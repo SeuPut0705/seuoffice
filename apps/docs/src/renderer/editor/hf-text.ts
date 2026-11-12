@@ -52,7 +52,12 @@ export function hfPictureRuns(runs: Run[]): { leading: Run[]; text: Run[]; trail
 export function hfEditText(value: HeaderFooter): string {
   return hfParasOf(value)
     .filter((p) => !p.cells)
-    .map((p) => p.runs.map((r) => r.text).join(''))
+    .map((p) =>
+      p.runs
+        .filter((r) => !r.del)
+        .map((r) => r.text)
+        .join(''),
+    )
     .join('\n')
     .replaceAll(PAGE_MARK, PAGE_TOKEN)
     .replaceAll(TOTAL_PAGES_MARK, TOTAL_TOKEN)
@@ -79,7 +84,15 @@ export function applyHfText(value: HeaderFooter | null, text: string): HeaderFoo
   const edited: HfParagraph[] = lines.map((line, i) => {
     const template = templates[Math.min(i, templates.length - 1)]
     const { leading, text: textRuns, trailing } = hfPictureRuns(template.runs)
-    const style = textRuns[0] ?? {}
+    // The line takes the styling of the paragraph's first text run that is not a tracked
+    // deletion. A wrapper (a content control) is not styling: the retyped line is plain
+    // text. It is also the accepted text: it must not inherit a tracked wrapper.
+    const {
+      ins: _ins,
+      del: _del,
+      wrap: _wrap,
+      ...style
+    } = textRuns.find((r) => !r.del) ?? textRuns[0] ?? { text: '' }
     return {
       ...template,
       runs: [...leading, ...(line === '' ? [] : [{ ...style, text: line }]), ...trailing],

@@ -11,7 +11,7 @@ import {
   vi,
   type MockInstance,
 } from 'vitest'
-import { xlsxBufferFromSheets } from '@genoffice/xlsx-gateway/gateway/csv-import'
+import { xlsxBufferFromSheets } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { EXIT } from '../src/result'
 import { run, tempDir } from './helpers'
 

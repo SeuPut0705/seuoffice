@@ -8,6 +8,7 @@
  * and Gemini generateContent (inline or Files API).
  */
 
+import { getDomain } from 'tldts'
 import { aiFetch } from './fetch'
 import { endpointUrl } from './protocols/shared'
 import { httpBodyDetail } from './http-error'
@@ -18,6 +19,8 @@ import {
   MINIMAX_BASE_URL,
   OPENAI_IMAGES_BASE_URL,
   getMediaProviderMeta,
+  STABILITY_BASE_URL,
+  BFL_BASE_URL,
 } from './media'
 import type { AiMediaProviderConfig, AiMediaProviderId, AiMediaProviderMeta } from './types'
 
@@ -176,6 +179,40 @@ async function readJson(label: string, resp: Response): Promise<Record<string, u
 function withTimeout(signal: AbortSignal | undefined, ms: number): AbortSignal {
   const timeout = AbortSignal.timeout(ms)
   return signal ? AbortSignal.any([signal, timeout]) : timeout
+}
+
+/** the statuses fetch follows when the answer names a Location */
+const REDIRECT_STATUSES = new Set([301, 302, 303, 307, 308])
+
+/**
+ * For a request whose API key rides in a header of the vendor's own (`x-key`,
+ * `x-goog-api-key`, `api-key`). Fetch drops `Authorization` when a redirect
+ * leaves the origin but repeats every other header, so following one would
+ * hand the key to whatever address the answer names, plain http included.
+ * None of these APIs redirects, so a redirect ends the call. The mode is
+ * `manual` rather than `error` so that the refusal can be told apart from a
+ * network failure: Node hands back the 3xx itself, a browser an opaque
+ * stand-in for it.
+ */
+async function keyedFetch(url: string, init: RequestInit): Promise<Response> {
+  const resp = await aiFetch(url, { ...init, redirect: 'manual' })
+  const location = resp.headers.get('location')
+  const redirected =
+    resp.type === 'opaqueredirect' || (REDIRECT_STATUSES.has(resp.status) && location !== null)
+  if (!redirected) return resp
+  await resp.body?.cancel().catch(() => {})
+  let target = ''
+  if (location !== null) {
+    try {
+      const to = new URL(location, url)
+      target = ` to ${to.protocol}//${to.host.slice(0, 100)}`
+    } catch {
+      // an unreadable Location is not worth a second error
+    }
+  }
+  throw new Error(
+    `The provider answered with a redirect${target}, which a request carrying the API key does not follow. The API key was not sent on.`,
+  )
 }
 
 const MAX_DOWNLOAD_BYTES = 50 * 1024 * 1024
@@ -530,7 +567,7 @@ async function generateImageGemini(
   const aspectRatio =
     input.aspectRatio && GEMINI_ASPECT_RATIOS.has(input.aspectRatio) ? input.aspectRatio : undefined
   if (model.startsWith('imagen-')) {
-    const resp = await aiFetch(endpointUrl(base, `/models/${model}:predict`), {
+    const resp = await keyedFetch(endpointUrl(base, `/models/${model}:predict`), {
       method: 'POST',
       headers: geminiHeaders(config),
       body: JSON.stringify({
@@ -547,7 +584,7 @@ async function generateImageGemini(
     }
     return fromBase64(first.bytesBase64Encoded, first.mimeType)
   }
-  const resp = await aiFetch(endpointUrl(base, `/models/${model}:generateContent`), {
+  const resp = await keyedFetch(endpointUrl(base, `/models/${model}:generateContent`), {
     method: 'POST',
     headers: geminiHeaders(config),
     body: JSON.stringify({
@@ -596,7 +633,7 @@ async function geminiUploadFile(
   const base = geminiBase(config)
   const root = new URL(base)
   root.pathname = trimSlash(root.pathname).replace(/\/v1(beta)?$/, '')
-  const start = await aiFetch(endpointUrl(root.toString(), '/upload/v1beta/files'), {
+  const start = await keyedFetch(endpointUrl(root.toString(), '/upload/v1beta/files'), {
     method: 'POST',
     headers: {
       ...geminiHeaders(config),
@@ -611,7 +648,7 @@ async function geminiUploadFile(
   if (!start.ok) return failFrom('Media upload failed:', start)
   const uploadUrl = start.headers.get('x-goog-upload-url')
   if (!uploadUrl) throw new Error('Media upload failed: no upload URL returned')
-  const upload = await aiFetch(uploadUrl, {
+  const upload = await keyedFetch(uploadUrl, {
     method: 'POST',
     headers: {
       'x-goog-api-key': config.apiKey,
@@ -631,7 +668,7 @@ async function geminiUploadFile(
       throw new Error('Media upload timed out while the file was processing')
     }
     await new Promise((r) => setTimeout(r, GEMINI_FILE_POLL_MS))
-    const poll = await aiFetch(endpointUrl(base, `/${String(file.name)}`), {
+    const poll = await keyedFetch(endpointUrl(base, `/${String(file.name)}`), {
       headers: { 'x-goog-api-key': config.apiKey },
       signal,
     })
@@ -660,14 +697,17 @@ async function analyzeMediaGemini(
         : await geminiUploadFile(config, blob, signal),
     )
   }
-  const resp = await aiFetch(endpointUrl(geminiBase(config), `/models/${model}:generateContent`), {
-    method: 'POST',
-    headers: geminiHeaders(config),
-    body: JSON.stringify({
-      contents: [{ role: 'user', parts: [...mediaParts, { text: input.requirements }] }],
-    }),
-    signal,
-  })
+  const resp = await keyedFetch(
+    endpointUrl(geminiBase(config), `/models/${model}:generateContent`),
+    {
+      method: 'POST',
+      headers: geminiHeaders(config),
+      body: JSON.stringify({
+        contents: [{ role: 'user', parts: [...mediaParts, { text: input.requirements }] }],
+      }),
+      signal,
+    },
+  )
   if (!resp.ok) return failFrom('Media analysis failed:', resp)
   const json = await readJson('Media analysis failed:', resp)
   const text = geminiParts((json.candidates as unknown[] | undefined)?.[0])
@@ -678,7 +718,305 @@ async function analyzeMediaGemini(
   return text
 }
 
+// ── Microsoft Foundry MAI image API ─────────────────────────────────
+
+/** MAI wants pixel width/height (min 768 each); this grid stays within the
+ * tightest pixel cap (MAI-Image-2.5 models: 1,048,576 pixels) */
+const MAI_SIZES: Record<string, string> = {
+  '1:1': '1024x1024',
+  '16:9': '1344x768',
+  '3:2': '1152x768',
+  '4:3': '1152x864',
+  '9:16': '768x1344',
+  '2:3': '768x1152',
+  '3:4': '864x1152',
+}
+
+async function maiImageResult(label: string, resp: Response): Promise<MediaBlob> {
+  if (!resp.ok) return failFrom(label, resp)
+  const json = await readJson(label, resp)
+  const first = asRecord((json.data as unknown[] | undefined)?.[0])
+  if (typeof first.b64_json === 'string' && first.b64_json) return fromBase64(first.b64_json)
+  throw new Error(`${label} returned no image: ${JSON.stringify(json).slice(0, 200)}`)
+}
+
+async function generateImageMai(
+  config: AiMediaProviderConfig,
+  model: string,
+  input: GenerateImageInput,
+  signal: AbortSignal,
+): Promise<MediaBlob> {
+  const base = trimSlash(config.baseUrl || '')
+  const size =
+    input.aspectRatio && input.aspectRatio !== 'auto' ? MAI_SIZES[input.aspectRatio] : undefined
+  const [width, height] = size ? size.split('x').map(Number) : []
+  const auth = { 'api-key': config.apiKey }
+  if (input.references?.length) {
+    // edits ride /mai/v1/images/edits: multipart with the reference images
+    // repeated in the `image` field, at most five per request
+    if (input.references.length > 5) {
+      throw new Error('MAI-Image accepts at most 5 reference images per edit')
+    }
+    const form = new FormData()
+    form.set('model', model)
+    form.set('prompt', input.prompt)
+    input.references.forEach((ref, i) => {
+      const ext = ref.mime.split('/')[1]?.replace('jpeg', 'jpg') ?? 'png'
+      form.append(
+        'image',
+        new Blob([toArrayBuffer(ref.bytes)], { type: ref.mime }),
+        ref.name ?? `ref-${i}.${ext}`,
+      )
+    })
+    const resp = await keyedFetch(`${base}/mai/v1/images/edits`, {
+      method: 'POST',
+      headers: auth,
+      body: form,
+      signal,
+    })
+    return maiImageResult('MAI image edit failed:', resp)
+  }
+  const resp = await keyedFetch(`${base}/mai/v1/images/generations`, {
+    method: 'POST',
+    headers: { ...auth, 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model,
+      prompt: input.prompt,
+      ...(width && height ? { width, height } : {}),
+    }),
+    signal,
+  })
+  return maiImageResult('MAI image generation failed:', resp)
+}
+
 // ── dispatch ────────────────────────────────────────────────────────
+
+/** Stability's generation endpoint per model id; sd3.5 ids pick the model inside /sd3 */
+function stabilityEndpointOf(model: string): { path: string; sd3Model?: string } {
+  switch (model) {
+    case 'stable-image-ultra':
+      return { path: 'ultra' }
+    case 'stable-image-core':
+      return { path: 'core' }
+    case 'sd3.5-large':
+    case 'sd3.5-large-turbo':
+    case 'sd3.5-medium':
+      return { path: 'sd3', sd3Model: model }
+  }
+  throw new Error(`Unknown Stability AI image model: ${model}`)
+}
+
+/** Stability serves these aspect ratios on the generate endpoints; anything else omits the field */
+const STABILITY_ASPECT_RATIOS = new Set(['1:1', '4:3', '3:4', '16:9', '9:16', '2:3', '3:2'])
+
+async function generateImageStability(
+  config: AiMediaProviderConfig,
+  model: string,
+  input: GenerateImageInput,
+  signal: AbortSignal,
+): Promise<MediaBlob> {
+  if (input.references?.length) {
+    throw new Error(
+      'Stability AI cannot edit or reference images here; generate from the prompt alone or pick another image provider.',
+    )
+  }
+  const endpoint = stabilityEndpointOf(model)
+  const form = new FormData()
+  form.set('prompt', input.prompt)
+  form.set('output_format', 'png')
+  if (endpoint.sd3Model !== undefined) form.set('model', endpoint.sd3Model)
+  if (
+    input.aspectRatio &&
+    input.aspectRatio !== 'auto' &&
+    STABILITY_ASPECT_RATIOS.has(input.aspectRatio)
+  ) {
+    form.set('aspect_ratio', input.aspectRatio)
+  }
+  // Accept: image/* makes the API answer the rendered bytes directly instead of
+  // a base64 JSON envelope
+  const resp = await aiFetch(
+    `${trimSlash(config.baseUrl || STABILITY_BASE_URL)}/v2beta/stable-image/generate/${endpoint.path}`,
+    {
+      method: 'POST',
+      headers: { Accept: 'image/*', Authorization: `Bearer ${config.apiKey}` },
+      body: form,
+      signal,
+    },
+  )
+  if (!resp.ok) return failFrom('Stable Image generation failed:', resp)
+  const bytes = await readCapped(resp, 'Stable Image')
+  return { bytes, mime: sniffImageMime(bytes, resp.headers.get('content-type') ?? 'image/png') }
+}
+
+const BFL_CANCELLED = 'FLUX generation timed out or was cancelled'
+
+/** the waits between the polls of one queued FLUX job */
+interface BflPollWaits {
+  /** resolves after `ms`; rejects at once when the guard aborts */
+  next(ms: number): Promise<void>
+  /** takes the listener off the guard; call once when the polling is over */
+  done(): void
+}
+
+/**
+ * BFL serves one endpoint per model; the job is async and polled to a URL.
+ * The guard carries ONE abort listener for the whole poll loop: a listener
+ * per wait stayed on the signal after its wait was over, so a long job piled
+ * them up.
+ */
+function bflPollWaits(guard: AbortSignal): BflPollWaits {
+  let cancelWait: (() => void) | undefined
+  const onAbort = (): void => cancelWait?.()
+  guard.addEventListener('abort', onAbort)
+  return {
+    next: (ms) =>
+      new Promise((resolve, reject) => {
+        if (guard.aborted) {
+          reject(new Error(BFL_CANCELLED))
+          return
+        }
+        const timer = setTimeout(() => {
+          cancelWait = undefined
+          resolve()
+        }, ms)
+        cancelWait = () => {
+          clearTimeout(timer)
+          reject(new Error(BFL_CANCELLED))
+        }
+      }),
+    done: () => guard.removeEventListener('abort', onAbort),
+  }
+}
+
+/**
+ * Where to poll a queued FLUX job. Every poll carries the API key, so an
+ * address the provider's reply names is used only when it is the provider's
+ * own: an `https:` host of the same registrable domain (BFL answers
+ * `api.bfl.ai` with a regional host such as
+ * `api.eu1.bfl.ai`). A base URL the person set is held to its own host the
+ * same way; an IP address or a one-label name has to match exactly. Anything
+ * else ends the generation before a request goes out.
+ */
+function bflPollUrl(base: string, queued: Record<string, unknown>): string {
+  const named = queued.polling_url
+  const address =
+    typeof named === 'string' && named
+      ? named
+      : `${base}/v1/get_result?id=${encodeURIComponent(String(queued.id ?? ''))}`
+  const submitted = new URL(base)
+  let poll: URL
+  try {
+    poll = new URL(address)
+  } catch {
+    throw new Error(
+      'FLUX generation failed: the provider answered with a polling address that is not a URL. The API key was not sent to it.',
+    )
+  }
+  // Private suffixes keep separate hosted tenants (alice.github.io and
+  // bob.github.io) from being treated as one provider.
+  const site = getDomain(submitted.hostname, { allowPrivateDomains: true })
+  const sameSite =
+    poll.hostname === submitted.hostname ||
+    (site !== null && site === getDomain(poll.hostname, { allowPrivateDomains: true }))
+  if (poll.protocol !== 'https:' || !sameSite) {
+    throw new Error(
+      `FLUX generation failed: the provider answered with a polling address that is not its own (${poll.protocol}//${poll.host.slice(0, 100)}). The API key was not sent to it.`,
+    )
+  }
+  return poll.href
+}
+
+/** FLUX.2 Pro / FLUX 1.1 take width/height (256..1440, multiples of 32),
+ *  not aspect_ratio; map the UI ratio onto a 1024-long box. */
+function bflDimensions(aspectRatio: string): { width: number; height: number } | null {
+  const match = /^(\d+):(\d+)$/.exec(aspectRatio)
+  if (!match) return null
+  const ratioW = Number(match[1])
+  const ratioH = Number(match[2])
+  if (!(ratioW > 0) || !(ratioH > 0)) return null
+  const long = 1024
+  const round32 = (n: number): number => Math.max(256, Math.round(n / 32) * 32)
+  return ratioW >= ratioH
+    ? { width: long, height: round32((long * ratioH) / ratioW) }
+    : { width: round32((long * ratioW) / ratioH), height: long }
+}
+
+async function generateImageBfl(
+  config: AiMediaProviderConfig,
+  model: string,
+  input: GenerateImageInput,
+  signal: AbortSignal,
+): Promise<MediaBlob> {
+  if (input.references?.length) {
+    throw new Error(
+      'FLUX cannot edit or reference images here; generate from the prompt alone or pick another image provider.',
+    )
+  }
+  const base = trimSlash(config.baseUrl || BFL_BASE_URL)
+  const headers = {
+    'x-key': config.apiKey,
+    'Content-Type': 'application/json',
+    accept: 'application/json',
+  }
+  const body: Record<string, unknown> = { prompt: input.prompt }
+  if (input.aspectRatio && input.aspectRatio !== 'auto') {
+    // only FLUX 3 Image documents aspect_ratio; the others take width/height
+    if (model === 'flux-3-image') {
+      body.aspect_ratio = input.aspectRatio
+    } else {
+      const dimensions = bflDimensions(input.aspectRatio)
+      if (dimensions) Object.assign(body, dimensions)
+    }
+  }
+  const submit = await keyedFetch(`${base}/v1/${model}`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+    signal,
+  })
+  if (!submit.ok) return failFrom('FLUX generation failed:', submit)
+  const queued = await readJson('FLUX', submit)
+  const pollUrl = bflPollUrl(base, queued)
+  // the job is queued server-side; results come as status Ready + sample_url
+  const waits = bflPollWaits(signal)
+  try {
+    for (;;) {
+      await waits.next(1_500)
+      const poll = await keyedFetch(pollUrl, {
+        headers: { 'x-key': config.apiKey },
+        signal,
+      })
+      if (!poll.ok) return await failFrom('FLUX generation failed:', poll)
+      const json = await readJson('FLUX result', poll)
+      const status = String(json.status ?? '')
+      if (status === 'Ready') {
+        // BFL's quick start: result.result.sample
+        const result = (json.result ?? {}) as Record<string, unknown>
+        const sample =
+          typeof result.sample === 'string' && result.sample
+            ? result.sample
+            : typeof json.sample_url === 'string' && json.sample_url
+              ? json.sample_url
+              : undefined
+        if (!sample) {
+          throw new Error(`FLUX returned no image URL: ${JSON.stringify(json).slice(0, 200)}`)
+        }
+        return await downloadImage('FLUX', sample, signal)
+      }
+      if (
+        status === 'Error' ||
+        status === 'Failed' ||
+        status === 'No Card Generated' ||
+        status === 'Content Moderated' ||
+        status === 'Request Moderated'
+      ) {
+        throw new Error(`FLUX generation failed: ${status}`)
+      }
+    }
+  } finally {
+    waits.done()
+  }
+}
 
 function modelOf(
   meta: AiMediaProviderMeta,
@@ -719,6 +1057,12 @@ export async function generateImageWithProvider(
       return generateImageDashscope(config, model, input, guard)
     case 'minimax':
       return generateImageMinimax(config, model, input, guard)
+    case 'stability':
+      return generateImageStability(config, model, input, guard)
+    case 'bfl':
+      return generateImageBfl(config, model, input, guard)
+    case 'mai':
+      return generateImageMai(config, model, input, guard)
     case 'openai-images':
       return generateImageOpenAi(provider, config, model, input, guard)
   }
@@ -746,7 +1090,8 @@ export async function analyzeMediaWithProvider(
  * without a model-listing endpoint answer 404/405 even for a valid key, so
  * only those two statuses count as a pass when the response is not ok.
  * Every other non-ok status (auth failures, rate limits, server errors)
- * is surfaced as a failure with the status code included.
+ * is surfaced as a failure with the status code included. BFL is the
+ * exception: its probe endpoint authenticates the key, so only a 200 passes.
  */
 export async function testMediaProvider(
   provider: ByokMediaProviderId,
@@ -757,20 +1102,44 @@ export async function testMediaProvider(
     const meta = metaOf(provider)
     requireBaseUrl(meta, config)
     const guard = withTimeout(signal, TEST_TIMEOUT_MS)
-    const resp =
-      provider === 'gemini'
-        ? await aiFetch(geminiModelsProbeUrl(config), {
-            headers: { 'x-goog-api-key': config.apiKey },
-            signal: guard,
-          })
-        : await aiFetch(endpointUrl(openAiBase(provider, config), '/models'), {
-            headers: bearer(config),
-            signal: guard,
-          })
+    // provider-aware credential probes: BFL authenticates with x-key and has
+    // no model listing (the credits endpoint answers 403 without a valid
+    // key and 200 with one), Microsoft Foundry with api-key rather than a
+    // Bearer token
+    let resp: Response
+    if (provider === 'gemini') {
+      resp = await keyedFetch(geminiModelsProbeUrl(config), {
+        headers: { 'x-goog-api-key': config.apiKey },
+        signal: guard,
+      })
+    } else if (provider === 'bfl') {
+      // /v1/credits is the only cheap BFL endpoint that checks the key:
+      // it answers 403 without a valid key, 422 for a malformed key and
+      // 200 with the credit balance for a good one
+      const base = trimSlash(config.baseUrl || BFL_BASE_URL)
+      resp = await keyedFetch(`${base}/v1/credits`, {
+        headers: { 'x-key': config.apiKey },
+        signal: guard,
+      })
+    } else if (provider === 'microsoft') {
+      resp = await keyedFetch(endpointUrl(openAiBase(provider, config), '/models'), {
+        headers: { 'api-key': config.apiKey },
+        signal: guard,
+      })
+    } else {
+      resp = await aiFetch(endpointUrl(openAiBase(provider, config), '/models'), {
+        headers: bearer(config),
+        signal: guard,
+      })
+    }
     if (resp.ok) return { ok: true }
     // Vendors without a model-listing endpoint answer 404/405 to a valid
-    // key, so those statuses still mean the credentials are usable.
-    if (resp.status === 404 || resp.status === 405) return { ok: true }
+    // key, so those statuses still mean the credentials are usable. BFL is
+    // excluded: its probe endpoint authenticates the key, so a 404 there is
+    // a failure like every other non-ok status.
+    if (provider !== 'bfl' && (resp.status === 404 || resp.status === 405)) {
+      return { ok: true }
+    }
     const body = await readCappedResponseText(resp, {
       maxBytes: MAX_ERROR_BODY_BYTES,
       onOverflow: 'truncate',

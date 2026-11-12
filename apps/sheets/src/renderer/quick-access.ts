@@ -17,12 +17,12 @@ export const QUICK_ACCESS_MAX_ITEMS = 10
 
 /// Handled by the shell's own props (save state, undo stack), not by a
 /// ribbon command string.
-export type QuickAccessBuiltin = 'save' | 'save-as' | 'undo' | 'redo'
+export type QuickAccessBuiltin = 'save' | 'save-as' | 'name-with-ai' | 'undo' | 'redo'
 
 export interface QuickAccessItem {
   readonly id: string
   readonly labelKey: StringKey
-  /// Present for the four built-in buttons, which draw their own icons.
+  /// Present for the built-in buttons, which draw their own icons.
   readonly builtin?: QuickAccessBuiltin
   /// Ribbon command string, dispatched like a ribbon click.
   readonly command?: string
@@ -33,6 +33,7 @@ export interface QuickAccessItem {
 export const QUICK_ACCESS_CATALOG: readonly QuickAccessItem[] = [
   { id: 'save', labelKey: 'appSaveTitle', builtin: 'save' },
   { id: 'save-as', labelKey: 'appSaveAs', builtin: 'save-as' },
+  { id: 'name-with-ai', labelKey: 'aiNameFile', builtin: 'name-with-ai' },
   { id: 'undo', labelKey: 'appUndo', builtin: 'undo' },
   { id: 'redo', labelKey: 'appRedo', builtin: 'redo' },
   { id: 'sort-asc', labelKey: 'appSortAToZ', command: 'sort:asc', symbol: '↑' },

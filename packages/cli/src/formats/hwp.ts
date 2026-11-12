@@ -1,5 +1,7 @@
 import { hwpToText } from '@genoffice/file-parse/hwp'
+import { convertHwpToDocx, HwpConvertError } from '@genoffice/hwp2docx'
 import { rhwpWasmPath } from '../resources'
+import { CliError, EXIT } from '../result'
 
 /** Characters `hwp read` returns unless told otherwise. */
 export const HWP_PREVIEW_CHARS = 20_000
@@ -20,4 +22,28 @@ export async function hwpText(bytes: Uint8Array): Promise<string> {
 export async function hwpInfo(bytes: Uint8Array): Promise<{ chars: number; lines: number }> {
   const text = await hwpText(bytes)
   return { chars: text.length, lines: text ? text.split('\n').length : 0 }
+}
+
+/** .hwp/.hwpx → .docx through the local import filter (routed by content, not extension). */
+export async function convertHwp(input: Uint8Array): Promise<{
+  bytes: Uint8Array
+  detail: Record<string, unknown>
+}> {
+  process.env.GENOFFICE_RHWP_WASM ??= rhwpWasmPath()
+  try {
+    const result = await convertHwpToDocx(input)
+    return {
+      bytes: result.docx,
+      detail: {
+        blocks: result.blocks,
+        dropped: result.dropped,
+        ...(result.via ? { via: result.via } : {}),
+      },
+    }
+  } catch (err) {
+    if (err instanceof HwpConvertError) {
+      throw new CliError(EXIT.conversion, err.message, { reason: err.code })
+    }
+    throw err
+  }
 }

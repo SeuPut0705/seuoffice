@@ -163,7 +163,7 @@ import { LinkLayer, followLinkAt } from './LinkLayer'
 import { OutlinePanel } from './OutlinePanel'
 import { ComparePanel } from './ComparePanel'
 import { compareDocuments, type CompareResult, type PageText } from './compare-text'
-import { AttachmentsPanel, type AttachmentRow } from './AttachmentsPanel'
+import { AttachmentsPanel, humanBytes, type AttachmentRow } from './AttachmentsPanel'
 import type { OutlineNode } from './OutlinePanel'
 import {
   buildHeadingOutline,
@@ -172,6 +172,17 @@ import {
   remapOutlineTree,
 } from './heading-outline'
 import { printPdf } from './print'
+import { readFileBytes } from './file-bytes'
+import {
+  agreesToNoUndo,
+  NO_WRITTEN_STEPS,
+  recordWritten,
+  stepWrittenFile,
+  writeInPlace,
+  type NoUndoConsent,
+  type NoUndoGate,
+  type WrittenSteps,
+} from './written-history'
 import { mayChangeProtection } from './protection-gate'
 import { PasswordDialog } from './PasswordDialog'
 import { PropertiesDialog } from './PropertiesDialog'
@@ -733,10 +744,11 @@ export default function App() {
   const [savedNotes, setSavedNotes] = useState<Map<number, SavedNoteAnnot[]>>(new Map())
   /** Active comment thread: its margin card is expanded and linked to its pin */
   const [activeNote, setActiveNote] = useState<{ origIdx: number; rootKey: string } | null>(null)
-  /** OS account name; the default author of new note comments */
+  /** Settings → General user name; the default author of new note comments */
   const [noteAuthor, setNoteAuthor] = useState('')
   useEffect(() => {
     window.pdfApi.getUsername().then(setNoteAuthor, () => {})
+    return window.pdfApi.onUsernameChanged(setNoteAuthor)
   }, [])
   /** the selection bar's three highlighter pens (user-editable, remembered) */
   const [highlightPens, setHighlightPens] = useState<Rgb[]>(() =>
@@ -1355,6 +1367,20 @@ export default function App() {
   const [printing, setPrinting] = useState(false)
   const [undoStack, setUndoStack] = useState<EditSnapshot[]>([])
   const [redoStack, setRedoStack] = useState<EditSnapshot[]>([])
+  /** The file around each change written to it at once (Replace pages, Page size, Crop, Insert
+      PDF): Undo with no pending edit left writes it back as it was, Redo as the change left it */
+  const writtenRef = useRef<WrittenSteps>(NO_WRITTEN_STEPS)
+  /** Their counts, for the Undo and Redo buttons */
+  const [written, setWrittenCounts] = useState({ undo: 0, redo: 0 })
+  const setWritten = (steps: WrittenSteps) => {
+    writtenRef.current = steps
+    setWrittenCounts({ undo: steps.undo.length, redo: steps.redo.length })
+  }
+  const writtenStepBusyRef = useRef(false)
+  /** Whether the person agreed to page operations that cannot be undone because the file is
+      too large to keep for Undo. Asked once per document: opening a document in this tab
+      starts over, and a reloaded or reopened tab starts with a new renderer */
+  const noUndoConsentRef = useRef<NoUndoConsent>({ given: false })
   const [pwInput, setPwInput] = useState('')
   const [pwWrong, setPwWrong] = useState(false)
   const [extractDlg, setExtractDlg] = useState(false)
@@ -1580,11 +1606,10 @@ export default function App() {
       saved?: SavedSnapshot,
       waitForPageNos: number[] = [],
     ) => {
-      const data = await window.pdfApi.readFile(path)
-      const bytes = new Uint8Array(data)
-      // getDocument transfers the buffer to its worker, leaving `data` and `bytes`
-      // empty here: take what is needed from them first
-      const byteLength = data.byteLength
+      const bytes = await readFileBytes(window.pdfApi, path)
+      // getDocument transfers the buffer to its worker, leaving `bytes` empty
+      // here: take what is needed from it first
+      const byteLength = bytes.byteLength
       const xfaMarker = hasXfaMarker(bytes)
       setFormHasXfa(xfaMarker)
       if (!saved) {
@@ -1641,7 +1666,7 @@ export default function App() {
           // handler must accept it too before the document counts as editable
           const password = passwordRef.current ?? ''
           const outcome = await window.pdfApi.decryptPdf(
-            new Uint8Array(await window.pdfApi.readFile(path)),
+            await readFileBytes(window.pdfApi, path),
             password,
           )
           if (outcome.ok) {
@@ -1686,9 +1711,7 @@ export default function App() {
           // down with it. Show the lost one blank, as Acrobat does, from patched bytes
           // in memory; the view stays read-only since saving would see the damage.
           const { patchMissingPageKids } = await import('./page-tree-patch')
-          const patched = await patchMissingPageKids(
-            new Uint8Array(await window.pdfApi.readFile(path)),
-          )
+          const patched = await patchMissingPageKids(await readFileBytes(window.pdfApi, path))
           if (patched) {
             const retry = getDocument({
               data: patched.bytes,
@@ -2009,6 +2032,7 @@ export default function App() {
       setDeleteToast(false)
       setUndoStack([])
       setRedoStack([])
+      setWritten({ undo: [], redo: [] })
       outlineDocRef.current = loaded
       // A save-reload keeps the current tree (page indices already remapped
       // above) visible while headings rescan
@@ -2048,6 +2072,7 @@ export default function App() {
   const openPath = useCallback(
     async (path: string) => {
       try {
+        noUndoConsentRef.current = { given: false }
         setFilePath(path)
         setOpenError(null)
         await loadDoc(path, null)
@@ -2070,7 +2095,7 @@ export default function App() {
           // reports it like a password failure, and the answer has to name the
           // real reason instead of looping the prompt
           try {
-            const raw = new Uint8Array(await window.pdfApi.readFile(path))
+            const raw = await readFileBytes(window.pdfApi, path)
             const probe = await window.pdfApi.decryptPdf(raw, '')
             if (!probe.ok && probe.reason === 'certificate-encryption') {
               showNotice(t('pwCertEncrypted'))
@@ -2874,6 +2899,7 @@ export default function App() {
     const snap = snapshot()
     setUndoStack((prev) => [...prev.slice(-49), snap])
     setRedoStack([])
+    if (writtenRef.current.redo.length > 0) setWritten({ ...writtenRef.current, redo: [] })
   }
 
   const newId = () => `d${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`
@@ -3063,7 +3089,8 @@ export default function App() {
 
   const undo = () => {
     const top = undoStack[undoStack.length - 1]
-    if (!top || collabRef.current?.blocks('history')) return
+    if (collabRef.current?.blocks('history')) return
+    if (!top) return void stepWritten('undo')
     // Taken before applySnapshot rewrites the refs; the updater may run after it
     const cur = snapshot()
     setRedoStack((r) => [...r, cur])
@@ -3075,7 +3102,8 @@ export default function App() {
 
   const redo = () => {
     const top = redoStack[redoStack.length - 1]
-    if (!top || collabRef.current?.blocks('history')) return
+    if (collabRef.current?.blocks('history')) return
+    if (!top) return void stepWritten('redo')
     const cur = snapshot()
     setUndoStack((u) => [...u, cur])
     setRedoStack((r) => r.slice(0, -1))
@@ -5725,6 +5753,7 @@ export default function App() {
     fields: LocalFormField[] = savableFormFields,
   ) => ({
     markups: markups.map(({ id: _id, ...rest }) => rest),
+    ...(noteAuthor ? { annotationAuthor: noteAuthor } : {}),
     annotDeletes: annotDeletes.map((d): AnnotDeleteInput => ({
       pageIndex: d.annot.pageIndex,
       objNum: d.annot.objNum,
@@ -7754,12 +7783,76 @@ export default function App() {
     else if ('canceled' in result) return { ok: true, canceled: true, flushed }
     return result as Exclude<R, { canceled: true }>
   }
+  /** Reloads the file a change just wrote, and keeps the file from *before* it as an Undo step
+      (null: too large to keep, which ends the steps before it too) */
+  const reloadWritten = async (before: Uint8Array | null): Promise<number> => {
+    // the reload below empties the steps
+    const kept = writtenRef.current
+    // the stored AI results of the kept pages follow the rewritten file before it is read again
+    await aiReadRef.current?.afterPageOperation().catch(() => null)
+    const pageCount = await loadDoc(filePath, doc)
+    setWritten(recordWritten(kept, before))
+    return pageCount
+  }
+
+  /** Undo or Redo of a change written at once, once no pending edit is left; false when there is none */
+  const stepWritten = (direction: 'undo' | 'redo'): boolean => {
+    const steps = writtenRef.current
+    const step = steps[direction][steps[direction].length - 1]
+    if (!step || dirty || writtenStepBusyRef.current) return false
+    writtenStepBusyRef.current = true
+    void (async () => {
+      try {
+        const result = await stepWrittenFile(window.pdfApi, filePath, steps, direction, {
+          diskChanged: diskChange !== null,
+        })
+        if (!result.ok) {
+          // the kept file would replace what another program wrote: say so, write nothing
+          if (result.reason === 'disk-changed') showNotice(t('diskChangedNoUndo'))
+          else opFailed(result.error)
+          return
+        }
+        await aiReadRef.current?.afterPageOperation().catch(() => null)
+        await loadDoc(filePath, doc)
+        setWritten(result.steps)
+      } finally {
+        writtenStepBusyRef.current = false
+      }
+    })()
+    return true
+  }
+
+  const noUndoGate = (): NoUndoGate => ({
+    consent: noUndoConsentRef.current,
+    confirm: ({ fileBytes, limitBytes }) =>
+      window.confirm(
+        t('pageOpNoUndoConfirm', { size: humanBytes(fileBytes), limit: humanBytes(limitBytes) }),
+      ),
+  })
+  /** Asked before the flush saves the pending edits, so that Cancel leaves the file as it is.
+      Work the flush refuses anyway is not asked about, and a document with nothing pending is
+      asked by writeInPlace, from the size of the file it reads */
+  const mayFlushForRewrite = async (): Promise<boolean> => {
+    if (!dirty || redactions.length > 0 || collabRef.current) return true
+    return agreesToNoUndo(fileSize, noUndoGate())
+  }
+
   const rewriteInPlace = async (
     run: () => Promise<{ ok: true } | { ok: true; canceled: true } | { ok: false; error: string }>,
   ): Promise<FileOpResult> => {
-    const result = await runFileOp(run)
+    if (!(await mayFlushForRewrite())) return { ok: true, canceled: true, flushed: false }
+    const held: { before: Uint8Array | null } = { before: null }
+    const result = await runFileOp(async () => {
+      const change = await writeInPlace(window.pdfApi, filePath, run, noUndoGate())
+      // declined: reported like a dismissed picker, this operation wrote nothing
+      if (change.declined) return { ok: true, canceled: true } as const
+      held.before = change.before
+      return change.result
+    })
     if (!result.ok || 'canceled' in result) return result
-    // the stored AI results of the kept pages follow the rewritten file before it is read again
+    if (held.before) return { ok: true, pageCount: await reloadWritten(held.before) }
+    // too large to keep as an Undo step: a plain reload, which leaves no step at all.
+    // The stored AI results of the kept pages follow the rewritten file before it is read again
     await aiReadRef.current?.afterPageOperation().catch(() => null)
     return { ok: true, pageCount: await loadDoc(filePath, doc) }
   }
@@ -7842,18 +7935,24 @@ export default function App() {
     showNotice(savedPct > 0 ? t('reduceDone', { pct: savedPct }) : t('reduceAlreadySmall'))
   }
 
-  const insertPdf = (afterOrigIdx: number) => {
+  const insertPdf = async (afterOrigIdx: number) => {
     // the flush bakes the visible order into the file, so the anchor becomes its visible position
     const afterPageIndex = visListOf(orderRef.current).indexOf(afterOrigIdx)
+    if (!(await mayFlushForRewrite())) return
     return flushThen(async () => {
-      const result = await window.pdfApi.insertPdf({ path: filePath, afterPageIndex })
+      const change = await writeInPlace(
+        window.pdfApi,
+        filePath,
+        () => window.pdfApi.insertPdf({ path: filePath, afterPageIndex }),
+        noUndoGate(),
+      )
+      if (change.declined) return
+      const { result, before } = change
       if (!result.ok) {
         opFailed(result.error)
         return
       }
-      if ('canceled' in result) return
-      await aiReadRef.current?.afterPageOperation().catch(() => null)
-      await loadDoc(filePath, doc)
+      if (!('canceled' in result)) await reloadWritten(before)
     })
   }
 
@@ -8104,8 +8203,8 @@ export default function App() {
         setPrinting(true)
         try {
           const data =
-            (await collabRef.current?.shownFile()) ?? (await window.pdfApi.readFile(filePath))
-          const pdoc = await getDocument({ data: new Uint8Array(data), ...DOC_OPTS }).promise
+            (await collabRef.current?.shownFile()) ?? (await readFileBytes(window.pdfApi, filePath))
+          const pdoc = await getDocument({ data, ...DOC_OPTS }).promise
           try {
             await printPdf(pdoc, pages, { includeAnnotations })
           } finally {
@@ -9899,7 +9998,7 @@ export default function App() {
             className="qa-btn"
             data-tip={`${t('undo')} (${platformShortcuts('⌘Z')})`}
             aria-label={`${t('undo')} (${platformShortcuts('⌘Z')})`}
-            disabled={undoStack.length === 0}
+            disabled={undoStack.length === 0 && written.undo === 0}
             onClick={undo}
           >
             <IconUndo />
@@ -9908,7 +10007,7 @@ export default function App() {
             className="qa-btn"
             data-tip={`${t('redo')} (${platformShortcuts('⇧⌘Z')})`}
             aria-label={`${t('redo')} (${platformShortcuts('⇧⌘Z')})`}
-            disabled={redoStack.length === 0}
+            disabled={redoStack.length === 0 && written.redo === 0}
             onClick={redo}
           >
             <IconRedo />
@@ -11059,9 +11158,9 @@ export default function App() {
             api={aiReadApi}
             session={jobSession}
             openPageRenderer={async () => {
-              const data = await window.pdfApi.readFile(filePath)
+              const data = await readFileBytes(window.pdfApi, filePath)
               const task = getDocument({
-                data: new Uint8Array(data),
+                data,
                 password: passwordRef.current,
                 ...DOC_OPTS,
               })

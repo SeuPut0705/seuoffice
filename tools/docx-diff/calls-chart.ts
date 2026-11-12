@@ -10,7 +10,6 @@ import {
 import { readThemeColors } from '../../packages/docx-engine/src/theme'
 import type { ThemeColors } from '../../packages/docx-engine/src/types'
 import type { CallSpec, Input } from './calls-spec'
-import { chartexCategoryHole } from './listed'
 
 // chart.ts does not export these: the values are its literals
 const CONSTANTS: Record<string, unknown> = {
@@ -761,7 +760,6 @@ export const CHART: CallSpec[] = [
       { text: bar(ser(BASIC)), args: { partPath: '', theme: null } },
     ],
     argMutation: true,
-    listed: chartexCategoryHole,
   },
   {
     fn: 'chart.shadeHex',

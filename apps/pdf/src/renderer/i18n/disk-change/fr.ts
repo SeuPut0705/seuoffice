@@ -9,4 +9,8 @@ export const fr = {
   diskIgnore: 'Ignorer',
   diskDismiss: 'OK',
   diskReloadFailed: 'Impossible de recharger le fichier : {detail}',
+  diskChangedNoUndo:
+    'Un autre programme a modifié ou supprimé ce fichier : cette modification n’a donc été ni annulée ni rétablie.',
+  pageOpNoUndoConfirm:
+    'Ce fichier ({size}) dépasse la taille conservée pour l’annulation ({limit}) : cette opération sur les pages ne pourra pas être annulée. Continuer ?',
 } satisfies Record<keyof typeof zh, string>

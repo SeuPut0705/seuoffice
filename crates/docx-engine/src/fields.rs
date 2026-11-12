@@ -8,7 +8,7 @@
 //! read a resolved paragraph take it as a value ([`EffectivePPr`]).
 
 use jscompat::{
-    JsMap, JsNum, JsRegex, Radix, RegexSyntaxError, js_regex, math_round, parse_int, trim,
+    JsMap, JsNum, Radix, RegexError, TryJsRegex, js_regex, math_round, parse_int, trim,
 };
 use ooxml_xml::{XNode, parse_ordered};
 use serde::Serialize;
@@ -91,13 +91,9 @@ pub fn toc_level_of(style_id: &str, styles: Option<&JsMap<StyleInfo>>) -> Option
 
 /// Attribute value of the first `tag` element that declares `name`, in either
 /// quote. Both go into the pattern unescaped, as in the original.
-pub fn tag_attr<'a>(
-    xml: &'a str,
-    tag: &str,
-    name: &str,
-) -> Result<Option<&'a str>, RegexSyntaxError> {
-    let pattern = JsRegex::new(&format!(r#"<{tag}\b[^>]*\s{name}=(["'])([^"']*)\1"#), "")?;
-    Ok(pattern.exec(xml).and_then(|found| found.get(2)))
+pub fn tag_attr<'a>(xml: &'a str, tag: &str, name: &str) -> Result<Option<&'a str>, RegexError> {
+    let pattern = TryJsRegex::new(&format!(r#"<{tag}\b[^>]*\s{name}=(["'])([^"']*)\1"#), "")?;
+    Ok(pattern.try_exec(xml)?.and_then(|found| found.get(2)))
 }
 
 /// Direct paragraph geometry Word applies over the style: before/after spacing

@@ -36,7 +36,7 @@ Os agentes de programação não precisam desse passo. A aplicação regista em 
 | `skill`           | Lista os agentes de programação encontrados nesta máquina e instala ou atualiza neles a competência do GenOffice.                                                                                                                                                                                     |
 | `mcp`             | Serve cada comando como uma ferramenta do Model Context Protocol. Consulte **Ligar um agente de programação**.                                                                                                                                                                                        |
 
-## Edição: documentos, folhas, apresentações
+## Edição: documentos, planilhas, apresentações
 
 `ieumoffice docs`, `ieumoffice sheet` e `ieumoffice slides` leem e editam pelo mesmo caminho de escrita que a aplicação usa, e partilham um vocabulário: uma **operação** (op) é uma única edição, e uma **especificação** (spec) é uma lista de operações aplicadas por ordem.
 
@@ -46,7 +46,7 @@ ieumoffice slides apply deck.pptx --ops ops.json --dry-run
 ieumoffice docs apply brief.docx --ops ops.json
 ```
 
-`--dry-run` relata o que um lote faria e não escreve nada, que é a forma barata de verificar uma especificação antes de a aplicar. O painel de IA da aplicação funciona exatamente com estas operações, por isso tudo o que lhe pedir também pode ser escrito em script.
+`--dry-run` relata o que um lote faria e não escreve nada, que é a forma barata de verificar uma especificação antes de a aplicar. O painel de IA do aplicativo funciona exatamente com estas operações, por isso tudo o que lhe pedir também pode ser escrito em script.
 
 ## Os comandos de pesquisa, imagem e multimédia
 

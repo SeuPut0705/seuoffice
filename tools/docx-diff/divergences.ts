@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
-import { callOutcomes, listedClasses, maskedClasses } from './calls-run'
+import { callOutcomes, listedClasses } from './calls-run'
 import { openOnce } from './compare-package'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
@@ -86,10 +86,6 @@ export async function staleDivergences(): Promise<{ listed: number; stale: strin
   for (const [id, { inputs, differ }] of listedClasses) {
     if (!ledger.some((entry) => entry.id === id)) stale.push(`${id}: a spec lists it, no entry`)
     else if (differ === 0) stale.push(`${id}: none of the ${inputs} inputs of the class differs`)
-  }
-  // an entry of the class going stale is seen above: its input is one both sides answer
-  for (const id of maskedClasses.keys()) {
-    if (!ledger.some((entry) => entry.id === id)) stale.push(`${id}: a spec masks it, no entry`)
   }
   return { listed: ledger.length, stale }
 }

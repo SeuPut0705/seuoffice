@@ -67,6 +67,7 @@ export default defineConfig({
           '@genoffice/pipelines',
           '@genoffice/ai-search',
           '@genoffice/file-parse',
+          '@genoffice/xlsx-gateway',
           '@genoffice/electron-utils',
           'opentype.js',
         ],

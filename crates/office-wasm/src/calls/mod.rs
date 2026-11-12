@@ -9,6 +9,7 @@ use serde_json::Value;
 mod altchunk;
 mod blank;
 mod blockpasses;
+mod char_class;
 mod chart;
 mod checkbox;
 mod docprops;
@@ -60,6 +61,7 @@ mod resolve;
 mod revision;
 mod section;
 mod vml;
+mod xml_tag;
 
 /// What a call gives: a value, nothing where the TypeScript function returns
 /// `undefined`, or an error where it throws.
@@ -106,6 +108,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "blank" => Some(blank::dispatch(function, text, args)),
         "blockpasses" => Some(blockpasses::dispatch(function, text, args)),
         "chart" => Some(chart::dispatch(function, text, args)),
+        "charclass" => Some(char_class::dispatch(function, text, args)),
         "checkbox" => Some(checkbox::dispatch(function, text, args)),
         "docprops" => Some(docprops::dispatch(function, text, args)),
         "drawing" => Some(drawing::dispatch(function, text, args)),
@@ -155,6 +158,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "pptxTheme" => Some(pptx_theme::dispatch(function, text, args)),
         "pptxXml" => Some(pptx_xml::dispatch(function, text, args)),
         "vml" => Some(vml::dispatch(function, text, args)),
+        "xmltag" => Some(xml_tag::dispatch(function, text, args)),
         _ => None,
     }
 }

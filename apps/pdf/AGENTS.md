@@ -15,7 +15,7 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 문서 번역 화면(`src/renderer/translate/`): 언어·범위·형식 고르기와 시작 전 확인(`TranslateDialog.tsx`), 작업·멈춘 뒤의 선택·결과 파일 쓰기(`DocumentTranslation.tsx`), 결과 보고(`TranslateReport.tsx`).
 - 문서 작업 공용 부품(`src/renderer/doc-jobs/`): 탭의 작업 세션(`job-session.ts`), 쓸 제공자 정하기와 고정(`route.ts`), `ai:stream`으로 가는 모델 호출 하나(`model-call.ts`), 셸의 보관소 채널을 엔진의 보관소로 감싼 것(`ipc-store.ts`), 진행 줄(`JobProgressStrip.tsx`), 이어하기 제안(`ResumeOffer.tsx`), 작업에 고른 페이지 기억(`job-pages.ts`, 페이지 번호만).
 - AI 창에서 작업을 여는 도구 `start_ai_page_reading`, `start_document_translation`(`tools.ts`). 창만 열고 바로 끝난다.
-- PDF 읽기 도우미(결정 0043, 계획 `docs/plans/pdf-reading-assist.md`). 본체는 기능마다 자기 폴더에 있고 `App.tsx`에는 연결만 있다.
+- PDF 읽기 도우미(결정 0043, 계획 `docs/archive/ieum/plans/pdf-reading-assist.md`). 본체는 기능마다 자기 폴더에 있고 `App.tsx`에는 연결만 있다.
   - 선택 막대 단축키와 구절 카드(`src/renderer/reading/`): 단축키 판정(`shortcuts.ts`, 순수 함수), 앞뒤 글 뽑기(`passage-text.ts`), 지시문(`passage-prompt.ts`), 카드 보관·같은 구절 찾기(`passage-cards.ts`, `passage-controller.ts`, `usePassageCards.ts`), 카드와 점선(`PassageCard.tsx`, `PassageUnderlines.tsx`, `PassageReading.tsx`), 저장 성공 때 확정하는 장치(`save-confirmations.ts`, 카드와 AI 핵심 표시가 같이 쓴다).
   - 주석 모아 보기(`src/renderer/annot-panel/`): 목록 만들기(`items.ts`, `scan.ts`), 표시 아래의 글(`text-under.ts`), 거르기(`filter.ts`), Markdown 내보내기 글(`export.ts`), 단독 실행 판정(`host-capability.ts`), 패널과 깜빡임(`AnnotPanel.tsx`, `AnnotPanelHost.tsx`, `AnnotFlash.tsx`).
   - AI 창의 추천 질문(`ai/AiPanel.tsx`), 문단까지 가는 인용(`ai/pdf-nav.ts`의 `?q=`, 찾기 `ai/quote-find.ts`, 강조 `ai/QuoteFlash.tsx`), 문서 개요(`ai/insights/`: 나눔 계획 `insights-text.ts`, 지시문과 답 해석 `insights-prompt.ts`, 보관·작업 `insights-controller.ts`, 칸 `InsightsCard.tsx`).
@@ -105,6 +105,13 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 
 - 문서 작업 `doc-jobs/model-call.ts`는 `createModelCall` 하나마다 `contextGate` 하나를 만들고 `runId`를 요청에 싣는다. 호출자는 `runId`만 넘긴다.
 - 문맥 확인을 거절하면 그 작업은 `context-limit`으로 멈추고 모델을 부르지 않는다. `InsightsCard`의 `startSingle`과 `runJob`은 서로 다른 실행이다.
+
+## 원본과 다른 점
+
+- 쪽 작업 되돌리기는 파일 바이트 합계 256 MiB(`WRITTEN_HISTORY_BUDGET_BYTES`)와 10단계를 넘지 않는다. 넘으면 가장 먼 단계부터 버리고, 문서 하나가 그 상한보다 크면 되돌리기 단계를 아예 남기지 않는다(`written-history.ts`). 렌더러에 기가바이트를 쥐게 하지 않는다.
+- 되돌리기 단계로 둘 수 없을 만큼 큰 파일에 제자리 쪽 작업(페이지 교체, 페이지 크기, 자르기, PDF 넣기)을 쓰기 전에는 되돌릴 수 없다고 묻는다(`written-history.ts`의 `writeInPlace`, 문구 `pageOpNoUndoConfirm`, 다른 파괴적 작업처럼 `window.confirm`). 취소하면 아무것도 쓰지 않는다. 보류 중인 편집이 있으면 그 편집을 저장하기 전에 묻는다(`agreesToNoUndo`). 동의는 문서마다 한 번이다(`App.tsx`의 `noUndoConsentRef`. 탭에 다른 문서를 열거나 탭을 다시 열면 처음부터 묻는다). 10단계나 합계 상한 때문에 가장 먼 단계가 밀려나는 것은 평범한 되돌리기 깊이라 묻지 않는다. 제자리 쪽 작업을 더하면 `writeInPlace`를 거친다.
+- 쪽 작업 되돌리기는 파일이 이 뷰의 마지막 제자리 쓰기 그대로일 때만 덮어쓴다(`pdf-main.ts`의 `ownWriteStates`, `holdsOwnLastWrite`). 그래서 뷰가 스스로 자기 문서를 쓰거나 옮기는 길은 그 기록을 함께 챙긴다. 새 바이트를 쓰면 `writeOwnFile`을 거치고(저장, 제자리 쪽 작업, 제목 없는 사본을 고른 경로에 저장하는 `adoptUntitledCopy`), 바이트는 그대로 두고 이름만 바꾸면 `moveDiskState`로 기록을 새 경로로 옮긴다(셸의 이름 바꾸기 `pdfFileRenamed`, 내용에서 이름을 따는 `autoRename`). 빠뜨리면 자기 저장 뒤의 되돌리기가 "디스크에서 바뀜"으로 거절된다. 그 뒤에 다른 프로그램이 바꾼 파일은 여전히 거절한다(`tests/restore-file-conflict.test.ts`).
+- 디스크에서 다시 읽기로 버릴 때는 복구 사본을 `discardForDiskReload`(`pdf-main.ts`)로 버린다. 그 밖의 복구 사본 버리기는 `discardPdfRecovery`를 거친다.
 
 ## 테스트
 

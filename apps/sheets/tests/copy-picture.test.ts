@@ -22,6 +22,9 @@ describe('copy picture', () => {
     expect(isRangeCopyHtml(RANGE_HTML)).toBe(true)
     expect(isRangeCopyHtml('<p>cell editor text</p>')).toBe(false)
     expect(isRangeCopyHtml('<table><tr><td>a</td></tr></table>')).toBe(false)
+    // a paste reads the copy back inside the document the clipboard wrapped it in
+    expect(isRangeCopyHtml(`<html><head></head><body>${RANGE_HTML}</body></html>`)).toBe(true)
+    expect(isRangeCopyHtml(`<meta charset='utf-8'>${RANGE_HTML}`)).toBe(true)
   })
 
   it('reads the picture size off column widths and row heights', () => {

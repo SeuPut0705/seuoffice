@@ -16,6 +16,7 @@
  * formatting changed is reported as a deletion of the old run plus an
  * insertion of the new one, which is honest but more verbose than Word.
  */
+import { runCopiedElsewhere } from './inline-opaque'
 import { saveDocx, type ParsedDocFull, type SaveBlock } from './patch'
 import type { Block, GeneratedBlock, RevisionInfo, Run } from './types'
 
@@ -756,11 +757,13 @@ function emittedRun(run: Run): Run {
 /**
  * A run of the original document that ends up in the redline: its picture
  * points at a media part the revised package does not have, so the deletion
- * names it instead of carrying it.
+ * names it instead of carrying it. Its content controls stay behind too:
+ * their ids belong to the other document.
  */
 function foreignRun(run: Run): Run {
-  if (!run.image) return run
-  const { image: _image, ...rest } = run
+  const own = runCopiedElsewhere(run)
+  if (!own.image) return own
+  const { image: _image, ...rest } = own
   return { ...rest, text: '[picture]' }
 }
 

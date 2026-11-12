@@ -189,6 +189,19 @@ describe('docxToText (XML scan)', () => {
     expect(text).toBe(`7\ta&b <c> ${CJK}\nnext${WINGDING}-\n###### column head`)
   })
 
+  it('reads ruby (phonetic guide) base text without the guide text', async () => {
+    const BED = String.fromCodePoint(0x5e8a)
+    const FRONT = String.fromCodePoint(0x524d)
+    const ruby = (base: string, rt: string) =>
+      `<w:r><w:ruby><w:rubyPr><w:hps w:val="12"/></w:rubyPr>` +
+      `<w:rt><w:r><w:t>${rt}</w:t></w:r></w:rt>` +
+      `<w:rubyBase><w:r><w:t>${base}</w:t></w:r></w:rubyBase></w:ruby></w:r>`
+    const text = await docxToText(
+      await docx(`<w:p>${ruby(BED, 'chuang')}${ruby(FRONT, 'qian')}<w:r><w:t>,</w:t></w:r></w:p>`),
+    )
+    expect(text).toBe(`${BED}${FRONT},`)
+  })
+
   it('appends footnotes and endnotes under headers, skipping separator notes', async () => {
     const notes = (tag: string, body: string) =>
       `<w:${tag}s ${W}><w:${tag} w:type="separator" w:id="-1">${p('sep')}</w:${tag}>${body}</w:${tag}s>`
@@ -217,6 +230,22 @@ describe('docxToText (XML scan)', () => {
       await docx(p('elsewhere'), {}, { mainPart: 'word/document2.xml' }),
     )
     expect(text).toBe('elsewhere')
+  })
+
+  it('percent-decodes the main part target from the package rels', async () => {
+    const zip = new JSZip()
+    zip.file(
+      '_rels/.rels',
+      '<Relationships><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/my%20doc.xml"/></Relationships>',
+    )
+    zip.file(
+      'word/my doc.xml',
+      `<?xml version="1.0"?><w:document ${W}><w:body>${p('Encoded main part')}</w:body></w:document>`,
+    )
+    zip.file('word/styles.xml', `<w:styles ${W}/>`)
+    expect(await docxToText(await zip.generateAsync({ type: 'uint8array' }))).toBe(
+      'Encoded main part',
+    )
   })
 
   it('rejects a package without a main document part', async () => {

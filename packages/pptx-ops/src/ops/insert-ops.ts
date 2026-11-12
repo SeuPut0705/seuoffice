@@ -19,6 +19,7 @@ import {
   replacePictureBytes,
   setModel3dView,
   setShowNarration,
+  tagHangulParagraphs,
   type NewChartKind,
   type NewChartOptions,
   type NewElementOptions,
@@ -107,8 +108,9 @@ register({
     const el = addElement(slide, {
       kind: String(op.kind),
       offset: reqRect(op),
+      // Hangul written without a language gets PowerPoint's ko-KR so it wraps by word
       ...(Array.isArray(op.paragraphs) && op.paragraphs.length
-        ? { paragraphs: op.paragraphs as Paragraph[] }
+        ? { paragraphs: tagHangulParagraphs(op.paragraphs as Paragraph[]) }
         : {}),
       ...(typeof op.fill === 'string' ? { fillColor: op.fill } : {}),
       ...(op.stroke ? { stroke: op.stroke as NewElementOptions['stroke'] } : {}),

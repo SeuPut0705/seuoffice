@@ -203,7 +203,7 @@ describe('listKeyProviderModels — OpenAI-compatible', () => {
       json({ data: [{ id: 'deepseek-flash' }, { id: 'deepseek-v4-pro' }] }),
     )
     expect(await listKeyProviderModels('deepseek', { apiKey: 'sk-d' }, fetchMock)).toEqual([
-      'deep-seek-v4.1-flash',
+      'deepseek-flash',
       'deepseek-v4-pro',
     ])
   })

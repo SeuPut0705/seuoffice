@@ -11,6 +11,12 @@ export {
 export { decodeEntities } from './parse-xml-text'
 export { sdtCheckboxGlyphs, sdtCheckboxIsChecked } from './checkbox-control'
 export {
+  inlineWrapContentLocked,
+  runCopiedElsewhere,
+  sameInlineWrap,
+  sameInlineWrapChain,
+} from './inline-opaque'
+export {
   buildContentControlXml,
   isContentControlLock,
   nextContentControlId,
@@ -53,7 +59,7 @@ export { assertZipInflatesWithinLimits, assertZipWithinLimits, DOCX_ZIP_LIMITS }
 export { LAZY_MEDIA_SCHEME, isLazyMediaPart, lazyMediaUrl, parseLazyMediaUrl } from './lazy-media'
 export { setAltChunkHtmlConverter, type AltChunkHtmlConverter } from './alt-chunk'
 export { tocLevelOf } from './parse-fields'
-export { mergeStyleBorders } from './parse-props'
+export { EMPTY_EA_THEME_FONT, mergeStyleBorders, themeLangEaSlotFont } from './parse-props'
 export {
   APP_PROPERTIES_PATH,
   APP_PROPERTY_KEYS,
@@ -95,6 +101,7 @@ export {
   applyRemoveParts,
   planRemoveParts,
   removePartsRefusalMessage,
+  removePartsRefusalMessageFor,
   type RemovePartsKind,
   type RemovePartsOptions,
   type RemovePartsPlan,
@@ -238,6 +245,7 @@ export {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+export { DEFAULT_PICTURE_PX, usableNumber, usablePictureSize } from './xml-number'
 export { bibliographyLine, citationText, parseSourcesXml } from './sources'
 export { parseZoteroDocumentDataXml, patchZoteroDocumentDataXml } from './zotero-doc-props'
 export { readThemeColors, readThemeFonts } from './theme'
@@ -278,6 +286,7 @@ export {
   cleanMoveRangeMarkers,
   countTrackedChangesXml,
   readPropChangeXml,
+  revisionDateMs,
   resolvePropChangeXml,
   type PropChangeRecord,
   type RevisionResolution,
@@ -310,3 +319,16 @@ export {
   type CompareResult,
   type CompareSummary,
 } from './compare'
+export { keepsHangulKanaSingle } from './parse-block-passes'
+export {
+  charClass,
+  isCjkLetterChar,
+  isDoubleByteChar,
+  isEastAsianChar,
+  isEastAsianLangTag,
+  isHangulChar,
+  isLatinAlnumChar,
+  textHasEastAsian,
+  textHasHangulChars,
+  type CharClass,
+} from './char-class'

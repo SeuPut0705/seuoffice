@@ -102,9 +102,11 @@ the workspace and fails on a pattern `JsRegex::new` refuses.
 
 A search keeps at most `BACKTRACK_LIMIT` (2^22) entries on the backtrack
 stack of the vendored `regress` (`crates/vendor/regress/VENDORED.md`); an
-entry is 48 bytes on a 64-bit target, so one search holds about 250 MB at
-most, measured by `jscompat/tests/limit.rs`; on wasm32 the linear memory grew
-to about 170 MB, and a wasm memory never shrinks (`limit_wasm.rs`). A loop whose body is more than
+entry is 40 bytes on a 64-bit target, so one search holds 209 MB at most,
+and up to twice the bound while a lookaround runs on its own stack (263 MB
+measured), by `jscompat/tests/limit.rs`; on wasm32 an entry is 20 bytes, the
+linear memory grew to about 135 MB, and a wasm memory never shrinks
+(`limit_wasm.rs`). A loop whose body is more than
 one character matcher keeps entries for each turn, so
 `<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` answers over 1.39M characters and passes
 the bound at 1.40M; V8 answers up to about 8M and throws `RangeError` past
@@ -116,8 +118,13 @@ it. A search past the bound stops with `RegexLimit`:
   already gives for a file it cannot read, never into a default answer.
 - Every other pattern is a `JsRegex`, whose methods panic on `RegexLimit`.
   `tests/sites.rs` fails on a `JsRegex` with such a loop, and on one whose
-  pattern it cannot read (not a literal of the call or a `const` of the
-  file), so that panic is not reached.
+  pattern it cannot read, so that panic is not reached. It reads a literal
+  of the call, a `const` of the file, and a macro that writes its pattern as
+  `concat!` of literals and one literal parameter, at each use of the macro.
+  A `format!` template is not read: what goes into it can come from the
+  document (`settings.rs` puts an `r:embed` there), so a pattern built at run
+  time is a `TryJsRegex`, and a function that builds one returns
+  `RegexError`, the `SyntaxError` of the constructor or the limit.
 - `jscompat/examples/limit_wasm.rs` runs the same pattern over 25M characters
   on wasm32 in CI: it refuses where 0.12.0 trapped at 22.4M.
 
@@ -364,9 +371,8 @@ entry still reproduces as listed, so the ledger cannot go stale. A divergence
 is listed, never coded around in the harness.
 
 An entry pins one input. Where main decided that the Rust is right and the
-TypeScript is to be fixed (a missing paragraph style, single-quoted revision
-attributes), or where the answer is the host's (legacy charsets on Node),
-corpus documents and mutations fall in the same class. A spec names the
+TypeScript is to be fixed (a revision date with its T in a word, a custom
+geometry guide named after an Object.prototype member), corpus documents and mutations fall in the same class. A spec names the
 class of an input with `CallSpec.listed` (the predicates are in
 `tools/docx-diff/listed.ts`, each over the input alone). Such an input is
 still called on both sides: equal, it is a check like any other; different,
@@ -380,19 +386,6 @@ a class none of whose inputs differs any more. The classes are short-lived:
 main fixes the TypeScript, the fix is merged here, the entry and its class
 are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
 `zone` runs its TypeScript side in that zone.
-
-A class may also be compared under a mask instead of set aside
-(`CallSpec.masked`, `maskNonFinite` of `listed.ts`): each value where the
-TypeScript wrote a non-finite number is replaced by a placeholder on both
-sides, an attribute the TypeScript inserted with such a value and the Rust
-left out is taken out, and the rest is compared exactly, so a second defect
-in such an input shows. `CallSpec.maskedRefuses` says the Rust must refuse
-the call instead. The class `non-finite-number-in-a-drawing` is compared so;
-its entries (`non-finite-...`, one per function and argument, the rule the
-Rust follows in the reason of the first) are written by
-`tools/docx-diff/ledger-non-finite.ts` from the inputs the drawing specs
-export. Run the tool after a change to those functions; `-- --check` says
-whether the entries would change.
 
 ## Known debt
 
@@ -555,15 +548,14 @@ The builders, nine groups of (f), 43 functions (every export of
 Those first runs were local, on Node 22, before anything was fixed, and are
 in `crates/fixtures/generate-first/`; the porting agents compared nothing
 before them. All 297 differences are one class: a NaN or an infinity among
-the arguments, which the TypeScript writes into an integer attribute. Rust
-never writes one (main's decision): a patch keeps what the attribute held,
-a builder refuses; where the TypeScript result holds none, Rust gives the
-TypeScript result. Mutated arguments added 48,000 checks to the first run
-and 23 differences of the same class. Compared under the mask (first masked
-run in `crates/fixtures/regenerated-first/`), 1,314 such inputs showed 3
-differences outside the masked values, one defect of the Rust: it wrote the
-height of an `a:ext` whose width the TypeScript had just made NaN, which
-stops the TypeScript's own height pattern. Fixed; 0 since.
+the arguments, which the TypeScript then wrote into an integer attribute.
+Main has since fixed that in `xml-number.ts` (`xmlInt` rounds to a safe
+integer, `xmlId` takes a safe integer only, `xmlDecimal` a finite number
+without an exponent, `nonFinite` throws `RangeError("a non-finite number:
+<option>")`), and the Rust follows it in one place,
+`crates/docx-engine/src/xml_number.rs` (`xml_int`, `xml_id`, `xml_decimal`,
+`non_finite`): a patch keeps what the XML held, a builder refuses the call.
+Nothing is set aside or masked for it any more.
 
 27 faults, each switched on alone in one build: 20 showed at once. Five of
 the seven misses named inputs that are now there (an `rFonts` with
@@ -754,14 +746,17 @@ for a record keyed by data. No order is in the ledger.
 1. **The debt of the builders** listed under unit 3: one `resolvePropChangeXml`
    (`revision_xml.rs`), the helpers into `jscompat`, and the civil date of
    `chart.rs` (`Date.UTC`, `getUTC*`) into `jscompat`.
-2. **The package comparison reports the first differing path of a value
-   only**, so `styles/headings.rs:31` and `styles/display.rs:350` were never
-   shown apart from the heading difference beside them. Make it report every
-   differing path (additive), then show them: their inputs are in the
-   package "…letters that fold to ASCII only in Unicode"; a fault in each
-   says whether they are compared. One input waits for a comparison that can
-   see it: a part named `x.rel\u017f` for `ooxml-pkg/src/load.rs:104` (the
-   package comparison reads no part by such a name).
+2. **Done: the package comparison reports every differing path of a value.**
+   The report line keeps the first path with both values and adds the count
+   and the first `--show N` paths; `out/package-paths.json` holds every
+   differing value with all its paths. `package-only.ts` runs (e) over the
+   built containers alone (`--only TEXT`, `SEUOFFICE_WASM` for a wasm built
+   elsewhere). Faults, each alone in a HEAD copy (`"i"` to `"iu"`), against
+   0 differences unfaulted: `styles/headings.rs:31` shows at
+   `headingStyles/value/listParagraphStyleId`, `styles/display.rs:350` at
+   three `display` paths of `styles`, and `ooxml-pkg/src/load.rs:105` at the
+   length and hash of `word/x.rel\u017f`, the part of "a Strict package"
+   that stays Strict because `/i` without `/u` does not fold U+017F to `s`.
 3. **Merge main when main says so** (items 11 to 16 and 24 of its list are
    fixed there), and drop the entries and classes that go stale.
    `lazy-media.ts` (55) is about when the host reads media: decide what of
@@ -783,6 +778,31 @@ for a record keyed by data. No order is in the ledger.
 One finding is not a port matter and is with main: a run-level content
 control is dropped when its paragraph is saved as a generated block
 (`spike-one-run-save/README.md`). A faithful port reproduces it.
+
+### Batches (decision 0025 rule 5, from 2026-11-12)
+
+The owner wants the engine done, not checked unit by unit. The docx port
+runs in four whole-engine batches, each checked once:
+
+1. **B1**: the merge of main c673f0f71, finished as it stands.
+2. **B2**: the whole read side, everything `parseDocx` needs (`parse.ts`
+   and every `parse-*` module and helper not yet ported). Porters work in
+   parallel on independent files. No comparison runs until the batch
+   compiles end to end; then ONE first comparison, stored unedited, then
+   the fixes, then one runner gate.
+3. **B3**: the whole write side, everything `saveDocx` needs (`patch.ts`,
+   the rest of `generate.ts`, `compare.ts`, `mail-merge.ts`, the part
+   writers), the same way.
+4. **B4**: the switch. The app's docx-engine calls go to the Rust engine
+   through the wasm binding and the TypeScript modules are deleted. It is
+   the merge to main.
+
+Fault injection, the ledger tidy and the independent review happen once,
+before B4. The final gate before main keeps every comparison, the faults,
+the existing tests and the review. A runner job is started and the next
+batch begins without waiting for it; its result is read when it arrives.
+The rules below hold within a batch; where they speak of a unit, read
+batch.
 
 ### Standing rules
 
@@ -818,10 +838,10 @@ From the owner, for every unit:
   name. `tsc`, eslint, prettier and a single `tsx` script need no lock, on
   Node 22. At most two subagents at a time on this machine, each by the
   same rules; more hands are asked of main, who opens streams elsewhere.
-- The first comparison run of a newly ported module is saved untouched
-  before anything is fixed: it is the measure of the port. It is a runner's
-  run: the artifact, with its summary committed in the unit's report. A
-  comparison a subagent made privately does not count; the gate does.
+- The first comparison run of a batch is saved untouched before anything
+  is fixed: it is the measure of the port. It is a runner's run: the
+  artifact, with its summary committed in the batch's report. A comparison
+  a subagent made privately does not count; the gate does.
 - An input of (f) holds no lone surrogate: JSON cannot carry one to Rust and
   the runner names the input that does. Say so in a brief that asks for
   inputs over UTF-16.
@@ -832,9 +852,9 @@ From the owner, for every unit:
   `/i` without `/u`. The corpus is ASCII in the places these patterns read,
   so only built inputs see it.
 - A function counts as compared when it gave at least two distinct results
-  and a seeded fault in it is caught. The one who integrates seeds a fault
-  of their own per group, chosen without looking at the porter's list. A
-  fault that passes names an input to add.
+  and, in the fault round before B4, a seeded fault in it is caught. The
+  one who integrates seeds a fault of their own per group, chosen without
+  looking at the porter's list. A fault that passes names an input to add.
 - Floors are committed with the unit: exact where they follow the corpus,
   rounded down where they follow a seeded generator.
 - A difference is listed in `divergences.json` with both answers and the
@@ -856,9 +876,9 @@ From the owner, for every unit:
   every host, desktop included, and the native build serves the central
   process: both stay first-class. The wasm's host imports (`seu_host`) are
   supplied by every such host.
-- Each unit ends with a report to main: equality before fixing, the classes
-  of difference, what cannot be reproduced, the rate, and what was not
-  checked.
+- Each batch ends with a report to main: equality before fixing, the
+  classes of difference, what cannot be reproduced, the rate, and what was
+  not checked.
 - `packages/docx-engine` moves underneath: another session merges upstream
   commits. `compare-package.ts` holds four readers copied from `parse.ts`
   and the gate fails when `parse.ts` no longer holds that text.

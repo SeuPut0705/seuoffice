@@ -7,7 +7,7 @@
  * so they are visible with stable positions under any template.
  */
 import type { Paragraph, Slide, TextElement } from './types'
-import { generateParagraphXml } from './generate'
+import { generateParagraphXml, tagHangulRun } from './generate'
 import { cNvPrIdsInXml, pruneTimingForSpids } from './animation'
 import { materializeSlide, type OpenedPptx } from './index'
 import { nextCNvPrId } from './insert'
@@ -110,9 +110,11 @@ export function applyHeaderFooter(
           {
             align: 'left',
             runs: [
-              opts.dateAuto
-                ? { text: opts.date, field: 'datetime1', ...style }
-                : { text: opts.date, ...style },
+              tagHangulRun(
+                opts.dateAuto
+                  ? { text: opts.date, field: 'datetime1', ...style }
+                  : { text: opts.date, ...style },
+              ),
             ],
           },
         ),
@@ -127,7 +129,7 @@ export function applyHeaderFooter(
           { x: Math.round(cx * 0.3), y: barY, cx: Math.round(cx * 0.4), cy: barH },
           {
             align: 'center',
-            runs: [{ text: opts.footer, ...style }],
+            runs: [tagHangulRun({ text: opts.footer, ...style })],
           },
         ),
       )

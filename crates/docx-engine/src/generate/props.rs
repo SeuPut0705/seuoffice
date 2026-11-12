@@ -10,6 +10,7 @@ use serde_json::Value;
 use super::rpr::{js_slice, raw_attr, raw_bool};
 use super::{escape_xml_attr, split_xml_children};
 use crate::model::{CharIndents, ParaBorderLine, ParaFormat, ParaFrame, TabStop};
+use crate::xml_tag::remove_elements;
 
 pub const PPR_CHILD_ORDER: [&str; 36] = [
     "w:pStyle",
@@ -802,8 +803,11 @@ fn merge_cell_element_attrs(
     fresh_el: Option<&str>,
     rebuilt: &[&str],
 ) -> Result<String, RegexLimit> {
-    let el_re = jscompat::JsRegex::new(&format!(r"<{tag}(?:\s[^>]*)?/>"), "")
-        .expect("w:spacing and w:ind compile");
+    let el_re = match tag {
+        "w:spacing" => js_regex!(r"<w:spacing(?:\s[^>]*)?/>"),
+        "w:ind" => js_regex!(r"<w:ind(?:\s[^>]*)?/>"),
+        _ => unreachable!("merge_cell_element_attrs reads w:spacing and w:ind"),
+    };
     let raw_el = el_re.exec(p_pr).map(|m| m.as_str().to_owned());
     let fresh: Vec<(String, String)> = element_attrs(fresh_el.unwrap_or(""))
         .into_iter()
@@ -1227,17 +1231,8 @@ pub fn resolve_para_mark_r_pr_change(raw_p_pr: &str, mode: &str) -> String {
 }
 
 pub fn strip_p_pr_change(raw_p_pr: &str) -> String {
-    let Some(start) = raw_p_pr.find("<w:pPrChange") else {
-        return raw_p_pr.to_owned();
-    };
-    let Some(end) = raw_p_pr[start..].find("</w:pPrChange>").map(|i| i + start) else {
-        return raw_p_pr.to_owned();
-    };
-    format!(
-        "{}{}",
-        &raw_p_pr[..start],
-        &raw_p_pr[end + "</w:pPrChange>".len()..]
-    )
+    // pPrChange nests a <w:pPr> inside it; a self-closing record is one element
+    remove_elements(raw_p_pr, "w:pPrChange", Some(1))
 }
 
 /// The ParaFormat keys: an unchecked cast reads these and nothing else.

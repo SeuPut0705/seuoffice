@@ -28,6 +28,10 @@ export const id = {
     'Dokumen ini berisi pelacakan perubahan. Anda melihat teks terkininya, dengan perubahan diterapkan; menyimpan akan mempertahankan teks ini dan menghapus catatan perubahan.',
   saveTracked:
     'Tidak disimpan: dokumen ini memiliki pelacakan perubahan; menyimpannya di sini akan menghilangkannya dan dapat menghasilkan file yang tidak bisa dibuka Hancom Hangul.',
+  openedUnverified:
+    'Struktur file ini tidak dapat diverifikasi, sehingga sebagian isinya mungkin tidak tampil di sini. Anda dapat membaca dan mengeditnya, tetapi file ini tidak disimpan menimpa aslinya: gunakan Simpan Sebagai untuk menyimpan salinan dengan nama lain.',
+  saveUnverified:
+    'Tidak disimpan: struktur file ini tidak dapat diverifikasi, dan menimpa file asli dapat menghilangkan isi. Di Simpan Sebagai, simpan salinan dengan nama lain, sebaiknya dalam format HWPX.',
   savedTailsLost:
     'Tersimpan, tetapi sebagian halaman master atau memo dari file asli tidak dapat dipertahankan, dan Hancom Hangul mungkin tidak dapat membuka file yang disimpan. Buka untuk memeriksanya.',
   missingFonts:

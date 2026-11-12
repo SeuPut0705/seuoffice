@@ -5,11 +5,17 @@ import type { DocumentTabKind } from '../shared/tabs-api'
 const DOCX_RE = /\.docx$/i
 // OpenDocument text opens in the Word tab too (apps/docs docFormatOfPath picks the format)
 const ODT_RE = /\.odt$/i
+// legacy Word 97-2003 .doc/.dot open in the Word tab as a converted .docx copy
+const WORD97_RE = /\.(doc|dot)$/i
 // .ods opens as a converted .xlsx copy in the spreadsheet tab (decision 0119);
 // ODS_RE lets the rename gate tell the ODF package from the other sheet forms
 const ODS_RE = /\.ods$/i
 const XLSX_RE = /\.(xlsx|xlsm|xls|csv|tsv|ods)$/i
-const PPTX_RE = /\.pptx$/i
+// .odp and its .otp template open in Slides through the import filter (a converted .pptx copy)
+const ODP_RE = /\.(odp|otp)$/i
+// a legacy PowerPoint 97-2003 .ppt opens in Slides as a converted .pptx copy too
+const PPT_RE = /\.ppt$/i
+const PPTX_RE = /\.(pptx|ppt|odp|otp)$/i
 const PDF_RE = /\.pdf$/i
 const HTML_RE = /\.html?$/i
 // XMind maps, and a FreeMind / Freeplane map imported as a new map
@@ -26,6 +32,7 @@ const TEXT_RE = /\.(md|markdown|txt|json)$/i
 export {
   DOCX_RE,
   ODT_RE,
+  WORD97_RE,
   ODS_RE,
   XLSX_RE,
   PPTX_RE,
@@ -50,7 +57,7 @@ export function documentExtension(name: string): string {
 }
 
 export function appForPath(path: string): DocumentTabKind | undefined {
-  if (DOCX_RE.test(path) || ODT_RE.test(path)) return 'docs'
+  if (DOCX_RE.test(path) || ODT_RE.test(path) || WORD97_RE.test(path)) return 'docs'
   if (XLSX_RE.test(path)) return 'sheets'
   if (PPTX_RE.test(path)) return 'slides'
   if (PDF_RE.test(path)) return 'pdf'
@@ -70,9 +77,15 @@ export function renameStaysInApp(from: string, newName: string): boolean {
   // .docx and .odt share the Word tab but not the bytes: renaming one into the
   // other leaves a file the Word editor reads as corrupt
   if (current === 'docs' && ODT_RE.test(from) !== ODT_RE.test(newName)) return false
+  // a Word 97-2003 binary is no .docx/.odt either, only imported as a copy
+  if (current === 'docs' && WORD97_RE.test(from) !== WORD97_RE.test(newName)) return false
   // .ods is its own container (an ODF package, opened as a converted .xlsx
   // copy), so renaming it into or out of any other sheet form breaks the file
   if (current === 'sheets' && ODS_RE.test(from) !== ODS_RE.test(newName)) return false
+  // likewise an .odp/.otp is an ODF package that Slides only imports as a .pptx copy
+  if (current === 'slides' && ODP_RE.test(from) !== ODP_RE.test(newName)) return false
+  // and a PowerPoint 97-2003 binary is neither a .pptx nor an ODF package
+  if (current === 'slides' && PPT_RE.test(from) !== PPT_RE.test(newName)) return false
   // each diagram form keeps its own bytes (XML, a picture holding it, a Visio
   // drawing), and so does each map form (.xmind, an imported .mm): renaming one
   // into another leaves a file that no longer opens

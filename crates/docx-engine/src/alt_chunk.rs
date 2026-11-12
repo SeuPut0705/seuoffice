@@ -8,13 +8,12 @@
 //! keeps them and calls the functions here.
 //!
 //! `TextDecoder` is `encoding_rs`, which implements the same Encoding
-//! Standard. Node builds its decoders on ICU, which differs from the standard
-//! on some bytes of the CJK encodings; those differences are not reproduced.
+//! Standard as the `@exodus/bytes` decoder the TypeScript uses.
 
 use std::borrow::Cow;
 use std::rc::Rc;
 
-use encoding_rs::{Encoding, ISO_8859_16, UTF_8, UTF_16BE, UTF_16LE, WINDOWS_1252, X_USER_DEFINED};
+use encoding_rs::{Encoding, UTF_8, UTF_16BE, UTF_16LE, WINDOWS_1252};
 use jscompat::{JsMap, base64, js_regex, trim, trim_start, truthy};
 use serde::Serialize;
 
@@ -72,10 +71,8 @@ fn latin1(bytes: &[u8], limit: usize) -> String {
 
 /// `new TextDecoder(label)`: `None` where the constructor throws.
 fn text_decoder(label: &str) -> Option<&'static Encoding> {
-    // the replacement labels throw by the standard; Node's TextDecoder also
-    // throws on iso-8859-16 and x-user-defined, which its table lacks
+    // the replacement labels throw by the standard
     Encoding::for_label_no_replacement(label.as_bytes())
-        .filter(|encoding| *encoding != ISO_8859_16 && *encoding != X_USER_DEFINED)
 }
 
 /// `new TextDecoder(label).decode(bytes)`: the BOM of the decoder's own

@@ -110,9 +110,10 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         room.saturating_add(8 + re.groups as usize)
     }
 
-    /// Push onto a stack that grows by doubling below a quarter of `ceiling`
-    /// and then straight to `ceiling`, so its capacity stops at the bound and
-    /// the last reallocation holds 1.25 times it at most, not 1.5 or 2.
+    /// Push onto a stack that grows by doubling while that stays below a
+    /// quarter of `ceiling`, and then straight to `ceiling`, so its capacity
+    /// stops at the bound and the last reallocation holds 1.25 times it at
+    /// most, not 1.5 or 2.
     #[inline(always)]
     fn push_bounded(bts: &mut Vec<BacktrackInsn<Input>>, ceiling: usize, bt: BacktrackInsn<Input>) {
         if bts.len() == bts.capacity() {
@@ -126,7 +127,7 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         let capacity = bts.capacity();
         let target = if capacity >= ceiling {
             capacity.saturating_mul(2)
-        } else if capacity.saturating_mul(4) >= ceiling {
+        } else if capacity.saturating_mul(8) >= ceiling {
             ceiling
         } else {
             capacity.max(8) * 2
@@ -430,6 +431,15 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         // Temporarily defeat backtracking.
         let saved_groups = self.s.groups.iat(range.clone()).to_vec();
 
+        // A stack set aside keeps its capacity while the lookaround grows its
+        // own: give back what it does not hold, but keep room for it to
+        // double, so that a loop around the lookaround does not grow it back
+        // on its next turn. It is shrunk again only once it has doubled.
+        let keep = RETAINED_BACKTRACK_CAPACITY + 2 * self.bts.len();
+        if self.bts.capacity() > keep {
+            self.bts.shrink_to(keep);
+        }
+
         // Start with an "empty" backtrack stack.
         // TODO: consider using a stack-allocated array.
         let mut saved_bts = vec![BacktrackInsn::Exhausted];
@@ -442,8 +452,10 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         // Enter into the lookaround's instruction stream.
         let matched = self.try_at_pos(*input, ip, pos, Dir::new()).is_some();
 
-        // Put back our bts.
+        // Put back our bts, and give back the lookaround's own before more
+        // entries go on ours.
         core::mem::swap(&mut self.bts, &mut saved_bts);
+        drop(saved_bts);
         self.room = saved_room;
         self.ceiling = Self::ceiling_of(self.re, saved_room);
         if self.exceeded {

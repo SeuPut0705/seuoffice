@@ -34,11 +34,11 @@ describe('defaultAiSettings', () => {
 })
 
 describe('provider model catalog', () => {
-  it('offers DeepSeek V4.1 Flash under its versioned name', () => {
+  it("offers the vendor's own DeepSeek ids, not the old versioned spelling", () => {
     const deepseek = AI_PROVIDERS.find((provider) => provider.id === 'deepseek')!
 
-    expect(deepseek.models).toContain('deep-seek-v4.1-flash')
-    expect(deepseek.models).not.toContain('deepseek-flash')
+    expect(deepseek.models).toContain('deepseek-flash')
+    expect(deepseek.models).not.toContain('deep-seek-v4.1-flash')
     expect(deepseek.models).not.toContain('deepseek-v4-flash')
     expect(deepseek.models).not.toContain('deepseek-v4-flash-vision-exp')
   })
@@ -105,6 +105,56 @@ describe('provider model catalog', () => {
     expect(cloudgpu.keyPlaceholder).toBe('sk-...')
     for (const model of cloudgpu.models) {
       expect(model).not.toContain('/')
+    }
+  })
+
+  it('seeds SiliconFlow with lab-namespaced ids and the CN endpoint base', () => {
+    const siliconflow = AI_PROVIDERS.find((provider) => provider.id === 'siliconflow')!
+    expect(siliconflow.models).toEqual([
+      'deepseek-ai/DeepSeek-V4.1-Flash',
+      'deepseek-ai/DeepSeek-V4-Pro',
+      'deepseek-ai/DeepSeek-V3.2',
+      'zai-org/GLM-5.3',
+      'zai-org/GLM-5.3-Flash',
+      'moonshotai/Kimi-K2.7-Code',
+      'Qwen/Qwen3.8-27B',
+    ])
+    expect(siliconflow.defaultModel).toBe('deepseek-ai/DeepSeek-V4-Pro')
+    expect(siliconflow.models).toContain(siliconflow.defaultModel)
+    expect(siliconflow.needsBaseUrl).toBeUndefined()
+    expect(siliconflow.keyPlaceholder).toBe('sk-...')
+  })
+
+  it('seeds PPIO with lowercase namespaced ids', () => {
+    const ppio = AI_PROVIDERS.find((provider) => provider.id === 'ppio')!
+    expect(ppio.models).toEqual([
+      'deepseek/deepseek-v4.1-flash',
+      'deepseek/deepseek-v4-pro',
+      'moonshotai/kimi-k3',
+      'zai-org/glm-5.3',
+      'qwen/qwen3.8-max',
+      'minimax/minimax-m3.1-flash',
+    ])
+    expect(ppio.defaultModel).toBe('deepseek/deepseek-v4.1-flash')
+    expect(ppio.models).toContain(ppio.defaultModel)
+    expect(ppio.needsBaseUrl).toBeUndefined()
+    expect(ppio.keyPlaceholder).toBe('sk-...')
+    for (const model of ppio.models) {
+      expect(model).toBe(model.toLowerCase())
+    }
+  })
+
+  it('seeds Command Code with vendor-prefixed ids and no Claude/GPT/Grok in the list', () => {
+    const cc = AI_PROVIDERS.find((provider) => provider.id === 'commandcode')!
+    expect(cc.label).toBe('Command Code')
+    expect(cc.defaultModel).toBe('zai-org/GLM-5.3')
+    expect(cc.models).toContain(cc.defaultModel)
+    expect(cc.needsBaseUrl).toBeUndefined()
+    for (const model of cc.models) {
+      // the CLI model reference spells every listed open-weight / Gemini id lab-prefixed
+      expect(model).toMatch(/^[A-Za-z0-9-]+\/[A-Za-z0-9._-]+$/)
+      // Claude rides a different route; GPT/Grok need the Responses API for tools
+      expect(model).not.toMatch(/(^|\/)(claude-|gpt-|grok-)/)
     }
   })
 
@@ -214,7 +264,7 @@ describe('resolveAiSettings', () => {
     )
     expect(resolved.providers.deepseek).toEqual({
       apiKey: 'sk-user',
-      model: 'deep-seek-v4.1-flash',
+      model: 'deepseek-flash',
     })
   })
 
@@ -251,13 +301,19 @@ describe('resolveAiSettings', () => {
     expect(resolved.providers.openai).not.toHaveProperty('models')
   })
 
-  it('rewrites the retired V4 Flash id and the vendor wire id to the listed V4.1 Flash name', () => {
-    for (const model of ['deepseek-v4-flash', 'deepseek-flash']) {
+  it('rewrites retired DeepSeek ids and the old versioned spelling to the listed id', () => {
+    for (const model of [
+      'deepseek-v4-flash',
+      'deepseek-v4-flash-vision-exp',
+      'deepseek-chat',
+      'deepseek-reasoner',
+      'deep-seek-v4.1-flash',
+    ]) {
       const resolved = resolveAiSettings(
         { providers: { deepseek: { apiKey: 'sk-user', model } } as never },
         defaultAiSettings(),
       )
-      expect(resolved.providers.deepseek.model).toBe('deep-seek-v4.1-flash')
+      expect(resolved.providers.deepseek.model).toBe('deepseek-flash')
     }
   })
 
@@ -307,7 +363,7 @@ describe('resolveAiSettings', () => {
       },
       defaultAiSettings(),
     )
-    expect(resolved.providers.deepseek.model).toBe('deep-seek-v4.1-flash')
+    expect(resolved.providers.deepseek.model).toBe('deepseek-flash')
   })
 
   it('trims the legacy single-endpoint key and base URL too', () => {

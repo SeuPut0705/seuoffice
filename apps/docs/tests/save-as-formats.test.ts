@@ -307,9 +307,17 @@ describe('Save As into another format', () => {
     installDesktop()
     pick = null
     pdfPages = 1
+    // a PDF export prints the pagination preview's page sheets (exportPdf); the App
+    // mounts that preview, so the test puts one letter-size sheet in the page
+    const sheet = document.createElement('div')
+    sheet.className = 'pv-page'
+    sheet.style.width = '816px'
+    sheet.style.height = '1056px'
+    document.body.append(sheet)
   })
   afterEach(() => {
     while (editors.length) editors.pop()!.destroy()
+    document.querySelectorAll('.pv-page').forEach((sheet) => sheet.remove())
     vi.restoreAllMocks()
   })
 

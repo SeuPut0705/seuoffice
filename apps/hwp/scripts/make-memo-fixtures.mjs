@@ -5,7 +5,7 @@
  * box, each with a different author. They are made with this app's engine, not
  * with Hancom Hangul: the Hancom-made HWP sample is `memo-source.hwp`, and a
  * Hancom-made HWPX sample is not available on this PC (see
- * `docs/tracking/status.md`).
+ * `docs/archive/ieum/tracking/status.md`).
  *
  * Run from the repository root:
  *   node apps/hwp/scripts/make-memo-fixtures.mjs

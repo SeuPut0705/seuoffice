@@ -35,8 +35,8 @@
     "bdr",
     "shading",
     "eastAsiaLang",
-    "source",
-    "styleXor"
+    "styleXor",
+    "source"
   ],
   "EffectiveRPr.fonts": ["ascii", "eastAsia", "cs", "eaSlotEmpty"],
   "Run.link": ["href", "rId", "tooltip", "plain"],
@@ -301,9 +301,9 @@
     "paraProps",
     "align",
     "fill",
+    "locked",
     "vSpan",
     "vMergeContinue",
-    "locked",
     "widthPct",
     "widthTwips",
     "borders",

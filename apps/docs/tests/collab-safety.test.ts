@@ -39,11 +39,11 @@ interface Page {
 }
 
 /** One person's page: a real editor, an App holding the outside state, and the adapter */
-function page(): Page {
+function page(doc: unknown = content): Page {
   const editor = new Editor({
     element: document.createElement('div'),
     extensions: editorExtensions,
-    content: content as never,
+    content: doc as never,
   })
   editors.push(editor)
   let entries = new Map<string, Json>()
@@ -499,7 +499,7 @@ describe('what the app itself makes', () => {
         continue
       }
       const doc = asJson(blocksToPmDoc(parsed.blocks))
-      expect(safeNode(doc, {}), path).toBe(doc)
+      expect(safeNode(doc), path).toBe(doc)
       // the whole body pasted over itself, as a local step: from the nodes as the editor
       // holds them, not through JSON, so no value only a round trip would clean is hidden
       const node = schema.nodeFromJSON(blocksToPmDoc(parsed.blocks))
@@ -510,4 +510,97 @@ describe('what the app itself makes', () => {
     }
     expect(checked).toBeGreaterThan(170)
   }, 300_000)
+})
+
+describe('run-level wrappers while co-editing', () => {
+  const run = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
+  const control = (lock: string) =>
+    `<w:sdt><w:sdtPr><w:alias w:val='Due; "date"'/><w:id w:val="5"/>${lock}</w:sdtPr>` +
+    `<w:sdtContent>${run('5/6/2024')}</w:sdtContent></w:sdt>`
+  const SMART =
+    '<w:smartTag w:uri="urn:schemas-microsoft-com:office:smarttags" w:element="place">' +
+    `${run('Paris')}</w:smartTag>`
+  const body = (lock = '') =>
+    `<w:p>${run('Due on ')}${control(lock)}${run(' in ')}${SMART}${run(' open')}</w:p>`
+  const opened = async (lock = '') =>
+    blocksToPmDoc((await parseDocx(await buildDocx({ bodyXml: body(lock) }))).blocks)
+
+  /** where `text` starts in the document */
+  function at(editor: Editor, text: string): number {
+    let found = -1
+    editor.state.doc.descendants((node, pos) => {
+      const index = found < 0 && node.isText ? (node.text ?? '').indexOf(text) : -1
+      if (index >= 0) found = pos + index
+      return found < 0
+    })
+    return found
+  }
+
+  it('typing inside one, and undoing its deletion, is this person’s edit like any other', async () => {
+    const doc = await opened()
+    const alice = page(doc)
+    const bob = page(doc)
+    alice.editor.commands.insertContentAt(at(alice.editor, '6/2024'), 'X')
+    alice.editor.commands.insertContentAt(at(alice.editor, 'ris'), 'Y')
+    expect(alice.editor.state.doc.textContent).toBe('Due on 5/X6/2024 in PaYris open')
+    const from = at(alice.editor, '5/X6/2024')
+    alice.editor.commands.deleteRange({ from, to: from + '5/X6/2024'.length })
+    alice.editor.commands.undo()
+    expect(alice.editor.state.doc.textContent).toBe('Due on 5/X6/2024 in PaYris open')
+    expect(alice.refused).toEqual([])
+    carry(alice.sent.splice(0), alice, bob)
+    expect(bob.editor.state.doc.toJSON()).toEqual(alice.editor.state.doc.toJSON())
+    expect(await bob.adapter.fingerprint()).toBe(await alice.adapter.fingerprint())
+  })
+
+  it('a peer’s wrapper bytes arrive as sent and never as markup on the page', async () => {
+    const bob = page(await opened())
+    const chain = JSON.stringify([
+      { seq: 9, open: `<w:smartTag w:element="x">${HOSTILE_MARKUP}`, close: '</w:smartTag>' },
+    ])
+    const forged: Json = {
+      type: 'text',
+      text: 'forged',
+      marks: [{ type: 'inlineWrap', attrs: { chain } }],
+    }
+    const end = bob.editor.state.doc.content.size - 1
+    const step = new Transform(bob.editor.state.doc).insert(
+      end,
+      bob.editor.schema.nodeFromJSON(forged),
+    ).steps[0]
+    receive(bob, { kind: 'steps', steps: [step.toJSON() as Json] })
+    const text = bob.editor.state.doc.lastChild!.lastChild!
+    expect(text.marks.find((mark) => mark.type.name === 'inlineWrap')?.attrs.chain).toBe(chain)
+    expect(threats(bob.editor)).toEqual([])
+    const html = bob.editor.view.dom.innerHTML
+    expect(html).not.toContain('evil.example')
+    expect(html).not.toContain('onerror')
+    expect(html).not.toContain('w:smartTag')
+    // nor on the clipboard, which copies the page's markup
+    const copied = bob.editor.view.serializeForClipboard(
+      bob.editor.state.doc.slice(0, bob.editor.state.doc.content.size),
+    ).dom.innerHTML
+    expect(copied).not.toContain('evil.example')
+    expect(copied).not.toContain('w:smartTag')
+  })
+
+  it('a peer’s edit inside locked text is applied, with this person’s own edit kept on top', async () => {
+    const doc = await opened('<w:lock w:val="contentLocked"/>')
+    const alice = page(doc)
+    const bob = page(doc)
+    // this page refuses the edit for its own user
+    bob.editor.commands.insertContentAt(at(bob.editor, '6/2024'), 'X')
+    expect(bob.editor.state.doc.textContent).toBe('Due on 5/6/2024 in Paris open')
+    // a page without the rule (an older build in the room) made it; the log holds it
+    const inside = at(alice.editor, '6/2024')
+    const typed = alice.editor.schema.text('X', alice.editor.state.doc.resolve(inside).marks())
+    const step = new Transform(alice.editor.state.doc).insert(inside, typed).steps[0]
+    bob.editor.commands.insertContentAt(1, 'mine ')
+    const mine = bob.sent.splice(0)
+    bob.adapter.integrate(
+      [bob.adapter.decode({ kind: 'steps', steps: [step.toJSON() as Json] })],
+      mine,
+    )
+    expect(bob.editor.state.doc.textContent).toBe('mine Due on 5/X6/2024 in Paris open')
+  })
 })

@@ -1652,7 +1652,6 @@ export function AiPanel({
             onRecheck={subscription.recheck}
             onAcceptMetered={subscription.acceptMetered}
             onOpenInstallHelp={subscription.openInstallHelp}
-            onOpenConnectHelp={subscription.openConnectHelp}
           />
         )}
         {sendGate.noticeDue && (

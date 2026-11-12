@@ -259,14 +259,33 @@ export interface FetchWithSsrfGuardOptions {
   fetchImpl?: typeof fetch
 }
 
+/** For one request URL: does the dispatcher hand it to a forward proxy? */
+export type ProxyRouting = (url: URL) => boolean
+
+// Symbol.for: one bundled copy of this package builds the dispatcher (the
+// shell's, or an editor's) and another may run the guarded fetch.
+const PROXY_ROUTING = Symbol.for('genoffice.dispatcher-proxy-routing')
+
 /**
- * Own symbols that only undici's proxy dispatchers carry (every copy of the
+ * Lets the code that builds a dispatcher state how it routes, so the guard
+ * asks instead of inferring it from the object. `createMainProcessProxyDispatcher`
+ * is the caller: its NO_PROXY list sends some hosts directly, which no test on
+ * the dispatcher's class or symbols can answer for a single URL.
+ */
+export function declareProxyRouting(dispatcher: object, routing: ProxyRouting): void {
+  Object.defineProperty(dispatcher, PROXY_ROUTING, { value: routing })
+}
+
+/**
+ * Own symbols that only undici's ProxyAgent carries (every copy of the
  * library, npm or Node's bundled one, derives them from the same source):
  * a plain Agent — the default global dispatcher, and the one Node's bundled
- * copy wraps for its own slot — has none of these. Detection is duck-typed
- * on symbol descriptions rather than `instanceof`, because the global
- * dispatcher slot is shared through a registered symbol across all copies,
- * so the object in it may belong to a different copy's class hierarchy.
+ * copy wraps for its own slot — has none of these. Only consulted for a
+ * dispatcher that declared no routing, i.e. one this package did not build
+ * (the command line installs a bare ProxyAgent). Duck-typed on symbol
+ * descriptions rather than `instanceof`, because the global dispatcher slot
+ * is shared through a registered symbol across all copies, so the object in
+ * it may belong to a different copy's class hierarchy.
  */
 const PROXY_DISPATCHER_SYMBOLS: ReadonlySet<string> = new Set([
   'proxy agent options',
@@ -276,8 +295,11 @@ const PROXY_DISPATCHER_SYMBOLS: ReadonlySet<string> = new Set([
   'tunnel proxy',
 ])
 
-function globalDispatcherRoutesThroughProxy(dispatcher: unknown): boolean {
+/** True when the global dispatcher will send the request for `url` to a forward proxy. */
+function hopRidesProxy(dispatcher: unknown, url: string): boolean {
   if (dispatcher === null || typeof dispatcher !== 'object') return false
+  const routing: unknown = (dispatcher as Record<symbol, unknown>)[PROXY_ROUTING]
+  if (typeof routing === 'function') return (routing as ProxyRouting)(new URL(url))
   return Object.getOwnPropertySymbols(dispatcher).some((s) =>
     PROXY_DISPATCHER_SYMBOLS.has(s.description ?? ''),
   )
@@ -306,9 +328,11 @@ async function loadUndici(): Promise<UndiciModule> {
  *
  * Hostname hops connect through a per-hop undici Agent whose lookup answers
  * with the validated address list (TLS keeps the URL hostname for SNI and
- * certificate verification); literal-IP URLs need no pinning. When a forward
- * proxy is installed globally, the hop rides it instead — the proxy resolves,
- * so pinning is impossible — and the guard degrades to per-hop validation.
+ * certificate verification); literal-IP URLs need no pinning. When the global
+ * dispatcher sends the hop's URL to a forward proxy, the hop rides it instead
+ * — the proxy resolves, so pinning is impossible — and the guard degrades to
+ * per-hop validation. A host the proxy configuration exempts (NO_PROXY) is
+ * dialed directly and stays pinned.
  * A `fetchImpl` injected for tests receives the dispatcher in the init but
  * owns its transport, so binding is a production-path guarantee.
  */
@@ -340,13 +364,14 @@ export async function fetchWithSsrfGuard(
     // The hop is about to be requested, so the transport (and the Agent that
     // pins the validated addresses) is needed from here on.
     const undici = await loadUndici()
-    if (!target.literal && !globalDispatcherRoutesThroughProxy(undici.getGlobalDispatcher())) {
+    if (!target.literal && !hopRidesProxy(undici.getGlobalDispatcher(), target.url)) {
       // A forward proxy resolves at its own exit, so pinning is neither
       // possible (the proxy owns the connection) nor meaningful — when the
-      // shell has installed one via setGlobalDispatcher, let the hop ride it
-      // instead of dialing the validated address directly and breaking
-      // proxied users. Behind a proxy the gate therefore degrades to its
-      // per-hop validation; rebinding is then the proxy's to prevent.
+      // app has installed one via setGlobalDispatcher and it takes this URL,
+      // let the hop ride it instead of dialing the validated address
+      // directly, past the proxy the user configured. Behind a proxy the
+      // gate therefore degrades to its per-hop validation; rebinding is then
+      // the proxy's to prevent.
       dispatcher = new undici.Agent({ connect: { lookup: pinnedLookup(target) } })
       init.dispatcher = dispatcher
     }

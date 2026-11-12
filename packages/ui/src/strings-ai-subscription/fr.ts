@@ -155,7 +155,6 @@ export const fr = {
     'Toujours bloqué ? Copiez les informations de connexion et envoyez-les à la personne qui vous aide. Elles ne contiennent ni compte ni chemin de fichier.',
   actionCopyInfo: 'Copier les infos pour obtenir de l’aide',
   copyInfoDone: 'Copié',
-  actionConnectHelp: 'Voir chaque étape à l’écran (page en coréen)',
   guidePathChatGptBody:
     'Connectez-vous avec votre compte ChatGPT et utilisez votre forfait. Rien à installer. Le forfait gratuit ne permet qu’une utilisation limitée.',
   guideUseCodex: 'Vous utilisez déjà le programme Codex sur ce PC ? Se connecter avec Codex',

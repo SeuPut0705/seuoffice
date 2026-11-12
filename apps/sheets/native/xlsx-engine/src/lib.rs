@@ -1,6 +1,8 @@
 use std::collections::{HashMap, HashSet};
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter, Read, Seek, Write};
+#[cfg(unix)]
+use std::os::unix::fs::DirBuilderExt;
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Condvar, Mutex};
@@ -16,6 +18,7 @@ use zip::ZipArchive;
 pub mod archive;
 pub mod convert;
 pub mod find;
+pub mod protocol;
 pub mod recalc;
 mod rels_normalize;
 mod richdata;
@@ -157,7 +160,10 @@ struct CacheDirectory {
 
 impl CacheDirectory {
     fn create(path: PathBuf) -> Result<Self, SidecarError> {
-        fs::create_dir(&path)?;
+        let mut builder = fs::DirBuilder::new();
+        #[cfg(unix)]
+        builder.mode(0o700);
+        builder.create(&path)?;
         Ok(Self {
             path,
             committed: false,
@@ -182,6 +188,26 @@ impl Drop for CacheDirectory {
     }
 }
 
+/// Whether this build can run work on background threads. WebAssembly
+/// without threads (wasm32-wasip1, a browser without cross-origin isolation)
+/// and the `single-thread` feature run the same work inline: a sheet is
+/// indexed completely the first time it is read, and a recalc answers before
+/// the next request is read.
+pub const THREADS: bool = !cfg!(any(
+    feature = "single-thread",
+    all(target_family = "wasm", not(target_feature = "atomics"))
+));
+
+/// `std::env::temp_dir` panics on WASI, which has no notion of one: there the
+/// host maps a directory and names it in `TMPDIR` (`/tmp` when unset).
+fn temp_dir() -> PathBuf {
+    if cfg!(target_os = "wasi") {
+        std::env::var_os("TMPDIR").map_or_else(|| PathBuf::from("/tmp"), PathBuf::from)
+    } else {
+        std::env::temp_dir()
+    }
+}
+
 /// Creates the cache directory an open needs. This is the one boundary where
 /// the open touches the filesystem, so it is the one abort that happens after
 /// the directory exists: returning here drops the guard, which reclaims it,
@@ -190,12 +216,7 @@ fn create_cache_directory(
     session_id: &str,
     cancelled: &AtomicBool,
 ) -> Result<CacheDirectory, SidecarError> {
-    // WASI has no host temp dir; the web host preopens /tmp
-    #[cfg(target_os = "wasi")]
-    let base = PathBuf::from("/tmp");
-    #[cfg(not(target_os = "wasi"))]
-    let base = std::env::temp_dir();
-    let path = base.join(format!("genspark-ai-excel-{session_id}"));
+    let path = temp_dir().join(format!("ai-excel-session-{session_id}"));
     let directory = CacheDirectory::create(path)?;
     if cancelled.load(Ordering::Acquire) {
         return Err(SidecarError::cancelled());
@@ -270,12 +291,11 @@ impl WorkbookSessions {
         let mut file = File::open(&canonical_path)?;
         if is_ole2_container(&mut file)? {
             return Err(SidecarError::Workbook(
-                "This workbook is password-protected. GenOffice Sheets cannot open \
-                 encrypted workbooks yet."
-                    .into(),
+                "This workbook is password-protected and must be decrypted by the host application.".into(),
             ));
         }
         let mut archive = ZipArchive::new(file)?;
+        let workbook_path = canonical_path.clone();
         archive::validate_entries(&mut archive)?;
         // The archive is open and validated and nothing has been written to
         // disk yet, so abandoning here costs only the parse already done.
@@ -506,7 +526,7 @@ impl WorkbookSessions {
         self.sessions.insert(
             session_id.clone(),
             WorkbookSession {
-                path: canonical_path,
+                path: workbook_path,
                 sheets: sheets.clone(),
                 runtimes,
                 shared_strings,
@@ -708,17 +728,8 @@ impl WorkbookSession {
 
     fn ensure_parser(&mut self, sheet_index: usize) -> Result<(), SidecarError> {
         let runtime = &mut self.runtimes[sheet_index];
-        if runtime.handle.is_some() {
+        if runtime.started {
             return Ok(());
-        }
-        // No thread handle on WASI: a finished or failed inline index is the marker
-        if cfg!(target_os = "wasi") {
-            let (lock, _) = &*runtime.state;
-            if let Ok(index) = lock.lock() {
-                if index.complete || index.error.is_some() {
-                    return Ok(());
-                }
-            }
         }
         let path = self.path.clone();
         let worksheet_path = runtime.worksheet_path.clone();
@@ -737,7 +748,7 @@ impl WorkbookSession {
                 .collect(),
         );
         let cancelled = Arc::clone(&self.cancelled);
-        let index_job = move || {
+        let index = move || {
             let result = index_worksheet(
                 &path,
                 &worksheet_path,
@@ -759,16 +770,16 @@ impl WorkbookSession {
                 condition.notify_all();
             }
         };
-        // WASI has no threads: index the whole sheet on the calling thread, so
-        // the state is complete before the first read_range waits on it.
-        if cfg!(target_os = "wasi") {
-            index_job();
-            return Ok(());
+        if THREADS {
+            runtime.handle = Some(
+                thread::Builder::new()
+                    .name(format!("xlsx-index-{sheet_index}"))
+                    .spawn(index)?,
+            );
+        } else {
+            index();
         }
-        let handle = thread::Builder::new()
-            .name(format!("xlsx-index-{sheet_index}"))
-            .spawn(index_job)?;
-        runtime.handle = Some(handle);
+        runtime.started = true;
         Ok(())
     }
 
@@ -976,9 +987,12 @@ impl WorkbookSession {
                 let _ = handle.join();
             }
         }
-        if self.cache_directory.exists() {
-            fs::remove_dir_all(&self.cache_directory)?;
-        }
+        let cache_result = if self.cache_directory.exists() {
+            fs::remove_dir_all(&self.cache_directory)
+        } else {
+            Ok(())
+        };
+        cache_result?;
         Ok(())
     }
 }
@@ -986,6 +1000,8 @@ impl WorkbookSession {
 struct SheetRuntime {
     worksheet_path: String,
     state: Arc<(Mutex<SheetIndex>, Condvar)>,
+    /// Indexing has begun, on a thread or inline.
+    started: bool,
     handle: Option<JoinHandle<()>>,
 }
 
@@ -994,6 +1010,7 @@ impl SheetRuntime {
         Self {
             worksheet_path,
             state: Arc::new((Mutex::new(SheetIndex::default()), Condvar::new())),
+            started: false,
             handle: None,
         }
     }

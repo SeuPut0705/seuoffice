@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const ms = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Sembunyikan pilihan daripada AI',
+  redactDialogDesc:
+    'Kandungan yang dipilih kekal dalam dokumen dan fail; model hanya melihat placeholder di bawah. Beri nama supaya model tahu apa yang diwakili.',
+  redactDialogScope:
+    'Penyembunyian ini hanya untuk AI dalam aplikasi ini. CLI, alat MCP dan eksport tanpa antara muka membaca fail secara terus, jadi perkataan ini masih kelihatan kepada mereka.',
+  redactDialogPlaceholder: 'Nama placeholder, cth. telefon pelanggan',
+  redactCancel: 'Batal',
+  redactInsert: 'Sembunyikan',
+  redactEnable: 'Klik kanan pada teks yang dipilih untuk menyembunyikannya daripada model.',
+  redactNeedsSavedRow:
+    'Baris ini belum lagi dalam fail. Simpan dahulu, kemudian sembunyikan selnya.',
+  redactNeedsSavedSheet:
+    'Helaian ini atau salinannya belum lagi dalam fail. Simpan dahulu, kemudian ubah apa yang disembunyikan.',
+  redactMoveRefused:
+    'Tidak dilakukan: ini akan mengalihkan atau menyalin sel yang disembunyikan daripada AI, lalu nilainya tidak lagi tersembunyi. Berhenti menyembunyikannya dahulu, atau keluarkan sel itu daripada julat.',
+  redactRecoveredFromNames:
+    'Aplikasi lain menulis semula fail ini dan membuang rekod apa yang disembunyikan. Sel yang disembunyikan itu dipulihkan daripada nama yang ada dalam buku kerja; menyimpan akan memulihkan rekod penuh.',
+
   appMergeWorkbooks: 'Gabung Buku Kerja',
   appMergeWorkbooksTip: 'Tambah helaian daripada fail Excel lain ke buku kerja ini',
   appMergeWorkbooksPicking: 'Pilih fail untuk digabungkan…',
@@ -8,6 +27,8 @@ export const ms = {
   appMergeWorkbooksDone:
     '{sheets} helaian daripada {files} fail telah digabungkan (formula diimport sebagai nilai).',
   appMergeWorkbooksFailed: 'Gagal menggabungkan buku kerja.',
+  appMergeWorkbooksHiddenCells:
+    'Tiada apa-apa yang digabungkan: {file} mempunyai sel yang disembunyikan daripada AI, dan penggabungan akan membawa nilainya ke sini tanpa perlindungan itu. Buka fail tersebut, batalkan penyembunyian sel itu atau padamkannya, simpan, kemudian gabungkan semula.',
   appMergeWorkbooksInsertFailed: 'Tidak dapat mencipta helaian {sheet}.',
   appMergeWorkbooksLocked: 'Buku kerja masih dimuatkan; penggabungan tidak tersedia buat masa ini.',
   appFormulaBarShown: 'Bar formula dipaparkan.',
@@ -515,6 +536,7 @@ export const ms = {
   appColumnLabel: 'Lajur {col}',
   appBridgeUnavailable: 'Jambatan fail desktop tidak tersedia. Mulakan semula aplikasi Electron.',
   appOpenCanceled: 'Pemilihan buku kerja dibatalkan.',
+  appImportCanceled: 'Import dibatalkan.',
   appOpeningWorkbook: 'Membuka buku kerja…',
   appOpened: '{name} dibuka — suntingan sel disimpan semula dengan ⌘S.',
   appOpenFailed: 'Tidak dapat membuka buku kerja.',
@@ -610,6 +632,8 @@ export const ms = {
     'Jenis carta ini tidak menyokong suntingan itu; penyimpanan dihentikan — buat asal perubahan carta tersebut.',
   appSaveErrMoveOverlap:
     'Terdapat formula, julat berformat, bentuk atau jadual merentangi baris yang dialihkan; penyimpanan dihentikan — buat asal pengalihan itu.',
+  appSaveErrHiddenCellsUnreadable:
+    'Rekod sel yang disembunyikan daripada AI dalam buku kerja ini tidak dapat dibaca, jadi perubahan baris, lajur dan helaian tidak dapat disimpan: sel yang disembunyikan tidak akan dilindungi lagi. Buat asal perubahan itu, kemudian simpan semula.',
   appFromTextCsvTitle: 'Import fail CSV/teks ke pilihan semasa',
   appCsvImported: 'Mengimport {rows} baris × {columns} lajur daripada fail ke {cell}.',
   appCsvEmpty: 'Fail CSV tiada data.',
@@ -712,6 +736,7 @@ export const ms = {
   appExportPdfTitle: 'Eksport sebagai PDF',
   appSaveTitle: 'Simpan (⌘S)',
   appSaveAs: 'Simpan Sebagai',
+  aiNameFile: 'Namakan dengan AI…',
   appUndo: 'Buat Asal',
   appRedo: 'Buat Semula',
   appQuickAccessCustomize: 'Sesuaikan Bar Alat Capaian Pantas',
@@ -1165,6 +1190,20 @@ export const ms = {
   appWatchCell: 'Sel',
   appWatchValue: 'Nilai',
   appWatchFormula: 'Formula',
+  appLinksPanel: 'Pautan luaran',
+  appLinksPanelDetail: 'Senaraikan, kemas kini dan putuskan pautan ke buku kerja lain',
+  appLinksUpdate: 'Kemas kini nilai',
+  appLinksNone: 'Buku kerja ini tiada pautan ke buku kerja lain.',
+  appLinksUnsaved: 'Simpan buku kerja ini sebelum menyenaraikan pautan luarnya.',
+  appLinksSource: 'Sumber',
+  appLinksStatus: 'Status',
+  appLinksSheets: 'Helaian',
+  appLinksLocate: 'Buka lokasi fail sumber',
+  appLinksReachable: 'Tersedia',
+  appLinksBroken: 'Tiada',
+  appLinksBreak: 'Putuskan Pautan',
+  appLinksBreakConfirm: 'Sahkan pemutusan',
+  appLinksChangeSource: 'Tukar Sumber',
   appGroupCalculation: 'Pengiraan',
   appCalculationOptions: 'Opsyen Pengiraan',
   appCalculationOptionsTitle: 'Pengiraan semula automatik atau manual',
@@ -1181,6 +1220,13 @@ export const ms = {
   appGroupGetData: 'Dapatkan Data',
   appFromTextCsv: 'Daripada Teks/CSV',
   appRefreshAll: 'Segar Semula Semua',
+  appRefreshQuery: 'Muat semula pertanyaan',
+  appQueryConnectionsTitle: 'Muat semula pertanyaan buku',
+  appQueryRefreshing: 'Memuat semula {name}…',
+  appQueryRefreshed: '{name} disegarkan semula ({rows} baris)',
+  appQueryRefreshedClipped:
+    '{name} disegarkan semula ({rows} baris, {dropped} tidak muat dalam julat)',
+  appQueryRefreshFailed: 'Gagal memuat semula {name}',
   appWorkbookNoPivot: 'Tiada Jadual Pangsi dalam buku kerja ini.',
   appRefreshAllTitle: 'Segar semula semua Jadual Pangsi',
   appQueriesConnections: 'Pertanyaan & Sambungan',
@@ -1256,6 +1302,10 @@ export const ms = {
   appFontSizeTip: 'Saiz fon',
   appZoomIn: 'Zum masuk',
   appZoomOut: 'Zum keluar',
+  appImgActualSize: 'Saiz sebenar',
+  appImgFitWindow: 'Muat ke tetingkap',
+  appImgSaveAs: 'Simpan imej sebagai…',
+  appImgClose: 'Tutup (Esc)',
   appZoomSheetTitle: 'Zum helaian',
   appResetZoom: 'Tetapkan semula zum',
   appZoomToSelection: 'Zum ke Pilihan',
@@ -1298,6 +1348,19 @@ export const ms = {
   appOpenFileFirst: 'Buka fail dahulu',
   appNoPassword: 'Tiada kata laluan',
   appProtectWorkbook: 'Lindungi Buku Kerja',
+  appChangePassword: 'Tukar Kata Laluan',
+  appWorkbookPasswordChanged: 'Kata laluan buku kerja telah dikemas kini.',
+  appChangePasswordTitle: 'Tukar kata laluan buku kerja',
+  appChangePasswordCopy: 'Pilih kata laluan baharu dan sahkan di bawah.',
+  appNewPasswordLabel: 'Kata laluan baharu',
+  appConfirmPasswordLabel: 'Sahkan kata laluan baharu',
+  appPasswordsMismatch: 'Kata laluan tidak sepadan.',
+  appPasswordTooLong:
+    'Kata laluan terlalu panjang. Gunakan selebih-lebihnya {max} aksara, had terpanjang yang diterima Excel.',
+  appPasswordUpdateFailed: 'Tidak dapat mengemas kini kata laluan buku kerja.',
+  appPasswordUpdating: 'Mengemas kini…',
+  appUpdatePassword: 'Kemas Kini Kata Laluan',
+  appWorkbookNotPasswordProtected: 'Buku kerja ini tidak dilindungi oleh kata laluan pembukaan.',
   appAllowEditRanges: 'Benarkan Edit Julat',
   appGroupClipboard: 'Papan Klip',
   appPaste: 'Tampal',
@@ -1533,6 +1596,8 @@ export const ms = {
   appVisualSendBackward: 'Undurkan',
   appVisualSizeProperties: 'Saiz dan Sifat…',
   appVisualHyperlink: 'Hiperpautan…',
+  appVisualEmbedInCell: 'Benamkan imej dalam sel',
+  appVisualEmbedFailed: 'Tidak dapat membenamkan imej ini dalam sel.',
   appVisualDelete: 'Padam',
   appVisualArranged: 'Objek dikemas kini — simpan dengan ⌘S.',
   appVisualCopied: 'Objek disalin.',

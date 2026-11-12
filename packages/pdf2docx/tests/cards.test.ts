@@ -242,3 +242,21 @@ describe('card rebuild (P20)', () => {
     expect(xml).toContain('behindDoc="1"')
   })
 })
+
+describe('a card whose plate is out of drawing range', () => {
+  it.each([
+    ['x1 1e300', { x0: 60, y0: 480, x1: 1e300, y1: 600 }],
+    ['y1 1e300', { x0: 60, y0: 480, x1: 540, y1: 1e300 }],
+    ['x0 -Infinity', { x0: -Infinity, y0: 480, x1: 540, y1: 600 }],
+  ])('%s: the text flows in the body and the conversion goes on', async (_name, box) => {
+    const { page, candidates } = cardPage()
+    candidates[0]!.img.box = { ...box }
+    candidates[0]!.box = { ...box }
+    detectCardRegions(page, candidates)
+    const xml = await docXml(await rebuildDocx([page]))
+    expect(xml).not.toContain('<wps:txbx>')
+    expect(xml).toContain('FINAL TAKEAWAY')
+    expect(xml).toContain('after the card')
+    expect(xml).not.toMatch(/(?:="|>)-?[\d.]*(?:e\+|NaN|Infinity)/)
+  })
+})

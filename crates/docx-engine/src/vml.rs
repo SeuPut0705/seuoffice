@@ -4,7 +4,8 @@
 //! `vmlFloatAnchor`, `vmlFraction`, `vmlColorHex`.
 
 use jscompat::{
-    JsNum, JsRegex, RegexSyntaxError, js_object, js_regex, math_round, parse_float, trim, truthy,
+    JsNum, JsRegex, RegexError, TryJsRegex, js_object, js_regex, math_round, parse_float, trim,
+    truthy,
 };
 use serde::Deserialize;
 
@@ -73,9 +74,12 @@ pub(crate) fn prop_in<'s>(style: &'s str, pattern: &JsRegex) -> Option<&'s str> 
 
 /// One declaration of a VML style attribute ("rotation:315;width:4in", "width"
 /// gives "4in"). `key` goes into the pattern unescaped, as in the original.
-pub fn vml_style_prop<'s>(style: &'s str, key: &str) -> Result<Option<&'s str>, RegexSyntaxError> {
-    let pattern = JsRegex::new(&format!(r"(?:^|;)\s*{key}:([^;]+)"), "")?;
-    Ok(prop_in(style, &pattern))
+pub fn vml_style_prop<'s>(style: &'s str, key: &str) -> Result<Option<&'s str>, RegexError> {
+    let pattern = TryJsRegex::new(&format!(r"(?:^|;)\s*{key}:([^;]+)"), "")?;
+    Ok(pattern
+        .try_exec(style)?
+        .and_then(|found| found.get(1))
+        .map(trim))
 }
 
 /// The two dimensions of a VML style box.
@@ -204,17 +208,17 @@ pub fn vml_float_anchor(style: &str, out: &mut FloatAnchor) {
     set_float_anchor!(style, out);
 }
 
-/// VML fixed-point or fraction ("32768f" = 0.5, ".5", "1") as a number.
+/// VML fixed-point, fraction or percentage ("32768f" = 0.5, ".5", "50%", "1") as a number.
 pub fn vml_fraction(value: Option<&str>) -> Option<f64> {
-    let found = js_regex!(r"^\s*(-?[\d.]+)(f)?\s*$").exec(value.unwrap_or(""))?;
+    let found = js_regex!(r"^\s*(-?[\d.]+)(f|%)?\s*$").exec(value.unwrap_or(""))?;
     let v = parse_float(found.get(1).unwrap_or(""));
     if !v.is_finite() {
         return None;
     }
-    Some(if found.get(2).is_some() {
-        v / 65536.0
-    } else {
-        v
+    Some(match found.get(2) {
+        Some("f") => v / 65536.0,
+        Some(_) => v / 100.0,
+        None => v,
     })
 }
 

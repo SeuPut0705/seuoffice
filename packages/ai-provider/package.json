@@ -28,10 +28,11 @@
     "@genoffice/agent-core": "*",
     "@genoffice/i18n": "*",
     "@genoffice/zip-gate": "*",
-    "jszip": "^3.10.1"
+    "jszip": "^3.10.1",
+    "tldts": "^7.4.9"
   },
   "devDependencies": {
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   }
 }

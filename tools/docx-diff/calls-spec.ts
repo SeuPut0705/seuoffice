@@ -56,16 +56,6 @@ export interface CallSpec {
    * class narrow.
    */
   listed?(text: string, args: Record<string, unknown>): string | undefined
-  /**
-   * The id of the entry of divergences.json an input is compared under a mask
-   * for (`maskNonFinite` of listed.ts): where the TypeScript wrote a
-   * non-finite number into its result, that value is replaced by a
-   * placeholder on both sides and everything else is compared exactly. Where
-   * it wrote none, the input is a check like any other.
-   */
-  masked?(text: string, args: Record<string, unknown>): string | undefined
-  /** With `masked`: a builder has no earlier value to keep, so there the Rust must refuse the call. */
-  maskedRefuses?: true
 }
 
 /** The package a function over a zip reads, from `args.parts`: `[name, text]` pairs. */

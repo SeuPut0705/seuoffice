@@ -3,13 +3,12 @@
 //! wp:docPr name starts with `aidocs-ink` and whose descr carries the
 //! editor's stroke payload.
 
-use jscompat::{
-    JsNum, JsRegex, Radix, js_regex, math_max, math_round, number_to_string, parse_int,
-};
+use jscompat::{JsNum, JsRegex, Radix, js_regex, math_max, math_round, parse_int};
 use serde::Serialize;
 
 use crate::generate::escape_xml_attr;
 use crate::model::NewInkImage;
+use crate::xml_number::{non_finite, xml_id, xml_int};
 
 /// `INK_NAME_PREFIX`
 pub const INK_NAME_PREFIX: &str = "aidocs-ink";
@@ -40,7 +39,13 @@ const R_NS: &str = "http://schemas.openxmlformats.org/officeDocument/2006/relati
 
 /// `anchoredInkRunXml`: the anchored-picture run for one ink annotation.
 /// Reads only widthPx, heightPx, offsetXPx, offsetYPx and payload of `ink`.
-pub fn anchored_ink_run_xml(ink: &NewInkImage, r_id: &str, doc_pr_id: JsNum) -> String {
+/// A number with no XML text (`xml_number`) refuses the call, as the
+/// TypeScript throws `RangeError`.
+pub fn anchored_ink_run_xml(
+    ink: &NewInkImage,
+    r_id: &str,
+    doc_pr_id: JsNum,
+) -> Result<String, String> {
     let safe_px = |v: JsNum, fallback: f64| -> f64 {
         if v.0.is_finite() {
             math_round(v.0 * EMU_PER_PX)
@@ -48,18 +53,21 @@ pub fn anchored_ink_run_xml(ink: &NewInkImage, r_id: &str, doc_pr_id: JsNum) -> 
             fallback
         }
     };
-    let cx = number_to_string(math_max(1.0, safe_px(ink.width_px, 1.0)));
-    let cy = number_to_string(math_max(1.0, safe_px(ink.height_px, 1.0)));
-    let x = number_to_string(safe_px(ink.offset_x_px, 0.0));
-    let y = number_to_string(safe_px(ink.offset_y_px, 0.0));
-    let id = number_to_string(doc_pr_id.0);
+    let cx =
+        xml_int(math_max(1.0, safe_px(ink.width_px, 1.0))).ok_or_else(|| non_finite("widthPx"))?;
+    let cy = xml_int(math_max(1.0, safe_px(ink.height_px, 1.0)))
+        .ok_or_else(|| non_finite("heightPx"))?;
+    let x = xml_int(safe_px(ink.offset_x_px, 0.0)).ok_or_else(|| non_finite("offsetXPx"))?;
+    let y = xml_int(safe_px(ink.offset_y_px, 0.0)).ok_or_else(|| non_finite("offsetYPx"))?;
+    let id = xml_id(doc_pr_id.0).ok_or_else(|| non_finite("docPrId"))?;
+    let relative_height =
+        xml_int(251658240.0 + doc_pr_id.0).ok_or_else(|| non_finite("docPrId"))?;
     let name = format!("{INK_NAME_PREFIX} {id}");
     let descr = match ink.payload.as_deref() {
         Some(payload) if !payload.is_empty() => format!(" descr=\"{}\"", escape_xml_attr(payload)),
         _ => String::new(),
     };
-    let relative_height = number_to_string(251658240.0 + doc_pr_id.0);
-    String::from("<w:r><w:drawing>")
+    Ok(String::from("<w:r><w:drawing>")
         + &format!(
             "<wp:anchor xmlns:wp=\"{WP_NS}\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\""
         )
@@ -91,7 +99,7 @@ pub fn anchored_ink_run_xml(ink: &NewInkImage, r_id: &str, doc_pr_id: JsNum) -> 
             "<pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"{cx}\" cy=\"{cy}\"/></a:xfrm>"
         )
         + "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr>"
-        + "</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>"
+        + "</pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r>")
 }
 
 /// `ANCHOR_RUN_RE`

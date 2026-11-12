@@ -45,9 +45,9 @@ fn peak_of(regex: &TryJsRegex, text: &str) -> (Result<bool, RegexLimit>, usize) 
 fn a_search_that_passes_the_bound_refuses_within_it() {
     // a tag whose attributes run on: each character keeps entries on the stack
     let tag = TryJsRegex::new(r#"<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>"#, "").unwrap();
-    // an entry is 48 bytes on a 64-bit target; growing the stack copies it
-    // once, and a search without `u` reads the text as UTF-16 units
-    let room = |text: &str| BACKTRACK_LIMIT * 48 * 5 / 4 + 2 * text.len();
+    // an entry is 40 bytes on a 64-bit target; growing the stack to the bound
+    // copies it once, and a search without `u` may read the text as UTF-16 units
+    let room = |text: &str| BACKTRACK_LIMIT * 40 * 5 / 4 + 2 * text.len();
     let mut answers = Vec::new();
     for length in [1_000_000, 2_000_000, 20_000_000] {
         let text = format!("<{}", "a".repeat(length));
@@ -63,4 +63,42 @@ fn a_search_that_passes_the_bound_refuses_within_it() {
     // a refusal leaves the regex as it was
     let (answer, _) = peak_of(&tag, "<a b=\"c\">");
     assert_eq!(answer, Ok(true));
+
+    // a lookahead that grows its own stack after the stack it sets aside has
+    // grown and given its entries back: the two together stay near the bound
+    let looked = TryJsRegex::new("^(?:(?:a|b)*x|a)(?=(?:a|b)*y)", "").unwrap();
+    let text = "a".repeat(1_000_000);
+    let (answer, peak) = peak_of(&looked, &text);
+    println!(
+        "lookahead over 1M characters: {answer:?}, {} MB at most",
+        peak / 1_000_000
+    );
+    assert_eq!(answer, Ok(false));
+    assert!(peak <= room(&text), "{peak} bytes in the lookahead");
+
+    // a lookahead entered with a large stack set aside: that one keeps room
+    // to double (at most 4,096 entries and twice what it holds), the
+    // lookahead's own grows to what is left of the bound, so together they
+    // hold twice the bound at most
+    let twice = |text: &str| BACKTRACK_LIMIT * 40 * 2 + 4096 * 40 + 2 * text.len();
+    for (pattern, text) in [
+        (
+            "^(?:(?:a|b)*x|(?:a|b){600000})(?=((?:a|b)*)c)",
+            format!("{}c", "a".repeat(1_000_000)),
+        ),
+        (
+            "^(?:(?:a|b)*x|(?:a|b){1050000})(?=(?:a|b)*y)",
+            "a".repeat(1_700_000),
+        ),
+        ("^(?:(?!x)[\\s\\S])*y", "a".repeat(2_000_000)),
+    ] {
+        let regex = TryJsRegex::new(pattern, "").unwrap();
+        let (answer, peak) = peak_of(&regex, &text);
+        println!(
+            "/{pattern}/ over {} characters: {answer:?}, {} MB at most",
+            text.len(),
+            peak / 1_000_000
+        );
+        assert!(peak <= twice(&text), "/{pattern}/: {peak} bytes");
+    }
 }

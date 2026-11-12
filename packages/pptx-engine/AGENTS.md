@@ -49,6 +49,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 
 - **강조 색·문자 간격의 제자리 패치(결정 0094).** `TextRun.highlightEdited`·`letterSpacingEdited`가 선 런만 `patchRunProps`가 `<a:highlight>`(채움·효과 뒤, 글꼴 앞)와 `spc`를 쓰거나 지운다. 런이 없던 `a:rPr`에 강조 색을 넣는 길도 같다. `ElementFontPatch`에 `highlight`(`null`은 지움)·`letterSpacingPt`(0·`null`은 표준)가 있다. 시험: `tests/run-highlight-spacing-visibility.test.ts`.
 - **도형 숨기기·이름(결정 0094).** `setElementHidden`·`setElementName`이 원본 조각의 첫 `p:cNvPr` 여는 태그에서 `hidden`·`name` 속성 하나만 바꾸고 `structureDirty`를 세운다. 숨기기 뒤의 모델은 부르는 쪽이 `materializeSlide`로 다시 읽는다. 시험: 같은 파일.
+- **한글 런의 언어 표시.** `generate.ts`의 `tagHangulRun`·`tagHangulParagraphs`·`hangulLang`이 언어 없이 쓰인 한글 런에 `lang="ko-KR"`(모델에는 `eaLang`·`fontScriptHint`도)을 붙이는 단 하나의 규칙이다. 원본 #2523 뒤로 레이아웃이 한국어 표시가 있는 런만 한글을 낱말 단위로 줄바꿈하기 때문에, 글을 짓는 쪽(`packages/pipelines`의 페이지 빌더, `packages/pptx-ops`의 글자 op)과 엔진의 바꾸기(`replaceAllInDeck`, 한글 바꿀 말이 들어간 런만)·바닥글(`applyHeaderFooter`)·도형 묶음 다이어그램(`smartart.ts`)이 이것을 부른다. `addElement`와 `generateParagraphXml`은 받은 런을 그대로 쓴다. 가져오기 변환기(ODP, PDF)가 이 길로 슬라이드를 만들고, 원본에 언어가 없던 런은 표시 없이 남아야 PowerPoint와 줄바꿈이 같다. 제자리 패치(`patchRunProps`)는 모델에 새로 생긴 `lang`을 `lang`이 없는 `a:rPr`에만 쓰고, 이미 있는 값은 바꾸지 않는다. 시험: `tests/hangul-lang-tag.test.ts`.
 
 ## 테스트
 

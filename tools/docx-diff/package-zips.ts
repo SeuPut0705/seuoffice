@@ -994,6 +994,12 @@ const STRICT_PACKAGE: Array<[string, string]> = [
     'word/Header1.XML',
     `<x:hdr xmlns:x="${STRICT_W}"><x:p><x:pPr><x:spacing x:after="6pt"/></x:pPr></x:p></x:hdr>`,
   ],
+  // but not a name ending in U+017F, an s only under Unicode case folding,
+  // which /i without /u does not apply: this part stays Strict
+  [
+    'word/x.rel\u017f',
+    `<x:hdr xmlns:x="${STRICT_W}"><x:p><x:pPr><x:spacing x:after="6pt"/></x:pPr></x:p></x:hdr>`,
+  ],
   ['word/unchanged.xml', `<w:ftr xmlns:w="${W}"/>`],
 ]
 

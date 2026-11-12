@@ -290,7 +290,7 @@ export function noticeLabelsBeforeOutput(): void {
 
 // ---- refusals the editor guard records for the AI / MCP tool executor ----
 
-export type OdtRefusal = 'protectedCell' | 'lockedObject'
+export type OdtRefusal = 'protectedCell' | 'lockedObject' | 'lockedControl'
 
 let refusal: OdtRefusal | null = null
 

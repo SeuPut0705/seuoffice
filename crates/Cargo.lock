@@ -109,6 +109,7 @@ dependencies = [
  "jscompat",
  "ooxml-pkg",
  "ooxml-xml",
+ "pptx-engine",
  "serde",
  "serde_json",
  "sha2",

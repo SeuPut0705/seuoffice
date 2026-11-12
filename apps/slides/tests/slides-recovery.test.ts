@@ -346,7 +346,7 @@ describe('writing copies', () => {
     const target = vi.mocked(savePptxToFile).mock.calls[0]![1]
     const copy = legacyCopyPath(path)
     expect(dirname(target)).toBe(dirname(copy))
-    expect(basename(target)).toMatch(/^\.[0-9a-f]{16}\.pptx\.[0-9a-f]{12}\.tmp$/)
+    expect(basename(target)).toMatch(/^[0-9a-f]{16}\.pptx\.[0-9a-f]{12}\.tmp$/)
     expect(existsSync(target)).toBe(false)
     expect(store().copyInfo({ kind: 'slides', filePath: path })?.state).toBe('undecided')
     // the copy holds what the buffered copy held before: savePptx's package, part for part

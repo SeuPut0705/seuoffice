@@ -8,4 +8,8 @@ export const ko = {
   diskIgnore: '무시',
   diskDismiss: '확인',
   diskReloadFailed: '파일을 다시 불러오지 못했습니다: {detail}',
+  diskChangedNoUndo:
+    '다른 프로그램이 이 파일을 바꾸거나 지워서, 이 변경의 실행 취소와 다시 실행을 하지 않았습니다.',
+  pageOpNoUndoConfirm:
+    '이 파일({size})은 실행 취소를 위해 보관할 수 있는 크기({limit})보다 커서, 이 페이지 작업은 되돌릴 수 없습니다. 계속하시겠습니까?',
 } satisfies Record<keyof typeof zh, string>

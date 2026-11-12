@@ -365,21 +365,23 @@ pub fn empty_para_size_half_points(
     mark_only: bool,
     cs_size_half_points: Option<f64>,
 ) -> Option<f64> {
-    // an rtl mark is sized by its Cs twin, the chain's szCs when it has none
-    let size_of = |r_pr: Option<&XNode>| -> Option<String> {
+    // an rtl mark, or the mark of a bidi paragraph, is sized by its Cs twin, the
+    // chain's szCs when it has none
+    let bidi = p_pr.is_some_and(|p_pr| on_off_of(p_pr, "w:bidi") == Some(true));
+    let size_of = |r_pr: Option<&XNode>, is_mark: bool| -> Option<String> {
         let r_pr = r_pr?;
         let val_of = |name| r_pr.find_child(name).and_then(|size| size.attr("w:val"));
-        if on_off_of(r_pr, "w:rtl") == Some(true) {
+        if (is_mark && bidi) || on_off_of(r_pr, "w:rtl") == Some(true) {
             return val_of("w:szCs")
                 .map(str::to_owned)
                 .or_else(|| cs_size_half_points.map(number_to_string));
         }
         val_of("w:sz").map(str::to_owned)
     };
-    let mut size = p_pr.and_then(|p_pr| size_of(p_pr.find_child("w:rPr")));
+    let mut size = p_pr.and_then(|p_pr| size_of(p_pr.find_child("w:rPr"), true));
     if truthy(size.as_deref()).is_none() && !mark_only {
         for run in p_node.find_children("w:r") {
-            let value = size_of(run.find_child("w:rPr"));
+            let value = size_of(run.find_child("w:rPr"), false);
             if truthy(value.as_deref()).is_some() {
                 size = value;
             }

@@ -3,8 +3,8 @@
 //! of a w:themeColor reference.
 
 use jscompat::{
-    JsObject, JsRegex, Radix, js_regex, math_round, pad_start, parse_int, to_string_radix16, trim,
-    truthy,
+    JsObject, JsRegex, Radix, RegexLimit, TryJsRegex, js_regex, math_round, pad_start, parse_int,
+    to_string_radix16, trim, truthy,
 };
 use ooxml_pkg::Package;
 use serde::{Deserialize, Serialize};
@@ -111,13 +111,16 @@ pub struct ThemeFonts {
     pub bidi_lang: Option<String>,
 }
 
-/// The first `<tag ...>...</tag>` of the part. `tag` is one of the fixed
-/// names below, so the pattern always compiles.
+/// The first `<tag ...>...</tag>` of the part, for the three sections read
+/// here; `None` for any other tag.
 fn section_of<'a>(xml: &'a str, tag: &str) -> Option<&'a str> {
-    JsRegex::new(&format!(r"<{tag}(?:\s[^>]*)?>[\s\S]*?</{tag}>"), "")
-        .ok()?
-        .exec(xml)
-        .map(|found| found.as_str())
+    let pattern = match tag {
+        "a:clrScheme" => js_regex!(r"<a:clrScheme(?:\s[^>]*)?>[\s\S]*?</a:clrScheme>"),
+        "a:majorFont" => js_regex!(r"<a:majorFont(?:\s[^>]*)?>[\s\S]*?</a:majorFont>"),
+        "a:minorFont" => js_regex!(r"<a:minorFont(?:\s[^>]*)?>[\s\S]*?</a:minorFont>"),
+        _ => return None,
+    };
+    pattern.exec(xml).map(|found| found.as_str())
 }
 
 fn font_of(xml: &str, tag: &str) -> Option<String> {
@@ -177,8 +180,10 @@ const READ_TAGS: [&str; 12] = [
     "hlink", "folHlink",
 ];
 
-pub fn read_theme_colors(theme_xml: &str) -> Option<ThemeColors> {
-    let scheme = section_of(theme_xml, "a:clrScheme")?;
+pub fn read_theme_colors(theme_xml: &str) -> Result<Option<ThemeColors>, RegexLimit> {
+    let Some(scheme) = section_of(theme_xml, "a:clrScheme") else {
+        return Ok(None);
+    };
     let mut out = ThemeColors {
         name: js_regex!(r#"<a:clrScheme name="([^"]*)""#)
             .exec(theme_xml)
@@ -187,16 +192,17 @@ pub fn read_theme_colors(theme_xml: &str) -> Option<ThemeColors> {
         ..ThemeColors::default()
     };
     for tag in READ_TAGS {
-        let slot = JsRegex::new(
+        let Ok(slot) = TryJsRegex::new(
             &format!(r#"<a:{tag}>\s*<a:(?:srgbClr val|sysClr[^>]*? lastClr)="([0-9A-Fa-f]{{6}})""#),
             "",
-        )
-        .ok()?;
-        if let Some(hex) = slot.exec(scheme).and_then(|found| found.get(1)) {
+        ) else {
+            return Ok(None);
+        };
+        if let Some(hex) = slot.try_exec(scheme)?.and_then(|found| found.get(1)) {
             *out.slot_mut(tag) = Some(hex.to_uppercase());
         }
     }
-    (out != ThemeColors::default()).then_some(out)
+    Ok((out != ThemeColors::default()).then_some(out))
 }
 
 /// What the rest of the parser resolves theme references against.
@@ -237,7 +243,7 @@ pub fn parse_theme(package: &Package) -> Result<Theme, Thrown> {
     }
     Ok(Theme {
         fonts,
-        colors: read_theme_colors(xml),
+        colors: read_theme_colors(xml).map_err(|limit| limit.to_string())?,
     })
 }
 

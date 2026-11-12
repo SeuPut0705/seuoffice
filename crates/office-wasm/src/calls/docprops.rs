@@ -61,8 +61,12 @@ fn constant(name: &str) -> Returned {
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
     match function {
         "constants" => constant(&required::<String>(args, "name")?),
-        "parseCorePropertiesXml" => value(props::parse_core_properties_xml(text)),
-        "parseAppPropertiesXml" => value(props::parse_app_properties_xml(text)),
+        "parseCorePropertiesXml" => {
+            value(props::parse_core_properties_xml(text).map_err(|limit| limit.to_string())?)
+        }
+        "parseAppPropertiesXml" => {
+            value(props::parse_app_properties_xml(text).map_err(|limit| limit.to_string())?)
+        }
         "parseCustomPropertiesXml" => value(props::parse_custom_properties_xml(text)),
         "parseCustomPropertyTypesXml" => value(props::parse_custom_property_types_xml(text)),
         "readDocumentProperties" => value(

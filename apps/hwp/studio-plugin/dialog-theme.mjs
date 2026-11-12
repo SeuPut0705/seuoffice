@@ -16,7 +16,7 @@
  * the `--ieum-dialog-*` tokens below. Dialog bodies should use those tokens (or
  * the existing studio tokens) rather than a raw hex value.
  *
- * Design notes (docs/plans/hwp-dialog-design.md):
+ * Design notes (docs/archive/ieum/plans/hwp-dialog-design.md):
  * - paper-like surfaces, ink text, and one blue accent: the editor's
  *   chrome is a document tool, so the dialog should feel like paper on a desk,
  *   not like a web card.

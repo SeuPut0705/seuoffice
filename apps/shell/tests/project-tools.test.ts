@@ -260,6 +260,19 @@ describe('project_list_files', () => {
     expect(page.total).toBe(4)
   })
 
+  it('leaves a save temp file and a failed save’s copy out of the list', async () => {
+    put(root, 'reports/plan.md.0123456789ab.tmp', 'half written', 1_700_000_500)
+    put(root, 'reports/plan.md.unsaved.tmp', 'budget plan the save could not land', 1_700_000_500)
+    const scope = await tools.openScope(WIN, { projectId })
+    const listed = await tools.listFiles(WIN, { scope })
+    expect(listed.files.map((f) => f.relPath)).toEqual([
+      'notes.md',
+      'reports/plan.md',
+      'reports/deep/annex.txt',
+      'masked.md',
+    ])
+  })
+
   it('marks cloud-only files, asking the detector once per call', async () => {
     cloud.add(join(root, 'reports', 'plan.md'))
     const scope = await tools.openScope(WIN, { projectId })
@@ -396,6 +409,22 @@ describe('project_read', () => {
     expect(await read('drafts/old.md')).toEqual({ status: 'refused', reason: 'ignored' })
     expect(await read('missing.md')).toEqual({ status: 'refused', reason: 'not-found' })
     expect(await read('reports')).toEqual({ status: 'refused', reason: 'not-found' })
+  })
+
+  it('answers a save temp file and a failed save’s copy as hidden, like the other app files', async () => {
+    put(root, 'reports/plan.md.0123456789ab.tmp', 'half written')
+    put(root, 'reports/plan.md.unsaved.tmp', 'budget plan the save could not land')
+    expect(await read('reports/plan.md.0123456789ab.tmp')).toEqual({
+      status: 'refused',
+      reason: 'hidden',
+    })
+    expect(await read('reports/plan.md.unsaved.tmp')).toEqual({
+      status: 'refused',
+      reason: 'hidden',
+    })
+    // a .tmp file the person made is not the app's: it is just not a document
+    put(root, 'scratch.tmp', 'mine')
+    expect(await read('scratch.tmp')).toEqual({ status: 'refused', reason: 'unreadable' })
   })
 
   it('accepts an absolute path that lies inside the folder', async () => {

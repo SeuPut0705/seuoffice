@@ -24,7 +24,6 @@ import type {
   TextboxDisplay,
 } from '../../packages/docx-engine/src/types'
 import type { CallSpec, Input } from './calls-spec'
-import { selfClosingPprChange } from './listed'
 
 /** The value as it crosses the wire. */
 const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
@@ -455,7 +454,6 @@ export const BLOCKPASSES: CallSpec[] = [
     fromModel: (doc) => eachBlockOf(doc, (b) => b.type === 'image' || b.type === 'passthrough'),
     built: LEADING_BLOCKS.map((blocks) => ({ args: { blocks } })),
     mutation: 'none',
-    listed: selfClosingPprChange,
   },
   {
     fn: 'blockpasses.applyBalancedDbcsSpacing',

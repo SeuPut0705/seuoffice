@@ -130,7 +130,10 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
  */
 async function joinDocsCollab(doc: WebDocument): Promise<void> {
   const page = await joinPageCollab<DocsCollabHandles, DocsOp>({
-    format: { name: 'docx', schema: 2 },
+    // 4: run-level wrappers ride in the document (the `inlineWrap` mark), so the same file
+    // opens as another document than under 3. 3: header and footer table rows are cell nodes,
+    // text inserted then deleted is two revisions, and the room shares track changes.
+    format: { name: 'docx', schema: 4 },
     status: onSessionStatus,
     fileName: doc.fileName,
     bytes: doc.bytes,
@@ -221,6 +224,7 @@ const desktop: Partial<DesktopApi> = {
   // no host fonts to read: the editor falls back to its bundled and CSS fonts
   fontMetrics: async () => null,
   fontFamilyInfo: async () => [],
+  fontAliases: async () => ({}),
   fetchImage: async (url) => {
     try {
       const res = await fetch(url)
@@ -333,6 +337,7 @@ const shellBridges: Record<string, object> = {
   ),
   aiOfficeDocs: absent('list', 'available', 'pick'),
   aiOfficeSubscription: absent('statuses', 'onChanged'),
+  aiNamingApi: absent('suggestFileName'),
   // the AI panel calls these without probing, and every call site already swallows a rejection
   projectApi: {
     loadChat: unsupported('docs.project-chat'),

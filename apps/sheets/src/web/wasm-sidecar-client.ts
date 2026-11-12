@@ -1,8 +1,10 @@
 import {
   workbookFileSchema,
   workbookRangeResultSchema,
+  workbookRedactionsResultSchema,
   type WorkbookRangeRequest,
   type WorkbookRangeResult,
+  type WorkbookRedactionsResult,
 } from '../shared/desktop-api'
 import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
 import type { WorkerReply, WorkerRequest, WorkerSaveResult } from './xlsx-worker'
@@ -105,5 +107,12 @@ export class WasmSidecarClient {
     const reply = await this.post({ kind: 'save', source, target, save })
     if (!reply.ok) throw new Error(reply.error)
     return reply.result as WorkerSaveResult
+  }
+
+  /** The cells the reader withheld from the model in /work/<source> (the desktop's readWorkbookRedactions) */
+  async readRedactions(source: string): Promise<WorkbookRedactionsResult> {
+    const reply = await this.post({ kind: 'redactions', source })
+    if (!reply.ok) throw new Error(reply.error)
+    return workbookRedactionsResultSchema.parse(reply.result)
   }
 }

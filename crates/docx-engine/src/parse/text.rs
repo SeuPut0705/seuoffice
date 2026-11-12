@@ -1,4 +1,26 @@
-//! The text of runs: `w:t`, `w:br` and their kin.
+//! The text of runs (`w:t`, `w:br` and their kin) and the leaf readers of
+//! paragraphs, runs and styles.
+
+mod controls;
+mod format;
+mod lists;
+mod math;
+mod runs;
+
+pub use controls::*;
+pub use format::*;
+pub use lists::*;
+pub use math::*;
+pub use runs::*;
+
+use jscompat::math_round;
+
+use crate::xml_text::EMU_PER_PX;
+
+/// `emuToPx`: picture extents keep the authored size to 1/100 px.
+pub fn emu_to_px(emu: f64) -> f64 {
+    math_round((emu / EMU_PER_PX) * 100.0) / 100.0
+}
 
 /// `breakCharOf`: a `w:br` that clears floats travels as U+001E, a page break
 /// as a form feed, a column break as a vertical tab, any other as `\n`.

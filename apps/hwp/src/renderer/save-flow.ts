@@ -52,12 +52,13 @@ export type SaveOutcome =
    * Nothing was written.
    * `protected`: the document has a password this save path cannot keep.
    * `tracked`: the document has tracked changes this save path cannot keep.
+   * `unverified`: the save would replace the opened file, whose structure could not be checked.
    * `verify`: the engine could not read back what it was about to write.
    * `ai`: an AI run holds the document, so its unaccepted edits would have been written.
    */
   | {
       kind: 'failed'
-      reason: 'protected' | 'tracked' | 'verify' | 'export' | 'write' | 'ai'
+      reason: 'protected' | 'tracked' | 'unverified' | 'verify' | 'export' | 'write' | 'ai'
       detail?: string
     }
 
@@ -161,8 +162,8 @@ export async function runSave(
   const begin = await api.beginSave(mode)
   if (!begin.ok) {
     if (begin.reason === 'memo') return { kind: 'canceled' }
-    return begin.reason === 'tracked'
-      ? { kind: 'failed', reason: 'tracked' }
+    return begin.reason === 'tracked' || begin.reason === 'unverified'
+      ? { kind: 'failed', reason: begin.reason }
       : { kind: 'failed', reason: 'write', detail: begin.error }
   }
   if ('canceled' in begin) return { kind: 'canceled' }

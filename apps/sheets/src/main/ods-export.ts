@@ -11,12 +11,16 @@ import { copyFile, mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 
-import { promoteFileAtomically } from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
+import {
+  promoteFileAtomically,
+  type ArchiveClient,
+} from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
 
+import { readWorkbookRedactionPart } from './workbook-redactions'
 import type { OdsConversionResult, OdsDroppedCounts } from './xlsx-sidecar-client'
 
 /** The sidecar calls this module needs; the real client and a test double both fit. */
-export interface OdsExportSidecar {
+export interface OdsExportSidecar extends ArchiveClient {
   convertToOds(input: { path: string; targetPath: string }): Promise<OdsConversionResult>
   convertWorkbook(input: {
     path: string
@@ -36,10 +40,15 @@ export type OdsLossKind =
   | 'shapes'
   | 'slicers'
   | 'sparklines'
+  /// The marks that hide cells from the AI. The cells themselves are written;
+  /// the ODS writer carries neither the package part nor its defined-name
+  /// copy, so the exported workbook hides nothing.
+  | 'redactions'
 
 export interface OdsLoss {
   readonly kind: OdsLossKind
-  readonly count: number
+  /** how many; null when they are there but could not be counted */
+  readonly count: number | null
 }
 
 const DROPPED_KINDS = [
@@ -64,6 +73,27 @@ export function odsLosses(result: OdsConversionResult): OdsLoss[] {
     if (count > 0) losses.push({ kind, count })
   }
   return losses
+}
+
+/**
+ * The hide-from-AI marks `sourcePath` carries, as a loss of the export, or
+ * null when it carries none. A record that cannot be read is a loss too, with
+ * no count: the editor withholds every cell of such a workbook, and the copy
+ * withholds none.
+ */
+async function redactionLoss(sidecar: ArchiveClient, sourcePath: string): Promise<OdsLoss | null> {
+  let count: number | null
+  try {
+    const read = await readWorkbookRedactionPart(sidecar, sourcePath)
+    if (read.status === 'absent') return null
+    count =
+      read.status === 'ok'
+        ? read.states.reduce((marks, state) => marks + state.marks.length, 0)
+        : null
+  } catch {
+    count = null
+  }
+  return count === 0 ? null : { kind: 'redactions', count }
 }
 
 export type OdsExportOutcome =
@@ -97,6 +127,8 @@ export async function exportWorkbookAsOds(input: {
       return { status: 'failed', message: errorMessage(error) }
     }
     const losses = odsLosses(result)
+    const hidden = await redactionLoss(input.sidecar, input.sourcePath)
+    if (hidden !== null) losses.push(hidden)
     if (losses.length > 0 && !(await input.confirmLoss(losses))) return { status: 'canceled' }
     // Verify the private package before it replaces the target: a bad write
     // must never destroy an ODS the person already had at that path.

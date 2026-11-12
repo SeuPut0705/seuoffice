@@ -9,7 +9,6 @@ import type {
   SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionOffResult,
-  SubscriptionConnectHelpPath,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 
@@ -64,14 +63,10 @@ export interface SubscriptionApi {
   onChanged(handler: (statuses: SubscriptionStatusMap) => void): () => void
   /** open the vendor's install instructions in the default browser */
   openInstallHelp(provider: AiSubscriptionProviderId): Promise<void>
-  /** open the website's step-by-step connect help, at the path the guide shows (null: the top) */
-  openConnectHelp(path: SubscriptionConnectHelpPath | null): Promise<void>
 }
 
 /** Channels the shell main process itself answers (the shared ones are not listed here) */
 export const SHELL_SUBSCRIPTION_CHANNELS = {
   /** (AiSubscriptionProviderId) → void: open the vendor's install page */
   openInstallHelp: 'home:open-subscription-install-help',
-  /** (SubscriptionConnectHelpPath | null) → void: open the website's connect help */
-  openConnectHelp: 'home:open-connect-help',
 } as const

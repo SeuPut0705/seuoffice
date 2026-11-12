@@ -1,3 +1,4 @@
+import { ContentControlPart } from './inline-control-ids'
 import JSZip from 'jszip'
 import {
   applyRevisionResolutions,
@@ -30,10 +31,17 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+import { HF_ROOT_ATTRS, hfKeptRoot, hfWrapNamespaces } from './hf-root'
+import { partNamespaces } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
-import { applyRemoveParts, planRemoveParts, type RemovePartsOptions } from './remove-parts'
+import {
+  applyRemoveParts,
+  planRemoveParts,
+  removePartsRefusalMessageFor,
+  type RemovePartsOptions,
+} from './remove-parts'
 import { assertZipWithinLimits, resolveMainDocumentPath, type ParseExtras } from './parse'
-import { cleanupDocxOwnedResources } from './resource-cleanup'
+import { cleanupDocxOwnedResources, referencedRelationshipIds } from './resource-cleanup'
 import { loadDocxZip } from './zip-load'
 import {
   BLANK_NUMBERING_XML,
@@ -100,7 +108,6 @@ import {
   type StyleUpsert,
 } from './style-upsert'
 import {
-  WATERMARK_NS,
   isPictureWatermark,
   isWatermarkChild,
   pictureWatermarkParagraphXml,
@@ -123,6 +130,8 @@ import {
 import { applyPropertyChanges, type PropertyChanges } from './doc-properties'
 import { patchHfPicturesXml } from './run-picture'
 import { ownValue } from './own-value'
+import { findStartTag } from './xml-tag'
+import { EMU_PER_PX, usableNumber, usablePictureSize } from './xml-number'
 
 /**
  * Relationship attributes are read quote-agnostically and with any spacing
@@ -152,6 +161,32 @@ const BOOKMARK_ID = /<w:bookmark(?:Start|End)\s[^>]*?\bid\s*=\s*(["'])(\d+)\1/g
 
 /** wp:docPr/@id of a newly embedded picture is DOCPR_ID_BASE + its sequence */
 const DOCPR_ID_BASE = 9000
+
+/** EMU in one twip */
+const EMU_PER_TWIP = 635
+
+/**
+ * A new picture as the editor (or a peer, or a converter) handed it, with each
+ * number that is no usable drawing value treated as absent: the size falls
+ * back to the default square, a rotation, rank, offset or spacing is left out.
+ * A number from the document must not stop the save.
+ */
+function usableNewImage(image: NewImage): NewImage {
+  const out: NewImage = { ...image, ...usablePictureSize(image.widthPx, image.heightPx) }
+  if (out.rotDeg !== undefined && usableNumber(out.rotDeg) === undefined) delete out.rotDeg
+  if (out.zOrder !== undefined && usableNumber(out.zOrder) === undefined) delete out.zOrder
+  const off = out.posOffsetEmu
+  if (off && (usableNumber(off.x) === undefined || usableNumber(off.y) === undefined))
+    delete out.posOffsetEmu
+  if (out.paraSpacing) {
+    const spacing = { ...out.paraSpacing }
+    for (const key of ['beforeTwips', 'afterTwips', 'lineTwips'] as const)
+      if (spacing[key] !== undefined && usableNumber(spacing[key], EMU_PER_TWIP) === undefined)
+        delete spacing[key]
+    out.paraSpacing = spacing
+  }
+  return out
+}
 
 /**
  * CT_Settings child sequence (ECMA-376 17.15.1.78), in schema order. The type is
@@ -291,7 +326,12 @@ function insertSettingsChild(xml: string, localName: string, childXml: string): 
   if (close?.index !== undefined) {
     return xml.slice(0, close.index) + childXml + xml.slice(close.index)
   }
-  return xml.replace(/(<([A-Za-z0-9._-]+:)?settings\b[^>]*>)/, `$1${childXml}`)
+  const root = findStartTag(xml, /^(?:[A-Za-z0-9._-]+:)?settings$/)
+  if (!root) return xml
+  if (!root.selfClosing) return xml.slice(0, root.end) + childXml + xml.slice(root.end)
+  const name = /^<([^\s/>]+)/.exec(root.text)![1]
+  const open = root.text.replace(/\s*\/>$/, '>')
+  return `${xml.slice(0, root.start)}${open}${childXml}</${name}>${xml.slice(root.end)}`
 }
 
 /**
@@ -571,6 +611,14 @@ export interface SaveOptions {
    * dataBinding: 'strip' to unbind them and keep their text.
    */
   removeParts?: RemovePartsOptions
+  /**
+   * An accept / reject found move-range markers whose partner is gone and
+   * nothing else to resolve: strip them from the body and the story parts.
+   * A save that rewrites the package for any other reason strips them anyway;
+   * a save with no change returns the original bytes, orphan markers included,
+   * unless this is set.
+   */
+  dropOrphanMoveRanges?: true
 }
 
 const HYPERLINK_REL_TYPE =
@@ -796,19 +844,36 @@ export async function saveDocx(
     options.themeFonts === undefined &&
     options.themeColors === undefined &&
     options.properties === undefined &&
-    options.removeParts === undefined &&
     options.contentControls === undefined &&
     (options.partXml === undefined || Object.keys(options.partXml).length === 0) &&
     (options.partBinary === undefined || Object.keys(options.partBinary).length === 0)
+  let preloadedZip: JSZip | undefined
   if (isUnchanged && !scrubPersonalInfo) {
-    // remove_parts may be the only requested change: when nothing matches, the
-    // package is already scrubbed and the original bytes are the right answer
-    if (options.removeParts === undefined) return originalBytes
-    const plan = await planRemoveParts(originalBytes, options.removeParts)
-    if (plan.removedPaths.length === 0) return originalBytes
+    // remove_parts or the orphan move-range sweep may be the only requested
+    // change: when neither finds anything the package is already clean and the
+    // original bytes are the right answer. Nothing else may defeat this
+    // shortcut: an unedited save returns the file as it was opened, however
+    // malformed (an orphan marker included).
+    let pending = false
+    if (options.removeParts !== undefined) {
+      const plan = await planRemoveParts(originalBytes, options.removeParts)
+      // an op-level check already refuses these; this is the engine invariant:
+      // a save never applies a remove_parts set that names a structural part
+      if (plan.refusedPaths.length > 0)
+        throw new Error(removePartsRefusalMessageFor(plan.refusedPaths))
+      pending = plan.removedPaths.length > 0
+    }
+    if (!pending && options.dropOrphanMoveRanges) {
+      preloadedZip = await loadDocxZip(originalBytes)
+      pending = await hasOrphanMoveRanges(
+        preloadedZip,
+        (await resolveMainDocumentPath(preloadedZip)) ?? 'word/document.xml',
+      )
+    }
+    if (!pending) return originalBytes
   }
 
-  const zip = await loadDocxZip(originalBytes)
+  const zip = preloadedZip ?? (await loadDocxZip(originalBytes))
   assertZipWithinLimits(zip)
   const docPath = (await resolveMainDocumentPath(zip)) ?? 'word/document.xml'
 
@@ -872,6 +937,12 @@ export async function saveDocx(
   }
   const styleUpserts = [...(options.styleUpserts ?? []), ...headingUpserts]
 
+  // the body as the run writer sees it: what the document root declares, and
+  // the bytes copied into it as they are (their control ids are taken)
+  const bodyControls = new ContentControlPart(
+    [documentXml, ...finalBlocks.flatMap((b) => (b.kind === 'xml' ? [b.xml] : []))],
+    partNamespaces(documentXml),
+  )
   const genCtx = {
     headingStyleIds,
     listParagraphStyleId: parsed.listParagraphStyleId,
@@ -881,6 +952,7 @@ export async function saveDocx(
       [documentXml, ...(await storyPartsXml(zip))],
       options.revisionIdFloor,
     ),
+    part: bodyControls,
   }
 
   const newMedia: Array<{ path: string; base64: string }> = []
@@ -934,7 +1006,8 @@ export async function saveDocx(
     }
     return rId
   }
-  const embedImage = (image: NewImage): string => {
+  const embedImage = (editorImage: NewImage): string => {
+    const image = usableNewImage(editorImage)
     const rId = embedImageMedia(image)
     // dedup means imageSeq does not advance for repeated bytes — docPr ids need their own counter
     const docPrId = DOCPR_ID_BASE + ++docPrSeq
@@ -1077,7 +1150,16 @@ export async function saveDocx(
     })
     newMedia.push({ path: mediaPath, base64: ink.base64 })
     usedExtensions.add('png')
-    return anchoredInkRunXml(ink, rId, 9000 + inkSeq)
+    return anchoredInkRunXml(
+      {
+        ...ink,
+        ...usablePictureSize(ink.widthPx, ink.heightPx),
+        offsetXPx: usableNumber(ink.offsetXPx, EMU_PER_PX) ?? 0,
+        offsetYPx: usableNumber(ink.offsetYPx, EMU_PER_PX) ?? 0,
+      },
+      rId,
+      9000 + inkSeq,
+    )
   }
 
   // ---- header / footer: overwrite the existing default part or create one ----
@@ -1100,25 +1182,21 @@ export async function saveDocx(
   const savedSectPr = options.section
     ? applySectionSettings(options.trailingSectPr ?? trailingSectPr, options.section)
     : (options.trailingSectPr ?? trailingSectPr)
-  const sectAttr = (tag: RegExp, key: string): number | null => {
-    const el = tag.exec(savedSectPr)?.[0]
+  const sectAttr = (name: string, key: string): number | null => {
+    const el = findStartTag(savedSectPr, name)?.text
     const v = el ? new RegExp(`\\sw:${key}="(-?\\d+)"`).exec(el)?.[1] : undefined
     return v ? parseInt(v, 10) : null
   }
-  const pgW = sectAttr(/<w:pgSz\b[^>]*>/, 'w')
-  const pgH = sectAttr(/<w:pgSz\b[^>]*>/, 'h')
+  const pgW = sectAttr('w:pgSz', 'w')
+  const pgH = sectAttr('w:pgSz', 'h')
   const marginBoxPt =
     pgW && pgH
       ? {
           widthPt:
-            (pgW -
-              (sectAttr(/<w:pgMar\b[^>]*>/, 'left') ?? 1440) -
-              (sectAttr(/<w:pgMar\b[^>]*>/, 'right') ?? 1440)) /
+            (pgW - (sectAttr('w:pgMar', 'left') ?? 1440) - (sectAttr('w:pgMar', 'right') ?? 1440)) /
             20,
           heightPt:
-            (pgH -
-              (sectAttr(/<w:pgMar\b[^>]*>/, 'top') ?? 1440) -
-              (sectAttr(/<w:pgMar\b[^>]*>/, 'bottom') ?? 1440)) /
+            (pgH - (sectAttr('w:pgMar', 'top') ?? 1440) - (sectAttr('w:pgMar', 'bottom') ?? 1440)) /
             20,
         }
       : null
@@ -1519,8 +1597,7 @@ export async function saveDocx(
         const drawing = inlinePictureDrawingXml({
           rId,
           docPrId: DOCPR_ID_BASE + ++docPrSeq,
-          widthPx: image.widthPx,
-          heightPx: image.heightPx,
+          ...usablePictureSize(image.widthPx, image.heightPx),
         })
         imageRuns.set(c.id, `<w:r>${drawing}</w:r>`)
       }
@@ -1918,7 +1995,7 @@ export async function saveDocx(
 
   let newDocumentXml =
     documentXml.slice(0, bodyContentStart) +
-    balanceFieldChars(parts.join('')) +
+    balanceFieldChars(bodyControls.finish(parts.join(''))) +
     documentXml.slice(bodyContentEnd)
 
   // every ref-less body sectPr picks up the new header/footer references
@@ -2031,60 +2108,63 @@ export async function saveDocx(
   // A root that already declares `xmlns:mc` (every Word-saved file does) must
   // not get a second one: a duplicate attribute is the same parse error this
   // block exists to prevent. Its existing Ignorable list is extended instead.
+  const docRoot = findStartTag(newDocumentXml, 'w:document')
   if (
     newDocumentXml.includes(`<${REDACT_EL}`) &&
-    !new RegExp(`<w:document[^>]*xmlns:${REDACT_PREFIX}=`).test(newDocumentXml)
+    docRoot &&
+    !docRoot.text.includes(`xmlns:${REDACT_PREFIX}=`)
   ) {
-    const root = /<w:document\b[^>]*>/.exec(newDocumentXml)?.[0]
-    if (root) {
-      let next = root
-      if (!/xmlns:mc=/.test(next)) {
+    let next = docRoot.text
+    if (!/xmlns:mc=/.test(next)) {
+      next = next.replace(
+        '<w:document',
+        '<w:document xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"',
+      )
+    }
+    next = next.replace('<w:document', `<w:document xmlns:${REDACT_PREFIX}="${REDACT_NS}"`)
+    const ignorable = /mc:Ignorable="([^"]*)"/.exec(next)
+    if (ignorable) {
+      if (!new RegExp(`\\b${REDACT_PREFIX}\\b`).test(ignorable[1] ?? '')) {
+        const existing = (ignorable[1] ?? '').trim()
         next = next.replace(
-          '<w:document',
-          '<w:document xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"',
+          /mc:Ignorable="[^"]*"/,
+          `mc:Ignorable="${existing ? `${existing} ${REDACT_PREFIX}` : REDACT_PREFIX}"`,
         )
       }
-      next = next.replace('<w:document', `<w:document xmlns:${REDACT_PREFIX}="${REDACT_NS}"`)
-      const ignorable = /mc:Ignorable="([^"]*)"/.exec(next)
-      if (ignorable) {
-        if (!new RegExp(`\\b${REDACT_PREFIX}\\b`).test(ignorable[1] ?? '')) {
-          const existing = (ignorable[1] ?? '').trim()
-          next = next.replace(
-            /mc:Ignorable="[^"]*"/,
-            `mc:Ignorable="${existing ? `${existing} ${REDACT_PREFIX}` : REDACT_PREFIX}"`,
-          )
-        }
-      } else {
-        next = next.replace('<w:document', `<w:document mc:Ignorable="${REDACT_PREFIX}"`)
-      }
-      // a Word re-save drops every element whose namespace it does not process
-      // unless the root asks for it to be preserved verbatim — and a root that
-      // already preserves other elements needs ours added to that list, the
-      // same way the Ignorable list above is extended
-      const preserve = /mc:PreserveElements="([^"]*)"/.exec(next)
-      if (preserve) {
-        if (!new RegExp(`\\b${REDACT_EL}\\b`).test(preserve[1] ?? '')) {
-          const existing = (preserve[1] ?? '').trim()
-          next = next.replace(
-            /mc:PreserveElements="[^"]*"/,
-            `mc:PreserveElements="${existing ? `${existing} ${REDACT_EL}` : REDACT_EL}"`,
-          )
-        }
-      } else {
-        next = next.replace('<w:document', `<w:document mc:PreserveElements="${REDACT_EL}"`)
-      }
-      newDocumentXml = newDocumentXml.replace(root, next)
+    } else {
+      next = next.replace('<w:document', `<w:document mc:Ignorable="${REDACT_PREFIX}"`)
     }
+    // a Word re-save drops every element whose namespace it does not process
+    // unless the root asks for it to be preserved verbatim — and a root that
+    // already preserves other elements needs ours added to that list, the
+    // same way the Ignorable list above is extended
+    const preserve = /mc:PreserveElements="([^"]*)"/.exec(next)
+    if (preserve) {
+      if (!new RegExp(`\\b${REDACT_EL}\\b`).test(preserve[1] ?? '')) {
+        const existing = (preserve[1] ?? '').trim()
+        next = next.replace(
+          /mc:PreserveElements="[^"]*"/,
+          `mc:PreserveElements="${existing ? `${existing} ${REDACT_EL}` : REDACT_EL}"`,
+        )
+      }
+    } else {
+      next = next.replace('<w:document', `<w:document mc:PreserveElements="${REDACT_EL}"`)
+    }
+    newDocumentXml =
+      newDocumentXml.slice(0, docRoot.start) + next + newDocumentXml.slice(docRoot.end)
   }
 
-  if (
-    newDocumentXml.includes(' w16du:dateUtc=') &&
-    !/<w:document[^>]*xmlns:w16du=/.test(newDocumentXml)
-  ) {
-    newDocumentXml = newDocumentXml.replace(
-      /<w:document /,
-      '<w:document xmlns:w16du="http://schemas.microsoft.com/office/word/2023/wordml/word16du" ',
-    )
+  if (newDocumentXml.includes(' w16du:dateUtc=')) {
+    const root = findStartTag(newDocumentXml, 'w:document')
+    if (root && !root.text.includes('xmlns:w16du=')) {
+      newDocumentXml =
+        newDocumentXml.slice(0, root.start) +
+        root.text.replace(
+          '<w:document',
+          '<w:document xmlns:w16du="http://schemas.microsoft.com/office/word/2023/wordml/word16du"',
+        ) +
+        newDocumentXml.slice(root.end)
+    }
   }
 
   if (options.pageColor !== undefined) {
@@ -2260,10 +2340,11 @@ export async function saveDocx(
 
   const out = new JSZip()
   for (const [name, entry] of Object.entries(zip.files)) {
-    if (entry.dir) {
-      out.folder(name)
-      continue
-    }
+    // source folder entries are not copied over: Word does not write them and
+    // they carry no content (genoffice#2554). JSZip still auto-creates folder
+    // entries for every nested out.file() below — those are stripped right
+    // before the generate at the end.
+    if (entry.dir) continue
     const hfPart = hfParts.find((p) => p.path === name)
     if (name === docPath) {
       out.file(name, newDocumentXml, { date: entry.date })
@@ -2372,7 +2453,17 @@ export async function saveDocx(
   if (customPropertiesIsNew && customPropertiesXml !== null) {
     out.file(CUSTOM_PROPERTIES_PATH, customPropertiesXml)
   }
-  await cleanupDocxOwnedResources(out, docPath)
+  // The resource sweep prunes only what this save broke: a relationship the
+  // source document already did not reference is a pre-existing orphan, and
+  // Word keeps those (so do the byte-identity round trips).
+  const sourceDocumentFile = zip.file(docPath)
+  await cleanupDocxOwnedResources(
+    out,
+    docPath,
+    sourceDocumentFile
+      ? referencedRelationshipIds(await sourceDocumentFile.async('string'))
+      : undefined,
+  )
   await cleanStoryMoveRanges(out, docPath)
   if (scrubPersonalInfo) await scrubPersonalMetadata(out)
   // metadata scrubs come after every generated/copied part is in place, so a
@@ -2380,6 +2471,10 @@ export async function saveDocx(
   if (options.removeParts) await applyRemoveParts(out, options.removeParts)
   // the property write comes last: what the caller asked for wins over the scrub
   if (options.properties) await applyPropertyChanges(out, options.properties)
+  // Word does not write folder entries and they carry no content: JSZip
+  // auto-creates one per nested part, so drop them from the flat files map
+  // before the single generate pass (genoffice#2554)
+  for (const [name, entry] of Object.entries(out.files)) if (entry.dir) delete out.files[name]
   return out.generateAsync({
     type: 'uint8array',
     compression: 'DEFLATE',
@@ -2506,9 +2601,9 @@ function withWatermarkNs(openTag: string): string {
  * null when the root tag cannot be recognized so the caller falls back to a full rebuild.
  */
 function patchWatermarkInPart(originalXml: string, watermarkXml: string): string | null {
-  const open = /<w:hdr[^>]*>/.exec(originalXml)?.[0]
-  if (!open) return null
-  const openIdx = originalXml.indexOf(open)
+  const root = findStartTag(originalXml, 'w:hdr')
+  if (!root) return null
+  const { text: open, start: openIdx } = root
   const closeIdx = originalXml.lastIndexOf('</w:hdr>')
   if (closeIdx < 0) return null
   const prefix = originalXml.slice(0, openIdx)
@@ -2533,6 +2628,13 @@ function headerFooterPartXml(
   pageCount = 1,
 ): string {
   const root = kind === 'header' ? 'w:hdr' : 'w:ftr'
+  // Which root the part ends up under is known before its runs are written:
+  // a wrapper is written only when that root declares the prefixes it uses.
+  const kept = originalXml ? hfKeptRoot(root, originalXml) : null
+  const controls = new ContentControlPart(
+    originalXml ?? '',
+    hfWrapNamespaces(originalXml, kept !== null),
+  )
   const textRun = (t: string) =>
     t ? `<w:r><w:t xml:space="preserve">${escapeXmlText(t)}</w:t></w:r>` : ''
   const pageField =
@@ -2570,7 +2672,26 @@ function headerFooterPartXml(
     )
     let pageEmitted = !hf.pageNumber || hasPageMark
     const hfRunsXml = (paraRuns: Run[]): string => {
-      let runs = ''
+      let xml = ''
+      // A paragraph with wrappers goes through the same grouping as the body,
+      // including neighbouring runs of a hyperlink crossing a wrapper. Leave
+      // the legacy wrapper-less path byte-identical.
+      const grouped = paraRuns.some((r) => r.wrap?.length)
+      const written = new Set<string>()
+      const fragments = new Map<Run, string>()
+      const held: Run[] = []
+      const text = (piece: Run) => {
+        if (grouped) held.push(piece)
+        else xml += inlineRunsXml([piece], { written, part: controls })
+      }
+      const field = (fieldXml: string, host: Run, logicalText: string) => {
+        if (grouped) {
+          // Keep the logical field mark for the control's changed-text test.
+          const piece = { ...host, text: logicalText }
+          fragments.set(piece, fieldXml)
+          held.push(piece)
+        } else xml += fieldXml
+      }
       for (const run of paraRuns) {
         if (
           run.text.includes(TOTAL_PAGES_MARK) ||
@@ -2581,30 +2702,30 @@ function headerFooterPartXml(
           // SECTIONPAGES and NUMPAGES split alike: a mark between two segments is its field
           run.text.split(totalMarksRe).forEach((seg, k) => {
             if (k % 2 === 1) {
-              runs += seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField
+              field(seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField, run, seg)
               return
             }
             if (seg.includes(PAGE_MARK)) {
               seg.split(PAGE_MARK).forEach((piece, j) => {
-                if (j > 0) runs += pageField
-                if (piece) runs += inlineRunsXml([{ ...run, text: piece }])
+                if (j > 0) field(pageField, run, PAGE_MARK)
+                if (piece) text({ ...run, text: piece })
               })
             } else if (!pageEmitted && seg.includes('#')) {
               const [before, ...rest] = seg.split('#')
-              runs +=
-                inlineRunsXml(before ? [{ ...run, text: before }] : []) +
-                pageField +
-                inlineRunsXml(rest.join('#') ? [{ ...run, text: rest.join('#') }] : [])
+              if (before) text({ ...run, text: before })
+              field(pageField, run, '#')
+              if (rest.join('#')) text({ ...run, text: rest.join('#') })
               pageEmitted = true
             } else if (seg) {
-              runs += inlineRunsXml([{ ...run, text: seg }])
+              text({ ...run, text: seg })
             }
           })
         } else {
-          runs += inlineRunsXml([run])
+          text(run)
         }
       }
-      return runs
+      if (held.length > 0) xml += inlineRunsXml(held, { written, fragments, part: controls })
+      return xml
     }
     // rows live in the original w:tbl bytes (edited cells are patched into them
     // below); a rebuild without the original part flattens them to paragraphs
@@ -2671,85 +2792,63 @@ function headerFooterPartXml(
   // model) keep their original bytes; only the set of text paragraphs is replaced as a
   // whole at the position of the first text paragraph. The watermark child is kept
   // verbatim unless watermarkXml replaces or drops it.
-  if (originalXml) {
-    const open = new RegExp(`<${root}[^>]*>`).exec(originalXml)?.[0]
-    const closeIdx = originalXml.lastIndexOf(`</${root}>`)
-    if (open && closeIdx >= 0) {
-      const openIdx = originalXml.indexOf(open)
-      const children = splitXmlChildren(originalXml.slice(openIdx + open.length, closeIdx))
-      // a text paragraph whose pictures are all inline blips is fully modelled
-      // (the parser keeps them on its runs), so it is regenerated like any text
-      const isModelledPictures = (xml: string) =>
-        /<w:t[\s>]/.test(xml) &&
-        !/<w:pict[\s>]|<w:object[\s>]|<wp:anchor[\s>]/.test(xml) &&
-        (xml.match(/<w:drawing[\s>][\s\S]*?<\/w:drawing>/g) ?? []).every(
-          (d) => d.includes('<wp:inline') && d.includes('<a:blip'),
-        )
-      const isProtectedPara = (xml: string) =>
-        /<w:drawing[\s>]|<w:pict[\s>]|<w:object[\s>]/.test(xml) && !isModelledPictures(xml)
-      const isTextPara = (c: { name: string; xml: string }) =>
-        c.name === 'w:p' && !isWatermarkChild(c) && !isProtectedPara(c.xml)
-      if (children.some((c) => !isTextPara(c))) {
-        const parts: string[] = []
-        let injected = false
-        // tables are numbered the way the parser walks them (through w:sdt wrappers)
-        let tblIndex = 0
-        const patchTable = (xml: string): string => {
-          const grid = cellPatches(tblIndex++)
-          return grid ? patchTableCellTexts(xml, grid) : xml
+  if (kept) {
+    const { open, children, isTextPara } = kept
+    const parts: string[] = []
+    let injected = false
+    // tables are numbered the way the parser walks them (through w:sdt wrappers)
+    let tblIndex = 0
+    const patchTable = (xml: string): string => {
+      const grid = cellPatches(tblIndex++)
+      return grid ? patchTableCellTexts(xml, grid, controls) : xml
+    }
+    const openOf = (xml: string) => findStartTag(xml)?.text ?? ''
+    const closeOf = (xml: string) => /<\/[^>]*>$/.exec(xml)?.[0] ?? ''
+    const rewrap = (xml: string, children: string[]) =>
+      `${openOf(xml)}${children.join('')}${closeOf(xml)}`
+    const innerXml = (xml: string) =>
+      xml.slice(openOf(xml).length, xml.length - closeOf(xml).length)
+    const patchSdt = (sdtXml: string): string =>
+      rewrap(
+        sdtXml,
+        splitXmlChildren(innerXml(sdtXml)).map((inner) =>
+          inner.name !== 'w:sdtContent'
+            ? inner.xml
+            : rewrap(
+                inner.xml,
+                splitXmlChildren(innerXml(inner.xml)).map((c) =>
+                  c.name === 'w:tbl'
+                    ? patchTable(c.xml)
+                    : c.name === 'w:sdt'
+                      ? patchSdt(c.xml)
+                      : c.xml,
+                ),
+              ),
+        ),
+      )
+    for (const c of children) {
+      if (isTextPara(c)) {
+        if (!injected) {
+          parts.push(body)
+          injected = true
         }
-        const openOf = (xml: string) => /^<[^>]*>/.exec(xml)?.[0] ?? ''
-        const closeOf = (xml: string) => /<\/[^>]*>$/.exec(xml)?.[0] ?? ''
-        const rewrap = (xml: string, children: string[]) =>
-          `${openOf(xml)}${children.join('')}${closeOf(xml)}`
-        const innerXml = (xml: string) =>
-          xml.slice(openOf(xml).length, xml.length - closeOf(xml).length)
-        const patchSdt = (sdtXml: string): string =>
-          rewrap(
-            sdtXml,
-            splitXmlChildren(innerXml(sdtXml)).map((inner) =>
-              inner.name !== 'w:sdtContent'
-                ? inner.xml
-                : rewrap(
-                    inner.xml,
-                    splitXmlChildren(innerXml(inner.xml)).map((c) =>
-                      c.name === 'w:tbl'
-                        ? patchTable(c.xml)
-                        : c.name === 'w:sdt'
-                          ? patchSdt(c.xml)
-                          : c.xml,
-                    ),
-                  ),
-            ),
-          )
-        for (const c of children) {
-          if (isTextPara(c)) {
-            if (!injected) {
-              parts.push(body)
-              injected = true
-            }
-          } else if (isWatermarkChild(c) && watermarkXml !== undefined) {
-            // superseded by the watermark in body (or removed)
-          } else if (c.name === 'w:tbl') {
-            parts.push(patchTable(c.xml))
-          } else if (c.name === 'w:sdt') {
-            parts.push(patchSdt(c.xml))
-          } else {
-            parts.push(c.xml)
-          }
-        }
-        if (!injected) parts.unshift(body)
-        const rootOpen = watermarkXml ? withWatermarkNs(open) : open
-        return `${originalXml.slice(0, openIdx)}${rootOpen}${parts.join('')}</${root}>`
+      } else if (isWatermarkChild(c) && watermarkXml !== undefined) {
+        // superseded by the watermark in body (or removed)
+      } else if (c.name === 'w:tbl') {
+        parts.push(patchTable(c.xml))
+      } else if (c.name === 'w:sdt') {
+        parts.push(patchSdt(c.xml))
+      } else {
+        parts.push(c.xml)
       }
     }
+    if (!injected) parts.unshift(body)
+    const rootOpen = watermarkXml ? withWatermarkNs(open) : open
+    return controls.finish(`${kept.before}${rootOpen}${parts.join('')}</${root}>`)
   }
-  return (
+  return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-    `<${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"` +
-    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
-    `${WATERMARK_NS}>` +
-    `${body}</${root}>`
+      `<${root}${HF_ROOT_ATTRS}>${body}</${root}>`,
   )
 }
 
@@ -3035,11 +3134,14 @@ function clearQualifiedElements(
   )
   let out = xml
   for (const qName of qNames) {
-    const escaped = regexEscape(qName)
-    out = out.replace(
-      new RegExp(`(<${escaped}\\b[^>]*>)[\\s\\S]*?(<\\/${escaped}\\s*>)`, 'g'),
-      '$1$2',
-    )
+    const close = new RegExp(`<\\/${regexEscape(qName)}\\s*>`, 'g')
+    for (let tag = findStartTag(out, qName); tag; tag = findStartTag(out, qName, tag.end)) {
+      if (tag.selfClosing) continue
+      close.lastIndex = tag.end
+      const end = close.exec(out)
+      if (!end) break
+      out = out.slice(0, tag.end) + out.slice(end.index)
+    }
   }
   return out
 }
@@ -3072,6 +3174,17 @@ function scrubPeopleMetadata(xml: string): string {
 /** Story parts whose XML can carry w:moveFromRangeStart/End / w:moveToRangeStart/End pairs. */
 const MOVE_STORY_PART_RE = /^word\/(?:header|footer)[^/]*\.xml$/i
 
+/** the parts a move range can sit in: the body and the story parts */
+function carriesMoveRanges(name: string, documentPath: string): boolean {
+  return (
+    /\.xml$/i.test(name) &&
+    (name === documentPath ||
+      MOVE_STORY_PART_RE.test(name) ||
+      /^word\/(?:footnotes|endnotes)\.xml$/i.test(name) ||
+      name === 'word/glossary/document.xml')
+  )
+}
+
 /**
  * Orphaned move-range markers are a package-level residue: the editor rebuilds
  * an edited paragraph from its model (which does not model the range markers),
@@ -3081,18 +3194,20 @@ const MOVE_STORY_PART_RE = /^word\/(?:header|footer)[^/]*\.xml$/i
  */
 async function cleanStoryMoveRanges(zip: JSZip, documentPath: string): Promise<void> {
   for (const [name, entry] of Object.entries(zip.files)) {
-    if (entry.dir || !/\.xml$/i.test(name)) continue
-    if (
-      name !== documentPath &&
-      !MOVE_STORY_PART_RE.test(name) &&
-      !/^word\/(?:footnotes|endnotes)\.xml$/i.test(name) &&
-      name !== 'word/glossary/document.xml'
-    )
-      continue
+    if (entry.dir || !carriesMoveRanges(name, documentPath)) continue
     const xml = await entry.async('string')
     const cleaned = cleanMoveRangeMarkers(xml)
     if (cleaned.removed > 0) zip.file(name, cleaned.xml, { date: entry.date })
   }
+}
+
+/** whether cleanStoryMoveRanges would change a part of this package */
+async function hasOrphanMoveRanges(zip: JSZip, documentPath: string): Promise<boolean> {
+  for (const [name, entry] of Object.entries(zip.files)) {
+    if (entry.dir || !carriesMoveRanges(name, documentPath)) continue
+    if (cleanMoveRangeMarkers(await entry.async('string')).removed > 0) return true
+  }
+  return false
 }
 
 /**
@@ -3177,7 +3292,9 @@ function applyPageColor(documentXml: string, color: string | null): string {
     '',
   )
   if (color) {
-    xml = xml.replace(/(<w:document[^>]*>)/, `$1<w:background w:color="${escapeXmlAttr(color)}"/>`)
+    const root = findStartTag(xml, 'w:document')
+    if (root)
+      xml = `${xml.slice(0, root.end)}<w:background w:color="${escapeXmlAttr(color)}"/>${xml.slice(root.end)}`
   }
   return xml
 }

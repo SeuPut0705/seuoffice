@@ -13,6 +13,7 @@ import {
   onAiRailClick,
   presentationKeyOf,
   rememberAiPanelOpen,
+  runFileNaming,
   useAutoSavePref,
   skillTemplateText,
   templateDocumentOf,
@@ -58,6 +59,8 @@ import type { WikiSuggestController, WikiSuggestState } from './editor/wikiSugge
 import { invalidateWikiHeads } from './editor/wikiSuggest'
 import { dirOf, setImageBaseDir, VIEW_IMAGE_EVENT } from './editor/localImage'
 import { Ribbon } from './components/Ribbon'
+import { deriveAutoFileName } from './auto-file-name'
+import { modelSaveAsName, proposedSaveName } from './file-naming'
 import type { MarkdownTheme } from '../shared/markdown-theme'
 import { applyEditorFont, rememberEditorFont, storedEditorFont } from './editor-font'
 import { ImageHostDialog } from './components/ImageHostDialog'
@@ -144,18 +147,7 @@ function applyImageRewrites(
 }
 
 /** Measure a document image via the DOM (the editor already displays it) */
-/** File name for an AI-generated untitled document: first heading, else first words */
-export function deriveAutoFileName(editor: Editor): string {
-  const doc = editor.state.doc
-  for (let i = 0; i < doc.childCount; i++) {
-    const node = doc.child(i)
-    const text = node.textContent.replace(/\s+/g, ' ').trim()
-    if (!text) continue
-    if (node.type.name === 'heading') return text.slice(0, 60)
-    return text.split(' ').slice(0, 8).join(' ').slice(0, 60)
-  }
-  return ''
-}
+export { deriveAutoFileName } from './auto-file-name'
 
 /** Name an export suggests: the document's name without .md, else a derived one */
 export function exportBaseName(path: string | null, editor: Editor): string {
@@ -196,6 +188,8 @@ export default function App() {
     key: StringKey
     params?: Record<string, string | number>
   } | null>(null)
+  /** "Name with AI": that the model is being asked, then why it gave no name; stays, like the export line */
+  const [namingStatus, setNamingStatus] = useState<string | null>(null)
   const [slashState, setSlashState] = useState<SlashMenuState | null>(null)
   const [wikiSuggestState, setWikiSuggestState] = useState<WikiSuggestState | null>(null)
   const [fmOpen, setFmOpen] = useState(false)
@@ -792,7 +786,12 @@ export default function App() {
 
   /** Serialize and write to disk; false when canceled/failed (caller keeps the tab open) */
   const doSave = useCallback(
-    async (mode: SaveMode, suggestedName?: string, auto = false): Promise<boolean> => {
+    async (
+      mode: SaveMode,
+      suggestedName?: string,
+      auto = false,
+      proposedName?: string,
+    ): Promise<boolean> => {
       if (sourceMode) return doSaveSource(mode, auto)
       flushSource()
       const current = editorRef.current
@@ -819,6 +818,16 @@ export default function App() {
           mode === 'saveAs'
             ? buildPrintHtml(current.view.dom, exportBaseName(filePathRef.current, current))
             : undefined
+        // A never-saved document is offered a name derived from its own
+        // content: its first heading, else its first words. It prefills the
+        // save dialog rather than replacing it — the reader still chooses where
+        // the file goes, and a save never waits on a model. A name the caller
+        // proposed outright (the ribbon's "Name with AI") wins over both.
+        const defaultName = await proposedSaveName(current, {
+          filePath: filePathRef.current,
+          suggestedName,
+          proposedName,
+        })
         const result = await window.markdownApi.save({
           text,
           imageSources,
@@ -826,6 +835,7 @@ export default function App() {
           suggestedName,
           auto,
           ...(pdfHtml !== undefined ? { pdfHtml } : {}),
+          ...(defaultName ? { defaultName } : {}),
         })
         if (result.ok && 'path' in result) {
           // A PDF target is an export of this document: its path, unsaved edits
@@ -913,6 +923,34 @@ export default function App() {
     },
     [flushSource, sourceMode, doSaveSource],
   )
+
+  /**
+   * Ask the model to name this document, on request, then open Save As with its
+   * answer prefilled.
+   *
+   * The stem goes into the dialog rather than renaming the file on disk: a file
+   * that may be open elsewhere, referenced from a note, or synced is not
+   * something to move behind the reader's back. A declined or empty answer
+   * leaves the document on its current name; the status bar says that the
+   * model is being asked, and then, with a toast, why it gave no name.
+   */
+  const nameWithAi = useCallback(async () => {
+    const current = editorRef.current
+    if (!current || statusRef.current !== 'ready' || savingRef.current) return
+    const stem = await runFileNaming(
+      lang,
+      {
+        running: setNamingStatus,
+        failed: (text) => {
+          setNamingStatus(text)
+          showToast(text, 'error')
+        },
+      },
+      () => modelSaveAsName(current),
+    )
+    if (stem === null) return
+    await doSave('saveAs', undefined, false, stem)
+  }, [doSave, lang])
 
   /**
    * `outPath` (headless export only) skips the save dialog; resolves true when a file was written.
@@ -1436,6 +1474,7 @@ export default function App() {
         dirty={dirty}
         onSave={() => void doSave('save')}
         onSaveAs={() => void doSave('saveAs')}
+        onNameWithAi={() => void nameWithAi()}
         onFind={() => openFind(false)}
         autoSave={autoSave}
         onToggleAutoSave={setAutoSave}
@@ -1580,6 +1619,11 @@ export default function App() {
               {imageExportStatus && (
                 <span className="status-item status-export" role="status">
                   {t(imageExportStatus.key, imageExportStatus.params)}
+                </span>
+              )}
+              {namingStatus && (
+                <span className="status-item status-export" role="status">
+                  {namingStatus}
                 </span>
               )}
               {fileName && <span className="status-item status-file">{fileName}</span>}

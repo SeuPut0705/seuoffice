@@ -264,6 +264,14 @@ seuoffice modifications Copyright 2026 SeuPut, licensed under the Apache
 License, Version 2.0. Changes to upstream files are listed in
 docs/seuoffice/upstream-edits.md; the repository history records every change.
 
+From 2026-11-11 seuoffice is developed on its own: it no longer merges later
+changes of IeumOffice or GenOffice, and docs/seuoffice/upstream-edits.md was
+closed once the last catch-up landed (2026-11-12). Parts of seuoffice are
+being rewritten in Rust. A Rust file that translates code of the original
+works is a derivative of them, so the notices above for GenOffice and
+IeumOffice go on applying to seuoffice for as long as code of those works,
+or a translation of it, remains.
+
 The HWP/HWPX engine in vendor/rhwp-core is rhwp, Copyright (c) 2025-2026
 Edward Kim, MIT License (vendor/rhwp-core/LICENSE), with the IeumOffice
 patches in vendor/rhwp-core/patches.

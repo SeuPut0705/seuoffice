@@ -1,5 +1,5 @@
 use crate::model::{RevisionInfo, Run};
-use jscompat::{JsMap, Radix, RegexLimit, js_regex, parse_int};
+use jscompat::{JsMap, JsRegex, Radix, RegexLimit, js_regex, parse_int};
 use std::collections::HashSet;
 
 use super::rpr::run_r_pr_xml;
@@ -313,13 +313,8 @@ fn glyph_runs(
 }
 
 fn checkbox_glyphs(xml: &str) -> (char, char) {
-    let state = |name: &str, fallback: char| {
-        let value = jscompat::JsRegex::new(
-            &format!(r#"<w14:{name}\b[^>]*\bw14:val=(?:"([^"]*)"|'([^']*)')"#),
-            "",
-        )
-        .ok()
-        .and_then(|re| re.exec(xml).and_then(|m| m.get(1).or_else(|| m.get(2))));
+    let state = |re: &JsRegex, fallback: char| {
+        let value = re.exec(xml).and_then(|m| m.get(1).or_else(|| m.get(2)));
         let code = parse_int(value.unwrap_or_default(), Radix::Sixteen);
         if code.is_finite() && code > 0.0 && code <= 0x10ffff as f64 {
             char::from_u32(code as u32).unwrap_or(fallback)
@@ -328,8 +323,14 @@ fn checkbox_glyphs(xml: &str) -> (char, char) {
         }
     };
     (
-        state("checkedState", '\u{2612}'),
-        state("uncheckedState", '\u{2610}'),
+        state(
+            js_regex!(r#"<w14:checkedState\b[^>]*\bw14:val=(?:"([^"]*)"|'([^']*)')"#),
+            '\u{2612}',
+        ),
+        state(
+            js_regex!(r#"<w14:uncheckedState\b[^>]*\bw14:val=(?:"([^"]*)"|'([^']*)')"#),
+            '\u{2610}',
+        ),
     )
 }
 
