@@ -3,7 +3,7 @@
 
 use std::sync::LazyLock;
 
-use jscompat::{JsRegex, Radix, RegexSyntaxError, js_regex, parse_int, to_number};
+use jscompat::{JsMatch, JsRegex, Radix, RegexError, TryJsRegex, js_regex, parse_int, to_number};
 use ooxml_pkg::{Package, ReadError};
 
 pub const CUSTOM_PROPERTIES_PATH: &str = "docProps/custom.xml";
@@ -96,15 +96,18 @@ pub fn decode_xml_text(value: &str) -> String {
 }
 
 fn attr_with(xml: &str, pattern: &JsRegex) -> Option<String> {
-    let found = pattern.exec(xml)?;
-    Some(decode_xml_text(found.get(1).or(found.get(2)).unwrap_or("")))
+    pattern.exec(xml).map(|found| attr_of(&found))
+}
+
+fn attr_of(found: &JsMatch<'_>) -> String {
+    decode_xml_text(found.get(1).or(found.get(2)).unwrap_or(""))
 }
 
 /// `attrValue`: the pattern is built from `name`, so a name that is not a
-/// valid pattern throws.
-pub fn attr_value(xml: &str, name: &str) -> Result<Option<String>, RegexSyntaxError> {
-    let pattern = JsRegex::new(&format!(r#"\b{name}\s*=\s*(?:"([^"]*)"|'([^']*)')"#), "")?;
-    Ok(attr_with(xml, &pattern))
+/// valid pattern throws, and so does one whose search passes the bound.
+pub fn attr_value(xml: &str, name: &str) -> Result<Option<String>, RegexError> {
+    let pattern = TryJsRegex::new(&format!(r#"\b{name}\s*=\s*(?:"([^"]*)"|'([^']*)')"#), "")?;
+    Ok(pattern.try_exec(xml)?.map(|found| attr_of(&found)))
 }
 
 /// `attrValue(xml, 'name')`

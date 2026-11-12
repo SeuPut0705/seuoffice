@@ -4,7 +4,8 @@
 //! `vmlFloatAnchor`, `vmlFraction`, `vmlColorHex`.
 
 use jscompat::{
-    JsNum, JsRegex, RegexSyntaxError, js_object, js_regex, math_round, parse_float, trim, truthy,
+    JsNum, JsRegex, RegexError, TryJsRegex, js_object, js_regex, math_round, parse_float, trim,
+    truthy,
 };
 use serde::Deserialize;
 
@@ -72,9 +73,12 @@ pub(crate) fn prop_in<'s>(style: &'s str, pattern: &JsRegex) -> Option<&'s str> 
 
 /// One declaration of a VML style attribute ("rotation:315;width:4in", "width"
 /// gives "4in"). `key` goes into the pattern unescaped, as in the original.
-pub fn vml_style_prop<'s>(style: &'s str, key: &str) -> Result<Option<&'s str>, RegexSyntaxError> {
-    let pattern = JsRegex::new(&format!(r"(?:^|;)\s*{key}:([^;]+)"), "")?;
-    Ok(prop_in(style, &pattern))
+pub fn vml_style_prop<'s>(style: &'s str, key: &str) -> Result<Option<&'s str>, RegexError> {
+    let pattern = TryJsRegex::new(&format!(r"(?:^|;)\s*{key}:([^;]+)"), "")?;
+    Ok(pattern
+        .try_exec(style)?
+        .and_then(|found| found.get(1))
+        .map(trim))
 }
 
 /// The two dimensions of a VML style box.

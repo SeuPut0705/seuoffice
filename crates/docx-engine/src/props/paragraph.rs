@@ -334,10 +334,10 @@ pub fn collect_top_nodes<'a>(nodes: &'a [XNode], name: &str, out: &mut Vec<&'a X
 pub fn part_xml_space_preserve(
     part_xml: &str,
     root_tag: &str,
-) -> Result<bool, jscompat::RegexSyntaxError> {
-    let open_tag = JsRegex::new(&format!(r"<{root_tag}(\s[^>]*)?>"), "")?;
+) -> Result<bool, jscompat::RegexError> {
+    let open_tag = jscompat::TryJsRegex::new(&format!(r"<{root_tag}(\s[^>]*)?>"), "")?;
     let attributes = open_tag
-        .exec(part_xml)
+        .try_exec(part_xml)?
         .and_then(|found| found.get(1))
         .unwrap_or("");
     Ok(js_regex!(r#"\sxml:space=(?:"preserve"|'preserve')"#).test(attributes))

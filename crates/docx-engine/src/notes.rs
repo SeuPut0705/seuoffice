@@ -5,8 +5,7 @@
 //! are structural; only typeless entries are real notes.
 
 use jscompat::{
-    JsRegex, Radix, RegexSyntaxError, js_regex, number_to_string, parse_int, trim, trim_start,
-    truthy,
+    Radix, RegexError, TryJsRegex, js_regex, number_to_string, parse_int, trim, trim_start, truthy,
 };
 use serde::{Deserialize, Serialize};
 
@@ -47,10 +46,10 @@ pub fn root_attributes(
     root_tag: &str,
     fallback: &str,
     required: &[(String, String)],
-) -> Result<String, RegexSyntaxError> {
+) -> Result<String, RegexError> {
     let attrs = match truthy(original_xml) {
-        Some(original_xml) => JsRegex::new(&format!(r"<{root_tag}\b([^>]*?)/?>"), "")?
-            .exec(original_xml)
+        Some(original_xml) => TryJsRegex::new(&format!(r"<{root_tag}\b([^>]*?)/?>"), "")?
+            .try_exec(original_xml)?
             .and_then(|found| found.get(1))
             .map(trim),
         None => None,
