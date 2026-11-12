@@ -1,5 +1,5 @@
 /**
- * The inventory of the Electron main process that decision 0029 splits into
+ * The inventory of the Electron main process that decision 0030 splits into
  * batches: for every module (a file or a folder directly under an app's
  * `src/main`, and `packages/electron-utils/src`), its lines, the Electron
  * APIs it names, the IPC channels it registers, the Node built-ins it uses
@@ -223,7 +223,7 @@ function electronFree(m: Module, seen = new Set<string>()): boolean {
 for (const m of modules) m.electronFree = electronFree(m)
 
 /**
- * The batches of decision 0029, first rule that matches. Engine-bound modules
+ * The batches of decision 0030, first rule that matches. Engine-bound modules
  * call a JavaScript library that has no Rust port yet (pdf-lib, pdfium, ...):
  * they move with the engine of stage 1 that replaces it. Entry modules hold
  * windows, menus, dialogs and IPC registration: they stay TypeScript until

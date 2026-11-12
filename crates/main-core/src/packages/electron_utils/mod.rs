@@ -1,5 +1,5 @@
 //! `packages/electron-utils/src`: the modules that hold no Electron object
-//! (batches 1 and 2 of decision 0029), one file per TypeScript file.
+//! (batches 1 and 2 of decision 0030), one file per TypeScript file.
 
 pub mod abort_on_destroyed;
 pub mod ai_run_guard;

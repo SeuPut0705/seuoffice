@@ -139,7 +139,7 @@ jobs:
           path: tools/docx-diff/out
           if-no-files-found: ignore
 
-      # the central process (decision 0029): crates/main-core through its
+      # the central process (decision 0030): crates/main-core through its
       # Node-API addon against the TypeScript main process
       - name: Central process comparison
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
@@ -157,7 +157,7 @@ jobs:
           path: tools/main-diff/out
           if-no-files-found: ignore
 
-  # The central process on Windows (decision 0029): the functions whose Rust
+  # The central process on Windows (decision 0030): the functions whose Rust
   # reads the platform (the file identity of fs.statSync, the file error
   # table of node-fs) against the TypeScript on the same machine. The Linux job compares everything else.
   main-windows:
@@ -211,7 +211,7 @@ jobs:
           path: tools/main-diff/out
           if-no-files-found: ignore
 
-  # Fault injection for the central process (decision 0029): each fault of
+  # Fault injection for the central process (decision 0030): each fault of
   # the file rebuilds the Node-API addon and runs the comparison of its
   # functions, which must then differ.
   main-faults:

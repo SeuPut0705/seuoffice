@@ -1,4 +1,4 @@
-//! The Node-API addon the Electron main process loads (decision 0029). One
+//! The Node-API addon the Electron main process loads (decision 0030). One
 //! export for now: `call`, the comparison's entry point, which runs a ported
 //! function by its TypeScript name. The product's own exports come with the
 //! first caller that switches.

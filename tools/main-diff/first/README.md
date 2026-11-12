@@ -1,7 +1,7 @@
 # First comparisons
 
 The first runner comparison of each batch, kept as the runner wrote it, before
-anything was fixed: the measure of the port (decision 0029, crates/README.md).
+anything was fixed: the measure of the port (decision 0030, crates/README.md).
 
 - `b1-gate.txt`: batch 1, run 43241830975 of `seuoffice rust` at 5c00b256c,
   2026-11-12. 18,839 checks over 138 functions, 18,831 equal, 8 differences

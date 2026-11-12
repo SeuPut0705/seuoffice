@@ -1,5 +1,5 @@
 //! The central process of SeuOffice, ported from the Electron main process
-//! (`apps/*/src/main`) one batch at a time (decision 0029). Each module sits
+//! (`apps/*/src/main`) one batch at a time (decision 0030). Each module sits
 //! under the folder of the TypeScript it comes from and keeps its file name:
 //! `shell/update_attempt.rs` is `apps/shell/src/main/update-attempt.ts`.
 //!

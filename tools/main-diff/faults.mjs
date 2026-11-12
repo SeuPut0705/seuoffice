@@ -1,4 +1,4 @@
-// Fault injection for the central process comparison (decision 0029): each
+// Fault injection for the central process comparison (decision 0030): each
 // fault of a file changes one place of the Rust, the addon is rebuilt, and the
 // comparison of the fault's functions must then report a difference.
 //

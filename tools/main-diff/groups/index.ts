@@ -20,7 +20,7 @@ import { group as nodePath } from './node-path.ts'
 import { group as settings } from './settings.ts'
 import { group as update } from './update.ts'
 
-/** The groups of each batch (decision 0029), by the name `--group` takes. */
+/** The groups of each batch (decision 0030), by the name `--group` takes. */
 export const groups: Record<string, Group> = {
   'node-path': nodePath,
   update,

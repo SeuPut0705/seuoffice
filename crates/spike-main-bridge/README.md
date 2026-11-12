@@ -1,6 +1,6 @@
 # spike-main-bridge
 
-An experiment for decision 0029, not part of the product: how the Electron
+An experiment for decision 0030, not part of the product: how the Electron
 main process should call the Rust central process while Electron stays. Two
 bridges answer the same three things:
 
@@ -57,7 +57,7 @@ Sizes: the addon 612 KB, the sidecar 474 KB (release, LTO, not stripped).
 What it shows: Node-API is two times faster for a small call, seven to ten
 times for a megabyte, and starts in a third of the time. Both are far below
 what a person notices for one call. What decides is the shape of the callers
-(decision 0029): most of the main process reads its files synchronously, and
+(decision 0030): most of the main process reads its files synchronously, and
 only Node-API can answer a synchronous call.
 
 Not measured: Windows and Linux, a Mac x64 build, memory. The Electron p99 of

@@ -9,7 +9,7 @@
  *
  * Fails on a difference that `divergences.json` does not list, on a listed
  * one that no longer reproduces, and on a function whose cases gave fewer
- * than two distinct answers (decision 0029, crates/README.md).
+ * than two distinct answers (decision 0030, crates/README.md).
  */
 import {
   chmodSync,
