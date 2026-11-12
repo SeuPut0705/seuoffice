@@ -30,7 +30,11 @@ describe('the home folder an earlier version made', () => {
     mkdirSync(join(home, '.ieumoffice'))
     expect(auditLogPath({}, home)).toBe(join(home, '.ieumoffice', 'cli-audit.jsonl'))
 
+    // an empty ~/.seuoffice, made by hand as the help describes, hides nothing
     mkdirSync(join(home, '.seuoffice'))
+    expect(auditLogPath({}, home)).toBe(join(home, '.ieumoffice', 'cli-audit.jsonl'))
+
+    writeFileSync(join(home, '.seuoffice', 'launcher'), '/opt/SeuOffice/resources/cli\n')
     expect(auditLogPath({}, home)).toBe(join(home, '.seuoffice', 'cli-audit.jsonl'))
   })
 

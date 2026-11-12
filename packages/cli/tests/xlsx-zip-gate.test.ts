@@ -109,10 +109,10 @@ describe('a workbook the zip gate refuses never reaches JSZip', () => {
     expect(loadAsync).not.toHaveBeenCalled()
   })
 
-  it('sheet read --formats reads on without the stored formats', async () => {
+  it('sheet read reports the refusal: the cells it withholds from AI cannot be read', async () => {
     const r = await run(['sheet', 'read', workbook(), '--formats', '--json'], { env })
-    expect(r.code).toBe(0)
-    expect(r.json().detail.rows).toEqual([[1]])
+    expect(r.code).toBe(EXIT.conversion)
+    expect(r.json()).toMatchObject(REFUSAL)
     expect(loadAsync).not.toHaveBeenCalled()
   })
 

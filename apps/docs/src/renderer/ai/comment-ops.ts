@@ -9,6 +9,8 @@ import type { Editor } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import type { CommentInfo } from '@seuoffice/docx-engine'
 import { liveText } from './doc-utils'
+import { redactNode, type RedactableNode } from './redact-view'
+import { hasRedactionIn } from '../editor/redaction'
 
 export interface CommentAnchorInput {
   blockIndex: unknown
@@ -126,8 +128,11 @@ export function resolveCommentAnchor(editor: Editor, input: CommentAnchorInput):
     return {
       from: runs[0]!.pos,
       to: last.pos + (last.textEnd - last.textStart),
-      // a person reads this: a comment preview must show the real words
-      excerpt: liveText(anchorBlock.node, true),
+      // a model reads this: words hidden from AI read as their placeholders
+      excerpt: liveText(
+        editor.schema.nodeFromJSON(redactNode(anchorBlock.node.toJSON() as RedactableNode)),
+        true,
+      ),
     }
   }
   if (typeof input.text !== 'string') return { error: 'text must be a string' }
@@ -137,8 +142,15 @@ export function resolveCommentAnchor(editor: Editor, input: CommentAnchorInput):
     }
   }
   const needle = input.text
+  // a match that reaches into words hidden from AI is no match: finding one
+  // would tell the model the hidden words hold what it searched for
   const hits: number[] = []
-  for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + 1)) hits.push(at)
+  for (let at = text.indexOf(needle); at !== -1; at = text.indexOf(needle, at + 1)) {
+    const from = posOfOffset(segments, at)
+    const to = posOfOffset(segments, at + needle.length, true)
+    if (from !== null && to !== null && hasRedactionIn(editor, from, to)) continue
+    hits.push(at)
+  }
   if (hits.length === 0) {
     return {
       error: `block ${index} does not contain "${clipText(needle)}"; text must match exactly`,

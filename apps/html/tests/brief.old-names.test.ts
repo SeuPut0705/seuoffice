@@ -25,10 +25,10 @@ describe('a page with the brief an earlier version pinned', () => {
   it('keeps exactly one brief tag, in place, once a new brief is pinned', () => {
     const next = { ...parseBrief(PAGE)!, core_hook: 'Ship safer' }
     const updated = injectBrief(PAGE, next)
-    expect(briefTags(updated)).toEqual(['<meta name="seuoffice:brief"'])
+    expect(briefTags(updated)).toEqual(['<meta name="genoffice:brief"'])
     expect(parseBrief(updated)?.core_hook).toBe('Ship safer')
     expect(
-      updated.startsWith('<html><head><meta charset="utf-8"><meta name="seuoffice:brief"'),
+      updated.startsWith('<html><head><meta charset="utf-8"><meta name="genoffice:brief"'),
     ).toBe(true)
     expect(updated.endsWith('<title>Plan</title></head><body><p>x</p></body></html>')).toBe(true)
   })
@@ -37,5 +37,27 @@ describe('a page with the brief an earlier version pinned', () => {
     const edit = briefPinEdit(PAGE, { ...parseBrief(PAGE)!, core_hook: 'Ship safer' })
     expect(edit?.old).toBe(OLD_TAG)
     expect(briefTags(PAGE.replace(edit!.old, edit!.new))).toHaveLength(1)
+  })
+})
+
+describe('the name a pinned brief is written under', () => {
+  const BRIEF = parseBrief(PAGE)!
+
+  it('stays the name the page already has when re-pinned', () => {
+    const updated = injectBrief(PAGE, { ...BRIEF, core_hook: 'Ship safer' })
+    expect(briefTags(updated)).toEqual(['<meta name="genoffice:brief"'])
+    expect(parseBrief(updated)?.core_hook).toBe('Ship safer')
+  })
+
+  it('stays the new name on a page that already has the new name', () => {
+    const page = PAGE.replace('genoffice:brief', 'seuoffice:brief')
+    const updated = injectBrief(page, { ...BRIEF, core_hook: 'Ship safer' })
+    expect(briefTags(updated)).toEqual(['<meta name="seuoffice:brief"'])
+  })
+
+  it('is the name 0.12.37 reads for a brief pinned the first time', () => {
+    const updated = injectBrief('<html><head><meta charset="utf-8"></head></html>', BRIEF)
+    expect(briefTags(updated)).toEqual(['<meta name="genoffice:brief"'])
+    expect(parseBrief(updated)?.core_hook).toBe('Ship faster')
   })
 })

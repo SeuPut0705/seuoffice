@@ -1,4 +1,9 @@
 import JSZip from 'jszip'
+import {
+  RedactionMarkError,
+  UNKNOWN_CELL_MARKER,
+  xlsxWithheldCells,
+} from '@seuoffice/file-parse/redaction'
 import { assertZipInflatesWithinLimits } from '@seuoffice/docx-engine'
 import * as numfmt from 'numfmt'
 import {
@@ -462,8 +467,30 @@ function parseRangeChecked(range: string): Bounds {
   }
 }
 
+/**
+ * Which cells of a workbook the sheet editor withholds from a model (see
+ * file-parse's xlsx reader, which this shares), or null when it withholds
+ * none. A file that cannot carry the record withholds nothing; one whose
+ * record cannot be read is not read.
+ */
+async function withheldCellsOf(
+  path: string,
+): Promise<((sheet: string, ref: string, hasFormula: boolean) => string | null) | null> {
+  if (!/\.xls[xm]$/i.test(path)) return null
+  const bytes = new Uint8Array(await readFile(path))
+  // not a package at all: it carries no record, and the engine rejects it as it always did
+  if (bytes[0] !== 0x50 || bytes[1] !== 0x4b) return null
+  try {
+    return await xlsxWithheldCells(bytes)
+  } catch (err) {
+    if (!(err instanceof RedactionMarkError)) throw err
+    throw new CliError(EXIT.conversion, err.message, undefined, { reason: 'conversion_failed' })
+  }
+}
+
 export async function readSheet(path: string, opts: ReadOptions): Promise<SheetRead> {
   const cols = opts.cols ? parseCols(opts.cols) : undefined
+  const withheld = await withheldCellsOf(path)
   return withOpenWorkbook(path, async (client, wb) => {
     const meta = pickSheet(wb, opts.sheet)
     const bounds = opts.range
@@ -508,6 +535,17 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
           },
       true,
     )
+    // a cell hidden from AI reads as its placeholder, and neither its value nor
+    // its formula travels: everything below (rows, formulas, matches, stats)
+    // is built from these cells
+    if (withheld) {
+      for (const c of result.cells) {
+        const marker = withheld(meta.name, `${columnLabel(c.column)}${c.row + 1}`, !!c.formula)
+        if (marker === null) continue
+        c.value = marker
+        delete c.formula
+      }
+    }
     if (empty) {
       // the A1 probe only serves the sheet-wide fields; nothing per-range belongs to the asked area
       result.cells = []
@@ -579,7 +617,7 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
       rowsShown: shownRows.length,
       rowsTotal,
       ...(keptColumns ? { columns: keptColumns.map(columnLabel) } : {}),
-      features: sheetFeatures(wb, meta, result),
+      features: sheetFeatures(wb, meta, result, withheld !== null),
     }
     if (opts.where) {
       const cells: MatchedCell[] = []
@@ -817,7 +855,13 @@ function areaLabel(a: CellArea): string {
 }
 
 /** Structure the values alone do not show: panes, filter, visuals and rule counts for the sheet; merges and links for the range. */
-function sheetFeatures(wb: OpenedWorkbook, meta: SheetMeta, result: RangeResult): SheetFeatures {
+function sheetFeatures(
+  wb: OpenedWorkbook,
+  meta: SheetMeta,
+  result: RangeResult,
+  /** the workbook withholds cells from AI */
+  withholds: boolean,
+): SheetFeatures {
   return {
     frozen: meta.freeze
       ? { rows: meta.freeze.frozenRows, columns: meta.freeze.frozenColumns }
@@ -828,7 +872,9 @@ function sheetFeatures(wb: OpenedWorkbook, meta: SheetMeta, result: RangeResult)
       .filter((v) => v.sheetId === meta.id && v.kind === 'chart' && v.chart)
       .map((v) => ({
         id: v.id,
-        title: v.chart!.title,
+        // a title may be the text of a cell (a linked title, a series name): in a
+        // workbook that withholds cells it is withheld, as the sheet editor does
+        title: withholds && v.chart!.title ? UNKNOWN_CELL_MARKER : v.chart!.title,
         types: v.chart!.chartTypes,
         series: v.chart!.series.length,
         anchor: `${columnLabel(v.anchor.fromColumn)}${v.anchor.fromRow + 1}`,

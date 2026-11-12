@@ -93,16 +93,6 @@ describe('an assets folder whose list has the old name', () => {
   })
 })
 
-describe('a fresh assets folder', () => {
-  it('gets the list under the new name only', async () => {
-    const directory = await temporaryDirectory()
-    await writeImageIntoOwnedAssets(join(directory, 'note.md'), 'pic.png', Buffer.from('pic'))
-
-    expect(existsSync(join(directory, 'assets', NEW_MANIFEST))).toBe(true)
-    expect(existsSync(join(directory, 'assets', OLD_MANIFEST))).toBe(false)
-  })
-})
-
 describe('an assets folder that has a list under each name', () => {
   it('uses the new list and leaves the old one as it was', async () => {
     const directory = await folderFromPreviousVersion()

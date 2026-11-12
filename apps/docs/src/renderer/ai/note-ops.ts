@@ -241,7 +241,9 @@ export function buildNotesContext(
         : locked !== null && locked !== undefined
           ? `mark in protected block ${locked}, cannot be deleted here`
           : 'no reference mark in the text'
-      lines.push(`- id ${note.id} (${where}): ${clip(note.text.replace(/\s+/g, ' ').trim(), 300)}`)
+      lines.push(
+        `- id ${note.id} (${where}): ${clip((note.modelText ?? note.text).replace(/\s+/g, ' ').trim(), 300)}`,
+      )
     }
   }
   section('footnote', footnotes)

@@ -8,6 +8,7 @@
 import { personIdFor } from '@seuoffice/xlsx-gateway/gateway/xlsx-threaded-comments'
 
 import type { WorkbookFile } from '../shared/desktop-api'
+import { OLD_FALLBACK_AUTHORS } from './old-names'
 import type { StructuralJournalOp } from './edit-journal'
 
 export interface ThreadReply {
@@ -85,7 +86,11 @@ export class ThreadStore {
   private converted = new Map<string, Map<string, string>>()
   private listeners = new Set<Listener>()
   private version = 0
-  private author = FALLBACK_AUTHOR
+  /// The display name the user set; null for a user with none.
+  private named: string | null = null
+  /// What a user with no name is called: the name an earlier version gave
+  /// that person in this workbook when it is there (it is the person's id).
+  private fallback = FALLBACK_AUTHOR
   /// Called with the sheet id after every edit (journal marking).
   onChange: ((sheetId: string) => void) | null = null
 
@@ -98,20 +103,27 @@ export class ThreadStore {
 
   setAuthor(name: string): void {
     const trimmed = name.trim()
-    this.author = trimmed.length > 0 ? trimmed : FALLBACK_AUTHOR
+    this.named = trimmed.length > 0 ? trimmed : null
   }
 
   authorName(): string {
-    return this.author
+    return this.named ?? this.fallback
   }
 
   /// Replaces the whole store with the file's threads (open / reload).
   load(file: Pick<WorkbookFile, 'sheets'>): void {
     this.threads = new Map()
     this.converted = new Map()
+    this.fallback = FALLBACK_AUTHOR
     for (const sheet of file.sheets) {
       for (const comment of sheet.comments) {
         if (!comment.thread) continue
+        for (const author of [
+          comment.thread.author,
+          ...comment.thread.replies.map((r) => r.author),
+        ]) {
+          if (OLD_FALLBACK_AUTHORS.includes(author)) this.fallback = author
+        }
         this.sheet(sheet.id).set(cellKey(comment.row, comment.column), {
           row: comment.row,
           column: comment.column,
@@ -136,8 +148,8 @@ export class ThreadStore {
       row,
       column,
       id: newGuid(),
-      personId: personIdFor(this.author),
-      author: this.author,
+      personId: personIdFor(this.authorName()),
+      author: this.authorName(),
       dT: threadTimestamp(),
       done: false,
       text,
@@ -155,8 +167,8 @@ export class ThreadStore {
         ...thread.replies,
         {
           id: newGuid(),
-          personId: personIdFor(this.author),
-          author: this.author,
+          personId: personIdFor(this.authorName()),
+          author: this.authorName(),
           dT: threadTimestamp(),
           text,
         },

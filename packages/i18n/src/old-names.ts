@@ -27,6 +27,8 @@ export const OLD_ENV_NAMES: readonly string[] = [
   'AUDIT_LOG',
   'AUTH_DIR',
   'HB_SUBSET_WASM',
+  'HOME',
+  'LANG',
   'MCP_COMPACT_SCHEMAS',
   'MCP_TOKEN',
   'PDFIUM_WASM',
@@ -78,20 +80,29 @@ export const OLD_MCP_TOOL_NAMES: Readonly<Record<string, string>> = {
 }
 
 /**
+ * Scheme of the MCP resources (`<scheme>://guide/…`): the agent skill an
+ * earlier version installed names the guides under it
+ */
+export const OLD_MCP_RESOURCE_SCHEMES: readonly string[] = ['ieumoffice']
+
+/**
  * The name to use for something that may exist under an old name: the current
- * one when it exists; else the first old name that exists (what an earlier
- * version left is used where it is, never copied or moved); else the current
- * one, which the caller then creates.
+ * one when it is in use (`inUse`, by default: it exists); else the first old
+ * name that exists (what an earlier version left is used where it is, never
+ * copied or moved); else the current one, which the caller then creates.
  *
- * The current name wins when both exist, so nothing made later under an old
+ * The current name wins once it is in use, so nothing made later under an old
  * name, by an earlier version or by another program that uses that name, can
- * hide what this version already wrote.
+ * hide what this version already wrote. A folder that only exists (made by
+ * hand, as the help describes, with nothing in it yet) hides nothing either:
+ * a caller for a folder passes `inUse` as "holds data".
  */
 export function existingOrCurrent(
   current: string,
   oldNames: readonly string[],
   exists: (name: string) => boolean,
+  inUse: (name: string) => boolean = exists,
 ): string {
-  if (exists(current)) return current
+  if (inUse(current)) return current
   return oldNames.find(exists) ?? current
 }

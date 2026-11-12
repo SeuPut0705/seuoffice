@@ -9,6 +9,7 @@ export {
   sfntLineMetrics,
 } from './font-table'
 export { decodeEntities } from './parse-xml-text'
+export { withheldLabelOf } from './withheld'
 export { sdtCheckboxGlyphs, sdtCheckboxIsChecked } from './checkbox-control'
 export {
   inlineWrapContentLocked,

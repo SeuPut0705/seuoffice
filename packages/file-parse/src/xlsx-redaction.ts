@@ -89,6 +89,9 @@ function marker(label: string): string {
   return `{{${sanitizeLabel(label, { forComment: true }) || UNKNOWN_LABEL}}}`
 }
 
+/** what a model reads in place of text that may be a withheld cell (a chart title, say) */
+export const UNKNOWN_CELL_MARKER = marker(UNKNOWN_LABEL)
+
 /**
  * The marker standing in for the cell at `ref`, or null when the cell reads
  * as itself. `marks` are one sheet's marks and `derived` what the formula
