@@ -1,0 +1,75 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "blockpasses",
+      "argRefused": 381,
+      "populations": {
+        "corpus": {
+          "compared": 500,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 210,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 0,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 9000,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "blockpasses.applyProtectedLeadingBreaks",
+          "checks": 1891,
+          "differences": 0,
+          "distinctResults": 1050,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "blockpasses.applyBalancedDbcsSpacing",
+          "checks": 1532,
+          "differences": 0,
+          "distinctResults": 1097,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "blockpasses.blockRunGroups",
+          "checks": 1650,
+          "differences": 0,
+          "distinctResults": 508,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "blockpasses.normalizeImageZOrders",
+          "checks": 1515,
+          "differences": 0,
+          "distinctResults": 1177,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "blockpasses.floatTableColumnSpan",
+          "checks": 1600,
+          "differences": 0,
+          "distinctResults": 149,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "blockpasses.bandWrappedBoxesBeforeTables",
+          "checks": 1522,
+          "differences": 0,
+          "distinctResults": 955,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

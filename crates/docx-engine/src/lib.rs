@@ -3,6 +3,7 @@
 pub mod alt_chunk;
 pub mod blank;
 pub mod block_passes;
+pub mod char_class;
 pub mod chart;
 pub mod checkbox_control;
 pub mod doc_properties;
@@ -34,4 +35,5 @@ pub mod symbol_fonts;
 pub mod theme;
 pub mod vml;
 pub mod watermark;
+pub mod xml_tag;
 pub mod xml_text;

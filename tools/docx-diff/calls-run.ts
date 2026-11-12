@@ -3,6 +3,7 @@ import { ALTCHUNK } from './calls-altchunk'
 import { BLANK } from './calls-blank'
 import { BLOCKPASSES } from './calls-blockpasses'
 import { CHART } from './calls-chart'
+import { CHARCLASS, XMLTAG } from './calls-charclass'
 import { CHECKBOX } from './calls-checkbox'
 import { DOCPROPS } from './calls-docprops'
 import { DRAWING } from './calls-drawing'
@@ -43,6 +44,7 @@ export const {
   blank: BLANK,
   blockpasses: BLOCKPASSES,
   chart: CHART,
+  charclass: CHARCLASS,
   checkbox: CHECKBOX,
   docprops: DOCPROPS,
   drawing: DRAWING,
@@ -57,6 +59,7 @@ export const {
   revision: REVISION,
   section: SECTION,
   vml: VML,
+  xmltag: XMLTAG,
   genRpr: GEN_RPR,
   genProps: GEN_PROPS,
   genDrawing: GEN_DRAWING,

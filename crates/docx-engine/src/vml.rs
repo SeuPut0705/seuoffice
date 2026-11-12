@@ -208,17 +208,17 @@ pub fn vml_float_anchor(style: &str, out: &mut FloatAnchor) {
     set_float_anchor!(style, out);
 }
 
-/// VML fixed-point or fraction ("32768f" = 0.5, ".5", "1") as a number.
+/// VML fixed-point, fraction or percentage ("32768f" = 0.5, ".5", "50%", "1") as a number.
 pub fn vml_fraction(value: Option<&str>) -> Option<f64> {
-    let found = js_regex!(r"^\s*(-?[\d.]+)(f)?\s*$").exec(value.unwrap_or(""))?;
+    let found = js_regex!(r"^\s*(-?[\d.]+)(f|%)?\s*$").exec(value.unwrap_or(""))?;
     let v = parse_float(found.get(1).unwrap_or(""));
     if !v.is_finite() {
         return None;
     }
-    Some(if found.get(2).is_some() {
-        v / 65536.0
-    } else {
-        v
+    Some(match found.get(2) {
+        Some("f") => v / 65536.0,
+        Some(_) => v / 100.0,
+        None => v,
     })
 }
 

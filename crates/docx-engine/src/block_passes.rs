@@ -6,11 +6,13 @@
 use jscompat::{JsNum, JsRegex, RegexLimit, js_regex, math_round, trim, truthy, try_js_regex};
 use serde::Serialize;
 
+use crate::char_class::{CharClass, char_class, is_double_byte_char};
 use crate::model::{
     Block, BlockType, FieldDisplay, FieldDisplayKind, Run, SectionSettings, TableModel,
     TableModelFloatPosHorzAnchor, TextboxDisplay,
 };
 use crate::props::strip_textboxes;
+use crate::xml_tag::remove_elements;
 use crate::xml_text::EMU_PER_PX;
 
 /// `PAGE_BR_RE`
@@ -22,18 +24,31 @@ fn page_br_re() -> &'static JsRegex {
 /// million characters passes the bound of one search.
 fn host_paragraph_breaks_before(xml: &str) -> Result<bool, RegexLimit> {
     // w:pPrChange holds the tracked-change *previous* pPr, not the live setting
-    // (the TypeScript reads a self-closing record as the start of a paired one)
-    let live = js_regex!(
-        r"<w:pPrChange(?:\s[^>]*?)?\/>|<w:pPrChange[\s>][\s\S]*?<\/w:pPrChange>",
-        "g"
-    )
-    .replace_all(xml, |_| String::new());
+    let live = remove_elements(xml, "w:pPrChange", None);
     let head = try_js_regex!(r"^<w:p(?:\s[^>]*)?>\s*<w:pPr>((?:(?!<\/w:pPr>)[\s\S])*)<\/w:pPr>")
         .try_exec(&live)?;
     let p_pr = head.as_ref().and_then(|found| found.get(1));
     Ok(p_pr.is_some_and(|p_pr| {
         js_regex!(r#"<w:pageBreakBefore(?:\s+w:val="(?:1|true|on)")?\s*\/>"#).test(p_pr)
     }))
+}
+
+/// The text of the `w:t` elements of `xml`, joined: the visible text ahead of a break.
+fn wt_text_of(xml: &str) -> String {
+    js_regex!(r"<w:t[^>]*>([^<]*)<\/w:t>", "g")
+        .find_iter(xml)
+        .map(|found| found.get(1).unwrap_or(""))
+        .collect()
+}
+
+/// `leadsWithPageBreak`: a page break with no visible text ahead of it, text
+/// boxes left out.
+fn leads_with_page_break(xml: &str) -> bool {
+    let body = strip_textboxes(xml);
+    match page_br_re().exec(&body).map(|found| found.start()) {
+        Some(br) => trim(&wt_text_of(&body[..br])).is_empty(),
+        None => false,
+    }
 }
 
 /// What `applyProtectedLeadingBreaks` writes into one block.
@@ -63,18 +78,22 @@ fn leading_break(b: &Block) -> Result<Option<LeadingBreak>, RegexLimit> {
     if host_paragraph_breaks_before(xml)? {
         return Ok(Some(LeadingBreak::PageBreakBefore));
     }
-    if *b.r#type != Some(BlockType::Image) {
-        return Ok(None);
+    // a field paragraph (a heading that closes the TOC's fldChar) renders its
+    // result text only: a page break ahead of every visible run turns the page
+    if *b.r#type == Some(BlockType::Passthrough) {
+        let text_field = b.field_display.as_ref().is_some_and(|display| {
+            display.kind == FieldDisplayKind::Text && display.empty_line != Some(true)
+        });
+        return Ok(
+            (text_field && leads_with_page_break(xml)).then_some(LeadingBreak::PageBreakBefore)
+        );
     }
     let drawing = js_regex!(r"<w:drawing[\s>]|<w:pict[\s>]|<w:object[\s>]")
         .exec(xml)
         .map(|found| found.start());
     let head = &xml[..drawing.unwrap_or(xml.len())];
     if let Some(br) = page_br_re().exec(head).map(|found| found.start()) {
-        let text_before: String = js_regex!(r"<w:t[^>]*>([^<]*)<\/w:t>", "g")
-            .find_iter(&head[..br])
-            .map(|found| found.get(1).unwrap_or(""))
-            .collect();
+        let text_before = wt_text_of(&head[..br]);
         return Ok(trim(&text_before)
             .is_empty()
             .then_some(LeadingBreak::PageBreakBefore));
@@ -154,7 +173,7 @@ const SINGLE_SPACING_HANGUL_KANA_FONTS: [&str; 8] = [
 ];
 
 /// `keepsHangulKanaSingle`
-fn keeps_hangul_kana_single(font: Option<&str>) -> bool {
+pub fn keeps_hangul_kana_single(font: Option<&str>) -> bool {
     truthy(font).is_some_and(|font| {
         let key =
             js_regex!(r"[\s\u3000]+", "g").replace_all(&font.to_lowercase(), |_| String::new());
@@ -164,11 +183,7 @@ fn keeps_hangul_kana_single(font: Option<&str>) -> bool {
 
 /// `isHangulOrKana`
 fn is_hangul_or_kana(cp: u32) -> bool {
-    (0x1100..=0x11ff).contains(&cp)
-        || (0x3040..=0x30ff).contains(&cp)
-        || (0x3130..=0x318f).contains(&cp)
-        || (0x31f0..=0x31ff).contains(&cp)
-        || (0xac00..=0xd7af).contains(&cp)
+    matches!(char_class(cp), CharClass::Hangul | CharClass::Kana)
 }
 
 /// `doubledGlyphFraction`: the share of the code points of `text` that take
@@ -178,13 +193,7 @@ fn doubled_glyph_fraction(text: &str, hangul_kana_single: bool) -> f64 {
     let mut n = 0.0;
     for ch in text.chars() {
         let cp = u32::from(ch);
-        let hangul_kana = is_hangul_or_kana(cp);
-        let is_wide = hangul_kana
-            || (0x2e80..=0x9fff).contains(&cp)
-            || (0xf900..=0xfaff).contains(&cp)
-            || (0xff00..=0xff60).contains(&cp)
-            || cp >= 0x20000;
-        if is_wide && !(hangul_kana && hangul_kana_single) {
+        if is_double_byte_char(cp) && !(hangul_kana_single && is_hangul_or_kana(cp)) {
             wide += 1.0;
         }
         n += 1.0;
