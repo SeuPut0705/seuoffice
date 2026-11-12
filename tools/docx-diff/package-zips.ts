@@ -326,7 +326,9 @@ function richPackages(): Record<string, EntrySpec[]> {
     '<w:num w:numId="1"><w:abstractNumId w:val="1"/></w:num>' +
     '<w:num w:numId="2"><w:abstractNumId w:val="2"/><w:lvlOverride w:ilvl="1"><w:startOverride w:val="4"/></w:lvlOverride><w:lvlOverride w:ilvl="0"><w:startOverride w:val="x"/><w:lvl w:ilvl="5"><w:numFmt w:val="decimalZero"/></w:lvl></w:lvlOverride><w:lvlOverride w:ilvl="x"><w:startOverride w:val="1"/></w:lvlOverride></w:num>' +
     '<w:num w:numId="3"><w:abstractNumId w:val="3"/></w:num><w:num w:numId="1"><w:abstractNumId w:val="404"/></w:num>' +
-    '<w:num w:numId="8"><w:abstractNumId w:val="8"/></w:num>' +
+    // numId 1 is taken over by the entry above: this one shows the levels abstractNum 1
+    // gets through its numStyleLink
+    '<w:num w:numId="8"><w:abstractNumId w:val="8"/></w:num><w:num w:numId="9"><w:abstractNumId w:val="1"/></w:num>' +
     '<w:num w:numId="5"/><w:num><w:abstractNumId w:val="0"/></w:num><w:num w:numId="0"><w:abstractNumId w:val="0"/></w:num></w:numbering>'
   const theme = (scheme: string): string =>
     `<a:theme xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"><a:themeElements>${scheme}` +
@@ -424,7 +426,8 @@ function richPackages(): Record<string, EntrySpec[]> {
     'a package whose styles take every spread, assign and delete of parseStyles': [
       ...common,
       {
-        // key order by path: a pBdr spread per side, a tab merge that empties, the docDefaults
+        // key order by path: a pBdr spread per side, a tab merge that empties and a style
+        // under it that sets tabs again (a deleted key comes back last), the docDefaults
         // indent and border fill-in, a linked style filling run keys around a key that holds
         // undefined, both sides of a table condition, the Times New Roman and w:lang paths
         name: 'word/styles.xml',
@@ -432,10 +435,34 @@ function richPackages(): Record<string, EntrySpec[]> {
           '<w:docDefaults><w:rPrDefault><w:rPr><w:szCs w:val="24"/><w:lang w:val="en-US" w:eastAsia="ko-KR"/><w:b/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:pBdr><w:left w:val="single" w:sz="4"/></w:pBdr><w:ind w:right="100" w:leftChars="30"/></w:pPr></w:pPrDefault></w:docDefaults>' +
             '<w:style w:type="paragraph" w:styleId="P1"><w:name w:val="P1"/><w:link w:val="C1"/><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="8"/></w:pBdr><w:tabs><w:tab w:val="left" w:pos="720"/></w:tabs><w:ind w:firstLineChars="100"/></w:pPr><w:rPr><w:color w:val="FF0000"/><w:sz w:val="28"/><w:b/></w:rPr></w:style>' +
             '<w:style w:type="paragraph" w:styleId="P2"><w:name w:val="P2"/><w:basedOn w:val="P1"/><w:pPr><w:pBdr><w:top w:val="nil"/></w:pBdr><w:tabs><w:tab w:val="clear" w:pos="720"/></w:tabs><w:ind w:left="200" w:leftChars="50"/></w:pPr><w:rPr><w:i/></w:rPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="P3"><w:name w:val="P3"/><w:basedOn w:val="P2"/><w:pPr><w:tabs><w:tab w:val="right" w:pos="900"/></w:tabs></w:pPr></w:style>' +
             '<w:style w:type="character" w:styleId="C1"><w:name w:val="C1"/><w:link w:val="P1"/><w:rPr><w:sz w:val="abc"/><w:i/></w:rPr></w:style>' +
             '<w:style w:type="table" w:styleId="T0"><w:name w:val="T0"/><w:rPr><w:color w:val="00FF00"/></w:rPr><w:pPr><w:spacing w:after="10"/></w:pPr><w:tblPr><w:tblCellMar><w:right w:w="50" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblStylePr w:type="firstRow"><w:rPr><w:b/></w:rPr><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders><w:tcMar><w:left w:w="5" w:type="dxa"/></w:tcMar></w:tcPr></w:tblStylePr></w:style>' +
             '<w:style w:type="table" w:styleId="T1"><w:name w:val="T1"/><w:basedOn w:val="T0"/><w:rPr><w:i/><w:color w:val="0000FF"/></w:rPr><w:pPr><w:jc w:val="center"/><w:spacing w:before="20" w:after="30"/></w:pPr><w:tblPr><w:tblBorders><w:top w:val="single"/></w:tblBorders><w:tblCellMar><w:top w:w="7" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblStylePr w:type="lastRow"><w:tcPr><w:shd w:fill="AAAAAA"/></w:tcPr></w:tblStylePr><w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:fill="BBBBBB"/><w:tcBorders><w:bottom w:val="double"/></w:tcBorders><w:tcMar><w:top w:w="9" w:type="dxa"/></w:tcMar></w:tcPr></w:tblStylePr></w:style>',
         ),
+      },
+    ],
+    // U+0131 (dotless i), U+017F (long s) and U+212A (Kelvin sign) are an ASCII
+    // letter only under Unicode case folding, which /i without /u does not apply:
+    // none of these is a heading, a list paragraph, a justified paragraph, a
+    // pattern shading or a false
+    'a package whose names hold letters that fold to ASCII only in Unicode': [
+      ...common,
+      {
+        name: 'word/styles.xml',
+        data: styles(
+          '<w:style w:type="paragraph" w:styleId="A1"><w:name w:val="head\u0131ng 1"/></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="A2"><w:name w:val="HEAD\u0131NG 2"/></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="L\u0131stParagraph"><w:name w:val="B1"/><w:pPr><w:jc w:val="low\u212Aashida"/></w:pPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="Li\u017ftParagraph"><w:name w:val="B2"/><w:pPr><w:jc w:val="ka\u017fhida"/></w:pPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="C1"><w:name w:val="C1"/><w:pPr><w:jc w:val="tha\u0131Distribute"/><w:shd w:val="thinHorz\u017ftripe" w:color="FF0000" w:fill="FFFFFF"/></w:pPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="C2"><w:name w:val="C2"/><w:pPr><w:jc w:val="thaiDi\u017ftribute"/></w:pPr><w:rPr><w:shd w:val="diagCro\u017f\u017f" w:color="0000FF" w:fill="FFFF00"/></w:rPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="heading 3"/><w:pPr><w:jc w:val="lowKashida"/></w:pPr></w:style>',
+        ),
+      },
+      {
+        name: 'word/settings.xml',
+        data: settings('<w:removePersonalInformation w:val="fal\u017fe"/>'),
       },
     ],
     'a package whose settings switch protection off': [
@@ -508,9 +535,11 @@ export function oddContainers(): Array<[name: string, docx: Uint8Array]> {
   const valid = buildZip(base())
   const half = new Uint8Array(450 * MEGABYTE)
   const halfDeflated = deflateRawSync(half)
-  const damaged = deflateRawSync(encoder.encode(DOCUMENT.repeat(40)))
-  damaged[Math.floor(damaged.length / 2)] ^= 0xff
-  damaged[Math.floor(damaged.length / 2) + 1] ^= 0xff
+  // by hand, not a deflated text with bytes flipped: what a deflater writes differs
+  // between zlib builds, and the flipped bytes then land somewhere else. A stored
+  // block of 200 bytes, then a block of the reserved type.
+  const stored = encoder.encode(DOCUMENT.repeat(2)).subarray(0, 200)
+  const damaged = concat([Uint8Array.from([0, 200, 0, 55, 255]), stored, Uint8Array.from([7])])
   const cut = deflateRawSync(encoder.encode(DOCUMENT.repeat(40))).subarray(0, 60)
   const cases: Record<string, Uint8Array> = {
     'a valid package, deflated': valid,
@@ -565,9 +594,21 @@ export function oddContainers(): Array<[name: string, docx: Uint8Array]> {
       replaced('word/styles.xml', { payload: cut, declaredSize: 3 }),
     ),
     'empty deflate data': buildZip(replaced('word/styles.xml', { payload: new Uint8Array(0) })),
+    // refused as the product's hosts refuse them (host.ts); Node as it is reads past them
     'bytes after the deflate stream': buildZip(
+      replaced('word/styles.xml', { payload: afterTheStream(STYLES) }),
+    ),
+    // over what the part declares, the declaration is what it is refused for
+    'bytes after the deflate stream of a part that under-declares': buildZip(
+      replaced('word/styles.xml', { payload: afterTheStream(STYLES), declaredSize: 9 }),
+    ),
+    'one byte after a deflate stream of 300 KB': buildZip(
       replaced('word/styles.xml', {
-        payload: concat([deflateRawSync(encoder.encode(STYLES)), encoder.encode('trailing')]),
+        data: STYLES.padEnd(300_000, ' '),
+        payload: concat([
+          deflateRawSync(encoder.encode(STYLES.padEnd(300_000, ' '))),
+          Uint8Array.from([0]),
+        ]),
       }),
     ),
     'an unsupported compression method': buildZip(replaced('word/styles.xml', { method: 12 })),
@@ -896,6 +937,9 @@ export function hostileContainers(): Record<string, Uint8Array> {
     }),
   }
 }
+
+const afterTheStream = (text: string): Uint8Array =>
+  concat([deflateRawSync(encoder.encode(text)), encoder.encode('trailing')])
 
 const S = 'http://purl.oclc.org/ooxml/'
 const STRICT_W = `${S}wordprocessingml/main`

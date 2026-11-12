@@ -1,12 +1,21 @@
 // Comparison (f): the functions of the modules ported after the property
 // readers, each called by name on both sides: over the corpus, over built
 // inputs and over seeded mutations of both.
+import { isDeepStrictEqual } from 'node:util'
+import { ALTCHUNK } from './calls-altchunk'
 import { BLANK } from './calls-blank'
+import { CHECKBOX } from './calls-checkbox'
 import { DOCPROPS } from './calls-docprops'
+import { DRAWING } from './calls-drawing'
+import { FIELDDISPLAY } from './calls-fielddisplay'
 import { FIELDS } from './calls-fields'
+import { IMAGES } from './calls-images'
 import { MARKERS } from './calls-markers'
 import { MATH } from './calls-math'
+import { RESOLVE } from './calls-resolve'
+import { REVISION } from './calls-revision'
 import { SECTION } from './calls-section'
+import { VML } from './calls-vml'
 import type { CallSpec, Input } from './calls-spec'
 import { byFunction, checkOutcome, flush, type Outcome, rustOutcome } from './compare-props'
 import { mutate } from './compare-xml'
@@ -31,12 +40,20 @@ interface Group {
 const titled = (name: string): string => name[0]!.toUpperCase() + name.slice(1)
 
 const groups: Group[] = Object.entries({
+  altchunk: ALTCHUNK,
   blank: BLANK,
+  checkbox: CHECKBOX,
   docprops: DOCPROPS,
+  drawing: DRAWING,
+  fielddisplay: FIELDDISPLAY,
   fields: FIELDS,
+  images: IMAGES,
   markers: MARKERS,
   math: MATH,
+  resolve: RESOLVE,
+  revision: REVISION,
   section: SECTION,
+  vml: VML,
 })
   .filter(([name, specs]) => specs.length > 0 && (ONLY_GROUP ?? name) === name)
   .map(([name, specs]) => ({
@@ -92,13 +109,46 @@ export async function callOutcomes(
   }
 }
 
+const LONE_SURROGATE = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(?<![\uD800-\uDBFF])[\uDC00-\uDFFF]/
+
+/** No string in `value`, key or value, holds half a surrogate pair. */
+function wellFormed(value: unknown): boolean {
+  if (typeof value === 'string') return !LONE_SURROGATE.test(value)
+  if (Array.isArray(value)) return value.every(wellFormed)
+  if (typeof value !== 'object' || value === null) return true
+  return Object.entries(value).every(([key, item]) => wellFormed(key) && wellFormed(item))
+}
+
+/**
+ * The classes of divergences.json the specs name (`CallSpec.listed`): how many
+ * inputs fell in each and how many of those differed.
+ */
+export const listedClasses = new Map<string, { inputs: number; differ: number }>()
+
 async function check(
   comparison: Comparison,
   where: string,
   spec: CallSpec,
   { text = '', args = {} }: Input,
 ): Promise<void> {
+  // JSON cannot carry half a surrogate pair to Rust: the whole batch would be
+  // refused, so the input that holds one is named here instead
+  if (!wellFormed(text) || !wellFormed(args)) {
+    throw new Error(`${where}: ${spec.fn}: the input holds a lone surrogate`)
+  }
   const outcome = await typescriptOutcome(spec, text, args)
+  const id = spec.listed?.(text, args)
+  if (id !== undefined) {
+    const rust = rustOutcome(spec.fn, text, args)
+    const same = 'error' in outcome ? 'error' in rust : isDeepStrictEqual(outcome, rust)
+    const count = listedClasses.get(id) ?? { inputs: 0, differ: 0 }
+    listedClasses.set(id, count)
+    count.inputs++
+    if (!same) {
+      count.differ++
+      return
+    }
+  }
   checkOutcome(comparison, `${where}: ${spec.fn}`, spec.fn, text, args, () => outcome)
 }
 
@@ -170,5 +220,10 @@ export function reportCalls(): void {
           `TypeScript threw ${tally?.threw ?? 0}`,
       )
     }
+  }
+  for (const [id, { inputs, differ }] of listedClasses) {
+    console.log(
+      `(f) listed class ${id}: ${inputs} inputs, ${differ} differ as listed and are not counted above`,
+    )
   }
 }

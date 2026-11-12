@@ -330,6 +330,24 @@ const EQ_PARAS: string[] = [
     fld('end'),
   ),
   p(fld('begin'), instr('EQ \\f(1,'), instr('2)'), fld('separate'), fld('end')),
+  // the E and the Q in two elements, so no element opens the instruction; beside
+  // it an element that is w:instrText only under Unicode case folding
+  p(
+    fld('begin'),
+    instr('E'),
+    instr('Q \\f(1,2)'),
+    fld('separate'),
+    fld('end'),
+    r('<w:\u0131nstrText>EQ</w:\u0131nstrText>'),
+  ),
+  p(
+    r('<w:in\u017ftrText>EQ</w:in\u017ftrText>'),
+    fld('begin'),
+    instr('E'),
+    instr('Q \\r(3,x)'),
+    fld('end'),
+  ),
+  p(fld('begin'), instr('E'), instr('Q \\f(1,2)'), fld('separate'), fld('end')),
   p(...field('EQ \\f(a&amp;b,c&lt;d)')),
   p(...field('EQ \\z(1)', t('kept'))),
   p(
@@ -537,6 +555,10 @@ const STYLE_MAP: Array<[string, { styleId: string; name: string }]> = (
     ['TOC3', 'heading 1'],
     ['a9', 'toc 7 '],
     ['10', 'toc 1'],
+    // U+0131 and U+017F: an i and an s only under Unicode case folding
+    ['b1', 'table of f\u0131gures'],
+    ['b2', 'Table Of Figure\u017f'],
+    ['b3', 'TABLE OF F\u0131GURE\u017f'],
   ] as const
 ).map(([styleId, name]) => [styleId, { styleId, name }])
 
@@ -553,6 +575,9 @@ const STYLE_IDS = [
   'TableofFigures',
   'tableoffigures',
   'TableOfFigures1',
+  'TableofF\u0131gures',
+  'tableoffigure\u017f',
+  'TABLEOFF\u0131GURE\u017f',
   'Heading1',
   '',
   '\uBAA9\uCC281',

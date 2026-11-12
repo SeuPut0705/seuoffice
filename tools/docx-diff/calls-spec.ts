@@ -28,6 +28,15 @@ export interface CallSpec {
   built: Input[]
   /** `none` where the text is not what the function reads, so mutating it compares nothing. */
   mutation?: 'none'
+  /**
+   * The id of the entry of divergences.json an input may differ under: a class
+   * where main decided that the Rust is right and the TypeScript is to be
+   * fixed. Such an input is still called on both sides. Equal, it is a check
+   * like any other; different, it is counted under the entry and not as a
+   * difference, so anything else that differs in it is not seen: keep the
+   * class narrow.
+   */
+  listed?(text: string, args: Record<string, unknown>): string | undefined
 }
 
 /** The package a function over a zip reads, from `args.parts`: `[name, text]` pairs. */

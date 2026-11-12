@@ -265,17 +265,33 @@ fn set_number(format: &mut Map<String, Value>, key: &str, value: f64) {
     );
 }
 
-/// Folds character-unit indents into the twips fields of a paragraph format,
-/// the way Word lays them out. `format` is a `ParaFormat`: only its three
-/// indent fields are read and written.
-pub fn resolve_char_indents(
-    format: Option<&Map<String, Value>>,
+/// What `resolveCharIndents` does to `indentFirstLine`.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum FirstLineFold {
+    Set(f64),
+    /// `delete f.indentFirstLine`
+    Delete,
+    /// left as it was
+    Keep,
+}
+
+/// What `resolveCharIndents` does to the three indent fields, in the order
+/// it does it: `left` and `right` are `None` where the field is left as it was.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct CharIndentFold {
+    pub left: Option<f64>,
+    pub first_line: FirstLineFold,
+    pub right: Option<f64>,
+}
+
+/// The core of [`resolve_char_indents`] over numbers, NaN and the infinities
+/// as they are. `indent_first_line` is the format's `indentFirstLine`.
+pub fn fold_char_indents(
+    indent_first_line: Option<f64>,
     chars: &CharIndents,
     units: CharUnits,
-) -> Map<String, Value> {
-    let mut f = format.cloned().unwrap_or_default();
+) -> CharIndentFold {
     let twips = |hundredths: JsNum, unit: f64| math_round((hundredths.0 / 100.0) * unit);
-    let indent_first_line = number_field(&f, "indentFirstLine");
     let twips_hanging = indent_first_line
         .filter(|value| *value < 0.0)
         .map_or(0.0, |value| -value);
@@ -294,20 +310,49 @@ pub fn resolve_char_indents(
             .first_line
             .map_or(twips_first, |first_line| twips(first_line, units.run))
     };
-    if chars.left.is_some() || chars.hanging.is_some() {
+    let left = (chars.left.is_some() || chars.hanging.is_some()).then(|| {
         let ui_left = chars.left.map_or(0.0, |left| twips(left, units.normal));
-        set_number(&mut f, "indentLeft", ui_left + hanging);
-    }
-    if hanging > 0.0 {
-        set_number(&mut f, "indentFirstLine", -hanging);
+        ui_left + hanging
+    });
+    let first_line = if hanging > 0.0 {
+        FirstLineFold::Set(-hanging)
     } else if first_line > 0.0 {
-        set_number(&mut f, "indentFirstLine", first_line);
+        FirstLineFold::Set(first_line)
     } else if indent_first_line.is_some_and(|value| value != 0.0 && !value.is_nan()) {
-        // not `remove`: that moves the last key into the place of the one removed
-        f.shift_remove("indentFirstLine");
+        FirstLineFold::Delete
+    } else {
+        FirstLineFold::Keep
+    };
+    CharIndentFold {
+        left,
+        first_line,
+        right: chars.right.map(|right| twips(right, units.normal)),
     }
-    if let Some(right) = *chars.right {
-        set_number(&mut f, "indentRight", twips(right, units.normal));
+}
+
+/// Folds character-unit indents into the twips fields of a paragraph format,
+/// the way Word lays them out. `format` is a `ParaFormat`: only its three
+/// indent fields are read and written.
+pub fn resolve_char_indents(
+    format: Option<&Map<String, Value>>,
+    chars: &CharIndents,
+    units: CharUnits,
+) -> Map<String, Value> {
+    let mut f = format.cloned().unwrap_or_default();
+    let fold = fold_char_indents(number_field(&f, "indentFirstLine"), chars, units);
+    if let Some(left) = fold.left {
+        set_number(&mut f, "indentLeft", left);
+    }
+    match fold.first_line {
+        FirstLineFold::Set(first_line) => set_number(&mut f, "indentFirstLine", first_line),
+        // not `remove`: that moves the last key into the place of the one removed
+        FirstLineFold::Delete => {
+            f.shift_remove("indentFirstLine");
+        }
+        FirstLineFold::Keep => {}
+    }
+    if let Some(right) = fold.right {
+        set_number(&mut f, "indentRight", right);
     }
     f
 }

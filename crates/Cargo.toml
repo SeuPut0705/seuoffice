@@ -26,6 +26,8 @@ docx-engine = { path = "docx-engine" }
 omml = { path = "omml" }
 file-parse = { path = "file-parse" }
 epub-engine = { path = "epub-engine" }
+# the decoders of the Encoding Standard, which TextDecoder follows
+encoding_rs = "0.8"
 # the inflater the zip crate already uses; entries are read without its CRC check
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
 # ECMAScript regular expressions: patterns are ported by copying them

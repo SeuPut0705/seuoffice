@@ -1,6 +1,7 @@
 //! `fields.<name>`: parse-fields.ts, eq-field.ts, parse-sdt.ts and
 //! field-balance.ts. Offsets cross as UTF-16 code units.
 
+use docx_engine::resolve::{ResolveCompat, ResolveCtx};
 use docx_engine::sdt::{SdtChainLevel, SdtRange, SdtShell};
 use docx_engine::styles::StyleInfo;
 use docx_engine::{eq_field, field_balance, fields, sdt};
@@ -40,6 +41,12 @@ fn style_of(style: StyleArg) -> StyleInfo {
         heading_level_inherited: None,
         linked_char_shell: None,
     }
+}
+
+/// What a context carries over the wire: `additiveSpacingOf` reads its compat only.
+#[derive(Deserialize)]
+struct CtxArg {
+    compat: ResolveCompat,
 }
 
 /// An `XNode` as fast-xml-parser builds it with `preserveOrder`, its
@@ -147,7 +154,13 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "directParaGeometry" => value(fields::direct_para_geometry(&required(args, "eff")?)),
         "directLineOf" => value(fields::direct_line_of(&required(args, "eff")?)),
-        "additiveSpacingOf" => value(fields::additive_spacing_of(&required(args, "ctx")?)),
+        "additiveSpacingOf" => {
+            let ctx: CtxArg = required(args, "ctx")?;
+            value(fields::additive_spacing_of(&ResolveCtx {
+                compat: ctx.compat,
+                ..ResolveCtx::default()
+            }))
+        }
         "fieldStackAfter" => {
             let stack: Vec<bool> = required(args, "stack")?;
             value(fields::field_stack_after(text, &stack))

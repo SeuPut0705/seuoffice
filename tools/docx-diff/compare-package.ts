@@ -42,6 +42,7 @@ import {
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { failed } from './engine'
 import { type Comparison, describeTextDifference, engine, repoRoot, toolDir } from './harness'
+import { RAW_HOST_ENV } from './host'
 import { keyOrderDifference } from './key-order'
 
 export type Outcome = { value?: unknown } | { error: string }
@@ -143,7 +144,7 @@ async function contentTypesOf(zip: JSZip) {
 }
 
 /** `parseTheme` and `readThemeFontLang` of parse.ts. */
-async function parseTheme(
+export async function parseTheme(
   zip: JSZip,
 ): Promise<{ fonts: ThemeFonts | null; colors: ThemeColors | null }> {
   const file = zip.file(THEME_PART_PATH)
@@ -350,13 +351,21 @@ export function rustOpen(docx: Uint8Array): Opened {
  * does not return. A loader that hangs or dies gives a result that says so
  * instead of hanging or ending the gate. Two loaders that fail alike give the
  * same result, so a caller that expects an answer has to name it.
+ *
+ * `host: 'node'` runs the TypeScript loader on Node as it is, without what
+ * host.ts does to it.
  */
-export function openOnce(side: 'typescript' | 'rust', docx: Uint8Array): unknown {
+export function openOnce(
+  side: 'typescript' | 'rust',
+  docx: Uint8Array,
+  host: 'product' | 'node' = 'product',
+): unknown {
   const child = spawnSync(process.execPath, ['--import', 'tsx', 'load-once.ts', side], {
     cwd: toolDir,
     input: docx,
     timeout: 5_000,
     encoding: 'utf8',
+    env: host === 'node' ? { ...process.env, [RAW_HOST_ENV]: '1' } : process.env,
   })
   if (child.error || child.signal) return 'does not return within 5 s'
   if (child.status !== 0 || child.stdout.trim() === '') {

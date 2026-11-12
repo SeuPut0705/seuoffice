@@ -202,6 +202,20 @@ differ, with the answer of each side and the reason. The gate checks each
 entry still reproduces as listed, so the ledger cannot go stale. A divergence
 is listed, never coded around in the harness.
 
+An entry pins one input. Where main decided that the Rust is right and the
+TypeScript is to be fixed (a missing paragraph style, single-quoted revision
+attributes), or where the answer is the host's (legacy charsets on Node),
+corpus documents and mutations fall in the same class. A spec names the
+class of an input with `CallSpec.listed` (the predicates are in
+`tools/docx-diff/listed.ts`, each over the input alone). Such an input is
+still called on both sides: equal, it is a check like any other; different,
+it is counted on the line `(f) listed class <id>` and not as a difference.
+What else differs in an input that differs under its class is not seen:
+that is the price, so a class stays narrow and goes with its entry when the
+TypeScript is fixed. The gate fails on a class without an entry and on a
+class none of whose inputs differs any more. The gate runs in UTC
+(`host.ts`); an entry with `zone` runs its TypeScript side in that zone.
+
 ## Known debt
 
 - `Package` holds every entry inflated; JSZip inflates on read. Fine for the
@@ -255,16 +269,91 @@ is listed, never coded around in the harness.
 
 ## Next session starts here
 
-State on 2026-11-12. The branch is on origin and is pushed at every unit
-boundary (never forced, never to main).
+State on 2026-11-12, 13:30 KST. The branch is on origin and is pushed at
+every unit boundary (never forced, never to main).
 
 - `feat/rust-docx-u1`: everything below, on main at 5f03509fd (merged, not
-  rebased). The gate passes with key order compared: 0 differences, 5 ledger
-  entries, none stale.
-- Other streams (other engines, the model types) start from this branch on
-  origin, on another machine. Keep this file current for them.
+  rebased). The gate is RED on one thing only, and on purpose: 679 checks
+  over inputs with U+0131, U+017F or U+212A, where `js_regex!(…, "i")` folds
+  case as Unicode does and JavaScript without `/u` does not. The fix is one
+  place, `jscompat/src/regex.rs`, and is stream D's (`feat/rust-fileparse-u1`):
+  main sends the hash, it is merged here, and the gate has to read 0 again.
+  Do not fix it a second way. Everything else: 0 differences in 1,724,926
+  checks, 13 ledger entries, none stale, five listed classes.
+- Other streams start from this branch on origin, on another machine, and
+  merge it at unit boundaries: `feat/rust-docx-model` (B: the Word model
+  types generated from `types.ts` into `docx-engine/src/model/`, then the
+  save side, and the leaves over model types: `ink.ts`,
+  `parse-block-passes.ts`, `lineBoxOf`, `vmlWordArtBox`, the read side of
+  `chart.ts`), `feat/rust-pptx-u1` (C), `feat/rust-fileparse-u1` (D). They
+  add to `ooxml-xml`, `ooxml-pkg`, `jscompat` and the harness behind new
+  functions and options; the Word gate has to stay as it is. The model is
+  not ported here a second time.
+- `EffectivePPr`, `EffectiveRPr`, `ResolveCtx` and the direct and effective
+  formats are in `docx-engine/src/resolve.rs` now: stream B can type them.
+  Structs written here for want of the model, each under the doc line
+  "model type, to be replaced by the generated model": `FieldDisplay`
+  (`fields/display.rs`), `TextGlow` (`drawing_geometry/fill.rs`).
 
 ### What was done last
+
+**Unit 2: the resolver and the leaves without model types.** About 3,200
+TypeScript lines in 6,600 of Rust, eight groups of (f):
+
+| group | TypeScript | functions | first comparison |
+|---|---|---|---|
+| `resolve` | `resolve-props.ts`, whole | 13 | 24,840 checks, 0 differences |
+| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts` | 1 | 2,122, 0 |
+| `drawing` | `parse-drawing-geometry.ts` without `lineBoxOf` | 11 | 6,987, 0 |
+| `vml` | `parse-vml.ts` without `vmlWordArtBox` | 9 | 3,414, 0 |
+| `revision` | `revision-xml.ts`, whole | 6 | 6,348, 0 |
+| `altchunk` | `alt-chunk.ts` without the converter | 5 | 5,458, 12 |
+| `checkbox` | `checkbox-control.ts`, whole | 5 | 2,907, 0 |
+| `images` | the predicates of `tiff.ts` and `metafile.ts` | 4 | 1,505, 0 |
+
+The first comparisons are runner artifacts (runs 43149479120 for `resolve`,
+43151626477 for the rest), taken before anything was fixed; no porter
+compared privately. The 12 differences were one class: `TextDecoder` is ICU
+on Node and the Encoding Standard in Chromium and in `encoding_rs`.
+
+A first run without a difference says little until faults are seeded. Of 29
+faults in the resolver 22 were caught at once; four of the seven misses
+named inputs that are now there (a `w:specVanish` that is present but off,
+`shadowCompare` over inherited names, a negative half in
+`effectiveLineFormat`, default styles of other kinds before the paragraph
+default) and three cannot be seen by any input, because the TypeScript
+readers never produce the value (`eaSlotEmpty: false`, an empty conditional
+colour, a level with `hanging` 0). The faults of the leaves, the porters'
+35 and eight of the integrator's, are run 43153584303: read
+`tools/docx-diff/out/u2-leaves-faults.txt` or the artifact
+`docx-diff-faults`, add an input for each miss, and delete the branch
+`rust-faults/u2-leaves`.
+
+**Where the Rust is right and the TypeScript is to be fixed.** main decided
+six findings of this unit (items 11 to 16 of its TypeScript list). The Rust
+falls back to the default paragraph style for the runs of a paragraph whose
+style is missing, reads the wrap of the outer anchor only, reads revision
+attributes in either quote, reads a `v:fill` opacity in percent, stays on
+the Encoding Standard, and reads a `w:date` without a zone as UTC. Each is
+an entry of `divergences.json` with its class (see "Divergences"). When
+main's fix is merged the entry and its class go stale, and both go.
+
+**The machine.** Nothing heavier than `cargo check -p` runs here any more
+(see "Standing rules"); first comparisons and faults are runner jobs, and
+`tools/docx-diff/faults.py` with the `faults` input of the workflow is the
+tool for the latter. A dispatch right after a push can take the previous
+head: read `headSha` of a run before using its result.
+
+**Held locally until `jscompat` has them** (each marked `// to jscompat:`):
+`encodeURIComponent` (`vml/shape.rs`), a port of V8's `Date.parse`
+(`revision_xml.rs`, about 800 lines), and `utf16_shaped`
+(`fields/display.rs`): a counted quantifier (`\S{1,15}`) counts an astral
+character once in `regress` and twice in JavaScript without `/u`. That last
+one is a property of every `js_regex!` with a counted quantifier or a `.`
+over text outside the BMP and belongs with the case folding in `regex.rs`.
+
+
+**Before unit 2**
 
 **The Rust and the ledger in line with main.** main fixed the TypeScript
 defects this port found, and this branch follows: table lookups answer for
@@ -273,10 +362,20 @@ which build the inherited names as inputs instead), an unknown paper size
 gives A4, a record keeps an entry named `__proto__`, a character outside the
 BMP is one LaTeX argument, a surrogate character reference reads as U+FFFD.
 `parseTagAttrs` of `parse-vml.ts` writes a record with `setOwn` too and is
-not ported yet: keep the `__proto__` entry there. The ledger holds five
-entries: DOCTYPE and the CDATA opener (what fast-xml-parser reads and Rust
-refuses), the two host-dependent ones (`zip-text-in-hosts-without-buffer`,
-`inflate-failure-text-is-the-hosts`) and the LaTeX depth limit.
+not ported yet: keep the `__proto__` entry there.
+
+**The ledger holds six entries.** DOCTYPE and the CDATA opener (what
+fast-xml-parser reads and Rust refuses), the LaTeX depth limit, and three
+that belong to the host: `zip-text-in-hosts-without-buffer`,
+`inflate-failure-text-is-the-hosts`, and bytes after the end of a deflate
+stream, which Chromium refuses and Node 22 reads past. There the Rust
+follows the product's host, not the gate's, by the owner's decision, and
+`tools/docx-diff/host.ts` gives the TypeScript side a `DecompressionStream`
+that refuses them too, so that containers with such bytes (14 of 3,000
+mutated ones had them) are compared like any other; the ledger entry runs
+the TypeScript on Node as it is. Both go when main's zip gate answers alike
+on every host. The gate runs on Node 22 only (`host.ts` stops on another
+major): a fixture made on another one holds another host's answers.
 
 **Key order is part of parity.** The measurement, before anything was
 fixed, of 1,668,203 checks:
@@ -316,30 +415,29 @@ for a record keyed by data. No order is in the ledger.
 
 ### What to do, in order
 
-1. **`resolve-props.ts`** (1,141 lines, 25 exports; imports only modules
-   already ported). It unblocks `fieldDisplayOf` and replaces the partial
-   `EffectivePPr`, `ResolveCtx` and `ResolveCompat` of `fields.rs`. Its
-   results are `ParaFormat` and `Run` objects built by assignment and
-   spread: start from `--key-orders`.
-2. **The leaves `parse.ts` still imports**, in parallel, each as a group of
-   (f): the rest of `parse-drawing-geometry.ts` (651; one function is
-   ported) and of `parse-vml.ts` (568; nine are), `chart.ts` read side
-   (1,077), `revision-xml.ts` (511, shared with the save side),
-   `alt-chunk.ts` (289), `parse-block-passes.ts` (240), `ink.ts` (153),
-   `checkbox-control.ts` (77). `tiff.ts` (145) and `metafile.ts` (122) read
-   bytes: their inputs cross as blobs of the wire frame, not as text.
-   `lazy-media.ts` (55) is about when the host reads media, so decide what
-   of it the engine owns before porting it.
-3. **The model**, `types.ts` (2,719 lines), as Rust types that serialize to
-   the same JSON, each a struct or a `js_object!` by the rule above.
-4. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
+1. **Merge stream D's fix of `jscompat/src/regex.rs`** when main sends the
+   hash, see the gate read 0, and add the one input that waits for it: a
+   part named `x.rel\u017f` for `ooxml-pkg/src/load.rs`.
+2. **Close the leaves' faults** (above), then the unit report to main if it
+   has not gone.
+3. **Merge main when it has fixed items 11 to 16**, drop the entries and
+   classes that go stale, and take the model from stream B when it lands:
+   the local structs go, and `lineBoxOf`, `vmlWordArtBox`, `ink.ts`,
+   `parse-block-passes.ts` and the chart reader come with it.
+   `lazy-media.ts` (55) is about when the host reads media: decide what of
+   it the engine owns before porting it. The decoders of `tiff.ts` and
+   `metafile.ts` stay with the host.
+4. **The model**, `types.ts` (2,719 lines), is stream B's: Rust types that
+   serialize to the same JSON, each a struct or a `js_object!` by the rule
+   above. Fetch `origin/feat/rust-docx-model` and read it before wiring.
+5. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
    are not exported, so (f) cannot call them. Compare `parseDocx` as a
    whole: the model of every corpus document as JSON, block by block, with a
    count per block type and per field so a partial port shows what is equal
    already. Port by pass: runs, paragraphs, tables, drawings and text boxes,
    the block passes. Then finish `parseNotesXml`'s paragraph reader and
    `applyTocEntryNumbers`, which need it.
-5. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
+6. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
    `style-upsert.ts`, `remove-parts.ts`, `zip-splice.ts`,
    `resource-cleanup.ts`, the writers left out of the modules above) and
    the features on top (`compare.ts`, `mail-merge.ts`) come after the read
@@ -362,22 +460,41 @@ From the owner, for every unit:
 - English Conventional Commits, one change each, each building and passing
   its tests. Comments in English, no CJK ideographs (escape them in
   literals).
-- The whole gate, clippy and the tests of the whole workspace run on a
-  GitHub runner, not on this machine, which is shared and slow:
+- The whole gate, clippy, the tests of the whole workspace and the wasm
+  release build run on a GitHub runner, not on this machine, which is shared
+  and slow (a suite waited ten times its run time in the queue here):
   `gh workflow run "seuoffice rust" --ref <branch>`, then
-  `gh run watch <id> --exit-status` in the background. The run uploads
-  `tools/docx-diff/out`. Fault batches go to runners too, several at once:
-  a branch `rust-faults/<name>` per batch, pushed, started, and deleted
-  afterwards by whoever made it.
-- Locally only `cargo check -p <crate>`, `cargo test -p <crate>` and one
-  group of (f) (`npm --prefix tools/docx-diff run calls -- --group <name>`),
-  each through `tools/docx-diff/heavy.sh <command>`: one heavy command at a
-  time on the machine, and none between 03:30 and 05:00 KST. Never remove
-  `/tmp/heavy.lock` by hand and never kill by name. `tsc`, eslint, prettier
-  and a single `tsx` script need no lock. Every subagent goes by the same.
+  `gh run watch <id> --exit-status` in the background. The job runs every
+  check even after one failed and uploads `tools/docx-diff/out`, with the
+  whole gate output in `gate.txt` (`gh run download <id> -n docx-diff-out`).
+- Faults go to a runner too: a file of faults for `tools/docx-diff/faults.py`
+  on a branch `rust-faults/<name>`, pushed, started with
+  `gh workflow run "seuoffice rust" --ref rust-faults/<name> -f faults=<file>`
+  and deleted afterwards by whoever made it. The result is the artifact
+  `docx-diff-faults`. One ref runs one job at a time: a second start on the
+  same branch cancels the first.
+- Locally only `cargo check -p <crate>` and `cargo test -p <crate>` for the
+  crate being ported, through `tools/docx-diff/heavy.sh <command>`, which
+  hands the command to the machine's queue (`/tmp/heavy.sh`): one heavy
+  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit
+  75) when three already wait. No clippy, no gate, no `calls --group` and no
+  wasm build here. Never remove `/tmp/heavy.lock` by hand and never kill by
+  name. `tsc`, eslint, prettier and a single `tsx` script need no lock, on
+  Node 22. At most two subagents at a time on this machine, each by the
+  same rules; more hands are asked of main, who opens streams elsewhere.
 - The first comparison run of a newly ported module is saved untouched
-  before anything is fixed: it is the measure of the port. A comparison a
-  subagent made privately does not count; the gate does.
+  before anything is fixed: it is the measure of the port. It is a runner's
+  run: the artifact, with its summary committed in the unit's report. A
+  comparison a subagent made privately does not count; the gate does.
+- An input of (f) holds no lone surrogate: JSON cannot carry one to Rust and
+  the runner names the input that does. Say so in a brief that asks for
+  inputs over UTF-16.
+- Every case-insensitive or Unicode-sensitive primitive of `jscompat` (a
+  pattern with `i`, a case mapping, a trim, a word boundary) gets inputs
+  outside ASCII in each gate that uses it: U+0131, U+017F and U+212A fold to
+  `i`, `s` and `k` under Unicode case folding and not under a JavaScript
+  `/i` without `/u`. The corpus is ASCII in the places these patterns read,
+  so only built inputs see it.
 - A function counts as compared when it gave at least two distinct results
   and a seeded fault in it is caught. The one who integrates seeds a fault
   of their own per group, chosen without looking at the porter's list. A
@@ -386,8 +503,11 @@ From the owner, for every unit:
   rounded down where they follow a seeded generator.
 - A difference is listed in `divergences.json` with both answers and the
   reason, and the gate checks it still reproduces. It is never coded around,
-  in the Rust or in the harness. A TypeScript defect is reported to main,
-  not reproduced and not silently avoided. The DOCTYPE refusal is final.
+  in the Rust or in the harness. A TypeScript defect is reported to main at
+  once with its input and ported as it is until main decides: where the
+  TypeScript result is wrong by the format's rules or loses content a user
+  can reach, main has the Rust right from the start, and the difference is
+  an entry with its class. The DOCTYPE refusal is final.
 - A JavaScript operation gets one implementation, in `jscompat`.
 - `ooxml-xml` keeps yielding positions: the edit model of stage 4 starts
   from byte ranges (decision 0025 on main), for which `spike-one-run-save`
