@@ -3,7 +3,7 @@ import { applyRevisionResolutions } from './revision-xml'
 import { patchParagraphTexts } from './text-patch'
 import type { NoteInfo, NoteRun } from './types'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
-import { withheldAsPlaceholders } from './withheld'
+import { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
 
 /**
  * Footnotes / endnotes part handling (word/footnotes.xml, word/endnotes.xml).
@@ -86,12 +86,16 @@ export type NoteParagraphReader = (pXml: string) => NoteParagraph
 
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
-  // the same entries with every run hidden from AI as its placeholder
-  const view = withheldAsPlaceholders(xml)
-  const modelTexts =
-    view === xml ? null : new Map(noteEntriesOf(view, kind).map((e) => [e.id, e.text]))
   return noteEntriesOf(xml, kind).map(({ id, text, xml: entryXml }) => {
-    const modelText = modelTexts?.get(id)
+    // the entry with every run hidden from AI as its placeholder, or withheld
+    // whole when its marks cannot all be read
+    const view = withheldAsPlaceholders(entryXml)
+    const modelText =
+      view === entryXml
+        ? undefined
+        : view === null
+          ? WITHHELD_ENTRY_TEXT
+          : (noteEntriesOf(view, kind)[0]?.text ?? WITHHELD_ENTRY_TEXT)
     const paras = read ? noteParagraphsOf(entryXml).map(read) : []
     const first = paras[0]
     const richParas = paras.map((p) => p.runs)

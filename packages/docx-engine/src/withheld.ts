@@ -25,24 +25,36 @@ export function withheldLabelOf(rPrXml: string | undefined): string | null {
   return decodeEntities(LABEL_RE.exec(rPrXml)?.[1] ?? 'private')
 }
 
+/** What a model reads for an entry whose marks cannot all be read: the whole entry is withheld. */
+export const WITHHELD_ENTRY_TEXT = placeholderSource('private')
+
 /** a run's open tag (not w:rPr, w:rFonts…), self-closing or not, and its close tag */
 const RUN_TAG_RE = /<w:r(?:\s[^>]*?)?(\/)?>|<\/w:r>/g
-/** the rPr right after a run's open tag */
-const RUN_RPR_RE = /<w:rPr\b[^>]*?(?:\/>|>[\s\S]*?<\/w:rPr>)/y
+/** the rPr that opens a run, past the white space and comments a pretty-printed part puts first */
+const RUN_RPR_RE = /(?:\s+|<!--[\s\S]*?-->)*(<w:rPr\b[^>]*?(?:\/>|>[\s\S]*?<\/w:rPr>))/y
+/** a paragraph's properties: a mark on its paragraph mark withholds no words */
+const PPR_RE = /<w:pPr\b[^>]*?(?:\/>|>[\s\S]*?<\/w:pPr>)/g
+/** every trace of the mark, under any prefix or none */
+const MARK_TRACE_RE = new RegExp(MARK_RE.source, 'g')
 
 function runRPr(xml: string, start: number): string | undefined {
   RUN_RPR_RE.lastIndex = xml.indexOf('>', start) + 1
-  return RUN_RPR_RE.exec(xml)?.[0]
+  return RUN_RPR_RE.exec(xml)?.[1]
 }
 
 /**
- * The part's XML with every run hidden from AI replaced by a plain run that
- * holds its placeholder; runs next to each other under one label give one
- * placeholder, as a span in the body does. A hidden run holding other runs (a
- * text box in a drawing) is replaced whole. Reading the result's text gives
- * the part as a model may read it.
+ * One entry's XML (a comment, a note, a content control) with every run
+ * hidden from AI replaced by a plain run that holds its placeholder; runs next
+ * to each other under one label give one placeholder, as a span in the body
+ * does. A hidden run holding other runs (a text box in a drawing) is replaced
+ * whole. Reading the result's text gives the entry as a model may read it.
+ *
+ * Every trace of the mark has to be accounted for: in the properties of a
+ * run, which is then withheld, or on a paragraph mark, which has no words. A
+ * trace anywhere else gives null, and the caller withholds the whole entry
+ * (WITHHELD_ENTRY_TEXT) rather than guess which words it meant.
  */
-export function withheldAsPlaceholders(xml: string): string {
+export function withheldAsPlaceholders(xml: string): string | null {
   if (!MARK_RE.test(xml)) return xml
   const hidden: Array<{ start: number; end: number; label: string }> = []
   const open: number[] = []
@@ -60,6 +72,14 @@ export function withheldAsPlaceholders(xml: string): string {
     } else if (!m[1]) {
       open.push(at)
     }
+  }
+  const understood = [
+    ...hidden,
+    ...[...xml.matchAll(PPR_RE)].map((m) => ({ start: m.index!, end: m.index! + m[0].length })),
+  ]
+  for (const trace of xml.matchAll(MARK_TRACE_RE)) {
+    const at = trace.index!
+    if (!understood.some((range) => at >= range.start && at < range.end)) return null
   }
   let out = ''
   let at = 0
