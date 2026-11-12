@@ -285,7 +285,7 @@ function withProcess<T>(cwd: unknown, env: unknown, fn: () => T): T {
   }
 }
 
-type Fn = (...a: any[]) => unknown // eslint-disable-line @typescript-eslint/no-explicit-any
+type Fn = (...a: any[]) => unknown
 
 function spec(ts: FnSpec['ts'], cases: Case[]): FnSpec {
   return { ts, cases }
