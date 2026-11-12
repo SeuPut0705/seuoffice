@@ -50,5 +50,12 @@
     "find": "&& removed(&pending_dir, BLOCK_MAP_FILE, log)",
     "replace": "&& true",
     "fn": ["update-cache.pruneUpdateCache"]
+  },
+  {
+    "name": "output past the cap reported as the exit status",
+    "file": "main-core/src/pdf/child.rs",
+    "find": "let ended = if too_long.load(Ordering::SeqCst) {",
+    "replace": "let ended = if false {",
+    "fn": ["system-certificates.runCommand"]
   }
 ]

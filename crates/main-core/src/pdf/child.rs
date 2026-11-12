@@ -144,6 +144,13 @@ pub fn capture(
     let stderr = err_reader
         .map(|h| h.join().unwrap_or_default())
         .unwrap_or_default();
+    // Node fails the run once an output passes the cap, even when the child has
+    // already left (cut off, `sh -c 'a | b'` can exit on its own with SIGPIPE)
+    let ended = if too_long.load(Ordering::SeqCst) {
+        Ended::OutputTooLong
+    } else {
+        ended
+    };
     Captured {
         ended,
         stdout,
