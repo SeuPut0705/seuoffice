@@ -3260,7 +3260,7 @@
     }
    ],
    "ret": {
-    "type": "{ styles: Map<string, import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").StyleInfo>; docDefaults?: import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").DocDefaults; }",
+    "type": "{ styles: Map<string, import(\"tools/docx-diff/reference/types\").StyleInfo>; docDefaults?: import(\"tools/docx-diff/reference/types\").DocDefaults; }",
     "null": false,
     "undef": false,
     "shape": {
@@ -12071,7 +12071,7 @@
     }
    ],
    "ret": {
-    "type": "import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").TabStop[] | undefined",
+    "type": "import(\"tools/docx-diff/reference/types\").TabStop[] | undefined",
     "null": false,
     "undef": true,
     "shape": null,
@@ -12106,7 +12106,7 @@
     }
    ],
    "ret": {
-    "type": "import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").TabStop[]",
+    "type": "import(\"tools/docx-diff/reference/types\").TabStop[]",
     "null": false,
     "undef": false,
     "shape": null,
@@ -13178,7 +13178,7 @@
     }
    ],
    "ret": {
-    "type": "import(\"/Users/seuput/.omp/wt/gui-rust-docx-b4-d042965/tools/docx-diff/reference/types\").TableLook",
+    "type": "import(\"tools/docx-diff/reference/types\").TableLook",
     "null": false,
     "undef": false,
     "shape": null,
@@ -23711,10 +23711,10 @@
     "test"
    ],
    "rust": {
-    "path": "pptx_engine::xml_utils::escape_xml_text",
-    "file": "crates/pptx-engine/src/xml_utils.rs",
+    "path": "docx_engine::blank::escape_xml_text",
+    "file": "crates/docx-engine/src/blank.rs",
     "name": "escape_xml_text",
-    "vis": "pub",
+    "vis": "",
     "params": [
      "text: &str"
     ],
@@ -23747,10 +23747,10 @@
    },
    "required": [],
    "rust": {
-    "path": "pptx_engine::xml_utils::escape_xml_attr",
-    "file": "crates/pptx-engine/src/xml_utils.rs",
+    "path": "docx_engine::generate::escape_xml_attr",
+    "file": "crates/docx-engine/src/generate/mod.rs",
     "name": "escape_xml_attr",
-    "vis": "pub",
+    "vis": "pub(crate)",
     "params": [
      "text: &str"
     ],
@@ -23869,17 +23869,7 @@
     "package",
     "test"
    ],
-   "rust": {
-    "path": "pptx_engine::zip::assert_zip_within_limits",
-    "file": "crates/pptx-engine/src/zip.rs",
-    "name": "assert_zip_within_limits",
-    "vis": "pub",
-    "params": [
-     "files: &[DeclaredPart<'_>]"
-    ],
-    "ret": "Result<(), String>",
-    "reachable": true
-   },
+   "rust": null,
    "route": "ts",
    "reason": "stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)"
   },

@@ -8,17 +8,16 @@
 // Written by a script, never by hand: a hand decision lives in overrides.ts.
 import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve } from 'node:path'
+import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
-import { HOST_MODULES, isHandRoute, overrideOf } from './overrides'
+import { ROOT, config } from './config'
 
-const HERE = dirname(fileURLToPath(import.meta.url))
-export const ROOT = resolve(HERE, '../../..')
-export const REFERENCE = join(ROOT, 'tools/docx-diff/reference')
+export { ROOT }
+export const REFERENCE = join(ROOT, config.reference)
 const OUT = process.argv.includes('--out')
   ? process.argv[process.argv.indexOf('--out') + 1]!
-  : join(HERE, 'manifest.json')
+  : join(ROOT, config.manifest)
 
 // ---------------------------------------------------------------- TypeScript side
 
@@ -67,6 +66,8 @@ export interface ExportInfo {
   route: 'table' | 'routes' | 'command' | 'hand' | 'ts' | 'none'
   /** what stops it from being a row, when it stays TypeScript */
   reason?: string
+  /** a remark on a routed export */
+  note?: string
 }
 
 function typescriptProgram(): { program: ts.Program; files: string[] } {
@@ -192,6 +193,9 @@ function codecOf(type: string): ParamInfo['codec'] {
   return 'json'
 }
 
+/** a printed type with the checkout's own path left out: the manifest is the same in every worktree */
+const repoRelative = (type: string): string => type.split(`${ROOT}/`).join('')
+
 function typescriptExports(): ExportInfo[] {
   const { program, files } = typescriptProgram()
   const checker = program.getTypeChecker()
@@ -238,10 +242,12 @@ function typescriptExports(): ExportInfo[] {
         if (signature) {
           info.params = signature.getParameters().map((p) => {
             const d = p.valueDeclaration as ts.ParameterDeclaration | undefined
-            const type = checker.typeToString(
-              checker.getTypeOfSymbolAtLocation(p, decl),
-              decl,
-              ts.TypeFormatFlags.NoTruncation,
+            const type = repoRelative(
+              checker.typeToString(
+                checker.getTypeOfSymbolAtLocation(p, decl),
+                decl,
+                ts.TypeFormatFlags.NoTruncation,
+              ),
             )
             return {
               name: p.getName(),
@@ -261,9 +267,9 @@ function typescriptExports(): ExportInfo[] {
             !!(ts.getCombinedModifierFlags(decl as ts.Declaration) & ts.ModifierFlags.Async)
           const members = returned.isUnion() ? returned.types : [returned]
           info.ret = {
-            type: checker
-              .typeToString(returned, decl, ts.TypeFormatFlags.NoTruncation)
-              .slice(0, 300),
+            type: repoRelative(
+              checker.typeToString(returned, decl, ts.TypeFormatFlags.NoTruncation),
+            ).slice(0, 300),
             null: members.some((m) => m.flags & ts.TypeFlags.Null),
             undef: members.some((m) => m.flags & (ts.TypeFlags.Undefined | ts.TypeFlags.Void)),
             shape: shapeOf(checker, returned, 0, new Set()),
@@ -299,7 +305,7 @@ function rg(pattern: string, dirs: string[]): string[] {
         '-g',
         '!**/dist/**',
         '-g',
-        '!tools/docx-diff/reference/**',
+        `!${config.reference}/**`,
         pattern,
         ...dirs,
       ],
@@ -314,13 +320,14 @@ function rg(pattern: string, dirs: string[]): string[] {
 
 const IMPORT =
   /(?:import|export)\s+(type\s+)?(?:(\*\s+as\s+\w+)|\{([\s\S]*?)\})\s*from\s*['"]([^'"]+)['"]/g
-const DYNAMIC = /(?:import|vi\.mock|vi\.importActual)\(\s*['"]([^'"]*docx-engine[^'"]*)['"]/g
+const PACKAGE = config.packageDir.split('/').pop()!
+const DYNAMIC = new RegExp(`(?:import|vi\\.mock|vi\\.importActual)\\(\\s*['"]([^'"]*${PACKAGE}[^'"]*)['"]`, 'g')
 
-/** the module a specifier of docx-engine names, '' where it names the package index */
+/** the module a specifier of the package names, 'index' where it names the package index */
 function moduleOfSpecifier(specifier: string): string | null {
-  let m = /@seuoffice\/docx-engine(?:\/(.+))?$/.exec(specifier)
+  let m = new RegExp(`${config.packageName}(?:\\/(.+))?$`).exec(specifier)
   if (m) return m[1] ?? 'index'
-  m = /(?:^|\/)docx-engine\/(?:src|tests)\/(.+?)(?:\.(?:ts|mjs))?$/.exec(specifier)
+  m = new RegExp(`(?:^|\\/)${PACKAGE}\\/(?:src|tests)\\/(.+?)(?:\\.(?:ts|mjs))?$`).exec(specifier)
   if (m) return m[0].includes('/tests/') ? null : m[1]!
   return null
 }
@@ -358,7 +365,7 @@ function requiredBy(exportsOf: Map<string, ExportInfo[]>): Map<string, Set<strin
   }
   // package.json subpaths
   const pkg: { exports: Record<string, unknown> } = JSON.parse(
-    readFileSync(join(ROOT, 'packages/docx-engine/package.json'), 'utf8'),
+    readFileSync(join(ROOT, config.packageDir, 'package.json'), 'utf8'),
   )
   const targetsOf = (entry: unknown): string[] =>
     typeof entry === 'string'
@@ -369,24 +376,18 @@ function requiredBy(exportsOf: Map<string, ExportInfo[]>): Map<string, Set<strin
   for (const target of Object.values(pkg.exports).flatMap(targetsOf)) {
     const module = target.replace(/^\.\/src\//, '').replace(/\.ts$/, '')
     // the entries of the binding itself (node/, engine-*, init) are not engine modules
-    if (
-      module !== 'index' &&
-      !module.startsWith('node/') &&
-      !module.startsWith('engine-') &&
-      module !== 'init'
-    )
-      wholeModule(module, 'subpath')
+    if (!config.pluginModule(module)) wholeModule(module, 'subpath')
   }
   // everything else in the repository that imports a module of the package
-  const files = rg('docx-engine', ['apps', 'packages', 'tools', 'e2e']).filter(
+  const files = rg(PACKAGE, ['apps', 'packages', 'tools', 'e2e']).filter(
     (f) =>
-      !f.startsWith('packages/docx-engine/src/') &&
-      !f.startsWith('tools/docx-diff/reference/') &&
-      !f.startsWith('tools/docx-diff/binding/'),
+      !f.startsWith(`${config.packageDir}/src/`) &&
+      !f.startsWith(`${config.reference}/`) &&
+      !f.startsWith(`${config.bindingDir}/`),
   )
   for (const file of files) {
     const text = readFileSync(join(ROOT, file), 'utf8')
-    const why = file.startsWith('packages/docx-engine/tests/')
+    const why = file.startsWith(`${config.packageDir}/tests/`)
       ? 'test'
       : file.startsWith('tools/')
         ? 'tool'
@@ -415,7 +416,7 @@ function requiredBy(exportsOf: Map<string, ExportInfo[]>): Map<string, Set<strin
     }
   }
   // the tests of the package itself import `../src/<module>`
-  const tests = join(ROOT, 'packages/docx-engine/tests')
+  const tests = join(ROOT, config.packageDir, 'tests')
   const walk = (dir: string): string[] =>
     readdirSync(dir).flatMap((n) =>
       statSync(join(dir, n)).isDirectory()
@@ -462,12 +463,7 @@ interface RustFn {
   doc: string
 }
 
-const CRATES: Array<{ dir: string; crate: string }> = [
-  { dir: 'crates/docx-engine/src', crate: 'docx_engine' },
-  { dir: 'crates/omml/src', crate: 'omml' },
-  { dir: 'crates/ooxml-pkg/src', crate: 'ooxml_pkg' },
-  { dir: 'crates/pptx-engine/src', crate: 'pptx_engine' },
-]
+const CRATES = config.crates
 
 function splitTop(text: string): string[] {
   const out: string[] = []
@@ -591,16 +587,23 @@ export function pathOf(file: string, name: string): { path: string; reachable: b
 function rustMatch(fns: RustFn[], ts: ExportInfo): RustInfo | null {
   const mentioned = (f: RustFn): boolean => new RegExp('`' + ts.name + '(?:[`(:]|$)').test(f.doc)
   // the function that is named like the export, else the one whose doc names it
-  let c = fns.filter((f) => f.indent === 0 && f.name === snake(ts.name))
+  const named = config.rustName?.(ts.name) ?? snake(ts.name)
+  let c = fns.filter((f) => f.indent === 0 && f.name === named)
   if (!c.length) c = fns.filter((f) => f.indent === 0 && mentioned(f))
+  // the Rust module of the export's own TypeScript module first
+  const own = config.rustModule?.(ts.module)
+  if (own && c.length > 1) {
+    const there = c.filter((f) => f.file === own || f.file.startsWith(own.replace(/\.rs$/, '/')))
+    if (there.length) c = there
+  }
   if (c.length > 1) {
     // a module of the TypeScript names its own Rust module first; the save side's external.rs re-declares callees
     const own = c.filter((f) => !f.file.endsWith('/external.rs'))
     if (own.length) c = own
   }
   if (c.length > 1) {
-    const named = c.filter((f) => f.name === snake(ts.name))
-    if (named.length) c = named
+    const exact = c.filter((f) => f.name === named)
+    if (exact.length) c = exact
   }
   if (c.length > 1) {
     const open = c.filter((f) => f.vis === 'pub' && pathOf(f.file, f.name).reachable)
@@ -623,17 +626,21 @@ function rustMatch(fns: RustFn[], ts: ExportInfo): RustInfo | null {
 
 // ---------------------------------------------------------------- the manifest
 
-/** the Rust types a generated row can read from JSON and write back */
-export function decodable(type: string): boolean {
-  const t = type
-    .replace(/^(?:mut )?(?:r#)?_?[a-z][a-z_0-9]*\s*:\s*/, '')
-    .replace(/'[a-z_]+\s*/g, '')
-    .replace(/\s+/g, ' ')
-    .trim()
-  if (/^&(?:mut )?Package$/.test(t) || t === '&dyn MediaHost') return true
-  if (/&mut|dyn |impl |\bSelf\b|\bPackage\b|\bMediaHost\b|\bFnMut\b|\bFn\(/.test(t)) return false
-  if (/^[A-Z]$/.test(t)) return false
-  return true
+/** The wire arguments of the engine call a body spells (`$call(a, b)`); undefined where it has no explicit call. */
+function callArity(body: string | undefined): number | undefined {
+  const at = body?.indexOf('$call(') ?? -1
+  if (!body || at === -1) return undefined
+  let depth = 0
+  let count = 0
+  let any = false
+  for (let i = at + '$call'.length; i < body.length; i++) {
+    const c = body[i]!
+    if ('([{'.includes(c)) depth++
+    else if (')]}'.includes(c) && --depth === 0) break
+    else if (c === ',' && depth === 1) count++
+    else if (depth >= 1 && !/\s/.test(c)) any = true
+  }
+  return any ? count + 1 : 0
 }
 
 export function build(): { exports: ExportInfo[] } {
@@ -657,8 +664,9 @@ export function build(): { exports: ExportInfo[] } {
     e.required = [...(needed.get(`${e.module}:${e.name}`) ?? [])].sort()
     if (e.kind !== 'function') continue
     e.rust = rustMatch(fns, e)
-    const override = overrideOf(e.name)
-    if (HOST_MODULES[e.module]) {
+    const override = config.overrideOf(e.name)
+    const wire = e.rust ? config.wireParams(e.rust.params) : []
+    if (config.hostModules[e.module]) {
       e.route = 'ts'
       e.reason = 'a module of the host side of the package: it stays TypeScript and engine-free'
     } else if (override?.reject) {
@@ -666,7 +674,7 @@ export function build(): { exports: ExportInfo[] } {
       e.reason = override.reject
     } else if (override?.command) e.route = 'command'
     else if (override?.hand) e.route = 'hand'
-    else if (isHandRoute(e.name)) e.route = 'routes'
+    else if (config.isHandRoute(e.name)) e.route = 'routes'
     else if (!e.rust) {
       e.route = 'ts'
       e.reason = 'no Rust port names it'
@@ -675,18 +683,19 @@ export function build(): { exports: ExportInfo[] } {
       e.reason = `the port is not public (${e.rust.vis || 'private'}, ${e.rust.reachable ? 'reachable' : 'in a private module'}): ${e.rust.path}`
     } else if (
       !override?.rust &&
-      (!e.rust.params.every(decodable) || /&mut|dyn |impl /.test(e.rust.ret))
+      (!wire.every(config.decodable) || /&mut|dyn |impl /.test(e.rust.ret))
     ) {
       e.route = 'ts'
       e.reason = `its Rust signature is not one a row can read: (${e.rust.params.join(', ')}) -> ${e.rust.ret}`
     } else if (
       !override?.rust &&
-      e.rust.params.filter((p) => !/&dyn MediaHost/.test(p)).length !==
-        (override?.args?.length ?? e.params.length)
+      wire.length !== (override?.args?.length ?? callArity(override?.body) ?? e.params.length)
     ) {
       e.route = 'ts'
-      e.reason = `arity differs: TypeScript ${e.params.length} (${e.params.map((p) => p.name).join(', ')}), Rust ${e.rust.params.length}`
+      e.reason = `arity differs: TypeScript ${e.params.length} (${e.params.map((p) => p.name).join(', ')}), Rust ${wire.length}`
     } else e.route = 'table'
+    if (e.route === 'table' && config.dropUnused && !e.required.length)
+      e.note = 'nothing outside the package uses it: the module drops it unless a kept piece names it'
   }
   return { exports }
 }

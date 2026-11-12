@@ -8,15 +8,17 @@
 // It is a tool, not a check: it overwrites its output and refuses to touch what
 // the switch plumbing owns (src/node/**, src/engine-*.ts, src/vendor/**).
 //
-//   npx tsx tools/docx-diff/binding/gen.ts [--dry]
+//   npx tsx tools/docx-diff/binding/gen.ts [--engine docx|pptx] [--dry]
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import ts from 'typescript'
+import { config } from './config'
 import { type ExportInfo, REFERENCE, ROOT, build } from './manifest'
-import { APPEND, type Override, overrideOf } from './overrides'
+import type { Override } from './overrides'
 import { rustTable } from './rust-table'
 
-const SRC = join(ROOT, 'packages/docx-engine/src')
+const overrideOf = config.overrideOf
+const SRC = join(ROOT, config.packageDir, 'src')
 const DRY = process.argv.includes('--dry')
 
 const routed = (e: ExportInfo): boolean => e.route === 'table' || e.route === 'routes' || e.route === 'hand' || e.route === 'command'
@@ -48,6 +50,8 @@ interface Piece {
   refs: Set<string>
   /** the routed function this piece is, whose body was replaced */
   wrapped: ExportInfo | null
+  /** the piece's text is the config's hand-written replacement */
+  replaced: boolean
   /** what a re-export names of another module: its names, or '*' */
   reexports: Array<{ target: string; name: string }>
 }
@@ -81,10 +85,11 @@ const NOW = { $now: 'Date.now()', $nowIso: 'new Date().toISOString()' }
 
 /** The body of a routed function: what it hands the engine. Null where the declaration cannot be rewritten. */
 function wrapperBody(info: ExportInfo, fn: ts.FunctionDeclaration, override: Override | undefined): string | null {
-  if (override?.body) return override.body
   const params = fn.parameters
-  if (params.some((p) => !ts.isIdentifier(p.name))) return null
+  if (params.some((p) => !ts.isIdentifier(p.name))) return override?.body ?? null
   const names = params.map((p) => (p.name as ts.Identifier).text)
+  if (config.wrapperBody) return config.wrapperBody(info, names, override)
+  if (override?.body) return override.body
   if (info.route === 'command' || info.route === 'hand') {
     return `return hand.${info.name}(${params.map((p, i) => (p.dotDotDotToken ? '...' : '') + names[i]).join(', ')}) as never`
   }
@@ -141,7 +146,7 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
       continue
     }
     const exported = hasModifier(stmt, ts.SyntaxKind.ExportKeyword)
-    const piece: Piece = { module: name, names: [], exported, typeLike: false, root: false, text: stmt.getFullText(sf), refs: new Set(), wrapped: null, reexports: [] }
+    const piece: Piece = { module: name, names: [], exported, typeLike: false, root: false, text: stmt.getFullText(sf), refs: new Set(), wrapped: null, replaced: false, reexports: [] }
     if (ts.isFunctionDeclaration(stmt)) {
       if (stmt.name) piece.names.push(stmt.name.text)
       const info = stmt.name && stmt.body ? infoByName.get(stmt.name.text) : undefined
@@ -177,7 +182,12 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
         }
       }
     }
-    if (piece.wrapped) {
+    const replacement = piece.names.map((n) => config.replace[name]?.[n]).find((text) => text !== undefined)
+    if (replacement !== undefined) {
+      piece.text = `\n\n${replacement}`
+      piece.replaced = true
+    }
+    if (piece.wrapped || piece.replaced) {
       const probe = ts.createSourceFile('wrapper.ts', piece.text, ts.ScriptTarget.ES2022, true)
       identifiersOf(probe, piece.refs)
     } else identifiersOf(stmt, piece.refs)
@@ -319,14 +329,17 @@ function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbati
       const line = importText(decl, used)
       if (line) lines.push(line)
     }
-    const wrappers = kept.filter((p) => p.wrapped).map((p) => p.text).join('\n')
-    const core = ['invoke', 'invokeAsync', 'xnodeArg', 'zipCall'].filter((n) => new RegExp(`\\b${n}\\(`).test(wrappers))
-    const fromEngine = core.filter((n) => n !== 'zipCall')
-    if (fromEngine.length) lines.push(`import { ${fromEngine.join(', ')} } from './engine'`)
-    if (core.includes('zipCall')) lines.push(`import { zipCall } from './engine-hand'`)
-    if (/\bhand\./.test(wrappers)) lines.push(`import * as hand from './engine-hand'`)
+    const wrappers = kept.filter((p) => p.wrapped || p.replaced).map((p) => p.text).join('\n')
+    if (config.coreImports) lines.push(...config.coreImports(wrappers))
+    else {
+      const core = ['invoke', 'invokeAsync', 'xnodeArg', 'zipCall'].filter((n) => new RegExp(`\\b${n}\\(`).test(wrappers))
+      const fromEngine = core.filter((n) => n !== 'zipCall')
+      if (fromEngine.length) lines.push(`import { ${fromEngine.join(', ')} } from './engine'`)
+      if (core.includes('zipCall')) lines.push(`import { zipCall } from './engine-hand'`)
+      if (/\bhand\./.test(wrappers)) lines.push(`import * as hand from './engine-hand'`)
+    }
     const body = kept.map((p) => p.text.replace(/^\n+/, '\n')).join('')
-    const append = APPEND[mod.name] ? `\n${APPEND[mod.name]}\n` : ''
+    const append = config.append[mod.name] ? `\n${config.append[mod.name]}\n` : ''
     const header = mod.header ? `${mod.header}\n` : ''
     outputs.push({ module: mod.name, text: `${header}${lines.join('\n')}\n${body.replace(/^\n*/, '\n')}${append}` })
   }
@@ -403,7 +416,7 @@ function writeIfChanged(path: string, text: string): boolean {
 }
 
 const { exports: all } = build()
-writeFileSync(join(ROOT, 'tools/docx-diff/binding/manifest.json'), JSON.stringify({ exports: all }, null, 1) + '\n')
+writeFileSync(join(ROOT, config.manifest), JSON.stringify({ exports: all }, null, 1) + '\n')
 const { outputs, verbatim, dropped, wrapped } = generateModules(all)
 let changed = 0
 for (const out of outputs) if (writeIfChanged(join(SRC, `${out.module}.ts`), out.text)) changed++
@@ -416,9 +429,8 @@ for (const module of verbatim) {
   const texts = new Map<string, string>()
   for (const module of verbatim) texts.set(module, readFileSync(join(REFERENCE, `${module}.ts`), 'utf8'))
   for (const out of outputs) texts.set(out.module, out.text)
-  texts.set('engine', readFileSync(join(SRC, 'engine.ts'), 'utf8'))
-  texts.set('engine-hand', readFileSync(join(SRC, 'engine-hand.ts'), 'utf8'))
-  texts.set('engine-shapes', 'export const SHAPES = {}')
+  for (const module of config.plumbing) texts.set(module, readFileSync(join(SRC, `${module}.ts`), 'utf8'))
+  if (config.shapesModule) texts.set('engine-shapes', 'export const SHAPES = {}')
   for (const problem of checkImports(texts)) console.log(`  import check: ${problem}`)
 }
 console.log(`${outputs.length} modules rewritten, ${verbatim.length} copied, ${dropped.length} dropped (${dropped.join(', ')}), ${changed} files changed${DRY ? ' (dry run)' : ''}`)
@@ -426,8 +438,8 @@ console.log(`${outputs.length} modules rewritten, ${verbatim.length} copied, ${d
 const shapes: Record<string, unknown> = {}
 for (const e of all) if (e.kind === 'function' && e.ret.shape && (e.route !== 'ts') && !shapes[e.name]) shapes[e.name] = e.ret.shape
 const shapesText = `// GENERATED by tools/docx-diff/binding/gen.ts: where a Map or a Set sits in what an export returns.\nimport type { Shape } from './engine'\n\nexport const SHAPES: Record<string, Shape> = ${JSON.stringify(shapes, null, 2)}\n`
-if (writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText)) console.log('engine-shapes.ts written')
+if (config.shapesModule && writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText)) console.log('engine-shapes.ts written')
 const table = rustTable(all.filter((e) => e.kind === 'function' && (e.route === 'routes' || (e.route === 'table' && wrapped.has(e.name))))
 )
-if (writeIfChanged(join(ROOT, 'crates/office-wasm/src/invoke/table.rs'), table.text)) console.log(`table.rs written: ${table.rows} rows`)
+if (writeIfChanged(join(ROOT, config.table.file), table.text)) console.log(`${config.table.module}.rs written: ${table.rows} rows`)
 for (const note of table.notes) console.log(`  note: ${note}`)
