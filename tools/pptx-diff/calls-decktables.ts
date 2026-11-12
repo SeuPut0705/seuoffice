@@ -193,18 +193,12 @@ const PARAGRAPHS: unknown[][] = [
   [{ runs: [{ text: '$&' }] }],
 ]
 
-const built = (
-  rest: (index: number) => Record<string, unknown>[],
-  seedFalse?: (index: number) => boolean,
-): Input[] => {
+const built = (rest: (index: number) => Record<string, unknown>[]): Input[] => {
   const out: Input[] = []
   TABLES.forEach(([, text], index) => {
     const element = index === 14 ? 1 : 0
     rest(index).forEach((args) =>
-      out.push({
-        ...deckInput(BLANK, { slide: 0, element, ...args }, { part: PART, text }),
-        ...(seedFalse?.(index) ? { seed: false as const } : {}),
-      }),
+      out.push(deckInput(BLANK, { slide: 0, element, ...args }, { part: PART, text })),
     )
   })
   return out
@@ -246,9 +240,7 @@ const OPS_MERGE = [
   { kind: 'split', row: 1, col: 1 },
 ]
 
-/** Text with `$` in it merges into the anchor cell: the replacement string of the TypeScript expands it. */
-// ledger tablemerge-dollar
-const DOLLAR_TABLE = 5
+/** Text with `$` in it merges into the anchor cell: a function replacement writes it as it is. */
 
 const NASTY = [0, 1, 1.5, -1, 1e21, 1e308, 0.4, 2.5, 123456789012]
 
@@ -406,11 +398,7 @@ export const DECKTABLES: CallSpec[] = [
           args.op as never,
         ),
       ),
-    built: built(
-      (i) => OPS_MERGE.map((op) => ({ op })),
-      // the `$&` of the text of cell (1, 1) expands in the TypeScript
-      (i) => i === DOLLAR_TABLE,
-    ),
+    built: built((i) => OPS_MERGE.map((op) => ({ op }))),
   },
   {
     fn: 'pptxDecktables.index.setTableColWidth',

@@ -18,6 +18,7 @@ use serde::Serialize;
 
 use crate::deck::OpenedPptx;
 use crate::types::{ByteAnchor, Slide, SlideElement};
+use crate::xml_utils::{attribute_of, decode_xml};
 use crate::zip::{PackageArchive, rels_path_for, resolve_target};
 
 /// `ResourceCleanupStats`
@@ -67,11 +68,12 @@ fn is_owned_resource_path(path: &str) -> bool {
         .any(|prefix| path.starts_with(prefix))
 }
 
-/// `attributeValues`
+/// `attributeValues`: every attribute value of the XML, decoded; a relationship id is looked
+/// for among them.
 fn attribute_values(xml: &str) -> HashSet<String> {
     js_regex!(r#"\s[\w:.-]+\s*=\s*(["'])(.*?)\1"#, "g")
         .find_iter(xml)
-        .map(|m| m.get(2).unwrap_or_default().to_owned())
+        .map(|m| decode_xml(m.get(2).unwrap_or_default()))
         .collect()
 }
 
@@ -147,12 +149,9 @@ fn source_part_for_rels(path: &str) -> Option<String> {
 fn strip_relationships(xml: &str, ids: &HashSet<String>) -> String {
     js_regex!(r"<Relationship\b[^>]*\/\s*>", "g").replace_all(xml, |m| {
         let tag = m.as_str();
-        let id = js_regex!(r#"\bId\s*=\s*(["'])(.*?)\1"#)
-            .exec(tag)
-            .and_then(|found| found.get(2))
-            .filter(|id| !id.is_empty());
+        let id = attribute_of(tag, "Id").filter(|id| !id.is_empty());
         match id {
-            Some(id) if ids.contains(id) => String::new(),
+            Some(id) if ids.contains(&id) => String::new(),
             _ => tag.to_owned(),
         }
     })
@@ -182,10 +181,9 @@ fn remove_content_type_overrides(archive: &mut PackageArchive, removed_parts: &S
     };
     let next = js_regex!(r"<Override\b[^>]*\/\s*>", "g").replace_all(&xml, |m| {
         let tag = m.as_str();
-        let part_name = js_regex!(r#"\bPartName\s*=\s*(["'])(.*?)\1"#)
-            .exec(tag)
-            .and_then(|found| found.get(2))
-            .filter(|name| !name.is_empty())
+        let part_name = attribute_of(tag, "PartName");
+        let part_name = part_name
+            .as_deref()
             .map(|name| name.strip_prefix('/').unwrap_or(name));
         match part_name {
             Some(name) if !name.is_empty() && removed_parts.has(name) => String::new(),

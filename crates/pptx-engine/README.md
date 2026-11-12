@@ -611,3 +611,55 @@ jscompat --test sites` names every site that must use it. In this crate:
   pass per part and is listed in the test.
 - Patterns built from `format!` are written at the call so the test reads
   them (`theme.rs` clrMap names, `identity.rs`, `redaction_xml.rs`).
+
+## Batch C1: the rest of the engine
+
+Everything of `packages/pptx-engine/src` that units 1 to 4 had not ported
+(11,713 lines in 19 files: `index.ts`, `generate.ts`, `insert.ts`,
+`media-insert.ts`, `chart-insert.ts`, `hyperlink.ts`, `narration.ts`,
+`headerfooter.ts`, `smartart.ts`, `background-promote.ts`, `notes.ts`,
+`sections.ts`, `comments.ts`, `resource-cleanup.ts`, `layout.ts`,
+`builtin-layouts.ts`, `slide-transfer.ts`, `blank.ts`, `embedded-fonts.ts`),
+then main's TypeScript fixes through 41170cb0a (37 files, 1,171 lines added),
+ported once. `index.ts` is `src/deck/` (one module per section of it); every
+other file is its own module. Every exported function of the TypeScript has a
+Rust counterpart but `savePptxToFile` (no file system in the engine;
+`deck::save_pptx` gives the bytes).
+
+The operations on an opened deck are compared through one harness on both
+sides: `tools/pptx-diff/deck-ops.ts` and
+`crates/office-wasm/src/calls/pptx_deck.rs` open the same deck (a zip in
+base64, a slide part rewritten by the input so mutations reach it), run the
+operation and answer `{ value, deck, parts, paths }`: the return value, the
+deck model after it, every entry added, changed or removed, and the entry
+names. Element ids are rebased to a counter from 0, a fixed uuid stands in for
+`crypto.randomUUID()`, and every zip the gate writes carries one fixed date
+(`stable-zip.ts`), so an input is the same bytes on every run.
+
+| Comparison            | Checks  | Different | Note                                                   |
+| --------------------- | ------- | --------- | ------------------------------------------------------ |
+| First (all groups)    | 137,770 | 11,622    | `evidence/c1-first.*`, kept unedited                   |
+| First, new groups     | 59,128  | 9,949     | 11 groups, 210 functions                               |
+| Last (all groups)     | 144,314 | 0         | but the 2 ledger classes and `generate`'s null numbers |
+
+Most of the first differences were the harness, not the port: three groups
+named wrong (never compared), `null` against an absent key in dispatches, a
+spec that passed a list where the API takes bytes, two id offsets (a reparse
+on one side only), clock and counter parts of ids, a PNG deflated by two
+libraries. Port errors found and fixed: point colors capped where the
+TypeScript fills a sparse array (now a sparse map, memory by entries),
+`setGroupChildShapeAdjustValues` testing the child type after patching,
+`resizeTable` taking a width for a `gridCol` without `w`. The defects of the
+TypeScript the first comparison found were fixed on main (31 commits), so the
+ledger holds two classes, both of the XML reader: `doctype-refused` and
+`cdata-opener-splits-surrogate`.
+
+The model the binding of C2 sends as JSON deserializes strictly
+(`js_object! { deserialize_strict; }`: unknown or repeated keys refused, key
+presence kept, `SlideElement` read by its `type`), and
+`tests/model_roundtrip.rs` proves the round trip byte for byte. Bytes in
+option structs read a number list or `{ "$bytes": base64 }`
+(`src/json_bytes.rs`). `deck::open_pptx_with` and `open_archive_with` take the
+id counter a host keeps across calls (`Uids::next`).
+
+Fault probes run with C2, before the merge to main.

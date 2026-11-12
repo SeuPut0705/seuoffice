@@ -871,13 +871,7 @@ pub fn build_table_grid_xml(slide: &Slide, opts: &NewTableGridOptions, uuid: &st
 
 // ── Picture insertion (media part surgery) ─────────────────────────────
 
-/// `IMAGE_MIME[ext]` for an own key only.
-///
-/// Ledger `insert-inherited-image-ext`: the TypeScript reads a plain object,
-/// so an extension named `constructor`, `toString`, `__proto__` and the like
-/// finds an inherited member, counts as a known image type and writes a
-/// `[Content_Types]` Default whose ContentType is the source of a native
-/// function. Here only the eight own extensions are images.
+/// `ownValue(IMAGE_MIME, ext)`: the table answers its own extensions only.
 fn image_mime(ext: &str) -> Option<&'static str> {
     Some(match ext {
         "png" => "image/png",
@@ -897,6 +891,7 @@ const IMAGE_REL_TYPE: &str =
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NewPictureOptions {
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
     pub ext: String,
     pub offset: EmuRect,
@@ -964,13 +959,12 @@ pub fn add_image_media_and_rel(
         .read_text(ct_path)
         .map(|text| text.into_owned())
         .filter(|text| !text.is_empty());
-    if let Some(ct) = content_types {
-        let has = has_default_for(&ct, &ext).map_err(|error| error.to_string())?;
-        if !has {
-            let dflt = format!("<Default Extension=\"{ext}\" ContentType=\"{mime}\"/>");
-            let next = ct.replacen("</Types>", &format!("{dflt}</Types>"), 1);
-            archive.entries_mut().set(ct_path, next.into_bytes());
-        }
+    if let Some(ct) = content_types
+        && !has_default_for(&ct, &ext)
+    {
+        let dflt = format!("<Default Extension=\"{ext}\" ContentType=\"{mime}\"/>");
+        let next = ct.replacen("</Types>", &format!("{dflt}</Types>"), 1);
+        archive.entries_mut().set(ct_path, next.into_bytes());
     }
 
     // 3) slide rels: new rId (the rels file may not exist)

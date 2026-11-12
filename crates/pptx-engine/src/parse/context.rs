@@ -5,8 +5,9 @@
 
 use std::cell::Cell;
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{JsMap, JsNum};
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
 
@@ -103,6 +104,12 @@ impl Uids {
         Self {
             next: Cell::new(first),
         }
+    }
+
+    /// The number the next `uid` takes: a host that keeps parse.ts's
+    /// process-wide counter across calls starts the next call's `Uids` here.
+    pub fn next(&self) -> u64 {
+        self.next.get()
     }
 
     /// `uid(prefix)`

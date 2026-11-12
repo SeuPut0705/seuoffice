@@ -14,26 +14,11 @@ use crate::chart_insert::{
 use crate::deck::OpenedPptx;
 use crate::types::{EmuRect, Slide, SlideElement};
 use crate::with_element;
-use crate::xml_utils::escape_xml_attr;
-use crate::zip::{rels_path_for, resolve_target};
+use crate::xml_utils::{attribute_of, escape_xml_attr};
+use crate::zip::resolve_target;
 
 /// The `descr` of a chart this app created: only those are rebuilt.
 const APP_CHART: &str = "aislides-chart";
-
-/// `escapeRegex`: escape RegExp special characters (`.*+?^${}()|[]\`).
-pub(crate) fn escape_regex(s: &str) -> String {
-    let mut out = String::with_capacity(s.len());
-    for c in s.chars() {
-        if matches!(
-            c,
-            '.' | '*' | '+' | '?' | '^' | '$' | '{' | '}' | '(' | ')' | '|' | '[' | ']' | '\\'
-        ) {
-            out.push('\\');
-        }
-        out.push(c);
-    }
-    out
-}
 
 /// `patch` of `editChartElement`.
 #[derive(Debug, Clone, Default, Deserialize)]
@@ -100,36 +85,27 @@ pub fn edit_chart_element(
         }
         let slide_path = slide.path.as_deref().unwrap_or("");
 
-        // Find the chart part path (looked up from the slide rels)
-        let rels = opened.archive.read_text(&rels_path_for(slide_path));
-        let Some(rels) = rels.filter(|r| !r.is_empty()) else {
-            return Ok(false);
-        };
-
-        // Find the r:id in originalXml
+        // The chart part: the relationship the frame's own <c:chart> names, looked up in the
+        // slide rels by its decoded id
         let xml: &str = chart_el
             .anchor
             .as_ref()
             .map(|a| &*a.original_xml)
             .unwrap_or("");
-        let Some(r_id_match) = js_regex!(r#"r:id=["']([^"']+)["']"#).exec(xml) else {
+        let chart_tag = js_regex!(r"<c:chart\b[^>]*>").exec(xml).map(|m| m.as_str());
+        let r_id = chart_tag.and_then(|tag| attribute_of(tag, "r:id"));
+        let chart_rel = match r_id {
+            Some(r_id) => opened
+                .archive
+                .read_rels(slide_path)?
+                .get(r_id.as_str())
+                .cloned(),
+            None => None,
+        };
+        let Some(chart_rel) = chart_rel else {
             return Ok(false);
         };
-        let r_id = r_id_match.get(1).unwrap_or("");
-
-        // Find the chart part path in the rels
-        let rel_re = TryJsRegex::new(
-            &format!(
-                r#"Id=["']{}["'][^>]*Target=["']([^"']+)["']"#,
-                escape_regex(r_id)
-            ),
-            "",
-        )
-        .map_err(|e| e.to_string())?;
-        let Some(rel_match) = rel_re.try_exec(&rels).map_err(|e| e.to_string())? else {
-            return Ok(false);
-        };
-        let chart_path = resolve_target(slide_path, rel_match.get(1).unwrap_or(""));
+        let chart_path = resolve_target(slide_path, &chart_rel.target);
 
         // Read existing chart data (used to fill unspecified fields)
         let Some(existing) = chart_el.chart.as_ref() else {
@@ -407,8 +383,7 @@ pub fn mark_chart_editable(slide: &mut Slide, element_id: &str) -> bool {
 /// bytes: a group's nvGrpSpPr precedes its children). value None removes it.
 /// Returns false when the element or its cNvPr is missing; unchanged bytes stay as is.
 ///
-/// The TypeScript puts `value` into a replacement string, where `$&`, `$1`,
-/// `$$` expand; here it is written as given (ledger cnvpr-attr-dollar).
+/// `value` goes in as a function replacement: written as given, no `$` pattern expands.
 pub(crate) fn patch_own_c_nv_pr_attr(
     slide: &mut Slide,
     element_id: &str,

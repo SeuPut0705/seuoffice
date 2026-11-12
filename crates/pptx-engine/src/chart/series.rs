@@ -7,8 +7,8 @@ use serde_json::Value;
 use super::ResolveFill;
 use super::model::{CategoryGroup, ChartKind, ChartSeries, DLblOverride, PointLine};
 use super::node::{
-    Node, TsBoolRead, as_str, first, get, has_key, int, is, is_object, list, or0, string_of,
-    truthy, val, xsd_bool,
+    Node, as_str, ct_boolean, first, get, has_key, int, is, is_object, list, or0, string_of,
+    truthy, val, xsd_boolean,
 };
 use super::points::{
     ALLOC_FAILED, MAX_CHART_SERIES, cache_format_code, read_date_serials, read_num_points,
@@ -61,9 +61,9 @@ fn set_at<T: Clone>(arr: &mut Vec<Option<T>>, idx: usize, value: T) -> Result<()
 fn dl_on(d: Node<'_>) -> bool {
     truthy(d)
         && is_object(d)
-        && !xsd_bool(get(d, "c:delete"), TsBoolRead::EqOne)
-        && (xsd_bool(get(d, "c:showVal"), TsBoolRead::EqOne)
-            || xsd_bool(get(d, "c:showPercent"), TsBoolRead::EqOne))
+        && !ct_boolean(get(d, "c:delete"), false, false)
+        && (ct_boolean(get(d, "c:showVal"), false, false)
+            || ct_boolean(get(d, "c:showPercent"), false, false))
 }
 
 /// One `c:dLbl` as an override, `None` where the map gives `null`.
@@ -88,11 +88,11 @@ fn d_lbl_override(d: &Value, theme: Option<&Theme>) -> Result<Option<DLblOverrid
         fill: None,
         border: None,
     };
-    if xsd_bool(get(d, "c:delete"), TsBoolRead::EqOne) {
+    if ct_boolean(get(d, "c:delete"), false, false) {
         out.hidden = Some(true);
         return Ok(Some(out));
     }
-    let flag = |k: &str| xsd_bool(get(d, k), TsBoolRead::EqOne);
+    let flag = |k: &str| ct_boolean(get(d, k), false, false);
     // A rich-text label is authored text: PowerPoint shows it verbatim, styled by its first run
     let rich = get(get(d, "c:tx"), "c:rich");
     let rich_text = if truthy(rich) {
@@ -136,7 +136,7 @@ fn d_lbl_override(d: &Value, theme: Option<&Theme>) -> Result<Option<DLblOverrid
     out.pct = Some(flag("c:showPercent"));
     if let Some(text) = rich_text {
         out.text = Some(text);
-        out.bold = Some(is(get(r_pr, "@_b"), "1"));
+        out.bold = Some(xsd_boolean(get(r_pr, "@_b"), false));
     }
     if sz.is_finite() && sz > 0.0 {
         out.size_pt = Some(JsNum(sz / 100.0));
@@ -161,8 +161,7 @@ impl SeriesState<'_> {
         let group_start = self.series.len();
         let sers = list(get(plot_node, "c:ser"));
         let plot_marker_node = get(plot_node, "c:marker");
-        let plot_marker =
-            plot_marker_node.is_some() && xsd_bool(plot_marker_node, TsBoolRead::NotZero);
+        let plot_marker = ct_boolean(plot_marker_node, false, true);
         let scatter = plot_kind == ChartKind::Scatter;
         for ser_value in sers {
             if self.series.len() >= MAX_CHART_SERIES {
@@ -195,8 +194,9 @@ impl SeriesState<'_> {
                 s.secondary_axis.set(true);
             }
             if plot_kind == ChartKind::Bar {
+                // an element holding only text parses as a string: no `in` test
                 let sp_pr = get(ser, "c:spPr");
-                if let Some(sp_pr) = sp_pr.filter(|sp| truthy(Some(*sp)))
+                if let Some(sp_pr) = sp_pr.filter(|sp| truthy(Some(*sp)) && is_object(Some(*sp)))
                     && has_key(sp_pr, "a:noFill")?
                 {
                     s.no_fill.set(true);
@@ -230,7 +230,7 @@ impl SeriesState<'_> {
             if let Some(c) = ser_color(ser_value, theme, prefer_line) {
                 s.color.set(c);
             }
-            if xsd_bool(get(ser, "c:smooth"), TsBoolRead::EqOne) {
+            if ct_boolean(get(ser, "c:smooth"), false, false) {
                 s.smooth.set(true);
             }
             // Value-from-cells data labels (2012 c15 extension): strings live in the range cache,
@@ -242,7 +242,7 @@ impl SeriesState<'_> {
                 .flatten();
             let show_range = list(get(get(get(ser, "c:dLbls"), "c:extLst"), "c:ext"))
                 .iter()
-                .any(|e| xsd_bool(get(Some(e), "c15:showDataLabelsRange"), TsBoolRead::EqOne));
+                .any(|e| ct_boolean(get(Some(e), "c15:showDataLabelsRange"), false, false));
             if truthy(range_cache) && show_range {
                 let labs: Vec<Option<String>> = try_collect(
                     read_points(range_cache, &mut self.budget)?
@@ -298,7 +298,7 @@ impl SeriesState<'_> {
             }
             if !overrides.is_empty() {
                 let ser_shows_any = ser_dl_object
-                    && !xsd_bool(get(ser_dl, "c:delete"), TsBoolRead::EqOne)
+                    && !ct_boolean(get(ser_dl, "c:delete"), false, false)
                     && [
                         "c:showVal",
                         "c:showPercent",
@@ -306,7 +306,7 @@ impl SeriesState<'_> {
                         "c:showSerName",
                     ]
                     .iter()
-                    .any(|k| xsd_bool(get(ser_dl, k), TsBoolRead::EqOne));
+                    .any(|k| ct_boolean(get(ser_dl, k), false, false));
                 let any_shown = overrides.iter().any(|o| {
                     o.hidden != Some(true)
                         && (o.val == Some(true)
@@ -360,7 +360,8 @@ impl SeriesState<'_> {
                     }
                     // an integer in 0..values_len
                     let idx = idx as usize;
-                    let d_sp = get(d_pt, "c:spPr");
+                    // an element holding only text parses as a string: properties of none
+                    let d_sp = get(d_pt, "c:spPr").filter(|sp| is_object(Some(*sp)));
                     let c = color(get(d_sp, "a:solidFill"), theme);
                     if let Some(c) = c.clone() {
                         set_at(&mut point_colors, idx, c)?;

@@ -83,19 +83,24 @@ function applyEdits(opened: OpenedPptx, edits: Edit[] | undefined): void {
     if (e.ppr) el.dirtyPPr = { ...e.ppr }
     if (!e.set) continue
     switch (e.set.field) {
+      // only where the model type has the field: a mutated slide moves the
+      // element at an index to another type
       case 'fill':
       case 'stroke':
       case 'srcRect':
+        if (!(e.set.field === 'srcRect' ? ['picture'] : ['text', 'shape', 'picture']).includes(el.type)) break
         // a null value is no key: a Rust slot cannot hold null
         if (e.set.value === null) delete el[e.set.field]
         else el[e.set.field] = e.set.value
         break
       case 'offsetX':
-        el.transform.offset.x = e.set.value
+        if (el.transform) el.transform.offset.x = e.set.value
         break
-      case 'runText':
-        el.text.paragraphs[0].runs[0].text = e.set.value
+      case 'runText': {
+        const run = el.type === 'text' || el.type === 'shape' ? el.text?.paragraphs?.[0]?.runs?.[0] : undefined
+        if (run) run.text = e.set.value
         break
+      }
     }
   }
 }
@@ -268,6 +273,45 @@ const ALL_RELS = slideRels(
 /** A diagram data part naming its drawing relationship, so the data part's own rels are read. */
 const DIAGRAM_DATA = '<dgm:dataModel xmlns:dgm="d"><dgm:extLst><a:ext xmlns:a="a"><dsp:dataModelExt xmlns:dsp="x" relId="rId15"/></a:ext></dgm:extLst></dgm:dataModel>'
 
+/**
+ * A deck whose OLE preview (VML) and SmartArt data name their relationships the way XML allows:
+ * spaced `=`, single quotes, references, ids that are not `rId<number>`, other attributes first.
+ */
+const SPELLED_PARTS = await (async () => {
+  const zip = await JSZip.loadAsync(Buffer.from(DECKS.find(([name]) => name === 'blank deck')![1], 'base64'))
+  zip.file(
+    'ppt/slides/_rels/slide1.xml.rels',
+    slideRels(
+      rel('rId15', `${REL}/vmlDrawing`, '../drawings/vmlDrawing1.xml') +
+        rel('rId12', `${REL}/diagramData`, '../diagrams/data1.xml') +
+        rel('R20', `${REL}/diagramDrawing`, '../diagrams/drawing1.xml') +
+        rel('rId30', `${REL}/oleObject`, '../embeddings/o.bin') +
+        rel('rId17', `${REL}/slideLayout`, '../slideLayouts/slideLayout1.xml'),
+    ),
+  )
+  zip.file(
+    'ppt/drawings/vmlDrawing1.xml',
+    "<xml xmlns:v=\"v\" xmlns:o=\"o\"><v:shape note=\"a>b\" id = 'spid&#49;' o:spid = \"_x0001\"><v:imagedata note=\"x>y\" o:relid = 'img&amp;1'/></v:shape></xml>",
+  )
+  zip.file(
+    'ppt/drawings/_rels/vmlDrawing1.xml.rels',
+    slideRels(rel('img&amp;1', `${REL}/image`, '../theme/theme1.xml')),
+  )
+  zip.file(
+    'ppt/diagrams/data1.xml',
+    '<dgm:dataModel xmlns:dgm="d"><dgm:extLst><a:ext xmlns:a="a"><dsp:dataModelExt xmlns:dsp="x" note="a>b" relId = \'R&#50;0\'/></a:ext></dgm:extLst></dgm:dataModel>',
+  )
+  zip.file('ppt/diagrams/drawing1.xml', '<dsp:drawing xmlns:dsp="x"/>')
+  zip.file('ppt/embeddings/o.bin', new Uint8Array([1, 2, 3]))
+  zip.file(
+    'ppt/slides/slide1.xml',
+    slide(
+      '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="5" name="Ole"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><p:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></p:xfrm><a:graphic><a:graphicData uri="http://schemas.openxmlformats.org/presentationml/2006/ole"><p:oleObj spid="spid1" name="X" r:id="rId30" progId="x"><p:embed/></p:oleObj></a:graphicData></a:graphic></p:graphicFrame>',
+    ),
+  )
+  return Buffer.from(await zip.generateAsync({ type: 'uint8array' })).toString('base64')
+})()
+
 /** The slide of a deck rewritten to `xml`, with the slide's rels `rels` where given. */
 const asSlide = (xml: string, rest: Args = {}): Input =>
   deckInput('blank deck', rest, { part: SLIDE_PART, text: xml })
@@ -316,6 +360,7 @@ const OPEN_INPUTS: Input[] = [
   deckInput('blank deck', {}, { part: 'ppt/theme/theme2.xml', text: 'x' }),
   deckInput('blank deck', {}, { part: 'ppt/slideLayouts/_rels/slideLayout1.xml.rels', text: '' }),
   deckInput('blank deck', {}, { part: 'ppt/diagrams/data1.xml', text: DIAGRAM_DATA }),
+  { args: { deck: SPELLED_PARTS } },
   // a part the diagram data names through the slide rels
   asRels(
     slideRels(

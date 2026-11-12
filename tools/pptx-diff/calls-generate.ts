@@ -347,6 +347,13 @@ const RUN_FONTS: string[] = [
   '<a:r><a:rPr><a:ln><a:solidFill><a:srgbClr val="111111"/></a:solidFill></a:ln><a:effectLst/></a:rPr><a:t>x</a:t></a:r>',
   '<a:r><a:rPr/><a:t/></a:r>',
   '<a:r><a:rPr b="0" i="1" u="sng" strike="sngStrike" baseline="30000" spc="5" sz="100"/><a:t xml:space="preserve"> y </a:t></a:r>',
+  // the link as XML reads it: single quotes, spaced `=`, references, an empty id, none at all
+  '<a:r><a:rPr><a:hlinkClick r:id = \'rId9\' action="x"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick r:id="rId&#57;"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=lastslide"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick action=\'ppaction://hlinkshowjump?jump=lastslide\' r:id=\'\'/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick note="a>b" r:id="rId9"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick/></a:rPr><a:t>x</a:t></a:r>',
 ]
 
 const RUNS: Array<Args> = wire([
@@ -365,6 +372,9 @@ const RUNS: Array<Args> = wire([
   { text: 'x', paraMark: true, color: '#010101' },
   { text: 'x', fontSize: 1e999, baseline: 1e999, letterSpacing: 1e12, letterSpacingEdited: true },
   { text: '\u{1F600}', kern: 1.234, capExplicit: 'small', letterSpacing: 0.005, baseline: 0.0004, fontSize: 0.005 },
+  // text the deck or the user typed, with the `$` forms of a replacement string
+  { text: 'f', fontFamily: 'A$&B$1$$', latinFont: "$'$`", underline: true, underlineStyle: '$&', lang: 'x$&y' },
+  { text: 'g', hyperlinkRId: '', hyperlinkAction: 'ppaction://hlinkshowjump?jump=firstslide' },
 ])
 
 /** A wrapper element carrying the model's text body, so the Rust side builds the same value. */
@@ -372,9 +382,28 @@ function textArgs(text: unknown, extra: Args = {}): Args {
   return { text, ...extra }
 }
 
+/**
+ * A model value as the slides app holds it, from its JSON: types.ts declares
+ * no null, so a null there is a NaN (or an infinity) that JSON.stringify
+ * wrote as null. The Rust model reads it back as NaN; the TypeScript is given
+ * the same number.
+ */
+function asModel<T>(value: T): T {
+  if (value === null) return Number.NaN as T
+  if (Array.isArray(value)) return value.map(asModel) as T
+  if (typeof value !== 'object') return value
+  return Object.fromEntries(
+    Object.entries(value as Record<string, unknown>).map(([key, item]) => [key, asModel(item)]),
+  ) as T
+}
+
 /** The model call `fn(el)`: the element is a text element carrying `args.text`. */
 const modelElement = (args: Args): TextElement =>
-  ({ type: 'text', text: args.text, textMoved: args.textMoved }) as unknown as TextElement
+  ({
+    type: 'text',
+    text: asModel(args.text),
+    textMoved: args.textMoved,
+  }) as unknown as TextElement
 
 const FRAMES: string[] = [
   '<p:graphicFrame><p:nvGraphicFramePr/><p:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></p:xfrm><a:graphic><a:graphicData><a:xfrm><a:off x="9" y="9"/></a:xfrm></a:graphicData></a:graphic></p:graphicFrame>',
@@ -635,7 +664,7 @@ export const GENERATE: CallSpec[] = [
   },
   {
     fn: 'pptxGenerate.generate.generateParagraphXml',
-    call: (_t, args) => noGuid(generateParagraphXml(args.p as Paragraph)),
+    call: (_t, args) => noGuid(generateParagraphXml(asModel(args.p as Paragraph))),
     mutation: 'none',
     argMutation: true,
     built: [
@@ -788,7 +817,7 @@ export const GENERATE: CallSpec[] = [
   },
   {
     fn: 'pptxGenerate.generate.generateXfrmXml',
-    call: (_t, args) => generateXfrmXml(args.t as never, args.tag as string | undefined),
+    call: (_t, args) => generateXfrmXml(asModel(args.t as never), args.tag as string | undefined),
     mutation: 'none',
     argMutation: true,
     built: TRANSFORMS().flatMap((t) =>

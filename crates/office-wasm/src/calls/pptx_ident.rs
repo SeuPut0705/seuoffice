@@ -6,10 +6,10 @@
 use std::sync::Arc;
 
 use jscompat::{JsNum, number_to_string};
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use pptx_engine::identity::{
     element_cnvpr_id, element_durable_id, ensure_creation_id, group_child_durable_id,
-    matches_element_ref, slide_durable_id,
+    matches_element_ref, slide_durable_id, with_fresh_creation_ids,
 };
 use pptx_engine::model3d::{
     AM3D_NS, GLB_CONTENT_TYPE, GlbBounds, MODEL3D_EMU_PER_METER, MODEL3D_FOV, MODEL3D_LIGHTS,
@@ -18,10 +18,11 @@ use pptx_engine::model3d::{
     sync_model3d_frame,
 };
 use pptx_engine::redaction_xml::{
-    REDACT_EL, REDACT_EXT_URI, REDACT_NS, REDACT_PREFIX, has_redact_ext_in, read_redact_label,
-    redact_ext_xml, set_redact_ext, strip_redact_ext, sync_redact_ext,
+    REDACT_EL, REDACT_EXT_URI, REDACT_NS_WRITTEN, REDACT_PREFIX, has_redact_ext_in,
+    read_redact_label, redact_ext_xml, set_redact_ext, strip_redact_ext, sync_redact_ext,
 };
 use pptx_engine::types::{ByteAnchor, Slide, SlideElement, TextElement};
+use pptx_engine::xml_utils::xml_parse_object as parse_object;
 use serde_json::{Value, json};
 
 use super::{Returned, arg, optional, required, value};
@@ -95,7 +96,7 @@ fn redaction_constant(name: &str) -> Returned {
     match name {
         "REDACT_EXT_URI" => value(REDACT_EXT_URI),
         "REDACT_EL" => value(REDACT_EL),
-        "REDACT_NS" => value(REDACT_NS),
+        "REDACT_NS_WRITTEN" => value(REDACT_NS_WRITTEN),
         "REDACT_PREFIX" => value(REDACT_PREFIX),
         _ => Err(format!("no constant {name}")),
     }
@@ -117,20 +118,24 @@ fn model3d_constant(name: &str) -> Returned {
 
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
     match function {
-        "identity.elementDurableId" => value(element_durable_id(&element_of(text, args)?)),
+        "identity.elementDurableId" => value(element_durable_id(&element_of(text, args)?)?),
         "identity.slideDurableId" => {
             let mut slide = Slide::default();
             slide.path.set(text.to_owned());
             value(slide_durable_id(&slide))
         }
-        "identity.elementCNvPrId" => value(element_cnvpr_id(&element_of(text, args)?)),
+        "identity.elementCNvPrId" => value(element_cnvpr_id(&element_of(text, args)?)?),
         "identity.matchesElementRef" => value(matches_element_ref(
             &element_of(text, args)?,
             &required::<String>(args, "id")?,
-        )),
+        )?),
+        "identity.withFreshCreationIds" => {
+            let uuid: String = required(args, "uuid")?;
+            value(with_fresh_creation_ids(text, || uuid.clone())?)
+        }
         "identity.ensureCreationId" => {
             let mut el = element_of(text, args)?;
-            ensure_creation_id(&mut el, &required::<String>(args, "uuid")?);
+            ensure_creation_id(&mut el, &required::<String>(args, "uuid")?)?;
             optional(match &el {
                 SlideElement::Text(text) => text
                     .anchor

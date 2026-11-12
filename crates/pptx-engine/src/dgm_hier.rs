@@ -4,6 +4,7 @@
 //! scaling is in units of one box width.
 
 use jscompat::{JsNum, JsRegex, js_regex, math_max, math_min, parse_float, truthy};
+use serde::ser::{SerializeStruct, Serializer};
 use serde::{Deserialize, Serialize};
 
 /// What `layoutHierTree` reads of a diagram tree node. The model port
@@ -52,11 +53,91 @@ pub struct HierLineRect<'a> {
     pub to: Option<&'a HierTreeNode>,
 }
 
+/// The layout of `layoutHierTree`. It serializes as
+/// `{ boxes: [{ node, x, y, w, h }], lines: [{ x, y, cx, cy, to? }], boxW }`
+/// where `node` and `to` are the index of the node in a depth-first pre-order
+/// walk of `roots` (each root, then its children in order, recursively), so
+/// the first root is 0 and its first child 1.
 #[derive(Debug, Clone, PartialEq)]
 pub struct HierLayout<'a> {
+    pub roots: &'a [HierTreeNode],
     pub boxes: Vec<HierBox<'a>>,
     pub lines: Vec<HierLineRect<'a>>,
     pub box_w: JsNum,
+}
+
+fn preorder_index(
+    nodes: &[HierTreeNode],
+    into: &mut std::collections::HashMap<*const HierTreeNode, usize>,
+) {
+    for node in nodes {
+        let next = into.len();
+        into.insert(std::ptr::from_ref(node), next);
+        preorder_index(&node.children, into);
+    }
+}
+
+#[derive(Serialize)]
+struct WireBox {
+    node: usize,
+    x: JsNum,
+    y: JsNum,
+    w: JsNum,
+    h: JsNum,
+}
+
+#[derive(Serialize)]
+struct WireLine {
+    x: JsNum,
+    y: JsNum,
+    cx: JsNum,
+    cy: JsNum,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    to: Option<usize>,
+}
+
+impl Serialize for HierLayout<'_> {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut index = std::collections::HashMap::new();
+        preorder_index(self.roots, &mut index);
+        let at = |node: &HierTreeNode| {
+            index
+                .get(&std::ptr::from_ref(node))
+                .copied()
+                .ok_or_else(|| serde::ser::Error::custom("a layout node that is not in the roots"))
+        };
+        let boxes = self
+            .boxes
+            .iter()
+            .map(|b| {
+                Ok(WireBox {
+                    node: at(b.node)?,
+                    x: b.x,
+                    y: b.y,
+                    w: b.w,
+                    h: b.h,
+                })
+            })
+            .collect::<Result<Vec<_>, S::Error>>()?;
+        let lines = self
+            .lines
+            .iter()
+            .map(|ln| {
+                Ok(WireLine {
+                    x: ln.x,
+                    y: ln.y,
+                    cx: ln.cx,
+                    cy: ln.cy,
+                    to: ln.to.map(at).transpose()?,
+                })
+            })
+            .collect::<Result<Vec<_>, S::Error>>()?;
+        let mut st = serializer.serialize_struct("HierLayout", 3)?;
+        st.serialize_field("boxes", &boxes)?;
+        st.serialize_field("lines", &lines)?;
+        st.serialize_field("boxW", &self.box_w)?;
+        st.end()
+    }
 }
 
 const DEFAULTS: HierConstraints = HierConstraints {
@@ -550,6 +631,7 @@ pub fn layout_hier_tree<'a>(
         })
         .collect();
     Some(HierLayout {
+        roots,
         boxes,
         lines,
         box_w: JsNum(scale),

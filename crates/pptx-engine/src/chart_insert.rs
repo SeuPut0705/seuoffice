@@ -25,7 +25,7 @@ use crate::notes::append_relationship;
 use crate::resource_cleanup::remove_relationship_and_collect_owned_target;
 use crate::types::EmuRect;
 use crate::xml_utils::{
-    creation_id_xml, escape_xml_attr, escape_xml_text, has_content_type_override,
+    attribute_of, creation_id_xml, escape_xml_attr, escape_xml_text, has_content_type_override,
     max_relationship_id_number,
 };
 use crate::zip::{rels_path_for, resolve_target};
@@ -544,7 +544,10 @@ pub fn build_chart_space_xml(opts: &NewChartOptions, external_data_r_id: Option<
     };
     let external = match external_data_r_id.filter(|r| !r.is_empty()) {
         Some(r) => {
-            format!("<c:externalData r:id=\"{r}\"><c:autoUpdate val=\"0\"/></c:externalData>")
+            format!(
+                "<c:externalData r:id=\"{}\"><c:autoUpdate val=\"0\"/></c:externalData>",
+                escape_xml_attr(r)
+            )
         }
         None => String::new(),
     };
@@ -636,12 +639,15 @@ pub fn write_chart_workbook(
         .read_text(chart_path)
         .map(|c| c.into_owned())
         .unwrap_or_default();
-    let linked_id = js_regex!(r#"<c:externalData\b[^>]*\br:id="([^"]+)""#)
+    let linked_tag = js_regex!(r"<c:externalData\b[^>]*>")
         .exec(&current)
-        .and_then(|m| m.get(1).map(str::to_owned));
+        .map(|m| m.as_str());
+    let linked_id = linked_tag
+        .and_then(|tag| attribute_of(tag, "r:id"))
+        .filter(|id| !id.is_empty());
     let archive = &mut opened.archive;
     let linked = match &linked_id {
-        Some(id) => archive.read_rels(chart_path)?.get(id).cloned(),
+        Some(id) => archive.read_rels(chart_path)?.get(id.as_str()).cloned(),
         None => None,
     };
     if let Some(linked) = linked

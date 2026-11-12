@@ -2,7 +2,7 @@
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_placeholder.rs to
 // `pptxPlaceholder.placeholder.<TypeScript name>`.
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
 import { resolveColorNode } from '../../packages/pptx-engine/src/color'
 import {
   type LstStyleSource,
@@ -41,7 +41,7 @@ const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
  * `a:lstStyle` and `a:defRPr` nodes parse.ts hands to placeholder.ts. The
  * Rust dispatch holds the same list.
  */
-const parseTsParser = new XMLParser({
+const parseTsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,
@@ -64,7 +64,7 @@ const parseTsParser = new XMLParser({
 })
 
 /** `phParser` of placeholder.ts: the parser of layouts, masters and txStyles. */
-const phParser = new XMLParser({
+const phParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   isArray: (name) => ['p:sp', 'p:graphicFrame', 'p:pic'].includes(name),
