@@ -38,6 +38,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - 문서에서 온 값(색 이름, 스타일 id, `clrMap`이 가리키는 칸 이름 등)으로 일반 객체 표를 찾을 때는 `ownValue`(`own-value.ts`)를 거친다. `constructor`, `toString`, `__proto__` 같은 이름은 모든 객체가 물려받아서, 그대로 `TABLE[value]`로 찾으면 함수나 `Object.prototype`이 나오고 그 뒤에서 슬라이드 읽기가 터진다. 나쁜 값 하나가 슬라이드를 잃게 해서는 안 되며, 이를 막으려고 통째로 `try`로 감싸지 않는다. 시험: `tests/object-key-values-keep-slide.test.ts`.
 - 문서가 정한 이름을 키로 기록할 때(가이드 이름, 글꼴 script, 파트 확장자 등)는 `record[name] = value`나 `Object.assign` 대신 `setOwn`을 쓴다. `__proto__`라는 이름은 대입하면 항목이 생기지 않고 프로토타입이 바뀌어 값이 사라진다. 문서·편집기·AI op에서 온 값으로 엔진 밖(`packages/pptx-ops`)의 표를 찾을 때도 같은 규칙이다(`Object.hasOwn`). 시험: `tests/object-key-values-own.test.ts`, `packages/pptx-ops/tests/op-values-own-keys.test.ts`.
 - 파서가 준 노드는 객체라고 가정하지 않는다. 빈 요소나 글자만 든 요소(`<p:grpSpPr/>`, `<p:spPr>text</p:spPr>`)는 문자열로 나오고, 문자열에 `'a:noFill' in node`를 쓰면 TypeError가 난다. `asXmlNode`로 받거나 `typeof node === 'object'`를 먼저 본다.
+- 차트의 켜고 끄는 값(CT_Boolean: `c:delete`, `c:showVal`, `c:smooth`, `c:overlay` 등)은 `chart.ts`의 `ctBoolean`으로, xsd:boolean 속성(`b`, `i`, `rtl`)은 `xsdBoolean`으로 읽는다. `"1"`과 `"true"`가 참, `"0"`과 `"false"`가 거짓이고, `val` 없이 쓴 요소는 참(스키마 기본값)이다. `=== '1'`이나 `!== '0'`으로 읽으면 다른 프로그램이 쓴 `val="true"`, `val="false"`, `<c:delete/>`가 반대로 읽힌다. 시험: `tests/chart-xsd-boolean.test.ts`.
 
 ## 이 모듈의 방식
 
