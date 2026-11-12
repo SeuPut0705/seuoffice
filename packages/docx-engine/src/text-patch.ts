@@ -114,18 +114,31 @@ interface TSlice {
 function tSlices(paraXml: string): TSlice[] {
   const out: TSlice[] = []
   const re = /<w:t(\s[^>]*)?>([\s\S]*?)<\/w:t>/g
+  // a w:t is found where a CDATA section or a comment cannot fake its end tag
+  const masked = maskOpaque(paraXml)
   let m: RegExpExecArray | null
-  while ((m = re.exec(paraXml)) !== null) {
-    const inner = m[2]
-    const innerStart = m.index + m[0].length - inner.length - '</w:t>'.length
+  while ((m = re.exec(masked)) !== null) {
+    const innerStart = m.index + m[0].length - m[2]!.length - '</w:t>'.length
+    const innerEnd = innerStart + m[2]!.length
     out.push({
       tagStart: m.index,
       innerStart,
-      innerEnd: innerStart + inner.length,
-      text: decodeEntities(inner),
+      innerEnd,
+      text: wtText(paraXml.slice(innerStart, innerEnd)),
     })
   }
   return out
+}
+
+/** a w:t's text as the parser reads it: CDATA as written, comments dropped, entities decoded */
+function wtText(inner: string): string {
+  let text = ''
+  let at = 0
+  for (const m of inner.matchAll(/<!\[CDATA\[([\s\S]*?)\]\]>|<!--[\s\S]*?-->/g)) {
+    text += decodeEntities(inner.slice(at, m.index)) + (m[1] ?? '')
+    at = m.index! + m[0].length
+  }
+  return text + decodeEntities(inner.slice(at))
 }
 
 function decodedTextOf(paraXml: string): string {
