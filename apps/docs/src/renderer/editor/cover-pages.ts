@@ -13,6 +13,16 @@ const COVER_START_MARKS = [COVER_START_MARK, ...OLD_COVER_START_MARKS]
 const COVER_END_MARKS = [COVER_END_MARK, ...OLD_COVER_END_MARKS]
 
 /**
+ * The names a cover inserted now is marked with. 0.12.37 finds a cover only by
+ * the old ones: under the new names it could not remove a cover this version
+ * inserted, and stacked a second one on top. Switch these to COVER_START_MARK
+ * and COVER_END_MARK only when a version that reads both has been the stable
+ * release for at least 14 days.
+ */
+const COVER_START_MARK_WRITTEN = OLD_COVER_START_MARKS[0]!
+const COVER_END_MARK_WRITTEN = OLD_COVER_END_MARKS[0]!
+
+/**
  * Built-in cover page library (the preset gallery behind Insert → Cover
  * Page). Everything is built from layout primitives the engine
  * already supports: paragraph shading / single-line borders / alignment /
@@ -334,7 +344,7 @@ function paraNode(p: CoverPara): PmNode {
 /** Cover paragraphs + one trailing page-break empty paragraph (pushes existing content to page 2) */
 export function buildCoverNodes(preset: CoverPreset): PmNode[] {
   const paras = preset.paras.map(paraNode)
-  paras[0].attrs = { ...paras[0].attrs, hiddenBookmarks: [COVER_START_MARK] }
+  paras[0].attrs = { ...paras[0].attrs, hiddenBookmarks: [COVER_START_MARK_WRITTEN] }
   return [
     ...paras,
     {
@@ -343,7 +353,7 @@ export function buildCoverNodes(preset: CoverPreset): PmNode[] {
         docxIndex: null,
         aiChanged: false,
         pageBreakBefore: true,
-        hiddenBookmarks: [COVER_END_MARK],
+        hiddenBookmarks: [COVER_END_MARK_WRITTEN],
       },
     },
   ]

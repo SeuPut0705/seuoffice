@@ -98,6 +98,7 @@ async function docsModules() {
     floating,
     noteOps,
     tableOps,
+    redactView,
   ] = await Promise.all([
     import('@tiptap/core'),
     import('../../../../apps/docs/src/renderer/editor/extensions'),
@@ -114,6 +115,7 @@ async function docsModules() {
     import('../../../../apps/docs/src/renderer/ai/floating-ops'),
     import('../../../../apps/docs/src/renderer/ai/note-ops'),
     import('../../../../apps/docs/src/renderer/ai/table-ops'),
+    import('../../../../apps/docs/src/renderer/ai/redact-view'),
   ])
   locale.setModuleLang('en')
   return {
@@ -131,6 +133,7 @@ async function docsModules() {
     floating,
     noteOps,
     tableOps,
+    redactView,
   }
 }
 
@@ -643,7 +646,8 @@ export function describeDocument(
   const [start, end] = range ?? [0, root.childCount - 1]
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
-    const { text, truncated } = clipText(blockText(node), maxChars)
+    // the text is the AI readers' view: a span hidden from AI reads as its placeholder
+    const { text, truncated } = clipText(blockText(modelViewOf(doc, node)), maxChars)
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -662,6 +666,16 @@ export function describeDocument(
     })
   }
   return out
+}
+
+/**
+ * The block as the app's AI reader sees it: every span hidden from AI replaced
+ * by its `{{label}}` placeholder, through the shared walk in redact-view.
+ * Taken from the node's JSON, never the live node (see commentAnchors).
+ */
+function modelViewOf(doc: OpenDocument, node: PmNode): PmNode {
+  const view = doc.mods.redactView.redactNode(node.toJSON() as never)
+  return doc.editor.schema.nodeFromJSON(view)
 }
 
 /**
@@ -729,7 +743,11 @@ function inlineControlsOf(
   doc: OpenDocument,
   block: Editor['state']['doc'],
 ): InlineContentControlSummary[] {
-  return parsedBlockOf(doc, block)?.inlineContentControls ?? []
+  // the text a model may read: a run hidden from AI reads as its placeholder
+  return (parsedBlockOf(doc, block)?.inlineContentControls ?? []).map(({ modelText, ...c }) => ({
+    ...c,
+    text: modelText ?? c.text,
+  }))
 }
 
 /** native docx charts are passthrough blocks carrying chartDisplay; edit_chart targets them like AI-made ones */
@@ -1474,7 +1492,8 @@ export function listNotes(doc: OpenDocument): NoteSummary[] {
         id: n.id,
         ...(num !== undefined ? { num } : {}),
         ...(blockIndex !== undefined ? { blockIndex } : {}),
-        text: n.text,
+        // the text a model may read: a run hidden from AI reads as its placeholder
+        text: n.modelText ?? n.text,
       }
     })
   return [...summarize('footnote', doc.side.footnotes), ...summarize('endnote', doc.side.endnotes)]
@@ -1565,6 +1584,11 @@ function protectedXml(doc: OpenDocument, block: Editor['state']['doc']): string 
   return (typeof docxIndex === 'number' ? doc.parsed.blocks[docxIndex]?.originalXml : null) ?? ''
 }
 
+/** a field result's words as the AI readers see them: a span hidden from AI reads as its placeholder */
+function fieldText(doc: OpenDocument, node: PmNode): string {
+  return doc.mods.redactView.projectedNodeText(node.toJSON() as never)
+}
+
 /** Every field with its block: editable inline fields from the editor, the rest from the block XML. */
 export function listFields(doc: OpenDocument): FieldSummary[] {
   const out: FieldSummary[] = []
@@ -1585,7 +1609,7 @@ export function listFields(doc: OpenDocument): FieldSummary[] {
       const mark = instr ?? ref
       if (!mark) return true
       if (prev && prev.end === pos && prev.mark.eq(mark)) {
-        prev.field.result += node.text ?? ''
+        prev.field.result += fieldText(doc, node)
         prev.end += node.nodeSize
         return true
       }
@@ -1594,7 +1618,7 @@ export function listFields(doc: OpenDocument): FieldSummary[] {
             blockIndex,
             type: keywordOf(String(instr.attrs.instr)),
             instr: String(instr.attrs.instr),
-            result: node.text ?? '',
+            result: fieldText(doc, node),
             dirty: instr.attrs.dirty === true,
           }
         : {
@@ -1603,7 +1627,7 @@ export function listFields(doc: OpenDocument): FieldSummary[] {
             instr: mark.attrs.instr
               ? String(mark.attrs.instr).trim()
               : `REF ${String(mark.attrs.name)} \\h`,
-            result: node.text ?? '',
+            result: fieldText(doc, node),
             dirty: mark.attrs.dirty === true,
           }
       out.push(field)
@@ -1735,14 +1759,14 @@ function sectionHfText(
   variant: HfView,
 ): string {
   const value = resolveSectionHf(doc, sections, si, kind, variant)
-  return value ? doc.mods.hfText.hfEditText(value) : ''
+  return value ? doc.mods.hfText.hfModelText(value) : ''
 }
 
 export function headerFooterState(doc: OpenDocument): HeaderFooterState {
   const { side } = doc
   const textOf = (slot: HfSlot) => {
     const v = side.hf[slot]
-    return v ? doc.mods.hfText.hfEditText(v) : ''
+    return v ? doc.mods.hfText.hfModelText(v) : ''
   }
   const sections = readSections(doc.parsed)
   return {
@@ -1779,6 +1803,9 @@ function headerFooterAccess(doc: OpenDocument): {
   return {
     read: () => headerFooterState(doc),
     set: (kind, view, text) => {
+      const slot = slotOf(kind, view)
+      const next = doc.mods.hfText.applyHfModelText(side.hf[slot] ?? null, text)
+      if (typeof next === 'string') return next
       if (view === 'first' && !side.titlePg) {
         side.titlePg = true
         side.titlePgDirty = true
@@ -1787,8 +1814,7 @@ function headerFooterAccess(doc: OpenDocument): {
         side.evenOddHf = true
         side.evenOddHfDirty = true
       }
-      const slot = slotOf(kind, view)
-      side.hf[slot] = doc.mods.hfText.applyHfText(side.hf[slot] ?? null, text)
+      side.hf[slot] = next
       side.hfDirty.add(slot)
       return null
     },
@@ -1837,14 +1863,15 @@ function setSectionHeaderFooter(
       error:
         'set_header_footer{section} addresses the saved sections; apply the section break in its own `seuoffice docs apply` first, then edit the header/footer',
     }
+  const next = doc.mods.hfText.applyHfModelText(
+    resolveSectionHf(doc, sections, section, kind, view),
+    text,
+  )
+  if (typeof next === 'string') return { error: next }
   if (view === 'even' && !side.evenOddHf) {
     side.evenOddHf = true
     side.evenOddHfDirty = true
   }
-  const next = doc.mods.hfText.applyHfText(
-    resolveSectionHf(doc, sections, section, kind, view),
-    text,
-  )
   const slot = slotOf(kind, view)
   if (section === sections.length - 1) {
     if (view === 'first' && !side.titlePg) {
@@ -2062,9 +2089,10 @@ export interface CommentSummary extends CommentInfo {
 /** Every comment with the block its anchor sits in, ids as reply_comment / resolve_comment / delete_comment take them. */
 export function listComments(doc: OpenDocument): CommentSummary[] {
   const anchors = doc.mods.protocol.commentAnchors(doc.editor)
-  return doc.side.comments.map((c) => {
+  return doc.side.comments.map(({ modelText, ...c }) => {
     const a = anchors.get(c.parentId ?? c.id)
-    const base = { ...c, done: c.done === true }
+    // the text a model may read: a run hidden from AI reads as its placeholder
+    const base = { ...c, text: modelText ?? c.text, done: c.done === true }
     return a ? { ...base, blockIndex: a.blockIndex, anchorText: a.excerpt } : base
   })
 }

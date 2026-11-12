@@ -1,3 +1,4 @@
+import { OLD_VISUAL_SIGNATURE_CONTENT_PREFIXES } from './old-names'
 import type { AiPanelPrefs, AutoSaveDefault } from '@seuoffice/ui'
 import type { Lang } from '@seuoffice/i18n'
 import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
@@ -176,6 +177,16 @@ export const PDF_CHANNELS = {
 } as const
 
 export const VISUAL_SIGNATURE_CONTENT_PREFIX = 'SeuOffice visual signature field: '
+
+/**
+ * The prefix written into a visual signature's /Contents. A reader of
+ * 0.12.37 knows only the old one, and pdf.js hands it nothing else that ties
+ * the drawing to its field: under the new prefix the field reads as unsigned
+ * there, and can be signed twice. Readers here accept both
+ * (`form-catalog.ts`). Switch this to VISUAL_SIGNATURE_CONTENT_PREFIX only when
+ * a version that reads both has been the stable release for at least 14 days.
+ */
+export const VISUAL_SIGNATURE_CONTENT_PREFIX_WRITTEN = OLD_VISUAL_SIGNATURE_CONTENT_PREFIXES[0]!
 
 /** Signature strokes: pad pixel coords, scaled proportionally and y-flipped when placed on the page */
 export interface SignatureStrokes {

@@ -14,6 +14,10 @@
       "node": "./src/node/hwp.ts",
       "default": "./src/hwp.ts"
     },
+    "./redaction": {
+      "node": "./src/node/redaction.ts",
+      "default": "./src/redaction.ts"
+    },
     "./init": "./src/init.ts"
   },
   "scripts": {

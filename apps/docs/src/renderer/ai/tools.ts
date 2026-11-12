@@ -2054,6 +2054,13 @@ function executeSyncTool(
       if (found.length > 1)
         return fail(summary, `both a footnote and an endnote have id ${id}; pass kind`)
       const { kind, note } = found[0]!
+      // the note's own text is not the model's to see, so it is not the model's to rewrite;
+      // the answer must not tell whether the hidden words hold what it looks for
+      if (note.modelText !== undefined)
+        return fail(
+          summary,
+          `${kind} ${id} holds text the person hid from AI and cannot be edited here; tell the person what to change and let them edit the note`,
+        )
       const find = typeof call.input.find === 'string' ? call.input.find : ''
       if (!find) return fail(summary, 'find must not be empty')
       const replace = call.input.replace == null ? '' : String(call.input.replace)

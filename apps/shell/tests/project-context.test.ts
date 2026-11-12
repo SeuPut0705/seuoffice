@@ -24,9 +24,19 @@ describe('assembleTrustedContext', () => {
       on,
     )
     expect(result.instructions).toEqual({
+      dataDir,
       text: `[${dataDir}/instructions.md]\nmine\n\n[AGENTS.md]\nagents\n\n[CLAUDE.md]\nclaude`,
       sources: ['instructions', 'agents', 'claude'],
     })
+  })
+
+  it('carries the data folder the project uses, so the prompt can name its instructions file', () => {
+    const result = assembleTrustedContext(
+      { ...texts({ instructions: 'mine' }), dataDir: '.ieumoffice' },
+      { decision: 'use', hashes: {} },
+      on,
+    )
+    expect(result.instructions?.dataDir).toBe('.ieumoffice')
   })
 
   it('leaves out sources cut away entirely by the limit', () => {

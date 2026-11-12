@@ -78,8 +78,8 @@ const NOT_OURS: Array<[string, { command: string; args: string[] }, NodeJS.Proce
     OTHER_ON_PATH,
   ],
   [
-    'a bare old command PATH does not know',
-    { command: 'ieumoffice', args: ['mcp'] },
+    'a bare old command PATH does not know, with other arguments',
+    { command: 'ieumoffice', args: ['serve'] },
     NOTHING_ON_PATH,
   ],
 ]

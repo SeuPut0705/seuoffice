@@ -150,12 +150,23 @@ function countOf(haystack: string, needle: string): number {
  * element directly inside our extension, with a label that is not empty.
  */
 function labelOf(ext: XmlElement): string {
-  const marks = ext.children.filter((c) => c.name === REDACT_EL)
+  const marks = ext.children.filter((c) => isMark(c))
   const label = marks.length === 1 ? marks[0]!.attrs.get('label') : undefined
   if (ext.children.length !== 1 || !label) {
     throw new RedactionMarkError('a mark carries no label')
   }
   return label
+}
+
+/**
+ * The mark element: the engine's prefix, or no prefix with the mark's
+ * namespace declared on the element itself. One whose namespace comes from an
+ * element around it is not read, and the trace count below fails the deck.
+ */
+function isMark(el: XmlElement): boolean {
+  if (el.name === REDACT_EL) return true
+  const ns = el.attrs.get('xmlns')
+  return el.name === 'redact' && ns !== undefined && REDACT_NAMESPACES.includes(ns)
 }
 
 /** the element whose properties hold this extension list entry, or null */
@@ -200,7 +211,7 @@ export function redactPptxPartXml(xml: string): string {
   // extension, the namespace under another prefix, a mark inside a comment)
   if (
     countOf(xml, PPTX_REDACT_EXT_URI) !== understood ||
-    countOf(xml, `<${REDACT_EL}`) !== understood ||
+    countOf(xml, `<${REDACT_EL}`) + (xml.match(/<redact\b/g) ?? []).length !== understood ||
     REDACT_NAMESPACES.reduce((n, ns) => n + countOf(xml, ns), 0) > understood
   ) {
     throw new RedactionMarkError('a mark is written in a form that cannot be read')

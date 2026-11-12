@@ -5,10 +5,12 @@
  * {NUMPAGES} / {SECTIONPAGES} tokens. Layout-table rows (cells) and images stay out of the text flow and
  * keep their original content.
  */
+import { checkPlaceholders, placeholderSource } from '@seuoffice/agent-core/redact-core'
 import {
   PAGE_MARK,
   SECTION_PAGES_MARK,
   TOTAL_PAGES_MARK,
+  withheldLabelOf,
   type HeaderFooter,
   type HfImage,
   type HfParagraph,
@@ -50,18 +52,81 @@ export function hfPictureRuns(runs: Run[]): { leading: Run[]; text: Run[]; trail
 
 /** editable text of the part: one line per text paragraph, field sentinels as tokens */
 export function hfEditText(value: HeaderFooter): string {
-  return hfParasOf(value)
-    .filter((p) => !p.cells)
-    .map((p) =>
-      p.runs
-        .filter((r) => !r.del)
-        .map((r) => r.text)
-        .join(''),
-    )
+  return hfLinesText(textParas(value).map((p) => p.runs.filter((r) => !r.del).map((r) => r.text)))
+}
+
+function hfLinesText(lines: string[][]): string {
+  return lines
+    .map((pieces) => pieces.join(''))
     .join('\n')
     .replaceAll(PAGE_MARK, PAGE_TOKEN)
     .replaceAll(TOTAL_PAGES_MARK, TOTAL_TOKEN)
     .replaceAll(SECTION_PAGES_MARK, SECTION_TOKEN)
+}
+
+/** runs of the part hidden from AI, next to each other under one label: one placeholder */
+interface WithheldSpan {
+  marker: string
+  runs: Run[]
+}
+
+/** a text paragraph's live runs, the ones hidden from AI grouped into their spans */
+function modelPieces(runs: Run[]): Array<Run | WithheldSpan> {
+  const pieces: Array<Run | WithheldSpan> = []
+  let label: string | null = null
+  for (const run of runs) {
+    if (run.del) continue
+    const mine = withheldLabelOf(run.rawRPr)
+    const last = pieces[pieces.length - 1]
+    if (mine !== null && mine === label && last && 'marker' in last) last.runs.push(run)
+    else pieces.push(mine === null ? run : { marker: placeholderSource(mine), runs: [run] })
+    label = mine
+  }
+  return pieces
+}
+
+function textParas(value: HeaderFooter): HfParagraph[] {
+  return hfParasOf(value).filter((p) => !p.cells)
+}
+
+/**
+ * The part's text as a model may read it: `hfEditText`, with each run the
+ * person hid from AI read as its `{{label}}` placeholder.
+ */
+export function hfModelText(value: HeaderFooter): string {
+  return hfLinesText(
+    textParas(value).map((p) =>
+      modelPieces(p.runs).map((piece) => ('marker' in piece ? piece.marker : piece.text)),
+    ),
+  )
+}
+
+/**
+ * A model's new text for the part (written against `hfModelText`). Its
+ * placeholders must come back exactly as given: each then becomes the hidden
+ * runs it stands for, so the person's words and their mark survive the edit,
+ * and the new words never take the mark. Returns the reason when they do not.
+ */
+export function applyHfModelText(value: HeaderFooter | null, text: string): HeaderFooter | string {
+  const spans = new Map<string, Run[][]>()
+  for (const p of value ? textParas(value) : []) {
+    for (const piece of modelPieces(p.runs)) {
+      if ('marker' in piece)
+        spans.set(piece.marker, [...(spans.get(piece.marker) ?? []), piece.runs])
+    }
+  }
+  if (spans.size === 0) return applyHfText(value, text)
+  const damaged = checkPlaceholders(hfModelText(value!), text).length
+  if (damaged > 0) {
+    return `this edit would damage ${damaged} private placeholder(s) (dropped, renamed, split or duplicated) — reproduce each {{...}} exactly and rephrase around them instead`
+  }
+  return applyHfText(value, text, (line, style) =>
+    line.split(/(\{\{[^{}]*\}\})/).flatMap((piece): Run[] => {
+      const hidden = spans.get(piece)?.shift()
+      if (hidden) return hidden
+      return piece === '' ? [] : [{ ...style, text: piece }]
+    }),
+  )
 }
 
 /**
@@ -69,7 +134,12 @@ export function hfEditText(value: HeaderFooter): string {
  * paragraph's format and first-run styling (extra lines reuse the last
  * template), cells rows are spliced back at their original positions.
  */
-export function applyHfText(value: HeaderFooter | null, text: string): HeaderFooter {
+export function applyHfText(
+  value: HeaderFooter | null,
+  text: string,
+  /** a model's edit: how a line becomes runs, its hidden runs given back (applyHfModelText) */
+  lineRuns?: (line: string, style: Run) => Run[],
+): HeaderFooter {
   const base = value ?? { text: '' }
   const paras = hfParasOf(base)
   const lines = text
@@ -92,11 +162,12 @@ export function applyHfText(value: HeaderFooter | null, text: string): HeaderFoo
       del: _del,
       wrap: _wrap,
       ...style
-    } = textRuns.find((r) => !r.del) ?? textRuns[0] ?? { text: '' }
-    return {
-      ...template,
-      runs: [...leading, ...(line === '' ? [] : [{ ...style, text: line }]), ...trailing],
-    }
+    } = lineRuns
+      ? // the mark belongs to the person, so a model's new words never take it
+        (textRuns.find((r) => !r.del && withheldLabelOf(r.rawRPr) === null) ?? { text: '' })
+      : (textRuns.find((r) => !r.del) ?? textRuns[0] ?? { text: '' })
+    const runs = line === '' ? [] : lineRuns ? lineRuns(line, style) : [{ ...style, text: line }]
+    return { ...template, runs: [...leading, ...runs, ...trailing] }
   })
   const nextParas: HfParagraph[] = []
   let ei = 0

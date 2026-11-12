@@ -191,6 +191,9 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
                 "formula": output.formula,
             })))
         }
+        "redactPptxPartXml" => string_out(file_parse::pptx_redaction::redact_pptx_part_xml(text(
+            args, 0,
+        )?)),
         // the constants the binding keeps as TypeScript literals, for its parity test
         "constants" => Ok(Some(json!({
             "ATTACHABLE_EXTS": attachable::ATTACHABLE_EXTS,

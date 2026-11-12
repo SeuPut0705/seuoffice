@@ -62,6 +62,7 @@ import {
   type AutoSpace,
   type EffectivePPr,
   type EffectiveRPr,
+  withheldLabelOf,
 } from '@seuoffice/docx-engine'
 import { t } from '../i18n/locale'
 import { symbolFontCovers } from '../font-check'
@@ -142,20 +143,6 @@ export function pmDocOptions(parsed: {
       ...(asciiFont ? { font: asciiFont } : {}),
     },
   }
-}
-
-/** the element this editor writes into a run's rPr to carry the label */
-const REDACT_RPR_RE = /<go:redact\b/
-const REDACT_LABEL_RE = /<go:redact\b[^>]*\bw:label="([^"]*)"/
-
-function redactLabelIn(rawRPr: string): string {
-  const found = REDACT_LABEL_RE.exec(rawRPr)
-  const label = found?.[1] ?? 'private'
-  return label
-    .replace(/&quot;/g, '"')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&amp;/g, '&')
 }
 
 export function blocksToPmDoc(
@@ -2283,12 +2270,13 @@ function runMarks(run: Run): PmMark[] {
     // lifted out of the raw rPr and the run is re-tagged: without it the
     // border survives a reopen but the document quietly stops withholding
     // anything, and a model can read the whole thing again.
-    if (typeof run.rawRPr === 'string' && REDACT_RPR_RE.test(run.rawRPr)) {
+    const redactLabel = withheldLabelOf(run.rawRPr)
+    if (redactLabel !== null) {
       marks.push({
         type: 'redaction',
         // bdr and rawRPr are what the save path needs to write the mark back;
         // docTextStyle already carries the border, this re-asserts it on ours
-        attrs: { label: redactLabelIn(run.rawRPr), rawRPr: run.rawRPr },
+        attrs: { label: redactLabel, rawRPr: run.rawRPr },
       })
     }
     marks.push({
