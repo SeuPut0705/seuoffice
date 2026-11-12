@@ -3,6 +3,11 @@ import { join } from 'node:path'
 import JSZip from 'jszip'
 import { expect } from 'vitest'
 import { OLD_REDACT_NS } from '../../agent-core/src/old-names'
+import {
+  applyRedactionNameMirror,
+  serializeRedactionPart,
+  type SheetRedactionState,
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { setRedactExt } from '../../pptx-engine/src/redaction-xml'
 import { buildDocx } from '../../docx-engine/tests/helpers/build-docx'
 
@@ -78,6 +83,40 @@ export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<str
     expect(marked).not.toBe(xml)
     zip.file(part, marked)
   }
+  writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
+  return file
+}
+
+/**
+ * A workbook with a phone number in B2 hidden from AI, and a total in C2 that
+ * computes from it; the record is written the way a save of the sheet editor
+ * writes it (the part and its copy in the defined names).
+ */
+export async function hiddenXlsx(dir: string, name = 'hidden.xlsx'): Promise<string> {
+  const { run } = await import('./helpers')
+  const table = join(dir, 'table.json')
+  writeFileSync(
+    table,
+    JSON.stringify([
+      ['Name', 'Phone', 'Double'],
+      ['Kim', Number(SECRET), '=B2*2'],
+    ]),
+  )
+  const file = join(dir, name)
+  expect(
+    (await run(['create', '--type', 'xlsx', '--from', table, '--out', file, '--json'])).code,
+  ).toBe(0)
+  const zip = await JSZip.loadAsync(readFileSync(file))
+  const workbook = await zip.file('xl/workbook.xml')!.async('string')
+  const sheetName = /<sheet\b[^>]*\bname="([^"]+)"/.exec(workbook)![1]!
+  const states: SheetRedactionState[] = [
+    {
+      sheetName,
+      marks: [{ startRow: 1, startColumn: 1, endRow: 1, endColumn: 1, label: LABEL }],
+    },
+  ]
+  zip.file('xl/gxRedactions.json', serializeRedactionPart(states))
+  zip.file('xl/workbook.xml', applyRedactionNameMirror(workbook, states, [sheetName]))
   writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
   return file
 }
