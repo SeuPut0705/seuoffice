@@ -3,3 +3,4 @@
 pub mod attachable;
 pub mod opc;
 pub mod xlsx_dates;
+pub mod zip_text_parts;
