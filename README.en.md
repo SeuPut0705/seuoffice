@@ -2,7 +2,6 @@
 
 [한국어](README.md) · **English**
 
-[![Total downloads](https://img.shields.io/badge/dynamic/json?url=https%3A%2F%2Fraw.githubusercontent.com%2Fpblsketch%2Fieumoffice%2Fmain%2Fdocs%2Ftracking%2Fgrowth-latest.json&query=%24.totalDownloads&label=total%20downloads)](https://github.com/pblsketch/ieumoffice/releases)
 [![Stars](https://img.shields.io/github/stars/pblsketch/ieumoffice?style=social)](https://github.com/pblsketch/ieumoffice/stargazers)
 
 If IeumOffice helps you, please tap the **star** above. Every star makes it

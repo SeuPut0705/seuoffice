@@ -126,33 +126,6 @@ npm run dist:win -- -- --publish never
 - 스캔 문서 글자 인식 도우미(`win-ocr.exe`)가 이 과정에서 컴파일된다. Windows SDK가 없으면 여기서 멈춘다.
 - 설치 파일에는 서명이 없다. 설치할 때 Windows가 "알 수 없는 게시자" 경고를 띄운다.
 
-## 성장 기록
-
-이용자 수는 앱이 보내는 통계가 없으므로, GitHub가 공개하는 배포 신호로만 본다.
-`npm run growth`를 실행하면 그날의 기록(릴리스 다운로드 수, 스타, 포크)을
-`docs/tracking/growth-history.json`에 더하고, 소개 문서의 배지가 읽는 요약을
-`docs/tracking/growth-latest.json`에 쓴다. GitHub Actions의 Growth 워크플로우가
-한 시간마다(매시 17분) 같은 일을 하고, 바뀐 것이 있으면 기록 커밋 하나를 `main`에
-쌓는다. `growth-history.json`은 하루에 한 줄을 유지한다. 같은 날 다시 기록하면 그날
-줄을 덮어쓰므로, 그날의 마지막 기록이 하루치로 남는다. 소개 문서의 배지를 실시간에
-가깝게 두려는 것이며, 소개 사이트는 같은 값을 GitHub API에서 직접 읽는다.
-
-```bash
-npm run growth           # 그날 기록을 더한다(수동 실행)
-npm run growth:report    # 전일 대비 증감과 7일 추이 보기
-```
-
-숫자의 뜻:
-
-- 다운로드 합계는 설치 파일 전체 합계다. Windows 설치 수는 `.exe`, macOS 설치 수는
-  `.dmg`와 `.zip`, Linux 설치 수는 `.AppImage`·`.deb`·`.rpm`을 더한 것이다.
-- 업데이트 확인(`latest*.yml` 내려받기)은 설치된 앱의 자동 업데이트 확인 횟수다.
-  설치 수와 섞어 보지 않는다.
-- 같은 PC에서의 재설치도 설치 수에 더해진다. 정확한 이용자 수가 아니라 추이다.
-
-주 확인 루틴: `npm run growth:report`로 7일 Windows 설치 추이를 본다. 숫자가
-눈에 띄게 자라면 소개 문서의 배지를 더 눈에 띄는 자리로 옮기는 것을 생각한다.
-
 ## Mac 설치 파일 만들기
 
 저장소 주인에게 Mac이 없으므로 GitHub Actions에서 만든다.
