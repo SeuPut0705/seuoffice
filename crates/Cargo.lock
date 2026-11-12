@@ -342,6 +342,7 @@ dependencies = [
 name = "jscompat"
 version = "0.1.0"
 dependencies = [
+ "libm",
  "regress",
  "ryu",
  "serde",
@@ -355,6 +356,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "65cd87c9a6d60536580b316ad985726104730a5151c99845f2490428ef91240a"
 
 [[package]]
+name = "libm"
+version = "0.2.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b6d2cec3eae94f9f509c767b45932f1ada8350c4bdb85af2fcab4a3c14807981"
+
+[[package]]
 name = "litemap"
 version = "0.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -365,6 +372,13 @@ name = "memchr"
 version = "2.8.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
+
+[[package]]
+name = "mtx"
+version = "0.1.0"
+dependencies = [
+ "jscompat",
+]
 
 [[package]]
 name = "multiversion_no_op"
@@ -390,9 +404,11 @@ version = "0.1.0"
 dependencies = [
  "docx-engine",
  "jscompat",
+ "mtx",
  "omml",
  "ooxml-pkg",
  "ooxml-xml",
+ "pptx-engine",
  "serde",
  "serde_json",
  "zip",
@@ -423,6 +439,7 @@ name = "ooxml-xml"
 version = "0.1.0"
 dependencies = [
  "jscompat",
+ "serde_json",
 ]
 
 [[package]]
@@ -434,6 +451,18 @@ dependencies = [
  "serde_core",
  "writeable",
  "zerovec",
+]
+
+[[package]]
+name = "pptx-engine"
+version = "0.1.0"
+dependencies = [
+ "jscompat",
+ "ooxml-pkg",
+ "ooxml-xml",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

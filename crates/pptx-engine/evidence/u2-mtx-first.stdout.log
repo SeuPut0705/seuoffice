@@ -1,0 +1,15 @@
+pptx-diff: 3 tracked .pptx (floor      3); 3 opened (floor      3); 7 slides (floor      7)
+(f) mtx on the corpus, checks                  compared      0  floor missing  BELOW FLOOR  differences 0
+(f) mtx on built inputs, checks                compared   1968  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 760: Rust must refuse those too)
+(f+) mtx on mutated texts, checks              compared    300  floor missing  BELOW FLOOR  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) mtx: 9 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 9
+    pptxMtx.lzcomp.MtxError                  checks     309  differences      0  key order only      0  distinct results   275  TypeScript threw 0
+    pptxMtx.lzcomp.BitWriter                 checks      17  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    pptxMtx.lzcomp.BitReader                 checks      13  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxMtx.lzcomp.AHuff                     checks     123  differences      0  key order only      0  distinct results   102  TypeScript threw 0
+    pptxMtx.lzcomp.unpackLz                  checks     377  differences      0  key order only      0  distinct results    90  TypeScript threw 274
+    pptxMtx.lzcomp.unpackMtx                 checks     339  differences      0  key order only      0  distinct results    44  TypeScript threw 283
+    pptxMtx.ctf.sanitizeCmap                 checks     361  differences      0  key order only      0  distinct results   186  TypeScript threw 0
+    pptxMtx.ctf.ctfToSfnt                    checks     399  differences      0  key order only      0  distinct results   124  TypeScript threw 203
+    pptxMtx.index.mtxToSfnt                  checks     330  differences      0  key order only      0  distinct results    10  TypeScript threw 0

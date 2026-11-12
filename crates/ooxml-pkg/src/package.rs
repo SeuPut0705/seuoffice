@@ -48,6 +48,17 @@ impl Part {
         })
     }
 
+    /// Transfers the loaded entry without another inflated-byte allocation.
+    pub fn into_content(self) -> Result<(String, Vec<u8>), ReadError> {
+        match self.content {
+            Ok(content) => Ok((self.name, content)),
+            Err(reason) => Err(ReadError {
+                part: self.name,
+                reason,
+            }),
+        }
+    }
+
     /// `file.async('string')`
     pub fn text(&self) -> Result<&str, ReadError> {
         let bytes = self.bytes()?;
@@ -144,6 +155,10 @@ impl Package {
         &self.parts
     }
 
+    /// Transfers entries in `Object.keys(zip.files)` order.
+    pub fn into_parts(self) -> Vec<Part> {
+        self.parts
+    }
     /// `zip.file(path)`: a folder is not a file.
     pub fn file(&self, path: &str) -> Option<&Part> {
         self.by_name

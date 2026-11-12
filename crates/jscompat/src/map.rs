@@ -82,6 +82,15 @@ impl<V> JsMap<V> {
     }
 }
 
+impl<V> IntoIterator for JsMap<V> {
+    type Item = (String, V);
+    type IntoIter = std::vec::IntoIter<Self::Item>;
+
+    fn into_iter(self) -> Self::IntoIter {
+        self.entries.into_iter()
+    }
+}
+
 impl<V: Serialize> Serialize for JsMap<V> {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut pairs = serializer.serialize_seq(Some(self.entries.len()))?;

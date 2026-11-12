@@ -13,6 +13,7 @@ import { failed } from './engine'
 import { tagTokens } from './fragments'
 import { type Comparison, engine, option } from './harness'
 import { keyOrderDifference } from './key-order'
+import { listedDifference } from './known-differences'
 import { type Args, MODEL_FUNCTIONS, type Population, READERS, type Themes } from './props-registry'
 
 export type Outcome = { value?: unknown } | { error: string }
@@ -46,12 +47,18 @@ const pending: Array<{ comparison: Comparison; where: string; key: string; fn: s
 /** Each distinct case reaches Rust once. `difference` is `null` for an equal case. */
 const settled = new Map<
   string,
-  { difference: string | null; keyOrderOnly: boolean; typescriptThrew: boolean; outcome: string }
+  {
+    difference: string | null
+    keyOrderOnly: boolean
+    typescriptThrew: boolean
+    outcome: string
+    listed: boolean
+  }
 >()
 const queued = new Map<string, Case>()
 
 function record(comparison: Comparison, fn: string, key: string, where: string): void {
-  const { difference, keyOrderOnly, typescriptThrew, outcome } = settled.get(key)!
+  const { difference, keyOrderOnly, typescriptThrew, outcome, listed } = settled.get(key)!
   const tally = byFunction.get(fn) ?? {
     checks: 0,
     differences: 0,
@@ -65,6 +72,7 @@ function record(comparison: Comparison, fn: string, key: string, where: string):
     tally.threw += 1
   }
   tally.outcomes.add(outcome)
+  if (listed) comparison.listed += 1
   if (difference !== null) tally.differences += 1
   if (keyOrderOnly) tally.keyOrderOnly += 1
   byFunction.set(fn, tally)
@@ -102,17 +110,29 @@ export function flush(): void {
         const call = `${fn}(${JSON.stringify(texts[text]).slice(0, SHOWN_CHARS)}, ${JSON.stringify(args).slice(0, SHOWN_CHARS)})`
         const order =
           same && !('error' in typescript) ? keyOrderDifference(fn, typescript, rust) : null
+        const listed =
+          (!same || order !== null) &&
+          listedDifference({
+            fn,
+            text: texts[text]!,
+            args,
+            typescript,
+            rust,
+          }) !== null
         settled.set(key, {
           typescriptThrew: 'error' in typescript,
           outcome: 'error' in typescript ? 'error' : JSON.stringify(typescript),
-          keyOrderOnly: order !== null,
-          difference: !same
-            ? `${call}\n` +
-              `      typescript ${JSON.stringify(typescript).slice(0, SHOWN_CHARS)}\n` +
-              `      rust       ${JSON.stringify(rust).slice(0, SHOWN_CHARS)}`
-            : order === null
-              ? null
-              : `${call}\n      ${order}`,
+          keyOrderOnly: !listed && order !== null,
+          listed,
+          difference: listed
+            ? null
+            : !same
+              ? `${call}\n` +
+                `      typescript ${JSON.stringify(typescript).slice(0, SHOWN_CHARS)}\n` +
+                `      rust       ${JSON.stringify(rust).slice(0, SHOWN_CHARS)}`
+              : order === null
+                ? null
+                : `${call}\n      ${order}`,
         })
       })
     })

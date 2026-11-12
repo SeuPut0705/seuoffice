@@ -776,7 +776,7 @@ fn element_attrs(xml: &str) -> Vec<(String, String)> {
 fn replace_re(re: &jscompat::JsRegex, s: &str, replacement: &str) -> String {
     match re.exec(s) {
         Some(m) => {
-            let rep = get_substitution(replacement, m.as_str(), m.start(), s, &[]);
+            let rep = get_substitution(m.as_str(), s, m.start(), &[], replacement);
             format!("{}{rep}{}", &s[..m.start()], &s[m.end()..])
         }
         None => s.to_owned(),

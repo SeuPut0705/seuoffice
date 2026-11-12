@@ -1,0 +1,30 @@
+//! Pure slides engine: bytes and values in, values out.
+
+pub mod align;
+pub mod animation;
+pub mod chart;
+pub mod chart_workbook;
+pub mod chartex;
+pub mod color;
+pub mod crc32;
+pub mod custgeom;
+pub mod dgm_hier;
+pub mod format_brush;
+pub mod glb_bounds;
+pub mod identity;
+pub mod model3d;
+pub mod named_action;
+pub mod placeholder;
+pub mod preset_shape_types;
+pub mod redaction_xml;
+pub mod scan;
+pub mod slide_ids;
+pub mod smartart_layout;
+pub mod table_edit;
+pub mod table_grid;
+pub mod table_style;
+pub mod theme;
+pub mod theme_apply;
+pub mod types;
+pub mod xml_utils;
+pub mod zip;

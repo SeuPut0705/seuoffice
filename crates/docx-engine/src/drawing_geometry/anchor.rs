@@ -3,7 +3,7 @@
 //! anchor metadata of one fragment, its page/margin-relative position and the
 //! child-to-anchor transform of a wpg group.
 
-use jscompat::{JsNum, JsRegex, Radix, js_regex, math_round, parse_int, to_number};
+use jscompat::{JsNum, JsRegex, Radix, index_of, js_regex, math_round, parse_int, to_number};
 use ooxml_xml::XNode;
 use serde::{Deserialize, Serialize};
 
@@ -101,11 +101,6 @@ fn drawing_open_at(xml: &str, from: usize) -> Option<usize> {
         .find_from(xml, from)
         .next()
         .map(|found| found.start())
-}
-
-/// `xml.indexOf(needle, from)`
-fn index_of(xml: &str, needle: &str, from: usize) -> Option<usize> {
-    xml.get(from..)?.find(needle).map(|at| at + from)
 }
 
 /// `topLevelDrawings`: the top-level `<w:drawing>` fragments of a paragraph,
