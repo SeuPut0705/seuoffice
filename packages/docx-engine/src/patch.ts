@@ -1,3 +1,4 @@
+import { ContentControlPart } from './inline-control-ids'
 import JSZip from 'jszip'
 import {
   applyRevisionResolutions,
@@ -30,6 +31,8 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+import { HF_ROOT_ATTRS, hfKeptRoot, hfWrapNamespaces } from './hf-root'
+import { partNamespaces } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import {
   applyRemoveParts,
@@ -105,7 +108,6 @@ import {
   type StyleUpsert,
 } from './style-upsert'
 import {
-  WATERMARK_NS,
   isPictureWatermark,
   isWatermarkChild,
   pictureWatermarkParagraphXml,
@@ -902,6 +904,12 @@ export async function saveDocx(
   }
   const styleUpserts = [...(options.styleUpserts ?? []), ...headingUpserts]
 
+  // the body as the run writer sees it: what the document root declares, and
+  // the bytes copied into it as they are (their control ids are taken)
+  const bodyControls = new ContentControlPart(
+    [documentXml, ...finalBlocks.flatMap((b) => (b.kind === 'xml' ? [b.xml] : []))],
+    partNamespaces(documentXml),
+  )
   const genCtx = {
     headingStyleIds,
     listParagraphStyleId: parsed.listParagraphStyleId,
@@ -911,6 +919,7 @@ export async function saveDocx(
       [documentXml, ...(await storyPartsXml(zip))],
       options.revisionIdFloor,
     ),
+    part: bodyControls,
   }
 
   const newMedia: Array<{ path: string; base64: string }> = []
@@ -1948,7 +1957,7 @@ export async function saveDocx(
 
   let newDocumentXml =
     documentXml.slice(0, bodyContentStart) +
-    balanceFieldChars(parts.join('')) +
+    balanceFieldChars(bodyControls.finish(parts.join(''))) +
     documentXml.slice(bodyContentEnd)
 
   // every ref-less body sectPr picks up the new header/footer references
@@ -2578,6 +2587,13 @@ function headerFooterPartXml(
   pageCount = 1,
 ): string {
   const root = kind === 'header' ? 'w:hdr' : 'w:ftr'
+  // Which root the part ends up under is known before its runs are written:
+  // a wrapper is written only when that root declares the prefixes it uses.
+  const kept = originalXml ? hfKeptRoot(root, originalXml) : null
+  const controls = new ContentControlPart(
+    originalXml ?? '',
+    hfWrapNamespaces(originalXml, kept !== null),
+  )
   const textRun = (t: string) =>
     t ? `<w:r><w:t xml:space="preserve">${escapeXmlText(t)}</w:t></w:r>` : ''
   const pageField =
@@ -2615,7 +2631,26 @@ function headerFooterPartXml(
     )
     let pageEmitted = !hf.pageNumber || hasPageMark
     const hfRunsXml = (paraRuns: Run[]): string => {
-      let runs = ''
+      let xml = ''
+      // A paragraph with wrappers goes through the same grouping as the body,
+      // including neighbouring runs of a hyperlink crossing a wrapper. Leave
+      // the legacy wrapper-less path byte-identical.
+      const grouped = paraRuns.some((r) => r.wrap?.length)
+      const written = new Set<string>()
+      const fragments = new Map<Run, string>()
+      const held: Run[] = []
+      const text = (piece: Run) => {
+        if (grouped) held.push(piece)
+        else xml += inlineRunsXml([piece], { written, part: controls })
+      }
+      const field = (fieldXml: string, host: Run, logicalText: string) => {
+        if (grouped) {
+          // Keep the logical field mark for the control's changed-text test.
+          const piece = { ...host, text: logicalText }
+          fragments.set(piece, fieldXml)
+          held.push(piece)
+        } else xml += fieldXml
+      }
       for (const run of paraRuns) {
         if (
           run.text.includes(TOTAL_PAGES_MARK) ||
@@ -2626,30 +2661,30 @@ function headerFooterPartXml(
           // SECTIONPAGES and NUMPAGES split alike: a mark between two segments is its field
           run.text.split(totalMarksRe).forEach((seg, k) => {
             if (k % 2 === 1) {
-              runs += seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField
+              field(seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField, run, seg)
               return
             }
             if (seg.includes(PAGE_MARK)) {
               seg.split(PAGE_MARK).forEach((piece, j) => {
-                if (j > 0) runs += pageField
-                if (piece) runs += inlineRunsXml([{ ...run, text: piece }])
+                if (j > 0) field(pageField, run, PAGE_MARK)
+                if (piece) text({ ...run, text: piece })
               })
             } else if (!pageEmitted && seg.includes('#')) {
               const [before, ...rest] = seg.split('#')
-              runs +=
-                inlineRunsXml(before ? [{ ...run, text: before }] : []) +
-                pageField +
-                inlineRunsXml(rest.join('#') ? [{ ...run, text: rest.join('#') }] : [])
+              if (before) text({ ...run, text: before })
+              field(pageField, run, '#')
+              if (rest.join('#')) text({ ...run, text: rest.join('#') })
               pageEmitted = true
             } else if (seg) {
-              runs += inlineRunsXml([{ ...run, text: seg }])
+              text({ ...run, text: seg })
             }
           })
         } else {
-          runs += inlineRunsXml([run])
+          text(run)
         }
       }
-      return runs
+      if (held.length > 0) xml += inlineRunsXml(held, { written, fragments, part: controls })
+      return xml
     }
     // rows live in the original w:tbl bytes (edited cells are patched into them
     // below); a rebuild without the original part flattens them to paragraphs
@@ -2716,85 +2751,63 @@ function headerFooterPartXml(
   // model) keep their original bytes; only the set of text paragraphs is replaced as a
   // whole at the position of the first text paragraph. The watermark child is kept
   // verbatim unless watermarkXml replaces or drops it.
-  if (originalXml) {
-    const open = new RegExp(`<${root}[^>]*>`).exec(originalXml)?.[0]
-    const closeIdx = originalXml.lastIndexOf(`</${root}>`)
-    if (open && closeIdx >= 0) {
-      const openIdx = originalXml.indexOf(open)
-      const children = splitXmlChildren(originalXml.slice(openIdx + open.length, closeIdx))
-      // a text paragraph whose pictures are all inline blips is fully modelled
-      // (the parser keeps them on its runs), so it is regenerated like any text
-      const isModelledPictures = (xml: string) =>
-        /<w:t[\s>]/.test(xml) &&
-        !/<w:pict[\s>]|<w:object[\s>]|<wp:anchor[\s>]/.test(xml) &&
-        (xml.match(/<w:drawing[\s>][\s\S]*?<\/w:drawing>/g) ?? []).every(
-          (d) => d.includes('<wp:inline') && d.includes('<a:blip'),
-        )
-      const isProtectedPara = (xml: string) =>
-        /<w:drawing[\s>]|<w:pict[\s>]|<w:object[\s>]/.test(xml) && !isModelledPictures(xml)
-      const isTextPara = (c: { name: string; xml: string }) =>
-        c.name === 'w:p' && !isWatermarkChild(c) && !isProtectedPara(c.xml)
-      if (children.some((c) => !isTextPara(c))) {
-        const parts: string[] = []
-        let injected = false
-        // tables are numbered the way the parser walks them (through w:sdt wrappers)
-        let tblIndex = 0
-        const patchTable = (xml: string): string => {
-          const grid = cellPatches(tblIndex++)
-          return grid ? patchTableCellTexts(xml, grid) : xml
+  if (kept) {
+    const { open, children, isTextPara } = kept
+    const parts: string[] = []
+    let injected = false
+    // tables are numbered the way the parser walks them (through w:sdt wrappers)
+    let tblIndex = 0
+    const patchTable = (xml: string): string => {
+      const grid = cellPatches(tblIndex++)
+      return grid ? patchTableCellTexts(xml, grid, controls) : xml
+    }
+    const openOf = (xml: string) => /^<[^>]*>/.exec(xml)?.[0] ?? ''
+    const closeOf = (xml: string) => /<\/[^>]*>$/.exec(xml)?.[0] ?? ''
+    const rewrap = (xml: string, children: string[]) =>
+      `${openOf(xml)}${children.join('')}${closeOf(xml)}`
+    const innerXml = (xml: string) =>
+      xml.slice(openOf(xml).length, xml.length - closeOf(xml).length)
+    const patchSdt = (sdtXml: string): string =>
+      rewrap(
+        sdtXml,
+        splitXmlChildren(innerXml(sdtXml)).map((inner) =>
+          inner.name !== 'w:sdtContent'
+            ? inner.xml
+            : rewrap(
+                inner.xml,
+                splitXmlChildren(innerXml(inner.xml)).map((c) =>
+                  c.name === 'w:tbl'
+                    ? patchTable(c.xml)
+                    : c.name === 'w:sdt'
+                      ? patchSdt(c.xml)
+                      : c.xml,
+                ),
+              ),
+        ),
+      )
+    for (const c of children) {
+      if (isTextPara(c)) {
+        if (!injected) {
+          parts.push(body)
+          injected = true
         }
-        const openOf = (xml: string) => /^<[^>]*>/.exec(xml)?.[0] ?? ''
-        const closeOf = (xml: string) => /<\/[^>]*>$/.exec(xml)?.[0] ?? ''
-        const rewrap = (xml: string, children: string[]) =>
-          `${openOf(xml)}${children.join('')}${closeOf(xml)}`
-        const innerXml = (xml: string) =>
-          xml.slice(openOf(xml).length, xml.length - closeOf(xml).length)
-        const patchSdt = (sdtXml: string): string =>
-          rewrap(
-            sdtXml,
-            splitXmlChildren(innerXml(sdtXml)).map((inner) =>
-              inner.name !== 'w:sdtContent'
-                ? inner.xml
-                : rewrap(
-                    inner.xml,
-                    splitXmlChildren(innerXml(inner.xml)).map((c) =>
-                      c.name === 'w:tbl'
-                        ? patchTable(c.xml)
-                        : c.name === 'w:sdt'
-                          ? patchSdt(c.xml)
-                          : c.xml,
-                    ),
-                  ),
-            ),
-          )
-        for (const c of children) {
-          if (isTextPara(c)) {
-            if (!injected) {
-              parts.push(body)
-              injected = true
-            }
-          } else if (isWatermarkChild(c) && watermarkXml !== undefined) {
-            // superseded by the watermark in body (or removed)
-          } else if (c.name === 'w:tbl') {
-            parts.push(patchTable(c.xml))
-          } else if (c.name === 'w:sdt') {
-            parts.push(patchSdt(c.xml))
-          } else {
-            parts.push(c.xml)
-          }
-        }
-        if (!injected) parts.unshift(body)
-        const rootOpen = watermarkXml ? withWatermarkNs(open) : open
-        return `${originalXml.slice(0, openIdx)}${rootOpen}${parts.join('')}</${root}>`
+      } else if (isWatermarkChild(c) && watermarkXml !== undefined) {
+        // superseded by the watermark in body (or removed)
+      } else if (c.name === 'w:tbl') {
+        parts.push(patchTable(c.xml))
+      } else if (c.name === 'w:sdt') {
+        parts.push(patchSdt(c.xml))
+      } else {
+        parts.push(c.xml)
       }
     }
+    if (!injected) parts.unshift(body)
+    const rootOpen = watermarkXml ? withWatermarkNs(open) : open
+    return controls.finish(`${kept.before}${rootOpen}${parts.join('')}</${root}>`)
   }
-  return (
+  return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-    `<${root} xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"` +
-    ' xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"' +
-    `${WATERMARK_NS}>` +
-    `${body}</${root}>`
+      `<${root}${HF_ROOT_ATTRS}>${body}</${root}>`,
   )
 }
 

@@ -36,6 +36,7 @@ import type {
 import type { AutoSpace } from './types'
 import { resolveThemeColor } from './theme'
 import { isOn } from './checkbox-control'
+import { sameInlineWrapChain } from './inline-opaque'
 import { ownValue } from './own-value'
 
 /** No run un-hides itself and nothing anchors here (bookmarks, comments, sectPr,
@@ -1014,6 +1015,8 @@ function sameStyle(a: Run, b: Run): boolean {
   if (a.refField !== undefined || b.refField !== undefined) return false
   if (a.instrField !== undefined || b.instrField !== undefined) return false
   if (a.sdtCheckboxXml !== undefined || b.sdtCheckboxXml !== undefined) return false
+  // runs of different wrapper elements stay apart
+  if (!sameInlineWrapChain(a.wrap, b.wrap)) return false
   if (a.math || b.math) return false
   if (a.sym || b.sym) return false
   if (a.ruby || b.ruby) return false

@@ -86,6 +86,13 @@ import type { PictureLayer } from './image-rotation'
 import { tableFloatSideRoom } from './anchor-geometry'
 
 export { holdsDeclaredWidth }
+import {
+  INLINE_WRAP_MARK,
+  holdsInlineStructure,
+  inlineStructureKey,
+  inlineWrapMarkOf,
+  readInlineWrapMark,
+} from './inline-wrap-chain'
 
 /** minimal ProseMirror JSON shapes */
 export interface PmMark {
@@ -1551,14 +1558,17 @@ export function tableStructureSignature(table: PmNode): string {
 function inlineFormattingSignature(content: PmNode[] | undefined): string[] {
   const styles: string[] = []
   for (const node of content ?? []) {
-    // the schema re-sorts marks by rank on load, so the parse-side order must not count
-    // a picture adds no text, so one placed next to another must count on its
+    // the schema re-sorts marks by rank on load, so the parse-side order must not count;
+    // the wrapper mark is not formatting: a cell paragraph that reads as it did
+    // keeps its original bytes, as a body paragraph does (see `normalizedRuns`).
+    // A picture adds no text, so one placed next to another must count on its
     // own, and a resized one must regenerate the cell (its drawing carries the size)
     const atom = node.type === 'docInlineImage'
     const style =
       node.type === 'text'
         ? JSON.stringify(
-            [...(node.marks ?? [])]
+            (node.marks ?? [])
+              .filter((mark) => mark.type !== INLINE_WRAP_MARK)
               .sort((a, b) => a.type.localeCompare(b.type))
               .map((mark) => [mark.type, mark.attrs ?? null]),
           )
@@ -2164,6 +2174,8 @@ function runMarks(run: Run): PmMark[] {
   }
   if (run.sdtCheckboxXml !== undefined)
     marks.push({ type: 'ctrlCheckbox', attrs: { sdtPr: run.sdtCheckboxXml } })
+  const wrapMark = inlineWrapMarkOf(run)
+  if (wrapMark) marks.push(wrapMark)
   if (run.commentIds?.length)
     marks.push({ type: 'comment', attrs: { ids: run.commentIds.join(' ') } })
   if (run.ins) {
@@ -4168,7 +4180,8 @@ export function inlineToRuns(content: PmNode[]): Run[] {
       const prev = runs[runs.length - 1]
       const prevAtomic =
         prev &&
-        (prev.noteRef ||
+        (holdsInlineStructure(prev) ||
+          prev.noteRef ||
           prev.xeTerm !== undefined ||
           prev.math ||
           prev.sym ||
@@ -4294,6 +4307,7 @@ function atomBase(node: PmNode): Partial<Run> {
 function runFromMarks(text: string, marks: PmMark[]): Run {
   const run: Run = { text }
   for (const mark of marks) {
+    if (readInlineWrapMark(run, mark)) continue
     if (mark.type === 'redaction') {
       // rawRPr is the whole story: it carries both the w:bdr Word draws and the
       // custom element holding the label, and the save path writes it back
@@ -4487,6 +4501,7 @@ function runStyleKey(run: Run): string {
     run.math?.omml ?? null,
     run.sym ? [run.sym.font, run.sym.char] : null,
     run.ruby?.xml ?? null,
+    inlineStructureKey(run),
   ])
 }
 
@@ -4510,8 +4525,12 @@ function revisionKey(run: Run): string | null {
 
 // ---- signatures: "did the user actually change this block?" ----
 
+// A signature knows text and formatting, not the run-level wrappers around
+// the text (Run.wrap): a block that reads as the file's block is the file's
+// block, wrappers included, whatever the editor's marks say. Wrappers are
+// written from the marks only when the block is written anew.
 function normalizedRuns(runs: Run[]): unknown[] {
-  return mergeRuns(runs).map((r) =>
+  return mergeRuns(runs.map(({ wrap: _wrap, ...run }) => run)).map((r) =>
     // a picture/rule run's rPr-derived display fields do not survive the image
     // node round trip; its identity is the fragment plus the raw rPr it re-emits
     r.text === '' && r.image

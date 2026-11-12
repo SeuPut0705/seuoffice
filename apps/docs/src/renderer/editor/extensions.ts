@@ -224,6 +224,7 @@ import {
   UnderlineMark,
 } from './marks'
 import { DocRedaction } from './redaction'
+import { InlineWrapGuardExtension, InlineWrapMark } from './inline-wrap'
 import {
   DropCapExtension,
   MoveRevisionExtension,
@@ -7490,6 +7491,10 @@ export const textboxSubExtensions = [
   // inline pictures inside textbox paragraphs (form checkboxes): without the
   // node the sub-editor drops them on load and the first commit loses them
   DocInlineImage,
+  // run-level wrappers (a content control, a smart tag) ride on the runs here
+  // too, or a commit of the box would write the paragraph back without them
+  InlineWrapGuardExtension,
+  InlineWrapMark,
   BoldMark,
   ItalicMark,
   UnderlineMark,
@@ -7571,6 +7576,7 @@ export const AutoLinkOnDelimiter = Extension.create({
 export const editorExtensions = [
   StreamingTailGuardExtension,
   OdtGuardExtension,
+  InlineWrapGuardExtension,
   ScriptFonts,
   DocDocument,
   DocText,
@@ -7590,6 +7596,7 @@ export const editorExtensions = [
   DocNestedTable,
   DocCellBoxes,
   DocProtected,
+  InlineWrapMark,
   BoldMark,
   ItalicMark,
   UnderlineMark,

@@ -39,6 +39,7 @@ import type {
   DiagramDisplay,
   FieldDisplay,
   FormulaDisplay,
+  InlineWrap,
   NewChart,
   NewImage,
   PropChangeInfo,
@@ -161,6 +162,15 @@ const SDT = struct<SdtShell>()({
 })
 
 /**
+ * A run-level wrapper (an inline content control, a smart tag) carried around the runs it
+ * holds: structure of the document, written back by the save. `open` and `close` are the
+ * bytes before and after the runs; the renderer never draws them (the mark shows a token of
+ * its own making, editor/inline-wrap.ts). `text` is the text a control's properties were
+ * recorded for.
+ */
+const WRAPPER = struct<InlineWrap>()({ open: 'kept', close: 'kept', text: 'text' })
+
+/**
  * The engine's content models as attributes carry them: a nested table
  * (`model`, `table`), the merged-away cells of a table (`continuationCells`),
  * text boxes and the runs inside all of them.
@@ -170,6 +180,11 @@ const CONTENT = struct<TableModel | TextboxDisplay | Run>()({
   // a run
   text: 'text',
   rawRPr: 'kept',
+  // The run-level wrappers around a run: below `wrap` the wrapper's own table is in force,
+  // so its bytes are kept there and nowhere else. (A picture's and a frame's `wrap` is a
+  // keyword: a token under any table.) Outside a wrapper nothing is named `open` or `close`.
+  wrap: WRAPPER,
+  ...tokens('open', 'close'),
   href: 'link',
   tooltip: 'text',
   omml: 'kept',
@@ -650,4 +665,6 @@ export const MARK_ATTRS: { readonly [type: string]: Fields } = {
   ins: REVISION_MARK,
   del: REVISION_MARK,
   docSym: tokens('font', 'char'),
+  // the chain of wrappers around the text, as JSON text
+  inlineWrap: { chain: WRAPPER },
 }

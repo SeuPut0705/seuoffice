@@ -292,30 +292,30 @@ export interface StoryRevisionAccess {
   apply(targets: StoryRevision[], mode: 'accept' | 'reject', all?: boolean): number
 }
 
-/** accept or reject the selected changes in one transaction, last position first */
+/**
+ * Accept or reject the selected changes in one transaction, last position
+ * first. `locked`: the body ones left pending because they would change the
+ * text of a content control locked against editing.
+ */
 export function applyRevisionSelection(
   editor: Editor,
   sel: RevisionSelector,
   mode: 'accept' | 'reject',
   stories?: StoryRevisionAccess,
-): { entries: RevisionEntry[] } | { error: string } {
+): { entries: RevisionEntry[]; locked: RevisionEntry[] } | { error: string } {
   const picked = selectRevisions(editor.state.doc, sel, stories?.list() ?? [])
   if ('error' in picked) return picked
   // stories first: textbox entries address their anchor node by position, which body edits shift
   const outside = picked.entries.filter((e) => e.story).map((e) => e.story!)
   if (outside.length) stories?.apply(outside, mode, !!sel.all)
-  applyRevisions(
-    editor,
-    picked.entries
-      .filter((e) => !e.story)
-      .map((e) => ({
-        from: e.from,
-        to: e.to,
-        kind: e.kind,
-        author: e.author,
-        ...(e.date ? { date: e.date } : {}),
-      })),
-    mode,
-  )
-  return picked
+  const body = picked.entries.filter((e) => !e.story)
+  const ranges = body.map((e) => ({
+    from: e.from,
+    to: e.to,
+    kind: e.kind,
+    author: e.author,
+    ...(e.date ? { date: e.date } : {}),
+  }))
+  const left = applyRevisions(editor, ranges, mode)
+  return { ...picked, locked: body.filter((_, i) => left.includes(ranges[i])) }
 }
