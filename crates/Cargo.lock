@@ -95,10 +95,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "epub-engine"
+version = "0.1.0"
+dependencies = [
+ "jscompat",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "equivalent"
 version = "1.0.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "00d174d5400e5e8fd687ad1049e2f578285fa914201b1af7e8b112a4546bd826"
+
+[[package]]
+name = "file-parse"
+version = "0.1.0"
+dependencies = [
+ "jscompat",
+ "ooxml-pkg",
+ "ooxml-xml",
+ "serde",
+ "serde_json",
+]
 
 [[package]]
 name = "flate2"
@@ -209,6 +229,8 @@ name = "office-wasm"
 version = "0.1.0"
 dependencies = [
  "docx-engine",
+ "epub-engine",
+ "file-parse",
  "jscompat",
  "omml",
  "ooxml-pkg",

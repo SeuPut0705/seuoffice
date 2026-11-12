@@ -16,6 +16,8 @@ use ooxml_xml::{Utf16Map, parse_ordered, serialize};
 use serde::{Deserialize, Serialize};
 
 mod calls;
+mod epub;
+mod file_parse;
 mod package;
 mod props;
 
@@ -42,6 +44,22 @@ enum Command {
     /// Every blob: a part as UTF-8. Reply blob `i`: part `i` as
     /// `normalizeOoxmlXml` rewrites it, as UTF-8.
     NormalizeOoxml,
+    /// Attachment readers. Blob 0 holds the input file where the reader takes bytes.
+    FileParse {
+        function: String,
+        #[serde(default)]
+        text: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
+    /// EPUB engine functions, called the same way.
+    EpubCall {
+        function: String,
+        #[serde(default)]
+        text: String,
+        #[serde(default)]
+        args: serde_json::Value,
+    },
 }
 
 #[derive(Deserialize)]
@@ -298,6 +316,22 @@ fn respond(input: &[u8]) -> Vec<u8> {
                 (Command::PackageParts { parts }, _) => json(&Reply::Package {
                     package: package::from_parts(parts),
                 }),
+                (
+                    Command::FileParse {
+                        function,
+                        text,
+                        args,
+                    },
+                    blob,
+                ) => file_parse::run(&function, &text, blob.copied().unwrap_or_default(), &args),
+                (
+                    Command::EpubCall {
+                        function,
+                        text,
+                        args,
+                    },
+                    blob,
+                ) => epub::run(&function, &text, blob.copied().unwrap_or_default(), &args),
                 (Command::NormalizeOoxml, _) => normalize(&frame.blobs, &mut reply_blobs),
                 (Command::ScanBody, Some(xml)) => scan(xml),
                 (Command::ZipEntries, Some(container)) => zip_entries(container, &mut reply_blobs),

@@ -11,6 +11,8 @@ crate-type = ["cdylib"]
 
 [dependencies]
 docx-engine.workspace = true
+epub-engine = { workspace = true, features = ["primitives", "ranges", "package"] }
+file-parse = { workspace = true, features = ["redaction", "docx", "pptx", "xlsx"] }
 jscompat.workspace = true
 ooxml-pkg.workspace = true
 ooxml-xml.workspace = true
