@@ -108,6 +108,20 @@ export function ensureCreationId(el: SlideElement): void {
 }
 
 /**
+ * The <p:cNvPr> open tag whose own id attribute is exactly `id`. The id is whatever the deck
+ * says, so it is compared as text: built into a RegExp, a `(` in it threw, a `.` matched any
+ * character (another element answered) and a `$` matched nothing.
+ */
+function cNvPrOpenWithId(xml: string, id: string): RegExpMatchArray | null {
+  for (const open of xml.matchAll(/<p:cNvPr\b[^>]*?(\/?)>/g)) {
+    for (const attr of open[0].matchAll(/\s([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+      if (attr[1] === 'id' && (attr[2] ?? attr[3]) === id) return open
+    }
+  }
+  return null
+}
+
+/**
  * Durable id for a group child. Children carry no byte slice of their own —
  * their bytes (including any a16:creationId) live inside the parent group's
  * XML — so locate the child's <p:cNvPr> there by its parsed nvId (unique per
@@ -118,12 +132,13 @@ export function groupChildDurableId(grp: SlideElement, child: SlideElement): str
   const nvId = (child as { nvId?: number | string }).nvId
   const xml = grp.anchor?.originalXml
   if (xml && nvId != null) {
-    const open = new RegExp(`<p:cNvPr\\b[^>]*\\bid="${nvId}"[^>]*?(\\/?)>`).exec(xml)
+    const open = cNvPrOpenWithId(xml, String(nvId))
     if (open) {
+      const at = open.index!
       const own =
         open[1] === '/'
           ? open[0]
-          : xml.slice(open.index, xml.indexOf('</p:cNvPr>', open.index) + '</p:cNvPr>'.length)
+          : xml.slice(at, xml.indexOf('</p:cNvPr>', at) + '</p:cNvPr>'.length)
       const creation = CREATION_ID_RE.exec(own)
       if (creation) return `e_${creation[1]!.slice(0, 8).toLowerCase()}`
     }
