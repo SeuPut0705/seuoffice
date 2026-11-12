@@ -246,8 +246,8 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   (`preserve_order`), so `resolveCharIndents` sees its `format` as the
   TypeScript does. A typed argument (`CharIndents`) is read with
   `deserialize;`, which sets the keys in the order of the input.
-- `cargo-deny` is configured (`deny.toml`) but was not installed on the
-  machine these crates were written on, so it has not run.
+- `cargo-deny` runs on the runner against `deny.toml` (licences only); it
+  is not installed on the machine these crates were written on.
 - Helpers written more than once, to move down: `Math.max`/`Math.min` with
   JavaScript's NaN and zero rules (`list_markers.rs`, `vml.rs`), text escapes
   (`eq_field.rs`, `blank.rs`, `omml/src/xml.rs`, and private in `ooxml-xml`),
@@ -256,10 +256,17 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   copies of their own), `atob` (`protection.rs`),
   the `Date` readers (`ooxml-pkg/src/write.rs`, `blank.rs`), the new document
   properties (`blank.rs`; `doc_properties.rs` holds the read side only).
-- `fields.rs` takes what `resolve-props.ts` computes as arguments
-  (`EffectivePPr`, `ResolveCtx`, `ResolveCompat` hold only the fields read
-  here). `fieldDisplayOf` waits for that port; `applyTocEntryNumbers` works
-  on the block model and waits for `parse.ts`.
+- `applyTocEntryNumbers` of `parse-fields.ts` works on the block model and
+  waits for `parse.ts`.
+- A listed class is counted by its id over every spec that names it, and
+  the gate fails when no input of the id differs. A spec whose inputs of the
+  class never differ is not told apart, so a class can stay on a function
+  that has no such defect. `legacyCharsetOfMht` is wider than its defect by
+  design; the others read the input as their function does.
+- `tools/docx-diff/out/` is ignored by git: the decision trail
+  (`decisions.tsv`) and the copies of the first comparisons are on the
+  machine of the session that made them. The runs they come from are named
+  in this file.
 - `parseNotesXml` is ported without its paragraph reader callback, which
   `parse.ts` supplies.
 - `blank/locale.rs` answers `paperSizeForLocale` from a table of likely
@@ -287,10 +294,10 @@ State on 2026-11-12, 14:45 KST. The branch is on origin and is pushed at
 every unit boundary (never forced, never to main).
 
 - `feat/rust-docx-u1`: everything below, on main at 5f03509fd (merged, not
-  rebased). The gate is green on a runner (run 43158707050 on f6071c0f5):
-  1,733,886 checks, 0 differences, 14 ledger entries, none stale, six listed
-  classes (136 inputs set aside as differing), clippy, the tests and
-  cargo-deny pass, wasm 2,483,425 bytes.
+  rebased). The gate is green on a runner, with clippy, the tests and
+  cargo-deny: the run and its numbers are in the last report to main, and
+  `gh run list --workflow "seuoffice rust" --branch feat/rust-docx-u1`
+  shows it. 14 ledger entries, six listed classes.
 - Case folding under `i` without `u` was a defect of `jscompat` that 679
   checks over inputs with U+0131, U+017F and U+212A showed; stream D fixed it
   in `regex.rs` (two commits cherry-picked with `-x`), and those inputs stay
@@ -339,8 +346,13 @@ named inputs that are now there (a `w:specVanish` that is present but off,
 default) and three cannot be seen by any input, because the TypeScript
 readers never produce the value (`eaSlotEmpty: false`, an empty conditional
 colour, a level with `hanging` 0). Of 43 faults in the leaves (the porters'
-35 and eight of the integrator's, all eight caught) 34 were caught at once
-(run 43153584303). Four of the nine misses named inputs that are now there
+35 and eight of the integrator's, all eight caught) 33 were caught at once
+(run 43153584303) and one was only set aside: the fault that drops the 4096
+byte cap of `decodeHtmlBytes` moved its inputs into the legacy charset
+class, whose predicate was wider than the function reads, and the first
+verdict of `faults.py` took any changed line for a catch. Both are narrowed
+since (a report that changed in nothing but counts and class lines is SET
+ASIDE, a miss). Four of the nine misses named inputs that are now there
 and are caught (run 43157250362): text outside ASCII before a rewritten
 `w:delText`, a property change that is the first child of its holder, two
 range starts sharing an id under a filter, a tab stop at a negative
@@ -359,9 +371,10 @@ falls back to the default paragraph style for the runs of a paragraph whose
 style is missing, reads the wrap of the outer anchor only, reads revision
 attributes in either quote, reads a `v:fill` opacity in percent, stays on
 the Encoding Standard, reads a `w:date` without a zone as UTC, and restores
-the old properties on that reject. Each is
-an entry of `divergences.json` with its class (see "Divergences"). When
-main's fix is merged the entry and its class go stale, and both go.
+the old properties on that reject. Each is an entry of `divergences.json`;
+all but the date without a zone, which one pinned entry covers, have a
+class (see "Divergences"). When main's fix is merged the entry and its class
+go stale, and both go.
 
 **The machine.** Nothing heavier than `cargo check -p` runs here any more
 (see "Standing rules"); first comparisons and faults are runner jobs, and
@@ -546,7 +559,7 @@ From the owner, for every unit:
   is the evidence. That crate stays.
 - Each unit ends with a report to main: equality before fixing, the classes
   of difference, what cannot be reproduced, the rate, and what was not
-  checked. `cargo-deny` is not installed here: say it did not run.
+  checked.
 - `packages/docx-engine` moves underneath: another session merges upstream
   commits. `compare-package.ts` holds four readers copied from `parse.ts`
   and the gate fails when `parse.ts` no longer holds that text.
