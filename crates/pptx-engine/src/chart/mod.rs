@@ -30,6 +30,7 @@ pub use node::{TsBoolRead, xsd_bool};
 pub(crate) use node::{Node, get, int, list, string_of};
 use node::{as_str, first, is, is_object, not_same, number, or0, truthy, val};
 use points::{MAX_TAIL_PADDING, read_str_points, sort_by_date};
+pub(crate) use points::{try_collect, try_with_capacity};
 use series::SeriesState;
 use style::{collect_text, letter_spacing_pt, parse_axis, parse_data_table};
 
@@ -287,7 +288,8 @@ pub fn parse_chart_xml(
             .map(|s| s.values.as_ref().map_or(0, Vec::len))
             .max()
             .unwrap_or(0);
-        categories = vec![String::new(); n];
+        categories = try_with_capacity(n)?;
+        categories.resize(n, String::new());
     }
 
     // `categories` and `series` take their keys here; their values are set at the end
@@ -931,7 +933,7 @@ pub fn parse_chart_xml(
             && category_groups.is_none()
             && let Some(serials) = &cat_serials
         {
-            sort_by_date(&mut categories, &mut series, serials);
+            sort_by_date(&mut categories, &mut series, serials)?;
         }
     }
     // Source-linked data labels inherit the value axis's number format

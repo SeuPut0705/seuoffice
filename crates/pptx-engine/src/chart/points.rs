@@ -3,13 +3,31 @@
 //! `readPoints` of chart.ts, in its order.
 
 use jscompat::{
-    JsMap, JsNum, js_regex, math_max, math_min, number_to_string, pad_start, sort_by_number,
+    JsNum, js_regex, math_max, math_min, number_to_string, pad_start, sort_by_number,
     utc_date_parts,
 };
 use serde_json::Value;
 
 use super::model::ChartSeries;
 use super::node::{Node, get, int, list, or0, string_of, truthy, val};
+
+/// What V8 throws when it cannot allocate an array's backing store.
+pub(crate) const ALLOC_FAILED: &str = "RangeError: Array buffer allocation failed";
+
+/// `Vec::with_capacity(n)` that reports an allocation failure instead of aborting.
+pub(crate) fn try_with_capacity<T>(n: usize) -> Result<Vec<T>, String> {
+    let mut out = Vec::new();
+    out.try_reserve_exact(n)
+        .map_err(|_| ALLOC_FAILED.to_owned())?;
+    Ok(out)
+}
+
+/// `collect()` into a `Vec` that reports an allocation failure instead of aborting.
+pub(crate) fn try_collect<T>(items: impl ExactSizeIterator<Item = T>) -> Result<Vec<T>, String> {
+    let mut out = try_with_capacity(items.len())?;
+    out.extend(items);
+    Ok(out)
+}
 
 /// Non-General c:formatCode of a value cache.
 pub(crate) fn cache_format_code(node: Node<'_>) -> Option<String> {
@@ -35,14 +53,11 @@ pub(crate) fn read_num_points(
     if !truthy(cache) {
         return Ok(Vec::new());
     }
-    Ok(read_points(cache, budget)?
-        .into_iter()
-        .map(|v| {
-            let v = v.filter(|v| !v.is_empty())?;
-            let n = jscompat::to_number(&v);
-            n.is_finite().then_some(JsNum(n))
-        })
-        .collect())
+    try_collect(read_points(cache, budget)?.into_iter().map(|v| {
+        let v = v.filter(|v| !v.is_empty())?;
+        let n = jscompat::to_number(&v);
+        n.is_finite().then_some(JsNum(n))
+    }))
 }
 
 /// String cache (strRef/strCache or the innermost lvl of multiLvlStrRef).
@@ -53,10 +68,11 @@ pub(crate) fn read_str_points(
 ) -> Result<Vec<String>, String> {
     let str_cache = get(get(node, "c:strRef"), "c:strCache").or_else(|| get(node, "c:strLit"));
     if truthy(str_cache) {
-        return Ok(read_points(str_cache, budget)?
-            .into_iter()
-            .map(Option::unwrap_or_default)
-            .collect());
+        return try_collect(
+            read_points(str_cache, budget)?
+                .into_iter()
+                .map(Option::unwrap_or_default),
+        );
     }
     let lit = get(node, "c:v");
     if let Some(lit) = lit {
@@ -73,10 +89,11 @@ pub(crate) fn read_str_points(
     if truthy(multi) {
         // The innermost (first lvl) holds the leaf categories
         if let Some(first) = list(get(multi, "c:lvl")).first() {
-            return Ok(read_points(Some(first), budget)?
-                .into_iter()
-                .map(Option::unwrap_or_default)
-                .collect());
+            return try_collect(
+                read_points(Some(first), budget)?
+                    .into_iter()
+                    .map(Option::unwrap_or_default),
+            );
         }
     }
     let num_cache = get(get(node, "c:numRef"), "c:numCache");
@@ -85,21 +102,18 @@ pub(crate) fn read_str_points(
         let fmt_str = format_code_text(num_cache);
         let is_date =
             js_regex!(r"[ymd]", "i").test(&fmt_str) && !js_regex!(r"[#0?]").test(&fmt_str);
-        return Ok(read_points(num_cache, budget)?
-            .into_iter()
-            .map(|v| {
-                let Some(v) = v else { return String::new() };
-                if !is_date {
-                    return v;
-                }
-                let serial = jscompat::parse_float(&v);
-                if serial.is_finite() {
-                    format_date_serial(serial, &fmt_str, date1904)
-                } else {
-                    v
-                }
-            })
-            .collect());
+        return try_collect(read_points(num_cache, budget)?.into_iter().map(|v| {
+            let Some(v) = v else { return String::new() };
+            if !is_date {
+                return v;
+            }
+            let serial = jscompat::parse_float(&v);
+            if serial.is_finite() {
+                format_date_serial(serial, &fmt_str, date1904)
+            } else {
+                v
+            }
+        }));
     }
     Ok(Vec::new())
 }
@@ -130,20 +144,24 @@ pub(crate) fn read_date_serials(
     if !js_regex!(r"[ymd]", "i").test(&fmt_str) || js_regex!(r"[#0?]").test(&fmt_str) {
         return Ok(None);
     }
-    let serials: Vec<f64> = read_points(num_cache, budget)?
-        .into_iter()
-        .map(|v| v.map_or(f64::NAN, |v| jscompat::parse_float(&v)))
-        .collect();
+    let serials: Vec<f64> = try_collect(
+        read_points(num_cache, budget)?
+            .into_iter()
+            .map(|v| v.map_or(f64::NAN, |v| jscompat::parse_float(&v))),
+    )?;
     Ok(serials.iter().all(|v| v.is_finite()).then_some(serials))
 }
 
 /// `[...order.map((i) => arr[i]), ...arr.slice(n)]`, `None` being `undefined`.
-fn permute<T: Clone>(arr: &[Option<T>], order: &[usize], n: usize) -> Vec<Option<T>> {
-    order
-        .iter()
-        .map(|&i| arr.get(i).cloned().flatten())
-        .chain(arr.iter().skip(n).cloned())
-        .collect()
+fn permute<T: Clone>(
+    arr: &[Option<T>],
+    order: &[usize],
+    n: usize,
+) -> Result<Vec<Option<T>>, String> {
+    let mut out = try_with_capacity(order.len() + arr.len().saturating_sub(n))?;
+    out.extend(order.iter().map(|&i| arr.get(i).cloned().flatten()));
+    out.extend(arr.iter().skip(n).cloned());
+    Ok(out)
 }
 
 /// `pick`: permuted, trailing gaps trimmed, `undefined` when nothing is left.
@@ -151,15 +169,15 @@ fn pick<T: Clone>(
     arr: Option<&Vec<Option<T>>>,
     order: &[usize],
     n: usize,
-) -> Option<Vec<Option<T>>> {
-    let arr = arr?;
-    let mut out = permute(arr, order, n);
+) -> Result<Option<Vec<Option<T>>>, String> {
+    let Some(arr) = arr else { return Ok(None) };
+    let mut out = permute(arr, order, n)?;
     let end = out.iter().rposition(Option::is_some).map_or(0, |at| at + 1);
     if end == 0 {
-        return None;
+        return Ok(None);
     }
     out.truncate(end);
-    Some(out)
+    Ok(Some(out))
 }
 
 /// Reorder categories and every per-point series array chronologically.
@@ -168,42 +186,43 @@ pub(crate) fn sort_by_date(
     categories: &mut Vec<String>,
     series: &mut [ChartSeries],
     serials: &[f64],
-) {
+) -> Result<(), String> {
     let n = categories.len();
     if serials.len() != n {
-        return;
+        return Ok(());
     }
-    let mut order: Vec<usize> = (0..n).collect();
+    let mut order: Vec<usize> = try_collect(0..n)?;
     sort_by_number(&mut order, |&a, &b| serials[a] - serials[b]);
     if order.iter().enumerate().all(|(k, &i)| i == k) {
-        return;
+        return Ok(());
     }
     // Indexed arrays follow the sheet point index; points beyond the categories keep their
     // slot. Per-point arrays are sparse, so trailing gaps are trimmed again.
-    let sorted: Vec<String> = order.iter().map(|&i| categories[i].clone()).collect();
+    let sorted: Vec<String> = try_collect(order.iter().map(|&i| categories[i].clone()))?;
     *categories = sorted;
-    let mut new_idx: JsMap<usize> = JsMap::new();
+    // new_idx[i] is the sorted position of sheet point i
+    let mut new_idx: Vec<usize> = try_collect(0..n)?;
     for (k, &i) in order.iter().enumerate() {
-        new_idx.set(i.to_string(), k);
+        new_idx[i] = k;
     }
     for s in series.iter_mut() {
         if let Some(values) = s.values.as_ref() {
-            let permuted = permute(values, &order, n);
+            let permuted = permute(values, &order, n)?;
             s.values.set(permuted);
         }
         if let Some(labels) = s.point_labels.as_ref() {
-            let permuted = permute(labels, &order, n);
+            let permuted = permute(labels, &order, n)?;
             s.point_labels.set(permuted);
         }
-        let colors = pick(s.point_colors.as_ref(), &order, n);
+        let colors = pick(s.point_colors.as_ref(), &order, n)?;
         s.point_colors.assign(colors);
-        let fills = pick(s.point_fills.as_ref(), &order, n);
+        let fills = pick(s.point_fills.as_ref(), &order, n)?;
         s.point_fills.assign(fills);
-        let no_fill = pick(s.point_no_fill.as_ref(), &order, n);
+        let no_fill = pick(s.point_no_fill.as_ref(), &order, n)?;
         s.point_no_fill.assign(no_fill);
-        let lines = pick(s.point_lines.as_ref(), &order, n);
+        let lines = pick(s.point_lines.as_ref(), &order, n)?;
         s.point_lines.assign(lines);
-        let expl = pick(s.point_explosion_pct.as_ref(), &order, n);
+        let expl = pick(s.point_explosion_pct.as_ref(), &order, n)?;
         s.point_explosion_pct.assign(expl);
         if let Some(overrides) = s.d_lbl_overrides.as_ref() {
             let moved = overrides
@@ -213,10 +232,8 @@ pub(crate) fn sort_by_date(
                     // Map keys are the integers 0..n; -0 finds 0
                     let at = d.idx.0;
                     if at.fract() == 0.0 && at >= 0.0 && at < n as f64 {
-                        let key = number_to_string(at);
-                        if let Some(&k) = new_idx.get(&key) {
-                            d.idx = JsNum(k as f64);
-                        }
+                        // an integer in 0..n
+                        d.idx = JsNum(new_idx[at as usize] as f64);
                     }
                     d
                 })
@@ -224,6 +241,7 @@ pub(crate) fn sort_by_date(
             s.d_lbl_overrides.set(moved);
         }
     }
+    Ok(())
 }
 
 const MONTHS: [&str; 12] = [
@@ -292,9 +310,7 @@ pub(crate) fn read_points(
     *budget -= math_max(0.0, n - (max_idx + 1.0));
     // 0 <= n <= MAX_CHART_POINTS, an integer
     let n = n as usize;
-    let mut out: Vec<Option<String>> = Vec::new();
-    out.try_reserve_exact(n)
-        .map_err(|_| "RangeError: Invalid array length".to_owned())?;
+    let mut out: Vec<Option<String>> = try_with_capacity(n)?;
     out.resize(n, None);
     for pt in pts {
         let idx = or0(int(get(Some(pt), "@_idx")));

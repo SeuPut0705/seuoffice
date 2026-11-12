@@ -8,6 +8,7 @@ use serde_json::Value;
 
 use crate::chart::{
     ChartKind, ChartModel, ChartSeries, Node, SparseColors, Sunburst, get, int, list, string_of,
+    try_collect, try_with_capacity,
 };
 use crate::color::resolve_color_node;
 use crate::theme::Theme;
@@ -23,7 +24,7 @@ const MAX_CHARTEX_POINTS: f64 = 10000.0;
 const MAX_WALK_DEPTH: usize = 512;
 
 /// One cx:lvl: ptCount + sparse idx-to-text points as a dense list ('' for gaps).
-fn read_lvl(lvl: Node<'_>) -> Vec<String> {
+fn read_lvl(lvl: Node<'_>) -> Result<Vec<String>, String> {
     let parsed = int(get(lvl, "@_ptCount"));
     let parsed = if parsed == 0.0 || parsed.is_nan() {
         0.0
@@ -32,7 +33,8 @@ fn read_lvl(lvl: Node<'_>) -> Vec<String> {
     };
     // 0 <= n <= MAX_CHARTEX_POINTS, an integer
     let n = jscompat::math_min(jscompat::math_max(0.0, parsed), MAX_CHARTEX_POINTS) as usize;
-    let mut out = vec![String::new(); n];
+    let mut out = try_with_capacity(n)?;
+    out.resize(n, String::new());
     for pt in list(get(lvl, "cx:pt")) {
         let i = int(get(Some(pt), "@_idx"));
         // Negative or out-of-range idx would set expando props or grow the
@@ -51,7 +53,7 @@ fn read_lvl(lvl: Node<'_>) -> Vec<String> {
             }
         }
     }
-    out
+    Ok(out)
 }
 
 /// All a:t text values in a parsed subtree (handles xml:space="preserve" object form).
@@ -148,20 +150,23 @@ pub fn parse_chart_ex_xml(xml: &str, theme: Option<&Theme>) -> Result<Option<Cha
     let data = Some(data);
     let str_lvls: Vec<Vec<String>> = match get(get(data, "cx:strDim"), "cx:lvl") {
         None => Vec::new(),
-        Some(Value::Array(items)) => items.iter().map(|lvl| read_lvl(Some(lvl))).collect(),
-        Some(single) => vec![read_lvl(Some(single))],
+        Some(Value::Array(items)) => {
+            let mut lvls = try_with_capacity(items.len())?;
+            for lvl in items {
+                lvls.push(read_lvl(Some(lvl))?);
+            }
+            lvls
+        }
+        Some(single) => vec![read_lvl(Some(single))?],
     };
     let num_lvl = match get(get(data, "cx:numDim"), "cx:lvl") {
         Some(Value::Array(items)) => items.first(),
         other => other,
     };
-    let values: Vec<Option<JsNum>> = read_lvl(num_lvl)
-        .iter()
-        .map(|v| {
-            let n = parse_float(v);
-            n.is_finite().then_some(JsNum(n))
-        })
-        .collect();
+    let values: Vec<Option<JsNum>> = try_collect(read_lvl(num_lvl)?.iter().map(|v| {
+        let n = parse_float(v);
+        n.is_finite().then_some(JsNum(n))
+    }))?;
     if !values.iter().any(Option::is_some) {
         return Ok(None);
     }

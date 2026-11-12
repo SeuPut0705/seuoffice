@@ -11,8 +11,8 @@ use super::node::{
     truthy, val, xsd_bool,
 };
 use super::points::{
-    MAX_CHART_SERIES, cache_format_code, read_date_serials, read_num_points, read_points,
-    read_str_points,
+    ALLOC_FAILED, MAX_CHART_SERIES, cache_format_code, read_date_serials, read_num_points,
+    read_points, read_str_points, try_collect,
 };
 use super::style::{collect_text, label_box, ser_color};
 use crate::color::resolve_color_node;
@@ -47,11 +47,14 @@ fn color(node: Node<'_>, theme: Option<&Theme>) -> Option<String> {
 
 /// `arr[idx] = value` on a sparse array, `idx` below the length of the
 /// series' values.
-fn set_at<T: Clone>(arr: &mut Vec<Option<T>>, idx: usize, value: T) {
+fn set_at<T: Clone>(arr: &mut Vec<Option<T>>, idx: usize, value: T) -> Result<(), String> {
     if arr.len() <= idx {
+        arr.try_reserve_exact(idx + 1 - arr.len())
+            .map_err(|_| ALLOC_FAILED.to_owned())?;
         arr.resize(idx + 1, None);
     }
     arr[idx] = Some(value);
+    Ok(())
 }
 
 /// `dlOn`
@@ -241,10 +244,11 @@ impl SeriesState<'_> {
                 .iter()
                 .any(|e| xsd_bool(get(Some(e), "c15:showDataLabelsRange"), TsBoolRead::EqOne));
             if truthy(range_cache) && show_range {
-                let labs: Vec<Option<String>> = read_points(range_cache, &mut self.budget)?
-                    .into_iter()
-                    .map(|v| Some(v.unwrap_or_default()))
-                    .collect();
+                let labs: Vec<Option<String>> = try_collect(
+                    read_points(range_cache, &mut self.budget)?
+                        .into_iter()
+                        .map(|v| Some(v.unwrap_or_default())),
+                )?;
                 if labs
                     .iter()
                     .any(|v| v.as_deref().is_some_and(|v| !v.is_empty()))
@@ -359,7 +363,7 @@ impl SeriesState<'_> {
                     let d_sp = get(d_pt, "c:spPr");
                     let c = color(get(d_sp, "a:solidFill"), theme);
                     if let Some(c) = c.clone() {
-                        set_at(&mut point_colors, idx, c);
+                        set_at(&mut point_colors, idx, c)?;
                     }
                     let sp_truthy = d_sp.filter(|sp| truthy(Some(*sp)));
                     let no_fill = match sp_truthy {
@@ -367,11 +371,11 @@ impl SeriesState<'_> {
                         None => false,
                     };
                     if no_fill {
-                        set_at(&mut point_no_fill, idx, true);
+                        set_at(&mut point_no_fill, idx, true)?;
                     } else if sp_truthy.is_some() && c.is_none() {
                         let f = self.resolve_fill.and_then(|resolve| resolve(d_sp));
                         if let Some(f) = f.filter(|f| *f != Fill::None) {
-                            set_at(&mut point_fills, idx, f);
+                            set_at(&mut point_fills, idx, f)?;
                         }
                     }
                     let d_ln = get(d_sp, "a:ln");
@@ -391,12 +395,12 @@ impl SeriesState<'_> {
                                     width_pt: (ln_w.is_finite() && ln_w > 0.0)
                                         .then(|| JsNum(ln_w / 12700.0)),
                                 },
-                            );
+                            )?;
                         }
                     }
                     let pe = int(val(d_pt, "c:explosion"));
                     if pe.is_finite() {
-                        set_at(&mut point_expl, idx, JsNum(pe));
+                        set_at(&mut point_expl, idx, JsNum(pe))?;
                     }
                 }
                 if !point_colors.is_empty() {

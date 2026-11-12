@@ -303,7 +303,14 @@ impl SparseColors {
 
 impl Serialize for SparseColors {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        use serde::ser::SerializeSeq;
+        use serde::ser::{Error, SerializeSeq};
+        // V8's JSON.stringify throws once its text would pass 2^29 - 24 UTF-16
+        // units, and every hole costs five (`null,`): past this length the
+        // TypeScript's own serialization fails, so both sides refuse.
+        const MAX_LEN: u64 = ((1 << 29) - 24) / 5;
+        if self.len() > MAX_LEN {
+            return Err(S::Error::custom("RangeError: Invalid string length"));
+        }
         let mut seq = serializer.serialize_seq(None)?;
         let mut next: u64 = 0;
         for (&index, color) in &self.entries {
@@ -423,5 +430,28 @@ js_object! {
         pub rot_x_deg: JsNum,
         pub bar3_d: Bar3D,
         pub area3_d: Area3D,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::SparseColors;
+
+    // Fixes 1 and 2 (fallible point and cx:lvl allocations) cannot be forced
+    // to fail in a test; this covers fix 3 only.
+    #[test]
+    fn sparse_colors_past_v8_string_limit_is_an_error() {
+        let mut colors = SparseColors::default();
+        colors.set(0, "FF0000".to_owned());
+        colors.set(107_374_177, "00FF00".to_owned());
+        let err = serde_json::to_string(&colors).unwrap_err();
+        assert_eq!(err.to_string(), "RangeError: Invalid string length");
+
+        let mut colors = SparseColors::default();
+        colors.set(2, "FF0000".to_owned());
+        assert_eq!(
+            serde_json::to_string(&colors).unwrap(),
+            r#"[null,null,"FF0000"]"#
+        );
     }
 }
