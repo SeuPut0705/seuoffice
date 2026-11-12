@@ -227,7 +227,7 @@
   ],
   "LineNumbering": ["countBy", "start", "distance", "restart"],
   "DocGrid": ["type", "linePitch", "charSpace"],
-  "NoteProps": ["pos", "numFmt", "numStart", "numRestart"],
+  "NoteProps": "input",
   "SectionSettings": [
     "pageWidth",
     "pageHeight",

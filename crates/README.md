@@ -203,8 +203,9 @@ that commit.
   declares and writes its fields in that order. A type marked `"input"`
   (Run, ParaFormat, HfParagraph, HfTextBox, HfImage, CellBorders,
   CellMargins, TableCell, TextboxDisplay, Block, StyleDisplay,
-  TableStyleDisplay, DocDefaults, ChartDisplay) follows the path the
-  TypeScript took: it
+  TableStyleDisplay, DocDefaults, ChartDisplay, NoteProps) follows the path
+  the TypeScript took (NoteProps by a built input of `parseNoteProps`, whose
+  `{ ...base, ...own }` writes the settings' keys first): it
   is a `js_object!`, every field a `Slot` (HfParagraph, composed over
   ParaFormat, is a struct of slots ordered across both), and reading it sets
   the slots in the order of the input. `model-gen.ts --observe-orders

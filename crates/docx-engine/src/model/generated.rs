@@ -7209,13 +7209,15 @@ impl<'de> Deserialize<'de> for DocGridType {
     }
 }
 
-/// `NoteProps`
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct NoteProps {
-    pub pos: Option<NotePropsPos>,
-    pub num_fmt: Option<String>,
-    pub num_start: Option<JsNum>,
-    pub num_restart: Option<NotePropsNumRestart>,
+jscompat::js_object! {
+    /// `NoteProps`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct NoteProps {
+        pub pos: NotePropsPos,
+        pub num_fmt: String,
+        pub num_start: JsNum,
+        pub num_restart: NotePropsNumRestart,
+    }
 }
 
 /// The keys of `NoteProps`, in declaration order.
@@ -7247,25 +7249,6 @@ impl FieldKey for NotePropsKey {
 
 const _: () = assert!(NotePropsKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for NoteProps {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &self.pos {
-            map.serialize_entry("pos", value)?;
-        }
-        if let Some(value) = &self.num_fmt {
-            map.serialize_entry("numFmt", value)?;
-        }
-        if let Some(value) = &self.num_start {
-            map.serialize_entry("numStart", value)?;
-        }
-        if let Some(value) = &self.num_restart {
-            map.serialize_entry("numRestart", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for NoteProps {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -7278,22 +7261,19 @@ impl<'de> Deserialize<'de> for NoteProps {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<NoteProps, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_pos = None;
-                let mut v_num_fmt = None;
-                let mut v_num_start = None;
-                let mut v_num_restart = None;
+                let mut b_0 = NoteProps::default();
                 while let Some(Key(key)) = map.next_key::<Key<NotePropsKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        NotePropsKey::Pos => v_pos = Some(map.next_value()?),
-                        NotePropsKey::NumFmt => v_num_fmt = Some(map.next_value()?),
-                        NotePropsKey::NumStart => v_num_start = Some(map.next_value()?),
-                        NotePropsKey::NumRestart => v_num_restart = Some(map.next_value()?),
+                        NotePropsKey::Pos => b_0.pos.set(map.next_value()?),
+                        NotePropsKey::NumFmt => b_0.num_fmt.set(map.next_value()?),
+                        NotePropsKey::NumStart => b_0.num_start.set(map.next_value()?),
+                        NotePropsKey::NumRestart => b_0.num_restart.set(map.next_value()?),
                     }
                 }
-                Ok(NoteProps { pos: v_pos, num_fmt: v_num_fmt, num_start: v_num_start, num_restart: v_num_restart })
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
