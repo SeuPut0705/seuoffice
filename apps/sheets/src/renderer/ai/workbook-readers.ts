@@ -15,6 +15,7 @@ import { MAX_PATCH_ENTRY_BYTES } from '../../shared/desktop-api'
 import type { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
 import type { CellFormatState, CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { planFileTableRegistrations } from '../file-tables'
+import { pivotSourceSheetId } from '../pivot-source'
 import { toSelectionFormat } from '../selection-format'
 import { lazyCellReader } from '../univer-sync'
 import { lazySheetScreenExtent, type LazyWorkbookState, type UniverRuntime } from '../univer-state'
@@ -139,13 +140,13 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       }
       // Field names are the header row of the source range. A source that is
       // not a range of this workbook cannot say which cell a name came from,
-      // so in a workbook that withholds anything every name is withheld.
-      const sourceSheetId = workbook
-        .getSheets()
-        .find(
-          (sheet) => sheet.getSheetName().toLowerCase() === definition.sourceSheet.toLowerCase(),
-        )
-        ?.getSheetId()
+      // so in a workbook that withholds anything every name is withheld. The
+      // definition names the sheet as the file did, whatever it is called now.
+      const fileSourceId = state ? pivotSourceSheetId(state, definition.sourceSheet) : undefined
+      const sourceSheetId =
+        fileSourceId !== undefined && workbook.getSheetBySheetId(fileSourceId)
+          ? fileSourceId
+          : undefined
       let source: RangeBounds | null = null
       try {
         if (sourceSheetId !== undefined)

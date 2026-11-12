@@ -444,13 +444,20 @@ describe('PivotTable', () => {
   })
 
   it('is not refreshed from a source that holds a hidden cell', () => {
-    const { runtime, leaks } = boot(GRID, [at(1, 0)])
+    const { runtime, univerAPI, leaks } = boot(GRID, [at(1, 0)])
     const state = {
       formulaMode: true,
       flags: { preloadComplete: true },
       editJournal: createEditJournal(),
       file: {
-        sheets: [{ id: 's', pivotTables: [{ path: 'p', cachePath: null }], pivotRanges: [] }],
+        sheets: [
+          {
+            id: 's',
+            name: 'Sheet1',
+            pivotTables: [{ path: 'p', cachePath: null }],
+            pivotRanges: [],
+          },
+        ],
       },
       pivotDefinitions: new Map([
         ['p', { sourceSheet: 'Sheet1', sourceRef: 'A1:B3', outputRef: 'E1:F4' }],
@@ -460,6 +467,9 @@ describe('PivotTable', () => {
       univerRef: { current: runtime },
       lazyWorkbookRef: { current: state },
     } as unknown as PivotActionContext
+    expect(() => refreshPivotTables(ctx, 's')).toThrow(REFUSED)
+    // the definition goes on naming the sheet as the file did after a rename
+    univerAPI.getActiveWorkbook()!.getActiveSheet()!.setName('Renamed')
     expect(() => refreshPivotTables(ctx, 's')).toThrow(REFUSED)
     expect(leaks()).toEqual([])
   })

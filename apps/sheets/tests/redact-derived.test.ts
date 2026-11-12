@@ -28,7 +28,11 @@ import { readCells, type WorkbookReadContext } from '../src/renderer/ai/workbook
 import { findWorkbookCells } from '../src/renderer/ai/workbook-search'
 import { redactGuardForOps } from '../src/renderer/ai/redact-guard'
 import { redactionIndexOf } from '../src/renderer/ai/redact-load'
-import { createEditJournal, recordSetRangeValues } from '../src/renderer/edit-journal'
+import {
+  createEditJournal,
+  recordSetRangeValues,
+  recordSheetRename,
+} from '../src/renderer/edit-journal'
 import {
   createDerivedCells,
   installDerivedCellsInvalidation,
@@ -683,5 +687,67 @@ describe('what the in-app AI reads from the output of a PivotTable', () => {
     const index = redactionIndexOf(session.ctx.redactionLoadRef!.current)
     expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [3], cols: [4] })).toBe(true)
     expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [8], cols: [4] })).toBe(false)
+  })
+
+  it('finds the source by the name the file gave its sheet, after the sheets swapped names', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Data', sourceRef: 'A1:B2' })
+    swapSheetNames(session)
+    expect(session.read('s2', 'E4')).toBe(PRIVATE)
+    expect(session.read('s2', 'F4')).toBe(PRIVATE)
+  })
+
+  it('does not take the sheet that now carries the name for the source', () => {
+    // the pivot summarises its own sheet, which holds nothing hidden
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Report', sourceRef: 'A1:B2' })
+    swapSheetNames(session)
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
+
+  it('still finds the source after it alone was renamed', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Report', sourceRef: 'A1:B2' })
+    session.runtime.univerAPI.getActiveWorkbook()!.getSheetBySheetId('s2')!.setName('Summary')
+    session.mark(HIDDEN_B2)
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
+})
+
+/** Data becomes Report and Report becomes Data, by way of a third name. */
+function swapSheetNames(session: Session): void {
+  const workbook = session.runtime.univerAPI.getActiveWorkbook()!
+  workbook.getSheetBySheetId('s1')!.setName('Tmp')
+  workbook.getSheetBySheetId('s2')!.setName('Data')
+  workbook.getSheetBySheetId('s1')!.setName('Report')
+  recordSheetRename(session.state.editJournal, 's1', 'Report', 'Data')
+  recordSheetRename(session.state.editJournal, 's2', 'Data', 'Report')
+  session.mark(HIDDEN_B2)
+}
+
+describe('after two sheets swapped names this session', () => {
+  it('a formula on the other sheet still reads the hidden cell', () => {
+    const session = open(CLIENTS, {
+      A1: { f: '=Data!B2', v: SECRET },
+      B1: { f: '=Data!A2', v: 'Kim' },
+    })
+    swapSheetNames(session)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
+    expect(session.read('s2', 'B1')).not.toBe(PRIVATE)
+  })
+
+  it('a defined name still points at the hidden cell', () => {
+    const session = open(CLIENTS, { A1: { f: '=KimPhone', v: SECRET } })
+    session.defineName('KimPhone', 'Data!$B$2')
+    swapSheetNames(session)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
+  })
+
+  it('a formula the grid no longer holds, typed before the swap, is not read by its old sheet name', () => {
+    // The row scrolled out of a streamed grid: the journal keeps the formula
+    // as it was typed, and nothing rewrites it when a sheet is renamed.
+    const session = open(CLIENTS, { A1: { v: SECRET } })
+    recordSetRangeValues(session.state.editJournal, 's2', {
+      0: { 0: { f: '=Data!B2', v: SECRET } },
+    })
+    swapSheetNames(session)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
   })
 })

@@ -58,6 +58,7 @@ import type { WorkbookFormulaCellsResult, WorkbookPivotDefinition } from '../sha
 import type { RedactionIndex } from './ai/redact'
 import { UNKNOWN_REDACTION_LABEL } from './ai/redact-load'
 import { resolveDuplicateSource } from './edit-journal'
+import { pivotSourceSheetId } from './pivot-source'
 import { SharedFormulaLookup } from './shared-formula-index'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'
 import { fileRangeToScreenRange, fileToScreen } from './view-transform'
@@ -136,13 +137,15 @@ const sameArea = (a: RangeBounds, b: RangeBounds): boolean =>
  * of the session takes them (the refresh reads the source at these addresses);
  * on a sheet with rows or columns inserted this session the range as it was in
  * the file is counted as well, since the file's output was computed from that.
+ * A file pivot names its source sheet as the file did, so that name is looked
+ * up among the file's sheets (`pivotSourceSheetId`), never among the names
+ * the sheets carry now.
  */
 function pivotOutputsOf(
   state: LazyWorkbookState,
   sheetNames: ReadonlyMap<string, string>,
 ): Map<string, PivotOutput[]> {
   const journal = state.editJournal
-  const idByName = new Map([...sheetNames].map(([id, name]) => [name.toLowerCase(), id]))
   const onScreen = (sheetId: string, range: RangeBounds): RangeBounds[] => {
     const ops = journal.structuralOps.get(sheetId) ?? []
     const moved = ops.length === 0 ? null : fileRangeToScreenRange(ops, range)
@@ -177,8 +180,8 @@ function pivotOutputsOf(
       if (output === null) continue // left to `pivotRanges` below
       const formula = definition
         ? sourceFormula(
-            idByName.get(definition.sourceSheet.toLowerCase()),
-            definition.sourceSheet === '' ? null : rangeOf(definition.sourceRef),
+            pivotSourceSheetId(state, definition.sourceSheet),
+            rangeOf(definition.sourceRef),
           )
         : null
       resolved.push(output)
@@ -439,7 +442,10 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
       for (const entry of journalCells?.values() ?? []) {
         if (!entry.hasValue || !entry.formula || live.has(cellKey(entry.row, entry.column)))
           continue
-        formulas.push({ area: cellArea(entry.row, entry.column), formula: entry.formula })
+        // Nothing rewrites this text when a sheet is renamed, so a sheet name
+        // in it may by now be another sheet's: not traced.
+        if (entry.formula.includes('!')) unknownCells.push([entry.row, entry.column])
+        else formulas.push({ area: cellArea(entry.row, entry.column), formula: entry.formula })
       }
 
       const unknown: RangeBounds[] = []

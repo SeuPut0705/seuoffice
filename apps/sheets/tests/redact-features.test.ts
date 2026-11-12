@@ -152,10 +152,12 @@ function fileCtx(options: {
   definitions?: [string, object][]
   journal?: (journal: ReturnType<typeof createEditJournal>) => void
   visuals?: object[]
+  /** the file name of a second sheet (`sh2`) that swapped names with Customers this session */
+  swappedWith?: string
 }): WorkbookReadContext {
   const worksheet = {
     getSheetId: () => 'sh1',
-    getSheetName: () => 'Customers',
+    getSheetName: () => options.swappedWith ?? 'Customers',
     getFreeze: () => ({ xSplit: 0, ySplit: 0 }),
     getDataValidations: () => [],
     getConditionalFormattingRules: () => [],
@@ -195,6 +197,7 @@ function fileCtx(options: {
     labelsFor: (sheetId) => marks.labelsFor(sheetId),
     derivedFor: () => derived,
   }
+  const other = { getSheetId: () => 'sh2', getSheetName: () => 'Customers' }
   return {
     univerRef: {
       current: {
@@ -202,7 +205,7 @@ function fileCtx(options: {
           getActiveWorkbook: () => ({
             getActiveSheet: () => worksheet,
             getSheetBySheetId: () => worksheet,
-            getSheets: () => [worksheet],
+            getSheets: () => (options.swappedWith === undefined ? [worksheet] : [worksheet, other]),
             getDefinedNames: () => [],
             getActiveRange: () => null,
           }),
@@ -225,6 +228,19 @@ function fileCtx(options: {
               pivotTables: options.pivotTables ?? [],
               pivotRanges: [],
             },
+            ...(options.swappedWith === undefined
+              ? []
+              : [
+                  {
+                    id: 'sh2',
+                    name: options.swappedWith,
+                    rowCount: 10,
+                    columnCount: 4,
+                    tables: [],
+                    pivotTables: [],
+                    pivotRanges: [],
+                  },
+                ]),
           ],
         },
         editJournal,
@@ -325,6 +341,21 @@ describe('read_sheet_features: names and rule values that are copies of a hidden
     )
     expect(output).not.toContain(PHONE_HEADER)
     expect(output).toContain('rows[{{private}}] cols[{{private}}] values[{{private}}]')
+  })
+
+  it('looks for the source header on the sheet the file named, after two sheets swapped names', () => {
+    // The file says the source is "Customers": that is sh1, now called
+    // Archive, and not the sheet that took the name.
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        pivotTables: PIVOT,
+        definitions: [definition({ sourceSheet: 'Customers', sourceRef: 'A1:B10' })],
+        swappedWith: 'Archive',
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('rows[{{client phone}}] cols[Name] values[{{client phone}}]')
   })
 
   it('drops the kept values of a filter column that holds a hidden cell', () => {
