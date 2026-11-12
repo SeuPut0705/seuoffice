@@ -3,7 +3,7 @@
 
 use std::borrow::Cow;
 
-use jscompat::{JsRegex, Radix, RegexSyntaxError, js_regex, parse_int, trim, truthy};
+use jscompat::{Radix, RegexError, TryJsRegex, js_regex, parse_int, trim, truthy};
 use ooxml_xml::XNode;
 
 use crate::theme::{ThemeColors, resolve_theme_color};
@@ -75,9 +75,9 @@ pub fn bool_prop(parent: &XNode, name: &str) -> bool {
 
 /// `on_off_of` for a caller that only has the raw XML of a run's rPr. `name`
 /// goes into the pattern unescaped, as in the original.
-pub fn on_off_tag_in(xml: &str, name: &str) -> Result<Option<bool>, RegexSyntaxError> {
-    let tag_pattern = JsRegex::new(&format!(r"<{name}(?=[\s/>])[^>]*>"), "i")?;
-    let Some(tag) = tag_pattern.exec(xml) else {
+pub fn on_off_tag_in(xml: &str, name: &str) -> Result<Option<bool>, RegexError> {
+    let tag_pattern = TryJsRegex::new(&format!(r"<{name}(?=[\s/>])[^>]*>"), "i")?;
+    let Some(tag) = tag_pattern.try_exec(xml)? else {
         return Ok(None);
     };
     let value = js_regex!(r#"\bw:val=(?:"([^"]*)"|'([^']*)')"#, "i").exec(tag.as_str());

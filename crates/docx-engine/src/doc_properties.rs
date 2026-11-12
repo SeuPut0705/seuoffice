@@ -6,7 +6,7 @@ pub mod zotero;
 
 use std::sync::LazyLock;
 
-use jscompat::{JsObject, JsRegex, js_regex};
+use jscompat::{JsObject, RegexLimit, TryJsRegex, js_regex};
 use ooxml_pkg::{Package, ReadError};
 use serde::Serialize;
 
@@ -88,8 +88,8 @@ pub struct DocumentProperties {
 
 /// `<dc:title>`, `<dc:title/>` and `<title>`: the element by local name, the
 /// prefix optional because a part may bind it to another prefix.
-fn element_re(local: &str) -> JsRegex {
-    JsRegex::new(
+fn element_re(local: &str) -> TryJsRegex {
+    TryJsRegex::new(
         &format!(
             r"<([A-Za-z_][\w.-]*:)?{local}(?=[\s/>])([^>]*?)(?:/>|>([\s\S]*?)</([A-Za-z_][\w.-]*:)?{local}\s*>)"
         ),
@@ -98,14 +98,14 @@ fn element_re(local: &str) -> JsRegex {
     .expect("a pattern built from a table entry compiles")
 }
 
-static CORE_ELEMENTS: LazyLock<Vec<(&str, JsRegex)>> = LazyLock::new(|| {
+static CORE_ELEMENTS: LazyLock<Vec<(&str, TryJsRegex)>> = LazyLock::new(|| {
     CORE_PROPERTIES
         .iter()
         .map(|(key, local)| (*key, element_re(local)))
         .collect()
 });
 
-static APP_ELEMENTS: LazyLock<Vec<(&str, JsRegex)>> = LazyLock::new(|| {
+static APP_ELEMENTS: LazyLock<Vec<(&str, TryJsRegex)>> = LazyLock::new(|| {
     APP_PROPERTIES
         .iter()
         .map(|(key, local)| (*key, element_re(local)))
@@ -113,23 +113,23 @@ static APP_ELEMENTS: LazyLock<Vec<(&str, JsRegex)>> = LazyLock::new(|| {
 });
 
 /// The text of each element a table names, where the part carries it.
-fn element_texts(xml: &str, elements: &[(&str, JsRegex)]) -> Record {
+fn element_texts(xml: &str, elements: &[(&str, TryJsRegex)]) -> Result<Record, RegexLimit> {
     let mut out = Record::default();
     for (key, element) in elements {
-        if let Some(found) = element.exec(xml) {
+        if let Some(found) = element.try_exec(xml)? {
             out.set(*key, decode_xml_text(found.get(3).unwrap_or("")));
         }
     }
-    out
+    Ok(out)
 }
 
 /// `parseCorePropertiesXml`: the core properties of a core.xml part.
-pub fn parse_core_properties_xml(xml: &str) -> Record {
+pub fn parse_core_properties_xml(xml: &str) -> Result<Record, RegexLimit> {
     element_texts(xml, &CORE_ELEMENTS)
 }
 
 /// `parseAppPropertiesXml`: the extended properties of an app.xml part.
-pub fn parse_app_properties_xml(xml: &str) -> Record {
+pub fn parse_app_properties_xml(xml: &str) -> Result<Record, RegexLimit> {
     element_texts(xml, &APP_ELEMENTS)
 }
 
@@ -182,9 +182,25 @@ pub fn read_document_properties(package: &Package) -> Result<DocumentProperties,
     let custom = package.text(CUSTOM_PROPERTIES_PATH)?;
     let core = package.text(CORE_PROPERTIES_PATH)?;
     let app = package.text(APP_PROPERTIES_PATH)?;
+    // a part whose search passes the regex bound cannot be read
+    let unreadable = |part: &str| {
+        let part = part.to_owned();
+        move |limit: RegexLimit| ReadError {
+            part,
+            reason: limit.to_string(),
+        }
+    };
     Ok(DocumentProperties {
-        core: core.map(parse_core_properties_xml).unwrap_or_default(),
-        app: app.map(parse_app_properties_xml).unwrap_or_default(),
+        core: core
+            .map(parse_core_properties_xml)
+            .transpose()
+            .map_err(unreadable(CORE_PROPERTIES_PATH))?
+            .unwrap_or_default(),
+        app: app
+            .map(parse_app_properties_xml)
+            .transpose()
+            .map_err(unreadable(APP_PROPERTIES_PATH))?
+            .unwrap_or_default(),
         custom: custom.map(parse_custom_properties_xml).unwrap_or_default(),
         custom_types: custom
             .map(parse_custom_property_types_xml)

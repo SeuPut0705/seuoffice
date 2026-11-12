@@ -86,9 +86,13 @@ fn comment_image_of(package: &Package, comment: &XNode) -> Result<Option<Comment
         return Ok(None);
     };
     // the id goes into the pattern unescaped, as in the original
-    let rel_pattern = JsRegex::new(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#), "")
+    let rel_pattern = TryJsRegex::new(&format!(r#"<Relationship\b[^>]*Id="{rel_id}"[^>]*/>"#), "")
         .map_err(|error| error.to_string())?;
-    let Some(rel) = rel_pattern.exec(rels_xml).map(|found| found.as_str()) else {
+    let Some(rel) = rel_pattern
+        .try_exec(rels_xml)
+        .map_err(|limit| limit.to_string())?
+        .map(|found| found.as_str())
+    else {
         return Ok(None);
     };
     let Some(target) = js_regex!(r#"Target="([^"]+)""#)
