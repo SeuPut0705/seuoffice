@@ -1,6 +1,9 @@
 import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@seuoffice/docx-engine'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import { REDACT_NAMESPACES } from '@seuoffice/agent-core/redact-range'
 import { resolveTarget } from './opc'
+import { RedactionMarkError } from './redaction-error'
 
 export interface DocxTextOptions {
   /** stop once this many characters have been collected (the caller slices anyway) */
@@ -187,6 +190,8 @@ class TextSink {
 
 interface Para {
   text: string
+  /** the placeholder the paragraph text currently ends with, when a withheld run put it there */
+  marker?: string
   heading: number
   list: boolean
 }
@@ -241,6 +246,10 @@ function scanBody(
   let depth = 0
   let inText = false
   let runHidden = false
+  // one entry per open run: the label of its "hidden from AI" mark, or null
+  const runLabels: Array<string | null> = []
+  const redactElements = redactElementNames(xml)
+  let redactSeen = 0
   let noteSeparator = false
   let noteLines: string[] = []
 
@@ -271,8 +280,14 @@ function scanBody(
     }
   }
   const appendText = (text: string): void => {
+    // a withheld run holds no word the reader may pass on: nothing inside it
+    // (text, tabs, a picture's alt text, a nested text box) is collected
+    if (runLabels.some((label) => label !== null)) return
     const p = paras.at(-1)
-    if (p) p.text += text
+    if (p) {
+      p.text += text
+      p.marker = undefined
+    }
   }
 
   TOKEN.lastIndex = 0
@@ -285,6 +300,13 @@ function scanBody(
       continue
     }
     const opening = !close
+    if (opening && name !== undefined && redactElements.has(name)) {
+      const label = /(?:^|\s)w:label="([^"]*)"/.exec(attrs!)?.[1]
+      if (!label) throw new RedactionMarkError('a mark carries no label')
+      // outside a run (a paragraph mark's properties) there are no words to withhold
+      if (runLabels.length > 0) runLabels[runLabels.length - 1] ??= decodeEntities(label)
+      redactSeen++
+    }
     const closing = !!close && !selfClose
     // a self-closing element opens and ends in one token
     const ending = closing || !!selfClose
@@ -340,7 +362,21 @@ function scanBody(
         }
         break
       case 'w:r':
-        if (opening) runHidden = false
+        if (opening) {
+          runHidden = false
+          if (!selfClose) runLabels.push(null)
+        } else if (closing) {
+          const label = runLabels.pop()
+          // the run's own placeholder, once; adjacent runs of one label read as one
+          if (label && !runLabels.some((l) => l !== null)) {
+            const marker = placeholderSource(label)
+            const p = paras.at(-1)
+            if (p && p.marker !== marker) {
+              p.text += marker
+              p.marker = marker
+            }
+          }
+        }
         break
       case 'w:vanish':
         if (opening && !/w:val="(0|false)"/.test(attrs!)) runHidden = true
@@ -423,6 +459,29 @@ function scanBody(
     }
     if (closing) depth--
   }
+  if (redactSeen !== redactElements.count) {
+    throw new RedactionMarkError('a mark is written in a form that cannot be read')
+  }
+}
+
+/**
+ * The element names a part's "hidden from AI" mark goes by: the prefixes the
+ * part binds to either namespace the mark has been saved under, and how many
+ * such elements it holds. Every one has to be read by the scan above; a trace
+ * it cannot account for (no prefix bound, a mark outside any run) fails the
+ * read, as the deck and workbook readers do.
+ */
+function redactElementNames(xml: string): Set<string> & { count: number } {
+  const names = new Set<string>() as Set<string> & { count: number }
+  names.count = 0
+  if (!REDACT_NAMESPACES.some((ns) => xml.includes(ns)) && !/<[\w.-]+:redact\b/.test(xml)) {
+    return names
+  }
+  for (const m of xml.matchAll(/xmlns:([\w.-]+)="([^"]*)"/g)) {
+    if (REDACT_NAMESPACES.includes(m[2]!)) names.add(`${m[1]}:redact`)
+  }
+  names.count = (xml.match(/<[\w.-]+:redact\b/g) ?? []).length
+  return names
 }
 
 function decodeEntities(text: string): string {
