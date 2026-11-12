@@ -15,6 +15,11 @@ on:
     branches: [main]
     paths: ['crates/**', 'tools/docx-diff/**', 'packages/docx-engine/src/**']
   workflow_dispatch:
+    inputs:
+      faults:
+        description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
+        required: false
+        default: ''
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -25,6 +30,7 @@ permissions:
 
 jobs:
   crates:
+    if: ${{ !inputs.faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 45
     steps:
@@ -97,5 +103,50 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: docx-diff-out
+          path: tools/docx-diff/out
+          if-no-files-found: ignore
+
+  # Fault injection: each fault of the file through comparison (f), one at a
+  # time. It rebuilds the wasm once per fault, which is why it runs here.
+  faults:
+    if: ${{ inputs.faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain with the WASI target
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+          rustup target add wasm32-wasip1
+
+      - uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-rust-faults-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Faults
+        env:
+          FAULTS: ${{ inputs.faults }}
+        run: python3 tools/docx-diff/faults.py "$FAULTS"
+
+      - name: Keep the result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: docx-diff-faults
           path: tools/docx-diff/out
           if-no-files-found: ignore
