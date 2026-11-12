@@ -202,8 +202,8 @@ export function patchTableStyleXml(originalXml: string, edit: TableStyleEdit): s
     // Whole-block replacement. Presets carry their own firstRow/bandRow but never rtl —
     // table direction is orthogonal state and survives a style change (PowerPoint behavior)
     let next = edit.tblPrXml
-    const rtl = /<a:tblPr[^>]*\srtl="([^"]*)"/.exec(xml)?.[1]
-    if ((rtl === '1' || rtl === 'true') && !/\srtl="/.test(next)) {
+    const rtl = tblPrAttr(xml, 'rtl')
+    if ((rtl === '1' || rtl === 'true') && tblPrAttr(next, 'rtl') === undefined) {
       next = next.replace(/^<a:tblPr/, '<a:tblPr rtl="1"')
     }
     xml = replaceTblPr(xml, next)
@@ -282,10 +282,29 @@ function replaceTblPr(xml: string, newTblPr: string): string {
   return xml.slice(0, open) + newTblPr + xml.slice(close + '</a:tblPr>'.length)
 }
 
-/** Set or remove key="value" in an XML attribute string (remove: value=undefined). */
+/**
+ * One attribute of a start tag in any form XML allows: quoted with " or ', with or without
+ * spaces around the '='. PowerPoint writes key="value"; other producers do not always.
+ */
+const ATTR_RE = /\s+([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+
+/** The value of the first <a:tblPr>'s own `key` attribute, undefined when it has none. */
+function tblPrAttr(xml: string, key: string): string | undefined {
+  const attrs = /<a:tblPr(\s[^>]*)?>/.exec(xml)?.[1] ?? ''
+  for (const m of attrs.matchAll(ATTR_RE)) {
+    if (m[1] === key) return m[2] ?? m[3]
+  }
+  return undefined
+}
+
+/**
+ * Set or remove an attribute in an XML attribute string (remove: value=undefined). The string is
+ * read attribute by attribute rather than searched for `key="`: a search misses the other
+ * quoting forms, which left the old attribute in place beside the new one (a duplicate attribute
+ * is not well-formed), and it can land inside another attribute's value.
+ */
 function setAttr(attrs: string, key: string, value: string | undefined): string {
-  const re = new RegExp(`\\s${key}="[^"]*"`)
-  const cleaned = attrs.replace(re, '')
+  const cleaned = attrs.replace(ATTR_RE, (whole, name: string) => (name === key ? '' : whole))
   if (value === undefined) return cleaned
   return `${cleaned} ${key}="${escapeXmlAttr(value)}"`
 }
