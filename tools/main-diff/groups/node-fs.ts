@@ -26,8 +26,8 @@
  * which JSON cannot carry); ERROR_INVALID_REPARSE_DATA, ERROR_SYMLINK_NOT_SUPPORTED,
  * ERROR_CANT_ACCESS_FILE (damaged reparse points, a file system without them,
  * a cloud placeholder); ERROR_SEM_TIMEOUT, ERROR_OPERATION_ABORTED (timeouts and
- * cancelled I/O); ERROR_NOT_SUPPORTED, ERROR_INVALID_FUNCTION (EISDIR below
- * comes through the Rust side's own check, as libuv's does).
+ * cancelled I/O); ERROR_NOT_SUPPORTED. (ERROR_INVALID_FUNCTION, the EISDIR of a
+ * `read` on a folder, is caused by the `readFileSync` case of a folder.)
  * Producible: ENOENT, EEXIST, EISDIR, ENOTDIR, ENOTEMPTY, EPERM/EACCES,
  * EBUSY (the process's working folder cannot be removed), ENAMETOOLONG, EINVAL
  * or what `<` gives, ELOOP.
@@ -199,32 +199,42 @@ const readdir: FnSpec = {
   ],
 }
 
-/** EBUSY: the process holds its working folder open, so Windows will not remove it */
+/**
+ * EBUSY: the process holds its working folder open, so Windows will not remove
+ * it. `[cwd, target]`: the process changes into `cwd`, removes `target`, and
+ * changes back.
+ */
 const rmdirAsCwd: FnSpec = {
   ts: (a) => {
     const before = process.cwd()
     process.chdir(str(a, 0))
     try {
-      rmdirSync(str(a, 0))
+      rmdirSync(str(a, 1))
     } finally {
       process.chdir(before)
     }
   },
   cases: [
+    { args: [at('held'), at('held')], files: { held: { dir: true } }, note: 'EBUSY on Windows; removed on Unix' },
     {
-      args: [at('held')],
-      files: { held: { dir: true } },
-      note: 'EBUSY on Windows; removed on Unix',
+      args: [at('held'), at('other')],
+      files: { held: { dir: true }, other: { dir: true } },
+      note: 'another folder is removed while the working folder is held',
     },
+    { args: [at('held'), at('missing')], files: { held: { dir: true } }, note: 'ENOENT while the working folder is held' },
   ],
 }
 
-/** ELOOP: two links that point at each other, read, then removed */
-const readThroughLoop: FnSpec = {
+/**
+ * `[dir, end]`: `a.lnk` links to `b.lnk`, which links to `a.lnk` (`end` is
+ * "loop": ELOOP, on Windows ERROR_CANT_RESOLVE_FILENAME) or to `file.txt`
+ * (`end` is "file": the text); `a.lnk` is read and both links removed.
+ */
+const readThroughLinks: FnSpec = {
   ts: (a) => {
     const dir = str(a, 0)
     symlinkSync(`${dir}/b.lnk`, `${dir}/a.lnk`)
-    symlinkSync(`${dir}/a.lnk`, `${dir}/b.lnk`)
+    symlinkSync(a[1] === 'loop' ? `${dir}/a.lnk` : `${dir}/file.txt`, `${dir}/b.lnk`)
     try {
       return readFileSync(`${dir}/a.lnk`, 'utf8')
     } finally {
@@ -232,7 +242,10 @@ const readThroughLoop: FnSpec = {
       unlinkSync(`${dir}/b.lnk`)
     }
   },
-  cases: [{ args: ['$DIR'], note: 'ELOOP (Windows: ERROR_CANT_RESOLVE_FILENAME)' }],
+  cases: [
+    { args: ['$DIR', 'loop'], note: 'ELOOP (Windows: ERROR_CANT_RESOLVE_FILENAME)' },
+    { args: ['$DIR', 'file'], files: { 'file.txt': 'through two links\n' }, note: 'a chain of two links ends at a file' },
+  ],
 }
 
 export const group: Group = {
@@ -245,5 +258,5 @@ export const group: Group = {
   'node-fs.openSync': open,
   'node-fs.readdirSync': readdir,
   'node-fs.rmdirAsCwd': rmdirAsCwd,
-  'node-fs.readThroughLoop': readThroughLoop,
+  'node-fs.readThroughLinks': readThroughLinks,
 }

@@ -2,12 +2,19 @@
 //! raw file operations, each the std call Node's `fs` makes, answering with
 //! the error Node would throw (`crate::node_fs`).
 //!
-//! Where Node's libuv names an error itself instead of passing the system's
-//! (a directory given to `rmdir`, `readdir` or `read` on Windows) the Windows
-//! branches below do the same check libuv does.
+//! On Windows the std call takes the path as libuv gets it from Node
+//! (`namespaced`: `\\?\C:\...`, no Win32 normalisation), opens with backup
+//! semantics as libuv's `fs__open` does (a folder opens), and renames with
+//! `MoveFileExW` as `fs__rename` does (std's `rename` is a different call with
+//! other errors). Where libuv names an error itself instead of passing the
+//! system's (`fs__scandir` of a file: ENOTDIR; `fs__unlink` of a folder:
+//! EPERM; `fs__open` of a folder with `O_CREAT`: EISDIR) the Windows
+//! branches do the same check libuv does.
 
 use super::{Answer, CallError, Context, str_arg};
-use crate::node_fs::{NodeError, node_error, node_error_fd, node_error_named, node_error2};
+use crate::node_fs::{
+    NodeError, namespaced, node_error, node_error_fd, node_error_named, node_error2,
+};
 use serde_json::Value;
 use std::fs::{self, OpenOptions};
 use std::io::{self, Read, Write};
@@ -21,29 +28,35 @@ pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answ
             write_file(path, flag, text)
         }),
         "node-fs.mkdirSync" => str_arg(args, 0).and_then(|path| {
-            fs::create_dir(path)
+            fs::create_dir(namespaced(path))
                 .map(|()| None)
                 .map_err(|e| node_error(&e, "mkdir", path).into())
         }),
         "node-fs.rmdirSync" => str_arg(args, 0).and_then(rmdir),
         "node-fs.renameSync" => str_arg(args, 0).and_then(|from| {
             let to = str_arg(args, 1)?;
-            fs::rename(from, to)
+            rename(&namespaced(from), &namespaced(to))
                 .map(|()| None)
                 .map_err(|e| node_error2(&e, "rename", from, to).into())
         }),
         "node-fs.unlinkSync" => str_arg(args, 0).and_then(unlink),
         "node-fs.openSync" => str_arg(args, 0).and_then(|path| {
-            OpenOptions::new()
+            open_options()
                 .read(true)
                 .write(true)
-                .open(path)
+                .open(namespaced(path))
                 .map(|_| None)
                 .map_err(|e| node_error(&e, "open", path).into())
         }),
         "node-fs.readdirSync" => str_arg(args, 0).and_then(readdir),
-        "node-fs.rmdirAsCwd" => str_arg(args, 0).and_then(rmdir_as_cwd),
-        "node-fs.readThroughLoop" => str_arg(args, 0).and_then(read_through_loop),
+        "node-fs.rmdirAsCwd" => str_arg(args, 0).and_then(|cwd| {
+            let target = str_arg(args, 1)?;
+            rmdir_as_cwd(cwd, target)
+        }),
+        "node-fs.readThroughLinks" => str_arg(args, 0).and_then(|dir| {
+            let second = str_arg(args, 1)?;
+            read_through_links(dir, second)
+        }),
         _ => return None,
     })
 }
@@ -52,18 +65,29 @@ fn fail(e: NodeError) -> CallError {
     e.into()
 }
 
-/// `fs.readFileSync(path, 'utf8')`: `open`, then `read` (a directory opens on
-/// Windows, libuv opening with backup semantics, and fails in the `read`).
-fn read_file(path: &str) -> Answer {
+/// `OpenOptions` as libuv's `fs__open` opens: with backup semantics on
+/// Windows, so that a folder opens (and `read` then fails on it, `O_CREAT`
+/// on it says ERROR_FILE_EXISTS) instead of failing with access denied.
+fn open_options() -> OpenOptions {
     #[cfg(windows)]
-    if fs::metadata(path).is_ok_and(|m| m.is_dir()) {
-        // ERROR_INVALID_FUNCTION, which libuv names EISDIR
-        return Err(fail(node_error_fd(
-            &io::Error::from_raw_os_error(1),
-            "read",
-        )));
+    {
+        use std::os::windows::fs::OpenOptionsExt;
+        let mut options = OpenOptions::new();
+        options.custom_flags(windows_sys::Win32::Storage::FileSystem::FILE_FLAG_BACKUP_SEMANTICS);
+        options
     }
-    let mut file = fs::File::open(path).map_err(|e| fail(node_error(&e, "open", path)))?;
+    #[cfg(not(windows))]
+    {
+        OpenOptions::new()
+    }
+}
+
+/// `fs.readFileSync(path, 'utf8')`: `open`, then `read`.
+fn read_file(path: &str) -> Answer {
+    let mut file = open_options()
+        .read(true)
+        .open(namespaced(path))
+        .map_err(|e| fail(node_error(&e, "open", path)))?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes)
         .map_err(|e| fail(node_error_fd(&e, "read")))?;
@@ -74,16 +98,16 @@ fn read_file(path: &str) -> Answer {
 
 /// `fs.writeFileSync(path, text, { flag })` for the flags `w` and `wx`.
 fn write_file(path: &str, flag: &str, text: &str) -> Answer {
-    let mut options = OpenOptions::new();
+    let mut options = open_options();
     options.write(true);
     match flag {
         "w" => options.create(true).truncate(true),
         "wx" => options.create_new(true),
         _ => return Err(CallError::plain(format!("unsupported flag: {flag}"))),
     };
-    let mut file = options.open(path).map_err(|e| {
+    let mut file = options.open(namespaced(path)).map_err(|e| {
         // libuv's fs__open: ERROR_FILE_EXISTS under O_CREAT without O_EXCL
-        // means the path is a directory
+        // means the path is a folder
         if cfg!(windows) && flag == "w" && e.raw_os_error() == Some(80) {
             fail(node_error_named("EISDIR", "open", path))
         } else {
@@ -95,24 +119,21 @@ fn write_file(path: &str, flag: &str, text: &str) -> Answer {
         .map_err(|e| fail(node_error_fd(&e, "write")))
 }
 
-/// `fs.rmdirSync`: libuv's `fs__rmdir` says ENOTDIR for a file on Windows.
+/// `fs.rmdirSync`
 fn rmdir(path: &str) -> Answer {
-    #[cfg(windows)]
-    if fs::symlink_metadata(path).is_ok_and(|m| !m.is_dir()) {
-        return Err(fail(node_error_named("ENOTDIR", "rmdir", path)));
-    }
-    fs::remove_dir(path)
+    fs::remove_dir(namespaced(path))
         .map(|()| None)
         .map_err(|e| fail(node_error(&e, "rmdir", path)))
 }
 
-/// `fs.unlinkSync`: libuv's `fs__unlink` says EPERM for a directory on Windows.
+/// `fs.unlinkSync`: libuv's `fs__unlink` says EPERM for a folder on Windows.
 fn unlink(path: &str) -> Answer {
+    let full = namespaced(path);
     #[cfg(windows)]
-    if fs::symlink_metadata(path).is_ok_and(|m| m.is_dir()) {
+    if fs::symlink_metadata(&full).is_ok_and(|m| m.is_dir()) {
         return Err(fail(node_error_named("EPERM", "unlink", path)));
     }
-    fs::remove_file(path)
+    fs::remove_file(full)
         .map(|()| None)
         .map_err(|e| fail(node_error(&e, "unlink", path)))
 }
@@ -120,11 +141,12 @@ fn unlink(path: &str) -> Answer {
 /// `fs.readdirSync(path)`, sorted: libuv's `fs__scandir` says ENOTDIR for a
 /// file on Windows.
 fn readdir(path: &str) -> Answer {
+    let full = namespaced(path);
     #[cfg(windows)]
-    if fs::metadata(path).is_ok_and(|m| !m.is_dir()) {
+    if fs::metadata(&full).is_ok_and(|m| !m.is_dir()) {
         return Err(fail(node_error_named("ENOTDIR", "scandir", path)));
     }
-    let entries = fs::read_dir(path).map_err(|e| fail(node_error(&e, "scandir", path)))?;
+    let entries = fs::read_dir(full).map_err(|e| fail(node_error(&e, "scandir", path)))?;
     let mut names = Vec::new();
     for entry in entries {
         let entry = entry.map_err(|e| fail(node_error(&e, "scandir", path)))?;
@@ -134,29 +156,62 @@ fn readdir(path: &str) -> Answer {
     Ok(Some(Value::from(names)))
 }
 
-/// `process.chdir(path)`, `fs.rmdirSync(path)`, and the working folder back:
-/// the process holds the folder open, which Windows refuses to remove (EBUSY).
-fn rmdir_as_cwd(path: &str) -> Answer {
+/// libuv's `fs__rename`: `MoveFileExW` replacing an existing file
+#[cfg(windows)]
+fn rename(from: &str, to: &str) -> io::Result<()> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::{MOVEFILE_REPLACE_EXISTING, MoveFileExW};
+    let wide = |path: &str| -> Vec<u16> {
+        std::ffi::OsStr::new(path)
+            .encode_wide()
+            .chain(Some(0))
+            .collect()
+    };
+    let (from, to) = (wide(from), wide(to));
+    // SAFETY: both are NUL-terminated UTF-16 strings that outlive the call
+    let moved = unsafe { MoveFileExW(from.as_ptr(), to.as_ptr(), MOVEFILE_REPLACE_EXISTING) };
+    if moved == 0 {
+        Err(io::Error::last_os_error())
+    } else {
+        Ok(())
+    }
+}
+
+#[cfg(not(windows))]
+fn rename(from: &str, to: &str) -> io::Result<()> {
+    fs::rename(from, to)
+}
+
+/// `process.chdir(cwd)`, `fs.rmdirSync(target)`, and the working folder back:
+/// the process holds `cwd` open, which Windows refuses to remove (EBUSY).
+fn rmdir_as_cwd(cwd: &str, target: &str) -> Answer {
     let before = std::env::current_dir().map_err(|e| fail(node_error(&e, "uv_cwd", "")))?;
-    std::env::set_current_dir(path).map_err(|e| fail(node_error(&e, "chdir", path)))?;
-    let answer = rmdir(path);
+    std::env::set_current_dir(cwd).map_err(|e| fail(node_error(&e, "chdir", cwd)))?;
+    let answer = rmdir(target);
     std::env::set_current_dir(before)
         .map_err(|e| fail(node_error(&e, "chdir", "the working folder")))?;
     answer
 }
 
-/// Two links that point at each other, `readFileSync` of the first, and the
-/// links removed: ELOOP on Unix, ERROR_CANT_RESOLVE_FILENAME on Windows.
-fn read_through_loop(dir: &str) -> Answer {
+/// Two links in `dir`, `a.lnk` to `b.lnk` and `b.lnk` to `a.lnk` (`second` is
+/// "loop") or to `file.txt` (`second` is "file"); `readFileSync` of `a.lnk`;
+/// the links removed. ELOOP on Unix, ERROR_CANT_RESOLVE_FILENAME on Windows,
+/// for the loop.
+fn read_through_links(dir: &str, second: &str) -> Answer {
     let a = format!("{dir}/a.lnk");
     let b = format!("{dir}/b.lnk");
-    for (target, link) in [(&b, &a), (&a, &b)] {
+    let end = match second {
+        "loop" => a.clone(),
+        "file" => format!("{dir}/file.txt"),
+        _ => return Err(CallError::plain(format!("unsupported link end: {second}"))),
+    };
+    for (target, link) in [(&b, &a), (&end, &b)] {
         symlink(target, link).map_err(|e| fail(node_error2(&e, "symlink", target, link)))?;
     }
     let answer = read_file(&a);
     for link in [&a, &b] {
         // a link to a missing target is a file link on Windows
-        fs::remove_file(link).map_err(|e| fail(node_error(&e, "unlink", link)))?;
+        fs::remove_file(namespaced(link)).map_err(|e| fail(node_error(&e, "unlink", link)))?;
     }
     answer
 }

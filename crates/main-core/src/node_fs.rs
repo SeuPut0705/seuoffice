@@ -284,6 +284,45 @@ fn text_of(code: &str) -> &'static str {
         .map_or("unknown error", |(_, text)| text)
 }
 
+/// The path as Node hands it to libuv: on Windows `ToNamespacedPath`
+/// (node's `path.toNamespacedPath`: resolved against the working folder and
+/// written `\\?\C:\...`, which libuv then passes on without the Win32
+/// normalisation); elsewhere as given. A std call on a Windows path must take
+/// this form to do what libuv does (a name with `<` or past 255 characters
+/// gets another error as a verbatim path than as a plain one).
+pub fn namespaced(path: &str) -> String {
+    #[cfg(windows)]
+    {
+        jscompat::node_path::win32::to_namespaced_path(path)
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_string()
+    }
+}
+
+/// The path as Node's error message prints it: Node's `StringFromPath` takes
+/// the `\\?\` (`\\?\UNC\`) prefix off the namespaced path again, so on
+/// Windows the message holds the resolved path with backslashes, whatever form
+/// the caller gave.
+fn shown(path: &str) -> String {
+    #[cfg(windows)]
+    {
+        let full = namespaced(path);
+        if let Some(rest) = full.strip_prefix("\\\\?\\UNC\\") {
+            return format!("\\\\{rest}");
+        }
+        match full.strip_prefix("\\\\?\\") {
+            Some(rest) => rest.to_string(),
+            None => full,
+        }
+    }
+    #[cfg(not(windows))]
+    {
+        path.to_string()
+    }
+}
+
 /// Node's error for `syscall` on `path`: `ENOENT: no such file or directory,
 /// open '/x'`.
 pub fn node_error(e: &io::Error, syscall: &str, path: &str) -> NodeError {
@@ -291,7 +330,7 @@ pub fn node_error(e: &io::Error, syscall: &str, path: &str) -> NodeError {
     let name = code.unwrap_or("UNKNOWN");
     NodeError {
         code,
-        message: format!("{name}: {}, {syscall} '{path}'", text_of(name)),
+        message: format!("{name}: {}, {syscall} '{}'", text_of(name), shown(path)),
     }
 }
 
@@ -302,7 +341,12 @@ pub fn node_error2(e: &io::Error, syscall: &str, from: &str, to: &str) -> NodeEr
     let name = code.unwrap_or("UNKNOWN");
     NodeError {
         code,
-        message: format!("{name}: {}, {syscall} '{from}' -> '{to}'", text_of(name)),
+        message: format!(
+            "{name}: {}, {syscall} '{}' -> '{}'",
+            text_of(name),
+            shown(from),
+            shown(to)
+        ),
     }
 }
 
@@ -318,11 +362,11 @@ pub fn node_error_fd(e: &io::Error, syscall: &str) -> NodeError {
 }
 
 /// Node's error for `syscall` on `path` that libuv itself names `code`,
-/// without a system error behind it (`fs__rmdir` of a file on Windows says
-/// `ENOTDIR` where the system says `ERROR_DIRECTORY`).
+/// without a system error behind it (`fs__scandir` of a file on Windows says
+/// `ENOTDIR`).
 pub fn node_error_named(code: &'static str, syscall: &str, path: &str) -> NodeError {
     NodeError {
         code: Some(code),
-        message: format!("{code}: {}, {syscall} '{path}'", text_of(code)),
+        message: format!("{code}: {}, {syscall} '{}'", text_of(code), shown(path)),
     }
 }
