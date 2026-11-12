@@ -380,6 +380,7 @@ Nothing in this list is uploaded by the app.
 
 - **Your documents**, wherever you save them, together with the helper files
   some editors keep next to a document.
+- **The author of notes you add in the PDF editor** is written into the saved PDF, with the note. It is the user name in Settings → General, or your Windows, macOS or Linux account name when that is empty (`User` if the system gives none). The app does not send it anywhere.
 - **AI chat history**, kept in the app's data folder
   (`%APPDATA%\IeumOffice`). Chats in a project are kept in that project folder
   instead (see **Project folders**); a synced project folder is uploaded by
