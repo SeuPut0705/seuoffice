@@ -32,8 +32,8 @@ access: 3 entries
 ad hoc로 서명한 Electron은 접근 목록에 자기 `cdhash`만 올린다. partition_id 항목은 없다.
 
 - 같은 앱 A가 열기(T0): 된다.
-- `open-sealed`, 키체인 대화상자 끔(T1): 실패, **`-25293` errSecAuthFailed**("The user name or passphrase you entered is not correct"). `-25308`(errSecInteractionNotAllowed)이 아니다. 대화상자를 켜면 대화상자가 뜨고 기다린다(T2 이전 실행에서 SecurityAgent 확인).
-- **업데이트한 ad hoc Electron**(Info.plist 바꾸고 `codesign -f -s -`로 다시 서명, cdhash `88ff…`→`3720…`)은 같은 항목에서 키체인 대화상자("Electron wants to use your confidential information stored in "seuoffice Safe Storage" in your keychain", 암호 칸, Always Allow/Deny/Allow)가 뜬다(T3b, 스크린샷 `t3b-prompt.png`, 40초 뒤 `SIGKILL`). 비트가 같은 재서명 사본(cdhash 같음)은 대화상자 없이 열린다(T3a).
+- `open-sealed`, 키체인 대화상자 끔(T1): 실패, **`-25293` errSecAuthFailed**("The user name or passphrase you entered is not correct"). `-25308`(errSecInteractionNotAllowed)이 아니다.
+- **업데이트한 ad hoc Electron**(Info.plist 바꾸고 `codesign -f -s -`로 다시 서명, cdhash `88ff…`→`3720…`)은 같은 항목에서 키체인 대화상자("Electron wants to use your confidential information stored in "seuoffice Safe Storage" in your keychain", 암호 칸, Always Allow/Deny/Allow)가 뜬다(T3b, 스크린샷 `t3b-prompt.png`, 40초 뒤 `SIGKILL`, 종료 124). 비트가 같은 재서명 사본(cdhash 같음)은 대화상자 없이 열린다(T3a).
   - 결론: 지금도 ad hoc Electron은 업데이트 때마다 이 대화상자를 만난다. `apps/shell/src/main/ai-secrets.ts` 머리 주석의 "an ad hoc signed app would meet a Keychain prompt after every update"가 측정으로 맞다. Rust 껍데기가 한 번 묻는 건 후퇴가 아니라 지금과 같은 수준이다. 업데이트마다 되풀이되는 것도 지금과 같다.
 - 러너에서 대화상자를 눌러 끝내려는 시도(T3c)는 암호를 쳐 넣고 누르면 대화상자가 회색으로 멈추고 요청이 끝나지 않았다. 이 환경의 한계로 기록하고, 대화상자가 실제 Mac에서 눌러 통과하는 경로라는 증명은 하지 못했다(`[INFERENCE]`: 사용자가 "항상 허용"을 누르면 접근 목록에 새 cdhash가 올라간다는 건 macOS 문서 동작이다).
 
