@@ -178,7 +178,7 @@ item_block "$SVC" "$KC" | tee -a "$F"
 run_to 30 "$OPEN" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/r3.out" 2> "$WORK/r3.err"
 say "R3 exit=$? stderr=$(cat "$WORK/r3.err")"; check "R3 after partition list" "$WORK/r3.out"
 
-hdr "R4 a stable signing identity: Electron sealed by a self-signed build, then updated and signed with the same certificate"
+hdr "R4 a stable signing identity: the same certificate signs the installed build and its update"
 S=$WORK/self; mkdir -p "$S"
 cat > "$S/ext.cnf" <<'CNF'
 [req]
@@ -196,66 +196,72 @@ CNF
 /usr/bin/openssl pkcs12 -export -inkey "$S/k.pem" -in "$S/c.pem" -out "$S/id.p12" -passout pass:p12pw 2>&1 | tail -1
 security import "$S/id.p12" -k "$KC" -P p12pw -T /usr/bin/codesign 2>&1 | tee -a "$F"
 security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$KCPW" "$KC" >/dev/null 2>&1
-sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$S/c.pem" 2>&1 | tee -a "$F"
-security find-identity -p codesigning "$KC" 2>&1 | tee -a "$F"
+run_to 30 sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$S/c.pem" 2>&1 | tee -a "$F"
 SIGN_ID=$(/usr/bin/openssl x509 -in "$S/c.pem" -noout -fingerprint -sha1 | sed 's/.*=//;s/://g')
+security find-identity -p codesigning 2>&1 | tee -a "$F"
 say "signing identity sha1 $SIGN_ID"
 
-# the item moves to a second keychain so the new seed does not find the A-owned one
+# everything is signed while the proof keychain (which holds the identity) is still on the search list
+mkdir -p "$WORK/S1" "$WORK/S2"
+ditto "$ORIG_APP" "$WORK/S1/Electron.app"
+codesign -f -s "$SIGN_ID" --deep "$WORK/S1/Electron.app" 2>&1 | tail -2 | tee -a "$F"
+ditto "$WORK/S1/Electron.app" "$WORK/S2/Electron.app"
+/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 43.8.3-build2' "$WORK/S2/Electron.app/Contents/Info.plist"
+codesign -f -s "$SIGN_ID" --deep "$WORK/S2/Electron.app" 2>&1 | tail -2 | tee -a "$F"
+say "S1 (installed build, self-signed): $(cdhash "$WORK/S1/Electron.app")"
+say "S2 (updated build, same certificate): $(cdhash "$WORK/S2/Electron.app")"
+codesign -d -r- "$WORK/S1/Electron.app" 2>&1 | grep designated | tee -a "$F"
+codesign -d -r- "$WORK/S2/Electron.app" 2>&1 | grep designated | tee -a "$F"
+mkdir -p "$WORK/X1" "$WORK/X2" "$WORK/X3"
+cp "$OPEN" "$WORK/X1/open-sealed"; cp "$OPEN" "$WORK/X2/open-sealed"; cp "$OPEN" "$WORK/X3/open-sealed"
+strip -x "$WORK/X2/open-sealed" "$WORK/X3/open-sealed" 2>&1 | tail -1
+codesign -f -s "$SIGN_ID" -i com.seuput.seuoffice.shell "$WORK/X1/open-sealed" 2>&1 | tail -1
+codesign -f -s "$SIGN_ID" -i com.seuput.seuoffice.shell "$WORK/X2/open-sealed" 2>&1 | tail -1
+codesign -f -s - -i com.seuput.seuoffice.shell "$WORK/X3/open-sealed" 2>&1 | tail -1
+say "X1 shell binary, self-signed: $(cdhash "$WORK/X1/open-sealed")"
+say "X2 updated shell binary (different bytes), same certificate: $(cdhash "$WORK/X2/open-sealed")"
+say "X3 updated shell binary, ad hoc: $(cdhash "$WORK/X3/open-sealed")"
+cmp -s "$WORK/X1/open-sealed" "$WORK/X2/open-sealed" && say "WARNING X1 and X2 are identical"
+
+# a second keychain, so the new Electron seed does not find the item the ad hoc build A owns
 KC2="$WORK/proof2.keychain-db"
 security create-keychain -p "$KCPW" "$KC2" && security set-keychain-settings "$KC2" && security unlock-keychain -p "$KCPW" "$KC2"
 security default-keychain -d user -s "$KC2"
 security list-keychains -d user -s "$KC2" $ORIG_LIST
-
-mkdir -p "$WORK/S1"; ditto "$ORIG_APP" "$WORK/S1/Electron.app"
-codesign -f -s "$SIGN_ID" --keychain "$KC" --deep "$WORK/S1/Electron.app" 2>&1 | tail -2 | tee -a "$F"
-say "S1 (installed build, self-signed): $(cdhash "$WORK/S1/Electron.app")"
-codesign -d -r- "$WORK/S1/Electron.app" 2>&1 | grep designated | tee -a "$F"
 export BENCH_USER_DATA="$WORK/ud4"
 run_to 150 "$WORK/S1/Electron.app/Contents/MacOS/Electron" "$SEED_DIR" 2>&1 | tail -3 | tee -a "$F"
 item_block "$SVC" "$KC2" | sed -n '/access:/,$p' | tee -a "$F"
-
-mkdir -p "$WORK/S2"; ditto "$WORK/S1/Electron.app" "$WORK/S2/Electron.app"
-/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 43.8.3-build2' "$WORK/S2/Electron.app/Contents/Info.plist"
-codesign -f -s "$SIGN_ID" --keychain "$KC" --deep "$WORK/S2/Electron.app" 2>&1 | tail -2 | tee -a "$F"
-say "S2 (updated build, same certificate): $(cdhash "$WORK/S2/Electron.app")"
 ( SEED_MODE=decrypt SEED_RESULT="$WORK/s2-dec.json" run_to 40 "$WORK/S2/Electron.app/Contents/MacOS/Electron" "$SEED_DIR" > "$WORK/s2.log" 2>&1; echo "R4 updated exit=$?" > "$WORK/s2.res" ) &
 SPID=$!
 sleep 15; watch_prompt r4-prompt
 wait $SPID; cat "$WORK/s2.res" | tee -a "$F"; tail -1 "$WORK/s2.log" | tee -a "$F"
 check "R4 updated Electron, same certificate" "$WORK/s2-dec.json"
-pkill -f SecurityAgent 2>/dev/null
+pkill -f SecurityAgent 2>/dev/null; sleep 1
 unset BENCH_USER_DATA
+
+hdr "R5 the same for the Rust binary: a key item that names the signed shell binary in its ACL"
+RS2='seuoffice-rust stable key'
+security add-generic-password -a seuoffice-rust -s "$RS2" -w 'rust-side-key-material' -T "$WORK/X1/open-sealed" "$KC2" 2>&1 | tee -a "$F"
+for v in X1 X2 X3; do
+  run_to 20 "$WORK/$v/open-sealed" --probe --service "$RS2" --account seuoffice-rust 2>&1 | tee -a "$F"; say "R5 $v exit=${PIPESTATUS[0]}"
+done
+item_block "$RS2" "$KC2" | sed -n '/access:/,$p' | tee -a "$F"
+pkill -f SecurityAgent 2>/dev/null
 
 security default-keychain -d user -s "$KC"
 security list-keychains -d user -s "$KC" $ORIG_LIST
-hdr "T3c the same updated Electron, the user types the password and presses Allow"
+hdr "T3c the same updated Electron, the user types the password and presses Allow (best effort: the runner dialog may stay unanswered)"
 rm -f "$WORK/b-dec.json"
-( SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec.json" run_to 60 "$EL_B" "$SEED_DIR" > "$WORK/b2.log" 2>&1; echo "T3c exit=$?" > "$WORK/b2.res" ) &
+( SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec.json" run_to 30 "$EL_B" "$SEED_DIR" > "$WORK/b2.log" 2>&1; echo "T3c exit=$?" > "$WORK/b2.res" ) &
 BPID=$!
 answer_prompt t3c-click "Allow" 15
 wait $BPID; cat "$WORK/b2.res" | tee -a "$F"; tail -1 "$WORK/b2.log" | tee -a "$F"
 check "T3c updated Electron after Allow" "$WORK/b-dec.json"
 say "T3c again (Allow is a one-time pass, so the prompt returns):"
-SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec2.json" run_to 40 "$EL_B" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c second run" "$WORK/b-dec2.json"
+SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec2.json" run_to 20 "$EL_B" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c second run" "$WORK/b-dec2.json"
 pkill -f SecurityAgent 2>/dev/null; sleep 1
 say "the old build A (not updated) still opens it:"
 rm -f "$WORK/a-dec2.json"; SEED_MODE=decrypt SEED_RESULT="$WORK/a-dec2.json" run_to 40 "$EL_A" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c old build A" "$WORK/a-dec2.json"
-
-hdr "T2 open-sealed with the prompt allowed, the user presses Always Allow once"
-( run_to 60 "$OPEN" --allow-interaction --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t2.out" 2> "$WORK/t2.err"; echo "T2 exit=$? stdout=$(cat "$WORK/t2.out") stderr=$(cat "$WORK/t2.err")" > "$WORK/t2.res" ) &
-T2PID=$!
-answer_prompt t2-click "Always Allow" 12
-wait $T2PID; cat "$WORK/t2.res" | tee -a "$F"
-pkill -f SecurityAgent 2>/dev/null; sleep 1
-check "T2 open-sealed after Always Allow" "$WORK/t2.out"
-hdr "T4 open-sealed again, interaction disabled: no more prompt after the one click"
-run_to 60 "$OPEN" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4.out" 2> "$WORK/t4.err"
-say "T4 exit=$? stderr=$(cat "$WORK/t4.err")"; check "T4 open-sealed non-interactive" "$WORK/t4.out"
-say "T4b a rebuilt Rust binary (new cdhash) non-interactive:"
-mkdir -p "$WORK/open4" && cp "$OPEN" "$WORK/open4/open-sealed" && codesign -f -s - -i com.seuput.seuoffice.rebuilt2 "$WORK/open4/open-sealed" 2>&1 | tail -1
-run_to 60 "$WORK/open4/open-sealed" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4b.out" 2> "$WORK/t4b.err"
-say "T4b exit=$? stderr=$(cat "$WORK/t4b.err")"
 
 hdr "securityd / SecurityAgent log around the clicks"
 run_to 60 sudo log show --last 20m --style compact --predicate 'process == "SecurityAgent" OR process == "securityd"' 2>&1 | tail -80 > "$OUT/securityd.log"; say "log lines: $(wc -l < "$OUT/securityd.log")"
