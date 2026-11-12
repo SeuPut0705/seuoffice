@@ -16,13 +16,17 @@ name: seuoffice desktop release
 #   stable  feeds stable.yml / stable-mac.yml, file names end in -stable. Its
 #           updater only takes the release GitHub marks Latest.
 #
-# Release model. Every push to main that touches more than docs builds the next
-# version (the highest v* tag plus one patch, or apps/shell/package.json when
-# that is higher) while CI runs, and publishes it as a GitHub PRE-RELEASE only
-# once the CI and seuoffice workflows pass on the same commit. General
-# (latest) installs get it at once; only the ten newest pre-releases are kept.
-# A tag vX.Y.Z pushed by hand does the same for that version. The workflow
-# never promotes a release. The owner promotes one to stable once checked:
+# Release model (decision 0027). Releases are batched: a push to main builds
+# nothing here. The maintainer starts a release once a batch of merged changes
+# is ready, by running this workflow by hand on main with `release` set
+#   gh workflow run "seuoffice desktop release" --ref main -f release=true
+# which builds the next version (the highest v* tag plus one patch, or
+# apps/shell/package.json when that is higher) and publishes it as a GitHub
+# PRE-RELEASE only once the CI and seuoffice workflows passed on the same
+# commit. General (latest) installs get it at once; only the ten newest
+# pre-releases are kept. A tag vX.Y.Z pushed by hand does the same for that
+# version. The workflow never promotes a release. The owner promotes one to
+# stable once checked:
 #   gh release edit vX.Y.Z --prerelease=false --latest
 #
 # Signing (repository secrets):
@@ -36,21 +40,23 @@ name: seuoffice desktop release
 # staging, not Squirrel). Once a signed release is out, never publish an
 # unsigned one again: a signed install only takes updates from its signer.
 #
-# A run started by hand (workflow_dispatch) on a branch builds and uploads the
-# artifacts only, at the package.json version.
+# A run started by hand without `release` (on any branch) builds and uploads
+# the artifacts only, at the package.json version.
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
-    # a superset of CI's paths-ignore, so CI always runs for a commit this builds
-    paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish the next version as a pre-release (main only)
+        type: boolean
+        default: false
 
-# Every publishing run (main pushes and v* tags) shares one queue, so two runs
-# never pick or write the same version at once; a hand-started run keeps its ref's.
+# Every publishing run (release runs and v* tags) shares one queue, so two runs
+# never pick or write the same version at once; a build-only run keeps its ref's.
 concurrency:
-  group: ${{ github.event_name == 'push' && 'seuoffice-desktop-publish' || format('seuoffice-desktop-{0}', github.ref) }}
+  group: ${{ (github.event_name == 'push' || inputs.release) && 'seuoffice-desktop-publish' || format('seuoffice-desktop-{0}', github.ref) }}
   cancel-in-progress: false
 
 permissions:
@@ -76,7 +82,11 @@ jobs:
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             version=${GITHUB_REF_NAME#v}
             publish=true
-          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+          elif [ "${{ inputs.release }}" = "true" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::a release runs on main only, not $GITHUB_REF"
+              exit 1
+            fi
             highest=$(git ls-remote --tags --refs origin 'refs/tags/v*' | sed 's#.*refs/tags/v##' |
               grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
             if [ -z "$highest" ] || [ "$(printf '%s\n%s\n' "$highest" "$base" | sort -V | tail -n 1)" != "$highest" ]; then
