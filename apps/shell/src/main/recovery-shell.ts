@@ -17,7 +17,11 @@ import {
   migrateSheetsLegacyRecovery,
   sheetsRecoveryIdentity,
 } from '../../../sheets/src/main/sheets-main'
-import { createPdfView, pdfRecoveryIdentity } from '../../../pdf/src/main/pdf-main'
+import {
+  createPdfView,
+  discardPdfRecovery,
+  pdfRecoveryIdentity,
+} from '../../../pdf/src/main/pdf-main'
 import { slidesRecoveryIdentity } from '../../../slides/src/main/slides-main'
 import {
   markdownRecoveryIdentity,
@@ -261,6 +265,7 @@ export function discardEditorRecovery(kind: TabKind, contents: WebContents): voi
   if (contents.isDestroyed()) return
   if (kind === 'docs') discardDocsRecovery(contents)
   else if (kind === 'sheets') discardSheetsRecovery(contents)
+  else if (kind === 'pdf') discardPdfRecovery(contents)
   else if (kind === 'mindmap') discardMindmapRecovery(contents)
   else if (kind === 'hwp') hwpDiscardRecoveryCopy(contents)
   else if (kind === 'diagram') discardDiagramRecovery(contents)

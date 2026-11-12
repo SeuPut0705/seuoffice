@@ -8,6 +8,7 @@
  * hierarchy / pyramid / matrix / venn.
  */
 import type { EmuRect, Slide } from './types'
+import { hangulLang } from './generate'
 import { creationIdXml, escapeXmlAttr, escapeXmlText } from './xml-utils'
 import { appendRawElements, type OpenedPptx } from './index'
 import { nextCNvPrId } from './insert'
@@ -24,8 +25,9 @@ export interface NewSmartArtOptions {
 
 /** Fragment for a single child shape (in child coordinate space). */
 function childSpXml(id: number, s: SmartArtChildShape): string {
+  const lang = s.text ? hangulLang(s.text) : undefined
   const para = s.text
-    ? `<a:p><a:pPr algn="ctr"/><a:r><a:rPr sz="${Math.round((s.fontSize ?? 14) * 100)}" b="1">` +
+    ? `<a:p><a:pPr algn="ctr"/><a:r><a:rPr${lang ? ` lang="${lang}"` : ''} sz="${Math.round((s.fontSize ?? 14) * 100)}" b="1">` +
       '<a:solidFill><a:srgbClr val="FFFFFF"/></a:solidFill></a:rPr>' +
       `<a:t>${escapeXmlText(s.text)}</a:t></a:r></a:p>`
     : '<a:p/>'

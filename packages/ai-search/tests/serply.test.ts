@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { defaultAiSettings } from '@genoffice/ai-provider'
+import { PRODUCT_NAME } from '@genoffice/i18n'
 import { imageSearch, webSearch } from '../src/index'
 import { searchOptionsFromSettings, testSearchProvider } from '../src/search-tools'
 
@@ -27,7 +28,13 @@ const fallback = () =>
   new Response('<a class="result__a" href="https://fallback.example.com">Fallback</a>')
 
 beforeEach(() => {
-  for (const key of ['SERPER_API_KEY', 'SERPLY_API_KEY', 'TAVILY_API_KEY', 'PARALLEL_API_KEY'])
+  for (const key of [
+    'SERPER_API_KEY',
+    'SERPLY_API_KEY',
+    'SEARCHAPI_API_KEY',
+    'TAVILY_API_KEY',
+    'PARALLEL_API_KEY',
+  ])
     vi.stubEnv(key, '')
 })
 
@@ -63,7 +70,10 @@ describe('Serply web search', () => {
     expect(parsed.searchParams.get('q')).toBe('genoffice')
     expect(parsed.searchParams.get('num')).toBe('5')
     expect(init?.method).toBeUndefined()
-    expect(init?.headers).toEqual({ 'X-Api-Key': 'user-key', 'User-Agent': 'genoffice' })
+    expect(init?.headers).toEqual({
+      'X-Api-Key': 'user-key',
+      'User-Agent': PRODUCT_NAME.toLowerCase(),
+    })
   })
 
   it('reads SERPLY_API_KEY and caps the mapped results at maxResults', async () => {

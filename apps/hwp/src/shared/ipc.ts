@@ -13,6 +13,8 @@ export const HWP_CHANNELS = {
   commitSave: 'hwp:commit-save',
   newTabs: 'hwp:new-tabs',
   trackingDropped: 'hwp:tracking-dropped',
+  /** invoke → boolean: the file `readFile` gave this view could not be read by the app itself */
+  structureUnverified: 'hwp:structure-unverified',
   abortSave: 'hwp:abort-save',
   saveRequest: 'hwp:save-request',
   printRequest: 'hwp:print-request',
@@ -161,8 +163,10 @@ export type BeginSaveResult =
   /**
    * `reason` 'tracked': the document has tracked changes, which a save here would lose.
    * `reason` 'memo': a memo editor is open and its text has not been committed yet.
+   * `reason` 'unverified': the target is the opened file, whose structure could not be
+   * checked; what a save has to keep of it is unknown. Another name can be saved to.
    */
-  | { ok: false; error: string; reason?: 'tracked' | 'memo' }
+  | { ok: false; error: string; reason?: 'tracked' | 'memo' | 'unverified' }
 
 /** One step of a memo anchor's path into a table cell or text box, as the engine lists it. */
 export interface MemoPathStep {
@@ -329,6 +333,12 @@ export interface HwpApi {
    * text as it reads now, which is what a save writes (decision 0025)
    */
   trackingDropped(): Promise<boolean>
+  /**
+   * the file `readFile` gave this view is one the app's own readers refuse (a compound file
+   * whose structure does not hold): it is shown as the engine reads it, but what a save
+   * keeps of the original could not be read, so `beginSave` refuses to replace that file
+   */
+  structureUnverified(): Promise<boolean>
   /** resolve where and in which format this save goes (shows the dialog for Save As) */
   beginSave(mode: SaveMode): Promise<BeginSaveResult>
   /** the tabs of exported bytes that have no width yet (see tab-widths in main) */

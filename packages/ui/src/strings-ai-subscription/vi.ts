@@ -149,7 +149,6 @@ export const vi = {
     'Vẫn chưa được? Hãy sao chép thông tin kết nối và gửi cho người đang giúp bạn. Thông tin này không chứa tài khoản hay đường dẫn tệp.',
   actionCopyInfo: 'Sao chép thông tin để nhờ hỗ trợ',
   copyInfoDone: 'Đã sao chép',
-  actionConnectHelp: 'Xem từng bước trên màn hình (trang tiếng Hàn)',
   guidePathChatGptBody:
     'Đăng nhập bằng tài khoản ChatGPT và dùng gói của bạn. Không cần cài đặt gì. Gói miễn phí chỉ cho dùng một ít.',
   guideUseCodex: 'Đã dùng chương trình Codex trên máy tính này? Kết nối bằng Codex',

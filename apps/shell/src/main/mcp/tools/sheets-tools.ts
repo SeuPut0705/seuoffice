@@ -1,5 +1,7 @@
 import { z } from 'zod'
-import { createFileViaCli } from '../headless-cli'
+import { existsSync } from 'node:fs'
+import { basename, extname, isAbsolute } from 'node:path'
+import { createFileViaCli, sheetLinksViaCli } from '../headless-cli'
 import { resolveOutputPath } from './document-tools'
 import { generateExtension } from './formats'
 import type { FamilyDriver, SessionHost, TargetResolver } from './session-tools'
@@ -128,10 +130,96 @@ function createHeadlessXlsxTool(deps: SheetsToolDeps): McpToolDefinition {
   }
 }
 
+/**
+ * Headless external-link maintenance through the bundled CLI (`sheet links`):
+ * list is a read and stays available with background generation off; refresh
+ * and break write the workbook, so they demand the same opt-in as create_xlsx.
+ *
+ * The sources are paths the workbook chose, and an agent runs this on files it
+ * was handed: the list only checks whether a source on this computer exists,
+ * and a refresh reads only those. Reaching a source on another computer
+ * (`\\host\share\…`) signs this machine in to that host, which only a person
+ * can agree to — the CLI's `--remote-sources` is deliberately not offered here.
+ */
+function createSheetLinksTool(deps: SheetsToolDeps): McpToolDefinition {
+  return {
+    name: 'sheet_links',
+    description:
+      "Inspect and maintain an Excel workbook's external links (formulas referencing another " +
+      '.xlsx file) without opening the app. Default action lists every link with its index, ' +
+      'resolved source path and reachability. `update: true` re-reads reachable sources and ' +
+      "writes the computed values as the formulas' cached values (formulas untouched). A " +
+      'source on another computer (\\\\host\\share, file://host) is never contacted: it lists ' +
+      'as `reachable: null` and keeps its cached values. `break` severs the chosen 1-based ' +
+      'links — their formulas keep their current cached values as literals and the surviving ' +
+      'links renumber.',
+    inputSchema: {
+      path: z.string().describe('absolute path to the .xlsx file'),
+      update: z
+        .boolean()
+        .optional()
+        .describe('refresh the formulas’ cached values from the reachable sources'),
+      break: z
+        .array(z.number().int().min(1))
+        .optional()
+        .describe(
+          '1-based link indices (from this tool’s list) to break; formulas become literals',
+        ),
+      out: z
+        .string()
+        .optional()
+        .describe('absolute .xlsx path to write the refreshed/broken copy to instead of in place'),
+      overwrite: z.boolean().optional().describe('allow replacing an existing file at `out`'),
+    },
+    handler: async (args) => {
+      const filePath = String(args.path ?? '')
+      if (!isAbsolute(filePath)) throw new Error('path must be absolute')
+      if (extname(filePath).toLowerCase() !== XLSX_EXT)
+        throw new Error('path must point to an .xlsx file')
+      if (!existsSync(filePath)) throw new Error(`file not found: ${filePath}`)
+      if (!deps.cli) throw new Error('external-link tools are not available in this build')
+      const breakIndices = Array.isArray(args.break) ? (args.break as number[]) : undefined
+      if (args.update === true && breakIndices !== undefined) {
+        throw new Error(
+          'update and break cannot combine: an update re-reads the sources, a break severs them',
+        )
+      }
+      const writes = args.update === true || breakIndices !== undefined
+      // writing the workbook headlessly is opt-in, same rule as create_xlsx
+      if (writes && deps.background === false) {
+        throw new Error(
+          'refreshing or breaking links is disabled: headless file writes are off in MCP settings',
+        )
+      }
+      // `out` is a file this tool creates, so it obeys the rules of the other
+      // generating tools: absolute, a workbook, no silent replacement
+      const out =
+        writes && typeof args.out === 'string' && args.out
+          ? resolveOutputPath({
+              defaultSaveDir: deps.defaultSaveDir,
+              ext: XLSX_EXT,
+              title: basename(filePath, extname(filePath)),
+              requestedPath: args.out,
+              overwrite: args.overwrite === true,
+            })
+          : undefined
+      const json = await sheetLinksViaCli(deps.cli, {
+        path: filePath,
+        ...(args.update === true ? { update: true } : {}),
+        ...(breakIndices !== undefined ? { break: breakIndices } : {}),
+        ...(out !== undefined ? { out } : {}),
+        ...(args.overwrite === true ? { overwrite: true } : {}),
+      })
+      return { path: filePath, name: basename(filePath), summary: json.summary, ...json.detail }
+    },
+  }
+}
+
 export function createSheetsTools(deps: SheetsToolDeps, host: SessionHost): McpToolDefinition[] {
   return [
     // headless generation is opt-in, same rule as create_docx/create_pptx
     ...(deps.background === false ? [] : [createHeadlessXlsxTool(deps)]),
+    createSheetLinksTool(deps),
     ...createGridContentTools(deps, host),
   ]
 }
@@ -215,7 +303,7 @@ function createGridContentTools(deps: SheetsToolDeps, host: SessionHost): McpToo
       description:
         'Apply workbook DSL operations to the visible spreadsheet (the same vocabulary the CLI ' +
         'and the built-in AI use). Common ops: set_cell, set_formula, clear_cell, set_range, ' +
-        'clear_range, fill_range, copy_range, convert_to_values, insert_rows, delete_rows, ' +
+        'clear_range, fill_range, copy_range, move_range, convert_to_values, insert_rows, delete_rows, ' +
         'insert_cols, delete_cols, add_sheet, delete_sheet, add_chart, add_table, set_filter, ' +
         'set_hyperlink, add_conditional_format, set_data_validation, set_note. Address a worksheet ' +
         "by NAME with `sheet` (also `sourceSheet`/`targetSheet`) — the CLI's stable vocabulary — " +

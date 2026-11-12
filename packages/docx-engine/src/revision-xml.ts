@@ -15,7 +15,7 @@ export interface RevisionXmlFilter {
   /** case-insensitive w:author match */
   author?: string
   type?: RevisionXmlType
-  /** ISO date: only changes recorded strictly before it */
+  /** ISO date: only changes recorded strictly before it; without a zone designator it is UTC, as a w:date is */
   before?: string
   /** exact w:date match */
   date?: string
@@ -89,8 +89,13 @@ function scan(xml: string): El[] {
   return out
 }
 
-const attrOf = (el: El, name: string): string | undefined =>
-  new RegExp(`\\s${name}="([^"]*)"`).exec(el.attrs)?.[1]
+const ATTR_RE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+
+/** an attribute of a tag, in either quote; walks the tag so text inside another value is not taken for it */
+function attrOf(el: El, name: string): string | undefined {
+  for (const m of el.attrs.matchAll(ATTR_RE)) if (m[1] === name) return m[2] ?? m[3]
+  return undefined
+}
 
 const PROP_CHANGE: Record<string, string> = {
   'w:rPrChange': 'w:rPr',
@@ -131,6 +136,18 @@ function typeOf(el: El): RevisionXmlType | undefined {
   }
 }
 
+/**
+ * Epoch ms of a revision date (a w:date, or the `before` of a filter). A
+ * date-time without a zone designator is UTC: Date.parse reads it as local
+ * time, and a filter would pick different changes on machines in different
+ * zones. The editor's filter over body revisions reads dates through this too.
+ */
+export function revisionDateMs(iso: string): number {
+  const s = iso.trim()
+  const zoneless = /T/i.test(s) && !/(?:Z|[+-]\d\d(?::?\d\d)?)$/i.test(s)
+  return Date.parse(zoneless ? `${s}Z` : s)
+}
+
 function matches(el: El, filter: RevisionXmlFilter | undefined, type: RevisionXmlType): boolean {
   if (!filter) return true
   if (filter.type !== undefined && filter.type !== type) return false
@@ -140,7 +157,7 @@ function matches(el: El, filter: RevisionXmlFilter | undefined, type: RevisionXm
   }
   if (filter.before !== undefined) {
     const date = attrOf(el, 'w:date')
-    if (!date || Date.parse(date) >= Date.parse(filter.before)) return false
+    if (!date || revisionDateMs(date) >= revisionDateMs(filter.before)) return false
   }
   if (filter.date !== undefined && (attrOf(el, 'w:date') ?? '') !== filter.date) return false
   if (filter.ids !== undefined && !filter.ids.includes(attrOf(el, 'w:id') ?? '')) return false
@@ -346,9 +363,17 @@ function planEdits(
   return { edits, applied }
 }
 
+/**
+ * Order at one start: insertions (zero length) first, in plan order, then the
+ * longest replacement. An insertion stands in front of a replacement that
+ * starts where it does, as it stands behind one that ends there; only an edit
+ * strictly inside a replaced region is moot.
+ */
 function applyEdits(xml: string, edits: Edit[]): string {
-  const sorted = [...edits].sort((a, b) => a.start - b.start || b.end - a.end)
-  // an edit inside a region another edit replaces is moot
+  const sorted = [...edits].sort(
+    (a, b) =>
+      a.start - b.start || Number(a.end > a.start) - Number(b.end > b.start) || b.end - a.end,
+  )
   const kept: Edit[] = []
   let cutoff = -1
   for (const e of sorted) {

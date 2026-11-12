@@ -9,7 +9,9 @@ import {
   type HeaderFooter,
   type SaveBlock,
 } from '@genoffice/docx-engine'
+import { hfPageNumberOnly } from '../src/renderer/editor/hf-dom'
 import {
+  atHfCellEdge,
   hfDocJson,
   hfValueFromDoc,
   insertHfField,
@@ -18,6 +20,7 @@ import {
   type HfEditorHandle,
 } from '../src/renderer/editor/hf-editor'
 import type { PmNode } from '../src/renderer/editor/convert'
+import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 
 const handles: HfEditorHandle[] = []
 afterEach(() => {
@@ -61,10 +64,16 @@ const RICH: HeaderFooter = {
 }
 
 describe('hfDocJson / hfValueFromDoc', () => {
-  it('maps text paragraphs to editor nodes with field atoms and keeps rows out', () => {
+  it('maps text paragraphs to editor nodes with field atoms and rows to cell nodes', () => {
     const doc = hfDocJson(RICH)
-    expect(doc.content).toHaveLength(2)
-    const first = doc.content![0]
+    expect(doc.content).toHaveLength(3)
+    const row = doc.content![0]
+    expect(row.type).toBe('hfRow')
+    expect(row.attrs).toMatchObject({ hfIndex: 0 })
+    expect(row.content![0].type).toBe('hfCell')
+    expect(row.content![0].content![0]).toMatchObject({ type: 'docParagraph' })
+    expect(row.content![0].content![0].content![0]).toMatchObject({ text: 'logo row' })
+    const first = doc.content![1]
     expect(first.attrs).toMatchObject({ align: 'right', hfIndex: 1 })
     expect(JSON.parse(String(first.attrs!.tabStops))).toEqual([{ pos: 4680, val: 'right' }])
     const types = (first.content ?? []).map((n) => n.type)
@@ -94,16 +103,147 @@ describe('hfDocJson / hfValueFromDoc', () => {
 
   it('a new paragraph split from an existing one inherits that paragraph as its template', () => {
     const doc = hfDocJson(RICH)
-    const [p1, p2] = doc.content!
+    const [row, p1, p2] = doc.content!
     const extra: PmNode = {
       type: 'docParagraph',
       attrs: { ...p1.attrs },
       content: [{ type: 'text', text: 'new' }],
     }
-    const back = hfValueFromDoc({ type: 'doc', content: [p1, extra, p2] }, RICH)
+    const back = hfValueFromDoc({ type: 'doc', content: [row, p1, extra, p2] }, RICH)
     expect(back.paras!.map((p) => p.align)).toEqual([undefined, 'right', 'right', 'center'])
     expect(back.paras![2].runs[0].text).toBe('new')
     expect(back.text).toBe(`Report\tPage ${PAGE_MARK} of ${TOTAL_PAGES_MARK}newsecond line`)
+  })
+
+  it('an untouched row round-trips without a rewrite flag; an edited cell gets one', () => {
+    const same = hfValueFromDoc(hfDocJson(RICH), RICH)
+    expect(same.paras![0].cells![0].rewrite).toBeUndefined()
+    expect(same.paras![0].cells![0].paras).toEqual([[{ text: 'logo row' }]])
+
+    const doc = hfDocJson(RICH)
+    const cell = doc.content![0].content![0]
+    cell.content![0].content = [{ type: 'text', text: 'Company ', marks: [{ type: 'bold' }] }]
+    cell.content!.push({
+      type: 'docParagraph',
+      attrs: {},
+      content: [{ type: 'text', text: 'Ltd' }],
+    })
+    const back = hfValueFromDoc(doc, RICH)
+    const edited = back.paras![0].cells![0]
+    expect(edited.rewrite).toBe(true)
+    expect(edited.paras).toEqual([[{ text: 'Company ', bold: true }], [{ text: 'Ltd' }]])
+    // the row keeps its slot ahead of the text paragraphs
+    expect(back.paras![1].runs[0]).toMatchObject({ text: 'Report', bold: true })
+    expect(back.text).toBe(`Report\tPage ${PAGE_MARK} of ${TOTAL_PAGES_MARK}second line`)
+  })
+
+  it('Backspace at a cell start and Delete at a cell end are swallowed, inner joins still work', () => {
+    const { editor } = mount(RICH)
+    const posOf = (text: string, atEnd = false) => {
+      let pos = -1
+      editor.state.doc.descendants((n, p) => {
+        if (pos < 0 && n.isTextblock && n.textContent === text)
+          pos = atEnd ? p + 1 + n.content.size : p + 1
+        return pos < 0
+      })
+      return pos
+    }
+    const key = (k: 'Backspace' | 'Delete') =>
+      editor.view.someProp('handleKeyDown', (f) =>
+        f(editor.view, new KeyboardEvent('keydown', { key: k, cancelable: true })),
+      )
+    editor.commands.setTextSelection(posOf('logo row'))
+    const before = JSON.stringify(editor.getJSON())
+    expect(atHfCellEdge(editor.state, -1)).toBe(true)
+    expect(key('Backspace')).toBe(true)
+    editor.commands.setTextSelection(posOf('logo row', true))
+    expect(atHfCellEdge(editor.state, 1)).toBe(true)
+    expect(key('Delete')).toBe(true)
+    expect(JSON.stringify(editor.getJSON())).toBe(before)
+    // two paragraphs inside one cell still join on Backspace
+    editor.commands.splitBlock()
+    editor.commands.insertContent('more')
+    editor.commands.setTextSelection(posOf('more'))
+    expect(atHfCellEdge(editor.state, -1)).toBe(false)
+    expect(editor.commands.keyboardShortcut('Backspace')).toBe(true)
+    const cell = (editor.getJSON() as PmNode).content![0].content![0]
+    expect(cell.content).toHaveLength(1)
+    expect(cell.content![0].content![0].text).toBe('logo rowmore')
+  })
+
+  it('an untouched picture cell is not flagged when another cell changes; a format change is', () => {
+    const picture = {
+      dataUrl: 'data:image/png;base64,AA==',
+      widthPx: 40,
+      heightPx: 20,
+      xml: '<w:drawing>logo</w:drawing>',
+    }
+    const value: HeaderFooter = {
+      text: '',
+      paras: [
+        {
+          runs: [],
+          cells: [
+            { paras: [[{ text: '', image: picture }]], widthTwips: 2835 },
+            {
+              paras: [[{ text: 'Company' }], [{ text: 'Sub' }]],
+              paraProps: [undefined, { spaceAfter: 40 }],
+              widthTwips: 7370,
+            },
+          ],
+        },
+      ],
+    }
+    let committed: HeaderFooter | null = null
+    const { editor, handle } = mount(value, (next) => (committed = next))
+    // the loaded doc already carries the schema's non-null defaults (leadRule: false ...)
+    expect(handle.changed()).toBeNull()
+    let pos = -1
+    editor.state.doc.descendants((n, p) => {
+      if (pos < 0 && n.isTextblock && n.textContent === 'Company') pos = p + 1 + n.content.size
+      return pos < 0
+    })
+    editor.commands.setTextSelection(pos)
+    editor.commands.insertContent(' Ltd')
+    const next = handle.changed()!
+    expect(next.paras![0].cells![0].rewrite).toBeUndefined()
+    expect(next.paras![0].cells![1].rewrite).toBe(true)
+    expect(next.paras![0].cells![1].rewriteFormat).toBeUndefined()
+    expect(next.paras![0].cells![1].paras[0][0].text).toBe('Company Ltd')
+    // ribbon alignment on the second cell paragraph: that paragraph's pPr is rebuilt on save
+    let subPos = -1
+    editor.state.doc.descendants((n, p) => {
+      if (subPos < 0 && n.isTextblock && n.textContent === 'Sub') subPos = p
+      return subPos < 0
+    })
+    editor.view.dispatch(
+      editor.state.tr.setNodeMarkup(subPos, undefined, {
+        ...editor.state.doc.nodeAt(subPos)!.attrs,
+        align: 'right',
+      }),
+    )
+    const formatted = handle.changed()!
+    const cell = formatted.paras![0].cells![1]
+    expect(cell.rewriteFormat).toEqual([1])
+    expect(cell.paraProps![1]).toEqual({ spaceAfter: 40, align: 'right' })
+    expect(cell.priorParaProps).toEqual([undefined, { spaceAfter: 40 }])
+    handle.exit()
+    expect(committed).not.toBeNull()
+  })
+
+  it('a locked row (flattened nested table) stays out of the editor and in its slot', () => {
+    const locked: HeaderFooter = {
+      text: '',
+      paras: [
+        { runs: [], cells: [{ paras: [[{ text: 'nested' }]], locked: true }] },
+        { runs: [{ text: 'line' }] },
+      ],
+    }
+    const doc = hfDocJson(locked)
+    expect(doc.content!.map((n) => n.type)).toEqual(['docParagraph'])
+    const back = hfValueFromDoc(doc, locked)
+    expect(back.paras![0].cells![0].locked).toBe(true)
+    expect(back.paras![1].runs[0].text).toBe('line')
   })
 
   it('an empty legacy value edits as one paragraph; a typed PAGE field sets pageNumber', () => {
@@ -149,6 +289,32 @@ describe('mountHfEditor', () => {
     expect(editor.isDestroyed).toBe(true)
   })
 
+  it('keeps tracked header runs through an edit instead of resurrecting deleted text', () => {
+    const rev = { author: 'Ann', date: '2026-09-29T12:23:00Z' }
+    const value: HeaderFooter = {
+      text: 'Kept goneadded',
+      paras: [
+        {
+          runs: [{ text: 'Kept ' }, { text: 'gone', del: rev }, { text: 'added', ins: rev }],
+        },
+      ],
+    }
+    const commits: HeaderFooter[] = []
+    const { host, handle, editor } = mount(value, (next) => commits.push(next))
+    expect(host.querySelector('.doc-del')?.textContent).toBe('gone')
+    expect(host.querySelector('.doc-ins')?.textContent).toBe('added')
+    editor.commands.focus('end')
+    editor.commands.insertContent('!')
+    handle.exit()
+    expect(commits[0].paras![0].runs.map((r) => [r.text, !!r.del, !!r.ins])).toEqual([
+      ['Kept ', false, false],
+      ['gone', true, false],
+      ['added', false, true],
+      ['!', false, false],
+    ])
+    expect(commits[0].paras![0].runs[1].del).toMatchObject(rev)
+  })
+
   it('does not commit when nothing changed', () => {
     let commits = 0
     const { handle } = mount(RICH, () => commits++)
@@ -186,12 +352,17 @@ describe('mountHfEditor', () => {
   })
 })
 
+async function blankDocument() {
+  const parsed = await parseDocx(await buildBlankDocx())
+  const saveBlocks: SaveBlock[] = parsed.blocks
+    .filter((b) => !b.hidden && b.docxIndex !== null)
+    .map((b) => ({ kind: 'original', docxIndex: b.docxIndex! }))
+  return { parsed, saveBlocks }
+}
+
 describe('edited header saves with its formatting', () => {
   it('bold run, tab, PAGE and NUMPAGES fields survive save and reparse', async () => {
-    const parsed = await parseDocx(await buildBlankDocx())
-    const saveBlocks: SaveBlock[] = parsed.blocks
-      .filter((b) => !b.hidden && b.docxIndex !== null)
-      .map((b) => ({ kind: 'original', docxIndex: b.docxIndex! }))
+    const { parsed, saveBlocks } = await blankDocument()
     let committed: HeaderFooter | null = null
     const { handle, editor } = mount({ text: '' }, (next) => (committed = next))
     editor.commands.focus('end')
@@ -210,5 +381,140 @@ describe('edited header saves with its formatting', () => {
     const reparsed = await parseDocx(saved)
     expect(reparsed.headerParas![0].runs[0]).toMatchObject({ text: 'Title', bold: true })
     expect(reparsed.headerHasPageNumber).toBe(true)
+  })
+
+  it('a gallery page number edited in the strip saves the PAGE field, not its placeholder', async () => {
+    const { parsed, saveBlocks } = await blankDocument()
+    let committed: HeaderFooter | null = null
+    const { handle, editor } = mount(hfPageNumberOnly('center'), (next) => (committed = next))
+    editor.commands.focus('start')
+    editor.commands.insertContent('Page ')
+    handle.exit()
+    expect(committed!.pageNumber).toBe(true)
+    const saved = await saveDocx(parsed, saveBlocks, { footer: committed! })
+    const zip = await (await import('jszip')).default.loadAsync(saved)
+    const ftr = await zip.file('word/footer1.xml')!.async('string')
+    expect(ftr).toContain('<w:instrText xml:space="preserve"> PAGE </w:instrText>')
+    expect(ftr).not.toContain('#')
+    expect((await parseDocx(saved)).footerHasPageNumber).toBe(true)
+  })
+})
+
+describe('a header or footer that reads as it did is not committed', () => {
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+  const run = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
+  const sdt = (text: string, id: number) =>
+    `<w:sdt><w:sdtPr><w:id w:val="${id}"/></w:sdtPr><w:sdtContent>${run(text)}</w:sdtContent></w:sdt>`
+  const ONE = `<w:p>${run('Doc ')}${sdt('Annual report', 5)}${run(' end')}</w:p>`
+  const TWINS = `<w:p>${run('From ')}${sdt('2024', 5)}${run(' to ')}${sdt('2024', 6)}</w:p>`
+  const TABLE =
+    '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
+    '<w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>' +
+    `<w:tr><w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr><w:p>${run('logo')}</w:p></w:tc></w:tr></w:tbl>`
+
+  /** the part of a document as the app hands it to the header editor, mounted */
+  async function open(inner: string, kind: 'header' | 'footer' = 'header') {
+    const tag = kind === 'header' ? 'hdr' : 'ftr'
+    const parsed = await parseDocx(
+      await buildDocx({
+        bodyXml: `<w:p>${run('Body')}</w:p>`,
+        extraParts: [
+          {
+            path: `word/${kind}1.xml`,
+            xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:${tag} ${W}>${inner}</w:${tag}>`,
+            contentType: `application/vnd.openxmlformats-officedocument.wordprocessingml.${kind}+xml`,
+          },
+        ],
+        extraRels: `<Relationship Id="rId40" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${kind}" Target="${kind}1.xml"/>`,
+        sectPrExtra: `<w:${kind}Reference w:type="default" r:id="rId40"/>`,
+      }),
+    )
+    const value: HeaderFooter =
+      kind === 'header'
+        ? { text: parsed.headerText ?? '', paras: parsed.headerParas ?? [] }
+        : { text: parsed.footerText ?? '', paras: parsed.footerParas ?? [] }
+    const commits: HeaderFooter[] = []
+    return { ...mount(value, (next) => commits.push(next)), commits }
+  }
+  /** the first `text` deleted and `typed` put in its place, as a person retypes it */
+  function retype(editor: Editor, text: string, typed = text) {
+    let from = -1
+    editor.state.doc.descendants((node, pos) => {
+      if (from !== -1 || !node.isTextblock) return
+      const at = node.textContent.indexOf(text)
+      if (at !== -1) from = pos + 1 + at
+    })
+    editor.commands.deleteRange({ from, to: from + text.length })
+    editor.commands.insertContentAt(from, typed)
+    return { from, to: from + typed.length }
+  }
+  const wrapped = (editor: Editor) => {
+    let count = 0
+    editor.state.doc.descendants((node) => {
+      if (node.marks.some((mark) => mark.type.name === 'inlineWrap')) count++
+    })
+    return count
+  }
+
+  for (const [name, inner, text, kind] of [
+    ['the text of a control retyped', ONE, 'Annual report', 'header'],
+    ['the whole paragraph text retyped', ONE, 'Doc Annual report end', 'header'],
+    ['the first of two controls around the same text retyped', TWINS, '2024', 'header'],
+    ['the text of a control retyped, beside a table', TABLE + ONE, 'Annual report', 'header'],
+    ['the text of a control retyped in a footer', ONE, 'Annual report', 'footer'],
+  ] as const) {
+    it(name, async () => {
+      const { handle, editor, commits } = await open(inner, kind)
+      const before = wrapped(editor)
+      expect(before).toBeGreaterThan(0)
+      retype(editor, text)
+      // the editor no longer shows the control on the retyped text
+      expect(wrapped(editor)).toBeLessThan(before)
+      expect(handle.changed()).toBeNull()
+      handle.exit()
+      expect(commits).toHaveLength(0)
+    })
+  }
+
+  it('one character different is an edit', async () => {
+    const { handle, editor, commits } = await open(ONE)
+    retype(editor, 'Annual report', 'Annual repors')
+    expect(
+      handle
+        .changed()
+        ?.paras?.[0].runs.map((r) => r.text)
+        .join(''),
+    ).toBe('Doc Annual repors end')
+    handle.exit()
+    expect(commits).toHaveLength(1)
+  })
+
+  it('the same text retyped in bold is an edit', async () => {
+    const { handle, editor, commits } = await open(ONE)
+    const range = retype(editor, 'Annual report')
+    editor.chain().setTextSelection(range).setMark('bold').run()
+    expect(handle.changed()?.paras?.[0].runs.find((r) => r.bold)?.text).toBe('Annual report')
+    handle.exit()
+    expect(commits).toHaveLength(1)
+  })
+
+  it('the same text retyped with a shading is an edit', async () => {
+    // run shading is not part of the body's "is it as read" signature; here
+    // every difference but the wrapper mark stays an edit
+    const { handle, editor, commits } = await open(ONE)
+    const range = retype(editor, 'Annual report')
+    editor.chain().setTextSelection(range).setMark('docTextStyle', { shading: 'FFFF00' }).run()
+    expect(handle.changed()?.paras?.[0].runs.find((r) => r.shading)?.text).toBe('Annual report')
+    handle.exit()
+    expect(commits).toHaveLength(1)
+  })
+
+  it('a paragraph attribute changed beside the retyped text is an edit', async () => {
+    const { handle, editor, commits } = await open(ONE)
+    retype(editor, 'Annual report')
+    editor.commands.updateAttributes('docParagraph', { align: 'right' })
+    expect(handle.changed()?.paras?.[0].align).toBe('right')
+    handle.exit()
+    expect(commits).toHaveLength(1)
   })
 })

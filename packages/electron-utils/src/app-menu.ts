@@ -25,6 +25,8 @@ export interface AppMenuLabels extends ContextMenuLabels {
   about: string
   checkUpdates: string
   version: string
+  settings: string
+  nameWithAi: string
 }
 
 type Labels = Omit<AppMenuLabels, keyof ContextMenuLabels>
@@ -49,6 +51,8 @@ const EN: Labels = {
   about: 'About GenOffice',
   checkUpdates: 'Check for Updates…',
   version: 'Version',
+  settings: 'Settings…',
+  nameWithAi: 'Name with AI…',
 }
 
 // Shared table, same rationale as context-menu.ts: one copy instead of
@@ -74,6 +78,8 @@ const LABELS: Record<string, Labels> = {
     about: '关于 GenOffice',
     checkUpdates: '检查更新…',
     version: '版本',
+    nameWithAi: '用 AI 命名…',
+    settings: '设置…',
   },
   en: EN,
   ja: {
@@ -96,6 +102,8 @@ const LABELS: Record<string, Labels> = {
     about: 'GenOffice について',
     checkUpdates: '更新を確認…',
     version: 'バージョン',
+    nameWithAi: 'AI で名前を変更…',
+    settings: '設定…',
   },
   ko: {
     window: '창',
@@ -117,6 +125,8 @@ const LABELS: Record<string, Labels> = {
     about: 'GenOffice 정보',
     checkUpdates: '업데이트 확인…',
     version: '버전',
+    nameWithAi: 'AI로 이름 지정…',
+    settings: '설정…',
   },
   fr: {
     window: 'Fenêtre',
@@ -138,6 +148,8 @@ const LABELS: Record<string, Labels> = {
     about: 'À propos de GenOffice',
     checkUpdates: 'Rechercher les mises à jour…',
     version: 'Version',
+    nameWithAi: "Nommer avec l'IA…",
+    settings: 'Réglages…',
   },
   de: {
     window: 'Fenster',
@@ -159,6 +171,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Über GenOffice',
     checkUpdates: 'Nach Updates suchen…',
     version: 'Version',
+    nameWithAi: 'Mit KI benennen…',
+    settings: 'Einstellungen…',
   },
   es: {
     window: 'Ventana',
@@ -180,6 +194,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Acerca de GenOffice',
     checkUpdates: 'Buscar actualizaciones…',
     version: 'Versión',
+    nameWithAi: 'Nombrar con IA…',
+    settings: 'Ajustes…',
   },
   th: {
     window: 'หน้าต่าง',
@@ -201,6 +217,8 @@ const LABELS: Record<string, Labels> = {
     about: 'เกี่ยวกับ GenOffice',
     checkUpdates: 'ตรวจหาการอัปเดต…',
     version: 'เวอร์ชัน',
+    nameWithAi: 'ตั้งชื่อด้วย AI…',
+    settings: 'การตั้งค่า…',
   },
   id: {
     window: 'Jendela',
@@ -222,6 +240,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Tentang GenOffice',
     checkUpdates: 'Periksa Pembaruan…',
     version: 'Versi',
+    nameWithAi: 'Beri nama dengan AI…',
+    settings: 'Pengaturan…',
   },
   ru: {
     window: 'Окно',
@@ -243,6 +263,8 @@ const LABELS: Record<string, Labels> = {
     about: 'О GenOffice',
     checkUpdates: 'Проверить обновления…',
     version: 'Версия',
+    nameWithAi: 'Назвать с помощью ИИ…',
+    settings: 'Настройки…',
   },
   ar: {
     window: 'نافذة',
@@ -264,6 +286,8 @@ const LABELS: Record<string, Labels> = {
     about: 'حول GenOffice',
     checkUpdates: 'التحقق من التحديثات…',
     version: 'الإصدار',
+    nameWithAi: 'التسمية بالذكاء الاصطناعي…',
+    settings: 'الإعدادات…',
   },
   pt: {
     window: 'Janela',
@@ -285,6 +309,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Sobre o GenOffice',
     checkUpdates: 'Procurar atualizações…',
     version: 'Versão',
+    nameWithAi: 'Nomear com IA…',
+    settings: 'Configurações…',
   },
   it: {
     window: 'Finestra',
@@ -306,6 +332,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Informazioni su GenOffice',
     checkUpdates: 'Controlla aggiornamenti…',
     version: 'Versione',
+    nameWithAi: 'Assegna un nome con IA…',
+    settings: 'Impostazioni…',
   },
   pl: {
     window: 'Okno',
@@ -327,6 +355,8 @@ const LABELS: Record<string, Labels> = {
     about: 'O programie GenOffice',
     checkUpdates: 'Sprawdź aktualizacje…',
     version: 'Wersja',
+    nameWithAi: 'Nazwij za pomocą AI…',
+    settings: 'Ustawienia…',
   },
   cs: {
     window: 'Okno',
@@ -348,6 +378,8 @@ const LABELS: Record<string, Labels> = {
     about: 'O aplikaci GenOffice',
     checkUpdates: 'Zkontrolovat aktualizace…',
     version: 'Verze',
+    nameWithAi: 'Pojmenovat pomocí AI…',
+    settings: 'Nastavení…',
   },
   nl: {
     window: 'Venster',
@@ -369,6 +401,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Over GenOffice',
     checkUpdates: 'Controleren op updates…',
     version: 'Versie',
+    nameWithAi: 'Naam geven met AI…',
+    settings: 'Instellingen…',
   },
   ms: {
     window: 'Tetingkap',
@@ -390,6 +424,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Perihal GenOffice',
     checkUpdates: 'Semak Kemas Kini…',
     version: 'Versi',
+    nameWithAi: 'Namakan dengan AI…',
+    settings: 'Tetapan…',
   },
   he: {
     window: 'חלון',
@@ -411,6 +447,8 @@ const LABELS: Record<string, Labels> = {
     about: 'אודות GenOffice',
     checkUpdates: 'בדוק עדכונים…',
     version: 'גרסה',
+    nameWithAi: 'מתן שם באמצעות AI…',
+    settings: 'הגדרות…',
   },
   hi: {
     window: 'विंडो',
@@ -432,6 +470,8 @@ const LABELS: Record<string, Labels> = {
     about: 'GenOffice के बारे में',
     checkUpdates: 'अपडेट जांचें…',
     version: 'संस्करण',
+    nameWithAi: 'AI से नाम दें…',
+    settings: 'सेटिंग्स…',
   },
   vi: {
     window: 'Cửa sổ',
@@ -453,6 +493,8 @@ const LABELS: Record<string, Labels> = {
     about: 'Giới thiệu GenOffice',
     checkUpdates: 'Kiểm tra bản cập nhật…',
     version: 'Phiên bản',
+    nameWithAi: 'Đặt tên bằng AI…',
+    settings: 'Cài đặt…',
   },
   'zh-TW': {
     window: '視窗',
@@ -474,6 +516,8 @@ const LABELS: Record<string, Labels> = {
     about: '關於 GenOffice',
     checkUpdates: '檢查更新…',
     version: '版本',
+    nameWithAi: '用 AI 命名…',
+    settings: '設定…',
   },
 }
 
@@ -655,6 +699,58 @@ export function appMenuPopupTemplate(
   labels: AppMenuLabels,
 ): MenuItemConstructorOptions[] {
   return [...menus, { type: 'separator' }, checkUpdatesMenuItem(labels)]
+}
+
+/** The Settings entry, shared by every app: one label, one accelerator
+ * (⌘, on macOS and Ctrl+, elsewhere), one action. The shell owns the
+ * Settings view, so it registers the action; an app running on its own
+ * falls back to its own preferences entry. */
+let settingsInvoker: (() => void) | null = null
+
+export function setSettingsInvoker(invoke: (() => void) | null): void {
+  settingsInvoker = invoke
+}
+
+export function settingsMenuItem(
+  labels: AppMenuLabels,
+  fallback?: () => void,
+): MenuItemConstructorOptions {
+  return {
+    label: labels.settings,
+    accelerator: 'CmdOrCtrl+,',
+    click: () => (settingsInvoker ?? fallback)?.(),
+  }
+}
+
+/** macOS application menu — the one under the app name. Electron's
+ * role:'appMenu' is a fixed template, so an entry of our own means spelling
+ * the menu out; the native roles keep the standard order and labels. Only
+ * macOS has this menu, so every other platform gets undefined. */
+export function appMenuTemplate(
+  platform: NodeJS.Platform,
+  labels: AppMenuLabels,
+  {
+    extra = [],
+    appLabel = PRODUCT_NAME,
+  }: { extra?: MenuItemConstructorOptions[]; appLabel?: string } = {},
+): MenuItemConstructorOptions | undefined {
+  if (platform !== 'darwin') return undefined
+  return {
+    // Electron rejects a menu item that has neither label, role nor type
+    label: appLabel,
+    submenu: [
+      { role: 'about', label: labels.about },
+      ...extra,
+      { type: 'separator' },
+      { role: 'services' },
+      { type: 'separator' },
+      { role: 'hide' },
+      { role: 'hideOthers' },
+      { role: 'unhide' },
+      { type: 'separator' },
+      { role: 'quit' },
+    ],
+  }
 }
 
 /** Help menu with Check for Updates… (macOS) + About; extra app-specific items

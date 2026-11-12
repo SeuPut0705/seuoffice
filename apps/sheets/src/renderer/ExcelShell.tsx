@@ -89,7 +89,11 @@ import { scrollRibbonOnWheel } from './ribbon-wheel'
 
 import type { ChartSeriesVisualState } from '@genoffice/xlsx-gateway/domain/chart-visual'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
-import type { AttachmentMeta, WorkbookQueriesResult } from '../shared/desktop-api'
+import type {
+  AttachmentMeta,
+  WorkbookConnection as QueryConnection,
+  WorkbookQueriesResult,
+} from '../shared/desktop-api'
 import {
   AiChatPanel,
   type AiChatMessage,
@@ -369,6 +373,8 @@ interface ExcelShellProps {
   /// file-backed session (the in-memory demo workbook has nowhere to copy).
   readonly canSaveAs: boolean
   readonly onSaveAs: () => void
+  /** Ask the model for a name, then open Save As with it prefilled */
+  readonly onNameWithAi: () => void
   /// QAT redo (workbook history, same path as the app menu's ⇧⌘Z); undo
   /// shares the AI panel's onUndo above.
   readonly onRedo: () => void
@@ -405,6 +411,8 @@ interface ExcelShellProps {
   readonly sheetTabActions: SheetTabActions | null
   /// Effective workbook structure lock (null = no file open).
   readonly onGetWorkbookProtection: () => boolean | null
+  /// True when the open file is Office-encrypted with an open password this session holds.
+  readonly passwordProtected: boolean
   /// Spelling preference echo (Review ▸ Proofing toggle; gates F7 / Spelling).
   readonly spellcheckOn: boolean
   readonly formulaBarVisible: boolean
@@ -478,6 +486,8 @@ interface ExcelShellProps {
   readonly pageLayout: PageLayoutEcho
   /// Manual-recalc mode echo for the Calculation Options menu.
   readonly calcManual: boolean
+  /// The workbook's refreshable web queries.
+  readonly queryConnections: readonly QueryConnection[]
   /// Formula view (sheetView/@showFormulas) of the active sheet: the sheet
   /// renders formulas instead of their values.
   readonly showFormulas: boolean
@@ -566,6 +576,7 @@ export function ExcelShell({
   onUnprotectSheet,
   sheetTabActions,
   onGetWorkbookProtection,
+  passwordProtected,
   spellcheckOn,
   formulaBarVisible,
   crossHighlightVisible,
@@ -626,6 +637,7 @@ export function ExcelShell({
   onSave,
   canSaveAs,
   onSaveAs,
+  onNameWithAi,
   onRedo,
   canUndo,
   canRedo,
@@ -640,6 +652,7 @@ export function ExcelShell({
   onGetCreateTableRange,
   pageLayout,
   calcManual,
+  queryConnections,
   showFormulas,
   onGoalSeek,
   onDataTable,
@@ -994,6 +1007,12 @@ export function ExcelShell({
   > = {
     save: { title: t('appSaveTitle'), icon: <SaveIcon />, disabled: !canSave, run: onSave },
     'save-as': { title: saveAsTitle, icon: <SaveAsIcon />, disabled: !canSaveAs, run: onSaveAs },
+    'name-with-ai': {
+      title: t('aiNameFile'),
+      icon: <AiMark />,
+      disabled: !canSaveAs,
+      run: onNameWithAi,
+    },
     undo: { title: t('appUndo'), icon: <UndoIcon />, disabled: !canUndo, run: () => onUndo() },
     redo: { title: t('appRedo'), icon: <RedoIcon />, disabled: !canRedo, run: onRedo },
   }
@@ -1095,6 +1114,7 @@ export function ExcelShell({
           sheetHasContent={sheetHasContent}
           sheetProtected={onGetSheetProtection()?.protected ?? null}
           workbookProtected={onGetWorkbookProtection()}
+          passwordProtected={passwordProtected}
           spellcheckOn={spellcheckOn}
           formulaBarVisible={formulaBarVisible}
           crossHighlightVisible={crossHighlightVisible}
@@ -1114,6 +1134,7 @@ export function ExcelShell({
               .map((entry) => entry.name)
           }}
           calcManual={calcManual}
+          queryConnections={queryConnections}
           showFormulas={showFormulas}
           onRefreshPivot={onRefreshPivot}
           onIsSelectionInPivot={onIsSelectionInPivot}
@@ -2109,6 +2130,7 @@ function Ribbon({
   sheetHasContent,
   sheetProtected,
   workbookProtected,
+  passwordProtected,
   spellcheckOn,
   formulaBarVisible,
   crossHighlightVisible,
@@ -2123,6 +2145,7 @@ function Ribbon({
   onAiToggle,
   onListNames,
   calcManual,
+  queryConnections,
   showFormulas,
   onRefreshPivot,
   onIsSelectionInPivot,
@@ -2133,6 +2156,7 @@ function Ribbon({
   readonly sheetHasContent: boolean
   readonly sheetProtected: boolean | null
   readonly workbookProtected: boolean | null
+  readonly passwordProtected: boolean
   /// Spelling preference echo for the Review ▸ Proofing toggle.
   readonly spellcheckOn: boolean
   /// View > Show echo for the formula bar toggle (app-level, not per sheet).
@@ -2150,6 +2174,8 @@ function Ribbon({
   readonly onListNames: () => readonly string[]
   /** Manual-recalc mode echo for the Calculation Options menu. */
   readonly calcManual: boolean
+  /** The workbook's refreshable web queries, listed under Data ▸ Get data. */
+  readonly queryConnections: readonly QueryConnection[]
   /** Open the AI panel and immediately send the given prompt */
   readonly onAiRun: (prompt: string) => void
   /** AI side panel visibility (docs/slides parity: the entry button toggles it) */
@@ -3170,6 +3196,13 @@ function Ribbon({
             symbol="👓"
             onClick={() => onCommand('watch-window')}
           />
+          <RibbonButton
+            large
+            label={t('appLinksPanel')}
+            detail={t('appLinksPanelDetail')}
+            symbol="🔗"
+            onClick={() => onCommand('external-links-panel')}
+          />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupCalculation')}>
           {largeMenu(t('appCalculationOptions'), '🧮', t('appCalculationOptionsTitle'), [
@@ -3250,6 +3283,22 @@ function Ribbon({
           </div>
           {/* four rows overflow the band; the fourth starts a second column */}
           <div className="row-stack">
+            {queryConnections.length > 0 ? (
+              <span className="styles-row" data-tip={t('appQueryConnectionsTitle')}>
+                <ToolSymbol symbol="⟳" />
+                {t('appRefreshQuery')}
+                <CaretIcon />
+                <MenuSelect
+                  cover
+                  label={t('appRefreshQuery')}
+                  options={queryConnections.map((c) => ({
+                    value: `query-refresh:${c.id}`,
+                    label: `${c.name} — ${queryConnectionHost(c.source)}`,
+                  }))}
+                  onPick={onCommand}
+                />
+              </span>
+            ) : null}
             <button
               className="styles-row as-button"
               data-tip={t('appQueriesConnectionsTitle')}
@@ -3403,7 +3452,7 @@ function Ribbon({
           />
         </RibbonGroup>
         <RibbonGroup label={t('appGroupShow')}>
-          <div className="check-column">
+          <div className="check-column check-column-view">
             <button
               className="check-item"
               data-tip={t('appGridlines')}
@@ -3602,6 +3651,15 @@ function Ribbon({
             symbol={workbookProtected ? '🔓' : '🔐'}
             onClick={() => onCommand('workbook-protect')}
           />
+          {passwordProtected && (
+            <RibbonButton
+              large
+              label={t('appChangePassword')}
+              detail={t('appChangePassword')}
+              symbol="🔑"
+              onClick={() => onCommand('workbook-change-password')}
+            />
+          )}
           <RibbonButton
             large
             label={t('appAllowEditRanges')}
@@ -4888,4 +4946,14 @@ function RibbonButton({
 
 function fillSeriesDefaultType(numberFormat: string | undefined): FillSeriesType {
   return numberFormat && numberFormatLabel(numberFormat) === 'Date' ? 'date' : 'linear'
+}
+
+/// The host a query reads from, shown next to its name so the reader can see
+/// where a refresh would go before they ask for one.
+function queryConnectionHost(source: string): string {
+  try {
+    return new URL(source).host
+  } catch {
+    return source
+  }
 }

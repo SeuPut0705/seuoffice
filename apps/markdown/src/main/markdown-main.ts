@@ -921,12 +921,12 @@ function takeSaveAsExportTarget(
   saveAsExportTargets.delete(wcId)
   return approved.path
 }
-
 async function resolveSaveTarget(
   e: Electron.IpcMainInvokeEvent,
   mode: SaveMode,
   suggestedName?: string,
   offerExports = false,
+  defaultName?: string,
 ): Promise<string | null | 'canceled'> {
   const current = savePathByWc.get(e.sender.id)
   if (mode === 'save' && current) return current
@@ -942,14 +942,25 @@ async function resolveSaveTarget(
   }
   const win =
     BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
-  const defaultPath = current
-    ? join(dirname(current), basename(current))
-    : (recovery.saveAsDefaultPath(e.sender.id) ??
-      join(
-        // an untitled note whose panel has a project starts in that folder (spec 6)
-        (await runtime.newDocumentDir?.(e.sender.id)) ?? configuredDefaultSaveDir(app),
-        `${tm('untitledFile')}.md`,
-      ))
+  // An untitled document starts in the folder a recovered copy came from, else
+  // in its panel's project (spec 6), else in the default save folder.
+  const recovered = current ? undefined : recovery.saveAsDefaultPath(e.sender.id)
+  const folder = current
+    ? dirname(current)
+    : recovered
+      ? dirname(recovered)
+      : ((await runtime.newDocumentDir?.(e.sender.id)) ?? configuredDefaultSaveDir(app))
+  // A proposed name (the model's, or a never-saved document's first heading)
+  // prefills the dialog rather than replacing it: the reader still chooses the
+  // location, and cancelling still cancels. It keeps the open file's
+  // extension: a .md proposal must not offer to rewrite an opened .markdown
+  // (or .txt) file as a different format.
+  const proposed = defaultName ? suggestedBase(defaultName) : ''
+  const defaultPath = proposed
+    ? join(folder, `${proposed}${current ? extname(current) : '.md'}`)
+    : current
+      ? join(dirname(current), basename(current))
+      : (recovered ?? join(folder, `${tm('untitledFile')}.md`))
   // With the exports offered, the suggestion carries no extension: the file type
   // chosen in the dialog supplies .md, .pdf, .docx, .odt or .png (a typed name
   // keeps its own extension)
@@ -1213,8 +1224,11 @@ function registerMarkdownIpc(): void {
           mode === 'save' && !pathAtRequest && suggestedName
             ? await saveIntoProject(e.sender.id, suggestedName, request.text)
             : null
+        const defaultName =
+          typeof request.defaultName === 'string' ? request.defaultName : undefined
         const target =
-          placed ?? (await resolveSaveTarget(e, mode, suggestedName, pdfHtml !== undefined))
+          placed ??
+          (await resolveSaveTarget(e, mode, suggestedName, pdfHtml !== undefined, defaultName))
         if (target === 'canceled') return done({ ok: true, canceled: true })
         if (!target) return done({ ok: false, error: 'markdown: no save target' })
         if (pdfHtml !== undefined && /\.pdf$/i.test(target)) {

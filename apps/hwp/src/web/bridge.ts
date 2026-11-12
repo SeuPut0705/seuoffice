@@ -73,12 +73,16 @@ const saveApi: Partial<HwpApi> = {
   },
   beginSave: async () => {
     pendingFormat = null
-    const refuse = (error: string, reason?: 'tracked') => {
+    const refuse = (error: string, reason?: 'tracked' | 'unverified') => {
       settleSave(false, error)
       return { ok: false as const, error, ...(reason ? { reason } : {}) }
     }
     if (!opened) return refuse('hwp: no document is open')
     if (opened.hwp.tracked) return refuse('hwp: the document has tracked changes', 'tracked')
+    // the one target a page has is the opened file itself
+    if (opened.hwp.unverified) {
+      return refuse('hwp: the structure of the opened file could not be checked', 'unverified')
+    }
     const format = hwpFormatOfPath(opened.doc.fileName)
     if (!format) return refuse('hwp: no save format for this file name')
     pendingFormat = format
@@ -126,6 +130,7 @@ const hwpApi: Partial<HwpApi> = {
     return hwp.bytes
   },
   trackingDropped: async () => trackingDropped,
+  structureUnverified: async () => opened?.hwp.unverified ?? false,
   getLanguage: async () => webLanguage() as Lang,
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',

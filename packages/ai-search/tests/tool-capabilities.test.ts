@@ -94,6 +94,11 @@ describe('aiToolCapabilities', () => {
       settings({ search: { provider: 'serper', providers: { serper: { apiKey: '' } } } }),
     )
     expect(empty.webSearch).toEqual({ available: true, route: 'free', provider: 'parallel' })
+    // Keenable selected without a key: its free endpoint starts the keyless chain
+    const freeKeenable = aiToolCapabilities(
+      settings({ search: { provider: 'keenable', providers: { keenable: { apiKey: '' } } } }),
+    )
+    expect(freeKeenable.webSearch).toEqual({ available: true, route: 'free', provider: 'keenable' })
   })
 
   it('reports the key the image request would fall to when Codex cannot run', () => {

@@ -3,7 +3,7 @@ import type { Lang } from '@genoffice/i18n'
 /**
  * The PDF tools window: pick a task first, then the files it needs, then get
  * a new file. Every tool runs on the user's PC without AI and never writes
- * over its source. Plan: docs/plans/pdf-tools.md, decision 0030.
+ * over its source. Plan: docs/archive/ieum/plans/pdf-tools.md, decision 0030.
  *
  * Kept apart from pdf-tools-home-channels.ts: the shell preload and this
  * window's preload are separate bundle entries, and a module both import by

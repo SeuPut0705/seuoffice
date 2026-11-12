@@ -152,7 +152,6 @@ export const pl = {
     'Nadal nie działa? Skopiuj informacje o połączeniu i wyślij je osobie, która Ci pomaga. Nie zawierają konta ani ścieżek plików.',
   actionCopyInfo: 'Kopiuj informacje dla pomocy',
   copyInfoDone: 'Skopiowano',
-  actionConnectHelp: 'Zobacz każdy krok na ekranie (strona po koreańsku)',
   guidePathChatGptBody:
     'Zaloguj się kontem ChatGPT i korzystaj ze swojego planu. Nie trzeba nic instalować. Darmowy plan pozwala tylko na niewielkie użycie.',
   guideUseCodex: 'Używasz już programu Codex na tym komputerze? Połącz przez Codex',

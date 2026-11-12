@@ -11,11 +11,15 @@ import {
   type DateFormatParts,
 } from './xlsx-dates'
 import { decodeXlsxEscapes } from '@genoffice/xlsx-gateway/gateway/xlsx-escapes'
+import { readXlsxRedactions, withheldCellMarker } from './xlsx-redaction'
 
 function stripNamespacePrefix(name: string): string {
   const separator = name.indexOf(':')
   return separator < 0 ? name : name.slice(separator + 1)
 }
+
+/** the path of a workbook's `<sheet>` element, with or without a namespace prefix */
+const SHEET_ELEMENT_PATH = /(?:^|[.:])sheet$/
 
 // Text fidelity: no trim (xml:space="preserve" runs carry the spaces between words),
 // no numeric coercion of tag values (otherwise <t>02139</t> becomes a number and loses characters)
@@ -26,10 +30,13 @@ const parser = new XMLParser({
   parseTagValue: false,
   removeNSPrefix: false,
   transformTagName: stripNamespacePrefix,
-  // trimValues also governs attributes; nothing read here (r:id, Target, cell ref, sheet
-  // name) carries meaningful edge whitespace, and an untrimmed Target builds the wrong zip
-  // path, which silently drops the whole sheet
-  attributeValueProcessor: (_name, value) => value.trim(),
+  // trimValues also governs attributes; nothing else read here (r:id, Target, cell ref)
+  // carries meaningful edge whitespace, and an untrimmed Target builds the wrong zip
+  // path, which silently drops the whole sheet. A sheet's name is the exception: its
+  // edge spaces are part of the name, and the record of withheld cells is keyed by it
+  // as written, so a trimmed name finds no marks and fails the whole read.
+  attributeValueProcessor: (name, value, path) =>
+    name === 'name' && SHEET_ELEMENT_PATH.test(String(path)) ? value : value.trim(),
 })
 
 function asArray<T>(value: T | T[] | undefined): T[] {
@@ -365,6 +372,12 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
       shared.push(sharedStringText(si))
     }
   }
+  // Read before any cell is: a record of withheld cells that cannot be read
+  // fails the whole workbook, and no sheet is handed over without its marks.
+  const redactions = await readXlsxRedactions(
+    zip,
+    sheets.map((sheet) => String(sheet['@_name'] ?? '')),
+  )
 
   const sections: string[] = []
   let sheetsWithData = 0
@@ -378,7 +391,9 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
     const sheetXml =
       maxChars === Infinity ? raw.text : clipSheetXml(raw.text, budget, raw.truncated)
     const worksheet = parser.parse(sheetXml) as Record<string, any>
-    const lines: string[] = [`# ${String(sheet['@_name'] ?? '')}`]
+    const sheetName = String(sheet['@_name'] ?? '')
+    const marks = redactions.get(sheetName)
+    const lines: string[] = [`# ${sheetName}`]
     let sheetChars = lines[0].length
     const rows = asArray(worksheet.worksheet?.sheetData?.row) as Array<Record<string, unknown>>
     let hasData = false
@@ -390,8 +405,12 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
       // Sparse by column; a slot holds several values only when refs collide.
       const slots: string[][] = []
       for (const cell of asArray(row.c as Cell | Cell[])) {
-        const text = cellText(cell, shared, dateStyles, date1904, sharedFormulas)
         const ref = cell['@_r']
+        // A withheld cell is its marker and nothing else: neither its cached
+        // value nor its formula is read into the row.
+        const text =
+          withheldCellMarker(marks, ref) ??
+          cellText(cell, shared, dateStyles, date1904, sharedFormulas)
         // A malformed ref (no leading column letters) yields -1; append in
         // document order instead of writing slots[-1] which would drop text.
         // Clamp wild columns (e.g. XXXXXX99) to append: padding millions of

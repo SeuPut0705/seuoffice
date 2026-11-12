@@ -19,11 +19,14 @@ export {
   aboutMenuItem,
   appMenuLabels,
   appMenuPopupTemplate,
+  appMenuTemplate,
   checkUpdatesMenuItem,
   editMenuTemplate,
   helpCheckUpdatesItems,
   helpMenuTemplate,
+  setSettingsInvoker,
   setUpdateCheckInvoker,
+  settingsMenuItem,
   toggleDevToolsItem,
   viewMenuTemplate,
   windowMenuTemplate,
@@ -60,6 +63,7 @@ export { numberedExportPaths } from './numbered-export-paths'
 export {
   DEFAULT_SAVE_DIR_KEY,
   configuredDefaultSaveDir,
+  createDirLevels,
   defaultSaveDirFallback,
   documentsDirOrFallback,
   isUsableSaveDir,
@@ -98,6 +102,19 @@ export {
   readBodyCapped,
   remoteImageHeaders,
 } from './remote-image'
+export {
+  MAX_REMOTE_TABLE_BYTES,
+  MAX_REMOTE_TABLE_CELL_CHARS,
+  MAX_REMOTE_TABLE_COLUMNS,
+  MAX_REMOTE_TABLE_ROWS,
+  detectDelimiter,
+  fetchRemoteTable,
+  parseDelimitedRow,
+  parseDelimitedTable,
+  parseHtmlTable,
+  type RemoteTable,
+  type RemoteTableSource,
+} from './remote-table'
 export { GENERATED_IMAGE_DIR, readGeneratedImage, storeGeneratedImage } from './generated-images'
 export {
   buildPrintableHtml,
@@ -227,3 +244,12 @@ export {
   type SaveConflictOptions,
   type SaveDiskState,
 } from './save-conflict'
+export {
+  LEGACY_IMPORT_KINDS,
+  LEGACY_IMPORT_SKIP_KEY,
+  readLegacyImportPrompt,
+  readLegacyImportSkip,
+  writeLegacyImportPrompt,
+  writeLegacyImportSkip,
+  type LegacyImportKind,
+} from './legacy-import-prefs'

@@ -25,11 +25,13 @@ import type {
 import { documentExtension } from './app-routing'
 import { isValidRenameName } from './rename-validation'
 import { statPathEntries } from './recent-files'
+import { createDirLevels } from '@genoffice/electron-utils'
 
 /** files the home tree shows; mirrors the shell's open-dialog filter */
 export const TREE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   'docx',
   'doc',
+  'dot',
   'odt',
   'xlsx',
   'xlsm',
@@ -39,6 +41,8 @@ export const TREE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
   'ods',
   'pptx',
   'ppt',
+  'odp',
+  'otp',
   'pdf',
   'md',
   'markdown',
@@ -113,7 +117,10 @@ export function isInsideRoot(root: string, path: string): boolean {
 export function describeRoot(root: string): FolderRoot {
   let usable: boolean
   try {
-    mkdirSync(root, { recursive: true })
+    // per-level mkdir, not recursive: a filesystem that refuses the leaf while
+    // its parent exists (Defender Controlled Folder Access on Documents) makes
+    // the recursive form spin the main process forever — see createDirLevels.
+    createDirLevels(root)
     accessSync(root, constants.W_OK)
     usable = statSync(root).isDirectory()
   } catch {

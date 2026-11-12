@@ -13,7 +13,7 @@ A linha no canto inferior esquerdo do ecrã Início abre o painel de configuraç
 
 ## Tema
 
-Claro / Escuro / Seguir o Sistema. O modo Seguir o Sistema acompanha o aspeto do sistema operativo, e os editores mudam de aspeto em sincronia sem cintilação.
+Claro / Escuro / Seguir o Sistema. O modo Seguir o Sistema acompanha a aparência do sistema operacional, e os editores mudam de aparência em sincronia sem cintilação.
 
 ## Geral
 
@@ -38,18 +38,18 @@ Fica fechado até o abrir; a maioria das pessoas nunca precisa dele. O separador
 
 - **Versão**, o endereço do projeto no GitHub e uma linha que indica o projeto de código aberto em que esta aplicação se baseia.
 
-## Associações de aplicações predefinidas
+## Associações de aplicativos padrão
 
-As Configurações podem registar o GenOffice como a aplicação que abre ficheiros .docx / .xlsx / .pptx / .pdf e semelhantes (registo de aplicação predefinida ao nível do sistema; confirme quando for solicitado).
+As Configurações podem registrar o GenOffice como o aplicativo que abre arquivos .docx / .xlsx / .pptx / .pdf e semelhantes (registro de aplicativo padrão no sistema; confirme quando for solicitado).
 
 ## Avisos de software de terceiros e atualizações
 
 - Ajuda ▸ Avisos de software de terceiros: o inventário completo das licenças de código aberto que acompanha a aplicação.
 - Menu (☰) ▸ Procurar atualizações… (num Mac, Ajuda ▸ Procurar atualizações…): inicia uma verificação manual; e se houver uma versão mais recente, o GenOffice propõe a instalação.
 
-## Integração MCP (para utilizadores avançados / clientes de IA)
+## Integração MCP (para usuários avançados / clientes de IA)
 
-**Integrações** é o painel que liga o GenOffice a um agente de programação, e tem o seu próprio artigo: Ligar um agente de programação. A versão curta — escolha um caminho (a linha de comandos, ou MCP), siga essa secção e depois inicie uma conversa nova e pergunte.
+**Integrações** é o painel que liga o GenOffice a um agente de programação, e tem o seu próprio artigo: Ligar um agente de programação. A versão curta — escolha um caminho (a linha de comandos, ou MCP), siga essa seção e depois inicie uma conversa nova e pergunte.
 
 Em **Servidor HTTP local**, a aplicação também pode arrancar o servidor por si — um interruptor de ativação e uma porta —, enquanto **Avançado** acrescenta o URL de verificação de integridade e o arquivo de registro, em vez de o deixar ao assistente. Escuta apenas em localhost.
 

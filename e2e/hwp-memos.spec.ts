@@ -7,7 +7,7 @@
  * `apps/hwp/scripts/make-memo-fixtures.mjs` with this app's engine, not by
  * Hancom Hangul. The Hancom-made HWP sample is covered by the engine tests; a
  * Hancom-made HWPX sample was not available on this PC (see
- * `docs/tracking/status.md`).
+ * `docs/archive/ieum/tracking/status.md`).
  */
 import { test, expect } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'

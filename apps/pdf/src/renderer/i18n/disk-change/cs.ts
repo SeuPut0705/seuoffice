@@ -9,4 +9,8 @@ export const cs = {
   diskIgnore: 'Ignorovat',
   diskDismiss: 'OK',
   diskReloadFailed: 'Soubor se nepodařilo znovu načíst: {detail}',
+  diskChangedNoUndo:
+    'Jiný program tento soubor změnil nebo odstranil, proto se u této změny neprovedlo Zpět ani Znovu.',
+  pageOpNoUndoConfirm:
+    'Tento soubor ({size}) je větší než velikost uchovávaná pro Zpět ({limit}), proto tuto operaci se stránkami nepůjde vrátit zpět. Pokračovat?',
 } satisfies Record<keyof typeof zh, string>

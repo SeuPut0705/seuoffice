@@ -158,6 +158,19 @@ describe('listFolder', () => {
     expect(isSupportedTreeFile('BUDGET.ODS')).toBe(true)
   })
 
+  // the open dialog offers the presentation and its template, so the pane shows both
+  it('lists OpenDocument presentations and their templates', () => {
+    touch('deck.odp')
+    touch('DECK.OTP')
+    touch('photo.png')
+
+    expect(
+      listFolder(root, new Set())
+        .files.map((f) => f.name)
+        .sort(),
+    ).toEqual(['DECK.OTP', 'deck.odp'])
+  })
+
   it('lists diagrams, draw.io pictures and Visio drawings, but not plain pictures', () => {
     touch('flow.drawio')
     touch('flow.dio')

@@ -84,12 +84,22 @@ describe('appForPath', () => {
     expect(appForPath('C:/x/REPORT.ODT')).toBe('docs')
   })
 
+  it('opens legacy Word 97-2003 files in the Word tab (as converted copies)', () => {
+    expect(appForPath('/x/legacy.doc')).toBe('docs')
+    expect(appForPath('/x/TEMPLATE.DOT')).toBe('docs')
+  })
+
   it('opens an OpenDocument spreadsheet in the spreadsheet tab only', () => {
     expect(appForPath('/x/a.ods')).toBe('sheets')
     expect(appForPath('C:/x/BUDGET.ODS')).toBe('sheets')
-    // the spreadsheet form belongs to no other editor, and a backup of one is no document
-    expect(appForPath('/x/a.odp')).toBeUndefined()
+    // the other ODF forms belong to other editors, and a backup of one is no document
+    expect(appForPath('/x/a.odp')).toBe('slides')
     expect(appForPath('/x/a.ods.bak')).toBeUndefined()
+  })
+
+  it('opens an OpenDocument presentation and its template in Slides', () => {
+    expect(appForPath('/x/deck.odp')).toBe('slides')
+    expect(appForPath('C:/x/DECK.OTP')).toBe('slides')
   })
 
   it('has no app for an extension nothing opens', () => {
@@ -156,6 +166,14 @@ describe('renameStaysInApp', () => {
     expect(renameStaysInApp('/x/a.odt', 'a.pdf')).toBe(false)
   })
 
+  it('refuses a rename between .doc/.dot and .docx/.odt: same tab, different bytes', () => {
+    expect(renameStaysInApp('/x/legacy.doc', 'legacy.docx')).toBe(false)
+    expect(renameStaysInApp('/x/a.docx', 'a.doc')).toBe(false)
+    expect(renameStaysInApp('/x/a.odt', 'a.dot')).toBe(false)
+    expect(renameStaysInApp('/x/legacy.doc', 'legacy.dot')).toBe(true)
+    expect(renameStaysInApp('/x/legacy.doc', 'legacy.pdf')).toBe(false)
+  })
+
   it('refuses a rename between .ods and another spreadsheet form: same tab, different bytes', () => {
     expect(renameStaysInApp('/x/a.ods', 'b.ods')).toBe(true)
     expect(renameStaysInApp('/x/a.ods', 'b.ODS')).toBe(true)
@@ -163,6 +181,20 @@ describe('renameStaysInApp', () => {
     expect(renameStaysInApp('/x/a.xlsx', 'a.ods')).toBe(false)
     expect(renameStaysInApp('/x/a.ods', 'a.csv')).toBe(false)
     expect(renameStaysInApp('/x/a.csv', 'a.ods')).toBe(false)
+  })
+
+  it('refuses a rename between .odp and .pptx: same tab, different bytes', () => {
+    expect(renameStaysInApp('/x/a.odp', 'b.otp')).toBe(true)
+    expect(renameStaysInApp('/x/a.odp', 'a.pptx')).toBe(false)
+    expect(renameStaysInApp('/x/a.pptx', 'a.odp')).toBe(false)
+  })
+
+  it('refuses a rename between .ppt and .pptx/.odp: same tab, different bytes', () => {
+    expect(appForPath('/x/OLD.PPT')).toBe('slides')
+    expect(renameStaysInApp('/x/old.ppt', 'old.pptx')).toBe(false)
+    expect(renameStaysInApp('/x/a.pptx', 'a.ppt')).toBe(false)
+    expect(renameStaysInApp('/x/a.odp', 'a.ppt')).toBe(false)
+    expect(renameStaysInApp('/x/old.ppt', 'renamed.ppt')).toBe(true)
   })
 
   it('stays put when the file was never openable to begin with', () => {

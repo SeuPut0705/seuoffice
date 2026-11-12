@@ -158,9 +158,9 @@ describe('partitionDropPayload', () => {
   })
 
   it('treats a dropped .odt as openable (the Word tab opens it), not as unsupported', () => {
-    const result = partitionDropPayload(['/docs/report.odt', 'C:/x/Y.ODT', 'z.odp'])
+    const result = partitionDropPayload(['/docs/report.odt', 'C:/x/Y.ODT', 'z.rtf'])
     expect(result.supported).toEqual(['/docs/report.odt', 'C:/x/Y.ODT'])
-    expect(result.unsupportedExts).toEqual(['odp'])
+    expect(result.unsupportedExts).toEqual(['rtf'])
     expect(OPENABLE_DOC_RE.test('a.odt')).toBe(true)
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.odt')).toBe(false)
   })
@@ -172,11 +172,33 @@ describe('partitionDropPayload', () => {
   })
 
   it('treats a dropped .ods as openable (the spreadsheet tab converts it), not as unsupported', () => {
-    const result = partitionDropPayload(['/data/budget.ods', 'C:/x/BUDGET.ODS', 'z.odp'])
+    const result = partitionDropPayload(['/data/budget.ods', 'C:/x/BUDGET.ODS', 'z.rtf'])
     expect(result.supported).toEqual(['/data/budget.ods', 'C:/x/BUDGET.ODS'])
-    expect(result.unsupportedExts).toEqual(['odp'])
+    expect(result.unsupportedExts).toEqual(['rtf'])
     expect(OPENABLE_DOC_RE.test('a.ods')).toBe(true)
     expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.ods')).toBe(false)
+  })
+
+  it('treats a dropped .odp/.otp/.ppt as openable (Slides imports a .pptx copy), not as unsupported', () => {
+    const result = partitionDropPayload(['/decks/plan.odp', 'C:/x/DECK.OTP', '/decks/old.PPT'])
+    expect(result.supported).toEqual(['/decks/plan.odp', 'C:/x/DECK.OTP', '/decks/old.PPT'])
+    expect(result.unsupportedExts).toEqual([])
+    expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.odp')).toBe(false)
+    expect(KNOWN_UNSUPPORTED_DOC_RE.test('a.ppt')).toBe(false)
+  })
+
+  // The Word tab imports a legacy .doc/.dot as a converted .docx copy: the Open
+  // dialog and the file association open both, so a drop must too.
+  it('treats a dropped legacy .doc/.dot as openable (the Word tab imports a .docx copy), not as unsupported', () => {
+    const result = partitionDropPayload(['/docs/old.doc', 'C:/x/FORM.DOT', 'z.rtf'])
+    expect(result.supported).toEqual(['/docs/old.doc', 'C:/x/FORM.DOT'])
+    expect(result.unsupportedExts).toEqual(['rtf'])
+  })
+
+  it('opens a dropped Hangul document in either form', () => {
+    const result = partitionDropPayload(['/docs/report.hwp', 'C:/x/REPORT.HWPX'])
+    expect(result.supported).toEqual(['/docs/report.hwp', 'C:/x/REPORT.HWPX'])
+    expect(result.unsupportedExts).toEqual([])
   })
 
   it('routes dropped mind maps, a FreeMind / Freeplane map included, as openable', () => {
@@ -206,9 +228,9 @@ describe('partitionDropPayload', () => {
   })
 
   it('collects known-unsupported extensions uniquely, first-seen order', () => {
-    const result = partitionDropPayload(['old.doc', 'x.pages', 'y.rtf', 'z.doc'])
+    const result = partitionDropPayload(['old.xlsb', 'x.pages', 'y.rtf', 'z.xlsb'])
     expect(result.supported).toEqual([])
-    expect(result.unsupportedExts).toEqual(['doc', 'pages', 'rtf'])
+    expect(result.unsupportedExts).toEqual(['xlsb', 'pages', 'rtf'])
   })
 
   it('sets SKILL.md files and zip files apart for the shell to look into', () => {
@@ -351,10 +373,27 @@ describe('installDropOpenBridge', () => {
     electronMocks.getPathForFile.mockImplementation((f: { name: string }) => `/tmp/${f.name}`)
     const win = install()
     try {
-      const ev = fileDrag(['legacy.doc'])
+      const ev = fileDrag(['legacy.rtf'])
       win.fire('drop', ev)
       await vi.waitFor(() =>
-        expect(electronMocks.send).toHaveBeenCalledWith(DROP_OPEN_CHANNEL, ['/tmp/legacy.doc']),
+        expect(electronMocks.send).toHaveBeenCalledWith(DROP_OPEN_CHANNEL, ['/tmp/legacy.rtf']),
+      )
+    } finally {
+      uninstall(win)
+    }
+  })
+
+  it('forwards a dropped legacy Word template, which the Open dialog also offers', async () => {
+    electronMocks.getPathForFile.mockImplementation((f: { name: string }) => `/tmp/${f.name}`)
+    const win = install()
+    try {
+      const ev = fileDrag(['letterhead.dot', 'legacy.doc'])
+      win.fire('drop', ev)
+      await vi.waitFor(() =>
+        expect(electronMocks.send).toHaveBeenCalledWith(DROP_OPEN_CHANNEL, [
+          '/tmp/letterhead.dot',
+          '/tmp/legacy.doc',
+        ]),
       )
     } finally {
       uninstall(win)

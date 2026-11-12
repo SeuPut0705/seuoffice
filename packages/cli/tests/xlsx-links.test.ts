@@ -1,7 +1,8 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import JSZip from 'jszip'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
+import { XlsxSidecarClient } from '../../../apps/sheets/src/main/xlsx-sidecar-client'
 import { xlsxSidecarPath } from '../src/resources'
 import { run, tempDir } from './helpers'
 
@@ -45,8 +46,12 @@ async function writeSource(path: string): Promise<void> {
 }
 
 /// The dependent workbook: link [1] points at a file that does not exist,
-/// link [2] at `source.xlsx` (a relative path). Formulas reference both.
-async function writeDependent(path: string): Promise<void> {
+/// link [2] at `source.xlsx` (a relative path), unless other targets are
+/// given. Formulas reference both.
+async function writeDependent(
+  path: string,
+  targets: [string, string] = ['gone.xlsx', 'source.xlsx'],
+): Promise<void> {
   const zip = new JSZip()
   zip.file(
     '[Content_Types].xml',
@@ -78,7 +83,7 @@ async function writeDependent(path: string): Promise<void> {
     zip.file(
       `xl/externalLinks/_rels/externalLink${n}.xml.rels`,
       XML_DECL +
-        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/externalLinkPath" Target="${n === 1 ? 'gone.xlsx' : 'source.xlsx'}" TargetMode="External"/></Relationships>`,
+        `<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/externalLinkPath" Target="${targets[n - 1]}" TargetMode="External"/></Relationships>`,
     )
   }
   zip.file(
@@ -88,6 +93,20 @@ async function writeDependent(path: string): Promise<void> {
   )
   writeFileSync(path, await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE' }))
 }
+
+/** Every request this process hands the xlsx engine, in order: the lowest boundary the CLI owns. */
+function engineRequests(): () => Record<string, unknown>[] {
+  const proto = XlsxSidecarClient.prototype as unknown as {
+    request: (command: Record<string, unknown>, timeoutMs?: number) => Promise<unknown>
+  }
+  const spy = vi.spyOn(proto, 'request')
+  return () => spy.mock.calls.map(([command]) => command)
+}
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllEnvs()
+})
 
 describe('ieumoffice sheet links', () => {
   it.skipIf(!sidecar)('lists the links with resolved sources and reachability', async () => {
@@ -107,6 +126,137 @@ describe('ieumoffice sheet links', () => {
     })
     expect(links[1].source.endsWith('source.xlsx')).toBe(true)
   })
+
+  it.skipIf(!sidecar)(
+    'lists a source on another computer as not checked, beside a checked local one',
+    async () => {
+      const dir = tempDir()
+      await writeSource(join(dir, 'source.xlsx'))
+      const book = join(dir, 'book.xlsx')
+      await writeDependent(book, ['\\\\fileserver\\share\\budget.xlsx', 'source.xlsx'])
+      const r = await run(['sheet', 'links', book, '--json'])
+      expect(r.code).toBe(0)
+      const links = r.json().detail.links
+      expect(links[0]).toEqual({
+        index: 1,
+        rawTarget: '\\\\fileserver\\share\\budget.xlsx',
+        source: '\\\\fileserver\\share\\budget.xlsx',
+        reachable: null,
+        unchecked: 'remote',
+        sheetNames: ['Sheet1'],
+      })
+      expect(links[1]).toMatchObject({ index: 2, reachable: true })
+      expect(links[1]).not.toHaveProperty('unchecked')
+      expect(r.json().summary).toContain('2 external link(s), 1 reachable, 1 not checked')
+
+      // every spelling of a host is left alone the same way
+      await writeDependent(book, ['file://fileserver/share/q3.xlsx', '//fileserver/share/q4.xlsx'])
+      const hosts = (await run(['sheet', 'links', book, '--json'])).json().detail.links
+      expect(hosts.map((link: { reachable: unknown }) => link.reachable)).toEqual([null, null])
+      expect(hosts.map((link: { unchecked: unknown }) => link.unchecked)).toEqual([
+        'remote',
+        'remote',
+      ])
+    },
+  )
+
+  it.skipIf(!sidecar)(
+    'update reads a source on another computer only with --remote-sources',
+    async () => {
+      const sent = engineRequests()
+      const dir = tempDir()
+      await writeSource(join(dir, 'source.xlsx'))
+      const book = join(dir, 'book.xlsx')
+      await writeDependent(book, ['\\\\fileserver\\share\\budget.xlsx', 'source.xlsx'])
+
+      const r = await run(['sheet', 'links', book, '--update', '--json'])
+      expect(r.code).toBe(0)
+      expect(r.json().detail).toMatchObject({ reachable: 1, broken: 1, remoteSkipped: 1 })
+      // the caller learns why that link stayed on its cache, and how to ask for it
+      expect(r.json().summary).toContain('--remote-sources')
+      // no permission to read another computer's sources travelled with the request
+      expect(sent()).toContainEqual({ command: 'update_external_links', path: book })
+
+      const confirmed = await run([
+        'sheet',
+        'links',
+        book,
+        '--update',
+        '--remote-sources',
+        '--json',
+      ])
+      expect(confirmed.code).toBe(0)
+      expect(confirmed.json().detail).toMatchObject({ remoteSkipped: 0 })
+      expect(confirmed.json().summary).not.toContain('--remote-sources')
+      expect(sent().at(-1)).toEqual({
+        command: 'update_external_links',
+        path: book,
+        allowRemoteSources: true,
+      })
+    },
+  )
+
+  it('update counts a source left alone on a drive that may be a network drive', async () => {
+    // the engine as it answers on Windows for a `Z:\…` source: left alone by
+    // the update, and named as an unchecked drive by the link report
+    vi.stubEnv('XLSX_SIDECAR_PATH', 'stand-in-sidecar')
+    const proto = XlsxSidecarClient.prototype as unknown as {
+      request: (command: Record<string, unknown>) => Promise<unknown>
+    }
+    vi.spyOn(proto, 'request').mockImplementation(async (command) => {
+      if (command.command === 'update_external_links') {
+        return {
+          links: [
+            { index: 1, reachable: false },
+            { index: 2, reachable: false },
+          ],
+          cells: [],
+        }
+      }
+      if (command.command === 'read_external_links') {
+        return [
+          {
+            index: 1,
+            rawTarget: 'Z:\\data\\budget.xlsx',
+            source: 'Z:\\data\\budget.xlsx',
+            reachable: null,
+            unchecked: 'drive',
+            sheetNames: ['Sheet1'],
+          },
+          {
+            index: 2,
+            rawTarget: 'gone.xlsx',
+            source: 'C:\\books\\gone.xlsx',
+            reachable: false,
+            sheetNames: ['Sheet1'],
+          },
+        ]
+      }
+      throw new Error(`engine asked for ${String(command.command)}`)
+    })
+    const book = join(tempDir(), 'book.xlsx')
+    await writeDependent(book)
+
+    const r = await run(['sheet', 'links', book, '--update', '--json'])
+
+    expect(r.code).toBe(0)
+    // the drive source is the one --remote-sources would read; the missing local file is not
+    expect(r.json().detail).toMatchObject({ reachable: 0, broken: 2, remoteSkipped: 1 })
+    expect(r.json().summary).toContain('--remote-sources')
+  })
+
+  it.skipIf(!sidecar)(
+    'update does not blame another computer for a missing local source',
+    async () => {
+      const dir = tempDir()
+      await writeSource(join(dir, 'source.xlsx'))
+      const book = join(dir, 'book.xlsx')
+      await writeDependent(book)
+      const r = await run(['sheet', 'links', book, '--update', '--json'])
+      expect(r.json().detail).toMatchObject({ reachable: 1, broken: 1, remoteSkipped: 0 })
+      expect(r.json().summary).not.toContain('--remote-sources')
+    },
+  )
 
   it.skipIf(!sidecar)(
     'update writes live cached values and keeps every formula spelling',

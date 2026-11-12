@@ -41,7 +41,6 @@ import type {
   UiTheme,
 } from '../shared/ipc'
 import {
-  SUBSCRIPTION_CONNECT_HELP_CHANNEL,
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
   subscriptionLaunchResultOf,
   subscriptionMeteredResultOf,
@@ -159,9 +158,6 @@ const subscription: DiagramSubscriptionApi = {
     ),
   openInstallHelp: async (provider) => {
     await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
-  },
-  openConnectHelp: async (path) => {
-    await ipcRenderer.invoke(SUBSCRIPTION_CONNECT_HELP_CHANNEL, path)
   },
 }
 

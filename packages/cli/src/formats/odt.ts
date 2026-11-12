@@ -159,6 +159,7 @@ const ODT_DISABLED_OPS: Record<string, string> = {
   set_watermark: 'watermarks',
   wrap_content_control: 'content controls',
   unwrap_content_control: 'content controls',
+  remove_parts: 'package part removals',
 }
 
 /** insertField types that make captions, cross-references, citations or tables of contents. */

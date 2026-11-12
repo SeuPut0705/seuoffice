@@ -1,7 +1,7 @@
 import { spawn, type ChildProcessWithoutNullStreams } from 'node:child_process'
 import { createInterface, type Interface } from 'node:readline'
 
-import type { ExternalLinksUpdateResult } from '../shared/desktop-api'
+import type { ExternalLinksResult, ExternalLinksUpdateResult } from '../shared/desktop-api'
 
 const PROTOCOL_VERSION = 1
 const REQUEST_TIMEOUT_MS = 30_000
@@ -286,17 +286,54 @@ export class XlsxSidecarClient {
    * computed value when the source is reachable — the stored formula keeps
    * its indexed spelling, so the caller updates only the cached `<v>`. Cell
    * `row`/`column` are 0-based in the report (IronCalc, which computes the
-   * values, addresses the same cells 1-based). */
-  async updateExternalLinks(input: { readonly path: string }): Promise<ExternalLinksUpdateResult> {
+   * values, addresses the same cells 1-based).
+   *
+   * A source the workbook places on another computer (`\\host\share\…`,
+   * `file://host/…`) is neither looked for nor opened, and reports
+   * unreachable, unless `allowRemoteSources` is set: reaching it signs this
+   * machine in to a host the document chose, so the flag stands for a person
+   * having asked. `baseDir` is the folder relative targets resolve against
+   * when `path` is not where the workbook really lives (a decrypted copy). */
+  async updateExternalLinks(input: {
+    readonly path: string
+    readonly allowRemoteSources?: boolean
+    readonly baseDir?: string
+  }): Promise<ExternalLinksUpdateResult> {
     return this.request<ExternalLinksUpdateResult>(
       { command: 'update_external_links', ...input },
       ARCHIVE_TIMEOUT_MS,
     )
   }
 
-  /** The link list only: no source is opened, nothing is evaluated. */
+  /** The CLI's link report: the listing plus `reachable` for the sources that
+   * are plainly on this computer (a `stat`, nothing is opened). A source that
+   * names another computer, or a drive that may be a network drive, is not
+   * asked about: `reachable` is null and `unchecked` says why. */
   async readExternalLinks(input: { readonly path: string }): Promise<unknown> {
     return this.request({ command: 'read_external_links', ...input }, ARCHIVE_TIMEOUT_MS)
+  }
+
+  /** The formula cells referencing each `[n]` link with the value a break
+   * would freeze them at — a file-level scan, so `t="e"` error caches
+   * survive (a model pass would lose them). */
+  async readExternalLinkUsage(input: { readonly path: string }): Promise<unknown> {
+    return this.request({ command: 'read_external_link_usage', ...input }, ARCHIVE_TIMEOUT_MS)
+  }
+
+  /**
+   * The links panel's listing: identity fields only, and no source is asked
+   * about at all (no reachability) — opening a workbook must not stat a dead
+   * network share, nor sign in to a host the workbook names. The panel's
+   * Update asks `updateExternalLinks`. `baseDir` as there.
+   */
+  async listExternalLinks(input: {
+    readonly path: string
+    readonly baseDir?: string
+  }): Promise<ExternalLinksResult> {
+    return this.request<ExternalLinksResult>(
+      { command: 'list_external_links', ...input },
+      ARCHIVE_TIMEOUT_MS,
+    )
   }
 
   /**

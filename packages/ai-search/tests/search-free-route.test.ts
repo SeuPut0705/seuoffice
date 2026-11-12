@@ -55,6 +55,8 @@ const NO_KEYS = {
   parallelKey: '',
   exaKey: '',
   firecrawlKey: '',
+  keenableKey: '',
+  searchapiKey: '',
 }
 
 /**

@@ -114,7 +114,7 @@ describe('levels in a vendor list', () => {
     )
     const listing = await listKeyProviderModelListing('deepseek', { apiKey: 'sk-d' }, fetchMock)
     expect(listing?.efforts).toEqual({
-      'deep-seek-v4.1-flash': { efforts: ['low', 'high', 'max'], defaultEffort: 'high' },
+      'deepseek-flash': { efforts: ['low', 'high', 'max'], defaultEffort: 'high' },
       'deepseek-v4-pro': { efforts: ['low', 'high', 'max'] },
     })
   })

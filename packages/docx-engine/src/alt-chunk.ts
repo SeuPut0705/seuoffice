@@ -4,6 +4,7 @@
  * to a docx with the html2docx chain (needs a browser), which the parser
  * then reads like any other document. A .docx chunk is parsed directly.
  */
+import { normalizeEncoding, TextDecoder } from '@exodus/bytes/encoding-lite.js'
 import type JSZip from 'jszip'
 import { resolveRelationshipTargetPath } from './parse-package'
 import type { RelInfo } from './parse-xml-text'
@@ -59,24 +60,44 @@ function latin1(bytes: Uint8Array, limit = bytes.length): string {
   return s
 }
 
-function decodeWithCharset(bytes: Uint8Array, charset: string | undefined): string {
+/**
+ * Legacy encodings whose index tables (about 150 KB) load the first time a
+ * chunk declares one. TextDecoder here is the Encoding Standard decoder in
+ * JavaScript, not the host's: Node's differs from Chromium's on euc-kr, big5,
+ * shift_jis, euc-jp and some single-byte charsets, and lacks iso-8859-16 and
+ * x-user-defined, so a chunk read through the CLI came out garbled.
+ */
+const MULTI_BYTE: Record<string, true> = {
+  big5: true,
+  'euc-kr': true,
+  'euc-jp': true,
+  'iso-2022-jp': true,
+  shift_jis: true,
+  gbk: true,
+  gb18030: true,
+}
+
+async function decodeWithCharset(bytes: Uint8Array, charset: string | undefined): Promise<string> {
   const label = (charset ?? '')
     .trim()
     .replace(/^["']|["']$/g, '')
     .toLowerCase()
   for (const candidate of [label, 'utf-8']) {
-    if (!candidate) continue
+    const encoding = candidate ? normalizeEncoding(candidate) : null
+    if (!encoding) continue
+    // dynamic on purpose: the bundler splits the tables off the renderer's main chunk
+    if (Object.hasOwn(MULTI_BYTE, encoding)) await import('@exodus/bytes/encoding.js')
     try {
-      return new TextDecoder(candidate, { fatal: candidate === 'utf-8' }).decode(bytes)
+      return new TextDecoder(encoding, { fatal: candidate === 'utf-8' }).decode(bytes)
     } catch {
-      /* unknown label or invalid utf-8: try the next */
+      /* the replacement encoding, or invalid utf-8: try the next */
     }
   }
   return new TextDecoder('windows-1252').decode(bytes)
 }
 
 /** HTML bytes -> string: BOM, then <meta charset>, then utf-8 with a 1252 fallback */
-export function decodeHtmlBytes(bytes: Uint8Array): string {
+export async function decodeHtmlBytes(bytes: Uint8Array): Promise<string> {
   if (bytes.length >= 3 && bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
     return new TextDecoder('utf-8').decode(bytes.subarray(3))
   }
@@ -210,7 +231,7 @@ function decodeTransfer(part: MimePart): Uint8Array {
  * image parts are inlined as data URLs by Content-Location / Content-ID so
  * the converter sees them without the package.
  */
-export function decodeMhtToHtml(bytes: Uint8Array): string | null {
+export async function decodeMhtToHtml(bytes: Uint8Array): Promise<string | null> {
   const top = splitHeadersBody(bytes)
   const type = top.headers.get('content-type') ?? ''
   const boundary = headerParam(type, 'boundary')
@@ -221,7 +242,9 @@ export function decodeMhtToHtml(bytes: Uint8Array): string | null {
   if (!htmlPart) return null
   const htmlBytes = decodeTransfer(htmlPart)
   const charset = headerParam(htmlPart.headers.get('content-type'), 'charset')
-  const html = charset ? decodeWithCharset(htmlBytes, charset) : decodeHtmlBytes(htmlBytes)
+  const html = charset
+    ? await decodeWithCharset(htmlBytes, charset)
+    : await decodeHtmlBytes(htmlBytes)
   const baseLocation = htmlPart.headers.get('content-location') ?? ''
   // one map + one pass over the html: per-part regexes made this parts x html
   const inline = new Map<string, string>()
@@ -283,7 +306,7 @@ export async function altChunkToDocx(
   const kind = altChunkKind(path, await contentTypeOf(path), bytes.subarray(0, 4096))
   if (kind === 'docx') return bytes
   if (!kind || !htmlConverter) return null
-  const html = kind === 'mht' ? decodeMhtToHtml(bytes) : decodeHtmlBytes(bytes)
+  const html = kind === 'mht' ? await decodeMhtToHtml(bytes) : await decodeHtmlBytes(bytes)
   if (!html || !html.trim()) return null
   return htmlConverter(html)
 }

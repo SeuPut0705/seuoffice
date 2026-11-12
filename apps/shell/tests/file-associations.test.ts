@@ -65,15 +65,39 @@ describe('packaged file associations', () => {
     }
   })
 
-  it('keeps plain text and JSON off the Windows list, where NSIS would make the app their default', () => {
+  it('gives the legacy Word associations the Word mimeType', () => {
+    for (const ext of ['doc', 'dot']) {
+      const association = fileAssociations.find((entry) => entry.ext === ext)
+      expect(association, `no file association declared for .${ext}`).toBeTruthy()
+      expect(association!.mimeType).toBe('application/msword')
+    }
+    const ppt = fileAssociations.find((entry) => entry.ext === 'ppt')
+    expect(ppt, 'no file association declared for .ppt').toBeTruthy()
+    expect(ppt!.mimeType).toBe('application/vnd.ms-powerpoint')
+  })
+
+  it('keeps plain text, JSON and legacy .doc/.dot/.ppt off the Windows list, where NSIS would make the app their default', () => {
     const winExts = config.win.fileAssociations.map((entry: { ext: string }) => entry.ext)
-    expect(winExts).not.toContain('txt')
-    expect(winExts).not.toContain('json')
+    for (const ext of ['txt', 'json', 'doc', 'dot', 'ppt']) {
+      expect(winExts, `.${ext} must not become a Windows default opener`).not.toContain(ext)
+    }
     // a PC with Hancom Office keeps it as the opener for its own formats
     expect(winExts).not.toContain('hwp')
     expect(winExts).not.toContain('hwpx')
     for (const ext of ['docx', 'xlsx', 'pptx', 'pdf', 'md', 'html']) {
       expect(winExts, `.${ext} missing from the Windows associations`).toContain(ext)
+    }
+  })
+
+  // These open as a converted copy and are never written back, so installing must not make the
+  // app their default on macOS either (a handler without a rank is LSHandlerRank Default, which
+  // macOS may pick when no other app owns the type).
+  it('offers the import-only formats for Open With only on macOS', () => {
+    for (const ext of ['doc', 'dot', 'ppt', 'odp', 'otp', 'ods']) {
+      const offered = fileAssociations.find((entry) => entry.ext === ext) as
+        { rank?: string } | undefined
+      expect(offered, `no file association declared for .${ext}`).toBeTruthy()
+      expect(offered!.rank, `.${ext}`).toBe('Alternate')
     }
   })
 

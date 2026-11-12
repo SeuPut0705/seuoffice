@@ -19,7 +19,7 @@ Todos os editores podem chamar o painel de IA: selecione algo, dê uma instruç�
 
 ## O que sabe fazer
 
-- **Docs**: reescrever, desenvolver, traduzir, resumir, inserir tabelas e imagens, ajustar a formatação; cada volta guarda um instantâneo primeiro.
+- **Docs**: reescrever, desenvolver, traduzir, resumir, inserir tabelas e imagens, ajustar a formatação; cada volta salva um instantâneo primeiro.
 - **Sheets**: fórmulas, preenchimento de dados, transformações em massa, formatação.
 - **Slides**: gerar a apresentação inteira, ajustar o layout, reescrever os textos.
 - **PDF**: perguntas e respostas e resumos com base no texto ou nas páginas selecionadas.
@@ -51,7 +51,7 @@ No painel de IA dos editores Docs, Sheets, Slides, Hangul, HTML e mapa mental, v
 ## Ocultar uma seleção da IA
 
 - Em Slides, HTML e Markdown uma seleção pode sair da vista do modelo: clique direito ▸ **Ocultar a seleção da IA**, dê nome ao espaço reservado, e o modelo lê `{{nome}}` no lugar. (Markdown arma o item com a chave de olho riscado da faixa; a do HTML vive no painel de código.)
-- O arquivo guarda o texto real — salvar, exportar e imprimir ficam intactos, e a marca sobrevive à reabertura. O mesmo item desfaz (Markdown ganha também **Mostrar a seleção à IA novamente**).
+- O arquivo salva o texto real — salvar, exportar e imprimir ficam intactos, e a marca sobrevive à reabertura. O mesmo item desfaz (Markdown ganha também **Mostrar a seleção à IA novamente**).
 - HTML oculta conteúdos de elementos, valores de atributos e literais de string dos scripts; a página renderizada nunca muda.
 - Slides também oculta imagens, vídeos e áudios inteiros, e um slide com conteúdo oculto nunca é enviado como captura: a checagem automática de layout pula a página e avisa.
 - Isso vale só para a IA do aplicativo — a CLI, as ferramentas MCP e a exportação headless leem o arquivo diretamente e continuam vendo o texto.

@@ -17,7 +17,7 @@ import { DISTRIBUTION, ENCRYPTED, FILE_HEADER } from '../src/main/hwp5-file'
 import { fieldKindsOf } from '../src/main/field-kinds'
 import { applySaveFixes } from '../src/main/save-fixes'
 import { sectionTailsOf } from '../src/main/section-tails'
-import { hasTrackedChanges, withoutTrackedChanges } from '../src/main/tracked-changes'
+import { trackedChangesOf, withoutTrackedChanges } from '../src/main/tracked-changes'
 import { bytesMatchFormat } from '../src/main/save-plan'
 import type { SaveBase } from '../src/main/save-fixes'
 import { openHwpFromBytes } from '../src/web/open-hwp'
@@ -29,7 +29,7 @@ const require = createRequire(import.meta.url)
 /**
  * Files whose round trip is known to differ, by file name, with the reason. A file listed here is
  * reported as a known loss instead of failing; a listed file that now matches fails, so the
- * list cannot go stale. Reasons point at docs/tracking/findings.md or at the investigation.
+ * list cannot go stale. Reasons point at docs/archive/ieum/tracking/findings.md or at the investigation.
  */
 const KNOWN_LOSSES: Record<string, string> = {}
 
@@ -125,7 +125,7 @@ function measure(path: string, label: string, known: string | undefined): Row {
   if (excluded) return { ...row, verdict: 'excluded', note: excluded }
 
   // what the app's read does before the editor gets the bytes
-  if (format === 'hwp' && hasTrackedChanges(bytes)) {
+  if (format === 'hwp' && trackedChangesOf(bytes) === 'tracked') {
     const current = withoutTrackedChanges(bytes)
     if (!current) return { ...row, verdict: 'excluded', note: 'tracked changes cannot be dropped' }
     bytes = current

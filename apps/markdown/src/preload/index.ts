@@ -27,7 +27,6 @@ import type {
 } from '../shared/ipc'
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
-  SUBSCRIPTION_CONNECT_HELP_CHANNEL,
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
   subscriptionLaunchResultOf,
   subscriptionStatusMapOf,
@@ -86,9 +85,6 @@ const aiSubscription: SubscriptionApi = {
   },
   async openInstallHelp(provider) {
     await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
-  },
-  async openConnectHelp(path) {
-    await ipcRenderer.invoke(SUBSCRIPTION_CONNECT_HELP_CHANNEL, path)
   },
 }
 
@@ -262,6 +258,26 @@ const projectApi: Pick<ProjectApi, 'resolveChat' | 'appendChat' | 'loadChat' | '
   rebindChat: (args) => ipcRenderer.invoke('project:rebindChat', args),
 }
 
+/**
+ * Model file naming: the transport half of `suggestFileName`.
+ *
+ * Inlined rather than imported — a preload entry must stay a single-file bundle,
+ * or the sandbox drops every global it exposed. The one `ai:` channel is
+ * registered app-wide by the shell rather than by this app, the same arrangement
+ * the `project:*` bridge below already depends on.
+ *
+ * `content` crosses this bridge verbatim and the main process cannot see what
+ * this editor withheld, so what the caller hands over is exactly what the model
+ * sees. A caller that passed raw document text would undo its own redactions.
+ *
+ * The global is `aiNamingApi`, not `aiOffice`: `aiOffice` is the shell's home
+ * API, and a partial one in an editor window would shadow it there.
+ */
+const aiNamingApi = {
+  suggestFileName: (input: { content: string }) =>
+    ipcRenderer.invoke('ai:suggest-file-name', input),
+}
+
 contextBridge.exposeInMainWorld('markdownApi', api)
 // The split-pane role and focus calls the shell drives this pane with
 contextBridge.exposeInMainWorld('aiOfficeSplit', splitPaneBridge(ipcRenderer))
@@ -272,6 +288,7 @@ contextBridge.exposeInMainWorld('aiOfficeOutbound', outboundBridge())
 contextBridge.exposeInMainWorld('aiOfficeMcpTools', mcpToolsBridge())
 // the person's skills: the AI panel's `/` list and skill reads, skill cards (shell main checks each)
 contextBridge.exposeInMainWorld(USER_SKILLS_BRIDGE_KEY, userSkillsBridge())
+contextBridge.exposeInMainWorld('aiNamingApi', aiNamingApi)
 contextBridge.exposeInMainWorld('projectApi', projectApi)
 // project folders (decision 0088): main identifies this window, the bridge forwards ids only
 contextBridge.exposeInMainWorld(PROJECT_FOLDER_BRIDGE_KEY, projectFolderBridge(ipcRenderer))

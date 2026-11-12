@@ -21,7 +21,6 @@ import { AI_CHANNELS, HTML_CHANNELS } from '../shared/ipc'
 import { HTML_HANDOFF_CHANNELS } from '../shared/ipc'
 import type { AutoSaveDefault, ExportFormat, HtmlApi, SaveMode, UiTheme } from '../shared/ipc'
 import {
-  SUBSCRIPTION_CONNECT_HELP_CHANNEL,
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
   subscriptionLaunchResultOf,
   subscriptionMeteredResultOf,
@@ -73,9 +72,6 @@ const subscription: HtmlSubscriptionApi = {
   },
   openInstallHelp: async (provider) => {
     await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
-  },
-  openConnectHelp: async (path) => {
-    await ipcRenderer.invoke(SUBSCRIPTION_CONNECT_HELP_CHANNEL, path)
   },
 }
 
@@ -217,6 +213,26 @@ const projectApi: Pick<ProjectApi, 'resolveChat' | 'appendChat' | 'loadChat' | '
   rebindChat: (args) => ipcRenderer.invoke('project:rebindChat', args),
 }
 
+/**
+ * Model file naming: the transport half of `suggestFileName`.
+ *
+ * Inlined rather than imported — a preload entry must stay a single-file bundle,
+ * or the sandbox drops every global it exposed. The one `ai:` channel is
+ * registered app-wide by the shell rather than by this app, the same arrangement
+ * the `project:*` bridge below already depends on.
+ *
+ * `content` crosses this bridge verbatim and the main process cannot see what
+ * this editor withheld, so what the caller hands over is exactly what the model
+ * sees. A caller that passed raw document text would undo its own redactions.
+ *
+ * The global is `aiNamingApi`, not `aiOffice`: `aiOffice` is the shell's home
+ * API, and a partial one in an editor window would shadow it there.
+ */
+const aiNamingApi = {
+  suggestFileName: (input: { content: string }) =>
+    ipcRenderer.invoke('ai:suggest-file-name', input),
+}
+
 contextBridge.exposeInMainWorld('htmlApi', api)
 // The split-pane role and focus calls the shell drives this pane with
 contextBridge.exposeInMainWorld('aiOfficeSplit', splitPaneBridge(ipcRenderer))
@@ -229,6 +245,7 @@ contextBridge.exposeInMainWorld('aiOfficeMcpTools', mcpToolsBridge())
 contextBridge.exposeInMainWorld(USER_SKILLS_BRIDGE_KEY, userSkillsBridge())
 // The shell's document picker, for this editor's AI attach button
 contextBridge.exposeInMainWorld(DOC_ATTACH_BRIDGE_KEY, docAttachBridge())
+contextBridge.exposeInMainWorld('aiNamingApi', aiNamingApi)
 contextBridge.exposeInMainWorld('projectApi', projectApi)
 // project folders (decision 0088): main identifies this window, the bridge forwards ids only
 contextBridge.exposeInMainWorld(PROJECT_FOLDER_BRIDGE_KEY, projectFolderBridge(ipcRenderer))

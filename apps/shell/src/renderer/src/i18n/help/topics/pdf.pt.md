@@ -1,6 +1,6 @@
 # PDF: leitura, anotações e ocultação
 
-O editor de PDF tem cinco separadores no friso: **Página Inicial / Anotar / Editar / Páginas / Exibir**. Ele lê e escreve: o texto pode ser editado, o conteúdo pode ser ocultado, assinado e os formulários podem ser preenchidos.
+O editor de PDF tem cinco guias na faixa de opções: **Página Inicial / Anotar / Editar / Páginas / Exibir**. Ele lê e escreve: o texto pode ser editado, o conteúdo pode ser ocultado, assinado e os formulários podem ser preenchidos.
 
 ## Leitura e navegação
 
@@ -14,9 +14,9 @@ O editor de PDF tem cinco separadores no friso: **Página Inicial / Anotar / Edi
 
 ## Selecionar texto e marcar (Anotar)
 
-Experimente num parágrafo qualquer:
+Experimente em um parágrafo qualquer:
 
-1. **Arraste o rato por cima de uma frase** — ao largar, uma barra de anotação surge por cima do texto:
+1. **Arraste o mouse por cima de uma frase** — ao largar, uma barra de anotação surge por cima do texto:
 
 ![A barra de anotação depois de selecionar texto](img/pdf-highlight.png)
 
@@ -27,12 +27,12 @@ A ter em conta:
 
 - Arrastar sobre o texto faz aparecer uma barra: **Destacar / Sublinhar / Tachar / Copiar / Perguntar à IA**.
 - As cores vêm da paleta; e **aplicar a mesma marcação a um intervalo já marcado remove-a** (interruptor ao estilo do Word).
-- As marcações já gravadas no ficheiro podem ser selecionadas e eliminadas (menu ⋯ ou Delete).
+- As marcações já gravadas no arquivo podem ser selecionadas e eliminadas (menu ⋯ ou Delete).
 - **Nota**: enquanto uma ferramenta de desenho estiver armada, a camada de texto não pode ser selecionada — a ferramenta desarma-se sozinha após cada colocação, ficando outra vez em modo de seleção para a ação seguinte.
 
 ## Ferramentas de desenho (Anotar)
 
-Seis ferramentas: **Desenho livre, Retângulo, Elipse, Seta, Nota**, mais a **Censurar área** no separador Anotar.
+Seis ferramentas: **Desenho livre, Retângulo, Elipse, Seta, Nota**, mais a **Censurar área** na guia Anotar.
 
 - Cada ferramenta é um interruptor: clique para a armar; **ela desarma-se assim que uma forma é colocada** (clique outra vez na ferramenta para continuar); clicar na ferramenta armada também a desarma.
 - O traço segue a espessura do pincel; o retângulo, a elipse e a seta desenham-se arrastando; as cores vêm da paleta de desenho.
@@ -42,7 +42,7 @@ Seis ferramentas: **Desenho livre, Retângulo, Elipse, Seta, Nota**, mais a **Ce
   1. Separador Anotar ▸ clique **Censurar área** (a ferramenta arma-se).
   2. **Arraste uma caixa sobre o conteúdo** — fica coberto por um traço hachurado, e a barra de ferramentas ganha os botões **Limpar marcações** e **Aplicar censura**.
 
-  3. Clique **Aplicar censura** e confirme — o resultado é uma cópia de trabalho em que o texto e as imagens cobertas são removidos a sério (não apenas tapados), e isso não pode ser anulado; o documento original fica intacto.
+  3. Clique **Aplicar censura** e confirme — o resultado é uma cópia de trabalho em que o texto e as imagens cobertas são removidos de verdade (não apenas tapados), e isso não pode ser anulado; o documento original fica intacto.
 
   Errou? O botão de limpar marcações apaga as marcações atuais para poder desenhar de novo.
 
@@ -63,7 +63,7 @@ Seis ferramentas: **Desenho livre, Retângulo, Elipse, Seta, Nota**, mais a **Ce
 
 - **Assinatura manuscrita**: desenhe-a; pode ser associada a um campo de assinatura de um formulário.
 - **Assinatura por imagem**: coloque uma imagem como assinatura.
-- As assinaturas guardadas podem ser reutilizadas.
+- As assinaturas salvas podem ser reutilizadas.
 - **Assinatura com certificado** (aba Anotar): assine com um certificado do repositório do sistema ou de um arquivo .p12/.pfx; mostre opcionalmente a assinatura na página e certifique opcionalmente o documento contra mudanças posteriores.
 - Assinar sempre grava um **novo arquivo** (atualização incremental — assinaturas anteriores seguem válidas) e abre a cópia assinada no lugar. Salve antes: a assinatura cobre o arquivo como está no disco.
 - Uma faixa acima do documento lista as assinaturas existentes; **Ver assinaturas** mostra validade, cobertura e cadeia de certificados de cada uma. Revogação (CRL/OCSP) não é verificada.
@@ -76,8 +76,8 @@ Seis ferramentas: **Desenho livre, Retângulo, Elipse, Seta, Nota**, mais a **Ce
 - **Substituir páginas** troca um intervalo por páginas oriundas de outro documento; **Recortar páginas** apara as margens, com a opção de aplicar a todas as páginas.
 - **Tamanho da página** redimensiona todas as páginas para um único tamanho de papel; **Inverter ordem** inverte o documento de trás para a frente.
 - **Extrair página**: exporta as páginas selecionadas para um PDF novo.
-- **Dividir PDF**: duas formas — dividir por intervalos em vários ficheiros, ou cortar cada página numa grelha de páginas mais pequenas.
-- **Mesclar PDF**: duas formas — acrescentar outros PDFs, ou combinar várias páginas numa só folha. Os tamanhos são somados **antes** de se ler seja o que for, e um total **acima de 1 GiB é recusado** com uma mensagem legível (para manter a memória limitada).
+- **Dividir PDF**: duas formas — dividir por intervalos em vários arquivos, ou cortar cada página em uma grade de páginas mais pequenas.
+- **Mesclar PDF**: duas formas — acrescentar outros PDFs, ou combinar várias páginas em uma só folha. Os tamanhos são somados **antes** de se ler seja o que for, e um total **acima de 1 GiB é recusado** com uma mensagem legível (para manter a memória limitada).
 - As alterações ao nível da página são gravadas no salvamento seguinte; Salvar Como deixa o original intacto.
 
 ## Exportar e imprimir
@@ -89,7 +89,7 @@ Seis ferramentas: **Desenho livre, Retângulo, Elipse, Seta, Nota**, mais a **Ce
 
 ## Salvar
 
-- O salvamento normal/automático grava as anotações e as edições de volta no ficheiro (de forma atómica).
+- O salvamento normal/automático grava as anotações e as edições de volta no arquivo (de forma atômica).
 - **A ocultação passa pelo seu próprio fluxo Aplicar censura**, que produz uma cópia e deixa o original intacto, para que o conteúdo sensível não fique nele.
 
 ## Atalhos da barra de seleção

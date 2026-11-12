@@ -1,10 +1,59 @@
 import * as node from 'node:crypto'
+import * as nodeZlib from 'node:zlib'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { createWebBridge } from '../src/bridge'
 import { WebUnsupportedError } from '../src/errors'
 import { createCipheriv, createDecipheriv, createHash } from '../src/shims/crypto'
 import * as fs from '../src/shims/fs'
-import { crc32, deflateRawSync, deflateSync, inflateRawSync, inflateSync } from '../src/shims/zlib'
+import {
+  crc32,
+  deflateRawSync,
+  deflateSync,
+  gunzipSync,
+  inflateRawSync,
+  inflateSync,
+  unzipSync,
+} from '../src/shims/zlib'
+
+const MIB = 1024 * 1024
+
+/**
+ * `mib` MiB of zeros, deflated to about a thousandth of that: bare, with the zlib wrapper or
+ * as gzip. Put together from one deflated block, so the test never holds what it inflates to.
+ */
+function deflatedZeros(mib: number, format: 'raw' | 'zlib' | 'gzip'): Buffer {
+  const zeros = Buffer.alloc(MIB)
+  // a block flushed in full ends on a byte and forgets what came before it, so it repeats
+  const block = nodeZlib.deflateRawSync(zeros, { finishFlush: nodeZlib.constants.Z_FULL_FLUSH })
+  const raw = Buffer.concat([
+    ...Array<Buffer>(mib).fill(block),
+    nodeZlib.deflateRawSync(Buffer.alloc(0)),
+  ])
+  if (format === 'raw') return raw
+  if (format === 'zlib') {
+    // the Adler-32 of n zeros: 1 in the low half, n mod 65521 in the high half
+    const check = Buffer.alloc(4)
+    check.writeUInt16BE((mib * MIB) % 65521, 0)
+    check.writeUInt16BE(1, 2)
+    return Buffer.concat([Buffer.from([0x78, 0x9c]), raw, check])
+  }
+  const trailer = Buffer.alloc(8)
+  let crc = 0
+  for (let nth = 0; nth < mib; nth++) crc = nodeZlib.crc32(zeros, crc)
+  trailer.writeUInt32LE(crc, 0)
+  trailer.writeUInt32LE(mib * MIB, 4)
+  return Buffer.concat([Buffer.from([0x1f, 0x8b, 8, 0, 0, 0, 0, 0, 0, 0xff]), raw, trailer])
+}
+
+/** What a call threw, or undefined. */
+function thrownBy(run: () => unknown): (Error & { code?: string }) | undefined {
+  try {
+    run()
+  } catch (error) {
+    return error as Error & { code?: string }
+  }
+  return undefined
+}
 
 describe('zlib shim', () => {
   it('round-trips raw deflate for empty and 1 MiB random input', () => {
@@ -25,6 +74,63 @@ describe('zlib shim', () => {
     expect(crc32('123456789')).toBe(0xcbf43926)
     expect(crc32('6789', crc32('12345'))).toBe(0xcbf43926)
   })
+
+  // Node is the oracle: the desktop code bounds what a file may inflate to with
+  // `maxOutputLength`, and tells a refusal by the error node throws
+  const inflaters = [
+    ['inflateRawSync', inflateRawSync, nodeZlib.inflateRawSync, nodeZlib.deflateRawSync, 'raw'],
+    ['inflateSync', inflateSync, nodeZlib.inflateSync, nodeZlib.deflateSync, 'zlib'],
+    ['gunzipSync', gunzipSync, nodeZlib.gunzipSync, nodeZlib.gzipSync, 'gzip'],
+    ['unzipSync of gzip', unzipSync, nodeZlib.unzipSync, nodeZlib.gzipSync, 'gzip'],
+    ['unzipSync of zlib', unzipSync, nodeZlib.unzipSync, nodeZlib.deflateSync, 'zlib'],
+  ] as const
+
+  it.each(inflaters)(
+    '%s gives output up to maxOutputLength and refuses one byte more, like node',
+    (_name, shim, oracle, pack) => {
+      const input = Buffer.alloc(100_000, 'seuoffice ')
+      const packed = pack(input)
+      for (const inflate of [shim, oracle]) {
+        const whole = inflate(packed, { maxOutputLength: input.length })
+        expect(new Uint8Array(whole)).toEqual(new Uint8Array(input))
+        const refused = thrownBy(() => inflate(packed, { maxOutputLength: input.length - 1 }))
+        expect(refused).toBeInstanceOf(RangeError)
+        expect(refused?.code).toBe('ERR_BUFFER_TOO_LARGE')
+      }
+    },
+  )
+
+  it.each(inflaters)(
+    '%s reads the same with and without a limit, wherever the input ends',
+    (_name, shim, _oracle, pack) => {
+      // stored blocks: the packed length follows the input's, one byte at a time
+      for (let length = 990; length <= 1040; length++) {
+        const input = node.randomBytes(length)
+        const packed = pack(input, { level: 0 })
+        expect(new Uint8Array(shim(packed, { maxOutputLength: length }))).toEqual(
+          new Uint8Array(input),
+        )
+        expect(new Uint8Array(shim(packed))).toEqual(new Uint8Array(input))
+        expect(new Uint8Array(shim(packed, {}))).toEqual(new Uint8Array(input))
+      }
+    },
+  )
+
+  it.each(inflaters)(
+    '%s of 128 MiB of zeros stops at the limit, without holding what they inflate to',
+    (_name, shim, oracle, _pack, format) => {
+      // the wrapper built by hand is one node reads
+      expect(oracle(deflatedZeros(2, format)).length).toBe(2 * MIB)
+      const bomb = deflatedZeros(128, format)
+      expect(bomb.length).toBeLessThan(MIB)
+      // the most memory the process ever held, in kilobytes
+      const before = process.resourceUsage().maxRSS
+      const refused = thrownBy(() => shim(bomb, { maxOutputLength: MIB }))
+      const rise = (process.resourceUsage().maxRSS - before) * 1024
+      expect(refused?.code).toBe('ERR_BUFFER_TOO_LARGE')
+      expect(rise).toBeLessThan(64 * MIB)
+    },
+  )
 })
 
 describe('crypto shim', () => {

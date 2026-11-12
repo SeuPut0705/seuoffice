@@ -607,12 +607,14 @@ function parseChartexPartXml(parsed: XNode[], partPath: string): ChartDisplay | 
     const ptsOf = (dim: XNode): (string | null)[] => {
       const lvl = findChild(dim, 'cx:lvl')
       if (!lvl) return []
-      const out: (string | null)[] = []
+      const points: (string | null)[] = []
       for (const pt of findChildren(lvl, 'cx:pt')) {
         const idx = parseInt(attrsOf(pt)['idx'] ?? '', 10)
-        if (Number.isFinite(idx) && idx >= 0 && idx < MAX_CHART_CACHE_POINTS) out[idx] = textOf(pt)
+        if (Number.isFinite(idx) && idx >= 0 && idx < MAX_CHART_CACHE_POINTS)
+          points[idx] = textOf(pt)
       }
-      return out
+      // dense, as cachePoints: an idx hole is null (map skips the holes of a sparse array)
+      return Array.from(points, (v) => v ?? null)
     }
     for (const dim of childrenOf(data)) {
       const dimName = nameOf(dim)

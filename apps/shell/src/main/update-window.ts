@@ -15,7 +15,7 @@ import { UPDATE_CHANNELS } from '../shared/update-api'
  *
  * The card grows when the release notes are shown: the extra height fits the
  * notes box (max ~200px, scrolls) plus its label and footer link. Sizes are
- * tuned in docs/plans/update-details.md §5.
+ * tuned in docs/archive/ieum/plans/update-details.md §5.
  */
 
 interface UpdateActions {

@@ -118,6 +118,7 @@ describe('docs read / apply on a received .odt', () => {
     [{ op: 'set_page_setup', columns: { count: 2 } }],
     [{ op: 'insert_content', html: '<p>x <formula>E=mc^2</formula></p>' }],
     [{ op: 'insertField', target: { blockIndexes: [0] }, type: 'SEQ', args: 'Figure' }],
+    [{ op: 'remove_parts', kinds: ['customXml'] }],
   ])('rejects %o as unsupported on an .odt', async (op) => {
     const dir = tempDir()
     const odt = await writeFormOdt(dir)

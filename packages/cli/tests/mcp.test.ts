@@ -286,8 +286,9 @@ describe('mcp server', () => {
     // (about 0.5 KiB, decision 0094); 113 KiB before diagram_read, diagram_apply with its typed
     // ops and create_drawio (about 5.5 KiB); 119 KiB before the HWP note settings, page setup,
     // list, read_formatting and format_look ops (about 1.8 KiB, decision 0106); 121 KiB before
-    // the HWP check_layout op with from_table and from_row (about 0.2 KiB)
-    expect(bytes).toBeLessThanOrEqual(122 * 1024)
+    // the HWP check_layout op with from_table and from_row (about 0.2 KiB); 122 KiB before the
+    // docs set_properties op (the document properties)
+    expect(bytes).toBeLessThanOrEqual(123 * 1024)
     expect(bytes).toBeGreaterThan(60 * 1024)
   })
 

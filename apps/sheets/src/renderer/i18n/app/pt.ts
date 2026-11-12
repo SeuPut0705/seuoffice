@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const pt = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Ocultar a seleção da IA',
+  redactDialogDesc:
+    'O conteúdo selecionado continua no documento e no arquivo; o modelo vê apenas o marcador. Dê-lhe um nome para que saiba o que representa.',
+  redactDialogScope:
+    'Isso se aplica apenas à IA deste aplicativo. A CLI, as ferramentas MCP e a exportação sem interface leem o arquivo diretamente e ainda veem essas palavras.',
+  redactDialogPlaceholder: 'Nome do marcador, ex.: telefone do cliente',
+  redactCancel: 'Cancelar',
+  redactInsert: 'Ocultar',
+  redactEnable: 'Clique com o botão direito em uma seleção para ocultá-la do modelo.',
+  redactNeedsSavedRow:
+    'Esta linha ainda não está no arquivo. Salve primeiro e depois oculte a célula.',
+  redactNeedsSavedSheet:
+    'Esta planilha ou uma cópia dela ainda não está no arquivo. Salve primeiro e depois altere o que está oculto.',
+  redactMoveRefused:
+    'Não realizado: isso moveria ou copiaria células ocultas da IA, e seus valores deixariam de estar ocultos. Deixe de ocultá-las primeiro ou retire-as do intervalo.',
+  redactRecoveredFromNames:
+    'Outro aplicativo reescreveu este arquivo e descartou o registro do que está oculto. As células ocultas foram recuperadas a partir dos nomes na pasta de trabalho; salvar restaura o registro completo.',
+
   appMergeWorkbooks: 'Mesclar pastas de trabalho',
   appMergeWorkbooksTip: 'Adicionar planilhas de outros arquivos do Excel a esta pasta de trabalho',
   appMergeWorkbooksPicking: 'Escolha os arquivos para mesclar…',
@@ -8,6 +27,8 @@ export const pt = {
   appMergeWorkbooksDone:
     '{sheets} planilhas mescladas de {files} arquivos (fórmulas importadas como valores).',
   appMergeWorkbooksFailed: 'Falha ao mesclar as pastas de trabalho.',
+  appMergeWorkbooksHiddenCells:
+    'Nada foi mesclado: {file} tem células ocultas da IA, e a mesclagem traria os valores delas sem essa proteção. Abra esse arquivo, deixe de ocultar essas células ou exclua-as, salve e mescle novamente.',
   appMergeWorkbooksInsertFailed: 'Não foi possível criar a planilha {sheet}.',
   appMergeWorkbooksLocked:
     'A pasta de trabalho ainda está carregando; a mesclagem não está disponível agora.',
@@ -551,6 +572,7 @@ export const pt = {
   appBridgeUnavailable:
     'A ponte de arquivos do desktop está indisponível. Reinicie o aplicativo Electron.',
   appOpenCanceled: 'Seleção de pasta de trabalho cancelada.',
+  appImportCanceled: 'Importação cancelada.',
   appOpeningWorkbook: 'Abrindo pasta de trabalho…',
   appOpened: '{name} aberto — edições de células são salvas de volta com ⌘S.',
   appOpenFailed: 'Não foi possível abrir a pasta de trabalho.',
@@ -648,6 +670,8 @@ export const pt = {
     'Este tipo de gráfico não suporta essa edição; salvamento cancelado — desfaça a alteração do gráfico.',
   appSaveErrMoveOverlap:
     'Uma fórmula, um intervalo formatado, uma forma ou uma tabela atravessa as linhas movidas; salvamento cancelado — desfaça a movimentação.',
+  appSaveErrHiddenCellsUnreadable:
+    'Não foi possível ler o registro das células ocultas da IA nesta pasta de trabalho; por isso, alterações em linhas, colunas e planilhas não podem ser salvas: as células ocultas deixariam de estar protegidas. Desfaça essas alterações e salve novamente.',
   appFromTextCsvTitle: 'Importar um arquivo CSV/texto para a seleção atual',
   appCsvImported: '{rows} linhas × {columns} colunas importadas do arquivo para {cell}.',
   appCsvEmpty: 'O arquivo CSV não contém dados.',
@@ -751,6 +775,7 @@ export const pt = {
   appExportPdfTitle: 'Exportar como PDF',
   appSaveTitle: 'Salvar (⌘S)',
   appSaveAs: 'Salvar Como',
+  aiNameFile: 'Nomear com IA…',
   appUndo: 'Desfazer',
   appRedo: 'Refazer',
   appQuickAccessCustomize: 'Personalizar a Barra de Ferramentas de Acesso Rápido',
@@ -794,7 +819,7 @@ export const pt = {
   appAddChartElement: 'Adicionar Elemento de Gráfico',
   appAddChartElementTitle: 'Títulos, rótulos de dados, legenda',
   appQuickLayout: 'Layout Rápido',
-  appQuickLayoutTitle: 'Layouts predefinidos de legenda + rótulos',
+  appQuickLayoutTitle: 'Layouts padrão de legenda + rótulos',
   appChangeColors: 'Alterar Cores',
   appRecolorSlices: 'Recolorir cada fatia',
   appRecolorSeries: 'Recolorir cada série',
@@ -1204,6 +1229,20 @@ export const pt = {
   appWatchCell: 'Célula',
   appWatchValue: 'Valor',
   appWatchFormula: 'Fórmula',
+  appLinksPanel: 'Vínculos externos',
+  appLinksPanelDetail: 'Listar, atualizar e interromper vínculos a outras pastas de trabalho',
+  appLinksUpdate: 'Atualizar valores',
+  appLinksNone: 'Esta pasta de trabalho não tem vínculos para outras pastas de trabalho.',
+  appLinksUnsaved: 'Salve esta pasta de trabalho antes de listar as suas ligações externas.',
+  appLinksSource: 'Origem',
+  appLinksStatus: 'Estado',
+  appLinksSheets: 'Planilhas',
+  appLinksLocate: 'Localizar arquivo de origem',
+  appLinksReachable: 'Disponível',
+  appLinksBroken: 'Indisponível',
+  appLinksBreak: 'Interromper vínculos',
+  appLinksBreakConfirm: 'Confirmar interrupção',
+  appLinksChangeSource: 'Alterar origem',
   appGroupCalculation: 'Cálculo',
   appCalculationOptions: 'Opções de Cálculo',
   appCalculationOptionsTitle: 'Recálculo automático ou manual',
@@ -1220,6 +1259,12 @@ export const pt = {
   appGroupGetData: 'Obter Dados',
   appFromTextCsv: 'De Texto/CSV',
   appRefreshAll: 'Atualizar Tudo',
+  appRefreshQuery: 'Atualizar consulta',
+  appQueryConnectionsTitle: 'Atualizar as consultas da pasta de trabalho',
+  appQueryRefreshing: 'Atualizando {name}…',
+  appQueryRefreshed: '{name} atualizado ({rows} linhas)',
+  appQueryRefreshedClipped: '{name} atualizado ({rows} linhas, {dropped} não cabem no intervalo)',
+  appQueryRefreshFailed: 'Não foi possível atualizar {name}',
   appWorkbookNoPivot: 'Nenhuma tabela dinâmica nesta pasta de trabalho.',
   appRefreshAllTitle: 'Atualizar todas as tabelas dinâmicas',
   appQueriesConnections: 'Consultas e conexões',
@@ -1296,6 +1341,10 @@ export const pt = {
   appFontSizeTip: 'Tamanho da fonte',
   appZoomIn: 'Ampliar',
   appZoomOut: 'Reduzir',
+  appImgActualSize: 'Tamanho real',
+  appImgFitWindow: 'Ajustar à janela',
+  appImgSaveAs: 'Salvar imagem como…',
+  appImgClose: 'Fechar (Esc)',
   appZoomSheetTitle: 'Aplicar zoom na planilha',
   appResetZoom: 'Redefinir zoom',
   appZoomToSelection: 'Zoom na Seleção',
@@ -1338,6 +1387,20 @@ export const pt = {
   appOpenFileFirst: 'Abra um arquivo primeiro',
   appNoPassword: 'Sem senha',
   appProtectWorkbook: 'Proteger Pasta de Trabalho',
+  appChangePassword: 'Alterar Senha',
+  appWorkbookPasswordChanged: 'A senha da pasta de trabalho foi atualizada.',
+  appChangePasswordTitle: 'Alterar a senha da pasta de trabalho',
+  appChangePasswordCopy: 'Escolha uma nova senha e confirme-a abaixo.',
+  appNewPasswordLabel: 'Nova senha',
+  appConfirmPasswordLabel: 'Confirmar nova senha',
+  appPasswordsMismatch: 'As senhas não coincidem.',
+  appPasswordTooLong:
+    'A senha é muito longa. Use no máximo {max} caracteres, o tamanho máximo que o Excel aceita.',
+  appPasswordUpdateFailed: 'Não foi possível atualizar a senha da pasta de trabalho.',
+  appPasswordUpdating: 'Atualizando…',
+  appUpdatePassword: 'Atualizar senha',
+  appWorkbookNotPasswordProtected:
+    'Esta pasta de trabalho não está protegida por uma senha de abertura.',
   appAllowEditRanges: 'Permitir Edição de Intervalos',
   appGroupClipboard: 'Área de Transferência',
   appPaste: 'Colar',
@@ -1528,7 +1591,7 @@ export const pt = {
   appNotePictureUnavailable: 'Não é possível exibir esta imagem.',
   appNotePicturesToggle: 'Imagens das anotações',
   appNoteInsertPicture: 'Inserir imagem',
-  appNotePictureInserted: 'Imagem adicionada à nota em {cell}. Salve para gravá-la no ficheiro.',
+  appNotePictureInserted: 'Imagem adicionada à nota em {cell}. Salve para gravá-la no arquivo.',
   appNotePictureRemoved: 'Imagem removida da nota em {cell}.',
   appNotePictureRemove: 'Remover imagem',
   appCommentsPaneTitle: 'Comentários',
@@ -1575,10 +1638,12 @@ export const pt = {
   appVisualSendBackward: 'Recuar',
   appVisualSizeProperties: 'Tamanho e propriedades…',
   appVisualHyperlink: 'Hiperligação…',
+  appVisualEmbedInCell: 'Inserir imagem na célula',
+  appVisualEmbedFailed: 'Não foi possível inserir esta imagem na célula.',
   appVisualDelete: 'Eliminar',
-  appVisualArranged: 'Objeto atualizado — guarde com ⌘S.',
+  appVisualArranged: 'Objeto atualizado — salve com ⌘S.',
   appVisualCopied: 'Objeto copiado.',
-  appVisualPasted: 'Objeto colado — guarde com ⌘S.',
+  appVisualPasted: 'Objeto colado — salve com ⌘S.',
   appVisualNoCopy: 'Este objeto não pode ser copiado.',
   appVisualSelectTwo: 'Shift+clique para selecionar pelo menos dois objetos a alinhar.',
   appVisualSelectThree: 'Shift+clique para selecionar pelo menos três objetos a distribuir.',

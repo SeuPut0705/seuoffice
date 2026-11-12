@@ -11,13 +11,14 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { createHash, randomUUID } from 'node:crypto'
-import { copyFile, readFile, stat, writeFile } from 'node:fs/promises'
-import { tmpdir, userInfo } from 'node:os'
+import { copyFile, open, readFile, stat, writeFile } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
 import { BrowserWindow, WebContentsView, app, dialog, ipcMain, shell, webContents } from 'electron'
 import type { WebContents } from 'electron'
 import {
   buildPrintableHtml,
+  configuredAuthorName,
   configuredDefaultSaveDir,
   confirmOverwriteIfConflicted,
   contextMenuLabels,
@@ -44,7 +45,12 @@ import type {
 import { brandText, createI18n, getUiLang } from '@genoffice/i18n'
 import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
-import { PDF_CHANNELS, PDF_TOOLS_HANDOFF, type PdfToolsHandoffTool } from '../shared/ipc'
+import {
+  PDF_CHANNELS,
+  PDF_READ_CHUNK_BYTES,
+  PDF_TOOLS_HANDOFF,
+  type PdfToolsHandoffTool,
+} from '../shared/ipc'
 import { CertificateEncryptionError, WrongPasswordError, decryptDocument } from './pdf-crypt'
 import {
   buildExportImagePaths,
@@ -72,6 +78,8 @@ import type {
   PagePreviewRequest,
   ReplacePagesRequest,
   ReplacePagesResult,
+  RestoreFileRequest,
+  RestoreFileResult,
   SetPageSizeRequest,
   SetPageSizeResult,
   SplitPagesRequest,
@@ -88,6 +96,8 @@ import type {
   ValidateTextEditsRequest,
 } from '../shared/ipc'
 import type {
+  CertificateErrorCode,
+  CertificateInfo,
   InspectCertificateResult,
   ListSystemCertificatesResult,
   PdfSignatureInfo,
@@ -129,14 +139,11 @@ import {
 } from './signature-store'
 import { uniqueGeneratedPdfPath } from './generated-output'
 import { validateRedactionRegions } from './redaction'
-import { SignError, inspectCertificate, openCertificate, signPdf } from './pdf-sign'
+import { SignError, openCertificate, openExternalCertificate, signPdf } from './pdf-sign'
+import type { ExternalSigner, SignPdfOptions } from './pdf-sign'
 import { readPdfSignatures } from './pdf-signatures'
-import {
-  SystemStoreError,
-  exportSystemCertificate,
-  listSystemCertificates,
-} from './system-certificates'
-import type { ExportedIdentity, SystemCertificateRef } from './system-certificates'
+import { SystemStoreError, openSystemSigner, listSystemCertificates } from './system-certificates'
+import type { SystemCertificateRef, SystemIdentity } from './system-certificates'
 import {
   createNoteLinkService,
   noteDialogText,
@@ -778,20 +785,55 @@ const redactionFlows = new Set<number>()
 // two panes a save can see the sibling pane's write. A manual save asks before
 // overwriting it; an automatic save defers silently to the next manual one.
 const docDiskStates = new Map<number, Map<string, SaveDiskState>>()
+/**
+ * What each view's last write in place left on disk. Kept apart from
+ * docDiskStates because a read moves that one: Undo and Redo of a page
+ * operation write a kept copy of the whole file back, and that copy may only
+ * replace this state. Reading a file another program changed (to print it,
+ * say) does not make the change this view's own.
+ */
+const ownWriteStates = new Map<number, Map<string, SaveDiskState>>()
 
-async function rememberDiskState(wcId: number, path: string): Promise<void> {
+async function rememberDiskState(wcId: number, path: string): Promise<SaveDiskState | null> {
   const state = await recordDiskState(path)
-  if (!state) return
+  if (!state) return null
   const states = docDiskStates.get(wcId) ?? new Map<string, SaveDiskState>()
   states.set(path, state)
   docDiskStates.set(wcId, states)
+  return state
 }
 
 function forgetDiskState(wcId: number, path: string): void {
+  ownWriteStates.get(wcId)?.delete(path)
   const states = docDiskStates.get(wcId)
   if (!states) return
   states.delete(path)
   if (states.size === 0) docDiskStates.delete(wcId)
+}
+
+/** The app renamed or moved the view's file, bytes untouched: what is recorded of it follows */
+function moveDiskState(wcId: number, oldPath: string, newPath: string): void {
+  for (const states of [docDiskStates.get(wcId), ownWriteStates.get(wcId)]) {
+    const recorded = states?.get(oldPath)
+    if (states && recorded) {
+      states.delete(oldPath)
+      states.set(newPath, recorded)
+    }
+  }
+}
+
+/** True while `path` still holds what this view's last write in place left there */
+async function holdsOwnLastWrite(wcId: number, path: string): Promise<boolean> {
+  const left = ownWriteStates.get(wcId)?.get(path)
+  if (!left) return false
+  try {
+    const now = await stat(path)
+    // the save guard's rule: the same time and size skip the reread, otherwise the bytes decide
+    if (now.mtimeMs === left.mtimeMs && now.size === left.size) return true
+  } catch {
+    return false
+  }
+  return (await recordDiskState(path))?.hash === left.hash
 }
 
 /** True when this save must stop instead of writing: the sibling copy changed
@@ -895,7 +937,12 @@ async function writeOwnFile<T>(wcId: number, path: string, write: () => Promise<
   ownWritesInFlight.set(path, (ownWritesInFlight.get(path) ?? 0) + 1)
   try {
     const result = await write()
-    await rememberDiskState(wcId, path)
+    const written = await rememberDiskState(wcId, path)
+    const own = ownWriteStates.get(wcId) ?? new Map<string, SaveDiskState>()
+    // unreadable right after the write: nothing there is known to be this view's
+    if (written) own.set(path, written)
+    else own.delete(path)
+    ownWriteStates.set(wcId, own)
     const watcher = diskWatchByWc.get(wcId)
     if (watcher?.path === path) watcher.rebase(docDiskStates.get(wcId)?.get(path) ?? null)
     return result
@@ -915,7 +962,7 @@ export function setPdfRedactionSavedHook(hook: (wc: WebContents, path: string) =
 /** Certificate files the user picked in this view, by opaque id; the renderer never learns the path */
 type CertEntry =
   | { kind: 'file'; path: string }
-  | { kind: 'system'; ref: SystemCertificateRef; identity?: ExportedIdentity }
+  | { kind: 'system'; ref: SystemCertificateRef; identity?: SystemIdentity }
 const certEntriesByWc = new Map<number, Map<string, CertEntry>>()
 
 const certEntryOf = (wcId: number, id: unknown): CertEntry | undefined =>
@@ -934,15 +981,47 @@ function releaseCertEntry(entry: CertEntry | undefined): void {
   if (entry?.kind === 'system') delete entry.identity
 }
 
-/** PKCS#12 bytes and the password to open them; for a system identity both come from the store export */
+/** What signs: PKCS#12 bytes with their password, or an OS store that signs in place */
+type CertMaterial =
+  { kind: 'p12'; p12: Uint8Array; password: string } | { kind: 'in-place'; signer: ExternalSigner }
+
 async function certMaterial(
   entry: CertEntry,
   password: string,
   storePassword?: string,
-): Promise<{ p12: Uint8Array; password: string }> {
-  if (entry.kind === 'file') return { p12: await readCertificateFile(entry.path), password }
-  entry.identity ??= await exportSystemCertificate(entry.ref, storePassword)
+): Promise<CertMaterial> {
+  if (entry.kind === 'file')
+    return { kind: 'p12', p12: await readCertificateFile(entry.path), password }
+  entry.identity ??= await openSystemSigner(entry.ref, storePassword)
   return entry.identity
+}
+
+/** Decrypt a PKCS#12 once, or read the chain an OS store reports; the key itself is never read for the latter */
+function openMaterial(material: CertMaterial):
+  | { ok: false; error: CertificateErrorCode }
+  | {
+      ok: true
+      info: CertificateInfo[]
+      sign: Pick<SignPdfOptions, 'loaded' | 'p12' | 'password' | 'external'>
+    } {
+  if (material.kind === 'in-place') {
+    const opened = openExternalCertificate(material.signer)
+    return opened.ok
+      ? {
+          ok: true,
+          info: opened.info,
+          sign: { external: { signer: material.signer, loaded: opened.loaded } },
+        }
+      : opened
+  }
+  const opened = openCertificate(material.p12, material.password)
+  return opened.ok
+    ? {
+        ok: true,
+        info: opened.info,
+        sign: { loaded: opened.loaded, p12: material.p12, password: material.password },
+      }
+    : opened
 }
 
 const MAX_CERTIFICATE_FILE_BYTES = 4 * 1024 * 1024
@@ -1207,12 +1286,7 @@ export function pdfFileRenamed(contents: WebContents, oldPath: string, newPath: 
   if (untitledPdfPaths.delete(oldPath)) untitledPdfPaths.add(newPath)
   if (unsavedBlankPdfPaths.delete(oldPath)) unsavedBlankPdfPaths.add(newPath)
   void recovery.renamed(wcId, oldPath, newPath)
-  const states = docDiskStates.get(wcId)
-  const recorded = states?.get(oldPath)
-  if (states && recorded) {
-    states.delete(oldPath)
-    states.set(newPath, recorded)
-  }
+  moveDiskState(wcId, oldPath, newPath)
   // the old name is gone because the app moved it: watch the new one, no notice
   if (diskWatchByWc.get(wcId)?.path === oldPath && !contents.isDestroyed()) {
     stopViewWatch(wcId)
@@ -1375,13 +1449,21 @@ export async function requestPdfClose(
       : await dialog.showMessageBox(options)
   if (response === 2) return false
   if (response === 1) {
-    // "Don't Save" drops the unsaved edits, and with them their recovery copy: no new
-    // one is written while other tabs' prompts keep this view open
-    recovery.dontSave(contents.id, openPathByWc.get(contents.id))
-    if (!contents.isDestroyed()) contents.send(PDF_CHANNELS.recoveryDropped, true)
+    discardPdfRecovery(contents)
     return true
   }
   return await requestRendererSave(contents, true)
+}
+
+/**
+ * "Don't Save" for this view's document: the unsaved edits are given up, and
+ * with them their recovery copy. No new one is written while the view is
+ * still open (other tabs' prompts, or the tab on its way out). The close
+ * prompt ends here, and so does a tool that closes the tab without saving.
+ */
+export function discardPdfRecovery(contents: WebContents): void {
+  recovery.dontSave(contents.id, openPathByWc.get(contents.id))
+  if (!contents.isDestroyed()) contents.send(PDF_CHANNELS.recoveryDropped, true)
 }
 
 /**
@@ -1584,13 +1666,7 @@ function registerPdfIpc(): void {
     return recovery.resolveOnOpen(e.sender, path).then(() => path)
   })
 
-  ipcMain.handle(PDF_CHANNELS.getUsername, () => {
-    try {
-      return userInfo().username
-    } catch {
-      return ''
-    }
-  })
+  ipcMain.handle(PDF_CHANNELS.getUsername, (): string => configuredAuthorName(app))
 
   ipcMain.handle(PDF_CHANNELS.readFile, async (e, path: unknown) => {
     if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) {
@@ -1620,6 +1696,47 @@ function registerPdfIpc(): void {
     recovery.discardedForDisk(e.sender.id, path)
     return true
   })
+
+  // Chunked reads for the same grant: one 42 MB ArrayBuffer over IPC has
+  // killed renderers before first paint on Windows (genoffice#2366), while
+  // small slices deserialize fine. The size rides along so the renderer's
+  // loop needs no separate stat.
+  ipcMain.handle(
+    PDF_CHANNELS.readFileChunk,
+    async (e, path: unknown, start: unknown, end: unknown) => {
+      // the preload hands the grant's path, start and end as positional args
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) {
+        throw new Error('pdf: path not granted to this view')
+      }
+      const from = typeof start === 'number' && Number.isInteger(start) && start >= 0 ? start : -1
+      const to = typeof end === 'number' && Number.isInteger(end) && end >= from ? end : -1
+      if (from < 0 || to < 0 || to - from > PDF_READ_CHUNK_BYTES) {
+        throw new Error('pdf: invalid chunk range')
+      }
+      // a view restored from a recovery copy shows the copy until it is saved
+      const restored = recovery.viewBytes(e.sender.id, path)
+      if (restored) {
+        const data = restored.slice(
+          Math.min(from, restored.byteLength),
+          Math.min(to, restored.byteLength),
+        )
+        if (from === 0) await rememberDiskState(e.sender.id, path)
+        return { data, fileSize: restored.byteLength }
+      }
+      // the first slice is the reader's copy: this view's save guard compares against it
+      if (from === 0) await rememberDiskState(e.sender.id, path)
+      const handle = await open(path, 'r')
+      try {
+        const length = to - from
+        const buf = Buffer.alloc(length)
+        const { bytesRead } = await handle.read(buf, 0, length, from)
+        const fileSize = (await handle.stat()).size
+        return { data: new Uint8Array(buf.subarray(0, bytesRead)), fileSize }
+      } finally {
+        await handle.close()
+      }
+    },
+  )
 
   // pdf.js has already accepted `password` for these bytes on the render side;
   // a failure here therefore means the standard handler refused it
@@ -1900,13 +2017,14 @@ function registerPdfIpc(): void {
         : await dialog.showSaveDialog(options)
       if (picked.canceled || !picked.filePath) return null
       const target = /\.pdf$/i.test(picked.filePath) ? picked.filePath : `${picked.filePath}.pdf`
-      await copyFile(path, target)
+      // the view writes the picked file itself: Undo of an earlier page operation goes on
+      // there, and only a later change by another program reads as one
+      await writeOwnFile(e.sender.id, target, () => copyFile(path, target))
       untitledCopyPdfPaths.delete(path)
       allowedByWc.set(e.sender.id, new Set([target]))
       openPathByWc.set(e.sender.id, target)
       recovery.adopted(e.sender.id, path, target)
-      forgetDiskState(e.sender.id, path)
-      await rememberDiskState(e.sender.id, target)
+      if (target !== path) forgetDiskState(e.sender.id, path)
       try {
         pdfRedactionSavedHook?.(e.sender, target)
       } catch (err) {
@@ -2008,6 +2126,8 @@ function registerPdfIpc(): void {
       untitledPdfPaths.delete(path)
       if (unsavedBlankPdfPaths.delete(path)) unsavedBlankPdfPaths.add(target)
       void recovery.renamed(e.sender.id, path, target)
+      // the move kept the bytes: the save guard's record and this view's own-write record follow
+      moveDiskState(e.sender.id, path, target)
       try {
         pdfRenamedHook?.(e.sender, path, target)
       } catch (err) {
@@ -2529,6 +2649,33 @@ function registerPdfIpc(): void {
   )
 
   ipcMain.handle(
+    PDF_CHANNELS.restoreFile,
+    async (e, request: RestoreFileRequest): Promise<RestoreFileResult> => {
+      const { path, bytes } = request ?? {}
+      // a buffer from the renderer's realm (the web build's worker) fails instanceof
+      if (
+        typeof path !== 'string' ||
+        !allowedByWc.get(e.sender.id)?.has(path) ||
+        Object.prototype.toString.call(bytes) !== '[object ArrayBuffer]'
+      ) {
+        return { ok: false, error: 'pdf: path not granted to this view' }
+      }
+      // the kept copy holds nothing written since it was taken: another program's
+      // change (or a sibling pane's) is not overwritten with it
+      if (!(await holdsOwnLastWrite(e.sender.id, path))) {
+        return { ok: false, error: 'external-modified' }
+      }
+      try {
+        // ieum: through the view's own-write record, like the other in-place page operations
+        await writeOwnFile(e.sender.id, path, () => writePdfAtomically(path, new Uint8Array(bytes)))
+        return { ok: true }
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+    },
+  )
+
+  ipcMain.handle(
     PDF_CHANNELS.setPageSize,
     async (e, request: SetPageSizeRequest): Promise<SetPageSizeResult> => {
       const { path, width, height } = request ?? {}
@@ -2747,7 +2894,10 @@ function registerPdfIpc(): void {
           password,
           typeof storePassword === 'string' && storePassword ? storePassword : undefined,
         )
-        return inspectCertificate(material.p12, material.password)
+        const opened = openMaterial(material)
+        return opened.ok
+          ? { ok: true, signer: opened.info[0]!, chain: opened.info }
+          : { ok: false, error: opened.error }
       } catch (err) {
         return { ok: false, error: err instanceof SystemStoreError ? err.code : 'cert-invalid' }
       }
@@ -2789,7 +2939,7 @@ function registerPdfIpc(): void {
             : undefined,
         )
         // Fail on a wrong password before asking where to save
-        const opened = openCertificate(material.p12, material.password)
+        const opened = openMaterial(material)
         if (!opened.ok) return { ok: false, error: opened.error }
 
         const parent = BrowserWindow.fromWebContents(e.sender)
@@ -2808,9 +2958,7 @@ function registerPdfIpc(): void {
         if (isSameRedactionCopyPath(path, target)) return { ok: false, cancelled: true }
 
         const signed = await signPdf(new Uint8Array(await readFile(path)), {
-          loaded: opened.loaded,
-          p12: material.p12,
-          password: material.password,
+          ...opened.sign,
           ...options,
         })
         await writePdfAtomically(target, signed)
@@ -2953,6 +3101,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     allowedByWc.delete(wcId)
     dirtyByWc.delete(wcId)
     docDiskStates.delete(wcId)
+    ownWriteStates.delete(wcId)
     stopViewWatch(wcId)
     certEntriesByWc.delete(wcId)
     saveAsTargetByWc.delete(wcId)
