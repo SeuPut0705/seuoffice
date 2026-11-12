@@ -269,6 +269,10 @@ draw.io 다이어그램(`.drawio`, `.dio`, `.drawio.svg`, `.drawio.png`)을 읽�
 
 - 표준 입출력으로 같은 명령들을 도구로 내놓는다. `--http <포트>`를 주면 Streamable HTTP로 내놓는다(`--host`, `--token`).
 - 등록 예: `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`. `ieumoffice mcp install <에이전트|all>`이 각 에이전트의 설정 파일에 `ieumoffice` 항목만 쓴다. 같은 이름의 항목이 다른 프로그램을 가리키면 `occupied`로 알리고 `--force` 없이는 건드리지 않는다.
+- `ieumoffice mcp install dsh`는 DeepSeek Harness(dsh) 홈(`DSH_HOME`, 없으면 `~/.dsh`)의 `cordis.patch.yml`에 `ieumoffice` 항목을 쓴다. 이 파일에서 이 앱의 항목은 `mcp-ieumoffice` id나 `ieumoffice` 서버 이름을 가진 최상위 `- ` 블록 하나다. 블록이 여러 개면 첫 번째 것만 고치고 지운다. 블록은 최상위 항목 전체라서, 같은 항목에 손으로 넣은 다른 내용도 함께 바뀐다.
+- `command` 경로는 따옴표 없이 쓰이므로, 경로에 ` #`(공백 뒤의 샵)이 있으면 YAML 주석으로 잘린다. 설치 경로에서 그런 글자를 피한다.
+- `ieumoffice skill install dsh`는 공용 폴더 `~/.agents/skills`에 쓴다. dsh는 그 폴더를 읽는 도구라서 자기 폴더에는 새로 쓰지 않는다.
+- `ieumoffice mcp install --compact-schemas`는 같은 항목에 `GENOFFICE_MCP_COMPACT_SCHEMAS=1` 환경 값만 더해 쓴다. `mcp list`·`mcp uninstall`과 함께 쓰면 종료 코드 1, `reason: "invalid_argument"`다.
 - 도구는 명령 동사마다 하나다(`docs_read`, `docs_apply`, `hwp_read`, `hwp_apply`, `diagram_read`, `diagram_apply`, `create_drawio`, `sheet_apply`, `slides_render`, `convert`, `read_url`, `pdf_read`, `pdf_images`, `pdf_ai_read`, `pdf_translate`, `pdf_status`, `epub_translate`, `epub_status` 등). 매개변수는 명령의 옵션 목록에서 그대로 나온다(`allow-paid`는 `allow_paid`, `no-cover`는 `no_cover`). 두 표면이 어긋나지 않는다. `diagram_read`·`diagram_apply`·`convert`의 `page`는 다이어그램 쪽의 id나 이름(글자)이고, `create_drawio`의 `mermaid`는 Mermaid 글 그대로다.
 - `pdf_ai_read`·`pdf_translate`·`epub_translate`는 `yes`가 없으면 명령처럼 예상만 답한다. `yes`가 있으면 작업을 MCP 서버 프로세스 안에서 띄우고 바로 답한다(`detail.started: true`, `detail.estimate`). 진행, 멈춘 이유, `resetsAt`, 결과 파일 경로는 `pdf_status`(EPUB은 `epub_status`)의 `job`으로 본다. 이어하기는 같은 도구를 다시 부르면 된다.
 - 그 결과 파일은 작업이 끝날 때 쓴다. `partial: true`로 부른 작업은 멈출 때 끝난 부분만 반영해 쓴다. 위치 규칙은 명령어와 같고, 경로는 `job.outputs`로 알려 준다.
