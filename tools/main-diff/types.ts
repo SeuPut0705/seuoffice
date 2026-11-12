@@ -18,6 +18,8 @@ export type FileSpec =
       mtimeMs?: number
       /** permission bits, e.g. 0o444 for a read-only file */
       mode?: number
+      /** a hard link to this earlier entry of the case, instead of a new file */
+      link?: string
     }
 
 export interface Case {

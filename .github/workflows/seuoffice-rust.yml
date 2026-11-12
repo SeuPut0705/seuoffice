@@ -153,6 +153,53 @@ jobs:
           path: tools/main-diff/out
           if-no-files-found: ignore
 
+  # The central process on Windows (decision 0029): the functions whose Rust
+  # reads the platform (the file identity of fs.statSync) against the
+  # TypeScript on the same machine. The Linux job compares everything else.
+  main-windows:
+    if: ${{ !inputs.faults }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the central process in this tree
+        id: has
+        shell: bash
+        run: |
+          if [ -f crates/main-core/Cargo.toml ]; then echo "main=true" >> "$GITHUB_OUTPUT"; else echo "main=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Rust toolchain
+        if: steps.has.outputs.main == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.main == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.has.outputs.main == 'true'
+        run: npm ci
+
+      - name: Central process comparison on Windows
+        if: steps.has.outputs.main == 'true'
+        shell: bash
+        run: |
+          mkdir -p tools/main-diff/out
+          npm --prefix tools/main-diff run gate -- --fn rename-validation.isSameFile --fn rename-validation.pdfSaveAsTarget --show 40 2>&1 | tee tools/main-diff/out/gate.txt
+
+      - name: Keep the Windows comparison
+        if: ${{ always() && steps.has.outputs.main == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-diff-windows-out
+          path: tools/main-diff/out
+          if-no-files-found: ignore
+
   # Fault injection: each fault of the file through comparison (f), one at a
   # time. It rebuilds the wasm once per fault, which is why it runs here.
   faults:

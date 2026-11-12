@@ -525,6 +525,16 @@ export const group: Group = {
         files: { 'a.pdf': 'a' },
         note: 'case variant: same file only on a case-insensitive volume',
       },
+      {
+        args: ['$DIR/a.pdf', '$DIR/b.pdf'],
+        files: { 'a.pdf': 'a', 'b.pdf': { link: 'a.pdf' } },
+        note: 'two hard links to one file: two paths, one file',
+      },
+      {
+        args: ['$DIR/a.pdf', '$DIR/sub/b.pdf'],
+        files: { 'a.pdf': 'a', sub: { dir: true }, 'sub/b.pdf': { link: 'a.pdf' } },
+        note: 'a hard link in another folder',
+      },
       { args: ['$DIR/a.pdf', '$DIR/none.pdf'], files: { 'a.pdf': 'a' } },
       { args: ['$DIR/none.pdf', '$DIR/a.pdf'], files: { 'a.pdf': 'a' } },
       { args: ['$DIR/none.pdf', '$DIR/none.pdf'] },
@@ -536,6 +546,11 @@ export const group: Group = {
   'rename-validation.pdfSaveAsTarget': {
     ts: (a) => pdfSaveAsTarget(a[0] as { canceled: boolean; filePath?: string }, str(a, 1)),
     cases: [
+      {
+        args: [{ canceled: false, filePath: '$DIR/copy.pdf' }, '$DIR/open.pdf'],
+        files: { 'open.pdf': 'a', 'copy.pdf': { link: 'open.pdf' } },
+        note: 'the pick is a hard link to the open file: no copy onto itself',
+      },
       {
         args: [{ canceled: true, filePath: '$DIR/b.pdf' }, '$DIR/a.pdf'],
         files: { 'a.pdf': 'a', 'b.pdf': 'b' },

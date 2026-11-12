@@ -5,7 +5,7 @@
  * the answer (value, error, log lines) and the folder after the call are
  * equal, with each side's folder written as `$DIR`.
  *
- *   npm --prefix tools/main-diff run gate [-- --group update] [--show 20]
+ *   npm --prefix tools/main-diff run gate [-- --group update] [--fn name] [--show 20]
  *
  * Fails on a difference that `divergences.json` does not list, on a listed
  * one that no longer reproduces, and on a function whose cases gave fewer
@@ -13,6 +13,7 @@
  */
 import {
   chmodSync,
+  linkSync,
   mkdirSync,
   mkdtempSync,
   readdirSync,
@@ -64,6 +65,7 @@ function setUp(dir: string, files: Record<string, FileSpec> | undefined): void {
     mkdirSync(dirname(path), { recursive: true })
     const s = typeof spec === 'string' ? { text: spec } : spec
     if (s.dir) mkdirSync(path, { recursive: true })
+    else if (s.link !== undefined) linkSync(join(dir, s.link), path)
     else writeFileSync(path, s.hex !== undefined ? Buffer.from(s.hex, 'hex') : (s.text ?? ''))
     if (s.mtimeMs !== undefined) utimesSync(path, s.mtimeMs / 1000, s.mtimeMs / 1000)
     if (s.mode !== undefined) modes.push([path, s.mode])
@@ -168,6 +170,8 @@ async function side(
 
 const ledger: Divergence[] = JSON.parse(readFileSync(join(tool, 'divergences.json'), 'utf8'))
 const only = argValue('--group')
+/** `--fn name`, repeatable: only those functions */
+const fns = process.argv.flatMap((a, i) => (a === '--fn' ? [process.argv[i + 1]] : []))
 const show = Number(argValue('--show') ?? 10)
 
 interface FnReport {
@@ -186,6 +190,7 @@ let failed = false
 for (const [groupName, group] of Object.entries(groups) as [string, Group][]) {
   if (only && only !== groupName) continue
   for (const [fn, spec] of Object.entries(group)) {
+    if (fns.length > 0 && !fns.includes(fn)) continue
     const r: FnReport = { checks: 0, equal: 0, distinct: 0, listed: 0 }
     const answers = new Set<string>()
     for (let i = 0; i < spec.cases.length; i++) {
