@@ -2,6 +2,8 @@
 // form of tools/docx-diff/listed.ts): each predicate reads the input alone and
 // is as narrow as the input allows. Each class has its entry in divergences.json.
 
+import { readZip } from './zip-compare'
+
 type Args = Record<string, unknown>
 
 const isHigh = (unit: number): boolean => unit >= 0xd800 && unit <= 0xdbff
@@ -55,3 +57,24 @@ export function offsetInsidePair(text: string, args: Args): string | undefined {
 export function surrogateClasses(text: string, args: Args): string | undefined {
   return loneSurrogateReference(text, args) ?? offsetInsidePair(text, args)
 }
+
+/**
+ * A docx whose `w:spacing` carries a `w:lineRule` outside `auto`, `exact` and
+ * `atLeast`: the TypeScript docx engine keeps the text as it is and converts
+ * the document; the Rust docx engine's model refuses the value and the whole
+ * conversion (a defect of the Rust docx engine, with the docx stream). A
+ * class of the wire comparison (c), read from the docx alone.
+ */
+export function lineRuleOutsideEnum(docx: Uint8Array): string | undefined {
+  const decoder = new TextDecoder('utf-8')
+  for (const record of readZip(docx).records) {
+    if (record.nameText !== 'word/document.xml' && record.nameText !== 'word/styles.xml') continue
+    if (typeof record.inflated === 'string') continue
+    for (const found of decoder.decode(record.inflated).matchAll(/w:lineRule="([^"]*)"/g))
+      if (!['auto', 'exact', 'atLeast'].includes(found[1]!)) return 'docx-line-rule-outside-enum'
+  }
+  return undefined
+}
+
+/** The wire classes met by the comparisons, and how many of their inputs differed. */
+export const wireClasses = new Map<string, { inputs: number; differ: number }>()

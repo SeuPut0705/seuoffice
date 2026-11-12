@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { isDeepStrictEqual } from 'node:util'
 import { callOutcomes, listedClasses } from './calls-run'
+import { wireClasses } from './listed'
 import { failGate } from '../docx-diff/harness'
 import { keyOrderDifferences, parseKeepingOrder } from '../docx-diff/key-order'
 import { registerDifferences, type ObservedDifference } from '../docx-diff/known-differences'
@@ -9,6 +10,8 @@ import { registerDifferences, type ObservedDifference } from '../docx-diff/known
 interface DivergenceClass {
   id: string
   reason: string
+  /** a class of a wire comparison: its inputs are whole documents, counted by `wireClasses`, with no pinned case */
+  wire?: true
   cases: ObservedDifference[]
 }
 
@@ -27,6 +30,13 @@ export function registerLedger(): void {
 export async function reportDivergences(): Promise<void> {
   const stale: string[] = []
   for (const entry of ledger) {
+    if (entry.wire) {
+      const count = wireClasses.get(entry.id)
+      if (!entry.reason) stale.push(`${entry.id}: missing reason`)
+      else if (!count || count.differ === 0)
+        stale.push(`${entry.id}: none of the ${count?.inputs ?? 0} documents of the class differs`)
+      continue
+    }
     if (!entry.reason || entry.cases.length === 0)
       stale.push(`${entry.id}: missing reason or input`)
     for (const [index, input] of entry.cases.entries()) {
@@ -46,6 +56,13 @@ export async function reportDivergences(): Promise<void> {
       )
         stale.push(`${entry.id}:${index}: both sides now agree`)
     }
+  }
+  for (const [id, { inputs, differ }] of wireClasses) {
+    console.log(
+      `(c) listed class ${id}: ${inputs} documents, ${differ} differ as listed and are not counted above`,
+    )
+    if (!ledger.some((entry) => entry.id === id && entry.wire))
+      stale.push(`${id}: a wire class with no entry`)
   }
   // a class a spec names (`CallSpec.listed`) has its entry here, and an input of it still differs
   for (const [id, { inputs, differ }] of listedClasses) {
