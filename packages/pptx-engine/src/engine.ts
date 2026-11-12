@@ -1,10 +1,14 @@
 // The core of the pptx binding: how an exported function of this package
 // reaches the wasm engine (crates/office-wasm, `pptx.` rows). The generated
 // modules call `call` with the TypeScript arguments positionally; the engine
-// answers `{ value, out }`, and each argument it changed (`out[i]`) is written
-// back into the caller's object (engine-adopt.ts), so references callers hold
-// into a deck stay live. crates/pptx-engine/C2-PLAN.md has the argument kinds.
-import { engineInvoke, type Shape } from '@seuoffice/engine-wasm'
+// answers `{ "$result": value, "$out": { "<wire index>": answer } }`, and each
+// argument it changed (`$out`) is written back into the caller's object
+// (engine-adopt.ts), so references callers hold into a deck stay live.
+// crates/pptx-engine/C2-PLAN.md has the argument kinds. The codec is the shared
+// one of @seuoffice/engine-wasm. This file never starts the engine
+// (engine-init.ts and the `node` export condition do); it only refuses to call
+// one that has not started.
+import { engineInvoke, engineReady, type Shape } from '@seuoffice/engine-wasm'
 import { adopt, adoptArchive, type ArchiveChanges } from './engine-adopt'
 import type { OpenedPptx } from './index'
 import type { Slide } from './types'
@@ -14,17 +18,21 @@ import type { PackageArchive } from './zip'
 export type Changed = 'opened' | 'archive' | 'json'
 
 export interface CallOptions {
-  /** the arguments the engine changes, by index */
+  /** the arguments the engine changes, by wire index */
   mut?: Readonly<Record<number, Changed>>
+  /** the arguments that are an OpenedPptx the engine only reads */
+  opened?: readonly number[]
   /** the reply holds Maps, Sets or lists of them at these places */
   shape?: Shape
   /** the TypeScript function returns undefined where Rust has no value */
   undef?: boolean
+  /** the name of each wire argument: a function argument crosses as a callback slot of that name */
+  names?: readonly string[]
 }
 
 interface Answer {
-  value?: unknown
-  out?: Record<string, unknown>
+  $result?: unknown
+  $out?: Record<string, unknown>
 }
 
 interface OpenedAnswer {
@@ -33,9 +41,22 @@ interface OpenedAnswer {
   saveSnapshot: Array<[string, string]> | null
 }
 
+export function ensureEngine(): void {
+  if (!engineReady()) {
+    throw new Error(
+      'the pptx engine is not started: await initPptxEngine(url) (a page or worker) or initPptxEngineSync(bytes) once before the first call; under the `node` export condition it starts itself',
+    )
+  }
+}
+
 // `saveSnapshot` of index.ts: what the last save patched, per opened deck.
 // The engine has no memory between calls, so the binding keeps it.
 const saveSnapshots = new WeakMap<object, Array<[string, string]>>()
+
+/** A save that failed to reach its file leaves no snapshot (`savePptxToFile`). */
+export function forgetSnapshot(opened: OpenedPptx): void {
+  saveSnapshots.delete(opened)
+}
 
 /** An opened deck as the engine reads it: the deck, the archive and its save snapshot. */
 function openedArg(opened: OpenedPptx): unknown {
@@ -61,20 +82,22 @@ function writeBack(target: unknown, kind: Changed, answer: unknown): void {
 
 /** One exported function of the package: the engine's answer, with the arguments it changed written back. */
 export function call(fn: string, args: readonly unknown[], options: CallOptions = {}): unknown {
+  ensureEngine()
   const mut = options.mut ?? {}
-  const wire = args.map((arg, i) => (mut[i] === 'opened' ? openedArg(arg as OpenedPptx) : arg))
-  const answer = engineInvoke(fn, wire, { fnPrefix: 'pptx.', shape: options.shape && { k: 'obj', f: { value: options.shape } } }) as Answer
-  for (const [index, value] of Object.entries(answer.out ?? {})) {
+  const wire = args.map((arg, i) =>
+    mut[i] === 'opened' || options.opened?.includes(i) ? openedArg(arg as OpenedPptx) : arg,
+  )
+  const answer = engineInvoke(fn, wire, {
+    fnPrefix: 'pptx.',
+    names: options.names,
+    shape: options.shape && { k: 'obj', f: { $result: options.shape } },
+  }) as Answer
+  for (const [index, value] of Object.entries(answer.$out ?? {})) {
     const at = Number(index)
     writeBack(args[at], mut[at] ?? 'json', value)
   }
-  const value = answer.value === undefined || (answer.value === null && options.undef) ? undefined : answer.value
-  return value
-}
-
-/** `call` for a function the TypeScript declares `async`. */
-export async function callAsync(fn: string, args: readonly unknown[], options: CallOptions = {}): Promise<unknown> {
-  return call(fn, args, options)
+  const value = answer.$result
+  return value === undefined || (value === null && options.undef) ? undefined : value
 }
 
 /** The index of `slide` in the opened deck: the engine names a slide by its place. */

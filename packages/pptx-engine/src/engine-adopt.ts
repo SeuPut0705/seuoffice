@@ -44,11 +44,16 @@ function adoptArray(old: unknown[], next: Json[]): void {
 }
 
 /**
- * `target` changed in place to equal `next`: keys `next` lacks are deleted,
+ * `target` (an object, or a list of them) changed in place to equal `next`: keys `next` lacks are deleted,
  * nested objects and arrays are kept and changed the same way, arrays of
  * elements and slides matched by `id` and `path` so each keeps its object.
  */
 export function adopt(target: object, next: Json): void {
+  if (Array.isArray(target)) {
+    if (!Array.isArray(next)) throw new TypeError('the engine answered a value where a list was written back')
+    adoptArray(target, next)
+    return
+  }
   if (!isBag(next)) throw new TypeError('the engine answered a value where an object was written back')
   const own = target as Bag
   for (const name of Object.keys(own)) if (!(name in next)) delete own[name]

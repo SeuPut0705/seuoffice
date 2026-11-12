@@ -11,62 +11,15 @@
  * Implemented via "XML surgery + materialize": edit the cNvPr in the element's
  * current fragment, then reparse the whole slide (same path as appendRawElements).
  */
-import type { GroupElement, Slide } from './types'
-import { attributeOf, escapeXmlAttr, maxRelationshipIdNumber } from './xml-utils'
-import { sliceGroupChildXmls } from './parse'
-import { relsPathFor, resolveTarget } from './zip'
-import { cleanupSupersededSlideResources } from './resource-cleanup'
-import { materializeSlide, patchedElementXml, patchSlideXml, type OpenedPptx } from './index'
-import { namedActionAttr, namedActionOf, type NamedAction } from './named-action'
-
-const HYPERLINK_REL_TYPE =
-  'http://schemas.openxmlformats.org/officeDocument/2006/relationships/hyperlink'
-const SLIDE_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide'
-const SLDJUMP_ACTION = 'ppaction://hlinksldjump'
-const R_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+import type { Slide } from './types'
+import { type OpenedPptx } from './index'
+import { type NamedAction } from './named-action'
+import { call } from './engine'
 
 export type LinkTarget =
   | { kind: 'url'; url: string; tooltip?: string }
   | { kind: 'slide'; slideIndex: number; tooltip?: string }
   | { kind: 'action'; action: NamedAction; tooltip?: string }
-
-const EMPTY_RELS =
-  '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'
-
-/** Append a relationship to the slide rels and return the new rId. */
-function appendRel(
-  opened: OpenedPptx,
-  slide: Slide,
-  type: string,
-  target: string,
-  external: boolean,
-): string {
-  const { archive } = opened
-  const relsPath = relsPathFor(slide.path)
-  const rels = archive.readText(relsPath) ?? EMPTY_RELS
-  const maxRid = maxRelationshipIdNumber(rels)
-  const rid = `rId${maxRid + 1}`
-  const mode = external ? ' TargetMode="External"' : ''
-  const relXml = `<Relationship Id="${rid}" Type="${type}" Target="${escapeXmlAttr(target)}"${mode}/>`
-  archive.entries.set(
-    relsPath,
-    Buffer.from(
-      rels.replace('</Relationships>', () => `${relXml}</Relationships>`),
-      'utf8',
-    ),
-  )
-  return rid
-}
-
-function tooltipOf(tag: string | undefined): string | undefined {
-  return (tag && attributeOf(tag, 'tooltip')) || undefined
-}
-
-/** Strip the hlinkClick inside the element XML's first cNvPr (keeping other children). */
-function stripHlink(xml: string): string {
-  return xml.replace(/<a:hlinkClick\b[^>]*\/>|<a:hlinkClick\b[^>]*>[\s\S]*?<\/a:hlinkClick>/, '')
-}
-
 /**
  * Set/clear an element hyperlink. Relationships no longer used by any live slide
  * XML are pruned after the fragment changes. On success returns the materialized
@@ -78,75 +31,16 @@ export function setElementLink(
   elementId: string,
   target: LinkTarget | null,
 ): Slide | null {
-  const slide = opened.deck.slides[slideIndex]
-  if (!slide) return null
-  const el = slide.elements.find((e) => e.id === elementId)
-  if (!el) return null
-
-  const previousXml = patchSlideXml(slide)
-  const existingXml = patchedElementXml(el)
-  let xml = stripHlink(existingXml)
-
-  if (target) {
-    let hlink: string
-    // The UI edits the target only; keep PowerPoint's ScreenTip unless the caller sets one
-    const tooltip = target.tooltip ?? tooltipOf(/<a:hlinkClick\b[^>]*>/.exec(existingXml)?.[0])
-    const tip = tooltip ? ` tooltip="${escapeXmlAttr(tooltip)}"` : ''
-    if (target.kind === 'url') {
-      const rid = appendRel(opened, slide, HYPERLINK_REL_TYPE, target.url, true)
-      hlink = `<a:hlinkClick xmlns:r="${R_NS}" r:id="${rid}"${tip}/>`
-    } else if (target.kind === 'action') {
-      hlink = `<a:hlinkClick xmlns:r="${R_NS}" r:id="" action="${namedActionAttr(target.action)}"${tip}/>`
-    } else {
-      const dst = opened.deck.slides[target.slideIndex]
-      if (!dst) return null
-      // Same directory ppt/slides/, so Target is just the file name
-      const fileName = dst.path.split('/').pop()!
-      const rid = appendRel(opened, slide, SLIDE_REL_TYPE, fileName, false)
-      hlink = `<a:hlinkClick xmlns:r="${R_NS}" r:id="${rid}" action="${SLDJUMP_ACTION}"${tip}/>`
-    }
-    // Insert into the first cNvPr (hlinkClick is cNvPr's first valid child)
-    const cNvPr = /<p:cNvPr\b((?:"[^"]*"|'[^']*'|[^"'>])*?)(\/?)>/.exec(xml)
-    if (!cNvPr) return null
-    if (cNvPr[2] === '/') {
-      // Self-closing → expand into a tag pair
-      xml =
-        xml.slice(0, cNvPr.index) +
-        `<p:cNvPr${cNvPr[1]}>${hlink}</p:cNvPr>` +
-        xml.slice(cNvPr.index + cNvPr[0].length)
-    } else {
-      const at = cNvPr.index + cNvPr[0].length
-      xml = xml.slice(0, at) + hlink + xml.slice(at)
-    }
-  }
-
-  el.anchor = { ...el.anchor, originalXml: xml }
-  // Post-surgery fragment is the sole truth: clear text dirty so patches don't overwrite; structural rebuild persists it
-  el.dirty = false
-  slide.structureDirty = true
-  cleanupSupersededSlideResources(opened, slide, previousXml, patchSlideXml(slide))
-  return materializeSlide(opened, slideIndex)
+  return call('setElementLink', [opened, slideIndex, elementId, target], { mut: { 0: 'opened' } }) as never ? opened.deck.slides[slideIndex]! : null
 }
-
 /** Parse a TextRun.hyperlink encoded target ("slide:N", "action:<name>" or url); null on bad input. */
 export function decodeRunLink(s: string): LinkTarget | null {
-  const m = /^slide:(\d+)$/.exec(s)
-  if (m) return { kind: 'slide', slideIndex: Number(m[1]) }
-  const a = /^action:(\w+)$/.exec(s)
-  if (a) {
-    const action = namedActionOf(namedActionAttr(a[1]!))
-    return action ? { kind: 'action', action } : null
-  }
-  return s ? { kind: 'url', url: s } : null
+  return call('decodeRunLink', [s]) as never
 }
-
 /** TextRun.hyperlink encoding of a link target. */
 export function encodeRunLink(target: LinkTarget): string {
-  if (target.kind === 'slide') return `slide:${target.slideIndex}`
-  if (target.kind === 'action') return `action:${target.action}`
-  return target.url
+  return call('encodeRunLink', [target]) as never
 }
-
 /**
  * Allocate slide-rels relationships for runs whose hyperlink was set this session
  * (hyperlink present, hyperlinkRId absent — the edit path clears the rId on change).
@@ -161,38 +55,8 @@ export function ensureRunLinkRels(
     runs: Array<{ hyperlink?: string; hyperlinkRId?: string; hyperlinkAction?: string }>
   }>,
 ): boolean {
-  const slide = opened.deck.slides[slideIndex]
-  if (!slide) return false
-  let changed = false
-  for (const p of paragraphs) {
-    for (const run of p.runs) {
-      if (!run.hyperlink || run.hyperlinkRId !== undefined) continue
-      const target = decodeRunLink(run.hyperlink)
-      if (!target) continue
-      if (target.kind === 'url') {
-        run.hyperlinkRId = appendRel(opened, slide, HYPERLINK_REL_TYPE, target.url, true)
-        delete run.hyperlinkAction
-      } else if (target.kind === 'action') {
-        run.hyperlinkRId = ''
-        run.hyperlinkAction = namedActionAttr(target.action)
-      } else {
-        const dst = opened.deck.slides[target.slideIndex]
-        if (!dst) continue
-        run.hyperlinkRId = appendRel(
-          opened,
-          slide,
-          SLIDE_REL_TYPE,
-          dst.path.split('/').pop()!,
-          false,
-        )
-        run.hyperlinkAction = SLDJUMP_ACTION
-      }
-      changed = true
-    }
-  }
-  return changed
+  return call('ensureRunLinkRels', [opened, slideIndex, paragraphs], { mut: { 0: 'opened', 2: 'json' } }) as never
 }
-
 /**
  * All run-level hyperlinks on a slide, resolved live against the rels (parse-time
  * TextRun.hyperlink can go stale after slide reorders). Keyed by element + paragraph +
@@ -202,85 +66,16 @@ export function getRunLinks(
   opened: OpenedPptx,
   slideIndex: number,
 ): Array<{ elementId: string; paraIndex: number; runIndex: number; target: LinkTarget }> {
-  const slide = opened.deck.slides[slideIndex]
-  if (!slide) return []
-  const out: Array<{ elementId: string; paraIndex: number; runIndex: number; target: LinkTarget }> =
-    []
-  const rels = opened.archive.readRels(slide.path)
-  const resolve = (rid: string, tooltip?: string): LinkTarget | null => {
-    const rel = rels.get(rid)
-    if (!rel) return null
-    const tip = tooltip ? { tooltip } : {}
-    if (rel.type === HYPERLINK_REL_TYPE) return { kind: 'url', url: rel.target, ...tip }
-    if (rel.type === SLIDE_REL_TYPE) {
-      const abs = resolveTarget(slide.path, rel.target)
-      const idx = opened.deck.slides.findIndex((s) => s.path === abs)
-      if (idx >= 0) return { kind: 'slide', slideIndex: idx, ...tip }
-    }
-    return null
-  }
-  const walk = (elements: Slide['elements']) => {
-    for (const el of elements) {
-      if (el.type === 'group') {
-        walk((el as GroupElement).children)
-        continue
-      }
-      if ((el.type !== 'text' && el.type !== 'shape') || !('text' in el) || !el.text) continue
-      el.text.paragraphs.forEach((p, paraIndex) => {
-        p.runs.forEach((run, runIndex) => {
-          const action = namedActionOf(run.hyperlinkAction)
-          const target: LinkTarget | null = action
-            ? {
-                kind: 'action',
-                action,
-                ...(run.hyperlinkTooltip ? { tooltip: run.hyperlinkTooltip } : {}),
-              }
-            : run.hyperlinkRId
-              ? resolve(run.hyperlinkRId, run.hyperlinkTooltip)
-              : null
-          if (target) out.push({ elementId: el.id, paraIndex, runIndex, target })
-        })
-      })
-    }
-  }
-  walk(slide.elements)
-  return out
+  return call('getRunLinks', [opened, slideIndex], { opened: [0] }) as never
 }
-
-/** Resolve the hlinkClick rId in an element fragment against the slide rels; null if none/unresolvable. */
-function resolveLinkInXml(opened: OpenedPptx, slide: Slide, xml: string): LinkTarget | null {
-  const tag = /<a:hlinkClick\b[^>]*>/.exec(xml)?.[0]
-  if (!tag) return null
-  const tooltip = tooltipOf(tag)
-  const tip = tooltip ? { tooltip } : {}
-  const action = namedActionOf(attributeOf(tag, 'action') || undefined)
-  if (action) return { kind: 'action', action, ...tip }
-  // the id whatever its shape: only a named action has none
-  const rid = attributeOf(tag, 'r:id')
-  if (!rid) return null
-  const rel = opened.archive.readRels(slide.path).get(rid)
-  if (!rel) return null
-  if (rel.type === HYPERLINK_REL_TYPE) return { kind: 'url', url: rel.target, ...tip }
-  if (rel.type === SLIDE_REL_TYPE) {
-    const abs = resolveTarget(slide.path, rel.target)
-    const idx = opened.deck.slides.findIndex((s) => s.path === abs)
-    if (idx >= 0) return { kind: 'slide', slideIndex: idx, ...tip }
-  }
-  return null
-}
-
 /** Read an element's current hyperlink (for UI echo-back); returns null if none. */
 export function getElementLink(
   opened: OpenedPptx,
   slideIndex: number,
   elementId: string,
 ): LinkTarget | null {
-  const slide = opened.deck.slides[slideIndex]
-  const el = slide?.elements.find((e) => e.id === elementId)
-  if (!slide || !el) return null
-  return resolveLinkInXml(opened, slide, el.anchor.originalXml)
+  return call('getElementLink', [opened, slideIndex, elementId], { opened: [0] }) as never
 }
-
 /**
  * All element hyperlinks on a slide (groups scanned recursively) — the slideshow
  * uses this to hit-test clicks and follow slide jumps (Zoom) / external URLs.
@@ -291,28 +86,5 @@ export function getSlideLinks(
   opened: OpenedPptx,
   slideIndex: number,
 ): Array<{ elementId: string; target: LinkTarget }> {
-  const slide = opened.deck.slides[slideIndex]
-  if (!slide) return []
-  const out: Array<{ elementId: string; target: LinkTarget }> = []
-  const walk = (elements: Slide['elements'], xmlOf: (i: number) => string) => {
-    for (let i = 0; i < elements.length; i++) {
-      const el = elements[i]!
-      const xml = xmlOf(i)
-      if (el.type === 'group') {
-        // Restrict the group's own match to its nvGrpSpPr header so a child link
-        // doesn't make the whole group clickable
-        const own = /<p:nvGrpSpPr\b[^>]*>[\s\S]*?<\/p:nvGrpSpPr>/.exec(xml)?.[0] ?? ''
-        const target = resolveLinkInXml(opened, slide, own)
-        if (target) out.push({ elementId: el.id, target })
-        // Child fragments are in document order, matching (grp as GroupElement).children
-        const childXmls = sliceGroupChildXmls(xml)
-        walk((el as GroupElement).children, (j) => childXmls[j] ?? '')
-        continue
-      }
-      const target = resolveLinkInXml(opened, slide, xml)
-      if (target) out.push({ elementId: el.id, target })
-    }
-  }
-  walk(slide.elements, (i) => slide.elements[i]!.anchor.originalXml)
-  return out
+  return call('getSlideLinks', [opened, slideIndex], { opened: [0] }) as never
 }

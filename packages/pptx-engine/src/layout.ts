@@ -7,17 +7,9 @@
  *  - insertBlankSlideWithLayout: insert a blank slide after a given position, with
  *    rels pointing at the chosen layout
  */
-import { canListSlide, withSlideListed } from './slide-ids'
 import type { PackageArchive } from './zip'
-import { resolveTarget, relsPathFor } from './zip'
-import {
-  cSldNameOf,
-  escapeXmlAttr,
-  hasContentTypeOverride,
-  maxRelationshipIdNumber,
-} from './xml-utils'
-import { ownValue } from './own-value'
 import type { SlideDeck } from './types'
+import { call } from './engine'
 
 // ── Layout placeholder summary ─────────────────────────────────────────────
 
@@ -35,7 +27,6 @@ export interface LayoutPlaceholder {
   /** Editor default hint text (shown in the empty box) */
   hint: string
 }
-
 /** Description of one slideLayout */
 export interface SlideLayoutInfo {
   /** Path inside the zip, e.g. ppt/slideLayouts/slideLayout3.xml */
@@ -47,123 +38,24 @@ export interface SlideLayoutInfo {
   /** Main placeholders (excluding functional placeholders ftr/sldNum/dt/pic) */
   placeholders: LayoutPlaceholder[]
 }
-
-export const PH_HINT_MAP: Record<string, string> = {
-  title: 'Click to add title',
-  ctrTitle: 'Click to add title',
-  body: 'Click to add text',
-  subTitle: 'Click to add subtitle',
-  obj: 'Click to add content',
-  '': 'Click to add text',
-}
-
-export const FUNCTION_TYPES = new Set(['ftr', 'sldNum', 'dt', 'pic'])
-
-function parseLayoutName(xml: string, fallback: string): string {
-  return cSldNameOf(xml) || fallback
-}
-
-/** Quick-parse the <p:sldLayout> type attribute from the layout XML */
-function parseLayoutType(xml: string): string {
-  const m = /<p:sldLayout\b[^>]*\btype="([^"]*)"/.exec(xml)
-  return m?.[1] ?? 'custom'
-}
-
 /** Parse all placeholder geometry from the layout XML (only non-functional placeholders with an xfrm) */
 export function parseLayoutPlaceholders(xml: string): LayoutPlaceholder[] {
-  const results: LayoutPlaceholder[] = []
-  for (const spMatch of xml.matchAll(
-    /<p:sp>([\s\S]*?)<\/p:sp>|<p:graphicFrame>([\s\S]*?)<\/p:graphicFrame>|<p:pic>([\s\S]*?)<\/p:pic>/g,
-  )) {
-    const sp = spMatch[1] ?? spMatch[2] ?? spMatch[3]!
-    const phMatch = /<p:ph\b([^>]*)\/?>/.exec(sp)
-    if (!phMatch) continue
-    const phAttr = phMatch[1]!
-    const typeM = /\btype="([^"]*)"/.exec(phAttr)
-    const idxM = /\bidx="([^"]*)"/.exec(phAttr)
-    const type = typeM?.[1] ?? ''
-    const idx = idxM?.[1] ?? ''
-    if (FUNCTION_TYPES.has(type)) continue
-    // Try to parse the xfrm (may come from the layout or the master)
-    const xfrmM =
-      /<a:xfrm\b[^>]*>([\s\S]*?)<\/a:xfrm>/.exec(sp) ??
-      /<p:xfrm\b[^>]*>([\s\S]*?)<\/p:xfrm>/.exec(sp)
-    if (!xfrmM) continue
-    const xfrmContent = xfrmM[1]!
-    const offM = /<a:off\b([^>]*)\/?/.exec(xfrmContent)
-    const extM = /<a:ext\b([^>]*)\/?/.exec(xfrmContent)
-    const off = offM?.[1] ?? ''
-    const ext = extM?.[1] ?? ''
-    const x = parseInt(/\bx="([^"]*)"/.exec(off)?.[1] ?? '', 10)
-    const y = parseInt(/\by="([^"]*)"/.exec(off)?.[1] ?? '', 10)
-    const cx = parseInt(/\bcx="([^"]*)"/.exec(ext)?.[1] ?? '', 10)
-    const cy = parseInt(/\bcy="([^"]*)"/.exec(ext)?.[1] ?? '', 10)
-    if (isNaN(x) || isNaN(y) || isNaN(cx) || isNaN(cy)) continue
-    // the placeholder type is the document's: the table answers its own types only
-    const hint = ownValue(PH_HINT_MAP, type) ?? 'Click to add text'
-    results.push({ type, idx, x, y, cx, cy, hint })
-  }
-  return results
+  return call('parseLayoutPlaceholders', [xml]) as never
 }
-
 /**
  * Enumerate all slideLayouts in the archive (sorted by number).
  * Only scans ppt/slideLayouts/slideLayoutN.xml files; does not rely on
  * presentation.xml's sldLayoutIdLst.
  */
 export function listSlideLayouts(archive: PackageArchive): SlideLayoutInfo[] {
-  const paths = [...archive.entries.keys()]
-    .filter((p) => /^ppt\/slideLayouts\/slideLayout\d+\.xml$/.test(p))
-    .sort((a, b) => {
-      const na = parseInt(/(\d+)/.exec(a)?.[1] ?? '0', 10)
-      const nb = parseInt(/(\d+)/.exec(b)?.[1] ?? '0', 10)
-      return na - nb
-    })
-
-  return paths.map((path) => {
-    const xml = archive.readText(path) ?? ''
-    const fileName = path.slice(path.lastIndexOf('/') + 1, -4)
-    const name = parseLayoutName(xml, fileName)
-    const layoutType = parseLayoutType(xml)
-    const placeholders = parseLayoutPlaceholders(xml)
-    return { path, name, layoutType, placeholders }
-  })
+  return call('listSlideLayouts', [archive]) as never
 }
-
-// ── Blank slide insertion (with a given layout) ─────────────────────────
-
-const SLIDE_CONTENT_TYPE = 'application/vnd.openxmlformats-officedocument.presentationml.slide+xml'
-const SLIDE_REL_TYPE = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide'
-export const LAYOUT_REL_TYPE =
-  'http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout'
-
-/** Generate the next unused slide path (current max number + 1). */
-function nextSlidePath(archive: PackageArchive): string {
-  let max = 0
-  for (const path of archive.entries.keys()) {
-    const m = /^ppt\/slides\/slide(\d+)\.xml$/.exec(path)
-    if (m) max = Math.max(max, parseInt(m[1]!, 10))
-  }
-  return `ppt/slides/slide${max + 1}.xml`
-}
-
 export interface InsertLayoutSlideOptions {
   /** Insert after this slide index (0-based) */
   sourceIndex: number
   /** Target layout path (from listSlideLayouts), e.g. 'ppt/slideLayouts/slideLayout2.xml' */
   layoutPath: string
 }
-
-const XMLDECL = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n'
-const NS_A = 'http://schemas.openxmlformats.org/drawingml/2006/main'
-const NS_R = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
-const NS_P = 'http://schemas.openxmlformats.org/presentationml/2006/main'
-
-const EMPTY_SPTREE =
-  '<p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr>' +
-  '<p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/>' +
-  '<a:chOff x="0" y="0"/><a:chExt cx="0" cy="0"/></a:xfrm></p:grpSpPr>'
-
 /**
  * One empty placeholder shape (<p:sp>) slice: explicit xfrm + empty paragraph
  * (like a new PowerPoint slide; the click hint is drawn by the edit canvas, not persisted).
@@ -172,33 +64,8 @@ export function placeholderSpXml(
   ph: Pick<LayoutPlaceholder, 'type' | 'idx' | 'x' | 'y' | 'cx' | 'cy'>,
   id: number,
 ): string {
-  const typeAttr = ph.type ? ` type="${escapeXmlAttr(ph.type)}"` : ''
-  const idxAttr = ph.idx ? ` idx="${escapeXmlAttr(ph.idx)}"` : ''
-  return (
-    `<p:sp>` +
-    `<p:nvSpPr>` +
-    `<p:cNvPr id="${id}" name="ph${ph.idx || '0'}"/>` +
-    `<p:cNvSpPr><a:spLocks noGrp="1"/></p:cNvSpPr>` +
-    `<p:nvPr><p:ph${typeAttr}${idxAttr}/></p:nvPr>` +
-    `</p:nvSpPr>` +
-    `<p:spPr><a:xfrm><a:off x="${ph.x}" y="${ph.y}"/><a:ext cx="${ph.cx}" cy="${ph.cy}"/></a:xfrm></p:spPr>` +
-    `<p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody>` +
-    `</p:sp>`
-  )
+  return call('placeholderSpXml', [ph, id]) as never
 }
-
-/** Build blank slide XML containing the layout's placeholders. */
-function buildSlideXmlWithPlaceholders(placeholders: LayoutPlaceholder[]): string {
-  const shapes = placeholders.map((ph, i) => placeholderSpXml(ph, i + 2))
-  const spTree = `<p:spTree>${EMPTY_SPTREE}${shapes.join('')}</p:spTree>`
-  return (
-    XMLDECL +
-    `<p:sld xmlns:a="${NS_A}" xmlns:r="${NS_R}" xmlns:p="${NS_P}">` +
-    `<p:cSld>${spTree}</p:cSld>` +
-    '<p:clrMapOvr><a:masterClrMapping/></p:clrMapOvr></p:sld>'
-  )
-}
-
 /**
  * Insert a blank slide associated with a given layout.
  * The internal caller is responsible for:
@@ -215,74 +82,5 @@ export function prepareInsertSlideWithLayout(
   sourceIndex: number,
   layoutPath: string,
 ): string | null {
-  const src = deck.slides[sourceIndex]
-  if (!src) return null
-  if (!archive.readText(layoutPath)) return null
-  // asked before anything is written: a deck that cannot list the slide is left as it was
-  if (!canListSlide(archive.readText('ppt/presentation.xml'))) return null
-
-  // Parse the layout placeholders and build the new slide XML with placeholder text boxes
-  const layoutXml = archive.readText(layoutPath) ?? ''
-  const layoutInfo: SlideLayoutInfo = {
-    path: layoutPath,
-    name: parseLayoutName(layoutXml, ''),
-    layoutType: parseLayoutType(layoutXml),
-    placeholders: parseLayoutPlaceholders(layoutXml),
-  }
-  const newSlideXml = buildSlideXmlWithPlaceholders(layoutInfo.placeholders)
-
-  const newPath = nextSlidePath(archive)
-  archive.entries.set(newPath, Buffer.from(newSlideXml, 'utf8'))
-
-  // slide rels → point at the chosen layout
-  const relTarget = `../${layoutPath.slice(4)}` // 'ppt/' → '../'
-  const relsXml =
-    '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\r\n' +
-    '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-    `<Relationship Id="rId1" Type="${LAYOUT_REL_TYPE}" Target="${escapeXmlAttr(relTarget)}"/>` +
-    '</Relationships>'
-  archive.entries.set(relsPathFor(newPath), Buffer.from(relsXml, 'utf8'))
-
-  // [Content_Types].xml
-  const ctPath = '[Content_Types].xml'
-  const ct = archive.readText(ctPath)
-  if (ct && !hasContentTypeOverride(ct, newPath)) {
-    archive.entries.set(
-      ctPath,
-      Buffer.from(
-        ct.replace(
-          '</Types>',
-          () => `<Override PartName="/${newPath}" ContentType="${SLIDE_CONTENT_TYPE}"/></Types>`,
-        ),
-        'utf8',
-      ),
-    )
-  }
-
-  // presentation.xml.rels + presentation.xml
-  const presRelsPath = 'ppt/_rels/presentation.xml.rels'
-  const presPath = 'ppt/presentation.xml'
-  const presRels = archive.readText(presRelsPath)
-  const pres = archive.readText(presPath)
-  if (!presRels || !pres) return null
-
-  const maxRid = maxRelationshipIdNumber(presRels)
-  const newRid = `rId${maxRid + 1}`
-  // Listed after the source slide
-  const srcRid = [...archive.readRels(presPath).values()].find(
-    (r) => resolveTarget(presPath, r.target) === src.path,
-  )?.id
-  const nextPres = withSlideListed(pres, newRid, srcRid)
-  if (nextPres === null) return null
-  const relEntry = `<Relationship Id="${newRid}" Type="${SLIDE_REL_TYPE}" Target="${newPath.slice('ppt/'.length)}"/>`
-  archive.entries.set(
-    presRelsPath,
-    Buffer.from(
-      presRels.replace('</Relationships>', () => `${relEntry}</Relationships>`),
-      'utf8',
-    ),
-  )
-  archive.entries.set(presPath, Buffer.from(nextPres, 'utf8'))
-
-  return newPath
+  return call('prepareInsertSlideWithLayout', [archive, deck, sourceIndex, layoutPath], { mut: { 0: 'archive' } }) as never
 }
