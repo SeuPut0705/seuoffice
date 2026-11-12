@@ -11,8 +11,10 @@ const root = resolve(here, '../..')
 const dirArg = process.argv.indexOf('--dir')
 const gate = dirArg < 0 ? here : resolve(process.argv[dirArg + 1]!)
 const faults = JSON.parse(readFileSync(resolve(gate, 'faults.json'), 'utf8')) as Fault[]
+/** `--group a,b`: only the faults of those groups. */
 const only = process.argv.indexOf('--group')
-const selected = faults.filter(fault => only < 0 || fault.group === process.argv[only + 1])
+const groups = only < 0 ? null : new Set(process.argv[only + 1]!.split(','))
+const selected = faults.filter(fault => groups === null || groups.has(fault.group))
 if (selected.length === 0) throw new Error('No fault selected')
 mkdirSync(resolve(gate, 'out'), { recursive: true })
 const out = mkdtempSync(resolve(gate, 'out/faults-'))
@@ -26,11 +28,11 @@ const env = { ...process.env, CARGO_BUILD_JOBS: process.env.CARGO_BUILD_JOBS ?? 
   FILEPARSE_WASM_PATH: resolve(scratch, 'target/wasm32-wasip1/release/office_wasm.wasm') }
 function build(): boolean {
   return spawnSync(process.execPath, [resolve(scratch, 'office-wasm/build.mjs')],
-    { cwd: root, env, stdio: 'inherit', timeout: 600_000 }).status === 0
+    { cwd: root, env, stdio: 'inherit', timeout: 2_400_000 }).status === 0
 }
 function compare(group: string, save: string) {
   return spawnSync(process.execPath, ['--import', 'tsx', resolve(gate, 'main.ts'), '--group', group, '--save', save],
-    { cwd: root, env, stdio: 'inherit', timeout: 900_000 })
+    { cwd: root, env, stdio: 'inherit', timeout: 3_600_000 })
 }
 if (!build()) throw new Error('Clean scratch build failed')
 for (const group of new Set(selected.map(fault => fault.group))) {

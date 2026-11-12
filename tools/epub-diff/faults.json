@@ -14,5 +14,10 @@
   {"id":"package-linear-untrimmed","group":"package","file":"crates/epub-engine/src/package.rs","from":"attr(reference, \"linear\", None).map(trim) != Some(\"no\")","to":"attr(reference, \"linear\", None) != Some(\"no\")"},
   {"id":"package-empty-algorithm","group":"package","file":"crates/epub-engine/src/package.rs","from":"algorithm.unwrap_or(\"(none)\")","to":"algorithm.filter(|named| !named.is_empty()).unwrap_or(\"(none)\")"},
   {"id":"package-version-parse","group":"package","file":"crates/epub-engine/src/package.rs","from":"let major = parse_int(package_version, Radix::Ten);","to":"let major = package_version.parse::<f64>().unwrap_or(f64::NAN);"},
-  {"id":"integrator-package-adobe-font-is-drm","group":"package","file":"crates/epub-engine/src/primitives.rs","from":"value == IDPF_FONT_OBFUSCATION || value == ADOBE_FONT_OBFUSCATION","to":"value == IDPF_FONT_OBFUSCATION"}
+  {"id":"integrator-package-adobe-font-is-drm","group":"package","file":"crates/epub-engine/src/primitives.rs","from":"value == IDPF_FONT_OBFUSCATION || value == ADOBE_FONT_OBFUSCATION","to":"value == IDPF_FONT_OBFUSCATION"},
+  {"id":"saxes-surrogate-pair","group":"saxes","file":"crates/saxes/src/lib.rs","from":"out.push(0x10000 + ((unit - 0xD800) << 10)","to":"out.push(0x10001 + ((unit - 0xD800) << 10)"},
+  {"id":"notation-placeholder-number","group":"pure","file":"crates/epub-engine/src/notation.rs","from":"let n = (state.context.placeholders.len() + 1) as f64;","to":"let n = state.context.placeholders.len() as f64;"},
+  {"id":"blocks-h6-kind","group":"pure","file":"crates/epub-engine/src/blocks.rs","from":"Self::H6 => \"h6\",","to":"Self::H6 => \"h5\","},
+  {"id":"edits-trailing-blank-trim","group":"pure","file":"crates/epub-engine/src/edits.rs","from":"while i > 0 && is_ascii_blank(source[i - 1]) {","to":"while i > 1 && is_ascii_blank(source[i - 1]) {"},
+  {"id":"xml-listed-id-bound","group":"xml","file":"crates/epub-engine/src/xml.rs","from":".filter(|&at| at > id && at < listed.len())","to":".filter(|&at| at >= id && at < listed.len())"}
 ]
