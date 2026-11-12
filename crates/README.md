@@ -349,16 +349,17 @@ close` in `top_level_drawings`, the zone of a date-only form, the order of
 two alternative capture groups, `Math.max` over sizes (a NaN never reaches
 the direct layer) and an empty font name (dropped by the resolver).
 
-One of those inputs showed a TypeScript defect that is with main and that
-the Rust mirrors until main decides: rejecting a `w:pPrChange` that is the
-first child of `w:pPr` drops the old properties instead of restoring them.
+One of those inputs showed a TypeScript defect, the seventh below: rejecting
+a `w:pPrChange` that stands right after the open tag of its `w:pPr` drops
+the old properties instead of restoring them.
 
 **Where the Rust is right and the TypeScript is to be fixed.** main decided
-six findings of this unit (items 11 to 16 of its TypeScript list). The Rust
+seven findings of this unit (items 11 to 16 and 24 of its TypeScript list). The Rust
 falls back to the default paragraph style for the runs of a paragraph whose
 style is missing, reads the wrap of the outer anchor only, reads revision
 attributes in either quote, reads a `v:fill` opacity in percent, stays on
-the Encoding Standard, and reads a `w:date` without a zone as UTC. Each is
+the Encoding Standard, reads a `w:date` without a zone as UTC, and restores
+the old properties on that reject. Each is
 an entry of `divergences.json` with its class (see "Divergences"). When
 main's fix is merged the entry and its class go stale, and both go.
 
@@ -451,7 +452,7 @@ for a record keyed by data. No order is in the ledger.
    shown apart from the heading difference beside them. Their inputs are in
    the package "…letters that fold to ASCII only in Unicode"; a fault in
    each would say whether they are compared.
-3. **Merge main when it has fixed items 11 to 16**, drop the entries and
+3. **Merge main when it has fixed items 11 to 16 and 24**, drop the entries and
    classes that go stale, and take the model from stream B when it lands:
    the local structs go, and `lineBoxOf`, `vmlWordArtBox`, `ink.ts`,
    `parse-block-passes.ts` and the chart reader come with it.
