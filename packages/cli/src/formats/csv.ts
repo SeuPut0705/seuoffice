@@ -43,7 +43,7 @@ export function legacyCsvCharset(env: NodeJS.ProcessEnv = process.env): string |
 }
 
 /** CSV bytes as text, with the machine's legacy charset breaking ties. */
-export function decodeCsv(bytes: Uint8Array): string {
+export async function decodeCsv(bytes: Uint8Array): Promise<string> {
   return decodeCsvBuffer(bytes, legacyCsvCharset())
 }
 
@@ -53,8 +53,8 @@ export interface CsvInfo {
   delimiter: string
 }
 
-export function csvInfo(bytes: Uint8Array): CsvInfo {
-  const text = decodeCsv(bytes)
+export async function csvInfo(bytes: Uint8Array): Promise<CsvInfo> {
+  const text = await decodeCsv(bytes)
   const delimiter = resolveImportDelimiter(text)
   const rows = parseCsv(text, delimiter)
   return {
@@ -65,7 +65,7 @@ export function csvInfo(bytes: Uint8Array): CsvInfo {
 }
 
 export async function csvToXlsx(bytes: Uint8Array, sheetName: string): Promise<Uint8Array> {
-  const buf = await csvToXlsxBuffer(decodeCsv(bytes), sheetName)
+  const buf = await csvToXlsxBuffer(await decodeCsv(bytes), sheetName)
   return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 }
 

@@ -28,34 +28,34 @@ describe('a CSV in a legacy charset', () => {
       'c0ccc1f6c0ba2cbacebbea2cc1a4bab8b1e2bcfa0a8c63bee7b2e12cc164c0da2cb4ebc7d0b1b30a',
   )
 
-  it('reads Korean with 똠 and 햏 on a Korean install', () => {
-    expect(decodeCsvBuffer(KOREAN_CP949, 'euc-kr')).toBe(KOREAN)
+  it('reads Korean with 똠 and 햏 on a Korean install', async () => {
+    expect(await decodeCsvBuffer(KOREAN_CP949, 'euc-kr')).toBe(KOREAN)
   })
 
-  it('reads the same Korean with no language to go by', () => {
-    expect(decodeCsvBuffer(KOREAN_CP949)).toBe(KOREAN)
+  it('reads the same Korean with no language to go by', async () => {
+    expect(await decodeCsvBuffer(KOREAN_CP949)).toBe(KOREAN)
   })
 
-  it('reads Hong Kong characters from Big5', () => {
+  it('reads Hong Kong characters from Big5', async () => {
     const cantonese = '名稱,數量\n佢哋嘅貨,3\n係㗎,5\n'
     const big5 = bytes('a657bad92cbcc6b6710aca5c925d9defb3662c330aab599dee2c350a')
-    expect(decodeCsvBuffer(big5, 'big5')).toBe(cantonese)
+    expect(await decodeCsvBuffer(big5, 'big5')).toBe(cantonese)
   })
 
-  it('keeps byte 0x80 of Shift_JIS as the control character Windows reads', () => {
+  it('keeps byte 0x80 of Shift_JIS as the control character Windows reads', async () => {
     const japanese = '品名,数量\nりんご\u0080,100\nみかん,200\n'
     const shiftJis = bytes('956996bc2c909497ca0a82e882f182b2802c3130300a82dd82a982f12c3230300a')
-    expect(decodeCsvBuffer(shiftJis, 'shift_jis')).toBe(japanese)
+    expect(await decodeCsvBuffer(shiftJis, 'shift_jis')).toBe(japanese)
   })
 })
 
 describe('an HTML table that declares its charset', () => {
-  it('reads x-user-defined, the label the Encoding Standard keeps for raw bytes', () => {
+  it('reads x-user-defined, the label the Encoding Standard keeps for raw bytes', async () => {
     const page = join(
       ascii('<html><head><meta charset="x-user-defined"></head><body><table><tr><td>'),
       bytes('80ff'),
       ascii('</td></tr></table></body></html>'),
     )
-    expect(decodeHtmlBuffer(page)).toContain('<td>\uF780\uF7FF</td>')
+    expect(await decodeHtmlBuffer(page)).toContain('<td>\uF780\uF7FF</td>')
   })
 })
