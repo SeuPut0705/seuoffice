@@ -33,7 +33,7 @@ jobs:
         os: [macos-latest, windows-latest]
         shell: [tauri2, cef]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    timeout-minutes: 60
     defaults:
       run:
         shell: bash

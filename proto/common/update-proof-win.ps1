@@ -57,7 +57,9 @@ if (-not $installDir) { $installDir = Join-Path $env:LOCALAPPDATA 'Programs\SeuO
 $beforeFiles = if ($installDir) { Get-ChildItem $installDir | ForEach-Object Name } else { @() }
 
 $t = [Diagnostics.Stopwatch]::StartNew()
-$p = Start-Process -FilePath $Installer -ArgumentList '--updated', '/S', '--force-run' -PassThru -Wait
+# not -Wait: it also waits for the app the installer starts with --force-run
+$p = Start-Process -FilePath $Installer -ArgumentList '--updated', '/S', '--force-run' -PassThru
+$p.WaitForExit()
 $installerSeconds = [math]::Round($t.Elapsed.TotalSeconds, 1)
 $started = $null
 for ($i = 0; $i -lt 90 -and -not $started; $i++) {
