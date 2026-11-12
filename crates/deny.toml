@@ -18,4 +18,26 @@ allow = [
   "Unlicense",
   "CC0-1.0",
   "BSL-1.0",
+  # the JPEG code of rhwp (rhwp-zune-jpeg, rhwp-jpeg-encoder), which ships in
+  # rhwp_bg.wasm already and is named in the third-party notices (rhwp crates)
+  "IJG",
 ]
+
+# rhwp native-only test dependency (ureq), cfg(not(wasm32)), not shipped: the
+# HTTP client rhwp links outside wasm32. Revisit each if it ever becomes a
+# dependency of a shipped native crate.
+[[licenses.exceptions]]
+crate = "ring"
+allow = ["ISC"]
+
+[[licenses.exceptions]]
+crate = "rustls-webpki"
+allow = ["ISC"]
+
+[[licenses.exceptions]]
+crate = "untrusted"
+allow = ["ISC"]
+
+[[licenses.exceptions]]
+crate = "webpki-roots"
+allow = ["CDLA-Permissive-2.0"]
