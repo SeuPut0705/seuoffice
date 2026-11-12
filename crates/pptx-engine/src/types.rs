@@ -15,6 +15,7 @@
 //! `Slide` and `SlideDeck` carry no `Deserialize`: `CustomGeometry`
 //! (custgeom.rs) and `ChartModel` (chart) have none yet.
 
+use std::sync::Arc;
 use jscompat::{JsNum, JsObject, Slot, js_object};
 use serde::{Deserialize, Serialize};
 
@@ -640,7 +641,11 @@ pub enum ElementType {
 #[serde(rename_all = "camelCase")]
 pub struct ByteAnchor {
     pub sp_index: i64,
-    pub original_xml: String,
+    /// Shared: the TypeScript hands one string to every element built from
+    /// a fragment (a chart's user shapes, each choice of an
+    /// mc:AlternateContent), and a copy per element would make memory the
+    /// fragment's size times their number.
+    pub original_xml: Arc<str>,
     pub range: [u64; 2],
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub gap_after: Option<String>,

@@ -129,28 +129,22 @@
 //! 299-339, 347-1138 and 3378-3425; picture 1171-1742 and 3162-3175;
 //! diagram 1743-3161; table 3176-3377; fill 1141-1170 and 3426-3677; text
 //! 340-345 and 3678-4327; decor 4328-4401.
-//!
-//! The section modules join as their files arrive:
-//!
-//! ```text
-//! mod decor;
-//! mod diagram;
-//! mod fill;
-//! mod picture;
-//! mod shape;
-//! mod slide;
-//! mod table;
-//! mod text;
-//!
-//! pub use decor::parse_decorations;
-//! pub use diagram::layout_diagram_fallback;
-//! pub use shape::slice_group_child_xmls;
-//! pub use slide::{parse_background, parse_slide};
-//! ```
 
 pub mod context;
+mod decor;
+mod diagram;
+mod fill;
+mod picture;
+mod shape;
+mod slide;
+mod table;
+mod text;
 
 pub use context::{
     DEFAULT_BODY_INSETS, DecorationOptions, EMU_PER_PT, ParseContext, ParseContextData,
     SlideParseInput, Uids,
 };
+pub use decor::parse_decorations;
+pub use diagram::layout_diagram_fallback;
+pub use shape::slice_group_child_xmls;
+pub use slide::{parse_background, parse_slide};

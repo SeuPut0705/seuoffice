@@ -12,6 +12,7 @@ pub mod dgm_hier;
 pub mod format_brush;
 pub mod glb_bounds;
 pub mod identity;
+pub mod master_edit;
 pub mod model3d;
 pub mod named_action;
 pub mod parse;
