@@ -1,14 +1,14 @@
 # seuoffice 작업 규칙
 
-seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)를 통째로 포크해 웹에서도 돌게 개조한다. 스풋(GitHub SeuPut0705)의 개인 자산이고, 저장소 전체를 Apache-2.0으로 공개한다(결정 0007).
+seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)에서 갈라져 나왔고, 2026-11-12부터 상위를 따라가지 않는 독립 프로젝트다(결정 0024). 엔진을 Rust로 옮기는 중이다(결정 0025, 0026). 스풋(GitHub SeuPut0705)의 개인 자산이고, 저장소 전체를 Apache-2.0으로 공개한다(결정 0007).
 
 ## 먼저 읽을 것
 
 - `docs/seuoffice/로드맵.md`: 단계와 지금 위치
 - `docs/seuoffice/decisions/index.md`: seuoffice 결정 기록
-- `docs/seuoffice/upstream-edits.md`: 상위(이음오피스) 파일을 고친 목록
 - `docs/seuoffice/web-gaps.md`: 웹에서 데스크톱과 다르게 동작하는 브리지 메서드
 - `docs/seuoffice/baseline.md`: 들여올 때 이미 실패하던 검사
+- `docs/archive/`: 이음오피스 시절의 기록. 남은 TypeScript 코드가 왜 그렇게 생겼는지 볼 때 읽는다. 고치지 않는다.
 - 고치려는 모듈의 `apps/*/AGENTS.md`, `packages/*/AGENTS.md`, 그리고 `docs/standards.md`, `docs/engineering-notes.md`. 이음오피스 규칙이며 이 파일과 부딪히지 않는 한 그대로 따른다.
 
 ## 경계
@@ -17,17 +17,14 @@ seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하
 2. GenOffice `ee/`(GenOffice Enterprise License)는 가져오지 않는다. 추적 파일에 `ee/`가 생기면 `seuoffice` CI가 실패한다.
 3. 저장소 공개 전환, `main` force-push·이력 재작성, 저장소 삭제는 스풋 확인 뒤에만 한다.
 4. 비밀값(API 키, 서명 인증서, 토큰)을 커밋하지 않는다.
+5. 라이선스 고지를 지우거나 고쳐 쓰지 않는다: `LICENSE`, `NOTICE`, 제3자 고지, `vendor/`와 내장 스킬 폴더의 라이선스 파일, `docs/seuoffice/upstream-edits.md`(`NOTICE`가 가리키는 변경 고지, 2026-11-12에 닫음). 원본 코드를 Rust로 옮겨 적은 것도 파생물이라 고지는 그대로 둔다(결정 0024). 새 제3자 코드나 자료를 들이면 `NOTICE`에 출처와 라이선스를 더한다.
 
-## 상위 따라가기
+## 원본과의 관계
 
-- 원격 `ieum` = https://github.com/pblsketch/ieumoffice (바탕, merge로 따라감), 원격 `genoffice` = GenOffice 원본(보통 이음을 거쳐 받는다).
-- 내부 이름(`@genoffice/*` 패키지, `GENOFFICE_*` 환경 변수, `genoffice` 명령, `~/.genoffice`)은 바꾸지 않는다(결정 0002). 사용자에게 보이는 이름과 새로 만드는 부품만 seuoffice / `@seuoffice/*`로 한다.
-- 새 코드는 새 파일에 둔다: `packages/web-platform/`, `packages/embed/`, `packages/collab/`, `apps/web/`, `apps/*/vite.web.config.ts`, `apps/*/src/web/`, `apps/sheets/native/xlsx-wasm/`, `formal/`, `docs/seuoffice/`, `.github/workflows/seuoffice.yml`.
-- 상위 파일을 고쳐야 하면 가장 작게 고치고, 같은 커밋에서 `docs/seuoffice/upstream-edits.md`에 파일·까닭을 한 줄 적는다. Rust 엔진은 `#[cfg(target_os = "wasi")]` 분기로만 고치고 데스크톱 동작은 바꾸지 않는다.
-- 이음 따라잡기: `git fetch ieum` → 가지 `sync/ieum-YYYYMMDD`에서 `git merge ieum/main` → 충돌 처리 → 아래 "합치기 전 검사" → `main`에 `--no-ff`로 합친다.
-  - 루트 `AGENTS.md`·`CLAUDE.md`·`README.md`는 우리 것을 두고, 상위 규칙 변경 중 해당되는 것만 옮긴다.
-  - `package-lock.json`은 상위 것을 받은 뒤 `npm install`로 다시 만든다.
-  - 나머지는 `upstream-edits.md` 목록과 대조해 우리 편집을 다시 적용한다.
+- 이음오피스와 GenOffice를 따라가지 않는다(결정 0024). 원격 `ieum`, `genoffice`는 지웠고, 상위에서 코드를 받아오지 않는다. 이전에 받은 파일도 우리 파일이라 필요한 만큼 고친다.
+- `docs/seuoffice/upstream-edits.md`에는 더 적지 않는다.
+- 내부 이름(`@genoffice/*` 패키지, `GENOFFICE_*` 환경 변수, `genoffice` 명령, `~/.genoffice`)은 이름 바꾸기를 마칠 때까지 그대로 쓴다. 새로 만드는 부품은 `@seuoffice/*`로 짓는다. 설치된 앱의 정체(앱 이름, userData 폴더, 키체인 항목, ProgId, 업데이트 피드)는 결정 0013·0019 그대로다.
+- 엑셀 엔진(`apps/sheets/native/*`)의 웹 분기는 `#[cfg(target_os = "wasi")]`로만 두고 데스크톱 동작은 바꾸지 않는다.
 
 ## 커밋
 
