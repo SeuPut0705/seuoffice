@@ -8,8 +8,9 @@
  */
 import { Editor } from '@tiptap/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ParsedDocFull } from '@genoffice/docx-engine'
-import { docStyleCss } from '../src/renderer/doc-style-css'
+import { parseDocx, type ParsedDocFull } from '@genoffice/docx-engine'
+import { buildKitchenSinkDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
+import { docBodyEaFont, docStyleCss } from '../src/renderer/doc-style-css'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 
 ;(globalThis as { CSS?: unknown }).CSS ??= { escape: (s: string) => s }
@@ -172,11 +173,29 @@ describe('docStyleCss grid strut face', () => {
     expect(css).toContain('--doc-grid-strut-tail:')
   })
 
-  it('emits nothing without an EA face or with a Latin one', () => {
+  it('aligns the implicit SimSun spans in the kitchen-sink fixture without a grid', async () => {
+    stubMetricsCanvas(1160, 288)
+    mountBlankFace()
+    const parsed = await parseDocx(await buildKitchenSinkDocx())
+    expect(parsed.docDefaults?.eastAsiaFont).toBeUndefined()
+    expect(docBodyEaFont(parsed)).toBe('SimSun')
+    const css = docStyleCss(parsed)
+    expect(css).toContain('--doc-line-factor-cjk:1.3')
+    expect(css).toContain('--doc-line-mult:1.15')
+    expect(css).toContain("--doc-east-asian-font:'SimSun'")
+    expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
+    expect(css).toContain('ascent-override:116%')
+    expect(css).toContain('descent-override:28.8%')
+    expect(css).toContain(
+      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) .doc-east-asian-font { font-family:'GenOffice Grid Strut',",
+    )
+  })
+
+  it('aligns the effective fallback face without an EA declaration or with a Latin slot', () => {
     stubMetricsCanvas(1143, 286)
     mountBlankFace()
-    expect(docStyleCss(parsedWith(GRID_SECT))).not.toContain('Grid Strut')
-    expect(docStyleCss(parsedWith(null, 'Century'))).not.toContain('Grid Strut')
+    expect(docStyleCss(parsedWith(GRID_SECT))).toContain('Grid Strut')
+    expect(docStyleCss(parsedWith(null, 'Century'))).toContain('Grid Strut')
   })
 
   it('a missing EA face rendered by a stand-in gets the strut without a grid', () => {
@@ -202,7 +221,7 @@ describe('docStyleCss grid strut face', () => {
     const resolved = parsedWith(GRID_SECT, 'PMingLiU', { eaSlotEmpty: true, eaFromLang: true })
     expect(docStyleCss(resolved)).toContain('ascent-override:95.2%')
     const unresolved = parsedWith(GRID_SECT, 'Yu Gothic', { eaSlotEmpty: true })
-    expect(docStyleCss(unresolved)).not.toContain('Grid Strut')
+    expect(docStyleCss(unresolved)).toContain('Grid Strut')
   })
 
   it('Office-private faces under a metric alias get the strut without a grid', () => {

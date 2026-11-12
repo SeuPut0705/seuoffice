@@ -605,7 +605,11 @@ export function docStyleCss(parsed: ParsedDocFull): string {
       !aliasFace &&
       isCjkFontName(baseEa) &&
       (isBundledFont(baseEa) || !isFontAvailable(baseEa))
-    const eaFace = aliasFace ? baseEa : eaFaceForGridStrut(textCtx)
+    // Implicit / Latin-only EA slots also paint through the resolved stand-in
+    // (SimSun), so their spans need the same box as the paragraph strut.
+    const eaFace = aliasFace
+      ? baseEa
+      : (eaFaceForGridStrut(textCtx) ?? (standIn ? baseEa : undefined))
     if (eaFace && (typedGrid || aliasFace || standIn)) {
       const metrics = fontChainMetricsPct(cssFontFamily(eaFace))
       const blankSrc = metrics ? blankFontFaceSrc() : null
