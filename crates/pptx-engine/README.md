@@ -473,10 +473,14 @@ with unit 4.
 function, nine chosen for placeholder, table-style and theme and eight for
 charts by reviewers who had not seen those lists), plus the eight theme probes
 committed with that group. Locally 67 of the 69 were caught. The two that
-passed and what closed them: `ts-color-srgb-case` (no table style wrote its
-color in lower case; a style with `a0b1c2` was added) and
+passed and what closed them: `ts-color-srgb-case` and
 `chart-chartex-negative-idx` (no chartEx level had a point with a negative
-`idx`; one was added after `idx` 0). Both are rerun on the runner.
+`idx`; one was added after `idx` 0). For `ts-color-srgb-case` a style with
+the color `a0b1c2` was added first, and the runner (43177316406) still missed
+the probe: `applyColorMods` cuts the hex pairs and parses them without regard
+to case, so upper-casing changes an answer only where it changes the length.
+The input that closes it is `srgbClr val="ß0a0b0"`: `ß` upper-cases to `SS`
+and shifts every pair after it.
 
 A read-only audit found three ways a forged chart part exhausts wasm memory,
 none a panic: point arrays sized by one large `idx` in each of 256 series,
