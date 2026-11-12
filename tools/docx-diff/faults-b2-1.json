@@ -1,0 +1,60 @@
+{
+ "faults": [
+  {
+   "name": "porter: vmlImageMeta drops w:jc \"end\" from the right alignment",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/drawings/vml.rs",
+   "old": "Some(\"right\" | \"end\") => meta.image_align.set(BlockImageAlign::Right),",
+   "new": "Some(\"right\") => meta.image_align.set(BlockImageAlign::Right),"
+  },
+  {
+   "name": "porter: extractDiagramText keeps the untrimmed node text",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/drawings/diagram.rs",
+   "old": "let text = trim(&joined);",
+   "new": "let text = joined.as_str();"
+  },
+  {
+   "name": "porter: parseDocx reports bodyInnerEnd as a byte offset, not a UTF-16 one",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/entry.rs",
+   "old": "internal.insert(\"bodyInnerEnd\".to_owned(), at(scan.inner_end));",
+   "new": "internal.insert(\"bodyInnerEnd\".to_owned(), num(scan.inner_end as f64));"
+  },
+  {
+   "name": "porter: inlineWrapPrefixes lets a non-w:sdt wrapper hold no properties child (<= becomes <)",
+   "group": "parse",
+   "file": "crates/docx-engine/src/inline_opaque.rs",
+   "old": "&& root.children.len() <= usize::from(props.is_some())",
+   "new": "&& root.children.len() < usize::from(props.is_some())"
+  },
+  {
+   "name": "independent: crossParagraphZoteroFields needs three paragraphs for a cross-paragraph field",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/text/controls.rs",
+   "old": "if paragraphs.len() > 1 && zotero_inline_field().test(&instruction) {",
+   "new": "if paragraphs.len() > 2 && zotero_inline_field().test(&instruction) {"
+  },
+  {
+   "name": "independent: foldEffectiveFormat no longer flips a right jc to left in a bidi paragraph",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/text/format.rs",
+   "old": "Some(ParaAlign::Right) => out.align.set(ParaAlign::Left),",
+   "new": "Some(ParaAlign::Right) => out.align.set(ParaAlign::Right),"
+  },
+  {
+   "name": "independent: extractParaFormat stores w:keepNext under keepLines",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/text/paragraph.rs",
+   "old": "(\"w:keepNext\", \"keepNext\"),",
+   "new": "(\"w:keepNext\", \"keepLines\"),"
+  },
+  {
+   "name": "independent: tblLookFlags reads firstRow from the lastRow bit of w:val",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/tables.rs",
+   "old": "first_row_on: flag(\"w:firstRow\", 0x20, true),",
+   "new": "first_row_on: flag(\"w:firstRow\", 0x40, true),"
+  }
+ ]
+}
