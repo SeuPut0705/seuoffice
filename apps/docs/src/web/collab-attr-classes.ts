@@ -193,10 +193,11 @@ const CONTENT = struct<TableModel | TextboxDisplay | Run>()({
     'refField',
     'refInstr',
     'instrField',
-    'oldRPr',
   ),
   // a tracked change on a run, a cell, a row or the table
   author: 'text',
+  // the previous run properties of a tracked format change: only the save reads them
+  oldRPr: 'kept',
   oldXml: 'kept',
   ...tokens('date', 'dateUtc', 'id', 'move', 'vMerge', 'vMergeOrig'),
   // a table and its cells
@@ -594,7 +595,9 @@ export const MARK_ATTRS: { readonly [type: string]: Fields } = {
   ctrlCheckbox: { sdtPr: 'kept' },
   rprChange: {
     author: 'text',
-    ...tokens('date', 'dateUtc', 'id', 'old', 'oldRPr'),
+    // the previous w:rPr, as XML: a reject copies it into the run's `rawRPr`, the save writes it
+    oldRPr: 'kept',
+    ...tokens('date', 'dateUtc', 'id', 'old'),
   },
   docTextStyle: {
     ...tokens(

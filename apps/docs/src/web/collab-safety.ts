@@ -81,8 +81,11 @@ const FREE_TEXT = new Set([
   'sdtPr',
 ])
 
-/** an entry's OOXML fragments, kept for the save; the renderer only tests or stores them */
-const XML_KEY = /xml$|^raw|^original/i
+/**
+ * an entry's OOXML fragments, kept for the save; the renderer only tests or
+ * stores them (`oldRPr`: a run's properties before a tracked format change)
+ */
+const XML_KEY = /xml$|^raw|^original|^oldRPr$/i
 const LINK_KEY = /href$/i
 const PICTURE_KEY = /(src|url)$/i
 /** a token that could end a declaration, open a string, block or comment, or load something */

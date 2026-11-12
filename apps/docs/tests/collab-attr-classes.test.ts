@@ -119,15 +119,32 @@ const HOSTILE = [
   '}body{display:none',
 ]
 
+/** the attributes that carry the engine's content models: nested tables, text boxes, runs */
+const CONTENT = [
+  'docNestedTable.model',
+  'docCellBoxes.boxes',
+  'docTable.continuationCells',
+  'docProtected.table',
+  'docProtected.textboxes',
+  'docProtected.strayRuns',
+]
+
 /**
  * Where the table is looser than the rules that judged by the key's name, on
  * purpose: each is a value the old rules blanked although no page draws it as
- * anything but text, or draws it at all. `leaf`: the name that holds the value.
+ * anything but text, or draws it at all. `at`: `type.attribute`; `leaf`: the
+ * field inside it that holds the value (none: the attribute's own value).
  */
-const LOOSENED: { type: string; attr: string; leaf: string }[] = []
+const LOOSENED: { at: string[]; leaf?: string }[] = [
+  // the previous run properties of a tracked format change, as XML: only the save reads them
+  { at: ['rprChange.oldRPr'] },
+  { at: CONTENT, leaf: 'oldRPr' },
+]
 
 const loosened = (type: string, attr: string, leaf: string): boolean =>
-  LOOSENED.some((l) => l.type === type && l.attr === attr && l.leaf === leaf)
+  LOOSENED.some(
+    (l) => l.at.includes(`${type}.${attr}`) && (l.leaf === undefined || l.leaf === leaf),
+  )
 
 /** one value of a node or mark, and what it becomes with `value` in its place */
 interface Probe {
