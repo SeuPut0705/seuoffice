@@ -1,5 +1,6 @@
 import type { NewInkImage } from './types'
 import { escapeXmlAttr } from './xml-utils'
+import { nonFinite, xmlId, xmlInt } from './xml-number'
 
 /**
  * Ink annotations (freehand strokes). Each saved annotation is a floating picture —
@@ -54,28 +55,30 @@ export function anchoredInkRunXml(
   // would otherwise serialize as cx="NaN" corrupt OOXML.
   const safePx = (v: number, fallback: number): number =>
     Number.isFinite(v) ? Math.round(v * EMU_PER_PX) : fallback
-  const cx = Math.max(1, safePx(ink.widthPx, 1))
-  const cy = Math.max(1, safePx(ink.heightPx, 1))
-  const x = safePx(ink.offsetXPx, 0)
-  const y = safePx(ink.offsetYPx, 0)
-  const name = `${INK_NAME_PREFIX} ${docPrId}`
+  const cx = xmlInt(Math.max(1, safePx(ink.widthPx, 1))) ?? nonFinite('widthPx')
+  const cy = xmlInt(Math.max(1, safePx(ink.heightPx, 1))) ?? nonFinite('heightPx')
+  const x = xmlInt(safePx(ink.offsetXPx, 0)) ?? nonFinite('offsetXPx')
+  const y = xmlInt(safePx(ink.offsetYPx, 0)) ?? nonFinite('offsetYPx')
+  const id = xmlId(docPrId) ?? nonFinite('docPrId')
+  const rank = xmlInt(251658240 + docPrId) ?? nonFinite('docPrId')
+  const name = `${INK_NAME_PREFIX} ${id}`
   const descr = ink.payload ? ` descr="${escapeXmlAttr(ink.payload)}"` : ''
   return (
     '<w:r><w:drawing>' +
     `<wp:anchor xmlns:wp="${WP_NS}" distT="0" distB="0" distL="0" distR="0" simplePos="0"` +
-    ` relativeHeight="${251658240 + docPrId}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">` +
+    ` relativeHeight="${rank}" behindDoc="0" locked="0" layoutInCell="1" allowOverlap="1">` +
     '<wp:simplePos x="0" y="0"/>' +
     `<wp:positionH relativeFrom="column"><wp:posOffset>${x}</wp:posOffset></wp:positionH>` +
     `<wp:positionV relativeFrom="paragraph"><wp:posOffset>${y}</wp:posOffset></wp:positionV>` +
     `<wp:extent cx="${cx}" cy="${cy}"/>` +
     '<wp:effectExtent l="0" t="0" r="0" b="0"/>' +
     '<wp:wrapNone/>' +
-    `<wp:docPr id="${docPrId}" name="${name}"${descr}/>` +
+    `<wp:docPr id="${id}" name="${name}"${descr}/>` +
     '<wp:cNvGraphicFramePr/>' +
     `<a:graphic xmlns:a="${A_NS}">` +
     `<a:graphicData uri="${PIC_NS}">` +
     `<pic:pic xmlns:pic="${PIC_NS}">` +
-    `<pic:nvPicPr><pic:cNvPr id="${docPrId}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr>` +
+    `<pic:nvPicPr><pic:cNvPr id="${id}" name="${name}"/><pic:cNvPicPr/></pic:nvPicPr>` +
     `<pic:blipFill><a:blip xmlns:r="${R_NS}" r:embed="${rId}"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill>` +
     `<pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>` +
     '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></pic:spPr>' +
