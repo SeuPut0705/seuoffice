@@ -1,21 +1,27 @@
 import { placeholderSource } from '@seuoffice/agent-core/redact-core'
-import { REDACT_EL } from '@seuoffice/agent-core/redact-range'
 import { decodeEntities } from './parse-xml-text'
 import { escapeXmlText } from './xml-utils'
 
 /**
  * Text a person marked "hidden from AI" outside the body: in a header, a
  * footer, a comment or a note. The document editor writes the mark as
- * `<go:redact w:label="…"/>` in a run's rPr; the body reads it into an editor
+ * `<go:redact w:label="…"/>` in a run's rPr (other spellings: MARK_RE); the body reads it into an editor
  * mark (apps/docs editor/convert.ts), and these parts read it here, by the
  * same rule, so that a model is never handed the words.
  */
 
-const LABEL_RE = new RegExp(`<${REDACT_EL}\\b[^>]*\\bw:label="([^"]*)"`)
+/**
+ * The mark under any prefix or none. The editor writes `go:redact`, but
+ * another writer may bind the namespace to another prefix, declare it as the
+ * mark's default, or inherit it from an element around it; a reader that
+ * cannot tell which withholds the words rather than hand them over.
+ */
+const MARK_RE = /<(?:[\w.-]+:)?redact\b/
+const LABEL_RE = /<(?:[\w.-]+:)?redact\b[^>]*?\sw:label="([^"]*)"/
 
 /** The label of a run whose rPr carries the mark, or null when the run reads as itself. */
 export function withheldLabelOf(rPrXml: string | undefined): string | null {
-  if (!rPrXml?.includes(`<${REDACT_EL}`)) return null
+  if (!rPrXml || !MARK_RE.test(rPrXml)) return null
   return decodeEntities(LABEL_RE.exec(rPrXml)?.[1] ?? 'private')
 }
 
@@ -37,7 +43,7 @@ function runRPr(xml: string, start: number): string | undefined {
  * the part as a model may read it.
  */
 export function withheldAsPlaceholders(xml: string): string {
-  if (!xml.includes(`<${REDACT_EL}`)) return xml
+  if (!MARK_RE.test(xml)) return xml
   const hidden: Array<{ start: number; end: number; label: string }> = []
   const open: number[] = []
   for (const m of xml.matchAll(RUN_TAG_RE)) {
