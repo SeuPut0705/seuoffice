@@ -344,7 +344,7 @@ impl<'de> Deserialize<'de> for PropChangeInfo {
     }
 }
 
-/// `PropChangeInfo.resolved`. `Other` is a string the type does not name: the
+/// `PropChangeInfo.resolved`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -464,7 +464,7 @@ impl<'de> Deserialize<'de> for TextOutline {
     }
 }
 
-/// `TextEffect`. `Other` is a string the type does not name: the
+/// `TextEffect`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -963,7 +963,7 @@ impl<'de> Deserialize<'de> for RunThemeRFonts {
     }
 }
 
-/// `Run.caps`. `Other` is a string the type does not name: the
+/// `Run.caps`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1382,7 +1382,7 @@ impl<'de> Deserialize<'de> for EffectiveRPrFonts {
     }
 }
 
-/// `EffectiveRPr.caps`. `Other` is a string the type does not name: the
+/// `EffectiveRPr.caps`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1422,7 +1422,7 @@ impl<'de> Deserialize<'de> for EffectiveRPrCaps {
     }
 }
 
-/// `EffectiveRPr.vertAlign`. `Other` is a string the type does not name: the
+/// `EffectiveRPr.vertAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1459,7 +1459,7 @@ impl<'de> Deserialize<'de> for EffectiveRPrVertAlign {
     }
 }
 
-/// `PropSource`. `Other` is a string the type does not name: the
+/// `PropSource`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1511,7 +1511,7 @@ impl<'de> Deserialize<'de> for PropSource {
     }
 }
 
-/// `EffectiveRPr.styleXor[]`. `Other` is a string the type does not name: the
+/// `EffectiveRPr.styleXor[]`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1554,7 +1554,7 @@ impl<'de> Deserialize<'de> for EffectiveRPrStyleXorItem {
     }
 }
 
-/// `Run.vertAlign`. `Other` is a string the type does not name: the
+/// `Run.vertAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1591,7 +1591,7 @@ impl<'de> Deserialize<'de> for RunVertAlign {
     }
 }
 
-/// `Run.em`. `Other` is a string the type does not name: the
+/// `Run.em`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1802,7 +1802,7 @@ impl<'de> Deserialize<'de> for RunNoteRef {
     }
 }
 
-/// `Run.noteRef.kind`. `Other` is a string the type does not name: the
+/// `Run.noteRef.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1839,7 +1839,7 @@ impl<'de> Deserialize<'de> for RunNoteRefKind {
     }
 }
 
-/// `Run.zoteroFieldPart`. `Other` is a string the type does not name: the
+/// `Run.zoteroFieldPart`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1979,7 +1979,7 @@ impl<'de> Deserialize<'de> for InlineWrap {
     }
 }
 
-/// `InlineWrap.inside`. `Other` is a string the type does not name: the
+/// `InlineWrap.inside`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2364,7 +2364,7 @@ impl<'de> Deserialize<'de> for RunRPrChangeOld {
     }
 }
 
-/// `Run.rPrChange.old.vertAlign`. `Other` is a string the type does not name: the
+/// `Run.rPrChange.old.vertAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2401,7 +2401,7 @@ impl<'de> Deserialize<'de> for RunRPrChangeOldVertAlign {
     }
 }
 
-/// `Run.rPrChange.old.caps`. `Other` is a string the type does not name: the
+/// `Run.rPrChange.old.caps`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2919,7 +2919,7 @@ impl<'de> Deserialize<'de> for RunImage {
     }
 }
 
-/// `ImageWrap`. `Other` is a string the type does not name: the
+/// `ImageWrap`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -2977,7 +2977,7 @@ impl<'de> Deserialize<'de> for ImageWrap {
     }
 }
 
-/// `Run.image.relV`. `Other` is a string the type does not name: the
+/// `Run.image.relV`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3017,7 +3017,7 @@ impl<'de> Deserialize<'de> for RunImageRelV {
     }
 }
 
-/// `Run.image.relH`. `Other` is a string the type does not name: the
+/// `Run.image.relH`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3054,7 +3054,7 @@ impl<'de> Deserialize<'de> for RunImageRelH {
     }
 }
 
-/// `Run.image.posH`. `Other` is a string the type does not name: the
+/// `Run.image.posH`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3094,7 +3094,7 @@ impl<'de> Deserialize<'de> for RunImagePosH {
     }
 }
 
-/// `Run.image.posV`. `Other` is a string the type does not name: the
+/// `Run.image.posV`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3405,7 +3405,7 @@ impl<'de> Deserialize<'de> for RunImageRule {
     }
 }
 
-/// `Run.image.rule.align`. `Other` is a string the type does not name: the
+/// `Run.image.rule.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3712,7 +3712,7 @@ impl<'de> Deserialize<'de> for NewImage {
     }
 }
 
-/// `NewImage.mime`. `Other` is a string the type does not name: the
+/// `NewImage.mime`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3752,7 +3752,7 @@ impl<'de> Deserialize<'de> for NewImageMime {
     }
 }
 
-/// `NewImage.align`. `Other` is a string the type does not name: the
+/// `NewImage.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3875,7 +3875,7 @@ impl<'de> Deserialize<'de> for NewImagePosOffsetEmu {
     }
 }
 
-/// `NewImage.posOffsetEmu.relativeTo`. `Other` is a string the type does not name: the
+/// `NewImage.posOffsetEmu.relativeTo`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3912,7 +3912,7 @@ impl<'de> Deserialize<'de> for NewImagePosOffsetEmuRelativeTo {
     }
 }
 
-/// `NewImage.posH`. `Other` is a string the type does not name: the
+/// `NewImage.posH`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -3952,7 +3952,7 @@ impl<'de> Deserialize<'de> for NewImagePosH {
     }
 }
 
-/// `NewImage.posV`. `Other` is a string the type does not name: the
+/// `NewImage.posV`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -4087,7 +4087,7 @@ impl<'de> Deserialize<'de> for NewImageParaSpacing {
     }
 }
 
-/// `NewImage.paraSpacing.lineRule`. `Other` is a string the type does not name: the
+/// `NewImage.paraSpacing.lineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -4253,7 +4253,7 @@ impl<'de> Deserialize<'de> for CommentInfo {
     }
 }
 
-/// `ParaAlign`. `Other` is a string the type does not name: the
+/// `ParaAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -4452,7 +4452,7 @@ impl<'de> Deserialize<'de> for SdtShell {
     }
 }
 
-/// `SdtShell.controlType`. `Other` is a string the type does not name: the
+/// `SdtShell.controlType`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -4690,7 +4690,7 @@ impl<'de> Deserialize<'de> for TabStop {
     }
 }
 
-/// `TabStop.val`. `Other` is a string the type does not name: the
+/// `TabStop.val`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -4739,7 +4739,7 @@ impl<'de> Deserialize<'de> for TabStopVal {
     }
 }
 
-/// `TabStop.leader`. `Other` is a string the type does not name: the
+/// `TabStop.leader`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -4788,7 +4788,7 @@ impl<'de> Deserialize<'de> for TabStopLeader {
     }
 }
 
-/// `TabStop.rel`. `Other` is a string the type does not name: the
+/// `TabStop.rel`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5173,7 +5173,7 @@ impl<'de> Deserialize<'de> for ParaFrame {
     }
 }
 
-/// `ParaFrame.hRule`. `Other` is a string the type does not name: the
+/// `ParaFrame.hRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5210,7 +5210,7 @@ impl<'de> Deserialize<'de> for ParaFrameHRule {
     }
 }
 
-/// `ParaFrame.hAnchor`. `Other` is a string the type does not name: the
+/// `ParaFrame.hAnchor`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5250,7 +5250,7 @@ impl<'de> Deserialize<'de> for ParaFrameHAnchor {
     }
 }
 
-/// `ParaFrame.vAnchor`. `Other` is a string the type does not name: the
+/// `ParaFrame.vAnchor`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5290,7 +5290,7 @@ impl<'de> Deserialize<'de> for ParaFrameVAnchor {
     }
 }
 
-/// `ParaFrame.wrap`. `Other` is a string the type does not name: the
+/// `ParaFrame.wrap`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5339,7 +5339,7 @@ impl<'de> Deserialize<'de> for ParaFrameWrap {
     }
 }
 
-/// `ParaFrame.xAlign`. `Other` is a string the type does not name: the
+/// `ParaFrame.xAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5385,7 +5385,7 @@ impl<'de> Deserialize<'de> for ParaFrameXAlign {
     }
 }
 
-/// `ParaFrame.yAlign`. `Other` is a string the type does not name: the
+/// `ParaFrame.yAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5434,7 +5434,7 @@ impl<'de> Deserialize<'de> for ParaFrameYAlign {
     }
 }
 
-/// `TextFlowDirection`. `Other` is a string the type does not name: the
+/// `TextFlowDirection`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5680,7 +5680,7 @@ impl<'de> Deserialize<'de> for ParaFrameBox {
     }
 }
 
-/// `ParaFrameBox.hRule`. `Other` is a string the type does not name: the
+/// `ParaFrameBox.hRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -5717,7 +5717,7 @@ impl<'de> Deserialize<'de> for ParaFrameBoxHRule {
     }
 }
 
-/// `ParaFrameBox.floatSide`. `Other` is a string the type does not name: the
+/// `ParaFrameBox.floatSide`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -6117,7 +6117,7 @@ impl<'de> Deserialize<'de> for ParaFormat {
     }
 }
 
-/// `ParaFormat.lineRule`. `Other` is a string the type does not name: the
+/// `ParaFormat.lineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -6509,7 +6509,7 @@ impl<'de> Deserialize<'de> for ParaFormatDropCap {
     }
 }
 
-/// `ParaFormat.dropCap.type`. `Other` is a string the type does not name: the
+/// `ParaFormat.dropCap.type`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7024,7 +7024,7 @@ impl<'de> Deserialize<'de> for LineSpacing {
     }
 }
 
-/// `LineSpacing.rule`. `Other` is a string the type does not name: the
+/// `LineSpacing.rule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7380,7 +7380,7 @@ impl<'de> Deserialize<'de> for NumberingLevel {
     }
 }
 
-/// `NumberingLevel.suff`. `Other` is a string the type does not name: the
+/// `NumberingLevel.suff`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7420,7 +7420,7 @@ impl<'de> Deserialize<'de> for NumberingLevelSuff {
     }
 }
 
-/// `NumberingLevel.lvlJc`. `Other` is a string the type does not name: the
+/// `NumberingLevel.lvlJc`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7549,7 +7549,7 @@ impl<'de> Deserialize<'de> for LineNumbering {
     }
 }
 
-/// `LineNumbering.restart`. `Other` is a string the type does not name: the
+/// `LineNumbering.restart`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7674,7 +7674,7 @@ impl<'de> Deserialize<'de> for DocGrid {
     }
 }
 
-/// `DocGrid.type`. `Other` is a string the type does not name: the
+/// `DocGrid.type`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7792,7 +7792,7 @@ impl<'de> Deserialize<'de> for NoteProps {
     }
 }
 
-/// `NoteProps.pos`. `Other` is a string the type does not name: the
+/// `NoteProps.pos`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -7835,7 +7835,7 @@ impl<'de> Deserialize<'de> for NotePropsPos {
     }
 }
 
-/// `NoteProps.numRestart`. `Other` is a string the type does not name: the
+/// `NoteProps.numRestart`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -8120,7 +8120,7 @@ impl<'de> Deserialize<'de> for SectionSettings {
     }
 }
 
-/// `SectionSettings.orientation`. `Other` is a string the type does not name: the
+/// `SectionSettings.orientation`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -8272,7 +8272,7 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderProps {
     }
 }
 
-/// `SectionSettings.pageBorderProps.display`. `Other` is a string the type does not name: the
+/// `SectionSettings.pageBorderProps.display`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -8309,7 +8309,7 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsDisplay {
     }
 }
 
-/// `SectionSettings.pageBorderProps.offsetFrom`. `Other` is a string the type does not name: the
+/// `SectionSettings.pageBorderProps.offsetFrom`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -8346,7 +8346,7 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsOffsetFrom {
     }
 }
 
-/// `SectionSettings.pageBorderProps.zOrder`. `Other` is a string the type does not name: the
+/// `SectionSettings.pageBorderProps.zOrder`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -8588,7 +8588,7 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsSidesValue {
     }
 }
 
-/// `SectionSettings.vAlign`. `Other` is a string the type does not name: the
+/// `SectionSettings.vAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -8766,7 +8766,7 @@ impl<'de> Deserialize<'de> for SectionInfo {
     }
 }
 
-/// `SectionInfo.startType`. `Other` is a string the type does not name: the
+/// `SectionInfo.startType`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9355,7 +9355,7 @@ impl<'de> Deserialize<'de> for HfParagraph {
     }
 }
 
-/// `HfParagraph.frameXAlign`. `Other` is a string the type does not name: the
+/// `HfParagraph.frameXAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9679,7 +9679,7 @@ impl<'de> Deserialize<'de> for HfImage {
     }
 }
 
-/// `HfImage.posH`. `Other` is a string the type does not name: the
+/// `HfImage.posH`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9719,7 +9719,7 @@ impl<'de> Deserialize<'de> for HfImagePosH {
     }
 }
 
-/// `HfImage.posV`. `Other` is a string the type does not name: the
+/// `HfImage.posV`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9759,7 +9759,7 @@ impl<'de> Deserialize<'de> for HfImagePosV {
     }
 }
 
-/// `HfImage.posHRel`. `Other` is a string the type does not name: the
+/// `HfImage.posHRel`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9802,7 +9802,7 @@ impl<'de> Deserialize<'de> for HfImagePosHRel {
     }
 }
 
-/// `HfImage.posVRel`. `Other` is a string the type does not name: the
+/// `HfImage.posVRel`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -9848,7 +9848,7 @@ impl<'de> Deserialize<'de> for HfImagePosVRel {
     }
 }
 
-/// `HfImage.wrap`. `Other` is a string the type does not name: the
+/// `HfImage.wrap`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -10074,7 +10074,7 @@ impl<'de> Deserialize<'de> for HfImageWordArt {
     }
 }
 
-/// `HfImage.align`. `Other` is a string the type does not name: the
+/// `HfImage.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -10288,7 +10288,7 @@ impl<'de> Deserialize<'de> for HfImageWrapDistPx {
     }
 }
 
-/// `HfTextBox.vAlign`. `Other` is a string the type does not name: the
+/// `HfTextBox.vAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -10328,7 +10328,7 @@ impl<'de> Deserialize<'de> for HfTextBoxVAlign {
     }
 }
 
-/// `HfParagraph.ptabAligns[]`. `Other` is a string the type does not name: the
+/// `HfParagraph.ptabAligns[]`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -10876,7 +10876,7 @@ impl<'de> Deserialize<'de> for CellBorder {
     }
 }
 
-/// `HfTableCell.vAlign`. `Other` is a string the type does not name: the
+/// `HfTableCell.vAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11134,7 +11134,7 @@ impl<'de> Deserialize<'de> for HfTableRow {
     }
 }
 
-/// `HfTableRow.heightRule`. `Other` is a string the type does not name: the
+/// `HfTableRow.heightRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11171,7 +11171,7 @@ impl<'de> Deserialize<'de> for HfTableRowHeightRule {
     }
 }
 
-/// `HfTableRow.tabOverflow`. `Other` is a string the type does not name: the
+/// `HfTableRow.tabOverflow`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11283,7 +11283,7 @@ impl<'de> Deserialize<'de> for HfTableRowSource {
     }
 }
 
-/// `HfTableRow.align`. `Other` is a string the type does not name: the
+/// `HfTableRow.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11423,7 +11423,7 @@ impl<'de> Deserialize<'de> for HfTableFloat {
     }
 }
 
-/// `HfTableFloat.horzAnchor`. `Other` is a string the type does not name: the
+/// `HfTableFloat.horzAnchor`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11463,7 +11463,7 @@ impl<'de> Deserialize<'de> for HfTableFloatHorzAnchor {
     }
 }
 
-/// `HfTableFloat.vertAnchor`. `Other` is a string the type does not name: the
+/// `HfTableFloat.vertAnchor`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -11503,7 +11503,7 @@ impl<'de> Deserialize<'de> for HfTableFloatVertAnchor {
     }
 }
 
-/// `HfTableFloat.xSpec`. `Other` is a string the type does not name: the
+/// `HfTableFloat.xSpec`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -12004,7 +12004,7 @@ impl<'de> Deserialize<'de> for RevisionResolution {
     }
 }
 
-/// `RevisionXmlMode`. `Other` is a string the type does not name: the
+/// `RevisionXmlMode`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -12144,7 +12144,7 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
     }
 }
 
-/// `RevisionXmlType`. `Other` is a string the type does not name: the
+/// `RevisionXmlType`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -12441,7 +12441,7 @@ impl<'de> Deserialize<'de> for NoteRun {
     }
 }
 
-/// `NoteRun.caps`. `Other` is a string the type does not name: the
+/// `NoteRun.caps`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -12699,7 +12699,7 @@ impl<'de> Deserialize<'de> for NoteInfoSpacing {
     }
 }
 
-/// `NoteInfo.spacing.lineRule`. `Other` is a string the type does not name: the
+/// `NoteInfo.spacing.lineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -13205,7 +13205,7 @@ impl<'de> Deserialize<'de> for FieldDisplay {
     }
 }
 
-/// `FieldDisplay.kind`. `Other` is a string the type does not name: the
+/// `FieldDisplay.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -13245,7 +13245,7 @@ impl<'de> Deserialize<'de> for FieldDisplayKind {
     }
 }
 
-/// `FieldDisplay.align`. `Other` is a string the type does not name: the
+/// `FieldDisplay.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -13288,7 +13288,7 @@ impl<'de> Deserialize<'de> for FieldDisplayAlign {
     }
 }
 
-/// `FieldDisplay.lineRule`. `Other` is a string the type does not name: the
+/// `FieldDisplay.lineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -13501,7 +13501,7 @@ impl<'de> Deserialize<'de> for FormulaDisplay {
     }
 }
 
-/// `FormulaDisplay.align`. `Other` is a string the type does not name: the
+/// `FormulaDisplay.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -13935,7 +13935,7 @@ impl<'de> Deserialize<'de> for ChartDisplay {
     }
 }
 
-/// `ChartDisplay.kind`. `Other` is a string the type does not name: the
+/// `ChartDisplay.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -13990,7 +13990,7 @@ impl<'de> Deserialize<'de> for ChartDisplayKind {
     }
 }
 
-/// `ChartDisplay.grouping`. `Other` is a string the type does not name: the
+/// `ChartDisplay.grouping`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -14027,7 +14027,7 @@ impl<'de> Deserialize<'de> for ChartDisplayGrouping {
     }
 }
 
-/// `ChartDisplay.radarStyle`. `Other` is a string the type does not name: the
+/// `ChartDisplay.radarStyle`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -14178,7 +14178,7 @@ impl<'de> Deserialize<'de> for ChartDisplayDataLabels {
     }
 }
 
-/// `ChartDisplay.legendPos`. `Other` is a string the type does not name: the
+/// `ChartDisplay.legendPos`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -14319,23 +14319,25 @@ impl<'de> Deserialize<'de> for ChartDisplayDataTable {
     }
 }
 
-/// `DiagramShape`
-#[derive(Debug, Clone, PartialEq)]
-pub struct DiagramShape {
-    pub x_px: JsNum,
-    pub y_px: JsNum,
-    pub w_px: JsNum,
-    pub h_px: JsNum,
-    pub ln_hex: Option<String>,
-    pub ln_w_px: Option<JsNum>,
-    pub fill_rect: Option<DiagramShapeFillRect>,
-    pub rot_deg: Option<JsNum>,
-    pub prst: Option<String>,
-    pub fill_hex: Option<String>,
-    pub image_data_url: Option<String>,
-    pub texts: Option<Vec<String>>,
-    pub font_size_pt: Option<JsNum>,
-    pub text_color_hex: Option<String>,
+jscompat::js_object! {
+    /// `DiagramShape`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct DiagramShape {
+        pub x_px: JsNum,
+        pub y_px: JsNum,
+        pub w_px: JsNum,
+        pub h_px: JsNum,
+        pub prst: String,
+        pub fill_hex: String,
+        pub ln_hex: String,
+        pub ln_w_px: JsNum,
+        pub image_data_url: String,
+        pub fill_rect: DiagramShapeFillRect,
+        pub texts: Vec<String>,
+        pub font_size_pt: JsNum,
+        pub text_color_hex: String,
+        pub rot_deg: JsNum,
+    }
 }
 
 /// The keys of `DiagramShape`, in declaration order.
@@ -14387,47 +14389,6 @@ impl FieldKey for DiagramShapeKey {
 
 const _: () = assert!(DiagramShapeKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for DiagramShape {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("xPx", &self.x_px)?;
-        map.serialize_entry("yPx", &self.y_px)?;
-        map.serialize_entry("wPx", &self.w_px)?;
-        map.serialize_entry("hPx", &self.h_px)?;
-        if let Some(value) = &self.ln_hex {
-            map.serialize_entry("lnHex", value)?;
-        }
-        if let Some(value) = &self.ln_w_px {
-            map.serialize_entry("lnWPx", value)?;
-        }
-        if let Some(value) = &self.fill_rect {
-            map.serialize_entry("fillRect", value)?;
-        }
-        if let Some(value) = &self.rot_deg {
-            map.serialize_entry("rotDeg", value)?;
-        }
-        if let Some(value) = &self.prst {
-            map.serialize_entry("prst", value)?;
-        }
-        if let Some(value) = &self.fill_hex {
-            map.serialize_entry("fillHex", value)?;
-        }
-        if let Some(value) = &self.image_data_url {
-            map.serialize_entry("imageDataUrl", value)?;
-        }
-        if let Some(value) = &self.texts {
-            map.serialize_entry("texts", value)?;
-        }
-        if let Some(value) = &self.font_size_pt {
-            map.serialize_entry("fontSizePt", value)?;
-        }
-        if let Some(value) = &self.text_color_hex {
-            map.serialize_entry("textColorHex", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for DiagramShape {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -14440,20 +14401,7 @@ impl<'de> Deserialize<'de> for DiagramShape {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<DiagramShape, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_x_px = None;
-                let mut v_y_px = None;
-                let mut v_w_px = None;
-                let mut v_h_px = None;
-                let mut v_prst = None;
-                let mut v_fill_hex = None;
-                let mut v_ln_hex = None;
-                let mut v_ln_w_px = None;
-                let mut v_image_data_url = None;
-                let mut v_fill_rect = None;
-                let mut v_texts = None;
-                let mut v_font_size_pt = None;
-                let mut v_text_color_hex = None;
-                let mut v_rot_deg = None;
+                let mut b_0 = DiagramShape::default();
                 while let Some(Key(key)) = map.next_key::<Key<DiagramShapeKey>>()? {
                     let Some(key) = key else {
                         map.next_value::<serde::de::IgnoredAny>()?;
@@ -14463,23 +14411,35 @@ impl<'de> Deserialize<'de> for DiagramShape {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        DiagramShapeKey::XPx => v_x_px = Some(map.next_value()?),
-                        DiagramShapeKey::YPx => v_y_px = Some(map.next_value()?),
-                        DiagramShapeKey::WPx => v_w_px = Some(map.next_value()?),
-                        DiagramShapeKey::HPx => v_h_px = Some(map.next_value()?),
-                        DiagramShapeKey::Prst => v_prst = Some(map.next_value()?),
-                        DiagramShapeKey::FillHex => v_fill_hex = Some(map.next_value()?),
-                        DiagramShapeKey::LnHex => v_ln_hex = Some(map.next_value()?),
-                        DiagramShapeKey::LnWPx => v_ln_w_px = Some(map.next_value()?),
-                        DiagramShapeKey::ImageDataUrl => v_image_data_url = Some(map.next_value()?),
-                        DiagramShapeKey::FillRect => v_fill_rect = Some(map.next_value()?),
-                        DiagramShapeKey::Texts => v_texts = Some(map.next_value()?),
-                        DiagramShapeKey::FontSizePt => v_font_size_pt = Some(map.next_value()?),
-                        DiagramShapeKey::TextColorHex => v_text_color_hex = Some(map.next_value()?),
-                        DiagramShapeKey::RotDeg => v_rot_deg = Some(map.next_value()?),
+                        DiagramShapeKey::XPx => b_0.x_px.set(map.next_value()?),
+                        DiagramShapeKey::YPx => b_0.y_px.set(map.next_value()?),
+                        DiagramShapeKey::WPx => b_0.w_px.set(map.next_value()?),
+                        DiagramShapeKey::HPx => b_0.h_px.set(map.next_value()?),
+                        DiagramShapeKey::Prst => b_0.prst.set(map.next_value()?),
+                        DiagramShapeKey::FillHex => b_0.fill_hex.set(map.next_value()?),
+                        DiagramShapeKey::LnHex => b_0.ln_hex.set(map.next_value()?),
+                        DiagramShapeKey::LnWPx => b_0.ln_w_px.set(map.next_value()?),
+                        DiagramShapeKey::ImageDataUrl => b_0.image_data_url.set(map.next_value()?),
+                        DiagramShapeKey::FillRect => b_0.fill_rect.set(map.next_value()?),
+                        DiagramShapeKey::Texts => b_0.texts.set(map.next_value()?),
+                        DiagramShapeKey::FontSizePt => b_0.font_size_pt.set(map.next_value()?),
+                        DiagramShapeKey::TextColorHex => b_0.text_color_hex.set(map.next_value()?),
+                        DiagramShapeKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
                     }
                 }
-                Ok(DiagramShape { x_px: v_x_px.ok_or_else(|| A::Error::missing_field("xPx"))?, y_px: v_y_px.ok_or_else(|| A::Error::missing_field("yPx"))?, w_px: v_w_px.ok_or_else(|| A::Error::missing_field("wPx"))?, h_px: v_h_px.ok_or_else(|| A::Error::missing_field("hPx"))?, prst: v_prst, fill_hex: v_fill_hex, ln_hex: v_ln_hex, ln_w_px: v_ln_w_px, image_data_url: v_image_data_url, fill_rect: v_fill_rect, texts: v_texts, font_size_pt: v_font_size_pt, text_color_hex: v_text_color_hex, rot_deg: v_rot_deg })
+                if !b_0.x_px.has_key() {
+                    return Err(A::Error::missing_field("xPx"));
+                }
+                if !b_0.y_px.has_key() {
+                    return Err(A::Error::missing_field("yPx"));
+                }
+                if !b_0.w_px.has_key() {
+                    return Err(A::Error::missing_field("wPx"));
+                }
+                if !b_0.h_px.has_key() {
+                    return Err(A::Error::missing_field("hPx"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -14775,7 +14735,7 @@ impl<'de> Deserialize<'de> for NewChart {
     }
 }
 
-/// `NewChart.kind`. `Other` is a string the type does not name: the
+/// `NewChart.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -15343,7 +15303,7 @@ impl<'de> Deserialize<'de> for TableParagraphList {
     }
 }
 
-/// `TableParagraph.list.kind`. `Other` is a string the type does not name: the
+/// `TableParagraph.list.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16015,7 +15975,7 @@ impl<'de> Deserialize<'de> for TableModel {
     }
 }
 
-/// `TableAutoFitMode`. `Other` is a string the type does not name: the
+/// `TableAutoFitMode`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16055,7 +16015,7 @@ impl<'de> Deserialize<'de> for TableAutoFitMode {
     }
 }
 
-/// `TableModel.align`. `Other` is a string the type does not name: the
+/// `TableModel.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16210,7 +16170,7 @@ impl<'de> Deserialize<'de> for TableModelFloatPos {
     }
 }
 
-/// `TableModel.floatPos.horzAnchor`. `Other` is a string the type does not name: the
+/// `TableModel.floatPos.horzAnchor`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16250,7 +16210,7 @@ impl<'de> Deserialize<'de> for TableModelFloatPosHorzAnchor {
     }
 }
 
-/// `TableModel.floatPos.vertAnchor`. `Other` is a string the type does not name: the
+/// `TableModel.floatPos.vertAnchor`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16290,7 +16250,7 @@ impl<'de> Deserialize<'de> for TableModelFloatPosVertAnchor {
     }
 }
 
-/// `TableModel.floatPos.xSpec`. `Other` is a string the type does not name: the
+/// `TableModel.floatPos.xSpec`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16336,7 +16296,7 @@ impl<'de> Deserialize<'de> for TableModelFloatPosXSpec {
     }
 }
 
-/// `TableModel.floatPos.ySpec`. `Other` is a string the type does not name: the
+/// `TableModel.floatPos.ySpec`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16382,7 +16342,7 @@ impl<'de> Deserialize<'de> for TableModelFloatPosYSpec {
     }
 }
 
-/// `TableModel.floatSide`. `Other` is a string the type does not name: the
+/// `TableModel.floatSide`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16419,7 +16379,7 @@ impl<'de> Deserialize<'de> for TableModelFloatSide {
     }
 }
 
-/// `TableModel.rowHeightRules[]`. `Other` is a string the type does not name: the
+/// `TableModel.rowHeightRules[]`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -16563,7 +16523,7 @@ impl<'de> Deserialize<'de> for TableModelRowRevisionsItem {
     }
 }
 
-/// `TableModel.rowRevisions[].kind`. `Other` is a string the type does not name: the
+/// `TableModel.rowRevisions[].kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17131,7 +17091,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayTextOutline {
     }
 }
 
-/// `TextboxDisplay.vAlign`. `Other` is a string the type does not name: the
+/// `TextboxDisplay.vAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17713,7 +17673,7 @@ impl<'de> Deserialize<'de> for TextboxListMarker {
     }
 }
 
-/// `TextboxListMarker.kind`. `Other` is a string the type does not name: the
+/// `TextboxListMarker.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17750,7 +17710,7 @@ impl<'de> Deserialize<'de> for TextboxListMarkerKind {
     }
 }
 
-/// `TextboxDisplay.pageRelVFrom`. `Other` is a string the type does not name: the
+/// `TextboxDisplay.pageRelVFrom`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17787,7 +17747,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayPageRelVFrom {
     }
 }
 
-/// `TextboxDisplay.pageRelXFrom`. `Other` is a string the type does not name: the
+/// `TextboxDisplay.pageRelXFrom`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17908,7 +17868,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapDistPx {
     }
 }
 
-/// `TextboxDisplay.wrapSide`. `Other` is a string the type does not name: the
+/// `TextboxDisplay.wrapSide`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17945,7 +17905,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapSide {
     }
 }
 
-/// `TextboxDisplay.borderDash`. `Other` is a string the type does not name: the
+/// `TextboxDisplay.borderDash`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -17982,7 +17942,7 @@ impl<'de> Deserialize<'de> for TextboxDisplayBorderDash {
     }
 }
 
-/// `TableCell.vMerge`. `Other` is a string the type does not name: the
+/// `TableCell.vMerge`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -18019,7 +17979,7 @@ impl<'de> Deserialize<'de> for TableCellVMerge {
     }
 }
 
-/// `TableCell.vAlign`. `Other` is a string the type does not name: the
+/// `TableCell.vAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -18059,7 +18019,7 @@ impl<'de> Deserialize<'de> for TableCellVAlign {
     }
 }
 
-/// `TableCell.textDirection`. `Other` is a string the type does not name: the
+/// `TableCell.textDirection`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -18099,7 +18059,7 @@ impl<'de> Deserialize<'de> for TableCellTextDirection {
     }
 }
 
-/// `TableCell.hMerge`. `Other` is a string the type does not name: the
+/// `TableCell.hMerge`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -18243,7 +18203,7 @@ impl<'de> Deserialize<'de> for TableCellCellRevision {
     }
 }
 
-/// `TableCell.cellRevision.kind`. `Other` is a string the type does not name: the
+/// `TableCell.cellRevision.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -18492,7 +18452,7 @@ impl<'de> Deserialize<'de> for InkInfo {
     }
 }
 
-/// `BlockType`. `Other` is a string the type does not name: the
+/// `BlockType`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19271,7 +19231,7 @@ impl<'de> Deserialize<'de> for BlockList {
     }
 }
 
-/// `Block.list.kind`. `Other` is a string the type does not name: the
+/// `Block.list.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19482,7 +19442,7 @@ impl<'de> Deserialize<'de> for BlockImageFillRect {
     }
 }
 
-/// `Block.imageParagraphLineRule`. `Other` is a string the type does not name: the
+/// `Block.imageParagraphLineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19609,7 +19569,7 @@ impl<'de> Deserialize<'de> for BlockAnchorLine {
     }
 }
 
-/// `Block.anchorLine.clear`. `Other` is a string the type does not name: the
+/// `Block.anchorLine.clear`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19649,7 +19609,7 @@ impl<'de> Deserialize<'de> for BlockAnchorLineClear {
     }
 }
 
-/// `Block.imageAlign`. `Other` is a string the type does not name: the
+/// `Block.imageAlign`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19689,7 +19649,7 @@ impl<'de> Deserialize<'de> for BlockImageAlign {
     }
 }
 
-/// `Block.imageRelV`. `Other` is a string the type does not name: the
+/// `Block.imageRelV`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19729,7 +19689,7 @@ impl<'de> Deserialize<'de> for BlockImageRelV {
     }
 }
 
-/// `Block.imageRelH`. `Other` is a string the type does not name: the
+/// `Block.imageRelH`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19766,7 +19726,7 @@ impl<'de> Deserialize<'de> for BlockImageRelH {
     }
 }
 
-/// `Block.imagePosH`. `Other` is a string the type does not name: the
+/// `Block.imagePosH`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19806,7 +19766,7 @@ impl<'de> Deserialize<'de> for BlockImagePosH {
     }
 }
 
-/// `Block.imagePosV`. `Other` is a string the type does not name: the
+/// `Block.imagePosV`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -19996,7 +19956,7 @@ impl<'de> Deserialize<'de> for BlockStrayList {
     }
 }
 
-/// `Block.moveRevision`. `Other` is a string the type does not name: the
+/// `Block.moveRevision`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -20605,7 +20565,7 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfoOld {
     }
 }
 
-/// `Block.pPrChangeInfo.old.type`. `Other` is a string the type does not name: the
+/// `Block.pPrChangeInfo.old.type`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -20645,7 +20605,7 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfoOldType {
     }
 }
 
-/// `Block.pPrChangeInfo.old.kind`. `Other` is a string the type does not name: the
+/// `Block.pPrChangeInfo.old.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -20789,7 +20749,7 @@ impl<'de> Deserialize<'de> for BlockBlockRevision {
     }
 }
 
-/// `Block.blockRevision.kind`. `Other` is a string the type does not name: the
+/// `Block.blockRevision.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21206,7 +21166,7 @@ impl<'de> Deserialize<'de> for FinalBlockV0 {
     }
 }
 
-/// `FinalBlock|0.source`. `Other` is a string the type does not name: the
+/// `FinalBlock|0.source`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21315,7 +21275,7 @@ impl<'de> Deserialize<'de> for FinalBlockV1 {
     }
 }
 
-/// `FinalBlock|1.source`. `Other` is a string the type does not name: the
+/// `FinalBlock|1.source`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21363,8 +21323,8 @@ pub struct GeneratedBlock {
     pub hidden_bookmarks: Option<Vec<String>>,
     pub comment_starts: Option<Vec<String>>,
     pub comment_ends: Option<Vec<String>>,
-    pub runs: Vec<Run>,
     pub sdt_shell: Option<SdtShell>,
+    pub runs: Vec<Run>,
     pub p_pr_change: Option<Option<String>>,
     pub para_mark_del: Option<Option<String>>,
     pub para_mark_ins: Option<Option<String>>,
@@ -21469,10 +21429,10 @@ impl Serialize for GeneratedBlock {
         if let Some(value) = &self.comment_ends {
             map.serialize_entry("commentEnds", value)?;
         }
-        map.serialize_entry("runs", &self.runs)?;
         if let Some(value) = &self.sdt_shell {
             map.serialize_entry("sdtShell", value)?;
         }
+        map.serialize_entry("runs", &self.runs)?;
         if let Some(value) = &self.p_pr_change {
             map.serialize_entry("pPrChange", value)?;
         }
@@ -21568,7 +21528,7 @@ impl<'de> Deserialize<'de> for GeneratedBlock {
     }
 }
 
-/// `GeneratedBlock.type`. `Other` is a string the type does not name: the
+/// `GeneratedBlock.type`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21689,7 +21649,7 @@ impl<'de> Deserialize<'de> for GeneratedBlockList {
     }
 }
 
-/// `GeneratedBlock.list.kind`. `Other` is a string the type does not name: the
+/// `GeneratedBlock.list.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -21833,7 +21793,7 @@ impl<'de> Deserialize<'de> for GeneratedBlockBlockRevision {
     }
 }
 
-/// `GeneratedBlock.blockRevision.kind`. `Other` is a string the type does not name: the
+/// `GeneratedBlock.blockRevision.kind`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22129,7 +22089,7 @@ impl<'de> Deserialize<'de> for StyleDisplay {
     }
 }
 
-/// `StyleDisplay.caps`. `Other` is a string the type does not name: the
+/// `StyleDisplay.caps`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22169,7 +22129,7 @@ impl<'de> Deserialize<'de> for StyleDisplayCaps {
     }
 }
 
-/// `StyleDisplay.lineRule`. `Other` is a string the type does not name: the
+/// `StyleDisplay.lineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22209,7 +22169,7 @@ impl<'de> Deserialize<'de> for StyleDisplayLineRule {
     }
 }
 
-/// `StyleDisplay.align`. `Other` is a string the type does not name: the
+/// `StyleDisplay.align`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22414,7 +22374,7 @@ impl<'de> Deserialize<'de> for TableCondFormat {
     }
 }
 
-/// `TableCondFormat.caps`. `Other` is a string the type does not name: the
+/// `TableCondFormat.caps`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -22557,7 +22517,7 @@ impl<'de> Deserialize<'de> for TableParaSpacing {
     }
 }
 
-/// `TableParaSpacing.lineRule`. `Other` is a string the type does not name: the
+/// `TableParaSpacing.lineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -23012,7 +22972,7 @@ impl<'de> Deserialize<'de> for StyleInfo {
     }
 }
 
-/// `StyleInfo.type`. `Other` is a string the type does not name: the
+/// `StyleInfo.type`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -23340,7 +23300,7 @@ impl<'de> Deserialize<'de> for DocDefaults {
     }
 }
 
-/// `DocDefaults.lineRule`. `Other` is a string the type does not name: the
+/// `DocDefaults.lineRule`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -24135,7 +24095,7 @@ impl<'de> Deserialize<'de> for EmbeddedFontRef {
     }
 }
 
-/// `EmbeddedFontSlot`. `Other` is a string the type does not name: the
+/// `EmbeddedFontSlot`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -25212,12 +25172,12 @@ pub struct ParsedDocFull {
     pub auto_hyphenation: Option<bool>,
     pub default_tab_stop_twips: Option<JsNum>,
     pub balance_dbcs_spacing: Option<bool>,
+    pub use_f_e_layout: Option<bool>,
     pub compress_punctuation: Option<bool>,
     pub adjust_line_height_in_table: Option<bool>,
     pub indent_not_numbering_tab_stop: Option<bool>,
     pub do_not_expand_shift_return: Option<bool>,
     pub do_not_use_h_t_m_l_paragraph_auto_spacing: Option<bool>,
-    pub use_f_e_layout: Option<bool>,
     pub header_first: Option<Option<HfPartInfo>>,
     pub footer_first: Option<Option<HfPartInfo>>,
     pub header_even: Option<Option<HfPartInfo>>,
@@ -25455,6 +25415,9 @@ impl Serialize for ParsedDocFull {
         if let Some(value) = &self.balance_dbcs_spacing {
             map.serialize_entry("balanceDbcsSpacing", value)?;
         }
+        if let Some(value) = &self.use_f_e_layout {
+            map.serialize_entry("useFELayout", value)?;
+        }
         if let Some(value) = &self.compress_punctuation {
             map.serialize_entry("compressPunctuation", value)?;
         }
@@ -25469,9 +25432,6 @@ impl Serialize for ParsedDocFull {
         }
         if let Some(value) = &self.do_not_use_h_t_m_l_paragraph_auto_spacing {
             map.serialize_entry("doNotUseHTMLParagraphAutoSpacing", value)?;
-        }
-        if let Some(value) = &self.use_f_e_layout {
-            map.serialize_entry("useFELayout", value)?;
         }
         if let Some(value) = &self.header_first {
             map.serialize_entry("headerFirst", value)?;
@@ -26003,7 +25963,7 @@ impl<'de> Deserialize<'de> for ResolveDiff {
     }
 }
 
-/// `ResolveDiff.surface`. `Other` is a string the type does not name: the
+/// `ResolveDiff.surface`. `Unlisted` is a string the type does not name: the
 /// TypeScript keeps whatever an attribute held, so a reading in
 /// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]

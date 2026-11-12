@@ -39,7 +39,7 @@ pub fn find_sources_part(package: &Package) -> Result<Option<String>, ReadError>
         }
         let xml = part.text()?;
         if xml.contains("Sources") && xml.contains(SOURCES_NS) {
-            return Ok(Some(part.name.clone()));
+            return Ok(Some(part.name.to_string()));
         }
     }
     Ok(None)

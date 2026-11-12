@@ -419,7 +419,7 @@ pub fn apply_table_style_display(
 pub fn attach_raw_table_pr(
     xml: &str,
     model: &mut TableModel,
-    raw_tr_prs: &mut [Option<String>],
+    raw_tr_prs: &mut Vec<Option<String>>,
 ) -> Result<(), Thrown> {
     let Some(open) = js_regex!(r"<w:tbl[\s>]").exec(xml) else {
         return Ok(());
@@ -469,6 +469,10 @@ pub fn attach_raw_table_pr(
         let kids = split_xml_children(tr_inner).map_err(|limit| limit.to_string())?;
         if let Some(tr_pr) = find(&kids, "w:trPr") {
             row_pr_changes[ri] = prop_change_info(&tr_pr, "w:trPrChange");
+            // a JavaScript array grows on assignment past its end
+            if raw_tr_prs.len() <= ri {
+                raw_tr_prs.resize(ri + 1, None);
+            }
             raw_tr_prs[ri] = Some(tr_pr);
         }
         if let Some(tbl_pr_ex) = find(&kids, "w:tblPrEx") {

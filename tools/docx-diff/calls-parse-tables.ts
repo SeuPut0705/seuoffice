@@ -39,6 +39,7 @@ import {
   validInlineWrap,
 } from './reference/inline-opaque'
 import { deepXmlParser, nameOf, serializeXNode, type XNode } from './reference/xml-utils'
+import { lineRuleOutsideItsType } from './listed'
 
 const internals = await parseInternals()
 /** The module-level WeakMaps bindHfImageAnchors reads, exported by the copy. */
@@ -1492,6 +1493,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.extractTableModel',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.extractTableModel!(
         elementOf(text),
@@ -1589,6 +1591,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfParaStyleLayers',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.hfParaStyleLayers!(elementOf(text), (await buildCtx(args)).styles),
     fromParse: {
@@ -1755,6 +1758,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfCellContent',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.hfCellContent!(elementOf(text), await buildCtx(args), args.tableStyleId),
     fromParse: {

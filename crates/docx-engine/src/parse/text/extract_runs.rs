@@ -928,7 +928,11 @@ impl<'a, 'c> Walker<'a, 'c> {
                                 // inside a field, or cut by a field's edge
                                 self.not_carried.insert(key);
                             } else if carried {
-                                if !valid_inline_wrap(&wrap, ctx.part_namespaces.as_ref()) {
+                                if !valid_inline_wrap(
+                                    &wrap,
+                                    // `ctx.partNamespaces ?? NO_NAMESPACES`: a part with none known declares none
+                                    Some(ctx.part_namespaces.as_ref().unwrap_or(&JsMap::new())),
+                                ) {
                                     self.not_carried.insert(key);
                                 } else if sdt_follows_its_text(&wrap.open) {
                                     let text =

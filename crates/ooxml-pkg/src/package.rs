@@ -1,8 +1,12 @@
 //! A loaded package: what the TypeScript engine holds as a `JSZip`.
 
+use std::borrow::Borrow;
 use std::cell::OnceCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
+use std::rc::Rc;
 
 use crate::decode_text;
 
@@ -23,8 +27,103 @@ impl fmt::Display for ReadError {
 
 impl std::error::Error for ReadError {}
 
+/// A part name. The folders JSZip adds above a name are prefixes of it, and
+/// share its text as a JavaScript substring does: a name with thousands of
+/// slashes adds thousands of folders, and copies would take memory quadratic
+/// in its length.
+#[derive(Clone)]
+pub struct PartName {
+    text: Rc<str>,
+    len: usize,
+}
+
+impl PartName {
+    /// The first `len` bytes of this name, on a char boundary.
+    fn prefix(&self, len: usize) -> Self {
+        Self {
+            text: Rc::clone(&self.text),
+            len,
+        }
+    }
+
+    pub fn as_str(&self) -> &str {
+        &self.text[..self.len]
+    }
+}
+
+impl From<String> for PartName {
+    fn from(name: String) -> Self {
+        let len = name.len();
+        Self {
+            text: name.into(),
+            len,
+        }
+    }
+}
+
+impl From<&str> for PartName {
+    fn from(name: &str) -> Self {
+        Self {
+            text: name.into(),
+            len: name.len(),
+        }
+    }
+}
+
+impl Deref for PartName {
+    type Target = str;
+    fn deref(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl Borrow<str> for PartName {
+    fn borrow(&self) -> &str {
+        self.as_str()
+    }
+}
+
+impl PartialEq for PartName {
+    fn eq(&self, other: &Self) -> bool {
+        self.as_str() == other.as_str()
+    }
+}
+
+impl Eq for PartName {}
+
+impl PartialEq<str> for PartName {
+    fn eq(&self, other: &str) -> bool {
+        self.as_str() == other
+    }
+}
+
+impl PartialEq<&str> for PartName {
+    fn eq(&self, other: &&str) -> bool {
+        self.as_str() == *other
+    }
+}
+
+/// As `str` hashes, so a `&str` finds a name in a map.
+impl Hash for PartName {
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        self.as_str().hash(state);
+    }
+}
+
+impl fmt::Debug for PartName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Debug::fmt(self.as_str(), f)
+    }
+}
+
+impl fmt::Display for PartName {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str(self.as_str())
+    }
+}
+
 pub struct Part {
-    pub name: String,
+    pub name: PartName,
     pub is_dir: bool,
     /// The date of a loaded entry (a time value), which a save keeps; `None`
     /// for a part the save writes new, which takes the time of the save.
@@ -34,9 +133,9 @@ pub struct Part {
 }
 
 impl Part {
-    pub fn new(name: String, is_dir: bool, content: Result<Vec<u8>, String>) -> Self {
+    pub fn new(name: impl Into<PartName>, is_dir: bool, content: Result<Vec<u8>, String>) -> Self {
         Self {
-            name,
+            name: name.into(),
             is_dir,
             date: None,
             content,
@@ -53,7 +152,7 @@ impl Part {
     /// `file.async('uint8array')`
     pub fn bytes(&self) -> Result<&[u8], ReadError> {
         self.content.as_deref().map_err(|reason| ReadError {
-            part: self.name.clone(),
+            part: self.name.to_string(),
             reason: reason.clone(),
         })
     }
@@ -61,9 +160,9 @@ impl Part {
     /// Transfers the loaded entry without another inflated-byte allocation.
     pub fn into_content(self) -> Result<(String, Vec<u8>), ReadError> {
         match self.content {
-            Ok(content) => Ok((self.name, content)),
+            Ok(content) => Ok((self.name.to_string(), content)),
             Err(reason) => Err(ReadError {
-                part: self.name,
+                part: self.name.to_string(),
                 reason,
             }),
         }
@@ -92,7 +191,7 @@ fn array_index(name: &str) -> Option<u32> {
 #[derive(Default)]
 pub struct Package {
     parts: Vec<Part>,
-    by_name: HashMap<String, usize>,
+    by_name: HashMap<PartName, usize>,
     /// How many parts at the front have an array index for a name.
     indexed: usize,
 }
@@ -113,7 +212,7 @@ impl Package {
     /// `zip.files[name] = part`: a name seen before keeps its place and takes
     /// the new content.
     pub fn set(&mut self, part: Part) {
-        if let Some(&index) = self.by_name.get(&part.name) {
+        if let Some(&index) = self.by_name.get(part.name.as_str()) {
             self.parts[index] = part;
             return;
         }
@@ -137,31 +236,33 @@ impl Package {
 
     /// `zip.file(name, data)`: the folders above the file are created first
     /// where they are missing, as JSZip does by default.
-    pub fn set_file(&mut self, name: String, bytes: Vec<u8>) {
+    pub fn set_file(&mut self, name: impl Into<PartName>, bytes: Vec<u8>) {
         self.set_file_dated(name, bytes, None);
     }
 
     /// `zip.file(name, bytes, { date })`
-    pub fn set_file_dated(&mut self, name: String, bytes: Vec<u8>, date: Option<f64>) {
+    pub fn set_file_dated(&mut self, name: impl Into<PartName>, bytes: Vec<u8>, date: Option<f64>) {
+        let name: PartName = name.into();
         self.add_parent_folders(&name);
         self.set(Part::new(name, false, Ok(bytes)).with_date(date));
     }
 
     /// The folders above `name` that are missing, created outermost first. A
     /// loop, not a recursion: a name may hold thousands of slashes.
-    fn add_parent_folders(&mut self, name: &str) {
+    fn add_parent_folders(&mut self, name: &PartName) {
         let mut missing = Vec::new();
-        let mut path = name.strip_suffix('/').unwrap_or(name);
+        let mut path = name.strip_suffix('/').unwrap_or(name.as_str());
         // a slash at index 0 is no parent
         while let Some(last_slash) = path.rfind('/').filter(|at| *at > 0) {
-            // JSZip's forceTrailingSlash: a parent ending in a slash keeps just that one
+            // JSZip's forceTrailingSlash: a parent ending in a slash keeps just
+            // that one; either way the folder is the name up to that slash
             let parent = &path[..last_slash];
             let folder = if parent.ends_with('/') {
-                parent.to_owned()
+                name.prefix(last_slash)
             } else {
-                format!("{parent}/")
+                name.prefix(last_slash + 1)
             };
-            if self.by_name.contains_key(&folder) {
+            if self.by_name.contains_key(folder.as_str()) {
                 break;
             }
             path = parent.strip_suffix('/').unwrap_or(parent);
@@ -177,12 +278,12 @@ impl Package {
     /// goes, the folder itself included.
     pub fn remove(&mut self, name: &str) {
         let mut key = name.to_owned();
-        let mut found = self.by_name.get(&key).copied();
+        let mut found = self.by_name.get(key.as_str()).copied();
         if found.is_none() {
             if !key.ends_with('/') {
                 key.push('/');
             }
-            found = self.by_name.get(&key).copied();
+            found = self.by_name.get(key.as_str()).copied();
         }
         match found {
             Some(index) if !self.parts[index].is_dir => {

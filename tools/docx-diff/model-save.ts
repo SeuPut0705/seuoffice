@@ -21,7 +21,7 @@ const encode = new TextEncoder()
 /** Pinned: the TypeScript reads the clock where an option is absent. */
 const SAVED_AT = '2024-05-06T07:08:09.123Z'
 /** Documents the comparison must reach: the corpus is 185 files, some of them encrypted. */
-const DOCUMENT_FLOOR = 100
+const DOCUMENT_FLOOR = 183
 
 const documents = new Comparison('(i) saveDocx, corpus documents saved', DOCUMENT_FLOOR)
 const variantsRun = new Map<string, Comparison>()
@@ -153,7 +153,10 @@ function variantsOf(doc: ParsedDocFull): Variant[] {
       block: {
         type: 'heading',
         level: 3,
-        runs: [{ text: 'A new heading' }, { text: ' link', link: 'https://example.com/a?b=1&c=2' }],
+        runs: [
+          { text: 'A new heading' },
+          { text: ' link', link: { href: 'https://example.com/a?b=1&c=2' } },
+        ],
         bookmarks: ['bm1'],
       } as unknown as GeneratedBlock,
     },

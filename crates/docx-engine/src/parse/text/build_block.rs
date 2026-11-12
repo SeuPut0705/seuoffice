@@ -882,7 +882,7 @@ fn drawing_branch(
             let preview: Vec<String> = canvas
                 .shapes
                 .iter()
-                .flat_map(|s| s.texts.clone().unwrap_or_default())
+                .flat_map(|s| (*s.texts).clone().unwrap_or_default())
                 .collect();
             return Ok(Some(
                 Obj::of(base)
