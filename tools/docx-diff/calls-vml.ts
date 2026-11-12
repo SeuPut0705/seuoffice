@@ -1,5 +1,6 @@
 // Group `vml`: the shape readers of parse-vml.ts. The helpers the watermark
 // readers stand on (vmlLengthPx, vmlColorHex...) are in group `section`.
+import { percentOpacity } from './listed'
 import {
   VML_PICT_RID_RE,
   VML_WORDART_RE,
@@ -661,6 +662,7 @@ export const VML: CallSpec[] = [
     fn: 'vml.vmlShapeSvg',
     call: (text, args) =>
       vmlShapeSvg(text, typeof args.types === 'string' ? vmlShapeTypeTable(args.types) : undefined),
+    listed: percentOpacity,
     fromDocument: shapeInputsOf,
     built: SHAPE_BUILT,
   },

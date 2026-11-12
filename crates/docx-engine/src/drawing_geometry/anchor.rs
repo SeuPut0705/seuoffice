@@ -250,13 +250,15 @@ pub fn drawing_anchor_meta(frag: &str) -> DrawingAnchorMeta {
     }
     // the anchor's own wrap element sits before a:graphic; a nested drawing's
     // wrap must not leak up. behindDoc is z-order only: a behind-text picture
-    // with wrapTight/wrapSquare/wrapTopAndBottom still excludes the text
+    // with wrapTight/wrapSquare/wrapTopAndBottom still excludes the text.
+    // The TypeScript looks for wrapNone in the whole fragment, so the one of a
+    // nested drawing does leak there (divergences.json: `wrap-none-of-a-nested-drawing`).
     let own_xml = frag
         .find("<a:graphic")
         .map_or(frag, |graphic_at| frag.get(..graphic_at).unwrap_or(frag));
     let behind = js_regex!(r#"behindDoc\s*=\s*["'](?:1|true)["']"#).test(anchor_tag);
     let own_wrapped = js_regex!(r"<wp:wrap(?:Square|Tight|Through|TopAndBottom)\b").test(own_xml);
-    if frag.contains("<wp:wrapNone") || (behind && !own_wrapped) {
+    if own_xml.contains("<wp:wrapNone") || (behind && !own_wrapped) {
         meta.no_wrap = Some(true);
     }
     if behind {

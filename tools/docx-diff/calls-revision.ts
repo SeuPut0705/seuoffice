@@ -12,6 +12,7 @@ import {
 } from '../../packages/docx-engine/src/revision-xml'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
+import { singleQuotedRevisionAttribute } from './listed'
 
 const W = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
 
@@ -389,6 +390,7 @@ export const REVISION: CallSpec[] = [
         args.mode as RevisionXmlMode,
         args.filter as RevisionXmlFilter | undefined,
       ),
+    listed: singleQuotedRevisionAttribute,
     fromDocument: (parts) =>
       partsOf(parts).flatMap((text) => [
         { text, args: { mode: 'accept' } },
@@ -401,6 +403,7 @@ export const REVISION: CallSpec[] = [
     fn: 'revision.applyRevisionResolutions',
     call: (text, args) =>
       applyRevisionResolutions(text, args.resolutions as RevisionResolution[] | undefined),
+    listed: singleQuotedRevisionAttribute,
     fromDocument: (parts) =>
       partsOf(parts).map((text) => ({
         text,
@@ -413,6 +416,7 @@ export const REVISION: CallSpec[] = [
   {
     fn: 'revision.readPropChangeXml',
     call: (text, args) => readPropChangeXml(text, args.changeName as string),
+    listed: singleQuotedRevisionAttribute,
     fromDocument: fragmentInputs,
     built: PROP_FRAGMENTS.flatMap((text) =>
       FRAGMENT_NAMES.map((changeName) => ({ text, args: { changeName } })),

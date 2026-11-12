@@ -3,6 +3,7 @@
 // the resolver are built on both sides from `args.parts` as the `resolve`
 // group builds them. `args.resolver: false` calls it without a resolver,
 // `args.styles: false` without the styles map.
+import { missingParagraphStyle } from './listed'
 import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
 import { fieldDisplayOf } from '../../packages/docx-engine/src/parse-fields'
 import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
@@ -713,6 +714,7 @@ export const FIELDDISPLAY: CallSpec[] = [
   {
     fn: 'fielddisplay.fieldDisplayOf',
     call: displayOf,
+    listed: missingParagraphStyle,
     fromDocument: documentInputs,
     built: built(),
   },
