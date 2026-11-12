@@ -223,6 +223,13 @@ const worksheetMetadataSchema = z
     ),
     /// PivotTable output areas; the renderer blocks edits inside them.
     pivotRanges: z.array(cellAreaSchema).max(1_000),
+    /// PivotTable relationships of this sheet whose output range the sidecar
+    /// could not read (part missing, no location, no ref, ref not a range).
+    /// Such a pivot is in neither pivotRanges nor pivotTables, so its output
+    /// cells look like ordinary cells: a reader that withholds pivot output
+    /// (cells hidden from AI) must treat the whole sheet as pivot output when
+    /// this is not 0. Defaulted for stale sidecar binaries, like pivotTables.
+    pivotsUnlocated: z.number().int().nonnegative().default(0),
     /// Part paths for on-demand pivot definition reads (refresh support).
     /// Defaulted so a stale sidecar binary degrades to "no refresh" gracefully.
     pivotTables: z

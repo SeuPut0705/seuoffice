@@ -1185,7 +1185,8 @@ function parseWorkbookFile(input: unknown): WorkbookFile {
       !Array.isArray(sheet.tables) ||
       !Array.isArray(sheet.comments) ||
       !Array.isArray(sheet.pivotRanges) ||
-      sheet.pivotRanges.length > 1_000
+      sheet.pivotRanges.length > 1_000 ||
+      (sheet.pivotsUnlocated !== undefined && !isNonnegativeInteger(sheet.pivotsUnlocated))
     ) {
       throw new Error('Invalid worksheet metadata.')
     }
@@ -1388,6 +1389,9 @@ function parseWorkbookFile(input: unknown): WorkbookFile {
       tables,
       comments,
       pivotRanges: sheet.pivotRanges.map(parseCellArea),
+      // Pivots the sidecar could not place: dropping this would tell the
+      // renderer that every pivot's output is known.
+      pivotsUnlocated: sheet.pivotsUnlocated ?? 0,
       pivotTables: parsePivotTableInfos(sheet.pivotTables ?? []),
       sparklines: parseSparklineGroups(sheet.sparklines ?? []),
       cellImages: parseCellImages(sheet.cellImages ?? []),
