@@ -34,7 +34,7 @@ const pic = (id: number, blip: string, extra = ''): string =>
 const slideXml = (...shapes: string[]): string =>
   `<p:sld ${NS}><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${shapes.join('')}</p:spTree></p:cSld></p:sld>`
 const grp = (id: number, child: string): string =>
-  `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${id}" name="G"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/>${child}</p:grpSp>`
+  `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="${id}" name="G"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:effectLst/></p:grpSpPr>${child}</p:grpSp>`
 
 const PNG = [137, 80, 78, 71, 13, 10, 26, 10, 1, 2, 3]
 const PNG2 = [137, 80, 78, 71, 13, 10, 26, 10, 9, 9, 9]

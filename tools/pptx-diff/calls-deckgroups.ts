@@ -103,7 +103,9 @@ const group = (
     child
       ? `<a:xfrm${attrs}><a:off x="${box[0]}" y="${box[1]}"/><a:ext cx="${box[2]}" cy="${box[3]}"/>` +
         `<a:chOff x="${child[0]}" y="${child[1]}"/><a:chExt cx="${child[2]}" cy="${child[3]}"/></a:xfrm>`
-      : ''
+      : // an element child: an empty grpSpPr makes the TypeScript throw on the whole
+        // deck (ledger grpsppr-string-in), which would leave nothing compared
+        '<a:effectLst/>'
   }</p:grpSpPr>${inner}</p:grpSp>`
 
 const NESTED = group(
