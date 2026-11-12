@@ -127,8 +127,6 @@ const NOT_LITERAL: &[(&str, usize)] = &[
 const RESTARTS_THAT_MAY_READ_AHEAD: &[(&str, usize)] = &[
     // one search per SDT, over a pattern held in a constant
     ("docx-engine/src/sdt.rs", 1),
-    // one search per withheld span; `\r?\n[ \t]*\r?\n` reads nothing ahead
-    ("file-parse/src/markdown.rs", 1),
     // one pass over the attributes of one tag
     ("ooxml-pkg/src/normalize.rs", 1),
 ];
