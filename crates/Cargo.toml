@@ -29,7 +29,9 @@ regress = "0.12"
 # shortest float digits with the tie rule of JavaScript
 ryu = "1"
 serde = { version = "1", features = ["derive"] }
-serde_json = "1"
+# preserve_order: a value keeps its keys in the order they were written, as a
+# JavaScript object does; without it serde_json::Value sorts them
+serde_json = { version = "1", features = ["preserve_order"] }
 # SHA-512 of the document protection hash
 sha2 = "0.10"
 zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
