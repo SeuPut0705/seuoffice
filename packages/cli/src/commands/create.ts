@@ -28,6 +28,7 @@ import {
   type TableInput,
 } from '../formats/xlsx'
 import { exportViaApp } from '../formats/app-export'
+import { refuseHiddenContent } from '../formats/render-guard'
 import { blankDocument, closeDocument, fillFromHtml, saveDocument } from '../formats/docx'
 import { decodeHtmlBytes } from '../formats/html-text'
 import { markdownToDocx } from '../formats/markdown'
@@ -149,6 +150,12 @@ export const createCommand: CommandDef = {
           reason: 'missing_argument',
         })
       const source = resolveInput(from, ctx)
+      await refuseHiddenContent(
+        source,
+        undefined,
+        'print',
+        'read the document with its read command, which gives a placeholder for the hidden content',
+      )
       const r = await exportViaApp(source, 'pdf', output, { env: ctx.env, log: ctx.log })
       return {
         summary: `created ${basename(output)}`,

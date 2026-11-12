@@ -844,16 +844,18 @@ export function documentHtml(doc: OpenDocument): ExportHtml {
     flush(index - 1)
     // pending tracked deletions are dropped, as serializeRangeToHtml drops them
     if (doc.mods.protocol.isTrackedDeleted(node)) return
-    const formula = node.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
+    // a block hidden from AI (a picture) reads as its placeholder, as it does in every AI reader
+    const view = modelViewOf(doc, node)
+    const formula = view.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
     if (formula?.latex) {
       parts.push(`<div data-type="block-math" data-latex="${escapeHtml(formula.latex)}"></div>`)
     } else if (formula?.tokens?.length) {
       formulasAsText++
       parts.push(`<p>${escapeHtml(formula.tokens.join(' '))}</p>`)
-    } else if (node.attrs.blockType === 'image') {
+    } else if (view.attrs.blockType === 'image' && typeof view.attrs.redact !== 'string') {
       skipped.images++
     } else {
-      const preview = String(node.attrs.previewText ?? '')
+      const preview = String(view.attrs.previewText ?? '')
         .replace(/\s+/g, ' ')
         .trim()
       if (preview) parts.push(`<p>${escapeHtml(preview)}</p>`)
