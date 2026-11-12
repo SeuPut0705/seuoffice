@@ -60,14 +60,14 @@
 
 **프레젠테이션(`.odp`·`.otp`·`.ppt` → `.pptx`).**
 
-- `convert <file.odp|.otp|.ppt> --to pptx [--out <경로>] [--force]`다. `.odp`·`.otp`는 `detail.slides`와 `detail.dropped`를 준다.
+- `convert <file.odp|.otp|.ppt> --to pptx [--out <경로>] [--force]`다. `.odp`·`.otp`는 `detail.slides`와 `detail.dropped`를 준다. `.odp`·`.otp`의 가져오기가 실패하면 종료 코드 3이고 `detail.reason`에 이유 코드가 온다.
 - `.ppt`는 1단계 변환이다. 슬라이드 순서대로 글상자의 글과 슬라이드 크기만 옮긴다. 도형 자리와 글꼴 서식, 그림, 마스터, 발표자 노트는 옮기지 않는다(`packages/ppt2pptx/README.md`). 이 제한은 명령과 MCP `convert` 모두에 적용된다.
 - 입력과 같은 경로로 쓰려 하면 종료 코드 1, `reason: "invalid_argument"`다. 지원하지 않는 짝은 종료 코드 1, `reason: "unsupported"`이고 `detail.supported`에 그 원본이 바꿀 수 있는 형식 목록이 온다.
 
 **엑셀 외부 연결(`sheet links`).**
 
-- `sheet links <file.xlsx>`는 수식이 `[n]`으로 가리키는 다른 통합 문서 목록을 읽기만 한다. `detail.links[]`의 `index`가 수식의 `[n]`, `source`가 푼 경로, `reachable`이 그 파일이 있는지다.
-- `--update`는 닿는 원본을 다시 읽어 계산한 값을 수식의 저장된 값(`<v>`)에만 쓴다. 수식은 그대로이고, 닿지 않는 연결은 예전 값을 둔다. `--break <1부터 센 번호들>`은 그 연결을 끊는다. 수식은 저장된 값이 되고 연결 파트를 지우며, 남은 연결의 번호를 다시 매긴다. 둘을 함께 주면 종료 코드 1, `invalid_argument`.
+- `sheet links <file.xlsx>`는 수식이 `[n]`으로 가리키는 다른 통합 문서 목록을 읽기만 한다. `detail.links[]`의 `index`가 수식의 `[n]`, `source`가 푼 경로, `reachable`이 그 파일이 있는지다. 원본이 다른 컴퓨터를 가리키면(`\\호스트\공유`, `//호스트/…`, `file://호스트/…`) 목록은 그 경로를 건드리지 않는다. 이때 `reachable`은 `null`이고 `unchecked: "remote"`가 붙는다. 윈도우에서 통합 문서가 있는 드라이브도 시스템 드라이브도 아닌 드라이브 문자는 네트워크 드라이브일 수 있어 확인하지 않고 `reachable: null`, `unchecked: "drive"`로 답한다. 그 밖의 이 컴퓨터 경로는 예전처럼 파일이 있는지만 본다(`true`·`false`).
+- `--update`는 닿는 원본을 다시 읽어 계산한 값을 수식의 저장된 값(`<v>`)에만 쓴다. 수식은 그대로이고, 닿지 않는 연결은 예전 값을 둔다. 다른 컴퓨터를 가리키는 원본은 찾지도 열지도 않고 예전 값을 두며 `detail.remoteSkipped`에 그 수를 적는다. 사용자가 그 원본을 읽으라고 했을 때만 `--update --remote-sources`를 준다(문서가 고른 호스트에 윈도우가 로그인한다). 앱의 MCP 도구 `sheet_links`에는 이 옵션이 없다. `--break <1부터 센 번호들>`은 그 연결을 끊는다. 수식은 저장된 값이 되고 연결 파트를 지우며, 남은 연결의 번호를 다시 매긴다. 둘을 함께 주면 종료 코드 1, `invalid_argument`.
 - 쓰는 두 옵션은 `sheet apply`와 같은 파일 규칙(`--out`, `--force`, 허용 폴더, 앱에 열린 파일)을 따른다.
 
 ## PDF 명령

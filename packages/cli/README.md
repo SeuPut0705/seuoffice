@@ -41,8 +41,9 @@ ieumoffice sheet read book.xlsx [--sheet Data] [--range A1:D20] [--formats] --js
 ieumoffice sheet apply book.xlsx --cells cells.json    # [{cell:"B2", value|formula, style?, sheet?}]
 ieumoffice sheet apply book.xlsx --ops ops.json [--dry-run]   # workbook DSL: cells, formats, charts, tables, filters, conditional formats, validation, links, notes, panes, page setup, sheets (`ieumoffice guide sheets`)
 ieumoffice sheet check book.xlsx --json                # formula errors, missing-sheet references, broken defined names, chart ranges off the data, ### columns (suggest: set_col_width), placeholder text, existing rules; exit 0
-ieumoffice sheet links book.xlsx                       # external [n] links: stored path, resolved path, reachable, source sheets
-ieumoffice sheet links book.xlsx --update              # re-read reachable sources and write the computed values as the formulas' cached <v> (formulas untouched; unreachable links keep their cache)
+ieumoffice sheet links book.xlsx                       # external [n] links: stored path, resolved path, reachable, source sheets; a source on another computer (\\host\share, file://host/…) is not contacted: reachable is null, unchecked says why
+ieumoffice sheet links book.xlsx --update              # re-read reachable sources and write the computed values as the formulas' cached <v> (formulas untouched; unreachable links and sources on another computer keep their cache)
+ieumoffice sheet links book.xlsx --update --remote-sources   # also read the sources on another computer: the workbook chose that host and Windows signs in to it, so only when the user asked
 ieumoffice sheet links book.xlsx --break 1,2           # break links: formulas become their cached values, the links' parts are removed and surviving links renumber
 ieumoffice create --type docx --from report.md --out report.docx      # or --from fragment.html (restricted HTML); the new file carries Word-like docProps/core.xml + app.xml; --no-generator-fields drops the Application / AppVersion stamps
 ieumoffice convert notes.md --to docx|html
@@ -53,6 +54,8 @@ ieumoffice convert book.xlsx --to csv [--sheet Data]   # one sheet, cell text as
 ieumoffice convert book.xlsx --to ods                  # a complete ODS package (also .xlsm→ods); detail.dropped and warnings list the features ODS cannot hold
 ieumoffice convert form.odt --to docx|pdf|md|html      # through the ODT bridge docx (pdf/html: a temporary docx the app exports, always deleted)
 ieumoffice convert letter.doc --to docx                # Word 97-2003 .doc/.dot through the in-process doc2docx importer
+ieumoffice convert old.hwp --to docx                   # .hwp / .hwpx → docx in-process; a failure exits 3 with detail.reason
+ieumoffice convert deck.odp --to pptx                  # also .otp and .ppt → pptx; .ppt is stage 1 only (text boxes and slide size)
 ieumoffice convert report.docx --to odt                # also md→odt and html→odt; warnings[] odt_converted / odt_dropped + detail.odt_report
 ieumoffice capabilities --json                        # which of search, image generation, image/video analysis and the PDF AI jobs work here and by which route (free, key, subscription); no model call
 ieumoffice search "electron headless export" [--images] [--max 6] --json
