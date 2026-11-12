@@ -6,6 +6,8 @@
  * window-capture listener claims image-only transfers before it runs.
  */
 import { isGridKeyTarget } from './clear-selection-keyboard'
+import { isRangeCopyHtml } from './copy-picture'
+
 export const PICTURE_MAX_BYTES = 20 * 1024 * 1024
 const PICTURE_MEDIA_TYPES = new Set(['image/png', 'image/jpeg', 'image/gif'])
 
@@ -62,10 +64,15 @@ export function htmlIsFromExcel(html: string): boolean {
 /// where nothing saves it, and it is gone after the next save.
 export function pickTransferImage(data: TransferLike): File | null {
   if (!transferHasImage(data)) return null
+  const html = data.getData('text/html')
+  // A range copied in this editor carries a picture of its cells next to its
+  // own table markup (copy-picture.ts), which has no Excel marker. The engine
+  // gets that transfer without the file and pastes the cells, so the picture
+  // is not the app's to claim.
+  if (isRangeCopyHtml(html)) return null
   // The engine's Excel markers include the generic Office namespace, and it
   // pastes such HTML itself, never the file: there only a transfer that is a
   // picture (no cells, no text of its own) is claimed.
-  const html = data.getData('text/html')
   if (htmlIsFromExcel(html)) {
     if (/<(table|tr|td|th)\b/i.test(html)) return null
     if (data.getData('text/plain').trim() && !/<img\b/i.test(html)) return null

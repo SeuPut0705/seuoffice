@@ -46,6 +46,20 @@ describe('pickTransferImage', () => {
     expect(pickTransferImage(data)).toBeNull()
   })
 
+  // A range copied in this editor carries a picture of the cells next to its
+  // own table markup (copy-picture.ts), and that markup has no Excel marker.
+  // Claiming the picture would float a bitmap where the cells should paste.
+  it("leaves this editor's own range copy (its markup plus the copy picture) to the cell paste", () => {
+    const data = transfer([stringItem('text/plain'), stringItem('text/html'), imageItem()], {
+      'text/plain': 'a\tb\tc',
+      'text/html':
+        '<google-sheets-html-origin><table data-copy-id="copy-1" xmlns="http://www.w3.org/1999/xhtml" cellspacing="0" cellpadding="0" dir="ltr" style="table-layout:fixed">' +
+        '<colgroup><col width="88" /><col width="88" /><col width="88" /></colgroup>\n' +
+        '<tbody><tr style="height: 24px;"><td>a</td><td>b</td><td>c</td></tr></tbody></table>',
+    })
+    expect(pickTransferImage(data)).toBeNull()
+  })
+
   it('claims a picture copied from an Office app, whose HTML carries the Office namespace', () => {
     const data = transfer([stringItem('text/html'), imageItem()], {
       'text/html':
