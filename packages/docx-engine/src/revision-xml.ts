@@ -137,11 +137,12 @@ function typeOf(el: El): RevisionXmlType | undefined {
 }
 
 /**
- * Epoch ms of an ISO date. A date-time without a zone designator is UTC:
- * Date.parse reads it as local time, and a filter would pick different
- * changes on machines in different zones.
+ * Epoch ms of a revision date (a w:date, or the `before` of a filter). A
+ * date-time without a zone designator is UTC: Date.parse reads it as local
+ * time, and a filter would pick different changes on machines in different
+ * zones. The editor's filter over body revisions reads dates through this too.
  */
-function utcMs(iso: string): number {
+export function revisionDateMs(iso: string): number {
   const s = iso.trim()
   const zoneless = /T/i.test(s) && !/(?:Z|[+-]\d\d(?::?\d\d)?)$/i.test(s)
   return Date.parse(zoneless ? `${s}Z` : s)
@@ -156,7 +157,7 @@ function matches(el: El, filter: RevisionXmlFilter | undefined, type: RevisionXm
   }
   if (filter.before !== undefined) {
     const date = attrOf(el, 'w:date')
-    if (!date || utcMs(date) >= utcMs(filter.before)) return false
+    if (!date || revisionDateMs(date) >= revisionDateMs(filter.before)) return false
   }
   if (filter.date !== undefined && (attrOf(el, 'w:date') ?? '') !== filter.date) return false
   if (filter.ids !== undefined && !filter.ids.includes(attrOf(el, 'w:id') ?? '')) return false
