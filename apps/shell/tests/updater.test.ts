@@ -463,13 +463,13 @@ describe('initAutoUpdater', () => {
     expect(checkForUpdates).not.toHaveBeenCalled()
   })
 
-  it('configures manual full-package download and checks after the initial delay', async () => {
+  it('configures manual differential download and checks after the initial delay', async () => {
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
     expect(updaterState.autoDownload).toBe(false)
     // the installer is started at will-quit by the updater itself
     expect(updaterState.autoInstallOnAppQuit).toBe(false)
-    expect(updaterState.disableDifferentialDownload).toBe(true)
+    expect(updaterState.disableDifferentialDownload).toBe(false)
     // full changelog: the window shows the bodies of every skipped release
     expect(updaterState.fullChangelog).toBe(true)
     expect(checkForUpdates).not.toHaveBeenCalled()

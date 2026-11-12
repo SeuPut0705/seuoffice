@@ -1,4 +1,3 @@
-import { statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app, dialog, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
@@ -14,7 +13,7 @@ import {
   recordInstallAttempt,
 } from './update-attempt'
 import type { InstallFailureLevel } from './update-attempt'
-import { createUpdateLog, createUpdateSteps, UPDATE_LOG_FILE } from './update-log'
+import { createUpdateLog, createUpdateSteps, fileBytes, UPDATE_LOG_FILE } from './update-log'
 import { pruneUpdateCache } from './update-cache'
 import {
   installMacStaging,
@@ -46,8 +45,8 @@ import {
 import { normalizeReleaseNotes } from './update-notes'
 
 /**
- * Full-package auto-update from the GitHub Releases of the product's public
- * repository.
+ * Auto-update from the GitHub Releases of the product's public repository,
+ * downloading only the changed blocks when it can (see below).
  *
  * A release carries the versioned installer and its `latest.yml`
  * (docs/archive/ieum/releasing.ko.md is the procedure). The packaged app reads the
@@ -195,16 +194,6 @@ function log(...args: unknown[]): void {
 
 /** marks a step of the update in the record (update-log.ts); a no-op until the updater runs */
 let step: (step: UpdateStep, fields?: UpdateStepFields) => void = () => {}
-
-/** the size of a downloaded file, or null when it cannot be read */
-function fileBytes(file: unknown): number | null {
-  if (typeof file !== 'string') return null
-  try {
-    return statSync(file).size
-  } catch {
-    return null
-  }
-}
 
 function uiStrings(): UpdateUiStrings {
   const lang = getUiLang()
@@ -384,9 +373,16 @@ export function initAutoUpdater(
   // installer cannot close the app over a save prompt, and every start is
   // recorded for the next launch to check.
   autoUpdater.autoInstallOnAppQuit = false
-  // full-package policy: never attempt blockmap differential downloads
-  // (a release then needs only the installer and its latest.yml)
-  autoUpdater.disableDifferentialDownload = true
+  // Differential download: only the blocks that changed since the running
+  // version (about 9% of the Windows installer and 18% of the Mac zip between
+  // two releases a day apart). It needs the running version's file and the
+  // .blockmap of both releases: Windows, the copy the installer keeps of
+  // itself (`installer.exe` in the update cache, update-cache.ts keeps it);
+  // Mac, the `update.zip` electron-updater keeps after each download. When
+  // any of it is missing (the first update, a pruned old release) or the
+  // result fails the feed's sha512, electron-updater downloads the whole
+  // file instead (tests/update-differential.test.ts).
+  autoUpdater.disableDifferentialDownload = false
   installResumeDownload(autoUpdater as unknown as Parameters<typeof installResumeDownload>[0])
 
   // macOS: Squirrel.Mac only installs into an app signed with a Developer ID,

@@ -126,3 +126,13 @@ export function createUpdateSteps(
     write(parts.join(' '))
   }
 }
+
+/** the size of a downloaded file for a step line, or null when it cannot be read */
+export function fileBytes(file: unknown): number | null {
+  if (typeof file !== 'string') return null
+  try {
+    return statSync(file).size
+  } catch {
+    return null
+  }
+}

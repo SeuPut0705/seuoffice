@@ -10,10 +10,10 @@ import { basename, join } from 'node:path'
  *   electron-updater empties `pending/` when the next download starts or one
  *   fails, never after an install, so the installer of the version that is
  *   now running stays until the next update (the Mac zip likewise).
- * - `installer.exe` (Windows): a copy the NSIS installer makes of itself at
- *   the end of every install, the base of electron-updater's differential
- *   download. This app always downloads the whole installer (updater.ts turns
- *   differential downloads off), so nothing ever reads the copy.
+ * - `installer.exe` (Windows) and `update.zip` (Mac): the running version's
+ *   own file, which the NSIS installer copies there at the end of every
+ *   install and electron-updater after every Mac download. The next update
+ *   downloads only the blocks that differ from it (updater.ts), so both stay.
  *
  * A download of a version newer than the running one is an update on its way
  * (downloaded and not installed yet, or an install that did not take and gets
@@ -25,7 +25,6 @@ import { basename, join } from 'node:path'
 
 const PENDING_DIR = 'pending'
 const UPDATE_INFO_FILE = 'update-info.json'
-const INSTALLER_COPY = 'installer.exe'
 
 type Log = (...args: unknown[]) => void
 
@@ -81,8 +80,8 @@ function installedOrOlder(fileName: string, runningVersion: string): boolean {
 }
 
 /**
- * Removes the installer copies the running version no longer needs. Call it at
- * a start, before any download can run. Never throws. Returns false when a
+ * Removes the download of the version now running (or an older one). Call it
+ * at a start, before any download can run. Never throws. Returns false when a
  * file that should go stayed: the installer that reopened the app still runs
  * for a few seconds and holds its own file (EPERM), so the caller tries again
  * a little later.
@@ -94,14 +93,11 @@ export function pruneUpdateCache(options: {
 }): boolean {
   const { cacheDir, runningVersion, log } = options
   try {
-    const copyGone = removed(cacheDir, INSTALLER_COPY, log)
     const pendingDir = join(cacheDir, PENDING_DIR)
     const fileName = downloadedFileName(pendingDir)
-    if (fileName === null || !installedOrOlder(fileName, runningVersion)) return copyGone
+    if (fileName === null || !installedOrOlder(fileName, runningVersion)) return true
     // the record goes only with the file it names, so a failed removal is retried
-    return (
-      removed(pendingDir, fileName, log) && removed(pendingDir, UPDATE_INFO_FILE, log) && copyGone
-    )
+    return removed(pendingDir, fileName, log) && removed(pendingDir, UPDATE_INFO_FILE, log)
   } catch (err) {
     log('the update cache was not cleared:', err instanceof Error ? err.message : String(err))
     return false
