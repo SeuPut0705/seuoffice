@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
 import {
-  agreesToNoUndo,
   MAX_WRITTEN_STEPS,
   NO_WRITTEN_STEPS,
   recordWritten,
@@ -84,7 +83,7 @@ async function change(
     },
     { consent: { given: false }, confirm: () => true, limits },
   )
-  if (written.declined) throw new Error('the change was declined')
+  if (written.status !== 'run') throw new Error(`the change was ${written.status}`)
   return recordWritten(steps, written.before, limits)
 }
 
@@ -168,7 +167,7 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
       confirm: () => true,
       limits,
     })
-    const before = written.declined ? undefined : written.before
+    const before = written.status === 'run' ? written.before : undefined
     // not toBeNull: a failure would print sixteen million bytes
     expect(before === null).toBe(true)
     expect(file.wholeReads).toEqual([])
@@ -303,7 +302,7 @@ describe('a page operation on a file too large to keep for Undo', () => {
     })
 
     expect(asked).toEqual([{ fileBytes: 6, limitBytes: 4, writesSoFar: 0 }])
-    expect(out).toEqual({ declined: false, result: 'written', before: null })
+    expect(out).toEqual({ status: 'run', result: 'written', before: null })
     expect([...file.disk]).toEqual([9])
   })
 
@@ -321,7 +320,7 @@ describe('a page operation on a file too large to keep for Undo', () => {
       limits,
     })
 
-    expect(out).toEqual({ declined: true })
+    expect(out).toEqual({ status: 'declined', flushed: false })
     expect(user.asked).toHaveLength(1)
     expect(op.writes).toBe(0)
     expect(file.restores).toBe(0)
@@ -352,11 +351,9 @@ describe('a page operation on a file too large to keep for Undo', () => {
     const gate = { consent: { given: false }, confirm: user.confirm, limits }
 
     const first = operation(file, bytesOf(2, 2, 2, 2, 2, 2, 2))
-    expect(await writeInPlace(file.api, PATH, first.write, gate)).toMatchObject({ declined: false })
+    expect(await writeInPlace(file.api, PATH, first.write, gate)).toMatchObject({ status: 'run' })
     const second = operation(file, bytesOf(3, 3, 3, 3, 3, 3, 3, 3))
-    expect(await writeInPlace(file.api, PATH, second.write, gate)).toMatchObject({
-      declined: false,
-    })
+    expect(await writeInPlace(file.api, PATH, second.write, gate)).toMatchObject({ status: 'run' })
 
     expect([first.writes, second.writes]).toEqual([1, 1])
     expect(user.asked).toEqual([{ fileBytes: 6, limitBytes: 4 }])
@@ -385,7 +382,7 @@ describe('a page operation on a file too large to keep for Undo', () => {
 
     expect(user.asked).toEqual([])
     expect(op.writes).toBe(1)
-    expect(out.declined === false && [...out.before!]).toEqual([1, 2, 3, 4])
+    expect(out.status === 'run' && [...out.before!]).toEqual([1, 2, 3, 4])
   })
 
   it('does not ask when a change only pushes the oldest step out', async () => {
@@ -395,27 +392,126 @@ describe('a page operation on a file too large to keep for Undo', () => {
     let steps: WrittenSteps = NO_WRITTEN_STEPS
     for (let n = 1; n <= MAX_WRITTEN_STEPS + 2; n++) {
       const out = await writeInPlace(file.api, PATH, operation(file, bytesOf(n)).write, gate)
-      if (!out.declined) steps = recordWritten(steps, out.before)
+      if (out.status === 'run') steps = recordWritten(steps, out.before)
     }
     expect(steps.undo).toHaveLength(MAX_WRITTEN_STEPS)
     expect([...file.disk]).toEqual([MAX_WRITTEN_STEPS + 2])
     expect(user.asked).toEqual([])
   })
+})
 
-  it('takes an answer given before the pending edits were saved as the one time', async () => {
-    const file = fakeFile(bytesOf(...LARGE))
-    const user = person(true)
-    const gate = { consent: { given: false }, confirm: user.confirm, limits }
+/** Edits waiting to be saved into `file`: a save that works leaves `saved` there */
+function pendingEdits(file: FakeFile, saved: Uint8Array, works = true) {
+  const pending = {
+    saves: 0,
+    fileBytes: file.disk.byteLength,
+    save: async () => {
+      pending.saves += 1
+      if (works) file.disk = saved
+      return works
+    },
+  }
+  return pending
+}
 
-    // the size the document was read at, asked about before the save that precedes the change
-    expect(await agreesToNoUndo(3, gate)).toBe(true)
-    expect(user.asked).toEqual([])
-    expect(await agreesToNoUndo(6, gate)).toBe(true)
-    expect(user.asked).toEqual([{ fileBytes: 6, limitBytes: 4 }])
+describe('a page operation while edits are waiting to be saved', () => {
+  const limits = { bytes: 4, steps: MAX_WRITTEN_STEPS }
+  const LARGE = [1, 2, 3, 4, 5, 6]
 
+  it('saves them first, and keeps the saved file for Undo', async () => {
+    const file = fakeFile(bytesOf(1))
+    const pending = pendingEdits(file, bytesOf(1, 1))
+    const user = person(false)
     const op = operation(file, bytesOf(9))
-    await writeInPlace(file.api, PATH, op.write, gate)
-    expect(op.writes).toBe(1)
+
+    const out = await writeInPlace(
+      file.api,
+      PATH,
+      op.write,
+      { consent: { given: false }, confirm: user.confirm, limits },
+      pending,
+    )
+
+    expect([pending.saves, op.writes]).toEqual([1, 1])
+    expect(out.status === 'run' && [...out.before!]).toEqual([1, 1])
+    expect(user.asked).toEqual([])
+  })
+
+  it('asks before they are saved when the file is too large, and Cancel saves nothing', async () => {
+    const file = fakeFile(bytesOf(...LARGE))
+    const pending = pendingEdits(file, bytesOf(...LARGE, 7))
+    const user = person(false)
+    const op = operation(file, bytesOf(9))
+
+    const out = await writeInPlace(
+      file.api,
+      PATH,
+      op.write,
+      { consent: { given: false }, confirm: user.confirm, limits },
+      pending,
+    )
+
+    expect(out).toEqual({ status: 'declined', flushed: false })
+    expect(user.asked).toEqual([{ fileBytes: 6, limitBytes: 4 }])
+    expect([pending.saves, op.writes]).toEqual([0, 0])
+    expect([...file.disk]).toEqual(LARGE)
+  })
+
+  it('asks once: Continue before the save also covers the write after it', async () => {
+    const file = fakeFile(bytesOf(...LARGE))
+    const pending = pendingEdits(file, bytesOf(...LARGE, 7))
+    const user = person(true)
+    const op = operation(file, bytesOf(9))
+
+    const out = await writeInPlace(
+      file.api,
+      PATH,
+      op.write,
+      { consent: { given: false }, confirm: user.confirm, limits },
+      pending,
+    )
+
+    expect(out).toEqual({ status: 'run', result: 'written', before: null })
     expect(user.asked).toHaveLength(1)
+    expect([pending.saves, op.writes]).toEqual([1, 1])
+  })
+
+  it('writes nothing when they could not be saved', async () => {
+    const file = fakeFile(bytesOf(1))
+    const pending = pendingEdits(file, bytesOf(1, 1), false)
+    const op = operation(file, bytesOf(9))
+
+    const out = await writeInPlace(
+      file.api,
+      PATH,
+      op.write,
+      { consent: { given: false }, confirm: () => true, limits },
+      pending,
+    )
+
+    expect(out).toEqual({ status: 'unsaved' })
+    expect(op.writes).toBe(0)
+    expect([...file.disk]).toEqual([1])
+  })
+
+  it('asks after the save when the save itself made the file too large', async () => {
+    const file = fakeFile(bytesOf(1))
+    const pending = pendingEdits(file, bytesOf(...LARGE))
+    const user = person(false)
+    const op = operation(file, bytesOf(9))
+
+    const out = await writeInPlace(
+      file.api,
+      PATH,
+      op.write,
+      { consent: { given: false }, confirm: user.confirm, limits },
+      pending,
+    )
+
+    // the edits are in the file; the page operation is not
+    expect(out).toEqual({ status: 'declined', flushed: true })
+    expect(user.asked).toEqual([{ fileBytes: 6, limitBytes: 4 }])
+    expect(op.writes).toBe(0)
+    expect([...file.disk]).toEqual(LARGE)
   })
 })

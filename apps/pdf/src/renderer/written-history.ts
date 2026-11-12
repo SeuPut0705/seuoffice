@@ -80,7 +80,7 @@ export interface NoUndoGate {
  * is asked first, once per document. A file that fits is never asked about;
  * its oldest step falling off the bound is ordinary Undo depth.
  */
-export async function agreesToNoUndo(
+async function agreesToNoUndo(
   fileBytes: number,
   { consent, confirm, limits = DEFAULT_LIMITS }: NoUndoGate,
 ): Promise<boolean> {
@@ -90,28 +90,48 @@ export async function agreesToNoUndo(
   return true
 }
 
+/** Edits not in the file yet: they are saved to it before a change is written in place */
+export interface PendingEdits {
+  /** the file's size as the document was read: what the person is asked about before the save */
+  fileBytes: number
+  /** writes them to the file; false when that failed */
+  save(): Promise<boolean>
+}
+
 export type InPlaceWrite<R> =
-  /** the person chose not to go on: `write` was not called */
-  | { declined: true }
+  /** the person chose not to go on: `write` was not called. `flushed`: the pending edits
+   *  were saved all the same, because only their save made the file too large */
+  | { status: 'declined'; flushed: boolean }
+  /** the pending edits could not be saved: `write` was not called */
+  | { status: 'unsaved' }
   /** `before`: the file from before the change, null when it was too large to keep */
-  | { declined: false; result: R; before: Uint8Array | null }
+  | { status: 'run'; result: R; before: Uint8Array | null }
 
 /**
- * Writes a change to the file in place. The file as it is now is read first,
- * for Undo; when it is too large to keep, nothing is written unless the
- * person agrees to a change that cannot be undone.
+ * Writes a change to the file in place, after the pending edits are saved to
+ * it. The file as it is then is read first, for Undo; when it is too large to
+ * keep, nothing is written unless the person agrees to a change that cannot
+ * be undone. With edits pending they are asked before the save, so that
+ * Cancel leaves the file as it is.
  */
 export async function writeInPlace<R>(
   api: PdfFileChunkApi,
   path: string,
   write: () => Promise<R>,
   gate: NoUndoGate,
+  pending?: PendingEdits,
 ): Promise<InPlaceWrite<R>> {
+  if (pending) {
+    if (!(await agreesToNoUndo(pending.fileBytes, gate))) {
+      return { status: 'declined', flushed: false }
+    }
+    if (!(await pending.save())) return { status: 'unsaved' }
+  }
   const kept = await readFileWithin(api, path, (gate.limits ?? DEFAULT_LIMITS).bytes)
   if (kept.bytes === null && !(await agreesToNoUndo(kept.fileSize, gate))) {
-    return { declined: true }
+    return { status: 'declined', flushed: pending !== undefined }
   }
-  return { declined: false, result: await write(), before: kept.bytes }
+  return { status: 'run', result: await write(), before: kept.bytes }
 }
 
 /**
