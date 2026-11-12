@@ -14,7 +14,7 @@ mod space;
 mod string;
 mod uri;
 
-pub use json::JsNum;
+pub use json::{JsNum, json_to_string};
 pub use map::JsMap;
 pub use number::{
     Radix, math_round, number_to_string, parse_float, parse_int, to_int32, to_number,
