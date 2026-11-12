@@ -2,7 +2,7 @@
  * Schema check for renderer-supplied AI settings. Apps wire it into their AI
  * IPC handlers: 'ai:set-settings' (what gets persisted), 'ai:stream' and
  * 'ai:chat' (what the main process acts on), and 'ai:codex-models' (the direct
- * cliPath probe). SECURITY.md promises payloads are schema-checked in the main
+ * cliPath probe). Renderer payloads are schema-checked in the main
  * process; a compromised renderer must not be able to plant an arbitrary
  * cliPath (later spawn()ed by the Codex app-server) or a baseUrl that would
  * receive the user's API key. Electron-free so unit tests can import

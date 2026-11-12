@@ -780,8 +780,20 @@ jobs:
             gh release create "$TAG" "${where[@]}" --prerelease --title "$TAG" \
               --notes-file notes.md \
               "${files[@]}"
-            # a tag pushed between the check above and the create wins the name: take ours back out
-            owner=$(tag_commit "$TAG")
+            # A tag pushed between the check above and the create wins the name: take
+            # ours back out. The tag this create just made can take a moment to show in
+            # the refs API, and "no tag yet" is not "somebody else's tag" (v0.12.26 was
+            # removed that way), so wait for it to appear before judging.
+            owner=
+            for _ in 1 2 3 4 5 6 7 8 9 10; do
+              owner=$(tag_commit "$TAG")
+              [ -z "$owner" ] || break
+              sleep 3
+            done
+            if [ -z "$owner" ]; then
+              echo "::error::$TAG is still not visible after the release was created; release kept, check it by hand"
+              exit 1
+            fi
             if [ "$owner" != "$GITHUB_SHA" ]; then
               gh release delete "$TAG" --yes
               echo "::error::$TAG was tagged on $owner while this run published; release removed"

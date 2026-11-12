@@ -392,9 +392,8 @@ running "macOS build" and the Linux packages by running "Linux build" in this
 repository's GitHub Actions (locally, `npm run build:all` and then
 `npm run dist:mac -w @genoffice/shell -- --publish never` on a Mac or
 `npm run dist:linux -w @genoffice/shell -- --publish never` on Linux).
-The details, including the
-checks a change must pass, are in [CONTRIBUTING.md](CONTRIBUTING.md); the
-release procedure is in [docs/releasing.ko.md](docs/releasing.ko.md) (Korean).
+The release procedure is in [docs/releasing.ko.md](docs/releasing.ko.md)
+(Korean).
 
 Package names and environment variables inside the code still say `genoffice`
 / `GENOFFICE_`. That is deliberate: it keeps engine fixes from the upstream
@@ -470,16 +469,10 @@ memory. To tell when the whole app went down, the running app also writes its
 memory numbers to `crash-heartbeat.json` every 30 seconds; no document text, file names or paths, and it is never sent
 anywhere. The full list is in [PRIVACY.md](PRIVACY.md).
 
-## Contributing and reporting problems
+## Reporting problems
 
-- Bugs and requests:
-  [GitHub Issues](https://github.com/pblsketch/ieumoffice/issues).
-- Security problems: report them privately as described in
-  [SECURITY.md](SECURITY.md), not as a public issue.
-- Code: see [CONTRIBUTING.md](CONTRIBUTING.md) and the
-  [Code of Conduct](CODE_OF_CONDUCT.md).
-- Trademark and copyright questions, infringement reports:
-  pblsketch@gmail.com.
+Bugs and requests:
+[GitHub Issues](https://github.com/SeuPut0705/seuoffice/issues).
 
 ### Contributors
 
@@ -561,8 +554,3 @@ GenOffice, rhwp and the others listed in [NOTICE](NOTICE) and in the installed
 IeumOffice is provided as is, without warranties of any kind, under sections 7
 and 8 of the Apache License 2.0. AI-generated content can be wrong: check it
 before you use it. Making sure you have the right to use it is up to you.
-
-### Trademark and copyright contact
-
-Send trademark or copyright infringement reports and licensing questions to
-pblsketch@gmail.com. The same address is in the app under Settings → About.
