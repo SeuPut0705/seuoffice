@@ -98,6 +98,7 @@ async function docsModules() {
     floating,
     noteOps,
     tableOps,
+    redactView,
   ] = await Promise.all([
     import('@tiptap/core'),
     import('../../../../apps/docs/src/renderer/editor/extensions'),
@@ -114,6 +115,7 @@ async function docsModules() {
     import('../../../../apps/docs/src/renderer/ai/floating-ops'),
     import('../../../../apps/docs/src/renderer/ai/note-ops'),
     import('../../../../apps/docs/src/renderer/ai/table-ops'),
+    import('../../../../apps/docs/src/renderer/ai/redact-view'),
   ])
   locale.setModuleLang('en')
   return {
@@ -131,6 +133,7 @@ async function docsModules() {
     floating,
     noteOps,
     tableOps,
+    redactView,
   }
 }
 
@@ -643,7 +646,8 @@ export function describeDocument(
   const [start, end] = range ?? [0, root.childCount - 1]
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
-    const { text, truncated } = clipText(blockText(node), maxChars)
+    // the text is the AI readers' view: a span hidden from AI reads as its placeholder
+    const { text, truncated } = clipText(blockText(modelViewOf(doc, node)), maxChars)
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -662,6 +666,16 @@ export function describeDocument(
     })
   }
   return out
+}
+
+/**
+ * The block as the app's AI reader sees it: every span hidden from AI replaced
+ * by its `{{label}}` placeholder, through the shared walk in redact-view.
+ * Taken from the node's JSON, never the live node (see commentAnchors).
+ */
+function modelViewOf(doc: OpenDocument, node: PmNode): PmNode {
+  const view = doc.mods.redactView.redactNode(node.toJSON() as never)
+  return doc.editor.schema.nodeFromJSON(view)
 }
 
 /**
@@ -1565,6 +1579,11 @@ function protectedXml(doc: OpenDocument, block: Editor['state']['doc']): string 
   return (typeof docxIndex === 'number' ? doc.parsed.blocks[docxIndex]?.originalXml : null) ?? ''
 }
 
+/** a field result's words as the AI readers see them: a span hidden from AI reads as its placeholder */
+function fieldText(doc: OpenDocument, node: PmNode): string {
+  return doc.mods.redactView.projectedNodeText(node.toJSON() as never)
+}
+
 /** Every field with its block: editable inline fields from the editor, the rest from the block XML. */
 export function listFields(doc: OpenDocument): FieldSummary[] {
   const out: FieldSummary[] = []
@@ -1585,7 +1604,7 @@ export function listFields(doc: OpenDocument): FieldSummary[] {
       const mark = instr ?? ref
       if (!mark) return true
       if (prev && prev.end === pos && prev.mark.eq(mark)) {
-        prev.field.result += node.text ?? ''
+        prev.field.result += fieldText(doc, node)
         prev.end += node.nodeSize
         return true
       }
@@ -1594,7 +1613,7 @@ export function listFields(doc: OpenDocument): FieldSummary[] {
             blockIndex,
             type: keywordOf(String(instr.attrs.instr)),
             instr: String(instr.attrs.instr),
-            result: node.text ?? '',
+            result: fieldText(doc, node),
             dirty: instr.attrs.dirty === true,
           }
         : {
@@ -1603,7 +1622,7 @@ export function listFields(doc: OpenDocument): FieldSummary[] {
             instr: mark.attrs.instr
               ? String(mark.attrs.instr).trim()
               : `REF ${String(mark.attrs.name)} \\h`,
-            result: node.text ?? '',
+            result: fieldText(doc, node),
             dirty: mark.attrs.dirty === true,
           }
       out.push(field)
