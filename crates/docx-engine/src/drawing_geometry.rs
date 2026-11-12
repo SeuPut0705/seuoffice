@@ -9,6 +9,7 @@ use crate::theme::ThemeColors;
 
 pub mod anchor;
 pub mod fill;
+pub mod line_box;
 
 /// w14:textOutline stroke: hex without '#', width in points, opacity 0..1.
 #[derive(Debug, Clone, PartialEq, Serialize)]

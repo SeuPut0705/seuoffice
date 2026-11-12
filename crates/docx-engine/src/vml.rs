@@ -9,6 +9,7 @@ use jscompat::{
 use serde::Deserialize;
 
 pub mod shape;
+pub mod word_art;
 
 /// `vmlStyleProp(style, key)` for a literal key: the pattern compiles once per
 /// call site instead of once per call.
