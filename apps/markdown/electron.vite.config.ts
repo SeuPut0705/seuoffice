@@ -24,8 +24,6 @@ export default defineConfig({
     plugins: [
       externalizeDepsPlugin({
         exclude: [
-          // docx-engine: the engine start-up module (src/main/engine-init.ts) ships as TS source
-          '@seuoffice/docx-engine',
           '@seuoffice/i18n',
           '@seuoffice/electron-utils',
           '@seuoffice/odt-engine',

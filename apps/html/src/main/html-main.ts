@@ -1,5 +1,3 @@
-// the engine starts before any module that calls it evaluates
-import './engine-init'
 import {
   existsSync,
   mkdirSync,

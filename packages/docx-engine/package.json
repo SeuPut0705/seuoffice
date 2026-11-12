@@ -6,26 +6,11 @@
   "type": "module",
   "description": "docx parsing (Block tree with docxIndex anchors), OOXML fragment generation, paragraph-patch save",
   "exports": {
-    ".": {
-      "node": "./src/node/index.ts",
-      "default": "./src/index.ts"
-    },
-    "./math": {
-      "node": "./src/node/math.ts",
-      "default": "./src/math.ts"
-    },
+    ".": "./src/index.ts",
+    "./math": "./src/math.ts",
     "./metafile": "./src/metafile.ts",
-    "./zip-splice": {
-      "node": "./src/node/zip-splice.ts",
-      "default": "./src/zip-splice.ts"
-    },
-    "./lazy-media": {
-      "node": "./src/node/lazy-media.ts",
-      "default": "./src/lazy-media.ts"
-    },
-    "./init": "./src/engine-init.ts",
-    "./engine-node": "./src/engine-node.ts",
-    "./engine-url": "./src/engine-url.ts"
+    "./zip-splice": "./src/zip-splice.ts",
+    "./lazy-media": "./src/lazy-media.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",
@@ -35,7 +20,6 @@
   },
   "dependencies": {
     "@exodus/bytes": "1.15.1",
-    "@seuoffice/engine-wasm": "*",
     "@seuoffice/pptx-engine": "*",
     "@seuoffice/zip-gate": "*",
     "fast-xml-parser": "^5.3.4",

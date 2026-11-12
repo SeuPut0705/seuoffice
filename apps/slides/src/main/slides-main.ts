@@ -1,5 +1,3 @@
-/* the engine starts before any module that calls it evaluates */
-import './engine-init'
 /**
  * SeuOffice Slides main process — pptx parsing/render-tree building/edit application/saving all live
  * here (Node side). The renderer only gets plain-data RenderSlide; edit intents are sent back

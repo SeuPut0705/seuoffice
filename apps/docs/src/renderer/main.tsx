@@ -1,5 +1,3 @@
-// the engine starts before any module that calls it evaluates
-import './engine-init'
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
 import { htmlDir, htmlLang, type Lang } from '@seuoffice/i18n'

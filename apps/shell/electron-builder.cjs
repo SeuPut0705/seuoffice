@@ -129,7 +129,6 @@ function assertExtraResourceSources() {
     '../../node_modules/@neslinesli93/qpdf-wasm/dist/qpdf.wasm',
     '../../packages/ui/template-fonts/README.md',
     '../../node_modules/@rhwp/core/rhwp_bg.wasm',
-    '../../crates/target/wasm32-wasip1/release/office_wasm.wasm',
     'resources/builtin-skills/builtin-skills.json',
   ]) {
     if (!existsSync(join(__dirname, rel))) {
@@ -800,13 +799,6 @@ const config = {
     {
       from: '../../node_modules/@rhwp/core/rhwp_bg.wasm',
       to: 'wasm/rhwp_bg.wasm',
-    },
-    // the Rust document engine behind @seuoffice/docx-engine for the command line
-    // (packages/cli/src/resources.ts engineWasmPath); the app's own mains and pages
-    // carry their copy in the bundle (?asset / ?url)
-    {
-      from: '../../crates/target/wasm32-wasip1/release/office_wasm.wasm',
-      to: 'wasm/office_wasm.wasm',
     },
     // platform system-OCR helpers for scanned-page recovery (each exists only
     // on its own build platform; electron-builder skips absent sources and the

@@ -30,8 +30,6 @@ const workspaceAlias: Record<string, string> = {
   '@seuoffice/pipelines/slides': pkg('pipelines/src/slides/index.ts'),
   '@seuoffice/docx-engine/metafile': pkg('docx-engine/src/metafile.ts'),
   '@seuoffice/docx-engine/math': pkg('docx-engine/src/math.ts'),
-  '@seuoffice/docx-engine/init': pkg('docx-engine/src/engine-init.ts'),
-  '@seuoffice/docx-engine/engine-url': pkg('docx-engine/src/engine-url.ts'),
 }
 
 /**

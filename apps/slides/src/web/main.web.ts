@@ -1,4 +1,3 @@
-import './engine-init'
 import '@seuoffice/web-platform/globals'
 import { installBridges } from './bridge'
 

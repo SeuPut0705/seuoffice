@@ -101,16 +101,6 @@ export function rhwpWasmPath(): string {
   throw new Error('rhwp_bg.wasm not found (set SEUOFFICE_RHWP_WASM)')
 }
 
-/** The Rust document engine (crates/office-wasm) behind @seuoffice/docx-engine. */
-export function engineWasmPath(): string {
-  if (process.env.SEUOFFICE_WASM) return process.env.SEUOFFICE_WASM
-  const packaged = packagedResourcesDir()
-  if (packaged) return join(packaged, 'wasm', 'office_wasm.wasm')
-  const root = repoRoot()
-  if (root) return join(root, 'crates', 'target', 'wasm32-wasip1', 'release', 'office_wasm.wasm')
-  throw new Error('office_wasm.wasm not found (set SEUOFFICE_WASM)')
-}
-
 export function xlsxSidecarPath(): string | null {
   if (process.env.XLSX_SIDECAR_PATH) return process.env.XLSX_SIDECAR_PATH
   const executable = process.platform === 'win32' ? 'xlsx-sidecar.exe' : 'xlsx-sidecar'
