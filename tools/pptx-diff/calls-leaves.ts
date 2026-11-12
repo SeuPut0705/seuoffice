@@ -30,7 +30,7 @@ import type { CallSpec, Input } from '../docx-diff/calls-spec'
  * `run` with `crypto.randomUUID` answering `uuid`. creationIdExtXml draws a
  * UUID; the Rust side takes it as an argument.
  */
-function withUuid<T>(uuid: string, run: () => T): T {
+export function withUuid<T>(uuid: string, run: () => T): T {
   const host = globalThis.crypto
   const own = Object.getOwnPropertyDescriptor(host, 'randomUUID')
   Object.defineProperty(host, 'randomUUID', {

@@ -142,6 +142,11 @@ impl PackageArchive {
         &self.entries
     }
 
+    /// `archive.entries`, for the functions that replace a part.
+    pub fn entries_mut(&mut self) -> &mut JsMap<Vec<u8>> {
+        &mut self.entries
+    }
+
     pub fn original_hash(&self) -> &str {
         &self.original_hash
     }
