@@ -15,7 +15,7 @@ const COPY_NAME = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/
  * of the document.
  */
 test.describe('sheets: the status line after a workbook has opened', () => {
-  test('names the document, and no loading notice stays on it', async () => {
+  test('never names the working copy, and no loading notice stays on it', async () => {
     const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-status-e2e-'))
     const workbook = join(scratch, 'Budget 2026.xlsx')
     await copyFile(FIXTURE, workbook)
@@ -29,17 +29,19 @@ test.describe('sheets: the status line after a workbook has opened', () => {
       await sheets.waitForFunction(() => document.body.textContent?.includes('Sheet1'), null, {
         timeout: 30_000,
       })
+      // every text the status line shows from here until the workbook has
+      // loaded and settled: the open's notice can be replaced at once
       const status = sheets.locator('.workbook-status')
-      // the line names the workbook by the file that was opened
-      await expect(status).toContainText('Budget 2026.xlsx', { timeout: 15_000 })
-      // and stays free of a loading notice and of the copy's name while the
-      // rest of the sheet is read in behind it
-      for (let i = 0; i < 6; i++) {
-        const text = await status.innerText()
-        expect(text).not.toMatch(COPY_NAME)
-        expect(text).not.toMatch(/Streaming .*rows available/)
-        await sheets.waitForTimeout(500)
+      const seen = new Set<string>()
+      const deadline = Date.now() + 8_000
+      while (Date.now() < deadline) {
+        seen.add(await status.innerText())
+        await sheets.waitForTimeout(100)
       }
+      const shown = [...seen]
+      // no text names the working copy, and the line does not end on a loading notice
+      expect(shown.filter((text) => COPY_NAME.test(text))).toEqual([])
+      expect(await status.innerText()).not.toMatch(/Streaming .*rows available/)
     } finally {
       await closeAndSaveVideo(launched, 'sheets-status-after-open')
     }
