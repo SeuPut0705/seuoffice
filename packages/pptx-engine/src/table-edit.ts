@@ -183,7 +183,9 @@ export function ensureTableStyleXml(
   const xml = tableStylesXml?.includes('<a:tblStyleLst') ? tableStylesXml : EMPTY_TABLE_STYLES_XML
   if (xml.includes(styleId)) return xml
   const sc = /<a:tblStyleLst([^>]*)\/>/.exec(xml)
-  if (sc) return xml.replace(sc[0], `<a:tblStyleLst${sc[1]}>${styleDefXml}</a:tblStyleLst>`)
+  // A function, not a string: the list's own attributes are document text, and a replacement
+  // string would expand a `$&` or `$$` in them
+  if (sc) return xml.replace(sc[0], () => `<a:tblStyleLst${sc[1]}>${styleDefXml}</a:tblStyleLst>`)
   return xml.replace('</a:tblStyleLst>', () => `${styleDefXml}</a:tblStyleLst>`)
 }
 
