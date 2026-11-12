@@ -2,6 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
+import { buildDocx } from '../../docx-engine/tests/helpers/build-docx'
 import { hiddenStoriesDocx, NAMESPACES, PLACEHOLDER, SECRET } from './hidden-text-fixtures'
 import { run, tempDir } from './helpers'
 
@@ -100,5 +101,30 @@ describe('docs apply: a header or note holding text hidden from AI', () => {
     // the same answer whether or not the hidden words contain what it looked for
     expect(new Set(messages).size).toBe(1)
     expect(readFileSync(file)).toEqual(before)
+  })
+})
+
+describe('docs read: a content control holding text hidden from AI', () => {
+  it('reports the control text with the placeholder', async () => {
+    const dir = tempDir()
+    const file = join(dir, 'control.docx')
+    writeFileSync(
+      file,
+      await buildDocx({
+        docRootExtraAttrs: `xmlns:go="${NAMESPACES[1]![1]}"`,
+        bodyXml:
+          '<w:p><w:r><w:t xml:space="preserve">Call </w:t></w:r>' +
+          '<w:sdt><w:sdtPr><w:tag w:val="phone"/></w:sdtPr><w:sdtContent>' +
+          `<w:r><w:rPr><go:redact w:label="client phone"/></w:rPr><w:t>${SECRET}</w:t></w:r>` +
+          '</w:sdtContent></w:sdt></w:p>',
+      }),
+    )
+    const read = await run(['docs', 'read', file, '--full', '--json'])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    expect(read.json().detail.items[0].inlineContentControls[0]).toMatchObject({
+      tag: 'phone',
+      text: PLACEHOLDER,
+    })
   })
 })
