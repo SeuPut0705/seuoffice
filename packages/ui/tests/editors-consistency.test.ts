@@ -100,8 +100,7 @@ function filesUnder(dir: string): string[] {
 }
 
 describe('the AI entry label', () => {
-  it('is one shared key with a value in all 21 languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('is one shared key with a value in every language', () => {
     for (const lang of LANGS) {
       expect(AI_SUBSCRIPTION_STRINGS[lang].aiAssistant.trim().length, lang).toBeGreaterThan(0)
     }

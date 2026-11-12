@@ -15,7 +15,6 @@ import {
   webLanguage,
 } from '@seuoffice/web-platform'
 import type { WebDocument } from '@seuoffice/web-platform'
-import type { Lang } from '@genoffice/i18n'
 import { READ_ONLY_ATTRIBUTE } from '../../studio-plugin/read-only.mjs'
 import { hwpFormatOfPath } from '../shared/ipc'
 import type { CommitSaveResult, HwpApi, HwpFormat, SaveMode } from '../shared/ipc'
@@ -133,7 +132,7 @@ const hwpApi: Partial<HwpApi> = {
   structureUnverified: async () => opened?.hwp.unverified ?? false,
   // one save target, the opened file: the editor's notices do not point at a Save As
   noSaveAs: true,
-  getLanguage: async () => webLanguage() as Lang,
+  getLanguage: async () => webLanguage(),
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',
   onThemeChanged: unsubscribe,

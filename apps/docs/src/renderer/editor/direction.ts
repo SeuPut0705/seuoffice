@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import type { Lang } from '@genoffice/i18n'
+import { isRtlLang } from '@genoffice/i18n'
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Mapping } from '@tiptap/pm/transform'
@@ -42,7 +43,7 @@ export function effectiveBidi(attrs: Record<string, unknown>): boolean {
 
 /** UI languages whose users get the paragraph direction buttons by default */
 export function isRtlUiLang(lang: Lang): boolean {
-  return lang === 'ar' || lang === 'he'
+  return isRtlLang(lang)
 }
 
 /** whether any paragraph-like block touched by the selection is RTL */

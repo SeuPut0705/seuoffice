@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   loading: 'Loading…',
   noBook: 'No book is open',
@@ -64,4 +62,4 @@ export const en = {
   previewNextPage: 'Next page',
   previewPage: 'Page {n} of {total}',
   previewNote: "Page breaks differ a little in each store's app and device",
-} satisfies Record<keyof typeof zh, string>
+}

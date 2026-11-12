@@ -463,7 +463,6 @@ describe('Onboarding', () => {
 
 describe('welcome copy', () => {
   it('exists in every UI language, as a translation', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       const { onbWelcomeSubtitle, onbWelcomeBody } = strings[lang]
       expect(onbWelcomeSubtitle.trim(), lang).not.toBe('')

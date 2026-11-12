@@ -11,8 +11,9 @@
  * the model is asked (`tools` is a getter).
  */
 import type { AgentSkill, AgentToolDef } from '@genoffice/agent-core'
-import { brandText, LANGS } from '@genoffice/i18n'
+import { brandText } from '@genoffice/i18n'
 import { t } from '../i18n/locale'
+import { TRANSLATION_LANGUAGES } from '../translate/engine'
 import {
   BookTools,
   chapterTitle,
@@ -142,7 +143,7 @@ const TRANSLATE_TOOL: AgentToolDef = {
     properties: {
       lang: {
         type: 'string',
-        enum: [...LANGS],
+        enum: [...TRANSLATION_LANGUAGES],
         description:
           'target language code the user asked for (en, ko, ja, zh = Simplified Chinese, zh-TW = Traditional Chinese, …)',
       },

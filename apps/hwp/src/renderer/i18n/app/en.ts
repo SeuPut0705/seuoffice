@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   loading: 'Opening document…',
   editorFailed: 'The editor could not start.',
@@ -289,4 +287,4 @@ export const en = {
     'Characters are counted with spaces. Without spaces: whole document {totalNoSpace}. As in Document Information, headers, footers, footnotes and endnotes are not counted.',
   charCountHintSelected:
     'With spaces: selected {selected} / whole document {total}. Without spaces: selected {selectedNoSpace} / whole document {totalNoSpace}. As in Document Information, headers, footers, footnotes and endnotes are not counted.',
-} satisfies Record<keyof typeof zh, string>
+}

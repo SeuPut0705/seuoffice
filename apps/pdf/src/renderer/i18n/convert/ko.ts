@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   cvToMarkdown: 'Markdown으로 변환',
@@ -70,4 +70,4 @@ export const ko = {
   imgExportDone: '그림 {count}개를 내보냈습니다',
   imgExportNone: '페이지 안에서 그림을 찾지 못했습니다',
   imgExportFailed: '그림을 내보내지 못했습니다: {reason}',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

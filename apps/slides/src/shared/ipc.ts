@@ -1401,15 +1401,9 @@ export type ReadUrlResult =
 
 export interface SlidesApi {
   /** current UI language (persisted by the shell in app-settings.json) */
-  getLanguage: () => Promise<
-    'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'
-  >
+  getLanguage: () => Promise<'en' | 'ko'>
   /** language switched from the shell home page */
-  onLanguageChanged: (
-    handler: (
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => void,
-  ) => () => void
+  onLanguageChanged: (handler: (lang: 'en' | 'ko') => void) => () => void
   /** current UI theme preference (persisted by the shell in app-settings.json) */
   getTheme: () => Promise<UiTheme>
   /** theme switched from the shell home page */
@@ -1995,8 +1989,8 @@ export interface SlidesApi {
   }>
   /** The design template remembered for this window's document, on this PC only; null when there is none */
   getTemplateSelection: () => Promise<TemplateSelection | null>
-  /** The fonts AI generation uses when the request names none (Settings › General); `lang` picks the default before a choice is stored */
-  getAiDefaultFonts?: (lang: string) => Promise<SlidesAiFonts>
+  /** The fonts AI generation uses when the request names none (Settings › General); the language documents are read for picks the default before a choice is stored */
+  getAiDefaultFonts?: () => Promise<SlidesAiFonts>
   /** Open Settings › General at the AI slide fonts (the shell answers; a standalone app does not) */
   openFontSettings?: () => Promise<void>
   /** Remember a selection for this window's document (null forgets it; malformed input is ignored). Answers with what is stored afterwards */

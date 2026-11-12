@@ -5,6 +5,7 @@ import { afterEach, beforeAll, describe, expect, it } from 'vitest'
 
 import { DataTableDialog } from '../src/renderer/DataTableDialog'
 import type { DataTableInput, DataTableOutcome } from '../src/renderer/data-table'
+import { t } from '../src/renderer/i18n/locale'
 
 let root: Root | null = null
 let container: HTMLDivElement | null = null
@@ -63,15 +64,11 @@ describe('Data Table dialog validation', () => {
     const ok = host.querySelector<HTMLButtonElement>('button.primary-action')!
     expect(inputs[0]!.value).toBe('B4:C7')
     expect(ok.disabled).toBe(true)
-    expect(host.textContent).toContain(
-      '\u8bf7\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u8f93\u5165\u5355\u5143\u683c',
-    )
+    expect(host.textContent).toContain(t('dlgDataTableNeedInput'))
 
     type(inputs[2]!, 'D1')
     expect(ok.disabled).toBe(false)
-    expect(host.textContent).not.toContain(
-      '\u8bf7\u81f3\u5c11\u586b\u5199\u4e00\u4e2a\u8f93\u5165\u5355\u5143\u683c',
-    )
+    expect(host.textContent).not.toContain(t('dlgDataTableNeedInput'))
     expect(applied).toHaveLength(0)
   })
 
@@ -120,14 +117,14 @@ describe('Data Table dialog validation', () => {
     expect(typeof argument.onProgress).toBe('function')
 
     act(() => argument.onProgress?.(1, 3))
-    expect(host.textContent).toContain('\u8fd0\u7b97\u4e2d\u2026 1/3')
+    expect(host.textContent).toContain(t('dlgDataTableRunning', { done: 1, total: 3 }))
 
     await act(async () => {
       release({ kind: 'column', cells: 3 })
       await Promise.resolve()
       await Promise.resolve()
     })
-    expect(host.textContent).toContain('\u5df2\u5199\u5165 3 \u4e2a\u7ed3\u679c')
+    expect(host.textContent).toContain(t('dlgDataTableDone', { count: 3 }))
     expect(ok.disabled).toBe(false)
   })
 

@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   editUndo: 'Undo',
   editRedo: 'Redo',
@@ -20,4 +18,4 @@ export const en = {
   editLocked: 'Editing is not available while the book is being translated',
   editRefused: 'This change could not be made',
   editHistoryFailed: 'The undo history no longer matched the book and was cleared',
-} satisfies Record<keyof typeof zh, string>
+}

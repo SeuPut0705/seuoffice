@@ -46,7 +46,7 @@ async function mount(readOnly = false) {
   return { el: container, onSend, onCard, onClose }
 }
 
-/** the UI language of a bare LocaleProvider-less render is zh (the context default) */
+/** the UI language of a bare LocaleProvider-less render is en (the context default) */
 const chip = (el: Element, text: string) =>
   [...el.querySelectorAll('.ai-ask-chip')].find((b) => b.textContent === text) as
     HTMLButtonElement | undefined
@@ -56,26 +56,26 @@ const send = (el: Element) => el.querySelector('.ai-ask-confirm') as HTMLButtonE
 describe('Ask AI popover routing', () => {
   it('explain and translate chips open passage cards, not the chat', async () => {
     const m = await mount()
-    await act(async () => chip(m.el, strings.zh.aiChipExplain)!.click())
+    await act(async () => chip(m.el, strings.en.aiChipExplain)!.click())
     expect(m.onCard).toHaveBeenCalledWith('explain')
-    await act(async () => chip(m.el, strings.zh.aiChipTranslate)!.click())
+    await act(async () => chip(m.el, strings.en.aiChipTranslate)!.click())
     expect(m.onCard).toHaveBeenCalledWith('translate')
     expect(m.onSend).not.toHaveBeenCalled()
   })
 
   it('the passage summary chip still goes to the chat', async () => {
     const m = await mount()
-    await act(async () => chip(m.el, strings.zh.aiChipSummarizePassage)!.click())
+    await act(async () => chip(m.el, strings.en.aiChipSummarizePassage)!.click())
     await act(async () => send(m.el).click())
-    expect(m.onSend).toHaveBeenCalledWith(strings.zh.aiChipSummarizePassage)
+    expect(m.onSend).toHaveBeenCalledWith(strings.en.aiChipSummarizePassage)
     expect(m.onCard).not.toHaveBeenCalled()
   })
 
   it('the rewrite chip still goes to the chat on an editable document', async () => {
     const m = await mount(false)
-    await act(async () => chip(m.el, strings.zh.aiChipRewritePassage)!.click())
+    await act(async () => chip(m.el, strings.en.aiChipRewritePassage)!.click())
     await act(async () => send(m.el).click())
-    expect(m.onSend).toHaveBeenCalledWith(strings.zh.aiChipRewritePassage)
+    expect(m.onSend).toHaveBeenCalledWith(strings.en.aiChipRewritePassage)
     expect(m.onCard).not.toHaveBeenCalled()
   })
 
@@ -94,8 +94,8 @@ describe('Ask AI popover routing', () => {
 
   it('keeps the explain and translate chips on a document that cannot be edited', async () => {
     const m = await mount(true)
-    expect(chip(m.el, strings.zh.aiChipExplain)).toBeDefined()
-    expect(chip(m.el, strings.zh.aiChipTranslate)).toBeDefined()
-    expect(chip(m.el, strings.zh.aiChipRewritePassage)).toBeUndefined()
+    expect(chip(m.el, strings.en.aiChipExplain)).toBeDefined()
+    expect(chip(m.el, strings.en.aiChipTranslate)).toBeDefined()
+    expect(chip(m.el, strings.en.aiChipRewritePassage)).toBeUndefined()
   })
 })

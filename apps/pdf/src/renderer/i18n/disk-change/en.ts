@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   diskChanged: 'This file was changed. Reload it?',
   diskChangedUnsaved: 'This file was changed. Reloading discards your unsaved edits.',
@@ -14,4 +12,4 @@ export const en = {
     'This file ({size}) is larger than the {limit} kept for Undo, so this page operation cannot be undone. Continue?',
   undoNoRedoConfirm:
     'The file as it is now ({size}) is larger than the {limit} kept for Redo, so this Undo cannot be redone. Continue?',
-} satisfies Record<keyof typeof zh, string>
+}

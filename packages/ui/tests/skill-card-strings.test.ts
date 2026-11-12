@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { LANGS, type Lang } from '@genoffice/i18n'
 import { SKILL_CARD_STRINGS, type SkillCardStringKey } from '../src/strings-skill-card'
 
-const KEYS = Object.keys(SKILL_CARD_STRINGS.zh) as SkillCardStringKey[]
-const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+const KEYS = Object.keys(SKILL_CARD_STRINGS.en) as SkillCardStringKey[]
+const NON_LATIN: readonly Lang[] = ['ko']
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('SKILL_CARD_STRINGS', () => {
-  it('has every key, non-empty, in all 21 languages', () => {
+  it('has every key, non-empty, in every language', () => {
     expect(Object.keys(SKILL_CARD_STRINGS).sort()).toEqual([...LANGS].sort())
     for (const lang of LANGS) {
       const dict = SKILL_CARD_STRINGS[lang] as Record<string, string>
@@ -21,7 +21,7 @@ describe('SKILL_CARD_STRINGS', () => {
     for (const lang of LANGS) {
       for (const key of KEYS) {
         expect(placeholders(SKILL_CARD_STRINGS[lang][key]), `${lang}.${key}`).toEqual(
-          placeholders(SKILL_CARD_STRINGS.zh[key]),
+          placeholders(SKILL_CARD_STRINGS.en[key]),
         )
       }
     }

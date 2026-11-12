@@ -1,6 +1,5 @@
 import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import type { Lang } from '@genoffice/i18n'
 import type {
   ChangeEvent,
   KeyboardEvent as ReactKeyboardEvent,
@@ -148,12 +147,7 @@ import {
   splitHangulFamilies,
   systemFamiliesBesidesCandidates,
 } from '../font-list'
-import {
-  fontSizeLabel,
-  fontSizeOptions,
-  parseFontSize,
-  stepFontSize as stepSizeInList,
-} from '../font-sizes'
+import { fontSizeOptions, parseFontSize, stepFontSize as stepSizeInList } from '../font-sizes'
 import { useSystemFontFamilies } from '../system-fonts'
 import { cssFontFamily } from '../line-metrics'
 import type { RevisionFilter, RevisionScope } from '../editor/revision-filters'
@@ -456,8 +450,6 @@ export type { PainterFormat } from './ribbon-painter'
 // Word for Mac has no File ribbon tab: file actions live in the native menu
 // bar (which we provide). Windows Word does have one, so keep it there.
 const IS_MAC = navigator.platform.toLowerCase().includes('mac')
-// Word offers Half-width / Full-width under Change Case only on CJK UIs
-const WIDTH_CASE_LANGS = new Set<Lang>(['zh', 'zh-TW', 'ja'])
 /** shell tab mode: the tab strip above owns traffic lights / caption buttons */
 const IN_TAB = new URLSearchParams(window.location.search).get('mode') === 'tab'
 
@@ -1657,7 +1649,7 @@ function RibbonInner({
     if (!comboPressRef.current) setDropdown((v) => (v === menu ? null : v))
   }
   const commitSize = (text: string) => {
-    const pt = parseFontSize(text, lang)
+    const pt = parseFontSize(text)
     setSizeDraft(null)
     // Enter applies even an unchanged value: it normalizes a mixed-size selection
     if (pt !== null) setTextStyle({ sizeHalfPoints: Math.round(pt * 2) })
@@ -1910,7 +1902,7 @@ function RibbonInner({
   }
 
   /** A+/A- and ⇧⌘. / ⇧⌘,: walk the UI language's size list, tens above it, points below */
-  const stepFontSize = (dir: 1 | -1) => applyFontStep((base) => stepSizeInList(base, dir, lang))
+  const stepFontSize = (dir: 1 | -1) => applyFontStep((base) => stepSizeInList(base, dir))
 
   /** Word's ⌘] / ⌘[: exactly one point, within Word's 1–1638pt range */
   const nudgeFontSize = (dir: 1 | -1) =>
@@ -3707,9 +3699,7 @@ function RibbonInner({
                       type="text"
                       inputMode="decimal"
                       disabled={!canEdit}
-                      value={
-                        sizeDraft ?? (fs.fontSizeMixed ? '' : fontSizeLabel(currentSize, lang))
-                      }
+                      value={sizeDraft ?? (fs.fontSizeMixed ? '' : String(currentSize))}
                       aria-label={t('ribbonFontSizeTip')}
                       data-tip={t('ribbonFontSizeTip')}
                       onChange={(e) => setSizeDraft(e.currentTarget.value)}
@@ -3743,7 +3733,7 @@ function RibbonInner({
                     </button>
                     {dropdown === 'fontSize' && (
                       <div data-rb-panel="" className="spacing-menu rb-font-size-menu">
-                        {fontSizeOptions(lang).map((o) => (
+                        {fontSizeOptions().map((o) => (
                           <button
                             key={o.name}
                             className={
@@ -3802,16 +3792,6 @@ function RibbonInner({
                         <button onClick={() => changeCase('toggle')}>
                           {t('ribbonCaseToggle')}
                         </button>
-                        {WIDTH_CASE_LANGS.has(lang) && (
-                          <>
-                            <button onClick={() => changeCase('halfWidth')}>
-                              {t('ribbonCaseHalfWidth')}
-                            </button>
-                            <button onClick={() => changeCase('fullWidth')}>
-                              {t('ribbonCaseFullWidth')}
-                            </button>
-                          </>
-                        )}
                       </div>
                     )}
                   </div>

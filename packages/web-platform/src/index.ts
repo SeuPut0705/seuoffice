@@ -6,6 +6,7 @@ export {
   viewMode,
   waitForDocument,
   webLanguage,
+  webRequestedLanguage,
   type WebDocument,
 } from './document-store'
 export {

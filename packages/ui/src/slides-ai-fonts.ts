@@ -84,8 +84,8 @@ export const WINDOWS_STANDARD_FONTS: readonly string[] = [
 const MAX_FAMILY_LENGTH = 80
 
 /**
- * The value before the person chooses: the bundled gothic face where the UI language
- * is one its glyphs cover (Korean, English); 'auto' elsewhere, since the bundled
+ * The value before the person chooses: the bundled gothic face where the language
+ * documents are read for is one its glyphs cover (Korean, English); 'auto' elsewhere, since the bundled
  * faces carry no Japanese, Chinese, Arabic, Thai or Devanagari glyphs.
  */
 export function defaultSlidesAiFonts(lang: string): SlidesAiFonts {

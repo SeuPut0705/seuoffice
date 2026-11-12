@@ -21,7 +21,7 @@ function applyTheme(theme: UiTheme): void {
 
 void (async () => {
   const [lang, theme] = await Promise.all([
-    window.mindmapApi.getLanguage().catch(() => 'zh' as const),
+    window.mindmapApi.getLanguage().catch(() => 'en' as const),
     window.mindmapApi.getTheme().catch(() => 'system' as const),
   ])
   document.documentElement.lang = htmlLang(lang as Lang)

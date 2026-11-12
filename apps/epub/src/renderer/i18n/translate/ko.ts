@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   btRibbon: '책 번역',
@@ -137,4 +137,4 @@ export const ko = {
   btEasyReportTitle: '쉬운 풀이를 마쳤습니다',
   btEasyReportPartialTitle: '지금까지 풀이한 것으로 내보냈습니다',
   btEasyReportTranslated: '풀이한 블록({language}): {count}개',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

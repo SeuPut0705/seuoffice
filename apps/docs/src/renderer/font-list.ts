@@ -29,23 +29,11 @@ export function isEastAsianFontName(name: string): boolean {
 
 /**
  * docDefaults w:eastAsia font for new blank documents, matching what Word
- * ships per market (zh → SimSun, ja → Yu Mincho, ko → Malgun Gothic,
- * zh-TW → PMingLiU). English and every other language return undefined —
+ * ships for the Korean market (Malgun Gothic). English returns undefined,
  * like en-US Word, whose theme leaves the East Asian slot empty and lets
  * per-script substitution kick in only when CJK text actually appears.
  * Latin default stays Calibri for every language.
  */
 export function defaultEastAsiaFontFor(lang: Lang): string | undefined {
-  switch (lang) {
-    case 'zh':
-      return '宋体'
-    case 'ja':
-      return 'Yu Mincho'
-    case 'ko':
-      return 'Malgun Gothic'
-    case 'zh-TW':
-      return 'PMingLiU'
-    default:
-      return undefined
-  }
+  return lang === 'ko' ? 'Malgun Gothic' : undefined
 }

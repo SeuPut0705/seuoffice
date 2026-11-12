@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   paneCancel: 'Cancel',
   paneOk: 'OK',
@@ -316,4 +314,4 @@ export const en = {
   paneSelHide: 'Hide',
   paneSelShow: 'Show',
   paneSelRenameTip: 'Double-click to rename',
-} satisfies Record<keyof typeof zh, string>
+}

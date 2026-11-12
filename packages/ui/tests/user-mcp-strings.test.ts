@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { LANGS, type Lang } from '@genoffice/i18n'
 import { USER_MCP_STRINGS, type UserMcpStringKey } from '../src/strings-user-mcp'
 
-const KEYS = Object.keys(USER_MCP_STRINGS.zh) as UserMcpStringKey[]
-const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+const KEYS = Object.keys(USER_MCP_STRINGS.en) as UserMcpStringKey[]
+const NON_LATIN: readonly Lang[] = ['ko']
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('USER_MCP_STRINGS', () => {
-  it('has every key, non-empty, in all 21 languages', () => {
+  it('has every key, non-empty, in every language', () => {
     expect(Object.keys(USER_MCP_STRINGS).sort()).toEqual([...LANGS].sort())
     for (const lang of LANGS) {
       const dict = USER_MCP_STRINGS[lang] as Record<string, string>
@@ -21,7 +21,7 @@ describe('USER_MCP_STRINGS', () => {
     for (const lang of LANGS) {
       for (const key of KEYS) {
         expect(placeholders(USER_MCP_STRINGS[lang][key]), `${lang}.${key}`).toEqual(
-          placeholders(USER_MCP_STRINGS.zh[key]),
+          placeholders(USER_MCP_STRINGS.en[key]),
         )
       }
     }

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
  * under a running Electron — so the wiring is pinned by reading the source, the
  * same way main-locale-tables.test.ts and subscription-lifetime.test.ts do.
  * These checks cover what the sibling tasks rely on the shell to provide: the
- * menu entries and their 21 languages, the drag zones and intents (T1/T2), the
+ * menu entries in every language, the drag zones and intents (T1/T2), the
  * launch restore (T3), the pane-role channels (T1/T6/T8-T10) and the
  * same-document save probe (T4/T11-T13).
  */
@@ -24,29 +24,7 @@ function localeBlock(locale: string): string {
   return end < 0 ? rest : rest.slice(0, end)
 }
 
-const LOCALES = [
-  'zh',
-  'en',
-  'vi',
-  'ja',
-  'ko',
-  'fr',
-  'de',
-  'es',
-  'th',
-  'id',
-  'ru',
-  'ar',
-  'pt',
-  'it',
-  'pl',
-  'cs',
-  'nl',
-  'ms',
-  'he',
-  'hi',
-  "'zh-TW'",
-]
+const LOCALES = ['en', 'ko']
 
 const MENU_KEYS = ['menuSplitRight', 'menuSplitDown', 'menuUnsplit']
 

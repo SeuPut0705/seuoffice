@@ -14,6 +14,7 @@ import {
   resolveImportDelimiter,
 } from '@genoffice/xlsx-gateway/gateway/csv-import'
 import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@genoffice/xlsx-gateway/gateway/csv-limits'
+import { legacyCsvCharsetFor } from '@genoffice/xlsx-gateway/shared/document-locale'
 import type { AdvancedFilterColumn, AdvancedFilterCriteria } from './AdvancedFilterDialog'
 import {
   buildLabelMatrix,
@@ -24,11 +25,12 @@ import {
   type ConsolidateConfig,
   type OutputCell,
 } from './consolidate'
+import { getDocumentLocale } from './document-locale'
 import { isSheetRemoved, journalSize, recordStructuralOp } from './edit-journal'
 import { clearOutline, toggleOutlineGroup, type OutlineAxis } from './outline-actions'
 import { groupLevelOps, outlineGroups } from './outline-model'
 import { resolveGoToRef, type GoToNameEntry } from './goto'
-import { getLang, t } from './i18n/locale'
+import { t } from './i18n/locale'
 import { appendSymbol } from './SymbolDialog'
 import { inferContinuousRegion } from './table-actions'
 import {
@@ -59,15 +61,6 @@ export interface DataToolsContext {
 /// undoable; larger files should open as their own workbook instead.
 const CSV_IMPORT_MAX_CELLS = 50_000
 
-/// Excel writes CSV in the system's legacy charset; the UI language is the
-/// best tie-breaker we have (same map as the main-process open path).
-const CSV_CHARSET_BY_LANG: Record<string, string> = {
-  zh: 'gb18030',
-  'zh-TW': 'big5',
-  ja: 'shift_jis',
-  ko: 'euc-kr',
-}
-
 /// Data → From Text/CSV: reads a delimited file (encoding and delimiter
 /// decided by the same pipeline as opening a .csv) into the active sheet at the selection.
 export function handleImportCsv(ctx: DataToolsContext): void {
@@ -89,7 +82,12 @@ export function handleImportCsv(ctx: DataToolsContext): void {
         return
       }
       const buffer = await file.arrayBuffer()
-      importCsvText(ctx, decodeCsvBuffer(new Uint8Array(buffer), CSV_CHARSET_BY_LANG[getLang()]))
+      // Excel writes CSV in the system's legacy charset; the language documents
+      // are read for is the best tie-breaker we have (as on the open path)
+      importCsvText(
+        ctx,
+        decodeCsvBuffer(new Uint8Array(buffer), legacyCsvCharsetFor(getDocumentLocale())),
+      )
     })().catch(() => ctx.setMessage(t('appCsvTooLarge')))
   }
   input.click()

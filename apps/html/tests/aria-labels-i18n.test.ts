@@ -5,19 +5,26 @@ import { Breadcrumb } from '../src/renderer/components/Breadcrumb'
 import { PreviewFrame } from '../src/renderer/preview/PreviewFrame'
 import { DraftPreview } from '../src/renderer/preview/DraftPreview'
 import { buildParseMap } from '../src/renderer/document/parse-map'
+import { LocaleProvider } from '../src/renderer/i18n/locale'
+import { strings } from '../src/renderer/i18n/strings'
 
-beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true))
+beforeEach(() => {
+  vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true)
+  Object.assign(window, { htmlApi: { onLanguageChanged: () => () => {} } })
+})
 const cleanups: Array<() => void> = []
 afterEach(() => {
   cleanups.splice(0).forEach((cleanup) => cleanup())
+  delete (window as { htmlApi?: unknown }).htmlApi
   vi.unstubAllGlobals()
 })
 
+// Korean, not the default: a label typed as an English literal would pass under English
 function mount(element: React.ReactElement): HTMLElement {
   const container = document.createElement('div')
   document.body.appendChild(container)
   const root = createRoot(container)
-  act(() => root.render(element))
+  act(() => root.render(createElement(LocaleProvider, { initial: 'ko', children: element })))
   cleanups.push(() => {
     act(() => root.unmount())
     container.remove()
@@ -41,8 +48,8 @@ describe('aria-label/title i18n (existing keys)', () => {
     )
     const nav = container.querySelector('.crumbs')
     expect(nav).not.toBeNull()
-    expect(nav!.getAttribute('aria-label')).toBe('\u5143\u7d20\u8def\u5f84')
-    expect(nav!.getAttribute('aria-label')).not.toBe('element path')
+    expect(nav!.getAttribute('aria-label')).toBe(strings.ko.elementPath)
+    expect(nav!.getAttribute('aria-label')).not.toBe(strings.en.elementPath)
   })
 
   it('PreviewFrame uses the translated preview key, not the English literal', () => {
@@ -56,15 +63,15 @@ describe('aria-label/title i18n (existing keys)', () => {
     )
     const frame = container.querySelector('iframe.preview-frame')
     expect(frame).not.toBeNull()
-    expect(frame!.getAttribute('title')).toBe('\u9884\u89c8')
-    expect(frame!.getAttribute('title')).not.toBe('preview')
+    expect(frame!.getAttribute('title')).toBe(strings.ko.viewPreview)
+    expect(frame!.getAttribute('title')).not.toBe(strings.en.viewPreview)
   })
 
   it('DraftPreview reuses the translated preview key, not the English literal', () => {
     const container = mount(createElement(DraftPreview, { html: '<p>hi</p>' }))
     const frame = container.querySelector('iframe.draft-preview-frame')
     expect(frame).not.toBeNull()
-    expect(frame!.getAttribute('title')).toBe('\u9884\u89c8')
-    expect(frame!.getAttribute('title')).not.toBe('draft')
+    expect(frame!.getAttribute('title')).toBe(strings.ko.viewPreview)
+    expect(frame!.getAttribute('title')).not.toBe(strings.en.viewPreview)
   })
 })

@@ -105,29 +105,7 @@ ipcRenderer.on(
     openSettingsInbox.push(target),
 )
 
-const UI_LANGUAGES: readonly UiLanguage[] = [
-  'zh',
-  'en',
-  'ja',
-  'ko',
-  'fr',
-  'de',
-  'es',
-  'th',
-  'id',
-  'ru',
-  'ar',
-  'pt',
-  'it',
-  'pl',
-  'cs',
-  'nl',
-  'ms',
-  'he',
-  'hi',
-  'zh-TW',
-  'vi',
-]
+const UI_LANGUAGES: readonly UiLanguage[] = ['en', 'ko']
 
 function isUiLanguage(value: unknown): value is UiLanguage {
   return UI_LANGUAGES.includes(value as UiLanguage)
@@ -369,7 +347,7 @@ const homeApi: HomeApi = {
   },
   async getLanguage() {
     const result: unknown = await ipcRenderer.invoke(HOME_CHANNELS.getLanguage)
-    return isUiLanguage(result) ? result : 'zh'
+    return isUiLanguage(result) ? result : 'en'
   },
   async setLanguage(lang) {
     if (!isUiLanguage(lang)) throw new Error('Invalid language.')

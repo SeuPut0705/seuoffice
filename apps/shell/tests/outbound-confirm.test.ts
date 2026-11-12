@@ -10,7 +10,7 @@ const { OUTBOUND_CONFIRM_STRINGS, confirmDialogOptions } =
 
 describe('outbound confirm dialog', () => {
   it('has every string in every language', () => {
-    const keys = Object.keys(OUTBOUND_CONFIRM_STRINGS.zh).sort()
+    const keys = Object.keys(OUTBOUND_CONFIRM_STRINGS.en).sort()
     for (const lang of LANGS) {
       const table = (OUTBOUND_CONFIRM_STRINGS as Record<string, Record<string, string>>)[lang]
       expect(table, lang).toBeDefined()

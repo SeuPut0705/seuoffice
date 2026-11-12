@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   setHomeKinds: '홈 화면의 새 문서',
@@ -7,4 +7,4 @@ export const ko = {
   homeKindUp: '{name} 위로',
   homeKindDown: '{name} 아래로',
   homeKindsReset: '처음 순서로',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

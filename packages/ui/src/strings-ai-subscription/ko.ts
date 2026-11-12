@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   aiAssistant: 'AI 도우미',
@@ -181,4 +181,4 @@ export const ko = {
   errOffInApp:
     '{provider}를 이 앱에서 꺼 두어 실행하지 않았습니다. 설정 → AI에서 다시 쓸 수 있습니다.',
   guideBadgeOff: '꺼 둠',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

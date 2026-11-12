@@ -124,6 +124,7 @@ import fileImageIcon from './assets/file-image.png'
 import filePdfIcon from './assets/file-pdf.png'
 import filePptIcon from './assets/file-ppt.png'
 import fileWordIcon from './assets/file-word.png'
+import { isRtlLang } from '@genoffice/i18n'
 
 /** [chip label, composer prefill] */
 const STARTERS = [
@@ -1531,7 +1532,7 @@ export function AiPanel({ host, filePath, onCollapse }: AiPanelProps): ReactElem
       ref={asideRef}
       className={`copilot${resizing ? ' ai-panel-resizing' : ''}${dragOver ? ' ai-panel-dragover' : ''}`}
       style={{ width: '100%' }}
-      dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      dir={isRtlLang(lang) ? 'rtl' : undefined}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault()

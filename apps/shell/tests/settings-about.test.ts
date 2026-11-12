@@ -150,14 +150,10 @@ describe('Settings → About', () => {
   })
 
   it('has the link label in every UI language, none of them about stars', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       const label = strings[lang].viewOnGitHub
       expect(label, lang).toContain('GitHub')
       if (lang !== 'en') expect(label, lang).not.toBe(strings.en.viewOnGitHub)
     }
-    // the two Chinese scripts and the two Malay-family languages may share a wording
-    const distinct = new Set(LANGS.map((lang) => strings[lang].viewOnGitHub))
-    expect(distinct.size).toBeGreaterThanOrEqual(LANGS.length - 2)
   })
 })

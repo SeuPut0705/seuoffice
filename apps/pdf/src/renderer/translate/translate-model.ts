@@ -6,7 +6,7 @@
  * writer did (T13 report), and the easy explanation's results as the
  * Markdown / EPUB writer is handed them (translation-reading spec 5.4).
  */
-import type { Lang } from '@genoffice/i18n'
+import type { TranslationLanguage } from '../../../../../packages/pdf-structure/src/translate/language'
 import type { TranslationReport } from '../../../../../packages/pdf-structure/src/translate/result'
 import { translationUnits } from '../../../../../packages/pdf-structure/src/translate/result'
 import { easyExplanationLabel } from '../../../../../packages/pdf-structure/src/translate/easy-label'
@@ -153,7 +153,7 @@ export function easyResultOf(
 }
 
 /** each language's name in itself, when the platform cannot name it */
-const AUTONYMS: Record<Lang, string> = {
+const AUTONYMS: Record<TranslationLanguage, string> = {
   zh: '简体中文',
   en: 'English',
   ja: '日本語',

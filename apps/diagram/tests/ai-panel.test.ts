@@ -217,13 +217,12 @@ describe('a run', () => {
 })
 
 describe('the panel strings', () => {
-  it('has the same keys in all 21 languages, filled and translated', () => {
-    const keys = Object.keys(aiStrings.zh).sort()
-    expect(Object.keys(aiStrings)).toHaveLength(21)
+  it('has the same keys in every UI language, filled and translated', () => {
+    const keys = Object.keys(aiStrings.en).sort()
     for (const lang of LANGS) {
       expect(Object.keys(aiStrings[lang]).sort(), lang).toEqual(keys)
       for (const key of keys) {
-        expect(aiStrings[lang][key as keyof typeof aiStrings.zh], `${lang}.${key}`).not.toBe('')
+        expect(aiStrings[lang][key as keyof typeof aiStrings.en], `${lang}.${key}`).not.toBe('')
       }
       if (lang !== 'en') {
         expect(aiStrings[lang].aiEmptyBody, lang).not.toBe(aiStrings.en.aiEmptyBody)

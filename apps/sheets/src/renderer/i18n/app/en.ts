@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   // ── Withholding cells from the model ──
   redactMenuLabel: 'Hide the selection from AI',
@@ -1624,4 +1622,4 @@ export const en = {
   // ── ODS import ──
   appOdsImportNotice: 'Opened the ODS as an xlsx copy. Saving writes an xlsx file.',
   appOdsFormulasDropped: '{count} formulas were kept as values only.',
-} satisfies Record<keyof typeof zh, string>
+}

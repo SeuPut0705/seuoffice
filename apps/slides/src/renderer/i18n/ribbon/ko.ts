@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 import { ribbonCommonKo } from '@genoffice/i18n'
 
 export const ko = {
@@ -769,4 +769,4 @@ export const ko = {
   ribbonMergeFragment: '조각',
   ribbonMergeIntersect: '교차',
   ribbonMergeSubtract: '빼기',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>
