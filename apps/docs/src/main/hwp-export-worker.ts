@@ -2,9 +2,11 @@
  * One Hangul export in a worker thread of its own (see hwp-export.ts): it
  * answers once and is terminated by the main process.
  */
+// first: variables set under the old prefix are taken over before anything reads its own
+import '@seuoffice/i18n/old-names-env'
 import { readFileSync } from 'node:fs'
 import { parentPort } from 'node:worker_threads'
-import { Docx2HwpError, HwpEngine, docxToHwp } from '@genoffice/docx2hwp'
+import { Docx2HwpError, HwpEngine, docxToHwp } from '@seuoffice/docx2hwp'
 import type { HwpExportJob, HwpExportReply } from './hwp-export'
 
 parentPort?.once('message', async (job: HwpExportJob) => {

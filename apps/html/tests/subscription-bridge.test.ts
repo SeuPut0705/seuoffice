@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
 import type { HtmlApi } from '../src/shared/ipc'
 import { AI_CHANNELS } from '../src/shared/ipc'
 import {
@@ -32,7 +32,7 @@ vi.mock('electron', () => ({
   },
   webUtils: { getPathForFile: () => '' },
 }))
-vi.mock('@genoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: () => undefined }))
+vi.mock('@seuoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: () => undefined }))
 
 describe('subscription answers as the renderer reads them', () => {
   it('fills in a provider that is missing or malformed as still checking', () => {

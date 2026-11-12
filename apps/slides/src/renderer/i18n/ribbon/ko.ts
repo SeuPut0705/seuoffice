@@ -1,5 +1,5 @@
 import type { en } from './en'
-import { ribbonCommonKo } from '@genoffice/i18n'
+import { ribbonCommonKo } from '@seuoffice/i18n'
 
 export const ko = {
   ...ribbonCommonKo,

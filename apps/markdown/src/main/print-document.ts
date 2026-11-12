@@ -19,7 +19,7 @@ export async function printMarkdownDocument(
   pages: MarkdownPageRange | null,
   options: MarkdownPrintOptions = MARKDOWN_PRINT_OPTIONS,
 ): Promise<MarkdownPrintDocumentResult> {
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-md-print-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-md-print-'))
   let win: BrowserWindow | undefined
   try {
     win = new BrowserWindow({

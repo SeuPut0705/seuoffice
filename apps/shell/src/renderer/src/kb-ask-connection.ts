@@ -9,15 +9,15 @@ import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import type { IpcStreamError } from '@genoffice/agent-core'
+} from '@seuoffice/ai-provider/browser'
+import type { IpcStreamError } from '@seuoffice/agent-core'
 import {
   aiHoldReason,
   aiSendGate,
   isAiBlockedRunKind,
   withAiProviderSelection,
   type AiBlockedRunKind,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 
 /**
  * What a send does right now.

@@ -9,7 +9,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { decryptOfficeFile, encryptOoxml } from '@genoffice/electron-utils/office-encryption'
+import { decryptOfficeFile, encryptOoxml } from '@seuoffice/electron-utils/office-encryption'
 import { WORKBOOK_PASSWORD_MAX_LENGTH } from '../src/shared/desktop-api'
 import { IPC_CHANNELS } from '../src/shared/ipc-channels'
 
@@ -144,7 +144,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 }))
 
 // the archive writer is stubbed: it lands the bytes it read plus a mark
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -153,8 +153,8 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -225,8 +225,8 @@ function saveRequest(sessionId: string): unknown {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-password-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-password-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-password-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-password-user-'))
   path = join(dir, 'secret.xlsx')
   writeFileSync(path, encryptOoxml(PLAIN, OLD))
   nextWrite.fails = 'no'

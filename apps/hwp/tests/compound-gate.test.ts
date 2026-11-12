@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { CompoundFileError } from '@genoffice/compound-file'
+import { CompoundFileError } from '@seuoffice/compound-file'
 import { DOC_INFO, openHwp, sectionCount, streamOf } from '../src/main/hwp5-file'
 import { trackedChangesOf, withoutTrackedChanges } from '../src/main/tracked-changes'
 import {

@@ -6,7 +6,7 @@ import {
   validateHeadlessPaths,
   type HeadlessExporters,
 } from '../src/main/headless-export'
-import type { HeadlessExportRequest } from '@genoffice/electron-utils'
+import type { HeadlessExportRequest } from '@seuoffice/electron-utils'
 
 /**
  * Diagram jobs in the `--headless-export` host: routing, the diagram-only

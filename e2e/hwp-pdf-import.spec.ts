@@ -23,7 +23,7 @@ async function studioFrame(hwp: Page): Promise<Frame> {
 
 /** A one-page PDF with a line of text, in a folder of its own. */
 async function samplePdf(): Promise<{ pdfPath: string; original: Buffer }> {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-hwp-pdf-import-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-hwp-pdf-import-'))
   const pdfPath = join(dir, 'Field notes.pdf')
   const doc = await PDFDocument.create()
   const font = await doc.embedFont(StandardFonts.Helvetica)

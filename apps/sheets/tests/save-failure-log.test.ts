@@ -92,7 +92,7 @@ describe('sessionSourceFormat', () => {
 describe('appendSaveFailure', () => {
   let dir: string
   beforeEach(() => {
-    dir = mkdtempSync(join(tmpdir(), 'genoffice-save-failure-log-'))
+    dir = mkdtempSync(join(tmpdir(), 'seuoffice-save-failure-log-'))
   })
   afterEach(() => {
     rmSync(dir, { recursive: true, force: true })

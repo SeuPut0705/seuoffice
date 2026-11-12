@@ -67,7 +67,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { setOpenPathProbe } from '@genoffice/electron-utils'
+import { setOpenPathProbe } from '@seuoffice/electron-utils'
 import { createPdfView } from '../src/main/pdf-main'
 import { PDF_CHANNELS } from '../src/shared/ipc'
 import type { SavePdfResult } from '../src/shared/ipc'

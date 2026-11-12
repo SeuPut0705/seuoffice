@@ -18,7 +18,7 @@ import type {
   HfPartInfo,
   HfPictureEdit,
   SectionInfo,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { hfFromPart, type HfVariantKey, type HfVariantsState, type HfView } from './doc-state'
 
 export type HfKind = 'header' | 'footer'

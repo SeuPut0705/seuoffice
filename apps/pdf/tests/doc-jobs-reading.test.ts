@@ -9,7 +9,7 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { createI18n } from '@genoffice/i18n'
+import { createI18n } from '@seuoffice/i18n'
 import { DocumentJobRegistry } from '../../../packages/pdf-structure/src/jobs'
 import type { JobStatus } from '../../../packages/pdf-structure/src/store/store'
 import { strings } from '../src/renderer/i18n/strings'

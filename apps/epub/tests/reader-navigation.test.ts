@@ -3,7 +3,7 @@
  * past an edge turns the chapter, and the table of contents follows.
  */
 import { describe, expect, it } from 'vitest'
-import type { EpubTocEntry } from '@genoffice/epub-engine'
+import type { EpubTocEntry } from '@seuoffice/epub-engine'
 import {
   OVERSCROLL_GAP_MS,
   OVERSCROLL_IDLE,

@@ -3,7 +3,7 @@
  * a folder of `.odt` files (searched one level deep). Real files never enter
  * the repository; they may contain personal data.
  *
- *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @genoffice/odt-engine
+ *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @seuoffice/odt-engine
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'

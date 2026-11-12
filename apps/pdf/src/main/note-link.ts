@@ -15,7 +15,7 @@
  */
 import { access, writeFile } from 'node:fs/promises'
 import { posix, win32 } from 'node:path'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   FoundNoteLink,
   NoteLink,

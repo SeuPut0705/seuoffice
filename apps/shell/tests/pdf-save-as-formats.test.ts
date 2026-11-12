@@ -3,7 +3,7 @@
  * without an extension, and routes the picked name by its extension.
  */
 import { describe, expect, it } from 'vitest'
-import { numberedExportPaths } from '@genoffice/electron-utils/numbered-export-paths'
+import { numberedExportPaths } from '@seuoffice/electron-utils/numbered-export-paths'
 import {
   pdfSaveAsDefaultPath,
   pdfSaveAsFilters,

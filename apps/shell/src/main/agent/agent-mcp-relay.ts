@@ -5,10 +5,10 @@ import {
   ListToolsRequestSchema,
   type CallToolResult,
 } from '@modelcontextprotocol/sdk/types.js'
-import type { McpServerView } from '@genoffice/agent-core'
-import { isValidServerName } from '@genoffice/agent-core/user-mcp/names'
-import { mcpCallAnswerOf } from '@genoffice/agent-core/user-mcp/result'
-import type { AgentMcpRelay } from '@genoffice/ai-provider/agent-session'
+import type { McpServerView } from '@seuoffice/agent-core'
+import { isValidServerName } from '@seuoffice/agent-core/user-mcp/names'
+import { mcpCallAnswerOf } from '@seuoffice/agent-core/user-mcp/result'
+import type { AgentMcpRelay } from '@seuoffice/ai-provider/agent-session'
 import { McpServerService } from '../mcp/mcp-server'
 
 /**

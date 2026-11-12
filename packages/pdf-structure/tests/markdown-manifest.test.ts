@@ -1,5 +1,5 @@
 /**
- * App-owned asset manifest (`assets/.genoffice-assets.json`): the converter's
+ * App-owned asset manifest (`assets/.seuoffice-assets.json`): the converter's
  * entries merge in the format apps/markdown/src/main/asset-lifecycle.ts reads.
  */
 import { describe, expect, it } from 'vitest'
@@ -10,7 +10,7 @@ const rec = (c: string, ext = 'png') => ({ name: `${h(c)}.${ext}`, sha256: h(c) 
 
 describe('mergeAssetManifest', () => {
   it('uses the editor manifest file name', () => {
-    expect(ASSET_MANIFEST_FILENAME).toBe('.genoffice-assets.json')
+    expect(ASSET_MANIFEST_FILENAME).toBe('.seuoffice-assets.json')
   })
 
   it('creates a manifest when there is none', () => {

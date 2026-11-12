@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { redactHtmlSource } from '@genoffice/file-parse'
+import { redactHtmlSource } from '@seuoffice/file-parse'
 import { MARK_ATTR, MARK_ATTR_PREFIX, buildProjection } from '../src/renderer/ai/redact'
 import { buildParseMap } from '../src/renderer/document/parse-map'
 
 /**
  * A page read as another file's material (attachment, knowledge base, search
- * index) goes through `@genoffice/file-parse`, which cannot import this app and
+ * index) goes through `@seuoffice/file-parse`, which cannot import this app and
  * so restates the withholding rules. This holds the two together: for a page
  * whose marks can be read, the text handed to another conversation is exactly
  * the view this editor hands its own model.

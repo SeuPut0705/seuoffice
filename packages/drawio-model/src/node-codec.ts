@@ -1,4 +1,4 @@
-/** The Node implementation of the page codec (`@genoffice/drawio-model/node`). */
+/** The Node implementation of the page codec (`@seuoffice/drawio-model/node`). */
 import { deflateRawSync, inflateRawSync } from 'node:zlib'
 import type { PageCodec } from './codec'
 

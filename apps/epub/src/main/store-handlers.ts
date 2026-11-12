@@ -21,14 +21,14 @@ import {
   type ResultStore,
   type TranslationBlockInput,
   type TranslationMode,
-} from '@genoffice/pdf-structure/store'
+} from '@seuoffice/pdf-structure/store'
 import type {
   EpubFailure,
   EpubOutcome,
   EpubStoredTranslation,
   EpubStoreWriteResult,
 } from '../shared/ipc'
-import type { JobStatus } from '@genoffice/pdf-structure/store'
+import type { JobStatus } from '@seuoffice/pdf-structure/store'
 
 export type EpubStore = Pick<
   ResultStore,

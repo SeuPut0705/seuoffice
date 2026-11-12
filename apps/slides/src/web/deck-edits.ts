@@ -4,8 +4,8 @@
 // Only the members listed here edit on the web; the rest of the editing family stays unsupported.
 // AI runs are held for review as on the desktop (decision 0012): main/ai-proposal.ts begins,
 // holds, accepts and rejects them against this deck; this file keeps the page's revisions in step.
-import { commitSaved, savePptx } from '@genoffice/pptx-engine'
-import { runTxn, type TxnRequest, type TxnResult } from '@genoffice/pptx-ops'
+import { commitSaved, savePptx } from '@seuoffice/pptx-engine'
+import { runTxn, type TxnRequest, type TxnResult } from '@seuoffice/pptx-ops'
 import { documentByPath, onHostSaveRequest, reportDirty, saveToHost } from '@seuoffice/web-platform'
 import {
   AI_REVIEW_SAVE_REASON,

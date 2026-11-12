@@ -418,14 +418,16 @@ async function inTurn<T>(path: string, change: () => Promise<T>): Promise<T> {
 
 // ── the store ──
 
+const UPSTREAM_HOME_DIR = '.genoffice' // the upstream app's home folder
+
 /**
  * Root of the store. Pass the user-data folder of THIS program:
  * - the app: Electron `app.getPath('userData')`
- * - the terminal command and MCP server: `genofficeUserDataDir(env)` from
+ * - the terminal command and MCP server: `seuofficeUserDataDir(env)` from
  *   packages/cli/src/gui.ts (the folder `aiDataDir(env)` in cloud.ts also
  *   resolves to), so both write the same store.
- * Never `~/.genoffice`: that folder belongs to the original program and is
- * neither read nor written; the constructor refuses it.
+ * Never the upstream GenOffice program's home `~/.genoffice`: it is neither
+ * read nor written; the constructor refuses it.
  *
  * The store lives in one subfolder (`STORE_DIR_NAME`); deleteAll removes only
  * that subfolder, never the user-data folder around it.
@@ -440,8 +442,8 @@ export class ResultStore {
     if (!isAbsolute(userDataDir)) {
       throw new TypeError(`result store: the user-data folder must be absolute: ${userDataDir}`)
     }
-    if (userDataDir.split(/[\\/]/).some((part) => part.toLowerCase() === '.genoffice')) {
-      throw new TypeError('result store: ~/.genoffice belongs to the original program')
+    if (userDataDir.split(/[\\/]/).some((part) => part.toLowerCase() === UPSTREAM_HOME_DIR)) {
+      throw new TypeError(`result store: ~/${UPSTREAM_HOME_DIR} belongs to the upstream program`)
     }
     this.dir = join(userDataDir, STORE_DIR_NAME)
     this.now = options.now ?? Date.now

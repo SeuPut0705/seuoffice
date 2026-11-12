@@ -1,6 +1,6 @@
 /* Per-app accent (word-blue family) + docs-only tokens.
  * Chrome tokens (surface/text/border/…, AI panel --color-*) come from
- * @genoffice/ui/tokens.css; nothing here may shadow those names. */
+ * @seuoffice/ui/tokens.css; nothing here may shadow those names. */
 :root {
   --word-blue: #185abd;
   --word-blue-dark: #124a9e;
@@ -455,7 +455,7 @@ button {
 
 /* While a popover is open the row must deliver presses (drag regions swallow
    them), so outside-press dismissal can see presses on the blank band */
-html.genoffice-popover-open .ribbon-tabs {
+html.seuoffice-popover-open .ribbon-tabs {
   -webkit-app-region: no-drag;
 }
 
@@ -1487,7 +1487,7 @@ html.genoffice-popover-open .ribbon-tabs {
   background: var(--hover);
 }
 
-/* Anchor positioning for the shared Word-style color panel (@genoffice/ui
+/* Anchor positioning for the shared Word-style color panel (@seuoffice/ui
    .gcp-palette draws the chrome; this only places it under its trigger). */
 .docs-color-pop {
   position: fixed;
@@ -9050,7 +9050,7 @@ body.docs-crop-active
   display: flex;
   flex-direction: column;
   background: var(--color-bg-page);
-  /* Same visible divider as the GenOffice Sheets panel: the editor canvas is gray, so the default border would drown */
+  /* Same visible divider as the SeuOffice Sheets panel: the editor canvas is gray, so the default border would drown */
   border-left: var(--ai-panel-border-left, 0px) solid var(--color-border-strong);
   border-right: var(--ai-panel-border-right, 1px) solid var(--color-border-strong);
   font-family: var(--gs-font-sans);
@@ -11533,7 +11533,7 @@ body.docs-crop-active
   border-color: var(--word-blue);
 }
 
-/* Shared dropdown (@genoffice/ui gs-dd) app sizing: modal dialogs keep the old
+/* Shared dropdown (@seuoffice/ui gs-dd) app sizing: modal dialogs keep the old
    `.modal select` footprint; ribbon/table/page-number rows scope their own
    width/height below */
 .modal .gs-dd {

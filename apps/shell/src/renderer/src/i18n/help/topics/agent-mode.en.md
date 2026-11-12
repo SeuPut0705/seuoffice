@@ -1,6 +1,6 @@
 # Agent mode
 
-The agent takes one folder you choose as a project and runs Claude Code or Codex from this PC in that folder. The AI reads the material in the folder itself, creates new files, uses skills and scripts, and edits the documents open in GenOffice. Use it for work that draws on a lot of material.
+The agent takes one folder you choose as a project and runs Claude Code or Codex from this PC in that folder. The AI reads the material in the folder itself, creates new files, uses skills and scripts, and edits the documents open in SeuOffice. Use it for work that draws on a lot of material.
 
 ## Before you start
 
@@ -16,7 +16,7 @@ The agent takes one folder you choose as a project and runs Claude Code or Codex
 5. The first time, read **Before you start** and click **I understand**.
 6. Click **Start**, write what you want done, and click **Send**.
 
-One window is one session. Closing the window or clicking **Stop** ends the session, and the program GenOffice started for it ends too. A session also ends after 30 minutes with nothing sent.
+One window is one session. Closing the window or clicking **Stop** ends the session, and the program SeuOffice started for it ends too. A session also ends after 30 minutes with nothing sent.
 
 ## How the agent asks
 
@@ -30,13 +30,13 @@ When the agent asks, the window shows what it wants to do (the whole command, th
 
 Whatever you choose, the agent does not:
 
-- Overwrite the file of a document open in a GenOffice tab. Open documents are edited through the app, so the change shows in the editor at once and the editor's undo takes it back.
+- Overwrite the file of a document open in a SeuOffice tab. Open documents are edited through the app, so the change shows in the editor at once and the editor's undo takes it back.
 - Write outside the project folder.
-- Touch the sign-in data of Claude or Codex, or GenOffice's data folder.
+- Touch the sign-in data of Claude or Codex, or SeuOffice's data folder.
 
 ## Claude Code and Codex
 
-- **Codex** runs commands in its own isolated space, including the ones you allow. It can write only in the project folder, the internet is blocked unless you turn it on, and it cannot read your personal files outside the project. When a session starts, GenOffice first checks that this isolation works on this PC, and does not start if it does not.
+- **Codex** runs commands in its own isolated space, including the ones you allow. It can write only in the project folder, the internet is blocked unless you turn it on, and it cannot read your personal files outside the project. When a session starts, SeuOffice first checks that this isolation works on this PC, and does not start if it does not.
 - **Claude Code** cannot isolate commands on Windows. A command you allow can reach the whole PC and the internet. That is why, under **Trust this project**, Claude Code's own reviewer checks each action instead of you.
 
 A document someone sent you can carry hidden instructions that tell the AI to do something else. In a folder of material you do not know, use one of the choices that ask.
@@ -68,13 +68,13 @@ A document someone sent you can carry hidden instructions that tell the AI to do
 
 ## New files and open documents
 
-- New files the agent makes are saved in the project folder. Click **Open** on that line of the progress log to open the file in a GenOffice tab.
-- To have an open document edited, open it in GenOffice first and name it in your request.
+- New files the agent makes are saved in the project folder. Click **Open** on that line of the progress log to open the file in a SeuOffice tab.
+- To have an open document edited, open it in SeuOffice first and name it in your request.
 - A document you open during a session can be edited from your next message on.
 
 ## Privacy and usage
 
-- What you hid from the AI stays hidden only when the app reads a document open in GenOffice for the agent. Files the agent reads from the folder itself are sent as they are.
+- What you hid from the AI stays hidden only when the app reads a document open in SeuOffice for the agent. Files the agent reads from the folder itself are sent as they are.
 - Web search terms and the addresses of pages read go to the program's company and to those sites. With Codex's internet access for commands on, data can go wherever a command connects.
 - The agent works in many steps, so it uses more of your subscription limit than the AI panel. When the limit runs out, the request fails; the agent never moves to another AI or to a connection that is billed.
 

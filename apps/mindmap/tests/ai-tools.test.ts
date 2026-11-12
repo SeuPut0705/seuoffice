@@ -5,8 +5,8 @@
  * No model is involved; the tools are called the way the agent loop calls them.
  */
 import { afterEach, describe, expect, it } from 'vitest'
-import type { AgentToolCall } from '@genoffice/agent-core'
-import type { XmindSheet, XmindTopic } from '@genoffice/xmind-engine'
+import type { AgentToolCall } from '@seuoffice/agent-core'
+import type { XmindSheet, XmindTopic } from '@seuoffice/xmind-engine'
 import { DocumentSession } from '../src/renderer/document/session'
 import { newMap } from '../src/renderer/document/open'
 import { MapController } from '../src/renderer/map/controller'

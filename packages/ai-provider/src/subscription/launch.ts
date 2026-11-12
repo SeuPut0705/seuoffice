@@ -109,8 +109,8 @@ function tell<P>(listeners: Set<(value: P) => void>, value: P): void {
 }
 
 /** Carry the program and its arguments to the login window script as data */
-export const SUBSCRIPTION_LOGIN_EXE_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_EXE'
-export const SUBSCRIPTION_LOGIN_ARGS_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_ARGS'
+export const SUBSCRIPTION_LOGIN_EXE_ENV = 'SEUOFFICE_SUBSCRIPTION_LOGIN_EXE'
+export const SUBSCRIPTION_LOGIN_ARGS_ENV = 'SEUOFFICE_SUBSCRIPTION_LOGIN_ARGS'
 
 /**
  * Opens the login program in a console window of its own and waits for it.
@@ -129,9 +129,9 @@ function loginWindowScript(windowStyle: 'Normal' | 'Hidden'): string {
 }
 
 /** Carry the visible window's own words to its script as data (`SubscriptionLoginWindowText`) */
-export const SUBSCRIPTION_LOGIN_TITLE_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_TITLE'
-export const SUBSCRIPTION_LOGIN_GUIDE_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_GUIDE'
-export const SUBSCRIPTION_LOGIN_CLOSING_ENV = 'GENOFFICE_SUBSCRIPTION_LOGIN_CLOSING'
+export const SUBSCRIPTION_LOGIN_TITLE_ENV = 'SEUOFFICE_SUBSCRIPTION_LOGIN_TITLE'
+export const SUBSCRIPTION_LOGIN_GUIDE_ENV = 'SEUOFFICE_SUBSCRIPTION_LOGIN_GUIDE'
+export const SUBSCRIPTION_LOGIN_CLOSING_ENV = 'SEUOFFICE_SUBSCRIPTION_LOGIN_CLOSING'
 
 const LOGIN_WINDOW_ENVS = [
   SUBSCRIPTION_LOGIN_EXE_ENV,
@@ -479,8 +479,8 @@ export async function launchSubscriptionInstall(
 }
 
 /** Carry the program and its arguments to the update window as data, like the login's */
-export const SUBSCRIPTION_UPDATE_EXE_ENV = 'GENOFFICE_SUBSCRIPTION_UPDATE_EXE'
-export const SUBSCRIPTION_UPDATE_ARGS_ENV = 'GENOFFICE_SUBSCRIPTION_UPDATE_ARGS'
+export const SUBSCRIPTION_UPDATE_EXE_ENV = 'SEUOFFICE_SUBSCRIPTION_UPDATE_EXE'
+export const SUBSCRIPTION_UPDATE_ARGS_ENV = 'SEUOFFICE_SUBSCRIPTION_UPDATE_ARGS'
 
 /** The package manager commands that bring a Codex install up to date, by where it came from */
 export const SUBSCRIPTION_CODEX_UPDATE_COMMANDS = {

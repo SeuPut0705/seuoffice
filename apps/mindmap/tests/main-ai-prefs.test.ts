@@ -5,7 +5,7 @@
  * the panel's initial open state is decided with those preferences in place.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_AI_PANEL_PREFS, aiPanelInitiallyOpen, applyAiPanelPrefs } from '@genoffice/ui'
+import { DEFAULT_AI_PANEL_PREFS, aiPanelInitiallyOpen, applyAiPanelPrefs } from '@seuoffice/ui'
 
 /** what the app saw when it rendered for the first time */
 const firstRender = vi.hoisted(() => ({ seen: null as null | { side?: string; open: boolean } }))

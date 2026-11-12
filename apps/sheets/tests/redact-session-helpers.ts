@@ -10,13 +10,13 @@ import { join } from 'node:path'
 import JSZip from 'jszip'
 import { vi } from 'vitest'
 
-import { parseFileToText } from '@genoffice/file-parse'
-import { applyCellEditsToXlsx } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { parseFileToText } from '@seuoffice/file-parse'
+import { applyCellEditsToXlsx } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   REDACTION_PART_PATH,
   serializeRedactionPart,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 import { resolveWorkbookSave } from '../src/main/workbook-save-resolve'
 import type { RedactionIndex } from '../src/renderer/ai/redact'

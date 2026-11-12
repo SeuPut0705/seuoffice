@@ -45,7 +45,7 @@ import {
   type RecoveryOpenFileRequest,
   type RecoveryOpenUntitledRequest,
   type RecoveryStore,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 
 /** how long `writeCopiesNow` waits for one renderer to send its copy */
 export const RECOVERY_FLUSH_TIMEOUT_MS = 3_000

@@ -1,12 +1,12 @@
 /**
- * Input checks the `addChart` op of `@genoffice/pptx-ops` does not make,
+ * Input checks the `addChart` op of `@seuoffice/pptx-ops` does not make,
  * applied by the CLI before the op reaches the engine. The chart builder drops
  * data it cannot draw without a word: a text value leaves a gap in the series,
  * a short value list leaves the last category empty, an unknown kind is drawn
  * as columns, and a category that is not text throws a TypeError. pptx-ops
  * stays as it is, so a valid chart is built exactly as before.
  */
-import type { NewChartKind } from '@genoffice/pptx-engine'
+import type { NewChartKind } from '@seuoffice/pptx-engine'
 
 // A record over the engine's own NewChartKind: adding a kind there fails the
 // typecheck here until it is listed, so the two lists cannot drift apart (the

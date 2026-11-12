@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamChunk, IpcStreamError, IpcSubscriptionUsage } from '@genoffice/agent-core'
-import { normalizeAiSettings } from '@genoffice/ai-provider/browser'
-import { aiRunErrorText } from '@genoffice/ui'
+import type { IpcStreamChunk, IpcStreamError, IpcSubscriptionUsage } from '@seuoffice/agent-core'
+import { normalizeAiSettings } from '@seuoffice/ai-provider/browser'
+import { aiRunErrorText } from '@seuoffice/ui'
 import { createElectronTransport } from '../src/renderer/ai/transport'
 import { strings } from '../src/renderer/i18n/strings'
 

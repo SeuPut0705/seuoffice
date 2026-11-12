@@ -15,8 +15,8 @@ import {
   normalizeLang,
   requestedLanguage,
   setUiLang,
-} from '@genoffice/i18n'
-import { chartCategoryFormat } from '@genoffice/xlsx-gateway/domain/chart-visual'
+} from '@seuoffice/i18n'
+import { chartCategoryFormat } from '@seuoffice/xlsx-gateway/domain/chart-visual'
 import { XlsxSidecarClient } from '../src/main/xlsx-sidecar-client'
 import { workbookFileSchema } from '../src/shared/desktop-api'
 import { setDocumentLocale } from '../src/renderer/document-locale'

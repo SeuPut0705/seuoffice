@@ -32,7 +32,7 @@ import {
   parseAddress,
   parseRange,
   type RangeBounds,
-} from '@genoffice/xlsx-gateway/domain/cell-address'
+} from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { placeholderSource, type CellMark, type RedactionIndex } from './redact'
 import { UNKNOWN_REDACTION_LABEL } from './redact-load'
 

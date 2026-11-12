@@ -28,14 +28,14 @@ import {
   registerRecoveryEditor,
   resolveRecoveryOnOpen,
   unprotectableNoticeText,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type {
   RecoveryEditorContract,
   RecoveryIdentity,
   RecoveryStore,
   RecoveryWriteTicket,
-} from '@genoffice/electron-utils'
-import { getUiLang } from '@genoffice/i18n'
+} from '@seuoffice/electron-utils'
+import { getUiLang } from '@seuoffice/i18n'
 import { readHwpDefaultFormat } from './default-format'
 import { tm } from './dialog-strings'
 import { applySaveFixes } from './save-fixes'

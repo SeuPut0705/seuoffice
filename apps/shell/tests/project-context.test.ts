@@ -1,12 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import { assembleTrustedContext } from '../src/main/projects/context'
 import { hashText } from '../src/main/projects/folder-files'
 
 /** What one request carries for a trusted project (spec 5.4, 5.10) */
 
+const { dataDir } = PROJECT_FOLDER_NAMES
 const on = { memoryEnabled: true, readAgentsFiles: true }
 const off = { memoryEnabled: true, readAgentsFiles: false }
 const texts = (over: Partial<Record<'instructions' | 'memory' | 'agents' | 'claude', string>>) => ({
+  dataDir,
   instructions: over.instructions ?? null,
   memory: over.memory ?? null,
   agents: over.agents ?? null,
@@ -21,7 +24,7 @@ describe('assembleTrustedContext', () => {
       on,
     )
     expect(result.instructions).toEqual({
-      text: '[.ieumoffice/instructions.md]\nmine\n\n[AGENTS.md]\nagents\n\n[CLAUDE.md]\nclaude',
+      text: `[${dataDir}/instructions.md]\nmine\n\n[AGENTS.md]\nagents\n\n[CLAUDE.md]\nclaude`,
       sources: ['instructions', 'agents', 'claude'],
     })
   })
@@ -35,7 +38,12 @@ describe('assembleTrustedContext', () => {
     )
     expect(result.instructions?.text.length).toBe(40)
     expect(result.instructions?.sources).toEqual(['instructions'])
-    expect(result.notices).toContainEqual({ kind: 'instructions-truncated', chars: 100, limit: 40 })
+    const full = `[${dataDir}/instructions.md]\n${'x'.repeat(50)}\n\n[AGENTS.md]\nagents`
+    expect(result.notices).toContainEqual({
+      kind: 'instructions-truncated',
+      chars: full.length,
+      limit: 40,
+    })
   })
 
   it('never cuts memory; a long one gets a notice', () => {

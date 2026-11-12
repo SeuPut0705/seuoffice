@@ -1,11 +1,11 @@
 /// The main-process answer to a renderer's template-font URL
-/// (templateFontUrl in @genoffice/ui/template-fonts): the Word editor's media scheme
+/// (templateFontUrl in @seuoffice/ui/template-fonts): the Word editor's media scheme
 /// handler, which serves every editor inside the shell, and a standalone sheets app
 /// both answer with this. Node only (reads the file); no Electron.
 import { readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 
-import { templateFontFileOf } from '@genoffice/ui/template-fonts'
+import { templateFontFileOf } from '@seuoffice/ui/template-fonts'
 
 const FONT_MIME: Readonly<Record<string, string>> = { ttf: 'font/ttf', otf: 'font/otf' }
 

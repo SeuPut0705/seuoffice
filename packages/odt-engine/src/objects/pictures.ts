@@ -14,7 +14,7 @@
  * reference re-pointed at a new `Pictures/` entry when its bytes were
  * replaced; a picture the bridge never had becomes a new frame and entry.
  */
-import type { Run } from '@genoffice/docx-engine'
+import type { Run } from '@seuoffice/docx-engine'
 import type {
   InlineConverter,
   InlineOoxml,

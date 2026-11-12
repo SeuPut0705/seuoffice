@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AgentToolCall } from '@genoffice/agent-core'
+import type { AgentToolCall } from '@seuoffice/agent-core'
 import { chatOpenAiCompatible, streamOpenAiCompatible } from '../src/protocols/openai-compatible'
 import type { AiProviderConfig } from '../src/types'
 import { AiTimeoutError, createStreamWatchdog } from '../src/watchdog'

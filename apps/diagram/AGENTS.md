@@ -1,4 +1,4 @@
-# apps/diagram (`@genoffice/diagram`)
+# apps/diagram (`@seuoffice/diagram`)
 
 다이어그램 편집기다. draw.io(jgraph/drawio, Apache-2.0) 웹 편집기를 PC 안에서만 띄워 `.drawio`·`.dio`·`.drawio.svg`·`.drawio.png`를 탭에서 열고 고치고 저장하고 내보낸다. 화면에 보이는 이름은 "다이어그램"이고, "draw.io"는 어떤 파일을 다루는지 알리는 데만 쓴다(열기·저장 창의 형식 이름). draw.io 로고는 쓰지 않는다. 파일 형식·읽기 표·연산의 뜻은 `packages/drawio-model`에 있고, 이 모듈은 draw.io를 띄워 그 결과를 디스크와 잇는다. 계획과 까닭은 `docs/archive/ieum/plans/diagram-editor.md`와 결정 0103(`docs/archive/ieum/tracking/decisions/0103-diagram-editor.md`)에 있다.
 
@@ -11,7 +11,7 @@
   - `network-guard.ts`: 요청 허용 판정(앱 렌더러 스킴, `drawio-app:`, `data:`, `blob:`만, 개발 실행일 때만 개발 서버의 localhost), 새 창 거절, 이동 규칙, 요청 기록.
   - `export-main.ts`·`export-paths.ts`·`print-document.ts`: PNG·SVG 파일 쓰기(모든 쪽이면 쪽이 하나여도 쪽마다 `<이름>-p<쪽 번호>.<확장자>`, 지금 쪽이면 고른 이름 하나. 명령줄 `convert`도 같은 `pageFilePaths`를 쓴다. 이미 있는 파일은 물은 뒤 바꿈), PDF와 인쇄. PDF와 인쇄는 다이어그램 세션의 숨은 창에 쪽마다 한 장(그 쪽의 용지 크기, draw.io 단위 1/100인치)인 문서를 띄워 Electron이 만든다. draw.io의 인쇄 창은 쓰지 않는다.
   - `headless-main.ts`: 창 없는 일(`--headless-export`의 다이어그램 몫, `docs/headless-pdf-export.md`). 셸이 `exportDiagramHeadless`를 부른다. `createDiagramHiddenWindow`(`diagram-main.ts`)가 탭과 같은 세션·막기·허락한 파일로 숨은 창을 만들고(복구 사본은 묻지 않고 저장된 파일을 연다), 화면은 일 하나를 하고 보고한다(`diagram:headless-job`·`diagram:headless-done`). PDF·PNG·SVG는 내보내기 메뉴와 같은 함수로 만들고, 다이어그램 파일은 AI 창의 실행기(`applyLiveOps`, 묶음 방식과 기본 쪽을 받는다)로 연산을 한 뒤 저장과 같은 직렬화로 받아, 다이어그램으로 열리는 바이트만 쓴다. 파일은 뒷단이 쓴다.
-  - `open-check.ts`: 셸이 탭을 열기 전에 묻는 "다이어그램으로 열리는가"(Electron 없음). `diagramOpenRefusal`은 `.drawio`·`.dio`·`.drawio.svg`·`.drawio.png`를 모델의 `openDiagram`으로 열어 보고, 열리지 않으면 편집기의 실패 문구(`shared/open-failure.ts`의 `OPEN_FAILURE_KEYS`, 원본이 없는 그림은 `failNoOriginal`)를 앱 언어로 돌려준다. 그 파일의 복구 사본이 있으면 거절하지 않는다(편집기가 사본을 권한다). `visioOpenRefusal`은 `.vsdx`가 압축 관문(`@genoffice/zip-gate`)을 지나고 Visio 도면(`visio/document.xml`과 Visio 내용 형식)인지만 본다. 실제 가져오기는 탭 안의 draw.io가 한다.
+  - `open-check.ts`: 셸이 탭을 열기 전에 묻는 "다이어그램으로 열리는가"(Electron 없음). `diagramOpenRefusal`은 `.drawio`·`.dio`·`.drawio.svg`·`.drawio.png`를 모델의 `openDiagram`으로 열어 보고, 열리지 않으면 편집기의 실패 문구(`shared/open-failure.ts`의 `OPEN_FAILURE_KEYS`, 원본이 없는 그림은 `failNoOriginal`)를 앱 언어로 돌려준다. 그 파일의 복구 사본이 있으면 거절하지 않는다(편집기가 사본을 권한다). `visioOpenRefusal`은 `.vsdx`가 압축 관문(`@seuoffice/zip-gate`)을 지나고 Visio 도면(`visio/document.xml`과 Visio 내용 형식)인지만 본다. 실제 가져오기는 탭 안의 draw.io가 한다.
   - `recovery-main.ts`: 복구 사본(결정 0061). 마인드맵 편집기의 것과 같고 `<userData>/diagram-autosave`에 둔다. 공용 저장소가 `diagram` 종류를 알기 전(`RECOVERY_EDITOR_KINDS`, 셸 연결 작업이 더한다)에는 사본을 쓰지 않고 파일을 그대로 연다.
   - `i18n-main.ts`: 뒷단이 직접 보이는 글(저장·내보내기 창, 닫기 확인). 글은 `renderer/i18n/app`의 사전 하나에 있다.
   - `mcp-queries.ts`: 앱 안 MCP 서버가 화면에 묻는 것(`diagram:read-request`·`diagram:apply-request`). `diagramReadText`는 모든 쪽, `diagramReadPage`는 한 쪽(쪽을 주지 않으면 화면의 쪽, `current: true`)의 읽기 표를 글(`text`)과 값(`pages`, `page`. 앱 안 MCP `read_diagram`의 객체)으로 함께 준다. 값은 화면이 `diagram:read-result`에 `read`로 실어 보낸다. 읽기는 draw.io가 뜨는 동안 답이 없으므로 답이 올 때까지 다시 묻는다. `diagramApplyOps`는 읽기에 답이 온 뒤(화면이 듣고 있다는 뜻) 연산 목록을 **한 번만** 보낸다(다시 보내면 두 번 적용된다). 한 보기의 적용은 하나씩 차례로 돈다. 답은 질문의 id와 물은 보기에서 온 것만 받는다. 파일은 쓰지 않는다(저장은 `diagramSaveToPath`).
@@ -37,7 +37,7 @@
   - `document/mermaid.ts`: `convertMermaidInEditor(frame, text)`(변환만, 이름 없는 새 다이어그램을 Mermaid로 만들 때도 이것을 쓴다)와, 계획이 그림 뒤의 연산을 맞게 보도록 변환된 XML을 계획용 셀(`m1`, `m2`…, 그 자리로 옮김)로 바꾸는 `plannedMermaidCells`. 다이어그램에 들어가는 것은 이 셀이 아니라 draw.io의 XML 그대로다(선의 꺾임점까지).
   - `ai/`: AI 창. 다른 편집기와 같은 부품과 규칙(제공자 선택은 `selectAiProvider`를 거친 공용 설정, 보내기 문지기 `useAiSendGate`, 막힌 실행 알림, 오류 글 `aiRunErrorText`, 첨부·검색·사용자 스킬·MCP)을 쓰고, 다이어그램 능력만 따로 있다.
     - `diagram-tools.ts`: 도구 두 개를 `DIAGRAM_OPS` 한 곳에서 만든다. `read_diagram`(= `read`), `apply_diagram_ops`(바꾸는 연산 전부의 목록, 항목 스키마는 모든 연산의 키를 합친 것). 호출 하나가 되돌리기 한 번이고, 하나라도 거절되면 다이어그램은 그대로다.
-    - `diagram-skill.ts`: 지시문(영어, `brandText`)과 요청마다 붙는 문맥. 모델은 다이어그램을 **글로만** 읽는다. 요청마다 지금 쪽의 읽기 표가 `<diagram_page>` 안에 선택 id와 함께 가고, 그림은 만들지 않는다. 새 순서도·시퀀스·ER 등은 `insert_mermaid`를 먼저 쓰라고 적는다.
+    - `diagram-skill.ts`: 지시문(영어, 제품 이름을 직접 적는다)과 요청마다 붙는 문맥. 모델은 다이어그램을 **글로만** 읽는다. 요청마다 지금 쪽의 읽기 표가 `<diagram_page>` 안에 선택 id와 함께 가고, 그림은 만들지 않는다. 새 순서도·시퀀스·ER 등은 `insert_mermaid`를 먼저 쓰라고 적는다.
     - `AiPanel.tsx`·`AiDock.tsx`: 창과 오른쪽 끝 자리. AI 차례마다 그 차례의 호출들을 되돌리는 목록이 있다. `diagramAiHost`가 틀 쪽 실행기(`live-ops.ts`)를 도구에 잇는다.
     - `files-skill.ts`·`search-skill.ts`·`transport.ts`·`connection.ts`·`subscription-client.ts`·`lang-directive.ts`: 마인드맵 편집기의 것과 같다.
   - `i18n/app/<언어>.ts` 두 개(`en.ts`가 키 집합)와 `strings-app.ts`, AI 창의 `i18n/ai/<언어>.ts` 두 개와 `strings-ai.ts`, 둘을 언어별로 합치는 `strings.ts`, `locale.tsx`. `theme.ts`: 앱 테마 → draw.io 어두운 보기.
@@ -81,7 +81,7 @@
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/diagram`, `npm run typecheck -w @genoffice/diagram`, `npm run build -w @genoffice/diagram`(draw.io 묶음과 다리 스크립트까지).
+- 실행: `npm run test -w @seuoffice/diagram`, `npm run typecheck -w @seuoffice/diagram`, `npm run build -w @seuoffice/diagram`(draw.io 묶음과 다리 스크립트까지).
 - 바꾸면 반드시 테스트하는 것: 형식별 저장·압축·이름(`formats.test.ts`), 프로토콜 경로·끼우기·CSP(`protocol.test.ts`), 요청 허용·이동·새 창·링크(`network-guard.test.ts`), 메시지 출처와 틀 통신(`bridge-protocol.test.ts`), 기본 변경의 한 번 되돌리기·쪽 바꾸기·실패 시 원상(`apply-primitives.test.ts`, draw.io를 흉내 낸 가짜 모델), 알림 세기·인쇄 문서·시작 인자·사본·두 언어(`editor-parts.test.ts`), 뒷단의 열기·거절·저장 생략·저장 대상(`main.test.ts`, Electron은 가짜).
 - AI 창: 도구 정의가 `DIAGRAM_OPS`에서 나오는지, 읽기(지금 쪽·선택 id·다른 쪽), 모두 아니면 아무것도(거절·draw.io 실패 모두 그대로), Mermaid가 섞인 호출이 다리 요청 한 번·되돌리기 한 번인지, 변환 실패가 그 까닭과 함께 거절되는지, 문맥에 그림이 없는지(`ai-tools.test.ts`, 가짜 draw.io `tests/helpers/fake-drawio.ts`), 창의 실행과 차례 되돌리기, 두 언어(`ai-panel.test.ts`). 연결부는 가짜다. 실제 `claude`·`codex`에 닿는 테스트를 만들지 않는다. 뒷단 첨부 창구와 임시 이름(`main.test.ts`), 단계 목록과 libavoid 막기(`apply-primitives.test.ts`).
 - 열리지 않는 파일: 셸에 탭을 닫게 하는 창구(가져오기 실패, 열지 못한 파일, 열린 다이어그램과 빈 까닭의 거절, 셸이 없을 때)는 `visio-main.test.ts`, 화면 쪽 처리(`settleOpenFailure`)는 `visio-import.test.ts`, 탭을 열기 전의 판정(까닭마다, `.vsdx`)은 셸의 `tests/diagram-open-gate.test.ts`가 본다.

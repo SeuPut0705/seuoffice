@@ -3,7 +3,7 @@
  * the configuration the bridge hands it, and what is taken off its screen.
  * Data only; the bridge applies it inside the frame and the tests read it.
  */
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { DRAWIO_ORIGIN } from './bridge-protocol'
 
 /**

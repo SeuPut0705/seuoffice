@@ -1,5 +1,5 @@
 /**
- * read_hwp: the MCP tool around the shared HWP reader (@genoffice/file-parse).
+ * read_hwp: the MCP tool around the shared HWP reader (@seuoffice/file-parse).
  * The documents are built with the engine the reader uses.
  */
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'

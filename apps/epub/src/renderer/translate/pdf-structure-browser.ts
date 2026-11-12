@@ -1,5 +1,5 @@
 /**
- * The page's stand-in for `@genoffice/pdf-structure`'s package entry.
+ * The page's stand-in for `@seuoffice/pdf-structure`'s package entry.
  *
  * The book translation core of the EPUB engine (`packages/epub-engine/src/
  * translate/{job,call,prompt,language,keys}.ts`) takes its helpers from the

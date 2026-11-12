@@ -1,12 +1,12 @@
-import type { RangeBounds } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { offsetFormulaRefs } from '@genoffice/xlsx-gateway/domain/formula-shift'
+import type { RangeBounds } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { offsetFormulaRefs } from '@seuoffice/xlsx-gateway/domain/formula-shift'
 import {
   areaLookup,
   cellsDerivedFromWithheld,
   type NameDefinition,
   type ReadsSheet,
-} from '@genoffice/xlsx-gateway/gateway/formula-reads'
-import { relationshipIdOf } from '@genoffice/xlsx-gateway/gateway/xlsx-namespace'
+} from '@seuoffice/xlsx-gateway/gateway/formula-reads'
+import { relationshipIdOf } from '@seuoffice/xlsx-gateway/gateway/xlsx-namespace'
 
 /**
  * The formula cells of a workbook whose value comes from a withheld cell.

@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 
 /**
  * The PDF tools window: pick a task first, then the files it needs, then get

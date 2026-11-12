@@ -2,12 +2,12 @@
 // entries against the engine's copy of the workbook, and the engine's
 // save_archive writes the new package with untouched entries raw-copied.
 // Mirrors saveWorkbookViaSidecar (xlsx-package-io), which needs Node's file system.
-import { planCellEditsToXlsx, type EntrySource } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { planCellEditsToXlsx, type EntrySource } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   assertManifestPreserved,
   type ArchiveEntry,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
-import { MAX_PATCH_ENTRY_BYTES } from '@genoffice/xlsx-gateway/shared/edit-schemas'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-package-io'
+import { MAX_PATCH_ENTRY_BYTES } from '@seuoffice/xlsx-gateway/shared/edit-schemas'
 import { File } from '@seuoffice/web-platform/wasi'
 import type { ResolvedWorkbookSave } from '../main/workbook-save-resolve'
 import { readEntryText, type EngineFiles } from './xlsx-entries'

@@ -38,15 +38,15 @@
  * formula typed after the hide and a hide made after the formula are both
  * covered by the next read.
  */
-import type { RangeBounds } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { columnLabel, parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { offsetFormulaRefs } from '@genoffice/xlsx-gateway/domain/formula-shift'
+import type { RangeBounds } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { columnLabel, parseRange } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { offsetFormulaRefs } from '@seuoffice/xlsx-gateway/domain/formula-shift'
 import {
   areaLookup,
   cellsDerivedFromWithheld,
   type NameDefinition,
   type ReadsSheet,
-} from '@genoffice/xlsx-gateway/gateway/formula-reads'
+} from '@seuoffice/xlsx-gateway/gateway/formula-reads'
 import { CommandType } from '@univerjs/core'
 import {
   FormulaDataModel,

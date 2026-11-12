@@ -66,19 +66,19 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 }))
 
 const generateImageTool = vi.fn()
-vi.mock('@genoffice/ai-search', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-search')>()),
+vi.mock('@seuoffice/ai-search', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-search')>()),
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
 }))
 
 // no status check either: registering the subscription channels would look for the CLIs
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
 
-import { abortMediaCalls } from '@genoffice/ai-search'
+import { abortMediaCalls } from '@seuoffice/ai-search'
 import { createSheetsView } from '../src/main/sheets-main'
 
 /** a request of a new tab that stays in flight until the test answers it */

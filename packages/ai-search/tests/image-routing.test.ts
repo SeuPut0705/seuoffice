@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider')>()),
+vi.mock('@seuoffice/ai-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider')>()),
   generateImageWithProvider: vi.fn(),
 }))
 
@@ -9,8 +9,8 @@ import {
   AiRunError,
   generateImageWithProvider,
   setCodexImageGenerationAvailable,
-} from '@genoffice/ai-provider'
-import { readGeneratedImage } from '@genoffice/electron-utils/generated-images'
+} from '@seuoffice/ai-provider'
+import { readGeneratedImage } from '@seuoffice/electron-utils/generated-images'
 import { registerCodexImageGenerator, type CodexImageGenerator } from '../src/codex-image-generator'
 import { generateImageTool } from '../src/media-tools'
 import type { AiToolCallContext } from '../src/tool-routing'

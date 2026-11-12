@@ -1,7 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 
-const bundled = ['@genoffice/i18n', '@genoffice/electron-utils', '@genoffice/drawio-model']
+const bundled = ['@seuoffice/i18n', '@seuoffice/electron-utils', '@seuoffice/drawio-model']
 
 export default defineConfig({
   // workspace packages ship as TS source and must be bundled

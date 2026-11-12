@@ -6,7 +6,7 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 // environment-free modules (see src/renderer/translate/pdf-structure-browser.ts).
 const pageAlias = [
   {
-    find: /^@genoffice\/pdf-structure$/,
+    find: /^@seuoffice\/pdf-structure$/,
     replacement: fileURLToPath(
       new URL('./src/renderer/translate/pdf-structure-browser.ts', import.meta.url),
     ),
@@ -14,12 +14,12 @@ const pageAlias = [
 ]
 
 export default defineConfig({
-  // @genoffice/i18n and @genoffice/electron-utils ship as TS source — must be bundled
+  // @seuoffice/i18n and @seuoffice/electron-utils ship as TS source — must be bundled
   main: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/i18n', '@genoffice/electron-utils'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@seuoffice/i18n', '@seuoffice/electron-utils'] })],
   },
   preload: {
-    plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/i18n', '@genoffice/electron-utils'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@seuoffice/i18n', '@seuoffice/electron-utils'] })],
   },
   renderer: {
     plugins: [react()],

@@ -18,8 +18,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
 import {
   AiConnectPrompt,
   AiFirstConnectionNotice,
@@ -27,7 +27,7 @@ import {
   aiProviderDisplayName,
   useAiSendGate,
   type AiModelPickerBridge,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { applyStoredAiReadings } from '../../../../../packages/pdf-structure/src/ai-read'
 import {
   estimateHighlightJob,

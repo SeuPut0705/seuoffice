@@ -1,4 +1,4 @@
-import { createI18n, defineStrings } from '@genoffice/i18n'
+import { createI18n, defineStrings } from '@seuoffice/i18n'
 
 /**
  * Text the main process shows for Google Drive: the page the browser shows
@@ -7,9 +7,9 @@ import { createI18n, defineStrings } from '@genoffice/i18n'
  */
 const en = {
   pageDoneTitle: 'Google Drive is connected',
-  pageDoneBody: 'You can close this tab and go back to GenOffice.',
+  pageDoneBody: 'You can close this tab and go back to SeuOffice.',
   pageFailedTitle: 'Google Drive was not connected',
-  pageFailedBody: 'Go back to GenOffice and try again.',
+  pageFailedBody: 'Go back to SeuOffice and try again.',
   dialogTitle: 'Google Drive',
   askChanged: '“{name}” was changed in Google Drive after you opened it.',
   askReadOnly: 'You can’t edit “{name}” in Google Drive.',
@@ -25,7 +25,7 @@ const en = {
   noticeUploadFailed:
     '“{name}” could not be uploaded to Google Drive. Your changes are saved on this PC, and the app will try again.',
   pagePickedTitle: 'Files chosen',
-  pagePickedBody: 'You can close this tab and go back to GenOffice.',
+  pagePickedBody: 'You can close this tab and go back to SeuOffice.',
   freeAiDocRefusal:
     'This document is a copy of a Google Drive file, and the AI in use is a free connection that may train on what it receives. Choose another AI to work on this document.',
   ok: 'OK',
@@ -37,9 +37,9 @@ export const DRIVE_MAIN_STRINGS = defineStrings({
   en,
   ko: {
     pageDoneTitle: 'Google 드라이브를 연결했습니다',
-    pageDoneBody: '이 탭을 닫고 GenOffice로 돌아가세요.',
+    pageDoneBody: '이 탭을 닫고 SeuOffice로 돌아가세요.',
     pageFailedTitle: 'Google 드라이브를 연결하지 못했습니다',
-    pageFailedBody: 'GenOffice로 돌아가 다시 시도하세요.',
+    pageFailedBody: 'SeuOffice로 돌아가 다시 시도하세요.',
     dialogTitle: 'Google 드라이브',
     askChanged: '“{name}”을(를) 연 뒤에 Google 드라이브에서 누군가 고쳤습니다.',
     askReadOnly: 'Google 드라이브에서 “{name}”을(를) 고칠 권한이 없습니다.',
@@ -55,7 +55,7 @@ export const DRIVE_MAIN_STRINGS = defineStrings({
     noticeUploadFailed:
       '“{name}”을(를) Google 드라이브에 올리지 못했습니다. 고친 내용은 이 PC에 저장돼 있고, 앱이 다시 올려 봅니다.',
     pagePickedTitle: '파일을 골랐습니다',
-    pagePickedBody: '이 탭을 닫고 GenOffice로 돌아가세요.',
+    pagePickedBody: '이 탭을 닫고 SeuOffice로 돌아가세요.',
     freeAiDocRefusal:
       '이 문서는 Google 드라이브 파일의 사본이고, 지금 쓰는 AI는 받은 내용을 학습에 쓸 수 있는 무료 연결입니다. 이 문서는 다른 AI를 골라 맡기세요.',
     ok: '확인',

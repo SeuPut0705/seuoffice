@@ -3,13 +3,13 @@ import {
   AiPanelSideButton,
   AiModelPicker,
   type AiModelPickerBridge,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   AI_PANEL_WIDTH_DEFAULT,
   clampAiPanelWidth,
   loadAiPanelWidth,
   saveAiPanelWidth,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
 import {
@@ -17,7 +17,7 @@ import {
   composeWithDrive,
   windowMcpState,
   windowMcpUsableServers,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import {
   isSubscriptionProvider,
   localModelCapabilities,
@@ -25,7 +25,7 @@ import {
   type AiSettings,
   type AiSubscriptionProviderId,
   type AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   AiBlockedNotice,
   AiComposer,
@@ -68,9 +68,9 @@ import {
   type ProjectMemoryLine,
   type SkillChipRef,
   type SkillUse,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
-import { createFileNav, Markdown } from '@genoffice/ui'
+import { createFileNav, Markdown } from '@seuoffice/ui'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
@@ -87,7 +87,7 @@ import { useSubscriptionConnection } from './useSubscriptionConnection'
 import { PDF_NAV_SCHEME, parsePdfNavHref, type PdfNavTarget } from './pdf-nav'
 import type { FileOpConfirm, PdfAiDeps, PdfAppDeps } from './tools'
 import { withFollowUp, type FollowUpSelection } from '../reading/passage-cards'
-import { isRtlLang } from '@genoffice/i18n'
+import { isRtlLang } from '@seuoffice/i18n'
 
 /** Another editor's tool records on a reopened message, shown as one line */
 type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>

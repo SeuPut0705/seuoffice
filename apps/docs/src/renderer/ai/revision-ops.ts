@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
-import { revisionDateBefore, revisionDateMs } from '@genoffice/docx-engine'
+import { revisionDateBefore, revisionDateMs } from '@seuoffice/docx-engine'
 import {
   applyRevisions,
   collectRevisions,

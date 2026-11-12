@@ -170,7 +170,7 @@ describe('run-started events', () => {
   it('shares one store across bundled copies of the module', () => {
     queueGenerateHandoff(5, handoff())
     const holder = (globalThis as Record<symbol, { queued: Map<number, unknown> }>)[
-      Symbol.for('genoffice.generate-handoff')
+      Symbol.for('seuoffice.generate-handoff')
     ]
     expect(holder.queued.has(5)).toBe(true)
   })

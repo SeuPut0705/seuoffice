@@ -3,8 +3,8 @@
  * metrics. Shared by the parity runner and the invariant suite so both slice
  * exactly the same input.
  */
-import { readSections } from '@genoffice/docx-engine'
-import type { ParsedDoc, DocGrid, ParaFormat, StyleDisplay } from '@genoffice/docx-engine'
+import { readSections } from '@seuoffice/docx-engine'
+import type { ParsedDoc, DocGrid, ParaFormat, StyleDisplay } from '@seuoffice/docx-engine'
 import {
   sectionColGeom,
   sectionColumns,

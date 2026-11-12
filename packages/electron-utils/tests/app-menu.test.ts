@@ -21,7 +21,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
+import { PRODUCT_NAME, setUiLang } from '@seuoffice/i18n'
 import {
   aboutMenuItem,
   appMenuLabels,

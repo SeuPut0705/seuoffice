@@ -43,7 +43,7 @@ import {
   type SummaryStyleKey,
   type ViewBranchLine,
   type ViewCurve,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { emptyMeta, type MapArrow, type MapNodeMeta, type MapSummary } from '../document/convert'
 import { curveToDeltas, relationshipArrowStyle, relationshipPaint } from './relationship-shapes'
 import type {

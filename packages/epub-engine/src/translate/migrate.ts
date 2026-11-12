@@ -6,7 +6,7 @@
  * moves exactly the blocks whose key the saved book still has
  * (`keepBlockKeys`); the translation of an edited block stays behind.
  */
-import type { MigrateInput, TranslationBlockKey } from '@genoffice/pdf-structure/store'
+import type { MigrateInput, TranslationBlockKey } from '@seuoffice/pdf-structure/store'
 import type { EpubBook } from '../types'
 import { EPUB_METADATA_FINGERPRINT, epubChapterFingerprint } from './keys'
 import { epubTranslationUnits } from './units'

@@ -5,7 +5,7 @@
  * the two preload calls that validates like the real store does.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { listSlideTemplates } from '@genoffice/pipelines/slides/templates'
+import { listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
 import {
   createTemplateSelectionState,
   resolveAppliedTemplate,

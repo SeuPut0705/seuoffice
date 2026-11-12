@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import type { LegacyDocumentChat, ProjectChatListItem, ProjectId } from '@genoffice/project-store'
+import type { Lang } from '@seuoffice/i18n'
+import type { LegacyDocumentChat, ProjectChatListItem, ProjectId } from '@seuoffice/project-store'
 import { aiModelPopoverStyle } from './AiModelPicker'
 import { IconPencil, IconTrash } from './icons'
 import { revealInList, useDismissablePopover } from './popover-dismiss'

@@ -3,7 +3,7 @@
  * docs-main accepted before this list moved here is the baseline: the AI panel
  * shows what may be attached, so every editor must accept the same files.
  */
-import { detectDiagramFormat } from '@genoffice/drawio-model'
+import { detectDiagramFormat } from '@seuoffice/drawio-model'
 
 /** plain-text extensions read as UTF-8 */
 const TEXT_EXTS = [

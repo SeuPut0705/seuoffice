@@ -33,16 +33,16 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
 import type { TranslationMode } from '../../../../../packages/pdf-structure/src/store/job-keys'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   AiConnectPrompt,
   AiFirstConnectionNotice,
   aiProviderDisplayName,
   useAiSendGate,
   type AiModelPickerBridge,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type { TFunc } from '../i18n/locale'
 import { useSubscriptionConnection } from '../ai/useSubscriptionConnection'
 import type { DocumentJobSession } from '../doc-jobs/job-session'

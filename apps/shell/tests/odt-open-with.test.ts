@@ -48,7 +48,7 @@ const UPSTREAM_PROGIDS = ['Word Document', 'Excel Workbook', 'PowerPoint Present
 
 describe('the ODT "Open with" registration', () => {
   it('uses a ProgId of this product that the upstream app never registers', () => {
-    expect(nsh).toContain(`!define GENOFFICE_ODT_PROGID "${PROGID}"`)
+    expect(nsh).toContain(`!define SEUOFFICE_ODT_PROGID "${PROGID}"`)
     expect(PROGID).toMatch(/^seuoffice\.[A-Za-z][A-Za-z0-9]*$/)
     // Windows limits a ProgId to 39 characters
     expect(PROGID.length).toBeLessThanOrEqual(39)
@@ -57,8 +57,8 @@ describe('the ODT "Open with" registration', () => {
   })
 
   it('writes the ProgId with an open command and an icon, and offers it for .odt', () => {
-    const body = instructions('GenOfficeRegisterOpenWithOdt')
-    const progKey = 'Software\\Classes\\${GENOFFICE_ODT_PROGID}'
+    const body = instructions('SeuOfficeRegisterOpenWithOdt')
+    const progKey = 'Software\\Classes\\${SEUOFFICE_ODT_PROGID}'
     expect(body).toContain(
       `WriteRegStr SHELL_CONTEXT "${progKey}\\shell\\open\\command" "" '"$appExe" "%1"'`,
     )
@@ -66,34 +66,34 @@ describe('the ODT "Open with" registration', () => {
       `WriteRegStr SHELL_CONTEXT "${progKey}\\DefaultIcon" "" "$INSTDIR\\resources\\docx.ico"`,
     )
     expect(body).toContain(
-      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.odt\\OpenWithProgids" "${GENOFFICE_ODT_PROGID}"',
+      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.odt\\OpenWithProgids" "${SEUOFFICE_ODT_PROGID}"',
     )
   })
 
   it('never writes the default value of .odt or any other .odt key', () => {
-    const odtWrites = instructions('GenOfficeRegisterOpenWithOdt').filter((line) =>
+    const odtWrites = instructions('SeuOfficeRegisterOpenWithOdt').filter((line) =>
       line.includes('\\.odt'),
     )
     // the OpenWithProgids value is the only thing written under .odt
     expect(odtWrites).toEqual([
-      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.odt\\OpenWithProgids" "${GENOFFICE_ODT_PROGID}"',
+      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.odt\\OpenWithProgids" "${SEUOFFICE_ODT_PROGID}"',
     ])
     expect(nsh).not.toMatch(/"Software\\Classes\\\.odt" ""/)
     expect(nsh).not.toMatch(/\.odt\\ShellNew/)
   })
 
   it('removes only its own value and its own ProgId on uninstall', () => {
-    expect(instructions('GenOfficeUnregisterOpenWithOdt')).toEqual([
-      'DeleteRegValue SHELL_CONTEXT "Software\\Classes\\.odt\\OpenWithProgids" "${GENOFFICE_ODT_PROGID}"',
-      'DeleteRegKey SHELL_CONTEXT "Software\\Classes\\${GENOFFICE_ODT_PROGID}"',
+    expect(instructions('SeuOfficeUnregisterOpenWithOdt')).toEqual([
+      'DeleteRegValue SHELL_CONTEXT "Software\\Classes\\.odt\\OpenWithProgids" "${SEUOFFICE_ODT_PROGID}"',
+      'DeleteRegKey SHELL_CONTEXT "Software\\Classes\\${SEUOFFICE_ODT_PROGID}"',
     ])
     // the .odt key and its OpenWithProgids list belong to other programs too
     expect(nsh).not.toMatch(/DeleteRegKey[^\n]*\\\.odt/)
   })
 
   it('runs the registration on install and the removal on uninstall', () => {
-    expect(macroBody('customInstall')).toContain('!insertmacro GenOfficeRegisterOpenWithOdt')
-    expect(macroBody('customUnInstall')).toContain('!insertmacro GenOfficeUnregisterOpenWithOdt')
+    expect(macroBody('customInstall')).toContain('!insertmacro SeuOfficeRegisterOpenWithOdt')
+    expect(macroBody('customUnInstall')).toContain('!insertmacro SeuOfficeUnregisterOpenWithOdt')
     // the ProgId leans on the Word icon the installer places for the .docx
     // association, so that association and its icon must stay
     const win = loadBuilderConfig('win32')

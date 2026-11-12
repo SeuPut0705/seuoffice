@@ -13,7 +13,7 @@ import {
   normalizeLang,
   requestedLanguage,
   setUiLang,
-} from '@genoffice/i18n'
+} from '@seuoffice/i18n'
 import { XlsxSidecarClient } from '../src/main/xlsx-sidecar-client'
 
 // Builtin number formats 27-36 and 50-58 record no pattern in the file; the

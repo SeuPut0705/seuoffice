@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { ShapeRenderNode } from '@genoffice/pptx-render'
+import type { ShapeRenderNode } from '@seuoffice/pptx-render'
 import { caseChangedParagraphs, changeCase } from '../src/renderer/text-case'
 
 describe('changeCase', () => {

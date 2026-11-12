@@ -10,7 +10,7 @@
  * fonts: Aptos Display Regular/Bold/Italic/Bold Italic (Word cloud-font cache); Carlito-Regular/Bold/Italic/BoldItalic.ttf */
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 98.7%;
   ascent-override: 75.89%;
   descent-override: 25.3%;
@@ -21,7 +21,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 47.4%;
   unicode-range: U+007C;
   ascent-override: 158.07%;
@@ -33,7 +33,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 75.2%;
   unicode-range: U+0021;
   ascent-override: 99.61%;
@@ -45,7 +45,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 84.9%;
   unicode-range: U+0020, U+00A0;
   ascent-override: 88.22%;
@@ -57,7 +57,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 87.8%;
   unicode-range: U+002F, U+005C, U+006A, U+0072;
   ascent-override: 85.38%;
@@ -69,7 +69,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 89.4%;
   unicode-range: U+004D, U+0074;
   ascent-override: 83.79%;
@@ -81,7 +81,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 91.3%;
   unicode-range: U+0022, U+0026, U+003A-003B, U+0069;
   ascent-override: 82.03%;
@@ -93,7 +93,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 92.3%;
   unicode-range: U+0049, U+005F, U+0066-0067, U+2013;
   ascent-override: 81.14%;
@@ -105,7 +105,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 94.1%;
   unicode-range: U+2018-2019;
   ascent-override: 79.63%;
@@ -117,7 +117,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 95.6%;
   unicode-range: U+0027, U+005B, U+005D, U+0068, U+006E, U+0075-0076, U+0079;
   ascent-override: 78.39%;
@@ -129,7 +129,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 97%;
   unicode-range: U+0028-0029, U+002E, U+0054, U+006F;
   ascent-override: 77.28%;
@@ -141,7 +141,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 97.9%;
   unicode-range: U+006B;
   ascent-override: 76.5%;
@@ -153,7 +153,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 99.8%;
   unicode-range: U+0041, U+0056, U+006D, U+0077, U+201C-201D;
   ascent-override: 75.04%;
@@ -165,7 +165,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 101.3%;
   unicode-range: U+0055, U+0061, U+0078;
   ascent-override: 73.99%;
@@ -177,7 +177,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 102.7%;
   unicode-range: U+0030-0039, U+0051;
   ascent-override: 72.93%;
@@ -189,7 +189,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 104.6%;
   unicode-range: U+002B, U+003D, U+003F, U+004E-004F;
   ascent-override: 71.61%;
@@ -201,7 +201,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 106%;
   unicode-range: U+0042, U+0044, U+0047-0048, U+004B, U+0058, U+006C;
   ascent-override: 70.71%;
@@ -213,7 +213,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 107.6%;
   unicode-range: U+0050, U+0052, U+007A;
   ascent-override: 69.65%;
@@ -225,7 +225,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 109.4%;
   unicode-range: U+0059-005A;
   ascent-override: 68.48%;
@@ -237,7 +237,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 110.3%;
   unicode-range: U+0045-0046;
   ascent-override: 67.95%;
@@ -249,7 +249,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 113.4%;
   unicode-range: U+002D;
   ascent-override: 66.09%;
@@ -261,7 +261,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 114.8%;
   unicode-range: U+0025, U+004C;
   ascent-override: 65.25%;
@@ -273,7 +273,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 116%;
   unicode-range: U+0063;
   ascent-override: 64.6%;
@@ -285,7 +285,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 118.1%;
   unicode-range: U+0053, U+0073;
   ascent-override: 63.46%;
@@ -297,7 +297,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 122.4%;
   unicode-range: U+0043;
   ascent-override: 61.2%;
@@ -309,7 +309,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 102.2%;
   ascent-override: 73.33%;
   descent-override: 24.44%;
@@ -320,7 +320,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 52.7%;
   unicode-range: U+007C;
   ascent-override: 142.11%;
@@ -332,7 +332,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 79.9%;
   unicode-range: U+0021;
   ascent-override: 93.78%;
@@ -344,7 +344,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 85%;
   unicode-range: U+0020, U+00A0;
   ascent-override: 88.17%;
@@ -356,7 +356,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 89.6%;
   unicode-range: U+002F, U+005C;
   ascent-override: 83.58%;
@@ -368,7 +368,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 90.5%;
   unicode-range: U+004D;
   ascent-override: 82.8%;
@@ -380,7 +380,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 92.3%;
   unicode-range: U+0026, U+005F, U+2013;
   ascent-override: 81.21%;
@@ -392,7 +392,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 94.1%;
   unicode-range: U+003A-003B, U+006A;
   ascent-override: 79.6%;
@@ -404,7 +404,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 95.7%;
   unicode-range: U+0022, U+0072, U+0074;
   ascent-override: 78.27%;
@@ -416,7 +416,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 97.4%;
   unicode-range: U+002E, U+0069;
   ascent-override: 76.9%;
@@ -428,7 +428,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 98.9%;
   unicode-range: U+0027, U+0067-0068, U+006E-006F, U+0075;
   ascent-override: 75.78%;
@@ -440,7 +440,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 100.3%;
   unicode-range: U+0041, U+0049, U+0054, U+0062, U+0064, U+0066, U+0070-0071, U+0076-0077, U+0079;
   ascent-override: 74.72%;
@@ -452,7 +452,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 101.2%;
   unicode-range: U+002C, U+0056-0057;
   ascent-override: 74.06%;
@@ -464,7 +464,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 103.6%;
   unicode-range: U+004F, U+005B, U+005D, U+006B;
   ascent-override: 72.32%;
@@ -476,7 +476,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 105.2%;
   unicode-range: U+004A, U+004E, U+2018-2019;
   ascent-override: 71.22%;
@@ -488,7 +488,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 106.2%;
   unicode-range: U+0030-0039, U+0042, U+0078;
   ascent-override: 70.58%;
@@ -500,7 +500,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 107.6%;
   unicode-range: U+0028-0029, U+002B, U+003D, U+003F, U+0044, U+0047-0048, U+0052, U+0058;
   ascent-override: 69.62%;
@@ -512,7 +512,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 109.6%;
   unicode-range: U+0050, U+0059;
   ascent-override: 68.33%;
@@ -524,7 +524,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 109.8%;
   unicode-range: U+004B;
   ascent-override: 68.21%;
@@ -536,7 +536,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 112.3%;
   unicode-range: U+0045-0046, U+007A;
   ascent-override: 66.71%;
@@ -548,7 +548,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 113.5%;
   unicode-range: U+005A, U+006C, U+201C-201D;
   ascent-override: 66.03%;
@@ -560,7 +560,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 114.7%;
   unicode-range: U+0025;
   ascent-override: 65.33%;
@@ -572,7 +572,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 115.8%;
   unicode-range: U+004C;
   ascent-override: 64.69%;
@@ -584,7 +584,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 118.7%;
   unicode-range: U+002D;
   ascent-override: 63.13%;
@@ -596,7 +596,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 120.9%;
   unicode-range: U+0053, U+0063, U+0073;
   ascent-override: 61.99%;
@@ -608,7 +608,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 127%;
   unicode-range: U+0043;
   ascent-override: 59%;
@@ -620,7 +620,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 99.2%;
   ascent-override: 75.54%;
   descent-override: 25.18%;
@@ -631,7 +631,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 48.4%;
   unicode-range: U+007C;
   ascent-override: 154.66%;
@@ -643,7 +643,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 75.2%;
   unicode-range: U+0021;
   ascent-override: 99.63%;
@@ -655,7 +655,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 85%;
   unicode-range: U+0020, U+0067, U+00A0;
   ascent-override: 88.13%;
@@ -667,7 +667,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 87.1%;
   unicode-range: U+002F, U+005C;
   ascent-override: 86.06%;
@@ -679,7 +679,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 87.5%;
   unicode-range: U+006A;
   ascent-override: 85.59%;
@@ -691,7 +691,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 89.4%;
   unicode-range: U+0022, U+004D, U+0072, U+0074;
   ascent-override: 83.76%;
@@ -703,7 +703,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 91.3%;
   unicode-range: U+0026, U+0069;
   ascent-override: 82.1%;
@@ -715,7 +715,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 92.2%;
   unicode-range: U+003A-003B, U+0049, U+005F, U+0066, U+2013;
   ascent-override: 81.29%;
@@ -727,7 +727,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 94.6%;
   unicode-range: U+0061;
   ascent-override: 79.19%;
@@ -739,7 +739,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 95.7%;
   unicode-range: U+0027, U+005B, U+005D, U+0079;
   ascent-override: 78.26%;
@@ -751,7 +751,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 96.9%;
   unicode-range: U+0028-0029, U+002E, U+0054, U+0076;
   ascent-override: 77.33%;
@@ -763,7 +763,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 97.9%;
   unicode-range: U+0068, U+006B, U+006E, U+0075;
   ascent-override: 76.52%;
@@ -775,7 +775,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 100.3%;
   unicode-range: U+0056, U+0062, U+0064, U+006D, U+0070-0071;
   ascent-override: 74.68%;
@@ -787,7 +787,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 101.1%;
   unicode-range: U+0055, U+0078;
   ascent-override: 74.14%;
@@ -799,7 +799,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 102.7%;
   unicode-range: U+0030-0039, U+0065, U+201C-201D;
   ascent-override: 72.95%;
@@ -811,7 +811,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 104.5%;
   unicode-range: U+002B, U+003D, U+003F, U+004E, U+0051;
   ascent-override: 71.67%;
@@ -823,7 +823,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 105.9%;
   unicode-range: U+0042, U+0047-0048, U+004B, U+004F, U+0052, U+0058, U+006C;
   ascent-override: 70.76%;
@@ -835,7 +835,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 107.3%;
   unicode-range: U+0044, U+0050, U+007A;
   ascent-override: 69.85%;
@@ -847,7 +847,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 109.3%;
   unicode-range: U+0059-005A;
   ascent-override: 68.56%;
@@ -859,7 +859,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 110.2%;
   unicode-range: U+0045-0046;
   ascent-override: 67.96%;
@@ -871,7 +871,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 113.2%;
   unicode-range: U+002D;
   ascent-override: 66.2%;
@@ -883,7 +883,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 114.7%;
   unicode-range: U+004C;
   ascent-override: 65.34%;
@@ -895,7 +895,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 117.9%;
   unicode-range: U+0063, U+0073;
   ascent-override: 63.53%;
@@ -907,7 +907,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 120.2%;
   unicode-range: U+0053;
   ascent-override: 62.35%;
@@ -919,7 +919,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 122.2%;
   unicode-range: U+0025;
   ascent-override: 61.3%;
@@ -931,7 +931,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 125.8%;
   unicode-range: U+0043;
   ascent-override: 59.54%;
@@ -943,7 +943,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 102.6%;
   ascent-override: 73.03%;
   descent-override: 24.34%;
@@ -954,7 +954,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 56.2%;
   unicode-range: U+007C;
   ascent-override: 133.31%;
@@ -966,7 +966,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 79.9%;
   unicode-range: U+0021;
   ascent-override: 93.78%;
@@ -978,7 +978,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 85%;
   unicode-range: U+0020, U+00A0;
   ascent-override: 88.17%;
@@ -990,7 +990,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 88.6%;
   unicode-range: U+002F, U+005C;
   ascent-override: 84.54%;
@@ -1002,7 +1002,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 89.1%;
   unicode-range: U+0067;
   ascent-override: 84.09%;
@@ -1014,7 +1014,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 90.9%;
   unicode-range: U+0022, U+004D;
   ascent-override: 82.39%;
@@ -1026,7 +1026,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 92%;
   unicode-range: U+005F, U+2013;
   ascent-override: 81.45%;
@@ -1038,7 +1038,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 94%;
   unicode-range: U+0026, U+003A, U+006A;
   ascent-override: 79.72%;
@@ -1050,7 +1050,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 95.7%;
   unicode-range: U+003B, U+0074;
   ascent-override: 78.29%;
@@ -1062,7 +1062,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 97%;
   unicode-range: U+002E, U+0061, U+0069, U+0072;
   ascent-override: 77.25%;
@@ -1074,7 +1074,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 99%;
   unicode-range: U+0027;
   ascent-override: 75.7%;
@@ -1086,7 +1086,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 100.4%;
   unicode-range: U+0041, U+0049, U+0054, U+0066, U+0068, U+006E-006F, U+0075-0077, U+0079;
   ascent-override: 74.63%;
@@ -1098,7 +1098,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 101.1%;
   unicode-range: U+002C, U+0056-0057;
   ascent-override: 74.09%;
@@ -1110,7 +1110,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 103.6%;
   unicode-range: U+0051, U+006B;
   ascent-override: 72.29%;
@@ -1122,7 +1122,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 104.5%;
   unicode-range: U+004A, U+004F, U+0065, U+006D;
   ascent-override: 71.67%;
@@ -1134,7 +1134,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 106%;
   unicode-range: U+0030-0039, U+0042, U+004E, U+0078;
   ascent-override: 70.68%;
@@ -1146,7 +1146,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 107.5%;
   unicode-range: U+0028-0029, U+002B, U+003D, U+003F, U+0044, U+0047-0048, U+0052, U+0058, U+2018-2019;
   ascent-override: 69.67%;
@@ -1158,7 +1158,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 109.6%;
   unicode-range: U+0050, U+0059;
   ascent-override: 68.36%;
@@ -1170,7 +1170,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 109.8%;
   unicode-range: U+004B;
   ascent-override: 68.22%;
@@ -1182,7 +1182,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 112.3%;
   unicode-range: U+0045-0046, U+007A;
   ascent-override: 66.71%;
@@ -1194,7 +1194,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 113.3%;
   unicode-range: U+005A, U+006C;
   ascent-override: 66.12%;
@@ -1206,7 +1206,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 114.4%;
   unicode-range: U+201C-201D;
   ascent-override: 65.48%;
@@ -1218,7 +1218,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 115.8%;
   unicode-range: U+004C;
   ascent-override: 64.69%;
@@ -1230,7 +1230,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 118.5%;
   unicode-range: U+002D;
   ascent-override: 63.22%;
@@ -1242,7 +1242,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 122.6%;
   unicode-range: U+0053, U+0073;
   ascent-override: 61.12%;
@@ -1254,7 +1254,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 123.8%;
   unicode-range: U+0063;
   ascent-override: 60.51%;
@@ -1266,7 +1266,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 126%;
   unicode-range: U+0025;
   ascent-override: 59.45%;
@@ -1278,7 +1278,7 @@
 }
 @font-face {
   font-family: 'Aptos Display GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 130.5%;
   unicode-range: U+0043;
   ascent-override: 57.43%;
@@ -1322,7 +1322,7 @@
  * fonts: Aptos.ttf, Aptos-Bold.ttf, Aptos-Italic.ttf, Aptos-Bold-Italic.ttf (Word DFonts); Carlito-Regular/Bold/Italic/BoldItalic.ttf */
 @font-face {
   font-family: 'Aptos GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 106.3%;
   ascent-override: 75.15%;
   descent-override: 25.05%;
@@ -1333,7 +1333,7 @@
 }
 @font-face {
   font-family: 'Aptos GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 110.1%;
   ascent-override: 72.52%;
   descent-override: 24.17%;
@@ -1344,7 +1344,7 @@
 }
 @font-face {
   font-family: 'Aptos GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 106.7%;
   ascent-override: 74.88%;
   descent-override: 24.96%;
@@ -1355,7 +1355,7 @@
 }
 @font-face {
   font-family: 'Aptos GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 110.4%;
   ascent-override: 72.37%;
   descent-override: 24.12%;
@@ -1411,7 +1411,7 @@
  * fonts: Aptos-Narrow.ttf, Aptos-Narrow-Bold.ttf, Aptos-Narrow-Italic.ttf, Aptos-Narrow-Bold-Italic.ttf (Word DFonts); Carlito-Regular/Bold/Italic/BoldItalic.ttf */
 @font-face {
   font-family: 'Aptos Narrow GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 97.7%;
   ascent-override: 76.76%;
   descent-override: 25.59%;
@@ -1422,7 +1422,7 @@
 }
 @font-face {
   font-family: 'Aptos Narrow GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   size-adjust: 99.8%;
   ascent-override: 75.15%;
   descent-override: 25.05%;
@@ -1433,7 +1433,7 @@
 }
 @font-face {
   font-family: 'Aptos Narrow GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 97.7%;
   ascent-override: 76.77%;
   descent-override: 25.59%;
@@ -1444,7 +1444,7 @@
 }
 @font-face {
   font-family: 'Aptos Narrow GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   size-adjust: 98.8%;
   ascent-override: 75.87%;
   descent-override: 25.29%;
@@ -2592,7 +2592,7 @@
  * fonts: Calibri Light (Word DFonts: calibril.ttf, calibrili.ttf); Carlito */
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 98.9%;
   font-weight: normal;
   font-style: normal;
@@ -2600,7 +2600,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 94.5%;
   unicode-range: U+0022, U+002F, U+005C, U+007B, U+007D;
   font-weight: normal;
@@ -2609,7 +2609,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 96.9%;
   unicode-range: U+0027, U+002E, U+0041, U+0049, U+004B, U+0058-0059, U+005B, U+005D, U+0069-006C, U+0076, U+0078-0079, U+00A8, U+00AB, U+00B7, U+00BB, U+00C0-00C5, U+00CC-00CF, U+00DD, U+00DF, U+00EC-00EF, U+00FD, U+00FF;
   font-weight: normal;
@@ -2618,7 +2618,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 98.6%;
   unicode-range: U+0025-0026, U+0028-0029, U+002C, U+003A-003B, U+0042, U+0044, U+004A, U+004D-0053, U+0055-0057, U+005A, U+0060-0062, U+0064, U+0066, U+0068, U+006D-0075, U+0077, U+007C, U+00AA, U+00B4-00B6, U+00B9-00BA, U+00BC-00BE, U+00D0-00D6, U+00D8-00DC, U+00DE, U+00E0-00E5, U+00F0-00F6, U+00F8-00FC, U+00FE, U+2018-201E, U+2026;
   font-weight: normal;
@@ -2627,7 +2627,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 99.9%;
   unicode-range: U+0020-0021, U+0023-0024, U+002A-002B, U+002D, U+0030-0039, U+003C-0040, U+0043, U+0045-0048, U+004C, U+0054, U+005E-005F, U+0063, U+0065, U+0067, U+007A, U+007E, U+00A1-00A7, U+00A9, U+00AC, U+00AE-00B3, U+00BF, U+00C6-00CB, U+00D7, U+00E6-00EB, U+00F7, U+2013-2015, U+2017, U+2020-2022, U+20AC;
   font-weight: normal;
@@ -2636,7 +2636,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   size-adjust: 100.8%;
   unicode-range: U+00B8;
   font-weight: normal;
@@ -2645,7 +2645,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 98.6%;
   font-weight: normal;
   font-style: italic;
@@ -2653,7 +2653,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 93.9%;
   unicode-range: U+002F, U+005C;
   font-weight: normal;
@@ -2662,7 +2662,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 95.9%;
   unicode-range: U+0022, U+0059, U+0069-006A, U+006C, U+007B, U+007D, U+00DD, U+00EC-00EF;
   font-weight: normal;
@@ -2671,7 +2671,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 97.3%;
   unicode-range: U+0027, U+002C, U+002E, U+0041, U+0049-004B, U+0052, U+0056, U+0058, U+005B, U+005D, U+0066, U+006B, U+0076-0079, U+00A8, U+00AB, U+00B7, U+00BB, U+00BE, U+00C0-00C5, U+00CC-00CF, U+00DF, U+00FD, U+00FF, U+2018-201E;
   font-weight: normal;
@@ -2680,7 +2680,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 98.7%;
   unicode-range: U+0025-0026, U+0028-0029, U+003A-003B, U+0042, U+0044, U+0047-0048, U+004D-0051, U+0053-0055, U+0057, U+005A, U+0060-0062, U+0064-0065, U+0067-0068, U+006D-0075, U+007C, U+00AA, U+00B0, U+00B4-00B6, U+00B9-00BA, U+00BC-00BD, U+00C6, U+00D0-00D6, U+00D8-00DC, U+00DE, U+00E0-00E6, U+00E8-00EB, U+00F0-00F6, U+00F8-00FC, U+00FE, U+2026;
   font-weight: normal;
@@ -2689,7 +2689,7 @@
 }
 @font-face {
   font-family: 'Calibri Light GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   size-adjust: 100%;
   unicode-range: U+0020-0021, U+0023-0024, U+002A-002B, U+002D, U+0030-0039, U+003C-0040, U+0043, U+0045-0046, U+004C, U+005E-005F, U+0063, U+007A, U+007E, U+00A1-00A7, U+00A9, U+00AC, U+00AE-00AF, U+00B1-00B3, U+00B8, U+00BF, U+00C7-00CB, U+00D7, U+00E7, U+00F7, U+2013-2015, U+2017, U+2020-2022, U+20AC;
   font-weight: normal;

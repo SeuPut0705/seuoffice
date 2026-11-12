@@ -44,7 +44,7 @@ const parseFileToText = vi.fn(async (_path: string) => ({
   kind: 'text',
   text: 'text as last saved',
 }))
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   parseFileToText: (path: string) => parseFileToText(path),
   ATTACHABLE_EXTS: new Set([
     'txt',
@@ -101,23 +101,23 @@ vi.mock('@genoffice/file-parse', () => ({
 }))
 // this workspace's test aliases do not reach the rest of these packages, and
 // the handler under test uses none of them
-vi.mock('@genoffice/ai-search', async () => ({
+vi.mock('@seuoffice/ai-search', async () => ({
   ...(await import('../../../packages/ai-search/src/media-call-abort')),
   documentMediaRoots: () => [],
 }))
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
-vi.mock('@genoffice/ai-provider/codex-app-server', () => ({
+vi.mock('@seuoffice/ai-provider/codex-app-server', () => ({
   shutdownCodexAppServers: () => {},
 }))
-vi.mock('@genoffice/ai-provider/custom-models', () => ({}))
+vi.mock('@seuoffice/ai-provider/custom-models', () => ({}))
 // nothing here is stored lazily; the real module reaches past the test aliases
 vi.mock('../src/main/lazy-media', () => ({ registerLazyMediaProtocol: () => {} }))
 vi.mock('../src/main/lazy-media-inline', () => ({}))
 
-import { UNSAVED_CHANGES_MESSAGE, setOpenFilesSource } from '@genoffice/electron-utils'
+import { UNSAVED_CHANGES_MESSAGE, setOpenFilesSource } from '@seuoffice/electron-utils'
 import { registerDocsIpc } from '../src/main/docs-main'
 
 type ReadResult = { ok: boolean; text?: string; error?: string }
@@ -131,7 +131,7 @@ beforeAll(() => {
   registerDocsIpc()
 })
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-docs-attach-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-docs-attach-'))
   parseFileToText.mockClear()
 })
 afterEach(() => {

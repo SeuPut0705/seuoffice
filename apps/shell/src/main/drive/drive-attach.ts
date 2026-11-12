@@ -16,7 +16,7 @@ import {
   openPlan,
   type DriveApi,
   type DriveFile,
-} from '@genoffice/google-drive'
+} from '@seuoffice/google-drive'
 
 export const MAX_ATTACH_FILES = 20
 const KEEP_MS = 7 * 24 * 60 * 60 * 1000

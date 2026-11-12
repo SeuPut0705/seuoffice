@@ -11,8 +11,8 @@ const ENV_NAMES = [
   'APPLE_ID',
   'APPLE_APP_SPECIFIC_PASSWORD',
   'APPLE_TEAM_ID',
-  'GENOFFICE_MAC_X64',
-  'GENOFFICE_WIN_ARM64',
+  'SEUOFFICE_MAC_X64',
+  'SEUOFFICE_WIN_ARM64',
   'SEUOFFICE_UPDATE_CHANNEL',
 ]
 const saved = Object.fromEntries(ENV_NAMES.map((name) => [name, process.env[name]]))
@@ -65,8 +65,8 @@ describe('the seuoffice release packages', () => {
   })
 
   it('refuses the upstream switches for the Intel Mac and ARM Windows packages', () => {
-    expect(() => loadRelease({ GENOFFICE_MAC_X64: '1' })).toThrow(/does not release/)
-    expect(() => loadRelease({ GENOFFICE_WIN_ARM64: '1' })).toThrow(/does not release/)
+    expect(() => loadRelease({ SEUOFFICE_MAC_X64: '1' })).toThrow(/does not release/)
+    expect(() => loadRelease({ SEUOFFICE_WIN_ARM64: '1' })).toThrow(/does not release/)
   })
 
   it('names the stable build so both builds fit in one release', () => {

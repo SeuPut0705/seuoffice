@@ -48,7 +48,7 @@ import type {
   SdtShell,
   TableModel,
   TextboxDisplay,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 
 export type Leaf =
   'kept' | 'text' | 'token' | 'link' | 'picture' | 'cssString' | 'mathml' | 'inlineMathml' | 'marks'

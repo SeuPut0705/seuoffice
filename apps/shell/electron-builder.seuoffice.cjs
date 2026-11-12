@@ -25,7 +25,7 @@ const base = require('./electron-builder.cjs')
 /** The only package each platform gets: electron platform name -> CPU. */
 const RELEASE_ARCH = { darwin: 'arm64', win32: 'x64' }
 
-for (const name of ['GENOFFICE_MAC_X64', 'GENOFFICE_WIN_ARM64']) {
+for (const name of ['SEUOFFICE_MAC_X64', 'SEUOFFICE_WIN_ARM64']) {
   if (process.env[name] === '1') {
     throw new Error(`${name}=1 asks for a package seuoffice does not release`)
   }

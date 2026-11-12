@@ -5,8 +5,8 @@
  */
 import type { IWorkbookData } from '@univerjs/core'
 
-import type { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import type { ChangePlan, CommitReceipt } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import type { ChangePlan, CommitReceipt } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 
 import { t } from '../i18n/locale'
 import { planStillMatches } from '../lazy-plan'

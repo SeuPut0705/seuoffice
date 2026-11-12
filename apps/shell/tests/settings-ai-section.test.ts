@@ -11,13 +11,13 @@ import {
   AI_SEARCH_PROVIDERS,
   HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatus,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import type { HomeApi } from '../src/shared/home-api'
 import type { SubscriptionApi } from '../src/shared/subscription-api'
 import { LocaleProvider } from '../src/renderer/src/locale'

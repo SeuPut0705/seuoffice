@@ -130,7 +130,7 @@ describe('Markdown local image paths', () => {
     const output = join(allowed, 'menu.docx')
     writeFileSync(markdown, '![dish](../outside%231.png)\n')
     const result = await run(['convert', markdown, '--to', 'docx', '--out', output, '--json'], {
-      env: { GENOFFICE_ALLOWED_ROOTS: allowed },
+      env: { SEUOFFICE_ALLOWED_ROOTS: allowed },
     })
     // The shared exporter falls back to alt text when the loader refuses a file.
     expect(result.code).toBe(0)

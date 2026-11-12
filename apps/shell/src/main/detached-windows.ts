@@ -1,7 +1,7 @@
 import { basename } from 'node:path'
 import { BrowserWindow, screen } from 'electron'
 import type { Rectangle, WebContents, WebContentsView } from 'electron'
-import { resumeDiscardedCopies } from '@genoffice/electron-utils'
+import { resumeDiscardedCopies } from '@seuoffice/electron-utils'
 
 import {
   docsQueryDirty,

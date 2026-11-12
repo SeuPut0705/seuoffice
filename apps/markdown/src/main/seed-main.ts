@@ -10,7 +10,7 @@
  * nothing; a tab that closes first drops its text. Nothing here runs an AI.
  */
 import { ipcMain } from 'electron'
-import type { HandoffWebContents } from '@genoffice/electron-utils/generate-handoff'
+import type { HandoffWebContents } from '@seuoffice/electron-utils/generate-handoff'
 import { MARKDOWN_CHANNELS } from '../shared/ipc'
 
 /** queued text by webContents id: one per new tab at most */

@@ -17,7 +17,7 @@ vi.mock('electron', () => ({
 }))
 
 const generateImageTool = vi.fn()
-vi.mock('@genoffice/ai-search', () => ({
+vi.mock('@seuoffice/ai-search', () => ({
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
   documentMediaRoots: (path: string | null, pasted: string) =>
     [path ? `/roots${path}` : null, `/roots${pasted}`].filter(Boolean),
@@ -25,12 +25,12 @@ vi.mock('@genoffice/ai-search', () => ({
     run(new AbortController().signal),
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   sharedSubscriptionStatuses: () => ({ codex: 'ready' }),
 }))
 
 const fetchImageBytes = vi.fn()
-vi.mock('@genoffice/electron-utils/fetch-image-bytes', () => ({
+vi.mock('@seuoffice/electron-utils/fetch-image-bytes', () => ({
   fetchImageBytes: (...args: unknown[]) => fetchImageBytes(...args),
 }))
 

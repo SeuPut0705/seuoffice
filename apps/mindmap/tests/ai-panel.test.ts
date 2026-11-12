@@ -14,10 +14,10 @@ import {
   type AiStreamChunk,
   type AiStreamRequest,
   type AiSubscriptionState,
-} from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME, type Lang } from '@genoffice/i18n'
-import { DEFAULT_AI_PANEL_PREFS, applyAiPanelPrefs, type AiPanelPrefs } from '@genoffice/ui'
+} from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME, type Lang } from '@seuoffice/i18n'
+import { DEFAULT_AI_PANEL_PREFS, applyAiPanelPrefs, type AiPanelPrefs } from '@seuoffice/ui'
 import App from '../src/renderer/App'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import { AiPanel, type MindmapAiRequest, type MindmapAiRunStart } from '../src/renderer/ai/AiPanel'

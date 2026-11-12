@@ -1,7 +1,7 @@
 import { placeholderInstruction } from './redact'
 import { redactLabelsOf } from './redact-view'
 import type { Editor } from '@tiptap/core'
-import { attachedImageNote, type AgentSkill } from '@genoffice/agent-core'
+import { attachedImageNote, type AgentSkill } from '@seuoffice/agent-core'
 import { AGENT_SYSTEM_PROMPT, buildDocContext, getSelectionScope, type NumIds } from './protocol'
 import type { AiDocWriter } from './doc-writer'
 import type { AiPageSetupAccess } from './page-setup'

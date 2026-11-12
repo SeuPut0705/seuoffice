@@ -13,7 +13,7 @@ vi.mock('electron', () => ({
   webContents: {},
 }))
 
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   parseFileToText: vi.fn(async () => ({ ok: false, error: 'mocked' })),
   ATTACHABLE_EXTS: new Set(['txt', 'md', 'png', 'jpg', 'jpeg', 'gif', 'webp']),
   ATTACHABLE_IMAGE_EXTS: new Set(['png', 'jpg', 'jpeg', 'gif', 'webp']),
@@ -27,9 +27,9 @@ vi.mock('@genoffice/file-parse', () => ({
       ext.replace(/^\./, '').toLowerCase(),
     ),
 }))
-vi.mock('@genoffice/cli/agent-skills', () => ({}))
-vi.mock('@genoffice/cli/install', () => ({}))
-vi.mock('@genoffice/electron-utils', () => ({ showOpenDialogWithMemory: vi.fn() }))
+vi.mock('@seuoffice/cli/agent-skills', () => ({}))
+vi.mock('@seuoffice/cli/install', () => ({}))
+vi.mock('@seuoffice/electron-utils', () => ({ showOpenDialogWithMemory: vi.fn() }))
 // session-state pulls the font/shaping chain (harfbuzz wasm) which cannot
 // load in the unit-test env; the paste handler under test never reaches it.
 vi.mock('../src/main/session-state', () => ({ dialogParent: vi.fn(() => null) }))

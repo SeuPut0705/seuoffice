@@ -50,7 +50,7 @@ async function drag(page: Page, dx: number, dy: number, button: 'left' | 'middle
 }
 
 test('the hand tool and the middle button drag the PDF view', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-pan-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-pan-'))
   const pdfPath = join(dir, 'pan.pdf')
   await writeFile(pdfPath, textPdf())
 

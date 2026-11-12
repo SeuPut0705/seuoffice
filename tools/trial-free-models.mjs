@@ -1,6 +1,6 @@
 // Trial of OpenRouter free models before they go into OPENROUTER_FREE_MODELS.
 // Spends the free daily requests of the OpenRouter key the installed app holds
-// (%APPDATA%/IeumOffice/ai-settings.json); the key is never printed. Needs a
+// (%APPDATA%/SeuOffice/ai-settings.json); the key is never printed. Needs a
 // build (`npm run build:all`).
 //
 //   node tools/trial-free-models.mjs              the candidates check-free-models finds

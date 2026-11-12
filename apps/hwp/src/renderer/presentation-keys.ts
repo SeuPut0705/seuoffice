@@ -1,4 +1,4 @@
-import { presentationKeyOf, type PresentationKey, type PresentationKeyInput } from '@genoffice/ui'
+import { presentationKeyOf, type PresentationKey, type PresentationKeyInput } from '@seuoffice/ui'
 
 /**
  * Hancom's F5 opens a cell block and its Shift+F5 a block that grows by the arrow

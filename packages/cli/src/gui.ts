@@ -1,13 +1,13 @@
 import { existsSync, readFileSync } from 'node:fs'
 import { homedir } from 'node:os'
 import { dirname, join } from 'node:path'
-import { DEV_USER_DATA_DIR_NAME, PRODUCT_NAME, USER_DATA_DIR_NAME } from '@genoffice/i18n'
+import { DEV_USER_DATA_DIR_NAME, PRODUCT_NAME, USER_DATA_DIR_NAME } from '@seuoffice/i18n'
 import { realizedPath } from './fs'
 import { CliError, EXIT } from './result'
 
-/** The shell's Electron userData directory, located without Electron (GENOFFICE_USER_DATA overrides). */
-export function genofficeUserDataDir(env: NodeJS.ProcessEnv): string {
-  if (env.GENOFFICE_USER_DATA) return env.GENOFFICE_USER_DATA
+/** The shell's Electron userData directory, located without Electron (SEUOFFICE_USER_DATA overrides). */
+export function seuofficeUserDataDir(env: NodeJS.ProcessEnv): string {
+  if (env.SEUOFFICE_USER_DATA) return env.SEUOFFICE_USER_DATA
   // Resolve the home from the env we were given (as os.homedir() does with process.env.HOME), so
   // an in-process caller with a substituted HOME never lands in the real user directories.
   const home = env.HOME || homedir()
@@ -21,8 +21,8 @@ export function genofficeUserDataDir(env: NodeJS.ProcessEnv): string {
 }
 
 /** userData of an unpacked (development) shell, which keeps its profile beside the installed app's. */
-export function genofficeDevUserDataDir(env: NodeJS.ProcessEnv): string {
-  const installed = genofficeUserDataDir({ ...env, GENOFFICE_USER_DATA: undefined })
+export function seuofficeDevUserDataDir(env: NodeJS.ProcessEnv): string {
+  const installed = seuofficeUserDataDir({ ...env, SEUOFFICE_USER_DATA: undefined })
   return join(dirname(installed), DEV_USER_DATA_DIR_NAME)
 }
 
@@ -32,15 +32,15 @@ export interface GuiOpenDocuments {
 }
 
 /**
- * Files the running GenOffice shell has open, from the registries it publishes
+ * Files the running SeuOffice shell has open, from the registries it publishes
  * on every tab change (apps/shell/src/main/open-documents.ts). Empty when no
  * shell is running: a registry whose pid is gone is a crash leftover.
  */
 export function guiOpenDocuments(
   env: NodeJS.ProcessEnv,
-  dirs = env.GENOFFICE_USER_DATA
-    ? [env.GENOFFICE_USER_DATA]
-    : [genofficeUserDataDir(env), genofficeDevUserDataDir(env)],
+  dirs = env.SEUOFFICE_USER_DATA
+    ? [env.SEUOFFICE_USER_DATA]
+    : [seuofficeUserDataDir(env), seuofficeDevUserDataDir(env)],
 ): GuiOpenDocuments[] {
   const live: GuiOpenDocuments[] = []
   for (const dir of dirs) {

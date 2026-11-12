@@ -4,7 +4,7 @@ import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { DriveApi, DriveFile } from '@genoffice/google-drive'
+import type { DriveApi, DriveFile } from '@seuoffice/google-drive'
 import {
   DriveFiles,
   type DriveFilesDeps,

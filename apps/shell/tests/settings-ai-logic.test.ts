@@ -4,8 +4,8 @@ import {
   AI_PROVIDERS,
   HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   defaultAiSettings,
-} from '@genoffice/ai-provider'
-import type { AiSettings, AiSubscriptionStatus } from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
+import type { AiSettings, AiSubscriptionStatus } from '@seuoffice/ai-provider'
 import {
   advancedPaneUseChoice,
   advancedProviderIds,

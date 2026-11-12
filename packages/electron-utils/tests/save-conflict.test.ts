@@ -8,7 +8,7 @@ const showMessageBox = vi.fn()
 vi.mock('electron', () => ({ dialog: { showMessageBox } }))
 
 import type { BrowserWindow } from 'electron'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import {
   confirmOverwriteIfConflicted,
   isModifiedSince,
@@ -24,7 +24,7 @@ let dir: string
 let doc: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-save-conflict-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-save-conflict-'))
   doc = join(dir, 'plan.docx')
   writeFileSync(doc, 'v1')
 })
@@ -122,7 +122,7 @@ describe('open path probe', () => {
   it('is shared by every bundled copy of this module through the process-wide key', () => {
     setOpenPathProbe(openInBothPanes)
     const holder = globalThis as unknown as Record<symbol, unknown>
-    expect(typeof holder[Symbol.for('genoffice.open-path-probe')]).toBe('function')
+    expect(typeof holder[Symbol.for('seuoffice.open-path-probe')]).toBe('function')
   })
 })
 

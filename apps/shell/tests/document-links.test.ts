@@ -5,8 +5,8 @@ import { join, resolve } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const atomicWrites = vi.hoisted(() => [] as string[])
-vi.mock('@genoffice/electron-utils/atomic-write', async (importActual) => {
-  const actual = await importActual<typeof import('@genoffice/electron-utils/atomic-write')>()
+vi.mock('@seuoffice/electron-utils/atomic-write', async (importActual) => {
+  const actual = await importActual<typeof import('@seuoffice/electron-utils/atomic-write')>()
   return {
     ...actual,
     writeJsonAtomic: (path: string, value: unknown) => {
@@ -24,7 +24,7 @@ import {
   resetGenerateHandoffsForTest,
   takeGenerateHandoff,
   type GenerateHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import {
   DOCUMENT_LINKS_FILE,
   DocumentLinks,
@@ -88,7 +88,7 @@ const stored = () => JSON.parse(readFileSync(file, 'utf8')) as { version: number
 const flush = () => new Promise<void>((r) => setTimeout(r, 0))
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-links-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-links-'))
   file = join(dir, DOCUMENT_LINKS_FILE)
   resetGenerateHandoffsForTest()
   atomicWrites.length = 0

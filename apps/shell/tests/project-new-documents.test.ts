@@ -12,7 +12,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ProjectTrustAnswer } from '@genoffice/project-store'
+import { PROJECT_FOLDER_NAMES, type ProjectTrustAnswer } from '@seuoffice/project-store'
 import { ProjectGuide } from '../src/main/projects/project-guide'
 import {
   NewDocumentPlacer,
@@ -28,6 +28,8 @@ import { projectMentionFiles } from '../src/main/projects/project-files'
  * numbered names that never overwrite, the write guard's refusals, presets of
  * tabs a create flow opened, and nothing at all without a project.
  */
+
+const { dataDir } = PROJECT_FOLDER_NAMES
 
 let base: string
 let root: string
@@ -98,7 +100,7 @@ describe('the folder rule', () => {
     expect(newDocumentFolder(root, join(base, 'elsewhere', 'notes.md'))).toBe(root)
     expect(newDocumentFolder(root, null)).toBe(root)
     // never into the app's own folder
-    expect(newDocumentFolder(root, join(root, '.ieumoffice', 'chats', 'x.md'))).toBe(root)
+    expect(newDocumentFolder(root, join(root, dataDir, 'chats', 'x.md'))).toBe(root)
   })
 
   it('numbers a taken name before the extension', () => {
@@ -191,8 +193,8 @@ describe('writing', () => {
       reason: 'outside',
     })
     expect(readdirSync(join(base, 'elsewhere'))).toEqual([])
-    const data: NewDocumentPlacement = { projectId, root, dir: join(root, '.ieumoffice') }
-    folder('Report', '.ieumoffice')
+    const data: NewDocumentPlacement = { projectId, root, dir: join(root, dataDir) }
+    folder('Report', dataDir)
     await expect(placer.write(data, 'a.md', Buffer.from('x'))).rejects.toMatchObject({
       reason: 'outside',
     })
@@ -211,7 +213,7 @@ describe('writing', () => {
       placer.writeFor(HOME, ['drafts', 'a.md'].join(sep), Buffer.from('x')),
     ).rejects.toMatchObject({ reason: 'bad-path' })
     expect(readdirSync(join(root, 'drafts'))).toEqual([])
-    expect(readdirSync(root).filter((name) => name !== '.ieumoffice')).toEqual(['drafts'])
+    expect(readdirSync(root).filter((name) => name !== dataDir)).toEqual(['drafts'])
   })
 
   it('a tab a create flow opened writes its document into its opener folder, numbered', async () => {
@@ -259,7 +261,7 @@ describe('the @ list files of a project (spec 5.13)', () => {
     write('drafts/new.md', 3_000)
     write('mid.pdf', 2_000)
     write('.hidden.docx', 4_000)
-    write('.ieumoffice/memory.md', 5_000)
+    write(`${dataDir}/memory.md`, 5_000)
     write('secret/plan.docx', 6_000)
     write('~$lock.docx', 7_000)
     expect((await guide.addIgnore(projectId, 'secret/')).status).toBe('ok')

@@ -2,7 +2,7 @@ import { mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { setOpenFilesSource } from '@genoffice/electron-utils/unsaved-files'
+import { setOpenFilesSource } from '@seuoffice/electron-utils/unsaved-files'
 import { MAX_MATERIALS } from '../src/main/generate/limits'
 import { inspectMaterial } from '../src/main/generate/materials'
 import {
@@ -16,7 +16,7 @@ import {
 let dir: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-generate-req-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-generate-req-'))
 })
 afterEach(() => {
   setOpenFilesSource(null)

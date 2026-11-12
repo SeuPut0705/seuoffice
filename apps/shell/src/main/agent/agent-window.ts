@@ -3,15 +3,15 @@ import { homedir } from 'node:os'
 import { isAbsolute, join } from 'node:path'
 import { app, BrowserWindow, dialog, ipcMain, shell } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
-import type { SkillProposal } from '@genoffice/agent-core'
+import type { SkillProposal } from '@seuoffice/agent-core'
 import type {
   UserSkillPreviewInput,
   UserSkillsResult,
-} from '@genoffice/electron-utils/user-skills-channels'
-import { productName, type Lang } from '@genoffice/i18n'
-import { safeExternalUrl } from '@genoffice/electron-utils'
-import type { AgentSessionEvent } from '@genoffice/ai-provider/agent-session'
-import type { AiSubscriptionProviderId, AiSubscriptionStatus } from '@genoffice/ai-provider'
+} from '@seuoffice/electron-utils/user-skills-channels'
+import { productName, type Lang } from '@seuoffice/i18n'
+import { safeExternalUrl } from '@seuoffice/electron-utils'
+import type { AgentSessionEvent } from '@seuoffice/ai-provider/agent-session'
+import type { AiSubscriptionProviderId, AiSubscriptionStatus } from '@seuoffice/ai-provider'
 import {
   AGENT_BLOCKED_PROVIDERS,
   AGENT_CHANNELS,

@@ -10,8 +10,8 @@ import { mkdtempSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import { listSlideTemplates } from '@genoffice/pipelines/slides/templates'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import { listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 
 const CHANNEL = 'slides:template-cover-render'
 

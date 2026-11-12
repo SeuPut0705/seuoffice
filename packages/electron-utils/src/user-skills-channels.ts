@@ -77,7 +77,7 @@ export type UserSkillUnreadable = 'no-frontmatter' | 'bad-name' | 'too-large' | 
 
 /**
  * Where a skill is used, as it crosses: every editor, or editor ids
- * (`@genoffice/agent-core/skill-editors`). Each end keeps the ids it knows.
+ * (`@seuoffice/agent-core/skill-editors`). Each end keeps the ids it knows.
  */
 export type UserSkillEditorsValue = 'all' | string[]
 
@@ -110,7 +110,7 @@ export interface UserSkillView {
   bytes: number
   /** installed from GitHub: where from */
   github: { repo: string; ref: string; path: string; commit: string } | undefined
-  /** the skill lives in the app's own folder (`~/.ieumoffice/skills`) */
+  /** the skill lives in the app's own folder (`~/.seuoffice/skills`) */
   owned: boolean
   /** what the more-menu offers (spec 5.1) */
   can: {

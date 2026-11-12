@@ -57,7 +57,7 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 
-import { createBlankPptx, openPptx } from '@genoffice/pptx-engine'
+import { createBlankPptx, openPptx } from '@seuoffice/pptx-engine'
 import {
   permissionCheckHandler,
   permissionRequestHandler,

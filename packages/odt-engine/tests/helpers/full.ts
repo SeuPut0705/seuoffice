@@ -3,9 +3,9 @@
  * full registry (text → tables → objects → pages, as the public API does)
  * and the full save order, so one layer's tests also exercise the others.
  *
- *   ODT_FULL_REGISTRY=1 npm run test -w @genoffice/odt-engine
+ *   ODT_FULL_REGISTRY=1 npm run test -w @seuoffice/odt-engine
  */
-import type { ParsedDocFull } from '@genoffice/docx-engine'
+import type { ParsedDocFull } from '@seuoffice/docx-engine'
 import { odtRegistry } from '../../src/assemble/registry'
 import {
   type BridgeMap,

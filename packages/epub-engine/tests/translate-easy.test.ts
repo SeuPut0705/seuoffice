@@ -20,8 +20,8 @@ import {
   translationLanguageName,
   translationStyleLines,
   type TranslationModelRequest,
-} from '@genoffice/pdf-structure'
-import { ResultStore } from '@genoffice/pdf-structure/store'
+} from '@seuoffice/pdf-structure'
+import { ResultStore } from '@seuoffice/pdf-structure/store'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openEpub } from '../src/open'
 import {

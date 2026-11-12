@@ -1,13 +1,13 @@
 import { createHash } from 'node:crypto'
 import { existsSync, readFileSync, unlinkSync } from 'node:fs'
 import { basename, extname, join } from 'node:path'
-import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
+import { writeJsonAtomic } from '@seuoffice/electron-utils/atomic-write'
 import {
   newUntitledRecoveryId,
   type RecoveryIdentity,
   type RecoveryStore,
   type RecoveryUntitledIdentity,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 
 /**
  * The current xlsx patcher materializes worksheet XML as JavaScript strings.

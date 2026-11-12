@@ -13,10 +13,10 @@
  *   it crosses IPC and process boundaries between open and save.
  * - Offsets in the map index the decoded part strings of the ORIGINAL ODT
  *   (`OdtDocument.contentXml` / `stylesXml`), exactly like the core position map.
- * - Nothing here touches `@genoffice/docx-engine` behaviour; it only imports
+ * - Nothing here touches `@seuoffice/docx-engine` behaviour; it only imports
  *   its public types.
  */
-import type { Block, GenerateContext, ParsedDoc, Run } from '@genoffice/docx-engine'
+import type { Block, GenerateContext, ParsedDoc, Run } from '@seuoffice/docx-engine'
 import type { OdtNode, OdtNodeKind } from './body'
 import type { OdtDocument } from './open'
 import type { OdtStylePart, OdtStyleScope } from './styles'

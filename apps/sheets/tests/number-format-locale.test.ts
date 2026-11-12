@@ -1,7 +1,7 @@
 import { numfmt } from '@univerjs/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
+import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@seuoffice/i18n'
 import { directCopyField } from '../src/renderer/copy-materialize'
 import { setDocumentLocale } from '../src/renderer/document-locale'
 import { getLang, setModuleLang } from '../src/renderer/i18n/locale'

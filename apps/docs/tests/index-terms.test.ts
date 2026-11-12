@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 
-import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
-import { generateIndexFieldXml } from '@genoffice/docx-engine'
+import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@seuoffice/i18n'
+import { generateIndexFieldXml } from '@seuoffice/docx-engine'
 import { indexTerms } from '../src/renderer/index-terms'
 
 // A new index lists its entries in the alphabetical order of the document's

@@ -20,7 +20,7 @@ import { useDocumentInsights } from '../src/renderer/ai/insights/useDocumentInsi
 import type { DocumentInsights } from '../src/renderer/ai/insights/insights-controller'
 import type { HighlightSuggestions } from '../src/renderer/highlight/highlight-controller'
 import { useAiHighlights } from '../src/renderer/highlight/useAiHighlights'
-import { createI18n } from '@genoffice/i18n'
+import { createI18n } from '@seuoffice/i18n'
 import { DocumentJobRegistry } from '../../../packages/pdf-structure/src/jobs'
 import {
   AiPageReading,

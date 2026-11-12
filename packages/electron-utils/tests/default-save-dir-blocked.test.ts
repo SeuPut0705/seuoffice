@@ -28,7 +28,7 @@ const { isUsableSaveDir, resolveDefaultSaveDir } = await import('../src/default-
 let root: string
 
 beforeEach(() => {
-  root = mkdtempSync(join(tmpdir(), 'genoffice-save-dir-blocked-'))
+  root = mkdtempSync(join(tmpdir(), 'seuoffice-save-dir-blocked-'))
   blocked.prefix = join(root, 'Documents')
 })
 

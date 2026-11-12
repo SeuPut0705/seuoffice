@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang } from '@seuoffice/i18n'
 
 /**
  * The published feedback survey (Google Forms, owned by the repository owner).

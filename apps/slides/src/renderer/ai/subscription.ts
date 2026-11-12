@@ -3,7 +3,7 @@
  * about its connection, which tools have a route, and the live connection
  * statuses. What stands between the user and a run (connect first, read the
  * first-connection notice) is the send gate every editor shares
- * (`useAiSendGate` in @genoffice/ui). The connection state machine itself is
+ * (`useAiSendGate` in @seuoffice/ui). The connection state machine itself is
  * shared too; this file only names the slides bridge and lays its actions out
  * for the connect card.
  */
@@ -13,13 +13,13 @@ import type {
   AiRunErrorKind,
   AiSubscriptionProviderId,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
-import type { IpcStreamError } from '@genoffice/agent-core'
+} from '@seuoffice/ai-provider/browser'
+import type { IpcStreamError } from '@seuoffice/agent-core'
 import {
   isAiBlockedRunKind,
   useSubscriptionConnection as useSharedSubscriptionConnection,
   type AiSubscriptionCardActions,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type { AiToolCapabilities } from '../../shared/ipc'
 
 // ---- a run that stopped because its connection cannot go on ----

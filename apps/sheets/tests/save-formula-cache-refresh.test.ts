@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import { liveFormulaCacheValues } from '../src/renderer/save-actions'
 import type { LazyWorkbookState } from '../src/renderer/univer-state'
-import type { CellState } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { CellState } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 
 /// The state slice liveFormulaCacheValues reads, no Univer needed: the
 /// journal's cells, the formula-text harvest and the file cache it pairs with.

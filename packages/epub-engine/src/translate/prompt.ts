@@ -19,7 +19,7 @@ import {
   translationStyleLines,
   type TranslationMode,
   type TranslationRequest,
-} from '@genoffice/pdf-structure'
+} from '@seuoffice/pdf-structure'
 
 export interface EpubTranslationRequestBlock {
   /** id of the block inside this batch ("1", "2", …) */

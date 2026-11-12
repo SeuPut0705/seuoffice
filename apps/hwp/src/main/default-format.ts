@@ -9,4 +9,4 @@ export {
   normalizeHwpDefaultFormat,
   readHwpDefaultFormat,
   type SettingsPathProvider,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'

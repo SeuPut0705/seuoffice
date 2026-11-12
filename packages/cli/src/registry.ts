@@ -1,5 +1,4 @@
 import type { ParsedArgs } from './args'
-import { branded } from './names'
 import type { CommandResult, Warning } from './result'
 
 export interface CommandContext {
@@ -51,13 +50,13 @@ export class CommandRegistry {
 }
 
 export function commandHelp(def: CommandDef): string {
-  const lines = [`Usage: ieumoffice ${def.usage}`, '', def.summary]
+  const lines = [`Usage: seuoffice ${def.usage}`, '', def.summary]
   if (def.options?.length) {
     lines.push('', 'Options:')
     const width = Math.max(...def.options.map((o) => optionLabel(o).length))
     for (const o of def.options) lines.push(`  ${optionLabel(o).padEnd(width)}  ${o.description}`)
   }
-  return branded(lines.join('\n'))
+  return lines.join('\n')
 }
 
 function optionLabel(o: OptionDef): string {

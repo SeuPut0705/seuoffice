@@ -54,7 +54,7 @@ import {
   type ViewSheet,
   type ViewSummaryStyle,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import {
   type Arrow,
   boundariesOf,

@@ -13,9 +13,9 @@ import {
   normalizeAiSettings,
   type AiSettings,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import { aiConnectPromptChoice, aiSendGate } from '@genoffice/ui'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
+} from '@seuoffice/ai-provider/browser'
+import { aiConnectPromptChoice, aiSendGate } from '@seuoffice/ui'
+import { DOC_ATTACH_BRIDGE_KEY } from '@seuoffice/electron-utils/doc-attach-channels'
 import { AiChatPanel, type AiPanelSubscription } from '../src/renderer/ai/AiChatPanel'
 
 const settings = (): AiSettings =>

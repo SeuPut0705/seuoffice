@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { MindMapTreeNode } from '@genoffice/agent-core'
+import type { MindMapTreeNode } from '@seuoffice/agent-core'
 import {
   countMindMapNodes,
   layoutMindMap,
   MIND_MAP_EXPORT_COLORS,
   MIND_MAP_METRICS,
   type MindMapOrientation,
-} from '@genoffice/agent-core/mind-map'
+} from '@seuoffice/agent-core/mind-map'
 import { useI18n } from '../i18n/locale'
 
 /**

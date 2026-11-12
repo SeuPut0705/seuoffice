@@ -2,8 +2,8 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
-import { SKILL_SKIPPED_STEPS_SENTENCE } from '@genoffice/agent-core/skill-mcp-refs'
+import { LANGS } from '@seuoffice/i18n'
+import { SKILL_SKIPPED_STEPS_SENTENCE } from '@seuoffice/agent-core/skill-mcp-refs'
 import { SkillChipRow } from '../src/SkillPicker'
 import { pickerSkillsOf, skillChipOf } from '../src/skill-picker-model'
 import {

@@ -10,7 +10,7 @@ import { existsSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { encryptOoxml } from '@genoffice/electron-utils/office-encryption'
+import { encryptOoxml } from '@seuoffice/electron-utils/office-encryption'
 import { IPC_CHANNELS } from '../src/shared/ipc-channels'
 import type { ExternalLinksResult, ExternalLinksUpdateResult } from '../src/shared/desktop-api'
 
@@ -154,8 +154,8 @@ vi.mock('../src/main/xlsx-sidecar-client', () => {
   }
 })
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -197,8 +197,8 @@ async function locate(tab: FakeContents, sessionId: string): Promise<string | un
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-links-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-links-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-links-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-links-user-'))
   source = join(dir, 'Sales.xlsx')
   writeFileSync(source, 'source-bytes')
   updates.length = 0

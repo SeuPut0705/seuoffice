@@ -14,7 +14,7 @@ import {
   TEMPLATE_FONT_SCHEME,
   TEMPLATE_FONTS,
   templateFontUrl,
-} from '@genoffice/ui/template-fonts'
+} from '@seuoffice/ui/template-fonts'
 
 type SchemeHandler = (request: Request) => Promise<Response>
 const handlers = vi.hoisted(() => new Map<string, SchemeHandler>())
@@ -30,7 +30,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@genoffice/electron-utils/renderer-scheme'
+import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@seuoffice/electron-utils/renderer-scheme'
 import {
   installStandaloneTemplateFontProtocol,
   sheetsTemplateFontsDir,
@@ -144,7 +144,7 @@ describe('registerTemplateFonts (grid canvas, at boot)', () => {
     )
     expect(created).toContainEqual({
       family: 'Playfair Display',
-      source: 'url("genoffice-docx-media://template-fonts/PlayfairDisplay%5Bwght%5D.ttf")',
+      source: 'url("seuoffice-docx-media://template-fonts/PlayfairDisplay%5Bwght%5D.ttf")',
       weight: '400 900',
     })
     expect(families).toEqual(expect.arrayContaining([...TEMPLATE_FONT_FAMILY_NAMES]))
@@ -214,7 +214,7 @@ describe('serving the bundled files (main)', () => {
       expect(bytes.equals(readFileSync(join(FOLDER, file))), file).toBe(true)
     }
     const other = await handle({
-      url: 'genoffice-docx-media://template-fonts/README.md',
+      url: 'seuoffice-docx-media://template-fonts/README.md',
     } as Request)
     expect(other.status).toBe(404)
   })

@@ -1,7 +1,7 @@
 import type { Dirent } from 'node:fs'
 import { readdir, stat } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
-import type { ProjectFileEntry } from '@genoffice/project-store'
+import type { ProjectFileEntry } from '@seuoffice/project-store'
 import { isSupportedTreeFile } from '../folder-tree'
 import { SCAN_MAX_DEPTH } from '../file-index/scan'
 import { resolveCloudOnly as detectCloudOnly } from './cloud-files'
@@ -108,7 +108,7 @@ const NO_IGNORE = compileIgnore('', { caseInsensitive: false })
 /**
  * The supported files `ignore` keeps from the AI (the project screen's own
  * list, spec 5.12; never offered to AI tools), newest first. Hidden entries and
- * `.ieumoffice/` stay out of this list too.
+ * `.seuoffice/` stay out of this list too.
  */
 export function listIgnoredFiles(visibility: ProjectAiVisibility): Promise<VisibleFile[]> {
   const shown = (rel: string, isDir: boolean) =>
@@ -207,7 +207,7 @@ export const PROJECT_MENTION_FILES_LIMIT = 50
 
 /**
  * The `@` list's "files of this project" (spec 5.13): the newest `limit`
- * AI-visible supported files (hidden entries, `.ieumoffice/` and `ignore` left
+ * AI-visible supported files (hidden entries, `.seuoffice/` and `ignore` left
  * out), as path and file name. Nothing is opened.
  */
 export async function projectMentionFiles(

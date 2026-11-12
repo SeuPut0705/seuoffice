@@ -6,7 +6,7 @@ import {
   defaultAiSettings,
   type AiSettings,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { AiModelPicker, type AiModelPickerBridge } from '../src/AiModelPicker'
 
 const statuses: AiSubscriptionStatuses = {

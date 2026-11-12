@@ -4,11 +4,11 @@ import {
   type IpcContextGate,
   type IpcStreamError,
   type IpcSubscriptionUsage,
-} from '@genoffice/agent-core'
-import { localContextLimit } from '@genoffice/ai-provider/browser'
-import type { AiSettings } from '@genoffice/ai-provider'
-import type { Lang } from '@genoffice/i18n'
-import { aiContextConfirmText, aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/agent-core'
+import { localContextLimit } from '@seuoffice/ai-provider/browser'
+import type { AiSettings } from '@seuoffice/ai-provider'
+import type { Lang } from '@seuoffice/i18n'
+import { aiContextConfirmText, aiRunErrorText } from '@seuoffice/ui'
 import { getLang, t } from '../i18n/locale'
 
 /** What the AI panel learns from a turn besides its text (all optional) */

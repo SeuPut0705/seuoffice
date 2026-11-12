@@ -8,7 +8,7 @@ import { mkdtempSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { ResultStore } from '@genoffice/pdf-structure/store'
+import { ResultStore } from '@seuoffice/pdf-structure/store'
 import { createEpubStoreHandlers } from '../src/main/store-handlers'
 
 const HASH = 'a'.repeat(64)
@@ -20,7 +20,7 @@ let store: ResultStore
 let handlers: ReturnType<typeof createEpubStoreHandlers>
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-epub-store-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-epub-store-'))
   store = new ResultStore(dir)
   handlers = createEpubStoreHandlers({
     store: () => store,

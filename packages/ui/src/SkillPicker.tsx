@@ -1,6 +1,6 @@
 import React from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { unusableMcpServers } from '@genoffice/agent-core/skill-mcp-refs'
+import type { Lang } from '@seuoffice/i18n'
+import { unusableMcpServers } from '@seuoffice/agent-core/skill-mcp-refs'
 import {
   chipTitleRepeats,
   skillNameBeside,

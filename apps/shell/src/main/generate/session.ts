@@ -18,7 +18,7 @@
  *   new unsaved tab; a failed read converts nothing and says why. A chosen
  *   conversion that is no longer offered never turns into an AI request.
  */
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   AiTargetKind,
   ConvertKind,

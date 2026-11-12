@@ -16,7 +16,7 @@ import {
   applyTitlePg,
   parseDocx,
   readSections,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   ConversionRegistry,
   OdfToOoxmlContext,

@@ -48,19 +48,19 @@ if [ -d "$shell_new" ]; then
       cp -f "$shell_new/blank.$ext" "$templates_dir/$name" || true
   done
 fi
-# Expose the ieumoffice command line shipped inside the app. Only an absent
+# Expose the seuoffice command line shipped inside the app. Only an absent
 # name, a dead link or a link into our own install dir is taken over; anything
-# else at /usr/bin/ieumoffice belongs to another program (genoffice#893).
-launcher="$app/resources/cli/ieumoffice"
-link="/usr/bin/ieumoffice"
+# else at /usr/bin/seuoffice belongs to another program (genoffice#893).
+launcher="$app/resources/cli/seuoffice"
+link="/usr/bin/seuoffice"
 [ -x "$launcher" ] || exit 0
 if [ -L "$link" ]; then
   case "$(readlink "$link")" in
     /opt/SeuOffice/*) ;;
-    *) [ -e "$link" ] && { echo "ieumoffice: $link is another program, left as is; run: ln -s $launcher $link" >&2; exit 0; } ;;
+    *) [ -e "$link" ] && { echo "seuoffice: $link is another program, left as is; run: ln -s $launcher $link" >&2; exit 0; } ;;
   esac
 elif [ -e "$link" ]; then
-  echo "ieumoffice: $link is another program, left as is; run: ln -s $launcher $link" >&2
+  echo "seuoffice: $link is another program, left as is; run: ln -s $launcher $link" >&2
   exit 0
 fi
 ln -sfn "$launcher" "$link"

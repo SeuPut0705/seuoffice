@@ -11,15 +11,15 @@ import { join } from 'node:path'
 import { act, createElement, createRef } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamChunk } from '@genoffice/agent-core'
+import type { IpcStreamChunk } from '@seuoffice/agent-core'
 import {
   normalizeAiSettings,
   type AiSettings,
   type AiSubscriptionState,
   type SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
-import { createI18n } from '@genoffice/i18n'
-import { aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { createI18n } from '@seuoffice/i18n'
+import { aiRunErrorText } from '@seuoffice/ui'
 import type { PassageCard } from '../../../packages/pdf-structure/src/store/reading'
 import { strings } from '../src/renderer/i18n/strings'
 import type { PdfStoreWriteRequest } from '../src/shared/ipc'

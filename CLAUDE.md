@@ -23,7 +23,7 @@ seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편�
 
 - 이음오피스와 GenOffice를 따라가지 않는다(결정 0024). 원격 `ieum`, `genoffice`는 지웠고, 상위에서 코드를 받아오지 않는다. 이전에 받은 파일도 우리 파일이라 필요한 만큼 고친다.
 - `docs/seuoffice/upstream-edits.md`에는 더 적지 않는다.
-- 내부 이름(`@genoffice/*` 패키지, `GENOFFICE_*` 환경 변수, `genoffice` 명령, `~/.genoffice`)은 이름 바꾸기를 마칠 때까지 그대로 쓴다. 새로 만드는 부품은 `@seuoffice/*`로 짓는다. 설치된 앱의 정체(앱 이름, userData 폴더, 키체인 항목, ProgId, 업데이트 피드)는 결정 0013·0019 그대로다.
+- 내부 이름(`@seuoffice/*` 패키지, `SEUOFFICE_*` 환경 변수, `genoffice` 명령, `~/.genoffice`)은 이름 바꾸기를 마칠 때까지 그대로 쓴다. 새로 만드는 부품은 `@seuoffice/*`로 짓는다. 설치된 앱의 정체(앱 이름, userData 폴더, 키체인 항목, ProgId, 업데이트 피드)는 결정 0013·0019 그대로다.
 - 엑셀 엔진(`apps/sheets/native/*`)의 웹 분기는 `#[cfg(target_os = "wasi")]`로만 두고 데스크톱 동작은 바꾸지 않는다.
 
 ## 커밋
@@ -37,9 +37,9 @@ seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편�
 
 ## 시험
 
-- 상위 모듈 시험은 작업 공간별로 돌린다: `npm run test -w @genoffice/<이름>`. 전부는 `npm run test:parallel`.
+- 상위 모듈 시험은 작업 공간별로 돌린다: `npm run test -w @seuoffice/<이름>`. 전부는 `npm run test:parallel`.
 - 웹 층: `npm run build -w @seuoffice/web` 뒤 `npm run test -w @seuoffice/web`(Playwright, 다섯 형식을 웹에서 열어 화면을 확인). 웹 층이나 웹 층이 import하는 상위 코드를 고치면 반드시 돌린다.
-- xlsx 엔진(`apps/sheets/native/*`)을 고치면 `npm run native:test -w @genoffice/sheets`와 웹 시험을 둘 다 돌린다.
+- xlsx 엔진(`apps/sheets/native/*`)을 고치면 `npm run native:test -w @seuoffice/sheets`와 웹 시험을 둘 다 돌린다.
 - 합치기 전 검사: `npm run check:english-comments`, `npm run format:check`, `npm run lint`, `npm run typecheck`, 고친 작업 공간 시험, 웹 층을 건드렸으면 웹 시험.
 - `docs/seuoffice/baseline.md`에 없는 실패는 고친 사람이 해결한다. 원래 실패인지는 손대지 않은 상위 커밋에서 같은 시험을 돌려 확인한다.
 - 시험은 동작(경계, 오류, 형식 왕복, 상태 전이)을 확인한다. 문구·배선·구현을 베끼는 시험은 쓰지 않는다.

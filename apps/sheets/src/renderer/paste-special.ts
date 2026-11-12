@@ -37,7 +37,7 @@ import {
 } from '@univerjs/sheets'
 import { COPY_TYPE, ISheetClipboardService } from '@univerjs/sheets-ui'
 
-import { formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { formatAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import type { RedactionIndex } from './ai/redact'
 import { isWithheldCopy } from './redact-clipboard'
 import { pasteSourceHoldsHidden } from './redact-move-guard'

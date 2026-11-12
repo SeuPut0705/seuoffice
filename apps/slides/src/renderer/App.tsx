@@ -8,7 +8,7 @@ import type {
   ChartRenderNode,
   PictureRenderNode,
   TableRenderNode,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import { animGalleryKind } from './animation-play'
 import { handleSlidesControl, type ControlRequest } from './control'
 import type {
@@ -117,7 +117,7 @@ import {
   templateDocumentOf,
   type TemplateDocument,
   useAiSidebarEnabled,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type { ChartPresetDef, IconDef, SmartArtDef } from './insert-presets'
 import { IconAiBeautify, IconAiFactCheck, IconAiImage } from './components/icons'
 import { ToastHost } from './components/toast'
@@ -159,7 +159,7 @@ import * as clipboardActions from './clipboard-actions'
 import * as insertActions from './insert-actions'
 import * as model3dActions from './model3d/actions'
 import { Model3dTurnHandle } from './model3d/Model3dTurnHandle'
-import type { Model3dRotation } from '@genoffice/pptx-engine/model3d'
+import type { Model3dRotation } from '@seuoffice/pptx-engine/model3d'
 import { bytesToBase64 } from './insert-actions'
 import { classifyDroppedFile, fileExt } from '../shared/media-kinds'
 import * as animationActions from './animation-actions'
@@ -3502,9 +3502,9 @@ export function App() {
     [hasDeck, path],
   )
 
-  // genoffice CLI (`open --slide/--el`, `selection`): the shell evaluates this hook
+  // seuoffice CLI (`open --slide/--el`, `selection`): the shell evaluates this hook
   useEffect(() => {
-    ;(window as unknown as Record<string, unknown>).__genofficeControl = (req: ControlRequest) =>
+    ;(window as unknown as Record<string, unknown>).__seuofficeControl = (req: ControlRequest) =>
       handleSlidesControl(req, {
         slides,
         path,

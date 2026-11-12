@@ -49,7 +49,7 @@ const PROGID = 'seuoffice.OpenDocumentSpreadsheet'
 
 describe('the ODS "Open with" registration', () => {
   it('uses a ProgId of this product that the upstream app never registers', () => {
-    expect(nsh).toContain(`!define GENOFFICE_ODS_PROGID "${PROGID}"`)
+    expect(nsh).toContain(`!define SEUOFFICE_ODS_PROGID "${PROGID}"`)
     expect(PROGID).toMatch(/^seuoffice\.[A-Za-z][A-Za-z0-9]*$/)
     // Windows limits a ProgId to 39 characters
     expect(PROGID.length).toBeLessThanOrEqual(39)
@@ -69,8 +69,8 @@ describe('the ODS "Open with" registration', () => {
   })
 
   it('writes the ProgId with an open command and the xlsx icon, and offers it for .ods', () => {
-    const body = instructions('GenOfficeRegisterOpenWithOds')
-    const progKey = 'Software\\Classes\\${GENOFFICE_ODS_PROGID}'
+    const body = instructions('SeuOfficeRegisterOpenWithOds')
+    const progKey = 'Software\\Classes\\${SEUOFFICE_ODS_PROGID}'
     expect(body).toContain(
       `WriteRegStr SHELL_CONTEXT "${progKey}\\shell\\open\\command" "" '"$appExe" "%1"'`,
     )
@@ -78,7 +78,7 @@ describe('the ODS "Open with" registration', () => {
       `WriteRegStr SHELL_CONTEXT "${progKey}\\DefaultIcon" "" "$INSTDIR\\resources\\xlsx.ico"`,
     )
     expect(body).toContain(
-      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.ods\\OpenWithProgids" "${GENOFFICE_ODS_PROGID}"',
+      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.ods\\OpenWithProgids" "${SEUOFFICE_ODS_PROGID}"',
     )
     // the icon the ProgId borrows is the one the .xlsx association installs
     const win = loadBuilderConfig('win32')
@@ -90,29 +90,29 @@ describe('the ODS "Open with" registration', () => {
   })
 
   it('never writes the default value of .ods or any other .ods key', () => {
-    const odsWrites = instructions('GenOfficeRegisterOpenWithOds').filter((line) =>
+    const odsWrites = instructions('SeuOfficeRegisterOpenWithOds').filter((line) =>
       line.includes('\\.ods'),
     )
     // the OpenWithProgids value is the only thing written under .ods
     expect(odsWrites).toEqual([
-      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.ods\\OpenWithProgids" "${GENOFFICE_ODS_PROGID}"',
+      'WriteRegNone SHELL_CONTEXT "Software\\Classes\\.ods\\OpenWithProgids" "${SEUOFFICE_ODS_PROGID}"',
     ])
     expect(nsh).not.toMatch(/"Software\\Classes\\\.ods" ""/)
     expect(nsh).not.toMatch(/\.ods\\ShellNew/)
   })
 
   it('removes only its own value and its own ProgId on uninstall', () => {
-    expect(instructions('GenOfficeUnregisterOpenWithOds')).toEqual([
-      'DeleteRegValue SHELL_CONTEXT "Software\\Classes\\.ods\\OpenWithProgids" "${GENOFFICE_ODS_PROGID}"',
-      'DeleteRegKey SHELL_CONTEXT "Software\\Classes\\${GENOFFICE_ODS_PROGID}"',
+    expect(instructions('SeuOfficeUnregisterOpenWithOds')).toEqual([
+      'DeleteRegValue SHELL_CONTEXT "Software\\Classes\\.ods\\OpenWithProgids" "${SEUOFFICE_ODS_PROGID}"',
+      'DeleteRegKey SHELL_CONTEXT "Software\\Classes\\${SEUOFFICE_ODS_PROGID}"',
     ])
     // the .ods key and its OpenWithProgids list belong to other programs too
     expect(nsh).not.toMatch(/DeleteRegKey[^\n]*\\\.ods/)
   })
 
   it('runs the registration on install and the removal on uninstall', () => {
-    expect(macroBody('customInstall')).toContain('!insertmacro GenOfficeRegisterOpenWithOds')
-    expect(macroBody('customUnInstall')).toContain('!insertmacro GenOfficeUnregisterOpenWithOds')
+    expect(macroBody('customInstall')).toContain('!insertmacro SeuOfficeRegisterOpenWithOds')
+    expect(macroBody('customUnInstall')).toContain('!insertmacro SeuOfficeUnregisterOpenWithOds')
   })
 })
 

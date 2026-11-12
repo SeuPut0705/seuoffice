@@ -4,7 +4,7 @@
 import { closeSync, openSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
+import { TEMPLATE_FONTS } from '@seuoffice/ui/template-fonts'
 
 import { parseFamilyNames } from '../src/family-info'
 import { faceOffsets, readTable, readTableDir } from '../src/sfnt'

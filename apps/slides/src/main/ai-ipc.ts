@@ -25,13 +25,13 @@ import {
   type AiStreamChunk,
   type AiStreamRequest,
   sealAiSecrets,
-} from '@genoffice/ai-provider'
-import { shutdownCodexAppServers } from '@genoffice/ai-provider/codex-app-server'
-import { withStoredMainFields } from '@genoffice/ai-provider/key-models'
+} from '@seuoffice/ai-provider'
+import { shutdownCodexAppServers } from '@seuoffice/ai-provider/codex-app-server'
+import { withStoredMainFields } from '@seuoffice/ai-provider/key-models'
 import {
   ensureSubscriptionIpc,
   sharedSubscriptionStatuses,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import {
   abortOnDestroyed,
   MAX_REMOTE_IMAGE_BYTES,
@@ -39,8 +39,8 @@ import {
   readBodyCapped,
   safeExternalUrl,
   writeJsonAtomic,
-} from '@genoffice/electron-utils'
-import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
+} from '@seuoffice/electron-utils'
+import { aiRunRefusal } from '@seuoffice/electron-utils/ai-run-guard'
 import {
   webSearchTool,
   imageSearchTool,
@@ -53,24 +53,24 @@ import {
   withMediaCallSignal,
   type AiToolCallContext,
   type AiToolCapabilities,
-} from '@genoffice/ai-search'
-import { documentLocale, getUiLang, PRODUCT_NAME } from '@genoffice/i18n'
-import { addPicture, editPictureSrcRect, replacePictureBytes } from '@genoffice/pptx-engine'
+} from '@seuoffice/ai-search'
+import { documentLocale, getUiLang, PRODUCT_NAME } from '@seuoffice/i18n'
+import { addPicture, editPictureSrcRect, replacePictureBytes } from '@seuoffice/pptx-engine'
 import { rasterImageExt } from './media-mime'
-import { matchesElementRef } from '@genoffice/pptx-engine/identity'
-import { coverCropFractions } from '@genoffice/pipelines/slides'
+import { matchesElementRef } from '@seuoffice/pptx-engine/identity'
+import { coverCropFractions } from '@seuoffice/pipelines/slides'
 import {
   aiChatGptSignInPages,
   aiSubscriptionLoginWindowText,
-} from '@genoffice/ui/ai-subscription-login-window'
+} from '@seuoffice/ui/ai-subscription-login-window'
 import type { AiRunFailure } from '../shared/ipc'
-import { EMU_PER_PX_96 } from '@genoffice/pptx-render'
+import { EMU_PER_PX_96 } from '@seuoffice/pptx-render'
 import { runAiStream, storedAiSettings, withMeteredAccepted } from './ai-stream'
 import { tm } from './i18n-main'
 import { pushHistory, rebuildSlide, scheduleHistoryNotify, sessions } from './session-state'
 import { registerTemplateSelectionIpc } from './template-selection-ipc'
 
-// ---- AI settings + streaming proxy (the main process does the networking to avoid renderer CORS; implementation shared via @genoffice/ai-provider) ----
+// ---- AI settings + streaming proxy (the main process does the networking to avoid renderer CORS; implementation shared via @seuoffice/ai-provider) ----
 
 const AI_SETTINGS_PATH = () => join(app.getPath('userData'), 'ai-settings.json')
 
@@ -91,7 +91,7 @@ function writeAiSettingsFile(settings: unknown): void {
  * user put next to the deck they are editing, and nothing else.
  */
 function slidesMediaRoots(wcId: number): string[] {
-  return documentMediaRoots(sessions.get(wcId)?.path, join(app.getPath('temp'), 'genoffice-pasted'))
+  return documentMediaRoots(sessions.get(wcId)?.path, join(app.getPath('temp'), 'seuoffice-pasted'))
 }
 
 function readJson<T>(path: string, fallback: T): T {

@@ -47,7 +47,7 @@ function fakeContents(): FakeContents {
     reload: () => {
       contents.reloads++
     },
-    getURL: () => 'genoffice://mindmap/index.html',
+    getURL: () => 'seuoffice://mindmap/index.html',
     send: (channel, ...args) => {
       contents.sent.push([channel, ...args])
     },
@@ -86,7 +86,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { createXmindDocument, openXmind } from '@genoffice/xmind-engine'
+import { createXmindDocument, openXmind } from '@seuoffice/xmind-engine'
 import {
   createRecoveryStore,
   markAppShuttingDown,
@@ -94,7 +94,7 @@ import {
   resetAppShuttingDown,
   resumeDiscardedCopies,
   type RecoveryIdentity,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import {
   MINDMAP_DONT_SAVE_HOLD_MS,
   createMindmapView,
@@ -118,7 +118,7 @@ import type {
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-mindmap-recovery-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-mindmap-recovery-'))
   userData = join(dir, 'userData')
   showSaveDialog.mockReset()
   showMessageBox.mockReset()

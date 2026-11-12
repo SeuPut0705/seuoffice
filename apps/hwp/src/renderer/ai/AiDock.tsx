@@ -18,8 +18,8 @@ import {
   effectiveAiPanelOpen,
   onAiRailClick,
   useSplitPaneRole,
-} from '@genoffice/ui'
-import type { TemplateDocument } from '@genoffice/ui'
+} from '@seuoffice/ui'
+import type { TemplateDocument } from '@seuoffice/ui'
 import { useI18n } from '../i18n/locale'
 import type { AgentBridge } from './agent-bridge'
 import type { AiPrefill } from './easy-words'

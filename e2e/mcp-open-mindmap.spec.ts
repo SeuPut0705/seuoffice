@@ -4,7 +4,7 @@ import http, { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, type Page } from '@playwright/test'
-import { createXmindDocumentFromOutline, openXmind, sheetsToOutline } from '@genoffice/xmind-engine'
+import { createXmindDocumentFromOutline, openXmind, sheetsToOutline } from '@seuoffice/xmind-engine'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -189,8 +189,8 @@ test.describe('MCP open documents: mind maps', () => {
   test('list, read with unsaved edits, save-and-close, untitled save, discard, and a map that did not open', async () => {
     test.setTimeout(240_000)
     const port = await freePort()
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-mindmap-e2e-'))
-    const saveDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-mindmap-e2e-default-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-mindmap-e2e-'))
+    const saveDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-mindmap-e2e-default-'))
     const planPath = join(dir, 'plan.xmind')
     const planOriginal = await writeMap(planPath, '# Plan\n\n- Trip plan\n  - Places\n')
     const keepPath = join(dir, 'keep.xmind')
@@ -222,7 +222,7 @@ test.describe('MCP open documents: mind maps', () => {
 
       // ── 1. a titled map: open, edit, list, read, close with save
       let before = mapPageCount(app)
-      expect((await call('open_in_genoffice', { path: planPath })).isError).toBe(false)
+      expect((await call('open_in_seuoffice', { path: planPath })).isError).toBe(false)
       await expect(editorTabs).toHaveCount(1)
       const plan = await newestMapPage(app, before)
       await expect.poll(() => topicTitles(plan)).toContain('Places')
@@ -274,7 +274,7 @@ test.describe('MCP open documents: mind maps', () => {
 
       // ── 3. discard: the tab closes and the file stays as it was
       before = mapPageCount(app)
-      await call('open_in_genoffice', { path: keepPath })
+      await call('open_in_seuoffice', { path: keepPath })
       const keep = await newestMapPage(app, before)
       await expect.poll(() => topicTitles(keep)).toContain('Keep me')
       await addBranch(keep, 'Dropped branch')
@@ -295,7 +295,7 @@ test.describe('MCP open documents: mind maps', () => {
 
       // ── 4. a map whose file did not open: listed, never dirty, never written
       before = mapPageCount(app)
-      await call('open_in_genoffice', { path: brokenPath })
+      await call('open_in_seuoffice', { path: brokenPath })
       await expect(editorTabs).toHaveCount(1)
       const broken = await newestMapPage(app, before)
       await broken.waitForLoadState()

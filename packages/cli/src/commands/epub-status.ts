@@ -4,7 +4,7 @@
  * sent and the book is not opened beyond hashing its bytes.
  */
 import { basename } from 'node:path'
-import { epubDocumentHash } from '@genoffice/epub-engine'
+import { epubDocumentHash } from '@seuoffice/epub-engine'
 import { documentJobs } from '../../../pdf-structure/src'
 import type { JobStatus } from '../../../pdf-structure/src/store'
 import type { ParsedArgs } from '../args'

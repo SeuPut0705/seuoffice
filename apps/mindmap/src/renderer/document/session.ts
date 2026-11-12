@@ -48,7 +48,7 @@ import {
   type XmindDocument,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 
 /** A sheet as the tabs show it. `key` stays the same while the sheet lives; `index` moves when a sheet before it is deleted. */
 export interface SheetTab {

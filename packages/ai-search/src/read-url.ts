@@ -8,9 +8,9 @@
 /// the SSRF guard. The tool never throws: every failure is an object
 /// with an English sentence and one of the ReadUrlErrorCode values.
 
-import { AiRedirectRefusedError, keyedDownload } from '@genoffice/ai-provider'
-import { ResponseTooLargeError, readBodyCapped } from '@genoffice/electron-utils/remote-image'
-import { fetchWithSsrfGuard } from '@genoffice/electron-utils/safe-remote-url'
+import { AiRedirectRefusedError, keyedDownload } from '@seuoffice/ai-provider'
+import { ResponseTooLargeError, readBodyCapped } from '@seuoffice/electron-utils/remote-image'
+import { fetchWithSsrfGuard } from '@seuoffice/electron-utils/safe-remote-url'
 import { htmlToText } from './html-text'
 import { readAiSettingsFile } from './media-tools'
 

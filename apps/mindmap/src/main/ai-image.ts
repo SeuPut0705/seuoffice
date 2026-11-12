@@ -14,9 +14,9 @@
  */
 import { join } from 'node:path'
 import { app, ipcMain } from 'electron'
-import { documentMediaRoots, generateImageTool, withMediaCallSignal } from '@genoffice/ai-search'
-import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
-import { fetchImageBytes } from '@genoffice/electron-utils/fetch-image-bytes'
+import { documentMediaRoots, generateImageTool, withMediaCallSignal } from '@seuoffice/ai-search'
+import { sharedSubscriptionStatuses } from '@seuoffice/ai-provider/subscription'
+import { fetchImageBytes } from '@seuoffice/electron-utils/fetch-image-bytes'
 import { MINDMAP_CHANNELS } from '../shared/ipc'
 
 export interface MindmapImageIpcOptions {

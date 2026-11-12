@@ -1,10 +1,10 @@
-import { createI18n, defineStrings, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang, type Params } from '@seuoffice/i18n'
 import { en } from './projects/en'
 import { ko } from './projects/ko'
 
 /**
  * The home project screen (decision 0088). Words the AI panel already has
- * (pin, new project, tidy up, undo, …) come from `@genoffice/ui`'s project
+ * (pin, new project, tidy up, undo, …) come from `@seuoffice/ui`'s project
  * panel strings. Sharded per language; `en` defines the key set.
  */
 export const projectsUiStrings = defineStrings({

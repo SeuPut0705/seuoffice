@@ -1,12 +1,12 @@
-import { parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { splitSheetRef } from '@genoffice/xlsx-gateway/domain/chart-visual'
-import { parseRelationships, parseSheetElements } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+import { parseRange } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { splitSheetRef } from '@seuoffice/xlsx-gateway/domain/chart-visual'
+import { parseRelationships, parseSheetElements } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
 import {
   FORMULA_REFERENCE_PATTERN,
   qualifierMatches,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-structure'
-import { resolveRelTarget } from '@genoffice/xlsx-gateway/gateway/xlsx-drawing-add'
-import { normalizeOoxmlPartPrefix } from '@genoffice/xlsx-gateway/gateway/xlsx-namespace'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-structure'
+import { resolveRelTarget } from '@seuoffice/xlsx-gateway/gateway/xlsx-drawing-add'
+import { normalizeOoxmlPartPrefix } from '@seuoffice/xlsx-gateway/gateway/xlsx-namespace'
 import { excerpt, PLACEHOLDER, textWidthPx, type IssueDraft } from '../check'
 import { displayText, loadWorkbookZip } from './xlsx'
 

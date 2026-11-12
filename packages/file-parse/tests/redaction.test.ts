@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { REDACT_EL, REDACT_NS } from '@genoffice/agent-core/redact-range'
+import { REDACT_EL, REDACT_NS_WRITTEN } from '@seuoffice/agent-core/redact-range'
 // the writer's own helpers, by path: the marks under test are the ones the deck
 // engine really saves, not a copy of their shape kept in this file
 import { REDACT_EXT_URI, setRedactExt } from '../../pptx-engine/src/redaction-xml'
@@ -22,12 +22,12 @@ import {
   serializeRedactionPart,
   type RedactionMark,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import {
   applyCellEditsToXlsx,
   type SheetStructuralOps,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import type { SheetEditPlan } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { SheetEditPlan } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
 
 /**
  * A file read as another file's material (attachment, knowledge base, search
@@ -238,7 +238,7 @@ describe('pptx: a withheld run reads as its marker', () => {
 
 describe('pptx: a mark that cannot be processed fails the read', () => {
   const ext = (inner: string, uri = REDACT_EXT_URI) =>
-    `<a:extLst><a:ext uri="${uri}" xmlns:go="${REDACT_NS}">${inner}</a:ext></a:extLst>`
+    `<a:extLst><a:ext uri="${uri}" xmlns:go="${REDACT_NS_WRITTEN}">${inner}</a:ext></a:extLst>`
   const broken: Array<[string, string]> = [
     ['an extension with no label element', run(SECRET, `<a:rPr>${ext('')}</a:rPr>`)],
     ['an empty label', run(SECRET, `<a:rPr>${ext(`<${REDACT_EL} label=""/>`)}</a:rPr>`)],
@@ -255,7 +255,7 @@ describe('pptx: a mark that cannot be processed fails the read', () => {
       'the namespace bound to another prefix',
       run(
         SECRET,
-        `<a:rPr><a:extLst><a:ext uri="{OTHER}" xmlns:x="${REDACT_NS}"><x:redact label="x"/></a:ext></a:extLst></a:rPr>`,
+        `<a:rPr><a:extLst><a:ext uri="{OTHER}" xmlns:x="${REDACT_NS_WRITTEN}"><x:redact label="x"/></a:ext></a:extLst></a:rPr>`,
       ),
     ],
     [

@@ -6,7 +6,7 @@ import {
   setCodexImageGenerationAvailable,
   type AiSettings,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { registerCodexImageGenerator } from '../src/codex-image-generator'
 import { aiToolCapabilities } from '../src/tool-capabilities'
 import type { AiToolCallContext } from '../src/tool-routing'

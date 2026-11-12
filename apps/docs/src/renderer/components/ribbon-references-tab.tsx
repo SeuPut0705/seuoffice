@@ -8,8 +8,8 @@ import {
   generateIndexFieldXml,
   type Block,
   type SourceInfo,
-} from '@genoffice/docx-engine'
-import { Dropdown } from '@genoffice/ui'
+} from '@seuoffice/docx-engine'
+import { Dropdown } from '@seuoffice/ui'
 import { PromptModal } from './PromptModal'
 import {
   collectTocEntriesWithPages,

@@ -565,7 +565,7 @@ function memoAuthorOf(author) {
     .replace(/[\u0000-\u001f\u007f/\\;]/g, '')
     .trim()
     .slice(0, MAX_MEMO_AUTHOR)
-  // the product's name (PRODUCT_NAME of @genoffice/i18n, which this plugin cannot import):
+  // the product's name (PRODUCT_NAME of @seuoffice/i18n, which this plugin cannot import):
   // Hangul shows it as the author
   return clean || 'seuoffice'
 }
@@ -3448,7 +3448,7 @@ function hangulFontOf(props) {
 }
 
 /**
- * What the document is made of, for the format checks of `@genoffice/doc-rules`: the
+ * What the document is made of, for the format checks of `@seuoffice/doc-rules`: the
  * paragraphs, the tables with their cells, the pictures, and every character shape in use
  * with the fonts it names. Reads only — it never changes the document, and it calls no
  * model. A cap that is reached sets `truncated`, so the panel can say it saw part of it.
@@ -5744,7 +5744,7 @@ export const agentPlugin = {
       }),
 
       /**
-       * What the document is made of, for the format checks (`@genoffice/doc-rules`):
+       * What the document is made of, for the format checks (`@seuoffice/doc-rules`):
        * paragraphs, tables with their cells, pictures, and every character shape in use.
        * Reads only; no model is called.
        */

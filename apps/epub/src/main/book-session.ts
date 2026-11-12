@@ -39,7 +39,7 @@ import {
   type EpubSaveResult,
   type OpenChapter,
   type RangeReplacement,
-} from '@genoffice/epub-engine'
+} from '@seuoffice/epub-engine'
 import type {
   EpubBlockInfo,
   EpubBookSummary,

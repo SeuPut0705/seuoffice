@@ -10,10 +10,10 @@
  * are listed separately below; this editor never registers those, it only
  * calls them (the language getter excepted, see the main module).
  */
-import type { Lang } from '@genoffice/i18n'
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
-import type { DiagramFormat, DiagramOpResult, DiagramReadResult } from '@genoffice/drawio-model'
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
+import type { DiagramFormat, DiagramOpResult, DiagramReadResult } from '@seuoffice/drawio-model'
+import type { AiPanelPrefs } from '@seuoffice/ui'
 import type { DiagramNotices } from './notices'
 import type { DiagramSubscriptionApi } from './subscription-api'
 

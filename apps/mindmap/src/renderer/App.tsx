@@ -16,8 +16,8 @@ import {
   useAutoSavePref,
   useSplitPaneFocusPing,
   type TemplateDocument,
-} from '@genoffice/ui'
-import type { ThemeId, ViewLayout } from '@genoffice/xmind-engine'
+} from '@seuoffice/ui'
+import type { ThemeId, ViewLayout } from '@seuoffice/xmind-engine'
 import { t as translate, useI18n } from './i18n/locale'
 import { mapStrings } from './i18n/map-strings'
 import type { StringKey } from './i18n/locale'

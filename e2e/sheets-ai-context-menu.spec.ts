@@ -12,7 +12,7 @@ interface Bounds {
 }
 
 type DebugWindow = Window & {
-  __genofficeDebug: {
+  __seuofficeDebug: {
     univerAPI: {
       getActiveWorkbook(): {
         getActiveRange(): { getRange(): Bounds }
@@ -33,7 +33,7 @@ type DebugWindow = Window & {
 
 async function selection(sheets: Page): Promise<Bounds> {
   return sheets.evaluate(() => {
-    const range = (window as unknown as DebugWindow).__genofficeDebug.univerAPI
+    const range = (window as unknown as DebugWindow).__seuofficeDebug.univerAPI
       .getActiveWorkbook()
       .getActiveRange()
       .getRange()
@@ -51,7 +51,7 @@ async function cellCenter(sheets: Page, row: number, column: number) {
       })
       if (!canvas) throw new Error('worksheet canvas not found')
       const grid = canvas.getBoundingClientRect()
-      const rect = (window as unknown as DebugWindow).__genofficeDebug.univerAPI
+      const rect = (window as unknown as DebugWindow).__seuofficeDebug.univerAPI
         .getActiveWorkbook()
         .getActiveSheet()
         .getRange(row, column, 1, 1)
@@ -63,11 +63,11 @@ async function cellCenter(sheets: Page, row: number, column: number) {
 }
 
 test('sheets: Ask AI opens the composer without changing a single cell or dragged range', async () => {
-  const scratch = await mkdtemp(join(tmpdir(), 'genoffice-ai-context-menu-'))
+  const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-ai-context-menu-'))
   const launched = await launchShell({
     onboardingSeen: true,
     settings: { aiPanelSide: 'right', aiPanelShowSidebar: false },
-    env: { GENOFFICE_DEBUG_HOOKS: '1' },
+    env: { SEUOFFICE_DEBUG_HOOKS: '1' },
     videoDir: 'sheets-ai-context-menu',
     recordVideo: false,
   })
@@ -77,7 +77,7 @@ test('sheets: Ask AI opens the composer without changing a single cell or dragge
     await launched.page.locator('.quick-card').nth(1).click()
     const sheets = await waitForPageWithUrl(launched.app, '://sheets/')
     diagnosticPage = sheets
-    await sheets.waitForFunction(() => !!(window as unknown as DebugWindow).__genofficeDebug)
+    await sheets.waitForFunction(() => !!(window as unknown as DebugWindow).__seuofficeDebug)
     await expect(sheets.locator('#univer-container')).toContainText('Sheet1')
     await expect(sheets.locator('.copilot')).toHaveCount(0)
     await sheets.bringToFront()

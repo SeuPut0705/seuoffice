@@ -1,6 +1,6 @@
 # Quick start: the interface and the basics
 
-GenOffice is an office suite that runs on your own computer: one window, one row of tabs, holding eight editors — Docs (word processing), Sheets (spreadsheets), Slides (presentations), PDF, Markdown and plain text, HTML, HWP/HWPX (Hangul documents) and Mind Map (.xmind). Each editor opens and saves files in its own format: .docx, .xlsx, .pptx, .pdf, .md, .html, .hwp/.hwpx and .xmind. Editing needs no network; the AI features do. The mind map editor also imports FreeMind and Freeplane files (.mm) as new maps, which save as .xmind.
+SeuOffice is an office suite that runs on your own computer: one window, one row of tabs, holding eight editors — Docs (word processing), Sheets (spreadsheets), Slides (presentations), PDF, Markdown and plain text, HTML, HWP/HWPX (Hangul documents) and Mind Map (.xmind). Each editor opens and saves files in its own format: .docx, .xlsx, .pptx, .pdf, .md, .html, .hwp/.hwpx and .xmind. Editing needs no network; the AI features do. The mind map editor also imports FreeMind and Freeplane files (.mm) as new maps, which save as .xmind.
 
 ## Interface overview
 
@@ -16,7 +16,7 @@ Any of:
 
 - Click a quick-create card in the [Quick start](help://getting-started) section of **Home** (AI Docs, AI Sheets, AI Slides, ...).
 - Menu **File ▸ New**: Docs (⌘N/ctrl+N), Sheets, Slides, Markdown, HTML or PDF.
-- Drag a file onto the window, or double-click it in your file manager (if GenOffice is the default app).
+- Drag a file onto the window, or double-click it in your file manager (if SeuOffice is the default app).
 
 A new document opens untitled; the file on disk is only created at the first save.
 
@@ -24,7 +24,7 @@ A new document opens untitled; the file on disk is only created at the first sav
 
 - Menu **File ▸ Open** (⌘O/ctrl+O) opens the system picker: .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html.
 - Click anything in Home's **Recent** list.
-- `ieumoffice <file>` from a terminal also opens files.
+- `seuoffice <file>` from a terminal also opens files.
 
 ## ODT documents
 
@@ -59,7 +59,7 @@ Shortcuts inside each editor (format painter, find & replace, table ops, ...) ar
 
 ## The Option+Command chords
 
-Option+Command is the layer Word reserves for structured jumps, and GenOffice fills it the same way. Docs takes most of it; Sheets takes two of its own for Excel parity; one chord works everywhere.
+Option+Command is the layer Word reserves for structured jumps, and SeuOffice fills it the same way. Docs takes most of it; Sheets takes two of its own for Excel parity; one chord works everywhere.
 
 **Docs**
 
@@ -88,7 +88,7 @@ Note that **⌥⌘0 means Normal in Docs and Outside borders in Sheets**. They n
 
 **Every editor**: **⌥⌘R / Ctrl+F1** folds the ribbon, as described above.
 
-That leaves ⌥⌘D free for GenOffice to use on macOS, if a future command wants it.
+That leaves ⌥⌘D free for SeuOffice to use on macOS, if a future command wants it.
 
 ## Where to go next
 

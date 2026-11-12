@@ -27,7 +27,7 @@ describe('fetchImageBytes', () => {
   it('lets the generated-image store answer a file:// URL (the generate_image path)', async () => {
     fetchRemoteImage.mockResolvedValue(response('image/png'))
     readBodyCapped.mockResolvedValue(Uint8Array.from([0x89, 0x50, 0x4e, 0x47]))
-    const url = 'file:///C:/Users/me/AppData/Local/Temp/genoffice-ai-images/a.png'
+    const url = 'file:///C:/Users/me/AppData/Local/Temp/seuoffice-ai-images/a.png'
     const r = await fetchImageBytes(url)
     // no scheme check here: fetchRemoteImage decides which file:// URLs may be read
     expect(fetchRemoteImage).toHaveBeenCalledWith(url)

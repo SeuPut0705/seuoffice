@@ -17,7 +17,7 @@ import {
   type Paragraph,
   type TableElement,
   type TextElement,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import { runTxn } from '../src/ops/executor'
 import '../src/ops/index'
 

@@ -4,7 +4,7 @@ export const en = {
   ntInsert: 'Add to note',
   ntInsertTip: 'Put this at the end of the note. Save it in the note tab',
   ntSaveFirst: 'Save the PDF first',
-  ntUnavailable: 'Notes open only inside the GenOffice app',
+  ntUnavailable: 'Notes open only inside the SeuOffice app',
   ntFailed: 'The note could not be opened. {reason}',
   ntInserted: 'Added to the note',
 }

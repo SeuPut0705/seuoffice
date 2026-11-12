@@ -119,7 +119,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 // the save pipeline's archive writer is stubbed: it lands different bytes on
 // the target (an edit is what a real save would carry) without touching the
 // engine, which the xlsx-roundtrip tests cover.
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -128,13 +128,13 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
 
-import { setOpenPathProbe } from '@genoffice/electron-utils'
+import { setOpenPathProbe } from '@seuoffice/electron-utils'
 import { createSheetsView } from '../src/main/sheets-main'
 
 let dir: string
@@ -196,8 +196,8 @@ async function saveWorkbook(
 const externalBytes = Buffer.from('a different program wrote here')
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-conflict-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-conflict-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-conflict-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-conflict-user-'))
   showMessageBox.mockReset()
   showMessageBox.mockResolvedValue({ response: 0 })
 })

@@ -1,7 +1,7 @@
 import { modelTextOf, redactJson, redactTextBetween } from '../editor/redact'
 import type { Editor, JSONContent } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
-import type { AgentToolCall, AgentToolDef, ToolExecution } from '@genoffice/agent-core'
+import type { AgentToolCall, AgentToolDef, ToolExecution } from '@seuoffice/agent-core'
 import {
   OP_SPECS,
   blockIndexRange,
@@ -15,7 +15,7 @@ import {
   type MdOp,
 } from '../editor/ops'
 import { t } from '../i18n/locale'
-import { MIND_MAP_LIMITS, MIND_MAP_TOOL, parseMindMapTree } from '@genoffice/agent-core/mind-map'
+import { MIND_MAP_LIMITS, MIND_MAP_TOOL, parseMindMapTree } from '@seuoffice/agent-core/mind-map'
 import {
   DraftLanding,
   type AiDocWriter,

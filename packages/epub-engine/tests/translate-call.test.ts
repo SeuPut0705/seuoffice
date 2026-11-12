@@ -10,7 +10,7 @@ import {
   translationSystemPrompt,
   type TranslationJobItem,
   type TranslationModelRequest,
-} from '@genoffice/pdf-structure'
+} from '@seuoffice/pdf-structure'
 import { describe, expect, it } from 'vitest'
 import {
   EPUB_TRANSLATION_MAX_RESENDS,

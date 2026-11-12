@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, htmlLang, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, defineStrings, htmlLang, type Lang, type Params } from '@seuoffice/i18n'
 import { en } from './strings-ai-context/en'
 import { ko } from './strings-ai-context/ko'
 

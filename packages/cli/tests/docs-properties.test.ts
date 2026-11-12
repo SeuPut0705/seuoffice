@@ -74,7 +74,7 @@ async function docxWithProps(path: string): Promise<string> {
   return path
 }
 
-describe('genoffice docs (document properties)', () => {
+describe('seuoffice docs (document properties)', () => {
   it('reads the core, app and custom properties of a document', async () => {
     const dir = tempDir()
     const file = await docxWithProps(join(dir, 'motion.docx'))
@@ -336,7 +336,7 @@ describe('genoffice docs (document properties)', () => {
     // the first save of a new document is revision 1, like Word's first Ctrl+S
     expect(core).toContain('<cp:revision>1</cp:revision>')
     const app = await zip.file('docProps/app.xml')!.async('string')
-    expect(app).toContain('<Application>GenOffice</Application>')
+    expect(app).toContain('<Application>SeuOffice</Application>')
     expect(app).toContain('<Template>Normal.dotm</Template>')
     expect(app).toMatch(/<AppVersion>[^<]+<\/AppVersion>/)
     expect(await zip.file('[Content_Types].xml')!.async('string')).toContain(
@@ -345,7 +345,7 @@ describe('genoffice docs (document properties)', () => {
     const read = await run(['docs', 'read', out, '--properties', '--json'])
     expect(read.code).toBe(0)
     expect(read.json().detail.properties.core.created).toMatch(/Z$/)
-    expect(read.json().detail.properties.app.application).toBe('GenOffice')
+    expect(read.json().detail.properties.app.application).toBe('SeuOffice')
     expect(read.json().detail.properties.custom).toEqual({})
     expect(read.json().detail.properties.customTypes).toEqual({})
   })
@@ -387,7 +387,7 @@ describe('genoffice docs (document properties)', () => {
     const zip = await JSZip.loadAsync(readFileSync(out))
     expect(zip.file('docProps/core.xml')).not.toBeNull()
     expect(await zip.file('docProps/app.xml')!.async('string')).toContain(
-      '<Application>GenOffice</Application>',
+      '<Application>SeuOffice</Application>',
     )
   })
 

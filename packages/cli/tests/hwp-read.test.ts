@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import init, { HwpDocument } from '@rhwp/core'
 import { run, tempDir } from './helpers'
 
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 
 /** The documents are built with the engine the reader uses; there is no other writer here. */
 beforeAll(async () => {
@@ -37,7 +37,7 @@ function write(name: string, bytes: Uint8Array): string {
   return path
 }
 
-describe('ieumoffice hwp read', () => {
+describe('seuoffice hwp read', () => {
   it('returns the text of a .hwp document, tables as rows', async () => {
     const r = await run(['hwp', 'read', write('report.hwp', report().exportHwp()), '--json'])
     expect(r.code).toBe(0)
@@ -154,7 +154,7 @@ describe('ieumoffice hwp read', () => {
   })
 })
 
-describe('ieumoffice info on an HWP document', () => {
+describe('seuoffice info on an HWP document', () => {
   it('says how much text there is and which command reads it', async () => {
     const r = await run(['info', write('report.hwpx', report().exportHwpx()), '--json'])
     expect(r.code).toBe(0)

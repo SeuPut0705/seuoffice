@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   UNSAVED_CHANGES_MESSAGE,
   setOpenFilesSource,
-} from '@genoffice/electron-utils/unsaved-files'
+} from '@seuoffice/electron-utils/unsaved-files'
 import {
   KB_GROUP_EMPTY,
   KB_NOT_IN_BASE,
@@ -47,7 +47,7 @@ function write(name: string, content: string): string {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-kb-scope-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-kb-scope-'))
   a1 = write('a1.md', 'budget of unit A, part one')
   a2 = write('a2.md', 'budget of unit A, part two')
   b1 = write('b1.md', 'budget of unit B')

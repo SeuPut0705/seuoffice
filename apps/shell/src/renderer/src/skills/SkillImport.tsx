@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { skillNameBeside } from '@genoffice/ui'
-import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import type { Lang } from '@seuoffice/i18n'
+import { skillNameBeside } from '@seuoffice/ui'
+import type { UserSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import {
   USER_SKILL_PREVIEW_TEXT_MAX_CHARS,
   type UserSkillCollisionChoice,
@@ -9,7 +9,7 @@ import {
   type UserSkillImportContent,
   type UserSkillImportPreview,
   type UserSkillImportText,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import { skillsText, type SkillsStringKey } from '../i18n/strings-skills'
 import { SkillDialog, useFinalCleanup } from './SkillDialog'
 import { failureKey, formatSkillSize, unreadableKey } from './skills-model'

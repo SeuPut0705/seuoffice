@@ -12,10 +12,10 @@ import {
   type AiStreamChunk,
   type AiStreamRequest,
   type AiSubscriptionState,
-} from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
+} from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
+import { DOC_ATTACH_BRIDGE_KEY } from '@seuoffice/electron-utils/doc-attach-channels'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { MapAiHost } from '../src/renderer/ai/map-tools'

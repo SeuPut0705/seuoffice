@@ -5,7 +5,7 @@
 // The test only asks "is something usable here". It sends fixed probe prompts —
 // no document, attachment or user conversation — and it observes the single
 // fake tool call without executing it or handing it to the app.
-import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
+import type { AgentMessage, AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
 import { listLocalModels, type AiLocalModelSummary } from './local-models'
 import {
   DEFAULT_LOCAL_TIMEOUT_MS,
@@ -91,7 +91,7 @@ const MAX_API_KEY_LENGTH = 8192
 const CHECK_SYSTEM_PROMPT =
   'You are answering a connection test of an AI server. The test only checks that this chat works. Reply briefly.'
 const CHAT_USER_PROMPT = 'ping'
-const TOOL_USER_PROMPT = 'Run the ieumoffice_probe tool now with ok set to true.'
+const TOOL_USER_PROMPT = 'Run the seuoffice_probe tool now with ok set to true.'
 
 /** enough for a short greeting; a local model may still be warming up */
 const CHAT_MAX_TOKENS = 32
@@ -103,7 +103,7 @@ const TOOL_MAX_TOKENS = 128
  * the call is only observed, so the model cannot make the app do anything.
  */
 const PROBE_TOOL: AgentToolDef = {
-  name: 'ieumoffice_probe',
+  name: 'seuoffice_probe',
   description: 'Connection probe. Call this once with {"ok": true} to confirm tool calling works.',
   inputSchema: {
     type: 'object',

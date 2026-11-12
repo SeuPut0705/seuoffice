@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { createXmindDocumentFromOutline } from '@genoffice/xmind-engine'
+import { createXmindDocumentFromOutline } from '@seuoffice/xmind-engine'
 import { parseFileToText, xmindToText } from '../src'
 import { writeFixture } from './helpers/fixtures'
 

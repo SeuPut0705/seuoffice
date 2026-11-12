@@ -3,7 +3,7 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionState,
   AiSubscriptionStatus,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   aiConnectAlternatePath,
   aiConnectGuideView,

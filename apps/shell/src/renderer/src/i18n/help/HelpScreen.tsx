@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
-import { Markdown } from '@genoffice/ui'
+import { Markdown } from '@seuoffice/ui'
 import {
   HELP_GROUPS,
   HELP_TOPICS,

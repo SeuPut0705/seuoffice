@@ -31,7 +31,7 @@ import {
   registerMindmapExportIpc,
   withExportExtension,
 } from '../src/main/export-main'
-import { setUiLang } from '@genoffice/i18n'
+import { setUiLang } from '@seuoffice/i18n'
 import { MINDMAP_CHANNELS } from '../src/shared/ipc'
 import type { ExportResult } from '../src/shared/ipc'
 
@@ -42,7 +42,7 @@ registerMindmapExportIpc({ filePathOf: () => mapPath })
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-mindmap-export-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-mindmap-export-'))
   showSaveDialog.mockReset()
   mapPath = undefined
 })

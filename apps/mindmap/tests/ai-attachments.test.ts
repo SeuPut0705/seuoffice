@@ -31,8 +31,8 @@ vi.mock('electron', () => ({
 }))
 
 const parsed = vi.fn()
-vi.mock('@genoffice/file-parse', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@genoffice/file-parse')>()
+vi.mock('@seuoffice/file-parse', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@seuoffice/file-parse')>()
   return {
     ...real,
     parseFileToText: (path: string) => {
@@ -42,8 +42,8 @@ vi.mock('@genoffice/file-parse', async (importOriginal) => {
   }
 })
 
-import { UNSAVED_CHANGES_MESSAGE, setOpenFilesSource } from '@genoffice/electron-utils'
-import { setUiLang } from '@genoffice/i18n'
+import { UNSAVED_CHANGES_MESSAGE, setOpenFilesSource } from '@seuoffice/electron-utils'
+import { setUiLang } from '@seuoffice/i18n'
 import {
   ATTACHMENT_EXTS,
   collectAttachments,
@@ -59,7 +59,7 @@ let hasFile = false
 registerMindmapAiIpc({ hasFile: () => hasFile })
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-mindmap-attach-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-mindmap-attach-'))
   parsed.mockClear()
   hasFile = false
   setUiLang('en')

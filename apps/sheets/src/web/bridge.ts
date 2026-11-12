@@ -1,6 +1,6 @@
-import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@genoffice/xlsx-gateway/gateway/csv-limits'
-import { documentLocaleFor } from '@genoffice/i18n'
-import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
+import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@seuoffice/xlsx-gateway/gateway/csv-limits'
+import { documentLocaleFor } from '@seuoffice/i18n'
+import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@seuoffice/ui'
 import {
   collabLink,
   createAiStreamBridge,
@@ -422,7 +422,7 @@ export function installBridges(): void {
     createWebBridge<DesktopApi>('desktopApi', desktopApi as Partial<DesktopApi>),
   )
   installWebBridge('nativeSpell', createWebBridge('nativeSpell', {}))
-  installWebBridge('__genofficeDebugHooks', createWebBridge('__genofficeDebugHooks', {}))
+  installWebBridge('__seuofficeDebugHooks', createWebBridge('__seuofficeDebugHooks', {}))
   // aiNamingApi stays absent: suggestFileName reads a missing one as "no shell" and offers no name
   if (editMode()) onHostSaveRequest(saveForHost)
 }

@@ -25,7 +25,7 @@ import {
   type NewElementOptions,
   type NewTableOptions,
   type Paragraph,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import {
   coerceBytes,
   dataUrlExt,

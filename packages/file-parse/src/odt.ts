@@ -1,4 +1,4 @@
-import { odtToText as engineOdtToText } from '@genoffice/odt-engine'
+import { odtToText as engineOdtToText } from '@seuoffice/odt-engine'
 
 /**
  * Plain text of an OpenDocument text file: paragraphs, tables (including the

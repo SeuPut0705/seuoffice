@@ -9,7 +9,7 @@ import {
   type StyleInfo,
   type ThemeColors,
   type ThemeFonts,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   cjkDeclaredLineFactor,
   cssAutoLineMult,

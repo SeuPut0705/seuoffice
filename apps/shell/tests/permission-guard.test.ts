@@ -143,7 +143,7 @@ const mainFrame = (url: string, more: Record<string, unknown> = {}): Record<stri
 
 /** Pages that are a document, not the app: a printed copy, a page the HTML tab shows, the web */
 const DOCUMENT_PAGES = [
-  pathToFileURL(join(tmpdir(), 'genoffice-html-print-x', 'print.html')).toString(),
+  pathToFileURL(join(tmpdir(), 'seuoffice-html-print-x', 'print.html')).toString(),
   'html-preview://7/index.html',
   'https://example.com/',
 ]

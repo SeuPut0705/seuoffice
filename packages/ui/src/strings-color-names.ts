@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type { ColorSwatch } from './color-picker'
 
 // Tooltip names of the shared picker's named swatches, keyed by hex, in every UI language.

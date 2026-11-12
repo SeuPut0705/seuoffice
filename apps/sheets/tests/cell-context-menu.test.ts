@@ -23,17 +23,17 @@ describe('cellContextMenuLayout', () => {
     expect(new Set(ids).size).toBe(ids.length)
     const others = nodes.filter((node) => node.group === ContextMenuGroup.OTHERS)
     expect(others.map((node) => node.id)).toEqual([
-      'genoffice.ctx.ask-ai',
-      'genoffice.ctx.new-comment',
-      'genoffice.ctx.reply-comment',
-      'genoffice.ctx.delete-comment',
-      'genoffice.ctx.resolve-comment',
+      'seuoffice.ctx.ask-ai',
+      'seuoffice.ctx.new-comment',
+      'seuoffice.ctx.reply-comment',
+      'seuoffice.ctx.delete-comment',
+      'seuoffice.ctx.resolve-comment',
       NUMBER_FORMAT_MENU_ID,
-      'genoffice.ctx.format-cells',
+      'seuoffice.ctx.format-cells',
       PICK_FROM_LIST_COMMAND_ID,
-      'genoffice.ctx.define-name',
-      'genoffice.ctx.link',
-      'genoffice.ctx.insert-function',
+      'seuoffice.ctx.define-name',
+      'seuoffice.ctx.link',
+      'seuoffice.ctx.insert-function',
     ])
     expect(others.map((node) => node.order)).toEqual(
       [...others.map((n) => n.order)].sort((a, b) => a - b),
@@ -48,7 +48,7 @@ describe('cellContextMenuLayout', () => {
   })
 
   it('offers Ask AI for any cell selection through the shell dispatcher', () => {
-    const node = byId('genoffice.ctx.ask-ai')
+    const node = byId('seuoffice.ctx.ask-ai')
     expect(node?.titleKey).toBe('aiAskBtn')
     expect(node?.commandId).toBe(SHELL_COMMAND_ID)
     expect(node?.params).toEqual({ command: 'ai-ask-selection' })

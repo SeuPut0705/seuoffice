@@ -85,8 +85,8 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { createXmindDocument, openXmind } from '@genoffice/xmind-engine'
-import { getUiLang, setUiLang } from '@genoffice/i18n'
+import { createXmindDocument, openXmind } from '@seuoffice/xmind-engine'
+import { getUiLang, setUiLang } from '@seuoffice/i18n'
 import {
   configureMindmapRuntime,
   createMindmapView,
@@ -104,13 +104,13 @@ import {
   queueGenerateHandoff,
   resetGenerateHandoffsForTest,
   type GenerateHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import { AI_CHANNELS, APP_CHANNELS, MINDMAP_CHANNELS } from '../src/shared/ipc'
 import type { MindmapHandoff, OpenFileResult, SaveMindmapResult } from '../src/shared/ipc'
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-mindmap-main-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-mindmap-main-'))
   openExternal.mockClear()
   showSaveDialog.mockReset()
   showMessageBox.mockReset()

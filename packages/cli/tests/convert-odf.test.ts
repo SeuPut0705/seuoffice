@@ -29,7 +29,7 @@ async function entryText(path: string, entry: string): Promise<string> {
   return file ? file.async('string') : ''
 }
 
-describe('genoffice convert ODF import filters', () => {
+describe('seuoffice convert ODF import filters', () => {
   it('converts .odp to .pptx headlessly', async () => {
     const dir = tempDir()
     const content =

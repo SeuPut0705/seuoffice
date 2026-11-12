@@ -1,4 +1,4 @@
-import { placeholderSource } from '@genoffice/agent-core/redact-core'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
 import { RedactionMarkError } from './redaction-error'
 
 /**

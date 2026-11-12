@@ -1,7 +1,7 @@
 import { mkdtempSync, readFileSync, realpathSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join, resolve as resolvePath } from 'node:path'
-import { PdfLoadError } from '@genoffice/pdf2docx'
+import { PdfLoadError } from '@seuoffice/pdf2docx'
 import { assertOptionValues, flagBool, flagString, type ParsedArgs } from '../args'
 import { csvToXlsx, sheetNameFromStem } from '../formats/csv'
 import { convertHwp } from '../formats/hwp'
@@ -69,7 +69,7 @@ const NODE_ROUTES: Record<string, readonly string[]> = {
 }
 
 /**
- * Conversions the GenOffice binary runs for us in its hidden headless-export
+ * Conversions the SeuOffice binary runs for us in its hidden headless-export
  * mode: anything that needs an app renderer (page layout for pdf, the Word
  * editor's HTML export, html2docx, the Hangul editor's pages). Mirrors
  * HEADLESS_TARGETS in the shell.
@@ -125,7 +125,7 @@ function appTarget(from: string, to: string): AppExportTarget | null {
 
 export const convertCommand: CommandDef = {
   name: 'convert',
-  summary: 'Convert a document to another format using the GenOffice engines.',
+  summary: 'Convert a document to another format using the SeuOffice engines.',
   usage:
     'convert <file> --to <format> [--out <path>] [--force] [--password <pw>] [--sheet <name>] [--pages <list>] [--title <text>] [--author <text>] [--no-cover] [--page-breaks] [--page <id|name>]',
   options: [
@@ -245,7 +245,7 @@ async function run(
   const viaApp = appTarget(from, to)
   if (viaApp) {
     const r = await exportViaApp(input, viaApp, output, { env: ctx.env, log: ctx.log })
-    return { detail: { via: 'ieumoffice --headless-export', summary: r.summary } }
+    return { detail: { via: 'seuoffice --headless-export', summary: r.summary } }
   }
   if (from === 'pdf' && (to === 'md' || to === 'epub')) {
     return pdfReflow(input, to, output, args, ctx)
@@ -375,7 +375,7 @@ async function docxToMarkdown(docx: Uint8Array, ctx: CommandContext): Promise<Pr
       ctx.warn({
         code: 'images_dropped',
         message: `${exported.skipped.images} image(s) have no Markdown form and were dropped`,
-        suggestion: 'use `ieumoffice docs read --html` when the images matter',
+        suggestion: 'use `seuoffice docs read --html` when the images matter',
       })
     }
     return {
@@ -423,7 +423,7 @@ async function withTempDocx<T>(
   docx: Uint8Array | null,
   work: (path: string) => Promise<T>,
 ): Promise<T> {
-  const dir = mkdtempSync(join(dirname(output), '.ieumoffice-odt-'))
+  const dir = mkdtempSync(join(dirname(output), '.seuoffice-odt-'))
   try {
     const path = join(dir, `${stem}.docx`)
     if (docx) writeOutput(path, docx)
@@ -453,7 +453,7 @@ async function runOdt(
     const r = await withTempDocx(output, stem, docxBytes, (docx) =>
       exportViaApp(docx, target, output, { env: ctx.env, log: ctx.log }),
     )
-    return { detail: { via: 'ieumoffice --headless-export', summary: r.summary, odt_report } }
+    return { detail: { via: 'seuoffice --headless-export', summary: r.summary, odt_report } }
   }
   let docx: Uint8Array
   const detail: Record<string, unknown> = {}
@@ -466,7 +466,7 @@ async function runOdt(
       await exportViaApp(input, 'docx', path, { env: ctx.env, log: ctx.log })
       return new Uint8Array(readFileSync(path))
     })
-    detail.via = 'ieumoffice --headless-export'
+    detail.via = 'seuoffice --headless-export'
   }
   const { odtBytes, report } = await docxBytesToOdt(docx)
   return {
@@ -507,7 +507,7 @@ async function pdfReflow(
       code: 'pages_as_images',
       message:
         'every page is a picture without readable text, so the result holds page images only',
-      suggestion: `read the pages with \`ieumoffice pdf ai-read ${basename(input)} --pages <list>\` first, then convert again`,
+      suggestion: `read the pages with \`seuoffice pdf ai-read ${basename(input)} --pages <list>\` first, then convert again`,
     })
   }
   const source = {
@@ -629,12 +629,12 @@ async function convertPdfViaDocx(
     const md = await docxToMarkdown(pdf.bytes, ctx)
     return { bytes: md.bytes, detail: { ...via, ...md.detail } }
   }
-  const dir = mkdtempSync(join(tmpdir(), 'genoffice-convert-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-convert-'))
   const docxPath = join(dir, `${basename(input, extname(input))}.docx`)
   try {
     writeFileSync(docxPath, pdf.bytes)
     const r = await exportViaApp(docxPath, 'html', output, { env: ctx.env, log: ctx.log })
-    return { detail: { ...via, via: 'genoffice --headless-export', summary: r.summary } }
+    return { detail: { ...via, via: 'seuoffice --headless-export', summary: r.summary } }
   } finally {
     try {
       rmSync(dir, { recursive: true, force: true })

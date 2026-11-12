@@ -15,7 +15,7 @@ describe('deck saves in the Slides main module', () => {
 
   it('stream the package into the temp that atomicWriteVia publishes', () => {
     expect(source).toContain(
-      "import { atomicWriteFile, atomicWriteVia } from '@genoffice/electron-utils/atomic-write'",
+      "import { atomicWriteFile, atomicWriteVia } from '@seuoffice/electron-utils/atomic-write'",
     )
     expect(source).toContain(
       'atomicWriteVia(filePath, (tmp) => savePptxToFile(session.opened, tmp))',

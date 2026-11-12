@@ -16,7 +16,7 @@ import {
   type DriveApi,
   type DriveError,
   type DriveFile,
-} from '@genoffice/google-drive'
+} from '@seuoffice/google-drive'
 import type { DriveEntryType } from '../../shared/drive-api'
 
 export const DRIVE_READ_CHUNK_CHARS = 24_000
@@ -167,7 +167,7 @@ export class DriveAi {
     // the download lives only as long as the parse
     let dir: string | null = null
     try {
-      dir = await mkdtemp(join(tmpdir(), 'ieumoffice-drive-'))
+      dir = await mkdtemp(join(tmpdir(), 'seuoffice-drive-'))
       const path = join(dir, localFileName(file.name, plan.extension))
       await writeFile(path, got.bytes)
       const parsed = await this.deps.parse(path)

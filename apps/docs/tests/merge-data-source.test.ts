@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { csvToXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+import { csvToXlsxBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { readMergeDataSource } from '../src/main/merge-data-source'
 
 /**
@@ -11,7 +11,7 @@ import { readMergeDataSource } from '../src/main/merge-data-source'
  */
 
 async function tempDir(): Promise<string> {
-  return mkdtemp(join(tmpdir(), 'genoffice-merge-'))
+  return mkdtemp(join(tmpdir(), 'seuoffice-merge-'))
 }
 
 describe('readMergeDataSource', () => {

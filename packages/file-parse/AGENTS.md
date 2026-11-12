@@ -24,7 +24,7 @@
 - 스캔한 PDF의 글자 인식은 하지 않는다. PDF를 문서로 되살리는 일은 `packages/pdf2docx`다.
 - 다이어그램의 해석(형식 판정, 원본 꺼내기, 압축 쪽 풀기)과 읽기 표 글은 `packages/drawio-model`이 한다. 여기는 `openDiagram`과 `formatDiagramText`를 부를 뿐이다(`diagram.ts`). `.vsdx`는 읽지 않는다(편집기의 가져오기만 있다).
 - 지도 파일의 해석과 개요 글은 `packages/xmind-engine`이 한다. 여기는 `openXmind`와 `sheetsToOutline`을 부를 뿐이다(`xmind.ts`).
-- EPUB 책의 해석(zip 관문, DRM 판정, 장 글 뽑기)은 `packages/epub-engine`이 한다. 여기는 번역을 싣지 않는 진입점 `@genoffice/epub-engine/core`에서 `openEpub`과 `extractChapterText`를 가져와 부를 뿐이다(`epub.ts`). 패키지 루트를 가져오면 이 패키지를 쓰는 모든 편집기가 `pdf2docx` 소스까지 형 검사하게 된다. 출력 모양을 고치려면 엔진 쪽을 고친다.
+- EPUB 책의 해석(zip 관문, DRM 판정, 장 글 뽑기)은 `packages/epub-engine`이 한다. 여기는 번역을 싣지 않는 진입점 `@seuoffice/epub-engine/core`에서 `openEpub`과 `extractChapterText`를 가져와 부를 뿐이다(`epub.ts`). 패키지 루트를 가져오면 이 패키지를 쓰는 모든 편집기가 `pdf2docx` 소스까지 형 검사하게 된다. 출력 모양을 고치려면 엔진 쪽을 고친다.
 - 워드(`.docx`)의 가리기 표시는 처리하지 않는다. 이 저장소에도 원본의 공개 저장소에도 그 표시를 쓰거나 읽는 코드가 없어 모양을 확인하지 못했고, 확인되기 전에 짐작으로 만들지 않는다.
 - 파일을 읽기 전에 "저장하지 않은 변경이 있는 파일인가"를 묻는 일은 호출자가 한다(`packages/electron-utils`의 `assertFileSaved`·`withoutUnsavedFiles`).
 - 터미널 명령어(`packages/cli`)의 읽기는 이 패키지를 지나지 않고, 가리기를 적용하지 않는다.
@@ -69,13 +69,13 @@
 - zip으로 된 문서가 `WHOLE_ZIP_READ_MAX_BYTES`(50MB)를 넘으면 `readZipTextParts`로 글이 든 파트(XML·관계·JSON·HTML·평문, 확장자 없는 파트)만 디스크에서 압축된 채 옮겨 작은 zip을 만들고, 나머지 파트는 이름만 남겨 내용을 비운다. 형식별 읽기와 zip 관문은 그 작은 zip에 그대로 돈다. 그 이하는 통째로 읽는다. 읽은 글은 통째로 읽을 때와 같아야 한다(`tests/large-documents.test.ts`). zip64는 거절한다(결정 0091).
 - 한글 문서는 문단을 한 줄로, 표를 행마다 칸을 `|`로 이어 적는다. 병합된 칸은 첫 자리에 적고 걸친 자리는 비우되, 줄 끝에 이어지는 빈 자리는 적지 않는다. 한 칸에 문단이 셋을 넘는 표(글을 배치하려고 쓴 표)는 행으로 적지 않고 칸의 문단을 줄로 푼다. 메모가 있으면 본문·표 뒤에 `### Comments` 블록을 붙인다. 첫 줄은 `- 작성자 (p.N): 첫 줄`이고 이어지는 줄은 두 칸 들여쓰며, 작성자가 없으면 `unknown`, 쪽을 모르면 `(p.N)`을 뺀다. 메모가 없으면 블록을 붙이지 않아 본문 출력이 그대로다.
 - 문단과 표를 따라가는 읽기가 닿지 못한 글자(글상자, 머리말, 표 안의 표 등)는 엔진의 평문 내보내기에서 찾아 제자리에 끼워 넣는다(`withMissingText`). 엔진 평문만 쓰지 않는 이유는 그쪽이 빈 누름틀에 안내 문구를 적고 표를 줄 구분 없이 풀기 때문이다.
-- 엔진 WASM(`rhwp_bg.wasm`, 약 12MB)은 한글 문서를 처음 읽을 때 한 번 올린다. 위치는 `GENOFFICE_RHWP_WASM`, `node_modules`의 `@rhwp/core`, 설치본의 `Resources/wasm` 순으로 찾는다. `@rhwp/core`는 패치해 빌드한 `vendor/rhwp-core`를 가리킨다(결정 0050). 연 문서는 반드시 `free()`한다(WASM 메모리는 저절로 풀리지 않는다).
+- 엔진 WASM(`rhwp_bg.wasm`, 약 12MB)은 한글 문서를 처음 읽을 때 한 번 올린다. 위치는 `SEUOFFICE_RHWP_WASM`, `node_modules`의 `@rhwp/core`, 설치본의 `Resources/wasm` 순으로 찾는다. `@rhwp/core`는 패치해 빌드한 `vendor/rhwp-core`를 가리킨다(결정 0050). 연 문서는 반드시 `free()`한다(WASM 메모리는 저절로 풀리지 않는다).
 - `hwpMemosOf(bytes)`는 저장 검증을 위해 메모를 구조(id·index·author·date·text·place·path·page)로 돌려준다. 받은 바이트를 복사해 엔진에 넘기고 `free()`하며, HWPX는 zip 관문을 먼저 거친다. 엔진이 배열이 아닌 값을 주면 빈 배열이다. 엔진이 모델에 담지 못한 원시 기록은 이 함수에 나오지 않으므로, 저장 손실을 세는 쪽은 `hwpxMemoCountOf`와 함께 본다(결정 0072).
 - 암호가 걸린 한글 문서는 읽지 않고 그렇다고 알린다. 암호를 받는 길은 없다.
 
 ## 테스트
 
-- `npm run test -w @genoffice/file-parse`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다.
+- `npm run test -w @seuoffice/file-parse`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃은 20초다.
 - OOXML 픽스처는 `tests/helpers/fixtures.ts`가 JSZip으로 그때그때 만들어 임시 폴더에 쓴다. ODT 픽스처는 `tests/odt.test.ts`가 손으로 묶거나(글상자 안 표, 각주, 암호 manifest) docx 픽스처를 `docxToOdt`로 바꿔 만든다. 파일로 들어 있는 것은 옛 형식 두 개(`tests/fixtures/legacy-sample.doc`, `legacy-sample.ppt`)뿐이다. `npm run fixtures`는 필요 없다. 한글 문서는 `tests/hwp.test.ts`가 엔진으로 직접 만든다(문단을 모두 만든 뒤 표를 붙인다. 표가 놓인 문단을 나누면 엔진이 표를 옮긴다).
 - 형식 처리를 바꾸면 정상 추출, 깨진 파일이 던지지 않고 `ok: false`가 되는 경우, 글자 원형 보존(앞자리 0, 런 사이 공백)을 덮는다. zip을 여는 경로를 건드리면 `tests/zip-bomb-gate.test.ts`도 함께 본다.
 - 가리기를 바꾸면 형식마다, 표시 종류마다 "가린 글이 결과에 남지 않는다"와 "표시를 처리하지 못하면 원문이 아니라 실패가 나온다"를 덮는다(`tests/redaction.test.ts`). 마크다운은 "끝을 짐작하지 않는다"와 "표시가 될 수 있는 것만 실패한다"를 함께 본다. 지도 읽기는 `tests/xmind.test.ts`, EPUB 읽기와 DRM·손상·인코딩 거절은 `tests/epub.test.ts`. 다이어그램 네 형식·압축 쪽·깨진 파일·원본 없는 그림·`.vsdx`는 `tests/diagram.test.ts`이고, 시험 파일 `tests/fixtures/out.drawio*`는 `packages/drawio-model/tests/fixtures`에서 복사했다.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import {
   PROJECT_CHAT_STRINGS,
   projectChatText,

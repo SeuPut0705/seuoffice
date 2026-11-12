@@ -17,8 +17,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, createRef, type RefObject } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { defaultAiSettings, resolveCustomEndpoints, type AiSettings } from '@genoffice/ai-provider'
-import type { Lang } from '@genoffice/i18n'
+import { defaultAiSettings, resolveCustomEndpoints, type AiSettings } from '@seuoffice/ai-provider'
+import type { Lang } from '@seuoffice/i18n'
 import type { EpubApi } from '../src/shared/ipc'
 import { LocaleProvider, useI18n } from '../src/renderer/i18n/locale'
 import {

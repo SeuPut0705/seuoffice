@@ -23,7 +23,7 @@
  * store.translation. Nothing is sent to an AI and nothing is written.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { applyStoredAiReadings } from '../../../../../packages/pdf-structure/src/ai-read'
 import { defaultTargetLanguageForTree } from '../../../../../packages/pdf-structure/src/translate/language'
 import type { TranslationMode } from '../../../../../packages/pdf-structure/src/store/job-keys'

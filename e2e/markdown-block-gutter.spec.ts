@@ -23,7 +23,7 @@ async function gutterBeside(page: Page, block: Locator): Promise<void> {
 }
 
 test('the block gutter sits left of the hovered block, like Notion', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-md-gutter-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-md-gutter-'))
   const mdPath = join(dir, 'gutter.md')
   const long = 'A paragraph long enough to wrap onto more than one line in the editor. '.repeat(6)
   await writeFile(mdPath, `# Gutter\n\n${long}\n\n- first item\n- second item\n`)

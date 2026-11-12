@@ -5,7 +5,7 @@
  * the existing export for it, and the open deck keeps its path, its unsaved
  * edits and its recovery identity.
  */
-import { numberedExportPaths } from '@genoffice/electron-utils/numbered-export-paths'
+import { numberedExportPaths } from '@seuoffice/electron-utils/numbered-export-paths'
 
 export type SlidesSaveAsPick =
   | { readonly kind: 'pptx'; readonly path: string }

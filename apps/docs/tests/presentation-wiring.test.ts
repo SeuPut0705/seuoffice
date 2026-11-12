@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * F5 wiring (presentation mode). The key classification itself is tested in
- * `@genoffice/ui` (`presentation-keys.test.ts`); this pins the editor side that
+ * `@seuoffice/ui` (`presentation-keys.test.ts`); this pins the editor side that
  * the unit test cannot reach without mounting the whole editor.
  */
 describe('docs presentation wiring', () => {

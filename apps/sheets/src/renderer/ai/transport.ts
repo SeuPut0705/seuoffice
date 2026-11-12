@@ -2,10 +2,10 @@ import {
   createIpcTransport,
   type AgentTransport,
   type IpcTransportOptions,
-} from '@genoffice/agent-core'
-import type { AiSettings } from '@genoffice/ai-provider'
-import { localContextLimit } from '@genoffice/ai-provider/browser'
-import { aiContextConfirmText, aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/agent-core'
+import type { AiSettings } from '@seuoffice/ai-provider'
+import { localContextLimit } from '@seuoffice/ai-provider/browser'
+import { aiContextConfirmText, aiRunErrorText } from '@seuoffice/ui'
 import { getLang, t } from '../i18n/locale'
 
 /** What the panel wants to hear from a turn besides its text: the cause of a failure, usage, a cut input */

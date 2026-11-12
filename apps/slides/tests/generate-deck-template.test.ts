@@ -5,8 +5,8 @@
  * call is a fake on DeckAccess; nothing here reaches a provider.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { listSlideTemplates } from '@genoffice/pipelines/slides/templates'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import { listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import { createSlidesSkill, type DeckAccess } from '../src/renderer/ai/slides-skill'
 import {
   createTemplateSelectionState,

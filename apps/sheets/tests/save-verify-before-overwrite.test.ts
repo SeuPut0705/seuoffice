@@ -152,7 +152,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 // the save pipeline's archive writer is stubbed: it lands different bytes on
 // the target (an edit is what a real save would carry) without touching the
 // engine, which the xlsx-roundtrip tests cover.
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -161,8 +161,8 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -237,8 +237,8 @@ function isSavedOutput(path: string): boolean {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-verify-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-verify-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-verify-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-verify-user-'))
   openFails.value = () => false
   opened.length = 0
   closed.length = 0

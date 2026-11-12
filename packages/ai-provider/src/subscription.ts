@@ -1,10 +1,10 @@
 /**
  * Shared plumbing for the subscription CLIs (Claude Code, Codex): locating the
  * program, reading its connection status, building its environment, starting
- * and stopping it. Entry point `@genoffice/ai-provider/subscription`.
+ * and stopping it. Entry point `@seuoffice/ai-provider/subscription`.
  *
  * Main-process (Node) only. Renderer and preload code imports the IPC contract
- * from `@genoffice/ai-provider/browser` instead.
+ * from `@seuoffice/ai-provider/browser` instead.
  */
 export * from './subscription/contract'
 export * from './subscription/env'

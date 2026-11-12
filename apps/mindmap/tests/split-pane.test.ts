@@ -9,13 +9,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import {
-  defaultAiSettings,
-  type AiSubscriptionState,
-} from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
-import type { SplitPaneRole } from '@genoffice/ui'
+import { defaultAiSettings, type AiSubscriptionState } from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
+import type { SplitPaneRole } from '@seuoffice/ui'
 import App from '../src/renderer/App'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import type { MindmapApi } from '../src/shared/ipc'

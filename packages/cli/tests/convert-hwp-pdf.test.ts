@@ -20,7 +20,7 @@ describe('convert a Hangul document to PDF', () => {
     if (process.platform === 'win32') return
     const dir = tempDir()
     const pdf = writeMinimalPdf(join(dir, 'page.pdf'))
-    const env = { ...process.env, GENOFFICE_APP_BIN: fakeApp(dir, pdf) }
+    const env = { ...process.env, SEUOFFICE_APP_BIN: fakeApp(dir, pdf) }
     for (const ext of ['hwp', 'hwpx']) {
       const input = join(dir, `form-${ext}.${ext}`)
       writeFileSync(input, 'x')
@@ -28,7 +28,7 @@ describe('convert a Hangul document to PDF', () => {
       expect(r.code).toBe(0)
       const out = r.json().output_path as string
       expect(out).toBe(join(dir, `form-${ext}.pdf`))
-      expect(r.json().detail.via).toBe('ieumoffice --headless-export')
+      expect(r.json().detail.via).toBe('seuoffice --headless-export')
       expect(readFileSync(out).subarray(0, 5).toString()).toBe('%PDF-')
       // never over an existing file unless asked
       const again = await run(['convert', input, '--to', 'pdf', '--json'], { env })

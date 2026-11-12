@@ -7,7 +7,7 @@
  *    rewritten although its OOXML came back unchanged);
  * 3. a space right after an inline picture stays after it.
  */
-import { type SaveBlock, parseDocx, saveDocx } from '@genoffice/docx-engine'
+import { type SaveBlock, parseDocx, saveDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { odtToDocx, saveOdt } from '../src'
 import { readOdtPackage } from '../src/core'

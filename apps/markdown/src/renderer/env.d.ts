@@ -1,7 +1,7 @@
 /// <reference types="vite/client" />
 
-import type { ProjectApi, ProjectFolderApi } from '@genoffice/project-store'
-import type { SplitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
+import type { ProjectApi, ProjectFolderApi } from '@seuoffice/project-store'
+import type { SplitPaneBridge } from '@seuoffice/electron-utils/split-pane-bridge'
 import type { MarkdownApi } from '../shared/ipc'
 
 declare global {

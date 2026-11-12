@@ -4,8 +4,8 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseDocx } from '@genoffice/docx-engine'
-import { ODT_MIMETYPE, odtToText, type ConversionReport } from '@genoffice/odt-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
+import { ODT_MIMETYPE, odtToText, type ConversionReport } from '@seuoffice/odt-engine'
 import { generateDocx } from '../../../packages/html2docx/src/generate'
 import { HTML_CHANNELS } from '../src/shared/ipc'
 import {
@@ -172,9 +172,9 @@ describe('HTML ODT export wiring', () => {
 
   it('takes its attachment formats from the one shared list', async () => {
     const main = await source('../src/main/html-main.ts')
-    const { ATTACHABLE_EXTS } = await import('@genoffice/file-parse')
+    const { ATTACHABLE_EXTS } = await import('@seuoffice/file-parse')
     expect(main).toContain('ATTACHABLE_EXTS')
-    expect(main).toMatch(/from '@genoffice\/file-parse'/)
+    expect(main).toMatch(/from '@seuoffice\/file-parse'/)
     expect(ATTACHABLE_EXTS.has('odt')).toBe(true)
   })
 })

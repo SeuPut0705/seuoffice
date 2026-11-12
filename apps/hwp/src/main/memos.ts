@@ -1,5 +1,5 @@
-import { hwpMemosOf } from '@genoffice/file-parse'
-import type { HwpMemo } from '@genoffice/file-parse'
+import { hwpMemosOf } from '@seuoffice/file-parse'
+import type { HwpMemo } from '@seuoffice/file-parse'
 import type { MemoSnapshot } from '../shared/ipc'
 import { hwpxMemoCountOf } from './tab-widths'
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import { USER_MCP_STRINGS, type UserMcpStringKey } from '../src/strings-user-mcp'
 
 const KEYS = Object.keys(USER_MCP_STRINGS.en) as UserMcpStringKey[]

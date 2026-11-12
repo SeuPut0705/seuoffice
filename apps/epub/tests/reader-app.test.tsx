@@ -7,8 +7,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { Lang } from '@genoffice/i18n'
-import { openChapter, type EpubTocEntry } from '@genoffice/epub-engine'
+import type { Lang } from '@seuoffice/i18n'
+import { openChapter, type EpubTocEntry } from '@seuoffice/epub-engine'
 import App from '../src/renderer/App'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import {

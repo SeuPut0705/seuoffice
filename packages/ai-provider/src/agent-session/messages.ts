@@ -11,7 +11,7 @@ export const DECLINED_BY_PERSON =
 export function denyMessage(reason: AgentDenyReason): string {
   switch (reason) {
     case 'open-document':
-      return 'This file is open in the office app, which holds its current state. Do not write the file; change it with the ieumoffice-editor tools instead.'
+      return 'This file is open in the office app, which holds its current state. Do not write the file; change it with the seuoffice-editor tools instead.'
     case 'outside-project':
       return 'Files outside the project folder cannot be written in this session. Write inside the project folder instead.'
     case 'protected-path':

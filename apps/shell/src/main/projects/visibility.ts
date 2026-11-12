@@ -1,18 +1,18 @@
 import { isAbsolute, join } from 'node:path'
-import { isSaveTempName } from '@genoffice/electron-utils/atomic-write'
-import { PROJECT_FOLDER_NAMES } from '@genoffice/project-store'
+import { isSaveTempName } from '@seuoffice/electron-utils/atomic-write'
 import { isHiddenEntry } from '../folder-tree'
+import { isDataDirName } from './folder-files'
 import type { IgnoreMatcher } from './ignore'
 
 /**
  * Whether a folder-relative path is a file the AI may see (spec 5.5, 5.9): it
  * stays inside the folder (no `..`, not absolute), no segment is a hidden entry
  * by the home tree's rule (dot names, `~$` lock files, OS junk, the Markdown
- * app-owned `assets/` folder), it is not under `.ieumoffice/`, it is not a
- * file a save puts beside a document (the staging temp, a failed save's
- * rescue copy), and `ignore` does not match it. Paths are not resolved here;
- * callers that touch the disk also check links (the read tool resolves the
- * real path).
+ * app-owned `assets/` folder), it is not under the data folder (by any name it
+ * has had), it is not a file a save puts beside a document (the staging temp,
+ * a failed save's rescue copy), and `ignore` does not match it. Paths are not
+ * resolved here; callers that touch the disk also check links (the read tool
+ * resolves the real path).
  */
 export function isAiVisiblePath(
   root: string,
@@ -29,7 +29,7 @@ export function isAiVisiblePath(
   for (let index = 0; index < segments.length; index++) {
     const name = segments[index]!
     if (name === '.' || name === '..') return false
-    if (index === 0 && name.toLowerCase() === PROJECT_FOLDER_NAMES.dataDir) return false
+    if (index === 0 && isDataDirName(name)) return false
     const segmentIsDir = index < segments.length - 1 || isDir
     if (isHiddenEntry(dir, name, segmentIsDir)) return false
     // a save's own files carry no leading dot (it would stick to the saved

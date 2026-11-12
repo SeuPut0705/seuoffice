@@ -30,7 +30,7 @@ import {
   structureClassForLayout,
   type XmindDocument,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 
 /** One node of a FreeMind or Freeplane map, as this editor takes it over. */
 export interface FreeMindNode {

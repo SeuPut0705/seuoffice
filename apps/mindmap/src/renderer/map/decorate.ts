@@ -42,7 +42,7 @@
  */
 import type { MindElixirInstance, Topic } from 'mind-elixir'
 import type { NodeObj } from 'mind-elixir'
-import { mixColors, type ThemeLook, type ViewImage } from '@genoffice/xmind-engine'
+import { mixColors, type ThemeLook, type ViewImage } from '@seuoffice/xmind-engine'
 import { boxWidth, type MapNodeMeta } from '../document/convert'
 import {
   type BranchBoxes,

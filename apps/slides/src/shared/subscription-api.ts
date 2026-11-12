@@ -1,6 +1,6 @@
 // Contract between the slides renderer (AI panel) and the main process for the
 // subscription providers (Claude, Codex). The channels and payloads are the
-// shared ones from @genoffice/ai-provider; the handlers are registered once per
+// shared ones from @seuoffice/ai-provider; the handlers are registered once per
 // process (by the shell's AI registration, or by slides itself when standalone).
 
 import type {
@@ -9,14 +9,14 @@ import type {
   SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 // Reading an IPC answer is the same in every app: one implementation, in the shared contract
 export {
   checkingSubscriptionStatuses,
   subscriptionLaunchResultOf,
   subscriptionStatusMapOf,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 /** exposed as `window.slidesApi.aiSubscription` by the slides preload */
 export interface SubscriptionApi {

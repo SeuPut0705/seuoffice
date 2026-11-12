@@ -90,8 +90,8 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/electron-utils', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/electron-utils')>()),
+vi.mock('@seuoffice/electron-utils', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/electron-utils')>()),
   configuredDefaultSaveDir: vi.fn(() => defaultSaveDir),
   contextMenuLabels: vi.fn(() => ({})),
   installContextMenu: vi.fn(),
@@ -110,7 +110,7 @@ import {
   resetAppShuttingDown,
   resumeDiscardedCopies,
   type RecoveryIdentity,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import {
   createMarkdownView,
   markdownDiscardPendingAssets,

@@ -37,7 +37,7 @@ import {
   sameInlineWrap,
   sameInlineWrapChain,
   type InlineWrap,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { notifyOdt, recordOdtRefusal } from '../odt-gate'
 import {
   INLINE_WRAP_MARK,

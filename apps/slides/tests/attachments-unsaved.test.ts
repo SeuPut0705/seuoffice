@@ -25,7 +25,7 @@ const parseFileToText = vi.fn(async (_path: string) => ({
   kind: 'text',
   text: 'text as last saved',
 }))
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   parseFileToText: (path: string) => parseFileToText(path),
   ATTACHABLE_EXTS: new Set([
     'txt',
@@ -80,10 +80,10 @@ vi.mock('@genoffice/file-parse', () => ({
   diagramPictureExtOf: () => null,
   diagramPictureExtOfName: () => null,
 }))
-vi.mock('@genoffice/cli/agent-skills', () => ({}))
-vi.mock('@genoffice/cli/install', () => ({}))
+vi.mock('@seuoffice/cli/agent-skills', () => ({}))
+vi.mock('@seuoffice/cli/install', () => ({}))
 // the real unsaved-files helper, by path: the package root reaches Electron
-vi.mock('@genoffice/electron-utils', async () => ({
+vi.mock('@seuoffice/electron-utils', async () => ({
   showOpenDialogWithMemory: vi.fn(),
   ...(await import('../../../packages/electron-utils/src/unsaved-files')),
 }))
@@ -111,7 +111,7 @@ function read(path: string): Promise<ReadResult> {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-slides-attach-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-slides-attach-'))
   parseFileToText.mockClear()
 })
 afterEach(() => {

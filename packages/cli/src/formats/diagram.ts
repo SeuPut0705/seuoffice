@@ -15,8 +15,8 @@ import {
   type DiagramFormat,
   type DiagramOpResult,
   type DiagramPageTable,
-} from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+} from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 import { pageFilePaths } from '../../../../apps/diagram/src/main/export-paths'
 import { diagramBaseName } from '../../../../apps/diagram/src/shared/formats'
 import { flagString, type ParsedArgs } from '../args'
@@ -38,7 +38,7 @@ import { runDiagramApp, type DiagramAppTarget } from './diagram-app'
 export const DIAGRAM_EXTENSIONS = '.drawio, .dio, .drawio.svg, .drawio.png'
 
 const GUIDE_HINT =
-  'run `ieumoffice diagram read <file>` for the ids and pages, and `ieumoffice guide diagram` for the ops'
+  'run `seuoffice diagram read <file>` for the ids and pages, and `seuoffice guide diagram` for the ops'
 
 /** Whether a path names a diagram (or a Visio file, which only the app imports). */
 export function isDiagramPath(path: string): boolean {
@@ -164,7 +164,7 @@ export function diagramOpsOf(args: ParsedArgs, ctx: PathContext): unknown[] {
   if (spec === undefined || spec === '') {
     throw new CliError(EXIT.usage, 'missing --ops <JSON|@file|->', undefined, {
       reason: 'missing_argument',
-      suggestion: 'run `ieumoffice guide diagram` for the ops',
+      suggestion: 'run `seuoffice guide diagram` for the ops',
     })
   }
   let text: string
@@ -200,7 +200,7 @@ export function diagramOpsOf(args: ParsedArgs, ctx: PathContext): unknown[] {
   if (!ops?.length) {
     throw new CliError(EXIT.usage, `${source}: expected a non-empty array of ops`, undefined, {
       reason: 'invalid_argument',
-      suggestion: 'run `ieumoffice guide diagram` for the ops',
+      suggestion: 'run `seuoffice guide diagram` for the ops',
     })
   }
   return ops
@@ -342,7 +342,7 @@ async function runBatch(
       via: 'model',
     }
   }
-  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-diagram-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-diagram-'))
   try {
     const opsFile = join(dir, 'ops.json')
     writeFileSync(opsFile, JSON.stringify(ops))
@@ -462,7 +462,7 @@ export async function createDrawio(
   const all =
     mermaid === undefined ? userOps : [{ op: 'insert_mermaid', text: mermaid }, ...userOps]
   const blank = createDiagramFile()
-  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-diagram-new-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-diagram-new-'))
   let run: BatchRun
   try {
     // the app opens a file: the new diagram is handed over as one

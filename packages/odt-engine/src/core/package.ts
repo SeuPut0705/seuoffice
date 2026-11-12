@@ -16,7 +16,7 @@ import {
   decompressionStream,
   streamBytes,
   type ZipLimits,
-} from '@genoffice/zip-gate'
+} from '@seuoffice/zip-gate'
 import { OdtOpenError } from './errors'
 
 /** Same caps as the docx engine's `DOCX_ZIP_LIMITS` (10,000 parts, 512 MiB per part, 1.5 GiB total). */

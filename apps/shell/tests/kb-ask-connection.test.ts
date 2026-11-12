@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import type {
   AiSettings,
   AiSubscriptionState,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
-import { aiSendGate } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { aiSendGate } from '@seuoffice/ui'
 import {
   askBlockedRunOf,
   askHeldStep,

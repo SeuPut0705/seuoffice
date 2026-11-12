@@ -6,7 +6,7 @@ import {
   parseDocx,
   readSections,
   saveDocx,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { substituteMergeFields } from '../src/renderer/mail-merge/template'

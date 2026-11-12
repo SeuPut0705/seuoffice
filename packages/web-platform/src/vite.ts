@@ -38,7 +38,7 @@ export function seuofficeWebAliases(): Alias[] {
       replacement: fileURLToPath(new URL('../../collab/src/client/index.ts', import.meta.url)),
     },
     {
-      find: /^@genoffice\/ui\/template-fonts$/,
+      find: /^@seuoffice\/ui\/template-fonts$/,
       replacement: fileURLToPath(new URL('./template-fonts.ts', import.meta.url)),
     },
   ]

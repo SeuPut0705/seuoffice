@@ -54,8 +54,8 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
     const docs = await scratch(run, '문서')
     // a folder "a colleague" handed over, with instructions written outside this app
     const received = await scratch(run, '받은 폴더', '학년 협의회')
-    await mkdir(join(received, '.ieumoffice'), { recursive: true })
-    await writeFile(join(received, '.ieumoffice', 'instructions.md'), SUSPICIOUS)
+    await mkdir(join(received, '.seuoffice'), { recursive: true })
+    await writeFile(join(received, '.seuoffice', 'instructions.md'), SUSPICIOUS)
     await writeFile(join(received, '협의록.md'), '# 협의록\n\n- 체험학습 장소 정함\n')
 
     const launched = await launchShell({
@@ -114,7 +114,7 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
 
       await test.step('8d. 앱 밖에서 지침을 고치면 "지침이 바뀌었습니다 [보기]"가 한 번', async () => {
         await writeFile(
-          join(received, '.ieumoffice', 'instructions.md'),
+          join(received, '.seuoffice', 'instructions.md'),
           SUSPICIOUS + '날짜는 2026. 10. 30. 꼴로 적는다.\n',
         )
         const before = (await recorded(app)).streams.length
@@ -141,9 +141,9 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
 
       await test.step('8e. 받은 폴더를 [지침까지 사용]으로 바로 추가', async () => {
         const second = await scratch(run, '받은 폴더', '동아리')
-        await mkdir(join(second, '.ieumoffice'), { recursive: true })
+        await mkdir(join(second, '.seuoffice'), { recursive: true })
         await writeFile(
-          join(second, '.ieumoffice', 'memory.md'),
+          join(second, '.seuoffice', 'memory.md'),
           '- 동아리 회비는 2만 원 (2026-09-01)\n',
         )
         await page.locator('.tab-bar .tab-home').click()
@@ -162,11 +162,11 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
 
       await test.step('8f. 등록하지 않은 프로젝트 폴더 안의 문서를 열면 [사용] 안내', async () => {
         const other = await scratch(run, '받은 폴더', '미등록 프로젝트')
-        await mkdir(join(other, '.ieumoffice'), { recursive: true })
-        await writeFile(join(other, '.ieumoffice', 'instructions.md'), '표는 쓰지 않는다.\n')
+        await mkdir(join(other, '.seuoffice'), { recursive: true })
+        await writeFile(join(other, '.seuoffice', 'instructions.md'), '표는 쓰지 않는다.\n')
         // made with this app on a colleague's PC: it carries its own project.json
         await writeFile(
-          join(other, '.ieumoffice', 'project.json'),
+          join(other, '.seuoffice', 'project.json'),
           JSON.stringify({
             version: 1,
             id: 'Colleague0Project01',
@@ -238,7 +238,7 @@ test.describe('project folder, someone else’s folder and mistakes', () => {
         expect(text2).toContain('사용자 폴더 전체는 프로젝트로 쓸 수 없습니다')
         // nothing was registered: the list is still empty
         expect(text2).toContain('아직 프로젝트가 없습니다')
-        expect(existsSync(join(homedir(), '.ieumoffice', 'project.json'))).toBe(false)
+        expect(existsSync(join(homedir(), '.seuoffice', 'project.json'))).toBe(false)
       })
 
       await test.step('10. 빈 이름과 겹치는 이름', async () => {

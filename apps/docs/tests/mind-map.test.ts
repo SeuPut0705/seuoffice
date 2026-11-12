@@ -12,10 +12,10 @@ import {
   mindMapToMermaid,
   parseMindMapTree,
   wrapLabel,
-} from '@genoffice/agent-core/mind-map'
+} from '@seuoffice/agent-core/mind-map'
 import { AGENT_SYSTEM_PROMPT } from '../src/renderer/ai/protocol'
 import { t } from '../src/renderer/i18n/locale'
-import type { MindMapTreeNode } from '@genoffice/agent-core'
+import type { MindMapTreeNode } from '@seuoffice/agent-core'
 
 const NUM_IDS = { bullet: null, ordered: null }
 

@@ -74,7 +74,7 @@ import {
   type ProjectChatOpened,
   type ProjectMemoryLine,
   type ProjectRunPrepared,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
 import {
@@ -83,8 +83,8 @@ import {
   windowMcpState,
   windowMcpUsableServers,
   toolStepLabel,
-} from '@genoffice/agent-core'
-import type { AgentImage, IpcStreamError } from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
+import type { AgentImage, IpcStreamError } from '@seuoffice/agent-core'
 import type {
   AddFolderResult,
   ChatMessage,
@@ -95,13 +95,13 @@ import type {
   ProjectListItem,
   ProjectNotice,
   ProjectScreenSection,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
-} from '@genoffice/ai-provider'
-import { localModelCapabilities } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider'
+import { localModelCapabilities } from '@seuoffice/ai-provider/browser'
 import { ATTACHMENT_IMAGE_EXTS } from '../../shared/ipc'
 import type { AttachmentAddResult, AttachmentMeta, EpubAiApi } from '../../shared/ipc'
 import { t as tGlobal, useI18n } from '../i18n/locale'
@@ -124,7 +124,7 @@ import fileImageIcon from './assets/file-image.png'
 import filePdfIcon from './assets/file-pdf.png'
 import filePptIcon from './assets/file-ppt.png'
 import fileWordIcon from './assets/file-word.png'
-import { isRtlLang } from '@genoffice/i18n'
+import { isRtlLang } from '@seuoffice/i18n'
 
 /** [chip label, composer prefill] */
 const STARTERS = [

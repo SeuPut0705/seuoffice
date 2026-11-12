@@ -6,7 +6,7 @@ import { join, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 
 interface LicenseTextModule {
   LICENSE_FILE: RegExp
@@ -253,7 +253,7 @@ function packWithNotice(notice: string | null, regenerated: string | null) {
               ? ['pdf-structure-process-test.js']
               : fs.readdirSync(path),
           readFileSync: (path: string, encoding: BufferEncoding) => {
-            if (String(path).endsWith('genoffice.cjs')) {
+            if (String(path).endsWith('seuoffice.cjs')) {
               return `const __cliAppVersion = ${JSON.stringify(shellPackage.version)};\n`
             }
             if (String(path).endsWith('THIRD-PARTY-NOTICES.txt')) {

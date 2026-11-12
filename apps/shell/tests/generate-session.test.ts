@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import type { GenerateHandoff, GenerateWindowState } from '../src/shared/generate-api'
 import { DEFAULT_GENERATE_PROMPTS } from '../src/shared/generate-default-prompts'
 import { MAX_MATERIALS, USAGE_NOTICE_CHARS } from '../src/main/generate/limits'

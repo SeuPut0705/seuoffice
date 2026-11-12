@@ -12,14 +12,15 @@ import JSZip from 'jszip'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import { AGENT_APP_MCP_TOOLS } from '@genoffice/ai-provider/agent-session'
-import { USER_SKILLS_CHANNELS as C } from '@genoffice/electron-utils/user-skills-channels'
+import { AGENT_APP_MCP_TOOLS } from '@seuoffice/ai-provider/agent-session'
+import { USER_SKILLS_CHANNELS as C } from '@seuoffice/electron-utils/user-skills-channels'
 import {
   AGENT_MCP_TOOL_NAMES,
   buildAgentMcpTools,
   createAgentSkillTools,
   startAgentMcpServer,
 } from '../../src/main/agent/agent-mcp'
+import { agentProtectedPaths } from '../../src/main/agent/agent-sessions'
 import {
   AGENT_WINDOW_MANAGE_CHANNELS,
   agentSessionSkillsOf,
@@ -518,7 +519,7 @@ describe('the skill a change is for', () => {
     { id: 'plugin:tools:minutes', source: 'plugin', name: 'minutes', title: 'T', owned: false },
     { id: 'user:letter', source: 'user', name: 'letter', title: 'L', owned: false },
     { id: 'builtin:letter', source: 'builtin', name: 'letter', title: 'L', owned: false },
-    { id: 'app:ieumoffice', source: 'app', name: 'ieumoffice', title: 'I', owned: true },
+    { id: 'app:seuoffice', source: 'app', name: 'seuoffice', title: 'I', owned: true },
   ]
   const session = [
     { id: 'project:minutes', name: 'minutes' },
@@ -552,8 +553,8 @@ describe('the skill a change is for', () => {
 
   it('refuses a name no skill has, and a hidden one', () => {
     expect(targetOf('nope')).toMatch(/No skill/)
-    expect(targetOf('ieumoffice')).toMatch(/No skill/)
-    expect(targetOf('app:ieumoffice')).toMatch(/No skill/)
+    expect(targetOf('seuoffice')).toMatch(/No skill/)
+    expect(targetOf('app:seuoffice')).toMatch(/No skill/)
   })
 })
 
@@ -561,11 +562,7 @@ describe('reading a candidate in main', () => {
   it('never reads the sign-in stores, the original app’s folder or the app’s own data', async () => {
     const home = temp()
     const userData = join(home, 'AppData', 'IeumOffice')
-    const guard = {
-      homeDir: home,
-      protectedPaths: ['.claude', '.codex', '.genoffice', '.ieumoffice'].map((n) => join(home, n)),
-    }
-    guard.protectedPaths.push(userData)
+    const guard = { homeDir: home, protectedPaths: agentProtectedPaths(home, userData) }
     for (const dir of [...guard.protectedPaths]) {
       mkdirSync(dir, { recursive: true })
       writeFileSync(join(dir, 'form.docx'), 'secret')
@@ -588,7 +585,7 @@ describe('reading a candidate in main', () => {
     expect(read.ok && new TextDecoder().decode(read.bytes)).toBe('mine')
     // a linked folder leading into one of them is judged by where it really is
     try {
-      symlinkSync(join(home, '.genoffice'), join(docs, 'linked'), 'junction')
+      symlinkSync(join(home, '.genoffice'), join(docs, 'linked'), 'junction') // the upstream app's folder
     } catch {
       return
     }

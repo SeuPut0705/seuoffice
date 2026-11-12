@@ -19,7 +19,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { canonicalPathKey } from '@genoffice/project-store'
+import { canonicalPathKey } from '@seuoffice/project-store'
 import {
   TEMPLATE_SELECTION_FILE,
   TEMPLATE_SELECTION_MAX_DOCUMENTS,

@@ -14,9 +14,9 @@ import type {
   AddTableRowOperation,
   DeleteTableColumnOperation,
   DeleteTableRowOperation,
-} from '@genoffice/xlsx-gateway/domain/workbook-dsl'
-import { columnLabel, parseAddress, parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { renameRefSheet } from '@genoffice/xlsx-gateway/domain/chart-visual'
+} from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
+import { columnLabel, parseAddress, parseRange } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { renameRefSheet } from '@seuoffice/xlsx-gateway/domain/chart-visual'
 import {
   areasOverlap,
   buildPivotLayout,
@@ -27,7 +27,7 @@ import {
   type PivotArea,
   type PivotLayout,
   type PivotLayoutErrorCode,
-} from '@genoffice/xlsx-gateway/domain/pivot-layout'
+} from '@seuoffice/xlsx-gateway/domain/pivot-layout'
 import type {
   WorkbookPivotAdd,
   WorkbookTableAdd,
@@ -46,7 +46,7 @@ import { DEFAULT_TABLE_STYLE, builtinTablePalette, tableThemeJson } from './tabl
 import { t } from './i18n/locale'
 import { numfmtLocale } from './i18n/numfmt-locale'
 import type { OoXmlPivotConfig, PivotField } from './PivotDialog'
-import type { PivotDefinition } from '@genoffice/xlsx-gateway/gateway/xlsx-pivot'
+import type { PivotDefinition } from '@seuoffice/xlsx-gateway/gateway/xlsx-pivot'
 import { applyFormatPatchToRange, nextSessionPivotName, nextSessionTableName } from './univer-sync'
 import { holdsHiddenCells } from './redact-move-guard'
 import type { LazyWorkbookState, UniverRuntime, UniverWorksheet } from './univer-state'

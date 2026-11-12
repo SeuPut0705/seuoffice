@@ -16,7 +16,7 @@ test.describe('home row menu position', () => {
   let root: string
 
   test.beforeEach(() => {
-    root = realpathSync(mkdtempSync(join(tmpdir(), 'genoffice-e2e-root-')))
+    root = realpathSync(mkdtempSync(join(tmpdir(), 'seuoffice-e2e-root-')))
     mkdirSync(join(root, 'Clients'), { recursive: true })
   })
 

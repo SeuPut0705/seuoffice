@@ -8,7 +8,7 @@ import {
   TOTAL_PAGES_MARK,
   type HeaderFooter,
   type SaveBlock,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { hfPageNumberOnly } from '../src/renderer/editor/hf-dom'
 import {
   atHfCellEdge,

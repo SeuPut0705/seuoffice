@@ -1,19 +1,19 @@
 # 명령줄과 에이전트
 
-모든 설치본에는 `ieumoffice` 명령이 들어 있으며, 창이 쓰는 바로 그 엔진을 구동합니다. 같은 파서, 같은 writer, 같은 렌더러입니다. 앱이 저장한 파일과 명령이 쓴 파일은 같은 파일이고, 앱의 AI 창이 통과한 검사는 명령도 통과합니다.
+모든 설치본에는 `seuoffice` 명령이 들어 있으며, 창이 쓰는 바로 그 엔진을 구동합니다. 같은 파서, 같은 writer, 같은 렌더러입니다. 앱이 저장한 파일과 명령이 쓴 파일은 같은 파일이고, 앱의 AI 창이 통과한 검사는 명령도 통과합니다.
 
 ```sh
-ieumoffice --help          # every command
-ieumoffice guide slides    # the op reference, for writing your own
+seuoffice --help          # every command
+seuoffice guide slides    # the op reference, for writing your own
 ```
 
-`ieumoffice --help` 한 화면에 전부 들어 있습니다. 각 명령 옆에 하는 일을 한 줄로 적은 설명이 붙고, 그다음 전역 옵션과 종료 코드가 나옵니다.
+`seuoffice --help` 한 화면에 전부 들어 있습니다. 각 명령 옆에 하는 일을 한 줄로 적은 설명이 붙고, 그다음 전역 옵션과 종료 코드가 나옵니다.
 
 ## 명령 준비하기
 
-명령은 앱 안에 들어 있습니다. 이름으로 호출하려면 `ieumoffice install-cli`를 한 번 실행하세요. Windows에서는 명령이 들어 있는 폴더를 사용자 `PATH`에 추가하며, 그 뒤에 여는 터미널부터 명령을 찾습니다. 터미널이 이미 명령을 찾는지, 못 찾는다면 어떤 줄을 실행하면 되는지는 **설정 ▸ 연동**에 나옵니다.
+명령은 앱 안에 들어 있습니다. 이름으로 호출하려면 `seuoffice install-cli`를 한 번 실행하세요. Windows에서는 명령이 들어 있는 폴더를 사용자 `PATH`에 추가하며, 그 뒤에 여는 터미널부터 명령을 찾습니다. 터미널이 이미 명령을 찾는지, 못 찾는다면 어떤 줄을 실행하면 되는지는 **설정 ▸ 연동**에 나옵니다.
 
-코딩 에이전트에는 이 단계가 필요 없습니다. 앱이 명령의 위치를 `~/.ieumoffice/launcher`에 적어 두고, 에이전트는 거기서 찾습니다.
+코딩 에이전트에는 이 단계가 필요 없습니다. 앱이 명령의 위치를 `~/.seuoffice/launcher`에 적어 두고, 에이전트는 거기서 찾습니다.
 
 ## 알아 둘 만한 명령
 
@@ -32,18 +32,18 @@ ieumoffice guide slides    # the op reference, for writing your own
 | `merge`           | `.docx`, `.pptx`, `.xlsx` 템플릿의 `{{key}}` 자리표시자를 채웁니다.                                                                                                                                            |
 | `capabilities`    | 이 컴퓨터에서 어떤 AI 기능(검색, 이미지 생성, 이미지·동영상 분석)을 쓸 수 있는지, 어느 경로로 되는지 보고합니다.                                                                                               |
 | `guide`           | op 레퍼런스와 디자인 가이드입니다. executor가 검증하는 바로 그 정의에서 만들어지므로 `apply`가 받아들이는 것과 어긋날 수 없습니다. `--json`을 주면 각 op의 스키마와 함께 나옵니다.                             |
-| `install-cli`     | `ieumoffice`를 `PATH`에 넣습니다.                                                                                                                                                                              |
-| `skill`           | 이 컴퓨터에서 찾은 코딩 에이전트를 나열하고, 그 안에 GenOffice 스킬을 설치하거나 갱신합니다.                                                                                                                   |
+| `install-cli`     | `seuoffice`를 `PATH`에 넣습니다.                                                                                                                                                                               |
+| `skill`           | 이 컴퓨터에서 찾은 코딩 에이전트를 나열하고, 그 안에 SeuOffice 스킬을 설치하거나 갱신합니다.                                                                                                                   |
 | `mcp`             | 모든 명령을 Model Context Protocol 도구로 제공합니다. **코딩 에이전트 연결**를 보세요.                                                                                                                         |
 
 ## 편집: 문서, 스프레드시트, 슬라이드
 
-`ieumoffice docs`, `ieumoffice sheet`, `ieumoffice slides`는 앱이 쓰는 것과 같은 쓰기 경로로 읽고 편집합니다. 어휘도 하나를 나눕니다. **op**은 한 번의 편집이고, **spec**은 op을 순서대로 적용한 목록입니다.
+`seuoffice docs`, `seuoffice sheet`, `seuoffice slides`는 앱이 쓰는 것과 같은 쓰기 경로로 읽고 편집합니다. 어휘도 하나를 나눕니다. **op**은 한 번의 편집이고, **spec**은 op을 순서대로 적용한 목록입니다.
 
 ```sh
-ieumoffice sheet read report.xlsx
-ieumoffice slides apply deck.pptx --ops ops.json --dry-run
-ieumoffice docs apply brief.docx --ops ops.json
+seuoffice sheet read report.xlsx
+seuoffice slides apply deck.pptx --ops ops.json --dry-run
+seuoffice docs apply brief.docx --ops ops.json
 ```
 
 `--dry-run`은 그 묶음이 무엇을 할지 보고만 하고 아무것도 쓰지 않습니다. spec을 적용하기 전에 싸게 확인하는 방법입니다. 앱의 AI 창이 도는 것도 바로 이 op이므로, AI에게 시킬 수 있는 건 전부 스크립트로 할 수 있습니다.
@@ -57,7 +57,7 @@ ieumoffice docs apply brief.docx --ops ops.json
 - 그림에 대한 `media`는 설정해 둔 키 방식 제공업체가 있으면 그것을 씁니다. Claude나 Codex 구독은 허용해 둔 경우에만 쓰며, **기본은 꺼짐**입니다. 스위치와 제한은 [코딩 에이전트 연결](help://mcp)에 설명되어 있습니다.
 - 동영상이나 음성에 대한 `media`에는 동영상을 지원하는 키 방식 제공업체가 필요합니다.
 
-`ieumoffice capabilities --json`은 AI를 호출하지 않고 이 내용을 모두 알려 줍니다. `detail`에 다음이 들어 있습니다.
+`seuoffice capabilities --json`은 AI를 호출하지 않고 이 내용을 모두 알려 줍니다. `detail`에 다음이 들어 있습니다.
 
 | 필드                                                                             | 내용                                                                                                                                                                                                                  |
 | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -71,15 +71,15 @@ ieumoffice docs apply brief.docx --ops ops.json
 
 ## 이 PC에 남기는 것
 
-두 파일 모두 사용자 폴더 안의 `.ieumoffice` 폴더에 있습니다.
+두 파일 모두 사용자 폴더 안의 `.seuoffice` 폴더에 있습니다.
 
-- `~/.ieumoffice/launcher`에는 앱의 명령이 어디 있는지 적혀 있습니다. 명령이 `PATH`에 없어도 코딩 에이전트가 이것으로 찾습니다.
-- `~/.ieumoffice/cli-audit.jsonl`에는 실행된 명령마다 한 줄씩(명령, 인자, 결과) 남습니다. 에이전트가 무엇을 했는지 나중에 확인할 수 있습니다.
+- `~/.seuoffice/launcher`에는 앱의 명령이 어디 있는지 적혀 있습니다. 명령이 `PATH`에 없어도 코딩 에이전트가 이것으로 찾습니다.
+- `~/.seuoffice/cli-audit.jsonl`에는 실행된 명령마다 한 줄씩(명령, 인자, 결과) 남습니다. 에이전트가 무엇을 했는지 나중에 확인할 수 있습니다.
 
 ## Model Context Protocol
 
-`ieumoffice mcp`는 모든 명령을 MCP 도구로 제공하고, `ieumoffice mcp install <agent|all>`는 코딩 에이전트 자체 설정에 등록합니다. 그쪽은 **코딩 에이전트 연결**를 보세요.
+`seuoffice mcp`는 모든 명령을 MCP 도구로 제공하고, `seuoffice mcp install <agent|all>`는 코딩 에이전트 자체 설정에 등록합니다. 그쪽은 **코딩 에이전트 연결**를 보세요.
 
 ## 명령이 하지 않는 것
 
-파일은 읽고 씁니다. 앱 그 자체는 아닙니다. 창이 없고, 앱 내 업데이트 대화상자도 적용되지 않습니다. 창이 필요한 일 — AI 창, 렌더링한 슬라이드에 대한 QC 검사 — 은 파일을 열 때까지 기다려야 합니다. `ieumoffice render`는 창 없이 픽셀을 얻게 해 주고, `ieumoffice slides`는 덱의 레이아웃을 스스로 검사합니다.
+파일은 읽고 씁니다. 앱 그 자체는 아닙니다. 창이 없고, 앱 내 업데이트 대화상자도 적용되지 않습니다. 창이 필요한 일 — AI 창, 렌더링한 슬라이드에 대한 QC 검사 — 은 파일을 열 때까지 기다려야 합니다. `seuoffice render`는 창 없이 픽셀을 얻게 해 주고, `seuoffice slides`는 덱의 레이아웃을 스스로 검사합니다.

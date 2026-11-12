@@ -1,5 +1,5 @@
-import type { AiEffort } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
+import type { AiEffort } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
 
 export interface AiModelPickerStrings {
   /** chip tooltip / list heading */

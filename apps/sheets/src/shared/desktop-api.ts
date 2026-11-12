@@ -12,11 +12,11 @@ import {
   SAVE_EDITS_CHUNK_JSON_MAX,
   SAVE_EDITS_CHUNK_MAX,
 } from './ipc-channels'
-import { ADDABLE_SHAPE_TYPES } from '@genoffice/xlsx-gateway/shared/shape-types'
+import { ADDABLE_SHAPE_TYPES } from '@seuoffice/xlsx-gateway/shared/shape-types'
 import {
   PIVOT_AGGREGATIONS,
   PIVOT_SHOW_DATA_AS,
-} from '@genoffice/xlsx-gateway/domain/pivot-value-modes'
+} from '@seuoffice/xlsx-gateway/domain/pivot-value-modes'
 import {
   CHART_CATEGORY_WIRE_MAX,
   CHART_TEXT_WIRE_MAX,
@@ -27,17 +27,17 @@ import {
   workbookChartEditSchema,
   workbookStyleEditSchema,
   workbookVisualEditSchema,
-} from '@genoffice/xlsx-gateway/shared/edit-schemas'
+} from '@seuoffice/xlsx-gateway/shared/edit-schemas'
 import type {
   AiChatRequest,
   AiChatResponse,
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
-} from '@genoffice/ai-provider'
-import { AI_EFFORTS } from '@genoffice/ai-provider/browser'
-import type { AiToolCapabilities } from '@genoffice/ai-search'
-import type { AiPanelPrefs, FontFamilyInfo } from '@genoffice/ui'
+} from '@seuoffice/ai-provider'
+import { AI_EFFORTS } from '@seuoffice/ai-provider/browser'
+import type { AiToolCapabilities } from '@seuoffice/ai-search'
+import type { AiPanelPrefs, FontFamilyInfo } from '@seuoffice/ui'
 import type { SubscriptionApi } from './subscription-api'
 
 // edit schemas shared with the xlsx gateway package; re-exported so IPC consumers keep one import site
@@ -49,13 +49,13 @@ export {
   workbookChartEditSchema,
   workbookStyleEditSchema,
   workbookVisualEditSchema,
-} from '@genoffice/xlsx-gateway/shared/edit-schemas'
+} from '@seuoffice/xlsx-gateway/shared/edit-schemas'
 export type {
   WorkbookChartEdit,
   WorkbookRichRun,
   WorkbookStyleEdit,
   WorkbookVisualEdit,
-} from '@genoffice/xlsx-gateway/shared/edit-schemas'
+} from '@seuoffice/xlsx-gateway/shared/edit-schemas'
 
 const MAX_RANGE_CELLS = 100_000
 const cellScalarSchema = z.union([z.string(), z.number().finite(), z.boolean(), z.null()])
@@ -3003,7 +3003,7 @@ export type WorkbookPivotAdd = z.infer<typeof workbookPivotAddSchema>
 export type WorkbookCellStyle = z.infer<typeof cellStyleSchema>
 export type WorkbookConditionalRule = z.infer<typeof conditionalRuleSchema>
 
-// ---- AI settings + chat/stream: canonical types live in @genoffice/ai-provider,
+// ---- AI settings + chat/stream: canonical types live in @seuoffice/ai-provider,
 // shared with apps/docs. Validated here like every other renderer→main request in
 // this file; the validated shape is cast to AiSettings at the main-process call
 // site, which has every known provider key once merged through

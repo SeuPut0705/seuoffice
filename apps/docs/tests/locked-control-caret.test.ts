@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/core'
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { TextSelection } from '@tiptap/pm/state'
 import { afterEach, describe, expect, it } from 'vitest'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'

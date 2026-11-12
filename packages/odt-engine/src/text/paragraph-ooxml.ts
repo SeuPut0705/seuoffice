@@ -15,7 +15,7 @@
  *   from these bookmarks (the engine moves them to the paragraph start when it
  *   regenerates a paragraph).
  */
-import type { GeneratedBlock, Run } from '@genoffice/docx-engine'
+import type { GeneratedBlock, Run } from '@seuoffice/docx-engine'
 import {
   type BridgeListItem,
   type BridgeParagraph,

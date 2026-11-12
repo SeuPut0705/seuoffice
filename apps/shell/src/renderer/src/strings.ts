@@ -162,7 +162,7 @@ export const strings = {
     setUpdateRestart: 'Restart & install',
     setAutoUpdateCheck: 'Check for updates automatically',
     setAutoUpdateCheckDesc:
-      'When off, GenOffice no longer checks for new versions at launch or in the background. You can still check from Help › Check for Updates.',
+      'When off, SeuOffice no longer checks for new versions at launch or in the background. You can still check from Help › Check for Updates.',
     theme: 'Theme',
     themeLight: 'Light',
     themeDark: 'Dark',
@@ -209,19 +209,19 @@ export const strings = {
     setLegacyImportPromptDesc:
       'Explain what carries over before opening .doc, .odt, .hwp, .ods or .odp files. When off, Save As opens right away.',
     setDefaultApp: 'Default app for Office documents',
-    setDefaultAppDesc: 'Open .docx, .xlsx and .pptx files in GenOffice when double-clicked.',
-    setDefaultAppIs: 'GenOffice is already the default.',
+    setDefaultAppDesc: 'Open .docx, .xlsx and .pptx files in SeuOffice when double-clicked.',
+    setDefaultAppIs: 'SeuOffice is already the default.',
     setDefaultAppOther: 'Current default: {app}',
     setDefaultAppSet: 'Make default',
     setDefaultAppOpenSettings: 'Open system settings',
     setDefaultAppFailed: 'Could not change it. Please set it in the system settings.',
-    onbDefaultAppTitle: 'Open documents with GenOffice',
+    onbDefaultAppTitle: 'Open documents with SeuOffice',
     onbDefaultAppBody:
-      'Make GenOffice the app that opens Word documents, Excel workbooks, PowerPoint presentations and draw.io diagrams when you double-click them.',
+      'Make SeuOffice the app that opens Word documents, Excel workbooks, PowerPoint presentations and draw.io diagrams when you double-click them.',
     onbDefaultAppWinStep1:
-      'In Windows Settings, open GenOffice (find it in the list of apps if its page does not open by itself).',
+      'In Windows Settings, open SeuOffice (find it in the list of apps if its page does not open by itself).',
     onbDefaultAppWinStep2:
-      'Set it as the default with the button at the top, or pick GenOffice for each file type.',
+      'Set it as the default with the button at the top, or pick SeuOffice for each file type.',
     onbDefaultAppLaterNote: 'You can skip this step and do it later in Settings → General.',
     setAiSpellcheckDesc: 'Underline misspelled words while typing in the AI chat input.',
     setAiPanelStart: 'AI panel',
@@ -306,7 +306,7 @@ export const strings = {
       'Images are shown to the AI you are chatting with. No separate key is needed.',
     setAiVideoNoneHint:
       'Video and audio analysis needs a key provider that supports video. Choose one here and enter its key to use it.',
-    intgHeroTitle: 'Use GenOffice from your AI assistant',
+    intgHeroTitle: 'Use SeuOffice from your AI assistant',
     intgHeroDesc:
       'Once connected, Claude Code, Codex, Cursor, Claude Desktop and similar assistants can create, convert, read and edit Word, Excel, PowerPoint, PDF and Markdown files for you. Everything runs on this computer; nothing is uploaded.',
     intgHeroStep1:
@@ -317,14 +317,14 @@ export const strings = {
     intgStep1Desc:
       'Only assistants found on this computer are listed. Install into the one you actually use; you do not need all of them.',
     intgStep1Update:
-      'When a GenOffice update ships a newer skill, an Update button appears next to that assistant.',
+      'When a SeuOffice update ships a newer skill, an Update button appears next to that assistant.',
     intgSkillVersion: 'skill {v}',
     intgStateMissing: 'Skill not installed',
     intgStateInstalled: 'Skill {v} installed · ready in your next chat',
     intgOtherToggle: 'My assistant is not listed',
     intgOtherDesc: 'Pick one of these three ways. They all install the same skill.',
     intgOtherFolderTitle: 'Any assistant that reads SKILL.md folders',
-    intgOtherFolderDesc: 'Pick its skills folder and GenOffice writes the file there.',
+    intgOtherFolderDesc: 'Pick its skills folder and SeuOffice writes the file there.',
     intgOtherZipTitle: 'Hand the file to the assistant',
     intgOtherZipDesc: 'Save the skill as a zip, then ask the assistant to install it.',
     intgOtherNpxTitle: 'With the skills command (needs Node.js)',
@@ -334,22 +334,22 @@ export const strings = {
     intgStep2Desc: 'Open a new chat in your assistant and ask in plain words, for example:',
     intgExample1: 'Turn ~/Downloads/report.md into a Word document',
     intgExample2: 'Make a 6-slide deck about our Q3 results',
-    intgExample3: 'Convert budget.xlsx to PDF and open it in GenOffice',
+    intgExample3: 'Convert budget.xlsx to PDF and open it in SeuOffice',
     intgStep2Note:
-      'The assistant calls GenOffice itself, through the command line or MCP; you never have to type a command.',
+      'The assistant calls SeuOffice itself, through the command line or MCP; you never have to type a command.',
     intgCliPartTitle: 'CLI · command line + skill',
     intgCliPartDesc:
-      'For assistants that can run terminal commands (Claude Code, Codex, Cursor and others). Once the skill is installed, the assistant calls the ieumoffice command line itself to create, convert, read and edit files.',
+      'For assistants that can run terminal commands (Claude Code, Codex, Cursor and others). Once the skill is installed, the assistant calls the seuoffice command line itself to create, convert, read and edit files.',
     intgMcpPartTitle: 'MCP',
-    intgMcpPartWho: 'Here, other AI programs use GenOffice.',
+    intgMcpPartWho: 'Here, other AI programs use SeuOffice.',
     intgMcpPartDesc:
-      'MCP is the common protocol AI assistants use to call external tools. Use it when your assistant cannot run commands (Claude Desktop, for example) or when you want it to drive the GenOffice window directly. Pick either of the two ways below.',
+      'MCP is the common protocol AI assistants use to call external tools. Use it when your assistant cannot run commands (Claude Desktop, for example) or when you want it to drive the SeuOffice window directly. Pick either of the two ways below.',
     intgMcpStdioTitle: 'Started by the assistant (recommended)',
     intgMcpStdioDesc:
-      'The assistant launches ieumoffice mcp itself: nothing to switch on here, and GenOffice does not need to be open. Same features as the CLI.',
+      'The assistant launches seuoffice mcp itself: nothing to switch on here, and SeuOffice does not need to be open. Same features as the CLI.',
     intgMcpHttpTitle: 'Local HTTP server',
     intgMcpHttpDesc:
-      'Runs inside GenOffice; the assistant connects to a URL and you can watch it build the document step by step in the Word editor. GenOffice must stay open; Word documents only for now.',
+      'Runs inside SeuOffice; the assistant connects to a URL and you can watch it build the document step by step in the Word editor. SeuOffice must stay open; Word documents only for now.',
     intgMcpHttpAdvanced: 'Advanced: other endpoints and log',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: 'Run this once in a terminal:',
@@ -358,10 +358,10 @@ export const strings = {
       'Add this to its MCP server settings (a JSON file, or "Add MCP server" in its settings):',
     intgMcpNote:
       'The skill and MCP can be set up side by side; the assistant picks one. They do exactly the same things.',
-    intgCliTitle: 'Advanced: ieumoffice command line',
-    intgCliReady: 'ieumoffice {v} · ready in your terminal ({path})',
+    intgCliTitle: 'Advanced: seuoffice command line',
+    intgCliReady: 'seuoffice {v} · ready in your terminal ({path})',
     intgCliNotOnPath:
-      "ieumoffice {v} · not on your terminal's PATH. Assistants still find it through ~/.ieumoffice/launcher, so the skill works. To type ieumoffice yourself, run this once:",
+      "seuoffice {v} · not on your terminal's PATH. Assistants still find it through ~/.seuoffice/launcher, so the skill works. To type seuoffice yourself, run this once:",
     intgCliLauncher: 'Launcher folder',
     intgStateOutdated: 'Installed {v}, update to {next} available',
     intgStateModified: 'Installed {v} (modified)',
@@ -390,9 +390,9 @@ export const strings = {
     intgSaveZipTitle: 'Save skill',
     intgSavedTo: 'Saved to {path}',
     intgCopied: 'Copied',
-    intgCliEphemeral: 'Drag GenOffice into Applications first, then use the command line.',
+    intgCliEphemeral: 'Drag SeuOffice into Applications first, then use the command line.',
     intgCopyPath: 'Copy path',
-    intgCliNeedsUpdate: 'This skill needs command line {v} or newer; update GenOffice.',
+    intgCliNeedsUpdate: 'This skill needs command line {v} or newer; update SeuOffice.',
     intgLoading: 'Checking…',
     intgUpdateDue: 'Skill update available',
     setSecAiModel: 'AI Model',
@@ -448,17 +448,17 @@ export const strings = {
     setAiSharedKeyHint:
       "A vendor's key and base URL are shared across capabilities; enter them once.",
     setGithub: 'Open Source',
-    setBasedOn: 'Based on the open-source project {{GenOffice}} (Apache License 2.0).',
+    setBasedOn: 'Based on the open-source project {upstream} (Apache License 2.0).',
     setLicenses: 'Open-source licenses',
     setLicensesDesc:
       'License and copyright notices for the software and fonts that ship with this app.',
     setLicensesOpen: 'View',
     setTrademarks:
-      'GenOffice is not affiliated with, sponsored by or endorsed by Microsoft, Hancom, Adobe, XMind, Google, Anthropic or OpenAI. Word, Excel and PowerPoint are trademarks of Microsoft; Hangul, HWP and HWPX of Hancom; XMind of XMind Ltd.; Google Drive of Google; Claude of Anthropic; ChatGPT and Codex of OpenAI. These names are used only to say which files the app opens and what it works with.',
+      'SeuOffice is not affiliated with, sponsored by or endorsed by Microsoft, Hancom, Adobe, XMind, Google, Anthropic or OpenAI. Word, Excel and PowerPoint are trademarks of Microsoft; Hangul, HWP and HWPX of Hancom; XMind of XMind Ltd.; Google Drive of Google; Claude of Anthropic; ChatGPT and Codex of OpenAI. These names are used only to say which files the app opens and what it works with.',
     setHwpNotice:
       "The HWP/HWPX editor is built on the open-source project rhwp (MIT License). This product was developed with reference to Hancom's published document on the Hangul document file format (.hwp).",
     setDisclaimer:
-      'GenOffice is provided as is, without warranties of any kind, under the Apache License 2.0. AI-generated content can be wrong: check it before you use it. Making sure you have the right to use it is up to you.',
+      'SeuOffice is provided as is, without warranties of any kind, under the Apache License 2.0. AI-generated content can be wrong: check it before you use it. Making sure you have the right to use it is up to you.',
     viewOnGitHub: 'View on GitHub',
     setFeedback: 'Send feedback',
     setFeedbackDesc:
@@ -475,7 +475,7 @@ export const strings = {
     splitHintRight: 'Split right',
     splitHintBottom: 'Split below',
     // First-run onboarding
-    onbTitle1: 'Welcome to GenOffice',
+    onbTitle1: 'Welcome to SeuOffice',
     onbWelcomeSubtitle: 'An open-source office suite',
     onbWelcomeBody:
       'Open and edit Word, Excel, PowerPoint, PDF, Markdown and HTML documents. AI works through the Claude or ChatGPT subscription you already have, or through a free AI connection.',
@@ -817,19 +817,19 @@ export const strings = {
     setLegacyImportPromptDesc:
       '.doc, .odt, .hwp, .ods, .odp 파일을 열기 전에 어떤 내용이 유지되는지 안내합니다. 끄면 바로 다른 이름으로 저장이 열립니다.',
     setDefaultApp: 'Office 문서 기본 앱',
-    setDefaultAppDesc: '.docx, .xlsx, .pptx 파일을 두 번 클릭하면 GenOffice로 엽니다.',
-    setDefaultAppIs: 'GenOffice가 이미 기본 앱입니다.',
+    setDefaultAppDesc: '.docx, .xlsx, .pptx 파일을 두 번 클릭하면 SeuOffice로 엽니다.',
+    setDefaultAppIs: 'SeuOffice가 이미 기본 앱입니다.',
     setDefaultAppOther: '현재 기본 앱: {app}',
     setDefaultAppSet: '기본으로 설정',
     setDefaultAppOpenSettings: '시스템 설정 열기',
     setDefaultAppFailed: '변경할 수 없습니다. 시스템 설정에서 직접 설정해 주세요.',
-    onbDefaultAppTitle: '문서를 GenOffice로 열기',
+    onbDefaultAppTitle: '문서를 SeuOffice로 열기',
     onbDefaultAppBody:
-      'Word 문서, Excel 통합 문서, PowerPoint 프레젠테이션, draw.io 다이어그램을 두 번 클릭하면 GenOffice로 열리게 합니다.',
+      'Word 문서, Excel 통합 문서, PowerPoint 프레젠테이션, draw.io 다이어그램을 두 번 클릭하면 SeuOffice로 열리게 합니다.',
     onbDefaultAppWinStep1:
-      'Windows 설정에서 GenOffice를 엽니다(그 페이지가 바로 열리지 않으면 앱 목록에서 찾으세요).',
+      'Windows 설정에서 SeuOffice를 엽니다(그 페이지가 바로 열리지 않으면 앱 목록에서 찾으세요).',
     onbDefaultAppWinStep2:
-      '맨 위의 버튼으로 기본값으로 설정하거나, 파일 형식마다 GenOffice를 고릅니다.',
+      '맨 위의 버튼으로 기본값으로 설정하거나, 파일 형식마다 SeuOffice를 고릅니다.',
     onbDefaultAppLaterNote: '이 단계는 건너뛰고 나중에 설정 → 일반에서 해도 됩니다.',
     setAiSpellcheckDesc: 'AI 채팅 입력란에 입력할 때 잘못된 단어에 밑줄을 표시합니다.',
     setAiPanelStart: 'AI 창',
@@ -911,7 +911,7 @@ export const strings = {
     setAiAnalysisChatHint: '대화 중인 AI에게 이미지를 직접 보여 줍니다. 별도의 키가 필요 없습니다.',
     setAiVideoNoneHint:
       '동영상·음성 분석은 동영상을 지원하는 키 방식 제공업체가 있어야 합니다. 여기서 하나를 고르고 키를 넣으면 쓸 수 있습니다.',
-    intgHeroTitle: 'AI 어시스턴트에서 GenOffice 사용하기',
+    intgHeroTitle: 'AI 어시스턴트에서 SeuOffice 사용하기',
     intgHeroDesc:
       '연결하면 Claude Code, Codex, Cursor, Claude Desktop 등의 어시스턴트가 Word, Excel, PowerPoint, PDF, Markdown 파일을 대신 만들고 변환하고 읽고 편집합니다. 모두 이 컴퓨터에서 처리되며 어떤 내용도 업로드되지 않습니다.',
     intgHeroStep1: '연결 방식 선택: 어시스턴트가 터미널 명령을 실행할 수 있으면 CLI, 없으면 MCP',
@@ -921,14 +921,14 @@ export const strings = {
     intgStep1Desc:
       '이 컴퓨터에서 발견된 어시스턴트만 표시됩니다. 실제로 사용하는 하나에만 설치하면 되고, 모두 설치할 필요는 없습니다.',
     intgStep1Update:
-      'GenOffice 업데이트에 새 스킬이 포함되면 해당 어시스턴트 옆에 업데이트 버튼이 나타납니다.',
+      'SeuOffice 업데이트에 새 스킬이 포함되면 해당 어시스턴트 옆에 업데이트 버튼이 나타납니다.',
     intgSkillVersion: '스킬 {v}',
     intgStateMissing: '스킬 미설치',
     intgStateInstalled: '스킬 {v} 설치됨 · 다음 대화부터 사용 가능',
     intgOtherToggle: '내 어시스턴트가 목록에 없음',
     intgOtherDesc: '다음 세 가지 방법 중 하나만 고르세요. 모두 같은 스킬을 설치합니다.',
     intgOtherFolderTitle: 'SKILL.md 폴더를 읽는 모든 어시스턴트',
-    intgOtherFolderDesc: '해당 skills 폴더를 선택하면 GenOffice가 파일을 기록합니다.',
+    intgOtherFolderDesc: '해당 skills 폴더를 선택하면 SeuOffice가 파일을 기록합니다.',
     intgOtherZipTitle: '파일을 어시스턴트에게 전달',
     intgOtherZipDesc: '스킬을 zip으로 저장한 뒤 어시스턴트에게 설치를 요청하세요.',
     intgOtherNpxTitle: 'skills 명령으로 설치(Node.js 필요)',
@@ -938,22 +938,22 @@ export const strings = {
     intgStep2Desc: '어시스턴트에서 새 대화를 열고 평소 말투로 요청하세요. 예:',
     intgExample1: '~/Downloads/report.md를 Word 문서로 만들어 줘',
     intgExample2: '3분기 실적을 소개하는 6장짜리 슬라이드를 만들어 줘',
-    intgExample3: 'budget.xlsx를 PDF로 변환해서 GenOffice에서 열어 줘',
+    intgExample3: 'budget.xlsx를 PDF로 변환해서 SeuOffice에서 열어 줘',
     intgStep2Note:
-      '어시스턴트가 명령줄이나 MCP로 GenOffice를 직접 호출하므로 명령을 입력할 필요가 없습니다.',
+      '어시스턴트가 명령줄이나 MCP로 SeuOffice를 직접 호출하므로 명령을 입력할 필요가 없습니다.',
     intgCliPartTitle: 'CLI · 명령줄 + 스킬',
     intgCliPartDesc:
-      '터미널 명령을 실행할 수 있는 어시스턴트(Claude Code, Codex, Cursor 등)용입니다. 스킬을 설치하면 어시스턴트가 스스로 ieumoffice 명령줄을 호출해 파일을 만들고 변환하고 읽고 편집합니다.',
+      '터미널 명령을 실행할 수 있는 어시스턴트(Claude Code, Codex, Cursor 등)용입니다. 스킬을 설치하면 어시스턴트가 스스로 seuoffice 명령줄을 호출해 파일을 만들고 변환하고 읽고 편집합니다.',
     intgMcpPartTitle: 'MCP',
-    intgMcpPartWho: '여기서는 다른 AI 프로그램이 GenOffice를 씁니다.',
+    intgMcpPartWho: '여기서는 다른 AI 프로그램이 SeuOffice를 씁니다.',
     intgMcpPartDesc:
-      'MCP는 AI 어시스턴트가 외부 도구를 호출하는 공통 프로토콜입니다. 어시스턴트가 명령을 실행할 수 없거나(예: Claude Desktop) GenOffice 창을 직접 조작하게 하려면 이 방식을 사용하세요. 아래 두 방법 중 하나를 선택하면 됩니다.',
+      'MCP는 AI 어시스턴트가 외부 도구를 호출하는 공통 프로토콜입니다. 어시스턴트가 명령을 실행할 수 없거나(예: Claude Desktop) SeuOffice 창을 직접 조작하게 하려면 이 방식을 사용하세요. 아래 두 방법 중 하나를 선택하면 됩니다.',
     intgMcpStdioTitle: '어시스턴트가 실행(권장)',
     intgMcpStdioDesc:
-      '어시스턴트가 ieumoffice mcp를 직접 실행합니다. 여기서 켤 것이 없고 GenOffice가 열려 있을 필요도 없습니다. 기능은 CLI와 같습니다.',
+      '어시스턴트가 seuoffice mcp를 직접 실행합니다. 여기서 켤 것이 없고 SeuOffice가 열려 있을 필요도 없습니다. 기능은 CLI와 같습니다.',
     intgMcpHttpTitle: '로컬 HTTP 서버',
     intgMcpHttpDesc:
-      'GenOffice 안에서 실행되며 어시스턴트가 URL로 연결합니다. Word 편집기에서 문서가 단계별로 만들어지는 과정을 볼 수 있습니다. GenOffice를 열어 두어야 하며 현재는 Word만 지원합니다.',
+      'SeuOffice 안에서 실행되며 어시스턴트가 URL로 연결합니다. Word 편집기에서 문서가 단계별로 만들어지는 과정을 볼 수 있습니다. SeuOffice를 열어 두어야 하며 현재는 Word만 지원합니다.',
     intgMcpHttpAdvanced: '고급: 기타 주소와 로그',
     intgMcpClaudeTitle: 'Claude Code',
     intgMcpClaudeDesc: '터미널에서 한 번만 실행하세요:',
@@ -962,10 +962,10 @@ export const strings = {
       '이 내용을 해당 어시스턴트의 MCP 서버 설정(JSON 파일 또는 설정의 "MCP 서버 추가")에 추가하세요:',
     intgMcpNote:
       '스킬과 MCP는 함께 설정할 수 있으며 어시스턴트가 하나를 선택합니다. 두 방식이 하는 일은 완전히 같습니다.',
-    intgCliTitle: '고급: 명령줄 ieumoffice',
-    intgCliReady: 'ieumoffice {v} · 터미널에서 바로 사용 가능({path})',
+    intgCliTitle: '고급: 명령줄 seuoffice',
+    intgCliReady: 'seuoffice {v} · 터미널에서 바로 사용 가능({path})',
     intgCliNotOnPath:
-      'ieumoffice {v} · 터미널 PATH에 없습니다. 어시스턴트는 ~/.ieumoffice/launcher로 찾을 수 있어 스킬은 정상 작동합니다. 직접 ieumoffice를 입력하려면 한 번만 실행:',
+      'seuoffice {v} · 터미널 PATH에 없습니다. 어시스턴트는 ~/.seuoffice/launcher로 찾을 수 있어 스킬은 정상 작동합니다. 직접 seuoffice를 입력하려면 한 번만 실행:',
     intgCliLauncher: '런처 폴더',
     intgStateOutdated: '설치됨 {v}, {next}(으)로 업데이트 가능',
     intgStateModified: '설치됨 {v} (수정됨)',
@@ -993,9 +993,9 @@ export const strings = {
     intgSaveZipTitle: '스킬 저장',
     intgSavedTo: '{path}에 저장됨',
     intgCopied: '복사됨',
-    intgCliEphemeral: '먼저 GenOffice를 응용 프로그램 폴더로 옮긴 뒤 명령줄을 사용하세요.',
+    intgCliEphemeral: '먼저 SeuOffice를 응용 프로그램 폴더로 옮긴 뒤 명령줄을 사용하세요.',
     intgCopyPath: '경로 복사',
-    intgCliNeedsUpdate: '이 스킬은 명령줄 {v} 이상이 필요합니다. GenOffice를 업데이트하세요.',
+    intgCliNeedsUpdate: '이 스킬은 명령줄 {v} 이상이 필요합니다. SeuOffice를 업데이트하세요.',
     intgLoading: '확인 중…',
     intgUpdateDue: '스킬 업데이트 가능',
     setSecAiModel: 'AI 모델',
@@ -1050,16 +1050,16 @@ export const strings = {
     setAiSharedKeyHint:
       '같은 제공업체의 키와 Base URL은 모든 기능에서 공유되므로 한 번만 입력하면 됩니다.',
     setGithub: '오픈 소스',
-    setBasedOn: '오픈 소스 프로젝트 {{GenOffice}}(Apache License 2.0)를 바탕으로 만들었습니다.',
+    setBasedOn: '오픈 소스 프로젝트 {upstream}(Apache License 2.0)를 바탕으로 만들었습니다.',
     setLicenses: '오픈소스 라이선스',
     setLicensesDesc: '이 앱에 함께 들어 있는 프로그램과 글꼴의 라이선스, 저작권 고지를 봅니다.',
     setLicensesOpen: '보기',
     setTrademarks:
-      'GenOffice는 Microsoft, 한글과컴퓨터, Adobe, XMind, Google, Anthropic, OpenAI와 제휴하지 않았고, 이들의 후원이나 보증을 받지 않습니다. Word·Excel·PowerPoint는 Microsoft의, 한글·HWP·HWPX는 한글과컴퓨터의, XMind는 XMind Ltd.의, Google 드라이브는 Google의, Claude는 Anthropic의, ChatGPT·Codex는 OpenAI의 상표입니다. 이 이름들은 어떤 파일을 열고 무엇과 함께 쓰는지 알리는 데만 씁니다.',
+      'SeuOffice는 Microsoft, 한글과컴퓨터, Adobe, XMind, Google, Anthropic, OpenAI와 제휴하지 않았고, 이들의 후원이나 보증을 받지 않습니다. Word·Excel·PowerPoint는 Microsoft의, 한글·HWP·HWPX는 한글과컴퓨터의, XMind는 XMind Ltd.의, Google 드라이브는 Google의, Claude는 Anthropic의, ChatGPT·Codex는 OpenAI의 상표입니다. 이 이름들은 어떤 파일을 열고 무엇과 함께 쓰는지 알리는 데만 씁니다.',
     setHwpNotice:
       '한글(HWP·HWPX) 편집기는 오픈소스 프로젝트 rhwp(MIT 라이선스)를 바탕으로 만들었습니다. 본 제품은 한글과컴퓨터의 한글 문서 파일(.hwp) 공개 문서를 참고하여 개발하였습니다.',
     setDisclaimer:
-      'GenOffice는 Apache License 2.0에 따라 있는 그대로 제공되며, 어떤 보증도 하지 않습니다. AI가 만든 내용은 틀릴 수 있으니 확인한 뒤 쓰세요. 그 내용을 쓸 권리가 있는지 확인하는 일은 쓰는 사람의 몫입니다.',
+      'SeuOffice는 Apache License 2.0에 따라 있는 그대로 제공되며, 어떤 보증도 하지 않습니다. AI가 만든 내용은 틀릴 수 있으니 확인한 뒤 쓰세요. 그 내용을 쓸 권리가 있는지 확인하는 일은 쓰는 사람의 몫입니다.',
     viewOnGitHub: 'GitHub에서 보기',
     setFeedback: '의견 보내기',
     setFeedbackDesc:
@@ -1078,7 +1078,7 @@ export const strings = {
     splitHintRight: '오른쪽에 나누기',
     splitHintBottom: '아래에 나누기',
     // First-run onboarding
-    onbTitle1: 'GenOffice에 오신 것을 환영합니다',
+    onbTitle1: 'SeuOffice에 오신 것을 환영합니다',
     onbWelcomeSubtitle: '오픈소스 오피스 프로그램',
     onbWelcomeBody:
       'Word, Excel, PowerPoint, PDF, Markdown, HTML 문서를 열고 편집합니다. AI는 이미 쓰고 있는 Claude·ChatGPT 구독이나 무료 AI 연결로 동작합니다.',

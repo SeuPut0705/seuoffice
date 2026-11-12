@@ -1,5 +1,5 @@
 {
-  "name": "@genoffice/ppt2pptx",
+  "name": "@seuoffice/ppt2pptx",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -14,7 +14,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@genoffice/compound-file": "*",
+    "@seuoffice/compound-file": "*",
     "cfb": "^1.2.2",
     "jszip": "^3.10.1"
   },

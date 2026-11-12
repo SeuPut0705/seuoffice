@@ -1,4 +1,4 @@
-# packages/epub-engine (`@genoffice/epub-engine`)
+# packages/epub-engine (`@seuoffice/epub-engine`)
 
 EPUB 책 엔진이다(결정 0066). 원본 프로그램에서 온 것이 아니라 이 프로젝트가 만든 패키지다. Electron에 묶이지 않고 화면과 Node 양쪽에서 돈다. 편집기(`apps/epub`의 뒷단과 화면), `packages/file-parse`, `packages/cli`가 같은 코드를 쓴다.
 
@@ -54,11 +54,11 @@ EPUB 책 엔진이다(결정 0066). 원본 프로그램에서 온 것이 아니�
 
 - 장 하나 = 원본 글 + 블록 지도. 편집은 지도를 바꾸지 않고 범위 바꾸기를 돌려주며, 호출자가 바뀐 글로 지도를 다시 만든다(`remapChapter`). 오프셋은 장 글의 UTF-16 오프셋이고 범위는 반열림 `[start, end)`다.
 - 굵게·기울임·줄바꿈은 개수가 그대로면 원래 표시를 글자 그대로 되쓴다. 개수가 바뀌면 그 블록의 표시를 `strong`·`em`·`br`로 다시 쓴다(`notation.ts`).
-- 진입점은 둘이다. `@genoffice/epub-engine/core`(`src/core.ts`)는 열기·블록 지도·표기·편집·글 뽑기·저장만 내보내고 번역을 싣지 않는다. 책을 읽기만 하는 쪽(`file-parse`)은 이것을 쓴다. 패키지 진입점(`.`)은 거기에 번역(`./translate`)을 더한 것이고, 그 길이 `pdf-structure` 진입점을 거쳐 `pdf2docx`와 Node 전용 모듈에 닿는다. 루트를 가져오면 그 쪽의 형 검사가 `pdf2docx` 소스까지 읽어 자기 `bidi-js` 형 선언과 부딪힐 수 있다(워드 편집기에서 실제로 났다). 화면은 필요한 모듈을 상대 경로로 가져온다(`apps/epub`의 `edit/engine.ts`, `translate/engine.ts`).
+- 진입점은 둘이다. `@seuoffice/epub-engine/core`(`src/core.ts`)는 열기·블록 지도·표기·편집·글 뽑기·저장만 내보내고 번역을 싣지 않는다. 책을 읽기만 하는 쪽(`file-parse`)은 이것을 쓴다. 패키지 진입점(`.`)은 거기에 번역(`./translate`)을 더한 것이고, 그 길이 `pdf-structure` 진입점을 거쳐 `pdf2docx`와 Node 전용 모듈에 닿는다. 루트를 가져오면 그 쪽의 형 검사가 `pdf2docx` 소스까지 읽어 자기 `bidi-js` 형 선언과 부딪힐 수 있다(워드 편집기에서 실제로 났다). 화면은 필요한 모듈을 상대 경로로 가져온다(`apps/epub`의 `edit/engine.ts`, `translate/engine.ts`).
 - `translate/index.ts`의 `/// <reference>`는 `pdf-structure` 진입점이 끌어오는 `pdf2docx`의 `bidi-js` 형 선언을 이 패키지를 컴파일하는 쪽에 알리려는 것이다.
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/epub-engine`, `npm run typecheck -w @genoffice/epub-engine`. 시험 책은 `tests/helpers.ts`, `chapter-helpers.ts`, `save-helpers.ts`, `translate-helpers.ts`가 그때그때 만든다. 다른 프로그램이 만든 책은 저장소에 없다. 이 앱의 PDF → EPUB 결과는 `tests/pdf-structure-book.test.ts`가 `pdf-structure`로 만들어 쓴다.
+- 실행: `npm run test -w @seuoffice/epub-engine`, `npm run typecheck -w @seuoffice/epub-engine`. 시험 책은 `tests/helpers.ts`, `chapter-helpers.ts`, `save-helpers.ts`, `translate-helpers.ts`가 그때그때 만든다. 다른 프로그램이 만든 책은 저장소에 없다. 이 앱의 PDF → EPUB 결과는 `tests/pdf-structure-book.test.ts`가 `pdf-structure`로 만들어 쓴다.
 - 바꾸면 반드시 테스트하는 것: 열기의 거절 네 가지와 고정 배치·깨진 장(`open.test.ts`), zip 밖 경로(`paths.test.ts`), 글꼴 감추기(`fonts.test.ts`), 인코딩(`encoding.test.ts`), 위치(`xml-positions.test.ts`), 블록 지도(`blocks.test.ts`), 표기 왕복과 자리 표시 거절·루비 빼기(`notation.test.ts`), 편집과 `id` 남기기·인라인 요소 보존·엔티티·CDATA(`edits.test.ts`, `ranges.test.ts`), 저장하지 않음·범위만 다름·`mimetype`·`dcterms:modified`·거절(`save.test.ts`), 글 뽑기(`text.test.ts`), 세로쓰기(`writing-mode.test.ts`), 번역 단위·호출·작업(`translate-units.test.ts`, `translate-call.test.ts`, `translate-job.test.ts`), 번역본·대역본(`translate-output*.test.ts`), 쉬운 풀이의 지시문·기록·결과 책 제목(`translate-easy.test.ts`), 화면과 Node 양쪽에서 도는지(`browser-safety.test.ts`), 공개 진입점(`index.test.ts`).
 - 모델 호출은 모두 가짜다. 만든 책이 `epubcheck`를 통과하는지와 다른 뷰어에서 열리는지는 자동 테스트로 확인하지 못한다. 사람이 확인한다(`docs/archive/ieum/tracking/status.md`).

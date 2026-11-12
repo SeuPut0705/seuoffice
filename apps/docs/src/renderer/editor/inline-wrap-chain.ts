@@ -4,7 +4,7 @@
  * piece of text, as the docx run model carries it (Run.wrap). No editor
  * imports here: the document converter reads and writes the attribute too.
  */
-import { sameInlineWrap, type InlineWrap, type Run } from '@genoffice/docx-engine'
+import { sameInlineWrap, type InlineWrap, type Run } from '@seuoffice/docx-engine'
 
 export const INLINE_WRAP_MARK = 'inlineWrap'
 

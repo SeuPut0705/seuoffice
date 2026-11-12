@@ -3,14 +3,14 @@ import { createReadStream } from 'node:fs'
 import { open, stat } from 'node:fs/promises'
 import { inflateRawSync } from 'node:zlib'
 import { protocol } from 'electron'
-import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@genoffice/electron-utils'
-import { templateFontResponse } from '@genoffice/electron-utils/template-font-response'
+import { DOCX_MEDIA_SCHEME_PRIVILEGE } from '@seuoffice/electron-utils'
+import { templateFontResponse } from '@seuoffice/electron-utils/template-font-response'
 import { takeHandoff } from './byte-handoff'
 import {
   LAZY_MEDIA_SCHEME,
   isLazyMediaPart,
   parseLazyMediaUrl,
-} from '@genoffice/docx-engine/lazy-media'
+} from '@seuoffice/docx-engine/lazy-media'
 import {
   bufferSource,
   lazyMediaHashesIn,
@@ -20,7 +20,7 @@ import {
   slimDocx,
   type ZipEntry,
   type ZipFile,
-} from '@genoffice/docx-engine/zip-splice'
+} from '@seuoffice/docx-engine/zip-splice'
 
 /** documents carrying at least this much browser-decodable media open lazily:
  *  below it the pictures ride along as data URLs (a copy in the model, the DOM
@@ -242,7 +242,7 @@ export async function readLazyMedia(url: string): Promise<{ body: Buffer; mime: 
 }
 
 /** `templateFontsDir`: the design templates' font folder, served under its own host
- *  (templateFontUrl in @genoffice/ui/template-fonts) for every editor in the shell */
+ *  (templateFontUrl in @seuoffice/ui/template-fonts) for every editor in the shell */
 export function registerLazyMediaProtocol(templateFontsDir: string): void {
   if (DOCX_MEDIA_SCHEME_PRIVILEGE.scheme !== LAZY_MEDIA_SCHEME) {
     throw new Error('lazy media scheme privilege registered under another name')

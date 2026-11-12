@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { RenderNode } from '@genoffice/pptx-render'
+import type { RenderNode } from '@seuoffice/pptx-render'
 import { flattenPath, mergeOutline, mergeShapes } from '../src/renderer/merge-shapes'
 
 function rect(id: string, x: number, y: number, w: number, h: number, extra = {}): RenderNode {

@@ -14,7 +14,7 @@ import {
   type KbFileInfo,
   windowMcpState,
   windowMcpUsableServers,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import {
   AiBlockedNotice,
   AiComposer,
@@ -64,7 +64,7 @@ import {
   type ProjectMemoryLine,
   type SkillChipRef,
   type SkillUse,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type {
   AddFolderResult,
   CreateProjectResult,
@@ -73,8 +73,8 @@ import type {
   ProjectListItem,
   ProjectNotice,
   ToolActivity,
-} from '@genoffice/project-store'
-import type { AiSettings } from '@genoffice/ai-provider'
+} from '@seuoffice/project-store'
+import type { AiSettings } from '@seuoffice/ai-provider'
 import {
   AI_SUBSCRIPTION_PROVIDERS,
   isSubscriptionProvider,
@@ -82,7 +82,7 @@ import {
   localModelCapabilities,
   selectAiProvider,
   type AiSubscriptionProviderId,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   askBlockedRunOf,
   askHeldStep,

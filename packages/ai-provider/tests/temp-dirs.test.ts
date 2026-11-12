@@ -25,7 +25,7 @@ afterEach(async () => {
 
 describe('tracked temporary folders', () => {
   it('removes a recorded folder and its record when the owner is gone', async () => {
-    const dir = await createTrackedTempDir('genoffice-codex-app-server-', {
+    const dir = await createTrackedTempDir('seuoffice-codex-app-server-', {
       tempRoot,
       recordDir: records,
       ownerPid: 2_147_483_647,
@@ -37,7 +37,7 @@ describe('tracked temporary folders', () => {
   })
 
   it('keeps a folder whose owner process still runs', async () => {
-    const dir = await createTrackedTempDir('genoffice-claude-code-', {
+    const dir = await createTrackedTempDir('seuoffice-claude-code-', {
       tempRoot,
       recordDir: records,
     })
@@ -49,7 +49,7 @@ describe('tracked temporary folders', () => {
   })
 
   it('never removes a folder outside the system temp directory or without the app prefix', async () => {
-    const outside = join(root, 'genoffice-codex-app-server-elsewhere')
+    const outside = join(root, 'seuoffice-codex-app-server-elsewhere')
     await mkdir(outside)
     const record = join(records, 'ai-temp-dir-0000000000000000.json')
     await mkdir(records, { recursive: true })

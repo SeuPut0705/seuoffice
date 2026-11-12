@@ -9,7 +9,7 @@ import {
   type AiSubscriptionProviderId,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   SUBSCRIPTION_STATUS_TIMEOUT_MS,
   createMeteredAcceptanceFileStore,
@@ -17,16 +17,16 @@ import {
   detectSubscriptionLogin,
   sharedSubscriptionChildRegistry,
   shutdownSubscriptionChildren,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import {
   aiToolCapabilities,
   codexImageRouteOffered,
   readAiSettingsFile,
   type AiToolCallContext,
   type MediaToolFailure,
-} from '@genoffice/ai-search'
-import { PRODUCT_NAME } from '@genoffice/i18n'
-import { genofficeUserDataDir } from './gui'
+} from '@seuoffice/ai-search'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
+import { seuofficeUserDataDir } from './gui'
 import { CliError, EXIT } from './result'
 
 /**
@@ -37,7 +37,7 @@ import { CliError, EXIT } from './result'
  * Electron.
  */
 export function aiSettingsPath(env: NodeJS.ProcessEnv): string {
-  return env.GENOFFICE_AI_SETTINGS || join(genofficeUserDataDir(env), 'ai-settings.json')
+  return env.SEUOFFICE_AI_SETTINGS || join(seuofficeUserDataDir(env), 'ai-settings.json')
 }
 
 /**

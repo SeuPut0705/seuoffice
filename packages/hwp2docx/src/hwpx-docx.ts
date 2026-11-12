@@ -228,7 +228,7 @@ export async function convertHwpxToDocx(hwpx: Uint8Array): Promise<HwpxToDocxRes
     ...((ended ?? ctx.section) ? { section: (ended ?? ctx.section)! } : {}),
     ...(Object.keys(ctx.pictures).length > 0 ? { newPictures: ctx.pictures } : {}),
   })
-  // original font names stay on the runs; the table tells Word/GenOffice how to substitute
+  // original font names stay on the runs; the table tells Word/SeuOffice how to substitute
   // one more pass over the package: the parts docx-engine does not write
   const zip = await JSZip.loadAsync(saved)
   await addHeaderFooter(zip, ctx.hf, pageNumberRunPr(ctx))
@@ -1194,7 +1194,7 @@ function withKeepNext(xml: string): string {
   return xml.slice(0, m.index) + next + xml.slice(m.index + m[0].length)
 }
 
-/** Word's left cell margin where a table declares none (GenOffice convert.ts DEFAULT_CELL_MAR) */
+/** Word's left cell margin where a table declares none (SeuOffice convert.ts DEFAULT_CELL_MAR) */
 const WORD_CELL_MARGIN_TW = 108
 
 /** the line a table set like a character (treatAsChar) occupies in its host paragraph */
@@ -1324,7 +1324,7 @@ function tableHost(
     startTw,
     endTw,
     roomTw: saved > 0 ? saved - startTw - endTw : null,
-    // the host's own page break is not carried (as before): GenOffice then
+    // the host's own page break is not carried (as before): SeuOffice then
     // places the page-break paragraph after a page-relative full-page
     // picture on the picture's page and holds that picture's band on the
     // next page too (a press release ran a page long); a page started by the
@@ -1527,7 +1527,7 @@ function rowContentHeight(
 ): number {
   if (heightHwp <= 0) return 0
   // the row's own cells: a cell merged down from a row above sits in that
-  // row's w:tr (one rowspan cell in GenOffice), so its margins and rules do
+  // row's w:tr (one rowspan cell in SeuOffice), so its margins and rules do
   // not add to this row (a press release's discount table lost 1.5pt a row to the
   // double rule of the cell spanning it)
   const starting = cells.filter((cell) => cell.row === r)

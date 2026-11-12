@@ -4,7 +4,7 @@
  * fonts, sizes and line spacing. `docxToOdt` is checked by comparing the
  * source docx with the docx `odtToDocx` makes of the result.
  */
-import { type Block, type ParsedDoc, type TableModel, readSections } from '@genoffice/docx-engine'
+import { type Block, type ParsedDoc, type TableModel, readSections } from '@seuoffice/docx-engine'
 
 export interface DocSignature {
   paragraphs: number

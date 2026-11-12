@@ -7,7 +7,7 @@
 // changing what the package compiles against.
 
 import { describe, expect, it } from 'vitest'
-import { REDACT_NS, REDACT_PREFIX, redactExtXml, setRedactExt } from '../src/redaction-xml'
+import { REDACT_NS_WRITTEN, REDACT_PREFIX, redactExtXml, setRedactExt } from '../src/redaction-xml'
 
 /**
  * The saved slide has to be XML PowerPoint can open.
@@ -53,12 +53,12 @@ describe('the marker is XML a presentation can open', () => {
     // OOXML's own extension point and a consumer is required to skip the
     // content of an `<a:ext>` whose uri it does not know, so the prefix
     // resolving is the whole requirement.
-    expect(redactExtXml('x')).toContain(`xmlns:${REDACT_PREFIX}="${REDACT_NS}"`)
+    expect(redactExtXml('x')).toContain(`xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
   })
 
   it('leaves the label where a namespace-aware reader can find it', () => {
     const doc = parseStrictly(asSlide(setRedactExt(RPR, 'client phone')))
-    expect(doc.getElementsByTagNameNS(REDACT_NS, 'redact').length).toBe(1)
+    expect(doc.getElementsByTagNameNS(REDACT_NS_WRITTEN, 'redact').length).toBe(1)
   })
 
   it('appends the extLst where the schema wants it: last child of the properties', () => {

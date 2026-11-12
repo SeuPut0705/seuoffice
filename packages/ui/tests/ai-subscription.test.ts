@@ -8,8 +8,8 @@ import {
   type AiSubscriptionState,
   type AiSubscriptionStatus,
   type AiSubscriptionUsage,
-} from '@genoffice/ai-provider'
-import { LANGS } from '@genoffice/i18n'
+} from '@seuoffice/ai-provider'
+import { LANGS } from '@seuoffice/i18n'
 import {
   AI_BLOCKED_RUN_KINDS,
   AI_SUBSCRIPTION_INSTALL_HELP_URLS,

@@ -28,7 +28,7 @@ PC에 설치된 글꼴 파일에서 수치를 읽는다. 세로 메트릭(`famil
 
 ## 테스트
 
-- `npm run test -w @genoffice/font-metrics`, 또는 패키지 폴더에서 `npx vitest run`.
+- `npm run test -w @seuoffice/font-metrics`, 또는 패키지 폴더에서 `npx vitest run`.
 - 실제 설치 글꼴을 쓰는 단언은 macOS에 Helvetica가 있을 때만 실행되고, 그 밖의 환경에서는 일찍 반환한다. Windows에서 통과했다고 실제 글꼴 경로가 검증된 것은 아니다.
 - 어느 플랫폼에서나 도는 것은 합성 글꼴 테스트다. 임시 폴더에 최소 sfnt 파일을 쓰고 `getFontIndex().byFamily`에 직접 꽂아 넣는다. 파서의 경계 검사를 바꾸면 이 방식으로 잘린 테이블 사례를 추가한다.
 - Windows에서 원본 코드 그대로도 실패하는 테스트는 없다.

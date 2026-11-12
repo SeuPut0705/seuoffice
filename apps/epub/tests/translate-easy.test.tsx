@@ -15,8 +15,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { act, createRef, type RefObject } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { openEpub } from '@genoffice/epub-engine'
-import type { Lang } from '@genoffice/i18n'
+import { openEpub } from '@seuoffice/epub-engine'
+import type { Lang } from '@seuoffice/i18n'
 import type { EpubApi, EpubStoreWriteRequest } from '../src/shared/ipc'
 import { LocaleProvider, useI18n } from '../src/renderer/i18n/locale'
 import {

@@ -1,4 +1,4 @@
-import { ribbonCommonEn } from '@genoffice/i18n'
+import { ribbonCommonEn } from '@seuoffice/i18n'
 
 export const en = {
   ...ribbonCommonEn,

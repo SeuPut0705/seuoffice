@@ -11,7 +11,7 @@ import {
   openPptx,
   type OpenedPptx,
   type Paragraph,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import { runTxn } from '../src/ops/executor'
 import { applyEditParagraphs } from '../src/edit-text'
 import '../src/ops/index'

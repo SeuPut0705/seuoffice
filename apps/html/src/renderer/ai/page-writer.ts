@@ -1,5 +1,4 @@
-import { streamText, type AgentTransport } from '@genoffice/agent-core'
-import { brandText } from '@genoffice/i18n'
+import { streamText, type AgentTransport } from '@seuoffice/agent-core'
 import type { Brief } from '../document/brief'
 
 /**
@@ -34,7 +33,7 @@ const OUTPUT_CONTRACT = [
 ].join('\n')
 
 const DESIGN_SYSTEM = [
-  'You are the page writer of GenOffice HTML, a design-first editor for single-file HTML pages. You receive a confirmed brief (core hook, style direction, section list) and write the complete page.',
+  'You are the page writer of SeuOffice HTML, a design-first editor for single-file HTML pages. You receive a confirmed brief (core hook, style direction, section list) and write the complete page.',
   '',
   '## Design rules',
   '- Design the page, do not typeset a document: a clear hero, deliberate typographic hierarchy (display heading, generous measure, restrained sizes), one accent system, consistent radius/spacing/shadow tokens, and whitespace that groups content.',
@@ -58,7 +57,7 @@ const DESIGN_SYSTEM = [
 ].join('\n')
 
 const CONTENT_SYSTEM = [
-  'You are the document writer of GenOffice HTML. The user wants written content first, not a designed page.',
+  'You are the document writer of SeuOffice HTML. The user wants written content first, not a designed page.',
   '',
   '## Writing rules',
   '- Write the requested text in full as a clean, readable single-column document: semantic <h1>/<h2>, paragraphs, lists and tables as the content needs.',
@@ -79,12 +78,12 @@ export function buildPageWriterRequest(
   if (spec.kind === 'design') {
     const { alternatives: _alternatives, ...brief } = spec.brief
     return {
-      system: brandText(DESIGN_SYSTEM, 'en') + langDirective,
+      system: DESIGN_SYSTEM + langDirective,
       user: `## Confirmed brief\n${JSON.stringify(brief, null, 1)}${context}${instruction}\n\nWrite the page now.`,
     }
   }
   return {
-    system: brandText(CONTENT_SYSTEM, 'en') + langDirective,
+    system: CONTENT_SYSTEM + langDirective,
     user: `## Plan\n${spec.title ? `Title: ${spec.title}\n` : ''}${spec.plan.slice(0, 4000)}${context}${instruction}\n\nWrite the document now.`,
   }
 }

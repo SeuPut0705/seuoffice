@@ -19,7 +19,7 @@ vi.mock('electron', () => ({
     on: vi.fn(),
     removeListener: vi.fn(),
   },
-  // the preload imports @genoffice/electron-utils (drop-open bridge), which
+  // the preload imports @seuoffice/electron-utils (drop-open bridge), which
   // binds webUtils at module scope even though node env never installs it
   webUtils: { getPathForFile: () => '' },
 }))
@@ -79,7 +79,7 @@ describe('removed shell modules', () => {
     expect(matching(/StarPrompt|starPrompt|fetchGithubStars|stargazers/, main)).toEqual([])
     expect(matching(/cloudProject|CloudProject/, main)).toEqual([])
     expect(matching(/CREDIT_USAGE_URL|credit-usage/, main)).toEqual([])
-    expect(matching(/startGenofficeLogin|genofficeLogout/)).toEqual([])
+    expect(matching(/startSeuofficeLogin|seuofficeLogout/)).toEqual([])
   })
 
   it('leave no caller behind in the renderer and the preload', () => {

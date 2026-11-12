@@ -2,8 +2,8 @@
 // screen as text with the selection, and applying a whole call as one undo
 // step, all or nothing, Mermaid included (converted by draw.io first).
 import { describe, expect, it } from 'vitest'
-import { DIAGRAM_OPS, type DiagramState } from '@genoffice/drawio-model'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import { DIAGRAM_OPS, type DiagramState } from '@seuoffice/drawio-model'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import {
   APPLY_OPS,
   DIAGRAM_TOOLS,

@@ -1,4 +1,4 @@
-import { decompressionStream, streamBytes } from '@genoffice/zip-gate'
+import { decompressionStream, streamBytes } from '@seuoffice/zip-gate'
 import { convertEmfToDataUrl, convertWmfToDataUrl } from './vendor/emf-converter/index.mjs'
 import { decodeSymbolText } from './symbol-fonts'
 

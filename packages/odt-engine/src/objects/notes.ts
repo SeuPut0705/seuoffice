@@ -14,7 +14,7 @@
  * reference the bridge never had becomes a new `text:note` shaped like the
  * document's other notes; a removed reference removes the note.
  */
-import { type Run, parseNotesXml } from '@genoffice/docx-engine'
+import { type Run, parseNotesXml } from '@seuoffice/docx-engine'
 import type {
   BridgeParagraph,
   EditedParagraph,
