@@ -107,7 +107,18 @@ function scanFile(file: string, mod: Module, moduleOf: (abs: string) => string |
     if (spec !== undefined) {
       if (spec.startsWith('node:')) add(mod.node, spec.slice(5))
       else if (spec === 'electron') {
-        /* counted above */
+        // a static import is counted above; `await import('electron')` and
+        // require count the names they destructure, or `*`
+        if (ts.isCallExpression(node)) {
+          let at: ts.Node = node.parent
+          if (ts.isAwaitExpression(at)) at = at.parent
+          if (ts.isVariableDeclaration(at) && ts.isObjectBindingPattern(at.name)) {
+            for (const el of at.name.elements) {
+              const name = el.propertyName ?? el.name
+              add(mod.electron, ts.isIdentifier(name) ? name.text : '*')
+            }
+          } else add(mod.electron, '*')
+        }
       } else if (spec.startsWith('.')) {
         const target = moduleOf(resolve(dirname(file), spec))
         if (target && target !== mod.id) add(mod.imports, target)
