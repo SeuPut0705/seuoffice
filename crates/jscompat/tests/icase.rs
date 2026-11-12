@@ -277,11 +277,13 @@ fn a_pattern_naming_a_cased_character_outside_ascii_is_refused() {
 }
 
 /// One call of `js_regex!` or `JsRegex::new`: its string literals as written,
-/// each with whether it is an argument of the call itself.
-fn literals_of_call(source: &str) -> Vec<(String, bool)> {
+/// each with whether it is an argument of the call itself, and whether the
+/// last of them is the last argument.
+fn literals_of_call(source: &str) -> (Vec<(String, bool)>, bool) {
     let bytes = source.as_bytes();
     let (mut at, mut depth) = (0, 1);
     let mut literals = Vec::new();
+    let mut last_literal_end = 0;
     while at < bytes.len() && depth > 0 {
         let rest = &source[at..];
         let after_name =
@@ -298,6 +300,7 @@ fn literals_of_call(source: &str) -> Vec<(String, bool)> {
             let end = body.find(&close).expect("a raw string that ends");
             literals.push((body[..end].to_owned(), depth == 1));
             at += 2 + hashes + end + close.len();
+            last_literal_end = at;
         } else if let Some(body) = rest.strip_prefix('"') {
             let mut text = String::new();
             let mut chars = body.char_indices();
@@ -336,6 +339,7 @@ fn literals_of_call(source: &str) -> Vec<(String, bool)> {
             };
             literals.push((text, depth == 1));
             at += 1 + end + 1;
+            last_literal_end = at;
         } else if rest.starts_with('\'') && rest[1..].starts_with('\\') {
             at += 2 + rest[2..].find('\'').expect("a char that ends") + 1;
         } else if rest.starts_with('\'') && rest.chars().nth(2) == Some('\'') {
@@ -349,7 +353,9 @@ fn literals_of_call(source: &str) -> Vec<(String, bool)> {
             at += rest.chars().next().map_or(1, char::len_utf8);
         }
     }
-    literals
+    let after_last =
+        source[last_literal_end..at].trim_matches(|c: char| c.is_whitespace() || c == ',');
+    (literals, after_last == ")")
 }
 
 fn rust_files(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
@@ -396,27 +402,26 @@ fn every_i_site_of_the_workspace_builds() {
         for opener in ["js_regex!(", "JsRegex::new("] {
             for (start, _) in source.match_indices(opener) {
                 let call = &source[start + opener.len()..];
-                let literals = literals_of_call(call);
+                let (literals, ends_in_a_literal) = literals_of_call(call);
+                let is_flags = |text: &str| text.chars().all(|flag| "dgimsuvy".contains(flag));
+                let mut note_unread = || match unread
+                    .iter_mut()
+                    .find(|(unread_name, _)| *unread_name == name)
+                {
+                    Some((_, count)) => *count += 1,
+                    None => unread.push((name.clone(), 1)),
+                };
                 let flags = match literals.last() {
+                    // `JsRegex::new` always takes its flags last
                     Some((flags, true))
-                        if literals.len() > 1
-                            && flags.chars().all(|flag| "dgimsuvy".contains(flag)) =>
+                        if ends_in_a_literal
+                            && is_flags(flags)
+                            && (literals.len() > 1 || opener == "JsRegex::new(") =>
                     {
                         flags.as_str()
                     }
-                    _ if opener == "js_regex!("
-                        && literals.iter().filter(|(_, own)| *own).count() == 1 =>
-                    {
-                        ""
-                    }
                     _ if opener == "JsRegex::new(" => {
-                        match unread
-                            .iter_mut()
-                            .find(|(unread_name, _)| *unread_name == name)
-                        {
-                            Some((_, count)) => *count += 1,
-                            None => unread.push((name.clone(), 1)),
-                        }
+                        note_unread();
                         continue;
                     }
                     _ => "",
@@ -425,6 +430,11 @@ fn every_i_site_of_the_workspace_builds() {
                     continue;
                 }
                 sites += 1;
+                // the flags are read and the pattern is not a literal
+                if literals.len() == 1 {
+                    note_unread();
+                    continue;
+                }
                 for (pattern, own) in &literals[..literals.len() - 1] {
                     // a format! template: what the caller puts in is not known here
                     let pattern = if *own {
