@@ -2547,6 +2547,7 @@ export function App({
     const pending = redactDialog
     setRedactDialog(null)
     if (!pending) return
+    if (editRefusal('direct:redact') !== null) return
     const clean = sanitizeLabel(label)
     if (!clean) return
     const workbook = univerRef.current?.univerAPI.getActiveWorkbook()
@@ -5697,7 +5698,7 @@ export function App({
     // this is also the state right after every save.
     redactionStatesRef.current = []
     loadedRedactionStatesRef.current = null
-    followRedactionRead(
+    const redactionsReady = followRedactionRead(
       redactionLoadRef,
       window.desktopApi.readWorkbookRedactions({ sessionId: selected.sessionId }),
       {
@@ -5811,6 +5812,20 @@ export function App({
     applyDefinedNames(univerRef.current, selected, state)
     const runtime = univerRef.current
     if (runtime) {
+      const attachCollab = async (): Promise<void> => {
+        const page = window.seuCollab
+        if (!page) return
+        await redactionsReady
+        if (lazyWorkbookRef.current !== state) return
+        const redactionStates = loadedRedactionStatesRef.current
+        // Structural edits must move known base-file marks at save time. An
+        // unreadable part cannot participate without risking a disclosure.
+        if (redactionStates === null) {
+          page.fail?.('The workbook privacy marks could not be read.')
+          return
+        }
+        await page.attach({ runtime, state, redactionStates })
+      }
       requestAnimationFrame(() => {
         const workbook = runtime.univerAPI.getActiveWorkbook()
         if (!workbook) {
@@ -5935,7 +5950,7 @@ export function App({
         )
         if (state.formulaMode) {
           void startFullLoad(runtime, lazyWorkbookRef, setMessage).then(
-            () => window.seuCollab?.attach({ runtime, state }),
+            attachCollab,
             (error: unknown) => {
               // a co-editing page holds input until attach; leave the session instead
               const page = window.seuCollab as { fail?(reason: string): void } | undefined
@@ -5944,7 +5959,7 @@ export function App({
             },
           )
         } else {
-          window.seuCollab?.attach({ runtime, state })
+          void attachCollab()
           // Deferred so first paint and initial streaming win the sidecar.
           setTimeout(() => {
             void activateFormulaClosure(runtime, lazyWorkbookRef, setMessage)

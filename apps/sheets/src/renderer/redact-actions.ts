@@ -15,6 +15,7 @@ import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-r
 
 import { buildRedactionIndex, type RedactionIndex, type SheetRefLike } from './ai/redact'
 import type { SelectionRequest } from './redact-menu'
+import { editRefusal } from './sheet-protection'
 
 /** The open question the dialog is asking. */
 export interface RedactDialogState {
@@ -101,6 +102,7 @@ export function redactIntentFor(
   index: RedactionIndex,
   sheetNameOf: (sheetId: string) => string | undefined,
 ): RedactIntent {
+  if (editRefusal('direct:redact') !== null) return { kind: 'ignore' }
   const sheetName = sheetNameOf(request.sheetId)
   if (sheetName === undefined) return { kind: 'ignore' }
   const mark = index.marksFor(request.sheetId).find((candidate) => covers(candidate, request))

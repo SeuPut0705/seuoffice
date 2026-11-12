@@ -160,7 +160,7 @@ export function followRedactionRead(
     /** the state is installed; the caller keeps the marks and tells the user */
     readonly onSettled: (result: WorkbookRedactionsResult, session: RedactionSession) => void
   },
-): void {
+): Promise<void> {
   loadRef.current = REDACTIONS_NOT_LOADED
   const settle = (result: WorkbookRedactionsResult): void => {
     if (!hooks.isCurrent()) return
@@ -172,7 +172,7 @@ export function followRedactionRead(
     loadRef.current = session.load
     hooks.onSettled(result, session)
   }
-  void read.then(settle).catch((error: unknown) => {
+  return read.then(settle).catch((error: unknown) => {
     settle({ status: 'unreadable', error: error instanceof Error ? error.message : String(error) })
   })
 }
