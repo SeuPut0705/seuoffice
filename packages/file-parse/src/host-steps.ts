@@ -115,15 +115,25 @@ function parseHtmlFlat(input: unknown): unknown {
 
 /** `epub.parseFragmentText`: the text of the first node parse5 reads in `html`, or null. */
 function parseFragmentText(input: unknown): unknown {
-  const fragment = parseFragment(stringField(input, 'html'))
-  const node = fragment.childNodes[0] as { nodeName: string; value?: string } | undefined
-  return node?.nodeName === '#text' ? (node.value ?? null) : null
+  const ref = stringField(input, 'html')
+  {
+    // the lines of xml-positions.ts that ask parse5
+    const fragment = parseFragment(ref)
+    const node = fragment.childNodes[0] as { nodeName: string; value?: string } | undefined
+    const decoded = node?.nodeName === '#text' ? node.value : undefined
+    return decoded ?? null
+  }
 }
 
 /** `epub.chapterTextRoots`: the roots of a chapter that is not XML, as parse5 reads it, written flat. */
 function chapterTextRoots(input: unknown): unknown {
-  const doc = parse(stringField(input, 'text')) as unknown as Parse5Node
-  const roots = (doc.childNodes ?? []).map(fromParse5).filter((n): n is TextNode => n !== null)
+  const source = stringField(input, 'text')
+  let roots: TextNode[]
+  {
+    // the two lines of text.ts that read a chapter that is not XML
+    const doc = parse(source) as unknown as Parse5Node
+    roots = (doc.childNodes ?? []).map(fromParse5).filter((n): n is TextNode => n !== null)
+  }
   const ids = new Map<TextNode, number>()
   const order: Array<Extract<TextNode, { kind: 'element' }>> = []
   const stack: TextNode[] = [...roots].reverse()
