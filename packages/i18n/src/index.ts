@@ -20,12 +20,21 @@ export function normalizeLang(raw: string | null | undefined): Lang {
 }
 
 /**
+ * The language an install asks for, as it was written: the choice it stored,
+ * else the system's. Only its normalized form is a UI language; what a document
+ * is formatted for follows this value, which names more languages than the UI has.
+ */
+export function requestedLanguage(stored: unknown, system: string | null | undefined): string {
+  return typeof stored === 'string' && stored.trim() ? stored : (system ?? '')
+}
+
+/**
  * The language an install shows: the choice it stored, else the system's. A
  * stored choice is read through normalizeLang like any other value, so one
  * that is not a UI language shows English instead of the system's language.
  */
 export function installLang(stored: unknown, system: string | null | undefined): Lang {
-  return normalizeLang(typeof stored === 'string' && stored.trim() ? stored : system)
+  return normalizeLang(requestedLanguage(stored, system))
 }
 
 const HTML_LANGS: Record<Lang, string> = {
@@ -136,13 +145,24 @@ export function defineStrings<D extends Record<string, string>>(dicts: LangDicts
 // bundle, so one holder). Renderers get the language over IPC instead.
 
 let uiLang: Lang = 'en'
+let requestedLocale: string = uiLang
 const langListeners = new Set<(lang: Lang) => void>()
 
 export function getUiLang(): Lang {
   return uiLang
 }
 
-export function setUiLang(lang: Lang): void {
+/**
+ * The language value the UI language was narrowed from (a stored 'ja', a system
+ * 'de-DE'), or the UI language when that is all that was given. Read by what
+ * follows the user's language beyond the UI languages, never by the UI.
+ */
+export function getRequestedLocale(): string {
+  return requestedLocale
+}
+
+export function setUiLang(lang: Lang, requested: string = lang): void {
+  requestedLocale = requested
   if (lang === uiLang) return
   uiLang = lang
   for (const listener of langListeners) listener(lang)

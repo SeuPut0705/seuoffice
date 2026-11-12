@@ -75,6 +75,7 @@ import {
   installLang,
   isLang,
   normalizeLang,
+  requestedLanguage,
   setUiLang,
   type Lang,
 } from '@genoffice/i18n'
@@ -1068,13 +1069,16 @@ let uiLang: Lang | null = null
 
 function currentLang(): Lang {
   if (uiLang) return uiLang
+  // the value as written goes along with the UI language it narrows to: what a
+  // workbook's dates are formatted for follows it (a Japanese system keeps its formats)
   if (process.env.GENOFFICE_LANG) {
     uiLang = normalizeLang(process.env.GENOFFICE_LANG)
-    setUiLang(uiLang)
+    setUiLang(uiLang, process.env.GENOFFICE_LANG)
     return uiLang
   }
-  uiLang = installLang(readAppSettings(APP_SETTINGS_PATH()).language, app.getLocale())
-  setUiLang(uiLang)
+  const stored = readAppSettings(APP_SETTINGS_PATH()).language
+  uiLang = installLang(stored, app.getLocale())
+  setUiLang(uiLang, requestedLanguage(stored, app.getLocale()))
   return uiLang
 }
 

@@ -1,7 +1,9 @@
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import {
   createI18n,
   format,
+  getRequestedLocale,
+  getUiLang,
   htmlDir,
   htmlLang,
   installLang,
@@ -10,6 +12,9 @@ import {
   LANGS,
   macShortcutsToWin,
   normalizeLang,
+  onUiLangChange,
+  requestedLanguage,
+  setUiLang,
   type Params,
 } from '../src/index'
 
@@ -67,6 +72,45 @@ describe('installLang', () => {
     expect(installLang(42, 'ko_KR')).toBe('ko')
     expect(installLang(undefined, 'fr-FR')).toBe('en')
     expect(installLang(undefined, undefined)).toBe('en')
+  })
+})
+
+describe('requestedLanguage', () => {
+  it('is the stored choice as it was written, else the system value', () => {
+    expect(requestedLanguage('ja', 'ko-KR')).toBe('ja')
+    expect(requestedLanguage('', 'de-DE')).toBe('de-DE')
+    expect(requestedLanguage(42, 'zh-TW')).toBe('zh-TW')
+    expect(requestedLanguage(undefined, undefined)).toBe('')
+  })
+})
+
+describe('the requested locale beside the UI language', () => {
+  afterEach(() => setUiLang('en'))
+
+  it('keeps the language an install asked for when the UI narrows it to English', () => {
+    setUiLang(normalizeLang('ja-JP'), 'ja-JP')
+    expect(getUiLang()).toBe('en')
+    expect(getRequestedLocale()).toBe('ja-JP')
+  })
+
+  it('follows a UI language chosen afterwards', () => {
+    setUiLang(normalizeLang('ja-JP'), 'ja-JP')
+    setUiLang('ko')
+    expect(getRequestedLocale()).toBe('ko')
+  })
+
+  it('takes a new request that narrows to the UI language already shown', () => {
+    setUiLang('en', 'ja')
+    setUiLang('en', 'de-DE')
+    expect(getRequestedLocale()).toBe('de-DE')
+  })
+
+  it('tells no listener when only the request changed', () => {
+    const seen: string[] = []
+    const stop = onUiLangChange((lang) => seen.push(lang))
+    setUiLang('en', 'ja')
+    stop()
+    expect(seen).toEqual([])
   })
 })
 

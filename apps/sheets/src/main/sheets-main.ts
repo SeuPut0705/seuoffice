@@ -20,6 +20,7 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { refreshCsvDigest } from './csv-digest'
+import { engineLocale } from './engine-locale'
 import { ImportRegistry } from './import-registry'
 import { createServer } from 'node:http'
 import { basename, dirname, isAbsolute, join, resolve as resolvePath, extname } from 'node:path'
@@ -3648,7 +3649,7 @@ export function registerSheetsIpc(): void {
       // large workbook opens slower here than it did the first time; give it
       // the headroom the archive commands of the same save get.
       stagedOpen = sidecarOpenResultSchema.parse(
-        await client.open(stagedPath, getUiLang(), systemShortDate(), {
+        await client.open(stagedPath, engineLocale(), systemShortDate(), {
           timeoutMs: SAVE_REOPEN_TIMEOUT_MS,
         }),
       )
@@ -4552,7 +4553,7 @@ async function openWorkbookSession(
       await Promise.all([
         staged?.opened ??
           client
-            .open(snapshotPath, getUiLang(), systemShortDate())
+            .open(snapshotPath, engineLocale(), systemShortDate())
             .then((result) => sidecarOpenResultSchema.parse(result)),
         sha256File(snapshotPath),
         stat(snapshotPath),
@@ -5173,7 +5174,8 @@ export function startSheetsStandalone(): void {
     installRendererProtocol({ sheets: join(__dirname, '../renderer') })
     // the shell's Word editor serves these URLs there; alone, sheets does
     installStandaloneTemplateFontProtocol()
-    setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
+    const requestedLang = process.env.GENOFFICE_LANG ?? app.getLocale()
+    setUiLang(normalizeLang(requestedLang), requestedLang)
     app.setAccessibilitySupportEnabled(true)
     installApplicationMenu()
     startCaptureServer()
