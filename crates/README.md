@@ -86,7 +86,13 @@ units, so a pattern is still copied as it is. Three things follow:
   the pattern cannot tell a pair from a character (no `.`, negated class,
   `\S`, `\W`, `\D`, `\B` or lookbehind, and every alternative begins with a
   character it must consume). Do not call `find_from(text, at).next()` once
-  per match of a large text with any other pattern: use `find_iter`.
+  per match of a large text with any other pattern: use `find_iter`. Measured
+  over 2 MB, 2,000 such calls took 0.5 s, and 31 s where the text held one
+  character outside the BMP. `tests/sites.rs` fails on a new `find_from` call
+  whose regex reads ahead (`JsRegex::reads_ahead`) or is not written at the
+  call. When such a loop is truly needed, the fix is a handle that prepares
+  the text once (its units and its shadow) and is searched many times; it is
+  not built.
 
 `jscompat/tests/astral.rs` holds Node 22's answers; `tests/sites.rs` reads
 every `js_regex!` and `JsRegex::new` of the workspace and fails on a pattern
