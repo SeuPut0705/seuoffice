@@ -2,8 +2,8 @@ import { decodeEntities } from './parse-xml-text'
 import { applyRevisionResolutions } from './revision-xml'
 import { patchParagraphTexts } from './text-patch'
 import type { NoteInfo, NoteRun } from './types'
-import { escapeXmlAttr, escapeXmlText } from './xml-utils'
-import { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
+import { escapeXmlAttr, escapeXmlText, findChildren, type XNode } from './xml-utils'
+import { runsText, withheldEntryText } from './withheld'
 
 /**
  * Footnotes / endnotes part handling (word/footnotes.xml, word/endnotes.xml).
@@ -87,15 +87,10 @@ export type NoteParagraphReader = (pXml: string) => NoteParagraph
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
   return noteEntriesOf(xml, kind).map(({ id, text, xml: entryXml }) => {
-    // the entry with every run hidden from AI as its placeholder, or withheld
-    // whole when its marks cannot all be read
-    const view = withheldAsPlaceholders(entryXml)
-    const modelText =
-      view === entryXml
-        ? undefined
-        : view === null
-          ? WITHHELD_ENTRY_TEXT
-          : (noteEntriesOf(view, kind)[0]?.text ?? WITHHELD_ENTRY_TEXT)
+    // the entry with every run hidden from AI as its placeholder, read from the
+    // parser's tree; withheld whole when its marks cannot all be read, or when
+    // the tree reads other words than `text` did
+    const modelText = withheldEntryText(entryXml, text, noteTreeText)
     const paras = read ? noteParagraphsOf(entryXml).map(read) : []
     const first = paras[0]
     const richParas = paras.map((p) => p.runs)
@@ -147,6 +142,13 @@ function noteEntriesOf(
     out.push({ id, text: noteEntryPlainText(m[2]), xml: m[0] })
   }
   return out
+}
+
+/** noteEntryPlainText's reading of a parsed entry */
+function noteTreeText(entry: XNode): string {
+  const paras = findChildren(entry, 'w:p').map(runsText)
+  if (paras.length > 0) paras[0] = paras[0]!.replace(/^\s+/, '')
+  return paras.join('\n')
 }
 
 /** paragraph texts joined with newlines; the first paragraph starts with the self-reference mark + a spacer */

@@ -10,7 +10,7 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
-import { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
+import { runsText, withheldEntryText } from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -950,16 +950,16 @@ function inlineContentControlsOf(xml: string): InlineContentControl[] {
     // run-level control; the body/split paths already report those
     if (/<w:p[\s/>]|<w:tbl[\s>]/.test(content)) continue
     const meta = sdtMeta(xml.slice(range.openStart, range.closeEnd))
-    const withheld = withheldAsPlaceholders(content)
+    const text = plainText(content)
+    // read again from the parser's tree, the control's runs wrapped in one element
+    const modelText = withheldEntryText(`<w:sdtContent>${content}</w:sdtContent>`, text, runsText)
     out.push({
       tag: meta.tag,
       title: meta.alias,
       lock: meta.lock,
       id: meta.id,
-      text: plainText(content),
-      ...(withheld === content
-        ? {}
-        : { modelText: withheld === null ? WITHHELD_ENTRY_TEXT : plainText(withheld) }),
+      text,
+      ...(modelText !== undefined ? { modelText } : {}),
     })
   }
   return out

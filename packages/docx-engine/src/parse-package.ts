@@ -13,7 +13,7 @@ import {
   type XNode,
 } from './xml-utils'
 import { customEnumItems } from './list-markers'
-import { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
+import { hasMarkElement, runsText, WITHHELD_ENTRY_TEXT, withheldNode } from './withheld'
 import { decodeNumericCharRefs, onOffOf, type RelInfo } from './parse-xml-text'
 import type {
   CommentImage,
@@ -93,17 +93,6 @@ export async function parseRels(zip: JSZip, path: string): Promise<Map<string, R
 }
 
 /** w:t text only: field instructions (w:instrText) and deleted runs are not part of the display text */
-function resultTextOf(node: XNode): string {
-  let out = ''
-  for (const child of childrenOf(node)) {
-    if ('#text' in child) continue
-    const name = nameOf(child)
-    if (name === 'w:t') out += textOf(child)
-    else if (name !== 'w:instrText' && name !== 'w:delInstrText' && name !== 'w:delText')
-      out += resultTextOf(child)
-  }
-  return out
-}
 
 /**
  * The first picture a comment carries: the blip's relationship resolves
@@ -154,27 +143,14 @@ async function commentImageOf(zip: JSZip, comment: XNode): Promise<CommentImage 
 }
 
 /**
- * Each comment's text as a model may read it, by id, for the comments that
- * hide something; one whose marks cannot all be read is withheld whole.
+ * A comment's text as a model may read it, from the parser's own node: each
+ * hidden run as its placeholder, the whole comment withheld when a mark sits
+ * where no run accounts for it; undefined when it hides nothing.
  */
-function commentModelTexts(xml: string): Map<string, string> {
-  const texts = new Map<string, string>()
-  for (const entry of xml.matchAll(/<w:comment\b[^>]*?(?:\/>|>[\s\S]*?<\/w:comment>)/g)) {
-    const view = withheldAsPlaceholders(entry[0])
-    if (view === entry[0]) continue
-    const id = /\sw:id="([^"]*)"/.exec(entry[0])?.[1]
-    if (id === undefined) continue
-    if (view === null) {
-      texts.set(id, WITHHELD_ENTRY_TEXT)
-      continue
-    }
-    const node = (xmlParser.parse(view) as XNode[]).find((n) => nameOf(n) === 'w:comment')
-    texts.set(
-      id,
-      node ? findChildren(node, 'w:p').map(resultTextOf).join('\n') : WITHHELD_ENTRY_TEXT,
-    )
-  }
-  return texts
+function commentModelText(node: XNode): string | undefined {
+  if (!hasMarkElement(node)) return undefined
+  const view = withheldNode(node)
+  return view === null ? WITHHELD_ENTRY_TEXT : findChildren(view, 'w:p').map(runsText).join('\n')
 }
 
 /** the model's text of a comment, kept only where it differs from what the comment says */
@@ -190,8 +166,6 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
   const parsed = xmlParser.parse(xml) as XNode[]
   const root = parsed.find((n) => nameOf(n) === 'w:comments')
   if (!root) return []
-  // the same comments with every run hidden from AI as its placeholder
-  const modelTexts = commentModelTexts(xml)
   const out: CommentInfo[] = []
   for (const node of findChildren(root, 'w:comment')) {
     const attrs = attrsOf(node)
@@ -199,14 +173,14 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
     const paras = findChildren(node, 'w:p')
     const paraId = paras.length > 0 ? attrsOf(paras[paras.length - 1])['w14:paraId'] : undefined
     const image = await commentImageOf(zip, node)
-    const text = paras.map(resultTextOf).join('\n')
+    const text = paras.map(runsText).join('\n')
     out.push({
       id: attrs['w:id'],
       author: attrs['w:author'] ?? '',
       initials: attrs['w:initials'],
       date: attrs['w:date'],
       text,
-      ...modelTextOf(modelTexts.get(attrs['w:id']), text),
+      ...modelTextOf(commentModelText(node), text),
       ...(paraId ? { paraId } : {}),
       ...(image ? { image } : {}),
     })
