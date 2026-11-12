@@ -8,6 +8,8 @@ export interface Input {
   text?: string
   /** Crosses the wire as JSON: what does not survive it is not an argument. */
   args?: Record<string, unknown>
+  /** `false`: not a seed of the mutations. A listed difference would spread to every mutation of it. */
+  seed?: false
 }
 
 export interface CallSpec {

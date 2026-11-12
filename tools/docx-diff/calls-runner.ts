@@ -105,7 +105,7 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
         }
         if (spec.mutation === 'none') continue
         const from = [...spec.built, ...(seeds.get(spec.fn)?.values() ?? [])].filter(
-          (input) => (input.text ?? '').length > 0,
+          (input) => input.seed !== false && (input.text ?? '').length > 0,
         )
         if (from.length === 0) continue
         for (let done = 0; done < CALL_FUZZ_CASES; done++) {

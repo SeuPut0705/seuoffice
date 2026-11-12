@@ -120,7 +120,7 @@ export function flush(): void {
         settled.set(key, {
           typescriptThrew: 'error' in typescript,
           outcome: 'error' in typescript ? 'error' : JSON.stringify(typescript),
-          keyOrderOnly: order !== null,
+          keyOrderOnly: !listed && order !== null,
           listed,
           difference: listed
             ? null

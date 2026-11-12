@@ -16,6 +16,11 @@ export interface ListedDifference extends ObservedDifference {
 
 const listed = new Map<string, ListedDifference>()
 export const observedDifferences: ObservedDifference[] = []
+let observing = false
+
+export function observeDifferences(): void {
+  observing = true
+}
 
 export function registerDifferences(entries: ListedDifference[]): void {
   for (const entry of entries) {
@@ -27,7 +32,7 @@ export function registerDifferences(entries: ListedDifference[]): void {
 
 /** Accepts only a ledger input whose two complete answers still match. */
 export function listedDifference(observed: ObservedDifference): string | null {
-  observedDifferences.push(observed)
+  if (observing) observedDifferences.push(observed)
   const entry = listed.get(JSON.stringify([observed.fn, observed.text, observed.args]))
   if (!entry) return null
   for (const side of ['typescript', 'rust'] as const) {
