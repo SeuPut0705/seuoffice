@@ -422,6 +422,8 @@ import { PasswordDialog } from './components/PasswordDialog'
 import { ProtectDialog, type ProtectDialogResult } from './components/ProtectDialog'
 import { PRODUCT_NAME } from '@genoffice/i18n'
 import { getLang, t, useI18n } from './i18n/locale'
+import { getDocumentLocale } from './document-locale'
+import { dateTimeFieldText } from './field-date'
 import {
   getActiveSubEditor,
   setActiveSubEditor,
@@ -2995,15 +2997,10 @@ export function App() {
 
   const fieldValue = useCallback(
     (instr: string): string => {
-      const kw = instr.trim().split(/\s+/)[0]?.toUpperCase()
-      const now = new Date()
+      const kw = instr.trim().split(/\s+/)[0]?.toUpperCase() ?? ''
+      const dateTime = dateTimeFieldText(kw, new Date(), getDocumentLocale())
+      if (dateTime !== null) return dateTime
       switch (kw) {
-        case 'DATE':
-        case 'CREATEDATE':
-        case 'SAVEDATE':
-          return now.toLocaleDateString('zh-CN')
-        case 'TIME':
-          return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
         case 'NUMPAGES':
           return String(pageInfo.total)
         case 'PAGE':

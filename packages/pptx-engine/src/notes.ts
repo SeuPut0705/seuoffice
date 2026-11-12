@@ -12,7 +12,8 @@
 import type { OpenedPptx } from './index'
 import { relsPathFor, resolveTarget, type PackageArchive } from './zip'
 import {
-  decodeNumericCharRefs,
+  decodeXml,
+  escapeXmlAttr,
   escapeXmlText,
   hasContentTypeOverride,
   maxRelationshipIdNumber,
@@ -37,15 +38,11 @@ function setEntry(archive: PackageArchive, path: string, xml: string): void {
   archive.entries.set(path, Buffer.from(xml, 'utf8'))
 }
 
-/** Unescape XML text (for reading <a:t>). */
-export function unescapeXml(s: string): string {
-  return decodeNumericCharRefs(s)
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/&quot;/g, '"')
-    .replace(/&apos;/g, "'")
-    .replace(/&amp;/g, '&')
-}
+/**
+ * Text or an attribute value read off raw XML, as XML reads it (`decodeXml`): one pass, so
+ * `&amp;lt;` is the four characters `&lt;`. Never applied to a value the parser returned.
+ */
+export const unescapeXml = decodeXml
 
 /** Path of the slide's notesSlide part (null if there is no notes slide). */
 export function notesPathForSlide(archive: PackageArchive, slidePath: string): string | null {
@@ -165,9 +162,13 @@ export function appendRelationship(
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'
   const maxRid = maxRelationshipIdNumber(xml)
   const rid = `rId${maxRid + 1}`
+  // A function, not a string: the target can be a part name the deck chose (the slide a notes
+  // slide belongs to), and a replacement string would expand a `$&` or `$$` in it. Escaped for
+  // the same reason: the name may hold `&`.
   xml = xml.replace(
     '</Relationships>',
-    `<Relationship Id="${rid}" Type="${type}" Target="${target}"/></Relationships>`,
+    () =>
+      `<Relationship Id="${rid}" Type="${type}" Target="${escapeXmlAttr(target)}"/></Relationships>`,
   )
   setEntry(archive, relsPath, xml)
   return rid

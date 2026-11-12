@@ -2,7 +2,7 @@
  * The document translation window (spec §8): the choices, then the
  * pre-start confirmation.
  *
- * - Choices: the target language (one of the 21 UI languages; the default is
+ * - Choices: the target language (one of the 21 target languages; the default is
  *   the UI language, or English when the document is in it), the pages, the
  *   output formats (translated PDF, Markdown, EPUB; several at once) and the
  *   bilingual option (Markdown and EPUB: each translation after its paragraph;

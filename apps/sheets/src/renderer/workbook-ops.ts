@@ -43,11 +43,12 @@ import {
 import { planFileTableRegistrations } from './file-tables'
 import { areasIntersect, fileTableArea, liveFileTables, optionsOfTableAdd } from './table-design'
 import { DEFAULT_TABLE_STYLE, builtinTablePalette, tableThemeJson } from './table-styles'
-import { getLang, t } from './i18n/locale'
-import { numfmtLocaleFor } from './i18n/numfmt-locale'
+import { t } from './i18n/locale'
+import { numfmtLocale } from './i18n/numfmt-locale'
 import type { OoXmlPivotConfig, PivotField } from './PivotDialog'
 import type { PivotDefinition } from '@genoffice/xlsx-gateway/gateway/xlsx-pivot'
 import { applyFormatPatchToRange, nextSessionPivotName, nextSessionTableName } from './univer-sync'
+import { holdsHiddenCells } from './redact-move-guard'
 import type { LazyWorkbookState, UniverRuntime, UniverWorksheet } from './univer-state'
 
 export function applyAiTableAdd(
@@ -292,7 +293,7 @@ export function readPivotSourceGrid(
         return numfmt.format(pattern, value + shift, {
           nbsp: true,
           throws: false,
-          locale: numfmtLocaleFor(getLang()),
+          locale: numfmtLocale(),
         })
       } catch {
         return value
@@ -365,6 +366,9 @@ export function applyAiPivotAdd(
     throw new Error(t('appPivotOnAddedSheet'))
   }
   const source = parseRange(op.sourceRange)
+  // A pivot table's output is plain cells holding the labels and totals of
+  // its source; the person's dialog and the AI's op both arrive here.
+  if (holdsHiddenCells(runtime, op.sheetId, [source])) throw new Error(t('redactMoveRefused'))
   const sourceRows = source.endRow - source.startRow + 1
   const sourceColumns = source.endColumn - source.startColumn + 1
   if (sourceRows < 2) throw new Error(t('appPivotSourceNeedsRows'))

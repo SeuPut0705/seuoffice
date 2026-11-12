@@ -232,7 +232,7 @@ describe('the grid menu item', () => {
 describe('the menu label reaches Univer as a locale key', () => {
   // Univer resolves a menu item's `title` through its own LocaleService, so a
   // missing key does not fail loudly — the item simply renders untranslated.
-  function titleFor(lang: 'en' | 'ja' | 'th') {
+  function titleFor(lang: 'en' | 'ko') {
     const pack = hideFromAiLocale({ 'sheets-ui': { rightClick: { cut: 'Cut' } } }, lang)
     return (pack['sheets-ui'] as { rightClick: Record<string, string> }).rightClick
       .hideSelectionFromAi
@@ -240,28 +240,18 @@ describe('the menu label reaches Univer as a locale key', () => {
 
   it('reads the wording out of the app string, for every language it is given', () => {
     // Compared against the app's own table rather than a literal, so the
-    // assertion holds for all 21 languages and cannot rot when one is edited.
-    // en is what the runtime boots with and ja is a Univer-pack language;
-    // both must come from here, which is what keeps the gesture identical
-    // across the other editors.
+    // assertion cannot rot when the wording is edited. en is what the runtime
+    // boots with and ko is a Univer-pack language; both must come from here,
+    // which is what keeps the gesture identical across the other editors.
     expect(titleFor('en')).toBe(strings.en.redactMenuLabel)
-    expect(titleFor('ja')).toBe(strings.ja.redactMenuLabel)
-    // ...and ja is genuinely translated, not quietly falling back to English.
-    expect(strings.ja.redactMenuLabel).not.toBe(strings.en.redactMenuLabel)
+    expect(titleFor('ko')).toBe(strings.ko.redactMenuLabel)
+    // ...and ko is genuinely translated, not quietly falling back to English.
+    expect(strings.ko.redactMenuLabel).not.toBe(strings.en.redactMenuLabel)
   })
 
   it('leaves the pack it merged into untouched', () => {
     const pack = hideFromAiLocale({ 'sheets-ui': { rightClick: { cut: 'Cut' } } }, 'en')
     const rightClick = (pack['sheets-ui'] as { rightClick: Record<string, string> }).rightClick
     expect(rightClick.cut).toBe('Cut')
-  })
-
-  it('stays English where Univer has no pack, like every other right-click item', () => {
-    // th/nl/ms/he/hi/cs/zh-TW keep the English pack the runtime booted with,
-    // where every other entry is English. The redaction item follows that
-    // rather than being the one string in the menu with a language of its own
-    // — so it must not fall back to the app's Thai wording.
-    expect(titleFor('th')).toBe(strings.en.redactMenuLabel)
-    expect(titleFor('th')).not.toBe(strings.th.redactMenuLabel)
   })
 })

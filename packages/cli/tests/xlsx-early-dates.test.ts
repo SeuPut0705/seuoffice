@@ -42,9 +42,9 @@ describe('CSV dates around the 1900 leap-day discontinuity', () => {
   })
   it.each(['1900-02-29', '1900-02-30', '2023-02-29', '1900-01-01 24:00', 'not a date'])(
     'retains invalid date text %s',
-    (text) => {
+    async (text) => {
       expect(isoDateSerial(text)).toBeUndefined()
-      expect(csvTable(Buffer.from(text), 'Data').rows).toEqual([[text]])
+      expect((await csvTable(Buffer.from(text), 'Data')).rows).toEqual([[text]])
     },
   )
   it('writes early and modern date serials with their original date/time formats', async () => {

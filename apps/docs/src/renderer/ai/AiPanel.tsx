@@ -149,6 +149,7 @@ import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
 import { IconNewChat, IconSidebarCollapse } from '../components/icons'
 import { useOdtSession } from '../odt-gate'
+import { isRtlLang } from '@genoffice/i18n'
 
 interface ToolActivity {
   name: string
@@ -469,7 +470,7 @@ export function AiPanel({
   const onHandedRunDoneRef = useRef(onHandedRunDone)
   onHandedRunDoneRef.current = onHandedRunDone
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
-  const isRtl = lang === 'ar' || lang === 'he'
+  const isRtl = isRtlLang(lang)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   /** messages queued while a reply runs; the pump re-runs them through runWith on settle */

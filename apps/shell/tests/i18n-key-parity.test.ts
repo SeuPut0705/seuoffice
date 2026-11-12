@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { strings } from '../src/renderer/src/strings'
 
 /**
- * zh defines the key set, every sibling locale must cover it. The LangDicts
+ * en defines the key set, every sibling locale must cover it. The LangDicts
  * constraint at the `createI18n(strings)` call already turns a missing key
  * into a compile error, but only while the object flows into that call
  * unmarked — and a type error names neither the locale nor the key. These
@@ -14,9 +14,9 @@ import { strings } from '../src/renderer/src/strings'
 const LOCALES = Object.keys(strings) as Array<keyof typeof strings>
 
 describe('shell strings — key parity', () => {
-  it('every locale carries exactly the zh key set', () => {
-    const reference = Object.keys(strings.zh).sort()
-    expect(reference.length, 'zh defines the key set').toBeGreaterThan(0)
+  it('every locale carries exactly the en key set', () => {
+    const reference = Object.keys(strings.en).sort()
+    expect(reference.length, 'en defines the key set').toBeGreaterThan(0)
     for (const lang of LOCALES) {
       const keys = Object.keys(strings[lang]).sort()
       const missing = reference.filter((key) => !keys.includes(key))
@@ -27,7 +27,7 @@ describe('shell strings — key parity', () => {
       ).toEqual([])
       expect(
         extra,
-        `${lang} carries ${extra.length} key(s) zh does not have: ${extra.slice(0, 8).join(', ')}`,
+        `${lang} carries ${extra.length} key(s) en does not have: ${extra.slice(0, 8).join(', ')}`,
       ).toEqual([])
     }
   })

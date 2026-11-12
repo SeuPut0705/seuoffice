@@ -13,7 +13,7 @@ import { createHash, createPublicKey, randomBytes, verify, type JsonWebKey } fro
 // it evaluates its WebSocket getter, which compiles undici's WebAssembly parser,
 // and the command line imports this module from every command.
 import type { IncomingMessage, Server, ServerResponse } from 'node:http'
-import { aiFetch, type AiFetchWatch } from '../fetch'
+import { aiFetch, keyedFetch, type AiFetchWatch } from '../fetch'
 import { freeConnectPageHtml, type FreeConnectPage } from '../free-connect'
 import { SUBSCRIPTION_LOGIN_ERROR_CODE } from '../subscription/contract'
 import type { AiSubscriptionLoginFailureStep } from '../types'
@@ -327,7 +327,7 @@ export async function exchangeChatGptCode(
   // a code is good once: sent again after a try that may have arrived, it can only be refused
   let resent = false
   try {
-    const response = await fetchImpl(
+    const response = await keyedFetch(
       CHATGPT_TOKEN_URL,
       {
         method: 'POST',
@@ -348,6 +348,7 @@ export async function exchangeChatGptCode(
           if (why !== 'blocked') resent = true
         },
       },
+      fetchImpl,
     )
     reached = true
     if (!response.ok) {
@@ -412,17 +413,22 @@ export async function refreshChatGptTokens(
   now: () => number = Date.now,
 ): Promise<ChatGptRefreshResult> {
   try {
-    const response = await fetchImpl(CHATGPT_TOKEN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'refresh_token',
-        client_id: request.clientId,
-        refresh_token: request.refreshToken,
-        resource: CHATGPT_RESOURCE,
-      }).toString(),
-      signal: withTimeout(signal),
-    })
+    const response = await keyedFetch(
+      CHATGPT_TOKEN_URL,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          grant_type: 'refresh_token',
+          client_id: request.clientId,
+          refresh_token: request.refreshToken,
+          resource: CHATGPT_RESOURCE,
+        }).toString(),
+        signal: withTimeout(signal),
+      },
+      undefined,
+      fetchImpl,
+    )
     if (!response.ok) {
       if (response.status >= 400 && response.status < 500) {
         const body = (await response.json().catch(() => ({}))) as TokenResponse
@@ -457,16 +463,21 @@ export async function revokeChatGptSession(
       .revocation_endpoint
     // the address comes off the network: only OpenAI's own sign-in host gets the token
     if (typeof endpoint !== 'string' || new URL(endpoint).origin !== CHATGPT_ISSUER) return false
-    const response = await fetchImpl(endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        token: request.refreshToken,
-        token_type_hint: 'refresh_token',
-        client_id: request.clientId,
-      }).toString(),
-      signal: withTimeout(signal),
-    })
+    const response = await keyedFetch(
+      endpoint,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: new URLSearchParams({
+          token: request.refreshToken,
+          token_type_hint: 'refresh_token',
+          client_id: request.clientId,
+        }).toString(),
+        signal: withTimeout(signal),
+      },
+      undefined,
+      fetchImpl,
+    )
     return response.ok
   } catch {
     return false

@@ -265,7 +265,7 @@ describe('the words for what the map turned down', () => {
     )
   })
 
-  it('has every one of those texts in all 21 languages', () => {
+  it('has every one of those texts in every UI language', () => {
     const notices = [
       { code: 'boundary-refused', reason: 'different-parents' },
       { code: 'boundary-refused', reason: 'both-sides' },

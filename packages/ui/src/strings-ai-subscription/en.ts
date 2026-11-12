@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   aiAssistant: 'AI Assistant',
   cardChecking: 'Checking…',
@@ -188,4 +186,4 @@ export const en = {
   errOffInApp:
     '{provider} is turned off in this app, so nothing was run. You can turn it back on in Settings → AI.',
   guideBadgeOff: 'Off',
-} satisfies Record<keyof typeof zh, string>
+}

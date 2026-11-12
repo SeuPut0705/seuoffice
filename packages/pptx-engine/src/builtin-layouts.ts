@@ -10,7 +10,7 @@
  */
 import type { PackageArchive } from './zip'
 import { relsPathFor, resolveTarget } from './zip'
-import { hasContentTypeOverride, maxRelationshipIdNumber } from './xml-utils'
+import { escapeXmlAttr, hasContentTypeOverride, maxRelationshipIdNumber } from './xml-utils'
 import type { SlideSize } from './types'
 import {
   LAYOUT_REL_TYPE,
@@ -193,7 +193,7 @@ export function ensureBuiltinLayout(
   const layoutRels =
     XMLDECL +
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-    `<Relationship Id="rId1" Type="${MASTER_REL_TYPE}" Target="../slideMasters/${masterPath.slice('ppt/slideMasters/'.length)}"/>` +
+    `<Relationship Id="rId1" Type="${MASTER_REL_TYPE}" Target="../slideMasters/${escapeXmlAttr(masterPath.slice('ppt/slideMasters/'.length))}"/>` +
     '</Relationships>'
   archive.entries.set(relsPathFor(layoutPath), Buffer.from(layoutRels, 'utf8'))
 
@@ -205,7 +205,8 @@ export function ensureBuiltinLayout(
       Buffer.from(
         ct.replace(
           '</Types>',
-          `<Override PartName="/${layoutPath}" ContentType="${LAYOUT_CONTENT_TYPE}"/></Types>`,
+          () =>
+            `<Override PartName="/${layoutPath}" ContentType="${LAYOUT_CONTENT_TYPE}"/></Types>`,
         ),
         'utf8',
       ),
@@ -219,7 +220,8 @@ export function ensureBuiltinLayout(
     Buffer.from(
       masterRels.replace(
         '</Relationships>',
-        `<Relationship Id="${rid}" Type="${LAYOUT_REL_TYPE}" Target="../slideLayouts/${layoutPath.slice('ppt/slideLayouts/'.length)}"/></Relationships>`,
+        () =>
+          `<Relationship Id="${rid}" Type="${LAYOUT_REL_TYPE}" Target="../slideLayouts/${layoutPath.slice('ppt/slideLayouts/'.length)}"/></Relationships>`,
       ),
       'utf8',
     ),
@@ -232,7 +234,10 @@ export function ensureBuiltinLayout(
   const idTag = `<p:sldLayoutId id="${maxId + 1}" r:id="${rid}"/>`
   const nextMaster = masterXml.includes('</p:sldLayoutIdLst>')
     ? masterXml.replace('</p:sldLayoutIdLst>', () => `${idTag}</p:sldLayoutIdLst>`)
-    : masterXml.replace(/(<p:clrMap\b[^>]*\/>)/, `$1<p:sldLayoutIdLst>${idTag}</p:sldLayoutIdLst>`)
+    : masterXml.replace(
+        /<p:clrMap\b[^>]*\/>/,
+        (clrMap) => `${clrMap}<p:sldLayoutIdLst>${idTag}</p:sldLayoutIdLst>`,
+      )
   archive.entries.set(masterPath, Buffer.from(nextMaster, 'utf8'))
   return layoutPath
 }

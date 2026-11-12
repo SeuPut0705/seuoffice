@@ -201,3 +201,35 @@ describe('run-level picture geometry on save', () => {
     expect(patchRunPictureXml(vml, { wrap: 'front', offsetXEmu: 5 })).toBe(vml)
   })
 })
+
+describe('a run picture moved to an offset that is no position', () => {
+  // wp:posOffset is ST_PositionOffset, an xsd:int: NaN, an infinity or a value
+  // beyond the int range has no text there, so the file keeps its position
+  it.each([
+    ['NaN', Number.NaN],
+    ['Infinity', Infinity],
+    ['-Infinity', -Infinity],
+    ['beyond the int range', 2147483648],
+    ['below the int range', -2147483649],
+  ])('%s keeps the offset the file has', async (_name, offset) => {
+    const image = await runPicture(
+      anchoredPicture({ posH: posOffset(457200), posV: posOffset(95250) }),
+    )
+    const moved = patchRunPictureXml(image.xml, {
+      ...geometryOf(image),
+      offsetXEmu: offset,
+      offsetYEmu: offset,
+    })
+    expect(moved).toContain(posOffset(457200))
+    expect(moved).toContain(posOffset(95250))
+    expect(moved).not.toMatch(/<wp:posOffset>(?:NaN|-?Infinity|-?\d{10,})</)
+  })
+
+  it('the largest int is still a position', async () => {
+    const image = await runPicture(
+      anchoredPicture({ posH: posOffset(457200), posV: posOffset(95250) }),
+    )
+    const moved = patchRunPictureXml(image.xml, { ...geometryOf(image), offsetXEmu: 2147483647 })
+    expect(moved).toContain(posOffset(2147483647))
+  })
+})

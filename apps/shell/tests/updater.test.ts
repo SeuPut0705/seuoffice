@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { HttpError } from 'builder-util-runtime'
@@ -70,6 +70,9 @@ const updaterState = {
   // MacUpdater's hand-over of a downloaded zip to Squirrel.Mac, which the Mac
   // install replaces (mac-update.ts installMacStaging)
   updateDownloaded: undefined as unknown,
+  // AppUpdater's own answer to "where is the download cache" (it reads
+  // app-update.yml for the folder name); a start clears stale installers there
+  cacheHelper: (): Promise<{ cacheDir: string }> => Promise.resolve({ cacheDir: '' }),
 }
 const squirrelServe = vi.fn(() => Promise.resolve([]))
 const checkForUpdates = vi.fn(() => Promise.resolve(null))
@@ -95,6 +98,7 @@ vi.mock('electron-updater', () => ({
     downloadUpdate: (token?: FakeCancellationToken) => downloadUpdate(token),
     quitAndInstall: (...args: unknown[]) => quitAndInstall(...(args as [boolean, boolean])),
     install: (isSilent: boolean, isForceRunAfter: boolean) => install(isSilent, isForceRunAfter),
+    getOrCreateDownloadHelper: () => updaterState.cacheHelper(),
     get updateDownloaded() {
       return updaterState.updateDownloaded
     },
@@ -389,6 +393,8 @@ beforeEach(() => {
   updaterState.allowDowngrade = false
   updaterState.allowPrerelease = null
   updaterState.updateDownloaded = squirrelServe
+  updaterState.cacheHelper = () =>
+    Promise.resolve({ cacheDir: join(appState.dataDir, 'no-updater-cache') })
   squirrelServe.mockClear()
   macInstall.bundle = '/Applications/IeumOffice.app'
   macInstall.block = null
@@ -674,6 +680,56 @@ describe('initAutoUpdater', () => {
     }
     const record = readFileSync(join(appState.dataDir, 'update-log.txt'), 'utf8')
     expect(record).toContain('running 0.1.0 on the stable channel, reopened by the installer')
+  })
+
+  describe('the installer the last update left in the download cache', () => {
+    /** electron-updater's cache as an update from 0.0.9 to the running 0.1.0 leaves it */
+    function staleCache(): { cacheDir: string; installer: string } {
+      const cacheDir = join(appState.dataDir, 'updater-cache')
+      const installer = join(cacheDir, 'pending', 'SeuOffice-Setup-0.1.0-stable.exe')
+      mkdirSync(join(cacheDir, 'pending'), { recursive: true })
+      writeFileSync(installer, 'installer bytes')
+      writeFileSync(
+        join(cacheDir, 'pending', 'update-info.json'),
+        JSON.stringify({ fileName: 'SeuOffice-Setup-0.1.0-stable.exe', sha512: 'c2hhNTEy' }),
+      )
+      return { cacheDir, installer }
+    }
+
+    it('is removed at the next start', async () => {
+      const { cacheDir, installer } = staleCache()
+      updaterState.cacheHelper = () => Promise.resolve({ cacheDir })
+      const { initAutoUpdater } = await loadUpdater()
+      initAutoUpdater(() => null)
+      await flushAsync()
+      expect(existsSync(installer)).toBe(false)
+    })
+
+    it('stays once a download is running', async () => {
+      const { cacheDir, installer } = staleCache()
+      let answer: (helper: { cacheDir: string }) => void = () => {}
+      // ES2022 lib: no Promise.withResolvers in this workspace's types
+      updaterState.cacheHelper = () => new Promise((resolve) => (answer = resolve))
+      const { initAutoUpdater } = await loadUpdater()
+      initAutoUpdater(() => null)
+      updaterState.listeners.get('update-available')!({ version: '0.2.0' })
+      lastShownActions().onDownload()
+      answer({ cacheDir })
+      await flushAsync()
+      expect(existsSync(installer)).toBe(true)
+    })
+
+    it('a cache that cannot be found is a line in the update record, not a failed start', async () => {
+      updaterState.cacheHelper = () => Promise.reject(new Error('no app-update.yml'))
+      const { initAutoUpdater } = await loadUpdater()
+      expect(() => initAutoUpdater(() => null)).not.toThrow()
+      await flushAsync()
+      const record = readFileSync(join(appState.dataDir, 'update-log.txt'), 'utf8')
+      expect(record).toContain('no app-update.yml')
+      // the updater carries on as usual
+      vi.advanceTimersByTime(FIRST_CHECK_DELAY_MS)
+      expect(checkForUpdates).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('starts no installer on quit while nothing is downloaded', async () => {
@@ -988,10 +1044,10 @@ describe('macOS: the app installs its own update (decision 0097)', () => {
     updaterState.listeners.get('update-available')!({ version: '0.2.0' })
     const state = lastShownState()
     expect(state.phase).toBe('available')
-    // the UI language of these tests is zh: "replaced with the new version",
+    // the UI language of these tests is en: "replaced with the new version",
     // not the Windows "an installer window shows the progress"
-    expect(state.strings.restartDesc).toContain('替换为新版本')
-    expect(state.strings.restartDesc).not.toContain('安装进度')
+    expect(state.strings.restartDesc).toContain('replaced with the new version')
+    expect(state.strings.restartDesc).not.toContain('installer window')
   })
 
   it('clears what an interrupted update left beside the app', async () => {

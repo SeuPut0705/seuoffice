@@ -10,6 +10,9 @@ import {
   insertCoverPage,
   removeCoverPage,
 } from '../src/renderer/editor/cover-pages'
+import { t } from '../src/renderer/i18n/locale'
+
+const TITLE = t('editorCoverTitle')
 
 function createEditor(): Editor {
   return new Editor({
@@ -37,7 +40,7 @@ describe('COVER_PRESETS', () => {
 
   it('every preset contains the title placeholder', () => {
     for (const preset of COVER_PRESETS) {
-      expect(preset.paras.some((p) => p.text === '文档标题')).toBe(true)
+      expect(preset.paras.some((p) => p.text === TITLE)).toBe(true)
     }
   })
 })
@@ -53,7 +56,7 @@ describe('buildCoverNodes', () => {
   it('maps styling onto paragraph attrs and text marks', () => {
     const preset = COVER_PRESETS.find((p) => p.id === 'banded')!
     const nodes = buildCoverNodes(preset)
-    const band = nodes.find((n) => n.content?.some((c) => c.text === '\u6587\u6863\u6807\u9898'))!
+    const band = nodes.find((n) => n.content?.some((c) => c.text === TITLE))!
     expect(band.attrs?.shadingFill).toBeTruthy()
     expect(band.attrs?.align).toBe('center')
     const marks = band.content![0].marks!
@@ -73,7 +76,7 @@ describe('insertCoverPage', () => {
       (n) => n.content?.map((c) => ('text' in c ? c.text : '')).join('') ?? '',
     )
     expect(texts[texts.length - 1]).toBe('First body paragraph')
-    expect(texts.some((t) => t.includes('文档标题'))).toBe(true)
+    expect(texts.some((text) => text.includes(TITLE))).toBe(true)
     expect(texts.indexOf('First body paragraph')).toBeGreaterThan(0)
     editor.destroy()
   })
@@ -83,7 +86,7 @@ describe('insertCoverPage', () => {
       const editor = createEditor()
       insertCoverPage(editor, preset)
       const all = JSON.stringify(editor.getJSON())
-      expect(all).toContain('文档标题')
+      expect(all).toContain(TITLE)
       editor.destroy()
     }
   })
@@ -138,7 +141,7 @@ describe('removeCoverPage', () => {
     insertCoverPage(editor, COVER_PRESETS[0])
     insertCoverPage(editor, COVER_PRESETS[1])
     const all = texts(editor)
-    expect(all.filter((t) => t.includes('\u6587\u6863\u6807\u9898'))).toHaveLength(1)
+    expect(all.filter((text) => text.includes(TITLE))).toHaveLength(1)
     expect(all[all.length - 1]).toBe('First body paragraph')
     expect(removeCoverPage(editor)).toBe(true)
     expect(texts(editor)).toEqual(['First body paragraph'])

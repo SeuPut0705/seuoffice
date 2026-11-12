@@ -42,13 +42,13 @@ function applyTheme(theme: UiTheme): void {
 }
 
 async function bootstrap(): Promise<void> {
-  let lang: Lang = 'zh'
+  let lang: Lang = 'en'
   let theme: UiTheme = 'system'
   try {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
     ;[lang, theme] = await Promise.all([
-      window.slidesApi.getLanguage().catch(() => 'zh' as const),
+      window.slidesApi.getLanguage().catch(() => 'en' as const),
       window.slidesApi.getTheme().catch(() => 'system' as const),
     ])
   } catch {

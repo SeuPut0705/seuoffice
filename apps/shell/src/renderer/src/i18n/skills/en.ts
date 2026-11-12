@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   navLabel: 'Skills',
   intro:
@@ -182,4 +180,4 @@ export const en = {
   builtinBodyNote: 'The instructions below are the text given to the AI, shown as written',
   pasteUnclosed:
     'The closing --- line is missing. The text may have been cut off; copy it again from start to end.',
-} satisfies Record<keyof typeof zh, string>
+}

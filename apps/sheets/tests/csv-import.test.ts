@@ -21,42 +21,44 @@ describe('decodeCsvBuffer', () => {
   const rows = '城市,人口\n东京,37\n'
   const jp = '都市,人口\n東京,37\n'
 
-  it('reads UTF-8 with and without a BOM', () => {
-    expect(decodeCsvBuffer(Buffer.from(rows, 'utf8'))).toBe(rows)
+  it('reads UTF-8 with and without a BOM', async () => {
+    expect(await decodeCsvBuffer(Buffer.from(rows, 'utf8'))).toBe(rows)
     expect(
-      decodeCsvBuffer(Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(rows, 'utf8')])),
+      await decodeCsvBuffer(
+        Buffer.concat([Buffer.from([0xef, 0xbb, 0xbf]), Buffer.from(rows, 'utf8')]),
+      ),
     ).toBe(rows)
   })
 
-  it('reads UTF-16 in both byte orders', () => {
-    expect(decodeCsvBuffer(Buffer.from(`\uFEFF${rows}`, 'utf16le'))).toBe(rows)
+  it('reads UTF-16 in both byte orders', async () => {
+    expect(await decodeCsvBuffer(Buffer.from(`\uFEFF${rows}`, 'utf16le'))).toBe(rows)
     const be = Buffer.from(`\uFEFF${rows}`, 'utf16le').swap16()
-    expect(decodeCsvBuffer(be)).toBe(rows)
+    expect(await decodeCsvBuffer(be)).toBe(rows)
   })
 
-  it('reads BOM-less UTF-16 instead of keeping NUL garbage', () => {
+  it('reads BOM-less UTF-16 instead of keeping NUL garbage', async () => {
     const ascii = 'a,b\n1,2\n'
     const le = Buffer.from(ascii, 'utf16le')
-    expect(decodeCsvBuffer(le)).toBe(ascii)
+    expect(await decodeCsvBuffer(le)).toBe(ascii)
     const be = Buffer.from(ascii, 'utf16le').swap16()
-    expect(decodeCsvBuffer(be)).toBe(ascii)
+    expect(await decodeCsvBuffer(be)).toBe(ascii)
     const leRows = Buffer.from(rows, 'utf16le')
-    expect(decodeCsvBuffer(leRows)).toBe(rows)
+    expect(await decodeCsvBuffer(leRows)).toBe(rows)
   })
 
-  it('falls back to the legacy charset Excel actually writes', () => {
-    expect(decodeCsvBuffer(gbkBytes(rows))).toBe(rows)
-    expect(decodeCsvBuffer(shiftJisBytes(jp), 'shift_jis')).toBe(jp)
+  it('falls back to the legacy charset Excel actually writes', async () => {
+    expect(await decodeCsvBuffer(gbkBytes(rows))).toBe(rows)
+    expect(await decodeCsvBuffer(shiftJisBytes(jp), 'shift_jis')).toBe(jp)
   })
 
-  it('uses the preferred charset to break GBK/Shift_JIS ties', () => {
+  it('uses the preferred charset to break GBK/Shift_JIS ties', async () => {
     // these bytes decode to plausible CJK under both, so the UI language decides
-    expect(decodeCsvBuffer(shiftJisBytes(jp))).not.toBe(jp)
-    expect(decodeCsvBuffer(gbkBytes(rows), 'gb18030')).toBe(rows)
+    expect(await decodeCsvBuffer(shiftJisBytes(jp))).not.toBe(jp)
+    expect(await decodeCsvBuffer(gbkBytes(rows), 'gb18030')).toBe(rows)
   })
 
-  it('keeps plain ASCII untouched', () => {
-    expect(decodeCsvBuffer(Buffer.from('a,b\n1,2\n', 'utf8'))).toBe('a,b\n1,2\n')
+  it('keeps plain ASCII untouched', async () => {
+    expect(await decodeCsvBuffer(Buffer.from('a,b\n1,2\n', 'utf8'))).toBe('a,b\n1,2\n')
   })
 })
 

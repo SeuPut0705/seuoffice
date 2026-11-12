@@ -51,6 +51,8 @@ export {
   defaultTargetLanguageForTree,
   isTranslationLanguage,
   translationLanguageName,
+  translationLanguageOf,
+  type TranslationLanguage,
   translationSentenceSeparator,
   translationSourceLanguage,
 } from './language'

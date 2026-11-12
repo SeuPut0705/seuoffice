@@ -2713,7 +2713,12 @@ function storeSharedFormulaGroups(
 function storeFormulaText(
   state: LazyWorkbookState,
   sheetId: string,
-  cells: readonly { row: number; column: number; formula?: string | undefined }[],
+  cells: readonly {
+    row: number
+    column: number
+    formula?: string | undefined
+    arrayRef?: string | undefined
+  }[],
 ): void {
   let bySheet = state.formulaText.get(sheetId)
   if (!bySheet) {
@@ -2727,7 +2732,15 @@ function storeFormulaText(
     state.formulaTextTruncated.add(sheetId)
   }
   for (const cell of cells) {
-    if (cell.formula) bySheet.set(`${cell.row}:${cell.column}`, cell.formula)
+    if (!cell.formula) continue
+    bySheet.set(`${cell.row}:${cell.column}`, cell.formula)
+    if (!cell.arrayRef) continue
+    let arrays = state.fileArrayRefs.get(sheetId)
+    if (!arrays) {
+      arrays = new Map()
+      state.fileArrayRefs.set(sheetId, arrays)
+    }
+    arrays.set(`${cell.row}:${cell.column}`, cell.arrayRef)
   }
 }
 

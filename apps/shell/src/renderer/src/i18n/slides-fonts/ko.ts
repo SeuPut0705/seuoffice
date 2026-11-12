@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   setSlidesFonts: 'AI 슬라이드 글꼴',
@@ -17,4 +17,4 @@ export const ko = {
   slidesFontGroupPc: 'PC에 설치된 글꼴',
   slidesFontPortableHint:
     '이 글꼴이 없는 PC의 PowerPoint에서는 다른 글꼴로 보입니다. PDF로 내보내면 그대로 보입니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

@@ -54,7 +54,7 @@ import {
   type AiToolCallContext,
   type AiToolCapabilities,
 } from '@genoffice/ai-search'
-import { getUiLang, PRODUCT_NAME } from '@genoffice/i18n'
+import { documentLocale, getUiLang, PRODUCT_NAME } from '@genoffice/i18n'
 import { addPicture, editPictureSrcRect, replacePictureBytes } from '@genoffice/pptx-engine'
 import { rasterImageExt } from './media-mime'
 import { matchesElementRef } from '@genoffice/pptx-engine/identity'
@@ -307,11 +307,10 @@ export function registerSlidesOnlyAiIpc(): void {
   // The design template remembered per document (slides:ai-template-selection-get / -set)
   registerTemplateSelectionIpc()
 
-  // The fonts generation uses when the request names none (Settings › General); the
-  // renderer passes its UI language, which picks the default before a choice is stored
-  ipcMain.handle('slides:ai-default-fonts', (_event, lang: unknown) =>
-    readSlidesAiFonts(app, typeof lang === 'string' ? lang : ''),
-  )
+  // The fonts generation uses when the request names none (Settings › General); before a
+  // choice is stored the language documents are read for picks the default: the bundled
+  // faces cover Korean and English text only
+  ipcMain.handle('slides:ai-default-fonts', () => readSlidesAiFonts(app, documentLocale()))
 
   // What the search/image/media tools can do right now (settings + subscription connections):
   // the renderer offers the model only the tools that have a route.

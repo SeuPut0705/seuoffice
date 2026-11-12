@@ -34,6 +34,7 @@ import {
   type RangeBounds,
 } from '@genoffice/xlsx-gateway/domain/cell-address'
 import { placeholderSource, type CellMark, type RedactionIndex } from './redact'
+import { UNKNOWN_REDACTION_LABEL } from './redact-load'
 
 export interface RedactionRefusal {
   /** the whole message the model sees, naming the cell and the label */
@@ -102,6 +103,12 @@ const READS: Record<string, (op: Record<string, unknown>) => ReadSite[]> = {
   set_range: (op) => {
     const values = Array.isArray(op.values) ? op.values : []
     return values.flatMap((row) => (Array.isArray(row) ? row.flatMap(formulaRefs) : []))
+  },
+  // A pivot table's output is plain cells holding the labels and totals of its
+  // source range, which is on the op's own sheet.
+  add_pivot: (op) => {
+    const bounds = rangeOf(op.sourceRange)
+    return bounds ? [{ bounds }] : []
   },
 }
 
@@ -318,7 +325,7 @@ export function redactGuardForOps(
         const readSheetId =
           site.sheetId ?? (site.sheetName !== undefined ? sheetIdOf(site.sheetName) : sheetId)
         if (!readSheetId) continue
-        for (const mark of index.marksFor(readSheetId)) {
+        for (const mark of withheldOn(index, readSheetId)) {
           if (!intersects(mark, site.bounds)) continue
           return refusalAt(
             mark,
@@ -332,9 +339,10 @@ export function redactGuardForOps(
     }
 
     const marks = index.marksFor(sheetId)
-    if (marks.length === 0) continue
     const sheetName = sheetNameOf(sheetId)
 
+    // A shift is judged against the marks alone: a formula cell that computes
+    // from a hidden cell takes its formula along, so it stays withheld.
     const shift = SHIFTS[name]
     if (shift) {
       const shifts = shift(op)
@@ -354,7 +362,7 @@ export function redactGuardForOps(
     if (!write) continue
     const bounds = write(op)
     if (!bounds) continue
-    for (const mark of marks) {
+    for (const mark of withheldOn(index, sheetId)) {
       if (!intersects(mark, bounds)) continue
       return refusalAt(
         mark,
@@ -366,6 +374,22 @@ export function redactGuardForOps(
     }
   }
   return null
+}
+
+/**
+ * Every withheld rectangle of a sheet: the marks, and the formula cells whose
+ * value is computed from a marked cell (`redact-derived`). An op that copies
+ * such a cell as a value, or freezes it with `convert_to_values`, would leave
+ * a constant holding the hidden value where nothing withholds it; one that
+ * writes over it replaces a formula the model was never shown.
+ */
+function withheldOn(index: RedactionIndex, sheetId: string): readonly CellMark[] {
+  const derived = index.derivedFor?.(sheetId) ?? []
+  if (derived.length === 0) return index.marksFor(sheetId)
+  return [
+    ...index.marksFor(sheetId),
+    ...derived.map((area) => ({ ...area, label: UNKNOWN_REDACTION_LABEL })),
+  ]
 }
 
 /// The address a refusal about a shifted mark names: the mark's own top-left.

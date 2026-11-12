@@ -38,6 +38,9 @@ import {
 import { COPY_TYPE, ISheetClipboardService } from '@univerjs/sheets-ui'
 
 import { formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import type { RedactionIndex } from './ai/redact'
+import { isWithheldCopy } from './redact-clipboard'
+import { pasteSourceHoldsHidden } from './redact-move-guard'
 import { sharedFormulaResolverFor } from './shared-formula-journal'
 import type { UniverRuntime } from './univer-state'
 
@@ -85,7 +88,12 @@ export type PasteSpecialSource =
       readonly cols: readonly number[]
       readonly cut: boolean
     }
-  | { readonly kind: 'text'; readonly rows: CellGrid<string> }
+  | {
+      readonly kind: 'text'
+      readonly rows: CellGrid<string>
+      /** set when the text is a copy of this app that held cells hidden from AI */
+      readonly withheld?: true
+    }
   | { readonly kind: 'none' }
 
 /// Paste types the dialog disables (Univer has no note/validation-only paste).
@@ -132,6 +140,32 @@ export function needsOwnLayer(options: PasteSpecialOptions): boolean {
     options.operation !== 'none' ||
     UNIVER_DELEGATE[options.type] === null
   )
+}
+
+/**
+ * Whether the dialog's paste would put a value withheld from AI into other
+ * cells: a hidden cell of the copy, in any paste that carries values or a link
+ * to it; and a formula that computes from a hidden cell, in the pastes that
+ * write its computed value down (Values, a transposed paste, an operation).
+ * Pasted as a formula or linked to, such a cell stays withheld where it lands.
+ */
+export function pasteSpecialCarriesWithheld(
+  index: RedactionIndex,
+  source: PasteSpecialSource,
+  options: PasteSpecialOptions,
+): boolean {
+  // The same cells copied in another tab or window of the app arrive as the
+  // clipboard's text; their copy says what it held (redact-clipboard.ts).
+  if (source.kind === 'text') return source.withheld === true
+  if (source.kind !== 'internal') return false
+  if (!source.cut && !options.link && !pasteTypeCarriesValues(options.type)) return false
+  const writesComputedValues =
+    !options.link &&
+    (options.type === 'values' ||
+      options.type === 'values-numfmt' ||
+      options.transpose ||
+      options.operation !== 'none')
+  return pasteSourceHoldsHidden(index, source, writesComputedValues)
 }
 
 export interface PasteSpecialAvailability {
@@ -514,7 +548,12 @@ export async function readPasteSpecialSource(runtime: UniverRuntime): Promise<Pa
   const copyId = /data-copy-id="([^\s"]+)"/.exec(html)?.[1] ?? null
   const internal = internalSource(cache, copyId)
   if (internal) return internal
-  if (text.trim() !== '') return { kind: 'text', rows: parseClipboardText(text) }
+  if (text.trim() !== '') {
+    const rows = parseClipboardText(text)
+    // A copy from another tab or window of the app: its copy id is not in
+    // this editor's cache, but its mark still says what it holds.
+    return isWithheldCopy(html) ? { kind: 'text', rows, withheld: true } : { kind: 'text', rows }
+  }
   return lastCopy ?? { kind: 'none' }
 }
 

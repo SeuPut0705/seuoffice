@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   driveNav: 'Google Drive',
   driveDesc:
@@ -61,4 +59,4 @@ export const en = {
     'Google does not allow Drive files to go to an AI service that uses them to train its models. Personal Claude, ChatGPT and Codex plans may use your chats for training unless you turn it off: in Claude under Settings → Privacy, in ChatGPT under Settings → Data controls → “Improve the model for everyone”. API key providers do not train on API data by default. Free AI connections are never given Drive files.',
   driveTrainingAck: 'Model training is off in the AI accounts I use with Drive files',
   driveFailTraining: 'First tick the item about model training above.',
-} satisfies Record<keyof typeof zh, string>
+}

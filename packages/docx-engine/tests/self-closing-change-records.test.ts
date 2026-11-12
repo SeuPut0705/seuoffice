@@ -67,3 +67,19 @@ describe('a self-closing property-change record', () => {
     expect(set).toContain('w:author="B"')
   })
 })
+
+describe('a property-change record whose close tag has white space before its >', () => {
+  // XML allows white space between a close tag's name and its >; such a
+  // record is the same element and goes whole
+  it('stripping it leaves the live properties and nothing of the record', () => {
+    const pPr = `<w:pPr><w:jc w:val="center"/><w:pPrChange ${AT}><w:pPr><w:jc w:val="left"/></w:pPr></w:pPrChange ></w:pPr>`
+    expect(stripPPrChange(pPr)).toBe('<w:pPr><w:jc w:val="center"/></w:pPr>')
+  })
+
+  it('a later paragraph does not lose its properties to it', () => {
+    const pPr = `<w:pPr><w:pPrChange ${AT}><w:pPr/></w:pPrChange\n></w:pPr><w:p><w:pPr><w:jc w:val="right"/><w:pPrChange ${AT}><w:pPr/></w:pPrChange></w:pPr></w:p>`
+    expect(stripPPrChange(pPr)).toBe(
+      `<w:pPr></w:pPr><w:p><w:pPr><w:jc w:val="right"/><w:pPrChange ${AT}><w:pPr/></w:pPrChange></w:pPr></w:p>`,
+    )
+  })
+})

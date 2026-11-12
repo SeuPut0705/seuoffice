@@ -150,6 +150,11 @@ export interface LazyWorkbookState {
   readonly formulaText: Map<string, Map<string, string>>
   /// Sheets whose formulaText overflowed and was dropped (see storeFormulaText).
   readonly formulaTextTruncated: Set<string>
+  /// The range each array formula of the file fills ('row:col' of its master
+  /// → `ref`, file coordinates), harvested with formulaText. The cells of the
+  /// range hold values computed by the master and carry no formula of their
+  /// own, so whoever asks what depends on a cell needs the range.
+  readonly fileArrayRefs: Map<string, Map<string, string>>
   /// Shared-formula groups per sheet (file coordinates) from the formula
   /// index: followers carry no text of their own there, so their formula is
   /// derived from the master on demand.

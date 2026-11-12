@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   aiCollapsePanel: 'Collapse panel',
   aiComposerPlaceholder: 'Ask AI to write or edit the document…',
@@ -187,4 +185,4 @@ export const en = {
   aiStarterAnnouncementPrompt: 'Draft a product announcement for me. Product and key points: ',
   aiStarterGuide: 'Write a how-to guide',
   aiStarterGuidePrompt: 'Write a how-to guide for me. The process to explain: ',
-} satisfies Record<keyof typeof zh, string>
+}

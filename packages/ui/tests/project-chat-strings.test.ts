@@ -6,14 +6,13 @@ import {
   type ProjectChatStringKey,
 } from '../src/strings-project-chat'
 
-const KEYS = Object.keys(PROJECT_CHAT_STRINGS.zh) as ProjectChatStringKey[]
-const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+const KEYS = Object.keys(PROJECT_CHAT_STRINGS.en) as ProjectChatStringKey[]
+const NON_LATIN: readonly Lang[] = ['ko']
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('PROJECT_CHAT_STRINGS', () => {
-  it('has every key, non-empty, in all 21 languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('has every key, non-empty, in every language', () => {
     expect(Object.keys(PROJECT_CHAT_STRINGS).sort()).toEqual([...LANGS].sort())
     for (const lang of LANGS) {
       const dict = PROJECT_CHAT_STRINGS[lang] as Record<string, string>
@@ -26,7 +25,7 @@ describe('PROJECT_CHAT_STRINGS', () => {
     for (const lang of LANGS) {
       for (const key of KEYS) {
         expect(placeholders(PROJECT_CHAT_STRINGS[lang][key]), `${lang}.${key}`).toEqual(
-          placeholders(PROJECT_CHAT_STRINGS.zh[key]),
+          placeholders(PROJECT_CHAT_STRINGS.en[key]),
         )
       }
     }

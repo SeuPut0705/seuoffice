@@ -6,7 +6,7 @@
  * simple shapes; everything else → passthrough.
  */
 import { namedActionOf } from './named-action'
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { layoutHierTree, parseHierConstraints } from './dgm-hier'
 import { scanSlide, type SpElement } from './scan'
 import { tableRowGridCols } from './table-grid'
@@ -72,10 +72,10 @@ import {
   type TablePartStyle,
   type TableStyleFlags,
 } from './table-style'
-import { decodeNumericCharRefs, percentFraction } from './xml-utils'
+import { decodeXml, percentFraction } from './xml-utils'
 import { readRedactLabel } from './redaction-xml'
 
-const parser = new XMLParser({
+const parser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   // Text fidelity: no trim (leading/trailing spaces in runs matter, e.g. "bold word " + following text),
@@ -426,7 +426,7 @@ function parseShapeFragment(
         if (model) {
           const rot = model['am3d:trans']?.['am3d:rot']
           const angle = (name: string) => Number(rot?.[`@_${name}`] ?? 0) || 0
-          const target = ctx.model3dRels?.get(String(model['@_r:embed']))
+          const target = ctx.model3dRels?.get(String(model['@_r:embed'] ?? ''))
           el.model3d = {
             ...(target ? { target } : {}),
             rot: { ax: angle('ax'), ay: angle('ay'), az: angle('az') },
@@ -1458,7 +1458,7 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
   // Chart: read the referenced chart part for semantic parsing (read-only render; save uses original bytes)
   if (uri.includes('/chart')) {
     const rid = data?.['c:chart']?.['@_r:id']
-    const chartXml = rid ? ctx.chartXmls?.get(rid) : undefined
+    const chartXml = rid ? ctx.chartXmls?.get(String(rid)) : undefined
     const ovXml = rid ? ctx.chartThemeOverrides?.get(String(rid)) : undefined
     const chartTheme = ovXml ? themeWithOverride(ctx.theme, ovXml) : ctx.theme
     // Fill resolver bound to the chart part's own rels (blip rIds live there, not on
@@ -1622,7 +1622,8 @@ function diagramTextColors(
   for (const m of dataXml.matchAll(/<dgm:pt modelId="([^"]+)" type="pres"[\s\S]*?<\/dgm:pt>/g)) {
     const lbl = /presStyleLbl="([^"]+)"/.exec(m[0])?.[1]
     const c = lbl ? lblColor.get(lbl) : undefined
-    if (c) out.set(m[1]!, c)
+    // decoded: looked up by the drawing shape's modelId, which the parser reads
+    if (c) out.set(decodeXml(m[1]!), c)
   }
   return out
 }
@@ -3865,7 +3866,7 @@ function parseParagraph(
   let bullet: Paragraph['bullet']
   if (pPr['a:buNone'] !== undefined) bullet = { type: 'none' }
   else if (pPr['a:buChar']?.['@_char'] != null) {
-    bullet = { type: 'char', char: decodeNumericCharRefs(String(pPr['a:buChar']['@_char'])) }
+    bullet = { type: 'char', char: String(pPr['a:buChar']['@_char']) }
   } else if (pPr['a:buAutoNum']) {
     bullet = { type: 'number' }
     if (pPr['a:buAutoNum']['@_type']) bullet.numType = String(pPr['a:buAutoNum']['@_type'])
@@ -4068,21 +4069,21 @@ function parseRun(r: any, ctx: ParseContext, dflt?: LevelTextStyle): TextRun {
   const rPr = r['a:rPr'] ?? {}
   const redactLabel = readRedactLabel(rPr)
   const rawT = r['a:t']
-  const text = decodeNumericCharRefs(
+  const text =
     typeof rawT === 'string'
       ? rawT
       : rawT == null
         ? ''
         : typeof rawT === 'object'
           ? String(rawT['#text'] ?? '')
-          : String(rawT),
-  )
+          : String(rawT)
   const hlink = rPr['a:hlinkClick']
+  const hlinkRId = hlink?.['@_r:id'] == null ? undefined : String(hlink['@_r:id'])
   const hlinkNamedAction = namedActionOf(hlink?.['@_action'] ? String(hlink['@_action']) : null)
   const hlinkTarget = hlinkNamedAction
     ? `action:${hlinkNamedAction}`
-    : hlink?.['@_r:id']
-      ? ctx.hlinkRels?.get(String(hlink['@_r:id']))
+    : hlinkRId
+      ? ctx.hlinkRels?.get(hlinkRId)
       : undefined
   const fill = rPr['a:solidFill']
   // WordArt gradient text fill: resolved stops for display, mid-stop as the flat fallback color
@@ -4320,9 +4321,9 @@ function parseRun(r: any, ctx: ParseContext, dflt?: LevelTextStyle): TextRun {
     ...(gradient ? { gradient } : {}),
     ...(runGlow ? { glow: runGlow } : {}),
     ...(reflection ? { reflection: true } : {}),
-    ...(hlink && (hlink['@_r:id'] != null || hlinkNamedAction)
+    ...(hlink && (hlinkRId != null || hlinkNamedAction)
       ? {
-          hyperlinkRId: String(hlink['@_r:id'] ?? ''),
+          hyperlinkRId: hlinkRId ?? '',
           ...(hlinkTarget ? { hyperlink: hlinkTarget } : {}),
           ...(hlink['@_action'] ? { hyperlinkAction: String(hlink['@_action']) } : {}),
           ...(hlink['@_tooltip'] ? { hyperlinkTooltip: String(hlink['@_tooltip']) } : {}),

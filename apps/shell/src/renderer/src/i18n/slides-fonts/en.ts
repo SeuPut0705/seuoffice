@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   setSlidesFonts: 'AI slide fonts',
   setSlidesFontsDesc:
@@ -17,4 +15,4 @@ export const en = {
   slidesFontGroupPc: 'Fonts on this PC',
   slidesFontPortableHint:
     'PowerPoint on a PC without this font shows another font instead. Exported PDFs keep it.',
-} satisfies Record<keyof typeof zh, string>
+}

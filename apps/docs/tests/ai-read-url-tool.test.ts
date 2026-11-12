@@ -171,7 +171,7 @@ describe('read_url execution', () => {
 })
 
 describe('read_url summary strings', () => {
-  it('every one of the 21 languages carries both keys with the placeholders', () => {
+  it('every UI language carries both keys with the placeholders', () => {
     expect(Object.keys(aiStrings).sort()).toEqual([...LANGS].sort())
     for (const [lang, dict] of Object.entries(aiStrings)) {
       const shard = dict as Record<string, string>

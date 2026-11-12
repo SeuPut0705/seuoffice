@@ -194,6 +194,24 @@ describe('live pagination reads the edited flags off the element', () => {
     expect(block.widowControl).toBe(false)
   })
 
+  it.each([
+    ['self-closing', '<w:pPrChange w:id="1" w:author="A"/>'],
+    [
+      'paired, its close tag ending in white space',
+      '<w:pPrChange w:id="1"><w:pPr/></w:pPrChange >',
+    ],
+  ])(
+    'a picture paragraph whose own %s change record comes first keeps the keepNext after it',
+    (_name, record) => {
+      // the picture is a text box whose own paragraph carries a paired record
+      const xml =
+        `<w:p><w:pPr>${record}<w:keepNext/></w:pPr><w:r><w:drawing><w:txbxContent>` +
+        '<w:p><w:pPr><w:pPrChange w:id="2"><w:pPr><w:jc w:val="left"/></w:pPr></w:pPrChange></w:pPr></w:p>' +
+        '</w:txbxContent></w:drawing></w:r></w:p>'
+      expect(paraFlagsFromXml(xml)).toEqual({ format: { keepNext: true } })
+    },
+  )
+
   it('a picture-only paragraph (image block, no data-para) keeps the keepNext of its own pPr', () => {
     const xml =
       '<w:p w:rsidR="00000001"><w:pPr><w:keepNext/><w:pStyle w:val="Caption"/><w:widowControl w:val="0"/></w:pPr><w:r><w:drawing/></w:r></w:p>'

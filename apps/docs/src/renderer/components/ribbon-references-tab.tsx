@@ -17,6 +17,8 @@ import {
   updateTocField,
   xmlOfNode,
 } from '../editor/toc-update'
+import { getDocumentLocale } from '../document-locale'
+import { indexTerms } from '../index-terms'
 import { useI18n, type StringKey } from '../i18n/locale'
 import { odtOffProps, useOdtSession } from '../odt-gate'
 import {
@@ -369,10 +371,10 @@ export function ReferencesTab({
       window.alert(t('ribbonNoIndexEntries'))
       return
     }
-    const unique = [...new Set(terms.map((t) => t.trim()).filter(Boolean))].sort((a, b) =>
-      a.localeCompare(b, 'zh-CN'),
-    )
-    const nodes = generateIndexFieldXml(unique).map((xml, i) => ({
+    const locale = getDocumentLocale()
+    const unique = indexTerms(terms, locale)
+    // the field's cached lines in the same order as the entries shown for them
+    const nodes = generateIndexFieldXml(unique, locale).map((xml, i) => ({
       type: 'docProtected',
       attrs: {
         docxIndex: null,

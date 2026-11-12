@@ -26,7 +26,7 @@ function applyTheme(theme: UiTheme): void {
 
 void (async () => {
   const [lang, theme] = await Promise.all([
-    window.pdfApi.getLanguage().catch(() => 'zh' as const),
+    window.pdfApi.getLanguage().catch(() => 'en' as const),
     window.pdfApi.getTheme().catch(() => 'system' as const),
   ])
   document.documentElement.lang = htmlLang(lang as Lang)

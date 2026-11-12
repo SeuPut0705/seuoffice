@@ -182,10 +182,7 @@ const api: SlidesApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
   fontFamilyInfo: (families) => ipcRenderer.invoke('app:font-family-info', families),
   onLanguageChanged: (handler) => {
-    const listener = (
-      _event: IpcRendererEvent,
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => handler(lang)
+    const listener = (_event: IpcRendererEvent, lang: 'en' | 'ko') => handler(lang)
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
@@ -579,7 +576,7 @@ const api: SlidesApi = {
   listStyleTemplates: () => ipcRenderer.invoke('ai:list-style-templates'),
   loadStyleTemplate: (name: string) => ipcRenderer.invoke('ai:load-style-template', name),
   getTemplateSelection: () => ipcRenderer.invoke('slides:ai-template-selection-get'),
-  getAiDefaultFonts: (lang: string) => ipcRenderer.invoke('slides:ai-default-fonts', lang),
+  getAiDefaultFonts: () => ipcRenderer.invoke('slides:ai-default-fonts'),
   openFontSettings: () => ipcRenderer.invoke('slides:open-font-settings'),
   setTemplateSelection: (selection: TemplateSelectionInput | null) =>
     ipcRenderer.invoke('slides:ai-template-selection-set', selection),

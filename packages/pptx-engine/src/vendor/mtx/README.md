@@ -5,6 +5,9 @@ TypeScript port of the decompression half of
 see `LICENSE`). libeot relicensed Monotype's original MTX reference code under
 the MPL and relies on the royalty-free patent grants Microsoft and Monotype
 attached to the [W3C EOT submission](http://www.w3.org/Submission/2008/01/).
+`PATENTS`, which `LICENSE` points to, is libeot's file taken verbatim from commit
+`4e52d8b4a05f63d8c2059b0a4a3f11a44fbc6c5e` (the head of its `master` branch; the
+commit the port was made from is not recorded, and `LICENSE` is identical at that one).
 
 What it does: an EOT payload with `TTEMBED_TTCOMPRESSED` (flag 0x4) holds three
 LZ-compressed streams (the CTF table container, glyph push data, glyph

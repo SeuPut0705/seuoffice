@@ -48,10 +48,11 @@ export function findStartTag(xml: string, name?: string | RegExp, from = 0): Sta
 /**
  * `xml` without the elements named `name`: a self-closing one is one element,
  * a paired one runs to its own close tag (the element must not nest itself,
- * as no property-change record does). `limit` stops after that many.
+ * as no property-change record does). A close tag may hold white space before
+ * its > (`</w:pPrChange >`), as XML allows. `limit` stops after that many.
  */
 export function removeElements(xml: string, name: string, limit = Infinity): string {
-  const close = `</${name}>`
+  const close = new RegExp(`</${name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*>`, 'g')
   let out = xml
   let from = 0
   for (let n = 0; n < limit; n++) {
@@ -59,9 +60,10 @@ export function removeElements(xml: string, name: string, limit = Infinity): str
     if (!tag) break
     let end = tag.end
     if (!tag.selfClosing) {
-      const at = out.indexOf(close, tag.end)
-      if (at === -1) break
-      end = at + close.length
+      close.lastIndex = tag.end
+      const found = close.exec(out)
+      if (!found) break
+      end = found.index + found[0].length
     }
     out = out.slice(0, tag.start) + out.slice(end)
     from = tag.start

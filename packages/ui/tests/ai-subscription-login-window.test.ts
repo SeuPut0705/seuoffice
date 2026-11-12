@@ -44,14 +44,4 @@ describe('aiSubscriptionLoginWindowText', () => {
       }
     }
   })
-
-  it('uses English where a console cannot draw the script, and the language elsewhere', () => {
-    const english = aiSubscriptionLoginWindowText('en', 'claude-code')
-    for (const lang of ['ar', 'he', 'hi', 'th'] as const) {
-      expect(aiSubscriptionLoginWindowText(lang, 'claude-code'), lang).toEqual(english)
-    }
-    for (const lang of ['ko', 'ja', 'zh', 'ru', 'vi'] as const) {
-      expect(aiSubscriptionLoginWindowText(lang, 'claude-code').guide, lang).not.toBe(english.guide)
-    }
-  })
 })

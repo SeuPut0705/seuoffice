@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   title: 'Documents with unsaved content',
   intro:
@@ -20,4 +18,4 @@ export const en = {
   missingNote:
     'If you restore it, it opens as a new untitled document. Saving suggests the original location.',
   choiceLabel: 'Choice for {name}',
-} satisfies Record<keyof typeof zh, string>
+}

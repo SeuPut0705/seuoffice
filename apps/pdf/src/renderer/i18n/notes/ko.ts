@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   ntOpen: '노트 열기',
@@ -9,4 +9,4 @@ export const ko = {
   ntUnavailable: '노트는 GenOffice 앱 안에서만 열 수 있습니다',
   ntFailed: '노트를 열지 못했습니다. {reason}',
   ntInserted: '노트에 넣었습니다',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

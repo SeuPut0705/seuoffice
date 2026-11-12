@@ -5,7 +5,7 @@ import {
   directCopyField,
   installCopyMaterialize,
 } from '../src/renderer/copy-materialize'
-import { setModuleLang } from '../src/renderer/i18n/locale'
+import { setDocumentLocale } from '../src/renderer/document-locale'
 import { ensureLazyRangeLoaded, readCopySourceDirect } from '../src/renderer/univer-sync'
 
 vi.mock('../src/renderer/univer-sync', () => ({
@@ -62,8 +62,8 @@ describe('copy materialize screen extent', () => {
     mockDirect.mockReset()
   })
 
-  it('copies a date cell with the UI language weekday', () => {
-    setModuleLang('ko')
+  it('copies a date cell with the weekday of the language documents are read for', () => {
+    setDocumentLocale('ko')
     try {
       expect(
         directCopyField({
@@ -75,7 +75,7 @@ describe('copy materialize screen extent', () => {
         } as never),
       ).toBe('2026년 10월 29일(목)')
     } finally {
-      setModuleLang('zh')
+      setDocumentLocale('en')
     }
   })
 

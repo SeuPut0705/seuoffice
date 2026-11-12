@@ -60,6 +60,7 @@ import {
 import type {
   ExportImagesRequest,
   ExportImagesResult,
+  AdoptUntitledCopyResult,
   PdfAutoRenameResult,
   ExtractPagesRequest,
   ExtractPagesResult,
@@ -156,27 +157,6 @@ import { copiedPagesOf, heldCopiedPages, holdCopiedPages } from './page-clipboar
 import { ResultStore, documentHashOfFile } from '../../../../packages/pdf-structure/src/store'
 
 const tDlg = createI18n({
-  zh: {
-    dlgExportImages: '导出图片到文件夹',
-    dlgExtract: '抽取页面为 PDF',
-    dlgInsert: '选择要导入的 PDF',
-    dlgSplit: '拆分 PDF 到文件夹',
-    dlgMerge: '选择要合并的 PDF',
-    dlgMergeSave: '合并 PDF 保存为',
-    dlgMergePages: '合并页面保存为',
-    dlgReplace: '选择用于替换的 PDF',
-    dlgSplitPages: '拆分页面保存为',
-    dlgRedactCopy: '保存涂黑副本为',
-    dlgPickCertificate: '选择证书文件',
-    dlgSignedCopy: '保存已签名副本为',
-    filterCertificate: '证书文件 (.p12, .pfx)',
-    filterPdf: 'PDF 文档',
-    closeUnsavedMsg: '此 PDF 有未保存的更改。',
-    closeUnsavedDetail: '关闭前是否保存？',
-    btnSave: '保存',
-    btnDontSave: '不保存',
-    btnCancel: '取消',
-  },
   en: {
     dlgExportImages: 'Export Images to Folder',
     dlgExtract: 'Extract Pages as PDF',
@@ -198,48 +178,6 @@ const tDlg = createI18n({
     btnDontSave: "Don't Save",
     btnCancel: 'Cancel',
   },
-  vi: {
-    dlgExportImages: 'Xuất hình ảnh vào thư mục',
-    dlgExtract: 'Trích xuất các trang dưới dạng PDF',
-    dlgInsert: 'Chọn một tệp PDF để nhập',
-    dlgSplit: 'Tách PDF vào thư mục',
-    dlgMerge: 'Chọn các tệp PDF để ghép',
-    dlgMergeSave: 'Lưu tệp PDF đã ghép dưới dạng',
-    dlgMergePages: 'Lưu các trang đã ghép dưới dạng',
-    dlgReplace: 'Chọn một tệp PDF thay thế',
-    dlgSplitPages: 'Lưu các trang đã tách dưới dạng',
-    dlgRedactCopy: 'Lưu bản sao đã che thông tin dưới dạng',
-    dlgPickCertificate: 'Chọn tệp chứng chỉ',
-    dlgSignedCopy: 'Lưu bản sao đã ký dưới dạng',
-    filterCertificate: 'Tệp chứng chỉ (.p12, .pfx)',
-    filterPdf: 'Tài liệu PDF',
-    closeUnsavedMsg: 'Tệp PDF này có những thay đổi chưa được lưu.',
-    closeUnsavedDetail: 'Bạn có muốn lưu các thay đổi trước khi đóng không?',
-    btnSave: 'Lưu',
-    btnDontSave: 'Không lưu',
-    btnCancel: 'Hủy',
-  },
-  ja: {
-    dlgExportImages: '画像をフォルダに書き出す',
-    dlgExtract: 'ページを PDF として抽出',
-    dlgInsert: 'インポートする PDF を選択',
-    dlgSplit: 'PDF をフォルダに分割',
-    dlgMerge: '結合する PDF を選択',
-    dlgMergeSave: '結合した PDF の保存先',
-    dlgMergePages: '結合したページの保存先',
-    dlgReplace: '差し替え用の PDF を選択',
-    dlgSplitPages: '分割したページの保存先',
-    dlgRedactCopy: '墨消し済みコピーの保存先',
-    dlgPickCertificate: '証明書ファイルを選択',
-    dlgSignedCopy: '署名済みコピーの保存先',
-    filterCertificate: '証明書ファイル (.p12, .pfx)',
-    filterPdf: 'PDF ドキュメント',
-    closeUnsavedMsg: 'この PDF に未保存の変更があります。',
-    closeUnsavedDetail: '閉じる前に保存しますか？',
-    btnSave: '保存',
-    btnDontSave: '保存しない',
-    btnCancel: 'キャンセル',
-  },
   ko: {
     dlgExportImages: '이미지를 폴더로 내보내기',
     dlgExtract: '페이지를 PDF로 추출',
@@ -260,342 +198,6 @@ const tDlg = createI18n({
     btnSave: '저장',
     btnDontSave: '저장 안 함',
     btnCancel: '취소',
-  },
-  fr: {
-    dlgExportImages: 'Exporter les images vers un dossier',
-    dlgExtract: 'Extraire les pages en PDF',
-    dlgInsert: 'Choisir un PDF à importer',
-    dlgSplit: 'Diviser le PDF dans un dossier',
-    dlgMerge: 'Choisir les PDF à fusionner',
-    dlgMergeSave: 'Enregistrer le PDF fusionné sous',
-    dlgMergePages: 'Enregistrer les pages fusionnées sous',
-    dlgReplace: 'Choisir un PDF de remplacement',
-    dlgSplitPages: 'Enregistrer les pages divisées sous',
-    dlgRedactCopy: 'Enregistrer la copie caviardée sous',
-    dlgPickCertificate: 'Choisir un fichier de certificat',
-    dlgSignedCopy: 'Enregistrer la copie signée sous',
-    filterCertificate: 'Fichiers de certificat (.p12, .pfx)',
-    filterPdf: 'Documents PDF',
-    closeUnsavedMsg: 'Ce PDF contient des modifications non enregistrées.',
-    closeUnsavedDetail: 'Voulez-vous les enregistrer avant de fermer ?',
-    btnSave: 'Enregistrer',
-    btnDontSave: 'Ne pas enregistrer',
-    btnCancel: 'Annuler',
-  },
-  de: {
-    dlgExportImages: 'Bilder in Ordner exportieren',
-    dlgExtract: 'Seiten als PDF extrahieren',
-    dlgInsert: 'Zu importierendes PDF wählen',
-    dlgSplit: 'PDF in Ordner aufteilen',
-    dlgMerge: 'Zu vereinende PDFs wählen',
-    dlgMergeSave: 'Zusammengeführtes PDF speichern unter',
-    dlgMergePages: 'Zusammengefasste Seiten speichern unter',
-    dlgReplace: 'Ersatz-PDF wählen',
-    dlgSplitPages: 'Geteilte Seiten speichern unter',
-    dlgRedactCopy: 'Geschwärzte Kopie speichern unter',
-    dlgPickCertificate: 'Zertifikatdatei wählen',
-    dlgSignedCopy: 'Signierte Kopie speichern unter',
-    filterCertificate: 'Zertifikatdateien (.p12, .pfx)',
-    filterPdf: 'PDF-Dokumente',
-    closeUnsavedMsg: 'Dieses PDF enthält ungespeicherte Änderungen.',
-    closeUnsavedDetail: 'Vor dem Schließen speichern?',
-    btnSave: 'Speichern',
-    btnDontSave: 'Nicht speichern',
-    btnCancel: 'Abbrechen',
-  },
-  es: {
-    dlgExportImages: 'Exportar imágenes a una carpeta',
-    dlgExtract: 'Extraer páginas como PDF',
-    dlgInsert: 'Elegir un PDF para importar',
-    dlgSplit: 'Dividir PDF en una carpeta',
-    dlgMerge: 'Elegir PDF para combinar',
-    dlgMergeSave: 'Guardar PDF combinado como',
-    dlgMergePages: 'Guardar páginas combinadas como',
-    dlgReplace: 'Elegir un PDF de reemplazo',
-    dlgSplitPages: 'Guardar páginas divididas como',
-    dlgRedactCopy: 'Guardar copia censurada como',
-    dlgPickCertificate: 'Elegir un archivo de certificado',
-    dlgSignedCopy: 'Guardar copia firmada como',
-    filterCertificate: 'Archivos de certificado (.p12, .pfx)',
-    filterPdf: 'Documentos PDF',
-    closeUnsavedMsg: 'Este PDF tiene cambios sin guardar.',
-    closeUnsavedDetail: '¿Quieres guardarlos antes de cerrar?',
-    btnSave: 'Guardar',
-    btnDontSave: 'No guardar',
-    btnCancel: 'Cancelar',
-  },
-  th: {
-    dlgExportImages: 'ส่งออกรูปภาพไปยังโฟลเดอร์',
-    dlgExtract: 'แยกหน้าเป็น PDF',
-    dlgInsert: 'เลือก PDF ที่จะนำเข้า',
-    dlgSplit: 'แยก PDF ไปยังโฟลเดอร์',
-    dlgMerge: 'เลือก PDF ที่จะรวม',
-    dlgMergeSave: 'บันทึก PDF ที่รวมแล้วเป็น',
-    dlgMergePages: 'บันทึกหน้าที่รวมแล้วเป็น',
-    dlgReplace: 'เลือก PDF สำหรับแทนที่',
-    dlgSplitPages: 'บันทึกหน้าที่แยกแล้วเป็น',
-    dlgRedactCopy: 'บันทึกสำเนาที่ปิดทับเป็น',
-    dlgPickCertificate: 'เลือกไฟล์ใบรับรอง',
-    dlgSignedCopy: 'บันทึกสำเนาที่ลงนามแล้วเป็น',
-    filterCertificate: 'ไฟล์ใบรับรอง (.p12, .pfx)',
-    filterPdf: 'เอกสาร PDF',
-    closeUnsavedMsg: 'PDF นี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก',
-    closeUnsavedDetail: 'ต้องการบันทึกก่อนปิดหรือไม่?',
-    btnSave: 'บันทึก',
-    btnDontSave: 'ไม่บันทึก',
-    btnCancel: 'ยกเลิก',
-  },
-  id: {
-    dlgExportImages: 'Ekspor gambar ke folder',
-    dlgExtract: 'Ekstrak halaman sebagai PDF',
-    dlgInsert: 'Pilih PDF untuk diimpor',
-    dlgSplit: 'Pisahkan PDF ke folder',
-    dlgMerge: 'Pilih PDF untuk digabung',
-    dlgMergeSave: 'Simpan PDF gabungan sebagai',
-    dlgMergePages: 'Simpan halaman gabungan sebagai',
-    dlgReplace: 'Pilih PDF pengganti',
-    dlgSplitPages: 'Simpan halaman terpisah sebagai',
-    dlgRedactCopy: 'Simpan Salinan Teredaksi Sebagai',
-    dlgPickCertificate: 'Pilih Berkas Sertifikat',
-    dlgSignedCopy: 'Simpan Salinan Bertanda Tangan Sebagai',
-    filterCertificate: 'Berkas Sertifikat (.p12, .pfx)',
-    filterPdf: 'Dokumen PDF',
-    closeUnsavedMsg: 'PDF ini memiliki perubahan yang belum disimpan.',
-    closeUnsavedDetail: 'Simpan sebelum menutup?',
-    btnSave: 'Simpan',
-    btnDontSave: 'Jangan Simpan',
-    btnCancel: 'Batal',
-  },
-  ru: {
-    dlgExportImages: 'Экспорт изображений в папку',
-    dlgExtract: 'Извлечь страницы в PDF',
-    dlgInsert: 'Выберите PDF для импорта',
-    dlgSplit: 'Разделить PDF в папку',
-    dlgMerge: 'Выберите PDF для объединения',
-    dlgMergeSave: 'Сохранить объединённый PDF как',
-    dlgMergePages: 'Сохранить объединённые страницы как',
-    dlgReplace: 'Выберите PDF для замены',
-    dlgSplitPages: 'Сохранить разделённые страницы как',
-    dlgRedactCopy: 'Сохранить затемнённую копию как',
-    dlgPickCertificate: 'Выберите файл сертификата',
-    dlgSignedCopy: 'Сохранить подписанную копию как',
-    filterCertificate: 'Файлы сертификатов (.p12, .pfx)',
-    filterPdf: 'Документы PDF',
-    closeUnsavedMsg: 'В этом PDF есть несохранённые изменения.',
-    closeUnsavedDetail: 'Сохранить их перед закрытием?',
-    btnSave: 'Сохранить',
-    btnDontSave: 'Не сохранять',
-    btnCancel: 'Отмена',
-  },
-  ar: {
-    dlgExportImages: 'تصدير الصور إلى مجلد',
-    dlgExtract: 'استخراج الصفحات كملف PDF',
-    dlgInsert: 'اختر PDF للاستيراد',
-    dlgSplit: 'تقسيم PDF إلى مجلد',
-    dlgMerge: 'اختر ملفات PDF للدمج',
-    dlgMergeSave: 'حفظ PDF المدمج باسم',
-    dlgMergePages: 'حفظ الصفحات المدمجة باسم',
-    dlgReplace: 'اختر PDF بديلاً',
-    dlgSplitPages: 'حفظ الصفحات المقسّمة باسم',
-    dlgRedactCopy: 'حفظ النسخة المنقّحة باسم',
-    dlgPickCertificate: 'اختيار ملف شهادة',
-    dlgSignedCopy: 'حفظ النسخة الموقّعة باسم',
-    filterCertificate: 'ملفات الشهادات (.p12, .pfx)',
-    filterPdf: 'مستندات PDF',
-    closeUnsavedMsg: 'يحتوي هذا الـ PDF على تغييرات غير محفوظة.',
-    closeUnsavedDetail: 'هل تريد حفظها قبل الإغلاق؟',
-    btnSave: 'حفظ',
-    btnDontSave: 'عدم الحفظ',
-    btnCancel: 'إلغاء',
-  },
-  pt: {
-    dlgExportImages: 'Exportar imagens para pasta',
-    dlgExtract: 'Extrair páginas como PDF',
-    dlgInsert: 'Escolher um PDF para importar',
-    dlgSplit: 'Dividir PDF em uma pasta',
-    dlgMerge: 'Escolher PDFs para mesclar',
-    dlgMergeSave: 'Salvar PDF mesclado como',
-    dlgMergePages: 'Salvar páginas combinadas como',
-    dlgReplace: 'Escolher um PDF de substituição',
-    dlgSplitPages: 'Salvar páginas divididas como',
-    dlgRedactCopy: 'Salvar cópia censurada como',
-    dlgPickCertificate: 'Escolher um arquivo de certificado',
-    dlgSignedCopy: 'Salvar cópia assinada como',
-    filterCertificate: 'Arquivos de certificado (.p12, .pfx)',
-    filterPdf: 'Documentos PDF',
-    closeUnsavedMsg: 'Este PDF tem alterações não salvas.',
-    closeUnsavedDetail: 'Deseja salvá-las antes de fechar?',
-    btnSave: 'Salvar',
-    btnDontSave: 'Não Salvar',
-    btnCancel: 'Cancelar',
-  },
-  it: {
-    dlgExportImages: 'Esporta immagini in una cartella',
-    dlgExtract: 'Estrai pagine come PDF',
-    dlgInsert: 'Scegli un PDF da importare',
-    dlgSplit: 'Dividi il PDF in una cartella',
-    dlgMerge: 'Scegli i PDF da unire',
-    dlgMergeSave: 'Salva il PDF unito come',
-    dlgMergePages: 'Salva le pagine combinate come',
-    dlgReplace: 'Scegli un PDF sostitutivo',
-    dlgSplitPages: 'Salva le pagine divise come',
-    dlgRedactCopy: 'Salva copia oscurata con nome',
-    dlgPickCertificate: 'Scegli un file di certificato',
-    dlgSignedCopy: 'Salva copia firmata con nome',
-    filterCertificate: 'File di certificato (.p12, .pfx)',
-    filterPdf: 'Documenti PDF',
-    closeUnsavedMsg: 'Questo PDF contiene modifiche non salvate.',
-    closeUnsavedDetail: 'Vuoi salvarle prima di chiudere?',
-    btnSave: 'Salva',
-    btnDontSave: 'Non salvare',
-    btnCancel: 'Annulla',
-  },
-  pl: {
-    dlgExportImages: 'Eksportuj obrazy do folderu',
-    dlgExtract: 'Wyodrębnij strony jako PDF',
-    dlgInsert: 'Wybierz PDF do zaimportowania',
-    dlgSplit: 'Podziel PDF do folderu',
-    dlgMerge: 'Wybierz pliki PDF do scalenia',
-    dlgMergeSave: 'Zapisz scalony PDF jako',
-    dlgMergePages: 'Zapisz scalone strony jako',
-    dlgReplace: 'Wybierz PDF zastępczy',
-    dlgSplitPages: 'Zapisz podzielone strony jako',
-    dlgRedactCopy: 'Zapisz zaczernioną kopię jako',
-    dlgPickCertificate: 'Wybierz plik certyfikatu',
-    dlgSignedCopy: 'Zapisz podpisaną kopię jako',
-    filterCertificate: 'Pliki certyfikatów (.p12, .pfx)',
-    filterPdf: 'Dokumenty PDF',
-    closeUnsavedMsg: 'Ten PDF ma niezapisane zmiany.',
-    closeUnsavedDetail: 'Czy zapisać je przed zamknięciem?',
-    btnSave: 'Zapisz',
-    btnDontSave: 'Nie zapisuj',
-    btnCancel: 'Anuluj',
-  },
-  cs: {
-    dlgExportImages: 'Exportovat obrázky do složky',
-    dlgExtract: 'Extrahovat stránky jako PDF',
-    dlgInsert: 'Vyberte PDF k importu',
-    dlgSplit: 'Rozdělit PDF do složky',
-    dlgMerge: 'Vyberte soubory PDF ke sloučení',
-    dlgMergeSave: 'Uložit sloučený PDF jako',
-    dlgMergePages: 'Uložit sloučené stránky jako',
-    dlgReplace: 'Vyberte náhradní PDF',
-    dlgSplitPages: 'Uložit rozdělené stránky jako',
-    dlgRedactCopy: 'Uložit začerněnou kopii jako',
-    dlgPickCertificate: 'Vyberte soubor certifikátu',
-    dlgSignedCopy: 'Uložit podepsanou kopii jako',
-    filterCertificate: 'Soubory certifikátů (.p12, .pfx)',
-    filterPdf: 'Dokumenty PDF',
-    closeUnsavedMsg: 'Tento PDF obsahuje neuložené změny.',
-    closeUnsavedDetail: 'Chcete je před zavřením uložit?',
-    btnSave: 'Uložit',
-    btnDontSave: 'Neukládat',
-    btnCancel: 'Zrušit',
-  },
-  nl: {
-    dlgExportImages: 'Afbeeldingen naar map exporteren',
-    dlgExtract: "Pagina's extraheren als PDF",
-    dlgInsert: 'Kies een PDF om te importeren',
-    dlgSplit: 'PDF splitsen naar map',
-    dlgMerge: "Kies PDF's om samen te voegen",
-    dlgMergeSave: 'Samengevoegde PDF opslaan als',
-    dlgMergePages: "Gecombineerde pagina's opslaan als",
-    dlgReplace: 'Kies een vervangende PDF',
-    dlgSplitPages: "Gesplitste pagina's opslaan als",
-    dlgRedactCopy: 'Zwartgemaakte kopie opslaan als',
-    dlgPickCertificate: 'Certificaatbestand kiezen',
-    dlgSignedCopy: 'Ondertekende kopie opslaan als',
-    filterCertificate: 'Certificaatbestanden (.p12, .pfx)',
-    filterPdf: 'PDF-documenten',
-    closeUnsavedMsg: 'Deze PDF bevat niet-opgeslagen wijzigingen.',
-    closeUnsavedDetail: 'Wilt u ze opslaan voordat u sluit?',
-    btnSave: 'Opslaan',
-    btnDontSave: 'Niet opslaan',
-    btnCancel: 'Annuleren',
-  },
-  ms: {
-    dlgExportImages: 'Eksport imej ke folder',
-    dlgExtract: 'Ekstrak halaman sebagai PDF',
-    dlgInsert: 'Pilih PDF untuk diimport',
-    dlgSplit: 'Pisahkan PDF ke folder',
-    dlgMerge: 'Pilih PDF untuk digabungkan',
-    dlgMergeSave: 'Simpan PDF gabungan sebagai',
-    dlgMergePages: 'Simpan halaman gabungan sebagai',
-    dlgReplace: 'Pilih PDF pengganti',
-    dlgSplitPages: 'Simpan halaman dipisah sebagai',
-    dlgRedactCopy: 'Simpan Salinan Teredaksi Sebagai',
-    dlgPickCertificate: 'Pilih Fail Sijil',
-    dlgSignedCopy: 'Simpan Salinan Bertandatangan Sebagai',
-    filterCertificate: 'Fail Sijil (.p12, .pfx)',
-    filterPdf: 'Dokumen PDF',
-    closeUnsavedMsg: 'PDF ini mempunyai perubahan yang belum disimpan.',
-    closeUnsavedDetail: 'Simpan sebelum menutup?',
-    btnSave: 'Simpan',
-    btnDontSave: 'Jangan Simpan',
-    btnCancel: 'Batal',
-  },
-  he: {
-    dlgExportImages: 'ייצוא תמונות לתיקייה',
-    dlgExtract: 'חילוץ עמודים כ-PDF',
-    dlgInsert: 'בחרו PDF לייבוא',
-    dlgSplit: 'פיצול PDF לתיקייה',
-    dlgMerge: 'בחרו קובצי PDF למיזוג',
-    dlgMergeSave: 'שמירת ה-PDF הממוזג בשם',
-    dlgMergePages: 'שמירת העמודים המאוחדים בשם',
-    dlgReplace: 'בחרו PDF חלופי',
-    dlgSplitPages: 'שמירת העמודים המפוצלים בשם',
-    dlgRedactCopy: 'שמירת עותק מושחר בשם',
-    dlgPickCertificate: 'בחירת קובץ אישור',
-    dlgSignedCopy: 'שמירת עותק חתום בשם',
-    filterCertificate: 'קובצי אישורים (.p12, .pfx)',
-    filterPdf: 'מסמכי PDF',
-    closeUnsavedMsg: 'ב-PDF הזה יש שינויים שלא נשמרו.',
-    closeUnsavedDetail: 'האם לשמור אותם לפני הסגירה?',
-    btnSave: 'שמירה',
-    btnDontSave: 'אל תשמור',
-    btnCancel: 'ביטול',
-  },
-  hi: {
-    dlgExportImages: 'चित्र फ़ोल्डर में निर्यात करें',
-    dlgExtract: 'पृष्ठों को PDF के रूप में निकालें',
-    dlgInsert: 'आयात करने के लिए PDF चुनें',
-    dlgSplit: 'PDF को फ़ोल्डर में विभाजित करें',
-    dlgMerge: 'मर्ज करने के लिए PDF चुनें',
-    dlgMergeSave: 'मर्ज किया गया PDF इस रूप में सहेजें',
-    dlgMergePages: 'संयोजित पृष्ठ इस रूप में सहेजें',
-    dlgReplace: 'प्रतिस्थापन के लिए PDF चुनें',
-    dlgSplitPages: 'विभाजित पृष्ठ इस रूप में सहेजें',
-    dlgRedactCopy: 'काला किया गया प्रति इस रूप में सहेजें',
-    dlgPickCertificate: 'प्रमाणपत्र फ़ाइल चुनें',
-    dlgSignedCopy: 'हस्ताक्षरित प्रति इस रूप में सहेजें',
-    filterCertificate: 'प्रमाणपत्र फ़ाइलें (.p12, .pfx)',
-    filterPdf: 'PDF दस्तावेज़',
-    closeUnsavedMsg: 'इस PDF में सहेजे नहीं गए परिवर्तन हैं।',
-    closeUnsavedDetail: 'क्या बंद करने से पहले उन्हें सहेजना चाहते हैं?',
-    btnSave: 'सहेजें',
-    btnDontSave: 'न सहेजें',
-    btnCancel: 'रद्द करें',
-  },
-  'zh-TW': {
-    dlgExportImages: '匯出圖片到資料夾',
-    dlgExtract: '擷取頁面為 PDF',
-    dlgInsert: '選擇要匯入的 PDF',
-    dlgSplit: '拆分 PDF 到資料夾',
-    dlgMerge: '選擇要合併的 PDF',
-    dlgMergeSave: '合併 PDF 儲存為',
-    dlgMergePages: '合併頁面儲存為',
-    dlgReplace: '選擇用於取代的 PDF',
-    dlgSplitPages: '拆分頁面儲存為',
-    dlgRedactCopy: '儲存塗黑副本為',
-    dlgPickCertificate: '選擇憑證檔案',
-    dlgSignedCopy: '儲存已簽署副本為',
-    filterCertificate: '憑證檔案 (.p12, .pfx)',
-    filterPdf: 'PDF 文件',
-    closeUnsavedMsg: '此 PDF 有未儲存的變更。',
-    closeUnsavedDetail: '關閉前是否儲存？',
-    btnSave: '儲存',
-    btnDontSave: '不儲存',
-    btnCancel: '取消',
   },
 })
 
@@ -937,6 +539,8 @@ async function writeOwnFile<T>(wcId: number, path: string, write: () => Promise<
   ownWritesInFlight.set(path, (ownWritesInFlight.get(path) ?? 0) + 1)
   try {
     const result = await write()
+    // a write into an untitled copy is not a save of the document: it has no place yet
+    if (untitledCopyPdfPaths.has(path)) unsavedUntitledCopyPaths.add(path)
     const written = await rememberDiskState(wcId, path)
     const own = ownWriteStates.get(wcId) ?? new Map<string, SaveDiskState>()
     // unreadable right after the write: nothing there is known to be this view's
@@ -1097,8 +701,15 @@ export function pdfPathGranted(webContentsId: number, path: unknown): path is st
   return typeof path === 'string' && !!allowedByWc.get(webContentsId)?.has(path)
 }
 
+/**
+ * Whether the view has unsaved work: edits pending in its renderer, or an untitled document
+ * that is not at a place the person chose yet. The second does not depend on what the
+ * renderer reports; closing asks, and a tab that goes away keeps its recovery copy.
+ */
 export function pdfIsDirty(webContentsId: number): boolean {
-  return dirtyByWc.has(webContentsId)
+  if (dirtyByWc.has(webContentsId)) return true
+  const open = openPathByWc.get(webContentsId)
+  return open !== undefined && unsavedUntitledCopyPaths.has(open)
 }
 
 /** Drop the mirrored dirty flag (webContents.reload does not destroy the view). */
@@ -1132,6 +743,17 @@ export function markPdfUntitledPath(path: string): void {
  * tab then shows the chosen file. Automatic saves stay in the temp copy.
  */
 const untitledCopyPdfPaths = new Set<string>()
+/** Where a view's untitled copy goes, picked in the save dialog (pickUntitledCopyTarget);
+ *  the adoption that follows the save of its edits copies it there, once */
+const untitledCopyTargetByWc = new Map<number, { path: string; target: string }>()
+/**
+ * Untitled copies that hold the person's work: restored from a recovery copy, or written
+ * into by their view (a save of the edits, a page operation). The working file is not
+ * where the document lives, so writing it saves nothing: the view stays unsaved until the
+ * copy is at the place the person picked (adoptUntitledCopy), and only they give it up
+ * ("Don't Save"). Nothing else takes a path out of this set while its view is open.
+ */
+const unsavedUntitledCopyPaths = new Set<string>()
 
 /** Called by the shell right before it opens an untitled copy's tab */
 export function markPdfUntitledCopy(path: string): void {
@@ -1255,6 +877,7 @@ export const pdfRecoveryEditor: RecoveryEditorContract = {
     if (!path || contents.isDestroyed()) return
     // the first explicit save asks where the document goes (like a template copy)
     untitledCopyPdfPaths.add(path)
+    unsavedUntitledCopyPaths.add(path)
     reopenView(contents, path)
   },
   isUnprotectable: (contents) => recovery.isUnprotectable(contents.id),
@@ -1433,7 +1056,7 @@ export async function requestPdfClose(
   contents: WebContents,
   parent?: BrowserWindow | null,
 ): Promise<boolean> {
-  if (!dirtyByWc.has(contents.id) || contents.isDestroyed()) return true
+  if (!pdfIsDirty(contents.id) || contents.isDestroyed()) return true
   const options = {
     type: 'warning' as const,
     message: tm('closeUnsavedMsg'),
@@ -1492,9 +1115,10 @@ function requestRendererSave(contents: WebContents, flushAll: boolean): Promise<
 
 /** Ask the renderer to write pending edits to disk; clean views resolve true immediately.
  *  flushAll (export flows): the file must then hold everything on screen, so the form field
- *  whose card is open is written too; menu Save leaves it to Done */
+ *  whose card is open is written too; menu Save leaves it to Done. An untitled document with
+ *  no place yet is not clean: its renderer's save asks where it goes */
 export function flushPdfSave(contents: WebContents, flushAll = false): Promise<boolean> {
-  if (contents.isDestroyed() || !dirtyByWc.has(contents.id)) return Promise.resolve(true)
+  if (contents.isDestroyed() || !pdfIsDirty(contents.id)) return Promise.resolve(true)
   return requestRendererSave(contents, flushAll)
 }
 
@@ -1909,8 +1533,10 @@ function registerPdfIpc(): void {
         allowedByWc.set(e.sender.id, new Set([target]))
         openPathByWc.set(e.sender.id, target)
         redactionPathByWc.set(e.sender.id, target)
-        // The view's document moved to the redacted copy: the old path's record is dead
+        // The view's document moved to the redacted copy, a file the person picked: the
+        // old path's record is dead, and an untitled copy left behind is no open document
         forgetDiskState(e.sender.id, path)
+        unsavedUntitledCopyPaths.delete(path)
         // never carry the old copy over: restoring it would undo the redaction
         recovery.movedToNewFile(e.sender.id, path, target)
         try {
@@ -1987,15 +1613,17 @@ function registerPdfIpc(): void {
   })
 
   /**
-   * The first explicit save of an untitled copy: the renderer has saved its
-   * edits into the temp copy; ask where the document goes, copy it there and
-   * make that file this tab's document. Null when the dialog was cancelled.
+   * The first explicit save of an untitled copy, step one: ask where the
+   * document goes. Asked before the renderer saves its edits into the temp
+   * copy, so that cancelling writes nothing. False when the dialog was cancelled.
    */
   ipcMain.handle(
-    PDF_CHANNELS.adoptUntitledCopy,
-    async (e, path: unknown, defaultName: unknown): Promise<string | null> => {
-      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return null
-      if (!untitledCopyPdfPaths.has(path)) return null
+    PDF_CHANNELS.pickUntitledCopyTarget,
+    async (e, path: unknown, defaultName: unknown): Promise<boolean> => {
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return false
+      if (!untitledCopyPdfPaths.has(path)) return false
+      // a place picked for a save that never got as far as the copy is not this save's
+      untitledCopyTargetByWc.delete(e.sender.id)
       const name =
         typeof defaultName === 'string' && /\.pdf$/i.test(defaultName) && defaultName.length < 256
           ? defaultName
@@ -2015,12 +1643,44 @@ function registerPdfIpc(): void {
       const picked = parent
         ? await dialog.showSaveDialog(parent, options)
         : await dialog.showSaveDialog(options)
-      if (picked.canceled || !picked.filePath) return null
+      if (picked.canceled || !picked.filePath) return false
       const target = /\.pdf$/i.test(picked.filePath) ? picked.filePath : `${picked.filePath}.pdf`
-      // the view writes the picked file itself: Undo of an earlier page operation goes on
-      // there, and only a later change by another program reads as one
-      await writeOwnFile(e.sender.id, target, () => copyFile(path, target))
+      untitledCopyTargetByWc.set(e.sender.id, { path, target })
+      return true
+    },
+  )
+
+  /**
+   * Step two: the renderer has saved its edits into the temp copy; copy it to
+   * the place picked in step one and make that file this tab's document. The
+   * path never comes from the renderer. When the copy fails the document stays
+   * the untitled copy, unsaved, and the answer says why.
+   */
+  ipcMain.handle(
+    PDF_CHANNELS.adoptUntitledCopy,
+    async (e, path: unknown): Promise<AdoptUntitledCopyResult> => {
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) {
+        return { ok: false, error: 'pdf: path not granted to this view' }
+      }
+      if (!untitledCopyPdfPaths.has(path)) {
+        return { ok: false, error: 'pdf: not an untitled document' }
+      }
+      const picked = untitledCopyTargetByWc.get(e.sender.id)
+      untitledCopyTargetByWc.delete(e.sender.id)
+      if (picked?.path !== path) {
+        return { ok: false, error: 'pdf: no place was picked for this document' }
+      }
+      const { target } = picked
+      try {
+        // the view writes the picked file itself: Undo of an earlier page operation goes on
+        // there, and only a later change by another program reads as one
+        await writeOwnFile(e.sender.id, target, () => copyFile(path, target))
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+      // the document is where the person chose: only now is it saved
       untitledCopyPdfPaths.delete(path)
+      unsavedUntitledCopyPaths.delete(path)
       allowedByWc.set(e.sender.id, new Set([target]))
       openPathByWc.set(e.sender.id, target)
       recovery.adopted(e.sender.id, path, target)
@@ -2030,7 +1690,7 @@ function registerPdfIpc(): void {
       } catch (err) {
         console.warn('[pdf] untitled copy saved hook failed:', err)
       }
-      return target
+      return { ok: true, path: target }
     },
   )
 
@@ -2964,7 +2624,9 @@ function registerPdfIpc(): void {
         await writePdfAtomically(target, signed)
         allowedByWc.set(e.sender.id, new Set([target]))
         openPathByWc.set(e.sender.id, target)
-        // the signed file starts clean: no copy of the unsigned document follows it
+        // the signed file, at the place the person picked, starts clean: no copy of the
+        // unsigned document follows it
+        unsavedUntitledCopyPaths.delete(path)
         recovery.movedToNewFile(e.sender.id, path, target)
         try {
           pdfRedactionSavedHook?.(e.sender, target)
@@ -3009,8 +2671,12 @@ function registerPdfIpc(): void {
     }),
   )
 
+  // unsaved with nothing pending in the renderer: opened from a recovery copy and not saved
+  // since, or an untitled document that is not at a place the person chose yet
   ipcMain.handle(PDF_CHANNELS.recoveryState, (e, path: unknown): { unsaved: boolean } => ({
-    unsaved: pdfPathGranted(e.sender.id, path) && recovery.unsavedFromCopy(e.sender.id, path),
+    unsaved:
+      pdfPathGranted(e.sender.id, path) &&
+      (recovery.unsavedFromCopy(e.sender.id, path) || unsavedUntitledCopyPaths.has(path)),
   }))
 
   // what a save of these edits would write, into the app data folder only; the file is never written
@@ -3092,9 +2758,11 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
   wc.on('render-process-gone', () => recovery.markCrashed(wcId))
   wc.once('destroyed', () => {
     // before the dirty flag goes: a tab closed with no unsaved changes drops its copy
-    recovery.destroyed(wcId, dirtyByWc.has(wcId))
+    recovery.destroyed(wcId, pdfIsDirty(wcId))
     copyFlushWaiters.get(wcId)?.()
     copyFlushWaiters.delete(wcId)
+    const open = openPathByWc.get(wcId)
+    if (open !== undefined) unsavedUntitledCopyPaths.delete(open)
     openPathByWc.delete(wcId)
     redactionPathByWc.delete(wcId)
     redactionFlows.delete(wcId)
@@ -3105,6 +2773,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     stopViewWatch(wcId)
     certEntriesByWc.delete(wcId)
     saveAsTargetByWc.delete(wcId)
+    untitledCopyTargetByWc.delete(wcId)
     imageTargetByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)

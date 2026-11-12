@@ -20,7 +20,7 @@ export interface SettingsPathProvider {
 }
 
 /**
- * The stored choice, or the default for `lang` (the renderer's UI language) when the
+ * The stored choice, or the default for `lang` (the language documents are read for) when the
  * file or the key is missing or unreadable.
  */
 export function readSlidesAiFonts(app: SettingsPathProvider, lang: string): SlidesAiFonts {

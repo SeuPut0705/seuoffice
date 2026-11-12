@@ -68,7 +68,7 @@ describe('image paste into an untitled document', () => {
     expect(handled).toBe(true)
 
     await vi.waitFor(() => expect(toasts).toHaveLength(1))
-    expect(toasts[0]).toEqual({ text: strings.zh.imageNeedsSavedDocument, kind: 'error' })
+    expect(toasts[0]).toEqual({ text: strings.en.imageNeedsSavedDocument, kind: 'error' })
     expect(editor.state.doc.toString()).not.toContain('image')
     expect(window.markdownApi.saveImage).toHaveBeenCalledOnce()
   })
@@ -112,7 +112,7 @@ describe('oversized image paste', () => {
 
     await vi.waitFor(() => expect(toasts).toHaveLength(1))
     expect(toasts[0]).toEqual({
-      text: strings.zh.imageTooLarge.replace('{mb}', '50'),
+      text: strings.en.imageTooLarge.replace('{mb}', '50'),
       kind: 'error',
     })
     expect(window.markdownApi.saveImage).not.toHaveBeenCalled()

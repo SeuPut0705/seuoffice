@@ -260,3 +260,34 @@ describe('a card whose plate is out of drawing range', () => {
     expect(xml).not.toMatch(/(?:="|>)-?[\d.]*(?:e\+|NaN|Infinity)/)
   })
 })
+
+describe('a card one of whose text blocks has a box that is no number', () => {
+  it.each([
+    ['x0 NaN', { x0: Number.NaN }],
+    ['y1 NaN', { y1: Number.NaN }],
+    ['x1 Infinity', { x1: Infinity }],
+  ])('%s: the text flows in the body and the conversion goes on', async (_name, edge) => {
+    const { page, candidates } = cardPage()
+    detectCardRegions(page, candidates)
+    const member = page.blocks.find((b) => b.kind === 'text' && b.cardId !== undefined)!
+    member.box = { ...member.box, ...edge }
+    const xml = await docXml(await rebuildDocx([page]))
+    expect(xml).not.toContain('<wps:txbx>')
+    expect(xml).toContain('FINAL TAKEAWAY')
+    expect(xml).toContain('after the card')
+    expect(xml).not.toMatch(/(?:="|>)-?[\d.]*(?:e\+|NaN|Infinity)/)
+  })
+})
+
+describe('a card placed past the int a position is', () => {
+  // inside the widest drawing coordinate, but wp:posOffset is an xsd:int
+  it('the text flows in the body and the conversion goes on', async () => {
+    const { page, candidates } = cardPage()
+    detectCardRegions(page, candidates)
+    const card = page.cards![0]!
+    card.box = { ...card.box, x0: 200000, x1: 200480 }
+    const xml = await docXml(await rebuildDocx([page]))
+    expect(xml).not.toContain('<wps:txbx>')
+    expect(xml).toContain('FINAL TAKEAWAY')
+  })
+})
