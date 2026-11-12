@@ -1,0 +1,39 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "SeuOffice",
+  "mainBinaryName": "SeuOffice",
+  "version": "0.13.0",
+  "identifier": "com.seuput.seuoffice",
+  "build": {
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "withGlobalTauri": true,
+    "security": {
+      "csp": null
+    },
+    "windows": [
+      {
+        "label": "main",
+        "title": "SeuOffice",
+        "url": "host.html",
+        "width": 1280,
+        "height": 900,
+        "visible": true
+      }
+    ]
+  },
+  "bundle": {
+    "active": true,
+    "publisher": "SeuPut",
+    "copyright": "SeuOffice prototype",
+    "shortDescription": "SeuOffice",
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

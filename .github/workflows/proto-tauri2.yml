@@ -1,0 +1,173 @@
+name: proto tauri2
+
+# Throwaway prototype of the Tauri 2 shell (proto/README.md, decision 0026). Builds the shell around
+# the staged Word editor bundle, smoke-tests it on the runner, and uploads proto-tauri2-<mac|win>.
+# Nothing here is released.
+
+on:
+  push:
+    branches: [proto/rust-shell]
+    paths: ['proto/tauri2/**', 'proto/common/**', '.github/workflows/proto-tauri2.yml']
+  workflow_dispatch:
+
+concurrency:
+  group: proto-tauri2-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  APP_DIR: proto/tauri2/src-tauri
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: proto/tauri2/src-tauri
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Tauri CLI
+        run: |
+          npm install -g @tauri-apps/cli@2
+          tauri --version
+          rustc --version
+
+      - name: Stage the frontend
+        run: bash proto/common/stage-dist.sh proto/tauri2/dist
+
+      - name: Build the app and the dmg
+        run: |
+          start=$(date +%s)
+          cd "$APP_DIR"
+          # the dmg bundler drives Finder through AppleScript, which a runner can refuse; the zip does not need it
+          tauri build --bundles app,dmg || { echo "::warning::dmg bundling failed, building the app alone"; tauri build --bundles app; }
+          echo "BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+
+      - name: Package
+        run: |
+          mkdir -p out
+          bundle="$APP_DIR/target/release/bundle"
+          (cd "$bundle/macos" && ditto -c -k --keepParent SeuOffice.app "$GITHUB_WORKSPACE/out/SeuOffice-0.13.0-arm64-mac.zip")
+          for dmg in "$bundle"/dmg/*.dmg; do [ -f "$dmg" ] && cp "$dmg" out/SeuOffice-0.13.0-arm64.dmg; done
+          python3 proto/tauri2/build-info.py mac SeuOffice.app/Contents/MacOS/SeuOffice out/build-info.json "$BUILD_SECONDS"
+          ls -l out
+
+      - name: Check what the shipped updater checks
+        run: |
+          rm -rf "$RUNNER_TEMP/unzipped" && mkdir "$RUNNER_TEMP/unzipped"
+          ditto -x -k out/SeuOffice-0.13.0-arm64-mac.zip "$RUNNER_TEMP/unzipped"
+          app="$RUNNER_TEMP/unzipped/SeuOffice.app"
+          ls "$RUNNER_TEMP/unzipped"
+          echo "--- codesign --verify --deep --strict"
+          codesign --verify --deep --strict --verbose=2 "$app" && echo "codesign verify: OK"
+          codesign -dv "$app" 2>&1 | head -12
+          echo "--- Info.plist"
+          for key in CFBundleIdentifier CFBundleShortVersionString CFBundleVersion CFBundleExecutable LSMinimumSystemVersion; do
+            echo "$key = $(/usr/libexec/PlistBuddy -c "Print :$key" "$app/Contents/Info.plist")"
+          done
+          plutil -extract CFBundleDocumentTypes xml1 -o - "$app/Contents/Info.plist"
+          lipo -info "$app/Contents/MacOS/SeuOffice"
+
+      - name: Smoke test (bench, then pdf)
+        run: python3 proto/tauri2/smoke.py "$RUNNER_TEMP/unzipped/SeuOffice.app/Contents/MacOS/SeuOffice" smoke-out tauri2
+
+      - name: Upload the build
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-tauri2-mac
+          path: out/*
+          if-no-files-found: error
+
+      - name: Upload the smoke output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-tauri2-mac-smoke
+          path: smoke-out/*
+          if-no-files-found: warn
+
+  win:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: proto/tauri2/src-tauri
+
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 22
+
+      - name: Tauri CLI
+        shell: bash
+        run: |
+          npm install -g @tauri-apps/cli@2
+          tauri --version
+          rustc --version
+
+      - name: Stage the frontend
+        shell: bash
+        run: bash proto/common/stage-dist.sh proto/tauri2/dist
+
+      - name: Build the NSIS installer
+        shell: bash
+        run: |
+          start=$(date +%s)
+          cd "$APP_DIR"
+          tauri build --bundles nsis
+          echo "BUILD_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+
+      - name: Package
+        shell: bash
+        run: |
+          mkdir -p out
+          cp "$APP_DIR"/target/release/bundle/nsis/*-setup.exe out/SeuOffice-Setup-0.13.0.exe
+          python proto/tauri2/build-info.py win SeuOffice.exe out/build-info.json "$BUILD_SECONDS"
+          ls -l out
+
+      - name: Smoke test (bench, then pdf)
+        shell: bash
+        run: python proto/tauri2/smoke.py "$APP_DIR/target/release/SeuOffice.exe" smoke-out tauri2
+
+      - name: Upload the build
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-tauri2-win
+          path: out/*
+          if-no-files-found: error
+
+      - name: Take over an Electron install (update, file association, uninstall)
+        shell: pwsh
+        run: |
+          gh release download v0.12.37 -R SeuPut0705/seuoffice -p SeuOffice-Setup-0.12.37.exe -D $env:RUNNER_TEMP
+          python proto/common/make-doc.py "$env:RUNNER_TEMP\assoc.docx"
+          ./proto/tauri2/takeover-test.ps1 -Electron "$env:RUNNER_TEMP\SeuOffice-Setup-0.12.37.exe" -Installer "$PWD\out\SeuOffice-Setup-0.13.0.exe" -Out smoke-out -Doc "$env:RUNNER_TEMP\assoc.docx"
+
+      - name: Upload the smoke output
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: proto-tauri2-win-smoke
+          path: smoke-out/*
+          if-no-files-found: warn

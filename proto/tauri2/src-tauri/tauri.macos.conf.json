@@ -1,0 +1,19 @@
+{
+  "bundle": {
+    "targets": ["app", "dmg"],
+    "category": "public.app-category.productivity",
+    "fileAssociations": [
+      {
+        "ext": ["docx"],
+        "name": "Word Document",
+        "description": "Word Document",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      }
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0",
+      "signingIdentity": "-"
+    }
+  }
+}

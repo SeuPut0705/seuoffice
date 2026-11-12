@@ -1,0 +1,21 @@
+{
+  "bundle": {
+    "targets": ["nsis"],
+    "fileAssociations": [
+      {
+        "ext": ["docx"],
+        "name": "seuoffice.WordDocument",
+        "description": "Word Document",
+        "role": "Editor",
+        "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+      }
+    ],
+    "windows": {
+      "nsis": {
+        "installMode": "currentUser",
+        "installerHooks": "windows/hooks.nsh",
+        "languages": ["English", "Korean"]
+      }
+    }
+  }
+}

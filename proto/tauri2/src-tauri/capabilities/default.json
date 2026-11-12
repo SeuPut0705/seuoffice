@@ -1,0 +1,6 @@
+{
+  "identifier": "default",
+  "description": "The one window may use the core API; the shell's own commands need no grant.",
+  "windows": ["main"],
+  "permissions": ["core:default"]
+}
