@@ -120,18 +120,13 @@ pub fn inherited_cs_font(
     truthy(r_style_id)
         .and_then(|id| from(styles.get(id)))
         .or_else(|| from(para))
-        .or_else(|| {
-            ctx.resolver
-                .doc_defaults
-                .as_ref()
-                .and_then(|d| (*d.cs_font).clone())
-        })
+        .or_else(|| ctx.doc_defaults().and_then(|d| (*d.cs_font).clone()))
 }
 
 /// `paraCsSize`: the Cs size an rtl paragraph mark falls back to.
 pub fn para_cs_size(ctx: &BuildContext<'_>, style_id: Option<&str>) -> JsNum {
     let display: Option<&StyleDisplay> = para_style_display(&ctx.style_ctx(), style_id);
-    para_cs_format(display, ctx.resolver.doc_defaults.as_ref()).size_half_points
+    para_cs_format(display, ctx.doc_defaults()).size_half_points
 }
 
 /// `paraTextSizeHalfPoints`: the size of the paragraph's first text run:
@@ -152,7 +147,7 @@ pub fn para_text_size_half_points(
     };
     let style_size = match truthy(style_id) {
         Some(id) => size_of(styles.get(id)),
-        None => size_of(ctx.resolver.default_para_style()),
+        None => size_of(ctx.default_para_style()),
     };
     let first = runs
         .iter()
@@ -237,7 +232,7 @@ pub fn with_char_indents(
         let styles = &ctx.resolver.styles;
         match truthy(style_id) {
             Some(id) => styles.get(id),
-            None => ctx.resolver.default_para_style(),
+            None => ctx.default_para_style(),
         }
         .and_then(|style| style.display.as_ref())
         .and_then(|display| (*display.indent_chars).clone())
