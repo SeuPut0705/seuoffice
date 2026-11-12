@@ -28,7 +28,15 @@ import { EMPHASIS_MARKS, TEXT_EFFECTS } from './types'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
 import { resolvePropChangeXml } from './revision-xml'
 import { ownValue } from './own-value'
-import { nonFinite, xmlDecimal, xmlId, xmlInt } from './xml-number'
+import {
+  nonFinite,
+  xmlDecimal,
+  xmlId,
+  xmlInt,
+  xmlPositionOffset,
+  xmlPositiveCoordinate,
+  xmlUnsignedInt,
+} from './xml-number'
 import { removeElements } from './xml-tag'
 
 export interface GenerateContext {
@@ -104,10 +112,9 @@ export function patchImageParagraphXml(xml: string, patch: ImagePatch): string {
     })
   }
   if (patch.widthPx && patch.heightPx) {
-    // Non-finite dimensions must not land in the XML verbatim (cx="Infinity"
-    // is schema-invalid); skip the resize and keep the original extents.
-    const toEmu = (px: number): number | null =>
-      Number.isFinite(px) ? Math.max(1, Math.round(px * EMU_PER_PX)) : null
+    // A size with no ST_PositiveCoordinate text (cx="Infinity", or past the
+    // widest extent) is schema-invalid: skip the resize, keep the extents.
+    const toEmu = (px: number): string | null => xmlPositiveCoordinate(Math.max(1, px * EMU_PER_PX))
     const cx = toEmu(patch.widthPx)
     const cy = toEmu(patch.heightPx)
     if (cx !== null && cy !== null) {
@@ -166,11 +173,10 @@ export function patchImageParagraphXml(xml: string, patch: ImagePatch): string {
       }
     }
   }
-  // Rewrite posOffset values inside positionH / positionV (surgical). Non-finite
-  // offsets would land verbatim (posOffset>NaN<) — skip and keep the original.
-  const finiteOffset = (v: number): number | null => (Number.isFinite(v) ? Math.round(v) : null)
+  // Rewrite posOffset values inside positionH / positionV (surgical). An offset
+  // with no xsd:int text (NaN, an infinity, out of range) keeps the original.
   if (patch.posOffsetX !== undefined) {
-    const x = finiteOffset(patch.posOffsetX)
+    const x = xmlPositionOffset(patch.posOffsetX)
     if (x !== null) {
       out = out.replace(
         /(<wp:positionH[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionH>)/,
@@ -179,7 +185,7 @@ export function patchImageParagraphXml(xml: string, patch: ImagePatch): string {
     }
   }
   if (patch.posOffsetY !== undefined) {
-    const y = finiteOffset(patch.posOffsetY)
+    const y = xmlPositionOffset(patch.posOffsetY)
     if (y !== null) {
       out = out.replace(
         /(<wp:positionV[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionV>)/,
@@ -201,7 +207,7 @@ const WRAP_ELEMENT_RE =
  * producer values). No-op on inline images (no wp:anchor).
  */
 export function applyImageZOrder(xml: string, zOrder?: number): string {
-  const rank = xmlInt(251658240 + (zOrder ?? 0))
+  const rank = xmlUnsignedInt(251658240 + (zOrder ?? 0))
   if (rank === null) return xml
   return xml.replace(/(<wp:anchor[^>]*?relativeHeight=")\d+(")/, `$1${rank}$2`)
 }
@@ -259,8 +265,8 @@ export function applyImageWrap(
       ? `<wp:positionV relativeFrom="margin"><wp:align>${marginAlign.v}</wp:align></wp:positionV>`
       : '<wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV>'
   if (posOffset !== undefined) {
-    const x = xmlInt(posOffset.x)
-    const y = xmlInt(posOffset.y)
+    const x = xmlPositionOffset(posOffset.x)
+    const y = xmlPositionOffset(posOffset.y)
     positionH =
       x === null
         ? (keptH ?? positionH)
@@ -284,7 +290,7 @@ export function applyImageWrap(
         : wrap === 'topBottom'
           ? '<wp:wrapTopAndBottom/>'
           : '<wp:wrapNone/>'
-  const rank = xmlInt(251658240 + (zOrder ?? 0)) ?? keptRank ?? '251658240'
+  const rank = xmlUnsignedInt(251658240 + (zOrder ?? 0)) ?? keptRank ?? '251658240'
   const anchorOpen =
     `<wp:anchor distT="0" distB="0" distL="114300" distR="114300" simplePos="0"` +
     ` relativeHeight="${rank}" behindDoc="${behind}" locked="0" layoutInCell="1" allowOverlap="1">`
@@ -333,7 +339,7 @@ function shapeDrawingSegment(
 
 /** Re-encode the rank of the drawing's own wp:anchor tag, never a nested drawing's. */
 function setAnchorRank(drawingXml: string, zOrder: number): string {
-  const rank = xmlInt(251658240 + zOrder)
+  const rank = xmlUnsignedInt(251658240 + zOrder)
   if (rank === null) return drawingXml
   return drawingXml.replace(/<wp:anchor[^>]*>/, (tag) =>
     tag.replace(/relativeHeight="\d+"/, `relativeHeight="${rank}"`),
@@ -1120,7 +1126,7 @@ function setVmlStyleLength(xml: string, prop: 'width' | 'height', px: number): s
  * plain-digit text, so the twins never disagree on a box's size.
  */
 function boxLength(px: number): { emu: string; px: number } | null {
-  const emu = xmlInt(Math.max(1, px * EMU_PER_PX))
+  const emu = xmlPositiveCoordinate(Math.max(1, px * EMU_PER_PX))
   return emu === null ? null : { emu, px: Math.max(1 / EMU_PER_PX, px) }
 }
 
@@ -1367,8 +1373,8 @@ export function patchShapeStyles(
 
 /** Rewrite the first drawing's extent (chart/SmartArt graphicFrame paragraphs). */
 export function patchDrawingExtent(paragraphXml: string, wPx: number, hPx: number): string {
-  const cx = xmlInt(Math.max(1, wPx * EMU_PER_PX))
-  const cy = xmlInt(Math.max(1, hPx * EMU_PER_PX))
+  const cx = xmlPositiveCoordinate(Math.max(1, wPx * EMU_PER_PX))
+  const cy = xmlPositiveCoordinate(Math.max(1, hPx * EMU_PER_PX))
   return paragraphXml
     .replace(/(<wp:extent\b[^>]*\bcx=")\d+(")/, cx === null ? '$&' : `$1${cx}$2`)
     .replace(/(<wp:extent\b[^>]*\bcy=")\d+(")/, cy === null ? '$&' : `$1${cy}$2`)
@@ -1397,8 +1403,8 @@ export function buildLineParagraphXml(opts: {
   const widthEmu = opts.widthEmu ?? 1800000
   const heightEmu = opts.heightEmu ?? 114300
   const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
-  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
-  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
+  const cx = xmlPositiveCoordinate(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlPositiveCoordinate(heightEmu) ?? nonFinite('heightEmu')
   const colorHex = opts.colorHex ?? '000000'
 
   const ln =
@@ -2955,8 +2961,8 @@ export function resizeAnchoredPictureXml(xml: string, widthPx: number, heightPx:
 
 function resizeDrawingExtents(xml: string, widthPx: number, heightPx: number): string {
   if (!(widthPx > 0) || !(heightPx > 0)) return xml
-  const cx = xmlInt(Math.max(1, widthPx * EMU_PER_PX))
-  const cy = xmlInt(Math.max(1, heightPx * EMU_PER_PX))
+  const cx = xmlPositiveCoordinate(Math.max(1, widthPx * EMU_PER_PX))
+  const cy = xmlPositiveCoordinate(Math.max(1, heightPx * EMU_PER_PX))
   const extent = /<wp:extent\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)"/.exec(xml)
   if (!extent) return xml
   const samePx = (emu: string, px: number) =>
@@ -2976,7 +2982,7 @@ function resizeDrawingExtents(xml: string, widthPx: number, heightPx: number): s
 export function inlinePictureDrawingXml(o: InlinePictureXmlOptions): string {
   const cx = Math.max(1, Math.round(o.widthPx * EMU_PER_PX))
   const cy = Math.max(1, Math.round(o.heightPx * EMU_PER_PX))
-  const size = `cx="${xmlInt(cx) ?? nonFinite('widthPx')}" cy="${xmlInt(cy) ?? nonFinite('heightPx')}"`
+  const size = `cx="${xmlPositiveCoordinate(cx) ?? nonFinite('widthPx')}" cy="${xmlPositiveCoordinate(cy) ?? nonFinite('heightPx')}"`
   // Word lays the drawing out against the unrotated wp:extent plus
   // wp:effectExtent: a rotated non-square picture needs the bounding-box
   // overflow recorded there (same math as patchImageParagraphXml)
@@ -4015,8 +4021,8 @@ export function buildTextboxParagraphXml(opts?: {
   const widthEmu = opts?.widthEmu ?? 1800000
   const heightEmu = opts?.heightEmu ?? 1080000
   const id = xmlId(opts?.id ?? 1) ?? nonFinite('id')
-  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
-  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
+  const cx = xmlPositiveCoordinate(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlPositiveCoordinate(heightEmu) ?? nonFinite('heightEmu')
   const fillHex = opts?.fillHex ?? 'FFFFFF'
   const borderHex = opts?.borderHex ?? '000000'
 
@@ -4131,8 +4137,8 @@ export interface AnchoredTextboxOptions {
 export function buildAnchoredTextboxParagraphXml(opts: AnchoredTextboxOptions): string {
   const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
   const { xEmu, yEmu, widthEmu, heightEmu } = opts
-  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
-  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
+  const cx = xmlPositiveCoordinate(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlPositiveCoordinate(heightEmu) ?? nonFinite('heightEmu')
 
   const contentParaXml = (p: TextboxContentParagraph): string => {
     const children = formatPPrChildren(p.format)
@@ -4191,17 +4197,17 @@ export function buildAnchoredTextboxParagraphXml(opts: AnchoredTextboxOptions): 
   const relFrom = opts.anchor === 'page' ? 'page' : undefined
   const posH =
     `<wp:positionH relativeFrom="${relFrom ?? 'column'}">` +
-    `<wp:posOffset>${xmlInt(xEmu) ?? nonFinite('xEmu')}</wp:posOffset></wp:positionH>`
+    `<wp:posOffset>${xmlPositionOffset(xEmu) ?? nonFinite('xEmu')}</wp:posOffset></wp:positionH>`
   const posV =
     `<wp:positionV relativeFrom="${relFrom ?? 'paragraph'}">` +
-    `<wp:posOffset>${xmlInt(yEmu) ?? nonFinite('yEmu')}</wp:posOffset></wp:positionV>`
+    `<wp:posOffset>${xmlPositionOffset(yEmu) ?? nonFinite('yEmu')}</wp:posOffset></wp:positionV>`
   const wrapMode = opts.wrap ?? (opts.anchor === 'page' ? 'none' : 'topAndBottom')
   const wrapEl = wrapMode === 'topAndBottom' ? '<wp:wrapTopAndBottom/>' : '<wp:wrapNone/>'
 
   const anchor =
     `<wp:anchor xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ` +
     `distT="0" distB="0" distL="0" distR="0" simplePos="0" ` +
-    `relativeHeight="${xmlInt(251658240 + (opts.zOrder ?? 0)) ?? nonFinite('zOrder')}" behindDoc="${opts.behindDoc ? 1 : 0}" ` +
+    `relativeHeight="${xmlUnsignedInt(251658240 + (opts.zOrder ?? 0)) ?? nonFinite('zOrder')}" behindDoc="${opts.behindDoc ? 1 : 0}" ` +
     `locked="0" layoutInCell="1" allowOverlap="1">` +
     `<wp:simplePos x="0" y="0"/>` +
     posH +
@@ -4269,8 +4275,8 @@ export function buildShapeParagraphXml(opts: {
   const widthEmu = opts.widthEmu ?? 1800000
   const heightEmu = opts.heightEmu ?? 1080000
   const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
-  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
-  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
+  const cx = xmlPositiveCoordinate(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlPositiveCoordinate(heightEmu) ?? nonFinite('heightEmu')
   const fillHex = opts.fillHex ?? '4472C4'
   const borderHex = opts.borderHex ?? '2F5496'
 
@@ -4374,8 +4380,8 @@ export function buildWordArtParagraphXml(opts: {
   const widthEmu = opts.widthEmu ?? 2700000 // ~7.5 cm
   const heightEmu = opts.heightEmu ?? 720000 // ~2 cm
   const id = xmlId(opts.id ?? 1) ?? nonFinite('id')
-  const cx = xmlInt(widthEmu) ?? nonFinite('widthEmu')
-  const cy = xmlInt(heightEmu) ?? nonFinite('heightEmu')
+  const cx = xmlPositiveCoordinate(widthEmu) ?? nonFinite('widthEmu')
+  const cy = xmlPositiveCoordinate(heightEmu) ?? nonFinite('heightEmu')
   const colorHex = opts.colorHex ?? '4472C4'
   const text = opts.text ?? 'WordArt'
 

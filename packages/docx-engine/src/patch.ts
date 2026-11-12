@@ -131,7 +131,7 @@ import { applyPropertyChanges, type PropertyChanges } from './doc-properties'
 import { patchHfPicturesXml } from './run-picture'
 import { ownValue } from './own-value'
 import { findStartTag, removeElements } from './xml-tag'
-import { EMU_PER_PX, usableNumber, usablePictureSize } from './xml-number'
+import { EMU_PER_PX, usableNumber, usablePictureSize, xmlPositiveCoordinate } from './xml-number'
 
 /**
  * Relationship attributes are read quote-agnostically and with any spacing
@@ -1114,8 +1114,11 @@ export async function saveDocx(
     })
 
     const docPrId = DOCPR_ID_BASE + ++docPrSeq
-    const cx = extentPx ? Math.max(1, Math.round(extentPx.w * 9525)) : 5486400
-    const cy = extentPx ? Math.max(1, Math.round(extentPx.h * 9525)) : 3200400
+    // a size past the widest extent (or none) takes the default chart size
+    const cx =
+      (extentPx && xmlPositiveCoordinate(Math.max(1, extentPx.w * EMU_PER_PX))) || '5486400'
+    const cy =
+      (extentPx && xmlPositiveCoordinate(Math.max(1, extentPx.h * EMU_PER_PX))) || '3200400'
     return (
       '<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' +
       `<wp:extent cx="${cx}" cy="${cy}"/>` +

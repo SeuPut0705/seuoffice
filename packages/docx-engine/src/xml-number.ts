@@ -21,6 +21,13 @@ function xmlIntIn(n: number, min: number, max: number): string | null {
 export const xmlPositionOffset = (emu: number): string | null =>
   xmlIntIn(emu, -2147483648, 2147483647)
 
+/** an extent's cx / cy (ST_PositiveCoordinate), in EMU */
+export const xmlPositiveCoordinate = (emu: number): string | null =>
+  xmlIntIn(emu, 0, MAX_COORDINATE_EMU)
+
+/** an xsd:unsignedInt: wp:anchor relativeHeight, distT / distB / distL / distR */
+export const xmlUnsignedInt = (n: number): string | null => xmlIntIn(n, 0, 4294967295)
+
 /**
  * An id must already be an integer: rounding 2.5 to a neighbour could
  * duplicate an id the part already holds.

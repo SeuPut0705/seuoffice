@@ -1,6 +1,12 @@
 import type { NewInkImage } from './types'
 import { escapeXmlAttr } from './xml-utils'
-import { nonFinite, xmlId, xmlInt } from './xml-number'
+import {
+  nonFinite,
+  xmlId,
+  xmlPositionOffset,
+  xmlPositiveCoordinate,
+  xmlUnsignedInt,
+} from './xml-number'
 
 /**
  * Ink annotations (freehand strokes). Each saved annotation is a floating picture —
@@ -51,16 +57,19 @@ export function anchoredInkRunXml(
   rId: string,
   docPrId: number,
 ): string {
-  // Math.max/min propagate NaN, so sanitize first: a non-finite measurement
-  // would otherwise serialize as cx="NaN" corrupt OOXML.
-  const safePx = (v: number, fallback: number): number =>
-    Number.isFinite(v) ? Math.round(v * EMU_PER_PX) : fallback
-  const cx = xmlInt(Math.max(1, safePx(ink.widthPx, 1))) ?? nonFinite('widthPx')
-  const cy = xmlInt(Math.max(1, safePx(ink.heightPx, 1))) ?? nonFinite('heightPx')
-  const x = xmlInt(safePx(ink.offsetXPx, 0)) ?? nonFinite('offsetXPx')
-  const y = xmlInt(safePx(ink.offsetYPx, 0)) ?? nonFinite('offsetYPx')
+  // Math.max/min propagate NaN, so sanitize first: a measurement with no text
+  // in its attribute's range (NaN, an infinity, past an int or the widest
+  // extent) takes the fallback instead of writing corrupt OOXML.
+  const size = (px: number): string =>
+    (Number.isFinite(px) ? xmlPositiveCoordinate(Math.max(1, px * EMU_PER_PX)) : null) ?? '1'
+  const offset = (px: number): string =>
+    (Number.isFinite(px) ? xmlPositionOffset(px * EMU_PER_PX) : null) ?? '0'
+  const cx = size(ink.widthPx)
+  const cy = size(ink.heightPx)
+  const x = offset(ink.offsetXPx)
+  const y = offset(ink.offsetYPx)
   const id = xmlId(docPrId) ?? nonFinite('docPrId')
-  const rank = xmlInt(251658240 + docPrId) ?? nonFinite('docPrId')
+  const rank = xmlUnsignedInt(251658240 + docPrId) ?? nonFinite('docPrId')
   const name = `${INK_NAME_PREFIX} ${id}`
   const descr = ink.payload ? ` descr="${escapeXmlAttr(ink.payload)}"` : ''
   return (
