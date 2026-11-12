@@ -12,4 +12,4 @@ mod utf16;
 pub use object::{ObjectOptions, parse_object};
 pub use ordered::{ParseError, XElement, XNode, parse_ordered, serialize, serialize_element};
 pub use tag::{Tag, opaque_end, tag_at};
-pub use utf16::Utf16Map;
+pub use utf16::{Utf16Index, Utf16Map};
