@@ -1513,17 +1513,20 @@ const CARD_DOCPR_BASE = 7000
 
 /**
  * the card a text block opens, when this page rebuilds it as a text box. A
- * plate (or page) out of drawing range makes no box: its text flows in the
- * body like any other, and the conversion goes on.
+ * plate (or page) out of drawing range makes no box, and neither does a text
+ * block of the card whose box is (the box insets are measured from them):
+ * its text flows in the body like any other, and the conversion goes on.
  */
 function cardOf(block: PageBlock, page: IrPage): CardRegion | undefined {
   if (block.kind !== 'text' || block.cardId === undefined || page.canvas) return undefined
   const card = page.cards?.[block.cardId]
   if (!card) return undefined
-  const { x0, y0, x1, y1 } = card.box
-  const usable = [x0, y0, x1, y1, page.heightPt].every(
-    (v) => usableNumber(v, EMU_PER_PT) !== undefined,
-  )
+  const inRange = (v: number) => usableNumber(v, EMU_PER_PT) !== undefined
+  const boxInRange = ({ x0, y0, x1, y1 }: CardRegion['box']) => [x0, y0, x1, y1].every(inRange)
+  const usable =
+    boxInRange(card.box) &&
+    inRange(page.heightPt) &&
+    page.blocks.every((b) => b.kind !== 'text' || b.cardId !== block.cardId || boxInRange(b.box))
   return usable ? card : undefined
 }
 
