@@ -184,6 +184,7 @@ import {
   type WrittenSteps,
 } from './written-history'
 import { pasteCopiedPages } from './page-paste'
+import { saveUntitledCopy } from './untitled-save'
 import { mayChangeProtection } from './protection-gate'
 import { PasswordDialog } from './PasswordDialog'
 import { PropertiesDialog } from './PropertiesDialog'
@@ -6003,22 +6004,40 @@ export default function App() {
     return tracked
   }
 
+  /** the first save of an untitled copy is under way (its save dialog, its write) */
+  const untitledSaveBusyRef = useRef(false)
   /**
    * Save, and for an untitled copy (a skill template's, spec 5.7) the first
-   * explicit save then asks where the document goes: the edits land in the
-   * copy first, the chosen file becomes this tab's document. Automatic saves
-   * stay in the copy.
+   * explicit save asks where the document goes before anything is written
+   * (Cancel leaves the edits pending); then the edits land in the copy and the
+   * chosen file becomes this tab's document. Automatic saves stay in the copy,
+   * and so does a save that arrives while the first save is under way: that
+   * one moves the document once the edits are in.
    */
   const save = async (autosave = false, flushAll = false): Promise<boolean> => {
-    const ok = await saveInPlace(autosave, flushAll)
-    if (autosave || !ok || !untitledCopyRef.current || !filePath) return ok
-    const target = await window.pdfApi
-      .adoptUntitledCopy?.(filePath, fileName || 'document.pdf')
-      .catch(() => null)
-    if (!target) return false
-    untitledCopyRef.current = false
-    documentMovedTo(target)
-    return true
+    if (autosave || !untitledCopyRef.current || !filePath || untitledSaveBusyRef.current) {
+      return saveInPlace(autosave, flushAll)
+    }
+    untitledSaveBusyRef.current = true
+    try {
+      const target = await saveUntitledCopy(
+        {
+          pickUntitledCopyTarget: async (path, name) =>
+            (await window.pdfApi.pickUntitledCopyTarget?.(path, name)) === true,
+          adoptUntitledCopy: async (path) =>
+            (await window.pdfApi.adoptUntitledCopy?.(path)) ?? null,
+        },
+        filePath,
+        fileName || 'document.pdf',
+        () => saveInPlace(false, flushAll),
+      )
+      if (!target) return false
+      untitledCopyRef.current = false
+      documentMovedTo(target)
+      return true
+    } finally {
+      untitledSaveBusyRef.current = false
+    }
   }
 
   // Drain queued saves. This effect runs after every commit, so by the time it fires

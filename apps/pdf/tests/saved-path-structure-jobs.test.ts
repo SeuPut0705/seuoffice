@@ -71,6 +71,7 @@ import {
 } from '../src/renderer/convert/ConvertDialog'
 import { exportEmbeddedImages } from '../src/renderer/convert/embedded-images'
 import { strings } from '../src/renderer/i18n/strings'
+import { saveUntitledCopy } from '../src/renderer/untitled-save'
 import { PDF_CHANNELS } from '../src/shared/ipc'
 import type { SavePdfRequest, SavePdfResult } from '../src/shared/ipc'
 
@@ -173,8 +174,8 @@ async function untitledCopy() {
   const picked = join(dir, 'Report.pdf')
   /**
    * What the editor does before a structure job when a highlight is pending:
-   * the edit goes into the working file, the person picks `Report.pdf` in the
-   * save dialog and the document moves there. Resolves to where it is now.
+   * the person picks `Report.pdf` in the save dialog, the edit goes into the
+   * working file and the document moves there. Resolves to where it is now.
    */
   const saveMovesDocument = vi.fn(async (): Promise<string | null> => {
     const request: SavePdfRequest = {
@@ -191,9 +192,17 @@ async function untitledCopy() {
       formValues: [],
       stamps: [],
     }
-    if (!(await call<SavePdfResult>(PDF_CHANNELS.save, request)).ok) return null
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: picked })
-    return call<string | null>(PDF_CHANNELS.adoptUntitledCopy, path, 'Draft.pdf')
+    return saveUntitledCopy(
+      {
+        pickUntitledCopyTarget: (file, name) =>
+          call(PDF_CHANNELS.pickUntitledCopyTarget, file, name),
+        adoptUntitledCopy: (file) => call(PDF_CHANNELS.adoptUntitledCopy, file),
+      },
+      path,
+      'Draft.pdf',
+      async () => (await call<SavePdfResult>(PDF_CHANNELS.save, request)).ok,
+    )
   })
   return {
     dir,

@@ -57,6 +57,7 @@ vi.mock('electron', () => ({
 import { createPdfView, markPdfUntitledCopy, markPdfUntitledPath } from '../src/main/pdf-main'
 import { holdCopiedPages } from '../src/main/page-clipboard'
 import { pasteCopiedPages, type PagePasteApi } from '../src/renderer/page-paste'
+import { saveUntitledCopy } from '../src/renderer/untitled-save'
 import {
   NO_WRITTEN_STEPS,
   recordWritten,
@@ -142,14 +143,22 @@ async function saveHighlight(view: OpenView): Promise<boolean> {
   return (await view.call<SavePdfResult>(PDF_CHANNELS.save, request)).ok
 }
 
-/** The editor's Save with a highlight pending in an untitled copy: the edit goes into the
- *  copy, then the person picks `picked` in the dialog and the document moves there */
+/** The editor's Save with a highlight pending in an untitled copy: the person picks `picked`
+ *  in the dialog, the edit goes into the copy and the document moves there */
 const savedToPickedPath = (view: OpenView, picked: string): PendingEdits => ({
   fileBytes: readFileSync(view.path).byteLength,
   save: async () => {
-    if (!(await saveHighlight(view))) return null
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: picked })
-    return view.call<string | null>(PDF_CHANNELS.adoptUntitledCopy, view.path, 'picked.pdf')
+    return saveUntitledCopy(
+      {
+        pickUntitledCopyTarget: (path, name) =>
+          view.call(PDF_CHANNELS.pickUntitledCopyTarget, path, name),
+        adoptUntitledCopy: (path) => view.call(PDF_CHANNELS.adoptUntitledCopy, path),
+      },
+      view.path,
+      'picked.pdf',
+      () => saveHighlight(view),
+    )
   },
 })
 

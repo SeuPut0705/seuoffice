@@ -1132,6 +1132,9 @@ export function markPdfUntitledPath(path: string): void {
  * tab then shows the chosen file. Automatic saves stay in the temp copy.
  */
 const untitledCopyPdfPaths = new Set<string>()
+/** Where a view's untitled copy goes, picked in the save dialog (pickUntitledCopyTarget);
+ *  the adoption that follows the save of its edits copies it there, once */
+const untitledCopyTargetByWc = new Map<number, { path: string; target: string }>()
 
 /** Called by the shell right before it opens an untitled copy's tab */
 export function markPdfUntitledCopy(path: string): void {
@@ -1987,15 +1990,17 @@ function registerPdfIpc(): void {
   })
 
   /**
-   * The first explicit save of an untitled copy: the renderer has saved its
-   * edits into the temp copy; ask where the document goes, copy it there and
-   * make that file this tab's document. Null when the dialog was cancelled.
+   * The first explicit save of an untitled copy, step one: ask where the
+   * document goes. Asked before the renderer saves its edits into the temp
+   * copy, so that cancelling writes nothing. False when the dialog was cancelled.
    */
   ipcMain.handle(
-    PDF_CHANNELS.adoptUntitledCopy,
-    async (e, path: unknown, defaultName: unknown): Promise<string | null> => {
-      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return null
-      if (!untitledCopyPdfPaths.has(path)) return null
+    PDF_CHANNELS.pickUntitledCopyTarget,
+    async (e, path: unknown, defaultName: unknown): Promise<boolean> => {
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return false
+      if (!untitledCopyPdfPaths.has(path)) return false
+      // a place picked for a save that never got as far as the copy is not this save's
+      untitledCopyTargetByWc.delete(e.sender.id)
       const name =
         typeof defaultName === 'string' && /\.pdf$/i.test(defaultName) && defaultName.length < 256
           ? defaultName
@@ -2015,8 +2020,27 @@ function registerPdfIpc(): void {
       const picked = parent
         ? await dialog.showSaveDialog(parent, options)
         : await dialog.showSaveDialog(options)
-      if (picked.canceled || !picked.filePath) return null
+      if (picked.canceled || !picked.filePath) return false
       const target = /\.pdf$/i.test(picked.filePath) ? picked.filePath : `${picked.filePath}.pdf`
+      untitledCopyTargetByWc.set(e.sender.id, { path, target })
+      return true
+    },
+  )
+
+  /**
+   * Step two: the renderer has saved its edits into the temp copy; copy it to
+   * the place picked in step one and make that file this tab's document. Null
+   * when nothing is picked for this copy: the path never comes from the renderer.
+   */
+  ipcMain.handle(
+    PDF_CHANNELS.adoptUntitledCopy,
+    async (e, path: unknown): Promise<string | null> => {
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return null
+      if (!untitledCopyPdfPaths.has(path)) return null
+      const picked = untitledCopyTargetByWc.get(e.sender.id)
+      untitledCopyTargetByWc.delete(e.sender.id)
+      if (picked?.path !== path) return null
+      const { target } = picked
       // the view writes the picked file itself: Undo of an earlier page operation goes on
       // there, and only a later change by another program reads as one
       await writeOwnFile(e.sender.id, target, () => copyFile(path, target))
@@ -3105,6 +3129,7 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
     stopViewWatch(wcId)
     certEntriesByWc.delete(wcId)
     saveAsTargetByWc.delete(wcId)
+    untitledCopyTargetByWc.delete(wcId)
     imageTargetByWc.delete(wcId)
     closeSaveWaiters.get(wcId)?.(false)
     closeSaveWaiters.delete(wcId)

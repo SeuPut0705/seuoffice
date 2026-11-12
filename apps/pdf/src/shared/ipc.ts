@@ -61,6 +61,7 @@ export const PDF_CHANNELS = {
   isUntitled: 'pdf:is-untitled',
   isUntitledCopy: 'pdf:is-untitled-copy',
   templateBytes: 'pdf:template-bytes',
+  pickUntitledCopyTarget: 'pdf:pick-untitled-copy-target',
   adoptUntitledCopy: 'pdf:adopt-untitled-copy',
   validateTextEdits: 'pdf:validate-text-edits',
   listEditFonts: 'pdf:list-edit-fonts',
@@ -1787,11 +1788,16 @@ export interface PdfApi {
   /** The document with its pending edits, as bytes, for a skill's template; nothing is written */
   templateBytes?(request: SavePdfRequest): Promise<Uint8Array | null>
   /**
-   * An untitled copy's first explicit save, after its edits were saved into the
-   * copy: asks where the document goes and makes that file this tab's
-   * document. The chosen path, or null when cancelled.
+   * An untitled copy's first explicit save, step one: asks where the document
+   * goes. Nothing is written; false when the dialog was cancelled.
    */
-  adoptUntitledCopy?(path: string, defaultName: string): Promise<string | null>
+  pickUntitledCopyTarget?(path: string, defaultName: string): Promise<boolean>
+  /**
+   * Step two, after the edits were saved into the copy: copies it to the
+   * picked place and makes that file this tab's document. The picked path, or
+   * null when no place is picked for this view.
+   */
+  adoptUntitledCopy?(path: string): Promise<string | null>
   /** Dry-run match of pending text edits against the file: reason null = would apply */
   validateTextEdits(request: ValidateTextEditsRequest): Promise<TextEditValidation[]>
   /** EDIT_FONTS ids whose font file exists on this machine */
