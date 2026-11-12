@@ -8,6 +8,7 @@ import { LEAVES } from './calls-leaves'
 import { MTX } from './calls-mtx'
 import { PACKAGE } from './calls-package'
 import { TABLES } from './calls-tables'
+import { THEME } from './calls-theme'
 import { XML_TREE } from './calls-xml-tree'
 
 export const { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls } = createCallsRunner({
@@ -21,4 +22,5 @@ export const { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls } = 
   bytes: BYTES,
   ident: IDENT,
   mtx: MTX,
+  theme: THEME,
 })

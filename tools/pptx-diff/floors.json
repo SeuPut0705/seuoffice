@@ -46,5 +46,9 @@
   "callsMtxCorpus": 0,
   "callsMtxBuilt": 1968,
   "callsMtxMutated": 300,
-  "callsMtxFunctions": 9
+  "callsMtxFunctions": 9,
+  "callsThemeCorpus": 2432,
+  "callsThemeBuilt": 2100,
+  "callsThemeMutated": 3300,
+  "callsThemeFunctions": 11
 }

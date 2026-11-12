@@ -3,6 +3,7 @@
 pub mod align;
 pub mod animation;
 pub mod chart_workbook;
+pub mod color;
 pub mod crc32;
 pub mod custgeom;
 pub mod dgm_hier;
@@ -18,6 +19,8 @@ pub mod slide_ids;
 pub mod smartart_layout;
 pub mod table_edit;
 pub mod table_grid;
+pub mod theme;
 pub mod theme_apply;
+pub mod types;
 pub mod xml_utils;
 pub mod zip;

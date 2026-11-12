@@ -845,6 +845,62 @@ const faults = [
     'u32_at(off + 8) != 0',
     '(u32_at(off + 8) >> 16) != 0',
   ],
+  [
+    'theme-pow-platform',
+    'pptxTheme.color.applyColorMods',
+    'crates/jscompat/src/math.rs',
+    'libm::pow(x, y)',
+    'x.powf(y)',
+  ],
+  [
+    'theme-sys-color-null',
+    'pptxTheme.theme.sysColorHex',
+    'crates/pptx-engine/src/theme.rs',
+    'None | Some(Value::Null) => "000000".to_owned(),',
+    'None => "000000".to_owned(),',
+  ],
+  [
+    'theme-ea-lang-anchor',
+    'pptxTheme.theme.eaScriptOfLang',
+    'crates/pptx-engine/src/theme.rs',
+    'js_regex!(r"^zh(-(tw|hk|mo|hant))")',
+    'js_regex!(r"^zh-(tw|hk|mo|hant)$")',
+  ],
+  [
+    'theme-clrmap-order',
+    'pptxTheme.theme.parseClrMap',
+    'crates/pptx-engine/src/theme.rs',
+    'for xml in [slide_xml, layout_xml]',
+    'for xml in [layout_xml, slide_xml]',
+  ],
+  [
+    'theme-hex-prefix',
+    'pptxTheme.color.hexToRgb',
+    'crates/pptx-engine/src/color.rs',
+    "hex.strip_prefix('#').unwrap_or(hex)",
+    "hex.trim_start_matches('#')",
+  ],
+  [
+    'theme-luminance-cap',
+    'pptxTheme.color.scaleLuminance',
+    'crates/pptx-engine/src/color.rs',
+    'math_min(0.97, l * factor)',
+    'math_min(1.0, l * factor)',
+  ],
+  [
+    'theme-scheme-standard-map',
+    'pptxTheme.theme.resolveSchemeColor',
+    'crates/pptx-engine/src/theme.rs',
+    '        .or(standard)\n        .unwrap_or(name);',
+    '        .unwrap_or(name);',
+  ],
+  [
+    'theme-font-single-han',
+    'pptxTheme.theme.resolveFontRef',
+    'crates/pptx-engine/src/theme.rs',
+    '(Some(only), None) => fonts.get(only).map(String::as_str),',
+    '(Some(only), _) => fonts.get(only).map(String::as_str),',
+  ],
 ]
 
 const out = resolve(here, 'out/faults')
