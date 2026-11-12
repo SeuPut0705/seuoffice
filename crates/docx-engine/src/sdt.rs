@@ -4,7 +4,7 @@
 //! Offsets are UTF-8 byte offsets of the text given; the TypeScript counts
 //! UTF-16 code units, so a caller that hands them to JavaScript converts.
 
-use jscompat::{JsRegex, js_regex};
+use jscompat::{JsRegex, RegexLimit, js_regex, try_js_regex};
 use serde::Serialize;
 
 /// A `<w:sdt>…</w:sdt>` element's ranges inside the scanned xml.
@@ -87,8 +87,9 @@ fn unit_after(text: &str, at: usize) -> usize {
 }
 
 /// Every `<w:sdt>` element inside xml with its own open/close ranges,
-/// outermost first.
-pub fn sdt_ranges(xml: &str) -> Vec<SdtRange> {
+/// outermost first. A tag with more than about a million characters of
+/// attributes passes the bound of one search.
+pub fn sdt_ranges(xml: &str) -> Result<Vec<SdtRange>, RegexLimit> {
     struct Open {
         open_start: usize,
         open_end: Option<usize>,
@@ -97,7 +98,8 @@ pub fn sdt_ranges(xml: &str) -> Vec<SdtRange> {
 
     let mut ranges = Vec::new();
     let mut stack: Vec<Open> = Vec::new();
-    for found in js_regex!(TAG).find_iter(xml) {
+    for found in try_js_regex!(TAG).try_find_iter(xml) {
+        let found = found?;
         let closing = found.get(1) == Some("/");
         let self_closing = found.get(3).unwrap_or("").ends_with('/');
         let name = found.get(2).unwrap_or("");
@@ -143,7 +145,7 @@ pub fn sdt_ranges(xml: &str) -> Vec<SdtRange> {
         }
     }
     ranges.sort_by_key(|range| range.open_start);
-    ranges
+    Ok(ranges)
 }
 
 fn shell_from_range(xml: &str, range: &SdtRange) -> SdtShell {
@@ -173,7 +175,11 @@ fn chain_of(
 
 /// The outermost shell of a raw `<w:sdt>…</w:sdt>`, the enclosing-control
 /// chain, and the first `<w:p>` of its content; `None` without a usable paragraph.
-pub fn parse_sdt_block(sdt_xml: &str) -> Option<SdtBlock> {
+pub fn parse_sdt_block(sdt_xml: &str) -> Result<Option<SdtBlock>, RegexLimit> {
+    sdt_block(sdt_xml).transpose()
+}
+
+fn sdt_block(sdt_xml: &str) -> Option<Result<SdtBlock, RegexLimit>> {
     let content_open = js_regex!(CONTENT_OPEN).exec(sdt_xml)?;
     let content_tag_end = content_open.end();
     // the last </w:sdtContent>, so nested controls don't truncate the region
@@ -209,7 +215,10 @@ pub fn parse_sdt_block(sdt_xml: &str) -> Option<SdtBlock> {
     let open_xml = &sdt_xml[..content_tag_end];
     let close_xml = &sdt_xml[content_close..];
 
-    let ranges = sdt_ranges(sdt_xml);
+    let ranges = match sdt_ranges(sdt_xml) {
+        Ok(ranges) => ranges,
+        Err(limit) => return Some(Err(limit)),
+    };
     let mut chain = chain_of(
         sdt_xml,
         &ranges,
@@ -232,11 +241,11 @@ pub fn parse_sdt_block(sdt_xml: &str) -> Option<SdtBlock> {
         }];
     }
     let shell = chain.first()?.shell.clone();
-    Some(SdtBlock {
+    Some(Ok(SdtBlock {
         shell,
         p_xml,
         chain,
-    })
+    }))
 }
 
 pub fn sdt_meta(sdt_xml: &str) -> SdtMeta {
@@ -278,7 +287,11 @@ pub fn sdt_meta(sdt_xml: &str) -> SdtMeta {
 
 /// When `<w:sdtContent>` holds several top-level w:p / w:tbl children, each
 /// becomes its own block. `None` for 0-1 children.
-pub fn split_sdt_parts(sdt_xml: &str) -> Option<Vec<SdtPart>> {
+pub fn split_sdt_parts(sdt_xml: &str) -> Result<Option<Vec<SdtPart>>, RegexLimit> {
+    sdt_parts(sdt_xml).transpose()
+}
+
+fn sdt_parts(sdt_xml: &str) -> Option<Result<Vec<SdtPart>, RegexLimit>> {
     struct Child<'a> {
         name: &'a str,
         start: usize,
@@ -296,7 +309,11 @@ pub fn split_sdt_parts(sdt_xml: &str) -> Option<Vec<SdtPart>> {
     let mut depth = 0i64;
     let mut start = 0;
     let mut name = "";
-    for found in js_regex!(TAG).find_from(sdt_xml, inner_start) {
+    for found in try_js_regex!(TAG).try_find_from(sdt_xml, inner_start) {
+        let found = match found {
+            Ok(found) => found,
+            Err(limit) => return Some(Err(limit)),
+        };
         if found.start() >= inner_end {
             break;
         }
@@ -338,21 +355,22 @@ pub fn split_sdt_parts(sdt_xml: &str) -> Option<Vec<SdtPart>> {
     if parts.len() < 2 {
         return None;
     }
-    let ranges = sdt_ranges(sdt_xml);
-    Some(
-        parts
-            .iter()
-            .enumerate()
-            .map(|(k, child)| SdtPart {
-                name: child.name.to_owned(),
-                start: if k == 0 { 0 } else { child.start },
-                end: parts.get(k + 1).map_or(sdt_xml.len(), |next| next.start),
-                child_start: child.start,
-                child_end: child.end,
-                chain: chain_of(sdt_xml, &ranges, child.start, child.end),
-            })
-            .collect(),
-    )
+    let ranges = match sdt_ranges(sdt_xml) {
+        Ok(ranges) => ranges,
+        Err(limit) => return Some(Err(limit)),
+    };
+    Some(Ok(parts
+        .iter()
+        .enumerate()
+        .map(|(k, child)| SdtPart {
+            name: child.name.to_owned(),
+            start: if k == 0 { 0 } else { child.start },
+            end: parts.get(k + 1).map_or(sdt_xml.len(), |next| next.start),
+            child_start: child.start,
+            child_end: child.end,
+            chain: chain_of(sdt_xml, &ranges, child.start, child.end),
+        })
+        .collect()))
 }
 
 /// When a control's content begins with a table (no paragraph before it),
