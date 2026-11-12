@@ -11,6 +11,9 @@ mod docprops;
 mod fields;
 mod markers;
 mod math;
+mod pptx_leaves;
+mod pptx_package;
+mod pptx_xml;
 mod section;
 
 /// What a call gives: a value, nothing where the TypeScript function returns
@@ -60,6 +63,9 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
+        "pptxLeaves" => Some(pptx_leaves::dispatch(function, text, args)),
+        "pptxPackage" => Some(pptx_package::dispatch(function, text, args)),
+        "pptxXml" => Some(pptx_xml::dispatch(function, text, args)),
         _ => None,
     }
 }

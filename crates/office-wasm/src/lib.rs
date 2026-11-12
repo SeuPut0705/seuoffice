@@ -37,6 +37,8 @@ enum Command {
     /// Blob 0: a docx. The reply is the package as `loadDocxZip` opens it and
     /// the values `parseDocx` reads from it before the body, or the refusal.
     Package,
+    /// Blob 0: a pptx, opened through its metered zip gate.
+    PptxPackage,
     /// The same values for a package given as named texts, without a zip.
     PackageParts { parts: Vec<package::WirePart> },
     /// Every blob: a part as UTF-8. Reply blob `i`: part `i` as
@@ -262,6 +264,26 @@ fn zip_entries(container: &[u8], reply_blobs: &mut Vec<Vec<u8>>) -> Vec<u8> {
     json(&Reply::Entries { entries })
 }
 
+fn pptx_package(container: &[u8], reply_blobs: &mut Vec<Vec<u8>>) -> Vec<u8> {
+    let opened = match pptx_engine::zip::PackageArchive::open(container) {
+        Ok(opened) => opened,
+        Err(reason) => {
+            return serde_json::to_vec(&serde_json::json!({ "refused": reason }))
+                .unwrap_or_else(|_| b"{}".to_vec());
+        }
+    };
+    let (hash, parts) = opened.into_parts();
+    let mut entries = Vec::with_capacity(parts.len());
+    for (name, bytes) in parts {
+        entries.push(name);
+        reply_blobs.push(bytes);
+    }
+    serde_json::to_vec(&serde_json::json!({
+        "hash": hash,
+        "entries": entries,
+    }))
+    .unwrap_or_else(|_| b"{}".to_vec())
+}
 fn normalize(parts: &[&[u8]], reply_blobs: &mut Vec<Vec<u8>>) -> Vec<u8> {
     let mut needed = Vec::with_capacity(parts.len());
     for part in parts {
@@ -301,12 +323,19 @@ fn respond(input: &[u8]) -> Vec<u8> {
                 (Command::NormalizeOoxml, _) => normalize(&frame.blobs, &mut reply_blobs),
                 (Command::ScanBody, Some(xml)) => scan(xml),
                 (Command::ZipEntries, Some(container)) => zip_entries(container, &mut reply_blobs),
+                (Command::PptxPackage, Some(container)) => {
+                    pptx_package(container, &mut reply_blobs)
+                }
                 (Command::Package, Some(docx)) => json(&Reply::Package {
                     package: package::open(docx),
                 }),
-                (Command::ScanBody | Command::ZipEntries | Command::Package, None) => {
-                    json(&Reply::failure("invalid_request", "blob 0 is missing"))
-                }
+                (
+                    Command::ScanBody
+                    | Command::ZipEntries
+                    | Command::Package
+                    | Command::PptxPackage,
+                    None,
+                ) => json(&Reply::failure("invalid_request", "blob 0 is missing")),
             },
         },
     };

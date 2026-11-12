@@ -4,6 +4,7 @@ members = [
   "ooxml-xml",
   "ooxml-pkg",
   "docx-engine",
+  "pptx-engine",
   "omml",
   "office-wasm",
   "spike-one-run-save",
@@ -21,6 +22,7 @@ jscompat = { path = "jscompat" }
 ooxml-xml = { path = "ooxml-xml" }
 ooxml-pkg = { path = "ooxml-pkg" }
 docx-engine = { path = "docx-engine" }
+pptx-engine = { path = "pptx-engine" }
 omml = { path = "omml" }
 # the inflater the zip crate already uses; entries are read without its CRC check
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }

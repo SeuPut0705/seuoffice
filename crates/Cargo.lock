@@ -213,6 +213,7 @@ dependencies = [
  "omml",
  "ooxml-pkg",
  "ooxml-xml",
+ "pptx-engine",
  "serde",
  "serde_json",
  "zip",
@@ -243,6 +244,19 @@ name = "ooxml-xml"
 version = "0.1.0"
 dependencies = [
  "jscompat",
+ "serde_json",
+]
+
+[[package]]
+name = "pptx-engine"
+version = "0.1.0"
+dependencies = [
+ "jscompat",
+ "ooxml-pkg",
+ "ooxml-xml",
+ "serde",
+ "serde_json",
+ "sha2",
 ]
 
 [[package]]

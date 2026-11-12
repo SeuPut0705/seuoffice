@@ -1,11 +1,12 @@
-//! Port of packages/docx-engine/src/zip-load.ts: the one way a docx is opened.
+//! Port of packages/docx-engine/src/zip-load.ts: the one way a docx is opened,
+//! and the part of it `PackageArchive.open` of the slides engine shares.
 
 use std::collections::HashMap;
 
 use jscompat::js_regex;
 
 use crate::gate::{
-    DEFAULT_ZIP_LIMITS, DeclaredPart, assert_declared_sizes_within_limits,
+    DEFAULT_ZIP_LIMITS, DeclaredPart, ZipLimits, assert_declared_sizes_within_limits,
     assert_zip_inflates_within_limits,
 };
 use crate::jszip::{self, LoadedEntry};
@@ -115,14 +116,17 @@ fn normalize_ooxml_parts(package: &mut Package) -> Result<(), String> {
     Ok(())
 }
 
-/// `loadDocxZip`: loads a docx resolving part names the way Word does. `Err`
-/// is the message of what the TypeScript throws.
-pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
-    let prepared = neutralize_unicode_path_fields(bytes);
-    let prepared = prepared.as_deref().unwrap_or(bytes);
+/// The metered gate, `JSZip.loadAsync` and the declared-size check that runs
+/// on the loaded zip. The engines word that check differently, so each passes
+/// its own. `Err` is the message of what the TypeScript throws.
+pub fn load_package(
+    bytes: &[u8],
+    limits: &ZipLimits,
+    assert_declared: impl FnOnce(&[DeclaredPart<'_>]) -> Result<(), String>,
+) -> Result<Package, String> {
     // metered inflation first: past this point no part is larger than a limit
-    assert_zip_inflates_within_limits(prepared, &DEFAULT_ZIP_LIMITS)?;
-    let entries = jszip::load(prepared)?;
+    assert_zip_inflates_within_limits(bytes, limits)?;
+    let entries = jszip::load(bytes)?;
     let mut package = Package::default();
     // what `assertZipWithinLimits` reads from the zip object: a later entry of
     // the same name replaces the earlier one
@@ -137,18 +141,28 @@ pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
         declared.insert(name.clone(), uncompressed_size.unwrap_or(0.0));
         package.set(Part::new(name, is_dir, content));
     }
-    {
-        let parts: Vec<DeclaredPart<'_>> = package
-            .parts()
-            .iter()
-            .filter(|part| !part.is_dir)
-            .map(|part| DeclaredPart {
-                name: &part.name,
-                usize: declared[&part.name],
-            })
-            .collect();
-        assert_declared_sizes_within_limits(&parts, &DEFAULT_ZIP_LIMITS)?;
-    }
+    let parts: Vec<DeclaredPart<'_>> = package
+        .parts()
+        .iter()
+        .filter(|part| !part.is_dir)
+        .map(|part| DeclaredPart {
+            name: &part.name,
+            usize: declared[&part.name],
+        })
+        .collect();
+    assert_declared(&parts)?;
+    drop(parts);
+    Ok(package)
+}
+
+/// `loadDocxZip`: loads a docx resolving part names the way Word does. `Err`
+/// is the message of what the TypeScript throws.
+pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
+    let prepared = neutralize_unicode_path_fields(bytes);
+    let prepared = prepared.as_deref().unwrap_or(bytes);
+    let mut package = load_package(prepared, &DEFAULT_ZIP_LIMITS, |parts| {
+        assert_declared_sizes_within_limits(parts, &DEFAULT_ZIP_LIMITS)
+    })?;
     normalize_ooxml_parts(&mut package)?;
     Ok(package)
 }

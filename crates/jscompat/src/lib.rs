@@ -13,6 +13,7 @@ mod regex;
 mod space;
 mod string;
 mod uri;
+mod value;
 
 pub use json::JsNum;
 pub use map::JsMap;
@@ -25,6 +26,7 @@ pub use regex::{JsMatch, JsRegex, RegexSyntaxError};
 pub use space::{is_js_space, trim, trim_start};
 pub use string::{pad_start, truthy};
 pub use uri::{UriError, base64, decode_uri_component};
+pub use value::{value_to_string, value_truthy};
 
 /// For the code [`js_object!`] writes.
 #[doc(hidden)]
