@@ -55,5 +55,904 @@
       "error": "Nested too deeply"
     },
     "reason": "latexToOmml recurses once per group and the TypeScript runs until the JavaScript stack overflows, somewhere past a thousand levels depending on the host. A stack overflow in wasm ends the instance, so Rust counts the depth and refuses past 256 levels of its reader (128 nested groups). No formula a person writes is that deep; the limit is listed because the two sides answer differently between the two limits."
+  },
+  {
+    "id": "non-finite-genDrawing.applyImageWrap-posOffset.x=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.applyImageWrap",
+    "text": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>",
+    "args": {
+      "wrap": "front",
+      "posOffset": {
+        "x": "NaN",
+        "y": 0
+      }
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>NaN</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>left</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.applyImageWrap-posOffset.y=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.applyImageWrap",
+    "text": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>",
+    "args": {
+      "wrap": "front",
+      "posOffset": {
+        "x": 0,
+        "y": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>Infinity</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.applyImageWrap-zOrder=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.applyImageWrap",
+    "text": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>",
+    "args": {
+      "wrap": "square-left",
+      "zOrder": "NaN"
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"NaN\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>left</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>left</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.applyImageZOrder-zOrder=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.applyImageZOrder",
+    "text": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>",
+    "args": {
+      "zOrder": "NaN"
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"NaN\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.applyShapeZOrderAt-zOrder=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.applyShapeZOrderAt",
+    "text": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>",
+    "args": {
+      "location": {
+        "boxIndex": 0
+      },
+      "zOrder": "NaN"
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"NaN\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.swapAnchorWrap-zOrder=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.swapAnchorWrap",
+    "text": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>",
+    "args": {
+      "wrap": "behind",
+      "zOrder": "NaN"
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"NaN\" behindDoc=\"1\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"1\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.patchTextboxHeights-heightsPx.0=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.patchTextboxHeights",
+    "text": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>",
+    "args": {
+      "heightsPx": [
+        "Infinity"
+      ]
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"Infinity\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"Infinity\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.patchTextboxSizes-sizes.0.wPx=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.patchTextboxSizes",
+    "text": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>",
+    "args": {
+      "sizes": [
+        {
+          "wPx": "NaN"
+        }
+      ]
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"NaN\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"NaN\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.patchTextboxSizes-sizes.0.hPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.patchTextboxSizes",
+    "text": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>",
+    "args": {
+      "sizes": [
+        {
+          "hPx": "Infinity"
+        }
+      ]
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"Infinity\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"Infinity\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.patchShapeStyles-styles.0.rotDeg=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.patchShapeStyles",
+    "text": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>",
+    "args": {
+      "styles": [
+        {
+          "rotDeg": "NaN"
+        }
+      ]
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm rot=\"NaN\"><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.patchShapeStyles-styles.0.borderWidthPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.patchShapeStyles",
+    "text": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>",
+    "args": {
+      "styles": [
+        {
+          "borderWidthPx": "Infinity"
+        }
+      ]
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"Infinity\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:anchor relativeHeight=\"251660288\" behindDoc=\"0\"><wp:extent cx=\"1905000\" cy=\"952500\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"7\" name=\"Text Box 7\"/><a:graphic><a:graphicData><wps:wsp><wps:cNvPr id=\"7\" name=\"Text Box 7\"/><wps:spPr><a:xfrm><a:ext cx=\"1905000\" cy=\"952500\"/></a:xfrm><a:ln w=\"9525\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t>Hi</w:t></w:r></w:p></w:txbxContent></wps:txbx></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.patchDrawingExtent-wPx=NaN",
+    "comparison": "call",
+    "fn": "genDrawing.patchDrawingExtent",
+    "text": "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>",
+    "args": {
+      "wPx": "NaN",
+      "hPx": 50
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"NaN\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"NaN\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.patchDrawingExtent-hPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.patchDrawingExtent",
+    "text": "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>",
+    "args": {
+      "wPx": 100,
+      "hPx": "Infinity"
+    },
+    "typescript": {
+      "value": "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"Infinity\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"Infinity\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.resizeInlinePictureXml-widthPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.resizeInlinePictureXml",
+    "text": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>",
+    "args": {
+      "widthPx": "Infinity",
+      "heightPx": 50
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:inline><wp:extent cx=\"Infinity\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"Infinity\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.resizeInlinePictureXml-heightPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.resizeInlinePictureXml",
+    "text": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>",
+    "args": {
+      "widthPx": 100,
+      "heightPx": "Infinity"
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"Infinity\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"Infinity\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:inline><wp:extent cx=\"952500\" cy=\"476250\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.resizeAnchoredPictureXml-widthPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.resizeAnchoredPictureXml",
+    "text": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>",
+    "args": {
+      "widthPx": "Infinity",
+      "heightPx": 50
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"Infinity\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"Infinity\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawing.resizeAnchoredPictureXml-heightPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawing.resizeAnchoredPictureXml",
+    "text": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>",
+    "args": {
+      "widthPx": 100,
+      "heightPx": "Infinity"
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"Infinity\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"Infinity\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:anchor simplePos=\"0\" relativeHeight=\"251659264\" behindDoc=\"0\"><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"952500\" cy=\"476250\"/><wp:wrapNone/><wp:docPr id=\"2\" name=\"Picture 2\"/><a:graphic><a:graphicData><pic:pic><pic:spPr><a:xfrm><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildLineParagraphXml-opts.widthEmu=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildLineParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "kind": "line",
+        "widthEmu": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"NaN\" cy=\"114300\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"line 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"NaN\" cy=\"114300\"/></a:xfrm><a:prstGeom prst=\"line\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:line xmlns:v=\"urn:schemas-microsoft-com:vml\" from=\"0,0\" to=\"NaNpt,9pt\" strokecolor=\"#000000\"/></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"114300\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"line 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"114300\"/></a:xfrm><a:prstGeom prst=\"line\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:line xmlns:v=\"urn:schemas-microsoft-com:vml\" from=\"0,0\" to=\"142pt,9pt\" strokecolor=\"#000000\"/></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildLineParagraphXml-opts.heightEmu=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildLineParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "kind": "line",
+        "heightEmu": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"Infinity\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"line 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"Infinity\"/></a:xfrm><a:prstGeom prst=\"line\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:line xmlns:v=\"urn:schemas-microsoft-com:vml\" from=\"0,0\" to=\"142pt,Infinitypt\" strokecolor=\"#000000\"/></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"114300\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"line 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"114300\"/></a:xfrm><a:prstGeom prst=\"line\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:line xmlns:v=\"urn:schemas-microsoft-com:vml\" from=\"0,0\" to=\"142pt,9pt\" strokecolor=\"#000000\"/></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildLineParagraphXml-opts.id=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildLineParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "kind": "line",
+        "id": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"114300\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"NaN\" name=\"line NaN\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"114300\"/></a:xfrm><a:prstGeom prst=\"line\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:line xmlns:v=\"urn:schemas-microsoft-com:vml\" from=\"0,0\" to=\"142pt,9pt\" strokecolor=\"#000000\"/></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"114300\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"line 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"114300\"/></a:xfrm><a:prstGeom prst=\"line\"><a:avLst/></a:prstGeom><a:noFill/><a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:line xmlns:v=\"urn:schemas-microsoft-com:vml\" from=\"0,0\" to=\"142pt,9pt\" strokecolor=\"#000000\"/></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.inlinePictureDrawingXml-opts.widthPx=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.inlinePictureDrawingXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "rId": "rId1",
+        "docPrId": 1,
+        "widthPx": "NaN",
+        "heightPx": 50
+      }
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"NaN\" cy=\"476250\"/><wp:effectExtent l=\"NaN\" t=\"NaN\" r=\"NaN\" b=\"NaN\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"1\" name=\"Picture 1\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"rId1\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"NaN\" cy=\"476250\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"1\" cy=\"476250\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"1\" name=\"Picture 1\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"rId1\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1\" cy=\"476250\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.inlinePictureDrawingXml-opts.heightPx=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.inlinePictureDrawingXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "rId": "rId1",
+        "docPrId": 1,
+        "widthPx": 100,
+        "heightPx": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"952500\" cy=\"Infinity\"/><wp:effectExtent l=\"NaN\" t=\"NaN\" r=\"NaN\" b=\"NaN\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"1\" name=\"Picture 1\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"rId1\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"Infinity\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"952500\" cy=\"1\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"1\" name=\"Picture 1\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"rId1\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"1\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.inlinePictureDrawingXml-opts.rotDeg=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.inlinePictureDrawingXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "rId": "rId1",
+        "docPrId": 1,
+        "widthPx": 100,
+        "heightPx": 50,
+        "rotDeg": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"952500\" cy=\"476250\"/><wp:effectExtent l=\"NaN\" t=\"NaN\" r=\"NaN\" b=\"NaN\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"1\" name=\"Picture 1\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"rId1\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "rust": {
+      "value": "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"952500\" cy=\"476250\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:docPr id=\"1\" name=\"Picture 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"1\" name=\"Picture 1\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"rId1\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"952500\" cy=\"476250\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildTextboxParagraphXml-opts.widthEmu=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "widthEmu": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"NaN\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"TextBox 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"NaN\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:NaNpt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"><v:textbox><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"TextBox 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"><v:textbox><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildTextboxParagraphXml-opts.heightEmu=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "heightEmu": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"Infinity\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"TextBox 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"Infinity\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:Infinitypt\" filled=\"t\" stroked=\"t\"><v:textbox><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"TextBox 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"><v:textbox><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildTextboxParagraphXml-opts.id=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "id": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"NaN\" name=\"TextBox NaN\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"><v:textbox><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"TextBox 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"FFFFFF\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"000000\"/></a:solidFill></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"><v:textbox><w:txbxContent><w:p><w:r><w:t xml:space=\"preserve\"> </w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.xEmu=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": "NaN",
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": []
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>NaN</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:NaNpt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.yEmu=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": "Infinity",
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": []
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>Infinity</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:Infinitypt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.widthEmu=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": "NaN",
+        "heightEmu": 50,
+        "paragraphs": []
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"NaN\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"NaN\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:NaNpt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"0\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"0\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.heightEmu=-Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": "-Infinity",
+        "paragraphs": []
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"-Infinity\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"-Infinity\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:-Infinitypt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"0\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"0\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.id=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "id": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"NaN\" name=\"Region NaN\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.zOrder=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "zOrder": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"NaN\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.insetsEmu.l=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "insetsEmu": {
+          "l": "NaN",
+          "t": 0,
+          "r": 0,
+          "b": 0
+        }
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"NaN\" tIns=\"0\" rIns=\"0\" bIns=\"0\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"0\" rIns=\"0\" bIns=\"0\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.insetsEmu.t=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "insetsEmu": {
+          "l": 0,
+          "t": "Infinity",
+          "r": 0,
+          "b": 0
+        }
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"0\" tIns=\"Infinity\" rIns=\"0\" bIns=\"0\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"0\" tIns=\"45720\" rIns=\"0\" bIns=\"0\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.insetsEmu.r=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "insetsEmu": {
+          "l": 0,
+          "t": 0,
+          "r": "NaN",
+          "b": 0
+        }
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"0\" tIns=\"0\" rIns=\"NaN\" bIns=\"0\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"0\" tIns=\"0\" rIns=\"91440\" bIns=\"0\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.insetsEmu.b=-Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "insetsEmu": {
+          "l": 0,
+          "t": 0,
+          "r": 0,
+          "b": "-Infinity"
+        }
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"0\" tIns=\"0\" rIns=\"0\" bIns=\"-Infinity\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"0\" tIns=\"0\" rIns=\"0\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.holderLineTwips=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "holderLineTwips": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:pPr><w:spacing w:after=\"0\" w:line=\"NaN\" w:lineRule=\"exact\"/></w:pPr><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:pPr><w:spacing w:after=\"0\"/></w:pPr><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildAnchoredTextboxParagraphXml-opts.holderSpacingBeforeTwips=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildAnchoredTextboxParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "anchor": "paragraph",
+        "xEmu": 0,
+        "yEmu": 0,
+        "widthEmu": 100,
+        "heightEmu": 50,
+        "paragraphs": [],
+        "holderSpacingBeforeTwips": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:pPr><w:spacing w:before=\"Infinity\" w:after=\"0\"/></w:pPr><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:pPr><w:spacing w:after=\"0\"/></w:pPr><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"100\" cy=\"50\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapTopAndBottom/><wp:docPr id=\"1\" name=\"Region 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"100\" cy=\"50\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent></w:txbxContent></wps:txbx><wps:bodyPr wrap=\"square\" lIns=\"91440\" tIns=\"45720\" rIns=\"91440\" bIns=\"45720\" anchor=\"t\"><a:noAutofit/></wps:bodyPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;margin-left:0pt;margin-top:0pt;width:0.007874015748031496pt;height:0.003937007874015748pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildShapeParagraphXml-opts.widthEmu=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildShapeParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "prst": "rect",
+        "widthEmu": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"NaN\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"rect 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvPr id=\"1\" name=\"rect 1\"/><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"NaN\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"4472C4\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"2F5496\"/></a:solidFill></a:ln></wps:spPr><wps:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef></wps:style><wps:bodyPr anchor=\"ctr\"/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:NaNpt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"rect 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvPr id=\"1\" name=\"rect 1\"/><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"4472C4\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"2F5496\"/></a:solidFill></a:ln></wps:spPr><wps:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef></wps:style><wps:bodyPr anchor=\"ctr\"/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildShapeParagraphXml-opts.heightEmu=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildShapeParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "prst": "rect",
+        "heightEmu": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"Infinity\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"rect 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvPr id=\"1\" name=\"rect 1\"/><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"Infinity\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"4472C4\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"2F5496\"/></a:solidFill></a:ln></wps:spPr><wps:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef></wps:style><wps:bodyPr anchor=\"ctr\"/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:Infinitypt\" filled=\"t\" stroked=\"t\"></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"rect 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvPr id=\"1\" name=\"rect 1\"/><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"4472C4\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"2F5496\"/></a:solidFill></a:ln></wps:spPr><wps:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef></wps:style><wps:bodyPr anchor=\"ctr\"/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildShapeParagraphXml-opts.id=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildShapeParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "prst": "rect",
+        "id": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"NaN\" name=\"rect NaN\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvPr id=\"NaN\" name=\"rect NaN\"/><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"4472C4\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"2F5496\"/></a:solidFill></a:ln></wps:spPr><wps:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef></wps:style><wps:bodyPr anchor=\"ctr\"/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"1800000\" cy=\"1080000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"rect 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvPr id=\"1\" name=\"rect 1\"/><wps:cNvSpPr/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"1800000\" cy=\"1080000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"4472C4\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"2F5496\"/></a:solidFill></a:ln></wps:spPr><wps:style><a:lnRef idx=\"2\"><a:schemeClr val=\"accent1\"/></a:lnRef><a:fillRef idx=\"1\"><a:schemeClr val=\"accent1\"/></a:fillRef><a:effectRef idx=\"0\"><a:schemeClr val=\"accent1\"/></a:effectRef><a:fontRef idx=\"minor\"><a:schemeClr val=\"lt1\"/></a:fontRef></wps:style><wps:bodyPr anchor=\"ctr\"/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:141.73228346456693pt;height:85.03937007874016pt\" filled=\"t\" stroked=\"t\"></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildWordArtParagraphXml-opts.widthEmu=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildWordArtParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "widthEmu": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"NaN\" cy=\"720000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"WordArt 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"NaN\" cy=\"720000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:NaNpt;height:56.69291338582677pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent><w:p><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"2700000\" cy=\"720000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"WordArt 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"2700000\" cy=\"720000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:212.5984251968504pt;height:56.69291338582677pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent><w:p><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildWordArtParagraphXml-opts.heightEmu=Infinity",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildWordArtParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "heightEmu": "Infinity"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"2700000\" cy=\"Infinity\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"WordArt 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"2700000\" cy=\"Infinity\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:212.5984251968504pt;height:Infinitypt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent><w:p><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"2700000\" cy=\"720000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"WordArt 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"2700000\" cy=\"720000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:212.5984251968504pt;height:56.69291338582677pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent><w:p><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
+  },
+  {
+    "id": "non-finite-genDrawingBuild.buildWordArtParagraphXml-opts.id=NaN",
+    "comparison": "call",
+    "fn": "genDrawingBuild.buildWordArtParagraphXml",
+    "text": "",
+    "args": {
+      "opts": {
+        "id": "NaN"
+      }
+    },
+    "typescript": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"2700000\" cy=\"720000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"NaN\" name=\"WordArt NaN\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"2700000\" cy=\"720000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:212.5984251968504pt;height:56.69291338582677pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent><w:p><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "rust": {
+      "value": "<w:p><w:r><mc:AlternateContent xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\" xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><mc:Choice Requires=\"wps\"><w:drawing><wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"251658240\" behindDoc=\"0\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"column\"><wp:align>center</wp:align></wp:positionH><wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx=\"2700000\" cy=\"720000\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/><wp:wrapSquare wrapText=\"bothSides\"/><wp:docPr id=\"1\" name=\"WordArt 1\"/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" uri=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/><wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"2700000\" cy=\"720000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr><wps:txbx><w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></wps:txbx><wps:bodyPr/></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></mc:Choice><mc:Fallback><w:pict><v:rect xmlns:v=\"urn:schemas-microsoft-com:vml\" style=\"position:absolute;width:212.5984251968504pt;height:56.69291338582677pt\" filled=\"f\" stroked=\"f\"><v:textbox><w:txbxContent><w:p><w:r><w:rPr><w:b/><w:color w:val=\"4472C4\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr><w:t xml:space=\"preserve\">WordArt</w:t></w:r></w:p></w:txbxContent></v:textbox></v:rect></w:pict></mc:Fallback></mc:AlternateContent></w:r></w:p>"
+    },
+    "reason": "TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an infinity reaches the XML as the text \"NaN\" or \"Infinity\", which no schema type of that attribute or element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result."
   }
 ]
