@@ -255,61 +255,73 @@ is listed, never coded around in the harness.
 
 ## Next session starts here
 
-State on 2026-11-12. Nothing is pushed.
+State on 2026-11-12. The branch is on origin and is pushed at every unit
+boundary (never forced, never to main).
 
-- `feat/rust-docx-u1`: everything below, on main at 0d846f69b (merged, not
-  rebased). The gate passes: 1,668,203 checks, 0 differences, 5 ledger
+- `feat/rust-docx-u1`: everything below, on main at 5f03509fd (merged, not
+  rebased). The gate passes with key order compared: 0 differences, 5 ledger
   entries, none stale.
-- `fix/rust-zip64-six-fields` is merged into this branch and has nothing
-  more.
+- Other streams (other engines, the model types) start from this branch on
+  origin, on another machine. Keep this file current for them.
 
-### What was done last: the Rust and the ledger in line with main
+### What was done last
 
-main fixed the TypeScript defects this port found, and this branch follows:
+**The Rust and the ledger in line with main.** main fixed the TypeScript
+defects this port found, and this branch follows: table lookups answer for
+own keys only (the Rust tables already did; `listed` is gone from the specs,
+which build the inherited names as inputs instead), an unknown paper size
+gives A4, a record keeps an entry named `__proto__`, a character outside the
+BMP is one LaTeX argument, a surrogate character reference reads as U+FFFD.
+`parseTagAttrs` of `parse-vml.ts` writes a record with `setOwn` too and is
+not ported yet: keep the `__proto__` entry there. The ledger holds five
+entries: DOCTYPE and the CDATA opener (what fast-xml-parser reads and Rust
+refuses), the two host-dependent ones (`zip-text-in-hosts-without-buffer`,
+`inflate-failure-text-is-the-hosts`) and the LaTeX depth limit.
 
-- **Table lookups answer for own keys only** (cf22e1fe4). The Rust tables
-  already did. The 13 `table-lookup-inherited-key-*` entries are gone, and
-  with them `listed` of `CallSpec` and `Reader`. The specs build inputs with
-  the names every object inherits instead (fonts, bullet texts, list levels,
-  fill colours, paper sizes, an East Asian language), so those are compared.
-  `props-registry.ts` reads `JC_ALIGN` and `EA_LANG_DEFAULT_FONT` through
-  `ownValue`, as every engine site does: read bare, the tables still answer
-  to `constructor`, and three ledger entries reproduced for that reason
-  alone.
-- **An unknown paper size gives A4** (`blank.rs`, `own_paper_size`).
-- **A record keeps an entry named `__proto__`** (f11df68ef):
-  `doc_properties.rs` and `theme.rs`. `parseTagAttrs` of `parse-vml.ts`
-  writes such a record too and is not ported yet: keep the entry there.
-- **A character outside the BMP is one LaTeX argument** (37c8fcdaa):
-  `peek_char` of `omml/src/latex_to_omml.rs`.
-- **A surrogate character reference reads as U+FFFD** (6f0fdab07). The Rust
-  already did. The lossy lines of (f) and their floors are gone.
+**Key order is part of parity.** The measurement, before anything was
+fixed, of 1,668,203 checks:
 
-The first gate run on the merged tree, before any of this, had 872
-differences in 9 lines and 13 of 21 ledger entries stale.
+- As the wasm stood (`serde_json::Value` sorted every object by name on its
+  way out): 96,794 checks, 41,404 distinct results in 210 places, differed
+  by key order only.
+- With `preserve_order` alone, which is the order the Rust was written in:
+  7,235 checks, 6,699 distinct results in 26 places. No result differed in
+  more than order.
 
-The ledger holds five entries: DOCTYPE and the CDATA opener (what
-fast-xml-parser reads and Rust refuses), the two host-dependent ones
-(`zip-text-in-hosts-without-buffer`, `inflate-failure-text-is-the-hosts`)
-and the LaTeX depth limit.
+Of the 26 places, by cause:
+
+- A struct declared in another order than the TypeScript literal: section
+  settings (2,566 results in four functions), theme fonts (331), the word
+  art of a watermark (167), embedded fonts (123), the sides of a paragraph
+  border (34), a ptab stop (11).
+- An order that follows the path the TypeScript took: the document defaults
+  (2,630: `sizeHalfPoints` and `eastAsiaFont` are each set at two places),
+  numbering levels (293, and 67 from the list dialogs, which write another
+  order), the float anchor (335) and the watermark shape that calls it
+  (185), the display of a style (208: spreads over the parent), character
+  indents merged (51) and resolved (44), table style formats (38), cell
+  margins (8: `w:start` after `w:right`).
+- A record keyed by data held in a sorted map: theme script fonts (87), the
+  levels of a numbering definition (9).
+
+What the corpus and the built inputs lacked, and now have: a numbering
+definition with levels 10 and 2 (the `BTreeMap` case this task was written
+for showed only through negative levels), levels spread from a linked
+abstractNum, and a styles part that takes every spread, `Object.assign` and
+`delete` of `parseStyles` (five of them were reached by no input).
+
+How an order is written down is in "jscompat rules": a struct in the order
+of the literal, `js_object!` where the order follows the path, `JsObject`
+for a record keyed by data. No order is in the ledger.
 
 ### What to do, in order
 
-1. **Key order becomes part of parity everywhere.** Turn on `preserve_order`
-   of `serde_json` and compare (d), (e) and (f) with a deep comparison that
-   looks at key order, struct fields included. The CLI prints engine results
-   as JSON, and 87 places in the TypeScript engine iterate objects. Where the
-   TypeScript order depends on the path taken (a key assigned under a
-   condition), mirror the path. A ledger entry for an order is allowed only
-   with its reason written. Expect the first run to light up many structs:
-   a Rust struct serializes in declaration order, a TypeScript literal in
-   the order it was written. `numbering.rs` keeps levels in a `BTreeMap`
-   (`"10"` before `"2"`); that is one known case. The specs of (f) that send
-   dictionaries as entries can go back to plain objects afterwards.
-2. **`resolve-props.ts`** (1,141 lines, 25 exports; imports only modules
+1. **`resolve-props.ts`** (1,141 lines, 25 exports; imports only modules
    already ported). It unblocks `fieldDisplayOf` and replaces the partial
-   `EffectivePPr`, `ResolveCtx` and `ResolveCompat` of `fields.rs`.
-3. **The leaves `parse.ts` still imports**, in parallel, each as a group of
+   `EffectivePPr`, `ResolveCtx` and `ResolveCompat` of `fields.rs`. Its
+   results are `ParaFormat` and `Run` objects built by assignment and
+   spread: start from `--key-orders`.
+2. **The leaves `parse.ts` still imports**, in parallel, each as a group of
    (f): the rest of `parse-drawing-geometry.ts` (651; one function is
    ported) and of `parse-vml.ts` (568; nine are), `chart.ts` read side
    (1,077), `revision-xml.ts` (511, shared with the save side),
@@ -318,16 +330,16 @@ and the LaTeX depth limit.
    bytes: their inputs cross as blobs of the wire frame, not as text.
    `lazy-media.ts` (55) is about when the host reads media, so decide what
    of it the engine owns before porting it.
-4. **The model**, `types.ts` (2,719 lines), as Rust types that serialize to
-   the same JSON. Task 1 decides how their field order is written down.
-5. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
+3. **The model**, `types.ts` (2,719 lines), as Rust types that serialize to
+   the same JSON, each a struct or a `js_object!` by the rule above.
+4. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
    are not exported, so (f) cannot call them. Compare `parseDocx` as a
    whole: the model of every corpus document as JSON, block by block, with a
    count per block type and per field so a partial port shows what is equal
    already. Port by pass: runs, paragraphs, tables, drawings and text boxes,
    the block passes. Then finish `parseNotesXml`'s paragraph reader and
    `applyTocEntryNumbers`, which need it.
-6. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
+5. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
    `style-upsert.ts`, `remove-parts.ts`, `zip-splice.ts`,
    `resource-cleanup.ts`, the writers left out of the modules above) and
    the features on top (`compare.ts`, `mail-merge.ts`) come after the read
@@ -342,16 +354,27 @@ control is dropped when its paragraph is saved as a generated block
 From the owner, for every unit:
 
 - Change files only under `crates/` and `tools/docx-diff/`. No product code
-  (`apps/`, `packages/*/src`), no workflow, no root `package.json`, no
-  `AGENTS.md`. No push, no `git stash`, no rewriting history.
+  (`apps/`, `packages/*/src`), no root `package.json`, no `AGENTS.md`. The
+  workflow `.github/workflows/seuoffice-rust.yml` may be fixed on this
+  branch, and main is told what changed. Push this branch and throwaway
+  `rust-faults/*` branches only; never force, never main, no `git stash`, no
+  rewriting history.
 - English Conventional Commits, one change each, each building and passing
   its tests. Comments in English, no CJK ideographs (escape them in
   literals).
-- Between 03:30 and 05:00 KST nothing heavy runs: no `cargo`, no wasm build,
-  no gate, no whole test suite. `tsc`, eslint, prettier and a single `tsx`
-  script are fine. Outside the window one heavy command at a time on the
-  machine. `tools/docx-diff/heavy.sh <command>` does both: it waits for the
-  window to end and for the lock. Every subagent goes through it too.
+- The whole gate, clippy and the tests of the whole workspace run on a
+  GitHub runner, not on this machine, which is shared and slow:
+  `gh workflow run "seuoffice rust" --ref <branch>`, then
+  `gh run watch <id> --exit-status` in the background. The run uploads
+  `tools/docx-diff/out`. Fault batches go to runners too, several at once:
+  a branch `rust-faults/<name>` per batch, pushed, started, and deleted
+  afterwards by whoever made it.
+- Locally only `cargo check -p <crate>`, `cargo test -p <crate>` and one
+  group of (f) (`npm --prefix tools/docx-diff run calls -- --group <name>`),
+  each through `tools/docx-diff/heavy.sh <command>`: one heavy command at a
+  time on the machine, and none between 03:30 and 05:00 KST. Never remove
+  `/tmp/heavy.lock` by hand and never kill by name. `tsc`, eslint, prettier
+  and a single `tsx` script need no lock. Every subagent goes by the same.
 - The first comparison run of a newly ported module is saved untouched
   before anything is fixed: it is the measure of the port. A comparison a
   subagent made privately does not count; the gate does.

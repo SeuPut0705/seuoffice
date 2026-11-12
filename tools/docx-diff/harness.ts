@@ -4,6 +4,20 @@ import { fileURLToPath } from 'node:url'
 import { Engine } from './engine'
 import { reportKeyOrder } from './key-order'
 
+// The TypeScript side answers with its host in three places: the text of a
+// failed inflate, the zip gate's DecompressionStream (Node 22 ignores bytes
+// after the end of a deflate stream, Node 24 and later and the browsers refuse
+// them), and Intl.Locale. The fixtures, the ledger and the Rust hold the
+// answers of this major: on another one the comparison compares another host.
+const NODE_MAJOR = 22
+if (Number(process.versions.node.split('.')[0]) !== NODE_MAJOR) {
+  console.error(
+    `docx-diff runs on Node ${NODE_MAJOR}, the host its answers were taken on; this is ${process.version}. ` +
+      'tools/docx-diff/heavy.sh puts it on the PATH.',
+  )
+  process.exit(2)
+}
+
 export const toolDir = dirname(fileURLToPath(import.meta.url))
 export const repoRoot = resolve(toolDir, '../..')
 export const WASM_PATH = resolve(repoRoot, 'crates/target/wasm32-wasip1/release/office_wasm.wasm')
