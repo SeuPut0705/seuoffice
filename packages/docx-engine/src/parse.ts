@@ -10,13 +10,7 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
-import {
-  parseEntry,
-  runsText,
-  withheldDrawingLabel,
-  withheldLabelOf,
-  withheldText,
-} from './withheld'
+import { parseEntry, runsText, withheldBlockLabel, withheldLabelOf, withheldText } from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -1018,7 +1012,7 @@ async function buildBlock(
 ): Promise<Block> {
   const block = await buildBlockOf(el, index, xml, ctx, zoteroField)
   if (block.type !== 'image' && block.type !== 'passthrough') return block
-  const redact = withheldDrawingLabel(xml)
+  const redact = withheldBlockLabel(xml)
   return redact === null ? block : { ...block, redact }
 }
 
@@ -4411,6 +4405,16 @@ function foldFieldCodeParagraphs(blocks: Block[], ctx: BuildContext): void {
 const XE_INSTR_RE = /^\s*XE\s+(?:"([^"]*)"|(\S+))/
 const REF_INSTR_RE = /^\s*REF\s+(?:"([^"]+)"|([^\s\\]+))/
 
+/**
+ * A field's result is shown as one run, whatever runs cached it: when a person
+ * hid any of them from AI, the result carries that mark (the whole result is
+ * hidden: its words cannot be told apart once merged).
+ */
+function hiddenResultMark(cached: readonly Run[]): Pick<Run, 'rawRPr'> {
+  const hidden = cached.find((r) => withheldLabelOf(r.rawRPr) !== null)
+  return hidden?.rawRPr ? { rawRPr: hidden.rawRPr } : {}
+}
+
 const RESULT_FORMAT_SKIP = new Set([
   'text',
   'image',
@@ -4558,7 +4562,10 @@ function extractRuns(
       )
     }
     if (!src) return {}
-    return Object.fromEntries(Object.entries(src).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
+    return {
+      ...Object.fromEntries(Object.entries(src).filter(([k]) => !RESULT_FORMAT_SKIP.has(k))),
+      ...hiddenResultMark(fieldCachedRuns),
+    }
   }
   // reference-only comments (bare w:commentReference, LibreOffice style) anchor
   // on the nearest run; refs seen before any run attach to the next one
@@ -4630,6 +4637,7 @@ function extractRuns(
                 text: fieldCached || name,
                 refField: name,
                 refInstr: fieldInstr,
+                ...hiddenResultMark(fieldCachedRuns),
                 ...(fieldDirty ? { fldDirty: true } : {}),
               },
               rev,
@@ -4849,9 +4857,12 @@ function extractRuns(
     walk(childrenOf(node), link, rev)
     const cached = runs.splice(first)
     const text = cached.map((r) => r.text).join('')
-    const format = cached[0]
-      ? Object.fromEntries(Object.entries(cached[0]).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
-      : {}
+    const format = {
+      ...(cached[0]
+        ? Object.fromEntries(Object.entries(cached[0]).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
+        : {}),
+      ...hiddenResultMark(cached),
+    }
     const dirty = /^(?:true|1)$/.test(String(attrsOf(node)['w:dirty'] ?? ''))
     if (xe) pushRun({ text: '', xeTerm: xe[1] ?? xe[2] }, rev)
     else if (ref) {

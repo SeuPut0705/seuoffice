@@ -492,7 +492,9 @@ async function applyRevisionOp(
   const body = ops.applyRevisionSelection(doc.editor, sel, mode)
   let elsewhere = 0
   if (!bodyOnly) {
+    // the parts it never loads: changes that would remove words hidden from AI stay pending
     const filter: RevisionXmlFilter = {
+      keepHidden: true,
       ...(sel.author !== undefined ? { author: sel.author } : {}),
       ...(sel.type !== undefined ? { type: sel.type } : {}),
       ...(sel.before !== undefined ? { before: sel.before } : {}),
@@ -526,6 +528,7 @@ async function applyRevisionOp(
   if (done.length)
     parts.push(`${done.length} tracked change(s) (${done.map((e) => e.id).join(', ')})`)
   if (elsewhere) parts.push(`${elsewhere} in headers, footers and notes`)
+  const withheld = 'error' in body ? [] : body.withheld
   const left = ops.listRevisionEntries(doc.editor.state.doc)
   const leftElsewhere = await countRevisionsElsewhere(doc)
   const still: string[] = []
@@ -534,8 +537,10 @@ async function applyRevisionOp(
     still.push(
       `${left.length ? 'and' : 'Still'} ${leftElsewhere} in headers, footers and notes${bodyOnly ? ' (ids address the body; all: true or author / type / before reach them)' : ''}`,
     )
+  const withheldNote =
+    withheld.length > 0 ? ` ${ops.withheldNote(withheld)}. Do not retry them.` : ''
   return {
-    output: `${verb} ${parts.join(' and ')}. ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
+    output: `${verb} ${parts.join(' and ')}.${withheldNote} ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
   }
 }
 

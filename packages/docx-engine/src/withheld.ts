@@ -132,45 +132,31 @@ export function withheldNode(node: XNode): XNode | null {
   return inner === null ? null : { ...node, [name]: inner }
 }
 
-const DRAWING_ELEMENTS = new Set(['w:drawing', 'w:pict', 'w:object', 'mc:AlternateContent'])
-
-function holdsDrawing(node: XNode): boolean {
-  return childrenOf(node).some((child) => {
-    const name = nameOf(child)
-    return (
-      name !== undefined && name !== 'w:rPr' && (DRAWING_ELEMENTS.has(name) || holdsDrawing(child))
-    )
-  })
-}
-
-function hiddenDrawingLabel(node: XNode): string | null {
+function firstMarkedRunLabel(node: XNode): string | null {
   for (const child of childrenOf(node)) {
     const name = nameOf(child)
     if (name === undefined) continue
     const label = name === 'w:r' ? runLabel(child) : null
-    if (label !== null && holdsDrawing(child)) return label
-    const inner = hiddenDrawingLabel(child)
+    if (label !== null) return label
+    const inner = firstMarkedRunLabel(child)
     if (inner !== null) return inner
   }
   return null
 }
 
 /**
- * The label of the first run marked hidden from AI that holds a picture,
- * shape, text box or object, in a paragraph's XML; null when no such run
- * is there. A picture's bytes, description, title and name are part of the
- * run that holds it. Whole-unit blocks (an image, a drawing) carry no run of
- * their own for the mark to sit on, so the parser asks here. A paragraph that
- * does not parse and holds both the mark and a drawing is withheld as `private`.
+ * The label of the first run marked hidden from AI anywhere in a block's XML
+ * (a text box's paragraphs and a field's cached result included); null when no
+ * run is. A block shown as a whole unit (a picture, a drawing, a field or
+ * control paragraph) has no run of its own for the mark to sit on, and its
+ * picture, description, preview text and display data are its runs' content: so
+ * the parser asks here, and withholds the whole block under that label. A block
+ * that does not parse and shows a trace of the mark is withheld as `private`.
  */
-export function withheldDrawingLabel(paragraphXml: string): string | null {
-  const node = parseEntry(paragraphXml)
-  if (!node) {
-    return hasWithheldTrace(paragraphXml) && /<w:(?:drawing|pict|object)[\s>]/.test(paragraphXml)
-      ? 'private'
-      : null
-  }
-  return hiddenDrawingLabel(node)
+export function withheldBlockLabel(blockXml: string): string | null {
+  const node = parseEntry(blockXml)
+  if (!node) return hasWithheldTrace(blockXml) ? 'private' : null
+  return firstMarkedRunLabel(node)
 }
 
 /** The run text of a subtree as Word shows it: w:t, outside field codes and deletions. */
