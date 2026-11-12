@@ -3,6 +3,7 @@
 pub mod alt_chunk;
 pub mod blank;
 pub mod block_passes;
+pub mod chart;
 pub mod checkbox_control;
 pub mod doc_properties;
 pub mod drawing_geometry;

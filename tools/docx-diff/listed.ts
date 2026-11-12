@@ -166,6 +166,29 @@ export function legacyCharsetOfMht(text: string, args: Args): string | undefined
   return undefined
 }
 
+/**
+ * A chartex part whose category dimension (cx:strDim, first cx:lvl) leaves a
+ * point index unset below its last one: parseChartexPartXml maps the sparse
+ * array with `v ?? ''`, which skips the hole, so the TypeScript writes null
+ * into `categories: string[]`; the Rust writes "".
+ */
+export function chartexCategoryHole(text: string, _args: Args): string | undefined {
+  if (!text.includes('<cx:chartSpace')) return undefined
+  for (const dim of text.matchAll(/<cx:strDim\b[^>]*>([\s\S]*?)<\/cx:strDim>/g)) {
+    const lvl = /<cx:lvl\b[^>]*?(?:\/>|>([\s\S]*?)<\/cx:lvl>)/.exec(dim[1]!)
+    const set = new Set<number>()
+    let last = -1
+    for (const pt of (lvl?.[1] ?? '').matchAll(/<cx:pt\b[^>]*?\bidx="([^"]*)"/g)) {
+      const idx = parseInt(pt[1]!, 10)
+      if (!Number.isFinite(idx) || idx < 0 || idx >= 1_048_576) continue
+      set.add(idx)
+      last = Math.max(last, idx)
+    }
+    if (set.size <= last) return 'chartex-category-hole-written-as-null'
+  }
+  return undefined
+}
+
 export const NON_FINITE_NUMBER = 'non-finite-number-in-a-drawing'
 
 function holdsNonFinite(value: unknown): boolean {

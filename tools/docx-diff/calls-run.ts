@@ -15,6 +15,7 @@ import { GEN_RUNS } from './calls-gen-runs'
 import { GEN_PARAGRAPH } from './calls-gen-paragraph'
 import { BLANK } from './calls-blank'
 import { BLOCKPASSES } from './calls-blockpasses'
+import { CHART } from './calls-chart'
 import { CHECKBOX } from './calls-checkbox'
 import { DOCPROPS } from './calls-docprops'
 import { DRAWING } from './calls-drawing'
@@ -65,6 +66,7 @@ const groups: Group[] = Object.entries({
   altchunk: ALTCHUNK,
   blank: BLANK,
   blockpasses: BLOCKPASSES,
+  chart: CHART,
   checkbox: CHECKBOX,
   docprops: DOCPROPS,
   drawing: DRAWING,

@@ -136,10 +136,10 @@
   "modelCorpus": 183,
   "modelBuilt": 233,
   "modelTests": 40,
-  "modelTypes": 5081,
-  "modelInvalid": 13835,
-  "modelBlocks paragraph": 3699,
-  "modelBlocks passthrough": 662,
+  "modelTypes": 5156,
+  "modelInvalid": 13976,
+  "modelBlocks paragraph": 3704,
+  "modelBlocks passthrough": 663,
   "modelBlocks heading": 122,
   "modelBlocks table": 144,
   "modelBlocks listItem": 145,
@@ -155,5 +155,10 @@
   "callsBlockpassesMutated": 0,
   "callsBlockpassesArgMutated": 8500,
   "callsBlockpassesFunctions": 6,
-  "writtenZips": 1662
+  "writtenZips": 1662,
+  "callsChartCorpus": 0,
+  "callsChartBuilt": 2215,
+  "callsChartMutated": 280,
+  "callsChartArgMutated": 5500,
+  "callsChartFunctions": 5
 }

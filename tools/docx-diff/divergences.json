@@ -379,6 +379,56 @@
     "reason": "TypeScript defect, decided by main: Rust is right from the start. hostParagraphBreaksBefore strips the w:pPrChange records of a paragraph with /<w:pPrChange[\\s>][\\s\\S]*?<\\/w:pPrChange>/g, which reads a self-closing record with attributes as the start of a paired one and removes everything up to a later </w:pPrChange> (here of a paragraph in a text box), the live w:pPr with it: the page break before the paragraph is lost. Rust strips a self-closing record as one element. The class holds a block whose originalXml has a self-closing w:pPrChange with attributes followed later by a </w:pPrChange>."
   },
   {
+    "id": "chartex-category-hole-written-as-null",
+    "comparison": "call",
+    "fn": "chart.parseChartPartXml",
+    "text": "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<cx:chartSpace xmlns:cx=\"http://schemas.microsoft.com/office/drawing/2014/chartex\" xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><cx:chartData><cx:data id=\"0\"><cx:strDim type=\"cat\"><cx:f>S!A2</cx:f><cx:lvl ptCount=\"2\"><cx:pt idx=\"0\">a</cx:pt><cx:pt idx=\"2\">c</cx:pt></cx:lvl></cx:strDim><cx:numDim type=\"val\"><cx:f>S!B2</cx:f><cx:lvl ptCount=\"3\" formatCode=\"General\"><cx:pt idx=\"0\">1</cx:pt><cx:pt idx=\"1\">2</cx:pt><cx:pt idx=\"2\">3</cx:pt></cx:lvl></cx:numDim></cx:data></cx:chartData><cx:chart><cx:plotArea><cx:plotAreaRegion><cx:series layoutId=\"treemap\" uniqueId=\"{1}\"><cx:dataId val=\"0\"/></cx:series></cx:plotAreaRegion></cx:plotArea></cx:chart></cx:chartSpace>",
+    "args": {
+      "partPath": "word/charts/chartEx99.xml"
+    },
+    "typescript": {
+      "value": {
+        "partPath": "word/charts/chartEx99.xml",
+        "kind": "pie",
+        "categories": [
+          "a",
+          null,
+          "c"
+        ],
+        "series": [
+          {
+            "values": [
+              1,
+              2,
+              3
+            ]
+          }
+        ]
+      }
+    },
+    "rust": {
+      "value": {
+        "partPath": "word/charts/chartEx99.xml",
+        "kind": "pie",
+        "categories": [
+          "a",
+          "",
+          "c"
+        ],
+        "series": [
+          {
+            "values": [
+              1,
+              2,
+              3
+            ]
+          }
+        ]
+      }
+    },
+    "reason": "TypeScript defect, reported to main. parseChartexPartXml reads the category points of a cx:strDim into a sparse array and maps it with v ?? '', which skips the holes, so JSON.stringify writes null into categories, a string[] of the model: a renderer gets null for a category label. Rust writes \"\" for a missing point, which is what the mapping means. The class holds a chartex part whose category strDim has a point index gap."
+  },
+  {
     "id": "non-finite-number-in-a-drawing",
     "comparison": "call",
     "fn": "genDrawing.applyImageWrap",

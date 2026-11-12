@@ -9,6 +9,7 @@ use serde_json::Value;
 mod altchunk;
 mod blank;
 mod blockpasses;
+mod chart;
 mod checkbox;
 mod docprops;
 mod drawing;
@@ -76,6 +77,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "altchunk" => Some(altchunk::dispatch(function, text, args)),
         "blank" => Some(blank::dispatch(function, text, args)),
         "blockpasses" => Some(blockpasses::dispatch(function, text, args)),
+        "chart" => Some(chart::dispatch(function, text, args)),
         "checkbox" => Some(checkbox::dispatch(function, text, args)),
         "docprops" => Some(docprops::dispatch(function, text, args)),
         "drawing" => Some(drawing::dispatch(function, text, args)),
