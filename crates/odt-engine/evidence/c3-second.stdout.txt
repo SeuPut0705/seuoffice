@@ -1,0 +1,414 @@
+odt-diff: 117 built ODTs, 225 exported from docx, 227 docx (205 tracked); populations {"docxTracked":205,"docxBuilt":22,"docxRendered":4,"docxMutated":90,"odt-built":116,"odt-built-opened":106,"edits":2597,"odt-sample":1,"odt-sample-opened":1,"odt-exported":225,"odt-exported-opened":225,"odt-mutation":210,"odt-mutation-opened":157}
+(a) odtToDocx: opens or refuses alike          compared    552  floor missing  BELOW FLOOR  differences 0
+(a) odtToDocx: the bridge docx, entries        compared    489  floor missing  BELOW FLOOR  differences 0
+(a) odtToDocx: the bridge JSON as written      compared    489  floor missing  BELOW FLOOR  differences 0
+(a) odtToDocx: the report                      compared    489  floor missing  BELOW FLOOR  differences 0
+(a+) odtToDocx: mutated ODTs, docx entries     compared      0  floor missing  BELOW FLOOR  differences 0
+(b) saveOdt: unchanged or not, or the refusal  compared   2597  floor missing  BELOW FLOOR  differences 0
+(b) saveOdt: the saved ODT, entries            compared   1327  floor missing  BELOW FLOOR  differences 0
+(c) docxToOdt: the ODT and the report          compared      0  floor missing  BELOW FLOOR  differences 0
+(c) docxToOdt: with rendered objects           compared      4  floor missing  BELOW FLOOR  differences 0
+(c) docxToOdt: tracked docx                    compared    205  floor missing  BELOW FLOOR  differences 0
+(c) docxToOdt: built docx                      compared     22  floor missing  BELOW FLOOR  differences 0
+(c+) docxToOdt: mutated docx                   compared     90  floor missing  BELOW FLOOR  differences 2
+    - docxToOdt mutation 40 of packages/docx-engine/tests/fixtures/truths/hf-exact-line-cap/probe.docx: word/document.xml: Rust refuses (thrown: invalid value: string "aut", expected a string of LineSpacing.rule), TypeScript converts
+    - docxToOdt mutation 48 of packages/docx-engine/tests/fixtures/truths/render-inherited-header-width/probe.docx: word/document.xml: Rust refuses (thrown: invalid value: string "o", expected a string of LineSpacing.rule), TypeScript converts
+(d) odtToText: the text, or the refusal        compared    552  floor missing  BELOW FLOOR  differences 0
+(f) odtCore on the corpus, checks              compared  76840  floor missing  BELOW FLOOR  differences 370  (TypeScript threw in 30: Rust must refuse those too)
+    - default: odtCore.walkElements: odtCore.walkElements("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><office:document-content xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\" xmlns:meta=\"urn:oasis:names:tc:opendocument:xmlns:meta:1.0\" xmln, {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[{"call":"other","kind":"text","start":3242,"end":3479,"parent":null},{"call":"warn","message":"stray </style:style> at 3479"},{"call":"open","name":"style:style","tag":"style:style","start":3493,"nameEnd":3505,"openEnd":3584,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+      rust       {"value":[{"call":"other","kind":"text","start":3242,"end":3479,"parent":null},{"call":"warn","message":"stray </style:style> at 3619"},{"call":"open","name":"style:style","tag":"style:style","start":3493,"nameEnd":3505,"openEnd":3584,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+    - default: odtCore.walkElements: odtCore.walkElements("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><office:document-styles xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\" xmlns:meta=\"urn:oasis:names:tc:opendocument:xmlns:meta:1.0\" xmlns, {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[{"call":"other","kind":"text","start":2545,"end":2698,"parent":null},{"call":"warn","message":"stray </style:style> at 2698"},{"call":"open","name":"style:style","tag":"style:style","start":2712,"nameEnd":2724,"openEnd":2826,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+      rust       {"value":[{"call":"other","kind":"text","start":2545,"end":2698,"parent":null},{"call":"warn","message":"stray </style:style> at 2750"},{"call":"open","name":"style:style","tag":"style:style","start":2712,"nameEnd":2724,"openEnd":2826,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+    - pictures-raw: odtCore.walkElements: odtCore.walkElements("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><office:document-content xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\" xmlns:meta=\"urn:oasis:names:tc:opendocument:xmlns:meta:1.0\" xmln, {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[{"call":"other","kind":"text","start":3242,"end":3479,"parent":null},{"call":"warn","message":"stray </style:style> at 3479"},{"call":"open","name":"style:style","tag":"style:style","start":3493,"nameEnd":3505,"openEnd":3584,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+      rust       {"value":[{"call":"other","kind":"text","start":3242,"end":3479,"parent":null},{"call":"warn","message":"stray </style:style> at 3619"},{"call":"open","name":"style:style","tag":"style:style","start":3493,"nameEnd":3505,"openEnd":3584,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+    - pictures-raw: odtCore.walkElements: odtCore.walkElements("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><office:document-styles xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\" xmlns:meta=\"urn:oasis:names:tc:opendocument:xmlns:meta:1.0\" xmlns, {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[{"call":"other","kind":"text","start":2545,"end":2698,"parent":null},{"call":"warn","message":"stray </style:style> at 2698"},{"call":"open","name":"style:style","tag":"style:style","start":2712,"nameEnd":2724,"openEnd":2826,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+      rust       {"value":[{"call":"other","kind":"text","start":2545,"end":2698,"parent":null},{"call":"warn","message":"stray </style:style> at 2750"},{"call":"open","name":"style:style","tag":"style:style","start":2712,"nameEnd":2724,"openEnd":2826,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+    - mimetype-first-1.3: odtCore.walkElements: odtCore.walkElements("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\" ?><office:document-content xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:office=\"urn:oasis:names:tc:opendocument:xmlns:office:1.0\" xmlns:meta=\"urn:oasis:names:tc:opendocument:xmlns:meta:1.0\" xmln, {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[{"call":"other","kind":"text","start":3249,"end":3500,"parent":null},{"call":"warn","message":"stray </style:style> at 3500"},{"call":"open","name":"style:style","tag":"style:style","start":3514,"nameEnd":3526,"openEnd":3605,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+      rust       {"value":[{"call":"other","kind":"text","start":3249,"end":3500,"parent":null},{"call":"warn","message":"stray </style:style> at 3640"},{"call":"open","name":"style:style","tag":"style:style","start":3514,"nameEnd":3526,"openEnd":3605,"selfClosing":false,"parent":null},{"call":"open","name":"style:p
+    ... 365 more (--show N)
+(f) odtCore on built inputs, checks            compared    314  floor missing  BELOW FLOOR  differences 2  (TypeScript threw in 15: Rust must refuse those too)
+    - built 1: odtCore.editedItems: odtCore.editedItems("", {"edited":{"blocks":[{"id":"b1","docxIndex":0,"originalXml":"<w:p><w:r><w:t xml:space=\"preserve\">본문 첫 문단입니다.</w:t></w:r></w:p>","type":"paragraph","format":{"effective":{"bidi":false,"indent":{"left":0,"right":0,"firstLine":0},"spacing":{"before":0,"after":160,"beforeAuto":false,"afterAuto":false,)
+      typescript {"value":[{"index":0,"xml":"<w:p><w:r><w:t xml:space=\"preserve\">본문 첫 문단입니다.</w:t></w:r></w:p>","blocks":[{"id":"b1","docxIndex":0,"originalXml":"<w:p><w:r><w:t xml:space=\"preserve\">본문 첫 문단입니다.</w:t></w:r></w:p>","type":"paragraph","format":{"effective":{"bidi":false,"indent":{"left":0,"right":0,
+      rust       {"error":"missing field `docxIndex`"}
+    - built 2: odtCore.editedItems: odtCore.editedItems("", {"edited":{"blocks":[{"id":"b1","docxIndex":3,"originalXml":"<w:p><w:r><w:t xml:space=\"preserve\">본문 첫 문단입니다.</w:t></w:r></w:p>","type":"paragraph","format":{"effective":{"bidi":false,"indent":{"left":0,"right":0,"firstLine":0},"spacing":{"before":0,"after":160,"beforeAuto":false,"afterAuto":false,)
+      typescript {"value":[{"index":3,"xml":"<w:p><w:r><w:t xml:space=\"preserve\">본문 첫 문단입니다.</w:t></w:r></w:p>","blocks":[{"id":"b1","docxIndex":3,"originalXml":"<w:p><w:r><w:t xml:space=\"preserve\">본문 첫 문단입니다.</w:t></w:r></w:p>","type":"paragraph","format":{"effective":{"bidi":false,"indent":{"left":0,"right":0,
+      rust       {"error":"missing field `docxIndex`"}
+(f+) odtCore on mutated texts, checks          compared   6000  floor missing  BELOW FLOOR  differences 192  (TypeScript threw in 123: Rust must refuse those too)
+    - mutation 46: odtCore.decodeXmlEntities: odtCore.decodeXmlEntities("보도&#xD800;보도&#xD800;?>일시", {})
+      typescript {"value":"보도\ud800보도\ud800?>일시"}
+      rust       {"value":"보도�보도�?>일시"}
+    - mutation 67: odtCore.decodeXmlEntities: odtCore.decodeXmlEntities("hwp&#xD800;/hangul/13, 0, 0, 711/Windows_1😀0", {})
+      typescript {"value":"hwp\ud800/hangul/13, 0, 0, 711/Windows_1😀0"}
+      rust       {"value":"hwp�/hangul/13, 0, 0, 711/Windows_1😀0"}
+    - mutation 116: odtCore.decodeXmlEntities: odtCore.decodeXmlEntities("&#xD800;&F;", {})
+      typescript {"value":"\ud800&F;"}
+      rust       {"value":"�&F;"}
+    - mutation 157: odtCore.decodeXmlEntities: odtCore.decodeXmlEntities("tai&l &a&#xD800;mp", {})
+      typescript {"value":"tai&l &a\ud800mp"}
+      rust       {"value":"tai&l &a�mp"}
+    - mutation 169: odtCore.decodeXmlEntities: odtCore.decodeXmlEntities("t&#xD800;&#xD800;e__proto__stere__proto__ster", {})
+      typescript {"value":"t\ud800\ud800e__proto__stere__proto__ster"}
+      rust       {"value":"t��e__proto__stere__proto__ster"}
+    ... 187 more (--show N)
+(f) odtText on the corpus, checks              compared  47634  floor missing  BELOW FLOOR  differences 1213
+    - default: odtText.alignTexts: odtText.alignTexts("Hello", {"edited":">> Hello","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[8,"start"],[8,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,3,4,5,6,7,10],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],)
+      typescript {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,true,false]}}
+    - pictures-raw: odtText.alignTexts: odtText.alignTexts("Hello", {"edited":">> Hello","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[8,"start"],[8,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,3,4,5,6,7,10],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],)
+      typescript {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,true,false]}}
+    - mimetype-first-1.3: odtText.alignTexts: odtText.alignTexts("Hello", {"edited":">> Hello","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[8,"start"],[8,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,3,4,5,6,7,10],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],)
+      typescript {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,true,false]}}
+    - mimetype-first-stored-1.2: odtText.alignTexts: odtText.alignTexts("Hello", {"edited":">> Hello","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[8,"start"],[8,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,3,4,5,6,7,10],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],)
+      typescript {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,true,false]}}
+    - no-mimetype: odtText.alignTexts: odtText.alignTexts("Hello", {"edited":">> Hello","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[8,"start"],[8,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,3,4,5,6,7,10],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],)
+      typescript {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,3,4,4,5,5,6,6,7,7,8,8,8,8,0,3],"originalOf":[0,0,0,0,1,2,3,4,4],"intact":[true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,true,false]}}
+    ... 1208 more (--show N)
+(f) odtText on built inputs, checks            compared    622  floor missing  BELOW FLOOR  differences 21  (key order only: 6)  (TypeScript threw in 1: Rust must refuse those too)
+    - built 1: odtText.alignTexts: odtText.alignTexts("abc", {"edited":"","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[6,"start"],[6,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,2],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],[2,8],[3,1],[3,3],[3,8],[6,1],[6,3],[6,8],[-1,1],[-1,3],[-1,8]]})
+      typescript {"value":{"maps":[0,0,0,0,0,0,0,0,0,0,0,0],"originalOf":[0,2],"intact":[false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,0,0,0,0,0,0,0,0,0,0,0],"originalOf":[0,2],"intact":[false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,false,false,false]}}
+    - built 3: odtText.alignTexts: odtText.alignTexts("abc", {"edited":"abc","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[6,"start"],[6,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,5],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],[2,8],[3,1],[3,3],[3,8],[6,1],[6,3],[6,8],[-1,1],[-1,3],[-1,)
+      typescript {"value":{"maps":[0,0,1,1,2,2,3,3,3,3,0,0],"originalOf":[0,1,2,2],"intact":[true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,0,1,1,2,2,3,3,3,3,0,0],"originalOf":[0,1,2,2],"intact":[true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,true,false]}}
+    - built 6: odtText.alignTexts: odtText.alignTexts("abcabc", {"edited":"abc","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[6,"start"],[6,"end"],[9,"start"],[9,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,5],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],)
+      typescript {"value":{"maps":[0,0,1,0,2,0,3,0,3,1,3,2,3,3,3,3,0,0],"originalOf":[0,1,2,5],"intact":[true,true,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,0,1,0,2,0,3,0,3,1,3,2,3,3,3,3,0,0],"originalOf":[0,1,2,5],"intact":[true,true,false,true,false,false,true,false,false,false,false,false,false,false,false,false,false,false,true,false,false,true,false,false,true,true,false]}}
+    - built 13: odtText.alignTexts: odtText.alignTexts("abcdefghij", {"edited":"jihgfedcba","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[6,"start"],[6,"end"],[7,"start"],[7,"end"],[8,"start"],[8,"end"],[9,"start"],[9,"end"],[10,"start"],[10,"end"],[13,"start"],[13,"end"],[)
+      typescript {"value":{"maps":[0,9,0,10,0,10,0,10,0,10,0,10,0,10,0,10,0,10,0,10,1,10,1,10,0,9],"originalOf":[9,9,9,9,9,9,9,9,9,9,9],"intact":[false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,fals
+      rust       {"value":{"maps":[0,9,0,10,0,10,0,10,0,10,0,10,0,10,0,10,0,10,0,10,1,10,1,10,0,9],"originalOf":[9,9,9,9,9,9,9,9,9,9,9],"intact":[false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,false,true,fals
+    - built 0: odtText.pairMarkers: odtText.pairMarkers("", {"markers":[{"kind":"bookmark-start","name":"a","offset":0,"length":0,"start":0,"end":5,"pair":99,"field":false,"ooxmlName":null,"owner":"text"},{"kind":"bookmark-end","name":"a","offset":1,"length":0,"start":10,"end":15,"pair":99,"field":false,"ooxmlName":null,"owner":"text"}]})
+      key order at /value/0 and 1 more
+      typescript kind, name, offset, length, start, end, pair, field, ooxmlName, owner
+      rust       kind, name, offset, length, start, end, pair, field, owner, ooxmlName
+    ... 16 more (--show N)
+(f+) odtText on mutated texts, checks          compared   4500  floor missing  BELOW FLOOR  differences 158
+    - mutation 35: odtText.alignTexts: odtText.alignTexts("이름: 홍길동", {"edited":"이름: 홍길동 한글","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[3,"start"],[3,"end"],[4,"start"],[4,"end"],[5,"start"],[5,"end"],[6,"start"],[6,"end"],[7,"start"],[7,"end"],[10,"start"],[10,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,2,3,4,5,6,7,8,9,12],"intac)
+      typescript {"value":{"maps":[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,10,7,10,0,0],"originalOf":[0,1,2,3,4,5,6,6,6,6,6],"intact":[true,true,false,true,true,false,true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,10,7,10,0,0],"originalOf":[0,1,2,3,4,5,6,6,6,6,6],"intact":[true,true,false,true,true,false,true,true,false,true,true,false,true,true,false,true,false,false,true,false,false,true,false,false,true,false,false,true,true,false]}}
+    - mutation 45: odtText.alignTexts: odtText.alignTexts("제목", {"edited":"","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[5,"start"],[5,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,2],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],[2,8],[5,1],[5,3],[5,8],[-1,1],[-1,3],[-1,8]]})
+      typescript {"value":{"maps":[0,0,0,0,0,0,0,0,0,0],"originalOf":[0,1],"intact":[false,false,false,false,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,0,0,0,0,0,0,0,0,0],"originalOf":[0,1],"intact":[false,false,false,false,false,false,true,false,false,true,false,false,false,false,false]}}
+    - mutation 58: odtText.alignTexts: odtText.alignTexts("d", {"edited":"😀","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[4,"start"],[4,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,1,4],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[4,1],[4,3],[4,8],[-1,1],[-1,3],[-1,8]]})
+      typescript {"value":{"maps":[0,2,0,2,0,2,0,2],"originalOf":[0,0,0],"intact":[false,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,2,0,2,0,2,0,2],"originalOf":[0,0,0],"intact":[false,false,false,true,false,false,true,false,false,false,false,false]}}
+    - mutation 63: odtText.alignTexts: odtText.alignTexts("중간", {"edited":"","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[2,"start"],[2,"end"],[5,"start"],[5,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,2],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[2,1],[2,3],[2,8],[5,1],[5,3],[5,8],[-1,1],[-1,3],[-1,8]]})
+      typescript {"value":{"maps":[0,0,0,0,0,0,0,0,0,0],"originalOf":[0,1],"intact":[false,false,false,false,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,0,0,0,0,0,0,0,0,0],"originalOf":[0,1],"intact":[false,false,false,false,false,false,true,false,false,true,false,false,false,false,false]}}
+    - mutation 67: odtText.alignTexts: odtText.alignTexts("뒤", {"edited":"","maps":[[0,"start"],[0,"end"],[1,"start"],[1,"end"],[4,"start"],[4,"end"],[-1,"start"],[-1,"end"]],"originalOf":[0,2],"intact":[[0,1],[0,3],[0,8],[1,1],[1,3],[1,8],[4,1],[4,3],[4,8],[-1,1],[-1,3],[-1,8]]})
+      typescript {"value":{"maps":[0,0,0,0,0,0,0,0],"originalOf":[0,0],"intact":[false,false,false,true,false,false,true,false,false,true,false,false]}}
+      rust       {"value":{"maps":[0,0,0,0,0,0,0,0],"originalOf":[0,0],"intact":[false,false,false,true,false,false,true,false,false,false,false,false]}}
+    ... 153 more (--show N)
+(f+) odtText on mutated arguments, checks      compared   4500  floor missing  BELOW FLOOR  differences 0
+(f) odtTable on the corpus, checks             compared   4754  floor missing  BELOW FLOOR  differences 0
+(f) odtTable on built inputs, checks           compared    192  floor missing  BELOW FLOOR  differences 9
+    - built 2: odtTable.anchorOf: odtTable.anchorOf("", {"cell":{"kind":"cell","units":[],"start":0,"end":1},"row":0,"col":0})
+      typescript {"value":[0,0]}
+      rust       {"error":"the cell argument: missing field `tc`"}
+    - built 3: odtTable.anchorOf: odtTable.anchorOf("", {"cell":{"kind":"cell","units":[],"start":0,"end":1},"row":4,"col":5})
+      typescript {"value":[4,5]}
+      rust       {"error":"the cell argument: missing field `tc`"}
+    - built 4: odtTable.anchorOf: odtTable.anchorOf("", {"cell":{"kind":"empty","start":0,"end":1},"row":0,"col":0})
+      typescript {"value":[0,0]}
+      rust       {"error":"the cell argument: unknown variant `empty`, expected one of `cell`, `covered`, `orphan`, `filler`"}
+    - built 5: odtTable.anchorOf: odtTable.anchorOf("", {"cell":{"kind":"empty","start":0,"end":1},"row":4,"col":5})
+      typescript {"value":[4,5]}
+      rust       {"error":"the cell argument: unknown variant `empty`, expected one of `cell`, `covered`, `orphan`, `filler`"}
+    - built 0: odtTable.spanOf: odtTable.spanOf("", {"cell":{"kind":"covered","anchor":[2,3]}})
+      typescript {"value":{"colSpan":1,"rowSpan":1}}
+      rust       {"error":"the cell argument: missing field `start`"}
+    ... 4 more (--show N)
+(f+) odtTable on mutated texts, checks         compared   1500  floor missing  BELOW FLOOR  differences 0
+(f+) odtTable on mutated arguments, checks     compared   1500  floor missing  BELOW FLOOR  differences 0
+(f) odtObjects on the corpus, checks           compared   5341  floor missing  BELOW FLOOR  differences 0
+(f) odtObjects on built inputs, checks         compared    539  floor missing  BELOW FLOOR  differences 1
+    - built 4: odtObjects.keepName: odtObjects.keepName("x", {"kind":"nothing"})
+      typescript {"value":"odt-keep:x:nothing"}
+      rust       {"error":"the kind argument: unknown variant `nothing`, expected one of `equation`, `shape`, `textbox`, `toc`, `chart`, `revision`, `object`"}
+(f+) odtObjects on mutated texts, checks       compared   3300  floor missing  BELOW FLOOR  differences 5
+    - mutation 104: odtObjects.subElements: odtObjects.subElements("<a><b></", {"from":0,"to":10})
+      typescript {"value":[{"name":"a","start":0,"nameEnd":2,"openEnd":3,"closeStart":10,"end":10,"selfClosing":false,"depth":0,"attrs":{}},{"name":"b","start":3,"nameEnd":5,"openEnd":6,"closeStart":10,"end":10,"selfClosing":false,"depth":1,"attrs":{}}]}
+      rust       {"value":[{"name":"a","start":0,"nameEnd":2,"openEnd":3,"closeStart":8,"end":8,"selfClosing":false,"depth":0,"attrs":{}},{"name":"b","start":3,"nameEnd":5,"openEnd":6,"closeStart":8,"end":8,"selfClosing":false,"depth":1,"attrs":{}}]}
+    - mutation 125: odtObjects.subElements: odtObjects.subElements("<text:p xmlns:text=\"urn:oa\"sis:names:tc:opendocument:xmlns:text:1.0\">a<text:an>b&lt;</text:span>c<!-- n --><![CDATA[ d ]]></text:p>", {"from":66,"to":132})
+      typescript {"value":[{"name":"text:an","start":70,"nameEnd":78,"openEnd":79,"closeStart":132,"end":132,"selfClosing":false,"depth":0,"attrs":{}}]}
+      rust       {"value":[{"name":"text:an","start":70,"nameEnd":78,"openEnd":79,"closeStart":131,"end":131,"selfClosing":false,"depth":0,"attrs":{}}]}
+    - mutation 176: odtObjects.subElements: odtObjects.subElements("<a><b>", {"from":2,"to":7})
+      typescript {"value":[{"name":"b","start":3,"nameEnd":5,"openEnd":6,"closeStart":7,"end":7,"selfClosing":false,"depth":0,"attrs":{}}]}
+      rust       {"value":[{"name":"b","start":3,"nameEnd":5,"openEnd":6,"closeStart":6,"end":6,"selfClosing":false,"depth":0,"attrs":{}}]}
+    - mutation 253: odtObjects.subElements: odtObjects.subElements("<a><b <w:x/>x=\"1\">t&am/><d>text</<e/></a>", {"from":23,"to":46})
+      typescript {"value":[{"name":"d","start":24,"nameEnd":26,"openEnd":27,"closeStart":46,"end":46,"selfClosing":false,"depth":0,"attrs":{}},{"name":"e","start":33,"nameEnd":35,"openEnd":37,"closeStart":37,"end":37,"selfClosing":true,"depth":1,"attrs":{}}]}
+      rust       {"value":[{"name":"d","start":24,"nameEnd":26,"openEnd":27,"closeStart":41,"end":41,"selfClosing":false,"depth":0,"attrs":{}},{"name":"e","start":33,"nameEnd":35,"openEnd":37,"closeStart":37,"end":37,"selfClosing":true,"depth":1,"attrs":{}}]}
+    - mutation 287: odtObjects.plainTextOf: odtObjects.plainTextOf("<a><b x=\"1\">t&am&#xD800;p;u<c/><d>text</d></ b><e/></a>", {"from":0,"to":46})
+      typescript {"value":"t&am\ud800p;utext"}
+      rust       {"value":"t&am�p;utext"}
+(f+) odtObjects on mutated arguments, checks   compared   1500  floor missing  BELOW FLOOR  differences 0
+(f) odtPage on the corpus, checks              compared  16686  floor missing  BELOW FLOOR  differences 2
+    - page-no-regions: odtPage.childElements: odtPage.childElements("<style:master-page style:name=\"Standard\" style:page-layout-name=\"Mpm1\"/>", {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[]}
+      rust       {"error":"the to argument: invalid value: integer `-1`, expected u32"}
+    - page-geometries: odtPage.childElements: odtPage.childElements("<style:master-page style:name=\"MP4\" style:page-layout-name=\"D\"/>", {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[]}
+      rust       {"error":"the to argument: invalid value: integer `-1`, expected u32"}
+(f) odtPage on built inputs, checks            compared    307  floor missing  BELOW FLOOR  differences 1
+    - built 2: odtPage.hfFormat: odtPage.hfFormat("", {"p":{"runs":[{"text":"h"}],"align":"center","box":{"x":1},"frameXAlign":"left","ptabAligns":["left"],"boxAnchored":true}})
+      typescript {"value":{"align":"center"}}
+      rust       {"error":"the p argument: unknown field `x`, expected one of `widthPx`, `heightPx`, `behind`, `posH`, `posV`, `posXPx`, `posYPx`, `posHRel`, `posVRel`, `wrap`, `id`, `insets`, `vAlign`, `nowrap`, `autofit`, `anchorPara`, `rotDeg`, `borderWidthPx`, `borderColor`"}
+(f+) odtPage on mutated texts, checks          compared   2400  floor missing  BELOW FLOOR  differences 15  (TypeScript threw in 1: Rust must refuse those too)
+    - mutation 86: odtPage.startTagAt: odtPage.startTagAt("<style:a b=\"&#xD800;1\"/>", {"start":0,"prefixes":[{"name":"xmlns:style","raw":"urn:oasis:names:tc:opendocument:xmlns:style:1.0"},{"name":"xmlns:fo","raw":"urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0"},{"name":"xmlns:svg","raw":"urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0"},{"name":"xmlns:s","raw":)
+      typescript {"value":{"name":"style:a","attrs":{"b":"\ud8001"},"end":24}}
+      rust       {"value":{"name":"style:a","attrs":{"b":"�1"},"end":24}}
+    - mutation 9: odtPage.childElements: odtPage.childElements("<rd\" sstyle:maste<w:x/>r-page style:constructorname=\"Standard\" style:page-layout-name=\"Mpm1\"/>", {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[]}
+      rust       {"error":"the to argument: invalid value: integer `-1`, expected u32"}
+    - mutation 11: odtPage.childElements: odtPage.childElements("<stytoStringle:master-page style:name=\"Standard\" style:page-layout->name=\"Mpm1\"/>", {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[]}
+      rust       {"error":"the to argument: invalid value: integer `-1`, expected u32"}
+    - mutation 33: odtPage.childElements: odtPage.childElements("<style:name=\"Mmaster-page style:name=\"St>andard\" style:page-layout-name=\"Mpm1\"/>", {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[]}
+      rust       {"error":"the to argument: invalid value: integer `-1`, expected u32"}
+    - mutation 41: odtPage.childElements: odtPage.childElements("<style:master-page style:name=\"Sd\" stye:page-laout-name=\"Mpm1\"/>", {"prefixes":[{"name":"xmlns:r","raw":"http://schemas.openxmlformats.org/officeDocument/2006/relationships"},{"name":"xmlns:office","raw":"urn:oasis:names:tc:opendocument:xmlns:office:1.0"},{"name":"xmlns:meta","raw":"urn:oasis:names:tc:opendocument:xmlns:meta:1.0"},{"name":"xmlns:config","raw":"urn:)
+      typescript {"value":[]}
+      rust       {"error":"the to argument: invalid value: integer `-1`, expected u32"}
+    ... 10 more (--show N)
+(f+) odtPage on mutated arguments, checks      compared   1500  floor missing  BELOW FLOOR  differences 0
+(f) odtAssemble on the corpus, checks          compared   3688  floor missing  BELOW FLOOR  differences 11
+    - apps/docs/tests/encrypted-fixtures/office-agile-plain.docx parsed model: odtAssemble.paragraphStylesXml: odtAssemble.paragraphStylesXml("", {"parsed":{"blocks":[{"id":"b0","docxIndex":0,"originalXml":"<w:p w:rsidR=\"00F021F4\" w:rsidRDefault=\"003D6A47\"><w:pPr><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\" w:cs=\"Arial\"/></w:rPr></w:pPr><w:r><w:rPr><w:rFonts w:ascii=\"Arial\" w:hAnsi=\"Arial\" w:cs=\"Arial\"/></w:rPr><w:t>Lorem )
+      typescript {"value":{"xml":"<style:style style:name=\"Standard\" style:family=\"paragraph\" style:class=\"text\"><style:paragraph-properties fo:text-align=\"start\" fo:margin-bottom=\"0.000cm\" fo:line-height=\"100%\" fo:margin-top=\"0.000cm\"/><style:text-properties fo:font-size=\"12.00pt\" style:font-size-as
+      rust       {"error":"the parsed argument: unknown field `extras`, expected one of `blocks`, `zoteroDocumentData`, `properties`, `comments`, `footnotes`, `endnotes`, `footnoteProps`, `endnoteProps`, `noteNumbers`, `sources`, `inks`, `themeFonts`, `fontTable`, `embeddedFonts`, `themeColors`, `protection`, `write
+    - apps/docs/tests/encrypted-fixtures/office-standard-plain.docx parsed model: odtAssemble.paragraphStylesXml: odtAssemble.paragraphStylesXml("", {"parsed":{"blocks":[{"id":"b0","docxIndex":0,"originalXml":"<w:p><w:pPr><w:pStyle w:val=\"Normal\"/><w:rPr></w:rPr></w:pPr><w:r><w:rPr></w:rPr><w:t>lorem ipsum</w:t></w:r></w:p>","type":"paragraph","styleId":"Normal","format":{"eastAsiaLang":"zh-CN","effective":{"styleId":"Normal","bidi":false,"ind)
+      typescript {"value":{"xml":"<style:style style:name=\"Standard\" style:family=\"paragraph\" style:class=\"text\"><style:paragraph-properties fo:text-align=\"start\" fo:margin-bottom=\"0.000cm\" fo:line-height=\"100%\" fo:margin-top=\"0.000cm\"/><style:text-properties fo:font-size=\"12.00pt\" style:font-size-as
+      rust       {"error":"the parsed argument: unknown field `extras`, expected one of `blocks`, `zoteroDocumentData`, `properties`, `comments`, `footnotes`, `endnotes`, `footnoteProps`, `endnoteProps`, `noteNumbers`, `sources`, `inks`, `themeFonts`, `fontTable`, `embeddedFonts`, `themeColors`, `protection`, `write
+    - apps/docs/tests/pagination-corpus/docx/01-simple-english.docx parsed model: odtAssemble.paragraphStylesXml: odtAssemble.paragraphStylesXml("", {"parsed":{"blocks":[{"id":"b0","docxIndex":0,"originalXml":"<w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr><w:r><w:t xml:space=\"preserve\">Simple English Document</w:t></w:r></w:p>","type":"heading","level":1,"styleId":"Heading1","format":{"effective":{"styleId":"Heading1","bidi":false,"indent")
+      typescript {"value":{"xml":"<style:style style:name=\"Standard\" style:family=\"paragraph\" style:class=\"text\"><style:paragraph-properties fo:text-align=\"start\" fo:margin-bottom=\"0.282cm\" fo:line-height=\"115%\" fo:margin-top=\"0.000cm\"/><style:text-properties fo:font-size=\"12.00pt\" style:font-size-as
+      rust       {"error":"the parsed argument: unknown field `extras`, expected one of `blocks`, `zoteroDocumentData`, `properties`, `comments`, `footnotes`, `endnotes`, `footnoteProps`, `endnoteProps`, `noteNumbers`, `sources`, `inks`, `themeFonts`, `fontTable`, `embeddedFonts`, `themeColors`, `protection`, `write
+    - apps/docs/tests/pagination-corpus/docx/02-chinese-long-docgrid.docx parsed model: odtAssemble.paragraphStylesXml: odtAssemble.paragraphStylesXml("", {"parsed":{"blocks":[{"id":"b0","docxIndex":0,"originalXml":"<w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr><w:r><w:t xml:space=\"preserve\">中文长篇文档测试</w:t></w:r></w:p>","type":"heading","level":1,"styleId":"Heading1","format":{"effective":{"styleId":"Heading1","bidi":false,"indent":{"left":0,"rig)
+      typescript {"value":{"xml":"<style:style style:name=\"Standard\" style:family=\"paragraph\" style:class=\"text\"><style:paragraph-properties fo:text-align=\"start\" fo:margin-bottom=\"0.282cm\" fo:line-height=\"115%\" fo:margin-top=\"0.000cm\"/><style:text-properties fo:font-size=\"12.00pt\" style:font-size-as
+      rust       {"error":"the parsed argument: unknown field `extras`, expected one of `blocks`, `zoteroDocumentData`, `properties`, `comments`, `footnotes`, `endnotes`, `footnoteProps`, `endnoteProps`, `noteNumbers`, `sources`, `inks`, `themeFonts`, `fontTable`, `embeddedFonts`, `themeColors`, `protection`, `write
+    - apps/docs/tests/pagination-corpus/docx/03-mixed-lang.docx parsed model: odtAssemble.paragraphStylesXml: odtAssemble.paragraphStylesXml("", {"parsed":{"blocks":[{"id":"b0","docxIndex":0,"originalXml":"<w:p><w:pPr><w:pStyle w:val=\"Heading1\"/></w:pPr><w:r><w:t xml:space=\"preserve\">中英文混排文档</w:t></w:r></w:p>","type":"heading","level":1,"styleId":"Heading1","format":{"effective":{"styleId":"Heading1","bidi":false,"indent":{"left":0,"righ)
+      typescript {"value":{"xml":"<style:style style:name=\"Standard\" style:family=\"paragraph\" style:class=\"text\"><style:paragraph-properties fo:text-align=\"start\" fo:margin-bottom=\"0.282cm\" fo:line-height=\"115%\" fo:margin-top=\"0.000cm\"/><style:text-properties fo:font-size=\"12.00pt\" style:font-size-as
+      rust       {"error":"the parsed argument: unknown field `extras`, expected one of `blocks`, `zoteroDocumentData`, `properties`, `comments`, `footnotes`, `endnotes`, `footnoteProps`, `endnoteProps`, `noteNumbers`, `sources`, `inks`, `themeFonts`, `fontTable`, `embeddedFonts`, `themeColors`, `protection`, `write
+    ... 6 more (--show N)
+(f) odtAssemble on built inputs, checks        compared    346  floor missing  BELOW FLOOR  differences 56
+    - built 0: odtAssemble.drawingXml: odtAssemble.drawingXml("Picture 1", {"cx":100,"cy":200})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"100\" cy=\"200\"/><wp:docPr id=\"1\" name=\"Picture 1\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - built 1: odtAssemble.drawingXml: odtAssemble.drawingXml("", {"cx":0,"cy":0})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"1\" cy=\"1\"/><wp:docPr id=\"1\" name=\"\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - built 2: odtAssemble.drawingXml: odtAssemble.drawingXml("a & \"b\" <c>", {"cx":-5,"cy":2.5})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"1\" cy=\"3\"/><wp:docPr id=\"1\" name=\"a &amp; &quot;b&quot; &lt;c&gt;\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - built 3: odtAssemble.drawingXml: odtAssemble.drawingXml("odt-label:chart", {"cx":914400.6,"cy":0.4})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"914401\" cy=\"1\"/><wp:docPr id=\"1\" name=\"odt-label:chart\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - built 4: odtAssemble.drawingXml: odtAssemble.drawingXml("한글 😀", {"cx":1000000000000,"cy":1})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"1000000000000\" cy=\"1\"/><wp:docPr id=\"1\" name=\"한글 😀\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    ... 51 more (--show N)
+(f+) odtAssemble on mutated texts, checks      compared   2700  floor missing  BELOW FLOOR  differences 300
+    - mutation 0: odtAssemble.drawingXml: odtAssemble.drawingXml("a ", {"cx":-5,"cy":2.5})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"1\" cy=\"3\"/><wp:docPr id=\"1\" name=\"a \"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - mutation 1: odtAssemble.drawingXml: odtAssemble.drawingXml("Picre 1<?ture 1\u0001<?", {"cx":100,"cy":200})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"100\" cy=\"200\"/><wp:docPr id=\"1\" name=\"Picre 1&lt;?ture 1&lt;?\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - mutation 2: odtAssemble.drawingXml: odtAssemble.drawingXml("Picure 1__proto__\u0001", {"cx":100,"cy":200})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"100\" cy=\"200\"/><wp:docPr id=\"1\" name=\"Picure 1__proto__\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - mutation 3: odtAssemble.drawingXml: odtAssemble.drawingXml("odt-label:chart<", {"cx":914400.6,"cy":0.4})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"914401\" cy=\"1\"/><wp:docPr id=\"1\" name=\"odt-label:chart&lt;\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    - mutation 4: odtAssemble.drawingXml: odtAssemble.drawingXml("<?xml version=\"1.1\"?>Picture é1", {"cx":100,"cy":200})
+      typescript {"value":"<w:drawing><wp:inline><wp:extent cx=\"100\" cy=\"200\"/><wp:docPr id=\"1\" name=\"&lt;?xml version=&quot;1.1&quot;?&gt;Picture é1\"/></wp:inline></w:drawing>"}
+      rust       {"error":"the name argument is missing"}
+    ... 295 more (--show N)
+(f+) odtAssemble on mutated arguments, checks  compared   4500  floor missing  BELOW FLOOR  differences 0
+key order: 6 results equal as JSON differ in the order of their keys, in 1 places
+          6  odtText.pairMarkers /value/*
+             typescript kind, name, offset, length, start, end, pair, field, ooxmlName, owner
+             rust       kind, name, offset, length, start, end, pair, field, owner, ooxmlName
+rust panics (each one a difference above): 0
+(f) odtCore: 34 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 15 of 34
+    odtCore.decodeXmlEntities                checks    4486  differences     11  key order only      0  distinct results  2277  TypeScript threw 0
+    odtCore.escapeXmlText                    checks    4464  differences      0  key order only      0  distinct results  2254  TypeScript threw 0
+    odtCore.escapeXmlAttr                    checks    4464  differences      0  key order only      0  distinct results  2251  TypeScript threw 0
+    odtCore.readAttributes                   checks   22147  differences     13  key order only      0  distinct results  1331  TypeScript threw 0
+    odtCore.attributeMap                     checks    8953  differences      3  key order only      0  distinct results  1060  TypeScript threw 0
+    odtCore.readRoot                         checks    1658  differences      0  key order only      0  distinct results   172  TypeScript threw 0
+    odtCore.XmlScanner                       checks    3016  differences     14  key order only      0  distinct results   997  TypeScript threw 0
+    odtCore.walkElements                     checks    5694  differences    495  key order only      0  distinct results  1727  TypeScript threw 0
+    odtCore.scanOdtBody                      checks     657  differences     24  key order only      0  distinct results   493  TypeScript threw 79
+    odtCore.sliceNode                        checks    2880  differences      0  key order only      0  distinct results  1478  TypeScript threw 0
+    odtCore.nodesOfKind                      checks    1997  differences      0  key order only      0  distinct results   494  TypeScript threw 28
+    odtCore.walkNodes                        checks     980  differences      0  key order only      0  distinct results   600  TypeScript threw 18
+    odtCore.pairBookmarks                    checks     643  differences      0  key order only      0  distinct results    49  TypeScript threw 23
+    odtCore.pairAnnotations                  checks     643  differences      0  key order only      0  distinct results    40  TypeScript threw 15
+    odtCore.anchorType                       checks    3010  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtCore.cellSpan                         checks    3010  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtCore.bookmarkName                     checks    3010  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtCore.readManifest                     checks     643  differences      2  key order only      0  distinct results   274  TypeScript threw 0
+    odtCore.classifyGenerator                checks     653  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    odtCore.detectGenerator                  checks     644  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    odtCore.readOdtStyles                    checks     641  differences      0  key order only      0  distinct results   520  TypeScript threw 0
+    odtCore.OdtStyleTable.resolve            checks    5260  differences      0  key order only      0  distinct results  1405  TypeScript threw 0
+    odtCore.createBridgeMap                  checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtCore.paragraphIdentityName            checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtCore.markerBookmarkName               checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtCore.paragraphIdFromBookmarks         checks      11  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtCore.unquoteFamily                    checks    2773  differences      0  key order only      0  distinct results   378  TypeScript threw 0
+    odtCore.applyTextPatches                 checks     682  differences      0  key order only      0  distinct results   563  TypeScript threw 1
+    odtCore.readDocxPart                     checks      12  differences      0  key order only      0  distinct results     5  TypeScript threw 4
+    odtCore.crc32                            checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtCore.dosDateTime                      checks       8  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtCore.editedItems                      checks      82  differences      2  key order only      0  distinct results    77  TypeScript threw 0
+    odtCore.paragraphBlockOf                 checks       7  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtCore.constant                         checks       7  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+(f+) odtText: 570 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtText: 39 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 15 of 39
+    odtText.alignTexts                       checks    3630  differences   1375  key order only      0  distinct results   753  TypeScript threw 0
+    odtText.numFmtFromOdf                    checks     312  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtText.numFmtToOdf                      checks     315  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    odtText.keptCharacters                   checks     257  differences      0  key order only      0  distinct results   197  TypeScript threw 0
+    odtText.placeMarkers                     checks      84  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    odtText.textStyleAttrs                   checks     925  differences      0  key order only      0  distinct results   189  TypeScript threw 0
+    odtText.readParagraph                    checks    3041  differences      0  key order only      0  distinct results  2728  TypeScript threw 0
+    odtText.editedParagraphFromBlock         checks    2531  differences      0  key order only      0  distinct results  1182  TypeScript threw 0
+    odtText.editedParagraphFromTableParagraph checks    1896  differences      0  key order only      0  distinct results  1177  TypeScript threw 0
+    odtText.isInvisibleInline                checks    6039  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtText.isFormFieldName                  checks    1507  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtText.pairMarkers                      checks       7  differences      6  key order only      6  distinct results     7  TypeScript threw 0
+    odtText.tabStopsFromOdf                  checks    3421  differences      0  key order only      0  distinct results    40  TypeScript threw 0
+    odtText.paraFormatFromOdf                checks    1711  differences      0  key order only      0  distinct results   193  TypeScript threw 0
+    odtText.paraKeys                         checks    1702  differences      0  key order only      0  distinct results    91  TypeScript threw 0
+    odtText.changedParaKeys                  checks     442  differences      0  key order only      0  distinct results    18  TypeScript threw 0
+    odtText.tabStopsToOdf                    checks      30  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtText.paraOverrides                    checks     402  differences      0  key order only      0  distinct results    45  TypeScript threw 0
+    odtText.textFormatFromOdf                checks    1315  differences      0  key order only      0  distinct results   299  TypeScript threw 0
+    odtText.textKeys                         checks     489  differences     11  key order only      0  distinct results    49  TypeScript threw 0
+    odtText.changedTextKeys                  checks      10  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    odtText.clearedToInherited               checks      11  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtText.textOverrides                    checks      22  differences      0  key order only      0  distinct results    20  TypeScript threw 0
+    odtText.quoteFamily                      checks     310  differences      0  key order only      0  distinct results   240  TypeScript threw 0
+    odtText.patchStartTag                    checks    3201  differences      0  key order only      0  distinct results   693  TypeScript threw 1
+    odtText.editStyleXml                     checks    4782  differences      0  key order only      0  distinct results  1478  TypeScript threw 0
+    odtText.newStyleXml                      checks     305  differences      0  key order only      0  distinct results   233  TypeScript threw 0
+    odtText.readOoxmlPPr                     checks     711  differences      0  key order only      0  distinct results   106  TypeScript threw 0
+    odtText.readOoxmlRPr                     checks     590  differences      0  key order only      0  distinct results   140  TypeScript threw 0
+    odtText.docxStylesById                   checks     381  differences      0  key order only      0  distinct results   149  TypeScript threw 0
+    odtText.styleEntryForOdf                 checks       6  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtText.styleEntryById                   checks       6  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtText.lengthToTwips                    checks    5602  differences      0  key order only      0  distinct results   294  TypeScript threw 0
+    odtText.twips                            checks    5602  differences      0  key order only      0  distinct results   279  TypeScript threw 0
+    odtText.percent                          checks    5602  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    odtText.twipsToCm                        checks      19  differences      0  key order only      0  distinct results    14  TypeScript threw 0
+    odtText.twipsToPt                        checks      19  differences      0  key order only      0  distinct results    14  TypeScript threw 0
+    odtText.halfPointsToPt                   checks      19  differences      0  key order only      0  distinct results    14  TypeScript threw 0
+    odtText.constant                         checks       2  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+(f+) odtTable: 275 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtTable: 20 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 5 of 20
+    odtTable.elementRecord                   checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtTable.borderFromOdf                   checks     633  differences      0  key order only      0  distinct results    42  TypeScript threw 0
+    odtTable.cellPropsFromOdf                checks     300  differences      0  key order only      0  distinct results    34  TypeScript threw 0
+    odtTable.cellBordersXml                  checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtTable.borderToOdf                     checks      18  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    odtTable.mapSequence                     checks      14  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    odtTable.tcIndexes                       checks     215  differences      0  key order only      0  distinct results    32  TypeScript threw 0
+    odtTable.lengthCm                        checks    2554  differences      0  key order only      0  distinct results   239  TypeScript threw 0
+    odtTable.segmentTable                    checks     362  differences      0  key order only      0  distinct results   348  TypeScript threw 0
+    odtTable.normalizedTcPr                  checks     362  differences      0  key order only      0  distinct results   240  TypeScript threw 0
+    odtTable.withoutBridgeBookmarks          checks    1284  differences      0  key order only      0  distinct results   813  TypeScript threw 0
+    odtTable.editedGrid                      checks    1556  differences      0  key order only      0  distinct results   969  TypeScript threw 0
+    odtTable.editedItems                     checks     230  differences      0  key order only      0  distinct results   132  TypeScript threw 0
+    odtTable.paraText                        checks     375  differences      0  key order only      0  distinct results   241  TypeScript threw 0
+    odtTable.protectedCellsOf                checks       5  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtTable.isProtectedCell                 checks       7  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtTable.anchorOf                        checks       6  differences      4  key order only      0  distinct results     3  TypeScript threw 0
+    odtTable.spanOf                          checks       5  differences      5  key order only      0  distinct results     3  TypeScript threw 0
+    odtTable.asJson                          checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtTable.constant                        checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+(f+) odtObjects: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtObjects: 25 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 11 of 25
+    odtObjects.lengthToEmu                   checks     791  differences      0  key order only      0  distinct results    91  TypeScript threw 0
+    odtObjects.emuToCm                       checks      16  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    odtObjects.drawingXml                    checks    1506  differences      0  key order only      0  distinct results   531  TypeScript threw 0
+    odtObjects.readDrawing                   checks     345  differences      0  key order only      0  distinct results   117  TypeScript threw 0
+    odtObjects.drawingsOf                    checks     388  differences      0  key order only      0  distinct results    35  TypeScript threw 0
+    odtObjects.sniffImage                    checks      19  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtObjects.base64Encode                  checks      19  differences      0  key order only      0  distinct results    19  TypeScript threw 0
+    odtObjects.base64Decode                  checks     321  differences      0  key order only      0  distinct results    54  TypeScript threw 0
+    odtObjects.dataUrlBytes                  checks     311  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    odtObjects.sameBytes                     checks      57  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtObjects.hrefPath                      checks     372  differences      0  key order only      0  distinct results   235  TypeScript threw 0
+    odtObjects.subElements                   checks    1676  differences      4  key order only      0  distinct results   867  TypeScript threw 0
+    odtObjects.plainTextOf                   checks    1676  differences      1  key order only      0  distinct results   868  TypeScript threw 0
+    odtObjects.keepName                      checks       5  differences      1  key order only      0  distinct results     5  TypeScript threw 0
+    odtObjects.pictureName                   checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtObjects.parseKeepName                 checks     317  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    odtObjects.parsePictureName              checks     317  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    odtObjects.patchManifestXml              checks    2352  differences      0  key order only      0  distinct results   372  TypeScript threw 0
+    odtObjects.noteKey                       checks       5  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtObjects.entriesOf                     checks      51  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    odtObjects.graphicProps                  checks      42  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtObjects.textWidthEmu                  checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtObjects.anchorOf                      checks      21  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtObjects.analyzeObject                 checks      57  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    odtObjects.constant                      checks       9  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+(f+) odtPage: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtPage: 20 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 7 of 20
+    odtPage.twipsToLength                    checks      16  differences      0  key order only      0  distinct results    14  TypeScript threw 0
+    odtPage.layoutGeometry                   checks     550  differences      0  key order only      0  distinct results    46  TypeScript threw 0
+    odtPage.columnsOf                        checks       7  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtPage.isEmptyOverrides                 checks       4  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtPage.layoutOverrides                  checks    2224  differences      0  key order only      0  distinct results    18  TypeScript threw 0
+    odtPage.odfLengths                       checks      48  differences      0  key order only      0  distinct results    17  TypeScript threw 0
+    odtPage.startTagAt                       checks    6949  differences      1  key order only      0  distinct results  1210  TypeScript threw 0
+    odtPage.childElements                    checks    1369  differences     16  key order only      0  distinct results   299  TypeScript threw 0
+    odtPage.editLayoutXml                    checks    1923  differences      0  key order only      0  distinct results   563  TypeScript threw 1
+    odtPage.editMasterXml                    checks    2456  differences      0  key order only      0  distinct results   558  TypeScript threw 0
+    odtPage.readPageExt                      checks       5  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtPage.writePageExt                     checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    odtPage.hfFormat                         checks      18  differences      1  key order only      0  distinct results     9  TypeScript threw 0
+    odtPage.pairParagraphs                   checks      13  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    odtPage.buildSectPr                      checks    1505  differences      0  key order only      0  distinct results   348  TypeScript threw 0
+    odtPage.injectParagraphSectPr            checks    1302  differences      0  key order only      0  distinct results   828  TypeScript threw 0
+    odtPage.paragraphSectPr                  checks    1852  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    odtPage.stripParagraphSectPr             checks     322  differences      0  key order only      0  distinct results   253  TypeScript threw 0
+    odtPage.stripPPrSectPr                   checks     319  differences      0  key order only      0  distinct results   207  TypeScript threw 0
+    odtPage.constant                         checks       8  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+(f+) odtAssemble: 12094 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) odtAssemble: 26 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 9 of 26
+    odtAssemble.readMetaPeople               checks     645  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    odtAssemble.coreXmlFor                   checks    1345  differences      0  key order only      0  distinct results    60  TypeScript threw 0
+    odtAssemble.personalInfoRemoved          checks      72  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    odtAssemble.scrubMetaXml                 checks     644  differences      0  key order only      0  distinct results   324  TypeScript threw 0
+    odtAssemble.classifyObject               checks     397  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtAssemble.objectSize                   checks     394  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    odtAssemble.fallbackPictureRId           checks     325  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtAssemble.drawingXml                   checks     305  differences    305  key order only      0  distinct results   273  TypeScript threw 0
+    odtAssemble.dataUrlOf                    checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    odtAssemble.pictureRun                   checks       3  differences      3  key order only      0  distinct results     3  TypeScript threw 0
+    odtAssemble.labelRun                     checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtAssemble.defaultSize                  checks     307  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    odtAssemble.solidPng                     checks       5  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtAssemble.headingsAsParagraphs         checks    1332  differences      0  key order only      0  distinct results   586  TypeScript threw 0
+    odtAssemble.withRowFloors                checks       7  differences      7  key order only      0  distinct results     6  TypeScript threw 0
+    odtAssemble.paragraphProps               checks    1700  differences      0  key order only      0  distinct results    82  TypeScript threw 0
+    odtAssemble.textProps                    checks    1985  differences      8  key order only      0  distinct results   219  TypeScript threw 0
+    odtAssemble.documentDefaults             checks      86  differences      0  key order only      0  distinct results    24  TypeScript threw 0
+    odtAssemble.defaultStyleXml              checks      86  differences      0  key order only      0  distinct results    24  TypeScript threw 0
+    odtAssemble.paragraphStylesXml           checks      19  differences     19  key order only      0  distinct results     4  TypeScript threw 0
+    odtAssemble.pageLayoutXml                checks    1506  differences      0  key order only      0  distinct results   285  TypeScript threw 0
+    odtAssemble.columnsXml                   checks       6  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    odtAssemble.masterPageXml                checks       6  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    odtAssemble.unresolvedThemeReferences    checks      25  differences     25  key order only      0  distinct results     3  TypeScript threw 0
+    odtAssemble.odtToDocxReport              checks      20  differences      0  key order only      0  distinct results    15  TypeScript threw 0
+    odtAssemble.constant                     checks       4  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+divergences.json: 0 classes, 0 exact inputs, 0 no longer reproduce
