@@ -77,19 +77,6 @@ async function labelsIn(saved: Uint8Array): Promise<Record<Place, Array<string |
 
 const labelsOf = (labels: Array<string | null>) => labels.every((l) => l === 'client phone')
 
-/**
- * The engine finds a text box's paragraphs by pattern: under these spellings the
- * box is not read back as it was written (a CDATA section holding `</w:p>`, a comment, an
- * end tag spelled `</w:p >`), whatever is done to it, so its labels are not compared.
- */
-const BOX_SURVIVES = new Set<string>([
-  'none',
-  'single quotes',
-  'spaces around =',
-  '> and /> inside values',
-  'fake markup in CDATA',
-])
-
 const MUTATIONS = ['none', ...TAG_MUTATION_NAMES.filter((m) => m !== 'namespace prefix')] as const
 
 describe.each(MUTATIONS)('rejecting formatting changes, tags: %s', (mutation) => {
@@ -186,7 +173,6 @@ describe.each(MUTATIONS)('rejecting formatting changes, tags: %s', (mutation) =>
     const saved = await saveDocx(parsed, plan.saveBlocks, { header, footer })
     const after = await labelsIn(saved)
     for (const place of ['body', 'header', 'footer', 'textbox'] as const) {
-      if (place === 'textbox' && !BOX_SURVIVES.has(mutation)) continue
       expect(after[place], place).toEqual(before[place])
       expect(labelsOf(after[place]), place).toBe(true)
     }

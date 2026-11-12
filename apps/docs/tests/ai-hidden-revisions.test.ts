@@ -110,13 +110,10 @@ describe.each([false, true])('read_revisions, hidden words literal: %s', (litera
       const { output } = call(editor, stories, 'read_revisions')
       expect(output).not.toContain(SECRET)
       const lines = output.split('\n').filter((l) => l.startsWith('- r'))
-      // every change of the document is a hidden one. (A text box whose end tags are spelled
-      // `</w:p >` is not read by the engine's box reader: its changes are not listed at all.)
-      const spacedEndTags = mutation === 'space before > in end tags' || mutation === 'all'
-      expect(lines.length).toBe(spacedEndTags ? 20 : 23)
+      // every change of the document is a hidden one, the text box's included
+      expect(lines.length).toBe(23)
       for (const line of lines) expect(line, line).toContain(PLACEHOLDER)
       for (const story of ['footnote', 'endnote', 'header', 'footer', 'textbox']) {
-        if (story === 'textbox' && spacedEndTags) continue
         expect(lines.filter((l) => l.includes(`in ${story} `)).length, story).toBeGreaterThan(0)
       }
     })
