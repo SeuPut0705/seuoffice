@@ -30,8 +30,9 @@ epub-engine = { path = "epub-engine" }
 encoding_rs = "0.8"
 # the inflater the zip crate already uses; entries are read without its CRC check
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
-# ECMAScript regular expressions: patterns are ported by copying them
-regress = "0.12"
+# ECMAScript regular expressions: patterns are ported by copying them;
+# utf16: a text outside the BMP is searched as UTF-16 units, as JavaScript does
+regress = { version = "0.12", features = ["utf16"] }
 # shortest float digits with the tie rule of JavaScript
 ryu = "1"
 serde = { version = "1", features = ["derive"] }
