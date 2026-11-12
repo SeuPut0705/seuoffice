@@ -38,6 +38,8 @@ Excel 통합 문서(.xlsx, .csv 등) 에디터다. 화면은 Univer 격자 위�
 - 모델에게 보내는 열은 `applyPrivacyPolicy`를 거친다. `deny`는 보내지 않고 `statistics-only`는 값 없이 개수만 보낸다. 값을 직접 읽어 프롬프트에 넣는 우회 경로를 만들지 않는다.
 - **민감 정보 표시(redaction) 상태를 모르면 가린다.** 읽는 쪽은 모두 `redactionIndexOf`를 거치고, 불러온 색인이 아니면(`not-loaded`·`unreadable`) 모든 셀을 가린다(`renderer/ai/redact-load.ts`).
 - **앱 안의 외부 링크 원본 갱신에서 원격 원본을 허용하는 곳은 패널의 "업데이트" IPC 한 곳이다**(`sheets-main.ts`, `allowRemoteSources: true`). CLI의 `remoteSources` 옵션은 별도 경로다(`packages/cli/src/formats/xlsx.ts`).
+- 공동 편집 저장은 기초 파일 좌표의 가림 표시와 구조 일지를 함께 넘긴다(`web/collab-join.ts`). 표시는 저장마다 다시 기초 파일에서 이동하므로 같은 행·열 변경을 두 번 적용하지 않는다. 표시를 읽지 못한 파일은 공동 편집에 붙이지 않고, 방 안에서는 가리기·가림 해제를 거절한다. 시험: `tests/collab-redaction-save.test.ts`.
+- 외부 링크 "업데이트"는 저장 전에 읽기 전용 가용성 확인을 한다(`renderer/external-links-flow.ts`). 웹처럼 지원하지 않는 환경이면 사용자에게 알리고 저장·갱신을 모두 하지 않는다. 시험: `tests/external-links-update-refusal.test.ts`.
 
 ## 이 모듈의 방식
 
