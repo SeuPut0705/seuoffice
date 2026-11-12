@@ -100,7 +100,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
                 }
             }
             let mut slide = slide_of(text, args)?;
-            let changed = prune_timing_for_spids(&mut slide, &spids);
+            let changed = prune_timing_for_spids(&mut slide, &spids)?;
             value(Pruned {
                 changed,
                 body_suffix: &slide.body_suffix,

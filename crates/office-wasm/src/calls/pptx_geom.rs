@@ -38,11 +38,10 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             }
             value(out)
         }
-        "custgeom.parseCustGeom" => optional(parse_cust_geom(
-            text,
-            required(args, "shapeW")?,
-            required(args, "shapeH")?,
-        )),
+        "custgeom.parseCustGeom" => optional(
+            parse_cust_geom(text, required(args, "shapeW")?, required(args, "shapeH")?)
+                .map_err(|limit| limit.to_string())?,
+        ),
         "custgeom.CUST_GEOM_PT_COUNT" => {
             let op: String = required(args, "op")?;
             optional(

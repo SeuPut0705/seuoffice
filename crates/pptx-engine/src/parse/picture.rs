@@ -120,7 +120,7 @@ pub(super) fn parse_picture(
     anchor: ByteAnchor,
     ctx: &ParseContext<'_>,
     raw_xml: Option<&str>,
-) -> PictureElement {
+) -> Result<PictureElement, String> {
     let empty = Value::Object(Map::new());
     let sp_pr = Some(get(node, "p:spPr").unwrap_or(&empty));
     let xfrm = get(sp_pr, "a:xfrm");
@@ -174,6 +174,7 @@ pub(super) fn parse_picture(
             transform.offset.cx.0,
             transform.offset.cy.0,
         )
+        .map_err(|limit| limit.to_string())?
     } else {
         None
     };
@@ -227,7 +228,7 @@ pub(super) fn parse_picture(
     };
     let tile = matches!(blip_fill, Some(Value::Object(map)) if map.contains_key("a:tile"));
     let geometry = truthy(pic_geom).filter(|geom| *geom != "rect");
-    PictureElement {
+    Ok(PictureElement {
         id: Slot::of(ctx.uid("pic")),
         r#type: Slot::of(ElementType::Picture),
         anchor: Slot::of(anchor),
@@ -255,7 +256,7 @@ pub(super) fn parse_picture(
         glow: Slot::maybe(glow),
         reflection: Slot::maybe(reflection),
         ..PictureElement::default()
-    }
+    })
 }
 
 /// `parseSrcRect`: `<a:srcRect l/t/r/b>` (1/1000 %) as 0..1 fractions; all
@@ -643,7 +644,7 @@ pub(super) fn graphic_frame_passthrough(
         let pic = find_descendant_pic(data, 0);
         let has_blip = get(get(get(pic, "p:blipFill"), "a:blip"), "@_r:embed").is_some();
         if value_truthy(pic) && has_blip {
-            el.preview_picture.set(parse_picture(pic, anchor, ctx, None));
+            el.preview_picture.set(parse_picture(pic, anchor, ctx, None)?);
         } else {
             let alternate = get(data, "mc:AlternateContent");
             let ole_obj = get(data, "p:oleObj")

@@ -3,6 +3,7 @@
 
 use jscompat::{
     JsNum, JsRegex, index_of, js_regex, last_index_of, number_to_string, prefix_utf16, to_number,
+    try_js_regex,
 };
 
 use super::model::Slide;
@@ -89,15 +90,15 @@ const MAX_TIMING_COLLAPSE_PASSES: usize = 64;
 /// timing back with `bodySuffix.replace(timing, xml)`, which reads `$&`,
 /// `$'`, `` $` `` and `$$` in the timing as replacement patterns. Here the
 /// pruned timing is put back as it is.
-pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> bool {
+pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> Result<bool, String> {
     if spids.is_empty() {
-        return false;
+        return Ok(false);
     }
     let Some(timing) = js_regex!(r"<p:timing>[\s\S]*?<\/p:timing>")
         .exec(&slide.body_suffix)
         .map(|m| m.as_str().to_owned())
     else {
-        return false;
+        return Ok(false);
     };
     let has = |id: &str| spids.contains(&to_number(id));
     let sp_tgt = js_regex!(r#"<p:spTgt spid="(\d+)""#);
@@ -108,7 +109,10 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> bool {
         let mut blocked_at = usize::MAX;
         let mut cursor = from;
         let mut removal = None;
-        while let Some(hit) = sp_tgt.find_from(&xml, cursor).next() {
+        while let Some(hit) = js_regex!(r#"<p:spTgt spid="(\d+)""#)
+            .find_from(&xml, cursor)
+            .next()
+        {
             cursor = hit.end();
             if !has(hit.get(1).unwrap_or_default()) {
                 continue;
@@ -167,21 +171,23 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> bool {
         }
     }
     if !changed {
-        return false;
+        return Ok(false);
     }
     xml = js_regex!(r"<p:bldLst\s*\/>|<p:bldLst\s*>\s*<\/p:bldLst>")
         .replace_all(&xml, |_| String::new());
     let targets = js_regex!(r"<p:spTgt\b");
     if targets.test(&xml) {
         for _ in 0..MAX_TIMING_COLLAPSE_PASSES {
-            let collapsed = js_regex!(r"<p:par\b[^>]*>(?:(?!<p:par\b|<\/p:par>)[\s\S])*?<\/p:par>")
-                .replace_all(&xml, |block| {
-                    if targets.test(block.as_str()) {
-                        block.as_str().to_owned()
-                    } else {
-                        String::new()
-                    }
-                });
+            let collapsed =
+                try_js_regex!(r"<p:par\b[^>]*>(?:(?!<p:par\b|<\/p:par>)[\s\S])*?<\/p:par>")
+                    .try_replace_all(&xml, |block| {
+                        if targets.test(block.as_str()) {
+                            block.as_str().to_owned()
+                        } else {
+                            String::new()
+                        }
+                    })
+                    .map_err(|limit| limit.to_string())?;
             if collapsed == xml {
                 break;
             }
@@ -195,7 +201,7 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> bool {
     };
     slide.body_suffix = slide.body_suffix.replacen(&timing, kept, 1);
     slide.structure_dirty = true;
-    true
+    Ok(true)
 }
 
 /// Every cNvPr id inside an element's XML fragment (group children

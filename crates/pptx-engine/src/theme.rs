@@ -4,7 +4,10 @@
 
 use std::sync::LazyLock;
 
-use jscompat::{JsObject, JsRegex, js_object, js_regex, truthy, value_to_string, value_truthy};
+use jscompat::{
+    JsObject, JsRegex, RegexLimit, js_object, js_regex, truthy, try_js_regex, value_to_string,
+    value_truthy,
+};
 use ooxml_xml::{ObjectOptions, parse_object};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -40,14 +43,16 @@ fn parse(xml: &str) -> Result<Value, String> {
     parse_object(xml, &ObjectOptions::default()).map_err(|error| error.to_string())
 }
 
-/// `topLevelFragments`: each depth-1 child of the fragment, whole, in order.
-fn top_level_fragments(xml: &str) -> Vec<&str> {
+/// `topLevelFragments`: each depth-1 child of the fragment, whole, in order;
+/// `RegexLimit` where the tag search passed the bound.
+fn top_level_fragments(xml: &str) -> Result<Vec<&str>, RegexLimit> {
     let mut out = Vec::new();
     let mut depth: i64 = 0;
     let mut cur_start: Option<usize> = None;
-    for m in
-        js_regex!(r#"<(\/?)([a-zA-Z][\w:]*)((?:"[^"]*"|'[^']*'|[^"'>])*?)(\/?)>"#).find_iter(xml)
+    for m in try_js_regex!(r#"<(\/?)([a-zA-Z][\w:]*)((?:"[^"]*"|'[^']*'|[^"'>])*?)(\/?)>"#)
+        .try_find_iter(xml)
     {
+        let m = m?;
         let closing = m.get(1) == Some("/");
         let self_close = m.get(4) == Some("/");
         if !closing && !self_close {
@@ -66,7 +71,7 @@ fn top_level_fragments(xml: &str) -> Vec<&str> {
             out.push(m.as_str());
         }
     }
-    out
+    Ok(out)
 }
 
 /// `parseStyleList`: the children of `<a:{tag}>`, each parsed on its own.
@@ -77,6 +82,7 @@ fn parse_style_list(theme_xml: &str, tag: &str) -> Result<Option<Vec<Value>>, St
         return Ok(None);
     };
     let items = top_level_fragments(m.get(1).unwrap_or_default())
+        .map_err(|limit| limit.to_string())?
         .into_iter()
         .map(|fragment| parse(fragment).map(|node| as_xml_node(Some(&node)).clone()))
         .collect::<Result<Vec<_>, _>>()?;
@@ -398,8 +404,8 @@ static CLR_MAP_ATTRIBUTES: LazyLock<Vec<(&'static str, JsRegex)>> = LazyLock::ne
     CLR_MAP_NAMES
         .into_iter()
         .map(|name| {
-            let pattern = format!(r#"\b{name}\s*=\s*(["'])(.*?)\1"#);
-            let regex = JsRegex::new(&pattern, "").expect("a pattern literal that compiles");
+            let regex = JsRegex::new(&format!(r#"\b{name}\s*=\s*(["'])(.*?)\1"#), "")
+                .expect("a pattern literal that compiles");
             (name, regex)
         })
         .collect()

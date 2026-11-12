@@ -105,7 +105,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let data = context_data(args)?;
             optional(parse_background(text, &data.context(&uids)))
         }
-        "parse.sliceGroupChildXmls" => value(slice_group_child_xmls(text)),
+        "parse.sliceGroupChildXmls" => value(slice_group_child_xmls(text)?),
         "parse.layoutDiagramFallback" => {
             let data = context_data(args)?;
             let layout_id: Option<String> = arg(args, "layoutId")?;

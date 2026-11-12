@@ -5,7 +5,7 @@
 
 use std::sync::Arc;
 use jscompat::{
-    JsNum, JsObject, Radix, base64, js_regex, number_truthy, parse_int, sort_by_number,
+    JsNum, JsObject, Radix, base64, js_regex, try_js_regex, number_truthy, parse_int, sort_by_number,
     to_number, value_to_string, value_truthy,
 };
 use serde_json::Value;
@@ -155,7 +155,7 @@ pub(super) fn parse_shape_fragment(
     let semantic_xml = js_regex!(r"<a:fld\b").replace_all(&semantic_xml, |_| "<a:r".to_owned());
     let semantic_xml =
         js_regex!(r"<\/a:fld>").replace_all(&semantic_xml, |_| "</a:r>".to_owned());
-    if sp.name == "p:grpSp" && group_exceeds_budget(frag_xml) {
+    if sp.name == "p:grpSp" && group_exceeds_budget(frag_xml)? {
         return Ok(Some(SlideElement::Passthrough(Box::new(passthrough(
             anchor,
             PassthroughKind::Unknown,
@@ -197,7 +197,7 @@ pub(super) fn parse_shape_fragment(
             Some(frag_xml),
         )?)))),
         "p:pic" => Ok(Some(SlideElement::Picture(Box::new(
-            super::picture::parse_picture(node, anchor, ctx, Some(frag_xml)),
+            super::picture::parse_picture(node, anchor, ctx, Some(frag_xml))?,
         )))),
         "p:grpSp" => {
             let mut budget = GroupParseBudget {
@@ -233,7 +233,7 @@ pub(super) fn parse_shape_fragment(
             let fb = get(node, "mc:Fallback");
             let pic = first(get(fb, "p:pic"));
             if value_truthy(pic) {
-                let mut el = super::picture::parse_picture(pic, anchor, ctx, None);
+                let mut el = super::picture::parse_picture(pic, anchor, ctx, None)?;
                 let model = choices
                     .iter()
                     .map(|ch| {
@@ -362,6 +362,7 @@ pub(super) fn parse_sp_shape(
                 _ => &anchor.original_xml,
             };
             crate::custgeom::parse_cust_geom(xml, transform.offset.cx.0, transform.offset.cy.0)
+                .map_err(|limit| limit.to_string())?
         }
     };
     let mut fill = super::fill::parse_fill(sp_pr, ctx);
@@ -1020,11 +1021,12 @@ fn skipped_tag(tag: &str) -> bool {
     tag.starts_with("<!--") || tag.starts_with("<![") || tag.starts_with("<?")
 }
 
-/// `groupExceedsBudget`
-fn group_exceeds_budget(xml: &str) -> bool {
+/// `groupExceedsBudget`; `Err` where the tag search passed the regex bound.
+fn group_exceeds_budget(xml: &str) -> Result<bool, String> {
     let mut group_depth: i64 = 0;
     let mut descendants: usize = 0;
-    for m in js_regex!(GROUP_TAG_RE).find_iter(xml) {
+    for m in try_js_regex!(GROUP_TAG_RE).try_find_iter(xml) {
+        let m = m.map_err(|limit| limit.to_string())?;
         let tag = m.as_str();
         if skipped_tag(tag) {
             continue;
@@ -1042,13 +1044,13 @@ fn group_exceeds_budget(xml: &str) -> bool {
             if group_depth > 0 {
                 descendants += 1;
                 if descendants > MAX_GROUP_DESCENDANTS {
-                    return true;
+                    return Ok(true);
                 }
             }
             if !is_self {
                 group_depth += 1;
                 if group_depth > i64::from(MAX_GROUP_DEPTH) {
-                    return true;
+                    return Ok(true);
                 }
             }
             continue;
@@ -1056,11 +1058,11 @@ fn group_exceeds_budget(xml: &str) -> bool {
         if group_depth > 0 && GROUP_CHILD_TAGS.contains(&name) {
             descendants += 1;
             if descendants > MAX_GROUP_DESCENDANTS {
-                return true;
+                return Ok(true);
             }
         }
     }
-    false
+    Ok(false)
 }
 
 /// `chOff ? parseInt(chOff[key], 10) || 0 : 0`
@@ -1137,7 +1139,7 @@ fn parse_group(
             .as_ref()
             .map_or("", |anchor| &*anchor.original_xml),
     };
-    let slices = slice_group_children(group_xml);
+    let slices = slice_group_children(group_xml)?;
     let mut ordered: Vec<(SlideElement, f64)> = Vec::new();
     for tag in GROUP_CHILD_TAGS {
         let raw = get(node, tag);
@@ -1254,7 +1256,7 @@ fn parse_leaf_child(
             child_anchor,
             ctx,
             raw_xml,
-        ))),
+        )?)),
         "p:graphicFrame" => super::picture::graphic_frame_passthrough(child, child_anchor, ctx)?,
         "p:cxnSp" => SlideElement::Text(Box::new(parse_connector(child, child_anchor, ctx))),
         _ => return Ok(None),
@@ -1285,13 +1287,14 @@ struct GroupChildSlice<'a> {
     start: u64,
 }
 
-/// `sliceGroupChildren`
-fn slice_group_children(xml: &str) -> Vec<GroupChildSlice<'_>> {
+/// `sliceGroupChildren`; `Err` where the tag search passed the regex bound.
+fn slice_group_children(xml: &str) -> Result<Vec<GroupChildSlice<'_>>, String> {
     let mut out = Vec::new();
     let mut depth: i64 = 0;
     let mut start: usize = 0;
     let mut start_name = "";
-    for m in js_regex!(GROUP_TAG_RE).find_iter(xml) {
+    for m in try_js_regex!(GROUP_TAG_RE).try_find_iter(xml) {
+        let m = m.map_err(|limit| limit.to_string())?;
         let tag = m.as_str();
         if skipped_tag(tag) {
             continue;
@@ -1327,16 +1330,16 @@ fn slice_group_children(xml: &str) -> Vec<GroupChildSlice<'_>> {
             depth += 1;
         }
     }
-    out
+    Ok(out)
 }
 
 /// `sliceGroupChildXmls`: the direct child fragments of a `p:grpSp` in
 /// document order (nested groups stay one slice).
-pub fn slice_group_child_xmls(grp_xml: &str) -> Vec<&str> {
-    slice_group_children(grp_xml)
+pub fn slice_group_child_xmls(grp_xml: &str) -> Result<Vec<&str>, String> {
+    Ok(slice_group_children(grp_xml)?
         .into_iter()
         .map(|s| s.xml)
-        .collect()
+        .collect())
 }
 
 /// `passthrough`

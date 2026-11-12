@@ -9,7 +9,7 @@
 
 use std::fmt;
 
-use jscompat::js_regex;
+use jscompat::{js_regex, try_js_regex};
 use serde::Serialize;
 
 /// A top-level shape. Ranges count UTF-8 bytes, converted to UTF-16 only at
@@ -41,6 +41,9 @@ pub enum ScanError<'a> {
     NoSpTree,
     UnexpectedClosingTag { name: &'a str },
     UnterminatedSpTree,
+    /// The tag search passed the regex bound: a tag of millions of
+    /// characters outside quotes.
+    RegexLimit,
 }
 
 impl fmt::Display for ScanError<'_> {
@@ -51,6 +54,7 @@ impl fmt::Display for ScanError<'_> {
                 write!(f, "unexpected closing tag </{name}> at spTree level")
             }
             Self::UnterminatedSpTree => f.write_str("slide xml: unterminated <p:spTree>"),
+            Self::RegexLimit => write!(f, "slide xml: {}", jscompat::RegexLimit),
         }
     }
 }
@@ -79,11 +83,12 @@ pub fn scan_slide(slide_xml: &str) -> Result<SlideScan<'_>, ScanError<'_>> {
     // The comment alternative of the tag pattern stays first: the tag class
     // cannot cross a '<', so a comment carrying markup would otherwise be
     // scanned as real tags.
-    let tag_re = js_regex!(r#"<!--[\s\S]*?-->|<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>"#);
+    let tag_re = try_js_regex!(r#"<!--[\s\S]*?-->|<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>"#);
     let name_re = js_regex!(r"^<\/?\s*([A-Za-z_][\w:.-]*)");
 
-    let sp_tree_open = js_regex!(r#"<p:spTree(?:\s(?:[^<>"']|"[^"]*"|'[^']*')*)?>"#)
-        .exec(slide_xml)
+    let sp_tree_open = try_js_regex!(r#"<p:spTree(?:\s(?:[^<>"']|"[^"]*"|'[^']*')*)?>"#)
+        .try_exec(slide_xml)
+        .map_err(|_| ScanError::RegexLimit)?
         .ok_or(ScanError::NoSpTree)?;
     let scan_from = sp_tree_open.end();
 
@@ -93,7 +98,8 @@ pub fn scan_slide(slide_xml: &str) -> Result<SlideScan<'_>, ScanError<'_>> {
     let mut current_name = "";
     let mut sp_tree_close_at = None;
 
-    for found in tag_re.find_from(slide_xml, scan_from) {
+    for found in tag_re.try_find_from(slide_xml, scan_from) {
+        let found = found.map_err(|_| ScanError::RegexLimit)?;
         let tag = found.as_str();
         if tag.starts_with("<!--") || tag.starts_with("<![") || tag.starts_with("<?") {
             continue;

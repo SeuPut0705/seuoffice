@@ -230,12 +230,14 @@ fn with_creation_id(xml: &str, uuid: &str) -> Option<String> {
 /// `+21` matches no tag. Here the nvId is literal text.
 pub fn group_child_durable_id(grp: &SlideElement, child: &SlideElement) -> Option<String> {
     if let (Some(xml), Some(nv_id)) = (xml_of(grp), child.nv_id.as_ref()) {
-        let pattern = format!(
-            r#"<p:cNvPr\b[^>]*\bid="{}"[^>]*?(\/?)>"#,
-            regex_escape(&nv_id.text())
-        );
         // an escaped literal always compiles; were it not to, the child's own id answers
-        if let Some(open) = JsRegex::new(&pattern, "")
+        if let Some(open) = JsRegex::new(
+            &format!(
+                r#"<p:cNvPr\b[^>]*\bid="{}"[^>]*?(\/?)>"#,
+                regex_escape(&nv_id.text())
+            ),
+            "",
+        )
             .ok()
             .and_then(|regex| regex.exec(xml))
         {

@@ -46,8 +46,11 @@ pub fn sync_redact_ext(
     tag: &str,
     label: Option<&str>,
 ) -> Result<String, RegexSyntaxError> {
-    let pattern = format!(r"<{tag}\b[^>]*?/>|<{tag}\b[^>]*?>[\s\S]*?</{tag}>");
-    let Some(open) = JsRegex::new(&pattern, "")?.exec(xml) else {
+    let Some(open) = JsRegex::new(
+        &format!(r"<{tag}\b[^>]*?/>|<{tag}\b[^>]*?>[\s\S]*?</{tag}>"),
+        "",
+    )?
+    .exec(xml) else {
         return Ok(xml.to_owned());
     };
     let next = match truthy(label) {

@@ -97,11 +97,12 @@ mod tests {
     #[test]
     fn escaped_text_matches_itself_only() {
         let text = r"a+(b)[c]{2}.*?^$|\/";
-        let regex = crate::JsRegex::new(&regex_escape(text), "").unwrap();
-        assert_eq!(regex.exec(text).map(|found| found.as_str()), Some(text));
-        let plus = crate::JsRegex::new(&regex_escape("+21"), "").unwrap();
-        assert!(!plus.test("221"));
-        assert!(plus.test("+21"));
+        let regex = crate::TryJsRegex::new(&regex_escape(text), "").unwrap();
+        let found = regex.try_exec(text).unwrap();
+        assert_eq!(found.map(|found| found.as_str()), Some(text));
+        let plus = crate::TryJsRegex::new(&regex_escape("+21"), "").unwrap();
+        assert_eq!(plus.try_test("221"), Ok(false));
+        assert_eq!(plus.try_test("+21"), Ok(true));
     }
 
     #[test]
