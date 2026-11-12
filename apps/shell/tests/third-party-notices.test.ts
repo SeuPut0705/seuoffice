@@ -215,6 +215,7 @@ const VALID_NOTICE = [
   'Apache License',
   '144 crates, all under permissive terms:',
   '138 crates, all under permissive terms:',
+  '31 crates compiled into office_wasm.wasm:',
   '',
 ].join('\n')
 
@@ -222,7 +223,7 @@ const VALID_NOTICE = [
  * Drives the real beforePack hook with the notice on disk replaced by `notice`
  * (null: no file). `regenerated` is what the generator run leaves behind.
  */
-function packWithNotice(notice: string | null, regenerated: string | null) {
+function packWithNotice(notice: string | null, regenerated: string | null, officeWasmCrates = 31) {
   const generatorRuns: Array<{ script: string; release: string | undefined }> = []
   let current = notice
   const configModule = { exports: {} as Record<string, unknown> }
@@ -235,7 +236,12 @@ function packWithNotice(notice: string | null, regenerated: string | null) {
       if (id === 'node:child_process') {
         return {
           execFileSync: (_file: string, args: string[], opts: { env?: NodeJS.ProcessEnv }) => {
-            if (args[0].replace(/\\/g, '/').endsWith('tools/gen-third-party-notices.mjs')) {
+            const script = args[0].replace(/\\/g, '/')
+            // what cargo says office_wasm.wasm holds
+            if (script.endsWith('tools/office-wasm-crates.mjs')) {
+              return JSON.stringify({ count: officeWasmCrates })
+            }
+            if (script.endsWith('tools/gen-third-party-notices.mjs')) {
               generatorRuns.push({ script: args[0], release: opts.env?.IEUM_RELEASE })
               current = regenerated
             }
@@ -308,6 +314,19 @@ describe('packaging gate on the third-party notice', () => {
     )
     const { pack, generatorRuns } = packWithNotice(partial, partial)
     await expect(pack()).rejects.toThrow(/1 of 2 Rust crate sections are listed/)
+    expect(generatorRuns).toHaveLength(1)
+  })
+
+  it('refuses a notice without the crates of office_wasm.wasm', async () => {
+    const without = VALID_NOTICE.replace('31 crates compiled into office_wasm.wasm:\n', '')
+    const { pack, generatorRuns } = packWithNotice(without, without)
+    await expect(pack()).rejects.toThrow(/crates compiled into office_wasm\.wasm are not listed/)
+    expect(generatorRuns).toHaveLength(1)
+  })
+
+  it('refuses a notice that lists fewer office_wasm.wasm crates than cargo links', async () => {
+    const { pack, generatorRuns } = packWithNotice(VALID_NOTICE, VALID_NOTICE, 32)
+    await expect(pack()).rejects.toThrow(/31 of the 32 crates compiled into office_wasm\.wasm/)
     expect(generatorRuns).toHaveLength(1)
   })
 
