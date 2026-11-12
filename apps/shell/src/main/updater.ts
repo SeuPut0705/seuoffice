@@ -1,3 +1,4 @@
+import { statSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { app, dialog, shell } from 'electron'
 import type { BrowserWindow } from 'electron'
@@ -13,7 +14,7 @@ import {
   recordInstallAttempt,
 } from './update-attempt'
 import type { InstallFailureLevel } from './update-attempt'
-import { createUpdateLog, UPDATE_LOG_FILE } from './update-log'
+import { createUpdateLog, createUpdateSteps, UPDATE_LOG_FILE } from './update-log'
 import { pruneUpdateCache } from './update-cache'
 import {
   installMacStaging,
@@ -23,7 +24,7 @@ import {
   stageMacUpdate,
   startMacSwap,
 } from './mac-update'
-import type { UpdateLogger } from './update-log'
+import type { UpdateLogger, UpdateStep, UpdateStepFields } from './update-log'
 import { reopenedByInstaller, requestUpdateRestart, updateRestartRequested } from './update-restart'
 import type { UpdateInfo } from 'electron-updater'
 import { createI18n, getUiLang, htmlLang } from '@genoffice/i18n'
@@ -188,6 +189,19 @@ function log(...args: unknown[]): void {
   updateLog?.info(args.map((arg) => (typeof arg === 'string' ? arg : String(arg))).join(' '))
 }
 
+/** marks a step of the update in the record (update-log.ts); a no-op until the updater runs */
+let step: (step: UpdateStep, fields?: UpdateStepFields) => void = () => {}
+
+/** the size of a downloaded file, or null when it cannot be read */
+function fileBytes(file: unknown): number | null {
+  if (typeof file !== 'string') return null
+  try {
+    return statSync(file).size
+  } catch {
+    return null
+  }
+}
+
 function uiStrings(): UpdateUiStrings {
   const lang = getUiLang()
   return {
@@ -282,9 +296,12 @@ export async function checkForUpdatesNow(): Promise<void> {
     dismissedVersion = null
     let result
     try {
+      step('check-start', { by: 'user' })
       result = await autoUpdater.checkForUpdates()
+      step('check-end', { found: result?.isUpdateAvailable ? result.updateInfo?.version : 'none' })
       if (result === null) throw new Error('Update check was skipped')
     } catch (err) {
+      if (!result) step('check-end', { found: 'failed' })
       log('manual check failed:', (err as Error)?.message ?? err)
       if (!isNoReleaseError(err)) {
         await dialog.showMessageBox({
@@ -346,6 +363,7 @@ export function initAutoUpdater(
   const record = createUpdateLog(join(dataDir, UPDATE_LOG_FILE))
   updateLog = record
   autoUpdater.logger = record
+  step = createUpdateSteps((line) => log(line))
   // the installer passes --updated when it reopens the app after an update;
   // without it this launch was the user's own
   const launchedBy = reopenedByInstaller() ? ', reopened by the installer' : ''
@@ -373,6 +391,9 @@ export function initAutoUpdater(
   // install that cannot replace itself keeps the download page.
   const isMac = process.platform === 'darwin'
   const macBundle = isMac ? macAppBundle(process.execPath) : null
+  // bytes the running download has fetched so far (its progress events); less
+  // than the file when only the changed blocks were downloaded
+  let transferred: number | null = null
   // the unpacked new version, once a download for it has been checked
   let macStaged: { version: string; app: string } | null = null
   let selfUpdates = true
@@ -384,8 +405,9 @@ export function initAutoUpdater(
       block === null &&
       installMacStaging(autoUpdater, async (zip, version) => {
         macStaged = null
+        step('download-end', { version, bytes: fileBytes(zip), transferred })
         log('unpacking', version, 'beside', macBundle)
-        const stagedApp = await stageMacUpdate({ zip, bundle: macBundle, version })
+        const stagedApp = await stageMacUpdate({ zip, bundle: macBundle, version, step })
         macStaged = { version, app: stagedApp }
         log('unpacked and checked', version)
       })
@@ -430,6 +452,17 @@ export function initAutoUpdater(
     )
   } else if (previousAttempt) {
     log('the installer started for', previousAttempt.version, 'has run; now', app.getVersion())
+    const since = previousAttempt.startedAt ? Date.parse(previousAttempt.startedAt) : NaN
+    step('app-started', {
+      version: app.getVersion(),
+      from: previousAttempt.fromVersion,
+      // from the installer's (or swap's) start to this line; the app's own
+      // start-up up to here is `uptime-s`
+      'since-install-start-s': Number.isNaN(since)
+        ? null
+        : ((Date.now() - since) / 1000).toFixed(1),
+      'uptime-s': process.uptime().toFixed(1),
+    })
     clearInstallAttempt(dataDir)
   }
 
@@ -454,7 +487,14 @@ export function initAutoUpdater(
       return
     }
     const tries = nextAttemptTries(failedInstall, version)
-    recordInstallAttempt(dataDir, { version, fromVersion: app.getVersion(), visible: false, tries })
+    recordInstallAttempt(dataDir, {
+      version,
+      fromVersion: app.getVersion(),
+      visible: false,
+      tries,
+      startedAt: new Date().toISOString(),
+    })
+    step('swap-scheduled', { version })
     log('replacing the app with', version, 'once it has quit, try', String(tries))
     const started = startMacSwap({
       pid: process.pid,
@@ -472,7 +512,14 @@ export function initAutoUpdater(
     // the files being replaced (decision 0077).
     const visible = process.platform === 'win32'
     const tries = nextAttemptTries(failedInstall, version)
-    recordInstallAttempt(dataDir, { version, fromVersion: app.getVersion(), visible, tries })
+    recordInstallAttempt(dataDir, {
+      version,
+      fromVersion: app.getVersion(),
+      visible,
+      tries,
+      startedAt: new Date().toISOString(),
+    })
+    step('installer-start', { version })
     log(
       'starting the installer for',
       version,
@@ -497,6 +544,7 @@ export function initAutoUpdater(
   app.on('will-quit', () => {
     if (!selfUpdates || phase !== 'downloaded' || latestSeenVersion === null) return
     if (!updateRestartRequested()) return
+    step('will-quit', { version: latestSeenVersion })
     if (isMac) startMacSwapFor(latestSeenVersion)
     else startInstaller(latestSeenVersion)
   })
@@ -521,6 +569,7 @@ export function initAutoUpdater(
   const failDownload = (): void => {
     if (!downloadInFlight) return
     downloadInFlight = false
+    step('download-end', { failed: 'yes', transferred })
     failedAttempts += 1
     setPhase({ phase: failedAttempts >= MANUAL_FALLBACK_AFTER ? 'manual' : 'error' })
   }
@@ -533,6 +582,8 @@ export function initAutoUpdater(
         return
       }
       downloadInFlight = true
+      transferred = null
+      step('download-start', { version: latestSeenVersion })
       setPhase({ phase: 'downloading', percent: 0 })
       const gen = ++downloadGen
       downloadToken = new CancellationToken()
@@ -545,7 +596,7 @@ export function initAutoUpdater(
     onInstall: () => {
       closeUpdateWindow()
       if (latestSeenVersion === null || phase !== 'downloaded') return
-      log('restart requested to install', latestSeenVersion)
+      step('quit-requested', { version: latestSeenVersion })
       requestUpdateRestart()
       // let the window fully close before tearing the app down; the installer
       // starts at will-quit, after every save prompt has been answered
@@ -614,13 +665,22 @@ export function initAutoUpdater(
 
   autoUpdater.on('download-progress', (progress) => {
     if (!downloadInFlight) return
+    transferred = progress.transferred
     setPhase({ phase: 'downloading', percent: progress.percent })
   })
 
-  autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+  autoUpdater.on('update-downloaded', (info: UpdateInfo & { downloadedFile?: string }) => {
     if (info.version !== latestSeenVersion) {
       log('downloaded:', info.version, 'ignored (stale after channel switch)')
       return
+    }
+    // the Mac download ended where its zip was handed over to be unpacked
+    if (!isMac) {
+      step('download-end', {
+        version: info.version,
+        bytes: fileBytes(info.downloadedFile),
+        transferred,
+      })
     }
     log('downloaded:', info.version)
     downloadInFlight = false
@@ -661,7 +721,18 @@ export function initAutoUpdater(
   const check = (): void => {
     // turned off: only an explicit check (Help › Check for Updates…, a channel switch) asks the feed
     if (!autoCheckEnabled()) return
-    autoUpdater.checkForUpdates().catch((err) => log('check failed:', err?.message ?? err))
+    step('check-start', { by: 'schedule' })
+    autoUpdater
+      .checkForUpdates()
+      .then((result) =>
+        step('check-end', {
+          found: result?.isUpdateAvailable ? result.updateInfo?.version : 'none',
+        }),
+      )
+      .catch((err) => {
+        step('check-end', { found: 'failed' })
+        log('check failed:', err?.message ?? err)
+      })
   }
   setTimeout(check, FIRST_CHECK_DELAY_MS)
   setInterval(check, RECHECK_INTERVAL_MS)
