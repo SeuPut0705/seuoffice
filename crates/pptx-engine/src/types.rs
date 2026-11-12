@@ -11,9 +11,11 @@
 //! types.ts declares and parse.ts never assigns come last, in the order of
 //! types.ts. A key the TypeScript leaves `undefined` is no key.
 //!
-//! The text, picture, group, passthrough and chart elements, `SlideElement`,
-//! `Slide` and `SlideDeck` carry no `Deserialize`: `CustomGeometry`
-//! (custgeom.rs) and `ChartModel` (chart) have none yet.
+//! Every type here reads back what it writes (`Deserialize`), strictly: a key
+//! the TypeScript interface lacks is an error. A `js_object!` is declared
+//! `deserialize_strict;` and keeps the keys that are present, in the order of
+//! the input; a plain struct is `deny_unknown_fields`, and its optional
+//! fields read with [`present`] where `null` has a meaning (NaN).
 
 use jscompat::{JsNum, JsObject, Slot, js_object};
 use serde::{Deserialize, Serialize};
@@ -25,6 +27,18 @@ use crate::table_style::TableStyleFlags;
 
 pub use crate::custgeom::CustomGeometry;
 
+/// `deserialize_with` of an optional model field: the key present reads as
+/// `Some`, whatever it holds. A `JsNum` reads `null` as NaN (what
+/// `JSON.stringify` writes for it) and `Option<T>` reads `null` as `None`, where
+/// the plain `Option` of serde would read both as an absent key.
+pub fn present<'de, D, T>(deserializer: D) -> Result<Option<T>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    T::deserialize(deserializer).map(Some)
+}
+
 /// `{ key: value }` where `value` may be `undefined`: the object has the key
 /// either way, so a later `object.key = v` keeps the place of the literal.
 pub fn assigned<T>(value: Option<T>) -> Slot<T> {
@@ -35,6 +49,7 @@ pub fn assigned<T>(value: Option<T>) -> Slot<T> {
 
 /// `EmuRect`
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct EmuRect {
     pub x: JsNum,
     pub y: JsNum,
@@ -44,7 +59,7 @@ pub struct EmuRect {
 
 /// `Transform`
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Transform {
     pub offset: EmuRect,
     pub rot: JsNum,
@@ -57,7 +72,7 @@ pub type ResolvedColor = String;
 
 /// `Fill`, tagged by `type`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(tag = "type", rename_all = "lowercase")]
+#[serde(tag = "type", rename_all = "lowercase", deny_unknown_fields)]
 pub enum Fill {
     None,
     Solid { color: ResolvedColor },
@@ -68,6 +83,7 @@ pub enum Fill {
 
 /// One of `stops` of a gradient `Fill`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct GradientStop {
     pub pos: JsNum,
     pub color: ResolvedColor,
@@ -75,6 +91,7 @@ pub struct GradientStop {
 
 /// `{ l, t, r, b }`: the insets of `fillTo`, `tileRect` and `fillRect`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Insets {
     pub l: JsNum,
     pub t: JsNum,
@@ -93,10 +110,14 @@ pub enum GradientPath {
 
 /// `Fill` of `type: 'gradient'`, without its tag.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct GradientFill {
     pub stops: Vec<GradientStop>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub angle: Option<JsNum>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scaled: Option<bool>,
@@ -118,6 +139,7 @@ pub enum ImageMode {
 
 /// `clrChange` of an image `Fill`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ClrChange {
     pub from: String,
     pub to: String,
@@ -125,6 +147,7 @@ pub struct ClrChange {
 
 /// `lum` of an image `Fill`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Lum {
     pub bright: JsNum,
     pub contrast: JsNum,
@@ -132,6 +155,7 @@ pub struct Lum {
 
 /// `tile` of an image `Fill`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ImageTile {
     pub tx: JsNum,
     pub ty: JsNum,
@@ -142,12 +166,16 @@ pub struct ImageTile {
 
 /// `Fill` of `type: 'image'`, without its tag.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ImageFill {
     pub media_ref: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub mode: Option<ImageMode>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub alpha: Option<JsNum>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub fill_rect: Option<Insets>,
@@ -157,7 +185,11 @@ pub struct ImageFill {
     pub clr_change: Option<ClrChange>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub lum: Option<Lum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub bi_level: Option<JsNum>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tile: Option<ImageTile>,
@@ -165,6 +197,7 @@ pub struct ImageFill {
 
 /// `Fill` of `type: 'pattern'`, without its tag.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PatternFill {
     pub fg: ResolvedColor,
     pub bg: ResolvedColor,
@@ -183,6 +216,7 @@ pub enum ArrowEndSize {
 /// `ArrowEnd`. `type` is a string: parse.ts casts the document's `type`
 /// attribute to the union without checking it.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ArrowEnd {
     pub r#type: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -222,7 +256,7 @@ pub enum LineCompound {
 
 /// `Stroke`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Stroke {
     pub fill: Fill,
     pub width: JsNum,
@@ -252,6 +286,7 @@ pub enum TextAlign {
 
 /// `GlowEffect`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct GlowEffect {
     pub color: ResolvedColor,
     pub radius: JsNum,
@@ -259,7 +294,7 @@ pub struct GlowEffect {
 
 /// `ReflectionEffect`
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ReflectionEffect {
     pub blur_rad: JsNum,
     pub start_a: JsNum,
@@ -269,7 +304,7 @@ pub struct ReflectionEffect {
 
 /// `ShadowEffect`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ShadowEffect {
     pub color: ResolvedColor,
     pub blur_rad: JsNum,
@@ -277,13 +312,29 @@ pub struct ShadowEffect {
     pub dir_deg: JsNum,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub inner: Option<bool>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub sx: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub sy: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub kx_deg: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub ky_deg: Option<JsNum>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub algn: Option<String>,
@@ -313,7 +364,7 @@ impl From<&crate::placeholder::ShadowEffect> for ShadowEffect {
 /// `RunStyleSource`, in the order of the literal of parseRun (types.ts
 /// declares `fontFamily` second).
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct RunStyleSource {
     pub font_size: String,
     pub bold: String,
@@ -346,7 +397,7 @@ pub enum EaLang {
 
 /// `outline` of a `TextRun`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct TextOutline {
     pub color: ResolvedColor,
     pub width_emu: JsNum,
@@ -354,16 +405,21 @@ pub struct TextOutline {
 
 /// `gradient` of a `TextRun`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct RunGradient {
     pub stops: Vec<GradientStop>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub angle: Option<JsNum>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub scaled: Option<bool>,
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `TextRun`. Declared in the order of the literal of parseRun, then
     /// what parseParagraph assigns after it (`field`, `rawXml`, `paraMark`),
     /// then the keys only an edit sets. `color` and `fontSize` are keys of
@@ -426,9 +482,13 @@ js_object! {
 
 /// `ParagraphDefaultRunProps`, one literal of parseParagraphDefRPr.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ParagraphDefaultRunProps {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub font_size: Option<JsNum>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bold: Option<bool>,
@@ -449,7 +509,7 @@ pub struct ParagraphDefaultRunProps {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `bullet` of a `Paragraph`: built by assignments under conditions in
     /// parseParagraph, or the level style's bullet (see the `From` below).
     #[derive(Debug, Clone, PartialEq)]
@@ -494,6 +554,7 @@ impl From<&Bullet> for ParagraphBullet {
 
 /// One of `tabStops` of a `Paragraph`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TabStop {
     pub pos: JsNum,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -501,7 +562,7 @@ pub struct TabStop {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `pPrExplicit` of a `Paragraph`: parseParagraph spreads its keys in this
     /// order; an edit sets the bit of what it changed, last.
     #[derive(Debug, Clone, PartialEq)]
@@ -523,7 +584,7 @@ js_object! {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `Paragraph`, in the order of the literal of parseParagraph. `align` and
     /// `level` are keys of the literal even when `undefined` ([`assigned`]).
     #[derive(Debug, Clone, PartialEq)]
@@ -582,7 +643,7 @@ pub enum TextVert {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `insets` of a `TextBody`: `{ l, t, r, b }` in parseTextBody,
     /// `{ l, r, t, b }` where parseTableCell replaces it.
     #[derive(Debug, Clone, PartialEq)]
@@ -596,7 +657,7 @@ js_object! {
 
 /// `extrusion3d` of a `TextBody`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Extrusion3d {
     pub color: ResolvedColor,
     pub depth_emu: JsNum,
@@ -606,6 +667,7 @@ pub struct Extrusion3d {
 
 /// `txWarp` of a `TextBody`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct TxWarp {
     pub prst: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -613,7 +675,7 @@ pub struct TxWarp {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `TextBody`, in the order of the literal of parseTextBody. `anchor` is a
     /// key of the literal even when `undefined` ([`assigned`]); `anchorCtr`
     /// inherited by parseSpShape comes after `txWarp`.
@@ -653,7 +715,7 @@ pub enum ElementType {
 /// `ByteAnchor`. `range` holds byte offsets into the slide XML inside the
 /// engine; the dispatch converts them to UTF-16 code units.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ByteAnchor {
     pub sp_index: i64,
     /// Shared: the TypeScript hands one string to every element built from
@@ -667,7 +729,7 @@ pub struct ByteAnchor {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `PPrDirty`: an edit merges it as `{ ...el.dirtyPPr, ...d }`.
     #[derive(Debug, Clone, PartialEq)]
     pub struct PPrDirty {
@@ -685,6 +747,7 @@ js_object! {
 
 /// `{ id, idx }` of `connection`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct ConnectionEnd {
     pub id: JsNum,
     pub idx: JsNum,
@@ -692,6 +755,7 @@ pub struct ConnectionEnd {
 
 /// `connection` of an element.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Connection {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub start: Option<ConnectionEnd>,
@@ -701,6 +765,7 @@ pub struct Connection {
 
 /// `{ lat, lon, rev }`: `cameraRot` and `lightRot` of a `Scene3D`.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SceneRotation {
     pub lat: JsNum,
     pub lon: JsNum,
@@ -709,7 +774,7 @@ pub struct SceneRotation {
 
 /// `bevelTop` of a `Scene3D`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct BevelTop {
     pub w_emu: JsNum,
     pub h_emu: JsNum,
@@ -718,7 +783,7 @@ pub struct BevelTop {
 
 /// `Scene3D`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Scene3D {
     pub camera_preset: String,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -729,9 +794,17 @@ pub struct Scene3D {
     pub light_dir: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub light_rot: Option<SceneRotation>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub extrusion_emu: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub z_emu: Option<JsNum>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub extrusion_color: Option<ResolvedColor>,
@@ -742,6 +815,7 @@ pub struct Scene3D {
 }
 
 js_object! {
+    deserialize_strict;
     /// `TextElement` (`type` is `text` or `shape`): the literal of parseSpShape
     /// with `connection` of parseConnector's between `noGeometry` and `fill`,
     /// then `nvId` (parseGroupChild), then `ElementBase` keys no parse sets.
@@ -794,6 +868,7 @@ pub enum MediaKind {
 
 /// `media` of a `PictureElement`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PictureMedia {
     pub kind: MediaKind,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -804,6 +879,7 @@ pub struct PictureMedia {
 
 /// `rot` of a picture's `model3d`: `am3d:rot` in 60,000ths of a degree.
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Model3dRotation {
     pub ax: JsNum,
     pub ay: JsNum,
@@ -812,6 +888,7 @@ pub struct Model3dRotation {
 
 /// `model3d` of a `PictureElement`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct Model3d {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub target: Option<String>,
@@ -819,6 +896,7 @@ pub struct Model3d {
 }
 
 js_object! {
+    deserialize_strict;
     /// `PictureElement`: the literal of parsePicture (the OLE preview picture of
     /// graphicFramePassthrough is its first five keys), then `model3d`
     /// (parseShapeFragment), `nvId` (parseGroupChild), then the keys no parse
@@ -868,6 +946,7 @@ js_object! {
 }
 
 js_object! {
+    deserialize_strict;
     /// `GroupElement`: the literal of parseGroup (`children` replaced in its
     /// place), then `nvId`, then the keys no parse sets.
     #[derive(Debug, Clone, PartialEq)]
@@ -909,6 +988,7 @@ pub enum PassthroughKind {
 }
 
 js_object! {
+    deserialize_strict;
     /// `PassthroughElement`: the literal of passthrough and of
     /// graphicFramePassthrough, then `previewShapes` or `previewPicture`,
     /// `noChip`, `nvId`, then the keys no parse sets.
@@ -942,7 +1022,7 @@ js_object! {
 // ── Table ──────────────────────────────────────────────────────────────
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `TableCellBorders`: parseTableCell sets the cell's own lines in the
     /// order l, r, t, b, then the style's inside lines it lacked, in the same
     /// order, so `{ t, l }` happens.
@@ -957,7 +1037,7 @@ js_object! {
 
 /// `bevel` of a `TableCell`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct CellBevel {
     pub width_emu: JsNum,
     #[serde(default, skip_serializing_if = "Option::is_none")]
@@ -967,7 +1047,7 @@ pub struct CellBevel {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `TableCell`: `{}` and then assignments, in the order of parseTableCell.
     #[derive(Debug, Clone, PartialEq)]
     pub struct TableCell {
@@ -982,7 +1062,7 @@ js_object! {
 }
 
 js_object! {
-    deserialize;
+    deserialize_strict;
     /// `TableElement`: the literal of parseTable, then `nvId`, then the keys
     /// no parse sets. `styleFlags` is `{ ...flags }`: all six flags, in the
     /// order of the literal of parseTable (types.ts declares `bandRow` second).
@@ -1019,6 +1099,7 @@ js_object! {
 // ── Chart ──────────────────────────────────────────────────────────────
 
 js_object! {
+    deserialize_strict;
     /// `ChartElement`: the literals of graphicFramePassthrough (`descr` and
     /// `userShapes` only for a classic chart), then `nvId`, then the keys no
     /// parse sets. `name` is a key of the literal even when `undefined`.
@@ -1060,6 +1141,43 @@ pub enum SlideElement {
     Passthrough(Box<PassthroughElement>),
 }
 
+/// An element is read by its `type`, never by the shape of its keys, so it
+/// cannot land in another variant: `text` and `shape` are a `TextElement`.
+/// The input is buffered as a JSON value (which keeps the order of the keys,
+/// serde_json's `preserve_order`) to read `type` wherever it stands.
+impl<'de> Deserialize<'de> for SlideElement {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        use serde::de::Error;
+        let value = serde_json::Value::deserialize(deserializer)?;
+        let kind = value
+            .get("type")
+            .and_then(serde_json::Value::as_str)
+            .ok_or_else(|| D::Error::custom("an element has a string `type`"))?;
+        let element = match kind {
+            "text" | "shape" => Self::Text(Box::new(
+                TextElement::deserialize(value).map_err(D::Error::custom)?,
+            )),
+            "picture" => Self::Picture(Box::new(
+                PictureElement::deserialize(value).map_err(D::Error::custom)?,
+            )),
+            "group" => Self::Group(Box::new(
+                GroupElement::deserialize(value).map_err(D::Error::custom)?,
+            )),
+            "table" => Self::Table(Box::new(
+                TableElement::deserialize(value).map_err(D::Error::custom)?,
+            )),
+            "chart" => Self::Chart(Box::new(
+                ChartElement::deserialize(value).map_err(D::Error::custom)?,
+            )),
+            "passthrough" => Self::Passthrough(Box::new(
+                PassthroughElement::deserialize(value).map_err(D::Error::custom)?,
+            )),
+            other => return Err(D::Error::custom(format!("unknown element type `{other}`"))),
+        };
+        Ok(element)
+    }
+}
+
 /// `el.<field>` of any element: every variant has the fields of
 /// `SlideElementBase` (`id`, `type`, `anchor`, `transform`, `nvId`, the dirty
 /// flags), so `with_element!(el, e => &mut e.dirty)` reads or writes one of
@@ -1093,6 +1211,7 @@ impl SlideElement {
 // ── Slide / presentation ───────────────────────────────────────────────
 
 js_object! {
+    deserialize_strict;
     /// `Slide`: the literal of parseSlide, then what index.ts assigns after
     /// it (`decorations` when the slide opens, `structureDirty` and the
     /// background keys on edits). `layoutPath` and `masterPath` are keys of
@@ -1116,14 +1235,15 @@ js_object! {
 
 /// `SlideSize`
 #[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct SlideSize {
     pub cx: JsNum,
     pub cy: JsNum,
 }
 
 /// `SlideDeck`
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct SlideDeck {
     pub slides: Vec<Slide>,
     pub size: SlideSize,

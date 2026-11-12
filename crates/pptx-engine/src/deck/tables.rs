@@ -1160,8 +1160,10 @@ pub fn resize_table(slide: &mut Slide, element_id: &str, cx: f64, cy: f64) -> bo
     let widths = scale_to_sum(&col_widths, target_cx);
     let mut ci = 0usize;
     // Opening tags only — paired-form gridCols (extLst children) must scale too
+    // `ci` moves on only where the tag has a `w` the replacement consumes:
+    // a gridCol without one keeps the width for the next
     xml = js_regex!(r"<a:gridCol\b[^>]*>").replace_all(&xml, |m| match widths.get(ci) {
-        Some(w) => {
+        Some(w) if js_regex!(r#"\bw="-?\d+""#).test(m.as_str()) => {
             ci += 1;
             replace_first(
                 js_regex!(r#"\bw="-?\d+""#),
@@ -1170,7 +1172,7 @@ pub fn resize_table(slide: &mut Slide, element_id: &str, cx: f64, cy: f64) -> bo
                 &format!("w=\"{}\"", number_to_string(w.0)),
             )
         }
-        None => m.as_str().to_owned(),
+        _ => m.as_str().to_owned(),
     });
 
     let heights = scale_to_sum(&row_heights, target_cy);

@@ -3,12 +3,12 @@
 //! a `js_object!`, so they serialize in the order they were set.
 
 use jscompat::{JsNum, js_object};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::types::Fill;
 
 /// `ChartKind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ChartKind {
     Line,
@@ -24,45 +24,62 @@ pub enum ChartKind {
 
 /// One of `ChartSeries.dLblOverrides`, keys in the order of the literal
 /// that writes them (`{ idx, hidden }` or `{ idx, val, cat, ser, pct, ... }`).
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct DLblOverride {
     pub idx: JsNum,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hidden: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub val: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub cat: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ser: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub pct: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub size_pt: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub color: Option<String>,
     /// `null` = explicit `a:noFill`
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub fill: Option<Option<String>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub border: Option<Option<String>>,
 }
 
 /// One of `ChartSeries.pointLines`: `{ color, widthPt? }`.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct PointLine {
     pub color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub width_pt: Option<JsNum>,
 }
 
 js_object! {
+    deserialize_strict;
     /// `ChartSeries`. Per-point arrays are sparse in the TypeScript: a hole
     /// is `None`, which JSON writes as `null` as it writes a hole.
     #[derive(Debug, Clone, PartialEq)]
@@ -101,82 +118,134 @@ js_object! {
 
 /// `ChartAxisStyle`: `parseAxis` sets its keys in this order, `isDate`
 /// last by a spread.
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ChartAxisStyle {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub hidden: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub min: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub max: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub reversed: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub log_base: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub crosses: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tick_lbl_hidden: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tick_lbl_pos: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label_color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub label_size_pt: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label_bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub label_caps: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub label_spc_pt: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub tick_lbl_garbage: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub label_rot_deg: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub num_fmt: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line_color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line_hidden: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid_color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid_color_auto: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid_dash: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub grid_dash_val: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub grid_width_emu: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_grid_color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub minor_grid_width_emu: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_grid_auto: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub major_unit: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub minor_unit: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub tick_lbl_skip: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub tick_mark_skip: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title_overlay: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub title_size_pt: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title_bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title_italic: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub title_color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub is_date: Option<bool>,
 }
 
@@ -188,41 +257,62 @@ impl ChartAxisStyle {
 }
 
 /// `ChartDataTable`
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ChartDataTable {
     pub show_keys: bool,
     pub horz_border: bool,
     pub vert_border: bool,
     pub outline: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub size_pt: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub text_color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub line_color: Option<String>,
 }
 
 /// `ChartModel.legendLayout`, in the order of the spreads that write it.
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct LegendLayout {
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub x: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub x_mode: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub y: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub y_mode: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub w: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub h: Option<JsNum>,
 }
 
 /// `ChartModel.plotLayout`
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct PlotLayout {
     pub x: JsNum,
     pub y: JsNum,
@@ -231,15 +321,16 @@ pub struct PlotLayout {
 }
 
 /// `ChartModel.categoryGroups[]`
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(deny_unknown_fields)]
 pub struct CategoryGroup {
     pub label: String,
     pub start: JsNum,
 }
 
 /// `ChartModel.ofPie`
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct OfPie {
     pub split_pos: JsNum,
     pub second_pie_size: JsNum,
@@ -247,30 +338,34 @@ pub struct OfPie {
 }
 
 /// `ChartModel.plotBorder` and `ChartModel.border`
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ChartBorder {
     pub color: String,
     pub width_emu: JsNum,
 }
 
 /// `ChartModel.stock`
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct ChartStock {
     pub hi_low_lines: bool,
     pub up_down_bars: bool,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "crate::types::present"
+    )]
     pub gap_width_pct: Option<JsNum>,
 }
 
 /// `ChartModel.sunburst`. `pointColors` is sparse: see [`SparseColors`].
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Sunburst {
     pub levels: Vec<Vec<String>>,
     pub sizes: Vec<Option<JsNum>>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub point_colors: Option<SparseColors>,
 }
 
@@ -325,9 +420,25 @@ impl Serialize for SparseColors {
     }
 }
 
+impl<'de> Deserialize<'de> for SparseColors {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        // A hole of the array is `null`: read back it is no entry.
+        let items = Vec::<Option<String>>::deserialize(deserializer)?;
+        let mut colors = Self::default();
+        for (index, item) in items.into_iter().enumerate() {
+            if let Some(color) = item {
+                let index = u32::try_from(index)
+                    .map_err(|_| serde::de::Error::custom("array index out of range"))?;
+                colors.set(index, color);
+            }
+        }
+        Ok(colors)
+    }
+}
+
 /// `ChartModel.userLines[]`
-#[derive(Debug, Clone, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct UserLine {
     pub x1: JsNum,
     pub y1: JsNum,
@@ -338,8 +449,8 @@ pub struct UserLine {
 }
 
 /// `ChartModel.bar3D`
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Bar3D {
     pub rot_x: JsNum,
     pub rot_y: JsNum,
@@ -350,8 +461,8 @@ pub struct Bar3D {
 }
 
 /// `ChartModel.area3D`
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 pub struct Area3D {
     pub rot_x: JsNum,
     pub rot_y: JsNum,
@@ -360,6 +471,7 @@ pub struct Area3D {
 }
 
 js_object! {
+    deserialize_strict;
     /// `ChartModel`. `grouping`, `legendPos` and `radarStyle` hold the
     /// document's text as the TypeScript casts it, unchecked.
     #[derive(Debug, Clone, PartialEq)]

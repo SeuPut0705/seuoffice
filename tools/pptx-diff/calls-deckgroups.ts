@@ -452,8 +452,12 @@ export const DECKGROUPS: CallSpec[] = [
     (opened, at, a) => {
       const slide = opened.deck.slides[a.slide as number]!
       const grp = groupOf(opened, a)
-      const child = grp?.children[a.child as number] as TextElement
-      return patchGroupChildText(slide, groupId(at, a), child)
+      const child = grp?.children[a.child as number]
+      // the Rust takes a TextElement: another child is refused before the call
+      if (child?.type !== 'text' && child?.type !== 'shape') {
+        throw new Error('the child is not a text element')
+      }
+      return patchGroupChildText(slide, groupId(at, a), child as TextElement)
     },
     [
       input({ slide: 0, element: 4, child: 0 }),
