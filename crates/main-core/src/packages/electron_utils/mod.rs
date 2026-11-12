@@ -1,0 +1,46 @@
+//! `packages/electron-utils/src`: the modules that hold no Electron object
+//! (batches 1 and 2 of decision 0029), one file per TypeScript file.
+
+pub mod abort_on_destroyed;
+pub mod atomic_write;
+pub mod author_name;
+pub mod default_save_dir;
+pub mod dialog_memory;
+pub mod doc_attach_channels;
+pub mod fetch_image_bytes;
+pub mod font_store;
+pub mod generate_handoff;
+pub mod generated_images;
+pub mod github_menu;
+pub mod handoff_editors;
+pub mod headless_export;
+pub mod headless_mode;
+pub mod hwp_default_format;
+pub mod legacy_import_prefs;
+pub mod main_proxy;
+pub mod mcp_tools_channels;
+pub mod navigation_guard;
+pub mod numbered_export_paths;
+pub mod outbound_channels;
+pub mod permission_guard;
+pub mod print_cups;
+pub mod print_html_pdf;
+pub mod print_job;
+pub mod print_window;
+pub mod printer_options;
+pub mod project_folder_bridge;
+pub mod recovery_contract;
+pub mod recovery_labels;
+pub mod recovery_prompt;
+pub mod recovery_store;
+pub mod remote_image;
+pub mod remote_table;
+pub mod renderer_scheme;
+pub mod safe_external_url;
+pub mod safe_remote_url;
+pub mod save_conflict_labels;
+pub mod split_pane_bridge;
+pub mod template_font_response;
+pub mod template_fonts_dir;
+pub mod unsaved_files;
+pub mod user_skills_channels;

@@ -10,7 +10,7 @@ use serde::Serialize;
 
 use super::crash_log::{CRASH_LOG_MAX_BYTES, CrashEntry, append_crash_log};
 use crate::node_fs::NodeError;
-use crate::packages::electron_utils::write_json_atomic;
+use crate::packages::electron_utils::atomic_write::write_json_atomic;
 
 pub const HEARTBEAT_FILE: &str = "crash-heartbeat.json";
 pub const HEARTBEAT_MS: f64 = 30_000.0;

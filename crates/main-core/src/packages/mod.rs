@@ -3,4 +3,5 @@
 
 pub mod ai_provider;
 pub mod electron_utils;
+pub mod i18n;
 pub mod project_store;

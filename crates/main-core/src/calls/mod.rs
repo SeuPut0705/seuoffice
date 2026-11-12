@@ -10,7 +10,12 @@
 //! - followed by `"logs":[[...],...]` when the function logged, one array of
 //!   arguments per call of its logger.
 
+mod b2_misc;
+mod b2_print;
+mod b2_recovery;
+mod b2_remote;
 mod files;
+mod node_fs;
 mod node_path;
 mod settings;
 mod update;
@@ -58,7 +63,17 @@ pub struct Context {
 /// One group's table: `None` when the group has no function of that name.
 type Group = fn(&str, &[Value], &mut Context) -> Option<Answer>;
 
-const GROUPS: &[Group] = &[update::call, settings::call, files::call, node_path::call];
+const GROUPS: &[Group] = &[
+    update::call,
+    settings::call,
+    files::call,
+    node_path::call,
+    node_fs::call,
+    b2_misc::call,
+    b2_recovery::call,
+    b2_remote::call,
+    b2_print::call,
+];
 
 /// Runs `name` with `args`; `None` when no group has it.
 pub fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {

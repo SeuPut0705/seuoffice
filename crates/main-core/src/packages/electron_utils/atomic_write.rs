@@ -1,4 +1,4 @@
-//! `packages/electron-utils`: `src/atomic-write.ts`.
+//! `packages/electron-utils/src/atomic-write.ts`.
 //!
 //! The TypeScript's async functions are one synchronous function each here;
 //! the order of the calls on the file system is the same. The retry sleeps

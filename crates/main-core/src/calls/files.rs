@@ -5,7 +5,7 @@
 
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::node_fs::NodeError;
-use crate::packages::electron_utils::{
+use crate::packages::electron_utils::atomic_write::{
     atomic_copy_file, atomic_move_file, atomic_write_file, atomic_write_via, is_save_temp_name,
     temp_path_beside, write_json_atomic,
 };
