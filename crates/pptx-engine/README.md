@@ -490,3 +490,103 @@ two allocate fallibly now and return `RangeError: Array buffer allocation
 failed`; the third refuses past (2^29 - 24) / 5 entries with `RangeError:
 Invalid string length`, where V8's own serialisation fails, so both sides
 refuse. No cap that changes an answer was added.
+
+## Unit 4 local proof
+
+The slide reader: `parse.ts` and `master-edit.ts` (4,524 lines) with the
+rest of `types.ts` (786), ported as `src/parse/` (one module per section of
+`parse.ts`, `diagram/` holding the SmartArt families) and `src/master_edit.rs`:
+7,889 lines of Rust. The group `parse` compares the seven exports, and
+`parseSlide` compares whole slide models, so every internal function is
+observed through the model it builds. Both sides draw ids from one module
+counter; the spec renumbers them from a probe slide per call
+(`parse/context.rs`, `Uids`). The first comparison is kept unchanged in
+`evidence/u4-parse-first.*`.
+
+| Checks         | First  | Different | Equal   |
+| -------------- | ------ | --------- | ------- |
+| Corpus         | 219    | 0         |         |
+| Built inputs   | 1,867  | 34        |         |
+| Mutated texts  | 2,100  | 3         |         |
+| Unit           | 4,186  | 37        | 99.116% |
+
+None of the 37 was an error of the port. Each is a TypeScript defect written
+right in Rust, one ledger class each (two classes of unit 3 gained cases):
+
+| Class                          | First | What the TypeScript does                                                         |
+| ------------------------------ | ----- | -------------------------------------------------------------------------------- |
+| `inherited-key-theme-clrmap`   | 8     | bg1 mapped to an inherited name: `toUpperCase` of a function throws, slide lost |
+| `inherited-key-table-style-id` | 3     | `tableStyleId` `constructor` reaches `wholeTbl` of undefined, slide lost        |
+| `grpsppr-string-in`            | 4     | `'a:grpFill' in ''` on `<p:grpSp/>`'s empty `grpSpPr` throws, slide lost         |
+| `dgm-style-idx-negative`       | 4     | `presStyleIdx="-1"` reads slot -1, then `.spPr` of undefined throws              |
+| `dgm-style-idx-infinite`       | 4     | a 400-digit `presStyleIdx` is Infinity, `% n` is NaN, the same throw             |
+| `inherited-key-parse-678`      | 2     | `a:ln cap` of an inherited name: a function or `{}` as the cap                   |
+| `inherited-key-parse-686`      | 2     | `a:ln cmpd` the same                                                             |
+| `inherited-key-parse-713`      | 2     | arrow `w`/`len` the same, instead of `med`                                      |
+| `avlst-proto`                  | 2     | a guide named `__proto__` is lost to the prototype setter                        |
+| `inherited-key-parse-3319`     | 2     | cell `anchor` of an inherited name                                               |
+| `inherited-key-parse-3762`     | 2     | body `anchor` of an inherited name                                               |
+| `inherited-key-parse-3985`     | 2     | paragraph `algn` of an inherited name                                            |
+
+The mutated texts of a whole run differ from those of a run of one group
+(the seeded stream is shared), so a full run found one more mutation of
+`dgm-style-idx-negative`; it is in the ledger too.
+
+Kept as the TypeScript reads them, not ledgered: `atob` of our own `gxRaw`
+attribute throws on text that is not base64 and the slide is lost
+(`jscompat::atob` follows the forgiving-base64 rules of Node);
+`diagramTextColors` finds `styleLbl` and `pt` elements by regular expressions
+that miss single quotes and other attribute orders; `cSldName` does not
+decode entities. Replacement strings: `shape.rs` rewrites the math blocks
+through a function, the others are literals or the group reference `$1` of a
+constant; none holds document text.
+
+The tracked decks have no SmartArt, no connector, no `p:bg` on a slide or
+layout, no `p:hf`, no deep groups and no media: those branches rest on built
+inputs (about 600) and the mutations.
+
+### Unit 4 stack, memory and faults
+
+A group nested 64 deep, the TypeScript's bound, overflowed the 1 MiB wasm
+stack of a debug build between depth 32 and 48 (about 25 KiB a level), and
+a release build linked with a 256 KiB stack the same. Each recursive frame
+held the temporaries of every element kind `parseGroupChild` builds; the
+arms that do not recurse are `parse_leaf_child` now (`#[inline(never)]`),
+and depth 64 passes on release at 256 KiB and on debug at 1 MiB.
+
+A read-only audit found no reachable panic. Fixed: every element built from
+one fragment copied the fragment's whole text (`ByteAnchor.original_xml` is
+an `Arc<str>` now, as the TypeScript shares one string), the SmartArt split
+cloned a run with its whole text per hard return, and one `lProcess` test
+was recomputed per root. Left, and the same in the TypeScript: lazy patterns
+that rescan to the end from every start with no terminator (`<p:bg`, `<a:br`,
+`<mc:AlternateContent>`), quadratic in such starts.
+
+110 fault probes: 96 from the porters' lists, at least one per function, and
+14 by a reviewer who had not seen them. Seven ran locally and all were caught before the run was
+moved to the runner (a debug rebuild per probe made the local run about four
+minutes a probe).
+
+## The regular expression bound in this crate
+
+Stream D bounded `regress` (`TryJsRegex`, `BACKTRACK_LIMIT`); `cargo test -p
+jscompat --test sites` names every site that must use it. In this crate:
+
+- A loop that keeps backtrack entries per turn is a `TryJsRegex`, and a
+  search that passes the bound is an error, never a default: the tag pattern
+  `<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` of `custgeom.rs` (`parse_cust_geom`
+  returns `Result`), `scan.rs` (`ScanError::RegexLimit`), the group slicing of
+  `parse/shape.rs` and `theme.rs`, and the timing collapse of
+  `animation/prune.rs` (`prune_timing_for_spids` returns `Result`).
+  `parse_picture` returns `Result` for the custom geometry it reads.
+- A search restarted once per match with a regex that reads the rest of the
+  text first (`[^>]` without `u` does) is gone: the balanced scans of
+  `<p:cTn>`, `<p:par>`, `<p:childTnLst>`, `<p:seq>` and `<p:bldLst>` are written
+  out (`animation::incremental::tag_matches`), and the effects of the main
+  sequence come from one search (`animation::read::EffectCtns`) that starts
+  again only where a match runs past the TypeScript's `lastIndex`. The rows
+  and cells of `table_edit.rs` and the targets of `prune.rs` are searched with
+  literals the test reads (they read nothing ahead). `scanSlide` makes one
+  pass per part and is listed in the test.
+- Patterns built from `format!` are written at the call so the test reads
+  them (`theme.rs` clrMap names, `identity.rs`, `redaction_xml.rs`).
