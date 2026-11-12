@@ -71,9 +71,26 @@ are the ones that bit, each with an input where the two disagree:
 | `decodeURIComponent`            | `decode_uri_component`                      | a percent-decoding crate | malformed escapes throw                                           |
 | `JSON.stringify`                | `serde` with `skip_serializing_if`, `JsNum` |                          | NaN is `null`, -0 is `0`, `undefined` is no key                   |
 
-`regress` walks UTF-8 characters where JavaScript without the `u` flag walks
-UTF-16 code units. It shows only in a pattern that counts characters outside
-the BMP (`.{2}`); no ported pattern does.
+JavaScript without the `u` flag walks UTF-16 code units: a character outside
+the BMP is two of them to `.`, a class, a count (`^\S{1,15}$`), `\B` and a
+lookbehind. `JsRegex` searches a text that holds such a character as its
+units, so a pattern is still copied as it is. Three things follow:
+
+- A pattern without `u` that names a character outside the BMP does not build
+  (`JsRegex::new` returns an error): JavaScript reads two units there.
+- Where JavaScript matches half a pair, `replace_all` writes U+FFFD for a half
+  left alone, as JavaScript does when it writes the string as UTF-8; a match,
+  a capture or a piece of `split` that would begin or end inside a pair ends
+  after the character instead.
+- A call costs one pass over the bytes from where the search starts, unless
+  the pattern cannot tell a pair from a character (no `.`, negated class,
+  `\S`, `\W`, `\D`, `\B` or lookbehind, and every alternative begins with a
+  character it must consume). Do not call `find_from(text, at).next()` once
+  per match of a large text with any other pattern: use `find_iter`.
+
+`jscompat/tests/astral.rs` holds Node 22's answers; `tests/sites.rs` reads
+every `js_regex!` and `JsRegex::new` of the workspace and fails on a pattern
+`JsRegex::new` refuses, and on a call whose pattern it cannot read.
 
 Under `i` without `u` JavaScript never matches a character outside ASCII as an
 ASCII letter; `regress` does for U+0131 (`i`), U+017F (`s`) and U+212A (`k` in
