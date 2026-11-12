@@ -4,9 +4,9 @@
 //! what it produced, with the text of what it threw, as the TypeScript
 //! drivers in tools/pptx-diff/calls-mtx.ts do.
 
-use pptx_engine::mtx::ctf::{ctf_to_sfnt, sanitize_cmap};
-use pptx_engine::mtx::lzcomp::{AHuff, BitReader, BitWriter, MtxError, unpack_lz, unpack_mtx};
-use pptx_engine::mtx::mtx_to_sfnt;
+use mtx::ctf::{ctf_to_sfnt, sanitize_cmap};
+use mtx::lzcomp::{AHuff, BitReader, BitWriter, MtxError, unpack_lz, unpack_mtx};
+use mtx::mtx_to_sfnt;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 

@@ -323,8 +323,10 @@ table); the decoder makes ranges 8 and 267 to 323 only. That PowerPoint
 repairs or refuses the slides the listed defects produce was not tried.
 
 The MTX decoder is a derived work of libeot (MPL-2.0), as the TypeScript it
-is ported from; `src/mtx/LICENSE` is the licence text and each of the three
-files says so. The workspace licence field does not.
+is ported from. It is the crate `crates/mtx`, alone under `license =
+"MPL-2.0"` so that the file-level boundary shows; its `LICENSE` and `README.md`
+carry the attribution of `vendor/mtx`, and `crates/deny.toml` allows the
+licence. The rest of the workspace is Apache-2.0 and links to it.
 
 ### Input that must not abort the engine
 

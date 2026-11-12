@@ -5,6 +5,7 @@ members = [
   "ooxml-pkg",
   "docx-engine",
   "pptx-engine",
+  "mtx",
   "omml",
   "office-wasm",
   "spike-one-run-save",
@@ -23,6 +24,7 @@ ooxml-xml = { path = "ooxml-xml" }
 ooxml-pkg = { path = "ooxml-pkg" }
 docx-engine = { path = "docx-engine" }
 pptx-engine = { path = "pptx-engine" }
+mtx = { path = "mtx" }
 omml = { path = "omml" }
 # the decoders of the Encoding Standard, which TextDecoder follows
 encoding_rs = "0.8"

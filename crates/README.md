@@ -17,6 +17,7 @@ A session that picks this work up starts at
 | `ooxml-pkg`          | A docx as `loadDocxZip` opens it: the zip gate, the JSZip reader, Strict normalization, `Package`; the zip as JSZip writes it (`write`)                                                                                                                                | `zip-load.ts`, `packages/zip-gate`, JSZip 3.10.1, `ooxml-normalize.ts`                                                                                                                                                                                                                                                                                                                                                                        |
 | `docx-engine`        | Body scan, property readers, relationships, content types, theme, font table, styles, numbering, comments, protection and its hash, document properties, sources, sections, watermarks, notes, fields, EQ fields, SDTs, list markers, symbol fonts, the blank document | `scan.ts`, `parse-props.ts`, `parse-xml-text.ts`, `parse-package.ts`, `theme.ts`, `font-table.ts`, `parse-styles.ts`, parts of `parse.ts`; the read side of `doc-properties.ts`, `zotero-doc-props.ts`, `sources.ts`, `protection.ts`, `section.ts`, `watermark.ts`, `notes.ts`; `parse-fields.ts` without what needs `resolve-props.ts`, `eq-field.ts`, `parse-sdt.ts`, `field-balance.ts`, `list-markers.ts`, `symbol-fonts.ts`, `blank.ts` |
 | `pptx-engine`        | Slide scan, XML helpers, slide ids, named actions, table-grid accounting, CRC-32 and the package reader. [Survey, unit order and evidence](pptx-engine/README.md).                                                                                                     | `packages/pptx-engine/src/{scan,xml-utils,slide-ids,named-action,table-grid,crc32,zip}.ts`                                                                                                                                                                                                                                                                                                                                                    |
+| `mtx`                | The MicroType Express font decoder of embedded fonts, a derived work of libeot and the one crate under MPL-2.0.                                                                                                                                                        | `packages/pptx-engine/src/vendor/mtx/{index,lzcomp,ctf}.ts`                                                                                                                                                                                                                                                                                                                                                                                   |
 | `omml`               | Office Math: OMML to LaTeX and to MathML, LaTeX to OMML. Depends on no engine                                                                                                                                                                                          | `math.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `office-wasm`        | The one entry point JavaScript calls, built for `wasm32-wasip1`                                                                                                                                                                                                        | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `spike-one-run-save` | An experiment, not part of the engine: see its README                                                                                                                                                                                                                  | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
@@ -226,6 +227,12 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   charsets of `alt_chunk.rs`. It has to appear in the third-party notices
   when the crates are wired into the product. `crates/deny.toml` holds the
   licences the workspace may depend on, and the runner checks it.
+- `crates/mtx` (MPL-2.0) is a derived work of libeot (Brennan T. Vincent),
+  after Monotype's MTX reference code, as `packages/pptx-engine/src/vendor/mtx`
+  is. The repository's notices do not name libeot today, for the TypeScript
+  either: the third-party notices of a release have to name it, with the MPL's
+  pointer to the source of the covered files, before or when the crate is
+  wired into the product.
 - `JsRegex::new` refuses a pattern under `i` without `u` that names a cased
   character outside ASCII. One site puts a caller's text into such a
   pattern: `xml_text::on_off_tag_in(xml, name)`, whose callers pass the
@@ -315,16 +322,16 @@ every unit boundary (never forced, never to main).
 **Unit 2: the resolver and the leaves without model types.** About 3,200
 TypeScript lines in 6,600 of Rust, eight groups of (f):
 
-| group | TypeScript | functions | first comparison |
-|---|---|---|---|
-| `resolve` | `resolve-props.ts`, whole | 13 | 24,840 checks, 0 differences |
-| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts` | 1 | 2,122, 0 |
-| `drawing` | `parse-drawing-geometry.ts` without `lineBoxOf` | 11 | 6,987, 0 |
-| `vml` | `parse-vml.ts` without `vmlWordArtBox` | 9 | 3,414, 0 |
-| `revision` | `revision-xml.ts`, whole | 6 | 6,348, 0 |
-| `altchunk` | `alt-chunk.ts` without the converter | 5 | 5,458, 12 |
-| `checkbox` | `checkbox-control.ts`, whole | 5 | 2,907, 0 |
-| `images` | the predicates of `tiff.ts` and `metafile.ts` | 4 | 1,505, 0 |
+| group          | TypeScript                                      | functions | first comparison             |
+| -------------- | ----------------------------------------------- | --------- | ---------------------------- |
+| `resolve`      | `resolve-props.ts`, whole                       | 13        | 24,840 checks, 0 differences |
+| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts`           | 1         | 2,122, 0                     |
+| `drawing`      | `parse-drawing-geometry.ts` without `lineBoxOf` | 11        | 6,987, 0                     |
+| `vml`          | `parse-vml.ts` without `vmlWordArtBox`          | 9         | 3,414, 0                     |
+| `revision`     | `revision-xml.ts`, whole                        | 6         | 6,348, 0                     |
+| `altchunk`     | `alt-chunk.ts` without the converter            | 5         | 5,458, 12                    |
+| `checkbox`     | `checkbox-control.ts`, whole                    | 5         | 2,907, 0                     |
+| `images`       | the predicates of `tiff.ts` and `metafile.ts`   | 4         | 1,505, 0                     |
 
 The first comparisons are runner artifacts (runs 43149479120 for `resolve`,
 43151626477 for the rest), taken before anything was fixed; no porter
@@ -376,7 +383,6 @@ head: read `headSha` of a run before using its result.
 character once in `regress` and twice in JavaScript without `/u`. That last
 one is a property of every `js_regex!` with a counted quantifier or a `.`
 over text outside the BMP and belongs with the case folding in `regex.rs`.
-
 
 **Before unit 2**
 
@@ -508,8 +514,7 @@ From the owner, for every unit:
 - Locally only `cargo check -p <crate>` and `cargo test -p <crate>` for the
   crate being ported, through `tools/docx-diff/heavy.sh <command>`, which
   hands the command to the machine's queue (`/tmp/heavy.sh`): one heavy
-  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit
-  75) when three already wait. No clippy, no gate, no `calls --group` and no
+  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit 75) when three already wait. No clippy, no gate, no `calls --group` and no
   wasm build here. Never remove `/tmp/heavy.lock` by hand and never kill by
   name. `tsc`, eslint, prettier and a single `tsx` script need no lock, on
   Node 22. At most two subagents at a time on this machine, each by the

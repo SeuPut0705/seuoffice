@@ -12,6 +12,7 @@ crate-type = ["cdylib"]
 [dependencies]
 docx-engine.workspace = true
 pptx-engine.workspace = true
+mtx.workspace = true
 jscompat.workspace = true
 ooxml-pkg.workspace = true
 ooxml-xml.workspace = true

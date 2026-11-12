@@ -4,7 +4,7 @@
 //!
 //! A derived work of libeot by Brennan T. Vincent, licensed under the Mozilla
 //! Public License 2.0 like the TypeScript it is ported from: see
-//! `LICENSE` in this directory, and `README.md` beside the TypeScript.
+//! `LICENSE` and `README.md` of this crate.
 
 pub mod ctf;
 pub mod lzcomp;

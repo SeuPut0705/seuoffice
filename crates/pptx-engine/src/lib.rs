@@ -10,7 +10,6 @@ pub mod format_brush;
 pub mod glb_bounds;
 pub mod identity;
 pub mod model3d;
-pub mod mtx;
 pub mod named_action;
 pub mod preset_shape_types;
 pub mod redaction_xml;

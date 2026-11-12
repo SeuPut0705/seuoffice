@@ -2,7 +2,7 @@
 //! itself a port of libeot's `src/ctf` (`parseCTF.c`, `parseTTF.c`,
 //! `SFNTContainer.c`) and `triplet_encodings.c` by Brennan T. Vincent. libeot is
 //! licensed under the Mozilla Public License 2.0, and so is this file, derived
-//! from it: see `LICENSE` in this directory.
+//! from it: see `LICENSE` of this crate.
 //! Spec: http://www.w3.org/Submission/MTX/
 
 use std::borrow::Cow;

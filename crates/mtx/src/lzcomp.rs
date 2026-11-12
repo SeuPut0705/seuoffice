@@ -3,7 +3,7 @@
 //! `bitio.c`, `lzcomp.c`, `liblzcomp.c`) by Brennan T. Vincent, after
 //! Monotype's MTX reference code. libeot is licensed under the Mozilla Public
 //! License 2.0, and so is this file, derived from it: see
-//! `LICENSE` in this directory. Decompression side only;
+//! `LICENSE` of this crate. Decompression side only;
 //! the compressor and the size-limited copy window are not ported.
 
 use std::borrow::Cow;
