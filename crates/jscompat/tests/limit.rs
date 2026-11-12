@@ -52,7 +52,10 @@ fn a_search_that_passes_the_bound_refuses_within_it() {
     for length in [1_000_000, 2_000_000, 20_000_000] {
         let text = format!("<{}", "a".repeat(length));
         let (answer, peak) = peak_of(&tag, &text);
-        println!("{length} characters: {answer:?}, {} MB at most", peak / 1_000_000);
+        println!(
+            "{length} characters: {answer:?}, {} MB at most",
+            peak / 1_000_000
+        );
         assert!(peak <= room(&text), "{peak} bytes for {length} characters");
         answers.push(answer);
     }
