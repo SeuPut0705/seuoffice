@@ -21,7 +21,6 @@ import { failed, type EngineFailure } from '../docx-diff/engine'
 import { Comparison, engine } from '../docx-diff/harness'
 import { keyOrderDifferences, parseKeepingOrder } from '../docx-diff/key-order'
 import { NOW } from './clock'
-import { lineRuleOutsideEnum, wireClasses } from './listed'
 import { compareZips, copiedEntries } from './zip-compare'
 import {
   isFailure,
@@ -284,21 +283,6 @@ export async function compareExport(
   rendered?: RenderedList,
 ): Promise<Uint8Array | null> {
   const typescript = await tsDocxToOdt(docx, rendered)
-  const listed = lineRuleOutsideEnum(docx)
-  /** A difference of an input in a ledger class is counted under it, not as a difference. */
-  const record = (difference: string | null): void => {
-    if (listed !== undefined) {
-      const count = wireClasses.get(listed) ?? { inputs: 0, differ: 0 }
-      count.inputs += 1
-      if (difference !== null) count.differ += 1
-      wireClasses.set(listed, count)
-      if (difference !== null) {
-        comparison.listed += 1
-        return
-      }
-    }
-    comparison.record(difference === null ? null : `${where}: ${difference}`)
-  }
   const blobs = [docx, ...(rendered ?? []).map(([, object]) => object.png)]
   const rust = rustCall<{ report: unknown }>(
     {
@@ -318,7 +302,7 @@ export async function compareExport(
       difference = `TypeScript refuses (${typescript.error.code}: ${typescript.error.message.slice(0, 160)}), Rust converts`
     else
       difference = `Rust refuses (${(rust as WireError).error.code}: ${(rust as WireError).error.message.slice(0, 160)}), TypeScript converts`
-    record(difference)
+    comparison.record(difference === null ? null : `${where}: ${difference}`)
     return null
   }
   const rustOdt = rust.blobs[0]
@@ -328,6 +312,6 @@ export async function compareExport(
     difference =
       compareZips(typescript.value.odt, rustOdt) ??
       valueDifference('report', typescript.value.report, rust.header.report)
-  record(difference)
+  comparison.record(difference === null ? null : `${where}: ${difference}`)
   return typescript.value.odt
 }

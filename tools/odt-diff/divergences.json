@@ -1,11 +1,5 @@
 [
   {
-    "id": "docx-line-rule-outside-enum",
-    "reason": "A docx whose w:spacing carries a w:lineRule outside auto, exact and atLeast: the TypeScript docx engine keeps the text and converts the document; the Rust docx engine's model refuses the value (invalid value: string aut, expected a string of LineSpacing.rule) and with it the whole docxToOdt. A defect of the Rust docx engine (crates/docx-engine model wire), reported to the docx stream; the odt engine is not involved. Two mutated docx of comparison (c+) show it.",
-    "wire": true,
-    "cases": []
-  },
-  {
     "id": "lone-surrogate-from-numeric-reference",
     "reason": "A numeric character reference to a surrogate code point that does not pair with the next reference: the TypeScript writes a lone surrogate into the text, which is not a valid string and loses the character; a Rust string cannot hold one and writes U+FFFD. Adjacent high and low references decode to one character on both sides. TypeScript defect (TS-DEFECTS.md row 4).",
     "cases": [
