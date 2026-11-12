@@ -25,12 +25,7 @@ import {
   sectionSettingsFromXml,
   xmlFlagOn,
 } from './reference/section'
-import type {
-  HfImage,
-  ParsedDoc,
-  SectionInfo,
-  SectionSettings,
-} from './reference/types'
+import type { HfImage, ParsedDoc } from './reference/types'
 import {
   isPictureWatermark,
   isPictureWatermarkShape,

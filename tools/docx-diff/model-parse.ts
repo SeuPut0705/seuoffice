@@ -11,7 +11,6 @@ import { Comparison, describeTextDifference, engine } from './harness'
 import { keyOrderDifferences, parseKeepingOrder } from './key-order'
 import { modelJson } from './model-wire'
 
-const encode = new TextEncoder()
 const decode = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 
 /** Documents the comparison must reach: the corpus is 185 files, some of them encrypted. */
@@ -29,7 +28,8 @@ interface RustParse {
 /** The Rust parser's model of a docx, as the JSON it wrote. */
 export function rustParse(bytes: Uint8Array): RustParse {
   const reply = engine.call<{ model: boolean }>({ cmd: 'parseDocx' }, [bytes])
-  if (failed(reply.header)) return { error: `${reply.header.error.code}: ${reply.header.error.message}` }
+  if (failed(reply.header))
+    return { error: `${reply.header.error.code}: ${reply.header.error.message}` }
   if (!reply.header.model || reply.blobs.length !== 1) throw new Error('invalid parseDocx reply')
   return { json: decode.decode(reply.blobs[0]!) }
 }
@@ -44,7 +44,12 @@ function population(type: string): Comparison {
 }
 
 /** One value of each side: equal as text, equal as JSON with another key order, or different. */
-function compareJson(comparison: Comparison, where: string, typescript: string, rust: string): void {
+function compareJson(
+  comparison: Comparison,
+  where: string,
+  typescript: string,
+  rust: string,
+): void {
   if (typescript === rust) {
     comparison.record(null)
     return
@@ -82,7 +87,9 @@ export function parseOnDocument(where: string, bytes: Uint8Array, doc: unknown):
     const theirs = rsBlocks[index]
     const comparison = population(own?.type ?? theirs?.type ?? 'missing')
     if (own === undefined || theirs === undefined) {
-      comparison.record(`${where} block ${index}: ${own === undefined ? 'only Rust has' : 'only TypeScript has'} it`)
+      comparison.record(
+        `${where} block ${index}: ${own === undefined ? 'only Rust has' : 'only TypeScript has'} it`,
+      )
       continue
     }
     compareJson(comparison, `${where} block ${index}`, JSON.stringify(own), JSON.stringify(theirs))
@@ -103,5 +110,7 @@ export function reportParse(): void {
   })
   const report = { documents: line(documents), blocks: [...blocks.values()].map(line), refusals }
   mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, JSON.stringify(report, null, 2) + '\n', { flag: process.argv.includes('--first') ? 'wx' : 'w' })
+  writeFileSync(path, JSON.stringify(report, null, 2) + '\n', {
+    flag: process.argv.includes('--first') ? 'wx' : 'w',
+  })
 }

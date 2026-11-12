@@ -63,7 +63,10 @@ function runOf(raw: string): Run {
   set('strike', on(top, 'w:strike') || undefined)
   const caps = on(top, 'w:caps')
   const small = on(top, 'w:smallCaps')
-  set('caps', caps ? 'all' : small ? 'small' : caps === false || small === false ? 'none' : undefined)
+  set(
+    'caps',
+    caps ? 'all' : small ? 'small' : caps === false || small === false ? 'none' : undefined,
+  )
   set('dstrike', on(top, 'w:dstrike'))
   set('vanishOwn', on(top, 'w:vanish'))
   const color = attr(top, 'w:color', 'w:val')
@@ -92,8 +95,6 @@ function runOf(raw: string): Run {
   return run
 }
 
-const strip = (run: Run): Run => JSON.parse(JSON.stringify(run)) as Run
-
 /** The runs a raw rPr is merged with: as read (a no-op), and edited one field at a time. */
 function runsOf(raw: string): Run[] {
   const base = JSON.parse(JSON.stringify(runOf(raw))) as Run
@@ -121,8 +122,12 @@ const RAWS = [
   R('<w:rStyle w:val="Strong"/>'),
   R('<w:rStyle w:val="Hyperlink"/>'),
   R('<w:rFonts w:ascii="Arial" w:hAnsi="Arial"/>'),
-  R('<w:rFonts w:ascii="Arial" w:eastAsia="SimSun" w:hAnsi="Arial" w:cs="Arial" w:hint="eastAsia"/>'),
-  R('<w:rFonts w:asciiTheme="minorHAnsi" w:eastAsiaTheme="minorEastAsia" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi"/>'),
+  R(
+    '<w:rFonts w:ascii="Arial" w:eastAsia="SimSun" w:hAnsi="Arial" w:cs="Arial" w:hint="eastAsia"/>',
+  ),
+  R(
+    '<w:rFonts w:asciiTheme="minorHAnsi" w:eastAsiaTheme="minorEastAsia" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi"/>',
+  ),
   R('<w:rFonts w:cs="Times New Roman"/><w:rtl/><w:bCs/><w:iCs/><w:szCs w:val="28"/>'),
   R('<w:b/><w:bCs/><w:i w:val="0"/><w:iCs/>'),
   R('<w:b w:val="false"/><w:i w:val="OFF"/><w:strike w:val="1"/>'),
@@ -143,18 +148,34 @@ const RAWS = [
   R('<w:shd w:val="pct10" w:color="auto" w:fill="D9D9D9" w:themeFill="background1"/>'),
   R('<w:vertAlign w:val="superscript"/>'),
   R('<w:vertAlign w:val="baseline"/>'),
-  R('<w:bdr w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:em w:val="dot"/><w:lang w:val="en-US" w:eastAsia="zh-CN"/>'),
-  R('<w14:textOutline w14:w="9525"><w14:solidFill><w14:srgbClr w14:val="000000"/></w14:solidFill></w14:textOutline><w:b/>'),
+  R(
+    '<w:bdr w:val="single" w:sz="4" w:space="0" w:color="auto"/><w:em w:val="dot"/><w:lang w:val="en-US" w:eastAsia="zh-CN"/>',
+  ),
+  R(
+    '<w14:textOutline w14:w="9525"><w14:solidFill><w14:srgbClr w14:val="000000"/></w14:solidFill></w14:textOutline><w:b/>',
+  ),
   R('<w:noProof/><w:x-unknown w:val="1"/><w:b/><w:oMath/>'),
   R('<w:eastAsianLayout w:id="1" w:combine="1"/><w:specVanish/><w:sz w:val="20"/>'),
-  R('<w:b/><w:rPrChange w:id="5" w:author="A" w:date="2024-01-01T00:00:00Z"><w:rPr><w:i/></w:rPr></w:rPrChange>'),
+  R(
+    '<w:b/><w:rPrChange w:id="5" w:author="A" w:date="2024-01-01T00:00:00Z"><w:rPr><w:i/></w:rPr></w:rPrChange>',
+  ),
   R('<w:sz w:val="20"/><w:b/><w:rFonts w:ascii="Z"/>'),
   R('<w:b/>', `<w:rPr ${W}>`),
   R('<w:rStyle w:val="a&amp;b"/><w:color w:val="1&quot;2"/>'),
 ]
 
 const OLD_RUNS: Run[] = [
-  { text: 'x', bold: true, rPrChange: { author: 'Ann', id: '7', date: '2024-02-02T00:00:00Z', dateUtc: '2024-02-02T00:00:00Z', old: {} } } as Run,
+  {
+    text: 'x',
+    bold: true,
+    rPrChange: {
+      author: 'Ann',
+      id: '7',
+      date: '2024-02-02T00:00:00Z',
+      dateUtc: '2024-02-02T00:00:00Z',
+      old: {},
+    },
+  } as Run,
   {
     text: 'x',
     italic: true,
@@ -184,7 +205,15 @@ const OLD_RUNS: Run[] = [
 
 const MODEL_RUNS: Run[] = [
   { text: 'x' } as Run,
-  { text: 'x', styleId: 'Emphasis', bold: true, italic: true, strike: true, underline: true, rtl: true } as Run,
+  {
+    text: 'x',
+    styleId: 'Emphasis',
+    bold: true,
+    italic: true,
+    strike: true,
+    underline: true,
+    rtl: true,
+  } as Run,
   { text: 'x', font: 'Arial' } as Run,
   { text: 'x', font: 'Arial', fontAscii: 'Arial' } as Run,
   { text: 'x', font: 'SimSun', fontAscii: 'Arial', fontCs: 'Arial' } as Run,
@@ -194,12 +223,47 @@ const MODEL_RUNS: Run[] = [
   { text: 'x', caps: 'all', dstrike: true, vanishOwn: false } as Run,
   { text: 'x', caps: 'small', dstrike: false, vanishOwn: true } as Run,
   { text: 'x', caps: 'none' } as Run,
-  { text: 'x', color: 'auto', charSpacingTwips: 0, charScalePct: 100, kernHalfPoints: 0, positionHalfPoints: 0, sizeHalfPoints: 0 } as Run,
-  { text: 'x', color: '1F497D', themeColor: '1F497D', charSpacingTwips: 1.5, charScalePct: 90, kernHalfPoints: 32, positionHalfPoints: -4, sizeHalfPoints: 25 } as Run,
+  {
+    text: 'x',
+    color: 'auto',
+    charSpacingTwips: 0,
+    charScalePct: 100,
+    kernHalfPoints: 0,
+    positionHalfPoints: 0,
+    sizeHalfPoints: 0,
+  } as Run,
+  {
+    text: 'x',
+    color: '1F497D',
+    themeColor: '1F497D',
+    charSpacingTwips: 1.5,
+    charScalePct: 90,
+    kernHalfPoints: 32,
+    positionHalfPoints: -4,
+    sizeHalfPoints: 25,
+  } as Run,
   { text: 'x', highlight: 'yellow', shading: 'D9D9D9', vertAlign: 'superscript' } as Run,
-  { text: 'x', highlight: 'none', shading: 'auto', vertAlign: 'subscript', cs: true, bold: true, sizeHalfPoints: 28 } as Run,
-  { text: 'x', font: 'Calibri', fontAscii: 'Calibri', themeRFonts: { font: 'Calibri', fontAscii: 'Calibri' } } as Run,
-  { text: 'x', font: 'SimSun', fontAscii: 'Calibri', themeRFonts: { font: 'DengXian', fontAscii: 'Calibri' } } as Run,
+  {
+    text: 'x',
+    highlight: 'none',
+    shading: 'auto',
+    vertAlign: 'subscript',
+    cs: true,
+    bold: true,
+    sizeHalfPoints: 28,
+  } as Run,
+  {
+    text: 'x',
+    font: 'Calibri',
+    fontAscii: 'Calibri',
+    themeRFonts: { font: 'Calibri', fontAscii: 'Calibri' },
+  } as Run,
+  {
+    text: 'x',
+    font: 'SimSun',
+    fontAscii: 'Calibri',
+    themeRFonts: { font: 'DengXian', fontAscii: 'Calibri' },
+  } as Run,
   { text: 'x', link: { href: 'h', rId: 'rId9' } } as Run,
   { text: 'x', link: { href: 'h', plain: true } } as Run,
   { text: 'x', link: { href: 'h' }, styleId: 'Own' } as Run,
@@ -217,13 +281,22 @@ const THEME_EAST_ASIA: Input[] = [
   const raw = R(`${rFonts}<w:b/>`)
   const runs: Run[] = [
     { text: 'x', bold: true, font: 'Arial', fontAscii: 'Times New Roman' },
-    { text: 'x', bold: true, font: 'Arial', fontAscii: 'Arial', themeRFonts: { fontAscii: 'Calibri' } },
+    {
+      text: 'x',
+      bold: true,
+      font: 'Arial',
+      fontAscii: 'Arial',
+      themeRFonts: { fontAscii: 'Calibri' },
+    },
     { text: 'x', bold: true, font: 'Arial' },
     { text: 'x', bold: true, font: 'Times New Roman', fontAscii: 'Times New Roman' },
     { text: 'x', bold: true, eastAsiaFont: 'SimSun' },
     { text: 'x', bold: true, font: 'Arial', fontAscii: 'Times New Roman', fontCs: 'Arial' },
   ] as Run[]
-  return runs.map((run) => ({ text: raw, args: { run: { ...run, rawRPr: raw }, insideLink: false } }))
+  return runs.map((run) => ({
+    text: raw,
+    args: { run: { ...run, rawRPr: raw }, insideLink: false },
+  }))
 })
 
 const BUILT: Input[] = [
@@ -245,7 +318,8 @@ export const GEN_RPR: CallSpec[] = [
     fromDocument: (parts) => {
       const raws = new Set<string>()
       for (const [name, xml] of parts) {
-        if (!/^word\/(document|header\d*|footer\d*|footnotes|endnotes|styles)\.xml$/.test(name)) continue
+        if (!/^word\/(document|header\d*|footer\d*|footnotes|endnotes|styles)\.xml$/.test(name))
+          continue
         for (const raw of rPrsOf(xml)) {
           if (raws.size >= 60) break
           raws.add(raw)

@@ -1079,7 +1079,7 @@ const CHART_PATCHES: ChartPatch[] = [
   {},
 ]
 
-let WORKBOOKS: string[] = []
+let WORKBOOKS: string[]
 let WORKBOOK_ARGS: Array<{
   categories: string[]
   series: Array<{ name: string; values: Array<number | null> }>
