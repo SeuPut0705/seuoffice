@@ -37,5 +37,9 @@
   {"id":"hwp-row-cell-paragraph-limit","group":"hwp","file":"crates/file-parse/src/hwp.rs","from":".all(|cell| cell.paragraphs.len() <= MAX_ROW_CELL_PARAGRAPHS);","to":".all(|cell| cell.paragraphs.len() < MAX_ROW_CELL_PARAGRAPHS);"},
   {"id":"dispatch-extension-keeps-dot","group":"parse","file":"crates/file-parse/src/parse.rs","from":"Some(at) => &name[at + 1..],","to":"Some(at) => &name[at..],"},
   {"id":"dispatch-jpeg-mime","group":"parse","file":"crates/file-parse/src/parse.rs","from":"\"jpg\" | \"jpeg\" => \"image/jpeg\",","to":"\"jpg\" => \"image/jpeg\","},
-  {"id":"epub-chapter-number","group":"epub","file":"crates/file-parse/src/epub.rs","from":"item.index + 1,","to":"item.index,"}
+  {"id":"epub-chapter-number","group":"epub","file":"crates/file-parse/src/epub.rs","from":"item.index + 1,","to":"item.index,"},
+  {"id":"docx-withheld-run-text-kept","group":"docx","file":"crates/file-parse/src/docx.rs","from":"if run_labels.iter().any(Option::is_some) {","to":"if false && run_labels.iter().any(Option::is_some) {"},
+  {"id":"docx-adjacent-markers-not-collapsed","group":"docx","file":"crates/file-parse/src/docx.rs","from":"&& p.marker.as_deref() != Some(marker.as_str())","to":"&& p.marker.as_deref() != Some(\"\")"},
+  {"id":"pptx-unprefixed-mark-uncounted","group":"redaction","file":"crates/file-parse/src/pptx_redaction.rs","from":"+ unprefixed_marks(xml) != understood","to":"!= understood"},
+  {"id":"xlsx-withheld-sheet-ignores-case","group":"xlsx","file":"crates/file-parse/src/xlsx.rs","from":"position(|name| name == sheet)","to":"position(|name| name.eq_ignore_ascii_case(sheet))"}
 ]

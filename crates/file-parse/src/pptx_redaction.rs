@@ -239,7 +239,10 @@ fn label_of<'a>(all: &'a [XmlElement<'a>], ext: usize) -> Result<&'a str, String
 /// around it is not read, and the trace count fails the deck.
 fn is_mark(el: &XmlElement) -> bool {
     el.name == REDACT_EL
-        || (el.name == "redact" && el.attr("xmlns").is_some_and(|ns| REDACT_NAMESPACES.contains(&ns)))
+        || (el.name == "redact"
+            && el
+                .attr("xmlns")
+                .is_some_and(|ns| REDACT_NAMESPACES.contains(&ns)))
 }
 
 /// `(xml.match(/<redact\b/g) ?? []).length`

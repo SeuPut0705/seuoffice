@@ -14,7 +14,10 @@ const faults = JSON.parse(readFileSync(resolve(gate, 'faults.json'), 'utf8')) as
 /** `--group a,b`: only the faults of those groups. */
 const only = process.argv.indexOf('--group')
 const groups = only < 0 ? null : new Set(process.argv[only + 1]!.split(','))
-const selected = faults.filter(fault => groups === null || groups.has(fault.group))
+/** `--id a,b`: only those faults. */
+const idArg = process.argv.indexOf('--id')
+const ids = idArg < 0 ? null : new Set(process.argv[idArg + 1]!.split(','))
+const selected = faults.filter(fault => (groups === null || groups.has(fault.group)) && (ids === null || ids.has(fault.id)))
 if (selected.length === 0) throw new Error('No fault selected')
 mkdirSync(resolve(gate, 'out'), { recursive: true })
 const out = mkdtempSync(resolve(gate, 'out/faults-'))

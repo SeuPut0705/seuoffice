@@ -418,7 +418,9 @@ fn redact_element_names(xml: &str) -> RedactElements {
     }
     for m in js_regex!(r#"xmlns:([\w.-]+)="([^"]*)""#).find_iter(xml) {
         if REDACT_NAMESPACES.contains(&m.get(2).unwrap_or("")) {
-            found.names.insert(format!("{}:redact", m.get(1).unwrap_or("")));
+            found
+                .names
+                .insert(format!("{}:redact", m.get(1).unwrap_or("")));
         }
     }
     found.count = count_marks(xml, namespaced);
@@ -703,7 +705,11 @@ fn scan_body(
                         .and_then(|m| m.get(1));
                     if let Some(code) = truthy(code) {
                         // `String.fromCharCode`: four hex digits are one code unit
-                        append_text(&mut paras, &run_labels, &[parse_int(code, Radix::Sixteen) as u16]);
+                        append_text(
+                            &mut paras,
+                            &run_labels,
+                            &[parse_int(code, Radix::Sixteen) as u16],
+                        );
                     }
                 }
             }
