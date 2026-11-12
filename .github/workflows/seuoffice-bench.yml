@@ -4,10 +4,13 @@ name: seuoffice bench
 # B4, crates/docx-engine/B4-PLAN.md): the web Docs app opens and lays out the
 # five largest .docx of the repository in Chromium, built once with the wasm
 # binding and once with the frozen TypeScript engine, three runs of each in
-# turn. Started by hand:
+# turn. Started by hand once the file is on main:
 #   gh workflow run "seuoffice bench" --ref <branch>
+# and, before that, by pushing the commit to measure as bench/<name>.
 
 on:
+  push:
+    branches: ['bench/**']
   workflow_dispatch:
     inputs:
       rounds:
@@ -49,7 +52,7 @@ jobs:
 
       - name: Run each build three times, in turn
         env:
-          SEUOFFICE_BENCH_ROUNDS: ${{ inputs.rounds }}
+          SEUOFFICE_BENCH_ROUNDS: ${{ inputs.rounds || '5' }}
         run: |
           set -euo pipefail
           for n in 1 2 3; do
