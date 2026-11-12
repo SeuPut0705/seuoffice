@@ -1,10 +1,9 @@
 # crates
 
-The Rust document engines of SeuOffice. Today this is the docx engine, ported
-from `packages/docx-engine` one module at a time. Nothing in the product calls
-it yet: every ported module is compared against the TypeScript it came from by
-`tools/docx-diff`, and the TypeScript stays the engine until a unit flips a
-caller.
+The Rust document engines of SeuOffice, ported from `packages/docx-engine`
+and `packages/pptx-engine` one module at a time. Nothing in the product calls
+them yet. `tools/docx-diff` and `tools/pptx-diff` compare each ported module
+against its TypeScript before a unit flips a caller.
 
 A session that picks this work up starts at
 [Next session starts here](#next-session-starts-here).
@@ -17,12 +16,13 @@ A session that picks this work up starts at
 | `ooxml-xml`          | The tag scanner, the ordered parser and its serializer, `XNode` readers, UTF-16 offsets                                                                                                                                                                                | `scan.ts`, `xml-utils.ts`, fast-xml-parser                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `ooxml-pkg`          | A docx as `loadDocxZip` opens it: the zip gate, the JSZip reader, Strict normalization, `Package`; the zip as JSZip writes it (`write`)                                                                                                                                | `zip-load.ts`, `packages/zip-gate`, JSZip 3.10.1, `ooxml-normalize.ts`                                                                                                                                                                                                                                                                                                                                                                        |
 | `docx-engine`        | Body scan, property readers, relationships, content types, theme, font table, styles, numbering, comments, protection and its hash, document properties, sources, sections, watermarks, notes, fields, EQ fields, SDTs, list markers, symbol fonts, the blank document | `scan.ts`, `parse-props.ts`, `parse-xml-text.ts`, `parse-package.ts`, `theme.ts`, `font-table.ts`, `parse-styles.ts`, parts of `parse.ts`; the read side of `doc-properties.ts`, `zotero-doc-props.ts`, `sources.ts`, `protection.ts`, `section.ts`, `watermark.ts`, `notes.ts`; `parse-fields.ts` without what needs `resolve-props.ts`, `eq-field.ts`, `parse-sdt.ts`, `field-balance.ts`, `list-markers.ts`, `symbol-fonts.ts`, `blank.ts` |
+| `pptx-engine`        | Slide scan, XML helpers, slide ids, named actions, table-grid accounting, CRC-32 and the package reader. [Survey, unit order and evidence](pptx-engine/README.md).                                                                                                     | `packages/pptx-engine/src/{scan,xml-utils,slide-ids,named-action,table-grid,crc32,zip}.ts`                                                                                                                                                                                                                                                                                                                                                    |
 | `omml`               | Office Math: OMML to LaTeX and to MathML, LaTeX to OMML. Depends on no engine                                                                                                                                                                                          | `math.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `office-wasm`        | The one entry point JavaScript calls, built for `wasm32-wasip1`                                                                                                                                                                                                        | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `spike-one-run-save` | An experiment, not part of the engine: see its README                                                                                                                                                                                                                  | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
-`docx-engine` is pure: bytes and values in, values out. No I/O, no clock, no
-randomness.
+Both document crates are pure: bytes and values in, values out. No I/O,
+clock or randomness. UUIDs come from the caller.
 
 ## How a module is ported
 

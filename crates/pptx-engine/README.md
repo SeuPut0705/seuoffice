@@ -129,37 +129,50 @@ by hand for what those lack. Each unit says what the corpus lacked.
 
 The first completed comparison is kept unchanged in
 `evidence/u1-comparison-first.stdout.log`, with every differing input and both
-answers in `evidence/u1-comparison-first.differences.json`. At `df02c5700`,
-before any parity fix, it made 11,854 checks: 11,791 equal, 63 different
+answers in `evidence/u1-comparison-first.differences.json`. The TypeScript
+base was `df02c5700`; the first Rust port was an uncommitted working tree.
+Before any parity fix it made 11,854 checks: 11,791 equal, 63 different
 (99.4685% equal). The package-open and entry-byte checks all agreed. None of
-the differences was key order alone.
+the differences was key order alone. The pre-fix Rust tree was not committed;
+the preserved artifacts are the actual run's output and complete differences.
 
-| First difference | Checks | Decision |
-| --- | --- | --- |
-| `<#text/>` projected as an ordinary empty element | 13 | Fixed the parser's text-node projection. Seven more built forms cover attributes, nesting, concatenation and repeated names. |
-| DOCTYPE accepted by TypeScript | 13 | Rust refuses it. Final policy, listed. |
-| A malformed CDATA opener splits a surrogate pair | 14 | Rust refuses it. Listed. |
-| XML whitespace around `id =` hides the existing slide id | 19 | TypeScript defect, reported 2026-11-12. Rust reads it correctly. Fix pending on main. |
-| A default-namespace presentation loses its slide list | 4 | TypeScript defect, reported 2026-11-12. Rust reads the prefix-less list. Fix pending on main. |
+| First difference                                         | Checks | Decision                                                                                                                     |
+| -------------------------------------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| `<#text/>` projected as an ordinary empty element        | 13     | Fixed the parser's text-node projection. Seven more built forms cover attributes, nesting, concatenation and repeated names. |
+| DOCTYPE accepted by TypeScript                           | 13     | Rust refuses it. Final policy, listed.                                                                                       |
+| A malformed CDATA opener splits a surrogate pair         | 14     | Rust refuses it. Listed.                                                                                                     |
+| XML whitespace around `id =` hides the existing slide id | 19     | TypeScript defect, reported 2026-11-12. Rust reads it correctly. Fix pending on main.                                        |
+| A default-namespace presentation loses its slide list    | 4      | TypeScript defect, reported 2026-11-12. Rust reads the prefix-less list. Fix pending on main.                                |
 
 `evidence/u1-first.stderr.log` is an earlier fixture-loader failure, before
 any comparison: `pptxgenjs` needed its CommonJS constructor under `tsx`. It is
 kept too, not presented as the first completed comparison.
 
-After the parser fix, `evidence/u1-local-verified.stdout.log` records 11,945
-checks, no unlisted difference, no key-order difference, and at least two
-distinct TypeScript results for each of the 27 functions. The ledger has
-four classes with 51 exact inputs, all still reproducing. Adding the
-`#text` forms changed one seeded CDATA input's parser options; both exact
-variants stay listed and checked. This is not a full slide model or a save
-comparison: those are units 4 and 7.
+After the parser fix and the merge of `origin/feat/rust-docx-u1` at
+`b471da31d`, `evidence/u1-local-verified.stdout.log` records 12,896 checks, no
+unlisted difference, no key-order difference, and at least two distinct
+TypeScript results for each of the 27 functions. The ledger has four classes
+with 28 exact inputs, all still reproducing. The first run listed 50: the
+other 22 were seeded mutations of the listed inputs, and a listed input is no
+longer a seed of mutations (`seed: false` of an `Input`), so the ledger does
+not move when a built input is added. This is not a full slide model or a
+save comparison: those are units 4 and 7.
+
+The lines named "on the corpus" take their inputs from the parts of every
+package that opens: the three tracked decks, the four built decks and the
+built containers that are valid. 300 seeded mutations of those containers go
+through the package comparison too: 208 are refused by both sides, the rest
+open to the same entries and bytes. Where both sides refuse, the comparison
+is that both refuse, not that the messages are equal.
 
 The three tracked decks have seven slides. They did not exercise a refusal
 at the zip gate, either reported document defect, DOCTYPE, or the split
 surrogate. Built inputs add blank and `pptxgenjs` decks, lost layout chains,
-invalid and over-limit containers, duplicate names, UTF-8 decoding edges,
-every parser option set used by the engine, XML lexical edge cases and
-JavaScript number/string boundaries.
+invalid and over-limit containers, bytes after a deflate stream, an Info-ZIP
+Unicode Path field (JSZip renames the entry by it; the Word loader blanks
+such fields, `PackageArchive.open` does not), duplicate names, UTF-8 decoding
+edges, every parser option set used by the engine, XML lexical edge cases
+and JavaScript number and string boundaries.
 
 The gate imports the Word harness, call runner, ordered-key comparison,
 mutator, seeded generator and zip builder. It does not copy them.
@@ -177,16 +190,18 @@ CARGO_BUILD_JOBS=4 npm --prefix tools/pptx-diff run calls -- --group leaves --by
 without overwriting. `--record-first <unit>` also keeps the first output and
 complete differences under this crate's `evidence/`.
 
-`faults.mjs` builds a debug wasm for each single Rust fault, runs the same
-comparisons, requires differences in the target function's own tally, and
-restores the source in `finally`. It also has three probes selected by an
-independent reviewer without the porters' lists: a byte offset instead of a
-UTF-16 offset, ignored URI decoding, and reversed repeated XML children.
-Their execution is not yet verified locally; the workflow runs them on the
-runner. Whole-workspace tests and clippy, including the unchanged Word gate,
-also belong on that runner.
+`faults.mjs` copies the crate sources into a scratch directory of the system
+and builds a debug wasm for each single Rust fault, so an interrupted probe
+leaves no fault in the working tree. It runs the comparisons of (f) and
+requires differences in the tally of the function the fault is in. Three of
+its probes were selected by an independent reviewer without the porters'
+lists: a byte offset instead of a UTF-16 offset, ignored URI decoding, and
+reversed repeated XML children. `--only <id,...>` runs some of them. The
+workflow runs all of them on the runner; so do the tests and clippy of the
+whole workspace and the Word gate.
 
 Local runtime: Node 22.23.5, npm 11.19.1, Rust 1.99.1, `wasm32-wasip1`.
-The release wasm after the parser fix is 2,070,552 bytes, including the Word
-engine. The changed crates' native tests passed 93 tests. Neither that test
-count nor compilation is the parity proof; the recorded comparison is.
+The release wasm is 2,070,717 bytes, the Word engine included (2,070,274
+before the parser fix; the size before this unit was not measured here). The
+changed crates' native tests passed 93 tests. Neither that test count nor
+compilation is the parity proof; the recorded comparison is.
