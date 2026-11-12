@@ -76,6 +76,10 @@ impl<V> JsMap<V> {
     pub fn values(&self) -> impl Iterator<Item = &V> {
         self.entries.iter().map(|(_, value)| value)
     }
+
+    pub fn values_mut(&mut self) -> impl Iterator<Item = &mut V> {
+        self.entries.iter_mut().map(|(_, value)| value)
+    }
 }
 
 impl<V: Serialize> Serialize for JsMap<V> {
