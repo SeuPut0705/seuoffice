@@ -15,7 +15,7 @@ export interface RevisionXmlFilter {
   /** case-insensitive w:author match */
   author?: string
   type?: RevisionXmlType
-  /** ISO date: only changes recorded strictly before it */
+  /** ISO date: only changes recorded strictly before it; without a zone designator it is UTC, as a w:date is */
   before?: string
   /** exact w:date match */
   date?: string
@@ -136,6 +136,17 @@ function typeOf(el: El): RevisionXmlType | undefined {
   }
 }
 
+/**
+ * Epoch ms of an ISO date. A date-time without a zone designator is UTC:
+ * Date.parse reads it as local time, and a filter would pick different
+ * changes on machines in different zones.
+ */
+function utcMs(iso: string): number {
+  const s = iso.trim()
+  const zoneless = /T/i.test(s) && !/(?:Z|[+-]\d\d(?::?\d\d)?)$/i.test(s)
+  return Date.parse(zoneless ? `${s}Z` : s)
+}
+
 function matches(el: El, filter: RevisionXmlFilter | undefined, type: RevisionXmlType): boolean {
   if (!filter) return true
   if (filter.type !== undefined && filter.type !== type) return false
@@ -145,7 +156,7 @@ function matches(el: El, filter: RevisionXmlFilter | undefined, type: RevisionXm
   }
   if (filter.before !== undefined) {
     const date = attrOf(el, 'w:date')
-    if (!date || Date.parse(date) >= Date.parse(filter.before)) return false
+    if (!date || utcMs(date) >= utcMs(filter.before)) return false
   }
   if (filter.date !== undefined && (attrOf(el, 'w:date') ?? '') !== filter.date) return false
   if (filter.ids !== undefined && !filter.ids.includes(attrOf(el, 'w:id') ?? '')) return false
