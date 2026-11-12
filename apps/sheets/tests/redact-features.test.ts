@@ -606,3 +606,47 @@ describe('get_workbook_context: chart titles', () => {
     expect(info.charts?.map((entry) => entry.title)).toEqual([PHONE_HEADER])
   })
 })
+
+describe('read_sheet_features: the text of shapes', () => {
+  // A shape's text is typed, or it is linked to a cell (`=Sheet1!B2` in the
+  // formula bar with the shape selected) and then shows that cell's text. The
+  // file's shapes reach the session as their text alone, with no word of a link.
+  const shape = (id: string, text: string, kind = 'shape') => ({
+    id,
+    kind,
+    sheetId: 'sh1',
+    shapeType: 'rect',
+    text,
+    anchor: { fromRow: 3, fromColumn: 4 },
+  })
+
+  it("withholds the text of the file's shapes in a workbook with hidden cells", () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        visuals: [shape('visual-1', PHONE_HEADER), shape('visual-2', PHONE_HEADER, 'slicer')],
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('- shape rect @ E4 text "{{private}}"')
+    expect(output).toContain('- slicer @ E4 text "{{private}}"')
+  })
+
+  it('prints the text of a shape made this session, which was typed', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        journal: (journal) =>
+          journal.visualAdds.push(shape('added-shape-1', 'Quarterly notes') as never),
+      }),
+    )
+    expect(output).toContain('- shape rect @ E4 text "Quarterly notes"')
+  })
+
+  it('prints every shape text in a workbook without hidden cells', () => {
+    const output = readSheetFeatures(
+      fileCtx({ marks: [], visuals: [shape('visual-1', PHONE_HEADER)] }),
+    )
+    expect(output).toContain(`- shape rect @ E4 text "${PHONE_HEADER}"`)
+  })
+})

@@ -396,10 +396,18 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
               : visual.kind === 'slicer'
                 ? 'slicer'
                 : `shape ${visual.shapeType ?? ''}`
+        // A shape's text is typed or linked to a cell, and a slicer is
+        // captioned with a field name, which is a header cell. The session
+        // holds the text and not where it came from, so in a workbook that
+        // withholds anything only text typed this session is given.
+        const text =
+          redactions.isEmpty || visual.id.startsWith('added-shape-')
+            ? visual.text
+            : placeholderSource(UNKNOWN_REDACTION_LABEL)
         lines.push(
           `- ${label} @ ` +
             `${columnLabel(visual.anchor.fromColumn)}${visual.anchor.fromRow + 1}` +
-            `${visual.text ? ` text "${visual.text}"` : ''} (${origin})`,
+            `${visual.text ? ` text "${text}"` : ''} (${origin})`,
         )
       }
     }
