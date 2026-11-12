@@ -19,6 +19,8 @@ const workspaceAlias: Record<string, string> = {
   '@seuoffice/pptx-engine/background-promote': pkg('pptx-engine/src/background-promote.ts'),
   '@seuoffice/pptx-engine/model3d': pkg('pptx-engine/src/model3d.ts'),
   '@seuoffice/pptx-engine/chart-workbook': pkg('pptx-engine/src/chart-workbook.ts'),
+  '@seuoffice/pptx-engine/init': pkg('pptx-engine/src/engine-init.ts'),
+  '@seuoffice/pptx-engine/engine-url': pkg('pptx-engine/src/engine-url.ts'),
   '@seuoffice/pptx-engine': pkg('pptx-engine/src/index.ts'),
   '@seuoffice/pptx-ops/op-docs': pkg('pptx-ops/src/op-docs.ts'),
   '@seuoffice/pptx-ops/font-size': pkg('pptx-ops/src/font-size.ts'),

@@ -20,5 +20,7 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
+    // @seuoffice/pptx-engine calls the wasm engine: started before any test module loads
+    setupFiles: [resolve(here, '../engine-wasm/src/node.ts')],
   },
 })
