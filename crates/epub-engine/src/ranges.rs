@@ -895,27 +895,96 @@ impl<F: FnMut(usize, usize) -> f64> TimSort<F> {
 /// `String::from_utf16_lossy`. A stylesheet comes out of `TextDecoder`,
 /// which leaves no lone surrogate.
 pub mod writing_mode {
-    use jscompat::{RegexLimit, js_regex, trim, try_js_regex};
+    use jscompat::{js_regex, trim};
 
     /// `isVerticalWritingMode`: `None` stands for anything not a string.
     pub fn is_vertical_writing_mode(value: Option<&str>) -> bool {
         value.is_some_and(|value| js_regex!(r"^vertical-", "i").test(trim(value)))
     }
 
-    /// `stripCommentsAndStrings`. A quoted string of more than about a
-    /// million characters passes the bound of one search.
-    fn strip_comments_and_strings(css: &str) -> Result<String, RegexLimit> {
-        try_js_regex!(r#"\/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'"#)
-            .try_replace_all(css, |_| " ".to_owned())
+    /// `stripCommentsAndStrings`: a linear scan with the semantics of
+    /// `/\*[\s\S]*?(?:\*\/|$)|"(?:[^"\\\n]|\\[\s\S])*"|'(?:[^'\\\n]|\\[\s\S])*'`
+    /// replaced by one space. A comment runs to `*/` or the end; a string needs
+    /// its closing quote before a bare newline or the end, else its opening
+    /// quote stays. Only ASCII bytes are tested, so UTF-8 sequences pass whole.
+    fn strip_comments_and_strings(css: &str) -> String {
+        let b = css.as_bytes();
+        let mut out = String::with_capacity(css.len());
+        let (mut i, mut copied) = (0, 0);
+        let mut dead: [Option<Vec<bool>>; 2] = [None, None];
+        while i < b.len() {
+            let end = match b[i] {
+                b'/' if b.get(i + 1) == Some(&b'*') => {
+                    let mut j = i + 2;
+                    loop {
+                        if j >= b.len() {
+                            break Some(b.len());
+                        }
+                        if b[j] == b'*' && b.get(j + 1) == Some(&b'/') {
+                            break Some(j + 2);
+                        }
+                        j += 1;
+                    }
+                }
+                q @ (b'"' | b'\'') => {
+                    // a string that does not close fails at the same place from
+                    // every token boundary it crossed: those boundaries are
+                    // marked, so a later quote on one fails at once
+                    let dead = &mut dead[usize::from(q == b'\'')];
+                    let mut j = i + 1;
+                    let mut crossed = Vec::new();
+                    let end = loop {
+                        if dead.as_ref().is_some_and(|d: &Vec<bool>| d[j]) {
+                            break None;
+                        }
+                        crossed.push(j);
+                        match b.get(j) {
+                            None | Some(b'\n') => break None,
+                            Some(&c) if c == q => break Some(j + 1),
+                            Some(b'\\') => {
+                                if j + 1 >= b.len() {
+                                    break None;
+                                }
+                                j += 2;
+                                // skip a whole UTF-8 sequence's continuation bytes
+                                while j < b.len() && b[j] & 0xC0 == 0x80 {
+                                    j += 1;
+                                }
+                            }
+                            Some(_) => j += 1,
+                        }
+                    };
+                    if end.is_none() {
+                        let d = dead.get_or_insert_with(|| vec![false; b.len() + 1]);
+                        for at in crossed {
+                            d[at] = true;
+                        }
+                    }
+                    end
+                }
+                _ => None,
+            };
+            match end {
+                Some(e) => {
+                    out.push_str(&css[copied..i]);
+                    out.push(' ');
+                    i = e;
+                    copied = e;
+                }
+                None => i += 1,
+            }
+        }
+        out.push_str(&css[copied..]);
+        out
     }
 
     /// `cssDeclaresVerticalWriting`
-    pub fn css_declares_vertical_writing(css: &str) -> Result<bool, RegexLimit> {
-        Ok(js_regex!(
+    pub fn css_declares_vertical_writing(css: &str) -> bool {
+        js_regex!(
             r"(?:^|[\s;{])(?:-epub-|-webkit-)?writing-mode\s*:\s*vertical-",
             "i"
         )
-        .test(&strip_comments_and_strings(css)?))
+        .test(&strip_comments_and_strings(css))
     }
 }
 
@@ -969,10 +1038,7 @@ pub fn call(
         "isVerticalWritingMode" => Value::Bool(writing_mode::is_vertical_writing_mode(
             args.get("value").and_then(Value::as_str),
         )),
-        "cssDeclaresVerticalWriting" => Value::Bool(
-            writing_mode::css_declares_vertical_writing(text)
-                .map_err(|limit| ("RangeError".to_owned(), limit.to_string()))?,
-        ),
+        "cssDeclaresVerticalWriting" => Value::Bool(writing_mode::css_declares_vertical_writing(text)),
         // the dispatcher asks the next module on exactly this answer
         _ => return Err(wire_error(format!("unknown function {function}"))),
     })

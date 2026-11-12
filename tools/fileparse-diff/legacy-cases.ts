@@ -348,6 +348,14 @@ function builtPpt(): Input[] {
   inputs.push(named('Current User holds two atoms (thrown string)', pptFile({ ppt: body, user: concat([currentUser(0), currentUser(0)]) })))
   inputs.push(named('Current User holds no CurrentUserAtom (TypeError)', pptFile({ ppt: body, user: atom(0x1234, Buffer.alloc(30)) })))
   inputs.push(named('Current User atom of four bytes', pptFile({ ppt: body, user: atom(RT.currentUser, Buffer.alloc(4)) })))
+  {
+    // cfb drops two bytes of every name but the root's: a name written without its terminator loses a letter
+    const unterminated = pptFile(deck([doc, ...slides])).slice()
+    const at = Buffer.from(unterminated).indexOf(Buffer.from('Current User', 'utf16le'))
+    if (at < 0) throw new Error('Current User entry not found')
+    new DataView(unterminated.buffer, unterminated.byteOffset, unterminated.byteLength).setUint16(at + 64, 24, true)
+    inputs.push(named('Current User entry of 24 name bytes, no terminator', unterminated))
+  }
   inputs.push(named('Current User stream is empty (TypeError)', pptFile({ ppt: body, user: EMPTY })))
   inputs.push(named('Current User stream of a few bytes', pptFile({ ppt: body, user: Buffer.from([1, 2, 3]) })))
   inputs.push(named('PowerPoint Document stream is empty', pptFile({ ppt: EMPTY, user: currentUser(0) })))

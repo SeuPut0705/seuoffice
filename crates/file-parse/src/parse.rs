@@ -84,8 +84,11 @@ fn is_text_ext(ext: &str) -> bool {
     matches!(ext, "txt" | "md" | "markdown" | "csv" | "tsv" | "json" | "xml" | "html" | "htm" | "log" | "py")
 }
 
+/// A text reader's redaction: the source with every withheld span rewritten.
+type TextRedactor = fn(&str) -> Result<String, String>;
+
 /// `TEXT_REDACTORS[ext]`
-fn text_redactor(ext: &str) -> Option<fn(&str) -> Result<String, String>> {
+fn text_redactor(ext: &str) -> Option<TextRedactor> {
     match ext {
         "md" | "markdown" | "txt" | "json" => Some(crate::markdown::redact_markdown_source),
         "html" | "htm" => Some(crate::html::redact_html_source),

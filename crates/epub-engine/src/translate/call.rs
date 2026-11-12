@@ -192,9 +192,10 @@ fn matching_end(text: &str, start: usize) -> Option<usize> {
 /// (chatter, code fences, stray braces) is skipped: every '{' or '[' is tried
 /// in turn until one starts a value of the expected shape.
 ///
-/// `serde_json` reads JSON to 128 levels and refuses a lone surrogate escape,
-/// where `JSON.parse` has no such limit: a value that deep, or with such an
-/// escape, is skipped here and read there.
+/// `serde_json` reads JSON to 128 levels and refuses a lone surrogate escape
+/// and a number past f64 (`1e999`), where `JSON.parse` reads all three (the
+/// number as Infinity): a value that deep, with such an escape or number, is
+/// skipped here and read there.
 pub fn parse_translation_output(output: &str) -> Option<HashMap<String, Vec<u16>>> {
     for (at, ch) in output.char_indices() {
         if ch != '{' && ch != '[' {

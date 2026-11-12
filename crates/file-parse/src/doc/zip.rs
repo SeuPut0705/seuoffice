@@ -417,7 +417,7 @@ impl EntryData<'_> {
 /// `AssertByteCountStream` after it.
 fn inflate(compressed: &[u8], expected: f64) -> Delivery {
     let mut produced: Vec<Vec<u8>> = Vec::new();
-    let end = run_inflate(compressed, &mut produced);
+    let end = run_inflate(compressed, expected, &mut produced);
     let mut chunks = Vec::new();
     let mut actual = 0.0;
     for chunk in produced {
@@ -450,15 +450,18 @@ fn inflate(compressed: &[u8], expected: f64) -> Delivery {
 
 /// The calls Node's zlib makes, each with the output space left in its
 /// 16 KiB buffer; what a call produces is pushed, and a call that fails
-/// pushes nothing.
-fn run_inflate(compressed: &[u8], pushed: &mut Vec<Vec<u8>>) -> Result<(), Thrown> {
+/// pushes nothing. It stops once the output passes `limit`, as the byte count
+/// stream after it fails on the first chunk that does.
+fn run_inflate(compressed: &[u8], limit: f64, pushed: &mut Vec<Vec<u8>>) -> Result<(), Thrown> {
+    let mut total = 0.0_f64;
     let mut decoder = Decompress::new(false);
     let mut offset = 0_usize;
     let mut ended = false;
     let mut call = |decoder: &mut Decompress,
                     input: &[u8],
                     flush: FlushDecompress,
-                    offset: &mut usize|
+                    offset: &mut usize,
+                    total: &mut f64|
      -> Result<(usize, usize, Status, usize), Thrown> {
         let space = ZLIB_CHUNK - *offset;
         let mut buffer = vec![0_u8; space];
@@ -471,6 +474,7 @@ fn run_inflate(compressed: &[u8], pushed: &mut Vec<Vec<u8>>) -> Result<(), Throw
         if made > 0 {
             buffer.truncate(made);
             pushed.push(buffer);
+            *total += made as f64;
             *offset += made;
             if *offset >= ZLIB_CHUNK {
                 *offset = 0;
@@ -485,7 +489,10 @@ fn run_inflate(compressed: &[u8], pushed: &mut Vec<Vec<u8>>) -> Result<(), Throw
         let mut input = chunk;
         loop {
             let (consumed, _, status, space_after) =
-                call(&mut decoder, input, FlushDecompress::None, &mut offset)?;
+                call(&mut decoder, input, FlushDecompress::None, &mut offset, &mut total)?;
+            if total > limit {
+                return Ok(());
+            }
             input = &input[consumed..];
             if space_after == 0 {
                 continue;
@@ -504,7 +511,10 @@ fn run_inflate(compressed: &[u8], pushed: &mut Vec<Vec<u8>>) -> Result<(), Throw
     // the flush: no input, and the end of the stream asked for
     loop {
         let (_, _, status, space_after) =
-            call(&mut decoder, &[], FlushDecompress::Finish, &mut offset)?;
+            call(&mut decoder, &[], FlushDecompress::Finish, &mut offset, &mut total)?;
+        if total > limit {
+            return Ok(());
+        }
         if space_after == 0 {
             continue;
         }
@@ -541,4 +551,31 @@ fn zlib_message(compressed: &[u8], message: Option<&str>) -> String {
         }
     }
     REPEATED.to_owned()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use flate2::{Compress, Compression, FlushCompress};
+
+    #[test]
+    fn a_stream_past_its_declared_size_stops_at_the_first_chunk_over() {
+        let plain = vec![0_u8; 50_000_000];
+        let mut packed = Vec::with_capacity(1 << 20);
+        let mut compress = Compress::new(Compression::best(), false);
+        compress
+            .compress_vec(&plain, &mut packed, FlushCompress::Finish)
+            .unwrap();
+        let mut pushed = Vec::new();
+        let _ = run_inflate(&packed, 1.0, &mut pushed);
+        let produced: usize = pushed.iter().map(Vec::len).sum();
+        assert!(produced <= 1 << 15, "inflated {produced} bytes past a declared size of 1");
+        let delivery = inflate(&packed, 1.0);
+        assert!(delivery.chunks.is_empty());
+        let message = match delivery.end {
+            Err(thrown) => format!("{thrown:?}"),
+            Ok(()) => panic!("a stream past its size was read"),
+        };
+        assert!(message.contains("too many bytes in the stream. expected 1. got at least "), "{message}");
+    }
 }

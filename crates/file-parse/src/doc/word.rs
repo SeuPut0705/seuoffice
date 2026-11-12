@@ -484,6 +484,9 @@ fn write_bookmarks(buffer: Buf<'_>, table: Buf<'_>) -> Result<(), Thrown> {
     Ok(())
 }
 
+/// Units of piece text held beyond four times the stream.
+const PIECE_TEXT_BASE: f64 = (1u64 << 26) as f64;
+
 /// `writePieces`.
 fn write_pieces(buffer: Buf<'_>, table: Buf<'_>) -> Result<Vec<Piece>, Thrown> {
     let mut pos = buffer.read_u32le(f64::from(0x01a2))?;
@@ -507,6 +510,9 @@ fn write_pieces(buffer: Buf<'_>, table: Buf<'_>) -> Result<Vec<Piece>, Thrown> {
 
     let mut start_cp = 0.0;
     let mut pieces = Vec::new();
+    // pieces may overlap, so the text they hold can far exceed the stream
+    let budget = PIECE_TEXT_BASE + 4.0 * buffer.len();
+    let mut held = 0.0;
     let end = pieces_count - 1.0;
     let mut x = 0.0;
     while x <= end {
@@ -531,6 +537,10 @@ fn write_pieces(buffer: Buf<'_>, table: Buf<'_>) -> Result<Vec<Piece>, Thrown> {
             binary_to_unicode(&text_buffer.to_latin1())
         };
         let length = text.len() as f64;
+        held += length;
+        if held > budget {
+            return Err(Thrown::Error("doc: pieces of text too long to hold".into()));
+        }
         let end_cp = start_cp + length;
         pieces.push(Piece {
             start_cp,
@@ -677,4 +687,26 @@ fn write_character_properties(
         i += 1.0;
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn overlapping_pieces_are_refused_not_allocated() {
+        let pieces: usize = 1000;
+        let mut table = vec![2_u8];
+        table.extend(((4 + 12 * pieces) as u32).to_le_bytes());
+        for i in 0..=pieces {
+            let cp: u32 = if i % 2 == 0 { 0 } else { u32::MAX };
+            table.extend(cp.to_le_bytes());
+        }
+        for _ in 0..pieces {
+            table.extend([0_u8; 8]);
+        }
+        let buffer = vec![0_u8; 1 << 20];
+        let got = write_pieces(Buf::new(&buffer), Buf::new(&table));
+        assert!(matches!(got, Err(Thrown::Error(m)) if m.starts_with("doc:")));
+    }
 }

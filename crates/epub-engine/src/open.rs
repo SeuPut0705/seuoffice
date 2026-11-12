@@ -424,7 +424,7 @@ fn detect_vertical_writing(
             continue;
         }
         if let Some(css) = archive.read_text(path)?
-            && css_declares_vertical_writing(&css.text).map_err(|_| Thrown::stack_overflow())?
+            && css_declares_vertical_writing(&css.text)
         {
             return Ok(true);
         }

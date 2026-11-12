@@ -172,6 +172,19 @@ const STYLESHEETS = [
   `"${ASTRAL}" writing-mode: vertical-rl`, `'${ASTRAL}\\' writing-mode: vertical-rl`, 'writing-modes: vertical-rl',
   'writing-mode : vertical', '"\\', "'a' 'b' writing-mode: vertical-rl", '"a"writing-mode: vertical-rl', '/**/',
   '*/ writing-mode: vertical-rl',
+  // a string past the old regex bound: a base64 font in a stylesheet
+  `@font-face { src: url("data:font/woff2;base64,${'A'.repeat(2_000_000)}") }\nbody { writing-mode: vertical-rl }`,
+  `@font-face { src: url('data:font/woff2;base64,${'A'.repeat(2_000_000)}') }\nbody { writing-mode: horizontal-tb }`,
+  `"${'\\"'.repeat(5)}" writing-mode: vertical-rl`,
+  // strings that never close, crossed again from inside: each start is read alone
+  `"${'\\"'.repeat(3000)} writing-mode: vertical-rl`,
+  `"${'\\"'.repeat(3000)}\n" writing-mode: vertical-rl "`,
+  `"${'\\\\"'.repeat(3000)} writing-mode: vertical-rl`,
+  `"\\${'\\"'.repeat(3000)}`,
+  `'${`\\'"`.repeat(2000)} writing-mode: vertical-rl`,
+  `"${`'\\"x`.repeat(2000)}\n'writing-mode: vertical-rl'`,
+  `${'"a\\'.repeat(2000)}" writing-mode: vertical-rl`, `'a\\'b' writing-mode: vertical-rl`, `"/* " writing-mode: vertical-rl /* "`,
+  '"abc\\\ndef" writing-mode: vertical-rl', "'unterminated writing-mode: vertical-rl", '/* never closed "', 'a "x" /* y */ writing-mode: vertical-rl',
 ]
 
 export const SPECS: Spec[] = [

@@ -23,6 +23,9 @@ const MAX_DEPTH: u32 = 3000;
 /// Record headers read in one call.
 const MAX_RECORDS: u64 = 1 << 25;
 /// Characters of one byte atom.
+/// Units of text a stream may give beyond eight for each of its bytes.
+const TEXT_BUDGET_BASE: u64 = 1 << 22;
+/// Characters of one byte atom
 const MAX_BYTES_ATOM: f64 = (1u64 << 26) as f64;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
@@ -431,6 +434,9 @@ impl<'a> Blob<'a> {
 struct Guard {
     depth: u32,
     records: u64,
+    /// Units of text collected so far, and what a stream of this size may hold.
+    text: u64,
+    text_budget: u64,
 }
 
 impl Guard {
@@ -444,6 +450,16 @@ impl Guard {
 
     fn leave(&mut self) {
         self.depth -= 1;
+    }
+
+    /// A rewind can read one atom again and again; real text stays far
+    /// below the budget.
+    fn take_text(&mut self, units: f64) -> Result<(), Thrown> {
+        self.text = self.text.saturating_add(units as u64);
+        if self.text > self.text_budget {
+            return Err(Thrown::Error("ppt: the text never ends".into()));
+        }
+        Ok(())
     }
 
     fn record(&mut self) -> Result<(), Thrown> {
@@ -673,11 +689,16 @@ fn parse_atom(
     length: f64,
 ) -> Result<Val, Thrown> {
     match rec.handler {
-        Handler::CString => Ok(Val::Text(c_string(blob, length))),
+        Handler::CString => {
+            let text = c_string(blob, length);
+            guard.take_text(text.len() as f64)?;
+            Ok(Val::Text(text))
+        }
         Handler::TextBytes => {
             if length.is_nan() || length < 0.0 || length > MAX_BYTES_ATOM {
                 return Err(Thrown::Error("ppt: a byte atom that never ends".into()));
             }
+            guard.take_text(length)?;
             let mut out = Vec::new();
             let mut i = 0.0;
             while i != length {
@@ -827,9 +848,17 @@ struct Presentation {
 
 /// `process_ppt`.
 fn process_ppt(index: &[IndexEntry]) -> Result<Presentation, Thrown> {
+    let longest = ["Current User", "PowerPoint Document"]
+        .iter()
+        .filter_map(|name| find(index, name)?.content.as_deref())
+        .map(<[u8]>::len)
+        .max()
+        .unwrap_or(0) as u64;
     let mut guard = Guard {
         depth: 0,
         records: 0,
+        text: 0,
+        text_budget: TEXT_BUDGET_BASE + 8 * longest,
     };
     let custream = find(index, "Current User");
     let cublob = custream
@@ -986,4 +1015,37 @@ pub fn ppt_to_text(bytes: &[u8]) -> Result<String, JsError> {
         }
     }
     Ok(String::from_utf16_lossy(&out))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn header(kind: u16, length: i32) -> Vec<u8> {
+        let mut out = vec![0, 0];
+        out.extend(kind.to_le_bytes());
+        out.extend(length.to_le_bytes());
+        out
+    }
+
+    #[test]
+    fn a_rewind_over_a_text_atom_is_refused() {
+        // SlideListWithText { TextCharsAtom "ab"; DocumentAtom of length -22 }:
+        // the noop atom walks back to the text atom, for ever.
+        let mut body = header(0x0FA0, 4);
+        body.extend([b'a', 0, b'b', 0]);
+        body.extend(header(0x03E9, -(8 + 4 + 8)));
+        let mut data = header(0x0FF0, body.len() as i32);
+        data.extend(body);
+        let mut guard = Guard {
+            depth: 0,
+            records: 0,
+            text: 0,
+            text_budget: TEXT_BUDGET_BASE + 8 * data.len() as u64,
+        };
+        let mut blob = Blob::new(&data);
+        let end = blob.length();
+        let got = recordhopper(&mut guard, &mut blob, end, None, &mut |_, _, _, _| Ok(()));
+        assert!(matches!(got, Err(Thrown::Error(m)) if m == "ppt: the text never ends"));
+    }
 }

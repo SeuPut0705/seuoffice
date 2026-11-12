@@ -309,6 +309,10 @@ impl<'a> CompoundDoc<'a> {
         let child_ids = self.child_ids(storage)?;
         let mut storages: Vec<(Vec<u16>, usize)> = Vec::new();
         let mut streams: Vec<(Vec<u16>, usize)> = Vec::new();
+        let mut storage_at: std::collections::HashMap<Vec<u16>, usize> =
+            std::collections::HashMap::new();
+        let mut stream_at: std::collections::HashMap<Vec<u16>, usize> =
+            std::collections::HashMap::new();
         let mut proto_storage = false;
         let proto: Vec<u16> = "__proto__".encode_utf16().collect();
         for child_id in child_ids {
@@ -317,16 +321,18 @@ impl<'a> CompoundDoc<'a> {
             if child.kind == ENTRY_TYPE_STORAGE {
                 if name == proto {
                     proto_storage = true;
-                } else if let Some(slot) = storages.iter_mut().find(|(n, _)| *n == name) {
-                    slot.1 = child_id;
+                } else if let Some(&slot) = storage_at.get(&name) {
+                    storages[slot].1 = child_id;
                 } else {
+                    storage_at.insert(name.clone(), storages.len());
                     storages.push((name.clone(), child_id));
                 }
             }
             if child.kind == ENTRY_TYPE_STREAM && name != proto {
-                if let Some(slot) = streams.iter_mut().find(|(n, _)| *n == name) {
-                    slot.1 = child_id;
+                if let Some(&slot) = stream_at.get(&name) {
+                    streams[slot].1 = child_id;
                 } else {
+                    stream_at.insert(name.clone(), streams.len());
                     streams.push((name, child_id));
                 }
             }

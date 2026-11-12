@@ -425,14 +425,19 @@ fn pivot_source_formula(cache_xml: Option<&str>) -> Result<Option<String>, Strin
     Ok(None)
 }
 
+/// Read on demand: the sheet's XML up to the scan limit and whether it was cut there.
+pub type SheetXmlRead<'a> = Box<dyn FnOnce() -> Result<Option<(String, bool)>, String> + 'a>;
+/// Read on demand: the PivotTables that put their output on a sheet.
+pub type PivotsRead<'a> = Box<dyn FnOnce() -> Result<Vec<PivotOutput>, String> + 'a>;
+
 /// A sheet as `readDerivedCells` is given it.
 pub struct DerivedInput<'a> {
     pub name: String,
     /// the sheet's XML up to the scan limit and whether it was cut there, or `None` when the part is missing
-    pub xml: Option<Box<dyn FnOnce() -> Result<Option<(String, bool)>, String> + 'a>>,
+    pub xml: Option<SheetXmlRead<'a>>,
     pub marks: Vec<RangeBounds>,
     /// the PivotTables that put their output on this sheet
-    pub pivots: Option<Box<dyn FnOnce() -> Result<Vec<PivotOutput>, String> + 'a>>,
+    pub pivots: Option<PivotsRead<'a>>,
 }
 
 /// Scan every sheet and trace the marks through the formulas. Returns one entry

@@ -590,6 +590,16 @@ fxp`); the two should share one module.
   that process keeps a JS host for it. Until then html-redaction and the
   three parse5 calls of epub-engine are host steps, and a native build
   answers `HostUnavailable` there.
+- The EPUB translation reply is read with `serde_json`, which refuses a
+  number past f64 (`1e999`), nesting deeper than 128 and a lone surrogate
+  escape; `JSON.parse` reads all three. Such a reply is a batch failure
+  (`unparseable-response`) in Rust and a translation in TypeScript
+  (`epub-engine/src/translate/call.rs`). A model reply has never been seen
+  to carry one.
+- Memory budgets the TypeScript does not have: `ppt` refuses once the text
+  it collects passes a budget, `doc` once the pieces it copies pass one.
+  TypeScript runs out of memory on those inputs, so neither the gate nor a
+  real file reaches them.
 - `cargo-deny` runs on the runner against `deny.toml` (licences only); it
   is not installed on the machine these crates were written on.
   Run by hand with 0.20.2 on the commit that vendored `regress`:
