@@ -92,7 +92,12 @@ export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<str
  * computes from it; the record is written the way a save of the sheet editor
  * writes it (the part and its copy in the defined names).
  */
-export async function hiddenXlsx(dir: string, name = 'hidden.xlsx'): Promise<string> {
+export async function hiddenXlsx(
+  dir: string,
+  name = 'hidden.xlsx',
+  /** changes made before the cell is marked, as a person would have made them */
+  beforeMark?: (file: string) => Promise<void>,
+): Promise<string> {
   const { run } = await import('./helpers')
   const table = join(dir, 'table.json')
   writeFileSync(
@@ -106,6 +111,7 @@ export async function hiddenXlsx(dir: string, name = 'hidden.xlsx'): Promise<str
   expect(
     (await run(['create', '--type', 'xlsx', '--from', table, '--out', file, '--json'])).code,
   ).toBe(0)
+  await beforeMark?.(file)
   const zip = await JSZip.loadAsync(readFileSync(file))
   const workbook = await zip.file('xl/workbook.xml')!.async('string')
   const sheetName = /<sheet\b[^>]*\bname="([^"]+)"/.exec(workbook)![1]!
