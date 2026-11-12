@@ -77,4 +77,21 @@ describe('genoffice convert ODF import filters', () => {
     expect(r.code).toBe(1)
     expect(r.json().message).toContain('cannot convert')
   })
+
+  it('names the reason when the file is not a presentation', async () => {
+    const dir = tempDir()
+    const odp = join(dir, 'letter.odp')
+    const { writeFile } = await import('node:fs/promises')
+    const textContent =
+      `<?xml version="1.0" encoding="UTF-8"?><office:document-content ${ODF_NAMESPACES} office:version="1.2">` +
+      '<office:body><office:text><text:p>Letter</text:p></office:text></office:body>' +
+      '</office:document-content>'
+    await writeFile(odp, await buildZip({ 'content.xml': textContent }))
+
+    const out = join(dir, 'letter.pptx')
+    const r = await run(['convert', odp, '--to', 'pptx', '--out', out, '--json'])
+    expect(r.code).toBe(3)
+    expect(r.json().detail).toMatchObject({ reason: 'not-a-presentation' })
+    expect(existsSync(out)).toBe(false)
+  })
 })
