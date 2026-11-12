@@ -86,7 +86,7 @@ export function handleImportCsv(ctx: DataToolsContext): void {
       // are read for is the best tie-breaker we have (as on the open path)
       importCsvText(
         ctx,
-        decodeCsvBuffer(new Uint8Array(buffer), legacyCsvCharsetFor(getDocumentLocale())),
+        await decodeCsvBuffer(new Uint8Array(buffer), legacyCsvCharsetFor(getDocumentLocale())),
       )
     })().catch(() => ctx.setMessage(t('appCsvTooLarge')))
   }

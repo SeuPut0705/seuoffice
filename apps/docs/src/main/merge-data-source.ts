@@ -43,7 +43,7 @@ export const MERGE_DATA_SOURCE_EXTENSIONS = ['xlsx', 'csv'] as const
 export async function readMergeDataSource(path: string): Promise<MergeDataSource> {
   const extension = extname(path).toLowerCase()
   const bytes = await readFile(path)
-  const csvText = extension === '.csv' ? decodeCsvBuffer(bytes) : null
+  const csvText = extension === '.csv' ? await decodeCsvBuffer(bytes) : null
   const rows =
     csvText !== null
       ? parseCsv(csvText, resolveImportDelimiter(csvText))

@@ -51,23 +51,23 @@ describe('opening an unmarked CSV', () => {
     ['ja-JP', SHIFT_JIS],
     ['zh-TW', BIG5],
     ['zh-CN', GBK],
-  ])('reads it as written on a %s system, with the UI in English', (system, file) => {
+  ])('reads it as written on a %s system, with the UI in English', async (system, file) => {
     startInstall(undefined, system)
     expect(getUiLang()).toBe('en')
 
-    expect(decodeCsvBuffer(file.bytes, legacyCsvCharset())).toBe(file.text)
+    expect(await decodeCsvBuffer(file.bytes, legacyCsvCharset())).toBe(file.text)
   })
 
-  it('reads a Korean file as written on a Korean system', () => {
+  it('reads a Korean file as written on a Korean system', async () => {
     startInstall(undefined, 'ko-KR')
 
-    expect(decodeCsvBuffer(CP949.bytes, legacyCsvCharset())).toBe(CP949.text)
+    expect(await decodeCsvBuffer(CP949.bytes, legacyCsvCharset())).toBe(CP949.text)
   })
 
-  it('keeps a Japanese choice stored before the UI had two languages', () => {
+  it('keeps a Japanese choice stored before the UI had two languages', async () => {
     startInstall('ja', 'ko-KR')
     expect(getUiLang()).toBe('en')
 
-    expect(decodeCsvBuffer(SHIFT_JIS.bytes, legacyCsvCharset())).toBe(SHIFT_JIS.text)
+    expect(await decodeCsvBuffer(SHIFT_JIS.bytes, legacyCsvCharset())).toBe(SHIFT_JIS.text)
   })
 })

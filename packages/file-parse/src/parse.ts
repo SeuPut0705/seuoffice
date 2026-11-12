@@ -258,7 +258,7 @@ export async function parseFileToText(
         ext === 'csv' || ext === 'tsv'
           ? isUtf32BomDeclared(bytes)
             ? null
-            : decodeCsvBuffer(bytes)
+            : await decodeCsvBuffer(bytes)
           : decodeTextBytes(bytes)
       if (text === null) {
         return {

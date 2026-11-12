@@ -36,18 +36,18 @@ const SALES_CSV = [
 describe('an unmarked CSV in a legacy code page', () => {
   it.each(SALES_CSV)(
     'reads as written where documents are read for $locale',
-    ({ locale, text, bytes }) => {
+    async ({ locale, text, bytes }) => {
       const charset = legacyCsvCharsetFor(locale)
-      expect(decodeCsvBuffer(new Uint8Array(bytes), charset)).toBe(text)
+      expect(await decodeCsvBuffer(new Uint8Array(bytes), charset)).toBe(text)
     },
   )
 
-  it('needs the language to tell Japanese bytes from Chinese ones', () => {
+  it('needs the language to tell Japanese bytes from Chinese ones', async () => {
     const japanese = SALES_CSV[0]!
-    const read = (locale: string): string =>
+    const read = (locale: string): Promise<string> =>
       decodeCsvBuffer(new Uint8Array(japanese.bytes), legacyCsvCharsetFor(locale))
-    expect(read('ja')).toBe(japanese.text)
-    expect(read('zh')).not.toBe(japanese.text)
+    expect(await read('ja')).toBe(japanese.text)
+    expect(await read('zh')).not.toBe(japanese.text)
   })
 
   it('has no code page to prefer where the system never had one', () => {

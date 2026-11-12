@@ -4875,7 +4875,7 @@ async function prepareWorkbookForOpen(
           throw new Error(`${tm('errTooLarge', { mb: limitMb })} (${sizeMb} MB)`)
         }
         const converted = await csvToXlsxBufferForOpen(
-          decodeCsvBuffer(await readFile(path), legacyCsvCharset()),
+          await decodeCsvBuffer(await readFile(path), legacyCsvCharset()),
           'Sheet1',
           copyExtension === 'tsv' ? '\t' : undefined,
         )
@@ -4925,7 +4925,7 @@ async function prepareWorkbookForOpen(
         throw new Error(`${tm('errTooLarge', { mb: limitMb })} (${sizeMb} MB)`)
       }
       const converted = await csvToXlsxBufferForOpen(
-        decodeCsvBuffer(await readFile(path), legacyCsvCharset()),
+        await decodeCsvBuffer(await readFile(path), legacyCsvCharset()),
         'Sheet1',
         // A .tsv's delimiter is declared by its extension, and sniffing by
         // frequency can get it wrong: annotation-heavy exports (gene

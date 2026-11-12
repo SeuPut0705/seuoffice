@@ -172,8 +172,8 @@ async function describePdf(path: string, password?: string): Promise<Description
   }
 }
 
-function describeCsv(path: string): Description {
-  const info = csvInfo(readInput(path))
+async function describeCsv(path: string): Promise<Description> {
+  const info = await csvInfo(readInput(path))
   return {
     headline: `${info.rows} rows × ${info.columns} columns`,
     fields: { rows: info.rows, columns: info.columns, delimiter: info.delimiter },
