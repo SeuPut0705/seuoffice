@@ -269,25 +269,91 @@ class none of whose inputs differs any more. The gate runs in UTC
 
 ## Next session starts here
 
-State on 2026-11-12. The branch is on origin and is pushed at every unit
-boundary (never forced, never to main).
+State on 2026-11-12, 13:30 KST. The branch is on origin and is pushed at
+every unit boundary (never forced, never to main).
 
 - `feat/rust-docx-u1`: everything below, on main at 5f03509fd (merged, not
-  rebased). The gate passes with key order compared: 0 differences, 6 ledger
-  entries, none stale.
+  rebased). The gate is RED on one thing only, and on purpose: 679 checks
+  over inputs with U+0131, U+017F or U+212A, where `js_regex!(…, "i")` folds
+  case as Unicode does and JavaScript without `/u` does not. The fix is one
+  place, `jscompat/src/regex.rs`, and is stream D's (`feat/rust-fileparse-u1`):
+  main sends the hash, it is merged here, and the gate has to read 0 again.
+  Do not fix it a second way. Everything else: 0 differences in 1,724,926
+  checks, 13 ledger entries, none stale, five listed classes.
 - Other streams start from this branch on origin, on another machine, and
-  merge it at unit boundaries: `feat/rust-docx-model` (the Word model types
-  generated from `types.ts` into `docx-engine/src/model/`, then the save
-  side), `feat/rust-pptx-u1` (slides), `feat/rust-fileparse-u1` (file
-  readers). They add to `ooxml-xml`, `ooxml-pkg`, `jscompat` and the harness
-  behind new functions and options; the Word gate has to stay as it is. The
-  model is not ported here a second time: a reader that is wired toward
-  `parse.ts` takes the model type as its return type and its local struct
-  goes in the same unit.
-- `EffectivePPr` and `EffectiveRPr` are not ported yet: the model stream
-  holds them opaque until `resolve-props.ts` lands here.
+  merge it at unit boundaries: `feat/rust-docx-model` (B: the Word model
+  types generated from `types.ts` into `docx-engine/src/model/`, then the
+  save side, and the leaves over model types: `ink.ts`,
+  `parse-block-passes.ts`, `lineBoxOf`, `vmlWordArtBox`, the read side of
+  `chart.ts`), `feat/rust-pptx-u1` (C), `feat/rust-fileparse-u1` (D). They
+  add to `ooxml-xml`, `ooxml-pkg`, `jscompat` and the harness behind new
+  functions and options; the Word gate has to stay as it is. The model is
+  not ported here a second time.
+- `EffectivePPr`, `EffectiveRPr`, `ResolveCtx` and the direct and effective
+  formats are in `docx-engine/src/resolve.rs` now: stream B can type them.
+  Structs written here for want of the model, each under the doc line
+  "model type, to be replaced by the generated model": `FieldDisplay`
+  (`fields/display.rs`), `TextGlow` (`drawing_geometry/fill.rs`).
 
 ### What was done last
+
+**Unit 2: the resolver and the leaves without model types.** About 3,200
+TypeScript lines in 6,600 of Rust, eight groups of (f):
+
+| group | TypeScript | functions | first comparison |
+|---|---|---|---|
+| `resolve` | `resolve-props.ts`, whole | 13 | 24,840 checks, 0 differences |
+| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts` | 1 | 2,122, 0 |
+| `drawing` | `parse-drawing-geometry.ts` without `lineBoxOf` | 11 | 6,987, 0 |
+| `vml` | `parse-vml.ts` without `vmlWordArtBox` | 9 | 3,414, 0 |
+| `revision` | `revision-xml.ts`, whole | 6 | 6,348, 0 |
+| `altchunk` | `alt-chunk.ts` without the converter | 5 | 5,458, 12 |
+| `checkbox` | `checkbox-control.ts`, whole | 5 | 2,907, 0 |
+| `images` | the predicates of `tiff.ts` and `metafile.ts` | 4 | 1,505, 0 |
+
+The first comparisons are runner artifacts (runs 43149479120 for `resolve`,
+43151626477 for the rest), taken before anything was fixed; no porter
+compared privately. The 12 differences were one class: `TextDecoder` is ICU
+on Node and the Encoding Standard in Chromium and in `encoding_rs`.
+
+A first run without a difference says little until faults are seeded. Of 29
+faults in the resolver 22 were caught at once; four of the seven misses
+named inputs that are now there (a `w:specVanish` that is present but off,
+`shadowCompare` over inherited names, a negative half in
+`effectiveLineFormat`, default styles of other kinds before the paragraph
+default) and three cannot be seen by any input, because the TypeScript
+readers never produce the value (`eaSlotEmpty: false`, an empty conditional
+colour, a level with `hanging` 0). The faults of the leaves, the porters'
+35 and eight of the integrator's, are run 43153584303: read
+`tools/docx-diff/out/u2-leaves-faults.txt` or the artifact
+`docx-diff-faults`, add an input for each miss, and delete the branch
+`rust-faults/u2-leaves`.
+
+**Where the Rust is right and the TypeScript is to be fixed.** main decided
+six findings of this unit (items 11 to 16 of its TypeScript list). The Rust
+falls back to the default paragraph style for the runs of a paragraph whose
+style is missing, reads the wrap of the outer anchor only, reads revision
+attributes in either quote, reads a `v:fill` opacity in percent, stays on
+the Encoding Standard, and reads a `w:date` without a zone as UTC. Each is
+an entry of `divergences.json` with its class (see "Divergences"). When
+main's fix is merged the entry and its class go stale, and both go.
+
+**The machine.** Nothing heavier than `cargo check -p` runs here any more
+(see "Standing rules"); first comparisons and faults are runner jobs, and
+`tools/docx-diff/faults.py` with the `faults` input of the workflow is the
+tool for the latter. A dispatch right after a push can take the previous
+head: read `headSha` of a run before using its result.
+
+**Held locally until `jscompat` has them** (each marked `// to jscompat:`):
+`encodeURIComponent` (`vml/shape.rs`), a port of V8's `Date.parse`
+(`revision_xml.rs`, about 800 lines), and `utf16_shaped`
+(`fields/display.rs`): a counted quantifier (`\S{1,15}`) counts an astral
+character once in `regress` and twice in JavaScript without `/u`. That last
+one is a property of every `js_regex!` with a counted quantifier or a `.`
+over text outside the BMP and belongs with the case folding in `regex.rs`.
+
+
+**Before unit 2**
 
 **The Rust and the ledger in line with main.** main fixed the TypeScript
 defects this port found, and this branch follows: table lookups answer for
@@ -349,30 +415,29 @@ for a record keyed by data. No order is in the ledger.
 
 ### What to do, in order
 
-1. **`resolve-props.ts`** (1,141 lines, 25 exports; imports only modules
-   already ported). It unblocks `fieldDisplayOf` and replaces the partial
-   `EffectivePPr`, `ResolveCtx` and `ResolveCompat` of `fields.rs`. Its
-   results are `ParaFormat` and `Run` objects built by assignment and
-   spread: start from `--key-orders`.
-2. **The leaves `parse.ts` still imports**, in parallel, each as a group of
-   (f): the rest of `parse-drawing-geometry.ts` (651; one function is
-   ported) and of `parse-vml.ts` (568; nine are), `chart.ts` read side
-   (1,077), `revision-xml.ts` (511, shared with the save side),
-   `alt-chunk.ts` (289), `parse-block-passes.ts` (240), `ink.ts` (153),
-   `checkbox-control.ts` (77). `tiff.ts` (145) and `metafile.ts` (122) read
-   bytes: their inputs cross as blobs of the wire frame, not as text.
-   `lazy-media.ts` (55) is about when the host reads media, so decide what
-   of it the engine owns before porting it.
-3. **The model**, `types.ts` (2,719 lines), as Rust types that serialize to
-   the same JSON, each a struct or a `js_object!` by the rule above.
-4. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
+1. **Merge stream D's fix of `jscompat/src/regex.rs`** when main sends the
+   hash, see the gate read 0, and add the one input that waits for it: a
+   part named `x.rel\u017f` for `ooxml-pkg/src/load.rs`.
+2. **Close the leaves' faults** (above), then the unit report to main if it
+   has not gone.
+3. **Merge main when it has fixed items 11 to 16**, drop the entries and
+   classes that go stale, and take the model from stream B when it lands:
+   the local structs go, and `lineBoxOf`, `vmlWordArtBox`, `ink.ts`,
+   `parse-block-passes.ts` and the chart reader come with it.
+   `lazy-media.ts` (55) is about when the host reads media: decide what of
+   it the engine owns before porting it. The decoders of `tiff.ts` and
+   `metafile.ts` stay with the host.
+4. **The model**, `types.ts` (2,719 lines), is stream B's: Rust types that
+   serialize to the same JSON, each a struct or a `js_object!` by the rule
+   above. Fetch `origin/feat/rust-docx-model` and read it before wiring.
+5. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
    are not exported, so (f) cannot call them. Compare `parseDocx` as a
    whole: the model of every corpus document as JSON, block by block, with a
    count per block type and per field so a partial port shows what is equal
    already. Port by pass: runs, paragraphs, tables, drawings and text boxes,
    the block passes. Then finish `parseNotesXml`'s paragraph reader and
    `applyTocEntryNumbers`, which need it.
-5. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
+6. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
    `style-upsert.ts`, `remove-parts.ts`, `zip-splice.ts`,
    `resource-cleanup.ts`, the writers left out of the modules above) and
    the features on top (`compare.ts`, `mail-merge.ts`) come after the read
