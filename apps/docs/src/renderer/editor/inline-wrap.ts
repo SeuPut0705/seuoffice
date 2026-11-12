@@ -458,7 +458,6 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
 function typedOverMarks(state: EditorState, from: number, to: number): readonly PmMark[] | null {
   const $from = state.doc.resolve(from)
   const $to = state.doc.resolve(to)
-  if (!$from.sameParent($to)) return null
   const outside = wrapsTypedOverLeftOutside($from, $to)
   if (outside.length === 0) return null
   const marks = $from.marksAcross($to) ?? []
