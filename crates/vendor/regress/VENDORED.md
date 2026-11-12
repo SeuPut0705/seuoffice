@@ -52,6 +52,16 @@ could be offered upstream.
    step, so its capacity stops at the bound and a reallocation holds 1.25
    times it at most. After each match attempt a stack above 4,096 entries is
    shrunk back to that, so one large search does not keep its memory.
+2. **A lazy loop over one character matcher takes one character per
+   backtrack** (`classicalbacktrack.rs`, `tests/lazy_loop.rs`). It used to
+   compute the farthest position the loop could reach before trying the
+   rest of the pattern, which reads the rest of the input for every match.
+   Now it takes its minimum and goes on; each backtrack into it checks one
+   more character against the loop body and fails when that does not match
+   or the loop has taken its maximum. The answers are those of before (the
+   suite, and 576 answers of V8 that `jscompat` holds); the scaling test
+   fails on the old code by a factor of 4.5 between two sizes, where the
+   bound it allows is 3 and the new code gives about 2.
 
 ## Dropping it
 
