@@ -1,0 +1,60 @@
+{
+ "faults": [
+  {
+   "name": "porter: legacyDirectRunFormat clamps w:sz to 0 instead of one half-point",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/text/runs.rs",
+   "old": "run.size_half_points.set(JsNum(math_max(1.0, sz)));",
+   "new": "run.size_half_points.set(JsNum(math_max(0.0, sz)));"
+  },
+  {
+   "name": "porter: crossParagraphZoteroFields reads the instruction of nested fields too (== 1 becomes >= 1)",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/text/controls.rs",
+   "old": ".filter(|active| active.depth == 1)",
+   "new": ".filter(|active| active.depth >= 1)"
+  },
+  {
+   "name": "porter: extractParaFormat drops an explicit w:before=\"0\" (>= 0 becomes > 0)",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/text/paragraph.rs",
+   "old": "if before >= 0.0 && attr(\"w:before\").is_some() {",
+   "new": "if before > 0.0 && attr(\"w:before\").is_some() {"
+  },
+  {
+   "name": "porter: tableSummary cuts the preview at 121 units, not 120",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/tables.rs",
+   "old": "preview_text: js_slice(&plain_text(xml), 0, 120),",
+   "new": "preview_text: js_slice(&plain_text(xml), 0, 121),"
+  },
+  {
+   "name": "porter: hfTblRanges takes the start as a byte offset, not a UTF-16 one",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/tables/hf.rs",
+   "old": ".map(|(start, end)| (units.to_utf16(start), units.to_utf16(end)))",
+   "new": ".map(|(start, end)| (start as u32, units.to_utf16(end)))"
+  },
+  {
+   "name": "porter: hfVSpanOf starts at the restart row itself (skip(r + 1) becomes skip(r))",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/tables/hf_paras.rs",
+   "old": "for row in rows.iter().skip(r + 1) {",
+   "new": "for row in rows.iter().skip(r) {"
+  },
+  {
+   "name": "porter: parseFieldTree records the separate end at the token start, not after it",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/tables/hf_fields.rs",
+   "old": "tree.frames[top].separate_end = (at + token.len()) as isize;",
+   "new": "tree.frames[top].separate_end = at as isize;"
+  },
+  {
+   "name": "porter: parseNoteProps overlays the first sectPr, not the last (rfind becomes find)",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/drawings/settings.rs",
+   "old": "let last_sect_pr = body_xml.rfind(\"<w:sectPr\")",
+   "new": "let last_sect_pr = body_xml.find(\"<w:sectPr\")"
+  }
+ ]
+}
