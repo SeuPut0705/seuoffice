@@ -23,21 +23,26 @@ allow = [
   "IJG",
 ]
 
-# rhwp native-only test dependency (ureq), cfg(not(wasm32)), not shipped: the
-# HTTP client rhwp links outside wasm32. Revisit each if it ever becomes a
-# dependency of a shipped native crate.
+# rhwp native-only test dependency (ureq), cfg(not(wasm32)), not shipped.
+# Revisit if it ever becomes a dependency of a shipped native crate.
 [[licenses.exceptions]]
 crate = "ring"
 allow = ["ISC"]
 
+# rhwp native-only test dependency (ureq), cfg(not(wasm32)), not shipped.
+# Revisit if it ever becomes a dependency of a shipped native crate.
 [[licenses.exceptions]]
 crate = "rustls-webpki"
 allow = ["ISC"]
 
+# rhwp native-only test dependency (ureq), cfg(not(wasm32)), not shipped.
+# Revisit if it ever becomes a dependency of a shipped native crate.
 [[licenses.exceptions]]
 crate = "untrusted"
 allow = ["ISC"]
 
+# rhwp native-only test dependency (ureq), cfg(not(wasm32)), not shipped.
+# Revisit if it ever becomes a dependency of a shipped native crate.
 [[licenses.exceptions]]
 crate = "webpki-roots"
 allow = ["CDLA-Permissive-2.0"]
