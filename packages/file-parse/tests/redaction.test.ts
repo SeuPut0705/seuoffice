@@ -12,6 +12,7 @@ import {
   xlsxToText,
 } from '../src/index'
 import { PPTX_REDACT_EXT_URI } from '../src/pptx-redaction'
+import { pivotOutputOf } from '../src/xlsx-formula-redaction'
 import { writeFixture } from './helpers/fixtures'
 // the workbook gateway's own writers: the part and its defined-name copy under
 // test are the ones a save really produces
@@ -1466,6 +1467,18 @@ describe('xlsx: the output of a PivotTable built from a withheld cell is withhel
   it.each([
     ['is a table or a name the workbook does not define', worksheetSource('name="Table1"')],
     ['is in another workbook', worksheetSource('ref="A1:A2" sheet="Clients" r:id="rId1"')],
+    [
+      'is in another workbook, the relationship written with spaces',
+      worksheetSource('ref="A1:A2" sheet="Clients" r:id = "rId1"'),
+    ],
+    [
+      'is in another workbook, the relationship in single quotes',
+      worksheetSource(`ref="A1:A2" sheet="Clients" r:id='rId1'`),
+    ],
+    [
+      'is in another workbook, the relationship under another declared prefix',
+      worksheetSource(`xmlns:rel="${REL_NS}" ref="A1:A2" sheet="Clients" rel:id="rId1"`),
+    ],
     ['is a database connection', '<cacheSource type="external" connectionId="1"/>'],
     [
       'is several ranges consolidated',
@@ -1479,10 +1492,95 @@ describe('xlsx: the output of a PivotTable built from a withheld cell is withhel
     expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
   })
 
+  it.each([
+    [
+      'a revision id',
+      'xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xr:id="{7C5A}"',
+    ],
+    ['an id of no namespace', 'id="7"'],
+    ['text inside another attribute that only looks like one', `comment='a r:id="rId1"'`],
+  ])('does not take %s on the source for another workbook', async (_what, extra) => {
+    const text = await read({ source: worksheetSource(`ref="A1:A2" sheet="Clients" ${extra}`) })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_SHOWN}`)
+  })
+
   it('withholds the whole sheet when a pivot on it does not say where its output is', async () => {
     const text = await read({ source: worksheetSource('ref="A1:A2" sheet="Clients"'), body: '' })
     expect(text).not.toContain(SECRET)
     expect(text).not.toContain('beside')
+  })
+
+  /** more member items than the megabyte a pivot part's head used to be read to */
+  const MANY_ITEMS = '<item x="0"/>'.repeat(90_000)
+  const BIG_FIELDS = `<pivotFields count="1"><pivotField axis="axisRow"><items count="90000">${MANY_ITEMS}</items></pivotField></pivotFields>`
+
+  it.each([
+    ['and no layout', ''],
+    ['and a layout too small to hold them', ' rowPageCount="1" colPageCount="1"'],
+  ])(
+    'withholds report filters listed after a megabyte of field items, %s',
+    async (_how, layout) => {
+      // the order Excel writes: location, the fields with their items, then the filters
+      const text = await read(
+        {
+          source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+          body:
+            `<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"${layout}/>` +
+            BIG_FIELDS +
+            '<pageFields count="2"><pageField fld="0" hier="-1"/><pageField fld="1" item="0" hier="-1"/></pageFields>',
+        },
+        pivotReport(
+          `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Kim')}${inline('D1', 'Phone')}<c r="E1"><v>${SECRET}</v></c></row>`,
+        ),
+      )
+      expect(text).not.toContain(SECRET)
+    },
+  )
+
+  it('finds an output location written after a megabyte of field items', async () => {
+    const text = await read({
+      source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+      body:
+        BIG_FIELDS + '<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>',
+    })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  it('withholds the output when the cache names its source after a megabyte of other content', async () => {
+    // a cache opens with its source; one that does not is not searched for it
+    const text = await read({
+      source:
+        `<extLst><ext uri="{0}">${MANY_ITEMS}</ext></extLst>` +
+        worksheetSource('ref="A1:A2" sheet="Clients"'),
+    })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  describe('a pivot part too large to be read to its end', () => {
+    const cache = `<pivotCacheDefinition>${worksheetSource('ref="A1:A2" sheet="Clients"')}</pivotCacheDefinition>`
+    const WHOLE = { startRow: 0, endRow: 1_048_575, startColumn: 0, endColumn: 16_383 }
+
+    it('takes every row from the top of the sheet to the end of the output', () => {
+      // the filters, if any, are in the part that was not read
+      const head = '<location ref="C5:D9" rowPageCount="1" colPageCount="1"/>'
+      expect(pivotOutputOf({ text: head, truncated: true }, cache).area).toEqual({
+        ...WHOLE,
+        endRow: 8,
+      })
+      expect(pivotOutputOf({ text: head, truncated: false }, cache).area).toEqual({
+        startRow: 2,
+        endRow: 8,
+        startColumn: 2,
+        endColumn: 3,
+      })
+    })
+
+    it('takes the whole sheet when the location was not in what was read', () => {
+      expect(pivotOutputOf({ text: BIG_FIELDS, truncated: true }, cache)).toEqual({
+        area: WHOLE,
+        formula: null,
+      })
+    })
   })
 
   it('changes nothing in a workbook that withholds nothing', async () => {

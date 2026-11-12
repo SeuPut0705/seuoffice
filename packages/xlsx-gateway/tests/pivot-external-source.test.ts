@@ -43,4 +43,44 @@ describe('a pivot whose data is a range of another workbook', () => {
     expect(definition.sourceRef).toBe('A1:B7')
     expect(definition.unsupported).toEqual([])
   })
+
+  const OFFICE_RELS = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+  it.each([
+    [
+      'with spaces around the equals sign',
+      '<worksheetSource ref="A1:B7" sheet="Data" r:id = "rId1"/>',
+    ],
+    ['in single quotes', `<worksheetSource ref="A1:B7" sheet="Data" r:id='rId1'/>`],
+    ['on its own line', '<worksheetSource ref="A1:B7" sheet="Data"\n\tr:id="rId1"/>'],
+    [
+      'under another prefix the part declares',
+      `<worksheetSource xmlns:rel="${OFFICE_RELS}" ref="A1:B7" sheet="Data" rel:id="rId1"/>`,
+    ],
+    [
+      'under the strict-format namespace',
+      '<worksheetSource xmlns:sr="http://purl.oclc.org/ooxml/officeDocument/relationships" ref="A1:B7" sheet="Data" sr:id="rId1"/>',
+    ],
+  ])('sees the relationship written %s', (_how, source) => {
+    const definition = parsePivotDefinition(PIVOT_XML, cache(source))
+    expect(definition.sourceSheet).toBe('')
+    expect(definition.sourceRef).toBe('')
+    expect(definition.unsupported).toEqual(['the data source is a range of another workbook'])
+  })
+
+  it.each([
+    [
+      'a revision id',
+      '<worksheetSource xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" ref="A1:B7" sheet="Data" xr:id="{7C5A}"/>',
+    ],
+    ['an id of no namespace', '<worksheetSource ref="A1:B7" sheet="Data" id="7"/>'],
+    [
+      'text inside another attribute that only looks like one',
+      `<worksheetSource ref="A1:B7" sheet="Data" name='a r:id="rId1"'/>`,
+    ],
+  ])('does not take %s for a relationship', (_what, source) => {
+    const definition = parsePivotDefinition(PIVOT_XML, cache(source))
+    expect(definition.sourceSheet).toBe('Data')
+    expect(definition.sourceRef).toBe('A1:B7')
+    expect(definition.unsupported).toEqual([])
+  })
 })

@@ -16,6 +16,7 @@ import {
   hasContentTypeOverride,
   maxRelationshipIdNumber,
 } from './xml-utils'
+import { ownValue } from './own-value'
 import type { SlideDeck } from './types'
 
 // ── Layout placeholder summary ─────────────────────────────────────────────
@@ -98,7 +99,9 @@ export function parseLayoutPlaceholders(xml: string): LayoutPlaceholder[] {
     const cx = parseInt(/\bcx="([^"]*)"/.exec(ext)?.[1] ?? '', 10)
     const cy = parseInt(/\bcy="([^"]*)"/.exec(ext)?.[1] ?? '', 10)
     if (isNaN(x) || isNaN(y) || isNaN(cx) || isNaN(cy)) continue
-    results.push({ type, idx, x, y, cx, cy, hint: PH_HINT_MAP[type] ?? 'Click to add text' })
+    // the placeholder type is the document's: the table answers its own types only
+    const hint = ownValue(PH_HINT_MAP, type) ?? 'Click to add text'
+    results.push({ type, idx, x, y, cx, cy, hint })
   }
   return results
 }

@@ -177,7 +177,8 @@ export function opVocabulary(): string {
 
 /** One-line usage for a failing op, appended to its guided error. */
 export function opUsage(name: string): string | undefined {
-  const doc = OP_DOCS[name]
+  // the name is the op's: only an op with docs of its own has a usage line
+  const doc = Object.hasOwn(OP_DOCS, name) ? OP_DOCS[name] : undefined
   if (!doc || doc.pending) return undefined
   return `Usage: ${name} ${doc.sig}`
 }

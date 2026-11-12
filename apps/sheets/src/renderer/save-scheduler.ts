@@ -82,3 +82,16 @@ export function shouldRunSaveTick(s: SaveTickState): boolean {
   if (s.kind === 'save') return !s.needsSaveAsNotUnsavedNew && !s.isCsv
   return !s.automaticRecoveryDisabled
 }
+
+/**
+ * What the end of an AI run that changed the workbook does with the file. A
+ * CSV session is left with its edits pending, for the reason the periodic
+ * AutoSave never saves one (`shouldRunSaveTick`): the save writes the active
+ * sheet's values over the .csv, flattening the workbook, and the file cannot
+ * keep the marks of cells hidden from AI, so their values (and values the run
+ * computed from them) would land in a plain file the AI can read back. The
+ * person's own Save still asks and writes as before.
+ */
+export function aiRunAutoSave(s: { autoSave: boolean; isCsv: boolean }): 'save' | 'leave-pending' {
+  return s.autoSave && !s.isCsv ? 'save' : 'leave-pending'
+}

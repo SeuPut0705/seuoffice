@@ -98,7 +98,7 @@ import {
 } from './cell-font-fallback'
 import { isNumericIdentifierText } from './cell-warning'
 import { consumePendingUndoCarry, undoMark, undoStepsSince } from './undo-carry'
-import { createSaveGate, guardedSave, shouldRunSaveTick } from './save-scheduler'
+import { aiRunAutoSave, createSaveGate, guardedSave, shouldRunSaveTick } from './save-scheduler'
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import {
   useAutoSavePref,
@@ -4651,7 +4651,11 @@ export function App({
     // AutoSave off = the user decides when the file is written: the
     // run's edits stay pending in the journal, so the offered Undo / ⌘Z keeps
     // working (saving would reopen the session and reset the undo stack).
-    if (!autoSaveRef.current) {
+    // A CSV session is never auto-saved either (aiRunAutoSave says why).
+    if (
+      aiRunAutoSave({ autoSave: autoSaveRef.current, isCsv: state.file.csvPath !== undefined }) !==
+      'save'
+    ) {
       setMessage(t('appAiChangesNotSaved'))
       return
     }

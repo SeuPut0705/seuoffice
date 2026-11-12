@@ -6,6 +6,7 @@ import {
 } from './generate'
 import { HF_DRAWING_RE, hfMovablePictureFrag, runPictureAnchorOf } from './parse'
 import type { HfPictureEdit, ImageWrap } from './types'
+import { xmlPositionOffset } from './xml-number'
 
 const EMU_PER_PX = 9525
 
@@ -42,8 +43,8 @@ export function patchHfPicturesXml(partXml: string, edits: Record<number, HfPict
  * the screen.
  */
 function setAnchorPosition(xml: string, axis: 'H' | 'V', px: number | undefined): string {
-  if (px == null) return xml
-  const emu = Math.round(px * EMU_PER_PX)
+  const emu = px == null ? null : xmlPositionOffset(px * EMU_PER_PX)
+  if (emu === null) return xml
   const el = `<wp:position${axis} relativeFrom="page"><wp:posOffset>${emu}</wp:posOffset></wp:position${axis}>`
   const existing = new RegExp(`<wp:position${axis}\\b[\\s\\S]*?</wp:position${axis}>`)
   if (existing.test(xml)) return xml.replace(existing, el)
@@ -81,8 +82,9 @@ export function patchRunPictureXml(xml: string, next: RunPictureGeometry): strin
   if (!/<wp:(?:inline|anchor)[\s>]/.test(xml)) return xml
   const cur = runPictureAnchorOf(xml)
   const wrap = next.wrap ?? null
-  const x = next.offsetXEmu ?? null
-  const y = next.offsetYEmu ?? null
+  // an offset with no wp:posOffset text (NaN, an infinity, beyond an int) is no move
+  const x = positionOffset(next.offsetXEmu)
+  const y = positionOffset(next.offsetYEmu)
   let out = xml
   const curWrap = cur.wrap ?? null
   if (wrap !== curWrap) {
@@ -110,7 +112,7 @@ export function patchRunPictureXml(xml: string, next: RunPictureGeometry): strin
     if (x != null && (x !== (cur.offsetXEmu ?? null) || relH !== (cur.relH ?? null))) {
       out = out.replace(
         /<wp:positionH\b[\s\S]*?<\/wp:positionH>/,
-        `<wp:positionH relativeFrom="${relH ?? 'column'}"><wp:posOffset>${Math.round(x)}</wp:posOffset></wp:positionH>`,
+        `<wp:positionH relativeFrom="${relH ?? 'column'}"><wp:posOffset>${x}</wp:posOffset></wp:positionH>`,
       )
     }
     if (
@@ -121,11 +123,17 @@ export function patchRunPictureXml(xml: string, next: RunPictureGeometry): strin
     ) {
       out = out.replace(
         /<wp:positionV\b[\s\S]*?<\/wp:positionV>/,
-        `<wp:positionV relativeFrom="${relV ?? 'paragraph'}"><wp:posOffset>${Math.round(y)}</wp:posOffset></wp:positionV>`,
+        `<wp:positionV relativeFrom="${relV ?? 'paragraph'}"><wp:posOffset>${y}</wp:posOffset></wp:positionV>`,
       )
     }
   }
   return resize(out, next)
+}
+
+/** an offset in EMU as wp:posOffset can hold it, rounded; null when it cannot */
+function positionOffset(emu: number | null | undefined): number | null {
+  const text = emu == null ? null : xmlPositionOffset(emu)
+  return text === null ? null : Number(text)
 }
 
 const wrapKind = (wrap: ImageWrap | null): string | null =>

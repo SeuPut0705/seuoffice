@@ -9,7 +9,7 @@
  * of racing, and retries on its next 30 s wake-up.
  */
 import { describe, expect, it } from 'vitest'
-import { createSaveGate, shouldRunSaveTick } from '../src/renderer/save-scheduler'
+import { aiRunAutoSave, createSaveGate, shouldRunSaveTick } from '../src/renderer/save-scheduler'
 
 function dirtyWorkbookState(overrides: Partial<Parameters<typeof shouldRunSaveTick>[0]> = {}) {
   return {
@@ -166,5 +166,19 @@ describe('a workbook whose only edit is a withheld cell still saves', () => {
     expect(
       shouldRunSaveTick(dirtyWorkbookState({ ...onlyRedactions, kind: 'save', editingCell: true })),
     ).toBe(false)
+  })
+})
+
+describe('the save at the end of an AI run', () => {
+  // A CSV session is written as the active sheet's values into the .csv
+  // (once the person chose to keep CSV), a file with no room for the marks
+  // of hidden cells, which the AI can read back.
+  it('leaves a CSV session unsaved, as the periodic AutoSave does', () => {
+    expect(aiRunAutoSave({ autoSave: true, isCsv: true })).toBe('leave-pending')
+  })
+
+  it('saves any other workbook when AutoSave is on', () => {
+    expect(aiRunAutoSave({ autoSave: true, isCsv: false })).toBe('save')
+    expect(aiRunAutoSave({ autoSave: false, isCsv: false })).toBe('leave-pending')
   })
 })

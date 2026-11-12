@@ -109,7 +109,8 @@ const rectsOf = (els: SlideElement[]) =>
 register({
   name: 'alignElements',
   validate(op, ctx) {
-    if (!ALIGN_MODES[String(op.mode)]) {
+    // the mode is the op's: only the table's own names are modes, not `constructor` & co.
+    if (!Object.hasOwn(ALIGN_MODES, String(op.mode))) {
       throw new GuidedError(
         `op "alignElements" needs "mode": ${Object.keys(ALIGN_MODES).join('/')}.`,
       )
@@ -317,7 +318,7 @@ register({
     const from = resolveEndpoint(op, slide, 'from', index)
     const to = resolveEndpoint(op, slide, 'to', index)
     if (from === to) throw new GuidedError('op "addConnector": "from" and "to" must differ.')
-    if (op.kind !== undefined && !CONNECTOR_KINDS[String(op.kind)]) {
+    if (op.kind !== undefined && !Object.hasOwn(CONNECTOR_KINDS, String(op.kind))) {
       throw new GuidedError('op "addConnector": "kind" must be straight/elbow/curved.')
     }
     sideOf(op, 'fromSide')

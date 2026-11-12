@@ -9870,6 +9870,11 @@ export default function App() {
   }
 
   const openCertSignDialog = () => {
+    // a host without the signing service (the web build) has no certificates to offer
+    if (typeof window.pdfApi.signWithCertificate !== 'function') {
+      showNotice(t('certSignUnavailable'))
+      return
+    }
     if (dirty || saveInFlightRef.current !== null) {
       showNotice(t('certSaveFirst'))
       return

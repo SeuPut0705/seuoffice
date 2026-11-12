@@ -12,6 +12,7 @@ import { cNvPrIdsInXml, pruneTimingForSpids } from './animation'
 import type { EmuRect, Paragraph, PictureElement, Slide, SlideElement, TextElement } from './types'
 import { clampPosEmu, generateParagraphXml, generateXfrmXml } from './generate'
 import { creationIdXml, escapeXmlAttr, hasDefaultFor, maxRelationshipIdNumber } from './xml-utils'
+import { ownValue } from './own-value'
 import { relsPathFor } from './zip'
 import type { OpenedPptx } from './index'
 import { cleanupDeletedElementResources } from './resource-cleanup'
@@ -532,7 +533,8 @@ export function addImageMediaAndRel(
 ): { rid: string; mediaPath: string } | null {
   const { archive } = opened
   const ext = extRaw.toLowerCase()
-  const mime = IMAGE_MIME[ext]
+  // the extension comes from a file name: the table answers its own extensions only
+  const mime = ownValue(IMAGE_MIME, ext)
   if (!mime) return null
 
   // 1) media part: identical bytes already in the package (a logo on every

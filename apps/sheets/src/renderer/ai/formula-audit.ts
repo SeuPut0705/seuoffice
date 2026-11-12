@@ -315,6 +315,7 @@ export async function traceWorkbookPrecedents(
     const samples = await sampleCells(ctx, targetSheet.id, bounds, MAX_SAMPLE_CELLS)
     refs.push({
       label: rectLabel(targetSheet, bounds, targetSheet.id === sheet.id),
+      sheetId: targetSheet.id,
       cellCount,
       samples,
       hasError: samples.some(
@@ -457,6 +458,7 @@ export async function traceWorkbookDependents(
       }
       dependents.push({
         sheetName: sheet.name,
+        sheetId: sheet.id,
         address: formatAddress(cell.row, cell.column),
         formula: cell.formula,
         value: cell.value,
