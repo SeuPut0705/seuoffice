@@ -89,8 +89,13 @@ function scan(xml: string): El[] {
   return out
 }
 
-const attrOf = (el: El, name: string): string | undefined =>
-  new RegExp(`\\s${name}="([^"]*)"`).exec(el.attrs)?.[1]
+const ATTR_RE = /([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+
+/** an attribute of a tag, in either quote; walks the tag so text inside another value is not taken for it */
+function attrOf(el: El, name: string): string | undefined {
+  for (const m of el.attrs.matchAll(ATTR_RE)) if (m[1] === name) return m[2] ?? m[3]
+  return undefined
+}
 
 const PROP_CHANGE: Record<string, string> = {
   'w:rPrChange': 'w:rPr',
