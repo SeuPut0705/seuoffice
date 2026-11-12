@@ -8,6 +8,7 @@
 //! about either: paths, clocks and loggers come from the caller.
 
 pub mod calls;
+pub mod html;
 pub mod node_fs;
 pub mod packages;
 pub mod shell;

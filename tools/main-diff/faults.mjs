@@ -36,7 +36,7 @@ for (const [i, fault] of faults.entries()) {
   const original = readFileSync(path, 'utf8')
   const count = original.split(fault.find).length - 1
   let verdict
-  let detail = ''
+  let detail
   if (count !== 1) {
     verdict = 'BAD'
     detail = `find occurs ${count} times`

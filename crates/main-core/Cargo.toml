@@ -11,6 +11,12 @@ jscompat.workspace = true
 libc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
+# parse5 of the TypeScript: both implement the WHATWG HTML parsing algorithm
+html5ever = "0.40"
+markup5ever_rcdom = "0.40"
+# the WHATWG URL of JavaScript
+url = "2.5"
 
 # the file identity of fs.statSync on Windows (rename_validation::is_same_file)
 [target.'cfg(windows)'.dependencies]
