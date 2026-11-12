@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 const discardDocsRecovery = vi.fn()
 const discardSheetsRecovery = vi.fn()
+const discardPdfRecovery = vi.fn()
 const discardMindmapRecovery = vi.fn()
 const hwpDiscardRecoveryCopy = vi.fn()
 const discardDiagramRecovery = vi.fn()
@@ -35,6 +36,7 @@ vi.mock('../../sheets/src/main/sheets-main', () => ({
 
 vi.mock('../../pdf/src/main/pdf-main', () => ({
   createPdfView: () => ({}),
+  discardPdfRecovery: (...args: unknown[]) => discardPdfRecovery(...args),
   pdfRecoveryIdentity: () => null,
 }))
 
@@ -94,6 +96,17 @@ describe('discardEditorRecovery', () => {
   it('leaves a destroyed sheets tab alone', () => {
     discardEditorRecovery('sheets', contents(true) as never)
 
+    expect(discardSheetsRecovery).not.toHaveBeenCalled()
+  })
+
+  it("runs the PDF editor's own Don't Save for a pdf tab, and not for one already gone", () => {
+    const tab = contents()
+
+    discardEditorRecovery('pdf', tab as never)
+    discardEditorRecovery('pdf', contents(true) as never)
+
+    expect(discardPdfRecovery).toHaveBeenCalledTimes(1)
+    expect(discardPdfRecovery).toHaveBeenCalledWith(tab)
     expect(discardSheetsRecovery).not.toHaveBeenCalled()
   })
 

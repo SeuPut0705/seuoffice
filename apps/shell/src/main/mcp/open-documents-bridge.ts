@@ -34,8 +34,9 @@ export interface OpenDocumentsBridgeDeps {
   isUnloaded?: (tabId: string) => boolean
   /**
    * The editor's own "Don't Save" for its recovery copy on a discard close
-   * (docs, mind map, hwp); called before the tab is removed. Markdown, html
-   * and slides drop theirs through their own discard hooks below.
+   * (docs, sheets, pdf, mind map, hwp, diagram); called before the tab is
+   * removed. Markdown, html and slides drop theirs through their own discard
+   * hooks below.
    */
   recoveryDiscard?: (tab: OpenDocumentTab, contents: WebContents) => void
   /** folder an untitled dirty document is saved into before closing */
@@ -260,7 +261,8 @@ export function createOpenDocumentsControl(deps: OpenDocumentsBridgeDeps): OpenD
   /**
    * What a discard leaves behind: markdown and html release staged assets and
    * drop their recovery copy (an untitled document's too), slides drops its
-   * copies, and docs / sheets / mind map / hwp / diagram drop theirs through `recoveryDiscard`.
+   * copies, and docs / sheets / pdf / mind map / hwp / diagram drop theirs
+   * through `recoveryDiscard`.
    */
   const discardLeftovers = async (tab: OpenDocumentTab): Promise<void> => {
     if (tab.kind === 'markdown' && deps.markdown) {
@@ -305,18 +307,17 @@ export function createOpenDocumentsControl(deps: OpenDocumentsBridgeDeps): OpenD
       const live = (await deps.list()).find((doc) => doc.id === tab.id)
       if (!live) throw new Error(`"${tab.title}" is already closed`)
       let savedPath: string | undefined
-      if (live.kind === 'pdf') {
-        // A PDF has no content this tool can write back, so a close can only drop
-        // the tab. Its one unsaved state — annotations drawn in the viewer — cannot
-        // be saved here, so refuse to lose it silently when a save-close is asked
-        // for; an explicit discard (or a clean PDF) just closes.
-        if (unsaved === 'save' && live.dirty) {
+      if (unsaved === 'save' && live.dirty) {
+        if (live.kind === 'pdf') {
+          // A PDF has no content this tool can write back. Its one unsaved state —
+          // annotations drawn in the viewer — cannot be saved here, so a save-close
+          // refuses to lose it silently; an explicit discard drops it below, like
+          // every other family's.
           throw new Error(
             `"${live.title}" has unsaved changes, and a PDF cannot be saved through this tool: ` +
               `close it with unsaved:"discard" to drop them, or save it in ${PRODUCT_NAME} first`,
           )
         }
-      } else if (unsaved === 'save' && live.dirty) {
         savedPath = closeSavePath(live, deps.defaultSaveDir)
         await saveTo(live, savedPath)
       } else if (unsaved === 'discard' && !deps.isUnloaded?.(live.id)) {

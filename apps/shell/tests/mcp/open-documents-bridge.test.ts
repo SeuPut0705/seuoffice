@@ -145,7 +145,7 @@ describe('open_documents close: discard cleanup', () => {
 })
 
 describe('open_documents: restored tabs and recovery copies', () => {
-  it.each(['docs', 'mindmap', 'hwp'] as const)(
+  it.each(['docs', 'pdf', 'mindmap', 'hwp'] as const)(
     'drops a %s document’s recovery copy on discard, before the tab goes',
     async (kind) => {
       const order: string[] = []
