@@ -1,4 +1,3 @@
-import type { zh } from './zh'
 import { ribbonCommonEn } from '@genoffice/i18n'
 
 export const en = {
@@ -749,4 +748,4 @@ export const en = {
   ribbonMergeFragment: 'Fragment',
   ribbonMergeIntersect: 'Intersect',
   ribbonMergeSubtract: 'Subtract',
-} satisfies Record<keyof typeof zh, string>
+}

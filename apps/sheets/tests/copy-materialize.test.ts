@@ -75,7 +75,7 @@ describe('copy materialize screen extent', () => {
         } as never),
       ).toBe('2026년 10월 29일(목)')
     } finally {
-      setModuleLang('zh')
+      setModuleLang('en')
     }
   })
 

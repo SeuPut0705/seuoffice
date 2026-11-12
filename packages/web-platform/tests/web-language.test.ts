@@ -19,7 +19,9 @@ describe('webLanguage', () => {
   })
 
   it('is English for a language the app has no UI in', () => {
-    at('?lang=xx')
-    expect(webLanguage()).toBe('en')
+    for (const lang of ['zh', 'ja', 'zh-TW', 'fr-FR', 'xx']) {
+      at(`?lang=${lang}`)
+      expect(webLanguage()).toBe('en')
+    }
   })
 })

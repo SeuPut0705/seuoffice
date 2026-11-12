@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   apPanel: '주석',
@@ -57,4 +57,4 @@ export const ko = {
   apCreateFailed: '문서를 만들지 못했습니다. {reason}',
   apMdNote: '메모: {text}',
   apCount: '{count}개',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

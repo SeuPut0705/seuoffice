@@ -40,7 +40,7 @@
     - `diagram-skill.ts`: 지시문(영어, `brandText`)과 요청마다 붙는 문맥. 모델은 다이어그램을 **글로만** 읽는다. 요청마다 지금 쪽의 읽기 표가 `<diagram_page>` 안에 선택 id와 함께 가고, 그림은 만들지 않는다. 새 순서도·시퀀스·ER 등은 `insert_mermaid`를 먼저 쓰라고 적는다.
     - `AiPanel.tsx`·`AiDock.tsx`: 창과 오른쪽 끝 자리. AI 차례마다 그 차례의 호출들을 되돌리는 목록이 있다. `diagramAiHost`가 틀 쪽 실행기(`live-ops.ts`)를 도구에 잇는다.
     - `files-skill.ts`·`search-skill.ts`·`transport.ts`·`connection.ts`·`subscription-client.ts`·`lang-directive.ts`: 마인드맵 편집기의 것과 같다.
-  - `i18n/app/<언어>.ts` 21개(`zh.ts`가 키 집합)와 `strings-app.ts`, AI 창의 `i18n/ai/<언어>.ts` 21개와 `strings-ai.ts`, 둘을 언어별로 합치는 `strings.ts`, `locale.tsx`. `theme.ts`: 앱 테마 → draw.io 어두운 보기.
+  - `i18n/app/<언어>.ts` 두 개(`en.ts`가 키 집합)와 `strings-app.ts`, AI 창의 `i18n/ai/<언어>.ts` 두 개와 `strings-ai.ts`, 둘을 언어별로 합치는 `strings.ts`, `locale.tsx`. `theme.ts`: 앱 테마 → draw.io 어두운 보기.
 
 ## 맡지 않는 것 (경계)
 
@@ -67,7 +67,7 @@
 - **AI 도구 호출 하나는 되돌리기 한 번이고, 하나라도 거절되면 아무것도 바뀌지 않는다.** 기본 변경과 Mermaid 그림을 다리 요청 한 번(`applyBatch`)으로 보내고, 다리는 모델 편집 한 번 안에서 넣는다. 연산 묶음을 여러 요청으로 나누지 않는다.
 - **모델에게 다이어그램의 그림을 보내지 않는다.** 읽기 표 글만 간다. 사람이 첨부한 그림 파일은 다른 편집기처럼 메시지와 함께 간다.
 - **draw.io 자체 AI는 꺼 둔다.** AI는 이 창으로만 쓴다(구독·요금 규칙은 공용 부품이 지킨다).
-- 문구는 21개 언어 조각에 모두 넣는다. 제품 이름은 `GenOffice`로 적는다.
+- 문구는 두 언어 조각에 모두 넣는다. 제품 이름은 `GenOffice`로 적는다.
 - **기본 스킬 `diagram`이 이 편집기의 도구·연산·도형 이름을 적는다**(`apps/shell/resources/builtin-skills/diagram`). 그 이름이나 새 도형의 기본 크기·간격을 바꾸면 그 본문도 고친다(`tests/builtin-skill.test.ts`가 지킨다, 결정 0132).
 
 ## 셸과의 약속
@@ -82,8 +82,8 @@
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/diagram`, `npm run typecheck -w @genoffice/diagram`, `npm run build -w @genoffice/diagram`(draw.io 묶음과 다리 스크립트까지).
-- 바꾸면 반드시 테스트하는 것: 형식별 저장·압축·이름(`formats.test.ts`), 프로토콜 경로·끼우기·CSP(`protocol.test.ts`), 요청 허용·이동·새 창·링크(`network-guard.test.ts`), 메시지 출처와 틀 통신(`bridge-protocol.test.ts`), 기본 변경의 한 번 되돌리기·쪽 바꾸기·실패 시 원상(`apply-primitives.test.ts`, draw.io를 흉내 낸 가짜 모델), 알림 세기·인쇄 문서·시작 인자·사본·21개 언어(`editor-parts.test.ts`), 뒷단의 열기·거절·저장 생략·저장 대상(`main.test.ts`, Electron은 가짜).
-- AI 창: 도구 정의가 `DIAGRAM_OPS`에서 나오는지, 읽기(지금 쪽·선택 id·다른 쪽), 모두 아니면 아무것도(거절·draw.io 실패 모두 그대로), Mermaid가 섞인 호출이 다리 요청 한 번·되돌리기 한 번인지, 변환 실패가 그 까닭과 함께 거절되는지, 문맥에 그림이 없는지(`ai-tools.test.ts`, 가짜 draw.io `tests/helpers/fake-drawio.ts`), 창의 실행과 차례 되돌리기, 21개 언어(`ai-panel.test.ts`). 연결부는 가짜다. 실제 `claude`·`codex`에 닿는 테스트를 만들지 않는다. 뒷단 첨부 창구와 임시 이름(`main.test.ts`), 단계 목록과 libavoid 막기(`apply-primitives.test.ts`).
+- 바꾸면 반드시 테스트하는 것: 형식별 저장·압축·이름(`formats.test.ts`), 프로토콜 경로·끼우기·CSP(`protocol.test.ts`), 요청 허용·이동·새 창·링크(`network-guard.test.ts`), 메시지 출처와 틀 통신(`bridge-protocol.test.ts`), 기본 변경의 한 번 되돌리기·쪽 바꾸기·실패 시 원상(`apply-primitives.test.ts`, draw.io를 흉내 낸 가짜 모델), 알림 세기·인쇄 문서·시작 인자·사본·두 언어(`editor-parts.test.ts`), 뒷단의 열기·거절·저장 생략·저장 대상(`main.test.ts`, Electron은 가짜).
+- AI 창: 도구 정의가 `DIAGRAM_OPS`에서 나오는지, 읽기(지금 쪽·선택 id·다른 쪽), 모두 아니면 아무것도(거절·draw.io 실패 모두 그대로), Mermaid가 섞인 호출이 다리 요청 한 번·되돌리기 한 번인지, 변환 실패가 그 까닭과 함께 거절되는지, 문맥에 그림이 없는지(`ai-tools.test.ts`, 가짜 draw.io `tests/helpers/fake-drawio.ts`), 창의 실행과 차례 되돌리기, 두 언어(`ai-panel.test.ts`). 연결부는 가짜다. 실제 `claude`·`codex`에 닿는 테스트를 만들지 않는다. 뒷단 첨부 창구와 임시 이름(`main.test.ts`), 단계 목록과 libavoid 막기(`apply-primitives.test.ts`).
 - 열리지 않는 파일: 셸에 탭을 닫게 하는 창구(가져오기 실패, 열지 못한 파일, 열린 다이어그램과 빈 까닭의 거절, 셸이 없을 때)는 `visio-main.test.ts`, 화면 쪽 처리(`settleOpenFailure`)는 `visio-import.test.ts`, 탭을 열기 전의 판정(까닭마다, `.vsdx`)은 셸의 `tests/diagram-open-gate.test.ts`가 본다.
 - Visio 가져오기: 등록과 "열 수 없는 파일"로의 거절, 거절 까닭, 그림 알림, 다리 요청(이름은 늘 `.vsdx`, 쪽 풀기, 실패 까닭), 그려지지 않는 그림 세기(`visio-import.test.ts`, 가짜 draw.io), 뒷단의 옛 형식 거절·`.vsdx`를 쓰지 않음·저장 뒤 탭 정체가 `.drawio`로 바뀜(`visio-main.test.ts`). 시험 파일 `tests/fixtures/visio-*.vsdx`는 같은 폴더의 `make-visio-fixtures.mjs`가 만든다(싣는 draw.io 판에 Visio 내보내기가 없어 VSDX 형식대로 손으로 짠다). 바꾸면 `node apps/diagram/tests/fixtures/make-visio-fixtures.mjs`로 다시 만든다.
 - 빌드한 편집기에서만 확인되는 것(draw.io를 띄운 바깥 요청 0건, 실제 저장·다시 열기, 밝은·어두운 테마의 결과 비교)은 스크립트로 Electron을 직접 띄워 확인하고, 셸 연결 뒤에는 E2E(`e2e/diagram-*.spec.ts`)가 맡는다.

@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   aiEmptyDraftTitle: 'Let AI draft this document for you',
   aiEmptyDraftBody1: 'Describe the topic and key points, or paste reference material;',
@@ -206,4 +204,4 @@ export const en = {
   aiMindMapToggleLayout: 'Switch layout',
   aiMindMapLayoutTopDown: 'Switch to the top-down layout',
   aiMindMapLayoutLeftRight: 'Switch to the left-right layout',
-} satisfies Record<keyof typeof zh, string>
+}

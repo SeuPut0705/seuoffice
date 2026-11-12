@@ -4,7 +4,7 @@
 
 ## 맡은 범위
 
-- 언어: `Lang`·`LANGS`(21개), 로캘 문자열을 지원 언어로 옮기는 `normalizeLang`, `<html lang>` 값 `htmlLang`, 오른쪽에서 왼쪽으로 쓰는 언어 판정 `isRtlLang`·`htmlDir`(`src/index.ts`).
+- 언어: `Lang`·`LANGS`(영어·한국어), 로캘 문자열을 지원 언어로 옮기는 `normalizeLang`, `<html lang>` 값 `htmlLang`, 오른쪽에서 왼쪽으로 쓰는 언어 판정 `isRtlLang`·`htmlDir`(`src/index.ts`).
 - 사전 규칙과 번역기: `LangDicts`, `defineStrings`, `createI18n`, 자리 표시 채우기 `format`.
 - 단축키 표기 변환: 사전에 Mac 표기로 적힌 단축키를 Windows/Linux에서 `Ctrl+…` 형태로 바꾸는 `macShortcutsToWin`·`platformShortcuts`.
 - 메인 프로세스용 현재 언어 보관소: `getUiLang`·`setUiLang`·`onUiLangChange`.
@@ -21,7 +21,7 @@
 ## 항상 지켜야 하는 것
 
 - 의존성을 추가하지 않는다. 렌더러, 메인 프로세스, Electron 없이 도는 명령줄 번들이 모두 이 패키지를 import한다. Node 전용 API나 DOM API를 모듈 최상위에서 쓰면 어느 한쪽이 깨진다(`IS_MAC` 판정이 `navigator`와 `process`를 둘 다 조심스럽게 읽는 이유다).
-- 모든 언어가 모든 키를 가져야 한다. `zh` 사전이 키 집합을 정의하고 나머지 20개 언어는 `Record<keyof D, string>`으로 같은 키를 강제받는다. 빠진 번역은 실행 중의 대체가 아니라 타입 오류여야 한다. `createI18n`의 `en` → `zh` → 키 이름 순 대체는 오래된 사전 조각이 예외를 던지지 않게 하는 안전망일 뿐, 번역을 생략해도 된다는 뜻이 아니다.
+- 모든 언어가 모든 키를 가져야 한다. `en` 사전이 키 집합을 정의하고 `ko`는 `Record<keyof D, string>`으로 같은 키를 강제받는다. 빠진 번역은 실행 중의 대체가 아니라 타입 오류여야 한다. `createI18n`의 `en` → 키 이름 순 대체는 오래된 사전 조각이 예외를 던지지 않게 하는 안전망일 뿐, 번역을 생략해도 된다는 뜻이 아니다.
 - 제품 이름은 출력 시점에 치환한다. 사전·도움말·소스는 제품을 원본 표기 `GenOffice`로 적고(원본의 수정을 계속 병합하기 위해서다), `createI18n`이 모든 번역 문자열에, `brandText`가 그 밖의 사용자에게 보이는 글에 제품 이름을 넣는다. 사전의 `GenOffice`를 일괄로 바꾸지 않는다.
 - 원본 이름 자체를 찍어야 하는 곳("GenOffice를 기반으로 합니다" 고지)은 `{{GenOffice}}`(`UPSTREAM_NAME_LITERAL`)로 쓴다. 이 고지는 지우거나 제품 이름으로 바뀌게 두지 않는다.
 - `brandText`가 바꾸지 않는 것을 유지한다. 더 긴 식별자 안의 이름(`GenOfficeFormField`), 소문자 `genoffice`(패키지 이름, 환경 변수, 스킴)는 손대지 않는다. 파일·폴더 이름 안의 이름(`GenOffice.exe`, `Documents/GenOffice`)은 언어와 무관하게 `PRODUCT_NAME`이 된다. 한국어 UI에서도 폴더 이름은 `IeumOffice`이고 화면 이름만 `이음오피스`다.
@@ -32,17 +32,17 @@
 
 ## 이 모듈의 방식
 
-- 큰 사전은 언어별 조각으로 나눈다. `i18n/strings-<영역>.ts`는 `i18n/<영역>/<lang>.ts`를 모으는 얇은 집계 파일이고, 조각 끝의 `satisfies Record<keyof typeof zh, string>`이 빠진 키와 남는 키를 둘 다 타입 오류로 만든다. 키를 추가할 때는 `zh.ts`와 나머지 20개 조각에 함께 넣는다. 집계 파일을 언어 전체가 든 한 객체로 되돌리지 않는다.
+- 큰 사전은 언어별 조각으로 나눈다. `i18n/strings-<영역>.ts`는 `i18n/<영역>/<lang>.ts`를 모으는 얇은 집계 파일이고, 조각 끝의 `satisfies Record<keyof typeof en, string>`이 빠진 키와 남는 키를 둘 다 타입 오류로 만든다. 키를 추가할 때는 `en.ts`와 `ko.ts`에 함께 넣는다. 집계 파일을 언어 전체가 든 한 객체로 되돌리지 않는다.
 - 단축키는 사전에 Mac 표기(`⌘S`, `⇧⌘Z`)로 적는다. macOS가 아니면 `createI18n`이 `Ctrl+S` 형태로 바꾼다. 사전에 `Ctrl+S`를 직접 쓰면 macOS에서 틀린 표기가 나온다. 변환은 템플릿에만 적용되어 매개변수로 넣은 글리프는 그대로 남는다.
 - `useI18n()`이 돌려주는 `t`는 참조가 고정되지 않는다. 훅의 의존성 배열에 넣지 않고, 키를 저장해 두었다가 렌더링할 때 번역한다.
-- 메인 프로세스의 현재 언어는 프로세스에 하나다. shell과 에디터들의 메인 코드가 한 번들에서 돌기 때문에 모듈 변수 하나로 충분하다. 렌더러는 이 보관소를 읽지 않고 IPC로 언어를 받는다. 초기값은 `zh`이므로 앱이 시작할 때 `setUiLang(normalizeLang(...))`을 불러야 한다.
-- `normalizeLang`은 번체 중국어 변형(`zh-TW`, `zh-HK`, `zh-Hant`)을 일반 `zh` 접두사보다 먼저 가려내고, 옛 코드 `in`·`iw`를 `id`·`he`로 읽고, 모르는 값은 `en`으로 보낸다. 언어 코드 뒤에는 `-`나 `_` 경계가 있어야 한다.
+- 메인 프로세스의 현재 언어는 프로세스에 하나다. shell과 에디터들의 메인 코드가 한 번들에서 돌기 때문에 모듈 변수 하나로 충분하다. 렌더러는 이 보관소를 읽지 않고 IPC로 언어를 받는다. 초기값은 `en`이므로 앱이 시작할 때 `setUiLang(normalizeLang(...))`을 불러야 한다.
+- `normalizeLang`은 바깥에서 온 언어 값이 `Lang`이 되는 단 하나의 자리다. 저장된 선택, 시스템 로캘, 환경 변수, 웹 호스트의 `?lang=`이 모두 이 함수를 거친다. 한국어(`ko`, `ko-KR`, `ko_KR`)는 `ko`, 그 밖의 값과 빈 값은 모두 `en`이다. 언어 코드 뒤에는 `-`나 `_` 경계가 있어야 한다. 설치본이 보일 언어는 `installLang`이 정한다: 저장된 선택이 있으면 그것을(UI 언어가 아니면 영어), 없으면 시스템 로캘을 따른다.
 - 언어를 추가하는 일은 이 파일만의 변경이 아니다. `Lang`, `LANGS`, `HTML_LANGS`(여기까지는 타입이 강제한다)에 더해 저장소의 모든 사전 조각, 메인 프로세스의 인라인 사전, 도움말의 모든 항목 파일이 그 언어를 가져야 한다.
 
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/i18n`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/i18n`. Windows에서 전부 통과한다.
 - 사전의 키 누락은 테스트가 아니라 타입 검사가 잡는다. 사전을 고쳤으면 그 사전이 속한 workspace의 `typecheck`를 돌린다.
-- 바꾸면 반드시 테스트하는 것: `brandText`의 경계(식별자 안, 파일 이름 안, `{{GenOffice}}`, 한 문장에 여러 번 나올 때, 한국어와 그 밖의 언어), 매개변수 값이 치환되지 않는지, 대체 경로로 나온 글에도 제품 이름이 들어가는지, `normalizeLang`의 경계(`zh-Hant`, `in-ID`, 빈 값).
+- 바꾸면 반드시 테스트하는 것: `brandText`의 경계(식별자 안, 파일 이름 안, `{{GenOffice}}`, 한 문장에 여러 번 나올 때, 한국어와 그 밖의 언어), 매개변수 값이 치환되지 않는지, 대체 경로로 나온 글에도 제품 이름이 들어가는지, `normalizeLang`의 경계(`ko-KR`, UI 언어가 아닌 값, 빈 값), `installLang`(저장된 `ja`, 저장값 없는 첫 실행).
 - `platformShortcuts`는 모듈을 불러올 때의 플랫폼으로 고정된다. 변환 규칙은 순수 함수 `macShortcutsToWin`으로 테스트한다.
 - 설치 설정, `package.json`, HTML 제목, 파일 연결 ProgId가 이 모듈의 상수와 어긋나지 않는지는 `apps/shell/tests/product-identity.test.ts`가 본다. `PRODUCT_NAME`이나 저장소 좌표를 바꾸면 그 테스트도 함께 돌린다.

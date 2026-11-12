@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest'
 import { strings } from '../src/renderer/src/strings'
 
 /**
- * Home-screen locale tables (src/renderer/src/strings.ts): zh defines the key
+ * Home-screen locale tables (src/renderer/src/strings.ts): en defines the key
  * set; every other locale must cover exactly the same keys with real content.
  */
 
 const locales = Object.keys(strings) as Array<keyof typeof strings>
-const referenceKeys = Object.keys(strings.zh).sort()
+const referenceKeys = Object.keys(strings.en).sort()
 
 /** placeholders like {n}, {name}, {v} embedded in a template */
 function placeholdersOf(template: string): string[] {
@@ -15,14 +15,7 @@ function placeholdersOf(template: string): string[] {
 }
 
 describe('home-screen locale tables', () => {
-  it('includes the expected UI languages', () => {
-    expect(locales).toContain('zh')
-    expect(locales).toContain('en')
-    expect(locales).toContain('zh-TW')
-    expect(locales.length).toBeGreaterThanOrEqual(19)
-  })
-
-  it.each(locales)('locale %s has exactly the zh key set', (locale) => {
+  it.each(locales)('locale %s has exactly the en key set', (locale) => {
     expect(Object.keys(strings[locale]).sort()).toEqual(referenceKeys)
   })
 
@@ -33,27 +26,27 @@ describe('home-screen locale tables', () => {
     expect(empty).toEqual([])
   })
 
-  it.each(locales)('locale %s keeps the zh placeholder set for each key', (locale) => {
+  it.each(locales)('locale %s keeps the en placeholder set for each key', (locale) => {
     const table = strings[locale] as Record<string, string>
     const mismatched = referenceKeys.filter((key) => {
       const localePlaceholders = placeholdersOf(table[key])
-      const zhPlaceholders = placeholdersOf((strings.zh as Record<string, string>)[key])
-      // Singular-count keys ("...One") may drop the numeral entirely in
-      // languages that express "one" grammatically (e.g. ar/he), so a
-      // missing placeholder is fine there — an extra one is not.
+      const enPlaceholders = placeholdersOf((strings.en as Record<string, string>)[key])
+      // Singular-count keys ("...One") may drop the numeral entirely in a
+      // language that expresses "one" grammatically, so a missing placeholder
+      // is fine there — an extra one is not.
       if (key.endsWith('One')) {
-        return localePlaceholders.some((p) => !zhPlaceholders.includes(p))
+        return localePlaceholders.some((p) => !enPlaceholders.includes(p))
       }
-      return localePlaceholders.join(',') !== zhPlaceholders.join(',')
+      return localePlaceholders.join(',') !== enPlaceholders.join(',')
     })
     expect(mismatched).toEqual([])
   })
 
-  it('has no duplicate values that suggest an untranslated copy-paste between zh and en', () => {
-    // sanity check that en is actually translated, not a zh copy
-    const zh = strings.zh as Record<string, string>
+  it('has no duplicate values that suggest an untranslated copy-paste between en and ko', () => {
+    // sanity check that ko is actually translated, not an en copy
     const en = strings.en as Record<string, string>
-    const identical = referenceKeys.filter((key) => zh[key] === en[key])
+    const ko = strings.ko as Record<string, string>
+    const identical = referenceKeys.filter((key) => en[key] === ko[key])
     // a few shared strings (brand names, "PDF", "OK"-style tokens) are fine
     expect(identical.length).toBeLessThan(referenceKeys.length / 4)
   })

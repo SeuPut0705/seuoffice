@@ -13,7 +13,7 @@ registerVisioImporter()
 
 void (async () => {
   const [lang, theme] = await Promise.all([
-    window.diagramApi.getLanguage().catch(() => 'zh' as const),
+    window.diagramApi.getLanguage().catch(() => 'en' as const),
     window.diagramApi.getTheme().catch(() => 'system' as const),
   ])
   // a windowless job's hidden window runs the job, not the editor (src/main/headless-main.ts)

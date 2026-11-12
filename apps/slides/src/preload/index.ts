@@ -182,10 +182,7 @@ const api: SlidesApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
   fontFamilyInfo: (families) => ipcRenderer.invoke('app:font-family-info', families),
   onLanguageChanged: (handler) => {
-    const listener = (
-      _event: IpcRendererEvent,
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => handler(lang)
+    const listener = (_event: IpcRendererEvent, lang: 'en' | 'ko') => handler(lang)
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },

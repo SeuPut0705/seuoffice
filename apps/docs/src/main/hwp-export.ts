@@ -138,7 +138,7 @@ export async function exportHwp(
 }
 
 const tHwp = createI18n(HWP_EXPORT_STRINGS)
-type HwpKey = keyof (typeof HWP_EXPORT_STRINGS)['zh']
+type HwpKey = keyof (typeof HWP_EXPORT_STRINGS)['en']
 
 /** a name for every loss the package reports: a new feature fails the typecheck here */
 const FEATURE_KEY = {

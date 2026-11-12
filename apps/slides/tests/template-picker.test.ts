@@ -292,7 +292,7 @@ describe('template gallery', () => {
     expect(state.current()).toMatchObject({ kind: 'builtin', key: TEMPLATES[1]!.id })
   })
 
-  it('the preview cover follows the UI language: ko for Korean, en for the other 20', async () => {
+  it('the preview cover follows the UI language: ko for Korean, en for English', async () => {
     mount(createElement(TemplateGallery, { state: freshState() }), 'ko')
     await flush()
     const calls = () => fake.api.renderTemplateCover.mock.calls as Array<[string, string]>
@@ -305,7 +305,7 @@ describe('template gallery', () => {
 
     fake.api.renderTemplateCover.mockClear()
     clearTemplateCoverCache()
-    mount(createElement(TemplateGallery, { state: freshState() }), 'ja')
+    mount(createElement(TemplateGallery, { state: freshState() }), 'en')
     await flush()
     expect(calls()).toHaveLength(12)
     expect(new Set(calls().map(([, lang]) => lang))).toEqual(new Set(['en']))

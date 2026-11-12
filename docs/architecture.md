@@ -28,7 +28,7 @@ apps/diagram    다이어그램(.drawio) 편집기. 빌드 때 받은 draw.io �
 packages/ai-provider   제공자 목록, 제공자 선택 규칙, 구독 프로그램 실행부, 키 방식 제공자 연결
 packages/ai-search     검색·이미지 생성·미디어 분석 도구, 자동 호출 경로의 구독 요청 차례
 packages/agent-core    AI 실행 반복(모델 → 도구 → 모델), 화면↔뒷단 전송 통로, 가리기
-packages/ui            편집기들이 함께 쓰는 AI 화면 부품과 그 문구(21개 언어)
+packages/ui            편집기들이 함께 쓰는 AI 화면 부품과 그 문구(두 언어)
 packages/i18n          화면 언어 목록, 제품 이름 한 곳 정의
 packages/cli           터미널 명령어 `ieumoffice`, MCP 도구, 에이전트 스킬 설치
 packages/electron-utils 편집기 뒷단 공용 도구(메뉴, 저장소 주소, 원격 이미지 받기 등), 저장하지 않은 파일 확인,

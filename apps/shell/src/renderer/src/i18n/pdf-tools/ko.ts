@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   toolMerge: 'PDF 병합',
@@ -185,4 +185,4 @@ export const ko = {
   errWrongPassword: '암호가 맞지 않습니다.',
   rejectNotEncrypted: '{name}: 암호가 걸려 있지 않습니다.',
   close: '닫기',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

@@ -94,8 +94,7 @@ The author's own account, in Korean, is at
 - **Search across your documents** from the home screen, indexed on your PC.
 - **A terminal command (`ieumoffice`), an MCP server and an agent skill**, so a
   coding agent can read, create and edit the same files.
-- **21 interface languages.** Korean and English were written by hand; the
-  other 19 are machine translations.
+- **Two interface languages**, English and Korean.
 
 Released for **Windows**, with separate **betas for Macs (Apple Silicon and
 Intel) and 64-bit Linux (x64)**. The developer has not been able to check the
@@ -426,8 +425,6 @@ project easy to take.
   see only the proxy environment variables (`HTTPS_PROXY` and the like), not a
   proxy that is set in Windows alone.
 - **Image generation needs a key**, as described above.
-- **Translations.** 19 of the 21 interface languages are machine-translated
-  and have not been reviewed by native speakers.
 - **Hiding does not reach everywhere.** Parts you hid from AI in the
   PowerPoint, Markdown and HTML editors stay hidden when the file is attached
   in another editor or asked about on the home screen, but hiding marks in

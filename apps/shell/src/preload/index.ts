@@ -105,29 +105,7 @@ ipcRenderer.on(
     openSettingsInbox.push(target),
 )
 
-const UI_LANGUAGES: readonly UiLanguage[] = [
-  'zh',
-  'en',
-  'ja',
-  'ko',
-  'fr',
-  'de',
-  'es',
-  'th',
-  'id',
-  'ru',
-  'ar',
-  'pt',
-  'it',
-  'pl',
-  'cs',
-  'nl',
-  'ms',
-  'he',
-  'hi',
-  'zh-TW',
-  'vi',
-]
+const UI_LANGUAGES: readonly UiLanguage[] = ['en', 'ko']
 
 function isUiLanguage(value: unknown): value is UiLanguage {
   return UI_LANGUAGES.includes(value as UiLanguage)

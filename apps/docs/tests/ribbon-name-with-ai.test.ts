@@ -70,7 +70,7 @@ afterEach(() => {
   act(() => root.unmount())
   container.remove()
   editor.destroy()
-  setModuleLang('zh')
+  setModuleLang('en')
 })
 
 describe('File ▸ the manual naming trigger', () => {

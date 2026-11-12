@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   aiCollapsePanel: '패널 접기',
@@ -186,4 +186,4 @@ export const ko = {
   aiStarterAnnouncementPrompt: '제품 공지 초안을 써 주세요. 제품과 핵심 내용: ',
   aiStarterGuide: '사용 가이드 쓰기',
   aiStarterGuidePrompt: '사용 가이드를 써 주세요. 설명할 절차: ',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

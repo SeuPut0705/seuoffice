@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   redactMenuLabel: 'Hide the selection from AI',
   redactDialogDesc:
@@ -287,4 +285,4 @@ export const en = {
   appStatusMergeUnsupported:
     "These shapes can't be merged (lines, pictures, tables, charts and some shapes are left out)",
   appStatusMergeEmpty: "Nothing is left after merging (the shapes don't overlap)",
-} satisfies Record<keyof typeof zh, string>
+}

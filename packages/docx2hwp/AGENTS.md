@@ -37,7 +37,7 @@
 - 워드의 내어쓰기는 첫 줄을 왼쪽으로 빼고, 한글의 내어쓰기는 다음 줄을 오른쪽으로 민다. 그래서 한글 왼쪽 여백 = 워드 왼쪽 들여쓰기 + (음수인) 첫 줄 들여쓰기다.
 - 한글의 머리말 칸은 위쪽 여백 아래에 있다. 워드의 위쪽 여백(본문까지)은 한글의 위쪽 여백(= 워드의 머리말 거리)과 머리말 칸으로 나눈다. 용지는 세운 크기로 주고 가로 방향은 표시로 준다.
 - 엔진이 개체 하나(그림, 각주, 표)를 거절하면 장부에 적고 나머지를 쓴다. 글자·서식 호출이 실패하면 변환 전체가 실패한다(서식 없는 문단은 조용한 손실이다).
-- `LOSS_FEATURES`에 기능을 더하면 `apps/docs/src/main/hwp-export.ts`의 이름 표와 `hwp-export-strings.ts`의 21개 언어 문구, 터미널 명령어의 이름 표(`packages/cli/src/formats/docx-hwp.ts`)도 더한다(형 검사가 지킨다). `docs/contracts.md`의 식별자 목록에도 더한다(`packages/cli/tests/convert-docx-hwp.test.ts`가 지킨다). 식별자는 명령어의 `detail.hwp_report`로 밖에 약속한 값이라 이름을 바꾸지 않는다. ODT의 보고 ID(`REPORT_FEATURES`)와 섞지 않는다.
+- `LOSS_FEATURES`에 기능을 더하면 `apps/docs/src/main/hwp-export.ts`의 이름 표와 `hwp-export-strings.ts`의 두 언어 문구, 터미널 명령어의 이름 표(`packages/cli/src/formats/docx-hwp.ts`)도 더한다(형 검사가 지킨다). `docs/contracts.md`의 식별자 목록에도 더한다(`packages/cli/tests/convert-docx-hwp.test.ts`가 지킨다). 식별자는 명령어의 `detail.hwp_report`로 밖에 약속한 값이라 이름을 바꾸지 않는다. ODT의 보고 ID(`REPORT_FEATURES`)와 섞지 않는다.
 
 ## 첫판에서 옮기지 않는 것
 

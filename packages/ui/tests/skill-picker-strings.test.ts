@@ -2,15 +2,15 @@ import { describe, expect, it } from 'vitest'
 import { LANGS, type Lang } from '@genoffice/i18n'
 import { SKILL_PICKER_STRINGS, type SkillPickerStringKey } from '../src/strings-skill-picker'
 
-const KEYS = Object.keys(SKILL_PICKER_STRINGS.zh) as SkillPickerStringKey[]
-const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+const KEYS = Object.keys(SKILL_PICKER_STRINGS.en) as SkillPickerStringKey[]
+const NON_LATIN: readonly Lang[] = ['ko']
 /** keys that are mostly a folder or product name and may read alike */
 const MAY_MATCH_EN = new Set<SkillPickerStringKey>(['sourceAppGitHub'])
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('SKILL_PICKER_STRINGS', () => {
-  it('has every key, non-empty, in all 21 languages', () => {
+  it('has every key, non-empty, in every language', () => {
     expect(Object.keys(SKILL_PICKER_STRINGS).sort()).toEqual([...LANGS].sort())
     for (const lang of LANGS) {
       const dict = SKILL_PICKER_STRINGS[lang] as Record<string, string>
@@ -23,7 +23,7 @@ describe('SKILL_PICKER_STRINGS', () => {
     for (const lang of LANGS) {
       for (const key of KEYS) {
         expect(placeholders(SKILL_PICKER_STRINGS[lang][key]), `${lang}.${key}`).toEqual(
-          placeholders(SKILL_PICKER_STRINGS.zh[key]),
+          placeholders(SKILL_PICKER_STRINGS.en[key]),
         )
       }
     }

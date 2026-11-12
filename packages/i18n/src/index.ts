@@ -1,51 +1,8 @@
 import { brandText } from './product'
 
-export type Lang =
-  | 'zh'
-  | 'en'
-  | 'ja'
-  | 'ko'
-  | 'fr'
-  | 'de'
-  | 'es'
-  | 'th'
-  | 'id'
-  | 'ru'
-  | 'ar'
-  | 'pt'
-  | 'it'
-  | 'pl'
-  | 'cs'
-  | 'nl'
-  | 'ms'
-  | 'he'
-  | 'hi'
-  | 'zh-TW'
-  | 'vi'
+export type Lang = 'en' | 'ko'
 
-export const LANGS: readonly Lang[] = [
-  'zh',
-  'en',
-  'ja',
-  'ko',
-  'fr',
-  'de',
-  'es',
-  'th',
-  'id',
-  'ru',
-  'ar',
-  'pt',
-  'it',
-  'pl',
-  'cs',
-  'nl',
-  'ms',
-  'he',
-  'hi',
-  'zh-TW',
-  'vi',
-]
+export const LANGS: readonly Lang[] = ['en', 'ko']
 
 export function isLang(value: unknown): value is Lang {
   return typeof value === 'string' && (LANGS as readonly string[]).includes(value)
@@ -54,22 +11,12 @@ export function isLang(value: unknown): value is Lang {
 /**
  * The one place a language value from outside becomes a Lang: a stored choice,
  * the system locale, an environment override, a host's `?lang=`. Every reader
- * of such a value goes through here.
+ * of such a value goes through here. Korean ('ko', 'ko-KR', 'ko_KR') is Korean;
+ * every other value, and none, is English.
  */
 export function normalizeLang(raw: string | null | undefined): Lang {
   const value = raw?.trim().toLowerCase()
-  if (!value) return 'en'
-  // traditional-script Chinese variants must win over the generic 'zh' prefix
-  if (/^zh[-_](tw|hk|mo|hant)/.test(value)) return 'zh-TW'
-  for (const lang of LANGS) {
-    if (lang === 'en' || lang === 'zh-TW') continue
-    if (value === lang || value.startsWith(`${lang}-`) || value.startsWith(`${lang}_`)) return lang
-  }
-  // 'in' is the legacy ISO code for Indonesian still reported by some systems
-  if (/^in\b/.test(value) || /^in[-_]/.test(value)) return 'id'
-  // 'iw' is the legacy ISO code for Hebrew
-  if (/^iw\b/.test(value) || /^iw[-_]/.test(value)) return 'he'
-  return 'en'
+  return value === 'ko' || value?.startsWith('ko-') || value?.startsWith('ko_') ? 'ko' : 'en'
 }
 
 /**
@@ -82,27 +29,8 @@ export function installLang(stored: unknown, system: string | null | undefined):
 }
 
 const HTML_LANGS: Record<Lang, string> = {
-  zh: 'zh-CN',
   en: 'en-US',
-  ja: 'ja-JP',
   ko: 'ko-KR',
-  fr: 'fr-FR',
-  de: 'de-DE',
-  es: 'es-ES',
-  th: 'th-TH',
-  id: 'id-ID',
-  ru: 'ru-RU',
-  ar: 'ar-SA',
-  pt: 'pt-BR',
-  it: 'it-IT',
-  pl: 'pl-PL',
-  cs: 'cs-CZ',
-  nl: 'nl-NL',
-  ms: 'ms-MY',
-  he: 'he-IL',
-  hi: 'hi-IN',
-  'zh-TW': 'zh-TW',
-  vi: 'vi-VN',
 }
 
 /** BCP-47 tag for document.documentElement.lang (drives CSS :lang() and Chromium's per-language font fallback) */
@@ -110,12 +38,17 @@ export function htmlLang(lang: Lang): string {
   return HTML_LANGS[lang]
 }
 
-/** Languages whose script reads right-to-left: UI chrome flips direction for them */
-const RTL_LANGS: readonly Lang[] = ['ar', 'he']
+/**
+ * Languages whose script reads right-to-left: UI chrome flips direction for
+ * them. None of them is a UI language any more, so nothing reaches the
+ * right-to-left layout through here; the list stays until it is decided what
+ * becomes of that layout.
+ */
+const RTL_LANGS: readonly string[] = ['ar', 'he']
 
 /** Whether this UI language lays out right-to-left (drives the renderers' html dir) */
 export function isRtlLang(lang: string | undefined | null): boolean {
-  return (RTL_LANGS as readonly string[]).includes(lang ?? '')
+  return RTL_LANGS.includes(lang ?? '')
 }
 
 /** The `dir` attribute value for a UI language: every bootstrap and every locale
@@ -185,14 +118,14 @@ export function format(template: string, params?: Params): string {
   )
 }
 
-/** per-language dictionaries; zh defines the key set, all others must match it */
-export type LangDicts<D extends Record<string, string>> = { zh: D } & {
-  [L in Exclude<Lang, 'zh'>]: Record<keyof D, string>
+/** per-language dictionaries; en defines the key set, all others must match it */
+export type LangDicts<D extends Record<string, string>> = { en: D } & {
+  [L in Exclude<Lang, 'en'>]: Record<keyof D, string>
 }
 
 /**
  * Identity helper for dictionary shards: keeps literal key inference while
- * type-checking that every other language covers exactly the zh key set.
+ * type-checking that every other language covers exactly the en key set.
  */
 export function defineStrings<D extends Record<string, string>>(dicts: LangDicts<D>): LangDicts<D> {
   return dicts
@@ -202,7 +135,7 @@ export function defineStrings<D extends Record<string, string>>(dicts: LangDicts
 // Used by Electron main-process code (shell + editor main modules share one
 // bundle, so one holder). Renderers get the language over IPC instead.
 
-let uiLang: Lang = 'zh'
+let uiLang: Lang = 'en'
 const langListeners = new Set<(lang: Lang) => void>()
 
 export function getUiLang(): Lang {
@@ -221,7 +154,7 @@ export function onUiLangChange(listener: (lang: Lang) => void): () => void {
 }
 
 /**
- * Build a translator over per-language dictionaries. The zh dictionary defines
+ * Build a translator over per-language dictionaries. The en dictionary defines
  * the key set; every other language must cover exactly the same keys
  * (compile-time checked), so a missing translation is a type error, not a
  * runtime fallback.
@@ -232,9 +165,9 @@ export function onUiLangChange(listener: (lang: Lang) => void): () => void {
  */
 export function createI18n<D extends Record<string, string>>(dicts: LangDicts<D>) {
   return (lang: Lang, key: keyof D, params?: Params): string => {
-    // A shard that predates a key must degrade (en, then zh, then the key)
-    // instead of throwing inside format()
-    const text = dicts[lang]?.[key] ?? dicts.en[key] ?? dicts.zh[key] ?? String(key)
+    // A shard that predates a key must degrade (en, then the key) instead of
+    // throwing inside format()
+    const text = dicts[lang]?.[key] ?? dicts.en[key] ?? String(key)
     // the product name is swapped into the template, never into a param value
     return format(brandText(platformShortcuts(text), lang), params)
   }

@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   loading: '문서를 여는 중…',
@@ -281,4 +281,4 @@ export const ko = {
     '글자 수는 공백을 포함해 셉니다. 공백 제외: 전체 {totalNoSpace}. 문서 정보처럼 머리말·꼬리말·각주·미주는 세지 않습니다.',
   charCountHintSelected:
     '공백 포함: 고른 글자 {selected} / 전체 {total}. 공백 제외: 고른 글자 {selectedNoSpace} / 전체 {totalNoSpace}. 문서 정보처럼 머리말·꼬리말·각주·미주는 세지 않습니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

@@ -10,18 +10,17 @@ import {
 } from '../src/renderer/src/doc-picker/DocPickerWindow'
 
 /**
- * The "Attach from GenOffice documents" window: every string exists in all 21
- * languages, the product name is written as the GenOffice token and localized
+ * The "Attach from GenOffice documents" window: every string exists in every
+ * language, the product name is written as the GenOffice token and localized
  * at output, the tick is capped, and the page deals in ids only.
  */
 
 const src = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
 
 describe('doc-picker strings', () => {
-  const keys = Object.keys(docPickerStrings.zh).sort()
+  const keys = Object.keys(docPickerStrings.en).sort()
 
-  it('fills every key in all 21 languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('fills every key in every language', () => {
     for (const lang of LANGS) {
       const dict = docPickerStrings[lang] as Record<string, string>
       expect(Object.keys(dict).sort(), lang).toEqual(keys)

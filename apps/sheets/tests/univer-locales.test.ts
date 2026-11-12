@@ -15,25 +15,14 @@ vi.mock('@univerjs/preset-sheets-core', () => ({
 }))
 
 describe('univerLocaleFor', () => {
-  it('maps every app language Univer has packs for', () => {
-    expect(univerLocaleFor('zh')).toBe(LocaleType.ZH_CN)
-    expect(univerLocaleFor('zh-TW')).toBe(LocaleType.ZH_TW)
-    expect(univerLocaleFor('ja')).toBe(LocaleType.JA_JP)
+  it('maps Korean to its Univer pack', () => {
     expect(univerLocaleFor('ko')).toBe(LocaleType.KO_KR)
-    expect(univerLocaleFor('ar')).toBe(LocaleType.AR_SA)
   })
 
   it('falls back to English where Univer ships no pack', () => {
-    for (const lang of ['en', 'th', 'nl', 'ms', 'he', 'hi']) {
+    for (const lang of ['en', 'zh', 'ja', 'ar', 'th', 'nl', 'ms', 'he', 'hi']) {
       expect(univerLocaleFor(lang)).toBeNull()
     }
-  })
-
-  it('zh packs resolve and localize the DV rule name', async () => {
-    const pack = (await import('@univerjs/preset-sheets-data-validation/locales/zh-CN')) as {
-      default: Record<string, { list?: { name?: string } }>
-    }
-    expect(pack.default['sheets-data-validation']?.list?.name).toBe('值必须是列表中的值')
   })
 })
 
@@ -59,7 +48,7 @@ describe('numberAsTextAlertLocale', () => {
   })
 
   it('localizes the title from the numfmt pack', async () => {
-    const core = (await import('@univerjs/preset-sheets-core/locales/zh-CN')).default as Record<
+    const core = (await import('@univerjs/preset-sheets-core/locales/ko-KR')).default as Record<
       string,
       Record<string, unknown>
     >
@@ -101,7 +90,7 @@ describe('insertRowsBelowLocale', () => {
   })
 
   it('leaves translated packs untouched', async () => {
-    const core = (await import('@univerjs/preset-sheets-core/locales/zh-CN')).default as Record<
+    const core = (await import('@univerjs/preset-sheets-core/locales/ko-KR')).default as Record<
       string,
       Record<string, unknown>
     >
@@ -142,8 +131,8 @@ describe('numfmt locale', () => {
     const seen: string[] = []
     await applyUniverLocale(
       fakeRuntime((locale) => seen.push(locale)),
-      'nl',
+      'en',
     )
-    expect(seen).toEqual(['nl-NL'])
+    expect(seen).toEqual(['en'])
   })
 })

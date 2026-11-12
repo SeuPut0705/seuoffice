@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   navProjects: 'Projects',
   intro:
@@ -88,4 +86,4 @@ export const en = {
   reloadFile: 'Reload',
   saveAnyway: 'Save anyway',
   openFileAria: 'Open in the app: {name}',
-} satisfies Record<keyof typeof zh, string>
+}

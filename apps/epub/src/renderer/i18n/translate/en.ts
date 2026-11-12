@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   btRibbon: 'Translate book',
   btRibbonTip: 'Translate the book into a new EPUB file',
@@ -142,4 +140,4 @@ export const en = {
   btEasyReportTitle: 'Plain-language version finished',
   btEasyReportPartialTitle: 'Exported what was rewritten so far',
   btEasyReportTranslated: 'Blocks rewritten in plain language ({language}): {count}',
-} satisfies Record<keyof typeof zh, string>
+}

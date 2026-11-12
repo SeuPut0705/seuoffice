@@ -53,7 +53,7 @@ interface SavedStyleEntry {
 /** The string key of a template's translated description, or null when the strings lack one */
 function descriptionKey(id: string): StringKey | null {
   const key = `aiTplDesc_${id.replace(/-/g, '_')}`
-  return Object.prototype.hasOwnProperty.call(strings.zh, key) ? (key as StringKey) : null
+  return Object.prototype.hasOwnProperty.call(strings.en, key) ? (key as StringKey) : null
 }
 
 /** The user's saved styles, read whenever a gallery mounts; none when the call fails */

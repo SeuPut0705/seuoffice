@@ -1,7 +1,7 @@
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { describe, expect, it } from 'vitest'
-import type { Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@genoffice/i18n'
 import type { GenerateHandoff, GenerateWindowState } from '../src/shared/generate-api'
 import { DEFAULT_GENERATE_PROMPTS } from '../src/shared/generate-default-prompts'
 import { MAX_MATERIALS, USAGE_NOTICE_CHARS } from '../src/main/generate/limits'
@@ -194,7 +194,7 @@ describe('GenerateSession', () => {
   })
 
   it('uses the kind’s default request in the UI language when the box is empty', async () => {
-    for (const lang of ['ko', 'en', 'ja'] as const) {
+    for (const lang of LANGS) {
       for (const kind of ['slides', 'html', 'mindmap'] as const) {
         const h = harness({ 'a.md': { size: 1, length: 1 } }, { lang })
         const s = await start(h, [{ path: p('a.md') }])

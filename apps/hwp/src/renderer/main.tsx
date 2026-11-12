@@ -26,7 +26,7 @@ function applyTheme(theme: UiTheme): void {
 
 void (async () => {
   const [lang, theme] = await Promise.all([
-    window.hwpApi.getLanguage().catch(() => 'zh' as const),
+    window.hwpApi.getLanguage().catch(() => 'en' as const),
     window.hwpApi.getTheme().catch(() => 'system' as const),
   ])
   document.documentElement.lang = htmlLang(lang as Lang)

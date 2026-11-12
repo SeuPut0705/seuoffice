@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   mathInsert: 'Insert equation',
   mathEdit: 'Edit equation',
@@ -192,4 +190,4 @@ export const en = {
   presentInTab: 'In this tab',
   presentFullscreen: 'Fullscreen',
   presentNewTab: 'New tab',
-} satisfies Record<keyof typeof zh, string>
+}

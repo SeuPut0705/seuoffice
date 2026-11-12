@@ -38,7 +38,6 @@ describe('docPickedOf', () => {
 
 describe('doc-attach strings', () => {
   it('fills every language, and the button shows the product name', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       expect(DOC_ATTACH_STRINGS[lang].label.trim().length, lang).toBeGreaterThan(0)
       expect(DOC_ATTACH_STRINGS[lang].busy.trim().length, lang).toBeGreaterThan(0)
@@ -93,7 +92,7 @@ describe('DocAttachButton', () => {
     setBridge({ available: async () => true, pick })
     const onPicked = vi.fn()
     await act(async () => {
-      root.render(createElement(DocAttachButton, { lang: 'zh', onPicked }))
+      root.render(createElement(DocAttachButton, { lang: 'ko', onPicked }))
     })
     const button = host.querySelector('button')!
     expect(button).not.toBeNull()
