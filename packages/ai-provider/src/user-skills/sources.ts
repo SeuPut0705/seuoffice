@@ -45,14 +45,17 @@ export async function isInsideCodexHome(path: string, homeDir: string): Promise<
 /**
  * Whether `dir` holds a file anywhere in its first few levels (a `.DS_Store`
  * does not count): a folder made by hand with nothing put in it yet holds no
- * data. Unreadable or missing: no.
+ * data. Missing (or not a folder): no. Any other failure to read it (no
+ * permission, an I/O error) says nothing about what it holds, so it counts as
+ * holding data: the folder in use is kept rather than switched for another.
  */
 export function folderHoldsData(dir: string, depth = 3): boolean {
   let entries: Dirent[]
   try {
     entries = readdirSync(dir, { withFileTypes: true })
-  } catch {
-    return false
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code
+    return code !== 'ENOENT' && code !== 'ENOTDIR'
   }
   return entries.some((entry) =>
     entry.isDirectory()
