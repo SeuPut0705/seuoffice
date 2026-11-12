@@ -15,7 +15,7 @@ const deckWith = (...slidesSps: string[]): SlideDeck => {
   const slides = slidesSps.map((sps, i) =>
     parseSlide({ path: `ppt/slides/slide${i + 1}.xml`, slideXml: slideWith(sps), ctx: {} }),
   )
-  return { slides } as unknown as SlideDeck
+  return { slides, size: { cx: 12192000, cy: 6858000 }, originalHash: '' }
 }
 
 describe('replaceAllInDeck', () => {
