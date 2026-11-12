@@ -91,7 +91,11 @@ import {
   holdsInlineStructure,
   inlineStructureKey,
   inlineWrapMarkOf,
+  nodeWrapSpans,
   readInlineWrapMark,
+  runWrapSpans,
+  wrapSpansKept,
+  type WrapSpan,
 } from './inline-wrap-chain'
 
 /** minimal ProseMirror JSON shapes */
@@ -1343,6 +1347,7 @@ export function tableModelToPmNode(
       tblGridChange: model.tblGridChange ?? null,
       originalStructure: null,
       originalFormatting: null,
+      originalWraps: null,
       // merged-away (vMerge continue) cells have no node of their own: their
       // own tcPr bytes and hidden text ride here, keyed row:column
       continuationCells: null,
@@ -1427,6 +1432,8 @@ export function tableModelToPmNode(
     continuationRecords.length > 0 ? JSON.stringify(continuationRecords) : null
   table.attrs!.originalStructure = tableStructureSignature(table)
   table.attrs!.originalFormatting = tableFormattingSignature(table)
+  const wraps = nodeWrapSpans(table)
+  table.attrs!.originalWraps = wraps.length > 0 ? JSON.stringify(wraps) : null
   return table
 }
 
@@ -1595,6 +1602,24 @@ export function tableFormattingSignature(table: PmNode): string {
       ),
     ),
   )
+}
+
+/**
+ * The wrappers the table's cells show sit inside the ones it was opened with
+ * (`wrapSpansKept`): the formatting signature leaves the wrapper mark out, so
+ * a wrapper that grew or moved is asked about here.
+ */
+function tableWrapsKept(table: PmNode): boolean {
+  const shown = nodeWrapSpans(table)
+  if (shown.length === 0) return true
+  let read: WrapSpan[] = []
+  try {
+    const stored: unknown = JSON.parse(String(table.attrs?.originalWraps ?? '[]'))
+    if (Array.isArray(stored)) read = stored as WrapSpan[]
+  } catch {
+    // an unreadable record reads as "no wrapper": the table is written anew
+  }
+  return wrapSpansKept(shown, read)
 }
 
 function paragraphText(node: PmNode): string {
@@ -2612,7 +2637,7 @@ export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): Save
         const structurallyUnchanged =
           node.attrs?.originalStructure === tableStructureSignature(node)
         const formattingUnchanged =
-          node.attrs?.originalFormatting === tableFormattingSignature(node)
+          node.attrs?.originalFormatting === tableFormattingSignature(node) && tableWrapsKept(node)
         if (
           original.blockRevision &&
           !revision &&
@@ -3017,7 +3042,8 @@ export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): Save
     if (
       original &&
       !usedIndexes.has(idx!) &&
-      signatureOfBlock(original) === signatureOfGenerated(generated)
+      signatureOfBlock(original) === signatureOfGenerated(generated) &&
+      wrapSpansKept(runWrapSpans(generated.runs), runWrapSpans(original.runs ?? []))
     ) {
       usedIndexes.add(idx!)
       mapAnchor(idx!)
@@ -3626,6 +3652,33 @@ export function textboxParaSignature(para: TextboxDisplay['paras'][number]): str
   ])
 }
 
+/**
+ * The paragraph is the one the box was read with: same signature, and no
+ * wrapper over text the read one does not cover (`wrapSpansKept`).
+ */
+function textboxParaKept(
+  para: TextboxDisplay['paras'][number],
+  read: TextboxDisplay['paras'][number],
+): boolean {
+  return (
+    textboxParaSignature(para) === textboxParaSignature(read) &&
+    wrapSpansKept(runWrapSpans(para.runs), runWrapSpans(read.runs))
+  )
+}
+
+/**
+ * Two states of one box paragraph in the editor show the same thing: same
+ * signature and the same wrappers over the same text. The sub-editor's content
+ * is committed to the node on any difference; what the file keeps is decided
+ * at the save (`textboxParaKept`).
+ */
+export function textboxParaSame(
+  a: TextboxDisplay['paras'][number],
+  b: TextboxDisplay['paras'][number],
+): boolean {
+  return textboxParaKept(a, b) && textboxParaKept(b, a)
+}
+
 /** all-empty sub-editor content counts as "still no text" for a paras:[] box */
 function boxStillEmpty(paras: TextboxDisplay['paras']): boolean {
   return paras.every((p) => p.runs.every((r) => r.text === ''))
@@ -3648,16 +3701,11 @@ function textboxParasPatch(node: PmNode, original: Block): TextboxParasPatchSet 
     const origParas = origBox.paras
     const same =
       box.paras.length === origParas.length &&
-      box.paras.every((p, j) => textboxParaSignature(p) === textboxParaSignature(origParas[j]))
+      box.paras.every((p, j) => textboxParaKept(p, origParas[j]))
     if (same || (origParas.length === 0 && boxStillEmpty(box.paras))) return
     if (origBox.txbxIndex !== undefined) {
       byIndex[origBox.txbxIndex] = box.paras.map((p, j) => {
-        if (
-          j < origParas.length &&
-          textboxParaSignature(p) === textboxParaSignature(origParas[j])
-        ) {
-          return null
-        }
+        if (j < origParas.length && textboxParaKept(p, origParas[j])) return null
         // align/numPr are always explicit so a removed alignment or list
         // membership also clears w:jc / w:numPr
         const m = p.listMarker

@@ -202,3 +202,86 @@ export function holdsInlineStructure(run: Run | undefined): boolean {
 export function inlineStructureKey(run: Run): unknown {
   return run.wrap?.length ? run.wrap.map((w) => [w.seq, w.open, w.close]) : null
 }
+
+// ---- where the wrappers sit: what a "did this block change" test asks ----
+
+/** one stretch of a paragraph's text that sits in one wrapper chain, in characters of that text */
+export interface WrapSpan {
+  /** the chain, and for a stretch read from the editor's JSON the paragraph it is in */
+  chain: string
+  from: number
+  to: number
+}
+
+/**
+ * The stretches of a paragraph's text that sit in one wrapper chain. Text
+ * without a wrapper makes no stretch, and a piece without text (a picture)
+ * neither ends nor starts one.
+ */
+function wrapSpans(pieces: Iterable<readonly [chain: string | null, length: number]>): WrapSpan[] {
+  const spans: WrapSpan[] = []
+  let at = 0
+  let from = 0
+  let open: string | null = null
+  for (const [chain, length] of [...pieces, [null, 1] as const]) {
+    if (length === 0) continue
+    if (chain !== open) {
+      if (open !== null) spans.push({ chain: open, from, to: at })
+      open = chain
+      from = at
+    }
+    at += length
+  }
+  return spans
+}
+
+/** the wrapper stretches of a paragraph's runs */
+export function runWrapSpans(runs: readonly Run[]): WrapSpan[] {
+  return wrapSpans(
+    runs.map((run) => [
+      run.wrap?.length ? JSON.stringify(inlineStructureKey(run)) : null,
+      run.text.length,
+    ]),
+  )
+}
+
+/**
+ * The wrapper stretches of every paragraph under `node` in the editor's JSON.
+ * Each carries the path of its paragraph in its chain, so the same wrapper in
+ * another paragraph is another stretch.
+ */
+export function nodeWrapSpans(node: NodeJson): WrapSpan[] {
+  type Json = NodeJson & { content?: Json[]; text?: string; marks?: MarkJson[] }
+  const out: WrapSpan[] = []
+  const walk = (parent: Json, path: string): void => {
+    const content = parent.content ?? []
+    if (!content.some((child) => child.type === 'text')) {
+      content.forEach((child, i) => walk(child, `${path}.${i}`))
+      return
+    }
+    const spans = wrapSpans(
+      content.map((child) => {
+        const chain = child.marks?.find((m) => m.type === INLINE_WRAP_MARK)?.attrs?.chain
+        return [typeof chain === 'string' ? chain : null, child.text?.length ?? 0]
+      }),
+    )
+    for (const span of spans) out.push({ ...span, chain: `${path}|${span.chain}` })
+  }
+  walk(node, '')
+  return out
+}
+
+/**
+ * No wrapper the editor shows covers text the file's wrapper does not. One
+ * that grew, moved, or stands where the file has none is an edit, and only
+ * writing the block anew puts it there. One that is gone or covers less is no
+ * difference: no command shrinks a wrapper, it only loses text as a side
+ * effect (a paragraph split inside it and joined again, text put back without
+ * its mark by an AI rewrite, a retyped word or a peer), and that text is still
+ * the file's text, so the block keeps its bytes, the whole wrapper included.
+ */
+export function wrapSpansKept(shown: readonly WrapSpan[], read: readonly WrapSpan[]): boolean {
+  return shown.every((span) =>
+    read.some((r) => r.chain === span.chain && r.from <= span.from && span.to <= r.to),
+  )
+}
