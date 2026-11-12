@@ -1,3 +1,4 @@
+import { XMLParser } from 'fast-xml-parser'
 import { parseRange } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { splitSheetRef } from '@seuoffice/xlsx-gateway/domain/chart-visual'
 import { parseRelationships, parseSheetElements } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
@@ -8,7 +9,7 @@ import {
 import { resolveRelTarget } from '@seuoffice/xlsx-gateway/gateway/xlsx-drawing-add'
 import { normalizeOoxmlPartPrefix } from '@seuoffice/xlsx-gateway/gateway/xlsx-namespace'
 import { excerpt, PLACEHOLDER, textWidthPx, type IssueDraft } from '../check'
-import { displayText, loadWorkbookZip } from './xlsx'
+import { displayText, loadWorkbookZip, withheldCellsIn } from './xlsx'
 
 export const SHEET_CHECKS = [
   'formula_error',
@@ -90,8 +91,13 @@ export async function checkWorkbook(bytes: Uint8Array): Promise<WorkbookCheck> {
   const date1904 = /<workbookPr\b[^>]*\bdate1904="(?:1|true)"/.test(workbook)
   const issues: IssueDraft[] = []
 
+  const withheld = await withheldCellsIn(bytes)
   for (const sheet of sheets) {
-    const cells = parseCells(sheet.xml)
+    // a cell hidden from AI, and one computed from it, is not reported: a finding
+    // quotes values, formulas and the numbers they show
+    const cells = parseCells(sheet.xml).filter(
+      (c) => withheld?.(sheet.name, c.ref, c.hasFormula) == null,
+    )
     checkFormulas(sheet.name, cells, names, issues)
     checkOverflow(sheet, cells, styles, shared, date1904, issues)
     checkPlaceholders(sheet.name, cells, shared, issues)
@@ -153,29 +159,71 @@ function plainText(richXml: string): string {
   return [...richXml.matchAll(/<t\b[^>]*>([\s\S]*?)<\/t>/g)].map((t) => unescapeXml(t[1]!)).join('')
 }
 
+/**
+ * Entities stay raw in the parse (a CDATA section is kept apart, so its text is
+ * never decoded a second time); comments, CDATA, quote style and `>` inside an
+ * attribute value are the parser's to read, not a pattern's.
+ */
+const cellParser = new XMLParser({
+  ignoreAttributes: false,
+  attributeNamePrefix: '@_',
+  trimValues: false,
+  parseTagValue: false,
+  processEntities: false,
+  cdataPropName: '#cdata',
+  removeNSPrefix: true,
+  isArray: (name) => name === 'row' || name === 'c' || name === 't',
+})
+
+type Node = Record<string, unknown>
+
+function nodeText(node: unknown): string {
+  if (node === undefined || node === null) return ''
+  if (typeof node === 'string') return unescapeXml(node)
+  if (typeof node !== 'object') return String(node)
+  const n = node as Node
+  return nodeText(n['#text']) + cdataText(n['#cdata'])
+}
+
+function cdataText(node: unknown): string {
+  return Array.isArray(node) ? node.map(cdataText).join('') : typeof node === 'string' ? node : ''
+}
+
+/** every `t` under a rich or inline string, in document order */
+function stringRuns(node: unknown): string {
+  if (typeof node !== 'object' || node === null) return ''
+  let out = ''
+  for (const [key, child] of Object.entries(node as Node)) {
+    if (key.startsWith('@_') || key.startsWith('#')) continue
+    for (const part of Array.isArray(child) ? child : [child]) {
+      out += key === 't' ? nodeText(part) : stringRuns(part)
+    }
+  }
+  return out
+}
+
 function parseCells(xml: string): Cell[] {
   const cells: Cell[] = []
-  const data = /<sheetData\b[^>]*>([\s\S]*?)<\/sheetData>/.exec(xml)?.[1] ?? ''
-  for (const m of data.matchAll(/<c\b([^>]*?)(\/>|>([\s\S]*?)<\/c>)/g)) {
-    const attrs = m[1]!
-    const ref = /\br="([A-Z]+\d+)"/.exec(attrs)?.[1]
-    if (!ref) continue
-    const body = m[3] ?? ''
-    const f = /<f\b([^>]*)(?:\/>|>([\s\S]*?)<\/f>)/.exec(body)
-    const v = /<v\b[^>]*>([\s\S]*?)<\/v>/.exec(body)?.[1]
-    const is = /<is\b[^>]*>([\s\S]*?)<\/is>/.exec(body)?.[1]
-    const bounds = parseRange(ref)
-    cells.push({
-      ref,
-      column: bounds.startColumn,
-      row: bounds.startRow,
-      styleIndex: Number(/\bs="(\d+)"/.exec(attrs)?.[1] ?? 0),
-      type: /\bt="([^"]+)"/.exec(attrs)?.[1],
-      formula: f?.[2] !== undefined ? unescapeXml(f[2]) : undefined,
-      hasFormula: f !== null,
-      value: v === undefined ? undefined : unescapeXml(v),
-      inline: is === undefined ? undefined : plainText(is),
-    })
+  const root = cellParser.parse(xml) as Node
+  const rows = ((root.worksheet as Node | undefined)?.sheetData as Node | undefined)?.row
+  for (const row of Array.isArray(rows) ? (rows as Node[]) : []) {
+    for (const c of Array.isArray(row.c) ? (row.c as Node[]) : []) {
+      const ref = c['@_r']
+      if (typeof ref !== 'string' || !/^[A-Z]+\d+$/.test(ref)) continue
+      const bounds = parseRange(ref)
+      const is = c.is
+      cells.push({
+        ref,
+        column: bounds.startColumn,
+        row: bounds.startRow,
+        styleIndex: Number(c['@_s'] ?? 0),
+        type: typeof c['@_t'] === 'string' ? c['@_t'] : undefined,
+        formula: c.f !== undefined && nodeText(c.f) !== '' ? nodeText(c.f) : undefined,
+        hasFormula: c.f !== undefined,
+        value: c.v === undefined ? undefined : nodeText(c.v),
+        inline: is === undefined ? undefined : stringRuns(is),
+      })
+    }
   }
   return cells
 }

@@ -572,6 +572,8 @@ export const NODE_ATTRS: { readonly [type: string]: Fields } = {
       'imageFlipV',
       'imageBorder',
       'imageReplace',
+      // the label of the mark hiding the block from AI; the model reads it, no page shows it
+      'redact',
     ),
     blockRevision: REVISION,
     sectPrChange: REVISION,

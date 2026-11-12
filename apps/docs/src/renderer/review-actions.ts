@@ -7,6 +7,7 @@
 import type { Editor } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
 import {
+  editedCommentModelText,
   nextNoteId,
   parseDocx,
   type CommentImage,
@@ -259,9 +260,16 @@ export function replyToComment(
 }
 
 /** Word: comment text edits in place; the author, date and anchor stay */
+/** The comment with the person's new text, and what a model reads of it from now on. */
+function editedComment(comment: CommentInfo, text: string): CommentInfo {
+  const { modelText: _stale, ...rest } = comment
+  const modelText = comment.markedXml ? editedCommentModelText(comment.markedXml, text) : undefined
+  return { ...rest, text, ...(modelText !== undefined ? { modelText } : {}) }
+}
+
 export function editComment(ctx: ReviewContext, id: string, text: string): void {
   if (refuseInOdt('comment')) return
-  ctx.setComments((prev) => prev.map((c) => (c.id === id ? { ...c, text } : c)))
+  ctx.setComments((prev) => prev.map((c) => (c.id === id ? editedComment(c, text) : c)))
   ctx.setCommentsDirty(true)
   ctx.dirtyRef.current = true
   ctx.setStatus(t('appCommentEdited'))

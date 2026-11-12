@@ -35,7 +35,8 @@ import { shiftCellArea, type StructuralOp } from './xlsx-structure'
 /// `readArchiveEntryText` reads any entry back, so no engine API was needed.
 
 import { nextFreeRelationshipId, parseSheetElements, type SheetEditPlan } from './xlsx-sheets'
-import { appendDefinedNames, escapeXmlText, unescapeXml } from './xlsx-defined-names'
+import { appendDefinedNames, escapeXmlText } from './xlsx-defined-names'
+import { elementText, prefixOf, rootNamespaceElements, type XmlElement } from './xlsx-xml-scan'
 
 export class RedactionError extends Error {}
 /** One withheld rectangle, in zero-based screen coordinates. */
@@ -411,24 +412,49 @@ async function removeRedactionPart(
   touchedEntries.add(REDACTION_PART_PATH)
 
   const relationships = await pkg.readText(WORKBOOK_RELS_PATH)
-  const withoutRel = relationships.replace(
-    new RegExp(`<Relationship\\b[^>]*Type="${REDACTION_REL_TYPE}"[^>]*/?>`),
-    '',
-  )
+  const withoutRel = removeElements(relationships, redactionRelationships(relationships))
   if (withoutRel !== relationships) {
     pkg.write(WORKBOOK_RELS_PATH, withoutRel)
     touchedEntries.add(WORKBOOK_RELS_PATH)
   }
 
   const contentTypes = await pkg.readText(CONTENT_TYPES_PATH)
-  const withoutOverride = contentTypes.replace(
-    new RegExp(`<Override\\b[^>]*PartName="/${REDACTION_PART_PATH}"[^>]*/>`),
-    '',
-  )
+  const withoutOverride = removeElements(contentTypes, redactionOverrides(contentTypes))
   if (withoutOverride !== contentTypes) {
     pkg.write(CONTENT_TYPES_PATH, withoutOverride)
     touchedEntries.add(CONTENT_TYPES_PATH)
   }
+}
+
+/// The part's relationship and content-type override, found by what they say
+/// (the type, the part name) and not by how they are written.
+function redactionRelationships(relationshipsXml: string): XmlElement[] {
+  return rootNamespaceElements(relationshipsXml, 'Relationship').filter(
+    (element) => element.attributes.get('Type') === REDACTION_REL_TYPE,
+  )
+}
+
+function redactionOverrides(contentTypesXml: string): XmlElement[] {
+  return rootNamespaceElements(contentTypesXml, 'Override').filter(
+    (element) => element.attributes.get('PartName') === `/${REDACTION_PART_PATH}`,
+  )
+}
+
+/// `child` as the last element of the part's root, in the root's own prefix.
+function appendToRoot(
+  xml: string,
+  rootLocal: string,
+  child: (name: (local: string) => string) => string,
+): string {
+  const root = rootNamespaceElements(xml, rootLocal)[0]
+  if (root === undefined) throw new RedactionError(`The package part has no ${rootLocal} element.`)
+  const prefix = prefixOf(root.name)
+  const added = child((local) => (prefix === '' ? local : `${prefix}:${local}`))
+  if (root.closeStart === root.end) {
+    const open = xml.slice(root.start, root.openEnd).replace(/\s*\/>$/, '>')
+    return `${xml.slice(0, root.start)}${open}${added}</${root.name}>${xml.slice(root.end)}`
+  }
+  return xml.slice(0, root.closeStart) + added + xml.slice(root.closeStart)
 }
 
 export async function applyRedactionPart(
@@ -461,21 +487,31 @@ export async function applyRedactionPart(
   touchedEntries.add(REDACTION_PART_PATH)
 
   const relationships = await pkg.readText(WORKBOOK_RELS_PATH)
-  if (!relationships.includes(`Type="${REDACTION_REL_TYPE}"`)) {
-    const relationship =
-      `<Relationship Id="${nextFreeRelationshipId(relationships)}" ` +
-      `Type="${REDACTION_REL_TYPE}" Target="gxRedactions.json"/>`
+  if (redactionRelationships(relationships).length === 0) {
+    const id = nextFreeRelationshipId(relationships)
     pkg.write(
       WORKBOOK_RELS_PATH,
-      relationships.replace('</Relationships>', `${relationship}</Relationships>`),
+      appendToRoot(
+        relationships,
+        'Relationships',
+        (name) =>
+          `<${name('Relationship')} Id="${id}" Type="${REDACTION_REL_TYPE}" Target="gxRedactions.json"/>`,
+      ),
     )
     touchedEntries.add(WORKBOOK_RELS_PATH)
   }
 
   const contentTypes = await pkg.readText(CONTENT_TYPES_PATH)
-  if (!contentTypes.includes(`PartName="/${REDACTION_PART_PATH}"`)) {
-    const override = `<Override PartName="/${REDACTION_PART_PATH}" ContentType="${REDACTION_CONTENT_TYPE}"/>`
-    pkg.write(CONTENT_TYPES_PATH, contentTypes.replace('</Types>', `${override}</Types>`))
+  if (redactionOverrides(contentTypes).length === 0) {
+    pkg.write(
+      CONTENT_TYPES_PATH,
+      appendToRoot(
+        contentTypes,
+        'Types',
+        (name) =>
+          `<${name('Override')} PartName="/${REDACTION_PART_PATH}" ContentType="${REDACTION_CONTENT_TYPE}"/>`,
+      ),
+    )
     touchedEntries.add(CONTENT_TYPES_PATH)
   }
 }
@@ -593,7 +629,7 @@ export function applyRedactionNameMirror(
   states: readonly SheetRedactionState[],
   sheetOrder: readonly string[],
 ): string {
-  const stripped = workbookXml.replace(MIRROR_ELEMENT, '')
+  const stripped = removeElements(workbookXml, mirrorElements(workbookXml))
   const entries: string[] = []
   for (const state of statesInWriteOrder(states)) {
     const sheet = sheetOrder.indexOf(state.sheetName)
@@ -616,11 +652,22 @@ export function applyRedactionNameMirror(
   return appendDefinedNames(stripped, entries.join(''))
 }
 
-const MIRROR_ELEMENT = new RegExp(
-  `<definedName\\b[^>]*\\bname="${REDACTION_MIRROR_PREFIX}\\d+"[^>]*>` +
-    `(?:[\\s\\S]*?</definedName>|)`,
-  'g',
-)
+const MIRROR_NAME = new RegExp(`^${REDACTION_MIRROR_PREFIX}\\d+$`)
+
+/** the mirrored entries of the workbook's `<definedNames>`, as written however they are spelled */
+function mirrorElements(workbookXml: string): XmlElement[] {
+  return rootNamespaceElements(workbookXml, 'definedName').filter((element) =>
+    MIRROR_NAME.test(element.attributes.get('name') ?? ''),
+  )
+}
+
+function removeElements(xml: string, elements: readonly XmlElement[]): string {
+  let result = xml
+  for (const element of [...elements].reverse()) {
+    result = result.slice(0, element.start) + result.slice(element.end)
+  }
+  return result
+}
 
 /**
  * Rebuild the marks a lost part recorded, from the mirrored defined names.
@@ -635,13 +682,11 @@ export function parseRedactionNameMirror(
   sheetOrder: readonly string[],
 ): SheetRedactionState[] {
   const bySheet = new Map<string, RedactionMark[]>()
-  for (const match of workbookXml.matchAll(MIRROR_ELEMENT)) {
-    const element = match[0]
-    const name = /\bname="([^"]*)"/.exec(element)?.[1] ?? '(unnamed)'
-    const body = /<definedName\b[^>]*>([\s\S]*?)<\/definedName>/.exec(element)?.[1] ?? ''
+  for (const element of mirrorElements(workbookXml)) {
+    const name = element.attributes.get('name') ?? '(unnamed)'
     let payload: unknown
     try {
-      payload = JSON.parse(unmirrorFormula(unescapeXml(body)))
+      payload = JSON.parse(unmirrorFormula(elementText(workbookXml, element)))
     } catch (err) {
       throw new RedactionError(
         `Defined name "${name}" does not hold a redaction mirror this version can read — ` +

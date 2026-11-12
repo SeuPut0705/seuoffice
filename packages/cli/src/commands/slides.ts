@@ -23,7 +23,7 @@ import {
 } from '../formats/slide-spec'
 import { parseOutline } from '@seuoffice/pipelines/slides'
 import { readOpsInput } from '../ops-input'
-import type { TxnResult } from '@seuoffice/pptx-ops'
+import { slideWithheldLabel, type TxnResult } from '@seuoffice/pptx-ops'
 import type { CommandContext, CommandDef } from '../registry'
 import { CliError, EXIT, type CommandResult } from '../result'
 import { txnDetail, txnFailure } from './txn'
@@ -429,6 +429,19 @@ async function replace(
   const specPath = resolveInput(specFile, ctx)
   const opened = await openDeck(readInput(path))
   const index = slideFlag(args, opened.deck.slides.length)!
+  // a rebuilt page drops every word on it: the ones hidden from AI are not the agent's to drop
+  const withheld = slideWithheldLabel(opened, opened.deck.slides[index]!)
+  if (withheld) {
+    throw new CliError(
+      EXIT.usage,
+      `slide ${index} holds text withheld from AI ({{${withheld}}}); replacing it would drop those words`,
+      undefined,
+      {
+        reason: 'invalid_argument',
+        suggestion: 'edit the slide with `slides apply`, around the placeholder',
+      },
+    )
+  }
   const explicit = flagString(args, 'outline')
   const stage = stageContext(
     dirname(specPath),
