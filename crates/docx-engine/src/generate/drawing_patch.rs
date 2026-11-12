@@ -3,7 +3,7 @@
 
 use jscompat::{
     JsMatch, JsRegex, get_substitution as substitute, js_regex, math_max as js_max, math_round,
-    number_to_string, to_number,
+    number_to_string, replace_first_with, to_number,
 };
 
 use super::text_patch::{para_plain_text, xml_segments};
@@ -30,17 +30,9 @@ fn replace_first(re: &JsRegex, count: usize, text: &str, template: &str) -> Stri
     match re.exec(text) {
         Some(m) => {
             let replacement =
-                substitute(template, m.as_str(), m.start(), text, &groups_of(&m, count));
+                substitute(m.as_str(), text, m.start(), &groups_of(&m, count), template);
             format!("{}{}{}", &text[..m.start()], replacement, &text[m.end()..])
         }
-        None => text.to_owned(),
-    }
-}
-
-/// `text.replace(re, (whole, ...groups) => ...)` without the `g` flag.
-fn replace_first_with(re: &JsRegex, text: &str, f: impl FnOnce(&JsMatch<'_>) -> String) -> String {
-    match re.exec(text) {
-        Some(m) => format!("{}{}{}", &text[..m.start()], f(&m), &text[m.end()..]),
         None => text.to_owned(),
     }
 }
@@ -51,7 +43,7 @@ fn replace_str(text: &str, pattern: &str, template: &str) -> String {
         Some(at) => format!(
             "{}{}{}",
             &text[..at],
-            substitute(template, pattern, at, text, &[]),
+            substitute(pattern, text, at, &[], template),
             &text[at + pattern.len()..]
         ),
         None => text.to_owned(),

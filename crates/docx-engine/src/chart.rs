@@ -5,7 +5,7 @@
 
 use jscompat::{
     JsNum, Radix, Slot, js_regex, math_max, math_min, math_round, number_to_string, pad_start,
-    parse_int, to_number, to_string_radix16, trim,
+    parse_int, to_number, to_string_radix16, trim, utc_date_parts,
 };
 use ooxml_xml::{XNode, parse_ordered};
 
@@ -954,22 +954,6 @@ fn cat_format_code(container: &XNode) -> Option<String> {
         .map(XNode::text)
 }
 
-// to jscompat: `Date.UTC` and `getUTCFullYear` / `getUTCMonth` / `getUTCDate`
-/// Year, month and day of a day count from 1970-01-01 (proleptic Gregorian),
-/// what `getUTCFullYear` / `getUTCMonth() + 1` / `getUTCDate` answer.
-fn civil_from_days(days: i64) -> (i64, i64, i64) {
-    let z = days + 719_468;
-    let era = z.div_euclid(146_097);
-    let doe = z.rem_euclid(146_097);
-    let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
-    let mp = (5 * doy + 2) / 153;
-    let day = doy - (153 * mp + 2) / 5 + 1;
-    let month = if mp < 10 { mp + 3 } else { mp - 9 };
-    let year = yoe + era * 400 + i64::from(month <= 2);
-    (year, month, day)
-}
-
 /// `serialDateText`: Excel date serial as "m/d/yyyy"
 fn serial_date_text(v: &str) -> Option<String> {
     let n = to_number(v);
@@ -978,8 +962,8 @@ fn serial_date_text(v: &str) -> Option<String> {
     }
     // Date.UTC(1899, 11, 31) and Date.UTC(1899, 11, 30), in days
     let base: i64 = if n < 61.0 { -25_568 } else { -25_569 };
-    let (year, month, day) = civil_from_days(base + math_round(n) as i64);
-    Some(format!("{month}/{day}/{year}"))
+    let (year, month, day) = utc_date_parts((base + math_round(n) as i64) as f64 * 86_400_000.0)?;
+    Some(format!("{}/{day}/{year}", month + 1.0))
 }
 
 /// The points `cachePoints` sets, sparse by idx, and the length it pads them to.

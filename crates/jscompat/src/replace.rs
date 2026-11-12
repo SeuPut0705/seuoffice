@@ -1,59 +1,117 @@
-//! `String.prototype.replace` with a string replacement.
+//! `String.prototype.slice`, `String.prototype.replace` with a replacement
+//! string, and `<` on strings.
 
-/// GetSubstitution: the replacement patterns `$$`, `$&`, `` $` ``, `$'`,
-/// `$n` and `$nn` of `template`, for a match `matched` at byte `position` of
-/// `text` with the capture `groups` (absent ones `None`).
-pub fn get_substitution(
-    template: &str,
-    matched: &str,
-    position: usize,
-    text: &str,
-    groups: &[Option<&str>],
-) -> String {
-    let bytes = template.as_bytes();
-    let mut out = String::with_capacity(template.len());
-    let mut copied = 0;
-    let mut i = 0;
-    while i < bytes.len() {
-        if bytes[i] != b'$' || i + 1 >= bytes.len() {
-            i += 1;
-            continue;
+use crate::JsRegex;
+
+/// `text.slice(start, end)`, the indexes counted in UTF-16 code units: a
+/// negative one counts from the end, NaN is 0, `None` for `end` is the length.
+/// A surrogate pair cut in half gives U+FFFD where JavaScript keeps the lone
+/// half, which a Rust string cannot hold.
+pub fn slice_utf16(text: &str, start: f64, end: Option<f64>) -> String {
+    let units: Vec<u16> = text.encode_utf16().collect();
+    let length = units.len() as f64;
+    let clamp = |index: f64| {
+        let index = if index.is_nan() { 0.0 } else { index.trunc() };
+        if index < 0.0 {
+            (length + index).max(0.0)
+        } else {
+            index.min(length)
         }
-        let next = bytes[i + 1];
-        let (piece, used): (Option<&str>, usize) = match next {
-            b'$' => (Some("$"), 2),
-            b'&' => (Some(matched), 2),
-            b'`' => (Some(&text[..position]), 2),
-            b'\'' => (Some(&text[(position + matched.len()).min(text.len())..]), 2),
-            b'0'..=b'9' => {
-                let one = usize::from(next - b'0');
-                let two = bytes
-                    .get(i + 2)
-                    .filter(|d| d.is_ascii_digit())
-                    .map(|d| one * 10 + usize::from(d - b'0'));
-                match two {
-                    Some(nn) if nn >= 1 && nn <= groups.len() => {
-                        (Some(groups[nn - 1].unwrap_or("")), 3)
-                    }
-                    _ if one >= 1 && one <= groups.len() => {
-                        (Some(groups[one - 1].unwrap_or("")), 2)
-                    }
-                    _ => (None, 0),
-                }
-            }
-            _ => (None, 0),
-        };
-        match piece {
-            Some(piece) => {
-                out.push_str(&template[copied..i]);
-                out.push_str(piece);
-                i += used;
-                copied = i;
-            }
-            None => i += 1,
-        }
+    };
+    let from = clamp(start);
+    let to = end.map_or(length, clamp);
+    if to <= from {
+        return String::new();
     }
-    out.push_str(&template[copied..]);
+    String::from_utf16_lossy(&units[from as usize..to as usize])
+}
+
+/// `a < b` on strings: UTF-16 code units compared in order, a prefix first.
+/// Rust orders by code point, which differs above U+FFFF.
+pub fn string_less_than(a: &str, b: &str) -> bool {
+    a.encode_utf16().lt(b.encode_utf16())
+}
+
+/// GetSubstitution of ECMAScript: `replacement` with `$$`, `$&`, `` $` ``,
+/// `$'`, `$n` and `$nn` expanded for a match of `matched` at byte `position`
+/// of `text`. `captures` are the groups of the pattern, `None` for one that did
+/// not take part. `$<` and a `$n` past the groups stay as written.
+pub fn get_substitution(
+    matched: &str,
+    text: &str,
+    position: usize,
+    captures: &[Option<&str>],
+    replacement: &str,
+) -> String {
+    let mut out = String::with_capacity(replacement.len());
+    let mut rest = replacement;
+    while let Some(at) = rest.find('$') {
+        out.push_str(&rest[..at]);
+        rest = &rest[at..];
+        let bytes = rest.as_bytes();
+        let taken = match bytes.get(1).copied() {
+            Some(b'$') => {
+                out.push('$');
+                2
+            }
+            Some(b'&') => {
+                out.push_str(matched);
+                2
+            }
+            Some(b'`') => {
+                out.push_str(text.get(..position).unwrap_or(""));
+                2
+            }
+            Some(b'\'') => {
+                let tail = (position + matched.len()).min(text.len());
+                out.push_str(text.get(tail..).unwrap_or(""));
+                2
+            }
+            Some(first @ b'0'..=b'9') => {
+                let one = usize::from(first - b'0');
+                let two = bytes
+                    .get(2)
+                    .filter(|digit| digit.is_ascii_digit())
+                    .map(|digit| one * 10 + usize::from(digit - b'0'));
+                let (index, length) = match two {
+                    Some(index) if index <= captures.len() => (index, 3),
+                    _ => (one, 2),
+                };
+                match index.checked_sub(1).and_then(|at| captures.get(at)) {
+                    Some(capture) => out.push_str(capture.unwrap_or("")),
+                    None => out.push_str(&rest[..length]),
+                }
+                length
+            }
+            _ => {
+                out.push('$');
+                1
+            }
+        };
+        rest = &rest[taken..];
+    }
+    out.push_str(rest);
+    out
+}
+
+/// `text.replace(regex, replacement)` for a regex without the `g` flag that
+/// has `groups` capture groups: the first match only, `$` patterns of
+/// `replacement` expanded.
+pub fn replace_first(regex: &JsRegex, groups: usize, text: &str, replacement: &str) -> String {
+    let Some(found) = regex.exec(text) else {
+        return text.to_owned();
+    };
+    let captures: Vec<Option<&str>> = (1..=groups).map(|index| found.get(index)).collect();
+    let mut out = String::with_capacity(text.len() + replacement.len());
+    out.push_str(&text[..found.start()]);
+    out.push_str(&get_substitution(
+        found.as_str(),
+        text,
+        found.start(),
+        &captures,
+        replacement,
+    ));
+    out.push_str(&text[found.end()..]);
     out
 }
 
@@ -63,7 +121,7 @@ pub fn replace_first_string(text: &str, needle: &str, replacement: &str) -> Stri
     match text.find(needle) {
         Some(at) => {
             let end = at + needle.len();
-            let piece = get_substitution(replacement, &text[at..end], at, text, &[]);
+            let piece = get_substitution(&text[at..end], text, at, &[], replacement);
             format!("{}{piece}{}", &text[..at], &text[end..])
         }
         None => text.to_owned(),
@@ -90,7 +148,7 @@ mod tests {
     #[test]
     fn group_patterns() {
         let g = [Some("a"), None];
-        assert_eq!(get_substitution("<$1|$2|$3>", "a", 1, "xay", &g), "<a||$3>");
-        assert_eq!(get_substitution("$01$10$0", "a", 1, "xay", &g), "aa0$0");
+        assert_eq!(get_substitution("a", "xay", 1, &g, "<$1|$2|$3>"), "<a||$3>");
+        assert_eq!(get_substitution("a", "xay", 1, &g, "$01$10$0"), "aa0$0");
     }
 }

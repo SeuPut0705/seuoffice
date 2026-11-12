@@ -29,6 +29,20 @@ mod ink;
 mod markers;
 mod math;
 mod parse;
+mod pptx_anim;
+mod pptx_bytes;
+mod pptx_chart;
+mod pptx_geom;
+mod pptx_ident;
+mod pptx_layout;
+mod pptx_leaves;
+mod pptx_mtx;
+mod pptx_package;
+mod pptx_placeholder;
+mod pptx_tables;
+mod pptx_tablestyle;
+mod pptx_theme;
+mod pptx_xml;
 mod resolve;
 mod revision;
 mod section;
@@ -101,6 +115,20 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "genFields" => Some(gen_fields::dispatch(function, text, args)),
         "genRuns" => Some(gen_runs::dispatch(function, text, args)),
         "genParagraph" => Some(gen_paragraph::dispatch(function, text, args)),
+        "pptxAnim" => Some(pptx_anim::dispatch(function, text, args)),
+        "pptxBytes" => Some(pptx_bytes::dispatch(function, text, args)),
+        "pptxChart" => Some(pptx_chart::dispatch(function, text, args)),
+        "pptxGeom" => Some(pptx_geom::dispatch(function, text, args)),
+        "pptxIdent" => Some(pptx_ident::dispatch(function, text, args)),
+        "pptxLayout" => Some(pptx_layout::dispatch(function, text, args)),
+        "pptxLeaves" => Some(pptx_leaves::dispatch(function, text, args)),
+        "pptxMtx" => Some(pptx_mtx::dispatch(function, text, args)),
+        "pptxPackage" => Some(pptx_package::dispatch(function, text, args)),
+        "pptxPlaceholder" => Some(pptx_placeholder::dispatch(function, text, args)),
+        "pptxTables" => Some(pptx_tables::dispatch(function, text, args)),
+        "pptxTablestyle" => Some(pptx_tablestyle::dispatch(function, text, args)),
+        "pptxTheme" => Some(pptx_theme::dispatch(function, text, args)),
+        "pptxXml" => Some(pptx_xml::dispatch(function, text, args)),
         "vml" => Some(vml::dispatch(function, text, args)),
         _ => None,
     }

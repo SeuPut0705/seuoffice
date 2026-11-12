@@ -1,10 +1,9 @@
 # crates
 
-The Rust document engines of SeuOffice. Today this is the docx engine, ported
-from `packages/docx-engine` one module at a time. Nothing in the product calls
-it yet: every ported module is compared against the TypeScript it came from by
-`tools/docx-diff`, and the TypeScript stays the engine until a unit flips a
-caller.
+The Rust document engines of SeuOffice, ported from `packages/docx-engine`
+and `packages/pptx-engine` one module at a time. Nothing in the product calls
+them yet. `tools/docx-diff` and `tools/pptx-diff` compare each ported module
+against its TypeScript before a unit flips a caller.
 
 A session that picks this work up starts at
 [Next session starts here](#next-session-starts-here).
@@ -17,14 +16,17 @@ A session that picks this work up starts at
 | `ooxml-xml`          | The tag scanner, the ordered parser and its serializer, `XNode` readers, UTF-16 offsets                                                                                                                                                                                | `scan.ts`, `xml-utils.ts`, fast-xml-parser                                                                                                                                                                                                                                                                                                                                                                                                    |
 | `ooxml-pkg`          | A docx as `loadDocxZip` opens it: the zip gate, the JSZip reader, Strict normalization, `Package`; the zip as JSZip writes it (`write`)                                                                                                                                | `zip-load.ts`, `packages/zip-gate`, JSZip 3.10.1, `ooxml-normalize.ts`                                                                                                                                                                                                                                                                                                                                                                        |
 | `docx-engine`        | Body scan, property readers, relationships, content types, theme, font table, styles, numbering, comments, protection and its hash, document properties, sources, sections, watermarks, notes, fields, EQ fields, SDTs, list markers, symbol fonts, the blank document | `scan.ts`, `parse-props.ts`, `parse-xml-text.ts`, `parse-package.ts`, `theme.ts`, `font-table.ts`, `parse-styles.ts`, parts of `parse.ts`; the read side of `doc-properties.ts`, `zotero-doc-props.ts`, `sources.ts`, `protection.ts`, `section.ts`, `watermark.ts`, `notes.ts`; `parse-fields.ts` without what needs `resolve-props.ts`, `eq-field.ts`, `parse-sdt.ts`, `field-balance.ts`, `list-markers.ts`, `symbol-fonts.ts`, `blank.ts` |
+| `pptx-engine`        | Slide scan, XML helpers, slide ids, named actions, table-grid accounting, CRC-32 and the package reader. [Survey, unit order and evidence](pptx-engine/README.md).                                                                                                     | `packages/pptx-engine/src/{scan,xml-utils,slide-ids,named-action,table-grid,crc32,zip}.ts`                                                                                                                                                                                                                                                                                                                                                    |
+| `mtx`                | The MicroType Express font decoder of embedded fonts, a derived work of libeot and the one crate under MPL-2.0.                                                                                                                                                        | `packages/pptx-engine/src/vendor/mtx/{index,lzcomp,ctf}.ts`                                                                                                                                                                                                                                                                                                                                                                                   |
 | `omml`               | Office Math: OMML to LaTeX and to MathML, LaTeX to OMML. Depends on no engine                                                                                                                                                                                          | `math.ts`                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `office-wasm`        | The one entry point JavaScript calls, built for `wasm32-wasip1`                                                                                                                                                                                                        | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `spike-one-run-save` | An experiment, not part of the engine: see its README                                                                                                                                                                                                                  | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
-`docx-engine` is pure: bytes and values in, values out. No I/O, no clock, no
-randomness. Two of its modules are not readers: `model/` holds the Word model
-of `types.ts` (generated, see "The model"), and `generate/` the pure builders
-of `generate.ts`, the save side, over that model.
+Both document crates are pure: bytes and values in, values out. No I/O,
+clock or randomness. UUIDs come from the caller. Two modules of
+`docx-engine` are not readers: `model/` holds the Word model of `types.ts`
+(generated, see "The model"), and `generate/` the pure builders of
+`generate.ts`, the save side, over that model.
 
 ## How a module is ported
 
@@ -398,6 +400,12 @@ whether the entries would change.
   charsets of `alt_chunk.rs`. It has to appear in the third-party notices
   when the crates are wired into the product. `crates/deny.toml` holds the
   licences the workspace may depend on, and the runner checks it.
+- `crates/mtx` (MPL-2.0) is a derived work of libeot (Brennan T. Vincent),
+  after Monotype's MTX reference code, as `packages/pptx-engine/src/vendor/mtx`
+  is. The repository's notices do not name libeot today, for the TypeScript
+  either: the third-party notices of a release have to name it, with the MPL's
+  pointer to the source of the covered files, before or when the crate is
+  wired into the product.
 - `JsRegex::new` refuses a pattern under `i` without `u` that names a cased
   character outside ASCII. One site puts a caller's text into such a
   pattern: `xml_text::on_off_tag_in(xml, name)`, whose callers pass the
@@ -604,16 +612,16 @@ Not verified, and not ported:
 **Unit 2: the resolver and the leaves without model types.** About 3,200
 TypeScript lines in 6,600 of Rust, eight groups of (f):
 
-| group | TypeScript | functions | first comparison |
-|---|---|---|---|
-| `resolve` | `resolve-props.ts`, whole | 13 | 24,840 checks, 0 differences |
-| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts` | 1 | 2,122, 0 |
-| `drawing` | `parse-drawing-geometry.ts` without `lineBoxOf` | 11 | 6,987, 0 |
-| `vml` | `parse-vml.ts` without `vmlWordArtBox` | 9 | 3,414, 0 |
-| `revision` | `revision-xml.ts`, whole | 6 | 6,348, 0 |
-| `altchunk` | `alt-chunk.ts` without the converter | 5 | 5,458, 12 |
-| `checkbox` | `checkbox-control.ts`, whole | 5 | 2,907, 0 |
-| `images` | the predicates of `tiff.ts` and `metafile.ts` | 4 | 1,505, 0 |
+| group          | TypeScript                                      | functions | first comparison             |
+| -------------- | ----------------------------------------------- | --------- | ---------------------------- |
+| `resolve`      | `resolve-props.ts`, whole                       | 13        | 24,840 checks, 0 differences |
+| `fielddisplay` | `fieldDisplayOf` of `parse-fields.ts`           | 1         | 2,122, 0                     |
+| `drawing`      | `parse-drawing-geometry.ts` without `lineBoxOf` | 11        | 6,987, 0                     |
+| `vml`          | `parse-vml.ts` without `vmlWordArtBox`          | 9         | 3,414, 0                     |
+| `revision`     | `revision-xml.ts`, whole                        | 6         | 6,348, 0                     |
+| `altchunk`     | `alt-chunk.ts` without the converter            | 5         | 5,458, 12                    |
+| `checkbox`     | `checkbox-control.ts`, whole                    | 5         | 2,907, 0                     |
+| `images`       | the predicates of `tiff.ts` and `metafile.ts`   | 4         | 1,505, 0                     |
 
 The first comparisons are runner artifacts (runs 43149479120 for `resolve`,
 43151626477 for the rest), taken before anything was fixed; no porter
@@ -680,7 +688,6 @@ head: read `headSha` of a run before using its result.
 (`revision_xml.rs`, about 800 lines). `utf16_shaped` is gone: stream D made
 a regex without `u` read a text outside the BMP by UTF-16 units (see
 "jscompat rules").
-
 
 **Before unit 2**
 
@@ -806,8 +813,7 @@ From the owner, for every unit:
 - Locally only `cargo check -p <crate>` and `cargo test -p <crate>` for the
   crate being ported, through `tools/docx-diff/heavy.sh <command>`, which
   hands the command to the machine's queue (`/tmp/heavy.sh`): one heavy
-  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit
-  75) when three already wait. No clippy, no gate, no `calls --group` and no
+  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit 75) when three already wait. No clippy, no gate, no `calls --group` and no
   wasm build here. Never remove `/tmp/heavy.lock` by hand and never kill by
   name. `tsc`, eslint, prettier and a single `tsx` script need no lock, on
   Node 22. At most two subagents at a time on this machine, each by the
@@ -842,6 +848,14 @@ From the owner, for every unit:
 - `ooxml-xml` keeps yielding positions: the edit model of stage 4 starts
   from byte ranges (decision 0025 on main), for which `spike-one-run-save`
   is the evidence. That crate stays.
+- Decision 0026 on main replaces 0025's screens in Rust: the screens stay
+  the React editors on desktop and web. The stages are this engine, then a
+  central process in Rust, then Electron removed for a Rust shell (Tauri 2
+  system webview or a CEF shell, chosen by measurement at stage 3) that
+  shows the React screens. So the wasm build is the one the screens use in
+  every host, desktop included, and the native build serves the central
+  process: both stay first-class. The wasm's host imports (`seu_host`) are
+  supplied by every such host.
 - Each unit ends with a report to main: equality before fixing, the classes
   of difference, what cannot be reproduced, the rate, and what was not
   checked.

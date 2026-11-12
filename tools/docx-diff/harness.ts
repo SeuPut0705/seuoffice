@@ -8,7 +8,9 @@ import { reportKeyOrder } from './key-order'
 
 export const toolDir = dirname(fileURLToPath(import.meta.url))
 export const repoRoot = resolve(toolDir, '../..')
-export const WASM_PATH = resolve(repoRoot, 'crates/target/wasm32-wasip1/release/office_wasm.wasm')
+export const WASM_PATH =
+  process.env.SEUOFFICE_WASM ??
+  resolve(repoRoot, 'crates/target/wasm32-wasip1/release/office_wasm.wasm')
 
 export const engine = Engine.load(WASM_PATH)
 
@@ -28,6 +30,7 @@ export class Comparison {
   compared = 0
   typescriptThrew = 0
   readonly differences: string[] = []
+  listed = 0
   /** Of the differences: results equal as JSON whose keys are in another order. */
   keyOrderOnly = 0
   /**
@@ -49,10 +52,15 @@ export class Comparison {
   }
 }
 
-const floors = JSON.parse(readFileSync(resolve(toolDir, 'floors.json'), 'utf8')) as Record<
+let floors = JSON.parse(readFileSync(resolve(toolDir, 'floors.json'), 'utf8')) as Record<
   string,
   number
 >
+
+/** Selects the populations of a gate that imports this harness. */
+export function useFloors(path: string): void {
+  floors = JSON.parse(readFileSync(path, 'utf8')) as Record<string, number>
+}
 let gateFailed = false
 
 /** Marks the gate as failed: the run exits with 1. */
@@ -85,6 +93,7 @@ export function reportComparisons(): void {
       `${comparison.label.padEnd(46)} compared ${String(comparison.compared).padStart(6)}  ` +
         `${atFloor(comparison.compared, comparison.floor)}  differences ${comparison.differences.length}` +
         (comparison.keyOrderOnly > 0 ? `  (key order only: ${comparison.keyOrderOnly})` : '') +
+        (comparison.listed > 0 ? `  listed ${comparison.listed}` : '') +
         (comparison.typescriptThrew > 0
           ? `  (TypeScript threw in ${comparison.typescriptThrew}: Rust must refuse those too)`
           : ''),

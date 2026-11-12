@@ -1,0 +1,114 @@
+pptx-diff: 3 tracked .pptx (floor missing  BELOW FLOOR); 3 opened (floor missing  BELOW FLOOR); 7 slides (floor missing  BELOW FLOOR)
+(a) package open, tracked decks                compared      3  floor missing  BELOW FLOOR  differences 0
+(a) package entry bytes, tracked decks         compared     99  floor missing  BELOW FLOOR  differences 0
+(a) package open, built containers             compared     20  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 10: Rust must refuse those too)
+(a) package entry bytes, built containers      compared     75  floor missing  BELOW FLOOR  differences 0
+(f) xml on the corpus, checks                  compared   1404  floor missing  BELOW FLOOR  differences 0
+(f) xml on built inputs, checks                compared   2171  floor missing  BELOW FLOOR  differences 39  (TypeScript threw in 169: Rust must refuse those too)
+    - built 1989: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":["c:ser","c:pt","c:lvl","c:dPt"],"trimValues":false,"parseTagValue":false})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    - built 1990: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":["cx:data","cx:lvl","cx:pt","cx:series","cx:dataPt"],"trimValues":false,"parseTagValue":false})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    - built 1991: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":["p:embeddedFont"]})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    - built 1992: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":["a:p","a:r","a:br","a:fld","p:sp","p:pic","p:graphicFrame","p:grpSp","p:cxnSp","a:tr","a:tc","a:gridCol"],"trimValues":false,"parseTagValue":false})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    - built 1993: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":["p:sp","p:graphicFrame","p:pic"]})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    - built 1994: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":["a:tblStyle"]})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    - built 1995: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":[]})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    - built 1996: pptxXml.parseObject: pptxXml.parseObject("<#text/>", {"arrayNames":["Relationship","sldId","Override"]})
+      typescript {"value":{"#text":[]}}
+      rust       {"value":{"#text":""}}
+    ... 31 more (--show N)
+(f+) xml on mutated texts, checks              compared    300  floor missing  BELOW FLOOR  differences 1  (TypeScript threw in 71: Rust must refuse those too)
+    - mutation 261: pptxXml.parseObject: pptxXml.parseObject("<&amp;a><![CDATA😀]]></a>", {"arrayNames":["p:sp","p:graphicFrame","p:pic"]})
+      typescript {"value":{"&amp;a":"\ude00"}}
+      rust       {"error":"a surrogate pair would be split"}
+(f) leaves on the corpus, checks               compared   1028  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f) leaves on built inputs, checks             compared    261  floor missing  BELOW FLOOR  differences 1  (TypeScript threw in 18: Rust must refuse those too)
+    - built 8: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/, {})
+      typescript {"value":256}
+      rust       {"value":601}
+(f+) leaves on mutated texts, checks           compared   3900  floor missing  BELOW FLOOR  differences 18  (TypeScript threw in 152: Rust must refuse those too)
+    - mutation 0: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/, {})
+      typescript {"value":256}
+      rust       {"value":601}
+    - mutation 1: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/, {})
+      typescript {"value":256}
+      rust       {"value":601}
+    - mutation 32: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://sch10emas.openxmlformats.or﻿g/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/200\"6/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibi, {})
+      typescript {"value":256}
+      rust       {"value":601}
+    - mutation 37: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/dr﻿awingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility, {})
+      typescript {"value":256}
+      rust       {"value":601}
+    - mutation 39: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlconstructorformats.org/markup-com, {})
+      typescript {"value":256}
+      rust       {"value":601}
+    - mutation 77: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" constructorxmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-com, {})
+      typescript {"value":256}
+      rust       {"value":601}
+    - mutation 122: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org?>/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibilit, {})
+      typescript {"value":256}
+      rust       {"value":601}
+    - mutation 130: pptxLeaves.slide-ids.nextSlideId: pptxLeaves.slide-ids.nextSlideId("<p:presentation xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentati006/main\" xmlns:mc=\"http://schemas.openxmlformats.org/markup-compatibility/2006\", {})
+      typescript {"value":256}
+      rust       {"value":601}
+    ... 10 more (--show N)
+(f) package on the corpus, checks              compared    406  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f) package on built inputs, checks            compared     87  floor missing  BELOW FLOOR  differences 1  (TypeScript threw in 11: Rust must refuse those too)
+    - built 1: pptxPackage.readPresentation: pptxPackage.readPresentation("<presentation xmlns:p=\"x\" xmlns:r=\"y\"><sldSz cx=\"1\" cy=\"2\"/><sldIdLst><sldId r:id=\"rId2\"/></sldIdLst></presentation>", {"parts":[["ppt/_rels/presentation.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" )
+      typescript {"value":{"size":{"cx":1,"cy":2},"slidePaths":[]}}
+      rust       {"value":{"size":{"cx":1,"cy":2},"slidePaths":["ppt/slides/slide1.xml"]}}
+(f+) package on mutated texts, checks          compared   2100  floor missing  BELOW FLOOR  differences 3  (TypeScript threw in 219: Rust must refuse those too)
+    - mutation 70: pptxPackage.readPresentation: pptxPackage.readPresentation("<presentation xmlns:p=\"<?xml version=\"1.1\"?>x\" xmlns:r=\"y\"><sldSz cx=\"1\" cy=\"2\"/><sldIdLst><sldId r:id=\"rId2\"/></sldIdLst></presentation>", {"parts":[["ppt/_rels/presentation.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" )
+      typescript {"value":{"size":{"cx":1,"cy":2},"slidePaths":[]}}
+      rust       {"value":{"size":{"cx":1,"cy":2},"slidePaths":["ppt/slides/slide1.xml"]}}
+    - mutation 262: pptxPackage.readPresentation: pptxPackage.readPresentation("<presentation xmlns:p=\"x\" xmlns:r=\"y\"><sldSz cx=\"1\" cy=\"2\"/><sldIdLst><sldId r:id=\"rId2\"/&#0;></sldIdIdLst></preLst></presentaon>", {"parts":[["ppt/_rels/presentation.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" )
+      typescript {"value":{"size":{"cx":1,"cy":2},"slidePaths":[]}}
+      rust       {"value":{"size":{"cx":1,"cy":2},"slidePaths":["ppt/slides/slide1.xml"]}}
+    - mutation 279: pptxPackage.readPresentation: pptxPackage.readPresentation("<presentation xmlns:p=\"x\" xmlns:r=\"y\"><sldSz cx=\"1\" cy=\"2\"/><sldIdLst><sldId r:id=\"rId2\"/></sldIdLst></present/><sldIdLstation>", {"parts":[["ppt/_rels/presentation.xml.rels","<?xml version=\"1.0\" encoding=\"UTF-8\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"><Relationship Id=\"rId1\" )
+      typescript {"value":{"size":{"cx":1,"cy":2},"slidePaths":[]}}
+      rust       {"value":{"size":{"cx":1,"cy":2},"slidePaths":["ppt/slides/slide1.xml"]}}
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) xml: 1 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 1
+    pptxXml.parseObject                      checks    3875  differences     40  key order only      0  distinct results   661  TypeScript threw 240
+(f) leaves: 16 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 11 of 16
+    pptxLeaves.scan.scanSlide                checks     386  differences      0  key order only      0  distinct results   234  TypeScript threw 133
+    pptxLeaves.xml-utils.asXmlNode           checks     237  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    pptxLeaves.xml-utils.xmlArray            checks     237  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    pptxLeaves.xml-utils.decodeNumericCharRefs checks     351  differences      0  key order only      0  distinct results   325  TypeScript threw 0
+    pptxLeaves.xml-utils.escapeXmlText       checks     336  differences      0  key order only      0  distinct results   300  TypeScript threw 0
+    pptxLeaves.xml-utils.escapeXmlAttr       checks     392  differences      0  key order only      0  distinct results   344  TypeScript threw 0
+    pptxLeaves.xml-utils.maxRelationshipIdNumber checks     371  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    pptxLeaves.xml-utils.hasContentTypeOverride checks     419  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxLeaves.xml-utils.creationIdExtXml    checks     308  differences      0  key order only      0  distinct results   289  TypeScript threw 0
+    pptxLeaves.xml-utils.creationIdXml       checks     308  differences      0  key order only      0  distinct results   273  TypeScript threw 0
+    pptxLeaves.xml-utils.hasDefaultFor       checks     413  differences      0  key order only      0  distinct results     3  TypeScript threw 38
+    pptxLeaves.slide-ids.nextSlideId         checks     322  differences     19  key order only      0  distinct results    11  TypeScript threw 0
+    pptxLeaves.named-action.namedActionOf    checks     317  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    pptxLeaves.named-action.namedActionAttr  checks     309  differences      0  key order only      0  distinct results   284  TypeScript threw 0
+    pptxLeaves.table-grid.tableRowGridCols   checks      20  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    pptxLeaves.crc32.crc32                   checks     463  differences      0  key order only      0  distinct results   377  TypeScript threw 0
+(f) package: 10 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 4 of 10
+    pptxPackage.open                         checks       6  differences      0  key order only      0  distinct results     5  TypeScript threw 2
+    pptxPackage.has                          checks      29  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxPackage.readText                     checks     316  differences      0  key order only      0  distinct results   268  TypeScript threw 0
+    pptxPackage.readBytes                    checks     303  differences      0  key order only      0  distinct results   110  TypeScript threw 0
+    pptxPackage.readRels                     checks     373  differences      0  key order only      0  distinct results   150  TypeScript threw 46
+    pptxPackage.readPresentation             checks     325  differences      4  key order only      0  distinct results    22  TypeScript threw 155
+    pptxPackage.resolveSlideChain            checks     329  differences      0  key order only      0  distinct results    31  TypeScript threw 25
+    pptxPackage.relsPathFor                  checks     462  differences      0  key order only      0  distinct results   349  TypeScript threw 0
+    pptxPackage.resolveTarget                checks     443  differences      0  key order only      0  distinct results   303  TypeScript threw 0
+    pptxPackage.assertZipWithinLimits        checks       7  differences      0  key order only      0  distinct results     2  TypeScript threw 3
+divergences.json: 0 classes, 0 exact inputs, 0 no longer reproduce

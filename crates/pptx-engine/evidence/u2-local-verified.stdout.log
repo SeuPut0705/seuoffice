@@ -1,0 +1,151 @@
+pptx-diff: 3 tracked .pptx (floor      3); 3 opened (floor      3); 7 slides (floor      7)
+(a) package open, tracked decks                compared      3  floor      3  differences 0
+(a) package entry bytes, tracked decks         compared     99  floor     99  differences 0
+(a) package open, built containers             compared     23  floor     23  differences 0  (TypeScript threw in 11: Rust must refuse those too)
+(a) package entry bytes, built containers      compared     80  floor     80  differences 0
+(a+) package open, mutated containers          compared    300  floor    300  differences 0  (TypeScript threw in 208: Rust must refuse those too)
+(a+) package entry bytes, mutated containers   compared    600  floor    500  differences 0
+(f) xml on the corpus, checks                  compared   1431  floor   1431  differences 0
+(f) xml on built inputs, checks                compared   2262  floor   2262  differences 0  listed 26  (TypeScript threw in 182: Rust must refuse those too)
+(f+) xml on mutated texts, checks              compared    300  floor    300  differences 0  (TypeScript threw in 71: Rust must refuse those too)
+(f) leaves on the corpus, checks               compared   1035  floor   1035  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f) leaves on built inputs, checks             compared    261  floor    261  differences 0  listed 1  (TypeScript threw in 18: Rust must refuse those too)
+(f+) leaves on mutated texts, checks           compared   3900  floor   3900  differences 0  (TypeScript threw in 152: Rust must refuse those too)
+(f) package on the corpus, checks              compared    415  floor    415  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f) package on built inputs, checks            compared     93  floor     93  differences 0  listed 1  (TypeScript threw in 12: Rust must refuse those too)
+(f+) package on mutated texts, checks          compared   2100  floor   2100  differences 0  (TypeScript threw in 225: Rust must refuse those too)
+(f) geom on the corpus, checks                 compared      3  floor      3  differences 0
+(f) geom on built inputs, checks               compared    695  floor    695  differences 0  listed 11  (TypeScript threw in 2: Rust must refuse those too)
+(f+) geom on mutated texts, checks             compared    600  floor    600  differences 0
+(f) layout on the corpus, checks               compared    678  floor    678  differences 0
+(f) layout on built inputs, checks             compared   1410  floor   1410  differences 0
+(f+) layout on mutated texts, checks           compared    600  floor    600  differences 0
+(f) tables on the corpus, checks               compared    445  floor    445  differences 0
+(f) tables on built inputs, checks             compared   1131  floor   1131  differences 0  listed 25
+(f+) tables on mutated texts, checks           compared   2700  floor   2700  differences 0
+(f) anim on the corpus, checks                 compared    735  floor    735  differences 0
+(f) anim on built inputs, checks               compared    506  floor    506  differences 0  listed 3
+(f+) anim on mutated texts, checks             compared   4200  floor   4200  differences 0
+(f) bytes on the corpus, checks                compared     15  floor     15  differences 0
+(f) bytes on built inputs, checks              compared   1102  floor   1102  differences 0  (TypeScript threw in 23: Rust must refuse those too)
+(f+) bytes on mutated texts, checks            compared      0  floor      0  differences 0
+(f) ident on the corpus, checks                compared    530  floor    530  differences 0
+(f) ident on built inputs, checks              compared    857  floor    857  differences 0  listed 44  (TypeScript threw in 12: Rust must refuse those too)
+(f+) ident on mutated texts, checks            compared   4800  floor   4800  differences 0  (TypeScript threw in 76: Rust must refuse those too)
+(f) mtx on the corpus, checks                  compared      0  floor      0  differences 0
+(f) mtx on built inputs, checks                compared   1968  floor   1968  differences 0  (TypeScript threw in 760: Rust must refuse those too)
+(f+) mtx on mutated texts, checks              compared    300  floor    300  differences 0
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) xml: 1 functions (floor      1); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 1
+    pptxXml.parseObject                      checks    3993  differences      0  key order only      0  distinct results   672  TypeScript threw 253
+(f) leaves: 16 functions (floor     16); with a single distinct result, so not really compared: 0; never threw in TypeScript: 11 of 16
+    pptxLeaves.scan.scanSlide                checks     386  differences      0  key order only      0  distinct results   234  TypeScript threw 133
+    pptxLeaves.xml-utils.asXmlNode           checks     239  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    pptxLeaves.xml-utils.xmlArray            checks     239  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    pptxLeaves.xml-utils.decodeNumericCharRefs checks     351  differences      0  key order only      0  distinct results   325  TypeScript threw 0
+    pptxLeaves.xml-utils.escapeXmlText       checks     336  differences      0  key order only      0  distinct results   300  TypeScript threw 0
+    pptxLeaves.xml-utils.escapeXmlAttr       checks     392  differences      0  key order only      0  distinct results   344  TypeScript threw 0
+    pptxLeaves.xml-utils.maxRelationshipIdNumber checks     371  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    pptxLeaves.xml-utils.hasContentTypeOverride checks     419  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxLeaves.xml-utils.creationIdExtXml    checks     308  differences      0  key order only      0  distinct results   289  TypeScript threw 0
+    pptxLeaves.xml-utils.creationIdXml       checks     308  differences      0  key order only      0  distinct results   273  TypeScript threw 0
+    pptxLeaves.xml-utils.hasDefaultFor       checks     413  differences      0  key order only      0  distinct results     3  TypeScript threw 38
+    pptxLeaves.slide-ids.nextSlideId         checks     322  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    pptxLeaves.named-action.namedActionOf    checks     317  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    pptxLeaves.named-action.namedActionAttr  checks     309  differences      0  key order only      0  distinct results   284  TypeScript threw 0
+    pptxLeaves.table-grid.tableRowGridCols   checks      20  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    pptxLeaves.crc32.crc32                   checks     466  differences      0  key order only      0  distinct results   379  TypeScript threw 0
+(f) package: 10 functions (floor     10); with a single distinct result, so not really compared: 0; never threw in TypeScript: 4 of 10
+    pptxPackage.open                         checks       6  differences      0  key order only      0  distinct results     5  TypeScript threw 2
+    pptxPackage.has                          checks      33  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxPackage.readText                     checks     318  differences      0  key order only      0  distinct results   268  TypeScript threw 0
+    pptxPackage.readBytes                    checks     303  differences      0  key order only      0  distinct results   110  TypeScript threw 0
+    pptxPackage.readRels                     checks     373  differences      0  key order only      0  distinct results   150  TypeScript threw 46
+    pptxPackage.readPresentation             checks     325  differences      0  key order only      0  distinct results    22  TypeScript threw 161
+    pptxPackage.resolveSlideChain            checks     329  differences      0  key order only      0  distinct results    31  TypeScript threw 25
+    pptxPackage.relsPathFor                  checks     465  differences      0  key order only      0  distinct results   351  TypeScript threw 0
+    pptxPackage.resolveTarget                checks     446  differences      0  key order only      0  distinct results   302  TypeScript threw 0
+    pptxPackage.assertZipWithinLimits        checks      10  differences      0  key order only      0  distinct results     2  TypeScript threw 4
+(f) geom: 7 functions (floor      7); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 7
+    pptxGeom.custgeom.evalGuides             checks     148  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    pptxGeom.custgeom.parseCustGeom          checks     370  differences      0  key order only      0  distinct results   125  TypeScript threw 0
+    pptxGeom.custgeom.CUST_GEOM_PT_COUNT     checks      11  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxGeom.custgeom.validCustGeomPath      checks      65  differences      0  key order only      0  distinct results     3  TypeScript threw 2
+    pptxGeom.custgeom.custGeomXml            checks      10  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxGeom.preset-shape-types.PRESET_SHAPE_TYPES checks     191  differences      0  key order only      0  distinct results   188  TypeScript threw 0
+    pptxGeom.preset-shape-types.isPresetShapeType checks     503  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+(f) layout: 8 functions (floor      8); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 8
+    pptxLayout.align.alignRects              checks     532  differences      0  key order only      0  distinct results   332  TypeScript threw 0
+    pptxLayout.align.distributeRects         checks      70  differences      0  key order only      0  distinct results    31  TypeScript threw 0
+    pptxLayout.dgm-hier.parseHierConstraints checks     311  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    pptxLayout.dgm-hier.layoutHierTree       checks     504  differences      0  key order only      0  distinct results   259  TypeScript threw 0
+    pptxLayout.smartart-layout.layoutShapes  checks     651  differences      0  key order only      0  distinct results   400  TypeScript threw 0
+    pptxLayout.smartart-layout.SMARTART_PALETTE checks      13  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    pptxLayout.format-brush.extractFormat    checks     142  differences      0  key order only      0  distinct results    29  TypeScript threw 0
+    pptxLayout.format-brush.applyFormat      checks     465  differences      0  key order only      0  distinct results    33  TypeScript threw 0
+(f) tables: 10 functions (floor     10); with a single distinct result, so not really compared: 0; never threw in TypeScript: 9 of 10
+    pptxTables.table-edit.TABLE_STYLE_PRESETS checks     316  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    pptxTables.table-edit.ensureTableStyleXml checks     441  differences      0  key order only      0  distinct results   221  TypeScript threw 0
+    pptxTables.table-edit.patchTableStyleXml checks    1134  differences      0  key order only      0  distinct results   811  TypeScript threw 0
+    pptxTables.table-edit.findTableElementInSlide checks     351  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    pptxTables.theme-apply.patchThemeXml     checks     414  differences      0  key order only      0  distinct results   357  TypeScript threw 0
+    pptxTables.theme-apply.applyThemeToArchive checks     336  differences      0  key order only      0  distinct results   324  TypeScript threw 0
+    pptxTables.theme-apply.collectExplicitColors checks     376  differences      0  key order only      0  distinct results    32  TypeScript threw 0
+    pptxTables.theme-apply.buildColorMap     checks      92  differences      0  key order only      0  distinct results    39  TypeScript threw 0
+    pptxTables.theme-apply.recolorXml        checks     480  differences      0  key order only      0  distinct results   342  TypeScript threw 0
+    pptxTables.theme-apply.remapDeckColors   checks     336  differences      0  key order only      0  distinct results   323  TypeScript threw 0
+(f) anim: 15 functions (floor     15); with a single distinct result, so not really compared: 0; never threw in TypeScript: 14 of 15
+    pptxAnim.animation.ANIM_DIRECTIONS       checks     309  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    pptxAnim.animation.ANIM_TRIGGERS         checks     308  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxAnim.animation.ANIM_EFFECTS          checks     328  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    pptxAnim.animation.DEFAULT_MOTION_PATH   checks     309  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    pptxAnim.animation.isMediaEffect         checks     330  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxAnim.animation.animClassOf           checks     330  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxAnim.animation.elementSpid           checks     399  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    pptxAnim.animation.buildTimingXml        checks      72  differences      0  key order only      0  distinct results    69  TypeScript threw 0
+    pptxAnim.animation.patchSlideTimingXml   checks     445  differences      0  key order only      0  distinct results   279  TypeScript threw 0
+    pptxAnim.animation.readSlideTimingXml    checks     483  differences      0  key order only      0  distinct results   107  TypeScript threw 0
+    pptxAnim.animation.patchSlideTimingIncrementalXml checks     445  differences      0  key order only      0  distinct results    58  TypeScript threw 0
+    pptxAnim.animation.setSlideAnimations    checks     445  differences      0  key order only      0  distinct results   309  TypeScript threw 0
+    pptxAnim.animation.getSlideAnimations    checks     352  differences      0  key order only      0  distinct results    19  TypeScript threw 0
+    pptxAnim.animation.pruneTimingForSpids   checks     381  differences      0  key order only      0  distinct results   290  TypeScript threw 0
+    pptxAnim.animation.cNvPrIdsInXml         checks     505  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+(f) bytes: 7 functions (floor      7); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 7
+    pptxBytes.glb-bounds.glbJson             checks     520  differences      0  key order only      0  distinct results   271  TypeScript threw 0
+    pptxBytes.glb-bounds.glbBounds           checks     520  differences      0  key order only      0  distinct results    59  TypeScript threw 23
+    pptxBytes.chart-workbook.constant        checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    pptxBytes.chart-workbook.colLetter       checks      27  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    pptxBytes.chart-workbook.chartWorkbookParts checks      11  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    pptxBytes.chart-workbook.storedZip       checks      25  differences      0  key order only      0  distinct results    22  TypeScript threw 0
+    pptxBytes.chart-workbook.chartWorkbookXlsx checks      11  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+(f) ident: 19 functions (floor     19); with a single distinct result, so not really compared: 0; never threw in TypeScript: 13 of 19
+    pptxIdent.identity.elementDurableId      checks     401  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    pptxIdent.identity.slideDurableId        checks     481  differences      0  key order only      0  distinct results   356  TypeScript threw 0
+    pptxIdent.identity.elementCNvPrId        checks     401  differences      0  key order only      0  distinct results    24  TypeScript threw 0
+    pptxIdent.identity.matchesElementRef     checks     370  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxIdent.identity.ensureCreationId      checks     374  differences      0  key order only      0  distinct results   365  TypeScript threw 0
+    pptxIdent.identity.groupChildDurableId   checks     333  differences      0  key order only      0  distinct results    23  TypeScript threw 1
+    pptxIdent.redaction-xml.constants        checks       7  differences      0  key order only      0  distinct results     5  TypeScript threw 3
+    pptxIdent.redaction-xml.redactExtXml     checks     330  differences      0  key order only      0  distinct results   290  TypeScript threw 0
+    pptxIdent.redaction-xml.hasRedactExtIn   checks     372  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxIdent.redaction-xml.syncRedactExt    checks     454  differences      0  key order only      0  distinct results   364  TypeScript threw 3
+    pptxIdent.redaction-xml.readRedactLabel  checks     372  differences      0  key order only      0  distinct results    19  TypeScript threw 78
+    pptxIdent.redaction-xml.stripRedactExt   checks     373  differences      0  key order only      0  distinct results   335  TypeScript threw 0
+    pptxIdent.redaction-xml.setRedactExt     checks     511  differences      0  key order only      0  distinct results   413  TypeScript threw 0
+    pptxIdent.model3d.constants              checks      11  differences      0  key order only      0  distinct results     9  TypeScript threw 3
+    pptxIdent.model3d.model3dFraming         checks      18  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    pptxIdent.model3d.model3dXml             checks     341  differences      0  key order only      0  distinct results   322  TypeScript threw 0
+    pptxIdent.model3d.syncModel3dFrame       checks     340  differences      0  key order only      0  distinct results   337  TypeScript threw 0
+    pptxIdent.model3d.readModel3dRotation    checks     335  differences      0  key order only      0  distinct results    29  TypeScript threw 0
+    pptxIdent.model3d.setModel3dRotationXml  checks     363  differences      0  key order only      0  distinct results   345  TypeScript threw 0
+(f) mtx: 9 functions (floor      9); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 9
+    pptxMtx.lzcomp.MtxError                  checks     309  differences      0  key order only      0  distinct results   273  TypeScript threw 0
+    pptxMtx.lzcomp.BitWriter                 checks      17  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    pptxMtx.lzcomp.BitReader                 checks      13  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxMtx.lzcomp.AHuff                     checks     123  differences      0  key order only      0  distinct results   102  TypeScript threw 0
+    pptxMtx.lzcomp.unpackLz                  checks     377  differences      0  key order only      0  distinct results    90  TypeScript threw 274
+    pptxMtx.lzcomp.unpackMtx                 checks     339  differences      0  key order only      0  distinct results    44  TypeScript threw 283
+    pptxMtx.ctf.sanitizeCmap                 checks     361  differences      0  key order only      0  distinct results   186  TypeScript threw 0
+    pptxMtx.ctf.ctfToSfnt                    checks     399  differences      0  key order only      0  distinct results   124  TypeScript threw 203
+    pptxMtx.index.mtxToSfnt                  checks     330  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+divergences.json: 18 classes, 111 exact inputs, 0 no longer reproduce

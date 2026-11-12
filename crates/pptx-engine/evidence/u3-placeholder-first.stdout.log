@@ -1,0 +1,39 @@
+pptx-diff: 4 tracked .pptx (floor      4); 4 opened (floor      4); 15 slides (floor     15)
+(f) placeholder on the corpus, checks          compared   2820  floor missing  BELOW FLOOR  differences 0
+(f) placeholder on built inputs, checks        compared   4889  floor missing  BELOW FLOOR  differences 46  (TypeScript threw in 3: Rust must refuse those too)
+    - built 272: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD)
+      typescript {"value":{"entries":[{"type":"body","idx":"1","transform":null,"anchor":"[function]"},{"type":"title","idx":"","transform":{"offset":{"x":10,"y":20,"cx":300,"cy":400},"rot":0,"flipH":false,"flipV":false},"anchor":{}},{"type":"obj","idx":"3","transform":null,"anchor":"[function]"},{"type":"subTitle",
+      rust       {"value":{"entries":[{"type":"title","idx":"","transform":{"offset":{"x":10,"y":20,"cx":300,"cy":400},"rot":0,"flipH":false,"flipV":false}}]}}
+    - built 273: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {})
+      typescript {"value":{"entries":[{"type":"body","idx":"1","transform":null,"anchor":"[function]"}]}}
+      rust       {"value":{"entries":[]}}
+    - built 274: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {})
+      typescript {"value":{"entries":[{"type":"body","idx":"1","transform":null,"anchor":"[function]"}]}}
+      rust       {"value":{"entries":[]}}
+    - built 275: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {})
+      typescript {"value":{"entries":[{"type":"body","idx":"1","transform":null,"anchor":{}}]}}
+      rust       {"value":{"entries":[]}}
+    - built 276: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {})
+      typescript {"value":{"entries":[{"type":"body","idx":"1","transform":null,"anchor":"[function]"}]}}
+      rust       {"value":{"entries":[]}}
+    - built 277: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {})
+      typescript {"value":{"entries":[{"type":"body","idx":"1","transform":null,"anchor":"[function]"}]}}
+      rust       {"value":{"entries":[]}}
+    ... 40 more (--show N)
+(f+) placeholder on mutated texts, checks      compared   3600  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 115: Rust must refuse those too)
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) placeholder: 14 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 10 of 14
+    pptxPlaceholder.placeholder.constants    checks       4  differences      0  key order only      0  distinct results     2  TypeScript threw 3
+    pptxPlaceholder.placeholder.parsePlaceholderMap checks     655  differences     11  key order only      0  distinct results   118  TypeScript threw 0
+    pptxPlaceholder.placeholder.parseDefRPrStyle checks     718  differences      0  key order only      0  distinct results   172  TypeScript threw 70
+    pptxPlaceholder.placeholder.parseLstStyleLevels checks    1008  differences     10  key order only      0  distinct results   187  TypeScript threw 45
+    pptxPlaceholder.placeholder.parseDefaultTextStyle checks     346  differences      0  key order only      0  distinct results    45  TypeScript threw 0
+    pptxPlaceholder.placeholder.parseMasterTextStyles checks     428  differences      5  key order only      0  distinct results    78  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderInsets checks    1093  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderAnchor checks    1093  differences     16  key order only      0  distinct results     6  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderAnchorCtr checks    1093  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    pptxPlaceholder.placeholder.placeholderStyleChain checks    1129  differences      0  key order only      0  distinct results    48  TypeScript threw 0
+    pptxPlaceholder.placeholder.mergeTextStyleChain checks     463  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderFillSpPr checks    1093  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderTransform checks    1093  differences      0  key order only      0  distinct results    47  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderPresetGeom checks    1093  differences      4  key order only      0  distinct results     5  TypeScript threw 0
