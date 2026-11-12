@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { buildBlankDocx } from '@genoffice/docx-engine'
-import { docxToOdt } from '@genoffice/odt-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
+import { docxToOdt } from '@seuoffice/odt-engine'
 import {
   docFormatOfPath,
   isOdtPackage,
@@ -24,10 +24,10 @@ describe('main open/save format rules', () => {
     expect(docFormatOfPath('/tmp/공문.odt')).toBe('odt')
     expect(docFormatOfPath('/tmp/notes.ott')).toBeNull()
     expect(docFormatOfPath('/tmp/notes.txt')).toBeNull()
-    expect(findDocxPath(['GenOffice.exe', 'C:\\Users\\Me\\FORM.ODT'])).toBe(
+    expect(findDocxPath(['SeuOffice.exe', 'C:\\Users\\Me\\FORM.ODT'])).toBe(
       'C:\\Users\\Me\\FORM.ODT',
     )
-    expect(findDocxPath(['GenOffice.exe', '--x=a.odt', '/tmp/a.ods'])).toBeNull()
+    expect(findDocxPath(['SeuOffice.exe', '--x=a.odt', '/tmp/a.ods'])).toBeNull()
   })
 
   it('reads zip entry names and tells an ODT package from a docx', async () => {

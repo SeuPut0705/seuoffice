@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useSyncExternalStore } from 'react'
-import type { AgentMessage } from '@genoffice/agent-core'
+import type { AgentMessage } from '@seuoffice/agent-core'
 import type {
   AppendProjectChatArgs,
   ChatMessage,
@@ -18,7 +18,7 @@ import type {
   ProjectWriteResult,
   ToolActivity,
   UnregisteredProjectHint,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   createProjectRun,
   forgetMemoryLine,
@@ -162,7 +162,7 @@ export interface ProjectChatState {
   chats: ProjectChatListItem[]
   /** "earlier chats of this document" */
   legacy: LegacyDocumentChat | null
-  /** `.ieumoffice/` cannot be written: chats and memory are not saved (spec 5.7) */
+  /** `.seuoffice/` cannot be written: chats and memory are not saved (spec 5.7) */
   unwritable: boolean
   /**
    * The chosen project's memory entries as last read, kept current as the app

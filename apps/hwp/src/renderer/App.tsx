@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createEditor } from '@rhwp/editor'
 import type { ChromeVisibility, RhwpEditor } from '@rhwp/editor'
-import type { Params } from '@genoffice/i18n'
-import { IconClose } from '@genoffice/ui/icons'
+import type { Params } from '@seuoffice/i18n'
+import { IconClose } from '@seuoffice/ui/icons'
 import {
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
@@ -11,7 +11,7 @@ import {
   useAutoSavePref,
   useSplitPaneFocusPing,
   type TemplateDocument,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { HwpAiDock } from './ai/AiDock'
 import { DocCheckPanel } from './check/DocCheckPanel'
 import { createAgentBridge } from './ai/agent-bridge'

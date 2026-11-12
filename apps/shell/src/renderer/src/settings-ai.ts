@@ -16,20 +16,20 @@ import {
   providerSelectionOf,
   resolveCustomEndpoints,
   selectCustomEndpoint,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type {
   AiProviderId,
   AiProviderSelection,
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import type { AiMediaProviderMeta } from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider/browser'
+import type { AiMediaProviderMeta } from '@seuoffice/ai-provider'
 import {
   aiProviderDisplayName,
   aiProviderPickerGroups,
   aiSubscriptionModelName,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 
 /**
  * Whether the first-connection notice carries its Codex sentence. The Codex

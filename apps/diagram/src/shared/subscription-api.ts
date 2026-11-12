@@ -1,6 +1,6 @@
 // Contract between the diagram renderer (AI panel) and the main process for the
 // subscription providers (Claude, Codex). The request channels and payloads are
-// the shared ones from @genoffice/ai-provider; the main-process handlers are
+// the shared ones from @seuoffice/ai-provider; the main-process handlers are
 // registered once for the whole app by the docs main, never by this editor.
 
 import type {
@@ -9,7 +9,7 @@ import type {
   SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 // Reading an IPC answer is the same in every app: one implementation, in the shared contract
 export {
@@ -18,7 +18,7 @@ export {
   subscriptionLaunchResultOf,
   subscriptionMeteredResultOf,
   subscriptionStatusMapOf,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 /** exposed as `window.diagramApi.subscription` by the diagram preload */
 export interface DiagramSubscriptionApi {

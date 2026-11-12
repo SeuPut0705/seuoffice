@@ -8,7 +8,7 @@
 // leaves the request queued for that tab to take exactly once; the editor in
 // that tab starts the run through its usual send gate.
 
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 
 /** `ai`: an editor's AI writes the new document. `convert`: no AI, no subscription (8.6) */
 export type GenerateMode = 'ai' | 'convert'
@@ -40,7 +40,7 @@ export interface GenerateRequest {
 }
 
 /** what a new tab takes, once (8.5); the contract lives with the queue */
-export type { GenerateHandoff } from '@genoffice/electron-utils/generate-handoff'
+export type { GenerateHandoff } from '@seuoffice/electron-utils/generate-handoff'
 
 /** the editor each conversion's result opens in */
 export const CONVERT_TARGETS = {

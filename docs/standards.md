@@ -52,7 +52,7 @@
 
 ## 모듈 경계
 
-- 화면(renderer)과 preload 코드가 `@genoffice/ai-provider`에서 **값**으로 가져오는 것은 브라우저용 진입점(`/browser`)뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 진입점은 뒷단에서만 가져온다.
+- 화면(renderer)과 preload 코드가 `@seuoffice/ai-provider`에서 **값**으로 가져오는 것은 브라우저용 진입점(`/browser`)뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 진입점은 뒷단에서만 가져온다.
 - 편집기 전용 AI 창구는 이름 앞에 편집기 이름을 붙이고(`sheets:ai-…`, `slides:ai-…`), 껍데기 앱 안에서도 항상 불리는 등록 함수에 넣는다. 공용 이름(`ai:…`)은 워드 뒷단이 이미 등록하므로, 같은 이름을 다시 등록하면 실행 중에 죽는다. 원본에서 온 예외가 하나 있다. PPT 편집기는 `ai:generate-image`, `ai:analyze-media` 등 몇 개를 이름을 붙이지 않은 채 등록하고, 그래서 워드 편집기가 같은 일에 `docs:`를 붙인다. 새 창구에는 이 예외를 따르지 않는다.
 - 구독 창구는 앱 뒷단에서 `ensureSubscriptionIpc`로만 등록한다. `registerSubscriptionIpc`를 직접 부르지 않는다. 같은 이름을 두 번 등록하면 실행 중에 죽는다.
 - 실행해 둔 프로그램의 추적 시작(`initSubscriptionChildTracking`)은 프로세스에서 한 번만 한다. 껍데기 앱이 한다.

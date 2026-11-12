@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import { aiRunErrorText } from '../src/ai-subscription'
 import { AiToolsUnsupportedNotice } from '../src/AiToolsUnsupportedNotice'
 import {

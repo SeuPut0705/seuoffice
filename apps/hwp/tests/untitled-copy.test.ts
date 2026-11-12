@@ -71,7 +71,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   hwpToText: vi.fn(async () => ''),
   parseFileToText: vi.fn(async () => ({ kind: 'text', text: '' })),
   ATTACHABLE_EXTS: new Set<string>(),
@@ -94,7 +94,7 @@ const HWPX = Uint8Array.from([0x50, 0x4b, 0x03, 0x04, 0x21, 0x22, 0x23])
 let dir: string
 let copyPath: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-hwp-copy-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-hwp-copy-'))
   copyPath = join(dir, 'Family letter.hwpx')
   writeFileSync(copyPath, HWPX)
   showSaveDialog.mockClear()

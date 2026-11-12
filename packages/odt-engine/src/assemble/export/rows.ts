@@ -21,7 +21,7 @@ import type {
   TableModel,
   TableParagraph,
   TableStyleDisplay,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { documentDefaults } from './styles'
 
 type TableSpacing = NonNullable<TableStyleDisplay['paraSpacing']>

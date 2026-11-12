@@ -22,8 +22,8 @@ import {
 } from '@univerjs/sheets'
 import '@univerjs/sheets/facade'
 import { UniverSheetsNumfmtPlugin } from '@univerjs/sheets-numfmt'
-import { getSystemShortDate, setSystemShortDate } from '@genoffice/xlsx-gateway/shared/short-date'
-import type { Lang } from '@genoffice/i18n'
+import { getSystemShortDate, setSystemShortDate } from '@seuoffice/xlsx-gateway/shared/short-date'
+import type { Lang } from '@seuoffice/i18n'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
 import {

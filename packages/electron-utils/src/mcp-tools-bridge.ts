@@ -7,7 +7,7 @@
 import { ipcRenderer } from 'electron'
 import { MCP_TOOLS_CHANNELS as C, type McpToolRefusal } from './mcp-tools-channels'
 
-/** The shape `@genoffice/agent-core`'s `McpToolsBridgeLike` expects */
+/** The shape `@seuoffice/agent-core`'s `McpToolsBridgeLike` expects */
 export interface McpToolsBridge {
   /** the registered servers with their approved tools; never a secret */
   list(): Promise<unknown>

@@ -4,7 +4,7 @@
  * writes, imports, GitHub updates, export, and the AI's reads. No Electron
  * here; the IPC layer adds dialogs, the OS trash and who may ask.
  *
- * Writes go only to the app's skills folder (`~/.ieumoffice/skills`); other
+ * Writes go only to the app's skills folder (`~/.seuoffice/skills`); other
  * sources are read only. Imports and update checks also use their own
  * temporary folder under the OS temp folder.
  */
@@ -26,7 +26,7 @@ import {
   skillEditorsChoiceOf,
   skillEditorsOf,
   type SkillEditorId,
-} from '@genoffice/agent-core/skill-editors'
+} from '@seuoffice/agent-core/skill-editors'
 import {
   IEUM_EDITORS_KEY,
   IEUM_SOURCE_FILE,
@@ -72,7 +72,7 @@ import {
   type UserSkillInvoke,
   type UserSkillSettings,
   type UserSkillSource,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   USER_SKILL_PREVIEW_TEXT_MAX_CHARS,
   type UserSkillAiRead,
@@ -92,7 +92,7 @@ import {
   type UserSkillsFail,
   type UserSkillsFailReason,
   type UserSkillsResult,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import { readSkillSettings, updateSkillSettings } from '../app-settings'
 
 /** Largest skill file the AI may read in one call (spec 5.8; tunable) */

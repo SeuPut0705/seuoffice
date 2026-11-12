@@ -6,7 +6,7 @@
  * anything: the switch only changes which stored results the column reads.
  */
 import type { ReactElement, ReactNode } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type { TranslationMode } from '../../../../../packages/pdf-structure/src/store/job-keys'
 import { TRANSLATION_LANGUAGES } from '../../../../../packages/pdf-structure/src/translate/language'
 import type { TFunc } from '../i18n/locale'

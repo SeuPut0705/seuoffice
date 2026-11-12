@@ -7,7 +7,7 @@ import {
   type AiSubscriptionProviderId,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   aiEffortChoice,
   withAiEffort,

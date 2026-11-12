@@ -7,14 +7,14 @@
  * The Korean names of the PC's fonts are not asked for; the list shows each
  * font by the name the PC reports.
  */
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   createSystemFontSource,
   fontFamiliesFor,
   partitionFontFamilies,
   type SystemFonts,
   useSystemFontSource,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { safeFontFamily } from './map/style-values'
 
 const source = createSystemFontSource(async () => [])

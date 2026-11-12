@@ -33,7 +33,7 @@
 
 ## 테스트
 
-- `npm run test -w @genoffice/project-store`, 또는 패키지 폴더에서 `npx vitest run`. 테스트마다 `os.tmpdir()` 아래에 임시 저장소를 만든다. 픽스처 파일은 없다.
+- `npm run test -w @seuoffice/project-store`, 또는 패키지 폴더에서 `npx vitest run`. 테스트마다 `os.tmpdir()` 아래에 임시 저장소를 만든다. 픽스처 파일은 없다.
 - 심볼릭 링크 테스트는 링크를 만들 수 있는 환경에서만 돌고, 대소문자 변형 테스트는 Windows에서만 돈다.
 - `tests/store.test.ts`의 `deleteProject > files of a deleted project revert to default`는 Windows에서 변경 이전부터 실패하는 것으로 알려져 있다. 테스트가 `/test/file.docx`라는 POSIX 경로가 `fileMap`의 키로 그대로 남기를 기대하는데, Windows에서는 `/test`가 현재 드라이브의 폴더로 풀리고 그 폴더가 실제로 있으면 키가 `<드라이브>:\test\file.docx`로 저장된다.
 - 경로 키 로직을 바꾸면 예전 표기 조회, 이름 바꾸기, 합치기 경로를 덮는다. 상한을 바꾸면 경계값을 넣는다. 테스트에서 경로를 맵 키와 비교할 때는 `canonicalPathKey`를 거친 값을 쓴다.

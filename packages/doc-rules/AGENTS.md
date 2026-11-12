@@ -40,6 +40,6 @@
 
 ## 테스트
 
-- `npm run test -w @genoffice/doc-rules`, 또는 패키지 폴더에서 `npx vitest run`. 환경은 `node`이고 편집기가 필요 없다.
+- `npm run test -w @seuoffice/doc-rules`, 또는 패키지 폴더에서 `npx vitest run`. 환경은 `node`이고 편집기가 필요 없다.
 - `tests/audit.test.ts`는 **가짜 프로필**로 판정을 고정한다. 규칙을 고치면 오탐 사례(정상인데 걸리는 문서)를 먼저 하나 넣고 고친다.
 - `tests/numbering.test.ts`는 날짜·소수·공백 없는 번호를 번호로 읽지 않는지 지킨다.

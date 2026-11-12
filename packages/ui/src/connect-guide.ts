@@ -11,7 +11,7 @@ import {
   type AiSubscriptionProviderId,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { aiSubscriptionStatusOf } from './ai-subscription'
 import type { AiSubscriptionStringKey } from './strings-ai-subscription'
 

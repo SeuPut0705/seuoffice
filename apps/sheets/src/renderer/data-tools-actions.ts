@@ -6,15 +6,15 @@
  */
 import { ILayoutService } from '@univerjs/preset-sheets-core'
 
-import { columnLabel } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { columnLabel } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import {
   decodeCsvBuffer,
   isNumericCell,
   parseCsv,
   resolveImportDelimiter,
-} from '@genoffice/xlsx-gateway/gateway/csv-import'
-import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@genoffice/xlsx-gateway/gateway/csv-limits'
-import { legacyCsvCharsetFor } from '@genoffice/xlsx-gateway/shared/document-locale'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import'
+import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@seuoffice/xlsx-gateway/gateway/csv-limits'
+import { legacyCsvCharsetFor } from '@seuoffice/xlsx-gateway/shared/document-locale'
 import type { AdvancedFilterColumn, AdvancedFilterCriteria } from './AdvancedFilterDialog'
 import {
   buildLabelMatrix,

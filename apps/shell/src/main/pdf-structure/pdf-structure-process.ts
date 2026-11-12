@@ -35,7 +35,7 @@ function loadPdfium(wasmPath: string): () => Promise<PdfiumModule> {
       const wasmBinary = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength)
       // thisProgram: emscripten writes argv[1] through an ASCII-only path;
       // a CJK document path would abort init (see pdf2docx-local.ts)
-      const wrapped = (await init({ wasmBinary, thisProgram: 'genoffice-pdf' })) as {
+      const wrapped = (await init({ wasmBinary, thisProgram: 'seuoffice-pdf' })) as {
         pdfium?: unknown
       }
       const m = (wrapped.pdfium ?? wrapped) as PdfiumModule & { _PDFiumExt_Init(): void }

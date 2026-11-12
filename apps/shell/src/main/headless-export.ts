@@ -22,7 +22,7 @@ import {
   type HeadlessExportOutcome,
   type HeadlessExportProduct,
   type HeadlessExportRequest,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 
 type HeadlessFailure = Extract<HeadlessExportOutcome, { ok: false }>
 

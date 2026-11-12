@@ -5,7 +5,7 @@ import {
   normalizeAiSettings,
   type AiSettings,
   type SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { AiPanel, type MarkdownAiDeps } from '../src/renderer/ai/AiPanel'
 import {
   installDocumentChatStore,

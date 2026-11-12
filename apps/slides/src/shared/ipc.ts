@@ -1,5 +1,5 @@
-import type { AiPanelPrefs, FontFamilyInfo } from '@genoffice/ui'
-import type { SlidesAiFonts } from '@genoffice/ui/slides-ai-fonts'
+import type { AiPanelPrefs, FontFamilyInfo } from '@seuoffice/ui'
+import type { SlidesAiFonts } from '@seuoffice/ui/slides-ai-fonts'
 /**
  * slides main-process <-> renderer IPC contract (Phase 3: open/save/edit, AI not included yet).
  *
@@ -9,18 +9,18 @@ import type { SlidesAiFonts } from '@genoffice/ui/slides-ai-fonts'
  * renderer sends edit intents (text/geometry changes) back to the main process, which applies
  * them to the model and rebuilds the RenderSlide.
  */
-import type { RenderSlide } from '@genoffice/pptx-render'
-import type { CustGeomPathCmd, SlideComment, SectionInfo } from '@genoffice/pptx-engine'
-import type { FontSizeStep } from '@genoffice/pptx-ops/font-size'
-import type { PrintDuplex, PrintJobOptions, PrinterInfo } from '@genoffice/electron-utils/print-job'
-import type { PrinterOption } from '@genoffice/electron-utils/printer-options'
+import type { RenderSlide } from '@seuoffice/pptx-render'
+import type { CustGeomPathCmd, SlideComment, SectionInfo } from '@seuoffice/pptx-engine'
+import type { FontSizeStep } from '@seuoffice/pptx-ops/font-size'
+import type { PrintDuplex, PrintJobOptions, PrinterInfo } from '@seuoffice/electron-utils/print-job'
+import type { PrinterOption } from '@seuoffice/electron-utils/printer-options'
 
 export type { PrintDuplex, PrintJobOptions, PrinterInfo }
 export type { PrinterOption }
 
 import type { LayoutSkeleton } from '../renderer/ai/layout-skeleton'
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
-import type { AiToolCapabilities } from '@genoffice/ai-search'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
+import type { AiToolCapabilities } from '@seuoffice/ai-search'
 import type { TemplateSelection, TemplateSelectionInput } from './template-selection'
 import type { SubscriptionApi } from './subscription-api'
 
@@ -32,7 +32,7 @@ import type {
   ScriptEditOp,
   ApplyEditScriptOp,
   LinkTargetOp,
-} from '@genoffice/pptx-ops'
+} from '@seuoffice/pptx-ops'
 
 // edit payload types moved to the op package; re-exported so IPC consumers keep one import site
 export type {
@@ -45,9 +45,9 @@ export type {
   LinkTargetOp,
 }
 
-export type { SlideComment, SectionInfo } from '@genoffice/pptx-engine'
+export type { SlideComment, SectionInfo } from '@seuoffice/pptx-engine'
 
-// Canonical definitions of AI-related types live in @genoffice/ai-provider / @genoffice/agent-core (shared with docs)
+// Canonical definitions of AI-related types live in @seuoffice/ai-provider / @seuoffice/agent-core (shared with docs)
 export type {
   AiProviderConfig,
   AiProviderId,
@@ -55,15 +55,15 @@ export type {
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
-} from '@genoffice/ai-provider'
-export type { AiToolCapabilities, AiToolCapability } from '@genoffice/ai-search'
+} from '@seuoffice/ai-provider'
+export type { AiToolCapabilities, AiToolCapability } from '@seuoffice/ai-search'
 export type {
   TemplateSelection,
   TemplateSelectionInput,
   TemplateSelectionKind,
 } from './template-selection'
-export { AI_PROVIDERS } from '@genoffice/ai-provider/browser'
-export type { AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
+export { AI_PROVIDERS } from '@seuoffice/ai-provider/browser'
+export type { AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
 
 export type UiTheme = 'light' | 'dark' | 'system'
 

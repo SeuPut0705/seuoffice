@@ -198,5 +198,5 @@ export const en = {
   launchSystemFold: 'Basic PC variables: {n}',
   permPaused: 'Not used until you approve the change (then: {perm})',
   permUnusable: 'Can’t be turned on',
-  direction: 'Here, the AI in GenOffice uses tools from outside servers.',
+  direction: 'Here, the AI in SeuOffice uses tools from outside servers.',
 }

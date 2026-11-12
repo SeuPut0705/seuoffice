@@ -21,13 +21,13 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - 저장할 때 슬라이드 파트 이름을 바꾸지 않는다. 슬라이드 영속 id(`s_<n>`)가 파트 경로에서 나온다.
 - `mc:AlternateContent`에 걸린 요소는 모델을 만든 가지에 패치한다. 위치·채움·선·자르기 패치는 같은 태그의 형제 가지에도 똑같이 적용하고, 텍스트 패치는 형제 가지에 적용하지 않는다. Choice 쪽 본문이 수식 같은 다른 어휘일 수 있다.
 - "모델에 숨김" 표시는 실제 글자를 지우지 않는다. 표시는 런의 `a:rPr`(그림은 `nvPr`) 안 `a:extLst` 확장으로 저장하고, 파싱할 때 모델로 읽어 저장할 때 다시 쓴다.
-- 문서 안에 남는 식별자는 바꾸지 않는다: 가리기 확장의 `uri`(`REDACT_EXT_URI`), 가리기 기능의 이름공간 주소(`REDACT_NS`, `@genoffice/agent-core/redact-range`에서 가져온다), 이 앱이 만든 차트를 알아보는 `descr="aislides-chart"`, 3D 모델 참조 표지 `aislides-3d:`.
+- 문서 안에 남는 식별자는 바꾸지 않는다: 가리기 확장의 `uri`(`REDACT_EXT_URI`), 가리기 기능의 이름공간 주소(`REDACT_NS`, `@seuoffice/agent-core/redact-range`에서 가져온다), 이 앱이 만든 차트를 알아보는 `descr="aislides-chart"`, 3D 모델 참조 표지 `aislides-3d:`.
 - 열 때 거부하는 한도는 파트 10,000개, 파트당 512 MiB, 합계 1.5 GiB(`PPTX_ZIP_LIMITS`)다. 파트를 실제로 풀어 보는 검사가 JSZip 로드보다 먼저다.
 - 예산을 넘는 입력은 버리지 않고 원본 바이트를 지닌 `passthrough`로 남긴다: 그룹 중첩 64단계, 한 슬라이드의 도형 10,000개. 그 밖의 상한은 차트 점 1,048,576개·계열 256개, chartEx 점 10,000개, 글자 크기 1pt 이상 4000pt 이하, 표 삽입 75×75다. 슬라이드 id는 256 이상 2147483647 이하에서만 낸다.
 - 관계 대상은 `resolveTarget`으로만 푼다. 스킴이 붙은 대상과 디코딩할 수 없는 대상은 빈 경로가 된다.
 - 자원 정리는 관계를 따라간다. 도형 하나가 그림을 안 쓰게 됐다고 파트를 지우지 않는다. 복제된 슬라이드가 같은 대상을 가리킬 수 있다. 먼저 쓰이지 않는 관계만 끊고, 그 결과 아무 데서도 닿지 않는 파트만 지운다.
 - 기본 진입점은 Node 전용이다(`node:crypto`, `Buffer`). 렌더러가 가져가는 것은 하위 경로 `./custgeom`, `./table-grid`, `./identity`, `./named-action`, `./background-promote`뿐이다. 이 파일들과 그 import 사슬에 Node 의존을 들이면 브라우저 빌드가 깨진다.
-- `@genoffice/agent-core`에서는 `redact-range` 하위 경로만 import한다. 그 패키지의 기본 진입점은 Electron에 닿는다.
+- `@seuoffice/agent-core`에서는 `redact-range` 하위 경로만 import한다. 그 패키지의 기본 진입점은 Electron에 닿는다.
 - `src/vendor/`는 가져온 원본과 바이트가 같아야 한다.
 - 엔진 동작은 원본(GenOffice)의 수정이 병합될 때만 바뀐다. 파일 이동, 재포맷, 이름 변경을 하지 않는다. 예외는 아래 "원본과 다른 점"에 적은 것뿐이고, 더할 때는 사람이 정한다.
 - `replace`/`replaceAll`의 둘째 인자는 `$`가 없는 문자열 리터럴이거나 함수(`() => text`)여야 한다. 변수나 템플릿 문자열을 그대로 넘기면 그 안의 `$&`, `$$`, `$1`, `` $` ``, `$'`가 치환 패턴으로 풀려서, 문서나 사용자가 쓴 글자에 `$`가 있을 때 파트가 깨진다. 시험: `tests/replace-dollar-*.test.ts`.
@@ -62,7 +62,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 
 ## 테스트
 
-- `npm run test -w @genoffice/pptx-engine`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처는 `tests/fixtures/`의 pptx 두 개(라이선스 고지 동봉)와, 테스트가 그때그때 `pptxgenjs`와 `createBlankPptx`로 만드는 덱이다. `npm run fixtures`는 필요 없다.
+- `npm run test -w @seuoffice/pptx-engine`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처는 `tests/fixtures/`의 pptx 두 개(라이선스 고지 동봉)와, 테스트가 그때그때 `pptxgenjs`와 `createBlankPptx`로 만드는 덱이다. `npm run fixtures`는 필요 없다.
 - OOXML 스키마 검사 테스트는 `xmllint`가 PATH에 있을 때만 돈다. 없고 `CI` 환경 변수도 없으면 경고를 찍고 건너뛴다. 건너뛴 채 통과한 결과는 스키마 적합성을 보증하지 않으므로, 생성하는 XML을 바꿨다면 CI 결과까지 확인한다.
 - `corpus-edit-fuzz.test.ts`는 `CORPUS_DIRS`를 줄 때만 돌고, 단언 없이 `FUZZ_OUT`에 보고서를 쓴다.
 - 열기·저장 경로를 바꾸면 "변경 없음 → 파트 바이트 동일"과 "한 요소 편집 → 나머지 바이트 그대로"를 테스트로 증명한다. 새 변경자는 자식 요소가 스키마 순서에 맞는 자리에 들어가는지도 본다.

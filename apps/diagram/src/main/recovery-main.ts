@@ -31,7 +31,7 @@ import {
   isUntitledIdentity,
   newUntitledRecoveryId,
   resolveRecoveryOnOpen,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type {
   RecoveryDeleteReason,
   RecoveryEditorKind,
@@ -39,8 +39,8 @@ import type {
   RecoveryOpenUntitledRequest,
   RecoveryStore,
   RecoveryWriteResult,
-} from '@genoffice/electron-utils'
-import { getUiLang } from '@genoffice/i18n'
+} from '@seuoffice/electron-utils'
+import { getUiLang } from '@seuoffice/i18n'
 
 // The shared store keeps copies only for the kinds it lists (RECOVERY_EDITOR_KINDS);
 // the shell wiring adds 'diagram' there, until then a copy is refused, not misfiled.

@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { REDACT_EL, REDACT_NS } from '@genoffice/agent-core/redact-range'
+import { REDACT_EL, REDACT_NS } from '@seuoffice/agent-core/redact-range'
 // the writer's own helpers, by path: the marks under test are the ones the deck
 // engine really saves, not a copy of their shape kept in this file
 import { REDACT_EXT_URI, setRedactExt } from '../../pptx-engine/src/redaction-xml'
@@ -22,12 +22,12 @@ import {
   serializeRedactionPart,
   type RedactionMark,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import {
   applyCellEditsToXlsx,
   type SheetStructuralOps,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import type { SheetEditPlan } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { SheetEditPlan } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
 
 /**
  * A file read as another file's material (attachment, knowledge base, search

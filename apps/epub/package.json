@@ -1,6 +1,6 @@
 {
-  "name": "@genoffice/epub",
-  "productName": "GenOffice EPUB",
+  "name": "@seuoffice/epub",
+  "productName": "SeuOffice EPUB",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -14,16 +14,16 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@genoffice/agent-core": "*",
-    "@genoffice/ai-provider": "*",
-    "@genoffice/ai-search": "*",
-    "@genoffice/electron-utils": "*",
-    "@genoffice/epub-engine": "*",
-    "@genoffice/file-parse": "*",
-    "@genoffice/i18n": "*",
-    "@genoffice/pdf-structure": "*",
-    "@genoffice/project-store": "*",
-    "@genoffice/ui": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/ai-provider": "*",
+    "@seuoffice/ai-search": "*",
+    "@seuoffice/electron-utils": "*",
+    "@seuoffice/epub-engine": "*",
+    "@seuoffice/file-parse": "*",
+    "@seuoffice/i18n": "*",
+    "@seuoffice/pdf-structure": "*",
+    "@seuoffice/project-store": "*",
+    "@seuoffice/ui": "*",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^5.0.4",
@@ -36,5 +36,5 @@
     "vite": "^7.3.1",
     "vitest": "^4.1.11"
   },
-  "author": "GenOffice"
+  "author": "SeuOffice"
 }

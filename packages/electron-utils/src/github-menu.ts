@@ -1,7 +1,7 @@
-import { PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
+import { PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER, PRODUCT_REPO_SLUG } from '@seuoffice/i18n'
 
 // Repository coordinates. Owner and repo are defined once, in the product
-// identity module of @genoffice/i18n (which renderers can import too); every
+// identity module of @seuoffice/i18n (which renderers can import too); every
 // repository, issue and release link is derived from them here.
 export const GITHUB_REPO_OWNER = PRODUCT_REPO_OWNER
 export const GITHUB_REPO_NAME = PRODUCT_REPO_NAME

@@ -11,10 +11,10 @@ import type {
   AgentSession,
   AgentSessionEvent,
   AgentSessionOptions,
-} from '@genoffice/ai-provider/agent-session'
-import type { AiSubscriptionStatus } from '@genoffice/ai-provider'
-import { normalizeAiSettings } from '@genoffice/ai-provider'
-import { SKILL_SKIPPED_STEPS_SENTENCE } from '@genoffice/agent-core/skill-mcp-refs'
+} from '@seuoffice/ai-provider/agent-session'
+import type { AiSubscriptionStatus } from '@seuoffice/ai-provider'
+import { normalizeAiSettings } from '@seuoffice/ai-provider'
+import { SKILL_SKIPPED_STEPS_SENTENCE } from '@seuoffice/agent-core/skill-mcp-refs'
 import { agentInstructions, createAgentManager } from '../../src/main/agent/agent-sessions'
 import type {
   AgentMcpRelays,
@@ -290,8 +290,8 @@ describe('the window’s card and lines for MCP tools', () => {
     const line = (tool: string): AgentActionView => ({ kind: 'app-tool', tool, paths: [] })
     expect(agentUserMcpTool(line('mcp__law__search'))).toEqual({ server: 'law', tool: 'search' })
     expect(agentUserMcpTool(line('law:search'))).toEqual({ server: 'law', tool: 'search' })
-    expect(agentUserMcpTool(line('mcp__ieumoffice-editor__read_document'))).toBeUndefined()
-    expect(agentUserMcpTool(line('ieumoffice-editor:read_document'))).toBeUndefined()
+    expect(agentUserMcpTool(line('mcp__seuoffice-editor__read_document'))).toBeUndefined()
+    expect(agentUserMcpTool(line('seuoffice-editor:read_document'))).toBeUndefined()
     expect(agentUserMcpTool({ kind: 'command', tool: 'Bash', paths: [] })).toBeUndefined()
   })
 

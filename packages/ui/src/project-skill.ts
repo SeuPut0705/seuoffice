@@ -1,5 +1,5 @@
-import type { Lang } from '@genoffice/i18n'
-import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@seuoffice/agent-core'
 import type {
   PROJECT_TOOL_NAMES,
   ProjectContextBundle,
@@ -11,7 +11,7 @@ import type {
   ProjectMemoryRefusal,
   ProjectNotice,
   ToolActivity,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { projectChatText } from './strings-project-chat'
 
 /**
@@ -34,7 +34,7 @@ import { projectChatText } from './strings-project-chat'
  * subscription programs get no tool of their own.
  */
 
-/** Tool names as the model sees them (same values as PROJECT_TOOL_NAMES in @genoffice/project-store) */
+/** Tool names as the model sees them (same values as PROJECT_TOOL_NAMES in @seuoffice/project-store) */
 export const PROJECT_TOOLS = {
   listFiles: 'project_list_files',
   search: 'project_search',
@@ -96,7 +96,7 @@ export interface ProjectRun {
   readonly bridge: ProjectSkillBridge
   /** the snapshot of the request in flight; null outside prepare → finish */
   readonly snapshot: ProjectRunSnapshot | null
-  /** `.ieumoffice/` of the chosen project could not be written during this window's life */
+  /** `.seuoffice/` of the chosen project could not be written during this window's life */
   readonly unwritable: boolean
   /** read the context and open a run scope for the request about to be sent */
   prepare(): Promise<ProjectRunPrepared>
@@ -316,7 +316,7 @@ function fileLine(file: ProjectFileEntry, withSize = false): string {
 }
 
 const SOURCE_NAMES = {
-  instructions: '.ieumoffice/instructions.md',
+  instructions: '.seuoffice/instructions.md',
   agents: 'AGENTS.md',
   claude: 'CLAUDE.md',
 } as const

@@ -1,5 +1,5 @@
 /// The editors' preloads expose the same outbound calls (decision 0062). The
-/// AI skill in the renderer (`guardOutbound` in @genoffice/agent-core) uses
+/// AI skill in the renderer (`guardOutbound` in @seuoffice/agent-core) uses
 /// them; answers cross contextBridge as plain booleans.
 import { ipcRenderer } from 'electron'
 import { OUTBOUND_CHANNELS } from './outbound-channels'

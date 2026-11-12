@@ -3,7 +3,7 @@
  * before closing a book with unsaved changes. Everything else the user reads
  * is in the renderer's dictionaries.
  */
-import { createI18n, getUiLang } from '@genoffice/i18n'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 
 const tDlg = createI18n({
   en: {

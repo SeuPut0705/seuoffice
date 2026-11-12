@@ -4,7 +4,7 @@ import {
   resolveCustomEndpoints,
   type AiCustomEndpoint,
   type AiSettings,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   aiEffortChoice,
   withAiEffort,

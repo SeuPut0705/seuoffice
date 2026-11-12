@@ -1,12 +1,12 @@
 /// The default folder where new/untitled files land on their first (silent)
 /// save and where AI-generated drafts go. Historically hardcoded to
-/// <Documents>/GenOffice; now user-configurable via the `defaultSaveDir` key
+/// <Documents>/SeuOffice; now user-configurable via the `defaultSaveDir` key
 /// in userData/app-settings.json (set from the home screen's account menu).
 /// Every editor main module resolves through here so they all honor the same
 /// setting.
 import { accessSync, constants, mkdirSync, readFileSync, statSync } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 
 /** the subset of Electron's `app` needed here (kept structural: this package has no Electron dependency) */
 export interface PathProvider {
@@ -31,7 +31,7 @@ interface SaveDirState {
 }
 
 // every editor bundles its own copy of this package into the one shell process
-const STATE_KEY = Symbol.for('genoffice.defaultSaveDir.state')
+const STATE_KEY = Symbol.for('seuoffice.defaultSaveDir.state')
 
 function saveDirState(): SaveDirState {
   const holder = globalThis as unknown as Record<symbol, SaveDirState | undefined>

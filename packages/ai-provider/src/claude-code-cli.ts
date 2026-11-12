@@ -1,6 +1,6 @@
 /**
  * Bridge to the Claude Code CLI (protocol `claude-code-cli`). Entry point
- * `@genoffice/ai-provider/claude-code-cli`.
+ * `@seuoffice/ai-provider/claude-code-cli`.
  *
  * The locally installed, already signed-in CLI answers one model turn. The app
  * keeps its own agent loop and runs its own tools, as with the Codex bridge:
@@ -24,7 +24,7 @@
 import type { ChildProcess } from 'node:child_process'
 import { randomUUID } from 'node:crypto'
 import { StringDecoder } from 'node:string_decoder'
-import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
+import type { AgentMessage, AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
 import { CLAUDE_EFFORTS, aiEffortOf, aiEffortsOf } from './effort'
 import { isAiNetworkError } from './network-error'
 import { createTrackedTempDir, removeTrackedTempDir } from './subscription/temp-dirs'
@@ -59,7 +59,7 @@ import { createStreamWatchdog, type StreamWatchdog } from './watchdog'
 const PROVIDER = 'claude-code'
 const BUDGET_LABEL = 'claude-code-cli'
 const DIAGNOSTIC_LIMIT = 4_000
-const TEMP_PREFIX = 'genoffice-claude-code-'
+const TEMP_PREFIX = 'seuoffice-claude-code-'
 const INITIALIZE_REQUEST_ID = 'initialize'
 /** How long a CLI may take to leave after its stdin was closed, before its process tree is ended */
 const EXIT_GRACE_MS = 5_000

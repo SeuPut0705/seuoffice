@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * F5 / Ctrl+F5 wiring (presentation mode). The key classification itself is
- * tested in `@genoffice/ui`; this pins the viewer side: fullscreen, fit to the
+ * tested in `@seuoffice/ui`; this pins the viewer side: fullscreen, fit to the
  * page, and the chrome the show hides.
  */
 describe('PDF presentation wiring', () => {

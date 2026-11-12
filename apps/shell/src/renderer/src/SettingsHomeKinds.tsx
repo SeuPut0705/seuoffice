@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { IconArrowDown, IconArrowUp } from '@genoffice/ui/icons'
+import { IconArrowDown, IconArrowUp } from '@seuoffice/ui/icons'
 import {
   HOME_KINDS,
   defaultHomeKinds,

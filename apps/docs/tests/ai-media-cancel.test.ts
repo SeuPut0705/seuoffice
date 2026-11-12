@@ -41,7 +41,7 @@ const generateImageTool = vi.fn()
 const analyzeMediaTool = vi.fn()
 // the real cancellation helper, by path: this workspace's test aliases do not reach the
 // rest of the package, and the handlers under test use nothing else of it
-vi.mock('@genoffice/ai-search', async () => ({
+vi.mock('@seuoffice/ai-search', async () => ({
   ...(await import('../../../packages/ai-search/src/media-call-abort')),
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
   analyzeMediaTool: (...args: unknown[]) => analyzeMediaTool(...args),
@@ -53,14 +53,14 @@ vi.mock('@genoffice/ai-search', async () => ({
 }))
 
 // no status check either: registering the subscription channels would look for the CLIs
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
-vi.mock('@genoffice/ai-provider/codex-app-server', () => ({
+vi.mock('@seuoffice/ai-provider/codex-app-server', () => ({
   shutdownCodexAppServers: () => {},
 }))
-vi.mock('@genoffice/ai-provider/custom-models', () => ({}))
+vi.mock('@seuoffice/ai-provider/custom-models', () => ({}))
 // nothing here is stored lazily: every media reference goes to the tool as given
 vi.mock('../src/main/lazy-media', () => ({ readLazyMedia: async () => null }))
 vi.mock('../src/main/lazy-media-inline', () => ({}))

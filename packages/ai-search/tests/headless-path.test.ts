@@ -2,8 +2,8 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider')>()),
+vi.mock('@seuoffice/ai-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider')>()),
   analyzeMediaWithProvider: vi.fn(),
   generateImageWithProvider: vi.fn(),
   streamForProvider: vi.fn(),
@@ -16,7 +16,7 @@ import {
   setCodexImageGenerationAvailable,
   streamForProvider,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { registerCodexImageGenerator, type CodexImageGenerator } from '../src/codex-image-generator'
 import { HEADLESS_LEDGER_FILE, HEADLESS_LOCK_FILE } from '../src/headless-ledger'
 import { analyzeMediaTool, generateImageTool } from '../src/media-tools'
@@ -62,7 +62,7 @@ function fillLedger(): number {
 }
 
 beforeEach(() => {
-  dataDir = tempDir('genoffice-headless-')
+  dataDir = tempDir('seuoffice-headless-')
   keyGen.mockReset()
   keyAnalyze.mockReset()
   stream.mockReset()

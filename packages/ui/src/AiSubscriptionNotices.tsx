@@ -1,5 +1,5 @@
 import React from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { aiSubscriptionText } from './strings-ai-subscription'
 import './ai-subscription.css'
 

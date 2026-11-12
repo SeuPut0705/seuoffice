@@ -5,7 +5,7 @@
  * neighbours' styles, the frame wrapper stays and its size follows the table,
  * and locked cells keep the table as it was.
  */
-import { type Block, type TableCell, type TableModel, parseDocx } from '@genoffice/docx-engine'
+import { type Block, type TableCell, type TableModel, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import JSZip from 'jszip'
 import { type TableExt, mapSequence } from '../src/table'

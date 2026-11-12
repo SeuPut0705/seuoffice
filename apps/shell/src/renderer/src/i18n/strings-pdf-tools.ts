@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang, type Params } from '@seuoffice/i18n'
 import { en } from './pdf-tools/en'
 import { ko } from './pdf-tools/ko'
 

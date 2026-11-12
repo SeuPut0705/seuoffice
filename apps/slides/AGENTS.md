@@ -1,4 +1,4 @@
-# apps/slides (`@genoffice/slides`)
+# apps/slides (`@seuoffice/slides`)
 
 PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로 열어 Konva 캔버스에 높은 충실도로 그리고, 고친 요소만 패치해 저장한다. AI는 슬라이드를 만들고 고치는 도구를 가장 많이 가진 에디터다.
 
@@ -53,8 +53,8 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 프롬프트 파일(`src/renderer/ai/prompts/*.md`)은 Prettier 대상이 아니다. Prettier가 강조 표식과 목록 들여쓰기를 바꾸면 모델이 읽는 글이 달라진다. 이 파일들을 포매터에 넣지 않는다.
 - 메인 프로세스의 Node `fetch`는 시스템 프록시를 쓰지 않아 `applyMainProcessProxy`가 환경 변수나 시스템 설정의 프록시를 전역 디스패처에 건다. 이 프록시는 구독 프로그램에는 전달되지 않는다(그쪽은 물려받은 환경 변수만 본다).
 - 메모(클래식 검토 댓글)는 `slides:get-comments`(현재 페이지)와 `slides:get-all-comments`(전 덱, 읽기 전용)로 읽는다. 메모 창은 현재 페이지/모든 페이지 두 보기를 쓰고(순수 함수는 `comments-view.ts`), AI는 `read_comments` 도구와 덱 문맥의 메모 힌트로 읽는다. 메모는 가리기 표식 대상이 아니며, 저장은 기존 댓글 경로 그대로다.
-- 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `panes/`, `ribbon/`)이고 `en.ts`가 키 집합을 정한다. 두 언어 모두에 넣는다. 구독 연결 문장은 `@genoffice/ui`의 것을 쓴다.
-- 렌더러에서 문서의 템플릿 선택과 덧붙인 요청은 `src/renderer/ai/template-selection-state.ts` 하나가 쥔다. 기억된 키가 더 이상 풀리지 않으면(지운 저장 스타일 등) 선택 없음으로 읽는다. 템플릿 자료는 `@genoffice/pipelines/slides/templates`에서 가져온다(렌더러에서 써도 되는 하위 경로).
+- 문자열은 `src/renderer/i18n/`의 언어별 조각(`ai/`, `app/`, `panes/`, `ribbon/`)이고 `en.ts`가 키 집합을 정한다. 두 언어 모두에 넣는다. 구독 연결 문장은 `@seuoffice/ui`의 것을 쓴다.
+- 렌더러에서 문서의 템플릿 선택과 덧붙인 요청은 `src/renderer/ai/template-selection-state.ts` 하나가 쥔다. 기억된 키가 더 이상 풀리지 않으면(지운 저장 스타일 등) 선택 없음으로 읽는다. 템플릿 자료는 `@seuoffice/pipelines/slides/templates`에서 가져온다(렌더러에서 써도 되는 하위 경로).
 - 템플릿 글꼴: `src/main/template-fonts.ts`가 `templateFontsDir`로 공용 폴더를 찾고, `fonts.ts`가 그 폴더를 사용자 글꼴 저장소 다음의 두 번째 읽기 전용 개인 글꼴로 색인한다. 같은 패밀리가 PC에 설치되어 있으면 그것이 먼저다. 캔버스, PDF 내보내기, 인쇄가 이 글꼴로 그린다. 발표 화면의 청중 창은 따로 된 문서라서 그리기 전에 개인 글꼴을 따로 등록한다. 폴더 열기 채널 `slides:open-template-fonts-folder`는 shell이 부르는 `registerSlidesIpc`에 있고, 정확히 그 폴더만 연다.
 - 서식 복사(`format-brush.ts`, `clipboard-actions.ts`)는 기존 연산(`editFill`·`editStroke`·`setEffects`·`setElementFont`·`setElementParagraphFormat`)만 부르고, 여러 호출을 `history-batch.ts`의 `batched`로 실행 취소 한 번에 묶는다. 글을 다시 쓰는 `editText`로 서식을 칠하지 않는다(줄바꿈에 삼킨 공백과 링크를 잃는다). 편집 중 선택한 글자가 있으면 그 글자의 서식을 집고, 붓이 켜진 채 마우스로 고른 글자에 칠한다.
 - F4 반복은 `repeat-action.ts`에 등록한 동작만 다시 한다. 새 편집 동작이 반복할 만하면 실행할 때 `rememberRepeat`로 "지금 선택에 다시 적용하는" 함수를 남긴다. 여러 IPC를 부르는 반복은 `batched`로 묶는다.
@@ -62,11 +62,11 @@ PowerPoint 프레젠테이션(.pptx) 에디터다. 파일을 바이트 그대로
 - 선택 창(`components/SelectionPane.tsx`)은 `getShapeKeys`로 숨긴 요소까지 나열한다. 숨기기·보이기(`setElementHidden`)는 슬라이드를 다시 읽어 그 슬라이드의 요소 id가 모두 바뀌므로, 화면은 선택을 풀고 애니메이션 목록을 다시 읽는다(결정 0094).
 - 도형 병합(`merge-shapes.ts`)은 화면 좌표의 윤곽을 `polygon-clipping`으로 합치고, 저장은 `addElement`·`setShapeGeometry`·서식 연산·`deleteElements`를 `batched`로 묶어 부른다. 윤곽을 모르는 도형(화면이 사각형으로 근사하는 프리셋, 선·그림·표·차트)은 병합하지 않는다.
 - 발표자 보기(`components/PresenterView.tsx`)의 오른쪽 칸(다음 슬라이드·노트) 폭은 현재 슬라이드와 그 칸 사이의 손잡이(`.pv-splitter`)로 끌거나, 손잡이에 포커스를 두고 ←/→(Shift는 큰 걸음)·Home·End로 바꾸고, 두 번 누르면 기본 340px로 돌아간다. 폭 계산은 순수 함수 모음 `presenter-layout.ts`에 있고, 고른 폭은 설치마다 localStorage `ai-slides-presenter-side-width`에 남긴다. 그릴 때는 창에 맞춰 줄이되(아래 줄 도구가 겹치지 않게 본 영역에 600px을 남긴다) 고른 값은 지우지 않는다. 다음 슬라이드 미리보기는 칸 높이의 40%까지만 커져서, 칸을 넓힌 만큼이 노트에 간다. 손잡이에 포커스가 있을 때 그 네 키는 쪽 넘기기로 가지 않는다. 마우스로 끌면 포커스를 가져가지 않는다. 끌기 한 번은 `presenter-side-drag.ts`가 맡는다. 실제로 움직였을 때만 놓을 때 저장하고(누르기만 하면 창에 맞춰 줄인 폭으로 고른 값을 덮지 않는다), 끄는 중에 발표자 보기가 닫히면(Esc) 창에 건 처리기와 커서를 거둔다.
-- `vitest.config.ts`는 `@genoffice/pptx-*` 패키지를 이 저장소의 소스 경로로 고정한다. 하위 경로 별칭은 패키지 이름 별칭보다 앞에 둔다(문자열 별칭은 접두사 치환이다).
+- `vitest.config.ts`는 `@seuoffice/pptx-*` 패키지를 이 저장소의 소스 경로로 고정한다. 하위 경로 별칭은 패키지 이름 별칭보다 앞에 둔다(문자열 별칭은 접두사 치환이다).
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/slides`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/slides`. Windows에서 전부 통과한다.
+- 실행: `npm run test -w @seuoffice/slides`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @seuoffice/slides`. Windows에서 전부 통과한다.
 - 열기·저장 경로를 바꾸면 손대지 않은 내용이 바이트 그대로 남는지 왕복 테스트를 붙인다.
 - 해석기를 바꾸면 탈출 시도를 테스트한다. 생성자·프로토타입 체인으로 호스트 함수에 닿으려는 스크립트, 계산된 속성 이름, 끝나지 않는 루프, 재앙적 정규식이 모두 상한 안에서 거절되어야 한다.
 - 가림을 바꾸면 쪼개진 표식, 지어낸 표식, 가려진 미디어의 주소가 모델용 직렬화에 남지 않는지 테스트한다.

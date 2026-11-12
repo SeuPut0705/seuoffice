@@ -23,7 +23,7 @@
  *   the right page margin instead of the bubble column; click focuses the
  *   thread in the Comments panel.
  */
-import type { CommentInfo } from '@genoffice/docx-engine'
+import type { CommentInfo } from '@seuoffice/docx-engine'
 import { PAGE_TURN_SEL } from './pagination-gaps'
 import { pagePaperEdges, pageReaderShadow, type PageCut } from '../pagination-cuts'
 import type { EditorView } from '@tiptap/pm/view'

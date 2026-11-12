@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement, useState, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
 import { afterPrefillTaken, type AiPrefill } from '../src/renderer/ai/easy-words'

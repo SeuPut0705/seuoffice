@@ -2,7 +2,7 @@
  * Local-only run of the text converters over real ODT files (never committed).
  * Skipped unless ODT_CORPUS points at a folder of `.odt` files (one level deep).
  *
- *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @genoffice/odt-engine
+ *   ODT_CORPUS=E:/github/odt-corpus npm run test -w @seuoffice/odt-engine
  *
  * For every file: ODF → OOXML for the whole body must not throw; every
  * converted paragraph must read back from the bridge docx (`parseDocx`) with
@@ -12,7 +12,7 @@
  */
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import {
   type ElementRange,

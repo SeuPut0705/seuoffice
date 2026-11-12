@@ -1,7 +1,6 @@
 import { documentLocaleFor } from './document-locale'
 
 export { documentLocaleFor } from './document-locale'
-import { brandText } from './product'
 
 export type Lang = 'en' | 'ko'
 
@@ -197,7 +196,7 @@ export function createI18n<D extends Record<string, string>>(dicts: LangDicts<D>
     // throwing inside format()
     const text = dicts[lang]?.[key] ?? dicts.en[key] ?? String(key)
     // the product name is swapped into the template, never into a param value
-    return format(brandText(platformShortcuts(text), lang), params)
+    return format(platformShortcuts(text), params)
   }
 }
 

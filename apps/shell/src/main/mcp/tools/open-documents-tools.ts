@@ -1,6 +1,6 @@
 import { realpathSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { z } from 'zod'
 import type { OpenDocumentTab, TabKind } from '../../../shared/tabs-api'
 import type { McpToolDefinition } from '../mcp-server'
@@ -199,7 +199,7 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
     {
       name: 'open_documents',
       description:
-        'Work with the documents the user currently has open in GenOffice tabs — not just the ' +
+        'Work with the documents the user currently has open in SeuOffice tabs — not just the ' +
         'one a session opened. Actions: "list" (no target) returns every open document with its ' +
         'id, type, path, title, whether it has ever been saved, and whether it has unsaved ' +
         'changes; "read" returns one document\'s live content including unsaved edits; "save" ' +

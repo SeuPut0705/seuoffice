@@ -13,8 +13,8 @@ import { execFileSync } from 'node:child_process'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setOpenFilesSource } from '@genoffice/electron-utils/unsaved-files'
-import type { ProjectTrustAnswer } from '@genoffice/project-store'
+import { setOpenFilesSource } from '@seuoffice/electron-utils/unsaved-files'
+import type { ProjectTrustAnswer } from '@seuoffice/project-store'
 import { FileIndexStore } from '../src/main/file-index/store'
 import {
   KB_DOWNLOAD_DECLINED,
@@ -403,7 +403,7 @@ describe('project_read', () => {
     expect(await read('C:/Windows/win.ini')).toEqual({ status: 'refused', reason: 'outside' })
     expect(await read('')).toEqual({ status: 'refused', reason: 'outside' })
     expect(await read('.hidden/secret.md')).toEqual({ status: 'refused', reason: 'hidden' })
-    expect(await read('.ieumoffice/ignore')).toEqual({ status: 'refused', reason: 'hidden' })
+    expect(await read('.seuoffice/ignore')).toEqual({ status: 'refused', reason: 'hidden' })
     expect(await read('~$lock.docx')).toEqual({ status: 'refused', reason: 'hidden' })
     expect(await read('node_modules/pkg.md')).toEqual({ status: 'refused', reason: 'hidden' })
     expect(await read('drafts/old.md')).toEqual({ status: 'refused', reason: 'ignored' })
@@ -516,14 +516,14 @@ describe('project_read: other names for the same entry (Windows)', () => {
   it.runIf(process.platform === 'win32')(
     'refuses a trailing dot or space that names a hidden or ignored entry',
     async () => {
-      put(root, '.ieumoffice/memory.md', 'remembered secret')
+      put(root, '.seuoffice/memory.md', 'remembered secret')
       for (const alias of [
         'drafts./old.md',
         'drafts /old.md',
         'drafts/old.md.',
         'drafts/old.md ',
-        '.ieumoffice./memory.md',
-        '.ieumoffice /memory.md',
+        '.seuoffice./memory.md',
+        '.seuoffice /memory.md',
         'notes.md.',
         'notes.md::$DATA',
       ]) {
@@ -544,11 +544,11 @@ describe('project_read: other names for the same entry (Windows)', () => {
   it.runIf(process.platform === 'win32')(
     'judges an 8.3 short name by the real name it stands for',
     async (ctx) => {
-      put(root, '.ieumoffice/memory.md', 'remembered secret')
+      put(root, '.seuoffice/memory.md', 'remembered secret')
       put(root, 'confidential-folder/x.md', 'confidential body')
       put(root, 'long-visible-name.md', 'visible body')
       await guide.addIgnore(projectId, 'confidential-folder/')
-      const dataShort = shortNameOf(root, '.ieumoffice')
+      const dataShort = shortNameOf(root, '.seuoffice')
       const confShort = shortNameOf(root, 'confidential-folder')
       const fileShort = shortNameOf(root, 'long-visible-name.md')
       if (!dataShort || !confShort || !fileShort) {

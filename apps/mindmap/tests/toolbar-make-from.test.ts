@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { Toolbar, type ToolbarProps } from '../src/renderer/components/Toolbar'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import type { MindmapApi } from '../src/shared/ipc'

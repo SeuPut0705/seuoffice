@@ -15,7 +15,7 @@
  * the response for a timeout that will never be met.
  */
 import type { ICellData, Nullable } from '@univerjs/core'
-import type { CellState } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { CellState } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { EXCEL_ERROR_LITERALS, modelCellValue } from './univer-sync'
 
 /** one `set_formula` target extracted from a batch */

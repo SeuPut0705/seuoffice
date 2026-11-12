@@ -32,7 +32,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useSyncExternalStore } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { applyStoredAiReadings } from '../../../../../packages/pdf-structure/src/ai-read'
 import {
   startTranslationJob,

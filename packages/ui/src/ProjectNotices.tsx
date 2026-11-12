@@ -1,12 +1,12 @@
 import React from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   ProjectEditor,
   ProjectMemoryOp,
   ProjectNotice,
   ProjectScreenSection,
   UnregisteredProjectHint,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   projectConsolidatedText,
   projectEditorLabel,
@@ -142,7 +142,7 @@ export function ProjectNoticeList({
 
 /**
  * "This document is in the '<name>' project folder [Use]": the document sits
- * under an unregistered folder holding `.ieumoffice/project.json`. Shown above
+ * under an unregistered folder holding `.seuoffice/project.json`. Shown above
  * the project chip; nothing is used until the person presses [Use].
  */
 export function ProjectFolderHintLine({

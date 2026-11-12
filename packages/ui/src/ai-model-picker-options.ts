@@ -21,7 +21,7 @@ import {
   type AiSettings,
   type AiSubscriptionModel,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { aiProviderDisplayName, aiSubscriptionProviderName } from './ai-subscription'
 
 export interface AiModelPickerSelection {

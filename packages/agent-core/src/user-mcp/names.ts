@@ -3,7 +3,7 @@
  * spec 4.2, 6.1): `mcp__<server>__<tool>`, the shape skills written for coding
  * agents already call.
  *
- * A file with no imports, exported as `@genoffice/agent-core/user-mcp/names`:
+ * A file with no imports, exported as `@seuoffice/agent-core/user-mcp/names`:
  * the main process checks names when a server is registered and cannot load
  * the package root as it is.
  *
@@ -20,7 +20,7 @@ export const MCP_SERVER_NAME_MAX = 24
 export const MCP_TOOL_NAME_MAX = 64
 
 /** The app's own MCP server; a user server may not take its name */
-export const APP_MCP_SERVER_NAME = 'ieumoffice-editor'
+export const APP_MCP_SERVER_NAME = 'seuoffice-editor'
 /** Server names refused, compared without case */
 export const RESERVED_MCP_SERVER_NAMES: ReadonlySet<string> = new Set([APP_MCP_SERVER_NAME])
 

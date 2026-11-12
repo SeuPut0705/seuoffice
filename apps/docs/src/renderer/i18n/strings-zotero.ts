@@ -1,4 +1,4 @@
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from '@seuoffice/i18n'
 
 /** Strings for the Zotero integration in the References tab. */
 export const zoteroStrings = defineStrings({
@@ -16,7 +16,7 @@ export const zoteroStrings = defineStrings({
     zoteroConnectionError: 'Unable to connect to Zotero. Start Zotero and keep it running.',
     zoteroOperationError: 'The Zotero operation failed.',
     zoteroNoteFieldsUnsupported:
-      'This document has Zotero citations in footnotes or endnotes, which GenOffice cannot update yet. Zotero commands are turned off here so the bibliography stays intact.',
+      'This document has Zotero citations in footnotes or endnotes, which SeuOffice cannot update yet. Zotero commands are turned off here so the bibliography stays intact.',
     zoteroGroup: 'Zotero',
   },
   ko: {
@@ -33,7 +33,7 @@ export const zoteroStrings = defineStrings({
     zoteroConnectionError: 'Zotero에 연결할 수 없습니다. Zotero를 실행한 상태로 유지하세요.',
     zoteroOperationError: 'Zotero 작업에 실패했습니다.',
     zoteroNoteFieldsUnsupported:
-      '이 문서의 각주 또는 미주에 Zotero 인용이 있으며 GenOffice는 아직 이를 업데이트할 수 없습니다. 참고문헌을 그대로 유지하기 위해 이 문서에서는 Zotero 명령이 비활성화되었습니다.',
+      '이 문서의 각주 또는 미주에 Zotero 인용이 있으며 SeuOffice는 아직 이를 업데이트할 수 없습니다. 참고문헌을 그대로 유지하기 위해 이 문서에서는 Zotero 명령이 비활성화되었습니다.',
     zoteroGroup: 'Zotero',
   },
 })

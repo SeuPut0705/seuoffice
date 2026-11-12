@@ -71,7 +71,7 @@ export async function isModifiedSince(
 
 // Symbol.for: the probe survives multiple bundled copies of this module (one
 // per editor), so the copy the shell fills is the one an editor main reads
-const PROBE = Symbol.for('genoffice.open-path-probe')
+const PROBE = Symbol.for('seuoffice.open-path-probe')
 
 type OpenPathProbe = (path: string) => boolean
 

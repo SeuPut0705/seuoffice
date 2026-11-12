@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type { UiTheme } from '../shared/ipc'
 
 /** localStorage key the studio reads its settings from before its first paint. */

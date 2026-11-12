@@ -19,7 +19,7 @@ import {
   GITHUB_REPO_NAME,
   GITHUB_REPO_OWNER,
   githubReleaseTagUrl,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type { UpdateUiState } from '../src/shared/update-api'
 
 /**
@@ -254,7 +254,7 @@ const EMPTY_RELEASES_ATOM = `<?xml version="1.0" encoding="UTF-8"?>
   <id>tag:github.com,2008:https://github.com/pblsketch/ieumoffice/releases</id>
   <link type="text/html" rel="alternate" href="https://github.com/pblsketch/ieumoffice/releases"/>
   <link type="application/atom+xml" rel="self" href="https://github.com/pblsketch/ieumoffice/releases.atom"/>
-  <title>Release notes from ieumoffice</title>
+  <title>Release notes from seuoffice</title>
   <updated>2026-10-13T06:34:27Z</updated>
 </feed>
 `
@@ -391,7 +391,7 @@ beforeEach(() => {
   appQuit.mockClear()
   install.mockClear()
   installDir.writable = true
-  delete process.env.GENOFFICE_FAKE_UPDATE
+  delete process.env.SEUOFFICE_FAKE_UPDATE
   updaterState.listeners.clear()
   updaterState.autoDownload = true
   updaterState.autoInstallOnAppQuit = false
@@ -433,7 +433,7 @@ afterEach(() => {
   vi.useRealTimers()
   platformSpy?.restore()
   platformSpy = null
-  delete process.env.GENOFFICE_FAKE_UPDATE
+  delete process.env.SEUOFFICE_FAKE_UPDATE
   rmSync(appState.dataDir, { recursive: true, force: true })
 })
 
@@ -1119,7 +1119,7 @@ describe('manual download fallback', () => {
 })
 
 describe('macOS: the app installs its own update (decision 0097)', () => {
-  const zip = '/Users/me/Library/Caches/ieumoffice-updater/pending/IeumOffice-0.2.0-arm64-mac.zip'
+  const zip = '/Users/me/Library/Caches/seuoffice-updater/pending/IeumOffice-0.2.0-arm64-mac.zip'
 
   beforeEach(() => {
     platformSpy?.restore()
@@ -1553,7 +1553,7 @@ describe('quiet failure', () => {
 describe('initAutoUpdater (fake update preview)', () => {
   it('runs a simulated download to completion in unpacked runs', async () => {
     appState.isPackaged = false
-    process.env.GENOFFICE_FAKE_UPDATE = '9.9.9'
+    process.env.SEUOFFICE_FAKE_UPDATE = '9.9.9'
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
 
@@ -1576,7 +1576,7 @@ describe('initAutoUpdater (fake update preview)', () => {
 
   it('closes the window on later and install without touching electron-updater', async () => {
     appState.isPackaged = false
-    process.env.GENOFFICE_FAKE_UPDATE = '9.9.9'
+    process.env.SEUOFFICE_FAKE_UPDATE = '9.9.9'
     const { initAutoUpdater } = await loadUpdater()
     initAutoUpdater(() => null)
     vi.advanceTimersByTime(1500)
@@ -1788,9 +1788,9 @@ describe('checkForUpdatesNow (r148 manual check)', () => {
     expect(showUpdateWindow).not.toHaveBeenCalled()
   })
 
-  it('re-shows the simulated update window in GENOFFICE_FAKE_UPDATE runs', async () => {
+  it('re-shows the simulated update window in SEUOFFICE_FAKE_UPDATE runs', async () => {
     appState.isPackaged = false
-    process.env.GENOFFICE_FAKE_UPDATE = '9.9.9'
+    process.env.SEUOFFICE_FAKE_UPDATE = '9.9.9'
     const { initAutoUpdater, checkForUpdatesNow } = await loadUpdater()
     initAutoUpdater(() => null)
 

@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { assertSoundCompoundFile } from './damaged-file'
-import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
+import { assertZipInflatesWithinLimits } from '@seuoffice/docx-engine'
 
 /**
  * Hangul word processor documents (HWP 5, HWPX, some HWP 3) to text, read by the
@@ -22,7 +22,7 @@ const MAX_ROW_CELL_PARAGRAPHS = 3
  * Resources/wasm (apps/shell/electron-builder.cjs), like the PDF engines.
  */
 export function rhwpWasmPath(): string {
-  const fromEnv = process.env.GENOFFICE_RHWP_WASM
+  const fromEnv = process.env.SEUOFFICE_RHWP_WASM
   if (fromEnv) return fromEnv
   try {
     return createRequire(import.meta.url).resolve('@rhwp/core/rhwp_bg.wasm')
@@ -31,7 +31,7 @@ export function rhwpWasmPath(): string {
   }
   const resources = (process as { resourcesPath?: string }).resourcesPath
   if (resources) return join(resources, 'wasm', 'rhwp_bg.wasm')
-  throw new Error('rhwp_bg.wasm not found (set GENOFFICE_RHWP_WASM)')
+  throw new Error('rhwp_bg.wasm not found (set SEUOFFICE_RHWP_WASM)')
 }
 
 let engine: Promise<Engine> | null = null

@@ -1,6 +1,6 @@
 // Contract between the docs renderer (AI panel) and the main process for the
 // subscription providers (Claude, Codex). The request channels and payloads are
-// the shared ones from @genoffice/ai-provider; this is the shape the shell
+// the shared ones from @seuoffice/ai-provider; this is the shape the shell
 // exposes to its own renderer (apps/shell/src/shared/subscription-api.ts).
 
 import type {
@@ -9,7 +9,7 @@ import type {
   SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 // Reading an IPC answer is the same in every app: one implementation, in the shared contract
 export {
@@ -17,7 +17,7 @@ export {
   isSubscriptionProviderId,
   subscriptionLaunchResultOf,
   subscriptionStatusMapOf,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 /** exposed on `window.aiOfficeSubscription` by the docs preload */
 export interface SubscriptionApi {

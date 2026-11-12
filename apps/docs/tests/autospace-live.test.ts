@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs'
 import { Editor } from '@tiptap/core'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import type { Run } from '@genoffice/docx-engine'
+import type { Run } from '@seuoffice/docx-engine'
 import { editorExtensions, paragraphInlineSegments } from '../src/renderer/editor/extensions'
 import {
   renderTableSpec,
@@ -17,7 +17,7 @@ import {
   setStaticAsciiResolver,
 } from '../src/renderer/editor/protected-render'
 import { DOMSerializer } from '@tiptap/pm/model'
-import type { TableModel, TextboxDisplay } from '@genoffice/docx-engine'
+import type { TableModel, TextboxDisplay } from '@seuoffice/docx-engine'
 import {
   autospacePadScale,
   codePointLengthAt,

@@ -7,7 +7,7 @@ import {
   type ProjectHashedFile,
   type ProjectId,
   type ProjectTrustPrompt,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   hashText,
   plainFileIn,

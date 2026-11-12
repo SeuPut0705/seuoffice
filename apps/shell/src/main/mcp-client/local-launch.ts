@@ -18,7 +18,7 @@ import type { McpServerConfig } from './store'
 /**
  * The system variables a server gets from the app's environment (5.3), a
  * tunable default. Everything else of the app's environment stays behind:
- * its secrets, the subscription programs' variables, `GENOFFICE_*`. On
+ * its secrets, the subscription programs' variables, `SEUOFFICE_*`. On
  * Windows names match without regard to case; elsewhere the lowercase proxy
  * spellings, which many tools read, are taken too.
  */
@@ -57,7 +57,7 @@ export const MCP_LOCAL_WINDOWS_ENV: readonly string[] = [
 ]
 
 /** Registered names the app never passes on, whatever the person typed */
-const NEVER_PASSED = /^GENOFFICE_/i
+const NEVER_PASSED = /^SEUOFFICE_/i
 
 /** Where a variable of the launch comes from, as the confirmation labels it */
 export type PlannedEnvOrigin = 'system' | 'registered' | 'app'
@@ -77,7 +77,7 @@ export interface PlannedLaunchReady {
   addedArgs: string[]
   /** the variable names the program gets; values are never part of the plan */
   env: PlannedEnvVar[]
-  /** registered names the app does not pass on (`GENOFFICE_*`) */
+  /** registered names the app does not pass on (`SEUOFFICE_*`) */
   droppedEnv: string[]
   /** the PC's own runtime or one the app downloaded */
   source: 'pc' | 'app'

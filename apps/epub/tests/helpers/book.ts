@@ -2,7 +2,7 @@
  * Small EPUB files for the editor's main-process tests, built in memory.
  */
 import JSZip from 'jszip'
-import { IDPF_FONT_OBFUSCATION, obfuscateFont } from '@genoffice/epub-engine'
+import { IDPF_FONT_OBFUSCATION, obfuscateFont } from '@seuoffice/epub-engine'
 
 export const BOOK_ID = 'urn:uuid:12345678-90ab-cdef-1234-567890abcdef'
 

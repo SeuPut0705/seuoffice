@@ -3,7 +3,7 @@
  * ready-made style sheet, and shows the user one sample cover per language.
  *
  * Renderer-safe: this folder is imported by its own subpath
- * (`@genoffice/pipelines/slides/templates`), so nothing in it may load a
+ * (`@seuoffice/pipelines/slides/templates`), so nothing in it may load a
  * package or a file outside the folder at run time. Types are imported with
  * `import type` only.
  */

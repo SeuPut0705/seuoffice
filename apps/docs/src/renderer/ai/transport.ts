@@ -2,9 +2,9 @@ import {
   createIpcTransport,
   type AgentTransport,
   type IpcTransportOptions,
-} from '@genoffice/agent-core'
-import { localContextLimit } from '@genoffice/ai-provider/browser'
-import { aiContextConfirmText, aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/agent-core'
+import { localContextLimit } from '@seuoffice/ai-provider/browser'
+import { aiContextConfirmText, aiRunErrorText } from '@seuoffice/ui'
 import type { AiSettings } from '../../shared/ipc'
 import { getLang, t } from '../i18n/locale'
 

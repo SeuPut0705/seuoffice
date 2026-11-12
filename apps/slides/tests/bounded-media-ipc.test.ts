@@ -48,7 +48,7 @@ vi.mock('electron', () => ({
   desktopCapturer: {},
   WebContentsView: class {},
 }))
-vi.mock('@genoffice/electron-utils', async (original) => ({
+vi.mock('@seuoffice/electron-utils', async (original) => ({
   ...(await original<object>()),
   showOpenDialogWithMemory: (...args: unknown[]) => state.pick(...args),
 }))
@@ -61,10 +61,10 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedFamily: () => null,
   shapedMeasure: () => ({ width: 0 }),
 }))
-import { createBlankPptx, narrationSpids, openPptx } from '@genoffice/pptx-engine'
+import { createBlankPptx, narrationSpids, openPptx } from '@seuoffice/pptx-engine'
 import { registerSlidesIpc } from '../src/main/slides-main'
 import { sessions } from '../src/main/session-state'
-import { setUiLang } from '@genoffice/i18n'
+import { setUiLang } from '@seuoffice/i18n'
 import { encodeWav } from '../src/renderer/narration/wav'
 
 const LIMIT = 50 * 1024 * 1024

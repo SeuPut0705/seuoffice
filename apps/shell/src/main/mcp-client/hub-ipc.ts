@@ -1,11 +1,11 @@
-import type { McpToolsBridgeLike } from '@genoffice/agent-core'
-import type { McpToolsBridge } from '@genoffice/electron-utils/mcp-tools-bridge'
+import type { McpToolsBridgeLike } from '@seuoffice/agent-core'
+import type { McpToolsBridge } from '@seuoffice/electron-utils/mcp-tools-bridge'
 import {
   MCP_TOOLS_CHANNELS,
   mcpCallIdOf,
   mcpServerNameOf,
   mcpToolCallRequestOf,
-} from '@genoffice/electron-utils/mcp-tools-channels'
+} from '@seuoffice/electron-utils/mcp-tools-channels'
 import { MCP_SERVERS_CHANNELS, type McpSettingsResult } from '../../shared/mcp-servers-api'
 import type { McpHub } from './hub'
 import {

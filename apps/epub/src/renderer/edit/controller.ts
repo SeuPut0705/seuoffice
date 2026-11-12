@@ -23,8 +23,8 @@
  *
  * Everything that talks to the main process runs one after the other.
  */
-import type { BlockEdit, ChapterBlock, OpenChapter, RangeReplacement } from '@genoffice/epub-engine'
-import type { Params } from '@genoffice/i18n'
+import type { BlockEdit, ChapterBlock, OpenChapter, RangeReplacement } from '@seuoffice/epub-engine'
+import type { Params } from '@seuoffice/i18n'
 import type {
   EpubApplyEditsRequest,
   EpubBlockInfo,
@@ -160,7 +160,7 @@ interface TypedBatch {
 const HISTORY_LIMIT = 300
 /** Rest after typing before the typed text is sent. */
 export const FLUSH_DELAY_MS = 500
-const EDIT_STYLE_ID = 'genoffice-epub-edit'
+const EDIT_STYLE_ID = 'seuoffice-epub-edit'
 const EDIT_CSS = `[${BLOCK_ATTR}][contenteditable="true"] { cursor: text; }
 [${BLOCK_ATTR}][contenteditable="true"]:focus { outline: none; }`
 

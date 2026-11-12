@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AiSubscriptionStatus } from '@genoffice/ai-provider'
+import type { AiSubscriptionStatus } from '@seuoffice/ai-provider'
 
 let AiSubscriptionCard: typeof import('../src/AiSubscriptionCard').AiSubscriptionCard
 

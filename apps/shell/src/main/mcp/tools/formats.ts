@@ -200,7 +200,7 @@ export function withSaveExtension(family: SessionFamily, filePath: string): stri
   // dialog-free save cannot ask: point the agent at the CLI conversion instead
   const hint =
     family === 'docx' && ext === 'odt'
-      ? '; save as .docx, then convert it with `ieumoffice convert <file> --to odt`'
+      ? '; save as .docx, then convert it with `seuoffice convert <file> --to odt`'
       : ''
   throw new Error(
     `a ${familyLabel(family)} session must be saved as ${wanted} (got ".${ext}")${hint}`,

@@ -4,7 +4,7 @@
  * `saveDocx`, so the paragraphs written back are really regenerated ones
  * (hidden bookmarks moved to the paragraph start, rawPPr reused or merged).
  */
-import type { GeneratedBlock } from '@genoffice/docx-engine'
+import type { GeneratedBlock } from '@seuoffice/docx-engine'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { type OdtStyleTable, readOdtStyles, readRoot, scanOdtBody, walkNodes } from '../src/core'
 import { readParagraph } from '../src/text'

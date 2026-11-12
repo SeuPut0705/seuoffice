@@ -4,7 +4,7 @@
  * way the user sees it, and the tools answer plainly when the app is not
  * running. The tools against a live editor are in open-documents-diagram.test.ts.
  */
-import { DIAGRAM_OPS } from '@genoffice/drawio-model'
+import { DIAGRAM_OPS } from '@seuoffice/drawio-model'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
 import type { OpenDocumentTab } from '../../src/shared/tabs-api'

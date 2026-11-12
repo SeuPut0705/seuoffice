@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Editor } from '@tiptap/core'
-import { mergeFieldInstruction } from '@genoffice/docx-engine'
+import { mergeFieldInstruction } from '@seuoffice/docx-engine'
 import type { MergeDataSource, MergeOutputMode } from '../../shared/ipc'
 import type { PmNode } from '../editor/convert'
 import { documentText, substituteMergeFields } from '../mail-merge/template'

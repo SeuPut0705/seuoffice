@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useId, useMemo, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import type { ProjectId, ProjectListItem } from '@genoffice/project-store'
+import type { Lang } from '@seuoffice/i18n'
+import type { ProjectId, ProjectListItem } from '@seuoffice/project-store'
 import { aiModelPopoverStyle } from './AiModelPicker'
 import { revealInList, useDismissablePopover } from './popover-dismiss'
 import {

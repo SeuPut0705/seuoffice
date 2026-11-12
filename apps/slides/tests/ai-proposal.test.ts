@@ -48,9 +48,9 @@ import {
   type AgentStreamCallbacks,
   type AgentToolCall,
   type AgentTransport,
-} from '@genoffice/agent-core'
-import { createBlankPptx, openPptx, type Slide } from '@genoffice/pptx-engine'
-import type { RenderSlide } from '@genoffice/pptx-render'
+} from '@seuoffice/agent-core'
+import { createBlankPptx, openPptx, type Slide } from '@seuoffice/pptx-engine'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import { applySessionTxn, registerSlidesIpc } from '../src/main/slides-main'
 import {
   buildAllRenderSlides,

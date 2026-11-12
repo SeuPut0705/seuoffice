@@ -1,4 +1,4 @@
-import type { ServerNameProblem, ToolNameProblem } from '@genoffice/agent-core/user-mcp/names'
+import type { ServerNameProblem, ToolNameProblem } from '@seuoffice/agent-core/user-mcp/names'
 import {
   isNearAddress,
   toolDisplayOf,

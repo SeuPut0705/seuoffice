@@ -1,6 +1,6 @@
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import type { RecoveryCopyFilter, RecoveryIdentity } from '@genoffice/electron-utils'
+import type { RecoveryCopyFilter, RecoveryIdentity } from '@seuoffice/electron-utils'
 import {
   LAUNCH_NEEDS_USER_MESSAGE,
   createLaunchListGate,

@@ -12,7 +12,7 @@ import {
   defaultTargetLanguage,
   guessLanguageFromText,
   type TranslationMode,
-} from '@genoffice/pdf-structure'
+} from '@seuoffice/pdf-structure'
 import { EPUB_METADATA_PAGE, type EpubTranslationUnit } from './units'
 
 type TargetLanguage = ReturnType<typeof defaultTargetLanguage>

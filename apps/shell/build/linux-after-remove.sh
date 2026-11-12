@@ -1,5 +1,5 @@
 #!/bin/sh
-# deb/rpm post-remove: drop the ieumoffice symlink only on a real uninstall.
+# deb/rpm post-remove: drop the seuoffice symlink only on a real uninstall.
 # rpm runs the old package's %postun after the new %post during an upgrade
 # (with $1 = 1); deb passes "upgrade" there. Removing then would kill the
 # link the new version just created.
@@ -17,7 +17,7 @@ if [ -f "$profile" ]; then
   fi
   rm -f "$profile"
 fi
-link="/usr/bin/ieumoffice"
+link="/usr/bin/seuoffice"
 # same ownership rule as the post-install: only a link into our install dir is ours
 if [ -L "$link" ]; then
   case "$(readlink "$link")" in

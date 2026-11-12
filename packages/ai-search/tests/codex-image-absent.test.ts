@@ -6,7 +6,7 @@
  * route, so a stray registration is noticed here.
  */
 import { describe, expect, it } from 'vitest'
-import { codexImageGenerationAvailable, normalizeAiSettings } from '@genoffice/ai-provider'
+import { codexImageGenerationAvailable, normalizeAiSettings } from '@seuoffice/ai-provider'
 import { aiToolCapabilities, codexImageGenerator, generateImageTool } from '../src/index'
 import { keyMedia, status, writeSettings } from './routing-helpers'
 

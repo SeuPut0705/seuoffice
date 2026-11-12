@@ -421,7 +421,7 @@ async function inTurn<T>(path: string, change: () => Promise<T>): Promise<T> {
 /**
  * Root of the store. Pass the user-data folder of THIS program:
  * - the app: Electron `app.getPath('userData')`
- * - the terminal command and MCP server: `genofficeUserDataDir(env)` from
+ * - the terminal command and MCP server: `seuofficeUserDataDir(env)` from
  *   packages/cli/src/gui.ts (the folder `aiDataDir(env)` in cloud.ts also
  *   resolves to), so both write the same store.
  * Never `~/.genoffice`: that folder belongs to the original program and is

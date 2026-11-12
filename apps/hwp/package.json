@@ -1,6 +1,6 @@
 {
-  "name": "@genoffice/hwp",
-  "productName": "GenOffice HWP",
+  "name": "@seuoffice/hwp",
+  "productName": "SeuOffice HWP",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -15,15 +15,15 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@genoffice/agent-core": "*",
-    "@genoffice/ai-provider": "*",
-    "@genoffice/compound-file": "*",
-    "@genoffice/doc-rules": "*",
-    "@genoffice/electron-utils": "*",
-    "@genoffice/file-parse": "*",
-    "@genoffice/i18n": "*",
-    "@genoffice/project-store": "*",
-    "@genoffice/ui": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/ai-provider": "*",
+    "@seuoffice/compound-file": "*",
+    "@seuoffice/doc-rules": "*",
+    "@seuoffice/electron-utils": "*",
+    "@seuoffice/file-parse": "*",
+    "@seuoffice/i18n": "*",
+    "@seuoffice/project-store": "*",
+    "@seuoffice/ui": "*",
     "@noble/hashes": "^2.2.0",
     "@rhwp/core": "file:../../vendor/rhwp-core",
     "@rhwp/editor": "0.8.7",
@@ -42,5 +42,5 @@
     "vite": "^7.3.1",
     "vitest": "^4.1.11"
   },
-  "author": "GenOffice"
+  "author": "SeuOffice"
 }

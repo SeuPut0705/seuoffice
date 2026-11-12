@@ -5,7 +5,7 @@
  * the tool answers. Nothing here imports Electron, so the rules are covered by
  * unit tests.
  */
-import type { ReadUrlFailure } from '@genoffice/ai-search'
+import type { ReadUrlFailure } from '@seuoffice/ai-search'
 
 /** The answer to an exception the tool promised never to throw. */
 export function unexpectedReadUrlFailure(): ReadUrlFailure {

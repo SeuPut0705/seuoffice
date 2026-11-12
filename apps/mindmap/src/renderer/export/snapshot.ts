@@ -28,7 +28,7 @@
  * source. The reference in the file is never followed.
  */
 import type { MindElixirInstance, Topic } from 'mind-elixir'
-import type { ViewImage } from '@genoffice/xmind-engine'
+import type { ViewImage } from '@seuoffice/xmind-engine'
 import { archivePictureEntry, pictureType } from '../map/images'
 
 /** A copy of a sheet, ready to be written out. */

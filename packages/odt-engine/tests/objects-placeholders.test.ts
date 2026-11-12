@@ -5,7 +5,7 @@
  * present writes the original bytes; one that disappeared deletes the object
  * and the package entries only it referenced.
  */
-import { patchImageParagraphXml } from '@genoffice/docx-engine'
+import { patchImageParagraphXml } from '@seuoffice/docx-engine'
 import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
 import { NEUTRAL_PLACEHOLDER_PNG, ODT_KEEP_PREFIX, parseKeepName } from '../src/objects'

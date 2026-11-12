@@ -17,8 +17,8 @@ import {
   uninstallSkill,
   type BundledSkill,
   type SkillLedger,
-} from '@genoffice/cli/agent-skills'
-import { CLI_COMMAND, inspectCliLink, launcherFileName } from '@genoffice/cli/install'
+} from '@seuoffice/cli/agent-skills'
+import { CLI_COMMAND, inspectCliLink, launcherFileName } from '@seuoffice/cli/install'
 import { readAppSettings, writeAppSetting } from './app-settings'
 import { isEphemeralInstall } from './cli-link'
 import { isInstallableSkillDir } from './skill-target'
@@ -33,9 +33,9 @@ export interface IntegrationsDeps {
   settingsPath: () => string
   /** the shell window dialogs attach to */
   window: () => BrowserWindow | null
-  /** directory holding ieumoffice / ieumoffice.cmd and, packaged, skills/ieumoffice/SKILL.md */
+  /** directory holding seuoffice / seuoffice.cmd and, packaged, skills/seuoffice/SKILL.md */
   cliDir: string
-  /** skills/ieumoffice/SKILL.md (repo file in dev, Resources/cli/skills/... packaged) */
+  /** skills/seuoffice/SKILL.md (repo file in dev, Resources/cli/skills/... packaged) */
   skillPath: string
   /** packages/cli/package.json (its version is the CLI version) */
   cliPackageJson: string

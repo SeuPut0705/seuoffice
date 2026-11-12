@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { pdfToolsStrings } from '../src/renderer/src/i18n/strings-pdf-tools'
 import { strings as pdfEditorStrings } from '../../pdf/src/renderer/i18n/strings'
 import { strings as homeStrings } from '../src/renderer/src/strings'
@@ -29,7 +29,7 @@ describe('no AI on the PDF tools path', () => {
     for (const path of MODULES) {
       const text = src(path)
       expect(text, path).not.toMatch(
-        /@genoffice\/ai-provider|@genoffice\/agent-core|@genoffice\/ai-search/,
+        /@seuoffice\/ai-provider|@seuoffice\/agent-core|@seuoffice\/ai-search/,
       )
       expect(text, path).not.toMatch(/['"]ai:|subscription/i)
     }

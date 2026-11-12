@@ -5,7 +5,7 @@
  * docx engine's `TableModel` of the edited table supplies the parsed content
  * (rich paragraphs, merges, widths) in the same `w:tr`/`w:tc` order.
  */
-import type { TableCell, TableModel, TableParagraph } from '@genoffice/docx-engine'
+import type { TableCell, TableModel, TableParagraph } from '@seuoffice/docx-engine'
 import { PrefixMap, walkElements } from '../core/xml'
 
 export interface OxItem {

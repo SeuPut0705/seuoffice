@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import JSZip from 'jszip'
-import { buildBlankDocx } from '@genoffice/docx-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'
 

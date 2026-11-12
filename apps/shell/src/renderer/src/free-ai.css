@@ -1,4 +1,4 @@
-/* Free connection cards (FreeAiCards.tsx). The card body is @genoffice/ui's
+/* Free connection cards (FreeAiCards.tsx). The card body is @seuoffice/ui's
  * ai-sub-card, so a free connection reads like a subscription one; these rules
  * add the "free" tag, the key field and the privacy line. Tokens only. */
 

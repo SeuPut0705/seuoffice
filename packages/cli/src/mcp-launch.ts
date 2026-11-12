@@ -3,10 +3,10 @@ import { APP_BINARY_NAME, CLI_BUNDLE_FILE, CLI_COMMAND } from './names'
 export { MCP_SERVER_NAME, SKILL_NAME } from './names'
 
 /**
- * How an MCP client starts `ieumoffice mcp`. Shared by the app's Settings snippet
- * and `ieumoffice mcp install` so the two cannot drift. Clients spawn without a
- * shell, so on Windows neither ieumoffice.cmd nor `cmd /c` is safe (a path with
- * a space splits); the entry does what ieumoffice.cmd does instead: the app
+ * How an MCP client starts `seuoffice mcp`. Shared by the app's Settings snippet
+ * and `seuoffice mcp install` so the two cannot drift. Clients spawn without a
+ * shell, so on Windows neither seuoffice.cmd nor `cmd /c` is safe (a path with
+ * a space splits); the entry does what seuoffice.cmd does instead: the app
  * binary as Node on the bundled CLI. Pure string code: the renderer imports it.
  */
 export interface McpLaunch {
@@ -20,7 +20,7 @@ export interface McpLaunch {
  * agent config shape carries (`mcp install --compact-schemas` writes it), so an
  * entry that asks for them is still the same launcher, just with one option.
  */
-export const COMPACT_SCHEMAS_ENV = 'GENOFFICE_MCP_COMPACT_SCHEMAS'
+export const COMPACT_SCHEMAS_ENV = 'SEUOFFICE_MCP_COMPACT_SCHEMAS'
 
 /** The same launch with compact MCP tool schemas turned on. */
 export function withCompactSchemas(launch: McpLaunch): McpLaunch {
@@ -29,7 +29,7 @@ export function withCompactSchemas(launch: McpLaunch): McpLaunch {
 
 const isWindowsPath = (p: string) => p.includes('\\')
 
-/** The app's snippet: the bare name once ieumoffice is on the PATH, else the launcher itself. */
+/** The app's snippet: the bare name once seuoffice is on the PATH, else the launcher itself. */
 export function mcpLaunch(
   cli: {
     status: string
@@ -68,7 +68,7 @@ export interface LauncherLaunchOptions {
  * `mcp install`: always the absolute launcher, never the bare name. On Windows
  * the packaged app is run as Node (same entry as the app's snippet); a checkout
  * has no SeuOffice.exe beside it and runs the bundle on the system node, as the
- * bin/ieumoffice script does. An upstream GenOffice.exe is never started.
+ * bin/seuoffice script does. An upstream GenOffice.exe is never started.
  */
 export function mcpLaunchFromLauncher(
   launcher: string,

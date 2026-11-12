@@ -5018,7 +5018,7 @@ fn an_uncancelled_open_completes_and_keeps_its_cache_directory() {
 /// A workbook part that lies about its size inflates fully on the XML read path.
 ///
 /// `read_media` is capped by `copy_entry_bounded`, and the docx/pptx hosts run
-/// `@genoffice/zip-gate` before opening at all — but `read_zip_string` is a
+/// `@seuoffice/zip-gate` before opening at all — but `read_zip_string` is a
 /// plain `read_to_string`, and it is how nearly every workbook part is loaded.
 /// `validate_entries` checks the entry *count* and the paths, never the bytes.
 /// A workbook therefore gets a full unbounded allocation out of one crafted

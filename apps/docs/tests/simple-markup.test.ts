@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { Block } from '@genoffice/docx-engine'
+import type { Block } from '@seuoffice/docx-engine'
 import { mergeChangeLines } from '../src/renderer/editor/margin-annotations'
 import { hfTabLines, hfTabSegments, hfValueInView } from '../src/renderer/editor/hf-dom'
 import {

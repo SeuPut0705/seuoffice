@@ -1,5 +1,5 @@
 /**
- * The Markdown editor's app-owned asset list, `assets/.genoffice-assets.json`
+ * The Markdown editor's app-owned asset list, `assets/.seuoffice-assets.json`
  * next to the document. Same format and rules as
  * apps/markdown/src/main/asset-lifecycle.ts: files the app wrote (name +
  * SHA-256), and per document the names its saved text references. Files not
@@ -11,7 +11,7 @@
  */
 
 /** stored identifier: do not rename (existing documents rely on it) */
-export const ASSET_MANIFEST_FILENAME = '.genoffice-assets.json'
+export const ASSET_MANIFEST_FILENAME = '.seuoffice-assets.json'
 
 export interface OwnedAssetRecord {
   name: string

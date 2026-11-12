@@ -1,5 +1,5 @@
 {
-  "name": "@genoffice/epub-engine",
+  "name": "@seuoffice/epub-engine",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -15,8 +15,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@genoffice/pdf-structure": "*",
-    "@genoffice/zip-gate": "*",
+    "@seuoffice/pdf-structure": "*",
+    "@seuoffice/zip-gate": "*",
     "jszip": "^3.10.1",
     "parse5": "^8.0.1",
     "saxes": "^6.0.0"

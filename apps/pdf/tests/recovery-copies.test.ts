@@ -105,7 +105,7 @@ import {
   recoveryEditor,
   resetAppShuttingDown,
   type RecoveryStore,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import {
   configurePdfRuntime,
   createPdfView,

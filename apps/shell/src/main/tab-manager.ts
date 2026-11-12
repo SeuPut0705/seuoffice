@@ -2,7 +2,7 @@ import { basename, join } from 'node:path'
 import { realpathSync } from 'node:fs'
 import { BrowserWindow, shell, WebContentsView } from 'electron'
 import type { Rectangle, WebContents } from 'electron'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 
 import {
   createDocsView,
@@ -70,7 +70,7 @@ import {
   setActiveSlidesWebContents,
   slidesIsDirty,
 } from '../../../slides/src/main/slides-main'
-import { rendererUrl, safeExternalUrl } from '@genoffice/electron-utils'
+import { rendererUrl, safeExternalUrl } from '@seuoffice/electron-utils'
 import type { DocumentTabKind, OpenDocumentTab, TabKind, TabSummary } from '../shared/tabs-api'
 import { isSettledRect, tabStripHeight } from '../shared/tab-drag-geometry'
 import type {
@@ -280,7 +280,7 @@ export class TabManager {
   }
 
   private scheduleSpareSheetsView(delayMs: number): void {
-    if (process.env.GENOFFICE_NO_SPARE_VIEW || this.spareSheetsTimer || this.spareSheetsView) return
+    if (process.env.SEUOFFICE_NO_SPARE_VIEW || this.spareSheetsTimer || this.spareSheetsView) return
     // a spare sheets view belongs to the single-pane shell; it must never
     // shadow a pane while a split is live
     if (this.split) return

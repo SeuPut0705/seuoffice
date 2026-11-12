@@ -3,12 +3,12 @@
  * data: which failed run gets the blocked notice, and which message "continue
  * with …" sends again. Whether a message may be sent, and what is shown when it
  * may not, is the send gate every editor shares (`useAiSendGate` in
- * @genoffice/ui). The panel and App.tsx only lay these answers out, so the
+ * @seuoffice/ui). The panel and App.tsx only lay these answers out, so the
  * rules are testable without a browser.
  */
-import type { IpcStreamError } from '@genoffice/agent-core'
-import type { AiRunErrorKind, AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
-import { isAiBlockedRunKind } from '@genoffice/ui'
+import type { IpcStreamError } from '@seuoffice/agent-core'
+import type { AiRunErrorKind, AiSubscriptionProviderId } from '@seuoffice/ai-provider/browser'
+import { isAiBlockedRunKind } from '@seuoffice/ui'
 
 /** Why a run stopped, kept on its chat message so the blocked notice can be drawn */
 export interface AiBlockedRun {

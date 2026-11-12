@@ -16,7 +16,7 @@
  * Excel's, so it would float the picture as an unsaved drawing; the files
  * are dropped there when the picture only renders the text.
  */
-import { clipboardPictureIsRendering } from '@genoffice/ui/clipboard-picture'
+import { clipboardPictureIsRendering } from '@seuoffice/ui/clipboard-picture'
 import { ISheetClipboardService } from '@univerjs/sheets-ui'
 
 import type { UniverRuntime } from './univer-state'

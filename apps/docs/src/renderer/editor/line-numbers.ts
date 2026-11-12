@@ -1,4 +1,4 @@
-import type { LineNumbering, SectionInfo } from '@genoffice/docx-engine'
+import type { LineNumbering, SectionInfo } from '@seuoffice/docx-engine'
 import type { PageCut } from '../pagination-cuts'
 import { sectionBidi, sectionColGeom } from '../pagination-sections'
 import type { BlockBox, BlockMetaOf } from '../pagination-types'

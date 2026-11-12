@@ -1,8 +1,8 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 
-import { applyCellEditsToXlsx } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import { REDACTION_PART_PATH } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import { applyCellEditsToXlsx } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { REDACTION_PART_PATH } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { localizeSaveError } from '../src/renderer/save-actions'
 import { buildEditFixture } from './fixture-builder'
 

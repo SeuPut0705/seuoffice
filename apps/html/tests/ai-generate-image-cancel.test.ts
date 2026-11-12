@@ -44,18 +44,18 @@ vi.mock('electron', () => ({
 }))
 
 const generateImageTool = vi.fn()
-vi.mock('@genoffice/ai-search', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-search')>()),
+vi.mock('@seuoffice/ai-search', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-search')>()),
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
 }))
 
 // the process-wide statuses of the subscription service (registered by the docs main in the shell)
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   sharedSubscriptionStatuses: () => ({}),
 }))
 
-import { abortMediaCalls } from '@genoffice/ai-search'
+import { abortMediaCalls } from '@seuoffice/ai-search'
 import { createHtmlView } from '../src/main/html-main'
 import { HTML_CHANNELS } from '../src/shared/ipc'
 

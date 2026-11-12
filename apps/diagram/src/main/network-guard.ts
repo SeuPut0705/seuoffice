@@ -14,7 +14,7 @@
  * Every request the session sees is counted (allowed and refused), so a
  * scripted run can prove that nothing was refused because nothing tried.
  */
-import { RENDERER_SCHEME } from '@genoffice/electron-utils/renderer-scheme'
+import { RENDERER_SCHEME } from '@seuoffice/electron-utils/renderer-scheme'
 import { DRAWIO_HOST, DRAWIO_SCHEME } from '../shared/bridge-protocol'
 
 /** The tab's session partition: draw.io's own storage (scratchpad, libraries, recent colors) stays in it. */

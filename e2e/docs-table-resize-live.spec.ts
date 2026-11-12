@@ -47,7 +47,7 @@ async function docx(): Promise<Buffer> {
 
 test('column border drag previews the width before mouseup', async () => {
   test.setTimeout(150_000)
-  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'genoffice-e2e-col-resize-')))
+  const dir = realpathSync(mkdtempSync(join(tmpdir(), 'seuoffice-e2e-col-resize-')))
   const docPath = join(dir, 'tables.docx')
   writeFileSync(docPath, await docx())
   const launched = await launchShell({

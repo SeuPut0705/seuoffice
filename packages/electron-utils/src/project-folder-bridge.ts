@@ -12,9 +12,9 @@ import {
   type ProjectFolderApi,
   type ProjectFolderEventMethod,
   type ProjectFolderListenMessage,
-} from '@genoffice/project-store/folder-api'
+} from '@seuoffice/project-store/folder-api'
 
-export { PROJECT_FOLDER_BRIDGE_KEY } from '@genoffice/project-store/folder-api'
+export { PROJECT_FOLDER_BRIDGE_KEY } from '@seuoffice/project-store/folder-api'
 
 /** The part of `ipcRenderer` the bridge uses */
 export type ProjectFolderBridgeIpc = Pick<IpcRenderer, 'invoke' | 'on' | 'removeListener' | 'send'>

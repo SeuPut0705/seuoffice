@@ -75,7 +75,7 @@ async function installed(
   archives: Record<string, Record<string, string>>,
 ) {
   const base = temp()
-  const app = join(base, 'home', '.ieumoffice', 'skills')
+  const app = join(base, 'home', '.seuoffice', 'skills')
   const tmp = join(base, 'tmp')
   mkdirSync(app, { recursive: true })
   const github = fakeGitHub(archives, head)

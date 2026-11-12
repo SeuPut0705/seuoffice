@@ -9,8 +9,8 @@
  * the store is a fake: no provider, no subscription program and no network.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { createI18n } from '@genoffice/i18n'
-import { normalizeAiSettings } from '@genoffice/ai-provider/browser'
+import { createI18n } from '@seuoffice/i18n'
+import { normalizeAiSettings } from '@seuoffice/ai-provider/browser'
 import { DocumentJobRegistry } from '../../../packages/pdf-structure/src/jobs'
 import type { TranslationBlockKey } from '../../../packages/pdf-structure/src/store/keys'
 import { strings } from '../src/renderer/i18n/strings'

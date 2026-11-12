@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
-import { IconClose } from '@genoffice/ui/icons'
+import { IconClose } from '@seuoffice/ui/icons'
 import {
   ADMINISTRATION_RULES,
   audit,
@@ -7,7 +7,7 @@ import {
   type Finding,
   type Place,
   type RuleId,
-} from '@genoffice/doc-rules'
+} from '@seuoffice/doc-rules'
 import type { AgentDocumentProfile } from '../../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from '../ai/agent-bridge'
 import { useI18n } from '../i18n/locale'
@@ -55,7 +55,7 @@ interface Props {
 }
 
 /**
- * The format check of `@genoffice/doc-rules` over the open document. It reads the document
+ * The format check of `@seuoffice/doc-rules` over the open document. It reads the document
  * once through the editor's plugin and judges it here, with no model and no network: the
  * panel works with AI turned off. The font fix is a plain edit; everything else is handed
  * to the AI as a request the user reads before sending.

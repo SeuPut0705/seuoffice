@@ -62,12 +62,12 @@ vi.mock('electron', () => {
     ipcMain: { handle: (channel: string, fn: Handler) => handlers.set(channel, fn) },
   }
 })
-vi.mock('@genoffice/electron-utils', () => ({
+vi.mock('@seuoffice/electron-utils', () => ({
   configuredDefaultSaveDir: () => '',
   showSaveDialogWithMemory: vi.fn(),
 }))
-vi.mock('@genoffice/electron-utils/print-window', () => ({ PRINT_READY_SCRIPT: '' }))
-vi.mock('@genoffice/electron-utils/atomic-write', () => ({ atomicWriteFile: vi.fn() }))
+vi.mock('@seuoffice/electron-utils/print-window', () => ({ PRINT_READY_SCRIPT: '' }))
+vi.mock('@seuoffice/electron-utils/atomic-write', () => ({ atomicWriteFile: vi.fn() }))
 
 import { registerDiagramExportIpc, renderPdf } from '../src/main/export-main'
 import { DIAGRAM_CHANNELS } from '../src/shared/ipc'

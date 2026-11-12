@@ -22,7 +22,7 @@ import {
   type ProjectSelection,
   type ProjectSettings,
   type ProjectTrustPrompt,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import type { KbRunScopes } from '../knowledge-base'
 import type { ProjectChatStore } from './chat-store'
 import type { ProjectFolderPickPurpose, ProjectTrustChoice } from './project-dialog-text'

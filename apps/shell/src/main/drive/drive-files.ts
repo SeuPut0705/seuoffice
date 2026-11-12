@@ -27,7 +27,7 @@ import {
   type DriveApi,
   type DriveError,
   type DriveFile,
-} from '@genoffice/google-drive'
+} from '@seuoffice/google-drive'
 import { atomicWriteFile } from '../atomic-write'
 
 export interface CacheEntry {

@@ -79,13 +79,13 @@ import {
   requestedLanguage,
   setUiLang,
   type Lang,
-} from '@genoffice/i18n'
+} from '@seuoffice/i18n'
 import {
   DEV_USER_DATA_DIR_NAME,
   PRODUCT_NAME,
   USER_DATA_DIR_NAME,
   productName,
-} from '@genoffice/i18n'
+} from '@seuoffice/i18n'
 import {
   DEFAULT_SAVE_DIR_KEY,
   defaultSaveDirFallback,
@@ -129,9 +129,9 @@ import {
   type RecoveryUntitledIdentity,
   readLegacyImportPrompt,
   writeLegacyImportPrompt,
-} from '@genoffice/electron-utils'
-import { SPLIT_PANE_CHANNELS } from '@genoffice/electron-utils/split-pane-bridge'
-import { createMainProcessProxyDispatcher } from '@genoffice/electron-utils/main-proxy'
+} from '@seuoffice/electron-utils'
+import { SPLIT_PANE_CHANNELS } from '@seuoffice/electron-utils/split-pane-bridge'
+import { createMainProcessProxyDispatcher } from '@seuoffice/electron-utils/main-proxy'
 import {
   agentSkillNoticeDue,
   markAgentSkillNoticeSeen,
@@ -172,7 +172,7 @@ import {
   attachableMaxBytes,
   diagramPictureExtOfName,
   parseFileToText,
-} from '@genoffice/file-parse'
+} from '@seuoffice/file-parse'
 import { createDocList } from './doc-picker/doc-list'
 import { resolveDocAsker } from './doc-picker/doc-asker'
 import { createDocPicker } from './doc-picker/doc-picker-window'
@@ -215,7 +215,7 @@ import {
   activeAiStreamCount,
   legacyDocumentChatFor,
 } from '../../../docs/src/main/docs-main'
-import { blankXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+import { blankXlsxBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { blankPdfBuffer } from '../../../pdf/src/main/blank-pdf'
 import {
   applyMcpSettings,
@@ -346,7 +346,7 @@ import {
   normalizeHwpDefaultFormat,
   readHwpDefaultFormat,
 } from '../../../hwp/src/main/default-format'
-import { SLIDES_AI_FONTS_KEY, normalizeSlidesAiFonts } from '@genoffice/ui/slides-ai-fonts'
+import { SLIDES_AI_FONTS_KEY, normalizeSlidesAiFonts } from '@seuoffice/ui/slides-ai-fonts'
 import {
   configureHtmlRuntime,
   exportHtmlHeadless,
@@ -438,7 +438,7 @@ import {
   normalizeAiPanelPrefs,
   sameAiPanelPrefs,
   type AiPanelPrefs,
-} from '@genoffice/ui/ai-panel-prefs'
+} from '@seuoffice/ui/ai-panel-prefs'
 import type { DocumentTabKind, TabKind } from '../shared/tabs-api'
 import { TABS_CHANNELS } from '../shared/tabs-api'
 import { SPLIT_TABS_CHANNELS } from '../shared/split-view-api'
@@ -457,7 +457,7 @@ import {
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
   trackedSubscriptionChildCount,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
 import { startRendererWatchdog } from './renderer-watchdog'
 import { crashLogPath, memoryFigures, startCrashWatch, startLowMemoryWatch } from './crash-watch'
@@ -524,7 +524,7 @@ import {
   PROJECT_EDITORS,
   PROJECT_FOLDER_LISTEN_CHANNEL,
   type ProjectEditor,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { ProjectChatStore } from './projects/chat-store'
 import { resolveCloudOnly } from './projects/cloud-files'
 import { createCachedCloudResolver } from './projects/cloud-cache'
@@ -594,14 +594,14 @@ import {
   buildAgentSkillBundle,
   startClaudeAgentSession,
   startCodexAgentSession,
-} from '@genoffice/ai-provider/agent-session'
+} from '@seuoffice/ai-provider/agent-session'
 import { normalizeAgentPrefs } from '../shared/agent-api'
 import {
   droppedSkillSourceOf,
   normalizeAiSettings,
   setAiSecretCodec,
   type AiSettings,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   REVEAL_FLAG,
   fileSearchHoldsPlainKeys,
@@ -690,7 +690,7 @@ import { checkForUpdatesNow, initAutoUpdater } from './updater'
 import { cancelUpdateRestart, reopenedByInstaller, updateRestartRequested } from './update-restart'
 
 /**
- * GenOffice unified shell: ONE Electron app, ONE BrowserWindow, hosting the
+ * SeuOffice unified shell: ONE Electron app, ONE BrowserWindow, hosting the
  * docs and sheets modules as WebContentsView tabs behind a WPS-style tab
  * strip. The shell owns the lifecycle — single-instance lock, file-
  * association routing by extension, and per-active-tab menu switching.
@@ -700,12 +700,12 @@ import { cancelUpdateRestart, reopenedByInstaller, updateRestartRequested } from
 
 // ANY unpacked run (`npm run shell`, `npm run dev`, `npx electron .`) must not
 // share the installed app's userData or single-instance lock — otherwise a dev
-// run silently quits and forwards its argv to the running installed GenOffice.
-// GENOFFICE_USER_DATA: test drivers point this at a scratch dir so an
+// run silently quits and forwards its argv to the running installed SeuOffice.
+// SEUOFFICE_USER_DATA: test drivers point this at a scratch dir so an
 // automated instance can run alongside the dev instance (separate lock).
 if (!app.isPackaged) {
-  if (process.env.GENOFFICE_USER_DATA) {
-    app.setPath('userData', process.env.GENOFFICE_USER_DATA)
+  if (process.env.SEUOFFICE_USER_DATA) {
+    app.setPath('userData', process.env.SEUOFFICE_USER_DATA)
   } else {
     // One token, no space: a space breaks unquoted shell expansions, rsync
     // targets and .desktop Exec= lines (genoffice#1817). The name follows the
@@ -794,8 +794,8 @@ function bundledCliRunner(): ReturnType<typeof createCliRunner> {
   cliRunner ??= createCliRunner({
     executable: process.execPath,
     entry: app.isPackaged
-      ? join(process.resourcesPath, 'cli', 'genoffice.cjs')
-      : join(APPS_ROOT, '..', 'packages', 'cli', 'dist', 'genoffice.cjs'),
+      ? join(process.resourcesPath, 'cli', 'seuoffice.cjs')
+      : join(APPS_ROOT, '..', 'packages', 'cli', 'dist', 'seuoffice.cjs'),
     // the sheets engine the app itself runs; the CLI's own lookup only knows the packaged layout and a checkout
     env: existsSync(SIDECAR_BIN) ? { XLSX_SIDECAR_PATH: SIDECAR_BIN } : {},
   })
@@ -808,7 +808,7 @@ function bundledCliRunner(): ReturnType<typeof createCliRunner> {
  * project folder only through its write guard, after the conversion succeeded.
  */
 async function markdownDocxBytes(markdown: string): Promise<Uint8Array> {
-  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-kb-docx-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-kb-docx-'))
   try {
     const out = join(dir, 'document.docx')
     await createFileViaCli(bundledCliRunner(), {
@@ -939,7 +939,7 @@ registerPrivilegedSchemes([EPUB_ASSET_SCHEME_PRIVILEGE, DRAWIO_SCHEME_PRIVILEGE]
 
 // ---- UI language ----
 // Persisted in userData/app-settings.json so the editor modules can read the
-// same file when they pick up i18n later. GENOFFICE_LANG overrides for tests.
+// same file when they pick up i18n later. SEUOFFICE_LANG overrides for tests.
 
 const APP_SETTINGS_PATH = () => join(app.getPath('userData'), 'app-settings.json')
 /** Google Drive (decision 0033); registered once this instance holds the single-instance lock */
@@ -1073,9 +1073,9 @@ function currentLang(): Lang {
   if (uiLang) return uiLang
   // the value as written goes along with the UI language it narrows to: what a
   // workbook's dates are formatted for follows it (a Japanese system keeps its formats)
-  if (process.env.GENOFFICE_LANG) {
-    uiLang = normalizeLang(process.env.GENOFFICE_LANG)
-    setUiLang(uiLang, process.env.GENOFFICE_LANG)
+  if (process.env.SEUOFFICE_LANG) {
+    uiLang = normalizeLang(process.env.SEUOFFICE_LANG)
+    setUiLang(uiLang, process.env.SEUOFFICE_LANG)
     return uiLang
   }
   const stored = readAppSettings(APP_SETTINGS_PATH()).language
@@ -1339,7 +1339,7 @@ const tMain = createI18n({
       'The selected folder is not writable and cannot be used as the default save location',
     saveDirFallbackMsg: "Can't save to the Documents folder",
     saveDirFallbackDetail:
-      'GenOffice could not create or write {blocked}, so new files are saved in {using}. If Windows Security\'s "Controlled folder access" blocked it, add GenOffice under "Allow an app through Controlled folder access" and restart the app. You can also pick another folder in Settings → General → Save Location.',
+      'SeuOffice could not create or write {blocked}, so new files are saved in {using}. If Windows Security\'s "Controlled folder access" blocked it, add SeuOffice under "Allow an app through Controlled folder access" and restart the app. You can also pick another folder in Settings → General → Save Location.',
   },
   ko: {
     menuTabSave: '저장',
@@ -1503,7 +1503,7 @@ const tMain = createI18n({
     errSaveDirUnusable: '선택한 폴더에 쓸 수 없어 기본 저장 위치로 사용할 수 없습니다',
     saveDirFallbackMsg: '문서 폴더에 저장할 수 없습니다',
     saveDirFallbackDetail:
-      '{blocked} 폴더를 만들거나 쓰지 못해서, 새 파일은 {using}에 저장합니다. Windows 보안의 "제어된 폴더 액세스"가 막은 것이라면 "제어된 폴더 액세스를 통해 앱 허용"에 GenOffice를 추가한 뒤 앱을 다시 시작하세요. 설정 → 일반 → 저장 위치에서 다른 폴더를 고를 수도 있습니다.',
+      '{blocked} 폴더를 만들거나 쓰지 못해서, 새 파일은 {using}에 저장합니다. Windows 보안의 "제어된 폴더 액세스"가 막은 것이라면 "제어된 폴더 액세스를 통해 앱 허용"에 SeuOffice를 추가한 뒤 앱을 다시 시작하세요. 설정 → 일반 → 저장 위치에서 다른 폴더를 고를 수도 있습니다.',
   },
 })
 
@@ -2698,7 +2698,7 @@ async function newSheetTab(recoverAs?: string): Promise<void> {
     suggestedPath = uniquePathIn(dir, `${tm('untitledSheet')} ${i}.xlsx`)
   try {
     // under the import root so the session-close cleanup removes it like an import copy
-    const tempDir = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+    const tempDir = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
     mkdirSync(tempDir, { recursive: true })
     const backingPath = join(tempDir, basename(suggestedPath))
     // reserve the name before the first await so a second new tab picks another;
@@ -2756,7 +2756,7 @@ function newDocTab(): void {
 
 /** MCP: open a blank docs tab and return its webContents id, for the visible-editor bridge */
 function openBlankDocsTabForMcp(): number {
-  if (!tabManager) throw new Error('GenOffice is not ready')
+  if (!tabManager) throw new Error('SeuOffice is not ready')
   const tabId = tabManager.openDocsTab(undefined, { newBlank: true })
   const view = tabManager.docsTabs().find((t) => t.id === tabId)
   if (!view) throw new Error('the new document tab could not be opened')
@@ -2771,7 +2771,7 @@ function openBlankDocsTabForMcp(): number {
  * marking is skipped, the file name is the agent's business.
  */
 async function openBlankSheetsTabForMcp(): Promise<number> {
-  if (!tabManager) throw new Error('GenOffice is not ready')
+  if (!tabManager) throw new Error('SeuOffice is not ready')
   const filePath = uniquePathIn(defaultSaveDir(), `${tm('untitledSheet')}.xlsx`)
   await atomicWriteFile(filePath, await blankXlsxBuffer())
   const tabId = tabManager.openSheetsTab(filePath)
@@ -2840,7 +2840,7 @@ function abandonBlankTabForMcp(
 
 /** MCP: open a blank slides tab and return its webContents id, for the visible-deck bridge */
 function openBlankSlidesTabForMcp(): number {
-  if (!tabManager) throw new Error('GenOffice is not ready')
+  if (!tabManager) throw new Error('SeuOffice is not ready')
   const tabId = tabManager.openSlidesTab()
   const view = tabManager.slidesTabs().find((t) => t.id === tabId)
   if (!view) throw new Error('the new presentation tab could not be opened')
@@ -3923,7 +3923,7 @@ function registerHomeIpc(): void {
       const displaced: string[] = []
       const result = movePathsInto(sources, targetDir, conflictPolicy, folderErrors(), {
         replaceExisting: (path) => {
-          const parked = join(dirname(path), `.genoffice-replaced-${Date.now()}-${basename(path)}`)
+          const parked = join(dirname(path), `.seuoffice-replaced-${Date.now()}-${basename(path)}`)
           const files = isDir(path) ? trackedFilesUnder(path) : [path]
           renameSync(path, parked)
           return {
@@ -6324,7 +6324,7 @@ async function openPdfAsHwp(): Promise<void> {
 /** The copy of `pdfPath` as a new, untitled Hangul tab that imports it; the copy goes with the tab. */
 function openPdfCopyAsHwp(pdfPath: string): void {
   if (!tabManager) return
-  const dir = join(app.getPath('temp'), 'ieumoffice-pdf-imports', randomUUID())
+  const dir = join(app.getPath('temp'), 'seuoffice-pdf-imports', randomUUID())
   const baseName = basename(pdfPath).replace(/\.pdf$/i, '')
   let tabId: string
   try {
@@ -6538,8 +6538,8 @@ registerIntegrationsIpc({
     ? join(process.resourcesPath, 'cli')
     : join(APPS_ROOT, '..', 'packages', 'cli', 'bin'),
   skillPath: app.isPackaged
-    ? join(process.resourcesPath, 'cli', 'skills', 'ieumoffice', 'SKILL.md')
-    : join(APPS_ROOT, '..', 'skills', 'ieumoffice', 'SKILL.md'),
+    ? join(process.resourcesPath, 'cli', 'skills', 'seuoffice', 'SKILL.md')
+    : join(APPS_ROOT, '..', 'skills', 'seuoffice', 'SKILL.md'),
   cliPackageJson: app.isPackaged
     ? join(process.resourcesPath, 'cli', 'package.json')
     : join(APPS_ROOT, '..', 'packages', 'cli', 'package.json'),
@@ -6563,7 +6563,7 @@ registerPdfConvertUiIpc({
 
 // The person's skills (settings → skills, the AI windows' `/` list and skill
 // reads, skill cards, the agent session's skills). Writes go only to
-// ~/.ieumoffice/skills; removing is the OS trash; GitHub only on request.
+// ~/.seuoffice/skills; removing is the OS trash; GitHub only on request.
 const builtinSkillsDir = (): string =>
   builtinSkillsDirFor({
     isPackaged: app.isPackaged,
@@ -6574,7 +6574,7 @@ const userSkills = createUserSkillsService({
   homeDir: () => homedir(),
   builtinDir: builtinSkillsDir,
   settingsPath: APP_SETTINGS_PATH,
-  tempDir: () => join(tmpdir(), 'ieumoffice-skills'),
+  tempDir: () => join(tmpdir(), 'seuoffice-skills'),
   trash: (path) => shell.trashItem(path),
   // Node's fetch: no browser cookies; the core sets no-redirect and no-credentials per request
   fetch: (url, init) => fetch(url, init),
@@ -6608,7 +6608,7 @@ const userSkillsIpc = registerUserSkillsIpc({
 // through its own send gate. The skill folder is only read here.
 const templateTabs = createTemplateTabs({
   makeCopyDir: async () => {
-    const dir = join(app.getPath('temp'), 'ieumoffice-template-copies', randomUUID())
+    const dir = join(app.getPath('temp'), 'seuoffice-template-copies', randomUUID())
     mkdirSync(dir, { recursive: true })
     return dir
   },
@@ -6661,7 +6661,7 @@ async function openTemplateCopyTab(copy: TemplateCopy): Promise<OpenedCopyTab | 
   for (let i = 2; sheetsSuggestedPathTaken(suggestedPath); i++) {
     suggestedPath = uniquePathIn(dir, `${stem} ${i}${saveExtension}`)
   }
-  const tempDir = join(app.getPath('temp'), 'genoffice-imports', randomUUID())
+  const tempDir = join(app.getPath('temp'), 'seuoffice-imports', randomUUID())
   mkdirSync(tempDir, { recursive: true })
   const backingPath = join(tempDir, `${stem}${extension}`)
   markSheetsUnsavedNew(backingPath, suggestedPath, tempDir)
@@ -6699,7 +6699,7 @@ const headlessExporters: HeadlessExporters = {
 /**
  * The whole `--headless-export` run: no shell window, no menus, no updater,
  * no single-instance lock (a GUI instance may well be running). Prints
- * exactly one line and exits with the genoffice convention (0/1/2/3).
+ * exactly one line and exits with the seuoffice convention (0/1/2/3).
  */
 async function runHeadlessExportEntry(
   parsed: Exclude<HeadlessArgvParse, { kind: 'none' }>,
@@ -6721,7 +6721,7 @@ async function runHeadlessExportEntry(
       resolve()
     })
   })
-  // app.quit() always exits 0; the genoffice envelope needs the real code, and
+  // app.quit() always exits 0; the seuoffice envelope needs the real code, and
   // every teardown this run owns has already happened.
   app.exit(headlessExitCode(outcome))
 }
@@ -6816,7 +6816,7 @@ app.whenReady().then(async () => {
   } catch {
     // an unwritable data folder keeps the plain file; the next save tries again
   }
-  // a registry left by a crashed instance must not block genoffice writes
+  // a registry left by a crashed instance must not block seuoffice writes
   ownsOpenDocumentsRegistry = true
   publishOpenDocuments(OPEN_DOCUMENTS_PATH(), [])
   if (!app.isPackaged) {
@@ -7126,7 +7126,7 @@ app.whenReady().then(async () => {
       },
       diagram: { read: diagramReadText, save: diagramSaveToPath },
     }),
-    // the headless create_*/read_* tools delegate to the bundled genoffice CLI
+    // the headless create_*/read_* tools delegate to the bundled seuoffice CLI
     // (the same engines, no second implementation); it runs on the app's own
     // Node runtime via ELECTRON_RUN_AS_NODE
     cliRunner: bundledCliRunner(),

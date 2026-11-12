@@ -34,7 +34,7 @@ const INSTALL = 'install-here'
 let root: string
 
 function chatFile(name: string, lines: object[]): void {
-  const dir = join(root, '.ieumoffice', 'chats')
+  const dir = join(root, '.seuoffice', 'chats')
   mkdirSync(dir, { recursive: true })
   writeFileSync(join(dir, name), lines.map((line) => `${JSON.stringify(line)}\n`).join(''))
 }

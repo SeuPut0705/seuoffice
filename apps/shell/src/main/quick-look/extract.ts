@@ -3,9 +3,9 @@ import { basename, extname, isAbsolute, resolve } from 'node:path'
 import { inflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
 import JSZip from 'jszip'
-import { readCompoundFile } from '@genoffice/compound-file'
-import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
-import { parseFileToText, type ParsedFile } from '@genoffice/file-parse'
+import { readCompoundFile } from '@seuoffice/compound-file'
+import { assertZipInflatesWithinLimits } from '@seuoffice/docx-engine'
+import { parseFileToText, type ParsedFile } from '@seuoffice/file-parse'
 import {
   QUICK_LOOK_SUPPORTED_EXTS,
   isQuickLookSupportedPath,

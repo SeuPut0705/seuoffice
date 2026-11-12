@@ -16,8 +16,8 @@ import type {
   ShapeRenderNode,
   PictureRenderNode,
   GlyphRun,
-} from '@genoffice/pptx-render'
-import { patternGrid } from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
+import { patternGrid } from '@seuoffice/pptx-render'
 import { classifyCjkScript } from '../shared/cjk-script'
 
 /**
@@ -1610,10 +1610,10 @@ declare global {
   interface Window {
     /** The drawing font stack, for main's ground-truth measureText (shaped-metrics.ts): glyphs a
      *  face lacks must measure in the same fallback font they draw in, or word gaps drift. */
-    __genofficeDisplayFontFamily?: (name: string) => string
+    __seuofficeDisplayFontFamily?: (name: string) => string
   }
 }
-if (typeof window !== 'undefined') window.__genofficeDisplayFontFamily = displayFontFamily
+if (typeof window !== 'undefined') window.__seuofficeDisplayFontFamily = displayFontFamily
 
 /**
  * Baseline anchoring for painted text, measured per family/style at a fixed size

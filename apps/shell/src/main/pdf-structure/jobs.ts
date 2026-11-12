@@ -5,7 +5,7 @@
  *
  * The source PDF is only read. Results go to the target the user picked:
  * Markdown writes `<name>.md`, its pictures under `assets/` and the editor's
- * app-owned list `assets/.genoffice-assets.json` (merged, never replaced);
+ * app-owned list `assets/.seuoffice-assets.json` (merged, never replaced);
  * an `assets/` file the list does not own is never overwritten.
  *
  * Pages the user had read by AI (spec §7) replace their pages in Markdown,

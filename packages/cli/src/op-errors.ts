@@ -75,16 +75,16 @@ export function opSuggestion(f: OpFailure, domain: 'slides' | 'docs' | 'sheets')
   switch (f.reason) {
     case 'unknown_op':
       return f.did_you_mean
-        ? `did you mean "${f.did_you_mean}"? (\`ieumoffice guide ${domain}\` lists every op), then resend the whole batch`
-        : `run \`ieumoffice guide ${domain}\` for the op list, then resend the whole batch`
+        ? `did you mean "${f.did_you_mean}"? (\`seuoffice guide ${domain}\` lists every op), then resend the whole batch`
+        : `run \`seuoffice guide ${domain}\` for the op list, then resend the whole batch`
     case 'out_of_range':
-      return `use an index between ${f.valid_range![0]} and ${f.valid_range![1]} (\`ieumoffice ${domain} read <file> --json\` lists the current ones), then resend the whole batch`
+      return `use an index between ${f.valid_range![0]} and ${f.valid_range![1]} (\`seuoffice ${domain} read <file> --json\` lists the current ones), then resend the whole batch`
     case 'target_not_found':
       return f.did_you_mean
         ? `did you mean "${f.did_you_mean}"? (detail.failures[].available lists the ids on that slide), then resend the whole batch`
-        : `run \`ieumoffice ${domain} read <file> --json\` for the current ids${f.available ? ' (see detail.failures[].available)' : ''}, then resend the whole batch`
+        : `run \`seuoffice ${domain} read <file> --json\` for the current ids${f.available ? ' (see detail.failures[].available)' : ''}, then resend the whole batch`
     case 'unsupported':
-      return `drop op ${f.index}: this file type keeps that feature off (an .odt can be converted with \`ieumoffice convert <file> --to docx\` to use it), then resend the whole batch`
+      return `drop op ${f.index}: this file type keeps that feature off (an .odt can be converted with \`seuoffice convert <file> --to docx\` to use it), then resend the whole batch`
     default:
       return f.usage
         ? `fix op ${f.index} to match its usage line (detail.failures[].usage), then resend the whole batch`

@@ -83,8 +83,8 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { setOpenPathProbe } from '@genoffice/electron-utils'
-import { createXmindDocument } from '@genoffice/xmind-engine'
+import { setOpenPathProbe } from '@seuoffice/electron-utils'
+import { createXmindDocument } from '@seuoffice/xmind-engine'
 import { createMindmapView } from '../src/main/mindmap-main'
 import { MINDMAP_CHANNELS } from '../src/shared/ipc'
 import type { OpenFileResult, SaveMindmapResult } from '../src/shared/ipc'
@@ -92,7 +92,7 @@ import type { OpenFileResult, SaveMindmapResult } from '../src/shared/ipc'
 let dir: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-mindmap-save-conflict-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-mindmap-save-conflict-'))
   showMessageBox.mockReset()
   showSaveDialog.mockReset()
 })

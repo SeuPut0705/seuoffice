@@ -2,7 +2,7 @@ import { mkdir, mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { createXmindDocumentFromOutline } from '@genoffice/xmind-engine'
+import { createXmindDocumentFromOutline } from '@seuoffice/xmind-engine'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -104,7 +104,7 @@ async function newestPage(app: ElectronApplication, urlPart: string): Promise<Pa
 const convertedEvents = (app: ElectronApplication) =>
   app.evaluate((): ConvertedEvent[] => {
     const store = (globalThis as Record<symbol, unknown>)[
-      Symbol.for('genoffice.generate-handoff')
+      Symbol.for('seuoffice.generate-handoff')
     ] as { converted?: ConvertedEvent[] } | undefined
     return (store?.converted ?? []).map((e) => ({
       ...(e.tabId ? { tabId: e.tabId } : {}),
@@ -141,7 +141,7 @@ const span = (label: string, words: string) =>
 test.describe('convert without AI', () => {
   test('map → markdown, map → PPT, markdown → map: each opens a new unsaved tab', async () => {
     test.setTimeout(300_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-convert-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-convert-e2e-'))
     const map = join(dir, 'plan.xmind')
     const notes = join(dir, 'lesson.md')
     const brief = join(dir, 'brief.docx')

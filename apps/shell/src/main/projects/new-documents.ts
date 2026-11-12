@@ -1,6 +1,6 @@
 import { lstat } from 'node:fs/promises'
 import { join } from 'node:path'
-import { PROJECT_FOLDER_NAMES, type ProjectId } from '@genoffice/project-store'
+import { PROJECT_FOLDER_NAMES, type ProjectId } from '@seuoffice/project-store'
 import type { ProjectGuide } from './project-guide'
 import { relativeInside } from './paths'
 import { ProjectWriteRefused } from './write-guard'
@@ -9,7 +9,7 @@ import { ProjectWriteRefused } from './write-guard'
  * New documents the AI makes while a project is chosen (spec 6, invariant 3).
  *
  * The folder rule: the folder of the window's current document when that
- * document is inside the project folder (not under `.ieumoffice/`), else the
+ * document is inside the project folder (not under `.seuoffice/`), else the
  * project folder itself. The home ask has no document, so it is the top. A
  * name already taken gets " (2)", " (3)"... and is never written over. The
  * bytes go through the project guide's write guard only (`writeNewDocument`),
@@ -42,7 +42,7 @@ export const NEW_DOCUMENT_NAME_ATTEMPTS = 1000
 
 /**
  * The folder rule (spec 6): `docPath`'s folder when it is inside `root` and not
- * under `.ieumoffice/`, else `root`. The result keeps the root's spelling.
+ * under `.seuoffice/`, else `root`. The result keeps the root's spelling.
  */
 export function newDocumentFolder(
   root: string,

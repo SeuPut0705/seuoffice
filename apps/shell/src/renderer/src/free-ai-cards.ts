@@ -3,13 +3,13 @@
  * attempt under way and today's quota, so the rules are testable without a DOM.
  * The card (FreeAiCards.tsx) only lays the result out.
  */
-import { freeAiConnected, providerSelectionOf } from '@genoffice/ai-provider/browser'
+import { freeAiConnected, providerSelectionOf } from '@seuoffice/ai-provider/browser'
 import type {
   AiSettings,
   FreeAiConnectFailure,
   FreeAiProviderId,
   FreeAiQuota,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type { StringKey } from './locale'
 
 /** The connect attempt a card is in; `failed` keeps the reason until the next press */

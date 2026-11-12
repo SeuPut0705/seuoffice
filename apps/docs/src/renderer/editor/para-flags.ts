@@ -3,7 +3,7 @@ import {
   type DocDefaults,
   type ParaFormat,
   type StyleDisplay,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { BlockMeta } from '../pagination-types'
 
 export interface DirectParaFlags {

@@ -7,7 +7,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { getSlideNotes, openPptx, type SlideElement } from '@genoffice/pptx-engine'
+import { getSlideNotes, openPptx, type SlideElement } from '@seuoffice/pptx-engine'
 import { expect, test, type Locator } from '@playwright/test'
 import { countOwnEdits, edited, openCoEdited, recoveryTests, type CoEditor } from './collab'
 

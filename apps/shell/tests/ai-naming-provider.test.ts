@@ -6,7 +6,7 @@ import {
   type AiSubscriptionState,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { resolveNamingProvider } from '../src/main/ai-naming-provider'
 
 /**

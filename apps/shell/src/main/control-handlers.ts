@@ -1,5 +1,5 @@
 import { existsSync } from 'node:fs'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import type { WebContents } from 'electron'
 import type {
   ControlReply,
@@ -7,7 +7,7 @@ import type {
   ControlTarget,
   RendererControlReply,
   RendererControlRequest,
-} from '@genoffice/cli/control-protocol'
+} from '@seuoffice/cli/control-protocol'
 import type { TabKind } from '../shared/tabs-api'
 
 export interface ControlHost {
@@ -28,7 +28,7 @@ const TARGET_KIND_BY_TAB: Partial<Record<TabKind, ControlTarget['kind']>> = {
 
 /**
  * Runs one CLI control request against the open tabs. Renderers register
- * `window.__genofficeControl`; the shell evaluates it through the debugger
+ * `window.__seuofficeControl`; the shell evaluates it through the debugger
  * channel, so no preload surface grows and an unloaded document simply
  * answers `not_ready` until its file is in.
  */
@@ -59,7 +59,7 @@ export function controlHandler(host: ControlHost): (req: ControlRequest) => Prom
     const tab = host.findTab(req.path)
     if (!tab) {
       return fail('file_not_open_in_gui', `${PRODUCT_NAME} does not have ${req.path} open`, {
-        suggestion: `ieumoffice open ${req.path}`,
+        suggestion: `seuoffice open ${req.path}`,
       })
     }
     return ask(tab.webContents, { cmd: 'selection' }, host.readyTimeoutMs)
@@ -112,7 +112,7 @@ async function evaluateControl(
 ): Promise<RendererControlReply> {
   if (wc.isDestroyed() || wc.isLoading()) return { status: 'not_ready' }
   const script = `(async () => {
-    const handler = window.__genofficeControl
+    const handler = window.__seuofficeControl
     if (typeof handler !== 'function') return { status: 'not_ready' }
     try {
       return await handler(${JSON.stringify(request)})

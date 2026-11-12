@@ -17,8 +17,8 @@ import { basename, dirname, join, resolve } from 'node:path'
 
 /** Every temporary folder name this module is allowed to remove */
 export const TRACKED_TEMP_PREFIXES = [
-  'genoffice-codex-app-server-',
-  'genoffice-claude-code-',
+  'seuoffice-codex-app-server-',
+  'seuoffice-claude-code-',
 ] as const
 
 const RECORD_PREFIX = 'ai-temp-dir-'

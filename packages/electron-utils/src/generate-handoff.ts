@@ -197,7 +197,7 @@ interface HandoffStore {
   tabIdOf: ((webContentsId: number) => string | undefined) | null
 }
 
-const STORE = Symbol.for('genoffice.generate-handoff')
+const STORE = Symbol.for('seuoffice.generate-handoff')
 /** keep the in-memory event list bounded across a long session */
 const MAX_RUN_EVENTS = 200
 

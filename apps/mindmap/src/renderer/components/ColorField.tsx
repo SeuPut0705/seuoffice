@@ -14,8 +14,8 @@
  * colour is still being chosen, and that colour is applied as it changes.
  */
 import { useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { ColorPicker, colorSwatchName, type ColorPickerStrings } from '@genoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import { ColorPicker, colorSwatchName, type ColorPickerStrings } from '@seuoffice/ui'
 import { type TFunc, useI18n } from '../i18n/locale'
 import type { ShownColor } from './format-model'
 

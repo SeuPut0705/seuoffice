@@ -7,7 +7,7 @@ import {
   type McpServerView,
   type McpToolsBridgeLike,
   type McpWindowState,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import { McpServerButton } from '../src/McpServerButton'
 
 type RawServer = Partial<McpServerView> & { name: string }

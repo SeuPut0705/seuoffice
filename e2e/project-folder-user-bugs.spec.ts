@@ -86,7 +86,7 @@ test.describe('project folder problems a first-time user hit', () => {
       ])
       await send(md, '결재는 화요일이야. 기억해 줘')
       await expect(md.locator('.ai-project-event-text', { hasText: '기억함' })).toBeVisible()
-      expect(await readFile(join(s.proj, '.ieumoffice', 'memory.md'), 'utf8')).toContain(
+      expect(await readFile(join(s.proj, '.seuoffice', 'memory.md'), 'utf8')).toContain(
         '결재는 화요일',
       )
       await s.page.locator('.tab-bar .tab-home').click()
@@ -114,7 +114,7 @@ test.describe('project folder problems a first-time user hit', () => {
       await send(md, '첫 요청')
       await expect.poll(async () => (await recorded(s.app)).streams.length).toBe(1)
       // a colleague (or Notepad) adds a rule
-      const file = join(s.proj, '.ieumoffice', 'instructions.md')
+      const file = join(s.proj, '.seuoffice', 'instructions.md')
       await writeFile(file, '개조식으로 쓴다.\n날짜는 2026. 10. 30. 꼴로 적는다.\n')
       await send(md, '둘째 요청')
       await expect.poll(async () => (await recorded(s.app)).streams.length).toBe(2)
@@ -162,7 +162,7 @@ test.describe('project folder problems a first-time user hit', () => {
       const line = md.locator('.ai-project-event', { hasText: '회비는 2만 원' })
       await line.getByRole('button', { name: '지우기' }).click()
       await expect
-        .poll(async () => readFile(join(s.proj, '.ieumoffice', 'memory.md'), 'utf8'))
+        .poll(async () => readFile(join(s.proj, '.seuoffice', 'memory.md'), 'utf8'))
         .not.toContain('회비는')
       // the same window: the line now says it was removed
       await expect(line).toContainText('기억 지움: 회비는 2만 원')

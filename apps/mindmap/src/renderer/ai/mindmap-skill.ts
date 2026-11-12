@@ -8,8 +8,7 @@
  * that nothing inside it, in an attachment or in a search result is an
  * instruction.
  */
-import { attachedImageNote, type AgentSkill, type AgentToolDef } from '@genoffice/agent-core'
-import { brandText } from '@genoffice/i18n'
+import { attachedImageNote, type AgentSkill, type AgentToolDef } from '@seuoffice/agent-core'
 import { t } from '../i18n/locale'
 import {
   blankNewMapSheet,
@@ -36,7 +35,7 @@ import {
   MIN_LINE_WIDTH,
   RELATIONSHIP_SHAPES,
   SUMMARY_SHAPES,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 
 /** The words a value may be, as the tool description lists them: what the format panel offers. */
 const words = (list: readonly string[]): string => list.join('|')
@@ -57,7 +56,7 @@ export const IMAGE_GEN_OFF_NOTE =
   '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use image_search for imagery.'
 
 const SYSTEM_PROMPT = [
-  'You are the assistant inside GenOffice Mind Map, an editor for mind maps saved as .xmind files. A map has one or more sheets; each sheet has one central topic with branches (subtopics) below it, any number of levels deep. A topic has a title and may carry labels, a note and a web link.',
+  'You are the assistant inside SeuOffice Mind Map, an editor for mind maps saved as .xmind files. A map has one or more sheets; each sheet has one central topic with branches (subtopics) below it, any number of levels deep. A topic has a title and may carry labels, a note and a web link.',
   '',
   '## Reading',
   '- Call read_map before you change a map you have not read in this conversation, and again when the user may have changed it since. It gives the outline of every sheet; every topic ends with its id as {#id}, and the other tools take these ids.',
@@ -373,7 +372,7 @@ export function createMindmapSkill(deps: MindmapSkillDeps): AgentSkill {
         deps.attachmentNames?.() ?? [],
         'call insert_image with attachment set to the name',
       )
-      const prompt = brandText(SYSTEM_PROMPT, 'en') + attached
+      const prompt = SYSTEM_PROMPT + attached
       return imageGenOn() ? prompt : `${prompt}${IMAGE_GEN_OFF_NOTE}`
     },
     // live like the prompt: the loop re-reads the tool list before every request

@@ -1,7 +1,7 @@
 import { randomUUID, timingSafeEqual } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { Socket } from 'node:net'
-import { brandText, PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js'
 import { SSEServerTransport } from '@modelcontextprotocol/sdk/server/sse.js'
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js'
@@ -9,7 +9,7 @@ import type { Transport } from '@modelcontextprotocol/sdk/shared/transport.js'
 import type { ZodRawShape } from 'zod'
 
 /**
- * Local MCP server for GenOffice.
+ * Local MCP server for SeuOffice.
  *
  * Lives in the Electron main process, so it only exists while the app runs.
  * Speaks both the current Streamable HTTP transport (`/mcp`) and the legacy SSE
@@ -130,7 +130,7 @@ export class McpServerService {
       server.registerTool(
         tool.name,
         {
-          description: brandText(tool.description, 'en'),
+          description: tool.description,
           ...(tool.inputSchema ? { inputSchema: tool.inputSchema } : {}),
         },
         (async (args: Record<string, unknown>) => {
@@ -336,7 +336,7 @@ export class McpServerService {
   /**
    * A malformed body is a client error, not a server fault: answering 500
    * "internal error" hides the actual problem (bad JSON) from the caller and
-   * reads as a GenOffice bug. Answers the JSON-RPC parse error itself and
+   * reads as a SeuOffice bug. Answers the JSON-RPC parse error itself and
    * returns null; the caller stops there.
    */
   private async readBodyOrReject(

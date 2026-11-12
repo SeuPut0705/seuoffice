@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentMessage } from '@genoffice/agent-core'
+import type { AgentMessage } from '@seuoffice/agent-core'
 import {
   createProjectChatController,
   useProjectChat,

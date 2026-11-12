@@ -11,7 +11,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 | `src/markdown`        | 나무 → Markdown 글, `assets/`의 그림, 앱 소유 목록(`.genoffice-assets.json`) 항목, 경고                          | `treeToMarkdown`, `mergeAssetManifest`                                                                              |
 | `src/epub`            | 나무 → EPUB 3 바이트. 문서 언어 추정                                                                             | `writeEpub`, `guessLanguageFromText`                                                                                |
 | `src/structured-text` | 나무 → AI 창의 `read_pages`와 `pdf read --structured`가 쓰는 페이지별 구조화 글                                  | `treeToStructuredText`, `formatStructuredPage`                                                                      |
-| `src/store`           | 결과 보관소. AI가 읽은 페이지, 번역, 작업 기록, 읽기 도우미의 카드·핵심 표시·개요, 노트 연결 기록. **Node 전용** | `@genoffice/pdf-structure/store`의 `ResultStore`, `documentHash`                                                    |
+| `src/store`           | 결과 보관소. AI가 읽은 페이지, 번역, 작업 기록, 읽기 도우미의 카드·핵심 표시·개요, 노트 연결 기록. **Node 전용** | `@seuoffice/pdf-structure/store`의 `ResultStore`, `documentHash`                                                    |
 | `src/jobs`            | 문서 작업 엔진. 호출 순서, 재시도, 멈춤, 이어하기, 문서마다 작업 하나                                            | `startAiReadJob`, `startTranslationJob`, `estimate*`, `plan*`, `runJobUnits`                                        |
 | `src/ai-read`         | AI 페이지 읽기의 지시문·요청, 답 해석과 검사, 반복 걸러내기, 보관 형식, 나무에 반영, 미리 고를 페이지            | `buildAiReadRequest`, `createAiReadCallModel`, `applyStoredAiReadings`, `aiReadPreselectPages`, `aiReadVisionCheck` |
 | `src/translate`       | 번역 단위·묶음, 자리 표시자, 지시문, 모델 호출과 다시 보내기, 기본 목표 언어, 번역·대역·부분 결과                | `translationJobParts`, `createTranslationModelCall`, `buildTranslatedTree`, `translationReport`                     |
@@ -113,7 +113,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 
 - `pdf2docx`와 문서 엔진 패키지의 파일을 고치지 않는다. 기존 워드·PPT·엑셀 변환 결과는 바이트 단위로 같아야 한다.
 - 형제 패키지는 상대 경로(`../../../pdf2docx/src/...`, `../../../i18n/src/index`)로 import한다. Electron을 import하지 않는다.
-- Node 전용 코드(`node:fs` 등)는 `src/store` 안에만 둔다. 보관소는 패키지 루트에서 내보내지 않고 `@genoffice/pdf-structure/store`(`src/store/index.ts`)로만 내보낸다. 화면 코드가 루트를 가져와도 Node 모듈이 끌려 들어오지 않아야 한다. `keys.ts`는 순수 코드라 엔진이 직접 가져온다.
+- Node 전용 코드(`node:fs` 등)는 `src/store` 안에만 둔다. 보관소는 패키지 루트에서 내보내지 않고 `@seuoffice/pdf-structure/store`(`src/store/index.ts`)로만 내보낸다. 화면 코드가 루트를 가져와도 Node 모듈이 끌려 들어오지 않아야 한다. `keys.ts`는 순수 코드라 엔진이 직접 가져온다.
 - IR 객체를 바꾸지 않는다. 구조 판단은 작업용 사본(`draft.ts`)에만 적는다.
 - 강등·스캔 페이지는 페이지 그림 블록으로 넣는다. 깨진 글자를 조용히 넣지 않는다.
 - 페이지 지문은 페이지 내용(글자, 그림 객체 원본 바이트, 객체 수, 크기)만으로 만든다. 페이지 위치가 들어가면 순서 변경과 범위 분석에서 보관소 열쇠가 깨진다.
@@ -136,7 +136,7 @@ PDF를 다시 흐르는 글의 **문서 나무**로 바꾸고, 그 나무를 쓰
 
 ## 테스트
 
-- `npm run test -w @genoffice/pdf-structure`, `npm run typecheck -w @genoffice/pdf-structure`. PDFium wasm과 합성 PDF 생성기는 `pdf2docx/tests/helpers`를 상대 경로로 쓴다(`tests/helpers/fixtures.ts`). `pdf-lib`는 저장소 루트의 `node_modules`에 설치된 것을 쓴다.
+- `npm run test -w @seuoffice/pdf-structure`, `npm run typecheck -w @seuoffice/pdf-structure`. PDFium wasm과 합성 PDF 생성기는 `pdf2docx/tests/helpers`를 상대 경로로 쓴다(`tests/helpers/fixtures.ts`). `pdf-lib`는 저장소 루트의 `node_modules`에 설치된 것을 쓴다.
 - 규칙마다 해당 사례와 인접 사례를 둔다. 같은 크기의 줄이 같은 폭이 되도록 다단·페이지 넘김 사례는 고정폭 글꼴(Courier)과 다섯 글자 낱말로 만든다.
 - 제공자는 항상 가짜다. 테스트는 실제 `claude`·`codex`나 네트워크에 닿지 않는다.
 - **보관소 동시 쓰기**(`tests/store-concurrency.test.ts`)는 Node 프로세스 두 개를 `node --import tsx`로 띄워 같은 항목을 번갈아 쓰게 하고, 다른 핸들이 항목을 열어 둔 채로도 바꿔 쓸 수 있는지 본다. Windows의 rename 거절을 실제로 겪는 것은 Windows에서 돌릴 때뿐이다. 보관소의 쓰기 방식을 바꾸면 Windows에서 이 파일을 여러 번 돌려 본다. 시간이 걸리는 테스트라 시간 제한이 길다(60초).

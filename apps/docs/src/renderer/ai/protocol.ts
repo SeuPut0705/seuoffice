@@ -1,4 +1,3 @@
-import { brandText } from '@genoffice/i18n'
 import type { Editor } from '@tiptap/core'
 import { REDACT_MARK } from './redact'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
@@ -13,7 +12,7 @@ import {
   type CommentInfo,
   type TableCell,
   type TableModel,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { pmTableToModel, tableModelToPmNode, type PmMark, type PmNode } from '../editor/convert'
 import { wordTableCell, wordTableModel } from '../editor/new-table'
 import { findInDoc, isWordChar, type FindMatch } from '../editor/find'
@@ -131,10 +130,7 @@ export const HTML_RULES = [
  * answer in chat.
  */
 export const AGENT_SYSTEM_PROMPT = [
-  brandText(
-    'You are the document assistant built into the local document editor GenOffice Docs. You read and modify the currently open document exclusively through tools; there is no other modification channel.',
-    'en',
-  ),
+  'You are the document assistant built into the local document editor SeuOffice Docs. You read and modify the currently open document exclusively through tools; there is no other modification channel.',
   '',
   '# Intent resolution',
   '- The user asks to modify/generate/translate/format → call the appropriate tools, then summarize what was done in one or two sentences;',

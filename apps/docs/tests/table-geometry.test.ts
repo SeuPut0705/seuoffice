@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { TableModel } from '@genoffice/docx-engine'
+import type { TableModel } from '@seuoffice/docx-engine'
 import {
   modelWidthInput,
   resolveTableWidth,

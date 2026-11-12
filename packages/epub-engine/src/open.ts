@@ -17,7 +17,7 @@ import {
   assertZipInflatesWithinLimits,
   DEFAULT_ZIP_LIMITS,
   type ZipLimits,
-} from '@genoffice/zip-gate'
+} from '@seuoffice/zip-gate'
 import JSZip from 'jszip'
 import { decodeEntryText, type DecodedText } from './encoding'
 import {

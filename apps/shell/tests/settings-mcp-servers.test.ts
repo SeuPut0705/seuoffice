@@ -4,8 +4,8 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
-import type { UserSkillView } from '@genoffice/electron-utils/user-skills-channels'
+import { LANGS } from '@seuoffice/i18n'
+import type { UserSkillView } from '@seuoffice/electron-utils/user-skills-channels'
 import type { HomeApi } from '../src/shared/home-api'
 import type {
   McpPasteView,

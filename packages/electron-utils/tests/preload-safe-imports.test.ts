@@ -24,7 +24,7 @@ const NODE_FREE = new Set([
   './outbound-channels',
   './mcp-tools-channels',
   // types and constants only (folder-api.ts imports nothing at runtime)
-  '@genoffice/project-store/folder-api',
+  '@seuoffice/project-store/folder-api',
 ])
 
 function runtimeImports(file: string): string[] {

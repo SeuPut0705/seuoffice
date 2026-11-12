@@ -1,4 +1,4 @@
-import { parseDocx, type ParsedDoc } from '@genoffice/docx-engine'
+import { parseDocx, type ParsedDoc } from '@seuoffice/docx-engine'
 import {
   joinCollab,
   MAX_CHANGE_BYTES,
@@ -204,7 +204,7 @@ describe('track changes while two people co-edit', () => {
     'turns away a page of a build that opened the same file as another document (format %i)',
     async (schema) => {
       // the room above was started by the page's own bridge. A page on format 3 reads a
-      // run-level wrapper as plain text; one on 2 is from before the GenOffice catch-up.
+      // run-level wrapper as plain text; one on 2 is from before the SeuOffice catch-up.
       // Either reads the file differently and must not join it.
       await expect(
         joinCollab(directLink('Carol'), { format: { name: 'docx', schema }, bytes }),

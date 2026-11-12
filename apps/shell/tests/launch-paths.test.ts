@@ -6,7 +6,7 @@ describe('collectLaunchPaths', () => {
   it('collects supported argv files in order and removes duplicates', () => {
     expect(
       collectLaunchPaths(
-        ['GenOffice.exe', 'first.docx', 'notes.rtf', 'second.xlsx', 'first.docx'],
+        ['SeuOffice.exe', 'first.docx', 'notes.rtf', 'second.xlsx', 'first.docx'],
         undefined,
         () => true,
       ),
@@ -55,7 +55,7 @@ describe('collectLaunchPaths', () => {
 
   it('accepts a .tsv from argv or the second-instance payload', () => {
     expect(
-      collectLaunchPaths(['GenOffice.app', '/data/variants.tsv'], undefined, () => true),
+      collectLaunchPaths(['SeuOffice.app', '/data/variants.tsv'], undefined, () => true),
     ).toEqual(['/data/variants.tsv'])
   })
 
@@ -84,53 +84,53 @@ describe('collectLaunchPaths', () => {
    * a path and then thrown away before it ever reached the open route.
    */
   it('accepts the text app extensions from argv', () => {
-    expect(collectLaunchPaths(['GenOffice.app', '/notes.txt'], undefined, () => true)).toEqual([
+    expect(collectLaunchPaths(['SeuOffice.app', '/notes.txt'], undefined, () => true)).toEqual([
       '/notes.txt',
     ])
-    expect(collectLaunchPaths(['GenOffice.app', '/data.json'], undefined, () => true)).toEqual([
+    expect(collectLaunchPaths(['SeuOffice.app', '/data.json'], undefined, () => true)).toEqual([
       '/data.json',
     ])
-    expect(collectLaunchPaths(['GenOffice.app', '/NOTES.TXT'], undefined, () => true)).toEqual([
+    expect(collectLaunchPaths(['SeuOffice.app', '/NOTES.TXT'], undefined, () => true)).toEqual([
       '/NOTES.TXT',
     ])
-    expect(collectLaunchPaths(['GenOffice.app', '/data.json.md'], undefined, () => true)).toEqual([
+    expect(collectLaunchPaths(['SeuOffice.app', '/data.json.md'], undefined, () => true)).toEqual([
       '/data.json.md',
     ])
   })
 
   it('accepts the text app extensions from the second-instance payload', () => {
     expect(
-      collectLaunchPaths(['GenOffice.exe'], { launchPaths: ['/notes.txt'] }, () => true),
+      collectLaunchPaths(['SeuOffice.exe'], { launchPaths: ['/notes.txt'] }, () => true),
     ).toEqual(['/notes.txt'])
   })
 
   it('accepts a mind map file from argv and from the second-instance payload', () => {
     expect(
-      collectLaunchPaths(['GenOffice.exe', 'C:\\maps\\plan.xmind'], undefined, () => true),
+      collectLaunchPaths(['SeuOffice.exe', 'C:\\maps\\plan.xmind'], undefined, () => true),
     ).toEqual(['C:\\maps\\plan.xmind'])
-    expect(collectLaunchPaths(['GenOffice.exe', '/PLAN.XMIND'], undefined, () => true)).toEqual([
+    expect(collectLaunchPaths(['SeuOffice.exe', '/PLAN.XMIND'], undefined, () => true)).toEqual([
       '/PLAN.XMIND',
     ])
     expect(
-      collectLaunchPaths(['GenOffice.exe'], { launchPaths: ['/maps/plan.xmind'] }, () => true),
+      collectLaunchPaths(['SeuOffice.exe'], { launchPaths: ['/maps/plan.xmind'] }, () => true),
     ).toEqual(['/maps/plan.xmind'])
     // a path that is not on disk is not opened
-    expect(collectLaunchPaths(['GenOffice.exe', '/plan.xmind'], undefined, () => false)).toEqual([])
+    expect(collectLaunchPaths(['SeuOffice.exe', '/plan.xmind'], undefined, () => false)).toEqual([])
   })
 
   it('accepts a book from argv and from the second-instance payload', () => {
     expect(
-      collectLaunchPaths(['GenOffice.exe', 'C:\\books\\novel.epub'], undefined, () => true),
+      collectLaunchPaths(['SeuOffice.exe', 'C:\\books\\novel.epub'], undefined, () => true),
     ).toEqual(['C:\\books\\novel.epub'])
     expect(
-      collectLaunchPaths(['GenOffice.exe'], { launchPaths: ['/books/NOVEL.EPUB'] }, () => true),
+      collectLaunchPaths(['SeuOffice.exe'], { launchPaths: ['/books/NOVEL.EPUB'] }, () => true),
     ).toEqual(['/books/NOVEL.EPUB'])
-    expect(collectLaunchPaths(['GenOffice.exe', '/novel.epub'], undefined, () => false)).toEqual([])
+    expect(collectLaunchPaths(['SeuOffice.exe', '/novel.epub'], undefined, () => false)).toEqual([])
   })
 
   it('accepts diagrams, draw.io pictures and Visio drawings, not plain pictures', () => {
     const argv = [
-      'GenOffice.exe',
+      'SeuOffice.exe',
       'C:\\maps\\flow.drawio',
       '/maps/flow.dio',
       '/maps/flow.drawio.svg',
@@ -140,26 +140,26 @@ describe('collectLaunchPaths', () => {
     ]
     expect(collectLaunchPaths(argv, undefined, () => true)).toEqual(argv.slice(1, 6))
     expect(
-      collectLaunchPaths(['GenOffice.exe'], { launchPaths: ['/maps/flow.drawio'] }, () => true),
+      collectLaunchPaths(['SeuOffice.exe'], { launchPaths: ['/maps/flow.drawio'] }, () => true),
     ).toEqual(['/maps/flow.drawio'])
   })
 
   it('accepts a FreeMind / Freeplane map, which no file association claims', () => {
-    const argv = ['GenOffice.exe', 'C:\\maps\\plan.mm', '/maps/PLAN.MM', '/maps/plan.mmap']
+    const argv = ['SeuOffice.exe', 'C:\\maps\\plan.mm', '/maps/PLAN.MM', '/maps/plan.mmap']
     expect(collectLaunchPaths(argv, undefined, () => true)).toEqual(argv.slice(1, 3))
     expect(LAUNCHABLE_EXTS).not.toContain('mm')
   })
 
   it('still drops a path nothing opens', () => {
     // a file that exists but is not a document the shell can route
-    expect(collectLaunchPaths(['GenOffice.app', '/photo.png'], undefined, () => true)).toEqual([])
-    expect(collectLaunchPaths(['GenOffice.app', '/notes.txt'], undefined, () => false)).toEqual([])
+    expect(collectLaunchPaths(['SeuOffice.app', '/photo.png'], undefined, () => true)).toEqual([])
+    expect(collectLaunchPaths(['SeuOffice.app', '/notes.txt'], undefined, () => false)).toEqual([])
   })
 
   it('collects argv and second-instance payload files without duplicates', () => {
     expect(
       collectLaunchPaths(
-        ['GenOffice.exe', 'first.docx', 'second.pptx'],
+        ['SeuOffice.exe', 'first.docx', 'second.pptx'],
         {
           launchPaths: ['first.docx', 'third.pdf', 42, ''],
           launchPath: 'legacy.md',
@@ -171,14 +171,14 @@ describe('collectLaunchPaths', () => {
 
   it('accepts a legacy launchPath payload', () => {
     expect(
-      collectLaunchPaths(['GenOffice.exe'], { launchPath: 'legacy.docx' }, () => true),
+      collectLaunchPaths(['SeuOffice.exe'], { launchPath: 'legacy.docx' }, () => true),
     ).toEqual(['legacy.docx'])
   })
 
   it('falls back to the first existing unsupported argv file', () => {
     expect(
       collectLaunchPaths(
-        ['GenOffice.exe', 'missing.doc', 'legacy.rtf'],
+        ['SeuOffice.exe', 'missing.doc', 'legacy.rtf'],
         undefined,
         (path) => path === 'legacy.rtf',
       ),
@@ -186,7 +186,7 @@ describe('collectLaunchPaths', () => {
     // an existing .doc is no fallback: it opens through the docs import route
     expect(
       collectLaunchPaths(
-        ['GenOffice.exe', 'legacy.doc', 'unsupported.rtf'],
+        ['SeuOffice.exe', 'legacy.doc', 'unsupported.rtf'],
         undefined,
         (path) => path === 'legacy.doc' || path === 'unsupported.rtf',
       ),

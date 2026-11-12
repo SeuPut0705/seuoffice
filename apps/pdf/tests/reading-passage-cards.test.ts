@@ -6,8 +6,8 @@
  * note a card leaves. No provider is reached: the model call is a fake.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { createI18n } from '@genoffice/i18n'
-import type { AgentStreamRequest } from '@genoffice/agent-core'
+import { createI18n } from '@seuoffice/i18n'
+import type { AgentStreamRequest } from '@seuoffice/agent-core'
 import type { PassageCard } from '../../../packages/pdf-structure/src/store/reading'
 import { strings } from '../src/renderer/i18n/strings'
 import type { PdfStoreWriteRequest } from '../src/shared/ipc'

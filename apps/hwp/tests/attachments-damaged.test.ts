@@ -7,8 +7,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { getUiLang, setUiLang } from '@genoffice/i18n'
-import type { Lang } from '@genoffice/i18n'
+import { getUiLang, setUiLang } from '@seuoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 
 const handlers = new Map<string, (...args: never[]) => unknown>()
 
@@ -21,7 +21,7 @@ vi.mock('electron', () => ({
   BrowserWindow: class {},
 }))
 // the real unsaved-files helper, by path: the package root reaches Electron
-vi.mock('@genoffice/electron-utils', async () => ({
+vi.mock('@seuoffice/electron-utils', async () => ({
   showOpenDialogWithMemory: vi.fn(),
   ...(await import('../../../packages/electron-utils/src/unsaved-files')),
 }))
@@ -58,7 +58,7 @@ function memo(refused: boolean): string {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-hwp-attach-damaged-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-hwp-attach-damaged-'))
   langBefore = getUiLang()
 })
 afterEach(() => {

@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
 import JSZip from 'jszip'
-import { buildBlankDocx, parseDocx, saveDocx } from '@genoffice/docx-engine'
+import { buildBlankDocx, parseDocx, saveDocx } from '@seuoffice/docx-engine'
 import { insertTableAt } from '../src/renderer/components/ribbon-tabs'
 import { insertPictureAtSelection } from '../src/renderer/editor/insert-picture'
 import {

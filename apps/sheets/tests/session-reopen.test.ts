@@ -4,11 +4,11 @@ import { continuedOpenOptions, sessionToContinue } from '../src/main/session-reo
 
 const plain = { path: '/docs/report.xlsx', snapshotPath: '/tmp/snap-1', sha256: 'a' }
 const converted = {
-  path: '/tmp/genoffice-imports/abc/book.xlsx',
+  path: '/tmp/seuoffice-imports/abc/book.xlsx',
   snapshotPath: '/tmp/snap-2',
   sha256: 'b',
   suggestSaveAs: '/docs/book.xlsx',
-  importTempDir: '/tmp/genoffice-imports/abc',
+  importTempDir: '/tmp/seuoffice-imports/abc',
   odsConverted: true,
   formulasDropped: 3,
   odsSourcePath: '/docs/book.ods',

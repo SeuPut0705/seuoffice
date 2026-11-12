@@ -8,7 +8,7 @@ import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { tmpdir } from 'node:os'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type * as AgentCore from '@genoffice/agent-core'
+import type * as AgentCore from '@seuoffice/agent-core'
 
 const handlers = new Map<string, (...args: never[]) => unknown>()
 const fsGate = vi.hoisted(() => ({ hold: null as null | Promise<void> }))
@@ -20,8 +20,8 @@ const agentHarness = vi.hoisted(() => ({
   busy: false,
 }))
 
-vi.mock('@genoffice/agent-core', async () => {
-  const actual = await vi.importActual<typeof AgentCore>('@genoffice/agent-core')
+vi.mock('@seuoffice/agent-core', async () => {
+  const actual = await vi.importActual<typeof AgentCore>('@seuoffice/agent-core')
   return {
     ...actual,
     AgentLoop: class MockAgentLoop {
@@ -50,7 +50,7 @@ vi.mock('node:fs/promises', async () => {
   return {
     ...actual,
     readFile: (async (...args: Parameters<typeof actual.readFile>) => {
-      if (fsGate.hold && String(args[0]).includes('genoffice-local-pages')) await fsGate.hold
+      if (fsGate.hold && String(args[0]).includes('seuoffice-local-pages')) await fsGate.hold
       return actual.readFile(...args)
     }) as typeof actual.readFile,
   }
@@ -114,8 +114,8 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 
-import { createBlankPptx, openPptx } from '@genoffice/pptx-engine'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import { createBlankPptx, openPptx } from '@seuoffice/pptx-engine'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import { applySessionTxn, registerSlidesIpc } from '../src/main/slides-main'
 import { buildAllRenderSlides, sessions, type Session } from '../src/main/session-state'
 import { AiPanel } from '../src/renderer/ai/AiPanel'

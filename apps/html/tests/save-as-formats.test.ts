@@ -46,8 +46,8 @@ vi.mock('../../../packages/html2docx/src/drivers/electron', () => ({
     })),
   },
 }))
-vi.mock('@genoffice/odt-engine', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/odt-engine')>()),
+vi.mock('@seuoffice/odt-engine', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/odt-engine')>()),
   docxToOdt,
 }))
 

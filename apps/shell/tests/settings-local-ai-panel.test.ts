@@ -10,8 +10,8 @@ import {
   AI_PROVIDERS,
   AI_SEARCH_PROVIDERS,
   defaultAiSettings,
-} from '@genoffice/ai-provider'
-import type { AiCustomEndpoint, AiSettings } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider'
+import type { AiCustomEndpoint, AiSettings } from '@seuoffice/ai-provider/browser'
 import type { HomeApi } from '../src/shared/home-api'
 import type { SubscriptionApi } from '../src/shared/subscription-api'
 import { LocaleProvider } from '../src/renderer/src/locale'

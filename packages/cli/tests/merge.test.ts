@@ -54,7 +54,7 @@ async function templateDocx(dir: string): Promise<string> {
   return out
 }
 
-describe('genoffice merge', () => {
+describe('seuoffice merge', () => {
   it('fills Korean placeholder keys and reports a Korean key it has no value for', async () => {
     const dir = tempDir()
     const md = join(dir, 'quote.md')

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ReactElement } from 'react'
-import type { Lang, Params } from '@genoffice/i18n'
-import { IconArrowDown, IconArrowLeft, IconArrowUp, IconClose } from '@genoffice/ui/icons'
+import type { Lang, Params } from '@seuoffice/i18n'
+import { IconArrowDown, IconArrowLeft, IconArrowUp, IconClose } from '@seuoffice/ui/icons'
 import {
   PDF_TOOL_ANNOT_KINDS,
   PDF_TOOL_MARGINS,

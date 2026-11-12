@@ -1,4 +1,4 @@
-# packages/i18n (`@genoffice/i18n`)
+# packages/i18n (`@seuoffice/i18n`)
 
 모든 앱과 패키지가 쓰는 i18n의 핵심이다. 지원 언어 목록, 사전의 타입 규칙, 번역 함수, 그리고 제품 이름을 정의하는 단 하나의 자리를 담는다. React·Electron·다른 workspace 패키지에 의존하지 않는다.
 
@@ -41,7 +41,7 @@
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/i18n`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/i18n`. Windows에서 전부 통과한다.
+- 실행: `npm run test -w @seuoffice/i18n`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @seuoffice/i18n`. Windows에서 전부 통과한다.
 - 사전의 키 누락은 테스트가 아니라 타입 검사가 잡는다. 사전을 고쳤으면 그 사전이 속한 workspace의 `typecheck`를 돌린다.
 - 바꾸면 반드시 테스트하는 것: `brandText`의 경계(식별자 안, 파일 이름 안, `{{GenOffice}}`, 한 문장에 여러 번 나올 때, 한국어와 그 밖의 언어), 매개변수 값이 치환되지 않는지, 대체 경로로 나온 글에도 제품 이름이 들어가는지, `normalizeLang`의 경계(`ko-KR`, UI 언어가 아닌 값, 빈 값), `installLang`(저장된 `ja`, 저장값 없는 첫 실행).
 - `platformShortcuts`는 모듈을 불러올 때의 플랫폼으로 고정된다. 변환 규칙은 순수 함수 `macShortcutsToWin`으로 테스트한다.

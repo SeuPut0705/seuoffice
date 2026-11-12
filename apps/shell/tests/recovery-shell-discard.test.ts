@@ -16,7 +16,7 @@ const discardDiagramRecovery = vi.fn()
 
 vi.mock('electron', () => ({ app: { getPath: () => '' } }))
 
-vi.mock('@genoffice/electron-utils', () => ({
+vi.mock('@seuoffice/electron-utils', () => ({
   createRecoveryStore: () => ({}),
   isUntitledIdentity: () => false,
   recoveryEditor: () => null,

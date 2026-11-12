@@ -17,10 +17,10 @@ import {
   safeExternalUrl,
   shouldDeferAutoSave,
   showSaveDialogWithMemory,
-} from '@genoffice/electron-utils'
-import type { SaveDiskState } from '@genoffice/electron-utils'
-import { hwpToText } from '@genoffice/file-parse'
-import { getUiLang } from '@genoffice/i18n'
+} from '@seuoffice/electron-utils'
+import type { SaveDiskState } from '@seuoffice/electron-utils'
+import { hwpToText } from '@seuoffice/file-parse'
+import { getUiLang } from '@seuoffice/i18n'
 import { registerHwpAttachmentIpc } from './attachments-ipc'
 import { registerHwpImageIpc } from './ai-image'
 import { atomicWriteFile } from './atomic-write'
@@ -1205,7 +1205,7 @@ export async function exportHwpPdfHeadless(
   }
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/hwp`, document path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/hwp`, document path passed via argv */
 export function startHwpStandalone(): void {
   registerRendererScheme()
   installNavigationGuard(app)

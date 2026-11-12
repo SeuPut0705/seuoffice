@@ -6,7 +6,7 @@
 import * as fs from 'node:fs'
 import { join, resolve } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
+import { TEMPLATE_FONTS } from '@seuoffice/ui/template-fonts'
 
 // every file a lookup opens or reads, to tell whether it ever touched the folder
 vi.mock('node:fs', async (importOriginal) => {

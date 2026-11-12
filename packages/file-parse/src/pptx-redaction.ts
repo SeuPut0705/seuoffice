@@ -1,5 +1,5 @@
-import { placeholderSource } from '@genoffice/agent-core/redact-core'
-import { REDACT_EL, REDACT_NS } from '@genoffice/agent-core/redact-range'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import { REDACT_EL, REDACT_NS } from '@seuoffice/agent-core/redact-range'
 import { RedactionMarkError } from './redaction-error'
 
 /**

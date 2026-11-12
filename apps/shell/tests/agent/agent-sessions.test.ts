@@ -19,9 +19,9 @@ import type {
   AgentSessionEvent,
   AgentSessionOptions,
   AgentSkillEntry,
-} from '@genoffice/ai-provider/agent-session'
-import type { AiSettings, AiSubscriptionStatus } from '@genoffice/ai-provider'
-import { normalizeAiSettings } from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider/agent-session'
+import type { AiSettings, AiSubscriptionStatus } from '@seuoffice/ai-provider'
+import { normalizeAiSettings } from '@seuoffice/ai-provider'
 import {
   agentInstructions,
   agentInstructionsAndCuts,
@@ -138,12 +138,12 @@ describe('instructions', () => {
     const claude = await agentInstructions('claude-code', project, 'ko', true)
     expect(claude).toContain('Use formal Korean.')
     expect(claude).toContain('Agents file.')
-    expect(claude).toContain('ieumoffice-editor')
+    expect(claude).toContain('seuoffice-editor')
     expect(claude).toContain('"ko"')
     const codex = await agentInstructions('codex', project, 'ko', false)
     expect(codex).toContain('Use formal Korean.')
     expect(codex).not.toContain('Agents file.')
-    expect(codex).not.toContain('ieumoffice-editor')
+    expect(codex).not.toContain('seuoffice-editor')
   })
 
   it('keeps the limit on a long project note, says where the rest is, and reports the cut', async () => {

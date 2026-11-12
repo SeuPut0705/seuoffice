@@ -14,15 +14,15 @@
 import { act, createElement, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamChunk } from '@genoffice/agent-core'
+import type { IpcStreamChunk } from '@seuoffice/agent-core'
 import {
   normalizeAiSettings,
   type AiSettings,
   type AiSubscriptionState,
   type SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
-import { createI18n } from '@genoffice/i18n'
-import { aiProviderDisplayName, aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { createI18n } from '@seuoffice/i18n'
+import { aiProviderDisplayName, aiRunErrorText } from '@seuoffice/ui'
 import { DocumentJobRegistry } from '../../../packages/pdf-structure/src/jobs'
 import {
   blockKeyString,

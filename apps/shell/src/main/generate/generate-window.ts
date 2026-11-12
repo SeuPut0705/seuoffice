@@ -20,8 +20,8 @@ import { randomUUID } from 'node:crypto'
 import { join } from 'node:path'
 import { BrowserWindow, dialog, ipcMain, nativeTheme, shell } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
-import { productName, type Lang } from '@genoffice/i18n'
-import { safeExternalUrl } from '@genoffice/electron-utils'
+import { productName, type Lang } from '@seuoffice/i18n'
+import { safeExternalUrl } from '@seuoffice/electron-utils'
 import {
   GENERATE_CHANNELS,
   type AiTargetKind,

@@ -42,8 +42,8 @@ the page's interactions alone.
 
 ## Verification
 
-Run `npm run test -w @genoffice/html` and
-`npm run typecheck -w @genoffice/html` from the repository root. The math tests
+Run `npm run test -w @seuoffice/html` and
+`npm run typecheck -w @seuoffice/html` from the repository root. The math tests
 cover static rendering, source preservation, file save/reopen/re-edit, undo
 patches, Meditor markup, escaping, unsupported syntax and preview routing.
 Also verify the built Electron app's visual input, virtual keyboard, native

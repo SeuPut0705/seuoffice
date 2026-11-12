@@ -6,10 +6,7 @@
 import { act, createElement, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type {
-  SplitPaneBridge,
-  SplitPaneRole,
-} from '@genoffice/electron-utils/split-pane-bridge'
+import type { SplitPaneBridge, SplitPaneRole } from '@seuoffice/electron-utils/split-pane-bridge'
 import { useAiDock, type AiDockState } from '../src/renderer/ai/use-ai-dock'
 
 const BRIDGE_KEY = 'aiOfficeSplit'

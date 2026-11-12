@@ -10,7 +10,7 @@ import { readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 
 import { formulaViewSheets } from '../src/renderer/formula-view'
 import type { LazyWorkbookState } from '../src/renderer/univer-state'

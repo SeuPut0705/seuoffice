@@ -5,7 +5,7 @@
  * slide-space boxes with box-local M/L/Z paths, ready for addElement + setShapeGeometry.
  */
 import polygonClipping, { type MultiPolygon, type Polygon, type Ring } from 'polygon-clipping'
-import type { PlacedBox, RenderNode, ShapeRenderNode } from '@genoffice/pptx-render'
+import type { PlacedBox, RenderNode, ShapeRenderNode } from '@seuoffice/pptx-render'
 import { shapeToEditablePath, type PathCmd } from './edit-points'
 import { presetToShapeKind } from './konva-adapter'
 

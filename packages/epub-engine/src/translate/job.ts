@@ -23,7 +23,7 @@ import {
   type TranslationJobPlan,
   type TranslationMode,
   type TranslationSend,
-} from '@genoffice/pdf-structure'
+} from '@seuoffice/pdf-structure'
 import { batchEpubTranslationItems, createEpubTranslationModelCall } from './call'
 import type { EpubTranslationUnit } from './units'
 

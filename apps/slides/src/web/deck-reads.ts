@@ -14,7 +14,7 @@ import {
   listSlideLayouts,
   readHeaderFooter,
   type OpenedPptx,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import { tm } from '../main/i18n-main'
 import type { AnimationItem, ShapeKey, SlidesApi } from '../shared/ipc'
 

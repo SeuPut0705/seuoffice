@@ -4,7 +4,7 @@ import { rename, rm } from 'node:fs/promises'
 import { basename, dirname, join } from 'node:path'
 
 import JSZip from 'jszip'
-import { assertZipInflatesWithinLimits } from '@genoffice/zip-gate'
+import { assertZipInflatesWithinLimits } from '@seuoffice/zip-gate'
 
 import type {
   CellState,

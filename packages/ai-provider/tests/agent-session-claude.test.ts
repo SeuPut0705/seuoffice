@@ -265,8 +265,8 @@ describe('what the CLI reports at the start', () => {
     expect(
       claudeAgentInitProblem({
         ...INIT,
-        tools: [...INIT.tools, 'mcp__ieumoffice-editor__read_document'],
-        mcp_servers: [{ name: 'ieumoffice-editor', status: 'connected' }],
+        tools: [...INIT.tools, 'mcp__seuoffice-editor__read_document'],
+        mcp_servers: [{ name: 'seuoffice-editor', status: 'connected' }],
       }),
     ).toBeUndefined()
   })
@@ -301,11 +301,11 @@ describe('what the CLI reports at the start', () => {
       'propose_skill',
       'propose_skill_install',
     ])
-    const server = [{ name: 'ieumoffice-editor', status: 'connected' }]
+    const server = [{ name: 'seuoffice-editor', status: 'connected' }]
     expect(
       claudeAgentInitProblem({
         ...INIT,
-        tools: [...INIT.tools, ...AGENT_APP_MCP_TOOLS.map((t) => `mcp__ieumoffice-editor__${t}`)],
+        tools: [...INIT.tools, ...AGENT_APP_MCP_TOOLS.map((t) => `mcp__seuoffice-editor__${t}`)],
         mcp_servers: server,
       }),
     ).toBeUndefined()
@@ -313,7 +313,7 @@ describe('what the CLI reports at the start', () => {
       expect(
         claudeAgentInitProblem({
           ...INIT,
-          tools: [...INIT.tools, `mcp__ieumoffice-editor__${outside}`],
+          tools: [...INIT.tools, `mcp__seuoffice-editor__${outside}`],
           mcp_servers: server,
         }),
       ).toMatch(/tools/)
@@ -330,7 +330,7 @@ describe('what the CLI reports at the start', () => {
       command: 'dir',
       reason: 'list',
     })
-    expect(claudeAgentAction('mcp__ieumoffice-editor__apply_ops', {})).toMatchObject({
+    expect(claudeAgentAction('mcp__seuoffice-editor__apply_ops', {})).toMatchObject({
       kind: 'app-tool',
     })
     expect(claudeAgentAction('WebSearch', { query: 'tide tables' })).toEqual({
@@ -477,7 +477,7 @@ describe('a session', () => {
     expect(responses[1]).toMatchObject({
       response: { request_id: 'r2', response: { behavior: 'deny' } },
     })
-    expect(responses[1]!.response.response.message).toMatch(/ieumoffice-editor/)
+    expect(responses[1]!.response.response.message).toMatch(/seuoffice-editor/)
     expect(harness.events.some((event) => event.type === 'permission')).toBe(false)
     session.stop()
   })
@@ -684,7 +684,7 @@ describe('relays of the person’s MCP servers (user MCP spec 9)', () => {
     },
     { name: 'notes-2', url: 'http://127.0.0.1:4101/mcp', token: 'relay-tok-2', tools: ['find'] },
   ]
-  const APP_SERVER = { name: 'ieumoffice-editor', status: 'connected' }
+  const APP_SERVER = { name: 'seuoffice-editor', status: 'connected' }
 
   it('accepts this session’s relays and the tools each listed at the start', () => {
     expect(
@@ -743,8 +743,8 @@ describe('relays of the person’s MCP servers (user MCP spec 9)', () => {
   it('never takes a relay named like the app server or of a malformed name', () => {
     expect(
       agentUsableRelays([
-        { name: 'ieumoffice-editor', url: 'u', token: 't', tools: ['create_docx'] },
-        { name: 'IEUMOFFICE-EDITOR', url: 'u', token: 't', tools: [] },
+        { name: 'seuoffice-editor', url: 'u', token: 't', tools: ['create_docx'] },
+        { name: 'SEUOFFICE-EDITOR', url: 'u', token: 't', tools: [] },
         { name: 'a__b', url: 'u', token: 't', tools: [] },
         { name: '_x', url: 'u', token: 't', tools: [] },
         { name: 'x y', url: 'u', token: 't', tools: [] },
@@ -754,8 +754,8 @@ describe('relays of the person’s MCP servers (user MCP spec 9)', () => {
     ).toEqual(['law'])
     expect(
       claudeAgentInitProblem(
-        { ...INIT, tools: [...INIT.tools, 'mcp__ieumoffice-editor__create_docx'] },
-        [{ name: 'ieumoffice-editor', url: 'u', token: 't', tools: ['create_docx'] }],
+        { ...INIT, tools: [...INIT.tools, 'mcp__seuoffice-editor__create_docx'] },
+        [{ name: 'seuoffice-editor', url: 'u', token: 't', tools: ['create_docx'] }],
       ),
     ).toMatch(/tools/)
   })
@@ -806,7 +806,7 @@ describe('relays of the person’s MCP servers (user MCP spec 9)', () => {
           url: 'http://127.0.0.1:4101/mcp',
           headers: { Authorization: 'Bearer relay-tok-2' },
         },
-        'ieumoffice-editor': {
+        'seuoffice-editor': {
           type: 'http',
           url: 'http://127.0.0.1:4000/mcp',
           headers: { Authorization: 'Bearer app-tok' },

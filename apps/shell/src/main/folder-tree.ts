@@ -25,7 +25,7 @@ import type {
 import { documentExtension } from './app-routing'
 import { isValidRenameName } from './rename-validation'
 import { statPathEntries } from './recent-files'
-import { createDirLevels } from '@genoffice/electron-utils'
+import { createDirLevels } from '@seuoffice/electron-utils'
 
 /** files the home tree shows; mirrors the shell's open-dialog filter */
 export const TREE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
@@ -66,7 +66,7 @@ export const TREE_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
 const HIDDEN_DIR_NAMES = new Set(['node_modules', '__macosx'])
 const HIDDEN_FILE_NAMES = new Set(['thumbs.db', 'desktop.ini'])
 /** the Markdown / HTML apps' image folder is app-owned when it holds this manifest */
-const MD_ASSET_MANIFEST = '.genoffice-assets.json'
+const MD_ASSET_MANIFEST = '.seuoffice-assets.json'
 
 export function isSupportedTreeFile(name: string): boolean {
   return TREE_FILE_EXTENSIONS.has(documentExtension(name))

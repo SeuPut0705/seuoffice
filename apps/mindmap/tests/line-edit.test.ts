@@ -14,7 +14,7 @@ import {
   type XmindDocument,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { MapController, type MapHost, type MapNotice } from '../src/renderer/map/controller'
 import { DocumentSession } from '../src/renderer/document/session'
 import type { MapNode } from '../src/renderer/document/convert'

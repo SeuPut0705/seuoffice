@@ -1,8 +1,8 @@
-import type { AiPanelPrefs } from '@genoffice/ui'
-import type { HeadlessExportTarget } from '@genoffice/electron-utils/headless-export'
-import type { Lang } from '@genoffice/i18n'
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
-import type { AiToolCapabilities } from '@genoffice/ai-search'
+import type { AiPanelPrefs } from '@seuoffice/ui'
+import type { HeadlessExportTarget } from '@seuoffice/electron-utils/headless-export'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
+import type { AiToolCapabilities } from '@seuoffice/ai-search'
 import type { HtmlSubscriptionApi } from './subscription-api'
 
 export const HTML_CHANNELS = {
@@ -396,7 +396,7 @@ export interface HtmlApi {
 
 // ---- the generate hand-off (8.5): a new tab opened by "make" takes its request ----
 
-/** html-owned channels over the shell's shared hand-off queue (`@genoffice/electron-utils/generate-handoff`) */
+/** html-owned channels over the shell's shared hand-off queue (`@seuoffice/electron-utils/generate-handoff`) */
 export const HTML_HANDOFF_CHANNELS = {
   /** invoke → `HtmlGenerateHandoff | null`: the request left for this view, once */
   take: 'html:handoff-take',

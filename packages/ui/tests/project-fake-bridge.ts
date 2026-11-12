@@ -9,7 +9,7 @@ import type {
   ProjectFolderApi,
   ProjectSelection,
   OpenProjectChatEvent,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 
 /** A project context bundle with sensible defaults */
 export function contextBundle(patch: Partial<ProjectContextBundle> = {}): ProjectContextBundle {

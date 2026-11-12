@@ -59,9 +59,9 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedFamily: () => null,
   shapedMeasure: () => ({ width: 0 }),
 }))
-import { createBlankPptx } from '@genoffice/pptx-engine'
-import { encryptOoxml } from '@genoffice/electron-utils/office-encryption'
-import { setUiLang } from '@genoffice/i18n'
+import { createBlankPptx } from '@seuoffice/pptx-engine'
+import { encryptOoxml } from '@seuoffice/electron-utils/office-encryption'
+import { setUiLang } from '@seuoffice/i18n'
 import { tm } from '../src/main/i18n-main'
 import { registerSlidesIpc, setSlidesPasswordPrompt } from '../src/main/slides-main'
 import { sessions } from '../src/main/session-state'

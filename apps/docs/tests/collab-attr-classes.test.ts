@@ -1,4 +1,4 @@
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import type { Json } from '@seuoffice/collab/client'
 import { getSchema } from '@tiptap/core'
 import { readFileSync } from 'node:fs'

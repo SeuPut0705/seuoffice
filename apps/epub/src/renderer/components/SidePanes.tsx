@@ -4,7 +4,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import type { EpubTocEntry } from '@genoffice/epub-engine'
+import type { EpubTocEntry } from '@seuoffice/epub-engine'
 import { useI18n } from '../i18n/locale'
 import type { BookSearchHit } from '../reader/book-search'
 import { IconClose, IconSearch } from './icons'

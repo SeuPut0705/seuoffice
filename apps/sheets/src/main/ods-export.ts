@@ -14,7 +14,7 @@ import { basename, dirname, join } from 'node:path'
 import {
   promoteFileAtomically,
   type ArchiveClient,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-package-io'
 
 import { readWorkbookRedactionPart } from './workbook-redactions'
 import type { OdsConversionResult, OdsDroppedCounts } from './xlsx-sidecar-client'
@@ -116,7 +116,7 @@ export async function exportWorkbookAsOds(input: {
   targetPath: string
   confirmLoss: (losses: readonly OdsLoss[]) => Promise<boolean>
 }): Promise<OdsExportOutcome> {
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-ods-export-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-ods-export-'))
   const tempOds = join(workDir, `${basename(input.targetPath).replace(/\.ods$/i, '')}.ods`)
   const verifyXlsx = join(workDir, 'verify.xlsx')
   try {

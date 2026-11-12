@@ -62,7 +62,7 @@ export const CLAUDE_AGENT_TOOLS = [
 ] as const
 
 /** Name of the app's MCP server for open documents, as the programs see it */
-export const APP_MCP_SERVER_NAME = 'ieumoffice-editor'
+export const APP_MCP_SERVER_NAME = 'seuoffice-editor'
 
 /**
  * The tools of the app's MCP server an agent session gets (spec 6.6): the

@@ -34,13 +34,13 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - 자원 정리는 좁게 한다. 문서 루트에서는 그림·차트·다이어그램·하이퍼링크·OLE 관계만 끊고, 머리글처럼 살아남은 다른 파트가 가리키는 대상은 남기며, 모르는 종류나 사용자 정의 파트는 지우지 않는다.
 - 새 id는 기존 것과 겹치지 않게 낸다. 관계 id는 따옴표 종류와 `=` 주변 공백에 상관없이 읽은 최대값 다음부터, `wp:docPr` id는 9000번대에서 문서에 이미 있는 값을 피해, 책갈피 id는 문서 최대값 위에서 낸다. 이미 있는 id를 "없다"고 읽으면 중복 id가 생기고 Word가 복구를 묻는다.
 - 문서 안에 남는 이름은 바꾸지 않는다: 새 그림 파트 `word/media/aidocs<N>.<확장자>`, 잉크 그림의 `wp:docPr` 이름 접두 `aidocs-ink`와 파트 `word/media/aidocsink<N>.png`. 다시 열었을 때 자기가 만든 것을 알아보는 열쇠이고, 원본 프로그램과 주고받는 문서에 이미 들어 있다.
-- 지연 미디어의 URL 스킴 `genoffice-docx-media`와 자리표시자 머리말 `GENOFFICE-LAZY-MEDIA`도 바꾸지 않는다. 자리표시자가 든 zip은 렌더러에 건네는 사본일 뿐이다. 사용자 파일로 쓰기 전에는 반드시 `materializeDocx`로 원본 바이트를 되돌린다.
+- 지연 미디어의 URL 스킴 `genoffice-docx-media`와 자리표시자 머리말 `SEUOFFICE-LAZY-MEDIA`도 바꾸지 않는다. 자리표시자가 든 zip은 렌더러에 건네는 사본일 뿐이다. 사용자 파일로 쓰기 전에는 반드시 `materializeDocx`로 원본 바이트를 되돌린다.
 - 열 때 거부하는 한도는 파트 10,000개, 파트당 512 MiB, 합계 1.5 GiB(`DOCX_ZIP_LIMITS`)이고 zip64와 암호화 항목도 거부한다. `loadDocxZip`은 파트를 실제로 풀어 보는 검사를 JSZip 로드보다 먼저 돌린다. 이 순서를 바꾸지 않는다.
 - 그 밖의 방어 상한: 표 중첩 8단계 초과는 1×1 표로 납작하게 만든다. `altChunk` 64 MiB, gzip 메타파일 해제 64 MiB, TIFF 1억 5천만 픽셀·한 변 16,384, 차트 캐시 점 1,048,576개·계열 256개, 지연 미디어 경로 512자(`..` 마디 거부). 보호 암호의 `spinCount`는 1,000,000으로 자른다.
 - 깨진 XML이 문서 전체를 실패시키면 안 된다. 파싱하지 못한 문단은 원본 바이트를 지닌 `passthrough` 블록이 되고, 읽히지 않는 `styles.xml`은 빈 스타일 표로 내려간다.
 - Electron과 UI에 의존하지 않는다. 기본 진입점은 Docs 렌더러 번들에 들어가므로 `node:*`를 import하지 않는다. Node 전용 코드는 `./zip-splice` 하위 경로에만 두고, `zip-load.ts`가 `zip-splice`를 import하게 만들지 않는다(테스트가 막고 있다).
 - `src/vendor/`는 가져온 원본과 바이트가 같아야 한다. 포매터 대상에서도 빠져 있다.
-- 엔진 동작은 이 저장소에서 사람이 정해 고친다. 원본(GenOffice)과 달라진 것과 그것을 지키는 시험은 "원본과 다른 점" 절에 적는다(결정 0092). 원본 커밋을 옮겨 올 때 충돌이 나면 그 절의 동작을 남긴다. 파일 이동, 재포맷, 이름 변경을 하지 않고 `@genoffice/*` 이름을 그대로 둔다.
+- 엔진 동작은 이 저장소에서 사람이 정해 고친다. 원본(GenOffice)과 달라진 것과 그것을 지키는 시험은 "원본과 다른 점" 절에 적는다(결정 0092). 원본 커밋을 옮겨 올 때 충돌이 나면 그 절의 동작을 남긴다. 파일 이동, 재포맷, 이름 변경을 하지 않고 `@seuoffice/*` 이름을 그대로 둔다.
 
 ## 이 모듈의 방식
 
@@ -85,7 +85,7 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 
 ## 테스트
 
-- 패키지 폴더에서 `npx vitest run`, 또는 저장소 루트에서 `npm run test -w @genoffice/docx-engine`. 테스트 타임아웃은 20초다.
+- 패키지 폴더에서 `npx vitest run`, 또는 저장소 루트에서 `npm run test -w @seuoffice/docx-engine`. 테스트 타임아웃은 20초다.
 - 단위 테스트는 `tests/helpers/build-docx.ts`로 docx를 메모리에서 만들고, `tests/fixtures/`에는 메타파일 견본만 있다. 엔진 테스트를 돌리는 데 `npm run fixtures`는 필요 없다.
 - `npm run fixtures`는 `fixtures/generated/*.docx`를 다시 만든다. 이 파일들은 저장소에 들어 있고 CI가 생성 결과와 커밋된 파일의 차이를 검사한다. 생성기(`scripts/generate-fixtures.ts`, `tests/helpers/build-docx.ts`)를 바꿨다면 다시 만들어 함께 커밋한다.
 - 열기·저장 경로를 건드리면 왕복 테스트로 증명한다. 편집 없음 → 결과가 원본 파일과 바이트 동일, 한 블록 편집 → 다른 zip 항목과 다른 `w:p`가 바이트 동일(`tests/roundtrip.test.ts`의 형태).

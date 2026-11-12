@@ -4,8 +4,8 @@ import {
   AiMark,
   aiSubscriptionProviderName,
   aiSubscriptionText,
-} from '@genoffice/ui'
-import { FREE_AI_PROVIDERS, freeAiConnected } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ui'
+import { FREE_AI_PROVIDERS, freeAiConnected } from '@seuoffice/ai-provider/browser'
 import appIcon from './assets/app-icon.png'
 import { FirstConnectionDialog } from './FirstConnectionNotice'
 import { FreeAiCards, useAiSettings as useFreeAiSettings } from './FreeAiCards'

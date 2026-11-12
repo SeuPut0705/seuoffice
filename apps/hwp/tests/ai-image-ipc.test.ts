@@ -18,7 +18,7 @@ vi.mock('electron', () => ({
 
 const generateImageTool = vi.fn()
 const analyzeMediaTool = vi.fn()
-vi.mock('@genoffice/ai-search', () => ({
+vi.mock('@seuoffice/ai-search', () => ({
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
   analyzeMediaTool: (...args: unknown[]) => analyzeMediaTool(...args),
   documentMediaRoots: (path: string | null, pasted: string) =>
@@ -27,12 +27,12 @@ vi.mock('@genoffice/ai-search', () => ({
     run(new AbortController().signal),
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   sharedSubscriptionStatuses: () => ({ codex: 'ready' }),
 }))
 
 const fetchImageBytes = vi.fn()
-vi.mock('@genoffice/electron-utils/fetch-image-bytes', () => ({
+vi.mock('@seuoffice/electron-utils/fetch-image-bytes', () => ({
   fetchImageBytes: (...args: unknown[]) => fetchImageBytes(...args),
 }))
 
@@ -77,7 +77,7 @@ describe('hwp image channels', () => {
     expect(options.context).toEqual({ path: 'screen', statuses: { codex: 'ready' } })
     const roots = options.mediaRoots as string[]
     expect(roots[0]).toBe('/rootsC:/docs/a.hwp')
-    expect(roots[1]).toContain('genoffice-pasted')
+    expect(roots[1]).toContain('seuoffice-pasted')
     expect(options.signal).toBeInstanceOf(AbortSignal)
   })
 
@@ -87,7 +87,7 @@ describe('hwp image channels', () => {
     await handlers.get(HWP_CHANNELS.aiGenerateImage)!({ sender }, { prompt: 'x' })
     const roots = (generateImageTool.mock.calls[0]![2] as { mediaRoots: string[] }).mediaRoots
     expect(roots).toHaveLength(1)
-    expect(roots[0]).toContain('genoffice-pasted')
+    expect(roots[0]).toContain('seuoffice-pasted')
   })
 
   it('fetches through the shared gate, which decides which URLs may be read', async () => {

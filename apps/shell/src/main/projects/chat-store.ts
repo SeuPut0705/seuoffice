@@ -21,13 +21,13 @@ import {
   type OpenProjectChatResult,
   type RenameProjectChatArgs,
   type ToolActivity,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { plainFileIn, plainFolderEntries, readFolderText } from './folder-files'
 import type { ProjectGuide } from './project-guide'
 import { hasForeignMessage } from './trust'
 
 /**
- * Chats inside a project folder (spec 3, 5.3, 5.7): `.ieumoffice/chats/<chatId>.json`
+ * Chats inside a project folder (spec 3, 5.3, 5.7): `.seuoffice/chats/<chatId>.json`
  * holds the chat info and `<chatId>.jsonl` one message per line.
  *
  * The record format, the storage caps and the lenient tail reading mirror the

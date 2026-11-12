@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import JSZip from 'jszip'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'
 
@@ -61,7 +61,7 @@ async function fixtures(): Promise<{ dir: string; original: string; revised: str
   return { dir, original, revised }
 }
 
-describe('genoffice docs compare', () => {
+describe('seuoffice docs compare', () => {
   it('writes a redline with the differences marked as tracked changes', async () => {
     const { dir, original, revised } = await fixtures()
     const out = join(dir, 'redline.docx')

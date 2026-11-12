@@ -18,7 +18,7 @@ import type {
   ProjectChatInfo,
   ProjectChatMessage,
   ProjectTrustAnswer,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { ProjectGuide } from '../src/main/projects/project-guide'
 import {
   CHAT_TITLE_CHARS,
@@ -86,7 +86,7 @@ async function addProject(
 }
 
 function chatsDir(root: string): string {
-  return join(root, '.ieumoffice', 'chats')
+  return join(root, '.seuoffice', 'chats')
 }
 
 function infoOf(root: string, chatId: string): ProjectChatInfo {
@@ -171,7 +171,7 @@ describe('new chat ids', () => {
     const b = await store.newChat(id)
     expect(a.chatId).toMatch(/^[A-Za-z0-9_-]+$/)
     expect(a.chatId).not.toBe(b.chatId)
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(root, '.seuoffice'))).toBe(false)
   })
 
   it('skips an id whose files already exist', async () => {
@@ -193,7 +193,7 @@ describe('appending', () => {
     const ref = { projectId: id, ...(await store.newChat(id)) }
     const first = await store.append(args(ref, 'user', 'hello'), home)
     expect(first.status).toBe('pending')
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(root, '.seuoffice'))).toBe(false)
     expect(await store.listChats(id)).toEqual([])
 
     const reply = await store.append(args(ref, 'assistant', 'hi'), home)
@@ -215,7 +215,7 @@ describe('appending', () => {
       documents: [],
     })
     // The first write also gives the folder its identity
-    expect(existsSync(join(root, '.ieumoffice', 'project.json'))).toBe(true)
+    expect(existsSync(join(root, '.seuoffice', 'project.json'))).toBe(true)
   })
 
   it('materializes the buffer early at 200 opening messages', async () => {
@@ -666,8 +666,8 @@ describe('rename and delete', () => {
 describe('unwritable folders (spec 5.7)', () => {
   it('surfaces unwritable, keeps the messages, and writes them after a retry', async () => {
     const { id, root } = await addProject('p')
-    // `.ieumoffice` as a plain file: every write into it fails
-    writeFileSync(join(root, '.ieumoffice'), 'blocker')
+    // `.seuoffice` as a plain file: every write into it fails
+    writeFileSync(join(root, '.seuoffice'), 'blocker')
     const store = makeStore()
     const ref = { projectId: id, ...(await store.newChat(id)) }
     expect((await store.append(args(ref, 'user', 'q'), home)).status).toBe('pending')
@@ -675,7 +675,7 @@ describe('unwritable folders (spec 5.7)', () => {
     expect(guide.isUnwritable(id)).toBe(true)
     expect(await store.append(args(ref, 'user', 'q2'), home)).toEqual({ status: 'unwritable' })
 
-    rmSync(join(root, '.ieumoffice'))
+    rmSync(join(root, '.seuoffice'))
     expect(await guide.retryUnwritable(id)).toEqual({ status: 'ok' })
     const after = await store.append(args(ref, 'assistant', 'r2'), home)
     expect(after.status).toBe('saved')
@@ -710,7 +710,7 @@ describe('append events', () => {
 
   it('emits nothing when the write fails', async () => {
     const { id, root } = await addProject('p')
-    writeFileSync(join(root, '.ieumoffice'), 'blocker')
+    writeFileSync(join(root, '.seuoffice'), 'blocker')
     const store = makeStore()
     const listener = vi.fn()
     store.onAppended(listener)

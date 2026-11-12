@@ -19,7 +19,7 @@ import {
   queueGenerateHandoff,
   resetGenerateHandoffsForTest,
   type GenerateHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import {
   SLIDES_HANDOFF_RUN_STARTED,
   SLIDES_HANDOFF_TAKE,

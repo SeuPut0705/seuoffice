@@ -19,7 +19,7 @@
  *
  * Everything here is pure: values in, values out.
  */
-import type { ViewRunStyle, ViewTitleRun, ViewTopicStyle } from '@genoffice/xmind-engine'
+import type { ViewRunStyle, ViewTitleRun, ViewTopicStyle } from '@seuoffice/xmind-engine'
 import {
   decorationValue,
   ownTextStyle,

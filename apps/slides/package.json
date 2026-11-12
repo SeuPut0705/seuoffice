@@ -1,6 +1,6 @@
 {
-  "name": "@genoffice/slides",
-  "productName": "GenOffice Slides",
+  "name": "@seuoffice/slides",
+  "productName": "SeuOffice Slides",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -18,17 +18,17 @@
     "dist:dir": "electron-vite build && electron-builder --dir"
   },
   "devDependencies": {
-    "@genoffice/agent-core": "*",
-    "@genoffice/ai-provider": "*",
-    "@genoffice/ai-search": "*",
-    "@genoffice/file-parse": "*",
-    "@genoffice/font-metrics": "*",
-    "@genoffice/i18n": "*",
-    "@genoffice/pptx-engine": "*",
-    "@genoffice/pptx-ops": "*",
-    "@genoffice/pptx-render": "*",
-    "@genoffice/project-store": "*",
-    "@genoffice/ui": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/ai-provider": "*",
+    "@seuoffice/ai-search": "*",
+    "@seuoffice/file-parse": "*",
+    "@seuoffice/font-metrics": "*",
+    "@seuoffice/i18n": "*",
+    "@seuoffice/pptx-engine": "*",
+    "@seuoffice/pptx-ops": "*",
+    "@seuoffice/pptx-render": "*",
+    "@seuoffice/project-store": "*",
+    "@seuoffice/ui": "*",
     "@types/opentype.js": "^1.3.8",
     "@types/pngjs": "^6.0.5",
     "@types/react": "^19.2.14",
@@ -50,10 +50,10 @@
     "vite": "^7.3.7",
     "vitest": "^4.1.12"
   },
-  "author": "GenOffice",
+  "author": "SeuOffice",
   "build": {
     "appId": "com.genoffice.slides",
-    "productName": "GenOffice Slides",
+    "productName": "SeuOffice Slides",
     "electronVersion": "43.3.0",
     "directories": {
       "output": "release"
@@ -92,11 +92,11 @@
     }
   },
   "dependencies": {
-    "@genoffice/electron-utils": "*",
+    "@seuoffice/electron-utils": "*",
     "acorn": "^8.18.0",
     "harfbuzzjs": "^1.4.0",
     "pngjs": "^7.0.0",
     "utif2": "^4.1.0",
-    "@genoffice/agent-core": "*"
+    "@seuoffice/agent-core": "*"
   }
 }

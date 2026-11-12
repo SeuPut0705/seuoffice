@@ -8,7 +8,7 @@
  *   - an alias that arrives later notifies the subscribers
  */
 
-import type { ParsedDoc } from '@genoffice/docx-engine'
+import type { ParsedDoc } from '@seuoffice/docx-engine'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 /** the family at the head of a css font chain */
@@ -71,7 +71,7 @@ await import('../src/renderer/line-metrics')
 // the localized FangSong spelling, escaped: a raw Han object key trips the
 // public-hygiene check, and quoting does not survive prettier (quoteProps
 // as-needed strips quotes from a valid identifier) — a computed key with an
-// escaped literal carries the same bytes in ASCII source (genoffice review r5)
+// escaped literal carries the same bytes in ASCII source (seuoffice review r5)
 const FANGSONG = '\u4eff\u5b8b_GB2312'
 
 describe('font aliases', () => {

@@ -1,7 +1,7 @@
 import { expect, test, type Page } from '@playwright/test'
 import JSZip from 'jszip'
-import { parseDocx } from '@genoffice/docx-engine'
-import { docxToOdt } from '@genoffice/odt-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
+import { docxToOdt } from '@seuoffice/odt-engine'
 import { openSource } from './helpers'
 
 // a journey draws its labels as <foreignObject> by default, and a state diagram's

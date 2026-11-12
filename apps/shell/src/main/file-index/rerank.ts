@@ -1,5 +1,5 @@
 import { basename, dirname } from 'node:path'
-import { withoutUnsavedFiles } from '@genoffice/electron-utils/unsaved-files'
+import { withoutUnsavedFiles } from '@seuoffice/electron-utils/unsaved-files'
 import {
   isCloudflareEndpoint,
   type DecisionEndpoint,

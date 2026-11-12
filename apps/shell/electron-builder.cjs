@@ -33,7 +33,7 @@ const { join } = require('node:path')
 const APP_ID = 'com.seuput.seuoffice'
 const PRODUCT_NAME = 'SeuOffice'
 // package.json "name" of the packaged app (the workspace keeps upstream's
-// "@genoffice/shell"): electron-builder and electron-updater name the per-user
+// "@seuoffice/shell"): electron-builder and electron-updater name the per-user
 // folder that caches the installer and downloaded updates after it
 // (<local app data>/<name>-updater), so a shared name is a shared folder.
 const PACKAGED_APP_NAME = 'seuoffice'
@@ -53,20 +53,20 @@ if (UPDATE_CHANNEL !== 'latest' && UPDATE_CHANNEL !== 'stable') {
   throw new Error(`SEUOFFICE_UPDATE_CHANNEL must be "latest" or "stable", got "${UPDATE_CHANNEL}"`)
 }
 
-// GENOFFICE_MAC_X64=1 — package the Intel (x64) dmg/zip alongside arm64
+// SEUOFFICE_MAC_X64=1 — package the Intel (x64) dmg/zip alongside arm64
 // (decision 0065); both are the same unsigned beta, signed ad hoc. No
 // workflow sets it: the SeuOffice release (electron-builder.seuoffice.cjs)
 // refuses it and ships arm64 only. Off by default, so a local `dist:mac`
 // stays one arm64 package that needs no universal sidecar.
-const includeMacX64 = process.env.GENOFFICE_MAC_X64 === '1'
+const includeMacX64 = process.env.SEUOFFICE_MAC_X64 === '1'
 
-// GENOFFICE_WIN_ARM64=1 — package the Windows ARM64 installer instead of x64.
+// SEUOFFICE_WIN_ARM64=1 — package the Windows ARM64 installer instead of x64.
 // CI runs it as a second electron-builder pass (own BUILD_DIR) after the
 // unchanged x64 pass, so the two never share an output dir or a sidecar path:
 // the sidecar comes from the matching cargo target dir and is checked to
 // exist at beforePack because electron-builder exits 0 on a missing
 // extraResources source (Sheets would ship dead on every ARM install).
-const winArm64 = process.env.GENOFFICE_WIN_ARM64 === '1'
+const winArm64 = process.env.SEUOFFICE_WIN_ARM64 === '1'
 // 7-Zip packs ARM64 executables with its ARM64 branch filter, which the NSIS
 // install-time extractor (Nsis7z) cannot decode: it silently skips
 // the app executable and every dll (electron-builder#9983). BCJ it can decode.
@@ -91,7 +91,7 @@ const winSidecarCandidates = [
 const WIN_SIDECAR =
   winSidecarCandidates.find((rel) => existsSync(join(__dirname, rel))) ?? winSidecarCandidates[0]
 
-// GENOFFICE_LINUX_ARM64=1 — package the arm64 Linux artifacts instead of x64.
+// SEUOFFICE_LINUX_ARM64=1 — package the arm64 Linux artifacts instead of x64.
 // Config support only: no CI job runs a second Linux pass yet, and whether
 // Linux arm64 joins the release matrix is decided on the maintainers' side.
 // With the flag set the AppImage/deb/rpm targets switch to arm64, and the
@@ -101,7 +101,7 @@ const WIN_SIDECAR =
 // beforePack checks the ELF machine type either way, because
 // electron-builder exits 0 on a missing/odd extraResources source and would
 // otherwise ship Sheets dead on every install.
-const linuxArm64 = process.env.GENOFFICE_LINUX_ARM64 === '1'
+const linuxArm64 = process.env.SEUOFFICE_LINUX_ARM64 === '1'
 const linuxSidecarTarget = linuxArm64 ? 'aarch64-unknown-linux-gnu' : 'x86_64-unknown-linux-gnu'
 // Mirrors the Windows candidate list above: the explicit triple first, then
 // cargo's plain host-native output — but only when the host really is the
@@ -263,7 +263,7 @@ function assertUniversalVisionOcr() {
 // Runs from the beforePack hook, not at module load: gen-third-party-notices
 // requires this config to read extraResources, and the dist:* scripts run
 // notices before build:all, when the out dirs legitimately don't exist yet.
-// When the mac build packages BOTH arches (GENOFFICE_MAC_X64=1) its
+// When the mac build packages BOTH arches (SEUOFFICE_MAC_X64=1) its
 // extraResources entry is a single path shared by the two packs, so the
 // sidecar there must be a lipo fat binary — a host-arch-only build (the plain
 // `native:build` dev path) would silently ship an arm64 sidecar inside the
@@ -273,7 +273,7 @@ function assertUniversalSidecar() {
   const sidecar = join(__dirname, '../sheets/native/xlsx-engine/target/release/xlsx-sidecar')
   if (!existsSync(sidecar)) {
     throw new Error(
-      `mac extraResources source missing: ${sidecar} (run "npm run native:build:universal -w @genoffice/sheets" first)`,
+      `mac extraResources source missing: ${sidecar} (run "npm run native:build:universal -w @seuoffice/sheets" first)`,
     )
   }
   const archs = execFileSync('lipo', ['-archs', sidecar], { encoding: 'utf8' }).trim().split(/\s+/)
@@ -281,7 +281,7 @@ function assertUniversalSidecar() {
     if (!archs.includes(want)) {
       throw new Error(
         `xlsx-sidecar is [${archs.join(', ')}] but both mac arch packages ship it — ` +
-          'run "npm run native:build:universal -w @genoffice/sheets" before packaging mac',
+          'run "npm run native:build:universal -w @seuoffice/sheets" before packaging mac',
       )
     }
   }
@@ -299,7 +299,7 @@ function assertModuleTreesPresent() {
     '../hwp/out',
     '../epub/out',
     '../diagram/out/drawio/index.html',
-    '../../packages/cli/dist/genoffice.cjs',
+    '../../packages/cli/dist/seuoffice.cjs',
     '../../packages/cli/dist/node_modules/jsdom',
   ]) {
     if (!existsSync(join(__dirname, rel))) {
@@ -321,14 +321,14 @@ function assertPdfStructureProcessBuilt() {
     existsSync(dir) && readdirSync(dir).some((f) => /^pdf-structure-process-.+\.js$/.test(f))
   if (!found) {
     throw new Error(
-      'out/main/pdf-structure-process-*.js missing (run "npm run build -w @genoffice/shell" first)',
+      'out/main/pdf-structure-process-*.js missing (run "npm run build -w @seuoffice/shell" first)',
     )
   }
 }
 
-const CLI_BUNDLE_REL = '../../packages/cli/dist/genoffice.cjs'
+const CLI_BUNDLE_REL = '../../packages/cli/dist/seuoffice.cjs'
 const CLI_BUILD_REL = '../../packages/cli/build.mjs'
-const CLI_VERSION_ENV = 'GENOFFICE_APP_VERSION'
+const CLI_VERSION_ENV = 'SEUOFFICE_APP_VERSION'
 const CLI_VERSION_BANNER = /^const __cliAppVersion = ("(?:[^"\\]|\\.)*");$/m
 
 /**
@@ -352,7 +352,7 @@ function bundledCliVersion(bundlePath) {
 }
 
 /**
- * `genoffice --version` is baked into the CLI bundle, which is built before
+ * `seuoffice --version` is baked into the CLI bundle, which is built before
  * electron-builder runs and therefore before a release version is known. Rebuild
  * it here with the app version whenever the two disagree, so the packaged
  * command line can never answer with the workspace CLI version.
@@ -368,7 +368,7 @@ function ensureCliBundleCarriesAppVersion() {
   const baked = bundledCliVersion(bundlePath)
   if (baked !== appVersion) {
     throw new Error(
-      `packaged genoffice CLI reports ${baked ?? 'no version'} but the app ships ${appVersion} ` +
+      `packaged seuoffice CLI reports ${baked ?? 'no version'} but the app ships ${appVersion} ` +
         `(rebuild it with ${CLI_VERSION_ENV}=${appVersion})`,
     )
   }
@@ -815,21 +815,21 @@ const config = {
       from: 'src/main/quick-look/win-quicklook.exe',
       to: 'quicklook/win-quicklook.exe',
     },
-    // genoffice command line: runs on the app binary with ELECTRON_RUN_AS_NODE,
+    // seuoffice command line: runs on the app binary with ELECTRON_RUN_AS_NODE,
     // so the RunAsNode fuse must stay enabled.
     // Layout (Resources/cli next to wasm/, native/, ocr/) is what
     // packages/cli/src/resources.ts expects.
     {
-      from: '../../packages/cli/dist/genoffice.cjs',
-      to: 'cli/genoffice.cjs',
+      from: '../../packages/cli/dist/seuoffice.cjs',
+      to: 'cli/seuoffice.cjs',
     },
     {
-      from: '../../packages/cli/bin/ieumoffice',
-      to: 'cli/ieumoffice',
+      from: '../../packages/cli/bin/seuoffice',
+      to: 'cli/seuoffice',
     },
     {
-      from: '../../packages/cli/bin/ieumoffice.cmd',
-      to: 'cli/ieumoffice.cmd',
+      from: '../../packages/cli/bin/seuoffice.cmd',
+      to: 'cli/seuoffice.cmd',
     },
     // the CLI's version (Settings → Integrations shows it) and the agent skill
     // the same pane installs into Claude Code / Codex / …; bytes identical to the repo file
@@ -838,10 +838,10 @@ const config = {
       to: 'cli/package.json',
     },
     {
-      from: '../../skills/ieumoffice/SKILL.md',
-      to: 'cli/skills/ieumoffice/SKILL.md',
+      from: '../../skills/seuoffice/SKILL.md',
+      to: 'cli/skills/seuoffice/SKILL.md',
     },
-    // runtime deps the genoffice bundle leaves external (jsdom for the Word/Markdown
+    // runtime deps the seuoffice bundle leaves external (jsdom for the Word/Markdown
     // paths); collected by packages/cli/collect-deps.mjs during its build
     {
       from: '../../packages/cli/dist/node_modules',
@@ -849,7 +849,7 @@ const config = {
     },
     // the design templates' shared fonts, shipped once for every editor (an
     // asset import would copy them into each editor's out/); main code finds
-    // the folder with templateFontsDir (@genoffice/electron-utils)
+    // the folder with templateFontsDir (@seuoffice/electron-utils)
     {
       from: '../../packages/ui/template-fonts',
       to: 'template-fonts',
@@ -870,7 +870,7 @@ const config = {
   // build/ as <icon>.icns for the mac CFBundleDocumentTypes entry and
   // <icon>.ico for the NSIS DefaultIcon registry value. Without it both
   // platforms fall back to the app icon, so every associated file shows the
-  // bare GenOffice logo instead of a per-type document icon. The icns/ico
+  // bare SeuOffice logo instead of a per-type document icon. The icns/ico
   // pairs are generated from the shell renderer's file-type tiles by
   // tools/gen-file-association-icons.mjs.
   //
@@ -881,7 +881,7 @@ const config = {
   mac: {
     // Two separate arch packages (NOT universal): arm64 keeps the exact
     // artifact names and update-feed entries it always had, x64 (via
-    // GENOFFICE_MAC_X64=1, see includeMacX64 above) adds the Intel package:
+    // SEUOFFICE_MAC_X64=1, see includeMacX64 above) adds the Intel package:
     // SeuOffice-<v>-x64.dmg (config.dmg.artifactName below) and the
     // arch-less SeuOffice-<v>-mac.zip. Both zips land in one latest-mac.yml,
     // which a Mac install only reads for the version. Dual-arch packs ship the
@@ -968,7 +968,7 @@ const config = {
   // triple), linux takes it from cargo's host-native target/release/ — the
   // same source mac uses. So no `arch` is pinned here beyond the flag below:
   // electron-builder defaults to the build host's architecture, which is the
-  // only one the sidecar was actually built for — and GENOFFICE_LINUX_ARM64=1
+  // only one the sidecar was actually built for — and SEUOFFICE_LINUX_ARM64=1
   // switches every target to arm64, where the sidecar must come from a native
   // arm64 host or an explicit cross build (see linuxSidecarCandidates and the
   // ELF check). That flag is config support only: no second Linux pass runs
@@ -977,10 +977,10 @@ const config = {
     // AppImage (self-contained, any distro) + deb (apt install, pulls in the
     // GTK/NSS runtime deps) + rpm (dnf/zypper install on Fedora / RHEL /
     // openSUSE). Default artifact names are kept on purpose —
-    // GenOffice-<v>.AppImage / genoffice_<v>_amd64.deb — because the public
+    // SeuOffice-<v>.AppImage / seuoffice_<v>_amd64.deb — because the public
     // README download links and the already-published linux-v0.5.149 release
     // use them. The arm64 targets reuse the ${arch}-templated deb/rpm names
-    // (genoffice_<v>_arm64.deb).
+    // (seuoffice_<v>_arm64.deb).
     target: [
       { target: 'AppImage', arch: [linuxArm64 ? 'arm64' : 'x64'] },
       { target: 'deb', arch: [linuxArm64 ? 'arm64' : 'x64'] },
@@ -1001,8 +1001,8 @@ const config = {
     // (upstream issue #90). The set ships every standard raster size.
     icon: 'build/icons',
     // mac and win name the binary from productName; linux instead derives it
-    // from package.json "name", and "@genoffice/shell" sanitizes to the
-    // invalid "@genofficeshell". Setting it explicitly also makes the
+    // from package.json "name", and "@seuoffice/shell" sanitizes to the
+    // invalid "@seuofficeshell". Setting it explicitly also makes the
     // generated seuoffice.desktop match the WM_CLASS Electron reports (it
     // takes that from the executable basename), so the running window links
     // back to its launcher entry.
@@ -1031,9 +1031,9 @@ const config = {
       },
     ],
   },
-  // Same "@genoffice/shell" problem as executableName above: the default deb
+  // Same "@seuoffice/shell" problem as executableName above: the default deb
   // artifact name derives from package.json "name", and the scope's "/" makes
-  // fpm treat "@genoffice" as a directory. Spell the published name out
+  // fpm treat "@seuoffice" as a directory. Spell the published name out
   // (seuoffice_<version>_amd64.deb) and pin the control Package field so apt
   // treats successive releases as upgrades of the same package and never
   // collides with an upstream genoffice deb install.
@@ -1062,11 +1062,11 @@ const config = {
       'libuuid1',
       'libsecret-1-0 | libsecret-1-0t64',
     ],
-    // expose the ieumoffice command line shipped inside the app
+    // expose the seuoffice command line shipped inside the app
     afterInstall: 'build/linux-after-install.sh',
     afterRemove: 'build/linux-after-remove.sh',
   },
-  // Same "@genoffice/shell" naming problem as deb: spell the artifact name
+  // Same "@seuoffice/shell" naming problem as deb: spell the artifact name
   // out (${arch} expands to the rpm arch string, x86_64) and pin the rpm
   // Package name so dnf/zypper treat successive releases as upgrades of the
   // same package. Like deb, rpm installs run no in-app updater — users
@@ -1112,7 +1112,7 @@ const config = {
     if (context.electronPlatformName === 'win32' && !existsSync(join(__dirname, WIN_SIDECAR))) {
       throw new Error(
         `win extraResources source missing: ${winSidecarCandidates.join(' or ')} ` +
-          `(run "npm run native:build -w @genoffice/sheets", or cargo build --target ${winSidecarTarget})`,
+          `(run "npm run native:build -w @seuoffice/sheets", or cargo build --target ${winSidecarTarget})`,
       )
     }
     if (context.electronPlatformName === 'linux') {
@@ -1123,7 +1123,7 @@ const config = {
         const hint = linuxArm64
           ? 'cross-build with "cargo zigbuild --release --target aarch64-unknown-linux-gnu", ' +
             'or build natively on an arm64 Linux host'
-          : 'run "npm run native:build -w @genoffice/sheets" on an x64 Linux host, ' +
+          : 'run "npm run native:build -w @seuoffice/sheets" on an x64 Linux host, ' +
             'or cross-build with "cargo zigbuild --release --target x86_64-unknown-linux-gnu"'
         throw new Error(
           `linux extraResources source missing: ${linuxSidecarCandidates.join(' or ')} (${hint})`,
@@ -1142,19 +1142,19 @@ const config = {
 // individually (Smart App Control, WDAC/AppLocker, AV heuristics) block
 // unsigned child processes — the unsigned xlsx-sidecar.exe died with
 // "spawn UNKNOWN" on such machines even though the installer itself was
-// signed. When CI exports GENOFFICE_WIN_SIGN_MODE ("test" = alpha
+// signed. When CI exports SEUOFFICE_WIN_SIGN_MODE ("test" = alpha
 // self-signed PFX, "production" = DigiCert KeyLocker — the two modes of
 // scripts/win-sign.cjs, whose env-var contract applies here too), every
-// binary electron-builder signs for win (GenOffice.exe, the NSIS
+// binary electron-builder signs for win (SeuOffice.exe, the NSIS
 // uninstaller, and the installer) goes through that script. The static
 // extraResources binaries (xlsx-sidecar.exe, win-ocr.exe) are signed by the
 // workflow before packaging since electron-builder does not sign
 // extraResources. Unset (local / fork builds) keeps the old behavior:
 // electron-builder has no signing config and packages everything unsigned.
-const winSignMode = process.env.GENOFFICE_WIN_SIGN_MODE
+const winSignMode = process.env.SEUOFFICE_WIN_SIGN_MODE
 if (winSignMode) {
   if (winSignMode !== 'test' && winSignMode !== 'production') {
-    throw new Error(`GENOFFICE_WIN_SIGN_MODE must be "test" or "production", got "${winSignMode}"`)
+    throw new Error(`SEUOFFICE_WIN_SIGN_MODE must be "test" or "production", got "${winSignMode}"`)
   }
   config.win.signtoolOptions = {
     // Single pass per file: the sha1+sha256 dual-signing default is a

@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import JSZip from 'jszip'
-import { setUiLang } from '@genoffice/i18n'
+import { setUiLang } from '@seuoffice/i18n'
 import {
   diagramOpenChecking,
   openDiagramChecked,
@@ -32,7 +32,7 @@ let dir: string
 
 beforeEach(() => {
   setUiLang('en')
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-diagram-gate-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-diagram-gate-'))
 })
 afterEach(() => rmSync(dir, { recursive: true, force: true }))
 

@@ -1,6 +1,6 @@
 # 빠른 시작: 인터페이스와 기본 조작
 
-GenOffice는 내 컴퓨터에서 돌아가는 오피스 프로그램입니다. 창 하나, 탭 한 줄에 편집기 8개가 들어 있습니다. 문서(Docs), 스프레드시트(Sheets), 프레젠테이션(Slides), PDF, Markdown·텍스트, HTML, 한글(HWP/HWPX), 마인드맵(.xmind)입니다. 편집기마다 자기 형식의 파일을 열고 저장합니다. .docx, .xlsx, .pptx, .pdf, .md, .html, .hwp/.hwpx, .xmind입니다. 문서를 고칠 때는 네트워크가 필요 없고, AI 기능을 쓸 때만 필요합니다. 마인드맵 편집기는 FreeMind·Freeplane 파일(.mm)도 새 지도로 가져오고, 저장은 .xmind로 합니다.
+SeuOffice는 내 컴퓨터에서 돌아가는 오피스 프로그램입니다. 창 하나, 탭 한 줄에 편집기 8개가 들어 있습니다. 문서(Docs), 스프레드시트(Sheets), 프레젠테이션(Slides), PDF, Markdown·텍스트, HTML, 한글(HWP/HWPX), 마인드맵(.xmind)입니다. 편집기마다 자기 형식의 파일을 열고 저장합니다. .docx, .xlsx, .pptx, .pdf, .md, .html, .hwp/.hwpx, .xmind입니다. 문서를 고칠 때는 네트워크가 필요 없고, AI 기능을 쓸 때만 필요합니다. 마인드맵 편집기는 FreeMind·Freeplane 파일(.mm)도 새 지도로 가져오고, 저장은 .xmind로 합니다.
 
 ## 화면 개요
 
@@ -16,7 +16,7 @@ GenOffice는 내 컴퓨터에서 돌아가는 오피스 프로그램입니다. �
 
 - **홈**의 [빠른 시작](help://getting-started) 영역에 있는 빠른 생성 카드(AI Docs, AI Sheets, AI Slides 등)를 누릅니다.
 - 메뉴 **파일 ▸ 새로 만들기**: Docs(⌘N/ctrl+N), Sheets, Slides, Markdown, HTML, PDF.
-- 파일을 창으로 끌어다 놓거나, 파일 관리자에서 더블클릭합니다(GenOffice가 기본 앱으로 설정된 경우).
+- 파일을 창으로 끌어다 놓거나, 파일 관리자에서 더블클릭합니다(SeuOffice가 기본 앱으로 설정된 경우).
 
 새 문서는 이름 없는 상태로 열리고, 디스크의 파일은 처음 저장할 때 비로소 만들어집니다.
 
@@ -24,7 +24,7 @@ GenOffice는 내 컴퓨터에서 돌아가는 오피스 프로그램입니다. �
 
 - 메뉴 **파일 ▸ 열기**(⌘O/ctrl+O)는 시스템 선택 창을 엽니다. .docx / .doc / .odt / .xlsx / .xls / .csv / .tsv / .pptx / .ppt / .pdf / .md / .html을 지원합니다.
 - 홈의 **최근 사용** 목록에서 아무 항목이나 누릅니다.
-- 터미널에서 `ieumoffice <file>`을 실행해도 열 수 있습니다.
+- 터미널에서 `seuoffice <file>`을 실행해도 열 수 있습니다.
 
 ## ODT 문서
 
@@ -59,7 +59,7 @@ GenOffice는 내 컴퓨터에서 돌아가는 오피스 프로그램입니다. �
 
 ## Option+Command 단축키
 
-Option+Command는 Word가 구조화된 점프를 위해 남겨 둔 계층이고, GenOffice도 같은 방식으로 채웁니다. 그중 대부분은 Docs가 차지하고, Sheets는 Excel과 같은 동작을 위해 자기 것 두 개를 차지합니다. 어디서나 통하는 조합도 하나 있습니다.
+Option+Command는 Word가 구조화된 점프를 위해 남겨 둔 계층이고, SeuOffice도 같은 방식으로 채웁니다. 그중 대부분은 Docs가 차지하고, Sheets는 Excel과 같은 동작을 위해 자기 것 두 개를 차지합니다. 어디서나 통하는 조합도 하나 있습니다.
 
 **Docs**
 
@@ -88,7 +88,7 @@ Windows가 Mac 쪽 두 개를 그대로 옮긴 것은 아닙니다. Excel for Ma
 
 **모든 편집기**: **⌥⌘R / Ctrl+F1** — 위에서 설명한 대로 리본을 축소합니다.
 
-그래서 macOS에서 ⌥⌘D는 GenOffice가 쓸 수 있도록 비워 두어집니다. 앞으로 어떤 명령이 필요로 하더라도요.
+그래서 macOS에서 ⌥⌘D는 SeuOffice가 쓸 수 있도록 비워 두어집니다. 앞으로 어떤 명령이 필요로 하더라도요.
 
 ## 다음에 읽을 장
 

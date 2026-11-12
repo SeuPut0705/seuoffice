@@ -6,7 +6,7 @@
  * protocols below, and only when a person clicked it. The main process
  * applies this before it opens anything.
  */
-import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
+import { safeExternalUrl } from '@seuoffice/electron-utils/safe-external-url'
 
 /** `file:`, `javascript:`, `data:` and app schemes are refused by `safeExternalUrl` whatever is listed here. */
 export const LINK_PROTOCOLS: readonly string[] = ['http:', 'https:', 'mailto:']

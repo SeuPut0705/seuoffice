@@ -1,6 +1,6 @@
 import { isAbsolute, join } from 'node:path'
-import { isSaveTempName } from '@genoffice/electron-utils/atomic-write'
-import { PROJECT_FOLDER_NAMES } from '@genoffice/project-store'
+import { isSaveTempName } from '@seuoffice/electron-utils/atomic-write'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import { isHiddenEntry } from '../folder-tree'
 import type { IgnoreMatcher } from './ignore'
 
@@ -8,7 +8,7 @@ import type { IgnoreMatcher } from './ignore'
  * Whether a folder-relative path is a file the AI may see (spec 5.5, 5.9): it
  * stays inside the folder (no `..`, not absolute), no segment is a hidden entry
  * by the home tree's rule (dot names, `~$` lock files, OS junk, the Markdown
- * app-owned `assets/` folder), it is not under `.ieumoffice/`, it is not a
+ * app-owned `assets/` folder), it is not under `.seuoffice/`, it is not a
  * file a save puts beside a document (the staging temp, a failed save's
  * rescue copy), and `ignore` does not match it. Paths are not resolved here;
  * callers that touch the disk also check links (the read tool resolves the

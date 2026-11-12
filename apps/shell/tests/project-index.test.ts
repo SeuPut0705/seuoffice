@@ -10,7 +10,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { ProjectTrustAnswer } from '@genoffice/project-store'
+import type { ProjectTrustAnswer } from '@seuoffice/project-store'
 import type { JevTransport } from '../src/main/file-index/decider'
 import { FileIndexer } from '../src/main/file-index/indexer'
 import { normalizeFileSearchSettings, SearchReranker } from '../src/main/file-index/rerank'
@@ -291,7 +291,7 @@ describe('file names for the per-send context', () => {
   it('sends the newest files first up to the limit, with the rest counted and cloud marked', async () => {
     for (let i = 0; i < 5; i++) put(join(project, `f${i}.md`), 'x', 1_700_000_000 + i)
     put(join(project, '.hidden.md'), 'x', 1_800_000_000)
-    put(join(project, '.ieumoffice', 'memory.md'), 'x', 1_800_000_000)
+    put(join(project, '.seuoffice', 'memory.md'), 'x', 1_800_000_000)
     const cloud = join(project, 'f3.md')
     const resolve = vi.fn(
       async (paths: readonly string[]) => new Map(paths.map((p) => [p, p === cloud])),

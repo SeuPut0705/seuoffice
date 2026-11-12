@@ -20,7 +20,7 @@
 import { mkdirSync, readFileSync, readdirSync, statSync, unlinkSync, writeFileSync } from 'node:fs'
 import { basename, join, extname } from 'node:path'
 import { BrowserWindow, app, dialog, ipcMain } from 'electron'
-import { assertFileSaved, showOpenDialogWithMemory } from '@genoffice/electron-utils'
+import { assertFileSaved, showOpenDialogWithMemory } from '@seuoffice/electron-utils'
 import {
   parseFileToText,
   ATTACHABLE_EXTS,
@@ -30,8 +30,8 @@ import {
   ATTACHABLE_IMAGE_MAX_BYTES,
   diagramPictureExtOf,
   diagramPictureExtOfName,
-} from '@genoffice/file-parse'
-import { createI18n, getUiLang } from '@genoffice/i18n'
+} from '@seuoffice/file-parse'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 import { EPUB_CHANNELS } from '../shared/ipc'
 import type {
   AttachmentAddResult,
@@ -169,7 +169,7 @@ function savePastedImage(data: unknown, ext: unknown): string | 'too-large' | nu
   if (!bytes || bytes.byteLength === 0) return null
   // the renderer decides what lands on disk here: the picture limit applies before anything is written
   if (bytes.byteLength > ATTACHABLE_IMAGE_MAX_BYTES) return 'too-large'
-  const dir = join(app.getPath('temp'), 'genoffice-pasted')
+  const dir = join(app.getPath('temp'), 'seuoffice-pasted')
   mkdirSync(dir, { recursive: true })
   prunePastedImages(dir)
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')

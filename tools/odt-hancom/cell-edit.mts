@@ -19,8 +19,8 @@ import {
   parseDocx,
   patchTableCellTexts,
   saveDocx,
-} from '@genoffice/docx-engine'
-import { isProtectedCell, odtToDocx, saveOdt } from '@genoffice/odt-engine'
+} from '@seuoffice/docx-engine'
+import { isProtectedCell, odtToDocx, saveOdt } from '@seuoffice/odt-engine'
 
 const [input, output, mode, a, b] = process.argv.slice(2)
 if (!input || !output || (mode !== '--append' && mode !== '--replace') || !a) {

@@ -12,7 +12,7 @@ cd ieumoffice
 export PATH="$HOME/.cargo/bin:$PATH"   # cargo가 PATH에 없을 때(Git Bash). 엑셀 처리 프로그램 빌드에 필요
 npm ci                                  # 잠금 파일 그대로 설치. 용량이 크다
 npm run fixtures                        # 테스트용 문서 만들기. 테스트보다 먼저
-npm run native:build -w @genoffice/sheets   # 엑셀 처리 프로그램(Rust) 빌드
+npm run native:build -w @seuoffice/sheets   # 엑셀 처리 프로그램(Rust) 빌드
 ```
 
 - `npm ci` 대신 `npm install`을 쓰면 잠금 파일이 바뀔 수 있다. 의존성을 실제로 바꿀 때만 쓴다.
@@ -25,7 +25,7 @@ npm run native:build -w @genoffice/sheets   # 엑셀 처리 프로그램(Rust) �
 | 모든 편집기와 앱 창을 개발 모드로 | `npm run dev`                       | preload를 고쳤으면 다시 빌드해야 화면이 뜬다                        |
 | 전체를 빌드해서 앱 실행           | `npm run shell`                     | 편집기들, 명령어, 껍데기 앱 순으로 빌드한 뒤 실행                   |
 | 전체 빌드만                       | `npm run build:all`                 | 화면 확인 스크립트(`npm run test:e2e`)는 이 결과물을 띄운다         |
-| 껍데기 앱만 다시 빌드             | `npm run build -w @genoffice/shell` | 편집기 뒷단(`apps/*/src/main`)을 고친 뒤에는 이것까지 해야 반영된다 |
+| 껍데기 앱만 다시 빌드             | `npm run build -w @seuoffice/shell` | 편집기 뒷단(`apps/*/src/main`)을 고친 뒤에는 이것까지 해야 반영된다 |
 
 개발·시험 실행은 설치본과 다른 데이터 폴더(`%APPDATA%\IeumOffice-Dev`)를 쓴다. 설치본은 `%APPDATA%\IeumOffice`다.
 
@@ -45,7 +45,7 @@ npm run check:skill-version
 테스트는 작업 공간별로 돌린다. `npm test`는 첫 실패에서 멈추는데, Windows에서는 원본 코드 그대로도 실패하는 테스트가 있기 때문이다.
 
 ```bash
-npm run test -w @genoffice/ai-provider      # 작업 공간 하나
+npm run test -w @seuoffice/ai-provider      # 작업 공간 하나
 cd apps/sheets && npx vitest run            # 엑셀 편집기: Rust 빌드를 건너뛰고 테스트만
 cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 ```
@@ -58,18 +58,18 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 
 | 이름                                                            | 역할                                                                                                               | 쓰이는 곳                                                                                                         |
 | --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------- |
-| `GENOFFICE_USER_DATA`                                           | 데이터 폴더를 다른 곳으로 돌린다                                                                                   | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다                                                           |
-| `GENOFFICE_LANG`                                                | 화면 언어를 강제한다                                                                                               | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                                                                     |
-| `GENOFFICE_AI_SETTINGS`                                         | 명령어가 읽을 AI 설정 파일 위치                                                                                    | 명령어, MCP                                                                                                       |
-| `GENOFFICE_APP_BIN`                                             | 명령어가 띄울 앱 실행 파일 위치                                                                                    | 명령어(화면이 필요한 변환)                                                                                        |
-| `GENOFFICE_ALLOWED_ROOTS`                                       | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개)                                                         | 명령어, MCP                                                                                                       |
-| `GENOFFICE_AUDIT_LOG`                                           | 명령어 실행 기록의 위치. `off`면 끈다                                                                              | 명령어                                                                                                            |
-| `GENOFFICE_MCP_TOKEN`                                           | `ieumoffice mcp --http`가 요청마다 요구할 값. `--token`이 없을 때 읽는다                                           | MCP                                                                                                               |
-| `GENOFFICE_TRUST_PROXY_HEADERS`                                 | `1`이면 HTTP MCP 서버가 앞단 프록시가 붙인 `X-Forwarded-*` 머리글을 믿는다. 믿을 수 있는 프록시 뒤에서만 켠다      | MCP(`--http`)                                                                                                     |
-| `GENOFFICE_AUTH_DIR`                                            | `~/.ieumoffice` 대신 쓸 폴더. 명령어 실행 기록과 명령어 위치 기록이 여기로 간다                                    | 명령어, 앱                                                                                                        |
-| `GENOFFICE_HOME`                                                | 에이전트 설정 폴더를 찾을 때의 홈 폴더                                                                             | 명령어(`mcp install`, 스킬 설치)                                                                                  |
-| `GENOFFICE_MCP_COMPACT_SCHEMAS`                                 | MCP 도구 설명을 짧게 낸다                                                                                          | MCP                                                                                                               |
-| `GENOFFICE_GOOGLE_CLIENT_ID` / `GENOFFICE_GOOGLE_CLIENT_SECRET` | 껍데기 앱을 빌드할 때 넣는 Google OAuth 클라이언트(결정 0033). 없으면 드라이브 기능이 빠진다. 저장소에 적지 않는다 | 빌드(`npm run build -w @genoffice/shell`, `build:all`, 설치 파일 만들기)                                          |
+| `SEUOFFICE_USER_DATA`                                           | 데이터 폴더를 다른 곳으로 돌린다                                                                                   | 앱, 명령어. 화면 확인 스크립트가 임시 폴더를 줄 때 쓴다                                                           |
+| `SEUOFFICE_LANG`                                                | 화면 언어를 강제한다                                                                                               | 앱. 화면 확인 스크립트는 기본으로 영어를 준다                                                                     |
+| `SEUOFFICE_AI_SETTINGS`                                         | 명령어가 읽을 AI 설정 파일 위치                                                                                    | 명령어, MCP                                                                                                       |
+| `SEUOFFICE_APP_BIN`                                             | 명령어가 띄울 앱 실행 파일 위치                                                                                    | 명령어(화면이 필요한 변환)                                                                                        |
+| `SEUOFFICE_ALLOWED_ROOTS`                                       | 명령어가 읽고 쓸 수 있는 폴더를 제한한다(PATH처럼 여러 개)                                                         | 명령어, MCP                                                                                                       |
+| `SEUOFFICE_AUDIT_LOG`                                           | 명령어 실행 기록의 위치. `off`면 끈다                                                                              | 명령어                                                                                                            |
+| `SEUOFFICE_MCP_TOKEN`                                           | `seuoffice mcp --http`가 요청마다 요구할 값. `--token`이 없을 때 읽는다                                            | MCP                                                                                                               |
+| `SEUOFFICE_TRUST_PROXY_HEADERS`                                 | `1`이면 HTTP MCP 서버가 앞단 프록시가 붙인 `X-Forwarded-*` 머리글을 믿는다. 믿을 수 있는 프록시 뒤에서만 켠다      | MCP(`--http`)                                                                                                     |
+| `SEUOFFICE_AUTH_DIR`                                            | `~/.seuoffice` 대신 쓸 폴더. 명령어 실행 기록과 명령어 위치 기록이 여기로 간다                                     | 명령어, 앱                                                                                                        |
+| `SEUOFFICE_HOME`                                                | 에이전트 설정 폴더를 찾을 때의 홈 폴더                                                                             | 명령어(`mcp install`, 스킬 설치)                                                                                  |
+| `SEUOFFICE_MCP_COMPACT_SCHEMAS`                                 | MCP 도구 설명을 짧게 낸다                                                                                          | MCP                                                                                                               |
+| `SEUOFFICE_GOOGLE_CLIENT_ID` / `SEUOFFICE_GOOGLE_CLIENT_SECRET` | 껍데기 앱을 빌드할 때 넣는 Google OAuth 클라이언트(결정 0033). 없으면 드라이브 기능이 빠진다. 저장소에 적지 않는다 | 빌드(`npm run build -w @seuoffice/shell`, `build:all`, 설치 파일 만들기)                                          |
 | `XLSX_SIDECAR_PATH`                                             | 엑셀 처리 프로그램의 위치를 바꾼다. 설치본과 엑셀 편집기 테스트에는 듣지 않는다                                    | 혼자 띄운 엑셀 편집기, 명령어                                                                                     |
 | `HTTPS_PROXY` / `HTTP_PROXY` / `ALL_PROXY`                      | 프록시                                                                                                             | 앱이 직접 보내는 요청, 명령어. 구독 프로그램에는 이 변수가 그대로 전달된다(프로그램이 따르는지는 확인하지 않았다) |
 
@@ -93,7 +93,7 @@ cd apps/shell && npx vitest run tests/<파일>.test.ts   # 파일 하나만
 3. **대상**: 사용자 유형 "외부". 처음에는 게시 상태를 "테스트"로 두고 시험할 Google 계정을 테스트 사용자로 넣는다(100명까지). 테스트 상태의 로그인은 7일마다 끊긴다.
 4. **데이터 액세스**: 범위 `https://www.googleapis.com/auth/drive.file` 하나를 넣는다. 일반 등급이다. Google 선택 창(`trigger_onepick`)은 이 범위 하나만 허락한다. **Google Picker API**를 켤 필요는 없다(선택 창이 OAuth 동의 화면 안에서 뜬다).
 5. **클라이언트**: 유형 "데스크톱 앱"으로 만들고 클라이언트 ID와 비밀값을 받는다.
-6. 빌드할 때 두 값을 환경변수로 준다. 예(Git Bash): `GENOFFICE_GOOGLE_CLIENT_ID=… GENOFFICE_GOOGLE_CLIENT_SECRET=… npm run build:all`. 값은 저장소, 커밋, 로그에 남기지 않는다.
+6. 빌드할 때 두 값을 환경변수로 준다. 예(Git Bash): `SEUOFFICE_GOOGLE_CLIENT_ID=… SEUOFFICE_GOOGLE_CLIENT_SECRET=… npm run build:all`. 값은 저장소, 커밋, 로그에 남기지 않는다.
 7. 공개 전: 게시 상태를 "프로덕션"으로 바꾼다. `drive.file`은 일반 등급이라 브랜딩 검증(Search Console의 도메인 소유 확인, 홈페이지와 같은 도메인의 개인정보 처리방침)만 있으면 되고, 제한 권한의 시연 영상과 연간 보안 심사(CASA)는 없다. 예전에 `drive`로 낸 검증 신청이 남아 있으면 데이터 액세스에서 `drive`를 빼고 Google에 범위를 좁혔다고 답한다. 검증이 끝나기 전에는 공개 설치 파일에 클라이언트를 넣지 않는다.
 
 확인할 것(시험 계정으로): 학습 확인에 체크하기 전에는 연결 버튼이 눌리지 않는지, 연결, "Google 드라이브에서 고르기"로 Google 선택 창이 뜨고 고른 파일(여러 개)이 탭으로 열리는지, "고른 파일" 목록과 그 안의 검색, PDF·워드·Google 문서 열기, Google 문서 저장 때 Office 파일이 같은 폴더나 내 드라이브에 생기는지, 두 번째 고르기 뒤에도 처음 고른 파일이 열리는지, 저장 뒤 드라이브에 올라갔는지, 다른 곳에서 고친 뒤 저장할 때의 질문, 보기 전용 파일 저장, AI 창의 "드라이브에서 찾아 요약해 줘", 드라이브를 읽은 대화에서 웹 검색이 거절되는지, 연결 끊기 뒤 Google 계정의 "서드 파티 앱" 목록에서 사라졌는지.
@@ -114,7 +114,7 @@ OpenRouter 무료 연결에서 고를 수 있는 모델은 `packages/ai-provider
 
 ```bash
 export PATH="$HOME/.cargo/bin:$PATH"
-npm run native:build -w @genoffice/sheets
+npm run native:build -w @seuoffice/sheets
 # 만들어진 apps/sheets/native/xlsx-engine/target/release/xlsx-sidecar.exe 를
 #   apps/sheets/native/xlsx-engine/target/x86_64-pc-windows-gnu/release/ 로 복사한다
 npm run dist:win -- -- --publish never
@@ -129,13 +129,13 @@ npm run dist:win -- -- --publish never
 
 릴리스의 Mac 설치 파일(Apple Silicon)은 `.github/workflows/seuoffice-desktop.yml`이 Windows 설치 파일과 함께 만든다. 순서는 `docs/seuoffice/판-내기.md`에 있다. Intel Mac판은 내지 않는다.
 
-- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`(Apple Silicon만). Intel용까지 묶으려면 그 전에 `npm run native:build:universal -w @genoffice/sheets`를 하고 `GENOFFICE_MAC_X64=1`을 켠다. 두 앱이 한 자리를 나눠 쓰는 엑셀 처리 프로그램과 글자 인식 도우미는 두 CPU를 담은 파일(lipo)이어야 한다. 루트의 `npm run dist:mac`은 원본의 경로라 쓰지 않는다.
+- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @seuoffice/shell -- --publish never`(Apple Silicon만). Intel용까지 묶으려면 그 전에 `npm run native:build:universal -w @seuoffice/sheets`를 하고 `SEUOFFICE_MAC_X64=1`을 켠다. 두 앱이 한 자리를 나눠 쓰는 엑셀 처리 프로그램과 글자 인식 도우미는 두 CPU를 담은 파일(lipo)이어야 한다. 루트의 `npm run dist:mac`은 원본의 경로라 쓰지 않는다.
 
 ## Linux 설치 파일 만들기
 
 Linux 패키지는 내지 않고, 만드는 워크플로도 없다.
 
-- Linux(x64)에서 직접 만들 때(`rpm` 패키지가 설치되어 있어야 한다): `npm ci`, `npm run build:all`, `npm run dist:linux -w @genoffice/shell -- --publish never`.
+- Linux(x64)에서 직접 만들 때(`rpm` 패키지가 설치되어 있어야 한다): `npm ci`, `npm run build:all`, `npm run dist:linux -w @seuoffice/shell -- --publish never`.
 - 그렇게 만든 엑셀 처리 프로그램은 그 PC의 glibc를 따른다. 지운 상위 워크플로는 glibc 2.28 기준으로 다시 링크하고(`cargo zigbuild`), deb의 의존성이 Ubuntu 24.04에서 풀리는지와 Ubuntu 20.04에서 CSV가 열리는지를 확인했다(`docs/engineering-notes.md`의 "Linux 패키지"). Linux 패키지를 다시 내려면 그 확인부터 되살린다.
 
 ## 새 버전 내기
@@ -180,7 +180,7 @@ npm run typecheck
 export PATH="$HOME/.cargo/bin:$PATH"
 cargo install wasm-pack --version 0.15.0 --locked   # 처음 한 번
 node tools/build-rhwp-core.mjs                      # 태그 받기 → 커밋 확인 → patches 적용 → wasm-pack → 파일과 해시 갱신
-npm run test -w @genoffice/hwp                      # 엔진 시험(engine-layout)과 편집기 시험
+npm run test -w @seuoffice/hwp                      # 엔진 시험(engine-layout)과 편집기 시험
 ```
 
 - 패치는 `vendor/rhwp-core/patches/`에 번호 순으로 두고 `package.json`의 `rhwp.patches`에 적는다. 만드는 방법은 같은 태그를 받은 rhwp 사본에서 커밋한 뒤 `git format-patch`로 뽑는 것이다.
@@ -189,15 +189,15 @@ npm run test -w @genoffice/hwp                      # 엔진 시험(engine-layou
 
 ## draw.io 판 올리기
 
-다이어그램 편집기가 싣는 draw.io는 저장소에 없다. 빌드(`npm run build -w @genoffice/diagram`, 개발 실행 포함)가 `vendor/drawio/drawio.json`에 적힌 판의 `draw.war`를 받아 해시를 확인하고, 뺄 목록을 적용하고, `js/extensions.min.js`에서 ELK·libavoid 구간을 잘라낸 뒤 `apps/diagram/out/drawio/`에 놓는다(결정 0103). 판은 v32.6.9로 시작했다. draw.io는 거의 매주 새 판을 내지만 따라 올리지 않는다. 올릴 까닭(고친 결함, 필요한 기능)이 있을 때 따로 일을 잡아 올린다. 자세한 절차와 목록은 `vendor/drawio/README.md`에 있다.
+다이어그램 편집기가 싣는 draw.io는 저장소에 없다. 빌드(`npm run build -w @seuoffice/diagram`, 개발 실행 포함)가 `vendor/drawio/drawio.json`에 적힌 판의 `draw.war`를 받아 해시를 확인하고, 뺄 목록을 적용하고, `js/extensions.min.js`에서 ELK·libavoid 구간을 잘라낸 뒤 `apps/diagram/out/drawio/`에 놓는다(결정 0103). 판은 v32.6.9로 시작했다. draw.io는 거의 매주 새 판을 내지만 따라 올리지 않는다. 올릴 까닭(고친 결함, 필요한 기능)이 있을 때 따로 일을 잡아 올린다. 자세한 절차와 목록은 `vendor/drawio/README.md`에 있다.
 
 ```bash
 # 1. drawio.json의 version·url을 새 판으로 바꾸고, 새 draw.war의 sha256·size를 적는다
 node vendor/drawio/prepare.mjs        # 2. 받기 → 해시 확인 → 빼기 → 잘라내기. 잘라내기가 실패하거나 결과 해시가 다르면 멈춘다
 npm run licenses                      # 3. 싣는 파일이 inventory.json에 다 있고 모두 허용 목록 안인지
 npm run notices                       # 4. THIRD-PARTY-NOTICES.txt의 draw.io 절 확인
-npm run test -w @genoffice/diagram
-npm run build -w @genoffice/shell     # 5. 빌드한 앱에서 편집기 확인
+npm run test -w @seuoffice/diagram
+npm run build -w @seuoffice/shell     # 5. 빌드한 앱에서 편집기 확인
 ```
 
 - **잘라내기를 다시 본다.** 새 `js/extensions.min.js` 안에서 ELK(`js/elk/drawio-elk.min.js`)와 libavoid(`js/libavoid-js/libavoid.min.js`, `libavoid-routing.js`)가 각각 정확히 한 번, 독립 파일과 바이트로 같게 나와야 한다. 찾지 못하면 그 파일이 세 부품을 어떻게 담는지 보고 `drawio.json`의 `cut`을 고친다. 결과 해시가 다르다고 나오면, 잘린 것이 그 세 구간뿐인지 확인한 뒤 알려 준 값을 `cut[].sha256`에 적는다. 잘라내기는 저장소 주인이 승인한 예외 하나뿐이다. 다른 파일을 고치거나 자르는 길로 넓히지 않는다.

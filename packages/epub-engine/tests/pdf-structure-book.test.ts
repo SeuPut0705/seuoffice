@@ -1,7 +1,7 @@
 // pdf-structure pulls in pdf2docx sources; their bidi-js shim is not on this package's include list.
 // eslint-disable-next-line @typescript-eslint/triple-slash-reference
 /// <reference path="../../pdf2docx/src/bidi-js.d.ts" />
-import { writeEpub, type DocumentTree, type TreeBlock } from '@genoffice/pdf-structure'
+import { writeEpub, type DocumentTree, type TreeBlock } from '@seuoffice/pdf-structure'
 import { describe, expect, it } from 'vitest'
 import { openEpub } from '../src/open'
 

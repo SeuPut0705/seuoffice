@@ -12,7 +12,7 @@ import {
   THEME_IDS,
   themeLook,
   type ViewBranchLine,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import {
   type BranchLineContext,
   lineChainOf,

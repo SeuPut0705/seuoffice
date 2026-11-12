@@ -25,7 +25,7 @@
  * connectors are presented from the parent transition point.
  *
  * The pre-rendered drawing is laid out by the org-chart interpreter in
- * @genoffice/pptx-engine/dgm-hier from the same constraint facts the layout
+ * @seuoffice/pptx-engine/dgm-hier from the same constraint facts the layout
  * carries, so the first picture and Word's re-layout share their geometry.
  */
 
@@ -33,7 +33,7 @@ import {
   layoutHierTree,
   parseHierConstraints,
   type HierTreeNode,
-} from '@genoffice/pptx-engine/dgm-hier'
+} from '@seuoffice/pptx-engine/dgm-hier'
 
 import { HIERARCHY1_LAYOUT_XML } from './smartart-layout'
 
@@ -70,8 +70,8 @@ export interface SmartArtParts {
 
 /** Word's built-in Organization Chart layout: the definition a re-layout uses. */
 export const SMARTART_LAYOUT_ID = 'urn:microsoft.com/office/officeart/2005/8/layout/hierarchy1'
-export const SMARTART_QUICK_STYLE_ID = 'urn:genoffice/officeart/quickstyle/smartart'
-export const SMARTART_COLORS_ID = 'urn:genoffice/officeart/colors/smartart'
+export const SMARTART_QUICK_STYLE_ID = 'urn:seuoffice/officeart/quickstyle/smartart'
+export const SMARTART_COLORS_ID = 'urn:seuoffice/officeart/colors/smartart'
 
 const DGM_NS = 'http://schemas.openxmlformats.org/drawingml/2006/diagram'
 const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main'

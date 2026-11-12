@@ -1,8 +1,8 @@
-import { createI18n, defineStrings, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang, type Params } from '@seuoffice/i18n'
 
 /**
  * The home ask panel's own wording for project folders (decision 0088). The
- * picker, the chat menu and the notice lines bring theirs from @genoffice/ui;
+ * picker, the chat menu and the notice lines bring theirs from @seuoffice/ui;
  * this is what the home ask says about the chosen project: its head, input
  * hint and first line, a document saved into its folder, and why a question
  * could not use it. `en` defines the key set.

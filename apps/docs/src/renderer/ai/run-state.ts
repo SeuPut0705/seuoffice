@@ -3,15 +3,15 @@
  * the component so it can be tested without a browser: how a failed run is
  * shown and which usage reports are kept. What stands between the user and a
  * run (connect first, read the first-connection notice) is the send gate every
- * editor shares (`useAiSendGate` in @genoffice/ui).
+ * editor shares (`useAiSendGate` in @seuoffice/ui).
  */
 import type {
   AiRunErrorKind,
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
-import type { IpcStreamError } from '@genoffice/agent-core'
-import { isAiBlockedRunKind } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import type { IpcStreamError } from '@seuoffice/agent-core'
+import { isAiBlockedRunKind } from '@seuoffice/ui'
 
 /** The machine-readable cause of a failed run, as the error chunk carried it */
 export interface RunErrorCause {

@@ -284,7 +284,7 @@ describe('the inserted text', () => {
 
   it('has no parentheses when the folder label is empty', () => {
     const picked = {
-      path: 'C:\\Temp\\ieumoffice-drive-attach\\r4nd\\계획서.docx',
+      path: 'C:\\Temp\\seuoffice-drive-attach\\r4nd\\계획서.docx',
       name: '계획서.docx',
     }
     expect(docMentionLabel(picked, [{ path: 'C:\\1학기\\계획서.docx', name: '계획서.docx' }])).toBe(

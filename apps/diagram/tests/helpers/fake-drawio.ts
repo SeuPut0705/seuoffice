@@ -5,7 +5,7 @@
  * `applyBatch`, `undoBatches`) with the bridge's own rules
  * (`applyStepsLive`), and records every request it got.
  */
-import { parseGraphModel, type DiagramCell } from '@genoffice/drawio-model'
+import { parseGraphModel, type DiagramCell } from '@seuoffice/drawio-model'
 import { applyStepsLive, type LiveDiagram } from '../../src/bridge/apply-primitives'
 import type { BridgeOp, BridgeOps } from '../../src/shared/bridge-protocol'
 import type { DrawioFrame } from '../../src/renderer/drawio/frame-client'

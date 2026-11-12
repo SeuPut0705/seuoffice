@@ -16,10 +16,10 @@ import { CLI_BUNDLE_FILE, CLI_COMMAND } from './names'
 export { CLI_COMMAND, HOME_DIR_NAME, launcherFileName } from './names'
 
 /**
- * Making `ieumoffice` reachable from a terminal. The launcher ships inside the app
- * (Resources/cli/ieumoffice, or ieumoffice.cmd on Windows); nothing at install time puts
+ * Making `seuoffice` reachable from a terminal. The launcher ships inside the app
+ * (Resources/cli/seuoffice, or seuoffice.cmd on Windows); nothing at install time puts
  * it on PATH for the dmg, so the app tries this on every launch until it
- * succeeds and `ieumoffice install-cli` repeats it on demand. Best effort
+ * succeeds and `seuoffice install-cli` repeats it on demand. Best effort
  * everywhere: no prompts, no elevation, never an error on the app's startup
  * path. `inspectCliLink` reports the same states without writing anything.
  */
@@ -52,7 +52,7 @@ export interface InstallOutcome {
  * inherit, so it is the target even when it does not exist yet: a missing
  * directory is reported as unwritable (creating it needs root), not skipped.
  * When it is not writable the user's own bin dir takes the link, so a
- * non-admin install still gets an `ieumoffice` command.
+ * non-admin install still gets an `seuoffice` command.
  *
  * The Homebrew prefix is never a candidate (genoffice#1914): `/opt/homebrew/bin` on
  * Apple Silicon, `/usr/local/bin` on an Intel Mac with a classic install,
@@ -64,7 +64,7 @@ export interface InstallOutcome {
  * without Homebrew keeps `/usr/local/bin`.
  *
  * A user who wants it there anyway still can: `ln -sf "$(dirname "$(which
- * ieumoffice)")/ieumoffice" "$(brew --prefix)/bin/ieumoffice"`. What is removed
+ * seuoffice)")/seuoffice" "$(brew --prefix)/bin/seuoffice"`. What is removed
  * is the uninvited write, not the possibility.
  */
 export function defaultCandidateDirs(
@@ -130,7 +130,7 @@ export function installCliLink(opts: InstallOptions): InstallOutcome {
       return withPathHint({ status: 'present', location: link }, dir, userDirs, env)
     }
     if (state === 'file' || state === 'foreign') {
-      // somebody else's ieumoffice (a file, or npm's symlink): never clobber it
+      // somebody else's seuoffice (a file, or npm's symlink): never clobber it
       occupied = link
       continue
     }
@@ -207,9 +207,9 @@ function linkState(
 
 /**
  * A link is ours when it resolves to the launcher we are installing, or to an
- * `ieumoffice` launcher shipped by another copy of the app (an earlier version,
+ * `seuoffice` launcher shipped by another copy of the app (an earlier version,
  * a second install dir): one that has our CLI bundle or the Windows twin beside
- * it. A path that merely ends in `/cli/ieumoffice` belongs to whoever put it there,
+ * it. A path that merely ends in `/cli/seuoffice` belongs to whoever put it there,
  * and the upstream app's `genoffice` launcher is never ours.
  */
 export function isOurLauncher(target: string, launcher: string): boolean {
@@ -273,9 +273,9 @@ const WIN_PATH_READ =
 // best effort: a locked-down PowerShell may refuse Add-Type, the PATH edit still stands
 const WIN_BROADCAST =
   'try { ' +
-  'Add-Type -Namespace GenOfficePath -Name Native -MemberDefinition \'[DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);\'; ' +
+  'Add-Type -Namespace SeuOfficePath -Name Native -MemberDefinition \'[DllImport("user32.dll", SetLastError=true, CharSet=CharSet.Auto)] public static extern IntPtr SendMessageTimeout(IntPtr hWnd, uint Msg, UIntPtr wParam, string lParam, uint fuFlags, uint uTimeout, out UIntPtr lpdwResult);\'; ' +
   '$r = [UIntPtr]::Zero; ' +
-  "[void][GenOfficePath.Native]::SendMessageTimeout([IntPtr]0xffff, 0x1A, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$r) " +
+  "[void][SeuOfficePath.Native]::SendMessageTimeout([IntPtr]0xffff, 0x1A, [UIntPtr]::Zero, 'Environment', 2, 5000, [ref]$r) " +
   '} catch {}; '
 
 function psQuote(text: string): string {

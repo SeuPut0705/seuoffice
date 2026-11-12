@@ -4,15 +4,15 @@
  * layout decides the box size (spAutoFit) or the shrink ratio (normAutofit), and the model
  * follows it so the saved file opens at the same size.
  */
-import { patchBodyPrAutofit, type Slide, type TextElement } from '@genoffice/pptx-engine'
-import { matchesElementRef } from '@genoffice/pptx-engine/identity'
+import { patchBodyPrAutofit, type Slide, type TextElement } from '@seuoffice/pptx-engine'
+import { matchesElementRef } from '@seuoffice/pptx-engine/identity'
 import {
   EMU_PER_PX_96,
   layoutText,
   makeViewport,
   type RenderSlide,
   type RenderTextLayout,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import { getFontMetrics, rebuildSlide, type Session } from './session-state'
 
 function findEl(slide: Slide, sourceId: string): TextElement | undefined {

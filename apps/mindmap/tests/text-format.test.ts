@@ -4,7 +4,7 @@
  * reaches the file. The real drawing library runs in jsdom.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { ViewTitleRun, XmindSheet, XmindTopic } from '@genoffice/xmind-engine'
+import type { ViewTitleRun, XmindSheet, XmindTopic } from '@seuoffice/xmind-engine'
 import { DocumentSession } from '../src/renderer/document/session'
 import { MapController, type MapStrings } from '../src/renderer/map/controller'
 import {

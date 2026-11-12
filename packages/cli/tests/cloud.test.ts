@@ -11,17 +11,17 @@ import { run } from './helpers'
 
 describe('cloud command plumbing', () => {
   it('locates the shell ai-settings.json without Electron and honours the override', () => {
-    expect(aiSettingsPath({ GENOFFICE_AI_SETTINGS: '/x/ai.json' })).toBe('/x/ai.json')
+    expect(aiSettingsPath({ SEUOFFICE_AI_SETTINGS: '/x/ai.json' })).toBe('/x/ai.json')
     const p = aiSettingsPath({})
     expect(p.endsWith(join('seuoffice', 'ai-settings.json'))).toBe(true)
     if (process.platform === 'darwin') expect(p).toContain('Library/Application Support')
-    expect(aiSettingsPath({ GENOFFICE_USER_DATA: '/ud' })).toBe(join('/ud', 'ai-settings.json'))
+    expect(aiSettingsPath({ SEUOFFICE_USER_DATA: '/ud' })).toBe(join('/ud', 'ai-settings.json'))
   })
 
   it('takes the folder of the settings file in use as the data folder', () => {
-    expect(aiDataDir({ GENOFFICE_USER_DATA: '/ud' })).toBe(join('/ud'))
+    expect(aiDataDir({ SEUOFFICE_USER_DATA: '/ud' })).toBe(join('/ud'))
     // the ledger and the acceptance record sit beside the settings actually read
-    expect(aiDataDir({ GENOFFICE_USER_DATA: '/ud', GENOFFICE_AI_SETTINGS: '/x/y/ai.json' })).toBe(
+    expect(aiDataDir({ SEUOFFICE_USER_DATA: '/ud', SEUOFFICE_AI_SETTINGS: '/x/y/ai.json' })).toBe(
       dirname('/x/y/ai.json'),
     )
     expect(aiDataDir({}).endsWith('seuoffice')).toBe(true)
@@ -103,12 +103,12 @@ describe('cloud command plumbing', () => {
     expect(r.json().message).toContain('output exists')
   })
 
-  it('applies GENOFFICE_ALLOWED_ROOTS to --out and local --ref before any network call', async () => {
+  it('applies SEUOFFICE_ALLOWED_ROOTS to --out and local --ref before any network call', async () => {
     const { writeFileSync } = await import('node:fs')
     const { tempDir } = await import('./helpers')
     const inside = tempDir()
     const outside = tempDir()
-    const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off', GENOFFICE_ALLOWED_ROOTS: inside }
+    const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off', SEUOFFICE_ALLOWED_ROOTS: inside }
     const out = await run(['image', 'a cat', '--out', join(outside, 'x.png'), '--json'], { env })
     expect(out.code).toBe(2)
     expect(out.json().message).toContain('refusing to write')

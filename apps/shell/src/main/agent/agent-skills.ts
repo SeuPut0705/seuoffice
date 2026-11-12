@@ -12,9 +12,9 @@
 import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { basename, dirname, extname, isAbsolute, join, resolve } from 'node:path'
 import JSZip from 'jszip'
-import type { SkillProposal } from '@genoffice/agent-core'
-import { REDACT_NS } from '@genoffice/agent-core/redact-range'
-import { skillEditorsOf } from '@genoffice/agent-core/skill-editors'
+import type { SkillProposal } from '@seuoffice/agent-core'
+import { REDACT_NS } from '@seuoffice/agent-core/redact-range'
+import { skillEditorsOf } from '@seuoffice/agent-core/skill-editors'
 import {
   IEUM_TEMPLATE_KEY,
   MAX_USER_SKILL_BYTES,
@@ -23,17 +23,17 @@ import {
   isReservedUserSkillName,
   normalizeSkillTemplatePath,
   parseSkillMd,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   AGENT_SKILL_PLUGIN_NAME,
   comparablePath,
   isInsidePath,
   type AgentSkillEntry,
-} from '@genoffice/ai-provider/agent-session'
-import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
-import { handoffEditorForFile } from '@genoffice/electron-utils/generate-handoff'
-import { USER_SKILLS_CHANNELS } from '@genoffice/electron-utils/user-skills-channels'
-import { PPTX_ZIP_LIMITS } from '@genoffice/pptx-engine'
+} from '@seuoffice/ai-provider/agent-session'
+import { assertZipInflatesWithinLimits } from '@seuoffice/docx-engine'
+import { handoffEditorForFile } from '@seuoffice/electron-utils/generate-handoff'
+import { USER_SKILLS_CHANNELS } from '@seuoffice/electron-utils/user-skills-channels'
+import { PPTX_ZIP_LIMITS } from '@seuoffice/pptx-engine'
 import type {
   AgentSessionSkill,
   AgentTemplateCandidateView,
@@ -443,7 +443,7 @@ async function isProtectedPath(path: string, guard: TemplateReadGuard): Promise<
 /**
  * A candidate's file, read whole in the main process; refused when it is gone,
  * larger than a skill may be, or (as written or where it really is) inside a
- * protected folder: `~/.claude`, `~/.codex`, `~/.genoffice`, `~/.ieumoffice`,
+ * protected folder: `~/.claude`, `~/.codex`, `~/.genoffice`, `~/.seuoffice`,
  * the app's data.
  */
 export async function readTemplateCandidate(

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { htmlDir, htmlLang, type Lang } from '@genoffice/i18n'
+import { htmlDir, htmlLang, type Lang } from '@seuoffice/i18n'
 import type { QuickLookPayload } from '../../../shared/quick-look-api'
 import { QuickLookView } from './QuickLookView'
 

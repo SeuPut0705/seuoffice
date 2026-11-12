@@ -3,7 +3,7 @@ import {
   type AgentRunErrorKind,
   type AgentStartFailure,
 } from '../../../shared/agent-api'
-import type { AgentProgramProblem } from '@genoffice/ai-provider/agent-session'
+import type { AgentProgramProblem } from '@seuoffice/ai-provider/agent-session'
 import type { AgentStringKey } from '../i18n/strings-agent'
 
 export const RUN_ERROR: Record<AgentRunErrorKind, AgentStringKey> = {

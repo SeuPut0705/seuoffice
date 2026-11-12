@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { readBasicWorkbook } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { readBasicWorkbook } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import { run, tempDir } from './helpers'
 
 describe('workbook creation with XML-invalid sheet names', () => {

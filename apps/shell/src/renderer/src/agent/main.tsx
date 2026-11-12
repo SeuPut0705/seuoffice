@@ -1,6 +1,6 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import '@genoffice/ui/tokens.css'
+import '@seuoffice/ui/tokens.css'
 import './agent.css'
 import { AgentWindow } from './AgentWindow'
 

@@ -5,13 +5,13 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
-import { skillEditorsText } from '@genoffice/ui'
+import { LANGS } from '@seuoffice/i18n'
+import { skillEditorsText } from '@seuoffice/ui'
 import type {
   UserSkillImportCandidateView,
   UserSkillImportPreview,
   UserSkillView,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import type { HomeApi } from '../src/shared/home-api'
 import { DropToOpenOverlay } from '../src/renderer/src/Home'
 import { LocaleProvider } from '../src/renderer/src/locale'

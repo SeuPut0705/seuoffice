@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import type { ChartModel } from '@genoffice/pptx-engine'
+import type { ChartModel } from '@seuoffice/pptx-engine'
 import { buildChartNode, truncateToWidth, rotatedLabelOrigin, applyCaps } from '../src/build-chart'
 import { HeuristicMetrics } from '../src/metrics'
 import { makeViewport } from '../src/coords'

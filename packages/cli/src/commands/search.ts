@@ -1,4 +1,4 @@
-import { imageSearchTool, webSearchTool } from '@genoffice/ai-search'
+import { imageSearchTool, webSearchTool } from '@seuoffice/ai-search'
 import { flagBool, flagString } from '../args'
 import { aiSettingsPath, prepareCloud } from '../cloud'
 import type { CommandDef } from '../registry'
@@ -7,7 +7,7 @@ import { CliError, EXIT } from '../result'
 export const searchCommand: CommandDef = {
   name: 'search',
   summary:
-    'Web or image search: the free search by default, or the search provider key selected in GenOffice (Serper, Serply, SearchApi, Tavily, Parallel).',
+    'Web or image search: the free search by default, or the search provider key selected in SeuOffice (Serper, Serply, SearchApi, Tavily, Parallel).',
   usage: 'search <query> [--images] [--max <n>]',
   options: [
     { name: 'images', description: 'search images instead of web pages' },

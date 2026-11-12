@@ -1,5 +1,5 @@
 {
-  "name": "@genoffice/doc2docx",
+  "name": "@seuoffice/doc2docx",
   "version": "0.1.0",
   "license": "Apache-2.0",
   "private": true,
@@ -15,8 +15,8 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@genoffice/compound-file": "*",
-    "@genoffice/docx-engine": "*",
+    "@seuoffice/compound-file": "*",
+    "@seuoffice/docx-engine": "*",
     "cfb": "^1.2.2",
     "jszip": "^3.10.1"
   },

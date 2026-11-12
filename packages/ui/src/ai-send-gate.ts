@@ -23,7 +23,7 @@ import {
   type AiSettings,
   type AiSubscriptionProviderId,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { withAiProviderSelection } from './ai-model-picker-options'
 
 type ConnectedChoice = Extract<AiProviderChoice, { connected: true }>

@@ -1,6 +1,6 @@
 import { deflateRawSync, inflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
-import { hasOle2Signature, readCompoundFile } from '@genoffice/compound-file'
+import { hasOle2Signature, readCompoundFile } from '@seuoffice/compound-file'
 
 /**
  * Reading and rewriting HWP 5 files (a compound file whose DocInfo and BodyText streams are
@@ -25,7 +25,7 @@ export const MAX_SECTIONS = 4096
 /**
  * The most a deflated stream may inflate to. The file alone decides how far its bytes
  * expand (zeros deflate about a thousand to one), so the size is not left to it. The value
- * is the one a part of an HWPX may inflate to (MAX_HWPX_PART_BYTES in @genoffice/hwp2docx,
+ * is the one a part of an HWPX may inflate to (MAX_HWPX_PART_BYTES in @seuoffice/hwp2docx,
  * which this module does not depend on): the same section as XML, the longer of the two
  * forms. Sections and DocInfo hold text and formatting; pictures are streams of their own.
  */

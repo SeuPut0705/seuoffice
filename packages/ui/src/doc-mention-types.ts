@@ -1,7 +1,7 @@
 /**
  * The `@` document list the shell hands an editor's AI panel, as the renderer
  * sees it through `window.aiOfficeDocs.list()`. The renderer does not import
- * `@genoffice/electron-utils`, so these mirror the shapes declared in
+ * `@seuoffice/electron-utils`, so these mirror the shapes declared in
  * `packages/electron-utils/src/doc-attach-bridge.ts`; keep the two in step.
  */
 

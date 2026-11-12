@@ -26,8 +26,8 @@ import {
 import type { UpdateLogger, UpdateStep, UpdateStepFields } from './update-log'
 import { reopenedByInstaller, requestUpdateRestart, updateRestartRequested } from './update-restart'
 import type { UpdateInfo } from 'electron-updater'
-import { createI18n, getUiLang, htmlLang } from '@genoffice/i18n'
-import { GITHUB_LATEST_RELEASE_URL, githubReleaseTagUrl } from '@genoffice/electron-utils'
+import { createI18n, getUiLang, htmlLang } from '@seuoffice/i18n'
+import { GITHUB_LATEST_RELEASE_URL, githubReleaseTagUrl } from '@seuoffice/electron-utils'
 import type {
   UpdatePhase,
   UpdateReleaseNotes,
@@ -65,7 +65,7 @@ import { normalizeReleaseNotes } from './update-notes'
  * (electron-updater replaces the .AppImage file in place, no root needed);
  * deb installs have no updater — users upgrade via `apt install ./<new>.deb`.
  *
- * Dev preview: GENOFFICE_FAKE_UPDATE=<version> in an unpacked run opens the
+ * Dev preview: SEUOFFICE_FAKE_UPDATE=<version> in an unpacked run opens the
  * window with a simulated download so the UI can be exercised end to end.
  */
 
@@ -176,7 +176,7 @@ function isNoReleaseError(err: unknown): boolean {
 let started = false
 // version the user declined this session — don't nag again until next launch
 let dismissedVersion: string | null = null
-// re-shows the GENOFFICE_FAKE_UPDATE window so the manual check is
+// re-shows the SEUOFFICE_FAKE_UPDATE window so the manual check is
 // exercisable in dev runs too
 let fakeShowAgain: (() => void) | null = null
 let manualCheckInFlight = false
@@ -336,8 +336,8 @@ export function initAutoUpdater(
   setUpdateParentWindow(getWindow)
 
   // dev preview of the update window with a simulated download
-  if (!app.isPackaged && process.env.GENOFFICE_FAKE_UPDATE) {
-    initFakeUpdate(getWindow, process.env.GENOFFICE_FAKE_UPDATE)
+  if (!app.isPackaged && process.env.SEUOFFICE_FAKE_UPDATE) {
+    initFakeUpdate(getWindow, process.env.SEUOFFICE_FAKE_UPDATE)
     return
   }
   // Unpacked runs have no app-update.yml and must not ask GitHub with a
@@ -473,7 +473,7 @@ export function initAutoUpdater(
     if (process.platform !== 'win32') return false
     installDirOk ??= installDirWritable(
       dirname(process.execPath),
-      `.ieumoffice-update-check-${process.pid}`,
+      `.seuoffice-update-check-${process.pid}`,
     )
     return !installDirOk
   }
@@ -786,7 +786,7 @@ function initFakeUpdate(getWindow: () => BrowserWindow | null, version: string):
 <h2>What's new</h2>
 <ul>
 <li><strong>Update notes</strong>: the window shows what changed before you update.</li>
-<li><code>GENOFFICE_FAKE_UPDATE</code> opens this preview.</li>
+<li><code>SEUOFFICE_FAKE_UPDATE</code> opens this preview.</li>
 </ul>`,
     },
     {

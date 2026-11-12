@@ -22,15 +22,15 @@
  * No Electron: the window module wires it, the tests run it as is.
  */
 import { readFile, stat } from 'node:fs/promises'
-import { parseFileToText, type ParsedFile } from '@genoffice/file-parse'
+import { parseFileToText, type ParsedFile } from '@seuoffice/file-parse'
 import {
   createXmindDocumentFromOutline,
   OUTLINE_KIND_MARKS,
   outlineToSheets,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
-import { createBlankPptx, openPptx, savePptx } from '@genoffice/pptx-engine'
-import { runTxn, type Op } from '@genoffice/pptx-ops'
+} from '@seuoffice/xmind-engine'
+import { createBlankPptx, openPptx, savePptx } from '@seuoffice/pptx-engine'
+import { runTxn, type Op } from '@seuoffice/pptx-ops'
 import { CONVERT_TARGETS, type ConvertKind, type ConvertProblem } from '../../shared/generate-api'
 import { MAX_OUTLINE_SLIDES, outlineToOps, parsePptxOutline } from '../mcp/pptx-outline'
 

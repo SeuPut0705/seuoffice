@@ -9,7 +9,7 @@ export async function printMarkdownPdf(
   html: string,
   options: MarkdownPrintOptions = MARKDOWN_PRINT_OPTIONS,
 ): Promise<Buffer> {
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-md-print-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-md-print-'))
   let printWin: BrowserWindow | undefined
   try {
     printWin = new BrowserWindow({

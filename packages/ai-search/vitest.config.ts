@@ -11,21 +11,21 @@ export default defineConfig({
   resolve: {
     alias: {
       // Subpath before the bare name: string aliases are prefix replacements
-      '@genoffice/electron-utils/remote-image': resolve(
+      '@seuoffice/electron-utils/remote-image': resolve(
         here,
         '../electron-utils/src/remote-image.ts',
       ),
-      '@genoffice/electron-utils/safe-remote-url': resolve(
+      '@seuoffice/electron-utils/safe-remote-url': resolve(
         here,
         '../electron-utils/src/safe-remote-url.ts',
       ),
-      '@genoffice/electron-utils/generated-images': resolve(
+      '@seuoffice/electron-utils/generated-images': resolve(
         here,
         '../electron-utils/src/generated-images.ts',
       ),
       // Subpath before the bare name: string aliases are prefix replacements
-      '@genoffice/ai-provider/subscription': resolve(here, '../ai-provider/src/subscription.ts'),
-      '@genoffice/ai-provider': resolve(here, '../ai-provider/src/index.ts'),
+      '@seuoffice/ai-provider/subscription': resolve(here, '../ai-provider/src/subscription.ts'),
+      '@seuoffice/ai-provider': resolve(here, '../ai-provider/src/index.ts'),
     },
   },
   test: {

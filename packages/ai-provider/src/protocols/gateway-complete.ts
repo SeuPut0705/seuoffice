@@ -5,7 +5,7 @@
  * that request's Authorization header: it is never part of the settings, so
  * it cannot reach ai-settings.json, and it is not put in error messages.
  */
-import type { AgentMessage, AgentToolDef } from '@genoffice/agent-core'
+import type { AgentMessage, AgentToolDef } from '@seuoffice/agent-core'
 import { AiRunError } from '../run-error'
 import type { AiChatResponse, AiProviderConfig } from '../types'
 import type { StreamWatchdog } from '../watchdog'

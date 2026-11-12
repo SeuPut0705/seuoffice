@@ -4,8 +4,8 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { createDiagramFile, openDiagram } from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+import { createDiagramFile, openDiagram } from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 import {
   SAVE_AS_FORMATS,
   diagramBaseName,

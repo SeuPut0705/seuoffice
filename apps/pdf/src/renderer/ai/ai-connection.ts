@@ -2,11 +2,11 @@
  * The AI panel's decisions under the subscription contract, kept free of React
  * so they can be tested on their own: when a failed run is shown as a blocked
  * notice, and which usage reports are kept. What pressing send does is the send
- * gate every editor shares (`useAiSendGate` in @genoffice/ui).
+ * gate every editor shares (`useAiSendGate` in @seuoffice/ui).
  */
-import type { AiProviderId, AiSettings, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
-import type { IpcStreamError } from '@genoffice/agent-core'
-import { isAiBlockedRunKind, type AiBlockedRunKind } from '@genoffice/ui'
+import type { AiProviderId, AiSettings, AiSubscriptionUsage } from '@seuoffice/ai-provider/browser'
+import type { IpcStreamError } from '@seuoffice/agent-core'
+import { isAiBlockedRunKind, type AiBlockedRunKind } from '@seuoffice/ui'
 
 /** The current PDF sentence: version 1 is the first time it is read on its own */
 export const PDF_SEND_NOTICE_VERSION = 1

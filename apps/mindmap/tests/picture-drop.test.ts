@@ -5,7 +5,7 @@
  * goes (a new entry, the reference through the controller, one undo step).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { XmindTopic } from '@genoffice/xmind-engine'
+import type { XmindTopic } from '@seuoffice/xmind-engine'
 import { DocumentSession } from '../src/renderer/document/session'
 import { MapController } from '../src/renderer/map/controller'
 import { mapStrings } from '../src/renderer/i18n/map-strings'

@@ -1,14 +1,14 @@
 import { existsSync } from 'node:fs'
 import { extname, isAbsolute } from 'node:path'
 import { webContents } from 'electron'
-import { placeholderSource } from '@genoffice/agent-core/redact-core'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
 import {
   elementDurableId,
   getSlideComments,
   getSlideHidden,
   slideDurableId,
   type SlideElement,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import { applySessionTxn, saveSessionDeckTo } from '../../../../slides/src/main/slides-main'
 import { attachedIds, sessions, type Session } from '../../../../slides/src/main/session-state'
 import type { SlidesControl, SlidesTxnRequest } from './tools/slides-tools'

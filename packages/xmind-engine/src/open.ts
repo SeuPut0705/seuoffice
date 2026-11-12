@@ -2,7 +2,7 @@ import {
   assertZipInflatesWithinLimits,
   DEFAULT_ZIP_LIMITS,
   type ZipLimits,
-} from '@genoffice/zip-gate'
+} from '@seuoffice/zip-gate'
 import type JSZip from 'jszip'
 import { carriesEveryEntry, loadArchive, readEntry, zipEntryCount } from './archive'
 import { parseJsonBytes, serializeSheets } from './content'

@@ -7,7 +7,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
-import type { McpServerView, McpToolView } from '@genoffice/agent-core'
+import type { McpServerView, McpToolView } from '@seuoffice/agent-core'
 import {
   RELAY_TEXT,
   agentRelayPlans,
@@ -59,7 +59,7 @@ describe('which servers and tools a session gets', () => {
       server('off', [tool('x', {}, 'off')], { status: 'disabled' }),
       server('failing', [tool('x', {}, 'failing')], { status: 'failed', keepResultsInside: true }),
       server('empty', [tool('only-off', { permission: 'off' }, 'empty')]),
-      server('ieumoffice-editor', [tool('create_docx', {}, 'ieumoffice-editor')]),
+      server('seuoffice-editor', [tool('create_docx', {}, 'seuoffice-editor')]),
       server('bad name', [tool('x', {}, 'bad name')]),
     ])
     expect(plans.map((p) => p.server)).toEqual(['law', 'failing'])

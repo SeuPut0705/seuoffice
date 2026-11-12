@@ -1,6 +1,6 @@
 // Contract between the pdf renderer (AI panel) and the main process for the
 // subscription providers (Claude, Codex). The request channels and payloads are
-// the shared ones from @genoffice/ai-provider; their main-process handlers are
+// the shared ones from @seuoffice/ai-provider; their main-process handlers are
 // registered once for the whole app by the docs main (pdf registers none), so
 // every answer is read defensively: a missing handler is "still checking".
 
@@ -10,7 +10,7 @@ import type {
   SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 // Reading an IPC answer is the same in every app: one implementation, in the shared contract
 export {
@@ -18,7 +18,7 @@ export {
   subscriptionLaunchResultOf,
   subscriptionMeteredResultOf,
   subscriptionStatusMapOf,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 /** exposed as `window.pdfApi.subscription` by the pdf preload (same shape as the shell's) */
 export interface SubscriptionApi {

@@ -19,17 +19,17 @@ const TIPTAP_DEDUPE = [
 ]
 
 export default defineConfig({
-  // @genoffice/i18n and @genoffice/electron-utils ship as TS source — must be bundled
+  // @seuoffice/i18n and @seuoffice/electron-utils ship as TS source — must be bundled
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@genoffice/i18n', '@genoffice/electron-utils', '@genoffice/odt-engine'],
+        exclude: ['@seuoffice/i18n', '@seuoffice/electron-utils', '@seuoffice/odt-engine'],
       }),
     ],
   },
   preload: {
     // same bundling requirement as main (see comment above)
-    plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/i18n', '@genoffice/electron-utils'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@seuoffice/i18n', '@seuoffice/electron-utils'] })],
   },
   renderer: {
     plugins: [react()],

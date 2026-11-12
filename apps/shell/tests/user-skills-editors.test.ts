@@ -2,7 +2,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { SKILL_EDITORS } from '@genoffice/agent-core/skill-editors'
+import { SKILL_EDITORS } from '@seuoffice/agent-core/skill-editors'
 import { readAppSettings } from '../src/main/app-settings'
 import {
   createUserSkillsService,
@@ -20,7 +20,7 @@ let home: string
 let settingsPath: string
 let service: UserSkillsService
 
-const appDir = () => join(home, '.ieumoffice', 'skills')
+const appDir = () => join(home, '.seuoffice', 'skills')
 const claudeDir = () => join(home, '.claude', 'skills')
 
 function skill(dir: string, text: string) {

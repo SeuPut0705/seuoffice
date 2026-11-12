@@ -2,7 +2,7 @@
  * Home's three ways into the generate window: a Starred group's "make a new
  * document from this group", the selection bar and the file-row menu.
  */
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import './globals'
 import { generateText, type GenerateStringKey } from '../i18n/strings-generate'
 

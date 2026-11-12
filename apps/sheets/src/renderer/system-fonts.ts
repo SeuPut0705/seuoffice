@@ -6,8 +6,8 @@ import {
   useSystemFontSource,
   type FontFamilyInfoMap,
   type SystemFonts,
-} from '@genoffice/ui'
-import { TEMPLATE_FONT_FAMILY_NAMES } from '@genoffice/ui/template-fonts'
+} from '@seuoffice/ui'
+import { TEMPLATE_FONT_FAMILY_NAMES } from '@seuoffice/ui/template-fonts'
 
 /** Suite-wide font dropdown candidates, kept under the historical sheets-side name. */
 export const DEFAULT_FONT_FAMILIES: readonly string[] = BUILTIN_FONT_FAMILIES

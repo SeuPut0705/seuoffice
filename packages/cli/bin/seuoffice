@@ -1,5 +1,5 @@
 #!/bin/sh
-# ieumoffice launcher. Inside a packaged IeumOffice it runs the bundled CLI on the
+# seuoffice launcher. Inside a packaged SeuOffice it runs the bundled CLI on the
 # app's own Node runtime (ELECTRON_RUN_AS_NODE); in a dev checkout it falls
 # back to the system node and the local build output. Usually reached through
 # a symlink on the PATH, so the real location is resolved first.
@@ -13,8 +13,8 @@ while [ -L "$self" ]; do
 done
 here=$(cd "$(dirname "$self")" && pwd)
 
-if [ -n "$GENOFFICE_NODE" ]; then
-  exec "$GENOFFICE_NODE" "$here/genoffice.cjs" "$@"
+if [ -n "$SEUOFFICE_NODE" ]; then
+  exec "$SEUOFFICE_NODE" "$here/seuoffice.cjs" "$@"
 fi
 
 case "$here" in
@@ -27,10 +27,10 @@ case "$here" in
 esac
 
 if [ -n "$app" ] && [ -x "$app" ]; then
-  ELECTRON_RUN_AS_NODE=1 exec "$app" "$here/genoffice.cjs" "$@"
+  ELECTRON_RUN_AS_NODE=1 exec "$app" "$here/seuoffice.cjs" "$@"
 fi
 
-if [ -f "$here/genoffice.cjs" ]; then
-  exec node "$here/genoffice.cjs" "$@"
+if [ -f "$here/seuoffice.cjs" ]; then
+  exec node "$here/seuoffice.cjs" "$@"
 fi
-exec node "$here/../dist/genoffice.cjs" "$@"
+exec node "$here/../dist/seuoffice.cjs" "$@"

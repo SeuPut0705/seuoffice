@@ -5,7 +5,7 @@ import {
   type ProjectNotice,
   type ProjectSettings,
   type ProjectTrustRecord,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { hashText } from './folder-files'
 import { MEMORY_SOFT_LIMIT_CHARS, memoryHasContent } from './memory'
 import type { HashedTexts } from './trust'

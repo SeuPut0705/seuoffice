@@ -31,8 +31,8 @@ import type {
   FormulaDisplay,
   TableModel,
   TextboxDisplay,
-} from '@genoffice/docx-engine'
-import { protectedCellsOf, type ProtectedCellRef } from '@genoffice/odt-engine'
+} from '@seuoffice/docx-engine'
+import { protectedCellsOf, type ProtectedCellRef } from '@seuoffice/odt-engine'
 import {
   keepOfNode,
   notifyOdt,

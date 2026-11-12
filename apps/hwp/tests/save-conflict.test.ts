@@ -76,7 +76,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   hwpToText: vi.fn(async () => ''),
   parseFileToText: vi.fn(async () => ({ kind: 'text', text: '' })),
   ATTACHABLE_EXTS: new Set<string>(),
@@ -86,7 +86,7 @@ vi.mock('@genoffice/file-parse', () => ({
   ATTACHABLE_IMAGE_MAX_BYTES: 5 * 1024 * 1024,
 }))
 
-import { setOpenPathProbe } from '@genoffice/electron-utils'
+import { setOpenPathProbe } from '@seuoffice/electron-utils'
 import { createHwpView } from '../src/main/hwp-main'
 import { HWP_CHANNELS } from '../src/shared/ipc'
 import type { BeginSaveResult, CommitSaveResult } from '../src/shared/ipc'
@@ -95,7 +95,7 @@ let dir: string
 let docPath: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-hwp-save-conflict-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-hwp-save-conflict-'))
   docPath = join(dir, 'doc.hwpx')
   showMessageBox.mockClear()
   showMessageBox.mockResolvedValue({ response: 1 })

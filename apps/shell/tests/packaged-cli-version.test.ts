@@ -3,14 +3,14 @@ import { createRequire } from 'node:module'
 import { resolve } from 'node:path'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it } from 'vitest'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 
 const require = createRequire(import.meta.url)
 const shellRoot = resolve(import.meta.dirname, '..')
 const shellPackage = JSON.parse(readFileSync(resolve(shellRoot, 'package.json'), 'utf-8')) as {
   version: string
 }
-const CLI_BUNDLE_REL = '../../packages/cli/dist/genoffice.cjs'
+const CLI_BUNDLE_REL = '../../packages/cli/dist/seuoffice.cjs'
 
 // ELF e_machine values the linux packaging guard reads out of the sidecar.
 const ELF_X86_64 = 0x3e
@@ -32,7 +32,7 @@ function elfHeader(machine: number): Buffer {
 /**
  * Loads the real packaging config and drives its beforePack hook with a stand-in
  * CLI bundle: `rebuiltWith` is the version the fake rebuild bakes in, so the hook
- * sees exactly what a real GENOFFICE_APP_VERSION rebuild would leave behind.
+ * sees exactly what a real SEUOFFICE_APP_VERSION rebuild would leave behind.
  */
 function loadConfig(opts: {
   baked: string
@@ -40,7 +40,7 @@ function loadConfig(opts: {
   rebuildApplies?: boolean
   /** e_machine the fake linux sidecar reports (defaults to x86_64). */
   sidecarMachine?: number
-  /** Extra env for the packaged config, e.g. GENOFFICE_LINUX_ARM64=1. */
+  /** Extra env for the packaged config, e.g. SEUOFFICE_LINUX_ARM64=1. */
   env?: Record<string, string>
   /** Whether the fake linux sidecar exists at all (false → missing source). */
   sidecarExists?: boolean
@@ -68,8 +68,8 @@ function loadConfig(opts: {
       if (id === 'node:child_process') {
         return {
           execFileSync: (_file: string, args: string[], runOpts: { env?: NodeJS.ProcessEnv }) => {
-            rebuilds.push({ script: args[0], appVersion: runOpts.env?.GENOFFICE_APP_VERSION })
-            if (opts.rebuildApplies !== false) baked = runOpts.env?.GENOFFICE_APP_VERSION ?? baked
+            rebuilds.push({ script: args[0], appVersion: runOpts.env?.SEUOFFICE_APP_VERSION })
+            if (opts.rebuildApplies !== false) baked = runOpts.env?.SEUOFFICE_APP_VERSION ?? baked
             return Buffer.from('')
           },
         }
@@ -85,7 +85,7 @@ function loadConfig(opts: {
               ? ['pdf-structure-process-test.js']
               : require(id).readdirSync(path),
           readFileSync: (path: string, encoding: string) => {
-            if (String(path).endsWith('genoffice.cjs')) {
+            if (String(path).endsWith('seuoffice.cjs')) {
               return `const __cliAppVersion = ${JSON.stringify(baked)};\n`
             }
             // Packaging also gates on a generated third-party notice. Serve a
@@ -181,7 +181,7 @@ describe('linux sidecar architecture guard', () => {
     const { config } = loadConfig({
       baked: shellPackage.version,
       sidecarMachine: ELF_AARCH64,
-      env: { GENOFFICE_LINUX_ARM64: '1' },
+      env: { SEUOFFICE_LINUX_ARM64: '1' },
     })
     await config.beforePack({ electronPlatformName: 'linux' })
     const targets = config.linux?.target ?? []
@@ -200,7 +200,7 @@ describe('linux sidecar architecture guard', () => {
     const { config } = loadConfig({
       baked: shellPackage.version,
       sidecarMachine: ELF_X86_64,
-      env: { GENOFFICE_LINUX_ARM64: '1' },
+      env: { SEUOFFICE_LINUX_ARM64: '1' },
     })
     await expect(config.beforePack({ electronPlatformName: 'linux' })).rejects.toThrow(
       /linux sidecar is x86_64 but this package ships aarch64/,
@@ -221,7 +221,7 @@ describe('linux sidecar architecture guard', () => {
     const { config } = loadConfig({
       baked: shellPackage.version,
       sidecarExists: false,
-      env: { GENOFFICE_LINUX_ARM64: '1' },
+      env: { SEUOFFICE_LINUX_ARM64: '1' },
     })
     const message = await config.beforePack({ electronPlatformName: 'linux' }).then(
       () => '',

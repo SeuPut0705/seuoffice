@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { TEMPLATE_FONT_FILES, templateFontUrl } from '@genoffice/ui/template-fonts'
+import { TEMPLATE_FONT_FILES, templateFontUrl } from '@seuoffice/ui/template-fonts'
 
 import { templateFontResponse } from '../src/template-font-response'
 
@@ -37,11 +37,11 @@ describe('templateFontResponse', () => {
   it('leaves every other URL alone without touching the disk', async () => {
     const read = vi.fn(() => Promise.resolve(new Uint8Array(4)))
     const urls = [
-      'genoffice-docx-media://template-fonts/README.md',
-      'genoffice-docx-media://template-fonts/Pretendard-OFL.txt',
-      'genoffice-docx-media://template-fonts/..%2F..%2Fpackage.json',
-      `genoffice-docx-media://${'a'.repeat(64)}/Pretendard-Bold.otf`,
-      'genoffice-docx-media://handoff/x',
+      'seuoffice-docx-media://template-fonts/README.md',
+      'seuoffice-docx-media://template-fonts/Pretendard-OFL.txt',
+      'seuoffice-docx-media://template-fonts/..%2F..%2Fpackage.json',
+      `seuoffice-docx-media://${'a'.repeat(64)}/Pretendard-Bold.otf`,
+      'seuoffice-docx-media://handoff/x',
       'genoffice-app://template-fonts/Pretendard-Bold.otf',
       'not a url',
     ]

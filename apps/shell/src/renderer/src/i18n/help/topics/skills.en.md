@@ -1,24 +1,24 @@
 # Skills
 
-A skill is a set of working instructions for the AI. Write down something you do again and again once — the steps for tidying meeting notes, the tone of a report, the points to check every time — and you can call it in the AI panel, or the AI picks it up by itself when it fits. A skill is a folder with a `SKILL.md` file in an open format, so a skill made in GenOffice also works as it is in Claude Code or Codex.
+A skill is a set of working instructions for the AI. Write down something you do again and again once — the steps for tidying meeting notes, the tone of a report, the points to check every time — and you can call it in the AI panel, or the AI picks it up by itself when it fits. A skill is a folder with a `SKILL.md` file in an open format, so a skill made in SeuOffice also works as it is in Claude Code or Codex.
 
 ## Turning skills on and off
 
 **Settings ▸ Skills** lists the skills on this PC, grouped by where they come from. Each skill is shown by its name, the way coding agents show it. Use the search box at the top to find one by name or description. A skill of yours that has a title shows the title in this list, in the `/` list and on chips, with the name in small text beside it. You can search by the title too. A name the app made up (`skill-…`) is not shown beside the title.
 
-| Source                   | What it holds                                     | At first |
-| ------------------------ | ------------------------------------------------- | -------- |
-| **Built-in**             | The skills that come with GenOffice               | On       |
-| **My skills**            | Skills you added or made (`~/.ieumoffice/skills`) | On       |
-| **Claude skills folder** | The skills in `~/.claude/skills`                  | Off      |
-| **Claude plugins**       | The skills of installed Claude plugins            | Off      |
-| **Codex skills folder**  | The skills in `~/.agents/skills`                  | Off      |
+| Source                   | What it holds                                    | At first |
+| ------------------------ | ------------------------------------------------ | -------- |
+| **Built-in**             | The skills that come with SeuOffice              | On       |
+| **My skills**            | Skills you added or made (`~/.seuoffice/skills`) | On       |
+| **Claude skills folder** | The skills in `~/.claude/skills`                 | Off      |
+| **Claude plugins**       | The skills of installed Claude plugins           | Off      |
+| **Codex skills folder**  | The skills in `~/.agents/skills`                 | Off      |
 
 - The switch turns a skill on or off. The same setting applies to the AI panel of every editor, Ask AI on Home, and the agent window.
 - For a skill that is on, choose **AI decides** or **Only when called**. It starts as AI decides. With Only when called, the skill is used only when you call it yourself.
 - Skills from different sources can share a name. The source label on each row tells them apart. When two skills of one name are both on, only one is listed under `/` and used: the first in the order My skills, Built-in, Claude skills folder, Codex skills folder, Claude plugins. The row of the other says which skill is used instead.
 - The more menu has **View contents**, **Edit** (my skills only), **Export (zip)** (my skills only) and **Open folder**. Built-in skills have no **Open folder**. **Where it is used** opens straight on the place where you choose the editors the skill is used in.
-- My skills are kept in the `~/.ieumoffice/skills` folder. On Windows that is `C:\Users\<your user name>\.ieumoffice\skills`. **Open folder** in the more menu opens the skill’s folder.
+- My skills are kept in the `~/.seuoffice/skills` folder. On Windows that is `C:\Users\<your user name>\.seuoffice\skills`. **Open folder** in the more menu opens the skill’s folder.
 - **Move to trash** moves one of my skills to the system trash, where you can restore it.
 - A built-in skill is hidden instead of removed: choose **Hide**. **Show again** at the bottom of the list brings it back as it was at first.
 - To change a built-in skill or one from another program, choose **Copy to my skills**. The copy appears in my skills and the original is turned off.
@@ -35,10 +35,10 @@ A skill is a set of working instructions for the AI. Write down something you do
 Below the preview it always says: "Install skills only from sources you trust. A skill gives the AI instructions, and in the agent window it can run scripts." Read a skill from an unknown source before you install it.
 
 - If my skills already have one with the same name, choose **Replace** or **Skip** on that row. **Replace** keeps the skill's settings: on or off, AI decides / Only when called, and where it is used.
-- You can also drop a skill's zip file or a `SKILL.md` file onto any GenOffice window. **Settings ▸ Skills** opens with the same preview. A zip counts as a skill when `SKILL.md` sits at its top or every top folder holds one; for any other zip dropped on its own, **Settings ▸ Skills** says "No skills found". A `SKILL.md` file comes in alone: put a skill with more files in a zip.
+- You can also drop a skill's zip file or a `SKILL.md` file onto any SeuOffice window. **Settings ▸ Skills** opens with the same preview. A zip counts as a skill when `SKILL.md` sits at its top or every top folder holds one; for any other zip dropped on its own, **Settings ▸ Skills** says "No skills found". A `SKILL.md` file comes in alone: put a skill with more files in a zip.
 - **Lines worth reading** are lines that ask the AI to ignore earlier instructions, to keep something from you, or to take instructions from an outside address, and `../` paths that point outside the skill folder. Each shows its file and line. They do not stop the install, and a skill with no such lines is not therefore safe.
-- When it downloads from GitHub, GenOffice connects only to `github.com`, `api.github.com` and `codeload.github.com`, and sends no sign-in data. If the archive is too large or fails the safety checks, nothing is installed.
-- A skill's page on skills.sh (`https://skills.sh/owner/repo/skill`) is read as that skill in the GitHub repository `owner/repo`. GenOffice does not connect to skills.sh.
+- When it downloads from GitHub, SeuOffice connects only to `github.com`, `api.github.com` and `codeload.github.com`, and sends no sign-in data. If the archive is too large or fails the safety checks, nothing is installed.
+- A skill's page on skills.sh (`https://skills.sh/owner/repo/skill`) is read as that skill in the GitHub repository `owner/repo`. SeuOffice does not connect to skills.sh.
 - **New skill** opens an empty editor where you write the name, description and instructions yourself. The **Title** field at the top takes a title in any language; the name is filled in from the title and you can change it. If an enabled skill from another source has the same name, you are asked before saving, and saving turns that skill off. When the title has no Latin letters or digits, the name is filled in as `skill-` followed by a few characters. The name is what other programs and the `/` call use, so it can stay as it is.
 
 ## Checking for updates
@@ -53,7 +53,7 @@ Below the preview it always says: "Install skills only from sources you trust. A
 1. Type `/` or `$` at the start of the AI input box or right after a space. The list of skills that are on appears.
 2. Keep typing to narrow the list. For example, `/meet` finds `meeting-minutes`. Words in the description work too.
 3. Pick one with the arrow keys and press Enter or Tab. The skill becomes a chip above the input box.
-4. Write what you want and send. GenOffice adds the skill's contents to the request.
+4. Write what you want and send. SeuOffice adds the skill's contents to the request.
 
 - In the Excel AI panel, `$` opens the list only at the very start of the input box, so it does not get in the way of cell addresses such as `$A$1`.
 - You can add several chips and remove one with ×. Esc only closes the list; it does not stop an AI run.

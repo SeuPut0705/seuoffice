@@ -36,7 +36,7 @@ import { installAltEnterWrap } from './alt-enter-wrap'
 import {
   pollUntilReady,
   runHeadlessRendererExport,
-} from '@genoffice/electron-utils/headless-export'
+} from '@seuoffice/electron-utils/headless-export'
 import {
   aiRunLock,
   commitActiveCellEditor,
@@ -55,7 +55,7 @@ import {
 import {
   hashSheetPassword,
   type SheetPasswordHash,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-protection-hash'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-protection-hash'
 import { applyChangePlan, planFromOps, type OpExecutorContext } from './op-executor'
 import { installSheetsMcpBridge, type McpSheetHandlers } from './mcp-bridge'
 import { renameChartRefsForSheet } from './workbook-ops'
@@ -129,7 +129,7 @@ import {
   placeRemoteEntries,
   useProjectPanel,
   type ProjectPanel,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 
 import {
   CellValueType,
@@ -200,19 +200,19 @@ import {
   windowMcpState,
   windowMcpUsableServers,
   toolStepLabel,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
-import { localModelCapabilities } from '@genoffice/ai-provider/browser'
-import { type WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
+} from '@seuoffice/ai-provider/browser'
+import { localModelCapabilities } from '@seuoffice/ai-provider/browser'
+import { type WorkbookOperation } from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
 import {
   columnLabel,
   parseAddress,
   rangeCellCount,
-} from '@genoffice/xlsx-gateway/domain/cell-address'
+} from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { aggregateWorkbookRange } from './ai/aggregate-range'
 import { collectCellFormulaTexts, quadraticFormulaError } from './formula-cost'
 import {
@@ -221,10 +221,10 @@ import {
   chartSupportsSeriesReplace,
   withDefaultBarLabels,
   type CellBounds,
-} from '@genoffice/xlsx-gateway/domain/chart-visual'
-import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import { cfRuleUnsaveableReason, iconSetSaveable } from '@genoffice/xlsx-gateway/gateway/xlsx-cf'
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/domain/chart-visual'
+import { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import { cfRuleUnsaveableReason, iconSetSaveable } from '@seuoffice/xlsx-gateway/gateway/xlsx-cf'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { markPlaceInFile, sessionRedactionIndex, type MarkPlace } from './redact-session'
 import {
   createDerivedCells,
@@ -268,7 +268,7 @@ import type {
   ApplyOutcome,
   ChangePlan,
   CommitReceipt,
-} from '@genoffice/xlsx-gateway/domain/workbook.types'
+} from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { createElectronTransport } from './ai/transport'
 import { useSubscriptionConnection } from './ai/subscription-client'
 import {
@@ -350,7 +350,7 @@ import { useImportProgress } from './import-progress'
 import {
   a1RangeToTarget,
   planTableRefresh,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-connection-refresh'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-connection-refresh'
 import { traceWorkbookDependents, traceWorkbookPrecedents } from './ai/formula-audit'
 import { createFilesSkill } from './ai/files-skill'
 import { createSearchSkill } from './ai/search-skill'
@@ -466,7 +466,7 @@ import {
   type SlicerPickerState,
   type TimelinePickerState,
 } from './pivot-actions'
-import type { ChartRecommendations } from '@genoffice/xlsx-gateway/domain/chart-recommend'
+import type { ChartRecommendations } from '@seuoffice/xlsx-gateway/domain/chart-recommend'
 import {
   cellAtClientPoint,
   handleInsertChart as handleInsertChartImpl,
@@ -525,7 +525,7 @@ import {
   installSheetProtectionGuard,
   ribbonCommandAllowed,
 } from './sheet-protection'
-import type { SheetProtectionAllow } from '@genoffice/xlsx-gateway/gateway/xlsx-protection'
+import type { SheetProtectionAllow } from '@seuoffice/xlsx-gateway/gateway/xlsx-protection'
 import { installCtrlDragFill } from './ctrl-drag-fill'
 import { installContextSubmenuReopenFix } from './context-submenu-reopen-fix'
 import { installMenuInputEnter } from './menu-input-enter'
@@ -2788,8 +2788,8 @@ export function App({
     univerRef.current = runtime
     // The hidden spare can have a canvas/editor before Univer finishes booting.
     // Expose its lifecycle readiness only to explicitly enabled e2e drivers.
-    if ((window as unknown as Record<string, unknown>).__genofficeDebugHooks === true) {
-      ;(window as unknown as Record<string, unknown>).__genofficeSpareViewReady = () =>
+    if ((window as unknown as Record<string, unknown>).__seuofficeDebugHooks === true) {
+      ;(window as unknown as Record<string, unknown>).__seuofficeSpareViewReady = () =>
         runtime.univerAPI.getCurrentLifecycleStage() ===
         runtime.univerAPI.Enum.LifecycleStages.Steady
     }
@@ -5862,10 +5862,10 @@ export function App({
       ;(window as unknown as Record<string, unknown>).__ribbonCommand = handleRibbonCommand
     }
     // Built-app e2e hook, off by default: the preload exposes
-    // __genofficeDebugHooks only when GENOFFICE_DEBUG_HOOKS=1 (scroll/freeze
+    // __seuofficeDebugHooks only when SEUOFFICE_DEBUG_HOOKS=1 (scroll/freeze
     // drivers read Univer's render state through the Facade).
-    if ((window as unknown as Record<string, unknown>).__genofficeDebugHooks === true) {
-      ;(window as unknown as Record<string, unknown>).__genofficeDebug = {
+    if ((window as unknown as Record<string, unknown>).__seuofficeDebugHooks === true) {
+      ;(window as unknown as Record<string, unknown>).__seuofficeDebug = {
         univerAPI: univerRef.current?.univerAPI,
         findReplaceService: univerRef.current?.univer.__getInjector().get(IFindReplaceService),
         // ground truth for typing-into-the-adopted-spare failures: the
@@ -6530,9 +6530,9 @@ export function App({
     }
   })()
 
-  // genoffice CLI (`open --range`, `selection`): the shell evaluates this hook
+  // seuoffice CLI (`open --range`, `selection`): the shell evaluates this hook
   useEffect(() => {
-    ;(window as unknown as Record<string, unknown>).__genofficeControl = (req: ControlRequest) =>
+    ;(window as unknown as Record<string, unknown>).__seuofficeControl = (req: ControlRequest) =>
       handleSheetsControl(
         req,
         univerRef.current?.univerAPI.getActiveWorkbook(),

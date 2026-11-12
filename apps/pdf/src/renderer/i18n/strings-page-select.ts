@@ -1,4 +1,4 @@
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from '@seuoffice/i18n'
 import { en } from './page-select/en'
 import { ko } from './page-select/ko'
 

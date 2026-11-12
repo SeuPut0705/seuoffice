@@ -18,7 +18,7 @@ import type {
   ProjectFolderFile,
   ProjectTrustAnswer,
   ProjectTrustPrompt,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { readAppSettings, readProjectsSettings, writeAppSetting } from '../src/main/app-settings'
 import {
   INSTRUCTIONS_LIMIT_CHARS,
@@ -57,11 +57,11 @@ function folder(...parts: string[]): string {
 }
 
 function dataFile(root: string, name: string): string {
-  return join(root, '.ieumoffice', name)
+  return join(root, '.seuoffice', name)
 }
 
 function writeData(root: string, name: string, text: string): void {
-  mkdirSync(join(root, '.ieumoffice', 'chats'), { recursive: true })
+  mkdirSync(join(root, '.seuoffice', 'chats'), { recursive: true })
   writeFileSync(dataFile(root, name), text)
 }
 
@@ -124,7 +124,7 @@ describe('registration refusals', () => {
     expect(await refused(folder('home', '.claude'))).toBe('protected')
     expect(await refused(folder('home', '.codex', 'sessions'))).toBe('protected')
     expect(await refused(folder('home', '.genoffice'))).toBe('protected')
-    expect(await refused(folder('home', '.ieumoffice'))).toBe('protected')
+    expect(await refused(folder('home', '.seuoffice'))).toBe('protected')
     expect(await refused(userData)).toBe('protected')
     expect(await refused(join(base, 'appdata'))).toBe('contains-protected')
     writeFileSync(join(base, 'file.txt'), 'x')
@@ -148,7 +148,7 @@ describe('adding folders and identity (spec 5.11)', () => {
     expect(result.identity).toBe('new')
     expect(result.project.path).toBe(root)
     expect(result.project.name).toBe('work')
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(root, '.seuoffice'))).toBe(false)
     expect(guide.trustState(result.project.id)).toBe('use')
     expect(never).not.toHaveBeenCalled()
   })
@@ -487,7 +487,7 @@ describe('new project (spec 5.1)', () => {
     writeFileSync(join(existing, 'keep.txt'), 'x')
     const result = await guide.createProject({ name: 'Taken' }, never)
     expect(result).toEqual({ status: 'exists', folderPath: existing })
-    expect(existsSync(join(existing, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(existing, '.seuoffice'))).toBe(false)
     const used = await guide.createProject({ name: 'Taken', useExisting: true }, never)
     expect(used.status).toBe('added')
   })
@@ -609,7 +609,7 @@ describe('context for a send (spec 5.4)', () => {
     expect(context.context.instructions?.text).toContain('agents rules')
     expect(context.context.memory).toBeNull()
     expect(context.context.canRemember).toBe(true)
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(root, '.seuoffice'))).toBe(false)
 
     await guide.setSettings(added.project.id, { readAgentsFiles: false })
     const off = await guide.readContext(added.project.id)
@@ -701,7 +701,7 @@ describe('unwritable folders (spec 5.7)', () => {
     const root = folder('ro')
     const added = await addOk(guide, root, never)
     const id = added.project.id
-    writeFileSync(join(root, '.ieumoffice'), 'a file where the folder should be')
+    writeFileSync(join(root, '.seuoffice'), 'a file where the folder should be')
 
     expect(await guide.saveInstructions(id, 'x')).toEqual({ status: 'unwritable' })
     expect(guide.isUnwritable(id)).toBe(true)
@@ -716,7 +716,7 @@ describe('unwritable folders (spec 5.7)', () => {
     })
     expect(await guide.retryUnwritable(id)).toEqual({ status: 'unwritable' })
 
-    rmSync(join(root, '.ieumoffice'))
+    rmSync(join(root, '.seuoffice'))
     expect(await guide.retryUnwritable(id)).toEqual({ status: 'ok' })
     expect(guide.isUnwritable(id)).toBe(false)
     expect(projectFile(root).id).toBe(id)
@@ -730,7 +730,7 @@ describe('unwritable folders (spec 5.7)', () => {
       { status: 'refused', reason: 'not-found' },
     )
     expect(await guide.removeIgnore(added.project.id, 'a.docx')).toEqual({ status: 'ok' })
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(root, '.seuoffice'))).toBe(false)
   })
 
   it('keeps project.json for the guide alone', async () => {
@@ -810,7 +810,7 @@ describe('memory through the guide (spec 5.6)', () => {
       names.push(result.backupName)
       if (i === 0) expect([result.before, result.after]).toEqual([2, 1])
     }
-    const backups = readdirSync(join(root, '.ieumoffice'))
+    const backups = readdirSync(join(root, '.seuoffice'))
       .filter((n) => n.endsWith('.bak.md'))
       .sort()
     expect(backups).toEqual(names.slice(1))
@@ -968,7 +968,7 @@ describe('new documents and data paths for other modules', () => {
     expect(visibility?.root).toBe(join(base, 'vis'))
     expect(visibility?.isVisible('drafts/a.docx')).toBe(false)
     expect(visibility?.isVisible('drafts/b.docx')).toBe(true)
-    expect(visibility?.isVisible('.ieumoffice/memory.md')).toBe(false)
+    expect(visibility?.isVisible('.seuoffice/memory.md')).toBe(false)
     await guide.removeIgnore(added.project.id, 'drafts/a.docx')
     expect((await guide.aiVisibility(added.project.id))?.isVisible('drafts/a.docx')).toBe(true)
   })

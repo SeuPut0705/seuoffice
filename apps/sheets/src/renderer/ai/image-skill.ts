@@ -1,4 +1,4 @@
-import { attachedImageNote, type AgentSkill } from '@genoffice/agent-core'
+import { attachedImageNote, type AgentSkill } from '@seuoffice/agent-core'
 import { ATTACHMENT_IMAGE_EXTS, type AttachmentMeta } from '../../shared/desktop-api'
 import { t } from '../i18n/locale'
 

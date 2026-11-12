@@ -21,7 +21,7 @@ describe('assembleTrustedContext', () => {
       on,
     )
     expect(result.instructions).toEqual({
-      text: '[.ieumoffice/instructions.md]\nmine\n\n[AGENTS.md]\nagents\n\n[CLAUDE.md]\nclaude',
+      text: '[.seuoffice/instructions.md]\nmine\n\n[AGENTS.md]\nagents\n\n[CLAUDE.md]\nclaude',
       sources: ['instructions', 'agents', 'claude'],
     })
   })

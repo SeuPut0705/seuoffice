@@ -1,5 +1,5 @@
-/* The "Attach from GenOffice documents" window. Chrome colours come from
- * @genoffice/ui/tokens.css; the few shell tokens the buttons and check boxes
+/* The "Attach from SeuOffice documents" window. Chrome colours come from
+ * @seuoffice/ui/tokens.css; the few shell tokens the buttons and check boxes
  * use are defined here, with light, dark and system-dark values. */
 :root {
   --accent: #0f7fff;

@@ -20,7 +20,7 @@
  * validate translate both directions.
  */
 
-import { keyedFetch } from '@genoffice/ai-provider'
+import { keyedFetch } from '@seuoffice/ai-provider'
 /** The endpoint list lives in the shared settings contract: this file used to
     keep its own copy of the union, and adding a route meant editing both. */
 import { isCloudflareEndpoint, type DecisionEndpoint } from '../../shared/home-api'

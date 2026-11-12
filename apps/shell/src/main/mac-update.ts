@@ -62,7 +62,7 @@ export function macSelfUpdateBlock(
   const bundle = macAppBundle(execPath)
   if (bundle === null) return 'not-an-app-bundle'
   if (bundle.includes('/AppTranslocation/')) return 'translocated'
-  if (!writable(dirname(bundle), `.ieumoffice-update-check-${process.pid}`)) return 'read-only'
+  if (!writable(dirname(bundle), `.seuoffice-update-check-${process.pid}`)) return 'read-only'
   return null
 }
 
@@ -239,7 +239,7 @@ export function startMacSwap(options: {
       [
         '-c',
         MAC_SWAP_SCRIPT,
-        'ieumoffice-update',
+        'seuoffice-update',
         String(pid),
         bundle,
         staged,

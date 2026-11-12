@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
 import type { SubscriptionApi } from '../src/shared/subscription-api'
 import {
   SHELL_SUBSCRIPTION_CHANNELS,
@@ -26,7 +26,7 @@ vi.mock('electron', () => ({
     on: electronMocks.on,
     removeListener: electronMocks.removeListener,
   },
-  // the preload imports @genoffice/electron-utils (drop-open bridge), which
+  // the preload imports @seuoffice/electron-utils (drop-open bridge), which
   // binds webUtils at module scope even though node env never installs it
   webUtils: { getPathForFile: () => '' },
 }))

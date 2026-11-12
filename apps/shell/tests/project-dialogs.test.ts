@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
-import type { ProjectTrustPrompt } from '@genoffice/project-store'
+import { LANGS } from '@seuoffice/i18n'
+import type { ProjectTrustPrompt } from '@seuoffice/project-store'
 import { createCachedCloudResolver } from '../src/main/projects/cloud-cache'
 import {
   PROJECT_DIALOG_STRINGS,

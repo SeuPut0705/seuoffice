@@ -6,8 +6,8 @@ import {
   type AgentToolCall,
   type AgentToolDef,
   type ToolExecution,
-} from '@genoffice/agent-core'
-import { brandText, type Params } from '@genoffice/i18n'
+} from '@seuoffice/agent-core'
+import { type Params } from '@seuoffice/i18n'
 import type {
   AgentCellText,
   AgentChangeOptions,
@@ -146,10 +146,7 @@ export const PICTURE_ANALYSIS_OFF_NOTE =
   '\n\nNote: analyze_picture is currently unavailable (no AI connection that can look at pictures and no picture-reading API key in Settings). Do not call it or promise to describe a picture: you cannot see what a picture of the document shows, so say that instead of guessing.'
 
 const SYSTEM_PROMPT = [
-  brandText(
-    'You are the assistant inside the GenOffice editor for Hangul word processor documents (HWP / HWPX), the format most Korean public offices write in.',
-    'en',
-  ),
+  'You are the assistant inside the SeuOffice editor for Hangul word processor documents (HWP / HWPX), the format most Korean public offices write in.',
   'You work on the document that is open in the editor, through tools.',
   '',
   '## What the tools can do',

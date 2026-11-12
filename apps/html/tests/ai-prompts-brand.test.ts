@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import { buildBriefWriterRequest } from '../src/renderer/ai/brief-writer'
 import { createDocumentSkill } from '../src/renderer/ai/html-skill'
 import { buildPageWriterRequest } from '../src/renderer/ai/page-writer'
@@ -54,7 +54,7 @@ describe('AI system prompts', () => {
 
   it('keeps the identifier stored inside saved pages', () => {
     // the pinned-brief meta is document data shared with pages made by the upstream editor
-    expect(BRIEF_META_NAME).toBe('genoffice:brief')
+    expect(BRIEF_META_NAME).toBe('seuoffice:brief')
   })
 
   it('names the image files attached to the chat and how to place one', () => {

@@ -61,7 +61,7 @@ export function fetchedAddresses(input: unknown): string[] {
  * files of a project folder are the folder's own text, not something the
  * person brought into the conversation, so an address that stands only in
  * what these tools returned is still put to the person before it is fetched.
- * Keep in sync with PROJECT_TOOL_NAMES in @genoffice/project-store (this
+ * Keep in sync with PROJECT_TOOL_NAMES in @seuoffice/project-store (this
  * package does not depend on it).
  */
 export const UNVOUCHED_RESULT_TOOLS: ReadonlySet<string> = new Set([

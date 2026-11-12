@@ -146,14 +146,14 @@ describe('entry points for the modules later work fills in', () => {
   })
 
   it('resolve by package name', async () => {
-    await expect(import('@genoffice/ai-provider/subscription')).resolves.toBeDefined()
-    await expect(import('@genoffice/ai-provider/claude-code-cli')).resolves.toBeDefined()
-    await expect(import('@genoffice/ai-provider/codex-image')).resolves.toBeDefined()
+    await expect(import('@seuoffice/ai-provider/subscription')).resolves.toBeDefined()
+    await expect(import('@seuoffice/ai-provider/claude-code-cli')).resolves.toBeDefined()
+    await expect(import('@seuoffice/ai-provider/codex-image')).resolves.toBeDefined()
   })
 
   it('the root and browser entries expose the selection contract', async () => {
-    const root = await import('@genoffice/ai-provider')
-    const browser = await import('@genoffice/ai-provider/browser')
+    const root = await import('@seuoffice/ai-provider')
+    const browser = await import('@seuoffice/ai-provider/browser')
     for (const name of [
       'selectAiProvider',
       'normalizeAiSettings',

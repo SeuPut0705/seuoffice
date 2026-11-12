@@ -1,5 +1,5 @@
 /**
- * @genoffice/pdf-structure/store — the result store (spec §6). Node-only
+ * @seuoffice/pdf-structure/store — the result store (spec §6). Node-only
  * (node:fs, node:crypto), so it is its own package entry and is not exported
  * from the package root. `keys.ts` is pure and may be imported directly by
  * environment-free code.

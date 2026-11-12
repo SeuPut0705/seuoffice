@@ -12,7 +12,7 @@ import { readFile, stat } from 'node:fs/promises'
 import { Readable } from 'node:stream'
 import { session } from 'electron'
 import type { Session } from 'electron'
-import { RENDERER_SCHEME, resolveRendererFile } from '@genoffice/electron-utils/renderer-scheme'
+import { RENDERER_SCHEME, resolveRendererFile } from '@seuoffice/electron-utils/renderer-scheme'
 import { DRAWIO_SCHEME } from '../shared/bridge-protocol'
 import {
   PRINT_PAGE_CSP,

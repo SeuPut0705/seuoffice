@@ -24,7 +24,7 @@ import {
   type TableCell,
   type TableModel,
   type TabStop as WordTabStop,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { LossFeature, LossLedger } from './losses'
 import type {
   Align,

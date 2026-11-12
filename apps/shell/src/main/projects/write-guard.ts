@@ -10,8 +10,8 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { isAbsolute, join, posix, win32 } from 'node:path'
-import { tempPathBeside } from '@genoffice/electron-utils/atomic-write'
-import { PROJECT_FOLDER_NAMES } from '@genoffice/project-store'
+import { tempPathBeside } from '@seuoffice/electron-utils/atomic-write'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import { atomicWriteFile } from '../atomic-write'
 import { isValidRenameName } from '../rename-validation'
 import { comparablePath, isPlainSegment, pathApi, relativeInside, samePath } from './paths'
@@ -20,12 +20,12 @@ import { comparablePath, isPlainSegment, pathApi, relativeInside, samePath } fro
  * The single write guard for project folders (spec 3, invariants 3 and 9).
  *
  * The app writes into a person's folder in two places only: under the project's
- * `.ieumoffice/`, and a new document the AI made inside the project folder. Every
+ * `.seuoffice/`, and a new document the AI made inside the project folder. Every
  * such write goes through this class, which checks each time that the project
  * root is still its canonical path, that the target stays below it (no `..`, no
  * drive or stream names), and that no folder on the way nor the target itself is
  * a link or junction. JSON and Markdown are written to a temporary file and
- * renamed; writes to one file run one at a time in arrival order. `.ieumoffice/`
+ * renamed; writes to one file run one at a time in arrival order. `.seuoffice/`
  * and its subfolders are created only by an actual write.
  *
  * A policy refusal throws `ProjectWriteRefused`; a file system failure throws the
@@ -35,7 +35,7 @@ import { comparablePath, isPlainSegment, pathApi, relativeInside, samePath } fro
 export type ProjectWriteRefusal =
   /** The relative path is empty, absolute, or holds `..`, `.`, a stream or control characters */
   | 'bad-path'
-  /** The target is not below the project folder (or, for a new document, inside `.ieumoffice/`) */
+  /** The target is not below the project folder (or, for a new document, inside `.seuoffice/`) */
   | 'outside'
   /** A folder on the way, or the target, is a link or junction */
   | 'link'
@@ -86,7 +86,7 @@ function looksAbsolute(path: string): boolean {
   )
 }
 
-/** The segments of a path relative to `.ieumoffice/`, or a refusal */
+/** The segments of a path relative to `.seuoffice/`, or a refusal */
 function dataSegments(relPath: string): string[] {
   if (typeof relPath !== 'string' || relPath === '' || looksAbsolute(relPath)) {
     throw new ProjectWriteRefused('bad-path', String(relPath))
@@ -101,12 +101,12 @@ export class ProjectWriteGuard {
 
   constructor(private readonly platform: NodeJS.Platform = process.platform) {}
 
-  /** The absolute path of a file under `<root>/.ieumoffice/`; checks the name only, touches nothing */
+  /** The absolute path of a file under `<root>/.seuoffice/`; checks the name only, touches nothing */
   dataPath(root: string, relPath: string): string {
     return join(root, PROJECT_FOLDER_NAMES.dataDir, ...dataSegments(relPath))
   }
 
-  /** Replace a file under `.ieumoffice/` (temporary file, then rename) */
+  /** Replace a file under `.seuoffice/` (temporary file, then rename) */
   async writeData(root: string, relPath: string, data: string | Uint8Array): Promise<void> {
     const target = this.dataPath(root, relPath)
     await this.serialize(target, async () => {
@@ -115,7 +115,7 @@ export class ProjectWriteGuard {
     })
   }
 
-  /** Append to a file under `.ieumoffice/` (chat message lines) */
+  /** Append to a file under `.seuoffice/` (chat message lines) */
   async appendData(root: string, relPath: string, text: string): Promise<void> {
     const target = this.dataPath(root, relPath)
     await this.serialize(target, async () => {
@@ -126,7 +126,7 @@ export class ProjectWriteGuard {
   }
 
   /**
-   * Read, change and write one file under `.ieumoffice/` without another write to
+   * Read, change and write one file under `.seuoffice/` without another write to
    * that file in between. `change` gets the current text (null when absent) and
    * returns the new text, or null/undefined to leave the file (and the folder) alone.
    */
@@ -149,7 +149,7 @@ export class ProjectWriteGuard {
     })
   }
 
-  /** Delete one file under `.ieumoffice/` (old memory backups); a missing file is fine */
+  /** Delete one file under `.seuoffice/` (old memory backups); a missing file is fine */
   async removeData(root: string, relPath: string): Promise<void> {
     const target = this.dataPath(root, relPath)
     await this.serialize(target, async () => {
@@ -160,7 +160,7 @@ export class ProjectWriteGuard {
 
   /**
    * Write a new document the AI made (spec 6): an absolute path inside the project
-   * folder, not under `.ieumoffice/`, in a folder that already exists, never over an
+   * folder, not under `.seuoffice/`, in a folder that already exists, never over an
    * existing entry. The bytes go to a temporary file beside it first.
    */
   async writeNewDocument(root: string, target: string, data: Uint8Array): Promise<void> {
@@ -293,7 +293,7 @@ export class ProjectWriteGuard {
   }
 }
 
-/** The folder a data file lives in; exported for callers that list `.ieumoffice/` */
+/** The folder a data file lives in; exported for callers that list `.seuoffice/` */
 export function dataDirOf(root: string): string {
   return join(root, PROJECT_FOLDER_NAMES.dataDir)
 }

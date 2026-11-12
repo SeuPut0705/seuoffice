@@ -4,7 +4,7 @@
  * The files live in packages/ui/template-fonts/ (outside src/, so no editor build
  * imports them as an asset) and ship once in the installer as resources/template-fonts
  * (apps/shell/electron-builder.cjs); main-process code finds the folder through
- * templateFontsDir in @genoffice/electron-utils/template-fonts-dir. Every file keeps the
+ * templateFontsDir in @seuoffice/electron-utils/template-fonts-dir. Every file keeps the
  * distributor's name, family names and metrics: no subsetting, no renaming, so the family
  * a document stores is the one a machine with the real font installed resolves. All but
  * Noto Serif KR are the distributor's files byte for byte; its two CFF faces carry
@@ -14,7 +14,7 @@
  *
  * Plain data and string helpers with no imports at all: renderer and main-process code
  * both read it (the main-process answer to a font URL is templateFontResponse in
- * @genoffice/electron-utils/template-font-response).
+ * @seuoffice/electron-utils/template-font-response).
  */
 
 export type TemplateFontScript = 'korean' | 'latin'
@@ -258,12 +258,12 @@ export const TEMPLATE_FONT_FILES: readonly string[] = [
 
 /**
  * Where a renderer loads a bundled file from: the template-fonts host of the Word
- * editor's privileged media scheme (LAZY_MEDIA_SCHEME in @genoffice/docx-engine,
- * DOCX_MEDIA_SCHEME_PRIVILEGE in @genoffice/electron-utils; the docs and sheets tests
+ * editor's privileged media scheme (LAZY_MEDIA_SCHEME in @seuoffice/docx-engine,
+ * DOCX_MEDIA_SCHEME_PRIVILEGE in @seuoffice/electron-utils; the docs and sheets tests
  * hold the three equal). Inside the shell the Word editor's main serves these URLs for
  * every editor; a standalone sheets app serves them itself.
  */
-export const TEMPLATE_FONT_SCHEME = 'genoffice-docx-media'
+export const TEMPLATE_FONT_SCHEME = 'seuoffice-docx-media'
 /** the URL host the template fonts are served under (never a 64-hex lazy-media hash) */
 export const TEMPLATE_FONT_HOST = 'template-fonts'
 

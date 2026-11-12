@@ -126,7 +126,7 @@ export const pdfCommand: CommandDef = {
         { verbs: [...VERBS] },
         {
           reason: verb === undefined ? 'missing_argument' : 'invalid_argument',
-          suggestion: 'run `ieumoffice help pdf`',
+          suggestion: 'run `seuoffice help pdf`',
         },
       )
     }
@@ -139,7 +139,7 @@ export const pdfCommand: CommandDef = {
         EXIT.usage,
         `pdf ${v} does not take ${extra.map((f) => `--${f}`).join(', ')}`,
         { options: VERB_OPTIONS[v].map((o) => `--${o}`) },
-        { reason: 'unknown_option', suggestion: 'run `ieumoffice help pdf`' },
+        { reason: 'unknown_option', suggestion: 'run `seuoffice help pdf`' },
       )
     }
     const path = pdfInput(file, ctx)

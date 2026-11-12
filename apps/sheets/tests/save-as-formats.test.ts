@@ -11,7 +11,7 @@ import { readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { setUiLang } from '@genoffice/i18n'
+import { setUiLang } from '@seuoffice/i18n'
 import { IPC_CHANNELS } from '../src/shared/ipc-channels'
 import { workbookSaveResultSchema } from '../src/shared/desktop-api'
 import { legacyCopyName } from '../src/main/recovery-policy'
@@ -170,7 +170,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 }))
 
 // the archive writer is stubbed: it lands the bytes it read plus a mark
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -179,8 +179,8 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -262,8 +262,8 @@ function pdfRequest(saveAsPath?: string): unknown {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-save-as-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-save-as-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-save-as-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-save-as-user-'))
   saveDialogs.length = 0
   saveDialogAnswer.value = ''
   messageBoxes.length = 0
@@ -583,7 +583,7 @@ describe('Save As in the workbook tab', () => {
 
   it('the first Save of a new workbook offers no PDF and keeps its suggestion', async () => {
     // a new workbook runs from a backing file in a temp folder until its first Save
-    const tempDir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-save-as-new-'))
+    const tempDir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-save-as-new-'))
     try {
       const backing = join(tempDir, 'New Spreadsheet.xlsx')
       writeFileSync(backing, 'blank')

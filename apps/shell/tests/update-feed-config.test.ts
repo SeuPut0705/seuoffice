@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { runInNewContext } from 'node:vm'
 import { describe, expect, it, vi } from 'vitest'
 import { NsisUpdater } from 'electron-updater/out/NsisUpdater'
-import { PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER } from '@genoffice/i18n'
+import { PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER } from '@seuoffice/i18n'
 
 /**
  * What the update feed is configured to be, as opposed to how the updater
@@ -60,7 +60,7 @@ describe('unsigned Windows builds can update', () => {
       provider: 'github',
       owner: PRODUCT_REPO_OWNER,
       repo: PRODUCT_REPO_NAME,
-      updaterCacheDirName: 'ieumoffice-updater',
+      updaterCacheDirName: 'seuoffice-updater',
     })
     // null is "nothing wrong": NsisUpdater goes on to install the download
     await expect(outcome).resolves.toBeNull()
@@ -91,7 +91,7 @@ describe('unsigned Windows builds can update', () => {
     expect(config.win.verifyUpdateCodeSignature).not.toBe(true)
     // the vendor's feed variable no longer selects anything
     expect(
-      loadBuilderConfig({ GENOFFICE_UPDATE_URL: 'https://updates.example.test/x' }).publish,
+      loadBuilderConfig({ SEUOFFICE_UPDATE_URL: 'https://updates.example.test/x' }).publish,
     ).toEqual(config.publish)
   })
 })
@@ -122,8 +122,8 @@ describe('macOS builds carry no Apple Developer ID', () => {
   })
 
   it('adds the Intel package when the build asks for it, each dmg named by CPU', () => {
-    // decision 0065: GENOFFICE_MAC_X64=1 adds the Intel package to a Mac build
-    const config = loadBuilderConfig({ GENOFFICE_MAC_X64: '1' })
+    // decision 0065: SEUOFFICE_MAC_X64=1 adds the Intel package to a Mac build
+    const config = loadBuilderConfig({ SEUOFFICE_MAC_X64: '1' })
     expect(config.mac.target).toEqual([
       { target: 'dmg', arch: ['arm64', 'x64'] },
       { target: 'zip', arch: ['arm64', 'x64'] },
@@ -148,7 +148,7 @@ describe('no trace of the upstream update service', () => {
   it.each(sources)('%s names no vendor feed, CDN or URL', (file) => {
     const text = readFileSync(join(ROOT, file), 'utf8')
     expect(text).not.toMatch(/azure/i)
-    expect(text).not.toContain('GENOFFICE_UPDATE_URL')
+    expect(text).not.toContain('SEUOFFICE_UPDATE_URL')
     // no literal address at all: every link comes from the repository constants
     expect(text).not.toMatch(/https?:\/\//)
   })

@@ -16,9 +16,9 @@
  * ribbon, the menu and the AI panel, and locks editing while it runs.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { EpubTocEntry } from '@genoffice/epub-engine'
-import type { Params } from '@genoffice/i18n'
-import { useAutoSavePref } from '@genoffice/ui'
+import type { EpubTocEntry } from '@seuoffice/epub-engine'
+import type { Params } from '@seuoffice/i18n'
+import { useAutoSavePref } from '@seuoffice/ui'
 import { epubAssetUrl } from '../shared/asset-url'
 import { EPUB_VIEW_PREFS_DEFAULT } from '../shared/ipc'
 import type {

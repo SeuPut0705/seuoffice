@@ -18,7 +18,7 @@ import {
   type NumberingDef,
   type NumberingLevel,
   type SectionInfo,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { pendingNumberingDirty, type PendingNumbering } from '../renderer/doc-state'
 import { buildDocBytes, type FileActionContext } from '../renderer/file-actions'
 import { showToast } from '../renderer/components/toast-bus'

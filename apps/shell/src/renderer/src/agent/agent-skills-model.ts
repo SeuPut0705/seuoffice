@@ -1,4 +1,4 @@
-import type { SkillChipView } from '@genoffice/ui'
+import type { SkillChipView } from '@seuoffice/ui'
 import type { AgentSessionSkill } from '../../../shared/agent-api'
 
 /**

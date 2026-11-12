@@ -1,4 +1,4 @@
-# apps/markdown (`@genoffice/markdown`)
+# apps/markdown (`@seuoffice/markdown`)
 
 Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 돌리고, 일반 텍스트와 JSON은 원문 편집기로 연다. AI는 공용 배선 위에 Markdown용 skill을 얹은 얇은 구성이다.
 
@@ -23,9 +23,9 @@ Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 
 - 문서 옆에 두는 파일의 이름을 바꾸지 않는다. 문서와 같은 폴더의 `assets/` 안에 앱이 소유한 파일 목록 `.genoffice-assets.json`(`ASSET_MANIFEST_FILENAME`)이 있고, 이것으로 "앱이 넣은 이미지"와 "사용자가 넣은 파일"을 구분한다. 이름을 바꾸면 기존 문서의 자산을 더는 앱의 것으로 알아보지 못한다. 앱이 넣지 않은 파일은 지우지 않는다.
 - 가려진 범위는 실제 글자 위의 표시다. 문서와 디스크의 파일은 원래 글자를 그대로 갖고, 모델에게 직렬화될 때만 `{{label}}`로 나간다. 변환은 Markdown 직렬화 전에 JSON에서 한다(`redactJson`). 텍스트 노드에 걸린 mark는 직렬화기가 mark의 렌더 함수로 보내지 않아, 직렬화 뒤에 바꾸려 하면 아무 일도 일어나지 않는다. `redactJson`은 throw하지 않고 모르는 노드는 통과시킨다. 모델의 편집은 표식이 쪼개지지 않았는지 검사한 뒤에만 받아들인다.
 - 이 모듈이 갖는 AI 채널은 `markdown:ai-generate-image` 하나다. 호출할 때 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`를 넘기고 로컬 경로는 문서 폴더와 붙여 넣기 임시 폴더로 제한한다. 가용성은 `AI_TOOL_CAPABILITIES_CHANNEL`(문서 에디터의 메인이 등록한 채널과 같은 이름이어야 한다)로 묻고, 답이 없으면 이미지 도구를 내놓지 않는다.
-- 구독 API의 채널 이름과 판독 함수는 `@genoffice/ai-provider/browser`의 것을 쓰고 사본을 만들지 않는다. 보내기 판단은 `useAiSendGate`만 쓴다. 다른 제공자로 저절로 넘어가는 코드를 넣지 않는다.
-- 이미지 호스트의 자격 증명은 메인 프로세스에만 둔다. 업로드는 메인에서 하고 로컬 `assets/` 사본을 대체 경로로 유지한다. 업로드 요청은 `@genoffice/ai-provider`의 `keyedFetch`로 보내 리다이렉트를 따라가지 않는다(`uploadImageToHost`). 따라가면 S3 서명·토큰과 그림이 답이 가리킨 주소에 다시 실린다. 리다이렉트로 답하면 업로드는 실패하고 로컬 사본이 쓰인다(`tests/image-host-redirect.test.ts`).
-- ODT로 내보내기(`'odt'` 요청, `markdown:export-odt`)는 docx 내보내기가 만든 바로 그 바이트(`exportDocxBytes`)를 `@genoffice/odt-engine`의 `docxToOdt`로 바꾼 것이다. ODT용 문서를 따로 만들지 않는다. 그래서 가린 범위도 docx 내보내기와 똑같이 다뤄진다(가림은 모델에게만 적용되고 내보낸 파일에는 원래 글자가 들어간다). ODT 경로가 docx보다 더 드러내는 것이 없다.
+- 구독 API의 채널 이름과 판독 함수는 `@seuoffice/ai-provider/browser`의 것을 쓰고 사본을 만들지 않는다. 보내기 판단은 `useAiSendGate`만 쓴다. 다른 제공자로 저절로 넘어가는 코드를 넣지 않는다.
+- 이미지 호스트의 자격 증명은 메인 프로세스에만 둔다. 업로드는 메인에서 하고 로컬 `assets/` 사본을 대체 경로로 유지한다. 업로드 요청은 `@seuoffice/ai-provider`의 `keyedFetch`로 보내 리다이렉트를 따라가지 않는다(`uploadImageToHost`). 따라가면 S3 서명·토큰과 그림이 답이 가리킨 주소에 다시 실린다. 리다이렉트로 답하면 업로드는 실패하고 로컬 사본이 쓰인다(`tests/image-host-redirect.test.ts`).
+- ODT로 내보내기(`'odt'` 요청, `markdown:export-odt`)는 docx 내보내기가 만든 바로 그 바이트(`exportDocxBytes`)를 `@seuoffice/odt-engine`의 `docxToOdt`로 바꾼 것이다. ODT용 문서를 따로 만들지 않는다. 그래서 가린 범위도 docx 내보내기와 똑같이 다뤄진다(가림은 모델에게만 적용되고 내보낸 파일에는 원래 글자가 들어간다). ODT 경로가 docx보다 더 드러내는 것이 없다.
 - **다른 이름으로 저장에서 고른 Markdown 밖의 형식은 저장이 아니라 사본 내보내기다.** 저장 창은 화면에 그릴 문서가 있을 때만(`mode: 'saveAs'`이고 렌더러가 `pdfHtml`을 보냈을 때) Markdown·TXT·JSON 다음에 PDF, Word(`.docx`), ODT, 쪽 이미지(`.png`)를 내놓고, 제안 이름에는 확장자를 붙이지 않는다(확장자 없는 답은 `.md`). `.pdf`는 뒷단이 그 HTML을 PDF로 써서 연 뒤(`markdown:export-pdf`와 같은 렌더) `{ ok: true, path, exported: 'pdf' }`로 답한다. `.docx`·`.odt`·`.png`는 뒷단이 그 경로를 이 화면에 한 번만 허락해 두고(`saveAsExportTargets`) 아무것도 쓰지 않은 채 `{ ok: true, path, exportAs }`로 답하며, 화면이 내보내기 메뉴의 코드(`runExport`)를 그 경로(`saveAsTarget`)로 돌린다. 이때 두 번째 저장 창·폴더 창은 뜨지 않고, 허락받지 않은 경로는 거절한다. 쪽 이미지는 한 쪽이면 입력한 이름 그대로, 여러 쪽이면 같은 폴더에 `이름-01.png`, `이름-02.png`…(`numberedExportPaths`)로 쓴다. 어느 경우든 문서의 경로·바뀜 상태·복구 사본·자산은 그대로라 다음 저장은 계속 원래 `.md`에 쓴다. `exported`·`exportAs`를 저장 성공으로 다루면 탭이 사본을 가리키게 되므로 화면은 이 값을 먼저 본다. 텍스트·JSON 원문 편집기의 Save As에는 내보내기 형식을 내놓지 않는다(그 내보내기들은 블록 편집기의 화면이 있어야 한다).
 - ODT 내보내기 순서: 저장 창(`.odt`) → docx → ODT → `report`가 비어 있지 않으면 "바뀌는 것·빠지는 것" 확인 창(뒷단의 `dialog.showMessageBox`, 문구는 `odt-export.ts`의 두 언어 사전) → 쓰기. 취소하면 아무것도 쓰지 않는다. 테마 부분이 있다는 것만으로는 보고하지 않으므로, 보통의 마크다운 문서는 확인 창 없이 바로 쓴다. 편집 화면 그림(`renderedObjects`)은 넘기지 않고, 수식은 엔진의 이름표 상자가 된다.
 - **"노트에 넣기"(결정 0043)는 노트 파일에 쓰지 않는다.** 셸이 노트 탭의 webContents에 글을 맡기면(`queueMarkdownNoteAppendFor`, 알림 `markdown:note-append-ready`), 그 탭의 화면이 `markdown:note-append-take`로 한 번만 가져가 블록 편집기의 문서 **끝에** 되돌릴 수 있는 편집으로 넣고 "바뀜" 상태로 만든다. 저장은 사람이 그 탭에서 한다. 이 편집기는 바깥에서 바뀐 파일을 다시 읽지 않으므로, 파일에 직접 쓰면 열린 탭과 디스크가 어긋난다. 맡긴 글은 그 노트 파일을 보여 주는 탭만 가져간다. 제목 없는 탭, 다른 파일을 보여 주는 탭, 원문 편집기로 연 파일, 가져간 뒤 다시 불러온 탭, 먼저 닫힌 탭은 아무것도 받지 않는다.
@@ -33,7 +33,7 @@ Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 
 
 ## 이 모듈의 방식
 
-- **발표 모드는 문서만 남긴다.** F5는 HTML 전체화면으로 열고 리본·AI 창·개요/백링크 패널·상태 표시줄을 숨긴다. 원문 보기(`sourceViewOpen`)가 열려 있었으면 닫았다가 발표가 끝날 때 다시 연다. 발표 중에는 편집기를 읽기 전용으로 둔다(`editor.setEditable(false)`). Esc·F5로 끝나며, OS에서 전체화면이 풀려도 같은 복원을 한다. `.txt`·`.json`처럼 블록 편집기가 없는 파일은 발표하지 않는다. 키 판정은 `@genoffice/ui`의 `presentationKeyOf` 하나다.
+- **발표 모드는 문서만 남긴다.** F5는 HTML 전체화면으로 열고 리본·AI 창·개요/백링크 패널·상태 표시줄을 숨긴다. 원문 보기(`sourceViewOpen`)가 열려 있었으면 닫았다가 발표가 끝날 때 다시 연다. 발표 중에는 편집기를 읽기 전용으로 둔다(`editor.setEditable(false)`). Esc·F5로 끝나며, OS에서 전체화면이 풀려도 같은 복원을 한다. `.txt`·`.json`처럼 블록 편집기가 없는 파일은 발표하지 않는다. 키 판정은 `@seuoffice/ui`의 `presentationKeyOf` 하나다.
 - 링크는 `window.open`으로 열고, 그 창구는 메인이 `shell.openExternal`로 넘긴다. 편집 중에는 Ctrl/Cmd+클릭, 발표(F5)처럼 읽기 전용일 때는 그냥 클릭이다(`linkOpen.ts`의 `externalLinkTarget`이 http·https·mailto만 통과시킨다). 앵커의 기본 이동은 막는다. 편집 중에 링크를 그냥 처음 클릭하면 Ctrl/⌘+클릭 안내를 한 번 띄운다(`linkOpenHint`).
 - 메인 코드는 shell 번들에 들어간다(`../../../markdown/src/main/markdown-main`을 상대 경로로 import한다). `src/main`을 고친 뒤에는 shell을 다시 빌드한다.
 - 경로는 뷰별로 허가된 것만 다룬다. 새 창을 만들 때 `grantAndTrack`으로 열 파일을 등록한다.
@@ -43,7 +43,7 @@ Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 
 - 패널은 다른 에디터와 같은 부품으로 조립한다(`AiConnectPrompt`, `AiFirstConnectionNotice`, `AiBlockedNotice`, `aiRunErrorText`). 막힌 실행의 원인은 전송이 기록한 마지막 실패가 그 메시지의 실패일 때만 쓴다.
 - `odt-export.ts`는 HTML 편집기의 같은 이름 파일과 내용이 같다. 한쪽을 고치면 다른 쪽도 고친다.
 - 복구 사본: 저장하지 않은 변경이 있으면 화면이 약 30초마다 저장할 때 쓸 글자 그대로를 뒷단에 넘기고(`src/renderer/recovery-copy.ts`, 자동 저장 스위치와 무관), 뒷단이 공용 저장소로 `<userData>/markdown-autosave`에 둔다(`src/main/recovery.ts`). 원본 파일과 사용자 폴더에는 쓰지 않는다(제목 없는 문서 포함). 저장(자동 저장·다른 이름·MCP 포함)은 사본을 지우고, "저장 안 함"과 MCP의 저장 없이 닫기는 `dontSave`로, 깨끗하게 닫힌 탭은 자기가 쓴 사본만 지운다. 화면이 죽은 탭과 앱이 끝나는 중의 닫기는 지우지 않는다. 사본이 있는 파일을 열면 내용을 읽기 전에 `recoveryOpen`이 공용 물음(Esc는 되살리기)을 거치고, 되살린 글은 원래 경로를 저장 대상으로 둔 채 "바뀜" 상태로 열린다. 껍데기 앱은 `markdownRecoveryEditor`(약속), `markdownRecoveryIdentity`, `setMarkdownRecoveryTitleSource`를 쓴다. `recovery.ts`와 `recovery-copy.ts`는 HTML 편집기의 같은 이름 파일과 내용이 같다.
-- 문자열은 `src/renderer/i18n/strings.ts` 한 파일에 두 언어가 있고 `en`이 키 집합을 정한다. 구독 연결 문장과 AI 진입 이름은 `@genoffice/ui`의 것을 쓴다.
+- 문자열은 `src/renderer/i18n/strings.ts` 한 파일에 두 언어가 있고 `en`이 키 집합을 정한다. 구독 연결 문장과 AI 진입 이름은 `@seuoffice/ui`의 것을 쓴다.
 - 편집 화면의 다이어그램(mermaid·wavedrom)은 원래 크기로 그린다. 글 폭보다 넓은 그림은 줄이지 않고 그림 상자 안에서 가로로 넘긴다. mermaid는 `width="100%"`와 `max-width`로 그림을 글 폭에 맞춰 줄이므로 `pinMermaidNaturalSize`가 그 크기를 픽셀 값으로 박는다. 인쇄·PDF·쪽 이미지는 `printHtml.ts`의 CSS(`max-width: 100%`)가 쪽 폭에 맞춰 줄인다. 그림에 인라인 `max-width`를 남기면 이 CSS를 이겨 인쇄한 그림이 쪽 밖으로 나간다. mermaid는 그릴 때 임시 그리기 칸을 `<body>` 맨 끝에 붙이는데, 그대로 두면 그리는 동안 문서가 길어져 창에 세로 스크롤바가 생기고 글 칸이 15px 좁아진다. 그래서 `renderMermaid`는 창 폭과 같고 자리를 차지하지 않는 고정 위치 칸(`scratchHost`)을 `mermaid.render`의 세 번째 인자로 넘긴다. 간트 차트만은 그릴 폭을 스스로 정하지 않고 이 임시 칸의 폭(창 폭)을 따르므로, 그림 상자의 폭(`CodeBlockView`가 재는 값)을 `gantt.useWidth`로 넘기고 글 칸의 폭이 바뀌면 다시 그린다(`withGanttWidth`). Word·ODT 내보내기는 그림 폭 `DOCX_MAX_IMAGE_PX`로 그린다. mermaid는 날짜 눈금 수를 기간만 보고 정해, 좁게 그리면 날짜 글자가 겹칠 수 있다. 그래서 한 번 그린 뒤 화면 밖에서 눈금 간격을 재고(`ganttFit`), 겹치면 글자가 겹치지 않는 폭으로 한 번 더 그린다(이때는 상자 안에서 가로로 넘긴다). 눈금이 놓이는 축은 그림 폭에서 mermaid의 양옆 여백(각 75px)을 뺀 길이라, 상자가 그보다 조금 넓거나 좁으면 축이 몇 픽셀이거나 없다. 눈금은 정수 픽셀로 반올림되어 한 점에 몰리고 간격을 잴 수 없으므로, 그때는 날짜 글자를 나란히 놓을 만한 폭으로 한 번 그려 재고 나서 다시 그린다. 원문이 `useWidth`를 정해 두었으면 그 값을 따른다. 간트인지는 mermaid와 같은 방법으로 가린다(`isGanttSource`: 머리말·지시문·`%%` 주석을 빼고 남은 글의 첫 낱말). 다른 줄에 `gantt`가 있는 마인드맵은 간트가 아니다.
 - Word·ODT 내보내기는 다이어그램 SVG를 캔버스에 그려 PNG로 넣는다(`diagramSvgToPng`). SVG에 `<foreignObject>`가 있으면 캔버스가 더럽혀져 PNG를 꺼낼 수 없고, 그 그림은 원문 코드로 들어간다. 그래서 mermaid는 글자를 SVG 글자로 그리게 둔다(`htmlLabels: false`, 여정 지도는 `journey.textPlacement: 'tspan'`). 그림 크기는 viewBox에서 읽는다. mermaid는 상태 다이어그램 등의 viewBox에 `9.5367431640625e-7` 같은 지수 표기를 쓰므로 숫자는 부호·지수까지 읽는다. viewBox가 없으면 뿌리의 `width`·`height`(px)를 쓴다. 새 mermaid 종류를 들이면 `tests/browser/docx-diagram-export.spec.ts`처럼 내보낸 파일에 그림이 들어가는지 본다.
 - 제목 개요 창(`OutlinePane.tsx`)은 열림 여부를 `mdapp.showOutline`에 기억한다. 제목이 없는 문서에서도 열 수 있고(빈 상태 안내), Ctrl+Shift+O로 여닫는다. 파일을 열 때 `collectOutline`으로 한 번 채워 두어 첫 편집 전에도 제목 목록이 보인다.
@@ -52,7 +52,7 @@ Markdown 에디터다. 일반 `.md` 파일 위에서 TipTap 블록 편집기를 
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/markdown`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/markdown`. 환경은 `jsdom`이다.
+- 실행: `npm run test -w @seuoffice/markdown`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @seuoffice/markdown`. 환경은 `jsdom`이다.
 - 저장 경로를 바꾸면 "고치지 않은 블록의 바이트가 그대로인지"를 테스트한다. 링크 참조 정의, 각주, 원시 HTML 블록, CRLF 파일, BOM이 있는 파일을 포함한다.
 - 가림을 바꾸면 쪼개진 표식, 가려진 범위를 가로지르는 선택, 모르는 노드 형태에서 원문이 모델용 글에 남지 않는지 테스트한다.
 - 노트에 넣기(`tests/note-append.test.ts`, `tests/note-append-editor.test.ts`): 그 노트를 보여 주는 탭만 한 번 가져가는지, 문서 끝에 넣고 바뀜이 되는지, 파일은 그대로인지.

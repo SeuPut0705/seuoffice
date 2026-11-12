@@ -32,7 +32,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/cli/agent-skills', () => {
+vi.mock('@seuoffice/cli/agent-skills', () => {
   const rows = {
     'claude-code': {
       id: 'claude-code',
@@ -43,13 +43,13 @@ vi.mock('@genoffice/cli/agent-skills', () => {
     codex: { id: 'codex', label: 'Codex', skillsDir: '/home/me/.codex/skills', legacy: true },
     cursor: { id: 'cursor', label: 'Cursor', skillsDir: '/home/me/.cursor/skills', legacy: true },
   } as Record<string, { id: string; label: string; skillsDir: string; legacy?: boolean }>
-  const skillFilePath = (dir: string) => `${dir}/ieumoffice/SKILL.md`
+  const skillFilePath = (dir: string) => `${dir}/seuoffice/SKILL.md`
   const legacy = () =>
     Object.values(rows).filter((r) => r.legacy && h.ledger[skillFilePath(r.skillsDir)])
   return {
     LEDGER_KEY: 'agentSkillInstalls',
     SHARED_AGENT_ID: 'agents',
-    bundledSkillFrom: () => ({ name: 'ieumoffice', version: '1.0.0', text: 'x' }),
+    bundledSkillFrom: () => ({ name: 'seuoffice', version: '1.0.0', text: 'x' }),
     buildSkillZip: async () => Buffer.alloc(0),
     detectAgents: () => [rows['claude-code'], rows.agents],
     skillRows: () => [rows['claude-code'], rows.agents, ...legacy()],
@@ -68,10 +68,10 @@ vi.mock('@genoffice/cli/agent-skills', () => {
   }
 })
 
-vi.mock('@genoffice/cli/install', () => ({
-  CLI_COMMAND: 'ieumoffice',
+vi.mock('@seuoffice/cli/install', () => ({
+  CLI_COMMAND: 'seuoffice',
   inspectCliLink: () => ({ linked: false }),
-  launcherFileName: () => 'ieumoffice',
+  launcherFileName: () => 'seuoffice',
 }))
 
 import { registerIntegrationsIpc } from '../src/main/integrations-ipc'
@@ -93,8 +93,8 @@ beforeEach(() => {
   h.dialogResult = { canceled: true, filePaths: [] }
   h.ledger = {}
   h.states = {}
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-integrations-'))
-  writeFileSync(join(dir, 'SKILL.md'), '---\nname: ieumoffice\n---\n')
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-integrations-'))
+  writeFileSync(join(dir, 'SKILL.md'), '---\nname: seuoffice\n---\n')
   writeFileSync(join(dir, 'package.json'), JSON.stringify({ version: '0.0.0' }))
   registerIntegrationsIpc({
     settingsPath: () => join(dir, 'app-settings.json'),
@@ -134,7 +134,7 @@ describe('integrations:install-skill', () => {
 })
 
 describe('integrations:install-skill and the shared ~/.agents row', () => {
-  const codexSkill = '/home/me/.codex/skills/ieumoffice/SKILL.md'
+  const codexSkill = '/home/me/.codex/skills/seuoffice/SKILL.md'
 
   it('refuses a new copy in the own folder of a tool the shared row serves', async () => {
     await expect(
@@ -153,7 +153,7 @@ describe('integrations:install-skill and the shared ~/.agents row', () => {
 
   it('brings plainly outdated older copies along with the shared row, and leaves edited ones', () => {
     h.ledger[codexSkill] = { version: '0.9.0' }
-    h.ledger['/home/me/.cursor/skills/ieumoffice/SKILL.md'] = { version: '0.9.0' }
+    h.ledger['/home/me/.cursor/skills/seuoffice/SKILL.md'] = { version: '0.9.0' }
     h.states['/home/me/.codex/skills'] = 'outdated'
     h.states['/home/me/.cursor/skills'] = 'modified'
     invoke(INTEGRATIONS_CHANNELS.installSkill, { agentId: 'agents' })

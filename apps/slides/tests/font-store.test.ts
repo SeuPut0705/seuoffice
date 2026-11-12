@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
-// The adapter, not the store: install discipline lives in @genoffice/electron-utils and is tested there, while where the store sits on disk and which registry reads it are only knowable here.
+// The adapter, not the store: install discipline lives in @seuoffice/electron-utils and is tested there, while where the store sits on disk and which registry reads it are only knowable here.
 
 const storeDir = mkdtempSync(join(tmpdir(), 'slides-font-store-'))
 
@@ -60,7 +60,7 @@ describe('installLocalFontFiles', () => {
   })
 
   it('installs without a font mirror, and without touching the network', () => {
-    vi.stubEnv('GENOFFICE_FONT_CDN_URL', '')
+    vi.stubEnv('SEUOFFICE_FONT_CDN_URL', '')
     const src = join(storeDir, 'brand.otf')
     writeFileSync(src, Buffer.concat([Buffer.from('OTTO'), Buffer.from('x'.repeat(64))]))
     expect(installLocalFontFiles([src])).toEqual(['Brand Sans'])
@@ -82,7 +82,7 @@ describe('no download entry point remains', () => {
 
   it('the adapter reads no mirror address and holds no network handle', () => {
     // A mirror URL used to arrive through an environment variable or the packaged metadata.
-    expect(read('src/main/font-store.ts')).not.toMatch(/process\.env|genofficeFontCdn|\bnet\b/)
+    expect(read('src/main/font-store.ts')).not.toMatch(/process\.env|seuofficeFontCdn|\bnet\b/)
   })
 
   it('main, preload and the shared contract carry the install channel alone', () => {

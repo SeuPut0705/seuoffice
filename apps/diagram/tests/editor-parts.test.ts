@@ -2,7 +2,7 @@
 // The open notice, the print sheets, draw.io's start arguments and
 // configuration, recovery copies, and the UI languages.
 import { describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { hasNotices, scanDiagramNotices } from '../src/shared/notices'
 import { buildPrintHtml, inertSvg, isPrintCancel, isPrintPage } from '../src/main/print-document'
 import {

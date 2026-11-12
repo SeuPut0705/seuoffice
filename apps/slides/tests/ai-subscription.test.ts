@@ -9,13 +9,13 @@ import {
   type AiSettings,
   type AiSubscriptionState,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   aiConnectPromptChoice,
   aiSendGate,
   withAiContinueProvider,
   withAiSubscriptionNoticeSeen,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { blockedRunOf, toolGatesOf } from '../src/renderer/ai/subscription'
 import { settingsSupportVision } from '../src/renderer/ai/slide-qc'
 import {
@@ -43,7 +43,7 @@ const withAnthropicKey = (settings: AiSettings): AiSettings => ({
   providers: { ...settings.providers, anthropic: { apiKey: 'sk-test', model: 'claude-test' } },
 })
 
-// The gate itself is the one every editor shares (@genoffice/ui); these pin it on the
+// The gate itself is the one every editor shares (@seuoffice/ui); these pin it on the
 // settings and statuses the slides panel hands it.
 describe('the gate in front of a run', () => {
   it('nothing connected → the connect prompt, with the choice it is built from', () => {

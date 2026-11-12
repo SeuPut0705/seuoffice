@@ -10,16 +10,16 @@ import { defineConfig } from 'vite'
 // The Docs app for the browser: the renderer from src/renderer behind the web desktop bridge in src/web.
 // Same package-source mapping as the renderer block of electron.vite.config.ts (specific entries first).
 const localAlias = {
-  '@genoffice/docx-engine/lazy-media': resolve(
+  '@seuoffice/docx-engine/lazy-media': resolve(
     __dirname,
     '../../packages/docx-engine/src/lazy-media.ts',
   ),
-  '@genoffice/docx-engine/zip-splice': resolve(
+  '@seuoffice/docx-engine/zip-splice': resolve(
     __dirname,
     '../../packages/docx-engine/src/zip-splice.ts',
   ),
-  '@genoffice/docx-engine': resolve(__dirname, '../../packages/docx-engine/src/index.ts'),
-  '@genoffice/odt-engine': resolve(__dirname, '../../packages/odt-engine/src/index.ts'),
+  '@seuoffice/docx-engine': resolve(__dirname, '../../packages/docx-engine/src/index.ts'),
+  '@seuoffice/odt-engine': resolve(__dirname, '../../packages/odt-engine/src/index.ts'),
 }
 
 export default defineConfig({

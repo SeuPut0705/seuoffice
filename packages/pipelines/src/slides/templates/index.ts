@@ -1,4 +1,4 @@
-// Renderer-safe entry (`@genoffice/pipelines/slides/templates`): data and lookup only.
+// Renderer-safe entry (`@seuoffice/pipelines/slides/templates`): data and lookup only.
 // The validator lives in '../template-check' because it builds pages with pptx-engine (Node only).
 import { SLIDE_TEMPLATES } from './catalog'
 import type { SlideTemplate } from './contract'

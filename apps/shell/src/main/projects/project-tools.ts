@@ -4,7 +4,7 @@ import {
   fileHasUnsavedChanges,
   UNSAVED_CHANGES_MESSAGE,
   withoutUnsavedFiles,
-} from '@genoffice/electron-utils/unsaved-files'
+} from '@seuoffice/electron-utils/unsaved-files'
 import type {
   ProjectId,
   ProjectListFilesResult,
@@ -12,7 +12,7 @@ import type {
   ProjectReadResult,
   ProjectSearchHit,
   ProjectSearchResult,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import type { FileIndexStore } from '../file-index/store'
 import { isSupportedTreeFile } from '../folder-tree'
 import { kbReadMaxBytes, readKnowledgeFilePage, type KbRunScopes } from '../knowledge-base'
@@ -344,7 +344,7 @@ export class ProjectFolderTools {
       }
     }
     // judged again by the name on disk: a short name or other spelling may stand for
-    // a hidden, `.ieumoffice/` or ignored entry; every later check uses the real path
+    // a hidden, `.seuoffice/` or ignored entry; every later check uses the real path
     const { path, segments } = found
     const judgedReal = this.judge(visibility, segments)
     if (judgedReal) return refused(judgedReal)

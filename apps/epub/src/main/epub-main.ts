@@ -42,11 +42,11 @@ import {
   recordDiskState,
   shouldDeferAutoSave,
   showSaveDialogWithMemory,
-} from '@genoffice/electron-utils'
-import type { SaveDiskState } from '@genoffice/electron-utils'
-import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
-import { buildTranslatedEpub, epubTranslationUnits } from '@genoffice/epub-engine'
-import { ResultStore } from '@genoffice/pdf-structure/store'
+} from '@seuoffice/electron-utils'
+import type { SaveDiskState } from '@seuoffice/electron-utils'
+import { getUiLang, normalizeLang, setUiLang } from '@seuoffice/i18n'
+import { buildTranslatedEpub, epubTranslationUnits } from '@seuoffice/epub-engine'
+import { ResultStore } from '@seuoffice/pdf-structure/store'
 import { registerEpubAiIpc } from './ai-attachments'
 import { EPUB_ASSET_SCHEME_PRIVILEGE, serveEpubAsset } from './asset-protocol'
 import { atomicWriteFile } from './atomic-write'
@@ -926,7 +926,7 @@ export function createEpubView(openPath: string): WebContentsView {
   return view
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/epub`, a book path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/epub`, a book path passed via argv */
 export function startEpubStandalone(): void {
   registerEpubPrivilegedSchemes()
   installNavigationGuard(app)
@@ -937,10 +937,10 @@ export function startEpubStandalone(): void {
     rendererFile: join(__dirname, '../renderer/index.html'),
   })
   // A scratch profile for scripted runs, the same variable the shell reads.
-  if (process.env.GENOFFICE_USER_DATA) app.setPath('userData', process.env.GENOFFICE_USER_DATA)
+  if (process.env.SEUOFFICE_USER_DATA) app.setPath('userData', process.env.SEUOFFICE_USER_DATA)
   void app.whenReady().then(() => {
     // there is no shell to say which language the user picked
-    setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
+    setUiLang(normalizeLang(process.env.SEUOFFICE_LANG ?? app.getLocale()))
     installRendererProtocol({ epub: join(__dirname, '../renderer') })
     registerEpubIpc()
     const win = new BrowserWindow({

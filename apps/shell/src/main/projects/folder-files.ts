@@ -9,7 +9,7 @@ import {
   PROJECT_FORMAT_VERSION,
   PROJECT_NAME_MAX_CHARS,
   type ProjectFolderFile,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { relativeInside } from './paths'
 
 /** the OS's own resolution (long names on Windows), unlike the JS `realpath` */
@@ -17,7 +17,7 @@ const realpathNative = promisify(realpath.native)
 
 /**
  * Reading what a project folder holds (spec 3). Reads never create anything and
- * never follow a link or junction: a linked `.ieumoffice/`, a linked file or a
+ * never follow a link or junction: a linked `.seuoffice/`, a linked file or a
  * file with a second hard link reads as absent, so a planted link cannot pull a
  * file from elsewhere on the PC (a sign-in store, say) into a request.
  */
@@ -121,7 +121,7 @@ export async function readFolderText(
   }
 }
 
-/** A file under `.ieumoffice/` */
+/** A file under `.seuoffice/` */
 export function readDataText(root: string, name: string): Promise<string | null> {
   return readFolderText(root, [PROJECT_FOLDER_NAMES.dataDir, name])
 }
@@ -132,7 +132,7 @@ export function cleanProjectName(name: string): string {
   return Array.from(oneLine).slice(0, PROJECT_NAME_MAX_CHARS).join('')
 }
 
-/** `.ieumoffice/project.json` when present and well-formed (a bad id makes the file count as absent) */
+/** `.seuoffice/project.json` when present and well-formed (a bad id makes the file count as absent) */
 export async function readProjectFile(root: string): Promise<ProjectFolderFile | null> {
   const text = await readDataText(root, PROJECT_FOLDER_NAMES.projectFile)
   if (text === null) return null

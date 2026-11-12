@@ -96,7 +96,7 @@ describe('macSelfUpdateBlock', () => {
   })
 
   it('blocks a run outside an app bundle', () => {
-    expect(macSelfUpdateBlock('/opt/ieumoffice/IeumOffice', () => true)).toBe('not-an-app-bundle')
+    expect(macSelfUpdateBlock('/opt/seuoffice/IeumOffice', () => true)).toBe('not-an-app-bundle')
   })
 })
 
@@ -125,8 +125,8 @@ function fakeMac(options: {
   dittoFails?: boolean
 }): FakeMac {
   const {
-    apps = { 'IeumOffice.app': { version: '0.2.0', id: 'com.pblsketch.ieumoffice' } },
-    installed = { version: '0.1.0', id: 'com.pblsketch.ieumoffice' },
+    apps = { 'IeumOffice.app': { version: '0.2.0', id: 'com.pblsketch.seuoffice' } },
+    installed = { version: '0.1.0', id: 'com.pblsketch.seuoffice' },
   } = options
   const plists = new Map<string, { version: string; id: string }>()
   const calls: [string, string[]][] = []
@@ -222,7 +222,7 @@ describe('stageMacUpdate', () => {
       'a zip with two apps',
       {
         apps: {
-          'IeumOffice.app': { version: '0.2.0', id: 'com.pblsketch.ieumoffice' },
+          'IeumOffice.app': { version: '0.2.0', id: 'com.pblsketch.seuoffice' },
           'Other.app': { version: '0.2.0', id: 'com.example.other' },
         },
       },
@@ -230,7 +230,7 @@ describe('stageMacUpdate', () => {
     ],
     [
       'another version than the feed announced',
-      { apps: { 'IeumOffice.app': { version: '0.1.9', id: 'com.pblsketch.ieumoffice' } } },
+      { apps: { 'IeumOffice.app': { version: '0.1.9', id: 'com.pblsketch.seuoffice' } } },
       /0\.1\.9, not 0\.2\.0/,
     ],
     [
@@ -354,7 +354,7 @@ describe('startMacSwap', () => {
       [
         '-c',
         MAC_SWAP_SCRIPT,
-        'ieumoffice-update',
+        'seuoffice-update',
         '7',
         '/Applications/IeumOffice.app',
         '/Applications/.IeumOffice.app.update/IeumOffice.app',
@@ -417,7 +417,7 @@ describe.skipIf(process.platform === 'win32')('the swap script', () => {
       [
         '-c',
         MAC_SWAP_SCRIPT,
-        'ieumoffice-update',
+        'seuoffice-update',
         String(pid),
         bundle,
         staged,

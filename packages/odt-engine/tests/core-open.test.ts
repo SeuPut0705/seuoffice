@@ -15,7 +15,7 @@ import {
   buildOdt,
   buildOdtPackage,
 } from './helpers/build-odt'
-import { DEFAULT_ZIP_LIMITS } from '@genoffice/zip-gate'
+import { DEFAULT_ZIP_LIMITS } from '@seuoffice/zip-gate'
 
 describe('openOdt: lenient package reading', () => {
   it('opens a Hancom-like package: mimetype not first and deflated, no office:version', async () => {

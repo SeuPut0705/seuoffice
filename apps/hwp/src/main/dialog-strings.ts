@@ -1,4 +1,4 @@
-import { createI18n, getUiLang } from '@genoffice/i18n'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 
 /** Text the main process shows or hands back: the save dialogs, the unsaved-changes prompt, and attachment errors. */
 const tDlg = createI18n({

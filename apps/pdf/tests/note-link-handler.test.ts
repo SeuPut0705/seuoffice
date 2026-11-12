@@ -52,7 +52,7 @@ vi.mock('electron', () => ({
     removeListener: vi.fn(),
   },
 }))
-vi.mock('@genoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: vi.fn() }))
+vi.mock('@seuoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: vi.fn() }))
 
 import {
   configurePdfRuntime,

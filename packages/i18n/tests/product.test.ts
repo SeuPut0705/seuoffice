@@ -60,8 +60,8 @@ describe('brandText', () => {
     expect(brandText(plain, 'ko')).toBe(plain)
     expect(brandText('', 'ko')).toBe('')
     // the command line and package names are lowercase and are not the display name
-    expect(brandText('run `genoffice open` (@genoffice/cli, GENOFFICE_USER_DATA)', 'ko')).toBe(
-      'run `genoffice open` (@genoffice/cli, GENOFFICE_USER_DATA)',
+    expect(brandText('run `genoffice open` (@seuoffice/cli, SEUOFFICE_USER_DATA)', 'ko')).toBe(
+      'run `genoffice open` (@seuoffice/cli, SEUOFFICE_USER_DATA)',
     )
   })
 
@@ -94,8 +94,8 @@ describe('brandText', () => {
 
   it('leaves identifiers that merely contain the name alone', () => {
     expect(brandText('GenOfficeFormField', 'en')).toBe('GenOfficeFormField')
-    expect(brandText('_GenOfficeCoverPage', 'en')).toBe('_GenOfficeCoverPage')
-    expect(brandText('MyGenOffice', 'en')).toBe('MyGenOffice')
+    expect(brandText('_SeuOfficeCoverPage', 'en')).toBe('_SeuOfficeCoverPage')
+    expect(brandText('MySeuOffice', 'en')).toBe('MySeuOffice')
   })
 })
 

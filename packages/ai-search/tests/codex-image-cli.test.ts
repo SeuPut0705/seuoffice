@@ -5,9 +5,9 @@ import { describe, expect, it, vi } from 'vitest'
 import {
   codexImageGenerationAvailable,
   setCodexImageGenerationAvailable,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { createCodexImageCliGenerator } from '../src/codex-image-cli'
-import type { SubscriptionProgram, SubscriptionRunner } from '@genoffice/ai-provider/subscription'
+import type { SubscriptionProgram, SubscriptionRunner } from '@seuoffice/ai-provider/subscription'
 
 /**
  * The Codex CLI image generator: the command shape the codex-image skill documents, the

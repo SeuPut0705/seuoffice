@@ -42,7 +42,7 @@ async function onPage(page: Page, x: number, y: number) {
 const selectedText = (page: Page) => page.evaluate(() => window.getSelection()?.toString() ?? '')
 
 test('text under a link selects by drag and the link still opens on a click (sheet row 247)', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-link-select-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-link-select-'))
   const pdfPath = join(dir, 'linked.pdf')
   await writeFile(pdfPath, linkedPdf())
 
@@ -179,7 +179,7 @@ function scrollingPdf(): Buffer {
 
 /** Open the two-page PDF with the system browser replaced by a recorder */
 async function openScrolling(video: string) {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-link-scroll-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-link-scroll-'))
   const pdfPath = join(dir, 'scroll.pdf')
   await writeFile(pdfPath, scrollingPdf())
   const launched = await launchShell({ onboardingSeen: true, videoDir: video, openFile: pdfPath })

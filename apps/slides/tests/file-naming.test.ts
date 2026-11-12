@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { parseSlide } from '@genoffice/pptx-engine'
-import { setRedactExt } from '@genoffice/pptx-engine'
-import { buildRenderSlide, type RenderSlide } from '@genoffice/pptx-render'
+import { parseSlide } from '@seuoffice/pptx-engine'
+import { setRedactExt } from '@seuoffice/pptx-engine'
+import { buildRenderSlide, type RenderSlide } from '@seuoffice/pptx-render'
 import { modelSaveAsName } from '../src/renderer/file-naming'
 
 /**

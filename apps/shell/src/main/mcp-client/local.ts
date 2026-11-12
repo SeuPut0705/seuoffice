@@ -39,12 +39,12 @@ import {
   killProcessTree,
   sharedSubscriptionChildRegistry,
   type SubscriptionChildRegistry,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import {
   MCP_RESULT_MAX_CHARS,
   shapeMcpResult,
   type ShapedMcpResult,
-} from '@genoffice/agent-core/user-mcp/result'
+} from '@seuoffice/agent-core/user-mcp/result'
 import { launchReviewNeeded, planFingerprint } from './fingerprint'
 import { MCP_CALL_TIMEOUT_MS } from './limits'
 import type { ListedTool, McpListing } from './listing'

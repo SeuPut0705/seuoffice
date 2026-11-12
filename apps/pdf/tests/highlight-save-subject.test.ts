@@ -50,10 +50,10 @@ const MARKUPS: MarkupInput[] = [
 
 /**
  * Taken with the save code before MarkupInput.subject existed: output
- * 3928334e…d99f4 then. GenOffice 5b53ada7c (#2467) writes a markup's author as
+ * 3928334e…d99f4 then. SeuOffice 5b53ada7c (#2467) writes a markup's author as
  * a text string, so each of the three markups holds
- * `/T <FEFF00470065006E004F00660066006900630065>` ("GenOffice", the author when
- * the request names none) where it held the name `/T /GenOffice`; nothing else
+ * `/T <FEFF00470065006E004F00660066006900630065>` ("SeuOffice", the author when
+ * the request names none) where it held the name `/T /SeuOffice`; nothing else
  * in the file differs but the offsets after them.
  */
 const BASELINE_INPUT = '5ea9553c3809ce08868b54dfb6386b4a1ccedd14bd8f817c197003ad5cf3cbba'

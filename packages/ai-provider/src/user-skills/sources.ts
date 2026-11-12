@@ -16,7 +16,7 @@ export interface UserSkillSourceOptions {
   homeDir: string
   /** the app's builtin skills folder; left out when not given */
   builtinDir?: string | undefined
-  /** the app's own skills folder; `~/.ieumoffice/skills` when not given */
+  /** the app's own skills folder; `~/.seuoffice/skills` when not given */
   appSkillsDir?: string | undefined
   /** the agent window's project folder; its skills are read only when given */
   projectRoot?: string | undefined
@@ -43,7 +43,7 @@ export async function isInsideCodexHome(path: string, homeDir: string): Promise<
 
 /** The app's own skills folder, the only one the app writes to */
 export function appSkillsDirOf(homeDir: string): string {
-  return join(homeDir, '.ieumoffice', 'skills')
+  return join(homeDir, '.seuoffice', 'skills')
 }
 
 /**

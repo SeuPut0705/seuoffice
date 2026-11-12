@@ -19,12 +19,12 @@ const BUILD = join(__dirname, '..', 'build')
 
 /** The scripts hardcode the package paths; a copy with the two roots swapped runs against a temp tree. */
 function makeRoot() {
-  const root = mkdtempSync(join(tmpdir(), 'genoffice-postinst-'))
+  const root = mkdtempSync(join(tmpdir(), 'seuoffice-postinst-'))
   const opt = join(root, 'opt', 'seuoffice')
   const bin = join(root, 'usr', 'bin')
   mkdirSync(join(opt, 'resources', 'cli'), { recursive: true })
   mkdirSync(bin, { recursive: true })
-  const launcher = join(opt, 'resources', 'cli', 'ieumoffice')
+  const launcher = join(opt, 'resources', 'cli', 'seuoffice')
   writeFileSync(launcher, '#!/bin/sh\n')
   chmodSync(launcher, 0o755)
   const script = (name: string) => {
@@ -42,7 +42,7 @@ function makeRoot() {
     root,
     bin,
     launcher,
-    link: join(bin, 'ieumoffice'),
+    link: join(bin, 'seuoffice'),
     install: script('linux-after-install.sh'),
     remove: script('linux-after-remove.sh'),
   }
@@ -56,7 +56,7 @@ describe.skipIf(process.platform === 'win32')('linux cli link scripts (genoffice
 
     expect(t.remove('remove').code).toBe(0)
     expect(existsSync(t.link)).toBe(false)
-    symlinkSync('/nowhere/cli/ieumoffice', t.link)
+    symlinkSync('/nowhere/cli/seuoffice', t.link)
     expect(t.install()).toEqual({ code: 0, stderr: '' })
     expect(readlinkSync(t.link)).toBe(t.launcher)
 
@@ -78,7 +78,7 @@ describe.skipIf(process.platform === 'win32')('linux cli link scripts (genoffice
     expect(existsSync(t.link)).toBe(true)
 
     rmSync(t.link)
-    const vendor = join(t.launcher, '..', '..', '..', '..', 'vendor', 'cli', 'ieumoffice')
+    const vendor = join(t.launcher, '..', '..', '..', '..', 'vendor', 'cli', 'seuoffice')
     mkdirSync(join(vendor, '..'), { recursive: true })
     writeFileSync(vendor, '#!/bin/sh\n')
     symlinkSync(vendor, t.link)
@@ -93,7 +93,7 @@ describe.skipIf(process.platform === 'win32')('linux cli link scripts (genoffice
     const upstream = join(t.root, 'opt', 'GenOffice', 'resources', 'cli', 'genoffice')
     mkdirSync(join(upstream, '..'), { recursive: true })
     writeFileSync(upstream, '#!/bin/sh\n')
-    const upstreamLink = join(t.bin, 'genoffice')
+    const upstreamLink = join(t.bin, 'seuoffice')
     symlinkSync(upstream, upstreamLink)
 
     expect(t.install()).toEqual({ code: 0, stderr: '' })

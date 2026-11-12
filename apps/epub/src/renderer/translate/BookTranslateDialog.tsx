@@ -41,14 +41,14 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import type { AiProviderId, AiSettings } from '@genoffice/ai-provider/browser'
-import type { DocumentJobEstimate, TranslationMode } from '@genoffice/pdf-structure'
+import type { AiProviderId, AiSettings } from '@seuoffice/ai-provider/browser'
+import type { DocumentJobEstimate, TranslationMode } from '@seuoffice/pdf-structure'
 import type {
   EpubSkippedChapter,
   EpubTranslationOutputKind,
   EpubTranslationUnit,
-} from '@genoffice/epub-engine'
-import type { Lang } from '@genoffice/i18n'
+} from '@seuoffice/epub-engine'
+import type { Lang } from '@seuoffice/i18n'
 import {
   AiConnectPrompt,
   AiFirstConnectionNotice,
@@ -56,7 +56,7 @@ import {
   useAiSendGate,
   useModalKeys,
   type AiModelPickerBridge,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type {
   EpubAiApi,
   EpubBookSummary,

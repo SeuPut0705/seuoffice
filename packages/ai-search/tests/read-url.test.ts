@@ -14,7 +14,7 @@ type FetchImpl = typeof fetch
 
 /** The app's settings file, with or without a read_url GitHub token. */
 function settingsFile(githubToken?: string): string {
-  const path = join(mkdtempSync(join(tmpdir(), 'genoffice-read-url-')), 'ai-settings.json')
+  const path = join(mkdtempSync(join(tmpdir(), 'seuoffice-read-url-')), 'ai-settings.json')
   const readUrl = githubToken === undefined ? {} : { readUrl: { githubToken } }
   writeFileSync(path, JSON.stringify({ provider: 'auto', providers: {}, ...readUrl }))
   return path

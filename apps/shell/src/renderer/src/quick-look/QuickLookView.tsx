@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { IconArrowDown, IconArrowUp, IconClose } from '@genoffice/ui/icons'
+import type { Lang } from '@seuoffice/i18n'
+import { IconArrowDown, IconArrowUp, IconClose } from '@seuoffice/ui/icons'
 import type {
   QuickLookDocBlock,
   QuickLookMindmapSheet,

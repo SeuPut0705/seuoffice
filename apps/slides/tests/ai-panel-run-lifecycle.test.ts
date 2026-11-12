@@ -17,9 +17,9 @@ const agentHarness = vi.hoisted(() => ({
   restore: vi.fn(),
 }))
 
-vi.mock('@genoffice/agent-core', async () => {
+vi.mock('@seuoffice/agent-core', async () => {
   const actual =
-    await vi.importActual<typeof import('@genoffice/agent-core')>('@genoffice/agent-core')
+    await vi.importActual<typeof import('@seuoffice/agent-core')>('@seuoffice/agent-core')
   return {
     ...actual,
     AgentLoop: class MockAgentLoop {
@@ -88,7 +88,7 @@ vi.mock('react-konva', () => {
   }
 })
 
-import { AI_SUBSCRIPTION_STRINGS } from '@genoffice/ui'
+import { AI_SUBSCRIPTION_STRINGS } from '@seuoffice/ui'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import { AI_PROVIDERS, type AiSettings, type AttachmentMeta } from '../src/shared/ipc'
 

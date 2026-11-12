@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import type { IpcRendererEvent } from 'electron'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   QUICK_LOOK_WINDOW_CHANNELS,
   type QuickLookInit,
@@ -14,7 +14,7 @@ function themeOf(value: unknown): QuickLookTheme {
 }
 
 // The main process only ever sends a valid language, so a plain pass-through is
-// enough here. Do not value-import @genoffice/i18n: the shell preload pulls it
+// enough here. Do not value-import @seuoffice/i18n: the shell preload pulls it
 // in transitively, and a shared module would become one chunk a sandboxed
 // preload cannot require (see tests/quick-look-wiring.test.ts).
 function langOf(value: unknown): Lang {

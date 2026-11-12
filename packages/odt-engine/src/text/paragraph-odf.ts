@@ -20,7 +20,7 @@
  * typed text inside it, becomes an empty pair when its text was deleted, and
  * disappears only with its paragraph.
  */
-import type { Block, TableParagraph } from '@genoffice/docx-engine'
+import type { Block, TableParagraph } from '@seuoffice/docx-engine'
 import type {
   BridgeParagraph,
   EditedParagraph,

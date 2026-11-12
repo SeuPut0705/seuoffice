@@ -1,7 +1,7 @@
 /*
  * The editor's own chrome around draw.io: the progress screen, the notice
  * bar, the status line and the export dialog. Every colour is a token from
- * @genoffice/ui (tokens.css) and follows the app's light or dark setting.
+ * @seuoffice/ui (tokens.css) and follows the app's light or dark setting.
  * The drawing inside the frame is draw.io's; its colours are document content.
  */
 

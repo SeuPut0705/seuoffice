@@ -9,7 +9,7 @@ import { afterAll } from 'vitest'
  * test file ends.
  *
  * Product code keeps per-user files under the home folder: the CLI's audit log
- * and launcher record in ~/.ieumoffice, the app's userData, the config folders
+ * and launcher record in ~/.seuoffice, the app's userData, the config folders
  * of the agent tools. A test that runs such code with the environment it
  * inherited used to write into the folders of whoever ran the suite. With HOME
  * (USERPROFILE on Windows) replaced, os.homedir() and every default derived
@@ -44,11 +44,11 @@ for (const name of [
   'XDG_STATE_HOME',
   'XDG_CACHE_HOME',
   'XDG_BIN_HOME',
-  'GENOFFICE_HOME',
-  'GENOFFICE_AUTH_DIR',
-  'GENOFFICE_AUDIT_LOG',
-  'GENOFFICE_USER_DATA',
-  'GENOFFICE_AI_SETTINGS',
+  'SEUOFFICE_HOME',
+  'SEUOFFICE_AUTH_DIR',
+  'SEUOFFICE_AUDIT_LOG',
+  'SEUOFFICE_USER_DATA',
+  'SEUOFFICE_AI_SETTINGS',
 ]) {
   delete process.env[name]
 }

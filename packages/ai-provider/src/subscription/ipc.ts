@@ -3,7 +3,7 @@
  * channel, wired to whatever the caller injects. Nothing here imports Electron,
  * so an app passes its `ipcMain` and the tests pass a stand-in.
  */
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import {
   createChatGptConnection,
   setChatGptConnection,

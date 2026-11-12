@@ -11,10 +11,10 @@ import {
   aiPanelStartOf,
   aiPanelStartPatch,
   clampAiCustomFontSize,
-} from '@genoffice/ui'
-import type { AiFontSize, AiPanelPrefs, AiPanelSide, AiPanelStart } from '@genoffice/ui'
-import { PRODUCT_REPO_SLUG } from '@genoffice/i18n'
-import type { Lang } from '@genoffice/i18n'
+} from '@seuoffice/ui'
+import type { AiFontSize, AiPanelPrefs, AiPanelSide, AiPanelStart } from '@seuoffice/ui'
+import { PRODUCT_REPO_SLUG } from '@seuoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   AuthorNameSetting,
   DecisionEndpoint,
@@ -44,7 +44,7 @@ import {
   resolveCustomEndpoints,
   selectCustomEndpoint,
   upsertCustomEndpoint,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type {
   AiCustomEndpoint,
   AiMediaProviderId,
@@ -55,7 +55,7 @@ import type {
   AiSearchSettings,
   AiSettings,
   AiSubscriptionProviderId,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { useI18n } from './locale'
 import type { StringKey, TFunc } from './locale'
 import type { AiCatalogEntry, DocTheme, UiTheme } from '../../shared/home-api'

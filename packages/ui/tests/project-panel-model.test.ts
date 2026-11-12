@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   LegacyDocumentChat,
   ProjectChatListItem,
   ProjectListItem,
   ProjectNotice,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   projectChatMenuItems,
   projectChatRows,

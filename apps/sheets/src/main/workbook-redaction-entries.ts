@@ -16,8 +16,8 @@ import {
   parseRedactionNameMirror,
   parseRedactionPart,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
-import { parseSheetElements } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
+import { parseSheetElements } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
 
 const WORKBOOK_PART_PATH = 'xl/workbook.xml'
 

@@ -73,7 +73,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   hwpToText: vi.fn(async () => ''),
   parseFileToText: vi.fn(async () => ({ kind: 'text', text: '' })),
   ATTACHABLE_EXTS: new Set<string>(),
@@ -88,7 +88,7 @@ vi.mock('../src/main/print-document', async (original) => ({
   printJobToPdf: vi.fn(async () => Buffer.from('%PDF-1.7 test')),
 }))
 
-import { getUiLang, setUiLang } from '@genoffice/i18n'
+import { getUiLang, setUiLang } from '@seuoffice/i18n'
 import { createHwpView, hwpIsDirty, requestHwpSave } from '../src/main/hwp-main'
 import { HWP_CHANNELS } from '../src/shared/ipc'
 import type { BeginSaveResult, CommitSaveResult, PrintJob, PrintResult } from '../src/shared/ipc'
@@ -107,7 +107,7 @@ const JOB: PrintJob = {
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-hwp-save-as-pdf-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-hwp-save-as-pdf-'))
   userData.dir = dir
   showSaveDialog.mockClear()
 })

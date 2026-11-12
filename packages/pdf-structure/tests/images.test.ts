@@ -20,7 +20,7 @@ async function loadPdfium(): Promise<PdfiumModule> {
   // thisProgram: emscripten writes argv[1] (the vitest path) through an
   // ASCII-only path; a checkout under a non-ASCII folder would abort init
   // (same fix as apps/pdf/src/main/text-edit.ts loadPdfium)
-  const wrapped = (await init({ wasmBinary, thisProgram: 'genoffice-pdf' })) as {
+  const wrapped = (await init({ wasmBinary, thisProgram: 'seuoffice-pdf' })) as {
     pdfium?: unknown
   }
   const mod = (wrapped.pdfium ?? wrapped) as PdfiumModule & { _PDFiumExt_Init(): void }

@@ -1,6 +1,6 @@
 import { statSync } from 'node:fs'
 import { isAbsolute, posix, win32 } from 'node:path'
-import { canonicalPathKey, type FolderRefusalReason } from '@genoffice/project-store'
+import { canonicalPathKey, type FolderRefusalReason } from '@seuoffice/project-store'
 import { agentProtectedPaths } from '../agent/agent-sessions'
 
 /**

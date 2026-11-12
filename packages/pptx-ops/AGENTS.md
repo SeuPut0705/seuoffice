@@ -34,7 +34,7 @@
 - 그림과 미디어 바이트는 `Uint8Array` 말고도 base64 문자열과 data URL로 받는다. AI 도구 경로는 바이너리를 실을 수 없다.
 - op 문서는 `?raw` import로 빌드에 들어가고 런타임에 디스크를 읽지 않는다. Vite가 아닌 번들러에는 같은 로더가 필요하다. 블록 머리말의 `(not-ai-callable)`은 실행기로는 되지만 모델에는 알리지 않는 op이고, `(pending)`은 아직 등록되지 않은 op라 어휘와 사용법 양쪽에서 숨긴다.
 - `edit-text.ts`는 편집기가 돌려준 `srcPara`/`srcRun` 색인으로 원래 문단과 런을 찾아, 편집기가 표현하지 못하는 속성을 원래 런에서 이어받는다. 위치로 대응시키면 문단을 쪼개거나 지울 때 서식이 밀린다. `link`와 `redact`는 세 상태다. `undefined`는 원래 값 유지, `null`은 명시적 해제, 값은 설정이다.
-- 수식 op는 `@genoffice/docx-engine/math`의 LaTeX→OMML 변환을 쓴다. docx-engine에 대한 의존은 이 하위 경로 하나다.
+- 수식 op는 `@seuoffice/docx-engine/math`의 LaTeX→OMML 변환을 쓴다. docx-engine에 대한 의존은 이 하위 경로 하나다.
 
 ## 원본과 다른 점
 
@@ -46,7 +46,7 @@
 
 ## 테스트
 
-- `npm run test -w @genoffice/pptx-ops`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처 파일은 없고, 테스트가 `createBlankPptx` 등으로 덱을 코드에서 만든다.
+- `npm run test -w @seuoffice/pptx-ops`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처 파일은 없고, 테스트가 `createBlankPptx` 등으로 덱을 코드에서 만든다.
 - `tests/op-docs-sync.test.ts`가 등록부와 문서의 일치, 서명 줄, 영어 전용을 검사한다. 문서 예시를 dry run에 태우는 테스트는 이 패키지가 아니라 `apps/slides/tests/op-docs-examples.test.ts`에 있다. op나 예시를 바꾸면 그쪽도 돌린다.
 - vitest 별칭이 `pptx-engine`과 `docx-engine/math`를 소스 경로로 묶는다. 엔진의 새 하위 경로를 import하면 `vitest.config.ts`와 `tsconfig.json`의 경로에도 추가한다.
 - op를 추가하면 정상 적용, 인자 거부(안내 문구 포함), 원자적 트랜잭션에서 실패했을 때 덱이 그대로인지를 덮는다.

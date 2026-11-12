@@ -7,7 +7,7 @@
  * before it opens anything; the renderer uses the same function only to tell
  * the user beforehand that an address will not be opened.
  */
-import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
+import { safeExternalUrl } from '@seuoffice/electron-utils/safe-external-url'
 
 /**
  * `file:`, `javascript:` and app schemes are refused by `safeExternalUrl` whatever is listed here.

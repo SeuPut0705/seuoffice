@@ -38,10 +38,10 @@ describe('attachmentFolderLabel', () => {
   it('hides the id folder under an app-made Drive attachment folder', () => {
     expect(
       attachmentFolderLabel(
-        'C:\\Users\\a\\AppData\\Local\\Temp\\ieumoffice-drive-attach\\3fa9c1\\계획서.docx',
+        'C:\\Users\\a\\AppData\\Local\\Temp\\seuoffice-drive-attach\\3fa9c1\\계획서.docx',
       ),
     ).toBe('')
-    expect(attachmentFolderLabel('/tmp/ieumoffice-drive-attach/3fa9c1/계획서.docx')).toBe('')
+    expect(attachmentFolderLabel('/tmp/seuoffice-drive-attach/3fa9c1/계획서.docx')).toBe('')
   })
 
   it('hides the file id folder under the Drive cache', () => {

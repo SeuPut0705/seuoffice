@@ -4,7 +4,7 @@
  * reach; scrolling past the end of a chapter turns to the next one, past its
  * start to the previous one.
  */
-import type { EpubTocEntry } from '@genoffice/epub-engine'
+import type { EpubTocEntry } from '@seuoffice/epub-engine'
 
 export interface FlowItem {
   linear: boolean

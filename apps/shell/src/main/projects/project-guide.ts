@@ -33,7 +33,7 @@ import {
   type ProjectWriteResult,
   type UndoMemoryConsolidationArgs,
   type UndoMemoryConsolidationResult,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
   readProjectsSettings,
   updateProjectsSettings,
@@ -129,7 +129,7 @@ export type SelectionTarget =
 export interface ProjectAiVisibility {
   root: string
   matcher: IgnoreMatcher
-  /** Folder-relative path (either separator) is visible: inside, not hidden, not `.ieumoffice/`, not ignored */
+  /** Folder-relative path (either separator) is visible: inside, not hidden, not `.seuoffice/`, not ignored */
   isVisible(relPath: string, isDir?: boolean): boolean
   /** Same for the same rule (`ignore` text and case folding); a file list cache keys on it */
   ruleKey?: string
@@ -174,7 +174,7 @@ export interface ProjectGuideDeps {
  */
 export const PROJECT_TOUCH_WRITE_MS = 60_000
 
-/** Writes into one project's `.ieumoffice/`, each through the write guard */
+/** Writes into one project's `.seuoffice/`, each through the write guard */
 interface DataWriter {
   root: string
   write(relPath: string, text: string): Promise<void>
@@ -225,7 +225,7 @@ export class ProjectGuide {
   private readonly newId: () => string
   private readonly language: () => string
   private readonly guard: ProjectWriteGuard
-  /** Projects whose `.ieumoffice/` could not be written during this app run */
+  /** Projects whose `.seuoffice/` could not be written during this app run */
   private readonly unwritable = new Set<ProjectId>()
   /** Copied folders listed under a new id whose `project.json` still names the original */
   private readonly pendingIdFix = new Set<ProjectId>()
@@ -292,7 +292,7 @@ export class ProjectGuide {
     return this.unwritable.has(id)
   }
 
-  /** Marks a project "unwritable" for this app run (a write into `.ieumoffice/` failed) */
+  /** Marks a project "unwritable" for this app run (a write into `.seuoffice/` failed) */
   markUnwritable(id: ProjectId): void {
     this.unwritable.add(id)
   }
@@ -550,7 +550,7 @@ export class ProjectGuide {
 
   /**
    * "New project" (spec 5.1): a new folder named `name` under the default save
-   * folder (or `parentDir`) with `.ieumoffice/project.json`, trusted without asking.
+   * folder (or `parentDir`) with `.seuoffice/project.json`, trusted without asking.
    * An existing folder of that name is never written to unless `useExisting` asks
    * to add it as a project (identity and trust as for "add folder").
    */
@@ -704,7 +704,7 @@ export class ProjectGuide {
   }
 
   /**
-   * A write into a listed project's `.ieumoffice/`. Refused without trying while the
+   * A write into a listed project's `.seuoffice/`. Refused without trying while the
    * project is marked unwritable. The first file actually written also writes
    * `project.json` when the folder has none, so the folder carries its identity; an
    * operation that ends up writing nothing creates nothing.
@@ -748,19 +748,19 @@ export class ProjectGuide {
     return this.tryWrite(id, () => write(data))
   }
 
-  /** Replace a file under `.ieumoffice/` (for the chat store) */
+  /** Replace a file under `.seuoffice/` (for the chat store) */
   async writeData(id: ProjectId, relPath: string, text: string): Promise<ProjectWriteResult> {
     assertNotProjectFile(relPath)
     return this.writeWithIdentity(id, (data) => data.write(relPath, text))
   }
 
-  /** Append to a file under `.ieumoffice/` (chat message lines) */
+  /** Append to a file under `.seuoffice/` (chat message lines) */
   async appendData(id: ProjectId, relPath: string, text: string): Promise<ProjectWriteResult> {
     assertNotProjectFile(relPath)
     return this.writeWithIdentity(id, (data) => data.append(relPath, text))
   }
 
-  /** Read-change-write one file under `.ieumoffice/`, serialized with every other write to it */
+  /** Read-change-write one file under `.seuoffice/`, serialized with every other write to it */
   async updateData(
     id: ProjectId,
     relPath: string,
@@ -776,13 +776,13 @@ export class ProjectGuide {
     return result.status === 'ok' ? { status: 'ok', ...outcome } : result
   }
 
-  /** Delete one file under `.ieumoffice/` */
+  /** Delete one file under `.seuoffice/` */
   async removeData(id: ProjectId, relPath: string): Promise<ProjectWriteResult> {
     assertNotProjectFile(relPath)
     return this.writeWithIdentity(id, (data) => data.remove(relPath))
   }
 
-  /** The checked absolute path of a file under a listed project's `.ieumoffice/` (nothing is touched) */
+  /** The checked absolute path of a file under a listed project's `.seuoffice/` (nothing is touched) */
   dataPath(id: ProjectId, relPath: string): string | null {
     const entry = this.entry(id)
     return entry ? this.guard.dataPath(entry.path, relPath) : null
@@ -790,7 +790,7 @@ export class ProjectGuide {
 
   /**
    * Write a new document the AI made (spec 6) at `target`: inside the project folder,
-   * not under `.ieumoffice/`, in an existing folder, never over an existing entry.
+   * not under `.seuoffice/`, in an existing folder, never over an existing entry.
    * Throws `ProjectWriteRefused` (or the file system error); callers pick a free name.
    */
   async writeNewDocument(
