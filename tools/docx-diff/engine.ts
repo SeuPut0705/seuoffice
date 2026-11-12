@@ -1,5 +1,7 @@
 // Node host of crates/office-wasm. The frame is described in its src/lib.rs.
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { WASI } from 'node:wasi'
 import { parseKeepingOrder } from './key-order'
 
@@ -97,7 +99,18 @@ export class Engine {
     offset += 4
     blobs.forEach(put)
 
-    const packed = seu_call(request, size)
+    let packed: bigint
+    try {
+      packed = seu_call(request, size)
+    } catch (error) {
+      // the instance is dead after a trap: keep the request that killed it
+      const crash = resolve(dirname(fileURLToPath(import.meta.url)), 'out/engine-crash')
+      mkdirSync(crash, { recursive: true })
+      writeFileSync(resolve(crash, 'header.json'), JSON.stringify(command))
+      blobs.forEach((blob, index) => writeFileSync(resolve(crash, `blob-${index}.bin`), blob))
+      const megabytes = (memory.buffer.byteLength / 2 ** 20).toFixed(0)
+      throw new Error(`engine trapped at ${megabytes} MB; request written to ${crash}`, { cause: error })
+    }
     seu_free(request, size)
     const pointer = Number(packed >> 32n)
     const length = Number(packed & 0xffff_ffffn)

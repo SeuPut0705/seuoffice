@@ -350,7 +350,7 @@ fn snapshot(package: &ooxml_pkg::Package) -> std::collections::HashMap<String, V
         .parts()
         .iter()
         .filter(|part| !part.is_dir)
-        .filter_map(|part| part.bytes().ok().map(|bytes| (part.name.clone(), bytes.to_vec())))
+        .filter_map(|part| part.bytes().ok().map(|bytes| (part.name.to_string(), bytes.to_vec())))
         .collect()
 }
 
@@ -359,7 +359,7 @@ fn changes(env: &mut InvokeEnv<'_>, mut before: std::collections::HashMap<String
     let mut out = Vec::new();
     for part in package.parts().iter().filter(|part| !part.is_dir) {
         let Ok(bytes) = part.bytes() else { continue };
-        let was = before.remove(&part.name);
+        let was = before.remove(part.name.as_str());
         if was.as_deref() == Some(bytes) {
             continue;
         }
@@ -367,7 +367,7 @@ fn changes(env: &mut InvokeEnv<'_>, mut before: std::collections::HashMap<String
             Ok(text) => Value::String(text.to_owned()),
             Err(_) => env.put_blob(bytes.to_vec()),
         };
-        out.push(json!([part.name, content]));
+        out.push(json!([part.name.as_str(), content]));
     }
     for name in before.into_keys() {
         out.push(json!([name, Value::Null]));

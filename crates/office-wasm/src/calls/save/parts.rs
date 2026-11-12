@@ -433,7 +433,7 @@ fn parts_of(package: &Package) -> Result<Vec<(String, Option<String>)>, String> 
             } else {
                 Some(part.text().map_err(|error| error.to_string())?.to_owned())
             };
-            Ok((part.name.clone(), text))
+            Ok((part.name.to_string(), text))
         })
         .collect()
 }

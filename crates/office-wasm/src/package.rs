@@ -87,7 +87,7 @@ fn read(package: &Package) -> Opened {
         .map(|part| {
             let content = (!part.is_dir).then(|| part.bytes());
             WireEntry {
-                name: part.name.clone(),
+                name: part.name.to_string(),
                 dir: part.is_dir,
                 length: content
                     .as_ref()
@@ -130,9 +130,9 @@ fn read(package: &Package) -> Opened {
                 .values()
                 .map(|rel| resolve_relationship_target_path(&source, &rel.target))
                 .collect();
-            targets.push(json!([part.name, source, resolved]));
+            targets.push(json!([part.name.as_str(), source, resolved]));
         }
-        relationships.push(json!([part.name, outcome(rels)]));
+        relationships.push(json!([part.name.as_str(), outcome(rels)]));
     }
 
     let theme = parse_theme(package);

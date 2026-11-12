@@ -173,7 +173,7 @@ pub fn load_package(
         .filter(|part| !part.is_dir)
         .map(|part| DeclaredPart {
             name: &part.name,
-            usize: declared[&part.name],
+            usize: declared[part.name.as_str()],
         })
         .collect();
     assert_declared(&parts)?;

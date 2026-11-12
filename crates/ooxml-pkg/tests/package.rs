@@ -9,7 +9,7 @@ fn folders_and_files(names: &[&str]) -> Vec<(String, bool)> {
     package
         .parts()
         .iter()
-        .map(|part| (part.name.clone(), part.is_dir))
+        .map(|part| (part.name.to_string(), part.is_dir))
         .collect()
 }
 

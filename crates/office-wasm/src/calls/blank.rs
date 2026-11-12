@@ -115,7 +115,7 @@ fn add_folder(package: &mut Package, name: &str) {
     } else {
         format!("{name}/")
     };
-    if package.parts().iter().any(|part| part.name == folder) {
+    if package.parts().iter().any(|part| part.name.as_str() == folder) {
         return;
     }
     let path = &folder[..folder.len() - 1];

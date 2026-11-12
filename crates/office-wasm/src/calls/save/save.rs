@@ -167,7 +167,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Option<Returned> {
             for part in zip.parts() {
                 if !part.is_dir {
                     out.push((
-                        part.name.clone(),
+                        part.name.to_string(),
                         part.text().map_err(|e| e.to_string())?.to_owned(),
                     ));
                 }
