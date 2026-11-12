@@ -215,13 +215,21 @@ const rmdirAsCwd: FnSpec = {
     }
   },
   cases: [
-    { args: [at('held'), at('held')], files: { held: { dir: true } }, note: 'EBUSY on Windows; removed on Unix' },
+    {
+      args: [at('held'), at('held')],
+      files: { held: { dir: true } },
+      note: 'EBUSY on Windows; removed on Unix',
+    },
     {
       args: [at('held'), at('other')],
       files: { held: { dir: true }, other: { dir: true } },
       note: 'another folder is removed while the working folder is held',
     },
-    { args: [at('held'), at('missing')], files: { held: { dir: true } }, note: 'ENOENT while the working folder is held' },
+    {
+      args: [at('held'), at('missing')],
+      files: { held: { dir: true } },
+      note: 'ENOENT while the working folder is held',
+    },
   ],
 }
 
@@ -244,7 +252,11 @@ const readThroughLinks: FnSpec = {
   },
   cases: [
     { args: ['$DIR', 'loop'], note: 'ELOOP (Windows: ERROR_CANT_RESOLVE_FILENAME)' },
-    { args: ['$DIR', 'file'], files: { 'file.txt': 'through two links\n' }, note: 'a chain of two links ends at a file' },
+    {
+      args: ['$DIR', 'file'],
+      files: { 'file.txt': 'through two links\n' },
+      note: 'a chain of two links ends at a file',
+    },
   ],
 }
 

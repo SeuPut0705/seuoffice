@@ -6,17 +6,20 @@
 //! (`namespaced`: `\\?\C:\...`, no Win32 normalisation), opens with backup
 //! semantics as libuv's `fs__open` does (a folder opens), and renames with
 //! `MoveFileExW` as `fs__rename` does (std's `rename` is a different call with
-//! other errors). Where libuv names an error itself instead of passing the
-//! system's (`fs__scandir` of a file: ENOTDIR; `fs__unlink` of a folder:
-//! EPERM; `fs__open` of a folder with `O_CREAT`: EISDIR) the Windows
-//! branches do the same check libuv does.
+//! other errors). A file is opened through `CreateFileW` with the arguments
+//! `fs__open` computes from the flags (`open_file`), not through std's
+//! `OpenOptions`, whose access mask differs. Where libuv names an error itself
+//! instead of passing the system's (`fs__scandir` of a file: ENOTDIR;
+//! `fs__unlink` of a folder: EPERM; `fs__open` of a folder with `O_CREAT`:
+//! EISDIR; `fs__mkdir` of an invalid name: EINVAL) the Windows branches do the
+//! same check libuv does.
 
 use super::{Answer, CallError, Context, str_arg};
 use crate::node_fs::{
     NodeError, namespaced, node_error, node_error_fd, node_error_named, node_error2,
 };
 use serde_json::Value;
-use std::fs::{self, OpenOptions};
+use std::fs;
 use std::io::{self, Read, Write};
 
 pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answer> {
@@ -30,7 +33,14 @@ pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answ
         "node-fs.mkdirSync" => str_arg(args, 0).and_then(|path| {
             fs::create_dir(namespaced(path))
                 .map(|()| None)
-                .map_err(|e| node_error(&e, "mkdir", path).into())
+                .map_err(|e| {
+                    // libuv's fs__mkdir: ERROR_INVALID_NAME and ERROR_DIRECTORY are EINVAL
+                    if cfg!(windows) && matches!(e.raw_os_error(), Some(123 | 267)) {
+                        fail(node_error_named("EINVAL", "mkdir", path))
+                    } else {
+                        fail(node_error(&e, "mkdir", path))
+                    }
+                })
         }),
         "node-fs.rmdirSync" => str_arg(args, 0).and_then(rmdir),
         "node-fs.renameSync" => str_arg(args, 0).and_then(|from| {
@@ -41,10 +51,7 @@ pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answ
         }),
         "node-fs.unlinkSync" => str_arg(args, 0).and_then(unlink),
         "node-fs.openSync" => str_arg(args, 0).and_then(|path| {
-            open_options()
-                .read(true)
-                .write(true)
-                .open(namespaced(path))
+            open_file(&namespaced(path), Access::ReadWrite, Create::Never)
                 .map(|_| None)
                 .map_err(|e| node_error(&e, "open", path).into())
         }),
@@ -65,28 +72,92 @@ fn fail(e: NodeError) -> CallError {
     e.into()
 }
 
-/// `OpenOptions` as libuv's `fs__open` opens: with backup semantics on
-/// Windows, so that a folder opens (and `read` then fails on it, `O_CREAT`
-/// on it says ERROR_FILE_EXISTS) instead of failing with access denied.
-fn open_options() -> OpenOptions {
-    #[cfg(windows)]
-    {
-        use std::os::windows::fs::OpenOptionsExt;
-        let mut options = OpenOptions::new();
-        options.custom_flags(windows_sys::Win32::Storage::FileSystem::FILE_FLAG_BACKUP_SEMANTICS);
-        options
+#[derive(Clone, Copy)]
+enum Access {
+    Read,
+    Write,
+    ReadWrite,
+}
+
+/// the disposition of `fs__open`: no `O_CREAT` (`OPEN_EXISTING`), `O_CREAT |
+/// O_TRUNC` (`CREATE_ALWAYS`), `O_CREAT | O_EXCL` (`CREATE_NEW`)
+#[derive(Clone, Copy)]
+enum Create {
+    Never,
+    Always,
+    New,
+}
+
+/// libuv's `fs__open` (src/win/fs.c) for the flags `r`, `r+`, `w`, `wx`: the
+/// access is `FILE_GENERIC_READ` / `FILE_GENERIC_WRITE`, the sharing all three
+/// modes, the attributes `FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS`
+/// (a folder opens), and the file mode is Node's default `0o666`, which
+/// leaves out `FILE_ATTRIBUTE_READONLY`.
+#[cfg(windows)]
+fn open_file(path: &str, access: Access, create: Create) -> io::Result<fs::File> {
+    use std::os::windows::ffi::OsStrExt;
+    use std::os::windows::io::FromRawHandle;
+    use windows_sys::Win32::Foundation::INVALID_HANDLE_VALUE;
+    use windows_sys::Win32::Storage::FileSystem::{
+        CREATE_ALWAYS, CREATE_NEW, CreateFileW, FILE_ATTRIBUTE_NORMAL, FILE_FLAG_BACKUP_SEMANTICS,
+        FILE_GENERIC_READ, FILE_GENERIC_WRITE, FILE_SHARE_DELETE, FILE_SHARE_READ,
+        FILE_SHARE_WRITE, OPEN_EXISTING,
+    };
+    let access = match access {
+        Access::Read => FILE_GENERIC_READ,
+        Access::Write => FILE_GENERIC_WRITE,
+        Access::ReadWrite => FILE_GENERIC_READ | FILE_GENERIC_WRITE,
+    };
+    let disposition = match create {
+        Create::Never => OPEN_EXISTING,
+        Create::Always => CREATE_ALWAYS,
+        Create::New => CREATE_NEW,
+    };
+    let wide: Vec<u16> = std::ffi::OsStr::new(path)
+        .encode_wide()
+        .chain(Some(0))
+        .collect();
+    // SAFETY: `wide` is a NUL-terminated UTF-16 string that outlives the call;
+    // the security attributes and template handle are null as in libuv
+    let handle = unsafe {
+        CreateFileW(
+            wide.as_ptr(),
+            access,
+            FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+            std::ptr::null(),
+            disposition,
+            FILE_ATTRIBUTE_NORMAL | FILE_FLAG_BACKUP_SEMANTICS,
+            std::ptr::null_mut(),
+        )
+    };
+    if handle == INVALID_HANDLE_VALUE {
+        return Err(io::Error::last_os_error());
     }
-    #[cfg(not(windows))]
-    {
-        OpenOptions::new()
+    // SAFETY: the handle is valid and owned by nobody else
+    Ok(unsafe { fs::File::from_raw_handle(handle) })
+}
+
+#[cfg(not(windows))]
+fn open_file(path: &str, access: Access, create: Create) -> io::Result<fs::File> {
+    let mut options = fs::OpenOptions::new();
+    options
+        .read(matches!(access, Access::Read | Access::ReadWrite))
+        .write(matches!(access, Access::Write | Access::ReadWrite));
+    match create {
+        Create::Never => {}
+        Create::Always => {
+            options.create(true).truncate(true);
+        }
+        Create::New => {
+            options.create_new(true);
+        }
     }
+    options.open(path)
 }
 
 /// `fs.readFileSync(path, 'utf8')`: `open`, then `read`.
 fn read_file(path: &str) -> Answer {
-    let mut file = open_options()
-        .read(true)
-        .open(namespaced(path))
+    let mut file = open_file(&namespaced(path), Access::Read, Create::Never)
         .map_err(|e| fail(node_error(&e, "open", path)))?;
     let mut bytes = Vec::new();
     file.read_to_end(&mut bytes)
@@ -98,14 +169,12 @@ fn read_file(path: &str) -> Answer {
 
 /// `fs.writeFileSync(path, text, { flag })` for the flags `w` and `wx`.
 fn write_file(path: &str, flag: &str, text: &str) -> Answer {
-    let mut options = open_options();
-    options.write(true);
-    match flag {
-        "w" => options.create(true).truncate(true),
-        "wx" => options.create_new(true),
+    let create = match flag {
+        "w" => Create::Always,
+        "wx" => Create::New,
         _ => return Err(CallError::plain(format!("unsupported flag: {flag}"))),
     };
-    let mut file = options.open(namespaced(path)).map_err(|e| {
+    let mut file = open_file(&namespaced(path), Access::Write, create).map_err(|e| {
         // libuv's fs__open: ERROR_FILE_EXISTS under O_CREAT without O_EXCL
         // means the path is a folder
         if cfg!(windows) && flag == "w" && e.raw_os_error() == Some(80) {
