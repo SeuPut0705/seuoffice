@@ -121,6 +121,10 @@ describe('formulaKeepsCache with the engine registry probe', () => {
     install()
     expect(formulaKeepsCache('IFERROR(FOOBARFN(A1),0)', false)).toBe(false)
     expect(formulaKeepsCache('FOOBARFN(A1)', false)).toBe(false)
+    // The pre-existing classes keep the cell cache-only regardless.
+    expect(formulaKeepsCache('IFERROR(__xludf.DUMMYFUNCTION("X"),0)', false)).toBe(true)
+    expect(formulaKeepsCache('DOLLAR(A1)', false)).toBe(true)
+    expect(formulaKeepsCache('A1*TaxRate', false)).toBe(true)
   })
 
   it('assumes every function is supported until a probe is installed', () => {
