@@ -73,7 +73,6 @@ import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
 import {
   DEV_USER_DATA_DIR_NAME,
-  PRODUCT_CONTACT_EMAIL,
   PRODUCT_NAME,
   USER_DATA_DIR_NAME,
   productName,
@@ -7141,16 +7140,6 @@ function registerHomeIpc(): void {
 
   ipcMain.handle(HOME_CHANNELS.openLicenseNotices, () => {
     void openThirdPartyNotices()
-  })
-
-  ipcMain.handle(HOME_CHANNELS.openRightsContact, () => {
-    const url = safeExternalUrl(`mailto:${PRODUCT_CONTACT_EMAIL}`, {
-      allowedProtocols: ['mailto:'],
-    })
-    if (!url) return
-    shell.openExternal(url).catch(() => {
-      // no mail handler registered; the address is shown in Settings to copy by hand
-    })
   })
 
   // the page is the vendor's fixed install guide; the renderer only names the provider
