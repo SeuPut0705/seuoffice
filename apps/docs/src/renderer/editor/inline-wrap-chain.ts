@@ -205,50 +205,60 @@ export function inlineStructureKey(run: Run): unknown {
 
 // ---- where the wrappers sit: what a "did this block change" test asks ----
 
-/** one stretch of a paragraph's text that sits in one wrapper chain, in characters of that text */
+/**
+ * One stretch of a paragraph's text that one wrapper covers, in characters of
+ * that text. Each wrapper is counted on its own, whatever else the text sits
+ * in: a smart tag taken off a word inside a control leaves the control
+ * covering what it covered.
+ */
 export interface WrapSpan {
-  /** the chain, and for a stretch read from the editor's JSON the paragraph it is in */
-  chain: string
+  /** the wrapper (seq, open, close), and for a stretch read from the editor's JSON the paragraph it is in */
+  wrap: string
   from: number
   to: number
 }
 
+/** a wrapper as a span key: the three fields that make two wrappers one element */
+const wrapIdentity = (wrap: InlineWrap): string => JSON.stringify([wrap.seq, wrap.open, wrap.close])
+
 /**
- * The stretches of a paragraph's text that sit in one wrapper chain. Text
- * without a wrapper makes no stretch, and a piece without text (a picture)
- * neither ends nor starts one.
+ * The stretches of a paragraph's text each wrapper covers. Text outside a
+ * wrapper ends its stretch, and a piece without text (a picture) neither
+ * ends nor starts one.
  */
-function wrapSpans(pieces: Iterable<readonly [chain: string | null, length: number]>): WrapSpan[] {
+function wrapSpans(
+  pieces: Iterable<readonly [wraps: readonly InlineWrap[], length: number]>,
+): WrapSpan[] {
   const spans: WrapSpan[] = []
+  const open = new Map<string, number>()
   let at = 0
-  let from = 0
-  let open: string | null = null
-  for (const [chain, length] of [...pieces, [null, 1] as const]) {
-    if (length === 0) continue
-    if (chain !== open) {
-      if (open !== null) spans.push({ chain: open, from, to: at })
-      open = chain
-      from = at
+  const close = (keep: ReadonlySet<string>): void => {
+    for (const [wrap, from] of open) {
+      if (keep.has(wrap)) continue
+      spans.push({ wrap, from, to: at })
+      open.delete(wrap)
     }
+  }
+  for (const [wraps, length] of pieces) {
+    if (length === 0) continue
+    const here = new Set(wraps.map(wrapIdentity))
+    close(here)
+    for (const wrap of here) if (!open.has(wrap)) open.set(wrap, at)
     at += length
   }
+  close(new Set())
   return spans
 }
 
 /** the wrapper stretches of a paragraph's runs */
 export function runWrapSpans(runs: readonly Run[]): WrapSpan[] {
-  return wrapSpans(
-    runs.map((run) => [
-      run.wrap?.length ? JSON.stringify(inlineStructureKey(run)) : null,
-      run.text.length,
-    ]),
-  )
+  return wrapSpans(runs.map((run) => [run.wrap ?? [], run.text.length]))
 }
 
 /**
  * The wrapper stretches of every paragraph under `node` in the editor's JSON.
- * Each carries the path of its paragraph in its chain, so the same wrapper in
- * another paragraph is another stretch.
+ * Each carries the path of its paragraph, so the same wrapper in another
+ * paragraph is another stretch.
  */
 export function nodeWrapSpans(node: NodeJson): WrapSpan[] {
   type Json = NodeJson & { content?: Json[]; text?: string; marks?: MarkJson[] }
@@ -262,10 +272,10 @@ export function nodeWrapSpans(node: NodeJson): WrapSpan[] {
     const spans = wrapSpans(
       content.map((child) => {
         const chain = child.marks?.find((m) => m.type === INLINE_WRAP_MARK)?.attrs?.chain
-        return [typeof chain === 'string' ? chain : null, child.text?.length ?? 0]
+        return [inlineWrapChainOf(chain), child.text?.length ?? 0]
       }),
     )
-    for (const span of spans) out.push({ ...span, chain: `${path}|${span.chain}` })
+    for (const span of spans) out.push({ ...span, wrap: `${path}|${span.wrap}` })
   }
   walk(node, '')
   return out
@@ -282,6 +292,6 @@ export function nodeWrapSpans(node: NodeJson): WrapSpan[] {
  */
 export function wrapSpansKept(shown: readonly WrapSpan[], read: readonly WrapSpan[]): boolean {
   return shown.every((span) =>
-    read.some((r) => r.chain === span.chain && r.from <= span.from && span.to <= r.to),
+    read.some((r) => r.wrap === span.wrap && r.from <= span.from && span.to <= r.to),
   )
 }

@@ -270,3 +270,60 @@ describe('a control that covers less text than the file has in it keeps the file
     expect(controlTexts(editor)).toEqual(['5/6/2024'])
   })
 })
+
+describe('a nested wrapper the editor no longer shows', () => {
+  // a smart tag inside the control: the control covers all three words, the
+  // tag the middle one
+  const TAG_OPEN = '<w:smartTag w:uri="urn:place" w:element="city">'
+  const NESTED = para(
+    run('Code: ') +
+      OPEN +
+      run('A ') +
+      TAG_OPEN +
+      run('Seoul') +
+      '</w:smartTag>' +
+      run(' B') +
+      CLOSE +
+      run(' end'),
+  )
+
+  /** the middle word keeps the control and loses the tag, as a peer or a rewrite may leave it */
+  function dropTheTag(editor: Editor): void {
+    const at = posOf(editor, 'Seoul')
+    const outer = editor.state.doc
+      .nodeAt(posOf(editor, 'A '))!
+      .marks.find((mark) => mark.type.name === 'inlineWrap')!
+    editor.view.dispatch(editor.state.tr.addMark(at, at + 'Seoul'.length, outer))
+  }
+
+  it('in a paragraph: the control covers what it covered, so the file is the one that was opened', async () => {
+    const { editor, parsed, source } = await open(NESTED + OTHER)
+    dropTheTag(editor)
+    expect(controlTexts(editor)).toEqual(['A Seoul B'])
+    const { bytes } = await save(editor, parsed)
+    expect(bytes).toEqual(source)
+  })
+
+  it('in a table cell: the file is the one that was opened', async () => {
+    const table =
+      '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
+      '<w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>' +
+      `<w:tr><w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr>${NESTED}</w:tc></w:tr></w:tbl>`
+    const { editor, parsed, source } = await open(table + OTHER)
+    dropTheTag(editor)
+    const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
+    expect(await saveDocx(parsed, plan.saveBlocks)).toEqual(source)
+  })
+
+  it('the control grown over the word behind it is still an edit', async () => {
+    const { editor, parsed } = await open(NESTED + OTHER)
+    dropTheTag(editor)
+    const behind = posOf(editor, ' end')
+    const outer = editor.state.doc
+      .nodeAt(posOf(editor, 'A '))!
+      .marks.find((mark) => mark.type.name === 'inlineWrap')!
+    editor.view.dispatch(editor.state.tr.addMark(behind, behind + 1, outer))
+    const { xml } = await save(editor, parsed)
+    expect(skeleton(xml)).toContain(`${OPEN}[A Seoul B ]${CLOSE}[end]`)
+  })
+})
