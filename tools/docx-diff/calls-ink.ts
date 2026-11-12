@@ -81,6 +81,8 @@ const PARAGRAPHS: string[] = [
       '<a:blip r:embed="rId9"/><a:blip r:embed="rId10"/>',
   ),
   run('<wp:docPr id="4" name="Picture 4"/>') + run('<wp:docPr name="aidocs-ink 5" descr="p"/>'),
+  // an escaped entity: decoded once it reads &lt;, decoded twice it reads <
+  run('<wp:docPr id="8" name="aidocs-ink 8" descr="&amp;lt;b&amp;gt; &amp;quot;"/>'),
   `<w:p>${run('<wp:docPr id="6" name="Picture aidocs-ink"/>')}</w:p>`,
   '<w:p><w:r><w:drawing><wp:anchor><wp:docPr name="aidocs-ink 7"/></wp:anchor></w:drawing></w:p>',
   '<w:p><w:r><w:t>aidocs-ink</w:t></w:r></w:p>',
