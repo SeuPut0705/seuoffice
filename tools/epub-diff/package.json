@@ -1,0 +1,14 @@
+{
+  "name": "epub-diff",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Parity gate for the Rust EPUB engine",
+  "scripts": {
+    "gate": "node ../../crates/office-wasm/build.mjs && tsx main.ts",
+    "compare": "tsx main.ts",
+    "typecheck": "tsc --noEmit",
+    "faults": "tsx ../fileparse-diff/faults.ts --dir ."
+  }
+}
