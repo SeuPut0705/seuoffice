@@ -7,7 +7,7 @@
  * intact. Tables are "modeled" in this app (not passthrough), so editing is allowed.
  */
 import type { Slide } from './types'
-import { escapeXmlAttr } from './xml-utils'
+import { attributeOf, escapeXmlAttr } from './xml-utils'
 
 /** Table style edit parameters (engine side of the IPC EditTableStyleOp) */
 export interface TableStyleEdit {
@@ -282,20 +282,17 @@ function replaceTblPr(xml: string, newTblPr: string): string {
   return xml.slice(0, open) + newTblPr + xml.slice(close + '</a:tblPr>'.length)
 }
 
+/** The value of the first <a:tblPr>'s own `key` attribute, undefined when it has none. */
+function tblPrAttr(xml: string, key: string): string | undefined {
+  const open = /<a:tblPr\b[^>]*>/.exec(xml)?.[0]
+  return open === undefined ? undefined : attributeOf(open, key)
+}
+
 /**
  * One attribute of a start tag in any form XML allows: quoted with " or ', with or without
  * spaces around the '='. PowerPoint writes key="value"; other producers do not always.
  */
-const ATTR_RE = /\s+([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
-
-/** The value of the first <a:tblPr>'s own `key` attribute, undefined when it has none. */
-function tblPrAttr(xml: string, key: string): string | undefined {
-  const attrs = /<a:tblPr(\s[^>]*)?>/.exec(xml)?.[1] ?? ''
-  for (const m of attrs.matchAll(ATTR_RE)) {
-    if (m[1] === key) return m[2] ?? m[3]
-  }
-  return undefined
-}
+const ATTR_RE = /\s+([^\s=/>]+)\s*=\s*(?:"[^"]*"|'[^']*')/g
 
 /**
  * Set or remove an attribute in an XML attribute string (remove: value=undefined). The string is

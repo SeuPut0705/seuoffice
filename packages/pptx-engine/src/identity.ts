@@ -14,7 +14,7 @@
  * after ungroup that same id would suddenly mean the child.
  */
 import type { Slide, SlideElement } from './types'
-import { creationIdExtXml, creationIdXml } from './xml-utils'
+import { attributeOf, creationIdExtXml, creationIdXml } from './xml-utils'
 
 const CREATION_ID_RE = /<a16:creationId[^>]*\bid="\{?([0-9A-Fa-f-]{36})\}?"/
 
@@ -119,9 +119,7 @@ export function ensureCreationId(el: SlideElement): void {
  */
 function cNvPrOpenWithId(xml: string, id: string): RegExpMatchArray | null {
   for (const open of xml.matchAll(/<p:cNvPr\b[^>]*?(\/?)>/g)) {
-    for (const attr of open[0].matchAll(/\s([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
-      if (attr[1] === 'id' && (attr[2] ?? attr[3]) === id) return open
-    }
+    if (attributeOf(open[0], 'id') === id) return open
   }
   return null
 }

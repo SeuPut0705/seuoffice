@@ -23,7 +23,7 @@ import {
 } from './placeholder'
 import { isPresetShapeType } from './preset-shape-types'
 import { custGeomXml, parseCustGeom, validCustGeomPath, type CustGeomPath } from './custgeom'
-import { canListSlide, withSlideListed } from './slide-ids'
+import { canListSlide, withSlideListed, withSlideUnlisted } from './slide-ids'
 import {
   alternateContentBranches,
   generateParagraphXml,
@@ -60,7 +60,14 @@ import {
   type NewTableOptions,
 } from './insert'
 import { BLANK_SLIDE_XML } from './blank'
-import { escapeXmlAttr, hasContentTypeOverride, maxRelationshipIdNumber } from './xml-utils'
+import {
+  attributeOf,
+  escapeXmlAttr,
+  hasContentTypeOverride,
+  hasDefaultFor,
+  maxRelationshipIdNumber,
+  withRelationshipIds,
+} from './xml-utils'
 import { elementSpid } from './animation'
 import { stripStaleEmbeddedFonts } from './embedded-fonts'
 import { ensureCreationId, matchesElementRef } from './identity'
@@ -1904,9 +1911,9 @@ export function replacePictureBytes(
   xml = xml.slice(0, blip.index) + tag + xml.slice(blip.index + blip[0].length)
   // A 3D model's Choice caches the same rendering (am3d:raster), which PowerPoint shows
   if (pic.model3d && previousRId) {
-    xml = xml.replace(
-      new RegExp(`(<am3d:blip\\b[^>]*\\br:embed=")${previousRId}"`),
-      (_all, head: string) => `${head}${added.rid}"`,
+    const repointed = new Map([[previousRId, added.rid]])
+    xml = xml.replace(/<am3d:blip\b[^>]*>/g, (cached) =>
+      withRelationshipIds(cached, ['embed'], repointed),
     )
   }
   // The replacement is always raster (IMAGE_MIME gate), and PowerPoint prefers a
@@ -2141,7 +2148,7 @@ function ensureDefaultContentType(archive: PackageArchive, ext: string, contentT
   const ctPath = '[Content_Types].xml'
   const ct = archive.readText(ctPath)
   if (!ct) return
-  if (new RegExp(`<Default\\s[^>]*Extension="${ext}"`, 'i').test(ct)) return
+  if (hasDefaultFor(ct, ext)) return
   // Insert before </Types>. indexOf('>') finds the XML declaration's closing
   // angle bracket first, so splicing there would put the Default between the
   // declaration and <Types> — outside the root element — and every OPC reader
@@ -2265,6 +2272,8 @@ export function mergeSlideFromSource(
   const newRelsLines: string[] = []
   let ridSeq = 0
   const nextRid = () => `rId${++ridSeq}`
+  /** source rId → the rId the same media has in the new slide's rels */
+  const ridMap = new Map<string, string>()
 
   for (const rel of source.rels) {
     if (MEDIA_REL_SUFFIXES.some((s) => rel.type.endsWith(s))) {
@@ -2276,13 +2285,8 @@ export function mergeSlideFromSource(
       const destPath = nextMediaPath(archive, ext)
       archive.entries.set(destPath, bytes)
       ensureDefaultContentType(archive, ext, MIME_BY_EXT[ext] ?? 'application/octet-stream')
-      const oldRid = rel.id
       const newRid = nextRid()
-      // Rewrite r:embed / r:link references in the slide XML to the new rId
-      slideXml = slideXml.replace(
-        new RegExp(`(r:(?:embed|link)=")${oldRid}(")`, 'g'),
-        (_all, head: string, tail: string) => `${head}${newRid}${tail}`,
-      )
+      ridMap.set(rel.id, newRid)
       const relTarget = '../media/' + destPath.slice('ppt/media/'.length)
       newRelsLines.push(
         `<Relationship Id="${newRid}" Type="${IMAGE_REL_TYPE}" Target="${escapeXmlAttr(relTarget)}"/>`,
@@ -2299,6 +2303,8 @@ export function mergeSlideFromSource(
     }
     // notesSlide and others (e.g. comments) are dropped
   }
+  // Re-point the r:embed / r:link references in the slide XML at the new rIds
+  slideXml = withRelationshipIds(slideXml, ['embed', 'link'], ridMap)
 
   // Write the new slide XML + rels
   archive.entries.set(newPath, Buffer.from(slideXml, 'utf8'))
@@ -2362,13 +2368,13 @@ export function deleteSlide(opened: OpenedPptx, index: number): boolean {
   )?.id
   if (!rid) return false
 
-  const sldTag = new RegExp(`<p:sldId\\s[^>]*r:id=["']${rid}["'][^>]*/>`).exec(pres)?.[0]
-  if (!sldTag) return false
-  archive.entries.set(presPath, Buffer.from(pres.replace(sldTag, ''), 'utf8'))
-  const relTag = new RegExp(`<Relationship\\s[^>]*Id=["']${rid}["'][^>]*/>`).exec(presRels)?.[0]
-  if (relTag) {
-    archive.entries.set(presRelsPath, Buffer.from(presRels.replace(relTag, ''), 'utf8'))
-  }
+  const nextPres = withSlideUnlisted(pres, rid)
+  if (nextPres === null) return false
+  archive.entries.set(presPath, Buffer.from(nextPres, 'utf8'))
+  const nextRels = presRels.replace(/<Relationship\b[^>]*\/\s*>/g, (tag) =>
+    attributeOf(tag, 'Id') === rid ? '' : tag,
+  )
+  if (nextRels !== presRels) archive.entries.set(presRelsPath, Buffer.from(nextRels, 'utf8'))
 
   removePartWithOwnedResources(archive, slide.path)
   deck.slides.splice(index, 1)
@@ -4308,7 +4314,7 @@ export function pasteElements(
 
   let nextId = nextCNvPrId(slide)
   const xmls = items.map((item) => {
-    let xml = item.xml
+    const ridMap = new Map<string, string>()
     for (const rel of item.rels) {
       const landed = rel.external ? rel.target : (pathMap?.get(rel.target) ?? rel.target)
       const key = `${rel.type} ${landed}`
@@ -4330,13 +4336,9 @@ export function pasteElements(
         relsDirty = true
         byKey.set(key, rid)
       }
-      if (rid !== rel.rid) {
-        xml = xml.replace(
-          new RegExp(`\\br:(embed|link|id)="${rel.rid}"`, 'g'),
-          (_all, attr: string) => `r:${attr}="${rid}"`,
-        )
-      }
+      if (rid !== rel.rid) ridMap.set(rel.rid, rid)
     }
+    let xml = withRelationshipIds(item.xml, ['embed', 'link', 'id'], ridMap)
     xml = xml.replace(
       /(<p:cNvPr\s[^>]*\bid=["'])\d+(["'])/g,
       (_a, pre: string, post: string) => `${pre}${nextId++}${post}`,

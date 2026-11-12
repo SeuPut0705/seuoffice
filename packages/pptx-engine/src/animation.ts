@@ -622,8 +622,9 @@ function missingMediaNodesXml(gen: IdGen, anims: SlideAnimation[], existing: str
   for (const a of anims) {
     if (!isMediaEffect(a.effect) || !a.mediaKind || seen.has(a.spid)) continue
     seen.add(a.spid)
+    const target = `<p:spTgt spid="${a.spid}"`
     const has = [...existing.matchAll(/<p:(?:video|audio)>[\s\S]*?<\/p:(?:video|audio)>/g)].some(
-      (m) => new RegExp(`<p:spTgt spid="${a.spid}"`).test(m[0]),
+      (m) => m[0].includes(target),
     )
     if (!has) out += mediaNodeXml(gen, a.spid, a.mediaKind)
   }

@@ -9,7 +9,12 @@
 /// paste does.
 
 import { PackageArchive, relsPathFor, resolveTarget, type Relationship } from './zip'
-import { hasContentTypeOverride, maxRelationshipIdNumber } from './xml-utils'
+import {
+  defaultContentTypeFor,
+  hasContentTypeOverride,
+  hasDefaultFor,
+  maxRelationshipIdNumber,
+} from './xml-utils'
 
 const LAYOUT_REL = '/slideLayout'
 const NOTES_REL = '/notesSlide'
@@ -61,11 +66,6 @@ function overrideContentType(ct: string | null, partPath: string): string | unde
   return re.exec(ct)?.[1]
 }
 
-function defaultContentType(ct: string | null, ext: string): string | undefined {
-  if (!ct) return undefined
-  return new RegExp(`<Default[^>]*Extension="${ext}"[^>]*ContentType="([^"]+)"`, 'i').exec(ct)?.[1]
-}
-
 /** Walks a part's rel graph, collecting bytes + content types for everything reachable. */
 export function collectPart(
   archive: PackageArchive,
@@ -83,7 +83,7 @@ export function collectPart(
   if (override) contentTypes[partPath] = override
   else {
     const ext = extOf(partPath)
-    const dflt = defaultContentType(ct, ext)
+    const dflt = ct ? defaultContentTypeFor(ct, ext) : undefined
     if (ext && dflt) contentTypes[ext] = dflt
   }
 
@@ -361,7 +361,7 @@ function ensureContentTypes(
       const override = `<Override PartName="/${targetPath}" ContentType="${contentType}"/>`
       if (!hasContentTypeOverride(ct, targetPath))
         ct = ct.replace('</Types>', () => `${override}</Types>`)
-    } else if (!new RegExp(`<Default[^>]*Extension="${key}"`, 'i').test(ct)) {
+    } else if (!hasDefaultFor(ct, key)) {
       // A function, not a string: the extension and its content type come from the source deck,
       // and a replacement string would expand a `$&` or `$$` in them
       ct = ct.replace(

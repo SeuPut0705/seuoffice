@@ -19,6 +19,47 @@ export function xmlArray(v: unknown): XmlNode[] {
   return v ? [asXmlNode(v)] : []
 }
 
+const ATTRIBUTE = /\s([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+
+/**
+ * What an element's open tag gives the attribute `name`, whatever its quotes and spacing; the
+ * value as written, entities undecoded. This is how a value from the deck (a relationship id, an
+ * extension, an element id) is looked up: compared as text, never built into a RegExp, where a
+ * `(` in it throws, a `.` matches any character and a `$` matches nothing.
+ */
+export function attributeOf(element: string, name: string): string | undefined {
+  const openTag = element.slice(0, element.indexOf('>') + 1)
+  for (const attr of openTag.matchAll(ATTRIBUTE)) {
+    if (attr[1] === name) return attr[2] ?? attr[3]
+  }
+  return undefined
+}
+
+const R_REFERENCE = /\br:(\w+)(\s*=\s*)(?:"([^"]*)"|'([^']*)')/g
+
+/**
+ * `xml` with each `r:<name>` reference (for the `names` given) whose id is a key of `ids`
+ * re-pointed at the id it maps to. One pass: every reference is read once and its id compared as
+ * text, so an id from the deck is never a pattern, and a new id that equals another old id is
+ * not renamed a second time, which renaming one id after another did.
+ */
+export function withRelationshipIds(
+  xml: string,
+  names: readonly string[],
+  ids: ReadonlyMap<string, string>,
+): string {
+  if (ids.size === 0) return xml
+  return xml.replace(
+    R_REFERENCE,
+    (all, name: string, equals: string, double: string | undefined, single: string | undefined) => {
+      const to = names.includes(name) ? ids.get(double ?? single ?? '') : undefined
+      if (to === undefined) return all
+      const quote = double === undefined ? "'" : '"'
+      return `r:${name}${equals}${quote}${to}${quote}`
+    },
+  )
+}
+
 /** Decode numeric references only when they name a Unicode scalar value. */
 export function decodeNumericCharRefs(text: string): string {
   return text.replace(/&#(?:x([0-9a-fA-F]+)|(\d+));/g, (reference, hex, decimal) => {
@@ -117,9 +158,22 @@ export function creationIdXml(): string {
 
 const DEFAULT_TAG = /<Default\b[^>]*\/?>/g
 
-/** Any <Default> already declaring this extension, whatever its attribute order or quoting. */
+/**
+ * The content type [Content_Types].xml declares by default for this extension, whatever the
+ * attribute order or quoting; undefined when it declares none. Extensions compare without regard
+ * to case, as OPC matches them.
+ */
+export function defaultContentTypeFor(ct: string, ext: string): string | undefined {
+  const wanted = ext.toLowerCase()
+  for (const tag of ct.matchAll(DEFAULT_TAG)) {
+    if (attributeOf(tag[0], 'Extension')?.toLowerCase() === wanted) {
+      return attributeOf(tag[0], 'ContentType') ?? ''
+    }
+  }
+  return undefined
+}
+
+/** Any <Default> already declaring this extension. */
 export function hasDefaultFor(ct: string, ext: string): boolean {
-  const re = new RegExp(`\\bExtension\\s*=\\s*(["'])${ext}\\1`)
-  for (const tag of ct.matchAll(DEFAULT_TAG)) if (re.test(tag[0])) return true
-  return false
+  return defaultContentTypeFor(ct, ext) !== undefined
 }
