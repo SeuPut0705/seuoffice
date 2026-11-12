@@ -60,6 +60,10 @@ are the ones that bit, each with an input where the two disagree:
 | `if (s)`, `a \|\| b` on strings | `truthy(Option<&str>)`                      | `Option::is_some`        | `""` is false                                                     |
 | `a ?? b`                        | `Option::or`, `unwrap_or`                   | `truthy`                 | `""` and `0` are kept                                             |
 | `new Map()`                     | `JsMap<V>`                                  | `HashMap`, `BTreeMap`    | order of entries; a key set again keeps its place                 |
+| `Record<string, V>`             | `JsObject<V>`                               | `BTreeMap`, a `Vec`      | integer keys first in numeric order, the rest as set: "2", "10"   |
+| `{ a, b }`, always in one order | a struct with its fields in that order      | any other field order    | JSON.stringify writes the keys as the literal has them            |
+| `o.k = v` on a path, a spread   | `js_object!` and the methods of `Slot`      | a plain struct           | a key set later comes later; `{...a, ...b}` keeps the order of a  |
+| `delete o.k` on a JSON map      | `shift_remove`                              | `remove`, `swap_remove`  | those move the last key into the place of the one removed         |
 | `ownValue(table, key)`          | a `match` on own keys                       |                          | `table["constructor"]` answers in JavaScript, `ownValue` does not |
 | `setOwn(record, key, value)`    | an entry like any other, `"__proto__"` too  | skipping `"__proto__"`   | a plain `obj[key] = value` would set the prototype there          |
 | `decodeURIComponent`            | `decode_uri_component`                      | a percent-decoding crate | malformed escapes throw                                           |
@@ -124,13 +128,15 @@ A `+` marks seeded mutations of the same inputs. The rule for them: where the
 TypeScript throws, Rust must refuse; where it answers, Rust must answer the
 same.
 
-What the comparisons do not see:
-
-- **The order of the keys of an object.** JSON objects are compared as sets
-  of keys. Where the order can be observed (a record keyed by data from the
-  document), (f) sends the result as its entries. (d) and (e) do not: the
-  numbering levels of `numbering.rs` sit in a `BTreeMap`, which puts `"10"`
-  before `"2"` where JavaScript puts integer keys in numeric order.
+The order of the keys of an object is part of every comparison of (a), (d),
+(e) and (f): a result equal as JSON whose keys are in another order is a
+difference, counted apart on its line (`key order only`) and listed per place
+under the `key order:` line. `key-order.ts` parses the reply keeping the
+order Rust wrote, which `JSON.parse` loses for integer keys.
+`npm --prefix tools/docx-diff run gate -- --key-orders` also lists, per
+place, the one order the TypeScript writes its keys in, or says that it has
+none: then the order follows the path the code took, and the type is a
+`js_object!`.
 
 A lone surrogate in a TypeScript result shows as a difference: a Rust string
 cannot hold one. None is left in what (f) compares since the TypeScript
@@ -205,14 +211,21 @@ is listed, never coded around in the harness.
   `load_docx_package`. The gate compares nothing of it; its unit tests do.
 - `docx-engine/src/styles/mod.rs` has a private `JsMap` from before
   `jscompat::JsMap` existed.
+- `Slot` numbers the keys from one counter of the process, so two objects
+  built at the same time never share a number; the counter is 64 bits wide.
+  A `js_object!` costs eight bytes a key more than a plain struct.
+- The key order of a JSON value an argument crosses the wire with is kept
+  (`preserve_order`), so `resolveCharIndents` sees its `format` as the
+  TypeScript does. A typed argument (`CharIndents`) is read with
+  `deserialize;`, which sets the keys in the order of the input.
 - `cargo-deny` is configured (`deny.toml`) but was not installed on the
   machine these crates were written on, so it has not run.
 - Helpers written more than once, to move down: `Math.max`/`Math.min` with
   JavaScript's NaN and zero rules (`list_markers.rs`, `vml.rs`), text escapes
   (`eq_field.rs`, `blank.rs`, `omml/src/xml.rs`, and private in `ooxml-xml`),
   `String.prototype.slice` (`sdt.rs`, `eq_field.rs`, `field_balance.rs`), the
-  record that keeps JavaScript's key order (`doc_properties.rs`, and the
-  array-index test in `ooxml-pkg` and `ooxml-xml`), `atob` (`protection.rs`),
+  array-index test (`jscompat::array_index`; `ooxml-pkg` and `ooxml-xml` have
+  copies of their own), `atob` (`protection.rs`),
   the `Date` readers (`ooxml-pkg/src/write.rs`, `blank.rs`), the new document
   properties (`blank.rs`; `doc_properties.rs` holds the read side only).
 - `fields.rs` takes what `resolve-props.ts` computes as arguments
