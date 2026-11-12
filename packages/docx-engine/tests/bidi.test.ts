@@ -188,4 +188,28 @@ describe('complex-script bold and italic', () => {
     expect(fresh).toContain('<w:szCs w:val="28"/>')
     expect(fresh).toContain('<w:b/><w:bCs/>')
   })
+
+  it('keeps bold, italic and size on a run turned right-to-left', async () => {
+    const doc = await parseDocx(
+      await buildDocx({
+        bodyXml:
+          '<w:p><w:r><w:rPr><w:b/><w:i/><w:sz w:val="28"/></w:rPr><w:t>abc</w:t></w:r></w:p>',
+      }),
+    )
+    const run = doc.blocks[0].runs![0]
+    const saved = await saveDocx(doc, [
+      {
+        kind: 'generated',
+        block: { type: 'paragraph', runs: [{ ...run, rtl: true }] },
+        docxIndex: doc.blocks[0].docxIndex!,
+      },
+    ])
+    expect((await parseDocx(saved)).blocks[0].runs?.[0]).toMatchObject({
+      text: 'abc',
+      rtl: true,
+      bold: true,
+      italic: true,
+      sizeHalfPoints: 28,
+    })
+  })
 })
