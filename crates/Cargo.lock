@@ -403,12 +403,26 @@ dependencies = [
 ]
 
 [[package]]
+name = "odt-engine"
+version = "0.1.0"
+dependencies = [
+ "docx-engine",
+ "flate2",
+ "jscompat",
+ "ooxml-pkg",
+ "ooxml-xml",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "office-wasm"
 version = "0.1.0"
 dependencies = [
  "docx-engine",
  "jscompat",
  "mtx",
+ "odt-engine",
  "omml",
  "ooxml-pkg",
  "ooxml-xml",
