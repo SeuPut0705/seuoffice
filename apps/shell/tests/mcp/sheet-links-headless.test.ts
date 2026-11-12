@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mkdtemp, rm } from 'node:fs/promises'
-import { readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
@@ -168,5 +168,63 @@ describe('sheet_links never contacts a source the workbook places on another com
     await sheetLinks({ path: book, update: true, remoteSources: true, 'remote-sources': true })
 
     expect(engine.sent().some((request) => 'allowRemoteSources' in request)).toBe(false)
+  })
+})
+
+describe('sheet_links `out` follows the output rules of the other writing tools', () => {
+  it('refuses a file that is not a workbook, overwrite or not', async () => {
+    const victim = join(dir, 'notes.txt')
+    writeFileSync(victim, 'keep me')
+
+    await expect(
+      sheetLinks({ path: book, break: [1], out: victim, overwrite: true }),
+    ).rejects.toThrow('path must point to a .xlsx file (got ".txt")')
+
+    expect(readFileSync(victim, 'utf8')).toBe('keep me')
+  })
+
+  it('refuses a relative path instead of resolving it somewhere', async () => {
+    await expect(sheetLinks({ path: book, break: [1], out: 'severed.xlsx' })).rejects.toThrow(
+      'path must be absolute',
+    )
+    expect(existsSync(join(dir, 'severed.xlsx'))).toBe(false)
+  })
+
+  it('refuses an existing workbook unless overwrite is set', async () => {
+    const existing = join(dir, 'existing.xlsx')
+    writeFileSync(existing, 'another workbook')
+
+    await expect(sheetLinks({ path: book, break: [1], out: existing })).rejects.toThrow(/exists/)
+    expect(readFileSync(existing, 'utf8')).toBe('another workbook')
+
+    await sheetLinks({ path: book, break: [1], out: existing, overwrite: true })
+    const written = await JSZip.loadAsync(readFileSync(existing))
+    expect(await written.file('xl/workbook.xml')!.async('string')).not.toContain('rId4')
+  })
+
+  it('refuses a folder outside the allowed roots', async () => {
+    const elsewhere = await mkdtemp(join(tmpdir(), 'genoffice-mcp-elsewhere-'))
+    try {
+      vi.stubEnv('GENOFFICE_ALLOWED_ROOTS', dir)
+      const out = join(elsewhere, 'severed.xlsx')
+      await expect(sheetLinks({ path: book, break: [1], out })).rejects.toThrow(/refusing to write/)
+      expect(existsSync(out)).toBe(false)
+    } finally {
+      await rm(elsewhere, { recursive: true, force: true })
+    }
+  })
+
+  it('writes the result to a new workbook and leaves the source as it was', async () => {
+    const before = readFileSync(book)
+    const out = join(dir, 'severed.xlsx')
+
+    const broken = await sheetLinks({ path: book, break: [1], out })
+
+    expect(broken).toMatchObject({ broken: [1], removedLinks: 1 })
+    expect(readFileSync(book).equals(before)).toBe(true)
+    const written = await JSZip.loadAsync(readFileSync(out))
+    const workbook = await written.file('xl/workbook.xml')!.async('string')
+    expect(workbook).not.toContain('rId4')
+    expect(workbook).toContain('<externalReference r:id="rId5"/>')
   })
 })

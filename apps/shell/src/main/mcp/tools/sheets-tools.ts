@@ -168,7 +168,7 @@ function createSheetLinksTool(deps: SheetsToolDeps): McpToolDefinition {
       out: z
         .string()
         .optional()
-        .describe('write the refreshed/broken copy here instead of in place'),
+        .describe('absolute .xlsx path to write the refreshed/broken copy to instead of in place'),
       overwrite: z.boolean().optional().describe('allow replacing an existing file at `out`'),
     },
     handler: async (args) => {
@@ -184,17 +184,30 @@ function createSheetLinksTool(deps: SheetsToolDeps): McpToolDefinition {
           'update and break cannot combine: an update re-reads the sources, a break severs them',
         )
       }
+      const writes = args.update === true || breakIndices !== undefined
       // writing the workbook headlessly is opt-in, same rule as create_xlsx
-      if ((args.update === true || breakIndices !== undefined) && deps.background === false) {
+      if (writes && deps.background === false) {
         throw new Error(
           'refreshing or breaking links is disabled: headless file writes are off in MCP settings',
         )
       }
+      // `out` is a file this tool creates, so it obeys the rules of the other
+      // generating tools: absolute, a workbook, no silent replacement
+      const out =
+        writes && typeof args.out === 'string' && args.out
+          ? resolveOutputPath({
+              defaultSaveDir: deps.defaultSaveDir,
+              ext: XLSX_EXT,
+              title: basename(filePath, extname(filePath)),
+              requestedPath: args.out,
+              overwrite: args.overwrite === true,
+            })
+          : undefined
       const json = await sheetLinksViaCli(deps.cli, {
         path: filePath,
         ...(args.update === true ? { update: true } : {}),
         ...(breakIndices !== undefined ? { break: breakIndices } : {}),
-        ...(typeof args.out === 'string' && args.out ? { out: args.out } : {}),
+        ...(out !== undefined ? { out } : {}),
         ...(args.overwrite === true ? { overwrite: true } : {}),
       })
       return { path: filePath, name: basename(filePath), summary: json.summary, ...json.detail }
