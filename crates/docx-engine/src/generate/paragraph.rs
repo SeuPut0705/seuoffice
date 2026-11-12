@@ -19,7 +19,7 @@ pub struct GenerateContext<'a> {
     pub part: Option<&'a ContentControlPart>,
 }
 
-static STANDALONE_BOOKMARK_SEQ: AtomicU64 = AtomicU64::new(0);
+pub(crate) static STANDALONE_BOOKMARK_SEQ: AtomicU64 = AtomicU64::new(0);
 
 fn bookmarks_xml(ctx: &mut GenerateContext<'_>, names: Option<&[String]>) -> String {
     let mut out = String::new();

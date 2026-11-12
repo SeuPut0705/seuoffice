@@ -1,7 +1,23 @@
 import { type RemovePartsOptions } from './remove-parts'
 import { type ParseExtras } from './parse'
 import { type CustomNumberingLevel } from './blank'
-import type { CommentInfo, DocProtection, WriteProtection, GeneratedBlock, HeaderFooter, NewChart, NewImage, NewInkImage, NoteInfo, ParsedDoc, RevisionInfo, SectionSettings, SourceInfo, ThemeColors, ThemeFonts } from './types'
+import type {
+  CommentInfo,
+  DocProtection,
+  WriteProtection,
+  GeneratedBlock,
+  HeaderFooter,
+  NewChart,
+  NewImage,
+  NewInkImage,
+  NoteInfo,
+  ParsedDoc,
+  RevisionInfo,
+  SectionSettings,
+  SourceInfo,
+  ThemeColors,
+  ThemeFonts,
+} from './types'
 import { type DefaultFonts, type StyleUpsert } from './style-upsert'
 import { type Watermark } from './watermark'
 import { type ContentControlSpec } from './content-control'

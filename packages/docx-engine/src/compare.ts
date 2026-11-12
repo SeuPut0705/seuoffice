@@ -72,5 +72,11 @@ export function compareBlocks(
   revised: ParsedDocFull,
   options: CompareOptions = {},
 ): { blocks: SaveBlock[]; summary: CompareSummary; nextRevisionId: number } {
-  return invoke('compareBlocks', [original.blocks, revised.blocks, revised.internal.documentXml, options ?? {}, new Date().toISOString()]) as never
+  return invoke('compareBlocks', [
+    original.blocks,
+    revised.blocks,
+    revised.internal.documentXml,
+    options ?? {},
+    new Date().toISOString(),
+  ]) as never
 }

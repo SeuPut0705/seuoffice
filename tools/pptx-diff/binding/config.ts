@@ -87,9 +87,9 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use super::{InvokeEnv, pptx, pptx_routes};
+use super::{Args, InvokeEnv, pptx, pptx_routes};
 
-fn at(args: &[Value], index: usize) -> &Value {
+fn at<'a>(args: Args<'a>, index: usize) -> &'a Value {
     args.get(index).unwrap_or(&Value::Null)
 }
 
@@ -99,7 +99,7 @@ fn reply(value: impl Serialize) -> Out {
 }
 
 `,
-  invokePrelude: '    let args = pptx::inline_blobs(env, args)?;\n    let args = &*args;\n',
+  invokePrelude:
+    '    let mut inlined = None;\n    let args = pptx::inline_blobs(env, args, &mut inlined)?;\n',
   rustDocxHelpers: false,
-  prettier: true,
 }

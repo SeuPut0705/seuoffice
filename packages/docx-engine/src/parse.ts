@@ -3,8 +3,6 @@ import { type BodyElement } from './scan'
 import { assertZipWithinLimits } from './zip-load'
 import type { ParsedDoc, Run, TableCell } from './types'
 import { type ResolveDiff } from './resolve-props'
-import { resolveMainDocumentPath } from './parse-package'
-import { paraCsFormat } from './parse-styles'
 import { invoke } from './engine'
 import * as hand from './engine-hand'
 
@@ -51,7 +49,11 @@ export function reconcileGridColumns(
   rowTcws: Array<Array<number | undefined>>,
   gridCols: number[] | undefined,
 ): number[] | undefined {
-  const r = invoke('reconcileGridColumns', [rows.map((row) => row.map((cell) => cell.colSpan)), rowTcws, gridCols]) as { widths: number[]; spans: number[][] } | null
+  const r = invoke('reconcileGridColumns', [
+    rows.map((row) => row.map((cell) => cell.colSpan)),
+    rowTcws,
+    gridCols,
+  ]) as { widths: number[]; spans: number[][] } | null
   if (!r) return undefined
   rows.forEach((row, i) =>
     row.forEach((cell, c) => {
@@ -75,10 +77,9 @@ export function hfMovablePictureFrag(frag: string): boolean {
 }
 /** reader for a notes part on its own (no styles: builtin defaults; tests, tools) */
 export function standaloneNoteParagraphReader(): NoteParagraphReader {
-  // parseNotesXml reads a notes part on its own in the engine, with this reader's rules: the reader itself has nothing left to do
-  return (() => {
-    throw new Error('standaloneNoteParagraphReader: the engine reads the paragraphs of a notes part')
-  }) as never
+  const read = ((pXml: string) =>
+    invoke('standaloneNoteParagraphReader', [pXml])) as NoteParagraphReader
+  return Object.assign(read, { [Symbol.for('seuoffice.standaloneNoteReader')]: true })
 }
 /** the floating geometry an anchored picture carries on Run.image */
 export type RunPictureAnchor = Pick<

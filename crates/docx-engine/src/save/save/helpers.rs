@@ -545,7 +545,7 @@ pub fn clean_story_move_ranges(zip: &mut Package, document_path: &str) -> Result
         let xml = part.text().map_err(|e| e.to_string())?;
         let cleaned = clean_move_range_markers(xml);
         if cleaned.removed > 0 {
-            updates.push((part.name.clone(), cleaned.xml.into_owned()));
+            updates.push((part.name.to_string(), cleaned.xml.into_owned()));
         }
     }
     for (name, xml) in updates {

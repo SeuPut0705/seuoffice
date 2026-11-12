@@ -198,12 +198,9 @@ pub fn collect_txbx_paras(
                     .and_then(|id| ctx.resolver.styles.get(id))
                     .and_then(|style| style.display.as_ref())
                     .and_then(|display| *display.bidi);
-                let bidi = level_bidi.or(style_bidi).or_else(|| {
-                    ctx.resolver
-                        .doc_defaults
-                        .as_ref()
-                        .and_then(|defaults| *defaults.bidi)
-                });
+                let bidi = level_bidi
+                    .or(style_bidi)
+                    .or_else(|| ctx.doc_defaults().and_then(|defaults| *defaults.bidi));
                 // pPr-less paragraphs too: the Normal style's character indents
                 // apply to them in a textbox just as in the body
                 let format = match p_pr {

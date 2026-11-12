@@ -188,6 +188,9 @@ pub fn reconcile_grid_columns(
     Ok(Some(widths))
 }
 
+/// The new spans of each row's cells, and the column widths.
+pub type GridSpans = (Vec<Vec<i64>>, Vec<JsNum>);
+
 /// The new spans of each row's cells and the column widths: `reconcileGridColumns`
 /// over the cells' `colSpan` alone (`None` where a cell has none), the one
 /// field it reads. The binding sends only these, not the cells.
@@ -195,7 +198,7 @@ pub fn reconcile_grid_spans(
     rows: &[Vec<Option<JsNum>>],
     row_tcws: &[Vec<Option<JsNum>>],
     grid_cols: Option<&[JsNum]>,
-) -> Result<Option<(Vec<Vec<i64>>, Vec<JsNum>)>, String> {
+) -> Result<Option<GridSpans>, String> {
     let span_of = |span: &Option<JsNum>| span.map_or(1.0, |span| span.0);
     let span_sums: Vec<f64> = rows
         .iter()

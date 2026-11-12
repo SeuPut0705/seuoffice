@@ -327,7 +327,10 @@ function rg(pattern: string, dirs: string[]): string[] {
 const IMPORT =
   /(?:import|export)\s+(type\s+)?(?:(\*\s+as\s+\w+)|\{([\s\S]*?)\})\s*from\s*['"]([^'"]+)['"]/g
 const PACKAGE = config.packageDir.split('/').pop()!
-const DYNAMIC = new RegExp(`(?:import|vi\\.mock|vi\\.importActual)\\(\\s*['"]([^'"]*${PACKAGE}[^'"]*)['"]`, 'g')
+const DYNAMIC = new RegExp(
+  `(?:import|vi\\.mock|vi\\.importActual)\\(\\s*['"]([^'"]*${PACKAGE}[^'"]*)['"]`,
+  'g',
+)
 
 /** the module a specifier of the package names, 'index' where it names the package index */
 function moduleOfSpecifier(specifier: string): string | null {
@@ -451,6 +454,11 @@ function requiredBy(exportsOf: Map<string, ExportInfo[]>): Map<string, Set<strin
     }
     for (const m of text.matchAll(
       /(?:import|vi\.mock|vi\.importActual)\(\s*['"](?:\.\.\/)+src\/([^'"]+?)(?:\.(?:ts|mjs))?['"]/g,
+    ))
+      wholeModule(m[1]!, 'test')
+    // a module a test names by its path to load it another way (a CommonJS child process)
+    for (const m of text.matchAll(
+      /resolve\(\s*__dirname\s*,\s*['"](?:\.\.\/)+src\/([^'"]+?)(?:\.(?:ts|mjs))?['"]\s*\)/g,
     ))
       wholeModule(m[1]!, 'test')
   }
@@ -713,7 +721,8 @@ export function build(): { exports: ExportInfo[] } {
       e.reason = `arity differs: TypeScript ${e.params.length} (${e.params.map((p) => p.name).join(', ')}), Rust ${wire.length}`
     } else e.route = 'table'
     if (e.route === 'table' && config.dropUnused && !e.required.length)
-      e.note = 'nothing outside the package uses it: the module drops it unless a kept piece names it'
+      e.note =
+        'nothing outside the package uses it: the module drops it unless a kept piece names it'
   }
   return { exports }
 }

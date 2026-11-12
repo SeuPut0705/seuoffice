@@ -543,10 +543,10 @@ impl<'a, 'c> Walker<'a, 'c> {
                 self.push_map(map, rev)?;
             }
         } else if zotero_inline_field().test(&instr) {
-            match self.zotero_field {
+            match &self.zotero_field {
                 Some(field) => {
-                    let part = field.part;
-                    self.push_zotero_cached_runs(part_name(part), rev)?;
+                    let part = field.part.as_str().to_owned();
+                    self.push_zotero_cached_runs(&part, rev)?;
                 }
                 None => self.push_zotero_cached_runs("single", rev)?,
             }
@@ -713,7 +713,7 @@ impl<'a, 'c> Walker<'a, 'c> {
     /// `enters`
     fn enters(&mut self, container: &str, chain: Option<&Vec<InlineWrap>>) {
         for wrap in chain.into_iter().flatten() {
-            let inside = wrap.inside.map(|inside| inside.as_str());
+            let inside = wrap.inside.as_ref().map(|inside| inside.as_str());
             if inside == Some("link") || (container == "revision" && inside == Some("revision")) {
                 self.not_carried.insert(wrap.seq.0 as u64);
             }
@@ -928,7 +928,11 @@ impl<'a, 'c> Walker<'a, 'c> {
                                 // inside a field, or cut by a field's edge
                                 self.not_carried.insert(key);
                             } else if carried {
-                                if !valid_inline_wrap(&wrap, ctx.part_namespaces.as_ref()) {
+                                if !valid_inline_wrap(
+                                    &wrap,
+                                    // `ctx.partNamespaces ?? NO_NAMESPACES`: a part with none known declares none
+                                    Some(ctx.part_namespaces.as_ref().unwrap_or(&JsMap::new())),
+                                ) {
                                     self.not_carried.insert(key);
                                 } else if sdt_follows_its_text(&wrap.open) {
                                     let text =
@@ -1004,10 +1008,6 @@ fn set_wrap_text(run: &mut Run, seq: u64, text: &str) {
             wrap.text = Some(text.to_owned());
         }
     }
-}
-
-fn part_name(part: crate::model::RunZoteroFieldPart) -> &'static str {
-    part.as_str()
 }
 
 /// `splitSymRun` over the children of a synthetic run.
@@ -1103,7 +1103,7 @@ pub fn extract_runs<'a>(
         && walker.field_depth > 0
         && field.part != crate::model::RunZoteroFieldPart::End
     {
-        walker.push_zotero_cached_runs(part_name(field.part), None)?;
+        walker.push_zotero_cached_runs(field.part.as_str(), None)?;
     } else if walker.field_depth > 0 && walker.field_separated {
         // a field whose result runs on into the next paragraph has no fldChar end here
         for cached in std::mem::take(&mut walker.field_cached_runs) {

@@ -451,7 +451,7 @@ pub fn band_wrapped_boxes_before_tables(blocks: &mut [Block]) {
         while j < blocks.len() && is_empty_paragraph(&blocks[j]) {
             j += 1;
         }
-        if blocks.get(j).and_then(|b| *b.r#type) != Some(BlockType::Table) {
+        if blocks.get(j).and_then(|b| b.r#type.as_ref()) != Some(&BlockType::Table) {
             continue;
         }
         for b in blocks[i].textboxes.as_mut().into_iter().flatten() {

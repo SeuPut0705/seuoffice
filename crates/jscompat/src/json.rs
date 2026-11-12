@@ -4,7 +4,8 @@ use std::io;
 use crate::number_to_string;
 
 /// A JavaScript number in a model value. It serializes the way
-/// `JSON.stringify` writes it: NaN and the infinities as `null`, -0 as `0`.
+/// `JSON.stringify` writes it: NaN and the infinities as `null`, -0 as `0`;
+/// inside [`writing_for_host`] a non-finite one as `{"$num": spelling}`.
 #[derive(Debug, Clone, Copy, Default, PartialEq, PartialOrd)]
 pub struct JsNum(pub f64);
 
@@ -12,13 +13,36 @@ impl Serialize for JsNum {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let x = self.0;
         if !x.is_finite() {
-            serializer.serialize_unit()
+            if FOR_HOST.with(std::cell::Cell::get) {
+                use serde::ser::SerializeMap;
+                let mut map = serializer.serialize_map(Some(1))?;
+                map.serialize_entry("$num", &number_to_string(x))?;
+                map.end()
+            } else {
+                serializer.serialize_unit()
+            }
         } else if x.fract() == 0.0 && x.abs() < 9_007_199_254_740_992.0 {
             serializer.serialize_i64(x as i64)
         } else {
             serializer.serialize_f64(x)
         }
     }
+}
+
+std::thread_local! {
+    static FOR_HOST: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Runs `write` with a non-finite [`JsNum`] written as `{"$num": "NaN" |
+/// "Infinity" | "-Infinity"}`, which the host's binding turns back into the
+/// number: a value the TypeScript returned keeps its infinities across the
+/// boundary. Only the binding's answer is written so; a port of a
+/// `JSON.stringify` writes `null` as the TypeScript does.
+pub fn writing_for_host<T>(write: impl FnOnce() -> T) -> T {
+    let was = FOR_HOST.with(|flag| flag.replace(true));
+    let out = write();
+    FOR_HOST.with(|flag| flag.set(was));
+    out
 }
 
 impl<'de> Deserialize<'de> for JsNum {
@@ -33,7 +57,9 @@ impl<'de> Deserialize<'de> for JsNum {
                 // a product caller handed a text where a number is declared:
                 // the TypeScript wrote it into the XML as it was
                 None if lenient() => Ok(JsNum(crate::to_number(&text))),
-                None => Err(serde::de::Error::custom(format!("a number, not the text {text:?}"))),
+                None => Err(serde::de::Error::custom(format!(
+                    "a number, not the text {text:?}"
+                ))),
             },
         }
     }
@@ -127,11 +153,13 @@ pub fn js_f64_opt<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<f
 pub fn js_f64_nullable<'de, D: Deserializer<'de>>(
     deserializer: D,
 ) -> Result<Option<Option<f64>>, D::Error> {
-    Ok(Some(match Option::<WireNumber>::deserialize(deserializer)? {
-        None => None,
-        Some(WireNumber::Number(value)) => Some(value),
-        Some(WireNumber::Text(text)) => Some(spelled(&text).unwrap_or(f64::NAN)),
-    }))
+    Ok(Some(
+        match Option::<WireNumber>::deserialize(deserializer)? {
+            None => None,
+            Some(WireNumber::Number(value)) => Some(value),
+            Some(WireNumber::Text(text)) => Some(spelled(&text).unwrap_or(f64::NAN)),
+        },
+    ))
 }
 
 /// `JSON.stringify` number spelling, including numbers stored inside a JSON value.
@@ -179,6 +207,22 @@ mod tests {
         let number: JsNum = serde_json::from_str("null").unwrap();
         assert!(number.0.is_nan());
         assert_eq!(json_to_string(&number).unwrap(), "null");
+    }
+
+    #[test]
+    fn an_answer_to_the_host_spells_non_finite_numbers() {
+        let numbers = [
+            JsNum(f64::NAN),
+            JsNum(f64::INFINITY),
+            JsNum(f64::NEG_INFINITY),
+            JsNum(2.5),
+        ];
+        assert_eq!(
+            writing_for_host(|| json_to_string(&numbers)).unwrap(),
+            r#"[{"$num":"NaN"},{"$num":"Infinity"},{"$num":"-Infinity"},2.5]"#
+        );
+        // a port of JSON.stringify after the answer writes null again
+        assert_eq!(json_to_string(&numbers).unwrap(), "[null,null,null,2.5]");
     }
 
     #[test]

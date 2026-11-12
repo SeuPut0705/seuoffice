@@ -1,6 +1,6 @@
 // The docx engine's side of the binding generator's config (config.ts).
 import type { EngineConfig } from './config'
-import { APPEND, HOST_MODULES, isHandRoute, overrideOf } from './overrides'
+import { APPEND, HOST_MODULES, UNUSED_MODULES, isHandRoute, overrideOf } from './overrides'
 
 /** the Rust types a generated row can read from JSON and write back */
 function decodable(type: string): boolean {
@@ -33,11 +33,15 @@ export const docx: EngineConfig = {
   dropUnused: false,
   dropReexportRefs: false,
   pluginModule: (module) =>
-    module === 'index' || module.startsWith('node/') || module.startsWith('engine-') || module === 'init',
+    module === 'index' ||
+    module.startsWith('node/') ||
+    module.startsWith('engine-') ||
+    module === 'init',
   overrideOf,
   isHandRoute,
   handRoutes: {},
   hostModules: HOST_MODULES,
+  unusedModules: UNUSED_MODULES,
   append: APPEND,
   replace: {},
   decodable,
@@ -55,7 +59,7 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use super::{InvokeEnv, routes};
+use super::{Args, InvokeEnv, routes};
 
 `,
   invokePrelude: '',

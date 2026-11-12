@@ -29,6 +29,7 @@ pub use atob::{InvalidCharacterError, atob};
 pub use date::utc_date_parts;
 pub use json::{
     JsNum, js_f64, js_f64_nullable, js_f64_opt, json_to_string, lenient, reading_leniently,
+    writing_for_host,
 };
 pub use json_value::{
     JSON_MAX_DEPTH, JsTypeError, JsonSyntaxError, JsonValue, Primitive, json_parse,

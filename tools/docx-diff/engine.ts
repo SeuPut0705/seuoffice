@@ -1,5 +1,7 @@
 // Node host of crates/office-wasm. The frame is described in its src/lib.rs.
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { WASI } from 'node:wasi'
 import { parseKeepingOrder } from './key-order'
 
@@ -42,6 +44,9 @@ const collatorOf = (locale: string): Intl.Collator | null => {
 }
 
 export class Engine {
+  /** Megabytes of wasm memory last reported; the memory never shrinks. */
+  private reportedMegabytes = 256
+
   private constructor(private readonly exports: EngineExports) {}
 
   static load(wasmPath: string): Engine {
@@ -66,7 +71,7 @@ export class Engine {
             decoder.decode(new Uint8Array(buffer, b, bLength)),
           )
         },
-        // the gate passes no callback: the engine refuses a call that asks for one
+        // the gate's calls register no callback: every slot answers "none"
         host_callback: (): bigint => 0xffff_ffff_ffff_ffffn,
       },
     })
@@ -94,10 +99,32 @@ export class Engine {
     offset += 4
     blobs.forEach(put)
 
-    const packed = seu_call(request, size)
+    let packed: bigint
+    try {
+      packed = seu_call(request, size)
+    } catch (error) {
+      // the instance is dead after a trap: keep the request that killed it
+      const crash = resolve(dirname(fileURLToPath(import.meta.url)), 'out/engine-crash')
+      mkdirSync(crash, { recursive: true })
+      writeFileSync(resolve(crash, 'header.json'), JSON.stringify(command))
+      blobs.forEach((blob, index) => writeFileSync(resolve(crash, `blob-${index}.bin`), blob))
+      const megabytes = (memory.buffer.byteLength / 2 ** 20).toFixed(0)
+      throw new Error(`engine trapped at ${megabytes} MB; request written to ${crash}`, {
+        cause: error,
+      })
+    }
     seu_free(request, size)
     const pointer = Number(packed >> 32n)
     const length = Number(packed & 0xffff_ffffn)
+    const megabytes = memory.buffer.byteLength / 2 ** 20
+    if (megabytes >= this.reportedMegabytes + 256) {
+      this.reportedMegabytes = megabytes
+      const name =
+        (command as { cmd?: unknown; fn?: unknown }).fn ?? (command as { cmd?: unknown }).cmd
+      console.error(
+        `(memory) ${megabytes.toFixed(0)} MB after ${String(name)}, request ${size} bytes`,
+      )
+    }
     // the call may have grown the memory: take the buffer again
     const reply = new Uint8Array(memory.buffer, pointer, length).slice()
     seu_free(pointer, length)

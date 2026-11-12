@@ -10,7 +10,7 @@
 // the shape tables it writes itself (engine-shapes.ts, engine-type-shapes.ts).
 //
 //   npx tsx tools/docx-diff/binding/gen.ts [--engine docx|pptx] [--dry]
-import { execFileSync } from 'node:child_process'
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import * as prettier from 'prettier'
@@ -130,6 +130,7 @@ function wrapperBody(
     info.params.map((_, i) => expr(i))
   const options: string[] = []
   if (
+    override?.callbacks ||
     info.params.some(
       (p) => p.codec === 'callback' || /=>/.test(p.type) || /GenerateContext/.test(p.type),
     )
@@ -240,6 +241,14 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
               : `arg${i}${p.questionToken ? '?' : ''}${p.type ? `: ${p.type.getText(sf)}` : ''}`,
           )
           prefix = `${text.slice(stmt.getFullStart(), first.getStart(sf))}${named.join(', ')}${text.slice(last.getEnd(), stmt.body.getStart(sf))}`
+        } else {
+          // a parameter the engine owns (a ContentControlPart) is not sent: named as unused
+          for (const param of [...stmt.parameters].reverse()) {
+            const id = param.name as ts.Identifier
+            if (new RegExp(`\\b${id.text}\\b`).test(body)) continue
+            const at = id.getStart(sf) - stmt.getFullStart()
+            prefix = `${prefix.slice(0, at)}_${prefix.slice(at)}`
+          }
         }
         if (!stmt.type && !OVERRIDES_KEEP_INFERRED.has(info.name)) {
           // the declared type of a function that infers it: spelled out, as the wrapper's `as never` has none
@@ -281,8 +290,9 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
     if (piece.wrapped || piece.replaced) {
       const probe = ts.createSourceFile('wrapper.ts', piece.text, ts.ScriptTarget.ES2022, true)
       identifiersOf(probe, piece.refs)
-    } else if (!(config.dropReexportRefs && ts.isExportDeclaration(stmt) && stmt.moduleSpecifier))
+    } else if (!(ts.isExportDeclaration(stmt) && stmt.moduleSpecifier))
       identifiersOf(stmt, piece.refs)
+    // an `export { x } from '…'` names x in another module, not this one's import of it
     mod.pieces.push(piece)
   }
   return mod
@@ -333,7 +343,9 @@ function generateModules(exportsAll: ExportInfo[]): {
   const everyModule = readdirSync(REFERENCE)
     .filter((f) => f.endsWith('.ts'))
     .map((f) => f.replace(/\.ts$/, ''))
-  const verbatim = everyModule.filter((m) => !rewritten.includes(m))
+  const verbatim = everyModule.filter(
+    (m) => !rewritten.includes(m) && !Object.hasOwn(config.unusedModules ?? {}, m),
+  )
 
   const mods = new Map<string, Module>()
   for (const name of rewritten) {
@@ -498,6 +510,7 @@ function generateModules(exportsAll: ExportInfo[]): {
       text: `${header}${lines.join('\n')}\n${body.replace(/^\n*/, '\n')}${append}`,
     })
   }
+  dropped.push(...Object.keys(config.unusedModules ?? {}))
   return { outputs, verbatim, dropped, wrapped }
 }
 
@@ -582,7 +595,21 @@ function checkImports(texts: Map<string, string>): string[] {
 
 // ---------------------------------------------------------------- run
 
-function writeIfChanged(path: string, text: string): boolean {
+/** `text` as the repository's formatters write it: prettier for TypeScript, rustfmt for Rust (CI checks both). */
+async function formatted(path: string, text: string): Promise<string> {
+  if (path.endsWith('.rs')) {
+    const rustfmt = spawnSync('rustfmt', ['--edition', '2024', '--emit', 'stdout'], {
+      input: text,
+      encoding: 'utf8',
+    })
+    if (rustfmt.status !== 0) throw new Error(`rustfmt refused ${path}: ${rustfmt.stderr}`)
+    return rustfmt.stdout
+  }
+  return prettier.format(text, { ...(await prettier.resolveConfig(path)), filepath: path })
+}
+
+async function writeIfChanged(path: string, raw: string): Promise<boolean> {
+  const text = await formatted(path, raw)
   if (existsSync(path) && readFileSync(path, 'utf8') === text) return false
   if (!DRY) {
     mkdirSync(dirname(path), { recursive: true })
@@ -591,25 +618,17 @@ function writeIfChanged(path: string, text: string): boolean {
   return true
 }
 
-/** A TypeScript file the generator writes, as prettier writes it where the engine's config asks for it. */
-async function formatted(path: string, text: string): Promise<string> {
-  if (!config.prettier) return text
-  return prettier.format(text, { ...(await prettier.resolveConfig(path)), filepath: path })
-}
-
 const { exports: all } = build()
-writeFileSync(join(ROOT, config.manifest), JSON.stringify({ exports: all }, null, 1) + '\n')
+await writeIfChanged(join(ROOT, config.manifest), JSON.stringify({ exports: all }, null, 1) + '\n')
 const { outputs, verbatim, dropped, wrapped } = generateModules(all)
 let changed = 0
-for (const out of outputs) {
-  const path = join(SRC, `${out.module}.ts`)
-  if (writeIfChanged(path, await formatted(path, out.text))) changed++
-}
+for (const out of outputs)
+  if (await writeIfChanged(join(SRC, `${out.module}.ts`), out.text)) changed++
 for (const module of dropped)
   if (existsSync(join(SRC, `${module}.ts`)) && !DRY) rmSync(join(SRC, `${module}.ts`))
 for (const module of verbatim) {
   const text = readFileSync(join(REFERENCE, `${module}.ts`), 'utf8')
-  if (writeIfChanged(join(SRC, `${module}.ts`), text)) changed++
+  if (await writeIfChanged(join(SRC, `${module}.ts`), text)) changed++
 }
 if (config.typeShapes) {
   const typeShapes: Record<string, unknown> = {}
@@ -619,8 +638,7 @@ if (config.typeShapes) {
   }
   const path = join(SRC, 'engine-type-shapes.ts')
   const text = `// GENERATED by tools/docx-diff/binding/gen.ts: where a Map, a Set or an array with holes sits in the model values the engine writes back.\nimport type { Shape } from '@seuoffice/engine-wasm'\n\nexport const TYPE_SHAPES: Readonly<Record<string, Shape>> = ${JSON.stringify(typeShapes)}\n`
-  if (writeIfChanged(path, await formatted(path, text)))
-    console.log('engine-type-shapes.ts written')
+  if (await writeIfChanged(path, text)) console.log('engine-type-shapes.ts written')
 }
 {
   const texts = new Map<string, string>()
@@ -636,30 +654,12 @@ console.log(
   `${outputs.length} modules rewritten, ${verbatim.length} copied, ${dropped.length} dropped (${dropped.join(', ')}), ${changed} files changed${DRY ? ' (dry run)' : ''}`,
 )
 
-/** The table as `cargo fmt --check` of the runner wants it: rustup's stable rustfmt, the workspace's edition. */
-function rustfmt(text: string): string {
-  const home = process.env.RUSTUP_HOME ?? join(process.env.HOME ?? '', '.rustup')
-  const toolchain = join(
-    home,
-    'toolchains',
-    `stable-${process.arch === 'arm64' ? 'aarch64' : 'x86_64'}-${process.platform === 'darwin' ? 'apple-darwin' : process.platform === 'win32' ? 'pc-windows-msvc' : 'unknown-linux-gnu'}`,
-  )
-  const binary = existsSync(join(toolchain, 'bin', 'rustfmt'))
-    ? join(toolchain, 'bin', 'rustfmt')
-    : 'rustfmt'
-  return execFileSync(binary, ['--edition', '2024', '--emit', 'stdout'], {
-    input: text,
-    encoding: 'utf8',
-    maxBuffer: 1 << 28,
-  })
-}
-
 const shapes: Record<string, unknown> = {}
 for (const e of all)
   if (e.kind === 'function' && e.ret.shape && e.route !== 'ts' && !shapes[e.name])
     shapes[e.name] = e.ret.shape
 const shapesText = `// GENERATED by tools/docx-diff/binding/gen.ts: where a Map or a Set sits in what an export returns.\nimport type { Shape } from './engine'\n\nexport const SHAPES: Record<string, Shape> = ${JSON.stringify(shapes, null, 2)}\n`
-if (config.shapesModule && writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText))
+if (config.shapesModule && (await writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText)))
   console.log('engine-shapes.ts written')
 const table = rustTable(
   all.filter(
@@ -668,6 +668,6 @@ const table = rustTable(
       (e.route === 'routes' || (e.route === 'table' && wrapped.has(e.name))),
   ),
 )
-if (writeIfChanged(join(ROOT, config.table.file), rustfmt(table.text)))
+if (await writeIfChanged(join(ROOT, config.table.file), table.text))
   console.log(`${config.table.module}.rs written: ${table.rows} rows`)
 for (const note of table.notes) console.log(`  note: ${note}`)

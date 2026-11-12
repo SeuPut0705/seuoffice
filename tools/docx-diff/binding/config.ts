@@ -56,6 +56,8 @@ export interface EngineConfig {
   /** routes the table answers that are no export (a class method): name on the wire, to the Rust function of the hand routes module */
   handRoutes: Readonly<Record<string, string>>
   hostModules: Readonly<Record<string, true>>
+  /** reference modules nothing reaches any more: neither copied nor rewritten, by module with the reason */
+  unusedModules?: Readonly<Record<string, string>>
   /** text appended to a module */
   append: Readonly<Record<string, string>>
   /**
@@ -87,8 +89,6 @@ export interface EngineConfig {
   rustHead: string
   /** statements at the top of the table's `invoke`, before it matches the name (each line indented, newline-terminated) */
   invokePrelude: string
-  /** the TypeScript the generator writes is formatted by prettier with the repository's config (the format check of CI reads it) */
-  prettier?: boolean
   /** the table carries the docx-only helpers (spin counts, XNode arguments, package snapshots) */
   rustDocxHelpers: boolean
 }
