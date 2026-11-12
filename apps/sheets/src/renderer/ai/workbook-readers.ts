@@ -5,7 +5,12 @@
  * WorkbookReadContext closing over its refs.
  */
 import type { IRange } from '@univerjs/core'
-import { columnLabel, parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import {
+  columnLabel,
+  parseAddress,
+  parseRange,
+  type RangeBounds,
+} from '@genoffice/xlsx-gateway/domain/cell-address'
 import { MAX_PATCH_ENTRY_BYTES } from '../../shared/desktop-api'
 import type { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
 import type { CellFormatState, CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
@@ -14,8 +19,8 @@ import { toSelectionFormat } from '../selection-format'
 import { lazyCellReader } from '../univer-sync'
 import { lazySheetScreenExtent, type LazyWorkbookState, type UniverRuntime } from '../univer-state'
 import type { ActiveSheetInfo, FrozenSelection } from './tools'
-import { NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
-import { redactionIndexOf, type RedactionLoad } from './redact-load'
+import { holdsWithheld, NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
+import { redactionIndexOf, UNKNOWN_REDACTION_LABEL, type RedactionLoad } from './redact-load'
 
 /** The App refs the readers need; passed per call so they never go stale. */
 export interface WorkbookReadContext {
@@ -86,18 +91,35 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
     )
   }
 
+  // A table column, a pivot field: names that are the text of a header cell,
+  // read here as that cell reads everywhere else.
+  const nameFrom = (
+    name: string | undefined,
+    headerSheetId: string,
+    row: number,
+    column: number,
+  ): string | undefined => {
+    const withheld = redactions.labelAt(headerSheetId, row, column)
+    return withheld === null ? name : placeholderSource(withheld)
+  }
   const tableLines: string[] = []
   if (state) {
     for (const table of planFileTableRegistrations(state.file.sheets)) {
       if (table.sheetId !== sheetId) continue
+      const columns = (table.columns ?? []).map((name, index) =>
+        nameFrom(name, sheetId, table.range.startRow, table.range.startColumn + index),
+      )
       tableLines.push(
-        `- ${table.tableName}: ${a1(table.range)} columns[${(table.columns ?? []).join(', ')}] (from file; structure read-only)`,
+        `- ${table.tableName}: ${a1(table.range)} columns[${columns.join(', ')}] (from file; structure read-only)`,
       )
     }
     for (const table of state.editJournal.tableAdds) {
       if (table.sheetId !== sheetId) continue
+      const columns = table.columnNames.map((name, index) =>
+        nameFrom(name, sheetId, table.area.startRow, table.area.startColumn + index),
+      )
       tableLines.push(
-        `- ${table.name}: ${a1(table.area)} columns[${table.columnNames.join(', ')}] (added this session)`,
+        `- ${table.name}: ${a1(table.area)} columns[${columns.join(', ')}] (added this session)`,
       )
     }
   }
@@ -115,15 +137,41 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
         lines.push(`- ${pivot.outputRef}: definition not loaded`)
         continue
       }
-      const rows = definition.rowFields
-        .filter((field) => field >= 0)
-        .map((field) => definition.fields[field]?.name)
-        .filter(Boolean)
-      const cols = definition.colFields
-        .filter((field) => field >= 0)
-        .map((field) => definition.fields[field]?.name)
-        .filter(Boolean)
-      const values = definition.dataFields.map((dataField) => dataField.name)
+      // Field names are the header row of the source range. A source that is
+      // not a range of this workbook cannot say which cell a name came from,
+      // so in a workbook that withholds anything every name is withheld.
+      const sourceSheetId = workbook
+        .getSheets()
+        .find(
+          (sheet) => sheet.getSheetName().toLowerCase() === definition.sourceSheet.toLowerCase(),
+        )
+        ?.getSheetId()
+      let source: RangeBounds | null = null
+      try {
+        if (sourceSheetId !== undefined)
+          source = parseRange(definition.sourceRef.replace(/\$/g, ''))
+      } catch {
+        // a named or external source
+      }
+      const fieldName = (field: number, name: string | undefined): string | undefined => {
+        if (redactions.isEmpty) return name
+        if (source === null || sourceSheetId === undefined) {
+          return placeholderSource(UNKNOWN_REDACTION_LABEL)
+        }
+        // past the source's columns: a calculated field, named by the person
+        if (field > source.endColumn - source.startColumn) return name
+        return nameFrom(name, sourceSheetId, source.startRow, source.startColumn + field)
+      }
+      const axis = (fields: readonly number[]): (string | undefined)[] =>
+        fields
+          .filter((field) => field >= 0)
+          .map((field) => fieldName(field, definition.fields[field]?.name))
+          .filter(Boolean)
+      const rows = axis(definition.rowFields)
+      const cols = axis(definition.colFields)
+      const values = definition.dataFields.map((dataField) =>
+        fieldName(dataField.field, dataField.name),
+      )
       lines.push(
         `- ${pivot.outputRef}: rows[${rows.join(',')}] cols[${cols.join(',')}] values[${values.join(',')}]` +
           ` source=${definition.sourceSheet}!${definition.sourceRef}` +
@@ -147,10 +195,19 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
         const columnCriteria = filter.getColumnFilterCriteria(column)
         if (!columnCriteria) continue
         const values = (columnCriteria.filters?.filters ?? []) as string[]
+        // The kept values are cell values of that column.
+        const withheld = holdsWithheld(redactions, sheetId, {
+          startRow: bounds.startRow,
+          endRow: bounds.endRow,
+          startColumn: column,
+          endColumn: column,
+        })
         criteria.push(
-          values.length > 0
-            ? `${columnLabel(column)} keeps [${values.slice(0, 10).join(', ')}${values.length > 10 ? ', …' : ''}]`
-            : `${columnLabel(column)} has custom criteria`,
+          values.length === 0
+            ? `${columnLabel(column)} has custom criteria`
+            : withheld
+              ? `${columnLabel(column)} keeps (withheld)`
+              : `${columnLabel(column)} keeps [${values.slice(0, 10).join(', ')}${values.length > 10 ? ', …' : ''}]`,
         )
       }
       lines.push(
@@ -173,9 +230,18 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       )
       for (const rule of rules.slice(0, 20)) {
         const detail = rule.rule as unknown as Record<string, unknown>
+        // A rule compares against a value the person typed, often the very
+        // one in the cells it formats: dropped like a validation literal.
+        const covered = (rule.ranges ?? []).some((range) =>
+          holdsWithheld(redactions, sheetId, range),
+        )
         const summary = ['type', 'subType', 'operator', 'value']
           .filter((key) => detail[key] !== undefined)
-          .map((key) => `${key}=${JSON.stringify(detail[key])}`)
+          .map((key) =>
+            key === 'value' && covered
+              ? 'value=(withheld)'
+              : `${key}=${JSON.stringify(detail[key])}`,
+          )
           .join(' ')
         lines.push(`- ${(rule.ranges ?? []).map(a1).join(',')}: ${summary}`)
       }
@@ -200,19 +266,14 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
         // to be reported (the model must not break it), but on a range holding
         // withheld cells the formulas are dropped: their shape is the only part
         // that is not the reader's data.
-        const covered = redactions.isEmpty
-          ? false
-          : rangeList.some((range) =>
-              redactions
-                .marksFor(sheetId)
-                .some(
-                  (mark) =>
-                    mark.startRow <= range.getLastRow() &&
-                    mark.endRow >= range.getRow() &&
-                    mark.startColumn <= range.getLastColumn() &&
-                    mark.endColumn >= range.getColumn(),
-                ),
-            )
+        const covered = rangeList.some((range) =>
+          holdsWithheld(redactions, sheetId, {
+            startRow: range.getRow(),
+            endRow: range.getLastRow(),
+            startColumn: range.getColumn(),
+            endColumn: range.getLastColumn(),
+          }),
+        )
         const parts = [rule.type, rule.operator, rule.formula1, rule.formula2].filter(
           (part) => part !== undefined && part !== '',
         )
@@ -369,11 +430,27 @@ export function getActiveSheetInfo(
       : `${workbook?.getSheetBySheetId(frozen.sheetId)?.getSheetName() ?? frozen.sheetId}!${frozen.a1}`
     : undefined
   const selection = frozen === undefined ? live : frozenLabel
+  // The names are the text of the row-1 cells of the selected columns. With
+  // one of those cells withheld the selection goes out as its range alone.
+  const namedColumns = (): readonly string[] | undefined => {
+    if (!frozen?.columns?.length) return undefined
+    const redactions = redactionsOf(ctx)
+    if (redactions.isEmpty) return frozen.columns
+    let first: number
+    try {
+      first = parseRange(frozen.a1).startColumn
+    } catch {
+      return undefined
+    }
+    return frozen.columns.some(
+      (_, index) => redactions.labelAt(frozen.sheetId, 0, first + index) !== null,
+    )
+      ? undefined
+      : frozen.columns
+  }
+  const columns = frozenLabel ? namedColumns() : undefined
   const frozenFields = frozenLabel
-    ? {
-        selectionFrozen: true,
-        ...(frozen?.columns?.length ? { selectionColumns: frozen.columns } : {}),
-      }
+    ? { selectionFrozen: true, ...(columns ? { selectionColumns: columns } : {}) }
     : {}
   const state = ctx.lazyWorkbookRef.current
   if (state) {

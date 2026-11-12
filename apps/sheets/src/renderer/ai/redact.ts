@@ -90,6 +90,13 @@ export interface RedactionIndex {
    * that knows only marks.
    */
   derivedFor?(sheetId: string): readonly RangeBounds[]
+  /**
+   * The part of `derivedFor` that holds constants rather than formulas: the
+   * output of a PivotTable built from withheld cells. A formula stays withheld
+   * wherever it is copied; these cells do not, so a guard against moving or
+   * copying a hidden cell counts them with the marks.
+   */
+  computedFor?(sheetId: string): readonly RangeBounds[]
   /** every sheet id carrying marks, so callers can decide what to say about them */
   readonly sheetIds: readonly string[]
 }
@@ -145,6 +152,20 @@ export function modelCellValueAt(
   const at = parseAddressParts(address)
   if (!at) return value
   return modelCellValue(index, sheetId, at.row, at.column, value)
+}
+
+/**
+ * Whether a rectangle of a sheet holds a withheld cell: a marked one, or a
+ * cell whose value is computed from one.
+ */
+export function holdsWithheld(index: RedactionIndex, sheetId: string, range: RangeBounds): boolean {
+  if (index.isEmpty) return false
+  const reaches = (area: RangeBounds): boolean =>
+    area.startRow <= range.endRow &&
+    area.endRow >= range.startRow &&
+    area.startColumn <= range.endColumn &&
+    area.endColumn >= range.startColumn
+  return index.marksFor(sheetId).some(reaches) || (index.derivedFor?.(sheetId) ?? []).some(reaches)
 }
 
 /**

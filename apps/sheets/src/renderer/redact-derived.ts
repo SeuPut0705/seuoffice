@@ -23,6 +23,13 @@
  * - **A sheet whose formula cells are not known** (the list has not arrived,
  *   holds more than the sidecar returns, or the platform has none) is withheld
  *   whole.
+ * - **The output of a PivotTable**: plain cells that hold the labels and totals
+ *   of the pivot's source range. It is traced like a formula that reads that
+ *   range, so it is withheld when the source holds a withheld cell, and what
+ *   reads the output is withheld after it. A pivot whose source is not a range
+ *   of this workbook the session can name (its definition is not read yet, an
+ *   external or OLAP source, a named source) is withheld untraced. These cells
+ *   are constants, which matters to a person copying them (`computedFor`).
  *
  * None of this runs, and nothing is withheld, in a workbook without marks.
  *
@@ -32,7 +39,7 @@
  * covered by the next read.
  */
 import type { RangeBounds } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { columnLabel, parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
 import { offsetFormulaRefs } from '@genoffice/xlsx-gateway/domain/formula-shift'
 import {
   areaLookup,
@@ -96,6 +103,8 @@ interface DerivedLookup {
   readonly sheetIds: readonly string[]
   areasOf(sheetId: string): readonly RangeBounds[]
   has(sheetId: string, row: number, column: number): boolean
+  /** the withheld areas that hold constants: pivot outputs */
+  computedOf(sheetId: string): readonly RangeBounds[]
 }
 
 /** Every cell of every sheet: what is answered when the formulas cannot be collected at all. */
@@ -103,6 +112,100 @@ const EVERYTHING: DerivedLookup = {
   sheetIds: [],
   areasOf: () => [WHOLE_SHEET],
   has: () => true,
+  // No reader hands a cell over in this state, so nothing a person copies can be read either.
+  computedOf: () => [],
+}
+
+/** One PivotTable's cells on a sheet; `formula` reads its source, null when that is not known. */
+interface PivotOutput {
+  readonly area: RangeBounds
+  readonly formula: string | null
+}
+
+const a1Of = (range: RangeBounds): string =>
+  `${columnLabel(range.startColumn)}${range.startRow + 1}:${columnLabel(range.endColumn)}${range.endRow + 1}`
+
+const sameArea = (a: RangeBounds, b: RangeBounds): boolean =>
+  a.startRow === b.startRow &&
+  a.endRow === b.endRow &&
+  a.startColumn === b.startColumn &&
+  a.endColumn === b.endColumn
+
+/**
+ * The pivot outputs of every sheet, by sheet id. Ranges are taken as the rest
+ * of the session takes them (the refresh reads the source at these addresses);
+ * on a sheet with rows or columns inserted this session the range as it was in
+ * the file is counted as well, since the file's output was computed from that.
+ */
+function pivotOutputsOf(
+  state: LazyWorkbookState,
+  sheetNames: ReadonlyMap<string, string>,
+): Map<string, PivotOutput[]> {
+  const journal = state.editJournal
+  const idByName = new Map([...sheetNames].map(([id, name]) => [name.toLowerCase(), id]))
+  const onScreen = (sheetId: string, range: RangeBounds): RangeBounds[] => {
+    const ops = journal.structuralOps.get(sheetId) ?? []
+    const moved = ops.length === 0 ? null : fileRangeToScreenRange(ops, range)
+    return moved && !sameArea(moved, range) ? [range, moved] : [range]
+  }
+  const sourceFormula = (sheetId: string | undefined, range: RangeBounds | null): string | null => {
+    const name = sheetId === undefined ? undefined : sheetNames.get(sheetId)
+    if (name === undefined || range === null) return null
+    const sheet = `'${name.replaceAll("'", "''")}'!`
+    return `=${onScreen(sheetId!, range)
+      .map((part) => sheet + a1Of(part))
+      .join('+')}`
+  }
+  const rangeOf = (ref: string): RangeBounds | null => {
+    try {
+      return parseRange(ref.replaceAll('$', '').toUpperCase())
+    } catch {
+      return null
+    }
+  }
+  const out = new Map<string, PivotOutput[]>()
+  const add = (sheetId: string, area: RangeBounds, formula: string | null): void => {
+    const list = out.get(sheetId) ?? []
+    for (const part of onScreen(sheetId, area)) list.push({ area: part, formula })
+    out.set(sheetId, list)
+  }
+  for (const sheet of state.file.sheets) {
+    const resolved: RangeBounds[] = []
+    for (const pivot of sheet.pivotTables) {
+      const definition = state.pivotDefinitions.get(pivot.path)
+      const output = rangeOf(definition?.outputRef ?? pivot.outputRef)
+      if (output === null) continue // left to `pivotRanges` below
+      const formula = definition
+        ? sourceFormula(
+            idByName.get(definition.sourceSheet.toLowerCase()),
+            definition.sourceSheet === '' ? null : rangeOf(definition.sourceRef),
+          )
+        : null
+      resolved.push(output)
+      // Report filters sit above the output: a label and the chosen item per
+      // field, then a blank row.
+      const pages = definition?.pageFields.length ?? 0
+      add(
+        sheet.id,
+        pages === 0
+          ? output
+          : {
+              ...output,
+              startRow: Math.max(0, output.startRow - pages - 1),
+              endColumn: Math.max(output.endColumn, output.startColumn + 1),
+            },
+        formula,
+      )
+    }
+    // An output area no definition accounts for.
+    for (const range of sheet.pivotRanges) {
+      if (!resolved.some((output) => sameArea(output, range))) add(sheet.id, range, null)
+    }
+  }
+  for (const pivot of journal.pivotAdds) {
+    add(pivot.sheetId, pivot.location, sourceFormula(pivot.sourceSheetId, pivot.sourceArea))
+  }
+  return out
 }
 
 const cellKey = (row: number, column: number): number => row * (MAX_COLUMN + 1) + column
@@ -242,6 +345,10 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
     }
     const fileSheetIds = new Set(state.file.sheets.map((sheet) => sheet.id))
     const journal = state.editJournal
+    const pivots = pivotOutputsOf(
+      state,
+      new Map(workbook.getSheets().map((sheet) => [sheet.getSheetId(), sheet.getSheetName()])),
+    )
 
     const ids: string[] = []
     const sheets: ReadsSheet[] = []
@@ -322,6 +429,10 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
         }
       }
       unknown.push(...columnRuns(unknownCells))
+      for (const pivot of pivots.get(id) ?? []) {
+        if (pivot.formula === null) unknown.push(pivot.area)
+        else formulas.push({ area: pivot.area, formula: pivot.formula })
+      }
       ids.push(id)
       sheets.push({ name: sheet.getSheetName(), marks: marks.marksFor(id), unknown, formulas })
     }
@@ -333,17 +444,30 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
         { areas: traced.bySheet[index]!, has: areaLookup(traced.bySheet[index]!) },
       ]),
     )
+    const computed = new Map(
+      ids.map((id) => [
+        id,
+        (pivots.get(id) ?? [])
+          .map((pivot) => pivot.area)
+          // the whole output is withheld or none of it
+          .filter((area) => lookups.get(id)!.has(area.startRow, area.startColumn)),
+      ]),
+    )
     return {
       sheetIds: ids.filter((id) => (lookups.get(id)?.areas.length ?? 0) > 0),
       areasOf: (sheetId) => lookups.get(sheetId)?.areas ?? [],
       has: (sheetId, row, column) => lookups.get(sheetId)?.has(row, column) ?? false,
+      computedOf: (sheetId) => computed.get(sheetId) ?? [],
     }
   }
 
   function derivedOf(marks: RedactionIndex): DerivedLookup {
     const state = deps.state()
-    // What the collection depends on besides mutations (which invalidate).
-    const stamp = `${state?.flags.preloadComplete}:${state?.formulaTextTruncated.size}`
+    // What the collection depends on besides mutations (which invalidate):
+    // the load state, and the pivot definitions, which are read on demand.
+    const stamp =
+      `${state?.flags.preloadComplete}:${state?.formulaTextTruncated.size}` +
+      `:${state?.pivotDefinitions.size}:${state?.editJournal.pivotAdds.length}`
     if (cached?.marks === marks && cached.stamp === stamp) return cached.lookup
     let lookup: DerivedLookup
     try {
@@ -377,6 +501,7 @@ export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
         },
         marksFor: (sheetId) => marks.marksFor(sheetId),
         derivedFor: (sheetId) => derivedOf(marks).areasOf(sheetId),
+        computedFor: (sheetId) => derivedOf(marks).computedOf(sheetId),
       }
     },
     invalidate() {

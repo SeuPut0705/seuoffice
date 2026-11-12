@@ -202,6 +202,7 @@ function holdsHidden(
     if (target === undefined) return false
     return (
       index.marksFor(target).some(reaches(range)) ||
+      (index.computedFor?.(target) ?? []).some(reaches(range)) ||
       (frozen === true && (index.derivedFor?.(target) ?? []).some(reaches(range)))
     )
   })
@@ -328,6 +329,7 @@ export function pasteSourceHoldsHidden(
     source.cols.some((column) => column >= area.startColumn && column <= area.endColumn)
   return (
     index.marksFor(source.subUnitId).some(within) ||
+    (index.computedFor?.(source.subUnitId) ?? []).some(within) ||
     (dependents && (index.derivedFor?.(source.subUnitId) ?? []).some(within))
   )
 }

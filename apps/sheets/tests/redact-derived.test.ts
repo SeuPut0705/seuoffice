@@ -34,6 +34,7 @@ import {
   installDerivedCellsInvalidation,
   type DerivedCellsDeps,
 } from '../src/renderer/redact-derived'
+import { pasteSourceHoldsHidden } from '../src/renderer/redact-move-guard'
 import { sessionRedactionIndex } from '../src/renderer/redact-session'
 import type { LazyWorkbookState, UniverRuntime } from '../src/renderer/univer-state'
 import type { WorkbookFormulaCellsResult } from '../src/shared/desktop-api'
@@ -111,7 +112,11 @@ function open(
   injector.get(IUniverInstanceService).focusUnit('wb')
   const runtime = { univer, univerAPI } as unknown as UniverRuntime
   const state = {
-    file: { sessionId: '11111111-1111-4111-8111-111111111111', sheets: FILE_SHEETS },
+    file: {
+      sessionId: '11111111-1111-4111-8111-111111111111',
+      sheets: FILE_SHEETS.map((sheet) => ({ ...sheet, pivotRanges: [], pivotTables: [] })),
+    },
+    pivotDefinitions: new Map(),
     editJournal: createEditJournal(),
     formulaMode: !options.streamed,
     flags: { preloadComplete: !options.streamed, preloadRunning: false },
@@ -475,5 +480,125 @@ describe('a large sheet', () => {
     expect(first).toBe(PRIVATE)
     expect(session.read('s1', 'D2501')).not.toBe(PRIVATE)
     expect(elapsed).toBeLessThan(1000)
+  })
+})
+
+describe('what the in-app AI reads from the output of a PivotTable', () => {
+  /** A pivot on Report!E3:F4, as a workbook made in Excel carries it: plain cells holding labels and totals. */
+  const OUTPUT: Cells = {
+    E3: { v: 'Phone' },
+    F3: { v: 'Sum of Amount' },
+    E4: { v: SECRET },
+    F4: { v: 10 },
+  }
+  const OUTPUT_AREA = { startRow: 2, endRow: 3, startColumn: 4, endColumn: 5 }
+
+  /** Put the pivot in the session's file state; `definition` null = its part has not been read. */
+  function withPivot(
+    session: Session,
+    definition: { sourceSheet: string; sourceRef: string; pageFields?: number } | null,
+  ): Session {
+    const file = session.state.file as unknown as { sheets: object[] }
+    file.sheets = FILE_SHEETS.map((sheet) => ({
+      ...sheet,
+      pivotRanges: sheet.id === 's2' ? [OUTPUT_AREA] : [],
+      pivotTables:
+        sheet.id === 's2' ? [{ path: 'pivot1', cachePath: 'cache1', outputRef: 'E3:F4' }] : [],
+    }))
+    if (definition) {
+      session.state.pivotDefinitions.set('pivot1', {
+        outputRef: 'E3:F4',
+        sourceSheet: definition.sourceSheet,
+        sourceRef: definition.sourceRef,
+        pageFields: Array.from({ length: definition.pageFields ?? 0 }, () => ({
+          field: 0,
+          item: 0,
+        })),
+      } as never)
+    }
+    session.mark(HIDDEN_B2)
+    return session
+  }
+
+  it('withholds the output when the source range holds a hidden cell', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Data', sourceRef: 'A1:B2' })
+    expect(readCells(session.ctx, ['E3', 'E4', 'F4'], 's2')).toEqual({
+      E3: { value: PRIVATE },
+      E4: { value: PRIVATE },
+      F4: { value: PRIVATE },
+    })
+  })
+
+  it('shows the output of a pivot whose source holds none', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Data', sourceRef: 'A1:A2' })
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+    expect(session.read('s2', 'F4')).toBe(10)
+  })
+
+  it('withholds it when the source holds a formula that computes from a hidden cell', () => {
+    const session = withPivot(open({ ...CLIENTS, D2: { f: '=B2', v: SECRET } }, OUTPUT), {
+      sourceSheet: 'Data',
+      sourceRef: 'D1:D2',
+    })
+    expect(session.read('s2', 'E4')).toBe(PRIVATE)
+  })
+
+  it('withholds a formula that reads the output', () => {
+    const session = withPivot(open(CLIENTS, { ...OUTPUT, H1: { f: '=E4', v: SECRET } }), {
+      sourceSheet: 'Data',
+      sourceRef: 'A1:B2',
+    })
+    expect(session.read('s2', 'H1')).toBe(PRIVATE)
+  })
+
+  it('withholds the report-filter cells above it as well', () => {
+    // one page field: its label and chosen item sit two rows above the output
+    const session = withPivot(open(CLIENTS, { ...OUTPUT, E1: { v: 'Phone' }, F1: { v: SECRET } }), {
+      sourceSheet: 'Data',
+      sourceRef: 'A1:B2',
+      pageFields: 1,
+    })
+    expect(session.read('s2', 'F1')).toBe(PRIVATE)
+  })
+
+  it.each([
+    ['its definition has not been read', null],
+    ['its source is not a range of this workbook', { sourceSheet: '', sourceRef: '' }],
+    [
+      'its source names a sheet the workbook does not have',
+      { sourceSheet: 'Gone', sourceRef: 'A1:B2' },
+    ],
+    ['its source is not a range', { sourceSheet: 'Data', sourceRef: 'Clients' }],
+  ])('withholds the output when %s', (_why, definition) => {
+    const session = withPivot(open(CLIENTS, OUTPUT), definition)
+    expect(session.read('s2', 'E4')).toBe(PRIVATE)
+    expect(session.read('s2', 'F4')).toBe(PRIVATE)
+    // a cell beside the pivot is an ordinary cell
+    expect(session.read('s1', 'A2')).toBe('Kim')
+  })
+
+  it('withholds a pivot made this session whose source was hidden afterwards', () => {
+    const session = open(CLIENTS, OUTPUT)
+    session.state.editJournal.pivotAdds.push({
+      sheetId: 's2',
+      sourceSheetId: 's1',
+      sourceArea: { startRow: 0, endRow: 1, startColumn: 0, endColumn: 1 },
+      location: OUTPUT_AREA,
+    } as never)
+    session.mark(HIDDEN_B2)
+    expect(session.read('s2', 'E4')).toBe(PRIVATE)
+  })
+
+  it('withholds nothing in a workbook without hidden cells', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), null)
+    session.mark([])
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
+
+  it('counts the output as hidden for a person copying it: the cells are constants', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Data', sourceRef: 'A1:B2' })
+    const index = redactionIndexOf(session.ctx.redactionLoadRef!.current)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [3], cols: [4] })).toBe(true)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [8], cols: [4] })).toBe(false)
   })
 })
