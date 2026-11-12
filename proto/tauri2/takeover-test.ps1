@@ -7,7 +7,8 @@
 #   takeover-test.ps1 -Electron <exe> -Installer <exe> -Out <dir> -Doc <docx>
 param([string]$Electron, [string]$Installer, [string]$Out, [string]$Doc)
 $ErrorActionPreference = 'Continue'
-New-Item -ItemType Directory -Force -Path $Out | Out-Null
+# absolute: the app the installer starts runs in the install folder, where a relative BENCH_OUT would not resolve
+$Out = (New-Item -ItemType Directory -Force -Path $Out).FullName
 $ud = Join-Path $env:APPDATA 'seuoffice'
 $root = 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall'
 $problems = New-Object System.Collections.Generic.List[string]
