@@ -5,7 +5,7 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS, PRODUCT_CONTACT_EMAIL, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
+import { LANGS, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
 import type { Lang } from '@genoffice/i18n'
 import type { HomeApi } from '../src/shared/home-api'
 import { LocaleProvider } from '../src/renderer/src/locale'
@@ -15,8 +15,8 @@ import { strings } from '../src/renderer/src/strings'
 /**
  * Settings → About: a plain link to the product's repository, the
  * acknowledgement of the project this one is based on, the bundled license
- * notices, the rights contact, and the trademark and no-warranty notices.
- * Nothing asks for a star, and the upstream vendor is not named.
+ * notices, and the trademark and no-warranty notices. Nothing asks for a
+ * star, the upstream vendor is not named, and no contact address is offered.
  */
 
 const actEnvironment = globalThis as typeof globalThis & { IS_REACT_ACT_ENVIRONMENT?: boolean }
@@ -26,7 +26,6 @@ let host: HTMLDivElement
 let root: Root
 let openGitHubRepo: ReturnType<typeof vi.fn<() => Promise<void>>>
 let openLicenseNotices: ReturnType<typeof vi.fn<() => Promise<void>>>
-let openRightsContact: ReturnType<typeof vi.fn<() => Promise<void>>>
 
 beforeEach(() => {
   host = document.createElement('div')
@@ -34,7 +33,6 @@ beforeEach(() => {
   root = createRoot(host)
   openGitHubRepo = vi.fn(async () => undefined)
   openLicenseNotices = vi.fn(async () => undefined)
-  openRightsContact = vi.fn(async () => undefined)
   const known: Record<string, unknown> = {
     getTheme: async () => 'system',
     getDocumentTheme: async () => 'follow',
@@ -46,7 +44,6 @@ beforeEach(() => {
     getAppVersion: async () => '1.2.3',
     openGitHubRepo,
     openLicenseNotices,
-    openRightsContact,
   }
   // every other call answers with something harmless
   window.aiOffice = new Proxy(known, {
@@ -104,16 +101,20 @@ describe('Settings → About', () => {
     expect(text.match(/GenOffice/g)).toHaveLength(1)
   })
 
-  it('opens the bundled license notices and starts a mail to the rights contact', async () => {
+  it('opens the bundled license notices', async () => {
     await openAbout()
-    expect(host.textContent).toContain(PRODUCT_CONTACT_EMAIL)
     await act(async () => {
       buttonLabeled(strings.en.setLicensesOpen).click()
-      buttonLabeled(strings.en.setRightsContactSend).click()
       await Promise.resolve()
     })
     expect(openLicenseNotices).toHaveBeenCalledTimes(1)
-    expect(openRightsContact).toHaveBeenCalledTimes(1)
+  })
+
+  it('offers no contact address: no e-mail is shown and nothing starts a mail', async () => {
+    await openAbout()
+    const pane = host.querySelector<HTMLElement>('.set-pane-title')!.parentElement!
+    expect(pane.textContent).not.toMatch(/[^\s@]+@[^\s@]+\.[^\s@]+/)
+    expect(pane.querySelector('a[href^="mailto:"]')).toBeNull()
   })
 
   it('shows the trademark, HWP and no-warranty notices under the product name', async () => {
@@ -134,9 +135,6 @@ describe('Settings → About', () => {
       'setLicenses',
       'setLicensesDesc',
       'setLicensesOpen',
-      'setRightsContact',
-      'setRightsContactDesc',
-      'setRightsContactSend',
       'setTrademarks',
       'setHwpNotice',
       'setDisclaimer',
@@ -152,14 +150,10 @@ describe('Settings → About', () => {
   })
 
   it('has the link label in every UI language, none of them about stars', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       const label = strings[lang].viewOnGitHub
       expect(label, lang).toContain('GitHub')
       if (lang !== 'en') expect(label, lang).not.toBe(strings.en.viewOnGitHub)
     }
-    // the two Chinese scripts and the two Malay-family languages may share a wording
-    const distinct = new Set(LANGS.map((lang) => strings[lang].viewOnGitHub))
-    expect(distinct.size).toBeGreaterThanOrEqual(LANGS.length - 2)
   })
 })

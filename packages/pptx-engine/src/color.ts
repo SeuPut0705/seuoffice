@@ -4,6 +4,7 @@
  * placeholder (lstStyle defRPr default colors) to avoid a circular dependency.
  */
 import { type Theme, resolveSchemeColor, sysColorHex } from './theme'
+import { ownValue } from './own-value'
 import { asXmlNode, percentFraction, xmlArray, type XmlNode } from './xml-utils'
 
 /**
@@ -35,10 +36,11 @@ export function resolveColorNode(
   } else if (n['a:prstClr']) {
     mods = asXmlNode(n['a:prstClr'])
     const raw = String(mods['@_val'] ?? '')
+    // the value is the document's: the table answers its own color names only
     base =
-      PRESET_COLORS[raw] ??
+      ownValue(PRESET_COLORS, raw) ??
       PRESET_COLORS_LOWER.get(raw.toLowerCase()) ??
-      PRESET_COLORS[raw.charAt(0).toLowerCase() + raw.slice(1)]
+      ownValue(PRESET_COLORS, raw.charAt(0).toLowerCase() + raw.slice(1))
   }
   if (!base) return undefined
   return applyColorMods(base, mods)

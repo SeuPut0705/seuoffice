@@ -20,6 +20,7 @@ import {
   type HfEditorHandle,
 } from '../src/renderer/editor/hf-editor'
 import type { PmNode } from '../src/renderer/editor/convert'
+import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 
 const handles: HfEditorHandle[] = []
 afterEach(() => {
@@ -396,5 +397,124 @@ describe('edited header saves with its formatting', () => {
     expect(ftr).toContain('<w:instrText xml:space="preserve"> PAGE </w:instrText>')
     expect(ftr).not.toContain('#')
     expect((await parseDocx(saved)).footerHasPageNumber).toBe(true)
+  })
+})
+
+describe('a header or footer that reads as it did is not committed', () => {
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+  const run = (text: string) => `<w:r><w:t xml:space="preserve">${text}</w:t></w:r>`
+  const sdt = (text: string, id: number) =>
+    `<w:sdt><w:sdtPr><w:id w:val="${id}"/></w:sdtPr><w:sdtContent>${run(text)}</w:sdtContent></w:sdt>`
+  const ONE = `<w:p>${run('Doc ')}${sdt('Annual report', 5)}${run(' end')}</w:p>`
+  const TWINS = `<w:p>${run('From ')}${sdt('2024', 5)}${run(' to ')}${sdt('2024', 6)}</w:p>`
+  const TABLE =
+    '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
+    '<w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>' +
+    `<w:tr><w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr><w:p>${run('logo')}</w:p></w:tc></w:tr></w:tbl>`
+
+  /** the part of a document as the app hands it to the header editor, mounted */
+  async function open(inner: string, kind: 'header' | 'footer' = 'header') {
+    const tag = kind === 'header' ? 'hdr' : 'ftr'
+    const parsed = await parseDocx(
+      await buildDocx({
+        bodyXml: `<w:p>${run('Body')}</w:p>`,
+        extraParts: [
+          {
+            path: `word/${kind}1.xml`,
+            xml: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:${tag} ${W}>${inner}</w:${tag}>`,
+            contentType: `application/vnd.openxmlformats-officedocument.wordprocessingml.${kind}+xml`,
+          },
+        ],
+        extraRels: `<Relationship Id="rId40" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/${kind}" Target="${kind}1.xml"/>`,
+        sectPrExtra: `<w:${kind}Reference w:type="default" r:id="rId40"/>`,
+      }),
+    )
+    const value: HeaderFooter =
+      kind === 'header'
+        ? { text: parsed.headerText ?? '', paras: parsed.headerParas ?? [] }
+        : { text: parsed.footerText ?? '', paras: parsed.footerParas ?? [] }
+    const commits: HeaderFooter[] = []
+    return { ...mount(value, (next) => commits.push(next)), commits }
+  }
+  /** the first `text` deleted and `typed` put in its place, as a person retypes it */
+  function retype(editor: Editor, text: string, typed = text) {
+    let from = -1
+    editor.state.doc.descendants((node, pos) => {
+      if (from !== -1 || !node.isTextblock) return
+      const at = node.textContent.indexOf(text)
+      if (at !== -1) from = pos + 1 + at
+    })
+    editor.commands.deleteRange({ from, to: from + text.length })
+    editor.commands.insertContentAt(from, typed)
+    return { from, to: from + typed.length }
+  }
+  const wrapped = (editor: Editor) => {
+    let count = 0
+    editor.state.doc.descendants((node) => {
+      if (node.marks.some((mark) => mark.type.name === 'inlineWrap')) count++
+    })
+    return count
+  }
+
+  for (const [name, inner, text, kind] of [
+    ['the text of a control retyped', ONE, 'Annual report', 'header'],
+    ['the whole paragraph text retyped', ONE, 'Doc Annual report end', 'header'],
+    ['the first of two controls around the same text retyped', TWINS, '2024', 'header'],
+    ['the text of a control retyped, beside a table', TABLE + ONE, 'Annual report', 'header'],
+    ['the text of a control retyped in a footer', ONE, 'Annual report', 'footer'],
+  ] as const) {
+    it(name, async () => {
+      const { handle, editor, commits } = await open(inner, kind)
+      const before = wrapped(editor)
+      expect(before).toBeGreaterThan(0)
+      retype(editor, text)
+      // the editor no longer shows the control on the retyped text
+      expect(wrapped(editor)).toBeLessThan(before)
+      expect(handle.changed()).toBeNull()
+      handle.exit()
+      expect(commits).toHaveLength(0)
+    })
+  }
+
+  it('one character different is an edit', async () => {
+    const { handle, editor, commits } = await open(ONE)
+    retype(editor, 'Annual report', 'Annual repors')
+    expect(
+      handle
+        .changed()
+        ?.paras?.[0].runs.map((r) => r.text)
+        .join(''),
+    ).toBe('Doc Annual repors end')
+    handle.exit()
+    expect(commits).toHaveLength(1)
+  })
+
+  it('the same text retyped in bold is an edit', async () => {
+    const { handle, editor, commits } = await open(ONE)
+    const range = retype(editor, 'Annual report')
+    editor.chain().setTextSelection(range).setMark('bold').run()
+    expect(handle.changed()?.paras?.[0].runs.find((r) => r.bold)?.text).toBe('Annual report')
+    handle.exit()
+    expect(commits).toHaveLength(1)
+  })
+
+  it('the same text retyped with a shading is an edit', async () => {
+    // run shading is not part of the body's "is it as read" signature; here
+    // every difference but the wrapper mark stays an edit
+    const { handle, editor, commits } = await open(ONE)
+    const range = retype(editor, 'Annual report')
+    editor.chain().setTextSelection(range).setMark('docTextStyle', { shading: 'FFFF00' }).run()
+    expect(handle.changed()?.paras?.[0].runs.find((r) => r.shading)?.text).toBe('Annual report')
+    handle.exit()
+    expect(commits).toHaveLength(1)
+  })
+
+  it('a paragraph attribute changed beside the retyped text is an edit', async () => {
+    const { handle, editor, commits } = await open(ONE)
+    retype(editor, 'Annual report')
+    editor.commands.updateAttributes('docParagraph', { align: 'right' })
+    expect(handle.changed()?.paras?.[0].align).toBe('right')
+    handle.exit()
+    expect(commits).toHaveLength(1)
   })
 })

@@ -1,14 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
-import { TextSelection, type Transaction } from '@tiptap/pm/state'
+import { TextSelection } from '@tiptap/pm/state'
 import { useI18n, type StringKey } from '../i18n/locale'
 import { searchPluginKey } from '../editor/extensions'
 import {
   HIGHLIGHT_CAP,
   RESULTS_LIST_CAP,
   SCAN_THRESHOLD,
+  applyReplacement,
   compileFind,
-  expandReplacement,
   findInDoc,
   findInDocAsync,
   matchContext,
@@ -16,6 +16,7 @@ import {
   type FindMode,
   type FindOptions,
 } from '../editor/find'
+import { notifyOdt } from '../odt-gate'
 import {
   GOTO_TARGETS,
   blockIndexAtPos,
@@ -349,27 +350,6 @@ export function FindPanel({
     [flushPending, query, goTo],
   )
 
-  /** insert the replacement, splitting the block wherever the template had a paragraph mark */
-  const applyReplacement = useCallback(
-    (tr: Transaction, m: FindMatch) => {
-      const segs = expandReplacement(replacement, m, mode)
-      const joined = segs.join('\u0000')
-      tr.insertText(joined, m.from, m.to)
-      const splitsAt: number[] = []
-      let offset = 0
-      for (let k = 0; k < segs.length - 1; k++) {
-        offset += segs[k].length
-        splitsAt.push(m.from + offset)
-        offset += 1
-      }
-      for (const p of splitsAt.reverse()) {
-        tr.delete(p, p + 1)
-        tr.split(p)
-      }
-    },
-    [replacement, mode],
-  )
-
   const replaceOne = useCallback(() => {
     if (!editor.isEditable) return
     // a pending debounced rescan means `matches` may describe the previous
@@ -380,13 +360,20 @@ export function FindPanel({
     const at = indexRef.current
     const m = ranges[at]
     if (!m) return
+    let replaced = true
     editor.commands.command(({ tr }) => {
-      applyReplacement(tr, m)
+      replaced = applyReplacement(tr, m, replacement, mode)
       return true
     })
+    if (!replaced) {
+      // inside a control locked against editing: say so and move on to the next match
+      notifyOdt('appOdtLockedObject')
+      goTo(ranges, (at + 1) % ranges.length)
+      return
+    }
     const after = refresh(query, at)
     if (after && after.length > 0) scrollTo(after[Math.min(at, after.length - 1)])
-  }, [editor, flushPending, query, applyReplacement, refresh, scrollTo])
+  }, [editor, flushPending, query, replacement, mode, refresh, scrollTo, goTo])
 
   const replaceAll = useCallback(() => {
     if (!editor.isEditable) return
@@ -394,12 +381,18 @@ export function FindPanel({
     if (scanTokenRef.current) return
     const ranges = fresh ? fresh.ranges : matchesRef.current
     if (ranges.length === 0) return
+    // one transaction for all of them; a match inside a control locked against
+    // editing is left, and stays in the results the rescan below shows
+    let left = 0
     editor.commands.command(({ tr }) => {
-      for (const m of [...ranges].reverse()) applyReplacement(tr, m)
+      for (const m of [...ranges].reverse()) {
+        if (!applyReplacement(tr, m, replacement, mode)) left++
+      }
       return true
     })
+    if (left > 0) notifyOdt('appOdtLockedObject')
     refresh(query)
-  }, [editor, flushPending, query, applyReplacement, refresh])
+  }, [editor, flushPending, query, replacement, mode, refresh])
 
   // ---- Go To ----
   const [target, setTarget] = useState<GoToTarget>('page')

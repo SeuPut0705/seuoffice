@@ -17,7 +17,6 @@ import {
   webLanguage,
   type PageCollab,
 } from '@seuoffice/web-platform'
-import type { Lang } from '@genoffice/i18n'
 import { CertificateEncryptionError, WrongPasswordError, decryptDocument } from '../main/pdf-crypt'
 import type { PdfApi, SavePdfRequest, SavePdfResult } from '../shared/ipc'
 import type { PdfCollabHandles } from './collab-join'
@@ -143,7 +142,7 @@ const pdfApi: Partial<PdfApi> = {
     if (start === 0) queueMicrotask(reportOpened)
     return { data: bytes.slice(start, end), fileSize: bytes.byteLength }
   },
-  getLanguage: async () => webLanguage() as Lang,
+  getLanguage: async () => webLanguage(),
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',
   onThemeChanged: unsubscribe,
@@ -214,6 +213,8 @@ const pdfApi: Partial<PdfApi> = {
   store: undefined,
   subscription: undefined,
   noteOpen: undefined,
+  // certificates, keys and the signed copy all live on the desktop
+  signWithCertificate: undefined,
 }
 
 export function installBridges(): void {

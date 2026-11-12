@@ -15,22 +15,17 @@
  * Read-only: layout/master geometry is used only for render inheritance, never
  * written back to the original pptx.
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import type { Transform, TextAlign } from './types'
 import { type EaScript, type Theme, eaScriptOfLang, resolveFontRef } from './theme'
 import { resolveColorNode } from './color'
-import {
-  asXmlNode,
-  decodeNumericCharRefs,
-  percentFraction,
-  xmlArray,
-  type XmlNode,
-} from './xml-utils'
+import { ownValue } from './own-value'
+import { asXmlNode, percentFraction, xmlArray, type XmlNode } from './xml-utils'
 
 /** Spec (and PowerPoint UI) ceiling for <a:buAutoNum startAt>. */
 export const MAX_AUTO_NUM_START = 32767
 
-const phParser = new XMLParser({
+const phParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   isArray: (name) => ['p:sp', 'p:graphicFrame', 'p:pic'].includes(name),
@@ -239,7 +234,7 @@ export function parsePlaceholderMap(
     const transform = frame ? parseXfrmNode(sp['p:xfrm']) : parseXfrmNode(spPr['a:xfrm'])
     const textStyle = parseLstStyleLevels(asXmlNode(sp['p:txBody'])['a:lstStyle'], theme, src)
     const bodyPrNode = asXmlNode(asXmlNode(sp['p:txBody'])['a:bodyPr'])
-    const anchor = ANCHOR_MAP[String(bodyPrNode['@_anchor'] ?? '')]
+    const anchor = ownValue(ANCHOR_MAP, String(bodyPrNode['@_anchor'] ?? ''))
     const anchorCtrRaw = bodyPrNode['@_anchorCtr']
     const anchorCtr =
       anchorCtrRaw != null ? String(anchorCtrRaw) === '1' || anchorCtrRaw === 'true' : undefined
@@ -323,7 +318,8 @@ function parseLvlPPr(
   const pPr = asXmlNode(pPrRaw)
   const out: LevelTextStyle = {}
   const algn = String(pPr['@_algn'] ?? '')
-  if (algn && ALIGN_MAP[algn]) out.align = ALIGN_MAP[algn]
+  const align = ownValue(ALIGN_MAP, algn)
+  if (align) out.align = align
   const lineHeight = spcPctVal(pPr['a:lnSpc'])
   const lineExact = spcPtsVal(pPr['a:lnSpc'])
   if (lineHeight != null) out.lineHeight = lineHeight
@@ -338,7 +334,7 @@ function parseLvlPPr(
   const buChar = asXmlNode(pPr['a:buChar'])['@_char']
   if (pPr['a:buNone'] !== undefined) out.bullet = { type: 'none' }
   else if (buChar != null) {
-    out.bullet = { type: 'char', char: decodeNumericCharRefs(String(buChar)) }
+    out.bullet = { type: 'char', char: String(buChar) }
   } else if (pPr['a:buAutoNum']) {
     out.bullet = { type: 'number' }
     const an = asXmlNode(pPr['a:buAutoNum'])
@@ -348,10 +344,11 @@ function parseLvlPPr(
       out.bullet.startAt = Math.min(startAt, MAX_AUTO_NUM_START)
   } else if (pPr['a:buBlip'] !== undefined) {
     out.bullet = { type: 'blip' }
-    const embed = asXmlNode(asXmlNode(pPr['a:buBlip'])['a:blip'])['@_r:embed']
-    if (embed != null) {
-      if (!src?.foreignPart) out.bullet.blipEmbedId = String(embed)
-      const ref = src?.mediaRels?.get(String(embed))
+    const blipEmbed = asXmlNode(asXmlNode(pPr['a:buBlip'])['a:blip'])['@_r:embed']
+    if (blipEmbed != null) {
+      const embed = String(blipEmbed)
+      if (!src?.foreignPart) out.bullet.blipEmbedId = embed
+      const ref = src?.mediaRels?.get(embed)
       if (ref) out.bullet.mediaRef = ref
     }
   }

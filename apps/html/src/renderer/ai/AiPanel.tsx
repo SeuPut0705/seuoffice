@@ -169,6 +169,7 @@ import {
 } from './edit-queue'
 import { buildProjection } from './redact'
 import { useGenerateHandoff } from './generate-handoff'
+import { isRtlLang } from '@genoffice/i18n'
 
 /** [chip label, composer prefill]: blank page → design something new; page with content → rework it */
 const GENERATE_STARTERS = [
@@ -2113,7 +2114,7 @@ export function AiPanel({
       ref={asideRef}
       className={`copilot${resizing ? ' ai-panel-resizing' : ''}${dragOver ? ' ai-panel-dragover' : ''}`}
       style={{ width: '100%' }}
-      dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      dir={isRtlLang(lang) ? 'rtl' : undefined}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault()
@@ -2479,7 +2480,6 @@ export function AiPanel({
               onRecheck={subscription.recheck}
               onAcceptMetered={subscription.acceptMetered}
               onOpenInstallHelp={subscription.openInstallHelp}
-              onOpenConnectHelp={subscription.openConnectHelp}
             />
           ) : (
             <AiFirstConnectionNotice

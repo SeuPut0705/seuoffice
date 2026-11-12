@@ -3,10 +3,11 @@
  * Provides color scheme and font scheme lookups so inheritance resolution can turn
  * schemeClr / theme fonts into final values.
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
+import { ownValue, setOwn } from './own-value'
 import { asXmlNode, xmlArray, type XmlNode } from './xml-utils'
 
-const parser = new XMLParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
+const parser = xmlParser({ ignoreAttributes: false, attributeNamePrefix: '@_' })
 
 export interface Theme {
   /** clrScheme: dk1/lt1/dk2/lt2/accent1..6/hlink/folHlink → #RRGGBB */
@@ -103,7 +104,8 @@ function scriptFonts(scheme: XmlNode, font: string): Record<string, string> | un
     const n = asXmlNode(f)
     const script = n['@_script']
     const face = n['@_typeface']
-    if (typeof script === 'string' && typeof face === 'string' && face) out[script] = face
+    // a script the document names `__proto__` is an entry like any other
+    if (typeof script === 'string' && typeof face === 'string' && face) setOwn(out, script, face)
   }
   return Object.keys(out).length ? out : undefined
 }
@@ -251,10 +253,12 @@ export function resolveSchemeColor(
   phClr?: string,
 ): string | undefined {
   if (name === 'phClr') return phClr
-  // Standard mapping: tx1→dk1, bg1→lt1, tx2→dk2, bg2→lt2
+  // Standard mapping: tx1→dk1, bg1→lt1, tx2→dk2, bg2→lt2. The name and the slot the map sends
+  // it to are the document's, so each table answers its own keys only (`ownValue`)
   const standard: Record<string, string> = { tx1: 'dk1', bg1: 'lt1', tx2: 'dk2', bg2: 'lt2' }
-  const key = theme?.clrMap?.[name] ?? standard[name] ?? name
-  return theme?.colors[key]
+  const mapped = theme?.clrMap ? ownValue(theme.clrMap, name) : undefined
+  const key = mapped ?? ownValue(standard, name) ?? name
+  return theme ? ownValue(theme.colors, key) : undefined
 }
 
 const CLR_MAP_NAMES = [

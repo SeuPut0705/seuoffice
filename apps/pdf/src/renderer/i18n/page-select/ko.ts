@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   pageSelDelete: '페이지 {n}개 삭제',
@@ -11,4 +11,4 @@ export const ko = {
   pagesPasted: '페이지 {n}개를 붙여 넣었습니다',
   pageClipEmpty: '복사한 페이지가 없습니다. 미리보기에서 페이지를 고르고 복사한 뒤 붙여 넣으세요.',
   pageClipProtected: '암호가 걸린 PDF에서는 페이지를 복사하거나 붙여 넣을 수 없습니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

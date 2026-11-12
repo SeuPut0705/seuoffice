@@ -1,3 +1,4 @@
+import { runCopiedElsewhere } from './inline-opaque'
 import type { Block, Run } from './types'
 import { ownValue, setOwn } from './own-value'
 
@@ -497,18 +498,46 @@ function mergeTable(
  * A template with no NEXT yields one set per record — the letter-per-recipient
  * case. A NEXT hands the remainder of the template to the next record, which is
  * what a directory or a label sheet does. A SKIPIF removes the whole record.
+ *
+ * The first set is the template itself with its fields filled in. Every later
+ * set is one more copy of the same paragraphs, so it goes without the content
+ * controls whose ids belong to the first (runCopiedElsewhere).
  */
 export function mergeBlockTree(blocks: readonly Block[], data: MergeData): Block[][] {
   const out: Block[][] = []
   let index = 0
   for (let round = 0; index < data.records.length && round <= data.records.length; round += 1) {
     const { blocks: merged, cursor } = mergeRecords(blocks, data, index)
-    if (!cursor.skipped) out.push(merged)
+    if (!cursor.skipped) out.push(out.length === 0 ? merged : merged.map(laterCopy))
     // a NEXT-driven pass (a label sheet) consumed several records; the next
     // sheet starts after the last one read
     index = cursor.index + 1
   }
   return out
+}
+
+/** a merged block as a copy after the first: see mergeBlockTree */
+function laterCopy(block: Block): Block {
+  const strip = (runs: readonly Run[]): Run[] => runs.map(runCopiedElsewhere)
+  // the report of the controls read from the template no longer describes the copy
+  const { inlineContentControls: _controls, ...copy } = block
+  if (copy.runs) copy.runs = strip(copy.runs)
+  if (copy.table) {
+    copy.table = {
+      ...copy.table,
+      rows: copy.table.rows.map((row) =>
+        row.map((cell) =>
+          cell.richParas
+            ? {
+                ...cell,
+                richParas: cell.richParas.map((para) => ({ ...para, runs: strip(para.runs) })),
+              }
+            : cell,
+        ),
+      ),
+    }
+  }
+  return copy
 }
 
 /**

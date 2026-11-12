@@ -153,4 +153,15 @@ describe('parseFileToText: images and unsupported', () => {
     expect(result.kind).toBe('unsupported')
     expect(result.error).toContain('.zip')
   })
+
+  // the extension is lower-cased, so these are the names an object inherits that it can spell
+  it.each(['constructor', '__proto__'])(
+    'rejects a file named x.%s as unsupported, not as an image',
+    async (ext) => {
+      const result = await parseFileToText(writeFixture(`x.${ext}`, Buffer.from('plain')))
+      expect(result.ok).toBe(false)
+      expect(result.kind).toBe('unsupported')
+      expect(result.mime).toBeUndefined()
+    },
+  )
 })

@@ -50,6 +50,15 @@ export interface TextOutline {
 
 /** w:outline / w:emboss / w:imprint / w:shadow (the legacy Word text effects) */
 export type TextEffect = 'outline' | 'emboss' | 'imprint' | 'shadow'
+/** the order a run's text effect is read in: the first one on is the run's effect */
+export const TEXT_EFFECTS: readonly TextEffect[] = ['outline', 'emboss', 'imprint', 'shadow']
+/** w:em values that mark text (w:val="none" marks nothing) */
+export const EMPHASIS_MARKS: readonly NonNullable<Run['em']>[] = [
+  'dot',
+  'comma',
+  'circle',
+  'underDot',
+]
 
 /** w14:glow halo: color hex without '#', radius in points, alpha 0..1 */
 export interface TextGlow {
@@ -124,7 +133,8 @@ export interface Run {
   shadingDisplay?: string
   /** WordArt text outline (w14:textOutline solidFill). Display only; saving is kept faithful by rawRPr */
   textOutline?: TextOutline
-  /** legacy text effect (w:outline/w:emboss/w:imprint/w:shadow). Display only; saving is kept faithful by rawRPr */
+  /** legacy text effect (w:outline/w:emboss/w:imprint/w:shadow). Written from the model when
+   *  set; absent means untouched (rawRPr keeps whatever the run had) */
   textEffect?: TextEffect
   /** w:dstrike double strikethrough (false = explicit off overriding the style) */
   dstrike?: boolean
@@ -144,7 +154,8 @@ export interface Run {
   effective?: EffectiveRPr
   /** superscript / subscript (w:vertAlign) */
   vertAlign?: 'superscript' | 'subscript'
-  /** East Asian emphasis mark (w:em). Display only; saving is kept faithful by rawRPr */
+  /** East Asian emphasis mark (w:em). Written from the model when set; absent means
+   *  untouched (rawRPr keeps whatever the run had) */
   em?: 'dot' | 'comma' | 'circle' | 'underDot'
   /** hyperlink info; rId references an existing relationship in the original docx.
    *  plain: unstyled run of a bookmark link (Word shows it in the paragraph's ink) */
@@ -191,6 +202,26 @@ export interface Run {
   /** w:sdtPr of a content-control checkbox (w14:checkbox) wrapping this run; the run text is the
    * box glyph, and write-back sets w14:checked from it */
   sdtCheckboxXml?: string
+  /**
+   * Run-level wrapper elements around this run that the model has no field for
+   * (w:sdt content controls, w:smartTag, w:customXml, w:dir, w:bdo), outermost
+   * first. Only a wrapper that holds a run is carried; one that holds none,
+   * and the text-less markers of a paragraph (w:permStart, the customXml
+   * range markers, w:subDoc), are not in the model: they stay in a paragraph
+   * that is not rebuilt and are not written into one that is.
+   *
+   * A rebuilt paragraph writes adjacent runs that share a wrapper back inside
+   * one element, with the bytes it was read with. A content control is
+   * written once per paragraph: a later group that is not adjacent to the
+   * first goes back as plain runs. At save a control written from here is
+   * the only kind that gives way when its w:id is already taken in the part
+   * (by an original slice, a verbatim fragment, a checkbox control, a block
+   * control, or an earlier control written from runs): it loses its wrapper,
+   * the text stays. The reader carries a wrapper only when its bytes can be
+   * written back in the part (see inline-opaque.ts), and the writer checks
+   * the same before it writes one.
+   */
+  wrap?: InlineWrap[]
   /**
    * Run-level formatting revision (w:rPrChange): records the review info, the modeled
    * subset of the pre-revision formatting (drives the on-screen reject preview) and the
@@ -412,6 +443,36 @@ export interface InlineContentControl {
   id: string
   /** the plain text that sits inside the control */
   text: string
+}
+
+/**
+ * One run-level wrapper element kept around the runs it holds. Its bytes are
+ * tags and white space only: one allowed wrapper element with its property
+ * elements, split where the runs go, at most 64 KiB (`open` and `close`
+ * together), using no prefix the part root does not declare. Bytes that are
+ * anything else are not carried and not written.
+ */
+export interface InlineWrap {
+  /** ordinal of the wrapper element inside its paragraph: runs sharing it sat in the same element */
+  seq: number
+  /** bytes before the wrapped runs: the opening tag and the wrapper's own properties (w:sdtPr...) */
+  open: string
+  /** bytes after the wrapped runs */
+  close: string
+  /**
+   * Where the wrapper sat relative to the run's own tracked-change element and
+   * hyperlink: absent = outside both, 'revision' = inside the w:ins / w:del
+   * (outside the hyperlink), 'link' = inside the w:hyperlink. A rebuilt
+   * paragraph writes it back at that depth, so `w:ins > w:sdt` does not turn
+   * into `w:sdt > w:ins`.
+   */
+  inside?: 'revision' | 'link'
+  /**
+   * Only on a content control whose properties hold just for the text it was
+   * read with (w:showingPlcHdr, w:dataBinding): that text. A rebuild that
+   * finds other text in the control writes it without those two properties.
+   */
+  text?: string
 }
 
 /** One custom tab stop from w:tabs/w:tab. Positions are in twips. */

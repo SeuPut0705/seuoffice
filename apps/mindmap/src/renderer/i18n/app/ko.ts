@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   loading: '불러오는 중…',
@@ -242,4 +242,4 @@ export const ko = {
   themeLines: '선',
   themeTapered: '끝이 가늘어지는 선',
   themeRainbow: '가지마다 다른 색',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

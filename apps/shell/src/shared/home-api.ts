@@ -25,28 +25,7 @@ import type { FontFamilyInfo } from '@genoffice/ui'
 
 /** UI language; kept self-contained here (mirrors Lang in @genoffice/i18n) */
 
-export type UiLanguage =
-  | 'zh'
-  | 'en'
-  | 'ja'
-  | 'ko'
-  | 'fr'
-  | 'de'
-  | 'es'
-  | 'th'
-  | 'id'
-  | 'ru'
-  | 'ar'
-  | 'pt'
-  | 'it'
-  | 'pl'
-  | 'cs'
-  | 'nl'
-  | 'ms'
-  | 'he'
-  | 'hi'
-  | 'zh-TW'
-  | 'vi'
+export type UiLanguage = 'en' | 'ko'
 
 /** UI theme preference */
 export type UiTheme = 'light' | 'dark' | 'system'
@@ -438,8 +417,6 @@ export interface HomeApi {
   openFeedbackSurvey(): Promise<void>
   /** open the bundled license and copyright notices (THIRD-PARTY-NOTICES.txt) */
   openLicenseNotices(): Promise<void>
-  /** start an e-mail to the trademark and copyright contact address */
-  openRightsContact(): Promise<void>
   /** AI settings (userData/ai-settings.json, shared by every editor) */
   getAiSettings(): Promise<AiSettings>
   /** persist AI settings; every renderer gets ai:settings-changed and re-reads */
@@ -660,5 +637,4 @@ export const HOME_CHANNELS = {
   openGitHubRepo: 'home:open-github-repo',
   openFeedbackSurvey: 'home:open-feedback-survey',
   openLicenseNotices: 'home:open-license-notices',
-  openRightsContact: 'home:open-rights-contact',
 } as const

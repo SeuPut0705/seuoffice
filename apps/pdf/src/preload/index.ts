@@ -29,7 +29,6 @@ import type {
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   AI_TOOL_CAPABILITIES_CHANNEL,
-  SUBSCRIPTION_CONNECT_HELP_CHANNEL,
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
   imageGenerationAvailableOf,
   subscriptionLaunchResultOf,
@@ -81,9 +80,6 @@ const subscription: SubscriptionApi = {
   },
   openInstallHelp: async (provider) => {
     await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
-  },
-  openConnectHelp: async (path) => {
-    await ipcRenderer.invoke(SUBSCRIPTION_CONNECT_HELP_CHANNEL, path)
   },
 }
 
@@ -169,8 +165,9 @@ const api: PdfApi = {
   isUntitled: (path) => ipcRenderer.invoke(PDF_CHANNELS.isUntitled, path),
   isUntitledCopy: (path) => ipcRenderer.invoke(PDF_CHANNELS.isUntitledCopy, path),
   templateBytes: (request) => ipcRenderer.invoke(PDF_CHANNELS.templateBytes, request),
-  adoptUntitledCopy: (path, defaultName) =>
-    ipcRenderer.invoke(PDF_CHANNELS.adoptUntitledCopy, path, defaultName),
+  pickUntitledCopyTarget: (path, defaultName) =>
+    ipcRenderer.invoke(PDF_CHANNELS.pickUntitledCopyTarget, path, defaultName),
+  adoptUntitledCopy: (path) => ipcRenderer.invoke(PDF_CHANNELS.adoptUntitledCopy, path),
   validateTextEdits: (request) => ipcRenderer.invoke(PDF_CHANNELS.validateTextEdits, request),
   listEditFonts: () => ipcRenderer.invoke(PDF_CHANNELS.listEditFonts),
   canDrawText: (text, font, bold, italic) =>

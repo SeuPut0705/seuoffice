@@ -105,29 +105,7 @@ ipcRenderer.on(
     openSettingsInbox.push(target),
 )
 
-const UI_LANGUAGES: readonly UiLanguage[] = [
-  'zh',
-  'en',
-  'ja',
-  'ko',
-  'fr',
-  'de',
-  'es',
-  'th',
-  'id',
-  'ru',
-  'ar',
-  'pt',
-  'it',
-  'pl',
-  'cs',
-  'nl',
-  'ms',
-  'he',
-  'hi',
-  'zh-TW',
-  'vi',
-]
+const UI_LANGUAGES: readonly UiLanguage[] = ['en', 'ko']
 
 function isUiLanguage(value: unknown): value is UiLanguage {
   return UI_LANGUAGES.includes(value as UiLanguage)
@@ -369,7 +347,7 @@ const homeApi: HomeApi = {
   },
   async getLanguage() {
     const result: unknown = await ipcRenderer.invoke(HOME_CHANNELS.getLanguage)
-    return isUiLanguage(result) ? result : 'zh'
+    return isUiLanguage(result) ? result : 'en'
   },
   async setLanguage(lang) {
     if (!isUiLanguage(lang)) throw new Error('Invalid language.')
@@ -588,9 +566,6 @@ const homeApi: HomeApi = {
   },
   async openLicenseNotices() {
     await ipcRenderer.invoke(HOME_CHANNELS.openLicenseNotices)
-  },
-  async openRightsContact() {
-    await ipcRenderer.invoke(HOME_CHANNELS.openRightsContact)
   },
   // AI settings channels are registered once by the shell's aggregated docs handlers
   onAiSettingsChanged(handler) {
@@ -901,9 +876,6 @@ const subscriptionApi: SubscriptionApi = {
   },
   async openInstallHelp(provider) {
     await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, provider)
-  },
-  async openConnectHelp(path) {
-    await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openConnectHelp, path)
   },
 }
 contextBridge.exposeInMainWorld('aiOfficeSubscription', subscriptionApi)

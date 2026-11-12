@@ -1511,7 +1511,10 @@ async function writeDocument(
     position.kind === 'whole' &&
     (isBlankDocument(editor) || call.input.replaceDocument === true)
   ) {
-    replaceBlockRange(editor, 0, editor.state.doc.childCount - 1, nodes, track)
+    // refused when the document holds a control locked against editing: its text
+    // would go with everything else, and the refusal recorded becomes the error
+    if (!replaceBlockRange(editor, 0, editor.state.doc.childCount - 1, nodes, track))
+      return fail(t('aiSumWriteDocumentFailed'), 'the document was not replaced')
   } else {
     insertBlocksAfter(editor, draft.indexBefore(), nodes, track)
   }
@@ -1667,7 +1670,10 @@ function executeSyncTool(
           .map((k) => `${k.block}.${k.index}`),
       ).size
       const lost = had - keptInRange
-      replaceBlockRange(editor, range.start, range.end, nodes, track)
+      // refused when it would change the text of a control locked against editing:
+      // the refusal recorded for this call becomes the error the model reads
+      if (!replaceBlockRange(editor, range.start, range.end, nodes, track))
+        return fail(t('aiSumReplaceContent'), 'the blocks were not replaced')
       const pictureNote =
         lost > 0
           ? ` ${lost} picture(s) that were in the replaced range are not in the new content and have been deleted${track ? ' (as a tracked change the user can reject)' : ' (the user can undo this)'}; tell the user if that was not intended. To keep pictures, include their <img src="doc:B.I"> tags from read_blocks in the new HTML.`
@@ -1910,9 +1916,14 @@ function executeSyncTool(
       if ('error' in r) return fail(summary, r.error)
       const left = listRevisionEntries(editor.state.doc, extras?.storyRevisions?.list())
       const verb = mode === 'accept' ? 'Accepted' : 'Rejected'
+      const applied = r.entries.filter((e) => !r.locked.includes(e))
+      const lockedNote =
+        r.locked.length > 0
+          ? ` ${r.locked.length} tracked change(s) (${r.locked.map((e) => e.id).join(', ')}) were left as they are: they would change the text of a content control locked against editing. Do not retry them.`
+          : ''
       return {
-        output: `${verb} ${r.entries.length} tracked change(s) (${r.entries.map((e) => e.id).join(', ')}). ${left.length ? `Still ${describePending(left)}.` : 'No tracked changes remain.'}`,
-        mutated: true,
+        output: `${verb} ${applied.length} tracked change(s) (${applied.map((e) => e.id).join(', ')}).${lockedNote} ${left.length ? `Still ${describePending(left)}.` : 'No tracked changes remain.'}`,
+        mutated: applied.length > 0,
         summary,
       }
     }
@@ -2297,8 +2308,14 @@ function executeSyncTool(
         skippedDeleted > 0
           ? `\nNote: ${skippedDeleted} matched target(s) were skipped because that text is a pending tracked deletion (already struck through). It is not current content — do not try to delete or replace it again; the user accepts/rejects revisions in the Review tab.`
           : ''
+      const skippedLocked = outcome.results.reduce((sum, r) => sum + (r.skippedLocked ?? 0), 0)
+      // the batch went on without them: say which part did not happen, and why
+      const lockedNote =
+        skippedLocked > 0
+          ? `\nNote: ${skippedLocked} match(es) were left unchanged because they are inside a content control locked against editing (w:lock contentLocked). Everything else was applied. Do not retry them; that text can only go by deleting the whole control.`
+          : ''
       return {
-        output: outcome.summary + deletedNote,
+        output: outcome.summary + deletedNote + lockedNote,
         mutated: changed > 0,
         summary: outcome.summary,
       }

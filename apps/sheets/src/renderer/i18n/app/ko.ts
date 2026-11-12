@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   // ── Withholding cells from the model ──
@@ -1661,4 +1661,4 @@ export const ko = {
   // ── ODS import ──
   appOdsImportNotice: 'ODS를 xlsx 사본으로 열었습니다. 저장하면 xlsx로 저장됩니다.',
   appOdsFormulasDropped: '수식 {count}개는 값만 남겼습니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

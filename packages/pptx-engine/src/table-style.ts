@@ -12,9 +12,10 @@
  *    into solid colors over the white/table background. Unknown GUIDs return undefined
  *    (keeping the unstyled rendering).
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { applyColorMods } from './color'
 import { resolveSchemeColor, type Theme } from './theme'
+import { ownValue } from './own-value'
 import type { Fill, Stroke } from './types'
 import { asXmlNode, xmlArray, type XmlNode } from './xml-utils'
 
@@ -474,7 +475,8 @@ export function resolveTableStyle(
   // (prod deck: Light Style 1 - Accent 3 banding drawn next to a one-entry part). The
   // earlier "transparent with a populated part" reading came from decks whose cells
   // carried an explicit <a:noFill/>, which hides any style fill anyway.
-  const builtin = BUILTIN[styleId]
+  // the id is the document's: the gallery answers its own ids only
+  const builtin = ownValue(BUILTIN, styleId)
   if (builtin) {
     const def = builtinStyle(builtin.family, builtin.accent, theme)
     def.wholeTbl = { fontRef: 'minor', ...def.wholeTbl }
@@ -513,7 +515,7 @@ export function cellStyleBorders(
 
 // ── tableStyles.xml parsing ─────────────────────────────────────────
 
-const tsParser = new XMLParser({
+const tsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   isArray: (name) => name === 'a:tblStyle',

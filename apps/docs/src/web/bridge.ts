@@ -1,3 +1,4 @@
+import { documentLocaleFor } from '@genoffice/i18n'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   createAiStreamBridge,
@@ -16,6 +17,7 @@ import {
   waitForDocument,
   webAiSettings,
   webLanguage,
+  webRequestedLanguage,
   type PageCollab,
   type WebDocument,
 } from '@seuoffice/web-platform'
@@ -130,9 +132,10 @@ const saveDocxToHost: DesktopApi['saveDocx'] = async (path, data) => {
  */
 async function joinDocsCollab(doc: WebDocument): Promise<void> {
   const page = await joinPageCollab<DocsCollabHandles, DocsOp>({
-    // 3: the same file opens as another document than under 2 (header and footer table rows are
-    // cell nodes, text inserted then deleted is two revisions), and the room shares track changes
-    format: { name: 'docx', schema: 3 },
+    // 4: run-level wrappers ride in the document (the `inlineWrap` mark), so the same file
+    // opens as another document than under 3. 3: header and footer table rows are cell nodes,
+    // text inserted then deleted is two revisions, and the room shares track changes.
+    format: { name: 'docx', schema: 4 },
     status: onSessionStatus,
     fileName: doc.fileName,
     bytes: doc.bytes,
@@ -178,6 +181,7 @@ const ai = createAiStreamBridge()
 
 const desktop: Partial<DesktopApi> = {
   getLanguage: async () => webLanguage() as Awaited<ReturnType<DesktopApi['getLanguage']>>,
+  getDocumentLocale: async () => documentLocaleFor(webRequestedLanguage()),
   onLanguageChanged: unsubscribe,
   getSystemLocale: async () => navigator.language,
   getTheme: async () => 'system',

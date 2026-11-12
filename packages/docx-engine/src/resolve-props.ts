@@ -776,7 +776,9 @@ export function resolveRunProps(
 ): EffectiveRPr {
   const rStyleId = rPr ? attrsOf(findChild(rPr, 'w:rStyle') ?? {})['w:val'] : undefined
   const charStyle = rStyleId ? ctx.styles.get(rStyleId) : undefined
-  const paraStyle = para.styleId ? ctx.styles.get(para.styleId) : ctx.defaultParaStyle
+  // a pStyle the document does not define falls back as it does for the paragraph's own properties
+  const paraStyle =
+    (para.styleId ? ctx.styles.get(para.styleId) : undefined) ?? ctx.defaultParaStyle
   // the mark of a bidi paragraph reads the Cs twins even with its own w:rtl off
   // (Word probe 2026-11-03: sz 36 / rtl=0 marks under szCs 22 lay 11pt lines);
   // w:cs marks the run complex-script outright (a Thai title with w:cs + w:bCs is bold)

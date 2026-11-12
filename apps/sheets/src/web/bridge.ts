@@ -1,4 +1,5 @@
 import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@genoffice/xlsx-gateway/gateway/csv-limits'
+import { documentLocaleFor } from '@genoffice/i18n'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   collabLink,
@@ -17,6 +18,7 @@ import {
   WebUnsupportedError,
   webAiSettings,
   webLanguage,
+  webRequestedLanguage,
   type PageCollab,
 } from '@seuoffice/web-platform'
 import {
@@ -116,7 +118,7 @@ async function openQueuedDocument(): Promise<WorkbookFile | null> {
     const bytes = collab?.baseBytes ?? doc.bytes
     const engineName = engineFileName(/\.[^./]+$/.exec(doc.fileName)?.[0].toLowerCase() ?? '')
     const enginePath = await engine().put(engineName, bytes)
-    const opened = await engine().open(enginePath, navigator.language)
+    const opened = await engine().open(enginePath, documentLocaleFor(navigator.language))
     return await adopt(opened, bytes, {
       fileName: doc.fileName,
       virtualPath: doc.virtualPath,
@@ -173,7 +175,7 @@ async function saveWorkbookEdits(input: WorkbookSaveRequest): Promise<WorkbookSa
     )
     let opened: SidecarOpenResult
     try {
-      opened = await engine().open(`/work/${target}`, navigator.language)
+      opened = await engine().open(`/work/${target}`, documentLocaleFor(navigator.language))
     } catch (error) {
       await engine().drop(target)
       throw error
@@ -302,6 +304,9 @@ const ai = createAiStreamBridge()
 
 const desktopApi: WebDesktopApi = {
   getLanguage: async () => webLanguage() as Awaited<ReturnType<DesktopApi['getLanguage']>>,
+  // number formats and the CSV code page guess follow the language the host asked
+  // for, as they did when it was also a UI language
+  getDocumentLocale: async () => documentLocaleFor(webRequestedLanguage()),
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',
   onThemeChanged: unsubscribe,

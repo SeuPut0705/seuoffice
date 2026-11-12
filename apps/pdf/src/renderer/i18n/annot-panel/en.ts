@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   apPanel: 'Annotations',
   apPanelTip: 'Gather highlights, notes and passage cards in one list',
@@ -57,4 +55,4 @@ export const en = {
   apCreateFailed: "Couldn't create the document. {reason}",
   apMdNote: 'Note: {text}',
   apCount: '{count} items',
-} satisfies Record<keyof typeof zh, string>
+}

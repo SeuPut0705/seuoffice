@@ -52,7 +52,7 @@ function addContentTypeOverride(
     ctPath,
     ct.replace(
       '</Types>',
-      `<Override PartName="/${partPath}" ContentType="${contentType}"/></Types>`,
+      () => `<Override PartName="/${partPath}" ContentType="${contentType}"/></Types>`,
     ),
   )
 }
@@ -139,7 +139,7 @@ function ensureAuthor(
     const lastIdx = Number(/\blastIdx="(\d+)"/.exec(attrs)?.[1] ?? 0)
     const nextIdx = lastIdx + 1
     const bumped = m[0].includes('lastIdx="')
-      ? m[0].replace(/\blastIdx="\d+"/, `lastIdx="${nextIdx}"`)
+      ? m[0].replace(/\blastIdx="\d+"/, () => `lastIdx="${nextIdx}"`)
       : m[0].replace('/>', () => ` lastIdx="${nextIdx}"/>`)
     setEntry(
       archive,

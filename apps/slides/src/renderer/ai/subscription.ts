@@ -12,7 +12,6 @@ import type {
   AiProviderId,
   AiRunErrorKind,
   AiSubscriptionProviderId,
-  SubscriptionConnectHelpPath,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 import type { IpcStreamError } from '@genoffice/agent-core'
@@ -66,8 +65,6 @@ export interface SubscriptionConnection {
   /** read the last known statuses again (cheap: no program is started) */
   readonly refresh: (providers?: AiSubscriptionProviderId[]) => void
   readonly actions: AiSubscriptionCardActions
-  /** open the website's step-by-step connect help at the guide's path */
-  readonly openConnectHelp: (path: SubscriptionConnectHelpPath | null) => void
 }
 
 export function useSubscriptionConnection(): SubscriptionConnection {
@@ -105,6 +102,5 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     busy: shared.busy,
     refresh: shared.refresh,
     actions,
-    openConnectHelp: shared.openConnectHelp,
   }
 }

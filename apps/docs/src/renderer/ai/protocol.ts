@@ -3,8 +3,12 @@ import type { Editor } from '@tiptap/core'
 import { REDACT_MARK } from './redact'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { TextSelection } from '@tiptap/pm/state'
+import { Transform } from '@tiptap/pm/transform'
 import {
   TABLE_HEADER_FILL,
+  inlineWrapContentLocked,
+  sameInlineWrap,
+  type InlineWrap,
   type Block,
   type CommentInfo,
   type TableCell,
@@ -12,6 +16,14 @@ import {
 } from '@genoffice/docx-engine'
 import { pmTableToModel, tableModelToPmNode, type PmMark, type PmNode } from '../editor/convert'
 import { wordTableCell, wordTableModel } from '../editor/new-table'
+import { findInDoc, isWordChar, type FindMatch } from '../editor/find'
+import { lockedControlsIn } from '../editor/inline-wrap'
+import {
+  INLINE_WRAP_MARK,
+  inlineWrapChainAttr,
+  inlineWrapChainOf,
+} from '../editor/inline-wrap-chain'
+import { notifyOdt, recordOdtRefusal } from '../odt-gate'
 import { equationBlockJson, inlineEquationNodeJson } from '../editor/equation'
 import { inheritFrom, inheritTableFormatting, sameBlockRole } from './inherit-formatting'
 import { TRACK_AUTHOR, TRACK_IGNORE, type RevisionRange } from '../editor/revisions'
@@ -1462,12 +1474,146 @@ export function inheritBlockFormatting(
   })
 }
 
+/** every place `text` stands, letter for letter, in the textblocks of `holder` */
+function exactHits(holder: ProseMirrorNode, text: string): FindMatch[] {
+  return findInDoc(
+    holder,
+    { mode: 'literal', re: null, needle: text, anchorStart: false, anchorEnd: false },
+    { matchCase: true, wholeWord: false, matchWidth: true },
+  )
+}
+
+/**
+ * Does the text stand in `now` without cutting a word it did not cut in `was`?
+ * An end of it that is a letter or a digit may have one right beside it only
+ * when that very character stood beside it before: Korean writes a particle
+ * or a counter straight after the word ("서울에서", "2024년"), while "5" found
+ * inside "15" is another number.
+ */
+function keepsItsWordEnds(was: FindMatch, now: FindMatch): boolean {
+  const { text } = now
+  const before = now.blockText[now.offset - 1]
+  const after = now.blockText[now.offset + text.length]
+  return (
+    !(isWordChar(text[0]) && isWordChar(before) && before !== was.blockText[was.offset - 1]) &&
+    !(
+      isWordChar(text[text.length - 1]) &&
+      isWordChar(after) &&
+      after !== was.blockText[was.offset + text.length]
+    )
+  )
+}
+
+/** the wrappers an inline node sits in, outermost first */
+const wrapChainOf = (node: ProseMirrorNode): InlineWrap[] =>
+  inlineWrapChainOf(node.marks.find((m) => m.type.name === INLINE_WRAP_MARK)?.attrs.chain)
+
+/**
+ * The blocks that replace [from, to) with the run-level wrappers of the old
+ * blocks back around their text; null when a control locked against editing
+ * cannot be kept.
+ *
+ * A rewrite arrives as plain blocks: the model never sees a wrapper, only the
+ * text. A wrapper goes back only where that cannot be the wrong place: its
+ * text holds a letter or a digit, stands exactly once in the old blocks and
+ * exactly once in the new ones, cuts no word there that it did not cut
+ * before, and the place does not overlap the place of another wrapper (two
+ * around the same text, one inside the other: neither goes back). Anything
+ * else is dropped; for a locked control, whose text may not change, the
+ * rewrite is refused instead.
+ */
+function withInlineStructure(
+  doc: ProseMirrorNode,
+  from: number,
+  to: number,
+  blocks: ProseMirrorNode[],
+): ProseMirrorNode[] | null {
+  interface Wrapped {
+    wrap: InlineWrap
+    /** null when the wrapper holds more than text (a picture, a field, a break) */
+    text: string | null
+    /** where the text starts in the old blocks */
+    from: number
+  }
+  const before = doc.type.create(null, doc.slice(from, to).content)
+  const wrapped: Wrapped[] = []
+  let open: Wrapped[] = []
+  before.descendants((node, pos) => {
+    if (!node.isInline) {
+      open = []
+      return true
+    }
+    open = wrapChainOf(node).map((wrap) => {
+      let span = open.find((candidate) => sameInlineWrap(candidate.wrap, wrap))
+      if (!span) {
+        span = { wrap, text: '', from: pos }
+        wrapped.push(span)
+      }
+      span.text = node.isText && span.text !== null ? span.text + node.text : null
+      return span
+    })
+    return false
+  })
+  if (wrapped.length === 0) return blocks
+
+  const after = new Transform(doc.type.create(null, blocks))
+  const wrapType = doc.type.schema.marks[INLINE_WRAP_MARK]
+  // a table cell whose text the rewrite left alone arrives with its content as it was
+  const present: InlineWrap[] = []
+  after.doc.descendants((node) => {
+    if (!node.isInline) return true
+    for (const wrap of wrapChainOf(node)) {
+      if (!present.some((other) => sameInlineWrap(other, wrap))) present.push(wrap)
+    }
+    return false
+  })
+  /** where `text`, which stood at `start` in the old blocks, stands in the new ones beyond doubt */
+  const sole = (text: string | null, start: number): FindMatch | undefined => {
+    // punctuation or spaces alone are not something to look for
+    if (!text || !/[\p{L}\p{N}]/u.test(text)) return undefined
+    const was = exactHits(before, text)
+    const now = exactHits(after.doc, text)
+    if (was.length !== 1 || now.length !== 1 || was[0].from !== start) return undefined
+    return keepsItsWordEnds(was[0], now[0]) ? now[0] : undefined
+  }
+
+  // every place first: a wrapper is judged against where the others would go
+  const places = wrapped
+    .filter((span) => !present.some((wrap) => sameInlineWrap(wrap, span.wrap)))
+    .map((span) => ({ span, hit: sole(span.text, span.from) }))
+  for (const { span, hit } of places) {
+    const alone =
+      hit !== undefined &&
+      !after.doc.rangeHasMark(hit.from, hit.to, wrapType) &&
+      !places.some(
+        (other) =>
+          other.span !== span &&
+          other.hit !== undefined &&
+          other.hit.from < hit.to &&
+          hit.from < other.hit.to,
+      )
+    if (alone) {
+      after.addMark(hit.from, hit.to, wrapType.create({ chain: inlineWrapChainAttr([span.wrap]) }))
+    } else if (inlineWrapContentLocked(span.wrap)) return null
+  }
+  const kept: ProseMirrorNode[] = []
+  after.doc.forEach((block) => kept.push(block))
+  return kept
+}
+
 /**
  * Replace the top-level block range with the parsed nodes (marked aiChanged).
  * The new blocks inherit the replaced blocks' formatting (see
  * inheritBlockFormatting). With `track`, and when both sides are plain text
  * blocks, this becomes a tracked rewrite instead: the old blocks stay struck
  * through (del) and the new blocks follow with ins marks — accept/reject via Review.
+ *
+ * False, with nothing changed, when the range holds a control locked against
+ * editing that the rewrite would not leave as it is: the refusal is recorded
+ * for the tool that asked, as the editor's own guard records one. Untracked,
+ * that is a rewrite that changes, drops or cannot place its text. Tracked, it
+ * is any rewrite: the old and the new blocks stand side by side until the
+ * user decides, and the control can be in one of them only.
  */
 export function replaceBlockRange(
   editor: Editor,
@@ -1482,6 +1628,17 @@ export function replaceBlockRange(
   const nodes = inheritBlockFormatting(editor, startIndex, endIndex, parsed, !track)
   const { from, to } = blockRangePositions(editor, startIndex, endIndex)
   const pmNodes = nodes.map((n) => editor.schema.nodeFromJSON(n))
+  // before either way of applying it, so neither goes around the lock
+  const kept = !track
+    ? withInlineStructure(editor.state.doc, from, to, pmNodes)
+    : lockedControlsIn(editor.state.doc, from, to).length > 0
+      ? null
+      : pmNodes
+  if (!kept) {
+    recordOdtRefusal('lockedControl')
+    notifyOdt('appOdtLockedObject')
+    return false
+  }
 
   let oldTrackable = true
   editor.state.doc.nodesBetween(from, to, (node, _pos, parent) => {
@@ -1547,7 +1704,7 @@ export function replaceBlockRange(
     return true
   }
   editor.view.dispatch(
-    editor.state.tr.replaceWith(from, to, pmNodes).setMeta(TRACK_AUTHOR, AI_REVISION_AUTHOR),
+    editor.state.tr.replaceWith(from, to, kept).setMeta(TRACK_AUTHOR, AI_REVISION_AUTHOR),
   )
   return true
 }

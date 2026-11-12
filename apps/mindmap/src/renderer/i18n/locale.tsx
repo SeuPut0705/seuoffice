@@ -5,13 +5,13 @@ import { strings } from './strings'
 
 const translate = createI18n(strings)
 
-export type StringKey = keyof typeof strings.zh
+export type StringKey = keyof typeof strings.en
 export type TFunc = (key: StringKey, params?: Params) => string
 
-const LocaleContext = createContext<Lang>('zh')
+const LocaleContext = createContext<Lang>('en')
 
 /** Module-level current language: for code outliving render closures, kept in sync with the Provider */
-let moduleLang: Lang = 'zh'
+let moduleLang: Lang = 'en'
 
 export function t(key: StringKey, params?: Params): string {
   return translate(moduleLang, key, params)

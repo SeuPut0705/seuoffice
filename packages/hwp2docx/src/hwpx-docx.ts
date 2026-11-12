@@ -23,6 +23,8 @@ import {
   generateParagraphXml,
   inlinePictureDrawingXml,
   keepsHangulKanaSingle,
+  usableNumber,
+  usablePictureSize,
   NEW_PICTURE_TOKEN_PREFIX,
   parseDocx,
   saveDocx,
@@ -893,15 +895,16 @@ async function pictureRunXml(pic: XNode, ctx: Ctx): Promise<string | null> {
   const resolved = { token, widthPx: decoded.widthPx, heightPx: decoded.heightPx }
   // displayed size: hp:sz (or curSz) in HWPUNIT; intrinsic pixels as the fallback
   const sz = firstChild(pic, 'hp:sz') ?? firstChild(pic, 'hp:curSz')
-  const w = intAttr(sz, 'width', 0)
-  const h = intAttr(sz, 'height', 0)
-  const widthPx = w > 0 ? hwpToPx(w) : resolved.widthPx
-  const heightPx = h > 0 ? hwpToPx(h) : resolved.heightPx
+  const w = drawingAttr(sz, 'width')
+  const h = drawingAttr(sz, 'height')
   const drawing = inlinePictureDrawingXml({
     rId: resolved.token,
     docPrId: resolved.token,
-    widthPx,
-    heightPx,
+    // the intrinsic pixels may be out of range too (a PNG header claims 4e9 px)
+    ...usablePictureSize(
+      w > 0 ? hwpToPx(w) : resolved.widthPx,
+      h > 0 ? hwpToPx(h) : resolved.heightPx,
+    ),
   })
   const placed = pos && attr(pos, 'treatAsChar') !== '1'
   return `<w:r>${placed ? floatingPictureXml(drawing, pic, pos) : drawing}</w:r>`
@@ -931,6 +934,16 @@ const ALIGN_V: Record<string, string> = {
 }
 
 /**
+ * An HWPUNIT length of a picture as a drawing may take it: zero when the file
+ * holds a value out of drawing range (a corrupt or hostile `1e300`), so that
+ * one picture keeps a usable size and place and the conversion goes on.
+ */
+function drawingAttr(node: XNode | null | undefined, name: string): number {
+  const value = intAttr(node, name, 0)
+  return usableNumber(hwpToEmu(signedHwp(value))) === undefined ? 0 : value
+}
+
+/**
  * A picture Hangul places (treatAsChar="0") as a Word anchor: the same
  * reference frame (paper, page, column, paragraph), alignment or offset,
  * text wrap and outside margins, so it no longer takes a line of its own.
@@ -940,12 +953,12 @@ function floatingPictureXml(inlineXml: string, pic: XNode, pos: XNode): string {
   const vert = attr(pos, 'vertAlign') ?? 'TOP'
   const positionH = ALIGN_H[horz]
     ? `<wp:align>${ALIGN_H[horz]}</wp:align>`
-    : `<wp:posOffset>${hwpToEmu(signedHwp(intAttr(pos, 'horzOffset', 0)))}</wp:posOffset>`
+    : `<wp:posOffset>${hwpToEmu(signedHwp(drawingAttr(pos, 'horzOffset')))}</wp:posOffset>`
   const positionV = ALIGN_V[vert]
     ? `<wp:align>${ALIGN_V[vert]}</wp:align>`
-    : `<wp:posOffset>${hwpToEmu(signedHwp(intAttr(pos, 'vertOffset', 0)))}</wp:posOffset>`
+    : `<wp:posOffset>${hwpToEmu(signedHwp(drawingAttr(pos, 'vertOffset')))}</wp:posOffset>`
   const margin = firstChild(pic, 'hp:outMargin')
-  const dist = (side: string) => hwpToEmu(intAttr(margin, side, 0))
+  const dist = (side: string) => hwpToEmu(drawingAttr(margin, side))
   const wrapMode = attr(pic, 'textWrap') ?? 'TOP_AND_BOTTOM'
   const behind = wrapMode === 'BEHIND_TEXT'
   const wrap =
@@ -954,7 +967,11 @@ function floatingPictureXml(inlineXml: string, pic: XNode, pos: XNode): string {
       : wrapMode === 'BEHIND_TEXT' || wrapMode === 'IN_FRONT_OF_TEXT'
         ? '<wp:wrapNone/>'
         : '<wp:wrapSquare wrapText="bothSides"/>'
-  const z = 251659264 + Math.max(0, intAttr(pic, 'zOrder', 0))
+  // relativeHeight is an xsd:unsignedInt; a rank past it is no rank
+  const rank = intAttr(pic, 'zOrder', 0)
+  const z =
+    251659264 +
+    (Number.isSafeInteger(rank) && rank > 0 && rank <= 0xffffffff - 251659264 ? rank : 0)
   return inlineXml
     .replace(
       /<wp:inline distT="0" distB="0" distL="0" distR="0">/,

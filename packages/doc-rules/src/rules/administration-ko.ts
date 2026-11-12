@@ -58,7 +58,7 @@ export const ADMINISTRATION_RULES: RuleSet = {
       id: 'table.no-caption',
       severity: 'check',
       // Fires on 40 of 40 ministry press releases, 119 of the 131 hits being the masthead
-      // table at the top of the page (docs/plans/ai-friendly-docs.md 8.1).
+      // table at the top of the page (docs/archive/ieum/plans/ai-friendly-docs.md 8.1).
       enabled: false,
       principle: 'tables',
       title: '제목 없는 표',
@@ -76,7 +76,7 @@ export const ADMINISTRATION_RULES: RuleSet = {
       id: 'figure.no-caption',
       severity: 'check',
       // Every picture of every press release fires: those images are illustrations, not
-      // figures that need a title (docs/plans/ai-friendly-docs.md 8.1).
+      // figures that need a title (docs/archive/ieum/plans/ai-friendly-docs.md 8.1).
       enabled: false,
       principle: 'tables',
       title: '제목 없는 그림',

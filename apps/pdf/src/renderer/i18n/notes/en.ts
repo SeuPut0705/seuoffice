@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   ntOpen: 'Open note',
   ntOpenTip: 'Open the Markdown note linked to this PDF',
@@ -9,4 +7,4 @@ export const en = {
   ntUnavailable: 'Notes open only inside the GenOffice app',
   ntFailed: 'The note could not be opened. {reason}',
   ntInserted: 'Added to the note',
-} satisfies Record<keyof typeof zh, string>
+}

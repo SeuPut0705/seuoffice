@@ -146,6 +146,20 @@ test('a text edit, which needs the desktop engine, is refused and kept unsaved',
   expect(errors).toEqual([])
 })
 
+test('certificate signing, which needs the desktop app, says so instead of opening', async ({
+  page,
+}) => {
+  const errors: string[] = []
+  page.on('pageerror', (error) => errors.push(error.message))
+  const app = await open(page, FIXTURE, true)
+
+  await app.locator('.ribbon-tab', { hasText: '주석' }).click()
+  await app.getByRole('button', { name: '인증서 서명', exact: true }).click()
+  await expect(app.getByText('인증서 서명은 데스크톱 앱에서만 할 수 있습니다')).toBeVisible()
+  await expect(app.locator('.pdf-cert-dialog')).toBeHidden()
+  expect(errors).toEqual([])
+})
+
 test('a PDF opened for viewing can be neither changed nor saved', async ({ page }) => {
   const app = await open(page, FIXTURE, false)
   await expect(page.locator('#save')).toBeHidden()

@@ -29,7 +29,7 @@
  * ## Where it lives
  *
  * `<a:extLst><a:ext uri="…"><go:redact label="…"/></a:ext></a:extLst>` inside
- * the run's `<a:rPr>`, or inside the element's `nvPr` for a picture. `a:extLst`
+ * the run's `<a:rPr>`, or inside the element's `<p:spPr>` for a picture. `a:extLst`
  * is the OOXML extension list — the schema's own slot for things it does not
  * know — so PowerPoint round-trips the file without noticing, and fast-xml-parser
  * hands the label back on the way in (verified: no element whitelist, so the
@@ -40,7 +40,14 @@
  * character border there.
  */
 
-import { asXmlNode, escapeXmlAttr, xmlArray, type XmlNode } from './xml-utils'
+import {
+  asXmlNode,
+  attributeOf,
+  elementRange,
+  escapeXmlAttr,
+  xmlArray,
+  type XmlNode,
+} from './xml-utils'
 
 /**
  * A fixed URI for our extension. Office's convention is that the `uri` is a
@@ -73,10 +80,7 @@ export function redactExtXml(label: string): string {
 
 /** True when the fragment already carries our mark. */
 export function hasRedactExtIn(xml: string): boolean {
-  // a /g regex keeps its lastIndex between .test() calls, so the answer would
-  // alternate true/false on consecutive runs — this runs once per run per save
-  OUR_EXT_RE.lastIndex = 0
-  return OUR_EXT_RE.test(xml)
+  return ourExtRanges(xml).length > 0
 }
 
 /**
@@ -95,16 +99,21 @@ export function syncRedactExt(xml: string, tag: string, label?: string): string 
   return xml.slice(0, open.index) + next + xml.slice(open.index + open[0].length)
 }
 
-/** One `<a:ext>` matching our URI, or null. */
+/**
+ * One `<a:ext>` matching our URI among the node's own extension lists, or null. A node should
+ * hold one list; a deck that holds two parses as an array, and reading it as a single node
+ * would miss a mark in either and hand the words to the model.
+ */
 function ourExt(extLst: unknown): XmlNode | null {
-  for (const ext of xmlArray(asXmlNode(extLst)['a:ext'])) {
-    const uri = ext['@_uri']
-    if (uri === REDACT_EXT_URI) return ext
+  for (const list of xmlArray(extLst)) {
+    for (const ext of xmlArray(list['a:ext'])) {
+      if (ext['@_uri'] === REDACT_EXT_URI) return ext
+    }
   }
   return null
 }
 
-/** The label, read out of an already-parsed `<a:rPr>` / `nvPr` node. */
+/** The label, read out of an already-parsed `<a:rPr>` / `<p:spPr>` node. */
 export function readRedactLabel(node: unknown): string | undefined {
   const ext = ourExt(asXmlNode(node)['a:extLst'])
   if (!ext) return undefined
@@ -112,24 +121,56 @@ export function readRedactLabel(node: unknown): string | undefined {
   return typeof label === 'string' && label !== '' ? label : undefined
 }
 
-/** Our `<a:ext>` as raw bytes, whether self-closing or paired. */
-const OUR_EXT_RE = new RegExp(
-  `<a:ext\\b[^>]*\\buri="${REDACT_EXT_URI}"[^>]*(?:/>|>[\\s\\S]*?</a:ext>)`,
-  'g',
-)
+const EXT_OPEN = /<a:ext\b(?:[^>"']|"[^"]*"|'[^']*')*>/g
 
-/** An `<a:extLst>` left holding nothing, either form. */
-const EMPTY_EXTLST_RE = /<a:extLst\b[^>]*?\/>|<a:extLst\b[^>]*>([\s\S]*?)<\/a:extLst>/g
+/**
+ * Where each of our `<a:ext>` lies in raw XML, self-closing or paired, in document order. An
+ * extension is ours by its `uri` as XML reads it (`attributeOf`: any quotes, any white space
+ * around `=`, references decoded), which is how the parser finds it on the way in: a writer
+ * that looked for one spelling kept a mark the user cleared, or wrote a second one beside it.
+ */
+function ourExtRanges(xml: string): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = []
+  for (const open of xml.matchAll(EXT_OPEN)) {
+    if (open.index < (out.at(-1)?.end ?? 0)) continue
+    if (attributeOf(open[0], 'uri') !== REDACT_EXT_URI) continue
+    const ext = elementRange(xml, 'a:ext', open.index)
+    if (ext) out.push({ start: ext.start, end: ext.end })
+  }
+  return out
+}
+
+/** `xml` without the ranges, which are in document order and do not overlap. */
+function without(xml: string, ranges: { start: number; end: number }[]): string {
+  let out = ''
+  let at = 0
+  for (const range of ranges) {
+    out += xml.slice(at, range.start)
+    at = range.end
+  }
+  return out + xml.slice(at)
+}
 
 /** Remove our extension from a raw `<a:rPr>` / `<p:spPr>` string, leaving everything else. */
 export function stripRedactExt(xml: string): string {
-  const withoutOurs = xml.replace(OUR_EXT_RE, '')
-  // an apply/unapply cycle would otherwise leave an empty <a:extLst> behind,
-  // and they would accumulate in a deck someone toggles marks in
-  const pruned = withoutOurs.replace(EMPTY_EXTLST_RE, (_all, inner: string | undefined) =>
-    inner?.trim() ? `<a:extLst>${inner}</a:extLst>` : '',
-  )
-  return collapseEmptyProps(pruned)
+  let out = xml
+  // last first, so the offsets of the earlier ones stay valid
+  for (const ours of ourExtRanges(xml).reverse()) {
+    let start = ours.start
+    let end = ours.end
+    // The list goes with it only when our extension was all it held: an apply/unapply cycle
+    // would otherwise leave an empty <a:extLst> behind, and they would accumulate in a deck
+    // someone toggles marks in. A list that still holds another extension, and every list we
+    // were never in, keeps its bytes, attributes included.
+    const open = /<a:extLst\b[^>]*>\s*$/.exec(out.slice(0, start))
+    const close = /^\s*<\/a:extLst\s*>/.exec(out.slice(end))
+    if (open && close) {
+      start = open.index
+      end += close[0].length
+    }
+    out = out.slice(0, start) + out.slice(end)
+  }
+  return collapseEmptyProps(out)
 }
 
 /**
@@ -146,7 +187,7 @@ function collapseEmptyProps(xml: string): string {
 }
 
 /**
- * Put the mark in a raw `<a:rPr>` (or `nvPr`) string, replacing any previous one.
+ * Put the mark in a raw `<a:rPr>` (or `<p:spPr>`) string, replacing any previous one.
  *
  * The `inner` of the node is preserved verbatim; only our own extension is added
  * or swapped. A self-closing `<a:rPr/>` gains a paired form because the mark
@@ -180,16 +221,30 @@ export function setRedactExt(propsXml: string, label: string): string {
   )
 }
 
-/** Replace our extension inside an existing `<a:extLst>`, or add one to the inner XML. */
+/**
+ * The node's inner XML with the mark in the node's OWN extension list, replacing any mark already
+ * in the node.
+ *
+ * The own list is the node's last child (both schemas put extLst last), and it is the only one
+ * the reader looks in. A list earlier in the node belongs to a child: PowerPoint gives
+ * <a:hlinkClick> one for the hyperlink colour, and an outline can carry one. Taking "the first
+ * extLst in the node" put the mark there, where it was written and never read back, so the words
+ * stopped being withheld once the deck was reopened.
+ */
 function spliceExtLst(inner: string, ext: string): string {
-  const list = /<a:extLst\b[^>]*?(?:\/>|>[\s\S]*?<\/a:extLst>)/.exec(inner)
-  // extLst is the last child both schemas allow here — prepending it before
-  // a:solidFill/a:latin/a:xfrm is a strict-validation failure
-  if (!list) return `${inner}<a:extLst>${ext}</a:extLst>`
-  const kept = list[0].replace(OUR_EXT_RE, '')
-  // our own extension goes last so a re-apply replaces rather than appends
-  const next = kept.includes('</a:extLst>')
-    ? kept.replace('</a:extLst>', `${ext}</a:extLst>`)
-    : kept.replace(/\/>$/, `>${ext}</a:extLst>`)
-  return inner.slice(0, list.index) + next + inner.slice(list.index + list[0].length)
+  // a mark already in the node goes first, wherever it sits, so a re-apply replaces it
+  const kept = without(inner, ourExtRanges(inner))
+  const body = kept.trimEnd()
+  const tail = kept.slice(body.length)
+  // the last thing in the node closes its last child, so a list ending here is the node's own
+  const close = /<\/a:extLst\s*>$/.exec(body)
+  if (close) return body.slice(0, close.index) + ext + body.slice(close.index) + tail
+  const selfClosing = /<a:extLst\b[^>]*\/>$/.exec(body)
+  if (selfClosing) {
+    const head = selfClosing[0].slice(0, -2)
+    return `${body.slice(0, selfClosing.index)}${head}>${ext}</a:extLst>${tail}`
+  }
+  // no list of its own: extLst is the last child both schemas allow here — prepending it
+  // before a:solidFill/a:latin/a:xfrm is a strict-validation failure
+  return `${kept}<a:extLst>${ext}</a:extLst>`
 }

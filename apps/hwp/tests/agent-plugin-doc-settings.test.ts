@@ -108,7 +108,7 @@ describe('note settings', () => {
     }
     // HWPX keeps the emptied suffix. rhwp v0.9.0 reads an empty HWP5 suffix back as
     // Hangul's default `)` (#6872 marks only HWPX decorations as the source's own;
-    // docs/tracking/findings.md)
+    // docs/archive/ieum/tracking/findings.md)
     expect(JSON.parse(new HwpDocument(doc().exportHwpx()).getFootnoteShape(0))).toMatchObject({
       suffixChar: '',
     })

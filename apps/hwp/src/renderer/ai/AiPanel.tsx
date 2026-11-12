@@ -105,6 +105,7 @@ import {
   type HoldState,
   type TurnProposal,
 } from './turn-proposal'
+import { isRtlLang } from '@genoffice/i18n'
 
 const PANEL_WIDTH_KEY = 'hwp-ai-panel-width'
 const PANEL_WIDTH_DEFAULT = 360
@@ -256,8 +257,9 @@ export function AiPanel({
    */
   prefill?: AiPrefill | null
   /**
-   * the panel took an `autoRun` request: the owner clears it (`afterPrefillTaken`), so the
-   * request runs once even when the panel mounts again with the same props
+   * the panel took a request (sent an `autoRun` one, put any other in the input box): the
+   * owner clears it (`afterPrefillTaken`), so it is taken once even when the panel mounts
+   * again with the same props
    */
   onPrefillTaken?: (taken: AiPrefill) => void
   /**
@@ -275,10 +277,13 @@ export function AiPanel({
   const [prompt, setPrompt] = useState('')
   const [busy, setBusy] = useState(false)
 
-  // a request handed over by the document check: it waits in the input box for the user
+  // a request handed over by the document check: it waits in the input box for the user,
+  // and from then on it is the box's text, not a request the app still holds
   useEffect(() => {
     if (!prefill || prefill.autoRun) return
     setPrompt(prefill.text)
+    onPrefillTaken?.(prefill)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- once per handed request
   }, [prefill])
 
   /** an undo of a run is on its way to the editor */
@@ -1465,7 +1470,7 @@ export function AiPanel({
       ref={asideRef}
       className={`copilot${resizing ? ' ai-panel-resizing' : ''}${dragOver ? ' ai-panel-dragover' : ''}`}
       style={{ width: '100%' }}
-      dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      dir={isRtlLang(lang) ? 'rtl' : undefined}
       onDragOver={(e) => {
         if (e.dataTransfer.types.includes('Files')) {
           e.preventDefault()
@@ -1652,7 +1657,6 @@ export function AiPanel({
             onRecheck={subscription.recheck}
             onAcceptMetered={subscription.acceptMetered}
             onOpenInstallHelp={subscription.openInstallHelp}
-            onOpenConnectHelp={subscription.openConnectHelp}
           />
         )}
         {sendGate.noticeDue && (
@@ -1792,7 +1796,7 @@ export function AiPanel({
             role="dialog"
             aria-modal="true"
             aria-labelledby={memoApprovalTitleId}
-            dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+            dir={isRtlLang(lang) ? 'rtl' : undefined}
           >
             <div className="memo-modal-head">
               <span id={memoApprovalTitleId} className="memo-modal-title">

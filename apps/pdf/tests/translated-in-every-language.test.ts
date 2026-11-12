@@ -7,23 +7,6 @@ const CHECKED = (key: string): boolean =>
     key,
   )
 
-// "lang:key" pairs whose translation is rightly the same word as the English.
-const SAME_AS_ENGLISH = new Set<string>([
-  'de:formDesignChoice',
-  'de:certPosition',
-  'es:formTextColor',
-  'fr:certContact',
-  'fr:certPage',
-  'fr:certPosition',
-  'fr:sigPanel',
-  'fr:sigOnPage',
-  'fr:sigContact',
-  'id:sigStatusValid',
-  'it:certPassword',
-  'nl:certContact',
-  'nl:sigContact',
-])
-
 describe('translations', () => {
   it('leave none of the checked strings in English', () => {
     const all: Record<string, Record<string, string>> = strings
@@ -35,9 +18,7 @@ describe('translations', () => {
           .filter(CHECKED)
           .filter(
             (key) =>
-              !SAME_AS_ENGLISH.has(`${lang}:${key}`) &&
-              all[lang]![key] === en[key] &&
-              /[A-Za-z]{3,}/.test(en[key]!.replace(/\{\w+\}/g, '')),
+              all[lang]![key] === en[key] && /[A-Za-z]{3,}/.test(en[key]!.replace(/\{\w+\}/g, '')),
           )
           .map((key) => `${lang}:${key}`),
       )

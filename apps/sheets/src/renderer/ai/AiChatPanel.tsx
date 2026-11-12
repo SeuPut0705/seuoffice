@@ -47,7 +47,6 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
   AiSubscriptionUsage,
-  SubscriptionConnectHelpPath,
 } from '@genoffice/ai-provider/browser'
 import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import type { AiBlockedRun } from './subscription-state'
@@ -71,6 +70,7 @@ import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
+import { isRtlLang } from '@genoffice/i18n'
 
 /** Clipboard bitmap MIME → attachment extension (matches the main process's
  * ATTACHMENT_IMAGE_EXTS) */
@@ -179,8 +179,6 @@ export interface AiPanelSubscription {
   readonly busy: boolean
   /** the connect cards' buttons */
   readonly actions: AiSubscriptionCardActions
-  /** open the website's step-by-step connect help at the guide's path */
-  readonly openConnectHelp?: ((path: SubscriptionConnectHelpPath | null) => void) | undefined
   /** look again without a card asking for it (both providers when none is named) */
   readonly refresh: (providers?: AiSubscriptionProviderId[]) => void
   /** rate-limit windows the subscription provider reported on its latest turn */
@@ -366,7 +364,7 @@ export function AiChatPanel({
     )
   }, [historicChat])
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
-  const isRtl = lang === 'ar' || lang === 'he'
+  const isRtl = isRtlLang(lang)
   const chatRef = useRef<HTMLDivElement | null>(null)
   const inputRef = useRef<HTMLTextAreaElement | null>(null)
   useEffect(() => {
@@ -841,7 +839,6 @@ export function AiChatPanel({
             disabled={subscription.busy}
             attention={subscription.connectAttention}
             onOpenSettings={() => void window.desktopApi.openAiModelSettings().catch(() => {})}
-            onOpenConnectHelp={subscription.openConnectHelp}
             {...subscription.actions}
           />
         )}

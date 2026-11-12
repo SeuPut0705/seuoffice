@@ -188,30 +188,54 @@ export function createRecoveryCopier(options: RecoveryCopierOptions): RecoveryCo
 }
 
 /**
- * The plugin calls that only read the document (or draw over it). The AI panel asks for
- * the selection every 0.7 s: that is no change and no work of the user's.
+ * The plugin calls after which the saved file is what it was: they read the document, or
+ * change only what the editor shows or takes (marks and memo anchors drawn over the pages,
+ * menu entries, the input lock of a dialog or a run). The AI panel asks for the selection
+ * every 0.7 s and the memo panel lists the memos as it opens: that is no change and no work
+ * of the user's. A call not named here counts as a change, so a new call that writes is
+ * counted without being added anywhere; a new call that only reads is added here
+ * (tests/change-notes.test.ts makes each call on a real document and compares the file).
  */
 const READING_CALLS: ReadonlySet<string> = new Set([
+  // read the document
   'foreignChanges',
   'readText',
   'documentProfile',
   'findText',
   'listTables',
   'readTable',
+  'checkLayout',
+  'listPictures',
+  'readPicture',
   'selection',
   'listFields',
   'listNotes',
+  'noteSettings',
+  'pageSetup',
   'listStyles',
+  'readStyle',
+  'formatting',
+  'paragraphLooks',
   'measureTabs',
   'printPages',
   'previewPage',
+  'pageTarget',
+  'listMemos',
+  'memoSelection',
+  'runSteps',
+  // change what the editor shows or takes, not the document
   'reveal',
   'clearMarks',
+  'showMemoAnchors',
+  'selectMemo',
   'installFileMenu',
+  'installEasyWords',
+  'showCharCount',
+  'watchMissingFonts',
+  'setMemoLock',
   'setRunLock',
   'strandRun',
   'setHeldRun',
-  'runSteps',
 ])
 
 /**

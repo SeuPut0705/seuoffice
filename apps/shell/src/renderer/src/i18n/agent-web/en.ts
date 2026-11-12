@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   actWebSearch: 'Web search',
   actWebFetch: 'Read web page',
@@ -21,4 +19,4 @@ export const en = {
   codexFolderNote: 'These two settings are remembered for each project folder.',
   providerCodexNoteWeb:
     'Commands run in Codex’s isolated space: only the project folder can be written, and there is no internet unless you turn it on.',
-} satisfies Record<keyof typeof zh, string>
+}

@@ -344,6 +344,38 @@ describe('fetchWithSsrfGuard', () => {
     expect(fetchImpl).not.toHaveBeenCalled()
   })
 
+  it('hands a redirect back unfollowed when asked to, after the same checks', async () => {
+    const moved = res(302, 'https://1.1.1.1/final.png')
+    const fetchImpl = vi.fn().mockResolvedValueOnce(moved)
+    const out = await fetchWithSsrfGuard('https://8.8.8.8/start.png', {
+      fetchImpl,
+      redirect: 'manual',
+      headers: { 'User-Agent': 'test-agent' },
+    })
+    // the caller follows by asking again, which checks the next address the same way
+    expect(out).toBe(moved)
+    expect(out?.headers.get('location')).toBe('https://1.1.1.1/final.png')
+    expect(fetchImpl).toHaveBeenCalledTimes(1)
+    expect(fetchImpl.mock.calls[0][1]).toMatchObject({
+      headers: { 'User-Agent': 'test-agent' },
+      redirect: 'manual',
+    })
+
+    // a hop that fails the check is still never requested
+    const blocked = vi.fn()
+    await expect(
+      fetchWithSsrfGuard('http://169.254.169.254/latest/', {
+        fetchImpl: blocked,
+        redirect: 'manual',
+      }),
+    ).resolves.toBeNull()
+    dnsResult('10.0.0.7')
+    await expect(
+      fetchWithSsrfGuard('https://intranet.example/x', { fetchImpl: blocked, redirect: 'manual' }),
+    ).resolves.toBeNull()
+    expect(blocked).not.toHaveBeenCalled()
+  })
+
   it('does not request anything when the signal is already aborted', async () => {
     const controller = new AbortController()
     controller.abort()

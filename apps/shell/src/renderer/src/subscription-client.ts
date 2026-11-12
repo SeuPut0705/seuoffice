@@ -9,7 +9,6 @@ import {
 } from '@genoffice/ui'
 import type {
   AiSubscriptionProviderId,
-  SubscriptionConnectHelpPath,
   SubscriptionLoginMode,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
@@ -58,8 +57,6 @@ export interface SubscriptionConnection {
   /** stop using a vendor CLI in this app (`true`), or use it again; the program keeps its login */
   readonly setOff: (provider: AiSubscriptionProviderId, off: boolean) => void
   readonly openInstallHelp: (provider: AiSubscriptionProviderId) => void
-  /** open the website's step-by-step connect help at the guide's path */
-  readonly openConnectHelp: (path: SubscriptionConnectHelpPath | null) => void
 }
 
 export function useSubscriptionConnection(): SubscriptionConnection {
@@ -86,6 +83,5 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     acceptMetered: shared.acceptMetered,
     setOff: shared.setOff,
     openInstallHelp: shared.openInstallHelp,
-    openConnectHelp: shared.openConnectHelp,
   }
 }

@@ -92,8 +92,6 @@ export {
 } from './effort'
 export type { AiEffort, AiModelEffort } from './effort'
 export { keyEffortBody, keyModelEffort, keyProviderEffort, takesKeyEffort } from './key-effort'
-export { subscriptionConnectHelpUrl } from './connect-help'
-export type { SubscriptionConnectHelpPath } from './connect-help'
 export {
   SUBSCRIPTION_INSTALL_COMMANDS,
   SUBSCRIPTION_INSTALL_URLS,
@@ -262,7 +260,15 @@ export type {
 } from './registry'
 export { sanitizeAiSettings, sanitizeCliPath, validCliPath } from './ai-settings-guard'
 export { chatForProvider } from './chat'
-export { setAiUserAgent, setRescueFetch } from './fetch'
+export {
+  AiRedirectRefusedError,
+  fetchSeeingRedirects,
+  keyedDownload,
+  keyedFetch,
+  setAiUserAgent,
+  setRescueFetch,
+} from './fetch'
+export type { AiRedirectRefusal, KeyedDownloadOptions, KeyedFetchBase } from './fetch'
 export { isAiNetworkError } from './network-error'
 export { isAiOverloadedError } from './overload-error'
 export { freeLimitOf, isOpenRouterFreeModel } from './free-ai'

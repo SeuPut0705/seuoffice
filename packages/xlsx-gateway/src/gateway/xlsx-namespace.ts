@@ -20,6 +20,43 @@ const OFFICE_RELATIONSHIPS_NAMESPACE =
 /// (legal in XML) from ending the match early.
 const ROOT_START_TAG = /<(?![?!])(?:[^>"']|"[^"]*"|'[^']*')*?\/?>/
 
+/// The relationships namespace of the transitional format and of the strict one.
+const RELATIONSHIP_NAMESPACES = new Set([
+  OFFICE_RELATIONSHIPS_NAMESPACE,
+  'http://purl.oclc.org/ooxml/officeDocument/relationships',
+])
+const ATTRIBUTE = /([^\s=<>/"']+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+const NAMESPACE_DECLARATION = /(?:^|\s)xmlns:([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
+
+/// The relationship id an element carries (`r:id`), or undefined when it has
+/// none. `precedingXml` is the part up to the element: the start tags of its
+/// ancestors, where the prefix is declared.
+///
+/// The attribute is read by its qualified name, whatever the quotes and the
+/// space around `=`, and one attribute at a time, so text inside another
+/// attribute's value is not taken for it. The prefix is the one the part binds
+/// to the relationships namespace: `r` by convention, but any name is legal,
+/// and `xr:id` (a revision id) is not a relationship. A prefix bound to that
+/// namespace anywhere in scope counts, and so does an `r` nobody declares:
+/// what cannot be told is read as a relationship, because the callers treat
+/// one as "this is not data of this workbook".
+export function relationshipIdOf(startTag: string, precedingXml: string): string | undefined {
+  const tag = ROOT_START_TAG.exec(startTag)?.[0] ?? startTag
+  const bound = new Map<string, boolean>()
+  for (const declaration of `${precedingXml} ${tag}`.matchAll(NAMESPACE_DECLARATION)) {
+    const prefix = declaration[1] ?? ''
+    const toRelationships = RELATIONSHIP_NAMESPACES.has(declaration[2] ?? declaration[3] ?? '')
+    bound.set(prefix, toRelationships || bound.get(prefix) === true)
+  }
+  for (const attribute of tag.matchAll(ATTRIBUTE)) {
+    const name = attribute[1] ?? ''
+    if (!name.endsWith(':id')) continue
+    const prefix = name.slice(0, -':id'.length)
+    if (bound.get(prefix) ?? prefix === 'r') return attribute[2] ?? attribute[3] ?? ''
+  }
+  return undefined
+}
+
 /// Elements the pipeline appends carry r:-prefixed attributes; some
 /// producers bind r on individual elements only, so the host root gets the
 /// conventional binding before such an element is inserted.

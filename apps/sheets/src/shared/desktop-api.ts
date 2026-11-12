@@ -223,6 +223,13 @@ const worksheetMetadataSchema = z
     ),
     /// PivotTable output areas; the renderer blocks edits inside them.
     pivotRanges: z.array(cellAreaSchema).max(1_000),
+    /// PivotTable relationships of this sheet whose output range the sidecar
+    /// could not read (part missing, no location, no ref, ref not a range).
+    /// Such a pivot is in neither pivotRanges nor pivotTables, so its output
+    /// cells look like ordinary cells: a reader that withholds pivot output
+    /// (cells hidden from AI) must treat the whole sheet as pivot output when
+    /// this is not 0. Defaulted for stale sidecar binaries, like pivotTables.
+    pivotsUnlocated: z.number().int().nonnegative().default(0),
     /// Part paths for on-demand pivot definition reads (refresh support).
     /// Defaulted so a stale sidecar binary degrades to "no refresh" gracefully.
     pivotTables: z
@@ -2752,6 +2759,9 @@ export const workbookPivotDefinitionSchema = z
           .strict(),
       )
       .max(256),
+    /// The extent of the report filters above the output; absent when not known.
+    pageRows: z.number().int().nonnegative().max(1_048_576).optional(),
+    pageColumns: z.number().int().nonnegative().max(16_384).optional(),
     /// Value/label filters (pivotFilters); filtered-out members are hidden entries
     /// in fieldItems.
     filters: z
@@ -3464,13 +3474,13 @@ export interface DesktopApi {
    *  files); families that are not Korean are left out */
   fontFamilyInfo(families: readonly string[]): Promise<Array<[string, FontFamilyInfo]>>
   /** current UI language (persisted by the shell in app-settings.json) */
-  getLanguage(): Promise<'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'>
+  getLanguage(): Promise<'en' | 'ko'>
+  /** the language documents are read and drawn for: number formats and the legacy
+   *  code page guess follow it. A document-locale code, worked out from the language
+   *  the install asks for; it names more languages than the UI has */
+  getDocumentLocale(): Promise<string>
   /** language switched from the shell home page */
-  onLanguageChanged(
-    handler: (
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => void,
-  ): () => void
+  onLanguageChanged(handler: (lang: 'en' | 'ko') => void): () => void
   /** current UI theme preference (persisted by the shell in app-settings.json) */
   getTheme(): Promise<UiTheme>
   /** theme switched from the shell home page */

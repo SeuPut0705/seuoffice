@@ -23,7 +23,7 @@ import {
 } from './placeholder'
 import { isPresetShapeType } from './preset-shape-types'
 import { custGeomXml, parseCustGeom, validCustGeomPath, type CustGeomPath } from './custgeom'
-import { nextSlideId } from './slide-ids'
+import { canListSlide, withSlideListed, withSlideUnlisted } from './slide-ids'
 import {
   alternateContentBranches,
   generateParagraphXml,
@@ -60,10 +60,19 @@ import {
   type NewTableOptions,
 } from './insert'
 import { BLANK_SLIDE_XML } from './blank'
-import { escapeXmlAttr, hasContentTypeOverride, maxRelationshipIdNumber } from './xml-utils'
+import {
+  attributeOf,
+  decodeXml,
+  escapeXmlAttr,
+  hasContentTypeOverride,
+  hasDefaultFor,
+  maxRelationshipIdNumber,
+  withRelationshipIds,
+} from './xml-utils'
+import { ownValue, setOwn } from './own-value'
 import { elementSpid } from './animation'
 import { stripStaleEmbeddedFonts } from './embedded-fonts'
-import { ensureCreationId, matchesElementRef } from './identity'
+import { ensureCreationId, matchesElementRef, withFreshCreationIds } from './identity'
 import { listMasterParts, parseMasterPart } from './master-edit'
 import type {
   Paragraph,
@@ -484,12 +493,14 @@ function parseSlideFromArchive(archive: PackageArchive, slidePath: string): Slid
       if (vml) {
         const vmlRels = archive.readRels(vmlPath)
         for (const m of vml.matchAll(/<v:shape\b([^>]*)>([\s\S]*?)<\/v:shape>/g)) {
-          const relid = /<v:imagedata\b[^>]*\bo:relid="([^"]+)"/.exec(m[2]!)?.[1]
+          const imageData = /<v:imagedata\b[^>]*>/.exec(m[2]!)?.[0]
+          const relid = imageData ? attributeOf(imageData, 'o:relid') : undefined
           const imgRel = relid ? vmlRels.get(relid) : undefined
           if (!imgRel) continue
           const target = resolveTarget(vmlPath, imgRel.target)
+          // decoded: the slide's oleObj names the shape by the value, which the parser reads
           for (const key of ['id', 'o:spid']) {
-            const v = new RegExp(`\\b${key}="([^"]+)"`).exec(m[1]!)?.[1]
+            const v = attributeOf(m[0], key)
             if (v) vmlPreviews.set(v, target)
           }
         }
@@ -500,9 +511,8 @@ function parseSlideFromArchive(archive: PackageArchive, slidePath: string): Slid
       const dataPath = resolveTarget(slidePath, rel.target)
       const dataXml = archive.readText(dataPath)
       if (dataXml) diagramDatas.set(rel.id, dataXml)
-      const relId = dataXml
-        ? /<dsp:dataModelExt\b[^>]*\brelId="([^"]+)"/.exec(dataXml)?.[1]
-        : undefined
+      const modelExt = dataXml ? /<dsp:dataModelExt\b[^>]*>/.exec(dataXml)?.[0] : undefined
+      const relId = modelExt ? attributeOf(modelExt, 'relId') : undefined
       if (relId) {
         const drawRel = rels.get(relId) ?? archive.readRels(dataPath).get(relId)
         const basePath = rels.get(relId) ? slidePath : dataPath
@@ -1046,7 +1056,7 @@ function imageRelFor(archive: PackageArchive, slide: Slide, mediaPath: string): 
   const rid = `rId${maxRid + 1}`
   // slide parts live in ppt/slides/, media in ppt/media/
   const target = mediaPath.replace(/^ppt\//, '../')
-  const relXml = `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${target}"/>`
+  const relXml = `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="${escapeXmlAttr(target)}"/>`
   archive.entries.set(
     relsPath,
     Buffer.from(
@@ -1260,7 +1270,7 @@ function swapAvLstXml(xml: string, adjust: Record<string, number>): string | nul
   const innerStart = open.index + open[0].length
   const inner = xml.slice(innerStart, end)
   const avRe = /<a:avLst\b[^>]*\/>|<a:avLst\b[\s\S]*?<\/a:avLst>/
-  const newInner = avRe.test(inner) ? inner.replace(avRe, av) : av + inner
+  const newInner = avRe.test(inner) ? inner.replace(avRe, () => av) : av + inner
   return xml.slice(0, innerStart) + newInner + xml.slice(end)
 }
 
@@ -1321,7 +1331,7 @@ export function setElementTextAnchor(
   const m = /<a:bodyPr\b[^>]*?\/?>/.exec(xml)
   if (!m) return false
   let tag = m[0].replace(/\s+anchor="[^"]*"/, '')
-  tag = tag.replace(/^<a:bodyPr/, `<a:bodyPr anchor="${val}"`)
+  tag = tag.replace(/^<a:bodyPr/, () => `<a:bodyPr anchor="${val}"`)
   xml = xml.slice(0, m.index) + tag + xml.slice(m.index + m[0].length)
   el.dirty = el.dirtyTransform = el.dirtyFill = el.dirtyStroke = false
   el.dirtyPPr = undefined
@@ -1389,7 +1399,7 @@ export function setElementTextBodyProps(
 
   const setAttr = (name: string, value: string | null) => {
     openTag = openTag.replace(new RegExp(`\\s+${name}="[^"]*"`), '')
-    if (value != null) openTag = openTag.replace(/^<a:bodyPr/, `<a:bodyPr ${name}="${value}"`)
+    if (value != null) openTag = openTag.replace(/^<a:bodyPr/, () => `<a:bodyPr ${name}="${value}"`)
   }
 
   if (patch.vert !== undefined) setAttr('vert', patch.vert === 'horz' ? null : patch.vert)
@@ -1845,9 +1855,12 @@ export function setPictureOpacity(slide: Slide, sourceId: string, opacity: numbe
   if (v < 0.999) {
     const amt = `<a:alphaModFix amt="${Math.round(v * 100000)}"/>`
     if (/<a:blip\b[^>]*\/>/.test(xml)) {
-      xml = xml.replace(/<a:blip\b([^>]*)\/>/, `<a:blip$1>${amt}</a:blip>`)
+      xml = xml.replace(
+        /<a:blip\b([^>]*)\/>/,
+        (_all, attrs: string) => `<a:blip${attrs}>${amt}</a:blip>`,
+      )
     } else if (/<a:blip\b[^>]*>/.test(xml)) {
-      xml = xml.replace(/(<a:blip\b[^>]*>)/, `$1${amt}`)
+      xml = xml.replace(/<a:blip\b[^>]*>/, (open) => `${open}${amt}`)
     } else {
       return false
     }
@@ -1889,19 +1902,23 @@ export function replacePictureBytes(
   const added = addImageMediaAndRel(opened, slide, bytes, ext)
   if (!added) return false
   let tag = blip[0]
-  const previousRId = /r:embed="([^"]*)"/.exec(tag)?.[1]
+  const previousRId = attributeOf(tag, 'r:embed')
   // A coexisting r:link ("insert and link" pictures) would keep refreshing from
   // the old external file, so it is dropped once the embed points at new bytes
-  if (/r:embed="/.test(tag))
-    tag = tag.replace(/r:embed="[^"]*"/, `r:embed="${added.rid}"`).replace(/\s+r:link="[^"]*"/, '')
-  else if (/r:link="/.test(tag)) tag = tag.replace(/r:link="[^"]*"/, `r:embed="${added.rid}"`)
-  else tag = tag.replace(/<a:blip\b/, `<a:blip r:embed="${added.rid}"`)
+  const embed = /\br:embed\s*=\s*(?:"[^"]*"|'[^']*')/
+  const link = /\br:link\s*=\s*(?:"[^"]*"|'[^']*')/
+  if (embed.test(tag))
+    tag = tag
+      .replace(embed, () => `r:embed="${added.rid}"`)
+      .replace(/\s+r:link\s*=\s*(?:"[^"]*"|'[^']*')/, '')
+  else if (link.test(tag)) tag = tag.replace(link, () => `r:embed="${added.rid}"`)
+  else tag = tag.replace(/<a:blip\b/, () => `<a:blip r:embed="${added.rid}"`)
   xml = xml.slice(0, blip.index) + tag + xml.slice(blip.index + blip[0].length)
   // A 3D model's Choice caches the same rendering (am3d:raster), which PowerPoint shows
   if (pic.model3d && previousRId) {
-    xml = xml.replace(
-      new RegExp(`(<am3d:blip\\b[^>]*\\br:embed=")${previousRId}"`),
-      `$1${added.rid}"`,
+    const repointed = new Map([[previousRId, added.rid]])
+    xml = xml.replace(/<am3d:blip\b[^>]*>/g, (cached) =>
+      withRelationshipIds(cached, ['embed'], repointed),
     )
   }
   // The replacement is always raster (IMAGE_MIME gate), and PowerPoint prefers a
@@ -1941,6 +1958,15 @@ function nextSlidePath(archive: PackageArchive): string {
 }
 
 /**
+ * Whether a slide can be added to the deck: its slide list is one this engine can write to
+ * (`canListSlide`). Everything that adds a slide asks first, before it writes a part, so a
+ * deck that cannot take the slide is left exactly as it was and the caller gets null.
+ */
+function canAddSlide(archive: PackageArchive): boolean {
+  return canListSlide(archive.readText('ppt/presentation.xml'))
+}
+
+/**
  * Register a new slide part (already written into the archive) with the package
  * and insert it into the deck: add an Override to [Content_Types].xml, register a
  * new sldId/rId in presentation.xml(.rels) (inserted after the sourceIndex slide's
@@ -1949,7 +1975,7 @@ function nextSlidePath(archive: PackageArchive): string {
 function registerNewSlide(opened: OpenedPptx, sourceIndex: number, newPath: string): Slide | null {
   const { deck, archive } = opened
   const src = deck.slides[sourceIndex]
-  if (!src) return null
+  if (!src || !canAddSlide(archive)) return null
 
   const ctPath = '[Content_Types].xml'
   const ct = archive.readText(ctPath)
@@ -1971,6 +1997,12 @@ function registerNewSlide(opened: OpenedPptx, sourceIndex: number, newPath: stri
   if (!presRels || !pres) return null
   const maxRid = maxRelationshipIdNumber(presRels)
   const newRid = `rId${maxRid + 1}`
+  // Listed after the source slide; at the end of the list when that one is not found
+  const srcRid = [...archive.readRels(presPath).values()].find(
+    (r) => resolveTarget(presPath, r.target) === src.path,
+  )?.id
+  const nextPres = withSlideListed(pres, newRid, srcRid)
+  if (nextPres === null) return null
   const relXml = `<Relationship Id="${newRid}" Type="${SLIDE_REL_TYPE}" Target="${newPath.slice('ppt/'.length)}"/>`
   archive.entries.set(
     presRelsPath,
@@ -1979,18 +2011,6 @@ function registerNewSlide(opened: OpenedPptx, sourceIndex: number, newPath: stri
       'utf8',
     ),
   )
-
-  const newSldId = `<p:sldId id="${nextSlideId(pres)}" r:id="${newRid}"/>`
-  // Insert after the source slide's sldId; append to the end of the list when not found
-  const srcRid = [...archive.readRels(presPath).values()].find(
-    (r) => resolveTarget(presPath, r.target) === src.path,
-  )?.id
-  const srcTag = srcRid
-    ? new RegExp(`<p:sldId\\s[^>]*r:id="${srcRid}"[^>]*/>`).exec(pres)?.[0]
-    : undefined
-  const nextPres = srcTag
-    ? pres.replace(srcTag, () => `${srcTag}${newSldId}`)
-    : pres.replace('</p:sldIdLst>', () => `${newSldId}</p:sldIdLst>`)
   archive.entries.set(presPath, Buffer.from(nextPres, 'utf8'))
 
   const slide = parseSlideFromArchive(archive, newPath)
@@ -2013,7 +2033,7 @@ export function duplicateSlide(
 ): Slide | null {
   const { deck, archive } = opened
   const src = deck.slides[sourceIndex]
-  if (!src) return null
+  if (!src || !canAddSlide(archive)) return null
 
   const newPath = nextSlidePath(archive)
   archive.entries.set(newPath, Buffer.from(patchSlideXml(src), 'utf8'))
@@ -2062,7 +2082,7 @@ export function pasteSlide(
   opts?: { keepSourceFormatting?: boolean },
 ): Slide | null {
   const { deck, archive } = opened
-  if (deck.slides.length === 0) return null
+  if (deck.slides.length === 0 || !canAddSlide(archive)) return null
   const anchorIndex = Math.min(Math.max(afterIndex, -1), deck.slides.length - 1)
   const neighbour = deck.slides[anchorIndex] ?? deck.slides[0]
   const layoutPath =
@@ -2092,7 +2112,7 @@ export function pasteSlide(
 export function insertBlankSlide(opened: OpenedPptx, sourceIndex: number): Slide | null {
   const { deck, archive } = opened
   const src = deck.slides[sourceIndex]
-  if (!src) return null
+  if (!src || !canAddSlide(archive)) return null
 
   const newPath = nextSlidePath(archive)
   archive.entries.set(newPath, Buffer.from(BLANK_SLIDE_XML, 'utf8'))
@@ -2133,7 +2153,7 @@ function ensureDefaultContentType(archive: PackageArchive, ext: string, contentT
   const ctPath = '[Content_Types].xml'
   const ct = archive.readText(ctPath)
   if (!ct) return
-  if (new RegExp(`<Default\\s[^>]*Extension="${ext}"`, 'i').test(ct)) return
+  if (hasDefaultFor(ct, ext)) return
   // Insert before </Types>. indexOf('>') finds the XML declaration's closing
   // angle bracket first, so splicing there would put the Default between the
   // declaration and <Types> — outside the root element — and every OPC reader
@@ -2242,6 +2262,7 @@ export function mergeSlideFromSource(
   opts: MergeSlideOptions = {},
 ): Slide | null {
   const { deck, archive } = target
+  if (!canAddSlide(archive)) return null
   let slideXml = source.slideXml
   const mediaByPath = new Map(source.media.map((m) => [m.path, m.bytes]))
 
@@ -2256,6 +2277,8 @@ export function mergeSlideFromSource(
   const newRelsLines: string[] = []
   let ridSeq = 0
   const nextRid = () => `rId${++ridSeq}`
+  /** source rId → the rId the same media has in the new slide's rels */
+  const ridMap = new Map<string, string>()
 
   for (const rel of source.rels) {
     if (MEDIA_REL_SUFFIXES.some((s) => rel.type.endsWith(s))) {
@@ -2266,14 +2289,11 @@ export function mergeSlideFromSource(
       const ext = (srcMediaPath.split('.').pop() || 'png').toLowerCase()
       const destPath = nextMediaPath(archive, ext)
       archive.entries.set(destPath, bytes)
-      ensureDefaultContentType(archive, ext, MIME_BY_EXT[ext] ?? 'application/octet-stream')
-      const oldRid = rel.id
+      // the extension is the source deck's: the table answers its own extensions only
+      const mime = ownValue(MIME_BY_EXT, ext) ?? 'application/octet-stream'
+      ensureDefaultContentType(archive, ext, mime)
       const newRid = nextRid()
-      // Rewrite r:embed / r:link references in the slide XML to the new rId
-      slideXml = slideXml.replace(
-        new RegExp(`(r:(?:embed|link)=")${oldRid}(")`, 'g'),
-        `$1${newRid}$2`,
-      )
+      ridMap.set(rel.id, newRid)
       const relTarget = '../media/' + destPath.slice('ppt/media/'.length)
       newRelsLines.push(
         `<Relationship Id="${newRid}" Type="${IMAGE_REL_TYPE}" Target="${escapeXmlAttr(relTarget)}"/>`,
@@ -2290,6 +2310,8 @@ export function mergeSlideFromSource(
     }
     // notesSlide and others (e.g. comments) are dropped
   }
+  // Re-point the r:embed / r:link references in the slide XML at the new rIds
+  slideXml = withRelationshipIds(slideXml, ['embed', 'link'], ridMap)
 
   // Write the new slide XML + rels
   archive.entries.set(newPath, Buffer.from(slideXml, 'utf8'))
@@ -2353,13 +2375,13 @@ export function deleteSlide(opened: OpenedPptx, index: number): boolean {
   )?.id
   if (!rid) return false
 
-  const sldTag = new RegExp(`<p:sldId\\s[^>]*r:id=["']${rid}["'][^>]*/>`).exec(pres)?.[0]
-  if (!sldTag) return false
-  archive.entries.set(presPath, Buffer.from(pres.replace(sldTag, ''), 'utf8'))
-  const relTag = new RegExp(`<Relationship\\s[^>]*Id=["']${rid}["'][^>]*/>`).exec(presRels)?.[0]
-  if (relTag) {
-    archive.entries.set(presRelsPath, Buffer.from(presRels.replace(relTag, ''), 'utf8'))
-  }
+  const nextPres = withSlideUnlisted(pres, rid)
+  if (nextPres === null) return false
+  archive.entries.set(presPath, Buffer.from(nextPres, 'utf8'))
+  const nextRels = presRels.replace(/<Relationship\b[^>]*\/\s*>/g, (tag) =>
+    attributeOf(tag, 'Id') === rid ? '' : tag,
+  )
+  if (nextRels !== presRels) archive.entries.set(presRelsPath, Buffer.from(nextRels, 'utf8'))
 
   removePartWithOwnedResources(archive, slide.path)
   deck.slides.splice(index, 1)
@@ -2587,11 +2609,13 @@ export function setSlideLayout(
     'g',
   )
   let next: string | null = null
+  // Functions, not strings: the target is a part name the deck chose, and a replacement string
+  // would expand a `$&` or `$$` in it
   for (const m of rels.matchAll(existing)) {
     if (!m[0].includes('slideLayout')) continue
     next =
       rels.slice(0, m.index) +
-      m[0].replace(/\bTarget="[^"]*"/, `Target="${escapeXmlAttr(relTarget)}"`) +
+      m[0].replace(/\bTarget="[^"]*"/, () => `Target="${escapeXmlAttr(relTarget)}"`) +
       rels.slice(m.index! + m[0].length)
     break
   }
@@ -2599,7 +2623,8 @@ export function setSlideLayout(
     const maxRid = maxRelationshipIdNumber(rels)
     next = rels.replace(
       '</Relationships>',
-      `<Relationship Id="rId${maxRid + 1}" Type="${LAYOUT_REL_TYPE}" Target="${escapeXmlAttr(relTarget)}"/></Relationships>`,
+      () =>
+        `<Relationship Id="rId${maxRid + 1}" Type="${LAYOUT_REL_TYPE}" Target="${escapeXmlAttr(relTarget)}"/></Relationships>`,
     )
   }
   opened.archive.entries.set(relsPath, Buffer.from(next, 'utf8'))
@@ -2679,7 +2704,9 @@ export function setSlideSize(opened: OpenedPptx, cx: number, cy: number): boolea
   const hasCy = /\bcy=["']\d+["']/.test(sldSz)
   if (!hasCx && !hasCy) return false
   const next = pres.replace(sldSz, () =>
-    sldSz.replace(/\bcx=["']\d+["']/, `cx="${cx}"`).replace(/\bcy=["']\d+["']/, `cy="${cy}"`),
+    sldSz
+      .replace(/\bcx=["']\d+["']/, () => `cx="${cx}"`)
+      .replace(/\bcy=["']\d+["']/, () => `cy="${cy}"`),
   )
   archive.entries.set(presPath, Buffer.from(next, 'utf8'))
   deck.size = { cx, cy }
@@ -2889,7 +2916,8 @@ export function ensureTableStylePart(
       Buffer.from(
         ct.replace(
           '</Types>',
-          `<Override PartName="/${path}" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/></Types>`,
+          () =>
+            `<Override PartName="/${path}" ContentType="application/vnd.openxmlformats-officedocument.presentationml.tableStyles+xml"/></Types>`,
         ),
         'utf8',
       ),
@@ -2902,7 +2930,10 @@ export function ensureTableStylePart(
     const rel = `<Relationship Id="rId${maxRid + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/tableStyles" Target="tableStyles.xml"/>`
     archive.entries.set(
       presRelsPath,
-      Buffer.from(presRels.replace('</Relationships>', rel + '</Relationships>'), 'utf8'),
+      Buffer.from(
+        presRels.replace('</Relationships>', () => rel + '</Relationships>'),
+        'utf8',
+      ),
     )
   }
 }
@@ -2947,22 +2978,14 @@ export function editChartElement(
   const chartEl = el as ChartElement
   if (chartEl.descr !== 'aislides-chart') return false // only charts created by this app are editable
 
-  // Find the chart part path (looked up from the slide rels)
+  // The chart part: the relationship the frame's own <c:chart> names, looked up in the slide
+  // rels by its decoded id
   const { archive } = opened
-  const relsPath = relsPathFor(slide.path)
-  const rels = archive.readText(relsPath)
-  if (!rels) return false
-
-  // Find the r:id in originalXml
-  const rIdInFrame = /r:id=["']([^"']+)["']/.exec(el.anchor.originalXml)
-  if (!rIdInFrame) return false
-  const rId = rIdInFrame[1]!
-
-  // Find the chart part path in the rels
-  const relRe = new RegExp(`Id=["']${escapeRegex(rId)}["'][^>]*Target=["']([^"']+)["']`)
-  const relMatch = relRe.exec(rels)
-  if (!relMatch) return false
-  const chartPath = resolveTarget(slide.path, relMatch[1]!)
+  const chartTag = /<c:chart\b[^>]*>/.exec(el.anchor.originalXml)?.[0]
+  const rId = chartTag ? attributeOf(chartTag, 'r:id') : undefined
+  const chartRel = rId === undefined ? undefined : archive.readRels(slide.path).get(rId)
+  if (!chartRel) return false
+  const chartPath = resolveTarget(slide.path, chartRel.target)
 
   // Read existing chart data (used to fill unspecified fields)
   const existing = chartEl.chart
@@ -3111,12 +3134,14 @@ function patchOwnCNvPrAttr(
   const m = /<p:cNvPr\b[^>]*?\/?>/.exec(xml)
   if (!m) return false
   const re = new RegExp(`\\s${name}="[^"]*"`)
+  // Functions, not strings: the value is a name the user typed, and a replacement string would
+  // expand a `$&` or `$$` in it
   const tag =
     value === undefined
       ? m[0].replace(re, '')
       : re.test(m[0])
-        ? m[0].replace(re, ` ${name}="${escapeXmlAttr(value)}"`)
-        : m[0].replace(/(\s*\/?>)$/, ` ${name}="${escapeXmlAttr(value)}"$1`)
+        ? m[0].replace(re, () => ` ${name}="${escapeXmlAttr(value)}"`)
+        : m[0].replace(/(\s*\/?>)$/, (close) => ` ${name}="${escapeXmlAttr(value)}"${close}`)
   if (tag === m[0]) return true
   el.anchor.originalXml = xml.slice(0, m.index) + tag + xml.slice(m.index + m[0].length)
   slide.structureDirty = true
@@ -3139,11 +3164,6 @@ export function setElementName(slide: Slide, elementId: string, name: string): b
   const el = slide.elements.find((e) => e.id === elementId)!
   el.name = name
   return true
-}
-
-/** Escape RegExp special characters. */
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 /** Read a chart element's current data (for dialog echo-back). */
@@ -3878,7 +3898,7 @@ function setTcAttrXml(tcXml: string, name: string, val: number | null): string {
   return tcXml.replace(/<a:tc(\s[^>]*)?>/, (open) => {
     const cleaned = open.replace(new RegExp(`\\s${name}="[^"]*"`), '')
     if (val == null) return cleaned
-    return cleaned.replace(/^<a:tc/, `<a:tc ${name}="${val}"`)
+    return cleaned.replace(/^<a:tc/, () => `<a:tc ${name}="${val}"`)
   })
 }
 
@@ -3924,8 +3944,10 @@ export function mergeTableCells(
   /** Clear text + set the merge continuation flag. */
   const toCovered = (tcXml: string, mark: 'hMerge' | 'vMerge') =>
     setTcAttrXml(clearTcText(tcXml), mark, 1)
+  // A function, not a string: the paragraphs are the words of the merged-in cell, and a
+  // replacement string would expand a `$&` or `$$` in them
   const appendToAnchor = (parasXml: string) => {
-    if (parasXml) anchorXml = anchorXml.replace(/<\/a:txBody>/, `${parasXml}</a:txBody>`)
+    if (parasXml) anchorXml = anchorXml.replace(/<\/a:txBody>/, () => `${parasXml}</a:txBody>`)
   }
 
   if (op.kind === 'merge-right') {
@@ -4016,7 +4038,7 @@ export function setTableColWidth(
   el.dirty = el.dirtyTransform = el.dirtyFill = el.dirtyStroke = false
   el.dirtyPPr = undefined
   const w = Math.max(1, Math.round(wEmu))
-  const patched = gc.open.replace(/\bw="-?\d+"/, `w="${w}"`)
+  const patched = gc.open.replace(/\bw="-?\d+"/, () => `w="${w}"`)
   xml = xml.slice(0, gc.start) + patched + xml.slice(gc.start + gc.open.length)
 
   const dxRtl = table.rtl ? w - table.colWidths[col]! : 0
@@ -4064,8 +4086,8 @@ export function setTableRowHeight(
   const h = Math.max(1, Math.round(hEmu))
   const trOpen = /<a:tr(\s[^>]*)?>/.exec(xml.slice(tr.start, tr.end))![0]
   const patchedOpen = /\bh="-?\d+"/.test(trOpen)
-    ? trOpen.replace(/\bh="-?\d+"/, `h="${h}"`)
-    : trOpen.replace(/^<a:tr/, `<a:tr h="${h}"`)
+    ? trOpen.replace(/\bh="-?\d+"/, () => `h="${h}"`)
+    : trOpen.replace(/^<a:tr/, () => `<a:tr h="${h}"`)
   xml = xml.slice(0, tr.start) + patchedOpen + xml.slice(tr.start + trOpen.length)
 
   table.rowHeights[row] = h
@@ -4112,7 +4134,7 @@ export function resizeTable(slide: Slide, elementId: string, cx: number, cy: num
   let ci = 0
   // Opening tags only — paired-form gridCols (extLst children) must scale too
   xml = xml.replace(/<a:gridCol\b[^>]*>/g, (m) =>
-    ci < widths.length ? m.replace(/\bw="-?\d+"/, `w="${widths[ci++]}"`) : m,
+    ci < widths.length ? m.replace(/\bw="-?\d+"/, () => `w="${widths[ci++]}"`) : m,
   )
 
   const heights = scaleToSum(table.rowHeights, targetCy)
@@ -4121,8 +4143,8 @@ export function resizeTable(slide: Slide, elementId: string, cx: number, cy: num
     if (ri >= heights.length) return m
     const h = heights[ri++]!
     return /\bh="-?\d+"/.test(m)
-      ? m.replace(/\bh="-?\d+"/, `h="${h}"`)
-      : m.replace(/^<a:tr/, `<a:tr h="${h}"`)
+      ? m.replace(/\bh="-?\d+"/, () => `h="${h}"`)
+      : m.replace(/^<a:tr/, () => `<a:tr h="${h}"`)
   })
 
   const sumW = widths.reduce((a, b) => a + b, 0)
@@ -4170,10 +4192,10 @@ export function setTableCellAnchor(
   const tcPr = /<a:tcPr(\s[^>]*)?\/?>/.exec(tcXml)
   if (tcPr) {
     let tag = tcPr[0].replace(/\s+anchor="[^"]*"/, '')
-    tag = tag.replace(/^<a:tcPr/, `<a:tcPr anchor="${val}"`)
+    tag = tag.replace(/^<a:tcPr/, () => `<a:tcPr anchor="${val}"`)
     tcXml = tcXml.slice(0, tcPr.index) + tag + tcXml.slice(tcPr.index + tcPr[0].length)
   } else {
-    tcXml = tcXml.replace(/<\/a:tc>$/, `<a:tcPr anchor="${val}"/></a:tc>`)
+    tcXml = tcXml.replace(/<\/a:tc>$/, () => `<a:tcPr anchor="${val}"/></a:tc>`)
   }
   trXml = trXml.slice(0, tc.start) + tcXml + trXml.slice(tc.end)
   xml = xml.slice(0, tr.start) + trXml + xml.slice(tr.end)
@@ -4199,9 +4221,10 @@ export interface ElementClipboardItem {
   contentTypes?: Readonly<Record<string, string>>
 }
 
-// Quote-agnostic like the other relationship scanners: a slide written by a
-// producer that prefers single quotes still names its rIds.
-const RID_ATTR_RE = /\br:(?:embed|link|id)\s*=\s*(["'])(rId\d+)\1/g
+// The references an element carries with it. The id is taken whatever its shape: it is the name
+// the producer chose (`rId7`, `R7a3f`, `id5`), and one read only as `rId<number>` left the
+// relationships of a deck written another way behind. Quote-agnostic like the other scanners.
+const RID_ATTR_RE = /\br:(?:embed|link|id)\s*=\s*(?:"([^"]*)"|'([^']*)')/g
 
 /** Copy: grab the element's current XML and the relationships it references (part paths that pictures/charts etc. point at). */
 export function copyElementData(
@@ -4216,7 +4239,8 @@ export function copyElementData(
   const contentTypes: Record<string, string> = {}
   const seen = new Set<string>()
   for (const m of xml.matchAll(RID_ATTR_RE)) {
-    const rid = m[2]!
+    // decoded: the rels part may spell the same id another way
+    const rid = decodeXml(m[1] ?? m[2]!)
     if (seen.has(rid)) continue
     seen.add(rid)
     const rel = slideRels.get(rid)
@@ -4277,8 +4301,10 @@ export function pasteElements(
   const bundledParts: Record<string, string> = {}
   const bundledCT: Record<string, string> = {}
   for (const item of items) {
-    Object.assign(bundledParts, item.parts ?? {})
-    Object.assign(bundledCT, item.contentTypes ?? {})
+    // own entries, also under a name such as `__proto__`, which Object.assign would set the
+    // prototype with: a content type keyed by the extension of the document
+    for (const [k, v] of Object.entries(item.parts ?? {})) setOwn(bundledParts, k, v)
+    for (const [k, v] of Object.entries(item.contentTypes ?? {})) setOwn(bundledCT, k, v)
   }
   const pathMap = Object.keys(bundledParts).length
     ? importClipboardParts(archive, bundledParts, bundledCT)
@@ -4286,7 +4312,7 @@ export function pasteElements(
 
   let nextId = nextCNvPrId(slide)
   const xmls = items.map((item) => {
-    let xml = item.xml
+    const ridMap = new Map<string, string>()
     for (const rel of item.rels) {
       const landed = rel.external ? rel.target : (pathMap?.get(rel.target) ?? rel.target)
       const key = `${rel.type} ${landed}`
@@ -4308,21 +4334,16 @@ export function pasteElements(
         relsDirty = true
         byKey.set(key, rid)
       }
-      if (rid !== rel.rid) {
-        xml = xml.replace(new RegExp(`\\br:(embed|link|id)="${rel.rid}"`, 'g'), `r:$1="${rid}"`)
-      }
+      if (rid !== rel.rid) ridMap.set(rel.rid, rid)
     }
+    let xml = withRelationshipIds(item.xml, ['embed', 'link', 'id'], ridMap)
     xml = xml.replace(
       /(<p:cNvPr\s[^>]*\bid=["'])\d+(["'])/g,
       (_a, pre: string, post: string) => `${pre}${nextId++}${post}`,
     )
     // Pasted elements are new identities: mint fresh creationIds so durable ids
-    // never collide with their source elements on the same slide
-    xml = xml.replace(
-      /(<a16:creationId[^>]*\bid=")\{?[0-9A-Fa-f-]{36}\}?(")/g,
-      (_a, pre: string, post: string) =>
-        `${pre}{${globalThis.crypto.randomUUID().toUpperCase()}}${post}`,
-    )
+    // never collide with their source elements on the same slide, however the id is written
+    xml = withFreshCreationIds(xml)
     // Offset only the outermost xfrm's off (group child coordinate systems stay put)
     xml = xml.replace(/<a:off\b[^>]*\/>/, (tag) =>
       tag
@@ -4608,8 +4629,10 @@ export function groupChildSlices(grpXml: string): GroupChildSlice[] {
       continue
     }
     const xml = grpXml.slice(m.index, end)
-    const nvId = /<p:cNvPr\b[^>]*\bid="([^"]+)"/.exec(xml)?.[1]
-    slices.push({ start: m.index, end, xml, ...(nvId != null ? { nvId } : {}) })
+    // decoded, like the child's nvId the parser read
+    const cNvPr = /<p:cNvPr\b[^>]*>/.exec(xml)?.[0]
+    const nvId = (cNvPr && attributeOf(cNvPr, 'id')) || undefined
+    slices.push({ start: m.index, end, xml, ...(nvId !== undefined ? { nvId } : {}) })
     pos = end
   }
   return slices

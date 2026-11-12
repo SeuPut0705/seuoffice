@@ -135,7 +135,7 @@ describe('shared subscription connection', () => {
     expect(recheck).toHaveBeenCalledWith(['claude-code'])
   })
 
-  it('opening help falls back to a browser page when the bridge cannot', async () => {
+  it('opening install help falls back to a browser page when the bridge cannot', async () => {
     const open = vi.fn()
     vi.stubGlobal('open', open)
     const api = {
@@ -145,29 +145,24 @@ describe('shared subscription connection', () => {
     } as unknown as SubscriptionApiLike
     await mount({ api: () => api, help: 'auto' })
     act(() => connection.openInstallHelp('claude-code'))
-    act(() => connection.openConnectHelp('codex'))
-    expect(open).toHaveBeenCalledTimes(2)
+    expect(open).toHaveBeenCalledTimes(1)
     expect(String(open.mock.calls[0]![0])).toContain('claude')
   })
 
-  it('uses the bridge’s help handlers when it has them, and reads the Codex image answer', async () => {
+  it('uses the bridge’s help handler when it has one, and reads the Codex image answer', async () => {
     const open = vi.fn()
     vi.stubGlobal('open', open)
     const openInstallHelp = vi.fn(async () => undefined)
-    const openConnectHelp = vi.fn(async () => undefined)
     const api = {
       statuses: async () => statusMap('signed-out', 'signed-out'),
       recheck: async () => statusMap('signed-out', 'signed-out'),
       onChanged: () => () => undefined,
       openInstallHelp,
-      openConnectHelp,
       codexImageAvailable: async () => true,
     } as unknown as SubscriptionApiLike
     await mount({ api: () => api, help: 'api', readCodexImageAvailable: true })
     act(() => connection.openInstallHelp('claude-code'))
-    act(() => connection.openConnectHelp(null))
     expect(openInstallHelp).toHaveBeenCalledWith('claude-code')
-    expect(openConnectHelp).toHaveBeenCalledWith(null)
     expect(open).not.toHaveBeenCalled()
     expect(connection.codexImageAvailable).toBe(true)
   })

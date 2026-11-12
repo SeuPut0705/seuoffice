@@ -293,8 +293,8 @@ describe('the launch list on Home', () => {
 })
 
 describe('recovery list strings', () => {
-  it('covers every UI language with the zh key set, translated', () => {
-    const keys = Object.keys(recoveryListStrings.zh).sort()
+  it('covers every UI language with the en key set, translated', () => {
+    const keys = Object.keys(recoveryListStrings.en).sort()
     for (const lang of LANGS) {
       const dict = recoveryListStrings[lang] as Record<string, string>
       expect(Object.keys(dict).sort(), lang).toEqual(keys)

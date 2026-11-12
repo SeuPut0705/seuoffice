@@ -12,7 +12,7 @@ import { isPdfToolId, toolInputKind } from '../src/main/pdf-tools/tools'
  * The PDF tools window (decision 0030), fixed by reading the source where
  * Electron would be needed: it never reaches an AI provider, paths stay in
  * the main process, the window is sandboxed and wired once, and every string
- * exists in all 21 languages with the editor's own names for its commands.
+ * exists in every language with the editor's own names for its commands.
  */
 
 const src = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
@@ -157,9 +157,9 @@ describe('the window and its wiring', () => {
 })
 
 describe('strings', () => {
-  const keys = Object.keys(pdfToolsStrings.zh).sort()
+  const keys = Object.keys(pdfToolsStrings.en).sort()
 
-  it('fills every key in all 21 languages', () => {
+  it('fills every key in every language', () => {
     for (const lang of LANGS) {
       const dict = (pdfToolsStrings as Record<string, Record<string, string>>)[lang]!
       expect(Object.keys(dict).sort(), lang).toEqual(keys)
@@ -212,7 +212,7 @@ describe('strings', () => {
     }
   })
 
-  it('labels the Home card in all 21 languages', () => {
+  it('labels the Home card in every language', () => {
     for (const lang of LANGS) {
       const dict = (homeStrings as unknown as Record<string, Record<string, string>>)[lang]!
       expect(dict.pdfToolsCard, lang).toBeTruthy()

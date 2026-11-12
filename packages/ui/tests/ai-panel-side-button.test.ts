@@ -43,10 +43,10 @@ it('keeps the existing side when saving the preference fails', async () => {
     throw new Error('write failed')
   })
   vi.spyOn(console, 'error').mockImplementation(() => {})
-  act(() => root.render(createElement(AiPanelSideButton, { lang: 'zh', onMove })))
+  act(() => root.render(createElement(AiPanelSideButton, { lang: 'ko', onMove })))
   const button = host.querySelector('button')!
   await act(async () => button.click())
-  expect(button.getAttribute('aria-label')).toBe(AI_PANEL_SIDE_LABELS.zh.right)
+  expect(button.getAttribute('aria-label')).toBe(AI_PANEL_SIDE_LABELS.ko.right)
   expect(button.disabled).toBe(false)
   expect(document.documentElement.dataset.aiPanelSide).not.toBe('right')
 })

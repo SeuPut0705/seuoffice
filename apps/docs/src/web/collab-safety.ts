@@ -27,6 +27,11 @@
  * - free text, OOXML and JSON-carrying keys stay as they are (JSON is read
  *   and its values judged by their own keys); the renderer shows them as
  *   text, data attributes and titles only.
+ * - a run-level wrapper (`wrap` on a run of a header, a text box or a nested
+ *   table; the `inlineWrap` mark's `chain`, the same list as JSON) keeps its
+ *   `open` and `close`: OOXML the save writes around the runs. The renderer
+ *   never draws them: the mark shows a token of its own making
+ *   (editor/inline-wrap.ts), the run models are drawn from their text.
  * - every other string is a style token (a colour, a face, a size, an id) and
  *   must not be able to end a CSS declaration, open a string or a comment,
  *   or load anything.
@@ -389,7 +394,9 @@ function safeObject(object: JsonObject, how: Safety, inline = false): JsonObject
 
 function safeValue(value: Json, key: string, how: Safety): Json {
   if (Array.isArray(value)) {
-    const items = value.map((item) => safeValue(item, key, how))
+    const items = value.map((item) =>
+      key === WRAP_KEY && isObject(item) ? safeWrapper(item, how) : safeValue(item, key, how),
+    )
     return items.some((item, i) => item !== value[i]) ? items : value
   }
   if (isObject(value)) return safeObject(value, how)
@@ -401,12 +408,33 @@ function safeValue(value: Json, key: string, how: Safety): Json {
   if (key === 'lvlText') return /[\n\r\f]/.test(value) ? '' : value
   if (how.urlsOnly || FREE_TEXT.has(key) || XML_KEY.test(key)) return value
   const json = jsonIn(value)
+  // the wrapper mark holds the list a run's `wrap` holds, as text
+  if (key === CHAIN_KEY && Array.isArray(json)) {
+    wellFormed(json, 0)
+    const next = safeValue(json, WRAP_KEY, how)
+    return next === json ? value : JSON.stringify(next)
+  }
   if (json !== undefined) {
     wellFormed(json, 0)
     const next = safeValue(json, key, how)
     return next === json ? value : JSON.stringify(next)
   }
   return UNSAFE_TOKEN.test(value) ? '' : value
+}
+
+/** the runs' wrapper list, and the mark attribute that holds the same list as JSON */
+const WRAP_KEY = 'wrap'
+const CHAIN_KEY = 'chain'
+
+/** One wrapper of a `wrap` list: its OOXML stays, every other key is judged as anywhere else */
+function safeWrapper(wrapper: JsonObject, how: Safety): JsonObject {
+  let out = wrapper
+  for (const [key, value] of Object.entries(wrapper)) {
+    const xml = (key === 'open' || key === 'close') && typeof value === 'string'
+    const next = xml ? value : safeValue(value, key, how)
+    if (next !== value) out = { ...out, [key]: next }
+  }
+  return out
 }
 
 function safeLink(href: string): boolean {

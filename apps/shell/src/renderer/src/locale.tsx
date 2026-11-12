@@ -5,7 +5,7 @@ import { strings } from './strings'
 
 const translate = createI18n(strings)
 
-export type StringKey = keyof typeof strings.zh
+export type StringKey = keyof typeof strings.en
 export type TFunc = (key: StringKey, params?: Params) => string
 
 interface LocaleValue {
@@ -13,7 +13,7 @@ interface LocaleValue {
   setLang: (lang: Lang) => void
 }
 
-const LocaleContext = createContext<LocaleValue>({ lang: 'zh', setLang: () => {} })
+const LocaleContext = createContext<LocaleValue>({ lang: 'en', setLang: () => {} })
 
 export function LocaleProvider({ initial, children }: { initial: Lang; children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>(initial)
@@ -49,27 +49,8 @@ export interface I18n {
 
 /** BCP-47 locale per UI language, for date/number formatting */
 const DATE_LOCALES: Record<Lang, string> = {
-  zh: 'zh-CN',
   en: 'en-US',
-  ja: 'ja-JP',
   ko: 'ko-KR',
-  fr: 'fr-FR',
-  de: 'de-DE',
-  es: 'es-ES',
-  th: 'th-TH',
-  id: 'id-ID',
-  ru: 'ru-RU',
-  ar: 'ar-SA',
-  pt: 'pt-BR',
-  it: 'it-IT',
-  pl: 'pl-PL',
-  cs: 'cs-CZ',
-  nl: 'nl-NL',
-  ms: 'ms-MY',
-  he: 'he-IL',
-  hi: 'hi-IN',
-  'zh-TW': 'zh-TW',
-  vi: 'vi-VN',
 }
 
 export function useI18n(): I18n {

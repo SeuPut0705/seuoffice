@@ -41,12 +41,23 @@ type Bounds = Pick<IRange, 'startRow' | 'endRow' | 'startColumn' | 'endColumn'>
 interface CarriedCells {
   readonly sheetId: string | undefined
   readonly range: Bounds
+  /**
+   * The operation writes the cells' computed values down as constants. A
+   * formula that computes from a hidden cell then counts too: left as a
+   * formula it stays withheld, frozen it is the hidden value in a plain cell.
+   */
+  readonly frozen?: true
 }
 
 /** Excel's grid limits, for an operation that reaches to the edge of the sheet. */
 const MAX_ROW = 1_048_575
 const MAX_COLUMN = 16_383
-const WHOLE_SHEET: Bounds = { startRow: 0, endRow: MAX_ROW, startColumn: 0, endColumn: MAX_COLUMN }
+export const WHOLE_SHEET: Bounds = {
+  startRow: 0,
+  endRow: MAX_ROW,
+  startColumn: 0,
+  endColumn: MAX_COLUMN,
+}
 
 function isBounds(value: unknown): value is Bounds {
   if (typeof value !== 'object' || value === null) return false
@@ -82,6 +93,9 @@ function columnBand(ranges: readonly unknown[]): Bounds {
 }
 
 const SHIFT_COMMAND = /^sheet\.command\.(?:insert|delete)-range-move-(left|right|up|down)$/
+/// Univer's table rows and columns: inserting or removing one shifts the cells
+/// below or beside the table, and the command does not say which.
+const TABLE_SHIFT_COMMAND = /^sheet\.command\.table-(?:insert|remove)-(?:row|col|row-at|column-at)$/
 
 /**
  * The cells a person's command would carry away or copy from, or null for a
@@ -122,10 +136,16 @@ function cellsCarriedByCommand(
     // The fill handle, Fill Down/Right/Up/Left: the series is built from the source.
     case 'sheet.command.auto-fill':
       return orSelection(p.sourceRange)
-    // Text to Columns writes the parts of each cell into the cells to its right.
+    // Text to Columns writes the parts of each cell's text into the cells to its right.
     case 'sheet.command.split-text-to-columns':
-      return orSelection(p.range)
+      return orSelection(p.range).map((cells) => ({ ...cells, frozen: true as const }))
+    // A merge keeps one value: the first filled cell of the range, moved to its top-left.
+    case 'sheet.command.add-worksheet-merge': {
+      const merged = Array.isArray(p.selections) ? p.selections.filter(isBounds) : []
+      return merged.length > 0 ? merged.map((range) => ({ sheetId, range })) : orSelection(null)
+    }
     default: {
+      if (TABLE_SHIFT_COMMAND.test(id)) return [{ sheetId, range: WHOLE_SHEET }]
       // Insert/Delete Cells with a shift moves everything from the range to the sheet edge.
       const shift = SHIFT_COMMAND.exec(id)?.[1]
       if (!shift) return null
@@ -172,19 +192,70 @@ function holdsHidden(
   cells: readonly CarriedCells[],
   activeSheetId: string | undefined,
 ): boolean {
-  return cells.some(({ sheetId, range }) => {
+  const reaches = (range: Bounds) => (area: Bounds) =>
+    area.startRow <= range.endRow &&
+    area.endRow >= range.startRow &&
+    area.startColumn <= range.endColumn &&
+    area.endColumn >= range.startColumn
+  return cells.some(({ sheetId, range, frozen }) => {
     const target = sheetId ?? activeSheetId
     if (target === undefined) return false
-    return index
-      .marksFor(target)
-      .some(
-        (mark) =>
-          mark.startRow <= range.endRow &&
-          mark.endRow >= range.startRow &&
-          mark.startColumn <= range.endColumn &&
-          mark.endColumn >= range.startColumn,
-      )
+    return (
+      index.marksFor(target).some(reaches(range)) ||
+      (index.computedFor?.(target) ?? []).some(reaches(range)) ||
+      (frozen === true && (index.derivedFor?.(target) ?? []).some(reaches(range)))
+    )
   })
+}
+
+/// The guard of each running editor, for the tools that are not commands.
+const INSTALLED = new WeakMap<object, RedactMoveGuardDeps>()
+
+/**
+ * Whether `ranges` of a sheet hold a cell withheld from AI: a hidden cell, or
+ * a formula that computes from one.
+ *
+ * For the editor's own tools, which read cells and write what they read, or
+ * something worked out from it, into other cells (remove duplicates, flash
+ * fill, subtotal labels, a pivot table, ...). They run no command that names
+ * a source, so each asks here before it reads. They all write constants,
+ * hence formulas count.
+ */
+export function holdsHiddenCells(
+  runtime: UniverRuntime,
+  sheetId: string,
+  ranges: readonly Bounds[],
+): boolean {
+  const deps = INSTALLED.get(runtime.univer)
+  if (deps === undefined) return false
+  const index = deps.redactions()
+  if (index.isEmpty) return false
+  return holdsHidden(
+    index,
+    ranges.map((range) => ({ sheetId, range, frozen: true as const })),
+    undefined,
+  )
+}
+
+/** `holdsHiddenCells`, telling the person when it does. True = the tool must not run. */
+export function refuseHiddenSource(
+  runtime: UniverRuntime,
+  sheetId: string,
+  ranges: readonly Bounds[],
+): boolean {
+  if (!holdsHiddenCells(runtime, sheetId, ranges)) return false
+  INSTALLED.get(runtime.univer)?.notify(t('redactMoveRefused'))
+  return true
+}
+
+/**
+ * Whether the workbook of this editor withholds any cell from AI. For a
+ * message meant for the model that would quote something read off the file,
+ * where no cell says whether the quoted text is a hidden one.
+ */
+export function withholdsCells(runtime: UniverRuntime): boolean {
+  const deps = INSTALLED.get(runtime.univer)
+  return deps !== undefined && !deps.redactions().isEmpty
 }
 
 /**
@@ -244,25 +315,33 @@ export function installRedactMoveGuard(
       ),
     ),
   ]
+  INSTALLED.set(runtime.univer, deps)
   return {
     dispose() {
       for (const disposable of disposables) disposable.dispose()
+      INSTALLED.delete(runtime.univer)
     },
   }
 }
 
-/** Whether the cells a copy or cut took hold a hidden one. */
+/**
+ * Whether the cells a copy or cut took hold a hidden one. With `dependents`
+ * a formula that computes from a hidden cell counts too: its value says what
+ * the hidden cell holds, which matters once the copy leaves this workbook.
+ */
 export function pasteSourceHoldsHidden(
   index: RedactionIndex,
   source: { subUnitId: string; rows: readonly number[]; cols: readonly number[] },
+  dependents = false,
 ): boolean {
-  return index
-    .marksFor(source.subUnitId)
-    .some(
-      (mark) =>
-        source.rows.some((row) => row >= mark.startRow && row <= mark.endRow) &&
-        source.cols.some((column) => column >= mark.startColumn && column <= mark.endColumn),
-    )
+  const within = (area: Bounds): boolean =>
+    source.rows.some((row) => row >= area.startRow && row <= area.endRow) &&
+    source.cols.some((column) => column >= area.startColumn && column <= area.endColumn)
+  return (
+    index.marksFor(source.subUnitId).some(within) ||
+    (index.computedFor?.(source.subUnitId) ?? []).some(within) ||
+    (dependents && (index.derivedFor?.(source.subUnitId) ?? []).some(within))
+  )
 }
 
 /** The slice of Univer's clipboard service a paste from this workbook goes through. */
@@ -280,7 +359,7 @@ export interface InternalPasteService {
 }
 
 /** Paste kinds that put no value down: formatting and column widths. */
-const VALUE_FREE_PASTES: ReadonlySet<unknown> = new Set([
+export const VALUE_FREE_PASTES: ReadonlySet<unknown> = new Set([
   'special-paste-format',
   'special-paste-col-width',
 ])
@@ -293,6 +372,10 @@ const VALUE_FREE_PASTES: ReadonlySet<unknown> = new Set([
  * marks as they are then, so a cell hidden after it was copied is covered and
  * the copy itself stays free: the person may paste their own data into another
  * program.
+ *
+ * Paste Values writes computed values down, so there a formula that computes
+ * from a hidden cell counts as well; any other paste carries it as a formula,
+ * which stays withheld where it lands.
  */
 export function guardInternalPaste(
   service: InternalPasteService,
@@ -305,11 +388,11 @@ export function guardInternalPaste(
       copied?.subUnitId !== undefined &&
       copied.range !== undefined &&
       (copied.copyType === COPY_TYPE.CUT || !VALUE_FREE_PASTES.has(pasteType)) &&
-      pasteSourceHoldsHidden(deps.redactions(), {
-        subUnitId: copied.subUnitId,
-        rows: copied.range.rows,
-        cols: copied.range.cols,
-      })
+      pasteSourceHoldsHidden(
+        deps.redactions(),
+        { subUnitId: copied.subUnitId, rows: copied.range.rows, cols: copied.range.cols },
+        pasteType === 'special-paste-value',
+      )
     ) {
       deps.notify(t('redactMoveRefused'))
       return false

@@ -13,7 +13,7 @@ import {
   clampAiCustomFontSize,
 } from '@genoffice/ui'
 import type { AiFontSize, AiPanelPrefs, AiPanelSide, AiPanelStart } from '@genoffice/ui'
-import { PRODUCT_CONTACT_EMAIL, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
+import { PRODUCT_REPO_SLUG } from '@genoffice/i18n'
 import type { Lang } from '@genoffice/i18n'
 import type {
   AuthorNameSetting,
@@ -94,27 +94,8 @@ import './settings.css'
 // sorted by ISO 639 language code — native-script labels have no natural
 // shared alphabet, so the code is the ordering key
 const LANG_OPTIONS = [
-  { value: 'ar', label: 'العربية' },
-  { value: 'cs', label: 'Čeština' },
-  { value: 'de', label: 'Deutsch' },
   { value: 'en', label: 'English' },
-  { value: 'es', label: 'Español' },
-  { value: 'fr', label: 'Français' },
-  { value: 'he', label: 'עברית' },
-  { value: 'hi', label: 'हिन्दी' },
-  { value: 'id', label: 'Bahasa Indonesia' },
-  { value: 'it', label: 'Italiano' },
-  { value: 'ja', label: '日本語' },
   { value: 'ko', label: '한국어' },
-  { value: 'ms', label: 'Bahasa Melayu' },
-  { value: 'nl', label: 'Nederlands' },
-  { value: 'pl', label: 'Polski' },
-  { value: 'pt', label: 'Português' },
-  { value: 'ru', label: 'Русский' },
-  { value: 'th', label: 'ไทย' },
-  { value: 'vi', label: 'Tiếng Việt' },
-  { value: 'zh', label: '简体中文' },
-  { value: 'zh-TW', label: '繁體中文' },
 ] as const
 
 // GenMail's option order: follow-system first, then the manual picks
@@ -2279,19 +2260,6 @@ export function SettingsModal({
                     onClick={() => void window.aiOffice.openLicenseNotices?.()}
                   >
                     {t('setLicensesOpen')}
-                  </button>
-                </div>
-                <div className="set-field">
-                  <div className="set-field-text">
-                    <label className="set-field-label">{t('setRightsContact')}</label>
-                    <div className="set-field-desc">{t('setRightsContactDesc')}</div>
-                    <div className="set-field-value">{PRODUCT_CONTACT_EMAIL}</div>
-                  </div>
-                  <button
-                    className="set-btn"
-                    onClick={() => void window.aiOffice.openRightsContact?.()}
-                  >
-                    {t('setRightsContactSend')}
                   </button>
                 </div>
                 <div className="set-field">

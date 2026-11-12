@@ -422,6 +422,8 @@ import { PasswordDialog } from './components/PasswordDialog'
 import { ProtectDialog, type ProtectDialogResult } from './components/ProtectDialog'
 import { PRODUCT_NAME } from '@genoffice/i18n'
 import { getLang, t, useI18n } from './i18n/locale'
+import { getDocumentLocale } from './document-locale'
+import { dateTimeFieldText } from './field-date'
 import {
   getActiveSubEditor,
   setActiveSubEditor,
@@ -565,6 +567,7 @@ import { runHeadlessDocumentExport } from './headless-export'
 import { installMcpBridge } from './mcp-bridge'
 import { odtOffProps, refuseInOdt, useOdtSession } from './odt-gate'
 import { cleanOdtPaste } from './editor/odt-guard'
+import { PASTED_CONTENT } from './editor/inline-wrap'
 import {
   clampDocsZoom,
   DOCS_ZOOM_MAX,
@@ -1499,7 +1502,13 @@ export function App() {
                   if (slots) content = fillMissingRunFonts(content, slots, schema)
                 }
               }
-              view.dispatch(view.state.tr.replaceWith($from.before(1), $from.after(1), content))
+              // tagged as pasted: a copy of a content control the document
+              // still holds arrives without it (inline-wrap.ts)
+              view.dispatch(
+                view.state.tr
+                  .replaceWith($from.before(1), $from.after(1), content)
+                  .setMeta(PASTED_CONTENT, true),
+              )
               return true
             }
           } catch {
@@ -2988,15 +2997,10 @@ export function App() {
 
   const fieldValue = useCallback(
     (instr: string): string => {
-      const kw = instr.trim().split(/\s+/)[0]?.toUpperCase()
-      const now = new Date()
+      const kw = instr.trim().split(/\s+/)[0]?.toUpperCase() ?? ''
+      const dateTime = dateTimeFieldText(kw, new Date(), getDocumentLocale())
+      if (dateTime !== null) return dateTime
       switch (kw) {
-        case 'DATE':
-        case 'CREATEDATE':
-        case 'SAVEDATE':
-          return now.toLocaleDateString('zh-CN')
-        case 'TIME':
-          return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
         case 'NUMPAGES':
           return String(pageInfo.total)
         case 'PAGE':

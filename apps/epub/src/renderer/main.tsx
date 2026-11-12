@@ -18,7 +18,7 @@ function applyTheme(theme: UiTheme): void {
 
 void (async () => {
   const [lang, theme] = await Promise.all([
-    window.epubApi.getLanguage().catch(() => 'zh' as const),
+    window.epubApi.getLanguage().catch(() => 'en' as const),
     window.epubApi.getTheme().catch(() => 'system' as const),
   ])
   document.documentElement.lang = htmlLang(lang as Lang)

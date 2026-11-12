@@ -14,12 +14,41 @@
  * c:axId) carry secondaryAxis, with the secondary axis style/range parsed into
  * valAxis2.
  */
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from './xml-parser'
 import { resolveFontRef, type Theme } from './theme'
 import { applyColorMods, resolveColorNode, scaleLuminance } from './color'
 import type { Fill } from './types'
 
-const chartParser = new XMLParser({
+/**
+ * An xsd:boolean as XML Schema spells it: "1" and "true" are true, "0" and "false" are false.
+ * Any other text is no boolean, and the caller says what it reads then (`otherwise`).
+ */
+function xsdBoolean(value: unknown, otherwise: boolean): boolean {
+  switch (value) {
+    case '1':
+    case 'true':
+      return true
+    case '0':
+    case 'false':
+      return false
+    default:
+      return otherwise
+  }
+}
+
+/**
+ * A CT_Boolean element of the chart (`<c:delete val="1"/>`): its val as xsd:boolean, and true
+ * when the element is written without val, the schema's default for every CT_Boolean.
+ * `absent` answers for an element that is not there, `otherwise` for a val no boolean spells.
+ */
+function ctBoolean(node: unknown, absent: boolean, otherwise = absent): boolean {
+  const one: unknown = Array.isArray(node) ? node[0] : node
+  if (one == null) return absent
+  const val = typeof one === 'object' ? (one as Record<string, unknown>)['@_val'] : undefined
+  return val === undefined ? true : xsdBoolean(val, otherwise)
+}
+
+const chartParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,
@@ -437,7 +466,7 @@ export function parseChartXml(
   const valAxes: any[] = Array.isArray(valAxRaw) ? valAxRaw : valAxRaw ? [valAxRaw] : []
   const secValAxNode =
     kind !== 'scatter' && cartesian.length > 1
-      ? valAxes.find((a) => a?.['c:axPos']?.['@_val'] === 'r' && a?.['c:delete']?.['@_val'] !== '1')
+      ? valAxes.find((a) => a?.['c:axPos']?.['@_val'] === 'r' && !ctBoolean(a?.['c:delete'], false))
       : undefined
   const secAxId: string | undefined = secValAxNode?.['c:axId']?.['@_val']
   // Axes attached to a plot node (two c:axIds: category axis + value axis)
@@ -463,7 +492,7 @@ export function parseChartXml(
     const sersRaw = plotNode['c:ser']
     const sers: any[] = Array.isArray(sersRaw) ? sersRaw : sersRaw ? [sersRaw] : []
     const plotMarkerNode = plotNode['c:marker']
-    const plotMarker = plotMarkerNode != null && plotMarkerNode?.['@_val'] !== '0'
+    const plotMarker = ctBoolean(plotMarkerNode, false, true)
     for (const ser of sers) {
       if (series.length >= MAX_CHART_SERIES) break
       // Scatter: y values in c:yVal, x values in c:xVal; other types use c:val
@@ -480,7 +509,9 @@ export function parseChartXml(
       const palIdx = parseInt(ser['c:idx']?.['@_val'], 10)
       if (Number.isFinite(palIdx)) s.paletteIdx = palIdx
       if (secondary) s.secondaryAxis = true
-      if (plotKind === 'bar' && ser['c:spPr'] && 'a:noFill' in ser['c:spPr']) s.noFill = true
+      const serSpPr = ser['c:spPr']
+      if (plotKind === 'bar' && serSpPr && typeof serSpPr === 'object' && 'a:noFill' in serSpPr)
+        s.noFill = true
       if (fromStock) s.fromStock = true
       if (plotKind === 'scatter') {
         const xs = readNumPoints(ser['c:xVal'])
@@ -497,7 +528,7 @@ export function parseChartXml(
         !s.bubbleSizes && (plotKind === 'line' || plotKind === 'scatter' || plotKind === 'radar'),
       )
       if (color) s.color = color
-      if (ser['c:smooth']?.['@_val'] === '1') s.smooth = true
+      if (ctBoolean(ser['c:smooth'], false)) s.smooth = true
       // Value-from-cells data labels (2012 c15 extension): strings live in the range cache,
       // gated by c15:showDataLabelsRange on the series dLbls
       const serExtRaw = ser['c:extLst']?.['c:ext']
@@ -511,7 +542,7 @@ export function parseChartXml(
         : dLblExtRaw
           ? [dLblExtRaw]
           : []
-      const showRange = dLblExts.some((e) => e?.['c15:showDataLabelsRange']?.['@_val'] === '1')
+      const showRange = dLblExts.some((e) => ctBoolean(e?.['c15:showDataLabelsRange'], false))
       if (rangeCache && showRange) {
         const labs = readPoints(rangeCache).map((v) => v ?? '')
         if (labs.some((v) => v)) s.pointLabels = labs
@@ -526,8 +557,8 @@ export function parseChartXml(
       const dlOn = (d: any) =>
         !!d &&
         typeof d === 'object' &&
-        d['c:delete']?.['@_val'] !== '1' &&
-        (d['c:showVal']?.['@_val'] === '1' || d['c:showPercent']?.['@_val'] === '1')
+        !ctBoolean(d['c:delete'], false) &&
+        (ctBoolean(d['c:showVal'], false) || ctBoolean(d['c:showPercent'], false))
       const serDl = ser['c:dLbls']
       s.dataLabels = serDl && typeof serDl === 'object' ? dlOn(serDl) : dlOn(plotNode['c:dLbls'])
       if (serDl && typeof serDl === 'object') {
@@ -542,8 +573,8 @@ export function parseChartXml(
         .map((d: any): NonNullable<ChartSeries['dLblOverrides']>[number] | null => {
           const idx = parseInt(d?.['c:idx']?.['@_val'], 10)
           if (!Number.isFinite(idx)) return null
-          if (d['c:delete']?.['@_val'] === '1') return { idx, hidden: true }
-          const flag = (k: string) => d[k]?.['@_val'] === '1'
+          if (ctBoolean(d['c:delete'], false)) return { idx, hidden: true }
+          const flag = (k: string) => ctBoolean(d[k], false)
           // A rich-text label is authored text: PowerPoint shows it verbatim, styled by its first run
           const rich = d['c:tx']?.['c:rich']
           const richText = rich ? collectText(rich) : undefined
@@ -569,7 +600,7 @@ export function parseChartXml(
             cat: flag('c:showCatName'),
             ser: flag('c:showSerName'),
             pct: flag('c:showPercent'),
-            ...(richText != null ? { text: richText, bold: rPr?.['@_b'] === '1' } : {}),
+            ...(richText != null ? { text: richText, bold: xsdBoolean(rPr?.['@_b'], false) } : {}),
             ...(Number.isFinite(sz) && sz > 0 ? { sizePt: sz / 100 } : {}),
             ...(color ? { color } : {}),
             ...box,
@@ -581,9 +612,9 @@ export function parseChartXml(
         const serShowsAny =
           !!serDl &&
           typeof serDl === 'object' &&
-          serDl['c:delete']?.['@_val'] !== '1' &&
-          ['c:showVal', 'c:showPercent', 'c:showCatName', 'c:showSerName'].some(
-            (k) => serDl[k]?.['@_val'] === '1',
+          !ctBoolean(serDl['c:delete'], false) &&
+          ['c:showVal', 'c:showPercent', 'c:showCatName', 'c:showSerName'].some((k) =>
+            ctBoolean(serDl[k], false),
           )
         if (
           overrides.some((o) => !o.hidden && (o.val || o.cat || o.ser || o.pct || o.text != null))
@@ -618,7 +649,8 @@ export function parseChartXml(
         for (const dPt of dPts) {
           const idx = parseInt(dPt['c:idx']?.['@_val'], 10)
           if (!Number.isFinite(idx) || idx < 0 || idx >= s.values.length) continue
-          const dSp = dPt['c:spPr']
+          // an element holding only text parses as a string: properties of none
+          const dSp = typeof dPt['c:spPr'] === 'object' ? dPt['c:spPr'] : undefined
           const c = resolveColorNode(dSp?.['a:solidFill'], theme)
           if (c != null) pointColors[idx] = c
           if (dSp && 'a:noFill' in dSp) pointNoFill[idx] = true
@@ -718,14 +750,14 @@ export function parseChartXml(
     const serAx = plotArea['c:serAx']
     const serAxLabels =
       serAx != null &&
-      serAx['c:delete']?.['@_val'] !== '1' &&
+      !ctBoolean(serAx['c:delete'], false) &&
       serAx['c:tickLblPos']?.['@_val'] !== 'none'
     if (b3) {
       model.bar3D = {
         rotX: num(v3?.['c:rotX'], 15),
         rotY: num(v3?.['c:rotY'], 20),
         depthPct: num(v3?.['c:depthPercent'], 100),
-        rAngAx: v3?.['c:rAngAx']?.['@_val'] !== '0',
+        rAngAx: ctBoolean(v3?.['c:rAngAx'], true),
         gapDepthPct: num(b3['c:gapDepth'], 150),
         serAxLabels,
       }
@@ -761,8 +793,7 @@ export function parseChartXml(
     model.holePct = hole != null ? parseInt(hole, 10) || 0 : plotArea['c:doughnutChart'] ? 50 : 0
     const first = plot['c:firstSliceAng']?.['@_val']
     if (first != null) model.firstSliceAngDeg = parseInt(first, 10) || 0
-    const vary = plot['c:varyColors']?.['@_val']
-    if (vary === '0' || vary === 'false') model.varyColors = false
+    if (!ctBoolean(plot['c:varyColors'], true)) model.varyColors = false
   }
 
   if (kind === 'scatter') {
@@ -795,8 +826,8 @@ export function parseChartXml(
     model.legendPos = (legendPos as ChartModel['legendPos']) ?? 'r'
     // Measured PowerPoint behavior: explicit <c:overlay val="1"/> floats the legend, and so does
     // a legend with no <c:legendPos> at all (unless overlay is explicitly 0)
-    const overlay = legendNode['c:overlay']?.['@_val']
-    if (overlay === '1' || (overlay === undefined && legendPos === undefined)) {
+    const overlay = legendNode['c:overlay']
+    if (overlay == null ? legendPos === undefined : ctBoolean(overlay, false)) {
       model.legendOverlay = true
     }
     const man = legendNode['c:layout']?.['c:manualLayout']
@@ -823,11 +854,11 @@ export function parseChartXml(
     if (legRPr?.['@_baseline'] === '-2147483648') delete model.legendPos
     const legSz = parseInt(legRPr?.['@_sz'], 10)
     if (Number.isFinite(legSz) && legSz > 0) model.legendPt = legSz / 100
-    if (legRPr?.['@_b'] === '1') model.legendBold = true
+    if (xsdBoolean(legRPr?.['@_b'], false)) model.legendBold = true
     const legColor = resolveColorNode(legRPr?.['a:solidFill'], theme)
     if (legColor) model.legendColor = legColor
     const legPPr = (Array.isArray(legP) ? legP[0] : legP)?.['a:pPr']
-    if (legPPr?.['@_rtl'] === '1') model.legendRtl = true
+    if (xsdBoolean(legPPr?.['@_rtl'], false)) model.legendRtl = true
     // PowerPoint lists entries per plot group; a stacked group next to a side legend runs
     // top-of-stack first (reversed). c:legendEntry idx counts positions in that display
     // order (probe: idx 0/1/2 hid the 1st/2nd/3rd displayed entry of a stacked+line combo)
@@ -840,7 +871,7 @@ export function parseChartXml(
     )
     const catReversed = catAxes.some(
       (ax: any) =>
-        ax?.['c:delete']?.['@_val'] !== '1' &&
+        !ctBoolean(ax?.['c:delete'], false) &&
         ax?.['c:scaling']?.['c:orientation']?.['@_val'] === 'maxMin',
     )
     const order = plotGroups.flatMap((g) => {
@@ -853,7 +884,7 @@ export function parseChartXml(
     const entries: any[] = Array.isArray(entriesRaw) ? entriesRaw : entriesRaw ? [entriesRaw] : []
     const deleted = new Set(
       entries
-        .filter((e) => e?.['c:delete']?.['@_val'] === '1')
+        .filter((e) => ctBoolean(e?.['c:delete'], false))
         .map((e) => parseInt(e?.['c:idx']?.['@_val'], 10)),
     )
     const shown = order.filter((_, pos) => !deleted.has(pos))
@@ -964,14 +995,14 @@ export function parseChartXml(
   const chartTitle =
     collectText(chart['c:title']?.['c:tx']?.['c:rich'], '\n') ||
     readStrPoints(chart['c:title']?.['c:tx'])[0]
-  if (chart['c:title']?.['c:overlay']?.['@_val'] === '1') model.titleOverlay = true
+  if (ctBoolean(chart['c:title']?.['c:overlay'], false)) model.titleOverlay = true
   if (chartTitle) model.title = chartTitle
   // Auto title: a <c:title> with no c:tx at all (and autoTitleDeleted != 1) takes the
   // sole series name; with several series PowerPoint shows the literal "Chart Title"
   else if (
     chart['c:title'] &&
     !chart['c:title']?.['c:tx'] &&
-    chart['c:autoTitleDeleted']?.['@_val'] !== '1'
+    !ctBoolean(chart['c:autoTitleDeleted'], false)
   ) {
     model.title = (series.length === 1 && series[0]!.name) || 'Chart Title'
   }
@@ -1001,8 +1032,8 @@ export function parseChartXml(
     ].filter(Boolean)
     const styleAttr = (k: string) => styleLayers.map((l) => l[k]).find((v) => v != null)
     const b = styleAttr('@_b')
-    if (b != null) model.titleBold = b === '1'
-    if (styleAttr('@_i') === '1') model.titleItalic = true
+    if (b != null) model.titleBold = xsdBoolean(b, false)
+    if (xsdBoolean(styleAttr('@_i'), false)) model.titleItalic = true
     const c = resolveColorNode(styleAttr('a:solidFill'), theme)
     if (c) model.titleColor = c
     if (styleAttr('@_cap') === 'all') model.titleCaps = true
@@ -1028,12 +1059,12 @@ export function parseChartXml(
     spcPt?: number
   } => {
     const d = owner?.['c:dLbls']
-    if (!d || typeof d !== 'object' || d['c:delete']?.['@_val'] === '1')
+    if (!d || typeof d !== 'object' || ctBoolean(d['c:delete'], false))
       return { on: false, pct: false }
-    const showVal = d['c:showVal']?.['@_val'] === '1'
-    const showPct = d['c:showPercent']?.['@_val'] === '1'
-    const showSer = d['c:showSerName']?.['@_val'] === '1'
-    const showCat = d['c:showCatName']?.['@_val'] === '1'
+    const showVal = ctBoolean(d['c:showVal'], false)
+    const showPct = ctBoolean(d['c:showPercent'], false)
+    const showSer = ctBoolean(d['c:showSerName'], false)
+    const showCat = ctBoolean(d['c:showCatName'], false)
     const fmt = d['c:numFmt']?.['@_formatCode']
     const dP = d['c:txPr']?.['a:p']
     const dRPr = (Array.isArray(dP) ? dP[0] : dP)?.['a:pPr']?.['a:defRPr']
@@ -1049,7 +1080,7 @@ export function parseChartXml(
       val: showVal || showPct,
       ...(typeof fmt === 'string' && fmt && fmt !== 'General' ? { fmt } : {}),
       ...(Number.isFinite(dSz) && dSz > 0 ? { sizePt: dSz / 100 } : {}),
-      ...(dRPr?.['@_b'] === '1' ? { bold: true } : {}),
+      ...(xsdBoolean(dRPr?.['@_b'], false) ? { bold: true } : {}),
       ...(Number.isFinite(dRot) && dRot !== 0 && Math.abs(dRot) <= 5400000
         ? { rotDeg: dRot / 60000 }
         : {}),
@@ -1135,7 +1166,7 @@ export function parseChartXml(
       ...toArr(plotArea['c:catAx']).map((n) => ({ n, date: false })),
       ...toArr(plotArea['c:dateAx']).map((n) => ({ n, date: true })),
     ]
-    const pick = catCands.find((c) => c.n?.['c:delete']?.['@_val'] !== '1') ?? catCands[0]
+    const pick = catCands.find((c) => !ctBoolean(c.n?.['c:delete'], false)) ?? catCands[0]
     const catAx = parseAxis(pick?.n, theme)
     if (catAx || pick?.date)
       model.catAxis = { ...(catAx ?? {}), ...(pick?.date ? { isDate: true } : {}) }
@@ -1154,7 +1185,7 @@ export function parseChartXml(
 }
 
 function parseDataTable(node: any, theme?: Theme): ChartDataTable {
-  const on = (k: string) => node?.[k]?.['@_val'] !== '0'
+  const on = (k: string) => ctBoolean(node?.[k], true)
   const out: ChartDataTable = {
     showKeys: on('c:showKeys'),
     horzBorder: on('c:showHorzBorder'),
@@ -1293,13 +1324,13 @@ function formatDateSerial(serial: number, fmt: string, date1904: boolean): strin
   ]
   return fmt
     .replace(/\\/g, '')
-    .replace(/yyyy/gi, String(yyyy))
-    .replace(/yy/gi, String(yyyy % 100).padStart(2, '0'))
-    .replace(/mmm/gi, MONTHS[d.getUTCMonth()]!)
-    .replace(/mm/gi, String(mNum).padStart(2, '0'))
-    .replace(/(?<![a-z])m(?![a-z])/gi, String(mNum))
-    .replace(/dd/gi, String(dayNum).padStart(2, '0'))
-    .replace(/(?<![a-z])d(?![a-z])/gi, String(dayNum))
+    .replace(/yyyy/gi, () => String(yyyy))
+    .replace(/yy/gi, () => String(yyyy % 100).padStart(2, '0'))
+    .replace(/mmm/gi, () => MONTHS[d.getUTCMonth()]!)
+    .replace(/mm/gi, () => String(mNum).padStart(2, '0'))
+    .replace(/(?<![a-z])m(?![a-z])/gi, () => String(mNum))
+    .replace(/dd/gi, () => String(dayNum).padStart(2, '0'))
+    .replace(/(?<![a-z])d(?![a-z])/gi, () => String(dayNum))
 }
 
 /** c:pt list → value array ordered by idx. */
@@ -1374,7 +1405,7 @@ function labelBox(spPr: any, theme?: Theme): { fill?: string | null; border?: st
 function parseAxis(ax: any, theme?: Theme): ChartAxisStyle | undefined {
   if (!ax || typeof ax !== 'object') return undefined
   const out: ChartAxisStyle = {}
-  if (ax['c:delete']?.['@_val'] === '1') out.hidden = true
+  if (ctBoolean(ax['c:delete'], false)) out.hidden = true
   const scaling = ax['c:scaling']
   // Corrupt axis bounds (c:min val="Infinity") would poison chart scale math:
   // assign only finite values, else the axis auto-scales.
@@ -1399,7 +1430,7 @@ function parseAxis(ax: any, theme?: Theme): ChartAxisStyle | undefined {
     // sz="auto" parses to NaN, and a NaN labelSizePt beats the render default
     const axSz = parseInt(defRPr['@_sz'], 10)
     if (Number.isFinite(axSz) && axSz > 0) out.labelSizePt = axSz / 100
-    if (defRPr['@_b'] === '1') out.labelBold = true
+    if (xsdBoolean(defRPr['@_b'], false)) out.labelBold = true
     if (defRPr['@_cap'] === 'all') out.labelCaps = true
     const spc = letterSpacingPt(defRPr['@_spc'])
     if (spc) out.labelSpcPt = spc
@@ -1461,7 +1492,7 @@ function parseAxis(ax: any, theme?: Theme): ChartAxisStyle | undefined {
     (titleNode && !titleNode['c:tx'] ? 'Axis Title' : undefined)
   if (title) {
     out.title = title
-    if (titleNode?.['c:overlay']?.['@_val'] === '1') out.titleOverlay = true
+    if (ctBoolean(titleNode?.['c:overlay'], false)) out.titleOverlay = true
     const tp0raw = titleNode?.['c:tx']?.['c:rich']?.['a:p']
     const tp0 = Array.isArray(tp0raw) ? tp0raw[0] : tp0raw
     const tr0 = Array.isArray(tp0?.['a:r']) ? tp0['a:r'][0] : tp0?.['a:r']
@@ -1473,8 +1504,8 @@ function parseAxis(ax: any, theme?: Theme): ChartAxisStyle | undefined {
     if (rPr) {
       const sz = parseInt(rPr['@_sz'], 10)
       if (Number.isFinite(sz) && sz > 0) out.titleSizePt = sz / 100
-      if (rPr['@_b'] === '1') out.titleBold = true
-      if (rPr['@_i'] === '1') out.titleItalic = true
+      if (xsdBoolean(rPr['@_b'], false)) out.titleBold = true
+      if (xsdBoolean(rPr['@_i'], false)) out.titleItalic = true
       const c = resolveColorNode(rPr['a:solidFill'], theme)
       if (c) out.titleColor = c
     }

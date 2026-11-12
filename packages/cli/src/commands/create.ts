@@ -346,7 +346,7 @@ async function createXlsx(
       reason: 'invalid_argument',
     })
   }
-  const tables = readTables(source, basename(source, extname(source)), { decimal })
+  const tables = await readTables(source, basename(source, extname(source)), { decimal })
   // Validate every name before the first write, including --force and later worksheets.
   for (const [index, table] of tables.entries()) {
     for (const character of table.name) {
@@ -419,14 +419,14 @@ function headerOps(table: TableInput): Record<string, unknown>[] {
   ]
 }
 
-function readTables(
+async function readTables(
   source: string,
   fallbackName: string,
   opts: CsvTableOptions = {},
-): TableInput[] {
+): Promise<TableInput[]> {
   const sheetName = sheetNameFromStem(fallbackName)
   if (extname(source).toLowerCase() === '.csv') {
-    return [csvTable(readFileSync(source), sheetName, opts)]
+    return [await csvTable(readFileSync(source), sheetName, opts)]
   }
   let parsed: unknown
   try {

@@ -7,7 +7,7 @@
  * intact. Tables are "modeled" in this app (not passthrough), so editing is allowed.
  */
 import type { Slide } from './types'
-import { escapeXmlAttr } from './xml-utils'
+import { attributeOf, escapeXmlAttr } from './xml-utils'
 
 /** Table style edit parameters (engine side of the IPC EditTableStyleOp) */
 export interface TableStyleEdit {
@@ -183,7 +183,9 @@ export function ensureTableStyleXml(
   const xml = tableStylesXml?.includes('<a:tblStyleLst') ? tableStylesXml : EMPTY_TABLE_STYLES_XML
   if (xml.includes(styleId)) return xml
   const sc = /<a:tblStyleLst([^>]*)\/>/.exec(xml)
-  if (sc) return xml.replace(sc[0], `<a:tblStyleLst${sc[1]}>${styleDefXml}</a:tblStyleLst>`)
+  // A function, not a string: the list's own attributes are document text, and a replacement
+  // string would expand a `$&` or `$$` in them
+  if (sc) return xml.replace(sc[0], () => `<a:tblStyleLst${sc[1]}>${styleDefXml}</a:tblStyleLst>`)
   return xml.replace('</a:tblStyleLst>', () => `${styleDefXml}</a:tblStyleLst>`)
 }
 
@@ -200,8 +202,8 @@ export function patchTableStyleXml(originalXml: string, edit: TableStyleEdit): s
     // Whole-block replacement. Presets carry their own firstRow/bandRow but never rtl —
     // table direction is orthogonal state and survives a style change (PowerPoint behavior)
     let next = edit.tblPrXml
-    const rtl = /<a:tblPr[^>]*\srtl="([^"]*)"/.exec(xml)?.[1]
-    if ((rtl === '1' || rtl === 'true') && !/\srtl="/.test(next)) {
+    const rtl = tblPrAttr(xml, 'rtl')
+    if ((rtl === '1' || rtl === 'true') && tblPrAttr(next, 'rtl') === undefined) {
       next = next.replace(/^<a:tblPr/, '<a:tblPr rtl="1"')
     }
     xml = replaceTblPr(xml, next)
@@ -280,10 +282,26 @@ function replaceTblPr(xml: string, newTblPr: string): string {
   return xml.slice(0, open) + newTblPr + xml.slice(close + '</a:tblPr>'.length)
 }
 
-/** Set or remove key="value" in an XML attribute string (remove: value=undefined). */
+/** The value of the first <a:tblPr>'s own `key` attribute, undefined when it has none. */
+function tblPrAttr(xml: string, key: string): string | undefined {
+  const open = /<a:tblPr\b[^>]*>/.exec(xml)?.[0]
+  return open === undefined ? undefined : attributeOf(open, key)
+}
+
+/**
+ * One attribute of a start tag in any form XML allows: quoted with " or ', with or without
+ * spaces around the '='. PowerPoint writes key="value"; other producers do not always.
+ */
+const ATTR_RE = /\s+([^\s=/>]+)\s*=\s*(?:"[^"]*"|'[^']*')/g
+
+/**
+ * Set or remove an attribute in an XML attribute string (remove: value=undefined). The string is
+ * read attribute by attribute rather than searched for `key="`: a search misses the other
+ * quoting forms, which left the old attribute in place beside the new one (a duplicate attribute
+ * is not well-formed), and it can land inside another attribute's value.
+ */
 function setAttr(attrs: string, key: string, value: string | undefined): string {
-  const re = new RegExp(`\\s${key}="[^"]*"`)
-  const cleaned = attrs.replace(re, '')
+  const cleaned = attrs.replace(ATTR_RE, (whole, name: string) => (name === key ? '' : whole))
   if (value === undefined) return cleaned
   return `${cleaned} ${key}="${escapeXmlAttr(value)}"`
 }
@@ -426,7 +444,7 @@ function patchCellsTcPr(xml: string, edit: TableStyleEdit): string {
         tcXml.slice(m.index + m[0].length)
     } else {
       // tcPr follows txBody in CT_TableCell
-      tcXml = tcXml.replace(/<\/a:tc>$/, `<a:tcPr>${applyTcPrEdit('', edit)}</a:tcPr></a:tc>`)
+      tcXml = tcXml.replace(/<\/a:tc>$/, () => `<a:tcPr>${applyTcPrEdit('', edit)}</a:tcPr></a:tc>`)
     }
     xml = xml.slice(0, tc.start) + tcXml + xml.slice(tc.end)
   }

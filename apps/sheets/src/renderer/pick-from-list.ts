@@ -18,19 +18,24 @@ function isBlank(entry: PickListEntry | null): boolean {
   return !entry || entry.display.trim() === ''
 }
 
+/**
+ * `withheld` rows are cells hidden from AI: they keep the block going like
+ * any filled cell, and are never offered.
+ */
 export function collectPickListValues(
   read: (row: number) => PickListEntry | null,
   row: number,
   rowCount: number,
+  withheld: (row: number) => boolean = () => false,
 ): PickListEntry[] {
   const block: PickListEntry[] = []
   for (let r = row - 1, steps = 0; r >= 0 && steps < PICK_LIST_SCAN_LIMIT; r -= 1, steps += 1) {
     const entry = read(r)
     if (isBlank(entry)) break
-    block.push(entry!)
+    if (!withheld(r)) block.push(entry!)
   }
   const self = read(row)
-  if (!isBlank(self)) block.push(self!)
+  if (!isBlank(self) && !withheld(row)) block.push(self!)
   for (
     let r = row + 1, steps = 0;
     r < rowCount && steps < PICK_LIST_SCAN_LIMIT;
@@ -38,7 +43,7 @@ export function collectPickListValues(
   ) {
     const entry = read(r)
     if (isBlank(entry)) break
-    block.push(entry!)
+    if (!withheld(r)) block.push(entry!)
   }
   const seen = new Set<string>()
   const unique: PickListEntry[] = []

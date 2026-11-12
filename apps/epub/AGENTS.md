@@ -1,6 +1,6 @@
 # apps/epub (`@genoffice/epub`)
 
-전자책 편집기다. EPUB 책(`.epub`)을 탭에서 열어 읽고, 보이는 책 화면에서 본문 글을 고치고, 전자책 단말기처럼 쪽을 넘겨 미리 보고(결정 0090), AI 창으로 읽고 고치고, 책을 번역해 새 EPUB으로 낸다(결정 0066). 파일을 다루는 일은 `packages/epub-engine`이 하고, 이 모듈은 책 한 벌을 쥔 뒷단과 화면을 잇는다. 사람이 읽는 계획은 `docs/plans/epub-editor.md`에 있다.
+전자책 편집기다. EPUB 책(`.epub`)을 탭에서 열어 읽고, 보이는 책 화면에서 본문 글을 고치고, 전자책 단말기처럼 쪽을 넘겨 미리 보고(결정 0090), AI 창으로 읽고 고치고, 책을 번역해 새 EPUB으로 낸다(결정 0066). 파일을 다루는 일은 `packages/epub-engine`이 하고, 이 모듈은 책 한 벌을 쥔 뒷단과 화면을 잇는다. 사람이 읽는 계획은 `docs/archive/ieum/plans/epub-editor.md`에 있다.
 
 ## 맡은 범위
 
@@ -22,7 +22,7 @@
   - `edit/`: 편집 컨트롤러(`controller.ts`), 블록 표기와 화면 요소의 짝(`inline-roles.ts`), 블록 안 찾아 바꾸기(`block-text.ts`), 단축키(`shortcuts.ts`), 화면이 쓰는 엔진 모듈(`engine.ts`).
   - `ai/`: AI 창(`AiPanel.tsx`, `AiDock.tsx`), 책 스킬과 지시문(`epub-skill.ts`), 다섯 도구가 하는 일(`book-tools.ts`), 첨부·검색 스킬, 전송과 연결 상태.
   - `translate/`: 책 번역 창과 확인(`BookTranslateDialog.tsx`), 작업·진행·멈춤·이어하기·결과 쓰기(`BookTranslation.tsx`, `job-session.ts`), 보고(`BookTranslateReport.tsx`), 리본 단추, 제공자 고정(`route.ts`), 모델 호출(`model-call.ts`), 보관소 창구(`ipc-store.ts`), 화면에서 쓰는 번역 엔진 부분(`engine.ts`, `pdf-structure-browser.ts`), 순수 함수(`translate-model.ts`).
-  - `i18n/`: 21개 언어 조각(`app/`, `edit/`, `ai/`, `translate/`의 `<언어>.ts`, `zh.ts`가 키 집합을 정한다)과 그것을 모으는 `strings-*.ts`.
+  - `i18n/`: 두 언어 조각(`app/`, `edit/`, `ai/`, `translate/`의 `<언어>.ts`, `en.ts`가 키 집합을 정한다)과 그것을 모으는 `strings-*.ts`.
 
 ## 맡지 않는 것 (경계)
 
@@ -46,7 +46,7 @@
 - **쉬운 풀이는 책 번역의 두 번째 방식이다(결정 0108).** 책 번역 창에서 방식을 고르고, 고르기만 해서는 보내지 않는다. 확인과 잠금, 제공자 고정, 멈춤 규칙은 번역과 같다. 쉬운 풀이의 기본 목표 언어는 책 언어와 상관없이 화면 언어이고, 책과 같은 언어라는 경고를 하지 않는다. 결과는 "풀이본"과 "원문 다음에 풀이"이고, 기본 이름은 `<이름>.<언어>.<표시 낱말>.epub`(대역은 `….bilingual.epub`)이며 낱말은 화면 언어다(`resultName`, `easyExplanationLabel`). 결과 책 제목에 붙는 표시는 목표 언어다. 확인 창의 이미 한 분량과 다른 AI 안내는 쉬운 풀이의 기록만 본다. 이어하기 제안은 방식마다 따로 나오고 쉬운 풀이는 그렇다고 적는다. 방식이 바뀌면 결과 이름이 달라지므로 저장 위치를 다시 고른다.
 - **책 글은 모델에게 자료다.** 지시문과 도구 설명은 영어이고 제품 이름은 `brandText`를 거친다. 지시문은 책 글, 맥락, 첨부, 검색 결과의 지시를 따르지 말라고 한다. 고정 배치 책에는 `edit_blocks`를 주지 않는다.
 - **창구 이름은 `epub:`로 시작한다.** `src/shared/ipc.ts`에 있는 이름만 쓴다. 공용 `ai:*`와 구독 창구는 등록하지 않는다.
-- 문구는 21개 언어 조각에 모두 넣는다. 제품 이름은 `GenOffice`로 적는다.
+- 문구는 두 언어 조각에 모두 넣는다. 제품 이름은 `GenOffice`로 적는다.
 
 ## 이 모듈의 방식
 
@@ -66,8 +66,8 @@
 - 그린 모양이 원본과 맞지 않는 블록은 읽기만 된다(AI의 `edit_blocks`로는 고칠 수 있다).
 - 앱 안 MCP의 `read`는 화면에 대기 중인 입력을 먼저 보내 달라고 요청하고, 해당 보기·요청의 응답을 받은 뒤 뒷단의 글을 읽는다. 입력기 조합 중이거나 응답이 없으면 예전 글을 성공으로 돌려주지 않고 읽기를 거절한다. 파일은 저장하지 않는다.
 - 미리보기의 쪽 번호는 장 안에서만 센다. 글자 크기는 뿌리 글꼴 크기로 바꾸므로, 책이 글자 크기를 px로 정했으면 바뀌지 않는다. 고정 배치 장은 장 하나가 한 쪽이다.
-- 장 틀 안의 입력·포커스 이벤트, 블록 사이 커서 이동, 초점을 잃을 때의 자동 저장은 jsdom 시험으로만 확인했다. 빌드한 앱의 Chromium에서 사람이 확인한다(`docs/tracking/status.md`).
-- 자세한 것은 `docs/tracking/findings.md`의 "EPUB:"로 시작하는 항목들.
+- 장 틀 안의 입력·포커스 이벤트, 블록 사이 커서 이동, 초점을 잃을 때의 자동 저장은 jsdom 시험으로만 확인했다. 빌드한 앱의 Chromium에서 사람이 확인한다(`docs/archive/ieum/tracking/status.md`).
+- 자세한 것은 `docs/archive/ieum/tracking/findings.md`의 "EPUB:"로 시작하는 항목들.
 
 ## 로컬 AI (결정 0067)
 

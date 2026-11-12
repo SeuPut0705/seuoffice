@@ -157,13 +157,11 @@ const aiSubscription: SubscriptionApi = {
 
 const desktopApi: DesktopApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
+  getDocumentLocale: () => ipcRenderer.invoke(IPC_CHANNELS.documentLocale),
   fontFamilyInfo: (families) => ipcRenderer.invoke('app:font-family-info', families),
   openSourcePath: (path: string) => ipcRenderer.invoke('home:open-path', path),
   onLanguageChanged(handler) {
-    const listener = (
-      _event: Electron.IpcRendererEvent,
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => handler(lang)
+    const listener = (_event: Electron.IpcRendererEvent, lang: 'en' | 'ko') => handler(lang)
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
@@ -1185,7 +1183,8 @@ function parseWorkbookFile(input: unknown): WorkbookFile {
       !Array.isArray(sheet.tables) ||
       !Array.isArray(sheet.comments) ||
       !Array.isArray(sheet.pivotRanges) ||
-      sheet.pivotRanges.length > 1_000
+      sheet.pivotRanges.length > 1_000 ||
+      (sheet.pivotsUnlocated !== undefined && !isNonnegativeInteger(sheet.pivotsUnlocated))
     ) {
       throw new Error('Invalid worksheet metadata.')
     }
@@ -1388,6 +1387,9 @@ function parseWorkbookFile(input: unknown): WorkbookFile {
       tables,
       comments,
       pivotRanges: sheet.pivotRanges.map(parseCellArea),
+      // Pivots the sidecar could not place: dropping this would tell the
+      // renderer that every pivot's output is known.
+      pivotsUnlocated: sheet.pivotsUnlocated ?? 0,
       pivotTables: parsePivotTableInfos(sheet.pivotTables ?? []),
       sparklines: parseSparklineGroups(sheet.sparklines ?? []),
       cellImages: parseCellImages(sheet.cellImages ?? []),
