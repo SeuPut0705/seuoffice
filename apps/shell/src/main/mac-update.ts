@@ -202,10 +202,11 @@ while kill -0 "$pid" 2>/dev/null; do
 done
 note 'phase swap-start'
 /bin/rm -rf "$previous"
+installed=0
 if /bin/mv "$app" "$previous"; then
   if /bin/mv "$staged" "$app"; then
     note 'installed the new version'
-    /bin/rm -rf "$previous" "$staging"
+    installed=1
   else
     note 'could not move the new version in; putting the previous one back'
     /bin/mv "$previous" "$app" || note "could not put the previous version back from $previous"
@@ -215,6 +216,8 @@ else
 fi
 note 'phase relaunch'
 "$opener" "$app" --args --updated
+# the old bundle goes once the new one is opening, not before
+if [ "$installed" = 1 ]; then /bin/rm -rf "$previous" "$staging"; fi
 `
 
 /**
