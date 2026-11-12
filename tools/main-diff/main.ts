@@ -162,7 +162,13 @@ async function side(
     setUp(dir, c.files)
     const wire = await run(substitute(c.args, dir) as unknown[], dir)
     const files = snapshot(dir)
-    return JSON.stringify({ answer: wire, files }).split(dir).join('$DIR')
+    // the folder appears as written and inside one or two JSON strings, where
+    // a Windows path's backslashes are escaped once or twice
+    const once = JSON.stringify(dir).slice(1, -1)
+    const twice = JSON.stringify(once).slice(1, -1)
+    let text = JSON.stringify({ answer: wire, files })
+    for (const form of [twice, once, dir]) text = text.split(form).join('$DIR')
+    return text
   } finally {
     cleanUp(dir)
   }
