@@ -287,7 +287,7 @@ const SOURCES_PACKAGES: Array<Array<[string, string]>> = [
 ]
 
 const PLACEHOLDER_HASH = '0123456789abcdef'.repeat(4)
-const placeholder = (hash: string, tail = '\n'): string => `GENOFFICE-LAZY-MEDIA\n${hash}${tail}`
+const placeholder = (hash: string, tail = '\n'): string => `SEUOFFICE-LAZY-MEDIA\n${hash}${tail}`
 const MEDIA_PARTS: Array<[string, string, string]> = [
   ['word/media/image1.png', placeholder(PLACEHOLDER_HASH), 'image/png'],
   ['word/media/ä b#1.png', placeholder('f'.repeat(64)), 'image/png'],

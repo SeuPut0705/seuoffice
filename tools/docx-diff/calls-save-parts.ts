@@ -568,7 +568,7 @@ async function zipBytes(files: Array<[string, string]>, options: { streamFiles?:
 
 const HASH_A = 'a'.repeat(64)
 const HASH_B = `${'0123456789abcdef'.repeat(4)}`
-const placeholder = (hash: string): string => `GENOFFICE-LAZY-MEDIA\n${hash}\n`
+const placeholder = (hash: string): string => `SEUOFFICE-LAZY-MEDIA\n${hash}\n`
 
 const MEDIA = 'M'.repeat(5000)
 

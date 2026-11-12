@@ -6,10 +6,10 @@
 use crate::vml::shape::encode_uri_component;
 
 /// `LAZY_MEDIA_SCHEME`
-pub const LAZY_MEDIA_SCHEME: &str = "genoffice-docx-media";
+pub const LAZY_MEDIA_SCHEME: &str = "seuoffice-docx-media";
 
 /// `MAGIC`
-const MAGIC: &[u8] = b"GENOFFICE-LAZY-MEDIA\n";
+const MAGIC: &[u8] = b"SEUOFFICE-LAZY-MEDIA\n";
 
 /// `LAZY_MEDIA_PLACEHOLDER_BYTES`: the magic, a sha256 in hex and a line feed.
 pub const LAZY_MEDIA_PLACEHOLDER_BYTES: usize = MAGIC.len() + 64 + 1;
@@ -83,7 +83,7 @@ pub struct LazyMediaUrl {
 /// too long, holds a NUL or climbs out with `..`.
 pub fn parse_lazy_media_url(url: &str) -> Result<Option<LazyMediaUrl>, jscompat::RegexLimit> {
     let Some(found) =
-        jscompat::try_js_regex!(r"^genoffice-docx-media://([0-9a-f]{64})/(.+)$").try_exec(url)?
+        jscompat::try_js_regex!(r"^seuoffice-docx-media://([0-9a-f]{64})/(.+)$").try_exec(url)?
     else {
         return Ok(None);
     };
