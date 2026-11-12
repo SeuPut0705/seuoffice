@@ -234,7 +234,6 @@ import {
 import {
   installRedactMoveGuard,
   installRedactPasteGuard,
-  pasteSourceHoldsHidden,
   type RedactMoveGuardDeps,
 } from './redact-move-guard'
 import { installWithheldCopyMark } from './redact-clipboard'
@@ -576,7 +575,7 @@ import { installCopyMaterialize } from './copy-materialize'
 import { installCopyPicture } from './copy-picture'
 import {
   applyPasteSpecial,
-  pasteTypeCarriesValues,
+  pasteSpecialCarriesWithheld,
   readPasteSpecialSource,
   type PasteSpecialOptions,
   type PasteSpecialSource,
@@ -5258,19 +5257,11 @@ export function App({
   ): Promise<string | null> {
     const runtime = univerRef.current
     if (!runtime) return t('dlgPasteSpecialNothing')
-    // The dialog's own paste layer reads the copied cells itself; a hidden
-    // value must not reach another cell that way either, as a value or as a
-    // link to it.
-    if (
-      source.kind === 'internal' &&
-      (source.cut || options.link || pasteTypeCarriesValues(options.type)) &&
-      pasteSourceHoldsHidden(currentRedactions(), source)
-    ) {
+    // The dialog's own paste layer reads the copied cells itself; a value
+    // withheld from AI must not reach another cell that way either.
+    if (pasteSpecialCarriesWithheld(currentRedactions(), source, options)) {
       return t('redactMoveRefused')
     }
-    // The same cells copied in another tab or window of the app arrive as the
-    // clipboard's text; their copy says what it held (redact-clipboard.ts).
-    if (source.kind === 'text' && source.withheld) return t('redactMoveRefused')
     const result = await applyPasteSpecial(runtime, source, options)
     if (result.ok) return null
     return t(

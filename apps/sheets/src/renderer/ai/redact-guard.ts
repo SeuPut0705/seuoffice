@@ -104,6 +104,12 @@ const READS: Record<string, (op: Record<string, unknown>) => ReadSite[]> = {
     const values = Array.isArray(op.values) ? op.values : []
     return values.flatMap((row) => (Array.isArray(row) ? row.flatMap(formulaRefs) : []))
   },
+  // A pivot table's output is plain cells holding the labels and totals of its
+  // source range, which is on the op's own sheet.
+  add_pivot: (op) => {
+    const bounds = rangeOf(op.sourceRange)
+    return bounds ? [{ bounds }] : []
+  },
 }
 
 function sourceOf(op: Record<string, unknown>): ReadSite[] {

@@ -114,6 +114,7 @@ import {
   handleRefreshAllPivots,
   type PivotActionContext,
 } from './pivot-actions'
+import { refuseHiddenSource } from './redact-move-guard'
 import { INDENT_STEP_PX, indentStepsOf, normalizeHexColor } from './selection-format'
 import { collectDependents, collectPrecedents, installTraceArrows } from './trace-arrows'
 import { stepFontSize } from './font-size-ladder'
@@ -2085,6 +2086,14 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
         const row = active?.getRow() ?? range.getRow()
         const column = active?.getColumn() ?? range.getColumn()
         if (row <= 0) return
+        // the cell above is copied into this one, value or formula text alike
+        if (
+          refuseHiddenSource(runtime, worksheet.getSheetId(), [
+            { startRow: row - 1, endRow: row - 1, startColumn: column, endColumn: column },
+          ])
+        ) {
+          return
+        }
         const above = worksheet.getRange(row - 1, column).getCellData()
         const target = worksheet.getRange(row, column)
         if (argument === 'formula') {
@@ -2142,6 +2151,8 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
           ctx.setMessage(t('appDedupeSelectRows'))
           return
         }
+        // Rows move up as their computed values; a mark stays where it was.
+        if (refuseHiddenSource(runtime, sheetId, [range.getRange()])) return
         const values = range.getValues().map((row) => row.map((value) => value ?? null))
         const { rows, removed } = dedupeRows(values, argument === '1')
         if (removed === 0) {
@@ -2229,6 +2240,19 @@ export function handleRibbonCommand(ctx: RibbonCommandContext, command: string):
           return
         }
         const firstSource = Math.max(0, targetColumn - 6)
+        // What it fills is put together from the text of these columns.
+        if (
+          refuseHiddenSource(runtime, worksheet.getSheetId(), [
+            {
+              startRow,
+              endRow,
+              startColumn: firstSource,
+              endColumn: targetColumn,
+            },
+          ])
+        ) {
+          return
+        }
         const grid = worksheet
           .getRange(startRow, firstSource, rowCount, targetColumn - firstSource + 1)
           .getValues() as (string | number | boolean | null | undefined)[][]
