@@ -90,6 +90,14 @@ notice:
   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS
   IN THE SOFTWARE.
 
+SheetJS cfb
+
+crates/main-core/src/hwp/cfb.rs is a Rust port of the reading and writing
+parts of cfb 1.2.2 (https://github.com/SheetJS/js-cfb), Copyright (C) 2013-present
+SheetJS LLC,
+distributed under the Apache License, Version 2.0 (the license of this
+repository, in LICENSE).
+
 SeuOffice brand artwork
 
 The SeuOffice app icon and logo lockup are original compositions for this
