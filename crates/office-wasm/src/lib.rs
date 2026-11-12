@@ -42,6 +42,8 @@ enum Command {
     /// Every blob: a part as UTF-8. Reply blob `i`: part `i` as
     /// `normalizeOoxmlXml` rewrites it, as UTF-8.
     NormalizeOoxml,
+    /// Blob 0: one model value as JSON. Reply blob 0: typed value serialized again.
+    ModelRoundTrip { type_name: String },
 }
 
 #[derive(Deserialize)]
@@ -72,6 +74,9 @@ enum Reply<'a> {
     /// Per part, what `needsOoxmlNormalization` answers.
     Normalized {
         needed: Vec<bool>,
+    },
+    ModelRoundTrip {
+        model: bool,
     },
     Failure {
         error: Failure,
@@ -299,12 +304,30 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     package: package::from_parts(parts),
                 }),
                 (Command::NormalizeOoxml, _) => normalize(&frame.blobs, &mut reply_blobs),
+                (Command::ModelRoundTrip { type_name }, Some(bytes)) => {
+                    match std::str::from_utf8(bytes)
+                        .map_err(|error| error.to_string())
+                        .and_then(|text| docx_engine::model::round_trip(&type_name, text))
+                    {
+                        Ok(text) => {
+                            reply_blobs.push(text.into_bytes());
+                            json(&Reply::ModelRoundTrip { model: true })
+                        }
+                        Err(error) => json(&Reply::failure("model_refused", error)),
+                    }
+                }
                 (Command::ScanBody, Some(xml)) => scan(xml),
                 (Command::ZipEntries, Some(container)) => zip_entries(container, &mut reply_blobs),
                 (Command::Package, Some(docx)) => json(&Reply::Package {
                     package: package::open(docx),
                 }),
-                (Command::ScanBody | Command::ZipEntries | Command::Package, None) => {
+                (
+                    Command::ScanBody
+                    | Command::ZipEntries
+                    | Command::Package
+                    | Command::ModelRoundTrip { .. },
+                    None,
+                ) => {
                     json(&Reply::failure("invalid_request", "blob 0 is missing"))
                 }
             },
