@@ -323,11 +323,20 @@ named inputs that are now there (a `w:specVanish` that is present but off,
 `effectiveLineFormat`, default styles of other kinds before the paragraph
 default) and three cannot be seen by any input, because the TypeScript
 readers never produce the value (`eaSlotEmpty: false`, an empty conditional
-colour, a level with `hanging` 0). The faults of the leaves, the porters'
-35 and eight of the integrator's, are run 43153584303: read
-`tools/docx-diff/out/u2-leaves-faults.txt` or the artifact
-`docx-diff-faults`, add an input for each miss, and delete the branch
-`rust-faults/u2-leaves`.
+colour, a level with `hanging` 0). Of 43 faults in the leaves (the porters'
+35 and eight of the integrator's, all eight caught) 34 were caught at once
+(run 43153584303). Four of the nine misses named inputs that are now there
+and are caught (run 43157250362): text outside ASCII before a rewritten
+`w:delText`, a property change that is the first child of its holder, two
+range starts sharing an id under a filter, a tab stop at a negative
+position. Five are the same code for every value that can arrive: `open <=
+close` in `top_level_drawings`, the zone of a date-only form, the order of
+two alternative capture groups, `Math.max` over sizes (a NaN never reaches
+the direct layer) and an empty font name (dropped by the resolver).
+
+One of those inputs showed a TypeScript defect that is with main and that
+the Rust mirrors until main decides: rejecting a `w:pPrChange` that is the
+first child of `w:pPr` drops the old properties instead of restoring them.
 
 **Where the Rust is right and the TypeScript is to be fixed.** main decided
 six findings of this unit (items 11 to 16 of its TypeScript list). The Rust
@@ -418,8 +427,8 @@ for a record keyed by data. No order is in the ledger.
 1. **Merge stream D's fix of `jscompat/src/regex.rs`** when main sends the
    hash, see the gate read 0, and add the one input that waits for it: a
    part named `x.rel\u017f` for `ooxml-pkg/src/load.rs`.
-2. **Close the leaves' faults** (above), then the unit report to main if it
-   has not gone.
+2. **Ask main what it decided** about the `w:pPrChange` reject above and
+   about the counted quantifier over astral text; both were reported.
 3. **Merge main when it has fixed items 11 to 16**, drop the entries and
    classes that go stale, and take the model from stream B when it lands:
    the local structs go, and `lineBoxOf`, `vmlWordArtBox`, `ink.ts`,
