@@ -7,8 +7,13 @@ import JSZip from 'jszip'
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
-import { getUiLang, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
-import { documentLocale } from '../src/main/document-locale'
+import {
+  documentLocale,
+  getUiLang,
+  normalizeLang,
+  requestedLanguage,
+  setUiLang,
+} from '@genoffice/i18n'
 import { XlsxSidecarClient } from '../src/main/xlsx-sidecar-client'
 
 // Builtin number formats 27-36 and 50-58 record no pattern in the file; the

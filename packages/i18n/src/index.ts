@@ -1,3 +1,6 @@
+import { documentLocaleFor } from './document-locale'
+
+export { documentLocaleFor } from './document-locale'
 import { brandText } from './product'
 
 export type Lang = 'en' | 'ko'
@@ -159,6 +162,11 @@ export function getUiLang(): Lang {
  */
 export function getRequestedLocale(): string {
   return requestedLocale
+}
+
+/** The language documents are read and drawn for in this process (a documentLocaleFor code) */
+export function documentLocale(): string {
+  return documentLocaleFor(requestedLocale)
 }
 
 export function setUiLang(lang: Lang, requested: string = lang): void {

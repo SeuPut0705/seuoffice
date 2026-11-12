@@ -1,5 +1,5 @@
 import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@genoffice/xlsx-gateway/gateway/csv-limits'
-import { documentLocaleFor } from '@genoffice/xlsx-gateway/shared/document-locale'
+import { documentLocaleFor } from '@genoffice/i18n'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   collabLink,

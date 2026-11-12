@@ -20,7 +20,7 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { refreshCsvDigest } from './csv-digest'
-import { documentLocale, legacyCsvCharset } from './document-locale'
+import { legacyCsvCharset } from './document-locale'
 import { ImportRegistry } from './import-registry'
 import { createServer } from 'node:http'
 import { basename, dirname, isAbsolute, join, resolve as resolvePath, extname } from 'node:path'
@@ -110,6 +110,7 @@ import {
 import {
   brandText,
   createI18n,
+  documentLocale,
   getUiLang,
   normalizeLang,
   PRODUCT_NAME,
