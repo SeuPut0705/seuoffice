@@ -826,6 +826,20 @@ const entriesOf = (kinds: FieldKinds | null): [string, number][] =>
 const KEPT = entriesOf(fieldKindsOf(FIELDS_OPENED))
 const KEPT_TWO = entriesOf(fieldKindsOf(FIELDS_OPENED_DEFLATED))
 
+/** one field whose control holds the id and nothing else: four bytes */
+const bareField = (kind: number): Buffer =>
+  hwp({
+    sections: [
+      para(
+        0,
+        Buffer.concat([chars('a'), fieldBegin(kind), chars('x'), fieldEnd()]),
+        fieldControl(0, ''),
+      ),
+    ],
+  })
+const BARE_OPENED = bareField(KIND_ME)
+const BARE_ENGINE = bareField(UNKNOWN_FIELD)
+
 // ---------- section tails ----------
 
 const MEMO_COMMAND = (second: number, first = 0): Buffer => chars(`MEMO/${first}/${second}/`)
@@ -1372,6 +1386,7 @@ export const group: Group = {
       { args: [hex(zip([mimetype()]))], note: 'a zip' },
       { args: [''], note: 'empty' },
       { args: ['d0cf11e0a1b11ae1'], note: 'only the signature' },
+      { args: [hex(BARE_OPENED)], note: 'a field control of the four bytes of its id' },
     ] as Case[],
   },
   'field-kinds.restoreFieldKinds': {
@@ -1449,6 +1464,23 @@ export const group: Group = {
       },
       { args: [hex(zip([mimetype()])), KEPT, 'exact'], note: 'a zip' },
       { args: ['', KEPT, 'exact'], note: 'empty' },
+      {
+        args: [hex(BARE_ENGINE), entriesOf(fieldKindsOf(BARE_OPENED)), 'exact'],
+        note: 'a field control of the four bytes of its id',
+      },
+      {
+        args: [
+          hex(
+            hwp({
+              sections: [fieldSection(() => UNKNOWN_FIELD)],
+              streams: { '/Extra': Buffer.alloc(65, 1), '/Tiny': Buffer.alloc(1, 2) },
+            }),
+          ),
+          KEPT,
+          'exact',
+        ],
+        note: 'small streams of 65 and 1 bytes: a sector more than the whole sectors they fill',
+      },
     ] as Case[],
   },
 

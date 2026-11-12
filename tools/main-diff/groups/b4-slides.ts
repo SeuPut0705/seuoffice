@@ -541,6 +541,12 @@ const limitFile = (extra: number): Buffer => {
 }
 const atLimit = gzipSync(limitFile(0))
 const overLimit = gzipSync(limitFile(1))
+const atLimitWithFont = (() => {
+  const head = emf(emfFont('AtLimit', 400, 0))
+  const b = Buffer.alloc(MAX_METAFILE_GUNZIP_BYTES)
+  head.copy(b, 0)
+  return gzipSync(b)
+})()
 const bomb = gzipSync(Buffer.alloc(MAX_METAFILE_GUNZIP_BYTES * 2))
 
 // ---------- mp4 ----------
@@ -1432,6 +1438,7 @@ export const group: Group = {
       { args: [hx(bomb)], note: 'gzip bomb: twice the limit' },
       { args: [hx(overLimit)], note: 'one byte over the limit, EMF header first' },
       { args: [hx(atLimit)], note: 'exactly the limit' },
+      { args: [hx(atLimitWithFont)], note: 'exactly the limit, a font in it' },
     ],
   },
   'metafile-fonts.listMetafileFonts': {
@@ -2335,6 +2342,23 @@ export const group: Group = {
         { [`ud/${FILE}`]: { text: stored({ [A]: rec('locked') }), mode: 0 } },
         {},
         'the record file cannot be read',
+      ),
+      ...[59_993, 59_994, 59_995, 59_996, 59_997, 59_998, 59_999, 60_000].map((ms) =>
+        storeCase(
+          [
+            { op: 'set', path: '/d/1', input: sel('builtin', 'one') },
+            { op: 'set', path: '/d/2', input: sel('builtin', 'two') },
+            { op: 'tick', ms },
+            { op: 'get', path: '/d/1' },
+            { op: 'set', path: '/d/3', input: sel('builtin', 'three') },
+            { op: 'get', path: '/d/1' },
+            { op: 'get', path: '/d/2' },
+            { op: 'get', path: '/d/3' },
+          ],
+          undefined,
+          { maxDocuments: 2 },
+          `a read ${ms} ms on: a touched record outlives the one written after it; the clock moves a step on each call, so one of these is exactly a minute`,
+        ),
       ),
     ],
   },

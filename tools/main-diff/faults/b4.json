@@ -319,8 +319,8 @@
   {
     "name": "old-names asset manifest renamed",
     "file": "main-core/src/markdown/old_names.rs",
-    "find": "\".genoffice-assets.json\"",
-    "replace": "\".genoffice-assets.jsonx\"",
+    "find": "[&str; 1] = [\".genoffice-assets.json\"]",
+    "replace": "[&str; 1] = [\".genoffice-assets.jsonx\"]",
     "fn": [
       "markdown/old-names.OLD_ASSET_MANIFEST_FILENAMES",
       "markdown/asset-lifecycle.readOwnedAssetManifest"
@@ -529,7 +529,7 @@
     "name": "notes depth off by one",
     "file": "main-core/src/markdown/wiki_notes.rs",
     "find": "if out.len() as f64 >= cap || depth + 1 > MAX_DEPTH {",
-    "replace": "if out.len() as f64 >= cap || depth > MAX_DEPTH {",
+    "replace": "if out.len() as f64 >= cap || *depth > MAX_DEPTH {",
     "fn": ["wiki-notes.listWikiNotes"]
   },
   {
@@ -858,24 +858,10 @@
     "fn": ["note-link.createNoteLinkService"]
   },
   {
-    "name": "helper existence unchecked",
+    "name": "no engine answers an empty list",
     "file": "main-core/src/pdf/ocr.rs",
-    "find": "if platform != Platform::Darwin || !exists(helper_path) {",
-    "replace": "if platform != Platform::Darwin {",
-    "fn": ["ocr.ocrPagePng"]
-  },
-  {
-    "name": "byte order mark kept",
-    "file": "main-core/src/pdf/ocr.rs",
-    "find": "let text = text.strip_prefix('\\u{feff}').unwrap_or(&text);",
-    "replace": "let text = &*text;",
-    "fn": ["ocr.ocrPagePng"]
-  },
-  {
-    "name": "exit status ignored",
-    "file": "main-core/src/pdf/ocr.rs",
-    "find": "if run.ended != Ended::Exited(Some(0)) {",
-    "replace": "if matches!(run.ended, Ended::NotFound) {",
+    "find": "let Some(engine) = self.ensure_engine(env) else {\n            return Ok(None);",
+    "replace": "let Some(engine) = self.ensure_engine(env) else {\n            return Ok(Some(Vec::new()));",
     "fn": ["ocr.ocrPagePng"]
   },
   {
@@ -1131,10 +1117,10 @@
     "fn": ["read-url-ipc.normalizeReadUrlRequest"]
   },
   {
-    "name": "saveas-ext-regex",
+    "name": "saveas-htm-extension",
     "file": "main-core/src/docs/save_as_formats.rs",
-    "find": "js_regex!(r\"\\.([^./\\\\]+)$\")",
-    "replace": "js_regex!(r\"\\.([^.]+)$\")",
+    "find": "(SaveAsKind::Html, \"filterHtml\", &[\"html\", \"htm\"]),",
+    "replace": "(SaveAsKind::Html, \"filterHtml\", &[\"html\"]),",
     "fn": ["docs/save-as-formats.saveAsTarget", "docs/save-as-formats.hwpExportTarget"]
   },
   {
@@ -1587,10 +1573,10 @@
     "fn": ["html/asset-lifecycle.readOwnedAssetManifest"]
   },
   {
-    "name": "positions-limit",
+    "name": "positions-oldest-kept",
     "file": "main-core/src/epub/reading_state.rs",
-    "find": "if file.positions.len() > MAX_POSITIONS {",
-    "replace": "if file.positions.len() >= MAX_POSITIONS {",
+    "find": "sort_by_number(&mut keys, |a, b| updated_at(b) - updated_at(a));",
+    "replace": "sort_by_number(&mut keys, |a, b| updated_at(a) - updated_at(b));",
     "fn": ["reading-state.createReadingState"]
   },
   {
@@ -1680,8 +1666,8 @@
   {
     "name": "old-list-name",
     "file": "main-core/src/html/old_names.rs",
-    "find": ".genoffice-assets.json",
-    "replace": ".genoffice-assets.js",
+    "find": "[&str; 1] = [\".genoffice-assets.json\"]",
+    "replace": "[&str; 1] = [\".genoffice-assets.js\"]",
     "fn": ["html/old-names.OLD_ASSET_MANIFEST_FILENAMES"]
   },
   {
@@ -2040,7 +2026,7 @@
     "file": "main-core/src/diagram/network_guard.rs",
     "find": "if log.blocked.len() > REFUSED_ADDRESSES_KEPT {",
     "replace": "if log.blocked.len() >= REFUSED_ADDRESSES_KEPT {",
-    "fn": ["network-guard.isAllowedDiagramRequest", "network-guard.REFUSED_ADDRESSES_KEPT"]
+    "fn": ["network-guard.screenRequest"]
   },
   {
     "name": "integrator: max unit exclusive",
@@ -2064,10 +2050,10 @@
     "fn": ["close-guard.closeGuardDecision"]
   },
   {
-    "name": "integrator: zero inode taken as identity",
+    "name": "integrator: any identity matches",
     "file": "main-core/src/sheets/csv_digest.rs",
-    "find": "if ino == 0.0 {",
-    "replace": "if ino < 0.0 {",
+    "find": "if file_identity(source).as_deref() == Some(target_id.as_str()) {",
+    "replace": "if file_identity(source).is_some() {",
     "fn": ["csv-digest.refreshCsvDigest"]
   },
   {
@@ -2183,10 +2169,10 @@
     "fn": ["slides/export-images.buildExportImagePaths"]
   },
   {
-    "name": "integrator: zero timeout allowed",
+    "name": "integrator: empty family kept",
     "file": "main-core/src/slides/font_scan.rs",
-    "find": "if ms.is_nan() || ms <= 0.0 {",
-    "replace": "if ms.is_nan() || ms < 0.0 {",
+    "find": ".filter(|(_, files)| !files.is_empty())",
+    "replace": ".filter(|_| true)",
     "fn": ["font-scan.scanFontDirs"]
   },
   {
@@ -2243,10 +2229,10 @@
     "fn": ["picture-frame.pictureFrame"]
   },
   {
-    "name": "integrator: NaN owner differs [seed_queue.rs]",
+    "name": "integrator: requeue keeps first deck",
     "file": "main-core/src/slides/seed_queue.rs",
-    "find": "a == b || (a.is_nan() && b.is_nan())",
-    "replace": "a == b",
+    "find": "Some(slot) => slot.1 = SeedEntry { deck, options },",
+    "replace": "Some(_) => {}",
     "fn": [
       "seed-queue.queueSlidesSeedFor",
       "seed-queue.takeSlidesSeed",
@@ -2278,10 +2264,10 @@
     "fn": ["conversion-lifecycle.cleanupStaleMarkdownConversions"]
   },
   {
-    "name": "integrator: parent root accepted",
+    "name": "integrator: dot-dot prefix refused",
     "file": "main-core/src/markdown/fs_util.rs",
-    "find": "&& from_root != \"..\"",
-    "replace": "&& from_root != \".\"",
+    "find": "&& !from_root.starts_with(&format!(\"..{SEP}\"))",
+    "replace": "&& !from_root.starts_with(\"..\")",
     "fn": [
       "markdown/asset-lifecycle.resolveSafeRelativeImagePath",
       "markdown/asset-lifecycle.resolveSafeVaultImagePath"
@@ -2396,8 +2382,8 @@
   {
     "name": "integrator: old manifest name",
     "file": "main-core/src/html/old_names.rs",
-    "find": "\".genoffice-assets.json\"",
-    "replace": "\".genoffice-asset.json\"",
+    "find": "[&str; 1] = [\".genoffice-assets.json\"]",
+    "replace": "[&str; 1] = [\".genoffice-asset.json\"]",
     "fn": ["html/old-names.OLD_ASSET_MANIFEST_FILENAMES"]
   },
   {
@@ -2481,10 +2467,10 @@
     "fn": ["disk-watch.watchDiskFile"]
   },
   {
-    "name": "integrator: duplicate page test",
+    "name": "duplicate pages tested unsorted",
     "file": "main-core/src/pdf/export_images.rs",
-    "find": "seen.windows(2).all(|pair| pair[0] != pair[1])",
-    "replace": "seen.windows(2).all(|pair| pair[0] < pair[1])",
+    "find": "seen.sort_by(f64::total_cmp);",
+    "replace": "",
     "fn": ["pdf/export-images.hasValidExportPageNumbers"]
   },
   {
@@ -2534,10 +2520,10 @@
     "fn": ["generated-output.uniqueGeneratedPdfPath"]
   },
   {
-    "name": "integrator: tmp env order",
+    "name": "password file without its line end",
     "file": "main-core/src/pdf/node_io.rs",
-    "find": "[\"TMPDIR\", \"TMP\", \"TEMP\"]",
-    "replace": "[\"TMP\", \"TMPDIR\", \"TEMP\"]",
+    "find": "file.write_all(text.as_bytes())",
+    "replace": "file.write_all(text.trim_end().as_bytes())",
     "fn": ["system-certificates.listSystemCertificates", "system-certificates.openSystemSigner"]
   },
   {
@@ -2548,10 +2534,10 @@
     "fn": ["note-link.parseNoteInsertRequest", "note-link.parseNoteOpenRequest"]
   },
   {
-    "name": "integrator: helper presence on mac",
+    "name": "windows helper run on any platform",
     "file": "main-core/src/pdf/ocr.rs",
-    "find": "if platform != Platform::Darwin || !exists(helper_path) {",
-    "replace": "if platform != Platform::Darwin && !exists(helper_path) {",
+    "find": "if platform != Platform::Win32 || !exists(helper_path) {",
+    "replace": "if !exists(helper_path) {",
     "fn": ["ocr.ocrPagePng"]
   },
   {
@@ -2597,10 +2583,10 @@
     "fn": ["wasm-path.hbSubsetWasmPath"]
   },
   {
-    "name": "integrator: fat sector count rounding",
+    "name": "integrator: small stream sector count rounding",
     "file": "main-core/src/hwp/cfb.rs",
-    "find": "let mut fat_cnt = (fat_base + 0x7f) >> 7;",
-    "replace": "let mut fat_cnt = (fat_base + 0x7e) >> 7;",
+    "find": "chain.chainit(&mut o, (flen + 0x3f) >> 6);",
+    "replace": "chain.chainit(&mut o, (flen + 0x3e) >> 6);",
     "fn": [
       "field-kinds.restoreFieldKinds",
       "section-tails.restoreSectionTails",
@@ -2700,10 +2686,10 @@
     ]
   },
   {
-    "name": "integrator: mkdtemp mode",
+    "name": "integrator: mkdtemp template short",
     "file": "main-core/src/node_fs.rs",
-    "find": "std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);",
-    "replace": "std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o755);",
+    "find": "let template = format!(\"{prefix}XXXXXX\");",
+    "replace": "let template = format!(\"{prefix}XXXXX\");",
     "fn": ["image-export.ImageExportSessions", "hwp/print-document.printJobToPdf"]
   },
   {

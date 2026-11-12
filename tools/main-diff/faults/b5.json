@@ -447,10 +447,10 @@
     "fn": ["ai-provider/custom-endpoints.resolveCustomEndpoints"]
   },
   {
-    "name": "integrator: claude effort order",
+    "name": "integrator: effort order xhigh max",
     "file": "main-core/src/packages/ai_provider/effort.rs",
-    "find": "CLAUDE_EFFORTS: [&str; 5] = [\"low\", \"medium\", \"high\", \"xhigh\", \"max\"]",
-    "replace": "CLAUDE_EFFORTS: [&str; 5] = [\"low\", \"medium\", \"high\", \"max\", \"xhigh\"]",
+    "find": "AI_EFFORTS: [&str; 7] = [\"none\", \"minimal\", \"low\", \"medium\", \"high\", \"xhigh\", \"max\"]",
+    "replace": "AI_EFFORTS: [&str; 7] = [\"none\", \"minimal\", \"low\", \"medium\", \"high\", \"max\", \"xhigh\"]",
     "fn": ["ai-provider/effort.aiEffortsOf", "ai-provider/effort.aiModelEffortsOf"]
   },
   {
@@ -461,14 +461,14 @@
     "fn": ["ai-provider/free-ai.nextPacificMidnight"]
   },
   {
-    "name": "integrator: infinity counted as integer",
+    "name": "integrator: fraction below one half counted as integer",
     "file": "main-core/src/packages/ai_provider/jsval.rs",
     "find": "x.is_finite() && x.trunc() == x\n",
-    "replace": "x.trunc() == x\n",
+    "replace": "x.is_finite() && x.trunc() == x.round()\n",
     "fn": [
-      "ai-provider/ai-settings-guard.sanitizeAiSettings",
-      "ai-provider/local-profile.localEndpointFieldsOf",
-      "ai-provider/effort.aiModelEffortsOf"
+      "ai-provider/providers.withMigratedSubscriptionNoticeVersion",
+      "ai-provider/providers.subscriptionNoticeVersionOf",
+      "ai-provider/providers.headlessConsentVersionOf"
     ]
   },
   {
@@ -479,10 +479,10 @@
     "fn": ["ai-provider/local-profile.localEndpointFieldsOf"]
   },
   {
-    "name": "integrator: minimax base url",
+    "name": "integrator: minimax default analysis model",
     "file": "main-core/src/packages/ai_provider/media.rs",
-    "find": "pub const MINIMAX_BASE_URL: &str = \"https://api.minimax.io/v1\";",
-    "replace": "pub const MINIMAX_BASE_URL: &str = \"https://api.minimax.io/v1/\";",
+    "find": "default_analysis_model: \"MiniMax-M3\",",
+    "replace": "default_analysis_model: \"MiniMax-M2\",",
     "fn": ["ai-provider/media.defaultAiMediaSettings", "ai-provider/media.resolveAiMediaSettings"]
   },
   {
@@ -539,10 +539,10 @@
     "fn": ["ai-provider/run-error.aiStreamErrorFields"]
   },
   {
-    "name": "integrator: tavily image search",
+    "name": "integrator: default search provider",
     "file": "main-core/src/packages/ai_provider/search_settings.rs",
-    "find": "key_placeholder: \"tvly-...\",\n        image_search: false,",
-    "replace": "key_placeholder: \"tvly-...\",\n        image_search: true,",
+    "find": "(\"provider\", text(\"parallel\")),",
+    "replace": "(\"provider\", text(\"tavily\")),",
     "fn": [
       "ai-provider/search-settings.defaultAiSearchSettings",
       "ai-provider/search-settings.resolveAiSearchSettings"
@@ -556,17 +556,17 @@
     "fn": ["ai-provider/settings-secrets.sealSecretValue"]
   },
   {
-    "name": "integrator: min timeout boundary",
+    "name": "integrator: floor not applied",
     "file": "main-core/src/packages/ai_provider/watchdog.rs",
-    "find": "if ms < AI_WATCHDOG_MIN_TIMEOUT_MS {",
-    "replace": "if ms <= AI_WATCHDOG_MIN_TIMEOUT_MS {",
+    "find": "return AI_WATCHDOG_MIN_TIMEOUT_MS;",
+    "replace": "return ms;",
     "fn": ["ai-provider/watchdog.normalizeWatchdogTimeout"]
   },
   {
-    "name": "integrator: blocked error code",
+    "name": "integrator: run target provider name",
     "file": "main-core/src/sheets/ai_run.rs",
-    "find": "error_code: Some(\"not-connected\"),",
-    "replace": "error_code: Some(\"not-configured\"),",
+    "find": "(\"provider\", text(provider.as_str())),",
+    "replace": "(\"provider\", text(provider.as_str().trim_end_matches(\"-code\"))),",
     "fn": ["sheets/ai-run.resolveAiRunTarget"]
   },
   {

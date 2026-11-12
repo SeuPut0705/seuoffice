@@ -319,6 +319,10 @@ const providersFns: Group = {
       c([{ subscriptionNoticeSeen: true, subscriptionNoticeVersion: 2 }], 'a version is there'),
       c([{ subscriptionNoticeSeen: true, subscriptionNoticeVersion: -1 }], 'a negative version'),
       c([{ subscriptionNoticeSeen: true, subscriptionNoticeVersion: 1.5 }], 'a fractional version'),
+      c(
+        [{ subscriptionNoticeSeen: true, subscriptionNoticeVersion: 1.4 }],
+        'a fraction that rounds down',
+      ),
       c([{ subscriptionNoticeSeen: true, subscriptionNoticeVersion: '2' }], 'a text version'),
       c([{ subscriptionNoticeSeen: true, subscriptionNoticeVersion: null }], 'a null version'),
       c([{ subscriptionNoticeSeen: true, subscriptionNoticeVersion: 0, x: 1 }], 'version 0'),
@@ -373,6 +377,7 @@ const providersFns: Group = {
       c([0, true], 'zero is a version'),
       c([-1, true], 'negative reads the flag'),
       c([1.5, true]),
+      c([1.4, true], 'a fraction that rounds down'),
       c([null, true], 'only the flag'),
       c([null, false]),
       c(['2', true]),
@@ -381,7 +386,7 @@ const providersFns: Group = {
   },
   'ai-provider/providers.headlessConsentVersionOf': {
     ts: (a) => headlessConsentVersionOf(a[0]),
-    cases: [c([2]), c([1]), c([0]), c([-3]), c([2.5]), c(['2']), c([null]), c([1e300])],
+    cases: [c([2]), c([1]), c([0]), c([-3]), c([2.5]), c(['2']), c([null]), c([1e300]), c([2.4])],
   },
   'ai-provider/providers.headlessSubscriptionOn': {
     ts: (a) => headlessSubscriptionOn(a[0] as J),
@@ -1489,6 +1494,18 @@ const guardCases: Case[] = [
     ],
     'an own __proto__ key in media providers',
   ),
+  c(
+    [
+      {
+        provider: 'auto',
+        providers: {},
+        pdfSendNoticeSeen: 1.4,
+        subscriptionNoticeVersion: 2.4,
+        headlessSubscriptionConsentVersion: 3.4,
+      },
+    ],
+    'fractions below one half are no whole numbers',
+  ),
 ]
 
 const guardFns: Group = {
@@ -1752,6 +1769,25 @@ const errorCases: unknown[][] = [
   [{ cause: 'rate limit' }],
   [{ cause: { message: 'fetch failed' } }],
   [{ message: 5, cause: 'overloaded' }],
+  [err('HTTP 529')],
+  [err('upstream said HTTP 529: busy')],
+  [err('credits low, HTTP 529')],
+  [
+    err('inner', {
+      cause: err('mid', {
+        cause: err('deep', {
+          cause: err('deeper', { cause: err('deepest', { cause: err('fetch failed') }) }),
+        }),
+      }),
+    }),
+  ],
+  [
+    err('inner', {
+      cause: err('mid', {
+        cause: err('deep', { cause: err('deeper', { cause: err('fetch failed') }) }),
+      }),
+    }),
+  ],
 ]
 
 const clockCases: Case[] = errorCases.map((e) => c(e))
@@ -1856,6 +1892,8 @@ const utilFns: Group = {
       c(['https://\u0131.example/\u017F?k=\u212A', '']),
       c(['https://exa mple.com/', '']),
       c(['https://example.com/\u{1F600}', '']),
+      c([`https://a.com/${'x'.repeat(2048 - 14)}`, ''], 'exactly 2048 units'),
+      c([`https://a.com/${'x'.repeat(2049 - 14)}`, ''], 'one past the bound'),
     ],
   },
   'ai-provider/effort.aiEffortOf': {
@@ -1881,6 +1919,7 @@ const utilFns: Group = {
       c(['low']),
       c([{ 0: 'low' }]),
       c([null]),
+      c([['max', 'xhigh', 'none', 'minimal', 'medium', 'high', 'low']], 'every level, shuffled'),
     ],
   },
   'ai-provider/effort.aiModelEffortOf': {
@@ -2090,6 +2129,17 @@ const utilFns: Group = {
       c([[1]]),
       c(['x']),
       c([null]),
+      c(
+        [
+          {
+            kind: 'local',
+            modelProfiles: {
+              m: { contextLength: 4096, tools: true, vision: false, checkedAt: 7.4 },
+            },
+          },
+        ],
+        'a fractional checkedAt',
+      ),
     ],
   },
   'ai-provider/custom-endpoints.resolveCustomEndpoints': {
@@ -2907,6 +2957,8 @@ const namingFns: Group = {
       '\u{1F600}\u{1F600} party.txt',
       '# Heading *bold*',
       '> quote "x"',
+      `${'a'.repeat(40)} ${'b'.repeat(19)} c`,
+      `${'a'.repeat(61)} c`,
     ].map((raw) => c([raw])),
   },
   'ai-naming.buildNamingInstruction': {
@@ -3152,6 +3204,26 @@ const secretsFns2: Group = {
           `sealed:v1:${b64('enc:sk-1').replace(/\+/g, '-').replace(/\//g, '_')}`,
         ],
         'the URL-safe alphabet',
+      ),
+      c(
+        [
+          storages.win,
+          'win32',
+          true,
+          'open',
+          `sealed:v1:${b64('enc:>>>?').replace(/\+/g, '-').replace(/\//g, '_')}`,
+        ],
+        'the URL-safe dash is the sixty-second digit',
+      ),
+      c(
+        [
+          storages.win,
+          'win32',
+          true,
+          'open',
+          `sealed:v1:${b64('enc:???>').replace(/\+/g, '-').replace(/\//g, '_')}`,
+        ],
+        'the URL-safe underscore is the sixty-third digit',
       ),
       c(
         [

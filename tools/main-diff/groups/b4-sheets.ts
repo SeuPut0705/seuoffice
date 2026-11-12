@@ -1114,6 +1114,23 @@ const saveFailureLog: Record<string, FnSpec> = {
         files: { 'log.jsonl': { dir: true } },
         note: 'a folder as the log: nothing happens',
       },
+      ...(() => {
+        const e = entry()
+        const failure = e.failure as { kind: string; detail: string }
+        const line = `${JSON.stringify({
+          time: new Date(0).toISOString(),
+          app: e.appVersion,
+          source: e.sourceFormat,
+          bytes: e.stagedBytes,
+          kind: failure.kind,
+          detail: failure.detail,
+        })}\n`
+        const size = Buffer.byteLength(line)
+        return [size, size - 1].map((cap): Case => ({
+          args: ['$DIR/log.jsonl', entry(), 0, cap],
+          note: `a new file of exactly ${size} bytes under a cap of ${cap}`,
+        }))
+      })(),
     ],
   },
 }
@@ -2081,6 +2098,18 @@ const resolveCases: Case[] = [
       }),
     ],
     note: 'structural ops before filters before links',
+  },
+  {
+    args: [
+      [
+        ['u1', ''],
+        ['u2', 'B'],
+      ],
+      saveRequest({
+        sheetOps: [{ kind: 'duplicate-sheet', sheetId: 'd1', sourceSheetId: 'u1', name: 'C' }],
+      }),
+    ],
+    note: 'a duplicate of a file sheet whose name is empty is refused',
   },
 ]
 

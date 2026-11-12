@@ -980,7 +980,13 @@ export const group: Group = {
   },
   'doc-format.zipEntryNames': {
     ts: (a) => zipEntryNames(bytesOf(str(a, 0))),
-    cases: zipCases.map((args): Case => ({ args })),
+    cases: [
+      ...zipCases.map((args): Case => ({ args })),
+      {
+        args: ['504b0506' + '00000000' + '0000' + '0000' + '00000000' + 'ffffffff' + '0000'],
+        note: 'no entries, but a central directory offset that is the zip64 sentinel',
+      },
+    ],
   },
   'doc-format.isOdtPackage': {
     ts: (a) => isOdtPackage(bytesOf(str(a, 0))),
@@ -2423,7 +2429,13 @@ export const group: Group = {
         `${h}/~user/x`,
         `${h}/;x`,
         `${h}/ \u00a0`,
-      ].map((url): Case => ({ args: [root, url] }))
+      ]
+        .map((url): Case => ({ args: [root, url] }))
+        .concat([
+          { args: ['/', `${h}/index.html`], note: 'a root of "/" never holds "//"' },
+          { args: ['/', `${h}/etc/passwd`] },
+          { args: ['$DIR/bundle/', `${h}/js/app.js`], note: 'a root with a trailing separator' },
+        ])
     })(),
   },
   'drawio-protocol.injectBridge': {

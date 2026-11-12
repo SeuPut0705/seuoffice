@@ -1812,6 +1812,9 @@ const headsCases: Case[] = [
     '\n# Last ^lastblock\ntext ^other\n^lone',
   Array.from({ length: 201 }, (_, i) => `text ^b${i}`).join('\n') + '\n# Late heading\n# Late ^blk',
   NOTE_MD,
+  '  text  ^id',
+  '\ttext\t^id',
+  '   text ^id',
 ].map((raw): Case => ({ args: [raw] }))
 
 const wikiHeadsCase = (
@@ -2564,6 +2567,10 @@ const relativeCases: Case[] = [
   'img/a.png\u0000',
   'img/\u00a0a.png',
 ].map((source): Case => relCase(source))
+relativeCases.push(
+  relCase('..x.png', { ...REL_FILES, 'd/..x.png': 'x' }),
+  relCase('img/..x.png', { ...REL_FILES, 'd/img/..x.png': 'x' }),
+)
 
 const vaultImageCase = (
   target: string,

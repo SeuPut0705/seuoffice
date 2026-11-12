@@ -936,6 +936,7 @@ const exportCases: Case[] = [
     args: ['$DIR/out', '\u0131\u017f\u212a \u{1F600}', [9007199254740991], 'png'],
     note: 'astral and folding characters; the largest safe page',
   },
+  { args: ['$DIR/out', 'a|b', [1], 'png'], note: 'a pipe cannot stay in a name' },
   { args: ['$DIR/out', 'x', [9007199254740992], 'png'], note: 'past the safe integers' },
 ]
 
@@ -970,6 +971,7 @@ const FBOTH = sfnt(0x10000, [
     ]),
   ],
 ])
+const F4_WRAP = sfnt(0x10000, [['cmap', cmapTable([[3, 1, cmap4([[0xc000, 0xc000, 0x4000, 0]])]])]])
 const F4_UNICODE = sfnt(0x10000, [['cmap', cmapTable([[0, 3, cmap4(SEG, [7, 0, 9])]])]])
 const F4_MAC = sfnt(0x10000, [['cmap', cmapTable([[1, 0, cmap4(SEG, [7, 0, 9])]])]])
 const F_NOCMAP = sfnt(0x10000, [['name', [0, 0, 0, 0]]])
@@ -999,6 +1001,7 @@ const cmapCases: Case[] = [
   { args: [fontHex(F4).slice(0, 20), 'A'], note: 'a truncated font does not throw' },
   { args: ['', ''], note: 'no text needs no font' },
   { args: ['', '\r\n'], note: 'only line breaks needs no font' },
+  { args: [fontHex(F4_WRAP), '\uc000'], note: 'format 4: a glyph id wraps past 16 bits to 0' },
   { args: ['', 'A'], note: 'an empty font' },
 ]
 
@@ -1070,6 +1073,11 @@ const sourceCases: Case[] = [
   },
   { args: [faceSpec('MS-Mincho', 0), null], note: 'Japanese serif' },
   { args: [faceSpec('SimSun-Italic', 64), null], note: 'Chinese serif, italic twice' },
+  {
+    args: [faceSpec('12345', 0, os2Font(600, [2, 5, 0, 3])), null],
+    note: 'weight 600 of the embedded OS/2 is bold',
+  },
+  { args: [faceSpec('BOLDXX+Arial'), null], note: 'a subset tag is not part of the name' },
   { args: [faceSpec('Foo', 4294967296 + 2 + 32), null], note: 'flags past 32 bits wrap as int32' },
 ]
 
@@ -1247,6 +1255,19 @@ const FIXTURE_FONTS: Record<string, number[]> = {
       ],
     ]),
   }),
+  'weighty.ttf': fixtureFace({
+    family: 'Weighty',
+    sub: 'Regular',
+    ps: 'Weighty',
+    cmap: cmapTable([[3, 1, cmap4([[0x2603, 0x2603, 1 - 0x2603, 0]])]]),
+  }),
+  'weightyxbi.ttf': fixtureFace({
+    family: 'Weighty',
+    sub: 'ExtraBold Italic',
+    ps: 'Weighty-ExtraBoldItalic',
+    weight: 800,
+    cmap: cmapTable([[3, 1, cmap4([[0x2603, 0x2603, 1 - 0x2603, 0]])]]),
+  }),
   'collection.ttc': fixtureCollection([
     fixtureFace({ family: 'Collection Sans', sub: 'Regular', ps: 'CollectionSans-Regular' }),
     fixtureFace({
@@ -1325,6 +1346,10 @@ const similarCases: Case[] = [
     args: [faceSpec('Foo', 0, os2Font(700, [2, 5, 0, 3])), 'abc', false],
     note: 'serif and bold by the embedded OS/2',
   },
+  {
+    args: [faceSpec('BOLDXX+Arial'), 'Hello', false],
+    note: 'a subset tag is not part of the name',
+  },
 ]
 
 const locateCases: Case[] = [
@@ -1350,6 +1375,9 @@ const locateCases: Case[] = [
   { args: ['Helvetica-Oblique', ''], note: 'a face in a subfolder' },
   { args: ['', 'Helvetica'], note: 'two faces of a family, Regular wins' },
   { args: ['ColorEmoji', ''], note: 'a color font is found by name' },
+  { args: ['Foo-ExtraBold', 'Times New Roman'], note: 'extra bold is a neighbouring weight too' },
+  { args: ['ABCDEF+ArialMT', ''], note: 'a subset tag in the name' },
+  { args: ['Foo-Bold', 'Weighty'], note: 'extra bold is the neighbouring weight of bold' },
   { args: ['', 'Broken'], note: 'files that are no fonts are skipped' },
 ]
 
@@ -1655,6 +1683,52 @@ const readCases: Case[] = [
     note: 'an empty password is none',
   },
   { args: [{ loadFail: true, pages: [] }, 'PDFDATA', {}], note: 'the document does not load' },
+  {
+    args: [
+      {
+        pages: [
+          text3('Te\r\nst', {
+            generated: [2],
+            origins: [
+              [0, 0],
+              [10, 100],
+              [0, 0],
+              [0, 0],
+              [35, 100],
+              [0, 0],
+            ],
+            sizes: [10, 10, 10, 10, 10, 10],
+          }),
+        ],
+      },
+      'PDFDATA',
+      {},
+    ],
+    note: 'a gap of 2.5 sizes becomes a space',
+  },
+  {
+    args: [
+      {
+        pages: [
+          text3('Te\r\nst', {
+            generated: [2],
+            origins: [
+              [0, 0],
+              [10, 100],
+              [0, 0],
+              [0, 0],
+              [15, 104],
+              [0, 0],
+            ],
+            sizes: [10, 10, 10, 10, 10, 10],
+          }),
+        ],
+      },
+      'PDFDATA',
+      {},
+    ],
+    note: 'a baseline 0.4 sizes off keeps the break',
+  },
   { args: [{ pages: [] }, 'PDFDATA', {}], note: 'no pages' },
 ]
 
@@ -1887,6 +1961,18 @@ const validateCases: Case[] = [
     note: 'an object that looks like a list',
   },
   { args: [[{ pageIndex: 0, rect: 'abcd' }]], note: 'a string' },
+  {
+    args: [[{ pageIndex: 0, rect: [1e38, 2, 3, 4] }]],
+    note: 'a tenth of the float32 range is inside',
+  },
+  {
+    args: [[{ pageIndex: 0, rect: [3.402823466e38, 2, 3, 4] }]],
+    note: 'the float32 maximum itself is inside',
+  },
+  {
+    args: [[{ pageIndex: 0, rect: [-1e38, 2, 3, 3.5e38] }]],
+    note: 'a last coordinate out of range',
+  },
   { args: [[{ pageIndex: 0, rect: [-0, 2, 3, 4] }]], note: 'negative zero' },
 ]
 
@@ -1947,6 +2033,7 @@ const cffCases: Case[] = [
   { args: [CFF({ truncate: 60 })], note: 'cut inside the name INDEX' },
   { args: [CFF({ truncate: 74 })], note: 'cut inside the top DICT' },
   { args: [CFF({ truncate: 90 })], note: 'cut before the charset' },
+  { args: [CFF({ fmt: 1, nGlyphs: 257 })], note: 'format 1 with the longest range one byte holds' },
   { args: [CFF({ fmt: 2, nGlyphs: 70000 })], note: 'a glyph count past 16 bits wraps in the file' },
 ]
 
@@ -2410,6 +2497,19 @@ const dataCases: Case[] = [
   { args: [null] },
   { args: ['image'] },
   { args: [[]], note: 'an array' },
+  { args: [{ ...STROKES, paths: [[1, 2]] }], note: 'a path of two numbers is no stroke' },
+  {
+    args: [
+      {
+        ...STROKES,
+        paths: [
+          [1, 2, 3, 4],
+          [1, 2],
+        ],
+      },
+    ],
+    note: 'one short path among good ones',
+  },
   { args: [7] },
 ]
 
@@ -3187,6 +3287,10 @@ const runCases: Case[] = [
     files: { 'not-executable': { text: '#!/bin/sh\n', mode: 0o644 } },
     note: 'permission denied is not missing',
   },
+  {
+    args: ['/bin/sh', ['-c', "head -c 17000000 /dev/zero | tr '\\0' x"]],
+    note: 'output past the 16 MiB cap is cut at the cap',
+  },
   { args: ['/bin/sh', ['-c', 'printf "\\303\\251\\377x"']], note: 'bytes that are not UTF-8' },
 ]
 
@@ -3363,6 +3467,28 @@ const ocrCases: Case[] = [
   ),
   ocr('$DIR/res', PNG, undefined, 'no helper'),
   ocr(null, PNG, undefined, 'no resources folder'),
+  ocr(
+    '$DIR/res',
+    PNG,
+    {
+      'res/ocr/win-ocr.exe': {
+        text: `#!/bin/sh\ncat > /dev/null\nprintf '%s' '${OCR_JSON}'\n`,
+        mode: 0o755,
+      },
+    },
+    'the Windows helper is not run on other platforms',
+  ),
+  ocr(
+    '$DIR/res',
+    PNG,
+    {
+      'res/ocr/vision-ocr': {
+        text: `#!/bin/sh\ncat > /dev/null\nprintf '%s' '${OCR_JSON}'\nexit 2\n`,
+        mode: 0o755,
+      },
+    },
+    'the answer of a helper that fails after printing is not read',
+  ),
 ]
 
 // ---- the cases of the functions that take more than a value ------------------------------------------------------------
@@ -3505,6 +3631,7 @@ const hasValidCases = pagesCases([
   [[2, 1], 2],
   [null, 0],
   [[1.5], 1],
+  [[1, 2, 1], 3],
   [[1, 2], null as unknown as number],
 ])
 

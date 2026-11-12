@@ -790,6 +790,18 @@ const MANIFEST_FILES: [string, Record<string, FileSpec>, string][] = [
     badListFiles(text),
     '',
   ]),
+  [
+    'a name of exactly 180 characters',
+    assetsDir(
+      {
+        files: [['n'.repeat(176) + '.png', 'x']],
+        documents: { 'doc.html': ['n'.repeat(176) + '.png'] },
+        pending: {},
+      },
+      { ['n'.repeat(176) + '.png']: 'x' },
+    ),
+    '',
+  ],
 ]
 
 // ---------------------------------------------------------------------------
@@ -828,11 +840,15 @@ const htmlGroup: Group = {
   },
   'html/asset-lifecycle.extractHtmlImageSources': {
     ts: (a) => extractHtmlImageSources(str(a, 0)),
-    cases: IMAGE_TEXTS.map((text) => ({ args: [text] })),
+    cases: [...IMAGE_TEXTS, '<img src="&#1114111;a.png">', '<img src="&#x10FFFF;a.png">'].map(
+      (text) => ({ args: [text] }),
+    ),
   },
   'html/asset-lifecycle.extractDocumentImageSources': {
     ts: (a) => extractDocumentImageSources(str(a, 0)),
-    cases: IMAGE_TEXTS.map((text) => ({ args: [text] })),
+    cases: [...IMAGE_TEXTS, '<img src="&#1114111;a.png">', '<img src="&#x10FFFF;a.png">'].map(
+      (text) => ({ args: [text] }),
+    ),
   },
   'html/asset-lifecycle.scanCssUrls': {
     ts: (a) => scanCssUrls(str(a, 0)),
