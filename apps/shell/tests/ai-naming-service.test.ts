@@ -122,4 +122,44 @@ describe('ai:suggest-file-name', () => {
       model: 'claude-sonnet-4-6',
     })
   })
+
+  describe('before the first-connection notice was acknowledged', () => {
+    it('sends nothing to a subscription when there is no settings file yet', async () => {
+      expect(await suggest('Revenue by region, third quarter')).toEqual({
+        ok: false,
+        reason: 'notice',
+      })
+      expect(providersAsked()).toEqual([])
+    })
+
+    it('sends nothing to a subscription the settings select', async () => {
+      writeSettings({ provider: 'claude-code', providers: {} })
+      expect(await suggest('Revenue by region, third quarter')).toEqual({
+        ok: false,
+        reason: 'notice',
+      })
+      expect(providersAsked()).toEqual([])
+    })
+
+    it('sends nothing to a subscription when only an earlier wording was acknowledged', async () => {
+      // the flag alone is a file from before the notice had versions: the first wording
+      for (const seen of [
+        { subscriptionNoticeSeen: true, subscriptionNoticeVersion: 1 },
+        { subscriptionNoticeSeen: true },
+      ]) {
+        writeSettings({ provider: 'auto', providers: {}, ...seen })
+        expect((await suggest('Revenue by region, third quarter')).reason).toBe('notice')
+      }
+      expect(providersAsked()).toEqual([])
+    })
+
+    it('still names on a key provider, which the notice is not about', async () => {
+      writeSettings({
+        provider: 'anthropic',
+        providers: { anthropic: { apiKey: 'sk-ant', model: 'claude-sonnet-4-6' } },
+      })
+      expect((await suggest('Revenue by region, third quarter')).ok).toBe(true)
+      expect(providersAsked()).toEqual(['anthropic'])
+    })
+  })
 })

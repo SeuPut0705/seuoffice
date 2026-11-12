@@ -12,7 +12,8 @@ import { resolveNamingProvider } from '../src/main/ai-naming-provider'
 /**
  * A naming request runs on the provider every other AI request would run on:
  * `auto` only on a ready subscription, a selected provider only when it can
- * run, and never a fallback to another one.
+ * run, and never a fallback to another one. A subscription is used only after
+ * the first-connection notice was acknowledged in its current wording.
  */
 
 function status(
@@ -37,33 +38,67 @@ const NOTICE_SEEN = {
   subscriptionNoticeVersion: AI_SUBSCRIPTION_NOTICE_VERSION,
 }
 
+const NOT_CONNECTED = { ok: false, reason: 'not-connected' }
+const NOTICE_FIRST = { ok: false, reason: 'notice' }
+
 describe('resolveNamingProvider', () => {
   // the file as every other AI path reads it: what it does not say is the default
   it('reads a settings file without a selection as the default one', () => {
     const stored = { providers: {}, ...NOTICE_SEEN }
-    expect(resolveNamingProvider(stored, CLAUDE_READY)?.provider).toBe('claude-code')
+    expect(resolveNamingProvider(stored, CLAUDE_READY)).toMatchObject({
+      ok: true,
+      provider: 'claude-code',
+    })
   })
 
   it('reads a selection this build no longer has as the default one', () => {
     const stored = { provider: 'a-provider-of-an-older-build', providers: {}, ...NOTICE_SEEN }
-    expect(resolveNamingProvider(stored, CLAUDE_READY)?.provider).toBe('claude-code')
+    expect(resolveNamingProvider(stored, CLAUDE_READY)).toMatchObject({
+      ok: true,
+      provider: 'claude-code',
+    })
   })
 
   it('declines a settings file that could not be read when no subscription is ready', () => {
-    expect(resolveNamingProvider(null, {})).toBeNull()
+    expect(resolveNamingProvider(null, {})).toEqual(NOT_CONNECTED)
   })
 
-  it('runs auto on the ready subscription', () => {
-    expect(resolveNamingProvider(settings(), CLAUDE_READY)?.provider).toBe('claude-code')
+  it('runs auto on the ready subscription once its notice was acknowledged', () => {
+    expect(resolveNamingProvider(settings(NOTICE_SEEN), CLAUDE_READY)).toMatchObject({
+      ok: true,
+      provider: 'claude-code',
+    })
+  })
+
+  it('holds a ready subscription back until the first-connection notice was acknowledged', () => {
+    // default settings, a settings file that could not be read, no file at all
+    for (const stored of [settings(), null, {}]) {
+      expect(resolveNamingProvider(stored, CLAUDE_READY)).toEqual(NOTICE_FIRST)
+    }
+  })
+
+  it('holds a selected subscription back the same way', () => {
+    expect(resolveNamingProvider(settings({ provider: 'claude-code' }), CLAUDE_READY)).toEqual(
+      NOTICE_FIRST,
+    )
+  })
+
+  it('holds a subscription back when only an earlier wording of the notice was acknowledged', () => {
+    const earlier = { subscriptionNoticeSeen: true, subscriptionNoticeVersion: 1 }
+    expect(resolveNamingProvider(settings(earlier), CLAUDE_READY)).toEqual(NOTICE_FIRST)
+    // a file from before the notice had versions: the flag alone is the first wording
+    const unversioned = { provider: 'auto', providers: {}, subscriptionNoticeSeen: true }
+    expect(resolveNamingProvider(unversioned, CLAUDE_READY)).toEqual(NOTICE_FIRST)
   })
 
   it('declines auto when no subscription is ready, instead of picking a paid provider', () => {
     const stored = settings({
       providers: { ...defaultAiSettings().providers, anthropic: { apiKey: 'sk-ant', model: 'm' } },
     })
-    expect(resolveNamingProvider(stored, {})).toBeNull()
+    expect(resolveNamingProvider(stored, {})).toEqual(NOT_CONNECTED)
   })
 
+  // a key provider is not a subscription: the notice is not about it
   it('honors a configured key provider the reader selected', () => {
     const resolved = resolveNamingProvider(
       settings({
@@ -75,9 +110,11 @@ describe('resolveNamingProvider', () => {
       }),
       CLAUDE_READY,
     )
-    expect(resolved?.provider).toBe('anthropic')
-    expect(resolved?.config.apiKey).toBe('sk-ant')
-    expect(resolved?.config.model).toBe('claude-sonnet-4-6')
+    expect(resolved).toMatchObject({
+      ok: true,
+      provider: 'anthropic',
+      config: { apiKey: 'sk-ant', model: 'claude-sonnet-4-6' },
+    })
   })
 
   it('declines a half-filled selected provider rather than falling back', () => {
@@ -88,10 +125,12 @@ describe('resolveNamingProvider', () => {
       }),
       CLAUDE_READY,
     )
-    expect(resolved).toBeNull()
+    expect(resolved).toEqual(NOT_CONNECTED)
   })
 
   it('declines a selected subscription that is signed out', () => {
-    expect(resolveNamingProvider(settings({ provider: 'codex' }), CLAUDE_READY)).toBeNull()
+    expect(
+      resolveNamingProvider(settings({ provider: 'codex', ...NOTICE_SEEN }), CLAUDE_READY),
+    ).toEqual(NOT_CONNECTED)
   })
 })

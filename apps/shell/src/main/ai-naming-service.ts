@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { chatForProvider } from '@genoffice/ai-provider'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { buildNamingInstruction, excerptForNaming, sanitizeFileStem } from './ai-naming'
-import { resolveNamingProvider } from './ai-naming-provider'
+import { resolveNamingProvider, type NamingTarget } from './ai-naming-provider'
 
 /** The channel the renderer's "Name with AI…" button calls. */
 export const AI_NAMING_SUGGEST_CHANNEL = 'ai:suggest-file-name'
@@ -34,10 +34,11 @@ function readAiSettingsFile(): unknown {
  * keeps whatever name the document already has — a failed rename must never
  * cost the reader their file.
  */
-async function askModel(content: string, lang: string): Promise<string> {
-  const target = resolveNamingProvider(readAiSettingsFile(), sharedSubscriptionStatuses())
-  if (!target) return ''
-
+async function askModel(
+  target: Extract<NamingTarget, { ok: true }>,
+  content: string,
+  lang: string,
+): Promise<string> {
   const controller = new AbortController()
   // a naming call that has not answered in 30s is not going to
   const timer = setTimeout(() => controller.abort(), 30_000)
@@ -80,9 +81,12 @@ export function registerAiNamingIpc(lang: () => string): void {
     ): Promise<{ ok: boolean; name?: string; reason?: string }> => {
       const content = typeof input?.content === 'string' ? input.content : ''
       if (!content.trim()) return { ok: false, reason: 'empty-content' }
-      const name = await askModel(content, lang())
-      // A model that returned nothing usable — no provider, unreachable,
-      // refused, or a stem that sanitised away to empty — is a *failed* naming,
+      // decided before anything is built for the model: a refusal sends nothing
+      const target = resolveNamingProvider(readAiSettingsFile(), sharedSubscriptionStatuses())
+      if (!target.ok) return { ok: false, reason: target.reason }
+      const name = await askModel(target, content, lang())
+      // A model that returned nothing usable — unreachable, refused, or a
+      // stem that sanitised away to empty — is a *failed* naming,
       // not a successful one handing back "". The caller's contract is that it
       // keeps whatever name the document already had, and returning ok:true
       // with an empty name would instead rename the file to nothing.
