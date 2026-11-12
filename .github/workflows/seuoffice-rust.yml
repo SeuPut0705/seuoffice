@@ -143,7 +143,12 @@ jobs:
       # Node-API addon against the TypeScript main process
       - name: Central process comparison
         if: ${{ !cancelled() && steps.has.outputs.crates == 'true' }}
+        # a full run takes minutes; a case that never returns fails the step
+        # (its log and trace are kept) instead of holding the job for hours
+        timeout-minutes: 30
         shell: bash
+        env:
+          MAIN_DIFF_TRACE: ${{ github.workspace }}/tools/main-diff/out/trace.txt
         run: |
           npm --prefix tools/main-diff run typecheck
           mkdir -p tools/main-diff/out

@@ -12,12 +12,13 @@
  * than two distinct answers (decision 0030, crates/README.md).
  */
 import {
+  appendFileSync,
   chmodSync,
   linkSync,
   mkdirSync,
   mkdtempSync,
-  readdirSync,
   readFileSync,
+  readdirSync,
   rmSync,
   statSync,
   utimesSync,
@@ -192,6 +193,9 @@ const differences: { fn: string; case: number; note?: string; typescript: string
 const reproduced = new Set<string>()
 const singles = new Set<string>()
 let failed = false
+/** MAIN_DIFF_TRACE=file: each side of each case is named before it runs, written
+ * synchronously, so a case that never returns is the last line */
+const trace = process.env.MAIN_DIFF_TRACE
 
 for (const [groupName, group] of Object.entries(groups) as [string, Group][]) {
   if (only && only !== groupName) continue
@@ -201,7 +205,9 @@ for (const [groupName, group] of Object.entries(groups) as [string, Group][]) {
     const answers = new Set<string>()
     for (let i = 0; i < spec.cases.length; i++) {
       const c = spec.cases[i]
+      if (trace) appendFileSync(trace, `${fn} #${i} typescript\n`)
       const ts = await side((args, dir) => tsWire(spec, args, dir), c)
+      if (trace) appendFileSync(trace, `${fn} #${i} rust\n`)
       const rust = await side((args) => rustCall(fn, args, NOW), c)
       r.checks++
       answers.add(ts)
