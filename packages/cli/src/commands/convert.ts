@@ -313,11 +313,22 @@ const HIDDEN_ALTERNATIVES: Record<string, string> = {
   pptx: 'read the deck with `slides read --full`, which gives a placeholder for the hidden content',
   xlsx: 'convert to .csv, or read the workbook with `sheet read`, which give a placeholder for the hidden content',
   xlsm: 'convert to .csv, or read the workbook with `sheet read`, which give a placeholder for the hidden content',
+  md: 'convert to .docx or .html, which keep the hiding',
+  markdown: 'convert to .docx or .html, which keep the hiding',
+  html: 'the page marks have no run to sit on in another format: keep the page, or clear the marks in the HTML editor first',
+  htm: 'the page marks have no run to sit on in another format: keep the page, or clear the marks in the HTML editor first',
 }
 const REPACKAGING_TARGETS = ['pdf', 'odt', 'hwp', 'hwpx']
+const MARKDOWN = ['md', 'markdown']
+/** a Markdown file's hidden span is carried into these; an HTML page's marks into none */
+const CARRIED_FROM_MARKDOWN = ['docx', 'html']
 
 async function guardHiddenContent(input: string, from: string, to: string): Promise<void> {
-  if (!Object.hasOwn(HIDDEN_ALTERNATIVES, from) || !REPACKAGING_TARGETS.includes(to)) return
+  if (!Object.hasOwn(HIDDEN_ALTERNATIVES, from)) return
+  const carried = MARKDOWN.includes(from) && CARRIED_FROM_MARKDOWN.includes(to)
+  const copies =
+    ['md', 'markdown', 'html', 'htm'].includes(from) || REPACKAGING_TARGETS.includes(to)
+  if (carried || !copies) return
   await refuseHiddenContent(input, undefined, `convert to .${to}`, HIDDEN_ALTERNATIVES[from])
 }
 

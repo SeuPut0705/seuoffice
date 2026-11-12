@@ -4,6 +4,8 @@ import { REDACT_NAMESPACES } from '@seuoffice/agent-core/redact-range'
 import { REDACT_EXT_URI } from '@seuoffice/pptx-engine'
 import JSZip from 'jszip'
 import { CliError, EXIT } from '../result'
+import { decodeText } from '../fs'
+import { decodeHtmlBytes } from './html-text'
 import { openDeck } from './pptx'
 import { withheldCellsIn } from './xlsx'
 
@@ -70,13 +72,30 @@ async function documentHoldsMark(zip: JSZip): Promise<boolean> {
   )
 }
 
-const HOLDERS = ['pptx', 'docx', 'xlsx', 'xlsm']
+const HOLDERS = ['pptx', 'docx', 'xlsx', 'xlsm', 'md', 'markdown', 'html', 'htm']
+
+/** the HTML app's three marks: an element, an attribute's value, a script literal (apps/html marked-html.ts) */
+const HTML_MARK = /data-gx-redact|gx:redact:/i
+/** the markdown app's persisted span (apps/markdown editor/Redaction.ts) */
+const MARKDOWN_MARK = /<span\b[^>]*\bdata-redaction\b/i
+
+/** Whether a Markdown file's text holds a span hidden from AI. */
+export function markdownHoldsMark(text: string): boolean {
+  return MARKDOWN_MARK.test(text)
+}
+
+/** Whether an HTML page's text holds any mark of the HTML app. */
+export function htmlHoldsMark(text: string): boolean {
+  return HTML_MARK.test(text)
+}
 
 /** Whether `path` (or its slide `only`, 0-based, of a deck) holds content hidden from AI. */
 export async function holdsHiddenContent(path: string, only?: number): Promise<boolean> {
   const ext = extname(path).slice(1).toLowerCase()
   if (!HOLDERS.includes(ext)) return false
   const bytes = new Uint8Array(await readFile(path))
+  if (ext === 'md' || ext === 'markdown') return markdownHoldsMark(decodeText(bytes))
+  if (ext === 'html' || ext === 'htm') return htmlHoldsMark(decodeHtmlBytes(bytes))
   if (ext === 'pptx' || ext === 'docx') {
     // not a package at all: it holds no mark, and the route that reads it fails as it always did
     const zip = await JSZip.loadAsync(bytes).catch(() => null)

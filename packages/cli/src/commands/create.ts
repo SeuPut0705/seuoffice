@@ -490,6 +490,13 @@ async function createDocx(
     }
   }
   if (ext === '.html' || ext === '.htm') {
+    // the page's marks have no run to sit on in the document: the words would arrive unhidden
+    await refuseHiddenContent(
+      source,
+      undefined,
+      'create a document from',
+      'keep the page, or clear the marks in the HTML editor first',
+    )
     const doc = await blankDocument(blankOptions)
     try {
       const blocks = fillFromHtml(doc, decodeHtmlBytes(readFileSync(source)))
