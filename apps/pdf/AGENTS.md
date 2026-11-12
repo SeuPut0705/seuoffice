@@ -106,6 +106,11 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 문서 작업 `doc-jobs/model-call.ts`는 `createModelCall` 하나마다 `contextGate` 하나를 만들고 `runId`를 요청에 싣는다. 호출자는 `runId`만 넘긴다.
 - 문맥 확인을 거절하면 그 작업은 `context-limit`으로 멈추고 모델을 부르지 않는다. `InsightsCard`의 `startSingle`과 `runJob`은 서로 다른 실행이다.
 
+## 원본과 다른 점
+
+- 쪽 작업 되돌리기는 파일 바이트 합계 256 MiB(`WRITTEN_HISTORY_BUDGET_BYTES`)와 10단계를 넘지 않는다. 넘으면 가장 먼 단계부터 버리고, 문서 하나가 그 상한보다 크면 되돌리기 단계를 아예 남기지 않는다(`written-history.ts`). 렌더러에 기가바이트를 쥐게 하지 않는다.
+- 디스크에서 다시 읽기로 버릴 때는 복구 사본을 `discardForDiskReload`(`pdf-main.ts`)로 버린다. 그 밖의 복구 사본 버리기는 `discardPdfRecovery`를 거친다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/pdf`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/pdf`. 환경은 `jsdom`이다.

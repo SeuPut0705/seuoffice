@@ -60,6 +60,10 @@ shell과 에디터들의 메인 프로세스(일부는 preload)가 함께 쓰는
 - 기본 저장 폴더는 설정된 폴더가 쓸 수 없으면(뽑힌 드라이브, 권한 회수) 대체 폴더로 내려간다. 조용한 저장이 깨지지 않게 하기 위해서다. 대체 폴더는 `<문서>/IeumOffice` → `<홈>/IeumOffice` → `<userData>/IeumOffice` 순서이고, 쓸 수 없던 폴더는 30초 동안 다시 시도하지 않으며 실패 기록은 `Symbol.for` 키에 둔다(결정 0078). 이 함수는 홈 화면·검색 색인·첫 저장이 쉬지 않고 부르므로, 있는 폴더를 다시 만들거나 실패한 폴더를 매번 다시 만드는 코드를 넣지 않는다. 문서 폴더에서 내려갔는지는 `defaultSaveDirFallback()`이 알려 주고, shell이 한 번 알린다. 운영체제가 문서 폴더 위치를 알려 주지 못하면(`app.getPath('documents')`가 예외) 그 후보를 빼고 홈부터 고른다. 이때는 막힌 폴더가 없으니 알리지 않는다. 대화 상자를 문서 폴더에서 열 때도 `app.getPath('documents')`를 바로 부르지 않고 `documentsDirOrFallback`(문서 → 홈 → userData)을 쓴다.
 - 이 패키지는 `@genoffice/i18n`을 import하지만 `package.json`의 `dependencies`에는 `parse5`만 있다(workspace 호이스팅에 기대는 기존 구조다).
 
+## 원본과 다른 점
+
+- 앱의 권한 판정(`permissionAllowed`)은 앱 페이지의 최상위 프레임에만 허락한다. 마이크(`media`)는 슬라이드 편집기 페이지가 녹음 중이라고 표시한 요청에만 준다(`permission-guard.ts`). 다른 권한이나 다른 페이지로 넓히지 않는다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/electron-utils`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/electron-utils`.
