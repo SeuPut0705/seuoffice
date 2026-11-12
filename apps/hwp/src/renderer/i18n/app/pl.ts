@@ -32,6 +32,10 @@ export const pl = {
     'Nie udało się sprawdzić struktury tego pliku, więc części jego zawartości może tu brakować. Możesz go czytać i edytować, ale nie zostanie zapisany na oryginale: użyj Zapisz jako, aby zachować kopię pod inną nazwą.',
   saveUnverified:
     'Nie zapisano: nie udało się sprawdzić struktury tego pliku, a zapisanie go na oryginale mogłoby spowodować utratę zawartości. W oknie Zapisz jako zapisz kopię pod inną nazwą, najlepiej w formacie HWPX.',
+  openedUnverifiedNoCopy:
+    'Nie udało się sprawdzić struktury tego pliku, więc części jego zawartości może tu brakować. Możesz go czytać, ale zmian nie da się tutaj zapisać: otwórz go w aplikacji komputerowej albo najpierw zapisz go ponownie w Hancom Hangul.',
+  saveUnverifiedNoCopy:
+    'Nie zapisano: nie udało się sprawdzić struktury tego pliku, zapisanie go na oryginale mogłoby spowodować utratę zawartości, a kopii nie da się tutaj zapisać. Otwórz go w aplikacji komputerowej albo najpierw zapisz go ponownie w Hancom Hangul.',
   savedTailsLost:
     'Zapisano, ale części stron wzorcowych lub notatek z oryginalnego pliku nie udało się zachować; Hancom Hangul może nie otworzyć zapisanego pliku. Otwórz go, aby sprawdzić.',
   missingFonts:

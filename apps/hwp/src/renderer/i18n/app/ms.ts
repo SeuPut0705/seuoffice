@@ -32,6 +32,10 @@ export const ms = {
     'Struktur fail ini tidak dapat disahkan, jadi sebahagian kandungannya mungkin tiada di sini. Anda boleh membaca dan menyuntingnya, tetapi ia tidak disimpan menimpa fail asal: gunakan Simpan Sebagai untuk menyimpan salinan dengan nama lain.',
   saveUnverified:
     'Tidak disimpan: struktur fail ini tidak dapat disahkan, dan menimpa fail asal boleh menyebabkan kandungan hilang. Dalam Simpan Sebagai, simpan salinan dengan nama lain, sebaik-baiknya dalam format HWPX.',
+  openedUnverifiedNoCopy:
+    'Struktur fail ini tidak dapat disahkan, jadi sebahagian kandungannya mungkin tiada di sini. Anda boleh membacanya, tetapi perubahan tidak dapat disimpan di sini: buka dalam aplikasi desktop, atau simpan semula dahulu dalam Hancom Hangul.',
+  saveUnverifiedNoCopy:
+    'Tidak disimpan: struktur fail ini tidak dapat disahkan, menimpa fail asal boleh menyebabkan kandungan hilang, dan salinan tidak dapat disimpan dari sini. Buka dalam aplikasi desktop, atau simpan semula dahulu dalam Hancom Hangul.',
   savedTailsLost:
     'Disimpan, tetapi sebahagian halaman induk atau memo daripada fail asal tidak dapat dikekalkan, dan Hancom Hangul mungkin tidak dapat membuka fail yang disimpan. Buka untuk menyemak.',
   missingFonts:

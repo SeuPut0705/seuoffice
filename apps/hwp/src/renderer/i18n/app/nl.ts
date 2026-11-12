@@ -32,6 +32,10 @@ export const nl = {
     'De structuur van dit bestand kon niet worden gecontroleerd; een deel van de inhoud kan hier ontbreken. U kunt het lezen en bewerken, maar het wordt niet over het origineel opgeslagen: gebruik Opslaan als om een kopie onder een andere naam te bewaren.',
   saveUnverified:
     'Niet opgeslagen: de structuur van dit bestand kon niet worden gecontroleerd, en opslaan over het origineel kan inhoud verloren laten gaan. Sla in Opslaan als een kopie op onder een andere naam, bij voorkeur als HWPX.',
+  openedUnverifiedNoCopy:
+    'De structuur van dit bestand kon niet worden gecontroleerd; een deel van de inhoud kan hier ontbreken. U kunt het lezen, maar wijzigingen kunnen hier niet worden opgeslagen: open het in de desktop-app of sla het eerst opnieuw op in Hancom Hangul.',
+  saveUnverifiedNoCopy:
+    'Niet opgeslagen: de structuur van dit bestand kon niet worden gecontroleerd, opslaan over het origineel kan inhoud verloren laten gaan en hier kan geen kopie worden bewaard. Open het in de desktop-app of sla het eerst opnieuw op in Hancom Hangul.',
   savedTailsLost:
     "Opgeslagen, maar sommige basispagina's of memo's van het oorspronkelijke bestand konden niet worden behouden; Hancom Hangul kan het opgeslagen bestand mogelijk niet openen. Open het ter controle.",
   missingFonts:

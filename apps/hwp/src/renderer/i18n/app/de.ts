@@ -32,6 +32,10 @@ export const de = {
     'Die Struktur dieser Datei konnte nicht geprüft werden; Teile des Inhalts fehlen hier möglicherweise. Sie können sie lesen und bearbeiten, aber das Original wird nicht überschrieben: Speichern Sie mit „Speichern unter“ eine Kopie unter anderem Namen.',
   saveUnverified:
     'Nicht gespeichert: Die Struktur dieser Datei konnte nicht geprüft werden, beim Überschreiben könnte Inhalt verloren gehen. Speichern Sie in „Speichern unter“ eine Kopie unter anderem Namen, am besten als HWPX.',
+  openedUnverifiedNoCopy:
+    'Die Struktur dieser Datei konnte nicht geprüft werden; Teile des Inhalts fehlen hier möglicherweise. Sie können sie lesen, aber Änderungen lassen sich hier nicht speichern: Öffnen Sie sie in der Desktop-App oder speichern Sie sie zuerst in Hancom Hangul erneut.',
+  saveUnverifiedNoCopy:
+    'Nicht gespeichert: Die Struktur dieser Datei konnte nicht geprüft werden, beim Überschreiben könnte Inhalt verloren gehen, und eine Kopie lässt sich hier nicht anlegen. Öffnen Sie sie in der Desktop-App oder speichern Sie sie zuerst in Hancom Hangul erneut.',
   savedTailsLost:
     'Gespeichert, aber einige Masterseiten oder Memos der Originaldatei konnten nicht übernommen werden. Hancom Hangul kann die gespeicherte Datei möglicherweise nicht öffnen. Bitte dort zur Kontrolle öffnen.',
   missingFonts:

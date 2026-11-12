@@ -32,6 +32,10 @@ export const cs = {
     'Strukturu tohoto souboru se nepodařilo ověřit, takže část obsahu zde může chybět. Můžete jej číst a upravovat, ale původní soubor se nepřepíše: pomocí Uložit jako uložte kopii pod jiným názvem.',
   saveUnverified:
     'Neuloženo: strukturu tohoto souboru se nepodařilo ověřit a přepsáním původního souboru by se mohl ztratit obsah. V dialogu Uložit jako uložte kopii pod jiným názvem, nejlépe ve formátu HWPX.',
+  openedUnverifiedNoCopy:
+    'Strukturu tohoto souboru se nepodařilo ověřit, takže část obsahu zde může chybět. Můžete jej číst, ale změny zde uložit nelze: otevřete jej v desktopové aplikaci, nebo jej nejprve znovu uložte v Hancom Hangul.',
+  saveUnverifiedNoCopy:
+    'Neuloženo: strukturu tohoto souboru se nepodařilo ověřit, přepsáním původního souboru by se mohl ztratit obsah a kopii zde uložit nelze. Otevřete jej v desktopové aplikaci, nebo jej nejprve znovu uložte v Hancom Hangul.',
   savedTailsLost:
     'Uloženo, ale některé předlohy stránek nebo poznámky z původního souboru se nepodařilo zachovat; Hancom Hangul nemusí uložený soubor otevřít. Otevřete jej pro kontrolu.',
   missingFonts:

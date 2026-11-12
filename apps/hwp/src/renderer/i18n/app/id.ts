@@ -32,6 +32,10 @@ export const id = {
     'Struktur file ini tidak dapat diverifikasi, sehingga sebagian isinya mungkin tidak tampil di sini. Anda dapat membaca dan mengeditnya, tetapi file ini tidak disimpan menimpa aslinya: gunakan Simpan Sebagai untuk menyimpan salinan dengan nama lain.',
   saveUnverified:
     'Tidak disimpan: struktur file ini tidak dapat diverifikasi, dan menimpa file asli dapat menghilangkan isi. Di Simpan Sebagai, simpan salinan dengan nama lain, sebaiknya dalam format HWPX.',
+  openedUnverifiedNoCopy:
+    'Struktur file ini tidak dapat diverifikasi, sehingga sebagian isinya mungkin tidak tampil di sini. Anda dapat membacanya, tetapi perubahan tidak dapat disimpan di sini: buka di aplikasi desktop, atau simpan ulang dahulu di Hancom Hangul.',
+  saveUnverifiedNoCopy:
+    'Tidak disimpan: struktur file ini tidak dapat diverifikasi, menimpa file asli dapat menghilangkan isi, dan salinan tidak dapat disimpan dari sini. Buka di aplikasi desktop, atau simpan ulang dahulu di Hancom Hangul.',
   savedTailsLost:
     'Tersimpan, tetapi sebagian halaman master atau memo dari file asli tidak dapat dipertahankan, dan Hancom Hangul mungkin tidak dapat membuka file yang disimpan. Buka untuk memeriksanya.',
   missingFonts:

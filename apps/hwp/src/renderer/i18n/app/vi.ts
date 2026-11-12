@@ -31,6 +31,10 @@ export const vi = {
     'Không thể xác minh cấu trúc của tệp này nên một phần nội dung có thể bị thiếu ở đây. Bạn vẫn đọc và chỉnh sửa được, nhưng tệp sẽ không được lưu đè lên bản gốc: hãy dùng Lưu dưới dạng để giữ một bản sao với tên khác.',
   saveUnverified:
     'Chưa lưu: không thể xác minh cấu trúc của tệp này, và lưu đè lên bản gốc có thể làm mất nội dung. Trong Lưu dưới dạng, hãy lưu một bản sao với tên khác, tốt nhất là ở định dạng HWPX.',
+  openedUnverifiedNoCopy:
+    'Không thể xác minh cấu trúc của tệp này nên một phần nội dung có thể bị thiếu ở đây. Bạn vẫn đọc được, nhưng không thể lưu thay đổi tại đây: hãy mở tệp trong ứng dụng trên máy tính, hoặc lưu lại tệp trong Hancom Hangul trước.',
+  saveUnverifiedNoCopy:
+    'Chưa lưu: không thể xác minh cấu trúc của tệp này, lưu đè lên bản gốc có thể làm mất nội dung, và tại đây không thể lưu bản sao. Hãy mở tệp trong ứng dụng trên máy tính, hoặc lưu lại tệp trong Hancom Hangul trước.',
   savedTailsLost:
     'Đã lưu, nhưng không giữ được một số trang chủ hoặc ghi chú của tệp gốc, và Hancom Hangul có thể không mở được tệp đã lưu. Hãy mở để kiểm tra.',
   missingFonts:

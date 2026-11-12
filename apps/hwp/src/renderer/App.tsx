@@ -38,7 +38,7 @@ import {
   withChangeNotes,
   type RecoveryCopier,
 } from './recovery-flow'
-import { runSave, type SaveEditorPort } from './save-flow'
+import { openedUnverifiedKey, runSave, saveFailureKey, type SaveEditorPort } from './save-flow'
 import { AUTOSAVE_IDLE_MS, startAutosave } from './autosave-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
 import { STUDIO_SETTINGS_KEY, seededStudioSettings, studioUrl } from './studio-settings'
@@ -283,8 +283,11 @@ export default function App() {
         if (disposed) return
         setPhase('ready')
         if (await window.hwpApi.structureUnverified().catch(() => false)) {
-          // said once: the document can be read and edited, and its file is not saved over
-          if (!disposed) setNotice({ tone: 'info', key: 'openedUnverified', sticky: true })
+          // said once: the document can be read, and its file is not saved over; how it can
+          // be kept depends on whether this page has a Save As
+          if (!disposed) {
+            setNotice({ tone: 'info', key: openedUnverifiedKey(window.hwpApi), sticky: true })
+          }
         } else if (await window.hwpApi.trackingDropped().catch(() => false)) {
           if (!disposed) setNotice({ tone: 'info', key: 'openedTracked', sticky: true })
         }
@@ -487,16 +490,7 @@ export default function App() {
           if (!automatic || !propertyFailure) {
             setNotice({
               tone: 'error',
-              key:
-                outcome.reason === 'protected'
-                  ? 'saveProtected'
-                  : outcome.reason === 'tracked'
-                    ? 'saveTracked'
-                    : outcome.reason === 'unverified'
-                      ? 'saveUnverified'
-                      : outcome.reason === 'verify'
-                        ? 'saveVerifyFailed'
-                        : 'saveFailed',
+              key: saveFailureKey(outcome.reason, window.hwpApi),
               ...(outcome.reason === 'verify'
                 ? { detail: t('saveVerifyHint') }
                 : outcome.detail

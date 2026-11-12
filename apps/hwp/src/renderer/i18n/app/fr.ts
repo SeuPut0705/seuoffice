@@ -32,6 +32,10 @@ export const fr = {
     "La structure de ce fichier n'a pas pu être vérifiée ; une partie de son contenu peut manquer ici. Vous pouvez le lire et le modifier, mais il n'est pas enregistré par-dessus l'original : utilisez Enregistrer sous pour en garder une copie sous un autre nom.",
   saveUnverified:
     "Non enregistré : la structure de ce fichier n'a pas pu être vérifiée, et l'enregistrer par-dessus l'original pourrait faire perdre du contenu. Dans Enregistrer sous, enregistrez une copie sous un autre nom, de préférence au format HWPX.",
+  openedUnverifiedNoCopy:
+    "La structure de ce fichier n'a pas pu être vérifiée ; une partie de son contenu peut manquer ici. Vous pouvez le lire, mais les modifications ne peuvent pas être enregistrées ici : ouvrez-le dans l'application de bureau, ou enregistrez-le d'abord à nouveau dans Hancom Hangul.",
+  saveUnverifiedNoCopy:
+    "Non enregistré : la structure de ce fichier n'a pas pu être vérifiée, l'enregistrer par-dessus l'original pourrait faire perdre du contenu, et aucune copie ne peut être enregistrée ici. Ouvrez-le dans l'application de bureau, ou enregistrez-le d'abord à nouveau dans Hancom Hangul.",
   savedTailsLost:
     "Enregistré, mais certaines pages maîtres ou certains mémos du fichier d'origine n'ont pas pu être conservés ; Hancom Hangul pourrait ne pas ouvrir le fichier enregistré. Ouvrez-le pour vérifier.",
   missingFonts:

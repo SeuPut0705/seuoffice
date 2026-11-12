@@ -32,6 +32,10 @@ export const pt = {
     'Não foi possível verificar a estrutura deste arquivo, então parte do conteúdo pode estar faltando aqui. Você pode ler e editar, mas ele não é salvo por cima do original: use Salvar como para manter uma cópia com outro nome.',
   saveUnverified:
     'Não foi salvo: não foi possível verificar a estrutura deste arquivo, e salvar por cima do original poderia perder conteúdo. Em Salvar como, salve uma cópia com outro nome, de preferência em HWPX.',
+  openedUnverifiedNoCopy:
+    'Não foi possível verificar a estrutura deste arquivo, então parte do conteúdo pode estar faltando aqui. Você pode ler, mas as alterações não podem ser salvas aqui: abra-o no aplicativo para computador ou salve-o novamente no Hancom Hangul antes.',
+  saveUnverifiedNoCopy:
+    'Não foi salvo: não foi possível verificar a estrutura deste arquivo, salvar por cima do original poderia perder conteúdo e não é possível salvar uma cópia aqui. Abra-o no aplicativo para computador ou salve-o novamente no Hancom Hangul antes.',
   savedTailsLost:
     'Salvo, mas algumas páginas mestras ou notas do arquivo original não puderam ser mantidas, e o Hancom Hangul pode não abrir o arquivo salvo. Abra-o para conferir.',
   missingFonts:
