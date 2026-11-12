@@ -89,6 +89,10 @@ const CHANGES: Record<string, unknown[]> = {
   'add a note': [{ op: 'insert_footnote', blockIndex: 0, text: 'Extra note.' }],
   'add a comment': [{ op: 'add_comment', blockIndex: 0, comment: 'Extra comment.' }],
   'add a paragraph': [{ op: 'insert_content', html: '<p>Appended.</p>' }],
+  'edit another paragraph': [{ op: 'findReplace', find: 'Edit me', replace: 'Edited' }],
+  'replace another paragraph': [
+    { op: 'replace_blocks', startBlockIndex: 1, endBlockIndex: 1, html: '<p>Replaced.</p>' },
+  ],
   'edit the header': [{ op: 'set_header_footer', kind: 'header', text: 'Head 2 {{client phone}}' }],
 }
 
@@ -131,6 +135,8 @@ describe.each(TAG_MUTATION_NAMES)('tags rewritten: %s, then saved', (mutation) =
     expect(read.stdout).not.toContain(SECRET)
     const detail = read.json().detail
     expect(detail.items[0].text).toContain('{{client phone}}')
+    if (change === 'edit another paragraph') expect(detail.items[1].text).toBe('Edited please')
+    if (change === 'replace another paragraph') expect(detail.items[1].text).toBe('Replaced.')
     expect(detail.headerFooter.header).toContain('{{client phone}}')
     expect(detail.headerFooter.footer).toContain('{{client phone}}')
     expect(detail.comments.find((c: { id: string }) => c.id === '1').text).toContain('{{')

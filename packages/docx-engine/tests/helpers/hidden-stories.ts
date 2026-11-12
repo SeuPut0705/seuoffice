@@ -178,13 +178,15 @@ export async function mutatedStoriesDocx(dir: string, mutation: TagMutation): Pr
   const { readFileSync } = await import('node:fs')
   const file = await hiddenStoriesDocx(dir, OWN_REDACT_NS, `mutated.docx`)
   const zip = await JSZip.loadAsync(readFileSync(file))
-  // and an inline content control holding a hidden run, in a paragraph of its own
+  // a plain paragraph to edit, and an inline content control holding a hidden
+  // run in a paragraph of its own
   const documentXml = await zip.file('word/document.xml')!.async('string')
   zip.file(
     'word/document.xml',
     documentXml.replace(
       '<w:sectPr',
-      '<w:p><w:sdt><w:sdtPr><w:tag w:val="phone"/></w:sdtPr><w:sdtContent>' +
+      '<w:p><w:r><w:t>Edit me please</w:t></w:r></w:p>' +
+        '<w:p><w:sdt><w:sdtPr><w:tag w:val="phone"/></w:sdtPr><w:sdtContent>' +
         `${hiddenRunOf(OWN_REDACT_NS, `${SECRET}S`)}</w:sdtContent></w:sdt></w:p><w:sectPr`,
     ),
   )
