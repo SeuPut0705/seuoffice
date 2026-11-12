@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { HiddenEntrySaveError, parseDocx, saveDocx, type SaveBlock } from '../src'
+import { parseDocx, saveDocx, type SaveBlock } from '../src'
 import { buildDocx } from './helpers/build-docx'
 import { OWN_REDACT_NS, PLACEHOLDER, SECRET } from './helpers/hidden-stories'
 
@@ -71,33 +71,31 @@ describe('an edited note whose hidden run holds CDATA keeps its mark', () => {
   })
 })
 
-describe('an edit that cannot be patched into a marked note', () => {
-  it('fails the save rather than drop its mark or the edit', async () => {
-    const doc = await parseDocx(await notedDocx('w:id="1"'))
-    const blocks = doc.blocks
-      .filter((block) => !block.hidden)
-      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
-    const { richParas: _rich, ...note } = doc.footnotes[0]!
-    await expect(
-      saveDocx(doc, blocks, {
+describe("an edit that cannot be patched around a note's hidden runs", () => {
+  it.each([`See ${SECRET}\nmore`, `Read: ${SECRET} more`])(
+    'saves %j with every word of the note hidden',
+    async (text) => {
+      const doc = await parseDocx(await notedDocx('w:id="1"'))
+      const blocks = doc.blocks
+        .filter((block) => !block.hidden)
+        .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+      const { richParas: _rich, ...note } = doc.footnotes[0]!
+      const saved = await saveDocx(doc, blocks, {
         footnotes: [
-          { ...note, text: `See ${SECRET}\nmore` },
+          { ...note, text },
           { id: '5', text: 'plain' },
         ],
-      }),
-    ).rejects.toThrow(HiddenEntrySaveError)
-  })
-})
-
-describe('a note edit across a hidden run and its neighbours', () => {
-  it('is refused on save rather than move hidden words into a plain run', async () => {
-    const doc = await parseDocx(await notedDocx('w:id="1"'))
-    const blocks = doc.blocks
-      .filter((block) => !block.hidden)
-      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
-    const { richParas: _rich, ...note } = doc.footnotes[0]!
-    await expect(
-      saveDocx(doc, blocks, { footnotes: [{ ...note, text: `Read: ${SECRET} more` }] }),
-    ).rejects.toThrow(HiddenEntrySaveError)
-  })
+      })
+      const reopened = await parseDocx(saved)
+      const first = reopened.footnotes.find((n) => n.id === '1')!
+      expect(first.text).toBe(text)
+      expect(first.modelText).toBe(
+        text
+          .split('\n')
+          .map(() => PLACEHOLDER)
+          .join('\n'),
+      )
+      expect(reopened.footnotes.find((n) => n.id === '5')?.text).toBe('plain')
+    },
+  )
 })

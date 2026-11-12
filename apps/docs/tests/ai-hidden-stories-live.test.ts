@@ -99,10 +99,10 @@ describe('what a model reads of a comment or note follows the person’s change 
     expect(comments[0]!.text).toBe(`Call: ${SECRET}`)
     expect(comments[0]!.modelText).toBe(`Call: ${PLACEHOLDER}`)
 
-    // a second paragraph cannot be patched into the comment's runs: what the
-    // hidden words are is no longer known, so the whole comment is withheld
+    // a second paragraph cannot be patched into the comment's runs: which of
+    // its words are hidden is no longer known, so every one is
     editComment(ctx, '1', `Call: ${SECRET}\nthanks`)
-    expect(comments[0]!.modelText).toBe('{{private}}')
+    expect(comments[0]!.modelText).toBe(`${PLACEHOLDER}\n${PLACEHOLDER}`)
   })
 
   it('a note whose tracked insertion the person rejects', async () => {
