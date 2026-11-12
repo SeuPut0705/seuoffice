@@ -15,7 +15,7 @@
   "callsLeavesMutated": 3900,
   "callsLeavesFunctions": 16,
   "callsPackageCorpus": 415,
-  "callsPackageBuilt": 87,
+  "callsPackageBuilt": 93,
   "callsPackageMutated": 2100,
   "callsPackageFunctions": 10,
   "packageMutatedEntries": 500

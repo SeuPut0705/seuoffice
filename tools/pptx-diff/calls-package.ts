@@ -175,6 +175,10 @@ const TARGETS: Array<[string, string]> = [
   ['ppt/presentation.xml', 'http://example.com/a'],
   ['ppt/presentation.xml', 'C:/x.xml'],
   ['ppt/presentation.xml', 'a%20b.xml'],
+  // decoded before the path is split: an escaped slash separates, escaped dots climb
+  ['ppt/slides/slide1.xml', 'a%2Fb.xml'],
+  ['ppt/slides/slide1.xml', '%2E%2E/media/x%2Ey.png'],
+  ['ppt/slides/slide1.xml', '%5Croot.xml'],
   ['ppt/presentation.xml', '%E0%A4%A'],
   ['ppt/presentation.xml', '%ED%A0%80'],
   ['ppt/presentation.xml', './a//./b/../c.xml'],
@@ -213,6 +217,26 @@ const declaredInputs: Array<Array<[string, boolean, number | null]>> = [
     ['x', false, 1],
   ],
   [],
+  // the part count at its limit and one past it: a fault of `>` for `>=` passed without these
+  Array.from({ length: PPTX_ZIP_LIMITS.maxParts }, (_, index): [string, boolean, number] => [
+    `p${index}`,
+    false,
+    1,
+  ]),
+  Array.from({ length: PPTX_ZIP_LIMITS.maxParts + 1 }, (_, index): [string, boolean, number] => [
+    `p${index}`,
+    false,
+    1,
+  ]),
+  // folders do not count
+  [
+    ...Array.from({ length: PPTX_ZIP_LIMITS.maxParts }, (_, index): [string, boolean, number] => [
+      `p${index}`,
+      false,
+      1,
+    ]),
+    ['folder/', true, 0],
+  ],
 ]
 
 /** The chains a deck gives: a damaged copy of DECK for each way to lose a link. */
