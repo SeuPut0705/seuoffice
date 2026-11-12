@@ -1,5 +1,5 @@
 /**
- * HWP tables with Hancom Hangul's keys (docs/plans/hwp-table-parity.md, Phase 1A–2B).
+ * HWP tables with Hancom Hangul's keys (docs/archive/ieum/plans/hwp-table-parity.md, Phase 1A–2B).
  *
  * Runs against the production build: the studio's own automation surface and the app's
  * `ieum-agent` plugin are used, never the DEV-only `window.__wasm`.

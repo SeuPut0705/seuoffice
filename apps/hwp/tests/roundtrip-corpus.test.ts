@@ -29,7 +29,7 @@ const require = createRequire(import.meta.url)
 /**
  * Files whose round trip is known to differ, by file name, with the reason. A file listed here is
  * reported as a known loss instead of failing; a listed file that now matches fails, so the
- * list cannot go stale. Reasons point at docs/tracking/findings.md or at the investigation.
+ * list cannot go stale. Reasons point at docs/archive/ieum/tracking/findings.md or at the investigation.
  */
 const KNOWN_LOSSES: Record<string, string> = {}
 
