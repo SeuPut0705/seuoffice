@@ -43,19 +43,79 @@ export function singleQuotedRevisionAttribute(text: string): string | undefined 
 }
 
 /**
+ * A block whose originalXml holds a self-closing w:pPrChange with attributes
+ * and a later `</w:pPrChange>`: applyProtectedLeadingBreaks strips everything
+ * between the two in the TypeScript, the live pPr included.
+ */
+export function selfClosingPprChange(_text: string, args: Args): string | undefined {
+  const blocks = Array.isArray(args.blocks) ? (args.blocks as unknown[]) : []
+  const found = blocks.some((block) => {
+    const xml = (block as { originalXml?: unknown } | null)?.originalXml
+    if (typeof xml !== 'string') return false
+    const record = /<w:pPrChange\s[^>]*\/>/.exec(xml)
+    return record !== null && xml.includes('</w:pPrChange>', record.index + record[0].length)
+  })
+  return found ? 'self-closing-ppr-change-read-as-paired' : undefined
+}
+
+/**
  * What the functions that resolve revisions answer differently by decision:
  * an attribute in single quotes, or, where the call can revert it (no accept,
  * and for resolvePropChangeXml the change it is asked for), a w:pPrChange
- * right after the open tag of its w:pPr, whose old properties the TypeScript
- * loses. An input of both is counted under the first.
+ * whose old properties the TypeScript loses. That is one right after the open
+ * tag of its w:pPr, or one after a paragraph-mark w:rPr that opens the w:pPr
+ * and that the same call removes whole: one holding only an empty record
+ * (any revert of formatting empties it), or only a w:ins or w:del mark
+ * (every revision rejected, with no filter). The same loss, a restore
+ * inserted where a removal starts, happens for the record of any holder that
+ * a mark with a close tag opens when the holder itself never closes (a
+ * mutated text): there the restore has no length. An input of both is
+ * counted under the first.
  */
 export function revisionClass(text: string, args: Args): string | undefined {
   if (SINGLE_QUOTED_REVISION_ATTRIBUTE.test(text)) return 'revision-attribute-in-single-quotes'
-  const reverts =
-    args.mode !== 'accept' && (args.changeName === undefined || args.changeName === 'w:pPrChange')
-  return reverts && /<w:pPr(?:\s[^>]*)?><w:pPrChange[\s>]/.test(text)
-    ? 'reject-of-a-ppr-change-that-opens-its-ppr'
-    : undefined
+  if (args.mode === 'accept') return undefined
+  const all = args.changeName === undefined
+  const loses =
+    ((all || args.changeName === 'w:pPrChange') &&
+      /<w:pPr(?:\s[^>]*)?><w:pPrChange[\s>]/.test(text)) ||
+    (all &&
+      (args.filter === undefined || (args.filter as Args | null)?.type === 'formatting') &&
+      /<w:pPr(?:\s[^>]*)?><w:rPr><w:rPrChange(?:\s[^>]*)?><w:rPr\/><\/w:rPrChange><\/w:rPr><w:pPrChange[\s>]/.test(
+        text,
+      )) ||
+    (all &&
+      args.filter === undefined &&
+      args.resolutions === undefined &&
+      /<w:pPr(?:\s[^>]*)?><w:rPr><w:(?:ins|del)\s[^>]*\/><\/w:rPr><w:pPrChange[\s>]/.test(text)) ||
+    (all &&
+      args.filter === undefined &&
+      args.resolutions === undefined &&
+      unclosedHolderOpenedByMark(text))
+  return loses ? 'reject-of-a-ppr-change-that-opens-its-ppr' : undefined
+}
+
+/**
+ * A w:tcPr, w:trPr or w:rPr that opens with a revision mark written with a
+ * close tag, followed by its own property change, and that is never closed.
+ * The same text with the holder closed is compared like any other: it is
+ * the input that shows the end tiebreak of the edit sort.
+ */
+function unclosedHolderOpenedByMark(text: string): boolean {
+  for (const found of text.matchAll(
+    /<w:(tcPr|trPr|rPr)(?:\s[^>]*)?><w:(cellIns|cellDel|ins|del)\s[^>]*><\/w:\2><w:\1Change[\s>]/g,
+  )) {
+    // the record holds a holder of the same name: count the depth to find the outer close
+    let depth = 1
+    const tags = new RegExp(`<(/?)w:${found[1]}(?=[\\s/>])[^>]*?(/?)>`, 'g')
+    tags.lastIndex = found.index + found[0].length
+    for (let tag = tags.exec(text); tag && depth > 0; tag = tags.exec(text)) {
+      if (tag[1]) depth--
+      else if (!tag[2]) depth++
+    }
+    if (depth > 0) return true
+  }
+  return false
 }
 
 /** A v:fill opacity given as a percentage. */
@@ -116,8 +176,68 @@ function holdsNonFinite(value: unknown): boolean {
 /**
  * A drawing function given a NaN or an infinity (crossing as the text 'NaN',
  * 'Infinity', '-Infinity'): the TypeScript writes it into the XML, the Rust
- * never does. Where the TypeScript writes none the two agree.
+ * never does. The input is compared under `maskNonFinite`.
  */
 export function nonFiniteNumber(_text: string, args: Args): string | undefined {
   return holdsNonFinite(args) ? NON_FINITE_NUMBER : undefined
+}
+
+/** What a non-finite number looks like once a result holds it: the token, or a number in exponent form. */
+const NON_FINITE_TOKEN = /NaN|Infinity|\de[+-]\d/
+const MASK = '\u25a0'
+
+/** A text as its tags and the texts between them, in turn: even places are text. */
+const pieces = (xml: string): string[] => xml.split(/(<[^>]*>)/)
+
+/**
+ * Both results with every attribute value and every text between tags that
+ * holds a non-finite token on the TypeScript side replaced by a placeholder,
+ * at the same place on both sides: the n-th tag and the attribute's name, or
+ * the n-th text. An attribute the TypeScript wrote with such a value and the
+ * Rust did not write at all (there was no earlier value to keep) is taken
+ * out of the TypeScript side. `undefined` where the TypeScript result holds
+ * no such token. Where the two results do not have the same number of tags
+ * nothing is masked, so they differ as they are.
+ */
+export function maskNonFinite(
+  typescript: unknown,
+  rust: unknown,
+): { typescript: unknown; rust: unknown } | undefined {
+  if (!NON_FINITE_TOKEN.test(JSON.stringify(typescript))) return undefined
+  if (typeof typescript === 'string' && typeof rust === 'string') {
+    const ours = pieces(typescript)
+    const theirs = pieces(rust)
+    if (ours.length !== theirs.length) return { typescript, rust }
+    for (const [at, piece] of ours.entries()) {
+      if (at % 2 === 0) {
+        if (NON_FINITE_TOKEN.test(piece)) ours[at] = theirs[at] = MASK
+        continue
+      }
+      for (const [, name, value] of piece.matchAll(/([\w:.-]+)\s*=\s*"([^"]*)"/g)) {
+        if (!NON_FINITE_TOKEN.test(value!)) continue
+        const attribute = new RegExp(`(\\s${name!.replace(/[.]/g, '\\.')}\\s*=\\s*")[^"]*"`)
+        if (attribute.test(theirs[at]!)) {
+          ours[at] = ours[at]!.replace(attribute, `$1${MASK}"`)
+          theirs[at] = theirs[at]!.replace(attribute, `$1${MASK}"`)
+        } else {
+          ours[at] = ours[at]!.replace(attribute, '')
+        }
+      }
+    }
+    return { typescript: ours.join(''), rust: theirs.join('') }
+  }
+  if (Array.isArray(typescript) && Array.isArray(rust) && typescript.length === rust.length) {
+    const pairs = typescript.map((item, at) => maskNonFinite(item, rust[at]) ?? { typescript: item, rust: rust[at] })
+    return { typescript: pairs.map((pair) => pair.typescript), rust: pairs.map((pair) => pair.rust) }
+  }
+  if (typeof typescript === 'object' && typescript !== null && typeof rust === 'object' && rust !== null) {
+    const out = { typescript: { ...typescript } as Args, rust: { ...rust } as Args }
+    for (const [key, item] of Object.entries(typescript)) {
+      if (!(key in out.rust)) continue
+      const pair = maskNonFinite(item, out.rust[key])
+      if (pair) [out.typescript[key], out.rust[key]] = [pair.typescript, pair.rust]
+    }
+    return out
+  }
+  return { typescript, rust }
 }

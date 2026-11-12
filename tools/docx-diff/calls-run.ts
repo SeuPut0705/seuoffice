@@ -14,12 +14,14 @@ import { GEN_FIELDS } from './calls-gen-fields'
 import { GEN_RUNS } from './calls-gen-runs'
 import { GEN_PARAGRAPH } from './calls-gen-paragraph'
 import { BLANK } from './calls-blank'
+import { BLOCKPASSES } from './calls-blockpasses'
 import { CHECKBOX } from './calls-checkbox'
 import { DOCPROPS } from './calls-docprops'
 import { DRAWING } from './calls-drawing'
 import { FIELDDISPLAY } from './calls-fielddisplay'
 import { FIELDS } from './calls-fields'
 import { IMAGES } from './calls-images'
+import { INK } from './calls-ink'
 import { MARKERS } from './calls-markers'
 import { MATH } from './calls-math'
 import { RESOLVE } from './calls-resolve'
@@ -28,8 +30,9 @@ import { SECTION } from './calls-section'
 import { VML } from './calls-vml'
 import { ArgPool } from './calls-arg-mutation'
 import type { CallSpec, Input } from './calls-spec'
-import { byFunction, checkOutcome, flush, type Outcome, rustOutcome } from './compare-props'
+import { byFunction, checkOutcome, flush, type Outcome, rustOutcome, SHOWN_CHARS } from './compare-props'
 import { mutate } from './compare-xml'
+import { maskNonFinite } from './listed'
 import { atFloor, Comparison, failGate, option } from './harness'
 
 const CALL_FUZZ_CASES = option('--call-fuzz', 300)
@@ -61,12 +64,14 @@ const titled = (name: string): string => name[0]!.toUpperCase() + name.slice(1)
 const groups: Group[] = Object.entries({
   altchunk: ALTCHUNK,
   blank: BLANK,
+  blockpasses: BLOCKPASSES,
   checkbox: CHECKBOX,
   docprops: DOCPROPS,
   drawing: DRAWING,
   fielddisplay: FIELDDISPLAY,
   fields: FIELDS,
   images: IMAGES,
+  ink: INK,
   markers: MARKERS,
   math: MATH,
   resolve: RESOLVE,
@@ -170,6 +175,23 @@ function wellFormed(value: unknown): boolean {
  */
 export const listedClasses = new Map<string, { inputs: number; differ: number }>()
 
+/**
+ * The classes compared under a mask (`CallSpec.masked`): the inputs where the
+ * TypeScript wrote a non-finite number, how many of them were compared with
+ * that value masked, and how many the Rust refused as its builders must.
+ */
+export const maskedClasses = new Map<string, { inputs: number; compared: number; refused: number }>()
+
+/** One check whose two sides were compared here and not through the queue of compare-props. */
+function recordCheck(comparison: Comparison, fn: string, outcome: string, difference: string | null): void {
+  const tally = byFunction.get(fn) ?? { checks: 0, differences: 0, keyOrderOnly: 0, threw: 0, outcomes: new Set<string>() }
+  byFunction.set(fn, tally)
+  tally.checks += 1
+  tally.outcomes.add(outcome)
+  if (difference !== null) tally.differences += 1
+  comparison.record(difference)
+}
+
 async function check(
   comparison: Comparison,
   where: string,
@@ -191,6 +213,36 @@ async function check(
     count.inputs++
     if (!same) {
       count.differ++
+      return
+    }
+  }
+  const masked = spec.masked?.(text, args)
+  if (masked !== undefined && 'value' in outcome) {
+    const rust = rustOutcome(spec.fn, text, args)
+    const pair = maskNonFinite(outcome.value, 'value' in rust ? rust.value : undefined)
+    if (pair) {
+      const count = maskedClasses.get(masked) ?? { inputs: 0, compared: 0, refused: 0 }
+      maskedClasses.set(masked, count)
+      count.inputs++
+      const call = `${where}: ${spec.fn}(${JSON.stringify(text).slice(0, SHOWN_CHARS)}, ${JSON.stringify(args).slice(0, SHOWN_CHARS)})`
+      const shown = (value: unknown): string => (JSON.stringify(value) ?? 'undefined').slice(0, SHOWN_CHARS)
+      let difference: string | null = null
+      if (spec.maskedRefuses) {
+        count.refused++
+        if (!('error' in rust)) difference = `${call}\n      the TypeScript wrote a non-finite number and Rust did not refuse: ${shown(rust)}`
+      } else {
+        count.compared++
+        if ('error' in rust) difference = `${call}\n      the TypeScript wrote a non-finite number and Rust refused: ${shown(rust)}`
+        else if (!isDeepStrictEqual(pair.typescript, pair.rust)) {
+          // the two texts around the first place they differ
+          const [ours, theirs] = [JSON.stringify(pair.typescript) ?? '', JSON.stringify(pair.rust) ?? '']
+          let at = 0
+          while (at < ours.length && ours[at] === theirs[at]) at++
+          const from = Math.max(0, at - 120)
+          difference = `${call}\n      under the mask, at ${at}\n      typescript ${ours.slice(from, at + 180)}\n      rust       ${theirs.slice(from, at + 180)}`
+        }
+      }
+      recordCheck(comparison, spec.fn, JSON.stringify(outcome), difference)
       return
     }
   }
@@ -301,6 +353,11 @@ export function reportCalls(): void {
           `TypeScript threw ${tally?.threw ?? 0}`,
       )
     }
+  }
+  for (const [id, { inputs, compared, refused }] of maskedClasses) {
+    console.log(
+      `(f) masked class ${id}: in ${inputs} inputs the TypeScript wrote a non-finite number: ${compared} compared with that value masked, ${refused} where the Rust must refuse`,
+    )
   }
   for (const [id, { inputs, differ }] of listedClasses) {
     console.log(

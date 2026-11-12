@@ -8,6 +8,7 @@ use serde_json::Value;
 
 mod altchunk;
 mod blank;
+mod blockpasses;
 mod checkbox;
 mod docprops;
 mod drawing;
@@ -23,6 +24,7 @@ mod gen_runs;
 mod gen_table;
 mod gen_text;
 mod images;
+mod ink;
 mod markers;
 mod math;
 mod resolve;
@@ -73,12 +75,14 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
     match group {
         "altchunk" => Some(altchunk::dispatch(function, text, args)),
         "blank" => Some(blank::dispatch(function, text, args)),
+        "blockpasses" => Some(blockpasses::dispatch(function, text, args)),
         "checkbox" => Some(checkbox::dispatch(function, text, args)),
         "docprops" => Some(docprops::dispatch(function, text, args)),
         "drawing" => Some(drawing::dispatch(function, text, args)),
         "fielddisplay" => Some(fielddisplay::dispatch(function, text, args)),
         "fields" => Some(fields::dispatch(function, text, args)),
         "images" => Some(images::dispatch(function, text, args)),
+        "ink" => Some(ink::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),

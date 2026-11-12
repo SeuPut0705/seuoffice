@@ -11,7 +11,7 @@ import type {
 import { nameOf, type XNode, xmlParser } from '../../packages/docx-engine/src/xml-utils'
 import { failed } from './engine'
 import { tagTokens } from './fragments'
-import { type Comparison, engine } from './harness'
+import { type Comparison, engine, option } from './harness'
 import { keyOrderDifference } from './key-order'
 import { type Args, MODEL_FUNCTIONS, type Population, READERS, type Themes } from './props-registry'
 
@@ -72,6 +72,8 @@ function record(comparison: Comparison, fn: string, key: string, where: string):
 }
 
 const BATCH_CHARS = 2_000_000
+/** `--chars N`: how much of a call and of each answer a difference shows; the whole input reproduces it. */
+export const SHOWN_CHARS = option('--chars', 300)
 
 /** Sends the queued cases to Rust, the calls on one text together, and records the waiting checks. */
 export function flush(): void {
@@ -97,7 +99,7 @@ export function flush(): void {
       cases.forEach(([key, { fn, text, args, typescript }], index) => {
         const rust = header.results[input]![index]!
         const same = 'error' in typescript ? 'error' in rust : isDeepStrictEqual(typescript, rust)
-        const call = `${fn}(${JSON.stringify(texts[text]).slice(0, 300)}, ${JSON.stringify(args).slice(0, 200)})`
+        const call = `${fn}(${JSON.stringify(texts[text]).slice(0, SHOWN_CHARS)}, ${JSON.stringify(args).slice(0, SHOWN_CHARS)})`
         const order =
           same && !('error' in typescript) ? keyOrderDifference(fn, typescript, rust) : null
         settled.set(key, {
@@ -106,8 +108,8 @@ export function flush(): void {
           keyOrderOnly: order !== null,
           difference: !same
             ? `${call}\n` +
-              `      typescript ${JSON.stringify(typescript).slice(0, 300)}\n` +
-              `      rust       ${JSON.stringify(rust).slice(0, 300)}`
+              `      typescript ${JSON.stringify(typescript).slice(0, SHOWN_CHARS)}\n` +
+              `      rust       ${JSON.stringify(rust).slice(0, SHOWN_CHARS)}`
             : order === null
               ? null
               : `${call}\n      ${order}`,

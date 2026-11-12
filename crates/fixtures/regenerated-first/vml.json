@@ -1,0 +1,98 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "vml",
+      "argRefused": 0,
+      "populations": {
+        "corpus": {
+          "compared": 48,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 1125,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 2700,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "vml.constants",
+          "checks": 3,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 1
+        },
+        {
+          "fn": "vml.VML_WORDART_RE",
+          "checks": 326,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "vml.VML_PICT_RID_RE",
+          "checks": 326,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "vml.vmlGroupScale",
+          "checks": 390,
+          "differences": 0,
+          "distinctResults": 15,
+          "typescriptThrew": 183
+        },
+        {
+          "fn": "vml.vmlCoordPx",
+          "checks": 366,
+          "differences": 0,
+          "distinctResults": 36,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "vml.vmlPathToNormD",
+          "checks": 580,
+          "differences": 0,
+          "distinctResults": 85,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "vml.vmlShapeDimPx",
+          "checks": 424,
+          "differences": 0,
+          "distinctResults": 47,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "vml.vmlShapeTypeTable",
+          "checks": 313,
+          "differences": 0,
+          "distinctResults": 129,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "vml.vmlShapeSvg",
+          "checks": 684,
+          "differences": 0,
+          "distinctResults": 175,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "vml.vmlWordArtBox",
+          "checks": 461,
+          "differences": 0,
+          "distinctResults": 182,
+          "typescriptThrew": 73
+        }
+      ]
+    }
+  ]
+}

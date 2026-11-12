@@ -1,9 +1,11 @@
 // Mutations of the arguments of a call, for functions whose input is a model
 // value instead of a text. A mutation stays inside what the seeds showed: a
 // value is replaced by one seen under the same key, a key is dropped where
-// some seed object lacked it, added where another had it, and array elements
-// are removed, repeated, swapped or taken from another array of the same key.
-// So a mutated value has the types of the seeds, in a combination none had.
+// some seed object lacked it, added where another had it (after the keys
+// every seed had before it, so an object whose type writes one order keeps
+// it), and array elements are removed, repeated, swapped or taken from
+// another array of the same key. So a mutated value has the types of the
+// seeds, in a combination none had.
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 
@@ -18,6 +20,8 @@ export class ArgPool {
   private readonly objects = new Map<string, number>()
   private readonly present = new Map<string, number>()
   private readonly keys = new Map<string, Set<string>>()
+  /** `context\0a\0b`: some seed object of the context held key a before key b. */
+  private readonly before = new Set<string>()
 
   add(args: unknown): void {
     this.walk(JSON.parse(JSON.stringify(args)) as Json, '')
@@ -40,8 +44,11 @@ export class ArgPool {
       this.objects.set(context, (this.objects.get(context) ?? 0) + 1)
       const keys = this.keys.get(context) ?? new Set<string>()
       this.keys.set(context, keys)
+      const earlier: string[] = []
       for (const [key, child] of Object.entries(value)) {
         keys.add(key)
+        for (const other of earlier) this.before.add(`${context}\0${other}\0${key}`)
+        earlier.push(key)
         const at = `${context}.${key}`
         this.present.set(at, (this.present.get(at) ?? 0) + 1)
         this.keep(at, child)
@@ -49,6 +56,26 @@ export class ArgPool {
         this.walk(child, key)
       }
     }
+  }
+
+  /**
+   * Sets `key`, a key the object lacks, at the place the seeds give it:
+   * between the keys that always came before it and those that always came
+   * after. Where the seeds do not say (a pair seen in both orders or never
+   * together, or the object's own keys not in that order), nothing is set: a
+   * key at a place its type never writes it would differ by order alone.
+   */
+  private insert(object: { [key: string]: Json }, context: string, key: string, value: Json): void {
+    const entries = Object.entries(object)
+    const sides = entries.map(([other]) => {
+      const earlier = this.before.has(`${context}\0${other}\0${key}`)
+      return earlier === this.before.has(`${context}\0${key}\0${other}`) ? undefined : earlier
+    })
+    const at = sides.lastIndexOf(true) + 1
+    if (sides.includes(undefined) || sides.indexOf(false, 0) !== (at < sides.length ? at : -1)) return
+    for (const [other] of entries) delete object[other]
+    entries.splice(at, 0, [key, value])
+    for (const [other, kept] of entries) object[other] = kept
   }
 
   private pick(context: string, random: () => number): Json | undefined {
@@ -115,7 +142,7 @@ export class ArgPool {
         if (key in value) continue
         out.push((random) => {
           const other = this.pick(`${context}.${key}`, random)
-          if (other !== undefined) value[key] = other
+          if (other !== undefined) this.insert(value, context, key, other)
         })
       }
     }

@@ -311,10 +311,11 @@ export const NON_FINITE_DRAWING_BUILD: Array<{ fn: string; text: string; args: R
 ]
 
 // The inputs of divergences.json are inputs of the comparison too: each falls
-// in the listed class, and the mutations carry its numbers to other places.
+// in the masked class, and the mutations carry its numbers to other places.
 for (const spec of GEN_DRAWING_BUILD) {
   const listed = NON_FINITE_DRAWING_BUILD.filter(({ fn }) => fn === spec.fn)
   if (listed.length === 0) continue
   spec.built.push(...listed.map(({ text, args }) => ({ text, args })))
-  spec.listed = nonFiniteNumber
+  spec.masked = nonFiniteNumber
+  spec.maskedRefuses = true
 }

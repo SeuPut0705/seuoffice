@@ -2,6 +2,7 @@
 
 pub mod alt_chunk;
 pub mod blank;
+pub mod block_passes;
 pub mod checkbox_control;
 pub mod doc_properties;
 pub mod drawing_geometry;
@@ -11,6 +12,7 @@ pub mod fields;
 pub mod font_table;
 pub mod generate;
 pub mod image_kinds;
+pub mod ink;
 pub mod list_markers;
 pub mod model;
 pub mod notes;

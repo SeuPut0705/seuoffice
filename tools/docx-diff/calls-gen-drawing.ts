@@ -402,6 +402,12 @@ export const GEN_DRAWING: CallSpec[] = [
       ...cross(SHAPE_PARAS, SIZES),
       // valid TypeScript output: -Infinity clamps to 1 EMU
       ...cross(NO_FALLBACK_PARAS, [{ sizes: [{ wPx: '-Infinity' }, { hPx: '-Infinity', wPx: 12 }] }]),
+      // a non-finite width, then a finite height: the TypeScript's own cx="NaN"
+      // stops the height reaching the shape's a:ext; the other order does not
+      ...cross(SHAPE_PARAS, [
+        { sizes: [{ wPx: 'NaN', hPx: 40 }, { wPx: 'Infinity', hPx: 12.5 }] },
+        { sizes: [{ wPx: 20, hPx: 'NaN' }, { wPx: 'Infinity', hPx: '-Infinity' }] },
+      ]),
     ],
   },
   {
@@ -483,10 +489,10 @@ export const NON_FINITE_DRAWING: Array<{ fn: string; text: string; args: Record<
 ]
 
 // The inputs of divergences.json are inputs of the comparison too: each falls
-// in the listed class, and the mutations carry its numbers to other places.
+// in the masked class, and the mutations carry its numbers to other places.
 for (const spec of GEN_DRAWING) {
   const listed = NON_FINITE_DRAWING.filter(({ fn }) => fn === spec.fn)
   if (listed.length === 0) continue
   spec.built.push(...listed.map(({ text, args }) => ({ text, args })))
-  spec.listed = nonFiniteNumber
+  spec.masked = nonFiniteNumber
 }

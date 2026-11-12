@@ -256,16 +256,13 @@ fn remove_wraps(xml: &str) -> String {
     wrap_element_re().replace_all(xml, |_| String::new())
 }
 
-/// Main policy, ahead of the TypeScript fix: a non-finite rank is ignored, never written.
-fn finite(x: Option<f64>) -> Option<f64> {
-    x.filter(|x| x.is_finite())
-}
-
 fn rank(z_order: Option<f64>) -> String {
-    num(251658240.0 + finite(z_order).unwrap_or(0.0))
+    num(251658240.0 + z_order.unwrap_or(0.0))
 }
 
-/// `applyImageZOrder`
+/// `applyImageZOrder`. The owner's rule for the patches: where the
+/// TypeScript would write a non-finite number, the attribute or text keeps
+/// what it held; everything else the call does is done.
 pub fn apply_image_z_order(xml: &str, z_order: Option<f64>) -> String {
     if z_order.is_some_and(|z| !z.is_finite()) {
         return xml.to_owned();
@@ -361,27 +358,26 @@ pub fn apply_image_wrap(
     let default_v =
         "<wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>";
     let position = if let Some(pos) = pos_offset {
-        // Main policy: a non-finite axis keeps the drawing's own position
-        // element for that axis (the default one when it had none)
         let rel_h = pos.relative_to.as_deref().unwrap_or("column");
         let rel_v = pos.relative_to.as_deref().unwrap_or("paragraph");
-        let pos_h = if pos.x.is_finite() {
-            format!(
-                "<wp:positionH relativeFrom=\"{rel_h}\"><wp:posOffset>{}</wp:posOffset></wp:positionH>",
-                num(math_round(pos.x))
-            )
-        } else {
-            original_h.unwrap_or(default_h)
+        // a non-finite axis keeps the offset its element held; without one
+        // the TypeScript writes a new offset, which stays empty here
+        let offset = |x: f64, original: &Option<String>| -> String {
+            if x.is_finite() {
+                return num(math_round(x));
+            }
+            original
+                .as_deref()
+                .and_then(|el| js_regex!(r"<wp:posOffset>([^<]*)<\/wp:posOffset>").exec(el))
+                .and_then(|m| m.get(1))
+                .unwrap_or("")
+                .to_owned()
         };
-        let pos_v = if pos.y.is_finite() {
-            format!(
-                "<wp:positionV relativeFrom=\"{rel_v}\"><wp:posOffset>{}</wp:posOffset></wp:positionV>",
-                num(math_round(pos.y))
-            )
-        } else {
-            original_v.unwrap_or_else(|| default_v.to_owned())
-        };
-        format!("<wp:simplePos x=\"0\" y=\"0\"/>{pos_h}{pos_v}")
+        format!(
+            "<wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"{rel_h}\"><wp:posOffset>{}</wp:posOffset></wp:positionH><wp:positionV relativeFrom=\"{rel_v}\"><wp:posOffset>{}</wp:posOffset></wp:positionV>",
+            offset(pos.x, &original_h),
+            offset(pos.y, &original_v),
+        )
     } else if let Some(align) = margin_align {
         format!(
             "<wp:simplePos x=\"0\" y=\"0\"/><wp:positionH relativeFrom=\"margin\"><wp:align>{}</wp:align></wp:positionH><wp:positionV relativeFrom=\"margin\"><wp:align>{}</wp:align></wp:positionV>",
@@ -408,9 +404,20 @@ pub fn apply_image_wrap(
         None if wrap == "topBottom" => "<wp:wrapTopAndBottom/>",
         None => "<wp:wrapNone/>",
     };
+    // a non-finite rank keeps the relativeHeight the anchor held; an inline
+    // drawing or an anchor without one gets no relativeHeight
+    let relative_height = match z_order {
+        Some(z) if !z.is_finite() => js_regex!(r"<wp:anchor[^>]*>")
+            .exec(xml)
+            .filter(|_| has_anchor)
+            .and_then(|tag| js_regex!(r#"\brelativeHeight="([^"]*)""#).exec(tag.as_str()))
+            .and_then(|m| m.get(1))
+            .map(|held| format!(" relativeHeight=\"{held}\""))
+            .unwrap_or_default(),
+        _ => format!(" relativeHeight=\"{}\"", rank(z_order)),
+    };
     let anchor_open = format!(
-        "<wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\" relativeHeight=\"{}\" behindDoc=\"{behind}\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\">",
-        rank(z_order),
+        "<wp:anchor distT=\"0\" distB=\"0\" distL=\"114300\" distR=\"114300\" simplePos=\"0\"{relative_height} behindDoc=\"{behind}\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\">",
     );
     if has_anchor {
         out = replace_first(js_regex!(r"<wp:anchor[^>]*>"), 0, &out, &anchor_open);
@@ -599,40 +606,55 @@ pub fn swap_anchor_wrap(drawing_xml: &str, wrap: ImageWrap, z_order: Option<f64>
     insert_wrap_element(&next, wrap_element)
 }
 
-/// The shape's own a:ext in its wps:spPr; `None` keeps that dimension.
+/// The shape's own a:ext in its wps:spPr; `None` keeps that dimension (the
+/// TypeScript's `size.cx ?? cx of the tag`). A non-finite size keeps what the
+/// attribute held, and leaves it out where the tag had none.
 fn set_shape_ext(drawing_xml: &str, cx: Option<f64>, cy: Option<f64>) -> String {
-    let Some(sp_pr) =
-        js_regex!(r"<wps:spPr(?:\s[^>]*)?>[\s\S]*?<\/wps:spPr>|<wps:spPr(?:\s[^>]*)?\/>")
-            .exec(drawing_xml)
-    else {
-        return drawing_xml.to_owned();
-    };
+    try_set_shape_ext(drawing_xml, cx, cy).unwrap_or_else(|| drawing_xml.to_owned())
+}
+
+/// `set_shape_ext`, `None` where the TypeScript returns the drawing as it was.
+fn try_set_shape_ext(drawing_xml: &str, cx: Option<f64>, cy: Option<f64>) -> Option<String> {
+    let sp_pr = js_regex!(r"<wps:spPr(?:\s[^>]*)?>[\s\S]*?<\/wps:spPr>|<wps:spPr(?:\s[^>]*)?\/>")
+        .exec(drawing_xml)?;
     let sp = sp_pr.as_str();
-    let Some(tag) = js_regex!(r"<a:ext\b[^>]*?(?:\/>|><\/a:ext>)").exec(sp) else {
-        return drawing_xml.to_owned();
+    let tag = js_regex!(r"<a:ext\b[^>]*?(?:\/>|><\/a:ext>)").exec(sp)?;
+    let dimension = |given: Option<f64>, digits: &JsRegex, held: &JsRegex| match given {
+        Some(x) if x.is_finite() => Some(Some(num(x))),
+        Some(_) => Some(
+            held.exec(tag.as_str())
+                .and_then(|m| m.get(1))
+                .map(str::to_owned),
+        ),
+        None => digits
+            .exec(tag.as_str())
+            .and_then(|m| m.get(1))
+            .map(|v| Some(v.to_owned())),
     };
-    let cx = cx.map(num).or_else(|| {
-        js_regex!(r#"\bcx="(\d+)""#)
-            .exec(tag.as_str())
-            .and_then(|m| m.get(1))
-            .map(str::to_owned)
-    });
-    let cy = cy.map(num).or_else(|| {
-        js_regex!(r#"\bcy="(\d+)""#)
-            .exec(tag.as_str())
-            .and_then(|m| m.get(1))
-            .map(str::to_owned)
-    });
+    let cx = dimension(
+        cx,
+        js_regex!(r#"\bcx="(\d+)""#),
+        js_regex!(r#"\bcx="([^"]*)""#),
+    );
+    let cy = dimension(
+        cy,
+        js_regex!(r#"\bcy="(\d+)""#),
+        js_regex!(r#"\bcy="([^"]*)""#),
+    );
     let (Some(cx), Some(cy)) = (cx, cy) else {
-        return drawing_xml.to_owned();
+        return None;
     };
-    format!(
-        "{}{}<a:ext cx=\"{cx}\" cy=\"{cy}\"/>{}{}",
+    let attr =
+        |name: &str, v: Option<String>| v.map_or(String::new(), |v| format!(" {name}=\"{v}\""));
+    Some(format!(
+        "{}{}<a:ext{}{}/>{}{}",
         &drawing_xml[..sp_pr.start()],
         &sp[..tag.start()],
+        attr("cx", cx),
+        attr("cy", cy),
         &sp[tag.end()..],
         &drawing_xml[sp_pr.end()..]
-    )
+    ))
 }
 
 fn set_extent_cx(xml: &str, cx: f64) -> String {
@@ -653,8 +675,8 @@ fn set_extent_cy(xml: &str, cy: f64) -> String {
     )
 }
 
-/// The VML fallback's `style` height or width, from px to its own unit. Main
-/// policy: a non-finite value is not written; the style keeps its own.
+/// The VML fallback's `style` height or width, from px to its own unit. A
+/// non-finite value keeps what the style held.
 fn set_fallback_style(fallback: &str, re: &JsRegex, px: f64) -> String {
     replace_first_with(re, fallback, |m| {
         let prefix = m.get(1).unwrap_or("");
@@ -707,11 +729,12 @@ pub fn patch_textbox_heights(paragraph_xml: &str, heights_px: &[Option<f64>]) ->
             continue;
         }
         let cy = js_max(1.0, math_round(height_px.unwrap_or(f64::NAN) * EMU_PER_PX));
-        // Main policy: a non-finite size is not written (-Infinity clamps to 1 and is)
-        if !cy.is_finite() {
-            continue;
-        }
-        let resized = set_shape_ext(&set_extent_cy(drawing_xml, cy), None, Some(cy));
+        // a non-finite height keeps the extent's cy; the shape's a:ext is still rewritten
+        let resized = if cy.is_finite() {
+            set_shape_ext(&set_extent_cy(drawing_xml, cy), None, Some(cy))
+        } else {
+            set_shape_ext(drawing_xml, None, Some(cy))
+        };
         out.push_str(&paragraph_xml[cursor..drawing.start]);
         out.push_str(&resized);
         cursor = drawing.end;
@@ -787,17 +810,27 @@ pub fn patch_textbox_sizes(paragraph_xml: &str, sizes: &[Option<TextboxSizePatch
             continue;
         }
         let mut resized = drawing_xml.to_owned();
+        // a non-finite size keeps the extent's value; the shape's a:ext is still rewritten
+        let mut ext_cx_non_finite = false;
         if let Some(w_px) = size.w_px {
-            // Main policy: a non-finite size is not written (-Infinity clamps to 1 and is)
             let cx = js_max(1.0, math_round(w_px * EMU_PER_PX));
             if cx.is_finite() {
-                resized = set_shape_ext(&set_extent_cx(&resized, cx), Some(cx), None);
+                resized = set_extent_cx(&resized, cx);
+            }
+            if let Some(next) = try_set_shape_ext(&resized, Some(cx), None) {
+                resized = next;
+                ext_cx_non_finite = !cx.is_finite();
             }
         }
         if let Some(h_px) = size.h_px {
             let cy = js_max(1.0, math_round(h_px * EMU_PER_PX));
             if cy.is_finite() {
-                resized = set_shape_ext(&set_extent_cy(&resized, cy), None, Some(cy));
+                resized = set_extent_cy(&resized, cy);
+            }
+            // the TypeScript reads the a:ext's cx as digits here: after its own
+            // cx="NaN" it finds none and leaves the a:ext alone
+            if !ext_cx_non_finite {
+                resized = set_shape_ext(&resized, None, Some(cy));
             }
             resized = replace_first(
                 js_regex!(r"<a:spAutoFit\s*\/>|<a:spAutoFit\s*>\s*<\/a:spAutoFit>"),
@@ -861,17 +894,27 @@ impl ShapeStylePatch {
 fn patch_shape_rotation(sp_pr: &str, rot_deg: Option<f64>) -> String {
     let norm = rot_deg.map_or(0.0, |rot| ((rot % 360.0) + 360.0) % 360.0);
     let emu = math_round(norm * 60000.0) % 21600000.0;
+    // a non-finite rotation keeps the rot the xfrm held; where the TypeScript
+    // inserts it (no rot, or no xfrm) it is left out
     let Some(xfrm) = js_regex!(r"<a:xfrm\b[^>]*>").exec(sp_pr) else {
         if emu == 0.0 {
             return sp_pr.to_owned();
         }
+        let rot = if emu.is_finite() {
+            format!(" rot=\"{}\"", num(emu))
+        } else {
+            String::new()
+        };
         return replace_first(
             js_regex!(r"^(<wps:spPr\b[^>]*>)"),
             1,
             sp_pr,
-            &format!("$1<a:xfrm rot=\"{}\"/>", num(emu)),
+            &format!("$1<a:xfrm{rot}/>"),
         );
     };
+    if !emu.is_finite() {
+        return sp_pr.to_owned();
+    }
     let xfrm = xfrm.as_str();
     let tag = if emu == 0.0 {
         replace_first(js_regex!(r#"\s+rot="[^"]*""#), 0, xfrm, "")
@@ -895,13 +938,14 @@ fn patch_shape_rotation(sp_pr: &str, rot_deg: Option<f64>) -> String {
 
 fn patch_shape_line_width(sp_pr: &str, border_width_px: Option<f64>) -> String {
     let emu = border_width_px.map(|px| js_max(1.0, math_round(px * EMU_PER_PX)));
-    // Main policy: a non-finite width is not written (-Infinity clamps to 1 and is)
-    if emu.is_some_and(|emu| !emu.is_finite()) {
-        return sp_pr.to_owned();
-    }
+    // a non-finite width keeps the w the a:ln held; where the TypeScript
+    // inserts it (no w, or no a:ln) it is left out
     let Some(ln) = js_regex!(r"<a:ln\b[^>]*>").exec(sp_pr) else {
         return match emu {
             None => sp_pr.to_owned(),
+            Some(emu) if !emu.is_finite() => {
+                replace_str(sp_pr, "</wps:spPr>", "<a:ln/></wps:spPr>")
+            }
             Some(emu) => replace_str(
                 sp_pr,
                 "</wps:spPr>",
@@ -909,6 +953,9 @@ fn patch_shape_line_width(sp_pr: &str, border_width_px: Option<f64>) -> String {
             ),
         };
     };
+    if emu.is_some_and(|emu| !emu.is_finite()) {
+        return sp_pr.to_owned();
+    }
     let ln = ln.as_str();
     let tag = match emu {
         None => replace_first(js_regex!(r#"\s+w="[^"]*""#), 0, ln, ""),
@@ -945,20 +992,6 @@ fn replace_fill_slot(xml: &str, hex: Option<&str>) -> String {
 
 /// `patchShapeStyles`; an entry `None` is null or undefined.
 pub fn patch_shape_styles(paragraph_xml: &str, styles: &[Option<ShapeStylePatch>]) -> String {
-    // Main policy: a non-finite rotation always writes rot="NaN", so it is ignored
-    let normalized: Vec<Option<ShapeStylePatch>> = styles
-        .iter()
-        .map(|style| {
-            style.as_ref().map(|s| ShapeStylePatch {
-                rot_deg: match s.rot_deg {
-                    Some(Some(rot)) if !rot.is_finite() => None,
-                    other => other,
-                },
-                ..s.clone()
-            })
-        })
-        .collect();
-    let styles = normalized.as_slice();
     if styles
         .iter()
         .all(|s| s.as_ref().is_none_or(ShapeStylePatch::keeps_all))

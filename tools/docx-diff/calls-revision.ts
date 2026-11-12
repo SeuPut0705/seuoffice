@@ -94,6 +94,38 @@ const PPR_CHANGES = [
   ),
 ]
 
+// a mark written with a close tag (no paragraph-mark or cell marker) and the
+// record after it: the mark's edit and the record's revert share a start, and
+// the longer one, the revert, is the one kept
+const SAME_START = (['Ins', 'Del'] as const).flatMap((mark) => [
+  para(
+    `<w:r><w:rPr><w:${mark.toLowerCase()}${at('120')}></w:${mark.toLowerCase()}>` +
+      `<w:rPrChange${at('121')}><w:rPr><w:b/></w:rPr></w:rPrChange></w:rPr><w:t>x</w:t></w:r>`,
+  ),
+  `<w:tbl><w:tr>${tc(
+    `<w:tcPr><w:cell${mark}${at('122')}></w:cell${mark}>` +
+      `<w:tcPrChange${at('123')}><w:tcPr><w:tcW w:w="9"/></w:tcPr></w:tcPrChange></w:tcPr>`,
+    'c',
+  )}</w:tr></w:tbl>`,
+])
+
+const afterMarkRPr = (rPr: string, before = ''): string =>
+  para(
+    run('p'),
+    `<w:pPr>${before}${rPr}<w:pPrChange${at('135')}><w:pPr><w:jc w:val="center"/></w:pPr></w:pPrChange></w:pPr>`,
+  )
+
+// a paragraph-mark rPr first in its pPr, before the record: where the reject
+// removes that rPr whole, its removal starts where the old properties go in
+const PPR_AFTER_MARK_RPR = [
+  afterMarkRPr(`<w:rPr><w:ins${at('130')}/></w:rPr>`),
+  afterMarkRPr(`<w:rPr><w:del${at('131')}/></w:rPr>`),
+  afterMarkRPr(`<w:rPr><w:rPrChange${at('132')}><w:rPr/></w:rPrChange></w:rPr>`),
+  // the rPr keeps a child, or white space stands before it
+  afterMarkRPr(`<w:rPr><w:ins${at('133')}/><w:b/></w:rPr>`),
+  afterMarkRPr(`<w:rPr><w:ins${at('134')}/></w:rPr>`, ' '),
+]
+
 const SECT_CHANGE =
   `<w:sectPr><w:headerReference w:type="default" r:id="rId1"/><w:pgSz w:w="11906"/>` +
   `<w:footerReference w:type="first" r:id="rId2"/>` +
@@ -186,6 +218,8 @@ const XMLS: string[] = [
   doc(NUMBERING),
   ...RPR_CHANGES.map((r) => doc(para(r))),
   ...PPR_CHANGES.map(doc),
+  ...SAME_START.map(doc),
+  ...PPR_AFTER_MARK_RPR.map(doc),
   `<w:body>${para(run('s'))}${SECT_CHANGE}</w:body>`,
   doc(TABLE_CHANGES),
   ...NESTED.map(doc),
@@ -283,6 +317,11 @@ const APPLY_INPUTS: Input[] = [
     ['accept', 'reject'].map((mode) => ({ text: DATED, args: { mode, filter } })),
   ),
   ...UNCONSULTED.map((text) => ({ text, args: { mode: 'accept', filter: { author: 5, ids: 5 } } })),
+  // only the formatting rejected: the paragraph-mark rPr stays, the old properties come back
+  ...PPR_AFTER_MARK_RPR.slice(0, 2).map((p) => ({
+    text: doc(p),
+    args: { mode: 'reject', filter: { type: 'formatting' } },
+  })),
   ...[
     { author: 'kim' },
     { before: '2024-01-01T00:00:00Z' },
@@ -366,6 +405,11 @@ const PROP_FRAGMENTS: string[] = [
   ...elementFragments(NUMBERING, 'w:numPr'),
   ...PPR_CHANGES.flatMap((p) => elementFragments(p, 'w:pPr').slice(0, 1)),
   ...RPR_CHANGES.flatMap((r) => elementFragments(r, 'w:rPr').slice(0, 1)),
+  ...SAME_START.flatMap((x) => [
+    ...elementFragments(x, 'w:rPr').slice(0, 1),
+    ...elementFragments(x, 'w:tcPr').slice(0, 1),
+  ]),
+  ...PPR_AFTER_MARK_RPR.flatMap((p) => elementFragments(p, 'w:pPr').slice(0, 1)),
   SECT_CHANGE,
   `<w:tcPr><w:cellMerge w:id="1" w:author="a" w:date="" w16du:dateUtc="2024-01-01T00:00:00Z" w:vMerge="" w:vMergeOrig="cont"/></w:tcPr>`,
   `<w:tcPr><w:cellMerge w:author='x' w:vMerge="rest"></w:cellMerge><w:cellMerge w:id="2"/></w:tcPr>`,

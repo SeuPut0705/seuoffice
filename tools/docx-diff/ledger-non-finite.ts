@@ -3,7 +3,8 @@
 // NON_FINITE_DRAWING and NON_FINITE_DRAWING_BUILD, with what each side gives
 // now. An input both sides agree on, or one where the TypeScript writes no
 // NaN or Infinity, is no such divergence: the tool stops on it. The first
-// entry is the class `CallSpec.listed` names for every such input.
+// entry is the class `CallSpec.masked` names for every such input: the
+// comparison masks the non-finite values and compares the rest.
 //
 //   npx tsx tools/docx-diff/ledger-non-finite.ts          rewrite the entries
 //   npx tsx tools/docx-diff/ledger-non-finite.ts --check  exit 1 when they would change
@@ -21,10 +22,14 @@ const NON_FINITE = /^-?(?:NaN|Infinity)$/
 const REASON =
   'TypeScript defect, fix pending on main. The TypeScript formats the number it is given, so a NaN or an ' +
   'infinity reaches the XML as the text "NaN" or "Infinity", which no schema type of that attribute or ' +
-  'element admits (they are integers), so the part is invalid. Rust never writes a non-finite number: a ' +
-  'value that is optional or that patches an existing one is ignored, as patchImageParagraphXml already ' +
-  'does on both sides, and a number a builder needs is written as the floor the TypeScript clamps a size ' +
-  'to, or as 0 for a position. Where the TypeScript result holds no NaN or Infinity, Rust gives that result.'
+  'element admits (they are integers), so the part is invalid. One rule for all 16 functions: a function ' +
+  'that patches existing XML keeps what the attribute or text held, as the guarded patchImageParagraphXml ' +
+  'does on both sides, and does everything else the TypeScript does, including what the TypeScript\'s own ' +
+  'NaN prevents later in the same call; where the TypeScript inserts a new attribute holding the value, ' +
+  'the Rust leaves that attribute out. A builder, which has nothing to keep, refuses the call ' +
+  '("a non-finite number: <option>"). Where the TypeScript result holds no NaN or Infinity (a size of ' +
+  '-Infinity clamped to 1 EMU, a NaN holder spacing), Rust gives that result. The comparison masks, on ' +
+  'both sides, each value where the TypeScript wrote a non-finite number and compares the rest exactly.'
 
 /** The paths of the arguments that hold a non-finite number, as text. */
 function nonFiniteAt(value: unknown, path: string): string[] {
