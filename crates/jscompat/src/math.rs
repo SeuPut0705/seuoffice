@@ -111,6 +111,22 @@ pub fn number_truthy(x: f64) -> bool {
     !(x == 0.0 || x.is_nan())
 }
 
+/// `Math.pow(x, y)` and `x ** y`. Not C's `pow` at two points: a NaN exponent
+/// gives NaN even where the base is 1, and a base of +1 or -1 under an infinite
+/// exponent gives NaN where C gives 1.
+///
+/// Every other case is `pow` of the `libm` crate, on every target. `f64::powf`
+/// was not V8's answer in the last bit: two colors of the tracked decks came
+/// back one step off after the gamma curve of a tint. With this one the 1,259
+/// colors of the gate agree with Node 22; that is measured on those inputs,
+/// not proven for every pair.
+pub fn math_pow(x: f64, y: f64) -> f64 {
+    if y.is_nan() || (y.is_infinite() && x.abs() == 1.0) {
+        return f64::NAN;
+    }
+    libm::pow(x, y)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -152,5 +168,17 @@ mod tests {
         assert!(!number_truthy(f64::NAN));
         assert!(number_truthy(-1.0));
         assert!(number_truthy(f64::NEG_INFINITY));
+    }
+
+    // what Node 22 answers for the same input
+    #[test]
+    fn the_cases_where_javascript_is_not_c() {
+        assert!(math_pow(1.0, f64::NAN).is_nan());
+        assert!(math_pow(1.0, f64::INFINITY).is_nan());
+        assert!(math_pow(-1.0, f64::NEG_INFINITY).is_nan());
+        assert_eq!(math_pow(f64::NAN, 0.0), 1.0);
+        assert_eq!(math_pow(0.0, 2.2), 0.0);
+        assert_eq!(math_pow(2.0, 10.0), 1024.0);
+        assert!(math_pow(f64::NAN, 2.2).is_nan());
     }
 }

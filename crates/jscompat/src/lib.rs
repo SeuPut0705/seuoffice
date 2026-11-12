@@ -27,7 +27,7 @@ pub use json_value::{
 };
 pub use map::JsMap;
 pub use math::{
-    math_atan2, math_cos, math_hypot, math_max, math_min, math_sign, math_sin, math_tan,
+    math_atan2, math_cos, math_hypot, math_max, math_min, math_pow, math_sign, math_sin, math_tan,
     number_truthy,
 };
 pub use number::{
