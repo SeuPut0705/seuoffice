@@ -1466,6 +1466,18 @@ describe('xlsx: the output of a PivotTable built from a withheld cell is withhel
   it.each([
     ['is a table or a name the workbook does not define', worksheetSource('name="Table1"')],
     ['is in another workbook', worksheetSource('ref="A1:A2" sheet="Clients" r:id="rId1"')],
+    [
+      'is in another workbook, the relationship written with spaces',
+      worksheetSource('ref="A1:A2" sheet="Clients" r:id = "rId1"'),
+    ],
+    [
+      'is in another workbook, the relationship in single quotes',
+      worksheetSource(`ref="A1:A2" sheet="Clients" r:id='rId1'`),
+    ],
+    [
+      'is in another workbook, the relationship under another declared prefix',
+      worksheetSource(`xmlns:rel="${REL_NS}" ref="A1:A2" sheet="Clients" rel:id="rId1"`),
+    ],
     ['is a database connection', '<cacheSource type="external" connectionId="1"/>'],
     [
       'is several ranges consolidated',
@@ -1477,6 +1489,18 @@ describe('xlsx: the output of a PivotTable built from a withheld cell is withhel
   ])('withholds the output when the source %s', async (_why, source) => {
     const text = await read({ source })
     expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  it.each([
+    [
+      'a revision id',
+      'xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xr:id="{7C5A}"',
+    ],
+    ['an id of no namespace', 'id="7"'],
+    ['text inside another attribute that only looks like one', `comment='a r:id="rId1"'`],
+  ])('does not take %s on the source for another workbook', async (_what, extra) => {
+    const text = await read({ source: worksheetSource(`ref="A1:A2" sheet="Clients" ${extra}`) })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_SHOWN}`)
   })
 
   it('withholds the whole sheet when a pivot on it does not say where its output is', async () => {

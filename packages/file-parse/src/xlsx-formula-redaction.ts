@@ -6,6 +6,7 @@ import {
   type NameDefinition,
   type ReadsSheet,
 } from '@genoffice/xlsx-gateway/gateway/formula-reads'
+import { relationshipIdOf } from '@genoffice/xlsx-gateway/gateway/xlsx-namespace'
 
 /**
  * The formula cells of a workbook whose value comes from a withheld cell.
@@ -267,11 +268,14 @@ export function pivotOutputOf(
 
 function pivotSourceFormula(cacheXml: string | undefined): string | null {
   const cacheSource = CACHE_SOURCE.exec(cacheXml ?? '')?.[1]
-  const source = WORKSHEET_SOURCE.exec(cacheXml ?? '')?.[1]
-  if (cacheSource === undefined || source === undefined) return null
+  const sourceElement = WORKSHEET_SOURCE.exec(cacheXml ?? '')
+  const source = sourceElement?.[1]
+  if (cacheSource === undefined || sourceElement === null || source === undefined) return null
   if (attribute(cacheSource, 'type') !== 'worksheet') return null
-  // a relationship on the source: the range is in another workbook
-  if (/(?:^|\s)[\w.-]+:id\s*=/.test(source)) return null
+  // A relationship on the source: the range is in another workbook. Told the
+  // way the workbook gateway tells it for the editor, so the two agree.
+  const before = (cacheXml ?? '').slice(0, sourceElement.index)
+  if (relationshipIdOf(sourceElement[0], before) !== undefined) return null
   const ref = attribute(source, 'ref')
   const sheet = attribute(source, 'sheet')
   const name = attribute(source, 'name')
