@@ -245,6 +245,7 @@ export {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+export { DEFAULT_PICTURE_PX, usableNumber, usablePictureSize } from './xml-number'
 export { bibliographyLine, citationText, parseSourcesXml } from './sources'
 export { parseZoteroDocumentDataXml, patchZoteroDocumentDataXml } from './zotero-doc-props'
 export { readThemeColors, readThemeFonts } from './theme'

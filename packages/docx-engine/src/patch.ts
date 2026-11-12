@@ -131,6 +131,7 @@ import { applyPropertyChanges, type PropertyChanges } from './doc-properties'
 import { patchHfPicturesXml } from './run-picture'
 import { ownValue } from './own-value'
 import { findStartTag } from './xml-tag'
+import { EMU_PER_PX, usableNumber, usablePictureSize } from './xml-number'
 
 /**
  * Relationship attributes are read quote-agnostically and with any spacing
@@ -160,6 +161,32 @@ const BOOKMARK_ID = /<w:bookmark(?:Start|End)\s[^>]*?\bid\s*=\s*(["'])(\d+)\1/g
 
 /** wp:docPr/@id of a newly embedded picture is DOCPR_ID_BASE + its sequence */
 const DOCPR_ID_BASE = 9000
+
+/** EMU in one twip */
+const EMU_PER_TWIP = 635
+
+/**
+ * A new picture as the editor (or a peer, or a converter) handed it, with each
+ * number that is no usable drawing value treated as absent: the size falls
+ * back to the default square, a rotation, rank, offset or spacing is left out.
+ * A number from the document must not stop the save.
+ */
+function usableNewImage(image: NewImage): NewImage {
+  const out: NewImage = { ...image, ...usablePictureSize(image.widthPx, image.heightPx) }
+  if (out.rotDeg !== undefined && usableNumber(out.rotDeg) === undefined) delete out.rotDeg
+  if (out.zOrder !== undefined && usableNumber(out.zOrder) === undefined) delete out.zOrder
+  const off = out.posOffsetEmu
+  if (off && (usableNumber(off.x) === undefined || usableNumber(off.y) === undefined))
+    delete out.posOffsetEmu
+  if (out.paraSpacing) {
+    const spacing = { ...out.paraSpacing }
+    for (const key of ['beforeTwips', 'afterTwips', 'lineTwips'] as const)
+      if (spacing[key] !== undefined && usableNumber(spacing[key], EMU_PER_TWIP) === undefined)
+        delete spacing[key]
+    out.paraSpacing = spacing
+  }
+  return out
+}
 
 /**
  * CT_Settings child sequence (ECMA-376 17.15.1.78), in schema order. The type is
@@ -979,7 +1006,8 @@ export async function saveDocx(
     }
     return rId
   }
-  const embedImage = (image: NewImage): string => {
+  const embedImage = (editorImage: NewImage): string => {
+    const image = usableNewImage(editorImage)
     const rId = embedImageMedia(image)
     // dedup means imageSeq does not advance for repeated bytes — docPr ids need their own counter
     const docPrId = DOCPR_ID_BASE + ++docPrSeq
@@ -1122,7 +1150,16 @@ export async function saveDocx(
     })
     newMedia.push({ path: mediaPath, base64: ink.base64 })
     usedExtensions.add('png')
-    return anchoredInkRunXml(ink, rId, 9000 + inkSeq)
+    return anchoredInkRunXml(
+      {
+        ...ink,
+        ...usablePictureSize(ink.widthPx, ink.heightPx),
+        offsetXPx: usableNumber(ink.offsetXPx, EMU_PER_PX) ?? 0,
+        offsetYPx: usableNumber(ink.offsetYPx, EMU_PER_PX) ?? 0,
+      },
+      rId,
+      9000 + inkSeq,
+    )
   }
 
   // ---- header / footer: overwrite the existing default part or create one ----
@@ -1560,8 +1597,7 @@ export async function saveDocx(
         const drawing = inlinePictureDrawingXml({
           rId,
           docPrId: DOCPR_ID_BASE + ++docPrSeq,
-          widthPx: image.widthPx,
-          heightPx: image.heightPx,
+          ...usablePictureSize(image.widthPx, image.heightPx),
         })
         imageRuns.set(c.id, `<w:r>${drawing}</w:r>`)
       }
