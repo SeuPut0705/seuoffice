@@ -7,7 +7,7 @@ import JSZip from 'jszip'
 import { assertZipInflatesWithinLimits } from '../../packages/zip-gate/src/index'
 import { Engine, failed } from '../docx-diff/engine'
 import {
-  atFloor, Comparison, engine, failGate, gateHasFailed, option, repoRoot, reportComparisons, WASM_PATH,
+  atFloor, Comparison, failGate, gateHasFailed, option, repoRoot, reportComparisons, WASM_PATH,
 } from '../docx-diff/harness'
 import { keyOrderDifference, keyOrderDifferences, keysAsWritten } from '../docx-diff/key-order'
 import { mutate } from '../docx-diff/compare-xml'
@@ -17,6 +17,7 @@ import type { Input, Spec } from './spec'
 import { isolatedOutcomes } from './isolated'
 import { type Outcome, typescriptOutcome, withoutHostText } from './outcome'
 import { fixtureBytes } from './zip-fixture'
+import { HOST_STEPS } from './host-steps'
 
 export type { Input, Spec } from './spec'
 
@@ -149,7 +150,7 @@ async function mutant(spec: Spec, from: Input, label: string, random: () => numb
 export async function runSuite(config: SuiteConfig): Promise<boolean> {
   const { directory, groups, command = 'fileParse' } = config
   const wasmPath = process.env.FILEPARSE_WASM_PATH ?? WASM_PATH
-  let gateEngine = process.env.FILEPARSE_WASM_PATH ? Engine.load(wasmPath) : engine
+  let gateEngine = Engine.load(wasmPath, HOST_STEPS)
   const floors = JSON.parse(readFileSync(resolve(directory, 'floors.json'), 'utf8')) as Record<string, unknown>
   const ledger = JSON.parse(readFileSync(resolve(directory, 'divergences.json'), 'utf8')) as Divergence[]
   const groupArg = process.argv.indexOf('--group')
@@ -203,7 +204,7 @@ export async function runSuite(config: SuiteConfig): Promise<boolean> {
       runtimeFailure(spec, input, 'host', message)
       return { ts, rs: { error: { name: 'HostError', message } }, broke: true }
     } catch (error) {
-      gateEngine = Engine.load(wasmPath)
+      gateEngine = Engine.load(wasmPath, HOST_STEPS)
       const trap = error instanceof WebAssembly.RuntimeError
       const message = error instanceof Error ? `${error.name}: ${error.message}` : String(error)
       runtimeFailure(spec, input, trap ? 'trap' : 'host', message)

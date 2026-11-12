@@ -1,0 +1,10 @@
+[package]
+name = "seu-host"
+description = "Steps the engines leave to the host that loads them: PDF text, parse5, the engines not ported"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[dependencies]
+serde_json.workspace = true

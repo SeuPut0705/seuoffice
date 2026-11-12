@@ -31,12 +31,41 @@ const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 export class Engine {
   private constructor(private readonly exports: EngineExports) {}
 
-  static load(wasmPath: string): Engine {
+  /**
+   * `steps` answers the import `seu_host.host_call` of crates/seu-host: a step
+   * of the host by name, JSON in and JSON out. A step that throws answers
+   * `{ error: { name, message } }`.
+   */
+  static load(wasmPath: string, steps: Record<string, (input: unknown) => unknown> = {}): Engine {
     const wasi = new WASI({ version: 'preview1' })
     const module = new WebAssembly.Module(readFileSync(wasmPath))
+    let memory: WebAssembly.Memory | undefined
+    let pending = new Uint8Array()
+    const text = (pointer: number, length: number): string => decoder.decode(new Uint8Array(memory!.buffer, pointer, length))
     const instance = new WebAssembly.Instance(module, {
       wasi_snapshot_preview1: wasi.wasiImport,
+      seu_host: {
+        host_call: (namePointer: number, nameLength: number, inputPointer: number, inputLength: number): number => {
+          const name = text(namePointer, nameLength)
+          let answer: unknown
+          try {
+            const step = steps[name]
+            if (step === undefined) throw Object.assign(new Error(`no host step ${name}`), { name: 'HostUnavailable' })
+            answer = { ok: step(JSON.parse(text(inputPointer, inputLength))) ?? null }
+          } catch (error) {
+            const thrown = error instanceof Error ? error : new Error(String(error))
+            answer = { error: { name: thrown.name, message: thrown.message } }
+          }
+          pending = encoder.encode(JSON.stringify(answer))
+          return pending.length
+        },
+        host_take: (pointer: number): void => {
+          new Uint8Array(memory!.buffer, pointer, pending.length).set(pending)
+          pending = new Uint8Array()
+        },
+      },
     })
+    memory = (instance.exports as unknown as EngineExports).memory
     wasi.initialize(instance)
     return new Engine(instance.exports as unknown as EngineExports)
   }
