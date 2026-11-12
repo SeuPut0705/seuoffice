@@ -110,7 +110,9 @@ const LEVEL_NUMBERED = {
   align: 'right',
 }
 const MASTER_TEXT_STYLES = {
-  title: { levels: [{ fontSize: 44, latinFont: 'Title Face', latinFontRef: '+mj-lt', align: 'left' }] },
+  title: {
+    levels: [{ fontSize: 44, latinFont: 'Title Face', latinFontRef: '+mj-lt', align: 'left' }],
+  },
   body: { levels: [LEVEL_FULL, LEVEL_NUMBERED, null, { bullet: { type: 'none' } }] },
   other: { levels: [{ fontSize: 18 }] },
 }
@@ -121,7 +123,9 @@ const LAYOUT_PLACEHOLDERS = {
       idx: '1',
       insets: { l: 1000, b: 2000 },
       anchor: 'bottom',
-      textStyle: { levels: [{ color: '#ABCDEF', bullet: { type: 'blip', mediaRef: 'ppt/media/b.png' } }] },
+      textStyle: {
+        levels: [{ color: '#ABCDEF', bullet: { type: 'blip', mediaRef: 'ppt/media/b.png' } }],
+      },
     },
     { type: 'title', idx: '', insets: { t: 0, r: -5 } },
   ],
@@ -200,7 +204,10 @@ export const SLIDES: SlideInput[] = [
   { name: 'gxRaw throws: three pads', spTree: shapes(p(gx('YQ==='))) },
   { name: 'gxRaw throws: non-ASCII', spTree: shapes(p(gx('YQ==\u00E9'))) },
   { name: 'gxRaw throws: no-break space', spTree: shapes(p(gx('Y\u00A0Q'))) },
-  { name: "gxRaw throws: single-quoted base64url", spTree: shapes(p("<a:r gxRaw='_-'><a:rPr/><a:t>q</a:t></a:r>")) },
+  {
+    name: 'gxRaw throws: single-quoted base64url',
+    spTree: shapes(p("<a:r gxRaw='_-'><a:rPr/><a:t>q</a:t></a:r>")),
+  },
 
   // ── parseRun: a:t ─────────────────────────────────────────────────
   {
@@ -235,7 +242,9 @@ export const SLIDES: SlideInput[] = [
           r(' of ') +
           '<a:fld id="{1}" type="datetime1"><a:rPr lang="en-US"/><a:t>11/12/2026</a:t></a:fld>',
       ),
-      p('<a:fld id="{2}" type="slidenum"><a:rPr lang="en-US"/></a:fld><a:endParaRPr lang="en-US" sz="4000"/>'),
+      p(
+        '<a:fld id="{2}" type="slidenum"><a:rPr lang="en-US"/></a:fld><a:endParaRPr lang="en-US" sz="4000"/>',
+      ),
       p('<a:fld id="{3}"><a:rPr lang="en-US"/><a:t>untyped</a:t></a:fld>'),
       p("<a:fld id='{4}' type=''><a:rPr/><a:t/></a:fld><a:endParaRPr sz='900'/>"),
     ),
@@ -255,10 +264,10 @@ export const SLIDES: SlideInput[] = [
                 '<a:fld id="{5}" type="slidenum"><a:rPr lang="en-US" b="1"/><a:t>7</a:t></a:fld>' +
                 '<a:br/><a:fld id="{6}"><a:t>x</a:t></a:fld>',
             ) +
-              p('<a:fld id="{7}" type="datetime"/><a:endParaRPr lang="en-US"/>') +
-              p('<a:fld/><a:fld/><a:endParaRPr lang="en-US" sz="1100"/>') +
-              p('<a:fld type="footer"><a:rPr/><a:t>Footer text</a:t></a:fld>') +
-              DRAWING_CLOSE,
+            p('<a:fld id="{7}" type="datetime"/><a:endParaRPr lang="en-US"/>') +
+            p('<a:fld/><a:fld/><a:endParaRPr lang="en-US" sz="1100"/>') +
+            p('<a:fld type="footer"><a:rPr/><a:t>Footer text</a:t></a:fld>') +
+            DRAWING_CLOSE,
         ],
       ],
     },
@@ -325,8 +334,14 @@ export const SLIDES: SlideInput[] = [
     spTree: shapes(
       p(
         r('a', '<a:rPr><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:rPr>') +
-          r('b', '<a:rPr><a:solidFill><a:srgbClr val="FF0000"><a:lumMod val="50000"/></a:srgbClr></a:solidFill></a:rPr>') +
-          r('c', '<a:rPr><a:solidFill><a:srgbClr val="00FF00"><a:alpha val="40000"/></a:srgbClr></a:solidFill></a:rPr>') +
+          r(
+            'b',
+            '<a:rPr><a:solidFill><a:srgbClr val="FF0000"><a:lumMod val="50000"/></a:srgbClr></a:solidFill></a:rPr>',
+          ) +
+          r(
+            'c',
+            '<a:rPr><a:solidFill><a:srgbClr val="00FF00"><a:alpha val="40000"/></a:srgbClr></a:solidFill></a:rPr>',
+          ) +
           r('d', '<a:rPr><a:solidFill><a:schemeClr val="accent2"/></a:solidFill></a:rPr>') +
           r('e', '<a:rPr><a:solidFill/></a:rPr>') +
           r('f', '<a:rPr><a:solidFill><a:srgbClr/></a:solidFill></a:rPr>') +
@@ -338,9 +353,18 @@ export const SLIDES: SlideInput[] = [
           r('h3', '<a:rPr><a:highlight><a:schemeClr val="bg1"/></a:highlight></a:rPr>'),
       ),
       p(
-        r('o1', '<a:rPr><a:ln w="12700"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></a:rPr>') +
-          r('o2', '<a:rPr><a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln></a:rPr>') +
-          r('o3', '<a:rPr><a:ln w="thin"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></a:rPr>') +
+        r(
+          'o1',
+          '<a:rPr><a:ln w="12700"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></a:rPr>',
+        ) +
+          r(
+            'o2',
+            '<a:rPr><a:ln><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln></a:rPr>',
+          ) +
+          r(
+            'o3',
+            '<a:rPr><a:ln w="thin"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln></a:rPr>',
+          ) +
           r('o4', '<a:rPr><a:ln w="12700"><a:noFill/></a:ln></a:rPr>') +
           r('o5', '<a:rPr><a:ln/></a:rPr>') +
           r('o6', '<a:rPr><a:ln w="-1"><a:solidFill/></a:ln></a:rPr>'),
@@ -370,7 +394,10 @@ export const SLIDES: SlideInput[] = [
             '<a:rPr><a:solidFill><a:srgbClr val="123456"/></a:solidFill><a:gradFill><a:gsLst>' +
               '<a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs></a:gsLst></a:gradFill></a:rPr>',
           ) +
-          r('g6', '<a:rPr><a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="ABCDEF"/></a:gs></a:gsLst><a:path path="circle"/></a:gradFill></a:rPr>'),
+          r(
+            'g6',
+            '<a:rPr><a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="ABCDEF"/></a:gs></a:gsLst><a:path path="circle"/></a:gradFill></a:rPr>',
+          ),
       ),
     ),
     ctx: CTX,
@@ -380,10 +407,22 @@ export const SLIDES: SlideInput[] = [
     spTree:
       shapes(
         p(
-          r('s1', '<a:rPr><a:effectLst><a:outerShdw blurRad="38100" dist="38100" dir="2700000"><a:srgbClr val="000000"><a:alpha val="40000"/></a:srgbClr></a:outerShdw></a:effectLst></a:rPr>') +
-            r('s2', '<a:rPr><a:effectLst><a:innerShdw blurRad="63500"><a:prstClr val="black"/></a:innerShdw></a:effectLst></a:rPr>') +
-            r('s3', '<a:rPr><a:effectLst><a:glow rad="101600"><a:schemeClr val="accent1"/></a:glow></a:effectLst></a:rPr>') +
-            r('s4', '<a:rPr><a:effectLst><a:reflection blurRad="6350" stA="50000"/></a:effectLst></a:rPr>') +
+          r(
+            's1',
+            '<a:rPr><a:effectLst><a:outerShdw blurRad="38100" dist="38100" dir="2700000"><a:srgbClr val="000000"><a:alpha val="40000"/></a:srgbClr></a:outerShdw></a:effectLst></a:rPr>',
+          ) +
+            r(
+              's2',
+              '<a:rPr><a:effectLst><a:innerShdw blurRad="63500"><a:prstClr val="black"/></a:innerShdw></a:effectLst></a:rPr>',
+            ) +
+            r(
+              's3',
+              '<a:rPr><a:effectLst><a:glow rad="101600"><a:schemeClr val="accent1"/></a:glow></a:effectLst></a:rPr>',
+            ) +
+            r(
+              's4',
+              '<a:rPr><a:effectLst><a:reflection blurRad="6350" stA="50000"/></a:effectLst></a:rPr>',
+            ) +
             r('s5', '<a:rPr><a:effectLst><a:reflection/></a:effectLst></a:rPr>') +
             r('s6', '<a:rPr><a:effectLst/></a:rPr>'),
         ),
@@ -407,7 +446,10 @@ export const SLIDES: SlideInput[] = [
         r('a', '<a:rPr><a:hlinkClick r:id="rId2" tooltip="Go there"/></a:rPr>') +
           r('b', '<a:rPr><a:hlinkClick r:id="rId99"/></a:rPr>') +
           r('c', '<a:rPr><a:hlinkClick r:id="rId3"/></a:rPr>') +
-          r('d', '<a:rPr><a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=nextslide"/></a:rPr>') +
+          r(
+            'd',
+            '<a:rPr><a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=nextslide"/></a:rPr>',
+          ) +
           r('e', '<a:rPr><a:hlinkClick action="ppaction://hlinkshowjump?jump=endshow"/></a:rPr>') +
           r('f', '<a:rPr><a:hlinkClick r:id="rId2" action="ppaction://hlinksldjump"/></a:rPr>') +
           r('g', '<a:rPr><a:hlinkClick action="ppaction://hlinkshowjump?jump=sideways"/></a:rPr>') +
@@ -416,7 +458,10 @@ export const SLIDES: SlideInput[] = [
       p(
         r('i', '<a:rPr u="none"><a:hlinkClick r:id="rId2"/></a:rPr>') +
           r('j', '<a:rPr u="dash"><a:hlinkClick r:id="rId2"/></a:rPr>') +
-          r('k', '<a:rPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill><a:hlinkClick r:id="rId2"/></a:rPr>') +
+          r(
+            'k',
+            '<a:rPr><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill><a:hlinkClick r:id="rId2"/></a:rPr>',
+          ) +
           r('l', '<a:rPr><a:hlinkClick r:id="constructor"/></a:rPr>') +
           r('m', '<a:rPr><a:hlinkClick r:id="toString"/></a:rPr>') +
           r('n', "<a:rPr><a:hlinkClick r:id='rId2' tooltip=''/></a:rPr>"),
@@ -440,7 +485,10 @@ export const SLIDES: SlideInput[] = [
         r('Jane Doe', `<a:rPr lang="en-US">${redact('PII')}</a:rPr>`) +
           r('x', `<a:rPr>${redact('')}</a:rPr>`) +
           r('y', `<a:rPr>${redact('PII', '{00000000-0000-0000-0000-000000000000}')}</a:rPr>`) +
-          r('z', `<a:rPr><a:extLst><a:ext uri='${REDACT_URI}'><go:redact xmlns:go='${REDACT_NS}' label='secret &amp; more'/></a:ext></a:extLst></a:rPr>`),
+          r(
+            'z',
+            `<a:rPr><a:extLst><a:ext uri='${REDACT_URI}'><go:redact xmlns:go='${REDACT_NS}' label='secret &amp; more'/></a:ext></a:extLst></a:rPr>`,
+          ),
       ),
     ),
   },
@@ -450,7 +498,10 @@ export const SLIDES: SlideInput[] = [
     name: 'fonts: explicit faces, theme references, empty typeface, symbol font',
     spTree: shapes(
       p(
-        r('a', '<a:rPr><a:latin typeface="Georgia"/><a:ea typeface="MS Gothic"/><a:cs typeface="Arial"/></a:rPr>') +
+        r(
+          'a',
+          '<a:rPr><a:latin typeface="Georgia"/><a:ea typeface="MS Gothic"/><a:cs typeface="Arial"/></a:rPr>',
+        ) +
           r('b', '<a:rPr><a:latin typeface="+mj-lt"/></a:rPr>') +
           r('c', '<a:rPr><a:latin typeface="+mn-lt"/></a:rPr>') +
           r('d', '<a:rPr><a:latin typeface="+zz"/></a:rPr>') +
@@ -475,11 +526,20 @@ export const SLIDES: SlideInput[] = [
     name: 'font buckets by script: complex script, CJK, kana, hangul, latin with ea only',
     spTree: shapes(
       p(
-        r('\u05E9\u05DC\u05D5\u05DD', '<a:rPr><a:cs typeface="David"/><a:latin typeface="Arial"/></a:rPr>') +
-          r('\u0645\u0631\u062D\u0628\u0627', '<a:rPr><a:latin typeface="Arial"/><a:ea typeface="MS Gothic"/></a:rPr>') +
+        r(
+          '\u05E9\u05DC\u05D5\u05DD',
+          '<a:rPr><a:cs typeface="David"/><a:latin typeface="Arial"/></a:rPr>',
+        ) +
+          r(
+            '\u0645\u0631\u062D\u0628\u0627',
+            '<a:rPr><a:latin typeface="Arial"/><a:ea typeface="MS Gothic"/></a:rPr>',
+          ) +
           r('\u0E2A\u0E27\u0E31\u0E2A', '<a:rPr><a:ea typeface="MS Gothic"/></a:rPr>') +
           r('\u6F22\u5B57', '<a:rPr><a:latin typeface="Arial"/><a:ea typeface="SimSun"/></a:rPr>') +
-          r('\u6F22\u5B57', '<a:rPr><a:latin typeface="SimSun"/><a:ea typeface="SimSun"/></a:rPr>') +
+          r(
+            '\u6F22\u5B57',
+            '<a:rPr><a:latin typeface="SimSun"/><a:ea typeface="SimSun"/></a:rPr>',
+          ) +
           r('\u3072\u3089\u304C\u306A', '<a:rPr><a:latin typeface="Arial"/></a:rPr>') +
           r('\uD55C\uAE00', '<a:rPr><a:ea typeface="+mn-ea"/></a:rPr>') +
           r('Latin', '<a:rPr><a:ea typeface="Malgun Gothic"/></a:rPr>') +
@@ -608,7 +668,10 @@ export const SLIDES: SlideInput[] = [
           p(r('d'), '<a:pPr rtl="false" hangingPunct="yes" latinLnBrk="" eaLnBrk="on"/>') +
           p(r('e'), '<a:pPr rtl="yes"/>'),
       ) +
-      sp(tx(p(r('inherited switches')) + p(r('overridden'), '<a:pPr eaLnBrk="0" latinLnBrk="1"/>')), BODY_PH),
+      sp(
+        tx(p(r('inherited switches')) + p(r('overridden'), '<a:pPr eaLnBrk="0" latinLnBrk="1"/>')),
+        BODY_PH,
+      ),
     ctx: PH_CTX,
   },
 
@@ -616,14 +679,32 @@ export const SLIDES: SlideInput[] = [
   {
     name: 'spacing: lnSpc, spcBef, spcAft in percent and points, empty, text, negative',
     spTree: shapes(
-      p(r('a'), '<a:pPr><a:lnSpc><a:spcPct val="150000"/></a:lnSpc><a:spcBef><a:spcPts val="1200"/></a:spcBef><a:spcAft><a:spcPct val="50000"/></a:spcAft></a:pPr>') +
-        p(r('b'), '<a:pPr><a:lnSpc><a:spcPts val="2400"/></a:lnSpc><a:spcBef><a:spcPct val="20000"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr>') +
+      p(
+        r('a'),
+        '<a:pPr><a:lnSpc><a:spcPct val="150000"/></a:lnSpc><a:spcBef><a:spcPts val="1200"/></a:spcBef><a:spcAft><a:spcPct val="50000"/></a:spcAft></a:pPr>',
+      ) +
+        p(
+          r('b'),
+          '<a:pPr><a:lnSpc><a:spcPts val="2400"/></a:lnSpc><a:spcBef><a:spcPct val="20000"/></a:spcBef><a:spcAft><a:spcPts val="600"/></a:spcAft></a:pPr>',
+        ) +
         p(r('c'), '<a:pPr><a:lnSpc/><a:spcBef/><a:spcAft/></a:pPr>') +
-        p(r('d'), '<a:pPr><a:lnSpc><a:spcPct val="x"/></a:lnSpc><a:spcBef><a:spcPts val=""/></a:spcBef></a:pPr>') +
-        p(r('e'), '<a:pPr><a:lnSpc><a:spcPct val="-90000"/></a:lnSpc><a:spcAft><a:spcPts val="-0"/></a:spcAft></a:pPr>') +
+        p(
+          r('d'),
+          '<a:pPr><a:lnSpc><a:spcPct val="x"/></a:lnSpc><a:spcBef><a:spcPts val=""/></a:spcBef></a:pPr>',
+        ) +
+        p(
+          r('e'),
+          '<a:pPr><a:lnSpc><a:spcPct val="-90000"/></a:lnSpc><a:spcAft><a:spcPts val="-0"/></a:spcAft></a:pPr>',
+        ) +
         p(r('f'), '<a:pPr><a:lnSpc><a:spcPct/></a:lnSpc><a:spcBef><a:spcPts/></a:spcBef></a:pPr>') +
-        p(r('g'), '<a:pPr><a:lnSpc><a:spcPct val="100000"/><a:spcPts val="1800"/></a:lnSpc></a:pPr>') +
-        p(r('h'), '<a:pPr><a:lnSpc><a:spcPct val="12.5e3"/></a:lnSpc><a:spcBef><a:spcPts val="99999999999999999999999"/></a:spcBef></a:pPr>'),
+        p(
+          r('g'),
+          '<a:pPr><a:lnSpc><a:spcPct val="100000"/><a:spcPts val="1800"/></a:lnSpc></a:pPr>',
+        ) +
+        p(
+          r('h'),
+          '<a:pPr><a:lnSpc><a:spcPct val="12.5e3"/></a:lnSpc><a:spcBef><a:spcPts val="99999999999999999999999"/></a:spcBef></a:pPr>',
+        ),
     ),
   },
   {
@@ -632,7 +713,10 @@ export const SLIDES: SlideInput[] = [
       tx(
         p(r('inherits lineHeight and spaceBefore')) +
           p(r('level 2 inherits lineExact and percent'), '<a:pPr lvl="1"/>') +
-          p(r('own lnSpc wins'), '<a:pPr lvl="1"><a:lnSpc><a:spcPct val="80000"/></a:lnSpc></a:pPr>') +
+          p(
+            r('own lnSpc wins'),
+            '<a:pPr lvl="1"><a:lnSpc><a:spcPct val="80000"/></a:lnSpc></a:pPr>',
+          ) +
           p(r('level 3 falls back to level 1'), '<a:pPr lvl="2"/>'),
       ),
       BODY_PH,
@@ -665,7 +749,10 @@ export const SLIDES: SlideInput[] = [
         p(r('i4'), '<a:pPr><a:buBlip/></a:pPr>') +
         p(r('i5'), '<a:pPr><a:buBlip><a:blip/></a:buBlip></a:pPr>') +
         p(r('i6'), '<a:pPr><a:buBlip><a:blip r:embed="constructor"/></a:buBlip></a:pPr>') +
-        p(r('i7'), '<a:pPr><a:buBlip><a:blip r:embed=""><a:extLst><a:ext uri="x"><asvg:svgBlip r:embed="rId5"/></a:ext></a:extLst></a:blip></a:buBlip></a:pPr>') +
+        p(
+          r('i7'),
+          '<a:pPr><a:buBlip><a:blip r:embed=""><a:extLst><a:ext uri="x"><asvg:svgBlip r:embed="rId5"/></a:ext></a:extLst></a:blip></a:buBlip></a:pPr>',
+        ) +
         p(r('i8'), '<a:pPr><a:buBlip><a:blip r:embed=""/></a:buBlip></a:pPr>'),
     ),
     ctx: CTX,
@@ -673,19 +760,40 @@ export const SLIDES: SlideInput[] = [
   {
     name: 'bullet decoration: color, scheme color with transforms, font, size in percent and points',
     spTree: shapes(
-      p(r('a'), '<a:pPr><a:buClr><a:srgbClr val="00FF00"/></a:buClr><a:buSzPct val="75000"/><a:buChar char="o"/></a:pPr>') +
-        p(r('b'), '<a:pPr><a:buClr><a:schemeClr val="accent1"><a:lumMod val="75000"/></a:schemeClr></a:buClr><a:buSzPts val="1200"/><a:buChar char="-"/></a:pPr>') +
-        p(r('c'), '<a:pPr><a:buClr/><a:buFont typeface=""/><a:buSzPct val="x"/><a:buSzPts val="y"/><a:buChar char="*"/></a:pPr>') +
-        p(r('d'), '<a:pPr><a:buClr><a:srgbClr val="0000FF"><a:alpha val="50000"/></a:srgbClr></a:buClr><a:buFont typeface="+mj-lt"/><a:buSzPct val=""/><a:buAutoNum type="arabicPeriod"/></a:pPr>') +
-        p(r('e'), '<a:pPr><a:buSzPts val="-100"/><a:buSzPct val="250000"/><a:buBlip><a:blip r:embed="rId5"/></a:buBlip></a:pPr>'),
+      p(
+        r('a'),
+        '<a:pPr><a:buClr><a:srgbClr val="00FF00"/></a:buClr><a:buSzPct val="75000"/><a:buChar char="o"/></a:pPr>',
+      ) +
+        p(
+          r('b'),
+          '<a:pPr><a:buClr><a:schemeClr val="accent1"><a:lumMod val="75000"/></a:schemeClr></a:buClr><a:buSzPts val="1200"/><a:buChar char="-"/></a:pPr>',
+        ) +
+        p(
+          r('c'),
+          '<a:pPr><a:buClr/><a:buFont typeface=""/><a:buSzPct val="x"/><a:buSzPts val="y"/><a:buChar char="*"/></a:pPr>',
+        ) +
+        p(
+          r('d'),
+          '<a:pPr><a:buClr><a:srgbClr val="0000FF"><a:alpha val="50000"/></a:srgbClr></a:buClr><a:buFont typeface="+mj-lt"/><a:buSzPct val=""/><a:buAutoNum type="arabicPeriod"/></a:pPr>',
+        ) +
+        p(
+          r('e'),
+          '<a:pPr><a:buSzPts val="-100"/><a:buSzPct val="250000"/><a:buBlip><a:blip r:embed="rId5"/></a:buBlip></a:pPr>',
+        ),
     ),
     ctx: CTX,
   },
   {
     name: 'bullet and paragraph defRPr color: repeated srgbClr children are a plain color',
     spTree: shapes(
-      p(r('a'), '<a:pPr><a:buClr><a:srgbClr val="FF0000"/><a:srgbClr val="00FF00"/></a:buClr><a:buChar char="o"/></a:pPr>') +
-        p(r('b'), '<a:pPr><a:defRPr><a:solidFill><a:srgbClr val="010203"/><a:srgbClr val="040506"/></a:solidFill></a:defRPr></a:pPr>'),
+      p(
+        r('a'),
+        '<a:pPr><a:buClr><a:srgbClr val="FF0000"/><a:srgbClr val="00FF00"/></a:buClr><a:buChar char="o"/></a:pPr>',
+      ) +
+        p(
+          r('b'),
+          '<a:pPr><a:defRPr><a:solidFill><a:srgbClr val="010203"/><a:srgbClr val="040506"/></a:solidFill></a:defRPr></a:pPr>',
+        ),
     ),
     ctx: CTX,
   },
@@ -708,7 +816,10 @@ export const SLIDES: SlideInput[] = [
   },
   {
     name: 'layout placeholder chain: bullet and color from the layout, insets and anchor inherited',
-    spTree: sp(tx(p(r('layout first')) + p(r('lvl 2'), '<a:pPr lvl="1"><a:buFontTx/></a:pPr>')), BODY_PH),
+    spTree: sp(
+      tx(p(r('layout first')) + p(r('lvl 2'), '<a:pPr lvl="1"><a:buFontTx/></a:pPr>')),
+      BODY_PH,
+    ),
     ctx: PH_CTX,
   },
 
@@ -721,17 +832,24 @@ export const SLIDES: SlideInput[] = [
           p(r('b'), '<a:pPr marL="x" marR="y" indent="z" defTabSz="w"/>') +
           p(r('c'), '<a:pPr marL="" marR="" indent="" defTabSz=""/>') +
           p(r('d'), '<a:pPr marL="12.9" marR="-1" indent="1e5" defTabSz="-0"/>'),
-      ) + sp(tx(p(r('inherited marL and indent')) + p(r('own marL'), '<a:pPr marL="0"/>')), BODY_PH),
+      ) +
+      sp(tx(p(r('inherited marL and indent')) + p(r('own marL'), '<a:pPr marL="0"/>')), BODY_PH),
     ctx: PH_CTX,
   },
   {
     name: 'tab stops: single, several unsorted, equal positions, without pos, empty, text',
     spTree: shapes(
       p(r('a'), '<a:pPr><a:tabLst><a:tab pos="914400" algn="l"/></a:tabLst></a:pPr>') +
-        p(r('b'), '<a:pPr><a:tabLst><a:tab pos="2743200" algn="r"/><a:tab pos="914400"/><a:tab pos="1828800" algn="ctr"/><a:tab pos="914400" algn="dec"/></a:tabLst></a:pPr>') +
+        p(
+          r('b'),
+          '<a:pPr><a:tabLst><a:tab pos="2743200" algn="r"/><a:tab pos="914400"/><a:tab pos="1828800" algn="ctr"/><a:tab pos="914400" algn="dec"/></a:tabLst></a:pPr>',
+        ) +
         p(r('c'), '<a:pPr><a:tabLst><a:tab/></a:tabLst></a:pPr>') +
         p(r('d'), '<a:pPr><a:tabLst><a:tab/><a:tab/></a:tabLst></a:pPr>') +
-        p(r('e'), '<a:pPr><a:tabLst><a:tab pos="x" algn="l"/><a:tab pos="-100" algn=""/><a:tab pos="12.5"/></a:tabLst></a:pPr>') +
+        p(
+          r('e'),
+          '<a:pPr><a:tabLst><a:tab pos="x" algn="l"/><a:tab pos="-100" algn=""/><a:tab pos="12.5"/></a:tabLst></a:pPr>',
+        ) +
         p(r('f'), '<a:pPr><a:tabLst/></a:pPr>') +
         p(r('g'), '<a:pPr><a:tabLst><a:tab algn="r"/></a:tabLst></a:pPr>'),
     ),
@@ -741,8 +859,14 @@ export const SLIDES: SlideInput[] = [
   {
     name: 'paragraph defRPr: every field, theme references, plain and modified colors, empty',
     spTree: shapes(
-      p(r('a', '<a:rPr/>'), '<a:pPr><a:defRPr sz="2000" b="1" i="0" cap="small"><a:solidFill><a:srgbClr val="FF8800"/></a:solidFill><a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/><a:cs typeface="Tahoma"/></a:defRPr></a:pPr>') +
-        p(r('b', '<a:rPr/>'), '<a:pPr><a:defRPr><a:solidFill><a:schemeClr val="accent3"><a:lumOff val="20000"/></a:schemeClr></a:solidFill><a:latin typeface="Arial"/><a:ea typeface=""/></a:defRPr></a:pPr>') +
+      p(
+        r('a', '<a:rPr/>'),
+        '<a:pPr><a:defRPr sz="2000" b="1" i="0" cap="small"><a:solidFill><a:srgbClr val="FF8800"/></a:solidFill><a:latin typeface="+mn-lt"/><a:ea typeface="+mn-ea"/><a:cs typeface="Tahoma"/></a:defRPr></a:pPr>',
+      ) +
+        p(
+          r('b', '<a:rPr/>'),
+          '<a:pPr><a:defRPr><a:solidFill><a:schemeClr val="accent3"><a:lumOff val="20000"/></a:schemeClr></a:solidFill><a:latin typeface="Arial"/><a:ea typeface=""/></a:defRPr></a:pPr>',
+        ) +
         p(r('c', '<a:rPr sz="1000" b="0"/>'), '<a:pPr><a:defRPr sz="3600" b="1" i="1"/></a:pPr>') +
         p(r('d'), '<a:pPr><a:defRPr/></a:pPr>') +
         p(r('e'), '<a:pPr><a:defRPr sz="x"><a:latin typeface="+mj-lt"/></a:defRPr></a:pPr>') +
@@ -755,9 +879,18 @@ export const SLIDES: SlideInput[] = [
     spTree: sp(
       tx(
         p(r('chain only', '<a:rPr/>')) +
-          p(r('defRPr size and color', '<a:rPr/>'), '<a:pPr><a:defRPr sz="1400"><a:solidFill><a:srgbClr val="010203"/></a:solidFill></a:defRPr></a:pPr>') +
-          p(r('concrete latin and ea', '<a:rPr/>'), '<a:pPr><a:defRPr><a:latin typeface="Verdana"/><a:ea typeface="Meiryo"/></a:defRPr></a:pPr>') +
-          p(r('theme latin and ea', '<a:rPr/>'), '<a:pPr><a:defRPr><a:latin typeface="+mj-lt"/><a:ea typeface="+mj-ea"/></a:defRPr></a:pPr>') +
+          p(
+            r('defRPr size and color', '<a:rPr/>'),
+            '<a:pPr><a:defRPr sz="1400"><a:solidFill><a:srgbClr val="010203"/></a:solidFill></a:defRPr></a:pPr>',
+          ) +
+          p(
+            r('concrete latin and ea', '<a:rPr/>'),
+            '<a:pPr><a:defRPr><a:latin typeface="Verdana"/><a:ea typeface="Meiryo"/></a:defRPr></a:pPr>',
+          ) +
+          p(
+            r('theme latin and ea', '<a:rPr/>'),
+            '<a:pPr><a:defRPr><a:latin typeface="+mj-lt"/><a:ea typeface="+mj-ea"/></a:defRPr></a:pPr>',
+          ) +
           p(r('\u6F22\u5B57', '<a:rPr/>'), '<a:pPr><a:defRPr b="0"/></a:pPr>') +
           p(r('run face', '<a:rPr><a:latin typeface="+mn-lt"/></a:rPr>')) +
           p(r('run cs', '<a:rPr><a:cs typeface="Tahoma"/></a:rPr>')) +
@@ -793,7 +926,10 @@ export const SLIDES: SlideInput[] = [
   {
     name: 'p:style fontRef color between the shape lstStyle and the chain',
     spTree: sp(
-      tx(p(r('fontRef color', '<a:rPr/>')) + p(r('own fill', '<a:rPr><a:solidFill><a:srgbClr val="999999"/></a:solidFill></a:rPr>'))),
+      tx(
+        p(r('fontRef color', '<a:rPr/>')) +
+          p(r('own fill', '<a:rPr><a:solidFill><a:srgbClr val="999999"/></a:solidFill></a:rPr>')),
+      ),
       '',
       '<p:style><a:lnRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef>' +
         '<a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></p:style>',
@@ -806,7 +942,10 @@ export const SLIDES: SlideInput[] = [
     name: 'paragraph marks: empty paragraph, empty run, whitespace run, self-closing mark, two marks',
     spTree: shapes(
       p('<a:endParaRPr lang="en-US" sz="8000"/>') +
-        p(r('', '<a:rPr sz="1000"/>') + '<a:endParaRPr lang="en-US" sz="4000" b="1"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:endParaRPr>') +
+        p(
+          r('', '<a:rPr sz="1000"/>') +
+            '<a:endParaRPr lang="en-US" sz="4000" b="1"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:endParaRPr>',
+        ) +
         p(r(' ') + '<a:endParaRPr sz="4000"/>') +
         p('<a:endParaRPr/>') +
         p('<a:endParaRPr sz="1"/><a:endParaRPr sz="2"/>') +
@@ -927,8 +1066,12 @@ export const SLIDES: SlideInput[] = [
     name: 'text body shapes: no paragraphs, bodyPr twice, a body that is text',
     spTree:
       sp('<a:bodyPr/><a:lstStyle/>') +
-      sp('<a:bodyPr anchor="ctr"/><a:bodyPr anchor="b"/><a:lstStyle/><a:p><a:r><a:t>x</a:t></a:r></a:p>') +
+      sp(
+        '<a:bodyPr anchor="ctr"/><a:bodyPr anchor="b"/><a:lstStyle/><a:p><a:r><a:t>x</a:t></a:r></a:p>',
+      ) +
       sp('stray text') +
-      sp('<a:bodyPr/><a:lstStyle/><a:lstStyle><a:lvl1pPr algn="r"/></a:lstStyle><a:p><a:r><a:t>two lstStyles</a:t></a:r></a:p>'),
+      sp(
+        '<a:bodyPr/><a:lstStyle/><a:lstStyle><a:lvl1pPr algn="r"/></a:lstStyle><a:p><a:r><a:t>two lstStyles</a:t></a:r></a:p>',
+      ),
   },
 ]

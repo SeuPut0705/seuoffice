@@ -423,9 +423,21 @@ const GROUP_CHILD_INPUTS: Input[] = [
     args: { nvId: '21' },
   },
   // an nvId is text, never a pattern
-  ...['2.', '2[12]', '+21', '21|x', '2\\d', '(', '[', ']', '{', '2{2}', '\\', '&#50;1', '2&amp;1'].map(
-    (nvId): Input => ({ text: GROUP, args: { nvId } }),
-  ),
+  ...[
+    '2.',
+    '2[12]',
+    '+21',
+    '21|x',
+    '2\\d',
+    '(',
+    '[',
+    ']',
+    '{',
+    '2{2}',
+    '\\',
+    '&#50;1',
+    '2&amp;1',
+  ].map((nvId): Input => ({ text: GROUP, args: { nvId } })),
   ...CREATION_FORMS.flatMap((creation) => [
     {
       text: group(cNvPr('id="20" name="Group"'), creation),
@@ -642,7 +654,9 @@ const SET_INPUTS: Input[] = [
     text: '<a:rPr lang="en-US"><a:latin typeface="x"/></a:rPr><a:t>w</a:t><a:rPr/>',
     args: { label: 'Name' },
   },
-  ...DOLLAR_PROPS().flatMap((text) => DOLLAR_LABELS.map((label): Input => ({ text, args: { label } }))),
+  ...DOLLAR_PROPS().flatMap((text) =>
+    DOLLAR_LABELS.map((label): Input => ({ text, args: { label } })),
+  ),
   ...REDACT_FORMS.flatMap((text) => LABELS.map((label) => ({ text, args: { label } }))),
 ]
 
@@ -934,7 +948,9 @@ export const IDENT: CallSpec[] = [
     call: (text) => hasRedactExtIn(text),
     fromDocument: (parts) =>
       [...shapesOf(parts), ...elementsOf(parts, RPR)].map((text) => ({ text })),
-    built: [...PROPS, ...REDACT_FORMS, ...SYNC_TEXTS.map(([text]) => text)].map((text) => ({ text })),
+    built: [...PROPS, ...REDACT_FORMS, ...SYNC_TEXTS.map(([text]) => text)].map((text) => ({
+      text,
+    })),
   },
   {
     fn: 'pptxIdent.redaction-xml.syncRedactExt',
@@ -973,9 +989,7 @@ export const IDENT: CallSpec[] = [
       ...REDACT_FORMS,
       ...SYNC_TEXTS.map(([text]) => text),
       `<a:t> </a:t><a:b></a:c>`,
-    ].map(
-      (text) => ({ text }),
-    ),
+    ].map((text) => ({ text })),
   },
   {
     fn: 'pptxIdent.redaction-xml.setRedactExt',

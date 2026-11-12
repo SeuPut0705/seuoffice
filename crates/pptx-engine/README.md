@@ -662,4 +662,9 @@ option structs read a number list or `{ "$bytes": base64 }`
 (`src/json_bytes.rs`). `deck::open_pptx_with` and `open_archive_with` take the
 id counter a host keeps across calls (`Uids::next`).
 
-Fault probes run with C2, before the merge to main.
+The fault probes (`tools/pptx-diff/faults.mjs`, 311) all fail the gate on
+runner 43310891406 (ee9a20614). Main's fixes had made 15 of them dead or
+equivalent code and 2 no longer compiled: those were replaced by other defects
+of the same function or given gate inputs that reach them. They build in the
+`probe` profile (release semantics, no LTO), so eight shards finish in under an
+hour.

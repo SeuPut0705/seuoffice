@@ -1050,6 +1050,11 @@ export interface ReplaceOptions {
   /** Restrict to one slide/element (the "Replace" button acts on the currently hit element) */
   slideIndex?: number
   elementId?: string
+  /**
+   * Text a person hid from AI is out of the search: no match inside it or across it, and no count
+   * for one. For an agent, whose answer would otherwise tell it the words are there.
+   */
+  skipWithheld?: boolean
 }
 /**
  * Deck-wide replace (a match may span consecutive runs of a paragraph: the

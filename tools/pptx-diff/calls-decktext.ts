@@ -63,9 +63,7 @@ const para = (pPr: string, ...inner: string[]): string => `<a:p>${pPr}${inner.jo
 const sp = (id: number, name: string, paragraphs?: string, cNvPr?: string): string =>
   `<p:sp><p:nvSpPr>${cNvPr ?? `<p:cNvPr id="${id}" name="${name}"/>`}<p:cNvSpPr/><p:nvPr/></p:nvSpPr>` +
   `<p:spPr>${XFRM}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>` +
-  (paragraphs === undefined
-    ? ''
-    : `<p:txBody><a:bodyPr/><a:lstStyle/>${paragraphs}</p:txBody>`) +
+  (paragraphs === undefined ? '' : `<p:txBody><a:bodyPr/><a:lstStyle/>${paragraphs}</p:txBody>`) +
   '</p:sp>'
 
 const TEXT_A = sp(
@@ -178,7 +176,13 @@ const CHARTS: ChartSpec[] = [
   {
     rid: 'rIdC1',
     descr: 'aislides-chart',
-    opts: { kind: 'doughnut', title: 'Share', categories: CATS, series: [BASE_SERIES[0]!], holeSizePct: 60 },
+    opts: {
+      kind: 'doughnut',
+      title: 'Share',
+      categories: CATS,
+      series: [BASE_SERIES[0]!],
+      holeSizePct: 60,
+    },
   },
   {
     // the id carries regex metacharacters: a decoy relationship precedes the real one
@@ -262,7 +266,12 @@ const frame = (c: ChartSpec, i: number): string =>
 /** `name="a>b"`: the cNvPr ends at the first `>`. */
 const GT_NAME = sp(40, 'a>b', '<a:p/>', '<p:cNvPr id="40" name="a>b"/>')
 const OPEN_TAG = sp(41, 'x', '<a:p/>', '<p:cNvPr id="41" name="x"></p:cNvPr>')
-const HIDDEN = sp(42, 'Hidden', para('', run('hidden Hello')), '<p:cNvPr id="42" name="Hidden" hidden="1"/>')
+const HIDDEN = sp(
+  42,
+  'Hidden',
+  para('', run('hidden Hello')),
+  '<p:cNvPr id="42" name="Hidden" hidden="1"/>',
+)
 
 /** The element indexes of the slide. */
 const EL = {
@@ -299,12 +308,15 @@ async function richDeck(): Promise<string> {
         `<Relationship Id="rIId2" Type="${REL}/chart" Target="../charts/chart99.xml"/>`,
       )
     }
-    slideRels.push(`<Relationship Id="${c.rid}" Type="${REL}/chart" Target="../charts/chart${n}.xml"/>`)
+    slideRels.push(
+      `<Relationship Id="${c.rid}" Type="${REL}/chart" Target="../charts/chart${n}.xml"/>`,
+    )
     let xml = buildChartSpaceXml(
       { offset: { x: 0, y: 0, cx: 0, cy: 0 }, ...c.opts },
       c.external?.id,
     )
-    if (c.legend) xml = xml.replace(/<c:legendPos val="[^"]*"\/>/, `<c:legendPos val="${c.legend}"/>`)
+    if (c.legend)
+      xml = xml.replace(/<c:legendPos val="[^"]*"\/>/, `<c:legendPos val="${c.legend}"/>`)
     zip.file(`ppt/charts/chart${n}.xml`, xml)
     if (c.external && c.external.rel) {
       zip.file(
@@ -323,9 +335,9 @@ async function richDeck(): Promise<string> {
     `${slideRels.join('')}</Relationships>`,
   )
   zip.file(relsPath, rels)
-  return Buffer.from(await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })).toString(
-    'base64',
-  )
+  return Buffer.from(
+    await zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' }),
+  ).toString('base64')
 }
 
 const DECK = await richDeck()
@@ -339,7 +351,8 @@ const onElement = (element: number, rest: Record<string, unknown> = {}): Input =
   on({ slide: 0, element, ...rest })
 
 /** An input on the blank deck, whose only slide has no element. */
-const blank = (rest: Record<string, unknown>): Input => deckInput('blank deck', { slide: 0, element: 0, ...rest })
+const blank = (rest: Record<string, unknown>): Input =>
+  deckInput('blank deck', { slide: 0, element: 0, ...rest })
 
 const CHART_ELEMENTS = CHARTS.map((_, i) => EL.chart(i))
 
@@ -387,7 +400,16 @@ const CHART_PATCHES: Array<Record<string, unknown>> = [
   { catAxisTitle: 'Cats', valAxisTitle: '' },
   { gapWidthPct: 40 },
   { holeSizePct: 30 },
-  { title: 'All', legendPos: 'b', dataLabels: true, gridlines: true, gapWidthPct: 55, catAxisTitle: 'x', valAxisTitle: 'y', colorScheme: ['#010203', '#040506', '#070809'] },
+  {
+    title: 'All',
+    legendPos: 'b',
+    dataLabels: true,
+    gridlines: true,
+    gapWidthPct: 55,
+    catAxisTitle: 'x',
+    valAxisTitle: 'y',
+    colorScheme: ['#010203', '#040506', '#070809'],
+  },
 ]
 
 const EDIT_CHART_INPUTS: Input[] = [
@@ -406,10 +428,7 @@ const EDIT_CHART_INPUTS: Input[] = [
   onElement(99, { patch: {} }),
   on({ slide: 3, element: 0, patch: {} }),
   // a frame without an r:id, a relationship the slide lacks, a slide without relationships
-  on(
-    { slide: 0, element: EL.chart(0), patch: {} },
-    SLIDE_XML.replace(/ r:id="rIdC0"/, ''),
-  ),
+  on({ slide: 0, element: EL.chart(0), patch: {} }, SLIDE_XML.replace(/ r:id="rIdC0"/, '')),
   on(
     { slide: 0, element: EL.chart(0), patch: {} },
     SLIDE_XML.replace('r:id="rIdC0"', 'r:id="rIdMissing"'),
@@ -454,11 +473,17 @@ const MARK_INPUTS: Input[] = [
   // descr is the first attribute, a space before the close, an empty descr
   on(
     { slide: 0, element: EL.chart(8) },
-    SLIDE_XML.replace('<p:cNvPr id="38" name="Chart 38"></p:cNvPr>', '<p:cNvPr descr="" id="38" name="Chart 38" />'),
+    SLIDE_XML.replace(
+      '<p:cNvPr id="38" name="Chart 38"></p:cNvPr>',
+      '<p:cNvPr descr="" id="38" name="Chart 38" />',
+    ),
   ),
   on(
     { slide: 0, element: EL.chart(8) },
-    SLIDE_XML.replace('<p:cNvPr id="38" name="Chart 38"></p:cNvPr>', '<p:cNvPr id="38" name="a>b"/>'),
+    SLIDE_XML.replace(
+      '<p:cNvPr id="38" name="Chart 38"></p:cNvPr>',
+      '<p:cNvPr id="38" name="a>b"/>',
+    ),
   ),
 ]
 
@@ -479,20 +504,20 @@ const OWN_CNVPR_ELEMENTS = [
 ]
 
 const HIDDEN_INPUTS: Input[] = [
-  ...OWN_CNVPR_ELEMENTS.flatMap((e) => [onElement(e, { hidden: true }), onElement(e, { hidden: false })]),
+  ...OWN_CNVPR_ELEMENTS.flatMap((e) => [
+    onElement(e, { hidden: true }),
+    onElement(e, { hidden: false }),
+  ]),
   blank({ hidden: true }),
   // single quotes, no name, hidden already in the tag, tag closed with a space
   on(
     { slide: 0, element: 0, hidden: true },
     slideXml(sp(2, 'q', '<a:p/>', "<p:cNvPr id='2' name='q'/>")),
   ),
-  on(
-    { slide: 0, element: 0, hidden: true },
-    slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" />')),
-  ),
+  on({ slide: 0, element: 0, hidden: true }, slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" />'))),
   on(
     { slide: 0, element: 0, hidden: false },
-    slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" hidden="1" name="q">'  + '</p:cNvPr>')),
+    slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" hidden="1" name="q">' + '</p:cNvPr>')),
   ),
   on(
     { slide: 0, element: 0, hidden: false },
@@ -511,13 +536,12 @@ const DOLLAR_NAMES = ['$&', '$1x', '$$', "$'", 'a$`b']
 
 const NAME_INPUTS: Input[] = [
   ...OWN_CNVPR_ELEMENTS.flatMap((e) => NAMES.slice(0, 3).map((name) => onElement(e, { name }))),
-  ...[EL.text, EL.group, EL.chart(0), EL.gtName].flatMap((e) => NAMES.slice(3).map((name) => onElement(e, { name }))),
+  ...[EL.text, EL.group, EL.chart(0), EL.gtName].flatMap((e) =>
+    NAMES.slice(3).map((name) => onElement(e, { name })),
+  ),
   blank({ name: 'n' }),
   // no name attribute, single-quoted name, a name attribute that is a suffix of another
-  on(
-    { slide: 0, element: 0, name: 'Added' },
-    slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" />')),
-  ),
+  on({ slide: 0, element: 0, name: 'Added' }, slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" />'))),
   on(
     { slide: 0, element: 0, name: 'Added' },
     slideXml(sp(2, 'q', '<a:p/>', "<p:cNvPr id='2' name='q'/>")),
@@ -537,10 +561,7 @@ const NAME_INPUTS: Input[] = [
     [EL.text, EL.gtName, EL.group].map((e): Input => onElement(e, { name })),
   ),
   ...DOLLAR_NAMES.map((name): Input =>
-    on(
-      { slide: 0, element: 0, name },
-      slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" />')),
-    ),
+    on({ slide: 0, element: 0, name }, slideXml(sp(2, 'q', '<a:p/>', '<p:cNvPr id="2" />'))),
   ),
 ]
 
@@ -603,18 +624,19 @@ const FONT_PATCHES: Array<Record<string, unknown>> = [
 const FONT_ELEMENTS = [EL.text, EL.empty, EL.table, EL.rect, EL.group, EL.chart(0), 99]
 
 const FONT_INPUTS: Input[] = [
-  ...FONT_PATCHES.flatMap((patch) => [EL.text, EL.empty, EL.table].map((e) => onElement(e, { patch }))),
+  ...FONT_PATCHES.flatMap((patch) =>
+    [EL.text, EL.empty, EL.table].map((e) => onElement(e, { patch })),
+  ),
   ...FONT_ELEMENTS.slice(3).map((e) => onElement(e, { patch: { bold: true } })),
   // the stand-in size map: with and without a size in the patch
-  ...[EL.text, EL.empty, EL.table, EL.rect, EL.group].map((e) => onElement(e, { patch: {}, sizeStep: true })),
+  ...[EL.text, EL.empty, EL.table, EL.rect, EL.group].map((e) =>
+    onElement(e, { patch: {}, sizeStep: true }),
+  ),
   onElement(EL.text, { patch: { fontSizePt: 40, bold: true }, sizeStep: true }),
   onElement(EL.table, { patch: { fontFamily: 'Calibri' }, sizeStep: true }),
   blank({ patch: { bold: true } }),
   // a shape whose text body has no paragraph
-  on(
-    { slide: 0, element: 0, patch: { bold: true } },
-    slideXml(sp(2, 'n', '')),
-  ),
+  on({ slide: 0, element: 0, patch: { bold: true } }, slideXml(sp(2, 'n', ''))),
   // a run that already carries a size, and a table whose cell has no a:txBody span to edit
   on(
     { slide: 0, element: 0, patch: { fontSizePt: 11 }, sizeStep: true },
@@ -709,8 +731,41 @@ const SCOPES: Array<Record<string, unknown>> = [
   { slideIndex: 0, elementAt: EL.hidden },
 ]
 
+/** A redaction mark for an a:rPr: the run is hidden from AI under `label`. */
+const redactExt = (label: string, prefix = 'go'): string =>
+  `<a:extLst><a:ext uri="{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}">` +
+  `<${prefix}:redact xmlns:${prefix}="https://genspark.ai/genoffice/redaction/2026" label="${label}"/></a:ext></a:extLst>`
+const withheldRun = (text: string, label = 'secret', prefix = 'go'): string =>
+  `<a:r><a:rPr lang="en-US">${redactExt(label, prefix)}</a:rPr><a:t>${text}</a:t></a:r>`
+/** Runs hidden from AI between plain ones, each paragraph its own case. */
+const WITHHELD_SLIDE = slideXml(
+  sp(
+    2,
+    'Withheld',
+    para('', run('Hello '), withheldRun('Hello'), run(' Hello')) +
+      para('', run('Hel'), withheldRun('lo Hel'), run('lo')) +
+      para('', withheldRun('Hello', ''), run('Hello')) +
+      para('', withheldRun('Hello', 'x', 'r'), run(' wor'), withheldRun('ld')) +
+      para('', withheldRun('only Hello')),
+  ),
+)
+
 const REPLACE_INPUTS: Input[] = [
   ...REPLACE_CASES.map(([find, replace, opts]) => on({ find, replace, opts })),
+  ...(
+    [
+      ['Hello', 'X', {}],
+      ['lo Hel', 'X', {}],
+      ['Hello Hello', 'X', {}],
+      ['Hello', 'X', { firstOnly: true }],
+      ['wor', 'W', {}],
+      ['only', 'O', {}],
+    ] as Array<[string, string, Record<string, unknown>]>
+  ).flatMap(([find, replace, opts]) =>
+    [undefined, true, false].map((skipWithheld) =>
+      on({ find, replace, opts: { ...opts, skipWithheld } }, WITHHELD_SLIDE),
+    ),
+  ),
   ...SCOPES.flatMap((scope) =>
     [
       ['Hello', 'World', {}],
@@ -811,7 +866,14 @@ const MODEL_PARAGRAPHS = [
       level: 1,
       marL: 285750,
       indent: -285750,
-      bullet: { type: 'char', char: 'x', color: '#FF0000', colorNodeXml: '<a:schemeClr val="accent1"/>', sizePct: 80, font: 'Wingdings' },
+      bullet: {
+        type: 'char',
+        char: 'x',
+        color: '#FF0000',
+        colorNodeXml: '<a:schemeClr val="accent1"/>',
+        sizePct: 80,
+        font: 'Wingdings',
+      },
     },
     {
       runs: [{ text: 'numbered' }],
@@ -870,7 +932,9 @@ const PARAGRAPH_INDICES: Array<number[] | null> = [
 
 const SET_PARAGRAPH_INPUTS: Input[] = [
   ...PARAGRAPH_PATCHES.flatMap((patch) =>
-    [EL.text, EL.empty, EL.table, EL.group, EL.rect, EL.chart(0)].map((e) => onElement(e, { patch })),
+    [EL.text, EL.empty, EL.table, EL.group, EL.rect, EL.chart(0)].map((e) =>
+      onElement(e, { patch }),
+    ),
   ),
   ...PARAGRAPH_INDICES.flatMap((paraIndices) =>
     [
@@ -889,7 +953,10 @@ const SET_PARAGRAPH_INPUTS: Input[] = [
     [[0], null],
     [null, [1]],
     [[0], [1]],
-    [[0, 1], [1, 2]],
+    [
+      [0, 1],
+      [1, 2],
+    ],
     [[-0], [0]],
     [[1], [1]],
   ].flatMap(([first, second]) =>
@@ -898,13 +965,12 @@ const SET_PARAGRAPH_INPUTS: Input[] = [
       [{ align: 'right' }, { bullet: 'number' }],
       [{ lineSpacingPct: 100 }, { lineSpacingPct: 150 }],
       [{ bullet: 'none' }, { indentDelta: 1 }],
-    ].map(([patch, then]) => onElement(EL.text, { patch, paraIndices: first, then, thenIndices: second })),
+    ].map(([patch, then]) =>
+      onElement(EL.text, { patch, paraIndices: first, then, thenIndices: second }),
+    ),
   ),
   blank({ patch: { bullet: 'char' } }),
-  on(
-    { slide: 0, element: 0, patch: { bullet: 'char' } },
-    slideXml(sp(2, 'n', '')),
-  ),
+  on({ slide: 0, element: 0, patch: { bullet: 'char' } }, slideXml(sp(2, 'n', ''))),
 ]
 
 // ── setGroupChildParagraphFormat ────────────────────────────────────────
@@ -1034,7 +1100,9 @@ export const DECKTEXT: CallSpec[] = [
   {
     fn: 'pptxDecktext.index.applyParagraphFormat',
     call: (_text, args) => {
-      const paragraphs = structuredClone(args.paragraphs) as Parameters<typeof applyParagraphFormat>[0]
+      const paragraphs = structuredClone(args.paragraphs) as Parameters<
+        typeof applyParagraphFormat
+      >[0]
       const dirty = applyParagraphFormat(paragraphs, args.patch as ParagraphFormatPatch)
       return { dirty, paragraphs }
     },

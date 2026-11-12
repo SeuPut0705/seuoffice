@@ -19656,6 +19656,40 @@
     },
     {
       "module": "xml-utils",
+      "name": "canonicalXml",
+      "kind": "function",
+      "async": false,
+      "params": [
+        {
+          "name": "xml",
+          "type": "string",
+          "optional": false,
+          "rest": false,
+          "codec": "json"
+        }
+      ],
+      "ret": {
+        "type": "string",
+        "null": false,
+        "undef": false,
+        "shape": null,
+        "bytes": false
+      },
+      "required": [],
+      "rust": {
+        "path": "pptx_engine::xml_utils::canonical_xml",
+        "file": "crates/pptx-engine/src/xml_utils.rs",
+        "name": "canonical_xml",
+        "vis": "pub",
+        "params": ["xml: &str"],
+        "ret": "Result<Cow<'_, str>, String>",
+        "reachable": true
+      },
+      "route": "table",
+      "note": "nothing outside the package uses it: the module drops it unless a kept piece names it"
+    },
+    {
+      "module": "xml-utils",
       "name": "maxRelationshipIdNumber",
       "kind": "function",
       "async": false,
