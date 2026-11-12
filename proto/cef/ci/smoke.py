@@ -86,7 +86,10 @@ def run(exe, env_extra, out_jsonl, until, timeout=TIMEOUT):
 
 
 def pdf_pages(data):
-    return len(re.findall(rb'/Type\s*/Page(?![a-zA-Z])', data))
+    # Skia writes page objects into compressed object streams; the page tree root
+    # carries the total as /Count
+    counts = [int(c) for c in re.findall(rb'/Count\s+(\d+)', data)]
+    return max(counts) if counts else len(re.findall(rb'/Type\s*/Page(?![a-zA-Z])', data))
 
 
 def main():
