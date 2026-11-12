@@ -5,9 +5,18 @@
 
 const THEME = {
   colors: {
-    dk1: '#000000', lt1: '#FFFFFF', dk2: '#44546A', lt2: '#E7E6E6',
-    accent1: '#4472C4', accent2: '#ED7D31', accent3: '#A5A5A5', accent4: '#FFC000',
-    accent5: '#5B9BD5', accent6: '#70AD47', hlink: '#0563C1', folHlink: '#954F72',
+    dk1: '#000000',
+    lt1: '#FFFFFF',
+    dk2: '#44546A',
+    lt2: '#E7E6E6',
+    accent1: '#4472C4',
+    accent2: '#ED7D31',
+    accent3: '#A5A5A5',
+    accent4: '#FFC000',
+    accent5: '#5B9BD5',
+    accent6: '#70AD47',
+    hlink: '#0563C1',
+    folHlink: '#954F72',
   },
   clrMap: { bg1: 'lt1', tx1: 'dk1', bg2: 'lt2', tx2: 'dk2' },
   majorFont: 'Calibri Light',
@@ -36,17 +45,22 @@ interface PicOpts {
 }
 const pic = (o: PicOpts = {}): string =>
   `<p:pic><p:nvPicPr>${o.cNvPr ?? '<p:cNvPr id="4" name="Picture 3"/>'}<p:cNvPicPr><a:picLocks noChangeAspect="1"/></p:cNvPicPr><p:nvPr>${o.nvPr ?? ''}</p:nvPr></p:nvPicPr>` +
-  (o.blipFill ?? '<p:blipFill><a:blip r:embed="rId2"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>') +
-  (o.spPrEl ?? `<p:spPr>${o.spPr ?? `${xfrm()}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>`}</p:spPr>`) +
+  (o.blipFill ??
+    '<p:blipFill><a:blip r:embed="rId2"/><a:stretch><a:fillRect/></a:stretch></p:blipFill>') +
+  (o.spPrEl ??
+    `<p:spPr>${o.spPr ?? `${xfrm()}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>`}</p:spPr>`) +
   '</p:pic>'
-const blipFill = (blip: string, rest = '<a:stretch><a:fillRect/></a:stretch>', attrs = ''): string =>
-  `<p:blipFill${attrs}>${blip}${rest}</p:blipFill>`
+const blipFill = (
+  blip: string,
+  rest = '<a:stretch><a:fillRect/></a:stretch>',
+  attrs = '',
+): string => `<p:blipFill${attrs}>${blip}${rest}</p:blipFill>`
 const many = (...pics: string[]): string => pics.join('')
 
 const CUST_GEOM =
   '<a:custGeom><a:avLst/><a:gdLst/><a:ahLst/><a:cxnLst/><a:rect l="0" t="0" r="r" b="b"/><a:pathLst><a:path w="2000000" h="1000000"><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="2000000" y="0"/></a:lnTo><a:lnTo><a:pt x="1500000" y="1000000"/></a:lnTo><a:close/></a:path></a:pathLst></a:custGeom>'
 const REDACT =
-  '<a:extLst><a:ext uri="{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}" xmlns:go="urn:genoffice"><go:redact label="face"/></a:ext></a:extLst>'
+  '<a:extLst><a:ext uri="{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}" xmlns:go="urn:seuoffice"><go:redact label="face"/></a:ext></a:extLst>'
 const SVG_BLIP =
   '<a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="rId3"/></a:ext></a:extLst>'
 
@@ -59,18 +73,33 @@ const transform = (x: number, y: number, cx: number, cy: number) => ({
 const PLACEHOLDERS = {
   layoutPlaceholders: {
     entries: [
-      { type: 'pic', idx: '13', transform: transform(500, 600, 4000000, 3000000), presetGeom: { prst: 'ellipse' } },
+      {
+        type: 'pic',
+        idx: '13',
+        transform: transform(500, 600, 4000000, 3000000),
+        presetGeom: { prst: 'ellipse' },
+      },
       {
         type: 'body',
         idx: '1',
         transform: transform(700, 800, 5000000, 2500000),
-        presetGeom: { prst: 'roundRect', avLstRaw: { 'a:gd': { '@_name': 'adj', '@_fmla': 'val 30000' } } },
+        presetGeom: {
+          prst: 'roundRect',
+          avLstRaw: { 'a:gd': { '@_name': 'adj', '@_fmla': 'val 30000' } },
+        },
       },
       { type: 'obj', idx: '2', transform: null },
     ],
   },
   masterPlaceholders: {
-    entries: [{ type: 'pic', idx: '20', transform: transform(1, 2, 3, 4), presetGeom: { prst: 'parallelogram' } }],
+    entries: [
+      {
+        type: 'pic',
+        idx: '20',
+        transform: transform(1, 2, 3, 4),
+        presetGeom: { prst: 'parallelogram' },
+      },
+    ],
   },
 }
 
@@ -85,7 +114,12 @@ const AV_RELS = [
   ['', { target: 'ppt/media/empty-key.wav' }],
 ]
 
-const PICTURES: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> = [
+const PICTURES: Array<{
+  name: string
+  spTree: string
+  ctx?: Record<string, unknown>
+  seed?: false
+}> = [
   { name: 'pic plain', spTree: pic(), ctx: BASE },
   { name: 'pic without context', spTree: pic() },
   {
@@ -111,20 +145,41 @@ const PICTURES: Array<{ name: string; spTree: string; ctx?: Record<string, unkno
       pic({ blipFill: blipFill('<a:blip/>') }),
       pic({ blipFill: '' }),
       pic({ blipFill: '<p:blipFill/>' }),
-      pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>') + blipFill('<a:blip r:embed="rId3"/>') }),
+      pic({
+        blipFill: blipFill('<a:blip r:embed="rId2"/>') + blipFill('<a:blip r:embed="rId3"/>'),
+      }),
     ),
     ctx: BASE,
   },
   {
     name: 'pic srcRect',
     spTree: many(
-      pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect l="10000" t="20000" r="30000" b="40000"/><a:stretch/>') }),
-      pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect l="0" t="0" r="0" b="0"/>') }),
+      pic({
+        blipFill: blipFill(
+          '<a:blip r:embed="rId2"/>',
+          '<a:srcRect l="10000" t="20000" r="30000" b="40000"/><a:stretch/>',
+        ),
+      }),
+      pic({
+        blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect l="0" t="0" r="0" b="0"/>'),
+      }),
       pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect/>') }),
       pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect b="-5000"/>') }),
-      pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect l="abc" t="12.9" r="1e5" b=" 7"/>') }),
-      pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', "<a:srcRect l='2500' r='99999999999999999999999'/>") }),
-      pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect l="1"/><a:srcRect t="2"/>') }),
+      pic({
+        blipFill: blipFill(
+          '<a:blip r:embed="rId2"/>',
+          '<a:srcRect l="abc" t="12.9" r="1e5" b=" 7"/>',
+        ),
+      }),
+      pic({
+        blipFill: blipFill(
+          '<a:blip r:embed="rId2"/>',
+          "<a:srcRect l='2500' r='99999999999999999999999'/>",
+        ),
+      }),
+      pic({
+        blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect l="1"/><a:srcRect t="2"/>'),
+      }),
       pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:srcRect>text</a:srcRect>') }),
     ),
     ctx: BASE,
@@ -132,7 +187,12 @@ const PICTURES: Array<{ name: string; spTree: string; ctx?: Record<string, unkno
   {
     name: 'pic tile',
     spTree: many(
-      pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:tile tx="0" ty="0" sx="100000" sy="100000" algn="tl"/>') }),
+      pic({
+        blipFill: blipFill(
+          '<a:blip r:embed="rId2"/>',
+          '<a:tile tx="0" ty="0" sx="100000" sy="100000" algn="tl"/>',
+        ),
+      }),
       pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:tile/>') }),
       pic({ blipFill: blipFill('<a:blip r:embed="rId2"/>', '<a:tile/><a:tile/>') }),
     ),
@@ -142,8 +202,12 @@ const PICTURES: Array<{ name: string; spTree: string; ctx?: Record<string, unkno
     name: 'pic preset geometry',
     spTree: many(
       pic({ spPr: `${xfrm()}<a:prstGeom prst="ellipse"><a:avLst/></a:prstGeom>` }),
-      pic({ spPr: `${xfrm()}<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 25000"/></a:avLst></a:prstGeom>` }),
-      pic({ spPr: `${xfrm()}<a:prstGeom prst="rect"><a:avLst><a:gd name="adj" fmla="val 1"/></a:avLst></a:prstGeom>` }),
+      pic({
+        spPr: `${xfrm()}<a:prstGeom prst="roundRect"><a:avLst><a:gd name="adj" fmla="val 25000"/></a:avLst></a:prstGeom>`,
+      }),
+      pic({
+        spPr: `${xfrm()}<a:prstGeom prst="rect"><a:avLst><a:gd name="adj" fmla="val 1"/></a:avLst></a:prstGeom>`,
+      }),
       pic({ spPr: `${xfrm()}<a:prstGeom prst=""/>` }),
       pic({ spPr: `${xfrm()}<a:prstGeom/>` }),
       pic({ spPr: xfrm() }),
@@ -204,7 +268,9 @@ const PICTURES: Array<{ name: string; spTree: string; ctx?: Record<string, unkno
       pic({ spPr: `${xfrm()}<a:effectLst><a:softEdge rad="x"/></a:effectLst>` }),
       pic({ spPr: `${xfrm()}<a:effectLst><a:softEdge rad=""/></a:effectLst>` }),
       pic({ spPr: `${xfrm()}<a:effectLst><a:softEdge/></a:effectLst>` }),
-      pic({ spPr: `${xfrm()}<a:effectLst><a:softEdge rad="-12"/><a:glow rad="10"><a:srgbClr val="FF0000"/></a:glow></a:effectLst>` }),
+      pic({
+        spPr: `${xfrm()}<a:effectLst><a:softEdge rad="-12"/><a:glow rad="10"><a:srgbClr val="FF0000"/></a:glow></a:effectLst>`,
+      }),
     ),
     ctx: BASE,
   },
@@ -222,7 +288,9 @@ const PICTURES: Array<{ name: string; spTree: string; ctx?: Record<string, unkno
       }),
       pic({ blipFill: blipFill('<a:blip r:embed="rId2"><a:grayscl/><a:biLevel/></a:blip>') }),
       pic({ spPr: `${xfrm()}${REDACT}` }),
-      pic({ spPr: `${xfrm()}<a:extLst><a:ext uri="{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}"><go:redact label=""/></a:ext></a:extLst>` }),
+      pic({
+        spPr: `${xfrm()}<a:extLst><a:ext uri="{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}"><go:redact label=""/></a:ext></a:extLst>`,
+      }),
     ),
     ctx: BASE,
   },
@@ -294,7 +362,9 @@ const BAR = barChart()
 const BAR_BLIP = barChart(
   '<c:spPr><a:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></a:blipFill></c:spPr>',
 )
-const BAR_SCHEME = barChart('<c:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></c:spPr>')
+const BAR_SCHEME = barChart(
+  '<c:spPr><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></c:spPr>',
+)
 const NO_PLOT = `<c:chartSpace ${C_NS}><c:chart><c:plotArea><c:layout/></c:plotArea></c:chart></c:chartSpace>`
 
 const CX_NS =
@@ -312,12 +382,19 @@ const BROKEN_OVERRIDE =
 
 const CDR =
   'xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" xmlns:cdr="http://schemas.openxmlformats.org/drawingml/2006/chartDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main"'
-const from = (x: string, y: string): string => `<cdr:from><cdr:x>${x}</cdr:x><cdr:y>${y}</cdr:y></cdr:from>`
-const to = (x: string, y: string): string => `<cdr:to><cdr:x>${x}</cdr:x><cdr:y>${y}</cdr:y></cdr:to>`
+const from = (x: string, y: string): string =>
+  `<cdr:from><cdr:x>${x}</cdr:x><cdr:y>${y}</cdr:y></cdr:from>`
+const to = (x: string, y: string): string =>
+  `<cdr:to><cdr:x>${x}</cdr:x><cdr:y>${y}</cdr:y></cdr:to>`
 const cdrSp = (spPr: string, opts: { nv?: string; style?: string; tx?: string } = {}): string =>
   `<cdr:sp macro="" textlink="">${opts.nv ?? '<cdr:nvSpPr><cdr:cNvPr id="2" name="Overlay 1"/><cdr:cNvSpPr/></cdr:nvSpPr>'}<cdr:spPr>${spPr}</cdr:spPr>${opts.style ?? ''}${opts.tx ?? ''}</cdr:sp>`
-const lineSp = (prst = 'line', ln = '<a:ln w="19050"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln>'): string =>
-  cdrSp(`<a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm><a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${ln}`)
+const lineSp = (
+  prst = 'line',
+  ln = '<a:ln w="19050"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln>',
+): string =>
+  cdrSp(
+    `<a:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></a:xfrm><a:prstGeom prst="${prst}"><a:avLst/></a:prstGeom>${ln}`,
+  )
 const cdrTx = (t: string): string =>
   `<cdr:txBody><a:bodyPr vertOverflow="clip" wrap="none" rtlCol="0"/><a:lstStyle/><a:p><a:r><a:rPr lang="en-US" sz="1100"/><a:t>${t}</a:t></a:r></a:p></cdr:txBody>`
 const STYLE =
@@ -329,33 +406,90 @@ const userShapes = (...anchors: string[]): string =>
 
 const USER_SHAPES = userShapes(
   rel(from('0.1', '0.5') + to('0.9', '0.5') + lineSp()),
-  rel(from('0.2', '0.1') + to('0.2', '0.9') + lineSp('straightConnector1', '<a:ln><a:solidFill><a:schemeClr val="accent2"/></a:solidFill></a:ln>')),
-  rel(from('0', '0') + to('1', '1') + lineSp('line', '<a:ln w="0"><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></a:ln>')),
-  rel(from('abc', '1e400') + to('', '-0.5') + lineSp('line', '<a:ln w="abc"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln>')),
+  rel(
+    from('0.2', '0.1') +
+      to('0.2', '0.9') +
+      lineSp(
+        'straightConnector1',
+        '<a:ln><a:solidFill><a:schemeClr val="accent2"/></a:solidFill></a:ln>',
+      ),
+  ),
+  rel(
+    from('0', '0') +
+      to('1', '1') +
+      lineSp('line', '<a:ln w="0"><a:solidFill><a:srgbClr val="00FF00"/></a:solidFill></a:ln>'),
+  ),
+  rel(
+    from('abc', '1e400') +
+      to('', '-0.5') +
+      lineSp('line', '<a:ln w="abc"><a:solidFill><a:srgbClr val="0000FF"/></a:solidFill></a:ln>'),
+  ),
   rel(from('0.3', '0.3') + to('0.4', '0.4') + lineSp('line', '<a:ln w="12700"><a:noFill/></a:ln>')),
   rel(from('0.3', '0.3') + to('0.4', '0.4') + lineSp('line', '')),
-  rel(from('0.3', '0.3') + to('0.4', '0.4') + lineSp('line', '<a:ln w="25400"><a:solidFill><a:srgbClr val="FF00FF"/></a:solidFill></a:ln>') + lineSp('rect')),
-  rel(from('0.05', '0.05') + to('0.45', '0.25') + cdrSp('<a:xfrm rot="600000" flipH="1" flipV="0"/><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/>', { nv: '<cdr:nvSpPr><cdr:cNvPr id="3" name="TextBox 2"/><cdr:cNvSpPr txBox="1"/></cdr:nvSpPr>', tx: cdrTx('Note') })),
-  rel(from('0.5', '0.5') + to('0.4', '0.6') + cdrSp('<a:prstGeom prst="ellipse"/>', { tx: cdrTx('Negative width') })),
-  rel(from('0.6', '0.6') + to('0.8', '0.9') + cdrSp('', { style: STYLE, tx: cdrTx('Styled, no spPr') })),
-  rel(from('0.6', '0.1') + to('0.7', '0.2') + cdrSp('<a:prstGeom prst="wedgeRectCallout"/><a:solidFill><a:srgbClr val="FFFF00"/></a:solidFill>', { nv: '' })),
-  rel(from('<b>0.1</b>', '0.1') + to('0.2', '0.2') + cdrSp('<a:prstGeom prst="rect"/>', { tx: cdrTx('Object coordinate') })),
-  abs(from('0.5', '0.1') + '<cdr:ext cx="914400" cy="457200"/>' + cdrSp('<a:prstGeom prst="roundRect"/>', { style: STYLE, tx: cdrTx('Absolute') })),
-  abs(from('0.5', '0.1') + '<cdr:ext cx="0" cy="457200"/>' + cdrSp('<a:prstGeom prst="rect"/>', { tx: cdrTx('Zero width') })),
+  rel(
+    from('0.3', '0.3') +
+      to('0.4', '0.4') +
+      lineSp(
+        'line',
+        '<a:ln w="25400"><a:solidFill><a:srgbClr val="FF00FF"/></a:solidFill></a:ln>',
+      ) +
+      lineSp('rect'),
+  ),
+  rel(
+    from('0.05', '0.05') +
+      to('0.45', '0.25') +
+      cdrSp(
+        '<a:xfrm rot="600000" flipH="1" flipV="0"/><a:prstGeom prst="rect"><a:avLst/></a:prstGeom><a:noFill/>',
+        {
+          nv: '<cdr:nvSpPr><cdr:cNvPr id="3" name="TextBox 2"/><cdr:cNvSpPr txBox="1"/></cdr:nvSpPr>',
+          tx: cdrTx('Note'),
+        },
+      ),
+  ),
+  rel(
+    from('0.5', '0.5') +
+      to('0.4', '0.6') +
+      cdrSp('<a:prstGeom prst="ellipse"/>', { tx: cdrTx('Negative width') }),
+  ),
+  rel(
+    from('0.6', '0.6') +
+      to('0.8', '0.9') +
+      cdrSp('', { style: STYLE, tx: cdrTx('Styled, no spPr') }),
+  ),
+  rel(
+    from('0.6', '0.1') +
+      to('0.7', '0.2') +
+      cdrSp(
+        '<a:prstGeom prst="wedgeRectCallout"/><a:solidFill><a:srgbClr val="FFFF00"/></a:solidFill>',
+        { nv: '' },
+      ),
+  ),
+  rel(
+    from('<b>0.1</b>', '0.1') +
+      to('0.2', '0.2') +
+      cdrSp('<a:prstGeom prst="rect"/>', { tx: cdrTx('Object coordinate') }),
+  ),
+  abs(
+    from('0.5', '0.1') +
+      '<cdr:ext cx="914400" cy="457200"/>' +
+      cdrSp('<a:prstGeom prst="roundRect"/>', { style: STYLE, tx: cdrTx('Absolute') }),
+  ),
+  abs(
+    from('0.5', '0.1') +
+      '<cdr:ext cx="0" cy="457200"/>' +
+      cdrSp('<a:prstGeom prst="rect"/>', { tx: cdrTx('Zero width') }),
+  ),
   abs(from('0.5', '0.1') + cdrSp('<a:prstGeom prst="rect"/>', { tx: cdrTx('No ext') })),
   abs(from('0.5', '0.1') + '<cdr:ext cx="914400.6" cy="457200.5"/>' + lineSp()),
   '<cdr:relSizeAnchor/>',
 )
 
-const gf = (
-  uri: string,
-  body: string,
-  opts: { cNvPr?: string; xfrm?: string } = {},
-): string =>
+const gf = (uri: string, body: string, opts: { cNvPr?: string; xfrm?: string } = {}): string =>
   `<p:graphicFrame><p:nvGraphicFramePr>${opts.cNvPr ?? '<p:cNvPr id="5" name="Frame 4"/>'}<p:cNvGraphicFramePr><a:graphicFrameLocks noGrp="1"/></p:cNvGraphicFramePr><p:nvPr/></p:nvGraphicFramePr>` +
   `${opts.xfrm ?? '<p:xfrm><a:off x="1000000" y="500000"/><a:ext cx="4000000" cy="3000000"/></p:xfrm>'}` +
   `<a:graphic><a:graphicData uri="${uri}">${body}</a:graphicData></a:graphic></p:graphicFrame>`
-const chartRef = (rid: string): string => `<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="${rid}"/>`
+const chartRef = (rid: string): string =>
+  `<c:chart xmlns:c="http://schemas.openxmlformats.org/drawingml/2006/chart" r:id="${rid}"/>`
 const cxRef = (rid: string): string => `<cx:chart xmlns:cx="${CHARTEX_URI}" r:id="${rid}"/>`
 
 const CHART_CTX = {
@@ -386,70 +520,77 @@ const CHART_CTX = {
   ],
 }
 
-const CHARTS: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> = [
-  {
-    name: 'chart with user lines and shapes',
-    spTree: gf(CHART_URI, chartRef('rId7'), { cNvPr: '<p:cNvPr id="5" name="Chart 4" descr="Sales by region"/>' }),
-    ctx: CHART_CTX,
-  },
-  {
-    name: 'chart variants',
-    spTree: many(
-      gf(CHART_URI, chartRef('rId10'), { cNvPr: '<p:cNvPr id="6" descr=""/>' }),
-      gf(CHART_URI, chartRef('rId12')),
-      gf(CHART_URI, chartRef('rId9')),
-      gf(CHART_URI, chartRef('rId13')),
-      gf(CHART_URI, chartRef('rId14')),
-      gf(CHART_URI, chartRef('rIdMissing')),
-      gf(CHART_URI, chartRef('')),
-      gf(CHART_URI, '<c:chart/>'),
-      gf(CHART_URI, ''),
-      gf(CHART_URI, chartRef('constructor')),
-      gf(CHART_URI, chartRef('toString')),
-      gf(CHART_URI, chartRef('rId7'), { xfrm: '<p:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="3000000"/></p:xfrm>' }),
-      gf(CHART_URI, chartRef('rId7'), { xfrm: '' }),
-    ),
-    ctx: CHART_CTX,
-  },
-  {
-    name: 'chart without chart context',
-    spTree: many(gf(CHART_URI, chartRef('rId7')), gf(CHARTEX_URI, cxRef('rId8'))),
-    ctx: BASE,
-  },
-  {
-    name: 'chartex',
-    spTree: many(
-      gf(CHARTEX_URI, cxRef('rId8'), { cNvPr: '<p:cNvPr id="7" name="Funnel" descr="dropped"/>' }),
-      gf(CHARTEX_URI, cxRef('rId11')),
-      gf(CHARTEX_URI, cxRef('rId11') + chartRef('rId7')),
-      gf(CHARTEX_URI, cxRef('rId7')),
-      gf(CHARTEX_URI, cxRef('rIdMissing')),
-      gf(CHARTEX_URI, '<cx:chart/>'),
-      gf(CHARTEX_URI, cxRef('rId8'), { cNvPr: '<p:cNvPr id="8"/>' }),
-    ),
-    ctx: CHART_CTX,
-  },
-  {
-    name: 'chartex in mc:AlternateContent',
-    spTree:
-      '<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" Requires="cx1">' +
-      gf(CHARTEX_URI, cxRef('rId8')) +
-      '</mc:Choice><mc:Fallback>' +
-      pic() +
-      '</mc:Fallback></mc:AlternateContent>',
-    ctx: CHART_CTX,
-  },
-  {
-    name: 'chart theme override that does not parse',
-    spTree: gf(CHART_URI, chartRef('rId7')),
-    ctx: { ...CHART_CTX, chartThemeOverrides: [['rId7', BROKEN_OVERRIDE]] },
-  },
-  {
-    name: 'chart theme override without a base theme',
-    spTree: many(gf(CHART_URI, chartRef('rId12')), gf(CHARTEX_URI, cxRef('rId8'))),
-    ctx: { ...CHART_CTX, theme: undefined },
-  },
-]
+const CHARTS: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> =
+  [
+    {
+      name: 'chart with user lines and shapes',
+      spTree: gf(CHART_URI, chartRef('rId7'), {
+        cNvPr: '<p:cNvPr id="5" name="Chart 4" descr="Sales by region"/>',
+      }),
+      ctx: CHART_CTX,
+    },
+    {
+      name: 'chart variants',
+      spTree: many(
+        gf(CHART_URI, chartRef('rId10'), { cNvPr: '<p:cNvPr id="6" descr=""/>' }),
+        gf(CHART_URI, chartRef('rId12')),
+        gf(CHART_URI, chartRef('rId9')),
+        gf(CHART_URI, chartRef('rId13')),
+        gf(CHART_URI, chartRef('rId14')),
+        gf(CHART_URI, chartRef('rIdMissing')),
+        gf(CHART_URI, chartRef('')),
+        gf(CHART_URI, '<c:chart/>'),
+        gf(CHART_URI, ''),
+        gf(CHART_URI, chartRef('constructor')),
+        gf(CHART_URI, chartRef('toString')),
+        gf(CHART_URI, chartRef('rId7'), {
+          xfrm: '<p:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="3000000"/></p:xfrm>',
+        }),
+        gf(CHART_URI, chartRef('rId7'), { xfrm: '' }),
+      ),
+      ctx: CHART_CTX,
+    },
+    {
+      name: 'chart without chart context',
+      spTree: many(gf(CHART_URI, chartRef('rId7')), gf(CHARTEX_URI, cxRef('rId8'))),
+      ctx: BASE,
+    },
+    {
+      name: 'chartex',
+      spTree: many(
+        gf(CHARTEX_URI, cxRef('rId8'), {
+          cNvPr: '<p:cNvPr id="7" name="Funnel" descr="dropped"/>',
+        }),
+        gf(CHARTEX_URI, cxRef('rId11')),
+        gf(CHARTEX_URI, cxRef('rId11') + chartRef('rId7')),
+        gf(CHARTEX_URI, cxRef('rId7')),
+        gf(CHARTEX_URI, cxRef('rIdMissing')),
+        gf(CHARTEX_URI, '<cx:chart/>'),
+        gf(CHARTEX_URI, cxRef('rId8'), { cNvPr: '<p:cNvPr id="8"/>' }),
+      ),
+      ctx: CHART_CTX,
+    },
+    {
+      name: 'chartex in mc:AlternateContent',
+      spTree:
+        '<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice xmlns:cx1="http://schemas.microsoft.com/office/drawing/2015/9/8/chartex" Requires="cx1">' +
+        gf(CHARTEX_URI, cxRef('rId8')) +
+        '</mc:Choice><mc:Fallback>' +
+        pic() +
+        '</mc:Fallback></mc:AlternateContent>',
+      ctx: CHART_CTX,
+    },
+    {
+      name: 'chart theme override that does not parse',
+      spTree: gf(CHART_URI, chartRef('rId7')),
+      ctx: { ...CHART_CTX, chartThemeOverrides: [['rId7', BROKEN_OVERRIDE]] },
+    },
+    {
+      name: 'chart theme override without a base theme',
+      spTree: many(gf(CHART_URI, chartRef('rId12')), gf(CHARTEX_URI, cxRef('rId8'))),
+      ctx: { ...CHART_CTX, theme: undefined },
+    },
+  ]
 
 // ── tables, unknown and OLE ────────────────────────────────────────────
 
@@ -475,61 +616,80 @@ const VML = [
   ['constructor', 'ppt/media/ctor.emf'],
 ]
 
-const FRAMES: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> = [
-  {
-    name: 'graphicFrame table and unknown kinds',
-    spTree: many(
-      gf(TABLE_URI, TBL),
-      gf(TABLE_URI, '<a:tbl/>'),
-      gf(TABLE_URI, ''),
-      gf('urn:example:unknown', '<x:thing/>'),
-      gf('http://example.com/SmartArtish', ''),
-      gf('', ''),
-      '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="Bare"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><p:xfrm/></p:graphicFrame>',
-      '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="Bare"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><a:graphic><a:graphicData uri="a"/><a:graphicData uri="b"/></a:graphic></p:graphicFrame>',
-    ),
-    ctx: BASE,
-  },
-  {
-    name: 'ole previews',
-    spTree: many(
-      gf(OLE_URI, oleObj(' spid="_x0000_s1026"', `<p:embed/>${olePic()}`)),
-      gf(OLE_URI, oleAlternate(oleObj(' spid="_x0000_s1026"'), oleObj('', `<p:embed/>${olePic()}`))),
-      gf(OLE_URI, oleAlternate(oleObj(' spid="_x0000_s1026"'), oleObj('', `<p:embed/>${olePic('<a:blip/>')}`))),
-      gf(OLE_URI, oleAlternate(oleObj(''), oleObj(' spid="_x0000_s1026"'))),
-      gf(OLE_URI, oleObj(' spid="_x0000_s1026"')),
-      gf(OLE_URI, oleObj(' spid="_x0000_s2048"')),
-      gf(OLE_URI, oleObj(' spid="_x0000_s9999"')),
-      gf(OLE_URI, oleObj(' spid=""')),
-      gf(OLE_URI, oleObj(' spid="constructor"')),
-      gf(OLE_URI, oleObj(' spid="__proto__"')),
-      gf(OLE_URI, `<p:oleObj/>${oleAlternate(oleObj(' spid="_x0000_s1026"'), '')}`),
-      gf(OLE_URI, oleObj(' spid="_x0000_s1026"', `<p:embed/>${olePic('<a:blip r:embed=""/>')}`)),
-      gf(OLE_URI, oleObj(' spid="_x0000_s1026"', `<p:embed/>${olePic('<a:blip r:embed="rIdMissing"/>')}${olePic()}`)),
-      gf(OLE_URI, deep(5, olePic())),
-      gf(OLE_URI, deep(7, olePic()) + oleObj(' spid="_x0000_s1026"')),
-      gf(OLE_URI, `<x:list><x:item/><x:item>${olePic()}</x:item></x:list>`),
-      gf(OLE_URI, '<p:pic/>' + oleObj(' spid="_x0000_s1026"')),
-      gf(OLE_URI, oleObj(' spid="_x0000_s1026"'), { xfrm: '' }),
-      gf(OLE_URI, ''),
-    ),
-    ctx: { ...BASE, vmlPreviews: VML },
-  },
-  {
-    name: 'ole previews without vmlPreviews',
-    spTree: many(gf(OLE_URI, oleObj(' spid="_x0000_s1026"')), gf(OLE_URI, oleObj('', `<p:embed/>${olePic()}`))),
-    ctx: BASE,
-  },
-  {
-    name: 'ole and chart frames inside a group',
-    spTree:
-      '<p:grpSp><p:nvGrpSpPr><p:cNvPr id="10" name="Group 9"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6000000" cy="4000000"/><a:chOff x="0" y="0"/><a:chExt cx="6000000" cy="4000000"/></a:xfrm></p:grpSpPr>' +
-      gf(OLE_URI, oleObj(' spid="_x0000_s1026"')) +
-      gf(CHART_URI, chartRef('rId7')) +
-      '</p:grpSp>',
-    ctx: { ...CHART_CTX, vmlPreviews: VML },
-  },
-]
+const FRAMES: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> =
+  [
+    {
+      name: 'graphicFrame table and unknown kinds',
+      spTree: many(
+        gf(TABLE_URI, TBL),
+        gf(TABLE_URI, '<a:tbl/>'),
+        gf(TABLE_URI, ''),
+        gf('urn:example:unknown', '<x:thing/>'),
+        gf('http://example.com/SmartArtish', ''),
+        gf('', ''),
+        '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="Bare"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><p:xfrm/></p:graphicFrame>',
+        '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="9" name="Bare"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr><a:graphic><a:graphicData uri="a"/><a:graphicData uri="b"/></a:graphic></p:graphicFrame>',
+      ),
+      ctx: BASE,
+    },
+    {
+      name: 'ole previews',
+      spTree: many(
+        gf(OLE_URI, oleObj(' spid="_x0000_s1026"', `<p:embed/>${olePic()}`)),
+        gf(
+          OLE_URI,
+          oleAlternate(oleObj(' spid="_x0000_s1026"'), oleObj('', `<p:embed/>${olePic()}`)),
+        ),
+        gf(
+          OLE_URI,
+          oleAlternate(
+            oleObj(' spid="_x0000_s1026"'),
+            oleObj('', `<p:embed/>${olePic('<a:blip/>')}`),
+          ),
+        ),
+        gf(OLE_URI, oleAlternate(oleObj(''), oleObj(' spid="_x0000_s1026"'))),
+        gf(OLE_URI, oleObj(' spid="_x0000_s1026"')),
+        gf(OLE_URI, oleObj(' spid="_x0000_s2048"')),
+        gf(OLE_URI, oleObj(' spid="_x0000_s9999"')),
+        gf(OLE_URI, oleObj(' spid=""')),
+        gf(OLE_URI, oleObj(' spid="constructor"')),
+        gf(OLE_URI, oleObj(' spid="__proto__"')),
+        gf(OLE_URI, `<p:oleObj/>${oleAlternate(oleObj(' spid="_x0000_s1026"'), '')}`),
+        gf(OLE_URI, oleObj(' spid="_x0000_s1026"', `<p:embed/>${olePic('<a:blip r:embed=""/>')}`)),
+        gf(
+          OLE_URI,
+          oleObj(
+            ' spid="_x0000_s1026"',
+            `<p:embed/>${olePic('<a:blip r:embed="rIdMissing"/>')}${olePic()}`,
+          ),
+        ),
+        gf(OLE_URI, deep(5, olePic())),
+        gf(OLE_URI, deep(7, olePic()) + oleObj(' spid="_x0000_s1026"')),
+        gf(OLE_URI, `<x:list><x:item/><x:item>${olePic()}</x:item></x:list>`),
+        gf(OLE_URI, '<p:pic/>' + oleObj(' spid="_x0000_s1026"')),
+        gf(OLE_URI, oleObj(' spid="_x0000_s1026"'), { xfrm: '' }),
+        gf(OLE_URI, ''),
+      ),
+      ctx: { ...BASE, vmlPreviews: VML },
+    },
+    {
+      name: 'ole previews without vmlPreviews',
+      spTree: many(
+        gf(OLE_URI, oleObj(' spid="_x0000_s1026"')),
+        gf(OLE_URI, oleObj('', `<p:embed/>${olePic()}`)),
+      ),
+      ctx: BASE,
+    },
+    {
+      name: 'ole and chart frames inside a group',
+      spTree:
+        '<p:grpSp><p:nvGrpSpPr><p:cNvPr id="10" name="Group 9"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="6000000" cy="4000000"/><a:chOff x="0" y="0"/><a:chExt cx="6000000" cy="4000000"/></a:xfrm></p:grpSpPr>' +
+        gf(OLE_URI, oleObj(' spid="_x0000_s1026"')) +
+        gf(CHART_URI, chartRef('rId7')) +
+        '</p:grpSp>',
+      ctx: { ...CHART_CTX, vmlPreviews: VML },
+    },
+  ]
 
 // ── SmartArt ───────────────────────────────────────────────────────────
 
@@ -566,17 +726,24 @@ const DATA =
   cxn('{C2}', '{D}', '{2}', '1') +
   '</dgm:cxnLst><dgm:bg/><dgm:whole/></dgm:dataModel>'
 
-const styleLbl = (name: string, inner: string): string => `<dgm:styleLbl name="${name}">${inner}</dgm:styleLbl>`
-const txFill = (clr: string): string => `<dgm:fillClrLst meth="repeat"><a:schemeClr val="accent1"/></dgm:fillClrLst><dgm:txFillClrLst meth="repeat">${clr}</dgm:txFillClrLst>`
+const styleLbl = (name: string, inner: string): string =>
+  `<dgm:styleLbl name="${name}">${inner}</dgm:styleLbl>`
+const txFill = (clr: string): string =>
+  `<dgm:fillClrLst meth="repeat"><a:schemeClr val="accent1"/></dgm:fillClrLst><dgm:txFillClrLst meth="repeat">${clr}</dgm:txFillClrLst>`
 const COLORS =
   `<dgm:colorsDef ${DGM_NS} uniqueId="urn:microsoft.com/office/officeart/2005/8/colors/accent1_2">` +
   styleLbl('node1', txFill('<a:schemeClr val="lt1"/>')) +
   styleLbl('revTx', txFill('<a:srgbClr val="ab12cd"/>')) +
-  styleLbl('constructor', txFill('<a:schemeClr val="accent2"><a:lumMod val="50000"/></a:schemeClr>')) +
+  styleLbl(
+    'constructor',
+    txFill('<a:schemeClr val="accent2"><a:lumMod val="50000"/></a:schemeClr>'),
+  ) +
   styleLbl('empty', '<dgm:txFillClrLst/>') +
   styleLbl('prst', txFill('<a:prstClr val="red"/>')) +
   styleLbl('unknownScheme', txFill('<a:schemeClr val="nope"/>')) +
-  "<dgm:styleLbl name='single'>" + txFill('<a:srgbClr val="00FF00"/>') + '</dgm:styleLbl>' +
+  "<dgm:styleLbl name='single'>" +
+  txFill('<a:srgbClr val="00FF00"/>') +
+  '</dgm:styleLbl>' +
   '</dgm:colorsDef>'
 const COLORS_NONE = `<dgm:colorsDef ${DGM_NS}>${styleLbl('node1', txFill(''))}</dgm:colorsDef>`
 
@@ -588,8 +755,10 @@ const DSP_NS =
   'xmlns:dgm="http://schemas.openxmlformats.org/drawingml/2006/diagram" xmlns:dsp="http://schemas.microsoft.com/office/drawing/2008/diagram" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
 const DSP_STYLE =
   '<dsp:style><a:lnRef idx="2"><a:scrgbClr r="0" g="0" b="0"/></a:lnRef><a:fillRef idx="1"><a:scrgbClr r="0" g="0" b="0"/></a:fillRef><a:effectRef idx="0"><a:scrgbClr r="0" g="0" b="0"/></a:effectRef><a:fontRef idx="minor"><a:schemeClr val="lt1"/></a:fontRef></dsp:style>'
-const dspTx = (paras: string): string => `<dsp:txBody><a:bodyPr spcFirstLastPara="0" vert="horz" wrap="square" anchor="ctr"/><a:lstStyle/>${paras}</dsp:txBody>`
-const dspP = (...runs: string[]): string => `<a:p>${runs.map((t) => `<a:r><a:rPr lang="en-US" sz="1800" kern="1200"/>${t}</a:r>`).join('')}</a:p>`
+const dspTx = (paras: string): string =>
+  `<dsp:txBody><a:bodyPr spcFirstLastPara="0" vert="horz" wrap="square" anchor="ctr"/><a:lstStyle/>${paras}</dsp:txBody>`
+const dspP = (...runs: string[]): string =>
+  `<a:p>${runs.map((t) => `<a:r><a:rPr lang="en-US" sz="1800" kern="1200"/>${t}</a:r>`).join('')}</a:p>`
 interface DspOpts {
   modelId?: string
   rot?: string
@@ -604,26 +773,64 @@ const dspSp = (o: DspOpts = {}): string =>
   `${o.nv ?? '<dsp:nvSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvSpPr/></dsp:nvSpPr>'}` +
   `<dsp:spPr>${o.spPr ?? `<a:xfrm${o.rot ?? ''}><a:off x="0" y="0"/><a:ext cx="2000000" cy="1000000"/></a:xfrm><a:prstGeom prst="roundRect"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val="4472C4"/></a:solidFill>`}</dsp:spPr>` +
   `${o.style ?? DSP_STYLE}${o.tx ?? ''}${o.txXfrm ?? ''}</dsp:sp>`
-const TX_XFRM = '<dsp:txXfrm rot="-5400000"><a:off x="10" y="10"/><a:ext cx="1900000" cy="900000"/></dsp:txXfrm>'
+const TX_XFRM =
+  '<dsp:txXfrm rot="-5400000"><a:off x="10" y="10"/><a:ext cx="1900000" cy="900000"/></dsp:txXfrm>'
 const drawing = (...sps: string[]): string =>
   `<dsp:drawing ${DSP_NS}><dsp:spTree><dsp:nvGrpSpPr><dsp:cNvPr id="0" name=""/><dsp:cNvGrpSpPr/></dsp:nvGrpSpPr><dsp:grpSpPr/>${sps.join('')}</dsp:spTree></dsp:drawing>`
 
 const DRAWING = drawing(
   dspSp({ rot: ' rot="5400000"', tx: dspTx(dspP('<a:t>One\nTwo</a:t>')), txXfrm: TX_XFRM }),
-  dspSp({ modelId: ' modelId="{P2}"', tx: dspTx(dspP('<a:t xml:space="preserve">Lead \r\nTail</a:t>', '<a:t>\nfirst</a:t>', '<a:t>last\n</a:t>') + dspP('<a:t>Plain</a:t>')) }),
+  dspSp({
+    modelId: ' modelId="{P2}"',
+    tx: dspTx(
+      dspP(
+        '<a:t xml:space="preserve">Lead \r\nTail</a:t>',
+        '<a:t>\nfirst</a:t>',
+        '<a:t>last\n</a:t>',
+      ) + dspP('<a:t>Plain</a:t>'),
+    ),
+  }),
   dspSp({ modelId: ' modelId="constructor"', tx: dspTx(dspP('<a:t>Ctor</a:t>')) }),
-  dspSp({ modelId: ' modelId="{P3}"', tx: dspTx(dspP('<a:t>a\n\nb</a:t>')), txXfrm: '<dsp:txXfrm/>' }),
-  dspSp({ modelId: ' modelId="{P4}"', rot: ' rot="abc"', tx: dspTx(dspP('<a:t>Rot</a:t>')), txXfrm: '<dsp:txXfrm rot="99999999999999999999999"><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></dsp:txXfrm>' }),
-  dspSp({ modelId: ' modelId="{P9}"', style: '', tx: dspTx(dspP('<a:t>No style</a:t>')), txXfrm: '<dsp:txXfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></dsp:txXfrm>' }),
-  dspSp({ modelId: ' modelId="{P9}"', style: '<dsp:style/>', tx: dspTx(dspP('<a:t>Empty style</a:t>')) }),
-  dspSp({ modelId: ' modelId="{P5}"', nv: '', tx: dspTx(dspP('<a:t>No nv</a:t>')), txXfrm: TX_XFRM }),
+  dspSp({
+    modelId: ' modelId="{P3}"',
+    tx: dspTx(dspP('<a:t>a\n\nb</a:t>')),
+    txXfrm: '<dsp:txXfrm/>',
+  }),
+  dspSp({
+    modelId: ' modelId="{P4}"',
+    rot: ' rot="abc"',
+    tx: dspTx(dspP('<a:t>Rot</a:t>')),
+    txXfrm:
+      '<dsp:txXfrm rot="99999999999999999999999"><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></dsp:txXfrm>',
+  }),
+  dspSp({
+    modelId: ' modelId="{P9}"',
+    style: '',
+    tx: dspTx(dspP('<a:t>No style</a:t>')),
+    txXfrm: '<dsp:txXfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></dsp:txXfrm>',
+  }),
+  dspSp({
+    modelId: ' modelId="{P9}"',
+    style: '<dsp:style/>',
+    tx: dspTx(dspP('<a:t>Empty style</a:t>')),
+  }),
+  dspSp({
+    modelId: ' modelId="{P5}"',
+    nv: '',
+    tx: dspTx(dspP('<a:t>No nv</a:t>')),
+    txXfrm: TX_XFRM,
+  }),
   dspSp({ modelId: ' modelId="{P1}"' }),
   dspSp({ modelId: '', tx: dspTx(dspP('<a:t>No modelId</a:t>')) }),
   dspSp({
     modelId: ' modelId="{P7}"',
     spPr: '<a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/></a:xfrm><a:prstGeom prst="rect"/><a:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></a:blipFill>',
   }),
-  dspSp({ modelId: ' modelId="{P1}"', style: `${DSP_STYLE}`, tx: dspTx(dspP('<a:t>Two styles</a:t>')) }).replace('</dsp:sp>', `${DSP_STYLE}</dsp:sp>`),
+  dspSp({
+    modelId: ' modelId="{P1}"',
+    style: `${DSP_STYLE}`,
+    tx: dspTx(dspP('<a:t>Two styles</a:t>')),
+  }).replace('</dsp:sp>', `${DSP_STYLE}</dsp:sp>`),
   '<dsp:sp/>',
 )
 const STUB = drawing(dspSp({ modelId: ' modelId="{P1}"' }))
@@ -664,8 +871,17 @@ const SMARTART_CTX = {
   diagramMediaRels: [['rId2', [['rId1', 'ppt/media/dgm-image.png']]]],
 }
 
-const SMARTART: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> = [
-  { name: 'smartart drawing with text colors and split paragraphs', spTree: gf(DIAGRAM_URI, RELS), ctx: SMARTART_CTX },
+const SMARTART: Array<{
+  name: string
+  spTree: string
+  ctx?: Record<string, unknown>
+  seed?: false
+}> = [
+  {
+    name: 'smartart drawing with text colors and split paragraphs',
+    spTree: gf(DIAGRAM_URI, RELS),
+    ctx: SMARTART_CTX,
+  },
   {
     name: 'smartart drawing variants',
     spTree: many(
@@ -690,7 +906,9 @@ const SMARTART: Array<{ name: string; spTree: string; ctx?: Record<string, unkno
       gf(DIAGRAM_URI, relIds('r:dm="rIdNoDrawing" r:lo="rIdMissing" r:cs="rIdMissing"')),
       gf(DIAGRAM_URI, relIds('r:dm="rIdEmptyData"')),
       gf(DIAGRAM_URI, relIds('r:dm="rIdNoDrawing"'), { xfrm: '' }),
-      gf(DIAGRAM_URI, relIds('r:dm="rIdNoDrawing"'), { xfrm: '<p:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></p:xfrm>' }),
+      gf(DIAGRAM_URI, relIds('r:dm="rIdNoDrawing"'), {
+        xfrm: '<p:xfrm><a:off x="0" y="0"/><a:ext cx="0" cy="0"/></p:xfrm>',
+      }),
       gf(DIAGRAM_URI, ''),
       gf(DIAGRAM_URI, relIds('')),
     ),
@@ -713,9 +931,9 @@ const SMARTART: Array<{ name: string; spTree: string; ctx?: Record<string, unkno
   },
 ]
 
-export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> = [
-  ...PICTURES,
-  ...CHARTS,
-  ...FRAMES,
-  ...SMARTART,
-]
+export const SLIDES: Array<{
+  name: string
+  spTree: string
+  ctx?: Record<string, unknown>
+  seed?: false
+}> = [...PICTURES, ...CHARTS, ...FRAMES, ...SMARTART]

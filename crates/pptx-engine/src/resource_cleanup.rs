@@ -274,7 +274,7 @@ fn remove_unreferenced_owned_parts(
         }
     }
 
-    // GenOffice's simplified 3D placeholder records the model path in cNvPr@descr
+    // SeuOffice's simplified 3D placeholder records the model path in cNvPr@descr
     // rather than an OOXML relationship, so include those direct references.
     for (path, bytes) in archive.entries().iter() {
         if closure.has(path) || !may_carry_model3d_ref(path) {

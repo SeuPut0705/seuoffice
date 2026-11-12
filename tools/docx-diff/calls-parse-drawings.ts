@@ -7,18 +7,25 @@ import JSZip from 'jszip'
 import type { JSZipObject } from 'jszip'
 import { resolveRelationshipTargetPath } from '../../packages/docx-engine/src/parse-package'
 import type { RelInfo } from '../../packages/docx-engine/src/parse-xml-text'
-import { attrsOf, findChild, nameOf, serializeXNode, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+import {
+  attrsOf,
+  findChild,
+  nameOf,
+  serializeXNode,
+  xmlParser,
+  type XNode,
+} from '../../packages/docx-engine/src/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { custgeomInheritedGuide } from './listed'
 import { parseInternals } from './parse-internals'
 
 const internals = await parseInternals()
 
-
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value)
 
-const isNode = (value: unknown): value is XNode => isObject(value) && nameOf(value as XNode) !== undefined
+const isNode = (value: unknown): value is XNode =>
+  isObject(value) && nameOf(value as XNode) !== undefined
 
 /** The first element of `text` as xmlParser reads it, `{}` for none: what the Rust side takes. */
 const nodeOf = (text: string): XNode =>
@@ -30,10 +37,15 @@ const copy = <T>(value: T): T => structuredClone(value)
 const SETTINGS = 'word/settings.xml'
 
 /** `[name, text]` of the parts in `names` the document has. */
-const partsNamed = (parts: ReadonlyMap<string, string>, ...names: string[]): Array<[string, string]> =>
+const partsNamed = (
+  parts: ReadonlyMap<string, string>,
+  ...names: string[]
+): Array<[string, string]> =>
   names.flatMap((name) => (parts.has(name) ? [[name, parts.get(name)!] as [string, string]] : []))
 
-const settingsOnly = (parts: ReadonlyMap<string, string>): Input => ({ args: { parts: partsNamed(parts, SETTINGS) } })
+const settingsOnly = (parts: ReadonlyMap<string, string>): Input => ({
+  args: { parts: partsNamed(parts, SETTINGS) },
+})
 
 const relsEntries = (rels: unknown): Array<[string, RelInfo]> | undefined =>
   rels instanceof Map ? ([...rels] as Array<[string, RelInfo]>) : undefined
@@ -77,20 +89,36 @@ const positionV = (from: string, inner: string): string =>
   `<wp:positionV relativeFrom="${from}">${inner}</wp:positionV>`
 const ALIGNS = ['left', 'center', 'right', 'inside', 'outside', 'top', 'bottom', 'none']
 const ANCHOR_FRAGS = [
-  ...['page', 'column', 'margin', 'character', 'leftMargin', 'insideMargin', 'outsideMargin'].flatMap((from) => [
+  ...[
+    'page',
+    'column',
+    'margin',
+    'character',
+    'leftMargin',
+    'insideMargin',
+    'outsideMargin',
+  ].flatMap((from) => [
     ...ALIGNS.map((align) => positionH(from, `<wp:align>${align}</wp:align>`)),
     positionH(from, '<wp:posOffset>-952500</wp:posOffset>'),
   ]),
-  positionH('page', '<wp:posOffset>4762</wp:posOffset>') + positionV('paragraph', '<wp:posOffset>-14287</wp:posOffset>'),
+  positionH('page', '<wp:posOffset>4762</wp:posOffset>') +
+    positionV('paragraph', '<wp:posOffset>-14287</wp:posOffset>'),
   positionH('margin', '<wp:align>center</wp:align><wp:posOffset>12</wp:posOffset>') +
     positionV('line', '<wp:align>bottom</wp:align>'),
-  ...['page', 'paragraph', 'line', 'topMargin', 'bottomMargin', 'insideMargin', 'outsideMargin', 'margin'].flatMap(
-    (from) => [
-      positionV(from, '<wp:align>top</wp:align>'),
-      positionV(from, '<wp:align>left</wp:align>'),
-      positionV(from, '<wp:posOffset>95250</wp:posOffset>'),
-    ],
-  ),
+  ...[
+    'page',
+    'paragraph',
+    'line',
+    'topMargin',
+    'bottomMargin',
+    'insideMargin',
+    'outsideMargin',
+    'margin',
+  ].flatMap((from) => [
+    positionV(from, '<wp:align>top</wp:align>'),
+    positionV(from, '<wp:align>left</wp:align>'),
+    positionV(from, '<wp:posOffset>95250</wp:posOffset>'),
+  ]),
   '<wp:positionH relativeFrom="page"><wp:posOffset>1.5</wp:posOffset></wp:positionH>',
   '<wp:positionH><wp:align>left</wp:align></wp:positionH>',
   '<wp:positionH relativeFrom="page"></wp:positionH>',
@@ -171,7 +199,11 @@ const BODY_PRS = [
   '<wps:bodyPr anchor="t"><a:spAutoFit></a:spAutoFit></wps:bodyPr>',
   '<wps:bodyPr lIns="914400000000000000000000"/>',
 ]
-const TEXT_BOXES = [{ id: 1 }, { id: 2, widthPx: 10, autofit: false, insets: [1, 2, 3, 4] }, { id: 3, vAlign: 'top', nowrap: false }]
+const TEXT_BOXES = [
+  { id: 1 },
+  { id: 2, widthPx: 10, autofit: false, insets: [1, 2, 3, 4] },
+  { id: 3, vAlign: 'top', nowrap: false },
+]
 
 const RECT_TAGS = [
   '<a:srcRect l="12500" t="-3000" r="0" b="99999.5"/>',
@@ -184,11 +216,19 @@ const RECT_NAMES = ['l', 't', 'r', 'b', 'bright', 'contrast', 'thresh', 'x(', ''
 
 const pic = (spPr: string): string => `<pic:pic><pic:nvPicPr/><pic:spPr${spPr}</pic:spPr></pic:pic>`
 const PIC_XMLS = [
-  pic('><a:xfrm rot="5400000" flipH="1"><a:off x="0" y="0"/></a:xfrm><a:ln w="19050"><a:solidFill><a:srgbClr val="ff00aa"/></a:solidFill></a:ln>'),
-  pic(' bwMode="auto"><a:xfrm rot="-60000" flipV="true"/><a:ln><a:solidFill> <a:srgbClr val="00FF00"/></a:solidFill></a:ln>'),
+  pic(
+    '><a:xfrm rot="5400000" flipH="1"><a:off x="0" y="0"/></a:xfrm><a:ln w="19050"><a:solidFill><a:srgbClr val="ff00aa"/></a:solidFill></a:ln>',
+  ),
+  pic(
+    ' bwMode="auto"><a:xfrm rot="-60000" flipV="true"/><a:ln><a:solidFill> <a:srgbClr val="00FF00"/></a:solidFill></a:ln>',
+  ),
   pic('><a:xfrm rot="21570000" flipH="0"/><a:ln w="0"><a:noFill/></a:ln>'),
-  pic('><a:xfrm rot="30000"/><a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:ln>'),
-  pic('><a:xfrm/><a:ln w="12700"><a:noFill /><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>'),
+  pic(
+    '><a:xfrm rot="30000"/><a:ln w="12700"><a:solidFill><a:schemeClr val="accent1"/></a:solidFill></a:ln>',
+  ),
+  pic(
+    '><a:xfrm/><a:ln w="12700"><a:noFill /><a:solidFill><a:srgbClr val="000000"/></a:solidFill></a:ln>',
+  ),
   pic('><a:xfrm rot="abc" flipV="1" flipH="true"></a:xfrm>'),
   pic('></a:xfrm>'),
   '<wps:spPr><a:xfrm rot="5400000"/><a:ln w="9525"><a:solidFill><a:srgbClr val="123456"/></a:solidFill></a:ln></wps:spPr>',
@@ -196,7 +236,11 @@ const PIC_XMLS = [
   '',
 ]
 
-const groupDrawing = (pics: string, ext = '<wp:extent cx="2000000" cy="1000000"/>', grp = ''): string =>
+const groupDrawing = (
+  pics: string,
+  ext = '<wp:extent cx="2000000" cy="1000000"/>',
+  grp = '',
+): string =>
   `<w:drawing><wp:anchor>${ext}<a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr>${grp}</wpg:grpSpPr>${pics}</wpg:wgp></a:graphicData></a:graphic></wp:anchor></w:drawing>`
 const groupPic = (rId: string, xfrm: string, link = false): string =>
   `<pic:pic><pic:blipFill><a:blip r:${link ? 'link' : 'embed'}="${rId}"/></pic:blipFill><pic:spPr>${xfrm}</pic:spPr></pic:pic>`
@@ -210,18 +254,49 @@ const MEDIA: Array<[string, string]> = [
   ['rId3', ''],
 ]
 const GROUP_DRAWINGS = [
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 1000000, 500000)) + groupPic('rId2', PIC_XFRM(500000, 250000, 1000000, 500000)), undefined, GRP_XFRM),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 1000000, 500000)) + groupPic('rId2', PIC_XFRM(-7, 0, 3, 3), true)),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 1000000, 500000)) +
+      groupPic('rId2', PIC_XFRM(500000, 250000, 1000000, 500000)),
+    undefined,
+    GRP_XFRM,
+  ),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 1000000, 500000)) +
+      groupPic('rId2', PIC_XFRM(-7, 0, 3, 3), true),
+  ),
   groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + groupPic('rId9', PIC_XFRM(0, 0, 10, 10))),
   groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + groupPic('rId3', PIC_XFRM(0, 0, 10, 10))),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10, ' rot="60000"')) + groupPic('rId2', PIC_XFRM(0, 0, 10, 10))),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10, ' flipH="0"')) + groupPic('rId2', PIC_XFRM(0, 0, 10, 10))),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10, ' rot="x"')) + groupPic('rId2', PIC_XFRM(0, 0, 0, 10))),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + groupPic('rId2', PIC_XFRM(0, 0, 10, 10)) + '<wps:wsp/>'),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + '<wpg:grpSp>' + groupPic('rId2', PIC_XFRM(0, 0, 10, 10)) + '</wpg:grpSp>'),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 10, 10, ' rot="60000"')) +
+      groupPic('rId2', PIC_XFRM(0, 0, 10, 10)),
+  ),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 10, 10, ' flipH="0"')) +
+      groupPic('rId2', PIC_XFRM(0, 0, 10, 10)),
+  ),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 10, 10, ' rot="x"')) + groupPic('rId2', PIC_XFRM(0, 0, 0, 10)),
+  ),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) +
+      groupPic('rId2', PIC_XFRM(0, 0, 10, 10)) +
+      '<wps:wsp/>',
+  ),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) +
+      '<wpg:grpSp>' +
+      groupPic('rId2', PIC_XFRM(0, 0, 10, 10)) +
+      '</wpg:grpSp>',
+  ),
   groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10))),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + groupPic('rId2', PIC_XFRM(0, 0, 10, 10)), '<wp:extent cx="0" cy="5"/>'),
-  groupDrawing(groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + groupPic('rId2', PIC_XFRM(0, 0, 10, 10)), ''),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + groupPic('rId2', PIC_XFRM(0, 0, 10, 10)),
+    '<wp:extent cx="0" cy="5"/>',
+  ),
+  groupDrawing(
+    groupPic('rId1', PIC_XFRM(0, 0, 10, 10)) + groupPic('rId2', PIC_XFRM(0, 0, 10, 10)),
+    '',
+  ),
   groupDrawing(groupPic('rId1', '') + groupPic('rId2', PIC_XFRM(0, 0, 10, 10))),
   '<w:drawing><wp:inline/></w:drawing>',
   '<wpg:wgp><pic:pic/><pic:pic/></wpg:wgp>',
@@ -259,8 +334,17 @@ const SETTINGS_XMLS = [
   '<w:settings><w:footnotePr><w:pos w:val="beneathText"/><w:numRestart w:val="eachSect"/></w:footnotePr></w:settings>',
   '',
 ]
-const SETTINGS_TAGS = ['w:gutterAtTop', 'w:evenAndOddHeaders', 'w:mirrorMargins', 'w:trackRevisions', 'w:autoHyphenation', 'w:(', '']
-const settingsParts = (xml: string): Array<[string, string]> => (xml === '' ? [] : [[SETTINGS, xml]])
+const SETTINGS_TAGS = [
+  'w:gutterAtTop',
+  'w:evenAndOddHeaders',
+  'w:mirrorMargins',
+  'w:trackRevisions',
+  'w:autoHyphenation',
+  'w:(',
+  '',
+]
+const settingsParts = (xml: string): Array<[string, string]> =>
+  xml === '' ? [] : [[SETTINGS, xml]]
 
 const sectPr = (inner: string): string => `<w:sectPr>${inner}</w:sectPr>`
 const NOTE_DOCUMENTS = [
@@ -275,14 +359,17 @@ const NOTE_DOCUMENTS = [
 const SOURCES_NS = 'http://schemas.openxmlformats.org/officeDocument/2006/bibliography'
 const SOURCES_XML = `<b:Sources xmlns:b="${SOURCES_NS}"><b:Source><b:Tag>Smi20</b:Tag><b:SourceType>Book</b:SourceType><b:Author><b:Author><b:NameList><b:Person><b:Last>Smith</b:Last><b:First>A</b:First></b:Person></b:NameList></b:Author></b:Author><b:Title>T &amp; U</b:Title><b:Year>2020</b:Year></b:Source></b:Sources>`
 const SOURCES_PACKAGES: Array<Array<[string, string]>> = [
-  [['customXml/item1.xml', '<other/>'], ['customXml/item2.xml', SOURCES_XML]],
+  [
+    ['customXml/item1.xml', '<other/>'],
+    ['customXml/item2.xml', SOURCES_XML],
+  ],
   [['customXml/item1.xml', `<b:Sources xmlns:b="${SOURCES_NS}"/>`]],
   [['customXml/itemProps1.xml', SOURCES_XML]],
   [],
 ]
 
 const PLACEHOLDER_HASH = '0123456789abcdef'.repeat(4)
-const placeholder = (hash: string, tail = '\n'): string => `GENOFFICE-LAZY-MEDIA\n${hash}${tail}`
+const placeholder = (hash: string, tail = '\n'): string => `SEUOFFICE-LAZY-MEDIA\n${hash}${tail}`
 const MEDIA_PARTS: Array<[string, string, string]> = [
   ['word/media/image1.png', placeholder(PLACEHOLDER_HASH), 'image/png'],
   ['word/media/ä b#1.png', placeholder('f'.repeat(64)), 'image/png'],
@@ -290,7 +377,11 @@ const MEDIA_PARTS: Array<[string, string, string]> = [
   ['word/media/image3.png', placeholder(PLACEHOLDER_HASH, '\r'), 'image/png'],
   ['word/media/image4.png', placeholder(PLACEHOLDER_HASH.slice(1), 'x\n'), 'image/png'],
   ['word/media/image5.png', placeholder(PLACEHOLDER_HASH) + '\n', 'image/png'],
-  ['word/media/image6.svg', '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>', 'image/svg+xml'],
+  [
+    'word/media/image6.svg',
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"/>',
+    'image/svg+xml',
+  ],
   ['word/media/empty.png', '', 'image/png'],
   ['word/media/text.svg', 'ü€😀', ''],
 ]
@@ -327,7 +418,15 @@ const TXBX_PARTS: Array<[string, string]> = [
 ]
 
 /** a solid-fill custGeom shape of a wpg group: x, y, cx, cy in EMU */
-const wsp = (x: number, y: number, cx: number, cy: number, geom: string, spPr = '<a:solidFill><a:srgbClr val="1f497d"/></a:solidFill>', tail = ''): string =>
+const wsp = (
+  x: number,
+  y: number,
+  cx: number,
+  cy: number,
+  geom: string,
+  spPr = '<a:solidFill><a:srgbClr val="1f497d"/></a:solidFill>',
+  tail = '',
+): string =>
   `<wps:wsp><wps:spPr><a:xfrm><a:off x="${x}" y="${y}"/><a:ext cx="${cx}" cy="${cy}"/></a:xfrm>${geom}${spPr}</wps:spPr>${tail}</wps:wsp>`
 const geom = (paths: string, guides = ''): string =>
   `<a:custGeom><a:avLst/><a:gdLst>${guides}</a:gdLst><a:pathLst>${paths}</a:pathLst></a:custGeom>`
@@ -346,14 +445,42 @@ const NO_SIZE = geom(
   '<a:path><a:moveTo><a:pt x="0" y="0"/></a:moveTo><a:lnTo><a:pt x="20" y="40"/></a:lnTo></a:path><a:path><a:moveTo><a:pt x="10" y="5"/></a:moveTo><a:lnTo><a:pt x="-3" y="60"/></a:lnTo></a:path>',
 )
 const LINE_LN = '<a:ln w="12700"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln>'
-const shapeDrawing = (shapes: string, extent = '<wp:extent cx="952500" cy="476250"/>', grp = ''): string =>
+const shapeDrawing = (
+  shapes: string,
+  extent = '<wp:extent cx="952500" cy="476250"/>',
+  grp = '',
+): string =>
   `<w:drawing><wp:anchor>${extent}<a:graphic><a:graphicData><wpg:wgp><wpg:grpSpPr>${grp}</wpg:grpSpPr>${shapes}</wpg:wgp></a:graphicData></a:graphic></wp:anchor></w:drawing>`
 const SVG_FRAGS = [
   shapeDrawing(wsp(0, 0, 952500, 476250, SQUARE)),
-  shapeDrawing(wsp(0, 0, 952500, 476250, CURVES) + wsp(9525, 19050, 95250, 95250, ARCS), undefined, GRP_XFRM),
+  shapeDrawing(
+    wsp(0, 0, 952500, 476250, CURVES) + wsp(9525, 19050, 95250, 95250, ARCS),
+    undefined,
+    GRP_XFRM,
+  ),
   shapeDrawing(wsp(0, 0, 0, 476250, NO_SIZE, LINE_LN)),
-  shapeDrawing(wsp(10, 10, 952500, 0, SQUARE, '<a:ln w="25400"><a:noFill/></a:ln>', '<wps:style><a:lnRef idx="2"><a:srgbClr val="00FF00"/></a:lnRef></wps:style>')),
-  shapeDrawing(wsp(10, 10, 952500, 0, SQUARE, '<a:ln w="25400"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln>', '<wps:style><a:lnRef idx="2"><a:srgbClr val="00FF00"/></a:lnRef></wps:style>')),
+  shapeDrawing(
+    wsp(
+      10,
+      10,
+      952500,
+      0,
+      SQUARE,
+      '<a:ln w="25400"><a:noFill/></a:ln>',
+      '<wps:style><a:lnRef idx="2"><a:srgbClr val="00FF00"/></a:lnRef></wps:style>',
+    ),
+  ),
+  shapeDrawing(
+    wsp(
+      10,
+      10,
+      952500,
+      0,
+      SQUARE,
+      '<a:ln w="25400"><a:solidFill><a:schemeClr val="tx1"/></a:solidFill></a:ln>',
+      '<wps:style><a:lnRef idx="2"><a:srgbClr val="00FF00"/></a:lnRef></wps:style>',
+    ),
+  ),
   shapeDrawing(wsp(0, 0, 100, 100, SQUARE, '<a:noFill/>')),
   shapeDrawing(wsp(0, 0, 100, 100, '')),
   shapeDrawing(wsp(0, 0, -1, 100, SQUARE)),
@@ -365,24 +492,71 @@ const SVG_FRAGS = [
   shapeDrawing(wsp(0, 0, 100, 100, SQUARE), '<wp:extent cx="0" cy="5"/>'),
   `<mc:AlternateContent><mc:Choice>${shapeDrawing(wsp(0, 0, 100, 100, SQUARE))}</mc:Choice><mc:Fallback><w:pict><v:shape style="rotation:90"/></w:pict><wps:wsp/></mc:Fallback></mc:AlternateContent>`,
   shapeDrawing(wsp(0, 0, 100, 100, geom('<a:path w="100" h="100"><a:close/></a:path>'))),
-  shapeDrawing(wsp(0, 0, 100, 100, '<a:custGeom><a:pathLst><a:path w="1" h="1"><a:moveTo><a:pt x="0" y="0"/></a:moveTo></a:path></a:pathLst>')),
-  shapeDrawing(wsp(0, 0, 100, 100, geom('<a:path w="1" h="1" fill="none" stroke="none"><a:moveTo><a:pt x="0" y="0"/></a:moveTo></a:path>'))),
-  shapeDrawing(wsp(0, 0, 100, 100, geom('<a:path w="2" h="2"><!-- a > b --><a:moveTo><a:pt x="1" y="1" name="a>b"/></a:moveTo><a:lnTo><a:pt x="2" y="2"/></a:lnTo><a:gd name="x" fmla="val 1"/></a:path>'))),
+  shapeDrawing(
+    wsp(
+      0,
+      0,
+      100,
+      100,
+      '<a:custGeom><a:pathLst><a:path w="1" h="1"><a:moveTo><a:pt x="0" y="0"/></a:moveTo></a:path></a:pathLst>',
+    ),
+  ),
+  shapeDrawing(
+    wsp(
+      0,
+      0,
+      100,
+      100,
+      geom(
+        '<a:path w="1" h="1" fill="none" stroke="none"><a:moveTo><a:pt x="0" y="0"/></a:moveTo></a:path>',
+      ),
+    ),
+  ),
+  shapeDrawing(
+    wsp(
+      0,
+      0,
+      100,
+      100,
+      geom(
+        '<a:path w="2" h="2"><!-- a > b --><a:moveTo><a:pt x="1" y="1" name="a>b"/></a:moveTo><a:lnTo><a:pt x="2" y="2"/></a:lnTo><a:gd name="x" fmla="val 1"/></a:path>',
+      ),
+    ),
+  ),
   // a point at -0.125 px: a tie Math.round takes up, toward zero
   shapeDrawing(
-    wsp(0, 0, 9525, 9525, geom('<a:path w="1000" h="1000"><a:moveTo><a:pt x="-125" y="-375"/></a:moveTo><a:lnTo><a:pt x="1000" y="1000"/></a:lnTo></a:path>')),
+    wsp(
+      0,
+      0,
+      9525,
+      9525,
+      geom(
+        '<a:path w="1000" h="1000"><a:moveTo><a:pt x="-125" y="-375"/></a:moveTo><a:lnTo><a:pt x="1000" y="1000"/></a:lnTo></a:path>',
+      ),
+    ),
   ),
   // Object.prototype members as guide names: NaN in the TypeScript, and a guide named __proto__ is not kept
   shapeDrawing(
-    wsp(0, 0, 100, 100, geom(
-      '<a:path w="10" h="10"><a:moveTo><a:pt x="g1" y="__proto__"/></a:moveTo><a:lnTo><a:pt x="valueOf" y="hasOwnProperty"/></a:lnTo><a:arcTo wR="__proto__" hR="5" stAng="0" swAng="5400000"/><a:lnTo><a:pt x="toString" y="5"/></a:lnTo></a:path>',
-      '<a:gd name="g1" fmla="val toString"/><a:gd name="__proto__" fmla="val 5"/>',
-    )),
+    wsp(
+      0,
+      0,
+      100,
+      100,
+      geom(
+        '<a:path w="10" h="10"><a:moveTo><a:pt x="g1" y="__proto__"/></a:moveTo><a:lnTo><a:pt x="valueOf" y="hasOwnProperty"/></a:lnTo><a:arcTo wR="__proto__" hR="5" stAng="0" swAng="5400000"/><a:lnTo><a:pt x="toString" y="5"/></a:lnTo></a:path>',
+        '<a:gd name="g1" fmla="val toString"/><a:gd name="__proto__" fmla="val 5"/>',
+      ),
+    ),
   ),
   '<w:drawing><wp:inline><a:graphic/></wp:inline></w:drawing>',
 ]
 
-const TEXTBOX_PARAS = [{ runs: [] }, { runs: [], cells: [] }, { runs: [{ text: 'a' }] }, { runs: [{ text: '' }], styleId: 'x' }]
+const TEXTBOX_PARAS = [
+  { runs: [] },
+  { runs: [], cells: [] },
+  { runs: [{ text: 'a' }] },
+  { runs: [{ text: '' }], styleId: 'x' },
+]
 
 const DOCUMENT_VML_FLAGS = /\b(?:stroked|filled|on)="([^"]*)"/g
 
@@ -400,22 +574,31 @@ export const PARSE_DRAWINGS: CallSpec[] = [
       },
     },
     built: ANCHOR_FRAGS.flatMap((text) =>
-      [{ imageWidthPx: 96 }, { imageWidthPx: 0 }, {}, { imageWidthPx: 1000.5, imageWrap: 'square-left' }].flatMap((meta) =>
-        SECTS.map((sect) => ({ text, args: { meta, sect } })),
-      ),
+      [
+        { imageWidthPx: 96 },
+        { imageWidthPx: 0 },
+        {},
+        { imageWidthPx: 1000.5, imageWrap: 'square-left' },
+      ].flatMap((meta) => SECTS.map((sect) => ({ text, args: { meta, sect } }))),
     ),
     argMutation: true,
   },
   {
     fn: 'parse.vmlHrRule',
     call: (text) => internals.vmlHrRule!(text),
-    fromParse: { fn: 'vmlHrRule', input: ([tag]) => (typeof tag === 'string' ? { text: tag } : undefined) },
+    fromParse: {
+      fn: 'vmlHrRule',
+      input: ([tag]) => (typeof tag === 'string' ? { text: tag } : undefined),
+    },
     built: HR_RECTS.map((text) => ({ text })),
   },
   {
     fn: 'parse.txbxParaVisible',
     call: (_text, args) => internals.txbxParaVisible!(args.p),
-    fromParse: { fn: 'txbxParaVisible', input: ([p]) => (isObject(p) ? { args: { p: copy(p) } } : undefined) },
+    fromParse: {
+      fn: 'txbxParaVisible',
+      input: ([p]) => (isObject(p) ? { args: { p: copy(p) } } : undefined),
+    },
     built: TEXTBOX_PARAS.map((p) => ({ args: { p } })),
     mutation: 'none',
     argMutation: true,
@@ -423,18 +606,29 @@ export const PARSE_DRAWINGS: CallSpec[] = [
   {
     fn: 'parse.hasFloatingVmlGeometry',
     call: (text) => internals.hasFloatingVmlGeometry!(text),
-    fromParse: { fn: 'hasFloatingVmlGeometry', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
+    fromParse: {
+      fn: 'hasFloatingVmlGeometry',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
     built: [...FLOATING_VML, ...VML_PARAS].map((text) => ({ text })),
   },
   {
     fn: 'parse.vmlPictsInlineOnly',
     call: (text, args) =>
-      internals.vmlPictsInlineOnly!(text, Array.isArray(args.shapeTypes) ? new Map(args.shapeTypes as Array<[string, unknown]>) : undefined),
+      internals.vmlPictsInlineOnly!(
+        text,
+        Array.isArray(args.shapeTypes)
+          ? new Map(args.shapeTypes as Array<[string, unknown]>)
+          : undefined,
+      ),
     fromParse: {
       fn: 'vmlPictsInlineOnly',
       input: ([xml, shapeTypes]) =>
         typeof xml === 'string'
-          ? { text: xml, args: shapeTypes instanceof Map ? { shapeTypes: copy([...shapeTypes]) } : {} }
+          ? {
+              text: xml,
+              args: shapeTypes instanceof Map ? { shapeTypes: copy([...shapeTypes]) } : {},
+            }
           : undefined,
     },
     built: VML_PARAS.flatMap((text) => [{ text }, { text, args: { shapeTypes: SHAPE_TYPES } }]),
@@ -451,10 +645,16 @@ export const PARSE_DRAWINGS: CallSpec[] = [
       },
     },
     fromDocument: (parts) =>
-      [...new Set([...parts.values()].flatMap((xml) => [...xml.matchAll(DOCUMENT_VML_FLAGS)].map((m) => m[1]!)))].map(
-        (value) => ({ args: { value } }),
-      ),
-    built: ['f', 'false', '0', 't', 'true', '1', '', 'F', 'off', ' f'].map((value): Input => ({ args: { value } })).concat([{ args: {} }]),
+      [
+        ...new Set(
+          [...parts.values()].flatMap((xml) =>
+            [...xml.matchAll(DOCUMENT_VML_FLAGS)].map((m) => m[1]!),
+          ),
+        ),
+      ].map((value) => ({ args: { value } })),
+    built: ['f', 'false', '0', 't', 'true', '1', '', 'F', 'off', ' f']
+      .map((value): Input => ({ args: { value } }))
+      .concat([{ args: {} }]),
     mutation: 'none',
   },
   {
@@ -462,9 +662,29 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     call: (_text, args) => internals.vmlStrokeWeightPx!(args.value),
     fromParse: {
       fn: 'vmlStrokeWeightPx',
-      input: ([value]) => (value === undefined || typeof value === 'string' ? { args: value === undefined ? {} : { value } } : undefined),
+      input: ([value]) =>
+        value === undefined || typeof value === 'string'
+          ? { args: value === undefined ? {} : { value } }
+          : undefined,
     },
-    built: ['0.75pt', '2px', ' 1 ', '0', '-1pt', '1.5 pt', 'abc', '1e2', '..', '1.2.3pt', '', '3in', '1px ', '.5', '0.333px', '\u00a01pt']
+    built: [
+      '0.75pt',
+      '2px',
+      ' 1 ',
+      '0',
+      '-1pt',
+      '1.5 pt',
+      'abc',
+      '1e2',
+      '..',
+      '1.2.3pt',
+      '',
+      '3in',
+      '1px ',
+      '.5',
+      '0.333px',
+      '\u00a01pt',
+    ]
       .map((value): Input => ({ args: { value } }))
       .concat([{ args: {} }]),
     mutation: 'none',
@@ -479,9 +699,13 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     fromParse: {
       fn: 'applyVmlMsoPosition',
       input: ([box, style, sect]) =>
-        isObject(box) && typeof style === 'string' && isObject(sect) ? { text: style, args: { box: copy(box), sect } } : undefined,
+        isObject(box) && typeof style === 'string' && isObject(sect)
+          ? { text: style, args: { box: copy(box), sect } }
+          : undefined,
     },
-    built: MSO_STYLES.flatMap((text) => BOXES.flatMap((box) => SECTS.map((sect) => ({ text, args: { box, sect } })))),
+    built: MSO_STYLES.flatMap((text) =>
+      BOXES.flatMap((box) => SECTS.map((sect) => ({ text, args: { box, sect } }))),
+    ),
     argMutation: true,
   },
   {
@@ -512,17 +736,42 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     fn: 'parse.hfShapeDrawingSvg',
     call: (text) => internals.hfShapeDrawingSvg!(text),
     listed: custgeomInheritedGuide,
-    fromParse: { fn: 'hfShapeDrawingSvg', input: ([frag]) => (typeof frag === 'string' ? { text: frag } : undefined) },
-    built: SVG_FRAGS.map((text): Input => (custgeomInheritedGuide(text, {}) ? { text, seed: false } : { text })),
+    fromParse: {
+      fn: 'hfShapeDrawingSvg',
+      input: ([frag]) => (typeof frag === 'string' ? { text: frag } : undefined),
+    },
+    built: SVG_FRAGS.map((text): Input =>
+      custgeomInheritedGuide(text, {}) ? { text, seed: false } : { text },
+    ),
   },
   {
     fn: 'parse.vmlLengthPx',
     call: (_text, args) => internals.vmlLengthPx!(args.raw),
     fromParse: {
       fn: 'vmlLengthPx',
-      input: ([raw]) => (raw === undefined || typeof raw === 'string' ? { args: raw === undefined ? {} : { raw } } : undefined),
+      input: ([raw]) =>
+        raw === undefined || typeof raw === 'string'
+          ? { args: raw === undefined ? {} : { raw } }
+          : undefined,
     },
-    built: ['46pt', '16in', '2cm', '12px', '1pc', '3mm', '0', '-1.5pt', ' 7 pt ', '1em', '..', '', 'pt', '1e3pt', '0.1', '-']
+    built: [
+      '46pt',
+      '16in',
+      '2cm',
+      '12px',
+      '1pc',
+      '3mm',
+      '0',
+      '-1.5pt',
+      ' 7 pt ',
+      '1em',
+      '..',
+      '',
+      'pt',
+      '1e3pt',
+      '0.1',
+      '-',
+    ]
       .map((raw): Input => ({ args: { raw } }))
       .concat([{ args: {} }]),
     mutation: 'none',
@@ -536,7 +785,10 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     },
     fromParse: {
       fn: 'readBodyPr',
-      input: ([bodyPr, box]) => (isNode(bodyPr) && isObject(box) ? { text: serializeXNode(bodyPr), args: { box: copy(box) } } : undefined),
+      input: ([bodyPr, box]) =>
+        isNode(bodyPr) && isObject(box)
+          ? { text: serializeXNode(bodyPr), args: { box: copy(box) } }
+          : undefined,
     },
     built: BODY_PRS.flatMap((text) => TEXT_BOXES.map((box) => ({ text, args: { box } }))),
     argMutation: true,
@@ -546,19 +798,29 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     call: (text, args) => internals.rectFrac!(text, args.name),
     fromParse: {
       fn: 'rectFrac',
-      input: ([tag, name]) => (typeof tag === 'string' && typeof name === 'string' ? { text: tag, args: { name } } : undefined),
+      input: ([tag, name]) =>
+        typeof tag === 'string' && typeof name === 'string'
+          ? { text: tag, args: { name } }
+          : undefined,
     },
     built: RECT_TAGS.flatMap((text) => RECT_NAMES.map((name) => ({ text, args: { name } }))),
   },
   {
     fn: 'parse.picBorderOf',
     call: (text) => internals.picBorderOf!(text),
-    fromParse: { fn: 'picBorderOf', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
+    fromParse: {
+      fn: 'picBorderOf',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
     built: PIC_XMLS.map((text) => ({ text })),
   },
   {
     fn: 'parse.groupPictureLayers',
-    call: (text, args) => internals.groupPictureLayers!(nodeOf(text), new Map(args.mediaByRid as Array<[string, string]>)),
+    call: (text, args) =>
+      internals.groupPictureLayers!(
+        nodeOf(text),
+        new Map(args.mediaByRid as Array<[string, string]>),
+      ),
     fromParse: {
       fn: 'groupPictureLayers',
       input: ([drawing, mediaByRid]) =>
@@ -571,34 +833,54 @@ export const PARSE_DRAWINGS: CallSpec[] = [
   {
     fn: 'parse.picTransformOf',
     call: (text) => internals.picTransformOf!(text),
-    fromParse: { fn: 'picTransformOf', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
+    fromParse: {
+      fn: 'picTransformOf',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
     built: PIC_XMLS.map((text) => ({ text })),
   },
   {
     fn: 'parse.vmlImageMeta',
     call: (text) => internals.vmlImageMeta!(text),
-    fromParse: { fn: 'vmlImageMeta', input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined) },
+    fromParse: {
+      fn: 'vmlImageMeta',
+      input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
+    },
     built: VML_IMAGES.map((text) => ({ text })),
   },
   {
     fn: 'parse.relPartPath',
     call: (_text, args) =>
       internals.relPartPath!(
-        { rels: new Map(args.rels as Array<[string, RelInfo]>), ...(args.sourcePath !== undefined ? { sourcePath: args.sourcePath } : {}) },
+        {
+          rels: new Map(args.rels as Array<[string, RelInfo]>),
+          ...(args.sourcePath !== undefined ? { sourcePath: args.sourcePath } : {}),
+        },
         args.rId,
       ),
     fromParse: {
       fn: 'relPartPath',
       input: ([ctx, rId]) => {
         const rels = isObject(ctx) ? relsEntries(ctx.rels) : undefined
-        if (!isObject(ctx) || !rels || (rId !== undefined && typeof rId !== 'string')) return undefined
+        if (!isObject(ctx) || !rels || (rId !== undefined && typeof rId !== 'string'))
+          return undefined
         const sourcePath = sourcePathOf(ctx)
-        return { args: { rels, ...(sourcePath !== undefined ? { sourcePath } : {}), ...(rId !== undefined ? { rId } : {}) } }
+        return {
+          args: {
+            rels,
+            ...(sourcePath !== undefined ? { sourcePath } : {}),
+            ...(rId !== undefined ? { rId } : {}),
+          },
+        }
       },
     },
     built: [...RELS.map(([id]) => id), 'rId99', undefined].flatMap((rId) =>
       [undefined, 'word/header1.xml', 'word/glossary/document.xml', ''].map((sourcePath) => ({
-        args: { rels: RELS, ...(sourcePath !== undefined ? { sourcePath } : {}), ...(rId !== undefined ? { rId } : {}) },
+        args: {
+          rels: RELS,
+          ...(sourcePath !== undefined ? { sourcePath } : {}),
+          ...(rId !== undefined ? { rId } : {}),
+        },
       })),
     ),
     mutation: 'none',
@@ -624,18 +906,25 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     fromParse: {
       fn: 'parseNoteProps',
       input: ([, documentXml], parts) =>
-        typeof documentXml === 'string' ? { text: documentXml, args: { parts: partsNamed(parts, SETTINGS) } } : undefined,
+        typeof documentXml === 'string'
+          ? { text: documentXml, args: { parts: partsNamed(parts, SETTINGS) } }
+          : undefined,
     },
-    built: NOTE_DOCUMENTS.flatMap((text) => SETTINGS_XMLS.map((xml) => ({ text, args: { parts: settingsParts(xml) } }))),
+    built: NOTE_DOCUMENTS.flatMap((text) =>
+      SETTINGS_XMLS.map((xml) => ({ text, args: { parts: settingsParts(xml) } })),
+    ),
   },
   {
     fn: 'parse.parseSettingsFlag',
     call: (_text, args) => internals.parseSettingsFlag!(zipOf(args.parts), args.tag),
     fromParse: {
       fn: 'parseSettingsFlag',
-      input: ([, tag], parts) => (typeof tag === 'string' ? { args: { ...settingsOnly(parts).args, tag } } : undefined),
+      input: ([, tag], parts) =>
+        typeof tag === 'string' ? { args: { ...settingsOnly(parts).args, tag } } : undefined,
     },
-    built: SETTINGS_XMLS.flatMap((xml) => SETTINGS_TAGS.map((tag) => ({ args: { parts: settingsParts(xml), tag } }))),
+    built: SETTINGS_XMLS.flatMap((xml) =>
+      SETTINGS_TAGS.map((tag) => ({ args: { parts: settingsParts(xml), tag } })),
+    ),
     mutation: 'none',
   },
   {
@@ -643,7 +932,9 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     call: (_text, args) => internals.parseSources!(zipOf(args.parts)),
     fromParse: {
       fn: 'parseSources',
-      input: (_args, parts) => ({ args: { parts: [...parts].filter(([name]) => name.startsWith('customXml/')) } }),
+      input: (_args, parts) => ({
+        args: { parts: [...parts].filter(([name]) => name.startsWith('customXml/')) },
+      }),
     },
     built: SOURCES_PACKAGES.map((parts) => ({ args: { parts } })),
     mutation: 'none',
@@ -659,7 +950,9 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     fn: 'parse.mediaPartSrc',
     // a zip read from bytes, as parseDocx has it: its parts carry the size the zip declares
     call: async (_text, args) => {
-      const zip = await JSZip.loadAsync(await zipOf(args.parts).generateAsync({ type: 'uint8array' }))
+      const zip = await JSZip.loadAsync(
+        await zipOf(args.parts).generateAsync({ type: 'uint8array' }),
+      )
       const partPath = args.partPath as string
       const src = await internals.mediaPartSrc!(zip, zip.file(partPath), partPath, args.mime)
       const lazy = internals.lazyHashesByZip as unknown as WeakMap<JSZip, Set<string>>
@@ -668,12 +961,23 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     fromParse: {
       fn: 'mediaPartSrc',
       input: ([, file, partPath, mime]) => {
-        const text = typeof partPath === 'string' && typeof mime === 'string' ? partText(file) : undefined
-        return text === undefined ? undefined : { args: { parts: [[partPath, text]], partPath, mime } }
+        const text =
+          typeof partPath === 'string' && typeof mime === 'string' ? partText(file) : undefined
+        return text === undefined
+          ? undefined
+          : { args: { parts: [[partPath, text]], partPath, mime } }
       },
     },
-    built: MEDIA_PARTS.map(([name, text, mime]) => ({ args: { parts: [[name, text]], partPath: name, mime } })).concat([
-      { args: { parts: [['word/media/a.png', 'x']], partPath: 'word/media/b.png', mime: 'image/png' } },
+    built: MEDIA_PARTS.map(([name, text, mime]) => ({
+      args: { parts: [[name, text]], partPath: name, mime },
+    })).concat([
+      {
+        args: {
+          parts: [['word/media/a.png', 'x']],
+          partPath: 'word/media/b.png',
+          mime: 'image/png',
+        },
+      },
     ]),
     mutation: 'none',
     argMutation: true,
@@ -691,20 +995,35 @@ export const PARSE_DRAWINGS: CallSpec[] = [
       fn: 'externalTxbxParts',
       input: ([documentXml, , rels, sourcePath], parts) => {
         const entries = relsEntries(rels)
-        if (typeof documentXml !== 'string' || !entries || (sourcePath !== undefined && typeof sourcePath !== 'string')) return undefined
+        if (
+          typeof documentXml !== 'string' ||
+          !entries ||
+          (sourcePath !== undefined && typeof sourcePath !== 'string')
+        )
+          return undefined
         const map = rels as Map<string, RelInfo>
-        const ids = [...documentXml.matchAll(/<wps:txbx\b[^>]*\br:txbx="([^"]+)"/g)].map((m) => m[1])
+        const ids = [...documentXml.matchAll(/<wps:txbx\b[^>]*\br:txbx="([^"]+)"/g)].map(
+          (m) => m[1],
+        )
         const named = ids.flatMap((rId) => relPart(parts, map, rId, sourcePath))
         return {
           text: documentXml,
-          args: { parts: [...new Map(named)], rels: entries, ...(sourcePath !== undefined ? { sourcePath } : {}) },
+          args: {
+            parts: [...new Map(named)],
+            rels: entries,
+            ...(sourcePath !== undefined ? { sourcePath } : {}),
+          },
         }
       },
     },
     built: TXBX_DOCUMENTS.flatMap((text) =>
       [undefined, 'word/sub/document.xml'].map((sourcePath) => ({
         text,
-        args: { parts: TXBX_PARTS, rels: RELS, ...(sourcePath !== undefined ? { sourcePath } : {}) },
+        args: {
+          parts: TXBX_PARTS,
+          rels: RELS,
+          ...(sourcePath !== undefined ? { sourcePath } : {}),
+        },
       })),
     ),
   },
@@ -725,7 +1044,8 @@ export const PARSE_DRAWINGS: CallSpec[] = [
       fn: 'extractChart',
       input: ([xml, ctx], parts) => {
         const rels = isObject(ctx) ? relsEntries(ctx.rels) : undefined
-        if (typeof xml !== 'string' || !isObject(ctx) || !rels || !isObject(ctx.chartParts)) return undefined
+        if (typeof xml !== 'string' || !isObject(ctx) || !rels || !isObject(ctx.chartParts))
+          return undefined
         const sourcePath = sourcePathOf(ctx)
         const rId = /<cx?:chart [^>]*r:id="([^"]+)"/.exec(xml)?.[1]
         return {
@@ -743,8 +1063,16 @@ export const PARSE_DRAWINGS: CallSpec[] = [
     built: CHART_DRAWINGS.flatMap((text) =>
       [
         { chartParts: {} },
-        { chartParts: { 'word/charts/chart1.xml': 'old', '2': 'two' }, themeColors: null, sourcePath: 'word/document.xml' },
-        { chartParts: {}, themeColors: { accent1: '112233', dk1: '000000' }, sourcePath: 'word/sub/x.xml' },
+        {
+          chartParts: { 'word/charts/chart1.xml': 'old', '2': 'two' },
+          themeColors: null,
+          sourcePath: 'word/document.xml',
+        },
+        {
+          chartParts: {},
+          themeColors: { accent1: '112233', dk1: '000000' },
+          sourcePath: 'word/sub/x.xml',
+        },
       ].map((extra) => ({ text, args: { parts: CHART_PARTS, rels: RELS, ...extra } })),
     ),
     argMutation: true,
@@ -758,13 +1086,13 @@ export const PARSE_DRAWINGS: CallSpec[] = [
  */
 function partText(file: unknown): string | undefined {
   const data = (file as JSZipObject & { _data?: unknown })._data as
-    | { compressedContent?: Uint8Array; compression?: { magic?: string } }
-    | Uint8Array
-    | undefined
+    { compressedContent?: Uint8Array; compression?: { magic?: string } } | Uint8Array | undefined
   let bytes: Uint8Array | undefined
   if (data instanceof Uint8Array) bytes = data
-  else if (data?.compressedContent && data.compression?.magic === '\x00\x00') bytes = data.compressedContent
-  else if (data?.compressedContent && data.compression?.magic === '\x08\x00') bytes = inflateRawSync(data.compressedContent)
+  else if (data?.compressedContent && data.compression?.magic === '\x00\x00')
+    bytes = data.compressedContent
+  else if (data?.compressedContent && data.compression?.magic === '\x08\x00')
+    bytes = inflateRawSync(data.compressedContent)
   if (!bytes) return undefined
   try {
     return new TextDecoder('utf-8', { fatal: true, ignoreBOM: true }).decode(bytes)
@@ -772,4 +1100,3 @@ function partText(file: unknown): string | undefined {
     return undefined
   }
 }
-

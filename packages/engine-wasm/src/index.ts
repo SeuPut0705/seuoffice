@@ -1,5 +1,5 @@
 // The one loader of the Rust engines' WASM build (crates/office-wasm), shared
-// by every engine binding (@genoffice/pptx-engine, @genoffice/docx-engine).
+// by every engine binding (@seuoffice/pptx-engine, @seuoffice/docx-engine).
 // Host-agnostic: no Node built-in and no browser API beyond WebAssembly,
 // TextEncoder, TextDecoder, Intl and crypto.getRandomValues, so the same code
 // runs in Electron main, Node tools and the web page.

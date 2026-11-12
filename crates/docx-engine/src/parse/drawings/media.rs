@@ -12,10 +12,10 @@ use crate::theme::ThemeColors;
 use crate::vml::shape::encode_uri_component;
 
 /// `LAZY_MEDIA_SCHEME` of lazy-media.ts.
-pub const LAZY_MEDIA_SCHEME: &str = "genoffice-docx-media";
+pub const LAZY_MEDIA_SCHEME: &str = "seuoffice-docx-media";
 
 /// `MAGIC` of lazy-media.ts.
-const LAZY_MEDIA_MAGIC: &[u8] = b"GENOFFICE-LAZY-MEDIA\n";
+const LAZY_MEDIA_MAGIC: &[u8] = b"SEUOFFICE-LAZY-MEDIA\n";
 
 /// `LAZY_MEDIA_PLACEHOLDER_BYTES` of lazy-media.ts: the magic, a sha256 in hex
 /// and a line feed.

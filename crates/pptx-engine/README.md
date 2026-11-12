@@ -36,7 +36,7 @@ imports are left out.
 | 1     | 301   | `theme.ts`              | xml-utils                                                                                                                                      | fast-xml-parser                                 |
 | 1     | 287   | `zip.ts`                | xml-utils                                                                                                                                      | zip-gate, jszip, fast-xml-parser, `node:crypto` |
 | 1     | 245   | `theme-apply.ts`        | xml-utils                                                                                                                                      |                                                 |
-| 1     | 195   | `redaction-xml.ts`      | xml-utils                                                                                                                                      | `@genoffice/agent-core/redact-range`            |
+| 1     | 195   | `redaction-xml.ts`      | xml-utils                                                                                                                                      | `@seuoffice/agent-core/redact-range`            |
 | 0     | 181   | `smartart-layout.ts`    |                                                                                                                                                |                                                 |
 | 1     | 174   | `model3d.ts`            | xml-utils                                                                                                                                      |                                                 |
 | 1     | 167   | `chart-workbook.ts`     | crc32, xml-utils                                                                                                                               |                                                 |
@@ -115,7 +115,7 @@ ported in batches, not unit by unit:
    files and their comparisons in parallel, with no build. The parent
    compiles end to end, runs ONE first comparison and keeps it unedited in
    `evidence/`, classifies and fixes, and runs ONE runner gate.
-2. C2, the switch: the slides app's calls to `@genoffice/pptx-engine` go to
+2. C2, the switch: the slides app's calls to `@seuoffice/pptx-engine` go to
    the Rust engine through WASM, and the TypeScript modules are deleted.
    Fault injection, the ledger tidy and an independent review run once,
    before the merge to main.
@@ -524,30 +524,30 @@ counter; the spec renumbers them from a probe slide per call
 (`parse/context.rs`, `Uids`). The first comparison is kept unchanged in
 `evidence/u4-parse-first.*`.
 
-| Checks         | First  | Different | Equal   |
-| -------------- | ------ | --------- | ------- |
-| Corpus         | 219    | 0         |         |
-| Built inputs   | 1,867  | 34        |         |
-| Mutated texts  | 2,100  | 3         |         |
-| Unit           | 4,186  | 37        | 99.116% |
+| Checks        | First | Different | Equal   |
+| ------------- | ----- | --------- | ------- |
+| Corpus        | 219   | 0         |         |
+| Built inputs  | 1,867 | 34        |         |
+| Mutated texts | 2,100 | 3         |         |
+| Unit          | 4,186 | 37        | 99.116% |
 
 None of the 37 was an error of the port. Each is a TypeScript defect written
 right in Rust, one ledger class each (two classes of unit 3 gained cases):
 
-| Class                          | First | What the TypeScript does                                                         |
-| ------------------------------ | ----- | -------------------------------------------------------------------------------- |
+| Class                          | First | What the TypeScript does                                                        |
+| ------------------------------ | ----- | ------------------------------------------------------------------------------- |
 | `inherited-key-theme-clrmap`   | 8     | bg1 mapped to an inherited name: `toUpperCase` of a function throws, slide lost |
 | `inherited-key-table-style-id` | 3     | `tableStyleId` `constructor` reaches `wholeTbl` of undefined, slide lost        |
-| `grpsppr-string-in`            | 4     | `'a:grpFill' in ''` on `<p:grpSp/>`'s empty `grpSpPr` throws, slide lost         |
-| `dgm-style-idx-negative`       | 4     | `presStyleIdx="-1"` reads slot -1, then `.spPr` of undefined throws              |
-| `dgm-style-idx-infinite`       | 4     | a 400-digit `presStyleIdx` is Infinity, `% n` is NaN, the same throw             |
-| `inherited-key-parse-678`      | 2     | `a:ln cap` of an inherited name: a function or `{}` as the cap                   |
-| `inherited-key-parse-686`      | 2     | `a:ln cmpd` the same                                                             |
+| `grpsppr-string-in`            | 4     | `'a:grpFill' in ''` on `<p:grpSp/>`'s empty `grpSpPr` throws, slide lost        |
+| `dgm-style-idx-negative`       | 4     | `presStyleIdx="-1"` reads slot -1, then `.spPr` of undefined throws             |
+| `dgm-style-idx-infinite`       | 4     | a 400-digit `presStyleIdx` is Infinity, `% n` is NaN, the same throw            |
+| `inherited-key-parse-678`      | 2     | `a:ln cap` of an inherited name: a function or `{}` as the cap                  |
+| `inherited-key-parse-686`      | 2     | `a:ln cmpd` the same                                                            |
 | `inherited-key-parse-713`      | 2     | arrow `w`/`len` the same, instead of `med`                                      |
-| `avlst-proto`                  | 2     | a guide named `__proto__` is lost to the prototype setter                        |
-| `inherited-key-parse-3319`     | 2     | cell `anchor` of an inherited name                                               |
-| `inherited-key-parse-3762`     | 2     | body `anchor` of an inherited name                                               |
-| `inherited-key-parse-3985`     | 2     | paragraph `algn` of an inherited name                                            |
+| `avlst-proto`                  | 2     | a guide named `__proto__` is lost to the prototype setter                       |
+| `inherited-key-parse-3319`     | 2     | cell `anchor` of an inherited name                                              |
+| `inherited-key-parse-3762`     | 2     | body `anchor` of an inherited name                                              |
+| `inherited-key-parse-3985`     | 2     | paragraph `algn` of an inherited name                                           |
 
 The mutated texts of a whole run differ from those of a run of one group
 (the seeded stream is shared), so a full run found one more mutation of
