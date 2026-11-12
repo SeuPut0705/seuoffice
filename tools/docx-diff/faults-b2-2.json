@@ -1,0 +1,60 @@
+{
+ "faults": [
+  {
+   "name": "independent: hfTableFloatOf reads tblpY from w:tblpX",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/tables/hf.rs",
+   "old": "let y_twips = number(\"w:tblpY\");",
+   "new": "let y_twips = number(\"w:tblpX\");"
+  },
+  {
+   "name": "independent: cellConds puts the last-row condition one row too late",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/tables.rs",
+   "old": "if look.last_row_on && r == row_count - 1.0 {",
+   "new": "if look.last_row_on && r == row_count {"
+  },
+  {
+   "name": "independent: textbox page-relative Y offset subtracts the left margin instead of the top one",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/drawings/textbox.rs",
+   "old": "m.offset_y_emu = Some(JsNum(offset.0 - section.margin_top.0 * EMU_PER_TWIP));",
+   "new": "m.offset_y_emu = Some(JsNum(offset.0 - section.margin_left.0 * EMU_PER_TWIP));"
+  },
+  {
+   "name": "independent: pictureColumnGeom treats a picture turned by 0 degrees as quarter-turned",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/drawings/picture.rs",
+   "old": "&& meta.image_rot_deg.map_or(0.0, |rot| rot.0) % 180.0 == 90.0;",
+   "new": "&& meta.image_rot_deg.map_or(0.0, |rot| rot.0) % 180.0 == 0.0;"
+  },
+  {
+   "name": "independent: parseNoteProps reads the footnote properties from the endnotePr",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/drawings/settings.rs",
+   "old": "footnote_props: merged(NotePrTag::Footnote),",
+   "new": "footnote_props: merged(NotePrTag::Endnote),"
+  },
+  {
+   "name": "independent: parseDocx takes the first page break boundary from the last sectPr",
+   "group": "parse",
+   "file": "crates/docx-engine/src/parse/entry.rs",
+   "old": "let sect = document_xml.find(\"</w:sectPr>\");",
+   "new": "let sect = document_xml.rfind(\"</w:sectPr>\");"
+  },
+  {
+   "name": "independent: inlineWrapContentLocked ignores sdtContentLocked",
+   "group": "parse",
+   "file": "crates/docx-engine/src/inline_opaque.rs",
+   "old": "matches!(val, Some(\"contentLocked\" | \"sdtContentLocked\"))",
+   "new": "matches!(val, Some(\"contentLocked\"))"
+  },
+  {
+   "name": "independent: lazyMediaHashOf no longer needs the closing line feed",
+   "group": "parse",
+   "file": "crates/docx-engine/src/lazy_media.rs",
+   "old": "if bytes.len() != LAZY_MEDIA_PLACEHOLDER_BYTES || !bytes.ends_with(b\"\\n\") {",
+   "new": "if bytes.len() != LAZY_MEDIA_PLACEHOLDER_BYTES {"
+  }
+ ]
+}
