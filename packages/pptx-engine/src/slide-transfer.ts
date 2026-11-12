@@ -10,6 +10,7 @@
 
 import { PackageArchive, relsPathFor, resolveTarget, type Relationship } from './zip'
 import {
+  attributeOf,
   defaultContentTypeFor,
   hasContentTypeOverride,
   hasDefaultFor,
@@ -58,12 +59,14 @@ function extOf(path: string): string {
   return dot < 0 ? '' : path.slice(dot + 1).toLowerCase()
 }
 
+/** The content type an Override declares for the part; read decoded, so it is escaped when written. */
 function overrideContentType(ct: string | null, partPath: string): string | undefined {
   if (!ct) return undefined
-  const re = new RegExp(
-    `<Override[^>]*PartName=["']/${partPath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}["'][^>]*ContentType=["']([^"']+)["']`,
-  )
-  return re.exec(ct)?.[1]
+  const wanted = `/${partPath}`
+  for (const tag of ct.matchAll(/<Override\b[^>]*>/g)) {
+    if (attributeOf(tag[0], 'PartName') === wanted) return attributeOf(tag[0], 'ContentType')
+  }
+  return undefined
 }
 
 /** Walks a part's rel graph, collecting bytes + content types for everything reachable. */
@@ -329,15 +332,18 @@ export function materializeSlideBundle(
 ): string {
   const pathMap = writeParts(archive, bundle.parts, bundle.contentTypes)
 
+  // The ids are the source deck's own, kept so the slide XML needs no rewriting. They were read
+  // decoded, so they are escaped here: an id holding `&` or `"` would break the part otherwise.
   const relLines = bundle.rels.map((rel) => {
+    const id = escapeAttr(rel.id)
     if (rel.layout) {
-      return `<Relationship Id="${rel.id}" Type="${rel.type}" Target="${escapeAttr(relative(slidePath, layoutPath))}"/>`
+      return `<Relationship Id="${id}" Type="${rel.type}" Target="${escapeAttr(relative(slidePath, layoutPath))}"/>`
     }
     if (rel.external) {
-      return `<Relationship Id="${rel.id}" Type="${rel.type}" Target="${escapeAttr(rel.target)}" TargetMode="External"/>`
+      return `<Relationship Id="${id}" Type="${rel.type}" Target="${escapeAttr(rel.target)}" TargetMode="External"/>`
     }
     const mapped = pathMap.get(rel.target) ?? rel.target
-    return `<Relationship Id="${rel.id}" Type="${rel.type}" Target="${escapeAttr(relative(slidePath, mapped))}"/>`
+    return `<Relationship Id="${id}" Type="${rel.type}" Target="${escapeAttr(relative(slidePath, mapped))}"/>`
   })
   return (
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
@@ -358,15 +364,17 @@ function ensureContentTypes(
     if (key.includes('/')) {
       const targetPath = pathMap.get(key)
       if (!targetPath) continue
-      const override = `<Override PartName="/${targetPath}" ContentType="${contentType}"/>`
+      const override = `<Override PartName="/${targetPath}" ContentType="${escapeAttr(contentType)}"/>`
       if (!hasContentTypeOverride(ct, targetPath))
         ct = ct.replace('</Types>', () => `${override}</Types>`)
     } else if (!hasDefaultFor(ct, key)) {
       // A function, not a string: the extension and its content type come from the source deck,
-      // and a replacement string would expand a `$&` or `$$` in them
+      // and a replacement string would expand a `$&` or `$$` in them. Escaped: they were read
+      // decoded.
       ct = ct.replace(
         '</Types>',
-        () => `<Default Extension="${key}" ContentType="${contentType}"/></Types>`,
+        () =>
+          `<Default Extension="${escapeAttr(key)}" ContentType="${escapeAttr(contentType)}"/></Types>`,
       )
     }
   }

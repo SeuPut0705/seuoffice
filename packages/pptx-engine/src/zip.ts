@@ -11,7 +11,7 @@ import { assertZipInflatesWithinLimits } from '@genoffice/zip-gate'
 import { createHash } from 'node:crypto'
 import { XMLParser } from 'fast-xml-parser'
 import type { SlideSize } from './types'
-import { asXmlNode, xmlArray } from './xml-utils'
+import { asXmlNode, attributeOf, parsedId, xmlArray } from './xml-utils'
 
 const relsParser = new XMLParser({
   ignoreAttributes: false,
@@ -116,7 +116,8 @@ export class PackageArchive {
     const doc = asXmlNode(relsParser.parse(xml))
     const list = asXmlNode(doc.Relationships).Relationship
     for (const r of xmlArray(list)) {
-      const id = String(r['@_Id'] ?? '')
+      // decoded, so the id meets a reference to it however either part spells it
+      const id = parsedId(r['@_Id']) ?? ''
       rels.set(id, {
         id,
         type: String(r['@_Type'] ?? ''),
@@ -165,9 +166,9 @@ export class PackageArchive {
     const sldIdLst = asXmlNode(root['p:sldIdLst'] ?? root.sldIdLst)
     const slidePaths: string[] = []
     for (const id of xmlArray(sldIdLst['p:sldId'] ?? sldIdLst.sldId)) {
-      const rId = id['@_r:id'] ?? id['@_id']
+      const rId = parsedId(id['@_r:id'] ?? id['@_id'])
       if (!rId) continue
-      const rel = rels.get(String(rId))
+      const rel = rels.get(rId)
       if (!rel) continue
       slidePaths.push(resolveTarget('ppt/presentation.xml', rel.target))
     }
@@ -224,7 +225,8 @@ export class PackageArchive {
     const presXml = this.readText('ppt/presentation.xml')
     if (!presXml) return undefined
     const presRels = this.readRels('ppt/presentation.xml')
-    const masterRid = /<p:sldMasterId\b[^>]*\br:id="([^"]+)"/.exec(presXml)?.[1]
+    const masterTag = /<p:sldMasterId\b[^>]*>/.exec(presXml)?.[0]
+    const masterRid = masterTag ? attributeOf(masterTag, 'r:id') : undefined
     const masterRel = masterRid
       ? presRels.get(masterRid)
       : [...presRels.values()].find((r) => r.type.endsWith('/slideMaster'))
@@ -234,8 +236,9 @@ export class PackageArchive {
     if (!masterXml) return undefined
     const masterRels = this.readRels(masterPath)
     const layouts: string[] = []
-    for (const m of masterXml.matchAll(/<p:sldLayoutId\b[^>]*\br:id="([^"]+)"/g)) {
-      const rel = masterRels.get(m[1]!)
+    for (const m of masterXml.matchAll(/<p:sldLayoutId\b[^>]*>/g)) {
+      const rid = attributeOf(m[0], 'r:id')
+      const rel = rid === undefined ? undefined : masterRels.get(rid)
       if (rel) layouts.push(resolveTarget(masterPath, rel.target))
     }
     if (!layouts.length)

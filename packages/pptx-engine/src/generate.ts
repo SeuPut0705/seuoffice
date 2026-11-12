@@ -29,7 +29,7 @@ import type {
   Transform,
   PPrDirty,
 } from './types'
-import { escapeXmlText, escapeXmlAttr } from './xml-utils'
+import { attributeOf, escapeXmlText, escapeXmlAttr } from './xml-utils'
 import { hasRedactExtIn, redactExtXml, syncRedactExt } from './redaction-xml'
 
 type BulletModel = NonNullable<Paragraph['bullet']>
@@ -540,9 +540,8 @@ function ownRPr(runXml: string) {
 /** Sync <a:hlinkClick> in the rPr with the model: no-op when the rId already matches (keeping bytes). */
 function patchRunHlink(runXml: string, run: TextRun): string {
   const existing = /<a:hlinkClick\b[^>]*>/.exec(runXml)?.[0]
-  const existingRId = existing
-    ? (/\br:id=(?:"([^"]*)"|'([^']*)')/.exec(existing)?.slice(1, 3).find(Boolean) ?? undefined)
-    : undefined
+  // decoded, like the model's id: the same id spelled another way is not a change
+  const existingRId = (existing && attributeOf(existing, 'r:id')) || undefined
   const existingAction = existing
     ? (/\baction=(?:"([^"]*)"|'([^']*)')/.exec(existing)?.slice(1, 3).find(Boolean) ?? undefined)
     : undefined

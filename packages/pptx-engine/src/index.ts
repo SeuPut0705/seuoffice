@@ -62,6 +62,7 @@ import {
 import { BLANK_SLIDE_XML } from './blank'
 import {
   attributeOf,
+  decodeXmlAttr,
   escapeXmlAttr,
   hasContentTypeOverride,
   hasDefaultFor,
@@ -491,7 +492,8 @@ function parseSlideFromArchive(archive: PackageArchive, slidePath: string): Slid
       if (vml) {
         const vmlRels = archive.readRels(vmlPath)
         for (const m of vml.matchAll(/<v:shape\b([^>]*)>([\s\S]*?)<\/v:shape>/g)) {
-          const relid = /<v:imagedata\b[^>]*\bo:relid="([^"]+)"/.exec(m[2]!)?.[1]
+          const imageData = /<v:imagedata\b[^>]*>/.exec(m[2]!)?.[0]
+          const relid = imageData ? attributeOf(imageData, 'o:relid') : undefined
           const imgRel = relid ? vmlRels.get(relid) : undefined
           if (!imgRel) continue
           const target = resolveTarget(vmlPath, imgRel.target)
@@ -507,9 +509,8 @@ function parseSlideFromArchive(archive: PackageArchive, slidePath: string): Slid
       const dataPath = resolveTarget(slidePath, rel.target)
       const dataXml = archive.readText(dataPath)
       if (dataXml) diagramDatas.set(rel.id, dataXml)
-      const relId = dataXml
-        ? /<dsp:dataModelExt\b[^>]*\brelId="([^"]+)"/.exec(dataXml)?.[1]
-        : undefined
+      const modelExt = dataXml ? /<dsp:dataModelExt\b[^>]*>/.exec(dataXml)?.[0] : undefined
+      const relId = modelExt ? attributeOf(modelExt, 'relId') : undefined
       if (relId) {
         const drawRel = rels.get(relId) ?? archive.readRels(dataPath).get(relId)
         const basePath = rels.get(relId) ? slidePath : dataPath
@@ -1899,14 +1900,16 @@ export function replacePictureBytes(
   const added = addImageMediaAndRel(opened, slide, bytes, ext)
   if (!added) return false
   let tag = blip[0]
-  const previousRId = /r:embed="([^"]*)"/.exec(tag)?.[1]
+  const previousRId = attributeOf(tag, 'r:embed')
   // A coexisting r:link ("insert and link" pictures) would keep refreshing from
   // the old external file, so it is dropped once the embed points at new bytes
-  if (/r:embed="/.test(tag))
+  const embed = /\br:embed\s*=\s*(?:"[^"]*"|'[^']*')/
+  const link = /\br:link\s*=\s*(?:"[^"]*"|'[^']*')/
+  if (embed.test(tag))
     tag = tag
-      .replace(/r:embed="[^"]*"/, () => `r:embed="${added.rid}"`)
-      .replace(/\s+r:link="[^"]*"/, '')
-  else if (/r:link="/.test(tag)) tag = tag.replace(/r:link="[^"]*"/, () => `r:embed="${added.rid}"`)
+      .replace(embed, () => `r:embed="${added.rid}"`)
+      .replace(/\s+r:link\s*=\s*(?:"[^"]*"|'[^']*')/, '')
+  else if (link.test(tag)) tag = tag.replace(link, () => `r:embed="${added.rid}"`)
   else tag = tag.replace(/<a:blip\b/, () => `<a:blip r:embed="${added.rid}"`)
   xml = xml.slice(0, blip.index) + tag + xml.slice(blip.index + blip[0].length)
   // A 3D model's Choice caches the same rendering (am3d:raster), which PowerPoint shows
@@ -2971,22 +2974,14 @@ export function editChartElement(
   const chartEl = el as ChartElement
   if (chartEl.descr !== 'aislides-chart') return false // only charts created by this app are editable
 
-  // Find the chart part path (looked up from the slide rels)
+  // The chart part: the relationship the frame's own <c:chart> names, looked up in the slide
+  // rels by its decoded id
   const { archive } = opened
-  const relsPath = relsPathFor(slide.path)
-  const rels = archive.readText(relsPath)
-  if (!rels) return false
-
-  // Find the r:id in originalXml
-  const rIdInFrame = /r:id=["']([^"']+)["']/.exec(el.anchor.originalXml)
-  if (!rIdInFrame) return false
-  const rId = rIdInFrame[1]!
-
-  // Find the chart part path in the rels
-  const relRe = new RegExp(`Id=["']${escapeRegex(rId)}["'][^>]*Target=["']([^"']+)["']`)
-  const relMatch = relRe.exec(rels)
-  if (!relMatch) return false
-  const chartPath = resolveTarget(slide.path, relMatch[1]!)
+  const chartTag = /<c:chart\b[^>]*>/.exec(el.anchor.originalXml)?.[0]
+  const rId = chartTag ? attributeOf(chartTag, 'r:id') : undefined
+  const chartRel = rId === undefined ? undefined : archive.readRels(slide.path).get(rId)
+  if (!chartRel) return false
+  const chartPath = resolveTarget(slide.path, chartRel.target)
 
   // Read existing chart data (used to fill unspecified fields)
   const existing = chartEl.chart
@@ -3165,11 +3160,6 @@ export function setElementName(slide: Slide, elementId: string, name: string): b
   const el = slide.elements.find((e) => e.id === elementId)!
   el.name = name
   return true
-}
-
-/** Escape RegExp special characters. */
-function escapeRegex(s: string): string {
-  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
 /** Read a chart element's current data (for dialog echo-back). */
@@ -4245,7 +4235,8 @@ export function copyElementData(
   const contentTypes: Record<string, string> = {}
   const seen = new Set<string>()
   for (const m of xml.matchAll(RID_ATTR_RE)) {
-    const rid = m[1] ?? m[2]!
+    // decoded: the rels part may spell the same id another way
+    const rid = decodeXmlAttr(m[1] ?? m[2]!)
     if (seen.has(rid)) continue
     seen.add(rid)
     const rel = slideRels.get(rid)

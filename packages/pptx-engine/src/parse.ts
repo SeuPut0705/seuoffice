@@ -72,7 +72,7 @@ import {
   type TablePartStyle,
   type TableStyleFlags,
 } from './table-style'
-import { decodeNumericCharRefs, percentFraction } from './xml-utils'
+import { decodeNumericCharRefs, parsedId, percentFraction } from './xml-utils'
 import { readRedactLabel } from './redaction-xml'
 
 const parser = new XMLParser({
@@ -426,7 +426,7 @@ function parseShapeFragment(
         if (model) {
           const rot = model['am3d:trans']?.['am3d:rot']
           const angle = (name: string) => Number(rot?.[`@_${name}`] ?? 0) || 0
-          const target = ctx.model3dRels?.get(String(model['@_r:embed']))
+          const target = ctx.model3dRels?.get(parsedId(model['@_r:embed']) ?? '')
           el.model3d = {
             ...(target ? { target } : {}),
             rot: { ax: angle('ax'), ay: angle('ay'), az: angle('az') },
@@ -1143,7 +1143,7 @@ export function sliceGroupChildXmls(grpXml: string): string[] {
     whose only image reference is the svgBlip inside a:extLst — without this
     fallback such pictures resolve to no media and render as a broken-image box. */
 function blipEmbedId(blip: any): string | undefined {
-  return blip?.['@_r:embed'] || svgBlipEmbedId(blip)
+  return parsedId(blip?.['@_r:embed']) || svgBlipEmbedId(blip)
 }
 
 /** r:embed of the Office 2016 <asvg:svgBlip> extension (the vector PowerPoint actually draws). */
@@ -1152,7 +1152,7 @@ function svgBlipEmbedId(blip: any): string | undefined {
   for (const ext of Array.isArray(exts) ? exts : exts ? [exts] : []) {
     for (const [key, value] of Object.entries(ext as Record<string, any>)) {
       if (key === 'svgBlip' || key.endsWith(':svgBlip')) {
-        const id = value?.['@_r:embed']
+        const id = parsedId(value?.['@_r:embed'])
         if (id) return id
       }
     }
@@ -1242,8 +1242,8 @@ function parsePicture(
   let media: PictureElement['media']
   if (avNode !== undefined) {
     const kind = nvPr?.['a:videoFile'] !== undefined ? ('video' as const) : ('audio' as const)
-    const link = avNode?.['@_r:link']
-    const rel = link ? ctx.avRels?.get(String(link)) : undefined
+    const link = parsedId(avNode?.['@_r:link'])
+    const rel = link ? ctx.avRels?.get(link) : undefined
     media = {
       kind,
       ...(rel ? { target: rel.target, ...(rel.external ? { external: true } : {}) } : {}),
@@ -1251,8 +1251,10 @@ function parsePicture(
   } else {
     const extRaw = nvPr?.['p:extLst']?.['p:ext']
     const exts = Array.isArray(extRaw) ? extRaw : extRaw ? [extRaw] : []
-    const embed = exts.map((e: any) => e?.['p14:media']?.['@_r:embed']).find((v: any) => v != null)
-    const rel = embed != null ? ctx.avRels?.get(String(embed)) : undefined
+    const embed = exts
+      .map((e: any) => parsedId(e?.['p14:media']?.['@_r:embed']))
+      .find((v) => v != null)
+    const rel = embed != null ? ctx.avRels?.get(embed) : undefined
     if (rel) {
       const kind = /\.(mp3|wav|m4a|aac|ogg|flac|wma)$/i.test(rel.target) ? 'audio' : 'video'
       media = { kind, target: rel.target, ...(rel.external ? { external: true } : {}) }
@@ -1438,9 +1440,9 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
   }
   // chartEx (cx namespace, e.g. funnel/sunburst): same read-only semantics as classic charts
   if (uri.includes('/chartex')) {
-    const rid = data?.['cx:chart']?.['@_r:id']
-    const chartXml = rid ? ctx.chartXmls?.get(String(rid)) : undefined
-    const ovXml = rid ? ctx.chartThemeOverrides?.get(String(rid)) : undefined
+    const rid = parsedId(data?.['cx:chart']?.['@_r:id'])
+    const chartXml = rid ? ctx.chartXmls?.get(rid) : undefined
+    const ovXml = rid ? ctx.chartThemeOverrides?.get(rid) : undefined
     const chartTheme = ovXml ? themeWithOverride(ctx.theme, ovXml) : ctx.theme
     const model = chartXml ? parseChartExXml(chartXml, chartTheme) : null
     if (model) {
@@ -1457,9 +1459,9 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
   }
   // Chart: read the referenced chart part for semantic parsing (read-only render; save uses original bytes)
   if (uri.includes('/chart')) {
-    const rid = data?.['c:chart']?.['@_r:id']
+    const rid = parsedId(data?.['c:chart']?.['@_r:id'])
     const chartXml = rid ? ctx.chartXmls?.get(rid) : undefined
-    const ovXml = rid ? ctx.chartThemeOverrides?.get(String(rid)) : undefined
+    const ovXml = rid ? ctx.chartThemeOverrides?.get(rid) : undefined
     const chartTheme = ovXml ? themeWithOverride(ctx.theme, ovXml) : ctx.theme
     // Fill resolver bound to the chart part's own rels (blip rIds live there, not on
     // the slide) and to the chart-local theme (accents may be remapped per chart)
@@ -1512,14 +1514,14 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
   }
   // SmartArt read-only preview: dgm:relIds@r:dm → prerendered drawing part (assembled in index.ts)
   if (kind === 'smartart') {
-    const dm = data?.['dgm:relIds']?.['@_r:dm']
+    const dm = parsedId(data?.['dgm:relIds']?.['@_r:dm'])
     const drawingXml = dm ? ctx.diagramDrawings?.get(String(dm)) : undefined
     if (drawingXml) {
       // Picture-fill rIds inside the drawing resolve against the drawing part's own rels
       const drawingRels = dm ? ctx.diagramMediaRels?.get(String(dm)) : undefined
       // PowerPoint re-renders SmartArt from data+colors, so the drawing part's cached
       // text color can be stale — resolve the truth per modelId from the color part
-      const csRel = data?.['dgm:relIds']?.['@_r:cs']
+      const csRel = parsedId(data?.['dgm:relIds']?.['@_r:cs'])
       const txColors = diagramTextColors(
         dm ? ctx.diagramDatas?.get(String(dm)) : undefined,
         csRel ? ctx.diagramColors?.get(String(csRel)) : undefined,
@@ -1544,8 +1546,8 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
       // node tree out ourselves, dispatched on the layout part's uniqueId
       const dataXml = dm ? ctx.diagramDatas?.get(String(dm)) : undefined
       if (dataXml) {
-        const lo = data?.['dgm:relIds']?.['@_r:lo']
-        const cs = data?.['dgm:relIds']?.['@_r:cs']
+        const lo = parsedId(data?.['dgm:relIds']?.['@_r:lo'])
+        const cs = parsedId(data?.['dgm:relIds']?.['@_r:cs'])
         const layoutXml = lo ? ctx.diagramLayouts?.get(String(lo)) : undefined
         const uniqueId = layoutXml
           ? /\buniqueId="([^"]+)"/.exec(layoutXml)?.[1]?.split('/').pop()
@@ -4078,11 +4080,13 @@ function parseRun(r: any, ctx: ParseContext, dflt?: LevelTextStyle): TextRun {
           : String(rawT),
   )
   const hlink = rPr['a:hlinkClick']
+  // decoded once here: the model's id is what the rels reader keys by and what a rebuild writes
+  const hlinkRId = parsedId(hlink?.['@_r:id'])
   const hlinkNamedAction = namedActionOf(hlink?.['@_action'] ? String(hlink['@_action']) : null)
   const hlinkTarget = hlinkNamedAction
     ? `action:${hlinkNamedAction}`
-    : hlink?.['@_r:id']
-      ? ctx.hlinkRels?.get(String(hlink['@_r:id']))
+    : hlinkRId
+      ? ctx.hlinkRels?.get(hlinkRId)
       : undefined
   const fill = rPr['a:solidFill']
   // WordArt gradient text fill: resolved stops for display, mid-stop as the flat fallback color
@@ -4320,9 +4324,9 @@ function parseRun(r: any, ctx: ParseContext, dflt?: LevelTextStyle): TextRun {
     ...(gradient ? { gradient } : {}),
     ...(runGlow ? { glow: runGlow } : {}),
     ...(reflection ? { reflection: true } : {}),
-    ...(hlink && (hlink['@_r:id'] != null || hlinkNamedAction)
+    ...(hlink && (hlinkRId != null || hlinkNamedAction)
       ? {
-          hyperlinkRId: String(hlink['@_r:id'] ?? ''),
+          hyperlinkRId: hlinkRId ?? '',
           ...(hlinkTarget ? { hyperlink: hlinkTarget } : {}),
           ...(hlink['@_action'] ? { hyperlinkAction: String(hlink['@_action']) } : {}),
           ...(hlink['@_tooltip'] ? { hyperlinkTooltip: String(hlink['@_tooltip']) } : {}),

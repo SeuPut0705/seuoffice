@@ -22,6 +22,7 @@ import { resolveColorNode } from './color'
 import {
   asXmlNode,
   decodeNumericCharRefs,
+  parsedId,
   percentFraction,
   xmlArray,
   type XmlNode,
@@ -348,10 +349,10 @@ function parseLvlPPr(
       out.bullet.startAt = Math.min(startAt, MAX_AUTO_NUM_START)
   } else if (pPr['a:buBlip'] !== undefined) {
     out.bullet = { type: 'blip' }
-    const embed = asXmlNode(asXmlNode(pPr['a:buBlip'])['a:blip'])['@_r:embed']
+    const embed = parsedId(asXmlNode(asXmlNode(pPr['a:buBlip'])['a:blip'])['@_r:embed'])
     if (embed != null) {
-      if (!src?.foreignPart) out.bullet.blipEmbedId = String(embed)
-      const ref = src?.mediaRels?.get(String(embed))
+      if (!src?.foreignPart) out.bullet.blipEmbedId = embed
+      const ref = src?.mediaRels?.get(embed)
       if (ref) out.bullet.mediaRef = ref
     }
   }

@@ -14,7 +14,7 @@
  * after ungroup that same id would suddenly mean the child.
  */
 import type { Slide, SlideElement } from './types'
-import { attributeOf, creationIdExtXml, creationIdXml } from './xml-utils'
+import { attributeOf, creationIdExtXml, creationIdXml, parsedId } from './xml-utils'
 
 const CREATION_ID_RE = /<a16:creationId[^>]*\bid="\{?([0-9A-Fa-f-]{36})\}?"/
 
@@ -135,7 +135,7 @@ export function groupChildDurableId(grp: SlideElement, child: SlideElement): str
   const nvId = (child as { nvId?: number | string }).nvId
   const xml = grp.anchor?.originalXml
   if (xml && nvId != null) {
-    const open = cNvPrOpenWithId(xml, String(nvId))
+    const open = cNvPrOpenWithId(xml, parsedId(nvId)!)
     if (open) {
       const at = open.index!
       const own =
