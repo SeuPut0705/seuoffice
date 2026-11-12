@@ -3064,6 +3064,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.paragraphStrayBox',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.paragraphStrayBox!(text, await buildCtx(args)),
     fromParse: {
       fn: 'paragraphStrayBox',
@@ -3077,6 +3078,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.textboxParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const paras = internals.textboxParagraphs!(nodeOf(text), await buildCtx(args)) as Array<{
         box?: { id?: number }
@@ -3096,6 +3098,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.txbxTableParas',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.txbxTableParas!(nodeOf(text), await buildCtx(args)),
     fromParse: {
       fn: 'txbxTableParas',
@@ -3169,6 +3172,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.extractTextboxes',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => internals.extractTextboxes!(text, await buildCtx(args), args.opts),
     fromParse: {
       fn: 'extractTextboxes',

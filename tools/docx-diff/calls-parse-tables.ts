@@ -1038,6 +1038,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.extractCell',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) =>
       internals.extractCell!(elementOf(text), await buildCtx(args), args.depth, args.docOffset, args.tableStyleId, args.conds),
     fromParse: {
@@ -1211,6 +1212,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.hfParagraphs',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       const paras = internals.hfParagraphs!(
@@ -1275,6 +1277,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.readHeaderFooterPart',
+    listed: lineRuleOutsideItsType,
     call: async (text, args) => {
       const doc = await docOf(args)
       return internals.readHeaderFooterPart!(
@@ -1330,6 +1333,7 @@ const BATCH2: CallSpec[] = [
   },
   {
     fn: 'parse.parseAllHfParts',
+    listed: lineRuleOutsideItsType,
     call: async (_text, args) => {
       const doc = await docOf(args)
       return internals.parseAllHfParts!(doc.zip, doc.rels, doc.styles, doc.themeColors, args.compatibilityMode, doc.themeFonts, resolverOf(doc, args), args.sourcePath)

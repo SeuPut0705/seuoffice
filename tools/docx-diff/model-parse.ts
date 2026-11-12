@@ -61,6 +61,26 @@ interface Model {
   [key: string]: unknown
 }
 
+/**
+ * Header and footer text boxes take their `id` from a counter of the process
+ * (`++hfTextBoxSeq`), which each side advances on every call the gate makes:
+ * the ids are renumbered from 1, in the order the boxes appear.
+ */
+function renumberBoxIds(value: unknown, seen = new Map<unknown, number>()): unknown {
+  if (Array.isArray(value)) {
+    for (const item of value) renumberBoxIds(item, seen)
+  } else if (value !== null && typeof value === 'object') {
+    const object = value as Record<string, unknown>
+    const box = object.box as { id?: unknown } | undefined
+    if (box !== null && typeof box === 'object' && typeof box.id === 'number') {
+      if (!seen.has(box.id)) seen.set(box.id, seen.size + 1)
+      box.id = seen.get(box.id)
+    }
+    for (const child of Object.values(object)) renumberBoxIds(child, seen)
+  }
+  return value
+}
+
 /** `doc` is what the TypeScript parseDocx returned for `bytes`. */
 export function parseOnDocument(where: string, bytes: Uint8Array, doc: unknown): void {
   const typescript = modelJson(doc)
@@ -70,8 +90,8 @@ export function parseOnDocument(where: string, bytes: Uint8Array, doc: unknown):
     documents.record(`${where}: Rust refused ${rust.error}`)
     return
   }
-  const ts = JSON.parse(typescript) as Model
-  const rs = JSON.parse(rust.json!) as Model
+  const ts = renumberBoxIds(JSON.parse(typescript)) as Model
+  const rs = renumberBoxIds(JSON.parse(rust.json!)) as Model
   const { blocks: tsBlocks, ...tsRest } = ts
   const { blocks: rsBlocks, ...rsRest } = rs
   // JSON.stringify of the rest keeps each side's key order
