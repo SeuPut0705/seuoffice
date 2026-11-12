@@ -434,23 +434,29 @@ pub struct MergeSlideOptions<'a> {
 }
 
 /// One referenced media file of a [`MergeSlideSource`].
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MergeSlideMedia {
     pub path: String,
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
 }
 
 /// One layout→master→theme chain part of a [`MergeSlideSource`].
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MergeSlideChainPart {
     pub path: String,
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[serde(
+        default,
+        deserialize_with = "crate::json_bytes::optional_bytes",
+        skip_serializing_if = "Option::is_none"
+    )]
     pub rels: Option<Vec<u8>>,
 }
 
 /// `MergeSlideSource`: a single-slide pptx reduced to the plain data the merge needs.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MergeSlideSource {
     pub src_slide_path: String,

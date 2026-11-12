@@ -23,6 +23,7 @@ pub mod headerfooter;
 pub mod hyperlink;
 pub mod identity;
 pub mod insert;
+pub mod json_bytes;
 pub mod layout;
 pub mod master_edit;
 pub mod media_insert;

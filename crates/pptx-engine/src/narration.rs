@@ -91,16 +91,11 @@ fn mark_narration(body_suffix: &str, spid: f64) -> String {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct NarrationAudio {
-    #[serde(deserialize_with = "base64_bytes")]
+    #[serde(deserialize_with = "crate::json_bytes::bytes")]
     pub bytes: Vec<u8>,
     /// wav, m4a or mp3
     pub ext: String,
     pub duration_ms: JsNum,
-}
-
-fn base64_bytes<'de, D: serde::Deserializer<'de>>(d: D) -> Result<Vec<u8>, D::Error> {
-    let text = <String as Deserialize>::deserialize(d)?;
-    jscompat::atob(&text).map_err(serde::de::Error::custom)
 }
 
 /// Replaces the slide's narration with `audio`, which plays from the slide's start, before the

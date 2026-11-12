@@ -639,12 +639,21 @@ fn parse_slides(archive: &PackageArchive, uids: &Uids) -> Result<(Vec<Slide>, Sl
 
 /// `openPptx`
 pub fn open_pptx(bytes: &[u8]) -> Result<OpenedPptx, String> {
-    open_archive(PackageArchive::open(bytes)?)
+    open_pptx_with(bytes, Uids::starting_at(0))
+}
+
+/// `openPptx` with the id counter the caller supplies; read it back with `opened.uids.next()`.
+pub fn open_pptx_with(bytes: &[u8], uids: Uids) -> Result<OpenedPptx, String> {
+    open_archive_with(PackageArchive::open(bytes)?, uids)
 }
 
 /// `openPptx` once the zip is read.
 pub fn open_archive(archive: PackageArchive) -> Result<OpenedPptx, String> {
-    let uids = Uids::starting_at(0);
+    open_archive_with(archive, Uids::starting_at(0))
+}
+
+/// [`open_archive`] with the id counter the caller supplies.
+pub fn open_archive_with(archive: PackageArchive, uids: Uids) -> Result<OpenedPptx, String> {
     let (slides, size) = parse_slides(&archive, &uids)?;
     let deck = SlideDeck {
         slides,

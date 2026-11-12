@@ -9,19 +9,23 @@ use jscompat::{
 };
 use ooxml_pkg::{DeclaredPart, ZipLimits, decode_text, load_package};
 use ooxml_xml::ObjectOptions;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use sha2::{Digest, Sha256};
 
 use crate::xml_utils::{as_xml_node, attribute_of, xml_array};
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Relationship {
     pub id: String,
     #[serde(rename = "type")]
     pub r#type: String,
     pub target: String,
-    #[serde(rename = "targetMode", skip_serializing_if = "Option::is_none")]
+    #[serde(
+        rename = "targetMode",
+        default,
+        skip_serializing_if = "Option::is_none"
+    )]
     pub target_mode: Option<String>,
 }
 
