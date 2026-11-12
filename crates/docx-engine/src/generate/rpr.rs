@@ -241,7 +241,10 @@ fn merge_r_fonts_xml(raw_xml: &str, run: &Run) -> String {
         }
     }
     let get = |attrs: &[(String, String)], k: &str| -> Option<String> {
-        attrs.iter().find(|(key, _)| key == k).map(|(_, v)| v.clone())
+        attrs
+            .iter()
+            .find(|(key, _)| key == k)
+            .map(|(_, v)| v.clone())
     };
     let raw_primary = get(&attrs, "w:eastAsia")
         .or_else(|| get(&attrs, "w:ascii"))
@@ -266,9 +269,7 @@ fn merge_r_fonts_xml(raw_xml: &str, run: &Run) -> String {
     }
     if let Some(font) = run.font.as_deref().filter(|f| !f.is_empty())
         && Some(font) != theme_font(run)
-        && (had_east_asia
-            || Some(font) != raw_primary.as_deref()
-            || run.east_asia_font.is_some())
+        && (had_east_asia || Some(font) != raw_primary.as_deref() || run.east_asia_font.is_some())
     {
         set(&mut attrs, "w:eastAsia", "w:eastAsiaTheme", font);
     }
@@ -336,7 +337,10 @@ fn revision_r_pr_change_xml(run: &Run) -> Option<String> {
             ));
         }
         if num_truthy(old.char_scale_pct) {
-            props.push_str(&format!("<w:w w:val=\"{}\"/>", num(old.char_scale_pct.unwrap())));
+            props.push_str(&format!(
+                "<w:w w:val=\"{}\"/>",
+                num(old.char_scale_pct.unwrap())
+            ));
         }
         if num_truthy(old.size_half_points) {
             let size = num(old.size_half_points.unwrap());
@@ -379,7 +383,9 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
             format!("<w:rStyle w:val=\"{}\"/>", escape_xml_attr(s)),
         ));
     }
-    if truthy(run.font.as_deref()) || truthy(run.font_ascii.as_deref()) || truthy(run.font_cs.as_deref())
+    if truthy(run.font.as_deref())
+        || truthy(run.font_ascii.as_deref())
+        || truthy(run.font_cs.as_deref())
     {
         out.push(child(
             "w:rFonts",
@@ -424,7 +430,10 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
         ));
     }
     if let Some(s) = *run.char_spacing_twips {
-        out.push(child("w:spacing", format!("<w:spacing w:val=\"{}\"/>", num(s))));
+        out.push(child(
+            "w:spacing",
+            format!("<w:spacing w:val=\"{}\"/>", num(s)),
+        ));
     }
     if num_truthy(*run.char_scale_pct) {
         out.push(child(
@@ -526,7 +535,8 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
     };
     let cs = *run.cs == Some(true) || raw_bool(raw_of("w:rtl"));
 
-    let mut fresh_by_group: Vec<Vec<Child>> = RUN_MANAGED_GROUPS.iter().map(|_| Vec::new()).collect();
+    let mut fresh_by_group: Vec<Vec<Child>> =
+        RUN_MANAGED_GROUPS.iter().map(|_| Vec::new()).collect();
     for f in fresh {
         let g = RUN_MANAGED_GROUPS
             .iter()
@@ -546,10 +556,7 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
                 match raw {
                     None => {
                         !inside_link
-                            || run
-                                .link
-                                .as_ref()
-                                .is_some_and(|l| truthy(l.r_id.as_deref()))
+                            || run.link.as_ref().is_some_and(|l| truthy(l.r_id.as_deref()))
                             || link_plain(run)
                     }
                     Some(raw) => raw == "Hyperlink",
@@ -562,13 +569,16 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
                 let font_ascii = run.font_ascii.as_deref();
                 (raw_attr(attrs, "w:eastAsia").or(ascii) == font
                     || (font.is_some() && font == theme_font))
-                    && (ascii == font_ascii || (font_ascii.is_some() && font_ascii == theme_font_ascii))
+                    && (ascii == font_ascii
+                        || (font_ascii.is_some() && font_ascii == theme_font_ascii))
                     && (run.east_asia_font.is_none()
                         || raw_attr(attrs, "w:eastAsia") == run.east_asia_font.as_deref()
                         || run.east_asia_font.as_deref() == theme_font)
                     && (run.font_cs.is_none() || raw_attr(attrs, "w:cs") == run.font_cs.as_deref())
             }
-            Group::Bold => raw_bool(raw_of(if cs { "w:bCs" } else { "w:b" })) == (*run.bold == Some(true)),
+            Group::Bold => {
+                raw_bool(raw_of(if cs { "w:bCs" } else { "w:b" })) == (*run.bold == Some(true))
+            }
             Group::Italic => {
                 raw_bool(raw_of(if cs { "w:iCs" } else { "w:i" })) == (*run.italic == Some(true))
             }
@@ -578,7 +588,9 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
                     == run.caps.as_ref().map(|c| c.as_str())
             }
             Group::Dstrike => raw_bool(raw_of("w:dstrike")) == (*run.dstrike == Some(true)),
-            Group::Vanish => run.vanish_own.is_none() || raw_on_off(raw_of("w:vanish")) == *run.vanish_own,
+            Group::Vanish => {
+                run.vanish_own.is_none() || raw_on_off(raw_of("w:vanish")) == *run.vanish_own
+            }
             Group::Spacing => num_eq(raw_int(raw_of("w:spacing")), *run.char_spacing_twips),
             Group::Scale => {
                 let raw = raw_int(raw_of("w:w")).filter(|r| *r != 0.0 && *r != 100.0);
@@ -604,7 +616,11 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
                 let raw = raw_attr(raw_of(if cs { "w:szCs" } else { "w:sz" }), "w:val");
                 let raw = raw.filter(|r| !r.is_empty()).and_then(|r| {
                     let n = parse_int(r, Radix::Ten);
-                    if n.is_nan() || n == 0.0 { None } else { Some(n) }
+                    if n.is_nan() || n == 0.0 {
+                        None
+                    } else {
+                        Some(n)
+                    }
                 });
                 num_eq(raw, *run.size_half_points)
             }
@@ -613,7 +629,8 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
                 raw == run.highlight.as_deref()
             }
             Group::Shading => {
-                let raw = raw_attr(raw_of("w:shd"), "w:fill").filter(|r| !r.is_empty() && *r != "auto");
+                let raw =
+                    raw_attr(raw_of("w:shd"), "w:fill").filter(|r| !r.is_empty() && *r != "auto");
                 raw == run.shading.as_deref()
             }
             Group::Underline => {
@@ -659,7 +676,11 @@ pub fn merge_r_pr_model(raw_r_pr: &str, run: &Run, inside_link: bool) -> String 
         .filter(|(name, _)| !rebuilt_tags.contains(&name.as_str()))
     {
         let own = rank(name);
-        let effective = if own == -1 { prev_rank } else { own.max(prev_rank) };
+        let effective = if own == -1 {
+            prev_rank
+        } else {
+            own.max(prev_rank)
+        };
         while fi < fresh_out.len() && rank(fresh_out[fi].name) < effective {
             parts.push_str(&fresh_out[fi].xml);
             fi += 1;

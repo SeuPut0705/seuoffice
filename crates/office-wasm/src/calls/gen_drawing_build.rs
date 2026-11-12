@@ -15,10 +15,12 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "LINE_KINDS" => optional(line_kind(text)),
         "buildLineParagraphXml" => value(build_line_paragraph_xml(&required(args, "opts")?)),
         "inlinePictureDrawingXml" => value(inline_picture_drawing_xml(&required(args, "opts")?)),
-        "buildTextboxParagraphXml" => value(build_textbox_paragraph_xml(arg(args, "opts")?.as_ref())),
-        "buildAnchoredTextboxParagraphXml" => {
-            value(build_anchored_textbox_paragraph_xml(&required(args, "opts")?))
+        "buildTextboxParagraphXml" => {
+            value(build_textbox_paragraph_xml(arg(args, "opts")?.as_ref()))
         }
+        "buildAnchoredTextboxParagraphXml" => value(build_anchored_textbox_paragraph_xml(
+            &required(args, "opts")?,
+        )),
         "buildShapeParagraphXml" => value(build_shape_paragraph_xml(&required(args, "opts")?)),
         "buildWordArtParagraphXml" => value(build_word_art_paragraph_xml(&required(args, "opts")?)),
         _ => Err(format!("unknown function {function}")),

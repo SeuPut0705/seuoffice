@@ -19,13 +19,22 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "generateTableModelXml" => {
             let model: TableModel = required(args, "model")?;
             let original = (!text.is_empty()).then_some(text);
-            value(table::generate_table_model_xml(&model, original).map_err(|error| error.to_string())?)
+            value(
+                table::generate_table_model_xml(&model, original)
+                    .map_err(|error| error.to_string())?,
+            )
         }
         "generateTableXml" => {
             let rows: f64 = required(args, "rows")?;
             let cols: f64 = required(args, "cols")?;
             let opts = arg::<OptsArg>(args, "opts")?.unwrap_or_default();
-            value(table::generate_table_xml(rows, cols, TableGenOptions { header_row: opts.header_row == Some(true) }))
+            value(table::generate_table_xml(
+                rows,
+                cols,
+                TableGenOptions {
+                    header_row: opts.header_row == Some(true),
+                },
+            ))
         }
         _ => Err(format!("unknown function {function}")),
     }

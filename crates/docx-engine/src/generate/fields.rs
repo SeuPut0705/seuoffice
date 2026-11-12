@@ -67,14 +67,17 @@ pub fn generate_toc_field_xml(entries: &[TocEntry]) -> Vec<String> {
 
 /// Caption paragraph: `<label> <SEQ label> <text>`
 pub fn generate_caption_xml(label: &str, number: JsNum, text: &str) -> String {
-    let r_pr = "<w:rPr><w:color w:val=\"44546A\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr>";
+    let r_pr =
+        "<w:rPr><w:color w:val=\"44546A\"/><w:sz w:val=\"18\"/><w:szCs w:val=\"18\"/></w:rPr>";
     let run = |inner: &str| format!("<w:r>{r_pr}{inner}</w:r>");
     let label = escape_xml_text(label);
     let mut out = String::from(
         "<w:p><w:pPr><w:jc w:val=\"center\"/><w:spacing w:before=\"80\" w:after=\"200\"/></w:pPr>",
     );
     out.push_str(&run(&format!("<w:t xml:space=\"preserve\">{label} </w:t>")));
-    out.push_str(&run("<w:fldChar w:fldCharType=\"begin\" w:dirty=\"true\"/>"));
+    out.push_str(&run(
+        "<w:fldChar w:fldCharType=\"begin\" w:dirty=\"true\"/>",
+    ));
     out.push_str(&run(&format!(
         "<w:instrText xml:space=\"preserve\"> SEQ {label} \\* ARABIC </w:instrText>"
     )));

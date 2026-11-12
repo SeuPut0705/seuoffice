@@ -327,9 +327,7 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     | Command::Package
                     | Command::ModelRoundTrip { .. },
                     None,
-                ) => {
-                    json(&Reply::failure("invalid_request", "blob 0 is missing"))
-                }
+                ) => json(&Reply::failure("invalid_request", "blob 0 is missing")),
             },
         },
     };

@@ -53,12 +53,25 @@ fn generate(block: &GeneratedBlock, ctx: &CtxArg) -> Result<Generated, String> {
             heading_style_ids: &ctx.heading_style_ids,
             list_paragraph_style_id: ctx.list_paragraph_style_id.as_deref(),
             allocate_hyperlink_rel: &mut allocate_hyperlink_rel,
-            allocate_bookmark_id: if ctx.bookmark_ids { Some(&mut allocate_bookmark_id) } else { None },
-            allocate_revision_id: if ctx.revision_ids { Some(&mut allocate_revision_id) } else { None },
+            allocate_bookmark_id: if ctx.bookmark_ids {
+                Some(&mut allocate_bookmark_id)
+            } else {
+                None
+            },
+            allocate_revision_id: if ctx.revision_ids {
+                Some(&mut allocate_revision_id)
+            } else {
+                None
+            },
         };
         generate_paragraph_xml(block, &mut context)?
     };
-    Ok(Generated { xml, hyperlinks, bookmarks, revisions })
+    Ok(Generated {
+        xml,
+        hyperlinks,
+        bookmarks,
+        revisions,
+    })
 }
 
 pub fn dispatch(function: &str, _text: &str, args: &Value) -> Returned {

@@ -75,7 +75,9 @@ pub(super) fn one_of<T, E: serde::de::Error, const N: usize>(
     let mut matching = candidates.into_iter().flatten();
     match (matching.next(), matching.next()) {
         (Some(value), None) => Ok(value),
-        (None, _) => Err(E::custom(format_args!("no variant of {name} reads the value"))),
+        (None, _) => Err(E::custom(format_args!(
+            "no variant of {name} reads the value"
+        ))),
         (Some(_), Some(_)) => Err(E::custom(format_args!(
             "more than one variant of {name} reads the value"
         ))),
@@ -136,7 +138,9 @@ impl<'de, V: Deserialize<'de>> Deserialize<'de> for NumberRecord<V> {
         let record = JsObject::<V>::deserialize(deserializer)?;
         for (key, _) in record.entries() {
             if jscompat::number_to_string(jscompat::to_number(key)) != key {
-                return Err(D::Error::custom(format_args!("the key {key:?} is no number")));
+                return Err(D::Error::custom(format_args!(
+                    "the key {key:?} is no number"
+                )));
             }
         }
         Ok(Self(record))
@@ -301,7 +305,9 @@ mod tests {
         assert_eq!(decode_base64("AAEC/w==").unwrap(), [0, 1, 2, 255]);
         assert_eq!(decode_base64("YWJj").unwrap(), b"abc");
         assert_eq!(decode_base64("YWI=").unwrap(), b"ab");
-        for refused in ["YWJ", "YQ=", "YR==", "YWJ=", "Y===", "YQ==YQ==", "YW J", "Y=Q="] {
+        for refused in [
+            "YWJ", "YQ=", "YR==", "YWJ=", "Y===", "YQ==YQ==", "YW J", "Y=Q=",
+        ] {
             assert_eq!(decode_base64(refused), None, "{refused}");
         }
     }
@@ -309,15 +315,27 @@ mod tests {
     #[test]
     fn a_map_keeps_its_entries_in_order() {
         let entries: MapEntries<String, u8> = serde_json::from_str(r#"[["b",1],["a",2]]"#).unwrap();
-        assert_eq!(serde_json::to_string(&entries).unwrap(), r#"[["b",1],["a",2]]"#);
+        assert_eq!(
+            serde_json::to_string(&entries).unwrap(),
+            r#"[["b",1],["a",2]]"#
+        );
         let numbers = |json: &str| serde_json::from_str::<MapEntries<jscompat::JsNum, u8>>(json);
         // new Map([[NaN, 1], [Infinity, 2], [-Infinity, 3]]) as JSON.stringify writes its entries
         let nonfinite = r#"[[null,1],[null,2],[null,3]]"#;
-        assert_eq!(serde_json::to_string(&numbers(nonfinite).unwrap()).unwrap(), nonfinite);
-        assert!(numbers(r#"[["2",1]]"#).is_err(), "a string key in a Map of numbers");
+        assert_eq!(
+            serde_json::to_string(&numbers(nonfinite).unwrap()).unwrap(),
+            nonfinite
+        );
+        assert!(
+            numbers(r#"[["2",1]]"#).is_err(),
+            "a string key in a Map of numbers"
+        );
         assert!(serde_json::from_str::<MapEntries<String, u8>>(r#"[[2,1]]"#).is_err());
         assert!(numbers(r#"[[2]]"#).is_err(), "an entry without a value");
-        assert!(numbers(r#"[[2,1,0]]"#).is_err(), "an entry with more than a key and a value");
+        assert!(
+            numbers(r#"[[2,1,0]]"#).is_err(),
+            "an entry with more than a key and a value"
+        );
     }
 
     #[test]

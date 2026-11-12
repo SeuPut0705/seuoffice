@@ -65,19 +65,31 @@ fn wrap(args: &Value) -> Result<Option<ImageWrap>, String> {
 }
 
 fn location(args: &Value) -> Result<ShapeDrawingLocation, String> {
-    let l = args.get("location").ok_or("the location argument is missing")?;
+    let l = args
+        .get("location")
+        .ok_or("the location argument is missing")?;
     Ok(ShapeDrawingLocation {
         shape_id: opt_string(l, "shapeId"),
         box_index: req_number(l, "boxIndex")?,
     })
 }
 
-fn list<T>(args: &Value, key: &str, f: impl Fn(&Value) -> Result<T, String>) -> Result<Vec<Option<T>>, String> {
+fn list<T>(
+    args: &Value,
+    key: &str,
+    f: impl Fn(&Value) -> Result<T, String>,
+) -> Result<Vec<Option<T>>, String> {
     args.get(key)
         .and_then(Value::as_array)
         .ok_or_else(|| format!("the {key} argument is not a list"))?
         .iter()
-        .map(|v| if v.is_null() { Ok(None) } else { f(v).map(Some) })
+        .map(|v| {
+            if v.is_null() {
+                Ok(None)
+            } else {
+                f(v).map(Some)
+            }
+        })
         .collect()
 }
 
@@ -144,7 +156,10 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "patchTextboxSizes" => {
             let sizes = list(args, "sizes", |s| {
-                Ok(TextboxSizePatch { w_px: opt_number(s, "wPx")?, h_px: opt_number(s, "hPx")? })
+                Ok(TextboxSizePatch {
+                    w_px: opt_number(s, "wPx")?,
+                    h_px: opt_number(s, "hPx")?,
+                })
             })?;
             value(patch_textbox_sizes(text, &sizes))
         }

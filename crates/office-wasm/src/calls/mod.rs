@@ -9,10 +9,6 @@ use serde_json::Value;
 mod blank;
 mod docprops;
 mod fields;
-mod markers;
-mod math;
-mod resolve;
-mod section;
 mod gen_drawing;
 mod gen_drawing_build;
 mod gen_fields;
@@ -22,6 +18,10 @@ mod gen_rpr;
 mod gen_runs;
 mod gen_table;
 mod gen_text;
+mod markers;
+mod math;
+mod resolve;
+mod section;
 
 /// What a call gives: a value, nothing where the TypeScript function returns
 /// `undefined`, or an error where it throws.

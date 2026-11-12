@@ -9,8 +9,9 @@ use super::runs::runs_xml;
 use super::{escape_xml_attr, split_xml_children};
 use crate::model::{
     CellBorder, CellBorders, CellMargins, ParaFormat, PropChangeInfo, PropChangeInfoResolved, Run,
-    TableAutoFitMode, TableCell, TableCellTextDirection, TableCellVAlign, TableCellVMerge, TableLook,
-    TableModel, TableModelAlign, TableModelFloatSide, TableModelRowHeightRulesItem, TableParagraphList,
+    TableAutoFitMode, TableCell, TableCellTextDirection, TableCellVAlign, TableCellVMerge,
+    TableLook, TableModel, TableModelAlign, TableModelFloatSide, TableModelRowHeightRulesItem,
+    TableParagraphList,
 };
 
 /// What `generateTableModelXml` throws: a trPr whose head the edge insertion
@@ -36,12 +37,20 @@ pub const TABLE_HEADER_FILL: &str = "F2F2F2";
 
 /// `Math.max(a, b)`: NaN wins.
 fn js_max(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() { f64::NAN } else { a.max(b) }
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else {
+        a.max(b)
+    }
 }
 
 /// `Math.min(a, b)`: NaN wins.
 fn js_min(a: f64, b: f64) -> f64 {
-    if a.is_nan() || b.is_nan() { f64::NAN } else { a.min(b) }
+    if a.is_nan() || b.is_nan() {
+        f64::NAN
+    } else {
+        a.min(b)
+    }
 }
 
 fn num(x: f64) -> String {
@@ -135,11 +144,17 @@ fn prop_change_holder(change_name: &str) -> Option<&'static str> {
 }
 
 fn remove(el: &El) -> Edit {
-    Edit { start: el.start, end: el.end, text: String::new() }
+    Edit {
+        start: el.start,
+        end: el.end,
+        text: String::new(),
+    }
 }
 
 fn children_of(els: &[El], parent: usize) -> impl Iterator<Item = (usize, &El)> {
-    els.iter().enumerate().filter(move |(_, c)| c.parent == Some(parent))
+    els.iter()
+        .enumerate()
+        .filter(move |(_, c)| c.parent == Some(parent))
 }
 
 /// restore the pre-change properties recorded in a *Change element
@@ -151,15 +166,25 @@ fn revert_prop_change(els: &[El], xml: &str, change_at: usize, holder_name: &str
     let holder = &els[holder_at];
     let old_inner = children_of(els, change_at)
         .find(|(_, c)| c.name == holder_name)
-        .map_or("", |(_, old)| &xml[old.inner_start..old.inner_end.max(old.inner_start)]);
+        .map_or("", |(_, old)| {
+            &xml[old.inner_start..old.inner_end.max(old.inner_start)]
+        });
     if holder_name == "w:pPr" {
         // the paragraph mark's rPr and the sectPr are not part of the record: keep them in place
         let keep_from = children_of(els, holder_at)
             .find(|&(at, c)| c.name == "w:rPr" || c.name == "w:sectPr" || at == change_at)
             .map_or(change.start, |(_, c)| c.start);
         return vec![
-            Edit { start: holder.inner_start, end: keep_from, text: old_inner.to_owned() },
-            Edit { start: change.start, end: change.end, text: String::new() },
+            Edit {
+                start: holder.inner_start,
+                end: keep_from,
+                text: old_inner.to_owned(),
+            },
+            Edit {
+                start: change.start,
+                end: change.end,
+                text: String::new(),
+            },
         ];
     }
     if holder_name == "w:sectPr" {
@@ -167,21 +192,36 @@ fn revert_prop_change(els: &[El], xml: &str, change_at: usize, holder_name: &str
             .filter(|(_, c)| c.name == "w:headerReference" || c.name == "w:footerReference")
             .map(|(_, c)| &xml[c.start..c.end])
             .collect();
-        return vec![Edit { start: holder.inner_start, end: holder.inner_end, text: refs + old_inner }];
+        return vec![Edit {
+            start: holder.inner_start,
+            end: holder.inner_end,
+            text: refs + old_inner,
+        }];
     }
     let is_marker = |c: &El| {
-        c.self_closing && js_regex!(r"^w:(?:ins|del|moveFrom|moveTo|cellIns|cellDel|cellMerge)$").test(&c.name)
+        c.self_closing
+            && js_regex!(r"^w:(?:ins|del|moveFrom|moveTo|cellIns|cellDel|cellMerge)$").test(&c.name)
     };
     if children_of(els, holder_at).any(|(_, c)| is_marker(c)) {
-        let mut edits: Vec<Edit> =
-            children_of(els, holder_at).filter(|(_, c)| !is_marker(c)).map(|(_, c)| remove(c)).collect();
-        edits.push(Edit { start: holder.inner_end, end: holder.inner_end, text: old_inner.to_owned() });
+        let mut edits: Vec<Edit> = children_of(els, holder_at)
+            .filter(|(_, c)| !is_marker(c))
+            .map(|(_, c)| remove(c))
+            .collect();
+        edits.push(Edit {
+            start: holder.inner_end,
+            end: holder.inner_end,
+            text: old_inner.to_owned(),
+        });
         return edits;
     }
     if trim(old_inner).is_empty() && holder_name != "w:tblPr" && holder_name != "w:tblGrid" {
         return vec![remove(holder)];
     }
-    vec![Edit { start: holder.inner_start, end: holder.inner_end, text: old_inner.to_owned() }]
+    vec![Edit {
+        start: holder.inner_start,
+        end: holder.inner_end,
+        text: old_inner.to_owned(),
+    }]
 }
 
 fn apply_edits(xml: &str, mut edits: Vec<Edit>) -> String {
@@ -214,7 +254,9 @@ fn resolve_prop_change_xml(xml: &str, change_name: &str, mode: PropChangeInfoRes
         return xml.to_owned();
     };
     let edits = match prop_change_holder(change_name) {
-        Some(holder) if mode == PropChangeInfoResolved::Reject => revert_prop_change(&els, xml, change_at, holder),
+        Some(holder) if mode == PropChangeInfoResolved::Reject => {
+            revert_prop_change(&els, xml, change_at, holder)
+        }
         _ => vec![remove(&els[change_at])],
     };
     let applied = apply_edits(xml, edits);
@@ -273,13 +315,26 @@ fn cell_borders_xml(borders: &CellBorders) -> String {
     let side = |name: &str, b: &Option<CellBorder>| {
         let Some(b) = b else { return String::new() };
         let none = b.style == "none" || b.style == "nil";
-        let sz = if none { String::new() } else { format!(" w:sz=\"{}\" w:space=\"0\"", num(b.sz_eighths.map_or(4.0, |n| n.0))) };
+        let sz = if none {
+            String::new()
+        } else {
+            format!(
+                " w:sz=\"{}\" w:space=\"0\"",
+                num(b.sz_eighths.map_or(4.0, |n| n.0))
+            )
+        };
         let color = if none {
             String::new()
         } else {
-            format!(" w:color=\"{}\"", escape_xml_attr(b.color.as_deref().unwrap_or("auto")))
+            format!(
+                " w:color=\"{}\"",
+                escape_xml_attr(b.color.as_deref().unwrap_or("auto"))
+            )
         };
-        format!("<w:{name} w:val=\"{}\"{sz}{color}/>", escape_xml_attr(&b.style))
+        format!(
+            "<w:{name} w:val=\"{}\"{sz}{color}/>",
+            escape_xml_attr(&b.style)
+        )
     };
     // CT_TcBorders is a sequence: top, left, bottom, right, tl2br, tr2bl
     format!(
@@ -296,13 +351,27 @@ fn cell_borders_xml(borders: &CellBorders) -> String {
 /// w:tcMar / w:tblCellMar with only the declared sides; None when nothing is declared
 fn cell_margins_xml(tag: &str, margins: Option<&CellMargins>) -> Option<String> {
     let margins = margins?;
-    let sides: String = [("top", *margins.top), ("left", *margins.left), ("bottom", *margins.bottom), ("right", *margins.right)]
-        .into_iter()
-        .filter_map(|(side, value)| {
-            value.map(|value| format!("<w:{side} w:w=\"{}\" w:type=\"dxa\"/>", num(js_max(0.0, math_round(value.0)))))
+    let sides: String = [
+        ("top", *margins.top),
+        ("left", *margins.left),
+        ("bottom", *margins.bottom),
+        ("right", *margins.right),
+    ]
+    .into_iter()
+    .filter_map(|(side, value)| {
+        value.map(|value| {
+            format!(
+                "<w:{side} w:w=\"{}\" w:type=\"dxa\"/>",
+                num(js_max(0.0, math_round(value.0)))
+            )
         })
-        .collect();
-    if sides.is_empty() { None } else { Some(format!("<{tag}>{sides}</{tag}>")) }
+    })
+    .collect();
+    if sides.is_empty() {
+        None
+    } else {
+        Some(format!("<{tag}>{sides}</{tag}>"))
+    }
 }
 
 /// colSpan clamped to 1..1000 at every emit site
@@ -330,7 +399,9 @@ fn resolved_props(xml: &str, change_name: &str, change: Option<Option<&PropChang
 
 fn cell_merge_xml(record: &PropChangeInfo) -> String {
     let attr = |name: &str, value: Option<&str>| {
-        value.map_or_else(String::new, |value| format!(" {name}=\"{}\"", escape_xml_attr(value)))
+        value.map_or_else(String::new, |value| {
+            format!(" {name}=\"{}\"", escape_xml_attr(value))
+        })
     };
     format!(
         "<w:cellMerge{}{}{}{}{}{}/>",
@@ -338,7 +409,10 @@ fn cell_merge_xml(record: &PropChangeInfo) -> String {
         attr("w:author", Some(&record.author)),
         attr("w:date", record.date.as_deref()),
         attr("w16du:dateUtc", record.date_utc.as_deref()),
-        attr("w:vMerge", Some(record.v_merge.as_deref().unwrap_or("cont"))),
+        attr(
+            "w:vMerge",
+            Some(record.v_merge.as_deref().unwrap_or("cont"))
+        ),
         attr("w:vMergeOrig", record.v_merge_orig.as_deref())
     )
 }
@@ -352,7 +426,12 @@ fn paragraph_xml(format: &ParaFormat, runs: &[Run], list: Option<&TableParagraph
         )
     });
     // no cell.align fallback here: it is a display aggregate of the paragraphs' own jc values
-    let p_pr = merge_p_pr_format(&format!("<w:pPr>{num_pr}</w:pPr>"), Some(format), None, None);
+    let p_pr = merge_p_pr_format(
+        &format!("<w:pPr>{num_pr}</w:pPr>"),
+        Some(format),
+        None,
+        None,
+    );
     format!("<w:p>{p_pr}{}</w:p>", runs_xml(runs, None))
 }
 
@@ -375,7 +454,11 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
     // unmodeled ones keep their original bytes
     let raw_tc_pr = match cell.raw_tc_pr.as_deref().filter(|raw| !raw.is_empty()) {
         Some(raw) => resolved_props(
-            &resolved_props(raw, "w:tcPrChange", cell.tc_pr_change.as_ref().map(Option::as_ref)),
+            &resolved_props(
+                raw,
+                "w:tcPrChange",
+                cell.tc_pr_change.as_ref().map(Option::as_ref),
+            ),
             "w:cellMerge",
             cell.cell_merge.as_ref().map(Option::as_ref),
         ),
@@ -386,10 +469,22 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         &replace_first(js_regex!(r"^<w:tcPr(?:\s[^>]*)?>"), &raw_tc_pr, ""),
         "",
     );
-    let mut children = if raw_tc_pr.ends_with("</w:tcPr>") { split_xml_children(&raw_inner) } else { Vec::new() };
-    set_tc_pr_child(&mut children, "w:tcW", Some(format!("<w:tcW w:w=\"{}\" w:type=\"dxa\"/>", num(width))));
+    let mut children = if raw_tc_pr.ends_with("</w:tcPr>") {
+        split_xml_children(&raw_inner)
+    } else {
+        Vec::new()
+    };
+    set_tc_pr_child(
+        &mut children,
+        "w:tcW",
+        Some(format!("<w:tcW w:w=\"{}\" w:type=\"dxa\"/>", num(width))),
+    );
     let span = cell_span(cell);
-    set_tc_pr_child(&mut children, "w:gridSpan", (span > 1.0).then(|| format!("<w:gridSpan w:val=\"{}\"/>", num(span))));
+    set_tc_pr_child(
+        &mut children,
+        "w:gridSpan",
+        (span > 1.0).then(|| format!("<w:gridSpan w:val=\"{}\"/>", num(span))),
+    );
     let merge = cell.v_merge;
     set_tc_pr_child(
         &mut children,
@@ -406,11 +501,19 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         && merge == Some(TableCellVMerge::Continue)
         && !raw_tc_pr.contains("<w:cellMerge")
     {
-        set_tc_pr_child(&mut children, "w:cellMerge", Some(cell_merge_xml(cell_merge)));
+        set_tc_pr_child(
+            &mut children,
+            "w:cellMerge",
+            Some(cell_merge_xml(cell_merge)),
+        );
     }
     // With borders unmodeled (undefined), leave the raw tcBorders alone
     if let Some(borders) = &cell.borders {
-        set_tc_pr_child(&mut children, "w:tcBorders", Some(cell_borders_xml(borders)));
+        set_tc_pr_child(
+            &mut children,
+            "w:tcBorders",
+            Some(cell_borders_xml(borders)),
+        );
     }
     set_tc_pr_child(
         &mut children,
@@ -418,7 +521,12 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         cell.fill
             .as_deref()
             .filter(|fill| !fill.is_empty())
-            .map(|fill| format!("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{}\"/>", escape_xml_attr(fill))),
+            .map(|fill| {
+                format!(
+                    "<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{}\"/>",
+                    escape_xml_attr(fill)
+                )
+            }),
     );
     set_tc_pr_child(
         &mut children,
@@ -435,15 +543,31 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
                 .filter(|&direction| direction != TableCellTextDirection::LrTb)
                 .map(|direction| format!("<w:textDirection w:val=\"{}\"/>", direction.as_str())),
         );
-        set_tc_pr_child(&mut children, "w:tcMar", cell_margins_xml("w:tcMar", cell.cell_mar_twips.as_ref()));
-        set_tc_pr_child(&mut children, "w:noWrap", (cell.no_wrap == Some(true)).then(|| "<w:noWrap/>".to_owned()));
+        set_tc_pr_child(
+            &mut children,
+            "w:tcMar",
+            cell_margins_xml("w:tcMar", cell.cell_mar_twips.as_ref()),
+        );
+        set_tc_pr_child(
+            &mut children,
+            "w:noWrap",
+            (cell.no_wrap == Some(true)).then(|| "<w:noWrap/>".to_owned()),
+        );
     }
     let tc_pr: String = children.into_iter().map(|(_, xml)| xml).collect();
-    let para_xmls: Vec<String> = match cell.rich_paras.as_deref().filter(|paras| !paras.is_empty()) {
-        Some(rich) => rich.iter().map(|p| paragraph_xml(&p.para_format, &p.runs, p.list.as_ref())).collect(),
+    let para_xmls: Vec<String> = match cell.rich_paras.as_deref().filter(|paras| !paras.is_empty())
+    {
+        Some(rich) => rich
+            .iter()
+            .map(|p| paragraph_xml(&p.para_format, &p.runs, p.list.as_ref()))
+            .collect(),
         None => {
             let empty = [String::new()];
-            let texts: &[String] = if cell.paras.is_empty() { &empty } else { &cell.paras };
+            let texts: &[String] = if cell.paras.is_empty() {
+                &empty
+            } else {
+                &cell.paras
+            };
             let mut format = ParaFormat::default();
             format.align.assign(cell.align);
             texts
@@ -477,9 +601,15 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         let at = splice_index(anchor, para_count, items.len());
         items.insert(at, (true, generate_table_model_xml(&nested[i], None)?));
     }
-    let tail = if items.last().is_none_or(|(tbl, _)| *tbl) { "<w:p/>" } else { "" };
+    let tail = if items.last().is_none_or(|(tbl, _)| *tbl) {
+        "<w:p/>"
+    } else {
+        ""
+    };
     let content: String = items.into_iter().map(|(_, xml)| xml).collect();
-    Ok(format!("<w:tc><w:tcPr>{tc_pr}</w:tcPr>{content}{tail}</w:tc>"))
+    Ok(format!(
+        "<w:tc><w:tcPr>{tc_pr}</w:tcPr>{content}{tail}</w:tc>"
+    ))
 }
 
 const TBL_PR_ORDER: [&str; 17] = [
@@ -520,10 +650,16 @@ fn set_tbl_pr_child(tbl_pr: &str, name: &str, xml: Option<&str>) -> String {
         let end = tbl_pr
             .rfind("</w:tblPr>")
             .unwrap_or_else(|| tbl_pr.char_indices().next_back().map_or(0, |(at, _)| at));
-        if end > open.len() { &tbl_pr[open.len()..end] } else { "" }
+        if end > open.len() {
+            &tbl_pr[open.len()..end]
+        } else {
+            ""
+        }
     };
-    let mut children: Vec<(String, String)> =
-        split_xml_children(inner).into_iter().filter(|(child, _)| child != name).collect();
+    let mut children: Vec<(String, String)> = split_xml_children(inner)
+        .into_iter()
+        .filter(|(child, _)| child != name)
+        .collect();
     if let Some(xml) = xml.filter(|xml| !xml.is_empty()) {
         let order = order_of(&TBL_PR_ORDER, name);
         let at = children
@@ -561,7 +697,9 @@ fn table_look_xml(look: &TableLook) -> String {
 /// the table's own <w:tblPr> (depth-aware: a w:tblPrChange nests another tblPr inside it)
 fn original_tbl_pr_of(table_xml: &str) -> Option<String> {
     let open = js_regex!(r"<w:tbl[\s>]").exec(table_xml)?;
-    let inner_start = table_xml[open.start()..].find('>').map_or(0, |at| open.start() + at + 1);
+    let inner_start = table_xml[open.start()..]
+        .find('>')
+        .map_or(0, |at| open.start() + at + 1);
     let inner_end = table_xml.rfind("</w:tbl>")?;
     if inner_start == 0 || inner_end < inner_start {
         return None;
@@ -580,19 +718,37 @@ const EMPTY_TR_PR: &str = r"^<w:trPr(?:\s[^>]*)?>\s*<\/w:trPr>$";
 
 /// `values?.[ri]` of a per-row text array (null and absent alike: the caller writes `?? ''`)
 fn row_text(values: &Option<Vec<Option<String>>>, ri: usize) -> Option<&str> {
-    values.as_ref().and_then(|values| values.get(ri)).and_then(Option::as_deref)
+    values
+        .as_ref()
+        .and_then(|values| values.get(ri))
+        .and_then(Option::as_deref)
 }
 
 /// `changes?.[ri]`: None = undefined, Some(None) = null
-fn row_change(changes: &Option<Vec<Option<PropChangeInfo>>>, ri: usize) -> Option<Option<&PropChangeInfo>> {
-    changes.as_ref().and_then(|changes| changes.get(ri)).map(Option::as_ref)
+fn row_change(
+    changes: &Option<Vec<Option<PropChangeInfo>>>,
+    ri: usize,
+) -> Option<Option<&PropChangeInfo>> {
+    changes
+        .as_ref()
+        .and_then(|changes| changes.get(ri))
+        .map(Option::as_ref)
 }
 
 fn row_flag(values: &Option<Vec<Option<bool>>>, ri: usize) -> Option<bool> {
-    values.as_ref().and_then(|values| values.get(ri)).copied().flatten()
+    values
+        .as_ref()
+        .and_then(|values| values.get(ri))
+        .copied()
+        .flatten()
 }
 
-fn row_xml(model: &TableModel, ri: usize, row: &[TableCell], widths: &[f64]) -> Result<String, TableXmlError> {
+fn row_xml(
+    model: &TableModel,
+    ri: usize,
+    row: &[TableCell],
+    widths: &[f64],
+) -> Result<String, TableXmlError> {
     let mut grid_column = 0.0;
     let mut cells = String::new();
     let mut cell_count = 0;
@@ -635,7 +791,8 @@ fn row_xml(model: &TableModel, ri: usize, row: &[TableCell], widths: &[f64]) -> 
         tbl_pr_ex = String::new();
     }
     // the placeholders are the truth for the grid edges
-    tr_pr = js_regex!(r"<w:(?:gridBefore|gridAfter|wBefore|wAfter)\b[^>]*\/>", "g").replace_all(&tr_pr, |_| String::new());
+    tr_pr = js_regex!(r"<w:(?:gridBefore|gridAfter|wBefore|wAfter)\b[^>]*\/>", "g")
+        .replace_all(&tr_pr, |_| String::new());
     if before > 0.0 || after > 0.0 {
         let mut edge_xml = String::new();
         if before > 0.0 {
@@ -645,25 +802,36 @@ fn row_xml(model: &TableModel, ri: usize, row: &[TableCell], widths: &[f64]) -> 
             edge_xml.push_str(&format!("<w:gridAfter w:val=\"{}\"/>", num(after)));
         }
         if before > 0.0 {
-            edge_xml.push_str(&format!("<w:wBefore w:w=\"{}\" w:type=\"dxa\"/>", num(w_before)));
+            edge_xml.push_str(&format!(
+                "<w:wBefore w:w=\"{}\" w:type=\"dxa\"/>",
+                num(w_before)
+            ));
         }
         if after > 0.0 {
-            edge_xml.push_str(&format!("<w:wAfter w:w=\"{}\" w:type=\"dxa\"/>", num(w_after)));
+            edge_xml.push_str(&format!(
+                "<w:wAfter w:w=\"{}\" w:type=\"dxa\"/>",
+                num(w_after)
+            ));
         }
         if tr_pr.is_empty() {
             tr_pr = format!("<w:trPr>{edge_xml}</w:trPr>");
         } else {
-            let head = js_regex!(r"^<w:trPr(?:\s[^>]*)?>(?:<w:cnfStyle\b[^>]*\/>)?(?:<w:divId\b[^>]*\/>)?")
-                .exec(&tr_pr)
-                .map(|head| head.end())
-                .ok_or_else(|| TableXmlError("Cannot read properties of null (reading '0')".to_owned()))?;
+            let head = js_regex!(
+                r"^<w:trPr(?:\s[^>]*)?>(?:<w:cnfStyle\b[^>]*\/>)?(?:<w:divId\b[^>]*\/>)?"
+            )
+            .exec(&tr_pr)
+            .map(|head| head.end())
+            .ok_or_else(|| {
+                TableXmlError("Cannot read properties of null (reading '0')".to_owned())
+            })?;
             tr_pr = insert_at(&tr_pr, Some(head), &edge_xml);
         }
     } else if js_regex!(EMPTY_TR_PR).test(&tr_pr) {
         tr_pr = String::new();
     }
     if let Some(repeat_header) = row_flag(&model.repeat_header_rows, ri) {
-        tr_pr = js_regex!(r"<w:tblHeader(?:\s[^>]*)?\/>", "g").replace_all(&tr_pr, |_| String::new());
+        tr_pr =
+            js_regex!(r"<w:tblHeader(?:\s[^>]*)?\/>", "g").replace_all(&tr_pr, |_| String::new());
         if repeat_header {
             let tag = "<w:tblHeader/>";
             tr_pr = if tr_pr.is_empty() {
@@ -676,27 +844,43 @@ fn row_xml(model: &TableModel, ri: usize, row: &[TableCell], widths: &[f64]) -> 
         }
     }
     if let Some(cant_split) = row_flag(&model.row_cant_split, ri) {
-        tr_pr = js_regex!(r"<w:cantSplit(?:\s[^>]*)?\/>", "g").replace_all(&tr_pr, |_| String::new());
+        tr_pr =
+            js_regex!(r"<w:cantSplit(?:\s[^>]*)?\/>", "g").replace_all(&tr_pr, |_| String::new());
         if cant_split {
             // CT_TrPr: cantSplit precedes trHeight and tblHeader
             let tag = "<w:cantSplit/>";
             tr_pr = if tr_pr.is_empty() {
                 format!("<w:trPr>{tag}</w:trPr>")
             } else {
-                let at = js_regex!(r"<w:trHeight\b|<w:tblHeader\b|<\/w:trPr>").exec(&tr_pr).map(|m| m.start());
+                let at = js_regex!(r"<w:trHeight\b|<w:tblHeader\b|<\/w:trPr>")
+                    .exec(&tr_pr)
+                    .map(|m| m.start());
                 insert_at(&tr_pr, at, tag)
             };
         } else if js_regex!(EMPTY_TR_PR).test(&tr_pr) {
             tr_pr = String::new();
         }
     }
-    let height = model.row_heights_twips.as_ref().and_then(|v| v.get(ri)).copied().flatten();
+    let height = model
+        .row_heights_twips
+        .as_ref()
+        .and_then(|v| v.get(ri))
+        .copied()
+        .flatten();
     match height {
         Some(h) if h.0 > 0.0 => {
-            let exact = model.row_height_rules.as_ref().and_then(|v| v.get(ri)).copied().flatten()
+            let exact = model
+                .row_height_rules
+                .as_ref()
+                .and_then(|v| v.get(ri))
+                .copied()
+                .flatten()
                 == Some(TableModelRowHeightRulesItem::Exact);
             let rule = if exact { "exact" } else { "atLeast" };
-            let tag = format!("<w:trHeight w:val=\"{}\" w:hRule=\"{rule}\"/>", num(math_round(h.0)));
+            let tag = format!(
+                "<w:trHeight w:val=\"{}\" w:hRule=\"{rule}\"/>",
+                num(math_round(h.0))
+            );
             if tr_pr.is_empty() {
                 tr_pr = format!("<w:trPr>{tag}</w:trPr>");
             } else if js_regex!(r"<w:trHeight[^>]*\/>").test(&tr_pr) {
@@ -717,7 +901,10 @@ fn row_xml(model: &TableModel, ri: usize, row: &[TableCell], widths: &[f64]) -> 
 }
 
 /// Generate a complete table from the editable display model.
-pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&str>) -> Result<String, TableXmlError> {
+pub fn generate_table_model_xml(
+    model: &TableModel,
+    original_table_xml: Option<&str>,
+) -> Result<String, TableXmlError> {
     // the widest row decides the column count
     let pct = model.col_widths_pct.as_deref();
     let mut column_count = js_max(1.0, pct.map_or(0.0, |pct| pct.len() as f64));
@@ -733,10 +920,19 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
         _ => vec![100.0 / column_count; count],
     };
     let total = sum(percentages.iter().copied());
-    let total_pct = if total == 0.0 || total.is_nan() { 100.0 } else { total };
+    let total_pct = if total == 0.0 || total.is_nan() {
+        100.0
+    } else {
+        total
+    };
     let widths: Vec<f64> = match model.col_widths_twips.as_deref() {
-        Some(twips) if twips.len() as f64 == column_count => twips.iter().map(|n| js_max(1.0, math_round(n.0))).collect(),
-        _ => percentages.iter().map(|value| js_max(1.0, math_round((value / total_pct) * 9360.0))).collect(),
+        Some(twips) if twips.len() as f64 == column_count => {
+            twips.iter().map(|n| js_max(1.0, math_round(n.0))).collect()
+        }
+        _ => percentages
+            .iter()
+            .map(|value| js_max(1.0, math_round((value / total_pct) * 9360.0)))
+            .collect(),
     };
     let total_width = sum(widths.iter().copied());
     // model borders win over the self-contained single-line default
@@ -746,12 +942,17 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
         Some(b) => format!(
             "<w:{name} w:val=\"{}\"{} w:space=\"0\" w:color=\"{}\"/>",
             escape_xml_attr(&b.style),
-            b.sz_eighths.map_or_else(String::new, |sz| format!(" w:sz=\"{}\"", num(math_round(sz.0)))),
+            b.sz_eighths.map_or_else(String::new, |sz| format!(
+                " w:sz=\"{}\"",
+                num(math_round(sz.0))
+            )),
             escape_xml_attr(b.color.as_deref().unwrap_or("auto"))
         ),
     };
     let none = None;
-    let side = |pick: fn(&crate::model::TableBorders) -> &Option<CellBorder>| model.borders.as_ref().map_or(&none, pick);
+    let side = |pick: fn(&crate::model::TableBorders) -> &Option<CellBorder>| {
+        model.borders.as_ref().map_or(&none, pick)
+    };
     let borders = format!(
         "<w:tblBorders>{}{}{}{}{}{}</w:tblBorders>",
         border_of("top", side(|b| &b.top)),
@@ -761,18 +962,26 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
         border_of("insideH", side(|b| &b.inside_h)),
         border_of("insideV", side(|b| &b.inside_v))
     );
-    let cell_mar = model.cell_mar_twips.as_ref().map_or_else(String::new, |mar| {
-        let side = |name: &str, w: Option<JsNum>| {
-            w.map_or_else(String::new, |w| format!("<w:{name} w:w=\"{}\" w:type=\"dxa\"/>", num(math_round(w.0))))
-        };
-        format!(
-            "<w:tblCellMar>{}{}{}{}</w:tblCellMar>",
-            side("top", *mar.top),
-            side("left", *mar.left),
-            side("bottom", *mar.bottom),
-            side("right", *mar.right)
-        )
-    });
+    let cell_mar = model
+        .cell_mar_twips
+        .as_ref()
+        .map_or_else(String::new, |mar| {
+            let side = |name: &str, w: Option<JsNum>| {
+                w.map_or_else(String::new, |w| {
+                    format!(
+                        "<w:{name} w:w=\"{}\" w:type=\"dxa\"/>",
+                        num(math_round(w.0))
+                    )
+                })
+            };
+            format!(
+                "<w:tblCellMar>{}{}{}{}</w:tblCellMar>",
+                side("top", *mar.top),
+                side("left", *mar.left),
+                side("bottom", *mar.bottom),
+                side("right", *mar.right)
+            )
+        });
     let grid_record = match &model.tbl_grid_change {
         Some(Some(change)) if change.resolved.is_none() => format!(
             "<w:tblGridChange w:id=\"{}\"><w:tblGrid>{}</w:tblGrid></w:tblGridChange>",
@@ -781,22 +990,33 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
         ),
         _ => String::new(),
     };
-    let cols: String = widths.iter().map(|width| format!("<w:gridCol w:w=\"{}\"/>", num(*width))).collect();
+    let cols: String = widths
+        .iter()
+        .map(|width| format!("<w:gridCol w:w=\"{}\"/>", num(*width)))
+        .collect();
     let grid = format!("<w:tblGrid>{cols}{grid_record}</w:tblGrid>");
     let mut rows = String::new();
     for (ri, row) in model.rows.iter().enumerate() {
         rows.push_str(&row_xml(model, ri, row, &widths)?);
     }
-    let original_tbl_pr = original_table_xml.filter(|xml| !xml.is_empty()).and_then(original_tbl_pr_of);
+    let original_tbl_pr = original_table_xml
+        .filter(|xml| !xml.is_empty())
+        .and_then(original_tbl_pr_of);
     let tbl_ind = match model.indent_twips {
         Some(indent) if truthy_num(Some(indent)) && math_round(indent.0) != 0.0 => {
-            format!("<w:tblInd w:w=\"{}\" w:type=\"dxa\"/>", num(math_round(indent.0)))
+            format!(
+                "<w:tblInd w:w=\"{}\" w:type=\"dxa\"/>",
+                num(math_round(indent.0))
+            )
         }
         _ => String::new(),
     };
     let mut tbl_pr = resolved_props(
         &original_tbl_pr.clone().unwrap_or_else(|| {
-            format!("<w:tblPr><w:tblW w:w=\"{}\" w:type=\"dxa\"/>{tbl_ind}{borders}</w:tblPr>", num(total_width))
+            format!(
+                "<w:tblPr><w:tblW w:w=\"{}\" w:type=\"dxa\"/>{tbl_ind}{borders}</w:tblPr>",
+                num(total_width)
+            )
         }),
         "w:tblPrChange",
         model.tbl_pr_change.as_ref().map(Option::as_ref),
@@ -804,12 +1024,21 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
     // Table style reference: '' = remove, non-empty = replace/insert
     if let Some(style) = &model.tbl_style_id {
         let tag = format!("<w:tblStyle w:val=\"{}\"/>", escape_xml_attr(style));
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblStyle", (!style.is_empty()).then_some(tag.as_str()));
+        tbl_pr = set_tbl_pr_child(
+            &tbl_pr,
+            "w:tblStyle",
+            (!style.is_empty()).then_some(tag.as_str()),
+        );
     }
     // Floating positioning + wrapping. null returns the table to the text flow;
     // undefined leaves an imported tblpPr intact.
-    let requested: Option<Option<TableModelFloatSide>> = match (&model.float_side, &model.float_pos) {
-        (None, Some(pos)) => Some(Some(if pos.x_twips.0 > 4680.0 { TableModelFloatSide::Right } else { TableModelFloatSide::Left })),
+    let requested: Option<Option<TableModelFloatSide>> = match (&model.float_side, &model.float_pos)
+    {
+        (None, Some(pos)) => Some(Some(if pos.x_twips.0 > 4680.0 {
+            TableModelFloatSide::Right
+        } else {
+            TableModelFloatSide::Left
+        })),
         (side, _) => *side,
     };
     if requested.is_some() || (original_tbl_pr.is_none() && model.float_pos.is_some()) {
@@ -828,7 +1057,11 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
                         pos.horz_anchor.map_or("page", |a| a.as_str()),
                     ),
                     None => (
-                        if side == TableModelFloatSide::Right { js_max(0.0, 9360.0 - total_width) } else { 0.0 },
+                        if side == TableModelFloatSide::Right {
+                            js_max(0.0, 9360.0 - total_width)
+                        } else {
+                            0.0
+                        },
                         0.0,
                         None,
                         "page",
@@ -836,7 +1069,9 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
                     ),
                 };
                 let attr = |name: &str, value: Option<JsNum>| {
-                    value.map_or_else(String::new, |value| format!(" w:{name}=\"{}\"", num(js_max(0.0, math_round(value.0)))))
+                    value.map_or_else(String::new, |value| {
+                        format!(" w:{name}=\"{}\"", num(js_max(0.0, math_round(value.0))))
+                    })
                 };
                 let tag = format!(
                     "<w:tblpPr{}{}{}{} w:vertAnchor=\"{vert}\" w:horzAnchor=\"{horz}\" w:tblpX=\"{}\" w:tblpY=\"{}\"/>",
@@ -848,31 +1083,52 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
                     num(math_round(y))
                 );
                 tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblpPr", Some(&tag));
-                tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblOverlap", Some("<w:tblOverlap w:val=\"overlap\"/>"));
+                tbl_pr = set_tbl_pr_child(
+                    &tbl_pr,
+                    "w:tblOverlap",
+                    Some("<w:tblOverlap w:val=\"overlap\"/>"),
+                );
             }
         }
     }
     let effective_auto_fit = model.auto_fit.or_else(|| {
         original_tbl_pr.is_none().then(|| {
-            if model.auto_layout == Some(true) { TableAutoFitMode::Contents } else { TableAutoFitMode::Fixed }
+            if model.auto_layout == Some(true) {
+                TableAutoFitMode::Contents
+            } else {
+                TableAutoFitMode::Fixed
+            }
         })
     });
     if let Some(fit) = effective_auto_fit {
         let tbl_w = match fit {
             TableAutoFitMode::Window => "<w:tblW w:w=\"5000\" w:type=\"pct\"/>".to_owned(),
             TableAutoFitMode::Contents => "<w:tblW w:w=\"0\" w:type=\"auto\"/>".to_owned(),
-            TableAutoFitMode::Fixed => format!("<w:tblW w:w=\"{}\" w:type=\"dxa\"/>", num(total_width)),
+            TableAutoFitMode::Fixed => {
+                format!("<w:tblW w:w=\"{}\" w:type=\"dxa\"/>", num(total_width))
+            }
         };
         tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblW", Some(&tbl_w));
-        let layout = if fit == TableAutoFitMode::Fixed { "fixed" } else { "autofit" };
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblLayout", Some(&format!("<w:tblLayout w:type=\"{layout}\"/>")));
+        let layout = if fit == TableAutoFitMode::Fixed {
+            "fixed"
+        } else {
+            "autofit"
+        };
+        tbl_pr = set_tbl_pr_child(
+            &tbl_pr,
+            "w:tblLayout",
+            Some(&format!("<w:tblLayout w:type=\"{layout}\"/>")),
+        );
     }
     if model.cell_mar_twips.is_some() {
         tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblCellMar", Some(&cell_mar));
     }
     if let Some(look) = &model.table_look {
         tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblLook", Some(&table_look_xml(look)));
-    } else if model.tbl_style_id.as_deref().is_some_and(|style| !style.is_empty())
+    } else if model
+        .tbl_style_id
+        .as_deref()
+        .is_some_and(|style| !style.is_empty())
         && !js_regex!(r"<w:tblLook[\s/>]").test(&tbl_pr)
     {
         let look = TableLook {
@@ -888,22 +1144,41 @@ pub fn generate_table_model_xml(model: &TableModel, original_table_xml: Option<&
     // Table alignment (w:jc): explicit align replaces/removes the original
     if let Some(align) = model.align {
         let jc = format!("<w:jc w:val=\"{}\"/>", align.as_str());
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:jc", (align != TableModelAlign::Left).then_some(jc.as_str()));
+        tbl_pr = set_tbl_pr_child(
+            &tbl_pr,
+            "w:jc",
+            (align != TableModelAlign::Left).then_some(jc.as_str()),
+        );
     }
     if let Some(caption) = &model.caption {
         let tag = format!("<w:tblCaption w:val=\"{}\"/>", escape_xml_attr(caption));
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblCaption", (!caption.is_empty()).then_some(tag.as_str()));
+        tbl_pr = set_tbl_pr_child(
+            &tbl_pr,
+            "w:tblCaption",
+            (!caption.is_empty()).then_some(tag.as_str()),
+        );
     }
     if let Some(description) = &model.description {
-        let tag = format!("<w:tblDescription w:val=\"{}\"/>", escape_xml_attr(description));
-        tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblDescription", (!description.is_empty()).then_some(tag.as_str()));
+        let tag = format!(
+            "<w:tblDescription w:val=\"{}\"/>",
+            escape_xml_attr(description)
+        );
+        tbl_pr = set_tbl_pr_child(
+            &tbl_pr,
+            "w:tblDescription",
+            (!description.is_empty()).then_some(tag.as_str()),
+        );
     }
     Ok(format!("<w:tbl>{tbl_pr}{grid}{rows}</w:tbl>"))
 }
 
 /// `String.prototype.repeat(count)` for a count already known not to be negative.
 fn repeat(text: &str, count: f64) -> String {
-    if count.is_nan() { String::new() } else { text.repeat(count.trunc() as usize) }
+    if count.is_nan() {
+        String::new()
+    } else {
+        text.repeat(count.trunc() as usize)
+    }
 }
 
 /// Generate a self-contained w:tbl fragment (inline borders, no style reference).
@@ -914,14 +1189,27 @@ pub fn generate_table_xml(rows: f64, cols: f64, opts: TableGenOptions) -> String
     let col_width = num((total_width / safe_cols).floor());
     let borders: String = ["top", "left", "bottom", "right", "insideH", "insideV"]
         .iter()
-        .map(|name| format!("<w:{name} w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"auto\"/>"))
+        .map(|name| {
+            format!("<w:{name} w:val=\"single\" w:sz=\"4\" w:space=\"0\" w:color=\"auto\"/>")
+        })
         .collect();
-    let grid = format!("<w:tblGrid>{}</w:tblGrid>", repeat(&format!("<w:gridCol w:w=\"{col_width}\"/>"), safe_cols));
+    let grid = format!(
+        "<w:tblGrid>{}</w:tblGrid>",
+        repeat(&format!("<w:gridCol w:w=\"{col_width}\"/>"), safe_cols)
+    );
     let cell = |header: bool| {
         format!(
             "<w:tc><w:tcPr><w:tcW w:w=\"{col_width}\" w:type=\"dxa\"/>{}</w:tcPr>{}</w:tc>",
-            if header { format!("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{TABLE_HEADER_FILL}\"/>") } else { String::new() },
-            if header { "<w:p><w:r><w:rPr><w:b/></w:rPr></w:r></w:p>" } else { "<w:p/>" }
+            if header {
+                format!("<w:shd w:val=\"clear\" w:color=\"auto\" w:fill=\"{TABLE_HEADER_FILL}\"/>")
+            } else {
+                String::new()
+            },
+            if header {
+                "<w:p><w:r><w:rPr><w:b/></w:rPr></w:r></w:p>"
+            } else {
+                "<w:p/>"
+            }
         )
     };
     let row = |header: bool| format!("<w:tr>{}</w:tr>", repeat(&cell(header), safe_cols));

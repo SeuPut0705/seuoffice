@@ -118,15 +118,30 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
     }
     let touch_size = num_truthy(patch.width_px) && num_truthy(patch.height_px);
     if touch_size {
-        let to_emu = |px: f64| px.is_finite().then(|| js_max(1.0, math_round(px * EMU_PER_PX)));
+        let to_emu = |px: f64| {
+            px.is_finite()
+                .then(|| js_max(1.0, math_round(px * EMU_PER_PX)))
+        };
         let cx = to_emu(patch.width_px.unwrap_or(f64::NAN));
         let cy = to_emu(patch.height_px.unwrap_or(f64::NAN));
         if let (Some(cx), Some(cy)) = (cx, cy) {
             let resize = |tag: &str| {
-                let tag = replace_first(js_regex!(r#"cx="\d+""#), 0, tag, &format!("cx=\"{}\"", num(cx)));
-                replace_first(js_regex!(r#"cy="\d+""#), 0, &tag, &format!("cy=\"{}\"", num(cy)))
+                let tag = replace_first(
+                    js_regex!(r#"cx="\d+""#),
+                    0,
+                    tag,
+                    &format!("cx=\"{}\"", num(cx)),
+                );
+                replace_first(
+                    js_regex!(r#"cy="\d+""#),
+                    0,
+                    &tag,
+                    &format!("cy=\"{}\"", num(cy)),
+                )
             };
-            out = replace_first_with(js_regex!(r"<wp:extent[^>]*\/?>"), &out, |m| resize(m.as_str()));
+            out = replace_first_with(js_regex!(r"<wp:extent[^>]*\/?>"), &out, |m| {
+                resize(m.as_str())
+            });
             out = replace_first_with(js_regex!(r"<a:ext[^>]*\/>"), &out, |m| resize(m.as_str()));
         }
     }
@@ -136,7 +151,12 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
             .map(|m| m.get(1).unwrap_or("").to_owned());
         let ext_m = js_regex!(r#"<wp:extent[^>]*?\bcx="(\d+)"[^>]*?\bcy="(\d+)""#)
             .exec(&out)
-            .map(|m| (m.get(1).unwrap_or("").to_owned(), m.get(2).unwrap_or("").to_owned()));
+            .map(|m| {
+                (
+                    m.get(1).unwrap_or("").to_owned(),
+                    m.get(2).unwrap_or("").to_owned(),
+                )
+            });
         let touch_rot = patch.rot_deg.is_some();
         if let Some((ext_cx, ext_cy)) = ext_m {
             if touch_rot || (touch_size && rot_m.is_some()) {
@@ -153,7 +173,12 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
                 out = if effect.test(&out) {
                     replace_first(effect, 0, &out, &ee)
                 } else {
-                    replace_first(js_regex!(r"(<wp:extent\b[^>]*\/?>)"), 1, &out, &format!("$1{ee}"))
+                    replace_first(
+                        js_regex!(r"(<wp:extent\b[^>]*\/?>)"),
+                        1,
+                        &out,
+                        &format!("$1{ee}"),
+                    )
                 };
             }
         }
@@ -167,14 +192,25 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
             let found = js_regex!(r"(<w:pPr[^>]*>)([\s\S]*?)<\/w:pPr>")
                 .exec(&out)
                 .map(|m| {
-                    (m.start(), m.as_str().len(), m.get(1).unwrap_or("").to_owned(), m.get(2).unwrap_or("").to_owned())
+                    (
+                        m.start(),
+                        m.as_str().len(),
+                        m.get(1).unwrap_or("").to_owned(),
+                        m.get(2).unwrap_or("").to_owned(),
+                    )
                 });
             if let Some((index, whole_len, open, inner)) = found {
                 let patched = match inner.find("<w:rPr>") {
                     None => format!("{inner}{jc}"),
                     Some(at) => format!("{}{}{}", &inner[..at], jc, &inner[at..]),
                 };
-                out = format!("{}{}{}</w:pPr>{}", &out[..index], open, patched, &out[index + whole_len..]);
+                out = format!(
+                    "{}{}{}</w:pPr>{}",
+                    &out[..index],
+                    open,
+                    patched,
+                    &out[index + whole_len..]
+                );
             } else {
                 out = replace_first(
                     js_regex!(r"(<w:p(?: [^>]*)?>)"),
@@ -188,7 +224,9 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
     let finite_offset = |v: f64| v.is_finite().then(|| math_round(v));
     if let Some(x) = patch.pos_offset_x.and_then(finite_offset) {
         out = replace_first(
-            js_regex!(r"(<wp:positionH[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionH>)"),
+            js_regex!(
+                r"(<wp:positionH[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionH>)"
+            ),
             2,
             &out,
             &format!("$1<wp:posOffset>{}</wp:posOffset>$2", num(x)),
@@ -196,7 +234,9 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
     }
     if let Some(y) = patch.pos_offset_y.and_then(finite_offset) {
         out = replace_first(
-            js_regex!(r"(<wp:positionV[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionV>)"),
+            js_regex!(
+                r"(<wp:positionV[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionV>)"
+            ),
             2,
             &out,
             &format!("$1<wp:posOffset>{}</wp:posOffset>$2", num(y)),
@@ -264,10 +304,24 @@ pub fn apply_image_wrap(
     let has_anchor = js_regex!(r"<wp:anchor[\s>]").test(xml);
     let existing_wrap = wrap_element_re().exec(xml).map(|m| m.as_str().to_owned());
     let mut out = replace_first(js_regex!(r"<wp:simplePos[^>]*\/>"), 0, xml, "");
-    let original_h = js_regex!(r"<wp:positionH[\s\S]*?<\/wp:positionH>").exec(&out).map(|m| m.as_str().to_owned());
-    out = replace_first(js_regex!(r"<wp:positionH[\s\S]*?<\/wp:positionH>"), 0, &out, "");
-    let original_v = js_regex!(r"<wp:positionV[\s\S]*?<\/wp:positionV>").exec(&out).map(|m| m.as_str().to_owned());
-    out = replace_first(js_regex!(r"<wp:positionV[\s\S]*?<\/wp:positionV>"), 0, &out, "");
+    let original_h = js_regex!(r"<wp:positionH[\s\S]*?<\/wp:positionH>")
+        .exec(&out)
+        .map(|m| m.as_str().to_owned());
+    out = replace_first(
+        js_regex!(r"<wp:positionH[\s\S]*?<\/wp:positionH>"),
+        0,
+        &out,
+        "",
+    );
+    let original_v = js_regex!(r"<wp:positionV[\s\S]*?<\/wp:positionV>")
+        .exec(&out)
+        .map(|m| m.as_str().to_owned());
+    out = replace_first(
+        js_regex!(r"<wp:positionV[\s\S]*?<\/wp:positionV>"),
+        0,
+        &out,
+        "",
+    );
     out = remove_wraps(&out);
 
     let Some(wrap) = wrap else {
@@ -287,7 +341,12 @@ pub fn apply_image_wrap(
     let behind = if wrap == "behind" { "1" } else { "0" };
     let is_side = matches!(
         wrap,
-        "square-left" | "square-right" | "tight-left" | "tight-right" | "through-left" | "through-right"
+        "square-left"
+            | "square-right"
+            | "tight-left"
+            | "tight-right"
+            | "through-left"
+            | "through-right"
     );
     let h_align = if wrap.ends_with("-right") {
         "right"
@@ -296,20 +355,29 @@ pub fn apply_image_wrap(
     } else {
         "left"
     };
-    let default_h = format!("<wp:positionH relativeFrom=\"column\"><wp:align>{h_align}</wp:align></wp:positionH>");
-    let default_v = "<wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>";
+    let default_h = format!(
+        "<wp:positionH relativeFrom=\"column\"><wp:align>{h_align}</wp:align></wp:positionH>"
+    );
+    let default_v =
+        "<wp:positionV relativeFrom=\"paragraph\"><wp:posOffset>0</wp:posOffset></wp:positionV>";
     let position = if let Some(pos) = pos_offset {
         // Main policy: a non-finite axis keeps the drawing's own position
         // element for that axis (the default one when it had none)
         let rel_h = pos.relative_to.as_deref().unwrap_or("column");
         let rel_v = pos.relative_to.as_deref().unwrap_or("paragraph");
         let pos_h = if pos.x.is_finite() {
-            format!("<wp:positionH relativeFrom=\"{rel_h}\"><wp:posOffset>{}</wp:posOffset></wp:positionH>", num(math_round(pos.x)))
+            format!(
+                "<wp:positionH relativeFrom=\"{rel_h}\"><wp:posOffset>{}</wp:posOffset></wp:positionH>",
+                num(math_round(pos.x))
+            )
         } else {
             original_h.unwrap_or(default_h)
         };
         let pos_v = if pos.y.is_finite() {
-            format!("<wp:positionV relativeFrom=\"{rel_v}\"><wp:posOffset>{}</wp:posOffset></wp:positionV>", num(math_round(pos.y)))
+            format!(
+                "<wp:positionV relativeFrom=\"{rel_v}\"><wp:posOffset>{}</wp:posOffset></wp:positionV>",
+                num(math_round(pos.y))
+            )
         } else {
             original_v.unwrap_or_else(|| default_v.to_owned())
         };
@@ -350,16 +418,28 @@ pub fn apply_image_wrap(
         out = replace_first(js_regex!(r"<wp:inline[^>]*>"), 0, &out, &anchor_open);
         out = replace_first(js_regex!(r"<\/wp:inline>"), 0, &out, "</wp:anchor>");
     }
-    out = replace_first(js_regex!(r"(<wp:anchor[^>]*>)"), 1, &out, &format!("$1{position}"));
+    out = replace_first(
+        js_regex!(r"(<wp:anchor[^>]*>)"),
+        1,
+        &out,
+        &format!("$1{position}"),
+    );
     insert_wrap_element(&out, wrap_element)
 }
 
 /// The wrap element between extent/effectExtent and docPr, else before a:graphic.
 fn insert_wrap_element(out: &str, wrap_element: &str) -> String {
     if js_regex!(r"<wp:docPr").test(out) {
-        return replace_first(js_regex!(r"<wp:docPr"), 0, out, &format!("{wrap_element}<wp:docPr"));
+        return replace_first(
+            js_regex!(r"<wp:docPr"),
+            0,
+            out,
+            &format!("{wrap_element}<wp:docPr"),
+        );
     }
-    replace_first_with(js_regex!(r"<a:graphic[\s>]"), out, |m| format!("{wrap_element}{}", m.as_str()))
+    replace_first_with(js_regex!(r"<a:graphic[\s>]"), out, |m| {
+        format!("{wrap_element}{}", m.as_str())
+    })
 }
 
 fn box_drawing_segments(paragraph_xml: &str) -> Vec<(usize, usize)> {
@@ -377,7 +457,10 @@ pub struct ShapeDrawingLocation {
     pub box_index: f64,
 }
 
-fn shape_drawing_segment(paragraph_xml: &str, location: &ShapeDrawingLocation) -> Option<(usize, usize)> {
+fn shape_drawing_segment(
+    paragraph_xml: &str,
+    location: &ShapeDrawingLocation,
+) -> Option<(usize, usize)> {
     if let Some(shape_id) = location.shape_id.as_deref().filter(|id| !id.is_empty()) {
         return xml_segments(paragraph_xml, "w:drawing", 0, paragraph_xml.len())
             .into_iter()
@@ -413,12 +496,21 @@ fn set_anchor_rank(drawing_xml: &str, z_order: f64) -> String {
 }
 
 /// `applyShapeZOrderAt`
-pub fn apply_shape_z_order_at(paragraph_xml: &str, location: &ShapeDrawingLocation, z_order: f64) -> String {
+pub fn apply_shape_z_order_at(
+    paragraph_xml: &str,
+    location: &ShapeDrawingLocation,
+    z_order: f64,
+) -> String {
     let Some((start, end)) = shape_drawing_segment(paragraph_xml, location) else {
         return paragraph_xml.to_owned();
     };
     let next = set_anchor_rank(&paragraph_xml[start..end], z_order);
-    format!("{}{}{}", &paragraph_xml[..start], next, &paragraph_xml[end..])
+    format!(
+        "{}{}{}",
+        &paragraph_xml[..start],
+        next,
+        &paragraph_xml[end..]
+    )
 }
 
 /// `applyShapeWrapAt`
@@ -439,8 +531,18 @@ pub fn apply_shape_wrap_at(
                 return paragraph_xml.to_owned();
             }
             let next = replace_first(js_regex!(r"<wp:simplePos[^>]*\/>"), 0, drawing, "");
-            let next = replace_first(js_regex!(r"<wp:positionH[\s\S]*?<\/wp:positionH>"), 0, &next, "");
-            let next = replace_first(js_regex!(r"<wp:positionV[\s\S]*?<\/wp:positionV>"), 0, &next, "");
+            let next = replace_first(
+                js_regex!(r"<wp:positionH[\s\S]*?<\/wp:positionH>"),
+                0,
+                &next,
+                "",
+            );
+            let next = replace_first(
+                js_regex!(r"<wp:positionV[\s\S]*?<\/wp:positionV>"),
+                0,
+                &next,
+                "",
+            );
             let next = remove_wraps(&next);
             let next = replace_first(
                 js_regex!(r"<wp:anchor[^>]*>"),
@@ -453,7 +555,12 @@ pub fn apply_shape_wrap_at(
         Some(wrap) if !has_anchor => apply_image_wrap(drawing, Some(wrap), None, None, z_order),
         Some(wrap) => swap_anchor_wrap(drawing, wrap, z_order),
     };
-    format!("{}{}{}", &paragraph_xml[..start], next, &paragraph_xml[end..])
+    format!(
+        "{}{}{}",
+        &paragraph_xml[..start],
+        next,
+        &paragraph_xml[end..]
+    )
 }
 
 /// `swapAnchorWrap`
@@ -471,9 +578,19 @@ pub fn swap_anchor_wrap(drawing_xml: &str, wrap: ImageWrap, z_order: Option<f64>
     let mut next = replace_first_with(js_regex!(r"<wp:anchor[^>]*>"), &next, |m| {
         let tag = m.as_str();
         if tag.contains("behindDoc=") {
-            replace_first(js_regex!(r#"behindDoc="[^"]*""#), 0, tag, &format!("behindDoc=\"{behind}\""))
+            replace_first(
+                js_regex!(r#"behindDoc="[^"]*""#),
+                0,
+                tag,
+                &format!("behindDoc=\"{behind}\""),
+            )
         } else {
-            replace_first(js_regex!(r"<wp:anchor"), 0, tag, &format!("<wp:anchor behindDoc=\"{behind}\""))
+            replace_first(
+                js_regex!(r"<wp:anchor"),
+                0,
+                tag,
+                &format!("<wp:anchor behindDoc=\"{behind}\""),
+            )
         }
     });
     if let Some(z_order) = z_order {
@@ -484,7 +601,9 @@ pub fn swap_anchor_wrap(drawing_xml: &str, wrap: ImageWrap, z_order: Option<f64>
 
 /// The shape's own a:ext in its wps:spPr; `None` keeps that dimension.
 fn set_shape_ext(drawing_xml: &str, cx: Option<f64>, cy: Option<f64>) -> String {
-    let Some(sp_pr) = js_regex!(r"<wps:spPr(?:\s[^>]*)?>[\s\S]*?<\/wps:spPr>|<wps:spPr(?:\s[^>]*)?\/>").exec(drawing_xml)
+    let Some(sp_pr) =
+        js_regex!(r"<wps:spPr(?:\s[^>]*)?>[\s\S]*?<\/wps:spPr>|<wps:spPr(?:\s[^>]*)?\/>")
+            .exec(drawing_xml)
     else {
         return drawing_xml.to_owned();
     };
@@ -492,8 +611,18 @@ fn set_shape_ext(drawing_xml: &str, cx: Option<f64>, cy: Option<f64>) -> String 
     let Some(tag) = js_regex!(r"<a:ext\b[^>]*?(?:\/>|><\/a:ext>)").exec(sp) else {
         return drawing_xml.to_owned();
     };
-    let cx = cx.map(num).or_else(|| js_regex!(r#"\bcx="(\d+)""#).exec(tag.as_str()).and_then(|m| m.get(1)).map(str::to_owned));
-    let cy = cy.map(num).or_else(|| js_regex!(r#"\bcy="(\d+)""#).exec(tag.as_str()).and_then(|m| m.get(1)).map(str::to_owned));
+    let cx = cx.map(num).or_else(|| {
+        js_regex!(r#"\bcx="(\d+)""#)
+            .exec(tag.as_str())
+            .and_then(|m| m.get(1))
+            .map(str::to_owned)
+    });
+    let cy = cy.map(num).or_else(|| {
+        js_regex!(r#"\bcy="(\d+)""#)
+            .exec(tag.as_str())
+            .and_then(|m| m.get(1))
+            .map(str::to_owned)
+    });
     let (Some(cx), Some(cy)) = (cx, cy) else {
         return drawing_xml.to_owned();
     };
@@ -507,11 +636,21 @@ fn set_shape_ext(drawing_xml: &str, cx: Option<f64>, cy: Option<f64>) -> String 
 }
 
 fn set_extent_cx(xml: &str, cx: f64) -> String {
-    replace_first(js_regex!(r#"(<wp:extent\b[^>]*\bcx=")\d+(")"#), 2, xml, &format!("$1{}$2", num(cx)))
+    replace_first(
+        js_regex!(r#"(<wp:extent\b[^>]*\bcx=")\d+(")"#),
+        2,
+        xml,
+        &format!("$1{}$2", num(cx)),
+    )
 }
 
 fn set_extent_cy(xml: &str, cy: f64) -> String {
-    replace_first(js_regex!(r#"(<wp:extent\b[^>]*\bcy=")\d+(")"#), 2, xml, &format!("$1{}$2", num(cy)))
+    replace_first(
+        js_regex!(r#"(<wp:extent\b[^>]*\bcy=")\d+(")"#),
+        2,
+        xml,
+        &format!("$1{}$2", num(cy)),
+    )
 }
 
 /// The VML fallback's `style` height or width, from px to its own unit. Main
@@ -594,7 +733,11 @@ pub fn patch_textbox_heights(paragraph_xml: &str, heights_px: &[Option<f64>]) ->
         if !num_truthy(height_px) {
             return fallback.to_owned();
         }
-        set_fallback_style(fallback, fallback_height_re(), height_px.unwrap_or(f64::NAN))
+        set_fallback_style(
+            fallback,
+            fallback_height_re(),
+            height_px.unwrap_or(f64::NAN),
+        )
     })
 }
 
@@ -617,7 +760,8 @@ pub struct TextboxSizePatch {
 /// `patchTextboxSizes`; an entry `None` is null or undefined.
 pub fn patch_textbox_sizes(paragraph_xml: &str, sizes: &[Option<TextboxSizePatch>]) -> String {
     let empty = |size: &Option<TextboxSizePatch>| {
-        size.as_ref().is_none_or(|size| size.w_px.is_none() && size.h_px.is_none())
+        size.as_ref()
+            .is_none_or(|size| size.w_px.is_none() && size.h_px.is_none())
     };
     if sizes.iter().all(empty) {
         return paragraph_xml.to_owned();
@@ -732,9 +876,19 @@ fn patch_shape_rotation(sp_pr: &str, rot_deg: Option<f64>) -> String {
     let tag = if emu == 0.0 {
         replace_first(js_regex!(r#"\s+rot="[^"]*""#), 0, xfrm, "")
     } else if js_regex!(r#"\brot=""#).test(xfrm) {
-        replace_first(js_regex!(r#"\brot="[^"]*""#), 0, xfrm, &format!("rot=\"{}\"", num(emu)))
+        replace_first(
+            js_regex!(r#"\brot="[^"]*""#),
+            0,
+            xfrm,
+            &format!("rot=\"{}\"", num(emu)),
+        )
     } else {
-        replace_first(js_regex!(r"^<a:xfrm\b"), 0, xfrm, &format!("<a:xfrm rot=\"{}\"", num(emu)))
+        replace_first(
+            js_regex!(r"^<a:xfrm\b"),
+            0,
+            xfrm,
+            &format!("<a:xfrm rot=\"{}\"", num(emu)),
+        )
     };
     replace_str(sp_pr, xfrm, &tag)
 }
@@ -748,16 +902,28 @@ fn patch_shape_line_width(sp_pr: &str, border_width_px: Option<f64>) -> String {
     let Some(ln) = js_regex!(r"<a:ln\b[^>]*>").exec(sp_pr) else {
         return match emu {
             None => sp_pr.to_owned(),
-            Some(emu) => replace_str(sp_pr, "</wps:spPr>", &format!("<a:ln w=\"{}\"/></wps:spPr>", num(emu))),
+            Some(emu) => replace_str(
+                sp_pr,
+                "</wps:spPr>",
+                &format!("<a:ln w=\"{}\"/></wps:spPr>", num(emu)),
+            ),
         };
     };
     let ln = ln.as_str();
     let tag = match emu {
         None => replace_first(js_regex!(r#"\s+w="[^"]*""#), 0, ln, ""),
-        Some(emu) if js_regex!(r#"\bw=""#).test(ln) => {
-            replace_first(js_regex!(r#"\bw="[^"]*""#), 0, ln, &format!("w=\"{}\"", num(emu)))
-        }
-        Some(emu) => replace_first(js_regex!(r"^<a:ln\b"), 0, ln, &format!("<a:ln w=\"{}\"", num(emu))),
+        Some(emu) if js_regex!(r#"\bw=""#).test(ln) => replace_first(
+            js_regex!(r#"\bw="[^"]*""#),
+            0,
+            ln,
+            &format!("w=\"{}\"", num(emu)),
+        ),
+        Some(emu) => replace_first(
+            js_regex!(r"^<a:ln\b"),
+            0,
+            ln,
+            &format!("<a:ln w=\"{}\"", num(emu)),
+        ),
     };
     replace_str(sp_pr, ln, &tag)
 }
@@ -793,7 +959,10 @@ pub fn patch_shape_styles(paragraph_xml: &str, styles: &[Option<ShapeStylePatch>
         })
         .collect();
     let styles = normalized.as_slice();
-    if styles.iter().all(|s| s.as_ref().is_none_or(ShapeStylePatch::keeps_all)) {
+    if styles
+        .iter()
+        .all(|s| s.as_ref().is_none_or(ShapeStylePatch::keeps_all))
+    {
         return paragraph_xml.to_owned();
     }
     let drawings = xml_segments(paragraph_xml, "w:drawing", 0, paragraph_xml.len());
@@ -810,7 +979,11 @@ pub fn patch_shape_styles(paragraph_xml: &str, styles: &[Option<ShapeStylePatch>
             box_index += 1;
         }
         seen = true;
-        let Some(style) = styles.get(box_index).and_then(Option::as_ref).filter(|s| !s.keeps_all()) else {
+        let Some(style) = styles
+            .get(box_index)
+            .and_then(Option::as_ref)
+            .filter(|s| !s.keeps_all())
+        else {
             continue;
         };
         let sp_pr_match = js_regex!(r"<wps:spPr>[\s\S]*?<\/wps:spPr>")
@@ -827,14 +1000,22 @@ pub fn patch_shape_styles(paragraph_xml: &str, styles: &[Option<ShapeStylePatch>
                 sp_pr = format!("{}{}", replace_fill_slot(head, fill_hex.as_deref()), tail);
             }
             if let Some(border_hex) = &style.border_hex {
-                let ln_match = js_regex!(r"<a:ln[\s>][\s\S]*?<\/a:ln>").exec(&sp_pr).map(|m| m.as_str().to_owned());
+                let ln_match = js_regex!(r"<a:ln[\s>][\s\S]*?<\/a:ln>")
+                    .exec(&sp_pr)
+                    .map(|m| m.as_str().to_owned());
                 if let Some(ln_match) = ln_match {
-                    sp_pr = replace_str(&sp_pr, &ln_match, &replace_fill_slot(&ln_match, border_hex.as_deref()));
+                    sp_pr = replace_str(
+                        &sp_pr,
+                        &ln_match,
+                        &replace_fill_slot(&ln_match, border_hex.as_deref()),
+                    );
                 } else if let Some(hex) = border_hex.as_deref().filter(|hex| !hex.is_empty()) {
                     sp_pr = replace_str(
                         &sp_pr,
                         "</wps:spPr>",
-                        &format!("<a:ln><a:solidFill><a:srgbClr val=\"{hex}\"/></a:solidFill></a:ln></wps:spPr>"),
+                        &format!(
+                            "<a:ln><a:solidFill><a:srgbClr val=\"{hex}\"/></a:solidFill></a:ln></wps:spPr>"
+                        ),
                     );
                 }
             }
@@ -861,14 +1042,34 @@ pub fn patch_drawing_extent(paragraph_xml: &str, w_px: f64, h_px: f64) -> String
     let cx = js_max(1.0, math_round(w_px * EMU_PER_PX));
     if cx.is_finite() {
         let cx = num(cx);
-        out = replace_first(js_regex!(r#"(<wp:extent\b[^>]*\bcx=")\d+(")"#), 2, &out, &format!("$1{cx}$2"));
-        out = replace_first(js_regex!(r#"(<a:ext\b[^>]*\bcx=")\d+(")"#), 2, &out, &format!("$1{cx}$2"));
+        out = replace_first(
+            js_regex!(r#"(<wp:extent\b[^>]*\bcx=")\d+(")"#),
+            2,
+            &out,
+            &format!("$1{cx}$2"),
+        );
+        out = replace_first(
+            js_regex!(r#"(<a:ext\b[^>]*\bcx=")\d+(")"#),
+            2,
+            &out,
+            &format!("$1{cx}$2"),
+        );
     }
     let cy = js_max(1.0, math_round(h_px * EMU_PER_PX));
     if cy.is_finite() {
         let cy = num(cy);
-        out = replace_first(js_regex!(r#"(<wp:extent\b[^>]*\bcy=")\d+(")"#), 2, &out, &format!("$1{cy}$2"));
-        out = replace_first(js_regex!(r#"(<a:ext\b[^>]*\bcy=")\d+(")"#), 2, &out, &format!("$1{cy}$2"));
+        out = replace_first(
+            js_regex!(r#"(<wp:extent\b[^>]*\bcy=")\d+(")"#),
+            2,
+            &out,
+            &format!("$1{cy}$2"),
+        );
+        out = replace_first(
+            js_regex!(r#"(<a:ext\b[^>]*\bcy=")\d+(")"#),
+            2,
+            &out,
+            &format!("$1{cy}$2"),
+        );
     }
     out
 }
@@ -898,28 +1099,44 @@ fn resize_drawing_extents(xml: &str, width_px: f64, height_px: f64) -> String {
     }
     let cx = js_max(1.0, math_round(width_px * EMU_PER_PX));
     let cy = js_max(1.0, math_round(height_px * EMU_PER_PX));
-    let Some(extent) = js_regex!(r#"<wp:extent\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)""#).exec(xml) else {
+    let Some(extent) = js_regex!(r#"<wp:extent\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)""#).exec(xml)
+    else {
         return xml.to_owned();
     };
-    let same_px = |emu: &str, px: f64| math_round((to_number(emu) / EMU_PER_PX) * 100.0) / 100.0 == px;
-    if same_px(extent.get(1).unwrap_or(""), width_px) && same_px(extent.get(2).unwrap_or(""), height_px) {
+    let same_px =
+        |emu: &str, px: f64| math_round((to_number(emu) / EMU_PER_PX) * 100.0) / 100.0 == px;
+    if same_px(extent.get(1).unwrap_or(""), width_px)
+        && same_px(extent.get(2).unwrap_or(""), height_px)
+    {
         return xml.to_owned();
     }
     // Main policy: an infinite size is not written; the other dimension is
     let ext = |tag: &str| {
         let tag = if cx.is_finite() {
-            replace_first(js_regex!(r#"\bcx="\d+""#), 0, tag, &format!("cx=\"{}\"", num(cx)))
+            replace_first(
+                js_regex!(r#"\bcx="\d+""#),
+                0,
+                tag,
+                &format!("cx=\"{}\"", num(cx)),
+            )
         } else {
             tag.to_owned()
         };
         if cy.is_finite() {
-            replace_first(js_regex!(r#"\bcy="\d+""#), 0, &tag, &format!("cy=\"{}\"", num(cy)))
+            replace_first(
+                js_regex!(r#"\bcy="\d+""#),
+                0,
+                &tag,
+                &format!("cy=\"{}\"", num(cy)),
+            )
         } else {
             tag
         }
     };
     let mut out = replace_first_with(js_regex!(r"<wp:extent\b[^>]*>"), xml, |m| ext(m.as_str()));
-    let pic = js_regex!(r"<pic:spPr[\s>][\s\S]*?<\/pic:spPr>").exec(&out).map(|m| m.as_str().to_owned());
+    let pic = js_regex!(r"<pic:spPr[\s>][\s\S]*?<\/pic:spPr>")
+        .exec(&out)
+        .map(|m| m.as_str().to_owned());
     if let Some(pic) = pic {
         let resized = replace_first_with(js_regex!(r"<a:ext\b[^>]*>"), &pic, |m| ext(m.as_str()));
         out = replace_str(&out, &pic, &resized);

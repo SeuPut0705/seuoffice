@@ -58,8 +58,13 @@ mod tests {
     #[test]
     fn model_numbers_keep_javascript_json_spelling() {
         let numbers = [
-            JsNum(-0.0), JsNum(9_007_199_254_740_992.0), JsNum(1e21),
-            JsNum(1e-7), JsNum(0.000001), JsNum(f64::NAN), JsNum(f64::INFINITY),
+            JsNum(-0.0),
+            JsNum(9_007_199_254_740_992.0),
+            JsNum(1e21),
+            JsNum(1e-7),
+            JsNum(0.000001),
+            JsNum(f64::NAN),
+            JsNum(f64::INFINITY),
         ];
         assert_eq!(
             json_to_string(&numbers).unwrap(),
@@ -72,9 +77,9 @@ mod tests {
 
     #[test]
     fn opaque_model_numbers_use_the_same_formatter() {
-        let value: serde_json::Value = serde_json::from_str(
-            r#"{"big":1e21,"small":1e-7,"integer":9007199254740992.0}"#,
-        ).unwrap();
+        let value: serde_json::Value =
+            serde_json::from_str(r#"{"big":1e21,"small":1e-7,"integer":9007199254740992.0}"#)
+                .unwrap();
         assert_eq!(
             json_to_string(&value).unwrap(),
             r#"{"big":1e+21,"small":1e-7,"integer":9007199254740992}"#

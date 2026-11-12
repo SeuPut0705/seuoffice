@@ -128,7 +128,9 @@ fn alternate_paragraph(anchor: &str, vml: &str) -> String {
 
 /// `buildLineParagraphXml`
 pub fn build_line_paragraph_xml(opts: &LineOptions) -> String {
-    let def = line_kind(&opts.kind).or_else(|| line_kind("line")).expect("LINE_KINDS.line");
+    let def = line_kind(&opts.kind)
+        .or_else(|| line_kind("line"))
+        .expect("LINE_KINDS.line");
     let width_emu = fin(opts.width_emu).unwrap_or(1800000.0);
     let height_emu = fin(opts.height_emu).unwrap_or(114300.0);
     let id = num(fin(opts.id).unwrap_or(1.0));
@@ -137,8 +139,16 @@ pub fn build_line_paragraph_xml(opts: &LineOptions) -> String {
 
     let ln = format!(
         "<a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"{color_hex}\"/></a:solidFill>{}{}</a:ln>",
-        if def.head == Some(true) { "<a:headEnd type=\"triangle\"/>" } else { "" },
-        if def.tail == Some(true) { "<a:tailEnd type=\"triangle\"/>" } else { "" },
+        if def.head == Some(true) {
+            "<a:headEnd type=\"triangle\"/>"
+        } else {
+            ""
+        },
+        if def.tail == Some(true) {
+            "<a:tailEnd type=\"triangle\"/>"
+        } else {
+            ""
+        },
     );
     let sp_pr = format!(
         "<wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"{w}\" cy=\"{h}\"/></a:xfrm><a:prstGeom prst=\"{}\"><a:avLst/></a:prstGeom><a:noFill/>{ln}</wps:spPr>",
@@ -212,9 +222,21 @@ pub fn inline_picture_drawing_xml(o: &InlinePictureXmlOptions) -> String {
         Some(alt) => format!(" descr=\"{}\"", escape_xml_attr(alt)),
         None => String::new(),
     };
-    let rot_attr = if truthy(Some(rot)) { format!(" rot=\"{}\"", num(rot * 60000.0)) } else { String::new() };
-    let flip_h = if o.flip_h == Some(true) { " flipH=\"1\"" } else { "" };
-    let flip_v = if o.flip_v == Some(true) { " flipV=\"1\"" } else { "" };
+    let rot_attr = if truthy(Some(rot)) {
+        format!(" rot=\"{}\"", num(rot * 60000.0))
+    } else {
+        String::new()
+    };
+    let flip_h = if o.flip_h == Some(true) {
+        " flipH=\"1\""
+    } else {
+        ""
+    };
+    let flip_v = if o.flip_v == Some(true) {
+        " flipV=\"1\""
+    } else {
+        ""
+    };
     format!(
         "<w:drawing><wp:inline distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\"><wp:extent cx=\"{cx}\" cy=\"{cy}\"/><wp:effectExtent l=\"{ee_x}\" t=\"{ee_y}\" r=\"{ee_x}\" b=\"{ee_y}\"/><wp:docPr id=\"{id}\" name=\"{name}\"{descr}/><a:graphic xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\"><a:graphicData uri=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:pic xmlns:pic=\"http://schemas.openxmlformats.org/drawingml/2006/picture\"><pic:nvPicPr><pic:cNvPr id=\"{id}\" name=\"{name}\"/><pic:cNvPicPr/></pic:nvPicPr><pic:blipFill><a:blip r:embed=\"{}\"/><a:stretch><a:fillRect/></a:stretch></pic:blipFill><pic:spPr><a:xfrm{rot_attr}{flip_h}{flip_v}><a:off x=\"0\" y=\"0\"/><a:ext cx=\"{cx}\" cy=\"{cy}\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:inline></w:drawing>",
         o.r_id
@@ -320,12 +342,23 @@ pub struct AnchoredTextboxOptions {
 
 fn content_para_xml(p: &TextboxContentParagraph) -> String {
     let mut children = format_p_pr_children(p.format.as_ref());
-    let rank = |name: &str| PPR_CHILD_ORDER.iter().position(|n| *n == name).map_or(-1, |i| i as i64);
+    let rank = |name: &str| {
+        PPR_CHILD_ORDER
+            .iter()
+            .position(|n| *n == name)
+            .map_or(-1, |i| i as i64)
+    };
     children.sort_by_key(|(name, _)| rank(name));
     let p_pr = if children.is_empty() {
         String::new()
     } else {
-        format!("<w:pPr>{}</w:pPr>", children.iter().map(|(_, xml)| xml.as_str()).collect::<String>())
+        format!(
+            "<w:pPr>{}</w:pPr>",
+            children
+                .iter()
+                .map(|(_, xml)| xml.as_str())
+                .collect::<String>()
+        )
     };
     format!("<w:p>{p_pr}{}</w:p>", inline_runs_xml(&p.runs))
 }
@@ -344,7 +377,10 @@ pub fn build_anchored_textbox_paragraph_xml(opts: &AnchoredTextboxOptions) -> St
 
     let txbx_content = format!(
         "<w:txbxContent>{}</w:txbxContent>",
-        opts.paragraphs.iter().map(content_para_xml).collect::<String>()
+        opts.paragraphs
+            .iter()
+            .map(content_para_xml)
+            .collect::<String>()
     );
     // an infinite radius gives a valid 50000 or 0 in the TypeScript too
     let corner_radius_emu = opts.corner_radius_emu;
@@ -353,19 +389,31 @@ pub fn build_anchored_textbox_paragraph_xml(opts: &AnchoredTextboxOptions) -> St
         let radius = corner_radius_emu.unwrap_or(f64::NAN);
         let adj = js_min(
             50000.0,
-            js_max(0.0, math_round((radius / js_max(1.0, js_min(width_emu, height_emu))) * 100000.0)),
+            js_max(
+                0.0,
+                math_round((radius / js_max(1.0, js_min(width_emu, height_emu))) * 100000.0),
+            ),
         );
-        format!("<a:prstGeom prst=\"roundRect\"><a:avLst><a:gd name=\"adj\" fmla=\"val {}\"/></a:avLst></a:prstGeom>", num(adj))
+        format!(
+            "<a:prstGeom prst=\"roundRect\"><a:avLst><a:gd name=\"adj\" fmla=\"val {}\"/></a:avLst></a:prstGeom>",
+            num(adj)
+        )
     } else {
         "<a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom>".to_owned()
     };
     let fill_hex = str_truthy(&opts.fill_hex);
     let fill = match fill_hex {
-        Some(hex) => format!("<a:solidFill><a:srgbClr val=\"{}\"/></a:solidFill>", escape_xml_attr(hex)),
+        Some(hex) => format!(
+            "<a:solidFill><a:srgbClr val=\"{}\"/></a:solidFill>",
+            escape_xml_attr(hex)
+        ),
         None => "<a:noFill/>".to_owned(),
     };
     let line = match str_truthy(&opts.border_hex) {
-        Some(hex) => format!("<a:ln><a:solidFill><a:srgbClr val=\"{}\"/></a:solidFill></a:ln>", escape_xml_attr(hex)),
+        Some(hex) => format!(
+            "<a:ln><a:solidFill><a:srgbClr val=\"{}\"/></a:solidFill></a:ln>",
+            escape_xml_attr(hex)
+        ),
         None => "<a:ln><a:noFill/></a:ln>".to_owned(),
     };
     let sp_pr = format!(
@@ -378,7 +426,12 @@ pub fn build_anchored_textbox_paragraph_xml(opts: &AnchoredTextboxOptions) -> St
             r: fin_or(i.r, 91440.0),
             b: fin_or(i.b, 45720.0),
         },
-        None => Insets { l: 91440.0, t: 45720.0, r: 91440.0, b: 45720.0 },
+        None => Insets {
+            l: 91440.0,
+            t: 45720.0,
+            r: 91440.0,
+            b: 45720.0,
+        },
     };
     let body_pr = format!(
         "<wps:bodyPr wrap=\"square\" lIns=\"{}\" tIns=\"{}\" rIns=\"{}\" bIns=\"{}\" anchor=\"t\"><a:noAutofit/></wps:bodyPr>",
@@ -403,8 +456,15 @@ pub fn build_anchored_textbox_paragraph_xml(opts: &AnchoredTextboxOptions) -> St
         if page { "page" } else { "paragraph" },
         num(math_round(y_emu)),
     );
-    let wrap_mode = opts.wrap.as_deref().unwrap_or(if page { "none" } else { "topAndBottom" });
-    let wrap_el = if wrap_mode == "topAndBottom" { "<wp:wrapTopAndBottom/>" } else { "<wp:wrapNone/>" };
+    let wrap_mode = opts
+        .wrap
+        .as_deref()
+        .unwrap_or(if page { "none" } else { "topAndBottom" });
+    let wrap_el = if wrap_mode == "topAndBottom" {
+        "<wp:wrapTopAndBottom/>"
+    } else {
+        "<wp:wrapNone/>"
+    };
     let anchor = format!(
         "<wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"{}\" behindDoc=\"{}\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/>{pos_h}{pos_v}<wp:extent cx=\"{w}\" cy=\"{h}\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>{wrap_el}<wp:docPr id=\"{id}\" name=\"Region {id}\"/>{graphic}</wp:anchor>",
         num(251658240.0 + fin(opts.z_order).unwrap_or(0.0)),
@@ -429,25 +489,33 @@ pub fn build_anchored_textbox_paragraph_xml(opts: &AnchoredTextboxOptions) -> St
 
     // `null` is a defined value there: Math.round(null) is 0. Main policy: a
     // non-finite value leaves out only the attribute it would write.
-    let holder_spacing = if opts.holder_line_twips.is_some() || opts.holder_spacing_before_twips.is_some() {
-        let before = opts.holder_spacing_before_twips.flatten();
-        let before_twips = math_round(before.unwrap_or(f64::NAN));
-        let before = if truthy(before) && before_twips.is_finite() {
-            format!(" w:before=\"{}\"", num(before_twips))
+    let holder_spacing =
+        if opts.holder_line_twips.is_some() || opts.holder_spacing_before_twips.is_some() {
+            let before = opts.holder_spacing_before_twips.flatten();
+            let before_twips = math_round(before.unwrap_or(f64::NAN));
+            let before = if truthy(before) && before_twips.is_finite() {
+                format!(" w:before=\"{}\"", num(before_twips))
+            } else {
+                String::new()
+            };
+            let line = match opts.holder_line_twips {
+                Some(line) if math_round(line.unwrap_or(0.0)).is_finite() => {
+                    format!(
+                        " w:line=\"{}\" w:lineRule=\"exact\"",
+                        num(math_round(line.unwrap_or(0.0)))
+                    )
+                }
+                _ => String::new(),
+            };
+            format!("<w:spacing{before} w:after=\"0\"{line}/>")
         } else {
             String::new()
         };
-        let line = match opts.holder_line_twips {
-            Some(line) if math_round(line.unwrap_or(0.0)).is_finite() => {
-                format!(" w:line=\"{}\" w:lineRule=\"exact\"", num(math_round(line.unwrap_or(0.0))))
-            }
-            _ => String::new(),
-        };
-        format!("<w:spacing{before} w:after=\"0\"{line}/>")
+    let holder_break = if opts.holder_page_break_before == Some(true) {
+        "<w:pageBreakBefore/>"
     } else {
-        String::new()
+        ""
     };
-    let holder_break = if opts.holder_page_break_before == Some(true) { "<w:pageBreakBefore/>" } else { "" };
     let holder_p_pr = if !holder_spacing.is_empty() || !holder_break.is_empty() {
         format!("<w:pPr>{holder_break}{holder_spacing}</w:pPr>")
     } else {
@@ -506,7 +574,9 @@ pub fn build_shape_paragraph_xml(opts: &ShapeOptions) -> String {
         num(width_emu / EMU_PER_PT),
         num(height_emu / EMU_PER_PT),
         if with_textbox {
-            format!("<v:textbox style=\"v-text-anchor:middle\"><w:txbxContent>{seeded_para}</w:txbxContent></v:textbox>")
+            format!(
+                "<v:textbox style=\"v-text-anchor:middle\"><w:txbxContent>{seeded_para}</w:txbxContent></v:textbox>"
+            )
         } else {
             String::new()
         },
@@ -539,10 +609,16 @@ pub fn build_word_art_paragraph_xml(opts: &WordArtOptions) -> String {
 
     let r_pr = format!(
         "<w:rPr><w:b/>{}<w:color w:val=\"{color_hex}\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr>",
-        if opts.italic == Some(true) { "<w:i/>" } else { "" },
+        if opts.italic == Some(true) {
+            "<w:i/>"
+        } else {
+            ""
+        },
     );
     let text_run = format!("<w:r>{r_pr}<w:t xml:space=\"preserve\">{text}</w:t></w:r>");
-    let txbx_content = format!("<w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>{text_run}</w:p></w:txbxContent>");
+    let txbx_content = format!(
+        "<w:txbxContent><w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr>{text_run}</w:p></w:txbxContent>"
+    );
     let sp_pr = format!(
         "<wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"{w}\" cy=\"{h}\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:noFill/><a:ln><a:noFill/></a:ln></wps:spPr>"
     );

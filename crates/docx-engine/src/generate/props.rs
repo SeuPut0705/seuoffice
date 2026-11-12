@@ -136,7 +136,10 @@ fn para_spacing_xml(format: &ParaFormat) -> String {
     }
     let rule = format.line_rule.as_ref().map(|r| r.as_str());
     if (rule == Some("exact") || rule == Some("atLeast")) && num_truthy(*format.line_raw_twips) {
-        attrs.push(format!("w:line=\"{}\"", round(format.line_raw_twips.unwrap().0)));
+        attrs.push(format!(
+            "w:line=\"{}\"",
+            round(format.line_raw_twips.unwrap().0)
+        ));
         attrs.push(format!("w:lineRule=\"{}\"", rule.unwrap()));
     } else if let Some(spacing) = n(*format.line_spacing).filter(|s| *s > 0.0) {
         attrs.push(format!("w:line=\"{}\"", round(spacing * 240.0)));
@@ -179,7 +182,10 @@ pub(crate) fn format_p_pr_children(format: Option<&ParaFormat>) -> Vec<(String, 
         );
         let space = math_min(
             31.0,
-            math_max(0.0, math_round(style.and_then(|s| n(s.space_pt)).unwrap_or(0.0))),
+            math_max(
+                0.0,
+                math_round(style.and_then(|s| n(s.space_pt)).unwrap_or(0.0)),
+            ),
         );
         let default_color = match style.and_then(|s| s.color.as_deref()) {
             Some(c) if !c.is_empty() => escape_xml_attr(c),
@@ -331,10 +337,16 @@ fn frame_pr_xml(frame: &ParaFrame) -> String {
         ));
     }
     if num_truthy(frame.v_space_twips) {
-        attrs.push(format!("w:vSpace=\"{}\"", round(frame.v_space_twips.unwrap().0)));
+        attrs.push(format!(
+            "w:vSpace=\"{}\"",
+            round(frame.v_space_twips.unwrap().0)
+        ));
     }
     if num_truthy(frame.h_space_twips) {
-        attrs.push(format!("w:hSpace=\"{}\"", round(frame.h_space_twips.unwrap().0)));
+        attrs.push(format!(
+            "w:hSpace=\"{}\"",
+            round(frame.h_space_twips.unwrap().0)
+        ));
     }
     attrs.push(format!(
         "w:wrap=\"{}\"",
@@ -409,7 +421,9 @@ fn raw_spacing_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
             && line == math_round(f.line_raw_twips.unwrap().0);
     }
     if let Some(spacing) = n(*f.line_spacing).filter(|s| *s > 0.0) {
-        return line > 0.0 && rule == "auto" && math_round((line / 240.0) * 100.0) / 100.0 == spacing;
+        return line > 0.0
+            && rule == "auto"
+            && math_round((line / 240.0) * 100.0) / 100.0 == spacing;
     }
     !(line > 0.0)
 }
@@ -502,7 +516,9 @@ fn raw_p_bdr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
         return false;
     }
     let model_lines: [LineKey; 4] = ['t', 'b', 'l', 'r'].map(|ch| {
-        border_line(f, ch).map_or((None, None, None), |l| (l.color.clone(), l.sz_pt, l.space_pt))
+        border_line(f, ch).map_or((None, None, None), |l| {
+            (l.color.clone(), l.sz_pt, l.space_pt)
+        })
     });
     // JSON.stringify of both: NaN prints as null
     serde_json::to_string(&raw_lines).ok() == serde_json::to_string(&model_lines).ok()
@@ -536,11 +552,19 @@ fn raw_tabs_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
     if raw_stops.len() != stops.len() {
         return false;
     }
-    raw_stops.iter().zip(stops).all(|((pos, val, leader), stop)| {
-        *pos == stop.pos.0
-            && val == stop.val.as_str()
-            && leader.as_deref() == stop.leader.as_ref().map(|l| l.as_str()).filter(|l| *l != "none")
-    })
+    raw_stops
+        .iter()
+        .zip(stops)
+        .all(|((pos, val, leader), stop)| {
+            *pos == stop.pos.0
+                && val == stop.val.as_str()
+                && leader.as_deref()
+                    == stop
+                        .leader
+                        .as_ref()
+                        .map(|l| l.as_str())
+                        .filter(|l| *l != "none")
+        })
 }
 
 fn raw_frame_pr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
@@ -551,7 +575,14 @@ fn raw_frame_pr_unchanged(raw: Option<&str>, f: &ParaFormat) -> bool {
     let raw_dc = match val {
         Some(v @ ("drop" | "margin")) => {
             let lines = parse_int(raw_attr(raw, "w:lines").unwrap_or("3"), Radix::Ten);
-            Some((v, if lines.is_nan() || lines == 0.0 { 3.0 } else { lines }))
+            Some((
+                v,
+                if lines.is_nan() || lines == 0.0 {
+                    3.0
+                } else {
+                    lines
+                },
+            ))
         }
         _ => None,
     };
@@ -567,7 +598,10 @@ fn same_indent(a: &ParaFormat, b: &ParaFormat) -> bool {
         && same(norm(*a.indent_first_line), norm(*b.indent_first_line))
 }
 
-fn char_indent_cancel_attrs(original: &CharIndents, format: Option<&ParaFormat>) -> Vec<&'static str> {
+fn char_indent_cancel_attrs(
+    original: &CharIndents,
+    format: Option<&ParaFormat>,
+) -> Vec<&'static str> {
     let kept = format.and_then(|f| f.char_indents.as_ref());
     let k = |get: fn(&CharIndents) -> Option<JsNum>| num_truthy(kept.and_then(get));
     let mut out = Vec::new();
@@ -598,7 +632,10 @@ fn ppr_group_unchanged(
 ) -> bool {
     match tag {
         "w:pageBreakBefore" => raw_bool(raw) == (*f.page_break_before == Some(true)),
-        "w:keepNext" | "w:keepLines" | "w:widowControl" | "w:suppressLineNumbers"
+        "w:keepNext"
+        | "w:keepLines"
+        | "w:widowControl"
+        | "w:suppressLineNumbers"
         | "w:contextualSpacing" => match flag(f, tag) {
             None => original.and_then(|o| flag(o, tag)).is_none(),
             Some(v) => raw.is_some() && raw_bool(raw) == v,
@@ -610,7 +647,11 @@ fn ppr_group_unchanged(
             if (*f.bidi == Some(true) || *f.bidi_inherited == Some(true))
                 && (raw_align == Some("left") || raw_align == Some("right"))
             {
-                raw_align = Some(if raw_align == Some("left") { "right" } else { "left" });
+                raw_align = Some(if raw_align == Some("left") {
+                    "right"
+                } else {
+                    "left"
+                });
             }
             raw_align == f.align.as_ref().map(|a| a.as_str())
         }
@@ -651,7 +692,13 @@ const CELL_PPR_GROUPS: [(&str, &[&str]); 4] = [
     ("w:jc", &["align"]),
     (
         "w:spacing",
-        &["spaceBefore", "spaceAfter", "lineSpacing", "lineRule", "lineRawTwips"],
+        &[
+            "spaceBefore",
+            "spaceAfter",
+            "lineSpacing",
+            "lineRule",
+            "lineRawTwips",
+        ],
     ),
     ("w:ind", &["indentLeft", "indentFirstLine"]),
     ("w:tabs", &["tabStops"]),
@@ -662,16 +709,33 @@ type AttrGroup = (&'static [&'static str], &'static [&'static str]);
 fn cell_modeled_attr_groups(tag: &str) -> &'static [AttrGroup] {
     match tag {
         "w:ind" => &[
-            (&["w:left", "w:start", "w:leftChars", "w:startChars"], &["indentLeft"]),
             (
-                &["w:firstLine", "w:hanging", "w:firstLineChars", "w:hangingChars"],
+                &["w:left", "w:start", "w:leftChars", "w:startChars"],
+                &["indentLeft"],
+            ),
+            (
+                &[
+                    "w:firstLine",
+                    "w:hanging",
+                    "w:firstLineChars",
+                    "w:hangingChars",
+                ],
                 &["indentFirstLine"],
             ),
         ],
         _ => &[
-            (&["w:before", "w:beforeLines", "w:beforeAutospacing"], &["spaceBefore"]),
-            (&["w:after", "w:afterLines", "w:afterAutospacing"], &["spaceAfter"]),
-            (&["w:line", "w:lineRule"], &["lineSpacing", "lineRule", "lineRawTwips"]),
+            (
+                &["w:before", "w:beforeLines", "w:beforeAutospacing"],
+                &["spaceBefore"],
+            ),
+            (
+                &["w:after", "w:afterLines", "w:afterAutospacing"],
+                &["spaceAfter"],
+            ),
+            (
+                &["w:line", "w:lineRule"],
+                &["lineSpacing", "lineRule", "lineRawTwips"],
+            ),
         ],
     }
 }
@@ -806,7 +870,11 @@ pub fn merge_cell_para_format(
         raw_p_pr.to_owned()
     };
     if tags.contains(&"w:tabs") && real_stops(format).is_empty() {
-        out = replace_re(js_regex!(r"<w:tabs>[\s\S]*?<\/w:tabs>|<w:tabs\/>"), &out, "");
+        out = replace_re(
+            js_regex!(r"<w:tabs>[\s\S]*?<\/w:tabs>|<w:tabs\/>"),
+            &out,
+            "",
+        );
         tags.retain(|t| *t != "w:tabs");
     }
     let via_merge: Vec<String> = tags
@@ -938,7 +1006,11 @@ pub fn merge_p_pr_format(
         .filter(|(name, _)| !rebuilt.contains(&name.as_str()))
     {
         let own = rank(name);
-        let effective = if own == -1 { prev_rank } else { own.max(prev_rank) };
+        let effective = if own == -1 {
+            prev_rank
+        } else {
+            own.max(prev_rank)
+        };
         while fi < fresh_out.len() && rank(&fresh_out[fi].0) < effective {
             parts.push_str(&fresh_out[fi].1);
             fi += 1;
@@ -1275,14 +1347,20 @@ pub(crate) fn revision_p_pr_change_xml(change_json: &str) -> Result<Option<Strin
     if let Some(style_id) = old_map.get("styleId").filter(|v| value_truthy(v)) {
         children.push((
             "w:pStyle".to_owned(),
-            format!("<w:pStyle w:val=\"{}\"/>", escape_xml_attr(&js_string(style_id))),
+            format!(
+                "<w:pStyle w:val=\"{}\"/>",
+                escape_xml_attr(&js_string(style_id))
+            ),
         ));
     }
     if old_map.get("type") == Some(&Value::String("docListItem".to_owned()))
         && let Some(num_id) = old_map.get("numId").filter(|v| value_truthy(v))
     {
         let raw = js_number(old_map.get("ilvl"));
-        let ilvl = math_min(math_max(if raw.is_nan() || raw == 0.0 { 0.0 } else { raw }, 0.0), 8.0);
+        let ilvl = math_min(
+            math_max(if raw.is_nan() || raw == 0.0 { 0.0 } else { raw }, 0.0),
+            8.0,
+        );
         children.push((
             "w:numPr".to_owned(),
             format!(
@@ -1313,10 +1391,16 @@ pub(crate) fn revision_p_pr_change_xml(change_json: &str) -> Result<Option<Strin
         escape_xml_attr(&attr("author", ""))
     );
     if let Some(date) = change_map.get("date").filter(|v| value_truthy(v)) {
-        attrs.push_str(&format!(" w:date=\"{}\"", escape_xml_attr(&js_string(date))));
+        attrs.push_str(&format!(
+            " w:date=\"{}\"",
+            escape_xml_attr(&js_string(date))
+        ));
     }
     if let Some(utc) = change_map.get("dateUtc").filter(|v| value_truthy(v)) {
-        attrs.push_str(&format!(" w16du:dateUtc=\"{}\"", escape_xml_attr(&js_string(utc))));
+        attrs.push_str(&format!(
+            " w16du:dateUtc=\"{}\"",
+            escape_xml_attr(&js_string(utc))
+        ));
     }
     let inner: String = children.iter().map(|(_, xml)| xml.as_str()).collect();
     Ok(Some(format!(

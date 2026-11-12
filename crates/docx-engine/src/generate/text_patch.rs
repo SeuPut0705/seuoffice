@@ -55,12 +55,19 @@ fn code_point_or_reference(cp: f64, reference: &str) -> String {
 }
 
 fn decode_xml_text(text: &str) -> String {
-    let text = text.replace("&lt;", "<").replace("&gt;", ">").replace("&quot;", "\"").replace("&apos;", "'");
+    let text = text
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", "\"")
+        .replace("&apos;", "'");
     let text = js_regex!(r"&#(\d+);", "g").replace_all(&text, |m| {
         code_point_or_reference(to_number(m.get(1).unwrap_or_default()), m.as_str())
     });
     let text = js_regex!(r"&#x([0-9a-fA-F]+);", "g").replace_all(&text, |m| {
-        code_point_or_reference(parse_int(m.get(1).unwrap_or_default(), Radix::Sixteen), m.as_str())
+        code_point_or_reference(
+            parse_int(m.get(1).unwrap_or_default(), Radix::Sixteen),
+            m.as_str(),
+        )
     });
     text.replace("&amp;", "&")
 }
@@ -88,7 +95,13 @@ fn text_nodes<'a>(xml: &'a str, tag: &str) -> Vec<XmlTextNode<'a>> {
     // Only for w:t: mathTokensOf tokenizes paired <m:t> only.
     if tag == "w:t" {
         for m in js_regex!(r"<w:t(?:\s[^>]*)?\/>", "g").find_iter(xml) {
-            nodes.push(XmlTextNode { start: m.start(), end: m.end(), open: m.as_str(), close: "", text: String::new() });
+            nodes.push(XmlTextNode {
+                start: m.start(),
+                end: m.end(),
+                open: m.as_str(),
+                close: "",
+                text: String::new(),
+            });
         }
         nodes.sort_by_key(|node| node.start);
     }
@@ -129,14 +142,28 @@ fn replace_text_nodes(xml: &str, replacements: &[(&XmlTextNode<'_>, String)]) ->
     for (node, text) in ordered {
         // wtText drops edge whitespace without xml:space="preserve"
         let has_edge_ws = !text.is_empty()
-            && (js_regex!(r"^\s|\s$").test(text) || text.starts_with('\u{200B}') || text.ends_with('\u{200B}'));
+            && (js_regex!(r"^\s|\s$").test(text)
+                || text.starts_with('\u{200B}')
+                || text.ends_with('\u{200B}'));
         let open = if js_regex!(r"xml:space\s*=").test(node.open) || !has_edge_ws {
             node.open.to_owned()
         } else {
-            replace_first(js_regex!(r"<w:t(?=[\s>/])"), node.open, "<w:t xml:space=\"preserve\"")
+            replace_first(
+                js_regex!(r"<w:t(?=[\s>/])"),
+                node.open,
+                "<w:t xml:space=\"preserve\"",
+            )
         };
-        let close = if node.close.is_empty() { "</w:t>" } else { node.close };
-        let open_paired = if node.close.is_empty() { replace_first(js_regex!(r"\/>$"), &open, ">") } else { open };
+        let close = if node.close.is_empty() {
+            "</w:t>"
+        } else {
+            node.close
+        };
+        let open_paired = if node.close.is_empty() {
+            replace_first(js_regex!(r"\/>$"), &open, ">")
+        } else {
+            open
+        };
         let replacement = format!("{open_paired}{}{close}", escape_xml_text(text));
         let start = (map.to_utf16(node.start) as usize).min(out.len());
         let end = (map.to_utf16(node.end) as usize).min(out.len());
@@ -177,16 +204,21 @@ pub fn patch_field_paragraph_xml(xml: &str, patch: &FieldTextPatch) -> String {
     if nodes.is_empty() {
         return xml.to_owned();
     }
-    let tab_starts: Vec<usize> =
-        js_regex!(r"<w:tab\s*\/>|<w:tab>\s*<\/w:tab>", "g").find_iter(xml).map(|m| m.start()).collect();
+    let tab_starts: Vec<usize> = js_regex!(r"<w:tab\s*\/>|<w:tab>\s*<\/w:tab>", "g")
+        .find_iter(xml)
+        .map(|m| m.start())
+        .collect();
     let last_tab = tab_starts.last().copied();
     if patch.right.is_some() && last_tab.is_none() {
         return xml.to_owned();
     }
     let mut left_from: Option<usize> = None;
     if tab_starts.len() >= 2 {
-        let first: String =
-            nodes.iter().filter(|node| node.start < tab_starts[0]).map(|node| node.text.as_str()).collect();
+        let first: String = nodes
+            .iter()
+            .filter(|node| node.start < tab_starts[0])
+            .map(|node| node.text.as_str())
+            .collect();
         if short_spaceless(trim(&first)) {
             left_from = Some(tab_starts[0]);
         }
@@ -194,7 +226,10 @@ pub fn patch_field_paragraph_xml(xml: &str, patch: &FieldTextPatch) -> String {
     let (left_nodes, right_nodes): (Vec<&XmlTextNode<'_>>, Vec<&XmlTextNode<'_>>) = match last_tab {
         None => (nodes.iter().collect(), Vec::new()),
         Some(last) => (
-            nodes.iter().filter(|node| left_from.is_none_or(|from| node.start > from) && node.start < last).collect(),
+            nodes
+                .iter()
+                .filter(|node| left_from.is_none_or(|from| node.start > from) && node.start < last)
+                .collect(),
             nodes.iter().filter(|node| node.start > last).collect(),
         ),
     };
@@ -224,8 +259,11 @@ pub fn patch_math_tokens(xml: &str, tokens: &[String]) -> String {
     if nodes.is_empty() || nodes.len() != tokens.len() {
         return xml.to_owned();
     }
-    let replacements: Vec<(&XmlTextNode<'_>, String)> =
-        nodes.iter().zip(tokens).map(|(node, token)| (node, token.clone())).collect();
+    let replacements: Vec<(&XmlTextNode<'_>, String)> = nodes
+        .iter()
+        .zip(tokens)
+        .map(|(node, token)| (node, token.clone()))
+        .collect();
     replace_text_nodes(xml, &replacements)
 }
 
@@ -262,7 +300,10 @@ pub fn xml_segments(xml: &str, tag: &str, from: usize, to: usize) -> Vec<XmlSegm
                 let gt = index_of(xml, ">", o);
                 if let Some(gt) = gt.filter(|&gt| gt > 0 && bytes[gt - 1] == b'/') {
                     if depth == 0 {
-                        segs.push(XmlSegment { start: o, end: gt + 1 });
+                        segs.push(XmlSegment {
+                            start: o,
+                            end: gt + 1,
+                        });
                     }
                     i = gt + 1;
                     continue;
@@ -279,7 +320,10 @@ pub fn xml_segments(xml: &str, tag: &str, from: usize, to: usize) -> Vec<XmlSegm
                 }
                 depth -= 1;
                 if depth == 0 {
-                    segs.push(XmlSegment { start: seg_start, end: c + close_tag.len() });
+                    segs.push(XmlSegment {
+                        start: seg_start,
+                        end: c + close_tag.len(),
+                    });
                 }
                 i = c + close_tag.len();
             }
@@ -290,7 +334,10 @@ pub fn xml_segments(xml: &str, tag: &str, from: usize, to: usize) -> Vec<XmlSegm
 }
 
 fn segment_texts<'a>(xml: &'a str, tag: &str, from: usize, to: usize) -> Vec<&'a str> {
-    xml_segments(xml, tag, from, to).into_iter().map(|seg| &xml[seg.start..seg.end]).collect()
+    xml_segments(xml, tag, from, to)
+        .into_iter()
+        .map(|seg| &xml[seg.start..seg.end])
+        .collect()
 }
 
 fn first_match<'t>(regex: &jscompat::JsRegex, text: &'t str) -> &'t str {
@@ -302,10 +349,13 @@ fn p_pr_of(p_xml: &str) -> &str {
 }
 
 fn media_r_ids(xml: &str) -> Vec<&str> {
-    js_regex!(r#"<(?:a:blip|v:imagedata)\b[^>]*\br:(?:embed|link|id)="([^"]+)""#, "g")
-        .find_iter(xml)
-        .map(|m| m.get(1).unwrap_or_default())
-        .collect()
+    js_regex!(
+        r#"<(?:a:blip|v:imagedata)\b[^>]*\br:(?:embed|link|id)="([^"]+)""#,
+        "g"
+    )
+    .find_iter(xml)
+    .map(|m| m.get(1).unwrap_or_default())
+    .collect()
 }
 
 const DRAWING_TAGS: [&str; 4] = ["mc:AlternateContent", "w:drawing", "w:pict", "w:object"];
@@ -335,7 +385,11 @@ fn carried_runs_of(p_xml: &str, emitted_media: &[&str]) -> String {
                 .filter(|(name, xml)| DRAWING_TAGS.contains(&name.as_str()) && !is_twin(xml))
                 .map(|(_, xml)| xml)
                 .collect();
-            if kept.is_empty() { String::new() } else { format!("<w:r>{kept}</w:r>") }
+            if kept.is_empty() {
+                String::new()
+            } else {
+                format!("<w:r>{kept}</w:r>")
+            }
         })
         .collect()
 }
@@ -347,7 +401,10 @@ fn patch_cell_xml(tc_xml: &str, paras: &[Option<CellParaPatch>]) -> Option<Strin
         return None;
     }
     let open_tag = js_regex!(r"^<w:tc(?: [^>]*)?>").exec(tc_xml)?.as_str();
-    let tc_pr = first_match(js_regex!(r"<w:tcPr[\s\S]*?<\/w:tcPr>|<w:tcPr[^>]*\/>"), tc_xml);
+    let tc_pr = first_match(
+        js_regex!(r"<w:tcPr[\s\S]*?<\/w:tcPr>|<w:tcPr[^>]*\/>"),
+        tc_xml,
+    );
     let originals = segment_texts(tc_xml, "w:p", open_tag.len(), tc_xml.len());
     let first = originals.first().copied().unwrap_or("");
     let first_p_pr = p_pr_of(first);
@@ -355,7 +412,10 @@ fn patch_cell_xml(tc_xml: &str, paras: &[Option<CellParaPatch>]) -> Option<Strin
     let r_pr = first_match(js_regex!(r"<w:rPr[\s\S]*?<\/w:rPr>"), first_run);
     // picture runs are not part of the text model; carry them over verbatim
     let drawing_runs: String = if tc_xml.contains("<w:drawing") {
-        segment_texts(tc_xml, "w:r", 0, tc_xml.len()).into_iter().filter(|r| r.contains("<w:drawing")).collect()
+        segment_texts(tc_xml, "w:r", 0, tc_xml.len())
+            .into_iter()
+            .filter(|r| r.contains("<w:drawing"))
+            .collect()
     } else {
         String::new()
     };
@@ -369,13 +429,22 @@ fn patch_cell_xml(tc_xml: &str, paras: &[Option<CellParaPatch>]) -> Option<Strin
                 if text.is_empty() {
                     body.push_str(&format!("<w:p>{first_p_pr}{keep}</w:p>"));
                 } else {
-                    body.push_str(&format!("<w:p>{first_p_pr}<w:r>{r_pr}{}</w:r>{keep}</w:p>", cell_run_content_xml(text)));
+                    body.push_str(&format!(
+                        "<w:p>{first_p_pr}<w:r>{r_pr}{}</w:r>{keep}</w:p>",
+                        cell_run_content_xml(text)
+                    ));
                 }
             }
             Some(CellParaPatch::Rich(rich)) => {
-                let template = if originals.is_empty() { "" } else { originals[i.min(originals.len() - 1)] };
+                let template = if originals.is_empty() {
+                    ""
+                } else {
+                    originals[i.min(originals.len() - 1)]
+                };
                 let p_pr = match &rich.format {
-                    Some(format) => merge_cell_para_format(p_pr_of(template), format, rich.original.as_ref()),
+                    Some(format) => {
+                        merge_cell_para_format(p_pr_of(template), format, rich.original.as_ref())
+                    }
                     None => p_pr_of(template).to_owned(),
                 };
                 let emitted = match &rich.xml {
@@ -386,7 +455,10 @@ fn patch_cell_xml(tc_xml: &str, paras: &[Option<CellParaPatch>]) -> Option<Strin
                 let keep = if aligned {
                     carried_runs_of(template, &emitted_media)
                 } else if i == 0 {
-                    originals.iter().map(|p| carried_runs_of(p, &emitted_media)).collect()
+                    originals
+                        .iter()
+                        .map(|p| carried_runs_of(p, &emitted_media))
+                        .collect()
                 } else {
                     String::new()
                 };
@@ -414,7 +486,10 @@ fn cell_run_content_xml(text: &str) -> String {
     let mut piece_start = 0;
     let flush = |out: &mut String, piece: &str| {
         if !piece.is_empty() {
-            out.push_str(&format!("<w:t xml:space=\"preserve\">{}</w:t>", escape_xml_text(piece)));
+            out.push_str(&format!(
+                "<w:t xml:space=\"preserve\">{}</w:t>",
+                escape_xml_text(piece)
+            ));
         }
     };
     for (at, c) in text.char_indices() {
@@ -470,17 +545,32 @@ pub struct NestedCellTexts {
 }
 
 /// Replace cell texts inside a <w:tbl> fragment.
-pub fn patch_table_cell_texts(table_xml: &str, texts: &[Option<Vec<Option<CellTextsPatch>>>]) -> String {
+pub fn patch_table_cell_texts(
+    table_xml: &str,
+    texts: &[Option<Vec<Option<CellTextsPatch>>>],
+) -> String {
     let mut out = String::new();
     let mut cursor = 0;
-    for (r, tr) in xml_segments(table_xml, "w:tr", 0, table_xml.len()).into_iter().enumerate() {
-        let Some(Some(row_texts)) = texts.get(r) else { continue };
-        for (c, tc) in xml_segments(table_xml, "w:tc", tr.start, tr.end).into_iter().enumerate() {
-            let Some(Some(entry)) = row_texts.get(c) else { continue };
+    for (r, tr) in xml_segments(table_xml, "w:tr", 0, table_xml.len())
+        .into_iter()
+        .enumerate()
+    {
+        let Some(Some(row_texts)) = texts.get(r) else {
+            continue;
+        };
+        for (c, tc) in xml_segments(table_xml, "w:tc", tr.start, tr.end)
+            .into_iter()
+            .enumerate()
+        {
+            let Some(Some(entry)) = row_texts.get(c) else {
+                continue;
+            };
             let tc_xml = &table_xml[tc.start..tc.end];
             let patched = match entry {
                 CellTextsPatch::Paras(paras) => patch_cell_xml(tc_xml, paras),
-                CellTextsPatch::Nested(nested) => patch_nested_in_cell(tc_xml, nested.nested.as_deref()),
+                CellTextsPatch::Nested(nested) => {
+                    patch_nested_in_cell(tc_xml, nested.nested.as_deref())
+                }
             };
             let Some(patched) = patched else { continue };
             out.push_str(&table_xml[cursor..tc.start]);
@@ -503,7 +593,9 @@ fn patch_nested_in_cell(tc_xml: &str, nested: Option<&[Option<TableTexts>]>) -> 
     let mut out = String::new();
     let mut cursor = 0;
     for (i, seg) in tbl_segs.into_iter().enumerate() {
-        let Some(Some(grid)) = nested.get(i) else { continue };
+        let Some(Some(grid)) = nested.get(i) else {
+            continue;
+        };
         out.push_str(&tc_xml[cursor..seg.start]);
         out.push_str(&patch_table_cell_texts(&tc_xml[seg.start..seg.end], grid));
         cursor = seg.end;
@@ -559,7 +651,10 @@ pub struct TextboxParaPatch {
 /// Plain text of one w:p fragment (w:t + tabs/breaks), for change detection.
 pub(crate) fn para_plain_text(p_xml: &str) -> String {
     let mut out = String::new();
-    let re = js_regex!(r"<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:tab\s*\/>|<w:tab>\s*<\/w:tab>|<w:br\/>|<w:cr\/>", "g");
+    let re = js_regex!(
+        r"<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<w:tab\s*\/>|<w:tab>\s*<\/w:tab>|<w:br\/>|<w:cr\/>",
+        "g"
+    );
     for m in re.find_iter(p_xml) {
         let whole = m.as_str();
         if whole.starts_with("<w:tab") {
@@ -584,7 +679,14 @@ pub(crate) fn para_plain_text(p_xml: &str) -> String {
 fn paired_p_pr(p_pr: &str) -> String {
     js_regex!(r"<w:pPr([^>]*)\/>").exec(p_pr).map_or_else(
         || p_pr.to_owned(),
-        |m| format!("{}<w:pPr{}></w:pPr>{}", &p_pr[..m.start()], m.get(1).unwrap_or_default(), &p_pr[m.end()..]),
+        |m| {
+            format!(
+                "{}<w:pPr{}></w:pPr>{}",
+                &p_pr[..m.start()],
+                m.get(1).unwrap_or_default(),
+                &p_pr[m.end()..]
+            )
+        },
     )
 }
 
@@ -600,14 +702,20 @@ fn p_pr_with_num_pr(p_pr: &str, num_pr: Option<&TextboxNumPr>) -> String {
     let stripped = replace_first(js_regex!(r"<w:numPr>[\s\S]*?<\/w:numPr>"), &out, "");
     let stripped = replace_first(js_regex!(r"<w:numPr\/>"), &stripped, "");
     let Some(num_pr) = num_pr else {
-        return if stripped == "<w:pPr></w:pPr>" { String::new() } else { stripped };
+        return if stripped == "<w:pPr></w:pPr>" {
+            String::new()
+        } else {
+            stripped
+        };
     };
     let num = format!(
         "<w:numPr><w:ilvl w:val=\"{}\"/><w:numId w:val=\"{}\"/></w:numPr>",
         number_to_string(num_pr.ilvl.0),
         num_pr.num_id
     );
-    let after_style = stripped.find("<w:pStyle ").and_then(|style| index_of(&stripped, "/>", style));
+    let after_style = stripped
+        .find("<w:pStyle ")
+        .and_then(|style| index_of(&stripped, "/>", style));
     let at = match after_style {
         Some(after) => after + 2,
         None => match stripped.find('>') {
@@ -632,7 +740,11 @@ fn p_pr_with_ind_left(p_pr: &str, left: Option<f64>) -> String {
         let attrs = js_regex!(r#"\s+w:(left|start|leftChars|startChars)="[^"]*""#, "g")
             .replace_all(ind.get(1).unwrap_or_default(), |_| String::new());
         let next = format!("{attrs}{value}");
-        let tag = if trim(&next).is_empty() { String::new() } else { format!("<w:ind{next}/>") };
+        let tag = if trim(&next).is_empty() {
+            String::new()
+        } else {
+            format!("<w:ind{next}/>")
+        };
         let (start, end) = (ind.start(), ind.end());
         out = format!("{}{tag}{}", &out[..start], &out[end..]);
     } else if left.is_some() {
@@ -640,19 +752,34 @@ fn p_pr_with_ind_left(p_pr: &str, left: Option<f64>) -> String {
         if out.is_empty() {
             return format!("<w:pPr>{tag}</w:pPr>");
         }
-        let at = [out.find("<w:jc "), out.find("<w:rPr")].into_iter().flatten().min();
+        let at = [out.find("<w:jc "), out.find("<w:rPr")]
+            .into_iter()
+            .flatten()
+            .min();
         let at = at.or_else(|| out.rfind("</w:pPr>"));
         out = insert_at(&out, at, &tag);
     }
-    if out == "<w:pPr></w:pPr>" { String::new() } else { out }
+    if out == "<w:pPr></w:pPr>" {
+        String::new()
+    } else {
+        out
+    }
 }
 
 fn p_pr_with_jc(p_pr: &str, align: Option<TextboxAlign>) -> String {
     let out = replace_first(js_regex!(r"<w:jc [^>]*\/>"), &paired_p_pr(p_pr), "");
     let Some(align) = align else {
-        return if out == "<w:pPr></w:pPr>" { String::new() } else { out };
+        return if out == "<w:pPr></w:pPr>" {
+            String::new()
+        } else {
+            out
+        };
     };
-    let jc_val = if align == TextboxAlign::Justify { "both" } else { align.as_str() };
+    let jc_val = if align == TextboxAlign::Justify {
+        "both"
+    } else {
+        align.as_str()
+    };
     let jc = format!("<w:jc w:val=\"{jc_val}\"/>");
     if out.is_empty() {
         return format!("<w:pPr>{jc}</w:pPr>");
@@ -723,11 +850,16 @@ pub fn patch_textbox_paras(paragraph_xml: &str, patches: &TextboxParasPatchSet) 
     let segs = xml_segments(paragraph_xml, "w:txbxContent", 0, paragraph_xml.len());
     let mut xml = paragraph_xml.to_owned();
     if !segs.is_empty() && !by_index.is_empty() {
-        let fallbacks: Vec<(usize, usize)> = js_regex!(r"<mc:Fallback>[\s\S]*?<\/mc:Fallback>", "g")
-            .find_iter(paragraph_xml)
-            .map(|m| (m.start(), m.end()))
-            .collect();
-        let in_fallback = |pos: usize| fallbacks.iter().any(|&(start, end)| pos >= start && pos < end);
+        let fallbacks: Vec<(usize, usize)> =
+            js_regex!(r"<mc:Fallback>[\s\S]*?<\/mc:Fallback>", "g")
+                .find_iter(paragraph_xml)
+                .map(|m| (m.start(), m.end()))
+                .collect();
+        let in_fallback = |pos: usize| {
+            fallbacks
+                .iter()
+                .any(|&(start, end)| pos >= start && pos < end)
+        };
         let mut out = String::new();
         let mut cursor = 0;
         let mut ordinal = 0;
@@ -739,7 +871,10 @@ pub fn patch_textbox_paras(paragraph_xml: &str, patches: &TextboxParasPatchSet) 
             }
             let Some(paras) = current else { continue };
             out.push_str(&paragraph_xml[cursor..seg.start]);
-            out.push_str(&patch_txbx_content(&paragraph_xml[seg.start..seg.end], paras));
+            out.push_str(&patch_txbx_content(
+                &paragraph_xml[seg.start..seg.end],
+                paras,
+            ));
             cursor = seg.end;
         }
         out.push_str(&paragraph_xml[cursor..]);
@@ -755,15 +890,21 @@ pub fn patch_textbox_paras(paragraph_xml: &str, patches: &TextboxParasPatchSet) 
 fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> String {
     for seg in xml_segments(paragraph_xml, "wps:wsp", 0, paragraph_xml.len()) {
         let mut shape_xml = paragraph_xml[seg.start..seg.end].to_owned();
-        let id = js_regex!(r#"<wps:cNvPr\b[^>]*\bid="([^"]+)""#).exec(&shape_xml).and_then(|m| m.get(1));
+        let id = js_regex!(r#"<wps:cNvPr\b[^>]*\bid="([^"]+)""#)
+            .exec(&shape_xml)
+            .and_then(|m| m.get(1));
         if id != Some(entry.shape_id.as_str()) {
             continue;
         }
         if shape_xml.contains("<wps:txbx") {
-            let Some(content) = xml_segments(&shape_xml, "w:txbxContent", 0, shape_xml.len()).into_iter().next() else {
+            let Some(content) = xml_segments(&shape_xml, "w:txbxContent", 0, shape_xml.len())
+                .into_iter()
+                .next()
+            else {
                 return paragraph_xml.to_owned();
             };
-            let paras: Vec<Option<TextboxParaPatch>> = entry.paras.iter().cloned().map(Some).collect();
+            let paras: Vec<Option<TextboxParaPatch>> =
+                entry.paras.iter().cloned().map(Some).collect();
             shape_xml = format!(
                 "{}{}{}",
                 &shape_xml[..content.start],
@@ -783,16 +924,31 @@ fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> String {
                 })
                 .collect();
             let txbx = format!("<wps:txbx><w:txbxContent>{body}</w:txbxContent></wps:txbx>");
-            shape_xml = match js_regex!(r"<wps:bodyPr[\s/>]").exec(&shape_xml).map(|m| m.start()) {
-                None => shape_xml.replacen("</wps:wsp>", &format!("{txbx}<wps:bodyPr anchor=\"ctr\"/></wps:wsp>"), 1),
+            shape_xml = match js_regex!(r"<wps:bodyPr[\s/>]")
+                .exec(&shape_xml)
+                .map(|m| m.start())
+            {
+                None => shape_xml.replacen(
+                    "</wps:wsp>",
+                    &format!("{txbx}<wps:bodyPr anchor=\"ctr\"/></wps:wsp>"),
+                    1,
+                ),
                 Some(at) => format!(
                     "{}{txbx}{}",
                     &shape_xml[..at],
-                    replace_first(js_regex!(r#"<wps:bodyPr\b(?![^>]*\banchor=")"#), &shape_xml[at..], "<wps:bodyPr anchor=\"ctr\"")
+                    replace_first(
+                        js_regex!(r#"<wps:bodyPr\b(?![^>]*\banchor=")"#),
+                        &shape_xml[at..],
+                        "<wps:bodyPr anchor=\"ctr\""
+                    )
                 ),
             };
         }
-        return format!("{}{shape_xml}{}", &paragraph_xml[..seg.start], &paragraph_xml[seg.end..]);
+        return format!(
+            "{}{shape_xml}{}",
+            &paragraph_xml[..seg.start],
+            &paragraph_xml[seg.end..]
+        );
     }
     paragraph_xml.to_owned()
 }

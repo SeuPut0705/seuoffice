@@ -40,10 +40,18 @@ fn xml_segments16(text: &str, tag: &str, from: f64, to: f64) -> Vec<Segment16> {
     let from16 = from.trunc().clamp(0.0, len16) as usize;
     let to16 = to.ceil().clamp(0.0, len16) as usize;
     let map = Utf16Map::new(text);
-    text_patch::xml_segments(text, tag, byte_at_unit(text, from16), byte_at_unit(text, to16))
-        .into_iter()
-        .map(|seg| Segment16 { start: map.to_utf16(seg.start), end: map.to_utf16(seg.end) })
-        .collect()
+    text_patch::xml_segments(
+        text,
+        tag,
+        byte_at_unit(text, from16),
+        byte_at_unit(text, to16),
+    )
+    .into_iter()
+    .map(|seg| Segment16 {
+        start: map.to_utf16(seg.start),
+        end: map.to_utf16(seg.end),
+    })
+    .collect()
 }
 
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
