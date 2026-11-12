@@ -284,9 +284,13 @@ const EDGES: string[] = [
   nested(101),
   nested(102),
   nested(101, '<b/>'),
-  // ledger: DOCTYPE is refused on purpose
+]
+
+/** Listed in divergences.json, so not seeds of the mutations. */
+const LISTED: string[] = [
+  // DOCTYPE is refused on purpose
   '<!DOCTYPE a><a/>',
-  // ledger: a CDATA opener that splits a surrogate pair
+  // a CDATA opener that splits a surrogate pair
   '<a><![CDATA\u{1F600}]]></a>',
 ]
 
@@ -300,8 +304,11 @@ export const XML_TREE: CallSpec[] = [
       [...parts.values()].flatMap((text): Input[] =>
         ENGINE_OPTIONS.map((args) => ({ text, args: { ...args } })),
       ),
-    built: EDGES.flatMap((text): Input[] =>
-      ALL_OPTIONS.map((args) => ({ text, args: { ...args } })),
-    ),
+    built: [
+      ...EDGES.flatMap((text): Input[] => ALL_OPTIONS.map((args) => ({ text, args: { ...args } }))),
+      ...LISTED.flatMap((text): Input[] =>
+        ALL_OPTIONS.map((args) => ({ text, args: { ...args }, seed: false })),
+      ),
+    ],
   },
 ]

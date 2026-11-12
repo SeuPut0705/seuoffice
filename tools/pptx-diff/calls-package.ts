@@ -120,6 +120,7 @@ const PRESENTATIONS = [
   presentation(
     '<p:sldSz cx="9906000" cy="6858000"/><p:sldIdLst><p:sldId r:id="rId2"/></p:sldIdLst>',
   ),
+  // ledger presentation-default-namespace-slide-list: the TypeScript loses this slide
   presentation('<sldSz cx="1" cy="2"/><sldIdLst><sldId r:id="rId2"/></sldIdLst>', ''),
   presentation(
     '<p:sldSz cx="12.9e3" cy="-5"/><p:sldIdLst><p:sldId id="rId3"/><p:sldId r:id=""/><p:sldId r:id="rId9"/></p:sldIdLst>',
@@ -408,12 +409,13 @@ export const PACKAGE: CallSpec[] = [
       ]
     },
     built: [
-      ...PRESENTATIONS.map((text) => ({
+      ...PRESENTATIONS.map((text): Input => ({
         text,
         args: {
           parts: replacing(DECK, 'ppt/presentation.xml', ''),
           textPart: 'ppt/presentation.xml',
         },
+        ...(text.includes('<sldId r:id') ? { seed: false } : {}),
       })),
       split(DECK, 'ppt/presentation.xml'),
       {

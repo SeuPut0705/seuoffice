@@ -343,6 +343,7 @@ const PRESENTATIONS = [
   ),
   presentation(sldIds('<p:sldId id="00300"/>', '<p:sldId r:id="rId2" id="500"/>')),
   presentation(sldIds('<p:sldId id="300" r:id="7"/>')),
+  // ledger slide-id-xml-whitespace: the TypeScript misses this id
   presentation(sldIds('<p:sldId id = "600"/>', '<p:sldId id="-700"/>', '<p:sldId id="7e2"/>')),
   presentation(sldIds(`<p:sldId id="${'9'.repeat(400)}"/>`, '<p:sldId id="1000"/>')),
   presentation(sldIds('<p:sldId/>', '<p:sldIdLst id="900"/>', '<p:sldId\u00a0id="901"/>')),
@@ -530,7 +531,9 @@ export const LEAVES: CallSpec[] = [
       const text = parts.get('ppt/presentation.xml')
       return text === undefined ? [] : [{ text }]
     },
-    built: PRESENTATIONS.map((text) => ({ text })),
+    built: PRESENTATIONS.map((text) =>
+      text.includes('id = "600"') ? { text, seed: false } : { text },
+    ),
   },
   {
     fn: 'pptxLeaves.named-action.namedActionOf',

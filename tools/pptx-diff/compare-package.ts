@@ -13,20 +13,16 @@ export async function comparePackage(
   where: string,
   bytes: Uint8Array,
 ): Promise<PackageArchive | null> {
-  let archive: PackageArchive
-  try {
-    archive = await PackageArchive.open(bytes)
-  } catch (error) {
-    const { header } = engine.call<Opened>({ cmd: 'pptxPackage' }, [bytes])
-    if (failed(header)) throw new Error(`pptxPackage failed: ${header.error.message}`)
+  const { header, blobs } = engine.call<Opened>({ cmd: 'pptxPackage' }, [bytes])
+  if (failed(header)) throw new Error(`pptxPackage failed: ${header.error.message}`)
+  const archive = await PackageArchive.open(bytes).catch((error: unknown) => String(error))
+  if (typeof archive === 'string') {
     comparison.typescriptThrew += 1
     comparison.record(
-      'refused' in header ? null : `${where}: TypeScript refused ${String(error)}, Rust opened`,
+      'refused' in header ? null : `${where}: TypeScript refused ${archive}, Rust opened`,
     )
     return null
   }
-  const { header, blobs } = engine.call<Opened>({ cmd: 'pptxPackage' }, [bytes])
-  if (failed(header)) throw new Error(`pptxPackage failed: ${header.error.message}`)
   if ('refused' in header) {
     comparison.record(`${where}: TypeScript opened, Rust refused ${header.refused}`)
     return archive
