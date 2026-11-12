@@ -670,9 +670,12 @@ export function build(): { exports: ExportInfo[] } {
     const [module, name] = key.split(':') as [string, string]
     if (byModule.get(module)?.some((e) => e.name === name)) continue
     for (const e of declared.get(name) ?? [])
-      for (const reason of why)
-        needed.get(`${e.module}:${e.name}`)?.add(reason) ??
-          needed.set(`${e.module}:${e.name}`, new Set([reason]))
+      for (const reason of why) {
+        const key = `${e.module}:${e.name}`
+        const reasons = needed.get(key)
+        if (reasons) reasons.add(reason)
+        else needed.set(key, new Set([reason]))
+      }
   }
   for (const e of exports) {
     e.required = [...(needed.get(`${e.module}:${e.name}`) ?? [])].sort()
