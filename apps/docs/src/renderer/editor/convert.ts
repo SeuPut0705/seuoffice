@@ -66,6 +66,7 @@ import { parseTextOutlineAttr } from './text-outline'
 import { charScaleXAttr, parseGlowAttr, parseTextEffectAttr } from './text-effects'
 import { SHAPE_INLINE_WRAP, shapeWrapOf } from './floating-z-order'
 import {
+  INLINE_WRAP_MARK,
   holdsInlineStructure,
   inlineStructureKey,
   inlineWrapMarkOf,
@@ -1267,11 +1268,14 @@ export function tableStructureSignature(table: PmNode): string {
 function inlineFormattingSignature(content: PmNode[] | undefined): string[] {
   const styles: string[] = []
   for (const node of content ?? []) {
-    // the schema re-sorts marks by rank on load, so the parse-side order must not count
+    // the schema re-sorts marks by rank on load, so the parse-side order must not count;
+    // the wrapper mark is not formatting: a cell paragraph that reads as it did
+    // keeps its original bytes, as a body paragraph does (see `normalizedRuns`)
     const style =
       node.type === 'text'
         ? JSON.stringify(
-            [...(node.marks ?? [])]
+            (node.marks ?? [])
+              .filter((mark) => mark.type !== INLINE_WRAP_MARK)
               .sort((a, b) => a.type.localeCompare(b.type))
               .map((mark) => [mark.type, mark.attrs ?? null]),
           )
@@ -3857,19 +3861,16 @@ function revisionKey(run: Run): string | null {
 
 // ---- signatures: "did the user actually change this block?" ----
 
+// A signature knows text and formatting, not the run-level wrappers around
+// the text (Run.wrap): a block that reads as the file's block is the file's
+// block, wrappers included, whatever the editor's marks say. Wrappers are
+// written from the marks only when the block is written anew.
 function normalizedRuns(runs: Run[]): unknown[] {
-  return mergeRuns(runs).map((r) =>
+  return mergeRuns(runs.map(({ wrap: _wrap, ...run }) => run)).map((r) =>
     // a picture/rule run's rPr-derived display fields do not survive the image
     // node round trip; its identity is the fragment plus the raw rPr it re-emits
     r.text === '' && r.image
-      ? [
-          'image',
-          r.rawRPr ?? null,
-          r.image.xml,
-          r.link?.href ?? null,
-          revisionKey(r),
-          inlineStructureKey(r),
-        ]
+      ? ['image', r.rawRPr ?? null, r.image.xml, r.link?.href ?? null, revisionKey(r)]
       : [
           r.text,
           r.rawRPr ?? null,
@@ -3901,7 +3902,6 @@ function normalizedRuns(runs: Run[]): unknown[] {
           r.sym ? [r.sym.font, r.sym.char] : null,
           r.ruby?.xml ?? null,
           r.image?.xml ?? null,
-          inlineStructureKey(r),
         ],
   )
 }

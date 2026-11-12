@@ -76,7 +76,13 @@ async function open(xml: string) {
     ).internal.documentXml
   return { editor, parsed, make, save }
 }
-const rewrite = (editor: Editor, html: string, tracked = false, name = 'replace_blocks') =>
+const rewrite = (
+  editor: Editor,
+  html: string,
+  tracked = false,
+  name = 'replace_blocks',
+  endBlockIndex = 0,
+) =>
   executeTool(
     editor,
     {
@@ -85,7 +91,7 @@ const rewrite = (editor: Editor, html: string, tracked = false, name = 'replace_
       input:
         name === 'write_document'
           ? { plan: 'Rewrite', replaceDocument: true }
-          : { startBlockIndex: 0, endBlockIndex: 0, html },
+          : { startBlockIndex: 0, endBlockIndex, html },
     },
     { bullet: null, ordered: null },
     tracked ? { author: 'Probe' } : undefined,
@@ -153,6 +159,105 @@ describe('an AI block rewrite and a control locked against editing', () => {
       expect(await save()).toBe(before)
     })
   }
+})
+
+describe('a block an untracked AI rewrite gives back as it was keeps its bytes', () => {
+  const placeholder = (id: number) =>
+    `<w:sdt><w:sdtPr><w:id w:val="${id}"/><w:showingPlcHdr/></w:sdtPr><w:sdtContent>` +
+    `${run('Click or tap here to enter text.')}</w:sdtContent></w:sdt>`
+  const nested =
+    `<w:p>${run('Due on ')}` +
+    sdtOf(
+      run('5/6/') + `<w:smartTag w:uri="urn:date" w:element="year">${run('2024')}</w:smartTag>`,
+      37,
+    ) +
+    `${run(' at noon')}</w:p>`
+  const twins = `<w:p>${run('From ')}${sdt('2024', 17)}${run(' to ')}${sdt('2024', 18)}</w:p>`
+  /** the paragraphs of the file, the html the model sends back, the paragraphs it left as they were */
+  const SHAPES: Array<[string, string[], string, number[]]> = [
+    [
+      'two controls that show the same placeholder, in two paragraphs',
+      [
+        `<w:p>${run('Name: ')}${placeholder(1)}</w:p>`,
+        `<w:p>${run('Address: ')}${placeholder(2)}</w:p>`,
+      ],
+      '<p>Name: Click or tap here to enter text.</p><p>Address: Click or tap here to enter text.</p>',
+      [0, 1],
+    ],
+    [
+      'two controls around the same text in one paragraph',
+      [twins],
+      '<p>From 2024 to 2024</p>',
+      [0],
+    ],
+    [
+      'a control whose text also stands outside it',
+      [`<w:p>${run('Signed 2024, due ')}${sdt('2024', 12)}</w:p>`],
+      '<p>Signed 2024, due 2024</p>',
+      [0],
+    ],
+    [
+      'a control around one space',
+      [`<w:p>${run('one two')}${sdt(' ', 15)}${run('three')}</w:p>`],
+      '<p>one two three</p>',
+      [0],
+    ],
+    [
+      'a control around punctuation only',
+      [`<w:p>${run('Total ')}${sdt('-', 33)}${run(' units')}</w:p>`],
+      '<p>Total - units</p>',
+      [0],
+    ],
+    ['a smart tag inside a control', [nested], '<p>Due on 5/6/2024 at noon</p>', [0]],
+    [
+      'a control inside a control',
+      [`<w:p>${run('Due on ')}${sdtOf(run('5/6/') + sdt('2024', 39), 38)}${run(' at noon')}</w:p>`],
+      '<p>Due on 5/6/2024 at noon</p>',
+      [0],
+    ],
+    [
+      'two smart tags around the same word',
+      [`<w:p>${run('From ')}${smart}${run(' to ')}${smart}</w:p>`],
+      '<p>From Paris to Paris</p>',
+      [0],
+    ],
+    [
+      'two blocks given back, the wrapped word also standing in the second',
+      [`<w:p>${run('Due ')}${sdt('2024', 17)}</w:p>`, `<w:p>${run('Year 2024 again')}</w:p>`],
+      '<p>Due 2024</p><p>Year 2024 again</p>',
+      [0, 1],
+    ],
+    [
+      'the middle block of three, the other two rewritten',
+      [`<w:p>${run('First old')}</w:p>`, twins, `<w:p>${run('Third old')}</w:p>`],
+      '<p>First new</p><p>From 2024 to 2024</p><p>Third new</p>',
+      [1],
+    ],
+  ]
+  for (const [name, paragraphs, html, untouched] of SHAPES) {
+    it(name, async () => {
+      const { editor, save } = await open(paragraphs.join('') + TAIL)
+      const result = await rewrite(editor, html, false, 'replace_blocks', paragraphs.length - 1)
+      expect(result.isError).toBeFalsy()
+      const xml = await save()
+      for (const index of untouched) expect(xml).toContain(paragraphs[index])
+      expect(count(xml, 'sdt>')).toBe(count(paragraphs.join(''), 'sdt>'))
+      expect(count(xml, 'smartTag ')).toBe(count(paragraphs.join(''), 'smartTag '))
+    })
+  }
+
+  it('a locked control that cannot be put back still refuses the rewrite, and the file stays as it was', async () => {
+    const locked = `<w:p>${run('From ')}${sdt('2024', 17, true)}${run(' to ')}${sdt('2024', 18, true)}</w:p>`
+    const { editor, save } = await open(locked + TAIL)
+    const before = await save()
+    const result = await rewrite(editor, '<p>From 2024 to 2024</p>')
+    expect(result.isError).toBe(true)
+    expect(result.mutated).not.toBe(true)
+    expect(await save()).toBe(before)
+    // the lock still holds in the editor
+    editor.commands.insertContentAt(posOf(editor, '024'), 'X')
+    expect(texts(editor)).toEqual(['From 2024 to 2024', 'tail'])
+  })
 })
 
 describe('an untracked AI block rewrite keeps the wrapper it cannot misplace', () => {

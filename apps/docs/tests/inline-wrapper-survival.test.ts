@@ -778,6 +778,140 @@ describe('one control stays one control', () => {
   })
 })
 
+describe('a paragraph whose text and formatting are what was read keeps its bytes', () => {
+  // the wrapper is written from the editor only when the paragraph is written
+  // anew; a paragraph that reads as it did is the one in the file, control included
+  const PLAIN =
+    '<w:p><w:r><w:t xml:space="preserve">Due on </w:t></w:r>' +
+    `${UNLOCKED.open}<w:r><w:t>5/6/2024</w:t></w:r>${UNLOCKED.close}` +
+    '<w:r><w:t xml:space="preserve"> at noon</w:t></w:r></w:p>'
+  const controlsOf = (xml: string) => [
+    occurrences(xml, '<w:sdt>'),
+    occurrences(xml, 'w:val="1234567"'),
+  ]
+
+  it('Enter inside the control, then the halves joined again: the file is the one that was opened', async () => {
+    const { editor, parsed, source } = await open(around(UNLOCKED) + OTHER)
+    editor.commands.setTextSelection(posOf(editor, '6/2024'))
+    press(editor, 'Enter')
+    expect(texts(editor)).toHaveLength(3)
+    editor.commands.joinBackward()
+    expect(texts(editor)).toEqual(['Due on 5/6/2024 at noon', 'Untouched paragraph'])
+    const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
+    expect(await saveDocx(parsed, plan.saveBlocks)).toEqual(source)
+  })
+
+  it('the AI putting the same text back over the control leaves the paragraph as it was', async () => {
+    const { editor, parsed } = await open(PLAIN + OTHER)
+    const from = posOf(editor, '5/6/2024')
+    editor.commands.setTextSelection({ from, to: from + '5/6/2024'.length })
+    const result = await executeTool(
+      editor,
+      { id: 'ai', name: 'replace_selection', input: { html: '5/6/2024' } },
+      NUM_IDS,
+    )
+    expect(result.isError).toBeFalsy()
+    const { xml } = await save(editor, parsed)
+    expect(xml).toContain(PLAIN)
+    expect(controlsOf(xml)).toEqual([1, 1])
+  })
+
+  it('its text cut, typed again in place, and the cut pasted elsewhere: the control is written once, where it was', async () => {
+    const { editor, parsed } = await open(PLAIN + OTHER)
+    const from = posOf(editor, '5/6/2024')
+    const to = from + '5/6/2024'.length
+    const html = clipboardHtml(editor, from, to)
+    editor.commands.deleteRange({ from, to })
+    editor.commands.insertContentAt(from, '5/6/2024')
+    pasteAtEnd(editor, html)
+    expect(texts(editor)).toEqual(['Due on 5/6/2024 at noon', 'Untouched paragraph5/6/2024'])
+    const { xml } = await save(editor, parsed)
+    expect(controlsOf(xml)).toEqual([1, 1])
+    expect(xml).toContain(PLAIN)
+    expect(skeleton(xml)).toContain('[Untouched paragraph][5/6/2024]</w:p>')
+  })
+
+  it('a copy of its paragraph pasted above it: the control is written once and both texts are whole', async () => {
+    const { editor, parsed } = await open('<w:p/>' + PLAIN)
+    const original = editor.state.doc.child(1)
+    editor.view.dispatch(
+      editor.state.tr
+        .replaceWith(0, editor.state.doc.child(0).nodeSize, original.copy(original.content))
+        .setMeta(PASTED_CONTENT, true),
+    )
+    expect(texts(editor)).toEqual(['Due on 5/6/2024 at noon', 'Due on 5/6/2024 at noon'])
+    const { xml } = await save(editor, parsed)
+    expect(controlsOf(xml)).toEqual([1, 1])
+    expect(occurrences(skeleton(xml).replace(/\]\[/g, ''), '[Due on 5/6/2024 at noon]')).toBe(1)
+    expect(xml).toContain(PLAIN)
+  })
+
+  // a paragraph and a table cell answer the same action the same way
+  const PLACES: [string, string][] = [
+    ['a paragraph', PLAIN],
+    [
+      'a table cell',
+      '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr>' +
+        '<w:tblGrid><w:gridCol w:w="4000"/></w:tblGrid>' +
+        `<w:tr><w:tc><w:tcPr><w:tcW w:w="4000" w:type="dxa"/></w:tcPr>${PLAIN}</w:tc></w:tr></w:tbl>`,
+    ],
+  ]
+  /** every text block of the document, at any depth */
+  const lines = (editor: Editor) => {
+    const out: string[] = []
+    editor.state.doc.descendants((node) => {
+      if (node.isTextblock) out.push(node.textContent)
+    })
+    return out
+  }
+  const wrapped = (editor: Editor) => {
+    let count = 0
+    editor.state.doc.descendants((node) => {
+      if (node.marks.some((mark) => mark.type.name === 'inlineWrap')) count++
+    })
+    return count
+  }
+
+  it.each(PLACES)(
+    'in %s, the control text deleted and typed again: the file is the one that was opened',
+    async (_place, body) => {
+      const { editor, parsed, source } = await open(body + OTHER)
+      const from = posOf(editor, '5/6/2024')
+      editor.commands.deleteRange({ from, to: from + '5/6/2024'.length })
+      editor.commands.insertContentAt(from, '5/6/2024')
+      expect(lines(editor)).toEqual(['Due on 5/6/2024 at noon', 'Untouched paragraph'])
+      expect(wrapped(editor)).toBe(0)
+      const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
+      expect(await saveDocx(parsed, plan.saveBlocks)).toEqual(source)
+    },
+  )
+
+  it.each(PLACES)(
+    'in %s, a peer delivering the same text without the control: the file is the one that was opened',
+    async (_place, body) => {
+      const { editor, parsed, source } = await open(body + OTHER)
+      let at = -1
+      let size = 0
+      editor.state.doc.descendants((node, pos) => {
+        if (at !== -1 || !node.isTextblock || !node.textContent.includes('5/6/2024')) return
+        at = pos + 1
+        size = node.content.size
+      })
+      // a step that arrives from a peer carries `rebased`, as the co-editing
+      // adapter applies it
+      editor.view.dispatch(
+        editor.state.tr
+          .replaceWith(at, at + size, editor.schema.text('Due on 5/6/2024 at noon'))
+          .setMeta('rebased', 0),
+      )
+      expect(lines(editor)).toEqual(['Due on 5/6/2024 at noon', 'Untouched paragraph'])
+      expect(wrapped(editor)).toBe(0)
+      const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
+      expect(await saveDocx(parsed, plan.saveBlocks)).toEqual(source)
+    },
+  )
+})
+
 describe('the same paragraph inside a text box', () => {
   it('clearing formatting in the box keeps the control when the box is written back', async () => {
     // the text box source is read through the parse tree, so the control's
