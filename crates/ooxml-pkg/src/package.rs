@@ -132,23 +132,60 @@ impl Package {
         self.set(Part::new(name, false, Ok(bytes)));
     }
 
+    /// The folders above `name` that are missing, created outermost first. A
+    /// loop, not a recursion: a name may hold thousands of slashes.
     fn add_parent_folders(&mut self, name: &str) {
-        let path = name.strip_suffix('/').unwrap_or(name);
+        let mut missing = Vec::new();
+        let mut path = name.strip_suffix('/').unwrap_or(name);
         // a slash at index 0 is no parent
-        let Some(last_slash) = path.rfind('/').filter(|at| *at > 0) else {
-            return;
-        };
-        // JSZip's forceTrailingSlash: a parent ending in a slash keeps just that one
-        let parent = &path[..last_slash];
-        let folder = if parent.ends_with('/') {
-            parent.to_owned()
-        } else {
-            format!("{parent}/")
-        };
-        if !self.by_name.contains_key(&folder) {
-            self.add_parent_folders(&folder);
+        while let Some(last_slash) = path.rfind('/').filter(|at| *at > 0) {
+            // JSZip's forceTrailingSlash: a parent ending in a slash keeps just that one
+            let parent = &path[..last_slash];
+            let folder = if parent.ends_with('/') {
+                parent.to_owned()
+            } else {
+                format!("{parent}/")
+            };
+            if self.by_name.contains_key(&folder) {
+                break;
+            }
+            path = parent.strip_suffix('/').unwrap_or(parent);
+            missing.push(folder);
+        }
+        for folder in missing.into_iter().rev() {
             self.set(Part::new(folder, true, Ok(Vec::new())));
         }
+    }
+
+    /// `zip.remove(name)`: a file goes; otherwise `name` (with a trailing slash
+    /// added where it has none) is a folder prefix, and every entry under it
+    /// goes, the folder itself included.
+    pub fn remove(&mut self, name: &str) {
+        let mut key = name.to_owned();
+        let mut found = self.by_name.get(&key).copied();
+        if found.is_none() {
+            if !key.ends_with('/') {
+                key.push('/');
+            }
+            found = self.by_name.get(&key).copied();
+        }
+        match found {
+            Some(index) if !self.parts[index].is_dir => {
+                self.parts.remove(index);
+            }
+            _ => self.parts.retain(|part| !part.name.starts_with(&key)),
+        }
+        self.by_name = self
+            .parts
+            .iter()
+            .enumerate()
+            .map(|(index, part)| (part.name.clone(), index))
+            .collect();
+        self.indexed = self
+            .parts
+            .iter()
+            .filter(|part| array_index(&part.name).is_some())
+            .count();
     }
 
     pub fn parts(&self) -> &[Part] {

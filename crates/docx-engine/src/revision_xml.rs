@@ -148,26 +148,25 @@ fn scan(xml: &str) -> Vec<El<'_>> {
     out
 }
 
-/// `attrOf`, with the pattern of each name written out. The TypeScript reads
-/// `\s${name}="([^"]*)"`, so an attribute in single quotes is absent to it and
-/// a filter by author, id or date never matches such an element; here either
-/// quote is read (divergences.json: `revision-attribute-in-single-quotes`).
-fn attr_of<'a>(el: &El<'a>, pattern: &JsRegex) -> Option<&'a str> {
-    pattern
-        .exec(el.attrs)
-        .and_then(|found| found.get(1).or(found.get(2)))
+/// `attrOf`: an attribute of a tag, in either quote. It walks the tag, so text
+/// inside another value is not taken for it.
+fn attr_of<'a>(el: &El<'a>, name: &str) -> Option<&'a str> {
+    js_regex!(r#"([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#, "g")
+        .find_iter(el.attrs)
+        .find(|found| found.get(1) == Some(name))
+        .and_then(|found| found.get(2).or(found.get(3)))
 }
 
 fn author_of<'a>(el: &El<'a>) -> Option<&'a str> {
-    attr_of(el, js_regex!(r#"\sw:author=(?:"([^"]*)"|'([^']*)')"#))
+    attr_of(el, "w:author")
 }
 
 fn date_of<'a>(el: &El<'a>) -> Option<&'a str> {
-    attr_of(el, js_regex!(r#"\sw:date=(?:"([^"]*)"|'([^']*)')"#))
+    attr_of(el, "w:date")
 }
 
 fn id_of<'a>(el: &El<'a>) -> Option<&'a str> {
-    attr_of(el, js_regex!(r#"\sw:id=(?:"([^"]*)"|'([^']*)')"#))
+    attr_of(el, "w:id")
 }
 
 /// `PROP_CHANGE[name]` for its own keys. An inherited name (`constructor`)
@@ -908,20 +907,11 @@ pub fn read_prop_change_xml<'a>(xml: &'a str, change_name: &str) -> Option<PropC
     Some(PropChangeRecord {
         author: author_of(change).unwrap_or(""),
         date: truthy(date_of(change)),
-        date_utc: truthy(attr_of(
-            change,
-            js_regex!(r#"\sw16du:dateUtc=(?:"([^"]*)"|'([^']*)')"#),
-        )),
+        date_utc: truthy(attr_of(change, "w16du:dateUtc")),
         id: truthy(id_of(change)),
         old_xml: old.map_or("", |old| slice(xml, old.inner_start, old.inner_end)),
-        v_merge: truthy(attr_of(
-            change,
-            js_regex!(r#"\sw:vMerge=(?:"([^"]*)"|'([^']*)')"#),
-        )),
-        v_merge_orig: truthy(attr_of(
-            change,
-            js_regex!(r#"\sw:vMergeOrig=(?:"([^"]*)"|'([^']*)')"#),
-        )),
+        v_merge: truthy(attr_of(change, "w:vMerge")),
+        v_merge_orig: truthy(attr_of(change, "w:vMergeOrig")),
     })
 }
 
