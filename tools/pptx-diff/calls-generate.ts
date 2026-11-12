@@ -41,15 +41,15 @@ import {
   type BackgroundFillPatch,
   type FillPatch,
   type StrokePatch,
-} from '../../packages/pptx-engine/src/generate'
-import { parseSlide } from '../../packages/pptx-engine/src/parse'
+} from './reference/generate'
+import { parseSlide } from './reference/parse'
 import type {
   Paragraph,
   PPrDirty,
   SlideElement,
   TextElement,
   TextRun,
-} from '../../packages/pptx-engine/src/types'
+} from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 type Args = Record<string, unknown>

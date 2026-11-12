@@ -1,7 +1,7 @@
 // Group `ident` of comparison (f): identity.ts, redaction-xml.ts and model3d.ts
 // of packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_ident.rs to `pptxIdent.<module>.<TypeScript name>`.
-import type { GlbBounds } from '../../packages/pptx-engine/src/glb-bounds'
+import type { GlbBounds } from './reference/glb-bounds'
 import {
   elementCNvPrId,
   elementDurableId,
@@ -10,7 +10,7 @@ import {
   matchesElementRef,
   slideDurableId,
   withFreshCreationIds,
-} from '../../packages/pptx-engine/src/identity'
+} from './reference/identity'
 import {
   AM3D_NS,
   GLB_CONTENT_TYPE,
@@ -26,7 +26,7 @@ import {
   readModel3dRotation,
   setModel3dRotationXml,
   syncModel3dFrame,
-} from '../../packages/pptx-engine/src/model3d'
+} from './reference/model3d'
 import {
   hasRedactExtIn,
   readRedactLabel,
@@ -38,10 +38,10 @@ import {
   setRedactExt,
   stripRedactExt,
   syncRedactExt,
-} from '../../packages/pptx-engine/src/redaction-xml'
-import { scanSlide } from '../../packages/pptx-engine/src/scan'
-import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
-import type { EmuRect, Slide, SlideElement } from '../../packages/pptx-engine/src/types'
+} from './reference/redaction-xml'
+import { scanSlide } from './reference/scan'
+import { xmlParser } from './reference/xml-parser'
+import type { EmuRect, Slide, SlideElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { withUuid } from './calls-leaves'
 
@@ -139,7 +139,7 @@ const MODEL3D_CONSTANTS: Record<string, unknown> = {
 const OTHER_NAMES = ['nothing', 'constructor', 'toString']
 
 /**
- * The parser of packages/pptx-engine/src/parse.ts, which parses the `<a:rPr>`
+ * The parser of tools/pptx-diff/reference/parse.ts, which parses the `<a:rPr>`
  * and `<p:spPr>` nodes readRedactLabel is given. The Rust dispatch holds the
  * same list.
  */

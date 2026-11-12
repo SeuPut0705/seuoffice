@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
-const sourceRoot = resolve(root, 'packages/pptx-engine/src')
+const sourceRoot = resolve(root, 'tools/pptx-diff/reference')
 const paths = readdirSync(sourceRoot, { recursive: true, withFileTypes: true })
   .filter((entry) => entry.isFile() && /\.[cm]?[jt]sx?$/.test(entry.name))
   .map((entry) => resolve(entry.parentPath, entry.name))

@@ -19,7 +19,7 @@ import {
   setTableCellAnchor,
   setTableColWidth,
   setTableRowHeight,
-} from '../../packages/pptx-engine/src/index'
+} from './reference/index'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckNamed, deckOp } from './deck-ops'
 

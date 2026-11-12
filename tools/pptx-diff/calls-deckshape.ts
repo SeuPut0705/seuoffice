@@ -17,7 +17,7 @@ import {
   setShapeCustomGeometry,
   setShapePresetGeometry,
   patchSlideXml,
-} from '../../packages/pptx-engine/src/index'
+} from './reference/index'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckOp } from './deck-ops'
 

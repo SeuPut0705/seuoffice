@@ -14,9 +14,9 @@
 // FontSizeMap is a function argument: the gate gives both sides the stand-in
 // GATE_SIZE_MAP, `(pt) => (pt ?? 18) + 2`, where `args.sizeStep` is true.
 import JSZip from 'jszip'
-import { createBlankPptx } from '../../packages/pptx-engine/src/blank'
-import { buildChartSpaceXml, type NewChartOptions } from '../../packages/pptx-engine/src/chart-insert'
-import { chartWorkbookXlsx } from '../../packages/pptx-engine/src/chart-workbook'
+import { createBlankPptx } from './reference/blank'
+import { buildChartSpaceXml, type NewChartOptions } from './reference/chart-insert'
+import { chartWorkbookXlsx } from './reference/chart-workbook'
 import {
   applyParagraphFormat,
   editChartElement,
@@ -32,8 +32,8 @@ import {
   type FontSizeMap,
   type ParagraphFormatPatch,
   type ReplaceOptions,
-} from '../../packages/pptx-engine/src/index'
-import type { GroupElement } from '../../packages/pptx-engine/src/types'
+} from './reference/index'
+import type { GroupElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckOp } from './deck-ops'
 

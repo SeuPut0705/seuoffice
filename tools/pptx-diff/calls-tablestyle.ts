@@ -2,8 +2,8 @@
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_tablestyle.rs to
 // `pptxTablestyle.table-style.<TypeScript name>`.
-import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
-import { tableRowGridCols } from '../../packages/pptx-engine/src/table-grid'
+import { xmlParser } from './reference/xml-parser'
+import { tableRowGridCols } from './reference/table-grid'
 import {
   BUILTIN_TABLE_STYLES,
   builtinTableStyleName,
@@ -14,10 +14,10 @@ import {
   resolveTableStyle,
   type TableStyleDef,
   type TableStyleFlags,
-} from '../../packages/pptx-engine/src/table-style'
-import { parseClrMap, parseTheme, type Theme } from '../../packages/pptx-engine/src/theme'
-import { asXmlNode, xmlArray, type XmlNode } from '../../packages/pptx-engine/src/xml-utils'
-import { relsPathFor, resolveTarget } from '../../packages/pptx-engine/src/zip'
+} from './reference/table-style'
+import { parseClrMap, parseTheme, type Theme } from './reference/theme'
+import { asXmlNode, xmlArray, type XmlNode } from './reference/xml-utils'
+import { relsPathFor, resolveTarget } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 type Args = Record<string, unknown>
@@ -26,7 +26,7 @@ type Parts = ReadonlyMap<string, string>
 /** A value as it reaches Rust: keys that hold undefined are gone. */
 const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
-/** The parser of packages/pptx-engine/src/parse.ts, which reads the tables. */
+/** The parser of tools/pptx-diff/reference/parse.ts, which reads the tables. */
 const parseTsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',

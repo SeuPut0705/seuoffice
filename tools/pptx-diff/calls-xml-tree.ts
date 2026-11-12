@@ -5,7 +5,7 @@
 // gate, so the comparison cannot drift from what the engine parses with.
 import { readdirSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
+import { xmlParser } from './reference/xml-parser'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 interface TreeOptions {
@@ -14,7 +14,7 @@ interface TreeOptions {
   arrayNames: string[]
 }
 
-const ENGINE_SOURCE = fileURLToPath(new URL('../../packages/pptx-engine/src/', import.meta.url))
+const ENGINE_SOURCE = fileURLToPath(new URL('./reference/', import.meta.url))
 /** Every option an engine parser sets besides `isArray`, as written. */
 const FIXED_OPTIONS: Record<string, Partial<TreeOptions>> = {
   'ignoreAttributes: false': {},

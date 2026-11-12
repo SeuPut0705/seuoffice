@@ -1,16 +1,16 @@
 // Group `chart` of comparison (f): chart.ts and chartex.ts of
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_chart.rs to `pptxChart.<module>.<TypeScript name>`.
-import { parseChartXml } from '../../packages/pptx-engine/src/chart'
-import { parseChartExXml } from '../../packages/pptx-engine/src/chartex'
+import { parseChartXml } from './reference/chart'
+import { parseChartExXml } from './reference/chartex'
 import {
   parseClrMap,
   parseTheme,
   type Theme,
   themeWithOverride,
-} from '../../packages/pptx-engine/src/theme'
-import type { Fill } from '../../packages/pptx-engine/src/types'
-import { relsPathFor, resolveTarget } from '../../packages/pptx-engine/src/zip'
+} from './reference/theme'
+import type { Fill } from './reference/types'
+import { relsPathFor, resolveTarget } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { mulberry32 } from '../docx-diff/synthetic'
 

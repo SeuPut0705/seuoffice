@@ -13,7 +13,7 @@ import {
   reportComparisons,
   useFloors,
 } from '../docx-diff/harness'
-import { PackageArchive } from '../../packages/pptx-engine/src/zip'
+import { PackageArchive } from './reference/zip'
 import { observeDifferences, observedDifferences } from '../docx-diff/known-differences'
 import { mutateContainer } from '../docx-diff/package-zips'
 import { mulberry32 } from '../docx-diff/synthetic'

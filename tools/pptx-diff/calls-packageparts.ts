@@ -15,7 +15,7 @@ import {
   addSlideComment,
   deleteSlideComment,
   getSlideComments,
-} from '../../packages/pptx-engine/src/comments'
+} from './reference/comments'
 import {
   addContentTypeOverride,
   appendRelationship,
@@ -23,13 +23,13 @@ import {
   notesPathForSlide,
   setSlideNotes,
   unescapeXml,
-} from '../../packages/pptx-engine/src/notes'
+} from './reference/notes'
 import {
   cleanupDeletedElementResources,
   cleanupSupersededSlideResources,
   removePartWithOwnedResources,
   removeRelationshipAndCollectOwnedTarget,
-} from '../../packages/pptx-engine/src/resource-cleanup'
+} from './reference/resource-cleanup'
 import {
   addSection,
   getSections,
@@ -39,7 +39,7 @@ import {
   removeSection,
   renameSection,
   setSections,
-} from '../../packages/pptx-engine/src/sections'
+} from './reference/sections'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckNamed, deckOp } from './deck-ops'
 

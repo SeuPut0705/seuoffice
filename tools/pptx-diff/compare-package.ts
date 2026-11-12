@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import { isDeepStrictEqual } from 'node:util'
-import { PackageArchive } from '../../packages/pptx-engine/src/zip'
+import { PackageArchive } from './reference/zip'
 import { failed } from '../docx-diff/engine'
 import { type Comparison, engine } from '../docx-diff/harness'
 import { keyOrderDifference } from '../docx-diff/key-order'

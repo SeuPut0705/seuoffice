@@ -35,7 +35,7 @@ import {
   setSlideLayout,
   setSlideSize,
   updateConnectorsForMoved,
-} from '../../packages/pptx-engine/src/index'
+} from './reference/index'
 import {
   demandKey,
   editedGlyphDemand,
@@ -45,8 +45,8 @@ import {
   staleEmbeddedTypefaces,
   stripEmbeddedFonts,
   stripStaleEmbeddedFonts,
-} from '../../packages/pptx-engine/src/embedded-fonts'
-import type { SlideElement } from '../../packages/pptx-engine/src/types'
+} from './reference/embedded-fonts'
+import type { SlideElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckNamed, deckOp } from './deck-ops'
 

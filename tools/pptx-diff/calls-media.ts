@@ -14,7 +14,7 @@ import {
   type NewChartOptions,
   addChart,
   writeChartWorkbook,
-} from '../../packages/pptx-engine/src/chart-insert'
+} from './reference/chart-insert'
 import {
   decodeRunLink,
   encodeRunLink,
@@ -24,8 +24,8 @@ import {
   getSlideLinks,
   type LinkTarget,
   setElementLink,
-} from '../../packages/pptx-engine/src/hyperlink'
-import { reparseDeck } from '../../packages/pptx-engine/src/index'
+} from './reference/hyperlink'
+import { reparseDeck } from './reference/index'
 import {
   addMedia,
   addModel3d,
@@ -35,16 +35,16 @@ import {
   type NewModel3dOptions,
   setModel3dView,
   solidPng,
-} from '../../packages/pptx-engine/src/media-insert'
+} from './reference/media-insert'
 import {
   addNarration,
   clearNarration,
   NARRATION_NAME,
   narrationSpids,
   setShowNarration,
-} from '../../packages/pptx-engine/src/narration'
-import type { OpenedPptx } from '../../packages/pptx-engine/src/index'
-import type { Slide } from '../../packages/pptx-engine/src/types'
+} from './reference/narration'
+import type { OpenedPptx } from './reference/index'
+import type { Slide } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { deckInput, deckOp } from './deck-ops'
 import { withUuid } from './calls-leaves'

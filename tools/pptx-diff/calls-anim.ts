@@ -25,9 +25,9 @@ import {
   type AnimEffectKind,
   type AnimTrigger,
   type SlideAnimation,
-} from '../../packages/pptx-engine/src/animation'
-import { scanSlide } from '../../packages/pptx-engine/src/scan'
-import type { Slide, SlideElement } from '../../packages/pptx-engine/src/types'
+} from './reference/animation'
+import { scanSlide } from './reference/scan'
+import type { Slide, SlideElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 const TIMING_PART = /^ppt\/(?:slides|slideLayouts|slideMasters)\/[^/]+\.xml$/

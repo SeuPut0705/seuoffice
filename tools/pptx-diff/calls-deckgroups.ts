@@ -38,8 +38,8 @@ import {
   strokePatchToModel,
   ungroupElement,
   type ElementClipboardItem,
-} from '../../packages/pptx-engine/src/index'
-import type { GroupElement, TextElement } from '../../packages/pptx-engine/src/types'
+} from './reference/index'
+import type { GroupElement, TextElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { type At, deckInput, deckOp } from './deck-ops'
 import { withUuid } from './calls-leaves'

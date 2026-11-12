@@ -3,20 +3,20 @@
 // Rust side answers in crates/office-wasm/src/calls/pptx_leaves.rs to
 // `pptxLeaves.<module>.<TypeScript name>`.
 import { XMLParser } from 'fast-xml-parser'
-import { crc32 } from '../../packages/pptx-engine/src/crc32'
+import { crc32 } from './reference/crc32'
 import {
   namedActionAttr,
   namedActionOf,
   NAMED_ACTIONS,
-} from '../../packages/pptx-engine/src/named-action'
-import { scanSlide } from '../../packages/pptx-engine/src/scan'
+} from './reference/named-action'
+import { scanSlide } from './reference/scan'
 import {
   canListSlide,
   nextSlideId,
   withSlideListed,
   withSlideUnlisted,
-} from '../../packages/pptx-engine/src/slide-ids'
-import { tableRowGridCols } from '../../packages/pptx-engine/src/table-grid'
+} from './reference/slide-ids'
+import { tableRowGridCols } from './reference/table-grid'
 import {
   asXmlNode,
   attributeOf,
@@ -35,7 +35,7 @@ import {
   rootPrefixOf,
   withRelationshipIds,
   xmlArray,
-} from '../../packages/pptx-engine/src/xml-utils'
+} from './reference/xml-utils'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 /**

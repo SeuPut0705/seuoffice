@@ -3,7 +3,7 @@ import JSZip from 'jszip'
 import { createRequire } from 'node:module'
 import { crc32, deflateRawSync } from 'node:zlib'
 import type PptxGenJS from 'pptxgenjs'
-import { createBlankPptx } from '../../packages/pptx-engine/src/blank'
+import { createBlankPptx } from './reference/blank'
 import { buildZip, hostileContainers } from '../docx-diff/package-zips'
 
 const PptxGenerator = createRequire(import.meta.url)('pptxgenjs') as typeof PptxGenJS

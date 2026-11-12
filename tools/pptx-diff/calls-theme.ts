@@ -1,13 +1,13 @@
 // Group `theme` of comparison (f): theme.ts and color.ts of
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_theme.rs to `pptxTheme.<module>.<TypeScript name>`.
-import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
+import { xmlParser } from './reference/xml-parser'
 import {
   applyColorMods,
   hexToRgb,
   resolveColorNode,
   scaleLuminance,
-} from '../../packages/pptx-engine/src/color'
+} from './reference/color'
 import {
   type EaScript,
   eaScriptOfLang,
@@ -18,8 +18,8 @@ import {
   sysColorHex,
   type Theme,
   themeWithOverride,
-} from '../../packages/pptx-engine/src/theme'
-import { relsPathFor, resolveTarget } from '../../packages/pptx-engine/src/zip'
+} from './reference/theme'
+import { relsPathFor, resolveTarget } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { mulberry32 } from '../docx-diff/synthetic'
 
@@ -33,7 +33,7 @@ type Parts = ReadonlyMap<string, string>
 const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 /**
- * The parser of packages/pptx-engine/src/parse.ts, which parses the nodes
+ * The parser of tools/pptx-diff/reference/parse.ts, which parses the nodes
  * resolveColorNode and applyColorMods are given. The Rust dispatch holds the
  * same list.
  */

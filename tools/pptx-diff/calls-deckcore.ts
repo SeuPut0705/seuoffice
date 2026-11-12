@@ -37,8 +37,8 @@ import {
   setSlideBackgroundImage,
   setSlideBgGraphicsHidden,
   type OpenedPptx,
-} from '../../packages/pptx-engine/src/index'
-import type { Slide } from '../../packages/pptx-engine/src/types'
+} from './reference/index'
+import type { Slide } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { type At, DECKS, deckInput, deckOp } from './deck-ops'
 

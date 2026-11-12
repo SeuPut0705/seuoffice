@@ -6,7 +6,7 @@ import {
   PPTX_ZIP_LIMITS,
   relsPathFor,
   resolveTarget,
-} from '../../packages/pptx-engine/src/zip'
+} from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 type Parts = Array<[string, string]>

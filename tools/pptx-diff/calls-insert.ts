@@ -4,8 +4,8 @@
 // `pptxInsert.<module>.<TypeScript name>`. Every function reads or changes an
 // opened deck, so each goes through deckOp; `args.uuid` is what
 // crypto.randomUUID answers and `args.now` what Date.now answers.
-import { promoteSlideBackground, isBackgroundLikeElement } from '../../packages/pptx-engine/src/background-promote'
-import { applyHeaderFooter, readHeaderFooter } from '../../packages/pptx-engine/src/headerfooter'
+import { promoteSlideBackground, isBackgroundLikeElement } from './reference/background-promote'
+import { applyHeaderFooter, readHeaderFooter } from './reference/headerfooter'
 import {
   addElement,
   addImageMediaAndRel,
@@ -22,8 +22,8 @@ import {
   type NewPictureOptions,
   type NewTableGridOptions,
   type NewTableOptions,
-} from '../../packages/pptx-engine/src/insert'
-import { addSmartArt, buildSmartArtXml, type NewSmartArtOptions } from '../../packages/pptx-engine/src/smartart'
+} from './reference/insert'
+import { addSmartArt, buildSmartArtXml, type NewSmartArtOptions } from './reference/smartart'
 import type { CallSpec } from '../docx-diff/calls-spec'
 import { deckInput, deckOp } from './deck-ops'
 import { withUuid } from './calls-leaves'
