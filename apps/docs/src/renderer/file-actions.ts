@@ -697,9 +697,10 @@ async function systemLocale(): Promise<string> {
   }
 }
 
-async function blankDocxBytes(): Promise<Uint8Array> {
+/** the bytes of a new blank document */
+export async function blankDocxBytes(): Promise<Uint8Array> {
   return buildBlankDocx({
-    eastAsiaFont: defaultEastAsiaFontFor(getLang()),
+    eastAsiaFont: defaultEastAsiaFontFor(getDocumentLocale()),
     paperSize: paperSizeForLocale(await systemLocale()),
   })
 }
