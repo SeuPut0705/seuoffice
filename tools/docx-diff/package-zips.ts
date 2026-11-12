@@ -465,6 +465,18 @@ function richPackages(): Record<string, EntrySpec[]> {
         data: settings('<w:removePersonalInformation w:val="fal\u017fe"/>'),
       },
     ],
+    // a prefix outside ASCII is none to the reader, whose prefix pattern is
+    // ASCII: the setting is not found on either side
+    'a package whose settings prefix is outside ASCII': [
+      ...common,
+      { name: 'word/styles.xml', data: STYLES },
+      {
+        name: 'word/settings.xml',
+        data:
+          `<\u00E9:settings xmlns:\u00E9="${W}" xmlns:w\u00E9="${W}"><\u00E9:removePersonalInformation \u00E9:val="0"/>` +
+          '<w\u00E9:removePersonalInformation w\u00E9:val="false"/></\u00E9:settings>',
+      },
+    ],
     'a package whose settings switch protection off': [
       ...common,
       { name: 'word/styles.xml', data: STYLES },

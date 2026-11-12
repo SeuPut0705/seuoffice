@@ -473,6 +473,11 @@ export const PROPS_TEXTS: Record<string, string[]> = {
     ),
     p(r(t('x'), '<w:shd w:val="horzStr\u0131pe" w:color="00FF00" w:fill="000000"/>')),
     p(field('ADD\u0131N ZOTERO_ITEM CSL_CITATION {}') + field('C\u017fL_CITATION {}')),
+    // tags outside ASCII, with and without case, on and off
+    p(
+      r(t('x'), '<w:\uAC00/><w:\u00E9 w:val="0"/><w:\u00C9/>') +
+        r(t('y'), '<w:\uAC00 w:val="off"/>'),
+    ),
   ],
 }
 
