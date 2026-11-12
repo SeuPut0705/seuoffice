@@ -22,6 +22,14 @@ export const CTRL_HEADER = 71
 export const LIST_HEADER = 72
 /** A document has few sections; this only bounds the walk over a malformed container. */
 export const MAX_SECTIONS = 4096
+/**
+ * The most a deflated stream may inflate to. The file alone decides how far its bytes
+ * expand (zeros deflate about a thousand to one), so the size is not left to it. The value
+ * is the one a part of an HWPX may inflate to (MAX_HWPX_PART_BYTES in @genoffice/hwp2docx,
+ * which this module does not depend on): the same section as XML, the longer of the two
+ * forms. Sections and DocInfo hold text and formatting; pictures are streams of their own.
+ */
+export const MAX_STREAM_INFLATE_BYTES = 64 * 1024 * 1024
 
 export interface HwpRecord {
   tag: number
@@ -80,11 +88,18 @@ export function openHwp(file: Uint8Array): OpenedHwp | null {
   return { cfb, compressed: (flags & COMPRESSED) !== 0 }
 }
 
+/**
+ * The bytes of a stream, inflated when the file deflates its streams; null when the file
+ * has no such stream. Throws when the stream is not deflate data, and likewise when it
+ * inflates past MAX_STREAM_INFLATE_BYTES: it stops there, without holding the rest.
+ */
 export function streamOf(opened: OpenedHwp, path: string): Buffer | null {
   const entry = CFB.find(opened.cfb, path)
   if (!entry?.content) return null
   const raw = Buffer.from(entry.content as Uint8Array)
-  return opened.compressed ? inflateRawSync(raw) : raw
+  return opened.compressed
+    ? inflateRawSync(raw, { maxOutputLength: MAX_STREAM_INFLATE_BYTES })
+    : raw
 }
 
 export function sectionCount(opened: OpenedHwp): number {

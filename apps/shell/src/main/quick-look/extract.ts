@@ -89,8 +89,10 @@ function extractHwp5Thumbnail(bytes: Buffer): string | undefined {
     const raw = Buffer.from(entry.content as Uint8Array)
     const directMime = sniffImageMime(raw)
     if (directMime) return toDataUrl(raw, directMime)
-    // Some writers deflate PrvImage when the header compressed bit is set
-    const inflated = inflateRawSync(raw)
+    // Some writers deflate PrvImage when the header compressed bit is set. The file alone
+    // decides how far it inflates, so it stops at the largest picture toDataUrl would show:
+    // one that goes past it throws here and gets no picture, as it got none before
+    const inflated = inflateRawSync(raw, { maxOutputLength: MAX_THUMBNAIL_BYTES })
     const inflatedMime = sniffImageMime(inflated)
     if (inflatedMime) return toDataUrl(inflated, inflatedMime)
   } catch {
