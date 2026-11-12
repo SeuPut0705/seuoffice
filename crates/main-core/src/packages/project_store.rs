@@ -152,3 +152,38 @@ pub struct ProjectFolderListenMessage {
     pub method: ProjectFolderEventMethod,
     pub listening: bool,
 }
+
+/// `realpathSync.native(path)`, `None` where it throws
+fn real_path_native(path: &str) -> Option<String> {
+    let real = std::fs::canonicalize(path).ok()?;
+    let real = real.to_string_lossy().into_owned();
+    // std adds the verbatim prefix on Windows; realpath does not
+    Some(match real.strip_prefix(r"\\?\") {
+        Some(rest) if !rest.starts_with(r"UNC\") => rest.to_owned(),
+        _ => real,
+    })
+}
+
+/// `text.normalize('NFC')`
+fn nfc(text: &str) -> String {
+    icu_normalizer::ComposingNormalizerBorrowed::new_nfc()
+        .normalize(text)
+        .into_owned()
+}
+
+/// `canonicalPathKey(filePath)` of `packages/project-store/src/store.ts`: the
+/// one key a file path is stored and hashed under. The path with its links
+/// resolved (a leaf that is not there is keyed under its resolved folder; a
+/// path whose folder does not resolve either is used as given), in Unicode
+/// normalization form C.
+pub fn canonical_path_key(file_path: &str) -> String {
+    use jscompat::node_path::host::{basename, dirname, join};
+    if let Some(real) = real_path_native(file_path) {
+        return nfc(&real);
+    }
+    // The leaf may be gone (renamed or deleted) while its directory still resolves
+    if let Some(real) = real_path_native(&dirname(file_path)) {
+        return nfc(&join(&[&real, &basename(file_path, None)]));
+    }
+    nfc(file_path)
+}

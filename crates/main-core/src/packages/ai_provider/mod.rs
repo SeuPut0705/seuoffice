@@ -1,4 +1,27 @@
 //! `packages/ai-provider/src`: what the main process uses of it, one file per
 //! TypeScript file.
+//!
+//! The settings are JSON values ([`jscompat::JsonValue`]): the TypeScript
+//! reads them as `unknown` from a file or from a renderer and builds new
+//! objects from them, and the order of their keys shows in what the
+//! comparison writes.
 
+pub mod ai_settings_guard;
+pub mod custom_endpoints;
+pub mod effort;
+pub mod free_ai;
+pub mod jsval;
+pub mod legacy_settings;
+pub mod local_profile;
+pub mod media;
+pub mod network_error;
+pub mod overload_error;
+pub mod protocols_shared;
+pub mod provider_selection;
+pub mod providers;
+pub mod registry;
+pub mod run_error;
+pub mod search_settings;
+pub mod settings_secrets;
 pub mod user_skills_states;
+pub mod watchdog;

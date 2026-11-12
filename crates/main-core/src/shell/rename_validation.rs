@@ -52,7 +52,7 @@ pub fn is_same_file(a: &str, b: &str) -> bool {
 
 /// `(stat.dev, stat.ino)` as Node hands them out: doubles.
 #[cfg(unix)]
-fn file_identity(path: &str) -> Option<(f64, f64)> {
+pub fn file_identity(path: &str) -> Option<(f64, f64)> {
     use std::os::unix::fs::MetadataExt;
     let meta = std::fs::metadata(path).ok()?;
     Some((meta.dev() as f64, meta.ino() as f64))
@@ -63,7 +63,7 @@ fn file_identity(path: &str) -> Option<(f64, f64)> {
 /// attributes alone, following links, with backup semantics so a folder opens.
 /// Two hard links to one file answer alike, which a path comparison would not.
 #[cfg(windows)]
-fn file_identity(path: &str) -> Option<(f64, f64)> {
+pub fn file_identity(path: &str) -> Option<(f64, f64)> {
     use std::os::windows::fs::OpenOptionsExt;
     use std::os::windows::io::AsRawHandle;
     use windows_sys::Win32::Storage::FileSystem::{

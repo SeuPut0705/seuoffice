@@ -551,7 +551,12 @@ checksum = "5d15f86d12da44cd8d4ec3c73984537eb7f4cadcb9776a575a0a8a05ca11005c"
 name = "main-core"
 version = "0.1.0"
 dependencies = [
+ "encoding_rs",
+ "flate2",
+ "getrandom",
  "html5ever",
+ "icu_collator",
+ "icu_normalizer",
  "jscompat",
  "libc",
  "markup5ever_rcdom",

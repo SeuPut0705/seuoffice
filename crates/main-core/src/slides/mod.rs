@@ -16,5 +16,6 @@ pub mod picture_frame;
 pub mod save_as_formats;
 pub mod seed_queue;
 pub mod shaped_metrics;
+pub mod template_selection;
 pub mod template_selection_store;
 pub mod video_size;

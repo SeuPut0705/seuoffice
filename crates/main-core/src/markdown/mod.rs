@@ -13,3 +13,7 @@ pub mod wiki_heads;
 pub mod wiki_index;
 pub mod wiki_notes;
 pub mod wiki_resolve;
+
+pub mod asset_scan;
+pub mod fs_util;
+pub mod ord_map;
