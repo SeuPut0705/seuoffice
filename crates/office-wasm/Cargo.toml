@@ -18,5 +18,9 @@ omml.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 
+# the wasm build sorts with the host's Intl.Collator; a native build of the tests has none
+[target.'cfg(not(target_arch = "wasm32"))'.dependencies]
+docx-engine = { workspace = true, features = ["icu-collation"] }
+
 [dev-dependencies]
 zip.workspace = true

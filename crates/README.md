@@ -169,42 +169,53 @@ results and equal the field orders of the structs in `resolve.rs`.
 `docx-engine/src/model/generated.rs` is written by
 `tools/docx-diff/model-gen.ts` from the declarations of
 `packages/docx-engine/src/types.ts` (and those of `resolve-props.ts` it
-imports), read with the TypeScript compiler: 290 types, 156 of them objects.
+imports), read with the TypeScript compiler: 293 types, 158 of them objects.
+The declarations are read from main at the commit `MODEL_SOURCE` pins in
+`model-schema.ts` (`ca8f1414b`), because the model is what ships; this
+branch's parser and save side are older until main is merged.
 Do not edit it; `npm --prefix tools/docx-diff run model-gen` writes it and
-`-- --check` (part of `typecheck` and of `gate`) fails when it is stale.
+`-- --check` (part of `typecheck` and of `gate`) fails when it is stale for
+that commit.
 
 - **Key order.** `tools/docx-diff/model-orders.json` commits, per object
   type, the order its keys are written in. A fixed order is a struct that
   declares and writes its fields in that order. A type marked `"input"`
   (Run, ParaFormat, HfParagraph, HfTextBox, HfImage, CellBorders,
   CellMargins, TableCell, TextboxDisplay, Block, StyleDisplay,
-  TableStyleDisplay, DocDefaults) follows the path the TypeScript took: it
+  TableStyleDisplay, DocDefaults, ChartDisplay) follows the path the
+  TypeScript took: it
   is a `js_object!`, every field a `Slot` (HfParagraph, composed over
   ParaFormat, is a struct of slots ordered across both), and reading it sets
   the slots in the order of the input. `model-gen.ts --observe-orders
   FILE.ndjson` derives the table from captured parse results. **Only parse
   results vote**: values built from the schema set their keys in whatever
   order the builder chose, and 32 types were once marked `"input"` by them
-  alone. 82 orders are fixed by evidence, 61 are the declaration order of a
+  alone. 82 orders are fixed by evidence, 62 are the declaration order of a
   type no parse result holds with two keys in question. Fixed by evidence
   means no parse result contradicts it: the four documents of
   `model-bodies.ts`, built to reach producers the corpus does not, corrected
-  15 such orders and 4 declaration orders and made 6 types path-ordered.
+  17 such orders and 5 declaration orders and made 7 types path-ordered.
   `model-producers.ts` reads the producers in the TypeScript source for the
   orders no document shows, and exits 1 on a producer that contradicts a
-  committed fixed order.
+  committed fixed order. It follows a spread of a call into the function's
+  returned literals, keeps the branches of a conditional apart, and counts
+  `x[k] = v` with `k` from the data (`axesOf` of a chart) as writing those
+  keys in either order.
 - **Strict reading.** An unknown key, a key twice, a missing required key,
   null where the type has none, a value of another JSON kind, a string no
   enum holds, an enum written as an object, a `Record<number>` key that is
   no number and base64 with padding bits set are refused; `model-invalid.ts`
-  builds one value per case from the schema (13,835) and comparison (h)
+  builds one value per case from the schema (13,976) and comparison (h)
   demands a refusal for each. `model/mod.rs` lists the three limits that
   remain.
 - **Evidence per field.** `model-field-floors.json` holds, for each of the
-  1,663 fields, how many values the parse results held and how many the
-  schema-built values did, apart: 934 fields are seen in parse results, 729
-  only in built values. A built value proves that the Rust reads and writes
-  what the schema says, not that the parser ever produces it.
+  1,680 fields, how many values the parse results held and how many the
+  schema-built values did, apart: in the capture `model-gen.ts
+  --observe-orders` read last, 983 fields are seen in parse results and 697
+  only in built values. The 24 fields of main that this branch's parser does
+  not write (`Run.wrap` and the 5 of `InlineWrap` among them) are among the
+  697. A built value proves that the Rust reads and
+  writes what the schema says, not that the parser ever produces it.
   `model-full.ts --write-field-floors` rewrites the file from the gate's own
   run.
 - **A reader that is wired** takes the model type as its return type and its
@@ -399,6 +410,17 @@ whether the entries would change.
   subtags taken from one ICU (`tools/docx-diff/blank-locale-table.mjs` says
   which and regenerates it). The TypeScript asks the host's `Intl.Locale`, so
   another ICU can answer differently for rare tags.
+- `generateIndexFieldXml` sorts as `a.localeCompare(b, 'zh-CN')`, which
+  asks the host's ICU. The wasm build asks the host too: `office-wasm`
+  imports `seu_host.host_collate(a_ptr, a_len, b_ptr, b_len) -> i32`, two
+  UTF-8 strings of its memory, answered by one `Intl.Collator('zh-CN')` of
+  the host (`tools/docx-diff/engine.ts`). A host that instantiates the wasm
+  must supply it. A native build sorts with ICU4X instead (feature
+  `icu-collation` of `docx-engine`, CLDR 49 where Node 22 has CLDR 48), so
+  a native and a wasm sort can differ where the two CLDRs do. Each member
+  names the feature: the workspace dependency has it off, and `office-wasm`
+  turns it on for native targets only. A native build without it does not
+  compile.
 - `omml` refuses LaTeX nested deeper than 256 levels; the TypeScript runs
   until the JavaScript stack overflows.
 - The zip writer re-deflates every entry and rebuilds every header, as JSZip
@@ -515,21 +537,21 @@ Not verified, and not ported:
   `null`, which the TypeScript side reads as `null` and the Rust as NaN, so
   no spec sends one outside the drawing functions, where numbers cross as
   text.
-- `generateIndexFieldXml` sorts with ICU4X (`icu_collator` 2.4, CLDR 49)
-  where Node 22.23.5 has ICU 78 (CLDR 48): equal over the corpus lists, 33
-  built ones (13 of them Korean and Japanese: syllables against jamo,
-  hiragana against katakana, half-width kana, voiced marks combined and
-  precomposed, kana against kanji, Japanese-only kanji) and 4,500 mutated
-  ones; evidence, not proof. The collation data is about 1.5 MB of the wasm
-  (measured: 6,059,696 bytes with it, 4,538,991 bytes with the sort replaced
-  by a code point sort, the rest the same).
+- The native build's `generateIndexFieldXml` sorts with ICU4X
+  (`icu_collator` 2.4, CLDR 49) where Node 22.23.5 has ICU 78 (CLDR 48):
+  equal over the corpus lists, 33 built ones (13 of them Korean and
+  Japanese: syllables against jamo, hiragana against katakana, half-width
+  kana, voiced marks combined and precomposed, kana against kanji,
+  Japanese-only kanji) and 4,500 mutated ones; evidence, not proof. The
+  wasm asks the host's collator and carries no collation data.
+- The generated model is 1.49 MB of the wasm's code section (3.84 MB,
+  unstripped build of 115028dce). No action taken.
 - `floatTableColumnSpan` reads a missing `w:horzAnchor` of `w:tblpPr` as
   page-relative, as the TypeScript does. The schema
   (`ISO-IEC29500-4_2016/wml.xsd`, `CT_TblPPr`) declares the attribute
   without a default, so that reading is not verified by the schema.
-- The `fix/inline-wrappers` changes of `generate.ts` (`Run.wrap`,
-  `Run.opaqueXml` on the save side) are not on this branch's TypeScript; the
-  model has the two fields.
+- The `fix/inline-wrappers` changes of `generate.ts` (`Run.wrap` on the save
+  side) are not on this branch's TypeScript; the model has the field.
 - `generateParagraphXml` without a bookmark id allocator reads a counter of
   the process: the inputs always pass one.
 - `generate/table.rs` holds a private copy of `resolvePropChangeXml` written
@@ -681,14 +703,10 @@ for a record keyed by data. No order is in the ledger.
 
 ### What to do, in order
 
-1. **The leaves over model types**, each a group of (f): `ink.ts` (153),
-   `parse-block-passes.ts` (240), `lineBoxOf` of
-   `parse-drawing-geometry.ts` and `vmlWordArtBox` of `parse-vml.ts` (the
-   rest of both files is ported), the read side of `chart.ts`
-   (`parseChartPartXml` and its colour helpers, about 700 of 1,084 lines).
-2. **The debt of the builders** listed under unit 3: one `resolvePropChangeXml`
-   (`revision_xml.rs`), the helpers into `jscompat`.
-3. **The package comparison reports the first differing path of a value
+1. **The debt of the builders** listed under unit 3: one `resolvePropChangeXml`
+   (`revision_xml.rs`), the helpers into `jscompat`, and the civil date of
+   `chart.rs` (`Date.UTC`, `getUTC*`) into `jscompat`.
+2. **The package comparison reports the first differing path of a value
    only**, so `styles/headings.rs:31` and `styles/display.rs:350` were never
    shown apart from the heading difference beside them. Make it report every
    differing path (additive), then show them: their inputs are in the
@@ -696,12 +714,12 @@ for a record keyed by data. No order is in the ledger.
    says whether they are compared. One input waits for a comparison that can
    see it: a part named `x.rel\u017f` for `ooxml-pkg/src/load.rs:104` (the
    package comparison reads no part by such a name).
-4. **Merge main when main says so** (items 11 to 16 and 24 of its list are
+3. **Merge main when main says so** (items 11 to 16 and 24 of its list are
    fixed there), and drop the entries and classes that go stale.
    `lazy-media.ts` (55) is about when the host reads media: decide what of
    it the engine owns before porting it. The decoders of `tiff.ts` and
    `metafile.ts` stay with the host.
-5. **`parse.ts`** (9,171 lines, 152 functions, 12 exports), leaf first, with
+4. **`parse.ts`** (9,171 lines, 152 functions, 12 exports), leaf first, with
    the model as its types. Its functions are not exported, so (f) cannot
    call them. Compare `parseDocx` as a whole: comparison (h) already holds
    the model of every corpus document as JSON, block by block, with a count
@@ -709,7 +727,7 @@ for a record keyed by data. No order is in the ledger.
    already. Port by pass: runs, paragraphs, tables, drawings and text boxes,
    the block passes. Then finish `parseNotesXml`'s paragraph reader and
    `applyTocEntryNumbers`, which need it.
-6. The rest of the save side (`patch.ts`, `text-patch.ts`,
+5. The rest of the save side (`patch.ts`, `text-patch.ts`,
    `style-upsert.ts`, `remove-parts.ts`, `zip-splice.ts`,
    `resource-cleanup.ts`, the writers left out of the modules above) and
    the features on top (`compare.ts`, `mail-merge.ts`).

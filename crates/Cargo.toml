@@ -20,7 +20,8 @@ publish = false
 jscompat = { path = "jscompat" }
 ooxml-xml = { path = "ooxml-xml" }
 ooxml-pkg = { path = "ooxml-pkg" }
-docx-engine = { path = "docx-engine" }
+# without icu-collation: each member names it, so the wasm build can leave it out
+docx-engine = { path = "docx-engine", default-features = false }
 omml = { path = "omml" }
 # the decoders of the Encoding Standard, which TextDecoder follows
 encoding_rs = "0.8"
