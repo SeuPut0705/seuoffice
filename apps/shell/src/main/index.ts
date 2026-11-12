@@ -615,6 +615,7 @@ import {
   type LinkedDocument,
 } from './document-links-shell'
 import {
+  applyShellWindowState,
   installShellWindowBoundsPersistence,
   readShellWindowState,
   SHELL_WINDOW_DEFAULT_HEIGHT,
@@ -5151,6 +5152,9 @@ function createShellWindow(): void {
     ...(restored ? { x: restored.x, y: restored.y } : {}),
     minWidth: SHELL_WINDOW_MIN_WIDTH,
     minHeight: SHELL_WINDOW_MIN_HEIGHT,
+    // shown below, once the stored geometry is applied: the sequence the fix
+    // was measured with on Windows, and no visible jump of a few pixels
+    show: false,
     title: productName(currentLang()),
     // Paint the theme's surface before the renderer's first frame so the window
     // does not flash white in dark mode. nativeTheme.themeSource is already set
@@ -5178,9 +5182,12 @@ function createShellWindow(): void {
       sandbox: true,
     },
   })
-  // the stored rectangle is the normal-state one, so a maximized session
-  // reopens maximized instead of as a screen-sized ordinary window
-  if (restored?.maximized) win.maximize()
+  // The constructor only gets the window near the right place and onto the
+  // right display: on a scaled Windows display it creates the window a few
+  // DIPs larger than asked. The stored content rectangle and the maximized
+  // flag are applied here, before anything listens to the window's geometry.
+  const baseline = applyShellWindowState(win, restored)
+  win.show()
   shellWindow = win
   nativeTheme.on('updated', refreshTitleBarOverlay)
   win.once('closed', () => nativeTheme.off('updated', refreshTitleBarOverlay))
@@ -5188,7 +5195,7 @@ function createShellWindow(): void {
   // DOM event anywhere — will-move is the only signal to dismiss popovers
   win.on('will-move', () => broadcastChromePressed())
   // remember the window's position and size for the next launch (issue #2049)
-  installShellWindowBoundsPersistence(APP_SETTINGS_PATH(), win)
+  installShellWindowBoundsPersistence(APP_SETTINGS_PATH(), win, { restored, baseline })
   // A detached editor window claims the process-global menu/active-editor targets
   // while focused; take them back when the shell window regains focus. Keyboard
   // focus must land back on the active tab's view too — regaining window focus
@@ -9834,8 +9841,6 @@ app.whenReady().then(async () => {
   // the editors take the ceiling before anything can be opened: the headless
   // export opens documents too
   setDelimitedImportLimit(currentCsvImportLimitMb() * 1024 * 1024)
-  // first scan waits for the windows to come up; later ones follow folder changes
-  setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   installRendererProtocol({
     docs: join(DOCS_OUT, 'renderer'),
     sheets: join(SHEETS_OUT, 'renderer'),
@@ -9857,6 +9862,10 @@ app.whenReady().then(async () => {
     await runHeadlessExportEntry(headlessArgv)
     return
   }
+  // first scan waits for the windows to come up; later ones follow folder changes.
+  // Past the headless branch: an export that outlasts the wait must not start
+  // walking the user's folders into the search index.
+  setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   const lockData = () =>
     pendingLaunchPaths.length > 0
       ? { launchPath: pendingLaunchPaths[0], launchPaths: pendingLaunchPaths }

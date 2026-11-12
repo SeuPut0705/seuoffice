@@ -14,6 +14,7 @@ import {
 } from './update-attempt'
 import type { InstallFailureLevel } from './update-attempt'
 import { createUpdateLog, UPDATE_LOG_FILE } from './update-log'
+import { pruneUpdateCache } from './update-cache'
 import {
   installMacStaging,
   macAppBundle,
@@ -1191,6 +1192,30 @@ export function initAutoUpdater(
       showUpdateWindow(getWindow(), windowState(info.version), actions, { inactive: true })
     }
   })
+
+  // What the last update left in electron-updater's download cache goes at a
+  // start (update-cache.ts). The folder is the updater's to name (it reads
+  // the name from app-update.yml); nothing is removed once a download runs
+  // or a finished one waits for the restart.
+  // AppUpdater.getOrCreateDownloadHelper is private in its typings; what it
+  // answers is checked before use, like `install` above
+  const cacheOwner = autoUpdater as unknown as {
+    getOrCreateDownloadHelper?: () => Promise<{ cacheDir?: unknown } | null>
+  }
+  const clearInstalledCache = async (): Promise<void> => {
+    try {
+      const helper = await cacheOwner.getOrCreateDownloadHelper?.()
+      if (typeof helper?.cacheDir !== 'string') {
+        log('the update cache was not looked at: the updater names no cache folder')
+        return
+      }
+      if (downloadInFlight || phase === 'downloaded') return
+      pruneUpdateCache({ cacheDir: helper.cacheDir, runningVersion: app.getVersion(), log })
+    } catch (err) {
+      log('the update cache was not looked at:', err instanceof Error ? err.message : String(err))
+    }
+  }
+  void clearInstalledCache()
 
   const check = (): void => {
     // turned off: only an explicit check (Help › Check for Updates…, a channel switch) asks the feed

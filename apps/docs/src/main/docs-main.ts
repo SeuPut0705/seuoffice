@@ -3535,6 +3535,8 @@ const APP_SETTINGS_PATH = () => join(app.getPath('userData'), 'app-settings.json
 const RECENT_LIMIT = 100
 
 function pushRecent(filePath: string): void {
+  // A headless export is not a document the user opened.
+  if (isHeadlessMode()) return
   const recent = readJson<string[]>(RECENT_PATH(), [])
   // Every save lands here (autosave = every 30s): skip the write and the menu
   // rebuild when the file is already at the head of the list
@@ -3649,6 +3651,8 @@ export function readStarredGroupMap(): Map<string, string> {
 // ---- original archive (pass-through base: original file archived by content hash) ----
 
 async function archiveOriginal(filePath: string, hash: string, size: number): Promise<void> {
+  // a headless export reads the file and goes: the profile keeps no copy of it
+  if (isHeadlessMode()) return
   // a copy larger than the whole cap would only evict every other original
   if (size > ORIGINALS_MAX_BYTES) return
   const dir = userDataPath('originals')
@@ -4416,9 +4420,12 @@ const SETTINGS_PATH = () => userDataPath('ai-settings.json')
 
 /**
  * The only write of the settings file: keys and tokens go to disk sealed
- * (decision 0063), and fields a newer build wrote stay as they are.
+ * (decision 0063), and fields a newer build wrote stay as they are. A
+ * headless export changes no setting, so a migration its hidden window's
+ * read would start waits for the next ordinary run.
  */
 function writeAiSettingsFile(settings: unknown): void {
+  if (isHeadlessMode()) return
   const stored = readJson<unknown>(SETTINGS_PATH(), {})
   writeJsonAtomic(SETTINGS_PATH(), sealAiSecrets(withStoredUnknownFields(settings, stored)))
 }
@@ -4988,7 +4995,11 @@ export function registerProjectIpc(): void {
     'project:resolveChat',
     (event, args: { filePath: string | null; tempChatId?: string; sessionId?: string }) => {
       const store = getProjectStore()
-      store.ensureDefaultProject()
+      // a headless export's hidden window is not a document the user opened:
+      // its AI panel gets the ids a tab would get, and the store keeps no
+      // trace of the file
+      const lookOnly = isHeadlessMode()
+      if (!lookOnly) store.ensureDefaultProject()
       let resolvedPath = args.filePath
       if (!resolvedPath && args.sessionId && sessionPathResolver) {
         resolvedPath = sessionPathResolver(event.sender.id, args.sessionId)
@@ -4999,7 +5010,9 @@ export function registerProjectIpc(): void {
           chatId: args.tempChatId ?? `unsaved-${Date.now()}`,
         }
       }
-      return store.resolveChatForFile(resolvedPath)
+      return lookOnly
+        ? store.lookupChatForFile(resolvedPath)
+        : store.resolveChatForFile(resolvedPath)
     },
   )
 
