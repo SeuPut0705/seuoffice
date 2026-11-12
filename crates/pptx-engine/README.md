@@ -387,3 +387,24 @@ all, no limit on one part). Main's decision: no size cap on a part; the
 bound belongs in `jscompat` and the stream that owns `jscompat`'s pattern
 sites does it (another executor measured against V8's answers, else a
 budget or hand-written scanners).
+
+### Unit 2 on the runner
+
+Run 43161973043 at `0ad2a994c`: the Word gate, clippy and tests passed after
+the merge of `origin/feat/rust-docx-u1` (its runner additions ported into the
+shared `calls-runner.ts`), the slides gate passed, and 114 of the 119 fault
+probes were caught in four shards of about ten minutes. The five that passed,
+and what closed each:
+
+| Fault                                   | Why it passed                                                                 | Closed by                                                             |
+| --------------------------------------- | ----------------------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `geom-r5-round`                         | No coordinate was a negative half of a hundred-thousandth                     | A path 64 wide with points at -1, -3 and -5 (3 differences)           |
+| `ident-set-first-close`                 | With one `a:extLst`, the first and the last closing tag give the same result  | Two `a:rPr` without a list (1 difference)                             |
+| `independent-anim-eq-ignores-direction` | No new list differed from the slide's only in a direction                     | The second effect's direction changed (1 difference)                  |
+| `independent-own-cnvpr-last-close`      | No group had a paired `p:cNvPr` without a creationId over a child with one    | Such a group (8 differences)                                          |
+| `mtx-huffman-range-boundary`            | Not a miss: the fault underflowed and the debug module aborted before a tally | The fault is `<= 512` now (11 differences); an abort is named ABORTED |
+
+Two of the five were chosen by the reviewers who had not seen the porters'
+lists. A probe whose comparison ends without its tally is reported as
+ABORTED and fails the run, so a fault has to show as a difference of its
+function.
