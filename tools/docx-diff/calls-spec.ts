@@ -2,6 +2,7 @@
 // function, in calls-<group>.ts. The Rust side answers to the same name in
 // crates/office-wasm/src/calls/<group>.rs.
 import JSZip from 'jszip'
+import type { ParsedDoc } from '../../packages/docx-engine/src/types'
 
 /** One call: the text argument (or the text the Rust side parses), and the rest. */
 export interface Input {
@@ -24,10 +25,17 @@ export interface CallSpec {
    * and .rels entry by name.
    */
   fromDocument?(parts: ReadonlyMap<string, string>): Input[]
+  /** Inputs from the actual parser model, before Maps and bytes cross the wire. */
+  fromModel?(doc: ParsedDoc): Input[]
   /** Inputs written for what the corpus lacks, and the seeds of the mutations. */
   built: Input[]
   /** `none` where the text is not what the function reads, so mutating it compares nothing. */
   mutation?: 'none'
+  /**
+   * The arguments are a model value: compare mutations of them as well
+   * (calls-arg-mutation.ts), each inside the types the seeds showed.
+   */
+  argMutation?: true
 }
 
 /** The package a function over a zip reads, from `args.parts`: `[name, text]` pairs. */

@@ -23,7 +23,7 @@ import { parseDocx } from '../../packages/docx-engine/src/index'
 import { resolveMainDocumentPath } from '../../packages/docx-engine/src/parse-package'
 import { loadDocxZip } from '../../packages/docx-engine/src/zip-load'
 import { bench } from './bench'
-import { callsAfterCorpus, callsOnDocument, reportCalls } from './calls-run'
+import { callsAfterCorpus, callsOnDocument, callsOnModel, reportCalls } from './calls-run'
 import { compareBlankBytes } from './compare-blank'
 import { compareScan } from './compare-scan'
 import { compareRoundTrips, mutate } from './compare-xml'
@@ -105,6 +105,7 @@ for (const path of corpus) {
   loadable.push(bytes)
   await packageOnDocument(path, bytes, zip)
   const parsed = await parseDocx(bytes).catch(() => null)
+  if (parsed) await callsOnModel(path, parsed)
   if (parsed) modelOnDocument(path, parsed)
   const themes: Themes = {
     colors: parsed?.themeColors ?? undefined,
