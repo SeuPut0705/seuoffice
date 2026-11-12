@@ -47,6 +47,7 @@ mod pptx_theme;
 mod pptx_xml;
 mod resolve;
 mod revision;
+pub(crate) mod save;
 mod section;
 mod vml;
 mod xml_tag;
@@ -109,6 +110,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),
         "revision" => Some(revision::dispatch(function, text, args)),
+        "save" => Some(save::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
         "genRpr" => Some(gen_rpr::dispatch(function, text, args)),
         "genProps" => Some(gen_props::dispatch(function, text, args)),

@@ -1,6 +1,10 @@
-use crate::model::{RevisionInfo, Run};
+use crate::inline_opaque::{
+    ContentControlPart, PlacedWraps, inline_wrap_key, inline_wrap_prefixes, inline_wrap_text_of,
+    inline_wrap_writes_once, place_inline_wraps, same_inline_wrap, sdt_open_for_changed_text,
+};
+use crate::model::{InlineWrap, RevisionInfo, Run};
 use jscompat::{JsMap, JsRegex, Radix, RegexLimit, js_regex, parse_int};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use super::rpr::run_r_pr_xml;
 use super::{escape_xml_attr as attr, escape_xml_text as text};
@@ -8,19 +12,99 @@ use super::{escape_xml_attr as attr, escape_xml_text as text};
 type Allocator<'a> = Option<&'a mut dyn FnMut(&str) -> String>;
 type RevisionAllocator<'a> = Option<&'a mut dyn FnMut() -> String>;
 
+/// `RunsXmlOptions`
+#[derive(Default)]
+pub struct RunsXmlOptions<'a> {
+    /// the content controls already written for this paragraph, shared by a
+    /// caller that writes one paragraph's runs in several calls
+    pub written: HashSet<String>,
+    /// xml written in place of a run (the fields of a header), by the run's index
+    pub fragments: HashMap<usize, String>,
+    /// the part the runs are written into (see `GenerateContext.part`)
+    pub part: Option<&'a ContentControlPart>,
+}
+
+/// `inlineRunsXml`: OOXML runs without relationship allocation (header/footer
+/// parts, ...).
 pub fn inline_runs_xml(runs: &[Run]) -> Result<String, RegexLimit> {
-    runs_xml(runs, None)
+    inline_runs_xml_with(runs, &mut RunsXmlOptions::default())
 }
 
-pub(crate) fn runs_xml(runs: &[Run], allocate: Allocator<'_>) -> Result<String, RegexLimit> {
-    runs_xml_with_revisions(runs, allocate, None)
+/// `inlineRunsXml(runs, options)`
+pub fn inline_runs_xml_with(
+    runs: &[Run],
+    options: &mut RunsXmlOptions<'_>,
+) -> Result<String, RegexLimit> {
+    runs_xml_core(runs, None, None, options)
 }
 
+/// `runsXml(runs, null, { part })`
+pub(crate) fn runs_xml_in(runs: &[Run], part: &ContentControlPart) -> Result<String, RegexLimit> {
+    runs_xml_with_revisions(runs, None, None, Some(part))
+}
+
+/// `runsXml(runs, allocate, { allocateRevisionId, part })` of the paragraph generator.
 pub(crate) fn runs_xml_with_revisions(
     runs: &[Run],
     allocate: Allocator<'_>,
     allocate_revision: RevisionAllocator<'_>,
+    part: Option<&ContentControlPart>,
 ) -> Result<String, RegexLimit> {
+    runs_xml_core(
+        runs,
+        allocate,
+        allocate_revision,
+        &mut RunsXmlOptions {
+            part,
+            ..RunsXmlOptions::default()
+        },
+    )
+}
+
+/// `runsXml`
+pub(crate) fn runs_xml_core(
+    given: &[Run],
+    allocate: Allocator<'_>,
+    allocate_revision: RevisionAllocator<'_>,
+    options: &mut RunsXmlOptions<'_>,
+) -> Result<String, RegexLimit> {
+    let part = options.part;
+    // The wrappers a run carries may come from a co-editing peer: each is
+    // checked before it is written, and one that fails goes without taking the
+    // run's text with it.
+    let wrap_ok = |wrap: &InlineWrap| {
+        inline_wrap_prefixes(wrap)
+            .is_some_and(|prefixes| part.is_none_or(|part| part.takes(&prefixes)))
+    };
+    let filtered: Vec<Run>;
+    let runs: &[Run] = if given.iter().any(|run| run.wrap.is_some()) {
+        filtered = given
+            .iter()
+            .map(|run| {
+                let Some(given_wrap) = run.wrap.as_ref() else {
+                    return run.clone();
+                };
+                let kept: Vec<InlineWrap> = given_wrap
+                    .iter()
+                    .filter(|wrap| wrap_ok(wrap))
+                    .cloned()
+                    .collect();
+                if kept.len() == given_wrap.len() {
+                    return run.clone();
+                }
+                let mut rest = run.clone();
+                rest.wrap.delete();
+                if !kept.is_empty() {
+                    rest.wrap.set(kept);
+                }
+                rest
+            })
+            .collect();
+        &filtered
+    } else {
+        given
+    };
+    let placed = place_inline_wraps(runs, &|run| revision_key(run));
     let mut emitter = Emitter {
         runs,
         allocate,
@@ -29,6 +113,11 @@ pub(crate) fn runs_xml_with_revisions(
         emitted_ids: HashSet::new(),
         first_of: JsMap::new(),
         last_of: JsMap::new(),
+        placed,
+        written: &mut options.written,
+        fragments: &options.fragments,
+        part,
+        open_range: None,
     };
     for (index, run) in runs.iter().enumerate() {
         for id in run.comment_ids.as_deref().unwrap_or_default() {
@@ -38,10 +127,23 @@ pub(crate) fn runs_xml_with_revisions(
             emitter.last_of.set(id.clone(), index);
         }
     }
-    emitter.emit()
+    let mut out = String::new();
+    emitter.within(0, runs.len(), 0, 0, Leaf::Revisions, &mut out)?;
+    Ok(out)
 }
 
-struct Emitter<'r, 'h, 'v> {
+/// What `within` writes inside the innermost wrapper of a level.
+#[derive(Clone, Copy)]
+enum Leaf {
+    /// `emitRevisions`
+    Revisions,
+    /// `emitRange`
+    Range,
+    /// the runs of a hyperlink group, one fragment each
+    Fragments { inside_link: bool },
+}
+
+struct Emitter<'r, 'h, 'v, 'w> {
     runs: &'r [Run],
     allocate: Allocator<'h>,
     allocate_revision: RevisionAllocator<'v>,
@@ -49,27 +151,31 @@ struct Emitter<'r, 'h, 'v> {
     emitted_ids: HashSet<String>,
     first_of: JsMap<usize>,
     last_of: JsMap<usize>,
+    placed: Option<Vec<PlacedWraps>>,
+    written: &'w mut HashSet<String>,
+    fragments: &'w HashMap<usize, String>,
+    part: Option<&'w ContentControlPart>,
+    open_range: Option<(&'static str, String)>,
 }
 
-fn revision_key(run: &Run) -> Option<(&Option<RevisionInfo>, &Option<RevisionInfo>)> {
-    (run.ins.is_some() || run.del.is_some()).then_some((&*run.ins, &*run.del))
-}
-
-fn same_info(a: &RevisionInfo, b: &RevisionInfo) -> bool {
-    a.author == b.author
-        && a.date == b.date
-        && a.date_utc == b.date_utc
-        && a.id == b.id
-        && a.r#move == b.r#move
-}
-
-fn same_revision(a: &Run, b: &Run) -> bool {
-    let same = |a: &Option<RevisionInfo>, b: &Option<RevisionInfo>| match (a, b) {
-        (None, None) => true,
-        (Some(a), Some(b)) => same_info(a, b),
-        _ => false,
+/// `revKey` of the generator's tracked-change grouping: empty for a run with no revision.
+fn revision_key(run: &Run) -> String {
+    if run.ins.is_none() && run.del.is_none() {
+        return String::new();
+    }
+    let field = |info: Option<&RevisionInfo>| {
+        [
+            info.map(|info| info.author.clone()),
+            info.and_then(|info| info.date.clone()),
+            info.and_then(|info| info.date_utc.clone()),
+            info.and_then(|info| info.id.clone()),
+            info.and_then(|info| info.r#move.clone()),
+        ]
     };
-    same(&a.ins, &b.ins) && same(&a.del, &b.del)
+    let mut parts = Vec::new();
+    parts.extend(field(run.ins.as_ref()));
+    parts.extend(field(run.del.as_ref()));
+    serde_json::to_string(&parts).unwrap_or_default()
 }
 
 fn move_of(run: Option<&Run>) -> Option<(&'static str, &str)> {
@@ -88,7 +194,7 @@ fn move_of(run: Option<&Run>) -> Option<(&'static str, &str)> {
         })
 }
 
-impl Emitter<'_, '_, '_> {
+impl Emitter<'_, '_, '_, '_> {
     fn starts_at(&self, at: usize, out: &mut String) {
         for (id, index) in self.first_of.iter() {
             if *index == at {
@@ -103,14 +209,126 @@ impl Emitter<'_, '_, '_> {
             }
         }
     }
+    /// `fragment`
+    fn fragment(&self, index: usize, inside_link: bool) -> Result<String, RegexLimit> {
+        match self.fragments.get(&index) {
+            Some(xml) => Ok(xml.clone()),
+            None => run_fragment_xml(&self.runs[index], inside_link),
+        }
+    }
+    /// `within`: runs [from, to) inside their wrappers of one level: adjacent
+    /// runs that share a wrapper go back inside one element, written with the
+    /// bytes it was read with; `leaf` writes what sits inside the innermost one.
+    fn within(
+        &mut self,
+        from: usize,
+        to: usize,
+        level: usize,
+        depth: usize,
+        leaf: Leaf,
+        out: &mut String,
+    ) -> Result<(), RegexLimit> {
+        if self.placed.is_none() {
+            return self.leaf(leaf, from, to, out);
+        }
+        let wrap_at = |emitter: &Self, index: usize| -> Option<InlineWrap> {
+            emitter
+                .placed
+                .as_ref()
+                .and_then(|placed| placed[index][level].get(depth).cloned())
+        };
+        let mut g = from;
+        while g < to {
+            let wrap = wrap_at(self, g);
+            let mut end = g + 1;
+            let Some(wrap) = wrap else {
+                while end < to && wrap_at(self, end).is_none() {
+                    end += 1;
+                }
+                self.leaf(leaf, g, end, out)?;
+                g = end;
+                continue;
+            };
+            while end < to && same_inline_wrap(wrap_at(self, end).as_ref(), Some(&wrap)) {
+                end += 1;
+            }
+            let once = inline_wrap_writes_once(&wrap);
+            let key = inline_wrap_key(&wrap);
+            if once && self.written.contains(&key) {
+                // a content control is one element: runs that left its first group
+                // go back without it rather than as a second control with its w:id
+                self.within(g, end, level, depth + 1, leaf, out)?;
+            } else {
+                if once {
+                    self.written.insert(key);
+                }
+                // text typed into a placeholder or a data-bound control: the two
+                // properties that would make Word discard it go (see InlineWrap.text)
+                let edited = wrap
+                    .text
+                    .as_ref()
+                    .is_some_and(|text| inline_wrap_text_of(self.runs, g, end) != *text);
+                let open = if edited {
+                    sdt_open_for_changed_text(&wrap.open)?
+                } else {
+                    wrap.open.clone()
+                };
+                // a control written from runs is the one that gives way to a taken id
+                match self.part {
+                    Some(part) if once => out.push_str(&part.yielding(&open)),
+                    _ => out.push_str(&open),
+                }
+                self.within(g, end, level, depth + 1, leaf, out)?;
+                out.push_str(&wrap.close);
+            }
+            g = end;
+        }
+        Ok(())
+    }
+    fn leaf(
+        &mut self,
+        leaf: Leaf,
+        from: usize,
+        to: usize,
+        out: &mut String,
+    ) -> Result<(), RegexLimit> {
+        match leaf {
+            Leaf::Revisions => self.emit_revisions(from, to, out),
+            Leaf::Range => self.emit_range(from, to, out),
+            Leaf::Fragments { inside_link } => {
+                for index in from..to {
+                    out.push_str(&self.fragment(index, inside_link)?);
+                }
+                Ok(())
+            }
+        }
+    }
+    /// The runs of a hyperlink group, inside the wrappers that sat in the hyperlink.
+    fn link_inner(
+        &mut self,
+        start: usize,
+        end: usize,
+        inside_link: bool,
+    ) -> Result<String, RegexLimit> {
+        let mut inner = String::new();
+        self.within(
+            start,
+            end,
+            2,
+            0,
+            Leaf::Fragments { inside_link },
+            &mut inner,
+        )?;
+        Ok(inner)
+    }
     fn emit_range(&mut self, from: usize, to: usize, out: &mut String) -> Result<(), RegexLimit> {
         let mut i = from;
         while i < to {
             let run = &self.runs[i];
-            if let Some(link) = &*run.link {
+            if let Some(link) = (*run.link).clone() {
                 let start = i;
                 let href = &link.href;
-                let mut rid = link.r_id.as_deref();
+                let mut rid = link.r_id.clone();
                 while i < to {
                     let Some(next_link) =
                         self.runs[i].link.as_ref().filter(|link| link.href == *href)
@@ -118,10 +336,12 @@ impl Emitter<'_, '_, '_> {
                         break;
                     };
                     let next = next_link.r_id.as_deref();
-                    if i > start && next.is_some() && rid.is_some() && next != rid {
+                    if i > start && next.is_some() && rid.is_some() && next != rid.as_deref() {
                         break;
                     }
-                    rid = rid.or(next);
+                    if rid.is_none() {
+                        rid = next.map(str::to_owned);
+                    }
                     i += 1;
                 }
                 for index in start..i {
@@ -134,26 +354,30 @@ impl Emitter<'_, '_, '_> {
                     .map(|tip| format!(" w:tooltip=\"{}\"", attr(tip)))
                     .unwrap_or_default();
                 if let Some(anchor) = href.strip_prefix('#') {
-                    out.push_str(&format!("<w:hyperlink w:anchor=\"{}\"{tip}>", attr(anchor)));
-                    for run in &self.runs[start..i] {
-                        out.push_str(&run_fragment_xml(run, true)?);
-                    }
-                    out.push_str("</w:hyperlink>");
+                    let inner = self.link_inner(start, i, true)?;
+                    out.push_str(&format!(
+                        "<w:hyperlink w:anchor=\"{}\"{tip}>{inner}</w:hyperlink>",
+                        attr(anchor)
+                    ));
                 } else {
                     let allocated = if rid.is_none() {
                         self.allocate.as_mut().map(|allocate| allocate(href))
                     } else {
                         None
                     };
-                    let final_rid = rid.or(allocated.as_deref()).filter(|rid| !rid.is_empty());
+                    let final_rid = rid
+                        .as_deref()
+                        .or(allocated.as_deref())
+                        .filter(|rid| !rid.is_empty());
                     if let Some(rid) = final_rid {
-                        out.push_str(&format!("<w:hyperlink r:id=\"{}\"{tip}>", attr(rid)));
-                    }
-                    for run in &self.runs[start..i] {
-                        out.push_str(&run_fragment_xml(run, final_rid.is_some())?);
-                    }
-                    if final_rid.is_some() {
-                        out.push_str("</w:hyperlink>");
+                        let inner = self.link_inner(start, i, true)?;
+                        out.push_str(&format!(
+                            "<w:hyperlink r:id=\"{}\"{tip}>{inner}</w:hyperlink>",
+                            attr(rid)
+                        ));
+                    } else {
+                        let inner = self.link_inner(start, i, false)?;
+                        out.push_str(&inner);
                     }
                 }
                 for index in start..i {
@@ -161,7 +385,7 @@ impl Emitter<'_, '_, '_> {
                 }
             } else {
                 self.starts_at(i, out);
-                out.push_str(&run_fragment_xml(run, false)?);
+                out.push_str(&self.fragment(i, false)?);
                 self.ends_at(i, out);
                 i += 1;
             }
@@ -204,29 +428,37 @@ impl Emitter<'_, '_, '_> {
         }
         out
     }
-    fn emit(&mut self) -> Result<String, RegexLimit> {
-        let mut out = String::new();
-        let mut g = 0;
-        let mut open_range: Option<(&str, String)> = None;
-        while g < self.runs.len() {
+    /// `emitRevisions`: runs [from, to), each tracked-change group in its w:ins / w:del
+    fn emit_revisions(
+        &mut self,
+        from: usize,
+        to: usize,
+        out: &mut String,
+    ) -> Result<(), RegexLimit> {
+        let runs = self.runs;
+        let mut g = from;
+        while g < to {
+            let key = revision_key(&runs[g]);
             let mut end = g;
-            while end < self.runs.len() && same_revision(&self.runs[g], &self.runs[end]) {
+            while end < to && revision_key(&runs[end]) == key {
                 end += 1;
             }
-            let run = &self.runs[g];
-            if revision_key(run).is_none() {
-                self.emit_range(g, end, &mut out)?;
+            if key.is_empty() {
+                self.within(g, end, 1, 0, Leaf::Range, out)?;
             } else {
+                let run = &runs[g];
+                let (ins, del) = ((*run.ins).clone(), (*run.del).clone());
                 let movement = move_of(Some(run));
                 if let Some((side, name)) = movement.filter(|movement| {
-                    Some(*movement) != move_of(g.checked_sub(1).map(|i| &self.runs[i]))
+                    Some(*movement) != move_of(g.checked_sub(1).map(|i| &runs[i]))
                 }) {
                     let info = if side == "From" {
-                        run.del.as_ref()
+                        del.as_ref()
                     } else {
-                        run.ins.as_ref()
+                        ins.as_ref()
                     }
                     .expect("move has a revision");
+                    let name = name.to_owned();
                     let id = self.mint_id();
                     out.push_str(&format!(
                         "<w:move{side}RangeStart w:id=\"{}\" w:author=\"{}\"{} w:name=\"{}\"/>",
@@ -237,12 +469,11 @@ impl Emitter<'_, '_, '_> {
                             .filter(|v| !v.is_empty())
                             .map(|date| format!(" w:date=\"{}\"", attr(date)))
                             .unwrap_or_default(),
-                        attr(name)
+                        attr(&name)
                     ));
-                    open_range = Some((side, id));
+                    self.open_range = Some((side, id));
                 }
-                let ins_tag = if run
-                    .ins
+                let ins_tag = if ins
                     .as_ref()
                     .and_then(|info| info.r#move.as_deref())
                     .is_some_and(|v| !v.is_empty())
@@ -251,8 +482,7 @@ impl Emitter<'_, '_, '_> {
                 } else {
                     "w:ins"
                 };
-                let del_tag = if run
-                    .del
+                let del_tag = if del
                     .as_ref()
                     .and_then(|info| info.r#move.as_deref())
                     .is_some_and(|v| !v.is_empty())
@@ -261,29 +491,34 @@ impl Emitter<'_, '_, '_> {
                 } else {
                     "w:del"
                 };
-                if let Some(info) = &*run.ins {
+                let movement = move_of(Some(&runs[g])).map(|(side, name)| (side, name.to_owned()));
+                if let Some(info) = &ins {
                     out.push_str(&format!("<{ins_tag}{}>", self.revision_attrs(info)));
                 }
-                if let Some(info) = &*run.del {
+                if let Some(info) = &del {
                     out.push_str(&format!("<{del_tag}{}>", self.revision_attrs(info)));
                 }
-                self.emit_range(g, end, &mut out)?;
-                if run.del.is_some() {
+                self.within(g, end, 1, 0, Leaf::Range, out)?;
+                if del.is_some() {
                     out.push_str(&format!("</{del_tag}>"));
                 }
-                if run.ins.is_some() {
+                if ins.is_some() {
                     out.push_str(&format!("</{ins_tag}>"));
                 }
-                if open_range.is_some()
-                    && movement != move_of(self.runs.get(end))
-                    && let Some((side, id)) = open_range.take()
+                let next = runs
+                    .get(end)
+                    .and_then(|run| move_of(Some(run)))
+                    .map(|(side, name)| (side, name.to_owned()));
+                if self.open_range.is_some()
+                    && movement != next
+                    && let Some((side, id)) = self.open_range.take()
                 {
                     out.push_str(&format!("<w:move{side}RangeEnd w:id=\"{}\"/>", attr(&id)));
                 }
             }
             g = end;
         }
-        Ok(out)
+        Ok(())
     }
 }
 

@@ -63,6 +63,7 @@ fn generate(block: &GeneratedBlock, ctx: &CtxArg) -> Result<Generated, String> {
             } else {
                 None
             },
+            part: None,
         };
         generate_paragraph_xml(block, &mut context)?
     };

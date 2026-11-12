@@ -1029,3 +1029,168 @@ pub fn run_copied_elsewhere(run: &Run) -> Run {
     }
     copy
 }
+
+/// `ContentControlPart` of inline-control-ids.ts: one part as the run writer
+/// sees it while the part is put together.
+///
+/// Namespaces: wrapper bytes carried on runs are written under elements the
+/// engine generates, so every prefix they use has to be declared by the part
+/// root; the writer asks before it writes a wrapper.
+///
+/// Control ids: a content control written from `Run.wrap` is the only kind that
+/// gives way when its `w:id` is taken. The run writer marks it with a comment
+/// directly before its opening tag; `finish` removes the comments and unwraps a
+/// marked control whose id an unmarked control holds or an earlier marked one
+/// took. Nothing unmarked is ever rewritten.
+pub struct ContentControlPart {
+    marker: String,
+    namespaces: Option<PartNamespaces>,
+}
+
+impl ContentControlPart {
+    /// `sources`: every text copied into the part as it is (the marker must
+    /// not occur in it). `namespaces`: what the part root declares; None when
+    /// the root is not known (a fragment written outside a part), and then
+    /// prefixes are not judged.
+    pub fn new(sources: &[&str], namespaces: Option<PartNamespaces>) -> Self {
+        let mut name = String::from("seuoffice-inline-yields");
+        while sources.iter().any(|xml| xml.contains(&name)) {
+            name.push('_');
+        }
+        Self {
+            marker: format!("<!--{name}-->"),
+            namespaces,
+        }
+    }
+
+    /// The part root declares all of `prefixes` (a root that is not known: not judged).
+    pub fn takes(&self, prefixes: &HashSet<String>) -> bool {
+        match &self.namespaces {
+            None => true,
+            Some(namespaces) => prefixes.iter().all(|prefix| namespaces.has(prefix)),
+        }
+    }
+
+    /// `control_xml` (bytes starting a `w:sdt`) marked as written from a run: it gives way to a taken id.
+    pub fn yielding(&self, control_xml: &str) -> String {
+        format!("{}{control_xml}", self.marker)
+    }
+
+    /// `finish`: the part with the markers removed and the marked controls
+    /// whose id is taken unwrapped.
+    pub fn finish(&self, xml: &str) -> Result<String, RegexLimit> {
+        let mut cuts: Vec<(usize, usize)> = Vec::new();
+        let mut marked: HashSet<usize> = HashSet::new();
+        let mut from = 0;
+        while let Some(found) = xml[from..].find(&self.marker) {
+            let at = from + found;
+            let end = at + self.marker.len();
+            cuts.push((at, end));
+            marked.insert(end);
+            // `indexOf(marker, at + 1)`: the next character boundary
+            from = at + xml[at..].chars().next().map_or(1, char::len_utf8);
+        }
+        if cuts.is_empty() {
+            return Ok(xml.to_owned());
+        }
+        struct Control {
+            element: usize,
+            id: String,
+            yields: bool,
+        }
+        let mut controls: Vec<Control> = Vec::new();
+        let tree = raw_elements(xml, true)?;
+        let mut todo: Vec<usize> = tree.roots.iter().rev().copied().collect();
+        while let Some(index) = todo.pop() {
+            let element = tree.get(index);
+            if element.name == "w:sdt" {
+                let id_tag = tree
+                    .children(element)
+                    .find(|child| child.name == "w:sdtPr")
+                    .and_then(|props| tree.children(props).find(|child| child.name == "w:id"));
+                let attr = id_tag.and_then(|tag| {
+                    js_regex!(r#"\bw:val\s*=\s*(?:"([^"]*)"|'([^']*)')"#)
+                        .exec(&xml[tag.start..tag.open_end])
+                        .map(|found| {
+                            found
+                                .get(1)
+                                .or_else(|| found.get(2))
+                                .unwrap_or_default()
+                                .to_owned()
+                        })
+                });
+                if let Some(attr) = attr {
+                    let mut id = decode_entities(&attr);
+                    if js_regex!(r"^[+-]?\d+$").test(&id) {
+                        id = canonical_integer(&id);
+                    }
+                    controls.push(Control {
+                        element: index,
+                        id,
+                        yields: marked.contains(&element.start),
+                    });
+                }
+            }
+            for child in element.children.iter().rev() {
+                todo.push(*child);
+            }
+        }
+        let mut taken: HashSet<&str> = controls
+            .iter()
+            .filter(|control| !control.yields)
+            .map(|control| control.id.as_str())
+            .collect();
+        for control in &controls {
+            if !control.yields {
+                continue;
+            }
+            if taken.insert(control.id.as_str()) {
+                continue;
+            }
+            // unwrap, do not delete: what the control held stays where it was
+            let element = tree.get(control.element);
+            cuts.push((element.start, element.open_end));
+            cuts.push((element.close_start, element.end));
+            for child in tree.children(element) {
+                if child.name == "w:sdtPr" || child.name == "w:sdtEndPr" {
+                    cuts.push((child.start, child.end));
+                } else if child.name == "w:sdtContent" {
+                    cuts.push((child.start, child.open_end));
+                    cuts.push((child.close_start, child.end));
+                }
+            }
+        }
+        cuts.sort_by_key(|cut| cut.0);
+        let mut out = String::with_capacity(xml.len());
+        let mut cursor = 0;
+        for (start, end) in cuts {
+            if start > cursor {
+                out.push_str(&xml[cursor..start]);
+            }
+            cursor = cursor.max(end);
+        }
+        out.push_str(&xml[cursor..]);
+        Ok(out)
+    }
+}
+
+/// The id of a control as an integer is read: a plus sign and leading zeros
+/// go, and `-0` is `0`.
+fn canonical_integer(id: &str) -> String {
+    let id = id.strip_prefix('+').unwrap_or(id);
+    let (sign, digits) = match id.strip_prefix('-') {
+        Some(digits) => ("-", digits),
+        None => ("", id),
+    };
+    let trimmed = digits.trim_start_matches('0');
+    let digits = if trimmed.is_empty() && !digits.is_empty() {
+        "0"
+    } else {
+        trimmed
+    };
+    if sign == "-" && digits == "0" {
+        "0".to_owned()
+    } else {
+        format!("{sign}{digits}")
+    }
+}

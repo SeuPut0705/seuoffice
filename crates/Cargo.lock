@@ -104,6 +104,7 @@ name = "docx-engine"
 version = "0.1.0"
 dependencies = [
  "encoding_rs",
+ "flate2",
  "icu_collator",
  "icu_locale_core",
  "jscompat",

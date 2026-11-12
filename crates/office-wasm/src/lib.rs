@@ -50,6 +50,23 @@ enum Command {
     /// it, as the model comparison's JSON (a Map as its entries, bytes as
     /// `{ "$bytes" }`), read with no media converter installed.
     ParseDocx,
+    /// Blob 0: the original docx. Blob 1: the `ParsedDocFull` of it as the
+    /// model comparison's JSON (its `internal.originalBytes` is taken from
+    /// blob 0). Header: `blocks` (`SaveBlock[]`), `options` (`SaveOptions`) and
+    /// `nowMs`, the clock `saveDocx` reads. Reply blob 0: the docx it writes.
+    SaveDocx {
+        blocks: serde_json::Value,
+        options: serde_json::Value,
+        now_ms: f64,
+    },
+    /// Blobs 0 and 1: the original docx and its `ParsedDocFull` JSON; blobs 2
+    /// and 3: the revised docx and its model. Header: `options`
+    /// (`CompareOptions`) and `nowMs`. Reply blob 0: the redline docx; reply
+    /// blob 1: the summary as JSON.
+    CompareDocuments {
+        options: Option<serde_json::Value>,
+        now_ms: f64,
+    },
 }
 
 #[derive(Deserialize)]
@@ -306,6 +323,45 @@ fn normalize(parts: &[&[u8]], reply_blobs: &mut Vec<Vec<u8>>) -> Vec<u8> {
     json(&Reply::Normalized { needed })
 }
 
+/// `saveDocx` over the model of `docx` (blob 1) with the blocks and options of the request.
+fn save_docx(
+    docx: &[u8],
+    model: Option<&&[u8]>,
+    blocks: serde_json::Value,
+    options: serde_json::Value,
+    now_ms: f64,
+) -> Result<Vec<u8>, String> {
+    let model = model.ok_or("blob 1 is missing")?;
+    let mut parsed: docx_engine::model::ParsedDocFull =
+        serde_json::from_slice(model).map_err(|error| format!("model: {error}"))?;
+    parsed.internal.original_bytes = docx_engine::model::Bytes(docx.to_vec());
+    let blocks: Vec<docx_engine::save::save::SaveBlock> =
+        serde_json::from_value(blocks).map_err(|error| format!("blocks: {error}"))?;
+    let options: docx_engine::save::save::SaveOptions =
+        serde_json::from_value(options).map_err(|error| format!("options: {error}"))?;
+    docx_engine::save::save::save_docx(&parsed, &blocks, &options, now_ms)
+}
+
+/// `compareDocuments` over two documents given as blobs (docx, model) each.
+fn compare_documents(
+    blobs: &[&[u8]],
+    options: Option<&serde_json::Value>,
+    now_ms: f64,
+) -> Result<(Vec<u8>, serde_json::Value), String> {
+    let model_of = |docx: Option<&&[u8]>,
+                    model: Option<&&[u8]>|
+     -> Result<docx_engine::model::ParsedDocFull, String> {
+        let (docx, model) = docx.zip(model).ok_or("a docx and its model are missing")?;
+        let mut parsed: docx_engine::model::ParsedDocFull =
+            serde_json::from_slice(model).map_err(|error| format!("model: {error}"))?;
+        parsed.internal.original_bytes = docx_engine::model::Bytes(docx.to_vec());
+        Ok(parsed)
+    };
+    let original = model_of(blobs.first(), blobs.get(1))?;
+    let revised = model_of(blobs.get(2), blobs.get(3))?;
+    calls::save::features::compare_documents(original, revised, options, now_ms)
+}
+
 fn respond(input: &[u8]) -> Vec<u8> {
     let mut reply_blobs = Vec::new();
     let header = match decode_frame(input) {
@@ -357,6 +413,30 @@ fn respond(input: &[u8]) -> Vec<u8> {
                         Err(error) => json(&Reply::failure("parse_refused", error)),
                     }
                 }
+                (
+                    Command::SaveDocx {
+                        blocks,
+                        options,
+                        now_ms,
+                    },
+                    Some(docx),
+                ) => match save_docx(docx, frame.blobs.get(1), blocks, options, now_ms) {
+                    Ok(saved) => {
+                        reply_blobs.push(saved);
+                        json(&Reply::ModelRoundTrip { model: true })
+                    }
+                    Err(error) => json(&Reply::failure("save_refused", error)),
+                },
+                (Command::CompareDocuments { options, now_ms }, _) => {
+                    match compare_documents(&frame.blobs, options.as_ref(), now_ms) {
+                        Ok((docx, summary)) => {
+                            reply_blobs.push(docx);
+                            reply_blobs.push(summary.to_string().into_bytes());
+                            json(&Reply::ModelRoundTrip { model: true })
+                        }
+                        Err(error) => json(&Reply::failure("compare_refused", error)),
+                    }
+                }
                 (Command::ScanBody, Some(xml)) => scan(xml),
                 (Command::ZipEntries, Some(container)) => zip_entries(container, &mut reply_blobs),
                 (Command::PptxPackage, Some(container)) => {
@@ -371,6 +451,7 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     | Command::Package
                     | Command::ModelRoundTrip { .. }
                     | Command::ParseDocx
+                    | Command::SaveDocx { .. }
                     | Command::PptxPackage,
                     None,
                 ) => json(&Reply::failure("invalid_request", "blob 0 is missing")),

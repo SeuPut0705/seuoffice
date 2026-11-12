@@ -27,6 +27,7 @@ pub mod props;
 pub mod protection;
 pub mod resolve;
 pub mod revision_xml;
+pub mod save;
 pub mod scan;
 pub mod sdt;
 pub mod section;

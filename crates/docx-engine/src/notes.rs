@@ -165,14 +165,14 @@ fn note_paragraphs_of(entry_xml: &str) -> impl Iterator<Item = &str> {
         .map(|found| found.as_str())
 }
 
-struct NoteEntry<'x> {
-    id: &'x str,
-    text: String,
-    xml: &'x str,
+pub(crate) struct NoteEntry<'x> {
+    pub(crate) id: &'x str,
+    pub(crate) text: String,
+    pub(crate) xml: &'x str,
 }
 
 /// Typeless (real) note entries with their exact XML slice and plain text.
-fn note_entries_of(xml: &str, kind: NoteKind) -> Vec<NoteEntry<'_>> {
+pub(crate) fn note_entries_of(xml: &str, kind: NoteKind) -> Vec<NoteEntry<'_>> {
     // the attribute run must not end in "/" so a self-closing empty entry is
     // not read as an open tag over the next entry
     let entry = match kind {
@@ -202,7 +202,7 @@ fn note_entries_of(xml: &str, kind: NoteKind) -> Vec<NoteEntry<'_>> {
 
 /// Paragraph texts joined with newlines; the first paragraph starts with the
 /// self-reference mark and a spacer.
-fn note_entry_plain_text(inner_xml: &str) -> String {
+pub(crate) fn note_entry_plain_text(inner_xml: &str) -> String {
     let mut paras: Vec<String> = note_paragraphs_of(inner_xml).map(note_plain_text).collect();
     if let Some(first) = paras.first_mut() {
         *first = trim_start(first).to_owned();

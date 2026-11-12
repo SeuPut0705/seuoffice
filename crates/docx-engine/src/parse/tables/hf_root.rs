@@ -30,7 +30,7 @@ impl HfRootName {
 
 /// `WATERMARK_NS`: namespaces the header part root needs when it carries a VML
 /// watermark.
-const WATERMARK_NS: &str = concat!(
+pub const WATERMARK_NS: &str = concat!(
     r#" xmlns:v="urn:schemas-microsoft-com:vml""#,
     r#" xmlns:o="urn:schemas-microsoft-com:office:office""#,
     r#" xmlns:w10="urn:schemas-microsoft-com:office:word""#
