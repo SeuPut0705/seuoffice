@@ -17,6 +17,8 @@ use crate::props::XML_PARSER_MAX_NESTED_TAGS;
 use crate::resolve::{EffectivePPr, PropSource, ResolveCtx};
 use crate::styles::StyleInfo;
 
+pub mod display;
+
 /// `directParaGeometry`'s `Pick<FieldDisplay, ...>`.
 #[derive(Debug, Default, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]

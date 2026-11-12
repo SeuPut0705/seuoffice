@@ -2,7 +2,7 @@ import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { isDeepStrictEqual } from 'node:util'
 import JSZip from 'jszip'
-import { callOutcomes } from './calls-run'
+import { callOutcomes, listedClasses } from './calls-run'
 import { openOnce } from './compare-package'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
@@ -18,8 +18,17 @@ type Divergence = { id: string; typescript: unknown; rust: unknown; reason: stri
    * `host: node` the TypeScript side is the loader on Node as it is.
    */
   | { comparison: 'loadDocx'; container: string; host?: 'node' }
-  /** A function of comparison (f), by the name of its spec. */
-  | { comparison: 'call'; fn: string; text: string; args?: Record<string, unknown> }
+  /**
+   * A function of comparison (f), by the name of its spec. With `zone` the
+   * TypeScript side runs in that time zone; the gate itself runs in UTC.
+   */
+  | {
+      comparison: 'call'
+      fn: string
+      text: string
+      args?: Record<string, unknown>
+      zone?: string
+    }
 )
 
 async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust: unknown }> {
@@ -29,7 +38,15 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
       rust: rustRoundTrip([entry.fragment])[0],
     }
   }
-  if (entry.comparison === 'call') return callOutcomes(entry.fn, entry.text, entry.args ?? {})
+  if (entry.comparison === 'call') {
+    const zone = process.env.TZ
+    if (entry.zone) process.env.TZ = entry.zone
+    try {
+      return await callOutcomes(entry.fn, entry.text, entry.args ?? {})
+    } finally {
+      process.env.TZ = zone ?? 'UTC'
+    }
+  }
   if (entry.comparison === 'loadDocx') {
     const docx = oddContainers().find(([name]) => name === entry.container)?.[1]
     if (!docx) return { typescript: 'no such container', rust: 'no such container' }
@@ -64,6 +81,11 @@ export async function staleDivergences(): Promise<{ listed: number; stale: strin
       }
     }
     if (isDeepStrictEqual(now.typescript, now.rust)) stale.push(`${entry.id}: both sides now agree`)
+  }
+  // a class a spec names has its entry here, and still has an input that differs
+  for (const [id, { inputs, differ }] of listedClasses) {
+    if (!ledger.some((entry) => entry.id === id)) stale.push(`${id}: a spec lists it, no entry`)
+    else if (differ === 0) stale.push(`${id}: none of the ${inputs} inputs of the class differs`)
   }
   return { listed: ledger.length, stale }
 }

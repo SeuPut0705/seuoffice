@@ -6,12 +6,90 @@
 //! the `u` flag walks UTF-16 code units: a character outside the BMP counts
 //! once here and twice there. That shows only where a pattern counts
 //! characters (`.{2}`, `[^x]{3}`); the result offsets are bytes either way.
+//!
+//! Under `i` without `u` JavaScript maps each UTF-16 unit to upper case and
+//! never gives a character outside ASCII an ASCII letter. `regress` folds as
+//! Unicode does, so for three characters it does: U+0131 is `i`, U+017F is
+//! `s`, and U+212A is `k` in a class and a word character. Every such
+//! pattern searches the text with those three replaced ([`JsRegex::shadow`]).
+//! What that cannot make right is a pattern that itself names a cased
+//! character outside ASCII (`/\u0131/i` matches `I` in `regress`), so
+//! [`JsRegex::new`] refuses to build one.
 
 use std::fmt;
 
 #[derive(Debug)]
 pub struct JsRegex {
     regex: regress::Regex,
+    /// `i` without `u`: the text is searched through [`JsRegex::shadow`].
+    shadows: bool,
+}
+
+/// The characters `regress` matches as ASCII letters under `i` without `u`.
+const FOLDED_TO_ASCII: [char; 3] = ['\u{131}', '\u{17f}', '\u{212a}'];
+/// Characters as long in UTF-8 as U+0131 and U+017F, with no case, that are
+/// neither spaces nor line ends nor in Latin-1, which an octal escape names.
+const TWO_BYTE_STAND_INS: [char; 4] = ['\u{2c7}', '\u{2d8}', '\u{2d9}', '\u{2da}'];
+/// The same for U+212A.
+const THREE_BYTE_STAND_INS: [char; 2] = ['\u{2192}', '\u{2190}'];
+
+/// `c` is one of a pair of cases, in any direction.
+fn has_case(c: char) -> bool {
+    !c.to_uppercase().eq([c]) || !c.to_lowercase().eq([c])
+}
+
+/// Whether `regress` under `i` without `u` matches the characters this
+/// pattern names as JavaScript does, once the text is shadowed: every one is
+/// ASCII, or has no case and stands outside a class. A class or an escape
+/// that can reach outside ASCII (`\u`, `\p`, `\x80` and `\200` and above) is
+/// not followed further.
+fn icase_without_unicode_is_exact(pattern: &str) -> bool {
+    let mut chars = pattern.chars();
+    let mut in_class = false;
+    while let Some(c) = chars.next() {
+        let named = match c {
+            '\\' => match chars.next() {
+                Some('u' | 'p' | 'P') => return false,
+                Some('x')
+                    if chars.clone().next().is_some_and(
+                        |digit| matches!(digit, '8' | '9' | 'a'..='f' | 'A'..='F'),
+                    ) =>
+                {
+                    return false;
+                }
+                Some('2' | '3')
+                    if chars
+                        .clone()
+                        .take(2)
+                        .filter(|digit| ('0'..='7').contains(digit))
+                        .count()
+                        == 2 =>
+                {
+                    return false;
+                }
+                Some(escaped) => escaped,
+                None => return true,
+            },
+            '[' => {
+                in_class = true;
+                continue;
+            }
+            ']' => {
+                in_class = false;
+                continue;
+            }
+            c => c,
+        };
+        if !named.is_ascii()
+            && (in_class
+                || has_case(named)
+                || TWO_BYTE_STAND_INS.contains(&named)
+                || THREE_BYTE_STAND_INS.contains(&named))
+        {
+            return false;
+        }
+    }
+    true
 }
 
 /// What `new RegExp(pattern)` throws as a `SyntaxError`.
@@ -58,15 +136,58 @@ impl JsRegex {
     /// `new RegExp(pattern, flags)`. The `g` flag is not state here: use
     /// [`JsRegex::find_iter`] or [`JsRegex::find_from`] where the JavaScript
     /// loops on `lastIndex`.
+    ///
+    /// A pattern JavaScript builds is refused in one case: under `i` without
+    /// `u` it names a cased character outside ASCII, or holds a class or an
+    /// escape that can reach one. `regress` would match it as Unicode folds.
     pub fn new(pattern: &str, flags: &str) -> Result<Self, RegexSyntaxError> {
+        let shadows = flags.contains('i') && !flags.contains(['u', 'v']);
+        if shadows && !icase_without_unicode_is_exact(pattern) {
+            return Err(RegexSyntaxError(format!(
+                "/{pattern}/{flags}: a cased character outside ASCII under `i` without `u` is not matched as JavaScript matches it"
+            )));
+        }
         regress::Regex::with_flags(pattern, flags)
-            .map(|regex| Self { regex })
+            .map(|regex| Self { regex, shadows })
             .map_err(|error| RegexSyntaxError(error.to_string()))
+    }
+
+    /// The text the engine searches in place of `text`, byte for byte as
+    /// long: each character of [`FOLDED_TO_ASCII`] replaced by one the text
+    /// does not hold, a different one each, so a backreference still tells
+    /// them apart. `None` where the text holds none of the three.
+    fn shadow(&self, text: &str) -> Option<String> {
+        if !self.shadows || !text.contains(FOLDED_TO_ASCII) {
+            return None;
+        }
+        let mut two_byte = TWO_BYTE_STAND_INS
+            .into_iter()
+            .filter(|stand_in| !text.contains(*stand_in));
+        let three_byte = THREE_BYTE_STAND_INS
+            .into_iter()
+            .find(|stand_in| !text.contains(*stand_in));
+        let stand_ins = [
+            two_byte.next().unwrap_or(TWO_BYTE_STAND_INS[0]),
+            two_byte.next().unwrap_or(TWO_BYTE_STAND_INS[1]),
+            three_byte.unwrap_or(THREE_BYTE_STAND_INS[0]),
+        ];
+        Some(
+            text.chars()
+                .map(|c| {
+                    FOLDED_TO_ASCII
+                        .iter()
+                        .position(|folded| *folded == c)
+                        .map_or(c, |at| stand_ins[at])
+                })
+                .collect(),
+        )
     }
 
     /// `regex.test(text)`
     pub fn test(&self, text: &str) -> bool {
-        self.regex.find(text).is_some()
+        self.regex
+            .find(self.shadow(text).as_deref().unwrap_or(text))
+            .is_some()
     }
 
     /// `regex.exec(text)` of a regex without the `g` flag, and `text.match(regex)`.
@@ -91,8 +212,15 @@ impl JsRegex {
     where
         't: 'r,
     {
-        self.regex
-            .find_from(text, start)
+        // the matches of a shadow are listed at once: the shadow ends with this call
+        let listed: Option<Vec<regress::Match>> = self
+            .shadow(text)
+            .map(|shadow| self.regex.find_from(&shadow, start).collect());
+        let lazy = listed.is_none().then(|| self.regex.find_from(text, start));
+        listed
+            .into_iter()
+            .flatten()
+            .chain(lazy.into_iter().flatten())
             .map(move |found| JsMatch { text, found })
     }
 

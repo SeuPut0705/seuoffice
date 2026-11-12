@@ -442,6 +442,41 @@ function richPackages(): Record<string, EntrySpec[]> {
         ),
       },
     ],
+    // U+0131 (dotless i), U+017F (long s) and U+212A (Kelvin sign) are an ASCII
+    // letter only under Unicode case folding, which /i without /u does not apply:
+    // none of these is a heading, a list paragraph, a justified paragraph, a
+    // pattern shading or a false
+    'a package whose names hold letters that fold to ASCII only in Unicode': [
+      ...common,
+      {
+        name: 'word/styles.xml',
+        data: styles(
+          '<w:style w:type="paragraph" w:styleId="A1"><w:name w:val="head\u0131ng 1"/></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="A2"><w:name w:val="HEAD\u0131NG 2"/></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="L\u0131stParagraph"><w:name w:val="B1"/><w:pPr><w:jc w:val="low\u212Aashida"/></w:pPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="Li\u017ftParagraph"><w:name w:val="B2"/><w:pPr><w:jc w:val="ka\u017fhida"/></w:pPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="C1"><w:name w:val="C1"/><w:pPr><w:jc w:val="tha\u0131Distribute"/><w:shd w:val="thinHorz\u017ftripe" w:color="FF0000" w:fill="FFFFFF"/></w:pPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="C2"><w:name w:val="C2"/><w:pPr><w:jc w:val="thaiDi\u017ftribute"/></w:pPr><w:rPr><w:shd w:val="diagCro\u017f\u017f" w:color="0000FF" w:fill="FFFF00"/></w:rPr></w:style>' +
+            '<w:style w:type="paragraph" w:styleId="ListParagraph"><w:name w:val="heading 3"/><w:pPr><w:jc w:val="lowKashida"/></w:pPr></w:style>',
+        ),
+      },
+      {
+        name: 'word/settings.xml',
+        data: settings('<w:removePersonalInformation w:val="fal\u017fe"/>'),
+      },
+    ],
+    // a prefix outside ASCII is none to the reader, whose prefix pattern is
+    // ASCII: the setting is not found on either side
+    'a package whose settings prefix is outside ASCII': [
+      ...common,
+      { name: 'word/styles.xml', data: STYLES },
+      {
+        name: 'word/settings.xml',
+        data:
+          `<\u00E9:settings xmlns:\u00E9="${W}" xmlns:w\u00E9="${W}"><\u00E9:removePersonalInformation \u00E9:val="0"/>` +
+          '<w\u00E9:removePersonalInformation w\u00E9:val="false"/></\u00E9:settings>',
+      },
+    ],
     'a package whose settings switch protection off': [
       ...common,
       { name: 'word/styles.xml', data: STYLES },

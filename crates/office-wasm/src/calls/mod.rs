@@ -6,8 +6,12 @@ use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 
+mod altchunk;
 mod blank;
+mod checkbox;
 mod docprops;
+mod drawing;
+mod fielddisplay;
 mod fields;
 mod gen_drawing;
 mod gen_drawing_build;
@@ -18,10 +22,13 @@ mod gen_rpr;
 mod gen_runs;
 mod gen_table;
 mod gen_text;
+mod images;
 mod markers;
 mod math;
 mod resolve;
+mod revision;
 mod section;
+mod vml;
 
 /// What a call gives: a value, nothing where the TypeScript function returns
 /// `undefined`, or an error where it throws.
@@ -64,12 +71,18 @@ pub fn package(args: &Value) -> Result<Package, String> {
 pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
     let (group, function) = name.split_once('.')?;
     match group {
+        "altchunk" => Some(altchunk::dispatch(function, text, args)),
         "blank" => Some(blank::dispatch(function, text, args)),
+        "checkbox" => Some(checkbox::dispatch(function, text, args)),
         "docprops" => Some(docprops::dispatch(function, text, args)),
+        "drawing" => Some(drawing::dispatch(function, text, args)),
+        "fielddisplay" => Some(fielddisplay::dispatch(function, text, args)),
         "fields" => Some(fields::dispatch(function, text, args)),
+        "images" => Some(images::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),
+        "revision" => Some(revision::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
         "genRpr" => Some(gen_rpr::dispatch(function, text, args)),
         "genProps" => Some(gen_props::dispatch(function, text, args)),
@@ -80,6 +93,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "genFields" => Some(gen_fields::dispatch(function, text, args)),
         "genRuns" => Some(gen_runs::dispatch(function, text, args)),
         "genParagraph" => Some(gen_paragraph::dispatch(function, text, args)),
+        "vml" => Some(vml::dispatch(function, text, args)),
         _ => None,
     }
 }

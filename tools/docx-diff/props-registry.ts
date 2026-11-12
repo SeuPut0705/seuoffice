@@ -162,7 +162,10 @@ export const READERS: Reader[] = [
   {
     fn: 'onOffTagIn',
     on: elements('w:rPr'),
-    variants: () => ['w:b', 'w:vanish', 'w:rtl', 'w:B', ...PATTERN_NAMES].map((name) => ({ name })),
+    // w:\uAC00 is a name outside ASCII without case; one with case
+    // (w:\u00E9) is refused by jscompat under `i`, and no caller passes one
+    variants: () =>
+      ['w:b', 'w:vanish', 'w:rtl', 'w:B', 'w:\uAC00', ...PATTERN_NAMES].map((name) => ({ name })),
     call: (xml, args) => xmlText.onOffTagIn(xml, args.name!),
   },
 
