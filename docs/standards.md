@@ -27,8 +27,7 @@
 
 ## 원본 제작사 표기를 다시 들이지 않는다
 
-- `npm run check:no-genspark`가 저장소의 추적 파일 전체에서 원본 제작사와 그 서비스의 표기를 찾는다. 허용 목록 밖에서 한 건이라도 나오면 실패한다. 원본 변경을 받아온 뒤에는 반드시 돌린다.
-- 허용 목록은 좁게 유지한다. 지금 들어 있는 것: `LICENSE`, `NOTICE`, 파일 안의 저작권 고지 줄, 소개 문서의 출처 단락, 가리기 기능이 문서에 적는 이름공간 주소 한 줄, 엑셀 처리 프로그램의 임시 폴더 이름, 예전 설정 파일 시험 자료, 검사 명령의 이름 자체, 검사 도구와 그 테스트. 항목마다 이유를 도구 안에 적는다.
+- 원본 제작사와 그 서비스의 표기·연결을 다시 들이지 않는다. 이것을 지키던 자동 검사(`check:no-genspark`)는 원본 커밋을 옮겨 올 때를 위한 것이었고, 원본을 더 받지 않게 되면서 지웠다(seuoffice 결정 0024).
 - `LICENSE`, `NOTICE`, 파일 안의 저작권 고지, "GenOffice를 바탕으로 만들었다"는 표시는 지우지 않는다.
 
 ## 상표와 아이콘
@@ -95,7 +94,6 @@ npm run check:theme-colors
 npm run check:english-comments
 npm run check:help-langs
 npm run check:skill-version
-npm run check:no-genspark
 ```
 
 - 새 동작에는 단위 테스트를 둔다. 테스트는 `<작업 공간>/tests`에 둔다.

@@ -28,7 +28,6 @@ seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하
   - 루트 `AGENTS.md`·`CLAUDE.md`·`README.md`는 우리 것을 두고, 상위 규칙 변경 중 해당되는 것만 옮긴다.
   - `package-lock.json`은 상위 것을 받은 뒤 `npm install`로 다시 만든다.
   - 나머지는 `upstream-edits.md` 목록과 대조해 우리 편집을 다시 적용한다.
-- GenOffice를 직접 받을 때는 이음 `docs/operations.md` "원본의 개선 받아오기" 절차(`git cherry-pick -x`, `npm run check:no-genspark`)를 따른다.
 
 ## 커밋
 
@@ -43,7 +42,7 @@ seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하
 - 상위 모듈 시험은 작업 공간별로 돌린다: `npm run test -w @genoffice/<이름>`. 전부는 `npm run test:parallel`.
 - 웹 층: `npm run build -w @seuoffice/web` 뒤 `npm run test -w @seuoffice/web`(Playwright, 다섯 형식을 웹에서 열어 화면을 확인). 웹 층이나 웹 층이 import하는 상위 코드를 고치면 반드시 돌린다.
 - xlsx 엔진(`apps/sheets/native/*`)을 고치면 `npm run native:test -w @genoffice/sheets`와 웹 시험을 둘 다 돌린다.
-- 합치기 전 검사: `npm run check:no-genspark`, `npm run check:english-comments`, `npm run format:check`, `npm run lint`, `npm run typecheck`, 고친 작업 공간 시험, 웹 층을 건드렸으면 웹 시험.
+- 합치기 전 검사: `npm run check:english-comments`, `npm run format:check`, `npm run lint`, `npm run typecheck`, 고친 작업 공간 시험, 웹 층을 건드렸으면 웹 시험.
 - `docs/seuoffice/baseline.md`에 없는 실패는 고친 사람이 해결한다. 원래 실패인지는 손대지 않은 상위 커밋에서 같은 시험을 돌려 확인한다.
 - 시험은 동작(경계, 오류, 형식 왕복, 상태 전이)을 확인한다. 문구·배선·구현을 베끼는 시험은 쓰지 않는다.
 

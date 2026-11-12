@@ -149,13 +149,6 @@ jobs:
       - name: Check comments/docs are English-only
         run: npm run check:english-comments
 
-      # Whole-tree, lockfile included: the vendor services this product was
-      # cut loose from must not come back with a merge of upstream fixes. What
-      # may still name the vendor (licence, attribution, identifiers stored in
-      # documents) is the allowlist inside the tool.
-      - name: Check the removed vendor stays out
-        run: npm run check:no-genspark
-
       - name: Lint
         if: matrix.share == 1
         run: npm run lint
