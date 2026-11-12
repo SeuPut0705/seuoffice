@@ -23,6 +23,8 @@ export const th = {
   appMergeWorkbooksReading: 'กำลังนำเข้า {sheet} จาก {file}…',
   appMergeWorkbooksDone: 'รวม {sheets} ชีตจาก {files} ไฟล์แล้ว (สูตรถูกนำเข้าเป็นค่า)',
   appMergeWorkbooksFailed: 'รวมเวิร์กบุ๊กไม่สำเร็จ',
+  appMergeWorkbooksHiddenCells:
+    'ไม่ได้รวมอะไรเลย: {file} มีเซลล์ที่ซ่อนจาก AI และการรวมจะนำค่าของเซลล์เหล่านั้นเข้ามาโดยไม่ถูกซ่อน โปรดเปิดไฟล์นั้น ยกเลิกการซ่อนหรือลบเซลล์เหล่านั้น บันทึก แล้วรวมอีกครั้ง',
   appMergeWorkbooksInsertFailed: 'ไม่สามารถสร้างชีต {sheet} ได้',
   appMergeWorkbooksLocked: 'เวิร์กบุ๊กยังโหลดไม่เสร็จ ยังรวมไม่ได้ในตอนนี้',
   appFormulaBarShown: 'แสดงแถบสูตรแล้ว',

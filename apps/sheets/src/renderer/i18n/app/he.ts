@@ -23,6 +23,8 @@ export const he = {
   appMergeWorkbooksReading: 'מייבא את {sheet} מתוך {file}…',
   appMergeWorkbooksDone: 'מוזגו {sheets} גיליונות מ‑{files} קבצים (נוסחאות יובאו כערכים).',
   appMergeWorkbooksFailed: 'מיזוג חוברות העבודה נכשל.',
+  appMergeWorkbooksHiddenCells:
+    'דבר לא מוזג: בקובץ {file} יש תאים מוסתרים מהמודל, והמיזוג היה מביא את ערכיהם לכאן ללא ההסתרה. פתחו את הקובץ, בטלו את ההסתרה של התאים האלה או מחקו אותם, שמרו ומזגו שוב.',
   appMergeWorkbooksInsertFailed: 'לא ניתן ליצור את הגיליון {sheet}.',
   appMergeWorkbooksLocked: 'חוברת העבודה עדיין נטענת; המיזוג אינו זמין כרגע.',
   appFormulaBarShown: 'שורת הנוסחאות מוצגת.',

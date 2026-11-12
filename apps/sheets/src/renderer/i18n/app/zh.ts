@@ -21,6 +21,8 @@ export const zh = {
   appMergeWorkbooksReading: '正在导入 {file} 的 {sheet}…',
   appMergeWorkbooksDone: '已合并 {files} 个文件的 {sheets} 张工作表（公式已转为数值）。',
   appMergeWorkbooksFailed: '合并工作簿失败。',
+  appMergeWorkbooksHiddenCells:
+    '没有合并：{file} 里有对 AI 隐藏的单元格，合并会把这些值不带隐藏地带进来。请打开该文件，取消隐藏或删除这些单元格，保存后再合并。',
   appMergeWorkbooksInsertFailed: '无法创建工作表 {sheet}。',
   appMergeWorkbooksLocked: '大文件仍在加载中，暂时无法合并工作簿。',
   appFormulaBarShown: '公式栏已显示。',

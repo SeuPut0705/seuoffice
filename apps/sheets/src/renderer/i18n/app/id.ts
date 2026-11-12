@@ -24,6 +24,8 @@ export const id = {
   appMergeWorkbooksDone:
     '{sheets} sheet dari {files} file digabungkan (rumus diimpor sebagai nilai).',
   appMergeWorkbooksFailed: 'Gagal menggabungkan buku kerja.',
+  appMergeWorkbooksHiddenCells:
+    'Tidak ada yang digabungkan: {file} memiliki sel yang disembunyikan dari AI, dan penggabungan akan membawa nilainya ke sini tanpa perlindungan itu. Buka file tersebut, batalkan penyembunyian sel itu atau hapus selnya, simpan, lalu gabungkan lagi.',
   appMergeWorkbooksInsertFailed: 'Tidak dapat membuat sheet {sheet}.',
   appMergeWorkbooksLocked: 'Buku kerja masih dimuat; penggabungan belum tersedia saat ini.',
   appFormulaBarShown: 'Bilah rumus ditampilkan.',

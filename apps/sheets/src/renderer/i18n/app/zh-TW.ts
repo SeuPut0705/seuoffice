@@ -22,6 +22,8 @@ export const zhTW = {
   appMergeWorkbooksReading: '正在匯入 {file} 的 {sheet}…',
   appMergeWorkbooksDone: '已合併 {files} 個檔案的 {sheets} 張工作表（公式已轉為數值）。',
   appMergeWorkbooksFailed: '合併活頁簿失敗。',
+  appMergeWorkbooksHiddenCells:
+    '沒有合併：{file} 裡有對 AI 隱藏的儲存格，合併會把這些值不帶隱藏地帶進來。請開啟該檔案，取消隱藏或刪除這些儲存格，儲存後再合併。',
   appMergeWorkbooksInsertFailed: '無法建立工作表 {sheet}。',
   appMergeWorkbooksLocked: '大型檔案仍在載入中，目前無法合併活頁簿。',
   appFormulaBarShown: '公式列已顯示。',

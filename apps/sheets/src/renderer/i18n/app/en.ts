@@ -23,6 +23,8 @@ export const en = {
   appMergeWorkbooksReading: 'Importing {sheet} from {file}…',
   appMergeWorkbooksDone: 'Merged {sheets} sheets from {files} files (formulas imported as values).',
   appMergeWorkbooksFailed: 'Merging workbooks failed.',
+  appMergeWorkbooksHiddenCells:
+    'Nothing was merged: {file} has cells hidden from AI, and merging would bring their values in without the hiding. Open that file, unhide or delete those cells, save, then merge again.',
   appMergeWorkbooksInsertFailed: 'Could not create sheet {sheet}.',
   appMergeWorkbooksLocked: 'The workbook is still streaming in; merging is unavailable right now.',
   appFormulaBarShown: 'Formula bar shown.',

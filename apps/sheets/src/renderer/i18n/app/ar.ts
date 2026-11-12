@@ -23,6 +23,8 @@ export const ar = {
   appMergeWorkbooksReading: 'جارٍ استيراد {sheet} من {file}…',
   appMergeWorkbooksDone: 'تم دمج {sheets} ورقة من {files} ملفات (تم استيراد الصيغ كقيم).',
   appMergeWorkbooksFailed: 'فشل دمج المصنفات.',
+  appMergeWorkbooksHiddenCells:
+    'لم يُدمج شيء: يحتوي {file} على خلايا مخفية عن الذكاء الاصطناعي، والدمج سيجلب قيمها إلى هنا دون هذا الإخفاء. افتح ذلك الملف، وألغِ إخفاء تلك الخلايا أو احذفها، ثم احفظ وادمج من جديد.',
   appMergeWorkbooksInsertFailed: 'تعذر إنشاء الورقة {sheet}.',
   appMergeWorkbooksLocked: 'ما زال المصنف قيد التحميل؛ الدمج غير متاح الآن.',
   appFormulaBarShown: 'تم إظهار شريط الصيغة.',

@@ -25,6 +25,8 @@ export const pl = {
   appMergeWorkbooksDone:
     'Scalono {sheets} arkuszy z {files} plików (formuły zaimportowano jako wartości).',
   appMergeWorkbooksFailed: 'Scalanie skoroszytów nie powiodło się.',
+  appMergeWorkbooksHiddenCells:
+    'Niczego nie scalono: {file} zawiera komórki ukryte przed AI, a scalenie przeniosłoby ich wartości bez tego ukrycia. Otwórz ten plik, wyłącz ukrycie tych komórek albo je usuń, zapisz i scal ponownie.',
   appMergeWorkbooksInsertFailed: 'Nie można utworzyć arkusza {sheet}.',
   appMergeWorkbooksLocked: 'Skoroszyt wciąż się wczytuje; scalanie jest teraz niedostępne.',
   appFormulaBarShown: 'Pasek formuły widoczny.',

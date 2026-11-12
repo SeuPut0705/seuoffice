@@ -24,6 +24,8 @@ export const ru = {
   appMergeWorkbooksDone:
     'Объединено листов: {sheets} из файлов: {files} (формулы импортированы как значения).',
   appMergeWorkbooksFailed: 'Не удалось объединить книги.',
+  appMergeWorkbooksHiddenCells:
+    'Ничего не объединено: в файле {file} есть ячейки, скрытые от ИИ, и при объединении их значения попали бы сюда без этой защиты. Откройте этот файл, отмените скрытие этих ячеек или удалите их, сохраните и объедините снова.',
   appMergeWorkbooksInsertFailed: 'Не удалось создать лист {sheet}.',
   appMergeWorkbooksLocked: 'Книга ещё загружается; объединение пока недоступно.',
   appFormulaBarShown: 'Строка формул показана.',

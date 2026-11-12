@@ -25,6 +25,8 @@ export const es = {
   appMergeWorkbooksDone:
     'Se combinaron {sheets} hojas de {files} archivos (las fórmulas se importaron como valores).',
   appMergeWorkbooksFailed: 'No se pudieron combinar los libros.',
+  appMergeWorkbooksHiddenCells:
+    'No se combinó nada: {file} tiene celdas ocultas a la IA, y al combinar sus valores llegarían sin esa protección. Abra ese archivo, deje de ocultar esas celdas o elimínelas, guarde y vuelva a combinar.',
   appMergeWorkbooksInsertFailed: 'No se pudo crear la hoja {sheet}.',
   appMergeWorkbooksLocked:
     'El libro aún se está cargando; la combinación no está disponible ahora.',

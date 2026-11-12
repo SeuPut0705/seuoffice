@@ -25,6 +25,8 @@ export const pt = {
   appMergeWorkbooksDone:
     '{sheets} planilhas mescladas de {files} arquivos (fórmulas importadas como valores).',
   appMergeWorkbooksFailed: 'Falha ao mesclar as pastas de trabalho.',
+  appMergeWorkbooksHiddenCells:
+    'Nada foi mesclado: {file} tem células ocultas da IA, e a mesclagem traria os valores delas sem essa proteção. Abra esse arquivo, deixe de ocultar essas células ou exclua-as, salve e mescle novamente.',
   appMergeWorkbooksInsertFailed: 'Não foi possível criar a planilha {sheet}.',
   appMergeWorkbooksLocked:
     'A pasta de trabalho ainda está carregando; a mesclagem não está disponível agora.',

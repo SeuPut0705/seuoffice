@@ -24,6 +24,8 @@ export const ko = {
   appMergeWorkbooksReading: '{file}의 {sheet} 가져오는 중…',
   appMergeWorkbooksDone: '{files}개 파일에서 시트 {sheets}장을 병합했습니다(수식은 값으로 가져옴).',
   appMergeWorkbooksFailed: '통합 문서 병합에 실패했습니다.',
+  appMergeWorkbooksHiddenCells:
+    '병합하지 않았습니다. {file} 파일에 AI에서 숨긴 셀이 있어, 병합하면 그 값이 숨김 없이 이 통합 문서로 들어옵니다. 그 파일을 열어 숨기기를 풀거나 해당 셀을 지우고 저장한 뒤 다시 병합하세요.',
   appMergeWorkbooksInsertFailed: '시트 {sheet}을(를) 만들 수 없습니다.',
   appMergeWorkbooksLocked: '통합 문서를 아직 불러오는 중이라 지금은 병합할 수 없습니다.',
   appFormulaBarShown: '수식 입력줄을 표시했습니다.',

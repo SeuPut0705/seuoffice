@@ -24,6 +24,8 @@ export const cs = {
   appMergeWorkbooksDone:
     'Sloučeno {sheets} listů z {files} souborů (vzorce importovány jako hodnoty).',
   appMergeWorkbooksFailed: 'Sloučení sešitů se nezdařilo.',
+  appMergeWorkbooksHiddenCells:
+    'Nic nebylo sloučeno: {file} obsahuje buňky skryté před AI a sloučení by sem přeneslo jejich hodnoty bez tohoto skrytí. Otevřete ten soubor, zrušte skrytí těchto buněk nebo je odstraňte, uložte a slučte znovu.',
   appMergeWorkbooksInsertFailed: 'Nepodařilo se vytvořit list {sheet}.',
   appMergeWorkbooksLocked: 'Sešit se stále načítá; sloučení teď není k dispozici.',
   appFormulaBarShown: 'Řádek vzorců zobrazen.',

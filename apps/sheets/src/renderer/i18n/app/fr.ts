@@ -25,6 +25,8 @@ export const fr = {
   appMergeWorkbooksDone:
     '{sheets} feuilles fusionnées depuis {files} fichiers (formules importées comme valeurs).',
   appMergeWorkbooksFailed: 'Échec de la fusion des classeurs.',
+  appMergeWorkbooksHiddenCells:
+    'Rien n’a été fusionné : {file} contient des cellules masquées à l’IA, et la fusion importerait leurs valeurs sans ce masquage. Ouvrez ce fichier, démasquez ou supprimez ces cellules, enregistrez, puis fusionnez de nouveau.',
   appMergeWorkbooksInsertFailed: 'Impossible de créer la feuille {sheet}.',
   appMergeWorkbooksLocked:
     'Le classeur est encore en cours de chargement ; fusion indisponible pour le moment.',

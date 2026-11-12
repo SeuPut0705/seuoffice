@@ -24,6 +24,8 @@ export const hi = {
   appMergeWorkbooksDone:
     '{files} फ़ाइलों से {sheets} शीट मर्ज की गईं (सूत्र मानों के रूप में आयात हुए)।',
   appMergeWorkbooksFailed: 'वर्कबुक मर्ज नहीं हो सकीं।',
+  appMergeWorkbooksHiddenCells:
+    'कुछ भी मर्ज नहीं किया गया: {file} में AI से छिपाए गए सेल हैं, और मर्ज करने पर उनके मान बिना छिपाए यहाँ आ जाते। वह फ़ाइल खोलें, उन सेल को छिपाना बंद करें या उन्हें हटाएँ, सहेजें, फिर दोबारा मर्ज करें।',
   appMergeWorkbooksInsertFailed: 'शीट {sheet} नहीं बनाई जा सकी।',
   appMergeWorkbooksLocked: 'वर्कबुक अभी लोड हो रही है; मर्ज अभी उपलब्ध नहीं है।',
   appFormulaBarShown: 'सूत्र पट्टी दिखाई गई।',

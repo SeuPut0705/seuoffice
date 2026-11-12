@@ -24,6 +24,8 @@ export const vi = {
   appMergeWorkbooksDone:
     'Đã hợp nhất {sheets} trang tính từ {files} tệp (công thức được nhập dưới dạng giá trị).',
   appMergeWorkbooksFailed: 'Hợp nhất sổ làm việc thất bại.',
+  appMergeWorkbooksHiddenCells:
+    'Không hợp nhất gì cả: {file} có các ô ẩn khỏi AI, và việc hợp nhất sẽ đưa giá trị của chúng vào đây mà không còn được ẩn. Hãy mở tệp đó, bỏ ẩn hoặc xóa các ô này, lưu lại rồi hợp nhất lần nữa.',
   appMergeWorkbooksInsertFailed: 'Không thể tạo trang tính {sheet}.',
   appMergeWorkbooksLocked: 'Sổ làm việc vẫn đang được tải theo luồng; hiện chưa thể hợp nhất.',
   appFormulaBarShown: 'Đã hiển thị thanh công thức.',

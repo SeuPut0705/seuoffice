@@ -25,6 +25,8 @@ export const nl = {
   appMergeWorkbooksDone:
     '{sheets} bladen uit {files} bestanden samengevoegd (formules als waarden geïmporteerd).',
   appMergeWorkbooksFailed: 'Samenvoegen van werkmappen mislukt.',
+  appMergeWorkbooksHiddenCells:
+    'Er is niets samengevoegd: {file} bevat cellen die voor de AI verborgen zijn, en bij samenvoegen zouden hun waarden zonder die afscherming binnenkomen. Open dat bestand, maak het verbergen ongedaan of verwijder die cellen, sla op en voeg daarna opnieuw samen.',
   appMergeWorkbooksInsertFailed: 'Kan blad {sheet} niet maken.',
   appMergeWorkbooksLocked: 'De werkmap wordt nog geladen; samenvoegen is nu niet beschikbaar.',
   appFormulaBarShown: 'Formulebalk weergegeven.',

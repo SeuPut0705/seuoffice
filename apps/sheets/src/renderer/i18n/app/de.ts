@@ -25,6 +25,8 @@ export const de = {
   appMergeWorkbooksDone:
     '{sheets} Blätter aus {files} Dateien zusammengeführt (Formeln als Werte importiert).',
   appMergeWorkbooksFailed: 'Zusammenführen der Arbeitsmappen fehlgeschlagen.',
+  appMergeWorkbooksHiddenCells:
+    'Nichts wurde zusammengeführt: {file} enthält vor der KI verborgene Zellen, und beim Zusammenführen kämen ihre Werte ohne diesen Schutz herein. Öffnen Sie die Datei, heben Sie das Verbergen auf oder löschen Sie diese Zellen, speichern Sie und führen Sie dann erneut zusammen.',
   appMergeWorkbooksInsertFailed: 'Blatt {sheet} konnte nicht erstellt werden.',
   appMergeWorkbooksLocked:
     'Die Arbeitsmappe wird noch geladen; Zusammenführen ist gerade nicht möglich.',

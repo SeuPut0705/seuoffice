@@ -205,6 +205,20 @@ export async function mergeSourcesIntoCurrent(
 ): Promise<MergeSourcesResult> {
   const { runtime, setMessage } = deps
   try {
+    // A source that hides cells from AI is refused, and the whole merge with
+    // it, before anything lands: its values would arrive here as plain cells
+    // with no mark on them, readable by this workbook's AI, by file parsing
+    // and by search. Marks are not carried across workbooks. A record that
+    // cannot be read hides cells nobody can name, so it is refused the same.
+    for (const file of sources) {
+      const record = await window.desktopApi.readWorkbookRedactions({ sessionId: file.sessionId })
+      if (
+        record.status === 'unreadable' ||
+        (record.status === 'ok' && record.states.some((state) => state.marks.length > 0))
+      ) {
+        throw new Error(t('appMergeWorkbooksHiddenCells', { file: file.name }))
+      }
+    }
     const workbook = runtime.univerAPI.getActiveWorkbook()
     if (!workbook) throw new Error(t('appMergeWorkbooksFailed'))
     const commandService = runtime.univer.__getInjector().get(ICommandService)

@@ -25,6 +25,8 @@ export const ja = {
   appMergeWorkbooksDone:
     '{files} 個のファイルから {sheets} 枚のシートを結合しました（数式は値として取り込み）。',
   appMergeWorkbooksFailed: 'ブックの結合に失敗しました。',
+  appMergeWorkbooksHiddenCells:
+    '結合しませんでした。{file} にはAIから隠したセルがあり、結合するとその値が隠されないまま取り込まれます。そのファイルを開いて、該当セルをAIから隠す設定を解除するかセルを削除し、保存してからもう一度結合してください。',
   appMergeWorkbooksInsertFailed: 'シート {sheet} を作成できませんでした。',
   appMergeWorkbooksLocked: 'ブックの読み込み中のため、今は結合できません。',
   appFormulaBarShown: '数式バーを表示しました。',

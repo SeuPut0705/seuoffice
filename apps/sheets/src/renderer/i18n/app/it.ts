@@ -23,6 +23,8 @@ export const it = {
   appMergeWorkbooksReading: 'Importazione di {sheet} da {file}…',
   appMergeWorkbooksDone: 'Uniti {sheets} fogli da {files} file (formule importate come valori).',
   appMergeWorkbooksFailed: 'Unione delle cartelle di lavoro non riuscita.',
+  appMergeWorkbooksHiddenCells:
+    'Non è stato unito nulla: {file} contiene celle nascoste all’IA e l’unione ne porterebbe qui i valori senza questa protezione. Apri quel file, rendi di nuovo visibili all’IA quelle celle oppure eliminale, salva e ripeti l’unione.',
   appMergeWorkbooksInsertFailed: 'Impossibile creare il foglio {sheet}.',
   appMergeWorkbooksLocked:
     'La cartella di lavoro è ancora in caricamento; unione non disponibile al momento.',

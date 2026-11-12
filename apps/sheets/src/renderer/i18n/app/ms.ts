@@ -25,6 +25,8 @@ export const ms = {
   appMergeWorkbooksDone:
     '{sheets} helaian daripada {files} fail telah digabungkan (formula diimport sebagai nilai).',
   appMergeWorkbooksFailed: 'Gagal menggabungkan buku kerja.',
+  appMergeWorkbooksHiddenCells:
+    'Tiada apa-apa yang digabungkan: {file} mempunyai sel yang disembunyikan daripada AI, dan penggabungan akan membawa nilainya ke sini tanpa perlindungan itu. Buka fail tersebut, batalkan penyembunyian sel itu atau padamkannya, simpan, kemudian gabungkan semula.',
   appMergeWorkbooksInsertFailed: 'Tidak dapat mencipta helaian {sheet}.',
   appMergeWorkbooksLocked: 'Buku kerja masih dimuatkan; penggabungan tidak tersedia buat masa ini.',
   appFormulaBarShown: 'Bar formula dipaparkan.',
