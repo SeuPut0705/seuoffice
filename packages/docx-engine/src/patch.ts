@@ -117,7 +117,7 @@ import {
 } from './watermark'
 import { escapeXmlAttr, escapeXmlText, findChildren } from './xml-utils'
 import { commentEntries } from './comment-slices'
-import { parseEntry, runsText } from './withheld'
+import { HiddenEntrySaveError, hasWithheldTrace, parseEntry, runsText } from './withheld'
 import {
   buildContentControlXml,
   nextContentControlId,
@@ -2897,6 +2897,9 @@ function buildCommentsXml(
         // multiple paragraphs, and inline links
         const patched = patchParagraphTexts(orig.xml, c.text)
         if (patched !== null) return patched
+        // written anew, the comment would lose the mark that hides some of its
+        // words, and kept as it was, the person's edit would be lost: refuse
+        if (hasWithheldTrace(orig.xml)) throw new HiddenEntrySaveError('comment', c.id)
       }
       const attrs =
         `w:id="${escapeXmlAttr(c.id)}" w:author="${escapeXmlAttr(c.author)}"` +

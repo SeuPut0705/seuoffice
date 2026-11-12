@@ -159,3 +159,18 @@ export function withheldText(node: XNode, textOf: (node: XNode) => string): stri
   const modelText = view === null ? WITHHELD_ENTRY_TEXT : textOf(view)
   return modelText === textOf(node) ? undefined : modelText
 }
+
+/**
+ * A save refused because an edit cannot be written into a comment or note that
+ * hides words from AI: written anew from its text, the entry would lose its
+ * mark and show a model the words; kept as it was, the edit would be lost.
+ */
+export class HiddenEntrySaveError extends Error {
+  constructor(kind: 'comment' | 'footnote' | 'endnote', id: string) {
+    super(
+      `${kind} ${id} holds text hidden from AI, and this edit cannot be written into it ` +
+        '(it adds or removes a paragraph): keep its paragraphs as they were, or show the text to AI first',
+    )
+    this.name = 'HiddenEntrySaveError'
+  }
+}

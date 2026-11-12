@@ -12,7 +12,13 @@ import {
   type XNode,
 } from './xml-utils'
 import { placeholderSource } from '@seuoffice/agent-core/redact-core'
-import { parseEntry, runsText, withheldText } from './withheld'
+import {
+  HiddenEntrySaveError,
+  hasWithheldTrace,
+  parseEntry,
+  runsText,
+  withheldText,
+} from './withheld'
 
 /**
  * Footnotes / endnotes part handling (word/footnotes.xml, word/endnotes.xml).
@@ -392,7 +398,11 @@ export function buildNotesXml(
       const patched = patchParagraphTexts(orig.xml, n.text, {
         stripFirstParaLeadingSpace: true,
       })
-      return patched ?? noteEntryXml(kind, n, revAttrs)
+      if (patched !== null) return patched
+      // written anew, the note would lose the mark that hides some of its words,
+      // and kept as it was, the person's edit would be lost: refuse
+      if (hasWithheldTrace(orig.xml)) throw new HiddenEntrySaveError(kind, n.id)
+      return noteEntryXml(kind, n, revAttrs)
     })
     .join('')
   return (

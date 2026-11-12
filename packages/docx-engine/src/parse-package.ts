@@ -157,12 +157,15 @@ function commentModelText(node: XNode): string | undefined {
 /**
  * What a model reads of a marked comment once a person's edit has given it
  * `text`: the save patches the text into the comment's own XML, keeping its
- * runs and their marks (patchParagraphTexts, as buildCommentsXml does).
+ * runs and their marks (patchParagraphTexts, as buildCommentsXml does). An
+ * edit the runs cannot carry reads as the whole comment withheld.
  */
 export function editedCommentModelText(markedXml: string, text: string): string | undefined {
   const patched = patchParagraphTexts(markedXml, text)
+  // an edit the runs cannot carry cannot be saved (buildCommentsXml refuses it),
+  // and which of its words are hidden is no longer known
   const node = patched === null ? undefined : parseEntry(patched)
-  const modelText = node ? commentModelText(node) : undefined
+  const modelText = node ? commentModelText(node) : WITHHELD_ENTRY_TEXT
   return modelText === text ? undefined : modelText
 }
 
