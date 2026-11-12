@@ -70,7 +70,11 @@ export function forgetSnapshot(opened: OpenedPptx): void {
 
 /** An opened deck as the engine reads it: the deck, the archive and its save snapshot. */
 function openedArg(opened: OpenedPptx): unknown {
-  return { deck: opened.deck, archive: opened.archive, saveSnapshot: saveSnapshots.get(opened) ?? null }
+  return {
+    deck: opened.deck,
+    archive: opened.archive,
+    saveSnapshot: saveSnapshots.get(opened) ?? null,
+  }
 }
 
 function writeBack(target: unknown, kind: Changed, answer: unknown): void {
@@ -92,13 +96,17 @@ function writeBack(target: unknown, kind: Changed, answer: unknown): void {
 
 /** Where the JSON of a changed value holds what JSON cannot: the holes of its arrays, its Maps and Sets. */
 function shapeOf(kind: Changed | undefined): Shape | undefined {
-  if (kind === 'opened') return TYPE_SHAPES.SlideDeck && { k: 'obj', f: { deck: TYPE_SHAPES.SlideDeck } }
+  if (kind === 'opened')
+    return TYPE_SHAPES.SlideDeck && { k: 'obj', f: { deck: TYPE_SHAPES.SlideDeck } }
   if (kind === 'Paragraph[]') return TYPE_SHAPES.Paragraph && { k: 'arr', v: TYPE_SHAPES.Paragraph }
   return kind === undefined || kind === 'archive' || kind === 'json' ? undefined : TYPE_SHAPES[kind]
 }
 
 /** The shape of the whole answer: the value's, and each changed argument's. */
-function answerShape(options: CallOptions, mut: Readonly<Record<number, Changed>>): Shape | undefined {
+function answerShape(
+  options: CallOptions,
+  mut: Readonly<Record<number, Changed>>,
+): Shape | undefined {
   const fields: Record<string, Shape> = {}
   const result = options.shape ?? shapeOf(options.reply)
   if (result) fields.$result = result
@@ -144,7 +152,9 @@ function sameValue(a: unknown, b: unknown): boolean {
   const keysB = Object.keys(b).filter((k) => (b as Record<string, unknown>)[k] !== undefined)
   return (
     keysA.length === keysB.length &&
-    keysA.every((k) => sameValue((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]))
+    keysA.every((k) =>
+      sameValue((a as Record<string, unknown>)[k], (b as Record<string, unknown>)[k]),
+    )
   )
 }
 
@@ -166,7 +176,8 @@ export function shared<T>(input: T, answer: T): T {
     !Array.isArray(answer)
   ) {
     const out: Record<string, unknown> = {}
-    for (const [key, value] of Object.entries(answer)) out[key] = shared((input as Record<string, unknown>)[key], value)
+    for (const [key, value] of Object.entries(answer))
+      out[key] = shared((input as Record<string, unknown>)[key], value)
     return out as T
   }
   return answer

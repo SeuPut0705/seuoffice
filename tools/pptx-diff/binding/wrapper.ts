@@ -29,7 +29,12 @@ function closeOf(text: string, open: number): number {
   throw new Error(`unbalanced $call( in: ${text}`)
 }
 
-export function callOptions(info: ExportInfo, args: string[], withReply: boolean, named: boolean): string {
+export function callOptions(
+  info: ExportInfo,
+  args: string[],
+  withReply: boolean,
+  named: boolean,
+): string {
   const wire = wireParams(info.rust?.params ?? [])
   const mut: string[] = []
   const read: number[] = []
@@ -47,7 +52,9 @@ export function callOptions(info: ExportInfo, args: string[], withReply: boolean
   if (reply) options.push(`reply: '${reply}'`)
   if (read.length) options.push(`opened: ${JSON.stringify(read)}`)
   if (named || info.params.some((p) => p.codec === 'callback' || /=>/.test(p.type)))
-    options.push(`names: ${JSON.stringify(args.map((a) => (/^[A-Za-z_$][\w$]*$/.test(a) ? a : '')))}`)
+    options.push(
+      `names: ${JSON.stringify(args.map((a) => (/^[A-Za-z_$][\w$]*$/.test(a) ? a : '')))}`,
+    )
   if (withReply) {
     if (info.ret.shape) options.push(`shape: ${JSON.stringify(info.ret.shape)}`)
     if (info.ret.undef && !info.ret.null) options.push('undef: true')
@@ -76,7 +83,8 @@ function expand(body: string, info: ExportInfo, defaults: string[], named: boole
     const lineStart = body.lastIndexOf('\n', start - 1) + 1
     const rest = /^[ \t]*(?:;|\n|$)/.test(body.slice(end))
     const statement = body.slice(lineStart, start).trim() === '' && rest
-    out += body.slice(at, start) + callText(info, args, false, named) + (statement ? '' : ' as never')
+    out +=
+      body.slice(at, start) + callText(info, args, false, named) + (statement ? '' : ' as never')
     at = end
   }
   return out + body.slice(at)
@@ -107,8 +115,14 @@ function splitArgs(text: string): string[] {
   return out
 }
 
-export function pptxWrapperBody(info: ExportInfo, names: string[], override: Override | undefined): string | null {
-  const args = override?.args?.map(substituteNow) ?? names.map((n, i) => (info.params[i]?.rest ? `...${n}` : n))
+export function pptxWrapperBody(
+  info: ExportInfo,
+  names: string[],
+  override: Override | undefined,
+): string | null {
+  const args =
+    override?.args?.map(substituteNow) ??
+    names.map((n, i) => (info.params[i]?.rest ? `...${n}` : n))
   // a function argument crosses under the name of its wire argument: a row that takes one (`pass`) asks the host for it by that name
   const named = !!(override as { pass?: unknown } | undefined)?.pass
   if (override?.body) return expand(substituteNow(override.body), info, args, named)

@@ -23,7 +23,10 @@ export function nameOf(raw: string): string {
 }
 
 export function typeOf(raw: string): string {
-  return (SPLIT.exec(raw.trim())?.[2] ?? raw).replace(/'[a-z_]+\s*/g, '').replace(/\s+/g, ' ').trim()
+  return (SPLIT.exec(raw.trim())?.[2] ?? raw)
+    .replace(/'[a-z_]+\s*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
 }
 
 export function classify(raw: string): Kind {
@@ -51,7 +54,13 @@ export function wireParams(params: string[]): string[] {
 const WRITTEN_JSON = /^(?:Slide|SlideDeck|SlideElement|GroupElement|\[Paragraph\]|JsObject<[^>]+>)$/
 
 /** The model types the binding writes back by their shape (packages/pptx-engine/src/engine.ts, `ModelType`). */
-export const MODEL_TYPES = ['SlideDeck', 'Slide', 'SlideElement', 'GroupElement', 'Paragraph'] as const
+export const MODEL_TYPES = [
+  'SlideDeck',
+  'Slide',
+  'SlideElement',
+  'GroupElement',
+  'Paragraph',
+] as const
 
 /** How engine.ts writes a `&mut` JSON argument back: a model type by its TypeScript name, other JSON as `json`. */
 export function writtenAs(type: string): string {

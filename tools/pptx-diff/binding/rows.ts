@@ -7,13 +7,20 @@ import type { ExportInfo } from '../../docx-diff/binding/manifest'
 import { classify } from './kinds'
 import { overrideOf } from './overrides'
 
-const rowHead = (fn: string): string => `fn ${fn}(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {\n    `
+const rowHead = (fn: string): string =>
+  `fn ${fn}(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {\n    `
 
-export function pptxRow(e: ExportInfo, notes: string[], fn: string, tools: RowTools): { code: string } | null {
+export function pptxRow(
+  e: ExportInfo,
+  notes: string[],
+  fn: string,
+  tools: RowTools,
+): { code: string } | null {
   const { firstArgument, readParam } = tools
   const rust = e.rust!
   const override = overrideOf(e.name)
-  if (override?.rust) return { code: `${rowHead(fn)}${override.rust.replaceAll('{{path}}', rust.path)}\n}\n` }
+  if (override?.rust)
+    return { code: `${rowHead(fn)}${override.rust.replaceAll('{{path}}', rust.path)}\n}\n` }
   const lines: string[] = []
   const passed: string[] = []
   const out: string[] = []
@@ -54,7 +61,9 @@ export function pptxRow(e: ExportInfo, notes: string[], fn: string, tools: RowTo
       passed.push(c.mut ? `&mut ${p}.archive` : `&${p}.archive`)
       if (c.mut) out.push(`(${wire}, pptx::answer_archive(env, &${p}.sent, &${p}.archive))`)
     } else if (c.kind === 'json-mut') {
-      const type = c.type.startsWith('[') ? `Vec<${qualified(tools, e, c.type.slice(1, -1), notes)}>` : qualified(tools, e, c.type, notes)
+      const type = c.type.startsWith('[')
+        ? `Vec<${qualified(tools, e, c.type.slice(1, -1), notes)}>`
+        : qualified(tools, e, c.type, notes)
       lines.push(`let mut ${p}: ${type} = req(args, ${wire})?;`)
       passed.push(`&mut ${p}`)
       out.push(`(${wire}, to_json(&${p})?)`)
@@ -74,12 +83,19 @@ export function pptxRow(e: ExportInfo, notes: string[], fn: string, tools: RowTo
     wire++
   }
   if (override?.lines) lines.push(override.lines)
-  const ret = rust.ret.replace(/'[a-z_]+\s*/g, '').replace(/\s+/g, ' ').trim()
+  const ret = rust.ret
+    .replace(/'[a-z_]+\s*/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
   const isResult = /^Result</.test(ret)
   const inner = isResult ? firstArgument(ret.slice('Result<'.length, ret.lastIndexOf('>'))) : ret
   const call = `${rust.path}(${passed.join(', ')})`
   if (override?.ret) {
-    lines.push(`let r = ${call};`, ...after, override.ret.replaceAll('{{out}}', `vec![${out.join(', ')}]`))
+    lines.push(
+      `let r = ${call};`,
+      ...after,
+      override.ret.replaceAll('{{out}}', `vec![${out.join(', ')}]`),
+    )
     return { code: `${rowHead(fn)}${lines.join('\n    ')}\n}\n` }
   }
   lines.push(isResult ? `let r = ${call}.map_err(|error| error.to_string())?;` : `let r = ${call};`)
@@ -93,12 +109,15 @@ export function pptxRow(e: ExportInfo, notes: string[], fn: string, tools: RowTo
         ? 'Some(match r { Some(bytes) => env.put_blob(bytes), None => Value::Null })'
         : 'Some(to_json(&r)?)'
   if (value.includes('to_json')) lines.push('let value = to_json(&r)?;')
-  lines.push(`Ok(Some(pptx::answer(${value.includes('to_json') ? 'Some(value)' : value}, vec![${out.join(', ')}])))`)
+  lines.push(
+    `Ok(Some(pptx::answer(${value.includes('to_json') ? 'Some(value)' : value}, vec![${out.join(', ')}])))`,
+  )
   return { code: `${rowHead(fn)}${lines.join('\n    ')}\n}\n` }
 }
 
 function qualified(tools: RowTools, e: ExportInfo, type: string, notes: string[]): string {
   const named = tools.qualify(type, e.rust!.file)
-  if (named.missing) notes.push(`${e.name}: the type ${named.missing} cannot be named from pptx_table.rs`)
+  if (named.missing)
+    notes.push(`${e.name}: the type ${named.missing} cannot be named from pptx_table.rs`)
   return named.text
 }

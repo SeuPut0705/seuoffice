@@ -39,13 +39,16 @@ export type Override = PptxOverride
 export const PPTX_TS_ONLY: Readonly<Record<string, string>> = {
   savePptxToFile:
     'the engine has no file system: savePptx gives the bytes and the host writes them to the file (hand-written piece, PPTX_REPLACE)',
-  ownValue: 'a JavaScript-object helper the host code of pptx-ops calls on its own tables; Rust has its own over JsMap',
+  ownValue:
+    'a JavaScript-object helper the host code of pptx-ops calls on its own tables; Rust has its own over JsMap',
   setOwn: 'the same, writing a key of a JavaScript object',
-  xmlParser: 'answers a fast-xml-parser instance the host parses with; the engine parses inside each call',
+  xmlParser:
+    'answers a fast-xml-parser instance the host parses with; the engine parses inside each call',
   sfntCmapLookup: 'answers a function (cp) => boolean, which cannot cross; only tests call it',
 }
 
-const slideOf = (opened: string): string => `const i = $call as number | null\n  return i === null ? null : ${opened}.deck.slides[i]!`
+const slideOf = (opened: string): string =>
+  `const i = $call as number | null\n  return i === null ? null : ${opened}.deck.slides[i]!`
 const withSlide = (index: string, key: string): string =>
   `const v = $call; return v === null ? null : { slide: opened.deck.slides[${index}]!, ${key}: v }`
 
@@ -67,7 +70,9 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   setSlideBackground: { body: '$call(opened, slideIndex(opened, slide), fill)' },
   resetSlideBackground: { body: '$call(opened, slideIndex(opened, slide))' },
   setSlideBgGraphicsHidden: { body: '$call(opened, slideIndex(opened, slide), hidden)' },
-  setElementFill: { body: 'return $call(opened, slideIndex(opened, slide), elementId, fill, opts)' },
+  setElementFill: {
+    body: 'return $call(opened, slideIndex(opened, slide), elementId, fill, opts)',
+  },
   replacePictureBytes: {
     body: 'return $call(opened, slideIndex(opened, slide), sourceId, bytes, ext, opts?.keepSrcRect ?? false)',
   },
@@ -90,8 +95,12 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   resetSlideLayout: { body: slideOf('opened') },
   mergeSlideFromSource: { body: slideOf('target') },
   mergeSlideFromPptx: { body: slideOf('target') },
-  materializeSlide: { body: 'return $call(opened, slideIndex) ? opened.deck.slides[slideIndex]! : null' },
-  ungroupElement: { body: 'return $call(opened, slideIndex, sourceId) ? opened.deck.slides[slideIndex]! : null' },
+  materializeSlide: {
+    body: 'return $call(opened, slideIndex) ? opened.deck.slides[slideIndex]! : null',
+  },
+  ungroupElement: {
+    body: 'return $call(opened, slideIndex, sourceId) ? opened.deck.slides[slideIndex]! : null',
+  },
   setElementLink: {
     body: 'return $call(opened, slideIndex, elementId, target) ? opened.deck.slides[slideIndex]! : null',
   },
@@ -125,8 +134,12 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   stripStaleEmbeddedFonts: { args: ['deck.slides', 'archive'] },
 
   // ---- a slide of the opened deck, by index
-  setSlideBackgroundImage: { body: 'return $call(opened, slideIndex(opened, slide), source, tile)' },
-  setElementImageFill: { body: 'return $call(opened, slideIndex(opened, slide), elementId, source, opts)' },
+  setSlideBackgroundImage: {
+    body: 'return $call(opened, slideIndex(opened, slide), source, tile)',
+  },
+  setElementImageFill: {
+    body: 'return $call(opened, slideIndex(opened, slide), elementId, source, opts)',
+  },
   addPicture: {
     body: 'const at = slideIndex(opened, slide)\n  return $call(opened, at, opts) === null ? null : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)',
   },
@@ -140,7 +153,9 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   },
   // the TypeScript copies only what it tags: what is left as it was stays the caller's object
   tagHangulRun: { body: 'return shared(run, $call)' },
-  tagHangulParagraphs: { body: 'const tagged = $call as Paragraph[] | null\n  return tagged === null ? paragraphs : shared(paragraphs, tagged)' },
+  tagHangulParagraphs: {
+    body: 'const tagged = $call as Paragraph[] | null\n  return tagged === null ? paragraphs : shared(paragraphs, tagged)',
+  },
   calcBoundingBox: {
     rust: `let elements: Vec<pptx_engine::types::SlideElement> = req(args, 0)?;
     reply({{path}}(elements.iter()))`,
@@ -236,7 +251,9 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
 
   // ---- a parse context the row builds from the ParseContext the TypeScript passes
   parseSlide: {
-    pass: { 0: 'pptx_engine::parse::SlideParseInput { path: &path, slide_xml: &slide_xml, layout_path: layout_path.as_deref(), master_path: master_path.as_deref(), ctx: data.context(&uids) }' },
+    pass: {
+      0: 'pptx_engine::parse::SlideParseInput { path: &path, slide_xml: &slide_xml, layout_path: layout_path.as_deref(), master_path: master_path.as_deref(), ctx: data.context(&uids) }',
+    },
     lines: `let input = at(args, 0);
     let path: String = field(input, "path")?.ok_or("TypeError: input.path is missing")?;
     let slide_xml: String = field(input, "slideXml")?.ok_or("TypeError: input.slideXml is missing")?;
@@ -277,14 +294,36 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   },
 
   // ---- the placeholder tables are read the way a ParseContext reads them
-  resolvePlaceholderInsets: { pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' }, lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;' },
-  resolvePlaceholderAnchor: { pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' }, lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;' },
-  resolvePlaceholderAnchorCtr: { pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' }, lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;' },
-  resolvePlaceholderTransform: { pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' }, lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;' },
-  resolvePlaceholderPresetGeom: { pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' }, lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;' },
-  resolvePlaceholderFillSpPr: { pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' }, lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;' },
+  resolvePlaceholderInsets: {
+    pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' },
+    lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;',
+  },
+  resolvePlaceholderAnchor: {
+    pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' },
+    lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;',
+  },
+  resolvePlaceholderAnchorCtr: {
+    pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' },
+    lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;',
+  },
+  resolvePlaceholderTransform: {
+    pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' },
+    lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;',
+  },
+  resolvePlaceholderPresetGeom: {
+    pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' },
+    lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;',
+  },
+  resolvePlaceholderFillSpPr: {
+    pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()' },
+    lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;',
+  },
   placeholderStyleChain: {
-    pass: { 0: 'tables.layout_placeholders.as_ref()', 1: 'tables.master_placeholders.as_ref()', 2: 'tables.master_text_styles.as_ref()' },
+    pass: {
+      0: 'tables.layout_placeholders.as_ref()',
+      1: 'tables.master_placeholders.as_ref()',
+      2: 'tables.master_text_styles.as_ref()',
+    },
     lines: 'let tables = pptx_routes::tables(at(args, 0), at(args, 1), Some(at(args, 2)))?;',
   },
 

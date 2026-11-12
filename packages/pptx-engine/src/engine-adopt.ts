@@ -8,13 +8,19 @@ type Json = null | boolean | number | string | Json[] | { [key: string]: Json }
 type Bag = Record<string, unknown>
 
 function isBag(value: unknown): value is Bag {
-  return value !== null && typeof value === 'object' && !Array.isArray(value) && !ArrayBuffer.isView(value)
+  return (
+    value !== null &&
+    typeof value === 'object' &&
+    !Array.isArray(value) &&
+    !ArrayBuffer.isView(value)
+  )
 }
 
 /** The key an array's objects are matched by: `id` for elements, `path` for slides; null matches by index. */
 function keyOf(items: readonly unknown[]): 'id' | 'path' | null {
   for (const key of ['id', 'path'] as const) {
-    if (items.length && items.every((item) => isBag(item) && typeof item[key] === 'string')) return key
+    if (items.length && items.every((item) => isBag(item) && typeof item[key] === 'string'))
+      return key
   }
   return null
 }
@@ -50,11 +56,13 @@ function adoptArray(old: unknown[], next: Json[]): void {
  */
 export function adopt(target: object, next: Json): void {
   if (Array.isArray(target)) {
-    if (!Array.isArray(next)) throw new TypeError('the engine answered a value where a list was written back')
+    if (!Array.isArray(next))
+      throw new TypeError('the engine answered a value where a list was written back')
     adoptArray(target, next)
     return
   }
-  if (!isBag(next)) throw new TypeError('the engine answered a value where an object was written back')
+  if (!isBag(next))
+    throw new TypeError('the engine answered a value where an object was written back')
   const own = target as Bag
   for (const name of Object.keys(own)) if (!(name in next)) delete own[name]
   for (const [name, value] of Object.entries(next)) own[name] = adoptValue(own[name], value)
@@ -79,7 +87,8 @@ export function adoptArchive(archive: PackageArchive, changes: ArchiveChanges): 
     else entries.set(path, bytes)
   }
   const now = [...entries.keys()]
-  if (now.length === changes.paths.length && now.every((path, i) => path === changes.paths[i])) return
+  if (now.length === changes.paths.length && now.every((path, i) => path === changes.paths[i]))
+    return
   const kept = new Map(entries)
   entries.clear()
   for (const path of changes.paths) {
