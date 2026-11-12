@@ -88,6 +88,15 @@ describe('hwp AI panel: requests handed over', () => {
     expect(streamed).toEqual([])
   })
 
+  it('shows a request of the document check that was handed over before the panel was there', async () => {
+    // the other order: the request is the app's before the panel mounts (the dock is not
+    // mounted under the print preview)
+    root = createRoot(container)
+    await render({ text: '쪽 번호를 고쳐 주세요.', nonce: 1 })
+    expect(composer()).toBe('쪽 번호를 고쳐 주세요.')
+    expect(streamed).toEqual([])
+  })
+
   it('sends an autoRun request at once, through the usual gate', async () => {
     root = createRoot(container)
     await render(null)
