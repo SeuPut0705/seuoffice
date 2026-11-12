@@ -8,17 +8,20 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { handleSave, type SaveContext } from '../src/renderer/save-actions'
 import { createEditJournal, recordSetRangeValues } from '../src/renderer/edit-journal'
+import { buildRedactionIndex, type RedactionIndex } from '../src/renderer/ai/redact'
 
 const saveWorkbookEdits = vi.fn()
 const writeWorkbookRecovery = vi.fn()
 const confirmCsvSave = vi.fn()
+const refuseWithheldCsv = vi.fn()
 
 beforeEach(() => {
   saveWorkbookEdits.mockReset().mockResolvedValue({ canceled: true })
   writeWorkbookRecovery.mockReset().mockResolvedValue({ ok: true })
   confirmCsvSave.mockReset()
+  refuseWithheldCsv.mockReset()
   ;(globalThis as unknown as { window: unknown }).window = {
-    desktopApi: { saveWorkbookEdits, writeWorkbookRecovery, confirmCsvSave },
+    desktopApi: { saveWorkbookEdits, writeWorkbookRecovery, confirmCsvSave, refuseWithheldCsv },
   }
 })
 
@@ -26,7 +29,10 @@ beforeEach(() => {
 // test uses its own csv path to stay independent.
 let serial = 0
 
-function csvCtx(opts: { preloadComplete: boolean }): { ctx: SaveContext; messages: string[] } {
+function csvCtx(opts: { preloadComplete: boolean; redactions?: RedactionIndex }): {
+  ctx: SaveContext
+  messages: string[]
+} {
   const journal = createEditJournal()
   recordSetRangeValues(journal, 'sheet-1', { 0: { 0: { v: 'edited' } } })
   const messages: string[] = []
@@ -34,7 +40,24 @@ function csvCtx(opts: { preloadComplete: boolean }): { ctx: SaveContext; message
   return {
     messages,
     ctx: {
-      univerRef: { current: null },
+      univerRef: {
+        current: {
+          univerAPI: {
+            getActiveWorkbook: () => ({
+              getActiveSheet: () => ({
+                getSheetId: () => 'sheet-1',
+                getSheetName: () => 'Sheet1',
+                getLastRow: () => 0,
+                getLastColumn: () => 0,
+                getRange: () => ({ getDisplayValues: () => [['x']], getRawValues: () => [['x']] }),
+                getSheet: () => ({ getCellMatrix: () => ({ forValue: () => undefined }) }),
+              }),
+              getSheets: () => [{}],
+            }),
+          },
+        } as never,
+      },
+      ...(opts.redactions ? { redactions: () => opts.redactions! } : {}),
       stashViewRestore: () => {},
       lazyWorkbookRef: {
         current: {
@@ -47,6 +70,7 @@ function csvCtx(opts: { preloadComplete: boolean }): { ctx: SaveContext; message
             overlay: new Map(),
           },
           flags: { preloadComplete: opts.preloadComplete },
+          showFormulaSheets: new Set<string>(),
           file: {
             sessionId: '11111111-1111-4111-8111-111111111111',
             needsSaveAs: false,
@@ -98,5 +122,39 @@ describe('handleSave on a streamed CSV session', () => {
     await handleSave(ctx, 'save')
     await handleSave(ctx, 'save')
     expect(confirmCsvSave).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('handleSave on a CSV session whose sheet holds a cell hidden from the AI', () => {
+  const HIDDEN_A1 = buildRedactionIndex(
+    [
+      {
+        sheetName: 'Sheet1',
+        marks: [{ startRow: 0, endRow: 0, startColumn: 0, endColumn: 0, label: 'client phone' }],
+      },
+    ],
+    [{ id: 'sheet-1', name: 'Sheet1' }],
+  )
+
+  it('writes no CSV, and offers .xlsx through Save As', async () => {
+    confirmCsvSave.mockResolvedValue('csv')
+    refuseWithheldCsv.mockResolvedValue('xlsx')
+    const { ctx } = csvCtx({ preloadComplete: true, redactions: HIDDEN_A1 })
+    await handleSave(ctx, 'save')
+    expect(refuseWithheldCsv).toHaveBeenCalledTimes(1)
+    // the one write is the Save As that follows, never a CSV
+    expect(saveWorkbookEdits).toHaveBeenCalledTimes(1)
+    const payload = saveWorkbookEdits.mock.calls[0]![0] as Record<string, unknown>
+    expect(payload.mode).toBe('save-as')
+    expect(payload.csvContent).toBeUndefined()
+  })
+
+  it('writes nothing when the person cancels', async () => {
+    confirmCsvSave.mockResolvedValue('csv')
+    refuseWithheldCsv.mockResolvedValue('cancel')
+    const { ctx, messages } = csvCtx({ preloadComplete: true, redactions: HIDDEN_A1 })
+    await handleSave(ctx, 'save')
+    expect(saveWorkbookEdits).not.toHaveBeenCalled()
+    expect(messages).toHaveLength(1)
   })
 })
