@@ -23,7 +23,7 @@
  * edits and go when it is rewritten, as they always did.
  */
 import { Extension, Mark } from '@tiptap/core'
-import { Slice, type Node as PmNode, type ResolvedPos } from '@tiptap/pm/model'
+import { Slice, type Mark as PmMark, type Node as PmNode, type ResolvedPos } from '@tiptap/pm/model'
 import {
   Plugin,
   PluginKey,
@@ -271,22 +271,37 @@ function endTakesText(wrap: InlineWrap): boolean {
 }
 
 /**
- * The wrappers content put in over [$from, $to) takes from its neighbour and
+ * The wrappers text put in at a caret at `$pos` takes from its neighbour and
  * must not sit in. At a wrapper's end the chain is kept from the outside in as
  * long as each wrapper the text behind does not also sit in takes text
  * (`endTakesText`): a w:dir inside a control drops off, a control inside a
- * w:dir goes with it. At the start of a paragraph (an empty range only) the
- * text after is the only neighbour, and a start belongs to no wrapper.
+ * w:dir goes with it. At the start of a paragraph the text after is the only
+ * neighbour, and a start belongs to no wrapper.
  */
-function wrapsLeftOutside($from: ResolvedPos, $to: ResolvedPos = $from): InlineWrap[] {
-  if (!$from.parent.inlineContent) return NO_WRAPS
-  const before = $from.nodeBefore
-  const after = $from.sameParent($to) ? $to.nodeAfter : null
-  if (!before) return after && $from.pos === $to.pos ? wrapsOf(after) : NO_WRAPS
+function wrapsLeftOutside($pos: ResolvedPos): InlineWrap[] {
+  if (!$pos.parent.inlineContent) return NO_WRAPS
+  const before = $pos.nodeBefore
+  const after = $pos.nodeAfter
+  if (!before) return after ? wrapsOf(after) : NO_WRAPS
   const chain = wrapsOf(before)
   let kept = after ? sharedInlineWraps(chain, wrapsOf(after)).length : 0
   while (kept < chain.length && endTakesText(chain[kept]!)) kept++
   return chain.slice(kept)
+}
+
+/**
+ * The wrappers text typed over [$from, $to) takes and must not sit in. The
+ * editor gives typed text the wrappers of the first text it replaces (the mark
+ * is inclusive); one whose end takes no text stays only if the text after the
+ * selection sits in it, as before the mark was inclusive: a word typed over all
+ * of a smart tag's text replaces the tag, and text typed over its last letters
+ * lands behind it whole.
+ */
+function wrapsTypedOverLeftOutside($from: ResolvedPos, $to: ResolvedPos): InlineWrap[] {
+  const first = $from.nodeAfter
+  if (!$from.parent.inlineContent || !first) return NO_WRAPS
+  const after = $to.parent.inlineContent ? $to.nodeAfter : null
+  return wrapsOf(first).filter((wrap) => !endTakesText(wrap) && !(after && sitsIn(after, wrap)))
 }
 
 /** What one step put into the document, as a range of the document the edits end in */
@@ -342,9 +357,10 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
         const cut = inside
           ? sharedInlineWraps(wrapsOf($from.nodeBefore!), wrapsOf($to.nodeAfter!))
           : NO_WRAPS
-        // typed or pasted, at a point or over a range of one paragraph
-        const outside =
-          oldFrom === oldTo || $from.sameParent($to) ? wrapsLeftOutside($from, $to) : NO_WRAPS
+        // typed or pasted at a caret; text typed over a selection got its marks
+        // as it was typed (`typedOverMarks`), and Replace, the AI and the
+        // clipboard bring their own
+        const outside = oldFrom === oldTo ? wrapsLeftOutside($from) : NO_WRAPS
         if (cut.length === 0 && outside.length === 0 && !pasted) return
         const rest = tr.mapping.slice(i + 1)
         arrivals.push({
@@ -434,6 +450,27 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
 }
 
 /**
+ * The marks text typed over [from, to) gets when a wrapper it would take must
+ * stay behind (`wrapsTypedOverLeftOutside`); null when the editor's own marks
+ * are right. Only typed text goes through here: a replacement made with its
+ * own marks (Replace, the AI, the clipboard) keeps them.
+ */
+function typedOverMarks(state: EditorState, from: number, to: number): readonly PmMark[] | null {
+  const $from = state.doc.resolve(from)
+  const $to = state.doc.resolve(to)
+  const outside = wrapsTypedOverLeftOutside($from, $to)
+  if (outside.length === 0) return null
+  const marks = $from.marksAcross($to) ?? []
+  const mark = marks.find((m) => m.type.name === INLINE_WRAP_MARK)
+  if (!mark) return null
+  const chain = inlineWrapsWithout(inlineWrapChainOf(mark.attrs.chain), outside)
+  const rest = mark.removeFromSet(marks)
+  return chain.length > 0
+    ? mark.type.create({ chain: inlineWrapChainAttr(chain) }).addToSet(rest)
+    : rest
+}
+
+/**
  * Before a composition starts at a caret whose text must land outside a
  * wrapper (`wrapsLeftOutside`): stores the caret's marks without it.
  */
@@ -519,8 +556,17 @@ export const InlineWrapGuardExtension = Extension.create({
           // and the next text typed landed there as a real edit. The caret
           // goes where the text was typed instead (a selection typed over
           // stays selected), and nothing is inserted.
-          handleTextInput: (view, from, to, _text) => {
-            if (!lockedControlRefuses(view.state.doc, from, to, true)) return false
+          handleTextInput: (view, from, to, text) => {
+            if (!lockedControlRefuses(view.state.doc, from, to, true)) {
+              // typed over a selection: the text gets the marks it had before
+              // the mark was inclusive (`typedOverMarks`)
+              const marks = from === to ? null : typedOverMarks(view.state, from, to)
+              if (!marks) return false
+              view.dispatch(
+                view.state.tr.setStoredMarks(marks).insertText(text, from, to).scrollIntoView(),
+              )
+              return true
+            }
             recordOdtRefusal('lockedControl')
             notifyOdt('appOdtLockedObject')
             // over a selection the selection stays, as the text did not replace it

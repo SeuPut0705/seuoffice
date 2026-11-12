@@ -267,6 +267,80 @@ describe('the end of a wrapper that is not a plain content control', () => {
     expect(xml.split('<w:smartTag').length - 1).toBe(1)
   })
 
+  it.each([
+    ['w:smartTag', SMART, '</w:smartTag>'],
+    ['w:customXml', CUSTOM, '</w:customXml>'],
+    ['w:dir', DIR, '</w:dir>'],
+    ['w:bdo', BDO, '</w:bdo>'],
+  ])(
+    '%s: text typed over its last letters is one piece behind it, as before',
+    async (_name, open, close) => {
+      const { editor, parsed } = await load(tagged(open, close) + OTHER)
+      const from = posOf(editor, 'Seoul') + 3
+      editor.commands.setTextSelection({ from, to: from + 2 })
+      type(editor, 'ZZ')
+      const xml = await saved(editor, parsed)
+      // the typed text is never split between the wrapper and what follows it
+      expect(skeleton(xml)).toContain(`${open}[Seo]${close}[ZZ end]`)
+      expect(xml.split(open).length - 1).toBe(1)
+    },
+  )
+
+  it.each([
+    ['w:smartTag', SMART, '</w:smartTag>'],
+    ['w:customXml', CUSTOM, '</w:customXml>'],
+    ['w:dir', DIR, '</w:dir>'],
+    ['w:bdo', BDO, '</w:bdo>'],
+  ])('%s: text pasted over its last letters stays inside it', async (_name, open, close) => {
+    const { editor, parsed } = await load(tagged(open, close) + OTHER)
+    const from = posOf(editor, 'Seoul') + 3
+    editor.commands.setTextSelection({ from, to: from + 2 })
+    editor.view.pasteText('ZZ')
+    const xml = await saved(editor, parsed)
+    expect(skeleton(xml)).toContain(`${open}[SeoZZ]${close}[ end]`)
+    expect(xml.split(open).length - 1).toBe(1)
+  })
+
+  it.each([
+    ['w:smartTag', SMART, '</w:smartTag>'],
+    ['w:customXml', CUSTOM, '</w:customXml>'],
+    ['w:dir', DIR, '</w:dir>'],
+    ['w:bdo', BDO, '</w:bdo>'],
+    ['a control showing its placeholder', PLACEHOLDER, CLOSE],
+    [
+      'a plain-text control showing its placeholder',
+      '<w:sdt><w:sdtPr><w:tag w:val="name"/><w:id w:val="89"/><w:showingPlcHdr/><w:text/></w:sdtPr><w:sdtContent>',
+      CLOSE,
+    ],
+  ])(
+    '%s: a word typed over all of its text is one word, the wrapper replaced',
+    async (_name, open, close) => {
+      const { editor, parsed } = await load(tagged(open, close) + OTHER)
+      const from = posOf(editor, 'Seoul')
+      editor.commands.setTextSelection({ from, to: from + 5 })
+      type(editor, 'Kim')
+      const xml = await saved(editor, parsed)
+      const paragraph = xml.slice(0, xml.indexOf('Untouched paragraph'))
+      expect([...paragraph.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join('')).toBe(
+        'Name: Kim end',
+      )
+      // as before the mark was inclusive: the word replaced the wrapper, no piece of it kept one
+      expect(paragraph).not.toMatch(/<w:(?:sdt|smartTag|customXml|dir|bdo)\b/)
+    },
+  )
+
+  it('w:smartTag: a word typed over a selection from its start into the next paragraph is one word', async () => {
+    const { editor, parsed } = await load(tagged(SMART, '</w:smartTag>') + OTHER)
+    const from = posOf(editor, 'Seoul')
+    editor.commands.setTextSelection({ from, to: posOf(editor, 'paragraph') })
+    type(editor, 'Kim')
+    const xml = await saved(editor, parsed)
+    expect(xml).not.toContain('<w:smartTag')
+    expect([...xml.matchAll(/<w:t[^>]*>([^<]*)<\/w:t>/g)].map((m) => m[1]).join('')).toBe(
+      'Name: Kimparagraph',
+    )
+  })
+
   it('a control inside a w:dir: text typed at their end lands behind both', async () => {
     const { editor, parsed } = await load(
       para(run('Name: ') + DIR + OPEN + run('Seoul') + CLOSE + '</w:dir>' + run(' end')) + OTHER,
