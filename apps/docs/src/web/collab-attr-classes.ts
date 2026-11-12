@@ -206,7 +206,9 @@ const CONTENT = struct<TableModel | TextboxDisplay | Run>()({
   rawTcPr: 'kept',
   rawTrPrs: 'kept',
   rawTblPrExs: 'kept',
-  ...tokens('paras', 'fill', 'styleColor', 'style', 'tblStyleId'),
+  // a cell's paragraphs as plain text: drawn as text nodes, like a run's `text`
+  paras: 'text',
+  ...tokens('fill', 'styleColor', 'style', 'tblStyleId'),
   // a text box
   fillImageDataUrl: 'picture',
   ...tokens(

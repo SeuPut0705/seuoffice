@@ -1,5 +1,7 @@
+import type { Json } from '@seuoffice/collab/client'
 import type { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
+import { Transform } from '@tiptap/pm/transform'
 import { afterEach, describe, expect, it } from 'vitest'
 import { carry, collabPage, openedBody, type CollabPage } from './helpers/collab-page'
 
@@ -113,5 +115,90 @@ describe('text whose formatting change is tracked', () => {
     expect(alice.sent).toEqual([{ kind: 'side', key: 'header', value: header }])
     carry(alice.sent.splice(0), alice, bob)
     expect(bob.entries().get('header')).toEqual(header)
+  })
+})
+
+describe('a vertically merged table whose hidden cell holds text', () => {
+  // the merged-away cell of row 2 keeps its own words: a quote, a semicolon and a line break
+  const MERGED_TABLE =
+    '<w:tbl><w:tblPr><w:tblW w:w="4000" w:type="dxa"/></w:tblPr>' +
+    '<w:tblGrid><w:gridCol w:w="2000"/><w:gridCol w:w="2000"/></w:tblGrid>' +
+    '<w:tr><w:tc><w:tcPr><w:vMerge w:val="restart"/></w:tcPr><w:p><w:r><w:t>Name</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:p><w:r><w:t>B1</w:t></w:r></w:p></w:tc></w:tr>' +
+    '<w:tr><w:tc><w:tcPr><w:vMerge/></w:tcPr>' +
+    '<w:p><w:r><w:t xml:space="preserve">it\'s here; </w:t><w:br/><w:t>next line</w:t></w:r></w:p></w:tc>' +
+    '<w:tc><w:p><w:r><w:t>B2</w:t></w:r></w:p></w:tc></w:tr>' +
+    '</w:tbl><w:p><w:r><w:t>after</w:t></w:r></w:p>'
+
+  it('can be pasted and have its properties changed, and the peer gets both', async () => {
+    const [alice, bob] = await pages(MERGED_TABLE)
+    const table = first(alice.editor, 'docTable')
+    // the hidden cell's words ride on the table for the save
+    const hidden = String(table.node.attrs.continuationCells)
+    expect(hidden).toContain("it's here; ")
+    expect(hidden).toContain('\\n')
+
+    // a copy of the table pasted after it
+    alice.editor.view.dispatch(
+      alice.editor.state.tr.insert(table.pos + table.node.nodeSize, table.node),
+    )
+    expect(alice.refused).toEqual([])
+    expect(alice.sent).toHaveLength(1)
+    agree(alice, bob)
+
+    // Table Properties: centre the table
+    alice.editor.view.dispatch(
+      alice.editor.state.tr.setNodeMarkup(table.pos, undefined, {
+        ...table.node.attrs,
+        tblAlign: 'center',
+      }),
+    )
+    expect(alice.refused).toEqual([])
+    expect(alice.sent).toHaveLength(1)
+    agree(alice, bob)
+    expect(first(bob.editor, 'docTable').node.attrs.tblAlign).toBe('center')
+  })
+})
+
+describe('a table inside a table cell whose text holds a quote and a semicolon', () => {
+  const NESTED_TABLE = nestedTable(
+    '<w:p><w:r><w:t xml:space="preserve">O\'Brien; "Q3" &lt;draft&gt;</w:t></w:r></w:p>',
+  )
+
+  it('can be pasted with its outer table, and the peer gets it', async () => {
+    const [alice, bob] = await pages(NESTED_TABLE)
+    const nested = first(alice.editor, 'docNestedTable')
+    expect(JSON.stringify(nested.node.attrs.model)).toContain("O'Brien; ")
+
+    pasteBody(alice)
+    expect(alice.refused).toEqual([])
+    expect(alice.sent).toHaveLength(1)
+    agree(alice, bob)
+    // the receiver draws the inner cell's words as the sender does
+    expect(bob.editor.view.dom.textContent).toContain('O\'Brien; "Q3" <draft>')
+    expect(bob.editor.view.dom.querySelector('draft')).toBeNull()
+  })
+
+  it('shows markup a peer puts in a cell’s text as the letters it is made of', async () => {
+    const [alice, bob] = await pages(NESTED_TABLE)
+    const nested = first(alice.editor, 'docNestedTable')
+    const markup = '<img src="x" onerror="alert(1)"><style>body{display:none}</style>'
+    // a forged step: the cell holds only plain paragraph texts, one of them markup
+    const model = JSON.parse(JSON.stringify(nested.node.attrs.model)) as {
+      rows: { paras: string[]; richParas?: unknown }[][]
+    }
+    model.rows[0][0] = { paras: [markup] }
+    const forged = new Transform(alice.editor.state.doc).setNodeAttribute(
+      nested.pos,
+      'model',
+      model,
+    ).steps[0]
+    bob.adapter.integrate(
+      [bob.adapter.decode({ kind: 'steps', steps: [forged.toJSON() as Json] })],
+      [],
+    )
+    const dom = bob.editor.view.dom
+    expect(dom.textContent).toContain(markup)
+    expect(dom.querySelector('img, style')).toBeNull()
   })
 })

@@ -139,6 +139,8 @@ const LOOSENED: { at: string[]; leaf?: string }[] = [
   // the previous run properties of a tracked format change, as XML: only the save reads them
   { at: ['rprChange.oldRPr'] },
   { at: CONTENT, leaf: 'oldRPr' },
+  // a cell's paragraph texts (a nested table's cells, a table's merged-away cells)
+  { at: CONTENT, leaf: 'paras' },
 ]
 
 const loosened = (type: string, attr: string, leaf: string): boolean =>
