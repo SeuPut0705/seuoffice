@@ -11,15 +11,29 @@
 // an unstarted engine says so ("call initEngine or initEngineSync first"). A
 // SEUOFFICE_WASM that names no file is an error.
 import { existsSync, readFileSync } from 'node:fs'
+import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { engineReady, initEngineSync } from './index'
+
+/**
+ * The file the URL of this module names. Under vitest's jsdom environment a
+ * module outside the project root has a `/@fs/<absolute path>` URL, not a
+ * file URL. The build output is joined to it as a path: vite rewrites a
+ * `new URL('<literal>', import.meta.url)` into a URL of its dev server.
+ */
+function pathOf(url: URL): string {
+  if (url.protocol === 'file:') return fileURLToPath(url)
+  const path = decodeURIComponent(url.pathname.replace(/^\/@fs/, ''))
+  return /^\/[A-Za-z]:/.test(path) ? path.slice(1) : path
+}
 
 if (!engineReady()) {
   const named = process.env.SEUOFFICE_WASM
   const path =
     named ??
-    fileURLToPath(
-      new URL('../../../crates/target/wasm32-wasip1/release/office_wasm.wasm', import.meta.url),
+    join(
+      dirname(pathOf(new URL(import.meta.url))),
+      '../../../crates/target/wasm32-wasip1/release/office_wasm.wasm',
     )
   if (named !== undefined || existsSync(path)) initEngineSync(readFileSync(path))
 }

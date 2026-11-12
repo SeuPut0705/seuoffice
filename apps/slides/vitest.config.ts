@@ -1,10 +1,17 @@
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { defineConfig } from 'vitest/config'
+import {
+  ENGINE_NODE_SETUP,
+  engineWasmAsset,
+  engineWasmEnv,
+} from '../../packages/engine-wasm/src/vitest'
 
 const here = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
+  // the engine behind @seuoffice/docx-engine: the mains start it from a ?asset path
+  plugins: [engineWasmAsset()],
   // Pin resolution to this repo's workspace sources (matches tsconfig paths)
   resolve: {
     alias: {
@@ -62,7 +69,8 @@ export default defineConfig({
     include: ['tests/**/*.test.ts'],
     environment: 'jsdom',
     // jsdom resolves packages without the `node` condition: the engine behind @seuoffice/docx-engine starts here
-    setupFiles: ['../../packages/engine-wasm/src/node.ts'],
+    env: engineWasmEnv(),
+    setupFiles: [ENGINE_NODE_SETUP],
     testTimeout: 20000,
   },
 })
