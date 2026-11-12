@@ -5,12 +5,15 @@
 /// narration recording asks for it), a document a tab shows could open it too,
 /// and the camera, the location and the rest, without a prompt. The guard
 /// answers for the default session and for every session created after it:
-/// no, unless the asking frame is the top frame of one of the app's own pages
-/// and the permission is one those pages use.
+/// no, unless the asking frame is one of the app's own pages (its top frame, or
+/// a frame of that same page such as the one the HWP editor runs in) and the
+/// permission is one those pages use. A document shown inside a page never
+/// qualifies, and the microphone, the camera and the screen stay with the top
+/// frame.
 ///
 /// A session that grants something else (the diagram tab's partition) sets its
 /// own handlers once it has the session; that replaces these for it alone.
-import type { App, Session, WebContents } from 'electron'
+import type { App, Session } from 'electron'
 import { resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { RENDERER_SCHEME } from './renderer-scheme'
@@ -36,8 +39,28 @@ export interface PermissionAsk {
   /** the last address the asking frame loaded */
   url: string | undefined
   isMainFrame: boolean
+  /**
+   * A frame inside a page only: whether it is that page's own, as `isOwnFrame`
+   * finds. Left out, the frame is taken for a document.
+   */
+  ownFrame?: boolean | undefined
   /** `media` only: the devices asked for; none is a screen capture */
   media?: readonly string[] | undefined
+}
+
+/** The part of a frame the guard reads (Electron's WebFrameMain). */
+interface AskingFrame {
+  readonly url: string
+  /** "null" for a sandboxed frame, whatever it loaded */
+  readonly origin: string
+  readonly parent: AskingFrame | null
+}
+
+/** The part of a webContents the guard reads. */
+export interface AskingContents {
+  readonly id: number
+  readonly mainFrame?:
+    (AskingFrame & { readonly framesInSubtree: readonly AskingFrame[] }) | undefined
 }
 
 /** The renderer host that records: its editor is the only page given `media`. */
@@ -56,11 +79,12 @@ const RENDERER_HOSTS: Readonly<Record<string, true | undefined>> = {
   help: true,
 }
 
-/** What the top frame of any of the app's own pages may use. */
+/** What any of the app's own pages may use, in its top frame and in a frame of its own. */
 const APP_PAGE_PERMISSIONS: Readonly<Record<string, true | undefined>> = {
-  // navigator.clipboard.read/readText: Paste in the Word and the sheet editor
+  // navigator.clipboard.read/readText: Paste in the Word, the sheet and the HWP editor
   'clipboard-read': true,
-  // navigator.clipboard.writeText: the copy buttons of every editor and of the shell
+  // navigator.clipboard.write/writeText: the copy buttons of every editor and of the shell,
+  // and the HWP editor's own copy
   'clipboard-sanitized-write': true,
   // requestFullscreen: the slide show and the editors' presentation views
   fullscreen: true,
@@ -113,13 +137,53 @@ export function appPageOf(pages: AppPages, address: string | undefined): string 
   return null
 }
 
+/**
+ * Whether the frame of `contents` that loaded `url` is the page's own: the top
+ * frame is one of the app's pages, the frame loaded an address of that same
+ * page, and it and every frame above it share the top frame's origin. A
+ * document is shown in a sandboxed frame, which has an origin of its own even
+ * after sending itself to an address of the app, so it never passes; neither
+ * does anything such a frame holds.
+ */
+function isOwnFrame(
+  pages: AppPages,
+  contents: AskingContents | null,
+  url: string | undefined,
+): boolean {
+  if (!contents || !url) return false
+  try {
+    const top = contents.mainFrame
+    if (!top) return false
+    const page = appPageOf(pages, top.url)
+    if (page === null || appPageOf(pages, url) !== page) return false
+    // Electron names the asking frame by its address alone: every frame at it has to qualify
+    const asking = top.framesInSubtree.filter((frame) => frame !== top && frame.url === url)
+    return (
+      asking.length > 0 &&
+      asking.every((frame) => {
+        for (let at: AskingFrame | null = frame; at !== null; at = at.parent) {
+          if (at.origin === 'null' || at.origin !== top.origin) return false
+        }
+        return true
+      })
+    )
+  } catch {
+    // Electron throws on a frame torn down while its question is in flight: nothing to grant
+    return false
+  }
+}
+
 export function permissionAllowed(policy: PermissionPolicy, ask: PermissionAsk): boolean {
-  // A frame inside a page is a document (the HTML preview, a book chapter), whatever it loaded
-  if (!ask.isMainFrame || ask.webContentsId === undefined) return false
+  if (ask.webContentsId === undefined) return false
+  // A frame inside a page is a document (the HTML preview, a book chapter) unless it is the
+  // page's own
+  if (!ask.isMainFrame && ask.ownFrame !== true) return false
   const page = appPageOf(policy.pages, ask.url)
   if (page === null) return false
   if (APP_PAGE_PERMISSIONS[ask.permission] === true) return true
-  if (ask.permission !== 'media' || page !== SLIDES_PAGE || !ask.media) return false
+  if (!ask.isMainFrame || ask.permission !== 'media' || page !== SLIDES_PAGE || !ask.media) {
+    return false
+  }
   // Insert > Screen Recording (getDisplayMedia): Electron asks for `media` with no
   // device, then leaves the choice of screen to the session's display-media handler
   if (ask.media.length === 0) return true
@@ -141,7 +205,7 @@ interface CheckDetails {
 /** The session's answer to a page asking for a permission. */
 export function permissionRequestHandler(policy: PermissionPolicy) {
   return (
-    contents: Pick<WebContents, 'id'> | null,
+    contents: AskingContents | null,
     permission: string,
     callback: (granted: boolean) => void,
     details: RequestDetails,
@@ -152,6 +216,7 @@ export function permissionRequestHandler(policy: PermissionPolicy) {
         webContentsId: contents?.id,
         url: details.requestingUrl,
         isMainFrame: details.isMainFrame,
+        ownFrame: !details.isMainFrame && isOwnFrame(policy.pages, contents, details.requestingUrl),
         media: permission === 'media' ? details.mediaTypes : undefined,
       }),
     )
@@ -161,7 +226,7 @@ export function permissionRequestHandler(policy: PermissionPolicy) {
 /** The session's answer to a page asking whether it holds a permission: the same as to a request. */
 export function permissionCheckHandler(policy: PermissionPolicy) {
   return (
-    contents: Pick<WebContents, 'id'> | null,
+    contents: AskingContents | null,
     permission: string,
     _requestingOrigin: string,
     details: CheckDetails,
@@ -172,6 +237,7 @@ export function permissionCheckHandler(policy: PermissionPolicy) {
       webContentsId: contents?.id,
       url: details.requestingUrl,
       isMainFrame: details.isMainFrame,
+      ownFrame: !details.isMainFrame && isOwnFrame(policy.pages, contents, details.requestingUrl),
       // a check names one device; one that names none is not the microphone
       media: device === 'audio' || device === 'video' ? [device] : undefined,
     })

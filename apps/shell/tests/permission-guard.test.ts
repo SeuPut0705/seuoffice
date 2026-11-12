@@ -248,4 +248,29 @@ describe('the app’s own pages in the default session', () => {
     expect(request(ses, { id: 1 }, 'clipboard-sanitized-write', mainFrame(home))).toBe(true)
     expect(request(ses, { id: 1 }, 'clipboard-sanitized-write', mainFrame(elsewhere))).toBe(false)
   })
+
+  it('lets the HWP editor, which runs in a frame of its own page, copy and list the fonts', () => {
+    const ses = sessionOf('')
+    const studio = 'genoffice-app://hwp/studio/index.html?chrome=embed&lang=ko'
+    const frames = (origin: string): { id: number; mainFrame: unknown } => {
+      const top = {
+        url: 'genoffice-app://hwp/index.html',
+        origin: 'genoffice-app://hwp',
+        parent: null,
+        framesInSubtree: [] as unknown[],
+      }
+      top.framesInSubtree = [top, { url: studio, origin, parent: top }]
+      return { id: 14, mainFrame: top }
+    }
+    const inFrame = { isMainFrame: false, requestingUrl: studio }
+    const hwp = frames('genoffice-app://hwp')
+    expect(request(ses, hwp, 'clipboard-sanitized-write', inFrame)).toBe(true)
+    expect(request(ses, hwp, 'clipboard-read', inFrame)).toBe(true)
+    expect(check(ses, hwp, 'local-fonts', inFrame)).toBe(true)
+    expect(request(ses, hwp, 'media', { ...inFrame, mediaTypes: ['audio'] })).toBe(false)
+    // the same address in a sandboxed frame is a document
+    const boxed = frames('null')
+    expect(request(ses, boxed, 'clipboard-sanitized-write', inFrame)).toBe(false)
+    expect(check(ses, boxed, 'local-fonts', inFrame)).toBe(false)
+  })
 })
