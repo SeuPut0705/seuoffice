@@ -202,6 +202,10 @@ pub fn format_serial(serial: f64, parts: &DateFormatParts, date_1904: bool) -> O
         if !date_1904 && days == 0. {
             return None;
         }
+        // 9999-12-31 is the last day the calendar represents
+        if days > 2958465. {
+            return None;
+        }
         let epoch = if date_1904 {
             -2082844800000.
         } else {
@@ -209,15 +213,16 @@ pub fn format_serial(serial: f64, parts: &DateFormatParts, date_1904: bool) -> O
         };
         let shift = if !date_1904 && days < 60. { 1. } else { 0. };
         let time = epoch + (days + shift) * 86400000.;
-        let utc = if time.abs() <= 8.64e15 {
-            UtcDate::from_time_value(time)
-        } else {
-            None
-        };
-        let (year, month, day) = utc.map_or((f64::NAN, f64::NAN, f64::NAN), |d| {
-            (d.year as f64, d.month as f64, d.day as f64)
-        });
-        format!("{}-{}-{}", pad(year, 4), pad(month, 2), pad(day, 2))
+        // `Number.isNaN(d.getTime())`
+        let utc = (time.abs() <= 8.64e15)
+            .then(|| UtcDate::from_time_value(time))
+            .flatten()?;
+        format!(
+            "{}-{}-{}",
+            pad(utc.year as f64, 4),
+            pad(utc.month as f64, 2),
+            pad(utc.day as f64, 2)
+        )
     };
     Some(if time_text.is_empty() {
         date_text

@@ -171,6 +171,12 @@ fn main_document_path(package: &Package) -> Result<Option<String>, String> {
         else {
             continue;
         };
+        // OPC targets are percent-encoded; the zip entry name is the decoded path.
+        let resolved = resolve_target("", target);
+        if !resolved.is_empty() && package.has(&resolved) {
+            return Ok(Some(resolved));
+        }
+        // resolveTarget rejects malformed escapes (a literal `%`); keep the raw lookup for those.
         let path = target.strip_prefix('/').unwrap_or(target);
         if package.has(path) {
             return Ok(Some(path.to_owned()));
@@ -311,13 +317,15 @@ struct Table {
 }
 
 /// subtrees whose text is not part of the readable document
-const SKIP_SUBTREES: [&str; 14] = [
+const SKIP_SUBTREES: [&str; 15] = [
     "mc:Fallback",
     "w:del",
     "w:moveFrom",
     "w:instrText",
     "w:delInstrText",
     "w:delText",
+    // ruby guide text (furigana, pinyin); the base text is read, as parseDocx does
+    "w:rt",
     "w:rPrChange",
     "w:pPrChange",
     "w:tabs",
