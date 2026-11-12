@@ -34,7 +34,8 @@ vi.mock('@univerjs/preset-sheets-core', () => ({
 // language the install asks for, which the UI no longer has.
 
 const DATE = 45651 // 2024-12-25, a Wednesday
-const FORMAT = 'mmmm d, yyyy (dddd)'
+// short enough for a category tick, which keeps at most 16 characters
+const FORMAT = 'mmm d (ddd)'
 
 // what the app makes of the engine's answer when it opens a workbook (sheets-main.ts)
 const opened = workbookFileSchema.omit({ sha256: true, readOnly: true })
