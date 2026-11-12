@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { Ribbon } from '../src/renderer/components/Ribbon'
+import { t } from '../src/renderer/i18n/locale'
 
 beforeEach(() => vi.stubGlobal('IS_REACT_ACT_ENVIRONMENT', true))
 const cleanups: Array<() => void> = []
@@ -48,7 +49,7 @@ function renderRibbon(disabled = false) {
 
 function saveAsButton(container: HTMLElement): HTMLButtonElement {
   const button = container.querySelector<HTMLButtonElement>(
-    '.ribbon-tabs button[aria-label="\u53e6\u5b58\u4e3a\u2026"]',
+    `.ribbon-tabs button[aria-label="${t('saveAs')}"]`,
   )
   expect(button, 'Save As must be available in the top-left quick-access row').not.toBeNull()
   return button!
@@ -58,7 +59,7 @@ describe('Save As quick-access button', () => {
   it('can save a copy of an unchanged document without triggering normal save', () => {
     const { container, onSave, onSaveAs } = renderRibbon()
     const button = saveAsButton(container)
-    expect(button.textContent).toBe('\u53e6\u5b58\u4e3a\u2026')
+    expect(button.textContent).toBe(t('saveAs'))
     expect(button.disabled).toBe(false)
     act(() => button.click())
     expect(onSaveAs).toHaveBeenCalledOnce()
