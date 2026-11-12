@@ -12,6 +12,8 @@ export const zh = {
   redactEnable: '选中文字后右键，即可对 AI 隐藏。',
   redactNeedsSavedRow: '这一行还没存进文件。请先存盘，再隐藏其中的单元格。',
   redactNeedsSavedSheet: '这张工作表或它的副本还没存进文件。请先存盘，再更改隐藏的内容。',
+  redactMoveRefused:
+    '未执行：这会移动或复制对 AI 隐藏的单元格，其中的值将不再被隐藏。请先取消隐藏，或把这些单元格排除在范围之外。',
   redactRecoveredFromNames:
     '这个文件被别的软件改写过，隐藏记录的部件被丢掉了。已从工作簿里的名称把隐藏单元格找回来；存一次盘就能恢复完整记录。',
 

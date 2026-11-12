@@ -15,6 +15,8 @@ export const nl = {
     'Deze rij staat nog niet in het bestand. Sla eerst op en verberg daarna de cel.',
   redactNeedsSavedSheet:
     'Dit blad of een kopie ervan staat nog niet in het bestand. Sla eerst op en wijzig daarna wat verborgen is.',
+  redactMoveRefused:
+    'Niet uitgevoerd: hierdoor zouden cellen die voor AI verborgen zijn worden verplaatst of gekopieerd, en hun waarden zouden niet meer verborgen zijn. Maak het verbergen eerst ongedaan of laat de cellen buiten het bereik.',
   redactRecoveredFromNames:
     'Een andere app heeft dit bestand herschreven en het overzicht van wat verborgen is weggegooid. De verborgen cellen zijn teruggevonden in de namen van de werkmap; bij opslaan wordt het volledige overzicht teruggeschreven.',
 

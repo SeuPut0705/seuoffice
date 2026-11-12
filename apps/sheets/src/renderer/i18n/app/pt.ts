@@ -15,6 +15,8 @@ export const pt = {
     'Esta linha ainda não está no arquivo. Salve primeiro e depois oculte a célula.',
   redactNeedsSavedSheet:
     'Esta planilha ou uma cópia dela ainda não está no arquivo. Salve primeiro e depois altere o que está oculto.',
+  redactMoveRefused:
+    'Não realizado: isso moveria ou copiaria células ocultas da IA, e seus valores deixariam de estar ocultos. Deixe de ocultá-las primeiro ou retire-as do intervalo.',
   redactRecoveredFromNames:
     'Outro aplicativo reescreveu este arquivo e descartou o registro do que está oculto. As células ocultas foram recuperadas a partir dos nomes na pasta de trabalho; salvar restaura o registro completo.',
 

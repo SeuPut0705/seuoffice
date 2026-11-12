@@ -14,6 +14,8 @@ export const cs = {
   redactNeedsSavedRow: 'Tento řádek zatím není v souboru. Nejprve uložte, pak buňku skryjte.',
   redactNeedsSavedSheet:
     'Tento list nebo jeho kopie zatím není v souboru. Nejprve uložte, pak změňte, co je skryté.',
+  redactMoveRefused:
+    'Neprovedeno: přesunuly nebo zkopírovaly by se buňky skryté před AI a jejich hodnoty by už skryté nebyly. Nejprve skrytí zrušte, nebo tyto buňky z oblasti vynechte.',
   redactRecoveredFromNames:
     'Jiná aplikace tento soubor přepsala a zahodila záznam o tom, co je skrytoé. Skryté buňky byly obnoveny z názvů v sešitě; uložením se obnoví celý záznam.',
 

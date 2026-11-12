@@ -14,6 +14,8 @@ export const vi = {
   redactNeedsSavedRow: 'Hàng này chưa có trong tệp. Hãy lưu trước, rồi ẩn ô.',
   redactNeedsSavedSheet:
     'Trang tính này hoặc bản sao của nó chưa có trong tệp. Hãy lưu trước, rồi thay đổi những gì đang ẩn.',
+  redactMoveRefused:
+    'Chưa thực hiện: thao tác này sẽ di chuyển hoặc sao chép các ô đang ẩn khỏi AI, khiến giá trị của chúng không còn được ẩn. Hãy bỏ ẩn trước, hoặc loại các ô đó khỏi vùng chọn.',
   redactRecoveredFromNames:
     'Ứng dụng khác đã ghi lại tệp này và làm mất bản ghi về những ô đang ẩn. Các ô bị ẩn đã được khôi phục từ các tên trong sổ làm việc; lưu sẽ khôi phục lại toàn bộ bản ghi.',
 

@@ -15,6 +15,8 @@ export const fr = {
     "Cette ligne n'est pas encore dans le fichier. Enregistrez d'abord, puis masquez la cellule.",
   redactNeedsSavedSheet:
     "Cette feuille, ou une copie de celle-ci, n'est pas encore dans le fichier. Enregistrez d'abord, puis modifiez ce qui est masqué.",
+  redactMoveRefused:
+    "Non effectué : cela déplacerait ou copierait des cellules masquées pour l'IA, et leurs valeurs ne seraient plus masquées. Arrêtez d'abord de les masquer, ou retirez-les de la plage.",
   redactRecoveredFromNames:
     'Une autre application a réécrit ce fichier et effacé la trace de ce qui est masqué. Les cellules masquées ont été retrouvées dans les noms du classeur ; la sauvegarde restaure la trace complète.',
 

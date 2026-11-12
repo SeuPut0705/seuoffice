@@ -15,6 +15,8 @@ export const de = {
     'Diese Zeile ist noch nicht in der Datei. Bitte zuerst speichern und dann die Zelle ausblenden.',
   redactNeedsSavedSheet:
     'Dieses Blatt oder eine Kopie davon ist noch nicht in der Datei. Bitte zuerst speichern und dann ändern, was ausgeblendet ist.',
+  redactMoveRefused:
+    'Nicht ausgeführt: Dabei würden vor der KI ausgeblendete Zellen verschoben oder kopiert, und ihre Werte wären nicht mehr ausgeblendet. Bitte zuerst das Ausblenden aufheben oder die Zellen aus dem Bereich herausnehmen.',
   redactRecoveredFromNames:
     'Eine andere App hat diese Datei neu geschrieben und den Eintrag darüber, was ausgeblendet ist, verworfen. Die ausgeblendeten Zellen wurden aus den Namen in der Arbeitsmappe wiederhergestellt; beim Speichern wird der vollständige Eintrag zurückgeschrieben.',
 

@@ -226,6 +226,12 @@ import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memor
 import { cfRuleUnsaveableReason, iconSetSaveable } from '@genoffice/xlsx-gateway/gateway/xlsx-cf'
 import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { markPlaceInFile, sessionRedactionIndex, type MarkPlace } from './redact-session'
+import {
+  installRedactMoveGuard,
+  installRedactPasteGuard,
+  pasteSourceHoldsHidden,
+  type RedactMoveGuardDeps,
+} from './redact-move-guard'
 import { installLazyFindBridge } from './lazy-find'
 import { startFullLoad } from './full-load'
 import { opensInFormulaMode, workbookCellCounts } from './load-budget'
@@ -564,6 +570,7 @@ import { installCopyMaterialize } from './copy-materialize'
 import { installCopyPicture } from './copy-picture'
 import {
   applyPasteSpecial,
+  pasteTypeCarriesValues,
   readPasteSpecialSource,
   type PasteSpecialOptions,
   type PasteSpecialSource,
@@ -2946,6 +2953,16 @@ export function App({
     // AI. Contributed to Univer's own menu rather than replacing it, so every
     // built-in item keeps working.
     const redactMenuDisposable = installRedactMenu(runtime, onRedactSelection)
+    // A person moving, sorting, filling or pasting a hidden cell would carry
+    // its value out from under the mark (redact-move-guard.ts).
+    const redactMoveGuardDeps: RedactMoveGuardDeps = {
+      redactions: currentRedactions,
+      notify: (message) => {
+        setMessage(message)
+        showToast(message, 'error')
+      },
+    }
+    const redactMoveGuardDisposable = installRedactMoveGuard(runtime, redactMoveGuardDeps)
     // A context-menu submenu re-hovered within Univer's close delay stays
     // invisible; re-trigger its positioning (genoffice#337).
     const contextSubmenuReopenDisposable = installContextSubmenuReopenFix()
@@ -2956,6 +2973,9 @@ export function App({
     // Pasting into an anchor-shaped target (rows a multiple, columns
     // narrower than the copy — or vice versa) repeats like Excel.
     installClipboardAnchorTile(runtime)
+    // After the anchor-tile patch, so the refusal comes before any of the
+    // paste runs.
+    const redactPasteGuardDisposable = installRedactPasteGuard(runtime, redactMoveGuardDeps)
     // Row-header double-click autofits every selected row, like Excel.
     const multiRowAutofitDisposable = installMultiRowAutofit(runtime)
     // Deleting Ctrl-selected rows/columns removes every area, like Excel.
@@ -4317,6 +4337,8 @@ export function App({
       sheetProtectionDisposable.dispose()
       ctrlDragFillDisposable.dispose()
       redactMenuDisposable.dispose()
+      redactMoveGuardDisposable.dispose()
+      redactPasteGuardDisposable.dispose()
       contextSubmenuReopenDisposable.dispose()
       multiRowAutofitDisposable.dispose()
       disjointLineRemovalDisposable.dispose()
@@ -5184,6 +5206,16 @@ export function App({
   ): Promise<string | null> {
     const runtime = univerRef.current
     if (!runtime) return t('dlgPasteSpecialNothing')
+    // The dialog's own paste layer reads the copied cells itself; a hidden
+    // value must not reach another cell that way either, as a value or as a
+    // link to it.
+    if (
+      source.kind === 'internal' &&
+      (source.cut || options.link || pasteTypeCarriesValues(options.type)) &&
+      pasteSourceHoldsHidden(currentRedactions(), source)
+    ) {
+      return t('redactMoveRefused')
+    }
     const result = await applyPasteSpecial(runtime, source, options)
     if (result.ok) return null
     return t(

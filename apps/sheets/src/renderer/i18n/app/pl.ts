@@ -15,6 +15,8 @@ export const pl = {
     'Ten wiersz nie jest jeszcze w pliku. Zapisz najpierw, a potem ukryj komórkę.',
   redactNeedsSavedSheet:
     'Tego arkusza lub jego kopii nie ma jeszcze w pliku. Zapisz najpierw, a potem zmień to, co jest ukryte.',
+  redactMoveRefused:
+    'Nie wykonano: spowodowałoby to przeniesienie lub skopiowanie komórek ukrytych przed AI, a ich wartości przestałyby być ukryte. Najpierw przestań je ukrywać albo pomiń je w zakresie.',
   redactRecoveredFromNames:
     'Inna aplikacja zapisała ten plik od nowa i usunęła rejestr tego, co jest ukryte. Ukryte komórki odtworzono z nazw w skoroszycie; zapisanie przywraca pełny rejestr.',
 

@@ -14,6 +14,8 @@ export const id = {
   redactNeedsSavedRow: 'Baris ini belum ada di berkas. Simpan dulu, lalu sembunyikan selnya.',
   redactNeedsSavedSheet:
     'Lembar ini atau salinannya belum ada di berkas. Simpan dulu, lalu ubah apa yang disembunyikan.',
+  redactMoveRefused:
+    'Tidak dilakukan: ini akan memindahkan atau menyalin sel yang disembunyikan dari AI, sehingga nilainya tidak lagi tersembunyi. Berhenti menyembunyikannya dulu, atau keluarkan sel itu dari rentang.',
   redactRecoveredFromNames:
     'Aplikasi lain menulis ulang berkas ini dan membuang catatan apa yang disembunyikan. Sel yang disembunyikan dipulihkan dari nama-nama di dalam buku kerja; menyimpan akan memulihkan catatan lengkapnya.',
 

@@ -15,6 +15,8 @@ export const ms = {
     'Baris ini belum lagi dalam fail. Simpan dahulu, kemudian sembunyikan selnya.',
   redactNeedsSavedSheet:
     'Helaian ini atau salinannya belum lagi dalam fail. Simpan dahulu, kemudian ubah apa yang disembunyikan.',
+  redactMoveRefused:
+    'Tidak dilakukan: ini akan mengalihkan atau menyalin sel yang disembunyikan daripada AI, lalu nilainya tidak lagi tersembunyi. Berhenti menyembunyikannya dahulu, atau keluarkan sel itu daripada julat.',
   redactRecoveredFromNames:
     'Aplikasi lain menulis semula fail ini dan membuang rekod apa yang disembunyikan. Sel yang disembunyikan itu dipulihkan daripada nama yang ada dalam buku kerja; menyimpan akan memulihkan rekod penuh.',
 

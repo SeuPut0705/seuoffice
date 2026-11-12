@@ -14,6 +14,8 @@ export const it = {
   redactNeedsSavedRow: 'Questa riga non è ancora nel file. Salva prima, poi nascondi la cella.',
   redactNeedsSavedSheet:
     'Questo foglio o una sua copia non è ancora nel file. Salva prima, poi modifica ciò che è nascosto.',
+  redactMoveRefused:
+    "Non eseguito: questa operazione sposterebbe o copierebbe celle nascoste all'IA e i loro valori non sarebbero più nascosti. Smetti prima di nasconderle oppure escludile dall'intervallo.",
   redactRecoveredFromNames:
     "Un'altra app ha riscritto questo file e ha perso il registro di ciò che è nascosto. Le celle nascoste sono state recuperate dai nomi del foglio di lavoro; salvando il file viene ripristinato il registro completo.",
 

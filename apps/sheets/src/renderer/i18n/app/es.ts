@@ -15,6 +15,8 @@ export const es = {
     'Esta fila todavía no está en el archivo. Guarda primero y luego oculta la celda.',
   redactNeedsSavedSheet:
     'Esta hoja o una copia suya todavía no está en el archivo. Guarda primero y luego cambia lo que está oculto.',
+  redactMoveRefused:
+    'No se hizo: esto movería o copiaría celdas ocultas para la IA y sus valores dejarían de estar ocultos. Deja de ocultarlas primero o exclúyelas del rango.',
   redactRecoveredFromNames:
     'Otra aplicación reescribió este archivo y descartó el registro de lo que está oculto. Las celdas ocultas se recuperaron de los nombres del libro; al guardar se restaura el registro completo.',
 
