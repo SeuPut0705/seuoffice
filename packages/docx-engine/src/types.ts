@@ -446,6 +446,9 @@ export interface InlineContentControl {
   id: string
   /** the plain text that sits inside the control */
   text: string
+  /** that text as a model may read it, each run hidden from AI as its placeholder;
+   *  absent when the control hides nothing */
+  modelText?: string
 }
 
 /**

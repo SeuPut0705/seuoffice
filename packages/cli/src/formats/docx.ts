@@ -743,7 +743,11 @@ function inlineControlsOf(
   doc: OpenDocument,
   block: Editor['state']['doc'],
 ): InlineContentControlSummary[] {
-  return parsedBlockOf(doc, block)?.inlineContentControls ?? []
+  // the text a model may read: a run hidden from AI reads as its placeholder
+  return (parsedBlockOf(doc, block)?.inlineContentControls ?? []).map(({ modelText, ...c }) => ({
+    ...c,
+    text: modelText ?? c.text,
+  }))
 }
 
 /** native docx charts are passthrough blocks carrying chartDisplay; edit_chart targets them like AI-made ones */
