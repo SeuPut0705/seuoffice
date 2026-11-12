@@ -1,3 +1,4 @@
+import './stable-zip'
 import JSZip from 'jszip'
 import { createRequire } from 'node:module'
 import { crc32, deflateRawSync } from 'node:zlib'
@@ -24,7 +25,18 @@ export async function builtDecks(): Promise<Array<[string, Uint8Array]>> {
     { x: 4, y: 3, w: 3, h: 1 },
   )
   deck.addSlide().addText('Second slide', { x: 1, y: 1, w: 4, h: 1 })
-  const generated = (await deck.write({ outputType: 'uint8array' })) as Uint8Array
+  // pptxgenjs stamps docProps/core.xml with the clock: one fixed time, so the
+  // deck is the same bytes on every run (see stable-zip.ts)
+  const written = await JSZip.loadAsync((await deck.write({ outputType: 'uint8array' })) as Uint8Array)
+  const core = await written.file('docProps/core.xml')?.async('string')
+  if (core !== undefined) {
+    written.file(
+      'docProps/core.xml',
+      core.replace(/(<dcterms:(?:created|modified)\b[^>]*>)[^<]*/g, '$11980-01-01T00:00:00Z'),
+    )
+  }
+  for (const entry of Object.values(written.files)) entry.date = new Date(Date.UTC(1980, 0, 1))
+  const generated = await written.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
   const brokenChain = await JSZip.loadAsync(blank)
   brokenChain.remove('ppt/slides/_rels/slide1.xml.rels')
   const titleFallback = await JSZip.loadAsync(blank)

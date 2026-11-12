@@ -20,6 +20,7 @@
 // Ids: element ids are rebased as the group `parse` does (calls-parse.ts,
 // `fromZero`): the Rust counts from 0 for each call. An input names an
 // element by its slide and element indexes (`at.element(s, e)`), never by id.
+import './stable-zip'
 import { createHash } from 'node:crypto'
 import { execFileSync } from 'node:child_process'
 import { readFileSync } from 'node:fs'
