@@ -326,7 +326,24 @@ export function reparseDeck(opened: OpenedPptx): OpenedPptx {
 export async function savePptx(opened: OpenedPptx): Promise<Uint8Array> {
   return call('savePptx', [opened], { mut: { 0: 'opened' } }) as never
 }
+/**
+ * Same output as savePptx, written straight to `filePath`.
+ *
+ * Prefer this for anything that lands on disk: savePptx has to assemble the whole
+ * package into one contiguous buffer, which on a large deck fails outright with
+ * "Array buffer allocation failed". Streaming keeps peak memory to a chunk at a
+ * time. JSZip throws stream errors from inside its own scheduled callbacks, so the
+ * stream's 'error' event — not just the returned promise — has to be handled or the
+ * throw escapes as an uncaught exception and takes the process down.
+ *
+ * The stream truncates `filePath` before its first chunk lands, so a caller that
+ * replaces an existing deck hands this a sibling temp path and renames it over the
+ * deck once the promise resolves (Slides does so through atomicWriteVia); given the
+ * deck's own path, a save that dies mid-stream leaves it cut off.
+ */
 export async function savePptxToFile(opened: OpenedPptx, filePath: string): Promise<void> {
+  // The engine builds the zip whole (savePptx); the file is written from that buffer through
+  // the same stream, so a stream error still reaches the promise and still drops the snapshot.
   const bytes = await savePptx(opened)
   const { createWriteStream } = await import('node:fs')
   const { Readable } = await import('node:stream')
