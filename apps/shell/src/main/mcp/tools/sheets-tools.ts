@@ -134,6 +134,12 @@ function createHeadlessXlsxTool(deps: SheetsToolDeps): McpToolDefinition {
  * Headless external-link maintenance through the bundled CLI (`sheet links`):
  * list is a read and stays available with background generation off; refresh
  * and break write the workbook, so they demand the same opt-in as create_xlsx.
+ *
+ * The sources are paths the workbook chose, and an agent runs this on files it
+ * was handed: the list only checks whether a source on this computer exists,
+ * and a refresh reads only those. Reaching a source on another computer
+ * (`\\host\share\…`) signs this machine in to that host, which only a person
+ * can agree to — the CLI's `--remote-sources` is deliberately not offered here.
  */
 function createSheetLinksTool(deps: SheetsToolDeps): McpToolDefinition {
   return {
@@ -142,9 +148,11 @@ function createSheetLinksTool(deps: SheetsToolDeps): McpToolDefinition {
       "Inspect and maintain an Excel workbook's external links (formulas referencing another " +
       '.xlsx file) without opening the app. Default action lists every link with its index, ' +
       'resolved source path and reachability. `update: true` re-reads reachable sources and ' +
-      "writes the computed values as the formulas' cached values (formulas untouched). " +
-      '`break` severs the chosen 1-based links — their formulas keep their current cached ' +
-      'values as literals and the surviving links renumber.',
+      "writes the computed values as the formulas' cached values (formulas untouched). A " +
+      'source on another computer (\\\\host\\share, file://host) is never contacted: it lists ' +
+      'as `reachable: null` and keeps its cached values. `break` severs the chosen 1-based ' +
+      'links — their formulas keep their current cached values as literals and the surviving ' +
+      'links renumber.',
     inputSchema: {
       path: z.string().describe('absolute path to the .xlsx file'),
       update: z

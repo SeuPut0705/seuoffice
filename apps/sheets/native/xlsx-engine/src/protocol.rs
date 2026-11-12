@@ -125,6 +125,15 @@ pub enum Command {
     #[serde(rename_all = "camelCase")]
     UpdateExternalLinks {
         path: PathBuf,
+        /// The folder relative link targets resolve against when `path` is
+        /// not where the workbook really lives (a decrypted temporary copy).
+        #[serde(default)]
+        base_dir: Option<PathBuf>,
+        /// Also read sources the workbook places on another computer. The
+        /// workbook chose that host and Windows signs in to it, so a host
+        /// sets this only when a person asked for those sources.
+        #[serde(default)]
+        allow_remote_sources: bool,
     },
     #[serde(rename_all = "camelCase")]
     ReadExternalLinks {
@@ -133,6 +142,9 @@ pub enum Command {
     #[serde(rename_all = "camelCase")]
     ListExternalLinks {
         path: PathBuf,
+        /// As for `UpdateExternalLinks`.
+        #[serde(default)]
+        base_dir: Option<PathBuf>,
     },
     #[serde(rename_all = "camelCase")]
     ReadExternalLinkUsage {
@@ -663,14 +675,22 @@ pub fn handle_request(
         } => {
             return recalc.dispatch(request_id, path, edits, reads, report_stale, output);
         }
-        Command::UpdateExternalLinks { path } => {
-            crate::external_links::update_external_link_values(&path).and_then(to_json_value)
-        }
+        Command::UpdateExternalLinks {
+            path,
+            base_dir,
+            allow_remote_sources,
+        } => crate::external_links::update_external_link_values(
+            &path,
+            base_dir.as_deref(),
+            allow_remote_sources,
+        )
+        .and_then(to_json_value),
         Command::ReadExternalLinks { path } => {
             crate::external_links::read_external_link_statuses(&path).and_then(to_json_value)
         }
-        Command::ListExternalLinks { path } => {
-            crate::external_links::list_external_link_statuses(&path).and_then(to_json_value)
+        Command::ListExternalLinks { path, base_dir } => {
+            crate::external_links::list_external_link_statuses(&path, base_dir.as_deref())
+                .and_then(to_json_value)
         }
         Command::ReadExternalLinkUsage { path } => {
             crate::external_links::read_external_link_usage(&path)
@@ -825,6 +845,84 @@ mod tests {
         let links = result["links"].as_array().unwrap();
         assert_eq!(links[0]["index"], serde_json::json!(1));
         assert_eq!(links[0]["cells"][0]["sheet"], serde_json::json!("Sheet1"));
+    }
+
+    /// The wire names of the external-link options: `baseDir` moves where a
+    /// relative target resolves, and an update that does not carry
+    /// `allowRemoteSources` reports a source on another computer unreachable.
+    #[test]
+    fn external_link_requests_carry_their_options() {
+        let dir = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        crate::external_links::tests::write_two_link_dependent_fixture(
+            &path,
+            "source.xlsx",
+            "\\\\fileserver\\share\\budget.xlsx",
+        );
+        let mut sessions = WorkbookSessions::new();
+        let recalc = RecalcWorker::new();
+        let in_flight = InFlightRequest::new();
+        let output: SharedOutput = Arc::new(Mutex::new(BufWriter::new(io::stdout())));
+        let mut send = |request: Value| {
+            expect_ok(
+                handle_line(
+                    &request.to_string(),
+                    &mut sessions,
+                    &recalc,
+                    &CancelledRequests::new(),
+                    &in_flight,
+                    &output,
+                )
+                .unwrap(),
+            )
+        };
+
+        let listed = send(serde_json::json!({
+            "version": 1,
+            "requestId": "l",
+            "command": "list_external_links",
+            "path": path,
+            "baseDir": home.path(),
+        }));
+        assert_eq!(
+            listed["links"][0]["source"],
+            serde_json::json!(home.path().join("source.xlsx"))
+        );
+
+        let read = send(serde_json::json!({
+            "version": 1,
+            "requestId": "r",
+            "command": "read_external_links",
+            "path": path,
+        }));
+        assert_eq!(read[1]["reachable"], Value::Null);
+        assert_eq!(read[1]["unchecked"], serde_json::json!("remote"));
+
+        let report = send(serde_json::json!({
+            "version": 1,
+            "requestId": "u",
+            "command": "update_external_links",
+            "path": path,
+        }));
+        assert_eq!(report["links"][1]["reachable"], serde_json::json!(false));
+
+        // parsed only: running it would look for the host
+        let confirmed: Command = serde_json::from_value(serde_json::json!({
+            "command": "update_external_links",
+            "path": path,
+            "baseDir": home.path(),
+            "allowRemoteSources": true,
+        }))
+        .unwrap();
+        assert!(matches!(
+            confirmed,
+            Command::UpdateExternalLinks {
+                allow_remote_sources: true,
+                base_dir: Some(_),
+                ..
+            }
+        ));
     }
 
     /// A cancel marks its target; the target is then skipped unexecuted, and

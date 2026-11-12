@@ -38,7 +38,7 @@ use crate::recalc::{
 };
 use crate::rels_normalize::load_model;
 
-/// One `[n]` link of the workbook, as the report carries it.
+/// One `[n]` link of the workbook, as the update report carries it.
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ExternalLinkStatus {
@@ -47,11 +47,31 @@ pub struct ExternalLinkStatus {
     /// The resolved local path when the target names one; `None` for schemes
     /// the sidecar cannot read (an `http://` source never becomes reachable).
     pub source: Option<String>,
+    /// False as well for a source on another computer the update was not
+    /// allowed to contact.
     pub reachable: bool,
     pub sheet_names: Vec<String>,
 }
 
-/// One `[n]` link as the read-only listing carries it. Deliberately no
+/// One `[n]` link as the CLI's link report carries it: the update report's
+/// shape, except that a source the report must not ask the disk about says
+/// so instead of answering.
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExternalLinkReadStatus {
+    pub index: usize,
+    pub raw_target: String,
+    pub source: Option<String>,
+    /// `None` (JSON `null`) when the source was not asked about.
+    pub reachable: Option<bool>,
+    /// Why it was not asked about: `remote` — the target names another
+    /// computer; `drive` — a drive letter that may be a network drive.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub unchecked: Option<&'static str>,
+    pub sheet_names: Vec<String>,
+}
+
+/// One `[n]` link as the panel's listing carries it. Deliberately no
 /// `reachable`: opening a workbook (and its links panel) must not probe the
 /// targets on disk — a network share can block for seconds if it is gone —
 /// so reachability is answered only by the explicit update.
@@ -116,22 +136,61 @@ pub struct ExternalLinksReport {
     pub cells: Vec<ExternalLinkCell>,
 }
 
+/// Where a link's source lives, as far as its spelling tells. The workbook
+/// chose the spelling, and on Windows merely asking whether a file exists on
+/// `\\host\share` signs the machine in to that host (an NTLM response leaves
+/// it), so the place decides which requests may ask the disk about a source.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum SourcePlace {
+    /// On this computer, or beside the workbook wherever the user keeps it.
+    Here,
+    /// A Windows drive letter that is neither the workbook's nor the
+    /// system's: it may be a mapped network drive.
+    OtherDrive,
+    /// The target names a host: `\\host\share\…`, `//host/…`, `file://host/…`.
+    AnotherComputer,
+}
+
 /// A link's parsed identity, kept private: the report carries the flattened
 /// status, the update pass needs nothing beyond the resolved source.
 struct LinkEntry {
     index: usize,
     raw_target: String,
     source: Option<PathBuf>,
+    place: SourcePlace,
     sheet_names: Vec<String>,
 }
 
 impl LinkEntry {
-    fn status(&self) -> ExternalLinkStatus {
+    /// The update's verdict on the link.
+    fn status(&self, allow_remote_sources: bool) -> ExternalLinkStatus {
         ExternalLinkStatus {
             index: self.index,
             raw_target: self.raw_target.clone(),
             source: self.source_text(),
-            reachable: self.reachable(),
+            reachable: (allow_remote_sources || self.place != SourcePlace::AnotherComputer)
+                && self.source_is_file(),
+            sheet_names: self.sheet_names.clone(),
+        }
+    }
+
+    /// The link report's shape: reachability only for a source that is
+    /// plainly on this computer.
+    fn checked_status(&self) -> ExternalLinkReadStatus {
+        let unchecked = match self.place {
+            SourcePlace::Here => None,
+            SourcePlace::OtherDrive => Some("drive"),
+            SourcePlace::AnotherComputer => Some("remote"),
+        };
+        ExternalLinkReadStatus {
+            index: self.index,
+            raw_target: self.raw_target.clone(),
+            source: self.source_text(),
+            reachable: match unchecked {
+                None => Some(self.source_is_file()),
+                Some(_) => None,
+            },
+            unchecked,
             sheet_names: self.sheet_names.clone(),
         }
     }
@@ -153,9 +212,63 @@ impl LinkEntry {
             .map(|path| path.to_string_lossy().into_owned())
     }
 
-    fn reachable(&self) -> bool {
-        self.source.as_ref().is_some_and(|path| path.is_file())
+    /// Whether the source is a file on disk: the one place this module asks
+    /// the filesystem about a path the workbook chose.
+    fn source_is_file(&self) -> bool {
+        let Some(path) = self.source.as_deref() else {
+            return false;
+        };
+        #[cfg(test)]
+        tests::PROBED.with(|probed| probed.borrow_mut().push(path.to_path_buf()));
+        path.is_file()
     }
+}
+
+/// Classifies a resolved source. `relative` marks a target that named no
+/// location of its own and was resolved beside the workbook; `home_drives`
+/// are the drive letters known to be the user's own (the workbook's and the
+/// system's). `windows` selects the rule set, a parameter so both are
+/// testable on any host.
+fn source_place(
+    path: &Path,
+    relative: bool,
+    home_drives: &[Option<u8>; 2],
+    windows: bool,
+) -> SourcePlace {
+    let text = path.to_string_lossy();
+    let bytes = text.as_bytes();
+    let is_separator = |byte: Option<&u8>| matches!(byte, Some(b'/' | b'\\'));
+    if windows {
+        if relative {
+            return SourcePlace::Here;
+        }
+        if let Some(drive) = drive_letter(&text)
+            && is_separator(bytes.get(2))
+        {
+            return if home_drives.contains(&Some(drive)) {
+                SourcePlace::Here
+            } else {
+                SourcePlace::OtherDrive
+            };
+        }
+        // `\\host\…`, and every other absolute spelling: Windows routes more
+        // than the two-backslash form to a network provider (`\??\UNC\…`)
+        return SourcePlace::AnotherComputer;
+    }
+    if is_separator(bytes.first()) && is_separator(bytes.get(1)) {
+        return SourcePlace::AnotherComputer;
+    }
+    // the automounter's conventional `-hosts` map, where the path picks the
+    // host to mount; `..` in a relative target can climb there too
+    if normalize_path(path).starts_with("/net") {
+        return SourcePlace::AnotherComputer;
+    }
+    SourcePlace::Here
+}
+
+/// The upper-cased letter of a `C:…` spelling.
+fn drive_letter(path: &str) -> Option<u8> {
+    starts_with_drive(path).then(|| path.as_bytes()[0].to_ascii_uppercase())
 }
 
 /// Where a `[n]Sheet!REF` span points, normalized to 0-based bounds.
@@ -178,8 +291,20 @@ impl RefSpan {
 /// cached value. A `<v>`-worth of data, not a whole external sheet.
 const MAX_INLINE_CELLS: u64 = 65_536;
 
-/// Parses the workbook's external links in `[n]` index order.
-fn parse_external_links(workbook: &Path) -> Result<Vec<LinkEntry>, SidecarError> {
+/// Parses the workbook's external links in `[n]` index order. `base_dir` is
+/// the folder relative targets resolve against when the file at `workbook`
+/// is not where the workbook really lives (a decrypted temporary copy).
+fn parse_external_links(
+    workbook: &Path,
+    base_dir: Option<&Path>,
+) -> Result<Vec<LinkEntry>, SidecarError> {
+    let base = base_dir.or_else(|| workbook.parent());
+    let home_drives = [
+        base.and_then(|folder| drive_letter(&folder.to_string_lossy())),
+        std::env::var("SystemDrive")
+            .ok()
+            .and_then(|drive| drive_letter(&drive)),
+    ];
     let mut links = Vec::new();
     let file = match std::fs::File::open(workbook) {
         Ok(file) => file,
@@ -219,11 +344,20 @@ fn parse_external_links(workbook: &Path) -> Result<Vec<LinkEntry>, SidecarError>
         };
         let sheet_names = external_sheet_names(&part_xml);
         let raw_target = external_link_path(&mut archive, &part).unwrap_or_default();
-        let source = resolve_external_path(workbook, &raw_target);
+        let source = resolve_external_path(base, &raw_target);
+        let place = source.as_deref().map_or(SourcePlace::Here, |path| {
+            source_place(
+                path,
+                is_relative_target(&raw_target),
+                &home_drives,
+                cfg!(windows),
+            )
+        });
         links.push(LinkEntry {
             index,
             raw_target,
             source,
+            place,
             sheet_names,
         });
     }
@@ -282,9 +416,9 @@ fn external_link_path(archive: &mut zip::ZipArchive<std::fs::File>, part: &str) 
 /// Resolves a stored source path the way Excel does: a `file:///` URI decodes
 /// to a local path (a two-slash `file://host/…` is an UNC spelling), a path
 /// that already looks absolute stays as written, and everything else is
-/// relative to the dependent workbook's own folder. `None` marks a target the
-/// sidecar cannot read at all (an `http://` source).
-fn resolve_external_path(workbook: &Path, raw: &str) -> Option<PathBuf> {
+/// relative to `base`, the dependent workbook's own folder. `None` marks a
+/// target the sidecar cannot read at all (an `http://` source).
+fn resolve_external_path(base: Option<&Path>, raw: &str) -> Option<PathBuf> {
     let raw = raw.trim();
     if let Some(rest) = raw.strip_prefix("file://") {
         if let Some(path) = rest.strip_prefix('/') {
@@ -316,11 +450,21 @@ fn resolve_external_path(workbook: &Path, raw: &str) -> Option<PathBuf> {
     if raw.contains("://") {
         return None;
     }
-    if raw.starts_with('\\') || Path::new(raw).is_absolute() || starts_with_drive(raw) {
+    if !is_relative_target(raw) {
         return Some(Path::new(raw).to_path_buf());
     }
-    let base = workbook.parent()?;
-    Some(normalize_path(&base.join(raw)))
+    Some(normalize_path(&base?.join(raw)))
+}
+
+/// A stored target that names no location of its own: it is resolved beside
+/// the workbook.
+fn is_relative_target(raw: &str) -> bool {
+    let raw = raw.trim();
+    !(raw.contains("://")
+        || raw.starts_with("//")
+        || raw.starts_with('\\')
+        || Path::new(raw).is_absolute()
+        || starts_with_drive(raw))
 }
 
 /// `C:/…` (or `C:\…`): a Windows drive spelling — absolute on Windows, and
@@ -373,14 +517,16 @@ fn join_package_path(base: &str, target: &str) -> String {
     format!("{base}/{target}")
 }
 
-/// The link list without touching any source: what `sheet links` prints and
-/// the panel lists.
+/// The CLI's link report (`sheet links`): the links, and for each source that
+/// is plainly on this computer whether the file exists (one `stat`, nothing
+/// is opened). A source that names another computer, or a drive that may be
+/// a network drive, is not asked about and says so.
 pub fn read_external_link_statuses(
     workbook: &Path,
-) -> Result<Vec<ExternalLinkStatus>, SidecarError> {
-    Ok(parse_external_links(workbook)?
+) -> Result<Vec<ExternalLinkReadStatus>, SidecarError> {
+    Ok(parse_external_links(workbook, None)?
         .iter()
-        .map(LinkEntry::status)
+        .map(LinkEntry::checked_status)
         .collect())
 }
 
@@ -389,9 +535,10 @@ pub fn read_external_link_statuses(
 /// panel reads when it opens; the explicit update answers reachability.
 pub(crate) fn list_external_link_statuses(
     workbook: &Path,
+    base_dir: Option<&Path>,
 ) -> Result<ExternalLinksListing, SidecarError> {
     Ok(ExternalLinksListing {
-        links: parse_external_links(workbook)?
+        links: parse_external_links(workbook, base_dir)?
             .iter()
             .map(LinkEntry::read_status)
             .collect(),
@@ -401,17 +548,26 @@ pub(crate) fn list_external_link_statuses(
 /// Computes fresh values for every external-formula cell against the reachable
 /// sources. The workbook is never written here — the caller carries the
 /// returned values into the save pipeline as cached `<v>`s, formulas intact.
+///
+/// A source on another computer is neither looked for nor opened, and reports
+/// unreachable, unless `allow_remote_sources`: the caller sets it when a
+/// person asked for those sources, never for a document it was merely handed.
 pub fn update_external_link_values(
     workbook: &Path,
+    base_dir: Option<&Path>,
+    allow_remote_sources: bool,
 ) -> Result<ExternalLinksReport, SidecarError> {
-    let links = parse_external_links(workbook)?;
-    let statuses: Vec<ExternalLinkStatus> = links.iter().map(LinkEntry::status).collect();
+    let links = parse_external_links(workbook, base_dir)?;
+    let statuses: Vec<ExternalLinkStatus> = links
+        .iter()
+        .map(|link| link.status(allow_remote_sources))
+        .collect();
 
     // One live source model per reachable link, loaded lazily: an update of
     // three links where only one source exists opens one workbook.
     let mut sources: Vec<Option<Model<'static>>> = Vec::with_capacity(links.len());
-    for link in &links {
-        sources.push(if link.reachable() {
+    for (link, status) in links.iter().zip(&statuses) {
+        sources.push(if status.reachable {
             load_model(link.source.as_ref().unwrap()).ok()
         } else {
             None
@@ -1306,6 +1462,23 @@ pub(crate) mod tests {
     use super::*;
     use std::io::Write;
 
+    thread_local! {
+        /// Every path `source_is_file` was asked about on this thread.
+        pub(super) static PROBED: std::cell::RefCell<Vec<PathBuf>> =
+            const { std::cell::RefCell::new(Vec::new()) };
+    }
+
+    /// Runs `run` and returns its result with the source paths the disk was
+    /// asked about meanwhile.
+    fn probed_by<T>(run: impl FnOnce() -> T) -> (T, Vec<PathBuf>) {
+        PROBED.with(|probed| probed.borrow_mut().clear());
+        let out = run();
+        (out, PROBED.with(|probed| probed.take()))
+    }
+
+    const UNC_TARGET: &str = "\\\\fileserver\\share\\budget.xlsx";
+    const FILE_HOST_TARGET: &str = "file://fileserver/share/q3.xlsx";
+
     /// A tiny source workbook: Sheet1 holds A1=10, A2=20, A3=30, B1="Total".
     pub(crate) fn write_source_fixture(path: &Path) {
         let entries: [(&str, &str); 6] = [
@@ -1479,7 +1652,7 @@ pub(crate) mod tests {
         let path = dir.path().join("book.xlsx");
         // a relative target resolves against the dependent workbook's folder
         write_dependent_fixture(&path, "source.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
         assert_eq!(report.links.len(), 1);
         assert!(report.links[0].reachable);
         assert!(
@@ -1522,7 +1695,7 @@ pub(crate) mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("book.xlsx");
         write_dependent_fixture(&path, "gone.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
         assert!(!report.links[0].reachable);
         assert_eq!(cell_of(&report, "[1]Sheet1!A1*2").formatted, "84");
         assert_eq!(
@@ -1553,7 +1726,7 @@ pub(crate) mod tests {
         #[cfg(not(windows))]
         let target = format!("file://{}", source.display());
         write_two_link_dependent_fixture(&path, &target, "gone.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
 
         assert_eq!(report.links.len(), 2);
         assert!(
@@ -1661,7 +1834,7 @@ pub(crate) mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("book.xlsx");
         write_dependent_fixture(&path, "gone.xlsx");
-        let links = list_external_link_statuses(&path).unwrap().links;
+        let links = list_external_link_statuses(&path, None).unwrap().links;
         assert_eq!(links.len(), 1);
         assert_eq!(links[0].index, 1);
         assert_eq!(links[0].raw_target, "gone.xlsx");
@@ -1674,8 +1847,173 @@ pub(crate) mod tests {
         );
         // a file:/// target resolves without being opened
         write_dependent_fixture(&path, "file:///Users/me/source.xlsx");
-        let links = list_external_link_statuses(&path).unwrap().links;
+        let links = list_external_link_statuses(&path, None).unwrap().links;
         assert_eq!(links[0].source.as_deref(), Some("/Users/me/source.xlsx"));
+    }
+
+    /// The link report asks the disk about a source that is plainly on this
+    /// computer and about no other: one that names another computer comes
+    /// back unchecked, in every spelling of a host.
+    #[test]
+    fn link_report_never_asks_the_disk_about_a_source_on_another_computer() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, UNC_TARGET, FILE_HOST_TARGET);
+        let (links, probed) = probed_by(|| read_external_link_statuses(&path).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        for link in &links {
+            assert_eq!(link.reachable, None);
+            assert_eq!(link.unchecked, Some("remote"));
+        }
+        let json = serde_json::to_value(&links).unwrap();
+        assert_eq!(json[0]["reachable"], serde_json::Value::Null);
+        assert_eq!(json[0]["unchecked"], serde_json::json!("remote"));
+
+        // beside a host, a missing absolute path on this computer is looked for
+        let missing = dir.path().join("missing.xlsx");
+        write_two_link_dependent_fixture(
+            &path,
+            "//fileserver/share/a.xlsx",
+            &missing.to_string_lossy(),
+        );
+        let (links, probed) = probed_by(|| read_external_link_statuses(&path).unwrap());
+        assert_eq!(probed, vec![missing]);
+        assert_eq!(links[0].unchecked, Some("remote"));
+        assert_eq!(links[1].reachable, Some(false));
+        let json = serde_json::to_value(&links).unwrap();
+        assert!(json[1].get("unchecked").is_none(), "{json}");
+
+        // and a source beside the workbook is found
+        write_source_fixture(&dir.path().join("source.xlsx"));
+        write_two_link_dependent_fixture(&path, "source.xlsx", UNC_TARGET);
+        let links = read_external_link_statuses(&path).unwrap();
+        assert_eq!(links[0].reachable, Some(true));
+        assert_eq!(links[1].reachable, None);
+    }
+
+    /// The panel's listing of a workbook whose links name another computer,
+    /// or an absolute path that is not there, asks the disk about none.
+    #[test]
+    fn listing_asks_the_disk_nothing_about_a_source() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, UNC_TARGET, FILE_HOST_TARGET);
+        let (listing, probed) = probed_by(|| list_external_link_statuses(&path, None).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        let sources: Vec<Option<&str>> = listing
+            .links
+            .iter()
+            .map(|link| link.source.as_deref())
+            .collect();
+        assert_eq!(
+            sources,
+            vec![
+                Some("\\\\fileserver\\share\\budget.xlsx"),
+                Some("\\\\fileserver\\share\\q3.xlsx")
+            ]
+        );
+
+        write_two_link_dependent_fixture(&path, "//fileserver/share/a.xlsx", "/nowhere/b.xlsx");
+        let (listing, probed) = probed_by(|| list_external_link_statuses(&path, None).unwrap());
+        assert_eq!(probed, Vec::<PathBuf>::new());
+        assert_eq!(listing.links.len(), 2);
+    }
+
+    /// An update reads the source beside the workbook and leaves the one on
+    /// another computer alone: not looked for, not opened, its cells on their
+    /// cached values. Only a caller that says a person asked gets it looked
+    /// for.
+    #[test]
+    fn update_leaves_a_source_on_another_computer_alone() {
+        let dir = tempfile::tempdir().unwrap();
+        write_source_fixture(&dir.path().join("source.xlsx"));
+        let path = dir.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, "source.xlsx", UNC_TARGET);
+        let (report, probed) =
+            probed_by(|| update_external_link_values(&path, None, false).unwrap());
+        assert_eq!(probed, vec![dir.path().join("source.xlsx")]);
+        assert!(report.links[0].reachable);
+        assert!(!report.links[1].reachable);
+        assert_eq!(cell_of(&report, "[2]Sheet1!A1").formatted, "5");
+
+        // not on Windows, where asking would go looking for the host
+        #[cfg(not(windows))]
+        {
+            let (_, probed) = probed_by(|| update_external_link_values(&path, None, true).unwrap());
+            assert!(
+                probed.contains(&PathBuf::from(UNC_TARGET)),
+                "the disk was asked about {probed:?}"
+            );
+        }
+    }
+
+    /// Which spellings count as this computer, per platform rule set.
+    #[test]
+    fn places_a_source_by_its_spelling() {
+        use SourcePlace::{AnotherComputer, Here, OtherDrive};
+        // (resolved source, target was relative, Windows rules, where it is)
+        let cases = [
+            ("\\\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("//host/share/s.xlsx", false, true, AnotherComputer),
+            ("/\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("\\??\\UNC\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("\\\\?\\UNC\\host\\share\\s.xlsx", false, true, AnotherComputer),
+            ("C:\\data\\s.xlsx", false, true, Here),
+            ("d:/data/s.xlsx", false, true, Here),
+            // a letter that is neither the workbook's nor the system's may be mapped
+            ("Z:\\data\\s.xlsx", false, true, OtherDrive),
+            // beside the workbook, even when the user keeps the workbook on a share
+            ("\\\\office\\team\\s.xlsx", true, true, Here),
+            ("\\\\host\\share\\s.xlsx", false, false, AnotherComputer),
+            ("//host/share/s.xlsx", false, false, AnotherComputer),
+            ("/net/host/share/s.xlsx", false, false, AnotherComputer),
+            ("/tmp/../net/host/s.xlsx", true, false, AnotherComputer),
+            ("/Users/me/s.xlsx", false, false, Here),
+            ("/network/s.xlsx", false, false, Here),
+        ];
+        // the workbook is on D:, the system on C:
+        let home = [Some(b'D'), Some(b'C')];
+        for (path, relative, windows, place) in cases {
+            assert_eq!(
+                source_place(Path::new(path), relative, &home, windows),
+                place,
+                "{path}"
+            );
+        }
+    }
+
+    /// A relative target resolves under the caller's folder when one is
+    /// given (the workbook was opened from a copy elsewhere), under the
+    /// workbook's own folder when not; an absolute target ignores both.
+    #[test]
+    fn relative_targets_resolve_against_a_caller_given_folder() {
+        let copy = tempfile::tempdir().unwrap();
+        let home = tempfile::tempdir().unwrap();
+        write_source_fixture(&home.path().join("source.xlsx"));
+        let path = copy.path().join("book.xlsx");
+        write_two_link_dependent_fixture(&path, "source.xlsx", UNC_TARGET);
+
+        let beside_the_copy = list_external_link_statuses(&path, None).unwrap().links;
+        assert_eq!(
+            beside_the_copy[0].source.as_deref().map(PathBuf::from),
+            Some(copy.path().join("source.xlsx"))
+        );
+        let in_the_folder = list_external_link_statuses(&path, Some(home.path()))
+            .unwrap()
+            .links;
+        assert_eq!(
+            in_the_folder[0].source.as_deref().map(PathBuf::from),
+            Some(home.path().join("source.xlsx"))
+        );
+        assert_eq!(in_the_folder[1].source.as_deref(), Some(UNC_TARGET));
+
+        // the update reads the source from that folder
+        let beside_the_copy = update_external_link_values(&path, None, false).unwrap();
+        assert!(!beside_the_copy.links[0].reachable);
+        let report = update_external_link_values(&path, Some(home.path()), false).unwrap();
+        assert!(report.links[0].reachable);
+        let live = cell_of(&report, "[1]Sheet1!A1&\"[1]Sheet1!A2\"");
+        assert_eq!(live.formatted, "10[1]Sheet1!A2");
     }
 
     /// Live values report their kind so the host caches booleans and errors
@@ -1686,7 +2024,7 @@ pub(crate) mod tests {
         write_source_fixture(&dir.path().join("source.xlsx"));
         let path = dir.path().join("book.xlsx");
         write_kind_dependent_fixture(&path, "source.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
         let number = cell_of(&report, "[1]Sheet1!A1*2");
         assert_eq!(number.kind, Some(ExternalLinkCellKind::Number));
         assert_eq!(number.formatted, "20");
@@ -1724,7 +2062,7 @@ pub(crate) mod tests {
         let dir = tempfile::tempdir().unwrap();
         let path = dir.path().join("book.xlsx");
         write_kind_dependent_fixture(&path, "gone.xlsx");
-        let report = update_external_link_values(&path).unwrap();
+        let report = update_external_link_values(&path, None, false).unwrap();
         assert!(!report.links[0].reachable);
         let number = cell_of(&report, "[1]Sheet1!A1*2");
         assert_eq!(number.kind, Some(ExternalLinkCellKind::Number));
@@ -1742,31 +2080,31 @@ pub(crate) mod tests {
     /// and folder-relative targets.
     #[test]
     fn resolves_stored_source_paths() {
-        let workbook = Path::new("/tmp/dep/book.xlsx");
+        let folder = Some(Path::new("/tmp/dep"));
         assert_eq!(
-            resolve_external_path(workbook, "file:///C:/data/source.xlsx").unwrap(),
+            resolve_external_path(folder, "file:///C:/data/source.xlsx").unwrap(),
             PathBuf::from("C:/data/source.xlsx")
         );
         // Excel for Mac, LibreOffice and openpyxl spell a POSIX source with
         // all three slashes; the leading slash is part of the path
         assert_eq!(
-            resolve_external_path(workbook, "file:///Users/me/source.xlsx").unwrap(),
+            resolve_external_path(folder, "file:///Users/me/source.xlsx").unwrap(),
             PathBuf::from("/Users/me/source.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "source.xlsx").unwrap(),
+            resolve_external_path(folder, "source.xlsx").unwrap(),
             PathBuf::from("/tmp/dep/source.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "../data/source.xlsx").unwrap(),
+            resolve_external_path(folder, "../data/source.xlsx").unwrap(),
             PathBuf::from("/tmp/data/source.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "\\\\server\\share\\s.xlsx").unwrap(),
+            resolve_external_path(folder, "\\\\server\\share\\s.xlsx").unwrap(),
             PathBuf::from("\\\\server\\share\\s.xlsx")
         );
         assert_eq!(
-            resolve_external_path(workbook, "https://example.com/s.xlsx"),
+            resolve_external_path(folder, "https://example.com/s.xlsx"),
             None
         );
     }
