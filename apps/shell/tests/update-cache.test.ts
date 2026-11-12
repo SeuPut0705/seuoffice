@@ -55,10 +55,15 @@ describe('pruneUpdateCache', () => {
     writeFileSync(join(cacheDir, 'installer.exe'), 'installer bytes')
     writeFileSync(join(cacheDir, 'update.zip'), 'zip bytes')
 
+    // the new version's block map: electron-updater copies it out of pending/
+    writeFileSync(join(cacheDir, 'pending', 'current.blockmap'), 'block map')
+    writeFileSync(join(cacheDir, 'current.blockmap'), 'block map')
+
     expect(pruneUpdateCache({ cacheDir, runningVersion: '0.12.31', log })).toBe(true)
 
     expect(pending()).toEqual([])
     // the base of the next differential download
+    expect(existsSync(join(cacheDir, 'current.blockmap'))).toBe(true)
     expect(existsSync(join(cacheDir, 'installer.exe'))).toBe(true)
     expect(existsSync(join(cacheDir, 'update.zip'))).toBe(true)
     expect(lines.join('\n')).toContain('0.12.31')
