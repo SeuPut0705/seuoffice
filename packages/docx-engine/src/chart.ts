@@ -1,4 +1,3 @@
-import { colLetter } from '@seuoffice/pptx-engine/chart-workbook'
 import type { ChartDisplay, NewChart, ThemeColors } from './types'
 import { invoke, invokeAsync } from './engine'
 
@@ -70,5 +69,10 @@ export async function patchChartWorkbookXlsxBase64(
   categories: string[],
   series: Array<{ name: string; values: (number | null)[] }>,
 ): Promise<string | null> {
-  return invokeAsync('patchChartWorkbookXlsxBase64', [base64, categories, series, Date.now()]) as never
+  return invokeAsync('patchChartWorkbookXlsxBase64', [
+    base64,
+    categories,
+    series,
+    Date.now(),
+  ]) as never
 }

@@ -18,7 +18,7 @@ use jscompat::math_round;
 
 /// `hfTextBoxSeq`: module state of the TypeScript, counted over every parse
 /// of the process.
-static HF_TEXT_BOX_SEQ: AtomicU64 = AtomicU64::new(0);
+pub(crate) static HF_TEXT_BOX_SEQ: AtomicU64 = AtomicU64::new(0);
 
 /// `++hfTextBoxSeq`
 fn next_text_box_id() -> JsNum {

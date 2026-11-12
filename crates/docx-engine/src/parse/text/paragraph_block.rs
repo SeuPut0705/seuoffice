@@ -425,7 +425,7 @@ fn displace_overlapping_floats(runs: &mut [Run]) {
         .filter(|(_, run)| {
             run.image
                 .as_ref()
-                .is_some_and(|image| matches!(image.wrap, Some(w) if w != ImageWrap::Front && w != ImageWrap::Behind))
+                .is_some_and(|image| matches!(&image.wrap, Some(w) if *w != ImageWrap::Front && *w != ImageWrap::Behind))
         })
         .map(|(index, _)| index)
         .collect();

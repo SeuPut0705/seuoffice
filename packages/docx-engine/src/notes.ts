@@ -37,7 +37,12 @@ export function rootAttributes(
   fallback: string,
   required: Record<string, string> = {},
 ): string {
-  return invoke('rootAttributes', [originalXml, rootTag, fallback, Object.entries(required)]) as never
+  return invoke('rootAttributes', [
+    originalXml,
+    rootTag,
+    fallback,
+    Object.entries(required),
+  ]) as never
 }
 /** one note paragraph read through the document's run extraction and property resolver */
 export interface NoteParagraph {
@@ -52,7 +57,19 @@ export interface NoteParagraph {
 export type NoteParagraphReader = (pXml: string) => NoteParagraph
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
-  return invoke('parseNotesXml', [xml, kind]) as never
+  return invoke(
+    'parseNotesXml',
+    [
+      xml,
+      kind,
+      read === undefined
+        ? null
+        : Symbol.for('seuoffice.standaloneNoteReader') in read
+          ? 'standalone'
+          : read,
+    ],
+    { names: ['xml', 'kind', 'read'] },
+  ) as never
 }
 /**
  * Regenerate the notes part from the full desired list. Structural entries

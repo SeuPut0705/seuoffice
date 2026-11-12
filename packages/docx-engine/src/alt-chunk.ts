@@ -4,15 +4,32 @@
  * to a docx with the html2docx chain (needs a browser), which the parser
  * then reads like any other document. A .docx chunk is parsed directly.
  */
+import type JSZip from 'jszip'
 import type { RelInfo } from './parse-xml-text'
 import { invoke, invokeAsync } from './engine'
+import { zipCall } from './engine-hand'
 
 export type AltChunkHtmlConverter = (html: string) => Promise<Uint8Array | null>
 let htmlConverter: AltChunkHtmlConverter | null = null
 export function setAltChunkHtmlConverter(fn: AltChunkHtmlConverter | null): void {
   htmlConverter = fn
 }
+/** an HTML/MHT chunk can only expand where the host installed a converter */
+export function hasAltChunkHtmlConverter(): boolean {
+  return htmlConverter !== null
+}
 export type AltChunkKind = 'html' | 'mht' | 'docx'
+export function altChunkKind(
+  path: string,
+  contentType: string | undefined,
+  head: Uint8Array,
+): AltChunkKind | null {
+  return invoke('altChunkKind', [path, contentType, head]) as never
+}
+/** HTML bytes -> string: BOM, then <meta charset>, then utf-8 with a 1252 fallback */
+export async function decodeHtmlBytes(bytes: Uint8Array): Promise<string> {
+  return invokeAsync('decodeHtmlBytes', [bytes]) as never
+}
 export function decodeQuotedPrintable(text: string): Uint8Array {
   return invoke('decodeQuotedPrintable', [text]) as never
 }
@@ -30,6 +47,21 @@ export function altChunkPartPath(
   sourcePath = 'word/document.xml',
 ): string | null {
   return invoke('altChunkPartPath', [rels, rId, sourcePath]) as never
+}
+/**
+ * Resolve the chunk to docx bytes the parser can read, or null when the part
+ * is missing, of an unsupported type, or no HTML converter is installed.
+ */
+export async function altChunkToDocx(
+  zip: JSZip,
+  rels: Map<string, RelInfo>,
+  rId: string,
+  contentTypeOf: (path: string) => Promise<string | undefined>,
+  sourcePath = 'word/document.xml',
+): Promise<Uint8Array | null> {
+  return zipCall('altChunkToDocx', zip, [rels, rId, sourcePath], false, {
+    names: ['zip', 'rels', 'rId', 'contentTypeOf', 'sourcePath'],
+  }) as never
 }
 /** the converter the host installed, for the engine's alt-chunk pass (engine-hand.ts) */
 export function altChunkHtmlConverter(): AltChunkHtmlConverter | null {

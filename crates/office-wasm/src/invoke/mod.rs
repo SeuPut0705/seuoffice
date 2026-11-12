@@ -85,6 +85,96 @@ impl<'a> InvokeEnv<'a> {
     }
 }
 
+/// The positional arguments of a call. A long text crosses beside the JSON
+/// header as `{"$text": n}`, the UTF-8 of request blob `n`: an argument that
+/// is one is read from the blob in place ([`Args::text`]); one inside an
+/// argument was made a string by [`Args::new`].
+#[derive(Clone, Copy)]
+pub struct Args<'a> {
+    values: &'a [Value],
+    blobs: &'a [&'a [u8]],
+}
+
+impl<'a> Args<'a> {
+    /// `values` with the texts nested in them resolved.
+    pub fn new(values: &'a mut [Value], blobs: &'a [&'a [u8]]) -> Result<Self, String> {
+        for value in values.iter_mut().filter(|value| text_blob(value).is_none()) {
+            texts_in(value, blobs)?;
+        }
+        Ok(Self { values, blobs })
+    }
+
+    /// The argument `index`, borrowed from the request.
+    pub fn get(&self, index: usize) -> Option<&'a Value> {
+        self.values.get(index)
+    }
+
+    /// The text argument `index` crossed as a blob, if it did.
+    pub fn text(&self, index: usize) -> Result<Option<&'a str>, String> {
+        match self.values.get(index).and_then(text_blob) {
+            Some(blob) => text_of(self.blobs, blob).map(Some),
+            None => Ok(None),
+        }
+    }
+
+    /// The arguments as JSON alone, a text crossed as a blob made a string.
+    pub fn resolved(&self) -> Result<std::borrow::Cow<'a, [Value]>, String> {
+        if !self.values.iter().any(|value| text_blob(value).is_some()) {
+            return Ok(std::borrow::Cow::Borrowed(self.values));
+        }
+        let mut values = self.values.to_vec();
+        for value in &mut values {
+            texts_in(value, self.blobs)?;
+        }
+        Ok(std::borrow::Cow::Owned(values))
+    }
+}
+
+impl std::ops::Deref for Args<'_> {
+    type Target = [Value];
+
+    fn deref(&self) -> &[Value] {
+        self.values
+    }
+}
+
+/// The blob index of `{"$text": n}`.
+fn text_blob(value: &Value) -> Option<u64> {
+    match value {
+        Value::Object(map) if map.len() == 1 => map.get("$text").and_then(Value::as_u64),
+        _ => None,
+    }
+}
+
+fn text_of<'a>(blobs: &[&'a [u8]], index: u64) -> Result<&'a str, String> {
+    let bytes = blobs
+        .get(index as usize)
+        .ok_or_else(|| format!("blob {index} is missing"))?;
+    std::str::from_utf8(bytes).map_err(|error| error.to_string())
+}
+
+/// `value` with every `{"$text": n}` replaced by the text of request blob `n`.
+fn texts_in(value: &mut Value, blobs: &[&[u8]]) -> Result<(), String> {
+    if let Some(index) = text_blob(value) {
+        *value = Value::String(text_of(blobs, index)?.to_owned());
+        return Ok(());
+    }
+    match value {
+        Value::Object(map) => {
+            for inner in map.values_mut() {
+                texts_in(inner, blobs)?;
+            }
+        }
+        Value::Array(items) => {
+            for inner in items {
+                texts_in(inner, blobs)?;
+            }
+        }
+        _ => {}
+    }
+    Ok(())
+}
+
 /// `value` with every `{"$bytes": base64}` replaced by `{"$blob": n}`, the
 /// bytes pushed on `blobs` at index `n`.
 pub fn blobify(value: &mut Value, blobs: &mut Vec<Vec<u8>>) {

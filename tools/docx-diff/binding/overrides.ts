@@ -17,8 +17,10 @@ export interface Override {
   args?: string[]
   /** The statements that are the TypeScript body of the function, where the call is not one line (a mutated argument, a Set written back) */
   body?: string
-  /** The body of the row, where the Rust function is not called with the arguments one to one. `args` is `&[Value]`, `env` the InvokeEnv. */
+  /** The body of the row, where the Rust function is not called with the arguments one to one. `args` is `Args` (the positional `&[Value]` with long texts read in place by `rstr`/`opt`), `env` the InvokeEnv. */
   rust?: string
+  /** a parameter is a function the engine calls back, under a type name that does not say so */
+  callbacks?: true
 }
 
 /** The 21 exports whose hand routes PortParseText wrote in crates/office-wasm/src/invoke/routes.rs. */
@@ -72,11 +74,27 @@ export const OVERRIDES: Record<string, Override> = {
   buildChartWorkbookXlsxBase64: { args: ['categories', 'series', '$now'] },
   patchChartWorkbookXlsxBase64: { args: ['base64', 'categories', 'series', '$now'] },
   // ---- a whole document where the Rust reads the part of it that it needs
-  readSections: { args: ['parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))', 'parsed.gutterAtTop'] },
-  readSectionSettings: { args: ['parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))', 'parsed.gutterAtTop'] },
+  readSections: {
+    args: [
+      'parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))',
+      'parsed.gutterAtTop',
+    ],
+  },
+  readSectionSettings: {
+    args: [
+      'parsed.blocks.map((b) => ({ hidden: b.hidden, originalXml: b.originalXml, docxIndex: b.docxIndex }))',
+      'parsed.gutterAtTop',
+    ],
+  },
   readPageColor: { args: ['parsed.internal.documentXml'] },
   compareBlocks: {
-    args: ['original.blocks', 'revised.blocks', 'revised.internal.documentXml', 'options ?? {}', '$nowIso'],
+    args: [
+      'original.blocks',
+      'revised.blocks',
+      'revised.internal.documentXml',
+      'options ?? {}',
+      '$nowIso',
+    ],
     rust: `let original: Vec<docx_engine::model::Block> = req(args, 0)?;
         let revised: Vec<docx_engine::model::Block> = req(args, 1)?;
         let xml: String = req(args, 2)?;
@@ -89,8 +107,14 @@ export const OVERRIDES: Record<string, Override> = {
         put(docx_engine::save::features::doc_properties_write::parse_property_changes(&input)?.to_json())`,
   },
   loadDocxZip: { reject: 'returns a JSZip (a host object)' },
-  assertZipWithinLimits: { reject: 'stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)' },
-  xmlSegments: { reject: 'the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ' },
+  assertZipWithinLimits: {
+    reject:
+      'stays TypeScript and engine-free: it reads the sizes of the entries of a JSZip (file-parse and the shell call it without an engine)',
+  },
+  xmlSegments: {
+    reject:
+      'the Rust port counts UTF-8 bytes, this export UTF-16 units: offsets of a text with non-ASCII characters differ',
+  },
   // ---- protection: a spin count is any JSON value, as `unknown` in the TypeScript
   hashProtectionPassword: {
     args: ['password', 'spinCount', 'globalThis.crypto.getRandomValues(new Uint8Array(16))'],
@@ -124,11 +148,31 @@ export const OVERRIDES: Record<string, Override> = {
         let original: Option<String> = opt(args, 1)?;
         put(docx_engine::generate::table::generate_table_model_xml(&model, original.as_deref(), None).map_err(|error| error.to_string())?)`,
   },
+  // the reader: none (plain text), the standalone one (read in the engine, no
+  // call back), or the caller's own (called back for each paragraph)
   parseNotesXml: {
-    args: ['xml', 'kind'],
+    args: [
+      'xml',
+      'kind',
+      "read === undefined ? null : Symbol.for('seuoffice.standaloneNoteReader') in read ? 'standalone' : read",
+    ],
+    callbacks: true,
     rust: `let xml: String = req(args, 0)?;
         let kind: docx_engine::notes::NoteKind = req(args, 1)?;
-        put(docx_engine::parse::text::notes_part::parse_notes_standalone(&xml, kind).map_err(|error| error.to_string())?)`,
+        match args.get(2) {
+            None | Some(Value::Null) => put(docx_engine::notes::parse_notes_xml(&xml, kind)),
+            Some(Value::String(standalone)) if standalone == "standalone" => {
+                put(docx_engine::parse::text::notes_part::parse_notes_standalone(&xml, kind).map_err(|error| error.to_string())?)
+            }
+            Some(_) => {
+                let host = &*env;
+                let mut read = |p_xml: &str| -> Result<docx_engine::notes::NoteParagraph, String> {
+                    let answer = host.callback("read", &json!([p_xml]))?;
+                    serde_json::from_value(answer).map_err(|error| format!("TypeError: read: {error}"))
+                };
+                put(docx_engine::notes::parse_notes_xml_with(&xml, kind, &mut read)?)
+            }
+        }`,
   },
   resolveRunProps: { args: ['xnodeArg(rPr)', 'para.styleId', '!!para.bidi', 'ctx', 'mark'] },
   // ---- an optional TypeScript parameter the Rust port takes as a plain value, or an options object it takes field by field
@@ -273,11 +317,12 @@ export const OVERRIDES: Record<string, Override> = {
     Object.assign(held, next)
   })`,
   },
+  // a reader that works on its own, and that parseNotesXml recognizes to read in the engine without calling back
   standaloneNoteParagraphReader: {
-    body: `// parseNotesXml reads a notes part on its own in the engine, with this reader's rules: the reader itself has nothing left to do
-  return (() => {
-    throw new Error('standaloneNoteParagraphReader: the engine reads the paragraphs of a notes part')
-  }) as never`,
+    rust: `let p_xml: String = req(args, 0)?;
+        put(docx_engine::parse::text::notes_part::read_note_paragraph_standalone(&p_xml).map_err(|error| error.to_string())?)`,
+    body: `const read = ((pXml: string) => invoke('standaloneNoteParagraphReader', [pXml])) as NoteParagraphReader
+  return Object.assign(read, { [Symbol.for('seuoffice.standaloneNoteReader')]: true })`,
   },
   inlineRunsXml: {
     args: ['runs', 'options'],
@@ -324,4 +369,10 @@ export function overrideOf(name: string): Override | undefined {
 
 export function isHandRoute(name: string): boolean {
   return Object.hasOwn(ROUTES_HAND, name)
+}
+
+/** Modules of the reference that the binding does not carry: nothing in the product or the tests imports them. */
+export const UNUSED_MODULES: Readonly<Record<string, string>> = {
+  'own-value': 'its one user was the codec, which @seuoffice/engine-wasm holds now',
+  'hf-root': 'a type no module imports',
 }

@@ -880,7 +880,7 @@ fn nominal_level(wrap: &InlineWrap) -> usize {
     match wrap.inside {
         Some(InlineWrapInside::Link) => 2,
         Some(InlineWrapInside::Revision) => 1,
-        None => 0,
+        Some(InlineWrapInside::Unlisted(_)) | None => 0,
     }
 }
 

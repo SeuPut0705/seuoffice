@@ -242,7 +242,7 @@ impl Saver<'_> {
                     };
                     let path = self.land_media(&MediaSource {
                         base64: &picture.base64,
-                        mime: picture.mime,
+                        mime: picture.mime.clone(),
                         source_part: None,
                     });
                     let target = path.strip_prefix("word/").unwrap_or(&path);
@@ -636,7 +636,7 @@ impl Saver<'_> {
             for pic in numbering.pic_bullets.as_deref().unwrap_or_default() {
                 let media_path = self.land_media(&MediaSource {
                     base64: &pic.base64,
-                    mime: pic.mime,
+                    mime: pic.mime.clone(),
                     source_part: None,
                 });
                 let r_id = format!("rId{}", number_to_string(rel_num));
@@ -842,10 +842,10 @@ impl Saver<'_> {
                 }
                 let media_path = self.land_media(&MediaSource {
                     base64: &image.base64,
-                    mime: image.mime,
+                    mime: image.mime.clone(),
                     source_part: None,
                 });
-                self.note_extension(image_ext(image.mime));
+                self.note_extension(image_ext(&image.mime));
                 rel_seq += 1.0;
                 let r_id = format!("rId{}", number_to_string(rel_seq));
                 let target = media_path.strip_prefix("word/").unwrap_or(&media_path);

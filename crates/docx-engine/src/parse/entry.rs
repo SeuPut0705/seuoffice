@@ -77,16 +77,18 @@ struct Parsed {
 
 /// `parseDocx(bytes)` with its `extras`: `Err` is what the TypeScript throws.
 pub fn parse_docx_full(bytes: &[u8], host: &dyn MediaHost) -> Result<ParsedDocFull, String> {
-    parse_docx_with(bytes, host, ParseOptions::default()).map(|parsed| parsed.doc)
+    parse_docx_full_with(bytes, host, ParseOptions::default())
 }
 
-/// `parseDocx(bytes, options)` with its `extras`.
+/// `parseDocx(bytes, options)` with its `extras`. The model holds what the
+/// document wrote as the TypeScript does, an attribute value no type names
+/// included.
 pub fn parse_docx_full_with(
     bytes: &[u8],
     host: &dyn MediaHost,
     options: ParseOptions,
 ) -> Result<ParsedDocFull, String> {
-    parse_docx_with(bytes, host, options).map(|parsed| parsed.doc)
+    jscompat::reading_leniently(|| parse_docx_with(bytes, host, options)).map(|parsed| parsed.doc)
 }
 
 /// `parseDocx(bytes)` without its `extras`: the `ParsedDoc` of the model.
@@ -96,7 +98,7 @@ pub fn parse_docx(bytes: &[u8], host: &dyn MediaHost) -> Result<ParsedDoc, Strin
     if let Some(object) = value.as_object_mut() {
         object.shift_remove("extras");
     }
-    model_of(value)
+    jscompat::reading_leniently(|| model_of(value))
 }
 
 fn entries<T: serde::Serialize>(items: impl Iterator<Item = (String, T)>) -> Value {
@@ -561,6 +563,7 @@ fn parse_docx_with(
     );
     doc.insert("properties".to_owned(), properties);
     doc.insert("comments".to_owned(), json(&comments));
+    // `protection: DocProtection | null`: the key is always there, null when none
     doc.insert(
         "protection".to_owned(),
         protection.as_ref().map_or(Value::Null, json),

@@ -219,7 +219,7 @@ export type CellTextsPatch =
 export function patchTableCellTexts(
   tableXml: string,
   texts: ReadonlyArray<ReadonlyArray<CellTextsPatch | null | undefined> | null | undefined>,
-  part?: ContentControlPart,
+  _part?: ContentControlPart,
 ): string {
   return invoke('patchTableCellTexts', [tableXml, texts]) as never
 }
@@ -364,7 +364,10 @@ interface PPrChild {
 }
 /** top-level child elements of an XML fragment (depth-aware, attrs kept) */
 export function splitXmlChildren(xml: string): PPrChild[] {
-  return (invoke('splitXmlChildren', [xml]) as Array<[string, string]>).map(([name, child]) => ({ name, xml: child }))
+  return (invoke('splitXmlChildren', [xml]) as Array<[string, string]>).map(([name, child]) => ({
+    name,
+    xml: child,
+  }))
 }
 /**
  * Paragraph format edit inside a layout-table cell: only the groups whose
@@ -416,7 +419,9 @@ export function paraMarkRevisionXml(
   record: string | null | undefined,
   mintId: () => string = () => '',
 ): string {
-  return invoke('paraMarkRevisionXml', [kind, record, mintId], { names: ["kind","record","mintId"] }) as never
+  return invoke('paraMarkRevisionXml', [kind, record, mintId], {
+    names: ['kind', 'record', 'mintId'],
+  }) as never
 }
 /** add a tracked paragraph-mark marker to raw pPr bytes (the mark's rPr opens with the revision markers) */
 export function setParaMarkRevision(rawPPr: string, markerXml: string): string {
@@ -451,7 +456,9 @@ export function setPPrChange(rawPPr: string, changeJson: string): string {
  * paragraph properties pass through byte-identical instead of being rebuilt.
  */
 export function generateParagraphXml(block: GeneratedBlock, ctx: GenerateContext): string {
-  return invoke('generateParagraphXml', [block, { ...ctx, part: undefined }], { names: ["block","ctx"] }) as never
+  return invoke('generateParagraphXml', [block, { ...ctx, part: undefined }], {
+    names: ['block', 'ctx'],
+  }) as never
 }
 export interface TableGenOptions {
   /**
@@ -466,7 +473,7 @@ export const TABLE_HEADER_FILL = 'F2F2F2'
 export function generateTableModelXml(
   model: TableModel,
   originalTableXml?: string,
-  part?: ContentControlPart,
+  _part?: ContentControlPart,
 ): string {
   return invoke('generateTableModelXml', [model, originalTableXml]) as never
 }
@@ -550,8 +557,13 @@ export interface RunsXmlOptions {
 /** OOXML runs without relationship allocation (header/footer parts, ...). */
 export function inlineRunsXml(runs: Run[], options?: RunsXmlOptions): string {
   const written = options?.written
-  const fragments = options?.fragments ? [...options.fragments].map(([run, xml]) => [runs.indexOf(run), xml]) : undefined
-  const done = invoke('inlineRunsXml', [runs, written ? [...written] : undefined, fragments]) as { xml: string; written: string[] }
+  const fragments = options?.fragments
+    ? [...options.fragments].map(([run, xml]) => [runs.indexOf(run), xml])
+    : undefined
+  const done = invoke('inlineRunsXml', [runs, written ? [...written] : undefined, fragments]) as {
+    xml: string
+    written: string[]
+  }
   for (const id of done.written) written?.add(id)
   return done.xml
 }

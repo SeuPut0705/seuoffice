@@ -233,35 +233,57 @@ export function engineReady(): boolean {
   return engine !== null
 }
 
+/** The UTF-8 length of `text`: what `TextEncoder.encodeInto` writes for it. */
+function utf8Length(text: string): number {
+  let length = text.length
+  for (let i = 0; i < text.length; i++) {
+    const unit = text.charCodeAt(i)
+    if (unit < 0x80) continue
+    // two bytes below U+0800; three for the rest of the plane and for a lone
+    // surrogate (written as U+FFFD); a pair is four bytes for its two units
+    length += unit < 0x800 ? 1 : 2
+    if (unit >= 0xd800 && unit < 0xdc00) {
+      const next = text.charCodeAt(i + 1)
+      if (next >= 0xdc00 && next < 0xe000) i++
+    }
+  }
+  return length
+}
+
 /**
- * One command: `command` is the header without `version`, `blobs` the bytes
- * that go beside it, `callbacks` the functions the engine may call back by
- * slot during this call (`seu_host.host_callback`). Throws `EngineError`
- * where the engine answers a failure, and rethrows what a callback threw.
+ * One command: `command` is the header without `version`, `blobs` what goes
+ * beside it, bytes or a text (written as UTF-8 straight into the engine's
+ * memory, without a copy of its own), `callbacks` the functions the engine
+ * may call back by slot during this call (`seu_host.host_callback`). Throws
+ * `EngineError` where the engine answers a failure, and rethrows what a
+ * callback threw.
  */
 export function engineCall<Header extends object>(
   command: object,
-  blobs: readonly Uint8Array[] = [],
+  blobs: readonly (Uint8Array | string)[] = [],
   callbacks: Readonly<Record<number, EngineCallback>> = {},
 ): EngineReply<Header> {
   if (!engine) throw new Error('office-wasm: call initEngine or initEngineSync first')
   const { memory, seu_alloc, seu_call, seu_free } = engine
   const header = encoder.encode(JSON.stringify({ version: PROTOCOL_VERSION, ...command }))
-  const size = 8 + header.length + blobs.reduce((sum, blob) => sum + 4 + blob.length, 0)
+  const lengths = blobs.map((blob) => (typeof blob === 'string' ? utf8Length(blob) : blob.length))
+  const size = 8 + header.length + lengths.reduce((sum, length) => sum + 4 + length, 0)
 
   const request = seu_alloc(size)
   const bytes = new Uint8Array(memory.buffer, request, size)
   const view = new DataView(memory.buffer, request, size)
   let offset = 0
-  const put = (part: Uint8Array): void => {
-    view.setUint32(offset, part.length, true)
-    bytes.set(part, offset + 4)
-    offset += 4 + part.length
+  const put = (part: Uint8Array | string, length: number): void => {
+    view.setUint32(offset, length, true)
+    if (typeof part === 'string')
+      encoder.encodeInto(part, bytes.subarray(offset + 4, offset + 4 + length))
+    else bytes.set(part, offset + 4)
+    offset += 4 + length
   }
-  put(header)
+  put(header, header.length)
   view.setUint32(offset, blobs.length, true)
   offset += 4
-  blobs.forEach(put)
+  blobs.forEach((blob, i) => put(blob, lengths[i]!))
 
   activeCallbacks.push(callbacks)
   const errorsBefore = callbackErrors.length

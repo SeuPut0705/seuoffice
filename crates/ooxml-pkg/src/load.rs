@@ -232,11 +232,12 @@ fn load_staged(
             .filter(|part| !part.is_dir)
             .map(|part| DeclaredPart {
                 name: &part.name,
-                usize: declared[&part.name],
+                usize: declared[part.name.as_str()],
             })
             .collect();
         assert_declared(&parts).map_err(LoadFailure::Declared)?;
     }
+
     Ok(package)
 }
 

@@ -33,7 +33,11 @@ export async function hashProtectionPassword(
   password: string,
   spinCount = DEFAULT_SPIN_COUNT,
 ): Promise<{ hash: string; salt: string; spinCount: number; algorithmSid: number }> {
-  return invokeAsync('hashProtectionPassword', [password, spinCount, globalThis.crypto.getRandomValues(new Uint8Array(16))]) as never
+  return invokeAsync('hashProtectionPassword', [
+    password,
+    spinCount,
+    globalThis.crypto.getRandomValues(new Uint8Array(16)),
+  ]) as never
 }
 /** Check whether the password matches the hash in documentProtection (no hash = no password, always true) */
 export async function verifyProtectionPassword(

@@ -132,7 +132,7 @@ pub fn hf_empty_mark_font(
             ea.filter(|ea| !ea.is_empty() && fonts.ascii.as_deref() == Some(ea.as_str()))
         });
     }
-    let ea_lang = is_east_asian_lang_tag(mark.east_asia_lang.as_deref(), false);
+    let ea_lang = is_east_asian_lang_tag(mark.east_asia_lang.as_deref(), true);
     Ok(if ea_lang { ea } else { None }.or_else(|| fonts.ascii.clone()))
 }
 
@@ -454,7 +454,7 @@ pub fn hf_cell_content(
             props.word_wrap = Some(false);
             any = true;
         }
-        let props_align = props.align;
+        let props_align = props.align.clone();
         para_props.push(any.then_some(props));
         if align.is_none() {
             align = props_align;

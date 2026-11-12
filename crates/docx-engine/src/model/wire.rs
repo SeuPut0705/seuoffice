@@ -89,13 +89,19 @@ pub(super) fn one_of<T, E: serde::de::Error, const N: usize>(
 
 /// Reads an enum of strings from a JSON string and nothing else. The reader
 /// serde derives also takes `{"value": null}`, which `JSON.stringify` never
-/// writes for a string.
+/// writes for a string. A string the enum does not name is refused, or held
+/// as `unlisted` inside `jscompat::reading_leniently`.
 pub(super) fn string_enum<'de, D: Deserializer<'de>, T>(
     deserializer: D,
     name: &'static str,
+    unlisted: fn(std::sync::Arc<str>) -> T,
     parse: fn(&str) -> Option<T>,
 ) -> Result<T, D::Error> {
-    struct Text<T>(&'static str, fn(&str) -> Option<T>);
+    struct Text<T>(
+        &'static str,
+        fn(std::sync::Arc<str>) -> T,
+        fn(&str) -> Option<T>,
+    );
     impl<T> Visitor<'_> for Text<T> {
         type Value = T;
 
@@ -104,10 +110,14 @@ pub(super) fn string_enum<'de, D: Deserializer<'de>, T>(
         }
 
         fn visit_str<E: serde::de::Error>(self, text: &str) -> Result<T, E> {
-            (self.1)(text).ok_or_else(|| E::invalid_value(Unexpected::Str(text), &self))
+            match (self.2)(text) {
+                Some(value) => Ok(value),
+                None if jscompat::lenient() => Ok((self.1)(text.into())),
+                None => Err(E::invalid_value(Unexpected::Str(text), &self)),
+            }
         }
     }
-    deserializer.deserialize_str(Text(name, parse))
+    deserializer.deserialize_str(Text(name, unlisted, parse))
 }
 
 /// A `Record<number, V>`: a [`JsObject`] every key of which is a number as

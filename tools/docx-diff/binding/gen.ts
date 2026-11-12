@@ -9,17 +9,20 @@
 // the switch plumbing owns (src/node/**, src/engine-*.ts, src/vendor/**).
 //
 //   npx tsx tools/docx-diff/binding/gen.ts [--dry]
+import { spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
+import * as prettier from 'prettier'
 import ts from 'typescript'
 import { type ExportInfo, REFERENCE, ROOT, build } from './manifest'
-import { APPEND, type Override, overrideOf } from './overrides'
+import { APPEND, type Override, UNUSED_MODULES, overrideOf } from './overrides'
 import { rustTable } from './rust-table'
 
 const SRC = join(ROOT, 'packages/docx-engine/src')
 const DRY = process.argv.includes('--dry')
 
-const routed = (e: ExportInfo): boolean => e.route === 'table' || e.route === 'routes' || e.route === 'hand' || e.route === 'command'
+const routed = (e: ExportInfo): boolean =>
+  e.route === 'table' || e.route === 'routes' || e.route === 'hand' || e.route === 'command'
 
 // ---------------------------------------------------------------- the TypeScript modules
 
@@ -73,14 +76,20 @@ function hasModifier(node: ts.Node, kind: ts.SyntaxKind): boolean {
 
 function bindingNames(name: ts.BindingName, into: string[]): string[] {
   if (ts.isIdentifier(name)) into.push(name.text)
-  else for (const element of name.elements) if (!ts.isOmittedExpression(element)) bindingNames(element.name, into)
+  else
+    for (const element of name.elements)
+      if (!ts.isOmittedExpression(element)) bindingNames(element.name, into)
   return into
 }
 
 const NOW = { $now: 'Date.now()', $nowIso: 'new Date().toISOString()' }
 
 /** The body of a routed function: what it hands the engine. Null where the declaration cannot be rewritten. */
-function wrapperBody(info: ExportInfo, fn: ts.FunctionDeclaration, override: Override | undefined): string | null {
+function wrapperBody(
+  info: ExportInfo,
+  fn: ts.FunctionDeclaration,
+  override: Override | undefined,
+): string | null {
   if (override?.body) return override.body
   const params = fn.parameters
   if (params.some((p) => !ts.isIdentifier(p.name))) return null
@@ -95,9 +104,17 @@ function wrapperBody(info: ExportInfo, fn: ts.FunctionDeclaration, override: Ove
     if (p.rest) return `...${name}`
     return p.codec === 'xnode' ? `xnodeArg(${name})` : name
   }
-  let args: string[] = override?.args?.map((a) => NOW[a as keyof typeof NOW] ?? a) ?? info.params.map((_, i) => expr(i))
+  let args: string[] =
+    override?.args?.map((a) => NOW[a as keyof typeof NOW] ?? a) ??
+    info.params.map((_, i) => expr(i))
   const options: string[] = []
-  if (info.params.some((p) => p.codec === 'callback' || /=>/.test(p.type) || /GenerateContext/.test(p.type))) options.push(`names: ${JSON.stringify(names)}`)
+  if (
+    override?.callbacks ||
+    info.params.some(
+      (p) => p.codec === 'callback' || /=>/.test(p.type) || /GenerateContext/.test(p.type),
+    )
+  )
+    options.push(`names: ${JSON.stringify(names)}`)
   if (info.ret.shape) options.push(`shape: ${JSON.stringify(info.ret.shape)}`)
   if (info.ret.undef && !info.ret.null) options.push('undef: true')
   const tail = options.length ? `, { ${options.join(', ')} }` : ''
@@ -114,11 +131,20 @@ const OVERRIDES_KEEP_INFERRED: ReadonlySet<string> = new Set()
 
 /** A type the checker printed with `import("…/reference/<module>").Name` paths, as a name this module imports. */
 function spellType(type: string, module: string, mod: Module): string {
-  return type.replace(/import\("[^"]*?\/reference\/([\w-]+)"\)\.(\w+)/g, (_match, from: string, name: string) => {
-    const known = mod.imports.some((d) => d.imports.some((i) => i.local === name))
-    if (!known && from !== module) mod.imports.push({ spec: `./${from}`, clauseTypeOnly: true, sideEffect: false, imports: [{ local: name, imported: name, kind: 'named', typeOnly: false }] })
-    return name
-  })
+  return type.replace(
+    /import\("[^"]*?\/reference\/([\w-]+)"\)\.(\w+)/g,
+    (_match, from: string, name: string) => {
+      const known = mod.imports.some((d) => d.imports.some((i) => i.local === name))
+      if (!known && from !== module)
+        mod.imports.push({
+          spec: `./${from}`,
+          clauseTypeOnly: true,
+          sideEffect: false,
+          imports: [{ local: name, imported: name, kind: 'named', typeOnly: false }],
+        })
+      return name
+    },
+  )
 }
 
 function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module {
@@ -132,23 +158,65 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
   for (const stmt of statements) {
     if (ts.isImportDeclaration(stmt)) {
       const clause = stmt.importClause
-      const decl: ImportDecl = { spec: (stmt.moduleSpecifier as ts.StringLiteral).text, imports: [], clauseTypeOnly: !!clause?.isTypeOnly, sideEffect: !clause }
-      if (clause?.name) decl.imports.push({ local: clause.name.text, imported: 'default', kind: 'default', typeOnly: false })
+      const decl: ImportDecl = {
+        spec: (stmt.moduleSpecifier as ts.StringLiteral).text,
+        imports: [],
+        clauseTypeOnly: !!clause?.isTypeOnly,
+        sideEffect: !clause,
+      }
+      if (clause?.name)
+        decl.imports.push({
+          local: clause.name.text,
+          imported: 'default',
+          kind: 'default',
+          typeOnly: false,
+        })
       const bindings = clause?.namedBindings
-      if (bindings && ts.isNamespaceImport(bindings)) decl.imports.push({ local: bindings.name.text, imported: '*', kind: 'namespace', typeOnly: false })
-      else if (bindings) for (const el of bindings.elements) decl.imports.push({ local: el.name.text, imported: (el.propertyName ?? el.name).text, kind: 'named', typeOnly: el.isTypeOnly })
+      if (bindings && ts.isNamespaceImport(bindings))
+        decl.imports.push({
+          local: bindings.name.text,
+          imported: '*',
+          kind: 'namespace',
+          typeOnly: false,
+        })
+      else if (bindings)
+        for (const el of bindings.elements)
+          decl.imports.push({
+            local: el.name.text,
+            imported: (el.propertyName ?? el.name).text,
+            kind: 'named',
+            typeOnly: el.isTypeOnly,
+          })
       mod.imports.push(decl)
       continue
     }
     const exported = hasModifier(stmt, ts.SyntaxKind.ExportKeyword)
-    const piece: Piece = { module: name, names: [], exported, typeLike: false, root: false, text: stmt.getFullText(sf), refs: new Set(), wrapped: null, reexports: [] }
+    const piece: Piece = {
+      module: name,
+      names: [],
+      exported,
+      typeLike: false,
+      root: false,
+      text: stmt.getFullText(sf),
+      refs: new Set(),
+      wrapped: null,
+      reexports: [],
+    }
     if (ts.isFunctionDeclaration(stmt)) {
       if (stmt.name) piece.names.push(stmt.name.text)
       const info = stmt.name && stmt.body ? infoByName.get(stmt.name.text) : undefined
       if (info && (routed(info) || overrideOf(info.name)?.body) && stmt.body) {
         const body = wrapperBody(info, stmt, overrideOf(info.name))
-        if (body === null) throw new Error(`${name}.${info.name}: a parameter of this function is not a plain name`)
+        if (body === null)
+          throw new Error(`${name}.${info.name}: a parameter of this function is not a plain name`)
         let prefix = text.slice(stmt.getFullStart(), stmt.body.getStart(sf))
+        // a parameter the engine owns (a ContentControlPart) is not sent: named as unused
+        for (const param of [...stmt.parameters].reverse()) {
+          const id = param.name as ts.Identifier
+          if (new RegExp(`\\b${id.text}\\b`).test(body)) continue
+          const at = id.getStart(sf) - stmt.getFullStart()
+          prefix = `${prefix.slice(0, at)}_${prefix.slice(at)}`
+        }
         if (!stmt.type && !OVERRIDES_KEEP_INFERRED.has(info.name)) {
           // the declared type of a function that infers it: spelled out, as the wrapper's `as never` has none
           const spelled = spellType(info.ret.type, name, mod)
@@ -172,7 +240,9 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
       if (ts.isExportDeclaration(stmt) && stmt.moduleSpecifier) {
         const target = moduleOf((stmt.moduleSpecifier as ts.StringLiteral).text)
         if (target) {
-          if (stmt.exportClause && ts.isNamedExports(stmt.exportClause)) for (const el of stmt.exportClause.elements) piece.reexports.push({ target, name: (el.propertyName ?? el.name).text })
+          if (stmt.exportClause && ts.isNamedExports(stmt.exportClause))
+            for (const el of stmt.exportClause.elements)
+              piece.reexports.push({ target, name: (el.propertyName ?? el.name).text })
           else piece.reexports.push({ target, name: '*' })
         }
       }
@@ -180,7 +250,9 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
     if (piece.wrapped) {
       const probe = ts.createSourceFile('wrapper.ts', piece.text, ts.ScriptTarget.ES2022, true)
       identifiersOf(probe, piece.refs)
-    } else identifiersOf(stmt, piece.refs)
+    } else if (!(ts.isExportDeclaration(stmt) && stmt.moduleSpecifier))
+      identifiersOf(stmt, piece.refs)
+    // an `export { x } from '…'` names x in another module, not this one's import of it
     mod.pieces.push(piece)
   }
   return mod
@@ -202,7 +274,12 @@ function importText(decl: ImportDecl, used: Set<string>): string | null {
   const ns = keep.find((i) => i.kind === 'namespace')
   if (def) parts.push(def.local)
   if (ns) parts.push(`* as ${ns.local}`)
-  const named = keep.filter((i) => i.kind === 'named').map((i) => `${i.typeOnly ? 'type ' : ''}${i.imported === i.local ? i.local : `${i.imported} as ${i.local}`}`)
+  const named = keep
+    .filter((i) => i.kind === 'named')
+    .map(
+      (i) =>
+        `${i.typeOnly ? 'type ' : ''}${i.imported === i.local ? i.local : `${i.imported} as ${i.local}`}`,
+    )
   if (named.length) parts.push(`{ ${named.join(', ')} }`)
   return `import ${type}${parts.join(', ')} from '${decl.spec}'`
 }
@@ -212,16 +289,29 @@ interface Output {
   text: string
 }
 
-function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbatim: string[]; dropped: string[]; wrapped: Set<string> } {
+function generateModules(exportsAll: ExportInfo[]): {
+  outputs: Output[]
+  verbatim: string[]
+  dropped: string[]
+  wrapped: Set<string>
+} {
   const byModule = new Map<string, ExportInfo[]>()
   for (const e of exportsAll) byModule.set(e.module, [...(byModule.get(e.module) ?? []), e])
-  const rewritten = [...byModule.entries()].filter(([, list]) => list.some((e) => e.kind === 'function' && routed(e))).map(([name]) => name)
-  const everyModule = readdirSync(REFERENCE).filter((f) => f.endsWith('.ts')).map((f) => f.replace(/\.ts$/, ''))
-  const verbatim = everyModule.filter((m) => !rewritten.includes(m))
+  const rewritten = [...byModule.entries()]
+    .filter(([, list]) => list.some((e) => e.kind === 'function' && routed(e)))
+    .map(([name]) => name)
+  const everyModule = readdirSync(REFERENCE)
+    .filter((f) => f.endsWith('.ts'))
+    .map((f) => f.replace(/\.ts$/, ''))
+  const verbatim = everyModule.filter(
+    (m) => !rewritten.includes(m) && !Object.hasOwn(UNUSED_MODULES, m),
+  )
 
   const mods = new Map<string, Module>()
   for (const name of rewritten) {
-    const infoByName = new Map((byModule.get(name) ?? []).filter((e) => e.kind === 'function').map((e) => [e.name, e]))
+    const infoByName = new Map(
+      (byModule.get(name) ?? []).filter((e) => e.kind === 'function').map((e) => [e.name, e]),
+    )
     mods.set(name, parseModule(name, infoByName))
   }
 
@@ -241,9 +331,15 @@ function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbati
     for (const piece of mods.get(module)?.pieces ?? []) if (piece.exported) take(piece)
   }
   for (const mod of mods.values()) {
-    const required = new Set((byModule.get(mod.name) ?? []).filter((e) => e.required.length).map((e) => e.name))
+    const required = new Set(
+      (byModule.get(mod.name) ?? []).filter((e) => e.required.length).map((e) => e.name),
+    )
     for (const piece of mod.pieces) {
-      if (piece.root || (piece.exported && (piece.typeLike || piece.names.some((n) => required.has(n))))) take(piece)
+      if (
+        piece.root ||
+        (piece.exported && (piece.typeLike || piece.names.some((n) => required.has(n))))
+      )
+        take(piece)
     }
   }
   const importsOfVerbatim = (module: string): ImportDecl[] => {
@@ -253,17 +349,50 @@ function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbati
     for (const stmt of sf.statements) {
       if (ts.isImportDeclaration(stmt) && stmt.importClause) {
         const clause = stmt.importClause
-        const decl: ImportDecl = { spec: (stmt.moduleSpecifier as ts.StringLiteral).text, imports: [], clauseTypeOnly: !!clause.isTypeOnly, sideEffect: false }
-        if (clause.name) decl.imports.push({ local: clause.name.text, imported: 'default', kind: 'default', typeOnly: false })
+        const decl: ImportDecl = {
+          spec: (stmt.moduleSpecifier as ts.StringLiteral).text,
+          imports: [],
+          clauseTypeOnly: !!clause.isTypeOnly,
+          sideEffect: false,
+        }
+        if (clause.name)
+          decl.imports.push({
+            local: clause.name.text,
+            imported: 'default',
+            kind: 'default',
+            typeOnly: false,
+          })
         const b = clause.namedBindings
-        if (b && ts.isNamespaceImport(b)) decl.imports.push({ local: b.name.text, imported: '*', kind: 'namespace', typeOnly: false })
-        else if (b) for (const el of b.elements) decl.imports.push({ local: el.name.text, imported: (el.propertyName ?? el.name).text, kind: 'named', typeOnly: el.isTypeOnly })
+        if (b && ts.isNamespaceImport(b))
+          decl.imports.push({
+            local: b.name.text,
+            imported: '*',
+            kind: 'namespace',
+            typeOnly: false,
+          })
+        else if (b)
+          for (const el of b.elements)
+            decl.imports.push({
+              local: el.name.text,
+              imported: (el.propertyName ?? el.name).text,
+              kind: 'named',
+              typeOnly: el.isTypeOnly,
+            })
         out.push(decl)
-      } else if ((ts.isExportDeclaration(stmt) || ts.isImportDeclaration(stmt)) && stmt.moduleSpecifier) {
+      } else if (
+        (ts.isExportDeclaration(stmt) || ts.isImportDeclaration(stmt)) &&
+        stmt.moduleSpecifier
+      ) {
         const spec = (stmt.moduleSpecifier as ts.StringLiteral).text
         const target = moduleOf(spec)
         if (target && mods.has(target)) {
-          if (ts.isExportDeclaration(stmt) && stmt.exportClause && ts.isNamedExports(stmt.exportClause)) for (const el of stmt.exportClause.elements) takeName(target, (el.propertyName ?? el.name).text)
+          if (
+            ts.isExportDeclaration(stmt) &&
+            stmt.exportClause &&
+            ts.isNamedExports(stmt.exportClause)
+          )
+            for (const el of stmt.exportClause.elements)
+              takeName(target, (el.propertyName ?? el.name).text)
           else takeAll(target)
         }
       }
@@ -319,8 +448,13 @@ function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbati
       const line = importText(decl, used)
       if (line) lines.push(line)
     }
-    const wrappers = kept.filter((p) => p.wrapped).map((p) => p.text).join('\n')
-    const core = ['invoke', 'invokeAsync', 'xnodeArg', 'zipCall'].filter((n) => new RegExp(`\\b${n}\\(`).test(wrappers))
+    const wrappers = kept
+      .filter((p) => p.wrapped)
+      .map((p) => p.text)
+      .join('\n')
+    const core = ['invoke', 'invokeAsync', 'xnodeArg', 'zipCall'].filter((n) =>
+      new RegExp(`\\b${n}\\(`).test(wrappers),
+    )
     const fromEngine = core.filter((n) => n !== 'zipCall')
     if (fromEngine.length) lines.push(`import { ${fromEngine.join(', ')} } from './engine'`)
     if (core.includes('zipCall')) lines.push(`import { zipCall } from './engine-hand'`)
@@ -328,8 +462,12 @@ function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbati
     const body = kept.map((p) => p.text.replace(/^\n+/, '\n')).join('')
     const append = APPEND[mod.name] ? `\n${APPEND[mod.name]}\n` : ''
     const header = mod.header ? `${mod.header}\n` : ''
-    outputs.push({ module: mod.name, text: `${header}${lines.join('\n')}\n${body.replace(/^\n*/, '\n')}${append}` })
+    outputs.push({
+      module: mod.name,
+      text: `${header}${lines.join('\n')}\n${body.replace(/^\n*/, '\n')}${append}`,
+    })
   }
+  dropped.push(...Object.keys(UNUSED_MODULES))
   return { outputs, verbatim, dropped, wrapped }
 }
 
@@ -342,11 +480,23 @@ function exportsOfText(file: string, text: string): { names: Set<string>; stars:
   const stars: string[] = []
   for (const stmt of sf.statements) {
     if (ts.isExportDeclaration(stmt)) {
-      if (!stmt.exportClause && stmt.moduleSpecifier) stars.push((stmt.moduleSpecifier as ts.StringLiteral).text)
-      else if (stmt.exportClause && ts.isNamedExports(stmt.exportClause)) for (const el of stmt.exportClause.elements) names.add(el.name.text)
+      if (!stmt.exportClause && stmt.moduleSpecifier)
+        stars.push((stmt.moduleSpecifier as ts.StringLiteral).text)
+      else if (stmt.exportClause && ts.isNamedExports(stmt.exportClause))
+        for (const el of stmt.exportClause.elements) names.add(el.name.text)
     } else if (hasModifier(stmt, ts.SyntaxKind.ExportKeyword)) {
-      if (ts.isVariableStatement(stmt)) for (const d of stmt.declarationList.declarations) bindingNames(d.name, []).forEach((n) => names.add(n))
-      else if ((ts.isFunctionDeclaration(stmt) || ts.isClassDeclaration(stmt) || ts.isInterfaceDeclaration(stmt) || ts.isTypeAliasDeclaration(stmt) || ts.isEnumDeclaration(stmt)) && stmt.name) names.add(stmt.name.text)
+      if (ts.isVariableStatement(stmt))
+        for (const d of stmt.declarationList.declarations)
+          bindingNames(d.name, []).forEach((n) => names.add(n))
+      else if (
+        (ts.isFunctionDeclaration(stmt) ||
+          ts.isClassDeclaration(stmt) ||
+          ts.isInterfaceDeclaration(stmt) ||
+          ts.isTypeAliasDeclaration(stmt) ||
+          ts.isEnumDeclaration(stmt)) &&
+        stmt.name
+      )
+        names.add(stmt.name.text)
     }
   }
   return { names, stars }
@@ -374,17 +524,26 @@ function checkImports(texts: Map<string, string>): string[] {
   for (const [module, text] of texts) {
     const sf = ts.createSourceFile(`${module}.ts`, text, ts.ScriptTarget.ES2022, true)
     for (const stmt of sf.statements) {
-      if (!(ts.isImportDeclaration(stmt) || ts.isExportDeclaration(stmt)) || !stmt.moduleSpecifier) continue
+      if (!(ts.isImportDeclaration(stmt) || ts.isExportDeclaration(stmt)) || !stmt.moduleSpecifier)
+        continue
       const target = moduleOf((stmt.moduleSpecifier as ts.StringLiteral).text)
       if (!target) continue
       if (!texts.has(target)) {
-        if (!existsSync(join(SRC, `${target}.ts`))) problems.push(`${module}: imports ${target}, which does not exist`)
+        if (!existsSync(join(SRC, `${target}.ts`)))
+          problems.push(`${module}: imports ${target}, which does not exist`)
         continue
       }
-      const named = ts.isImportDeclaration(stmt) ? (stmt.importClause?.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings) ? stmt.importClause.namedBindings.elements : []) : stmt.exportClause && ts.isNamedExports(stmt.exportClause) ? stmt.exportClause.elements : []
+      const named = ts.isImportDeclaration(stmt)
+        ? stmt.importClause?.namedBindings && ts.isNamedImports(stmt.importClause.namedBindings)
+          ? stmt.importClause.namedBindings.elements
+          : []
+        : stmt.exportClause && ts.isNamedExports(stmt.exportClause)
+          ? stmt.exportClause.elements
+          : []
       for (const el of named) {
         const name = (el.propertyName ?? el.name).text
-        if (has(target, name) === false) problems.push(`${module}: imports ${name} from ${target}, which does not export it`)
+        if (has(target, name) === false)
+          problems.push(`${module}: imports ${name} from ${target}, which does not export it`)
       }
     }
   }
@@ -393,7 +552,21 @@ function checkImports(texts: Map<string, string>): string[] {
 
 // ---------------------------------------------------------------- run
 
-function writeIfChanged(path: string, text: string): boolean {
+/** `text` as the repository's formatters write it: prettier for TypeScript, rustfmt for Rust (CI checks both). */
+async function formatted(path: string, text: string): Promise<string> {
+  if (path.endsWith('.rs')) {
+    const rustfmt = spawnSync('rustfmt', ['--edition', '2024', '--emit', 'stdout'], {
+      input: text,
+      encoding: 'utf8',
+    })
+    if (rustfmt.status !== 0) throw new Error(`rustfmt refused ${path}: ${rustfmt.stderr}`)
+    return rustfmt.stdout
+  }
+  return prettier.format(text, { ...(await prettier.resolveConfig(path)), filepath: path })
+}
+
+async function writeIfChanged(path: string, raw: string): Promise<boolean> {
+  const text = await formatted(path, raw)
   if (existsSync(path) && readFileSync(path, 'utf8') === text) return false
   if (!DRY) {
     mkdirSync(dirname(path), { recursive: true })
@@ -403,31 +576,48 @@ function writeIfChanged(path: string, text: string): boolean {
 }
 
 const { exports: all } = build()
-writeFileSync(join(ROOT, 'tools/docx-diff/binding/manifest.json'), JSON.stringify({ exports: all }, null, 1) + '\n')
+writeFileSync(
+  join(ROOT, 'tools/docx-diff/binding/manifest.json'),
+  JSON.stringify({ exports: all }, null, 1) + '\n',
+)
 const { outputs, verbatim, dropped, wrapped } = generateModules(all)
 let changed = 0
-for (const out of outputs) if (writeIfChanged(join(SRC, `${out.module}.ts`), out.text)) changed++
-for (const module of dropped) if (existsSync(join(SRC, `${module}.ts`)) && !DRY) rmSync(join(SRC, `${module}.ts`))
+for (const out of outputs)
+  if (await writeIfChanged(join(SRC, `${out.module}.ts`), out.text)) changed++
+for (const module of dropped)
+  if (existsSync(join(SRC, `${module}.ts`)) && !DRY) rmSync(join(SRC, `${module}.ts`))
 for (const module of verbatim) {
   const text = readFileSync(join(REFERENCE, `${module}.ts`), 'utf8')
-  if (writeIfChanged(join(SRC, `${module}.ts`), text)) changed++
+  if (await writeIfChanged(join(SRC, `${module}.ts`), text)) changed++
 }
 {
   const texts = new Map<string, string>()
-  for (const module of verbatim) texts.set(module, readFileSync(join(REFERENCE, `${module}.ts`), 'utf8'))
+  for (const module of verbatim)
+    texts.set(module, readFileSync(join(REFERENCE, `${module}.ts`), 'utf8'))
   for (const out of outputs) texts.set(out.module, out.text)
   texts.set('engine', readFileSync(join(SRC, 'engine.ts'), 'utf8'))
   texts.set('engine-hand', readFileSync(join(SRC, 'engine-hand.ts'), 'utf8'))
   texts.set('engine-shapes', 'export const SHAPES = {}')
   for (const problem of checkImports(texts)) console.log(`  import check: ${problem}`)
 }
-console.log(`${outputs.length} modules rewritten, ${verbatim.length} copied, ${dropped.length} dropped (${dropped.join(', ')}), ${changed} files changed${DRY ? ' (dry run)' : ''}`)
+console.log(
+  `${outputs.length} modules rewritten, ${verbatim.length} copied, ${dropped.length} dropped (${dropped.join(', ')}), ${changed} files changed${DRY ? ' (dry run)' : ''}`,
+)
 
 const shapes: Record<string, unknown> = {}
-for (const e of all) if (e.kind === 'function' && e.ret.shape && (e.route !== 'ts') && !shapes[e.name]) shapes[e.name] = e.ret.shape
+for (const e of all)
+  if (e.kind === 'function' && e.ret.shape && e.route !== 'ts' && !shapes[e.name])
+    shapes[e.name] = e.ret.shape
 const shapesText = `// GENERATED by tools/docx-diff/binding/gen.ts: where a Map or a Set sits in what an export returns.\nimport type { Shape } from './engine'\n\nexport const SHAPES: Record<string, Shape> = ${JSON.stringify(shapes, null, 2)}\n`
-if (writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText)) console.log('engine-shapes.ts written')
-const table = rustTable(all.filter((e) => e.kind === 'function' && (e.route === 'routes' || (e.route === 'table' && wrapped.has(e.name))))
+if (await writeIfChanged(join(SRC, 'engine-shapes.ts'), shapesText))
+  console.log('engine-shapes.ts written')
+const table = rustTable(
+  all.filter(
+    (e) =>
+      e.kind === 'function' &&
+      (e.route === 'routes' || (e.route === 'table' && wrapped.has(e.name))),
+  ),
 )
-if (writeIfChanged(join(ROOT, 'crates/office-wasm/src/invoke/table.rs'), table.text)) console.log(`table.rs written: ${table.rows} rows`)
+if (await writeIfChanged(join(ROOT, 'crates/office-wasm/src/invoke/table.rs'), table.text))
+  console.log(`table.rs written: ${table.rows} rows`)
 for (const note of table.notes) console.log(`  note: ${note}`)

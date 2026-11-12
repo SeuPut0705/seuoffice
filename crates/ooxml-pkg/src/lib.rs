@@ -26,7 +26,7 @@ pub use normalize::{
     dedupe_style_refs, has_duplicate_style_refs, has_universal_measures, needs_ooxml_normalization,
     normalize_ooxml_xml,
 };
-pub use package::{Package, Part, ReadError};
+pub use package::{Package, Part, PartName, ReadError};
 
 /// Per-entry cap, the `maxPartBytes` of the TypeScript zip gate.
 pub const MAX_ENTRY_BYTES: u64 = 512 * 1024 * 1024;
