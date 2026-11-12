@@ -22,6 +22,7 @@
 import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 import { parseAddressParts } from '../formula-values'
+import type { RangeBounds } from '@genoffice/xlsx-gateway/domain/cell-address'
 import type { CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import {
   placeholderInstruction as buildInstruction,
@@ -82,6 +83,13 @@ export interface RedactionIndex {
   labelsFor(sheetId: string): readonly string[]
   /** the raw rectangles, for callers that count an area rather than ask about a cell */
   marksFor(sheetId: string): readonly CellMark[]
+  /**
+   * The cells withheld beyond the marks: formula cells whose value is computed
+   * from a marked cell (see `redact-derived`). `labelAt` already answers for
+   * them; this is for a guard that asks about a rectangle. Absent on an index
+   * that knows only marks.
+   */
+  derivedFor?(sheetId: string): readonly RangeBounds[]
   /** every sheet id carrying marks, so callers can decide what to say about them */
   readonly sheetIds: readonly string[]
 }

@@ -1,0 +1,405 @@
+/**
+ * The formula cells that show a value computed from a hidden cell.
+ *
+ * A mark withholds its own cell. `=B2` beside it shows the same value, a
+ * `=SUM(B:B)` gives it away, and a formula reading either does so again. The
+ * index every reader asks (`redactionIndexOf`) therefore answers "withheld"
+ * for those cells too, with the generic `{{private}}` label: such a cell is
+ * not the one the person labelled. Both its value and its formula text are
+ * withheld, the same as for a marked cell, so no reader needs a second shape
+ * of answer. The rule that decides which cells is the workbook gateway's
+ * (`formula-reads`), shared with the file reader in `file-parse`.
+ *
+ * ## Where the formulas come from
+ *
+ * - **Live formulas**: every cell the grid's model holds a formula for (typed
+ *   this session, loaded for the engine, pinned by the closure), and the range
+ *   a dynamic array spills into. Their text is current, so they are traced.
+ * - **Formulas the session only knows from the file**: a formula cell shown
+ *   from its cached value (a function the engine lacks, a streamed workbook
+ *   whose formulas stay in the sidecar). Its text is in file coordinates and
+ *   its value was computed by another program, so it is not traced: it is
+ *   withheld, and so is everything that reads it.
+ * - **A sheet whose formula cells are not known** (the list has not arrived,
+ *   holds more than the sidecar returns, or the platform has none) is withheld
+ *   whole.
+ *
+ * None of this runs, and nothing is withheld, in a workbook without marks.
+ *
+ * The answer is computed when a reader asks and kept until something changes
+ * (any mutation of the workbook, a new mark, a formula list arriving), so a
+ * formula typed after the hide and a hide made after the formula are both
+ * covered by the next read.
+ */
+import type { RangeBounds } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { parseRange } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { offsetFormulaRefs } from '@genoffice/xlsx-gateway/domain/formula-shift'
+import {
+  areaLookup,
+  cellsDerivedFromWithheld,
+  type NameDefinition,
+  type ReadsSheet,
+} from '@genoffice/xlsx-gateway/gateway/formula-reads'
+import { CommandType } from '@univerjs/core'
+import {
+  FormulaDataModel,
+  IDefinedNamesService,
+  type IArrayFormulaRangeType,
+} from '@univerjs/engine-formula'
+
+import type { WorkbookFormulaCellsResult } from '../shared/desktop-api'
+import type { RedactionIndex } from './ai/redact'
+import { UNKNOWN_REDACTION_LABEL } from './ai/redact-load'
+import { resolveDuplicateSource } from './edit-journal'
+import { SharedFormulaLookup } from './shared-formula-index'
+import type { LazyWorkbookState, UniverRuntime } from './univer-state'
+import { fileRangeToScreenRange, fileToScreen } from './view-transform'
+
+const MAX_ROW = 1_048_575
+const MAX_COLUMN = 16_383
+const WHOLE_SHEET: RangeBounds = {
+  startRow: 0,
+  endRow: MAX_ROW,
+  startColumn: 0,
+  endColumn: MAX_COLUMN,
+}
+
+/** The formula cells of one file sheet, in file coordinates. */
+interface FileFormulaCells {
+  readonly cells: readonly (readonly [row: number, column: number])[]
+  /** the range each array formula fills, with its master at the top left */
+  readonly arrays: readonly RangeBounds[]
+}
+
+export interface DerivedCellsDeps {
+  readonly runtime: () => UniverRuntime | null
+  readonly state: () => LazyWorkbookState | null
+  /**
+   * The sidecar's list of one file sheet's formulas, for a workbook that is
+   * not fully loaded. Absent on a platform without one: such a workbook's file
+   * sheets are then withheld whole.
+   */
+  readonly readFormulas?:
+    ((sessionId: string, sheetId: string) => Promise<WorkbookFormulaCellsResult>) | undefined
+}
+
+export interface DerivedCells {
+  /** The index readers ask: `marks`, plus the formula cells that compute from them. */
+  indexOver(marks: RedactionIndex): RedactionIndex
+  /** A formula, a value a formula shows, or the shape of the workbook changed. */
+  invalidate(): void
+  /** Another workbook was opened: nothing known about the last one applies. */
+  reset(): void
+}
+
+interface DerivedLookup {
+  readonly sheetIds: readonly string[]
+  areasOf(sheetId: string): readonly RangeBounds[]
+  has(sheetId: string, row: number, column: number): boolean
+}
+
+/** Every cell of every sheet: what is answered when the formulas cannot be collected at all. */
+const EVERYTHING: DerivedLookup = {
+  sheetIds: [],
+  areasOf: () => [WHOLE_SHEET],
+  has: () => true,
+}
+
+const cellKey = (row: number, column: number): number => row * (MAX_COLUMN + 1) + column
+const cellArea = (row: number, column: number): RangeBounds => ({
+  startRow: row,
+  endRow: row,
+  startColumn: column,
+  endColumn: column,
+})
+
+/** Cells as column runs, so a column of 100,000 formulas is one area and not 100,000. */
+function columnRuns(cells: readonly (readonly [number, number])[]): RangeBounds[] {
+  const sorted = [...cells].sort((a, b) => a[1] - b[1] || a[0] - b[0])
+  const runs: RangeBounds[] = []
+  let run: { startRow: number; endRow: number; startColumn: number; endColumn: number } | null =
+    null
+  for (const [row, column] of sorted) {
+    if (run && run.startColumn === column && row <= run.endRow + 1) {
+      run.endRow = Math.max(run.endRow, row)
+      continue
+    }
+    run = { ...cellArea(row, column) }
+    runs.push(run)
+  }
+  return runs
+}
+
+function fileCellsOfState(state: LazyWorkbookState, fileSheetId: string): FileFormulaCells {
+  const cells: [number, number][] = []
+  for (const key of state.formulaText.get(fileSheetId)?.keys() ?? []) {
+    const [row, column] = key.split(':').map(Number)
+    if (row !== undefined && column !== undefined) cells.push([row, column])
+  }
+  state.sharedFormulaGroups
+    .get(fileSheetId)
+    ?.forEachFollower((row, column) => cells.push([row, column]))
+  const arrays: RangeBounds[] = []
+  for (const ref of state.fileArrayRefs.get(fileSheetId)?.values() ?? []) {
+    try {
+      arrays.push(parseRange(ref))
+    } catch {
+      // A range that cannot be read fills cells nobody can name.
+      arrays.push(WHOLE_SHEET)
+    }
+  }
+  return { cells, arrays }
+}
+
+function fileCellsOfIndex(result: WorkbookFormulaCellsResult): FileFormulaCells {
+  const cells: [number, number][] = []
+  const arrays: RangeBounds[] = []
+  for (const cell of result.cells) {
+    if (!cell.formula) continue
+    cells.push([cell.row, cell.column])
+    if (!cell.arrayRef) continue
+    try {
+      arrays.push(parseRange(cell.arrayRef))
+    } catch {
+      arrays.push(WHOLE_SHEET)
+    }
+  }
+  new SharedFormulaLookup(result.sharedGroups).forEachFollower((row, column) =>
+    cells.push([row, column]),
+  )
+  return { cells, arrays }
+}
+
+const INDEX_RETRY_MS = 400
+const INDEX_RETRIES = 450
+
+export function createDerivedCells(deps: DerivedCellsDeps): DerivedCells {
+  /** per file sheet id: its formula cells, or why they are not known */
+  const fileIndexes = new Map<string, FileFormulaCells | 'loading' | 'unavailable'>()
+  let cached: { marks: RedactionIndex; stamp: string; lookup: DerivedLookup } | null = null
+  /** bumped by `reset`, so a list read for the last workbook is dropped */
+  let generation = 0
+
+  async function loadFileIndex(state: LazyWorkbookState, fileSheetId: string): Promise<void> {
+    const started = generation
+    const settle = (value: FileFormulaCells | 'unavailable'): void => {
+      if (started !== generation || deps.state() !== state) return
+      fileIndexes.set(fileSheetId, value)
+      cached = null
+    }
+    if (!deps.readFormulas) return settle('unavailable')
+    try {
+      for (let attempt = 0; attempt < INDEX_RETRIES; attempt += 1) {
+        const result = await deps.readFormulas(state.file.sessionId, fileSheetId)
+        if (started !== generation || deps.state() !== state) return
+        // More formulas than the sidecar lists: the rest could be anywhere.
+        if (result.truncated) return settle('unavailable')
+        if (result.indexingComplete) return settle(fileCellsOfIndex(result))
+        await new Promise((resolve) => setTimeout(resolve, INDEX_RETRY_MS))
+      }
+      settle('unavailable')
+    } catch {
+      settle('unavailable')
+    }
+  }
+
+  /** The file sheet's formula cells, or null while they are not known. */
+  function fileCells(state: LazyWorkbookState, fileSheetId: string): FileFormulaCells | null {
+    // A full load has read every cell of every sheet, formulas included.
+    if (state.flags.preloadComplete && !state.formulaTextTruncated.has(fileSheetId)) {
+      return fileCellsOfState(state, fileSheetId)
+    }
+    const known = fileIndexes.get(fileSheetId)
+    if (known === undefined) {
+      fileIndexes.set(fileSheetId, 'loading')
+      void loadFileIndex(state, fileSheetId)
+      return null
+    }
+    return typeof known === 'string' ? null : known
+  }
+
+  function collect(marks: RedactionIndex): DerivedLookup {
+    const runtime = deps.runtime()
+    const state = deps.state()
+    const workbook = runtime?.univerAPI.getActiveWorkbook()
+    if (!runtime || !state || !workbook) return EVERYTHING
+    const injector = runtime.univer.__getInjector()
+    const unitId = workbook.getId()
+    let spills: IArrayFormulaRangeType[string]
+    try {
+      spills = injector.get(FormulaDataModel).getArrayFormulaRange()?.[unitId]
+    } catch {
+      // no formula engine in this runtime: nothing spills
+    }
+    const names: NameDefinition[] = []
+    try {
+      const defined = injector.get(IDefinedNamesService).getDefinedNameMap(unitId)
+      for (const item of Object.values(defined ?? {})) {
+        names.push({ name: item.name, formula: item.formulaOrRefString })
+      }
+    } catch {
+      // no names service: a formula that uses a name is withheld
+    }
+    const fileSheetIds = new Set(state.file.sheets.map((sheet) => sheet.id))
+    const journal = state.editJournal
+
+    const ids: string[] = []
+    const sheets: ReadsSheet[] = []
+    for (const sheet of workbook.getSheets()) {
+      const id = sheet.getSheetId()
+      const live = new Map<number, string>()
+      const masters = new Map<string, { row: number; column: number; formula: string }>()
+      const followers: { row: number; column: number; si: string }[] = []
+      const unknownCells: [number, number][] = []
+      sheet
+        .getSheet()
+        .getCellMatrix()
+        .forValue((row, column, cell) => {
+          const formula = typeof cell?.f === 'string' && cell.f !== '' ? cell.f : null
+          const si = typeof cell?.si === 'string' && cell.si !== '' ? cell.si : null
+          if (formula !== null) {
+            live.set(cellKey(row, column), formula)
+            if (si !== null) masters.set(si, { row, column, formula })
+          } else if (si !== null) followers.push({ row, column, si })
+        })
+      for (const follower of followers) {
+        const master = masters.get(follower.si)
+        if (!master) {
+          unknownCells.push([follower.row, follower.column])
+          continue
+        }
+        live.set(
+          cellKey(follower.row, follower.column),
+          offsetFormulaRefs(
+            master.formula,
+            follower.row - master.row,
+            follower.column - master.column,
+          ),
+        )
+      }
+      const formulas: { area: RangeBounds; formula: string }[] = []
+      for (const [key, formula] of live) {
+        const row = Math.floor(key / (MAX_COLUMN + 1))
+        const column = key % (MAX_COLUMN + 1)
+        formulas.push({ area: spills?.[id]?.[row]?.[column] ?? cellArea(row, column), formula })
+      }
+      // A formula typed this session whose row the streaming grid has let go of.
+      const journalCells = journal.cells.get(id)
+      for (const entry of journalCells?.values() ?? []) {
+        if (!entry.hasValue || !entry.formula || live.has(cellKey(entry.row, entry.column)))
+          continue
+        formulas.push({ area: cellArea(entry.row, entry.column), formula: entry.formula })
+      }
+
+      const unknown: RangeBounds[] = []
+      const fileSheetId = fileSheetIds.has(id) ? id : resolveDuplicateSource(journal, id)
+      if (fileSheetId !== undefined && !fileSheetIds.has(fileSheetId)) {
+        // neither a file sheet nor one this session made: nothing is known about it
+        unknown.push(WHOLE_SHEET)
+      } else if (fileSheetId !== undefined) {
+        const file = fileCells(state, fileSheetId)
+        if (!file) unknown.push(WHOLE_SHEET)
+        else {
+          const ops = journal.structuralOps.get(id) ?? []
+          const isLive = (row: number, column: number): boolean =>
+            live.has(cellKey(row, column)) ||
+            // overwritten this session: a constant, or a formula listed above
+            journalCells?.get(`${row}:${column}`)?.hasValue === true
+          for (const [fileRow, fileColumn] of file.cells) {
+            const row = fileToScreen(ops, 'row', fileRow)
+            const column = fileToScreen(ops, 'column', fileColumn)
+            if (row === null || column === null || isLive(row, column)) continue
+            unknownCells.push([row, column])
+          }
+          for (const filled of file.arrays) {
+            const row = fileToScreen(ops, 'row', filled.startRow)
+            const column = fileToScreen(ops, 'column', filled.startColumn)
+            // a master the engine evaluates spills by itself (see `spills`)
+            if (row !== null && column !== null && live.has(cellKey(row, column))) continue
+            const onScreen = ops.length === 0 ? filled : fileRangeToScreenRange(ops, filled)
+            if (onScreen) unknown.push(onScreen)
+          }
+        }
+      }
+      unknown.push(...columnRuns(unknownCells))
+      ids.push(id)
+      sheets.push({ name: sheet.getSheetName(), marks: marks.marksFor(id), unknown, formulas })
+    }
+
+    const traced = cellsDerivedFromWithheld(sheets, names)
+    const lookups = new Map(
+      ids.map((id, index) => [
+        id,
+        { areas: traced.bySheet[index]!, has: areaLookup(traced.bySheet[index]!) },
+      ]),
+    )
+    return {
+      sheetIds: ids.filter((id) => (lookups.get(id)?.areas.length ?? 0) > 0),
+      areasOf: (sheetId) => lookups.get(sheetId)?.areas ?? [],
+      has: (sheetId, row, column) => lookups.get(sheetId)?.has(row, column) ?? false,
+    }
+  }
+
+  function derivedOf(marks: RedactionIndex): DerivedLookup {
+    const state = deps.state()
+    // What the collection depends on besides mutations (which invalidate).
+    const stamp = `${state?.flags.preloadComplete}:${state?.formulaTextTruncated.size}`
+    if (cached?.marks === marks && cached.stamp === stamp) return cached.lookup
+    let lookup: DerivedLookup
+    try {
+      lookup = collect(marks)
+    } catch {
+      lookup = EVERYTHING
+    }
+    cached = { marks, stamp, lookup }
+    return lookup
+  }
+
+  return {
+    indexOver(marks) {
+      if (marks.isEmpty) return marks
+      return {
+        isEmpty: false,
+        get sheetIds() {
+          return [...new Set([...marks.sheetIds, ...derivedOf(marks).sheetIds])]
+        },
+        labelAt(sheetId, row, column) {
+          return (
+            marks.labelAt(sheetId, row, column) ??
+            (derivedOf(marks).has(sheetId, row, column) ? UNKNOWN_REDACTION_LABEL : null)
+          )
+        },
+        labelsFor(sheetId) {
+          const labels = marks.labelsFor(sheetId)
+          return derivedOf(marks).areasOf(sheetId).length === 0
+            ? labels
+            : [...new Set([...labels, UNKNOWN_REDACTION_LABEL])]
+        },
+        marksFor: (sheetId) => marks.marksFor(sheetId),
+        derivedFor: (sheetId) => derivedOf(marks).areasOf(sheetId),
+      }
+    },
+    invalidate() {
+      cached = null
+    },
+    reset() {
+      generation += 1
+      fileIndexes.clear()
+      cached = null
+    },
+  }
+}
+
+/**
+ * Forget the answer whenever the workbook changes. Every mutation counts: a
+ * typed formula, a pasted block, a row inserted, a sheet renamed, and the
+ * engine's own result writes (they change what a dynamic array spills into).
+ */
+export function installDerivedCellsInvalidation(
+  runtime: UniverRuntime,
+  derived: DerivedCells,
+): { dispose(): void } {
+  return runtime.univerAPI.addEvent(runtime.univerAPI.Event.CommandExecuted, (event) => {
+    if (event.type === CommandType.MUTATION) derived.invalidate()
+  })
+}
