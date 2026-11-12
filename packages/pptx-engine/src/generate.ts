@@ -381,7 +381,8 @@ function patchRunProps(runXml: string, run: TextRun): string {
     // A language the model gained (tagHangulRun on text written into an untagged run) is
     // written; one that is already in the bytes is never replaced
     if (run.lang != null && !/\slang\s*=/.test(tag)) {
-      tag = tag.replace(/^<a:rPr/, `<a:rPr lang="${escapeXmlAttr(run.lang)}"`)
+      const lang = run.lang
+      tag = tag.replace(/^<a:rPr/, () => `<a:rPr lang="${escapeXmlAttr(lang)}"`)
     }
     tag = setBoolAttr(tag, 'b', run.boldImplicit ? undefined : run.bold)
     tag = setBoolAttr(tag, 'i', run.italicImplicit ? undefined : run.italic)
@@ -478,7 +479,9 @@ function patchRunProps(runXml: string, run: TextRun): string {
     // schema order: fill, highlight, the font slots, hlinkClick
     const inner = color + highlight + font + hlinkXml(run)
     const rpr = inner ? `<a:rPr${attrs}>${inner}</a:rPr>` : `<a:rPr${attrs}/>`
-    runXml = runXml.replace(/(<a:r(?:\s[^>]*)?>)/, `$1${rpr}`)
+    // A function, not a string: the rPr holds a font name the user typed and attribute values
+    // from the deck, and a replacement string would expand a `$&` or `$$` in them
+    runXml = runXml.replace(/<a:r(?:\s[^>]*)?>/, (open) => `${open}${rpr}`)
   }
   return runXml
 }
@@ -832,11 +835,13 @@ function setBoolAttr(tag: string, name: string, val: boolean | undefined): strin
 /** Set/replace/delete an attribute. value=undefined means untouched (keep the original value). */
 function setAttr(tag: string, name: string, value: string | undefined, existingRe: RegExp): string {
   if (value === undefined) return tag
+  // Functions, not strings: the value can be an attribute the deck carries (an underline or
+  // strike style), and a replacement string would expand a `$&` or `$$` in it
   if (existingRe.test(tag)) {
-    return tag.replace(existingRe, ` ${name}="${escapeXmlAttr(value)}"`)
+    return tag.replace(existingRe, () => ` ${name}="${escapeXmlAttr(value)}"`)
   }
   // Inject after the tag name (after <a:rPr)
-  return tag.replace(/^<a:rPr/, `<a:rPr ${name}="${escapeXmlAttr(value)}"`)
+  return tag.replace(/^<a:rPr/, () => `<a:rPr ${name}="${escapeXmlAttr(value)}"`)
 }
 
 /**

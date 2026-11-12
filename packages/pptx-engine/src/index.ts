@@ -3111,12 +3111,14 @@ function patchOwnCNvPrAttr(
   const m = /<p:cNvPr\b[^>]*?\/?>/.exec(xml)
   if (!m) return false
   const re = new RegExp(`\\s${name}="[^"]*"`)
+  // Functions, not strings: the value is a name the user typed, and a replacement string would
+  // expand a `$&` or `$$` in it
   const tag =
     value === undefined
       ? m[0].replace(re, '')
       : re.test(m[0])
-        ? m[0].replace(re, ` ${name}="${escapeXmlAttr(value)}"`)
-        : m[0].replace(/(\s*\/?>)$/, ` ${name}="${escapeXmlAttr(value)}"$1`)
+        ? m[0].replace(re, () => ` ${name}="${escapeXmlAttr(value)}"`)
+        : m[0].replace(/(\s*\/?>)$/, (close) => ` ${name}="${escapeXmlAttr(value)}"${close}`)
   if (tag === m[0]) return true
   el.anchor.originalXml = xml.slice(0, m.index) + tag + xml.slice(m.index + m[0].length)
   slide.structureDirty = true
@@ -3924,8 +3926,10 @@ export function mergeTableCells(
   /** Clear text + set the merge continuation flag. */
   const toCovered = (tcXml: string, mark: 'hMerge' | 'vMerge') =>
     setTcAttrXml(clearTcText(tcXml), mark, 1)
+  // A function, not a string: the paragraphs are the words of the merged-in cell, and a
+  // replacement string would expand a `$&` or `$$` in them
   const appendToAnchor = (parasXml: string) => {
-    if (parasXml) anchorXml = anchorXml.replace(/<\/a:txBody>/, `${parasXml}</a:txBody>`)
+    if (parasXml) anchorXml = anchorXml.replace(/<\/a:txBody>/, () => `${parasXml}</a:txBody>`)
   }
 
   if (op.kind === 'merge-right') {
