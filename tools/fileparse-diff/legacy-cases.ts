@@ -100,18 +100,6 @@ function written(streams: ReadonlyArray<readonly [string, Uint8Array]>): Uint8Ar
   return new Uint8Array(CFB.write(container, { type: 'buffer' }) as Buffer)
 }
 
-/** The offset of the directory entry named `name` in a file cfb wrote. */
-function entryAt(bytes: Uint8Array, name: string): number {
-  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
-  for (let at = 512; at + 128 <= bytes.length; at += 128) {
-    if (view.getUint16(at + 64, true) !== (name.length + 1) * 2) continue
-    let same = true
-    for (let k = 0; k < name.length && same; k++) same = view.getUint16(at + 2 * k, true) === name.charCodeAt(k)
-    if (same) return at
-  }
-  throw new Error(`no directory entry ${name}`)
-}
-
 const concat = (parts: readonly Uint8Array[]): Buffer => Buffer.concat(parts)
 const le16 = (value: number): Buffer => { const b = Buffer.alloc(2); b.writeUInt16LE(value & 0xffff); return b }
 const le32 = (value: number): Buffer => { const b = Buffer.alloc(4); b.writeUInt32LE(value >>> 0); return b }
@@ -149,13 +137,6 @@ const documentOf = (...children: Uint8Array[]): Buffer => container(RT.document,
 /** The Current User stream: one CurrentUserAtom naming the offset of the last UserEditAtom. */
 function currentUser(offset: number, extra: Uint8Array = EMPTY): Buffer {
   return concat([atom(RT.currentUser, concat([le32(0x14), le32(0xe391c05f), le32(offset), le16(0), le16(0), Buffer.alloc(4), extra])), EMPTY])
-}
-
-interface Deck {
-  /** Records before the edit history, in order. */
-  top: Uint8Array[]
-  /** `(offsetLastEdit)` of each edit after the first, in file order: pointers to the previous edit. */
-  edits?: number
 }
 
 /** `PowerPoint Document` and `Current User` with one edit: a PersistDirectoryAtom and the UserEditAtom after it. */
@@ -502,7 +483,7 @@ function builtDoc(): Input[] {
     broken('lcbPlcfbteChpx 0xffffffff', w => { w.writeUInt32LE(0xffffffff, 0xfe); return [w, Buffer.from(good.table)] }),
     broken('table stream chosen by the wrong flag', w => { w.writeUInt16LE(0, 0xa); return [w, Buffer.from(good.table)] }),
     broken('fcClx past the table', w => { w.writeUInt32LE(0x1000, 0x1a2); return [w, Buffer.from(good.table)] }),
-    broken('fcClx at a PRC entry that never ends', (w, t) => [w, concat([Buffer.alloc(0), Buffer.from([1, 0, 0]).subarray(0, 1)])]),
+    broken('fcClx at a PRC entry that never ends', w => [w, concat([Buffer.alloc(0), Buffer.from([1, 0, 0]).subarray(0, 1)])]),
   )
   // streams as word-extractor looks them up
   inputs.push(named('no Table stream', written([['/WordDocument', good.word]])))
@@ -553,7 +534,6 @@ const r = (text: string): string => `<w:r><w:t xml:space="preserve">${text}</w:t
 const box = (...paragraphs: string[]): string => `<w:r><w:pict><v:textbox xmlns:v="urn:v"><w:txbxContent>${paragraphs.join('')}</w:txbxContent></v:textbox></w:pict></w:r>`
 const documentXml = (body: string): string => root('document', `<w:body>${body}</w:body>`)
 
-interface PartSpec { name: string; data: string | Uint8Array; method?: number }
 const docxOf = (parts: Record<string, string | Uint8Array>, method = 8): Uint8Array =>
   buildZip(Object.entries(parts).map(([name, data]) => ({ name, data, method })))
 const packageOf = (body: string, extra: Record<string, string> = {}): Record<string, string> => ({
@@ -804,7 +784,6 @@ function builtGate(): Input[] {
   const base = written([['/WordDocument', fill(5000, 1)], ['/1Table', fill(300, 2)], ['/Small', fill(100, 3)], ['/Store/Inner', fill(70, 4)], ['/Empty', EMPTY]])
   const view = (bytes: Uint8Array): DataView => new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const edit = (bytes: Uint8Array, write: (view: DataView, bytes: Uint8Array) => void): Uint8Array => { const out = bytes.slice(); write(view(out), out); return out }
-  const entry = (name: string): number => entryAt(base, name)
   add('a file cfb wrote', base)
   add('the same for a presentation', base, 'PowerPoint 97-2003')
   add('the same with an empty type', base, '')

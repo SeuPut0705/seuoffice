@@ -1054,7 +1054,10 @@ fn dispatch(function: &str, text: &str, bytes: &[u8], args: &Value) -> Option<An
             "EPUB_METADATA_PAGE": number_value(EPUB_METADATA_PAGE),
             "LANGUAGE_SAMPLE_CHARS": LANGUAGE_SAMPLE_CHARS,
             "opaque": OPAQUE_ELEMENTS.iter().map(|e| is_opaque(e)).collect::<Vec<_>>(),
-        })),
+        })
+        .get(args.get("name").and_then(Value::as_str).unwrap_or_default())
+        .cloned()
+        .unwrap_or(Value::Null)),
         _ => return None,
     };
     Some(answer)

@@ -1,5 +1,5 @@
 import { builtinDateFormat, classifyFormatCode, formatSerial, type DateFormatParts } from './reference/xlsx-dates'
-import type { Input, Spec } from './spec'
+import type { Spec } from './spec'
 const formats = ['General','0.00','yyyy-mm-dd','yyyy-mm-dd hh:mm:ss','hh:mm','mm:ss','mmm','mm','AM/PM','A/P','[h]:mm:ss','[h]','[h]:mm','[mm]:ss','[ss]','[m]','[Red]0','[Red]yyyy-mm-dd','"yyyy"0','\\h0','_h0','*m0','0;yyyy','yyyy;0','[h]yyyy','[h][mm]','[h].m','[m]:ss','[s]hh','General m','[notclosed','"unterminated yyyy','yyyy\\;h',
   // U+017F is not `s` under /i
   'General \u017f','[\u017f\u017f]','[\u017f]hh','hh:mm:\u017f\u017f']

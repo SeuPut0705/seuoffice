@@ -1,10 +1,15 @@
 //! What the redactors share: `sanitizeLabel` and `placeholderSource` of
-//! packages/agent-core/src/redact-core.ts, `REDACT_NS` and `REDACT_EL` of
+//! packages/agent-core/src/redact-core.ts, `REDACT_NAMESPACES` and `REDACT_EL` of
 //! redact-range.ts, and the message of packages/file-parse/src/redaction-error.ts.
 
 use jscompat::{js_regex, trim, truthy};
 
-pub const REDACT_NS: &str = "https://genspark.ai/genoffice/redaction/2026";
+/// `REDACT_NAMESPACES`: the product's own namespace, then the one written
+/// before it took its own names (`OLD_REDACT_NS`); readers take both.
+pub const REDACT_NAMESPACES: [&str; 2] = [
+    "https://github.com/SeuPut0705/seuoffice/redaction/2026",
+    "https://genspark.ai/genoffice/redaction/2026",
+];
 pub const REDACT_EL: &str = "go:redact";
 
 const OPEN: &str = "{{";

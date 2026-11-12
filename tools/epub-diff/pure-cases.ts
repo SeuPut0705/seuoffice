@@ -1,4 +1,3 @@
-/// <reference path="../../packages/pdf2docx/src/bidi-js.d.ts" />
 import { findBlock, isFlowingKind, openChapter, remapChapter, OPAQUE_ELEMENTS, type ChapterBlock, type ChapterMap, type OpenChapter } from '../../packages/epub-engine/src/blocks'
 import { applyBlockEdit, applyBlockEdits, blockEditReplacements, type BlockEdit, type EditRefusal } from '../../packages/epub-engine/src/edits'
 import { toggleMarkInTree } from '../../packages/epub-engine/src/marks'
@@ -1128,11 +1127,16 @@ add({
 
 add({
   fn: 'pureConstants', ...noText, mutation: 'none',
-  call: () => ({
-    OPAQUE_ELEMENTS: [...OPAQUE_ELEMENTS], ID_ATTRIBUTES: [...ID_ATTRIBUTES].sort(), EPUB_METADATA_FINGERPRINT_SOURCE, EPUB_METADATA_FINGERPRINT, EPUB_METADATA_PAGE,
-    LANGUAGE_SAMPLE_CHARS, opaque: [...OPAQUE_ELEMENTS].map(() => true),
-  }),
-  built: () => [{ label: 'constants', args: {} }],
+  // one input per constant, each its own result
+  call: ({ args = {} }) => {
+    const constants: Record<string, unknown> = {
+      OPAQUE_ELEMENTS: [...OPAQUE_ELEMENTS], ID_ATTRIBUTES: [...ID_ATTRIBUTES].sort(), EPUB_METADATA_FINGERPRINT_SOURCE, EPUB_METADATA_FINGERPRINT, EPUB_METADATA_PAGE,
+      LANGUAGE_SAMPLE_CHARS, opaque: [...OPAQUE_ELEMENTS].map(() => true),
+    }
+    return typeof args.name === 'string' ? constants[args.name] : undefined
+  },
+  built: () => ['OPAQUE_ELEMENTS', 'ID_ATTRIBUTES', 'EPUB_METADATA_FINGERPRINT_SOURCE', 'EPUB_METADATA_FINGERPRINT', 'EPUB_METADATA_PAGE', 'LANGUAGE_SAMPLE_CHARS', 'opaque']
+    .map(name => ({ label: name, args: { name } })),
 })
 
 // an input that crosses as units has no text to mutate: it seeds no mutations

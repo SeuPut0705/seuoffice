@@ -1,6 +1,6 @@
 // Writes crates/epub-engine/tests/pure.rs and pure_parse.json from what the TypeScript answers; run it again to renew them.
 import { writeFileSync } from 'node:fs'
-import { applyBlockEdit, applyBlockEdits, blockEditReplacements, type BlockEdit } from '../../packages/epub-engine/src/edits'
+import { applyBlockEdit, applyBlockEdits, type BlockEdit } from '../../packages/epub-engine/src/edits'
 import { openChapter, remapChapter, type OpenChapter } from '../../packages/epub-engine/src/blocks'
 import { blockNotation, blockPlainText, checkNotation, escapeNotationText, newBlockNotationToXhtml, notationToXhtml, parseBlockNotation, serializeNotation, encodeBlock, type NotationContext, type NotationNode } from '../../packages/epub-engine/src/notation'
 import { toggleMarkInTree } from '../../packages/epub-engine/src/marks'
@@ -21,7 +21,6 @@ import { createHash } from 'node:crypto'
 
 const NS = 'xmlns="http://www.w3.org/1999/xhtml"'
 const C1 = `<?xml version="1.0"?>\n<html ${NS}><body>\n  <p id="a">Hello <b>big</b> &amp; <a href="#x">link</a><br/>end</p>\n  <p>Second <em class="k">one</em></p>\n  <div><p>in div</p></div>\n  <p/>\n  <td>cell</td>\n</body></html>`
-const C2 = `<html ${NS}><body><p>a&#x1F600;b &#65;&#10;<![CDATA[c < d]]>e</p><p>ruby <ruby>\u6F22<rp>(</rp><rt>kan</rt><rp>)</rp></ruby></p></body></html>`
 const C3 = `<!DOCTYPE html>\n<html ${NS}><body><p>x&nbsp;y&eacute;z</p></body></html>`
 const lit = (s: string): string => `"${[...s].map(c => { const k = c.codePointAt(0)!; return c === '\\' ? '\\\\' : c === '"' ? '\\"' : c === '\n' ? '\\n' : c === '\r' ? '\\r' : c === '\t' ? '\\t' : k < 0x20 || k > 0x7e ? `\\u{${k.toString(16)}}` : c }).join('')}"`
 const parses: Record<string, unknown> = {}

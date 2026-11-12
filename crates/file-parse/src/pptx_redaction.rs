@@ -7,7 +7,7 @@
 
 use jscompat::{Radix, is_js_space, js_regex, parse_int, to_number, trim};
 
-use crate::redaction::{REDACT_EL, REDACT_NS, placeholder_source, redaction_error};
+use crate::redaction::{REDACT_EL, REDACT_NAMESPACES, placeholder_source, redaction_error};
 
 /// the engine's REDACT_EXT_URI: the `uri` of the `<a:ext>` that carries the mark
 pub const PPTX_REDACT_EXT_URI: &str = "{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}";
@@ -254,7 +254,7 @@ fn escape_text(value: &str) -> String {
 /// One slide or notes part with every withheld run rewritten to its `{{label}}`
 /// marker. A part with no trace of the mark is returned as it came, unparsed.
 pub fn redact_pptx_part_xml(xml: &str) -> Result<String, String> {
-    if !xml.contains(PPTX_REDACT_EXT_URI) && !xml.contains(REDACT_EL) && !xml.contains(REDACT_NS) {
+    if !xml.contains(PPTX_REDACT_EXT_URI) && !xml.contains(REDACT_EL) && !REDACT_NAMESPACES.iter().any(|ns| xml.contains(ns)) {
         return Ok(xml.to_owned());
     }
     let all = scan_elements(xml)?;
@@ -292,7 +292,7 @@ pub fn redact_pptx_part_xml(xml: &str) -> Result<String, String> {
     // extension, the namespace under another prefix, a mark inside a comment)
     if count_of(xml, PPTX_REDACT_EXT_URI) != understood
         || count_of(xml, &format!("<{REDACT_EL}")) != understood
-        || count_of(xml, REDACT_NS) > understood
+        || REDACT_NAMESPACES.iter().map(|ns| count_of(xml, ns)).sum::<usize>() > understood
     {
         return Err(redaction_error(
             "a mark is written in a form that cannot be read",

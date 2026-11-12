@@ -1,4 +1,4 @@
-import { REDACT_EL, REDACT_NS } from '../../packages/agent-core/src/redact-range'
+import { OWN_REDACT_NS, REDACT_EL, REDACT_NS_WRITTEN as REDACT_NS } from '../../packages/agent-core/src/redact-range'
 import { redactMarkdownSource } from './reference/markdown-redaction'
 import { PPTX_REDACT_EXT_URI, redactPptxPartXml } from './reference/pptx-redaction'
 import { redactExtXml, setRedactExt } from '../../packages/pptx-engine/src/redaction-xml'
@@ -254,6 +254,11 @@ const PPTX: ReadonlyArray<readonly [string, string]> = [
   ['mark-in-cdata', slide(para(`<a:r><a:t><![CDATA[${redactExtXml('a')}]]></a:t></a:r>`))],
   ['label-under-foreign-extension', slide(para(runWithExtList(`<a:ext uri="{00000000-0000-0000-0000-000000000000}">${label('a')}</a:ext>`)))],
   ['namespace-under-other-prefix', slide(para(runWithExtList(`<a:ext uri="{00000000-0000-0000-0000-000000000000}"><x:r xmlns:x="${REDACT_NS}"/></a:ext>`)))],
+  // the product's own namespace, which a later version writes: read as the old one
+  ['own-namespace', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${OWN_REDACT_NS}"><${REDACT_EL} label="Own"/></a:ext>`)))],
+  ['own-namespace-under-other-prefix', slide(para(runWithExtList(`<a:ext uri="{00000000-0000-0000-0000-000000000000}"><x:r xmlns:x="${OWN_REDACT_NS}"/></a:ext>`)))],
+  ['both-namespaces-on-one-mark', slide(para(runWithExtList(`<a:ext uri="${PPTX_REDACT_EXT_URI}" xmlns:go="${REDACT_NS}" xmlns:o="${OWN_REDACT_NS}"><${REDACT_EL} label="Two"/></a:ext>`)))],
+  ['own-namespace-text-only', slide(para(`<a:r><a:t>${OWN_REDACT_NS}</a:t></a:r>`))],
   ['namespace-declared-twice', slide(para(markedRun('x', 'a'))).replace('<p:sld ', `<p:sld xmlns:go="${REDACT_NS}" `)],
   ['extension-id-in-text', slide(para(run(`id ${PPTX_REDACT_EXT_URI}`)))],
   ['extension-id-as-reference', slide(para(runWithExtList(`<a:ext uri="&#123;${PPTX_REDACT_EXT_URI.slice(1)}">${label('a')}</a:ext>`)))],
