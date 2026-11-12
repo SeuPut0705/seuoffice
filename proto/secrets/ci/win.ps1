@@ -42,6 +42,8 @@ New-Item -ItemType Directory -Force (Join-Path $work 'el') | Out-Null
 Push-Location (Join-Path $work 'el')
 npm init -y | Out-Null
 npm i --no-save electron@43.8.3 2>&1 | Select-Object -Last 2 | ForEach-Object { Say $_ }
+# Electron 43 has no postinstall download; the app's own postinstall runs install-electron
+node node_modules/electron/install.js 2>&1 | Select-Object -Last 3 | ForEach-Object { Say $_ }
 Pop-Location
 $electron = Join-Path $work 'el/node_modules/electron/dist/electron.exe'
 $seedDir = Join-Path $repo 'proto/secrets/seed'

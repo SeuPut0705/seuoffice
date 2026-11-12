@@ -81,7 +81,7 @@ ls -l "$OPEN" | tee -a "$F"
 say "open-sealed $(cdhash "$OPEN")"
 
 hdr "Electron 43.8.3"
-mkdir -p "$WORK/el" && ( cd "$WORK/el" && npm init -y >/dev/null && npm i --no-save electron@43.8.3 2>&1 | tail -2 )
+mkdir -p "$WORK/el" && ( cd "$WORK/el" && npm init -y >/dev/null && npm i --no-save electron@43.8.3 2>&1 | tail -2 && node node_modules/electron/install.js 2>&1 | tail -3 )
 ORIG_APP=$WORK/el/node_modules/electron/dist/Electron.app
 say "downloaded Electron: $(cdhash "$ORIG_APP")"
 codesign --verify --deep --strict "$ORIG_APP" 2>&1 | tee -a "$F"
