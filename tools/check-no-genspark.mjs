@@ -100,12 +100,6 @@ const ALLOW = [
       'relationship type of the hidden-cells part written into saved workbooks: changing it would stop reading marks made with the original',
   },
   {
-    path: /^apps\/sheets\/native\/xlsx-engine\/src\/(?:lib|tests)\.rs$/,
-    span: /genspark-ai-excel-/g,
-    reason:
-      'temp folder name inside the spreadsheet sidecar, never shown; renaming it means rebuilding the document engine',
-  },
-  {
     path: 'packages/ai-provider/tests/legacy-settings.test.ts',
     patterns: ['genspark', 'gsk'],
     reason: 'fixture of a settings file written by the original, with the ids it stored',
