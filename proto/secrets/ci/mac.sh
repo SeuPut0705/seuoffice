@@ -202,6 +202,56 @@ item_block "$SVC" "$KC" | tee -a "$F"
 run_to 30 "$OPEN" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/r3.out" 2> "$WORK/r3.err"
 say "R3 exit=$? stderr=$(cat "$WORK/r3.err")"; check "R3 after partition list" "$WORK/r3.out"
 
+hdr "R4 a stable signing identity: Electron sealed by a self-signed build, then updated and signed with the same certificate"
+S=$WORK/self; mkdir -p "$S"
+cat > "$S/ext.cnf" <<'CNF'
+[req]
+distinguished_name = dn
+x509_extensions = ext
+prompt = no
+[dn]
+CN = seuoffice proto signer
+[ext]
+basicConstraints = critical,CA:false
+keyUsage = critical,digitalSignature
+extendedKeyUsage = critical,codeSigning
+CNF
+/usr/bin/openssl req -x509 -newkey rsa:2048 -nodes -keyout "$S/k.pem" -out "$S/c.pem" -days 2 -config "$S/ext.cnf" 2>&1 | tail -1
+/usr/bin/openssl pkcs12 -export -inkey "$S/k.pem" -in "$S/c.pem" -out "$S/id.p12" -passout pass:p12pw 2>&1 | tail -1
+security import "$S/id.p12" -k "$KC" -P p12pw -T /usr/bin/codesign 2>&1 | tee -a "$F"
+security set-key-partition-list -S apple-tool:,apple:,codesign: -k "$KCPW" "$KC" >/dev/null 2>&1
+sudo security add-trusted-cert -d -r trustRoot -p codeSign -k /Library/Keychains/System.keychain "$S/c.pem" 2>&1 | tee -a "$F"
+security find-identity -p codesigning "$KC" 2>&1 | tee -a "$F"
+SIGN_ID=$(/usr/bin/openssl x509 -in "$S/c.pem" -noout -fingerprint -sha1 | sed 's/.*=//;s/://g')
+say "signing identity sha1 $SIGN_ID"
+
+# the item moves to a second keychain so the new seed does not find the A-owned one
+KC2="$WORK/proof2.keychain-db"
+security create-keychain -p "$KCPW" "$KC2" && security set-keychain-settings "$KC2" && security unlock-keychain -p "$KCPW" "$KC2"
+security default-keychain -d user -s "$KC2"
+security list-keychains -d user -s "$KC2" $ORIG_LIST
+
+mkdir -p "$WORK/S1"; ditto "$ORIG_APP" "$WORK/S1/Electron.app"
+codesign -f -s "$SIGN_ID" --deep "$WORK/S1/Electron.app" 2>&1 | tail -2 | tee -a "$F"
+say "S1 (installed build, self-signed): $(cdhash "$WORK/S1/Electron.app")"
+codesign -d -r- "$WORK/S1/Electron.app" 2>&1 | grep designated | tee -a "$F"
+export BENCH_USER_DATA="$WORK/ud4"
+run_to 150 "$WORK/S1/Electron.app/Contents/MacOS/Electron" "$SEED_DIR" 2>&1 | tail -3 | tee -a "$F"
+item_block "$SVC" "$KC2" | sed -n '/access:/,$p' | tee -a "$F"
+
+mkdir -p "$WORK/S2"; ditto "$WORK/S1/Electron.app" "$WORK/S2/Electron.app"
+/usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 43.8.3-build2' "$WORK/S2/Electron.app/Contents/Info.plist"
+codesign -f -s "$SIGN_ID" --deep "$WORK/S2/Electron.app" 2>&1 | tail -2 | tee -a "$F"
+say "S2 (updated build, same certificate): $(cdhash "$WORK/S2/Electron.app")"
+( SEED_MODE=decrypt SEED_RESULT="$WORK/s2-dec.json" run_to 40 "$WORK/S2/Electron.app/Contents/MacOS/Electron" "$SEED_DIR" > "$WORK/s2.log" 2>&1; echo "R4 updated exit=$?" > "$WORK/s2.res" ) &
+SPID=$!
+sleep 15; watch_prompt r4-prompt
+wait $SPID; cat "$WORK/s2.res" | tee -a "$F"; tail -1 "$WORK/s2.log" | tee -a "$F"
+check "R4 updated Electron, same certificate" "$WORK/s2-dec.json"
+pkill -f SecurityAgent 2>/dev/null
+unset BENCH_USER_DATA
+sudo security remove-trusted-cert -d "$S/c.pem" 2>&1 | tail -1
+
 hdr "summary"
 cp "$WORK"/*.log "$WORK"/*.res "$WORK"/*.err "$WORK"/*.out "$OUT"/ 2>/dev/null
 say "done"

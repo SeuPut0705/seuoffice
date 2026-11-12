@@ -10,22 +10,17 @@ on run argv
 		tell process "SecurityAgent"
 			if (count of windows) is 0 then return "SecurityAgent has no window"
 			set w to window 1
-			repeat with e in (entire contents of w)
+			repeat with e in (UI elements of w)
 				try
 					set report to report & (class of e as text) & " | " & (name of e as text) & " | " & (role description of e as text) & linefeed
 				end try
 			end repeat
-			set done to false
-			repeat with e in (entire contents of w)
-				try
-					if (class of e is text field) then
-						set value of e to pw
-						set done to true
-						exit repeat
-					end if
-				end try
-			end repeat
-			set report to report & "password typed: " & done & linefeed
+			-- the password field already has the keyboard focus; secure fields refuse AXValue writes
+			set frontmost to true
+			delay 0.5
+			keystroke pw
+			delay 1
+			set report to report & "password keystrokes sent" & linefeed
 			try
 				click button btn of w
 				set report to report & "clicked: " & btn & linefeed
