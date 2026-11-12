@@ -12,6 +12,13 @@
 
 use std::collections::HashMap;
 
+#[cfg(target_arch = "wasm32")]
+mod grow;
+
+#[cfg(target_arch = "wasm32")]
+#[global_allocator]
+static ALLOCATOR: grow::Doubling = grow::Doubling;
+
 use docx_engine::scan::{BodyScan, scan_body};
 use ooxml_pkg::{decode_text, needs_ooxml_normalization, normalize_ooxml_xml, read_entries};
 use ooxml_xml::{Utf16Map, parse_ordered, serialize};

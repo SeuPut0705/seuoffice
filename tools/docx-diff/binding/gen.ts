@@ -13,7 +13,7 @@ import { existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync
 import { dirname, join } from 'node:path'
 import ts from 'typescript'
 import { type ExportInfo, REFERENCE, ROOT, build } from './manifest'
-import { APPEND, type Override, overrideOf } from './overrides'
+import { APPEND, type Override, UNUSED_MODULES, overrideOf } from './overrides'
 import { rustTable } from './rust-table'
 
 const SRC = join(ROOT, 'packages/docx-engine/src')
@@ -217,7 +217,7 @@ function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbati
   for (const e of exportsAll) byModule.set(e.module, [...(byModule.get(e.module) ?? []), e])
   const rewritten = [...byModule.entries()].filter(([, list]) => list.some((e) => e.kind === 'function' && routed(e))).map(([name]) => name)
   const everyModule = readdirSync(REFERENCE).filter((f) => f.endsWith('.ts')).map((f) => f.replace(/\.ts$/, ''))
-  const verbatim = everyModule.filter((m) => !rewritten.includes(m))
+  const verbatim = everyModule.filter((m) => !rewritten.includes(m) && !Object.hasOwn(UNUSED_MODULES, m))
 
   const mods = new Map<string, Module>()
   for (const name of rewritten) {
@@ -330,6 +330,7 @@ function generateModules(exportsAll: ExportInfo[]): { outputs: Output[]; verbati
     const header = mod.header ? `${mod.header}\n` : ''
     outputs.push({ module: mod.name, text: `${header}${lines.join('\n')}\n${body.replace(/^\n*/, '\n')}${append}` })
   }
+  dropped.push(...Object.keys(UNUSED_MODULES))
   return { outputs, verbatim, dropped, wrapped }
 }
 

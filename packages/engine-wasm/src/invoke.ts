@@ -80,7 +80,7 @@ interface Wire {
   field: InvokeOptions['field']
 }
 
-/** `record[key] = value` as an own entry, `__proto__` included (packages/docx-engine/src/own-value.ts). */
+/** `record[key] = value` as an own entry, `__proto__` included (the own-value rule of the engines). */
 function setOwn(record: Record<string, unknown>, key: string, value: unknown): void {
   if (key === '__proto__')
     Object.defineProperty(record, key, { value, enumerable: true, writable: true, configurable: true })

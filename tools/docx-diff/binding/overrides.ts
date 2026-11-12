@@ -325,3 +325,9 @@ export function overrideOf(name: string): Override | undefined {
 export function isHandRoute(name: string): boolean {
   return Object.hasOwn(ROUTES_HAND, name)
 }
+
+/** Modules of the reference that the binding does not carry: nothing in the product or the tests imports them. */
+export const UNUSED_MODULES: Readonly<Record<string, string>> = {
+  'own-value': 'its one user was the codec, which @seuoffice/engine-wasm holds now',
+  'hf-root': 'a type no module imports',
+}
