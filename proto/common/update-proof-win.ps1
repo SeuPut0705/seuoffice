@@ -46,7 +46,14 @@ function Classes {
 Remove-Item -Force -ErrorAction SilentlyContinue (Join-Path $ud 'proto-shell-started.json')
 $before = [ordered]@{ entries = @(Entries); classes = Classes }
 Hashes | Set-Content (Join-Path $Out 'userdata-before.txt')
-$installDir = ($before.entries | Select-Object -First 1).InstallLocation
+# electron-builder keeps the folder under HKCU\Software\<key>, not in the uninstall entry
+$entry = $before.entries | Select-Object -First 1
+$installDir = $null
+if ($entry) {
+  $installDir = (Get-ItemProperty "HKCU:\Software\$($entry.key)" -ErrorAction SilentlyContinue).InstallLocation
+  if (-not $installDir -and $entry.UninstallString -match '^"?([^"]+)\\[^\\"]+"?') { $installDir = $Matches[1] }
+}
+if (-not $installDir) { $installDir = Join-Path $env:LOCALAPPDATA 'Programs\SeuOffice' }
 $beforeFiles = if ($installDir) { Get-ChildItem $installDir | ForEach-Object Name } else { @() }
 
 $t = [Diagnostics.Stopwatch]::StartNew()

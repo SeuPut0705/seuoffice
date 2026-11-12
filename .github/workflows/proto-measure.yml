@@ -93,7 +93,7 @@ jobs:
               --installer "$RUNNER_TEMP/rel/SeuOffice-0.12.37-arm64-mac.zip" --installed /Applications/SeuOffice.app -- "$exe" || true
           else
             gh release download v0.12.37 -R "$GITHUB_REPOSITORY" -p 'SeuOffice-Setup-0.12.37.exe' -D "$RUNNER_TEMP/rel"
-            powershell -c "Start-Process -Wait -FilePath '$RUNNER_TEMP\\rel\\SeuOffice-Setup-0.12.37.exe' -ArgumentList '/S'"
+            powershell -c "Start-Process -Wait -FilePath '$RUNNER_TEMP\\rel\\SeuOffice-Setup-0.12.37.exe' -ArgumentList '/S','/currentuser'"
             dir="$LOCALAPPDATA/Programs/SeuOffice"
             ls "$dir"
             python proto/common/real-app.py --out "$RES" --doc "$DOC" --installer "$RUNNER_TEMP/rel/SeuOffice-Setup-0.12.37.exe" \
@@ -139,7 +139,7 @@ jobs:
             installed="$LOCALAPPDATA/Programs/SeuOffice"
             if [ ! -f "$installed/$rel" ]; then
               echo "::warning::candidate not in the Electron folder after the update proof; installing it fresh"
-              powershell -c "Start-Process -Wait -FilePath '$(cygpath -w "$(ls "$RUNNER_TEMP"/cand/*.exe | head -1)")' -ArgumentList '/S'"
+              powershell -c "Start-Process -Wait -FilePath '$(cygpath -w "$(ls "$RUNNER_TEMP"/cand/*.exe | head -1)")' -ArgumentList '/S','/currentuser'"
             fi
             exe="$installed/$rel"
             inst=(--installer "$(ls "$RUNNER_TEMP"/cand/*.exe | head -1)")

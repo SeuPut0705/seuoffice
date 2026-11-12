@@ -33,7 +33,7 @@
 ### 묶을 때 (아티팩트 `proto-<shell>-<mac|win>`)
 
 - 정체: 표시 이름 `SeuOffice`, 식별자 `com.seuput.seuoffice`, 판 `0.13.0`(마지막 Electron 판 0.12.37보다 높다).
-- Windows: 사용자별 NSIS 설치 파일 `SeuOffice-Setup-0.13.0.exe`. Electron 판이 깔려 있으면 그 자리(electron-builder 제거 정보 키의 `InstallLocation`, 보통 `%LOCALAPPDATA%\Programs\SeuOffice`)에 덮어 깔고, 그 제거 정보 키를 이어 쓰고(앱 목록에 SeuOffice 하나), 옛 Electron 파일을 치운다. 파일 연결은 `apps/shell/electron-builder.cjs`의 `winProgId` 규칙(`seuoffice.WordDocument` 등)과 `apps/shell/build/installer.nsh`를 따른다(적어도 `.docx`). `/S`, `--updated`, `--force-run`(설치 뒤 앱을 연다)을 받는다. electron-updater는 `설치파일 --updated /S --force-run`으로 부른다.
+- Windows: 사용자별 NSIS 설치 파일 `SeuOffice-Setup-0.13.0.exe`. Electron 판이 깔려 있으면 그 자리(electron-builder가 `HKCU\Software\<제거 정보 키 이름>`의 `InstallLocation`에 적는다. 제거 정보 키에는 없다. 보통 `%LOCALAPPDATA%\Programs\SeuOffice`)에 덮어 깔고, 그 제거 정보 키를 이어 쓰고(앱 목록에 SeuOffice 하나), 옛 Electron 파일을 치운다. 파일 연결은 `apps/shell/electron-builder.cjs`의 `winProgId` 규칙(`seuoffice.WordDocument` 등)과 `apps/shell/build/installer.nsh`를 따른다(적어도 `.docx`). `/S`, `--updated`, `--force-run`(설치 뒤 앱을 연다)을 받는다. electron-updater는 `설치파일 --updated /S --force-run`으로 부른다.
 - macOS: `SeuOffice-0.13.0-arm64-mac.zip`(`ditto -c -k --keepParent SeuOffice.app`), 앱은 하나, `CFBundleIdentifier` `com.seuput.seuoffice`, `CFBundleShortVersionString` `0.13.0`, `codesign --verify --deep --strict` 통과(임시 서명 가능), `CFBundleDocumentTypes`에 적어도 docx. 지금 업데이터(`apps/shell/src/main/mac-update.ts`)가 이 셋을 확인하고 바꿔 끼운다. 번들러가 dmg를 만들면 함께 싣는다.
 - `build-info.json`: `{ shell, os, exe, versions, buildSeconds }`. `exe`는 설치 폴더(Windows) 또는 zip을 푼 폴더(macOS) 기준의 실행 파일 상대 경로.
 
