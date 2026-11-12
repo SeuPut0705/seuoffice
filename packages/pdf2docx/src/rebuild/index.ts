@@ -14,6 +14,7 @@ import {
   generateTableModelXml,
   parseDocx,
   saveDocx,
+  usableNumber,
 } from '../../../docx-engine/src/index'
 import type {
   CustomNumberingLevel,
@@ -1510,11 +1511,21 @@ const CARD_Z_BASE = 2000
 /** docPr id base for card boxes (patch-time images mint from 9000 up) */
 const CARD_DOCPR_BASE = 7000
 
-/** the card a text block opens, when this page rebuilds it as a text box */
-const cardOf = (block: PageBlock, page: IrPage): CardRegion | undefined =>
-  block.kind === 'text' && block.cardId !== undefined && !page.canvas
-    ? page.cards?.[block.cardId]
-    : undefined
+/**
+ * the card a text block opens, when this page rebuilds it as a text box. A
+ * plate (or page) out of drawing range makes no box: its text flows in the
+ * body like any other, and the conversion goes on.
+ */
+function cardOf(block: PageBlock, page: IrPage): CardRegion | undefined {
+  if (block.kind !== 'text' || block.cardId === undefined || page.canvas) return undefined
+  const card = page.cards?.[block.cardId]
+  if (!card) return undefined
+  const { x0, y0, x1, y1 } = card.box
+  const usable = [x0, y0, x1, y1, page.heightPt].every(
+    (v) => usableNumber(v, EMU_PER_PT) !== undefined,
+  )
+  return usable ? card : undefined
+}
 
 /** holder spacing for a card: the chain measured to the first TEXT ink, and
  * the box top sits one top-inset above it */
