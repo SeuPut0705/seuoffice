@@ -68,12 +68,13 @@ jobs:
           echo "DOC=$RUNNER_TEMP/bench-50p.docx" >> "$GITHUB_ENV"
           python proto/common/make-doc.py "$RUNNER_TEMP/bench-50p.docx"
           proto/common/stage-dist.sh "$RUNNER_TEMP/dist"
-          (cd proto/electron && npm install --no-audit --no-fund)
+          (cd proto/electron && npm install --no-audit --no-fund && node node_modules/electron/install.js)
           mkdir -p "$RUNNER_TEMP/res"
           system_profiler SPHardwareDataType 2>/dev/null | grep -E 'Model|Chip|Memory' || true
           [ "$OSK" = win ] && powershell -c "Get-CimInstance Win32_Processor | Select Name,NumberOfLogicalProcessors; (Get-CimInstance Win32_ComputerSystem).TotalPhysicalMemory; (Get-ItemProperty 'HKLM:\SOFTWARE\WOW6432Node\Microsoft\EdgeUpdate\Clients\{F3017226-FE2A-4295-8BDF-00C3A9A7E4C5}' -ErrorAction SilentlyContinue).pv" || true
 
       - name: Electron baseline (same page in Electron 43.8.3)
+        continue-on-error: true
         run: |
           if [ "$OSK" = mac ]; then exe=proto/electron/node_modules/electron/dist/Electron.app/Contents/MacOS/Electron
           else exe=proto/electron/node_modules/electron/dist/electron.exe; fi
@@ -81,6 +82,7 @@ jobs:
             --env BENCH_DIST="$RUNNER_TEMP/dist" --env BENCH_USER_DATA="$RUNNER_TEMP/ud-electron" -- "$exe" proto/electron
 
       - name: Shipped Electron app v0.12.37 (install, size, memory)
+        continue-on-error: true
         run: |
           set -euo pipefail
           if [ "$OSK" = mac ]; then
