@@ -42,6 +42,7 @@
 
 - **강조 색·문자 간격(결정 0094).** `EditRun`에 `highlight`(`null`은 없음)·`letterSpacing`(pt)이 있고, `applyEditParagraphs`는 값이 실제로 바뀐 런에만 `highlightEdited`·`letterSpacingEdited`를 세운다(문자 간격은 0.05pt 미만 차이를 같은 값으로 본다). `setFont`가 `font.highlight`·`font.letterSpacingPt`를 검증해 받는다. 시험: `tests/selection-pane-ops.test.ts`.
 - **`setElementHidden`·`renameElement`(결정 0094).** 최상위 요소의 `p:cNvPr`만 고친다. `setElementHidden`은 적용 끝에 슬라이드를 다시 읽어(`materializeSlide`) 그 슬라이드의 요소 id가 모두 바뀐다. 문서는 `prompts/ops/element.md`. 시험: 같은 파일.
+- **한글 런의 언어 표시.** 언어 없이 쓴 한글에 엔진의 `tagHangulRun`으로 `lang="ko-KR"`을 붙인다. 원본 #2523 뒤로 레이아웃이 한국어 표시가 있는 런만 한글을 낱말 단위로 줄바꿈하기 때문이다. `addElement`는 받은 문단 전체에, `applyEditParagraphs`(`setText`, `setTableCell`, 편집기 입력)는 글자가 바뀌었거나 새로 생긴 런에만 붙인다. 이미 언어가 있는 런(원래 런에서 이어받은 것 포함)은 그대로 두고, 글자가 안 바뀐 런은 바이트를 건드리지 않는다. 모델에도 `eaLang`을 같이 세워, 다시 읽기 전의 화면 줄바꿈이 저장본과 같다. 시험: `tests/hangul-lang-tag.test.ts`, `apps/slides/tests/hangul-word-wrap.test.ts`.
 
 ## 테스트
 

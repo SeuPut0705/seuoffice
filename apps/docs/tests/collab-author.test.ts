@@ -19,7 +19,7 @@ import { docsSide } from '../src/web/collab-side'
 import { fakeApp } from './helpers/collab-app'
 
 const para = (text: string) => `<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
-const FORMAT = { name: 'docx', schema: 2 }
+const FORMAT = { name: 'docx', schema: 4 }
 
 let server: CollabServer
 let bytes: Uint8Array
@@ -199,4 +199,16 @@ describe('track changes while two people co-edit', () => {
       expect(insertions(bob.editor)).toEqual(both)
     })
   })
+
+  it.each([3, 2])(
+    'turns away a page of a build that opened the same file as another document (format %i)',
+    async (schema) => {
+      // the room above was started by the page's own bridge. A page on format 3 reads a
+      // run-level wrapper as plain text; one on 2 is from before the GenOffice catch-up.
+      // Either reads the file differently and must not join it.
+      await expect(
+        joinCollab(directLink('Carol'), { format: { name: 'docx', schema }, bytes }),
+      ).rejects.toMatchObject({ code: 'schema_mismatch' })
+    },
+  )
 })

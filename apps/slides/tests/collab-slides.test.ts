@@ -65,7 +65,7 @@ import { applyOp, fingerprint, slideIdAt, type SlidesOp } from '../src/web/colla
 import { decodeOp, encodeOp, unshareable } from '../src/web/collab-wire'
 import { decodeLinkTarget } from '../src/shared/run-link'
 
-const FORMAT = { name: 'pptx', schema: 2 }
+const FORMAT = { name: 'pptx', schema: 3 }
 const CREATION_ID =
   /<a:ext uri="\{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236\}"><a16:creationId[^>]*\/><\/a:ext>/g
 

@@ -137,6 +137,12 @@ const pdfApi: Partial<PdfApi> = {
     queueMicrotask(reportOpened)
     return bytes.slice().buffer
   },
+  // the document is already in memory here: a slice is a copy, no IPC limit applies
+  readFileChunk: async (path, start, end) => {
+    const bytes = bytesOf(path)
+    if (start === 0) queueMicrotask(reportOpened)
+    return { data: bytes.slice(start, end), fileSize: bytes.byteLength }
+  },
   getLanguage: async () => webLanguage() as Lang,
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',
@@ -146,6 +152,7 @@ const pdfApi: Partial<PdfApi> = {
   getAutoSaveDefault: async () => NO_AUTO_SAVE_DEFAULT,
   onAutoSaveDefaultChanged: unsubscribe,
   getUsername: async () => '',
+  onUsernameChanged: unsubscribe,
   getAiSettings: webAiSettings,
   aiStream: ai.aiStream,
   aiStreamCancel: ai.aiStreamCancel,

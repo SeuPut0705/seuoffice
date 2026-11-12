@@ -13,8 +13,10 @@ import {
   cleanMoveRangeMarkers,
   parseDocx,
   saveDocx,
+  type ParsedDocFull,
   type SaveBlock,
 } from '../src/index'
+import { buildDocx } from './helpers/build-docx'
 
 const ISSUE_BODY =
   '<w:p><w:r><w:t>P0 intro</w:t></w:r></w:p>' +
@@ -201,5 +203,114 @@ describe('saveDocx final package: move-range leftovers', () => {
     expect(xml).toContain('<w:moveFromRangeEnd w:id="1"/>')
     expect(xml).toContain('<w:moveToRangeStart w:id="3"')
     expect(xml).toContain('<w:moveToRangeEnd w:id="3"/>')
+  })
+})
+
+/**
+ * An unedited save returns the file it was given, whatever is malformed in it
+ * (docx-engine AGENTS.md). The orphan sweep rides on a save that rewrites the
+ * package anyway, or on an accept / reject that asks for it.
+ */
+describe('saveDocx: orphan move-range markers and the unedited save', () => {
+  const MOVE_RANGE_MARKER = /<w:move(?:From|To)Range(?:Start|End)\b/
+  const ORPHAN_BODY =
+    '<w:p><w:r><w:t>P0 intro</w:t></w:r></w:p>' +
+    '<w:p><w:moveFromRangeEnd w:id="1"/><w:r><w:t>P1 stays</w:t></w:r></w:p>' +
+    '<w:p><w:moveToRangeStart w:id="7" w:author="X" w:date="2026-01-01T00:00:00Z" w:name="move7"/>' +
+    '<w:r><w:t>P2 tail</w:t></w:r></w:p>'
+  const ORPHAN_HEADER = '<w:p><w:moveFromRangeEnd w:id="1"/><w:r><w:t>H stays</w:t></w:r></w:p>'
+
+  const untouched = (parsed: ParsedDocFull): SaveBlock[] =>
+    parsed.blocks
+      .filter((b) => !b.hidden && b.docxIndex !== null)
+      .map((b) => ({ kind: 'original' as const, docxIndex: b.docxIndex! }))
+
+  /** one real edit: the first paragraph is rewritten from the model */
+  const firstParagraphEdited = (parsed: ParsedDocFull): SaveBlock[] =>
+    untouched(parsed).map((block, i) =>
+      i === 0
+        ? { kind: 'generated', block: { type: 'paragraph', runs: [{ text: 'P0 edited' }] } }
+        : block,
+    )
+
+  async function partsOf(bytes: Uint8Array): Promise<Map<string, string>> {
+    const zip = await JSZip.loadAsync(bytes)
+    const out = new Map<string, string>()
+    for (const [name, entry] of Object.entries(zip.files)) {
+      if (!entry.dir) out.set(name, await entry.async('string'))
+    }
+    return out
+  }
+
+  it('an unedited document that holds orphan markers saves to its original bytes', async () => {
+    const bytes = await buildDocx({ bodyXml: ORPHAN_BODY, headerXml: ORPHAN_HEADER })
+    const parsed = await parseDocx(bytes)
+    expect(await saveDocx(parsed, untouched(parsed))).toBe(bytes)
+  })
+
+  it('one real edit strips the orphans and the result still opens', async () => {
+    const bytes = await buildDocx({ bodyXml: ORPHAN_BODY, headerXml: ORPHAN_HEADER })
+    const parsed = await parseDocx(bytes)
+    const saved = await saveDocx(parsed, firstParagraphEdited(parsed))
+    const parts = await partsOf(saved)
+    const body = parts.get('word/document.xml')!
+    expect(body).not.toMatch(MOVE_RANGE_MARKER)
+    expect(body).toContain('<w:p><w:r><w:t>P1 stays</w:t></w:r></w:p>')
+    expect(body).toContain('<w:p><w:r><w:t>P2 tail</w:t></w:r></w:p>')
+    expect(parts.get('word/header1.xml')).not.toMatch(MOVE_RANGE_MARKER)
+    expect(parts.get('word/header1.xml')).toContain('H stays')
+    const reopened = await parseDocx(saved)
+    expect(
+      reopened.blocks.filter((b) => !b.hidden).map((b) => b.runs?.map((r) => r.text).join('')),
+    ).toEqual(['P0 edited', 'P1 stays', 'P2 tail'])
+  })
+
+  it('a properly paired range is untouched, edited or not', async () => {
+    const bytes = await buildDocx({ bodyXml: ISSUE_BODY })
+    const parsed = await parseDocx(bytes)
+    expect(await saveDocx(parsed, untouched(parsed))).toBe(bytes)
+
+    const body = (await partsOf(await saveDocx(parsed, firstParagraphEdited(parsed)))).get(
+      'word/document.xml',
+    )!
+    expect(body).toContain('P0 edited')
+    for (const block of parsed.blocks.slice(1)) expect(body).toContain(block.originalXml!)
+  })
+
+  it('dropOrphanMoveRanges strips the orphans of a save that changes nothing else', async () => {
+    const bytes = await buildDocx({ bodyXml: ORPHAN_BODY, headerXml: ORPHAN_HEADER })
+    const parsed = await parseDocx(bytes)
+    const saved = await saveDocx(parsed, untouched(parsed), { dropOrphanMoveRanges: true })
+    const before = await partsOf(bytes)
+    const after = await partsOf(saved)
+    expect([...after.keys()].sort()).toEqual([...before.keys()].sort())
+    for (const [name, xml] of after) {
+      expect(xml, name).not.toMatch(MOVE_RANGE_MARKER)
+      if (name !== 'word/document.xml' && name !== 'word/header1.xml') {
+        expect(xml, name).toBe(before.get(name))
+      }
+    }
+    expect(after.get('word/document.xml')).toContain('<w:p><w:r><w:t>P0 intro</w:t></w:r></w:p>')
+    expect(after.get('word/document.xml')).toContain('<w:p><w:r><w:t>P1 stays</w:t></w:r></w:p>')
+    expect(after.get('word/header1.xml')).toContain('<w:p><w:r><w:t>H stays</w:t></w:r></w:p>')
+  })
+
+  it('dropOrphanMoveRanges reaches an orphan that only a header carries', async () => {
+    const bytes = await buildDocx({
+      bodyXml: '<w:p><w:r><w:t>P0 intro</w:t></w:r></w:p>',
+      headerXml: ORPHAN_HEADER,
+    })
+    const parsed = await parseDocx(bytes)
+    const saved = await saveDocx(parsed, untouched(parsed), { dropOrphanMoveRanges: true })
+    const before = await partsOf(bytes)
+    const after = await partsOf(saved)
+    expect(after.get('word/header1.xml')).not.toMatch(MOVE_RANGE_MARKER)
+    expect(after.get('word/document.xml')).toBe(before.get('word/document.xml'))
+  })
+
+  it('dropOrphanMoveRanges with nothing to drop returns the original bytes', async () => {
+    const bytes = await buildDocx({ bodyXml: ISSUE_BODY })
+    const parsed = await parseDocx(bytes)
+    expect(await saveDocx(parsed, untouched(parsed), { dropOrphanMoveRanges: true })).toBe(bytes)
   })
 })

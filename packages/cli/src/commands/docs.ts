@@ -13,8 +13,10 @@ import {
   listComments,
   listFields,
   listNotes,
+  listProperties,
   listTableStyles,
   listRevisions,
+  countRevisionsElsewhere,
   listStyles,
   openDocumentFile,
   saveDocument,
@@ -79,10 +81,15 @@ export const docsCommand: CommandDef = {
       description: 'read: list footnotes and endnotes (ids for delete_note, anchored block index)',
     },
     {
+      name: 'properties',
+      description:
+        'read: the document properties of the file (core, app, custom and customTypes — the vt type each custom value is stored as)',
+    },
+    {
       name: 'ops',
       value: 'file',
       description:
-        'apply: JSON array of ops (apply_ops entries, plus insert_content / replace_blocks with an html field, insert_image / insert_picture / insert_text_box, insert_chart / edit_chart, set_header_footer, set_page_setup / insert_section_break, set_watermark, define_style, add_comment / reply_comment / resolve_comment / delete_comment, accept_changes / reject_changes, insert_footnote / insert_endnote / delete_note, wrap_content_control / unwrap_content_control); "-" reads stdin. See `ieumoffice guide docs`.',
+        'apply: JSON array of ops (apply_ops entries, plus insert_content / replace_blocks with an html field, insert_image / insert_picture / insert_text_box, insert_chart / edit_chart, set_header_footer, set_page_setup / insert_section_break, set_watermark, define_style, add_comment / reply_comment / resolve_comment / delete_comment, accept_changes / reject_changes, insert_footnote / insert_endnote / delete_note, wrap_content_control / unwrap_content_control, remove_parts (strip customXml / web-extension package parts for metadata scrubs)); "-" reads stdin. See `ieumoffice guide docs`.',
     },
     {
       name: 'track',
@@ -205,12 +212,21 @@ async function read(
       detail.html = blockRangeHtml(doc, s, e)
     }
     if (flagBool(args, 'comments')) detail.comments = listComments(doc)
-    if (flagBool(args, 'revisions')) detail.revisions = listRevisions(doc)
+    if (flagBool(args, 'revisions')) {
+      detail.revisions = listRevisions(doc)
+      const elsewhere = await countRevisionsElsewhere(doc)
+      if (elsewhere)
+        detail.revisionsElsewhere = {
+          count: elsewhere,
+          note: 'tracked changes in headers, footers, footnotes or endnotes (not listed); accept_changes / reject_changes with all: true or author / type / before include them',
+        }
+    }
     if (flagBool(args, 'styles')) detail.styles = listStyles(doc)
     if (flagBool(args, 'header-footer')) detail.headerFooter = headerFooterState(doc)
     if (flagBool(args, 'sections')) detail.sections = listSections(doc)
     if (flagBool(args, 'fields')) detail.fields = listFields(doc)
     if (flagBool(args, 'notes')) detail.notes = listNotes(doc)
+    if (flagBool(args, 'properties')) detail.properties = listProperties(doc)
     return { summary: `${basename(path)}: ${count} blocks`, detail }
   } finally {
     closeDocument(doc)

@@ -1,9 +1,13 @@
 /**
  * Find & Replace engine: query compilation (literal / Word wildcards / regex),
- * width and case folding, document scanning and replacement expansion. Pure
- * functions over ProseMirror documents so the panel stays thin and testable.
+ * width and case folding, document scanning, replacement expansion and the
+ * replacement itself. Functions over ProseMirror documents and transactions
+ * so the panel stays thin and testable.
  */
 import type { Node as PmNode } from '@tiptap/pm/model'
+import type { Transaction } from '@tiptap/pm/state'
+import { lockedControlRefuses } from './inline-wrap'
+import { INLINE_WRAP_MARK } from './inline-wrap-chain'
 
 export type FindMode = 'literal' | 'wildcard' | 'regex'
 
@@ -52,7 +56,7 @@ export const LEAF_CHAR = '\u0000'
 export const BREAK_CHAR = '\n'
 /** wildcard `?`: any character that is not a leaf or a break */
 const ANY_CHAR = '[^\\u0000\\n]'
-const isWordChar = (ch: string | undefined) => !!ch && /[\p{L}\p{N}_]/u.test(ch)
+export const isWordChar = (ch: string | undefined) => !!ch && /[\p{L}\p{N}_]/u.test(ch)
 
 /** length-preserving lowercase: chars whose lowercase grows ('İ' → 'i̇') stay as-is so match offsets never shift */
 export function foldCase(s: string): string {
@@ -553,6 +557,134 @@ export function expandReplacement(template: string, m: FindMatch, mode: FindMode
     add(ch)
   }
   return segs
+}
+
+/** where a replacement template asked for a paragraph mark, inside the text being put in */
+const PARA_MARK = '\u0000'
+
+/** One piece of text an edit replaces; `text` takes the marks of the character at `marksAt` */
+export interface TextEdit {
+  from: number
+  to: number
+  text: string
+  marksAt: number
+}
+
+/**
+ * The edits that put `replacement` in place of [from, to) of one textblock.
+ *
+ * Text that reads continuously can sit in several pieces: a run-level wrapper
+ * (a content control, a smart tag) covers only part of it. Replacing the range
+ * whole would take the wrapper off its text. So what the old and the new text
+ * share at either end stays where it is, the new text goes into the first
+ * piece it changes, and the changed part of every later piece is removed: the
+ * part of a wrapper the match did not reach keeps the wrapper, and so does a
+ * word replaced inside it.
+ *
+ * One piece, which is every match in a document without such structure, is
+ * one edit over the whole range.
+ */
+export function planReplacement(
+  doc: PmNode,
+  from: number,
+  to: number,
+  replacement: string,
+): TextEdit[] {
+  const pieces: Array<{ from: number; to: number; text: string; wrap: unknown }> = []
+  doc.nodesBetween(from, to, (node, pos) => {
+    if (!node.isInline) return true
+    const start = Math.max(pos, from)
+    const end = Math.min(pos + node.nodeSize, to)
+    const text = node.isText ? (node.text ?? '').slice(start - pos, end - pos) : BREAK_CHAR
+    const wrap = node.marks.find((mark) => mark.type.name === INLINE_WRAP_MARK)?.attrs.chain ?? ''
+    const last = pieces[pieces.length - 1]
+    if (last && last.wrap === wrap) {
+      last.to = end
+      last.text += text
+    } else {
+      pieces.push({ from: start, to: end, text, wrap })
+    }
+    return false
+  })
+  if (pieces.length <= 1) return [{ from, to, text: replacement, marksAt: from }]
+
+  const old = pieces.map((piece) => piece.text).join('')
+  let head = 0
+  while (head < old.length && head < replacement.length && old[head] === replacement[head]) head++
+  let tail = 0
+  while (
+    tail < old.length - head &&
+    tail < replacement.length - head &&
+    old[old.length - 1 - tail] === replacement[replacement.length - 1 - tail]
+  )
+    tail++
+  const fresh = replacement.slice(head, replacement.length - tail)
+  const changedTo = old.length - tail
+  const edits: TextEdit[] = []
+  let offset = 0
+  for (const piece of pieces) {
+    const start = offset
+    offset += piece.text.length
+    if (head === changedTo) {
+      // nothing goes: the new text follows the last character both texts share
+      if (!fresh || head > offset || (head === start && head > 0)) continue
+      const at = piece.from + (head - start)
+      return [{ from: at, to: at, text: fresh, marksAt: head > start ? at - 1 : at }]
+    }
+    const a = Math.max(start, head)
+    const b = Math.min(offset, changedTo)
+    if (a >= b) continue
+    const at = piece.from + (a - start)
+    edits.push({
+      from: at,
+      to: piece.from + (b - start),
+      text: edits.length === 0 ? fresh : '',
+      marksAt: at,
+    })
+  }
+  return edits
+}
+
+/**
+ * Put the replacement for one match into `tr`, splitting the block wherever
+ * the template had a paragraph mark. False, with nothing done, when the match
+ * sits in a control locked against editing: the caller counts those.
+ */
+export function applyReplacement(
+  tr: Transaction,
+  m: FindMatch,
+  template: string,
+  mode: FindMode,
+): boolean {
+  const joined = expandReplacement(template, m, mode).join(PARA_MARK)
+  const edits = planReplacement(tr.doc, m.from, m.to, joined)
+  if (edits.some((edit) => lockedControlRefuses(tr.doc, edit.from, edit.to, edit.text !== ''))) {
+    return false
+  }
+  // one piece, replaced as it always was; insertText leaves a mark that must
+  // not spread (`inclusive: false`) off text that takes the place of all the
+  // text carrying it, and the wrapper is such a mark: put it back, or
+  // replacing the word a smart tag holds would silently drop the smart tag
+  const whole = edits.length === 1 && edits[0].from === m.from && edits[0].to === m.to
+  const wrapper = whole
+    ? tr.doc.nodeAt(m.from)?.marks.find((mark) => mark.type.name === INLINE_WRAP_MARK)
+    : undefined
+  for (const edit of [...edits].reverse()) {
+    if (whole) {
+      tr.insertText(edit.text, edit.from, edit.to)
+      if (wrapper && edit.text) tr.addMark(edit.from, edit.from + edit.text.length, wrapper)
+    } else if (!edit.text) tr.delete(edit.from, edit.to)
+    else {
+      const marks = tr.doc.nodeAt(edit.marksAt)?.marks
+      tr.replaceWith(edit.from, edit.to, tr.doc.type.schema.text(edit.text, marks))
+    }
+    for (let at = edit.text.length - 1; at >= 0; at--) {
+      if (edit.text[at] !== PARA_MARK) continue
+      tr.delete(edit.from + at, edit.from + at + 1)
+      tr.split(edit.from + at)
+    }
+  }
+  return true
 }
 
 /** `radius` characters of block text on either side of a match, with ellipses */

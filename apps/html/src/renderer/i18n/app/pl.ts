@@ -97,6 +97,7 @@ export const pl = {
   openExternal: 'Link otwarty w przeglądarce',
   save: 'Zapisz (⌘S)',
   saveAs: 'Zapisz jako…',
+  aiNameFile: 'Nazwij za pomocą AI…',
   ribbonCollapse: 'Zwiń Wstążkę',
   ribbonExpand: 'Rozwiń Wstążkę',
   ribbonGroupInsert: 'Wstaw',

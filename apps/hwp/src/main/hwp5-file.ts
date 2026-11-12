@@ -1,5 +1,6 @@
 import { deflateRawSync, inflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
+import { hasOle2Signature, readCompoundFile } from '@genoffice/compound-file'
 
 /**
  * Reading and rewriting HWP 5 files (a compound file whose DocInfo and BodyText streams are
@@ -21,6 +22,14 @@ export const CTRL_HEADER = 71
 export const LIST_HEADER = 72
 /** A document has few sections; this only bounds the walk over a malformed container. */
 export const MAX_SECTIONS = 4096
+/**
+ * The most a deflated stream may inflate to. The file alone decides how far its bytes
+ * expand (zeros deflate about a thousand to one), so the size is not left to it. The value
+ * is the one a part of an HWPX may inflate to (MAX_HWPX_PART_BYTES in @genoffice/hwp2docx,
+ * which this module does not depend on): the same section as XML, the longer of the two
+ * forms. Sections and DocInfo hold text and formatting; pictures are streams of their own.
+ */
+export const MAX_STREAM_INFLATE_BYTES = 64 * 1024 * 1024
 
 export interface HwpRecord {
   tag: number
@@ -59,11 +68,15 @@ export interface OpenedHwp {
   compressed: boolean
 }
 
-/** A plain HWP 5 container, or null: not one, or one whose streams are not readable here. */
+/**
+ * A plain HWP 5 container, or null: not one, or one whose streams are not readable here.
+ * A compound file whose sector tables or directory cannot be followed to an end is refused
+ * with a CompoundFileError before the container library reads it.
+ */
 export function openHwp(file: Uint8Array): OpenedHwp | null {
-  const cfb = CFB.read(Buffer.from(file.buffer, file.byteOffset, file.byteLength), {
-    type: 'buffer',
-  })
+  // an HWPX is a zip, which the container library would inflate whole to find no HWP in it
+  if (!hasOle2Signature(file)) return null
+  const cfb = readCompoundFile(file)
   const header = CFB.find(cfb, FILE_HEADER)
   if (!header?.content || header.content.length < 40) return null
   const bytes = Buffer.from(header.content as Uint8Array)
@@ -75,11 +88,18 @@ export function openHwp(file: Uint8Array): OpenedHwp | null {
   return { cfb, compressed: (flags & COMPRESSED) !== 0 }
 }
 
+/**
+ * The bytes of a stream, inflated when the file deflates its streams; null when the file
+ * has no such stream. Throws when the stream is not deflate data, and likewise when it
+ * inflates past MAX_STREAM_INFLATE_BYTES: it stops there, without holding the rest.
+ */
 export function streamOf(opened: OpenedHwp, path: string): Buffer | null {
   const entry = CFB.find(opened.cfb, path)
   if (!entry?.content) return null
   const raw = Buffer.from(entry.content as Uint8Array)
-  return opened.compressed ? inflateRawSync(raw) : raw
+  return opened.compressed
+    ? inflateRawSync(raw, { maxOutputLength: MAX_STREAM_INFLATE_BYTES })
+    : raw
 }
 
 export function sectionCount(opened: OpenedHwp): number {

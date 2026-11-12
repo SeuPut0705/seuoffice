@@ -21,8 +21,8 @@ node packages/cli/pack-tarball.mjs \
 That writes `ieumoffice-cli_<version>_linux-x64.tar.gz` and its `.sha256`.
 `GENOFFICE_APP_VERSION` overrides the version; without it the packer reads the
 banner inside the shipped CLI bundle, so the archive cannot drift from the app.
-`.github/workflows/linux-build.yml` builds, tests and uploads it with the other
-Linux files.
+No workflow builds it: SeuOffice releases no Linux package, so the archive is
+made by hand with the command above.
 
 Layout (the app's `resources/`):
 

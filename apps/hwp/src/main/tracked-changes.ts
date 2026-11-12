@@ -1,4 +1,5 @@
 import * as CFB from 'cfb'
+import { readCompoundFile } from '@genoffice/compound-file'
 import { SECTION, openHwp, sectionCount, writeContainer } from './hwp5-file'
 
 const SIGNATURE = 'HWP Document File'
@@ -11,9 +12,7 @@ type LinkedEntry = CFB.CFB$Entry & { L: number; R: number; C: number }
 
 /** The file's header and container when it is an HWP file with tracked changes, else null. */
 function trackedContainer(file: Uint8Array): { cfb: CFB.CFB$Container; header: Buffer } | null {
-  const cfb = CFB.read(Buffer.from(file.buffer, file.byteOffset, file.byteLength), {
-    type: 'buffer',
-  })
+  const cfb = readCompoundFile(file)
   const header = CFB.find(cfb, '/FileHeader')
   if (!header?.content || header.content.length < 40) return null
   const bytes = Buffer.from(header.content as Uint8Array)
@@ -24,15 +23,19 @@ function trackedContainer(file: Uint8Array): { cfb: CFB.CFB$Container; header: B
 }
 
 /**
- * Whether an HWP file carries tracked changes: the property in its header, and the second
- * copy of the body (`ViewText`) Hangul keeps for them. Never throws; a file that cannot be
- * read here is taken to have none.
+ * `tracked`: the header says so and the second copy of the body (`ViewText`) Hangul keeps
+ * for tracked changes is there. `none`: the container was read and they are not.
+ * `unreadable`: the container could not be read here (the compound-file gate refuses it, or
+ * the bytes are no compound file at all), so nothing is known of the file: not `none`.
  */
-export function hasTrackedChanges(file: Uint8Array): boolean {
+export type TrackedChanges = 'none' | 'tracked' | 'unreadable'
+
+/** What an HWP file says of tracked changes. Never throws. */
+export function trackedChangesOf(file: Uint8Array): TrackedChanges {
   try {
-    return trackedContainer(file) !== null
+    return trackedContainer(file) ? 'tracked' : 'none'
   } catch {
-    return false
+    return 'unreadable'
   }
 }
 

@@ -147,7 +147,6 @@ export const cs = {
     'Pořád to nejde? Zkopírujte informace o připojení a pošlete je tomu, kdo vám pomáhá. Neobsahují účet ani cesty k souborům.',
   actionCopyInfo: 'Kopírovat informace pro pomoc',
   copyInfoDone: 'Zkopírováno',
-  actionConnectHelp: 'Zobrazit každý krok na obrazovce (stránka v korejštině)',
   guidePathChatGptBody:
     'Přihlaste se účtem ChatGPT a používejte svůj tarif. Nic není třeba instalovat. Bezplatný tarif umožňuje jen malé využití.',
   guideUseCodex: 'Už na tomto počítači používáte program Codex? Připojit přes Codex',

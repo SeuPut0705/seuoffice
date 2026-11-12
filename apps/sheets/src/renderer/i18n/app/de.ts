@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const de = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Auswahl vor der KI verbergen',
+  redactDialogDesc:
+    'Das Ausgewählte bleibt im Dokument und in der Datei; das Modell sieht nur den Platzhalter. Geben Sie ihm einen Namen.',
+  redactDialogScope:
+    'Das Verbergen gilt nur für die KI dieser App. CLI, MCP-Tools und der Headless-Export lesen die Datei direkt und sehen diese Wörter weiterhin.',
+  redactDialogPlaceholder: 'Name des Platzhalters, z. B. Telefonnummer des Kunden',
+  redactCancel: 'Abbrechen',
+  redactInsert: 'Verbergen',
+  redactEnable: 'Rechtsklick auf eine Auswahl, um sie vor dem Modell zu verbergen.',
+  redactNeedsSavedRow:
+    'Diese Zeile ist noch nicht in der Datei. Bitte zuerst speichern und dann die Zelle ausblenden.',
+  redactNeedsSavedSheet:
+    'Dieses Blatt oder eine Kopie davon ist noch nicht in der Datei. Bitte zuerst speichern und dann ändern, was ausgeblendet ist.',
+  redactMoveRefused:
+    'Nicht ausgeführt: Dabei würden vor der KI ausgeblendete Zellen verschoben oder kopiert, und ihre Werte wären nicht mehr ausgeblendet. Bitte zuerst das Ausblenden aufheben oder die Zellen aus dem Bereich herausnehmen.',
+  redactRecoveredFromNames:
+    'Eine andere App hat diese Datei neu geschrieben und den Eintrag darüber, was ausgeblendet ist, verworfen. Die ausgeblendeten Zellen wurden aus den Namen in der Arbeitsmappe wiederhergestellt; beim Speichern wird der vollständige Eintrag zurückgeschrieben.',
+
   appMergeWorkbooks: 'Arbeitsmappen zusammenführen',
   appMergeWorkbooksTip: 'Blätter aus anderen Excel-Dateien in diese Arbeitsmappe übernehmen',
   appMergeWorkbooksPicking: 'Dateien zum Zusammenführen wählen…',
@@ -8,6 +27,8 @@ export const de = {
   appMergeWorkbooksDone:
     '{sheets} Blätter aus {files} Dateien zusammengeführt (Formeln als Werte importiert).',
   appMergeWorkbooksFailed: 'Zusammenführen der Arbeitsmappen fehlgeschlagen.',
+  appMergeWorkbooksHiddenCells:
+    'Nichts wurde zusammengeführt: {file} enthält vor der KI verborgene Zellen, und beim Zusammenführen kämen ihre Werte ohne diesen Schutz herein. Öffnen Sie die Datei, heben Sie das Verbergen auf oder löschen Sie diese Zellen, speichern Sie und führen Sie dann erneut zusammen.',
   appMergeWorkbooksInsertFailed: 'Blatt {sheet} konnte nicht erstellt werden.',
   appMergeWorkbooksLocked:
     'Die Arbeitsmappe wird noch geladen; Zusammenführen ist gerade nicht möglich.',
@@ -559,6 +580,7 @@ export const de = {
   appBridgeUnavailable:
     'Die Desktop-Dateibrücke ist nicht verfügbar. Starten Sie die Electron-App neu.',
   appOpenCanceled: 'Arbeitsmappenauswahl abgebrochen.',
+  appImportCanceled: 'Import abgebrochen.',
   appOpeningWorkbook: 'Arbeitsmappe wird geöffnet…',
   appOpened: '{name} geöffnet — Zellbearbeitungen werden mit ⌘S zurückgespeichert.',
   appOpenFailed: 'Die Arbeitsmappe kann nicht geöffnet werden.',
@@ -658,6 +680,8 @@ export const de = {
     'Dieser Diagrammtyp unterstützt diese Bearbeitung nicht; Speichern abgebrochen — machen Sie die Diagrammänderung rückgängig.',
   appSaveErrMoveOverlap:
     'Eine Formel, ein formatierter Bereich, eine Form oder eine Tabelle erstreckt sich über die verschobenen Zeilen; Speichern abgebrochen — machen Sie die Verschiebung rückgängig.',
+  appSaveErrHiddenCellsUnreadable:
+    'Der Eintrag über die vor der KI verborgenen Zellen dieser Arbeitsmappe ist nicht lesbar, daher können Änderungen an Zeilen, Spalten und Blättern nicht gespeichert werden: Die verborgenen Zellen wären danach nicht mehr geschützt. Machen Sie diese Änderungen rückgängig und speichern Sie erneut.',
   appFromTextCsvTitle: 'CSV-/Textdatei in die aktuelle Auswahl importieren',
   appCsvImported: '{rows} Zeilen × {columns} Spalten aus der Datei nach {cell} importiert.',
   appCsvEmpty: 'Die CSV-Datei enthält keine Daten.',
@@ -766,6 +790,7 @@ export const de = {
   appExportPdfTitle: 'Als PDF exportieren',
   appSaveTitle: 'Speichern (⌘S)',
   appSaveAs: 'Speichern unter',
+  aiNameFile: 'Mit KI benennen…',
   appUndo: 'Rückgängig',
   appRedo: 'Wiederholen',
   appQuickAccessCustomize: 'Symbolleiste für den Schnellzugriff anpassen',
@@ -1219,6 +1244,20 @@ export const de = {
   appWatchCell: 'Zelle',
   appWatchValue: 'Wert',
   appWatchFormula: 'Formel',
+  appLinksPanel: 'Externe Verknüpfungen',
+  appLinksPanelDetail: 'Verknüpfungen zu anderen Arbeitsmappen anzeigen, aktualisieren und trennen',
+  appLinksUpdate: 'Werte aktualisieren',
+  appLinksNone: 'Diese Arbeitsmappe hat keine Verknüpfungen zu anderen Arbeitsmappen.',
+  appLinksUnsaved: 'Speichern Sie diese Arbeitsmappe, bevor Sie ihre externen Links auflisten.',
+  appLinksSource: 'Quelle',
+  appLinksStatus: 'Status',
+  appLinksSheets: 'Blätter',
+  appLinksLocate: 'Quelldatei anzeigen',
+  appLinksReachable: 'Verfügbar',
+  appLinksBroken: 'Nicht verfügbar',
+  appLinksBreak: 'Link lösen',
+  appLinksBreakConfirm: 'Lösen bestätigen',
+  appLinksChangeSource: 'Quelle ändern',
   appGroupCalculation: 'Berechnung',
   appCalculationOptions: 'Berechnungsoptionen',
   appCalculationOptionsTitle: 'Automatische oder manuelle Neuberechnung',
@@ -1235,6 +1274,13 @@ export const de = {
   appGroupGetData: 'Daten abrufen',
   appFromTextCsv: 'Aus Text/CSV',
   appRefreshAll: 'Alle aktualisieren',
+  appRefreshQuery: 'Abfrage aktualisieren',
+  appQueryConnectionsTitle: 'Abfragen der Arbeitsmappe aktualisieren',
+  appQueryRefreshing: '{name} wird aktualisiert…',
+  appQueryRefreshed: '{name} aktualisiert ({rows} Zeilen)',
+  appQueryRefreshedClipped:
+    '{name} aktualisiert ({rows} Zeilen, {dropped} passten nicht in den Bereich)',
+  appQueryRefreshFailed: '{name} konnte nicht aktualisiert werden',
   appWorkbookNoPivot: 'Keine Pivot-Tabellen in dieser Arbeitsmappe.',
   appRefreshAllTitle: 'Alle Pivot-Tabellen aktualisieren',
   appQueriesConnections: 'Abfragen und Verbindungen',
@@ -1310,6 +1356,10 @@ export const de = {
   appFontSizeTip: 'Schriftgrad',
   appZoomIn: 'Vergrößern',
   appZoomOut: 'Verkleinern',
+  appImgActualSize: 'Originalgröße',
+  appImgFitWindow: 'An Fenster anpassen',
+  appImgSaveAs: 'Bild speichern unter…',
+  appImgClose: 'Schließen (Esc)',
   appZoomSheetTitle: 'Blatt zoomen',
   appResetZoom: 'Zoom zurücksetzen',
   appZoomToSelection: 'An Markierung anpassen',
@@ -1352,6 +1402,20 @@ export const de = {
   appOpenFileFirst: 'Öffnen Sie zuerst eine Datei',
   appNoPassword: 'Kein Kennwort',
   appProtectWorkbook: 'Arbeitsmappe schützen',
+  appChangePassword: 'Kennwort ändern',
+  appWorkbookPasswordChanged: 'Das Arbeitsmappenkennwort wurde aktualisiert.',
+  appChangePasswordTitle: 'Kennwort der Arbeitsmappe ändern',
+  appChangePasswordCopy: 'Wählen Sie ein neues Kennwort und bestätigen Sie es unten.',
+  appNewPasswordLabel: 'Neues Kennwort',
+  appConfirmPasswordLabel: 'Neues Kennwort bestätigen',
+  appPasswordsMismatch: 'Die Kennwörter stimmen nicht überein.',
+  appPasswordTooLong:
+    'Das Kennwort ist zu lang. Verwenden Sie höchstens {max} Zeichen, ein längeres nimmt Excel nicht an.',
+  appPasswordUpdateFailed: 'Das Kennwort der Arbeitsmappe konnte nicht aktualisiert werden.',
+  appPasswordUpdating: 'Wird aktualisiert…',
+  appUpdatePassword: 'Kennwort aktualisieren',
+  appWorkbookNotPasswordProtected:
+    'Diese Arbeitsmappe ist nicht durch ein Öffnungskennwort geschützt.',
   appAllowEditRanges: 'Bereiche zur Bearbeitung freigeben',
   appGroupClipboard: 'Zwischenablage',
   appPaste: 'Einfügen',
@@ -1591,6 +1655,8 @@ export const de = {
   appVisualSendBackward: 'Eine Ebene nach hinten',
   appVisualSizeProperties: 'Größe und Eigenschaften…',
   appVisualHyperlink: 'Link…',
+  appVisualEmbedInCell: 'Bild in Zelle einbetten',
+  appVisualEmbedFailed: 'Das Bild konnte nicht in die Zelle eingebettet werden.',
   appVisualDelete: 'Löschen',
   appVisualArranged: 'Objekt aktualisiert — mit ⌘S speichern.',
   appVisualCopied: 'Objekt kopiert.',

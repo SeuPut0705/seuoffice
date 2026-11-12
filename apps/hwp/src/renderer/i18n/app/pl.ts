@@ -28,6 +28,10 @@ export const pl = {
     'Ten dokument zawiera śledzone zmiany. Widzisz jego bieżący tekst z zastosowanymi zmianami; zapisanie zachowa ten tekst i usunie historię zmian.',
   saveTracked:
     'Nie zapisano: ten dokument zawiera śledzone zmiany; zapisanie go tutaj spowodowałoby ich utratę, a pliku Hancom Hangul mógłby nie otworzyć.',
+  openedUnverified:
+    'Nie udało się sprawdzić struktury tego pliku, więc części jego zawartości może tu brakować. Możesz go czytać i edytować, ale nie zostanie zapisany na oryginale: użyj Zapisz jako, aby zachować kopię pod inną nazwą.',
+  saveUnverified:
+    'Nie zapisano: nie udało się sprawdzić struktury tego pliku, a zapisanie go na oryginale mogłoby spowodować utratę zawartości. W oknie Zapisz jako zapisz kopię pod inną nazwą, najlepiej w formacie HWPX.',
   savedTailsLost:
     'Zapisano, ale części stron wzorcowych lub notatek z oryginalnego pliku nie udało się zachować; Hancom Hangul może nie otworzyć zapisanego pliku. Otwórz go, aby sprawdzić.',
   missingFonts:

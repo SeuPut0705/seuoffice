@@ -31,6 +31,7 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 - 보고와 실행은 같은 함수를 묻는다. `aiToolCapabilities`가 "된다"고 한 경로가 실제 도구가 시작하는 경로여야 하므로, 경로 규칙은 `tool-routing.ts`에만 두고 도구나 보고 쪽에 따로 분기를 만들지 않는다. 보고는 장부를 보지 않는다. 사용량(`used`)은 명령줄이 따로 읽어 붙인다.
 - 도구는 throw하지 않는다. 실패는 `error`와 `errorCode`(`'unavailable'` 또는 `AiRunErrorKind`)로 돌려준다. 문장은 영어이며 도구(모델)가 읽는 용도다. 화면은 `errorCode`로 번역한다.
 - 모델이 준 주소와 경로는 믿지 않는다. 원격 미디어는 `fetchWithSsrfGuard`와 크기 상한을 거치고, 로컬 경로는 `mediaRoots`(열린 문서의 폴더와 첨부 임시 폴더) 안에 있는지 양쪽을 realpath로 풀어 확인한다. `file://` 주소는 `readGeneratedImage`가 이 앱이 만든 이미지일 때만 읽는다.
+- 검색 서비스로 나가는 식별 값(User-Agent, `X-Keenable-Title`, MCP 클라이언트 이름)은 실제 제품 이름(`PRODUCT_NAME`)에서 만든다(`index.ts`, `parallel-mcp.ts`). 키 점검 질의(`KEY_TEST_QUERY`)는 중립 단어로 두는데, 체인이 넘어가는 다른 서비스도 같은 질의를 받기 때문이다(`search-tools.ts`, `tests/wire-identity.test.ts`).
 
 ## 이 모듈의 방식
 

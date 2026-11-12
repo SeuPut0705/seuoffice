@@ -47,13 +47,22 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
   AiSubscriptionUsage,
-  SubscriptionConnectHelpPath,
 } from '@genoffice/ai-provider/browser'
 import { localModelCapabilities } from '@genoffice/ai-provider/browser'
 import type { AiBlockedRun } from './subscription-state'
 import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
 import { proposalPreview, type TurnProposal } from './turn-proposal'
 import { ATTACHMENT_IMAGE_EXTS, type AttachmentMeta } from '../../shared/desktop-api'
+import {
+  AttachmentCardIcon,
+  clampAiPanelWidth,
+  fileImageIcon,
+  formatAttachmentSize,
+  loadAiPanelWidth,
+  saveAiPanelWidth,
+  SentAttachments,
+  truncateCardName,
+} from '@genoffice/ui'
 import { useI18n, type TFunc } from '../i18n/locale'
 import { createFileNav, Markdown } from '@genoffice/ui'
 import { SHEET_NAV_SCHEME } from './sheet-nav'
@@ -61,15 +70,6 @@ import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
-import filePdfIcon from '../assets/file-pdf.png'
-import fileWordIcon from '../assets/file-word.png'
-import fileExcelIcon from '../assets/file-excel.png'
-import filePptIcon from '../assets/file-ppt.png'
-import fileImageIcon from '../assets/file-image.png'
-import fileVideoIcon from '../assets/file-video.png'
-import fileVoiceIcon from '../assets/file-voice.png'
-import fileDocumentIcon from '../assets/file-document.png'
-import fileGeneralIcon from '../assets/file-general.png'
 
 /** Clipboard bitmap MIME → attachment extension (matches the main process's
  * ATTACHMENT_IMAGE_EXTS) */
@@ -78,80 +78,6 @@ const PASTE_MIME_EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/gif': 'gif',
   'image/webp': 'webp',
-}
-
-/** File-type icons for attachment cards; exts the
- *  attachment allowlist doesn't accept yet are mapped ahead so they light up when added */
-const ATTACHMENT_CARD_ICON_GROUPS: [icon: string, exts: string[]][] = [
-  [fileWordIcon, ['doc', 'docx', 'odt']],
-  [fileExcelIcon, ['xls', 'xlsx', 'xlsm', 'csv', 'tsv']],
-  [filePptIcon, ['ppt', 'pptx']],
-  [filePdfIcon, ['pdf']],
-  [fileImageIcon, ['png', 'jpg', 'jpeg', 'gif', 'webp', 'bmp', 'svg', 'tiff', 'heic']],
-  [fileVideoIcon, ['mp4', 'mov', 'avi', 'mkv', 'webm', 'm4v']],
-  [fileVoiceIcon, ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'opus']],
-  [
-    fileDocumentIcon,
-    [
-      'txt',
-      'md',
-      'markdown',
-      'rtf',
-      'log',
-      'json',
-      'yaml',
-      'yml',
-      'xml',
-      'html',
-      'htm',
-      'js',
-      'ts',
-      'tsx',
-      'jsx',
-      'py',
-      'java',
-      'c',
-      'h',
-      'cpp',
-      'go',
-      'rs',
-      'rb',
-      'sh',
-      'sql',
-      'css',
-    ],
-  ],
-]
-
-const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
-  ATTACHMENT_CARD_ICON_GROUPS.flatMap(([icon, exts]) => exts.map((ext) => [ext, icon])),
-)
-
-function AttachmentCardIcon({ ext }: { ext: string }) {
-  return <img src={ATTACHMENT_CARD_ICONS[ext] ?? fileGeneralIcon} alt="" aria-hidden />
-}
-
-/** Card name slot width: 190 card - 2 border - 8/14 padding - 40 icon - 10 gap */
-const CARD_NAME_MAX_WIDTH = 116
-let cardNameCtx: CanvasRenderingContext2D | null = null
-
-/** Ellipsize like the design: cut at the limit, strip trailing -_./spaces so
- *  punctuation never sits against the …; CSS text-overflow stays as fallback */
-function truncateCardName(name: string): string {
-  cardNameCtx ??= document.createElement('canvas').getContext('2d')
-  if (!cardNameCtx) return name
-  // must match the stack the card name actually renders with (body font in styles.css)
-  cardNameCtx.font =
-    "500 13px 'Segoe UI', -apple-system, BlinkMacSystemFont, 'PingFang SC', 'Microsoft YaHei', sans-serif"
-  if (cardNameCtx.measureText(name).width <= CARD_NAME_MAX_WIDTH) return name
-  let lo = 1
-  let hi = name.length
-  while (lo < hi) {
-    const mid = (lo + hi + 1) >> 1
-    if (cardNameCtx.measureText(`${name.slice(0, mid)}…`).width <= CARD_NAME_MAX_WIDTH) lo = mid
-    else hi = mid - 1
-  }
-  return `${name.slice(0, lo).replace(/[-_.\s]+$/, '')}…`
 }
 
 /** Name the scope the way the user thinks of it: by column header when the
@@ -164,69 +90,8 @@ export function scopeLabel(range: string, columns: readonly string[] | null, t: 
   return t('aiScopeRange', { range })
 }
 
-function formatAttachmentSize(bytes: number): string {
-  return bytes >= 1024 * 1024
-    ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-    : `${(bytes / 1024).toFixed(2)} KB`
-}
-
-/** Read-only echo of the attachments a user message consumed from the composer
- *  (image previews when the file is still readable; otherwise the placeholder icon) */
-function SentAttachments({
-  atts,
-  previews,
-}: {
-  readonly atts: readonly AttachmentMeta[]
-  readonly previews: Record<string, string>
-}): React.JSX.Element {
-  return (
-    <div className="ai-msg-attachments">
-      {atts.map((a) =>
-        ATTACHMENT_IMAGE_EXTS.has(a.ext) ? (
-          <span key={a.path} className="ai-attachment-thumb" title={a.name}>
-            {previews[a.path] ? (
-              <img src={previews[a.path]} alt={a.name} />
-            ) : (
-              <span className="ai-attachment-thumb-pending" aria-hidden>
-                <img src={fileImageIcon} alt="" />
-              </span>
-            )}
-          </span>
-        ) : (
-          <span key={a.path} className="ai-attachment-card" title={a.name}>
-            <span className="ai-attachment-card-icon">
-              <AttachmentCardIcon ext={a.ext} />
-            </span>
-            <span className="ai-attachment-card-meta">
-              <span className="ai-attachment-card-name">{truncateCardName(a.name)}</span>
-              <span className="ai-attachment-card-size">{formatAttachmentSize(a.sizeBytes)}</span>
-            </span>
-          </span>
-        ),
-      )}
-    </div>
-  )
-}
-
 /** Resizable panel width: persisted, clamped to min/max, drives the .sheet-body grid column via --copilot-width */
 const PANEL_WIDTH_KEY = 'sheets-ai-panel-width'
-const PANEL_WIDTH_MIN = 280
-
-function clampPanelWidth(w: number): number {
-  // The viewport can be transiently tiny (a WebContentsView is 0×0 until the
-  // shell lays it out), so never let the ceiling drop below the minimum
-  const max = Math.max(PANEL_WIDTH_MIN, Math.min(720, Math.round(window.innerWidth * 0.6)))
-  return Math.min(Math.max(w, PANEL_WIDTH_MIN), max)
-}
-
-function loadPanelWidth(): number | null {
-  const saved = Number(localStorage.getItem(PANEL_WIDTH_KEY))
-  // static bounds only — clamping against the window here would bake a
-  // transiently small viewport into the restored preference
-  return Number.isFinite(saved) && saved > 0
-    ? Math.min(Math.max(saved, PANEL_WIDTH_MIN), 720)
-    : null
-}
 
 export interface AiToolChip {
   readonly summary: string
@@ -313,8 +178,6 @@ export interface AiPanelSubscription {
   readonly busy: boolean
   /** the connect cards' buttons */
   readonly actions: AiSubscriptionCardActions
-  /** open the website's step-by-step connect help at the guide's path */
-  readonly openConnectHelp?: ((path: SubscriptionConnectHelpPath | null) => void) | undefined
   /** look again without a card asking for it (both providers when none is named) */
   readonly refresh: (providers?: AiSubscriptionProviderId[]) => void
   /** rate-limit windows the subscription provider reported on its latest turn */
@@ -581,11 +444,11 @@ export function AiChatPanel({
   // Restore the persisted panel width (the grid column tracks --copilot-width on .sheet-body)
   useEffect(() => {
     if (!isOpen) return
-    const saved = loadPanelWidth()
+    const saved = loadAiPanelWidth(PANEL_WIDTH_KEY)
     if (saved === null) return
     preferredWidthRef.current = saved
     const area = asideRef.current?.closest('.sheet-body') as HTMLElement | null
-    area?.style.setProperty('--copilot-width', `${clampPanelWidth(saved)}px`)
+    area?.style.setProperty('--copilot-width', `${clampAiPanelWidth(saved)}px`)
   }, [isOpen])
 
   // Re-derive the display width on window resize (max is 60% of the window);
@@ -596,7 +459,7 @@ export function AiChatPanel({
       const area = asideRef.current?.closest('.sheet-body') as HTMLElement | null
       const preferred = preferredWidthRef.current
       if (!area || preferred === null) return
-      area.style.setProperty('--copilot-width', `${clampPanelWidth(preferred)}px`)
+      area.style.setProperty('--copilot-width', `${clampAiPanelWidth(preferred)}px`)
     }
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
@@ -624,7 +487,7 @@ export function AiChatPanel({
     document.body.style.userSelect = 'none'
     let width = 0
     const onMove = (ev: PointerEvent): void => {
-      width = clampPanelWidth(aiPanelWidthAtPointer(ev.clientX))
+      width = clampAiPanelWidth(aiPanelWidthAtPointer(ev.clientX))
       preferredWidthRef.current = width
       area.style.setProperty('--copilot-width', `${width}px`)
     }
@@ -641,7 +504,7 @@ export function AiChatPanel({
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
       setResizing(false)
-      if (width > 0) localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(width)))
+      if (width > 0) saveAiPanelWidth(PANEL_WIDTH_KEY, width)
     }
     resizeCleanupRef.current = cleanup
     window.addEventListener('pointermove', onMove)
@@ -975,7 +838,6 @@ export function AiChatPanel({
             disabled={subscription.busy}
             attention={subscription.connectAttention}
             onOpenSettings={() => void window.desktopApi.openAiModelSettings().catch(() => {})}
-            onOpenConnectHelp={subscription.openConnectHelp}
             {...subscription.actions}
           />
         )}

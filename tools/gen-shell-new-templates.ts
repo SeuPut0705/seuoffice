@@ -3,7 +3,7 @@ import { mkdir, writeFile } from 'node:fs/promises'
 import JSZip from 'jszip'
 import { buildBlankDocx } from '../packages/docx-engine/src/blank'
 import { createBlankPptx } from '../packages/pptx-engine/src/blank'
-import { blankXlsxBuffer } from '../packages/xlsx-gateway/src/gateway/csv-import'
+import { blankXlsxBuffer } from '../packages/xlsx-gateway/src/gateway/csv-import-xlsx'
 
 async function main() {
   const output = new URL('../apps/shell/build/shell-new/', import.meta.url)

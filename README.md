@@ -1,3 +1,5 @@
+<p align="center"><b>한국어</b> · <a href="README.en.md">English</a></p>
+
 <p align="center">
   <img src="apps/shell/build/brand/app-icon.svg" width="96" height="96" alt="SeuOffice">
 </p>

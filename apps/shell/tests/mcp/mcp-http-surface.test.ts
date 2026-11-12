@@ -36,6 +36,7 @@ import { realCliRunner } from './real-cli'
 const DEFAULT_NAMES = [
   'apply_diagram_ops',
   'apply_ops',
+  'check_document',
   'apply_sheet_ops',
   'apply_slide_ops',
   'create_session',
@@ -49,13 +50,22 @@ const DEFAULT_NAMES = [
   'read_document',
   'read_docx',
   'read_hwp',
+  'read_docx_properties',
   'read_pdf',
   'read_sheet',
   'replace_blocks',
+  'sheet_links',
   'save_session',
 ].sort()
 
-const BACKGROUND_NAMES = [...DEFAULT_NAMES, 'create_docx', 'create_pptx', 'create_xlsx'].sort()
+const BACKGROUND_NAMES = [
+  ...DEFAULT_NAMES,
+  'convert_document',
+  'create_docx',
+  'create_pptx',
+  'create_xlsx',
+  'fill_template',
+].sort()
 
 function freePort(): Promise<number> {
   return new Promise((resolve, reject) => {
@@ -307,6 +317,12 @@ describe('MCP surface over Streamable HTTP (/mcp)', () => {
         'csv',
         'tsv',
         'ods',
+      ])
+      expect(infoJson.families.find((f) => f.family === 'pptx')!.editor.open).toEqual([
+        'pptx',
+        'odp',
+        'otp',
+        'ppt',
       ])
 
       // the diagram tools take their schema from DIAGRAM_OPS over the wire: an

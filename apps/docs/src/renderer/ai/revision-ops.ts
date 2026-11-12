@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
+import { revisionDateMs } from '@genoffice/docx-engine'
 import {
   applyRevisions,
   collectRevisions,
@@ -7,6 +8,7 @@ import {
   TEXT_STYLE_FIELDS,
   type RevisionRange,
 } from '../editor/revisions'
+import type { StoryKind, StoryRevision } from '../editor/story-revisions'
 import { redactTextBetween } from './redact-view'
 
 export type RevisionType = 'insertion' | 'deletion' | 'formatting' | 'move'
@@ -32,6 +34,9 @@ export interface RevisionEntry {
   change?: string
   from: number
   to: number
+  /** absent for body changes; the story a change outside the body lives in */
+  location?: StoryKind
+  story?: StoryRevision
 }
 
 export interface RevisionSelector {
@@ -41,7 +46,7 @@ export interface RevisionSelector {
   type?: RevisionType
   blockIndex?: number
   blockRange?: [number, number]
-  /** ISO date: only changes recorded strictly before it */
+  /** ISO date: only changes recorded strictly before it; without a zone designator it is UTC */
   before?: string
 }
 
@@ -50,16 +55,25 @@ const TYPE_OF: Record<RevisionRange['kind'], RevisionType> = {
   blockIns: 'insertion',
   rowIns: 'insertion',
   cellIns: 'insertion',
-  // ins+del marks on the same text count as a deletion: both accept and reject remove it
-  both: 'deletion',
   del: 'deletion',
   blockDel: 'deletion',
   rowDel: 'deletion',
   cellDel: 'deletion',
+  paraMarkIns: 'insertion',
+  paraMarkDel: 'deletion',
   pPrChange: 'formatting',
   rPrChange: 'formatting',
+  paraMarkRPrChange: 'formatting',
   moveFrom: 'move',
   moveTo: 'move',
+  tblPrChange: 'formatting',
+  tblGridChange: 'formatting',
+  trPrChange: 'formatting',
+  tblPrExChange: 'formatting',
+  tcPrChange: 'formatting',
+  cellMerge: 'formatting',
+  numberingChange: 'formatting',
+  sectPrChange: 'formatting',
 }
 
 function blockIndexOfPos(doc: PmNode, pos: number): number {
@@ -126,9 +140,9 @@ function paragraphFormatChange(doc: PmNode, r: RevisionRange): string | undefine
   return pairs.length ? pairs.join('; ') : undefined
 }
 
-/** Every pending tracked change with a positional id and enough context to pick it. */
-export function listRevisionEntries(doc: PmNode): RevisionEntry[] {
-  return collectRevisions(doc).map((r, i) => {
+/** Every pending tracked change with a positional id and enough context to pick it (stories after the body). */
+export function listRevisionEntries(doc: PmNode, stories: StoryRevision[] = []): RevisionEntry[] {
+  const body: RevisionEntry[] = collectRevisions(doc).map((r, i) => {
     const change =
       r.kind === 'rPrChange'
         ? runFormatChange(doc, r)
@@ -151,6 +165,21 @@ export function listRevisionEntries(doc: PmNode): RevisionEntry[] {
       to: r.to,
     }
   })
+  const outside: RevisionEntry[] = stories.map((r, i) => ({
+    id: `r${body.length + i + 1}`,
+    type: TYPE_OF[r.kind],
+    kind: r.kind,
+    author: r.author || 'unknown',
+    ...(r.date ? { date: r.date } : {}),
+    // header / footer parts sit in no body block: -1 never matches a blockIndex / blockRange pick
+    blockIndex: r.from >= 0 ? blockIndexOfPos(doc, r.from) : -1,
+    text: r.story.text,
+    from: r.from,
+    to: r.to,
+    location: r.story.kind,
+    story: r,
+  }))
+  return [...body, ...outside]
 }
 
 function tally(entries: RevisionEntry[], key: 'author' | 'type'): string {
@@ -207,7 +236,7 @@ export function validateSelector(
     sel.blockRange = [r[0], r[1]]
   }
   if (input.before !== undefined) {
-    if (typeof input.before !== 'string' || Number.isNaN(Date.parse(input.before)))
+    if (typeof input.before !== 'string' || Number.isNaN(revisionDateMs(input.before)))
       return { error: 'before must be an ISO date such as 2026-09-01 or 2026-09-01T12:00:00Z' }
     sel.before = input.before
   }
@@ -223,8 +252,9 @@ export function validateSelector(
 export function selectRevisions(
   doc: PmNode,
   sel: RevisionSelector,
+  stories: StoryRevision[] = [],
 ): { entries: RevisionEntry[] } | { error: string } {
-  const all = listRevisionEntries(doc)
+  const all = listRevisionEntries(doc, stories)
   if (all.length === 0) return { error: 'the document has no pending tracked changes' }
   if (sel.ids) {
     const known = new Map(all.map((e) => [e.id, e]))
@@ -234,7 +264,7 @@ export function selectRevisions(
         error: `unknown revision id(s) ${unknown.join(', ')}; valid ids are r1–r${all.length} (call read_revisions after every edit, ids are positional)`,
       }
   }
-  const beforeMs = sel.before ? Date.parse(sel.before) : null
+  const beforeMs = sel.before ? revisionDateMs(sel.before) : null
   const entries = all.filter((e) => {
     if (sel.ids && !sel.ids.includes(e.id)) return false
     if (sel.author !== undefined && e.author.toLowerCase() !== sel.author.toLowerCase())
@@ -243,7 +273,7 @@ export function selectRevisions(
     if (sel.blockIndex !== undefined && e.blockIndex !== sel.blockIndex) return false
     if (sel.blockRange && (e.blockIndex < sel.blockRange[0] || e.blockIndex > sel.blockRange[1]))
       return false
-    if (beforeMs !== null && (!e.date || Date.parse(e.date) >= beforeMs)) return false
+    if (beforeMs !== null && (!e.date || revisionDateMs(e.date) >= beforeMs)) return false
     return true
   })
   if (entries.length === 0) {
@@ -258,24 +288,35 @@ export function selectRevisions(
   return { entries }
 }
 
-/** accept or reject the selected changes in one transaction, last position first */
+export interface StoryRevisionAccess {
+  list(): StoryRevision[]
+  apply(targets: StoryRevision[], mode: 'accept' | 'reject', all?: boolean): number
+}
+
+/**
+ * Accept or reject the selected changes in one transaction, last position
+ * first. `locked`: the body ones left pending because they would change the
+ * text of a content control locked against editing.
+ */
 export function applyRevisionSelection(
   editor: Editor,
   sel: RevisionSelector,
   mode: 'accept' | 'reject',
-): { entries: RevisionEntry[] } | { error: string } {
-  const picked = selectRevisions(editor.state.doc, sel)
+  stories?: StoryRevisionAccess,
+): { entries: RevisionEntry[]; locked: RevisionEntry[] } | { error: string } {
+  const picked = selectRevisions(editor.state.doc, sel, stories?.list() ?? [])
   if ('error' in picked) return picked
-  applyRevisions(
-    editor,
-    picked.entries.map((e) => ({
-      from: e.from,
-      to: e.to,
-      kind: e.kind,
-      author: e.author,
-      ...(e.date ? { date: e.date } : {}),
-    })),
-    mode,
-  )
-  return picked
+  // stories first: textbox entries address their anchor node by position, which body edits shift
+  const outside = picked.entries.filter((e) => e.story).map((e) => e.story!)
+  if (outside.length) stories?.apply(outside, mode, !!sel.all)
+  const body = picked.entries.filter((e) => !e.story)
+  const ranges = body.map((e) => ({
+    from: e.from,
+    to: e.to,
+    kind: e.kind,
+    author: e.author,
+    ...(e.date ? { date: e.date } : {}),
+  }))
+  const left = applyRevisions(editor, ranges, mode)
+  return { ...picked, locked: body.filter((_, i) => left.includes(ranges[i])) }
 }

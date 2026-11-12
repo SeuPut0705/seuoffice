@@ -57,6 +57,13 @@ import {
   type ProjectMemoryLine,
   type ProjectRunPrepared,
 } from '@genoffice/ui'
+import {
+  AI_PANEL_WIDTH_DEFAULT,
+  clampAiPanelWidth,
+  formatAttachmentSize,
+  loadAiPanelWidth,
+  saveAiPanelWidth,
+} from '@genoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
 import {
@@ -201,12 +208,6 @@ const ATTACHMENT_CARD_ICONS: Record<string, string> = Object.fromEntries(
 )
 const MAX_IMAGES_PER_MESSAGE = 20
 
-function formatAttachmentSize(bytes: number): string {
-  return bytes >= 1024 * 1024
-    ? `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-    : `${(bytes / 1024).toFixed(2)} KB`
-}
-
 /** composer chips (removable) and the read-only echo on a sent message share one renderer */
 function AttachmentList({
   atts,
@@ -295,26 +296,8 @@ function storedAttachments(list: ChatMessage['attachments']): AttachmentMeta[] |
 }
 
 const PANEL_WIDTH_KEY = 'html-ai-panel-width'
-const PANEL_WIDTH_DEFAULT = 360
-const PANEL_WIDTH_MIN = 280
 const MAX_SNAPSHOTS = 20
 const TOOL_OUTPUT_MAX_CHARS = 2000
-
-function clampPanelWidth(w: number): number {
-  // The viewport can be transiently tiny (a WebContentsView is 0×0 until the
-  // shell lays it out), so never let the ceiling drop below the minimum
-  const max = Math.max(PANEL_WIDTH_MIN, Math.min(720, Math.round(window.innerWidth * 0.6)))
-  return Math.min(Math.max(w, PANEL_WIDTH_MIN), max)
-}
-
-function loadPanelWidth(): number {
-  const saved = Number(localStorage.getItem(PANEL_WIDTH_KEY))
-  // static bounds only — clamping against the window here would bake a
-  // transiently small viewport into the restored preference
-  return Number.isFinite(saved) && saved > 0
-    ? Math.min(Math.max(saved, PANEL_WIDTH_MIN), 720)
-    : PANEL_WIDTH_DEFAULT
-}
 
 interface ToolActivity {
   name: string
@@ -818,8 +801,8 @@ export function AiPanel({
   // preferred = the user's chosen width (the only value persisted); panelWidth =
   // what fits the current window. Deriving the display width from the preference
   // means a transiently small window never permanently shrinks the panel.
-  const preferredWidthRef = useRef(loadPanelWidth())
-  const [panelWidth, setPanelWidth] = useState(() => clampPanelWidth(preferredWidthRef.current))
+  const preferredWidthRef = useRef(loadAiPanelWidth(PANEL_WIDTH_KEY) ?? AI_PANEL_WIDTH_DEFAULT)
+  const [panelWidth, setPanelWidth] = useState(() => clampAiPanelWidth(preferredWidthRef.current))
   const [resizing, setResizing] = useState(false)
   const asideRef = useRef<HTMLElement>(null)
   const mountedRef = useRef(true)
@@ -2079,7 +2062,7 @@ export function AiPanel({
   // Re-derive the display width on window resize (max is 60% of the window);
   // growing the window back restores the preferred width
   useEffect(() => {
-    const onResize = (): void => setPanelWidth(clampPanelWidth(preferredWidthRef.current))
+    const onResize = (): void => setPanelWidth(clampAiPanelWidth(preferredWidthRef.current))
     window.addEventListener('resize', onResize)
     return () => window.removeEventListener('resize', onResize)
   }, [])
@@ -2095,7 +2078,7 @@ export function AiPanel({
     document.body.style.cursor = 'col-resize'
     document.body.style.userSelect = 'none'
     const onMove = (ev: PointerEvent): void => {
-      const w = clampPanelWidth(aiPanelWidthAtPointer(ev.clientX))
+      const w = clampAiPanelWidth(aiPanelWidthAtPointer(ev.clientX))
       preferredWidthRef.current = w
       setPanelWidth(w)
     }
@@ -2111,7 +2094,7 @@ export function AiPanel({
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
       setResizing(false)
-      localStorage.setItem(PANEL_WIDTH_KEY, String(Math.round(preferredWidthRef.current)))
+      saveAiPanelWidth(PANEL_WIDTH_KEY, preferredWidthRef.current)
     }
     resizeCleanupRef.current = cleanup
     window.addEventListener('pointermove', onMove)
@@ -2496,7 +2479,6 @@ export function AiPanel({
               onRecheck={subscription.recheck}
               onAcceptMetered={subscription.acceptMetered}
               onOpenInstallHelp={subscription.openInstallHelp}
-              onOpenConnectHelp={subscription.openConnectHelp}
             />
           ) : (
             <AiFirstConnectionNotice

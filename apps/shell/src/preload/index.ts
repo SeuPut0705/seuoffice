@@ -437,6 +437,15 @@ const homeApi: HomeApi = {
       updatedAt: typeof r?.updatedAt === 'number' ? r.updatedAt : 0,
     }
   },
+  async getCsvImportLimit() {
+    const result: unknown = await ipcRenderer.invoke(HOME_CHANNELS.getCsvImportLimit)
+    return typeof result === 'number' ? result : 0
+  },
+  async setCsvImportLimit(mb) {
+    if (typeof mb !== 'number' || !Number.isInteger(mb))
+      throw new Error('Invalid CSV import limit.')
+    await ipcRenderer.invoke(HOME_CHANNELS.setCsvImportLimit, mb)
+  },
   async setAutoSaveDefault(on) {
     if (typeof on !== 'boolean') throw new Error('Invalid AutoSave default.')
     await ipcRenderer.invoke(HOME_CHANNELS.setAutoSaveDefault, on)
@@ -506,6 +515,12 @@ const homeApi: HomeApi = {
   async openMcpLogFile() {
     await ipcRenderer.invoke(HOME_CHANNELS.openMcpLogFile)
   },
+  async getLegacyImportPrompt() {
+    return (await ipcRenderer.invoke(HOME_CHANNELS.getLegacyImportPrompt)) !== false
+  },
+  async setLegacyImportPrompt(prompt) {
+    return (await ipcRenderer.invoke(HOME_CHANNELS.setLegacyImportPrompt, prompt)) !== false
+  },
   async getAuthorName() {
     return normalizeAuthorNameSetting(await ipcRenderer.invoke(HOME_CHANNELS.getAuthorName))
   },
@@ -573,9 +588,6 @@ const homeApi: HomeApi = {
   },
   async openLicenseNotices() {
     await ipcRenderer.invoke(HOME_CHANNELS.openLicenseNotices)
-  },
-  async openRightsContact() {
-    await ipcRenderer.invoke(HOME_CHANNELS.openRightsContact)
   },
   // AI settings channels are registered once by the shell's aggregated docs handlers
   onAiSettingsChanged(handler) {
@@ -673,6 +685,24 @@ const homeApi: HomeApi = {
 }
 
 contextBridge.exposeInMainWorld('aiOffice', homeApi)
+
+/**
+ * Model file naming.
+ *
+ * The same channel the editor apps expose under this name, so the shared
+ * client (`@genoffice/ui`) finds one bridge wherever it runs.
+ *
+ * A global of its own rather than part of `aiOffice`: `aiOffice` is the
+ * shell's home API, and an editor window that reused the name would shadow it
+ * there — `window.aiOffice.setTheme` would vanish with it.
+ */
+const aiNamingApi = {
+  suggestFileName(input: { content: string }) {
+    return ipcRenderer.invoke('ai:suggest-file-name', input)
+  },
+}
+
+contextBridge.exposeInMainWorld('aiNamingApi', aiNamingApi)
 
 const integrationsApi: IntegrationsApi = {
   async status() {
@@ -868,9 +898,6 @@ const subscriptionApi: SubscriptionApi = {
   },
   async openInstallHelp(provider) {
     await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, provider)
-  },
-  async openConnectHelp(path) {
-    await ipcRenderer.invoke(SHELL_SUBSCRIPTION_CHANNELS.openConnectHelp, path)
   },
 }
 contextBridge.exposeInMainWorld('aiOfficeSubscription', subscriptionApi)

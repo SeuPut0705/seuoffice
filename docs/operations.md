@@ -40,7 +40,6 @@ npm run check:theme-colors
 npm run check:english-comments
 npm run check:help-langs
 npm run check:skill-version
-npm run check:no-genspark
 ```
 
 테스트는 작업 공간별로 돌린다. `npm test`는 첫 실패에서 멈추는데, Windows에서는 원본 코드 그대로도 실패하는 테스트가 있기 때문이다.
@@ -126,55 +125,18 @@ npm run dist:win -- -- --publish never
 - 스캔 문서 글자 인식 도우미(`win-ocr.exe`)가 이 과정에서 컴파일된다. Windows SDK가 없으면 여기서 멈춘다.
 - 설치 파일에는 서명이 없다. 설치할 때 Windows가 "알 수 없는 게시자" 경고를 띄운다.
 
-## 성장 기록
-
-이용자 수는 앱이 보내는 통계가 없으므로, GitHub가 공개하는 배포 신호로만 본다.
-`npm run growth`를 실행하면 그날의 기록(릴리스 다운로드 수, 스타, 포크)을
-`docs/tracking/growth-history.json`에 더하고, 소개 문서의 배지가 읽는 요약을
-`docs/tracking/growth-latest.json`에 쓴다. GitHub Actions의 Growth 워크플로우가
-한 시간마다(매시 17분) 같은 일을 하고, 바뀐 것이 있으면 기록 커밋 하나를 `main`에
-쌓는다. `growth-history.json`은 하루에 한 줄을 유지한다. 같은 날 다시 기록하면 그날
-줄을 덮어쓰므로, 그날의 마지막 기록이 하루치로 남는다. 소개 문서의 배지를 실시간에
-가깝게 두려는 것이며, 소개 사이트는 같은 값을 GitHub API에서 직접 읽는다.
-
-```bash
-npm run growth           # 그날 기록을 더한다(수동 실행)
-npm run growth:report    # 전일 대비 증감과 7일 추이 보기
-```
-
-숫자의 뜻:
-
-- 다운로드 합계는 설치 파일 전체 합계다. Windows 설치 수는 `.exe`, macOS 설치 수는
-  `.dmg`와 `.zip`, Linux 설치 수는 `.AppImage`·`.deb`·`.rpm`을 더한 것이다.
-- 업데이트 확인(`latest*.yml` 내려받기)은 설치된 앱의 자동 업데이트 확인 횟수다.
-  설치 수와 섞어 보지 않는다.
-- 같은 PC에서의 재설치도 설치 수에 더해진다. 정확한 이용자 수가 아니라 추이다.
-
-주 확인 루틴: `npm run growth:report`로 7일 Windows 설치 추이를 본다. 숫자가
-눈에 띄게 자라면 소개 문서의 배지를 더 눈에 띄는 자리로 옮기는 것을 생각한다.
-
 ## Mac 설치 파일 만들기
 
-저장소 주인에게 Mac이 없으므로 GitHub Actions에서 만든다.
+릴리스의 Mac 설치 파일(Apple Silicon)은 `.github/workflows/seuoffice-desktop.yml`이 Windows 설치 파일과 함께 만든다. 순서는 `docs/seuoffice/판-내기.md`에 있다. Intel Mac판은 내지 않는다.
 
-1. GitHub 저장소의 Actions 탭 → **macOS build** → **Run workflow**. 가지는 릴리스 태그가 가리킬 커밋이 있는 가지를 고른다.
-2. 끝나면 실행 결과의 Artifacts에서 `ieumoffice-mac`을 내려받는다. 안에 `IeumOffice-<버전>-arm64.dmg`, `IeumOffice-<버전>-x64.dmg`, `IeumOffice-<버전>-arm64-mac.zip`, `IeumOffice-<버전>-mac.zip`(Intel), `latest-mac.yml`(베타 버전 번호면 `beta-mac.yml`)이 있다.
-
-- 빌드는 `GENOFFICE_MAC_X64=1`로 두 앱을 묶는다. 두 앱이 한 자리를 나눠 쓰는 엑셀 처리 프로그램과 글자 인식 도우미는 두 CPU를 담은 파일(`native:build:universal`, lipo)이어야 한다. 빌드는 두 앱 모두 ad hoc 서명이 되었는지, 들어 있는 프로그램이 그 앱의 CPU를 담는지 검사하고, 두 앱을 창 없이 띄워(Intel판은 Rosetta로) Markdown·CSV 파일을 PDF로 내보내 본다. 하나라도 실패하면 결과를 올리지 않는다.
-- 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 dmg, zip, `latest-mac.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Mac 설치 파일"이다.
-- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`(Apple Silicon만). Intel용까지 묶으려면 그 전에 `npm run native:build:universal -w @genoffice/sheets`를 하고 `GENOFFICE_MAC_X64=1`을 켠다. 루트의 `npm run dist:mac`은 원본의 경로라 쓰지 않는다.
+- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`(Apple Silicon만). Intel용까지 묶으려면 그 전에 `npm run native:build:universal -w @genoffice/sheets`를 하고 `GENOFFICE_MAC_X64=1`을 켠다. 두 앱이 한 자리를 나눠 쓰는 엑셀 처리 프로그램과 글자 인식 도우미는 두 CPU를 담은 파일(lipo)이어야 한다. 루트의 `npm run dist:mac`은 원본의 경로라 쓰지 않는다.
 
 ## Linux 설치 파일 만들기
 
-GitHub Actions에서 만든다.
+Linux 패키지는 내지 않고, 만드는 워크플로도 없다.
 
-1. GitHub 저장소의 Actions 탭 → **Linux build** → **Run workflow**. 가지는 릴리스 태그가 가리킬 커밋이 있는 가지를 고른다.
-2. 끝나면 실행 결과의 Artifacts에서 `ieumoffice-linux-x64`를 내려받는다. 안에 `IeumOffice-<버전>.AppImage`, `ieumoffice_<버전>_amd64.deb`, `ieumoffice-<버전>.x86_64.rpm`, `latest-linux.yml`(베타 버전 번호면 `beta-linux.yml`)이 있다.
-
-- 빌드는 앱 실행 파일, 엑셀 처리 프로그램, 터미널 명령어가 실행 가능하게 들어갔는지 검사하고, deb의 의존성이 Ubuntu 24.04(64비트 time_t 전환으로 `t64` 이름이 쓰이는 곳)에서도 풀리는지 확인한 뒤, 만든 앱을 Xvfb 아래에서 창 없이 띄워 Markdown·CSV 파일을 PDF로 내보내 본다. 하나라도 실패하면 결과를 올리지 않는다.
-- 엑셀 처리 프로그램은 빌드 기계의 glibc가 아니라 glibc 2.28 기준으로 링크한다(`cargo zigbuild`, 기준 값은 워크플로의 `LINUX_GLIBC_FLOOR`). 빌드는 묶음 안의 실행 파일과 라이브러리가 모두 이 기준 안의 glibc만 요구하는지 보고, Ubuntu 20.04 컨테이너에 deb를 깔아 CSV를 내보내 본다.
-- 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 AppImage, deb, rpm, `latest-linux.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Linux 설치 파일"이다.
 - Linux(x64)에서 직접 만들 때(`rpm` 패키지가 설치되어 있어야 한다): `npm ci`, `npm run build:all`, `npm run dist:linux -w @genoffice/shell -- --publish never`.
+- 그렇게 만든 엑셀 처리 프로그램은 그 PC의 glibc를 따른다. 지운 상위 워크플로는 glibc 2.28 기준으로 다시 링크하고(`cargo zigbuild`), deb의 의존성이 Ubuntu 24.04에서 풀리는지와 Ubuntu 20.04에서 CSV가 열리는지를 확인했다(`docs/engineering-notes.md`의 "Linux 패키지"). Linux 패키지를 다시 내려면 그 확인부터 되살린다.
 
 ## 새 버전 내기
 
@@ -187,6 +149,8 @@ GitHub Actions에서 만든다.
 
 ## 원본의 개선 받아오기
 
+원본을 더 받지 않는다(seuoffice 결정 0024). 아래는 받던 때의 절차를 적은 기록이고, 그때 쓰던 `check:no-genspark` 검사는 지웠다.
+
 원본의 문서 엔진 쪽 커밋을 하나씩 골라 옮긴다. 원본 가지를 통째로 합치지 않는다. 통째로 합치면 걷어낸 제작사 연결과 화면이 한꺼번에 되돌아온다.
 
 ```bash
@@ -198,7 +162,6 @@ git log --oneline HEAD..upstream/main -- packages/docx-engine packages/pptx-engi
   packages/zip-gate packages/font-metrics apps/sheets/native
 git checkout -b sync/<날짜>
 git cherry-pick -x <커밋>                      # 하나씩. -x가 원본 커밋 번호를 커밋 글에 남긴다
-npm run check:no-genspark                      # 원본에서 다시 딸려 온 제작사 표기·연결을 여기서 잡는다
 npm run typecheck
 ```
 

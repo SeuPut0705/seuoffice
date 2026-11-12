@@ -15,6 +15,7 @@ import {
   atomicCopyFile,
   atomicWriteFile,
   atomicWriteVia,
+  isSaveTempName,
   tempPathBeside,
   writeJsonAtomic,
 } from '../src/atomic-write'
@@ -135,8 +136,64 @@ describe('atomicWriteFile', () => {
     // the fallback failed, so the completed temp is kept as the rescue copy
     const leftovers = readdirSync(dir).sort()
     expect(leftovers).toHaveLength(2)
-    expect(leftovers[0]).toMatch(/^\.a\.docx\..{12}\.tmp$/)
-    expect(leftovers[1]).toBe('a.docx')
+    expect(leftovers[0]).toBe('a.docx')
+    expect(leftovers[1]).toBe('a.docx.unsaved.tmp')
+  })
+
+  // A save that keeps failing (the document is open in another program, and
+  // the autosave retries it every 30s) must not leave a new file beside the
+  // document on every attempt: the user's folder fills with them
+  // (genoffice#2567).
+  it('replaces the rescue copy when the save keeps failing', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'eu-aw-'))
+    const target = join(dir, 'a.docx')
+    writeFileSync(target, 'old')
+    const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+    vi.mocked(rename).mockRejectedValue(errnoError('EEXIST'))
+    // every attempt: the temp write lands, the in-place fallback does not
+    vi.mocked(writeFile).mockImplementation(async (...args) => {
+      if (vi.mocked(writeFile).mock.calls.length % 2 === 1) {
+        return actual.writeFile(...(args as Parameters<typeof actual.writeFile>))
+      }
+      throw errnoError('EACCES')
+    })
+
+    for (const bytes of ['one', 'two', 'three']) {
+      await expect(atomicWriteFile(target, Buffer.from(bytes))).rejects.toThrow('EACCES')
+    }
+
+    expect(readFileSync(target, 'utf8')).toBe('old')
+    // one rescue copy, holding the newest bytes — not one per attempt
+    const leftovers = readdirSync(dir).sort()
+    expect(leftovers).toHaveLength(2)
+    expect(leftovers[1]).toBe('a.docx.unsaved.tmp')
+    expect(readFileSync(join(dir, leftovers[1]!), 'utf8')).toBe('three')
+  })
+
+  // The rescue copy is stale once the save lands: the document holds the
+  // bytes, so the leftover beside it must go.
+  it('removes the rescue copy once a later save lands', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'eu-aw-'))
+    const target = join(dir, 'a.docx')
+    writeFileSync(target, 'old')
+    const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+    vi.mocked(rename).mockRejectedValueOnce(errnoError('EEXIST'))
+    vi.mocked(writeFile).mockImplementationOnce((...args) =>
+      actual.writeFile(...(args as Parameters<typeof actual.writeFile>)),
+    )
+    vi.mocked(writeFile).mockRejectedValueOnce(errnoError('EACCES'))
+    await expect(atomicWriteFile(target, Buffer.from('new'))).rejects.toThrow('EACCES')
+    expect(readdirSync(dir).sort()).toEqual(['a.docx', 'a.docx.unsaved.tmp'])
+
+    // the next attempt lands: the document now holds the bytes, so the
+    // rescue copy beside it is stale
+    vi.mocked(rename).mockReset()
+    vi.mocked(rename).mockImplementation(async (from, to) => {
+      await actual.rename(from, to)
+    })
+    await atomicWriteFile(target, Buffer.from('newer'))
+    expect(readFileSync(target, 'utf8')).toBe('newer')
+    expect(readdirSync(dir).sort()).toEqual(['a.docx'])
   })
 })
 
@@ -270,7 +327,7 @@ describe('atomicWriteVia', () => {
     expect(readdirSync(dir)).toEqual(['a.pptx'])
   })
 
-  // Same fallback contract as atomicWriteFile (#1878): a mount that refuses
+  // Same fallback contract as atomicWriteFile (genoffice#1878): a mount that refuses
   // rename-over-existing still receives the completed temp, copied in place.
   it('falls back to an in-place copy when the mount refuses the rename', async () => {
     dir = mkdtempSync(join(tmpdir(), 'eu-av-'))
@@ -298,7 +355,7 @@ describe('atomicWriteVia', () => {
     const leftovers = readdirSync(dir).sort((a, b) => a.length - b.length)
     expect(leftovers).toHaveLength(2)
     expect(leftovers[0]).toBe('a.pptx')
-    expect(leftovers[1]).toMatch(/a\.pptx\..{12}\.tmp$/)
+    expect(leftovers[1]).toBe('a.pptx.unsaved.tmp')
     expect(readFileSync(join(dir, leftovers[1]!), 'utf8')).toBe('new')
   })
 })
@@ -369,13 +426,11 @@ describe('writeJsonAtomic', () => {
 
 describe('tempPathBeside', () => {
   it('keeps a short name whole and a long Hangul name within the 255-byte file-name limit', () => {
-    expect(basename(tempPathBeside(join('dir', 'a.docx')))).toMatch(
-      /^\.a\.docx\.[0-9a-f]{12}\.tmp$/,
-    )
+    expect(basename(tempPathBeside(join('dir', 'a.docx')))).toMatch(/^a\.docx\.[0-9a-f]{12}\.tmp$/)
     const name = `${'가'.repeat(100)}😀.docx`
     const temp = basename(tempPathBeside(join('dir', name)))
     expect(Buffer.byteLength(temp)).toBeLessThanOrEqual(255)
-    expect(temp).toMatch(/^\..+\.[0-9a-f]{12}\.tmp$/)
+    expect(temp).toMatch(/^.+\.[0-9a-f]{12}\.tmp$/)
     // a lone surrogate would not survive the trip through UTF-8
     expect(Buffer.from(temp).toString('utf-8')).toBe(temp)
   })
@@ -397,5 +452,48 @@ describe('tempPathBeside', () => {
     await atomicWriteFile(target, Buffer.from('new'))
     expect(readFileSync(target, 'utf-8')).toBe('new')
     expect(readdirSync(dir)).toEqual([basename(target)])
+  })
+})
+
+// Folder listings leave a save's own files out by this test, so it has to know
+// every name a save can put beside a document, and no other.
+describe('isSaveTempName', () => {
+  it('knows the staging temp of a short name and of a shortened one', () => {
+    for (const name of ['a.docx', 'no-extension', `${'가'.repeat(100)}😀.docx`]) {
+      expect(isSaveTempName(basename(tempPathBeside(join('dir', name)))), name).toBe(true)
+    }
+  })
+
+  it('knows the copy a failed save leaves beside the document', async () => {
+    dir = mkdtempSync(join(tmpdir(), 'eu-aw-'))
+    const target = join(dir, 'a.docx')
+    writeFileSync(target, 'old')
+    vi.mocked(rename).mockRejectedValueOnce(errnoError('EEXIST'))
+    const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises')
+    // call 1 writes the temp for real, call 2 is the in-place fallback (fails)
+    vi.mocked(writeFile).mockImplementationOnce((...args) =>
+      actual.writeFile(...(args as Parameters<typeof actual.writeFile>)),
+    )
+    vi.mocked(writeFile).mockRejectedValueOnce(errnoError('EACCES'))
+    await expect(atomicWriteFile(target, Buffer.from('new'))).rejects.toThrow('EACCES')
+    const leftovers = readdirSync(dir).filter((name) => name !== 'a.docx')
+    expect(leftovers).toHaveLength(1)
+    expect(isSaveTempName(leftovers[0]!)).toBe(true)
+  })
+
+  it('leaves the document and a .tmp file of the person alone', () => {
+    for (const name of [
+      'a.docx',
+      'notes.tmp',
+      'report.final.tmp',
+      'a.docx.tmp',
+      // one hex digit short of, and one past, the staging suffix
+      'a.docx.0123456789a.tmp',
+      'a.docx.0123456789abc.tmp',
+      'a.docx.0123456789ab.tmp.bak',
+      'unsaved.tmp',
+    ]) {
+      expect(isSaveTempName(name), name).toBe(false)
+    }
   })
 })

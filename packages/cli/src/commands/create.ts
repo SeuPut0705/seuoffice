@@ -92,6 +92,11 @@ export const createCommand: CommandDef = {
       description:
         'drawio: Mermaid source drawn by draw.io on the new diagram before any --ops (needs the app); "-" reads stdin',
     },
+    {
+      name: 'no-generator-fields',
+      description:
+        'docx: drop the Application / AppVersion generator fields from docProps/app.xml (the Word-default Template stays)',
+    },
     { name: 'out', value: 'path', description: 'output file (required)' },
     { name: 'force', description: 'overwrite an existing output file' },
     {
@@ -462,16 +467,23 @@ async function createDocx(
     throw new CliError(EXIT.usage, 'docx needs --from <content.md|fragment.html>', undefined, {
       reason: 'missing_argument',
     })
+  const blankOptions = flagBool(args, 'no-generator-fields')
+    ? { omitGeneratorFields: true }
+    : undefined
   const source = resolveInput(from, ctx)
   const ext = extname(source).toLowerCase()
   if (ext === '.md' || ext === '.markdown') {
     return {
-      bytes: await markdownToDocx(stripBom(readTextFile(source)), { file: source, ctx }),
+      bytes: await markdownToDocx(
+        stripBom(readTextFile(source)),
+        { file: source, ctx },
+        blankOptions,
+      ),
       detail: { source: 'markdown' },
     }
   }
   if (ext === '.html' || ext === '.htm') {
-    const doc = await blankDocument()
+    const doc = await blankDocument(blankOptions)
     try {
       const blocks = fillFromHtml(doc, decodeHtmlBytes(readFileSync(source)))
       return { bytes: await saveDocument(doc), detail: { source: 'html', blocks } }

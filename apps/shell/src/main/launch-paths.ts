@@ -5,6 +5,8 @@ import { existsSync } from 'node:fs'
  *  the app accepts is one the OS can send it. */
 export const LAUNCHABLE_EXTS = [
   'docx',
+  'doc',
+  'dot',
   'odt',
   'xlsx',
   'xlsm',
@@ -13,6 +15,9 @@ export const LAUNCHABLE_EXTS = [
   'tsv',
   'ods',
   'pptx',
+  'ppt',
+  'odp',
+  'otp',
   'pdf',
   'md',
   'markdown',
@@ -52,7 +57,7 @@ const SUPPORTED_LAUNCH_RE = new RegExp(
   ].join('|')})$`,
   'i',
 )
-const UNSUPPORTED_LAUNCH_RE = /\.(doc|rtf|ppt|pps|odp|xlsb|pages|key|numbers)$/i
+const UNSUPPORTED_LAUNCH_RE = /\.(rtf|pps|xlsb|pages|key|numbers)$/i
 
 interface LaunchPayload {
   launchPaths?: unknown

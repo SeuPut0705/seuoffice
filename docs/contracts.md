@@ -48,10 +48,26 @@
 - `.hwp`는 엔진이 쓴 파일을 다시 읽어 쪽 수가 같을 때만 쓴다(한글 편집기의 `.hwp` 저장 규칙). 다르면 파일을 쓰지 않고 종료 코드 3, `error: "conversion_failed"`, `detail.reason: "hwp-readback"`, `--to hwpx`로 다시 하라는 `suggestion`으로 답한다.
 - 워드 문서로 읽히지 않는 파일(zip이 아닌 파일, 깨진 파일)은 종료 코드 3, `conversion_failed`, `detail.reason: "not-docx"`다. 엔진이 WebAssembly 메모리를 만들지 못하면 다른 WebAssembly 명령처럼 종료 코드 3, `resource_limit`이다.
 
+**워드 문서의 추가 연산과 만들기 옵션.**
+
+- `docs apply`의 `set_properties`는 문서 속성을 바꾼다. `core`(title, subject, creator 등)와 `app`(company, template 등)은 키별로 문자열이면 값을 넣고 `null`이면 지우며, `custom`은 이름별로 쓴다. 숫자와 참거짓은 `custom`에서 자료형(`i4`·`bool` 등)으로 저장된다. `clear: "all"`은 세 부분을 모두 비운다. 본문은 바뀌지 않는다(`packages/cli/src/formats/docx.ts`의 `setDocumentProperties`).
+- `docs apply`의 `remove_parts`는 저장할 때 메타데이터를 담은 패키지 부품을 뺀다. `kinds`(`customXml`·`webExtensions`)나 `paths`(패키지 상대 경로)로 고른다. `dataBinding`이 `refuse`(기본)이고 빠질 `customXml`을 쓰는 내용 컨트롤이 있으면 배치 전체를 거절하고 컨트롤 이름을 알린다. `strip`이면 연결만 끊고 컨트롤과 글은 남긴다. 없는 경로와 글롭·폴더는 거절한다(`parseRemovePartsOp`, `setRemoveParts`).
+- `create --type docx --from <파일> --out <경로> --no-generator-fields`는 `docProps/app.xml`의 Application·AppVersion 필드를 쓰지 않는다. Word 기본 Template은 그대로 둔다(`packages/cli/src/commands/create.ts`의 `no-generator-fields` 옵션).
+
+**옛 한글 문서(`.hwp`·`.hwpx` → `.docx`).**
+
+- `convert <file.hwp|.hwpx> --to docx [--out <경로>] [--force]`는 앱을 띄우지 않고 명령 안에서 바꾼다. 바꾸며 빠진 것은 `detail.dropped`에 적는다. 변환이 실패하면 종료 코드 3이고 `detail.reason`에 변환기의 이유 코드가 온다.
+
+**프레젠테이션(`.odp`·`.otp`·`.ppt` → `.pptx`).**
+
+- `convert <file.odp|.otp|.ppt> --to pptx [--out <경로>] [--force]`다. `.odp`·`.otp`는 `detail.slides`와 `detail.dropped`를 준다. `.odp`·`.otp`의 가져오기가 실패하면 종료 코드 3이고 `detail.reason`에 이유 코드가 온다.
+- `.ppt`는 1단계 변환이다. 슬라이드 순서대로 글상자의 글과 슬라이드 크기만 옮긴다. 도형 자리와 글꼴 서식, 그림, 마스터, 발표자 노트는 옮기지 않는다(`packages/ppt2pptx/README.md`). 이 제한은 명령과 MCP `convert` 모두에 적용된다.
+- 입력과 같은 경로로 쓰려 하면 종료 코드 1, `reason: "invalid_argument"`다. 지원하지 않는 짝은 종료 코드 1, `reason: "unsupported"`이고 `detail.supported`에 그 원본이 바꿀 수 있는 형식 목록이 온다.
+
 **엑셀 외부 연결(`sheet links`).**
 
-- `sheet links <file.xlsx>`는 수식이 `[n]`으로 가리키는 다른 통합 문서 목록을 읽기만 한다. `detail.links[]`의 `index`가 수식의 `[n]`, `source`가 푼 경로, `reachable`이 그 파일이 있는지다.
-- `--update`는 닿는 원본을 다시 읽어 계산한 값을 수식의 저장된 값(`<v>`)에만 쓴다. 수식은 그대로이고, 닿지 않는 연결은 예전 값을 둔다. `--break <1부터 센 번호들>`은 그 연결을 끊는다. 수식은 저장된 값이 되고 연결 파트를 지우며, 남은 연결의 번호를 다시 매긴다. 둘을 함께 주면 종료 코드 1, `invalid_argument`.
+- `sheet links <file.xlsx>`는 수식이 `[n]`으로 가리키는 다른 통합 문서 목록을 읽기만 한다. `detail.links[]`의 `index`가 수식의 `[n]`, `source`가 푼 경로, `reachable`이 그 파일이 있는지다. 원본이 다른 컴퓨터를 가리키면(`\\호스트\공유`, `//호스트/…`, `file://호스트/…`) 목록은 그 경로를 건드리지 않는다. 이때 `reachable`은 `null`이고 `unchecked: "remote"`가 붙는다. 윈도우에서 통합 문서가 있는 드라이브도 시스템 드라이브도 아닌 드라이브 문자는 네트워크 드라이브일 수 있어 확인하지 않고 `reachable: null`, `unchecked: "drive"`로 답한다. 그 밖의 이 컴퓨터 경로는 예전처럼 파일이 있는지만 본다(`true`·`false`).
+- `--update`는 닿는 원본을 다시 읽어 계산한 값을 수식의 저장된 값(`<v>`)에만 쓴다. 수식은 그대로이고, 닿지 않는 연결은 예전 값을 둔다. 목록이 확인하지 않는 원본(다른 컴퓨터를 가리키는 원본과 네트워크 드라이브일 수 있는 드라이브의 원본, 곧 `unchecked`가 붙는 것)은 `--update`도 찾지도 열지도 않고 예전 값을 두며 `detail.remoteSkipped`에 그 수를 적는다(이름은 그대로이고 두 경우를 함께 센다). 사용자가 그 원본을 읽으라고 했을 때만 `--update --remote-sources`를 준다(문서가 고른 호스트에 윈도우가 로그인한다). 이 옵션은 두 경우를 모두 읽는다. 앱의 MCP 도구 `sheet_links`에는 이 옵션이 없다. `--break <1부터 센 번호들>`은 그 연결을 끊는다. 수식은 저장된 값이 되고 연결 파트를 지우며, 남은 연결의 번호를 다시 매긴다. 둘을 함께 주면 종료 코드 1, `invalid_argument`.
 - 쓰는 두 옵션은 `sheet apply`와 같은 파일 규칙(`--out`, `--force`, 허용 폴더, 앱에 열린 파일)을 따른다.
 
 ## PDF 명령
@@ -253,6 +269,10 @@ draw.io 다이어그램(`.drawio`, `.dio`, `.drawio.svg`, `.drawio.png`)을 읽�
 
 - 표준 입출력으로 같은 명령들을 도구로 내놓는다. `--http <포트>`를 주면 Streamable HTTP로 내놓는다(`--host`, `--token`).
 - 등록 예: `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`. `ieumoffice mcp install <에이전트|all>`이 각 에이전트의 설정 파일에 `ieumoffice` 항목만 쓴다. 같은 이름의 항목이 다른 프로그램을 가리키면 `occupied`로 알리고 `--force` 없이는 건드리지 않는다.
+- `ieumoffice mcp install dsh`는 DeepSeek Harness(dsh) 홈(`DSH_HOME`, 없으면 `~/.dsh`)의 `cordis.patch.yml`에 `ieumoffice` 항목을 쓴다. 이 파일에서 이 앱의 항목은 `mcp-ieumoffice` id나 `ieumoffice` 서버 이름을 가진 최상위 `- ` 블록 하나다. 블록이 여러 개면 첫 번째 것만 고치고 지운다. 블록은 최상위 항목 전체라서, 같은 항목에 손으로 넣은 다른 내용도 함께 바뀐다.
+- `command` 경로는 따옴표 없이 쓰이므로, 경로에 ` #`(공백 뒤의 샵)이 있으면 YAML 주석으로 잘린다. 설치 경로에서 그런 글자를 피한다.
+- `ieumoffice skill install dsh`는 공용 폴더 `~/.agents/skills`에 쓴다. dsh는 그 폴더를 읽는 도구라서 자기 폴더에는 새로 쓰지 않는다.
+- `ieumoffice mcp install --compact-schemas`는 같은 항목에 `GENOFFICE_MCP_COMPACT_SCHEMAS=1` 환경 값만 더해 쓴다. `mcp list`·`mcp uninstall`과 함께 쓰면 종료 코드 1, `reason: "invalid_argument"`다.
 - 도구는 명령 동사마다 하나다(`docs_read`, `docs_apply`, `hwp_read`, `hwp_apply`, `diagram_read`, `diagram_apply`, `create_drawio`, `sheet_apply`, `slides_render`, `convert`, `read_url`, `pdf_read`, `pdf_images`, `pdf_ai_read`, `pdf_translate`, `pdf_status`, `epub_translate`, `epub_status` 등). 매개변수는 명령의 옵션 목록에서 그대로 나온다(`allow-paid`는 `allow_paid`, `no-cover`는 `no_cover`). 두 표면이 어긋나지 않는다. `diagram_read`·`diagram_apply`·`convert`의 `page`는 다이어그램 쪽의 id나 이름(글자)이고, `create_drawio`의 `mermaid`는 Mermaid 글 그대로다.
 - `pdf_ai_read`·`pdf_translate`·`epub_translate`는 `yes`가 없으면 명령처럼 예상만 답한다. `yes`가 있으면 작업을 MCP 서버 프로세스 안에서 띄우고 바로 답한다(`detail.started: true`, `detail.estimate`). 진행, 멈춘 이유, `resetsAt`, 결과 파일 경로는 `pdf_status`(EPUB은 `epub_status`)의 `job`으로 본다. 이어하기는 같은 도구를 다시 부르면 된다.
 - 그 결과 파일은 작업이 끝날 때 쓴다. `partial: true`로 부른 작업은 멈출 때 끝난 부분만 반영해 쓴다. 위치 규칙은 명령어와 같고, 경로는 `job.outputs`로 알려 준다.
@@ -269,6 +289,7 @@ draw.io 다이어그램(`.drawio`, `.dio`, `.drawio.svg`, `.drawio.png`)을 읽�
 
 - 설정 → 연동에서 켠다. 기본은 꺼짐이다. 기본 포트는 3093이고 이 PC(`127.0.0.1`)에서만 닿는다. 인증은 없고, 요청의 Host·Origin이 이 PC의 것이 아니면 거절한다.
 - 도구: `get_app_info`, `open_documents`, `open_in_genoffice`(이 이름은 예전 철자를 유지한다), `create_session`, `save_session`, `read_document`, `read_docx`, `read_sheet`, `read_deck`, `read_pdf`, `create_docx`, `create_xlsx`, `create_pptx`, `apply_ops`, `apply_sheet_ops`, `apply_slide_ops`, `insert_content`, `replace_blocks`, `insert_picture`, `read_diagram`, `apply_diagram_ops`.
+- `fill_template`·`convert_document`은 설정 → 연동의 "백그라운드 생성"을 켰을 때만 등록된다. `fill_template`은 `.docx`·`.pptx`·`.xlsx` 서식에 `data`를 채워 새 파일을 쓰고, `convert_document`는 `path`를 `to` 형식으로 바꾼 파일을 쓴다(입력 파일은 바꾸지 않는다). `check_document`(`.docx`·`.odt`, 읽기만)와 `read_docx_properties`(`.docx`, 읽기만)는 항상 등록된다.
 - `insert_picture`는 열린 워드 탭에 그림을 넣는다(원본 genoffice#2267). 앱 안 AI의 같은 이름 도구를 그대로 거치므로 그림 주소는 http(s)와 `data:image/`만 받고, http(s) 주소면 앱이 그 주소에서 그림을 받아 온다. 에이전트 모드의 세션 서버에는 없다.
 - 열린 ODT 탭은 워드 문서로 다룬다(`open_documents`의 `format`이 `odt`). `read_docx`는 `.odt` 파일도 읽는다. `save_session`은 탭의 형식으로만 저장한다. 다른 확장자의 경로를 주면 거절하고 `ieumoffice convert`를 쓰라고 안내한다. 대화 상자가 없는 경로에서 형식이 조용히 바뀌지 않게 하기 위해서다.
 - 에이전트 설정에 넣는 항목 이름은 `ieumoffice-editor`다. 명령어 쪽 서버의 `ieumoffice`와 겹치지 않는다.
@@ -514,7 +535,7 @@ metadata:
 
 **이 PC에만 두는 것.** 고정·최근 목록, 믿음 기록(프로젝트 id마다 `use`·`without`과, 앱이 마지막으로 보거나 쓴 `instructions.md`·`memory.md`·`AGENTS.md`·`CLAUDE.md`의 해시), 문서마다 고른 프로젝트와 마지막 대화, "프로젝트 없이"로 바꾼 문서, 프로젝트별 설정(기억 쌓기, 루트 `AGENTS.md`·`CLAUDE.md` 읽기), `installId`는 폴더가 아니라 데이터 폴더의 `app-settings.json`(`projects`)에 있다. 앱만 읽고 쓴다.
 
-**누가 쓰나.** 앱에서는 껍데기 앱 뒷단의 프로젝트 길잡이만 쓴다. 터미널 명령어와 MCP는 이 폴더를 읽지도 쓰지도 않는다. 에이전트 모드의 프로그램은 프로젝트 폴더에 쓸 수 있으므로 이 파일들을 바꿀 수 있다(`docs/tracking/findings.md`).
+**누가 쓰나.** 앱에서는 껍데기 앱 뒷단의 프로젝트 길잡이만 쓴다. 터미널 명령어와 MCP는 이 폴더를 읽지도 쓰지도 않는다. 에이전트 모드의 프로그램은 프로젝트 폴더에 쓸 수 있으므로 이 파일들을 바꿀 수 있다(`docs/archive/ieum/tracking/findings.md`).
 
 ## Google 드라이브 (결정 0033, 0085)
 

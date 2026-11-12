@@ -282,7 +282,10 @@ export default function App() {
         })
         if (disposed) return
         setPhase('ready')
-        if (await window.hwpApi.trackingDropped().catch(() => false)) {
+        if (await window.hwpApi.structureUnverified().catch(() => false)) {
+          // said once: the document can be read and edited, and its file is not saved over
+          if (!disposed) setNotice({ tone: 'info', key: 'openedUnverified', sticky: true })
+        } else if (await window.hwpApi.trackingDropped().catch(() => false)) {
           if (!disposed) setNotice({ tone: 'info', key: 'openedTracked', sticky: true })
         }
       } catch (error) {
@@ -474,9 +477,13 @@ export default function App() {
             }
             return false
           }
-          // a protected or tracked document cannot be saved by this path at all;
-          // the manual save explains that once instead of every autosave backoff
-          const propertyFailure = outcome.reason === 'protected' || outcome.reason === 'tracked'
+          // a protected or tracked document cannot be saved by this path at all, and a file
+          // whose structure could not be checked is not saved over; the manual save explains
+          // that once instead of every autosave backoff
+          const propertyFailure =
+            outcome.reason === 'protected' ||
+            outcome.reason === 'tracked' ||
+            outcome.reason === 'unverified'
           if (!automatic || !propertyFailure) {
             setNotice({
               tone: 'error',
@@ -485,9 +492,11 @@ export default function App() {
                   ? 'saveProtected'
                   : outcome.reason === 'tracked'
                     ? 'saveTracked'
-                    : outcome.reason === 'verify'
-                      ? 'saveVerifyFailed'
-                      : 'saveFailed',
+                    : outcome.reason === 'unverified'
+                      ? 'saveUnverified'
+                      : outcome.reason === 'verify'
+                        ? 'saveVerifyFailed'
+                        : 'saveFailed',
               ...(outcome.reason === 'verify'
                 ? { detail: t('saveVerifyHint') }
                 : outcome.detail

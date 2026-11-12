@@ -28,6 +28,10 @@ export const pt = {
     'Este documento tem alterações controladas. Você vê o texto atual, com as alterações aplicadas; ao salvar, este texto é mantido e o registro de alterações é descartado.',
   saveTracked:
     'Não foi salvo: este documento tem alterações controladas; salvá-lo aqui faria com que se perdessem e poderia gerar um arquivo que o Hancom Hangul não consegue abrir.',
+  openedUnverified:
+    'Não foi possível verificar a estrutura deste arquivo, então parte do conteúdo pode estar faltando aqui. Você pode ler e editar, mas ele não é salvo por cima do original: use Salvar como para manter uma cópia com outro nome.',
+  saveUnverified:
+    'Não foi salvo: não foi possível verificar a estrutura deste arquivo, e salvar por cima do original poderia perder conteúdo. Em Salvar como, salve uma cópia com outro nome, de preferência em HWPX.',
   savedTailsLost:
     'Salvo, mas algumas páginas mestras ou notas do arquivo original não puderam ser mantidas, e o Hancom Hangul pode não abrir o arquivo salvo. Abra-o para conferir.',
   missingFonts:

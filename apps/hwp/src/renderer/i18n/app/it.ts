@@ -28,6 +28,10 @@ export const it = {
     'Questo documento contiene revisioni. Vedi il testo attuale, con le modifiche applicate; salvando si conserva questo testo e si perde la cronologia delle revisioni.',
   saveTracked:
     'Non salvato: questo documento contiene revisioni; salvandolo qui andrebbero perse e il file potrebbe non aprirsi in Hancom Hangul.',
+  openedUnverified:
+    "Non è stato possibile verificare la struttura di questo file, quindi parte del contenuto potrebbe mancare. Puoi leggerlo e modificarlo, ma non viene salvato sopra l'originale: usa Salva con nome per conservarne una copia con un altro nome.",
+  saveUnverified:
+    "Non salvato: non è stato possibile verificare la struttura di questo file e salvarlo sopra l'originale potrebbe far perdere contenuto. In Salva con nome salva una copia con un altro nome, preferibilmente in HWPX.",
   savedTailsLost:
     'Salvato, ma non è stato possibile conservare alcune pagine master o note del file originale; Hancom Hangul potrebbe non aprire il file salvato. Aprilo per verificare.',
   missingFonts:

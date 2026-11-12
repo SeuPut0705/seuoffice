@@ -10,4 +10,8 @@ export const ms = {
   diskIgnore: 'Abaikan',
   diskDismiss: 'OK',
   diskReloadFailed: 'Tidak dapat memuat semula fail: {detail}',
+  diskChangedNoUndo:
+    'Program lain telah mengubah atau memadam fail ini, jadi Buat asal dan Buat semula tidak dijalankan untuk perubahan ini.',
+  pageOpNoUndoConfirm:
+    'Fail ini ({size}) lebih besar daripada saiz yang disimpan untuk Buat asal ({limit}), jadi operasi halaman ini tidak boleh dibuat asal. Teruskan?',
 } satisfies Record<keyof typeof zh, string>

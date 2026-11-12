@@ -813,7 +813,7 @@ async function extractAttachmentText(filePath: string): Promise<string> {
   if (stat.size > attachableMaxBytes(capExt)) throw new Error(tm('errFileTooLarge'))
   const parsed = await parseFileToText(filePath)
   if (!parsed.ok || parsed.kind !== 'text' || parsed.text == null) {
-    throw new Error(parsed.error ?? tm('errParseFailed'))
+    throw new Error((!parsed.damaged && parsed.error) || tm('errParseFailed'))
   }
   attachmentTextCache.set(filePath, { stamp, text: parsed.text })
   if (attachmentTextCache.size > 8) {
@@ -1501,14 +1501,24 @@ async function resolveSaveTarget(
   }
   const win =
     BrowserWindow.fromWebContents(e.sender) ?? BrowserWindow.getFocusedWindow() ?? undefined
-  const defaultPath = current
-    ? join(dirname(current), basename(current))
-    : (recovery.saveAsDefaultPath(e.sender.id) ??
-      join(
-        // an untitled page whose panel has a project starts in that folder (spec 6)
-        (await runtime.newDocumentDir?.(e.sender.id)) ?? configuredDefaultSaveDir(app),
-        `${fileNameBase(defaultName) || tm('untitledFile')}.html`,
-      ))
+  // An untitled page starts in the folder a recovered copy came from, else in
+  // its panel's project (spec 6), else in the default save folder.
+  const recovered = current ? undefined : recovery.saveAsDefaultPath(e.sender.id)
+  const folder = current
+    ? dirname(current)
+    : recovered
+      ? dirname(recovered)
+      : ((await runtime.newDocumentDir?.(e.sender.id)) ?? configuredDefaultSaveDir(app))
+  // A name proposed by the model (or the page's own title) prefills the dialog
+  // rather than replacing it: the reader still chooses the location, and
+  // cancelling still cancels. It keeps the open file's extension: an .html
+  // proposal must not offer to rewrite an opened .htm file.
+  const proposed = fileNameBase(defaultName)
+  const defaultPath = proposed
+    ? join(folder, `${proposed}${current ? extname(current) : '.html'}`)
+    : current
+      ? join(dirname(current), basename(current))
+      : (recovered ?? join(folder, `${tm('untitledFile')}.html`))
   const filters: Array<{ name: string; extensions: string[] }> = [
     { name: tm('filterHtml'), extensions: ['html', 'htm'] },
   ]

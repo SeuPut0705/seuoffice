@@ -147,7 +147,6 @@ export const en = {
     'Still stuck? Copy the connection details and send them to whoever is helping you. They contain no account and no file paths.',
   actionCopyInfo: 'Copy details for help',
   copyInfoDone: 'Copied',
-  actionConnectHelp: 'See each step on screen (page in Korean)',
   guidePathChatGptBody:
     'Sign in with your ChatGPT account and use your plan. Nothing to install. The free plan allows only a little use.',
   guideUseCodex: 'Already use the Codex program on this PC? Connect with Codex',

@@ -5,7 +5,7 @@ import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import JSZip from 'jszip'
 import officeCrypto from 'officecrypto-tool'
-import { csvToXlsxBufferForOpen } from '../packages/xlsx-gateway/src/gateway/csv-import'
+import { csvToXlsxBufferForOpen } from '../packages/xlsx-gateway/src/gateway/csv-import-xlsx'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl, screenshotPath } from './helpers'
 
 /**

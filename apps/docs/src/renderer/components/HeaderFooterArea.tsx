@@ -12,17 +12,24 @@ import { spellcheckEnabled } from '../spellcheck-pref'
 import {
   hfCellGeometry,
   hfAnchoredImgStyle,
-  hfCellParaStyle,
+  hfCellParaBox,
   hfImageHangsOnPara,
   hfCellSegStyle,
   hfCellTabLines,
-  hfDeclaredStrutPt,
+  hfPictureOnlyLine,
+  hfVSpanBodyStyle,
   hfLeadIndentCss,
+  hfIndentOverhangPx,
+  hfInkOverhangPx,
+  hfRowGeomOf,
+  hfRowRightOverhangPx,
   hfRowStyle,
+  hfRunFace,
   hfSegHasImage,
   hfSegLeftCss,
   hfTabLeadNeedsStrut,
   hfTabSegImageHeightPx,
+  hfStripColumnPx,
   hfTabLines,
   hfTabOverflowPx,
   hfBoxAnchorEl,
@@ -34,12 +41,14 @@ import {
   type ParaBorderMergeFlags,
   type HfStripGeom,
   type HfTabLayout,
-  hfParaLineHeightCss,
   hfParaIndentStyle,
+  hfObstacleStyles,
+  hfSideWrapObstacles,
   hfStackedSpacingPx,
 } from '../editor/hf-dom'
 import { hfParasOf, PAGE_TOKEN } from '../editor/hf-text'
-import { mountHfEditor, type HfEditorHandle } from '../editor/hf-editor'
+import { fromHfParagraph, toStyleRecord } from '../editor/para-layout-spec'
+import { hfEditablePara, mountHfEditor, type HfEditorHandle } from '../editor/hf-editor'
 import { dkStyleProps } from '../editor/dark-page'
 import { INLINE_RULE_CLASS, inlineRuleStyle } from '../editor/inline-rule'
 import { textColorValue } from '../editor/text-color'
@@ -52,12 +61,18 @@ export interface HfValue {
   paras?: HfParagraph[]
 }
 
+function runRevClass(run: Run): string | undefined {
+  const cls = [run.ins && 'doc-ins', run.del && 'doc-del'].filter(Boolean).join(' ')
+  return cls || undefined
+}
+
 function runStyle(run: Run): React.CSSProperties {
   const style: React.CSSProperties = {}
-  if (run.bold) style.fontWeight = 600
-  else if (run.bold === false) style.fontWeight = 'normal'
-  if (run.italic) style.fontStyle = 'italic'
-  else if (run.italic === false) style.fontStyle = 'normal'
+  const face = hfRunFace(run)
+  if (face.bold) style.fontWeight = 600
+  else if (face.bold === false) style.fontWeight = 'normal'
+  if (face.italic) style.fontStyle = 'italic'
+  else if (face.italic === false) style.fontStyle = 'normal'
   if (run.underline) style.textDecoration = 'underline'
   if (run.strike) style.textDecoration = `${style.textDecoration ?? ''} line-through`.trim()
   // authored color stays the declaration; the --dk-c twin feeds the dark page
@@ -65,12 +80,12 @@ function runStyle(run: Run): React.CSSProperties {
     style.color = textColorValue(run.color)
     if (run.color !== 'auto') Object.assign(style, dkStyleProps({ color: run.color }))
   }
-  if (run.sizeHalfPoints) style.fontSize = `${run.sizeHalfPoints / 2}pt`
+  if (face.sizeHalfPoints) style.fontSize = `${face.sizeHalfPoints / 2}pt`
   const letterSpacing = runLetterSpacingCss(run)
   if (letterSpacing) style.letterSpacing = letterSpacing
   const kerning = fontKerningCss(run)
   if (kerning) style.fontKerning = kerning
-  if (run.font || run.fontAscii) style.fontFamily = cssRunFontFamily(run.fontAscii, run.font)
+  if (face.font || face.fontAscii) style.fontFamily = cssRunFontFamily(face.fontAscii, face.font)
   if (run.textOutline) style.WebkitTextStroke = textOutlineCssValue(run.textOutline)
   if (run.caps === 'all') style.textTransform = 'uppercase'
   else if (run.caps === 'small') style.fontVariantCaps = 'small-caps'
@@ -81,12 +96,14 @@ function runStyle(run: Run): React.CSSProperties {
   return style
 }
 
-/** document content colors (w:shd / w:pBdr) plus their dark-page twins; mirrors makeGapHfEl */
-function paraStyle(para: HfParagraph, merge?: ParaBorderMergeFlags): React.CSSProperties {
-  const style: React.CSSProperties = {}
-  const lh = hfParaLineHeightCss(para)
-  if (lh) style.lineHeight = lh
-  if (para.bidi) style.direction = 'rtl'
+/** line box (para-layout-spec) and document content colors (w:shd / w:pBdr) plus
+ *  their dark-page twins; mirrors makeGapHfEl */
+function paraBox(
+  para: HfParagraph,
+  merge?: ParaBorderMergeFlags,
+): { style: React.CSSProperties; classes: string[] } {
+  const box = fromHfParagraph(para)
+  const style: React.CSSProperties = toStyleRecord(box)
   Object.assign(style, hfParaIndentStyle(para))
   if (para.align) {
     style.textAlign =
@@ -103,7 +120,7 @@ function paraStyle(para: HfParagraph, merge?: ParaBorderMergeFlags): React.CSSPr
   } else if (para.shadingClear) style.backgroundColor = 'transparent'
   const bs = hfParaBorderStyle(para, merge)
   Object.assign(style, bs.style, dkStyleProps({ borders: bs.borders }))
-  return style
+  return { style, classes: box.classes }
 }
 
 /**
@@ -196,21 +213,27 @@ export function HeaderFooterArea({
     return hfUsesLegacyHash(value) ? t.replace('#', String(pageNo ?? 1)) : t
   }
 
-  // run-declared strip strut (shrink-only), mirroring makeGapHfEl so the
-  // preview/export strips lay out like the canvas gaps and the push-down probe
-  const strutPt = hfDeclaredStrutPt(paras)
   const hasBoxes = boxGeom != null && paras.some((p) => p.box)
+  const firstEditable = hfEditorSlot(paras)
+  const rowGeom = hfRowGeomOf(kind, boxGeom)
+  const indOver = hfIndentOverhangPx(paras, rowGeom)
+  const inkOver = hfInkOverhangPx(paras)
   const tabOver = Math.max(
-    0,
-    ...paras.map((p) => (p.cells ? 0 : hfTabOverflowPx(hfTabLines(p, display) ?? [], boxGeom))),
+    hfRowRightOverhangPx(paras, rowGeom),
+    ...paras.map((p) =>
+      p.cells
+        ? 0
+        : hfTabOverflowPx(hfTabLines(p, display, hfStripColumnPx(boxGeom)) ?? [], boxGeom),
+    ),
   )
   return (
     <div
       ref={rootRef}
       className={`page-hf page-hf-${kind}${editing ? ' page-hf-editing' : ''}${hasBoxes ? ' page-hf-has-boxes' : ''}`}
       style={{
-        ...(strutPt != null ? { fontSize: `min(${strutPt}pt, var(--hf-default-fs, 10.5pt))` } : {}),
         ...(tabOver > 0 ? { ['--hf-tab-over' as string]: `${tabOver.toFixed(1)}px` } : {}),
+        ...(indOver > 0 ? { ['--hf-ind-over' as string]: `${indOver.toFixed(1)}px` } : {}),
+        ...(inkOver > 0 ? { ['--hf-ink-over' as string]: `${inkOver}px` } : {}),
         ...style,
       }}
       data-tip={
@@ -256,7 +279,27 @@ export function HeaderFooterArea({
         </div>
       )}
       {editing ? (
-        <div ref={editRef} className="page-hf-edit-surface" />
+        // rows and floating boxes stay display-only around the editor (its doc
+        // holds the text paragraphs only), so a table-held logo does not vanish
+        <>
+          <HfContent
+            kind={kind}
+            paras={paras}
+            images={images}
+            display={display}
+            boxGeom={boxGeom}
+            only={(_, i) => i < firstEditable}
+          />
+          <div ref={editRef} className="page-hf-edit-surface" />
+          <HfContent
+            kind={kind}
+            paras={paras}
+            images={images}
+            display={display}
+            boxGeom={boxGeom}
+            only={(_, i) => i >= firstEditable}
+          />
+        </>
       ) : (
         <HfContent kind={kind} paras={paras} images={images} display={display} boxGeom={boxGeom} />
       )}
@@ -270,18 +313,30 @@ export function HeaderFooterArea({
   )
 }
 
-function HfContent({
+/** strip index the editor stands in for; with no editable paragraph it goes
+ *  last, where hfValueFromDoc appends typed text */
+export function hfEditorSlot(paras: HfParagraph[]): number {
+  const i = paras.findIndex(hfEditablePara)
+  return i === -1 ? paras.length : i
+}
+
+export function HfContent({
   kind,
   paras,
   images,
   display,
   boxGeom,
+  only,
 }: {
   kind: 'header' | 'footer'
   paras: HfParagraph[]
   images?: HfImage[]
   display: (text: string) => string
   boxGeom?: HfStripGeom
+  /** editing: this half of the strip owns these indices (spacing still
+   *  measures the whole strip); editable paragraphs live in the editor and
+   *  only lend their hosted boxes to the half they fall in */
+  only?: (para: HfParagraph, index: number) => boolean
 }) {
   const spacing = hfStackedSpacingPx(paras)
   const margins = (i: number): React.CSSProperties => ({
@@ -290,7 +345,7 @@ function HfContent({
   })
   const runSpans = (runs: Run[], imgClass: string) =>
     runs.map((run, l) => (
-      <span key={l} style={runStyle(run)}>
+      <span key={l} className={runRevClass(run)} style={runStyle(run)}>
         {run.image?.rule && (
           <span
             className={INLINE_RULE_CLASS}
@@ -322,15 +377,67 @@ function HfContent({
       <div
         key={i}
         className="page-hf-para page-hf-row"
-        style={{ ...hfRowStyle(para.row), ...margins(i) }}
+        style={{ ...margins(i), ...hfRowStyle(para.row, hfRowGeomOf(kind, boxGeom), i === 0) }}
       >
         {para.cells.map((cell, j) => {
           const geom = hfCellGeometry(cell)
           const spans = (runs: Run[]) => runSpans(runs, 'page-hf-cell-img')
+          const vSpan = !cell.vMergeContinue && (cell.vSpan ?? 1) > 1
+          // vMerge: the continuation holds nothing; the spanning cell's
+          // paragraphs overlay the merged rows without sizing its own row
+          const cellParas = cell.vMergeContinue
+            ? null
+            : (cell.paras.length > 0 ? cell.paras : [[]]).map((runs, k) => {
+                const props = cell.paraProps?.[k]
+                const tabLines = hfCellTabLines(runs, props, geom, para.row, display)
+                if (!tabLines) {
+                  const box = hfCellParaBox(props, undefined, runs, para.row)
+                  return (
+                    <div
+                      key={k}
+                      className={['page-hf-cell-para', ...box.classes].join(' ')}
+                      style={box.style}
+                    >
+                      {runs.length === 0 ? ' ' : null}
+                      {spans(runs)}
+                    </div>
+                  )
+                }
+                return tabLines.map((line, m) => {
+                  const box = hfCellParaBox(
+                    props,
+                    { first: m === 0, last: m === tabLines.length - 1 },
+                    runs,
+                    para.row,
+                  )
+                  return (
+                    <div
+                      key={`${k}-${m}`}
+                      className={['page-hf-cell-para page-hf-tabbed', ...box.classes].join(' ')}
+                      style={{
+                        ...box.style,
+                        textAlign: 'left',
+                        ...(line.minHeightPt ? { minHeight: `${line.minHeightPt}pt` } : {}),
+                      }}
+                    >
+                      {spans(line.lead)}
+                      {line.segments.map((seg, n) => (
+                        <span
+                          key={`t${n}`}
+                          className={`page-hf-tabseg page-hf-tabseg-${seg.anchor}`}
+                          style={hfCellSegStyle(seg)}
+                        >
+                          {spans(seg.runs)}
+                        </span>
+                      ))}
+                    </div>
+                  )
+                })
+              })
           return (
             <div
               key={j}
-              className="page-hf-cell"
+              className={vSpan ? 'page-hf-cell page-hf-cell-vspan' : 'page-hf-cell'}
               style={{
                 ...geom.style,
                 // document content colors (w:shd / borders) plus their dark-page twins
@@ -342,83 +449,52 @@ function HfContent({
                 }),
               }}
             >
-              {/* one block line per cell paragraph (mirrors makeGapHfEl) */}
-              {(cell.paras.length > 0 ? cell.paras : [[]]).map((runs, k) => {
-                const props = cell.paraProps?.[k]
-                const tabLines = hfCellTabLines(runs, props, geom, para.row, display)
-                if (!tabLines) {
-                  return (
-                    <div
-                      key={k}
-                      className="page-hf-cell-para"
-                      style={hfCellParaStyle(props, undefined, runs)}
-                    >
-                      {runs.length === 0 ? ' ' : null}
-                      {spans(runs)}
-                    </div>
-                  )
-                }
-                return tabLines.map((line, m) => (
-                  <div
-                    key={`${k}-${m}`}
-                    className="page-hf-cell-para page-hf-tabbed"
-                    style={{
-                      ...hfCellParaStyle(
-                        props,
-                        { first: m === 0, last: m === tabLines.length - 1 },
-                        runs,
-                      ),
-                      textAlign: 'left',
-                      ...(line.minHeightPt ? { minHeight: `${line.minHeightPt}pt` } : {}),
-                    }}
-                  >
-                    {spans(line.lead)}
-                    {line.segments.map((seg, n) => (
-                      <span
-                        key={`t${n}`}
-                        className={`page-hf-tabseg page-hf-tabseg-${seg.anchor}`}
-                        style={hfCellSegStyle(seg)}
-                      >
-                        {spans(seg.runs)}
-                      </span>
-                    ))}
-                  </div>
-                ))
-              })}
+              {vSpan ? (
+                <div className="page-hf-cell-vspan-body" style={hfVSpanBodyStyle(cell)}>
+                  {cellParas}
+                </div>
+              ) : (
+                cellParas
+              )}
             </div>
           )
         })}
       </div>
     ) : (
       (() => {
-        const tabLines = hfTabLines(para, display)
+        const tabLines = hfTabLines(para, display, hfStripColumnPx(boxGeom))
         if (!tabLines) {
+          const box = paraBox(para, mergeFlags[i])
           return (
             <div
               key={i}
-              className={`page-hf-para${para.frameXAlign ? ' page-hf-frame' : ''}`}
-              style={{
-                ...paraStyle(para, mergeFlags[i]),
-                ...margins(i),
-                ...(para.runs.length === 0 && para.emptyRunSizeHalfPoints
-                  ? { fontSize: `${para.emptyRunSizeHalfPoints / 2}pt` }
-                  : {}),
-              }}
+              className={[
+                'page-hf-para',
+                para.frameXAlign && 'page-hf-frame',
+                hfPictureOnlyLine(para.runs) && 'page-hf-pic-line',
+                ...box.classes,
+              ]
+                .filter(Boolean)
+                .join(' ')}
+              style={{ ...box.style, ...margins(i) }}
             >
               {para.runs.length === 0 ? ' ' : null}
               {runSpans(para.runs, 'page-hf-run-img')}
             </div>
           )
         }
-        // tab layout happens in left-aligned space; w:jc becomes an explicit shift
+        // tab layout happens in left-aligned space; w:jc becomes an explicit
+        // shift (a wrapping tail keeps the paragraph's own jc per line)
         const lineStyle = (tabbed: HfTabLayout): React.CSSProperties => {
           const leadIndent = hfLeadIndentCss(tabbed)
           return {
             ...(tabbed.minHeightPt ? { minHeight: `${tabbed.minHeightPt}pt` } : {}),
-            textAlign: 'left',
+            ...(tabbed.flow ? {} : { textAlign: 'left' }),
             ...(leadIndent ? { textIndent: leadIndent } : {}),
           }
         }
+        const lineClass = (tabbed: HfTabLayout) =>
+          `page-hf-tabbed${tabbed.flow ? ' page-hf-tabbed-flow' : ''}`
         const segImgH = (tabbed: HfTabLayout) => hfTabSegImageHeightPx(tabbed)
         const lineContent = (tabbed: HfTabLayout) => (
           <>
@@ -427,6 +503,12 @@ function HfContent({
               <span className="page-hf-tab-strut" style={{ height: segImgH(tabbed) }} />
             ) : null}
             {runSpans(tabbed.lead, 'page-hf-run-img')}
+            {tabbed.flow && tabbed.flow.gapPx > 0 ? (
+              <span className="page-hf-tab-gap" style={{ width: tabbed.flow.gapPx }} />
+            ) : null}
+            {tabbed.flow ? (
+              <span key="flow">{runSpans(tabbed.flow.runs, 'page-hf-run-img')}</span>
+            ) : null}
             {tabbed.segments.map((seg, k) => (
               <span
                 key={`t${k}`}
@@ -438,17 +520,16 @@ function HfContent({
             ))}
           </>
         )
-        const frame = para.frameXAlign ? ' page-hf-frame' : ''
+        const box = paraBox(para, mergeFlags[i])
+        const frame = [para.frameXAlign && ' page-hf-frame', ...box.classes.map((c) => ` ${c}`)]
+          .filter(Boolean)
+          .join('')
         if (tabLines.length === 1) {
           return (
             <div
               key={i}
-              className={`page-hf-para page-hf-tabbed${frame}`}
-              style={{
-                ...paraStyle(para, mergeFlags[i]),
-                ...margins(i),
-                ...lineStyle(tabLines[0]),
-              }}
+              className={`page-hf-para ${lineClass(tabLines[0])}${frame}`}
+              style={{ ...box.style, ...margins(i), ...lineStyle(tabLines[0]) }}
             >
               {lineContent(tabLines[0])}
             </div>
@@ -457,13 +538,9 @@ function HfContent({
         // a w:br paragraph stacks one positioned line per break inside the
         // paragraph block (which keeps the spacing and borders)
         return (
-          <div
-            key={i}
-            className={`page-hf-para${frame}`}
-            style={{ ...paraStyle(para, mergeFlags[i]), ...margins(i) }}
-          >
+          <div key={i} className={`page-hf-para${frame}`} style={{ ...box.style, ...margins(i) }}>
             {tabLines.map((tabbed, m) => (
-              <div key={m} className="page-hf-tabbed" style={lineStyle(tabbed)}>
+              <div key={m} className={lineClass(tabbed)} style={lineStyle(tabbed)}>
                 {lineContent(tabbed)}
               </div>
             ))}
@@ -475,9 +552,11 @@ function HfContent({
   // box (Word draws them at the anchor); everything else stacks as strip lines.
   // A box sharing its paragraph with text hangs off that paragraph instead.
   const indices = paras.map((_, i) => i)
+  const owned = (i: number) => !only || only(paras[i], i)
+  const drawn = (i: number) => owned(i) && !(only && hfEditablePara(paras[i]))
   const hostedBy = new Map<number, React.ReactNode[]>()
   for (const [n, img] of (images ?? []).filter(hfImageHangsOnPara).entries()) {
-    if (img.anchorPara! >= paras.length) continue
+    if (img.anchorPara! >= paras.length || !owned(img.anchorPara!)) continue
     const node = (
       <img
         key={`img${n}`}
@@ -490,16 +569,26 @@ function HfContent({
     hostedBy.set(img.anchorPara!, [...(hostedBy.get(img.anchorPara!) ?? []), node])
   }
   const out: React.ReactNode[] = []
+  if (boxGeom) {
+    hfObstacleStyles(hfSideWrapObstacles(kind, images, boxGeom)).forEach((style, n) =>
+      out.push(<div key={`ob${n}`} className="page-hf-obstacle" style={style} />),
+    )
+  }
   for (let i = 0; i < paras.length;) {
     const box = paras[i].box
     const css = box && boxGeom ? hfTextBoxStyle(box, kind, boxGeom) : null
     if (!css) {
-      out.push(indices[i])
+      if (drawn(i)) out.push(indices[i])
       i += 1
       continue
     }
     const items: React.ReactNode[] = []
     const start = i
+    const anchor = hfBoxAnchorEl(box!, indices)
+    if (!owned(anchor ?? start)) {
+      for (; i < paras.length && paras[i].box?.id === box?.id; i += 1);
+      continue
+    }
     for (; i < paras.length && paras[i].box?.id === box?.id; i += 1) {
       items.push(renderPara(paras[i], i))
     }
@@ -508,9 +597,12 @@ function HfContent({
         {items}
       </div>
     )
-    const anchor = hfBoxAnchorEl(box!, indices)
-    if (anchor != null) hostedBy.set(anchor, [...(hostedBy.get(anchor) ?? []), node])
-    else out.push(node)
+    if (anchor != null && drawn(anchor)) {
+      hostedBy.set(anchor, [...(hostedBy.get(anchor) ?? []), node])
+    } else out.push(node)
+  }
+  for (const [host, nodes] of hostedBy) {
+    if (!drawn(host)) out.push(...nodes)
   }
   return (
     <>

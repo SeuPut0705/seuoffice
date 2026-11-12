@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   MAX_PARA_ROUNDS,
   SettledParagraphCache,
+  measureNatural,
   noteFloatTransaction,
 } from '../src/renderer/editor/settled-measure'
 import type { EditorView } from '@tiptap/pm/view'
@@ -24,16 +25,30 @@ function sized(el: HTMLElement, box: () => { width: number; height: number }) {
 
 const shiftAll = (r: number[], d: number) => r.map((v) => v + d)
 
-const editor = new Editor({
-  element: document.createElement('div'),
-  extensions: editorExtensions,
-  content: {
-    type: 'doc',
-    content: [{ type: 'docParagraph', content: [{ type: 'text', text: 'abc' }] }],
-  },
+/** Editors created during the current test; destroyed in afterEach so ProseMirror's
+ * DOMObserver timers can't fire after the JSDOM environment is torn down. */
+const liveEditors: Editor[] = []
+
+function makeEditor(): Editor {
+  const editor = new Editor({
+    element: document.createElement('div'),
+    extensions: editorExtensions,
+    content: {
+      type: 'doc',
+      content: [{ type: 'docParagraph', content: [{ type: 'text', text: 'abc' }] }],
+    },
+  })
+  liveEditors.push(editor)
+  return editor
+}
+
+afterEach(() => {
+  for (const editor of liveEditors.splice(0)) editor.destroy()
 })
+
 /** a transaction that inserts a node: the float scan runs again on the next pass */
-const nodeInsert = () => editor.state.tr.insert(0, editor.schema.nodes.docParagraph.create())
+const nodeInsert = (editor: Editor) =>
+  editor.state.tr.insert(0, editor.schema.nodes.docParagraph.create())
 
 describe('SettledParagraphCache', () => {
   const node = {} as ProseMirrorNode
@@ -114,6 +129,7 @@ describe('SettledParagraphCache', () => {
   })
 
   it('keys on vertical position only beside a float', () => {
+    const editor = makeEditor()
     const el = document.createElement('p')
     const view = fakeView(el)
     let top = 0
@@ -134,7 +150,7 @@ describe('SettledParagraphCache', () => {
     float.className = 'doc-table doc-table-float-left'
     float.getBoundingClientRect = () => ({ top: 40, bottom: 80 }) as DOMRect
     view.dom.appendChild(float)
-    noteFloatTransaction(nodeInsert())
+    noteFloatTransaction(nodeInsert(editor))
     // flowed in place by the paginator: not a float until that class goes
     float.classList.add('doc-table-float-flow')
     pass()
@@ -227,12 +243,13 @@ describe('SettledParagraphCache', () => {
   })
 
   it('scans for floats once per editor state and only again after a node insert', () => {
+    const editor = makeEditor()
     const dom = document.createElement('div')
     const el = document.createElement('p')
     const view = { dom, nodeDOM: () => el, state: {} } as unknown as EditorView
     const scan = vi.spyOn(dom, 'querySelectorAll')
     const pass = () => new SettledParagraphCache<number[]>(shiftAll).beginPass(view)
-    noteFloatTransaction(nodeInsert())
+    noteFloatTransaction(nodeInsert(editor))
     pass()
     pass()
     expect(scan).toHaveBeenCalledTimes(1)
@@ -241,8 +258,57 @@ describe('SettledParagraphCache', () => {
     pass()
     expect(scan).toHaveBeenCalledTimes(1)
     ;(view as unknown as { state: object }).state = {}
-    noteFloatTransaction(nodeInsert())
+    noteFloatTransaction(nodeInsert(editor))
     pass()
     expect(scan).toHaveBeenCalledTimes(2)
+  })
+})
+
+describe('measureNatural', () => {
+  it('hides the inline page gaps of the paragraph while measuring and restores them', () => {
+    const el = document.createElement('p')
+    const gap = document.createElement('span')
+    gap.className = 'page-gap page-gap-inline'
+    gap.style.display = 'inline-block'
+    el.append('before', gap, 'after')
+    const seen = measureNatural(el, () => gap.style.display)
+    expect(seen).toBe('none')
+    expect(gap.style.display).toBe('inline-block')
+  })
+
+  it('restores the gaps when the measurement throws', () => {
+    const el = document.createElement('p')
+    const gap = document.createElement('span')
+    gap.className = 'page-gap-inline'
+    el.append(gap)
+    expect(() =>
+      measureNatural(el, () => {
+        throw new Error('x')
+      }),
+    ).toThrow('x')
+    expect(gap.style.display).toBe('')
+  })
+
+  it('keys the cache on the natural box, not the box with the gap in it', () => {
+    const el = document.createElement('p')
+    const gap = document.createElement('span')
+    gap.className = 'page-gap-inline'
+    el.append(gap)
+    sized(el, () => ({
+      width: 100,
+      height: !gap.isConnected || gap.style.display === 'none' ? 20 : 120,
+    }))
+    const view = fakeView(el)
+    const node = {} as ProseMirrorNode
+    const cache = new SettledParagraphCache<number[]>(shiftAll)
+    const fn = vi.fn<() => number[]>().mockReturnValue([1])
+    cache.beginPass(view)
+    cache.measure(view, node, 1, fn)
+    cache.beginPass(view)
+    cache.measure(view, node, 1, fn)
+    cache.beginPass(view)
+    gap.remove()
+    cache.measure(view, node, 1, fn)
+    expect(fn).toHaveBeenCalledTimes(2)
   })
 })

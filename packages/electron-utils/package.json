@@ -24,11 +24,14 @@
     "./font-store": "./src/font-store.ts",
     "./office-encryption": "./src/office-encryption.ts",
     "./headless-export": "./src/headless-export.ts",
+    "./main-proxy": "./src/main-proxy.ts",
     "./print-cups": "./src/print-cups.ts",
+    "./printer-options": "./src/printer-options.ts",
     "./print-job": "./src/print-job.ts",
     "./print-window": "./src/print-window.ts",
     "./remote-image": "./src/remote-image.ts",
     "./fetch-image-bytes": "./src/fetch-image-bytes.ts",
+    "./remote-table": "./src/remote-table.ts",
     "./renderer-protocol": "./src/renderer-protocol.ts",
     "./renderer-scheme": "./src/renderer-scheme.ts",
     "./safe-external-url": "./src/safe-external-url.ts",
@@ -49,10 +52,11 @@
   "devDependencies": {
     "officecrypto-tool": "^0.0.19",
     "typescript": "^5.9.3",
-    "vitest": "^4.1.11"
+    "vitest": "^4.1.12"
   },
   "dependencies": {
+    "@genoffice/compound-file": "*",
     "parse5": "^8.0.1",
-    "undici": "^6.29.0"
+    "undici": "^6.29.1"
   }
 }

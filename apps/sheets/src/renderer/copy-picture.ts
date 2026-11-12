@@ -22,8 +22,11 @@ import { ISheetClipboardService } from '@univerjs/sheets-ui'
 import type { UniverRuntime } from './univer-state'
 
 /// Univer's range-copy HTML (USMToHtmlService); in-cell editor copies and
-/// other writers produce different markup and get no picture.
-const RANGE_COPY_HTML = /^<google-sheets-html-origin><table\b[^>]*\bdata-copy-id="/
+/// other writers produce different markup and get no picture. Not anchored
+/// at the start: the same markup is also recognized when a paste reads it
+/// back, and the clipboard returns it inside a document of its own
+/// (`<html><head></head><body>…`) or behind a charset tag.
+const RANGE_COPY_HTML = /<google-sheets-html-origin><table\b[^>]*\bdata-copy-id="/
 
 /// Device pixels one copy picture may cover. Rendering and PNG-encoding
 /// happen before the clipboard write, so a picture this size (about 0.4 s)

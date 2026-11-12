@@ -28,6 +28,10 @@ export const fr = {
     'Ce document contient des modifications suivies. Vous voyez son texte actuel, modifications appliquées ; l’enregistrement conserve ce texte et supprime l’historique des modifications.',
   saveTracked:
     "Non enregistré : ce document contient des modifications suivies ; l'enregistrer ici les ferait perdre et pourrait produire un fichier que Hancom Hangul ne peut pas ouvrir.",
+  openedUnverified:
+    "La structure de ce fichier n'a pas pu être vérifiée ; une partie de son contenu peut manquer ici. Vous pouvez le lire et le modifier, mais il n'est pas enregistré par-dessus l'original : utilisez Enregistrer sous pour en garder une copie sous un autre nom.",
+  saveUnverified:
+    "Non enregistré : la structure de ce fichier n'a pas pu être vérifiée, et l'enregistrer par-dessus l'original pourrait faire perdre du contenu. Dans Enregistrer sous, enregistrez une copie sous un autre nom, de préférence au format HWPX.",
   savedTailsLost:
     "Enregistré, mais certaines pages maîtres ou certains mémos du fichier d'origine n'ont pas pu être conservés ; Hancom Hangul pourrait ne pas ouvrir le fichier enregistré. Ouvrez-le pour vérifier.",
   missingFonts:

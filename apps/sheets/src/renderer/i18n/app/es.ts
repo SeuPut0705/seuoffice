@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const es = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Ocultar la selección a la IA',
+  redactDialogDesc:
+    'Lo seleccionado sigue en el documento y en el archivo; el modelo solo ve el marcador. Ponle un nombre para que sepa qué representa.',
+  redactDialogScope:
+    'Ocultar solo se aplica a la IA de esta aplicación. La CLI, las herramientas MCP y la exportación headless leen el archivo directamente y siguen viendo estas palabras.',
+  redactDialogPlaceholder: 'Nombre del marcador, p. ej.: teléfono del cliente',
+  redactCancel: 'Cancelar',
+  redactInsert: 'Ocultar',
+  redactEnable: 'Clic derecho en una selección para ocultarla al modelo.',
+  redactNeedsSavedRow:
+    'Esta fila todavía no está en el archivo. Guarda primero y luego oculta la celda.',
+  redactNeedsSavedSheet:
+    'Esta hoja o una copia suya todavía no está en el archivo. Guarda primero y luego cambia lo que está oculto.',
+  redactMoveRefused:
+    'No se hizo: esto movería o copiaría celdas ocultas para la IA y sus valores dejarían de estar ocultos. Deja de ocultarlas primero o exclúyelas del rango.',
+  redactRecoveredFromNames:
+    'Otra aplicación reescribió este archivo y descartó el registro de lo que está oculto. Las celdas ocultas se recuperaron de los nombres del libro; al guardar se restaura el registro completo.',
+
   appMergeWorkbooks: 'Combinar libros',
   appMergeWorkbooksTip: 'Añadir las hojas de otros archivos de Excel a este libro',
   appMergeWorkbooksPicking: 'Elige los archivos para combinar…',
@@ -8,6 +27,8 @@ export const es = {
   appMergeWorkbooksDone:
     'Se combinaron {sheets} hojas de {files} archivos (las fórmulas se importaron como valores).',
   appMergeWorkbooksFailed: 'No se pudieron combinar los libros.',
+  appMergeWorkbooksHiddenCells:
+    'No se combinó nada: {file} tiene celdas ocultas a la IA, y al combinar sus valores llegarían sin esa protección. Abra ese archivo, deje de ocultar esas celdas o elimínelas, guarde y vuelva a combinar.',
   appMergeWorkbooksInsertFailed: 'No se pudo crear la hoja {sheet}.',
   appMergeWorkbooksLocked:
     'El libro aún se está cargando; la combinación no está disponible ahora.',
@@ -552,6 +573,7 @@ export const es = {
   appBridgeUnavailable:
     'El puente de archivos de escritorio no está disponible. Reinicie la aplicación Electron.',
   appOpenCanceled: 'Selección de libro cancelada.',
+  appImportCanceled: 'Importación cancelada.',
   appOpeningWorkbook: 'Abriendo libro…',
   appOpened: 'Se abrió {name} — las ediciones de celdas se vuelven a guardar con ⌘S.',
   appOpenFailed: 'No se puede abrir el libro.',
@@ -650,6 +672,8 @@ export const es = {
     'Este tipo de gráfico no admite esa edición; guardado cancelado — deshaga el cambio del gráfico.',
   appSaveErrMoveOverlap:
     'Una fórmula, un rango con formato, una forma o una tabla abarca las filas movidas; guardado cancelado — deshaga el movimiento.',
+  appSaveErrHiddenCellsUnreadable:
+    'No se puede leer el registro de las celdas ocultas a la IA en este libro, por lo que no se pueden guardar los cambios de filas, columnas y hojas: las celdas ocultas dejarían de estar protegidas. Deshaga esos cambios y vuelva a guardar.',
   appFromTextCsvTitle: 'Importar un archivo CSV/de texto en la selección actual',
   appCsvImported: 'Se importaron {rows} filas × {columns} columnas del archivo en {cell}.',
   appCsvEmpty: 'El archivo CSV no contiene datos.',
@@ -754,6 +778,7 @@ export const es = {
   appExportPdfTitle: 'Exportar como PDF',
   appSaveTitle: 'Guardar (⌘S)',
   appSaveAs: 'Guardar como',
+  aiNameFile: 'Nombrar con IA…',
   appUndo: 'Deshacer',
   appRedo: 'Rehacer',
   appQuickAccessCustomize: 'Personalizar la barra de herramientas de acceso rápido',
@@ -1208,6 +1233,20 @@ export const es = {
   appWatchCell: 'Celda',
   appWatchValue: 'Valor',
   appWatchFormula: 'Fórmula',
+  appLinksPanel: 'Vínculos externos',
+  appLinksPanelDetail: 'Enumerar, actualizar y romper vínculos a otros libros',
+  appLinksUpdate: 'Actualizar valores',
+  appLinksNone: 'Este libro no tiene vínculos a otros libros.',
+  appLinksUnsaved: 'Guarda este libro antes de listar sus vínculos externos.',
+  appLinksSource: 'Origen',
+  appLinksStatus: 'Estado',
+  appLinksSheets: 'Hojas',
+  appLinksLocate: 'Abrir ubicación del archivo de origen',
+  appLinksReachable: 'Disponible',
+  appLinksBroken: 'No disponible',
+  appLinksBreak: 'Interrumpir vínculos',
+  appLinksBreakConfirm: 'Confirmar interrupción',
+  appLinksChangeSource: 'Cambiar origen',
   appGroupCalculation: 'Cálculo',
   appCalculationOptions: 'Opciones para el cálculo',
   appCalculationOptionsTitle: 'Recálculo automático o manual',
@@ -1224,6 +1263,12 @@ export const es = {
   appGroupGetData: 'Obtener datos',
   appFromTextCsv: 'Desde texto/CSV',
   appRefreshAll: 'Actualizar todo',
+  appRefreshQuery: 'Actualizar consulta',
+  appQueryConnectionsTitle: 'Actualizar las consultas del libro',
+  appQueryRefreshing: 'Actualizando {name}…',
+  appQueryRefreshed: '{name} actualizado ({rows} filas)',
+  appQueryRefreshedClipped: '{name} actualizado ({rows} filas, {dropped} no caben en el rango)',
+  appQueryRefreshFailed: 'No se pudo actualizar {name}',
   appWorkbookNoPivot: 'No hay tablas dinámicas en este libro.',
   appRefreshAllTitle: 'Actualizar todas las tablas dinámicas',
   appQueriesConnections: 'Consultas y conexiones',
@@ -1299,6 +1344,10 @@ export const es = {
   appFontSizeTip: 'Tamaño de fuente',
   appZoomIn: 'Acercar',
   appZoomOut: 'Alejar',
+  appImgActualSize: 'Tamaño real',
+  appImgFitWindow: 'Ajustar a la ventana',
+  appImgSaveAs: 'Guardar imagen como…',
+  appImgClose: 'Cerrar (Esc)',
   appZoomSheetTitle: 'Hacer zoom en la hoja',
   appResetZoom: 'Restablecer zoom',
   appZoomToSelection: 'Ampliar selección',
@@ -1341,6 +1390,19 @@ export const es = {
   appOpenFileFirst: 'Abra primero un archivo',
   appNoPassword: 'Sin contraseña',
   appProtectWorkbook: 'Proteger libro',
+  appChangePassword: 'Cambiar contraseña',
+  appWorkbookPasswordChanged: 'Se actualizó la contraseña del libro.',
+  appChangePasswordTitle: 'Cambiar la contraseña del libro',
+  appChangePasswordCopy: 'Elige una nueva contraseña y confírmala abajo.',
+  appNewPasswordLabel: 'Nueva contraseña',
+  appConfirmPasswordLabel: 'Confirmar nueva contraseña',
+  appPasswordsMismatch: 'Las contraseñas no coinciden.',
+  appPasswordTooLong:
+    'La contraseña es demasiado larga. Usa como máximo {max} caracteres, la longitud máxima que acepta Excel.',
+  appPasswordUpdateFailed: 'No se pudo actualizar la contraseña del libro.',
+  appPasswordUpdating: 'Actualizando…',
+  appUpdatePassword: 'Actualizar contraseña',
+  appWorkbookNotPasswordProtected: 'Este libro no está protegido con una contraseña de apertura.',
   appAllowEditRanges: 'Permitir editar rangos',
   appGroupClipboard: 'Portapapeles',
   appPaste: 'Pegar',
@@ -1579,6 +1641,8 @@ export const es = {
   appVisualSendBackward: 'Enviar atrás',
   appVisualSizeProperties: 'Tamaño y propiedades…',
   appVisualHyperlink: 'Hipervínculo…',
+  appVisualEmbedInCell: 'Insertar imagen en la celda',
+  appVisualEmbedFailed: 'No se pudo insertar esta imagen en la celda.',
   appVisualDelete: 'Eliminar',
   appVisualArranged: 'Objeto actualizado — guarda con ⌘S.',
   appVisualCopied: 'Objeto copiado.',

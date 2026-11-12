@@ -8,4 +8,8 @@ export const vi = {
   diskIgnore: 'Bỏ qua',
   diskDismiss: 'OK',
   diskReloadFailed: 'Không thể tải lại tệp: {detail}',
+  diskChangedNoUndo:
+    'Một chương trình khác đã thay đổi hoặc xóa tệp này, nên Hoàn tác và Làm lại cho thay đổi này không được thực hiện.',
+  pageOpNoUndoConfirm:
+    'Tệp này ({size}) lớn hơn kích thước được giữ lại cho Hoàn tác ({limit}), nên thao tác trang này sẽ không thể hoàn tác. Tiếp tục?',
 } satisfies Record<keyof typeof zh, string>

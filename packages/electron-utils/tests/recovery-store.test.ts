@@ -756,7 +756,7 @@ describe('streaming a copy to disk', () => {
       { title: 'Deck' },
     )
     expect(dirname(seen)).toBe(dirname(store.copyPath(identity)))
-    expect(basename(seen)).toMatch(/^\.u-1\.pptx\.[0-9a-f]{12}\.tmp$/)
+    expect(basename(seen)).toMatch(/^u-1\.pptx\.[0-9a-f]{12}\.tmp$/)
   })
 
   it('writes the same metadata as a buffered copy: undecided, title, run, no content', async () => {
