@@ -128,26 +128,16 @@ npm run dist:win -- -- --publish never
 
 ## Mac 설치 파일 만들기
 
-저장소 주인에게 Mac이 없으므로 GitHub Actions에서 만든다.
+릴리스의 Mac 설치 파일(Apple Silicon)은 `.github/workflows/seuoffice-desktop.yml`이 Windows 설치 파일과 함께 만든다. 순서는 `docs/seuoffice/판-내기.md`에 있다. Intel Mac판은 내지 않는다.
 
-1. GitHub 저장소의 Actions 탭 → **macOS build** → **Run workflow**. 가지는 릴리스 태그가 가리킬 커밋이 있는 가지를 고른다.
-2. 끝나면 실행 결과의 Artifacts에서 `ieumoffice-mac`을 내려받는다. 안에 `IeumOffice-<버전>-arm64.dmg`, `IeumOffice-<버전>-x64.dmg`, `IeumOffice-<버전>-arm64-mac.zip`, `IeumOffice-<버전>-mac.zip`(Intel), `latest-mac.yml`(베타 버전 번호면 `beta-mac.yml`)이 있다.
-
-- 빌드는 `GENOFFICE_MAC_X64=1`로 두 앱을 묶는다. 두 앱이 한 자리를 나눠 쓰는 엑셀 처리 프로그램과 글자 인식 도우미는 두 CPU를 담은 파일(`native:build:universal`, lipo)이어야 한다. 빌드는 두 앱 모두 ad hoc 서명이 되었는지, 들어 있는 프로그램이 그 앱의 CPU를 담는지 검사하고, 두 앱을 창 없이 띄워(Intel판은 Rosetta로) Markdown·CSV 파일을 PDF로 내보내 본다. 하나라도 실패하면 결과를 올리지 않는다.
-- 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 dmg, zip, `latest-mac.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Mac 설치 파일"이다.
-- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`(Apple Silicon만). Intel용까지 묶으려면 그 전에 `npm run native:build:universal -w @genoffice/sheets`를 하고 `GENOFFICE_MAC_X64=1`을 켠다. 루트의 `npm run dist:mac`은 원본의 경로라 쓰지 않는다.
+- Mac에서 직접 만들 때: `npm ci`, `npm run build:all`, `npm run dist:mac -w @genoffice/shell -- --publish never`(Apple Silicon만). Intel용까지 묶으려면 그 전에 `npm run native:build:universal -w @genoffice/sheets`를 하고 `GENOFFICE_MAC_X64=1`을 켠다. 두 앱이 한 자리를 나눠 쓰는 엑셀 처리 프로그램과 글자 인식 도우미는 두 CPU를 담은 파일(lipo)이어야 한다. 루트의 `npm run dist:mac`은 원본의 경로라 쓰지 않는다.
 
 ## Linux 설치 파일 만들기
 
-GitHub Actions에서 만든다.
+Linux 패키지는 내지 않고, 만드는 워크플로도 없다.
 
-1. GitHub 저장소의 Actions 탭 → **Linux build** → **Run workflow**. 가지는 릴리스 태그가 가리킬 커밋이 있는 가지를 고른다.
-2. 끝나면 실행 결과의 Artifacts에서 `ieumoffice-linux-x64`를 내려받는다. 안에 `IeumOffice-<버전>.AppImage`, `ieumoffice_<버전>_amd64.deb`, `ieumoffice-<버전>.x86_64.rpm`, `latest-linux.yml`(베타 버전 번호면 `beta-linux.yml`)이 있다.
-
-- 빌드는 앱 실행 파일, 엑셀 처리 프로그램, 터미널 명령어가 실행 가능하게 들어갔는지 검사하고, deb의 의존성이 Ubuntu 24.04(64비트 time_t 전환으로 `t64` 이름이 쓰이는 곳)에서도 풀리는지 확인한 뒤, 만든 앱을 Xvfb 아래에서 창 없이 띄워 Markdown·CSV 파일을 PDF로 내보내 본다. 하나라도 실패하면 결과를 올리지 않는다.
-- 엑셀 처리 프로그램은 빌드 기계의 glibc가 아니라 glibc 2.28 기준으로 링크한다(`cargo zigbuild`, 기준 값은 워크플로의 `LINUX_GLIBC_FLOOR`). 빌드는 묶음 안의 실행 파일과 라이브러리가 모두 이 기준 안의 glibc만 요구하는지 보고, Ubuntu 20.04 컨테이너에 deb를 깔아 CSV를 내보내 본다.
-- 비밀 값을 쓰지 않는다. **release_tag**를 적고 `main`에서 실행하면, 빌드가 통과한 뒤 그 태그의 이미 공개된 릴리스에 AppImage, deb, rpm, `latest-linux.yml`을 붙인다(빌드한 버전과 태그가 같을 때만). 비워 두면 결과물만 남는다. 순서는 `docs/releasing.ko.md`의 "Linux 설치 파일"이다.
 - Linux(x64)에서 직접 만들 때(`rpm` 패키지가 설치되어 있어야 한다): `npm ci`, `npm run build:all`, `npm run dist:linux -w @genoffice/shell -- --publish never`.
+- 그렇게 만든 엑셀 처리 프로그램은 그 PC의 glibc를 따른다. 지운 상위 워크플로는 glibc 2.28 기준으로 다시 링크하고(`cargo zigbuild`), deb의 의존성이 Ubuntu 24.04에서 풀리는지와 Ubuntu 20.04에서 CSV가 열리는지를 확인했다(`docs/engineering-notes.md`의 "Linux 패키지"). Linux 패키지를 다시 내려면 그 확인부터 되살린다.
 
 ## 새 버전 내기
 
