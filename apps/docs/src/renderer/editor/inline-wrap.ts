@@ -5,8 +5,10 @@
  *
  * - `inlineWrap` mark: the chain of wrapper elements around the text (inline
  *   content controls, w:smartTag, w:customXml, w:dir, w:bdo). Text typed
- *   inside stays inside; text typed at an edge lands outside. The mark is
- *   structure, not formatting: "clear formatting" leaves it.
+ *   inside stays inside. The caret has one position at an edge, so the edges
+ *   take sides: text typed at the end joins the wrapper (as in Word), text
+ *   typed at the start lands in front of it. The mark is structure, not
+ *   formatting: "clear formatting" leaves it.
  * - the guard: the content of a control locked against editing
  *   (w:lock contentLocked / sdtContentLocked) refuses changes. The control can
  *   still be deleted whole.
@@ -20,8 +22,14 @@
  * edits and go when it is rewritten, as they always did.
  */
 import { Extension, Mark } from '@tiptap/core'
-import { Slice, type Node as PmNode } from '@tiptap/pm/model'
-import { Plugin, PluginKey, type EditorState, type Transaction } from '@tiptap/pm/state'
+import { Slice, type Node as PmNode, type ResolvedPos } from '@tiptap/pm/model'
+import {
+  Plugin,
+  PluginKey,
+  TextSelection,
+  type EditorState,
+  type Transaction,
+} from '@tiptap/pm/state'
 import { AddMarkStep, RemoveMarkStep, type Step } from '@tiptap/pm/transform'
 import {
   inlineWrapContentLocked,
@@ -44,8 +52,12 @@ import {
 
 export const InlineWrapMark = Mark.create({
   name: INLINE_WRAP_MARK,
-  // typing at the edge of a control produces text beside it, not inside it
-  inclusive: false,
+  // the end of a control belongs to it: text typed there, or typed over a
+  // selection that starts in it, is text of the control (as in Word). Its start
+  // does not, and neither does the end of a locked one (`keepWrappersWhole`).
+  inclusive: true,
+  // a paragraph started with Enter at the end of a control is outside it
+  keepOnSplit: false,
   addAttributes() {
     return { chain: { default: '', rendered: false } }
   },
@@ -233,12 +245,31 @@ function bringsPastedContent(tr: Transaction): boolean {
   return event === 'paste' || event === 'drop' || tr.getMeta(PASTED_CONTENT) === true
 }
 
+/**
+ * The wrappers text put in at `$pos` takes from its neighbour (the mark is
+ * inclusive) and must not sit in:
+ * - a control locked against editing that ends here: its content may not
+ *   grow, so the text lands behind it;
+ * - the wrappers of the text that starts the paragraph: a start belongs to
+ *   no wrapper, and here the text behind the caret is the only neighbour.
+ */
+function wrapsLeftOutside($pos: ResolvedPos): InlineWrap[] {
+  if (!$pos.parent.inlineContent) return NO_WRAPS
+  const before = $pos.nodeBefore
+  const after = $pos.nodeAfter
+  if (!before) return after ? wrapsOf(after) : NO_WRAPS
+  const locked = lockedWrapsOf(before)
+  return after && locked.length > 0 ? locked.filter((wrap) => !sitsIn(after, wrap)) : locked
+}
+
 /** What one step put into the document, as a range of the document the edits end in */
 interface Arrival {
   from: number
   to: number
   /** the wrappers the step cut in two: the content landed in the middle of them */
   cut: InlineWrap[]
+  /** the wrappers the content may have taken from its neighbour and does not belong in */
+  outside: InlineWrap[]
   /** clipboard or dragged content */
   pasted: boolean
 }
@@ -248,6 +279,9 @@ interface Arrival {
  * - content that landed between two pieces of one wrapper (a line break, a
  *   field, pasted text) goes inside it, or the save would write the wrapper
  *   twice around the halves;
+ * - content put in at the end of a locked control, or at the start of a
+ *   paragraph that begins with a wrapper, comes out of it (`wrapsLeftOutside`);
+ *   clipboard content is left alone: what it brings is its own;
  * - a paragraph split inside a content control leaves the control on the
  *   first half: the save cannot see across paragraphs that both halves carry
  *   the same w:id. Wrappers without an id (w:bdo, w:dir, w:smartTag,
@@ -281,9 +315,16 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
         const cut = inside
           ? sharedInlineWraps(wrapsOf($from.nodeBefore!), wrapsOf($to.nodeAfter!))
           : NO_WRAPS
-        if (cut.length === 0 && !pasted) return
+        const outside = !pasted && oldFrom === oldTo ? wrapsLeftOutside($from) : NO_WRAPS
+        if (cut.length === 0 && outside.length === 0 && !pasted) return
         const rest = tr.mapping.slice(i + 1)
-        arrivals.push({ from: rest.map(newFrom, 1), to: rest.map(newTo, -1), cut, pasted })
+        arrivals.push({
+          from: rest.map(newFrom, 1),
+          to: rest.map(newTo, -1),
+          cut,
+          outside,
+          pasted,
+        })
       })
     })
   }
@@ -310,7 +351,7 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
   }
 
   const marks: Array<{ from: number; to: number; chain: readonly InlineWrap[] }> = []
-  for (const { from, to, cut, pasted } of arrived) {
+  for (const { from, to, cut, outside, pasted } of arrived) {
     const $from = doc.resolve(from)
     const $to = doc.resolve(to)
     // only what both sides still sit in: a later step may have changed either
@@ -334,6 +375,7 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
           return key === null || !controls.has(key)
         })
       }
+      if (outside.length > 0) chain = inlineWrapsWithout(chain, outside)
       if (oneBlock && around.length > 0) chain = inlineWrapsInside(around, chain)
       if (!sameInlineWrapChain(chain, own)) marks.push({ ...range, chain })
       return false
@@ -360,6 +402,33 @@ function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Tra
     else fix.addMark(from, to, type.create({ chain: inlineWrapChainAttr(chain) }))
   }
   return fix
+}
+
+/**
+ * Before a composition starts at a caret whose text must land outside a
+ * wrapper (`wrapsLeftOutside`): stores the caret's marks without it.
+ */
+function composeOutside(view: {
+  composing: boolean
+  state: EditorState
+  dispatch: (tr: Transaction) => void
+}): void {
+  const { selection, storedMarks } = view.state
+  if (view.composing || !(selection instanceof TextSelection) || !selection.empty) return
+  const outside = wrapsLeftOutside(selection.$from)
+  if (outside.length === 0) return
+  const marks = storedMarks ?? selection.$from.marks()
+  const mark = marks.find((m) => m.type.name === INLINE_WRAP_MARK)
+  if (!mark) return
+  const chain = inlineWrapsWithout(inlineWrapChainOf(mark.attrs.chain), outside)
+  const rest = mark.removeFromSet(marks)
+  view.dispatch(
+    view.state.tr.setStoredMarks(
+      chain.length > 0
+        ? mark.type.create({ chain: inlineWrapChainAttr(chain) }).addToSet(rest)
+        : rest,
+    ),
+  )
 }
 
 export const InlineWrapGuardExtension = Extension.create({
@@ -412,6 +481,22 @@ export const InlineWrapGuardExtension = Extension.create({
           return true
         },
         appendTransaction: (trs, _before, state) => keepWrappersWhole(trs, state),
+        props: {
+          handleDOMEvents: {
+            // An IME draws its text where the caret's marks put it, and text
+            // moved out of a wrapper afterwards (keepWrappersWhole) would be
+            // moved under the IME's hands. So the marks are set before the
+            // composition starts: it is drawn outside from its first letter.
+            compositionstart: (view) => {
+              composeOutside(view)
+              return false
+            },
+            compositionupdate: (view) => {
+              composeOutside(view)
+              return false
+            },
+          },
+        },
         // no transformPasted here: its presence is how the paste actions tell
         // the document editor from a text box or header editor (paste-actions.ts)
       }),
