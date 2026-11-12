@@ -148,3 +148,5 @@ $result = [ordered]@{
 $result | ConvertTo-Json -Depth 6 | Set-Content -Path (Join-Path $Out 'takeover.json') -Encoding utf8
 if ($problems.Count) { Write-Host "TAKEOVER FAILED: $($problems -join '; ')"; exit 1 }
 Write-Host 'TAKEOVER OK'
+# the step's exit code is the last native command's (a reg query of a key the uninstaller removed)
+exit 0
