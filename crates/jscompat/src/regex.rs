@@ -40,6 +40,42 @@
 
 use std::fmt;
 
+/// The most entries the backtrack stack of one search may hold.
+///
+/// A loop whose body is more than one character matcher keeps entries for
+/// each turn until the match attempt ends; every other pattern keeps a number
+/// set by the pattern. One entry is 48 bytes on a 64-bit target, so the bound
+/// is 201 MB, and the counting allocator measured a peak of 252 MB while the
+/// stack makes its last step to the bound. On one unclosed tag read by
+/// `<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` (three entries per character) it
+/// answers up to 1.39M characters and stops from 1.40M; V8 answers up to 8M
+/// and throws a `RangeError` from 9M (Node 22.23.5). Between the two a search
+/// refuses where the TypeScript answers: a listed difference, never a wrong
+/// answer. Chosen for a browser tab and a wasm32 module whose memory does not
+/// shrink.
+pub const BACKTRACK_LIMIT: usize = 1 << 22;
+
+/// A search stopped at [`BACKTRACK_LIMIT`], as V8 throws a `RangeError` when
+/// its stack runs out: what the search would have answered is not known.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct RegexLimit;
+
+impl fmt::Display for RegexLimit {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("a regular expression needed more memory than one search may take")
+    }
+}
+
+impl std::error::Error for RegexLimit {}
+
+/// A regular expression whose searches cannot fail.
+///
+/// Its searches panic if one passes [`BACKTRACK_LIMIT`], and that cannot
+/// happen: only a loop that is more than one character matcher and may turn
+/// more than 4,096 times grows the stack with the text, and
+/// `jscompat/tests/sites.rs` fails when a pattern with such a loop, or a
+/// pattern it cannot read, is built as a `JsRegex`. Such a pattern is a
+/// [`TryJsRegex`].
 #[derive(Debug)]
 pub struct JsRegex {
     regex: regress::Regex,
@@ -124,6 +160,8 @@ struct UnitMatches<'r> {
     text: Units,
     /// Where `lastIndex` stands, in units; `None` after the last match.
     next: Option<usize>,
+    /// The last search stopped at [`BACKTRACK_LIMIT`].
+    exceeded: bool,
 }
 
 impl Iterator for UnitMatches<'_> {
@@ -131,7 +169,11 @@ impl Iterator for UnitMatches<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let from = self.next.take()?;
-        let mut found = self.regex.find_from_ucs2(&self.text.units, from).next()?;
+        let mut matches = self.regex.find_from_ucs2(&self.text.units, from);
+        let Some(mut found) = matches.next() else {
+            self.exceeded = matches.limit_exceeded();
+            return None;
+        };
         let in_units = found.range.clone();
         // as `lastIndex` moves: past the match, one unit further after an empty one
         let after = in_units.end + usize::from(in_units.is_empty());
@@ -153,6 +195,8 @@ struct ShadowMatches<'r> {
     base: usize,
     /// Where `lastIndex` stands, in bytes of the shadow; `None` after the last match.
     next: Option<usize>,
+    /// The last search stopped at [`BACKTRACK_LIMIT`].
+    exceeded: bool,
 }
 
 impl Iterator for ShadowMatches<'_> {
@@ -160,7 +204,11 @@ impl Iterator for ShadowMatches<'_> {
 
     fn next(&mut self) -> Option<Self::Item> {
         let from = self.next.take()?;
-        let mut found = self.regex.find_from(&self.shadow, from).next()?;
+        let mut matches = self.regex.find_from(&self.shadow, from);
+        let Some(mut found) = matches.next() else {
+            self.exceeded = matches.limit_exceeded();
+            return None;
+        };
         let end = found.range.end;
         // as `lastIndex` moves: past the match, one character further after an empty one
         let after = match found.range.is_empty() {
@@ -184,6 +232,51 @@ enum Search<'r, 't> {
     Shadowed(ShadowMatches<'r>),
     /// As its UTF-16 units.
     InUnits(UnitMatches<'r>),
+}
+
+impl Search<'_, '_> {
+    /// Whether the search ended at [`BACKTRACK_LIMIT`] rather than for want
+    /// of matches.
+    fn limit_exceeded(&self) -> bool {
+        match self {
+            Self::Plain(matches) => matches.limit_exceeded(),
+            Self::Shadowed(matches) => matches.exceeded,
+            Self::InUnits(matches) => matches.exceeded,
+        }
+    }
+}
+
+/// The matches of a search, then [`RegexLimit`] if it stopped at the bound.
+pub struct JsMatches<'r, 't> {
+    search: Search<'r, 't>,
+    text: &'t str,
+    done: bool,
+}
+
+impl<'t> Iterator for JsMatches<'_, 't> {
+    type Item = Result<JsMatch<'t>, RegexLimit>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        if self.done {
+            return None;
+        }
+        match self.search.next() {
+            Some(found) => Some(Ok(JsMatch {
+                text: self.text,
+                found,
+            })),
+            None => {
+                self.done = true;
+                self.search.limit_exceeded().then_some(Err(RegexLimit))
+            }
+        }
+    }
+}
+
+/// A search of a [`JsRegex`] passed the bound, which `tests/sites.rs`
+/// proves no `JsRegex` can.
+fn unreachable_limit(limit: RegexLimit) -> ! {
+    panic!("{limit}: a JsRegex holds a pattern that belongs in a TryJsRegex")
 }
 
 impl Iterator for Search<'_, '_> {
@@ -509,6 +602,10 @@ impl JsRegex {
             )));
         }
         regress::Regex::with_flags(pattern, flags)
+            .map(|mut regex| {
+                regex.set_backtrack_limit(Some(BACKTRACK_LIMIT));
+                regex
+            })
             .map(|regex| Self {
                 regex,
                 shadows,
@@ -576,11 +673,13 @@ impl JsRegex {
                 shadow,
                 base,
                 next: Some(start - base),
+                exceeded: false,
             }),
             shadow => Search::InUnits(UnitMatches {
                 regex: &self.regex,
                 text: Units::of(shadow.as_deref().unwrap_or(&text[base..]), base),
                 next: Some(text[base..start].encode_utf16().count()),
+                exceeded: false,
             }),
         }
     }
@@ -595,9 +694,99 @@ impl JsRegex {
         self.shadows || self.counts_units
     }
 
+    /// The matches from byte `start`, then [`RegexLimit`] if the search
+    /// stopped at the bound.
+    fn matches<'r, 't>(&'r self, text: &'t str, start: usize) -> JsMatches<'r, 't> {
+        JsMatches {
+            search: self.search(text, start),
+            text,
+            done: false,
+        }
+    }
+
+    fn checked_test(&self, text: &str) -> Result<bool, RegexLimit> {
+        self.matches(text, 0)
+            .next()
+            .transpose()
+            .map(|found| found.is_some())
+    }
+
+    fn checked_replace_all(
+        &self,
+        text: &str,
+        mut replacement: impl FnMut(&JsMatch<'_>) -> String,
+    ) -> Result<String, RegexLimit> {
+        let mut matches = match self.search(text, 0) {
+            Search::InUnits(mut matches) => {
+                let units: Vec<u16> = text.encode_utf16().collect();
+                let mut out = Vec::with_capacity(units.len());
+                let mut copied = 0;
+                for (in_units, found) in matches.by_ref() {
+                    out.extend_from_slice(&units[copied..in_units.start]);
+                    out.extend(replacement(&JsMatch { text, found }).encode_utf16());
+                    copied = in_units.end;
+                }
+                if matches.exceeded {
+                    return Err(RegexLimit);
+                }
+                out.extend_from_slice(&units[copied..]);
+                return Ok(String::from_utf16_lossy(&out));
+            }
+            matches => matches,
+        };
+        let mut out = String::with_capacity(text.len());
+        let mut copied = 0;
+        for found in matches.by_ref() {
+            let found = JsMatch { text, found };
+            out.push_str(&text[copied..found.start()]);
+            out.push_str(&replacement(&found));
+            copied = found.end();
+        }
+        if matches.limit_exceeded() {
+            return Err(RegexLimit);
+        }
+        out.push_str(&text[copied..]);
+        Ok(out)
+    }
+
+    fn checked_split<'t>(&self, text: &'t str) -> Result<Vec<&'t str>, RegexLimit> {
+        if text.is_empty() {
+            return Ok(if self.checked_test(text)? {
+                Vec::new()
+            } else {
+                vec![text]
+            });
+        }
+        let mut matches = match self.search(text, 0) {
+            Search::InUnits(mut matches) => {
+                let in_units: Vec<_> = matches.by_ref().map(|(in_units, _)| in_units).collect();
+                if matches.exceeded {
+                    return Err(RegexLimit);
+                }
+                let bytes = &matches.text.bytes;
+                return Ok(
+                    pieces_between(in_units.into_iter(), matches.text.units.len())
+                        .into_iter()
+                        .map(|piece| &text[bytes[piece.start]..bytes[piece.end]])
+                        .collect(),
+                );
+            }
+            matches => matches,
+        };
+        let found: Vec<_> = matches.by_ref().map(|found| found.range()).collect();
+        if matches.limit_exceeded() {
+            return Err(RegexLimit);
+        }
+        Ok(pieces_between(found.into_iter(), text.len())
+            .into_iter()
+            .map(|piece| &text[piece])
+            .collect())
+    }
+
     /// `regex.test(text)`
     pub fn test(&self, text: &str) -> bool {
-        self.search(text, 0).next().is_some()
+        self.checked_test(text)
+            .unwrap_or_else(|limit| unreachable_limit(limit))
     }
 
     /// `regex.exec(text)` of a regex without the `g` flag, and `text.match(regex)`.
@@ -622,67 +811,72 @@ impl JsRegex {
     where
         't: 'r,
     {
-        self.search(text, start)
-            .map(move |found| JsMatch { text, found })
+        self.matches(text, start)
+            .map(|found| found.unwrap_or_else(|limit| unreachable_limit(limit)))
     }
 
     /// `text.replace(regex, () => replacement(m))` with the `g` flag.
     pub fn replace_all(
         &self,
         text: &str,
-        mut replacement: impl FnMut(&JsMatch<'_>) -> String,
+        replacement: impl FnMut(&JsMatch<'_>) -> String,
     ) -> String {
-        let matches = match self.search(text, 0) {
-            Search::InUnits(matches) => {
-                let units: Vec<u16> = text.encode_utf16().collect();
-                let mut out = Vec::with_capacity(units.len());
-                let mut copied = 0;
-                for (in_units, found) in matches {
-                    out.extend_from_slice(&units[copied..in_units.start]);
-                    out.extend(replacement(&JsMatch { text, found }).encode_utf16());
-                    copied = in_units.end;
-                }
-                out.extend_from_slice(&units[copied..]);
-                return String::from_utf16_lossy(&out);
-            }
-            matches => matches,
-        };
-        let mut out = String::with_capacity(text.len());
-        let mut copied = 0;
-        for found in matches {
-            let found = JsMatch { text, found };
-            out.push_str(&text[copied..found.start()]);
-            out.push_str(&replacement(&found));
-            copied = found.end();
-        }
-        out.push_str(&text[copied..]);
-        out
+        self.checked_replace_all(text, replacement)
+            .unwrap_or_else(|limit| unreachable_limit(limit))
     }
 
     /// `text.split(regex)` for a regex without capture groups.
     pub fn split<'t>(&self, text: &'t str) -> Vec<&'t str> {
-        if text.is_empty() {
-            return if self.test(text) {
-                Vec::new()
-            } else {
-                vec![text]
-            };
-        }
-        let matches = match self.search(text, 0) {
-            Search::InUnits(mut matches) => {
-                let in_units: Vec<_> = matches.by_ref().map(|(in_units, _)| in_units).collect();
-                let bytes = &matches.text.bytes;
-                return pieces_between(in_units.into_iter(), matches.text.units.len())
-                    .into_iter()
-                    .map(|piece| &text[bytes[piece.start]..bytes[piece.end]])
-                    .collect();
-            }
-            matches => matches,
-        };
-        pieces_between(matches.map(|found| found.range()), text.len())
-            .into_iter()
-            .map(|piece| &text[piece])
-            .collect()
+        self.checked_split(text)
+            .unwrap_or_else(|limit| unreachable_limit(limit))
+    }
+}
+
+/// A regular expression whose searches can stop at [`BACKTRACK_LIMIT`], for a
+/// pattern with a loop that grows the stack with the text. Each search answers
+/// [`RegexLimit`] where it stopped; the caller refuses what it reads with a
+/// reason, as the TypeScript throws, and never takes the stop for "no match".
+#[derive(Debug)]
+pub struct TryJsRegex(JsRegex);
+
+impl TryJsRegex {
+    /// `new RegExp(pattern, flags)`, refused where [`JsRegex::new`] refuses.
+    pub fn new(pattern: &str, flags: &str) -> Result<Self, RegexSyntaxError> {
+        JsRegex::new(pattern, flags).map(Self)
+    }
+
+    /// `regex.test(text)`
+    pub fn try_test(&self, text: &str) -> Result<bool, RegexLimit> {
+        self.0.checked_test(text)
+    }
+
+    /// `regex.exec(text)` of a regex without the `g` flag.
+    pub fn try_exec<'t>(&self, text: &'t str) -> Result<Option<JsMatch<'t>>, RegexLimit> {
+        self.0.matches(text, 0).next().transpose()
+    }
+
+    /// `text.matchAll(regex)`: the matches, then [`RegexLimit`] if the search stopped.
+    pub fn try_find_iter<'r, 't>(&'r self, text: &'t str) -> JsMatches<'r, 't> {
+        self.0.matches(text, 0)
+    }
+
+    /// The `exec` loop after `regex.lastIndex = start`.
+    pub fn try_find_from<'r, 't>(&'r self, text: &'t str, start: usize) -> JsMatches<'r, 't> {
+        self.0.matches(text, start)
+    }
+
+    /// `text.replace(regex, () => replacement(m))` with the `g` flag.
+    pub fn try_replace_all(
+        &self,
+        text: &str,
+        replacement: impl FnMut(&JsMatch<'_>) -> String,
+    ) -> Result<String, RegexLimit> {
+        self.0.checked_replace_all(text, replacement)
+    }
+
+    /// `text.split(regex)` for a regex without capture groups.
+    pub fn try_split<'t>(&self, text: &'t str) -> Result<Vec<&'t str>, RegexLimit> {
+        self.0.checked_split(text)
     }
 }
 
@@ -701,6 +895,21 @@ macro_rules! js_regex {
         static REGEX: ::std::sync::LazyLock<$crate::JsRegex> = ::std::sync::LazyLock::new(|| {
             $crate::JsRegex::new($pattern, $flags).expect("a pattern literal that compiles")
         });
+        &*REGEX
+    }};
+}
+
+/// A regex literal whose searches can stop at [`BACKTRACK_LIMIT`]: see [`TryJsRegex`].
+#[macro_export]
+macro_rules! try_js_regex {
+    ($pattern:expr) => {
+        $crate::try_js_regex!($pattern, "")
+    };
+    ($pattern:expr, $flags:expr) => {{
+        static REGEX: ::std::sync::LazyLock<$crate::TryJsRegex> =
+            ::std::sync::LazyLock::new(|| {
+                $crate::TryJsRegex::new($pattern, $flags).expect("a pattern literal that compiles")
+            });
         &*REGEX
     }};
 }
