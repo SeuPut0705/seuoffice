@@ -9841,8 +9841,6 @@ app.whenReady().then(async () => {
   // the editors take the ceiling before anything can be opened: the headless
   // export opens documents too
   setDelimitedImportLimit(currentCsvImportLimitMb() * 1024 * 1024)
-  // first scan waits for the windows to come up; later ones follow folder changes
-  setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   installRendererProtocol({
     docs: join(DOCS_OUT, 'renderer'),
     sheets: join(SHEETS_OUT, 'renderer'),
@@ -9864,6 +9862,10 @@ app.whenReady().then(async () => {
     await runHeadlessExportEntry(headlessArgv)
     return
   }
+  // first scan waits for the windows to come up; later ones follow folder changes.
+  // Past the headless branch: an export that outlasts the wait must not start
+  // walking the user's folders into the search index.
+  setTimeout(() => ensureFileIndexer()?.refresh(), 4000)
   const lockData = () =>
     pendingLaunchPaths.length > 0
       ? { launchPath: pendingLaunchPaths[0], launchPaths: pendingLaunchPaths }
