@@ -8,7 +8,7 @@
 import { describe, expect, it } from 'vitest'
 import { XMLValidator } from 'fast-xml-parser'
 import { parseSlide, patchTextElementXml, setElementRedaction } from '../src/index'
-import { hasRedactExtIn, REDACT_EL, REDACT_EXT_URI, REDACT_NS } from '../src/redaction-xml'
+import { hasRedactExtIn, REDACT_EL, REDACT_EXT_URI, REDACT_NS_WRITTEN } from '../src/redaction-xml'
 import { attributeOf } from '../src/xml-utils'
 import type { PictureElement, Slide, TextElement } from '../src/types'
 
@@ -33,22 +33,22 @@ const FORMS: Array<[string, (label: string) => string]> = [
   [
     "uri='…'",
     (label) =>
-      `<a:extLst><a:ext uri='${REDACT_EXT_URI}' xmlns:go='${REDACT_NS}'><${REDACT_EL} label='${label}'/></a:ext></a:extLst>`,
+      `<a:extLst><a:ext uri='${REDACT_EXT_URI}' xmlns:go='${REDACT_NS_WRITTEN}'><${REDACT_EL} label='${label}'/></a:ext></a:extLst>`,
   ],
   [
     'uri = "…"',
     (label) =>
-      `<a:extLst><a:ext uri = "${REDACT_EXT_URI}" xmlns:go="${REDACT_NS}"><${REDACT_EL} label="${label}"/></a:ext></a:extLst>`,
+      `<a:extLst><a:ext uri = "${REDACT_EXT_URI}" xmlns:go="${REDACT_NS_WRITTEN}"><${REDACT_EL} label="${label}"/></a:ext></a:extLst>`,
   ],
   [
     'uri="&#123;…&#x7D;"',
     (label) =>
-      `<a:extLst><a:ext uri="${BRACED}" xmlns:go="${REDACT_NS}"><${REDACT_EL} label="${label}"/></a:ext></a:extLst>`,
+      `<a:extLst><a:ext uri="${BRACED}" xmlns:go="${REDACT_NS_WRITTEN}"><${REDACT_EL} label="${label}"/></a:ext></a:extLst>`,
   ],
   [
     'a list closed as </a:extLst >',
     (label) =>
-      `<a:extLst><a:ext uri="${REDACT_EXT_URI}" xmlns:go="${REDACT_NS}"><${REDACT_EL} label="${label}"/></a:ext></a:extLst >`,
+      `<a:extLst><a:ext uri="${REDACT_EXT_URI}" xmlns:go="${REDACT_NS_WRITTEN}"><${REDACT_EL} label="${label}"/></a:ext></a:extLst >`,
   ],
 ]
 
