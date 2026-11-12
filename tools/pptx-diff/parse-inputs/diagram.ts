@@ -282,6 +282,16 @@ export const SLIDES: Entry[] = [
   // ledger dgm-style-idx-infinite: a 400-digit presStyleIdx parses to Infinity, Infinity % n is NaN, and parseSlide throws as above; the Rust takes the cycle color
   dgm('dgm style slot index infinite', 'default', tree([{ t: 'Infinite', style: ['node1', '9'.repeat(400)] }]), { seed: false }),
   dgm(
+    'dgm style slot index beyond 32 bits is still a slot',
+    'default',
+    tree([
+      { t: 'Big a', style: ['node1', '4294967297'] },
+      { t: 'Big b', style: ['node1', '9007199254740991'] },
+      { t: 'Big c', style: ['node1', '4294967296'] },
+      { t: 'Past safe', style: ['node1', '9007199254740993'] },
+    ]),
+  ),
+  dgm(
     'dgm hierBranch values and presAssocID edge cases',
     'orgChart1',
     tree(

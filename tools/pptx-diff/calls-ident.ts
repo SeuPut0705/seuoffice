@@ -297,6 +297,8 @@ const CREATION_FORMS: string[] = [
   `<p:cNvPr id="36" name="B"><p:cNvPr id="37"/></p:cNvPr>`,
   `<p:cNvPr id="38" name="B"><a:hlinkClick r:id=""><a:extLst/></a:hlinkClick></p:cNvPr>`,
   `<p:cNvPr id="39" name="B"><a:hlinkClick r:id=""><a:extLst></a:extLst></a:hlinkClick></p:cNvPr>`,
+  `<p:cNvPr id="" name="B"/>`,
+  `<p:cNvPr id='' name="B"></p:cNvPr>`,
 ]
 
 /** An element without a slice of its own, as a group child is, named by nvId. */
