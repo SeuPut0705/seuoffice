@@ -11,4 +11,6 @@ export const zhTW = {
   diskChangedNoUndo: '此檔案已被其他程式變更或刪除，因此未執行此變更的復原或重做。',
   pageOpNoUndoConfirm:
     '此檔案（{size}）超過了可為復原保留的大小（{limit}），因此此頁面操作無法復原。是否繼續？',
+  undoNoRedoConfirm:
+    '目前的檔案（{size}）超過了可為重做保留的大小（{limit}），因此此次復原無法重做。是否繼續？',
 } satisfies Record<keyof typeof zh, string>

@@ -14,4 +14,6 @@ export const it = {
     'Un altro programma ha modificato o rimosso questo file, quindi Annulla e Ripeti non sono stati applicati a questa modifica.',
   pageOpNoUndoConfirm:
     'Questo file ({size}) supera la dimensione conservata per Annulla ({limit}), quindi questa operazione sulle pagine non potrà essere annullata. Continuare?',
+  undoNoRedoConfirm:
+    'Il file così com’è ora ({size}) supera la dimensione conservata per Ripeti ({limit}), quindi questo Annulla non potrà essere ripetuto. Continuare?',
 } satisfies Record<keyof typeof zh, string>

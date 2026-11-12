@@ -13,4 +13,6 @@ export const cs = {
     'Jiný program tento soubor změnil nebo odstranil, proto se u této změny neprovedlo Zpět ani Znovu.',
   pageOpNoUndoConfirm:
     'Tento soubor ({size}) je větší než velikost uchovávaná pro Zpět ({limit}), proto tuto operaci se stránkami nepůjde vrátit zpět. Pokračovat?',
+  undoNoRedoConfirm:
+    'Soubor v současné podobě ({size}) je větší než velikost uchovávaná pro Znovu ({limit}), proto toto Zpět nepůjde provést znovu. Pokračovat?',
 } satisfies Record<keyof typeof zh, string>

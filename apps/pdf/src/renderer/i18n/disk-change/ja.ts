@@ -13,4 +13,6 @@ export const ja = {
     'このファイルは別のプログラムによって変更または削除されたため、この変更の「元に戻す」と「やり直す」は実行されませんでした。',
   pageOpNoUndoConfirm:
     'このファイル（{size}）は、元に戻すために保持できるサイズ（{limit}）を超えているため、このページ操作は元に戻せません。続行しますか？',
+  undoNoRedoConfirm:
+    '現在のファイル（{size}）は、やり直しのために保持できるサイズ（{limit}）を超えているため、この「元に戻す」はやり直せません。続行しますか？',
 } satisfies Record<keyof typeof zh, string>

@@ -13,4 +13,6 @@ export const pl = {
     'Inny program zmienił lub usunął ten plik, dlatego Cofnij i Ponów nie zostały wykonane dla tej zmiany.',
   pageOpNoUndoConfirm:
     'Ten plik ({size}) jest większy niż rozmiar przechowywany na potrzeby Cofnij ({limit}), dlatego tej operacji na stronach nie będzie można cofnąć. Kontynuować?',
+  undoNoRedoConfirm:
+    'Plik w obecnej postaci ({size}) jest większy niż rozmiar przechowywany na potrzeby Ponów ({limit}), dlatego tego Cofnij nie będzie można ponowić. Kontynuować?',
 } satisfies Record<keyof typeof zh, string>

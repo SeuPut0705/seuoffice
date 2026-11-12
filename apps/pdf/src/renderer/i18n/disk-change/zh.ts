@@ -11,4 +11,7 @@ export const zh = {
   // asked before a page operation on a file too large to keep for Undo
   pageOpNoUndoConfirm:
     '此文件（{size}）超过了可为撤销保留的大小（{limit}），因此此页面操作无法撤销。是否继续？',
+  // asked before an Undo while the file as it is now is too large to keep for Redo
+  undoNoRedoConfirm:
+    '当前文件（{size}）超过了可为重做保留的大小（{limit}），因此此次撤销无法重做。是否继续？',
 }

@@ -13,4 +13,6 @@ export const fr = {
     'Un autre programme a modifié ou supprimé ce fichier : cette modification n’a donc été ni annulée ni rétablie.',
   pageOpNoUndoConfirm:
     'Ce fichier ({size}) dépasse la taille conservée pour l’annulation ({limit}) : cette opération sur les pages ne pourra pas être annulée. Continuer ?',
+  undoNoRedoConfirm:
+    'Le fichier actuel ({size}) dépasse la taille conservée pour le rétablissement ({limit}) : cette annulation ne pourra pas être rétablie. Continuer ?',
 } satisfies Record<keyof typeof zh, string>

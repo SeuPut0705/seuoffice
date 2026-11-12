@@ -137,15 +137,20 @@ describe('pasting copied pages into the file', () => {
     expect(user.asked).toEqual([])
 
     const steps = recordWritten(NO_WRITTEN_STEPS, pasted.before)
-    const undone = await stepWrittenFile(b.api, b.path, steps, 'undo', { diskChanged: false })
+    const undone = await stepWrittenFile(b.api, b.path, steps, 'undo', {
+      diskChanged: false,
+      gate: user.gate,
+    })
     expect(undone.ok).toBe(true)
     expect(readFileSync(b.path).equals(original)).toBe(true)
     if (!undone.ok) return
     const redone = await stepWrittenFile(b.api, b.path, undone.steps, 'redo', {
       diskChanged: false,
+      gate: user.gate,
     })
     expect(redone.ok).toBe(true)
     expect(await pageWidths(b.path)).toEqual([300, 110, 310])
+    expect(user.asked).toEqual([])
   })
 
   it('asks before it writes a file too large to keep, and Cancel writes nothing', async () => {

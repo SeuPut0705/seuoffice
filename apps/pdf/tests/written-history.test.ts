@@ -6,7 +6,9 @@ import {
   recordWritten,
   stepWrittenFile,
   writeInPlace,
+  type NoUndoGate,
   type NoUndoQuestion,
+  type WrittenLimits,
   type WrittenSteps,
 } from '../src/renderer/written-history'
 import { PDF_READ_CHUNK_BYTES } from '../src/shared/ipc'
@@ -67,6 +69,15 @@ const bytesOf = (...values: number[]) => new Uint8Array(values)
 const held = (steps: WrittenSteps) =>
   [...steps.undo, ...steps.redo].reduce((sum, each) => sum + each.byteLength, 0)
 
+/** The gate of a step whose way back fits: a question there fails the test */
+const unasked = (limits?: WrittenLimits): NoUndoGate => ({
+  consent: { given: false },
+  confirm: () => {
+    throw new Error('asked about a step that can be taken back')
+  },
+  limits,
+})
+
 /** One change written in place by a person who goes on whatever is asked: the file before it
  *  is kept, then the file becomes `after` */
 async function change(
@@ -96,11 +107,17 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     expect(steps.undo).toHaveLength(1)
     expect(steps.undo[0]!.byteLength).toBe(big.byteLength)
 
-    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })
+    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
+      diskChanged: false,
+      gate: unasked(),
+    })
     expect(undone.ok).toBe(true)
     if (undone.ok) steps = undone.steps
     expect(file.disk.byteLength).toBe(big.byteLength)
-    const redone = await stepWrittenFile(file.api, PATH, steps, 'redo', { diskChanged: false })
+    const redone = await stepWrittenFile(file.api, PATH, steps, 'redo', {
+      diskChanged: false,
+      gate: unasked(),
+    })
     expect(redone.ok).toBe(true)
 
     expect(file.wholeReads).toEqual([])
@@ -117,7 +134,10 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     expect([steps.undo.length, steps.redo.length]).toEqual([2, 0])
 
     const walk = async (direction: 'undo' | 'redo') => {
-      const result = await stepWrittenFile(file.api, PATH, steps, direction, { diskChanged: false })
+      const result = await stepWrittenFile(file.api, PATH, steps, direction, {
+        diskChanged: false,
+        gate: unasked(),
+      })
       if (!result.ok) throw new Error(result.reason)
       steps = result.steps
       return [...file.disk]
@@ -142,12 +162,12 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
 
     const first = await stepWrittenFile(file.api, PATH, steps, 'undo', {
       diskChanged: false,
-      limits,
+      gate: unasked(limits),
     })
     expect(first.ok && [...file.disk]).toEqual([2, 2, 2, 2])
     const second = await stepWrittenFile(file.api, PATH, first.ok ? first.steps : steps, 'undo', {
       diskChanged: false,
-      limits,
+      gate: unasked(limits),
     })
     expect(second.ok && [...file.disk]).toEqual([1, 1, 1, 1])
     // what the Undo button reads: nothing older is left to go back to
@@ -186,7 +206,7 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
 
     const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
       diskChanged: false,
-      limits,
+      gate: unasked(limits),
     })
     expect(undone.ok && [...file.disk]).toEqual([2, 2, 2, 2])
     // the 8-byte file now waits for Redo; with it, only 2 bytes are left for older steps
@@ -207,7 +227,9 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(2))
     file.restoreAnswer = { ok: false, error: 'disk full' }
 
-    expect(await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })).toEqual({
+    expect(
+      await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false, gate: unasked() }),
+    ).toEqual({
       ok: false,
       reason: 'failed',
       error: 'disk full',
@@ -225,6 +247,7 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
       expect(
         await stepWrittenFile(file.api, PATH, { undo: steps.undo, redo: steps.undo }, direction, {
           diskChanged: true,
+          gate: unasked(),
         }),
       ).toEqual({ ok: false, reason: 'disk-changed' })
     }
@@ -237,7 +260,9 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
     const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(2))
     file.restoreAnswer = { ok: false, error: 'external-modified' }
 
-    expect(await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })).toEqual({
+    expect(
+      await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false, gate: unasked() }),
+    ).toEqual({
       ok: false,
       reason: 'disk-changed',
     })
@@ -250,7 +275,9 @@ describe('the file kept around a page operation, for Undo and Redo', () => {
       throw new Error('ENOENT: no such file or directory')
     }
 
-    expect(await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false })).toEqual({
+    expect(
+      await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false, gate: unasked() }),
+    ).toEqual({
       ok: false,
       reason: 'disk-changed',
     })
@@ -325,10 +352,10 @@ describe('a page operation on a file too large to keep for Undo', () => {
     expect(op.writes).toBe(0)
     expect(file.restores).toBe(0)
     expect([...file.disk]).toEqual(LARGE)
-    // the step from before is still the way back
+    // the step from before is still the way back, for a person who then goes on with the Undo
     const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
       diskChanged: false,
-      limits,
+      gate: { consent: { given: false }, confirm: () => true, limits },
     })
     expect(undone.ok && [...file.disk]).toEqual([7])
   })
@@ -513,5 +540,112 @@ describe('a page operation while edits are waiting to be saved', () => {
     expect(user.asked).toEqual([{ fileBytes: 6, limitBytes: 4 }])
     expect(op.writes).toBe(0)
     expect([...file.disk]).toEqual(LARGE)
+  })
+})
+
+describe('an Undo or Redo when the file as it is now is too large to keep', () => {
+  const limits = { bytes: 4, steps: MAX_WRITTEN_STEPS }
+  const LARGE = [1, 2, 3, 4, 5, 6]
+
+  /** A file that fitted (`[7]`, kept as an Undo step) and that a page operation made too large */
+  async function grownPastTheLimit() {
+    const file = fakeFile(bytesOf(7))
+    const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(...LARGE), limits)
+    expect(steps.undo.map((each) => [...each])).toEqual([[7]])
+    return { file, steps }
+  }
+
+  it('asks before the Undo writes anything, naming the file size and the limit', async () => {
+    const { file, steps } = await grownPastTheLimit()
+    const asked: Array<NoUndoQuestion & { restoresSoFar: number }> = []
+
+    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
+      diskChanged: false,
+      gate: {
+        consent: { given: false },
+        confirm: (question) => {
+          asked.push({ ...question, restoresSoFar: file.restores })
+          return true
+        },
+        limits,
+      },
+    })
+
+    expect(asked).toEqual([{ fileBytes: 6, limitBytes: 4, restoresSoFar: 0 }])
+    // the person went on: the file is back, and there is nothing to redo
+    expect(undone).toEqual({ ok: true, steps: { undo: [], redo: [] } })
+    expect([...file.disk]).toEqual([7])
+  })
+
+  it('writes nothing and leaves both stacks as they were when the person cancels', async () => {
+    const { file, steps: kept } = await grownPastTheLimit()
+    const steps = { undo: kept.undo, redo: [bytesOf(8)] }
+    const user = person(false)
+
+    for (const direction of ['undo', 'redo'] as const) {
+      expect(
+        await stepWrittenFile(file.api, PATH, steps, direction, {
+          diskChanged: false,
+          gate: { consent: { given: false }, confirm: user.confirm, limits },
+        }),
+      ).toEqual({ ok: false, reason: 'declined' })
+    }
+
+    expect(user.asked).toEqual([
+      { fileBytes: 6, limitBytes: 4 },
+      { fileBytes: 6, limitBytes: 4 },
+    ])
+    expect(file.restores).toBe(0)
+    expect([...file.disk]).toEqual(LARGE)
+    expect(steps.undo.map((each) => [...each])).toEqual([[7]])
+    expect(steps.redo.map((each) => [...each])).toEqual([[8]])
+  })
+
+  it('asks again after a cancel, and not again for the document after Continue', async () => {
+    const { file, steps } = await grownPastTheLimit()
+    const answers = [false, true]
+    const asked: NoUndoQuestion[] = []
+    const gate: NoUndoGate = {
+      consent: { given: false },
+      confirm: (question) => {
+        asked.push(question)
+        return answers[asked.length - 1] ?? false
+      },
+      limits,
+    }
+
+    expect(
+      await stepWrittenFile(file.api, PATH, steps, 'undo', { diskChanged: false, gate }),
+    ).toEqual({ ok: false, reason: 'declined' })
+    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
+      diskChanged: false,
+      gate,
+    })
+    expect(undone.ok && [...file.disk]).toEqual([7])
+    expect(asked).toHaveLength(2)
+
+    // the same document grows past the limit once more: the answer given stands
+    const again = await change(file, NO_WRITTEN_STEPS, bytesOf(...LARGE), limits)
+    const second = await stepWrittenFile(file.api, PATH, again, 'undo', {
+      diskChanged: false,
+      gate,
+    })
+    expect(second.ok && [...file.disk]).toEqual([7])
+    expect(asked).toHaveLength(2)
+  })
+
+  it('never asks while the file as it is now fits, and keeps it for the way back', async () => {
+    const file = fakeFile(bytesOf(7))
+    const steps = await change(file, NO_WRITTEN_STEPS, bytesOf(1, 2, 3, 4), limits)
+    const user = person(false)
+
+    const undone = await stepWrittenFile(file.api, PATH, steps, 'undo', {
+      diskChanged: false,
+      gate: { consent: { given: false }, confirm: user.confirm, limits },
+    })
+
+    expect(user.asked).toEqual([])
+    expect(undone.ok && undone.steps.redo.map((each) => [...each])).toEqual([[1, 2, 3, 4]])
+    expect([...file.disk]).toEqual([7])
   })
 })

@@ -12,4 +12,6 @@ export const pt = {
     'Outro programa alterou ou removeu este arquivo, por isso Desfazer e Refazer não foram aplicados a esta alteração.',
   pageOpNoUndoConfirm:
     'Este arquivo ({size}) é maior que o tamanho mantido para Desfazer ({limit}), por isso esta operação de páginas não poderá ser desfeita. Continuar?',
+  undoNoRedoConfirm:
+    'O arquivo como está agora ({size}) é maior que o tamanho mantido para Refazer ({limit}), por isso este Desfazer não poderá ser refeito. Continuar?',
 } satisfies Record<keyof typeof zh, string>

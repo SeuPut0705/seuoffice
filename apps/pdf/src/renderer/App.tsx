@@ -1382,6 +1382,9 @@ export default function App() {
       too large to keep for Undo. Asked once per document: opening a document in this tab
       starts over, and a reloaded or reopened tab starts with a new renderer */
   const noUndoConsentRef = useRef<NoUndoConsent>({ given: false })
+  /** The same for an Undo that cannot be redone, because the file as it is now is too large
+      to keep for Redo. A question of its own: agreeing to the one above does not answer it */
+  const noRedoConsentRef = useRef<NoUndoConsent>({ given: false })
   const [pwInput, setPwInput] = useState('')
   const [pwWrong, setPwWrong] = useState(false)
   const [extractDlg, setExtractDlg] = useState(false)
@@ -2074,6 +2077,7 @@ export default function App() {
     async (path: string) => {
       try {
         noUndoConsentRef.current = { given: false }
+        noRedoConsentRef.current = { given: false }
         setFilePath(path)
         setOpenError(null)
         await loadDoc(path, null)
@@ -7801,6 +7805,18 @@ export default function App() {
     return pageCount
   }
 
+  /** The question asked before a write that cannot be taken back, in the app's confirm */
+  const wayBackGate = (
+    consent: NoUndoConsent,
+    question: 'pageOpNoUndoConfirm' | 'undoNoRedoConfirm',
+  ): NoUndoGate => ({
+    consent,
+    confirm: ({ fileBytes, limitBytes }) =>
+      window.confirm(t(question, { size: humanBytes(fileBytes), limit: humanBytes(limitBytes) })),
+  })
+  /** Before a page operation on a file too large to keep: it cannot be undone */
+  const noUndoGate = () => wayBackGate(noUndoConsentRef.current, 'pageOpNoUndoConfirm')
+
   /** Undo or Redo of a change written at once, once no pending edit is left; false when there is none */
   const stepWritten = (direction: 'undo' | 'redo'): boolean => {
     const steps = writtenRef.current
@@ -7811,8 +7827,16 @@ export default function App() {
       try {
         const result = await stepWrittenFile(window.pdfApi, filePath, steps, direction, {
           diskChanged: diskChange !== null,
+          // the file as it is now is too large to keep: this Undo cannot be redone. A Redo
+          // writes the page operation again, which then cannot be undone
+          gate:
+            direction === 'undo'
+              ? wayBackGate(noRedoConsentRef.current, 'undoNoRedoConfirm')
+              : noUndoGate(),
         })
         if (!result.ok) {
+          // the person chose not to take the step: nothing was written, the steps stay
+          if (result.reason === 'declined') return
           // the kept file would replace what another program wrote: say so, write nothing
           if (result.reason === 'disk-changed') showNotice(t('diskChangedNoUndo'))
           else opFailed(result.error)
@@ -7828,13 +7852,6 @@ export default function App() {
     return true
   }
 
-  const noUndoGate = (): NoUndoGate => ({
-    consent: noUndoConsentRef.current,
-    confirm: ({ fileBytes, limitBytes }) =>
-      window.confirm(
-        t('pageOpNoUndoConfirm', { size: humanBytes(fileBytes), limit: humanBytes(limitBytes) }),
-      ),
-  })
   /** The pending edits, which a change written in place saves first (as flushThen does) */
   const pendingEdits = (): PendingEdits | undefined =>
     dirty ? { fileBytes: fileSize, save: () => save(false, true) } : undefined

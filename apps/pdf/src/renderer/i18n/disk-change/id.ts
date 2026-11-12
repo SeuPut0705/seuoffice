@@ -14,4 +14,6 @@ export const id = {
     'Program lain mengubah atau menghapus file ini, sehingga Urungkan dan Ulangi untuk perubahan ini tidak dijalankan.',
   pageOpNoUndoConfirm:
     'File ini ({size}) lebih besar dari ukuran yang disimpan untuk Urungkan ({limit}), sehingga operasi halaman ini tidak dapat diurungkan. Lanjutkan?',
+  undoNoRedoConfirm:
+    'File seperti sekarang ({size}) lebih besar dari ukuran yang disimpan untuk Ulangi ({limit}), sehingga Urungkan ini tidak dapat diulangi. Lanjutkan?',
 } satisfies Record<keyof typeof zh, string>
