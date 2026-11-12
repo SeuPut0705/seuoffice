@@ -8,7 +8,6 @@ publish.workspace = true
 
 [dependencies]
 jscompat.workspace = true
-libc.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true
@@ -27,6 +26,10 @@ flate2.workspace = true
 icu_normalizer = "2"
 # String.prototype.localeCompare of html/asset_lifecycle (root collation; Unicode-3.0, as docx-engine uses it)
 icu_collator = "2.4"
+
+# errno numbers of the platform, read as Node names them (node_fs)
+[target.'cfg(unix)'.dependencies]
+libc.workspace = true
 
 # the file identity of fs.statSync on Windows (rename_validation::is_same_file)
 [target.'cfg(windows)'.dependencies]

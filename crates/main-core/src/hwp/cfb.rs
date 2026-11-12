@@ -1128,8 +1128,7 @@ pub fn write(cfb: &mut Container) -> Result<Vec<u8>, CfbError> {
         o.w4(i64::from(file.size));
         o.w4(0);
     }
-    for i in 1..cfb.file_index.len() {
-        let file = &cfb.file_index[i];
+    for file in cfb.file_index.iter().skip(1) {
         if file.size >= 0x1000 {
             o.l = ((i64::from(file.start) + 1) << 9) as usize;
             let Some(content) = file.content.as_deref() else {
@@ -1143,8 +1142,7 @@ pub fn write(cfb: &mut Container) -> Result<Vec<u8>, CfbError> {
             o.l += (file.size as usize + 511) & !511;
         }
     }
-    for i in 1..cfb.file_index.len() {
-        let file = &cfb.file_index[i];
+    for file in cfb.file_index.iter().skip(1) {
         if file.size > 0 && file.size < 0x1000 {
             let Some(content) = file.content.as_deref() else {
                 return throw("Cannot read properties of undefined (reading '0')");

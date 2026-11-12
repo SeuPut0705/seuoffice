@@ -63,7 +63,7 @@ pub fn install_local_font_files(
         let stem = js_regex!(r"[\\/:]", "g").replace_all(primary, |_| String::new());
         let dest = join(&[env.dir, &format!("{stem}{style_tag}.{ext}")]);
         // unreadable or locked source: skip
-        if fs::copy(path, &dest).is_ok() {
+        if crate::node_fs::copy_file(path, &dest, false).is_ok() {
             installed.extend(families.iter().cloned());
         }
     }

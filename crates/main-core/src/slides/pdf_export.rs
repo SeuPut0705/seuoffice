@@ -10,7 +10,7 @@ use jscompat::{js_regex, math_round, number_to_string};
 use serde_json::{Map, Number, Value};
 
 use crate::node_fs::node_error;
-use crate::packages::electron_utils::print_window::{JsError, mkdtemp, rm_recursive_force};
+use crate::packages::electron_utils::print_window::{JsError, rm_recursive_force};
 
 /// one clickable overlay: fractions of the page box and the target
 #[derive(Debug, Clone, PartialEq)]
@@ -230,7 +230,8 @@ pub fn export_slides_pdf<W: PdfExportWindow>(
     let mut win = create_window()?;
     let mut temp_dir: Option<String> = None;
     let outcome = (|| -> Result<ExportSlidesPdfResult, JsError> {
-        let dir = mkdtemp(&join(&[options.tmp_dir, "seuoffice-slides-pdf-"]))?;
+        let dir =
+            crate::node_fs::mkdtemp_random(&join(&[options.tmp_dir, "seuoffice-slides-pdf-"]))?;
         let dir = temp_dir.insert(dir).as_str();
         let html_path = join(&[dir, "slides.html"]);
         let html = build_pdf_export_html(

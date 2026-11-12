@@ -1017,16 +1017,17 @@ fn error_json(error: &crate::node_fs::NodeError) -> Value {
 fn store_options(
     script: &Value,
     cx: &Context,
-) -> Result<(String, TemplateSelectionStoreOptions), CallError> {
+) -> Result<(String, TemplateSelectionStoreOptions, Rc<Cell<f64>>), CallError> {
     let user_data = script
         .get("userData")
         .and_then(Value::as_str)
         .ok_or_else(|| bad("userData"))?
         .to_owned();
     let clock = Rc::new(Cell::new(cx.now_ms));
+    let ticking = Rc::clone(&clock);
     let now: Box<dyn Fn() -> f64> = Box::new(move || {
-        let t = clock.get();
-        clock.set(t + 1.0);
+        let t = ticking.get();
+        ticking.set(t + 1.0);
         t
     });
     Ok((
@@ -1035,6 +1036,7 @@ fn store_options(
             max_documents: opt_f64(script, "maxDocuments")?,
             now: Some(now),
         },
+        clock,
     ))
 }
 
@@ -1065,7 +1067,7 @@ fn input_of(op: &Value) -> Option<JsonValue> {
 /// `move` on the store; one result per op, `{ error }` where it throws
 fn store_script(args: &[Value], cx: &Context) -> Answer {
     let script = arg(args, 0).ok_or_else(|| bad("the script"))?;
-    let (user_data, options) = store_options(script, cx)?;
+    let (user_data, options, clock) = store_options(script, cx)?;
     let store = TemplateSelectionStore::new(&user_data, options);
     let ops = script
         .get("ops")
@@ -1093,6 +1095,10 @@ fn store_script(args: &[Value], cx: &Context) -> Answer {
             Some("move") => store
                 .move_record(path("from")?, path("to")?)
                 .map(|()| Value::Null),
+            Some("tick") => {
+                clock.set(clock.get() + f64_of(op.get("ms"), "ms")?);
+                Ok(Value::Null)
+            }
             _ => return Err(bad("an op")),
         };
         results.push(result.unwrap_or_else(|e| error_json(&e)));
@@ -1105,7 +1111,7 @@ fn store_script(args: &[Value], cx: &Context) -> Answer {
 /// which changes the `path` of a document as its window would
 fn memory_script(args: &[Value], cx: &Context) -> Answer {
     let script = arg(args, 0).ok_or_else(|| bad("the script"))?;
-    let (user_data, options) = store_options(script, cx)?;
+    let (user_data, options, clock) = store_options(script, cx)?;
     let mut memory = TemplateSelectionMemory::new(&user_data, options);
     let mut docs: Vec<(String, TemplateSelectionDocument)> = Vec::new();
     for (id, (name, path)) in script
@@ -1165,6 +1171,10 @@ fn memory_script(args: &[Value], cx: &Context) -> Answer {
             }
             Some("moved") => {
                 memory.moved(text("old")?, text("new")?);
+                results.push(Value::Null);
+            }
+            Some("tick") => {
+                clock.set(clock.get() + f64_of(op.get("ms"), "ms")?);
                 results.push(Value::Null);
             }
             Some("setPath") => {

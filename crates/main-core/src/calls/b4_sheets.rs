@@ -992,6 +992,9 @@ fn request_call(
         "open" => {
             let timeout = match arg(args, 3).and_then(|options| options.get("timeoutMs")) {
                 Some(Value::Number(n)) => n.as_f64(),
+                // a key that is there and `null` is a NaN (how it crosses the
+                // wire); a key that is not there is `undefined`, the default
+                Some(Value::Null) => Some(f64::NAN),
                 _ => None,
             };
             client.open(

@@ -18,14 +18,13 @@
 use super::child::{Ended, capture};
 use super::font_locate::{Platform, read_names};
 use super::node_io::{
-    base64url_encode, mkdtemp, random_bytes, read_file_bytes, rm_recursive_force, tmpdir,
-    write_file_mode,
+    base64url_encode, random_bytes, read_file_bytes, rm_recursive_force, tmpdir, write_file_mode,
 };
 use crate::node_fs::NodeError;
 use icu_collator::Collator;
 use icu_collator::options::CollatorOptions;
 use jscompat::node_path::host;
-use jscompat::{JsonValue, date_parse, js_regex, json_parse, trim, try_js_regex};
+use jscompat::{JsonSyntaxError, JsonValue, date_parse, js_regex, json_parse, trim, try_js_regex};
 use std::fs;
 use std::time::Duration;
 
@@ -95,8 +94,8 @@ impl SystemStoreError {
 pub enum Thrown {
     Store(SystemStoreError),
     Node(NodeError),
-    /// `JSON.parse` of the tool's output
-    JsonSyntax,
+    /// `JSON.parse` of the tool's output: the V8 message
+    JsonSyntax(String),
     /// a regular expression search past the backtrack bound (V8: `RangeError`)
     RegexLimit,
 }
@@ -194,7 +193,7 @@ pub struct InPlaceSigner {
 
 /// Scratch directory readable by this user only, removed when `work` settles
 fn with_private_dir<T>(work: impl FnOnce(&str) -> Result<T, Thrown>) -> Result<T, Thrown> {
-    let dir = mkdtemp(&host::join(&[&tmpdir(), "seuoffice-cert-"]))?;
+    let dir = crate::node_fs::mkdtemp_random(&host::join(&[&tmpdir(), "seuoffice-cert-"]))?;
     let result = work(&dir);
     rm_recursive_force(&dir)?;
     result
@@ -448,12 +447,16 @@ pub struct WindowsCertificate {
     pub der: Vec<u8>,
 }
 
+fn json_syntax(error: &JsonSyntaxError) -> Thrown {
+    Thrown::JsonSyntax(error.message().to_owned())
+}
+
 pub fn parse_windows_certificates(json: &str) -> Result<Vec<WindowsCertificate>, Thrown> {
     let text = json_text(json);
     if text.is_empty() {
         return Ok(Vec::new());
     }
-    let parsed = json_parse(text).map_err(|_| Thrown::JsonSyntax)?;
+    let parsed = json_parse(text).map_err(|error| json_syntax(&error))?;
     let mut out = Vec::new();
     for row in rows_of(parsed) {
         let thumbprint = row.get("Thumbprint");
@@ -511,7 +514,7 @@ pub fn parse_windows_chain(json: &str) -> Result<Vec<Vec<u8>>, Thrown> {
     if text.is_empty() {
         return Ok(Vec::new());
     }
-    let parsed = json_parse(text).map_err(|_| Thrown::JsonSyntax)?;
+    let parsed = json_parse(text).map_err(|error| json_syntax(&error))?;
     Ok(rows_of(parsed)
         .into_iter()
         .filter_map(|row| match row {

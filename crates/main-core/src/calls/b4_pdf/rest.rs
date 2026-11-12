@@ -217,12 +217,14 @@ pub(super) fn rest(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                         .map(|r| json!({"thumbprint": r.thumbprint, "der": hex_encode(&r.der)}))
                         .collect(),
                 ),
+                Err(CertThrown::JsonSyntax(message)) => json!({"syntaxError": message}),
                 Err(_) => json!({"syntaxError": true}),
             })
         }),
         "system-certificates.parseWindowsChain" => str_arg(args, 0).map(|text| {
             Some(match parse_windows_chain(text) {
                 Ok(rows) => Value::Array(rows.iter().map(|r| Value::String(hex_encode(r))).collect()),
+                Err(CertThrown::JsonSyntax(message)) => json!({"syntaxError": message}),
                 Err(_) => json!({"syntaxError": true}),
             })
         }),
@@ -856,7 +858,7 @@ fn cert_error(e: CertThrown) -> CallError {
             message: e.code,
         },
         CertThrown::Node(e) => masked_scratch(CallError::from(e)),
-        CertThrown::JsonSyntax => CallError::plain("SyntaxError"),
+        CertThrown::JsonSyntax(message) => CallError::plain(&message),
         CertThrown::RegexLimit => CallError::plain("RangeError"),
     }
 }

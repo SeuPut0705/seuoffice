@@ -13,9 +13,7 @@ use serde_json::{Map, Value};
 
 use super::ipc::{MAX_PRINT_CHARS, MAX_PRINT_PAGES, PrintPage};
 use crate::node_fs::node_error;
-use crate::packages::electron_utils::print_window::{
-    JsError, PrintReport, mkdtemp, rm_recursive_force,
-};
+use crate::packages::electron_utils::print_window::{JsError, PrintReport, rm_recursive_force};
 
 /// Paper sides in mm: ISO A3-A5, JIS B4-B5, US Letter, Legal and Tabloid.
 const PAPER_SIDES_MM: [f64; 11] = [
@@ -213,7 +211,7 @@ fn with_print_window<T, W: PrintWindow>(
     create_window: &mut dyn FnMut() -> Result<W, JsError>,
     use_: impl FnOnce(&mut W) -> Result<T, JsError>,
 ) -> Result<T, JsError> {
-    let dir = mkdtemp(&join(&[tmp_dir, "ieum-hwp-print-"]))?;
+    let dir = crate::node_fs::mkdtemp_random(&join(&[tmp_dir, "ieum-hwp-print-"]))?;
     let mut win: Option<W> = None;
     let outcome = (|| -> Result<T, JsError> {
         let mut names: Vec<String> = Vec::new();

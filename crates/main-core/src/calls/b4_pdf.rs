@@ -38,7 +38,7 @@ use crate::pdf::pdfium::PdfiumError;
 use fake::{FakeHb, FakePdfium};
 use jscompat::{JsRegex, JsonValue, js_regex, json_value_from_serde, sha1_hex};
 use serde_json::{Map, Number, Value, json};
-use std::sync::{Mutex, OnceLock};
+use std::sync::Mutex;
 
 mod rest;
 use rest::rest;
@@ -153,14 +153,16 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         }
         "font-locate.findSystemFont" => str_arg(args, 0).and_then(|ps| {
             let family = str_arg(args, 1)?;
-            Ok(Some(face_bytes_json(
-                locator().lock().expect("the font lock").find_system_font(ps, family),
-            )))
+            let home = str_arg(args, 2)?;
+            Ok(Some(face_bytes_json(with_locator(home, |l| {
+                l.find_system_font(ps, family)
+            }))))
         }),
-        "font-locate.findFontCovering" => str_arg(args, 0).map(|text| {
-            Some(face_bytes_json(
-                locator().lock().expect("the font lock").find_font_covering(text),
-            ))
+        "font-locate.findFontCovering" => str_arg(args, 0).and_then(|text| {
+            let home = str_arg(args, 1)?;
+            Ok(Some(face_bytes_json(with_locator(home, |l| {
+                l.find_font_covering(text)
+            }))))
         }),
         "font-similar.os2Traits" => {
             let font = arg(args, 0).and_then(Value::as_str).map(hex_decode);
@@ -187,11 +189,12 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
             out.insert("italic".into(), Value::Bool(t.italic));
             Ok(Some(Value::Object(out)))
         }
-        "font-similar.similarFontFor" => str_arg(args, 1).map(|drawn| {
+        "font-similar.similarFontFor" => str_arg(args, 1).and_then(|drawn| {
             let face = source_face(arg(args, 0));
             let italic = arg(args, 2).and_then(Value::as_bool).unwrap_or(false);
-            let found = similar_font_for(&mut locator().lock().expect("the font lock"), &face, drawn, italic);
-            Some(match found {
+            let home = str_arg(args, 3)?;
+            let found = with_locator(home, |l| similar_font_for(l, &face, drawn, italic));
+            Ok(Some(match found {
                 Some(f) => json!({
                     "len": f.bytes.len(),
                     "sha1": sha1_hex(&f.bytes),
@@ -199,7 +202,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                     "sourceBold": f.source_bold,
                 }),
                 None => Value::Null,
-            })
+            }))
         }),
         "font-subset.identityCffCharset" => str_arg(args, 0).and_then(|hex| {
             identity_cff_charset(&hex_decode(hex))
@@ -556,9 +559,12 @@ fn export_paths(args: &[Value]) -> Answer {
 
 // ---- fonts ---------------------------------------------------------------------
 
-fn locator() -> &'static Mutex<FontLocator> {
-    static LOCATOR: OnceLock<Mutex<FontLocator>> = OnceLock::new();
-    LOCATOR.get_or_init(|| {
+/// The font index of the home folder a case names: built on first use and kept, like the
+/// module state of `sfnt.ts`. The harness passes the same home for every case.
+fn locator(home: &str) -> std::sync::MutexGuard<'static, Option<(String, FontLocator)>> {
+    static LOCATOR: Mutex<Option<(String, FontLocator)>> = Mutex::new(None);
+    let mut guard = LOCATOR.lock().expect("the font lock");
+    if guard.as_ref().is_none_or(|(h, _)| h != home) {
         let platform = if cfg!(target_os = "macos") {
             Platform::Darwin
         } else if cfg!(windows) {
@@ -566,11 +572,21 @@ fn locator() -> &'static Mutex<FontLocator> {
         } else {
             Platform::Other
         };
-        let home = std::env::var("HOME")
-            .or_else(|_| std::env::var("USERPROFILE"))
-            .unwrap_or_default();
-        Mutex::new(FontLocator::new(FontEnv { platform, home }))
-    })
+        *guard = Some((
+            home.to_owned(),
+            FontLocator::new(FontEnv {
+                platform,
+                home: home.to_owned(),
+            }),
+        ));
+    }
+    guard
+}
+
+fn with_locator<T>(home: &str, run: impl FnOnce(&mut FontLocator) -> T) -> T {
+    let mut guard = locator(home);
+    let (_, locator) = guard.as_mut().expect("the locator was just made");
+    run(locator)
 }
 
 fn face_bytes_json(bytes: Option<Vec<u8>>) -> Value {

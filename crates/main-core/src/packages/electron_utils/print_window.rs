@@ -35,35 +35,6 @@ impl From<NodeError> for JsError {
     }
 }
 
-/// `fs.mkdtemp(prefix)`: the prefix with six random characters, a folder only
-/// the owner can use.
-pub fn mkdtemp(prefix: &str) -> Result<String, NodeError> {
-    const CHARS: &[u8] = b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-    loop {
-        let suffix: String = (0..6)
-            .map(|_| {
-                let at = (jscompat::math_random() * CHARS.len() as f64) as usize;
-                char::from(CHARS[at.min(CHARS.len() - 1)])
-            })
-            .collect();
-        let path = format!("{prefix}{suffix}");
-        // fs.mkdtemp creates the folder with mode 0o700
-        #[cfg(unix)]
-        let builder = {
-            let mut builder = std::fs::DirBuilder::new();
-            std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
-            builder
-        };
-        #[cfg(not(unix))]
-        let builder = std::fs::DirBuilder::new();
-        match builder.create(&path) {
-            Ok(()) => return Ok(path),
-            Err(e) if e.kind() == std::io::ErrorKind::AlreadyExists => continue,
-            Err(e) => return Err(node_error(&e, "mkdtemp", &format!("{prefix}XXXXXX"))),
-        }
-    }
-}
-
 /// `rm(path, { recursive: true, force: true })`
 pub fn rm_recursive_force(path: &str) -> Result<(), NodeError> {
     match std::fs::remove_dir_all(path) {
@@ -170,7 +141,7 @@ pub fn load_print_html(
     let file_name = file_name.unwrap_or(DEFAULT_FILE_NAME);
     let dir_prefix = dir_prefix.unwrap_or(DEFAULT_DIR_PREFIX);
     // a temp file, not a data: URL: long documents truncate the URL
-    let temp_dir = mkdtemp(&join(&[tmp_dir, dir_prefix]))?;
+    let temp_dir = crate::node_fs::mkdtemp_random(&join(&[tmp_dir, dir_prefix]))?;
     let loaded = (|| -> Result<(), JsError> {
         let html_path = join(&[&temp_dir, file_name]);
         std::fs::write(&html_path, html).map_err(|e| node_error(&e, "open", &html_path))?;

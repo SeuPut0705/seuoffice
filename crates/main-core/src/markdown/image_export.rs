@@ -7,7 +7,7 @@
 use jscompat::node_path::host::{basename, dirname, extname, join};
 use jscompat::{js_regex, pad_start, slice_utf16, trim};
 
-use super::fs_util::{mkdtemp, plain_error, rename, rm_recursive_force, write_file_excl};
+use super::fs_util::{plain_error, rename, rm_recursive_force, write_file_excl};
 use super::ord_map::OrdMap;
 use crate::node_fs::NodeError;
 use crate::packages::electron_utils::numbered_export_paths::numbered_export_paths;
@@ -67,10 +67,10 @@ impl ImageExportSessions {
         } else {
             trimmed
         };
-        let dir = mkdtemp(
-            &join(&[parent, &format!("{base}-images-")]),
-            env.mkdtemp_suffix,
-        )?;
+        let dir =
+            crate::node_fs::mkdtemp(&join(&[parent, &format!("{base}-images-")]), &mut || {
+                (env.mkdtemp_suffix)()
+            })?;
         let id = (env.random_uuid)();
         self.sessions.set(
             &id,

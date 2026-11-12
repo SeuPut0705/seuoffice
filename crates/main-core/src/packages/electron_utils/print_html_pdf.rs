@@ -8,7 +8,7 @@
 use jscompat::node_path::host::join;
 use serde_json::{Map, Value};
 
-use super::print_window::{JsError, mkdtemp, rm_recursive_force};
+use super::print_window::{JsError, rm_recursive_force};
 use crate::html_parse::{self, Node};
 use crate::node_fs::node_error;
 
@@ -173,7 +173,7 @@ pub fn print_html_to_pdf<W: PrintWindow>(
     create_window: impl FnOnce() -> Result<W, JsError>,
     tmp_dir: &str,
 ) -> Result<Vec<u8>, JsError> {
-    let work_dir = mkdtemp(&join(&[tmp_dir, "seuoffice-ai-doc-"]))?;
+    let work_dir = crate::node_fs::mkdtemp_random(&join(&[tmp_dir, "seuoffice-ai-doc-"]))?;
     let mut print_win: Option<W> = None;
     let printed = (|| -> Result<Vec<u8>, JsError> {
         let win = print_win.insert(create_window()?);

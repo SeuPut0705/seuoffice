@@ -6,7 +6,7 @@ use super::effort::{ai_effort_of, ai_model_effort_of};
 use super::jsval::{
     Obj, as_str, coalesce, object, prop, spread, str_trim, string_list, text, without,
 };
-use super::local_profile::local_endpoint_fields_of;
+use super::local_profile::{local_endpoint_fields_of, local_model_profiles_proto};
 use jscompat::{JsonValue, math_random, trim};
 
 const ID_ALPHABET: &str = "abcdefghijklmnopqrstuvwxyz0123456789";
@@ -27,7 +27,9 @@ fn configured_slot(config: Option<&JsonValue>) -> bool {
     !field("baseUrl").is_empty() || !field("model").is_empty() || !field("apiKey").is_empty()
 }
 
-fn normalize_endpoints(raw: Option<&JsonValue>) -> Vec<JsonValue> {
+/// Each endpoint with the prototype its `modelProfiles` table got (see
+/// `local_model_profiles_proto`).
+fn normalize_endpoints(raw: Option<&JsonValue>) -> Vec<(JsonValue, Option<JsonValue>)> {
     let Some(JsonValue::Array(items)) = raw else {
         return Vec::new();
     };
@@ -73,21 +75,32 @@ fn normalize_endpoints(raw: Option<&JsonValue>) -> Vec<JsonValue> {
         }
         // local-only fields survive a read/write round trip; malformed ones are dropped
         e.assign(&local_endpoint_fields_of(entry));
-        out.push(JsonValue::Object(e));
+        out.push((
+            JsonValue::Object(e),
+            local_model_profiles_proto(prop(entry, "modelProfiles")),
+        ));
     }
     out
 }
 
 /// The active server's level and what its model profile says the model
 /// takes, in the shape the request path reads from `providers.custom`.
-fn effort_of(endpoint: &JsonValue) -> Obj {
+fn effort_of(endpoint: &JsonValue, proto: Option<&JsonValue>) -> Obj {
     let mut out = Obj::new();
     if let Some(effort) = ai_effort_of(prop(endpoint, "effort")) {
         out.set("effort", text(effort));
     }
     let model = prop(endpoint, "model");
-    let profile = prop(endpoint, "modelProfiles")
-        .and_then(|profiles| as_str(model).and_then(|m| prop(profiles, m)));
+    let profile = prop(endpoint, "modelProfiles").and_then(|profiles| {
+        as_str(model).and_then(|m| {
+            // `profiles["__proto__"]` reads the prototype the table was given
+            if m == "__proto__" {
+                proto
+            } else {
+                prop(profiles, m)
+            }
+        })
+    });
     let taken = ai_model_effort_of(Some(&object(vec![
         // `{ efforts: profile?.efforts, defaultEffort: profile?.defaultEffort }`
         (
@@ -118,7 +131,9 @@ fn effort_of(endpoint: &JsonValue) -> Obj {
 /// slot made consistent. Pure: returns a new object.
 pub fn resolve_custom_endpoints(settings: &Obj) -> Obj {
     let settings_value = JsonValue::Object(settings.clone());
-    let mut endpoints = normalize_endpoints(settings.get("customEndpoints"));
+    let normalized = normalize_endpoints(settings.get("customEndpoints"));
+    let protos: Vec<Option<JsonValue>> = normalized.iter().map(|(_, p)| p.clone()).collect();
+    let mut endpoints: Vec<JsonValue> = normalized.into_iter().map(|(e, _)| e).collect();
     let slot = prop(&settings_value, "providers").and_then(|p| prop(p, "custom"));
     if endpoints.is_empty() && configured_slot(slot) {
         endpoints = vec![object(vec![
@@ -145,15 +160,20 @@ pub fn resolve_custom_endpoints(settings: &Obj) -> Obj {
     }
     let stored_active = settings.get("customEndpoint");
     let no_active_server = as_str(stored_active).is_some_and(|t| trim(t).is_empty());
-    let active: Option<&JsonValue> = if no_active_server {
+    let active_at: Option<usize> = if no_active_server {
         None
     } else {
         let wanted = str_trim(stored_active);
         endpoints
             .iter()
-            .find(|e| as_str(prop(e, "id")) == Some(wanted.as_str()))
-            .or_else(|| endpoints.first())
+            .position(|e| as_str(prop(e, "id")) == Some(wanted.as_str()))
+            .or(Some(0))
     };
+    let active: Option<&JsonValue> = active_at.and_then(|at| endpoints.get(at));
+    // the seeded entry (from the slot) has no profiles
+    let active_proto: Option<&JsonValue> = active_at
+        .and_then(|at| protos.get(at))
+        .and_then(Option::as_ref);
     let mut next = settings.clone();
     let list = JsonValue::Array(endpoints.clone());
     let providers = spread(coalesce(settings.get("providers"), None));
@@ -178,7 +198,7 @@ pub fn resolve_custom_endpoints(settings: &Obj) -> Obj {
     custom.set("apiKey", field("apiKey"));
     custom.set("model", field("model"));
     custom.set("baseUrl", field("baseUrl"));
-    custom.assign(&effort_of(active));
+    custom.assign(&effort_of(active, active_proto));
     next.set("customEndpoints", list);
     next.set("customEndpoint", field("id"));
     providers.set("custom", JsonValue::Object(custom));

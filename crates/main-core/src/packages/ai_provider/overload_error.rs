@@ -30,10 +30,7 @@ fn matches(text: &str) -> bool {
     // A bare 429/503/529 status marker makes it transient even when credits are named.
     let credits = js_regex!(r"credit|pricing", "i");
     let http_status = js_regex!(r"\bHTTP (429|503|529)\b", "i");
-    if credits.test(text) && !http_status.test(text) {
-        return false;
-    }
-    true
+    !(credits.test(text) && !http_status.test(text))
 }
 
 /// `isAiOverloadedError(err)`: true when the error (an Error, its `cause`

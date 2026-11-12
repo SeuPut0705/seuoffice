@@ -64,31 +64,9 @@ pub fn write_file_excl(path: &str, bytes: &[u8]) -> Result<(), NodeError> {
         .map_err(|e| node_error_fd(&e, "write"))
 }
 
-/// `copyFile(source, target, COPYFILE_EXCL)`: the target takes the source's mode.
+/// `copyFile(source, target, COPYFILE_EXCL)`
 pub fn copy_file_excl(source: &str, target: &str) -> Result<(), NodeError> {
-    let fail = |e: std::io::Error| node_error2(&e, "copyfile", source, target);
-    let mut from = fs::File::open(namespaced(source)).map_err(fail)?;
-    let meta = from.metadata().map_err(fail)?;
-    let mut options = OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::OpenOptionsExt;
-        use std::os::unix::fs::PermissionsExt;
-        options.mode(meta.permissions().mode() & 0o7777);
-    }
-    let mut to = options.open(namespaced(target)).map_err(fail)?;
-    let copied = std::io::copy(&mut from, &mut to).map_err(fail);
-    #[cfg(unix)]
-    {
-        let _ = to.set_permissions(meta.permissions());
-    }
-    drop(to);
-    if let Err(error) = copied {
-        let _ = fs::remove_file(namespaced(target));
-        return Err(error);
-    }
-    Ok(())
+    crate::node_fs::copy_file(source, target, true)
 }
 
 /// `rm(path, { recursive: true, force: true })`
@@ -119,31 +97,6 @@ pub fn rm_file(path: &str, force: bool) -> Result<(), NodeError> {
         Err(e) if force && code_of(&e) == Some("ENOENT") => Ok(()),
         Err(e) => Err(node_error(&e, "lstat", path)),
     }
-}
-
-/// `mkdtemp(prefix)`: a folder `prefix` plus six characters of `suffix()`,
-/// mode 0700 where the platform has modes; a taken name is tried again.
-pub fn mkdtemp(prefix: &str, suffix: &dyn Fn() -> String) -> Result<String, NodeError> {
-    let mut last = None;
-    for _ in 0..128 {
-        let path = format!("{prefix}{}", suffix());
-        let mut builder = fs::DirBuilder::new();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::DirBuilderExt;
-            builder.mode(0o700);
-        }
-        match builder.create(namespaced(&path)) {
-            Ok(()) => return Ok(path),
-            Err(e) if code_of(&e) == Some("EEXIST") => last = Some(e),
-            Err(e) => return Err(node_error(&e, "mkdtemp", &format!("{prefix}XXXXXX"))),
-        }
-    }
-    Err(node_error(
-        &last.expect("the loop ran"),
-        "mkdtemp",
-        &format!("{prefix}XXXXXX"),
-    ))
 }
 
 /// `rename(from, to)`

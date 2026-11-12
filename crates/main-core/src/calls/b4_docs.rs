@@ -1324,6 +1324,10 @@ fn coalescer_call(args: &[Value], cx: &mut Context) -> Answer {
         }
         out.push(json!({ "op": name, "timer": coalescer.due_ms().is_some() }));
     }
+    // the scenario ends with every timer left firing (`clock.fireAll()`)
+    if coalescer.due_ms().is_some() {
+        coalescer.fire();
+    }
     drop(coalescer);
     for chunk in sent.into_inner() {
         cx.logs.push(vec!["send".into(), chunk]);

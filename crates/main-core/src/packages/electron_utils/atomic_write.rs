@@ -115,7 +115,7 @@ fn rescue_path_for(file_path: &str) -> String {
 /// attempt left. If the copy does not land, the staging temp still holds the
 /// bytes.
 fn keep_rescue_copy(file_path: &str, tmp: &str) {
-    if fs::copy(tmp, rescue_path_for(file_path)).is_err() {
+    if crate::node_fs::copy_file(tmp, &rescue_path_for(file_path), false).is_err() {
         return;
     }
     let _ = fs::remove_file(tmp);
@@ -169,9 +169,7 @@ fn write_file(path: &str, data: &[u8]) -> Result<(), NodeError> {
 
 /// `copyFile(from, to)`
 fn copy_file(from: &str, to: &str) -> Result<(), NodeError> {
-    fs::copy(from, to)
-        .map(|_| ())
-        .map_err(|e| node_error2(&e, "copyfile", from, to))
+    crate::node_fs::copy_file(from, to, false)
 }
 
 /// Same-dir temp file, best-effort fsync, then rename. Rename-over-existing fails

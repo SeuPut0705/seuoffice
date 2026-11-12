@@ -34,7 +34,7 @@ use sha2::{Digest, Sha256};
 
 use crate::html::atomic_write::atomic_write_file;
 use crate::html::old_names::OLD_ASSET_MANIFEST_FILENAMES;
-use crate::node_fs::{NodeError, namespaced, node_error, node_error_fd, node_error2};
+use crate::node_fs::{NodeError, namespaced, node_error, node_error_fd};
 use crate::packages::i18n::existing_or_current;
 
 pub const ASSET_MANIFEST_FILENAME: &str = ".seuoffice-assets.json";
@@ -79,10 +79,10 @@ fn realpath(path: &str) -> Res<String> {
     let text = real.to_string_lossy().into_owned();
     // the verbatim form std gives on Windows is not what Node's realpath answers
     #[cfg(windows)]
-    if let Some(plain) = text.strip_prefix(r"\\?\") {
-        if !plain.starts_with("UNC\\") {
-            return Ok(plain.to_owned());
-        }
+    if let Some(plain) = text.strip_prefix(r"\\?\")
+        && !plain.starts_with("UNC\\")
+    {
+        return Ok(plain.to_owned());
     }
     Ok(text)
 }
@@ -113,29 +113,9 @@ fn mkdir_recursive(path: &str) -> Res<()> {
     fs::create_dir_all(namespaced(path)).map_err(|e| node_error(&e, "mkdir", path))
 }
 
-/// `copyFile(from, to, COPYFILE_EXCL)`: the target is created, never
-/// replaced, and takes the mode of the source
+/// `copyFile(from, to, COPYFILE_EXCL)`
 fn copy_file_excl(from: &str, to: &str) -> Res<()> {
-    let fail = |e: &io::Error| node_error2(e, "copyfile", from, to);
-    let mut source = fs::File::open(namespaced(from)).map_err(|e| fail(&e))?;
-    let info = source.metadata().map_err(|e| fail(&e))?;
-    let mut options = fs::OpenOptions::new();
-    options.write(true).create_new(true);
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::{OpenOptionsExt, PermissionsExt};
-        options.mode(info.permissions().mode() & 0o7777);
-    }
-    let mut target = options.open(namespaced(to)).map_err(|e| fail(&e))?;
-    let copied = io::copy(&mut source, &mut target)
-        .map(|_| ())
-        .and_then(|()| target.set_permissions(info.permissions()));
-    if let Err(e) = copied {
-        drop(target);
-        let _ = fs::remove_file(namespaced(to));
-        return Err(fail(&e));
-    }
-    Ok(())
+    crate::node_fs::copy_file(from, to, true)
 }
 
 /// `writeFile(path, bytes, { flag: 'wx' })`

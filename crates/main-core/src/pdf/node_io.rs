@@ -3,7 +3,6 @@
 //! with the syscall name and path Node's error carries.
 
 use crate::node_fs::{NodeError, code_of, namespaced, node_error, node_error_fd};
-use jscompat::random_uuid;
 use std::fs;
 use std::io::{Read, Write};
 
@@ -53,35 +52,6 @@ pub fn tmpdir() -> String {
         }
         path
     }
-}
-
-/// `mkdtemp(prefix)`: a folder `prefix` plus six random characters, mode 0700
-pub fn mkdtemp(prefix: &str) -> Result<String, NodeError> {
-    let mut last = None;
-    for _ in 0..128 {
-        let name: String = random_uuid()
-            .chars()
-            .filter(char::is_ascii_alphanumeric)
-            .take(6)
-            .collect();
-        let path = format!("{prefix}{name}");
-        let mut builder = fs::DirBuilder::new();
-        #[cfg(unix)]
-        {
-            use std::os::unix::fs::DirBuilderExt;
-            builder.mode(0o700);
-        }
-        match builder.create(namespaced(&path)) {
-            Ok(()) => return Ok(path),
-            Err(e) if code_of(&e) == Some("EEXIST") => last = Some(e),
-            Err(e) => return Err(node_error(&e, "mkdtemp", &format!("{prefix}XXXXXX"))),
-        }
-    }
-    Err(node_error(
-        &last.expect("the loop ran"),
-        "mkdtemp",
-        &format!("{prefix}XXXXXX"),
-    ))
 }
 
 /// `rm(path, { recursive: true, force: true })`

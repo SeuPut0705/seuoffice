@@ -8,9 +8,8 @@
 //! run, after each event. `run`'s promise is what [`ZoteroWireClient::on_close`]
 //! settles.
 //!
-//! Not reproduced: the `SyntaxError` text of a request that is not JSON. V8
-//! words it (`Unexpected token ...`); here the answer carries
-//! [`jscompat::JsonSyntaxError`]'s text. A handler that answers `undefined`
+//! A request that is not JSON answers with the `SyntaxError` message V8 gives
+//! ([`jscompat::JsonSyntaxError::message`]). A handler that answers `undefined`
 //! is not representable (the TypeScript throws a `TypeError` from the frame
 //! encoder after its `try`).
 
@@ -94,7 +93,7 @@ impl ZoteroFrameDecoder {
 
 /// `parseRequest(payload)`: the message of what it throws.
 fn parse_request(payload: &str) -> Result<ZoteroWireRequest, String> {
-    let value = json_parse(payload).map_err(|error| error.to_string())?;
+    let value = json_parse(payload).map_err(|error| error.message().to_owned())?;
     if let JsonValue::Array(items) = &value
         && let (Some(JsonValue::String(command)), Some(JsonValue::Array(args))) =
             (items.first(), items.get(1))

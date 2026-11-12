@@ -122,6 +122,32 @@ pub fn local_model_profiles_of(raw: Option<&JsonValue>) -> Option<JsonValue> {
     (count > 0).then_some(JsonValue::Object(profiles))
 }
 
+/// The prototype `localModelProfilesOf` gives its table: `profiles["__proto__"] =
+/// profile` sets the prototype of the table instead of an own key, and
+/// `table["__proto__"]` reads it back. The last such profile wins.
+pub fn local_model_profiles_proto(raw: Option<&JsonValue>) -> Option<JsonValue> {
+    let raw = as_record(raw?)?;
+    let mut proto = None;
+    let mut count = 0;
+    for (key, value) in raw.entries() {
+        if count >= MAX_LOCAL_MODEL_PROFILES {
+            break;
+        }
+        let model_id = str_trim(Some(&text(key)));
+        if model_id.is_empty() || length16(&model_id) > MAX_LOCAL_MODEL_ID_LENGTH {
+            continue;
+        }
+        let Some(profile) = local_model_profile_of(value) else {
+            continue;
+        };
+        if model_id == "__proto__" {
+            proto = Some(profile);
+        }
+        count += 1;
+    }
+    proto
+}
+
 /// `localEndpointFieldsOf(raw)`: the local-only fields of one endpoint, in
 /// the order `kind`, `modelProfiles`, `timeoutMs`.
 pub fn local_endpoint_fields_of(raw: &JsonValue) -> Obj {
