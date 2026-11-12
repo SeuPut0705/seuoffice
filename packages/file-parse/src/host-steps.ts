@@ -55,8 +55,7 @@ export function sourceElements(source: string): SourceElement[] {
 type FlatChild = string | { element: number }
 
 type TextNode =
-  | { kind: 'element'; name: string; children: TextNode[] }
-  | { kind: 'text'; value: string }
+  { kind: 'element'; name: string; children: TextNode[] } | { kind: 'text'; value: string }
 
 interface Parse5Node {
   nodeName: string
@@ -106,8 +105,8 @@ function parseHtmlFlat(input: unknown): unknown {
       local: element.local,
       uri: element.uri,
       attributes: element.attributes,
-      children: element.children.map(
-        (child): FlatChild => (typeof child === 'string' ? child : { element: ids.get(child)! }),
+      children: element.children.map((child): FlatChild =>
+        typeof child === 'string' ? child : { element: ids.get(child)! },
       ),
     })),
   }
