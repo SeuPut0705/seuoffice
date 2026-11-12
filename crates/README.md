@@ -283,17 +283,18 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
 
 ## Next session starts here
 
-State on 2026-11-12, 13:30 KST. The branch is on origin and is pushed at
+State on 2026-11-12, 14:45 KST. The branch is on origin and is pushed at
 every unit boundary (never forced, never to main).
 
 - `feat/rust-docx-u1`: everything below, on main at 5f03509fd (merged, not
-  rebased). The gate is RED on one thing only, and on purpose: 679 checks
-  over inputs with U+0131, U+017F or U+212A, where `js_regex!(…, "i")` folds
-  case as Unicode does and JavaScript without `/u` does not. The fix is one
-  place, `jscompat/src/regex.rs`, and is stream D's (`feat/rust-fileparse-u1`):
-  main sends the hash, it is merged here, and the gate has to read 0 again.
-  Do not fix it a second way. Everything else: 0 differences in 1,724,926
-  checks, 13 ledger entries, none stale, five listed classes.
+  rebased). The gate is green on a runner (run 43158707050 on f6071c0f5):
+  1,733,886 checks, 0 differences, 14 ledger entries, none stale, six listed
+  classes (136 inputs set aside as differing), clippy, the tests and
+  cargo-deny pass, wasm 2,483,425 bytes.
+- Case folding under `i` without `u` was a defect of `jscompat` that 679
+  checks over inputs with U+0131, U+017F and U+212A showed; stream D fixed it
+  in `regex.rs` (two commits cherry-picked with `-x`), and those inputs stay
+  in the gate.
 - Other streams start from this branch on origin, on another machine, and
   merge it at unit boundaries: `feat/rust-docx-model` (B: the Word model
   types generated from `types.ts` into `docx-engine/src/model/`, then the
@@ -438,11 +439,18 @@ for a record keyed by data. No order is in the ledger.
 
 ### What to do, in order
 
-1. **Merge stream D's fix of `jscompat/src/regex.rs`** when main sends the
-   hash, see the gate read 0, and add the one input that waits for it: a
-   part named `x.rel\u017f` for `ooxml-pkg/src/load.rs`.
-2. **Ask main what it decided** about the `w:pPrChange` reject above and
-   about the counted quantifier over astral text; both were reported.
+1. **Take stream D's next commit to `regex.rs`** when main names it: a
+   counted quantifier (`\S{1,15}`) counts an astral character once in
+   `regress` and twice in JavaScript without `/u`. Remove `utf16_shaped` of
+   `fields/display.rs` in the commit that takes it. One input still waits
+   for a comparison that can see it: a part named `x.rel\u017f` for
+   `ooxml-pkg/src/load.rs:104` (the package comparison reads no part by such
+   a name, so today it would compare nothing).
+2. **The package comparison reports the first differing path of a value
+   only**, so `styles/headings.rs:31` and `styles/display.rs:350` were never
+   shown apart from the heading difference beside them. Their inputs are in
+   the package "…letters that fold to ASCII only in Unicode"; a fault in
+   each would say whether they are compared.
 3. **Merge main when it has fixed items 11 to 16**, drop the entries and
    classes that go stale, and take the model from stream B when it lands:
    the local structs go, and `lineBoxOf`, `vmlWordArtBox`, `ink.ts`,
