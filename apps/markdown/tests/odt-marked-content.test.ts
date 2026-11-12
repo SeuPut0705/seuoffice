@@ -92,7 +92,12 @@ describe('the choice box', () => {
   })
 
   it('answers cancel for a closed box', () => {
-    expect([0, 1, 2, -1].map(markedOdtChoice)).toEqual(['docx', 'clear', 'cancel', 'cancel'])
+    expect([0, 1, 2, -1].map((r) => markedOdtChoice(r))).toEqual([
+      'docx',
+      'clear',
+      'cancel',
+      'cancel',
+    ])
   })
 
   it('speaks Korean and English differently', async () => {
