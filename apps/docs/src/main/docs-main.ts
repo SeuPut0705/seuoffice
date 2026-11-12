@@ -88,7 +88,14 @@ import {
   familyInfoFor,
   familyVerticalMetrics,
 } from '@genoffice/font-metrics'
-import { createI18n, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
+import {
+  createI18n,
+  documentLocale,
+  getUiLang,
+  normalizeLang,
+  PRODUCT_NAME,
+  setUiLang,
+} from '@genoffice/i18n'
 import { ProjectStore, type LegacyDocumentChat } from '@genoffice/project-store'
 import {
   aiChatGptSignInPages,
@@ -2406,6 +2413,9 @@ export function registerDocsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:get-language')
   ipcMain.handle('app:get-language', () => getUiLang())
+  // the language documents are read for; shared with the sheets module the same way
+  ipcMain.removeHandler('app:get-document-locale')
+  ipcMain.handle('app:get-document-locale', () => documentLocale())
   ipcMain.handle('docs:confirm-document-replace', async (event) => {
     const proceed = await requestDocsClose(event.sender, dialogParent(event))
     // another document takes this tab: settle the copies of the one leaving
@@ -4809,7 +4819,8 @@ export function startDocsStandalone(): void {
     // subscription CLIs behind with nothing to end them at the next start.
     void initSubscriptionChildTracking(app.getPath('userData')).catch(() => undefined)
     installRendererProtocol({ docs: join(__dirname, '../renderer') })
-    setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
+    const requestedLang = process.env.GENOFFICE_LANG ?? app.getLocale()
+    setUiLang(normalizeLang(requestedLang), requestedLang)
     // packaged builds get the Dock icon from icon.icns; dev shows Electron's default
     if (isDev && process.platform === 'darwin') {
       app.dock?.setIcon(join(app.getAppPath(), 'build/icon.png'))

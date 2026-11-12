@@ -2352,6 +2352,8 @@ export function registerSheetsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:get-language')
   ipcMain.handle('app:get-language', () => getUiLang())
+  // shared with the docs module the same way: last (identical) registration wins
+  ipcMain.removeHandler(IPC_CHANNELS.documentLocale)
   ipcMain.handle(IPC_CHANNELS.documentLocale, () => documentLocale())
 
   // shared with the other editor modules — last (identical) registration wins
