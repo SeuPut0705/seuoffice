@@ -890,21 +890,22 @@ function registrableDomain(host: string): string | null {
 /**
  * Where to poll a queued FLUX job. Every poll carries the API key, so an
  * address the provider's reply names is used only when it is the provider's
- * own: the origin the job went to, or an `https:` host of the same registrable
- * domain (BFL answers `api.bfl.ai` with a regional host such as
+ * own: an `https:` host of the same registrable domain (BFL answers
+ * `api.bfl.ai` with a regional host such as
  * `api.eu1.bfl.ai`). A base URL the person set is held to its own host the
  * same way; an IP address or a one-label name has to match exactly. Anything
  * else ends the generation before a request goes out.
  */
 function bflPollUrl(base: string, queued: Record<string, unknown>): string {
   const named = queued.polling_url
-  if (typeof named !== 'string' || !named) {
-    return `${base}/v1/get_result?id=${encodeURIComponent(String(queued.id ?? ''))}`
-  }
+  const address =
+    typeof named === 'string' && named
+      ? named
+      : `${base}/v1/get_result?id=${encodeURIComponent(String(queued.id ?? ''))}`
   const submitted = new URL(base)
   let poll: URL
   try {
-    poll = new URL(named)
+    poll = new URL(address)
   } catch {
     throw new Error(
       'FLUX generation failed: the provider answered with a polling address that is not a URL. The API key was not sent to it.',
@@ -914,7 +915,7 @@ function bflPollUrl(base: string, queued: Record<string, unknown>): string {
   const sameSite =
     poll.hostname === submitted.hostname ||
     (site !== null && site === registrableDomain(poll.hostname))
-  if (poll.origin !== submitted.origin && !(poll.protocol === 'https:' && sameSite)) {
+  if (poll.protocol !== 'https:' || !sameSite) {
     throw new Error(
       `FLUX generation failed: the provider answered with a polling address that is not its own (${poll.protocol}//${poll.host.slice(0, 100)}). The API key was not sent to it.`,
     )

@@ -183,18 +183,17 @@ describe('FLUX polling address', () => {
     }
   })
 
-  it('still polls a plain http base URL at its own origin, and nowhere else over http', async () => {
+  it('refuses HTTP polling even at the configured base origin, including the fallback', async () => {
     const base = 'http://127.0.0.1:8787'
-    const own = bflProvider('http://127.0.0.1:8787/v1/get_result?id=job-1')
-    expect((await generate(own, base)).ok).toBe(true)
-    expect(keyedUrls(own)).toEqual([
-      'http://127.0.0.1:8787/v1/flux-2-pro',
+    for (const address of [
       'http://127.0.0.1:8787/v1/get_result?id=job-1',
-    ])
-
-    const otherPort = bflProvider('http://127.0.0.1:9999/v1/get_result?id=job-1')
-    expect((await generate(otherPort, base)).ok).toBe(false)
-    expect(otherPort).toHaveBeenCalledTimes(1)
+      'http://127.0.0.1:9999/v1/get_result?id=job-1',
+      undefined,
+    ]) {
+      const provider = bflProvider(address)
+      expect((await generate(provider, base)).ok).toBe(false)
+      expect(provider).toHaveBeenCalledTimes(1)
+    }
   })
 
   it('polls the base URL when the reply names no address', async () => {
@@ -218,7 +217,7 @@ describe('FLUX polling and the abort signal', () => {
       if (url.includes('get_result')) listeners.push(getEventListeners(guard, 'abort').length)
       return provider(url, init)
     })
-    const result = await generate(watched as unknown as ReturnType<typeof bflProvider>)
+    const result = await generate(watched)
     expect(result.ok).toBe(true)
     // six polls: five Pending, one Ready
     expect(listeners).toHaveLength(6)
