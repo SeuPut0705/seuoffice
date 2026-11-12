@@ -2,6 +2,7 @@ import type { Mark, Node as PmNode } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
 import type { Op, OpDef, OpResult, RunEnv, Target, TopBlock } from './ops'
 import { posAfterText } from './after-text'
+import { REDACT_MARK } from './redact'
 
 /**
  * Word field ops: insert an inline field with a locally computed (or given)
@@ -312,6 +313,16 @@ function userBookmarks(doc: PmNode): string[] {
   return names
 }
 
+/** whether any word of the node is hidden from AI */
+function holdsHiddenWords(node: PmNode): boolean {
+  let found = false
+  node.descendants((child) => {
+    if (child.isText && child.marks.some((m) => m.type.name === REDACT_MARK)) found = true
+    return !found
+  })
+  return found
+}
+
 /** bookmark text as shown, minus deleted runs and REF results that point back at `excludeRef` (a REF inside its own bookmark would otherwise grow on every refresh) */
 function liveTextOf(node: PmNode, excludeRef?: string): string {
   let out = ''
@@ -388,6 +399,12 @@ function resolveField(op: Op, doc: PmNode, pos: number, now = new Date()): Resol
       )
     }
     if (type === 'PAGEREF') return { instr, result: given ?? '1', dirty: true }
+    // a cross-reference copies the bookmarked words, as plain words, into its result
+    if (given === undefined && holdsHiddenWords(target.node)) {
+      throw new Error(
+        `insertField: the paragraph bookmarked "${name}" holds words the person hid from AI, which a cross-reference would copy out as plain text; give result yourself, or tell the person to insert the cross-reference`,
+      )
+    }
     const plainRef = plainRefSwitches(args.replace(REF_HEAD_RE, ''))
     const text = given ?? (liveTextOf(target.node, name).trim() || name)
     return plainRef
@@ -573,6 +590,14 @@ function runUpdateFields(op: Op, env: RunEnv, h: FieldOpHelpers, now = new Date(
       const target = findBookmark(tr.doc, name)
       if (!target) {
         missing++
+        continue
+      }
+      if (holdsHiddenWords(target.node)) {
+        // the bookmarked words are hidden from AI: the cached result stays, Word refreshes it
+        if (run.ref.attrs.dirty !== true) {
+          rewrite(run, run.text, true)
+          dirtied++
+        }
         continue
       }
       rewrite(run, liveTextOf(target.node, name).trim() || run.text, false)
