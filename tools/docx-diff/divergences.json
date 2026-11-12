@@ -265,5 +265,29 @@
       }
     },
     "reason": "The before filter of applyTrackedChangesXml goes through Date.parse, which reads a date-time without a zone as local time: the answer follows the zone of the machine (here Asia/Seoul, where 08:00 is the day before in UTC). The Rust engine has no zone and reads it as UTC. Word writes w:date with a Z. Decided by main: UTC, and the TypeScript is to read it as UTC too, which makes this entry stale. The gate itself runs in UTC (host.ts)."
+  },
+  {
+    "id": "reject-of-a-ppr-change-that-opens-its-ppr",
+    "comparison": "call",
+    "fn": "revision.applyTrackedChangesXml",
+    "text": "<w:p><w:pPr><w:pPrChange w:id=\"1\" w:author=\"A\" w:date=\"2024-01-01T00:00:00Z\"><w:pPr><w:jc w:val=\"center\"/></w:pPr></w:pPrChange></w:pPr><w:r><w:t>x</w:t></w:r></w:p>",
+    "args": {
+      "mode": "reject"
+    },
+    "typescript": {
+      "value": {
+        "xml": "<w:p><w:pPr></w:pPr><w:r><w:t>x</w:t></w:r></w:p>",
+        "applied": 1,
+        "remaining": 0
+      }
+    },
+    "rust": {
+      "value": {
+        "xml": "<w:p><w:pPr><w:jc w:val=\"center\"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>",
+        "applied": 1,
+        "remaining": 0
+      }
+    },
+    "reason": "Rejecting a w:pPrChange that stands right after the open tag of its w:pPr (the paragraph kept no property of its own: someone removed a formatting with tracking on) loses the old properties: revertPropChange of revision-xml.ts plans them as an insertion where the record starts and the removal of the record at the same place, and applyEdits drops the insertion as overlapping. The revision mark goes and the paragraph stays as changed. With a property or white space before the record the old properties come back. Measured for the other holders (w:rPr, w:tcPr, w:tblPr, w:trPr, w:sectPr, w:tblGrid, each as the first child and after a property): they restore; only w:pPr plans two edits. resolvePropChangeXml loses them the same way. Decided by main (item 24 of its TypeScript list): the Rust restores the old properties, and the TypeScript is to be fixed. CallSpec.listed counts the inputs of this class."
   }
 ]

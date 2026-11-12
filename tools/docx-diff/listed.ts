@@ -32,10 +32,17 @@ export function nestedWrapNone(text: string): string | undefined {
     : undefined
 }
 
-/** An attribute the revision readers look for, in single quotes. */
-export function singleQuotedRevisionAttribute(text: string): string | undefined {
-  return /\s(?:w:author|w:date|w:id|w16du:dateUtc|w:vMerge|w:vMergeOrig)='/.test(text)
-    ? 'revision-attribute-in-single-quotes'
+/**
+ * What the revision functions answer differently by decision: an attribute
+ * they look for in single quotes, or a w:pPrChange right after the open tag of
+ * its w:pPr, whose old properties a reject loses in the TypeScript.
+ */
+export function revisionClass(text: string): string | undefined {
+  if (/\s(?:w:author|w:date|w:id|w16du:dateUtc|w:vMerge|w:vMergeOrig)='/.test(text)) {
+    return 'revision-attribute-in-single-quotes'
+  }
+  return /<w:pPr(?:\s[^>]*)?><w:pPrChange[\s>]/.test(text)
+    ? 'reject-of-a-ppr-change-that-opens-its-ppr'
     : undefined
 }
 

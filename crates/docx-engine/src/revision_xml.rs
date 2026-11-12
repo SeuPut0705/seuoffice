@@ -480,6 +480,21 @@ fn revert_prop_change<'a>(
         let keep_from = children(els, holder_index)
             .find(|&(i, c)| c.name == "w:rPr" || c.name == "w:sectPr" || i == change_index)
             .map_or(change, |(_, c)| c);
+        // The record opens the holder: the paragraph has no property of its
+        // own left and nothing stands before the record. The TypeScript plans
+        // the old properties as an insertion where the record starts and the
+        // removal of the record at the same place, and its applyEdits drops
+        // the insertion as overlapping, so the old properties are lost. Here
+        // the record is replaced by them
+        // (divergences.json: `reject-of-a-ppr-change-that-opens-its-ppr`).
+        if holder.inner_start.unit == change.start.unit {
+            edits.push(Edit {
+                start: change.start.unit,
+                end: change.end.unit,
+                text: Cow::Borrowed(old_inner),
+            });
+            return;
+        }
         edits.push(Edit {
             start: holder.inner_start.unit,
             end: keep_from.start.unit,
