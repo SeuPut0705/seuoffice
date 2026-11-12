@@ -543,7 +543,10 @@ fn invoke_command(
         invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
     // the product's calls: a model value read as the TypeScript reads it (wire.rs)
-    let result = jscompat::reading_leniently(|| invoke::table::invoke(&mut env, function, args));
+    let result = jscompat::reading_leniently(|| match function.strip_prefix("pptx.") {
+        Some(name) => invoke::pptx_table::invoke(&mut env, name, args),
+        None => invoke::table::invoke(&mut env, function, args),
+    });
     let warnings = docx_engine::warnings::take();
     let value = result?;
     let (mut reply_blobs, media) = env.into_reply_blobs();

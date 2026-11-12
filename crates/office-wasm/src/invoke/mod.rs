@@ -1,7 +1,9 @@
 //! `Command::Invoke`: a TypeScript export called by name with its arguments
 //! positionally, as the `@seuoffice/docx-engine` binding makes it. The table
 //! that answers it is generated (`table.rs`, from the export manifest); the
-//! exports that have no row there are the hand routes of `routes.rs`.
+//! exports that have no row there are the hand routes of `routes.rs`. The
+//! `pptx.` prefix is the pptx engine's table (`pptx_table.rs`, with the hand
+//! routes of `pptx_routes.rs` and the argument kinds of `pptx.rs`).
 //!
 //! Crossings JSON cannot carry:
 //! - A `Uint8Array` argument is `{"$blob": n}`, the request blob `n`; one that
@@ -18,6 +20,9 @@ use std::collections::HashMap;
 use serde_json::{Map, Value};
 
 pub mod host;
+pub mod pptx;
+pub mod pptx_routes;
+pub mod pptx_table;
 pub mod routes;
 pub mod table;
 

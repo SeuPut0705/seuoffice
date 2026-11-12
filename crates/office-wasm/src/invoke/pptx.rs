@@ -9,9 +9,13 @@
 //! - An opened deck is `{ deck, archive, saveSnapshot? }`, `deck` the
 //!   `SlideDeck` as JSON and `saveSnapshot` what the last save patched (the
 //!   TypeScript keeps it in a WeakMap keyed by the deck; the binding does).
-//! - A row answers `{ value, out }`: `out` maps the index of each argument the
-//!   engine changed to its answer.
+//! - A row answers `{ "$result": value, "$out": { "<wire index>": answer } }`
+//!   (B4's `$result`/`$parts`): `$out` holds the arguments the engine changed.
+//! - A `{"$blob": n}` inside an argument object that is no archive is the
+//!   request blob `n` as base64 text ([`inline_blobs`]): the option structs of
+//!   the engine read their `bytes` from text, as the gate sends them.
 
+use std::borrow::Cow;
 use std::cell::Cell;
 use std::collections::HashMap;
 
@@ -35,15 +39,17 @@ pub fn uids() -> Uids {
     Uids::starting_at(UID_NEXT.with(Cell::get))
 }
 
-/// Keeps where `uids` stopped for the next call.
+/// Keeps where `uids` stopped for the next call. The counter only moves
+/// forward: a deck opened later starts its own ids at 0, and the ids of an
+/// earlier deck must stay below what later calls draw.
 pub fn keep_uids(uids: &Uids) {
-    UID_NEXT.with(|next| next.set(uids.next()));
+    UID_NEXT.with(|next| next.set(next.get().max(uids.next())));
 }
 
 /// An archive as it came, with the request bytes of each part to tell what changed.
 pub struct SentArchive<'a> {
     pub archive: PackageArchive,
-    sent: HashMap<String, &'a [u8]>,
+    pub sent: HashMap<String, &'a [u8]>,
 }
 
 fn field<'v>(value: &'v Value, key: &str) -> Result<&'v Value, String> {
@@ -160,15 +166,95 @@ pub fn answer_opened(env: &mut InvokeEnv<'_>, sent: SentOpened<'_>) -> Result<Va
     Ok(Value::Object(out))
 }
 
+/// An archive in full, as the binding builds a `PackageArchive` from it:
+/// `{ entries: [[path, {"$blob": n}], ...], originalHash }`.
+pub fn answer_archive_whole(env: &mut InvokeEnv<'_>, archive: &PackageArchive) -> Value {
+    let entries = archive
+        .entries()
+        .iter()
+        .map(|(path, bytes)| Value::Array(vec![Value::String(path.to_owned()), env.put_blob(bytes.clone())]))
+        .collect();
+    let mut out = Map::new();
+    out.insert("entries".to_owned(), Value::Array(entries));
+    out.insert(
+        "originalHash".to_owned(),
+        Value::String(archive.original_hash().to_owned()),
+    );
+    Value::Object(out)
+}
+
+/// A deck the engine made (`openPptx`): `{ deck, archive }`, the archive in full.
+/// Keeps its id counter.
+pub fn answer_new_opened(env: &mut InvokeEnv<'_>, opened: &OpenedPptx) -> Result<Value, String> {
+    keep_uids(&opened.uids);
+    let mut out = Map::new();
+    out.insert(
+        "deck".to_owned(),
+        serde_json::to_value(&opened.deck).map_err(|error| error.to_string())?,
+    );
+    out.insert("archive".to_owned(), answer_archive_whole(env, &opened.archive));
+    Ok(Value::Object(out))
+}
+
+/// `args` with every `{"$blob": n}` below the top level of an argument written
+/// as the base64 text of the blob. An archive (`entries` and `originalHash`)
+/// keeps its blobs: `read_archive` reads them.
+pub fn inline_blobs<'v>(env: &InvokeEnv<'_>, args: &'v [Value]) -> Result<Cow<'v, [Value]>, String> {
+    fn holds_blob(value: &Value) -> bool {
+        match value {
+            Value::Object(map) if map.contains_key("entries") && map.contains_key("originalHash") => false,
+            Value::Object(map) if map.len() == 1 && map.contains_key("$blob") => true,
+            Value::Object(map) => map.values().any(holds_blob),
+            Value::Array(items) => items.iter().any(holds_blob),
+            _ => false,
+        }
+    }
+    fn inline(env: &InvokeEnv<'_>, value: &mut Value) -> Result<(), String> {
+        match value {
+            Value::Object(map) if map.contains_key("entries") && map.contains_key("originalHash") => {}
+            Value::Object(map) if map.len() == 1 && map.contains_key("$blob") => {
+                let bytes = env.blob(&Value::Object(map.clone()))?;
+                *value = Value::String(jscompat::base64(bytes));
+            }
+            Value::Object(map) => {
+                for inner in map.values_mut() {
+                    inline(env, inner)?;
+                }
+            }
+            Value::Array(items) => {
+                for inner in items {
+                    inline(env, inner)?;
+                }
+            }
+            _ => {}
+        }
+        Ok(())
+    }
+    let nested = |arg: &Value| match arg {
+        Value::Object(map) if map.len() == 1 && map.contains_key("$blob") => false,
+        other => holds_blob(other),
+    };
+    if !args.iter().any(nested) {
+        return Ok(Cow::Borrowed(args));
+    }
+    let mut out = args.to_vec();
+    for arg in &mut out {
+        if nested(arg) {
+            inline(env, arg)?;
+        }
+    }
+    Ok(Cow::Owned(out))
+}
+
 /// What a row answers: the value, and the arguments the engine changed by index.
 pub fn answer(value: Option<Value>, out: Vec<(usize, Value)>) -> Value {
     let mut reply = Map::new();
     if let Some(value) = value {
-        reply.insert("value".to_owned(), value);
+        reply.insert("$result".to_owned(), value);
     }
     if !out.is_empty() {
         reply.insert(
-            "out".to_owned(),
+            "$out".to_owned(),
             Value::Object(out.into_iter().map(|(index, value)| (index.to_string(), value)).collect()),
         );
     }
