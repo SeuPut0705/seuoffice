@@ -56,11 +56,11 @@
   "callsPlaceholderMutated": 3600,
   "callsPlaceholderFunctions": 14,
   "callsTablestyleCorpus": 85,
-  "callsTablestyleBuilt": 15764,
+  "callsTablestyleBuilt": 15769,
   "callsTablestyleMutated": 900,
   "callsTablestyleFunctions": 8,
   "callsChartCorpus": 107,
-  "callsChartBuilt": 680,
+  "callsChartBuilt": 683,
   "callsChartMutated": 599,
   "callsChartFunctions": 2
 }

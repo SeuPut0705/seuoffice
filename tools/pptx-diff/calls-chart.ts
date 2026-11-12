@@ -1516,6 +1516,19 @@ const SUNBURST_DATA = cxData(
 )
 
 const CX_HAND: string[] = [
+  // a point with a negative idx after idx 0: it must not take the place of the first
+  cxSpace({
+    layout: 'funnel',
+    data: cxData(
+      0,
+      strDim(
+        '<cx:lvl ptCount="2"><cx:pt idx="0">A</cx:pt><cx:pt idx="1">B</cx:pt><cx:pt idx="-1">Z</cx:pt></cx:lvl>',
+      ),
+      numDim(
+        '<cx:lvl ptCount="2"><cx:pt idx="0">3</cx:pt><cx:pt idx="1">4</cx:pt><cx:pt idx="-1">9</cx:pt></cx:lvl>',
+      ),
+    ),
+  }),
   cxSpace({
     layout: 'funnel',
     axis: '<cx:axis id="0"><cx:catScaling gapWidth="0.5"/></cx:axis>',

@@ -374,7 +374,9 @@ const OTHERS =
   tblStyle(MEDIUM2_A1, el('wholeTbl', tcStyle('', rgb('123456'))), 'Override') +
   tblStyle(LIGHT1, '', 'Empty built-in') +
   tblStyle(cid(19), el('wholeTbl', el('tcTxStyle', '', ' b="on"')), `Named ${cid(18)}`) +
-  tblStyle(cid(20).toLowerCase(), el('wholeTbl', tcStyle('', rgb('202020'))))
+  tblStyle(cid(20).toLowerCase(), el('wholeTbl', tcStyle('', rgb('202020')))) +
+  // a color written in lower case: the model holds it in upper case
+  tblStyle(cid(21), el('wholeTbl', tcStyle('', rgb('a0b1c2'))))
 
 const CUSTOM_XML = tblStyleLst(
   FULL + NO_FILL + LN_REFS + ARRAYS + COLORS + FONTS + QUOTES + DUPLICATES + BACKGROUNDS + OTHERS,
@@ -382,6 +384,7 @@ const CUSTOM_XML = tblStyleLst(
 const CUSTOM_IDS = [
   ...[1, 2, 3, 4, 5, 6, 7, 8, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20].map(cid),
   cid(20).toLowerCase(),
+  cid(21),
   MEDIUM2_A1,
   LIGHT1,
 ]
