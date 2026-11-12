@@ -12,6 +12,15 @@ mod fields;
 mod markers;
 mod math;
 mod section;
+mod gen_drawing;
+mod gen_drawing_build;
+mod gen_fields;
+mod gen_paragraph;
+mod gen_props;
+mod gen_rpr;
+mod gen_runs;
+mod gen_table;
+mod gen_text;
 
 /// What a call gives: a value, nothing where the TypeScript function returns
 /// `undefined`, or an error where it throws.
@@ -60,6 +69,15 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
+        "genRpr" => Some(gen_rpr::dispatch(function, text, args)),
+        "genProps" => Some(gen_props::dispatch(function, text, args)),
+        "genDrawing" => Some(gen_drawing::dispatch(function, text, args)),
+        "genDrawingBuild" => Some(gen_drawing_build::dispatch(function, text, args)),
+        "genText" => Some(gen_text::dispatch(function, text, args)),
+        "genTable" => Some(gen_table::dispatch(function, text, args)),
+        "genFields" => Some(gen_fields::dispatch(function, text, args)),
+        "genRuns" => Some(gen_runs::dispatch(function, text, args)),
+        "genParagraph" => Some(gen_paragraph::dispatch(function, text, args)),
         _ => None,
     }
 }
