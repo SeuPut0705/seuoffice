@@ -10,6 +10,7 @@ import {
   insertCoverPage,
   removeCoverPage,
 } from '../src/renderer/editor/cover-pages'
+import { t } from '../src/renderer/i18n/locale'
 
 /**
  * "Remove Current Cover Page" finds a gallery cover by two hidden bookmarks
@@ -17,7 +18,7 @@ import {
  * bookmark names it was given then.
  */
 
-const TITLE = '\u6587\u6863\u6807\u9898'
+const TITLE = t('editorCoverTitle')
 
 const editors = new Set<Editor>()
 afterEach(() => {
