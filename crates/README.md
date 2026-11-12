@@ -107,6 +107,38 @@ call: that is designed when a caller flips.
 Build: `node crates/office-wasm/build.mjs` (it uses rustup's toolchain; the
 Homebrew one has no wasm target).
 
+### Model comparison wire form
+
+The model comparison sends UTF-8 JSON in request blob 0 and receives the
+typed Rust model's JSON in reply blob 0. A JSON header would reprint the
+model before comparison, concealing number printing and key order.
+
+`Map<K, V>` crosses as `[[key, value], ...]`. This retains entries,
+insertion order and the key's JavaScript type. `JSON.stringify` alone writes
+a Map as `{}`. An object changes numeric keys into strings and reorders
+integer-looking keys. Each pair costs an array and punctuation in JSON.
+
+`Uint8Array` crosses as `{ "$bytes": "<padded standard base64>" }`.
+This is smaller than a JSON object with a property per byte. The marker
+distinguishes bytes from model records, but encoding still allocates and
+copies. A 20 MiB picture has 20,971,520 binary bytes and becomes 27,962,028
+ASCII base64 bytes plus 13 JSON bytes. Rust decodes a 20 MiB `Vec<u8>` and
+encodes it again for the reply. The host copies the reply out of wasm
+memory. JavaScript strings may use one or two bytes per character, so that
+encoded string alone can occupy roughly 26.7 or 53.3 MiB. These are
+representation sizes, not measured peak memory.
+
+This is a gate format, not a product API decision. At the product boundary,
+binary blobs with JSON references would avoid base64 expansion and repeated
+encoding for media and `internal.originalBytes`. Keep Map entries unless a
+replacement preserves key type, entries and order. The wire version must
+identify whichever product representation is chosen.
+
+The model holds `EffectivePPr`, `EffectiveRPr` and fields declared `unknown`
+as ordered JSON until the resolver port is integrated. This unit does not
+verify their field types. Byte comparison still checks their values and
+written key order.
+
 ## The gate: tools/docx-diff
 
 `npm --prefix tools/docx-diff run gate` builds the wasm and runs every
