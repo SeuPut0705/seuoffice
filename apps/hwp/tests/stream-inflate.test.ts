@@ -9,7 +9,7 @@ import { constants, deflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
 import { describe, expect, it } from 'vitest'
 import { fieldKindsOf } from '../src/main/field-kinds'
-import { SECTION, openHwp, streamOf } from '../src/main/hwp5-file'
+import { MAX_STREAM_INFLATE_BYTES, SECTION, openHwp, streamOf } from '../src/main/hwp5-file'
 import { sectionTailsOf } from '../src/main/section-tails'
 import { newTabsOf } from '../src/main/tab-widths'
 import { REFUSAL_MS } from '../../../packages/compound-file/tests/helpers/raw-compound'
@@ -17,6 +17,11 @@ import { REFUSAL_MS } from '../../../packages/compound-file/tests/helpers/raw-co
 const MIB = 1024 * 1024
 /** what the hostile section inflates to: several times any ceiling a section could need */
 const BOMB_MIB = 256
+/**
+ * The most one reader may add to the peak: the ceiling it inflates up to, and room for what
+ * else a reader allocates. Far below the bomb, which a reader without the ceiling holds whole.
+ */
+const READER_RISE_MAX = MAX_STREAM_INFLATE_BYTES + 32 * MIB
 
 /**
  * A raw deflate stream of `mib` MiB of 0xff bytes, about a thousandth of that size. It is
@@ -54,15 +59,19 @@ describe('an HWP 5 file whose section inflates far past what a section holds', (
     expect(opened?.compressed).toBe(true)
   })
 
-  it('is read as a file with nothing to keep, quickly and in a fraction of that memory', () => {
-    const started = performance.now()
-    const rise = peakRise(() => {
-      expect(fieldKindsOf(bomb)).toBeNull()
-      expect(sectionTailsOf(bomb)).toBeNull()
-      expect(newTabsOf(bomb, 'hwp')).toEqual([])
-    })
-    expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
-    expect(rise).toBeLessThan((BOMB_MIB / 2) * MIB)
+  it('is read as a file with nothing to keep, quickly and within the ceiling by each reader', () => {
+    // Each reader is measured by itself: what one let go of may still be counted in the peak
+    // when the next one runs, so their rises add up when the collector has not run between.
+    const readers: Array<() => void> = [
+      () => expect(fieldKindsOf(bomb)).toBeNull(),
+      () => expect(sectionTailsOf(bomb)).toBeNull(),
+      () => expect(newTabsOf(bomb, 'hwp')).toEqual([]),
+    ]
+    for (const reader of readers) {
+      const started = performance.now()
+      expect(peakRise(reader)).toBeLessThan(READER_RISE_MAX)
+      expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
+    }
   })
 
   it('has its section refused, not handed back inflated', () => {
@@ -80,7 +89,7 @@ describe('an HWP 5 file whose section inflates far past what a section holds', (
     expect(inflatedBytes).toBeUndefined()
     expect(thrown).toBeInstanceOf(Error)
     expect(performance.now() - started).toBeLessThan(REFUSAL_MS)
-    expect(rise).toBeLessThan((BOMB_MIB / 2) * MIB)
+    expect(rise).toBeLessThan(READER_RISE_MAX)
   })
 
   it('is refused the way a section that is not deflate data is', () => {
