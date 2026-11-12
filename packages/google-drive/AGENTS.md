@@ -28,7 +28,7 @@ Google 드라이브 연결의 뒷단(main) 코드다. 시스템 브라우저로 
 - 드라이브 검색어는 `queryLiteral`로만 쿼리에 넣는다. 모델이나 사람이 준 글이 쿼리 구조를 바꾸지 못하게 한다.
 - 올리기 세션 주소(`Location`)는 Google의 올리기 주소(`DRIVE_UPLOAD_API`)로 시작할 때만 따라간다. 접근 토큰이 다른 곳으로 가지 않게 하기 위해서다.
 - 내려받기는 크기 상한(`MAX_OPEN_BYTES`, `MAX_READ_BYTES`)을 지키고, 넘으면 읽기를 멈춘다.
-- 주입받는 `fetch`는 리다이렉트를 따라가지 않는 것이어야 한다. 이 패키지의 모든 요청이 접근 토큰(`Authorization`)이나 본문의 갱신 토큰·client secret·로그인 코드를 싣기 때문이다. 앱은 `apps/shell/src/main/drive/drive-fetch.ts`의 `driveFetchOver`(`keyedFetch` 위의 `net.fetch`)를 넘긴다. 드라이브는 이 호출들에 직접 답하고, 올리기 세션 주소는 3xx가 아니라 200의 `Location`으로 온다.
+- 접근 토큰과 본문의 갱신 토큰·client secret·로그인 코드는 Google의 그 주소 밖 출처로 보내지 않는다. 그래서 주입받는 fetch가 둘이다. `fetch`는 토큰 교환과 파일 바이트가 아닌 모든 드라이브 호출의 것이고, 리다이렉트를 따라가지 않는 것이어야 한다. `download`는 파일의 바이트(`download`의 `alt=media`, `export`)의 것이고, 드라이브가 바이트가 있는 곳으로 리다이렉트하면 따라가되 출처가 바뀔 때 토큰을 떼어야 한다(없으면 `fetch`를 쓴다). 앱은 `apps/shell/src/main/drive/drive-fetch.ts`의 `driveFetchOver`(`keyedFetch`)와 `driveDownloadOver`(`keyedDownload`)를 넘긴다. 올리기 세션 주소는 3xx가 아니라 200의 `Location`으로 오고 위 규칙으로 따로 검사한다.
 
 ## 테스트
 
