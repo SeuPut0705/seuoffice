@@ -83,19 +83,24 @@ function applyEdits(opened: OpenedPptx, edits: Edit[] | undefined): void {
     if (e.ppr) el.dirtyPPr = { ...e.ppr }
     if (!e.set) continue
     switch (e.set.field) {
+      // only where the model type has the field: a mutated slide moves the
+      // element at an index to another type
       case 'fill':
       case 'stroke':
       case 'srcRect':
+        if (!(e.set.field === 'srcRect' ? ['picture'] : ['text', 'shape', 'picture']).includes(el.type)) break
         // a null value is no key: a Rust slot cannot hold null
         if (e.set.value === null) delete el[e.set.field]
         else el[e.set.field] = e.set.value
         break
       case 'offsetX':
-        el.transform.offset.x = e.set.value
+        if (el.transform) el.transform.offset.x = e.set.value
         break
-      case 'runText':
-        el.text.paragraphs[0].runs[0].text = e.set.value
+      case 'runText': {
+        const run = el.type === 'text' || el.type === 'shape' ? el.text?.paragraphs?.[0]?.runs?.[0] : undefined
+        if (run) run.text = e.set.value
         break
+      }
     }
   }
 }
