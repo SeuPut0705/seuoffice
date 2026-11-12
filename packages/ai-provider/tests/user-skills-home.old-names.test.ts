@@ -4,7 +4,7 @@
  * and a skill saved now lands beside them. Once ~/.seuoffice exists it is the
  * one used, whatever appears under the old name later.
  */
-import { mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
+import { chmodSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
@@ -71,6 +71,19 @@ describe('the skills folder an earlier version made', () => {
     writeFileSync(join(home, '.seuoffice', '.DS_Store'), '')
     expect(appSkillsDirOf(home)).toBe(join(home, '.ieumoffice', 'skills'))
     expect(await ownSkills(home)).toEqual(['minutes'])
+  })
+
+  it('stays in the new folder when it cannot be read, rather than switch to the old one', () => {
+    const home = temp()
+    skill(join(home, '.ieumoffice', 'skills'), 'minutes')
+    skill(join(home, '.seuoffice', 'skills'), 'agenda')
+    // a permission problem says nothing about whether the folder holds data
+    chmodSync(join(home, '.seuoffice'), 0o000)
+    try {
+      expect(appSkillsDirOf(home)).toBe(join(home, '.seuoffice', 'skills'))
+    } finally {
+      chmodSync(join(home, '.seuoffice'), 0o755)
+    }
   })
 
   it('counts the old home folder even before it has a skills folder', () => {
