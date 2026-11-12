@@ -617,7 +617,7 @@ export const TextStyleMark = Mark.create({
       shadingDisplay: { default: null as string | null, rendered: false },
       // w14:textOutline as JSON {color,widthPt,alpha}; saving is kept faithful by rawRPr
       textOutline: { default: null as string | null },
-      // w:outline/w:emboss/w:imprint/w:shadow; saving is kept faithful by rawRPr
+      // w:outline/w:emboss/w:imprint/w:shadow; saves from the model when set (null keeps rawRPr's)
       textEffect: { default: null as string | null },
       // w:dstrike (false = explicit off)
       dstrike: { default: null as boolean | null },
@@ -628,7 +628,7 @@ export const TextStyleMark = Mark.create({
       // character border (w:bdr) as JSON {val,sz,color,space}; saving is kept faithful by rawRPr
       bdr: { default: null as string | null },
       vertAlign: { default: null as 'superscript' | 'subscript' | null },
-      // East Asian emphasis mark (w:em val); saving is kept faithful by rawRPr
+      // East Asian emphasis mark (w:em val); saves from the model when set (null keeps rawRPr's)
       em: { default: null as string | null },
       // run-level explicit off (w:b/w:i w:val="0"): counters style-inherited bold/italic CSS
       boldOff: { default: null as boolean | null },

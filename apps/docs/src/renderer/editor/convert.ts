@@ -3769,11 +3769,12 @@ function runFromMarks(text: string, marks: PmMark[]): Run {
 
 function mergeRuns(runs: Run[]): Run[] {
   const merged: Run[] = []
+  let lastKey: string | null = null
   for (const run of runs) {
     const prev = merged[merged.length - 1]
     // reference markers / index entries / inline math / fields are atomic and
     // never merge — two identical FORMCHECKBOX runs must stay two fields
-    const atomic =
+    const ownAtomic =
       run.noteRef ||
       run.xeTerm !== undefined ||
       run.instrField !== undefined ||
@@ -3781,7 +3782,9 @@ function mergeRuns(runs: Run[]): Run[] {
       run.math ||
       run.sym ||
       run.ruby ||
-      run.image ||
+      run.image
+    const atomic =
+      ownAtomic ||
       prev?.noteRef ||
       prev?.xeTerm !== undefined ||
       prev?.instrField !== undefined ||
@@ -3790,59 +3793,93 @@ function mergeRuns(runs: Run[]): Run[] {
       prev?.sym ||
       prev?.ruby ||
       prev?.image
-    if (prev && !atomic && runStyleKey(prev) === runStyleKey(run)) prev.text += run.text
-    else merged.push({ ...run })
+    // runs written as one keep the first run's fields: they must differ in
+    // nothing but text, and sit in the same wrappers
+    const key = ownAtomic
+      ? null
+      : `${runContentKey(run)}|${JSON.stringify(inlineStructureKey(run))}`
+    if (prev && !atomic && key === lastKey) prev.text += run.text
+    else {
+      merged.push({ ...run })
+      lastKey = key
+    }
   }
   return merged
 }
 
-/** Font-dialog fields that save from the model (mergeRPrModel rebuilds them when edited) */
-function charFormatKey(run: Run): unknown[] {
-  return [
-    run.charSpacingTwips ?? null,
-    run.charScalePct ?? null,
-    run.kernHalfPoints ?? null,
-    run.positionHalfPoints ?? null,
-    run.caps ?? null,
-    run.dstrike ?? null,
-    run.vanishOwn ?? null,
-  ]
+// ---- run content: what makes two runs the same formatted text ----
+
+/**
+ * Run fields that are not content. Every other own field of a run is, so a
+ * field the reader and the editor's marks learn to carry is seen without a
+ * change here, by `mergeRuns` (neighbours written as one run) and by
+ * `normalizedRuns` (the "did this block change" signature). A hand-kept list
+ * of fields once let character shading, rtl, text effects and emphasis marks
+ * given to a word in the editor go unsaved, or merge into the run beside it.
+ */
+const RUN_FIELDS_NOT_CONTENT: ReadonlySet<string> = new Set<keyof Run>([
+  // compared on its own
+  'text',
+  // the wrappers around the run, not its formatting (apps/docs/AGENTS.md);
+  // mergeRuns keys them separately (inlineStructureKey)
+  'wrap',
+  // numbered afresh each time a document is opened (runMarks)
+  'zoteroFieldId',
+  // resolved at read for display; the field after the arrow is what saves
+  'effective', // the whole style chain -> the direct fields
+  'vanish', // inherited hidden text -> vanishOwn
+  'cs', // rtl chain -> rtl
+  'shadingDisplay', // pattern / theme shading -> shading
+  'eaSlotEmpty', // empty theme slot -> font
+  'csFont', // theme-resolved complex-script face -> rawRPr
+  // no mark carries it, so the editor cannot change it; rawRPr keeps it
+  'fontCs',
+])
+
+/** an explicit off toggle (w:b w:val="0") lives in rawRPr: the marks carry only
+ *  "on", and the writer writes off and unset alike */
+const OFF_IS_UNSET: ReadonlySet<string> = new Set<keyof Run>([
+  'bold',
+  'italic',
+  'underline',
+  'strike',
+])
+
+function runContentKey(run: Run): string {
+  const content: Record<string, unknown> = {}
+  for (const [field, value] of Object.entries(run)) {
+    if (value === undefined || RUN_FIELDS_NOT_CONTENT.has(field)) continue
+    if (value === false && OFF_IS_UNSET.has(field)) continue
+    content[field] = value
+  }
+  // a picture or a formula is its fragment: its other fields are display,
+  // read from the fragment or around it (a picture's preview may load later)
+  if (run.image) content.image = run.image.xml
+  if (run.math) content.math = run.math.omml
+  // the marks carry the decoded previous formatting, not its verbatim bytes,
+  // and a tracked change without the name of the move range it belongs to
+  if (run.rPrChange) {
+    const { oldRPr: _oldRPr, ...change } = run.rPrChange
+    content.rPrChange = change
+  }
+  if (run.ins) {
+    const { move: _move, ...ins } = run.ins
+    content.ins = ins
+  }
+  if (run.del) {
+    const { move: _move, ...del } = run.del
+    content.del = del
+  }
+  return sortedJson(content)
 }
 
-function runStyleKey(run: Run): string {
-  return JSON.stringify([
-    run.rawRPr ?? null,
-    run.styleId ?? null,
-    !!run.bold,
-    !!run.italic,
-    !!run.underline,
-    !!run.strike,
-    run.color ?? null,
-    run.sizeHalfPoints ?? null,
-    run.font ?? null,
-    run.fontAscii ?? null,
-    run.eastAsiaFont ?? null,
-    run.highlight ?? null,
-    run.shading ?? null,
-    ...charFormatKey(run),
-    run.textOutline ? JSON.stringify(run.textOutline) : null,
-    run.vertAlign ?? null,
-    run.link?.href ?? null,
-    run.link?.rId ?? null,
-    run.commentIds?.join(' ') ?? null,
-    revisionKey(run),
-    run.noteRef ? [run.noteRef.kind, run.noteRef.id] : null,
-    run.xeTerm ?? null,
-    run.refField ?? null,
-    run.instrField ?? null,
-    run.fldBeginXml ?? null,
-    run.fldDirty ?? null,
-    run.sdtCheckboxXml ?? null,
-    run.math?.omml ?? null,
-    run.sym ? [run.sym.font, run.sym.char] : null,
-    run.ruby?.xml ?? null,
-    inlineStructureKey(run),
-  ])
+/** JSON with object keys sorted: the reader and the marks build fields in different orders */
+function sortedJson(value: unknown): string {
+  return JSON.stringify(value, (_key, v: unknown) =>
+    v && typeof v === 'object' && !Array.isArray(v)
+      ? Object.fromEntries(Object.entries(v).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)))
+      : v,
+  )
 }
 
 function revisionKey(run: Run): string | null {
@@ -3871,38 +3908,7 @@ function normalizedRuns(runs: Run[]): unknown[] {
     // node round trip; its identity is the fragment plus the raw rPr it re-emits
     r.text === '' && r.image
       ? ['image', r.rawRPr ?? null, r.image.xml, r.link?.href ?? null, revisionKey(r)]
-      : [
-          r.text,
-          r.rawRPr ?? null,
-          r.styleId ?? null,
-          !!r.bold,
-          !!r.italic,
-          !!r.underline,
-          !!r.strike,
-          r.color ?? null,
-          r.sizeHalfPoints ?? null,
-          r.font ?? null,
-          r.fontAscii ?? null,
-          r.eastAsiaFont ?? null,
-          r.highlight ?? null,
-          ...charFormatKey(r),
-          r.vertAlign ?? null,
-          r.link?.href ?? null,
-          r.commentIds?.join(' ') ?? null,
-          revisionKey(r),
-          r.noteRef ? [r.noteRef.kind, r.noteRef.id] : null,
-          r.xeTerm ?? null,
-          r.refField ?? null,
-          r.instrField ?? null,
-          r.zoteroFieldPart ?? null,
-          r.fldBeginXml ?? null,
-          r.fldDirty ?? null,
-          r.sdtCheckboxXml ?? null,
-          r.math?.omml ?? null,
-          r.sym ? [r.sym.font, r.sym.char] : null,
-          r.ruby?.xml ?? null,
-          r.image?.xml ?? null,
-        ],
+      : [r.text, runContentKey(r)],
   )
 }
 
