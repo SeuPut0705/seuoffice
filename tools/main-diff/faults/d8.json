@@ -28,36 +28,27 @@
     "file": "main-core/src/shell/update_cache.rs",
     "find": "&& removed(&pending_dir, BLOCK_MAP_FILE, log)",
     "replace": "&& (removed(&pending_dir, BLOCK_MAP_FILE, log) || true)",
-    "fn": [
-      "update-cache.pruneUpdateCache"
-    ]
+    "fn": ["update-cache.pruneUpdateCache"]
   },
   {
     "name": "d8 inUse ignored",
     "file": "main-core/src/packages/i18n.rs",
     "find": "Some(in_use) => in_use(current),",
     "replace": "Some(_) => exists(current),",
-    "fn": [
-      "i18n.existingOrCurrent"
-    ]
+    "fn": ["i18n.existingOrCurrent"]
   },
   {
     "name": "d8 HOME not adopted",
     "file": "main-core/src/packages/i18n.rs",
     "find": "    \"HOME\",\n",
     "replace": "    \"HOMEDIR\",\n",
-    "fn": [
-      "i18n.OLD_ENV_NAMES",
-      "i18n.adoptOldEnv"
-    ]
+    "fn": ["i18n.OLD_ENV_NAMES", "i18n.adoptOldEnv"]
   },
   {
     "name": "d8 block map never removed",
     "file": "main-core/src/shell/update_cache.rs",
     "find": "&& removed(&pending_dir, BLOCK_MAP_FILE, log)",
     "replace": "&& true",
-    "fn": [
-      "update-cache.pruneUpdateCache"
-    ]
+    "fn": ["update-cache.pruneUpdateCache"]
   }
 ]
