@@ -48,20 +48,26 @@ could be offered upstream.
    each instruction; the entries of a stack a lookaround sets aside count
    against it. A search that would pass it stops: the iterator ends and
    `Matches::limit_exceeded()` is true, and no search runs after it. The stack
-   grows by doubling below a quarter of the bound and then to the bound in one
-   step, so its capacity stops at the bound and a reallocation holds 1.25
-   times it at most. After each match attempt a stack above 4,096 entries is
-   shrunk back to that, so one large search does not keep its memory.
+   grows by doubling while that stays below a quarter of the bound and then
+   to the bound in one step, so its capacity stops at the bound and a
+   reallocation holds 1.25 times it at most. A lookaround first gives back
+   the capacity the stack it sets aside does not use, so the two stacks
+   together stay near the bound. After each match attempt a stack above 4,096
+   entries is shrunk back to that, so one large search does not keep its
+   memory.
    What the bound costs, with the 2^22 entries `jscompat` sets
    (`crates/jscompat/tests/limit.rs`, `crates/jscompat/examples/limit_wasm.rs`):
 
    | Target | Entry | Peak of one search at the bound |
    | ------ | ----- | ------------------------------- |
-   | 64-bit native | 48 bytes | 251 MB (2^22 × 48 = 201 MB, × 1.25 while the last growth copies) |
-   | wasm32 | 32 bytes, inferred from the growth | linear memory grew by 126–166 MB, to 170–177 MB in all; a wasm memory never shrinks, so a tab keeps it |
+   | 64-bit native | 40 bytes | 209 MB measured (2^22 × 40 = 168 MB, × 1.25 while the last growth copies) |
+   | wasm32 | 20 bytes | linear memory grew by 84–125 MB, to 128–135 MB in all; a wasm memory never shrinks, so a tab keeps it |
 
-   The wasm32 rows are from refused searches over 1.5M and 25M characters
-   on Node 22: 2^22 × 32 = 134 MB, 168 MB with the copy of the last growth.
+   The wasm32 rows are from searches over 1M, 1.5M and 25M characters on
+   Node 22. Over 25M the text had already grown the memory, and the search
+   grew it by 83,886,080 bytes, 2^22 × 20. The native peak is the same for a
+   lookahead that grows its own stack after the stack it sets aside reached
+   the bound; without giving that capacity back it was 377 MB.
 2. **A lazy loop over one character matcher takes one character per
    backtrack** (`classicalbacktrack.rs`, `tests/lazy_loop.rs`). It used to
    compute the farthest position the loop could reach before trying the
