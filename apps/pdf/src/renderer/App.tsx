@@ -184,7 +184,7 @@ import {
   type WrittenSteps,
 } from './written-history'
 import { pasteCopiedPages } from './page-paste'
-import { saveUntitledCopy } from './untitled-save'
+import { createUntitledSaver } from './untitled-save'
 import { mayChangeProtection } from './protection-gate'
 import { PasswordDialog } from './PasswordDialog'
 import { PropertiesDialog } from './PropertiesDialog'
@@ -1621,7 +1621,14 @@ export default function App() {
       saved?: SavedSnapshot,
       waitForPageNos: number[] = [],
     ) => {
-      const bytes = await readFileBytes(window.pdfApi, path)
+      // Whether the document is unsaved with nothing pending here is the main process's to
+      // say, each time the file is read: opened from a recovery copy and not saved since, or
+      // an untitled document that is not at a place the person chose yet (a save or a page
+      // operation written into its working file does not make it saved)
+      const [bytes, recovered] = await Promise.all([
+        readFileBytes(window.pdfApi, path),
+        window.pdfApi.recoveryState?.(path).catch(() => null) ?? null,
+      ])
       // getDocument transfers the buffer to its worker, leaving `bytes` empty
       // here: take what is needed from it first
       const byteLength = bytes.byteLength
@@ -2041,6 +2048,7 @@ export default function App() {
         })
       }
       setFileSize(byteLength)
+      setRestoredUnsaved(recovered?.unsaved === true)
       setSelected(null)
       setMarkupMenu(null)
       setPageSel(EMPTY_PAGE_SELECTION)
@@ -2092,9 +2100,6 @@ export default function App() {
         setFilePath(path)
         setOpenError(null)
         await loadDoc(path, null)
-        // a restored recovery copy opens with unsaved changes (the file is untouched until Save)
-        const recovered = await window.pdfApi.recoveryState?.(path).catch(() => null)
-        setRestoredUnsaved(recovered?.unsaved === true)
         // Silently restore the last reading position (WPS-style). A saved custom
         // zoom (fitMode null) must be applied before 'ready', or the initial
         // fit recompute would take over; fit modes are recomputed anyway.
@@ -5915,8 +5920,8 @@ export default function App() {
         else setSaveState('idle')
         return false
       }
-      // the file now holds what the recovery copy held; the main process deleted the copy
-      setRestoredUnsaved(false)
+      // the main process dropped or refreshed the recovery copy; whether the document still
+      // counts as unsaved is read with the reload below
       recoveryCopies.invalidate()
       // what this save wrote is in the file now: the reload below drops those annotations
       // from the editing document, and their "in the file" confirmations must not read
@@ -6004,40 +6009,43 @@ export default function App() {
     return tracked
   }
 
-  /** the first save of an untitled copy is under way (its save dialog, its write) */
-  const untitledSaveBusyRef = useRef(false)
+  /** the first save of an untitled copy: one at a time, asked where once */
+  const [untitledSaver] = useState(() =>
+    createUntitledSaver({
+      pickUntitledCopyTarget: async (path, name) =>
+        (await window.pdfApi.pickUntitledCopyTarget?.(path, name)) === true,
+      adoptUntitledCopy: async (path) =>
+        (await window.pdfApi.adoptUntitledCopy?.(path)) ?? {
+          ok: false,
+          error: 'pdf: untitled documents cannot be saved here',
+        },
+    }),
+  )
   /**
    * Save, and for an untitled copy (a skill template's, spec 5.7) the first
    * explicit save asks where the document goes before anything is written
    * (Cancel leaves the edits pending); then the edits land in the copy and the
    * chosen file becomes this tab's document. Automatic saves stay in the copy,
-   * and so does a save that arrives while the first save is under way: that
-   * one moves the document once the edits are in.
+   * and so does a save that arrives while the first save is writing: that one
+   * moves the document once the edits are in. Until it is at the chosen place
+   * the document is unsaved, which the main process holds (loadDoc reads it).
    */
   const save = async (autosave = false, flushAll = false): Promise<boolean> => {
-    if (autosave || !untitledCopyRef.current || !filePath || untitledSaveBusyRef.current) {
+    if (autosave || !untitledCopyRef.current || !filePath || untitledSaver.writing) {
       return saveInPlace(autosave, flushAll)
     }
-    untitledSaveBusyRef.current = true
-    try {
-      const target = await saveUntitledCopy(
-        {
-          pickUntitledCopyTarget: async (path, name) =>
-            (await window.pdfApi.pickUntitledCopyTarget?.(path, name)) === true,
-          adoptUntitledCopy: async (path) =>
-            (await window.pdfApi.adoptUntitledCopy?.(path)) ?? null,
-        },
-        filePath,
-        fileName || 'document.pdf',
-        () => saveInPlace(false, flushAll),
-      )
-      if (!target) return false
-      untitledCopyRef.current = false
-      documentMovedTo(target)
-      return true
-    } finally {
-      untitledSaveBusyRef.current = false
+    const out = await untitledSaver.save(filePath, fileName || 'document.pdf', () =>
+      saveInPlace(false, flushAll),
+    )
+    if (!out.saved) {
+      // the edits are in the working file, the document is not where the person chose
+      if (out.why === 'failed') opFailed(out.error)
+      return false
     }
+    untitledCopyRef.current = false
+    setRestoredUnsaved(false)
+    documentMovedTo(out.path)
+    return true
   }
 
   // Drain queued saves. This effect runs after every commit, so by the time it fires

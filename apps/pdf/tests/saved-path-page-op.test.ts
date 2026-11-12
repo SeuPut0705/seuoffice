@@ -57,7 +57,7 @@ vi.mock('electron', () => ({
 import { createPdfView, markPdfUntitledCopy, markPdfUntitledPath } from '../src/main/pdf-main'
 import { holdCopiedPages } from '../src/main/page-clipboard'
 import { pasteCopiedPages, type PagePasteApi } from '../src/renderer/page-paste'
-import { saveUntitledCopy } from '../src/renderer/untitled-save'
+import { createUntitledSaver } from '../src/renderer/untitled-save'
 import {
   NO_WRITTEN_STEPS,
   recordWritten,
@@ -149,16 +149,12 @@ const savedToPickedPath = (view: OpenView, picked: string): PendingEdits => ({
   fileBytes: readFileSync(view.path).byteLength,
   save: async () => {
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: picked })
-    return saveUntitledCopy(
-      {
-        pickUntitledCopyTarget: (path, name) =>
-          view.call(PDF_CHANNELS.pickUntitledCopyTarget, path, name),
-        adoptUntitledCopy: (path) => view.call(PDF_CHANNELS.adoptUntitledCopy, path),
-      },
-      view.path,
-      'picked.pdf',
-      () => saveHighlight(view),
-    )
+    const out = await createUntitledSaver({
+      pickUntitledCopyTarget: (path, name) =>
+        view.call(PDF_CHANNELS.pickUntitledCopyTarget, path, name),
+      adoptUntitledCopy: (path) => view.call(PDF_CHANNELS.adoptUntitledCopy, path),
+    }).save(view.path, 'picked.pdf', () => saveHighlight(view))
+    return out.saved ? out.path : null
   },
 })
 

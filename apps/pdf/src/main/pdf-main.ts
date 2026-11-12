@@ -60,6 +60,7 @@ import {
 import type {
   ExportImagesRequest,
   ExportImagesResult,
+  AdoptUntitledCopyResult,
   PdfAutoRenameResult,
   ExtractPagesRequest,
   ExtractPagesResult,
@@ -937,6 +938,8 @@ async function writeOwnFile<T>(wcId: number, path: string, write: () => Promise<
   ownWritesInFlight.set(path, (ownWritesInFlight.get(path) ?? 0) + 1)
   try {
     const result = await write()
+    // a write into an untitled copy is not a save of the document: it has no place yet
+    if (untitledCopyPdfPaths.has(path)) unsavedUntitledCopyPaths.add(path)
     const written = await rememberDiskState(wcId, path)
     const own = ownWriteStates.get(wcId) ?? new Map<string, SaveDiskState>()
     // unreadable right after the write: nothing there is known to be this view's
@@ -1097,8 +1100,15 @@ export function pdfPathGranted(webContentsId: number, path: unknown): path is st
   return typeof path === 'string' && !!allowedByWc.get(webContentsId)?.has(path)
 }
 
+/**
+ * Whether the view has unsaved work: edits pending in its renderer, or an untitled document
+ * that is not at a place the person chose yet. The second does not depend on what the
+ * renderer reports; closing asks, and a tab that goes away keeps its recovery copy.
+ */
 export function pdfIsDirty(webContentsId: number): boolean {
-  return dirtyByWc.has(webContentsId)
+  if (dirtyByWc.has(webContentsId)) return true
+  const open = openPathByWc.get(webContentsId)
+  return open !== undefined && unsavedUntitledCopyPaths.has(open)
 }
 
 /** Drop the mirrored dirty flag (webContents.reload does not destroy the view). */
@@ -1135,6 +1145,14 @@ const untitledCopyPdfPaths = new Set<string>()
 /** Where a view's untitled copy goes, picked in the save dialog (pickUntitledCopyTarget);
  *  the adoption that follows the save of its edits copies it there, once */
 const untitledCopyTargetByWc = new Map<number, { path: string; target: string }>()
+/**
+ * Untitled copies that hold the person's work: restored from a recovery copy, or written
+ * into by their view (a save of the edits, a page operation). The working file is not
+ * where the document lives, so writing it saves nothing: the view stays unsaved until the
+ * copy is at the place the person picked (adoptUntitledCopy), and only they give it up
+ * ("Don't Save"). Nothing else takes a path out of this set while its view is open.
+ */
+const unsavedUntitledCopyPaths = new Set<string>()
 
 /** Called by the shell right before it opens an untitled copy's tab */
 export function markPdfUntitledCopy(path: string): void {
@@ -1258,6 +1276,7 @@ export const pdfRecoveryEditor: RecoveryEditorContract = {
     if (!path || contents.isDestroyed()) return
     // the first explicit save asks where the document goes (like a template copy)
     untitledCopyPdfPaths.add(path)
+    unsavedUntitledCopyPaths.add(path)
     reopenView(contents, path)
   },
   isUnprotectable: (contents) => recovery.isUnprotectable(contents.id),
@@ -1436,7 +1455,7 @@ export async function requestPdfClose(
   contents: WebContents,
   parent?: BrowserWindow | null,
 ): Promise<boolean> {
-  if (!dirtyByWc.has(contents.id) || contents.isDestroyed()) return true
+  if (!pdfIsDirty(contents.id) || contents.isDestroyed()) return true
   const options = {
     type: 'warning' as const,
     message: tm('closeUnsavedMsg'),
@@ -1495,9 +1514,10 @@ function requestRendererSave(contents: WebContents, flushAll: boolean): Promise<
 
 /** Ask the renderer to write pending edits to disk; clean views resolve true immediately.
  *  flushAll (export flows): the file must then hold everything on screen, so the form field
- *  whose card is open is written too; menu Save leaves it to Done */
+ *  whose card is open is written too; menu Save leaves it to Done. An untitled document with
+ *  no place yet is not clean: its renderer's save asks where it goes */
 export function flushPdfSave(contents: WebContents, flushAll = false): Promise<boolean> {
-  if (contents.isDestroyed() || !dirtyByWc.has(contents.id)) return Promise.resolve(true)
+  if (contents.isDestroyed() || !pdfIsDirty(contents.id)) return Promise.resolve(true)
   return requestRendererSave(contents, flushAll)
 }
 
@@ -1912,8 +1932,10 @@ function registerPdfIpc(): void {
         allowedByWc.set(e.sender.id, new Set([target]))
         openPathByWc.set(e.sender.id, target)
         redactionPathByWc.set(e.sender.id, target)
-        // The view's document moved to the redacted copy: the old path's record is dead
+        // The view's document moved to the redacted copy, a file the person picked: the
+        // old path's record is dead, and an untitled copy left behind is no open document
         forgetDiskState(e.sender.id, path)
+        unsavedUntitledCopyPaths.delete(path)
         // never carry the old copy over: restoring it would undo the redaction
         recovery.movedToNewFile(e.sender.id, path, target)
         try {
@@ -2029,22 +2051,35 @@ function registerPdfIpc(): void {
 
   /**
    * Step two: the renderer has saved its edits into the temp copy; copy it to
-   * the place picked in step one and make that file this tab's document. Null
-   * when nothing is picked for this copy: the path never comes from the renderer.
+   * the place picked in step one and make that file this tab's document. The
+   * path never comes from the renderer. When the copy fails the document stays
+   * the untitled copy, unsaved, and the answer says why.
    */
   ipcMain.handle(
     PDF_CHANNELS.adoptUntitledCopy,
-    async (e, path: unknown): Promise<string | null> => {
-      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) return null
-      if (!untitledCopyPdfPaths.has(path)) return null
+    async (e, path: unknown): Promise<AdoptUntitledCopyResult> => {
+      if (typeof path !== 'string' || !allowedByWc.get(e.sender.id)?.has(path)) {
+        return { ok: false, error: 'pdf: path not granted to this view' }
+      }
+      if (!untitledCopyPdfPaths.has(path)) {
+        return { ok: false, error: 'pdf: not an untitled document' }
+      }
       const picked = untitledCopyTargetByWc.get(e.sender.id)
       untitledCopyTargetByWc.delete(e.sender.id)
-      if (picked?.path !== path) return null
+      if (picked?.path !== path) {
+        return { ok: false, error: 'pdf: no place was picked for this document' }
+      }
       const { target } = picked
-      // the view writes the picked file itself: Undo of an earlier page operation goes on
-      // there, and only a later change by another program reads as one
-      await writeOwnFile(e.sender.id, target, () => copyFile(path, target))
+      try {
+        // the view writes the picked file itself: Undo of an earlier page operation goes on
+        // there, and only a later change by another program reads as one
+        await writeOwnFile(e.sender.id, target, () => copyFile(path, target))
+      } catch (err) {
+        return { ok: false, error: err instanceof Error ? err.message : String(err) }
+      }
+      // the document is where the person chose: only now is it saved
       untitledCopyPdfPaths.delete(path)
+      unsavedUntitledCopyPaths.delete(path)
       allowedByWc.set(e.sender.id, new Set([target]))
       openPathByWc.set(e.sender.id, target)
       recovery.adopted(e.sender.id, path, target)
@@ -2054,7 +2089,7 @@ function registerPdfIpc(): void {
       } catch (err) {
         console.warn('[pdf] untitled copy saved hook failed:', err)
       }
-      return target
+      return { ok: true, path: target }
     },
   )
 
@@ -2988,7 +3023,9 @@ function registerPdfIpc(): void {
         await writePdfAtomically(target, signed)
         allowedByWc.set(e.sender.id, new Set([target]))
         openPathByWc.set(e.sender.id, target)
-        // the signed file starts clean: no copy of the unsigned document follows it
+        // the signed file, at the place the person picked, starts clean: no copy of the
+        // unsigned document follows it
+        unsavedUntitledCopyPaths.delete(path)
         recovery.movedToNewFile(e.sender.id, path, target)
         try {
           pdfRedactionSavedHook?.(e.sender, target)
@@ -3033,8 +3070,12 @@ function registerPdfIpc(): void {
     }),
   )
 
+  // unsaved with nothing pending in the renderer: opened from a recovery copy and not saved
+  // since, or an untitled document that is not at a place the person chose yet
   ipcMain.handle(PDF_CHANNELS.recoveryState, (e, path: unknown): { unsaved: boolean } => ({
-    unsaved: pdfPathGranted(e.sender.id, path) && recovery.unsavedFromCopy(e.sender.id, path),
+    unsaved:
+      pdfPathGranted(e.sender.id, path) &&
+      (recovery.unsavedFromCopy(e.sender.id, path) || unsavedUntitledCopyPaths.has(path)),
   }))
 
   // what a save of these edits would write, into the app data folder only; the file is never written
@@ -3116,9 +3157,11 @@ function grantAndTrack(wc: WebContents, openPath?: string | null): void {
   wc.on('render-process-gone', () => recovery.markCrashed(wcId))
   wc.once('destroyed', () => {
     // before the dirty flag goes: a tab closed with no unsaved changes drops its copy
-    recovery.destroyed(wcId, dirtyByWc.has(wcId))
+    recovery.destroyed(wcId, pdfIsDirty(wcId))
     copyFlushWaiters.get(wcId)?.()
     copyFlushWaiters.delete(wcId)
+    const open = openPathByWc.get(wcId)
+    if (open !== undefined) unsavedUntitledCopyPaths.delete(open)
     openPathByWc.delete(wcId)
     redactionPathByWc.delete(wcId)
     redactionFlows.delete(wcId)

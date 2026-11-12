@@ -211,7 +211,7 @@ describe('Undo of a page operation after the view itself moved its document', ()
       true,
     )
     const adopted = await handlers.get(PDF_CHANNELS.adoptUntitledCopy)!(sender, view.path)
-    expect(adopted).toBe(target)
+    expect(adopted).toEqual({ ok: true, path: target })
     return { ...view, path: target }
   }
 

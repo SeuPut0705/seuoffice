@@ -416,7 +416,10 @@ describe('untitled documents', () => {
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
     expect(await invoke(PDF_CHANNELS.pickUntitledCopyTarget, view, working, 'Draft.pdf')).toBe(true)
     expect(await save(view, editedRequest(working))).toMatchObject({ ok: true })
-    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working)).toBe(target)
+    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working)).toEqual({
+      ok: true,
+      path: target,
+    })
     expect(showSaveDialog.mock.calls[0]![0]).toMatchObject({ defaultPath: missing })
     expect(existsSync(target)).toBe(true)
     expect(store.copyInfo(copy)).toBeNull()
@@ -628,7 +631,10 @@ describe('working files of restored untitled copies', () => {
     const target = join(makeDir('pdf-recovery-adopt-'), 'picked.pdf')
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
     expect(await invoke(PDF_CHANNELS.pickUntitledCopyTarget, view, working, 'Draft.pdf')).toBe(true)
-    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working)).toBe(target)
+    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working)).toEqual({
+      ok: true,
+      path: target,
+    })
     expect(existsSync(target)).toBe(true)
     await vi.waitFor(() => expect(existsSync(working)).toBe(false))
   })

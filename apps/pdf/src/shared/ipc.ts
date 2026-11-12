@@ -1042,6 +1042,10 @@ export interface PdfAutoRenameResult {
   name?: string
 }
 
+/** Answer to adoptUntitledCopy: where the document is now, or why it is still the untitled
+ *  copy (no place picked for it, or the copy to the picked place failed) */
+export type AdoptUntitledCopyResult = { ok: true; path: string } | { ok: false; error: string }
+
 export type SavePdfResult =
   | {
       ok: true
@@ -1794,10 +1798,10 @@ export interface PdfApi {
   pickUntitledCopyTarget?(path: string, defaultName: string): Promise<boolean>
   /**
    * Step two, after the edits were saved into the copy: copies it to the
-   * picked place and makes that file this tab's document. The picked path, or
-   * null when no place is picked for this view.
+   * picked place and makes that file this tab's document. When that fails the
+   * document stays the untitled copy, unsaved, and the answer says why.
    */
-  adoptUntitledCopy?(path: string): Promise<string | null>
+  adoptUntitledCopy?(path: string): Promise<AdoptUntitledCopyResult>
   /** Dry-run match of pending text edits against the file: reason null = would apply */
   validateTextEdits(request: ValidateTextEditsRequest): Promise<TextEditValidation[]>
   /** EDIT_FONTS ids whose font file exists on this machine */
