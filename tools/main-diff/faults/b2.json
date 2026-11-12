@@ -761,21 +761,21 @@
   },
   {
     "name": "html-gt",
-    "file": "main-core/src/html.rs",
+    "file": "main-core/src/html_parse.rs",
     "find": "'>' => out.push_str(\"&gt;\"),",
     "replace": "'>' => out.push('>'),",
     "fn": ["print-html-pdf.sanitizePrintableBody", "print-html-pdf.parseSerialize"]
   },
   {
     "name": "html-bom",
-    "file": "main-core/src/html.rs",
+    "file": "main-core/src/html_parse.rs",
     "find": "discard_bom: false,",
     "replace": "discard_bom: true,",
     "fn": ["print-html-pdf.sanitizePrintableBody", "print-html-pdf.parseSerialize"]
   },
   {
     "name": "html-noscript-raw",
-    "file": "main-core/src/html.rs",
+    "file": "main-core/src/html_parse.rs",
     "find": "UNESCAPED_TEXT.contains(&name) || name == \"noscript\"",
     "replace": "UNESCAPED_TEXT.contains(&name)",
     "fn": ["print-html-pdf.parseSerialize"]
@@ -908,7 +908,7 @@
   },
   {
     "name": "integrator: html attr prefix default",
-    "file": "main-core/src/html.rs",
+    "file": "main-core/src/html_parse.rs",
     "find": "attr.prefix.as_deref().unwrap_or(\"undefined\")",
     "replace": "attr.prefix.as_deref().unwrap_or(\"\")",
     "fn": ["print-html-pdf.parseSerialize"]

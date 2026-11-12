@@ -11,7 +11,7 @@ use jscompat::node_path::host::{is_absolute, resolve};
 use jscompat::{JsObject, JsonValue, date_parse, json_parse, json_stringify_pretty, random_uuid};
 
 use crate::node_fs::{NodeError, node_error, node_error2};
-use crate::packages::ai_provider::{
+use crate::packages::ai_provider::user_skills_states::{
     UserSkillSettings, UserSkillStateSetting, normalize_user_skill_settings,
 };
 use crate::packages::project_store::is_valid_project_id;

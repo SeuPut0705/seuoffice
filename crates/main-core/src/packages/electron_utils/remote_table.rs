@@ -1,6 +1,6 @@
 //! `packages/electron-utils/src/remote-table.ts`.
 //!
-//! `parse5`'s `parseFragment` is `crate::html::parse_fragment` (html5ever).
+//! `parse5`'s `parseFragment` is `crate::html_parse::parse_fragment` (html5ever).
 //! The fetch takes the resolver, the fetcher and the timeout signal from the
 //! caller (`AbortSignal.timeout(REMOTE_TABLE_TIMEOUT_MS)`).
 
@@ -11,7 +11,7 @@ use super::remote_image::read_body_capped;
 use super::safe_remote_url::{
     AbortSignal, FetchWithSsrfGuardOptions, Fetcher, Resolver, fetch_with_ssrf_guard,
 };
-use crate::html::{Node, parse_fragment};
+use crate::html_parse::{Node, parse_fragment};
 
 /// A table this large is already past what a spreadsheet shows; the cap keeps
 /// a hostile page from turning into an allocation spike.

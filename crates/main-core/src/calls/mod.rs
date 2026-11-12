@@ -17,6 +17,14 @@ mod b2_remote;
 mod b3_session;
 mod b3_shell;
 mod b3_update;
+mod b4_docs;
+mod b4_html;
+mod b4_hwp;
+mod b4_markdown;
+mod b4_pdf;
+mod b4_sheets;
+mod b4_slides;
+mod b5_ai;
 mod files;
 mod node_fs;
 mod node_path;
@@ -79,6 +87,14 @@ const GROUPS: &[Group] = &[
     b3_session::call,
     b3_update::call,
     b3_shell::call,
+    b4_docs::call,
+    b4_sheets::call,
+    b4_slides::call,
+    b4_markdown::call,
+    b4_html::call,
+    b4_pdf::call,
+    b4_hwp::call,
+    b5_ai::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.

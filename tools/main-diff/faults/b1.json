@@ -267,14 +267,14 @@
   },
   {
     "name": "ai-provider: 64-character skill name rejected",
-    "file": "main-core/src/packages/ai_provider.rs",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
     "find": "name.chars().count() <= 64",
     "replace": "name.chars().count() < 64",
     "fn": ["states.normalizeUserSkillSettings"]
   },
   {
     "name": "ai-provider: plugin skills dropped instead of project skills",
-    "file": "main-core/src/packages/ai_provider.rs",
+    "file": "main-core/src/packages/ai_provider/user_skills_states.rs",
     "find": "parsed.source == \"project\"",
     "replace": "parsed.source == \"plugin\"",
     "fn": ["states.normalizeUserSkillSettings"]

@@ -1,8 +1,8 @@
 //! `apps/shell/src/main/update-notes.ts`: the release body of the update
 //! feed as a small block tree. `parse5`'s `parseFragment` is
-//! [`crate::html::parse_fragment`].
+//! [`crate::html_parse::parse_fragment`].
 
-use crate::html::{self, Node};
+use crate::html_parse::{self, Node};
 use jscompat::{js_regex, slice_utf16, trim};
 use serde::Serialize;
 use serde_json::Value;
@@ -175,7 +175,7 @@ fn has_content(html: &str) -> bool {
 
 /// `htmlToBlocks`
 fn html_to_blocks(html: &str) -> Vec<UpdateNoteBlock> {
-    let fragment = html::parse_fragment(html);
+    let fragment = html_parse::parse_fragment(html);
     let mut blocks = Vec::new();
     collect_blocks(&fragment, &mut blocks);
     blocks

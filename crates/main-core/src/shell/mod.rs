@@ -1,6 +1,9 @@
 //! `apps/shell/src/main`: the modules that hold no Electron object (batches 1
 //! and 3 of decision 0029), one file per TypeScript file.
 
+pub mod ai_naming;
+pub mod ai_naming_provider;
+pub mod ai_secrets;
 pub mod app_routing;
 pub mod app_settings;
 pub mod atomic_write;

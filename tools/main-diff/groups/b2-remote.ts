@@ -2304,7 +2304,11 @@ const FETCH_TABLE_CASES: Case[] = [
   fetchTable({ status: 200, headers: { 'content-type': 'text/plain' }, chunks: ['a\tb\n1\t2'] }),
   fetchTable({ status: 200, headers: { 'content-type': 'application/csv' }, chunks: ['a,b\n1,2'] }),
   fetchTable({ status: 200, headers: { 'content-type': 'Application/CSV' }, chunks: ['a,b\n1,2'] }),
-  fetchTable({ status: 200, headers: { 'content-type': 'text/csv; name=\u00e9' }, chunks: ['a,b\n1,2'] }),
+  fetchTable({
+    status: 200,
+    headers: { 'content-type': 'text/csv; name=\u00e9' },
+    chunks: ['a,b\n1,2'],
+  }),
   fetchTable({ status: 200, headers: { 'content-type': 'x-text/csv-x' }, chunks: ['a,b\n1,2'] }),
   fetchTable({ status: 200, headers: { 'content-type': 'text/html' }, chunks: ['a,b\n1,2\n'] }),
   fetchTable({ status: 200, chunks: ['a,b\n1,2\n'] }),

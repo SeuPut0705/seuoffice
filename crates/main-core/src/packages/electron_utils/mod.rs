@@ -2,11 +2,13 @@
 //! (batches 1 and 2 of decision 0029), one file per TypeScript file.
 
 pub mod abort_on_destroyed;
+pub mod ai_run_guard;
 pub mod atomic_write;
 pub mod author_name;
 pub mod default_save_dir;
 pub mod dialog_memory;
 pub mod doc_attach_channels;
+pub mod drive_ai_channels;
 pub mod fetch_image_bytes;
 pub mod font_store;
 pub mod generate_handoff;

@@ -19,7 +19,7 @@ use serde_json::{Map, Value};
 
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::node_fs::NodeError;
-use crate::packages::ai_provider::{
+use crate::packages::ai_provider::user_skills_states::{
     SKILL_EDITORS, SkillEditorsChoice, UserSkillSettings, UserSkillStateSetting,
     normalize_user_skill_settings,
 };

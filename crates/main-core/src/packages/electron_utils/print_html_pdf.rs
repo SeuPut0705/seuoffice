@@ -2,14 +2,14 @@
 //!
 //! Render a standalone HTML document to PDF bytes in a hidden window, shared
 //! by the AI create_document flows. The caller supplies the window as a
-//! [`PrintWindow`]. The HTML is parsed and written by `crate::html`, which
+//! [`PrintWindow`]. The HTML is parsed and written by `crate::html_parse`, which
 //! follows parse5.
 
 use jscompat::node_path::host::join;
 use serde_json::{Map, Value};
 
 use super::print_window::{JsError, mkdtemp, rm_recursive_force};
-use crate::html::{self, Node};
+use crate::html_parse::{self, Node};
 use crate::node_fs::node_error;
 
 /// `PrintWindow`: `loadFile`, `destroy` and `webContents.printToPDF`
@@ -88,13 +88,13 @@ fn sanitize_children(nodes: Vec<Node>) -> Vec<Node> {
 
 /// Keep only the restricted document tags and strip every attribute/URL.
 pub fn sanitize_printable_body(body_html: &str) -> String {
-    let fragment = html::parse_fragment(body_html);
-    html::serialize(&sanitize_children(fragment))
+    let fragment = html_parse::parse_fragment(body_html);
+    html_parse::serialize(&sanitize_children(fragment))
 }
 
 /// `serialize(parseFragment(html))`, with no sanitizing
 pub fn parse_and_serialize(fragment_html: &str) -> String {
-    html::serialize(&html::parse_fragment(fragment_html))
+    html_parse::serialize(&html_parse::parse_fragment(fragment_html))
 }
 
 // Print stylesheet, not UI chrome: document output must render identically in

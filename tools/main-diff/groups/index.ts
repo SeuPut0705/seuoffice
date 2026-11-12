@@ -6,6 +6,14 @@ import { group as b2Remote } from './b2-remote.ts'
 import { group as b3Session } from './b3-session.ts'
 import { group as b3Shell } from './b3-shell.ts'
 import { group as b3Update } from './b3-update.ts'
+import { group as b4Docs } from './b4-docs.ts'
+import { group as b4Sheets } from './b4-sheets.ts'
+import { group as b4Slides } from './b4-slides.ts'
+import { group as b4Markdown } from './b4-markdown.ts'
+import { group as b4Html } from './b4-html.ts'
+import { group as b4Pdf } from './b4-pdf.ts'
+import { group as b4Hwp } from './b4-hwp.ts'
+import { group as b5Ai } from './b5-ai.ts'
 import { group as files } from './files.ts'
 import { group as nodeFs } from './node-fs.ts'
 import { group as nodePath } from './node-path.ts'
@@ -26,4 +34,12 @@ export const groups: Record<string, Group> = {
   'b3-session': b3Session,
   'b3-update': b3Update,
   'b3-shell': b3Shell,
+  'b4-docs': b4Docs,
+  'b4-sheets': b4Sheets,
+  'b4-slides': b4Slides,
+  'b4-markdown': b4Markdown,
+  'b4-html': b4Html,
+  'b4-pdf': b4Pdf,
+  'b4-hwp': b4Hwp,
+  'b5-ai': b5Ai,
 }

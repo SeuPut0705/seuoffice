@@ -8,7 +8,17 @@
 //! about either: paths, clocks and loggers come from the caller.
 
 pub mod calls;
+pub mod diagram;
+pub mod docs;
+pub mod epub;
 pub mod html;
+pub mod html_parse;
+pub mod hwp;
+pub mod markdown;
+pub mod mindmap;
 pub mod node_fs;
 pub mod packages;
+pub mod pdf;
+pub mod sheets;
 pub mod shell;
+pub mod slides;
