@@ -335,7 +335,13 @@ pub fn redact_markdown_source(source: &str) -> Result<String, String> {
     // how far any HTML construct starting before `next_lt` reaches
     let mut reach = 0;
     let mut next_lt = source.find('<');
-    while let Some(start) = open_re().find_from(source, cursor).next() {
+    // One pass of each pattern, where the original restarts at `lastIndex`.
+    // The cursor stands after a ">" and neither pattern matches across one,
+    // so a match that begins before the cursor ends before it, and the first
+    // match of the pass at or after the cursor is the one a restart finds.
+    let mut opens = open_re().find_iter(source);
+    let mut closes = close_re().find_iter(source);
+    while let Some(start) = opens.by_ref().find(|open| open.start() >= cursor) {
         let open_end = start.end();
         // rule 1: a tag or comment that began earlier and has not ended yet would be
         // the token the editor reads, and its end, not this tag's, starts the span
@@ -355,10 +361,13 @@ pub fn redact_markdown_source(source: &str) -> Result<String, String> {
             return Err(ambiguous());
         }
 
-        let Some(end) = close_re().find_from(source, open_end).next() else {
+        let Some(end) = closes.by_ref().find(|close| close.start() >= open_end) else {
             return Err(redaction_error("a withheld span is never closed"));
         };
-        let Some(tag) = plain_close_re().exec(&source[end.start()..]) else {
+        // the closing tag ends at the first ">" or is not a plain one
+        let closing = &source[end.start()..];
+        let closing = &closing[..closing.find('>').map_or(closing.len(), |gt| gt + 1)];
+        let Some(tag) = plain_close_re().exec(closing) else {
             return Err(ambiguous());
         };
         let close_end = end.start() + tag.end();
