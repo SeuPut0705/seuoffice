@@ -230,13 +230,19 @@ export function overWithheldModelText(text: string, label: string): string {
     .join('\n')
 }
 
+/** a run holds content when it has words, a picture, a drawing, an object or a symbol */
+const RUN_CONTENT_RE =
+  /<w:t(?:\s[^>]*)?>[^<]*\S[^<]*<\/w:t>|<w:(?:drawing|pict|object|sym)[\s>/]|<mc:AlternateContent[\s>]/
+
 /**
- * An entry written anew from its text, with every run that holds words hidden
- * under `label`. For an edit that cannot be patched around an entry's hidden
- * runs (a paragraph added, a change across hidden and plain words): which of
- * the new words are the hidden ones is no longer known, so all of them are,
- * and the person can show them to AI again. `entryXml` is the entry as this
- * engine generates it (one run per text piece, no comments or CDATA).
+ * An entry written anew from its text, with every run that holds content (words,
+ * or a picture, drawing, object or symbol) hidden under `label`. For an edit
+ * that cannot be patched around an entry's hidden runs (a paragraph added, a
+ * change across hidden and plain words): which of the new words are the hidden
+ * ones is no longer known, so all of them are, and the person can show them to
+ * AI again. A picture kept in the entry is hidden with them: it may be what a
+ * hidden run held. `entryXml` is the entry as this engine generates it (one run
+ * per text piece, no comments or CDATA).
  */
 export function overWithheld(entryXml: string, label: string): string {
   const mark =
@@ -245,8 +251,8 @@ export function overWithheld(entryXml: string, label: string): string {
   return entryXml.replace(
     /<w:r(\s[^>]*)?>([\s\S]*?)<\/w:r>/g,
     (run, attrs: string | undefined, inner: string) => {
-      // a run with no words (a reference mark, a spacer) stays as it is
-      if (!/<w:t(?:\s[^>]*)?>[^<]*\S[^<]*<\/w:t>/.test(inner)) return run
+      // a run with no content (a reference mark, a spacer) stays as it is
+      if (!RUN_CONTENT_RE.test(inner)) return run
       const marked = inner.includes('</w:rPr>')
         ? inner.replace('</w:rPr>', `${mark}</w:rPr>`)
         : `<w:rPr>${mark}</w:rPr>${inner}`
