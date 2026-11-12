@@ -39,6 +39,7 @@ Sheets 앱(메인과 렌더러)과 명령줄 도구(`packages/cli`)가 쓴다.
 - 일부 생성기는 spreadsheetml 이름공간에 접두사를 붙인다(`<x:workbook>`). 접두사 없는 요소 패턴이 먹도록 읽을 때 `normalizeOoxmlPartPrefix`로 벗긴다. 계획이 다시 쓰는 파트만 파일에 닿으므로 손대지 않은 항목은 원래 바이트다.
 - Excel 2007 이후에 생긴 함수는 파일 안에서 `_xlfn.`(일부 동적 배열 함수는 `_xlfn._xlws.`) 표지를 달고 저장된다. 사이드카가 읽을 때 떼어 내므로, 수식을 시트 XML로 쓸 때 다시 붙인다. 빠지면 Excel이 `#NAME?`로 고친다.
 - 행·열을 밀 때는 같은 묶음 안에서 그 시트에 걸린 도형 앵커, 표 범위, VML 앵커, 차트 참조, 다른 시트의 수식, 정의된 이름도 함께 민다.
+- 숨김 표시는 구조 연산과 함께 원본 파일 좌표·원본 시트 이름으로 이동한 뒤 출력 시트 이름으로 바꾼다. 같은 저장의 이름 변경·이름 맞바꿈으로 연산 대상을 다시 찾지 않는다. 공동 편집 저장도 기초 파일 표시와 구조 일지를 함께 넘긴다.
 - CSV 가져오기는 값만 옮긴다. 숫자처럼 보이는 칸만 숫자가 되고 앞자리 0은 살며, 수식처럼 보이는 글자는 수식이 아니라 글자로 남는다. 예외는 `="0123"`처럼 따옴표 글 하나뿐인 칸이다: 시스템이 앞자리 0과 긴 번호를 지키려고 쓰는 꼴이라 Excel은 열 때 계산해 그 글을 보여 주므로, 계산 없이 그 글(글자 칸)로 옮긴다(`quotedTextFormula`, CSV와 HTML 표 가져오기 모두). Excel은 CSV를 시스템의 옛 문자셋으로 쓰므로, UTF-8로 읽히지 않으면 후보 문자셋(gb18030, shift_jis, big5, euc-kr, windows-1252)을 점수로 고른다.
 - HTML 표 가져오기(`gateway/html-import.ts`)도 값만 옮긴다. 웹 시스템이 `.xls` 이름으로 내려 주는 HTML 표를 사이드카 앞에서 읽으며, `colspan`·`rowspan`은 병합으로, `<br>`은 줄바꿈으로 남기고 `<x:Name>`이 있으면 시트 이름으로 쓴다. 스크립트·스타일은 읽지 않고, 숫자로 확정되는 칸만 숫자가 된다. 파일 내용을 보고 HTML인지 판단하는 일과 읽기 크기 한도는 `apps/sheets`의 `legacy-import.ts`가 맡는다.
 - 진입점 묶음 파일이 없다. `exports`가 `./*`를 `./src/*.ts`로 풀어서 `@genoffice/xlsx-gateway/gateway/xlsx-gateway`처럼 파일 경로로 import한다. 렌더러가 `domain/`·`shared/`와 `gateway/`의 일부 파일을 골라 가져가므로, `node:*` import는 지금처럼 `gateway/xlsx-gateway.ts`와 `gateway/xlsx-package-io.ts`에만 둔다.
@@ -51,6 +52,7 @@ Sheets 앱(메인과 렌더러)과 명령줄 도구(`packages/cli`)가 쓴다.
 
 - **`styles.xml`의 호환 블록(결정 0112).** 한셀은 서식 항목을 `mc:AlternateContent`로 감싸고 `xmlns:hs`를 `mc:Choice`에만 둔다. 구역의 직계 자식(일반 항목이나 블록 하나)을 한 칸으로 세고, 블록은 바이트 그대로 다시 쓴다. 번호를 읽을 때와 새 서식의 바탕을 찾을 때만 Fallback(없으면 첫 Choice)으로 푼다. 엔진의 `mc_children`과 같은 규칙이다. 구역 시작 태그는 `count`만 고친다. 읽기 전용 `xlsx-style-read.ts`와 `dateStyleIndexes`도 같은 칸 규칙을 쓴다. `gateway/xlsx-style-entries.ts`, `gateway/xlsx-styles.ts`. 시험 `tests/style-alternate-content.test.ts`, `apps/sheets/tests/xlsx-hancom-styles-reopen.test.ts`.
 - **구조 변경을 묶어 쓰기(결정 0133).** `applyStructuralOps`는 연달아 오는 행 속성 기록(높이·숨기기·윤곽), 병합 넣기, 병합 풀기를 각각 한 번에 쓴다(`applyRowAttributeRun`, `applyMergeRun`). 기록마다 시트 전체를 다시 쓰면 수천 개에서 수십 초 걸린다. 결과 바이트는 하나씩 쓸 때와 같고, 파일의 행 번호가 오름차순이 아니거나 ref가 두 개인 병합 요소가 있으면 하나씩 쓴다. 원본이 `applyRowAttributeOp`를 고치면 그 수정을 `patchRowAttributes`·`rowOpSetsSomething`·`newRowAttributes`로 옮긴다. `gateway/xlsx-structure.ts`. 시험 `tests/structural-op-runs.test.ts`.
+- **숨김 표시의 구조 연산은 원본 시트 이름으로 찾는다.** 이름 변경을 먼저 적용해 연산을 찾으면 같은 저장의 행·열 이동이 빠지고, 다음 열기에서 가린 값이 AI에 드러난다. 이름 변경과 구조 연산을 함께 저장해도 표시가 값을 따라간다. `gateway/xlsx-redaction.ts`. 시험: `tests/xlsx-redaction.test.ts`, `apps/sheets/tests/collab-redaction-save.test.ts`.
 
 ## 테스트
 
