@@ -133,6 +133,16 @@ export const TAG_MUTATIONS = {
     xml
       .replace(/(<w:r(?:\s[^>]*)?>)/g, '$1<!-- </w:r></w:p> <go:redact w:label="x"/> -->')
       .replace(/<\/w:t>/g, '<!-- </w:t> --></w:t>'),
+  // a hidden run's words inside CDATA dressed as a control, a note and a comment
+  // of their own: a pattern that takes them for markup makes an unmarked entry
+  'fake markup in CDATA': (xml: string) =>
+    xml.replace(
+      new RegExp(`<w:t([^>]*)>(${SECRET}[A-Z]?)</w:t>`, 'g'),
+      (_all, attrs: string, words: string) =>
+        `<w:t${attrs}><![CDATA[<w:sdt><w:sdtContent><w:r><w:t>${words}</w:t></w:r></w:sdtContent></w:sdt>` +
+        `</w:footnote><w:footnote w:id="9"><w:p><w:r><w:t>${words}</w:t></w:r></w:p></w:footnote>` +
+        `</w:comment><w:comment w:id="9" w:author="K"><w:p><w:r><w:t>${words}</w:t></w:r></w:p></w:comment>]]></w:t>`,
+    ),
   'space before > in end tags': (xml: string) => xml.replace(/<\/([\w:.-]+)>/g, '</$1 >'),
   CDATA: (xml: string) =>
     xml.replace(
