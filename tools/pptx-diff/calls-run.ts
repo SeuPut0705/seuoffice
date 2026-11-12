@@ -2,6 +2,7 @@ import { createCallsRunner } from '../docx-diff/calls-runner'
 import { ANIM } from './calls-anim'
 import { BYTES } from './calls-bytes'
 import { CHART } from './calls-chart'
+import { PARSE } from './calls-parse'
 import { GEOM } from './calls-geom'
 import { IDENT } from './calls-ident'
 import { LAYOUT } from './calls-layout'
@@ -30,4 +31,5 @@ export const { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls, lis
     placeholder: PLACEHOLDER,
     tablestyle: TABLESTYLE,
     chart: CHART,
+    parse: PARSE,
   })
