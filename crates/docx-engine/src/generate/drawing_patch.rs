@@ -8,10 +8,10 @@ use jscompat::{
 
 use super::text_patch::{para_plain_text, xml_segments};
 use crate::model::ImageWrap;
-use serde::{Deserialize, Deserializer};
 use crate::xml_number::{
     xml_decimal, xml_int, xml_position_offset, xml_positive_coordinate, xml_unsigned_int,
 };
+use serde::{Deserialize, Deserializer};
 
 const EMU_PER_PX: f64 = 9525.0;
 
@@ -53,7 +53,6 @@ fn replace_str(text: &str, pattern: &str, template: &str) -> String {
         None => text.to_owned(),
     }
 }
-
 
 /// A field that tells `undefined` (absent) from `null` (`Some(None)`).
 pub(crate) fn nullable<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>

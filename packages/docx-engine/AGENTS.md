@@ -56,7 +56,7 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 
 ## 엔진 시작 (wasm 바인딩)
 
-구현 모듈은 Rust 엔진(`crates/office-wasm`)을 `@genoffice/engine-wasm`으로 부르는 얇은 함수다. 호출은 동기이고 엔진은 프로세스(또는 워커)마다 한 번 시작한다.
+구현 모듈은 Rust 엔진(`crates/office-wasm`)을 `@seuoffice/engine-wasm`으로 부르는 얇은 함수다. 호출은 동기이고 엔진은 프로세스(또는 워커)마다 한 번 시작한다.
 
 - `node` 조건으로 이 패키지를 import하면 `src/node/*.ts`가 `src/engine-node.ts`를 먼저 불러 엔진을 동기로 시작한다. wasm은 `SEUOFFICE_WASM`이 가리키는 파일, 없으면 `crates/target/wasm32-wasip1/release/office_wasm.wasm`이다. 그 파일이 없으면 시작하지 않고(번들이 import만 하는 경우를 죽이지 않으려는 것), 엔진을 부르는 순간 "call initEngine or initEngineSync first"로 알린다.
 - 별칭으로 소스 경로를 직접 가리키는 곳(vitest 설정, electron-vite 설정)은 `node` 조건을 거치지 않는다. 시험은 `setupFiles`에 `src/engine-node.ts`를 넣고, 앱의 Electron main·워커 스레드는 `engine-init.ts`(`?asset`으로 번들에 담은 wasm)에서 `initDocxEngineSync`를, 렌더러·웹·웹 워커는 `await initDocxEngine(engineUrl)`(`./engine-url`의 `?url`)을 가장 먼저 import하는 모듈에서 부른다. CSP에 `'wasm-unsafe-eval'`이 있어야 한다.

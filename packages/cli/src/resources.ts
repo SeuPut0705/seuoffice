@@ -101,7 +101,7 @@ export function rhwpWasmPath(): string {
   throw new Error('rhwp_bg.wasm not found (set SEUOFFICE_RHWP_WASM)')
 }
 
-/** The Rust document engine (crates/office-wasm) behind @genoffice/docx-engine. */
+/** The Rust document engine (crates/office-wasm) behind @seuoffice/docx-engine. */
 export function engineWasmPath(): string {
   if (process.env.SEUOFFICE_WASM) return process.env.SEUOFFICE_WASM
   const packaged = packagedResourcesDir()

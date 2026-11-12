@@ -436,7 +436,9 @@ fn resolved_of(
                         .get("$blob")
                         .and_then(Value::as_u64)
                         .ok_or("resolved: a null, a string or a blob")?;
-                    let bytes = blobs.get(index as usize).ok_or("resolved: blob is missing")?;
+                    let bytes = blobs
+                        .get(index as usize)
+                        .ok_or("resolved: blob is missing")?;
                     invoke::host::Resolved::Bytes(bytes.to_vec())
                 }
             };
@@ -476,7 +478,8 @@ fn parse_docx_command(
     blob_refs: bool,
 ) -> Result<(Reply<'static>, Vec<Vec<u8>>), String> {
     docx_engine::warnings::take();
-    let media = invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
+    let media =
+        invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let parsed = docx_engine::parse::parse_docx_full_with(
         docx,
         &media,
@@ -492,7 +495,14 @@ fn parse_docx_command(
     let pending = pending_of(&media, &mut reply_blobs);
     if !pending.is_empty() {
         // the model of a pass that owes conversions is not the answer
-        return Ok((Reply::Parsed { model: false, pending, warnings }, reply_blobs));
+        return Ok((
+            Reply::Parsed {
+                model: false,
+                pending,
+                warnings,
+            },
+            reply_blobs,
+        ));
     }
     let text = if blob_refs {
         let mut value = serde_json::to_value(&model).map_err(|error| error.to_string())?;
@@ -508,7 +518,14 @@ fn parse_docx_command(
         serde_json::to_string(&model).map_err(|error| error.to_string())?
     };
     reply_blobs[0] = text.into_bytes();
-    Ok((Reply::Parsed { model: true, pending, warnings }, reply_blobs))
+    Ok((
+        Reply::Parsed {
+            model: true,
+            pending,
+            warnings,
+        },
+        reply_blobs,
+    ))
 }
 
 /// One `invoke`: the reply and its blobs.
@@ -522,14 +539,22 @@ fn invoke_command(
     alt_chunk_converter: bool,
 ) -> Result<(Reply<'static>, Vec<Vec<u8>>), String> {
     docx_engine::warnings::take();
-    let media = invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
+    let media =
+        invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
     let result = invoke::table::invoke(&mut env, function, args);
     let warnings = docx_engine::warnings::take();
     let value = result?;
     let (mut reply_blobs, media) = env.into_reply_blobs();
     let pending = pending_of(&media, &mut reply_blobs);
-    Ok((Reply::Invoked { value, pending, warnings }, reply_blobs))
+    Ok((
+        Reply::Invoked {
+            value,
+            pending,
+            warnings,
+        },
+        reply_blobs,
+    ))
 }
 
 fn respond(input: &[u8]) -> Vec<u8> {

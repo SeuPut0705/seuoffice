@@ -11,15 +11,15 @@ export default defineConfig({
   resolve: {
     conditions: ['seuoffice-source', ...defaultClientConditions],
     alias: {
-      '@genoffice/docx-engine/lazy-media': local('../../packages/docx-engine/src/lazy-media.ts'),
-      '@genoffice/docx-engine/zip-splice': local('../../packages/docx-engine/src/zip-splice.ts'),
-      '@genoffice/docx-engine/init': local('../../packages/docx-engine/src/engine-init.ts'),
-      '@genoffice/docx-engine/engine-url': local('../../packages/docx-engine/src/engine-url.ts'),
-      '@genoffice/docx-engine': local('../../packages/docx-engine/src/index.ts'),
-      '@genoffice/odt-engine': local('../../packages/odt-engine/src/index.ts'),
-      '@genoffice/docx2hwp': local('../../packages/docx2hwp/src/index.ts'),
-      '@genoffice/font-metrics/resolve': local('../../packages/font-metrics/src/resolve.ts'),
-      '@genoffice/font-metrics/word-faces.json': local(
+      '@seuoffice/docx-engine/lazy-media': local('../../packages/docx-engine/src/lazy-media.ts'),
+      '@seuoffice/docx-engine/zip-splice': local('../../packages/docx-engine/src/zip-splice.ts'),
+      '@seuoffice/docx-engine/init': local('../../packages/docx-engine/src/engine-init.ts'),
+      '@seuoffice/docx-engine/engine-url': local('../../packages/docx-engine/src/engine-url.ts'),
+      '@seuoffice/docx-engine': local('../../packages/docx-engine/src/index.ts'),
+      '@seuoffice/odt-engine': local('../../packages/odt-engine/src/index.ts'),
+      '@seuoffice/docx2hwp': local('../../packages/docx2hwp/src/index.ts'),
+      '@seuoffice/font-metrics/resolve': local('../../packages/font-metrics/src/resolve.ts'),
+      '@seuoffice/font-metrics/word-faces.json': local(
         '../../packages/font-metrics/word-faces.json',
       ),
       '@seuoffice/font-metrics': local('../../packages/font-metrics/src/index.ts'),

@@ -1,6 +1,6 @@
 // Pure XML -> value readers for paragraph, run and table-cell properties
 // (no document context, no recursion into block builders).
-import type { ParaBorderSides, ParaFormat, ThemeFonts } from './types'
+import type { ParaBorderSides, ParaFormat, Run, ThemeFonts } from './types'
 import { invoke } from './engine'
 
 /** No run un-hides itself and nothing anchors here (bookmarks, comments, sectPr,
@@ -33,6 +33,9 @@ export function themeLangEaSlotFont(
  *  w:document/w:hdr instead of per element; Word honors the inheritance) */
 export function partXmlSpacePreserve(partXml: string, rootTag: string): boolean {
   return invoke('partXmlSpacePreserve', [partXml, rootTag]) as never
+}
+export function mergeRuns(runs: Run[]): Run[] {
+  return invoke('mergeRuns', [runs]) as never
 }
 export type ParaBorderModel = Pick<
   ParaFormat,

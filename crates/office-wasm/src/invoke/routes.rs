@@ -1,4 +1,4 @@
-//! The exports of `@genoffice/docx-engine` whose Rust ports had no route
+//! The exports of `@seuoffice/docx-engine` whose Rust ports had no route
 //! before the binding: each answers `invoke`'s positional JSON arguments. A
 //! `Uint8Array` is a blob (see [`super`]); a `JSZip` is `[[name, text]]`, the
 //! parts the function reads; a `Date` is its time value in milliseconds.
@@ -41,14 +41,17 @@ fn req<T: serde::de::DeserializeOwned>(args: &[Value], index: usize) -> Result<T
 }
 
 fn some(value: impl Serialize) -> Out {
-    serde_json::to_value(value).map(Some).map_err(|error| error.to_string())
+    serde_json::to_value(value)
+        .map(Some)
+        .map_err(|error| error.to_string())
 }
 
 /// `deobfuscateOdttf(bytes, fontKey)`
 pub fn deobfuscate_odttf(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let bytes = env.blob(args.first().unwrap_or(&Value::Null))?;
     let key: Option<String> = opt(args, 1)?;
-    let out = font_table::deobfuscate_odttf(bytes, key.as_deref()).unwrap_or_else(|| bytes.to_vec());
+    let out =
+        font_table::deobfuscate_odttf(bytes, key.as_deref()).unwrap_or_else(|| bytes.to_vec());
     Ok(Some(env.put_blob(out)))
 }
 
@@ -72,8 +75,8 @@ pub fn parse_font_table(_env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 /// `[name, text | {"$blob"}]`: a part of the zip the function reads.
 pub(super) fn package_of(env: &InvokeEnv<'_>, value: &Value) -> Result<Package, String> {
-    let parts: Vec<(String, Value)> =
-        serde_json::from_value(value.clone()).map_err(|error| format!("TypeError: parts: {error}"))?;
+    let parts: Vec<(String, Value)> = serde_json::from_value(value.clone())
+        .map_err(|error| format!("TypeError: parts: {error}"))?;
     let mut package = Package::default();
     for (name, content) in parts {
         let bytes = match &content {
@@ -90,7 +93,10 @@ pub fn read_embedded_fonts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let package = package_of(env, args.first().unwrap_or(&Value::Null))?;
     let table: Vec<model::FontTableEntry> = req(args, 1)?;
     let slot = |slot: &Option<model::EmbeddedFontRef>| {
-        slot.as_ref().map(|r| EmbeddedFontRef { r_id: r.r_id.clone(), font_key: r.font_key.clone() })
+        slot.as_ref().map(|r| EmbeddedFontRef {
+            r_id: r.r_id.clone(),
+            font_key: r.font_key.clone(),
+        })
     };
     let entries: Vec<FontTableEntry> = table
         .iter()
@@ -210,7 +216,9 @@ pub fn new_document_app_properties_xml(_env: &mut InvokeEnv<'_>, args: &[Value])
 /// `newDocumentCorePropertiesXml(created?)`: `created` is a time value; absent, the host's clock
 pub fn new_document_core_properties_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let created: Option<f64> = opt(args, 0)?;
-    some(blank::new_document_core_properties_xml(created.unwrap_or(env.now_ms))?)
+    some(blank::new_document_core_properties_xml(
+        created.unwrap_or(env.now_ms),
+    )?)
 }
 
 /// `w3cdtfStamp(date)`: `date` is a time value; an invalid one throws
@@ -364,7 +372,12 @@ pub fn preview_font_settings(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let styles: Vec<Value> = preview
         .styles
         .iter()
-        .map(|(id, info)| Ok(json!([id, serde_json::to_value(info).map_err(|e: serde_json::Error| e.to_string())?])))
+        .map(|(id, info)| {
+            Ok(json!([
+                id,
+                serde_json::to_value(info).map_err(|e: serde_json::Error| e.to_string())?
+            ]))
+        })
         .collect::<Result<_, String>>()?;
     let mut object = serde_json::Map::new();
     object.insert("styles".to_owned(), Value::Array(styles));

@@ -115,13 +115,22 @@ impl PropertyChanges {
             out.insert("clear".to_owned(), Value::from("all"));
         }
         if let Some(core) = &self.core {
-            out.insert("core".to_owned(), serde_json::to_value(core).unwrap_or(Value::Null));
+            out.insert(
+                "core".to_owned(),
+                serde_json::to_value(core).unwrap_or(Value::Null),
+            );
         }
         if let Some(app) = &self.app {
-            out.insert("app".to_owned(), serde_json::to_value(app).unwrap_or(Value::Null));
+            out.insert(
+                "app".to_owned(),
+                serde_json::to_value(app).unwrap_or(Value::Null),
+            );
         }
         if let Some(custom) = &self.custom {
-            out.insert("custom".to_owned(), serde_json::to_value(custom).unwrap_or(Value::Null));
+            out.insert(
+                "custom".to_owned(),
+                serde_json::to_value(custom).unwrap_or(Value::Null),
+            );
         }
         Value::Object(out)
     }

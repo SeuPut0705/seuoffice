@@ -30,7 +30,7 @@ pub enum CompareIgnore {
 /// `CompareOptions`
 #[derive(Debug, Clone, Default)]
 pub struct CompareOptions {
-    /// author recorded on every revision; default "GenOffice"
+    /// author recorded on every revision; default "SeuOffice"
     pub author: Option<String>,
     /// ISO timestamp recorded on every revision; default: now
     pub date: Option<String>,
@@ -152,7 +152,7 @@ struct Token {
 const PAIR_THRESHOLD: f64 = 0.6;
 
 /// `DEFAULT_COMPARE_AUTHOR`: the author recorded when the caller names none
-pub const DEFAULT_COMPARE_AUTHOR: &str = "GenOffice";
+pub const DEFAULT_COMPARE_AUTHOR: &str = "SeuOffice";
 
 /// cells of the LCS table a gap between two unique anchors may cost before it is left unanchored
 const LCS_GAP_CELLS: usize = 4_000_000;

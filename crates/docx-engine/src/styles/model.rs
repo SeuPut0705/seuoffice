@@ -282,7 +282,10 @@ impl<'de> Deserialize<'de> for NumPr {
         enum Wire {
             Text(serde::de::IgnoredAny),
             #[serde(rename_all = "camelCase")]
-            Num { num_id: String, ilvl: JsNum },
+            Num {
+                num_id: String,
+                ilvl: JsNum,
+            },
         }
         Ok(match Wire::deserialize(deserializer)? {
             Wire::Text(_) => NumPr::None,

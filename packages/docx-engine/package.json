@@ -35,9 +35,9 @@
   },
   "dependencies": {
     "@exodus/bytes": "1.15.1",
-    "@genoffice/engine-wasm": "*",
-    "@genoffice/pptx-engine": "*",
-    "@genoffice/zip-gate": "*",
+    "@seuoffice/engine-wasm": "*",
+    "@seuoffice/pptx-engine": "*",
+    "@seuoffice/zip-gate": "*",
     "fast-xml-parser": "^5.3.4",
     "jszip": "^3.10.1",
     "utif2": "^4.1.0",

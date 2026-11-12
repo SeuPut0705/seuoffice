@@ -54,7 +54,7 @@ export interface CompareResult {
   summary: CompareSummary
 }
 /** the author recorded when the caller names none */
-export const DEFAULT_COMPARE_AUTHOR = 'GenOffice'
+export const DEFAULT_COMPARE_AUTHOR = 'SeuOffice'
 /**
  * Build the redline: the revised document with the differences marked as
  * tracked insertions and deletions.

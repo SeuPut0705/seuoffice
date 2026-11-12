@@ -21,6 +21,8 @@ pub mod list_markers;
 pub mod model;
 pub mod notes;
 pub mod numbering;
+#[path = "old-names.rs"]
+pub mod old_names;
 pub mod package;
 pub mod parse;
 pub mod props;

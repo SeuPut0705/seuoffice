@@ -42,17 +42,11 @@ impl<T> Default for Probe<T> {
 
 /// Picked first by method resolution, for `&'static str` only.
 pub trait StaticStrRead {
-    fn read<'de, A: MapAccess<'de>>(
-        self,
-        map: &mut A,
-    ) -> Result<Option<&'static str>, A::Error>;
+    fn read<'de, A: MapAccess<'de>>(self, map: &mut A) -> Result<Option<&'static str>, A::Error>;
 }
 
 impl StaticStrRead for &Probe<&'static str> {
-    fn read<'de, A: MapAccess<'de>>(
-        self,
-        map: &mut A,
-    ) -> Result<Option<&'static str>, A::Error> {
+    fn read<'de, A: MapAccess<'de>>(self, map: &mut A) -> Result<Option<&'static str>, A::Error> {
         Ok(map.next_value::<Option<String>>()?.map(intern))
     }
 }

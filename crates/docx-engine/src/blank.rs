@@ -39,7 +39,7 @@ const APP_PROPERTIES_CONTENT_TYPE: &str =
     "application/vnd.openxmlformats-officedocument.extended-properties+xml";
 const APP_PROPERTIES_REL_TYPE: &str =
     "http://schemas.openxmlformats.org/officeDocument/2006/relationships/extended-properties";
-const NEW_DOCUMENT_APPLICATION: &str = "GenOffice";
+const NEW_DOCUMENT_APPLICATION: &str = "SeuOffice";
 const NEW_DOCUMENT_TEMPLATE: &str = "Normal.dotm";
 const NEW_DOCUMENT_APP_VERSION: &str = "0.1.0";
 
@@ -939,7 +939,7 @@ pub struct BlankDocxOptions {
     /// Creation stamp of docProps/core.xml as a time value (milliseconds
     /// since 1970 UTC); defaults to the `now` of [`build_blank_docx`].
     pub created_at: Option<f64>,
-    /// docProps/app.xml Application; defaults to "GenOffice".
+    /// docProps/app.xml Application; defaults to "SeuOffice".
     pub application: Option<String>,
     /// docProps/app.xml AppVersion; defaults to the docx-engine package version.
     pub app_version: Option<String>,

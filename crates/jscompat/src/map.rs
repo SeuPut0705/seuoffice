@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use serde::{Deserialize, Deserializer, Serialize};
 use serde::ser::{SerializeSeq, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// A JavaScript `Map` with string keys: entries stay in insertion order, and
 /// setting a key again keeps its place and replaces the value.

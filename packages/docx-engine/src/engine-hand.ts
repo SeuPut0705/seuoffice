@@ -4,10 +4,21 @@
 // converters, and the functions that read or write a JSZip. The generated
 // modules call them as `hand.<name>` / `zipCall`; their TypeScript signatures
 // stay where they were declared.
-import { engineCall } from '@genoffice/engine-wasm'
+import { engineCall } from '@seuoffice/engine-wasm'
 import type JSZip from 'jszip'
 import { altChunkHtmlConverter } from './alt-chunk'
-import { type Answered, type Owed, ensureEngine, invokeRaw, jsonOf, modelJson, revive, text, utf8, type InvokeOptions } from './engine'
+import {
+  type Answered,
+  type Owed,
+  ensureEngine,
+  invokeRaw,
+  jsonOf,
+  modelJson,
+  revive,
+  text,
+  utf8,
+  type InvokeOptions,
+} from './engine'
 import { SHAPES } from './engine-shapes'
 import { metafileToDataUrl } from './metafile'
 import { tiffToDataUrlAsync } from './tiff'
@@ -39,17 +50,27 @@ async function converted(item: Owed, input: Uint8Array): Promise<string | Uint8A
  * must convert it answers what it owes, the host converts, and the engine
  * parses again with the answers until it owes nothing.
  */
-export async function parseDocx(bytes: Uint8Array, options: Record<string, unknown> = {}): Promise<unknown> {
+export async function parseDocx(
+  bytes: Uint8Array,
+  options: object = {},
+): Promise<unknown> {
   ensureEngine()
   const resolved: Record<string, string | null | { $blob: number }> = {}
   const resolvedBlobs: Uint8Array[] = []
   const hostConverts = altChunkHtmlConverter() !== null
   for (;;) {
-    const header = { cmd: 'parseDocx', options, altChunkConverter: hostConverts, resolved, blobRefs: true }
+    const header = {
+      cmd: 'parseDocx',
+      options,
+      altChunkConverter: hostConverts,
+      resolved,
+      blobRefs: true,
+    }
     const reply = engineCall<ParseReply>(header, [bytes, ...resolvedBlobs])
     warnAll(reply.header.warnings)
     const owed = reply.header.pending ?? []
-    if (!owed.length) return revive(JSON.parse(text(reply.blobs[0]!)), reply.blobs, SHAPES.parseDocx, bytes)
+    if (!owed.length)
+      return revive(JSON.parse(text(reply.blobs[0]!)), reply.blobs, SHAPES.parseDocx, bytes)
     await answerOwed(owed, reply.blobs, resolved, resolvedBlobs, 1)
   }
 }
@@ -73,10 +94,22 @@ async function answerOwed(
 }
 
 /** `saveDocx(parsed, finalBlocks, options)`: the model and the original docx go as they are, the blocks and options as JSON. */
-export async function saveDocx(parsed: { internal: { originalBytes: Uint8Array } }, finalBlocks: unknown[], options: unknown = {}): Promise<Uint8Array> {
+export async function saveDocx(
+  parsed: { internal: { originalBytes: Uint8Array } },
+  finalBlocks: unknown[],
+  options: unknown = {},
+): Promise<Uint8Array> {
   ensureEngine()
-  const header = { cmd: 'saveDocx', blocks: jsonOf(finalBlocks), options: jsonOf(options) ?? {}, nowMs: Date.now() }
-  const reply = engineCall<CommandReply>(header, [parsed.internal.originalBytes, utf8(modelJson(parsed))])
+  const header = {
+    cmd: 'saveDocx',
+    blocks: jsonOf(finalBlocks),
+    options: jsonOf(options) ?? {},
+    nowMs: Date.now(),
+  }
+  const reply = engineCall<CommandReply>(header, [
+    parsed.internal.originalBytes,
+    utf8(modelJson(parsed)),
+  ])
   warnAll(reply.header.warnings)
   return reply.blobs[0]!
 }
@@ -86,10 +119,19 @@ interface ParsedForCompare {
 }
 
 /** `compareDocuments(original, revised, options)`: the redline docx and its summary. */
-export async function compareDocuments(original: ParsedForCompare, revised: ParsedForCompare, options: unknown = {}): Promise<{ bytes: Uint8Array; summary: unknown }> {
+export async function compareDocuments(
+  original: ParsedForCompare,
+  revised: ParsedForCompare,
+  options: unknown = {},
+): Promise<{ bytes: Uint8Array; summary: unknown }> {
   ensureEngine()
   const header = { cmd: 'compareDocuments', options: jsonOf(options) ?? {}, nowMs: Date.now() }
-  const reply = engineCall<CommandReply>(header, [original.internal.originalBytes, utf8(modelJson(original)), revised.internal.originalBytes, utf8(modelJson(revised))])
+  const reply = engineCall<CommandReply>(header, [
+    original.internal.originalBytes,
+    utf8(modelJson(original)),
+    revised.internal.originalBytes,
+    utf8(modelJson(revised)),
+  ])
   warnAll(reply.header.warnings)
   return { bytes: reply.blobs[0]!, summary: JSON.parse(text(reply.blobs[1]!)) }
 }
@@ -109,7 +151,10 @@ async function zipParts(zip: JSZip): Promise<Array<[string, string | Uint8Array]
   const out: Array<[string, string | Uint8Array]> = []
   for (const [name, file] of Object.entries(zip.files)) {
     if (file.dir) continue
-    out.push([name, TEXT_PART.test(name) ? await file.async('string') : await file.async('uint8array')])
+    out.push([
+      name,
+      TEXT_PART.test(name) ? await file.async('string') : await file.async('uint8array'),
+    ])
   }
   return out
 }
@@ -119,16 +164,29 @@ async function zipParts(zip: JSZip): Promise<Array<[string, string | Uint8Array]
  * function that writes into the zip answers the parts it changed (`$parts`,
  * null for a part removed) next to its value (`$result`).
  */
-export async function zipCall(fn: string, zip: JSZip, args: readonly unknown[], mutates: boolean, options: InvokeOptions = {}): Promise<unknown> {
+export async function zipCall(
+  fn: string,
+  zip: JSZip,
+  args: readonly unknown[],
+  mutates: boolean,
+  options: InvokeOptions = {},
+): Promise<unknown> {
   const parts = await zipParts(zip)
   const { shape, ...rest } = options
-  const asked: Answered = { resolved: {}, blobs: [], altChunkConverter: altChunkHtmlConverter() !== null }
+  const asked: Answered = {
+    resolved: {},
+    blobs: [],
+    altChunkConverter: altChunkHtmlConverter() !== null,
+  }
   for (;;) {
     // the blobs of the arguments come first: how many is known once the arguments are encoded
     const raw = invokeRaw(fn, [parts, ...args], mutates ? rest : options, asked)
     if (!raw.owed.length) {
       if (!mutates) return raw.value
-      const done = raw.value as { $result: unknown; $parts: Array<[string, string | Uint8Array | null]> }
+      const done = raw.value as {
+        $result: unknown
+        $parts: Array<[string, string | Uint8Array | null]>
+      }
       for (const [name, content] of done.$parts) {
         if (content === null) zip.remove(name)
         else zip.file(name, content)

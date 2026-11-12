@@ -350,12 +350,20 @@ pub fn build_run(
             run.insert(key, value);
         }
         if let Some(collector) = &res.diff {
-            let legacy = json(&super::runs::legacy_direct_run_format(r_pr, eff.cs, theme_fonts));
+            let legacy = json(&super::runs::legacy_direct_run_format(
+                r_pr,
+                eff.cs,
+                theme_fonts,
+            ));
             let resolved = Value::Object(run.clone());
-            let keys: Vec<String> = DIRECT_RUN_KEYS.iter().map(|key| (*key).to_owned()).collect();
+            let keys: Vec<String> = DIRECT_RUN_KEYS
+                .iter()
+                .map(|key| (*key).to_owned())
+                .collect();
             let units: Vec<u16> = text.encode_utf16().take(40).collect();
             let shown = String::from_utf16_lossy(&units);
-            for diff in crate::resolve::shadow_compare(Some(&legacy), Some(&resolved), Some(&keys)) {
+            for diff in crate::resolve::shadow_compare(Some(&legacy), Some(&resolved), Some(&keys))
+            {
                 collector.borrow_mut().push(super::context::ShadowDiff {
                     surface: "run",
                     key: diff.key,

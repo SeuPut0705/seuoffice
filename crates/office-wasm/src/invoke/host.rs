@@ -34,7 +34,8 @@ pub fn call_host(slot: u32, args: &Value) -> Result<Value, String> {
     let (pointer, length) = ((packed >> 32) as u32, packed as u32);
     // SAFETY: the host wrote `length` bytes at `pointer`, memory it got from
     // `seu_alloc`; it is ours until `seu_free`.
-    let answer = unsafe { std::slice::from_raw_parts(pointer as *const u8, length as usize) }.to_vec();
+    let answer =
+        unsafe { std::slice::from_raw_parts(pointer as *const u8, length as usize) }.to_vec();
     // SAFETY: `pointer` and `length` are what `seu_alloc` handed out, freed once.
     unsafe { crate::seu_free(pointer as *mut u8, length) };
     serde_json::from_slice(&answer).map_err(|error| error.to_string())
@@ -90,7 +91,13 @@ pub struct RecordingHost {
 /// FNV-1a over the parts of a conversion's input, as 16 hex digits and its length.
 fn content_id(kind: &str, mime: &str, input: &[u8]) -> String {
     let mut hash: u64 = 0xcbf2_9ce4_8422_2325;
-    for byte in kind.bytes().chain([0]).chain(mime.bytes()).chain([0]).chain(input.iter().copied()) {
+    for byte in kind
+        .bytes()
+        .chain([0])
+        .chain(mime.bytes())
+        .chain([0])
+        .chain(input.iter().copied())
+    {
         hash ^= u64::from(byte);
         hash = hash.wrapping_mul(0x0000_0100_0000_01b3);
     }

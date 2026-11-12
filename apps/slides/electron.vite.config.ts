@@ -47,10 +47,10 @@ const workspaceAlias = {
   ),
   '@seuoffice/pipelines/slides': resolve(here, '../../packages/pipelines/src/slides/index.ts'),
   // Metafile (EMF/WMF) rasterizer shared with the docs engine (renderer-only: needs canvas)
-  '@genoffice/docx-engine/metafile': resolve(here, '../../packages/docx-engine/src/metafile.ts'),
-  '@genoffice/docx-engine/math': resolve(here, '../../packages/docx-engine/src/math.ts'),
-  '@genoffice/docx-engine/init': resolve(here, '../../packages/docx-engine/src/engine-init.ts'),
-  '@genoffice/docx-engine/engine-url': resolve(
+  '@seuoffice/docx-engine/metafile': resolve(here, '../../packages/docx-engine/src/metafile.ts'),
+  '@seuoffice/docx-engine/math': resolve(here, '../../packages/docx-engine/src/math.ts'),
+  '@seuoffice/docx-engine/init': resolve(here, '../../packages/docx-engine/src/engine-init.ts'),
+  '@seuoffice/docx-engine/engine-url': resolve(
     here,
     '../../packages/docx-engine/src/engine-url.ts',
   ),

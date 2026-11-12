@@ -1,5 +1,5 @@
 //! `Command::Invoke`: a TypeScript export called by name with its arguments
-//! positionally, as the `@genoffice/docx-engine` binding makes it. The table
+//! positionally, as the `@seuoffice/docx-engine` binding makes it. The table
 //! that answers it is generated (`table.rs`, from the export manifest); the
 //! exports that have no row there are the hand routes of `routes.rs`.
 //!

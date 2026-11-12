@@ -281,8 +281,12 @@ pub fn compare_documents(
     options: Option<&Value>,
     now_ms: f64,
 ) -> Result<(Vec<u8>, Value), String> {
-    let (bytes, summary) =
-        compare::compare_documents(&original, &revised, &CompareOptions::from_json(options), now_ms)?;
+    let (bytes, summary) = compare::compare_documents(
+        &original,
+        &revised,
+        &CompareOptions::from_json(options),
+        now_ms,
+    )?;
     let summary = serde_json::to_value(summary).map_err(|error| error.to_string())?;
     Ok((bytes, summary))
 }

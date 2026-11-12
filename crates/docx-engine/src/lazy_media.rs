@@ -6,25 +6,26 @@
 use crate::vml::shape::encode_uri_component;
 
 /// `LAZY_MEDIA_SCHEME`
-pub const LAZY_MEDIA_SCHEME: &str = "genoffice-docx-media";
+pub const LAZY_MEDIA_SCHEME: &str = "seuoffice-docx-media";
 
 /// `MAGIC`
-const MAGIC: &[u8] = b"GENOFFICE-LAZY-MEDIA\n";
+const MAGIC: &[u8] = b"SEUOFFICE-LAZY-MEDIA\n";
 
 /// `LAZY_MEDIA_PLACEHOLDER_BYTES`: the magic, a sha256 in hex and a line feed.
 pub const LAZY_MEDIA_PLACEHOLDER_BYTES: usize = MAGIC.len() + 64 + 1;
 
-/// `lazyMediaHashOf`: the hash a placeholder part names. The TypeScript
-/// decodes the bytes as windows-1252, which maps no byte above 0x7F to
-/// ASCII, so the bytes are compared as they are.
+/// `lazyMediaHashOf`: the hash a placeholder part names, under the current
+/// header or an old one. The TypeScript decodes the bytes as windows-1252,
+/// which maps no byte above 0x7F to ASCII, so the bytes are compared as they
+/// are.
 pub fn lazy_media_hash_of(bytes: &[u8]) -> Option<&str> {
-    if bytes.len() != LAZY_MEDIA_PLACEHOLDER_BYTES
-        || !bytes.starts_with(MAGIC)
-        || !bytes.ends_with(b"\n")
-    {
+    let magic = std::iter::once(MAGIC)
+        .chain(crate::old_names::OLD_LAZY_MEDIA_MAGICS)
+        .find(|magic| bytes.starts_with(magic))?;
+    if bytes.len() != LAZY_MEDIA_PLACEHOLDER_BYTES || !bytes.ends_with(b"\n") {
         return None;
     }
-    let hash = &bytes[MAGIC.len()..MAGIC.len() + 64];
+    let hash = &bytes[magic.len()..magic.len() + 64];
     if !hash
         .iter()
         .all(|byte| byte.is_ascii_digit() || (b'a'..=b'f').contains(byte))
@@ -84,7 +85,7 @@ pub struct LazyMediaUrl {
 /// too long, holds a NUL or climbs out with `..`.
 pub fn parse_lazy_media_url(url: &str) -> Result<Option<LazyMediaUrl>, jscompat::RegexLimit> {
     let Some(found) =
-        jscompat::try_js_regex!(r"^genoffice-docx-media://([0-9a-f]{64})/(.+)$").try_exec(url)?
+        jscompat::try_js_regex!(r"^seuoffice-docx-media://([0-9a-f]{64})/(.+)$").try_exec(url)?
     else {
         return Ok(None);
     };

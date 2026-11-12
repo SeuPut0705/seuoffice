@@ -25,7 +25,7 @@ export default defineConfig({
   },
   test: {
     include: ['tests/**/*.test.ts'],
-    // the engine behind @genoffice/docx-engine/math starts here: the alias skips the package's `node` entry
+    // the engine behind @seuoffice/docx-engine/math starts here: the alias skips the package's `node` entry
     setupFiles: [resolve(here, '../docx-engine/src/engine-node.ts')],
     environment: 'node',
   },

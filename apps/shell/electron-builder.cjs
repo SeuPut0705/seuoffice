@@ -801,7 +801,7 @@ const config = {
       from: '../../node_modules/@rhwp/core/rhwp_bg.wasm',
       to: 'wasm/rhwp_bg.wasm',
     },
-    // the Rust document engine behind @genoffice/docx-engine for the command line
+    // the Rust document engine behind @seuoffice/docx-engine for the command line
     // (packages/cli/src/resources.ts engineWasmPath); the app's own mains and pages
     // carry their copy in the bundle (?asset / ?url)
     {

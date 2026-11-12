@@ -7,4 +7,6 @@ mod entry;
 pub mod tables;
 pub mod text;
 
-pub use entry::{ParseOptions, alt_chunk_to_docx, parse_docx, parse_docx_full, parse_docx_full_with};
+pub use entry::{
+    ParseOptions, alt_chunk_to_docx, parse_docx, parse_docx_full, parse_docx_full_with,
+};

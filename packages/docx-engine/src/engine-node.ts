@@ -13,12 +13,14 @@
 // names no file is an error.
 import { existsSync, readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
-import { engineReady, initEngineSync } from '@genoffice/engine-wasm'
+import { engineReady, initEngineSync } from '@seuoffice/engine-wasm'
 
 if (!engineReady()) {
   const named = process.env.SEUOFFICE_WASM
   const path =
     named ??
-    fileURLToPath(new URL('../../../crates/target/wasm32-wasip1/release/office_wasm.wasm', import.meta.url))
+    fileURLToPath(
+      new URL('../../../crates/target/wasm32-wasip1/release/office_wasm.wasm', import.meta.url),
+    )
   if (named !== undefined || existsSync(path)) initEngineSync(readFileSync(path))
 }

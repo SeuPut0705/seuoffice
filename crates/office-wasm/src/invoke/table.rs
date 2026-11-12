@@ -232,6 +232,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
         "mergePPrFormat" => r_merge_p_pr_format(env, args),
         "mergeRecords" => r_merge_records(env, args),
         "mergeRPrModel" => r_merge_r_pr_model(env, args),
+        "mergeRuns" => r_merge_runs(env, args),
         "mergeStyleBorders" => r_merge_style_borders(env, args),
         "mergeStyleXml" => r_merge_style_xml(env, args),
         "missingHeadingLevels" => r_missing_heading_levels(env, args),
@@ -1156,6 +1157,12 @@ fn r_merge_r_pr_model(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: docx_engine::model::Run = req(args, 1)?;
     let p2: bool = req(args, 2)?;
     let r = docx_engine::generate::rpr::merge_r_pr_model(&p0, &p1, p2).map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_merge_runs(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
+    let p0: Vec<docx_engine::props::Run> = req(args, 0)?;
+    let r = docx_engine::props::merge_runs(&p0);
     Ok(Some(to_json(&r)?))
 }
 

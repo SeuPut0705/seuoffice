@@ -474,6 +474,8 @@ macro_rules! js_object {
                         self,
                         mut map: A,
                     ) -> ::core::result::Result<$name, A::Error> {
+                        // the expansion uses one or both, by the field types
+                        #[allow(unused_imports)]
                         use $crate::wire::{Owned as _, StaticStrRead as _};
                         let mut out = <$name>::default();
                         while let ::core::option::Option::Some(name) =

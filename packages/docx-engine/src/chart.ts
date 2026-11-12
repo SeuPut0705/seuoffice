@@ -1,8 +1,8 @@
-import { colLetter } from '@genoffice/pptx-engine/chart-workbook'
+import { colLetter } from '@seuoffice/pptx-engine/chart-workbook'
 import type { ChartDisplay, NewChart, ThemeColors } from './types'
 import { invoke, invokeAsync } from './engine'
 
-export { CHART_WORKBOOK_REL_TYPE, colLetter } from '@genoffice/pptx-engine/chart-workbook'
+export { CHART_WORKBOOK_REL_TYPE, colLetter } from '@seuoffice/pptx-engine/chart-workbook'
 /**
  * Read the display model of a chart part (word/charts/chartN.xml). Only the
  * caches Word writes next to the data references (c:strCache / c:numCache)

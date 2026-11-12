@@ -2,7 +2,7 @@
 
 ## 맡은 범위
 
-Rust 엔진의 WASM 빌드(`crates/office-wasm`)를 싣고 부르는 단 하나의 로더다. 엔진 바인딩(`@genoffice/pptx-engine`, `@genoffice/docx-engine`)이 이것으로 `seu_call`을 부른다. 시작 지점에서 한 번 인스턴스를 만들고(`initEngineSync(bytes)` 또는 `await initEngine(url)`), 그 뒤의 호출은 모두 동기다.
+Rust 엔진의 WASM 빌드(`crates/office-wasm`)를 싣고 부르는 단 하나의 로더다. 엔진 바인딩(`@seuoffice/pptx-engine`, `@seuoffice/docx-engine`)이 이것으로 `seu_call`을 부른다. 시작 지점에서 한 번 인스턴스를 만들고(`initEngineSync(bytes)` 또는 `await initEngine(url)`), 그 뒤의 호출은 모두 동기다.
 
 ## 맡지 않는 것 (경계)
 

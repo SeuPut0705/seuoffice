@@ -9253,6 +9253,23 @@
    "route": "none"
   },
   {
+   "module": "old-names",
+   "name": "OLD_LAZY_MEDIA_MAGICS",
+   "kind": "const",
+   "async": false,
+   "params": [],
+   "ret": {
+    "type": "",
+    "null": false,
+    "undef": false,
+    "shape": null,
+    "bytes": false
+   },
+   "required": [],
+   "rust": null,
+   "route": "none"
+  },
+  {
    "module": "ooxml-normalize",
    "name": "hasUniversalMeasures",
    "kind": "function",
@@ -12909,7 +12926,9 @@
     "shape": null,
     "bytes": false
    },
-   "required": [],
+   "required": [
+    "test"
+   ],
    "rust": {
     "path": "docx_engine::props::merge_runs",
     "file": "crates/docx-engine/src/props/runs.rs",

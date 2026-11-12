@@ -1,5 +1,5 @@
 // Starting the wasm engine that backs this package. The loader is
-// @genoffice/engine-wasm; this module is the one place the entries of the apps
+// @seuoffice/engine-wasm; this module is the one place the entries of the apps
 // reach it through, so an app needs no dependency of its own on the loader.
 //
 // - Node (tools, tests, the CLI, Electron main): importing the package under
@@ -7,9 +7,9 @@
 //   an entry that bundles the package from its source path calls
 //   `initDocxEngineSync(bytes)` itself, before the first call.
 // - A page or a worker: `await initDocxEngine(url)` once, before the first
-//   call (the editor mounts after it). `@genoffice/docx-engine/engine-url` is
+//   call (the editor mounts after it). `@seuoffice/docx-engine/engine-url` is
 //   the URL of the wasm file the bundler emits.
-import { engineReady, initEngine, initEngineSync } from '@genoffice/engine-wasm'
+import { engineReady, initEngine, initEngineSync } from '@seuoffice/engine-wasm'
 
 /** A URL, a fetch response or the bytes of the wasm file. */
 export type DocxEngineSource = Parameters<typeof initEngine>[0]

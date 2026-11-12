@@ -8,17 +8,8 @@
  */
 import { invoke } from './engine'
 
-/**
- * Lazy media: a large document's browser-renderable pictures stay in the file
- * on disk instead of travelling into the renderer. The zip handed to the
- * renderer carries a fixed-size placeholder per stripped part naming the
- * source document's sha256; the picture is then referenced by URL and served
- * from the original file, and a save swaps the placeholders back for the
- * original bytes (see zip-splice.ts).
- */
-
-export const LAZY_MEDIA_SCHEME = 'genoffice-docx-media'
-const MAGIC = 'GENOFFICE-LAZY-MEDIA\n'
+export const LAZY_MEDIA_SCHEME = 'seuoffice-docx-media'
+const MAGIC = 'SEUOFFICE-LAZY-MEDIA\n'
 export const LAZY_MEDIA_PLACEHOLDER_BYTES = MAGIC.length + 64 + 1
 export function lazyMediaPlaceholder(hash: string): Uint8Array {
   return invoke('lazyMediaPlaceholder', [hash]) as never
