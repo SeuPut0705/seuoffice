@@ -485,7 +485,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         "w:gridSpan",
         (span > 1.0).then(|| format!("<w:gridSpan w:val=\"{}\"/>", num(span))),
     );
-    let merge = cell.v_merge;
+    let merge = *cell.v_merge;
     set_tc_pr_child(
         &mut children,
         "w:vMerge",
@@ -496,7 +496,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         },
     );
     // a merged-away cell rebuilt from its restart cell's bytes lost the merge record it carried
-    if let Some(Some(cell_merge)) = &cell.cell_merge
+    if let Some(Some(cell_merge)) = &*cell.cell_merge
         && cell_merge.resolved.is_none()
         && merge == Some(TableCellVMerge::Continue)
         && !raw_tc_pr.contains("<w:cellMerge")
@@ -508,7 +508,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         );
     }
     // With borders unmodeled (undefined), leave the raw tcBorders alone
-    if let Some(borders) = &cell.borders {
+    if let Some(borders) = &*cell.borders {
         set_tc_pr_child(
             &mut children,
             "w:tcBorders",
@@ -535,7 +535,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
             .filter(|&v_align| v_align != TableCellVAlign::Top)
             .map(|v_align| format!("<w:vAlign w:val=\"{}\"/>", v_align.as_str())),
     );
-    if cell.tc_pr_edited == Some(true) {
+    if *cell.tc_pr_edited == Some(true) {
         set_tc_pr_child(
             &mut children,
             "w:textDirection",
@@ -551,7 +551,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
         set_tc_pr_child(
             &mut children,
             "w:noWrap",
-            (cell.no_wrap == Some(true)).then(|| "<w:noWrap/>".to_owned()),
+            (*cell.no_wrap == Some(true)).then(|| "<w:noWrap/>".to_owned()),
         );
     }
     let tc_pr: String = children.into_iter().map(|(_, xml)| xml).collect();
@@ -563,13 +563,10 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
             .collect(),
         None => {
             let empty = [String::new()];
-            let texts: &[String] = if cell.paras.is_empty() {
-                &empty
-            } else {
-                &cell.paras
-            };
+            let paras = cell.paras.as_deref().unwrap_or_default();
+            let texts: &[String] = if paras.is_empty() { &empty } else { paras };
             let mut format = ParaFormat::default();
-            format.align.assign(cell.align);
+            format.align.assign(*cell.align);
             texts
                 .iter()
                 .map(|text| {
@@ -578,8 +575,8 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
                     } else {
                         let mut run = Run::default();
                         run.text.set(text.clone());
-                        run.bold.assign(cell.bold);
-                        run.color.assign(cell.color.clone());
+                        run.bold.assign(*cell.bold);
+                        run.color.assign((*cell.color).clone());
                         vec![run]
                     };
                     paragraph_xml(&format, &runs, None)
@@ -763,7 +760,7 @@ fn row_xml(
         let to = ((grid_column + span) as usize).min(widths.len()).max(from);
         let width = sum(widths[from..to].iter().copied());
         grid_column += span;
-        if cell.grid_gap == Some(true) {
+        if *cell.grid_gap == Some(true) {
             if cell_count == 0 {
                 before += span;
                 w_before += width;

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url'
 import { parseDocx } from '../../packages/docx-engine/src/parse'
 import { buildDocx } from '../../packages/docx-engine/tests/helpers/build-docx'
 import { PROPS_TEXTS } from './props-synthetic'
+import { buildModelBody, MODEL_BODIES } from './model-bodies'
 import { modelJson, type ModelInput } from './model-wire'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
@@ -56,5 +57,9 @@ export async function* parsedModels(
       }))
       if (input) yield input
     }
+  }
+  for (const { name, ...options } of MODEL_BODIES) {
+    const input = await parse(`model body ${name}`, 'built', await buildModelBody(options))
+    if (input) yield input
   }
 }

@@ -4,6 +4,7 @@ import { resolve } from 'node:path'
 import { parseDocx } from '../../packages/docx-engine/src/parse'
 import { buildDocx } from '../../packages/docx-engine/tests/helpers/build-docx'
 import { builtModelInputs } from './model-built'
+import { buildModelBody, MODEL_BODIES } from './model-bodies'
 import { compareModel } from './compare-model'
 import { invalidModelInputs } from './model-invalid'
 import { atFloor, Comparison, failGate, repoRoot, toolDir } from './harness'
@@ -53,6 +54,13 @@ export async function modelAfterCorpus(): Promise<void> {
       catch (error) { refusals.push({ where, error: String(error) }); continue }
       check({ where, population: 'built', type: 'ParsedDocFull', json: modelJson(doc) }, built)
     }
+  }
+  for (const { name, ...options } of MODEL_BODIES) {
+    const where = `model body ${name}`
+    let doc: unknown
+    try { doc = await parseDocx(await buildModelBody(options)) }
+    catch (error) { refusals.push({ where, error: String(error) }); continue }
+    check({ where, population: 'built', type: 'ParsedDocFull', json: modelJson(doc) }, built)
   }
   mkdirSync(resolve(toolDir, 'out'), { recursive: true })
   const directory = resolve(toolDir, 'out', `model-tests-${process.pid}`)

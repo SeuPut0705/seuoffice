@@ -181,11 +181,14 @@ function levelsOf(definition: ObjectDef, schema: ModelSchema, orders: OrderTable
       local: `b_${levels.length}`,
     })
     if (at.base === undefined) break
-    if (levels.at(-1)!.input) throw new Error(`${at.name}: a type with an input order has a base`)
     const base = schema.types.get(at.base)
     if (base?.kind !== 'object') throw new Error(`${at.name}: the base ${at.base} is no object type`)
     if (base.fields.some((field, i) => at!.fields[i]?.name !== field.name)) {
       throw new Error(`${at.name}: the fields of ${at.base} do not lead its own`)
+    }
+    // the keys of an input-ordered type are ordered by when each was set, its base's too
+    if (levels.at(-1)!.input && orderOf(base, orders) !== 'input') {
+      throw new Error(`${at.name}: an input order over ${at.base}, whose order is fixed`)
     }
     at = base
   }
@@ -233,7 +236,7 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
   const byName = new Map(fields.map((field) => [field.name, field]))
   const base = levels[1]
   const lines: string[] = []
-  if (input) {
+  if (input && !base) {
     lines.push(
       'jscompat::js_object! {',
       `    /// \`${definition.name}\`: the keys go out in the order they were set`,
@@ -241,6 +244,18 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
       `    pub struct ${name} {`,
       ...fields.map((field) => `        pub ${field.rust}: ${field.type},`),
       '    }',
+      '}',
+      '',
+    )
+  } else if (input && base) {
+    lines.push(
+      `/// \`${definition.name}\`: the keys go out in the order they were set, those of`,
+      `/// \`${base.definition.name}\` among its own`,
+      '#[derive(Debug, Clone, Default, PartialEq)]',
+      `pub struct ${name} {`,
+      `    /// the fields of \`${base.definition.name}\`, which \`${definition.name}\` extends`,
+      `    pub ${base.field}: ${base.name},`,
+      ...fields.slice(own).map((field) => `    pub ${field.rust}: jscompat::Slot<${field.type}>,`),
       '}',
       '',
     )
@@ -307,6 +322,34 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     `const _: () = assert!(${key}::NAMES.len() <= wire::MAX_KEYS);`,
     '',
   )
+  /** where the deserializer sets a slot: through the whole value, or the local of its base */
+  const slotOf = (field: (typeof fields)[number]): string =>
+    input ? `b_0.${field.access}` : `${field.holder.local}.${field.rust}`
+  if (input && base) {
+    lines.push(
+      `impl Serialize for ${name} {`,
+      '    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {',
+      `        let mut keys: Vec<(u64, ${key})> = Vec::new();`,
+      ...fields.map(
+        (field) =>
+          `        if let Some(at) = self.${field.access}.set_at() { keys.push((at, ${key}::${field.variant})); }`,
+      ),
+      '        keys.sort_unstable_by_key(|&(at, _)| at);',
+      '        let mut map = serializer.serialize_map(None)?;',
+      '        for (_, key) in keys {',
+      '            match key {',
+      ...fields.map(
+        (field) =>
+          `                ${key}::${field.variant} => if let Some(value) = &*self.${field.access} { map.serialize_entry(${field.key}, value)?; },`,
+      ),
+      '            }',
+      '        }',
+      '        map.end()',
+      '    }',
+      '}',
+      '',
+    )
+  }
   if (order !== 'input') {
     lines.push(
       `impl Serialize for ${name} {`,
@@ -339,9 +382,11 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     '',
     `            fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<${name}, A::Error> {`,
     '                let mut seen = Seen::default();',
-    ...levels
-      .filter((level) => level.input)
-      .map((level) => `                let mut ${level.local} = ${level.name}::default();`),
+    ...(input
+      ? [`                let mut b_0 = ${name}::default();`]
+      : levels
+          .filter((level) => level.input)
+          .map((level) => `                let mut ${level.local} = ${level.name}::default();`)),
     ...fields.filter((field) => !field.slot).map((field) => `                let mut ${field.local} = None;`),
     `                while let Some(Key(key)) = map.next_key::<Key<${key}>>()? {`,
     '                    if !seen.insert(key.index()) {',
@@ -350,7 +395,7 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
     '                    match key {',
     ...fields.map((field) =>
       field.slot
-        ? `                        ${key}::${field.variant} => ${field.holder.local}.${field.rust}.set(map.next_value()?),`
+        ? `                        ${key}::${field.variant} => ${slotOf(field)}.set(map.next_value()?),`
         : `                        ${key}::${field.variant} => ${field.local} = Some(map.next_value()?),`,
     ),
     '                    }',
@@ -358,7 +403,7 @@ function objectCode(definition: ObjectDef, schema: ModelSchema, orders: OrderTab
   )
   for (const field of fields.filter((candidate) => candidate.slot && !candidate.optional)) {
     lines.push(
-      `                if !${field.holder.local}.${field.rust}.has_key() {`,
+      `                if !${slotOf(field)}.has_key() {`,
       `                    return Err(A::Error::missing_field(${field.key}));`,
       '                }',
     )

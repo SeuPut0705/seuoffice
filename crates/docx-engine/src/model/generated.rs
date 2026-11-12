@@ -197,9 +197,9 @@ impl<'de> Deserialize<'de> for RevisionInfo {
 pub struct PropChangeInfo {
     /// the fields of `RevisionInfo`, which `PropChangeInfo` extends
     pub revision_info: RevisionInfo,
-    pub old_xml: Option<String>,
     pub v_merge: Option<String>,
     pub v_merge_orig: Option<String>,
+    pub old_xml: Option<String>,
     pub resolved: Option<PropChangeInfoResolved>,
 }
 
@@ -272,14 +272,14 @@ impl Serialize for PropChangeInfo {
         if let Some(value) = &self.revision_info.r#move {
             map.serialize_entry("move", value)?;
         }
-        if let Some(value) = &self.old_xml {
-            map.serialize_entry("oldXml", value)?;
-        }
         if let Some(value) = &self.v_merge {
             map.serialize_entry("vMerge", value)?;
         }
         if let Some(value) = &self.v_merge_orig {
             map.serialize_entry("vMergeOrig", value)?;
+        }
+        if let Some(value) = &self.old_xml {
+            map.serialize_entry("oldXml", value)?;
         }
         if let Some(value) = &self.resolved {
             map.serialize_entry("resolved", value)?;
@@ -1850,8 +1850,8 @@ pub struct RunRPrChange {
     pub date_utc: Option<String>,
     pub id: Option<String>,
     pub r#move: Option<String>,
-    pub old_r_pr: Option<String>,
     pub old: Option<RunRPrChangeOld>,
+    pub old_r_pr: Option<String>,
 }
 
 /// The keys of `Run.rPrChange`, in declaration order.
@@ -1905,11 +1905,11 @@ impl Serialize for RunRPrChange {
         if let Some(value) = &self.r#move {
             map.serialize_entry("move", value)?;
         }
-        if let Some(value) = &self.old_r_pr {
-            map.serialize_entry("oldRPr", value)?;
-        }
         if let Some(value) = &self.old {
             map.serialize_entry("old", value)?;
+        }
+        if let Some(value) = &self.old_r_pr {
+            map.serialize_entry("oldRPr", value)?;
         }
         map.end()
     }
@@ -3809,10 +3809,10 @@ pub struct CommentInfo {
     pub initials: Option<String>,
     pub date: Option<String>,
     pub text: String,
+    pub para_id: Option<String>,
     pub image: Option<CommentImage>,
     pub parent_id: Option<String>,
     pub done: Option<bool>,
-    pub para_id: Option<String>,
 }
 
 /// The keys of `CommentInfo`, in declaration order.
@@ -3866,6 +3866,9 @@ impl Serialize for CommentInfo {
             map.serialize_entry("date", value)?;
         }
         map.serialize_entry("text", &self.text)?;
+        if let Some(value) = &self.para_id {
+            map.serialize_entry("paraId", value)?;
+        }
         if let Some(value) = &self.image {
             map.serialize_entry("image", value)?;
         }
@@ -3874,9 +3877,6 @@ impl Serialize for CommentInfo {
         }
         if let Some(value) = &self.done {
             map.serialize_entry("done", value)?;
-        }
-        if let Some(value) = &self.para_id {
-            map.serialize_entry("paraId", value)?;
         }
         map.end()
     }
@@ -4642,10 +4642,10 @@ impl<'de> Deserialize<'de> for ParaBorderSides {
 #[derive(Debug, Clone, PartialEq)]
 pub struct ParaFrame {
     pub w_twips: JsNum,
-    pub h_twips: Option<JsNum>,
-    pub h_rule: Option<ParaFrameHRule>,
     pub x_twips: JsNum,
     pub y_twips: JsNum,
+    pub h_twips: Option<JsNum>,
+    pub h_rule: Option<ParaFrameHRule>,
     pub h_anchor: Option<ParaFrameHAnchor>,
     pub v_anchor: Option<ParaFrameVAnchor>,
     pub wrap: Option<ParaFrameWrap>,
@@ -4707,14 +4707,14 @@ impl Serialize for ParaFrame {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("wTwips", &self.w_twips)?;
+        map.serialize_entry("xTwips", &self.x_twips)?;
+        map.serialize_entry("yTwips", &self.y_twips)?;
         if let Some(value) = &self.h_twips {
             map.serialize_entry("hTwips", value)?;
         }
         if let Some(value) = &self.h_rule {
             map.serialize_entry("hRule", value)?;
         }
-        map.serialize_entry("xTwips", &self.x_twips)?;
-        map.serialize_entry("yTwips", &self.y_twips)?;
         if let Some(value) = &self.h_anchor {
             map.serialize_entry("hAnchor", value)?;
         }
@@ -6641,27 +6641,27 @@ impl<'de> Deserialize<'de> for EffectivePPrList {
 #[derive(Debug, Clone, PartialEq)]
 pub struct NumberingLevel {
     pub num_fmt: String,
-    pub custom_format: Option<String>,
     pub lvl_text: String,
     pub start: JsNum,
+    pub custom_format: Option<String>,
     pub suff: Option<NumberingLevelSuff>,
     pub is_lgl: Option<bool>,
     pub lvl_jc: Option<NumberingLevelLvlJc>,
-    pub bidi: Option<bool>,
-    pub color: Option<String>,
-    pub pic_bullet_id: Option<JsNum>,
-    pub pic_bullet_src: Option<String>,
-    pub bold: Option<bool>,
-    pub italic: Option<bool>,
     pub p_style: Option<String>,
+    pub lvl_restart: Option<JsNum>,
+    pub bidi: Option<bool>,
     pub tab_stop: Option<JsNum>,
     pub indent_left: Option<JsNum>,
     pub indent_right: Option<JsNum>,
     pub hanging: Option<JsNum>,
     pub first_line: Option<JsNum>,
     pub sz_half_points: Option<JsNum>,
+    pub color: Option<String>,
+    pub bold: Option<bool>,
+    pub italic: Option<bool>,
     pub font: Option<String>,
-    pub lvl_restart: Option<JsNum>,
+    pub pic_bullet_id: Option<JsNum>,
+    pub pic_bullet_src: Option<String>,
 }
 
 /// The keys of `NumberingLevel`, in declaration order.
@@ -6733,11 +6733,11 @@ impl Serialize for NumberingLevel {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("numFmt", &self.num_fmt)?;
+        map.serialize_entry("lvlText", &self.lvl_text)?;
+        map.serialize_entry("start", &self.start)?;
         if let Some(value) = &self.custom_format {
             map.serialize_entry("customFormat", value)?;
         }
-        map.serialize_entry("lvlText", &self.lvl_text)?;
-        map.serialize_entry("start", &self.start)?;
         if let Some(value) = &self.suff {
             map.serialize_entry("suff", value)?;
         }
@@ -6747,26 +6747,14 @@ impl Serialize for NumberingLevel {
         if let Some(value) = &self.lvl_jc {
             map.serialize_entry("lvlJc", value)?;
         }
-        if let Some(value) = &self.bidi {
-            map.serialize_entry("bidi", value)?;
-        }
-        if let Some(value) = &self.color {
-            map.serialize_entry("color", value)?;
-        }
-        if let Some(value) = &self.pic_bullet_id {
-            map.serialize_entry("picBulletId", value)?;
-        }
-        if let Some(value) = &self.pic_bullet_src {
-            map.serialize_entry("picBulletSrc", value)?;
-        }
-        if let Some(value) = &self.bold {
-            map.serialize_entry("bold", value)?;
-        }
-        if let Some(value) = &self.italic {
-            map.serialize_entry("italic", value)?;
-        }
         if let Some(value) = &self.p_style {
             map.serialize_entry("pStyle", value)?;
+        }
+        if let Some(value) = &self.lvl_restart {
+            map.serialize_entry("lvlRestart", value)?;
+        }
+        if let Some(value) = &self.bidi {
+            map.serialize_entry("bidi", value)?;
         }
         if let Some(value) = &self.tab_stop {
             map.serialize_entry("tabStop", value)?;
@@ -6786,11 +6774,23 @@ impl Serialize for NumberingLevel {
         if let Some(value) = &self.sz_half_points {
             map.serialize_entry("szHalfPoints", value)?;
         }
+        if let Some(value) = &self.color {
+            map.serialize_entry("color", value)?;
+        }
+        if let Some(value) = &self.bold {
+            map.serialize_entry("bold", value)?;
+        }
+        if let Some(value) = &self.italic {
+            map.serialize_entry("italic", value)?;
+        }
         if let Some(value) = &self.font {
             map.serialize_entry("font", value)?;
         }
-        if let Some(value) = &self.lvl_restart {
-            map.serialize_entry("lvlRestart", value)?;
+        if let Some(value) = &self.pic_bullet_id {
+            map.serialize_entry("picBulletId", value)?;
+        }
+        if let Some(value) = &self.pic_bullet_src {
+            map.serialize_entry("picBulletSrc", value)?;
         }
         map.end()
     }
@@ -8368,20 +8368,21 @@ impl<'de> Deserialize<'de> for SectionInfoFooterRefs {
     }
 }
 
-/// `HfParagraph`
+/// `HfParagraph`: the keys go out in the order they were set, those of
+/// `ParaFormat` among its own
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct HfParagraph {
     /// the fields of `ParaFormat`, which `HfParagraph` extends
     pub para_format: ParaFormat,
-    pub frame_x_align: Option<HfParagraphFrameXAlign>,
-    pub box_anchored: Option<bool>,
-    pub r#box: Option<HfTextBox>,
-    pub ptab_aligns: Option<Vec<Option<HfParagraphPtabAlignsItem>>>,
-    pub empty_run_font: Option<String>,
-    pub runs: Vec<Run>,
-    pub line_only: Option<bool>,
-    pub cells: Option<Vec<HfTableCell>>,
-    pub row: Option<HfTableRow>,
+    pub frame_x_align: jscompat::Slot<HfParagraphFrameXAlign>,
+    pub box_anchored: jscompat::Slot<bool>,
+    pub r#box: jscompat::Slot<HfTextBox>,
+    pub ptab_aligns: jscompat::Slot<Vec<Option<HfParagraphPtabAlignsItem>>>,
+    pub empty_run_font: jscompat::Slot<String>,
+    pub runs: jscompat::Slot<Vec<Run>>,
+    pub line_only: jscompat::Slot<bool>,
+    pub cells: jscompat::Slot<Vec<HfTableCell>>,
+    pub row: jscompat::Slot<HfTableRow>,
 }
 
 impl std::ops::Deref for HfParagraph {
@@ -8529,166 +8530,120 @@ const _: () = assert!(HfParagraphKey::NAMES.len() <= wire::MAX_KEYS);
 
 impl Serialize for HfParagraph {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut keys: Vec<(u64, HfParagraphKey)> = Vec::new();
+        if let Some(at) = self.para_format.align.set_at() { keys.push((at, HfParagraphKey::Align)); }
+        if let Some(at) = self.para_format.line_spacing.set_at() { keys.push((at, HfParagraphKey::LineSpacing)); }
+        if let Some(at) = self.para_format.line_rule.set_at() { keys.push((at, HfParagraphKey::LineRule)); }
+        if let Some(at) = self.para_format.line_raw_twips.set_at() { keys.push((at, HfParagraphKey::LineRawTwips)); }
+        if let Some(at) = self.para_format.indent_left.set_at() { keys.push((at, HfParagraphKey::IndentLeft)); }
+        if let Some(at) = self.para_format.indent_right.set_at() { keys.push((at, HfParagraphKey::IndentRight)); }
+        if let Some(at) = self.para_format.indent_first_line.set_at() { keys.push((at, HfParagraphKey::IndentFirstLine)); }
+        if let Some(at) = self.para_format.char_indents.set_at() { keys.push((at, HfParagraphKey::CharIndents)); }
+        if let Some(at) = self.para_format.direct_char_indents.set_at() { keys.push((at, HfParagraphKey::DirectCharIndents)); }
+        if let Some(at) = self.para_format.space_before.set_at() { keys.push((at, HfParagraphKey::SpaceBefore)); }
+        if let Some(at) = self.para_format.space_after.set_at() { keys.push((at, HfParagraphKey::SpaceAfter)); }
+        if let Some(at) = self.para_format.space_before_auto.set_at() { keys.push((at, HfParagraphKey::SpaceBeforeAuto)); }
+        if let Some(at) = self.para_format.space_after_auto.set_at() { keys.push((at, HfParagraphKey::SpaceAfterAuto)); }
+        if let Some(at) = self.para_format.page_break_before.set_at() { keys.push((at, HfParagraphKey::PageBreakBefore)); }
+        if let Some(at) = self.para_format.keep_next.set_at() { keys.push((at, HfParagraphKey::KeepNext)); }
+        if let Some(at) = self.para_format.keep_lines.set_at() { keys.push((at, HfParagraphKey::KeepLines)); }
+        if let Some(at) = self.para_format.suppress_line_numbers.set_at() { keys.push((at, HfParagraphKey::SuppressLineNumbers)); }
+        if let Some(at) = self.para_format.widow_control.set_at() { keys.push((at, HfParagraphKey::WidowControl)); }
+        if let Some(at) = self.para_format.snap_to_grid.set_at() { keys.push((at, HfParagraphKey::SnapToGrid)); }
+        if let Some(at) = self.para_format.auto_space.set_at() { keys.push((at, HfParagraphKey::AutoSpace)); }
+        if let Some(at) = self.para_format.auto_space_d_e.set_at() { keys.push((at, HfParagraphKey::AutoSpaceDE)); }
+        if let Some(at) = self.para_format.auto_space_d_n.set_at() { keys.push((at, HfParagraphKey::AutoSpaceDN)); }
+        if let Some(at) = self.para_format.word_wrap.set_at() { keys.push((at, HfParagraphKey::WordWrap)); }
+        if let Some(at) = self.para_format.overflow_punct.set_at() { keys.push((at, HfParagraphKey::OverflowPunct)); }
+        if let Some(at) = self.para_format.east_asia_lang.set_at() { keys.push((at, HfParagraphKey::EastAsiaLang)); }
+        if let Some(at) = self.para_format.contextual_spacing.set_at() { keys.push((at, HfParagraphKey::ContextualSpacing)); }
+        if let Some(at) = self.para_format.shading_fill.set_at() { keys.push((at, HfParagraphKey::ShadingFill)); }
+        if let Some(at) = self.para_format.shading_display.set_at() { keys.push((at, HfParagraphKey::ShadingDisplay)); }
+        if let Some(at) = self.para_format.shading_clear.set_at() { keys.push((at, HfParagraphKey::ShadingClear)); }
+        if let Some(at) = self.para_format.borders.set_at() { keys.push((at, HfParagraphKey::Borders)); }
+        if let Some(at) = self.para_format.border_style.set_at() { keys.push((at, HfParagraphKey::BorderStyle)); }
+        if let Some(at) = self.para_format.border_lines.set_at() { keys.push((at, HfParagraphKey::BorderLines)); }
+        if let Some(at) = self.para_format.border_reset.set_at() { keys.push((at, HfParagraphKey::BorderReset)); }
+        if let Some(at) = self.para_format.border_pad.set_at() { keys.push((at, HfParagraphKey::BorderPad)); }
+        if let Some(at) = self.para_format.tab_stops.set_at() { keys.push((at, HfParagraphKey::TabStops)); }
+        if let Some(at) = self.para_format.drop_cap.set_at() { keys.push((at, HfParagraphKey::DropCap)); }
+        if let Some(at) = self.para_format.frame.set_at() { keys.push((at, HfParagraphKey::Frame)); }
+        if let Some(at) = self.para_format.frame_box.set_at() { keys.push((at, HfParagraphKey::FrameBox)); }
+        if let Some(at) = self.para_format.text_direction.set_at() { keys.push((at, HfParagraphKey::TextDirection)); }
+        if let Some(at) = self.para_format.bidi.set_at() { keys.push((at, HfParagraphKey::Bidi)); }
+        if let Some(at) = self.para_format.bidi_inherited.set_at() { keys.push((at, HfParagraphKey::BidiInherited)); }
+        if let Some(at) = self.para_format.empty_run_size_half_points.set_at() { keys.push((at, HfParagraphKey::EmptyRunSizeHalfPoints)); }
+        if let Some(at) = self.para_format.empty_run_font_family.set_at() { keys.push((at, HfParagraphKey::EmptyRunFontFamily)); }
+        if let Some(at) = self.para_format.mark_size_half_points.set_at() { keys.push((at, HfParagraphKey::MarkSizeHalfPoints)); }
+        if let Some(at) = self.para_format.effective.set_at() { keys.push((at, HfParagraphKey::Effective)); }
+        if let Some(at) = self.frame_x_align.set_at() { keys.push((at, HfParagraphKey::FrameXAlign)); }
+        if let Some(at) = self.box_anchored.set_at() { keys.push((at, HfParagraphKey::BoxAnchored)); }
+        if let Some(at) = self.r#box.set_at() { keys.push((at, HfParagraphKey::Box)); }
+        if let Some(at) = self.ptab_aligns.set_at() { keys.push((at, HfParagraphKey::PtabAligns)); }
+        if let Some(at) = self.empty_run_font.set_at() { keys.push((at, HfParagraphKey::EmptyRunFont)); }
+        if let Some(at) = self.runs.set_at() { keys.push((at, HfParagraphKey::Runs)); }
+        if let Some(at) = self.line_only.set_at() { keys.push((at, HfParagraphKey::LineOnly)); }
+        if let Some(at) = self.cells.set_at() { keys.push((at, HfParagraphKey::Cells)); }
+        if let Some(at) = self.row.set_at() { keys.push((at, HfParagraphKey::Row)); }
+        keys.sort_unstable_by_key(|&(at, _)| at);
         let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &*self.para_format.align {
-            map.serialize_entry("align", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_rule {
-            map.serialize_entry("lineRule", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_raw_twips {
-            map.serialize_entry("lineRawTwips", value)?;
-        }
-        if let Some(value) = &*self.para_format.line_spacing {
-            map.serialize_entry("lineSpacing", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_left {
-            map.serialize_entry("indentLeft", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_right {
-            map.serialize_entry("indentRight", value)?;
-        }
-        if let Some(value) = &*self.para_format.indent_first_line {
-            map.serialize_entry("indentFirstLine", value)?;
-        }
-        if let Some(value) = &*self.para_format.char_indents {
-            map.serialize_entry("charIndents", value)?;
-        }
-        if let Some(value) = &*self.para_format.direct_char_indents {
-            map.serialize_entry("directCharIndents", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_before {
-            map.serialize_entry("spaceBefore", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after {
-            map.serialize_entry("spaceAfter", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_before_auto {
-            map.serialize_entry("spaceBeforeAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after_auto {
-            map.serialize_entry("spaceAfterAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.page_break_before {
-            map.serialize_entry("pageBreakBefore", value)?;
-        }
-        if let Some(value) = &*self.para_format.keep_next {
-            map.serialize_entry("keepNext", value)?;
-        }
-        if let Some(value) = &*self.para_format.keep_lines {
-            map.serialize_entry("keepLines", value)?;
-        }
-        if let Some(value) = &*self.para_format.suppress_line_numbers {
-            map.serialize_entry("suppressLineNumbers", value)?;
-        }
-        if let Some(value) = &*self.para_format.widow_control {
-            map.serialize_entry("widowControl", value)?;
-        }
-        if let Some(value) = &*self.para_format.snap_to_grid {
-            map.serialize_entry("snapToGrid", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space {
-            map.serialize_entry("autoSpace", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space_d_e {
-            map.serialize_entry("autoSpaceDE", value)?;
-        }
-        if let Some(value) = &*self.para_format.auto_space_d_n {
-            map.serialize_entry("autoSpaceDN", value)?;
-        }
-        if let Some(value) = &*self.para_format.word_wrap {
-            map.serialize_entry("wordWrap", value)?;
-        }
-        if let Some(value) = &*self.para_format.overflow_punct {
-            map.serialize_entry("overflowPunct", value)?;
-        }
-        if let Some(value) = &*self.para_format.east_asia_lang {
-            map.serialize_entry("eastAsiaLang", value)?;
-        }
-        if let Some(value) = &*self.para_format.contextual_spacing {
-            map.serialize_entry("contextualSpacing", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_fill {
-            map.serialize_entry("shadingFill", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_display {
-            map.serialize_entry("shadingDisplay", value)?;
-        }
-        if let Some(value) = &*self.para_format.shading_clear {
-            map.serialize_entry("shadingClear", value)?;
-        }
-        if let Some(value) = &*self.para_format.borders {
-            map.serialize_entry("borders", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_style {
-            map.serialize_entry("borderStyle", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_lines {
-            map.serialize_entry("borderLines", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_reset {
-            map.serialize_entry("borderReset", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_pad {
-            map.serialize_entry("borderPad", value)?;
-        }
-        if let Some(value) = &*self.para_format.tab_stops {
-            map.serialize_entry("tabStops", value)?;
-        }
-        if let Some(value) = &*self.para_format.drop_cap {
-            map.serialize_entry("dropCap", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame {
-            map.serialize_entry("frame", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame_box {
-            map.serialize_entry("frameBox", value)?;
-        }
-        if let Some(value) = &*self.para_format.text_direction {
-            map.serialize_entry("textDirection", value)?;
-        }
-        if let Some(value) = &*self.para_format.bidi {
-            map.serialize_entry("bidi", value)?;
-        }
-        if let Some(value) = &*self.para_format.bidi_inherited {
-            map.serialize_entry("bidiInherited", value)?;
-        }
-        if let Some(value) = &*self.para_format.empty_run_size_half_points {
-            map.serialize_entry("emptyRunSizeHalfPoints", value)?;
-        }
-        if let Some(value) = &*self.para_format.empty_run_font_family {
-            map.serialize_entry("emptyRunFontFamily", value)?;
-        }
-        if let Some(value) = &*self.para_format.mark_size_half_points {
-            map.serialize_entry("markSizeHalfPoints", value)?;
-        }
-        if let Some(value) = &*self.para_format.effective {
-            map.serialize_entry("effective", value)?;
-        }
-        if let Some(value) = &self.frame_x_align {
-            map.serialize_entry("frameXAlign", value)?;
-        }
-        if let Some(value) = &self.box_anchored {
-            map.serialize_entry("boxAnchored", value)?;
-        }
-        if let Some(value) = &self.r#box {
-            map.serialize_entry("box", value)?;
-        }
-        if let Some(value) = &self.ptab_aligns {
-            map.serialize_entry("ptabAligns", value)?;
-        }
-        if let Some(value) = &self.empty_run_font {
-            map.serialize_entry("emptyRunFont", value)?;
-        }
-        map.serialize_entry("runs", &self.runs)?;
-        if let Some(value) = &self.line_only {
-            map.serialize_entry("lineOnly", value)?;
-        }
-        if let Some(value) = &self.cells {
-            map.serialize_entry("cells", value)?;
-        }
-        if let Some(value) = &self.row {
-            map.serialize_entry("row", value)?;
+        for (_, key) in keys {
+            match key {
+                HfParagraphKey::Align => if let Some(value) = &*self.para_format.align { map.serialize_entry("align", value)?; },
+                HfParagraphKey::LineSpacing => if let Some(value) = &*self.para_format.line_spacing { map.serialize_entry("lineSpacing", value)?; },
+                HfParagraphKey::LineRule => if let Some(value) = &*self.para_format.line_rule { map.serialize_entry("lineRule", value)?; },
+                HfParagraphKey::LineRawTwips => if let Some(value) = &*self.para_format.line_raw_twips { map.serialize_entry("lineRawTwips", value)?; },
+                HfParagraphKey::IndentLeft => if let Some(value) = &*self.para_format.indent_left { map.serialize_entry("indentLeft", value)?; },
+                HfParagraphKey::IndentRight => if let Some(value) = &*self.para_format.indent_right { map.serialize_entry("indentRight", value)?; },
+                HfParagraphKey::IndentFirstLine => if let Some(value) = &*self.para_format.indent_first_line { map.serialize_entry("indentFirstLine", value)?; },
+                HfParagraphKey::CharIndents => if let Some(value) = &*self.para_format.char_indents { map.serialize_entry("charIndents", value)?; },
+                HfParagraphKey::DirectCharIndents => if let Some(value) = &*self.para_format.direct_char_indents { map.serialize_entry("directCharIndents", value)?; },
+                HfParagraphKey::SpaceBefore => if let Some(value) = &*self.para_format.space_before { map.serialize_entry("spaceBefore", value)?; },
+                HfParagraphKey::SpaceAfter => if let Some(value) = &*self.para_format.space_after { map.serialize_entry("spaceAfter", value)?; },
+                HfParagraphKey::SpaceBeforeAuto => if let Some(value) = &*self.para_format.space_before_auto { map.serialize_entry("spaceBeforeAuto", value)?; },
+                HfParagraphKey::SpaceAfterAuto => if let Some(value) = &*self.para_format.space_after_auto { map.serialize_entry("spaceAfterAuto", value)?; },
+                HfParagraphKey::PageBreakBefore => if let Some(value) = &*self.para_format.page_break_before { map.serialize_entry("pageBreakBefore", value)?; },
+                HfParagraphKey::KeepNext => if let Some(value) = &*self.para_format.keep_next { map.serialize_entry("keepNext", value)?; },
+                HfParagraphKey::KeepLines => if let Some(value) = &*self.para_format.keep_lines { map.serialize_entry("keepLines", value)?; },
+                HfParagraphKey::SuppressLineNumbers => if let Some(value) = &*self.para_format.suppress_line_numbers { map.serialize_entry("suppressLineNumbers", value)?; },
+                HfParagraphKey::WidowControl => if let Some(value) = &*self.para_format.widow_control { map.serialize_entry("widowControl", value)?; },
+                HfParagraphKey::SnapToGrid => if let Some(value) = &*self.para_format.snap_to_grid { map.serialize_entry("snapToGrid", value)?; },
+                HfParagraphKey::AutoSpace => if let Some(value) = &*self.para_format.auto_space { map.serialize_entry("autoSpace", value)?; },
+                HfParagraphKey::AutoSpaceDE => if let Some(value) = &*self.para_format.auto_space_d_e { map.serialize_entry("autoSpaceDE", value)?; },
+                HfParagraphKey::AutoSpaceDN => if let Some(value) = &*self.para_format.auto_space_d_n { map.serialize_entry("autoSpaceDN", value)?; },
+                HfParagraphKey::WordWrap => if let Some(value) = &*self.para_format.word_wrap { map.serialize_entry("wordWrap", value)?; },
+                HfParagraphKey::OverflowPunct => if let Some(value) = &*self.para_format.overflow_punct { map.serialize_entry("overflowPunct", value)?; },
+                HfParagraphKey::EastAsiaLang => if let Some(value) = &*self.para_format.east_asia_lang { map.serialize_entry("eastAsiaLang", value)?; },
+                HfParagraphKey::ContextualSpacing => if let Some(value) = &*self.para_format.contextual_spacing { map.serialize_entry("contextualSpacing", value)?; },
+                HfParagraphKey::ShadingFill => if let Some(value) = &*self.para_format.shading_fill { map.serialize_entry("shadingFill", value)?; },
+                HfParagraphKey::ShadingDisplay => if let Some(value) = &*self.para_format.shading_display { map.serialize_entry("shadingDisplay", value)?; },
+                HfParagraphKey::ShadingClear => if let Some(value) = &*self.para_format.shading_clear { map.serialize_entry("shadingClear", value)?; },
+                HfParagraphKey::Borders => if let Some(value) = &*self.para_format.borders { map.serialize_entry("borders", value)?; },
+                HfParagraphKey::BorderStyle => if let Some(value) = &*self.para_format.border_style { map.serialize_entry("borderStyle", value)?; },
+                HfParagraphKey::BorderLines => if let Some(value) = &*self.para_format.border_lines { map.serialize_entry("borderLines", value)?; },
+                HfParagraphKey::BorderReset => if let Some(value) = &*self.para_format.border_reset { map.serialize_entry("borderReset", value)?; },
+                HfParagraphKey::BorderPad => if let Some(value) = &*self.para_format.border_pad { map.serialize_entry("borderPad", value)?; },
+                HfParagraphKey::TabStops => if let Some(value) = &*self.para_format.tab_stops { map.serialize_entry("tabStops", value)?; },
+                HfParagraphKey::DropCap => if let Some(value) = &*self.para_format.drop_cap { map.serialize_entry("dropCap", value)?; },
+                HfParagraphKey::Frame => if let Some(value) = &*self.para_format.frame { map.serialize_entry("frame", value)?; },
+                HfParagraphKey::FrameBox => if let Some(value) = &*self.para_format.frame_box { map.serialize_entry("frameBox", value)?; },
+                HfParagraphKey::TextDirection => if let Some(value) = &*self.para_format.text_direction { map.serialize_entry("textDirection", value)?; },
+                HfParagraphKey::Bidi => if let Some(value) = &*self.para_format.bidi { map.serialize_entry("bidi", value)?; },
+                HfParagraphKey::BidiInherited => if let Some(value) = &*self.para_format.bidi_inherited { map.serialize_entry("bidiInherited", value)?; },
+                HfParagraphKey::EmptyRunSizeHalfPoints => if let Some(value) = &*self.para_format.empty_run_size_half_points { map.serialize_entry("emptyRunSizeHalfPoints", value)?; },
+                HfParagraphKey::EmptyRunFontFamily => if let Some(value) = &*self.para_format.empty_run_font_family { map.serialize_entry("emptyRunFontFamily", value)?; },
+                HfParagraphKey::MarkSizeHalfPoints => if let Some(value) = &*self.para_format.mark_size_half_points { map.serialize_entry("markSizeHalfPoints", value)?; },
+                HfParagraphKey::Effective => if let Some(value) = &*self.para_format.effective { map.serialize_entry("effective", value)?; },
+                HfParagraphKey::FrameXAlign => if let Some(value) = &*self.frame_x_align { map.serialize_entry("frameXAlign", value)?; },
+                HfParagraphKey::BoxAnchored => if let Some(value) = &*self.box_anchored { map.serialize_entry("boxAnchored", value)?; },
+                HfParagraphKey::Box => if let Some(value) = &*self.r#box { map.serialize_entry("box", value)?; },
+                HfParagraphKey::PtabAligns => if let Some(value) = &*self.ptab_aligns { map.serialize_entry("ptabAligns", value)?; },
+                HfParagraphKey::EmptyRunFont => if let Some(value) = &*self.empty_run_font { map.serialize_entry("emptyRunFont", value)?; },
+                HfParagraphKey::Runs => if let Some(value) = &*self.runs { map.serialize_entry("runs", value)?; },
+                HfParagraphKey::LineOnly => if let Some(value) = &*self.line_only { map.serialize_entry("lineOnly", value)?; },
+                HfParagraphKey::Cells => if let Some(value) = &*self.cells { map.serialize_entry("cells", value)?; },
+                HfParagraphKey::Row => if let Some(value) = &*self.row { map.serialize_entry("row", value)?; },
+            }
         }
         map.end()
     }
@@ -8706,78 +8661,72 @@ impl<'de> Deserialize<'de> for HfParagraph {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<HfParagraph, A::Error> {
                 let mut seen = Seen::default();
-                let mut b_1 = ParaFormat::default();
-                let mut v_frame_x_align = None;
-                let mut v_box_anchored = None;
-                let mut v_box = None;
-                let mut v_ptab_aligns = None;
-                let mut v_empty_run_font = None;
-                let mut v_runs = None;
-                let mut v_line_only = None;
-                let mut v_cells = None;
-                let mut v_row = None;
+                let mut b_0 = HfParagraph::default();
                 while let Some(Key(key)) = map.next_key::<Key<HfParagraphKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfParagraphKey::Align => b_1.align.set(map.next_value()?),
-                        HfParagraphKey::LineSpacing => b_1.line_spacing.set(map.next_value()?),
-                        HfParagraphKey::LineRule => b_1.line_rule.set(map.next_value()?),
-                        HfParagraphKey::LineRawTwips => b_1.line_raw_twips.set(map.next_value()?),
-                        HfParagraphKey::IndentLeft => b_1.indent_left.set(map.next_value()?),
-                        HfParagraphKey::IndentRight => b_1.indent_right.set(map.next_value()?),
-                        HfParagraphKey::IndentFirstLine => b_1.indent_first_line.set(map.next_value()?),
-                        HfParagraphKey::CharIndents => b_1.char_indents.set(map.next_value()?),
-                        HfParagraphKey::DirectCharIndents => b_1.direct_char_indents.set(map.next_value()?),
-                        HfParagraphKey::SpaceBefore => b_1.space_before.set(map.next_value()?),
-                        HfParagraphKey::SpaceAfter => b_1.space_after.set(map.next_value()?),
-                        HfParagraphKey::SpaceBeforeAuto => b_1.space_before_auto.set(map.next_value()?),
-                        HfParagraphKey::SpaceAfterAuto => b_1.space_after_auto.set(map.next_value()?),
-                        HfParagraphKey::PageBreakBefore => b_1.page_break_before.set(map.next_value()?),
-                        HfParagraphKey::KeepNext => b_1.keep_next.set(map.next_value()?),
-                        HfParagraphKey::KeepLines => b_1.keep_lines.set(map.next_value()?),
-                        HfParagraphKey::SuppressLineNumbers => b_1.suppress_line_numbers.set(map.next_value()?),
-                        HfParagraphKey::WidowControl => b_1.widow_control.set(map.next_value()?),
-                        HfParagraphKey::SnapToGrid => b_1.snap_to_grid.set(map.next_value()?),
-                        HfParagraphKey::AutoSpace => b_1.auto_space.set(map.next_value()?),
-                        HfParagraphKey::AutoSpaceDE => b_1.auto_space_d_e.set(map.next_value()?),
-                        HfParagraphKey::AutoSpaceDN => b_1.auto_space_d_n.set(map.next_value()?),
-                        HfParagraphKey::WordWrap => b_1.word_wrap.set(map.next_value()?),
-                        HfParagraphKey::OverflowPunct => b_1.overflow_punct.set(map.next_value()?),
-                        HfParagraphKey::EastAsiaLang => b_1.east_asia_lang.set(map.next_value()?),
-                        HfParagraphKey::ContextualSpacing => b_1.contextual_spacing.set(map.next_value()?),
-                        HfParagraphKey::ShadingFill => b_1.shading_fill.set(map.next_value()?),
-                        HfParagraphKey::ShadingDisplay => b_1.shading_display.set(map.next_value()?),
-                        HfParagraphKey::ShadingClear => b_1.shading_clear.set(map.next_value()?),
-                        HfParagraphKey::Borders => b_1.borders.set(map.next_value()?),
-                        HfParagraphKey::BorderStyle => b_1.border_style.set(map.next_value()?),
-                        HfParagraphKey::BorderLines => b_1.border_lines.set(map.next_value()?),
-                        HfParagraphKey::BorderReset => b_1.border_reset.set(map.next_value()?),
-                        HfParagraphKey::BorderPad => b_1.border_pad.set(map.next_value()?),
-                        HfParagraphKey::TabStops => b_1.tab_stops.set(map.next_value()?),
-                        HfParagraphKey::DropCap => b_1.drop_cap.set(map.next_value()?),
-                        HfParagraphKey::Frame => b_1.frame.set(map.next_value()?),
-                        HfParagraphKey::FrameBox => b_1.frame_box.set(map.next_value()?),
-                        HfParagraphKey::TextDirection => b_1.text_direction.set(map.next_value()?),
-                        HfParagraphKey::Bidi => b_1.bidi.set(map.next_value()?),
-                        HfParagraphKey::BidiInherited => b_1.bidi_inherited.set(map.next_value()?),
-                        HfParagraphKey::EmptyRunSizeHalfPoints => b_1.empty_run_size_half_points.set(map.next_value()?),
-                        HfParagraphKey::EmptyRunFontFamily => b_1.empty_run_font_family.set(map.next_value()?),
-                        HfParagraphKey::MarkSizeHalfPoints => b_1.mark_size_half_points.set(map.next_value()?),
-                        HfParagraphKey::Effective => b_1.effective.set(map.next_value()?),
-                        HfParagraphKey::FrameXAlign => v_frame_x_align = Some(map.next_value()?),
-                        HfParagraphKey::BoxAnchored => v_box_anchored = Some(map.next_value()?),
-                        HfParagraphKey::Box => v_box = Some(map.next_value()?),
-                        HfParagraphKey::PtabAligns => v_ptab_aligns = Some(map.next_value()?),
-                        HfParagraphKey::EmptyRunFont => v_empty_run_font = Some(map.next_value()?),
-                        HfParagraphKey::Runs => v_runs = Some(map.next_value()?),
-                        HfParagraphKey::LineOnly => v_line_only = Some(map.next_value()?),
-                        HfParagraphKey::Cells => v_cells = Some(map.next_value()?),
-                        HfParagraphKey::Row => v_row = Some(map.next_value()?),
+                        HfParagraphKey::Align => b_0.para_format.align.set(map.next_value()?),
+                        HfParagraphKey::LineSpacing => b_0.para_format.line_spacing.set(map.next_value()?),
+                        HfParagraphKey::LineRule => b_0.para_format.line_rule.set(map.next_value()?),
+                        HfParagraphKey::LineRawTwips => b_0.para_format.line_raw_twips.set(map.next_value()?),
+                        HfParagraphKey::IndentLeft => b_0.para_format.indent_left.set(map.next_value()?),
+                        HfParagraphKey::IndentRight => b_0.para_format.indent_right.set(map.next_value()?),
+                        HfParagraphKey::IndentFirstLine => b_0.para_format.indent_first_line.set(map.next_value()?),
+                        HfParagraphKey::CharIndents => b_0.para_format.char_indents.set(map.next_value()?),
+                        HfParagraphKey::DirectCharIndents => b_0.para_format.direct_char_indents.set(map.next_value()?),
+                        HfParagraphKey::SpaceBefore => b_0.para_format.space_before.set(map.next_value()?),
+                        HfParagraphKey::SpaceAfter => b_0.para_format.space_after.set(map.next_value()?),
+                        HfParagraphKey::SpaceBeforeAuto => b_0.para_format.space_before_auto.set(map.next_value()?),
+                        HfParagraphKey::SpaceAfterAuto => b_0.para_format.space_after_auto.set(map.next_value()?),
+                        HfParagraphKey::PageBreakBefore => b_0.para_format.page_break_before.set(map.next_value()?),
+                        HfParagraphKey::KeepNext => b_0.para_format.keep_next.set(map.next_value()?),
+                        HfParagraphKey::KeepLines => b_0.para_format.keep_lines.set(map.next_value()?),
+                        HfParagraphKey::SuppressLineNumbers => b_0.para_format.suppress_line_numbers.set(map.next_value()?),
+                        HfParagraphKey::WidowControl => b_0.para_format.widow_control.set(map.next_value()?),
+                        HfParagraphKey::SnapToGrid => b_0.para_format.snap_to_grid.set(map.next_value()?),
+                        HfParagraphKey::AutoSpace => b_0.para_format.auto_space.set(map.next_value()?),
+                        HfParagraphKey::AutoSpaceDE => b_0.para_format.auto_space_d_e.set(map.next_value()?),
+                        HfParagraphKey::AutoSpaceDN => b_0.para_format.auto_space_d_n.set(map.next_value()?),
+                        HfParagraphKey::WordWrap => b_0.para_format.word_wrap.set(map.next_value()?),
+                        HfParagraphKey::OverflowPunct => b_0.para_format.overflow_punct.set(map.next_value()?),
+                        HfParagraphKey::EastAsiaLang => b_0.para_format.east_asia_lang.set(map.next_value()?),
+                        HfParagraphKey::ContextualSpacing => b_0.para_format.contextual_spacing.set(map.next_value()?),
+                        HfParagraphKey::ShadingFill => b_0.para_format.shading_fill.set(map.next_value()?),
+                        HfParagraphKey::ShadingDisplay => b_0.para_format.shading_display.set(map.next_value()?),
+                        HfParagraphKey::ShadingClear => b_0.para_format.shading_clear.set(map.next_value()?),
+                        HfParagraphKey::Borders => b_0.para_format.borders.set(map.next_value()?),
+                        HfParagraphKey::BorderStyle => b_0.para_format.border_style.set(map.next_value()?),
+                        HfParagraphKey::BorderLines => b_0.para_format.border_lines.set(map.next_value()?),
+                        HfParagraphKey::BorderReset => b_0.para_format.border_reset.set(map.next_value()?),
+                        HfParagraphKey::BorderPad => b_0.para_format.border_pad.set(map.next_value()?),
+                        HfParagraphKey::TabStops => b_0.para_format.tab_stops.set(map.next_value()?),
+                        HfParagraphKey::DropCap => b_0.para_format.drop_cap.set(map.next_value()?),
+                        HfParagraphKey::Frame => b_0.para_format.frame.set(map.next_value()?),
+                        HfParagraphKey::FrameBox => b_0.para_format.frame_box.set(map.next_value()?),
+                        HfParagraphKey::TextDirection => b_0.para_format.text_direction.set(map.next_value()?),
+                        HfParagraphKey::Bidi => b_0.para_format.bidi.set(map.next_value()?),
+                        HfParagraphKey::BidiInherited => b_0.para_format.bidi_inherited.set(map.next_value()?),
+                        HfParagraphKey::EmptyRunSizeHalfPoints => b_0.para_format.empty_run_size_half_points.set(map.next_value()?),
+                        HfParagraphKey::EmptyRunFontFamily => b_0.para_format.empty_run_font_family.set(map.next_value()?),
+                        HfParagraphKey::MarkSizeHalfPoints => b_0.para_format.mark_size_half_points.set(map.next_value()?),
+                        HfParagraphKey::Effective => b_0.para_format.effective.set(map.next_value()?),
+                        HfParagraphKey::FrameXAlign => b_0.frame_x_align.set(map.next_value()?),
+                        HfParagraphKey::BoxAnchored => b_0.box_anchored.set(map.next_value()?),
+                        HfParagraphKey::Box => b_0.r#box.set(map.next_value()?),
+                        HfParagraphKey::PtabAligns => b_0.ptab_aligns.set(map.next_value()?),
+                        HfParagraphKey::EmptyRunFont => b_0.empty_run_font.set(map.next_value()?),
+                        HfParagraphKey::Runs => b_0.runs.set(map.next_value()?),
+                        HfParagraphKey::LineOnly => b_0.line_only.set(map.next_value()?),
+                        HfParagraphKey::Cells => b_0.cells.set(map.next_value()?),
+                        HfParagraphKey::Row => b_0.row.set(map.next_value()?),
                     }
                 }
-                Ok(HfParagraph { para_format: b_1, frame_x_align: v_frame_x_align, box_anchored: v_box_anchored, r#box: v_box, ptab_aligns: v_ptab_aligns, empty_run_font: v_empty_run_font, runs: v_runs.ok_or_else(|| A::Error::missing_field("runs"))?, line_only: v_line_only, cells: v_cells, row: v_row })
+                if !b_0.runs.has_key() {
+                    return Err(A::Error::missing_field("runs"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -8817,28 +8766,30 @@ impl<'de> Deserialize<'de> for HfParagraphFrameXAlign {
     }
 }
 
-/// `HfTextBox`
-#[derive(Debug, Clone, PartialEq)]
-pub struct HfTextBox {
-    pub width_px: Option<JsNum>,
-    pub height_px: Option<JsNum>,
-    pub behind: Option<bool>,
-    pub pos_h: Option<HfImagePosH>,
-    pub pos_v: Option<HfImagePosV>,
-    pub pos_x_px: Option<JsNum>,
-    pub pos_y_px: Option<JsNum>,
-    pub pos_h_rel: Option<HfImagePosHRel>,
-    pub pos_v_rel: Option<HfImagePosVRel>,
-    pub wrap: Option<HfImageWrap>,
-    pub id: JsNum,
-    pub insets: Option<(JsNum, JsNum, JsNum, JsNum)>,
-    pub v_align: Option<HfTextBoxVAlign>,
-    pub nowrap: Option<bool>,
-    pub autofit: Option<bool>,
-    pub anchor_para: Option<JsNum>,
-    pub rot_deg: Option<JsNum>,
-    pub border_width_px: Option<JsNum>,
-    pub border_color: Option<String>,
+jscompat::js_object! {
+    /// `HfTextBox`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct HfTextBox {
+        pub width_px: JsNum,
+        pub height_px: JsNum,
+        pub behind: bool,
+        pub pos_h: HfImagePosH,
+        pub pos_v: HfImagePosV,
+        pub pos_x_px: JsNum,
+        pub pos_y_px: JsNum,
+        pub pos_h_rel: HfImagePosHRel,
+        pub pos_v_rel: HfImagePosVRel,
+        pub wrap: HfImageWrap,
+        pub id: JsNum,
+        pub insets: (JsNum, JsNum, JsNum, JsNum),
+        pub v_align: HfTextBoxVAlign,
+        pub nowrap: bool,
+        pub autofit: bool,
+        pub anchor_para: JsNum,
+        pub rot_deg: JsNum,
+        pub border_width_px: JsNum,
+        pub border_color: String,
+    }
 }
 
 /// The keys of `HfTextBox`, in declaration order.
@@ -8900,68 +8851,6 @@ impl FieldKey for HfTextBoxKey {
 
 const _: () = assert!(HfTextBoxKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for HfTextBox {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &self.width_px {
-            map.serialize_entry("widthPx", value)?;
-        }
-        if let Some(value) = &self.height_px {
-            map.serialize_entry("heightPx", value)?;
-        }
-        if let Some(value) = &self.behind {
-            map.serialize_entry("behind", value)?;
-        }
-        if let Some(value) = &self.pos_h {
-            map.serialize_entry("posH", value)?;
-        }
-        if let Some(value) = &self.pos_v {
-            map.serialize_entry("posV", value)?;
-        }
-        if let Some(value) = &self.pos_x_px {
-            map.serialize_entry("posXPx", value)?;
-        }
-        if let Some(value) = &self.pos_y_px {
-            map.serialize_entry("posYPx", value)?;
-        }
-        if let Some(value) = &self.pos_h_rel {
-            map.serialize_entry("posHRel", value)?;
-        }
-        if let Some(value) = &self.pos_v_rel {
-            map.serialize_entry("posVRel", value)?;
-        }
-        if let Some(value) = &self.wrap {
-            map.serialize_entry("wrap", value)?;
-        }
-        map.serialize_entry("id", &self.id)?;
-        if let Some(value) = &self.insets {
-            map.serialize_entry("insets", value)?;
-        }
-        if let Some(value) = &self.v_align {
-            map.serialize_entry("vAlign", value)?;
-        }
-        if let Some(value) = &self.nowrap {
-            map.serialize_entry("nowrap", value)?;
-        }
-        if let Some(value) = &self.autofit {
-            map.serialize_entry("autofit", value)?;
-        }
-        if let Some(value) = &self.anchor_para {
-            map.serialize_entry("anchorPara", value)?;
-        }
-        if let Some(value) = &self.rot_deg {
-            map.serialize_entry("rotDeg", value)?;
-        }
-        if let Some(value) = &self.border_width_px {
-            map.serialize_entry("borderWidthPx", value)?;
-        }
-        if let Some(value) = &self.border_color {
-            map.serialize_entry("borderColor", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for HfTextBox {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -8974,81 +8863,68 @@ impl<'de> Deserialize<'de> for HfTextBox {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<HfTextBox, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_width_px = None;
-                let mut v_height_px = None;
-                let mut v_behind = None;
-                let mut v_pos_h = None;
-                let mut v_pos_v = None;
-                let mut v_pos_x_px = None;
-                let mut v_pos_y_px = None;
-                let mut v_pos_h_rel = None;
-                let mut v_pos_v_rel = None;
-                let mut v_wrap = None;
-                let mut v_id = None;
-                let mut v_insets = None;
-                let mut v_v_align = None;
-                let mut v_nowrap = None;
-                let mut v_autofit = None;
-                let mut v_anchor_para = None;
-                let mut v_rot_deg = None;
-                let mut v_border_width_px = None;
-                let mut v_border_color = None;
+                let mut b_0 = HfTextBox::default();
                 while let Some(Key(key)) = map.next_key::<Key<HfTextBoxKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfTextBoxKey::WidthPx => v_width_px = Some(map.next_value()?),
-                        HfTextBoxKey::HeightPx => v_height_px = Some(map.next_value()?),
-                        HfTextBoxKey::Behind => v_behind = Some(map.next_value()?),
-                        HfTextBoxKey::PosH => v_pos_h = Some(map.next_value()?),
-                        HfTextBoxKey::PosV => v_pos_v = Some(map.next_value()?),
-                        HfTextBoxKey::PosXPx => v_pos_x_px = Some(map.next_value()?),
-                        HfTextBoxKey::PosYPx => v_pos_y_px = Some(map.next_value()?),
-                        HfTextBoxKey::PosHRel => v_pos_h_rel = Some(map.next_value()?),
-                        HfTextBoxKey::PosVRel => v_pos_v_rel = Some(map.next_value()?),
-                        HfTextBoxKey::Wrap => v_wrap = Some(map.next_value()?),
-                        HfTextBoxKey::Id => v_id = Some(map.next_value()?),
-                        HfTextBoxKey::Insets => v_insets = Some(map.next_value()?),
-                        HfTextBoxKey::VAlign => v_v_align = Some(map.next_value()?),
-                        HfTextBoxKey::Nowrap => v_nowrap = Some(map.next_value()?),
-                        HfTextBoxKey::Autofit => v_autofit = Some(map.next_value()?),
-                        HfTextBoxKey::AnchorPara => v_anchor_para = Some(map.next_value()?),
-                        HfTextBoxKey::RotDeg => v_rot_deg = Some(map.next_value()?),
-                        HfTextBoxKey::BorderWidthPx => v_border_width_px = Some(map.next_value()?),
-                        HfTextBoxKey::BorderColor => v_border_color = Some(map.next_value()?),
+                        HfTextBoxKey::WidthPx => b_0.width_px.set(map.next_value()?),
+                        HfTextBoxKey::HeightPx => b_0.height_px.set(map.next_value()?),
+                        HfTextBoxKey::Behind => b_0.behind.set(map.next_value()?),
+                        HfTextBoxKey::PosH => b_0.pos_h.set(map.next_value()?),
+                        HfTextBoxKey::PosV => b_0.pos_v.set(map.next_value()?),
+                        HfTextBoxKey::PosXPx => b_0.pos_x_px.set(map.next_value()?),
+                        HfTextBoxKey::PosYPx => b_0.pos_y_px.set(map.next_value()?),
+                        HfTextBoxKey::PosHRel => b_0.pos_h_rel.set(map.next_value()?),
+                        HfTextBoxKey::PosVRel => b_0.pos_v_rel.set(map.next_value()?),
+                        HfTextBoxKey::Wrap => b_0.wrap.set(map.next_value()?),
+                        HfTextBoxKey::Id => b_0.id.set(map.next_value()?),
+                        HfTextBoxKey::Insets => b_0.insets.set(map.next_value()?),
+                        HfTextBoxKey::VAlign => b_0.v_align.set(map.next_value()?),
+                        HfTextBoxKey::Nowrap => b_0.nowrap.set(map.next_value()?),
+                        HfTextBoxKey::Autofit => b_0.autofit.set(map.next_value()?),
+                        HfTextBoxKey::AnchorPara => b_0.anchor_para.set(map.next_value()?),
+                        HfTextBoxKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
+                        HfTextBoxKey::BorderWidthPx => b_0.border_width_px.set(map.next_value()?),
+                        HfTextBoxKey::BorderColor => b_0.border_color.set(map.next_value()?),
                     }
                 }
-                Ok(HfTextBox { width_px: v_width_px, height_px: v_height_px, behind: v_behind, pos_h: v_pos_h, pos_v: v_pos_v, pos_x_px: v_pos_x_px, pos_y_px: v_pos_y_px, pos_h_rel: v_pos_h_rel, pos_v_rel: v_pos_v_rel, wrap: v_wrap, id: v_id.ok_or_else(|| A::Error::missing_field("id"))?, insets: v_insets, v_align: v_v_align, nowrap: v_nowrap, autofit: v_autofit, anchor_para: v_anchor_para, rot_deg: v_rot_deg, border_width_px: v_border_width_px, border_color: v_border_color })
+                if !b_0.id.has_key() {
+                    return Err(A::Error::missing_field("id"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
     }
 }
 
-/// `HfImage`
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct HfImage {
-    pub data_url: String,
-    pub width_px: Option<JsNum>,
-    pub height_px: Option<JsNum>,
-    pub floating: Option<bool>,
-    pub behind: Option<bool>,
-    pub watermark: Option<bool>,
-    pub pos_h: Option<HfImagePosH>,
-    pub pos_v: Option<HfImagePosV>,
-    pub wrap: Option<HfImageWrap>,
-    pub pos_x_px: Option<JsNum>,
-    pub pos_h_rel: Option<HfImagePosHRel>,
-    pub pos_y_px: Option<JsNum>,
-    pub pos_v_rel: Option<HfImagePosVRel>,
-    pub washout: Option<HfImageWashout>,
-    pub rotation_deg: Option<JsNum>,
-    pub word_art: Option<HfImageWordArt>,
-    pub align: Option<HfImageAlign>,
-    pub anchor_para: Option<JsNum>,
-    pub crop: Option<HfImageCrop>,
-    pub drawing: Option<JsNum>,
+jscompat::js_object! {
+    /// `HfImage`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct HfImage {
+        pub data_url: String,
+        pub width_px: JsNum,
+        pub height_px: JsNum,
+        pub floating: bool,
+        pub behind: bool,
+        pub watermark: bool,
+        pub pos_h: HfImagePosH,
+        pub pos_v: HfImagePosV,
+        pub pos_x_px: JsNum,
+        pub pos_y_px: JsNum,
+        pub pos_h_rel: HfImagePosHRel,
+        pub pos_v_rel: HfImagePosVRel,
+        pub wrap: HfImageWrap,
+        pub washout: HfImageWashout,
+        pub rotation_deg: JsNum,
+        pub word_art: HfImageWordArt,
+        pub align: HfImageAlign,
+        pub anchor_para: JsNum,
+        pub crop: HfImageCrop,
+        pub drawing: JsNum,
+    }
 }
 
 /// The keys of `HfImage`, in declaration order.
@@ -9112,71 +8988,6 @@ impl FieldKey for HfImageKey {
 
 const _: () = assert!(HfImageKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for HfImage {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("dataUrl", &self.data_url)?;
-        if let Some(value) = &self.width_px {
-            map.serialize_entry("widthPx", value)?;
-        }
-        if let Some(value) = &self.height_px {
-            map.serialize_entry("heightPx", value)?;
-        }
-        if let Some(value) = &self.floating {
-            map.serialize_entry("floating", value)?;
-        }
-        if let Some(value) = &self.behind {
-            map.serialize_entry("behind", value)?;
-        }
-        if let Some(value) = &self.watermark {
-            map.serialize_entry("watermark", value)?;
-        }
-        if let Some(value) = &self.pos_h {
-            map.serialize_entry("posH", value)?;
-        }
-        if let Some(value) = &self.pos_v {
-            map.serialize_entry("posV", value)?;
-        }
-        if let Some(value) = &self.wrap {
-            map.serialize_entry("wrap", value)?;
-        }
-        if let Some(value) = &self.pos_x_px {
-            map.serialize_entry("posXPx", value)?;
-        }
-        if let Some(value) = &self.pos_h_rel {
-            map.serialize_entry("posHRel", value)?;
-        }
-        if let Some(value) = &self.pos_y_px {
-            map.serialize_entry("posYPx", value)?;
-        }
-        if let Some(value) = &self.pos_v_rel {
-            map.serialize_entry("posVRel", value)?;
-        }
-        if let Some(value) = &self.washout {
-            map.serialize_entry("washout", value)?;
-        }
-        if let Some(value) = &self.rotation_deg {
-            map.serialize_entry("rotationDeg", value)?;
-        }
-        if let Some(value) = &self.word_art {
-            map.serialize_entry("wordArt", value)?;
-        }
-        if let Some(value) = &self.align {
-            map.serialize_entry("align", value)?;
-        }
-        if let Some(value) = &self.anchor_para {
-            map.serialize_entry("anchorPara", value)?;
-        }
-        if let Some(value) = &self.crop {
-            map.serialize_entry("crop", value)?;
-        }
-        if let Some(value) = &self.drawing {
-            map.serialize_entry("drawing", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for HfImage {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -9189,54 +9000,38 @@ impl<'de> Deserialize<'de> for HfImage {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<HfImage, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_data_url = None;
-                let mut v_width_px = None;
-                let mut v_height_px = None;
-                let mut v_floating = None;
-                let mut v_behind = None;
-                let mut v_watermark = None;
-                let mut v_pos_h = None;
-                let mut v_pos_v = None;
-                let mut v_pos_x_px = None;
-                let mut v_pos_y_px = None;
-                let mut v_pos_h_rel = None;
-                let mut v_pos_v_rel = None;
-                let mut v_wrap = None;
-                let mut v_washout = None;
-                let mut v_rotation_deg = None;
-                let mut v_word_art = None;
-                let mut v_align = None;
-                let mut v_anchor_para = None;
-                let mut v_crop = None;
-                let mut v_drawing = None;
+                let mut b_0 = HfImage::default();
                 while let Some(Key(key)) = map.next_key::<Key<HfImageKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        HfImageKey::DataUrl => v_data_url = Some(map.next_value()?),
-                        HfImageKey::WidthPx => v_width_px = Some(map.next_value()?),
-                        HfImageKey::HeightPx => v_height_px = Some(map.next_value()?),
-                        HfImageKey::Floating => v_floating = Some(map.next_value()?),
-                        HfImageKey::Behind => v_behind = Some(map.next_value()?),
-                        HfImageKey::Watermark => v_watermark = Some(map.next_value()?),
-                        HfImageKey::PosH => v_pos_h = Some(map.next_value()?),
-                        HfImageKey::PosV => v_pos_v = Some(map.next_value()?),
-                        HfImageKey::PosXPx => v_pos_x_px = Some(map.next_value()?),
-                        HfImageKey::PosYPx => v_pos_y_px = Some(map.next_value()?),
-                        HfImageKey::PosHRel => v_pos_h_rel = Some(map.next_value()?),
-                        HfImageKey::PosVRel => v_pos_v_rel = Some(map.next_value()?),
-                        HfImageKey::Wrap => v_wrap = Some(map.next_value()?),
-                        HfImageKey::Washout => v_washout = Some(map.next_value()?),
-                        HfImageKey::RotationDeg => v_rotation_deg = Some(map.next_value()?),
-                        HfImageKey::WordArt => v_word_art = Some(map.next_value()?),
-                        HfImageKey::Align => v_align = Some(map.next_value()?),
-                        HfImageKey::AnchorPara => v_anchor_para = Some(map.next_value()?),
-                        HfImageKey::Crop => v_crop = Some(map.next_value()?),
-                        HfImageKey::Drawing => v_drawing = Some(map.next_value()?),
+                        HfImageKey::DataUrl => b_0.data_url.set(map.next_value()?),
+                        HfImageKey::WidthPx => b_0.width_px.set(map.next_value()?),
+                        HfImageKey::HeightPx => b_0.height_px.set(map.next_value()?),
+                        HfImageKey::Floating => b_0.floating.set(map.next_value()?),
+                        HfImageKey::Behind => b_0.behind.set(map.next_value()?),
+                        HfImageKey::Watermark => b_0.watermark.set(map.next_value()?),
+                        HfImageKey::PosH => b_0.pos_h.set(map.next_value()?),
+                        HfImageKey::PosV => b_0.pos_v.set(map.next_value()?),
+                        HfImageKey::PosXPx => b_0.pos_x_px.set(map.next_value()?),
+                        HfImageKey::PosYPx => b_0.pos_y_px.set(map.next_value()?),
+                        HfImageKey::PosHRel => b_0.pos_h_rel.set(map.next_value()?),
+                        HfImageKey::PosVRel => b_0.pos_v_rel.set(map.next_value()?),
+                        HfImageKey::Wrap => b_0.wrap.set(map.next_value()?),
+                        HfImageKey::Washout => b_0.washout.set(map.next_value()?),
+                        HfImageKey::RotationDeg => b_0.rotation_deg.set(map.next_value()?),
+                        HfImageKey::WordArt => b_0.word_art.set(map.next_value()?),
+                        HfImageKey::Align => b_0.align.set(map.next_value()?),
+                        HfImageKey::AnchorPara => b_0.anchor_para.set(map.next_value()?),
+                        HfImageKey::Crop => b_0.crop.set(map.next_value()?),
+                        HfImageKey::Drawing => b_0.drawing.set(map.next_value()?),
                     }
                 }
-                Ok(HfImage { data_url: v_data_url.ok_or_else(|| A::Error::missing_field("dataUrl"))?, width_px: v_width_px, height_px: v_height_px, floating: v_floating, behind: v_behind, watermark: v_watermark, pos_h: v_pos_h, pos_v: v_pos_v, pos_x_px: v_pos_x_px, pos_y_px: v_pos_y_px, pos_h_rel: v_pos_h_rel, pos_v_rel: v_pos_v_rel, wrap: v_wrap, washout: v_washout, rotation_deg: v_rotation_deg, word_art: v_word_art, align: v_align, anchor_para: v_anchor_para, crop: v_crop, drawing: v_drawing })
+                if !b_0.data_url.has_key() {
+                    return Err(A::Error::missing_field("dataUrl"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -9503,11 +9298,11 @@ impl<'de> Deserialize<'de> for HfImageWashout {
 #[derive(Debug, Clone, PartialEq)]
 pub struct HfImageWordArt {
     pub text: String,
+    pub color_hex: String,
+    pub opacity: JsNum,
     pub font_family: Option<String>,
     pub bold: Option<bool>,
     pub italic: Option<bool>,
-    pub color_hex: String,
-    pub opacity: JsNum,
 }
 
 /// The keys of `HfImage.wordArt`, in declaration order.
@@ -9547,6 +9342,8 @@ impl Serialize for HfImageWordArt {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
         map.serialize_entry("text", &self.text)?;
+        map.serialize_entry("colorHex", &self.color_hex)?;
+        map.serialize_entry("opacity", &self.opacity)?;
         if let Some(value) = &self.font_family {
             map.serialize_entry("fontFamily", value)?;
         }
@@ -9556,8 +9353,6 @@ impl Serialize for HfImageWordArt {
         if let Some(value) = &self.italic {
             map.serialize_entry("italic", value)?;
         }
-        map.serialize_entry("colorHex", &self.color_hex)?;
-        map.serialize_entry("opacity", &self.opacity)?;
         map.end()
     }
 }
@@ -9788,13 +9583,13 @@ pub struct HfTableCell {
     pub paras: Vec<Vec<Run>>,
     pub para_props: Option<Vec<Option<HfCellParaProps>>>,
     pub align: Option<ParaAlign>,
+    pub fill: Option<String>,
+    pub locked: Option<True>,
     pub width_pct: Option<JsNum>,
     pub width_twips: Option<JsNum>,
-    pub fill: Option<String>,
     pub borders: Option<CellBorders>,
     pub v_align: Option<HfTableCellVAlign>,
     pub mar_twips: Option<CellMargins>,
-    pub locked: Option<True>,
     pub rewrite: Option<True>,
     pub rewrite_format: Option<Vec<JsNum>>,
     pub prior_para_props: Option<Vec<Option<HfCellParaProps>>>,
@@ -9857,14 +9652,17 @@ impl Serialize for HfTableCell {
         if let Some(value) = &self.align {
             map.serialize_entry("align", value)?;
         }
+        if let Some(value) = &self.fill {
+            map.serialize_entry("fill", value)?;
+        }
+        if let Some(value) = &self.locked {
+            map.serialize_entry("locked", value)?;
+        }
         if let Some(value) = &self.width_pct {
             map.serialize_entry("widthPct", value)?;
         }
         if let Some(value) = &self.width_twips {
             map.serialize_entry("widthTwips", value)?;
-        }
-        if let Some(value) = &self.fill {
-            map.serialize_entry("fill", value)?;
         }
         if let Some(value) = &self.borders {
             map.serialize_entry("borders", value)?;
@@ -9874,9 +9672,6 @@ impl Serialize for HfTableCell {
         }
         if let Some(value) = &self.mar_twips {
             map.serialize_entry("marTwips", value)?;
-        }
-        if let Some(value) = &self.locked {
-            map.serialize_entry("locked", value)?;
         }
         if let Some(value) = &self.rewrite {
             map.serialize_entry("rewrite", value)?;
@@ -9949,15 +9744,15 @@ pub struct HfCellParaProps {
     pub align: Option<ParaAlign>,
     pub indent_left: Option<JsNum>,
     pub indent_first_line: Option<JsNum>,
-    pub tab_stops: Option<Vec<TabStop>>,
     pub space_before: Option<JsNum>,
     pub space_after: Option<JsNum>,
+    pub tab_stops: Option<Vec<TabStop>>,
     pub line_rule: Option<ParaFormatLineRule>,
     pub line_raw_twips: Option<JsNum>,
     pub line_spacing: Option<JsNum>,
-    pub word_wrap: Option<bool>,
     pub style_id: Option<String>,
     pub size_half_points: Option<JsNum>,
+    pub word_wrap: Option<bool>,
 }
 
 /// The keys of `HfCellParaProps`, in declaration order.
@@ -10017,14 +9812,14 @@ impl Serialize for HfCellParaProps {
         if let Some(value) = &self.indent_first_line {
             map.serialize_entry("indentFirstLine", value)?;
         }
-        if let Some(value) = &self.tab_stops {
-            map.serialize_entry("tabStops", value)?;
-        }
         if let Some(value) = &self.space_before {
             map.serialize_entry("spaceBefore", value)?;
         }
         if let Some(value) = &self.space_after {
             map.serialize_entry("spaceAfter", value)?;
+        }
+        if let Some(value) = &self.tab_stops {
+            map.serialize_entry("tabStops", value)?;
         }
         if let Some(value) = &self.line_rule {
             map.serialize_entry("lineRule", value)?;
@@ -10035,14 +9830,14 @@ impl Serialize for HfCellParaProps {
         if let Some(value) = &self.line_spacing {
             map.serialize_entry("lineSpacing", value)?;
         }
-        if let Some(value) = &self.word_wrap {
-            map.serialize_entry("wordWrap", value)?;
-        }
         if let Some(value) = &self.style_id {
             map.serialize_entry("styleId", value)?;
         }
         if let Some(value) = &self.size_half_points {
             map.serialize_entry("sizeHalfPoints", value)?;
+        }
+        if let Some(value) = &self.word_wrap {
+            map.serialize_entry("wordWrap", value)?;
         }
         map.end()
     }
@@ -10098,15 +9893,17 @@ impl<'de> Deserialize<'de> for HfCellParaProps {
     }
 }
 
-/// `CellBorders`
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct CellBorders {
-    pub top: Option<CellBorder>,
-    pub left: Option<CellBorder>,
-    pub bottom: Option<CellBorder>,
-    pub right: Option<CellBorder>,
-    pub tl2br: Option<CellBorder>,
-    pub tr2bl: Option<CellBorder>,
+jscompat::js_object! {
+    /// `CellBorders`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct CellBorders {
+        pub top: CellBorder,
+        pub left: CellBorder,
+        pub bottom: CellBorder,
+        pub right: CellBorder,
+        pub tl2br: CellBorder,
+        pub tr2bl: CellBorder,
+    }
 }
 
 /// The keys of `CellBorders`, in declaration order.
@@ -10142,31 +9939,6 @@ impl FieldKey for CellBordersKey {
 
 const _: () = assert!(CellBordersKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for CellBorders {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &self.top {
-            map.serialize_entry("top", value)?;
-        }
-        if let Some(value) = &self.left {
-            map.serialize_entry("left", value)?;
-        }
-        if let Some(value) = &self.bottom {
-            map.serialize_entry("bottom", value)?;
-        }
-        if let Some(value) = &self.right {
-            map.serialize_entry("right", value)?;
-        }
-        if let Some(value) = &self.tl2br {
-            map.serialize_entry("tl2br", value)?;
-        }
-        if let Some(value) = &self.tr2bl {
-            map.serialize_entry("tr2bl", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for CellBorders {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -10179,26 +9951,21 @@ impl<'de> Deserialize<'de> for CellBorders {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<CellBorders, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_top = None;
-                let mut v_left = None;
-                let mut v_bottom = None;
-                let mut v_right = None;
-                let mut v_tl2br = None;
-                let mut v_tr2bl = None;
+                let mut b_0 = CellBorders::default();
                 while let Some(Key(key)) = map.next_key::<Key<CellBordersKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        CellBordersKey::Top => v_top = Some(map.next_value()?),
-                        CellBordersKey::Left => v_left = Some(map.next_value()?),
-                        CellBordersKey::Bottom => v_bottom = Some(map.next_value()?),
-                        CellBordersKey::Right => v_right = Some(map.next_value()?),
-                        CellBordersKey::Tl2br => v_tl2br = Some(map.next_value()?),
-                        CellBordersKey::Tr2bl => v_tr2bl = Some(map.next_value()?),
+                        CellBordersKey::Top => b_0.top.set(map.next_value()?),
+                        CellBordersKey::Left => b_0.left.set(map.next_value()?),
+                        CellBordersKey::Bottom => b_0.bottom.set(map.next_value()?),
+                        CellBordersKey::Right => b_0.right.set(map.next_value()?),
+                        CellBordersKey::Tl2br => b_0.tl2br.set(map.next_value()?),
+                        CellBordersKey::Tr2bl => b_0.tr2bl.set(map.next_value()?),
                     }
                 }
-                Ok(CellBorders { top: v_top, left: v_left, bottom: v_bottom, right: v_right, tl2br: v_tl2br, tr2bl: v_tr2bl })
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -10393,15 +10160,15 @@ impl<'de> Deserialize<'de> for CellMargins {
 /// `HfTableRow`
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct HfTableRow {
-    pub height_twips: Option<JsNum>,
-    pub height_rule: Option<HfTableRowHeightRule>,
     pub indent_twips: Option<JsNum>,
     pub tab_overflow: Option<HfTableRowTabOverflow>,
     pub bidi_visual: Option<bool>,
-    pub additive_spacing: Option<bool>,
     pub align: Option<HfTableRowAlign>,
     pub float: Option<HfTableFloat>,
+    pub additive_spacing: Option<bool>,
     pub width_twips: Option<JsNum>,
+    pub height_twips: Option<JsNum>,
+    pub height_rule: Option<HfTableRowHeightRule>,
     pub source: Option<HfTableRowSource>,
 }
 
@@ -10449,12 +10216,6 @@ const _: () = assert!(HfTableRowKey::NAMES.len() <= wire::MAX_KEYS);
 impl Serialize for HfTableRow {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &self.height_twips {
-            map.serialize_entry("heightTwips", value)?;
-        }
-        if let Some(value) = &self.height_rule {
-            map.serialize_entry("heightRule", value)?;
-        }
         if let Some(value) = &self.indent_twips {
             map.serialize_entry("indentTwips", value)?;
         }
@@ -10464,17 +10225,23 @@ impl Serialize for HfTableRow {
         if let Some(value) = &self.bidi_visual {
             map.serialize_entry("bidiVisual", value)?;
         }
-        if let Some(value) = &self.additive_spacing {
-            map.serialize_entry("additiveSpacing", value)?;
-        }
         if let Some(value) = &self.align {
             map.serialize_entry("align", value)?;
         }
         if let Some(value) = &self.float {
             map.serialize_entry("float", value)?;
         }
+        if let Some(value) = &self.additive_spacing {
+            map.serialize_entry("additiveSpacing", value)?;
+        }
         if let Some(value) = &self.width_twips {
             map.serialize_entry("widthTwips", value)?;
+        }
+        if let Some(value) = &self.height_twips {
+            map.serialize_entry("heightTwips", value)?;
+        }
+        if let Some(value) = &self.height_rule {
+            map.serialize_entry("heightRule", value)?;
         }
         if let Some(value) = &self.source {
             map.serialize_entry("source", value)?;
@@ -12175,21 +11942,21 @@ pub struct FieldDisplay {
     pub left: Option<String>,
     pub right: Option<String>,
     pub level: Option<JsNum>,
+    pub num: Option<String>,
+    pub num_tab_twips: Option<JsNum>,
+    pub hang_twips: Option<JsNum>,
     pub anchor: Option<String>,
     pub deleted: Option<bool>,
     pub mark_deleted: Option<bool>,
-    pub num: Option<String>,
+    pub runs: Option<Vec<FieldRun>>,
+    pub empty_line: Option<bool>,
     pub sz_half_points: Option<JsNum>,
     pub font_family: Option<String>,
     pub ea_font_family: Option<String>,
     pub bold: Option<bool>,
     pub run_style_id: Option<String>,
-    pub num_tab_twips: Option<JsNum>,
-    pub hang_twips: Option<JsNum>,
     pub leader: Option<TabStopLeader>,
     pub right_tab_twips: Option<JsNum>,
-    pub runs: Option<Vec<FieldRun>>,
-    pub empty_line: Option<bool>,
     pub align: Option<FieldDisplayAlign>,
     pub line_rule: Option<FieldDisplayLineRule>,
     pub line_raw_twips: Option<JsNum>,
@@ -12300,6 +12067,15 @@ impl Serialize for FieldDisplay {
         if let Some(value) = &self.level {
             map.serialize_entry("level", value)?;
         }
+        if let Some(value) = &self.num {
+            map.serialize_entry("num", value)?;
+        }
+        if let Some(value) = &self.num_tab_twips {
+            map.serialize_entry("numTabTwips", value)?;
+        }
+        if let Some(value) = &self.hang_twips {
+            map.serialize_entry("hangTwips", value)?;
+        }
         if let Some(value) = &self.anchor {
             map.serialize_entry("anchor", value)?;
         }
@@ -12309,8 +12085,11 @@ impl Serialize for FieldDisplay {
         if let Some(value) = &self.mark_deleted {
             map.serialize_entry("markDeleted", value)?;
         }
-        if let Some(value) = &self.num {
-            map.serialize_entry("num", value)?;
+        if let Some(value) = &self.runs {
+            map.serialize_entry("runs", value)?;
+        }
+        if let Some(value) = &self.empty_line {
+            map.serialize_entry("emptyLine", value)?;
         }
         if let Some(value) = &self.sz_half_points {
             map.serialize_entry("szHalfPoints", value)?;
@@ -12327,23 +12106,11 @@ impl Serialize for FieldDisplay {
         if let Some(value) = &self.run_style_id {
             map.serialize_entry("runStyleId", value)?;
         }
-        if let Some(value) = &self.num_tab_twips {
-            map.serialize_entry("numTabTwips", value)?;
-        }
-        if let Some(value) = &self.hang_twips {
-            map.serialize_entry("hangTwips", value)?;
-        }
         if let Some(value) = &self.leader {
             map.serialize_entry("leader", value)?;
         }
         if let Some(value) = &self.right_tab_twips {
             map.serialize_entry("rightTabTwips", value)?;
-        }
-        if let Some(value) = &self.runs {
-            map.serialize_entry("runs", value)?;
-        }
-        if let Some(value) = &self.empty_line {
-            map.serialize_entry("emptyLine", value)?;
         }
         if let Some(value) = &self.align {
             map.serialize_entry("align", value)?;
@@ -13014,15 +12781,15 @@ pub struct ChartDisplay {
     pub hole_pct: Option<JsNum>,
     pub explosion_pct: Option<JsNum>,
     pub data_labels: Option<ChartDisplayDataLabels>,
-    pub title_font_pt: Option<JsNum>,
-    pub legend_font_pt: Option<JsNum>,
     pub legend_pos: Option<ChartDisplayLegendPos>,
+    pub legend_font_pt: Option<JsNum>,
     pub no_legend: Option<bool>,
     pub frame_line: Option<String>,
-    pub x_axis: Option<ChartAxis>,
     pub y_axis: Option<ChartAxis>,
+    pub x_axis: Option<ChartAxis>,
     pub data_table: Option<ChartDisplayDataTable>,
     pub title: Option<String>,
+    pub title_font_pt: Option<JsNum>,
     pub categories: Vec<String>,
     pub series: Vec<ChartSeries>,
     pub palette: Option<Vec<String>>,
@@ -13123,14 +12890,11 @@ impl Serialize for ChartDisplay {
         if let Some(value) = &self.data_labels {
             map.serialize_entry("dataLabels", value)?;
         }
-        if let Some(value) = &self.title_font_pt {
-            map.serialize_entry("titleFontPt", value)?;
+        if let Some(value) = &self.legend_pos {
+            map.serialize_entry("legendPos", value)?;
         }
         if let Some(value) = &self.legend_font_pt {
             map.serialize_entry("legendFontPt", value)?;
-        }
-        if let Some(value) = &self.legend_pos {
-            map.serialize_entry("legendPos", value)?;
         }
         if let Some(value) = &self.no_legend {
             map.serialize_entry("noLegend", value)?;
@@ -13138,17 +12902,20 @@ impl Serialize for ChartDisplay {
         if let Some(value) = &self.frame_line {
             map.serialize_entry("frameLine", value)?;
         }
-        if let Some(value) = &self.x_axis {
-            map.serialize_entry("xAxis", value)?;
-        }
         if let Some(value) = &self.y_axis {
             map.serialize_entry("yAxis", value)?;
+        }
+        if let Some(value) = &self.x_axis {
+            map.serialize_entry("xAxis", value)?;
         }
         if let Some(value) = &self.data_table {
             map.serialize_entry("dataTable", value)?;
         }
         if let Some(value) = &self.title {
             map.serialize_entry("title", value)?;
+        }
+        if let Some(value) = &self.title_font_pt {
+            map.serialize_entry("titleFontPt", value)?;
         }
         map.serialize_entry("categories", &self.categories)?;
         map.serialize_entry("series", &self.series)?;
@@ -13598,16 +13365,16 @@ pub struct DiagramShape {
     pub y_px: JsNum,
     pub w_px: JsNum,
     pub h_px: JsNum,
-    pub prst: Option<String>,
-    pub fill_hex: Option<String>,
     pub ln_hex: Option<String>,
     pub ln_w_px: Option<JsNum>,
-    pub image_data_url: Option<String>,
     pub fill_rect: Option<DiagramShapeFillRect>,
+    pub rot_deg: Option<JsNum>,
+    pub prst: Option<String>,
+    pub fill_hex: Option<String>,
+    pub image_data_url: Option<String>,
     pub texts: Option<Vec<String>>,
     pub font_size_pt: Option<JsNum>,
     pub text_color_hex: Option<String>,
-    pub rot_deg: Option<JsNum>,
 }
 
 /// The keys of `DiagramShape`, in declaration order.
@@ -13666,23 +13433,26 @@ impl Serialize for DiagramShape {
         map.serialize_entry("yPx", &self.y_px)?;
         map.serialize_entry("wPx", &self.w_px)?;
         map.serialize_entry("hPx", &self.h_px)?;
-        if let Some(value) = &self.prst {
-            map.serialize_entry("prst", value)?;
-        }
-        if let Some(value) = &self.fill_hex {
-            map.serialize_entry("fillHex", value)?;
-        }
         if let Some(value) = &self.ln_hex {
             map.serialize_entry("lnHex", value)?;
         }
         if let Some(value) = &self.ln_w_px {
             map.serialize_entry("lnWPx", value)?;
         }
-        if let Some(value) = &self.image_data_url {
-            map.serialize_entry("imageDataUrl", value)?;
-        }
         if let Some(value) = &self.fill_rect {
             map.serialize_entry("fillRect", value)?;
+        }
+        if let Some(value) = &self.rot_deg {
+            map.serialize_entry("rotDeg", value)?;
+        }
+        if let Some(value) = &self.prst {
+            map.serialize_entry("prst", value)?;
+        }
+        if let Some(value) = &self.fill_hex {
+            map.serialize_entry("fillHex", value)?;
+        }
+        if let Some(value) = &self.image_data_url {
+            map.serialize_entry("imageDataUrl", value)?;
         }
         if let Some(value) = &self.texts {
             map.serialize_entry("texts", value)?;
@@ -13692,9 +13462,6 @@ impl Serialize for DiagramShape {
         }
         if let Some(value) = &self.text_color_hex {
             map.serialize_entry("textColorHex", value)?;
-        }
-        if let Some(value) = &self.rot_deg {
-            map.serialize_entry("rotDeg", value)?;
         }
         map.end()
     }
@@ -14141,8 +13908,8 @@ pub struct TableParagraph {
     /// the fields of `ParaFormat`, which `TableParagraph` extends
     pub para_format: ParaFormat,
     pub style_id: Option<String>,
-    pub runs: Vec<Run>,
     pub list: Option<TableParagraphList>,
+    pub runs: Vec<Run>,
 }
 
 impl std::ops::Deref for TableParagraph {
@@ -14417,10 +14184,10 @@ impl Serialize for TableParagraph {
         if let Some(value) = &self.style_id {
             map.serialize_entry("styleId", value)?;
         }
-        map.serialize_entry("runs", &self.runs)?;
         if let Some(value) = &self.list {
             map.serialize_entry("list", value)?;
         }
+        map.serialize_entry("runs", &self.runs)?;
         map.end()
     }
 }
@@ -14672,22 +14439,22 @@ const _: () = assert!(TableBordersKey::NAMES.len() <= wire::MAX_KEYS);
 impl Serialize for TableBorders {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &self.cell_borders.top {
+        if let Some(value) = &*self.cell_borders.top {
             map.serialize_entry("top", value)?;
         }
-        if let Some(value) = &self.cell_borders.left {
+        if let Some(value) = &*self.cell_borders.left {
             map.serialize_entry("left", value)?;
         }
-        if let Some(value) = &self.cell_borders.bottom {
+        if let Some(value) = &*self.cell_borders.bottom {
             map.serialize_entry("bottom", value)?;
         }
-        if let Some(value) = &self.cell_borders.right {
+        if let Some(value) = &*self.cell_borders.right {
             map.serialize_entry("right", value)?;
         }
-        if let Some(value) = &self.cell_borders.tl2br {
+        if let Some(value) = &*self.cell_borders.tl2br {
             map.serialize_entry("tl2br", value)?;
         }
-        if let Some(value) = &self.cell_borders.tr2bl {
+        if let Some(value) = &*self.cell_borders.tr2bl {
             map.serialize_entry("tr2bl", value)?;
         }
         if let Some(value) = &self.inside_h {
@@ -14712,12 +14479,7 @@ impl<'de> Deserialize<'de> for TableBorders {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<TableBorders, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_top = None;
-                let mut v_left = None;
-                let mut v_bottom = None;
-                let mut v_right = None;
-                let mut v_tl2br = None;
-                let mut v_tr2bl = None;
+                let mut b_1 = CellBorders::default();
                 let mut v_inside_h = None;
                 let mut v_inside_v = None;
                 while let Some(Key(key)) = map.next_key::<Key<TableBordersKey>>()? {
@@ -14725,53 +14487,55 @@ impl<'de> Deserialize<'de> for TableBorders {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableBordersKey::Top => v_top = Some(map.next_value()?),
-                        TableBordersKey::Left => v_left = Some(map.next_value()?),
-                        TableBordersKey::Bottom => v_bottom = Some(map.next_value()?),
-                        TableBordersKey::Right => v_right = Some(map.next_value()?),
-                        TableBordersKey::Tl2br => v_tl2br = Some(map.next_value()?),
-                        TableBordersKey::Tr2bl => v_tr2bl = Some(map.next_value()?),
+                        TableBordersKey::Top => b_1.top.set(map.next_value()?),
+                        TableBordersKey::Left => b_1.left.set(map.next_value()?),
+                        TableBordersKey::Bottom => b_1.bottom.set(map.next_value()?),
+                        TableBordersKey::Right => b_1.right.set(map.next_value()?),
+                        TableBordersKey::Tl2br => b_1.tl2br.set(map.next_value()?),
+                        TableBordersKey::Tr2bl => b_1.tr2bl.set(map.next_value()?),
                         TableBordersKey::InsideH => v_inside_h = Some(map.next_value()?),
                         TableBordersKey::InsideV => v_inside_v = Some(map.next_value()?),
                     }
                 }
-                Ok(TableBorders { cell_borders: CellBorders { top: v_top, left: v_left, bottom: v_bottom, right: v_right, tl2br: v_tl2br, tr2bl: v_tr2bl }, inside_h: v_inside_h, inside_v: v_inside_v })
+                Ok(TableBorders { cell_borders: b_1, inside_h: v_inside_h, inside_v: v_inside_v })
             }
         }
         deserializer.deserialize_map(Fields)
     }
 }
 
-/// `TableCell`
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct TableCell {
-    pub paras: Vec<String>,
-    pub cell_mar_twips: Option<CellMargins>,
-    pub anchored_boxes: Option<Vec<TextboxDisplay>>,
-    pub anchored_box_anchors: Option<Vec<JsNum>>,
-    pub col_span: Option<JsNum>,
-    pub grid_gap: Option<bool>,
-    pub v_merge: Option<TableCellVMerge>,
-    pub fill: Option<String>,
-    pub color: Option<String>,
-    pub style_color: Option<String>,
-    pub v_align: Option<TableCellVAlign>,
-    pub align: Option<ParaAlign>,
-    pub text_direction: Option<TableCellTextDirection>,
-    pub no_wrap: Option<bool>,
-    pub hide_mark: Option<bool>,
-    pub rich_paras: Option<Vec<TableParagraph>>,
-    pub nested_tables: Option<Vec<TableModel>>,
-    pub nested_table_anchors: Option<Vec<JsNum>>,
-    pub style_bold: Option<True>,
-    pub bold: Option<bool>,
-    pub tc_pr_edited: Option<bool>,
-    pub h_merge: Option<TableCellHMerge>,
-    pub borders: Option<CellBorders>,
-    pub raw_tc_pr: Option<String>,
-    pub cell_revision: Option<TableCellCellRevision>,
-    pub tc_pr_change: Option<Option<PropChangeInfo>>,
-    pub cell_merge: Option<Option<PropChangeInfo>>,
+jscompat::js_object! {
+    /// `TableCell`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct TableCell {
+        pub paras: Vec<String>,
+        pub rich_paras: Vec<TableParagraph>,
+        pub cell_mar_twips: CellMargins,
+        pub nested_tables: Vec<TableModel>,
+        pub anchored_boxes: Vec<TextboxDisplay>,
+        pub anchored_box_anchors: Vec<JsNum>,
+        pub nested_table_anchors: Vec<JsNum>,
+        pub col_span: JsNum,
+        pub grid_gap: bool,
+        pub v_merge: TableCellVMerge,
+        pub fill: String,
+        pub color: String,
+        pub bold: bool,
+        pub style_color: String,
+        pub style_bold: True,
+        pub align: ParaAlign,
+        pub v_align: TableCellVAlign,
+        pub text_direction: TableCellTextDirection,
+        pub no_wrap: bool,
+        pub hide_mark: bool,
+        pub tc_pr_edited: bool,
+        pub h_merge: TableCellHMerge,
+        pub borders: CellBorders,
+        pub raw_tc_pr: String,
+        pub cell_revision: TableCellCellRevision,
+        pub tc_pr_change: Option<PropChangeInfo>,
+        pub cell_merge: Option<PropChangeInfo>,
+    }
 }
 
 /// The keys of `TableCell`, in declaration order.
@@ -14849,92 +14613,6 @@ impl FieldKey for TableCellKey {
 
 const _: () = assert!(TableCellKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for TableCell {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("paras", &self.paras)?;
-        if let Some(value) = &self.cell_mar_twips {
-            map.serialize_entry("cellMarTwips", value)?;
-        }
-        if let Some(value) = &self.anchored_boxes {
-            map.serialize_entry("anchoredBoxes", value)?;
-        }
-        if let Some(value) = &self.anchored_box_anchors {
-            map.serialize_entry("anchoredBoxAnchors", value)?;
-        }
-        if let Some(value) = &self.col_span {
-            map.serialize_entry("colSpan", value)?;
-        }
-        if let Some(value) = &self.grid_gap {
-            map.serialize_entry("gridGap", value)?;
-        }
-        if let Some(value) = &self.v_merge {
-            map.serialize_entry("vMerge", value)?;
-        }
-        if let Some(value) = &self.fill {
-            map.serialize_entry("fill", value)?;
-        }
-        if let Some(value) = &self.color {
-            map.serialize_entry("color", value)?;
-        }
-        if let Some(value) = &self.style_color {
-            map.serialize_entry("styleColor", value)?;
-        }
-        if let Some(value) = &self.v_align {
-            map.serialize_entry("vAlign", value)?;
-        }
-        if let Some(value) = &self.align {
-            map.serialize_entry("align", value)?;
-        }
-        if let Some(value) = &self.text_direction {
-            map.serialize_entry("textDirection", value)?;
-        }
-        if let Some(value) = &self.no_wrap {
-            map.serialize_entry("noWrap", value)?;
-        }
-        if let Some(value) = &self.hide_mark {
-            map.serialize_entry("hideMark", value)?;
-        }
-        if let Some(value) = &self.rich_paras {
-            map.serialize_entry("richParas", value)?;
-        }
-        if let Some(value) = &self.nested_tables {
-            map.serialize_entry("nestedTables", value)?;
-        }
-        if let Some(value) = &self.nested_table_anchors {
-            map.serialize_entry("nestedTableAnchors", value)?;
-        }
-        if let Some(value) = &self.style_bold {
-            map.serialize_entry("styleBold", value)?;
-        }
-        if let Some(value) = &self.bold {
-            map.serialize_entry("bold", value)?;
-        }
-        if let Some(value) = &self.tc_pr_edited {
-            map.serialize_entry("tcPrEdited", value)?;
-        }
-        if let Some(value) = &self.h_merge {
-            map.serialize_entry("hMerge", value)?;
-        }
-        if let Some(value) = &self.borders {
-            map.serialize_entry("borders", value)?;
-        }
-        if let Some(value) = &self.raw_tc_pr {
-            map.serialize_entry("rawTcPr", value)?;
-        }
-        if let Some(value) = &self.cell_revision {
-            map.serialize_entry("cellRevision", value)?;
-        }
-        if let Some(value) = &self.tc_pr_change {
-            map.serialize_entry("tcPrChange", value)?;
-        }
-        if let Some(value) = &self.cell_merge {
-            map.serialize_entry("cellMerge", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for TableCell {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -14947,68 +14625,45 @@ impl<'de> Deserialize<'de> for TableCell {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<TableCell, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_paras = None;
-                let mut v_rich_paras = None;
-                let mut v_cell_mar_twips = None;
-                let mut v_nested_tables = None;
-                let mut v_anchored_boxes = None;
-                let mut v_anchored_box_anchors = None;
-                let mut v_nested_table_anchors = None;
-                let mut v_col_span = None;
-                let mut v_grid_gap = None;
-                let mut v_v_merge = None;
-                let mut v_fill = None;
-                let mut v_color = None;
-                let mut v_bold = None;
-                let mut v_style_color = None;
-                let mut v_style_bold = None;
-                let mut v_align = None;
-                let mut v_v_align = None;
-                let mut v_text_direction = None;
-                let mut v_no_wrap = None;
-                let mut v_hide_mark = None;
-                let mut v_tc_pr_edited = None;
-                let mut v_h_merge = None;
-                let mut v_borders = None;
-                let mut v_raw_tc_pr = None;
-                let mut v_cell_revision = None;
-                let mut v_tc_pr_change = None;
-                let mut v_cell_merge = None;
+                let mut b_0 = TableCell::default();
                 while let Some(Key(key)) = map.next_key::<Key<TableCellKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableCellKey::Paras => v_paras = Some(map.next_value()?),
-                        TableCellKey::RichParas => v_rich_paras = Some(map.next_value()?),
-                        TableCellKey::CellMarTwips => v_cell_mar_twips = Some(map.next_value()?),
-                        TableCellKey::NestedTables => v_nested_tables = Some(map.next_value()?),
-                        TableCellKey::AnchoredBoxes => v_anchored_boxes = Some(map.next_value()?),
-                        TableCellKey::AnchoredBoxAnchors => v_anchored_box_anchors = Some(map.next_value()?),
-                        TableCellKey::NestedTableAnchors => v_nested_table_anchors = Some(map.next_value()?),
-                        TableCellKey::ColSpan => v_col_span = Some(map.next_value()?),
-                        TableCellKey::GridGap => v_grid_gap = Some(map.next_value()?),
-                        TableCellKey::VMerge => v_v_merge = Some(map.next_value()?),
-                        TableCellKey::Fill => v_fill = Some(map.next_value()?),
-                        TableCellKey::Color => v_color = Some(map.next_value()?),
-                        TableCellKey::Bold => v_bold = Some(map.next_value()?),
-                        TableCellKey::StyleColor => v_style_color = Some(map.next_value()?),
-                        TableCellKey::StyleBold => v_style_bold = Some(map.next_value()?),
-                        TableCellKey::Align => v_align = Some(map.next_value()?),
-                        TableCellKey::VAlign => v_v_align = Some(map.next_value()?),
-                        TableCellKey::TextDirection => v_text_direction = Some(map.next_value()?),
-                        TableCellKey::NoWrap => v_no_wrap = Some(map.next_value()?),
-                        TableCellKey::HideMark => v_hide_mark = Some(map.next_value()?),
-                        TableCellKey::TcPrEdited => v_tc_pr_edited = Some(map.next_value()?),
-                        TableCellKey::HMerge => v_h_merge = Some(map.next_value()?),
-                        TableCellKey::Borders => v_borders = Some(map.next_value()?),
-                        TableCellKey::RawTcPr => v_raw_tc_pr = Some(map.next_value()?),
-                        TableCellKey::CellRevision => v_cell_revision = Some(map.next_value()?),
-                        TableCellKey::TcPrChange => v_tc_pr_change = Some(map.next_value()?),
-                        TableCellKey::CellMerge => v_cell_merge = Some(map.next_value()?),
+                        TableCellKey::Paras => b_0.paras.set(map.next_value()?),
+                        TableCellKey::RichParas => b_0.rich_paras.set(map.next_value()?),
+                        TableCellKey::CellMarTwips => b_0.cell_mar_twips.set(map.next_value()?),
+                        TableCellKey::NestedTables => b_0.nested_tables.set(map.next_value()?),
+                        TableCellKey::AnchoredBoxes => b_0.anchored_boxes.set(map.next_value()?),
+                        TableCellKey::AnchoredBoxAnchors => b_0.anchored_box_anchors.set(map.next_value()?),
+                        TableCellKey::NestedTableAnchors => b_0.nested_table_anchors.set(map.next_value()?),
+                        TableCellKey::ColSpan => b_0.col_span.set(map.next_value()?),
+                        TableCellKey::GridGap => b_0.grid_gap.set(map.next_value()?),
+                        TableCellKey::VMerge => b_0.v_merge.set(map.next_value()?),
+                        TableCellKey::Fill => b_0.fill.set(map.next_value()?),
+                        TableCellKey::Color => b_0.color.set(map.next_value()?),
+                        TableCellKey::Bold => b_0.bold.set(map.next_value()?),
+                        TableCellKey::StyleColor => b_0.style_color.set(map.next_value()?),
+                        TableCellKey::StyleBold => b_0.style_bold.set(map.next_value()?),
+                        TableCellKey::Align => b_0.align.set(map.next_value()?),
+                        TableCellKey::VAlign => b_0.v_align.set(map.next_value()?),
+                        TableCellKey::TextDirection => b_0.text_direction.set(map.next_value()?),
+                        TableCellKey::NoWrap => b_0.no_wrap.set(map.next_value()?),
+                        TableCellKey::HideMark => b_0.hide_mark.set(map.next_value()?),
+                        TableCellKey::TcPrEdited => b_0.tc_pr_edited.set(map.next_value()?),
+                        TableCellKey::HMerge => b_0.h_merge.set(map.next_value()?),
+                        TableCellKey::Borders => b_0.borders.set(map.next_value()?),
+                        TableCellKey::RawTcPr => b_0.raw_tc_pr.set(map.next_value()?),
+                        TableCellKey::CellRevision => b_0.cell_revision.set(map.next_value()?),
+                        TableCellKey::TcPrChange => b_0.tc_pr_change.set(map.next_value()?),
+                        TableCellKey::CellMerge => b_0.cell_merge.set(map.next_value()?),
                     }
                 }
-                Ok(TableCell { paras: v_paras.ok_or_else(|| A::Error::missing_field("paras"))?, rich_paras: v_rich_paras, cell_mar_twips: v_cell_mar_twips, nested_tables: v_nested_tables, anchored_boxes: v_anchored_boxes, anchored_box_anchors: v_anchored_box_anchors, nested_table_anchors: v_nested_table_anchors, col_span: v_col_span, grid_gap: v_grid_gap, v_merge: v_v_merge, fill: v_fill, color: v_color, bold: v_bold, style_color: v_style_color, style_bold: v_style_bold, align: v_align, v_align: v_v_align, text_direction: v_text_direction, no_wrap: v_no_wrap, hide_mark: v_hide_mark, tc_pr_edited: v_tc_pr_edited, h_merge: v_h_merge, borders: v_borders, raw_tc_pr: v_raw_tc_pr, cell_revision: v_cell_revision, tc_pr_change: v_tc_pr_change, cell_merge: v_cell_merge })
+                if !b_0.paras.has_key() {
+                    return Err(A::Error::missing_field("paras"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -15033,19 +14688,19 @@ pub struct TableModel {
     pub fill: Option<String>,
     pub borders: Option<TableBorders>,
     pub align: Option<TableModelAlign>,
-    pub indent_twips: Option<JsNum>,
     pub float_side: Option<Option<TableModelFloatSide>>,
     pub float_pos: Option<TableModelFloatPos>,
-    pub caption: Option<String>,
-    pub description: Option<String>,
-    pub row_revisions: Option<Vec<Option<TableModelRowRevisionsItem>>>,
+    pub indent_twips: Option<JsNum>,
     pub tbl_style_id: Option<String>,
     pub table_look: Option<TableLook>,
+    pub bidi_visual: Option<bool>,
     pub row_heights_twips: Option<Vec<Option<JsNum>>>,
     pub row_height_rules: Option<Vec<Option<TableModelRowHeightRulesItem>>>,
-    pub bidi_visual: Option<bool>,
     pub repeat_header_rows: Option<Vec<Option<bool>>>,
     pub row_cant_split: Option<Vec<Option<bool>>>,
+    pub row_revisions: Option<Vec<Option<TableModelRowRevisionsItem>>>,
+    pub caption: Option<String>,
+    pub description: Option<String>,
     pub tbl_pr_change: Option<Option<PropChangeInfo>>,
     pub tbl_grid_change: Option<Option<PropChangeInfo>>,
     pub row_pr_changes: Option<Vec<Option<PropChangeInfo>>>,
@@ -15189,23 +14844,14 @@ impl Serialize for TableModel {
         if let Some(value) = &self.align {
             map.serialize_entry("align", value)?;
         }
-        if let Some(value) = &self.indent_twips {
-            map.serialize_entry("indentTwips", value)?;
-        }
         if let Some(value) = &self.float_side {
             map.serialize_entry("floatSide", value)?;
         }
         if let Some(value) = &self.float_pos {
             map.serialize_entry("floatPos", value)?;
         }
-        if let Some(value) = &self.caption {
-            map.serialize_entry("caption", value)?;
-        }
-        if let Some(value) = &self.description {
-            map.serialize_entry("description", value)?;
-        }
-        if let Some(value) = &self.row_revisions {
-            map.serialize_entry("rowRevisions", value)?;
+        if let Some(value) = &self.indent_twips {
+            map.serialize_entry("indentTwips", value)?;
         }
         if let Some(value) = &self.tbl_style_id {
             map.serialize_entry("tblStyleId", value)?;
@@ -15213,20 +14859,29 @@ impl Serialize for TableModel {
         if let Some(value) = &self.table_look {
             map.serialize_entry("tableLook", value)?;
         }
+        if let Some(value) = &self.bidi_visual {
+            map.serialize_entry("bidiVisual", value)?;
+        }
         if let Some(value) = &self.row_heights_twips {
             map.serialize_entry("rowHeightsTwips", value)?;
         }
         if let Some(value) = &self.row_height_rules {
             map.serialize_entry("rowHeightRules", value)?;
         }
-        if let Some(value) = &self.bidi_visual {
-            map.serialize_entry("bidiVisual", value)?;
-        }
         if let Some(value) = &self.repeat_header_rows {
             map.serialize_entry("repeatHeaderRows", value)?;
         }
         if let Some(value) = &self.row_cant_split {
             map.serialize_entry("rowCantSplit", value)?;
+        }
+        if let Some(value) = &self.row_revisions {
+            map.serialize_entry("rowRevisions", value)?;
+        }
+        if let Some(value) = &self.caption {
+            map.serialize_entry("caption", value)?;
+        }
+        if let Some(value) = &self.description {
+            map.serialize_entry("description", value)?;
         }
         if let Some(value) = &self.tbl_pr_change {
             map.serialize_entry("tblPrChange", value)?;
@@ -16404,8 +16059,8 @@ impl<'de> Deserialize<'de> for TextboxDisplayVAlign {
 pub struct TextboxParaDisplay {
     /// the fields of `ParaFormat`, which `TextboxParaDisplay` extends
     pub para_format: ParaFormat,
-    pub style_id: Option<String>,
     pub runs: Vec<Run>,
+    pub style_id: Option<String>,
     pub list_marker: Option<TextboxListMarker>,
     pub cells: Option<Vec<HfTableCell>>,
     pub row: Option<HfTableRow>,
@@ -16549,8 +16204,51 @@ const _: () = assert!(TextboxParaDisplayKey::NAMES.len() <= wire::MAX_KEYS);
 impl Serialize for TextboxParaDisplay {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         let mut map = serializer.serialize_map(None)?;
+        if let Some(value) = &*self.para_format.east_asia_lang {
+            map.serialize_entry("eastAsiaLang", value)?;
+        }
+        if let Some(value) = &*self.para_format.border_style {
+            map.serialize_entry("borderStyle", value)?;
+        }
+        if let Some(value) = &*self.para_format.empty_run_font_family {
+            map.serialize_entry("emptyRunFontFamily", value)?;
+        }
+        if let Some(value) = &*self.para_format.mark_size_half_points {
+            map.serialize_entry("markSizeHalfPoints", value)?;
+        }
+        if let Some(value) = &*self.para_format.effective {
+            map.serialize_entry("effective", value)?;
+        }
+        map.serialize_entry("runs", &self.runs)?;
+        if let Some(value) = &*self.para_format.space_before_auto {
+            map.serialize_entry("spaceBeforeAuto", value)?;
+        }
+        if let Some(value) = &*self.para_format.space_after_auto {
+            map.serialize_entry("spaceAfterAuto", value)?;
+        }
+        if let Some(value) = &*self.para_format.shading_clear {
+            map.serialize_entry("shadingClear", value)?;
+        }
+        if let Some(value) = &*self.para_format.drop_cap {
+            map.serialize_entry("dropCap", value)?;
+        }
+        if let Some(value) = &*self.para_format.frame_box {
+            map.serialize_entry("frameBox", value)?;
+        }
+        if let Some(value) = &*self.para_format.frame {
+            map.serialize_entry("frame", value)?;
+        }
+        if let Some(value) = &*self.para_format.bidi {
+            map.serialize_entry("bidi", value)?;
+        }
+        if let Some(value) = &*self.para_format.bidi_inherited {
+            map.serialize_entry("bidiInherited", value)?;
+        }
         if let Some(value) = &*self.para_format.align {
             map.serialize_entry("align", value)?;
+        }
+        if let Some(value) = &*self.para_format.line_raw_twips {
+            map.serialize_entry("lineRawTwips", value)?;
         }
         if let Some(value) = &*self.para_format.line_spacing {
             map.serialize_entry("lineSpacing", value)?;
@@ -16558,8 +16256,11 @@ impl Serialize for TextboxParaDisplay {
         if let Some(value) = &*self.para_format.line_rule {
             map.serialize_entry("lineRule", value)?;
         }
-        if let Some(value) = &*self.para_format.line_raw_twips {
-            map.serialize_entry("lineRawTwips", value)?;
+        if let Some(value) = &*self.para_format.space_before {
+            map.serialize_entry("spaceBefore", value)?;
+        }
+        if let Some(value) = &*self.para_format.space_after {
+            map.serialize_entry("spaceAfter", value)?;
         }
         if let Some(value) = &*self.para_format.indent_left {
             map.serialize_entry("indentLeft", value)?;
@@ -16569,12 +16270,6 @@ impl Serialize for TextboxParaDisplay {
         }
         if let Some(value) = &*self.para_format.indent_first_line {
             map.serialize_entry("indentFirstLine", value)?;
-        }
-        if let Some(value) = &*self.para_format.char_indents {
-            map.serialize_entry("charIndents", value)?;
-        }
-        if let Some(value) = &*self.para_format.direct_char_indents {
-            map.serialize_entry("directCharIndents", value)?;
         }
         if let Some(value) = &*self.para_format.page_break_before {
             map.serialize_entry("pageBreakBefore", value)?;
@@ -16588,14 +16283,14 @@ impl Serialize for TextboxParaDisplay {
         if let Some(value) = &*self.para_format.suppress_line_numbers {
             map.serialize_entry("suppressLineNumbers", value)?;
         }
-        if let Some(value) = &*self.para_format.widow_control {
-            map.serialize_entry("widowControl", value)?;
-        }
         if let Some(value) = &*self.para_format.snap_to_grid {
             map.serialize_entry("snapToGrid", value)?;
         }
-        if let Some(value) = &*self.para_format.auto_space {
-            map.serialize_entry("autoSpace", value)?;
+        if let Some(value) = &*self.para_format.widow_control {
+            map.serialize_entry("widowControl", value)?;
+        }
+        if let Some(value) = &*self.para_format.contextual_spacing {
+            map.serialize_entry("contextualSpacing", value)?;
         }
         if let Some(value) = &*self.para_format.auto_space_d_e {
             map.serialize_entry("autoSpaceDE", value)?;
@@ -16603,17 +16298,14 @@ impl Serialize for TextboxParaDisplay {
         if let Some(value) = &*self.para_format.auto_space_d_n {
             map.serialize_entry("autoSpaceDN", value)?;
         }
+        if let Some(value) = &*self.para_format.auto_space {
+            map.serialize_entry("autoSpace", value)?;
+        }
         if let Some(value) = &*self.para_format.word_wrap {
             map.serialize_entry("wordWrap", value)?;
         }
         if let Some(value) = &*self.para_format.overflow_punct {
             map.serialize_entry("overflowPunct", value)?;
-        }
-        if let Some(value) = &*self.para_format.east_asia_lang {
-            map.serialize_entry("eastAsiaLang", value)?;
-        }
-        if let Some(value) = &*self.para_format.contextual_spacing {
-            map.serialize_entry("contextualSpacing", value)?;
         }
         if let Some(value) = &*self.para_format.shading_fill {
             map.serialize_entry("shadingFill", value)?;
@@ -16621,14 +16313,8 @@ impl Serialize for TextboxParaDisplay {
         if let Some(value) = &*self.para_format.shading_display {
             map.serialize_entry("shadingDisplay", value)?;
         }
-        if let Some(value) = &*self.para_format.shading_clear {
-            map.serialize_entry("shadingClear", value)?;
-        }
         if let Some(value) = &*self.para_format.borders {
             map.serialize_entry("borders", value)?;
-        }
-        if let Some(value) = &*self.para_format.border_style {
-            map.serialize_entry("borderStyle", value)?;
         }
         if let Some(value) = &*self.para_format.border_lines {
             map.serialize_entry("borderLines", value)?;
@@ -16642,51 +16328,20 @@ impl Serialize for TextboxParaDisplay {
         if let Some(value) = &*self.para_format.tab_stops {
             map.serialize_entry("tabStops", value)?;
         }
-        if let Some(value) = &*self.para_format.drop_cap {
-            map.serialize_entry("dropCap", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame {
-            map.serialize_entry("frame", value)?;
-        }
-        if let Some(value) = &*self.para_format.frame_box {
-            map.serialize_entry("frameBox", value)?;
-        }
         if let Some(value) = &*self.para_format.text_direction {
             map.serialize_entry("textDirection", value)?;
         }
-        if let Some(value) = &*self.para_format.bidi_inherited {
-            map.serialize_entry("bidiInherited", value)?;
+        if let Some(value) = &*self.para_format.char_indents {
+            map.serialize_entry("charIndents", value)?;
         }
-        if let Some(value) = &*self.para_format.empty_run_font_family {
-            map.serialize_entry("emptyRunFontFamily", value)?;
-        }
-        if let Some(value) = &*self.para_format.mark_size_half_points {
-            map.serialize_entry("markSizeHalfPoints", value)?;
-        }
-        if let Some(value) = &*self.para_format.effective {
-            map.serialize_entry("effective", value)?;
-        }
-        if let Some(value) = &self.style_id {
-            map.serialize_entry("styleId", value)?;
-        }
-        map.serialize_entry("runs", &self.runs)?;
-        if let Some(value) = &*self.para_format.space_before {
-            map.serialize_entry("spaceBefore", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after {
-            map.serialize_entry("spaceAfter", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_before_auto {
-            map.serialize_entry("spaceBeforeAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.space_after_auto {
-            map.serialize_entry("spaceAfterAuto", value)?;
-        }
-        if let Some(value) = &*self.para_format.bidi {
-            map.serialize_entry("bidi", value)?;
+        if let Some(value) = &*self.para_format.direct_char_indents {
+            map.serialize_entry("directCharIndents", value)?;
         }
         if let Some(value) = &*self.para_format.empty_run_size_half_points {
             map.serialize_entry("emptyRunSizeHalfPoints", value)?;
+        }
+        if let Some(value) = &self.style_id {
+            map.serialize_entry("styleId", value)?;
         }
         if let Some(value) = &self.list_marker {
             map.serialize_entry("listMarker", value)?;
@@ -19097,12 +18752,12 @@ pub struct BlockPPrChangeInfoOld {
     pub empty_run_font_family: Option<String>,
     pub mark_size_half_points: Option<JsNum>,
     pub effective: Option<EffectivePPr>,
-    pub r#type: Option<BlockPPrChangeInfoOldType>,
     pub style_id: Option<String>,
+    pub r#type: Option<BlockPPrChangeInfoOldType>,
     pub level: Option<JsNum>,
-    pub kind: Option<BlockPPrChangeInfoOldKind>,
     pub num_id: Option<String>,
     pub ilvl: Option<JsNum>,
+    pub kind: Option<BlockPPrChangeInfoOldKind>,
 }
 
 /// The keys of `Block.pPrChangeInfo.old`, in declaration order.
@@ -19366,23 +19021,23 @@ impl Serialize for BlockPPrChangeInfoOld {
         if let Some(value) = &self.effective {
             map.serialize_entry("effective", value)?;
         }
-        if let Some(value) = &self.r#type {
-            map.serialize_entry("type", value)?;
-        }
         if let Some(value) = &self.style_id {
             map.serialize_entry("styleId", value)?;
         }
+        if let Some(value) = &self.r#type {
+            map.serialize_entry("type", value)?;
+        }
         if let Some(value) = &self.level {
             map.serialize_entry("level", value)?;
-        }
-        if let Some(value) = &self.kind {
-            map.serialize_entry("kind", value)?;
         }
         if let Some(value) = &self.num_id {
             map.serialize_entry("numId", value)?;
         }
         if let Some(value) = &self.ilvl {
             map.serialize_entry("ilvl", value)?;
+        }
+        if let Some(value) = &self.kind {
+            map.serialize_entry("kind", value)?;
         }
         map.end()
     }
@@ -21056,8 +20711,8 @@ pub struct TableCondFormat {
     pub char_spacing_twips: Option<JsNum>,
     pub borders: Option<CellBorders>,
     pub cell_mar_twips: Option<CellMargins>,
-    pub para_spacing: Option<TableParaSpacing>,
     pub para_jc: Option<String>,
+    pub para_spacing: Option<TableParaSpacing>,
 }
 
 /// The keys of `TableCondFormat`, in declaration order.
@@ -21138,11 +20793,11 @@ impl Serialize for TableCondFormat {
         if let Some(value) = &self.cell_mar_twips {
             map.serialize_entry("cellMarTwips", value)?;
         }
-        if let Some(value) = &self.para_spacing {
-            map.serialize_entry("paraSpacing", value)?;
-        }
         if let Some(value) = &self.para_jc {
             map.serialize_entry("paraJc", value)?;
+        }
+        if let Some(value) = &self.para_spacing {
+            map.serialize_entry("paraSpacing", value)?;
         }
         map.end()
     }
@@ -21363,22 +21018,24 @@ impl<'de> Deserialize<'de> for TableParaSpacingLineRule {
     }
 }
 
-/// `TableStyleDisplay`
-#[derive(Debug, Clone, Default, PartialEq)]
-pub struct TableStyleDisplay {
-    pub band2_fill: Option<String>,
-    pub cell_mar_twips: Option<CellMargins>,
-    pub fill: Option<String>,
-    pub whole_table: Option<TableStyleDisplayWholeTable>,
-    pub first_row: Option<TableCondFormat>,
-    pub last_row: Option<TableCondFormat>,
-    pub first_col: Option<TableCondFormat>,
-    pub last_col: Option<TableCondFormat>,
-    pub band1_fill: Option<String>,
-    pub row_band_size: Option<JsNum>,
-    pub borders: Option<TableBorders>,
-    pub para_spacing: Option<TableParaSpacing>,
-    pub para_jc: Option<String>,
+jscompat::js_object! {
+    /// `TableStyleDisplay`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct TableStyleDisplay {
+        pub fill: String,
+        pub whole_table: TableStyleDisplayWholeTable,
+        pub first_row: TableCondFormat,
+        pub first_col: TableCondFormat,
+        pub last_col: TableCondFormat,
+        pub last_row: TableCondFormat,
+        pub band1_fill: String,
+        pub band2_fill: String,
+        pub row_band_size: JsNum,
+        pub borders: TableBorders,
+        pub cell_mar_twips: CellMargins,
+        pub para_spacing: TableParaSpacing,
+        pub para_jc: String,
+    }
 }
 
 /// The keys of `TableStyleDisplay`, in declaration order.
@@ -21428,52 +21085,6 @@ impl FieldKey for TableStyleDisplayKey {
 
 const _: () = assert!(TableStyleDisplayKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for TableStyleDisplay {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        if let Some(value) = &self.band2_fill {
-            map.serialize_entry("band2Fill", value)?;
-        }
-        if let Some(value) = &self.cell_mar_twips {
-            map.serialize_entry("cellMarTwips", value)?;
-        }
-        if let Some(value) = &self.fill {
-            map.serialize_entry("fill", value)?;
-        }
-        if let Some(value) = &self.whole_table {
-            map.serialize_entry("wholeTable", value)?;
-        }
-        if let Some(value) = &self.first_row {
-            map.serialize_entry("firstRow", value)?;
-        }
-        if let Some(value) = &self.last_row {
-            map.serialize_entry("lastRow", value)?;
-        }
-        if let Some(value) = &self.first_col {
-            map.serialize_entry("firstCol", value)?;
-        }
-        if let Some(value) = &self.last_col {
-            map.serialize_entry("lastCol", value)?;
-        }
-        if let Some(value) = &self.band1_fill {
-            map.serialize_entry("band1Fill", value)?;
-        }
-        if let Some(value) = &self.row_band_size {
-            map.serialize_entry("rowBandSize", value)?;
-        }
-        if let Some(value) = &self.borders {
-            map.serialize_entry("borders", value)?;
-        }
-        if let Some(value) = &self.para_spacing {
-            map.serialize_entry("paraSpacing", value)?;
-        }
-        if let Some(value) = &self.para_jc {
-            map.serialize_entry("paraJc", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for TableStyleDisplay {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -21486,40 +21097,28 @@ impl<'de> Deserialize<'de> for TableStyleDisplay {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<TableStyleDisplay, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_fill = None;
-                let mut v_whole_table = None;
-                let mut v_first_row = None;
-                let mut v_first_col = None;
-                let mut v_last_col = None;
-                let mut v_last_row = None;
-                let mut v_band1_fill = None;
-                let mut v_band2_fill = None;
-                let mut v_row_band_size = None;
-                let mut v_borders = None;
-                let mut v_cell_mar_twips = None;
-                let mut v_para_spacing = None;
-                let mut v_para_jc = None;
+                let mut b_0 = TableStyleDisplay::default();
                 while let Some(Key(key)) = map.next_key::<Key<TableStyleDisplayKey>>()? {
                     if !seen.insert(key.index()) {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        TableStyleDisplayKey::Fill => v_fill = Some(map.next_value()?),
-                        TableStyleDisplayKey::WholeTable => v_whole_table = Some(map.next_value()?),
-                        TableStyleDisplayKey::FirstRow => v_first_row = Some(map.next_value()?),
-                        TableStyleDisplayKey::FirstCol => v_first_col = Some(map.next_value()?),
-                        TableStyleDisplayKey::LastCol => v_last_col = Some(map.next_value()?),
-                        TableStyleDisplayKey::LastRow => v_last_row = Some(map.next_value()?),
-                        TableStyleDisplayKey::Band1Fill => v_band1_fill = Some(map.next_value()?),
-                        TableStyleDisplayKey::Band2Fill => v_band2_fill = Some(map.next_value()?),
-                        TableStyleDisplayKey::RowBandSize => v_row_band_size = Some(map.next_value()?),
-                        TableStyleDisplayKey::Borders => v_borders = Some(map.next_value()?),
-                        TableStyleDisplayKey::CellMarTwips => v_cell_mar_twips = Some(map.next_value()?),
-                        TableStyleDisplayKey::ParaSpacing => v_para_spacing = Some(map.next_value()?),
-                        TableStyleDisplayKey::ParaJc => v_para_jc = Some(map.next_value()?),
+                        TableStyleDisplayKey::Fill => b_0.fill.set(map.next_value()?),
+                        TableStyleDisplayKey::WholeTable => b_0.whole_table.set(map.next_value()?),
+                        TableStyleDisplayKey::FirstRow => b_0.first_row.set(map.next_value()?),
+                        TableStyleDisplayKey::FirstCol => b_0.first_col.set(map.next_value()?),
+                        TableStyleDisplayKey::LastCol => b_0.last_col.set(map.next_value()?),
+                        TableStyleDisplayKey::LastRow => b_0.last_row.set(map.next_value()?),
+                        TableStyleDisplayKey::Band1Fill => b_0.band1_fill.set(map.next_value()?),
+                        TableStyleDisplayKey::Band2Fill => b_0.band2_fill.set(map.next_value()?),
+                        TableStyleDisplayKey::RowBandSize => b_0.row_band_size.set(map.next_value()?),
+                        TableStyleDisplayKey::Borders => b_0.borders.set(map.next_value()?),
+                        TableStyleDisplayKey::CellMarTwips => b_0.cell_mar_twips.set(map.next_value()?),
+                        TableStyleDisplayKey::ParaSpacing => b_0.para_spacing.set(map.next_value()?),
+                        TableStyleDisplayKey::ParaJc => b_0.para_jc.set(map.next_value()?),
                     }
                 }
-                Ok(TableStyleDisplay { fill: v_fill, whole_table: v_whole_table, first_row: v_first_row, first_col: v_first_col, last_col: v_last_col, last_row: v_last_row, band1_fill: v_band1_fill, band2_fill: v_band2_fill, row_band_size: v_row_band_size, borders: v_borders, cell_mar_twips: v_cell_mar_twips, para_spacing: v_para_spacing, para_jc: v_para_jc })
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -22474,8 +22073,8 @@ pub struct ThemeFonts {
     pub minor: String,
     pub east_asia: Option<String>,
     pub major_east_asia: Option<String>,
-    pub major_cs: Option<String>,
     pub minor_cs: Option<String>,
+    pub major_cs: Option<String>,
     pub bidi_lang: Option<String>,
     pub major_scripts: Option<JsObject<String>>,
     pub minor_scripts: Option<JsObject<String>>,
@@ -22534,11 +22133,11 @@ impl Serialize for ThemeFonts {
         if let Some(value) = &self.major_east_asia {
             map.serialize_entry("majorEastAsia", value)?;
         }
-        if let Some(value) = &self.major_cs {
-            map.serialize_entry("majorCs", value)?;
-        }
         if let Some(value) = &self.minor_cs {
             map.serialize_entry("minorCs", value)?;
+        }
+        if let Some(value) = &self.major_cs {
+            map.serialize_entry("majorCs", value)?;
         }
         if let Some(value) = &self.bidi_lang {
             map.serialize_entry("bidiLang", value)?;
@@ -23901,14 +23500,14 @@ pub struct ParsedDocFull {
     pub zotero_document_data: String,
     pub properties: DocumentProperties,
     pub comments: Vec<CommentInfo>,
-    pub footnote_props: Option<NoteProps>,
-    pub endnote_props: Option<NoteProps>,
     pub embedded_fonts: Option<Vec<EmbeddedFont>>,
     pub protection: Option<DocProtection>,
     pub write_protection: Option<WriteProtection>,
     pub remove_personal_info: bool,
     pub footnotes: Vec<NoteInfo>,
     pub endnotes: Vec<NoteInfo>,
+    pub footnote_props: Option<NoteProps>,
+    pub endnote_props: Option<NoteProps>,
     pub note_numbers: Option<JsObject<JsNum>>,
     pub sources: Vec<SourceInfo>,
     pub inks: Vec<InkInfo>,
@@ -24092,12 +23691,6 @@ impl Serialize for ParsedDocFull {
         map.serialize_entry("zoteroDocumentData", &self.zotero_document_data)?;
         map.serialize_entry("properties", &self.properties)?;
         map.serialize_entry("comments", &self.comments)?;
-        if let Some(value) = &self.footnote_props {
-            map.serialize_entry("footnoteProps", value)?;
-        }
-        if let Some(value) = &self.endnote_props {
-            map.serialize_entry("endnoteProps", value)?;
-        }
         if let Some(value) = &self.embedded_fonts {
             map.serialize_entry("embeddedFonts", value)?;
         }
@@ -24106,6 +23699,12 @@ impl Serialize for ParsedDocFull {
         map.serialize_entry("removePersonalInfo", &self.remove_personal_info)?;
         map.serialize_entry("footnotes", &self.footnotes)?;
         map.serialize_entry("endnotes", &self.endnotes)?;
+        if let Some(value) = &self.footnote_props {
+            map.serialize_entry("footnoteProps", value)?;
+        }
+        if let Some(value) = &self.endnote_props {
+            map.serialize_entry("endnoteProps", value)?;
+        }
         if let Some(value) = &self.note_numbers {
             map.serialize_entry("noteNumbers", value)?;
         }
