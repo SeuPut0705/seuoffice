@@ -23,23 +23,36 @@ def load(path):
 
 
 def diff(a_path, b_path, out_path):
+    """Pixel difference after the best small shift (window chrome can differ by a few pixels)."""
     if not (os.path.exists(a_path) and os.path.exists(b_path)):
         return None
-    a = Image.open(a_path).convert('RGB')
-    b = Image.open(b_path).convert('RGB')
-    w, h = min(a.width, b.width), min(a.height, b.height)
-    a = np.asarray(a.crop((0, 0, w, h)), dtype=np.int16)
-    b = np.asarray(b.crop((0, 0, w, h)), dtype=np.int16)
+    a_img = Image.open(a_path).convert('RGB')
+    b_img = Image.open(b_path).convert('RGB')
+    a_full = np.asarray(a_img, dtype=np.int16)
+    b_full = np.asarray(b_img, dtype=np.int16)
+    best = None
+    for dy in range(-8, 9):
+        for dx in range(-4, 5):
+            ay, by = max(0, dy), max(0, -dy)
+            ax, bx = max(0, dx), max(0, -dx)
+            h = min(a_full.shape[0] - ay, b_full.shape[0] - by)
+            w = min(a_full.shape[1] - ax, b_full.shape[1] - bx)
+            a = a_full[ay:ay + h, ax:ax + w]
+            b = b_full[by:by + h, bx:bx + w]
+            mean = float(np.abs(a - b).mean())
+            if best is None or mean < best[0]:
+                best = (mean, dy, dx, a, b)
+    mean, dy, dx, a, b = best
     d = np.abs(a - b).max(axis=2)
     changed = d > 32
     vis = np.where(changed[..., None], np.array([255, 0, 0], dtype=np.uint8), (a // 3).astype(np.uint8))
     Image.fromarray(vis.astype(np.uint8)).save(out_path)
     return {
-        'size': [w, h],
-        'size_a': list(Image.open(a_path).size),
-        'size_b': list(Image.open(b_path).size),
+        'size_a': list(a_img.size),
+        'size_b': list(b_img.size),
+        'shift': [dx, dy],
         'changed_pct': round(100 * changed.mean(), 2),
-        'mean_abs': round(float(np.abs(a - b).mean()), 2),
+        'mean_abs': round(mean, 2),
     }
 
 
