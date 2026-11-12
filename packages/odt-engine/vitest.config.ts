@@ -10,7 +10,6 @@ export default defineConfig({
   resolve: {
     alias: {
       '@seuoffice/docx-engine': local('../docx-engine/src/index.ts'),
-      '@seuoffice/zip-gate': local('../zip-gate/src/index.ts'),
     },
   },
   test: {
