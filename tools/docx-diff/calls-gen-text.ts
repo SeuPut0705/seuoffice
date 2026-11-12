@@ -154,6 +154,10 @@ const FIELD_PARAS: string[] = [
   p(r('<w:tab w:val="left"/>'), t('only stop')),
   p('<w:ins w:id="1" w:author="a">', t('inserted'), '</w:ins>', TAB, '<w:del w:id="2" w:author="a">', r('<w:delText>old</w:delText>'), '</w:del>', t('4')),
   p(r('<w:drawing/>')),
+  // a first segment before two tabs is the outline number when it is 1..15 UTF-16 units without white space
+  ...['a'.repeat(14), 'a'.repeat(15), 'a'.repeat(16), '\u{1F600}' + 'a'.repeat(13), '\u{1F600}' + 'a'.repeat(14)].map((first) =>
+    p(t(first), TAB, t('Title'), TAB, t('7')),
+  ),
 ]
 
 const MATHS: string[] = [

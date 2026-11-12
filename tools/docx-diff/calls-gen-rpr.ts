@@ -206,6 +206,26 @@ const MODEL_RUNS: Run[] = [
   ...OLD_RUNS,
 ]
 
+/** rFonts whose eastAsia slot is a theme ref only, merged with a run whose font equals the literal
+ *  primary: only the theme attribute says the slot existed, so w:eastAsia is written. */
+const THEME_EAST_ASIA: Input[] = [
+  '<w:rFonts w:asciiTheme="minorHAnsi" w:eastAsiaTheme="minorEastAsia" w:hAnsiTheme="minorHAnsi" w:cstheme="minorBidi"/>',
+  '<w:rFonts w:ascii="Arial" w:eastAsiaTheme="minorEastAsia" w:hAnsi="Arial" w:cstheme="minorBidi"/>',
+  '<w:rFonts w:eastAsiaTheme="minorEastAsia"/>',
+  '<w:rFonts w:ascii="Arial" w:eastAsiaTheme="minorEastAsia"/>',
+].flatMap((rFonts) => {
+  const raw = R(`${rFonts}<w:b/>`)
+  const runs: Run[] = [
+    { text: 'x', bold: true, font: 'Arial', fontAscii: 'Times New Roman' },
+    { text: 'x', bold: true, font: 'Arial', fontAscii: 'Arial', themeRFonts: { fontAscii: 'Calibri' } },
+    { text: 'x', bold: true, font: 'Arial' },
+    { text: 'x', bold: true, font: 'Times New Roman', fontAscii: 'Times New Roman' },
+    { text: 'x', bold: true, eastAsiaFont: 'SimSun' },
+    { text: 'x', bold: true, font: 'Arial', fontAscii: 'Times New Roman', fontCs: 'Arial' },
+  ] as Run[]
+  return runs.map((run) => ({ text: raw, args: { run: { ...run, rawRPr: raw }, insideLink: false } }))
+})
+
 const BUILT: Input[] = [
   ...RAWS.flatMap((raw) => [...inputsOf(raw), ...inputsOf(raw, true)]),
   ...RAWS.flatMap((raw) =>
@@ -214,6 +234,7 @@ const BUILT: Input[] = [
       { text: raw, args: { run: { ...run, rawRPr: raw }, insideLink: true } },
     ]),
   ),
+  ...THEME_EAST_ASIA,
 ]
 
 export const GEN_RPR: CallSpec[] = [

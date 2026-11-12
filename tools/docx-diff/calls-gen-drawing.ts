@@ -224,6 +224,8 @@ const IMAGE_PATCHES: Array<Record<string, unknown>> = [
   { posOffsetX: 'Infinity', posOffsetY: 2.5 },
   { posOffsetY: 'NaN' },
   {},
+  // fractional rotations: Math.round, not truncation, decides the degree
+  ...[45.6, 45.5, -45.5, -0.5, 359.5, 359.6, 719.7].map((rotDeg) => ({ rotDeg })),
 ]
 
 const Z = [{}, { zOrder: 3 }, { zOrder: -251658240 }, { zOrder: 1.5 }, { zOrder: 0 }]
@@ -280,6 +282,9 @@ const STYLES: Array<Record<string, unknown>> = [
   { styles: [{ rotDeg: -45.5 }, { rotDeg: 360 }, { rotDeg: -720 }] },
   { styles: [{ borderWidthPx: 2 }, { borderWidthPx: null }, { borderWidthPx: 0.01 }] },
   { styles: [{ borderWidthPx: 1.5, fillHex: 'C0C0C0', borderHex: 'FF00FF', rotDeg: 30 }] },
+  // rotations whose 60000ths have a fraction: Math.round decides the last unit and the 360 wrap
+  { styles: [{ rotDeg: 30.00001 }, { rotDeg: -0.000013 }, { rotDeg: 359.99999 }] },
+  { styles: [{ rotDeg: 359.999999 }, { rotDeg: 12.3456789 }, { rotDeg: -179.000009 }] },
 ]
 
 const EXTENTS: Array<Record<string, unknown>> = [

@@ -144,6 +144,15 @@ const BLOCKS: GeneratedBlock[] = [
   { type: 'paragraph', runs: [t('ppr change bad')], pPrChange: '{' },
   {
     type: 'paragraph',
+    runs: [
+      t('plain', { ins: { author: 'A', id: '7', date: '2026-01-01T00:00:00Z' } }),
+      t('moved', { ins: { author: 'A', id: '7', date: '2026-01-01T00:00:00Z', move: 'm1' } }),
+      t('gone', { del: { author: 'A', id: '8', move: 'm1' } }),
+      t('gone too', { del: { author: 'A', id: '8', move: 'm2' } }),
+    ],
+  },
+  {
+    type: 'paragraph',
     runs: [t('tabs')],
     format: { tabStops: [{ pos: 720, val: 'right', leader: 'dot' }], lineSpacing: 1.5, pageBreakBefore: true, widowControl: false, textDirection: 'tbRl' },
   },

@@ -34,6 +34,14 @@ const built: Run[][] = [
   [{ text: 'a', commentIds: ['10', '2'] }, { text: 'b', commentIds: ['2', '3'] }],
   ...revisions.map((ins) => [{ text: 'a', ins }, { text: 'b', ins }, { text: 'c', del: ins }, { text: 'd', ins, del: ins }, { text: 'end' }]),
   [{ text: 'first', ins: revisions[0] }, { text: 'middle' }, { text: 'last', ins: revisions[0] }],
+  ...(['ins', 'del'] as const).flatMap((side) => {
+    const base = { author: 'A', id: '7', date: '2026-01-01T00:00:00Z', dateUtc: '2026-01-01T00:00:00Z' }
+    return [
+      [{ text: 'plain', [side]: base }, { text: 'moved', [side]: { ...base, move: 'm1' } }, { text: 'end' }],
+      [{ text: 'one', [side]: { ...base, move: 'm1' } }, { text: 'two', [side]: { ...base, move: 'm2' } }],
+      [{ text: 'moved', [side]: { ...base, move: 'm1' } }, { text: 'plain', [side]: base }],
+    ] as Run[][]
+  }),
   [{ text: '', math: { omml: '<m:oMath/>', display: true } }],
   [{ text: '', ruby: { rt: 'r', xml: '<w:ruby/>' } }],
   [{ text: '', sym: { font: 'Wingdings', char: 'F0FE' } }],

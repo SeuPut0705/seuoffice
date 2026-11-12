@@ -176,6 +176,48 @@ const ORIGINALS: string[] = [
   '<w:tbl>no props</w:tbl>',
 ]
 
+/** Property changes whose recorded old properties are empty, rejected, accepted and resolved by null. */
+const EMPTY_OLD_TBL =
+  '<w:tbl><w:tblPr><w:jc w:val="center"/><w:tblPrChange w:id="1" w:author="a"><w:tblPr/></w:tblPrChange></w:tblPr>' +
+  '<w:tblGrid><w:gridCol w:w="100"/><w:tblGridChange w:id="2"><w:tblGrid/></w:tblGridChange></w:tblGrid></w:tbl>'
+const EMPTY_OLD_TBL_PAIRED =
+  '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/><w:tblPrChange w:id="1" w:author="a"><w:tblPr></w:tblPr></w:tblPrChange></w:tblPr><w:tblGrid/></w:tbl>'
+const VERDICTS = [change({ resolved: 'reject' }), change({ resolved: 'accept' }), null]
+const EMPTY_OLD_INPUTS: Input[] = [
+  ...VERDICTS.map((verdict) => ({
+    text: EMPTY_OLD_TBL,
+    args: { model: { rows: [[cell(['a'])]], tblPrChange: verdict, tblGridChange: change({ resolved: 'reject', oldXml: '' }) } },
+  })),
+  { text: EMPTY_OLD_TBL_PAIRED, args: { model: { rows: [[cell(['a'])]], tblPrChange: VERDICTS[0] } } },
+  ...VERDICTS.map((verdict) => ({
+    text: '',
+    args: {
+      model: {
+        rows: [[cell(['r'])]],
+        rawTrPrs: ['<w:trPr><w:cantSplit/><w:trPrChange w:id="3" w:author="a"><w:trPr/></w:trPrChange></w:trPr>'],
+        rowPrChanges: [verdict],
+        rawTblPrExs: ['<w:tblPrEx><w:tblW w:w="1"/><w:tblPrExChange w:id="5" w:author="a"><w:tblPrEx/></w:tblPrExChange></w:tblPrEx>'],
+        rowTblPrExChanges: [verdict],
+      },
+    },
+  })),
+  ...VERDICTS.map((verdict) => ({
+    text: '',
+    args: {
+      model: {
+        rows: [
+          [
+            cell(['c'], {
+              rawTcPr: '<w:tcPr><w:shd w:val="clear" w:fill="FF0000"/><w:tcPrChange w:id="4" w:author="a"><w:tcPr/></w:tcPrChange></w:tcPr>',
+              tcPrChange: verdict,
+            }),
+          ],
+        ],
+      },
+    },
+  })),
+]
+
 // ---------------------------------------------------------------- the specs
 
 export const GEN_TABLE: CallSpec[] = [
@@ -187,6 +229,7 @@ export const GEN_TABLE: CallSpec[] = [
     built: [
       ...MODELS.flatMap((model) => ORIGINALS.map((text) => ({ text, args: { model } }))),
       ...MODELS.flatMap((model) => variantsOf(model).map((model) => ({ text: ORIGINALS[3]!, args: { model } }))),
+      ...EMPTY_OLD_INPUTS,
     ],
   },
   {

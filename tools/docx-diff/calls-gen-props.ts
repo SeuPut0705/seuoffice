@@ -128,6 +128,21 @@ const ORIGINALS: Array<ParaFormat | undefined> = [
 
 const ONLY: Array<string[] | undefined> = [undefined, ['w:jc'], ['w:tabs', 'w:jc'], ['w:ind', 'w:keepNext']]
 
+/** w:ind whose first attribute is empty: `??` keeps it, so parseInt reads NaN and the group rebuilds
+ *  even though the fallback attribute equals the model. */
+const EMPTY_IND: Input[] = (
+  [
+    ['<w:ind w:left="" w:start="720"/>', { indentLeft: 720 }],
+    ['<w:ind w:right="" w:end="360"/>', { indentRight: 360 }],
+    ['<w:ind w:left="" w:start="720" w:hanging=""/>', { indentLeft: 720 }],
+    ['<w:ind w:left="" w:start="720" w:right="" w:end="360" w:hanging="240"/>', { indentLeft: 720, indentRight: 360, indentFirstLine: -240 }],
+    ['<w:ind w:left="" w:start="720"/>', { indentLeft: 720, align: 'center' }],
+  ] as Array<[string, ParaFormat]>
+).flatMap(([ind, format]) => [
+  { text: P(`<w:jc w:val="center"/>${ind}`), args: { format } },
+  { text: P(ind), args: { format, original: { indentLeft: 1 } } },
+])
+
 const merges = (texts: string[], all: boolean): Input[] =>
   texts.flatMap((text, i) =>
     (all ? FORMATS : FORMATS.filter((_, j) => (i + j) % 4 === 0)).flatMap((format, j) => [
@@ -198,7 +213,7 @@ export const GEN_PROPS: CallSpec[] = [
         args.onlyTags === undefined ? undefined : new Set(args.onlyTags as string[]),
       ),
     fromDocument: (parts) => merges(corpusPPrs(parts), false),
-    built: merges(RAWS, true),
+    built: [...merges(RAWS, true), ...EMPTY_IND],
     fromModel: pprModelInputs,
   },
   {
