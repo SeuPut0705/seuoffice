@@ -117,10 +117,14 @@ fn set_anchor_position(xml: &str, axis: char, px: Option<f64>) -> Result<String,
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct RunPictureGeometry {
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub width_px: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub height_px: Option<f64>,
     pub wrap: Option<ImageWrap>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub offset_x_emu: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub offset_y_emu: Option<f64>,
     pub rel_h: Option<String>,
     pub rel_v: Option<String>,

@@ -162,10 +162,11 @@ pub fn load_package(
         is_dir,
         uncompressed_size,
         content,
+        date,
     } in entries
     {
         declared.insert(name.clone(), uncompressed_size.unwrap_or(0.0));
-        package.set(Part::new(name, is_dir, content));
+        package.set(Part::new(name, is_dir, content).with_date(Some(date)));
     }
     let parts: Vec<DeclaredPart<'_>> = package
         .parts()

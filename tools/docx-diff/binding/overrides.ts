@@ -68,7 +68,7 @@ export const OVERRIDES: Record<string, Override> = {
   scanBody: { command: true },
 
   // ---- the clock and entropy the engine has not: the host supplies them as arguments
-  buildBlankDocx: { args: ['options', '$now'] },
+  buildBlankDocx: { args: ['options ?? {}', '$now'] },
   buildChartWorkbookXlsxBase64: { args: ['categories', 'series', '$now'] },
   patchChartWorkbookXlsxBase64: { args: ['base64', 'categories', 'series', '$now'] },
   // ---- a whole document where the Rust reads the part of it that it needs
@@ -131,6 +131,43 @@ export const OVERRIDES: Record<string, Override> = {
         put(docx_engine::parse::text::notes_part::parse_notes_standalone(&xml, kind).map_err(|error| error.to_string())?)`,
   },
   resolveRunProps: { args: ['xnodeArg(rPr)', 'para.styleId', '!!para.bidi', 'ctx', 'mark'] },
+  // ---- an optional TypeScript parameter the Rust port takes as a plain value, or an options object it takes field by field
+  buildChartPartXml: { args: ['chart', "externalDataRId ?? ''"] },
+  decodeSymbolText: { args: ['font', 'text', '!!opts?.textGlyphsOnly'] },
+  patchParagraphTexts: { args: ['entryXml', 'newText', '!!opts.stripFirstParaLeadingSpace'] },
+  sectionSettingsFromXml: { args: ['xml', 'opts.gutterAtTop'] },
+  rootAttributes: { args: ['originalXml', 'rootTag', 'fallback', 'Object.entries(required)'] },
+  resolveParagraphProps: { args: ['xnodeArg(pPr)', 'ctx', 'opts ?? {}'] },
+  resolveParagraphPropsXml: { args: ['xml', 'ctx', 'opts ?? {}'] },
+  removeElements: { args: ['xml', 'name', 'Number.isFinite(limit) ? limit : null'] },
+  // `unknown` in the TypeScript, which answers undefined for anything not a number: so does NaN in the port
+  usableNumber: { args: ["typeof value === 'number' ? value : NaN", 'emuPerUnit'] },
+  usablePositionOffset: { args: ["typeof value === 'number' ? value : NaN", 'emuPerUnit'] },
+  // a Pick<> of a model type: the fields the builder does not read cross as placeholders
+  anchoredInkRunXml: { args: ["{ blockIndex: 0, base64: '', ...ink }", 'rId', 'docPrId'] },
+  // ---- a Rust tuple where the TypeScript answers an object
+  mergeRecords: {
+    body: `const [merged, cursor] = invoke('mergeRecords', [blocks, data, startIndex]) as [Block[], MergeCursorState]
+  return { blocks: merged, cursor }`,
+  },
+  usablePictureSize: {
+    body: `const [w, h] = invoke('usablePictureSize', [
+    typeof widthPx === 'number' ? widthPx : NaN,
+    typeof heightPx === 'number' ? heightPx : NaN,
+  ]) as [number, number]
+  return { widthPx: w, heightPx: h }`,
+  },
+  splitXmlChildren: {
+    body: `return (invoke('splitXmlChildren', [xml]) as Array<[string, string]>).map(([name, child]) => ({ name, xml: child }))`,
+  },
+  // the route reads three fields of the document, not the whole model
+  previewFontSettings: {
+    args: [
+      '{ originalBytes: parsed.internal.originalBytes, themeColors: parsed.themeColors, themeFonts: parsed.themeFonts }',
+      'upserts',
+      'defaults',
+    ],
+  },
   // ---- functions of the caller the engine calls back (synchronous, for the length of the call)
   generateParagraphXml: {
     args: ['block', '{ ...ctx, part: undefined }'],
@@ -202,29 +239,39 @@ export const OVERRIDES: Record<string, Override> = {
   readZipEntries: { reject: 'reads through a ByteSource object (a file handle of the host)' },
   materializeDocx: { reject: 'calls back for a ZipFile object' },
   // ---- functions that write into an argument: the engine answers the argument again, the wrapper writes it back
+  // the engine reads and writes the cells' colSpan alone: only the spans cross (a TableCell is large in the engine)
   reconcileGridColumns: {
-    args: ['rows', 'rowTcws', 'gridCols'],
-    rust: `let mut rows: Vec<Vec<docx_engine::model::TableCell>> = req(args, 0)?;
+    args: ['rows.map((row) => row.map((cell) => cell.colSpan))', 'rowTcws', 'gridCols'],
+    rust: `let spans: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 0)?;
         let row_tcws: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 1)?;
         let grid_cols: Option<Vec<jscompat::JsNum>> = opt(args, 2)?;
-        let widths = {{path}}(&mut rows, &row_tcws, grid_cols.as_deref())?;
-        Ok(Some(json!({ "widths": to_json(&widths)?, "rows": to_json(&rows)? })))`,
-    body: `const r = invoke('reconcileGridColumns', [rows, rowTcws, gridCols]) as { widths: number[] | null; rows: TableCell[][] }
+        match docx_engine::parse::tables::reconcile_grid_spans(&spans, &row_tcws, grid_cols.as_deref())? {
+            None => Ok(None),
+            Some((spans, widths)) => Ok(Some(json!({ "widths": to_json(&widths)?, "spans": spans }))),
+        }`,
+    body: `const r = invoke('reconcileGridColumns', [rows.map((row) => row.map((cell) => cell.colSpan)), rowTcws, gridCols]) as { widths: number[]; spans: number[][] } | null
+  if (!r) return undefined
   rows.forEach((row, i) =>
     row.forEach((cell, c) => {
-      const span = r.rows[i]?.[c]?.colSpan
-      if (span === undefined) delete cell.colSpan
-      else cell.colSpan = span
+      const span = r.spans[i]![c]!
+      if (span > 1) cell.colSpan = span
+      else delete cell.colSpan
     }),
   )
-  return r.widths ?? undefined`,
+  return r.widths`,
   },
+  // the blocks are written back key by key: a caller keeps its references to them
   applyProtectedLeadingBreaks: {
     rust: `let mut blocks: Vec<docx_engine::model::Block> = req(args, 0)?;
         {{path}}(&mut blocks).map_err(|error| error.to_string())?;
         put(blocks)`,
     body: `const done = invoke('applyProtectedLeadingBreaks', [blocks]) as typeof blocks
-  blocks.splice(0, blocks.length, ...done)`,
+  blocks.forEach((block, i) => {
+    const next = done[i]! as unknown as Record<string, unknown>
+    const held = block as unknown as Record<string, unknown>
+    for (const key of Object.keys(held)) if (!(key in next)) delete held[key]
+    Object.assign(held, next)
+  })`,
   },
   standaloneNoteParagraphReader: {
     body: `// parseNotesXml reads a notes part on its own in the engine, with this reader's rules: the reader itself has nothing left to do

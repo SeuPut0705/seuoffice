@@ -1,3 +1,3 @@
 // The `node` export condition: the engine is started before the module evaluates.
-import '../engine-node'
+import '@seuoffice/engine-wasm/node'
 export * from '../math'

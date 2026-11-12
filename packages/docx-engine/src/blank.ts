@@ -95,5 +95,5 @@ export interface BlankDocxOptions {
 }
 /** Build a minimal valid .docx: one empty paragraph, portrait page, standard styles. */
 export async function buildBlankDocx(options?: BlankDocxOptions): Promise<Uint8Array> {
-  return invokeAsync('buildBlankDocx', [options, Date.now()]) as never
+  return invokeAsync('buildBlankDocx', [options ?? {}, Date.now()]) as never
 }

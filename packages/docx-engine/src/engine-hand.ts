@@ -4,17 +4,18 @@
 // converters, and the functions that read or write a JSZip. The generated
 // modules call them as `hand.<name>` / `zipCall`; their TypeScript signatures
 // stay where they were declared.
-import { engineCall } from '@seuoffice/engine-wasm'
 import type JSZip from 'jszip'
 import { altChunkHtmlConverter } from './alt-chunk'
 import {
   type Answered,
   type Owed,
+  callEngine,
   ensureEngine,
   invokeRaw,
   jsonOf,
   modelJson,
   revive,
+  sameBytesAs,
   text,
   utf8,
   type InvokeOptions,
@@ -66,7 +67,7 @@ export async function parseDocx(
       resolved,
       blobRefs: true,
     }
-    const reply = engineCall<ParseReply>(header, [bytes, ...resolvedBlobs])
+    const reply = callEngine<ParseReply>(header, [bytes, ...resolvedBlobs])
     warnAll(reply.header.warnings)
     const owed = reply.header.pending ?? []
     if (!owed.length)
@@ -106,12 +107,12 @@ export async function saveDocx(
     options: jsonOf(options) ?? {},
     nowMs: Date.now(),
   }
-  const reply = engineCall<CommandReply>(header, [
+  const reply = callEngine<CommandReply>(header, [
     parsed.internal.originalBytes,
     utf8(modelJson(parsed)),
   ])
   warnAll(reply.header.warnings)
-  return reply.blobs[0]!
+  return sameBytesAs(reply.blobs[0]!, [parsed.internal.originalBytes]) as Uint8Array
 }
 
 interface ParsedForCompare {
@@ -126,7 +127,7 @@ export async function compareDocuments(
 ): Promise<{ bytes: Uint8Array; summary: unknown }> {
   ensureEngine()
   const header = { cmd: 'compareDocuments', options: jsonOf(options) ?? {}, nowMs: Date.now() }
-  const reply = engineCall<CommandReply>(header, [
+  const reply = callEngine<CommandReply>(header, [
     original.internal.originalBytes,
     utf8(modelJson(original)),
     revised.internal.originalBytes,
@@ -139,7 +140,7 @@ export async function compareDocuments(
 /** `scanBody(documentXml)` */
 export function scanBody(documentXml: string): unknown {
   ensureEngine()
-  return engineCall<{ scan: unknown }>({ cmd: 'scanBody' }, [utf8(documentXml)]).header.scan
+  return callEngine<{ scan: unknown }>({ cmd: 'scanBody' }, [utf8(documentXml)]).header.scan
 }
 
 // ---------------------------------------------------------------- a JSZip argument

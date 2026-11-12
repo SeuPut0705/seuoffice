@@ -41,5 +41,5 @@ export function decodeSymbolText(
   text: string,
   opts?: { textGlyphsOnly?: boolean },
 ): string | null {
-  return invoke('decodeSymbolText', [font, text, opts]) as never
+  return invoke('decodeSymbolText', [font, text, !!opts?.textGlyphsOnly]) as never
 }

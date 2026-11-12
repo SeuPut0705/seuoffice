@@ -26,8 +26,9 @@ pub trait FieldKey: Copy + 'static {
     }
 }
 
-/// A key of an object being read: a key the type does not have is refused.
-pub(super) struct Key<K>(pub(super) K);
+/// A key of an object being read: a key the type does not have is refused,
+/// or skipped (`None`) inside `jscompat::reading_leniently`.
+pub(super) struct Key<K>(pub(super) Option<K>);
 
 impl<'de, K: FieldKey> Deserialize<'de> for Key<K> {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
@@ -40,9 +41,11 @@ impl<'de, K: FieldKey> Deserialize<'de> for Key<K> {
             }
 
             fn visit_str<E: serde::de::Error>(self, name: &str) -> Result<Key<K>, E> {
-                K::from_name(name)
-                    .map(Key)
-                    .ok_or_else(|| E::unknown_field(name, K::NAMES))
+                match K::from_name(name) {
+                    Some(key) => Ok(Key(Some(key))),
+                    None if jscompat::lenient() => Ok(Key(None)),
+                    None => Err(E::unknown_field(name, K::NAMES)),
+                }
             }
         }
         deserializer.deserialize_identifier(Name(PhantomData))

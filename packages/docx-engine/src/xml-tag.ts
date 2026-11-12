@@ -27,5 +27,5 @@ export interface StartTag {
  * its > (`</w:pPrChange >`), as XML allows. `limit` stops after that many.
  */
 export function removeElements(xml: string, name: string, limit = Infinity): string {
-  return invoke('removeElements', [xml, name, limit]) as never
+  return invoke('removeElements', [xml, name, Number.isFinite(limit) ? limit : null]) as never
 }

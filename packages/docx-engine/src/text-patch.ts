@@ -22,5 +22,5 @@ export function patchParagraphTexts(
   newText: string,
   opts: { stripFirstParaLeadingSpace?: boolean } = {},
 ): string | null {
-  return invoke('patchParagraphTexts', [entryXml, newText, opts]) as never
+  return invoke('patchParagraphTexts', [entryXml, newText, !!opts.stripFirstParaLeadingSpace]) as never
 }

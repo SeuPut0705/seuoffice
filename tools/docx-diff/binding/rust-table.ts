@@ -166,7 +166,7 @@ function readParam(env: ExportInfo, index: number, raw: string, notes: string[])
   if (plain === 'Option<&str>') return { lines: [`let ${p}: Option<String> = opt(args, ${index})?;`], arg: `${p}.as_deref()` }
   if (plain === 'Option<String>') return { lines: [`let ${p}: Option<String> = opt(args, ${index})?;`], arg: p }
   if (plain === 'f64') return { lines: [`let ${p} = num(args, ${index})?;`], arg: p }
-  if (plain === 'Option<f64>') return { lines: [`let ${p}: Option<f64> = opt(args, ${index})?;`], arg: p }
+  if (plain === 'Option<f64>') return { lines: [`let ${p} = onum(args, ${index})?;`], arg: p }
   if (INTEGER.test(plain)) return { lines: [`let ${p}: ${plain} = req(args, ${index})?;`], arg: p }
   const option = /^Option<(.+)>$/.exec(plain)
   if (option && INTEGER.test(option[1]!)) return { lines: [`let ${p}: ${plain} = opt(args, ${index})?;`], arg: p }
@@ -177,6 +177,10 @@ function readParam(env: ExportInfo, index: number, raw: string, notes: string[])
   if (plain === '&Package') return { lines: [`let ${p} = routes::package_of(env, ${at})?;`], arg: `&${p}` }
   if (plain === '&mut Package') return { lines: [`let mut ${p} = routes::package_of(env, ${at})?;`, `let before = snapshot(&${p});`], arg: `&mut ${p}`, mutates: true }
   if (plain === '&dyn MediaHost') return { lines: [], arg: '&env.media' }
+  if (plain === '&[f64]') return { lines: [`let ${p} = nums(args, ${index})?;`], arg: `&${p}` }
+  if (plain === '&[Option<f64>]') return { lines: [`let ${p} = onums(args, ${index})?;`], arg: `&${p}` }
+  if (plain === 'Option<&[f64]>')
+    return { lines: [`let ${p} = match args.get(${index}) { None | Some(Value::Null) => None, Some(_) => Some(nums(args, ${index})?) };`], arg: `${p}.as_deref()` }
   if (plain === '&[&str]') return { lines: [`let ${p}: Vec<String> = req(args, ${index})?;`, `let ${p}_refs: Vec<&str> = ${p}.iter().map(String::as_str).collect();`], arg: `&${p}_refs` }
   let m = /^&\[(.+)\]$/.exec(plain)
   if (m) {
@@ -300,13 +304,41 @@ fn field<T: DeserializeOwned>(object: &Value, key: &str) -> Result<Option<T>, St
     }
 }
 
-/// A number argument: \`null\` is NaN, which JSON cannot carry.
+/// A number argument: \`null\` is NaN; NaN and the infinities, which JSON
+/// cannot carry, cross as their JavaScript spelling (\`jscompat::js_f64\`).
 fn num(args: &[Value], index: usize) -> Result<f64, String> {
     match args.get(index) {
-        None | Some(Value::Null) => Ok(f64::NAN),
-        Some(Value::Number(number)) => Ok(number.as_f64().unwrap_or(f64::NAN)),
+        None => Ok(f64::NAN),
+        Some(value @ (Value::Null | Value::Number(_) | Value::String(_))) => {
+            jscompat::js_f64(value).map_err(|error| format!("TypeError: argument {index}: {error}"))
+        }
         Some(_) => Err(format!("TypeError: argument {index} is not a number")),
     }
+}
+
+/// An optional number argument: absent and \`null\` are \`None\`.
+fn onum(args: &[Value], index: usize) -> Result<Option<f64>, String> {
+    match args.get(index) {
+        None | Some(Value::Null) => Ok(None),
+        Some(_) => num(args, index).map(Some),
+    }
+}
+
+/// A list of numbers, each as \`num\` reads one; \`null\` items are \`None\`.
+fn onums(args: &[Value], index: usize) -> Result<Vec<Option<f64>>, String> {
+    let items: Vec<Value> = req(args, index)?;
+    items
+        .iter()
+        .map(|item| match item {
+            Value::Null => Ok(None),
+            item => jscompat::js_f64(item).map(Some).map_err(|error| format!("TypeError: argument {index}: {error}")),
+        })
+        .collect()
+}
+
+/// A list of numbers; a \`null\` item is NaN.
+fn nums(args: &[Value], index: usize) -> Result<Vec<f64>, String> {
+    Ok(onums(args, index)?.into_iter().map(|item| item.unwrap_or(f64::NAN)).collect())
 }
 
 /// A spin count as the TypeScript receives it: any value, \`unknown\`.

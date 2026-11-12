@@ -16,6 +16,35 @@ export const SHAPES: Record<string, Shape> = {
   "inlineWrapPrefixes": {
     "k": "set"
   },
+  "lineBoxOf": {
+    "k": "obj",
+    "f": {
+      "paras": {
+        "k": "arr",
+        "v": {
+          "k": "obj",
+          "f": {
+            "cells": {
+              "k": "arr",
+              "v": {
+                "k": "obj",
+                "f": {
+                  "paraProps": {
+                    "k": "arr",
+                    "u": true
+                  },
+                  "priorParaProps": {
+                    "k": "arr",
+                    "u": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "parseRels": {
     "k": "map"
   },
@@ -41,12 +70,265 @@ export const SHAPES: Record<string, Shape> = {
       }
     }
   },
+  "vmlWordArtBox": {
+    "k": "obj",
+    "f": {
+      "paras": {
+        "k": "arr",
+        "v": {
+          "k": "obj",
+          "f": {
+            "cells": {
+              "k": "arr",
+              "v": {
+                "k": "obj",
+                "f": {
+                  "paraProps": {
+                    "k": "arr",
+                    "u": true
+                  },
+                  "priorParaProps": {
+                    "k": "arr",
+                    "u": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
   "vmlShapeTypeTable": {
     "k": "map"
   },
   "parseDocx": {
     "k": "obj",
     "f": {
+      "headerParas": {
+        "k": "arr",
+        "v": {
+          "k": "obj",
+          "f": {
+            "ptabAligns": {
+              "k": "arr",
+              "u": true
+            },
+            "cells": {
+              "k": "arr",
+              "v": {
+                "k": "obj",
+                "f": {
+                  "paraProps": {
+                    "k": "arr",
+                    "u": true
+                  },
+                  "priorParaProps": {
+                    "k": "arr",
+                    "u": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "footerParas": {
+        "k": "arr",
+        "v": {
+          "k": "obj",
+          "f": {
+            "ptabAligns": {
+              "k": "arr",
+              "u": true
+            },
+            "cells": {
+              "k": "arr",
+              "v": {
+                "k": "obj",
+                "f": {
+                  "paraProps": {
+                    "k": "arr",
+                    "u": true
+                  },
+                  "priorParaProps": {
+                    "k": "arr",
+                    "u": true
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "headerFirst": {
+        "k": "obj",
+        "f": {
+          "paras": {
+            "k": "arr",
+            "v": {
+              "k": "obj",
+              "f": {
+                "ptabAligns": {
+                  "k": "arr",
+                  "u": true
+                },
+                "cells": {
+                  "k": "arr",
+                  "v": {
+                    "k": "obj",
+                    "f": {
+                      "paraProps": {
+                        "k": "arr",
+                        "u": true
+                      },
+                      "priorParaProps": {
+                        "k": "arr",
+                        "u": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "footerFirst": {
+        "k": "obj",
+        "f": {
+          "paras": {
+            "k": "arr",
+            "v": {
+              "k": "obj",
+              "f": {
+                "ptabAligns": {
+                  "k": "arr",
+                  "u": true
+                },
+                "cells": {
+                  "k": "arr",
+                  "v": {
+                    "k": "obj",
+                    "f": {
+                      "paraProps": {
+                        "k": "arr",
+                        "u": true
+                      },
+                      "priorParaProps": {
+                        "k": "arr",
+                        "u": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "headerEven": {
+        "k": "obj",
+        "f": {
+          "paras": {
+            "k": "arr",
+            "v": {
+              "k": "obj",
+              "f": {
+                "ptabAligns": {
+                  "k": "arr",
+                  "u": true
+                },
+                "cells": {
+                  "k": "arr",
+                  "v": {
+                    "k": "obj",
+                    "f": {
+                      "paraProps": {
+                        "k": "arr",
+                        "u": true
+                      },
+                      "priorParaProps": {
+                        "k": "arr",
+                        "u": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "footerEven": {
+        "k": "obj",
+        "f": {
+          "paras": {
+            "k": "arr",
+            "v": {
+              "k": "obj",
+              "f": {
+                "ptabAligns": {
+                  "k": "arr",
+                  "u": true
+                },
+                "cells": {
+                  "k": "arr",
+                  "v": {
+                    "k": "obj",
+                    "f": {
+                      "paraProps": {
+                        "k": "arr",
+                        "u": true
+                      },
+                      "priorParaProps": {
+                        "k": "arr",
+                        "u": true
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "hfParts": {
+        "k": "rec",
+        "v": {
+          "k": "obj",
+          "f": {
+            "paras": {
+              "k": "arr",
+              "v": {
+                "k": "obj",
+                "f": {
+                  "ptabAligns": {
+                    "k": "arr",
+                    "u": true
+                  },
+                  "cells": {
+                    "k": "arr",
+                    "v": {
+                      "k": "obj",
+                      "f": {
+                        "paraProps": {
+                          "k": "arr",
+                          "u": true
+                        },
+                        "priorParaProps": {
+                          "k": "arr",
+                          "u": true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
       "styles": {
         "k": "map"
       },

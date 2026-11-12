@@ -3,7 +3,7 @@
 // reach it through, so an app needs no dependency of its own on the loader.
 //
 // - Node (tools, tests, the CLI, Electron main): importing the package under
-//   the `node` export condition starts the engine by itself (engine-node.ts);
+//   the `node` export condition starts the engine by itself (@seuoffice/engine-wasm/node);
 //   an entry that bundles the package from its source path calls
 //   `initDocxEngineSync(bytes)` itself, before the first call.
 // - A page or a worker: `await initDocxEngine(url)` once, before the first

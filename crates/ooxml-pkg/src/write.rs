@@ -122,17 +122,18 @@ fn put32(out: &mut Vec<u8>, x: u64) {
     out.extend_from_slice(&(x as u32).to_le_bytes());
 }
 
-/// Writes every part of `package`, in its order, stamped with `date` (a time
-/// value in milliseconds). JSZip stamps each entry with the clock at the time
+/// Writes every part of `package`, in its order, stamped with its own date
+/// (`Part::date`, a time value in milliseconds) or else `date`. JSZip stamps
+/// each entry with the date it was given or the clock at the time
 /// `zip.file()` added it; here the caller passes the instant.
 ///
 /// A part that cannot be read (its content was damaged when it was loaded)
 /// is an error: JSZip would fail on it the same way.
 pub fn generate(package: &Package, date: f64) -> io::Result<Vec<u8>> {
-    let (dos_time, dos_date) = dos_time_and_date(date);
     let mut out = Vec::new();
     let mut directory = Vec::new();
     for part in package.parts() {
+        let (dos_time, dos_date) = dos_time_and_date(part.date.unwrap_or(date));
         // JSZip writes a folder with no content
         let data = if part.is_dir {
             &[][..]

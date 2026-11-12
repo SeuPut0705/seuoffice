@@ -30,7 +30,7 @@ export function anchoredInkRunXml(
   rId: string,
   docPrId: number,
 ): string {
-  return invoke('anchoredInkRunXml', [ink, rId, docPrId]) as never
+  return invoke('anchoredInkRunXml', [{ blockIndex: 0, base64: '', ...ink }, rId, docPrId]) as never
 }
 /** Remove every aidocs-ink run from a body-element XML slice. */
 export function stripInkRuns(xml: string): string {

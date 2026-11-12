@@ -48,7 +48,7 @@ export function sectionSettingsFromXml(
   xml: string,
   opts: { gutterAtTop?: boolean } = {},
 ): SectionSettings {
-  return invoke('sectionSettingsFromXml', [xml, opts]) as never
+  return invoke('sectionSettingsFromXml', [xml, opts.gutterAtTop]) as never
 }
 /**
  * Fields declared by a w:footnotePr / w:endnotePr element (sectPr or settings.xml);

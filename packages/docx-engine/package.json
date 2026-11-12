@@ -24,7 +24,6 @@
       "default": "./src/lazy-media.ts"
     },
     "./init": "./src/engine-init.ts",
-    "./engine-node": "./src/engine-node.ts",
     "./engine-url": "./src/engine-url.ts"
   },
   "scripts": {

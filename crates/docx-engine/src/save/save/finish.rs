@@ -333,7 +333,9 @@ impl Saver<'_> {
             } else {
                 entry.bytes().map_err(|e| e.to_string())?.to_vec()
             };
-            out.set_file(name.to_owned(), bytes);
+            // `out.file(name, data, { date: entry.date })`: two saves of one
+            // source write the same bytes
+            out.set_file_dated(name.to_owned(), bytes, entry.date);
         }
         for (path, base64) in &self.new_media {
             out.set_file(path.clone(), jszip_base64(base64)?);
@@ -457,11 +459,14 @@ impl Saver<'_> {
         let mut flat = Package::default();
         for part in out.into_parts() {
             if !part.is_dir {
-                flat.set(Part::new(
-                    part.name.clone(),
-                    false,
-                    part.bytes().map(<[u8]>::to_vec).map_err(|e| e.reason),
-                ));
+                flat.set(
+                    Part::new(
+                        part.name.clone(),
+                        false,
+                        part.bytes().map(<[u8]>::to_vec).map_err(|e| e.reason),
+                    )
+                    .with_date(part.date),
+                );
             }
         }
         ooxml_pkg::write::generate(&flat, self.now_ms).map_err(|e| e.to_string())

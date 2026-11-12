@@ -34,6 +34,8 @@ export interface ParamInfo {
 export interface Shape {
   /** map | set | arr | tuple | obj | rec */
   k: string
+  /** an array whose holes are undefined */
+  u?: true
   v?: Shape
   items?: Array<Shape | null>
   f?: Record<string, Shape>
@@ -133,13 +135,15 @@ function shapeOf(
   stack.add(id)
   try {
     if (checker.isArrayType(type)) {
-      const item = shapeOf(
-        checker,
-        checker.getTypeArguments(type as ts.TypeReference)[0]!,
-        depth + 1,
-        stack,
-      )
-      return item ? { k: 'arr', v: item } : null
+      const element = checker.getTypeArguments(type as ts.TypeReference)[0]!
+      const item = shapeOf(checker, element, depth + 1, stack)
+      // `Array<X | undefined>`: JSON writes the holes as null, the TypeScript held undefined
+      const holes =
+        element.isUnion() &&
+        element.types.some((t) => t.flags & ts.TypeFlags.Undefined) &&
+        !element.types.some((t) => t.flags & ts.TypeFlags.Null)
+      if (!item && !holes) return null
+      return { k: 'arr', ...(holes ? { u: true } : {}), ...(item ? { v: item } : {}) }
     }
     if (checker.isTupleType(type)) {
       const items = checker

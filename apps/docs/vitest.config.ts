@@ -98,7 +98,7 @@ export default defineConfig({
     // the engine's display-only `effective` keys stay out of saved-model toEqual
     setupFiles: [
       // the alias skips the package's `node` entry: start the engine here
-      local('../../packages/docx-engine/src/engine-node.ts'),
+      local('../../packages/engine-wasm/src/node.ts'),
       local('../../packages/docx-engine/tests/setup-equality.ts'),
     ],
     environment: 'jsdom',

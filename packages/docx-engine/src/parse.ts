@@ -51,15 +51,16 @@ export function reconcileGridColumns(
   rowTcws: Array<Array<number | undefined>>,
   gridCols: number[] | undefined,
 ): number[] | undefined {
-  const r = invoke('reconcileGridColumns', [rows, rowTcws, gridCols]) as { widths: number[] | null; rows: TableCell[][] }
+  const r = invoke('reconcileGridColumns', [rows.map((row) => row.map((cell) => cell.colSpan)), rowTcws, gridCols]) as { widths: number[]; spans: number[][] } | null
+  if (!r) return undefined
   rows.forEach((row, i) =>
     row.forEach((cell, c) => {
-      const span = r.rows[i]?.[c]?.colSpan
-      if (span === undefined) delete cell.colSpan
-      else cell.colSpan = span
+      const span = r.spans[i]![c]!
+      if (span > 1) cell.colSpan = span
+      else delete cell.colSpan
     }),
   )
-  return r.widths ?? undefined
+  return r.widths
 }
 /** the <w:drawing> elements of a header/footer part, in the order HfImage.drawing counts them */
 export const HF_DRAWING_RE = /<w:drawing[\s>][\s\S]*?<\/w:drawing>/g

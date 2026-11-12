@@ -204,7 +204,7 @@ pub fn is_lazy_media_part(_env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 pub fn lazy_media_url(_env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let hash: String = req(args, 0)?;
     let path: String = req(args, 1)?;
-    some(lazy_media::lazy_media_url(&hash, &path))
+    some(lazy_media::lazy_media_url_checked(&hash, &path)?)
 }
 
 /// `newDocumentAppPropertiesXml(opts?)`

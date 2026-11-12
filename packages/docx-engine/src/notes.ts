@@ -37,7 +37,7 @@ export function rootAttributes(
   fallback: string,
   required: Record<string, string> = {},
 ): string {
-  return invoke('rootAttributes', [originalXml, rootTag, fallback, required]) as never
+  return invoke('rootAttributes', [originalXml, rootTag, fallback, Object.entries(required)]) as never
 }
 /** one note paragraph read through the document's run extraction and property resolver */
 export interface NoteParagraph {

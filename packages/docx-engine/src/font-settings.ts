@@ -10,5 +10,5 @@ export async function previewFontSettings(
   upserts: StyleUpsert[],
   defaults?: DefaultFonts,
 ): Promise<{ styles: Map<string, StyleInfo>; docDefaults?: DocDefaults; }> {
-  return invokeAsync('previewFontSettings', [parsed, upserts, defaults], { shape: {"k":"obj","f":{"styles":{"k":"map"}}} }) as never
+  return invokeAsync('previewFontSettings', [{ originalBytes: parsed.internal.originalBytes, themeColors: parsed.themeColors, themeFonts: parsed.themeFonts }, upserts, defaults], { shape: {"k":"obj","f":{"styles":{"k":"map"}}} }) as never
 }

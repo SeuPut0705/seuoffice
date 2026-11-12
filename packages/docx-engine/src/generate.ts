@@ -364,7 +364,7 @@ interface PPrChild {
 }
 /** top-level child elements of an XML fragment (depth-aware, attrs kept) */
 export function splitXmlChildren(xml: string): PPrChild[] {
-  return invoke('splitXmlChildren', [xml]) as never
+  return (invoke('splitXmlChildren', [xml]) as Array<[string, string]>).map(([name, child]) => ({ name, xml: child }))
 }
 /**
  * Paragraph format edit inside a layout-table cell: only the groups whose

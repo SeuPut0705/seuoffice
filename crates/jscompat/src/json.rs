@@ -23,9 +23,115 @@ impl Serialize for JsNum {
 
 impl<'de> Deserialize<'de> for JsNum {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        // JSON.stringify maps every non-finite number to null. NaN is its wire representative.
-        Option::<f64>::deserialize(deserializer).map(|value| JsNum(value.unwrap_or(f64::NAN)))
+        // JSON.stringify maps every non-finite number to null, NaN's wire
+        // representative; a caller that must keep an infinity spells it.
+        match Option::<WireNumber>::deserialize(deserializer)? {
+            None => Ok(JsNum(f64::NAN)),
+            Some(WireNumber::Number(value)) => Ok(JsNum(value)),
+            Some(WireNumber::Text(text)) => match spelled(&text) {
+                Some(value) => Ok(JsNum(value)),
+                // a product caller handed a text where a number is declared:
+                // the TypeScript wrote it into the XML as it was
+                None if lenient() => Ok(JsNum(crate::to_number(&text))),
+                None => Err(serde::de::Error::custom(format!("a number, not the text {text:?}"))),
+            },
+        }
     }
+}
+
+std::thread_local! {
+    static LENIENT: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Whether values are read inside [`reading_leniently`].
+pub fn lenient() -> bool {
+    LENIENT.with(std::cell::Cell::get)
+}
+
+/// Runs `read` with values read as the TypeScript reads what it is handed:
+/// its types are structural and unchecked at run time, so a model object may
+/// carry keys its type does not have (they are skipped) and a number field a
+/// text (read as `Number(text)`). Outside it a value is read strictly, as the
+/// gate's comparison (h) demands.
+pub fn reading_leniently<T>(read: impl FnOnce() -> T) -> T {
+    let was = LENIENT.with(|flag| flag.replace(true));
+    let out = read();
+    LENIENT.with(|flag| flag.set(was));
+    out
+}
+
+/// A number or a text, read without buffering (an untagged enum would copy every number of a model first).
+enum WireNumber {
+    Number(f64),
+    Text(String),
+}
+
+impl<'de> Deserialize<'de> for WireNumber {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Visit;
+        impl serde::de::Visitor<'_> for Visit {
+            type Value = WireNumber;
+            fn expecting(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+                f.write_str("a number")
+            }
+            fn visit_f64<E>(self, value: f64) -> Result<WireNumber, E> {
+                Ok(WireNumber::Number(value))
+            }
+            fn visit_i64<E>(self, value: i64) -> Result<WireNumber, E> {
+                Ok(WireNumber::Number(value as f64))
+            }
+            fn visit_u64<E>(self, value: u64) -> Result<WireNumber, E> {
+                Ok(WireNumber::Number(value as f64))
+            }
+            fn visit_str<E>(self, value: &str) -> Result<WireNumber, E> {
+                Ok(WireNumber::Text(value.to_owned()))
+            }
+        }
+        deserializer.deserialize_any(Visit)
+    }
+}
+
+/// The JavaScript spelling of a number JSON cannot carry: `String(NaN)`, `String(Infinity)`, `String(-Infinity)`.
+fn spelled(text: &str) -> Option<f64> {
+    match text {
+        "NaN" => Some(f64::NAN),
+        "Infinity" => Some(f64::INFINITY),
+        "-Infinity" => Some(f64::NEG_INFINITY),
+        _ => None,
+    }
+}
+
+/// A `number` field as a host sends it: a JSON number, `null` for NaN, or
+/// the spelling of NaN or an infinity. Any other text is NaN: the
+/// TypeScript reads such a field through `typeof value === 'number'`, so a
+/// string there is a number it cannot use.
+pub fn js_f64<'de, D: Deserializer<'de>>(deserializer: D) -> Result<f64, D::Error> {
+    Ok(match Option::<WireNumber>::deserialize(deserializer)? {
+        None => f64::NAN,
+        Some(WireNumber::Number(value)) => value,
+        Some(WireNumber::Text(text)) => spelled(&text).unwrap_or(f64::NAN),
+    })
+}
+
+/// `js_f64` for an optional field: `null` or no key is `None`.
+pub fn js_f64_opt<'de, D: Deserializer<'de>>(deserializer: D) -> Result<Option<f64>, D::Error> {
+    Ok(match Option::<WireNumber>::deserialize(deserializer)? {
+        None => None,
+        Some(WireNumber::Number(value)) => Some(value),
+        Some(WireNumber::Text(text)) => Some(spelled(&text).unwrap_or(f64::NAN)),
+    })
+}
+
+/// `js_f64` for a field where `null` and no key differ: no key is `None`
+/// (with `#[serde(default)]`), `null` is `Some(None)`.
+pub fn js_f64_nullable<'de, D: Deserializer<'de>>(
+    deserializer: D,
+) -> Result<Option<Option<f64>>, D::Error> {
+    Ok(Some(match Option::<WireNumber>::deserialize(deserializer)? {
+        None => None,
+        Some(WireNumber::Number(value)) => Some(value),
+        Some(WireNumber::Text(text)) => Some(spelled(&text).unwrap_or(f64::NAN)),
+    }))
 }
 
 /// `JSON.stringify` number spelling, including numbers stored inside a JSON value.

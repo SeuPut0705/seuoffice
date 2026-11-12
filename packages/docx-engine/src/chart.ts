@@ -27,7 +27,7 @@ export function lumHex(hex: string, mod: number, off: number): string {
  * the workbook will be added in a separate step.
  */
 export function buildChartPartXml(chart: NewChart, externalDataRId?: string): string {
-  return invoke('buildChartPartXml', [chart, externalDataRId]) as never
+  return invoke('buildChartPartXml', [chart, externalDataRId ?? '']) as never
 }
 export interface ChartSeriesPatch {
   name?: string

@@ -67,17 +67,17 @@ where
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImagePatch {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub width_px: Option<f64>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub height_px: Option<f64>,
     #[serde(default, deserialize_with = "nullable")]
     pub align: Option<Option<String>>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub pos_offset_x: Option<f64>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub pos_offset_y: Option<f64>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub rot_deg: Option<f64>,
     #[serde(default)]
     pub flip_h: Option<bool>,
@@ -279,7 +279,9 @@ pub fn apply_image_z_order(xml: &str, z_order: Option<f64>) -> String {
 #[derive(Debug, Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct PosOffset {
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub x: f64,
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub y: f64,
     #[serde(default)]
     pub relative_to: Option<String>,
@@ -462,6 +464,7 @@ fn box_drawing_segments(paragraph_xml: &str) -> Vec<(usize, usize)> {
 pub struct ShapeDrawingLocation {
     #[serde(default)]
     pub shape_id: Option<String>,
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub box_index: f64,
 }
 
@@ -771,9 +774,9 @@ fn is_box_drawing(drawing_xml: &str) -> bool {
 #[derive(Debug, Clone, Default, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextboxSizePatch {
-    #[serde(default)]
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub w_px: Option<f64>,
-    #[serde(default)]
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub h_px: Option<f64>,
 }
 
@@ -862,9 +865,9 @@ pub struct ShapeStylePatch {
     pub fill_hex: Option<Option<String>>,
     #[serde(default, deserialize_with = "nullable")]
     pub border_hex: Option<Option<String>>,
-    #[serde(default, deserialize_with = "nullable")]
+    #[serde(default, deserialize_with = "jscompat::js_f64_nullable")]
     pub rot_deg: Option<Option<f64>>,
-    #[serde(default, deserialize_with = "nullable")]
+    #[serde(default, deserialize_with = "jscompat::js_f64_nullable")]
     pub border_width_px: Option<Option<f64>>,
 }
 

@@ -40,13 +40,41 @@ fn field<T: DeserializeOwned>(object: &Value, key: &str) -> Result<Option<T>, St
     }
 }
 
-/// A number argument: `null` is NaN, which JSON cannot carry.
+/// A number argument: `null` is NaN; NaN and the infinities, which JSON
+/// cannot carry, cross as their JavaScript spelling (`jscompat::js_f64`).
 fn num(args: &[Value], index: usize) -> Result<f64, String> {
     match args.get(index) {
-        None | Some(Value::Null) => Ok(f64::NAN),
-        Some(Value::Number(number)) => Ok(number.as_f64().unwrap_or(f64::NAN)),
+        None => Ok(f64::NAN),
+        Some(value @ (Value::Null | Value::Number(_) | Value::String(_))) => {
+            jscompat::js_f64(value).map_err(|error| format!("TypeError: argument {index}: {error}"))
+        }
         Some(_) => Err(format!("TypeError: argument {index} is not a number")),
     }
+}
+
+/// An optional number argument: absent and `null` are `None`.
+fn onum(args: &[Value], index: usize) -> Result<Option<f64>, String> {
+    match args.get(index) {
+        None | Some(Value::Null) => Ok(None),
+        Some(_) => num(args, index).map(Some),
+    }
+}
+
+/// A list of numbers, each as `num` reads one; `null` items are `None`.
+fn onums(args: &[Value], index: usize) -> Result<Vec<Option<f64>>, String> {
+    let items: Vec<Value> = req(args, index)?;
+    items
+        .iter()
+        .map(|item| match item {
+            Value::Null => Ok(None),
+            item => jscompat::js_f64(item).map(Some).map_err(|error| format!("TypeError: argument {index}: {error}")),
+        })
+        .collect()
+}
+
+/// A list of numbers; a `null` item is NaN.
+fn nums(args: &[Value], index: usize) -> Result<Vec<f64>, String> {
+    Ok(onums(args, index)?.into_iter().map(|item| item.unwrap_or(f64::NAN)).collect())
 }
 
 /// A spin count as the TypeScript receives it: any value, `unknown`.
@@ -117,9 +145,7 @@ fn changes(env: &mut InvokeEnv<'_>, mut before: std::collections::HashMap<String
 
 pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
     match name {
-        "altChunkKind" => r_alt_chunk_kind(env, args),
         "altChunkPartPath" => r_alt_chunk_part_path(env, args),
-        "altChunkToDocx" => r_alt_chunk_to_docx(env, args),
         "anchoredInkRunXml" => r_anchored_ink_run_xml(env, args),
         "anchorRelH" => r_anchor_rel_h(env, args),
         "anchorRelV" => r_anchor_rel_v(env, args),
@@ -165,7 +191,6 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
         "customLevelFromNumberingLevel" => r_custom_level_from_numbering_level(env, args),
         "customLevelXml" => r_custom_level_xml(env, args),
         "decodeEntities" => r_decode_entities(env, args),
-        "decodeHtmlBytes" => r_decode_html_bytes(env, args),
         "decodeMhtToHtml" => r_decode_mht_to_html(env, args),
         "decodeQuotedPrintable" => r_decode_quoted_printable(env, args),
         "decodeSymbolChar" => r_decode_symbol_char(env, args),
@@ -371,29 +396,12 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
     }
 }
 
-fn r_alt_chunk_kind(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    let p0: String = req(args, 0)?;
-    let p1: Option<String> = opt(args, 1)?;
-    let p2 = env.blob(args.get(2).unwrap_or(&Value::Null))?;
-    let r = docx_engine::alt_chunk::alt_chunk_kind(&p0, p1.as_deref(), p2);
-    Ok(Some(to_json(&r)?))
-}
-
 fn r_alt_chunk_part_path(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: jscompat::JsMap<docx_engine::package::RelInfo> = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: Option<String> = opt(args, 2)?;
     let r = docx_engine::alt_chunk::alt_chunk_part_path(&p0, &p1, p2.as_deref());
     Ok(Some(to_json(&r)?))
-}
-
-fn r_alt_chunk_to_docx(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    let p0 = routes::package_of(env, args.get(0).unwrap_or(&Value::Null))?;
-    let p1: jscompat::JsMap<docx_engine::package::RelInfo> = req(args, 1)?;
-    let p2: String = req(args, 2)?;
-    let p3: String = req(args, 3)?;
-    let r = docx_engine::parse::alt_chunk_to_docx(&p0, &p1, &p2, &p3, &env.media).map_err(|error| error.to_string())?;
-    Ok(Some(match r { Some(bytes) => env.put_blob(bytes), None => Value::Null }))
 }
 
 fn r_anchored_ink_run_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -421,14 +429,14 @@ fn r_apply_image_wrap(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: Option<docx_engine::model::ImageWrap> = opt(args, 1)?;
     let p2: Option<docx_engine::generate::drawing_patch::PosOffset> = opt(args, 2)?;
     let p3: Option<docx_engine::generate::drawing_patch::MarginAlign> = opt(args, 3)?;
-    let p4: Option<f64> = opt(args, 4)?;
+    let p4 = onum(args, 4)?;
     let r = docx_engine::generate::drawing_patch::apply_image_wrap(&p0, p1, p2.as_ref(), p3.as_ref(), p4);
     Ok(Some(to_json(&r)?))
 }
 
 fn r_apply_image_z_order(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let p1: Option<f64> = opt(args, 1)?;
+    let p1 = onum(args, 1)?;
     let r = docx_engine::generate::drawing_patch::apply_image_z_order(&p0, p1);
     Ok(Some(to_json(&r)?))
 }
@@ -436,7 +444,7 @@ fn r_apply_image_z_order(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_apply_page_num_type(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<String> = opt(args, 1)?;
-    let p2: Option<f64> = opt(args, 2)?;
+    let p2 = onum(args, 2)?;
     let r = docx_engine::save::save::section_write::apply_page_num_type(&p0, p1.as_deref(), p2).map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
@@ -490,7 +498,7 @@ fn r_apply_shape_wrap_at(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::generate::drawing_patch::ShapeDrawingLocation = req(args, 1)?;
     let p2: Option<docx_engine::model::ImageWrap> = opt(args, 2)?;
-    let p3: Option<f64> = opt(args, 3)?;
+    let p3 = onum(args, 3)?;
     let r = docx_engine::generate::drawing_patch::apply_shape_wrap_at(&p0, &p1, p2, p3);
     Ok(Some(to_json(&r)?))
 }
@@ -702,12 +710,6 @@ fn r_custom_level_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_decode_entities(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let r = docx_engine::xml_text::decode_entities(&p0);
-    Ok(Some(to_json(&r)?))
-}
-
-fn r_decode_html_bytes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    let p0 = env.blob(args.get(0).unwrap_or(&Value::Null))?;
-    let r = docx_engine::alt_chunk::decode_html_bytes(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -1048,7 +1050,7 @@ fn r_marker_tab_advance(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1 = num(args, 1)?;
     let p2 = num(args, 2)?;
     let p3 = num(args, 3)?;
-    let p4: Vec<f64> = req(args, 4)?;
+    let p4 = nums(args, 4)?;
     let r = docx_engine::list_markers::marker_tab_advance(p0, p1, p2, p3, &p4);
     Ok(Some(to_json(&r)?))
 }
@@ -1488,7 +1490,7 @@ fn r_patch_table_cell_texts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_patch_textbox_heights(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let p1: Vec<Option<f64>> = req(args, 1)?;
+    let p1 = onums(args, 1)?;
     let r = docx_engine::generate::drawing_patch::patch_textbox_heights(&p0, &p1);
     Ok(Some(to_json(&r)?))
 }
@@ -1611,11 +1613,13 @@ fn r_read_watermark_text(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 }
 
 fn r_reconcile_grid_columns(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    let mut rows: Vec<Vec<docx_engine::model::TableCell>> = req(args, 0)?;
+    let spans: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 0)?;
         let row_tcws: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 1)?;
         let grid_cols: Option<Vec<jscompat::JsNum>> = opt(args, 2)?;
-        let widths = docx_engine::parse::tables::reconcile_grid_columns(&mut rows, &row_tcws, grid_cols.as_deref())?;
-        Ok(Some(json!({ "widths": to_json(&widths)?, "rows": to_json(&rows)? })))
+        match docx_engine::parse::tables::reconcile_grid_spans(&spans, &row_tcws, grid_cols.as_deref())? {
+            None => Ok(None),
+            Some((spans, widths)) => Ok(Some(json!({ "widths": to_json(&widths)?, "spans": spans }))),
+        }
 }
 
 fn r_remove_elements(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1863,7 +1867,7 @@ fn r_substitute_bullet(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_swap_anchor_wrap(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::model::ImageWrap = req(args, 1)?;
-    let p2: Option<f64> = opt(args, 2)?;
+    let p2 = onum(args, 2)?;
     let r = docx_engine::generate::drawing_patch::swap_anchor_wrap(&p0, p1, p2);
     Ok(Some(to_json(&r)?))
 }

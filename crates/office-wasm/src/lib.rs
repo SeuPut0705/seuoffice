@@ -542,7 +542,8 @@ fn invoke_command(
     let media =
         invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
-    let result = invoke::table::invoke(&mut env, function, args);
+    // the product's calls: a model value read as the TypeScript reads it (wire.rs)
+    let result = jscompat::reading_leniently(|| invoke::table::invoke(&mut env, function, args));
     let warnings = docx_engine::warnings::take();
     let value = result?;
     let (mut reply_blobs, media) = env.into_reply_blobs();
@@ -647,7 +648,9 @@ fn respond(input: &[u8]) -> Vec<u8> {
                         now_ms,
                     },
                     Some(docx),
-                ) => match save_docx(docx, frame.blobs.get(1), blocks, options, now_ms) {
+                ) => match jscompat::reading_leniently(|| {
+                    save_docx(docx, frame.blobs.get(1), blocks, options, now_ms)
+                }) {
                     Ok(saved) => {
                         reply_blobs.push(saved);
                         json(&Reply::ModelRoundTrip { model: true })
@@ -655,7 +658,9 @@ fn respond(input: &[u8]) -> Vec<u8> {
                     Err(error) => json(&Reply::failure("save_refused", error)),
                 },
                 (Command::CompareDocuments { options, now_ms }, _) => {
-                    match compare_documents(&frame.blobs, options.as_ref(), now_ms) {
+                    match jscompat::reading_leniently(|| {
+                        compare_documents(&frame.blobs, options.as_ref(), now_ms)
+                    }) {
                         Ok((docx, summary)) => {
                             reply_blobs.push(docx);
                             reply_blobs.push(summary.to_string().into_bytes());

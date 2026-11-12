@@ -136,7 +136,7 @@ export function resolveParagraphProps(
   ctx: ResolveCtx,
   opts?: ResolveParaOptions,
 ): EffectivePPr {
-  return invoke('resolveParagraphProps', [xnodeArg(pPr), ctx, opts]) as never
+  return invoke('resolveParagraphProps', [xnodeArg(pPr), ctx, opts ?? {}]) as never
 }
 /** resolveParagraphProps for callers holding a raw <w:p> / <w:pPr> XML slice */
 export function resolveParagraphPropsXml(
@@ -144,7 +144,7 @@ export function resolveParagraphPropsXml(
   ctx: ResolveCtx,
   opts?: ResolveParaOptions,
 ): EffectivePPr {
-  return invoke('resolveParagraphPropsXml', [xml, ctx, opts]) as never
+  return invoke('resolveParagraphPropsXml', [xml, ctx, opts ?? {}]) as never
 }
 export function resolveRunProps(
   rPr: XNode | undefined,
