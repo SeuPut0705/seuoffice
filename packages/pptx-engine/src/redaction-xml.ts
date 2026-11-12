@@ -29,7 +29,7 @@
  * ## Where it lives
  *
  * `<a:extLst><a:ext uri="…"><go:redact label="…"/></a:ext></a:extLst>` inside
- * the run's `<a:rPr>`, or inside the element's `nvPr` for a picture. `a:extLst`
+ * the run's `<a:rPr>`, or inside the element's `<p:spPr>` for a picture. `a:extLst`
  * is the OOXML extension list — the schema's own slot for things it does not
  * know — so PowerPoint round-trips the file without noticing, and fast-xml-parser
  * hands the label back on the way in (verified: no element whitelist, so the
@@ -108,7 +108,7 @@ function ourExt(extLst: unknown): XmlNode | null {
   return null
 }
 
-/** The label, read out of an already-parsed `<a:rPr>` / `nvPr` node. */
+/** The label, read out of an already-parsed `<a:rPr>` / `<p:spPr>` node. */
 export function readRedactLabel(node: unknown): string | undefined {
   const ext = ourExt(asXmlNode(node)['a:extLst'])
   if (!ext) return undefined
@@ -162,7 +162,7 @@ function collapseEmptyProps(xml: string): string {
 }
 
 /**
- * Put the mark in a raw `<a:rPr>` (or `nvPr`) string, replacing any previous one.
+ * Put the mark in a raw `<a:rPr>` (or `<p:spPr>`) string, replacing any previous one.
  *
  * The `inner` of the node is preserved verbatim; only our own extension is added
  * or swapped. A self-closing `<a:rPr/>` gains a paired form because the mark
