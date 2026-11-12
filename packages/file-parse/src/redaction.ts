@@ -5,4 +5,5 @@
  */
 export { redactPptxPartXml } from './pptx-redaction'
 export { xlsxWithheldCells } from './xlsx'
+export { UNKNOWN_CELL_MARKER } from './xlsx-redaction'
 export { RedactionMarkError } from './redaction-error'

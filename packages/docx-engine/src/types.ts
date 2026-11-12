@@ -352,6 +352,9 @@ export interface CommentInfo {
   date?: string
   /** plain text, paragraphs joined with \n */
   text: string
+  /** the text as a model may read it, each run hidden from AI as its placeholder;
+   *  absent when the comment hides nothing (then `text` is what a model reads) */
+  modelText?: string
   /** the picture the comment carries; absent for a text-only comment */
   image?: CommentImage
   /** Reply: the parent comment's w:id (resolved via the paraId relation in commentsExtended) */
@@ -443,6 +446,9 @@ export interface InlineContentControl {
   id: string
   /** the plain text that sits inside the control */
   text: string
+  /** that text as a model may read it, each run hidden from AI as its placeholder;
+   *  absent when the control hides nothing */
+  modelText?: string
 }
 
 /**
@@ -1225,6 +1231,9 @@ export interface NoteInfo {
   id: string
   /** plain text, paragraphs joined with \n */
   text: string
+  /** the text as a model may read it, each run hidden from AI as its placeholder;
+   *  absent when the note hides nothing (then `text` is what a model reads) */
+  modelText?: string
   /** rich display runs (one group per paragraph); gone when an edit rebuilds the note as plain text */
   richParas?: NoteRun[][]
   /** no w:footnoteRef/w:endnoteRef run in the note body: Word renders the entry without a number mark */

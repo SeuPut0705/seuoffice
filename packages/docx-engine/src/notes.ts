@@ -3,6 +3,7 @@ import { applyRevisionResolutions } from './revision-xml'
 import { patchParagraphTexts } from './text-patch'
 import type { NoteInfo, NoteRun } from './types'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
+import { withheldAsPlaceholders } from './withheld'
 
 /**
  * Footnotes / endnotes part handling (word/footnotes.xml, word/endnotes.xml).
@@ -85,7 +86,12 @@ export type NoteParagraphReader = (pXml: string) => NoteParagraph
 
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
+  // the same entries with every run hidden from AI as its placeholder
+  const view = withheldAsPlaceholders(xml)
+  const modelTexts =
+    view === xml ? null : new Map(noteEntriesOf(view, kind).map((e) => [e.id, e.text]))
   return noteEntriesOf(xml, kind).map(({ id, text, xml: entryXml }) => {
+    const modelText = modelTexts?.get(id)
     const paras = read ? noteParagraphsOf(entryXml).map(read) : []
     const first = paras[0]
     const richParas = paras.map((p) => p.runs)
@@ -102,6 +108,7 @@ export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphR
     return {
       id,
       text,
+      ...(modelText !== undefined && modelText !== text ? { modelText } : {}),
       ...(first ? { richParas } : {}),
       ...(styleId ? { styleId } : {}),
       ...(/ADDIN\s+(?:ZOTERO_|CSL_)/.test(entryXml) ? { zoteroField: true as const } : {}),

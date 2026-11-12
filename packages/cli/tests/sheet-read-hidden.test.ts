@@ -33,6 +33,27 @@ describe('sheet read: a cell hidden from AI', () => {
     expect(formulas).toEqual({})
   })
 
+  it.skipIf(!sidecar)('withholds a chart title, which may be a hidden cell', async () => {
+    const { writeFileSync } = await import('node:fs')
+    const { join } = await import('node:path')
+    const dir = tempDir()
+    const file = await hiddenXlsx(dir, 'chart.xlsx', async (path) => {
+      const ops = join(dir, 'chart.json')
+      writeFileSync(
+        ops,
+        JSON.stringify([
+          { op: 'add_chart', chartType: 'column', dataRange: 'B1:B2', anchorCell: 'E2' },
+        ]),
+      )
+      expect((await run(['sheet', 'apply', path, '--ops', ops, '--json'])).code).toBe(0)
+    })
+    const read = await run(['sheet', 'read', file, '--json'])
+    expect(read.code).toBe(0)
+    expect(read.json().detail.features.charts).toEqual([
+      expect.objectContaining({ title: '{{private}}' }),
+    ])
+  })
+
   it.skipIf(!sidecar)('an unmarked workbook reads exactly as before', async () => {
     const { writeFileSync } = await import('node:fs')
     const { join } = await import('node:path')

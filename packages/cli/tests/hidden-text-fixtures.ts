@@ -13,14 +13,17 @@ import { buildDocx } from '../../docx-engine/tests/helpers/build-docx'
 
 /** Fixtures for text a person marked "hidden from AI", as the apps write it. */
 
-export const OWN_REDACT_NS = 'https://github.com/SeuPut0705/seuoffice/redaction/2026'
-export const NAMESPACES: Array<[string, string]> = [
-  ['the old namespace', OLD_REDACT_NS],
-  ['this product’s own namespace', OWN_REDACT_NS],
-]
-export const LABEL = 'client phone'
-export const SECRET = '13800138000'
-export const PLACEHOLDER = `{{${LABEL}}}`
+export {
+  hiddenStoriesDocx,
+  LABEL,
+  MARK_SPELLINGS,
+  NAMESPACES,
+  OWN_REDACT_NS,
+  PLACEHOLDER,
+  SECRET,
+  type MarkSpelling,
+} from '../../docx-engine/tests/helpers/hidden-stories'
+import { LABEL, SECRET } from '../../docx-engine/tests/helpers/hidden-stories'
 
 const MC = 'http://schemas.openxmlformats.org/markup-compatibility/2006'
 
@@ -43,7 +46,12 @@ export async function hiddenDocx(dir: string, ns: string, name = 'hidden.docx'):
  * A deck whose slide text and speaker notes each hold a run marked hidden from
  * AI, written the way the slide editor writes the mark (its own helper).
  */
-export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<string> {
+export async function hiddenPptx(
+  dir: string,
+  name = 'hidden.pptx',
+  /** the mark with no prefix, its namespace declared on itself, as another writer may spell it */
+  unprefixed = false,
+): Promise<string> {
   const { run } = await import('./helpers')
   const spec = join(dir, 'deck.json')
   writeFileSync(
@@ -81,7 +89,14 @@ export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<str
         `<a:r>${setRedactExt(rPr ?? '<a:rPr lang="en-US"/>', LABEL)}<a:t>${SECRET}</a:t></a:r>`,
     )
     expect(marked).not.toBe(xml)
-    zip.file(part, marked)
+    zip.file(
+      part,
+      unprefixed
+        ? marked
+            .replace(/ xmlns:go="[^"]*"/g, '')
+            .replace(/<go:redact /g, `<redact xmlns="${OLD_REDACT_NS}" `)
+        : marked,
+    )
   }
   writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
   return file
@@ -92,7 +107,12 @@ export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<str
  * computes from it; the record is written the way a save of the sheet editor
  * writes it (the part and its copy in the defined names).
  */
-export async function hiddenXlsx(dir: string, name = 'hidden.xlsx'): Promise<string> {
+export async function hiddenXlsx(
+  dir: string,
+  name = 'hidden.xlsx',
+  /** changes made before the cell is marked, as a person would have made them */
+  beforeMark?: (file: string) => Promise<void>,
+): Promise<string> {
   const { run } = await import('./helpers')
   const table = join(dir, 'table.json')
   writeFileSync(
@@ -106,6 +126,7 @@ export async function hiddenXlsx(dir: string, name = 'hidden.xlsx'): Promise<str
   expect(
     (await run(['create', '--type', 'xlsx', '--from', table, '--out', file, '--json'])).code,
   ).toBe(0)
+  await beforeMark?.(file)
   const zip = await JSZip.loadAsync(readFileSync(file))
   const workbook = await zip.file('xl/workbook.xml')!.async('string')
   const sheetName = /<sheet\b[^>]*\bname="([^"]+)"/.exec(workbook)![1]!

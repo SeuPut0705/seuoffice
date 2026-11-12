@@ -10,6 +10,7 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
+import { withheldAsPlaceholders } from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -949,12 +950,14 @@ function inlineContentControlsOf(xml: string): InlineContentControl[] {
     // run-level control; the body/split paths already report those
     if (/<w:p[\s/>]|<w:tbl[\s>]/.test(content)) continue
     const meta = sdtMeta(xml.slice(range.openStart, range.closeEnd))
+    const withheld = withheldAsPlaceholders(content)
     out.push({
       tag: meta.tag,
       title: meta.alias,
       lock: meta.lock,
       id: meta.id,
       text: plainText(content),
+      ...(withheld !== content ? { modelText: plainText(withheld) } : {}),
     })
   }
   return out

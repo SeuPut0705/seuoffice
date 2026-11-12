@@ -117,8 +117,12 @@ function ourExt(extLst: unknown): XmlNode | null {
 export function readRedactLabel(node: unknown): string | undefined {
   const ext = ourExt(asXmlNode(node)['a:extLst'])
   if (!ext) return undefined
-  const label = asXmlNode(ext[REDACT_EL])['@_label']
-  return typeof label === 'string' && label !== '' ? label : undefined
+  // the engine writes go:redact; another writer may use another prefix or none
+  // (the namespace declared on the mark or around it). Our extension exists only
+  // to carry the mark, so one whose label cannot be read still withholds.
+  const key = Object.keys(ext).find((k) => k === REDACT_EL || /^(?:[\w.-]+:)?redact$/.test(k))
+  const label = key === undefined ? undefined : asXmlNode(ext[key])['@_label']
+  return typeof label === 'string' && label !== '' ? label : 'private'
 }
 
 const EXT_OPEN = /<a:ext\b(?:[^>"']|"[^"]*"|'[^']*')*>/g
