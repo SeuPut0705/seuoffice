@@ -58,7 +58,11 @@ describe.each(['none', ...TAG_MUTATION_NAMES] as const)('tags rewritten: %s', (m
         const result = await readRedactionEntries(await readerOf(await book()))
         const session = redactionSessionFor(
           result.status === 'ok'
-            ? { status: 'ok', states: result.states, source: result.source }
+            ? {
+                status: 'ok',
+                states: result.states.map((s) => ({ ...s, marks: [...s.marks] })),
+                source: result.source,
+              }
             : { status: 'unreadable', error: 'unreadable' },
           SHEETS,
           t,
