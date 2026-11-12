@@ -358,6 +358,48 @@ describe('read_sheet_features: names and rule values that are copies of a hidden
     expect(output).toContain('rows[{{client phone}}] cols[Name] values[{{client phone}}]')
   })
 
+  // A row inserted at the top this session: every cell of the sheet is one
+  // row lower on screen than in the file, and the marks are asked on screen.
+  const rowInsertedOnTop = (journal: ReturnType<typeof createEditJournal>) =>
+    journal.structuralOps.set('sh1', [{ kind: 'insert-rows', index: 0, count: 1 }])
+  const B2 = { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1 }
+
+  it('follows a table whose header a row inserted this session moved down', () => {
+    const output = readSheetFeatures(
+      fileCtx({ marks: [B2], tables: [FILE_TABLE], journal: rowInsertedOnTop }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('- Clients: A2:B11 columns[Name, {{client phone}}]')
+  })
+
+  it('follows a pivot source whose header a row inserted this session moved down', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B2],
+        pivotTables: PIVOT,
+        definitions: [definition({ sourceSheet: 'Customers', sourceRef: 'A1:B10' })],
+        journal: rowInsertedOnTop,
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain(
+      'rows[{{client phone}}] cols[Name] values[{{client phone}}] source=Customers!A2:B11',
+    )
+  })
+
+  it('withholds the names whose header row was deleted this session: the cell cannot be asked', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B2_B10],
+        tables: [FILE_TABLE],
+        journal: (journal) =>
+          journal.structuralOps.set('sh1', [{ kind: 'remove-rows', index: 0, count: 1 }]),
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('columns[{{private}}, {{private}}]')
+  })
+
   it('drops the kept values of a filter column that holds a hidden cell', () => {
     const filter = {
       getRange: () => ({

@@ -18,6 +18,7 @@ import { planFileTableRegistrations } from '../file-tables'
 import { pivotSourceSheetId } from '../pivot-source'
 import { toSelectionFormat } from '../selection-format'
 import { lazyCellReader } from '../univer-sync'
+import { fileRangeToScreenRange, fileToScreen } from '../view-transform'
 import { lazySheetScreenExtent, type LazyWorkbookState, type UniverRuntime } from '../univer-state'
 import type { ActiveSheetInfo, FrozenSelection } from './tools'
 import { holdsWithheld, NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
@@ -103,15 +104,35 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
     const withheld = redactions.labelAt(headerSheetId, row, column)
     return withheld === null ? name : placeholderSource(withheld)
   }
+  // What the file knows (a table's range, a pivot's source) is in the file's
+  // coordinates; the marks are asked where the cells are on screen now, after
+  // the rows and columns inserted or removed this session.
+  const opsOf = (id: string) => state?.editJournal.structuralOps.get(id) ?? []
+  const onScreen = (id: string, range: RangeBounds): RangeBounds | null =>
+    opsOf(id).length === 0 ? range : fileRangeToScreenRange(opsOf(id), range)
+  const nameFromFileCell = (
+    name: string | undefined,
+    headerSheetId: string,
+    fileRow: number,
+    fileColumn: number,
+  ): string | undefined => {
+    if (redactions.isEmpty) return name
+    const row = fileToScreen(opsOf(headerSheetId), 'row', fileRow)
+    const column = fileToScreen(opsOf(headerSheetId), 'column', fileColumn)
+    // The header cell was deleted this session. The name outlives it, and
+    // whether the cell was hidden can no longer be asked.
+    if (row === null || column === null) return placeholderSource(UNKNOWN_REDACTION_LABEL)
+    return nameFrom(name, headerSheetId, row, column)
+  }
   const tableLines: string[] = []
   if (state) {
     for (const table of planFileTableRegistrations(state.file.sheets)) {
       if (table.sheetId !== sheetId) continue
       const columns = (table.columns ?? []).map((name, index) =>
-        nameFrom(name, sheetId, table.range.startRow, table.range.startColumn + index),
+        nameFromFileCell(name, sheetId, table.range.startRow, table.range.startColumn + index),
       )
       tableLines.push(
-        `- ${table.tableName}: ${a1(table.range)} columns[${columns.join(', ')}] (from file; structure read-only)`,
+        `- ${table.tableName}: ${a1(onScreen(sheetId, table.range) ?? table.range)} columns[${columns.join(', ')}] (from file; structure read-only)`,
       )
     }
     for (const table of state.editJournal.tableAdds) {
@@ -161,7 +182,7 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
         }
         // past the source's columns: a calculated field, named by the person
         if (field > source.endColumn - source.startColumn) return name
-        return nameFrom(name, sourceSheetId, source.startRow, source.startColumn + field)
+        return nameFromFileCell(name, sourceSheetId, source.startRow, source.startColumn + field)
       }
       const axis = (fields: readonly number[]): (string | undefined)[] =>
         fields
@@ -173,9 +194,16 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       const values = definition.dataFields.map((dataField) =>
         fieldName(dataField.field, dataField.name),
       )
+      // where the source is now: the sheet under its current name, the range on screen
+      const sourceNow =
+        sourceSheetId === undefined || source === null ? null : onScreen(sourceSheetId, source)
+      const sourceLabel =
+        sourceNow === null
+          ? `${definition.sourceSheet}!${definition.sourceRef}`
+          : `${workbook.getSheetBySheetId(sourceSheetId!)?.getSheetName() ?? definition.sourceSheet}!${a1(sourceNow)}`
       lines.push(
         `- ${pivot.outputRef}: rows[${rows.join(',')}] cols[${cols.join(',')}] values[${values.join(',')}]` +
-          ` source=${definition.sourceSheet}!${definition.sourceRef}` +
+          ` source=${sourceLabel}` +
           (definition.unsupported.length > 0
             ? ` (recompute unsupported: ${definition.unsupported.join('; ')})`
             : ' (recomputable)'),
