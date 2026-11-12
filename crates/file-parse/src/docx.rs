@@ -1,0 +1,726 @@
+//! packages/file-parse/src/docx.ts.
+//!
+//! Text is held as UTF-16 code units until the end: `w:sym` and character
+//! references can each give one half of a surrogate pair, and JavaScript joins
+//! two adjacent halves into one character. A half still alone in the result
+//! cannot be a Rust string, so that answer is refused rather than guessed.
+
+use std::collections::{HashMap, HashSet};
+
+use jscompat::{Radix, is_js_space, js_regex, number_to_string, parse_int, to_number, truthy};
+use ooxml_pkg::{Package, ReadError};
+
+use crate::opc::resolve_target;
+
+type Units = Vec<u16>;
+
+fn read_error(error: ReadError) -> String {
+    error.reason
+}
+
+fn units(text: &str) -> Units {
+    text.encode_utf16().collect()
+}
+
+/// `docxToText(bytes, { maxChars })`
+pub fn docx_to_text(bytes: &[u8], max_chars: Option<f64>) -> Result<String, String> {
+    let package = ooxml_pkg::load_zip_package(bytes)?;
+    let doc_path = main_document_path(&package)?;
+    let document_xml = match &doc_path {
+        Some(path) => package.text(path).map_err(read_error)?,
+        None => None,
+    };
+    let (Some(doc_path), Some(document_xml)) = (doc_path, truthy(document_xml)) else {
+        return Err("docx: main document part not found".to_owned());
+    };
+    let dir = &doc_path[..doc_path.rfind('/').map_or(0, |slash| slash + 1)];
+    let style_facts = paragraph_style_facts(
+        package
+            .text(&format!("{dir}styles.xml"))
+            .map_err(read_error)?,
+    );
+    let mut out = TextSink::new(max_chars.unwrap_or(f64::INFINITY));
+    scan_body(document_xml, &style_facts, &mut out, false)?;
+    if !out.lines.iter().any(|line| !is_blank(line)) && out.pictures > 0.0 {
+        let n = out.pictures;
+        out.lines.clear();
+        out.push(units(&format!(
+            "[image-only document: {} image{}, no extractable text]",
+            number_to_string(n),
+            if n == 1.0 { "" } else { "s" },
+        )));
+    }
+    for (part, title) in [("footnotes.xml", "Footnotes"), ("endnotes.xml", "Endnotes")] {
+        if out.full {
+            break;
+        }
+        let xml = package.text(&format!("{dir}{part}")).map_err(read_error)?;
+        let Some(xml) = truthy(xml) else { continue };
+        append_story(&mut out, title, xml, &style_facts, true)?;
+    }
+    for (title, xml) in related_stories(&package, &doc_path)? {
+        if out.full {
+            break;
+        }
+        append_story(&mut out, title, xml, &style_facts, false)?;
+    }
+    let mut joined: Units = Vec::new();
+    for (index, line) in out.lines.iter().enumerate() {
+        if index > 0 {
+            joined.push(u16::from(b'\n'));
+        }
+        joined.extend_from_slice(line);
+    }
+    String::from_utf16(&joined).map_err(|_| {
+        "docx: the TypeScript answer holds a lone surrogate, which a Rust string cannot".to_owned()
+    })
+}
+
+fn append_story(
+    out: &mut TextSink,
+    title: &str,
+    xml: &str,
+    style_facts: &HashMap<String, StyleFacts>,
+    notes: bool,
+) -> Result<(), String> {
+    let mut sink = TextSink::new(f64::INFINITY);
+    scan_body(xml, style_facts, &mut sink, notes)?;
+    if sink.lines.is_empty() {
+        return Ok(());
+    }
+    out.push(units(&format!("## {title}")));
+    for line in sink.lines {
+        out.push(line);
+    }
+    Ok(())
+}
+
+/// Headers, footers and comments named by the main document's relationships.
+fn related_stories<'p>(
+    package: &'p Package,
+    doc_path: &str,
+) -> Result<Vec<(&'static str, &'p str)>, String> {
+    let slash = doc_path.rfind('/');
+    let rels_path = match slash {
+        Some(slash) => format!(
+            "{}_rels/{}.rels",
+            &doc_path[..slash + 1],
+            &doc_path[slash + 1..]
+        ),
+        None => format!("_rels/{doc_path}.rels"),
+    };
+    let Some(rels) = truthy(package.text(&rels_path).map_err(read_error)?) else {
+        return Ok(Vec::new());
+    };
+    let mut out = Vec::new();
+    let mut seen = HashSet::new();
+    for m in js_regex!(r"<Relationship\b[^>]*>").find_iter(rels) {
+        let tag = m.as_str();
+        if js_regex!(r#"TargetMode="External""#).test(tag) {
+            continue;
+        }
+        let kind = js_regex!(r#"Type="([^"]+)""#)
+            .exec(tag)
+            .and_then(|m| m.get(1))
+            .unwrap_or("");
+        let Some(target) = js_regex!(r#"Target="([^"]+)""#)
+            .exec(tag)
+            .and_then(|m| m.get(1))
+        else {
+            continue;
+        };
+        let title = if kind.ends_with("/header") {
+            "Header"
+        } else if kind.ends_with("/footer") {
+            "Footer"
+        } else if kind.ends_with("/comments") {
+            "Comments"
+        } else {
+            continue;
+        };
+        let path = resolve_target(doc_path, target);
+        if path.is_empty() || seen.contains(&path) {
+            continue;
+        }
+        let xml = package.text(&path).map_err(read_error)?;
+        seen.insert(path);
+        if let Some(xml) = truthy(xml) {
+            out.push((title, xml));
+        }
+    }
+    Ok(out)
+}
+
+fn main_document_path(package: &Package) -> Result<Option<String>, String> {
+    if package.has("word/document.xml") {
+        return Ok(Some("word/document.xml".to_owned()));
+    }
+    let Some(rels) = truthy(package.text("_rels/.rels").map_err(read_error)?) else {
+        return Ok(None);
+    };
+    for m in js_regex!(r"<Relationship\b[^>]*>").find_iter(rels) {
+        let tag = m.as_str();
+        if !js_regex!(r#"Type="[^"]*\/officeDocument""#).test(tag)
+            || js_regex!(r#"TargetMode="External""#).test(tag)
+        {
+            continue;
+        }
+        let Some(target) = js_regex!(r#"Target="([^"]+)""#)
+            .exec(tag)
+            .and_then(|m| m.get(1))
+        else {
+            continue;
+        };
+        let path = target.strip_prefix('/').unwrap_or(target);
+        if package.has(path) {
+            return Ok(Some(path.to_owned()));
+        }
+    }
+    Ok(None)
+}
+
+struct StyleFacts {
+    heading: f64,
+    list: bool,
+}
+
+struct RawStyle<'x> {
+    heading: Option<f64>,
+    list: Option<bool>,
+    based_on: Option<&'x str>,
+}
+
+/// Paragraph style id -> heading level and list membership, both inherited
+/// along basedOn.
+fn paragraph_style_facts(styles_xml: Option<&str>) -> HashMap<String, StyleFacts> {
+    let mut facts = HashMap::new();
+    let Some(styles_xml) = truthy(styles_xml) else {
+        return facts;
+    };
+    let mut raw: HashMap<&str, RawStyle<'_>> = HashMap::new();
+    for m in js_regex!(r"<w:style\b([^>]*)>([\s\S]*?)<\/w:style>").find_iter(styles_xml) {
+        let attrs = m.get(1).unwrap_or("");
+        if !js_regex!(r#"w:type="paragraph""#).test(attrs) {
+            continue;
+        }
+        let Some(id) = js_regex!(r#"w:styleId="([^"]+)""#)
+            .exec(attrs)
+            .and_then(|m| m.get(1))
+        else {
+            continue;
+        };
+        let body = m.get(2).unwrap_or("");
+        let name = js_regex!(r#"<w:name\b[^>]*w:val="([^"]*)""#)
+            .exec(body)
+            .and_then(|m| m.get(1))
+            .unwrap_or("");
+        let by_name = js_regex!(r"^heading\s*(\d)$", "i").exec(name);
+        let outline = js_regex!(r#"<w:outlineLvl\b[^>]*w:val="(\d)""#).exec(body);
+        let heading = if let Some(by_name) = by_name {
+            Some(to_number(by_name.get(1).unwrap_or("")))
+        } else if js_regex!(r"^title$", "i").test(name) {
+            Some(1.0)
+        } else if let Some(outline) = outline {
+            let level = to_number(outline.get(1).unwrap_or(""));
+            Some(if level == 9.0 { 0.0 } else { level + 1.0 })
+        } else {
+            None
+        };
+        let num_id = js_regex!(r#"<w:numId\b[^>]*w:val="([^"]+)""#)
+            .exec(body)
+            .and_then(|m| m.get(1));
+        raw.insert(
+            id,
+            RawStyle {
+                heading,
+                // numId 0 is Word's "no numbering" override, not a list
+                list: num_id.map(|num_id| num_id != "0"),
+                based_on: js_regex!(r#"<w:basedOn\b[^>]*w:val="([^"]*)""#)
+                    .exec(body)
+                    .and_then(|m| m.get(1)),
+            },
+        );
+    }
+    for &id in raw.keys() {
+        let mut heading = None;
+        let mut list = None;
+        let mut seen = HashSet::new();
+        let mut cur = Some(id);
+        while let Some(at) = truthy(cur) {
+            if !seen.insert(at) {
+                break;
+            }
+            let Some(r) = raw.get(at) else { break };
+            heading = heading.or(r.heading);
+            list = list.or(r.list);
+            cur = r.based_on;
+        }
+        facts.insert(
+            id.to_owned(),
+            StyleFacts {
+                heading: heading.unwrap_or(0.0),
+                list: list.unwrap_or(false),
+            },
+        );
+    }
+    facts
+}
+
+struct TextSink {
+    lines: Vec<Units>,
+    chars: f64,
+    full: bool,
+    pictures: f64,
+    max_chars: f64,
+}
+
+impl TextSink {
+    fn new(max_chars: f64) -> Self {
+        Self {
+            lines: Vec::new(),
+            chars: 0.0,
+            full: false,
+            pictures: 0.0,
+            max_chars,
+        }
+    }
+
+    fn push(&mut self, line: Units) {
+        if self.full {
+            return;
+        }
+        self.chars += line.len() as f64 + 1.0;
+        self.lines.push(line);
+        if self.chars >= self.max_chars {
+            self.full = true;
+        }
+    }
+}
+
+struct Para {
+    text: Units,
+    heading: f64,
+    list: bool,
+}
+
+struct Table {
+    rows: Vec<Vec<Units>>,
+    cell: Option<Vec<Units>>,
+    /// The row `table.row` points at, as an index into `rows`.
+    row: Option<usize>,
+}
+
+/// subtrees whose text is not part of the readable document
+const SKIP_SUBTREES: [&str; 14] = [
+    "mc:Fallback",
+    "w:del",
+    "w:moveFrom",
+    "w:instrText",
+    "w:delInstrText",
+    "w:delText",
+    "w:rPrChange",
+    "w:pPrChange",
+    "w:tabs",
+    "w:tblPr",
+    "w:tblGrid",
+    "w:trPr",
+    "w:tcPr",
+    "w:sectPr",
+];
+
+/// `line.trim()` is empty.
+fn is_blank(line: &[u16]) -> bool {
+    line.iter().all(|&unit| is_space_unit(unit))
+}
+
+fn is_space_unit(unit: u16) -> bool {
+    char::from_u32(u32::from(unit)).is_some_and(is_js_space)
+}
+
+fn join_units(pieces: &[Units], separator: &str) -> Units {
+    let separator = units(separator);
+    let mut out = Vec::new();
+    for (index, piece) in pieces.iter().enumerate() {
+        if index > 0 {
+            out.extend_from_slice(&separator);
+        }
+        out.extend_from_slice(piece);
+    }
+    out
+}
+
+/// `text.replace(/\s*\n\s*/g, ' ')`: every maximal run of white space that
+/// holds a line feed becomes one space.
+fn collapse_line_breaks(text: &[u16]) -> Units {
+    let mut out = Vec::with_capacity(text.len());
+    let mut at = 0;
+    while at < text.len() {
+        if !is_space_unit(text[at]) {
+            out.push(text[at]);
+            at += 1;
+            continue;
+        }
+        let start = at;
+        while at < text.len() && is_space_unit(text[at]) {
+            at += 1;
+        }
+        let run = &text[start..at];
+        if run.contains(&u16::from(b'\n')) {
+            out.push(u16::from(b' '));
+        } else {
+            out.extend_from_slice(run);
+        }
+    }
+    out
+}
+
+fn append_text(paras: &mut [Para], text: &[u16]) {
+    if let Some(p) = paras.last_mut() {
+        p.text.extend_from_slice(text);
+    }
+}
+
+fn emit_para(
+    p: Para,
+    tables: &mut [Table],
+    notes: bool,
+    note_lines: &mut Vec<Units>,
+    out: &mut TextSink,
+) {
+    if let Some(cell) = tables.last_mut().and_then(|table| table.cell.as_mut()) {
+        cell.push(p.text);
+        return;
+    }
+    if notes {
+        note_lines.push(p.text);
+        return;
+    }
+    let line = if p.heading != 0.0 && !p.heading.is_nan() {
+        let mut line = units(&"#".repeat(p.heading.min(6.0) as usize));
+        line.push(u16::from(b' '));
+        line.extend_from_slice(&p.text);
+        line
+    } else if p.list {
+        let mut line = units("- ");
+        line.extend_from_slice(&p.text);
+        line
+    } else {
+        p.text
+    };
+    out.push(line);
+}
+
+fn emit_rows(
+    table: Table,
+    tables: &mut [Table],
+    notes: bool,
+    note_lines: &mut Vec<Units>,
+    out: &mut TextSink,
+) {
+    let lines: Vec<Units> = table
+        .rows
+        .iter()
+        .map(|row| join_units(row, " | "))
+        .collect();
+    let mut parent_cell = tables.last_mut().and_then(|table| table.cell.as_mut());
+    for line in lines {
+        if let Some(cell) = parent_cell.as_mut() {
+            cell.push(line);
+        } else if notes {
+            note_lines.push(line);
+        } else {
+            out.push(line);
+        }
+    }
+}
+
+/// One pass over a WordprocessingML body. `mc:Fallback` is skipped so a text
+/// box wrapped in AlternateContent is read once.
+fn scan_body(
+    xml: &str,
+    style_facts: &HashMap<String, StyleFacts>,
+    out: &mut TextSink,
+    notes: bool,
+) -> Result<(), String> {
+    let mut paras: Vec<Para> = Vec::new();
+    let mut tables: Vec<Table> = Vec::new();
+    // the depth of the skipped subtree's root
+    let mut skip: Option<i64> = None;
+    let mut depth: i64 = 0;
+    let mut in_text = false;
+    let mut run_hidden = false;
+    let mut note_separator = false;
+    let mut note_lines: Vec<Units> = Vec::new();
+
+    for m in js_regex!(r"<(\/?)([\w:.-]+)([^>]*?)(\/?)>|([^<]+)").find_iter(xml) {
+        if out.full {
+            return Ok(());
+        }
+        if let Some(text) = m.get(5) {
+            if in_text && skip.is_none() && !run_hidden {
+                let decoded = decode_entities(text)?;
+                append_text(&mut paras, &decoded);
+            }
+            continue;
+        }
+        let close = !m.get(1).unwrap_or("").is_empty();
+        let name = m.get(2).unwrap_or("");
+        let attrs = m.get(3).unwrap_or("");
+        let self_close = !m.get(4).unwrap_or("").is_empty();
+        let opening = !close;
+        let closing = close && !self_close;
+        // a self-closing element opens and ends in one token
+        let ending = closing || self_close;
+        if opening && !self_close {
+            depth += 1;
+        }
+        if let Some(skip_depth) = skip {
+            if closing {
+                depth -= 1;
+                if depth < skip_depth {
+                    skip = None;
+                }
+            }
+            continue;
+        }
+        if opening && SKIP_SUBTREES.contains(&name) {
+            if !self_close {
+                skip = Some(depth);
+            }
+            continue;
+        }
+        match name {
+            "w:p" => {
+                if opening {
+                    paras.push(Para {
+                        text: Vec::new(),
+                        heading: 0.0,
+                        list: false,
+                    });
+                }
+                if ending
+                    && let Some(p) = paras.pop()
+                    && !note_separator
+                {
+                    emit_para(p, &mut tables, notes, &mut note_lines, out);
+                }
+            }
+            "w:pStyle" => {
+                if opening {
+                    let val = js_regex!(r#"w:val="([^"]*)""#)
+                        .exec(attrs)
+                        .and_then(|m| m.get(1));
+                    if let Some(p) = paras.last_mut()
+                        && let Some(val) = truthy(val)
+                    {
+                        let facts = style_facts.get(val);
+                        let level = match facts {
+                            Some(facts) => facts.heading,
+                            None => to_number(
+                                js_regex!(r"^Heading(\d)$")
+                                    .exec(val)
+                                    .and_then(|m| m.get(1))
+                                    .unwrap_or("0"),
+                            ),
+                        };
+                        if level != 0.0 && !level.is_nan() {
+                            p.heading = level;
+                        }
+                        if facts.is_some_and(|facts| facts.list) {
+                            p.list = true;
+                        }
+                    }
+                }
+            }
+            "w:numPr" => {
+                if opening && let Some(p) = paras.last_mut() {
+                    p.list = true;
+                }
+            }
+            "w:numId" => {
+                // inside the paragraph's own numPr: numId 0 switches inherited numbering off
+                if opening && let Some(p) = paras.last_mut() {
+                    p.list = !js_regex!(r#"w:val="0""#).test(attrs);
+                }
+            }
+            "w:outlineLvl" => {
+                if opening {
+                    let val = js_regex!(r#"w:val="(\d)""#)
+                        .exec(attrs)
+                        .and_then(|m| m.get(1));
+                    if let Some(p) = paras.last_mut()
+                        && let Some(val) = truthy(val)
+                    {
+                        let level = to_number(val);
+                        p.heading = if level == 9.0 { 0.0 } else { level + 1.0 };
+                    }
+                }
+            }
+            "w:r" => {
+                if opening {
+                    run_hidden = false;
+                }
+            }
+            "w:vanish" => {
+                if opening && !js_regex!(r#"w:val="(0|false)""#).test(attrs) {
+                    run_hidden = true;
+                }
+            }
+            "w:t" => in_text = opening && !self_close,
+            "w:tab" | "w:ptab" => {
+                if opening && !run_hidden {
+                    append_text(&mut paras, &[u16::from(b'\t')]);
+                }
+            }
+            "w:br" | "w:cr" => {
+                // page and column breaks are layout, not text
+                if opening && !run_hidden && !js_regex!(r#"w:type="(page|column)""#).test(attrs) {
+                    append_text(&mut paras, &[u16::from(b'\n')]);
+                }
+            }
+            "w:noBreakHyphen" => {
+                if opening && !run_hidden {
+                    append_text(&mut paras, &[u16::from(b'-')]);
+                }
+            }
+            "w:sym" => {
+                if opening && !run_hidden {
+                    let code = js_regex!(r#"w:char="([0-9A-Fa-f]{4})""#)
+                        .exec(attrs)
+                        .and_then(|m| m.get(1));
+                    if let Some(code) = truthy(code) {
+                        // `String.fromCharCode`: four hex digits are one code unit
+                        append_text(&mut paras, &[parse_int(code, Radix::Sixteen) as u16]);
+                    }
+                }
+            }
+            "wp:docPr" => {
+                // hidden="1"/"true" is the drawing's own flag, same intent as a run's w:vanish
+                if opening
+                    && !run_hidden
+                    && !js_regex!(r#"(?:^|\s)hidden="(?:1|true)""#).test(attrs)
+                {
+                    let descr = js_regex!(r#"(?:^|\s)descr="([^"]*)""#)
+                        .exec(attrs)
+                        .and_then(|m| m.get(1));
+                    let title = js_regex!(r#"(?:^|\s)title="([^"]*)""#)
+                        .exec(attrs)
+                        .and_then(|m| m.get(1));
+                    let alt = decode_entities(truthy(descr).or(truthy(title)).unwrap_or(""))?;
+                    if !alt.is_empty() {
+                        let mut text = units("[image: ");
+                        text.extend_from_slice(&alt);
+                        text.push(u16::from(b']'));
+                        append_text(&mut paras, &text);
+                    }
+                }
+            }
+            "w:drawing" | "w:pict" => {
+                if opening {
+                    out.pictures += 1.0;
+                }
+            }
+            "w:tbl" => {
+                if opening {
+                    tables.push(Table {
+                        rows: Vec::new(),
+                        cell: None,
+                        row: None,
+                    });
+                }
+                if ending && let Some(table) = tables.pop() {
+                    emit_rows(table, &mut tables, notes, &mut note_lines, out);
+                }
+            }
+            "w:tr" => {
+                if let Some(table) = tables.last_mut() {
+                    if opening {
+                        table.rows.push(Vec::new());
+                        table.row = Some(table.rows.len() - 1);
+                    }
+                    if ending {
+                        table.row = None;
+                    }
+                }
+            }
+            "w:tc" => {
+                if let Some(table) = tables.last_mut() {
+                    if opening {
+                        table.cell = Some(Vec::new());
+                    }
+                    if ending && let Some(cell) = table.cell.take() {
+                        // a row is one line: soft breaks inside a cell must not split it
+                        if let Some(row) = table.row {
+                            table.rows[row].push(collapse_line_breaks(&join_units(&cell, " ")));
+                        }
+                    }
+                }
+            }
+            "w:footnote" | "w:endnote" => {
+                if opening {
+                    note_separator = js_regex!(
+                        r#"w:type="(separator|continuationSeparator|continuationNotice)""#
+                    )
+                    .test(attrs);
+                    note_lines = Vec::new();
+                } else {
+                    if !note_separator && !note_lines.is_empty() {
+                        out.push(join_units(&note_lines, " "));
+                    }
+                    note_separator = false;
+                }
+            }
+            _ => {}
+        }
+        if closing {
+            depth -= 1;
+        }
+    }
+    Ok(())
+}
+
+fn decode_entities(text: &str) -> Result<Units, String> {
+    if !text.contains('&') {
+        return Ok(units(text));
+    }
+    let mut out = Vec::with_capacity(text.len());
+    let mut copied = 0;
+    for m in js_regex!(r"&(#x[0-9a-fA-F]+|#\d+|amp|lt|gt|quot|apos);").find_iter(text) {
+        out.extend(text[copied..m.start()].encode_utf16());
+        copied = m.end();
+        let e = m.get(1).unwrap_or("");
+        if let Some(number) = e.strip_prefix('#') {
+            let code = match number.strip_prefix(['x', 'X']) {
+                Some(hex) => parse_int(hex, Radix::Sixteen),
+                None => parse_int(number, Radix::Ten),
+            };
+            if code.is_finite() {
+                from_code_point(code, &mut out)?;
+            }
+            continue;
+        }
+        out.push(u16::from(match e {
+            "amp" => b'&',
+            "lt" => b'<',
+            "gt" => b'>',
+            "quot" => b'"',
+            _ => b'\'',
+        }));
+    }
+    out.extend(text[copied..].encode_utf16());
+    Ok(out)
+}
+
+/// `String.fromCodePoint(code)`, which throws a RangeError past U+10FFFF.
+fn from_code_point(code: f64, out: &mut Units) -> Result<(), String> {
+    if !(0.0..=1_114_111.0).contains(&code) || code.fract() != 0.0 {
+        return Err(format!("Invalid code point {}", number_to_string(code)));
+    }
+    let code = code as u32;
+    match char::from_u32(code) {
+        Some(c) => out.extend(c.encode_utf16(&mut [0; 2]).iter()),
+        // a surrogate code point is one lone code unit in JavaScript
+        None => out.push(code as u16),
+    }
+    Ok(())
+}

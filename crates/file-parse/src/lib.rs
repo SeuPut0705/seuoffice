@@ -2,6 +2,8 @@
 
 pub mod attachable;
 pub mod compound;
+#[cfg(feature = "docx")]
+pub mod docx;
 #[cfg(feature = "redaction")]
 pub mod markdown;
 pub mod opc;
