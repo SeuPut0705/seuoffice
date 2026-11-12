@@ -151,34 +151,6 @@ wait $BPID; cat "$WORK/b.res" | tee -a "$F"; tail -2 "$WORK/b.log" | tee -a "$F"
 check "T3b updated Electron, nobody answers the prompt" "$WORK/b-dec.json"
 pkill -f SecurityAgent 2>/dev/null; sleep 2
 
-hdr "T3c the same updated Electron, the user types the password and presses Always Allow"
-rm -f "$WORK/b-dec.json"
-( SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec.json" run_to 60 "$EL_B" "$SEED_DIR" > "$WORK/b2.log" 2>&1; echo "T3c exit=$?" > "$WORK/b2.res" ) &
-BPID=$!
-answer_prompt t3c-click "Always Allow" 15
-wait $BPID; cat "$WORK/b2.res" | tee -a "$F"; tail -1 "$WORK/b2.log" | tee -a "$F"
-check "T3c updated Electron after Always Allow" "$WORK/b-dec.json"
-say "T3c again, nothing to click:"
-SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec2.json" run_to 40 "$EL_B" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c second run" "$WORK/b-dec2.json"
-pkill -f SecurityAgent 2>/dev/null; sleep 1
-say "the old build A (not updated) still opens it:"
-rm -f "$WORK/a-dec2.json"; SEED_MODE=decrypt SEED_RESULT="$WORK/a-dec2.json" run_to 40 "$EL_A" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c old build A" "$WORK/a-dec2.json"
-
-hdr "T2 open-sealed with the prompt allowed, the user presses Always Allow once"
-( run_to 60 "$OPEN" --allow-interaction --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t2.out" 2> "$WORK/t2.err"; echo "T2 exit=$? stdout=$(cat "$WORK/t2.out") stderr=$(cat "$WORK/t2.err")" > "$WORK/t2.res" ) &
-T2PID=$!
-answer_prompt t2-click "Always Allow" 12
-wait $T2PID; cat "$WORK/t2.res" | tee -a "$F"
-pkill -f SecurityAgent 2>/dev/null; sleep 1
-check "T2 open-sealed after Always Allow" "$WORK/t2.out"
-hdr "T4 open-sealed again, interaction disabled: no more prompt after the one click"
-run_to 60 "$OPEN" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4.out" 2> "$WORK/t4.err"
-say "T4 exit=$? stderr=$(cat "$WORK/t4.err")"; check "T4 open-sealed non-interactive" "$WORK/t4.out"
-say "T4b a rebuilt Rust binary (new cdhash) non-interactive:"
-mkdir -p "$WORK/open4" && cp "$OPEN" "$WORK/open4/open-sealed" && codesign -f -s - -i com.seuput.seuoffice.rebuilt2 "$WORK/open4/open-sealed" 2>&1 | tail -1
-run_to 60 "$WORK/open4/open-sealed" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4b.out" 2> "$WORK/t4b.err"
-say "T4b exit=$? stderr=$(cat "$WORK/t4b.err")"
-
 hdr "ACL after the tests (did any run change it)"
 item_block "$SVC" "$KC" | tee -a "$F"
 
@@ -254,7 +226,41 @@ wait $SPID; cat "$WORK/s2.res" | tee -a "$F"; tail -1 "$WORK/s2.log" | tee -a "$
 check "R4 updated Electron, same certificate" "$WORK/s2-dec.json"
 pkill -f SecurityAgent 2>/dev/null
 unset BENCH_USER_DATA
-sudo security remove-trusted-cert -d "$S/c.pem" 2>&1 | tail -1
+
+security default-keychain -d user -s "$KC"
+security list-keychains -d user -s "$KC" $ORIG_LIST
+hdr "T3c the same updated Electron, the user types the password and presses Allow"
+rm -f "$WORK/b-dec.json"
+( SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec.json" run_to 60 "$EL_B" "$SEED_DIR" > "$WORK/b2.log" 2>&1; echo "T3c exit=$?" > "$WORK/b2.res" ) &
+BPID=$!
+answer_prompt t3c-click "Allow" 15
+wait $BPID; cat "$WORK/b2.res" | tee -a "$F"; tail -1 "$WORK/b2.log" | tee -a "$F"
+check "T3c updated Electron after Allow" "$WORK/b-dec.json"
+say "T3c again (Allow is a one-time pass, so the prompt returns):"
+SEED_MODE=decrypt SEED_RESULT="$WORK/b-dec2.json" run_to 40 "$EL_B" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c second run" "$WORK/b-dec2.json"
+pkill -f SecurityAgent 2>/dev/null; sleep 1
+say "the old build A (not updated) still opens it:"
+rm -f "$WORK/a-dec2.json"; SEED_MODE=decrypt SEED_RESULT="$WORK/a-dec2.json" run_to 40 "$EL_A" "$SEED_DIR" > /dev/null 2>&1; say "exit=$?"; check "T3c old build A" "$WORK/a-dec2.json"
+
+hdr "T2 open-sealed with the prompt allowed, the user presses Always Allow once"
+( run_to 60 "$OPEN" --allow-interaction --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t2.out" 2> "$WORK/t2.err"; echo "T2 exit=$? stdout=$(cat "$WORK/t2.out") stderr=$(cat "$WORK/t2.err")" > "$WORK/t2.res" ) &
+T2PID=$!
+answer_prompt t2-click "Always Allow" 12
+wait $T2PID; cat "$WORK/t2.res" | tee -a "$F"
+pkill -f SecurityAgent 2>/dev/null; sleep 1
+check "T2 open-sealed after Always Allow" "$WORK/t2.out"
+hdr "T4 open-sealed again, interaction disabled: no more prompt after the one click"
+run_to 60 "$OPEN" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4.out" 2> "$WORK/t4.err"
+say "T4 exit=$? stderr=$(cat "$WORK/t4.err")"; check "T4 open-sealed non-interactive" "$WORK/t4.out"
+say "T4b a rebuilt Rust binary (new cdhash) non-interactive:"
+mkdir -p "$WORK/open4" && cp "$OPEN" "$WORK/open4/open-sealed" && codesign -f -s - -i com.seuput.seuoffice.rebuilt2 "$WORK/open4/open-sealed" 2>&1 | tail -1
+run_to 60 "$WORK/open4/open-sealed" --user-data "$USERDATA" --json "$USERDATA/proto-secrets.json" > "$WORK/t4b.out" 2> "$WORK/t4b.err"
+say "T4b exit=$? stderr=$(cat "$WORK/t4b.err")"
+
+hdr "securityd / SecurityAgent log around the clicks"
+run_to 60 sudo log show --last 20m --style compact --predicate 'process == "SecurityAgent" OR process == "securityd"' 2>&1 | tail -80 > "$OUT/securityd.log"; say "log lines: $(wc -l < "$OUT/securityd.log")"
+hdr "ACL at the end"
+item_block "$SVC" "$KC" | sed -n '/access:/,$p' | tee -a "$F"
 
 hdr "summary"
 cp "$WORK"/*.log "$WORK"/*.res "$WORK"/*.err "$WORK"/*.out "$OUT"/ 2>/dev/null
