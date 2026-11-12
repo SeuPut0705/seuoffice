@@ -95,8 +95,28 @@ units, so a pattern is still copied as it is. Three things follow:
   not built.
 
 `jscompat/tests/astral.rs` holds Node 22's answers; `tests/sites.rs` reads
-every `js_regex!` and `JsRegex::new` of the workspace and fails on a pattern
-`JsRegex::new` refuses, and on a call whose pattern it cannot read.
+every `js_regex!`, `JsRegex::new`, `try_js_regex!` and `TryJsRegex::new` of
+the workspace and fails on a pattern `JsRegex::new` refuses.
+
+A search keeps at most `BACKTRACK_LIMIT` (2^22) entries on the backtrack
+stack of the vendored `regress` (`crates/vendor/regress/VENDORED.md`); an
+entry is 48 bytes on a 64-bit target, so one search holds about 250 MB at
+most, measured by `jscompat/tests/limit.rs`. A loop whose body is more than
+one character matcher keeps entries for each turn, so
+`<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` answers over 1.39M characters and passes
+the bound at 1.40M; V8 answers up to about 8M and throws `RangeError` past
+it. A search past the bound stops with `RegexLimit`:
+
+- A pattern with such a loop (its loops may turn more than 4,096 times
+  together) is built as a `TryJsRegex` (`try_js_regex!`), which has only
+  `try_*` methods. The caller turns `RegexLimit` into the error the reader
+  already gives for a file it cannot read, never into a default answer.
+- Every other pattern is a `JsRegex`, whose methods panic on `RegexLimit`.
+  `tests/sites.rs` fails on a `JsRegex` with such a loop, and on one whose
+  pattern it cannot read (not a literal of the call or a `const` of the
+  file), so that panic is not reached.
+- `jscompat/examples/limit_wasm.rs` runs the same pattern over 25M characters
+  on wasm32 in CI: it refuses where 0.12.0 trapped at 22.4M.
 
 Under `i` without `u` JavaScript never matches a character outside ASCII as an
 ASCII letter; `regress` does for U+0131 (`i`), U+017F (`s`) and U+212A (`k` in
@@ -347,8 +367,13 @@ Open on these crates:
   (`preserve_order`), so `resolveCharIndents` sees its `format` as the
   TypeScript does. A typed argument (`CharIndents`) is read with
   `deserialize;`, which sets the keys in the order of the input.
-- `cargo-deny` is configured (`deny.toml`) but was not installed on the
-  machine these crates were written on, so it has not run.
+- `crates/vendor/regress` is a patched copy of a third-party crate
+  (MIT OR Apache-2.0). Its licence files are in the directory; a shipped
+  build needs it in the third-party notices like any other dependency, and
+  the notices are not written yet.
+- `cargo-deny` (`deny.toml`) is not run in CI. Run by hand with 0.20.2 on
+  the commit that vendored `regress`: advisories, bans, licences and sources
+  ok.
 - Helpers written more than once, to move down: `Math.max`/`Math.min` with
   JavaScript's NaN and zero rules (`list_markers.rs`, `vml.rs`), text escapes
   (`eq_field.rs`, `blank.rs`, `omml/src/xml.rs`, and private in `ooxml-xml`),
