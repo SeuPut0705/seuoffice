@@ -141,7 +141,6 @@ export const ko = {
     '그래도 안 되나요? 연결 정보를 복사해서 도와줄 사람에게 보내세요. 계정과 파일 경로는 들어가지 않습니다.',
   actionCopyInfo: '도움 요청용 정보 복사',
   copyInfoDone: '복사했습니다',
-  actionConnectHelp: '연결하는 방법 화면으로 보기',
   guidePathChatGptBody:
     'ChatGPT 계정으로 로그인하면 그 요금제 안에서 씁니다. 프로그램을 설치하지 않아도 됩니다. 무료 요금제는 쓸 수 있는 양이 적습니다.',
   guideUseCodex: '이 PC에서 Codex 프로그램을 이미 쓰고 있나요? Codex로 연결',

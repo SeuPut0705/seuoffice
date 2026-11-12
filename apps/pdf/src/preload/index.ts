@@ -29,7 +29,6 @@ import type {
 import type { SubscriptionApi } from '../shared/subscription-api'
 import {
   AI_TOOL_CAPABILITIES_CHANNEL,
-  SUBSCRIPTION_CONNECT_HELP_CHANNEL,
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
   imageGenerationAvailableOf,
   subscriptionLaunchResultOf,
@@ -81,9 +80,6 @@ const subscription: SubscriptionApi = {
   },
   openInstallHelp: async (provider) => {
     await ipcRenderer.invoke(SUBSCRIPTION_INSTALL_HELP_CHANNEL, provider)
-  },
-  openConnectHelp: async (path) => {
-    await ipcRenderer.invoke(SUBSCRIPTION_CONNECT_HELP_CHANNEL, path)
   },
 }
 

@@ -130,7 +130,6 @@ export const zhTW = {
   guideInfoHint: '還是不行？複製連線資訊，傳給協助你的人。其中不包含帳戶和檔案路徑。',
   actionCopyInfo: '複製求助資訊',
   copyInfoDone: '已複製',
-  actionConnectHelp: '查看每一步的畫面示範（韓語頁面）',
   guidePathChatGptBody:
     '用你的 ChatGPT 帳戶登入，即可在方案範圍內使用。不需要安裝程式。免費方案可用量很少。',
   guideUseCodex: '這台電腦上已在使用 Codex 程式？透過 Codex 連線',

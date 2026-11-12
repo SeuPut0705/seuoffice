@@ -59,9 +59,6 @@ export const PRODUCT_REPO_NAME = 'seuoffice'
 /** `owner/repo`; the URLs built from it live in @genoffice/electron-utils (github-menu.ts) */
 export const PRODUCT_REPO_SLUG = `${PRODUCT_REPO_OWNER}/${PRODUCT_REPO_NAME}`
 
-/** The product's website: downloads, release notes and the step-by-step help pages. */
-export const PRODUCT_WEBSITE = 'https://ieumoffice.com'
-
 const NAME_TOKEN = new RegExp(`\\{\\{${UPSTREAM_PRODUCT_NAME}\\}\\}|${UPSTREAM_PRODUCT_NAME}`, 'g')
 
 /** the name sits inside a longer identifier (GenOfficeFormField): not the product name */

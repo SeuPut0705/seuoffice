@@ -1190,7 +1190,6 @@ export function KbAskPanel({
               onRecheck={connection.recheck}
               onAcceptMetered={(provider) => void connection.acceptMetered(provider)}
               onOpenInstallHelp={connection.openInstallHelp}
-              onOpenConnectHelp={connection.openConnectHelp}
             />
             {AI_SUBSCRIPTION_PROVIDERS.map(
               (provider) =>
