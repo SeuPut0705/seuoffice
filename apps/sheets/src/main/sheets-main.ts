@@ -374,6 +374,7 @@ const tMain = createI18n({
     odsLossShapes: '图形和文本框:{count}',
     odsLossSlicers: '切片器:{count}',
     odsLossSparklines: '迷你图:{count}',
+    odsLossRedactions: '对 AI 隐藏的标记(单元格保留,但不再隐藏):{count}',
     odsContinueBtn: '继续',
     errOdsExportFailed: 'ODS 导出失败:{message}',
     errOdsReopenFailed: '导出的 ODS 文件无法重新打开,已将其删除。工作簿未受影响。',
@@ -459,6 +460,7 @@ const tMain = createI18n({
     odsLossShapes: 'Shapes and text boxes: {count}',
     odsLossSlicers: 'Slicers: {count}',
     odsLossSparklines: 'Sparklines: {count}',
+    odsLossRedactions: 'Hide-from-AI marks (the cells stay, no longer hidden): {count}',
     odsContinueBtn: 'Continue',
     errOdsExportFailed: 'The ODS export failed: {message}',
     errOdsReopenFailed:
@@ -549,6 +551,7 @@ const tMain = createI18n({
     odsLossShapes: 'Hình dạng và hộp văn bản: {count}',
     odsLossSlicers: 'Slicer: {count}',
     odsLossSparklines: 'Biểu đồ mini: {count}',
+    odsLossRedactions: 'Dấu ẩn khỏi AI (các ô vẫn còn, không còn bị ẩn): {count}',
     odsContinueBtn: 'Tiếp tục',
     errOdsExportFailed: 'Xuất ODS thất bại: {message}',
     errOdsReopenFailed:
@@ -641,6 +644,7 @@ const tMain = createI18n({
     odsLossShapes: '図形とテキスト ボックス: {count}',
     odsLossSlicers: 'スライサー: {count}',
     odsLossSparklines: 'スパークライン: {count}',
+    odsLossRedactions: 'AI から隠す指定 (セルは残り、隠されなくなります): {count}',
     odsContinueBtn: '続行',
     errOdsExportFailed: 'ODS へのエクスポートに失敗しました: {message}',
     errOdsReopenFailed:
@@ -730,6 +734,7 @@ const tMain = createI18n({
     odsLossShapes: '도형·글상자: {count}',
     odsLossSlicers: '슬라이서: {count}',
     odsLossSparklines: '스파크라인: {count}',
+    odsLossRedactions: 'AI에서 숨김 표시 (셀은 남고 더 이상 숨겨지지 않음): {count}',
     odsContinueBtn: '계속',
     errOdsExportFailed: 'ODS 내보내기에 실패했습니다: {message}',
     errOdsReopenFailed: '내보낸 ODS 파일을 다시 열지 못해 지웠습니다. 워크북은 그대로입니다.',
@@ -822,6 +827,8 @@ const tMain = createI18n({
     odsLossShapes: 'Formes et zones de texte : {count}',
     odsLossSlicers: 'Segments : {count}',
     odsLossSparklines: 'Graphiques sparkline : {count}',
+    odsLossRedactions:
+      'Marques « masquer à l’IA » (les cellules restent, sans être masquées) : {count}',
     odsContinueBtn: 'Continuer',
     errOdsExportFailed: 'L’export ODS a échoué : {message}',
     errOdsReopenFailed:
@@ -917,6 +924,8 @@ const tMain = createI18n({
     odsLossShapes: 'Formen und Textfelder: {count}',
     odsLossSlicers: 'Datenschnitte: {count}',
     odsLossSparklines: 'Sparklines: {count}',
+    odsLossRedactions:
+      'Markierungen „vor der KI verbergen“ (die Zellen bleiben, nicht mehr verborgen): {count}',
     odsContinueBtn: 'Weiter',
     errOdsExportFailed: 'Der ODS-Export ist fehlgeschlagen: {message}',
     errOdsReopenFailed:
@@ -1010,6 +1019,8 @@ const tMain = createI18n({
     odsLossShapes: 'Formas y cuadros de texto: {count}',
     odsLossSlicers: 'Segmentaciones de datos: {count}',
     odsLossSparklines: 'Minigráficos: {count}',
+    odsLossRedactions:
+      'Marcas de ocultar a la IA (las celdas se conservan, ya sin ocultar): {count}',
     odsContinueBtn: 'Continuar',
     errOdsExportFailed: 'La exportación a ODS falló: {message}',
     errOdsReopenFailed:
@@ -1100,6 +1111,7 @@ const tMain = createI18n({
     odsLossShapes: 'รูปร่างและกล่องข้อความ: {count}',
     odsLossSlicers: 'ตัวแบ่งส่วนข้อมูล: {count}',
     odsLossSparklines: 'เส้นแบบประกายไฟ: {count}',
+    odsLossRedactions: 'เครื่องหมายซ่อนจาก AI (เซลล์ยังอยู่ แต่ไม่ถูกซ่อนอีก): {count}',
     odsContinueBtn: 'ดำเนินการต่อ',
     errOdsExportFailed: 'ส่งออก ODS ล้มเหลว: {message}',
     errOdsReopenFailed: 'เปิดไฟล์ ODS ที่ส่งออกใหม่ไม่ได้ จึงลบไฟล์นั้นแล้ว สมุดงานไม่เปลี่ยนแปลง',
@@ -1189,6 +1201,8 @@ const tMain = createI18n({
     odsLossShapes: 'Bentuk dan kotak teks: {count}',
     odsLossSlicers: 'Pemotong: {count}',
     odsLossSparklines: 'Grafik mini: {count}',
+    odsLossRedactions:
+      'Tanda sembunyikan dari AI (sel tetap ada, tidak lagi disembunyikan): {count}',
     odsContinueBtn: 'Lanjutkan',
     errOdsExportFailed: 'Ekspor ODS gagal: {message}',
     errOdsReopenFailed:
@@ -1280,6 +1294,7 @@ const tMain = createI18n({
     odsLossShapes: 'Фигуры и надписи: {count}',
     odsLossSlicers: 'Срезы: {count}',
     odsLossSparklines: 'Спарклайны: {count}',
+    odsLossRedactions: 'Метки «скрыть от ИИ» (ячейки остаются, но больше не скрыты): {count}',
     odsContinueBtn: 'Продолжить',
     errOdsExportFailed: 'Не удалось экспортировать в ODS: {message}',
     errOdsReopenFailed:
@@ -1366,6 +1381,8 @@ const tMain = createI18n({
     odsLossShapes: 'الأشكال ومربعات النص: {count}',
     odsLossSlicers: 'مقسّمات طريقة العرض: {count}',
     odsLossSparklines: 'خطوط المؤشر: {count}',
+    odsLossRedactions:
+      'علامات الإخفاء عن الذكاء الاصطناعي (تبقى الخلايا لكنها لم تعد مخفية): {count}',
     odsContinueBtn: 'متابعة',
     errOdsExportFailed: 'فشل تصدير ODS: {message}',
     errOdsReopenFailed: 'تعذر إعادة فتح ملف ODS المصدّر فحُذف. المصنف لم يتغير.',
@@ -1455,6 +1472,8 @@ const tMain = createI18n({
     odsLossShapes: 'Formas e caixas de texto: {count}',
     odsLossSlicers: 'Segmentações de dados: {count}',
     odsLossSparklines: 'Minigráficos: {count}',
+    odsLossRedactions:
+      'Marcas de ocultar da IA (as células permanecem, sem ficar ocultas): {count}',
     odsContinueBtn: 'Continuar',
     errOdsExportFailed: 'Falha ao exportar em ODS: {message}',
     errOdsReopenFailed:
@@ -1549,6 +1568,7 @@ const tMain = createI18n({
     odsLossShapes: 'Forme e caselle di testo: {count}',
     odsLossSlicers: 'Filtri dati: {count}',
     odsLossSparklines: 'Grafici sparkline: {count}',
+    odsLossRedactions: 'Segni di nascondi all’IA (le celle restano, non più nascoste): {count}',
     odsContinueBtn: 'Continua',
     errOdsExportFailed: 'Esportazione ODS non riuscita: {message}',
     errOdsReopenFailed:
@@ -1641,6 +1661,7 @@ const tMain = createI18n({
     odsLossShapes: 'Kształty i pola tekstowe: {count}',
     odsLossSlicers: 'Fragmentatory: {count}',
     odsLossSparklines: 'Wykresy przebiegu w czasie: {count}',
+    odsLossRedactions: 'Oznaczenia ukrycia przed AI (komórki zostają, już nieukryte): {count}',
     odsContinueBtn: 'Kontynuuj',
     errOdsExportFailed: 'Eksport do ODS nie powiódł się: {message}',
     errOdsReopenFailed:
@@ -1731,6 +1752,7 @@ const tMain = createI18n({
     odsLossShapes: 'Obrazce a textová pole: {count}',
     odsLossSlicers: 'Průřezy: {count}',
     odsLossSparklines: 'Minigrafy: {count}',
+    odsLossRedactions: 'Značky skrytí před AI (buňky zůstávají, už nejsou skryté): {count}',
     odsContinueBtn: 'Pokračovat',
     errOdsExportFailed: 'Export do ODS selhal: {message}',
     errOdsReopenFailed:
@@ -1825,6 +1847,8 @@ const tMain = createI18n({
     odsLossShapes: 'Vormen en tekstvakken: {count}',
     odsLossSlicers: 'Slicers: {count}',
     odsLossSparklines: 'Sparklines: {count}',
+    odsLossRedactions:
+      'Markeringen voor verbergen voor de AI (de cellen blijven, niet meer verborgen): {count}',
     odsContinueBtn: 'Doorgaan',
     errOdsExportFailed: 'Exporteren naar ODS is mislukt: {message}',
     errOdsReopenFailed:
@@ -1915,6 +1939,7 @@ const tMain = createI18n({
     odsLossShapes: 'Bentuk dan kotak teks: {count}',
     odsLossSlicers: 'Penghiris: {count}',
     odsLossSparklines: 'Garis percikan: {count}',
+    odsLossRedactions: 'Tanda sembunyi daripada AI (sel kekal, tidak lagi disembunyikan): {count}',
     odsContinueBtn: 'Teruskan',
     errOdsExportFailed: 'Eksport ODS gagal: {message}',
     errOdsReopenFailed:
@@ -2003,6 +2028,7 @@ const tMain = createI18n({
     odsLossShapes: 'צורות ותיבות טקסט: {count}',
     odsLossSlicers: 'כלי פריסה: {count}',
     odsLossSparklines: 'תרשימים זעירים: {count}',
+    odsLossRedactions: 'סימוני הסתרה מהמודל (התאים נשארים, אך אינם מוסתרים עוד): {count}',
     odsContinueBtn: 'המשך',
     errOdsExportFailed: 'ייצוא ODS נכשל: {message}',
     errOdsReopenFailed:
@@ -2093,6 +2119,7 @@ const tMain = createI18n({
     odsLossShapes: 'आकृतियाँ और टेक्स्ट बॉक्स: {count}',
     odsLossSlicers: 'स्लाइसर: {count}',
     odsLossSparklines: 'स्पार्कलाइन: {count}',
+    odsLossRedactions: 'AI से छिपाने के चिह्न (सेल बने रहते हैं, पर अब छिपे नहीं): {count}',
     odsContinueBtn: 'जारी रखें',
     errOdsExportFailed: 'ODS निर्यात विफल: {message}',
     errOdsReopenFailed:
@@ -2179,6 +2206,7 @@ const tMain = createI18n({
     odsLossShapes: '圖案和文字方塊:{count}',
     odsLossSlicers: '交叉分析篩選器:{count}',
     odsLossSparklines: '走勢圖:{count}',
+    odsLossRedactions: '對 AI 隱藏的標記(儲存格保留,但不再隱藏):{count}',
     odsContinueBtn: '繼續',
     errOdsExportFailed: 'ODS 匯出失敗:{message}',
     errOdsReopenFailed: '匯出的 ODS 檔案無法重新開啟,已將其刪除。活頁簿未受影響。',
@@ -2631,6 +2659,7 @@ const ODS_LOSS_LABELS: Record<OdsLossKind, Parameters<typeof tMain>[1]> = {
   shapes: 'odsLossShapes',
   slicers: 'odsLossSlicers',
   sparklines: 'odsLossSparklines',
+  redactions: 'odsLossRedactions',
 }
 
 /** One warning listing only what this workbook actually loses, then Continue/Cancel. */
@@ -2641,7 +2670,8 @@ async function confirmOdsLoss(
   const detail = [
     tm('odsLossDetail'),
     '',
-    ...losses.map((loss) => `• ${tm(ODS_LOSS_LABELS[loss.kind], { count: loss.count })}`),
+    // a count that could not be read is shown as unknown, never as none
+    ...losses.map((loss) => `• ${tm(ODS_LOSS_LABELS[loss.kind], { count: loss.count ?? '?' })}`),
   ].join('\n')
   const options = {
     type: 'warning' as const,

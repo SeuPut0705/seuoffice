@@ -11,9 +11,10 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import { setUiLang } from '@genoffice/i18n'
+import { LANGS, setUiLang } from '@genoffice/i18n'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { IPC_CHANNELS } from '../src/shared/ipc-channels'
+import { serializeRedactionPart } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { workbookSaveResultSchema } from '../src/shared/desktop-api'
 
 type Handler = (event: { sender: FakeContents }, ...args: unknown[]) => unknown
@@ -72,6 +73,13 @@ const dropped = {
 }
 const formulasDropped = { value: 0 }
 const verify = { sheets: 1, cells: 3, fails: false }
+/** the package's record of cells hidden from the AI, as the archive reader finds it (none by default) */
+const redactionPart: { text: string | undefined; manifestFails: boolean } = {
+  text: undefined,
+  manifestFails: false,
+}
+const WORKBOOK_XML =
+  '<workbook><sheets><sheet name="Data" sheetId="1" r:id="rId1"/></sheets></workbook>'
 
 /** queued Save As answers, and the options each dialog was shown */
 const saveDialogAnswers: string[] = []
@@ -212,6 +220,24 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
         },
       }
     }
+    async archiveManifest(): Promise<unknown> {
+      if (redactionPart.manifestFails) throw new Error('the package could not be listed')
+      const names = ['xl/workbook.xml']
+      if (redactionPart.text !== undefined) names.push('xl/gxRedactions.json')
+      return { entries: names.map((name) => ({ name })) }
+    }
+    async readEntries(input: { entries: string[]; outputDir: string }): Promise<unknown> {
+      const entries: { name: string; path: string }[] = []
+      for (const [index, name] of input.entries.entries()) {
+        const path = join(input.outputDir, `entry-${index}`)
+        await writeFile(
+          path,
+          name === 'xl/workbook.xml' ? WORKBOOK_XML : (redactionPart.text ?? ''),
+        )
+        entries.push({ name, path })
+      }
+      return { entries }
+    }
   },
 }))
 
@@ -327,6 +353,8 @@ beforeEach(() => {
   verify.sheets = 1
   verify.cells = 3
   verify.fails = false
+  redactionPart.text = undefined
+  redactionPart.manifestFails = false
   setUiLang('en')
   resetSheetsShuttingDown()
 })
@@ -574,6 +602,83 @@ describe('ODS export', () => {
     await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
 
     expect(messageBoxes).toHaveLength(0)
+  })
+
+  it('says that the copy does not keep the cells hidden from the AI', async () => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    const target = join(dir, 'Budget.ods')
+    // two marks on the one sheet: a cell and a range
+    redactionPart.text = serializeRedactionPart([
+      {
+        sheetName: 'Data',
+        marks: [
+          { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1, label: 'client phone' },
+          { startRow: 3, endRow: 9, startColumn: 2, endColumn: 2, label: 'salary' },
+        ],
+      },
+    ])
+    saveDialogAnswers.push(target)
+    messageAnswers.push(1)
+
+    const canceled = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
+    // nothing else is dropped: the marks alone raise the warning, and Cancel writes nothing
+    expect(canceled).toEqual({ canceled: true, reason: 'canceled' })
+    expect(existsSync(target)).toBe(false)
+    expect(messageBoxes).toHaveLength(1)
+    expect(messageBoxes[0]?.detail).toMatch(/hide-from-AI marks.*: 2$/im)
+    expect(messageBoxes[0]?.detail).not.toContain('client phone')
+
+    saveDialogAnswers.push(target)
+    messageAnswers.push(0)
+    const exported = await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+    expect((exported as { canceled: boolean }).canceled).toBe(false)
+    expect(readFileSync(target, 'utf8')).toBe(ODS_BYTES)
+  })
+
+  it.each([
+    ['the record of hidden cells is damaged', () => (redactionPart.text = '{"version":1,')],
+    ['the package cannot be listed', () => (redactionPart.manifestFails = true)],
+  ])('warns without a count when %s', async (_name, damage) => {
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    damage()
+    saveDialogAnswers.push(join(dir, 'Budget.ods'))
+    messageAnswers.push(0)
+
+    await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+
+    // not knowing what is hidden is not the same as nothing being hidden
+    expect(messageBoxes).toHaveLength(1)
+    expect(messageBoxes[0]?.detail).toMatch(/hide-from-AI marks.*: \?$/im)
+  })
+
+  it('says it in each of the 21 languages', async () => {
+    redactionPart.text = serializeRedactionPart([
+      {
+        sheetName: 'Data',
+        marks: [{ startRow: 0, endRow: 0, startColumn: 0, endColumn: 0, label: 'x' }],
+      },
+    ])
+    const path = writeWorkbook('Budget.xlsx')
+    const tab = newTab()
+    const opened = await openWorkbook(tab, path)
+    const lines = new Set<string>()
+    for (const lang of LANGS) {
+      setUiLang(lang)
+      saveDialogAnswers.push(join(dir, `Budget-${lang}.ods`))
+      messageAnswers.push(0)
+      await call(tab, IPC_CHANNELS.exportOds, exportOdsRequest(opened.sessionId))
+      const line = messageBoxes.at(-1)?.detail?.split('\n').at(-1) ?? ''
+      expect(line, lang).toMatch(/^• .+1$/)
+      lines.add(line)
+    }
+    // a language without its own line would repeat another's
+    expect(LANGS).toHaveLength(21)
+    expect(lines.size).toBe(21)
   })
 
   it('never writes over the original .ods of a converted session', async () => {
