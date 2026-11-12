@@ -62,6 +62,12 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - 별칭으로 소스 경로를 직접 가리키는 곳(vitest 설정, electron-vite 설정)은 `node` 조건을 거치지 않는다. 시험은 `setupFiles`에 `packages/engine-wasm/src/node.ts`를 넣고, 앱의 Electron main·워커 스레드는 `engine-init.ts`(`?asset`으로 번들에 담은 wasm)에서 `initDocxEngineSync`를, 렌더러·웹·웹 워커는 `await initDocxEngine(engineUrl)`(`./engine-url`의 `?url`)을 가장 먼저 import하는 모듈에서 부른다. CSP에 `'wasm-unsafe-eval'`이 있어야 한다.
 - 명령줄은 번들이 CommonJS 한 파일이라 `packages/cli/src/engine-init.ts`가 `engineWasmPath()`(`Resources/wasm/office_wasm.wasm`)로 시작한다.
 - 이 패키지의 모듈은 스스로 엔진을 시작하지 않는다(`src/engine.ts`는 시작됐는지만 본다). 인자와 답을 오가게 하는 코덱(`engineInvokeRaw`, `revive`, 오류 이름 복원 `engineErrorOf`)은 `@seuoffice/engine-wasm`의 것이고, 이 패키지는 `Run.wrap` 경계 규칙만 더한다. `metafile.ts`, `tiff.ts`, `xml-utils.ts`와 `vendor/`는 엔진 없는 TypeScript로 남는다.
+- 경계에서 TypeScript와 다르게 보일 수 있는 값은 다음처럼 건넌다(`packages/engine-wasm/src/invoke.ts`, `crates/office-wasm`).
+  - 64 KiB(UTF-16 단위)를 넘는 글자 인자는 JSON 머리 밖의 blob(`{"$text": n}`)으로 가고, 엔진은 그 blob을 복사하지 않고 읽는다(`invoke::Args`).
+  - 짝 잃은 대리 문자는 UTF-8로 쓸 수 없어 U+FFFD로 바뀐다. 한 단위가 한 단위로 바뀌므로 UTF-16 위치는 그대로다. TypeScript 엔진은 메모리에서는 반쪽을 그대로 들고 있었고, 파일로 쓸 때는 어차피 U+FFFD가 됐다.
+  - 답 안의 NaN·무한대는 `{"$num": "NaN" | "Infinity" | "-Infinity"}`로 와서 `revive`가 숫자로 되돌린다(`jscompat::writing_for_host`). 엔진 안에서 `JSON.stringify`를 옮긴 곳은 TypeScript처럼 `null`을 쓴다.
+  - 인자는 JSON으로 1024단계까지 중첩될 수 있다(배열·객체 하나가 한 단계). 더 깊으면 엔진이 아무것도 재귀하기 전에 `RangeError: Maximum call stack size exceeded`로 거절한다. wasm 스택(8 MiB, `crates/office-wasm/build.rs`)이 넘치면 그 인스턴스는 다시 쓸 수 없기 때문이다.
+  - 모델의 문자열 열거형에 없는 값(`w:lineRule="aut"` 같은 문서의 오타)은 TypeScript처럼 쓰인 그대로 들고 다시 쓴다(생성된 열거형의 `Unlisted`). 게이트의 엄격한 읽기만 그런 값을 거절한다.
 - 바인딩 이전의 TypeScript 구현은 `tools/docx-diff/reference/`에 얼려 두었고 게이트는 그것과 비교한다. 거기는 고치지 않는다.
 
 ## 원본과 다른 점 (결정 0092)

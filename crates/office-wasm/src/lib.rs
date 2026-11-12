@@ -281,15 +281,37 @@ fn decode_frame(mut input: &[u8]) -> Option<Frame<'_>> {
     input.is_empty().then_some(Frame { header, blobs })
 }
 
-fn encode_frame(header: &[u8], blobs: &[Vec<u8>]) -> Vec<u8> {
+/// A first reply blob at least this large becomes the frame itself.
+const IN_PLACE_FRAME: usize = 1 << 20;
+
+fn encode_frame(header: &[u8], mut blobs: Vec<Vec<u8>>) -> Vec<u8> {
     let size = 8 + header.len() + blobs.iter().map(|blob| 4 + blob.len()).sum::<usize>();
-    let mut out = Vec::with_capacity(size);
-    out.extend_from_slice(&(header.len() as u32).to_le_bytes());
-    out.extend_from_slice(header);
-    out.extend_from_slice(&(blobs.len() as u32).to_le_bytes());
+    let mut prefix = Vec::with_capacity(12 + header.len());
+    prefix.extend_from_slice(&(header.len() as u32).to_le_bytes());
+    prefix.extend_from_slice(header);
+    prefix.extend_from_slice(&(blobs.len() as u32).to_le_bytes());
+    // a large first blob (a document, a decoded part) is moved right in its
+    // own buffer instead of copied into a new one: the memory never holds it
+    // twice, and a wasm memory never shrinks
+    let mut out = match blobs.first().map(Vec::len) {
+        Some(first) if first >= IN_PLACE_FRAME => {
+            let mut out = blobs.remove(0);
+            prefix.extend_from_slice(&(first as u32).to_le_bytes());
+            out.reserve_exact(size - first);
+            out.resize(first + prefix.len(), 0);
+            out.copy_within(..first, prefix.len());
+            out[..prefix.len()].copy_from_slice(&prefix);
+            out
+        }
+        _ => {
+            let mut out = Vec::with_capacity(size);
+            out.extend_from_slice(&prefix);
+            out
+        }
+    };
     for blob in blobs {
         out.extend_from_slice(&(blob.len() as u32).to_le_bytes());
-        out.extend_from_slice(blob);
+        out.extend_from_slice(&blob);
     }
     out
 }
@@ -485,6 +507,7 @@ fn parse_docx_command(
     blob_refs: bool,
 ) -> Result<(Reply<'static>, Vec<Vec<u8>>), String> {
     docx_engine::warnings::take();
+    let sequences = docx_engine::sequences::save();
     let media =
         invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let parsed = docx_engine::parse::parse_docx_full_with(
@@ -501,7 +524,9 @@ fn parse_docx_command(
     let mut reply_blobs: Vec<Vec<u8>> = vec![Vec::new()];
     let pending = pending_of(&media, &mut reply_blobs);
     if !pending.is_empty() {
-        // the model of a pass that owes conversions is not the answer
+        // the model of a pass that owes conversions is not the answer, and
+        // what it counted is counted again by the pass that is
+        docx_engine::sequences::restore(sequences);
         return Ok((
             Reply::Parsed {
                 model: false,
@@ -512,7 +537,8 @@ fn parse_docx_command(
         ));
     }
     let text = if blob_refs {
-        let mut value = serde_json::to_value(&model).map_err(|error| error.to_string())?;
+        let mut value = jscompat::writing_for_host(|| serde_json::to_value(&model))
+            .map_err(|error| error.to_string())?;
         if let Some(internal) = value.get_mut("internal").and_then(Value::as_object_mut) {
             internal.insert(
                 "originalBytes".to_owned(),
@@ -522,7 +548,8 @@ fn parse_docx_command(
         invoke::blobify(&mut value, &mut reply_blobs);
         value.to_string()
     } else {
-        serde_json::to_string(&model).map_err(|error| error.to_string())?
+        jscompat::writing_for_host(|| serde_json::to_string(&model))
+            .map_err(|error| error.to_string())?
     };
     reply_blobs[0] = text.into_bytes();
     Ok((
@@ -539,13 +566,15 @@ fn parse_docx_command(
 fn invoke_command(
     blobs: &[&[u8]],
     function: &str,
-    args: &[Value],
+    mut args: Vec<Value>,
     callbacks: HashMap<String, u32>,
     now_ms: f64,
     resolved: &HashMap<String, Value>,
     alt_chunk_converter: bool,
 ) -> Result<(Reply<'static>, Vec<Vec<u8>>), String> {
+    let args = invoke::Args::new(&mut args, blobs)?;
     docx_engine::warnings::take();
+    let sequences = docx_engine::sequences::save();
     let media =
         invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
@@ -555,6 +584,10 @@ fn invoke_command(
     let value = result?;
     let (mut reply_blobs, media) = env.into_reply_blobs();
     let pending = pending_of(&media, &mut reply_blobs);
+    if !pending.is_empty() {
+        // this pass is called again with the answers: it must not have counted
+        docx_engine::sequences::restore(sequences);
+    }
     Ok((
         Reply::Invoked {
             value,
@@ -565,11 +598,59 @@ fn invoke_command(
     ))
 }
 
+/// The deepest a request may nest: deeper than any document the TypeScript
+/// reads (a SmartArt tree of hundreds of levels). Reading one level takes
+/// stack of the host's own (V8 overflows near 4,000 levels on Node's main
+/// thread) and of the wasm build's (build.rs): this keeps both well clear.
+const MAX_ARGUMENT_DEPTH: usize = 1024;
+
+/// The request of a header, past serde_json's default bound of 128 levels. A
+/// deeper one than `MAX_ARGUMENT_DEPTH` is refused as the TypeScript fails on
+/// it, before anything recursive runs: an overflow of the wasm stack leaves
+/// the instance unusable.
+fn request_of(header: &[u8]) -> Result<Request, String> {
+    if nesting_of(header) > MAX_ARGUMENT_DEPTH {
+        return Err("RangeError: Maximum call stack size exceeded".to_owned());
+    }
+    let mut reader = serde_json::Deserializer::from_slice(header);
+    reader.disable_recursion_limit();
+    let request = Request::deserialize(&mut reader).map_err(|error| error.to_string())?;
+    reader.end().map_err(|error| error.to_string())?;
+    Ok(request)
+}
+
+/// The deepest nesting of arrays and objects in a JSON text, brackets inside
+/// strings not counted.
+fn nesting_of(json: &[u8]) -> usize {
+    let (mut depth, mut deepest, mut in_string, mut escaped) = (0usize, 0usize, false, false);
+    for &byte in json {
+        if in_string {
+            match (escaped, byte) {
+                (true, _) => escaped = false,
+                (false, b'\\') => escaped = true,
+                (false, b'"') => in_string = false,
+                _ => {}
+            }
+            continue;
+        }
+        match byte {
+            b'"' => in_string = true,
+            b'[' | b'{' => {
+                depth += 1;
+                deepest = deepest.max(depth);
+            }
+            b']' | b'}' => depth = depth.saturating_sub(1),
+            _ => {}
+        }
+    }
+    deepest
+}
+
 fn respond(input: &[u8]) -> Vec<u8> {
     let mut reply_blobs = Vec::new();
     let header = match decode_frame(input) {
         None => json(&Reply::failure("invalid_request", "malformed frame")),
-        Some(frame) => match serde_json::from_slice::<Request>(frame.header) {
+        Some(frame) => match request_of(frame.header) {
             Err(error) => json(&Reply::failure("invalid_request", error)),
             Ok(request) if request.version != PROTOCOL_VERSION => {
                 json(&Reply::failure("unsupported_version", request.version))
@@ -636,7 +717,7 @@ fn respond(input: &[u8]) -> Vec<u8> {
                 ) => match invoke_command(
                     &frame.blobs,
                     &function,
-                    &args,
+                    args,
                     callbacks,
                     now_ms,
                     &resolved,
@@ -697,7 +778,7 @@ fn respond(input: &[u8]) -> Vec<u8> {
             },
         },
     };
-    encode_frame(&header, &reply_blobs)
+    encode_frame(&header, reply_blobs)
 }
 
 /// Hands the host a buffer of `len` bytes to fill before calling `seu_call`.
@@ -740,7 +821,7 @@ mod tests {
 
     fn frame(header: &Value, blobs: &[&[u8]]) -> Vec<u8> {
         let blobs: Vec<Vec<u8>> = blobs.iter().map(|blob| blob.to_vec()).collect();
-        encode_frame(&serde_json::to_vec(header).unwrap(), &blobs)
+        encode_frame(&serde_json::to_vec(header).unwrap(), blobs)
     }
 
     fn call(header: Value, blobs: &[&[u8]]) -> (Value, Vec<Vec<u8>>) {
@@ -748,6 +829,16 @@ mod tests {
         let reply = decode_frame(&reply).expect("the reply is a well-formed frame");
         let blobs = reply.blobs.iter().map(|blob| blob.to_vec()).collect();
         (serde_json::from_slice(reply.header).unwrap(), blobs)
+    }
+
+    #[test]
+    fn a_frame_whose_first_blob_is_large_reads_back_the_same() {
+        let large: Vec<u8> = (0..IN_PLACE_FRAME + 7).map(|i| (i % 251) as u8).collect();
+        let header = br#"{"value":1}"#;
+        let frame = encode_frame(header, vec![large.clone(), b"tail".to_vec(), Vec::new()]);
+        let read = decode_frame(&frame).expect("a well-formed frame");
+        assert_eq!(read.header, header);
+        assert_eq!(read.blobs, vec![&large[..], b"tail", b""]);
     }
 
     #[test]

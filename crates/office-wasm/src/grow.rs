@@ -1,13 +1,13 @@
 //! The allocator of the wasm build: the system one (wasi-libc's dlmalloc),
-//! which grows the linear memory by doubling it instead of by what each
-//! allocation lacks.
+//! which grows the linear memory by doubling it (by 64 MiB at a time past
+//! that) instead of by what each allocation lacks.
 //!
 //! Every `memory.grow` is external memory to V8, which answers a growth with
 //! a full garbage collection of the JavaScript heap. Growing page run by page
 //! run while a call builds a large model made that collection run hundreds of
 //! times (178 full collections, 2 s of a 3.7 s call building a 130,000 row
 //! table, with the rows in the JavaScript heap). Doubling makes the number of
-//! growths logarithmic in the peak size. The linear memory never shrinks
+//! growths logarithmic in the peak size up to 64 MiB and one per 64 MiB past it. The linear memory never shrinks
 //! either way, so reserving ahead costs at most the doubling's slack.
 //!
 //! The reservation is a block as large as the memory then is, allocated and
@@ -31,8 +31,9 @@ thread_local! {
 const PAGE: usize = 65_536;
 /// No reservation before the memory reaches this: small calls keep a small memory.
 const FROM_PAGES: usize = 256;
-/// One reservation at most this large: a 32-bit memory holds 4 GiB.
-const MAX_RESERVE: usize = 512 << 20;
+/// One reservation at most this large: past it the memory grows by this much
+/// at a time, so a large call does not double a large memory.
+const MAX_RESERVE: usize = 64 << 20;
 
 impl Doubling {
     fn reserve_ahead(&self) {

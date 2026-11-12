@@ -50,12 +50,14 @@ pub const XLSX_CONTENT_TYPE: &str =
 pub const EMPTY_RELS_LF: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"></Relationships>";
 pub const EMPTY_RELS_NONE: &str = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\"></Relationships>";
 
-/// `IMAGE_EXT`
-pub fn image_ext(mime: NewImageMime) -> &'static str {
+/// `IMAGE_EXT`: a mime the record does not name reads `undefined`, which
+/// the TypeScript writes into the media path and the content types.
+pub fn image_ext(mime: &NewImageMime) -> &'static str {
     match mime {
         NewImageMime::ImagePng => "png",
         NewImageMime::ImageJpeg => "jpg",
         NewImageMime::ImageGif => "gif",
+        NewImageMime::Unlisted(_) => "undefined",
     }
 }
 
@@ -86,7 +88,7 @@ impl<'a> MediaSource<'a> {
     pub fn of_image(image: &'a NewImage) -> Self {
         Self {
             base64: &image.base64,
-            mime: image.mime,
+            mime: image.mime.clone(),
             source_part: image.source_part.as_deref(),
         }
     }
@@ -260,7 +262,7 @@ impl Saver<'_> {
         if let Some(path) = self.media_path_by_content.get(&content_key) {
             return path.clone();
         }
-        let ext = image_ext(image.mime);
+        let ext = image_ext(&image.mime);
         let path = format!(
             "word/media/aidocs{}.{ext}",
             number_to_string(self.image_seq)
@@ -318,7 +320,7 @@ impl Saver<'_> {
                 ));
             }
             if let Some(line) = ps.line_twips.filter(|n| n.0 != 0.0 && !n.0.is_nan())
-                && let Some(rule) = ps.line_rule
+                && let Some(rule) = &ps.line_rule
             {
                 spacing_attrs.push(format!(
                     "w:line=\"{}\"",
@@ -366,12 +368,12 @@ impl Saver<'_> {
         let pos_offset = image.pos_offset_emu.as_ref().map(|off| PosOffset {
             x: off.x.0,
             y: off.y.0,
-            relative_to: off.relative_to.map(|rel| rel.as_str().to_owned()),
+            relative_to: off.relative_to.as_ref().map(|rel| rel.as_str().to_owned()),
         });
-        Ok(match image.wrap {
+        Ok(match &image.wrap {
             Some(wrap) => apply_image_wrap(
                 &xml,
-                Some(wrap),
+                Some(wrap.clone()),
                 pos_offset.as_ref(),
                 margin_align.as_ref(),
                 image.z_order.map(|n| n.0),
@@ -407,7 +409,7 @@ impl Saver<'_> {
             if attr == "r:embed" {
                 let r_id = self.embed_image_media(&MediaSource {
                     base64: &picture.base64,
-                    mime: picture.mime,
+                    mime: picture.mime.clone(),
                     source_part: None,
                 });
                 return format!("r:embed=\"{r_id}\"");

@@ -34,10 +34,10 @@ fn page_setup_rounds_and_folds_the_gutter() {
             "headerDist": 720, "footerDist": 720, "pageBorder": true,
             "pageBorderProps": {
                 "display": "firstPage", "spacePt": 5, "widthPt": 20, "color": "00ff00",
-                "sides": [
-                    ["top", {"val": "gems", "widthPt": 20, "spacePt": 5, "art": true}],
-                    ["left", {"val": "double", "widthPt": 1.5, "spacePt": 0, "color": "00ff00"}]
-                ]
+                "sides": {
+                    "top": {"val": "gems", "widthPt": 20, "spacePt": 5, "art": true},
+                    "left": {"val": "double", "widthPt": 1.5, "spacePt": 0, "color": "00ff00"}
+                }
             },
             "columns": 2, "colSpace": 720, "colWidths": [2000, 3001]
         })
@@ -76,10 +76,10 @@ fn sections_default_and_references() {
     assert_eq!(section["startType"], json!("oddPage"));
     assert_eq!(section["titlePg"], json!(false));
     assert_eq!(section["pageNumberStart"], json!(5));
-    // an object in the original, filled in file order: compared as its entries
+    // an object filled in file order, as the TypeScript writes it
     assert_eq!(
         section["headerRefs"],
-        json!([["first", "rId1"], ["default", "rId2"]])
+        json!({"first": "rId1", "default": "rId2"})
     );
 }
 

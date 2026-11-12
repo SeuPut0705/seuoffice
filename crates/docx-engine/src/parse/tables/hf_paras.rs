@@ -454,7 +454,7 @@ pub fn hf_cell_content(
             props.word_wrap = Some(false);
             any = true;
         }
-        let props_align = props.align;
+        let props_align = props.align.clone();
         para_props.push(any.then_some(props));
         if align.is_none() {
             align = props_align;

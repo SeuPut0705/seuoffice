@@ -994,6 +994,7 @@ fn drawing_branch(
                 let wrap = meta
                     .block
                     .image_wrap
+                    .as_ref()
                     .map(|w| w.as_str().to_owned())
                     .unwrap_or_default();
                 let side_wrapped =
@@ -1070,6 +1071,7 @@ fn drawing_branch(
         let wrap = meta
             .block
             .image_wrap
+            .as_ref()
             .map(|w| w.as_str().to_owned())
             .unwrap_or_default();
         let anchor_line = if stray.as_ref().is_some_and(|s| !s.runs.is_empty())

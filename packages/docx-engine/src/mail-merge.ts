@@ -148,7 +148,10 @@ export function mergeRecords(
   data: MergeData,
   startIndex = 0,
 ): { blocks: Block[]; cursor: MergeCursorState } {
-  const [merged, cursor] = invoke('mergeRecords', [blocks, data, startIndex]) as [Block[], MergeCursorState]
+  const [merged, cursor] = invoke('mergeRecords', [blocks, data, startIndex]) as [
+    Block[],
+    MergeCursorState,
+  ]
   return { blocks: merged, cursor }
 }
 /**

@@ -255,53 +255,66 @@ fn split_multipart<'a>(body: &'a [u8], boundary: &str) -> Vec<MimePart<'a>> {
 /// `decodeQuotedPrintable`. The text is read by UTF-16 code unit, each giving
 /// its low byte where it is not an `=XX` escape.
 pub fn decode_quoted_printable(text: &str) -> Vec<u8> {
-    let units: Vec<u16> = text.encode_utf16().collect();
-    quoted_printable(&units)
+    quoted_printable(text.encode_utf16(), text.len())
 }
 
 /// `decodeQuotedPrintable` over code units: UTF-16 for a string, bytes for
-/// `latin1(bytes)`. The TypeScript counts the output in a first pass to size
-/// it; the output is the same.
-fn quoted_printable<T: Copy + Into<u16>>(text: &[T]) -> Vec<u8> {
-    // `text.replace(/=\r?\n/g, '')`
-    let mut src: Vec<u16> = Vec::with_capacity(text.len());
-    let mut i = 0;
-    while let Some(unit) = text.get(i) {
-        let unit: u16 = (*unit).into();
-        let at = |offset: usize| text.get(i + offset).map(|unit| (*unit).into());
-        if unit == 0x3d {
-            if at(1) == Some(0x0a) {
-                i += 2;
-                continue;
-            }
-            if at(1) == Some(0x0d) && at(2) == Some(0x0a) {
-                i += 3;
-                continue;
-            }
-        }
-        src.push(unit);
-        i += 1;
-    }
+/// `latin1(bytes)`. One pass, holding three units at a time: the TypeScript
+/// counts the output in a first pass to size it, and a 32 MiB part must
+/// decode at about its own size (the memory test of the package).
+fn quoted_printable(units: impl Iterator<Item = u16>, len: usize) -> Vec<u8> {
+    let mut src = SoftBreaksRemoved {
+        units,
+        ahead: std::collections::VecDeque::with_capacity(2),
+    };
     let hex = |unit: u16| char::from_u32(u32::from(unit)).and_then(|ch| ch.to_digit(16));
-    let mut out = Vec::with_capacity(src.len());
-    let mut i = 0;
-    while let Some(&c) = src.get(i) {
-        if c == 0x3d && i + 2 < src.len() {
-            let digits = src
-                .get(i + 1)
-                .copied()
-                .and_then(hex)
-                .zip(src.get(i + 2).copied().and_then(hex));
-            if let Some((high, low)) = digits {
-                out.push(u8::try_from(high * 16 + low).unwrap_or_default());
-                i += 3;
-                continue;
-            }
+    let mut out = Vec::with_capacity(len);
+    // the current unit and the two after it: an `=XX` escape needs both
+    let (mut a, mut b, mut c) = (src.next(), src.next(), src.next());
+    while let Some(unit) = a {
+        if unit == 0x3d
+            && let (Some(high), Some(low)) = (b.and_then(hex), c.and_then(hex))
+        {
+            out.push(u8::try_from(high * 16 + low).unwrap_or_default());
+            (a, b, c) = (src.next(), src.next(), src.next());
+            continue;
         }
-        out.push(c.to_le_bytes()[0]);
-        i += 1;
+        out.push(unit.to_le_bytes()[0]);
+        (a, b, c) = (b, c, src.next());
     }
     out
+}
+
+/// `text.replace(/=\r?\n/g, '')` as it is read.
+struct SoftBreaksRemoved<I> {
+    units: I,
+    ahead: std::collections::VecDeque<u16>,
+}
+
+impl<I: Iterator<Item = u16>> Iterator for SoftBreaksRemoved<I> {
+    type Item = u16;
+
+    fn next(&mut self) -> Option<u16> {
+        loop {
+            let unit = self.ahead.pop_front().or_else(|| self.units.next())?;
+            if unit != 0x3d {
+                return Some(unit);
+            }
+            while self.ahead.len() < 2 {
+                let Some(next) = self.units.next() else { break };
+                self.ahead.push_back(next);
+            }
+            match (self.ahead.front(), self.ahead.get(1)) {
+                (Some(0x0a), _) => {
+                    self.ahead.pop_front();
+                }
+                (Some(0x0d), Some(0x0a)) => {
+                    self.ahead.drain(..2);
+                }
+                _ => return Some(unit),
+            }
+        }
+    }
 }
 
 /// `decodeBase64`: the bytes that are not base64 dropped, then `atob`
@@ -349,7 +362,10 @@ fn decode_transfer<'a>(part: &MimePart<'a>) -> Result<Cow<'a, [u8]>, String> {
     let enc = part.header("content-transfer-encoding").unwrap_or("");
     // `toLowerCase()` of Latin-1 text maps no character but A-Z onto a-z
     if enc.eq_ignore_ascii_case("quoted-printable") {
-        return Ok(Cow::Owned(quoted_printable(part.body)));
+        return Ok(Cow::Owned(quoted_printable(
+            part.body.iter().map(|&byte| u16::from(byte)),
+            part.body.len(),
+        )));
     }
     if enc.eq_ignore_ascii_case("base64") {
         return decode_base64(part.body).map(Cow::Owned);

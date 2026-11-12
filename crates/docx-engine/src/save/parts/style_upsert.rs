@@ -17,7 +17,7 @@ use super::thrown;
 use crate::generate::props::PPR_CHILD_ORDER;
 use crate::generate::rpr::RPR_CHILD_ORDER;
 use crate::generate::{escape_xml_attr, split_xml_children};
-use crate::model::{TabStop, TabStopLeader, TabStopVal};
+use crate::model::{TabStop, TabStopLeader};
 
 /// A key that is absent, `null` or a value.
 fn nullable<'de, T: Deserialize<'de>, D: Deserializer<'de>>(
@@ -637,27 +637,17 @@ fn patch_run(children: &mut Children, rp: &StyleRunProps) -> Result<(), String> 
 
 /// `tabXml`
 fn tab_xml(ts: &TabStop) -> Result<String, String> {
-    let val = match ts.val {
-        TabStopVal::Left => "left",
-        TabStopVal::Center => "center",
-        TabStopVal::Right => "right",
-        TabStopVal::Decimal => "decimal",
-        TabStopVal::Bar => "bar",
-        TabStopVal::Clear => "clear",
-    };
+    let val = ts.val.as_str();
     let mut xml = format!(
         "<w:tab w:val=\"{}\" w:pos=\"{}\"",
         escape_xml_attr(val),
         num(ts.pos.0)?
     );
-    let leader = match ts.leader {
-        None | Some(TabStopLeader::None) => None,
-        Some(TabStopLeader::Dot) => Some("dot"),
-        Some(TabStopLeader::Hyphen) => Some("hyphen"),
-        Some(TabStopLeader::Underscore) => Some("underscore"),
-        Some(TabStopLeader::Heavy) => Some("heavy"),
-        Some(TabStopLeader::MiddleDot) => Some("middleDot"),
-    };
+    let leader = ts
+        .leader
+        .as_ref()
+        .filter(|leader| **leader != TabStopLeader::None)
+        .map(TabStopLeader::as_str);
     if let Some(leader) = leader {
         xml.push_str(&format!(" w:leader=\"{}\"", escape_xml_attr(leader)));
     }

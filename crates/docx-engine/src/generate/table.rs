@@ -400,7 +400,7 @@ fn cell_span(cell: &TableCell) -> f64 {
 fn resolved_props(xml: &str, change_name: &str, change: Option<Option<&PropChangeInfo>>) -> String {
     let mode = match change {
         Some(None) => Some(PropChangeInfoResolved::Accept),
-        Some(Some(change)) => change.resolved,
+        Some(Some(change)) => change.resolved.clone(),
         None => None,
     };
     match mode {
@@ -506,14 +506,14 @@ fn table_cell_xml(
         "w:gridSpan",
         (span > 1.0).then(|| format!("<w:gridSpan w:val=\"{}\"/>", num(span))),
     );
-    let merge = *cell.v_merge;
+    let merge = (*cell.v_merge).clone();
     set_tc_pr_child(
         &mut children,
         "w:vMerge",
         match merge {
             Some(TableCellVMerge::Restart) => Some("<w:vMerge w:val=\"restart\"/>".to_owned()),
             Some(TableCellVMerge::Continue) => Some("<w:vMerge/>".to_owned()),
-            None => None,
+            Some(TableCellVMerge::Unlisted(_)) | None => None,
         },
     );
     // a merged-away cell rebuilt from its restart cell's bytes lost the merge record it carried
@@ -553,7 +553,8 @@ fn table_cell_xml(
         &mut children,
         "w:vAlign",
         cell.v_align
-            .filter(|&v_align| v_align != TableCellVAlign::Top)
+            .as_ref()
+            .filter(|v_align| **v_align != TableCellVAlign::Top)
             .map(|v_align| format!("<w:vAlign w:val=\"{}\"/>", v_align.as_str())),
     );
     if *cell.tc_pr_edited == Some(true) {
@@ -561,7 +562,8 @@ fn table_cell_xml(
             &mut children,
             "w:textDirection",
             cell.text_direction
-                .filter(|&direction| direction != TableCellTextDirection::LrTb)
+                .as_ref()
+                .filter(|direction| **direction != TableCellTextDirection::LrTb)
                 .map(|direction| format!("<w:textDirection w:val=\"{}\"/>", direction.as_str())),
         );
         set_tc_pr_child(
@@ -587,7 +589,7 @@ fn table_cell_xml(
             let paras = cell.paras.as_deref().unwrap_or_default();
             let texts: &[String] = if paras.is_empty() { &empty } else { paras };
             let mut format = ParaFormat::default();
-            format.align.assign(*cell.align);
+            format.align.assign((*cell.align).clone());
             texts
                 .iter()
                 .map(|text| {
@@ -905,9 +907,8 @@ fn row_xml(
                 .row_height_rules
                 .as_ref()
                 .and_then(|v| v.get(ri))
-                .copied()
-                .flatten()
-                == Some(TableModelRowHeightRulesItem::Exact);
+                .and_then(Option::as_ref)
+                == Some(&TableModelRowHeightRulesItem::Exact);
             let rule = if exact { "exact" } else { "atLeast" };
             let tag = format!(
                 "<w:trHeight w:val=\"{}\" w:hRule=\"{rule}\"/>",
@@ -1082,7 +1083,7 @@ pub fn generate_table_model_xml(
         } else {
             TableModelFloatSide::Left
         })),
-        (side, _) => *side,
+        (side, _) => side.clone(),
     };
     if requested.is_some() || (original_tbl_pr.is_none() && model.float_pos.is_some()) {
         match requested.flatten() {
@@ -1096,8 +1097,8 @@ pub fn generate_table_model_xml(
                         pos.x_twips.0,
                         pos.y_twips.0,
                         pos.distance_twips.as_ref(),
-                        pos.vert_anchor.map_or("page", |a| a.as_str()),
-                        pos.horz_anchor.map_or("page", |a| a.as_str()),
+                        pos.vert_anchor.as_ref().map_or("page", |a| a.as_str()),
+                        pos.horz_anchor.as_ref().map_or("page", |a| a.as_str()),
                     ),
                     None => (
                         if side == TableModelFloatSide::Right {
@@ -1134,7 +1135,7 @@ pub fn generate_table_model_xml(
             }
         }
     }
-    let effective_auto_fit = model.auto_fit.or_else(|| {
+    let effective_auto_fit = model.auto_fit.clone().or_else(|| {
         original_tbl_pr.is_none().then(|| {
             if model.auto_layout == Some(true) {
                 TableAutoFitMode::Contents
@@ -1147,7 +1148,7 @@ pub fn generate_table_model_xml(
         let tbl_w = match fit {
             TableAutoFitMode::Window => "<w:tblW w:w=\"5000\" w:type=\"pct\"/>".to_owned(),
             TableAutoFitMode::Contents => "<w:tblW w:w=\"0\" w:type=\"auto\"/>".to_owned(),
-            TableAutoFitMode::Fixed => {
+            TableAutoFitMode::Fixed | TableAutoFitMode::Unlisted(_) => {
                 format!("<w:tblW w:w=\"{}\" w:type=\"dxa\"/>", num(total_width))
             }
         };
@@ -1185,12 +1186,12 @@ pub fn generate_table_model_xml(
         tbl_pr = set_tbl_pr_child(&tbl_pr, "w:tblLook", Some(&table_look_xml(&look)))?;
     }
     // Table alignment (w:jc): explicit align replaces/removes the original
-    if let Some(align) = model.align {
+    if let Some(align) = &model.align {
         let jc = format!("<w:jc w:val=\"{}\"/>", align.as_str());
         tbl_pr = set_tbl_pr_child(
             &tbl_pr,
             "w:jc",
-            (align != TableModelAlign::Left).then_some(jc.as_str()),
+            (*align != TableModelAlign::Left).then_some(jc.as_str()),
         )?;
     }
     if let Some(caption) = &model.caption {

@@ -841,7 +841,7 @@ pub fn extract_table_model(
         };
         // a keyword Y with no vertAnchor aligns to the margin box in Word (cover
         // page gallery tables sit at the bottom margin); a numeric Y stays text-relative
-        let vert_anchor = match attr("w:vertAnchor").or(y_spec.map(|_| "margin")) {
+        let vert_anchor = match attr("w:vertAnchor").or(y_spec.as_ref().map(|_| "margin")) {
             Some("page") => Some(TableModelFloatPosVertAnchor::Page),
             Some("margin") => Some(TableModelFloatPosVertAnchor::Margin),
             Some("text") => Some(TableModelFloatPosVertAnchor::Text),
