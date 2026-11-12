@@ -41,6 +41,7 @@ import { t } from '../src/renderer/i18n/locale'
 import { pasteSpecialCarriesWithheld } from '../src/renderer/paste-special'
 import { collectPickListValues } from '../src/renderer/pick-from-list'
 import { refreshPivotTables, type PivotActionContext } from '../src/renderer/pivot-actions'
+import { proposeOperations, type PlanContext } from '../src/renderer/plan-operations'
 import {
   guardInternalPaste,
   installRedactMoveGuard,
@@ -109,7 +110,14 @@ function boot(grid: Cell[][], hidden: IRange[], dependents: IRange[] = []) {
   injector.get(IUniverInstanceService).focusUnit('wb')
   const runtime = { univer, univerAPI } as unknown as UniverRuntime
   const marks = buildRedactionIndex(
-    [{ sheetName: 'Sheet1', marks: hidden.map((range) => ({ ...range, label: 'client phone' })) }],
+    hidden.length === 0
+      ? []
+      : [
+          {
+            sheetName: 'Sheet1',
+            marks: hidden.map((range) => ({ ...range, label: 'client phone' })),
+          },
+        ],
     [{ id: 's', name: 'Sheet1' }],
   )
   const inDependents = (row: number, column: number): boolean =>
@@ -472,6 +480,51 @@ describe('PivotTable', () => {
     univerAPI.getActiveWorkbook()!.getActiveSheet()!.setName('Renamed')
     expect(() => refreshPivotTables(ctx, 's')).toThrow(REFUSED)
     expect(leaks()).toEqual([])
+  })
+
+  it('is not told to the AI by field name when it cannot be refreshed', () => {
+    // The reason a pivot cannot be recomputed quotes its field names, and a
+    // field name is the text of a header cell.
+    const refusalOf = (hidden: IRange[]): string => {
+      const { runtime } = boot(GRID, hidden)
+      const state = {
+        formulaMode: true,
+        flags: { preloadComplete: true },
+        loadedRanges: new Map(),
+        editJournal: createEditJournal(),
+        file: {
+          sheets: [
+            {
+              id: 's',
+              name: 'Sheet1',
+              pivotTables: [{ path: 'xl/pivotTables/pivotTable1.xml', cachePath: null }],
+              pivotRanges: [],
+            },
+          ],
+        },
+        pivotDefinitions: new Map([
+          [
+            'xl/pivotTables/pivotTable1.xml',
+            { unsupported: [`grouped field "${SECRET}" does not support recompute`] },
+          ],
+        ]),
+      } as unknown as LazyWorkbookState
+      const outcome = proposeOperations(
+        {
+          univerRef: { current: runtime },
+          lazyWorkbookRef: { current: state },
+          lazyPreviewRef: { current: null },
+        } as unknown as PlanContext,
+        [{ op: 'refresh_pivot', sheetId: 's' }],
+        'refresh',
+      )
+      return outcome.ok ? '' : outcome.error
+    }
+    expect(refusalOf([at(0, 0)])).toBe(
+      'Pivot table xl/pivotTables/pivotTable1.xml does not support recompute.',
+    )
+    // with nothing hidden the reasons help the model, and are given
+    expect(refusalOf([])).toContain(`grouped field "${SECRET}"`)
   })
 })
 

@@ -400,6 +400,85 @@ describe('read_sheet_features: names and rule values that are copies of a hidden
     expect(output).toContain('columns[{{private}}, {{private}}]')
   })
 
+  /** A pivot over A1:B10 whose third cache field is not a source column. */
+  const withExtraField = (
+    extra: object,
+    reasons: string[] = [],
+    second: object = { name: PHONE_HEADER },
+  ) =>
+    [
+      'pivot1',
+      {
+        outputRef: 'E3:F9',
+        fields: [{ name: 'Name' }, second, extra],
+        rowFields: [2],
+        colFields: [1],
+        dataFields: [{ name: 'Count of Name', field: 0 }],
+        pageFields: [],
+        unsupported: reasons,
+        sourceSheet: 'Customers',
+        sourceRef: 'A1:B10',
+      },
+    ] as [string, object]
+  // Excel names a manual group after its base field: "<header>2"
+  const GROUP_OF_PHONE = { name: `${PHONE_HEADER}2` }
+
+  it('withholds the name of a group field Excel added when its source holds a hidden cell', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        pivotTables: PIVOT,
+        definitions: [
+          withExtraField(GROUP_OF_PHONE, [
+            `grouped field "${PHONE_HEADER}" does not support recompute`,
+          ]),
+        ],
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('rows[{{private}}] cols[{{client phone}}] values[Count of Name]')
+    // the reason quotes field names: it is given without them
+    expect(output).toContain('(recompute unsupported)')
+  })
+
+  it('prints a group field when nothing in the source is hidden', () => {
+    const elsewhere = { startRow: 20, endRow: 20, startColumn: 3, endColumn: 3 }
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [elsewhere],
+        pivotTables: PIVOT,
+        definitions: [withExtraField(GROUP_OF_PHONE)],
+      }),
+    )
+    expect(output).toContain(`rows[${PHONE_HEADER}2] cols[${PHONE_HEADER}]`)
+  })
+
+  it('prints a calculated field, which the person named, whatever the source holds', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        pivotTables: PIVOT,
+        definitions: [withExtraField({ name: 'Margin', formula: 'Name*2' })],
+      }),
+    )
+    expect(output).toContain('rows[Margin] cols[{{client phone}}]')
+  })
+
+  it('withholds a field grouped in place when its column holds a hidden cell', () => {
+    // the header "Signed" is not hidden; the dates under it are
+    const grouped = { name: 'Signed', grouping: { kind: 'date', dateUnit: 'month' } }
+    const definition = withExtraField({ name: 'Margin', formula: 'Name*2' }, [], grouped)
+    const output = readSheetFeatures(
+      fileCtx({ marks: [B2_B10], pivotTables: PIVOT, definitions: [definition] }),
+    )
+    expect(output).toContain('rows[Margin] cols[{{private}}]')
+    // and ungrouped, the same field is named by its visible header
+    const plain = withExtraField({ name: 'Margin', formula: 'Name*2' }, [], { name: 'Signed' })
+    expect(
+      readSheetFeatures(fileCtx({ marks: [B2_B10], pivotTables: PIVOT, definitions: [plain] })),
+    ).toContain('rows[Margin] cols[Signed]')
+  })
+
   it('drops the kept values of a filter column that holds a hidden cell', () => {
     const filter = {
       getRange: () => ({

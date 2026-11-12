@@ -249,6 +249,16 @@ export function refuseHiddenSource(
 }
 
 /**
+ * Whether the workbook of this editor withholds any cell from AI. For a
+ * message meant for the model that would quote something read off the file,
+ * where no cell says whether the quoted text is a hidden one.
+ */
+export function withholdsCells(runtime: UniverRuntime): boolean {
+  const deps = INSTALLED.get(runtime.univer)
+  return deps !== undefined && !deps.redactions().isEmpty
+}
+
+/**
  * Refuse the commands that would move or copy a hidden cell.
  *
  * Undo and redo are checked by the step they are about to replay: an edit made

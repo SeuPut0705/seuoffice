@@ -175,14 +175,34 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       } catch {
         // a named or external source
       }
+      const unknownName = placeholderSource(UNKNOWN_REDACTION_LABEL)
+      /** whether a part of the source range (in file coordinates) holds a withheld cell now */
+      const sourceHoldsWithheld = (sheet: string, part: RangeBounds): boolean => {
+        const now = onScreen(sheet, part)
+        return now === null || holdsWithheld(redactions, sheet, now)
+      }
       const fieldName = (field: number, name: string | undefined): string | undefined => {
         if (redactions.isEmpty) return name
-        if (source === null || sourceSheetId === undefined) {
-          return placeholderSource(UNKNOWN_REDACTION_LABEL)
+        if (source === null || sourceSheetId === undefined) return unknownName
+        const cacheField = definition.fields[field]
+        if (field > source.endColumn - source.startColumn) {
+          // Past the source's columns. A calculated field is named by the
+          // person. Anything else is a group Excel added (Years, Quarters,
+          // "Phone2"): it is named after a base field and its members are
+          // built from that column, and the definition does not say which
+          // one, so any withheld cell in the source withholds it.
+          if (cacheField?.formula !== undefined) return name
+          return sourceHoldsWithheld(sourceSheetId, source) ? unknownName : name
         }
-        // past the source's columns: a calculated field, named by the person
-        if (field > source.endColumn - source.startColumn) return name
-        return nameFromFileCell(name, sourceSheetId, source.startRow, source.startColumn + field)
+        const column = source.startColumn + field
+        // A field grouped in place: its members are made from its column.
+        if (
+          cacheField?.grouping !== undefined &&
+          sourceHoldsWithheld(sourceSheetId, { ...source, startColumn: column, endColumn: column })
+        ) {
+          return unknownName
+        }
+        return nameFromFileCell(name, sourceSheetId, source.startRow, column)
       }
       const axis = (fields: readonly number[]): (string | undefined)[] =>
         fields
@@ -204,9 +224,12 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       lines.push(
         `- ${pivot.outputRef}: rows[${rows.join(',')}] cols[${cols.join(',')}] values[${values.join(',')}]` +
           ` source=${sourceLabel}` +
-          (definition.unsupported.length > 0
-            ? ` (recompute unsupported: ${definition.unsupported.join('; ')})`
-            : ' (recomputable)'),
+          // The reasons quote field names: given whole only when nothing is withheld.
+          (definition.unsupported.length === 0
+            ? ' (recomputable)'
+            : redactions.isEmpty
+              ? ` (recompute unsupported: ${definition.unsupported.join('; ')})`
+              : ' (recompute unsupported)'),
       )
     }
   } else if (fileMeta && fileMeta.pivotRanges.length > 0) {
