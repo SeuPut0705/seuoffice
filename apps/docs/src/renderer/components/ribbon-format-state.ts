@@ -6,6 +6,7 @@ import { getActiveSubEditor } from '../editor/active-editor'
 import { shapeWrapOf } from '../editor/floating-z-order'
 import { tableCellsSelection } from '../editor/table-ops'
 import { effectiveBidi, selectionHasBidi } from '../editor/direction'
+import { INLINE_OPAQUE_NODE } from '../editor/inline-wrap-chain'
 import {
   effectiveSizeHalfPoints,
   selectedFonts,
@@ -171,7 +172,8 @@ const docEmptyOf = cachedByDoc((doc: PmNode) => {
   doc.descendants((node) => {
     if (!empty) return false
     if (node.isText && node.text?.trim()) empty = false
-    else if (node.isLeaf && !node.isText) empty = false
+    // a kept element (w:permStart...) is invisible: a document of those alone is empty
+    else if (node.isLeaf && !node.isText && node.type.name !== INLINE_OPAQUE_NODE) empty = false
     return empty
   })
   return empty

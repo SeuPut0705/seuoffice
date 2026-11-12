@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import type { DocDefaults, StyleInfo } from '@genoffice/docx-engine'
+import { drawnChildCount } from './inline-wrap-chain'
 
 const TEXT_BLOCK_TYPES = new Set(['docParagraph', 'docHeading', 'docListItem'])
 
@@ -69,7 +70,7 @@ export function selectedSizeMixed(
         styles,
         defaults,
       )
-    else if (node.isTextblock && node.childCount === 0)
+    else if (node.isTextblock && drawnChildCount(node) === 0)
       size = runSizeHalfPoints({}, node.attrs.styleId, styles, defaults)
     else return true
     if (seen === undefined) seen = size
@@ -135,7 +136,7 @@ export function selectedFonts(
           node.marks.find((m) => m.type.name === 'docTextStyle')?.attrs ?? {},
           parent?.attrs.styleId,
         )
-      else if (node.isTextblock && node.childCount === 0) add({}, node.attrs.styleId)
+      else if (node.isTextblock && drawnChildCount(node) === 0) add({}, node.attrs.styleId)
     })
   return result ?? { fontEastAsia: '', fontLatin: '' }
 }

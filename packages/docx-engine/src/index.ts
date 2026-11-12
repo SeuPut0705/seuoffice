@@ -11,6 +11,12 @@ export {
 export { decodeEntities } from './parse-xml-text'
 export { sdtCheckboxGlyphs, sdtCheckboxIsChecked } from './checkbox-control'
 export {
+  inlineWrapContentLocked,
+  runCopiedElsewhere,
+  sameInlineWrap,
+  sameInlineWrapChain,
+} from './inline-opaque'
+export {
   buildContentControlXml,
   isContentControlLock,
   nextContentControlId,

@@ -39,6 +39,7 @@ import type {
   FieldRun,
   InkInfo,
   InlineContentControl,
+  InlineWrap,
   NoteInfo,
   NoteRun,
   NoteProps,
@@ -242,6 +243,17 @@ import {
 } from './parse-package'
 import { parseSdtBlock, sdtMeta, sdtRanges, sdtTableXml, splitSdtParts } from './parse-sdt'
 import { sdtCheckboxControl } from './checkbox-control'
+import {
+  INLINE_KEPT_ELEMENTS,
+  inlineElementXml,
+  inlineRawSource,
+  inlineWrapTextOf,
+  inlineWrapperIsBare,
+  inlineWrapperShell,
+  isInlineWrapper,
+  sdtFollowsItsText,
+  type InlineRawSource,
+} from './inline-opaque'
 import { paraCsFormat, parseStyles } from './parse-styles'
 import { ownValue, setOwn } from './own-value'
 import {
@@ -774,6 +786,9 @@ interface BuildContext {
   /** next block-level control chain id: one id per w:sdt instance, shared by
    *  every level and every block of a split control */
   sdtGroupSeq: number
+  /** source text of the table being read: cell paragraphs slice their wrapper
+   *  and marker bytes from it (see extractRuns) */
+  tableRaw?: InlineRawSource
   /** settings.xml compatibilityMode (0 = legacy layout) */
   compatibilityMode?: number
   /** settings.xml compat flags the property resolver applies */
@@ -2413,16 +2428,18 @@ function buildTextParagraph(
     withImages,
     zoteroField,
     { eff: eff0, rctx },
+    inlineRawSource(xml, pNode),
   )
   shadowParaFormat(ctx, 'body', pPr, styleBidiOf(ctx, styleId, listRef), direct, runs)
-  const spaceOnly = runs.length > 0 && spaceOnlyRuns(runs) && !hasLayoutRunContent(pNode)
+  const textRuns = lineRuns(runs)
+  const spaceOnly = textRuns.length > 0 && spaceOnlyRuns(textRuns) && !hasLayoutRunContent(pNode)
   // a paragraph holding only page/column breaks lays its break line like an
   // empty one: by the mark's face and size, else the break run's
   const breakOnly =
-    runs.length > 0 &&
-    breakOnlyRuns(runs) &&
+    textRuns.length > 0 &&
+    breakOnlyRuns(textRuns) &&
     !hasLayoutRunContent(pNode, LAYOUT_RUN_CONTENT_BESIDES_BREAKS)
-  if (runs.length === 0 || spaceOnly || breakOnly) {
+  if (textRuns.length === 0 || spaceOnly || breakOnly) {
     // the mark sizes the line; a run-less line without a sized mark still takes
     // the dropped empty / break run's w:sz (Word sizes 1pt spacer lines by it)
     const emptySz =
@@ -2785,7 +2802,7 @@ function collectTxbxParas(
         ),
       )
       if (styleId) para.styleId = styleId
-      if (spaceOnlyRuns(para.runs) && !hasLayoutRunContent(child)) {
+      if (spaceOnlyRuns(lineRuns(para.runs)) && !hasLayoutRunContent(child)) {
         const markSz = emptyParaSizeHalfPoints(child, pPr, true)
         if (markSz) para.emptyRunSizeHalfPoints = markSz
       }
@@ -2821,7 +2838,18 @@ function txbxTableParas(tbl: XNode, ctx: BuildContext): TextboxParaDisplay[] {
 
 /** a paragraph the box shows: text runs or a table row */
 function txbxParaVisible(p: TextboxParaDisplay): boolean {
-  return p.runs.length > 0 || (p.cells?.length ?? 0) > 0
+  return lineRuns(p.runs).length > 0 || (p.cells?.length ?? 0) > 0
+}
+
+/**
+ * The runs that put something on the line. An element kept verbatim
+ * (w:permStart, a bare wrapper...) puts nothing there, so every judgment
+ * about an empty or space-only line reads the paragraph without them.
+ */
+function lineRuns(runs: Run[]): Run[] {
+  return runs.some((r) => r.opaqueXml !== undefined)
+    ? runs.filter((r) => r.opaqueXml === undefined)
+    : runs
 }
 
 /** a textless top-level v:shape/rect/roundrect/oval placed with position:absolute */
@@ -4304,6 +4332,8 @@ const RESULT_FORMAT_SKIP = new Set([
   'fldBeginXml',
   'fldDirty',
   'sdtCheckboxXml',
+  'wrap',
+  'opaqueXml',
   'commentIds',
   'ins',
   'del',
@@ -4361,6 +4391,9 @@ function extractRuns(
   withImages = false,
   zoteroField?: ZoteroFieldParagraph,
   para?: ParaResolve,
+  /** the text pNode was parsed from: wrapper and marker bytes are sliced from
+   *  it; without it they come from the serialized parse tree */
+  raw?: InlineRawSource,
 ): Run[] {
   const runs: Run[] = []
   let mathIndex = 0
@@ -4386,7 +4419,30 @@ function extractRuns(
   collectRangeIds(childrenOf(pNode))
   const complete = new Set([...starts].filter((id) => ends.has(id)))
   const activeComments = new Set<string>()
-  type RevCtx = { ins?: RevisionInfo; del?: RevisionInfo }
+  type RevCtx = { ins?: RevisionInfo; del?: RevisionInfo; wrap?: InlineWrap[] }
+  let wrapSeq = 0
+  /** wrappers this paragraph cannot carry: their runs are read as if they were not there */
+  const notCarried = new Set<InlineWrap>()
+  /**
+   * A wrapper is written back outside the run's tracked-change element,
+   * inside it, or inside the hyperlink (InlineWrap.inside). One that would
+   * have to sit between two of those the other way round (hyperlink >
+   * wrapper > w:ins, w:ins > wrapper > w:del) cannot be written back with its
+   * nesting, so it is not carried.
+   */
+  const enters = (container: 'revision' | 'link', chain: InlineWrap[] | undefined) => {
+    for (const wrap of chain ?? []) {
+      if (wrap.inside === 'link' || (container === 'revision' && wrap.inside === 'revision'))
+        notCarried.add(wrap)
+    }
+  }
+  /** something the editor can hold a wrapper on: text, a picture or an atom */
+  const carriesWrap = (r: Run) =>
+    r.text !== '' ||
+    r.image !== undefined ||
+    r.xeTerm !== undefined ||
+    r.math !== undefined ||
+    r.opaqueXml !== undefined
   // inline field state: XE folds into Run.xeTerm, REF (cross-reference) into Run.refField
   let fieldDepth = zoteroField && zoteroField.part !== 'begin' ? 1 : 0
   let fieldInstr = zoteroField?.instruction ?? ''
@@ -4428,8 +4484,13 @@ function extractRuns(
     }
     if (rev?.ins) run.ins = rev.ins
     if (rev?.del) run.del = rev.del
+    if (rev?.wrap) run.wrap = rev.wrap
     runs.push(run)
   }
+  /** a text-less element the model has no field for (w:permStart, a bare wrapper...):
+   *  kept verbatim at its position, inside the hyperlink it sat in */
+  const pushKept = (node: XNode, link: Run['link'] | undefined, rev?: RevCtx) =>
+    pushRun({ text: '', opaqueXml: inlineElementXml(node, raw), ...(link ? { link } : {}) }, rev)
   const pushZoteroCachedRuns = (part: ZoteroFieldPart, rev?: RevCtx) => {
     const cachedRuns = fieldCachedRuns.length > 0 ? fieldCachedRuns : [{ text: fieldCached || ' ' }]
     const id = zoteroField?.id ?? ctx.nextZoteroFieldId ?? 1
@@ -4699,7 +4760,13 @@ function extractRuns(
     }
     const first = runs.length
     walk(childrenOf(node), link, rev)
-    const cached = runs.splice(first)
+    const inside = runs.splice(first)
+    // elements kept verbatim are not part of the cached result: they stay
+    const cached = inside.filter((r) => {
+      if (r.opaqueXml === undefined) return true
+      runs.push(r)
+      return false
+    })
     const text = cached.map((r) => r.text).join('')
     const format = cached[0]
       ? Object.fromEntries(Object.entries(cached[0]).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
@@ -4759,6 +4826,7 @@ function extractRuns(
         if (attrs['w16du:dateUtc']) info.dateUtc = attrs['w16du:dateUtc']
         if (attrs['w:id']) info.id = attrs['w:id']
         const next: RevCtx = name === 'w:ins' ? { ...rev, ins: info } : { ...rev, del: info }
+        enters('revision', rev?.wrap)
         walk(childrenOf(node), link, next)
       } else if (name === 'w:moveFromRangeStart' || name === 'w:moveToRangeStart') {
         const attrs = attrsOf(node)
@@ -4785,6 +4853,7 @@ function extractRuns(
         const range = [...(ctx.openMoves ?? [])].reverse().find((m) => m.side === side)
         info.move = range?.name ?? attrs['w:name'] ?? `move${attrs['w:id'] ?? ''}`
         const next: RevCtx = side === 'from' ? { ...rev, del: info } : { ...rev, ins: info }
+        enters('revision', rev?.wrap)
         walk(childrenOf(node), link, next)
       } else if (name === 'w:r') {
         handleRun(node, link, rev)
@@ -4817,6 +4886,7 @@ function extractRuns(
             ? `#${anchor}`
             : ''
         const first = runs.length
+        enters('link', rev?.wrap)
         walk(childrenOf(node), { href, rId, ...(tooltip ? { tooltip } : {}) }, rev)
         // Word paints a bookmark link only through its character style: an
         // unstyled run (TOC entries under \h) keeps the paragraph's ink
@@ -4834,13 +4904,45 @@ function extractRuns(
         const base = runs.slice(first).find((r) => r.text.trim() !== '') ?? runs[first]
         runs.length = first
         pushRun({ ...(base ?? {}), text: control.glyph, sdtCheckboxXml: control.sdtPrXml }, rev)
-      } else if (
-        name === 'w:smartTag' ||
-        name === 'w:sdt' ||
-        name === 'w:sdtContent' ||
-        name === 'w:dir' ||
-        name === 'w:bdo'
-      ) {
+      } else if (name !== undefined && isInlineWrapper(name)) {
+        const shell = inlineWrapperShell(node, raw)
+        const first = runs.length
+        const fieldDepthAtEntry = fieldDepth
+        if (!shell) {
+          // nowhere to hold runs (no w:sdtContent, a self-closing element): one
+          // kept element when it is bare, else read through as plain content
+          if (fieldDepth === 0 && inlineWrapperIsBare(node)) pushKept(node, link, rev)
+          else walk(childrenOf(node), link, rev)
+        } else {
+          const wrap: InlineWrap = {
+            seq: wrapSeq++,
+            open: shell.open,
+            close: shell.close,
+            ...(link
+              ? { inside: 'link' as const }
+              : rev?.ins || rev?.del
+                ? { inside: 'revision' as const }
+                : {}),
+          }
+          walk(shell.content, link, { ...rev, wrap: [...(rev?.wrap ?? []), wrap] })
+          const inside = runs.slice(first)
+          if (fieldDepthAtEntry > 0 || fieldDepth !== fieldDepthAtEntry) {
+            // inside a field, or cut by a field's edge: the field's result run is
+            // built where the field ends, so it is not this wrapper's to hold
+            notCarried.add(wrap)
+          } else if (inside.some(carriesWrap)) {
+            if (sdtFollowsItsText(wrap.open)) wrap.text = inlineWrapTextOf(inside)
+          } else if (inlineWrapperIsBare(node)) {
+            // nothing in it the model reads: the whole element rides as one
+            runs.length = first
+            pushKept(node, link, rev)
+          } else {
+            // it holds runs, but none this reading carries (a picture in a part
+            // read without pictures): read as if the wrapper were not there
+            notCarried.add(wrap)
+          }
+        }
+      } else if (name === 'w:sdtContent') {
         walk(childrenOf(node), link, rev)
       } else if (name === 'm:oMathPara') {
         // display equation inside a cell paragraph: its m:oMath runs flag
@@ -4858,6 +4960,8 @@ function extractRuns(
       } else if (name === 'w:br') {
         // Word honors a <w:br> sitting outside any <w:r> (direct child of w:p / w:ins)
         pushRun({ text: breakCharOf(attrsOf(node)) }, rev)
+      } else if (name !== undefined && INLINE_KEPT_ELEMENTS.has(name)) {
+        pushKept(node, link, rev)
       }
     }
   }
@@ -4868,6 +4972,15 @@ function extractRuns(
     // a field whose result runs on into the next paragraph (BIBLIOGRAPHY) has no
     // fldChar end here; Word still shows the cached result of this paragraph
     for (const cached of fieldCachedRuns) pushRun(cached)
+  }
+  if (notCarried.size > 0) {
+    for (const run of runs) {
+      if (!run.wrap) continue
+      const kept = run.wrap.filter((w) => !notCarried.has(w))
+      if (kept.length === run.wrap.length) continue
+      if (kept.length > 0) run.wrap = kept
+      else delete run.wrap
+    }
   }
   return mergeRuns(runs)
 }
@@ -5235,7 +5348,14 @@ function extractTable(xml: string, ctx: BuildContext, docOffset?: number): Table
     const parsed = deepXmlParser.parse(xml) as XNode[]
     const tbl = parsed.find((n) => nameOf(n) === 'w:tbl')
     if (!tbl) return undefined
-    const model = extractTableModel(tbl, ctx, 1, docOffset)
+    const outer = ctx.tableRaw
+    ctx.tableRaw = inlineRawSource(xml, tbl)
+    let model: TableModel | undefined
+    try {
+      model = extractTableModel(tbl, ctx, 1, docOffset)
+    } finally {
+      ctx.tableRaw = outer
+    }
     if (!model) return undefined
     const rawTrPrs: Array<string | null> = model.rows.map(() => null)
     attachRawTablePr(xml, model, rawTrPrs)
@@ -6201,7 +6321,16 @@ function extractCell(
     const mathFragments = hasDeepChild(p, MATH_HOSTS)
       ? ommlFragmentsOf(mathSourceXmlOf(serializeXNode(p)))
       : []
-    const runs = extractRuns(p, ctx, mathFragments, [], true, undefined, { eff: eff0, rctx })
+    const runs = extractRuns(
+      p,
+      ctx,
+      mathFragments,
+      [],
+      true,
+      undefined,
+      { eff: eff0, rctx },
+      ctx.tableRaw,
+    )
     const eff = eff0.indent.chars
       ? resolveParagraphProps(pPr, rctx, {
           charUnits: charUnitsOf(ctx, runs, p, pPr, cellStyleId, docOffset),
@@ -6210,8 +6339,9 @@ function extractCell(
     const direct = resolvedParaFormat(eff0, pPr, ctx.themeColors)
     shadowParaFormat(ctx, 'cell', pPr, styleBidiOf(ctx, cellStyleId, cellRef), direct, runs)
     const format = foldEffectiveFormat(direct, pPr, eff)
-    const spaceOnly = runs.length > 0 && spaceOnlyRuns(runs) && !hasLayoutRunContent(p)
-    const markSized = runs.length === 0 || spaceOnly
+    const textRuns = lineRuns(runs)
+    const spaceOnly = textRuns.length > 0 && spaceOnlyRuns(textRuns) && !hasLayoutRunContent(p)
+    const markSized = textRuns.length === 0 || spaceOnly
     const emptySz = markSized
       ? (markSizeOf(eff, pPr) ??
         (spaceOnly
@@ -7318,7 +7448,11 @@ function hfParagraphs(
     // Word lays an inline picture out at its run position (after a tab, on the
     // text line); only a picture sharing its paragraph with text takes this
     // path, picture-only paragraphs stay on the part-level image list
-    if (runs.length > 0 && tableMedia && hasDeepChildOutside(pNode, WP_INLINE, TXBX_CONTENT)) {
+    if (
+      lineRuns(runs).length > 0 &&
+      tableMedia &&
+      hasDeepChildOutside(pNode, WP_INLINE, TXBX_CONTENT)
+    ) {
       runs = extractRuns(
         pNode,
         { ...ctx, mediaByRid: tableMedia } as BuildContext,
@@ -7339,7 +7473,7 @@ function hfParagraphs(
     const boxed = hasDeepChild(pNode, TXBX_CONTENT) ? textboxParagraphs(pNode, ctx) : []
     // runs carrying only w:rPr are a blank line like a bare w:p (genoffice#2116)
     if (
-      runs.length === 0 &&
+      lineRuns(runs).length === 0 &&
       !hfOnlyEmptyRuns(pNode) &&
       (findChild(pNode, 'w:r') || findChild(pNode, 'w:pict'))
     ) {
@@ -7745,7 +7879,7 @@ function textboxParagraphs(pNode: XNode, ctx: BuildContext): HfParagraph[] {
     if (name === 'w:txbxContent') {
       for (const inner of findChildren(node, 'w:p')) {
         const runs = extractRuns(inner, ctx)
-        if (runs.length === 0) continue
+        if (lineRuns(runs).length === 0) continue
         const pPr = findChild(inner, 'w:pPr')
         // content of a floating box draws at the anchor, not in the strip flow:
         // it must not push the body down (Word), only display does

@@ -258,24 +258,25 @@ export function selectRevisions(
   return { entries }
 }
 
-/** accept or reject the selected changes in one transaction, last position first */
+/**
+ * Accept or reject the selected changes in one transaction, last position
+ * first. `locked`: the ones left pending because they would change the text
+ * of a content control locked against editing.
+ */
 export function applyRevisionSelection(
   editor: Editor,
   sel: RevisionSelector,
   mode: 'accept' | 'reject',
-): { entries: RevisionEntry[] } | { error: string } {
+): { entries: RevisionEntry[]; locked: RevisionEntry[] } | { error: string } {
   const picked = selectRevisions(editor.state.doc, sel)
   if ('error' in picked) return picked
-  applyRevisions(
-    editor,
-    picked.entries.map((e) => ({
-      from: e.from,
-      to: e.to,
-      kind: e.kind,
-      author: e.author,
-      ...(e.date ? { date: e.date } : {}),
-    })),
-    mode,
-  )
-  return picked
+  const ranges = picked.entries.map((e) => ({
+    from: e.from,
+    to: e.to,
+    kind: e.kind,
+    author: e.author,
+    ...(e.date ? { date: e.date } : {}),
+  }))
+  const left = applyRevisions(editor, ranges, mode)
+  return { ...picked, locked: picked.entries.filter((_, i) => left.includes(ranges[i])) }
 }

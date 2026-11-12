@@ -20,6 +20,8 @@ import {
   ReplaceStep,
 } from '@tiptap/pm/transform'
 import { authorName } from '../author-name'
+import { notifyOdt } from '../odt-gate'
+import { lockedControlRefuses } from './inline-wrap'
 
 export interface RevisionRange {
   from: number
@@ -267,17 +269,38 @@ function stripTrackMarker(raw: string | null, tag: string, container: string): s
   return out
 }
 
+/**
+ * Would accepting / rejecting `r` take part of the text of a control locked
+ * against editing? Only a stretch of inline text can: an insertion that is
+ * rejected, a deletion that is accepted, text carrying both either way.
+ */
+function lockedAgainst(doc: PmNode, r: RevisionRange, mode: 'accept' | 'reject'): boolean {
+  const inserted = r.kind === 'ins' || r.kind === 'moveTo'
+  const deleted = r.kind === 'del' || r.kind === 'moveFrom'
+  if (!inserted && !deleted && r.kind !== 'both') return false
+  const removesText = mode === 'accept' ? !inserted : !deleted
+  return removesText && lockedControlRefuses(doc, r.from, r.to, false)
+}
+
+/**
+ * Accept or reject `ranges` in one transaction. A change that would take part
+ * of the text of a control locked against editing is left pending, so one such
+ * change does not hold back the rest of a batch; those are returned, and the
+ * user is told once.
+ */
 export function applyRevisions(
   editor: Editor,
   ranges: RevisionRange[],
   mode: 'accept' | 'reject',
-): void {
-  if (ranges.length === 0) return
+): RevisionRange[] {
+  if (ranges.length === 0) return []
   const { state } = editor
   const tr = state.tr
   tr.setMeta(TRACK_IGNORE, true)
+  const locked = ranges.filter((r) => lockedAgainst(state.doc, r, mode))
   // reverse order keeps earlier positions valid while later ranges mutate
   for (const r of [...ranges].sort((a, b) => b.from - a.from)) {
+    if (locked.includes(r)) continue
     if (r.kind === 'blockIns' || r.kind === 'blockDel') {
       const revisionKind = r.kind === 'blockIns' ? 'ins' : 'del'
       const removeNode = mode === 'accept' ? revisionKind === 'del' : revisionKind === 'ins'
@@ -505,14 +528,16 @@ export function applyRevisions(
     }
   }
   editor.view.dispatch(tr)
+  if (locked.length > 0) notifyOdt('appOdtLockedObject')
+  return locked
 }
 
-export function acceptAllRevisions(editor: Editor): void {
-  applyRevisions(editor, collectRevisions(editor.state.doc), 'accept')
+export function acceptAllRevisions(editor: Editor): RevisionRange[] {
+  return applyRevisions(editor, collectRevisions(editor.state.doc), 'accept')
 }
 
-export function rejectAllRevisions(editor: Editor): void {
-  applyRevisions(editor, collectRevisions(editor.state.doc), 'reject')
+export function rejectAllRevisions(editor: Editor): RevisionRange[] {
+  return applyRevisions(editor, collectRevisions(editor.state.doc), 'reject')
 }
 
 /** accept / reject only the revisions of one author (e.g. the AI assistant) */

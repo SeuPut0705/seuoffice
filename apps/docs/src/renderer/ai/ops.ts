@@ -1,10 +1,13 @@
 import { checkPlaceholders, placeholderSource, REDACT_MARK } from './redact'
 import type { Editor } from '@tiptap/core'
-import type { Node as PmDocNode, Schema } from '@tiptap/pm/model'
+import { Mark, type Node as PmDocNode, type Schema } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
 import { generateTocFieldXml, type TocEntry } from '@genoffice/docx-engine'
 import { isEastAsianFontName } from '../font-list'
 import { t } from '../i18n/locale'
+import { planReplacement, type TextEdit } from '../editor/find'
+import { lockedControlRefuses } from '../editor/inline-wrap'
+import { INLINE_OPAQUE_NODE, INLINE_WRAP_MARK } from '../editor/inline-wrap-chain'
 import { blockRangePositions, isTrackedDeleted, liveText } from './doc-utils'
 import { styleOpDefs, type AiStyleAccess } from './style-ops'
 import { fieldOpDefs } from './field-ops'
@@ -107,6 +110,8 @@ export interface OpResult {
   skippedProtected: number
   /** targets skipped because the text is a pending tracked deletion */
   skippedDeleted?: number
+  /** matches left as they are because they sit in a content control locked against editing */
+  skippedLocked?: number
   detail?: string
 }
 
@@ -843,6 +848,42 @@ function redactionRangesOf(node: PmDocNode, base: number): Array<{ from: number;
   return out
 }
 
+/** A stretch of a block's text a search reads as one, with the document position of each character */
+interface SearchRun {
+  text: string
+  posAt: number[]
+  /** the marks of its first text node: they tell whether the stretch is a pending deletion */
+  marks: PmDocNode['marks']
+}
+
+/**
+ * The text of `block` as a search reads it. A phrase is looked for inside one
+ * formatting run, as it always was; but a run-level wrapper (the `inlineWrap`
+ * mark: a content control, a smart tag) is not formatting, and a kept element
+ * (w:permStart...) is invisible, so neither ends a stretch: "in Paris" is
+ * found whether or not "Paris" is a smart tag.
+ */
+function searchRuns(block: PmDocNode, contentFrom: number): SearchRun[] {
+  const runs: SearchRun[] = []
+  let formatting: PmDocNode['marks'] | null = null
+  block.forEach((child, offset) => {
+    if (child.type.name === INLINE_OPAQUE_NODE) return
+    if (!child.isText || !child.text) {
+      formatting = null
+      return
+    }
+    const own = child.marks.filter((m) => m.type.name !== INLINE_WRAP_MARK)
+    if (!formatting || !Mark.sameSet(formatting, own)) {
+      runs.push({ text: '', posAt: [], marks: child.marks })
+    }
+    formatting = own
+    const run = runs[runs.length - 1]
+    for (let k = 0; k < child.text.length; k++) run.posAt.push(contentFrom + offset + k)
+    run.text += child.text
+  })
+  return runs
+}
+
 function runFindReplace(op: Op, env: RunEnv): OpResult {
   const { tr, schema, ctx, sel } = env
   const find = String(op.find)
@@ -850,10 +891,11 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
   const matchCase = op.matchCase !== false
   const needle = matchCase ? find : find.toLowerCase()
   const blocks = op.target ? matchTarget(tr.doc, targetOf(op), sel) : topLevelBlocks(tr.doc)
-  const replacements: Array<{ from: number; to: number; marks: PmDocNode['marks'] }> = []
+  const replacements: Array<{ from: number; to: number; edits: TextEdit[] }> = []
   const touchedIndexes = new Set<number>()
   let skippedProtected = 0
   let skippedDeleted = 0
+  let skippedLocked = 0
 
   for (const b of blocks) {
     if (b.node.type.name === 'docProtected') {
@@ -861,22 +903,28 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
       continue
     }
     const blockDeleted = isTrackedDeleted(b.node)
-    b.node.forEach((child, offset) => {
-      if (!child.isText || !child.text) return
-      const struck = blockDeleted || child.marks.some((m) => m.type.name === 'del')
-      const hay = matchCase ? child.text : child.text.toLowerCase()
+    for (const run of searchRuns(b.node, b.pos + 1)) {
+      const struck = blockDeleted || run.marks.some((m) => m.type.name === 'del')
+      const hay = matchCase ? run.text : run.text.toLowerCase()
       let at = hay.indexOf(needle)
       while (at !== -1) {
-        const from = b.pos + 1 + offset + at
+        const from = run.posAt[at]
+        const to = run.posAt[at + needle.length - 1] + 1
         if (struck) {
           skippedDeleted++
-        } else if (insideClip(b, from, from + needle.length)) {
-          replacements.push({ from, to: from + needle.length, marks: child.marks })
-          touchedIndexes.add(b.index)
+        } else if (insideClip(b, from, to)) {
+          const edits = planReplacement(tr.doc, from, to, replace)
+          // a match inside a locked control stays; the rest of the batch goes on
+          if (edits.some((e) => lockedControlRefuses(tr.doc, e.from, e.to, e.text !== ''))) {
+            skippedLocked++
+          } else {
+            replacements.push({ from, to, edits })
+            touchedIndexes.add(b.index)
+          }
         }
         at = hay.indexOf(needle, at + needle.length)
       }
-    })
+    }
   }
 
   // A rewrite is refused only when it would actually touch a withheld span: the
@@ -926,9 +974,21 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
 
     // the redaction mark belongs to the reader, so a rewrite never inherits it
     for (const r of [...replacements].reverse()) {
-      const marks = r.marks.filter((m) => m.type.name !== REDACT_MARK)
-      if (replace) tr.replaceWith(r.from, r.to, schema.text(replace, marks))
-      else tr.delete(r.from, r.to)
+      for (const edit of [...r.edits].reverse()) {
+        if (!edit.text) {
+          tr.delete(edit.from, edit.to)
+          continue
+        }
+        const marks = tr.doc.nodeAt(edit.marksAt)?.marks ?? []
+        tr.replaceWith(
+          edit.from,
+          edit.to,
+          schema.text(
+            edit.text,
+            marks.filter((m) => m.type.name !== REDACT_MARK),
+          ),
+        )
+      }
     }
 
     let damaged = 0
@@ -955,6 +1015,7 @@ function runFindReplace(op: Op, env: RunEnv): OpResult {
     changed: touchedIndexes.size,
     skippedProtected,
     skippedDeleted,
+    skippedLocked,
     detail: t('aiCmdReplacedCount', { count: replacements.length }),
   }
 }
@@ -979,14 +1040,13 @@ function runSetMatchedFont(op: Op, env: RunEnv): OpResult {
     }
     const blockDeleted = isTrackedDeleted(b.node)
     const contentFrom = b.pos + 1
-    b.node.forEach((child, offset) => {
-      if (!child.isText || !child.text) return
-      const struck = blockDeleted || child.marks.some((m) => m.type.name === 'del')
-      const hay = matchCase ? child.text : child.text.toLowerCase()
+    for (const run of searchRuns(b.node, contentFrom)) {
+      const struck = blockDeleted || run.marks.some((m) => m.type.name === 'del')
+      const hay = matchCase ? run.text : run.text.toLowerCase()
       let at = hay.indexOf(needle)
       while (at !== -1) {
-        const from = contentFrom + offset + at
-        const to = from + needle.length
+        const from = run.posAt[at]
+        const to = run.posAt[at + needle.length - 1] + 1
         if (struck) {
           skippedDeleted++
         } else if (insideClip(b, from, to)) {
@@ -996,7 +1056,7 @@ function runSetMatchedFont(op: Op, env: RunEnv): OpResult {
         }
         at = hay.indexOf(needle, at + needle.length)
       }
-    })
+    }
   }
   // mark steps never shift positions, so block offsets are still valid here
   for (const b of topLevelBlocks(tr.doc)) {

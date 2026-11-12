@@ -1,5 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
+import { INLINE_OPAQUE_NODE } from '../editor/inline-wrap-chain'
 
 /** ProseMirror positions of a top-level child index range */
 export function blockRangePositions(
@@ -98,6 +99,8 @@ export function isTrackedDeleted(node: ProseMirrorNode): boolean {
   let hasContent = false
   let hasLive = false
   node.descendants((child) => {
+    // a kept element (w:permStart...) is not content: it is never struck through
+    if (child.type.name === INLINE_OPAQUE_NODE) return
     if (child.isText || (child.isInline && child.isLeaf)) {
       hasContent = true
       if (!hasDelMark(child)) hasLive = true

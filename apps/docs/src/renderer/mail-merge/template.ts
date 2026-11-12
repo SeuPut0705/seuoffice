@@ -6,6 +6,7 @@ import {
   type MergeRecord,
 } from '@genoffice/docx-engine'
 import type { PmNode } from '../editor/convert'
+import { withoutUniqueStructure } from '../editor/inline-wrap-chain'
 
 /**
  * The template half of the mail merge: the document with its merge fields
@@ -149,9 +150,10 @@ export function mergeAllRecords(doc: PmNode, records: readonly MergeRecord[]): P
   records.forEach((record, index) => {
     const merged = substituteContent(blocks, record) ?? []
     merged.forEach((block, blockIndex) => {
-      // a bookmark, a comment anchor or a note reference exists once in the
-      // package, so only the first letter keeps it
-      const copy = index === 0 ? block : withoutUniqueAnchors(block)
+      // a bookmark, a comment anchor, a note reference, a content control or a
+      // kept element (w:permStart...) exists once in the package, so only the
+      // first letter keeps it
+      const copy = index === 0 ? block : withoutUniqueStructure(withoutUniqueAnchors(block))
       if (index === 0 || blockIndex !== 0) {
         content.push(copy)
         return

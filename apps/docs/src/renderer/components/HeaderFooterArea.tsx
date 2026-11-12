@@ -39,6 +39,7 @@ import {
   hfStackedSpacingPx,
 } from '../editor/hf-dom'
 import { hfParasOf, PAGE_TOKEN } from '../editor/hf-text'
+import { holdsNoDrawnRun } from '../editor/inline-wrap-chain'
 import { mountHfEditor, type HfEditorHandle } from '../editor/hf-editor'
 import { dkStyleProps } from '../editor/dark-page'
 import { INLINE_RULE_CLASS, inlineRuleStyle } from '../editor/inline-rule'
@@ -353,7 +354,7 @@ function HfContent({
                       className="page-hf-cell-para"
                       style={hfCellParaStyle(props, undefined, runs)}
                     >
-                      {runs.length === 0 ? ' ' : null}
+                      {holdsNoDrawnRun(runs) ? ' ' : null}
                       {spans(runs)}
                     </div>
                   )
@@ -400,12 +401,12 @@ function HfContent({
               style={{
                 ...paraStyle(para, mergeFlags[i]),
                 ...margins(i),
-                ...(para.runs.length === 0 && para.emptyRunSizeHalfPoints
+                ...(holdsNoDrawnRun(para.runs) && para.emptyRunSizeHalfPoints
                   ? { fontSize: `${para.emptyRunSizeHalfPoints / 2}pt` }
                   : {}),
               }}
             >
-              {para.runs.length === 0 ? ' ' : null}
+              {holdsNoDrawnRun(para.runs) ? ' ' : null}
               {runSpans(para.runs, 'page-hf-run-img')}
             </div>
           )

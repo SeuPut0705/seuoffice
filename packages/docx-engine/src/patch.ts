@@ -30,6 +30,7 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
+import { sameInlineWrap } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import { applyRemoveParts, planRemoveParts, type RemovePartsOptions } from './remove-parts'
 import { assertZipWithinLimits, resolveMainDocumentPath, type ParseExtras } from './parse'
@@ -75,6 +76,7 @@ import type {
   GeneratedBlock,
   HeaderFooter,
   HfParagraph,
+  InlineWrap,
   Run,
   NewChart,
   NewImage,
@@ -2570,7 +2572,34 @@ function headerFooterPartXml(
     )
     let pageEmitted = !hf.pageNumber || hasPageMark
     const hfRunsXml = (paraRuns: Run[]): string => {
-      let runs = ''
+      let xml = ''
+      // Runs are written one by one, as they always were, except the runs of
+      // one wrapper element (a content control, a smart tag): those go out in
+      // one call so the wrapper stays one element around all of them. A field
+      // that sat inside the wrapper rides along as a kept element.
+      const written: InlineWrap[] = []
+      let held: Run[] = []
+      const flush = () => {
+        if (held.length > 0) xml += inlineRunsXml(held, written)
+        held = []
+      }
+      const text = (piece: Run) => {
+        const outer = piece.wrap?.[0]
+        if (!outer) {
+          flush()
+          xml += inlineRunsXml([piece], written)
+          return
+        }
+        if (held.length > 0 && !sameInlineWrap(held[0].wrap?.[0], outer)) flush()
+        held.push(piece)
+      }
+      const field = (fieldXml: string, host: Run) => {
+        if (host.wrap?.length) text({ text: '', opaqueXml: fieldXml, wrap: host.wrap })
+        else {
+          flush()
+          xml += fieldXml
+        }
+      }
       for (const run of paraRuns) {
         if (
           run.text.includes(TOTAL_PAGES_MARK) ||
@@ -2581,30 +2610,30 @@ function headerFooterPartXml(
           // SECTIONPAGES and NUMPAGES split alike: a mark between two segments is its field
           run.text.split(totalMarksRe).forEach((seg, k) => {
             if (k % 2 === 1) {
-              runs += seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField
+              field(seg === SECTION_PAGES_MARK ? sectionPagesField : numPagesField, run)
               return
             }
             if (seg.includes(PAGE_MARK)) {
               seg.split(PAGE_MARK).forEach((piece, j) => {
-                if (j > 0) runs += pageField
-                if (piece) runs += inlineRunsXml([{ ...run, text: piece }])
+                if (j > 0) field(pageField, run)
+                if (piece) text({ ...run, text: piece })
               })
             } else if (!pageEmitted && seg.includes('#')) {
               const [before, ...rest] = seg.split('#')
-              runs +=
-                inlineRunsXml(before ? [{ ...run, text: before }] : []) +
-                pageField +
-                inlineRunsXml(rest.join('#') ? [{ ...run, text: rest.join('#') }] : [])
+              if (before) text({ ...run, text: before })
+              field(pageField, run)
+              if (rest.join('#')) text({ ...run, text: rest.join('#') })
               pageEmitted = true
             } else if (seg) {
-              runs += inlineRunsXml([{ ...run, text: seg }])
+              text({ ...run, text: seg })
             }
           })
         } else {
-          runs += inlineRunsXml([run])
+          text(run)
         }
       }
-      return runs
+      flush()
+      return xml
     }
     // rows live in the original w:tbl bytes (edited cells are patched into them
     // below); a rebuild without the original part flattens them to paragraphs

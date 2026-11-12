@@ -2,6 +2,7 @@ import { brandText } from '@genoffice/i18n'
 import type { Editor } from '@tiptap/core'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { TextSelection } from '@tiptap/pm/state'
+import { Transform } from '@tiptap/pm/transform'
 import {
   TABLE_HEADER_FILL,
   type Block,
@@ -10,6 +11,9 @@ import {
   type TableModel,
 } from '@genoffice/docx-engine'
 import { pmTableToModel, tableModelToPmNode, type PmMark, type PmNode } from '../editor/convert'
+import { findInDoc } from '../editor/find'
+import { lockedControlsIn } from '../editor/inline-wrap'
+import { notifyOdt, recordOdtRefusal } from '../odt-gate'
 import { equationBlockJson, inlineEquationNodeJson } from '../editor/equation'
 import { inheritFrom, inheritTableFormatting, sameBlockRole } from './inherit-formatting'
 import { TRACK_IGNORE, type RevisionRange } from '../editor/revisions'
@@ -1301,12 +1305,59 @@ export function inheritBlockFormatting(
   })
 }
 
+/** every place `text` stands, letter for letter, in the textblocks of `holder` */
+function exactHits(holder: ProseMirrorNode, text: string): Array<{ from: number; to: number }> {
+  return findInDoc(
+    holder,
+    { mode: 'literal', re: null, needle: text, anchorStart: false, anchorEnd: false },
+    { matchCase: true, wholeWord: false, matchWidth: true },
+  )
+}
+
+/**
+ * The blocks that replace [from, to) with every control locked against
+ * editing kept around its text; null when one cannot be kept.
+ *
+ * A rewrite arrives as plain blocks: the model never sees the control, only
+ * its text. The text of a locked control may not change, so a rewrite either
+ * holds that text exactly where the old blocks did (the same occurrence, when
+ * the text stands there more than once) and the control goes back around it,
+ * or it is not this function's to apply.
+ */
+function withLockedControls(
+  doc: ProseMirrorNode,
+  from: number,
+  to: number,
+  blocks: ProseMirrorNode[],
+): ProseMirrorNode[] | null {
+  const controls = lockedControlsIn(doc, from, to)
+  if (controls.length === 0) return blocks
+  const before = doc.type.create(null, doc.slice(from, to).content)
+  const after = new Transform(doc.type.create(null, blocks))
+  for (const control of controls) {
+    if (!control.text) return null
+    const was = exactHits(before, control.text)
+    const now = exactHits(after.doc, control.text)
+    // positions in `before` start where the replaced range starts
+    const nth = was.findIndex((hit) => hit.from + from === control.from)
+    if (nth < 0 || now.length !== was.length) return null
+    after.addMark(now[nth].from, now[nth].to, control.mark)
+  }
+  const kept: ProseMirrorNode[] = []
+  after.doc.forEach((block) => kept.push(block))
+  return kept
+}
+
 /**
  * Replace the top-level block range with the parsed nodes (marked aiChanged).
  * The new blocks inherit the replaced blocks' formatting (see
  * inheritBlockFormatting). With `track`, and when both sides are plain text
  * blocks, this becomes a tracked rewrite instead: the old blocks stay struck
  * through (del) and the new blocks follow with ins marks — accept/reject via Review.
+ *
+ * False, with nothing changed, when the range holds a control locked against
+ * editing whose text the new blocks change or drop: the refusal is recorded
+ * for the tool that asked, as the editor's own guard records one.
  */
 export function replaceBlockRange(
   editor: Editor,
@@ -1385,7 +1436,13 @@ export function replaceBlockRange(
     editor.view.dispatch(tr)
     return true
   }
-  editor.view.dispatch(editor.state.tr.replaceWith(from, to, pmNodes))
+  const kept = withLockedControls(editor.state.doc, from, to, pmNodes)
+  if (!kept) {
+    recordOdtRefusal('lockedControl')
+    notifyOdt('appOdtLockedObject')
+    return false
+  }
+  editor.view.dispatch(editor.state.tr.replaceWith(from, to, kept))
   return true
 }
 

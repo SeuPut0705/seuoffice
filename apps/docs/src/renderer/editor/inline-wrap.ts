@@ -1,0 +1,490 @@
+/**
+ * Run-level structure the docx run model keeps as bytes instead of fields
+ * (Run.wrap, Run.opaqueXml), carried through the editor so that editing a
+ * paragraph never drops it:
+ *
+ * - `inlineWrap` mark: the chain of wrapper elements around the text (inline
+ *   content controls, w:smartTag, w:customXml, w:dir, w:bdo). Text typed
+ *   inside stays inside; text typed at an edge lands outside. The mark is
+ *   structure, not formatting: "clear formatting" leaves it.
+ * - `docInlineOpaque` atom: one element with no text of its own (w:permStart,
+ *   range markers, an empty control). Invisible; saved verbatim in place.
+ * - the guard: the content of a control locked against editing
+ *   (w:lock contentLocked / sdtContentLocked) refuses changes. The control can
+ *   still be deleted whole.
+ * - one element stays one element: what is inserted in the middle of a
+ *   wrapper goes inside it, a paragraph split inside a content control leaves
+ *   the control on the first half, and a pasted copy of a content control or
+ *   of a kept element arrives without it, so no w:id is ever written twice.
+ */
+import { Extension, Mark, Node } from '@tiptap/core'
+import { Slice, type Node as PmNode } from '@tiptap/pm/model'
+import {
+  Plugin,
+  PluginKey,
+  TextSelection,
+  type EditorState,
+  type Transaction,
+} from '@tiptap/pm/state'
+import { AddMarkStep, RemoveMarkStep, type Step } from '@tiptap/pm/transform'
+import {
+  inlineWrapContentLocked,
+  sameInlineWrap,
+  sameInlineWrapChain,
+  type InlineWrap,
+} from '@genoffice/docx-engine'
+import { notifyOdt, recordOdtRefusal } from '../odt-gate'
+import {
+  INLINE_OPAQUE_NODE,
+  INLINE_WRAP_MARK,
+  contentControlKey,
+  inlineOpaqueDomKey,
+  inlineOpaqueXmlOfDomKey,
+  inlineWrapChainAttr,
+  inlineWrapChainOf,
+  inlineWrapChainOfDomKey,
+  inlineWrapDomKey,
+  inlineWrapsInside,
+  inlineWrapsWithout,
+  sharedInlineWraps,
+} from './inline-wrap-chain'
+
+export const InlineWrapMark = Mark.create({
+  name: INLINE_WRAP_MARK,
+  // typing at the edge of a control produces text beside it, not inside it
+  inclusive: false,
+  addAttributes() {
+    return { chain: { default: '', rendered: false } }
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'span[data-inline-wrap]',
+        getAttrs: (el) => {
+          const chain = inlineWrapChainOfDomKey(el.getAttribute('data-inline-wrap') ?? '')
+          return chain === undefined ? false : { chain }
+        },
+      },
+    ]
+  },
+  renderHTML({ mark }) {
+    // a token, never the bytes: the DOM is what the clipboard and HTML export copy
+    return [
+      'span',
+      { 'data-inline-wrap': inlineWrapDomKey(mark.attrs.chain), class: 'doc-inline-wrap' },
+      0,
+    ]
+  },
+})
+
+export const DocInlineOpaque = Node.create({
+  name: INLINE_OPAQUE_NODE,
+  inline: true,
+  group: 'inline',
+  atom: true,
+  selectable: false,
+  addAttributes() {
+    return { xml: { default: '', rendered: false } }
+  },
+  parseHTML() {
+    return [
+      {
+        tag: 'span[data-inline-opaque]',
+        getAttrs: (el) => {
+          const xml = inlineOpaqueXmlOfDomKey(el.getAttribute('data-inline-opaque') ?? '')
+          return xml === undefined ? false : { xml }
+        },
+      },
+    ]
+  },
+  renderHTML({ node }) {
+    // a token, never the bytes, as the wrapper mark does
+    return [
+      'span',
+      { 'data-inline-opaque': inlineOpaqueDomKey(node.attrs.xml), class: 'doc-inline-opaque' },
+    ]
+  },
+})
+
+const NO_WRAPS: InlineWrap[] = []
+
+/** the wrappers an inline node sits in, outermost first */
+function wrapsOf(node: PmNode): InlineWrap[] {
+  const mark = node.marks.find((m) => m.type.name === INLINE_WRAP_MARK)
+  return mark ? inlineWrapChainOf(mark.attrs.chain) : NO_WRAPS
+}
+
+/** the content-locked controls an inline node sits in */
+function lockedWrapsOf(node: PmNode): InlineWrap[] {
+  const wraps = wrapsOf(node)
+  return wraps.length === 0 ? NO_WRAPS : wraps.filter(inlineWrapContentLocked)
+}
+
+const sitsIn = (node: PmNode, wrap: InlineWrap): boolean =>
+  wrapsOf(node).some((w) => sameInlineWrap(w, wrap))
+
+/**
+ * Would replacing [from, to) of `doc` be refused for a control locked against
+ * editing? Taking part of its text is; so is content put in the middle of it;
+ * so is content put where the whole control stood (`inserts`: typing or
+ * pasting over a selection that holds it). A range that only removes a control
+ * whole is what the lock allows, and so is a range of whole blocks, which is a
+ * block being replaced (a document loading, a block rewrite).
+ */
+export function lockedControlRefuses(
+  doc: PmNode,
+  from: number,
+  to: number,
+  inserts: boolean,
+): boolean {
+  if (from === to) {
+    const $pos = doc.resolve(from)
+    const before = $pos.nodeBefore
+    const after = $pos.nodeAfter
+    if (!before || !after) return false
+    return lockedWrapsOf(before).some((wrap) => sitsIn(after, wrap))
+  }
+  let cut = false
+  let whole = false
+  doc.nodesBetween(from, to, (node, pos, parent, index) => {
+    if (cut) return false
+    if (!node.isInline || !parent) return true
+    for (const wrap of lockedWrapsOf(node)) {
+      let start = pos
+      let end = pos + node.nodeSize
+      for (let i = index - 1; i >= 0 && sitsIn(parent.child(i), wrap); i--) {
+        start -= parent.child(i).nodeSize
+      }
+      for (let i = index + 1; i < parent.childCount && sitsIn(parent.child(i), wrap); i++) {
+        end += parent.child(i).nodeSize
+      }
+      if (start < from || end > to) cut = true
+      else whole = true
+    }
+    return false
+  })
+  if (cut) return true
+  if (!whole || !inserts) return false
+  return doc.resolve(from).parent.inlineContent || doc.resolve(to).parent.inlineContent
+}
+
+/** does [from, to) of `doc` hold any content-locked text? */
+function holdsLockedContent(doc: PmNode, from: number, to: number): boolean {
+  let found = false
+  doc.nodesBetween(from, to, (node) => {
+    if (found) return false
+    if (!node.isInline) return true
+    if (lockedWrapsOf(node).length > 0) found = true
+    return false
+  })
+  return found
+}
+
+/** A control locked against editing inside a range */
+export interface LockedControl {
+  /** where its content starts */
+  from: number
+  /**
+   * Its text; null when it holds more than plain text under one wrapper chain
+   * (a picture, a field, an inner wrapper), which a rewrite from text cannot keep
+   */
+  text: string | null
+  /** the wrapper mark its text carries */
+  mark: PmNode['marks'][number]
+}
+
+/** the locked controls whose content lies in [from, to) of `doc`, in document order */
+export function lockedControlsIn(doc: PmNode, from: number, to: number): LockedControl[] {
+  const found: LockedControl[] = []
+  let wrap: InlineWrap | undefined
+  doc.nodesBetween(from, to, (node, pos) => {
+    if (!node.isInline) {
+      wrap = undefined
+      return true
+    }
+    const locked = lockedWrapsOf(node)[0]
+    const mark = node.marks.find((m) => m.type.name === INLINE_WRAP_MARK)
+    if (!locked || !mark) {
+      wrap = undefined
+      return false
+    }
+    if (!wrap || !sameInlineWrap(wrap, locked)) found.push({ from: pos, text: '', mark })
+    wrap = locked
+    const control = found[found.length - 1]
+    if (node.type.name === INLINE_OPAQUE_NODE) return false
+    control.text =
+      node.isText && control.text !== null && mark.eq(control.mark)
+        ? control.text + (node.text ?? '')
+        : null
+    return false
+  })
+  return found
+}
+
+/** would this step change what a locked control holds or covers? */
+function refusedByLock(step: Step, doc: PmNode): boolean {
+  if (step instanceof AddMarkStep || step instanceof RemoveMarkStep) {
+    const name = step.mark.type.name
+    // a tracked deletion marks the text instead of removing it
+    if (name === 'del') {
+      return step instanceof AddMarkStep && holdsLockedContent(doc, step.from, step.to)
+    }
+    if (name !== INLINE_WRAP_MARK) return false
+    // the wrapper mark is the control: taking it off its text, or putting
+    // another in its place, changes what the lock covers
+    const removes = step instanceof RemoveMarkStep
+    let changed = false
+    doc.nodesBetween(step.from, step.to, (node) => {
+      if (changed) return false
+      if (!node.isInline) return true
+      if (lockedWrapsOf(node).length > 0 && step.mark.isInSet(node.marks) === removes) {
+        changed = true
+      }
+      return false
+    })
+    return changed
+  }
+  const inserts = 'slice' in step && step.slice instanceof Slice && step.slice.size > 0
+  let refused = false
+  step.getMap().forEach((from, to) => {
+    if (!refused && lockedControlRefuses(doc, from, to, inserts)) refused = true
+  })
+  return refused
+}
+
+/**
+ * Meta on a transaction that puts clipboard content into the document without
+ * going through the editor's own paste (the App's lane that replaces an empty
+ * paragraph with pasted blocks): its content is judged as a paste is.
+ */
+export const PASTED_CONTENT = 'inlineWrapPasted'
+
+/** the meta prosemirror-history puts on an undo or redo transaction (its plugin key) */
+const HISTORY_META = 'history$'
+
+const inlineWrapGuardKey = new PluginKey('inlineWrapGuard')
+
+/** did the editor put clipboard or dragged content into the document with `tr`? */
+function bringsPastedContent(tr: Transaction): boolean {
+  const event: unknown = tr.getMeta('uiEvent')
+  return event === 'paste' || event === 'drop' || tr.getMeta(PASTED_CONTENT) === true
+}
+
+/** What one step put into the document, as a range of the document the edits end in */
+interface Arrival {
+  from: number
+  to: number
+  /** the wrappers the step cut in two: the content landed in the middle of them */
+  cut: InlineWrap[]
+  /** clipboard or dragged content */
+  pasted: boolean
+}
+
+/**
+ * Keeps one wrapper element one element after the edits in `trs`:
+ * - content that landed between two pieces of one wrapper (a line break, a
+ *   field, pasted text) goes inside it, or the save would write the wrapper
+ *   twice around the halves;
+ * - a paragraph split inside a content control leaves the control on the
+ *   first half: the save cannot see across paragraphs that both halves carry
+ *   the same w:id. Wrappers without an id (w:bdo, w:dir, w:smartTag,
+ *   w:customXml) stay on both halves, where each is written as its own element;
+ * - pasted or dropped content that brings a content control the document
+ *   still holds (a copy: a cut, or a drag that moves, took the original away
+ *   first) arrives as its text, and a kept element the document still holds
+ *   does not arrive at all. Content controls are told apart by their w:id,
+ *   kept elements by their bytes.
+ */
+function keepWrappersWhole(trs: readonly Transaction[], state: EditorState): Transaction | null {
+  const doc = state.doc
+  const type = doc.type.schema.marks[INLINE_WRAP_MARK]
+  if (!type) return null
+  const arrivals: Arrival[] = []
+  for (const tr of trs) {
+    for (const arrival of arrivals) {
+      arrival.from = tr.mapping.map(arrival.from, 1)
+      arrival.to = tr.mapping.map(arrival.to, -1)
+    }
+    // a peer's edit carries its own upkeep; so does this person's when it is
+    // re-applied. Undo and redo restore a document that already had its upkeep
+    // (and an appended edit would wipe the redo stack).
+    if (!tr.docChanged || tr.getMeta('rebased') !== undefined || tr.getMeta(HISTORY_META)) continue
+    const pasted = bringsPastedContent(tr)
+    tr.steps.forEach((step, i) => {
+      const before = tr.docs[i]
+      step.getMap().forEach((oldFrom, oldTo, newFrom, newTo) => {
+        const $from = before.resolve(oldFrom)
+        const $to = before.resolve(oldTo)
+        const inside =
+          $from.parent.inlineContent && $from.sameParent($to) && $from.nodeBefore && $to.nodeAfter
+        const cut = inside
+          ? sharedInlineWraps(wrapsOf($from.nodeBefore!), wrapsOf($to.nodeAfter!))
+          : NO_WRAPS
+        if (cut.length === 0 && !pasted) return
+        const rest = tr.mapping.slice(i + 1)
+        arrivals.push({ from: rest.map(newFrom, 1), to: rest.map(newTo, -1), cut, pasted })
+      })
+    })
+  }
+  const arrived = arrivals.filter((arrival) => arrival.from < arrival.to)
+  if (arrived.length === 0) return null
+
+  // what the document holds, outside what was pasted, of the things a file holds once
+  let held: { controls: Set<string>; elements: Set<string> } | null = null
+  const heldElsewhere = () => {
+    if (held) return held
+    const pastes = arrived.filter((arrival) => arrival.pasted)
+    const controls = new Set<string>()
+    const elements = new Set<string>()
+    doc.descendants((node, pos) => {
+      if (!node.isInline) return true
+      const end = pos + node.nodeSize
+      if (pastes.some((paste) => pos >= paste.from && end <= paste.to)) return false
+      if (node.type.name === INLINE_OPAQUE_NODE) elements.add(String(node.attrs.xml))
+      for (const wrap of wrapsOf(node)) {
+        const key = contentControlKey(wrap)
+        if (key !== null) controls.add(key)
+      }
+      return false
+    })
+    return (held = { controls, elements })
+  }
+
+  const marks: Array<{ from: number; to: number; chain: readonly InlineWrap[] }> = []
+  const removals: Array<{ from: number; to: number }> = []
+  for (const { from, to, cut, pasted } of arrived) {
+    const $from = doc.resolve(from)
+    const $to = doc.resolve(to)
+    // only what both sides still sit in: a later step may have changed either
+    const around =
+      cut.length > 0 && $from.nodeBefore && $to.nodeAfter
+        ? sharedInlineWraps(
+            cut,
+            sharedInlineWraps(wrapsOf($from.nodeBefore), wrapsOf($to.nodeAfter)),
+          )
+        : NO_WRAPS
+    const oneBlock = $from.sameParent($to)
+    doc.nodesBetween(from, to, (node, pos) => {
+      if (!node.isInline) return true
+      const range = { from: Math.max(pos, from), to: Math.min(pos + node.nodeSize, to) }
+      const own = wrapsOf(node)
+      let chain: readonly InlineWrap[] = own
+      if (pasted) {
+        if (node.type.name === INLINE_OPAQUE_NODE) {
+          if (heldElsewhere().elements.has(String(node.attrs.xml))) removals.push(range)
+          return false
+        }
+        if (own.some((wrap) => contentControlKey(wrap) !== null)) {
+          const { controls } = heldElsewhere()
+          chain = own.filter((wrap) => {
+            const key = contentControlKey(wrap)
+            return key === null || !controls.has(key)
+          })
+        }
+      }
+      if (oneBlock && around.length > 0) chain = inlineWrapsInside(around, chain)
+      if (!sameInlineWrapChain(chain, own)) marks.push({ ...range, chain })
+      return false
+    })
+    const controls = oneBlock ? [] : around.filter((wrap) => contentControlKey(wrap) !== null)
+    if (controls.length === 0) continue
+    const half = $to.parent
+    let pos = to
+    for (let i = $to.index(); i < half.childCount; i++) {
+      const node = half.child(i)
+      const own = wrapsOf(node)
+      const kept = inlineWrapsWithout(own, controls)
+      if (kept.length === own.length) break
+      marks.push({ from: pos, to: pos + node.nodeSize, chain: kept })
+      pos += node.nodeSize
+    }
+  }
+  if (marks.length === 0 && removals.length === 0) return null
+  // the lock is about what the user changes; this puts back what the edit broke
+  const fix = state.tr.setMeta(inlineWrapGuardKey, true)
+  // mark steps move no position, so every change applies where it was found
+  for (const { from, to, chain } of marks) {
+    if (chain.length === 0) fix.removeMark(from, to, type)
+    else fix.addMark(from, to, type.create({ chain: inlineWrapChainAttr(chain) }))
+  }
+  for (const { from, to } of removals.sort((a, b) => b.from - a.from)) fix.delete(from, to)
+  return fix
+}
+
+export const InlineWrapGuardExtension = Extension.create({
+  name: 'inlineWrapGuard',
+  addCommands() {
+    return {
+      // "Clear formatting" takes every mark off the selection. The wrapper
+      // mark is the control around the text, not formatting: it stays.
+      unsetAllMarks:
+        () =>
+        ({ tr, dispatch }) => {
+          const { empty, ranges } = tr.selection
+          if (empty) return true
+          if (dispatch) {
+            for (const range of ranges) {
+              for (const type of Object.values(tr.doc.type.schema.marks)) {
+                if (type.name === INLINE_WRAP_MARK) continue
+                tr.removeMark(range.$from.pos, range.$to.pos, type)
+              }
+            }
+          }
+          return true
+        },
+    }
+  },
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: inlineWrapGuardKey,
+        filterTransaction: (tr) => {
+          if (!tr.docChanged) return true
+          // A peer's edit was admitted on the page that made it (a page without
+          // this rule included), and the log holds it: refusing it here would
+          // leave this page with another document than everyone else's. The
+          // same transaction re-applies this person's own unconfirmed edits.
+          if (tr.getMeta('rebased') !== undefined) return true
+          // this plugin's own upkeep (keepWrappersWhole)
+          if (tr.getMeta(inlineWrapGuardKey) === true) return true
+          // Undo and redo go back to a document this guard let through. Taken
+          // step by step they can look like a change to locked text: undoing
+          // the paste of a copy right behind a locked control removes text
+          // that sat in the same run as the control's own.
+          if (tr.getMeta(HISTORY_META)) return true
+          for (let i = 0; i < tr.steps.length; i++) {
+            if (!refusedByLock(tr.steps[i], tr.docs[i])) continue
+            recordOdtRefusal('lockedControl')
+            notifyOdt('appOdtLockedObject')
+            return false
+          }
+          return true
+        },
+        appendTransaction: (trs, _before, state) => keepWrappersWhole(trs, state),
+        // no transformPasted here: its presence is how the paste actions tell
+        // the document editor from a text box or header editor (paste-actions.ts)
+        props: {
+          // Backspace / Delete beside an invisible kept element reach the text
+          // behind it: the caret steps over the element, the key then proceeds
+          handleKeyDown(view, event) {
+            if (event.key !== 'Backspace' && event.key !== 'Delete') return false
+            const { selection, doc } = view.state
+            if (!selection.empty) return false
+            const back = event.key === 'Backspace'
+            let pos = selection.from
+            for (;;) {
+              const $pos = doc.resolve(pos)
+              const beside = back ? $pos.nodeBefore : $pos.nodeAfter
+              if (beside?.type.name !== INLINE_OPAQUE_NODE) break
+              pos += back ? -beside.nodeSize : beside.nodeSize
+            }
+            if (pos !== selection.from) {
+              view.dispatch(view.state.tr.setSelection(TextSelection.create(doc, pos)))
+            }
+            return false
+          },
+        },
+      }),
+    ]
+  },
+})

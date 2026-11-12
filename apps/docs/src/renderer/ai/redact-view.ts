@@ -61,6 +61,7 @@ const ATOM_TYPES = new Set([
   'hardBreak',
   'docNoteRef',
   'docXeMark',
+  'docInlineOpaque',
   'docRuby',
   'docInlineImage',
   'docInlineMath',

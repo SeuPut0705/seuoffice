@@ -65,6 +65,14 @@ import { parseRunBorderAttr } from './run-border'
 import { parseTextOutlineAttr } from './text-outline'
 import { charScaleXAttr, parseGlowAttr, parseTextEffectAttr } from './text-effects'
 import { SHAPE_INLINE_WRAP, shapeWrapOf } from './floating-z-order'
+import {
+  holdsInlineStructure,
+  inlineOpaqueNodeOf,
+  inlineOpaqueXmlOf,
+  inlineStructureKey,
+  inlineWrapMarkOf,
+  readInlineWrapMark,
+} from './inline-wrap-chain'
 
 /** minimal ProseMirror JSON shapes */
 export interface PmMark {
@@ -1543,6 +1551,11 @@ export function runsToInline(runs: Run[]): PmNode[] {
   for (const run of runs) {
     const marks = runMarks(run)
     const atomMarks = marks.length > 0 ? { marks } : {}
+    const opaque = inlineOpaqueNodeOf(run)
+    if (opaque) {
+      nodes.push({ ...opaque, ...atomMarks })
+      continue
+    }
     if (run.math) {
       nodes.push({
         type: 'docInlineMath',
@@ -1695,6 +1708,8 @@ function runMarks(run: Run): PmMark[] {
   }
   if (run.sdtCheckboxXml !== undefined)
     marks.push({ type: 'ctrlCheckbox', attrs: { sdtPr: run.sdtCheckboxXml } })
+  const wrapMark = inlineWrapMarkOf(run)
+  if (wrapMark) marks.push(wrapMark)
   if (run.commentIds?.length)
     marks.push({ type: 'comment', attrs: { ids: run.commentIds.join(' ') } })
   if (run.ins) {
@@ -3533,7 +3548,8 @@ export function inlineToRuns(content: PmNode[]): Run[] {
       const prev = runs[runs.length - 1]
       const prevAtomic =
         prev &&
-        (prev.noteRef ||
+        (holdsInlineStructure(prev) ||
+          prev.noteRef ||
           prev.xeTerm !== undefined ||
           prev.math ||
           prev.sym ||
@@ -3559,6 +3575,11 @@ export function inlineToRuns(content: PmNode[]): Run[] {
     }
     if (node.type === 'docXeMark') {
       runs.push({ ...atomBase(node), text: '', xeTerm: String(node.attrs?.term ?? '') })
+      continue
+    }
+    const opaqueXml = inlineOpaqueXmlOf(node)
+    if (opaqueXml !== undefined) {
+      if (opaqueXml) runs.push({ ...atomBase(node), text: '', opaqueXml })
       continue
     }
     if (node.type === 'docInlineMath') {
@@ -3636,6 +3657,7 @@ function atomBase(node: PmNode): Partial<Run> {
 function runFromMarks(text: string, marks: PmMark[]): Run {
   const run: Run = { text }
   for (const mark of marks) {
+    if (readInlineWrapMark(run, mark)) continue
     if (mark.type === 'redaction') {
       // rawRPr is the whole story: it carries both the w:bdr Word draws and the
       // custom element holding the label, and the save path writes it back
@@ -3760,6 +3782,8 @@ function mergeRuns(runs: Run[]): Run[] {
     // reference markers / index entries / inline math / fields are atomic and
     // never merge — two identical FORMCHECKBOX runs must stay two fields
     const atomic =
+      run.opaqueXml !== undefined ||
+      prev?.opaqueXml !== undefined ||
       run.noteRef ||
       run.xeTerm !== undefined ||
       run.instrField !== undefined ||
@@ -3827,6 +3851,7 @@ function runStyleKey(run: Run): string {
     run.math?.omml ?? null,
     run.sym ? [run.sym.font, run.sym.char] : null,
     run.ruby?.xml ?? null,
+    inlineStructureKey(run),
   ])
 }
 
@@ -3851,7 +3876,14 @@ function normalizedRuns(runs: Run[]): unknown[] {
     // a picture/rule run's rPr-derived display fields do not survive the image
     // node round trip; its identity is the fragment plus the raw rPr it re-emits
     r.text === '' && r.image
-      ? ['image', r.rawRPr ?? null, r.image.xml, r.link?.href ?? null, revisionKey(r)]
+      ? [
+          'image',
+          r.rawRPr ?? null,
+          r.image.xml,
+          r.link?.href ?? null,
+          revisionKey(r),
+          inlineStructureKey(r),
+        ]
       : [
           r.text,
           r.rawRPr ?? null,
@@ -3883,6 +3915,7 @@ function normalizedRuns(runs: Run[]): unknown[] {
           r.sym ? [r.sym.font, r.sym.char] : null,
           r.ruby?.xml ?? null,
           r.image?.xml ?? null,
+          inlineStructureKey(r),
         ],
   )
 }

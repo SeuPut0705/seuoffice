@@ -19,7 +19,7 @@ import { docsSide } from '../src/web/collab-side'
 import { fakeApp } from './helpers/collab-app'
 
 const para = (text: string) => `<w:p><w:r><w:t xml:space="preserve">${text}</w:t></w:r></w:p>`
-const FORMAT = { name: 'docx', schema: 2 }
+const FORMAT = { name: 'docx', schema: 3 }
 
 let server: CollabServer
 let bytes: Uint8Array
@@ -198,5 +198,13 @@ describe('track changes while two people co-edit', () => {
       expect(insertions(alice.editor)).toEqual(both)
       expect(insertions(bob.editor)).toEqual(both)
     })
+  })
+
+  it('turns away a page of the build that opened the same file as another document', async () => {
+    // the room above was started by the page's own bridge: a page that still
+    // speaks the format from before run-level wrappers were carried must not join it
+    await expect(
+      joinCollab(directLink('Carol'), { format: { name: 'docx', schema: 2 }, bytes }),
+    ).rejects.toMatchObject({ code: 'schema_mismatch' })
   })
 })

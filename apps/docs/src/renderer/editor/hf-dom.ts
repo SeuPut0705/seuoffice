@@ -23,6 +23,7 @@ import { borderCssStyle, borderDrawnPx, cellDiagonalCss, isDrawnBorder } from '.
 import { setDkBackground, setDkBackgroundImage, setDkBorder, setDkColor } from './dark-page'
 import { INLINE_RULE_CLASS, inlineRuleDecls } from './inline-rule'
 import { hfParasOf } from './hf-text'
+import { holdsNoDrawnRun } from './inline-wrap-chain'
 import { borderMergeFlags, type ParaBorderAttrs } from './para-border-merge'
 
 /**
@@ -733,11 +734,12 @@ export function hfWithoutPageMarks(value: HeaderFooter): HeaderFooter {
             ...p,
             runs: p.runs
               .map((r) => ({ ...r, text: strip(r.text) }))
-              .filter((r) => r.text || r.image),
+              // kept elements (w:permStart...) have no text and stay where they are
+              .filter((r) => r.text || r.image || r.opaqueXml !== undefined),
           },
     )
     // dedicated page-number paragraphs go away entirely; table rows and user-typed blank lines stay
-    .filter((p, i) => p.cells != null || p.runs.length > 0 || value.paras![i].runs.length === 0)
+    .filter((p, i) => p.cells != null || p.runs.length > 0 || holdsNoDrawnRun(value.paras![i].runs))
   const text = paras
     .map((p) =>
       [...p.runs, ...(p.cells?.flatMap((c) => c.paras.flat()) ?? [])].map((r) => r.text).join(''),
@@ -758,7 +760,7 @@ export function hfHasVisibleContent(
   return Boolean(
     value.text ||
     value.pageNumber ||
-    value.paras?.some((p) => p.runs.length > 0 || p.cells?.length),
+    value.paras?.some((p) => !holdsNoDrawnRun(p.runs) || p.cells?.length),
   )
 }
 
@@ -1441,7 +1443,7 @@ export function makeGapHfEl(opts: {
             const paraEl = document.createElement('div')
             paraEl.className = 'page-hf-cell-para'
             assignStyle(paraEl, hfCellParaStyle(props, undefined, runs))
-            if (runs.length === 0) paraEl.textContent = ' '
+            if (holdsNoDrawnRun(runs)) paraEl.textContent = ' '
             spansOf(runs, paraEl)
             cellEl.append(paraEl)
             return
@@ -1527,7 +1529,7 @@ export function makeGapHfEl(opts: {
       host.append(p)
       continue
     }
-    if (para.runs.length === 0) {
+    if (holdsNoDrawnRun(para.runs)) {
       p.textContent = ' '
       if (para.emptyRunSizeHalfPoints) p.style.fontSize = `${para.emptyRunSizeHalfPoints / 2}pt`
     }

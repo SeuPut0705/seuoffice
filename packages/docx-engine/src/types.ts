@@ -192,6 +192,22 @@ export interface Run {
    * box glyph, and write-back sets w14:checked from it */
   sdtCheckboxXml?: string
   /**
+   * Run-level wrapper elements around this run that the model has no field for
+   * (w:sdt content controls, w:smartTag, w:customXml, w:dir, w:bdo), outermost
+   * first. A rebuilt paragraph writes adjacent runs that share a wrapper back
+   * inside one element, with the bytes it was read with. A content control is
+   * written once per paragraph: a later group that is not adjacent to the
+   * first goes back as plain runs, so its w:id is never repeated.
+   */
+  wrap?: InlineWrap[]
+  /**
+   * The run is one text-less element the model does not represent
+   * (w:permStart / w:permEnd, customXml range markers, w:subDoc, a wrapper
+   * holding no run at all). `text` is empty; the element is written back
+   * verbatim at this position when the paragraph is rebuilt.
+   */
+  opaqueXml?: string
+  /**
    * Run-level formatting revision (w:rPrChange): records the review info, the modeled
    * subset of the pre-revision formatting (drives the on-screen reject preview) and the
    * recorded previous w:rPr verbatim (`oldRPr`: its inner children; what reject writes).
@@ -412,6 +428,33 @@ export interface InlineContentControl {
   id: string
   /** the plain text that sits inside the control */
   text: string
+}
+
+/**
+ * One run-level wrapper element kept around the runs it holds. The wrapper's
+ * own bytes are never parsed into a model: they are stored and written back.
+ */
+export interface InlineWrap {
+  /** ordinal of the wrapper element inside its paragraph: runs sharing it sat in the same element */
+  seq: number
+  /** bytes before the wrapped runs: the opening tag and the wrapper's own properties (w:sdtPr...) */
+  open: string
+  /** bytes after the wrapped runs */
+  close: string
+  /**
+   * Where the wrapper sat relative to the run's own tracked-change element and
+   * hyperlink: absent = outside both, 'revision' = inside the w:ins / w:del
+   * (outside the hyperlink), 'link' = inside the w:hyperlink. A rebuilt
+   * paragraph writes it back at that depth, so `w:ins > w:sdt` does not turn
+   * into `w:sdt > w:ins`.
+   */
+  inside?: 'revision' | 'link'
+  /**
+   * Only on a content control whose properties hold just for the text it was
+   * read with (w:showingPlcHdr, w:dataBinding): that text. A rebuild that
+   * finds other text in the control writes it without those two properties.
+   */
+  text?: string
 }
 
 /** One custom tab stop from w:tabs/w:tab. Positions are in twips. */

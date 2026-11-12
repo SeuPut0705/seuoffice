@@ -1,5 +1,13 @@
 import { sdtCheckboxGlyphs, sdtCheckboxIsChecked, syncSdtCheckbox } from './checkbox-control'
+import {
+  inlineWrapTextOf,
+  inlineWrapWritesOnce,
+  placeInlineWraps,
+  sameInlineWrap,
+  sdtOpenForChangedText,
+} from './inline-opaque'
 import type {
+  InlineWrap,
   CellMargins,
   CharIndents,
   GeneratedBlock,
@@ -3076,9 +3084,13 @@ function generateRunsXml(runs: Run[], ctx: GenerateContext): string {
   return runsXml(runs, ctx.allocateHyperlinkRel, ctx.allocateRevisionId)
 }
 
-/** OOXML runs without relationship allocation (header/footer parts, ...) */
-export function inlineRunsXml(runs: Run[]): string {
-  return runsXml(runs, null)
+/**
+ * OOXML runs without relationship allocation (header/footer parts, ...).
+ * `written`: the content controls already written for this paragraph, shared
+ * by a caller that writes one paragraph's runs in several calls.
+ */
+export function inlineRunsXml(runs: Run[], written?: InlineWrap[]): string {
+  return runsXml(runs, null, undefined, written)
 }
 
 /**
@@ -3090,6 +3102,7 @@ function runsXml(
   runs: Run[],
   allocate: ((href: string) => string) | null,
   allocateRevisionId?: () => string,
+  written: InlineWrap[] = [],
 ): string {
   // comment ranges: re-emit start/end/reference markers around the first..last
   // run each id covers, so editing a commented paragraph keeps its comments
@@ -3118,55 +3131,6 @@ function runsXml(
 
   const parts: string[] = []
 
-  // serialize run indices [from, to) handling hyperlink grouping + comment markers
-  const emitRange = (from: number, to: number) => {
-    let i = from
-    while (i < to) {
-      const run = runs[i]
-      if (run.link) {
-        // group consecutive runs sharing the same link target; runs parsed from
-        // distinct w:hyperlink elements (own rId) stay separate so no relationship is orphaned
-        const group: Run[] = []
-        const groupStart = i
-        const href = run.link.href
-        let rId = run.link.rId
-        while (i < to && runs[i].link && runs[i].link!.href === href) {
-          const next = runs[i].link!.rId
-          if (group.length > 0 && next !== undefined && rId !== undefined && next !== rId) break
-          rId = rId ?? next
-          group.push(runs[i])
-          i++
-        }
-        // a comment boundary inside the link group widens to the whole hyperlink
-        for (let j = groupStart; j < i; j++) parts.push(startsAt(j))
-        const tooltip = group[0]?.link?.tooltip
-        const tipAttr = tooltip ? ` w:tooltip="${escapeXmlAttr(tooltip)}"` : ''
-        if (href.startsWith('#')) {
-          const inner = group.map((r) => runFragmentXml(r, true)).join('')
-          parts.push(
-            `<w:hyperlink w:anchor="${escapeXmlAttr(href.slice(1))}"${tipAttr}>${inner}</w:hyperlink>`,
-          )
-        } else {
-          const finalRId = rId ?? allocate?.(href)
-          if (finalRId) {
-            const inner = group.map((r) => runFragmentXml(r, true)).join('')
-            parts.push(
-              `<w:hyperlink r:id="${escapeXmlAttr(finalRId)}"${tipAttr}>${inner}</w:hyperlink>`,
-            )
-          } else {
-            parts.push(group.map((r) => runFragmentXml(r, false)).join(''))
-          }
-        }
-        for (let j = groupStart; j < i; j++) parts.push(endsAt(j))
-      } else {
-        parts.push(startsAt(i))
-        parts.push(runFragmentXml(run, false))
-        parts.push(endsAt(i))
-        i++
-      }
-    }
-  }
-
   // tracked changes: wrap consecutive runs of the same revision in w:ins / w:del.
   // An insertion later deleted (both set) nests w:del inside w:ins, as Word does.
   const revKey = (r: Run) =>
@@ -3184,6 +3148,109 @@ function runsXml(
           r.del?.move ?? null,
         ])
       : ''
+
+  // Wrapper elements the model keeps as bytes (w:sdt, w:smartTag...): each is
+  // written at the depth it was read at: outside the tracked-change element
+  // (level 0), inside it (1) or inside the hyperlink (2). Null = no wrappers.
+  const placed = placeInlineWraps(runs, revKey)
+  /**
+   * Runs [from, to) inside their wrappers of one level: adjacent runs that
+   * share a wrapper go back inside one element, written with the bytes it was
+   * read with; `leaf` writes what sits inside the innermost one.
+   */
+  const within = (
+    from: number,
+    to: number,
+    level: 0 | 1 | 2,
+    depth: number,
+    leaf: (from: number, to: number) => void,
+  ) => {
+    if (!placed) {
+      leaf(from, to)
+      return
+    }
+    let g = from
+    while (g < to) {
+      const wrap = placed[g][level][depth]
+      let end = g + 1
+      if (!wrap) {
+        while (end < to && !placed[end][level][depth]) end++
+        leaf(g, end)
+      } else {
+        while (end < to && sameInlineWrap(placed[end][level][depth], wrap)) end++
+        const once = inlineWrapWritesOnce(wrap)
+        if (once && written.some((w) => sameInlineWrap(w, wrap))) {
+          // a content control is one element: runs that left its first group
+          // go back without it rather than as a second control with its w:id
+          within(g, end, level, depth + 1, leaf)
+        } else {
+          if (once) written.push(wrap)
+          // text typed into a placeholder or a data-bound control: the two
+          // properties that would make Word discard it go (see InlineWrap.text)
+          const edited = wrap.text !== undefined && inlineWrapTextOf(runs, g, end) !== wrap.text
+          parts.push(edited ? sdtOpenForChangedText(wrap.open) : wrap.open)
+          within(g, end, level, depth + 1, leaf)
+          parts.push(wrap.close)
+        }
+      }
+      g = end
+    }
+  }
+
+  // serialize run indices [from, to) handling hyperlink grouping + comment markers
+  const emitRange = (from: number, to: number) => {
+    let i = from
+    while (i < to) {
+      const run = runs[i]
+      if (run.link) {
+        // group consecutive runs sharing the same link target; runs parsed from
+        // distinct w:hyperlink elements (own rId) stay separate so no relationship is orphaned
+        const groupStart = i
+        const href = run.link.href
+        let rId = run.link.rId
+        while (i < to && runs[i].link && runs[i].link!.href === href) {
+          const next = runs[i].link!.rId
+          if (i > groupStart && next !== undefined && rId !== undefined && next !== rId) break
+          rId = rId ?? next
+          i++
+        }
+        const groupEnd = i
+        // the group's runs, inside the wrappers that sat in the hyperlink
+        const inner = (insideLink: boolean): string => {
+          const at = parts.length
+          within(groupStart, groupEnd, 2, 0, (a, b) => {
+            for (let j = a; j < b; j++) parts.push(runFragmentXml(runs[j], insideLink))
+          })
+          return parts.splice(at).join('')
+        }
+        // a comment boundary inside the link group widens to the whole hyperlink
+        for (let j = groupStart; j < i; j++) parts.push(startsAt(j))
+        const tooltip = runs[groupStart].link?.tooltip
+        const tipAttr = tooltip ? ` w:tooltip="${escapeXmlAttr(tooltip)}"` : ''
+        if (href.startsWith('#')) {
+          parts.push(
+            `<w:hyperlink w:anchor="${escapeXmlAttr(href.slice(1))}"${tipAttr}>${inner(true)}</w:hyperlink>`,
+          )
+        } else {
+          const finalRId = rId ?? allocate?.(href)
+          if (finalRId) {
+            parts.push(
+              `<w:hyperlink r:id="${escapeXmlAttr(finalRId)}"${tipAttr}>${inner(true)}</w:hyperlink>`,
+            )
+          } else {
+            parts.push(inner(false))
+          }
+        }
+        for (let j = groupStart; j < i; j++) parts.push(endsAt(j))
+      } else {
+        parts.push(startsAt(i))
+        parts.push(runFragmentXml(run, false))
+        parts.push(endsAt(i))
+        i++
+      }
+    }
+  }
+
   let revSeq = 9001
   const mintRevisionId = allocateRevisionId ?? (() => String(revSeq++))
   // a later edit splitting one w:ins in two leaves both halves with the stored id
@@ -3211,41 +3278,45 @@ function runsXml(
   const sameMove = (a: ReturnType<typeof moveOf>, b: ReturnType<typeof moveOf>) =>
     !!a && !!b && a.side === b.side && a.name === b.name
   let openRange: { side: 'From' | 'To'; id: string } | null = null
-  let g = 0
-  while (g < runs.length) {
-    const key = revKey(runs[g])
-    let end = g
-    while (end < runs.length && revKey(runs[end]) === key) end++
-    if (key === '') {
-      emitRange(g, end)
-    } else {
-      const { ins, del } = runs[g]
-      const move = moveOf(runs[g])
-      if (move && !sameMove(move, moveOf(runs[g - 1]))) {
-        const info = move.side === 'From' ? del! : ins!
-        const id = mintRevisionId()
-        parts.push(
-          `<w:move${move.side}RangeStart w:id="${escapeXmlAttr(id)}"` +
-            ` w:author="${escapeXmlAttr(info.author)}"` +
-            (info.date ? ` w:date="${escapeXmlAttr(info.date)}"` : '') +
-            ` w:name="${escapeXmlAttr(move.name)}"/>`,
-        )
-        openRange = { side: move.side, id }
+  // runs [from, to), each tracked-change group in its w:ins / w:del
+  const emitRevisions = (from: number, to: number) => {
+    let g = from
+    while (g < to) {
+      const key = revKey(runs[g])
+      let end = g
+      while (end < to && revKey(runs[end]) === key) end++
+      if (key === '') {
+        within(g, end, 1, 0, emitRange)
+      } else {
+        const { ins, del } = runs[g]
+        const move = moveOf(runs[g])
+        if (move && !sameMove(move, moveOf(runs[g - 1]))) {
+          const info = move.side === 'From' ? del! : ins!
+          const id = mintRevisionId()
+          parts.push(
+            `<w:move${move.side}RangeStart w:id="${escapeXmlAttr(id)}"` +
+              ` w:author="${escapeXmlAttr(info.author)}"` +
+              (info.date ? ` w:date="${escapeXmlAttr(info.date)}"` : '') +
+              ` w:name="${escapeXmlAttr(move.name)}"/>`,
+          )
+          openRange = { side: move.side, id }
+        }
+        const insTag = ins?.move ? 'w:moveTo' : 'w:ins'
+        const delTag = del?.move ? 'w:moveFrom' : 'w:del'
+        if (ins) parts.push(`<${insTag}${revAttrs(ins)}>`)
+        if (del) parts.push(`<${delTag}${revAttrs(del)}>`)
+        within(g, end, 1, 0, emitRange)
+        if (del) parts.push(`</${delTag}>`)
+        if (ins) parts.push(`</${insTag}>`)
+        if (openRange && !sameMove(move, moveOf(runs[end]))) {
+          parts.push(`<w:move${openRange.side}RangeEnd w:id="${escapeXmlAttr(openRange.id)}"/>`)
+          openRange = null
+        }
       }
-      const insTag = ins?.move ? 'w:moveTo' : 'w:ins'
-      const delTag = del?.move ? 'w:moveFrom' : 'w:del'
-      if (ins) parts.push(`<${insTag}${revAttrs(ins)}>`)
-      if (del) parts.push(`<${delTag}${revAttrs(del)}>`)
-      emitRange(g, end)
-      if (del) parts.push(`</${delTag}>`)
-      if (ins) parts.push(`</${insTag}>`)
-      if (openRange && !sameMove(move, moveOf(runs[end]))) {
-        parts.push(`<w:move${openRange.side}RangeEnd w:id="${escapeXmlAttr(openRange.id)}"/>`)
-        openRange = null
-      }
+      g = end
     }
-    g = end
   }
+  within(0, runs.length, 0, 0, emitRevisions)
   return parts.join('')
 }
 
@@ -3275,6 +3346,8 @@ function splitGlyphRuns(
 }
 
 function runFragmentXml(run: Run, insideLink: boolean): string {
+  // an element the model does not represent: written back as it was read
+  if (run.opaqueXml !== undefined) return run.opaqueXml
   // atomic inline formula: the stored <m:oMath> fragment is already valid
   // paragraph content (patch.ts adds the xmlns:m declaration when missing)
   if (run.math) {

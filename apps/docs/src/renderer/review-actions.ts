@@ -320,9 +320,15 @@ export function handleRevision(
 ): void {
   if (!ctx.editor) return
   if (all) {
-    if (action === 'accept') acceptAllRevisions(ctx.editor)
-    else rejectAllRevisions(ctx.editor)
-    ctx.setStatus(action === 'accept' ? t('appAllRevisionsAccepted') : t('appAllRevisionsRejected'))
+    const left =
+      action === 'accept' ? acceptAllRevisions(ctx.editor) : rejectAllRevisions(ctx.editor)
+    // changes inside a control locked against editing stay pending (the editor
+    // says so): "all accepted" would not be true then
+    if (left.length === 0) {
+      ctx.setStatus(
+        action === 'accept' ? t('appAllRevisionsAccepted') : t('appAllRevisionsRejected'),
+      )
+    }
   } else {
     const ok =
       action === 'accept' ? acceptCurrentRevision(ctx.editor) : rejectCurrentRevision(ctx.editor)
