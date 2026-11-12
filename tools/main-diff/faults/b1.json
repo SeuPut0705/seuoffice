@@ -1,0 +1,63 @@
+[
+  {"name": "control: posix.join drops its last part", "file": "jscompat/src/node_path.rs", "find": "st(&normalize_u(&path.join(&(FS as u16))))", "replace": "st(&normalize_u(&path[..path.len() - 1].join(&(FS as u16))))", "fn": ["path.posix.join"]},
+  {"name": "posix.resolve: lone '.' no longer takes the cwd fast path", "file": "jscompat/src/node_path.rs", "find": "(args[0].is_empty() || args[0] == [DOT as u16])))", "replace": "(args[0].is_empty())))", "fn": ["path.posix.resolve"]},
+  {"name": "win32.resolve: device letters compared case-sensitively", "file": "jscompat/src/node_path.rs", "find": "if lower(&device) != lower(&resolved_device) {", "replace": "if device != resolved_device {", "fn": ["path.win32.resolve"]},
+  {"name": "posix.normalize: empty result keeps '.' and './' swapped", "file": "jscompat/src/node_path.rs", "find": "return if trailing_separator { u(\"./\") } else { u(\".\") };", "replace": "return if trailing_separator { u(\".\") } else { u(\"./\") };", "fn": ["path.posix.normalize"]},
+  {"name": "win32.normalize: CVE-2024-36139 guard needs a longer tail", "file": "jscompat/src/node_path.rs", "find": "if tail.len() >= 2 && is_windows_device_root(at(&tail, 0)) && at(&tail, 1) == COLON {", "replace": "if tail.len() > 2 && is_windows_device_root(at(&tail, 0)) && at(&tail, 1) == COLON {", "fn": ["path.win32.normalize"]},
+  {"name": "posix.relative: off by one, result keeps the leading slash", "file": "jscompat/src/node_path.rs", "find": "return slice_from(&to, to_start + i + 1);", "replace": "return slice_from(&to, to_start + i);", "fn": ["path.posix.relative"]},
+  {"name": "win32.relative: drive root common separator index 2 instead of 3", "file": "jscompat/src/node_path.rs", "find": "last_common_sep = 3;", "replace": "last_common_sep = 2;", "fn": ["path.win32.relative"]},
+  {"name": "win32.parse: UNC root loses its trailing separator", "file": "jscompat/src/node_path.rs", "find": "} else if j != last {\n                            root_end = j + 1;", "replace": "} else if j != last {\n                            root_end = j;", "fn": ["path.win32.parse"]},
+  {"name": "posix.parse: relative path starts one character late (|| for &&)", "file": "jscompat/src/node_path.rs", "find": "let start = if start_part == 0 && is_absolute {", "replace": "let start = if start_part == 0 || is_absolute {", "fn": ["path.posix.parse"]},
+
+  {"name": "app-routing: drawio picture kind keeps its case", "file": "main-core/src/shell/app_routing.rs", "find": "format!(\"drawio.{}\", kind.to_lowercase())", "replace": "format!(\"drawio.{}\", kind)", "fn": ["app-routing.documentExtension"]},
+  {"name": "app-routing: ppt rename may leave the .ppt form", "file": "main-core/src/shell/app_routing.rs", "find": "ppt_re().test(from) != ppt_re().test(new_name)", "replace": "ppt_re().test(from) && !ppt_re().test(new_name)", "fn": ["app-routing.renameStaysInApp"]},
+
+  {"name": "update-attempt: default tries of a visible attempt swapped", "file": "main-core/src/shell/update_attempt.rs", "find": "if attempt.visible { 2.0 } else { 1.0 }", "replace": "if attempt.visible { 1.0 } else { 2.0 }", "fn": ["update-attempt.nextAttemptTries", "update-attempt.installFailureLevel"]},
+  {"name": "update-attempt: tries of 0 accepted as a valid record", "file": "main-core/src/shell/update_attempt.rs", "find": "x.trunc() == *x && *x >= 1.0", "replace": "x.trunc() == *x && *x >= 0.0", "fn": ["update-attempt.readInstallAttempt"]},
+
+  {"name": "update-build-channel: channel regex lost the m flag", "file": "main-core/src/shell/update_build_channel.rs", "find": ", \"m\")", "replace": ", \"\")", "fn": ["update-build-channel.buildChannelFromAppUpdateYml", "update-build-channel.packagedUpdateChannel"]},
+  {"name": "update-build-channel: unreadable app-update.yml defaults to latest", "file": "main-core/src/shell/update_build_channel.rs", "find": "Err(_) => BuildUpdateChannel::Stable,", "replace": "Err(_) => BuildUpdateChannel::Latest,", "fn": ["update-build-channel.packagedUpdateChannel"]},
+
+  {"name": "update-cache: equal numbers always count as installed (prerelease ignored)", "file": "main-core/src/shell/update_cache.rs", "find": "!running_version.contains('-')", "replace": "true", "fn": ["update-cache.pruneUpdateCache"]},
+  {"name": "update-cache: patch number not compared", "file": "main-core/src/shell/update_cache.rs", "find": "for i in 0..3 {", "replace": "for i in 0..2 {", "fn": ["update-cache.pruneUpdateCache"]},
+
+  {"name": "launch-paths: .numbers dropped from the unsupported list", "file": "main-core/src/shell/launch_paths.rs", "find": "pages|key|numbers", "replace": "pages|key", "fn": ["launch-paths.collectLaunchPaths"]},
+  {"name": "launch-paths: fallback takes the last unsupported argv, not the first", "file": "main-core/src/shell/launch_paths.rs", "find": ".find(|path| unsupported(path) && exists(path))", "replace": ".rfind(|path| unsupported(path) && exists(path))", "fn": ["launch-paths.collectLaunchPaths"]},
+
+  {"name": "rename-validation: 255-unit name rejected (>= for >)", "file": "main-core/src/shell/rename_validation.rs", "find": "length == 0 || length > 255", "replace": "length == 0 || length >= 255", "fn": ["rename-validation.isValidRenameName", "rename-validation.isValidRawRenameName"]},
+  {"name": "rename-validation: trailing space allowed", "file": "main-core/src/shell/rename_validation.rs", "find": "name.ends_with('.') || name.ends_with(' ')", "replace": "name.ends_with('.')", "fn": ["rename-validation.isValidRenameName"]},
+
+  {"name": "folder-roots: default folder not in the seen set", "file": "main-core/src/shell/folder_roots.rs", "find": "let mut seen = vec![resolve(&[default_dir])];", "replace": "let mut seen: Vec<String> = Vec::new();", "fn": ["folder-roots.readExtraRoots"]},
+  {"name": "folder-roots: a file counts as a readable root", "file": "main-core/src/shell/folder_roots.rs", "find": "readable = metadata.is_dir();", "replace": "readable = true;", "fn": ["folder-roots.describeExtraRoot"]},
+
+  {"name": "crash-heartbeat: version >= 1 accepted", "file": "main-core/src/shell/crash_heartbeat.rs", "find": "Number(v)) if *v == 1.0", "replace": "Number(v)) if *v >= 1.0", "fn": ["crash-heartbeat.parseHeartbeat"]},
+  {"name": "crash-heartbeat: upMin rounds instead of floors", "file": "main-core/src/shell/crash_heartbeat.rs", "find": "((previous.at - previous.started_at) / MINUTE).floor(),", "replace": "((previous.at - previous.started_at) / MINUTE).round(),", "fn": ["crash-heartbeat.goneEntryFrom"]},
+
+  {"name": "crash-log: safe word may be 49 characters", "file": "main-core/src/shell/crash_log.rs", "find": "{0,47}", "replace": "{0,48}", "fn": ["crash-log.crashLine", "crash-log.errorReason"]},
+  {"name": "crash-log: tail keeps lines up to and including the budget (> for >=)", "file": "main-core/src/shell/crash_log.rs", "find": "if size + bytes > budget {", "replace": "if size + bytes >= budget {", "fn": ["crash-log.appendCrashLog"]},
+
+  {"name": "recent-files: limit ceil instead of floor", "file": "main-core/src/shell/recent_files.rs", "find": "raw_limit.floor()", "replace": "raw_limit.ceil()", "fn": ["recent-files.normalizeRecentQuery", "recent-files.pageRecentPaths"]},
+  {"name": "recent-files: xmind family loses .mm", "file": "main-core/src/shell/recent_files.rs", "find": "&[\"xmind\", \"mm\"]", "replace": "&[\"xmind\"]", "fn": ["recent-files.matchesExtFamily", "recent-files.pageRecentPaths"]},
+
+  {"name": "split-memory: max ratio 0.85", "file": "main-core/src/shell/split_memory.rs", "find": "const MAX_RATIO: f64 = 0.8;", "replace": "const MAX_RATIO: f64 = 0.85;", "fn": ["split-memory.readSplitMemory", "split-memory.writeSplitMemory"]},
+  {"name": "split-memory: only-b state no longer remembered as a", "file": "main-core/src/shell/split_memory.rs", "find": "(None, Some(b)) => Some(memory(b, None)),", "replace": "(None, Some(_b)) => None,", "fn": ["split-memory.writeSplitMemory"]},
+
+  {"name": "update-log: trim keeps the older half", "file": "main-core/src/shell/update_log.rs", "find": "let keep_from = length - length / 2;", "replace": "let keep_from = length / 2;", "fn": ["update-log.createUpdateLog"]},
+  {"name": "update-log: CRLF not folded (\\r?\\n -> \\n)", "file": "main-core/src/shell/update_log.rs", "find": "r\"\\r?\\n\"", "replace": "r\"\\n\"", "fn": ["update-log.createUpdateLog"]},
+
+  {"name": "window-bounds: minimum width itself rejected", "file": "main-core/src/shell/window_bounds.rs", "find": "state.rect.width < SHELL_WINDOW_MIN_WIDTH", "replace": "state.rect.width <= SHELL_WINDOW_MIN_WIDTH", "fn": ["window-bounds.parseShellWindowState", "window-bounds.readShellWindowState"]},
+  {"name": "window-bounds: visible overlap exactly 120 not enough", "file": "main-core/src/shell/window_bounds.rs", "find": "overlap_width >= MIN_VISIBLE_WIDTH", "replace": "overlap_width > MIN_VISIBLE_WIDTH", "fn": ["window-bounds.isShellWindowVisible", "window-bounds.readShellWindowState"]},
+
+  {"name": "app-settings: warningAccepted 1 no longer accepted (> for >=)", "file": "main-core/src/shell/app_settings.rs", "find": "x.fract() == 0.0 && *x >= 1.0", "replace": "x.fract() == 0.0 && *x > 1.0", "fn": ["app-settings.agentSkillNoticeDue", "app-settings.writeAgentPrefs"]},
+  {"name": "app-settings: default codexWebSearch is live", "file": "main-core/src/shell/app_settings.rs", "find": "codex_web_search: \"cached\".to_owned(),", "replace": "codex_web_search: \"live\".to_owned(),", "fn": ["app-settings.readAgentProjectPref", "app-settings.DEFAULT_AGENT_PROJECT_PREF", "app-settings.writeAgentProjectPref"]},
+
+  {"name": "ai-provider: 64-character skill name rejected", "file": "main-core/src/packages/ai_provider.rs", "find": "name.chars().count() <= 64", "replace": "name.chars().count() < 64", "fn": ["states.normalizeUserSkillSettings"]},
+  {"name": "ai-provider: plugin skills dropped instead of project skills", "file": "main-core/src/packages/ai_provider.rs", "find": "parsed.source == \"project\"", "replace": "parsed.source == \"plugin\"", "fn": ["states.normalizeUserSkillSettings"]},
+
+  {"name": "project-store: hyphen no longer valid in a project id", "file": "main-core/src/packages/project_store.rs", "find": "c == '_' || c == '-'", "replace": "c == '_'", "fn": ["folder-api.isValidProjectId"]},
+  {"name": "project-store: non-ASCII letters valid in a project id", "file": "main-core/src/packages/project_store.rs", "find": "c.is_ascii_alphanumeric() ||", "replace": "c.is_alphanumeric() ||", "fn": ["folder-api.isValidProjectId"]},
+
+  {"name": "atomic-write: save-temp name needs 11 hex digits", "file": "main-core/src/packages/electron_utils/atomic_write.rs", "find": "[0-9a-f]{12}", "replace": "[0-9a-f]{11}", "fn": ["atomic-write.isSaveTempName"]},
+  {"name": "atomic-write: save-temp name regex lost the i flag", "file": "main-core/src/packages/electron_utils/atomic_write.rs", "find": "\\.tmp$\", \"i\")", "replace": "\\.tmp$\", \"\")", "fn": ["atomic-write.isSaveTempName"]},
+  {"name": "atomic-write: temp name keeps 255 bytes of the target name", "file": "main-core/src/packages/electron_utils/atomic_write.rs", "find": "TEMP_NAME_MAX_BYTES: usize = 200;", "replace": "TEMP_NAME_MAX_BYTES: usize = 255;", "fn": ["atomic-write.tempPathBeside"]}
+]
