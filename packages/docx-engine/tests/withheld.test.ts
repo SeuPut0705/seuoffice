@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { parseEntry, runsText, withheldEntryText, withheldNode } from '../src/withheld'
+import { parseEntry, runsText, withheldNode, withheldText } from '../src/withheld'
 
 const hidden = (text: string, label = 'phone') =>
   `<w:r><w:rPr><go:redact w:label="${label}"/></w:rPr><w:t>${text}</w:t></w:r>`
@@ -54,25 +54,23 @@ describe('withheldNode', () => {
   })
 })
 
-describe('withheldEntryText', () => {
-  const read = (xml: string, text: string) => withheldEntryText(xml, text, runsText)
+describe('withheldText', () => {
+  const read = (xml: string) => withheldText(parseEntry(xml)!, runsText)
 
   it('is undefined for an entry that hides nothing', () => {
-    expect(read(`<w:p>${plain('open')}</w:p>`, 'open')).toBeUndefined()
+    expect(read(`<w:p>${plain('open')}</w:p>`)).toBeUndefined()
   })
 
-  it('withholds the whole entry when the reader saw other words than the tree', () => {
-    // a pattern that took the CDATA markup for text, or stopped at a ">" inside a value
-    expect(read(`<w:p>${hidden('<![CDATA[x]]>')}</w:p>`, 'x and more')).toBe('{{private}}')
-    // a slice the parser cannot read
-    expect(read('<w:p><go:redact w:label="p"/><w:t>secret</w:p></w:t>', 'secret')).toBe(
-      '{{private}}',
-    )
+  it('withholds the whole entry when a mark sits where no run accounts for it', () => {
+    expect(read(`<w:p><go:redact w:label="phone"/>${plain('secret')}</w:p>`)).toBe('{{private}}')
   })
 
-  it('gives the placeholder text when the readings agree', () => {
-    expect(read(`<w:p>${plain('Call ')}${hidden('secret')}</w:p>`, 'Call secret')).toBe(
-      'Call {{phone}}',
-    )
+  it('gives the placeholder text otherwise', () => {
+    expect(read(`<w:p>${plain('Call ')}${hidden('secret')}</w:p>`)).toBe('Call {{phone}}')
+  })
+
+  it('reads markup inside CDATA as words, not as an entry of its own', () => {
+    const xml = `<w:p>${hidden('<![CDATA[</w:p><w:p><w:r><w:t>secret</w:t></w:r></w:p>]]>')}</w:p>`
+    expect(read(xml)).toBe('{{phone}}')
   })
 })

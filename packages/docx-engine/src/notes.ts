@@ -1,9 +1,17 @@
-import { decodeEntities } from './parse-xml-text'
+import { decodeEntities, decodeNumericCharRefs } from './parse-xml-text'
 import { applyRevisionResolutions } from './revision-xml'
 import { patchParagraphTexts } from './text-patch'
 import type { NoteInfo, NoteRun } from './types'
-import { escapeXmlAttr, escapeXmlText, findChildren, type XNode } from './xml-utils'
-import { runsText, withheldEntryText } from './withheld'
+import {
+  attrsOf,
+  childrenOf,
+  escapeXmlAttr,
+  escapeXmlText,
+  findChildren,
+  serializeXNode,
+  type XNode,
+} from './xml-utils'
+import { parseEntry, runsText, withheldText } from './withheld'
 
 /**
  * Footnotes / endnotes part handling (word/footnotes.xml, word/endnotes.xml).
@@ -86,11 +94,21 @@ export type NoteParagraphReader = (pXml: string) => NoteParagraph
 
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
-  return noteEntriesOf(xml, kind).map(({ id, text, xml: entryXml }) => {
-    // the entry with every run hidden from AI as its placeholder, read from the
-    // parser's tree; withheld whole when its marks cannot all be read, or when
-    // the tree reads other words than `text` did
-    const modelText = withheldEntryText(entryXml, text, noteTreeText)
+  // the entries as the parser finds them: markup inside CDATA is text, not a note
+  const root = parseEntry(xml)
+  const entries = root ? findChildren(root, ENTRY[kind]) : []
+  return entries.flatMap((entry) => {
+    const attrs = attrsOf(entry)
+    if (attrs['w:type'] !== undefined) return [] // separator / continuation entries
+    const id = attrs['w:id']
+    // an entry with no body at all (<w:footnote w:id="1"/>) is no note
+    if (!id || childrenOf(entry).length === 0) return []
+    const text = noteTreeText(entry)
+    // each run hidden from AI as its placeholder, or the whole note withheld
+    // when a mark sits where no run accounts for it
+    const modelText = withheldText(entry, noteTreeText)
+    // the entry as the parser read it, for the readers below that take XML
+    const entryXml = serializeXNode(entry)
     const paras = read ? noteParagraphsOf(entryXml).map(read) : []
     const first = paras[0]
     const richParas = paras.map((p) => p.runs)
@@ -144,9 +162,9 @@ function noteEntriesOf(
   return out
 }
 
-/** noteEntryPlainText's reading of a parsed entry */
+/** a parsed note's text: its paragraphs' run text, the first one's leading spacer dropped */
 function noteTreeText(entry: XNode): string {
-  const paras = findChildren(entry, 'w:p').map(runsText)
+  const paras = findChildren(entry, 'w:p').map((p) => decodeNumericCharRefs(runsText(p)))
   if (paras.length > 0) paras[0] = paras[0]!.replace(/^\s+/, '')
   return paras.join('\n')
 }

@@ -9,10 +9,9 @@ import { attrsOf, childrenOf, findChild, nameOf, textOf, xmlParser, type XNode }
  *
  * Everything here reads the parser's tree, never the XML by pattern: a
  * pattern that reads a tag differently from the parser (quotes, white space,
- * `>` inside a value, comments, CDATA) has twice handed a model the words the
- * parser then showed. Where a reader still takes its text from the XML by
- * pattern (notes, controls), its entry is compared with the tree's reading and
- * withheld whole when the two disagree (`withheldEntryText`).
+ * `>` inside a value, comments, CDATA) has handed a model the words the parser
+ * then showed, or made up an entry out of markup inside CDATA. Entries
+ * (comments, notes, inline controls) are found in the tree and read from it.
  */
 
 /**
@@ -136,33 +135,27 @@ export function runsText(node: XNode): string {
   return out
 }
 
-/** the first element of an XML slice, parsed; undefined when the slice does not parse */
+/** the first element of an XML text (a declaration skipped), parsed; undefined when it does not parse */
 export function parseEntry(xml: string): XNode | undefined {
   try {
-    return (xmlParser.parse(xml) as XNode[]).find((n) => nameOf(n) !== undefined)
+    return (xmlParser.parse(xml) as XNode[]).find((n) => {
+      const name = nameOf(n)
+      return name !== undefined && !name.startsWith('?')
+    })
   } catch {
     return undefined
   }
 }
 
 /**
- * What a model reads of an entry whose reader took `text` from its XML by
- * pattern (`xml` the entry's slice, `textOfTree` the same reading done on the
- * parser's tree): undefined when the entry hides nothing, else its text with
- * each hidden run as its placeholder. When the slice does not parse, or the
- * tree reads other words than the pattern did, the reader may be showing words
- * the tree does not account for, and the whole entry is withheld.
+ * What a model reads of a parsed entry, given how its reader reads text
+ * (`textOf`): undefined when the entry hides nothing, else its text with each
+ * hidden run as its placeholder, or the whole entry withheld when a mark sits
+ * where no run accounts for it.
  */
-export function withheldEntryText(
-  xml: string,
-  text: string,
-  textOfTree: (node: XNode) => string,
-): string | undefined {
-  const node = parseEntry(xml)
-  if (!hasWithheldTrace(xml) && !(node && hasMarkElement(node))) return undefined
-  if (!node || textOfTree(node) !== text) return WITHHELD_ENTRY_TEXT
+export function withheldText(node: XNode, textOf: (node: XNode) => string): string | undefined {
+  if (!hasMarkElement(node)) return undefined
   const view = withheldNode(node)
-  if (view === null) return WITHHELD_ENTRY_TEXT
-  const modelText = textOfTree(view)
-  return modelText === text ? undefined : modelText
+  const modelText = view === null ? WITHHELD_ENTRY_TEXT : textOf(view)
+  return modelText === textOf(node) ? undefined : modelText
 }
