@@ -119,6 +119,54 @@ function answerShape(
   return Object.keys(fields).length ? { k: 'obj', f: fields } : undefined
 }
 
+// The TypeScript engine minted its ids with `crypto.randomUUID()` (creation ids) and
+// `Math.random()` (field ids), looked up at each call: a host that replaces them (co-editing
+// seeds both, so every page mints the same ids for one edit) got its own ids back. The wasm
+// engine draws its random bytes through WASI `random_get`, which the loader answers with
+// `crypto.getRandomValues`: one draw of 16 bytes is a `crypto.randomUUID()` (jscompat
+// random_uuid), one of 8 bytes a `Math.random()` (jscompat math_random, 53 bits shifted up 11).
+// While either function is replaced, a call answers those draws from them; anything else, and
+// every draw while both are the platform's, stays with `getRandomValues`.
+const PLATFORM_UUID = globalThis.crypto?.randomUUID
+const PLATFORM_RANDOM = Math.random
+
+function uuidBytes(into: Uint8Array): void {
+  const hex = globalThis.crypto.randomUUID().replaceAll('-', '')
+  for (let i = 0; i < 16; i++) into[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16)
+}
+
+function randomBytes(into: Uint8Array): void {
+  let word = BigInt(Math.floor(Math.random() * 2 ** 53)) << 11n
+  for (let i = 0; i < 8; i++) {
+    into[i] = Number(word & 0xffn)
+    word >>= 8n
+  }
+}
+
+function withHostRandomness<T>(run: () => T): T {
+  const crypto = globalThis.crypto
+  if (crypto.randomUUID === PLATFORM_UUID && Math.random === PLATFORM_RANDOM) return run()
+  const own = Object.getOwnPropertyDescriptor(crypto, 'getRandomValues')
+  const platform = crypto.getRandomValues.bind(crypto)
+  Object.defineProperty(crypto, 'getRandomValues', {
+    configurable: true,
+    writable: true,
+    // the loader hands a Uint8Array view of the engine's memory
+    value: (array: Uint8Array): Uint8Array => {
+      if (array.length === 16) uuidBytes(array)
+      else if (array.length === 8) randomBytes(array)
+      else platform(array)
+      return array
+    },
+  })
+  try {
+    return run()
+  } finally {
+    if (own) Object.defineProperty(crypto, 'getRandomValues', own)
+    else Reflect.deleteProperty(crypto, 'getRandomValues')
+  }
+}
+
 /** One exported function of the package: the engine's answer, with the arguments it changed written back. */
 export function call(fn: string, args: readonly unknown[], options: CallOptions = {}): unknown {
   ensureEngine()
@@ -126,11 +174,14 @@ export function call(fn: string, args: readonly unknown[], options: CallOptions 
   const wire = args.map((arg, i) =>
     mut[i] === 'opened' || options.opened?.includes(i) ? openedArg(arg as OpenedPptx) : arg,
   )
-  const answer = engineInvoke(fn, wire, {
-    fnPrefix: 'pptx.',
-    names: options.names,
-    shape: answerShape(options, mut),
-  }) as Answer
+  const answer = withHostRandomness(
+    () =>
+      engineInvoke(fn, wire, {
+        fnPrefix: 'pptx.',
+        names: options.names,
+        shape: answerShape(options, mut),
+      }) as Answer,
+  )
   for (const [index, value] of Object.entries(answer.$out ?? {})) {
     const at = Number(index)
     writeBack(args[at], mut[at] ?? 'json', value)
