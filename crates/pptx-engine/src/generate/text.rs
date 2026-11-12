@@ -1,7 +1,6 @@
 //! Text half of generate.ts: surgical patches of runs and paragraphs, and the
 //! rebuild path that regenerates a `<p:txBody>`.
 
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use jscompat::{
     JsNum, JsRegex, index_of, js_regex, last_index_of, number_truthy, prefix_utf16,
@@ -1614,25 +1613,9 @@ fn generate_run_xml(r: &TextRun) -> String {
     format!("<a:r>{r_pr}<a:t>{}</a:t></a:r>", escape_xml_text(text))
 }
 
-/// One 16-bit draw of `Math.random`'s stand-in: splitmix64 over a process-wide counter,
-/// seeded from the clock once. The engine has no other source of randomness.
+/// `Math.floor(Math.random() * 0x10000)`
 fn random_u16() -> u16 {
-    static STATE: AtomicU64 = AtomicU64::new(0);
-    let mut seed = STATE.load(Ordering::Relaxed);
-    if seed == 0 {
-        let nanos = std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map(|d| d.as_nanos() as u64)
-            .unwrap_or_default();
-        seed = nanos | 1;
-    }
-    let next = STATE
-        .fetch_add(0x9E37_79B9_7F4A_7C15, Ordering::Relaxed)
-        .wrapping_add(seed);
-    let mut z = next.wrapping_add(0x9E37_79B9_7F4A_7C15);
-    z = (z ^ (z >> 30)).wrapping_mul(0xBF58_476D_1CE4_E5B9);
-    z = (z ^ (z >> 27)).wrapping_mul(0x94D0_49BB_1331_11EB);
-    ((z ^ (z >> 31)) >> 16) as u16
+    (jscompat::math_random() * 65536.0).floor() as u16
 }
 
 /// `<a:fld>` requires a unique GUID id.

@@ -1,0 +1,667 @@
+pptx-diff: 4 tracked .pptx (floor      4); 4 opened (floor      4); 15 slides (floor     15)
+(f) xml on the corpus, checks                  compared   1683  floor   1683  differences 0
+(f) xml on built inputs, checks                compared   2262  floor   2262  differences 0  listed 26  (TypeScript threw in 182: Rust must refuse those too)
+(f+) xml on mutated texts, checks              compared    300  floor    300  differences 0  (TypeScript threw in 71: Rust must refuse those too)
+(f) leaves on the corpus, checks               compared   1325  floor   1325  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f) leaves on built inputs, checks             compared    261  floor    261  differences 0  listed 1  (TypeScript threw in 18: Rust must refuse those too)
+(f+) leaves on mutated texts, checks           compared   3900  floor   3900  differences 0  (TypeScript threw in 156: Rust must refuse those too)
+(f) package on the corpus, checks              compared    497  floor    497  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f) package on built inputs, checks            compared     93  floor     93  differences 0  listed 1  (TypeScript threw in 12: Rust must refuse those too)
+(f+) package on mutated texts, checks          compared   2100  floor   2100  differences 0  (TypeScript threw in 230: Rust must refuse those too)
+(f) geom on the corpus, checks                 compared     26  floor     26  differences 0
+(f) geom on built inputs, checks               compared    696  floor    696  differences 0  listed 11  (TypeScript threw in 2: Rust must refuse those too)
+(f+) geom on mutated texts, checks             compared    600  floor    600  differences 0
+(f) layout on the corpus, checks               compared    946  floor    946  differences 0
+(f) layout on built inputs, checks             compared   1410  floor   1410  differences 186
+    - built 9: pptxLayout.dgm-hier.layoutHierTree: pptxLayout.dgm-hier.layoutHierTree("", {"roots":[{"texts":["A"],"children":[{"texts":["B1"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["D1"],"children":[]},{"texts":["D2"],"children":[]}]}]},{"texts":["B2"],"children":[{"texts":["C3"],"children":[]},{"texts":["C4"],"children":[]}]}]}],"frameCx":80000)
+      typescript {"value":{"boxes":[{"node":{"texts":["A"],"children":[{"texts":["B1"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["D1"],"children":[]},{"texts":["D2"],"children":[]}]}]},{"texts":["B2"],"children":[{"texts":["C3"],"children":[]},{"texts":["C4"],"children":[]}]}]}
+      rust       {"value":{"boxes":[{"node":{"texts":["A"],"children":[{"texts":["B1"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["D1"],"children":[]},{"texts":["D2"],"children":[]}]}]},{"texts":["B2"],"children":[{"texts":["C3"],"children":[]},{"texts":["C4"],"children":[]}]}]}
+    - built 10: pptxLayout.dgm-hier.layoutHierTree: pptxLayout.dgm-hier.layoutHierTree("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<dgm:layoutDef xmlns:dgm=\"http://schemas.openxmlformats.org/drawingml/2006/diagram\" uniqueId=\"urn:microsoft.com/office/officeart/2005/8/layout/orgChart1\"><dgm:layoutNode name=\"hierChild1\"><dgm:constrLst><dgm:constr type=\"h\" fo, {"roots":[{"texts":["A"],"children":[{"texts":["B1"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["D1"],"children":[]},{"texts":["D2"],"children":[]}]}]},{"texts":["B2"],"children":[{"texts":["C3"],"children":[]},{"texts":["C4"],"children":[]}]}]}],"frameCx":-100,)
+      typescript {"value":{"boxes":[{"node":{"texts":["A"],"children":[{"texts":["B1"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["D1"],"children":[]},{"texts":["D2"],"children":[]}]}]},{"texts":["B2"],"children":[{"texts":["C3"],"children":[]},{"texts":["C4"],"children":[]}]}]}
+      rust       {"value":{"boxes":[{"node":{"texts":["A"],"children":[{"texts":["B1"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["D1"],"children":[]},{"texts":["D2"],"children":[]}]}]},{"texts":["B2"],"children":[{"texts":["C3"],"children":[]},{"texts":["C4"],"children":[]}]}]}
+    ... 184 more (--show N)
+(f+) layout on mutated texts, checks           compared    600  floor    600  differences 277
+    - mutation 0: pptxLayout.dgm-hier.layoutHierTree: pptxLayout.dgm-hier.layoutHierTree("<dgm:constr type=\"sibSp\" refForName=\"rootComposite1\"><x fact=\"0.8\"/></dgm:constr><dgm:constr type=\"h\" for=\"des\" fo=\"rootComposite1\" refForName=\"rootComposite1\" fact=\"1e3\"/>", {"roots":[{"texts":["n0"],"children":[],"hierBranch":"__proto__"},{"texts":["n0"],"children":[{"texts":["n1"],"children":[]},{"texts":["n1"],"children":[],"hierBranch":""},{"texts":["n1"],"children":[{"texts":["n2"],"children":[{"texts":["n3"],"children":[{"texts":["n4"],"children":[]},{"texts":["n4)
+      typescript {"value":{"boxes":[{"node":{"texts":["n0"],"children":[],"hierBranch":"__proto__"},"x":321253.6728697356,"y":325171.4005876592,"w":195886.3858961802,"h":97943.1929480901},{"node":{"texts":["n0"],"children":[{"texts":["n1"],"children":[]},{"texts":["n1"],"children":[],"hierBranch":""},{"texts":["n1"]
+      rust       {"value":{"boxes":[{"node":{"texts":["n0"],"children":[],"hierBranch":"__proto__"},"x":321253.6728697356,"y":325171.4005876592,"w":195886.3858961802,"h":97943.1929480901},{"node":{"texts":["n0"],"children":[{"texts":["n1"],"children":[]},{"texts":["n1"],"children":[],"hierBranch":""},{"texts":["n1"]
+    - mutation 1: pptxLayout.dgm-hier.layoutHierTree: pptxLayout.dgm-hier.layoutHierTree("<dgm:constr type=\"sibSp\" refForName=\"rootComposite1\"><x fact=\"0.8\"/></dgfForNm:constr><dgm:constr type=\"h\" for=\"des\" forName=\"rootComposite1\" refForName=\"rootComposite1\" fact=\"1e3\"/>", {"roots":[{"texts":["A"],"children":[{"texts":["B"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["E1"],"children":[]},{"texts":["E2"],"children":[]}]}],"hierBranch":"r"}]}],"frameCx":3000000,"frameCy":2000000})
+      typescript {"value":{"boxes":[{"node":{"texts":["A"],"children":[{"texts":["B"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["E1"],"children":[]},{"texts":["E2"],"children":[]}]}],"hierBranch":"r"}]},"x":1129629.6296296297,"y":0,"w":493827.1604938272,"h":246913.5802469136},{
+      rust       {"value":{"boxes":[{"node":{"texts":["A"],"children":[{"texts":["B"],"children":[{"texts":["C1"],"children":[]},{"texts":["C2"],"children":[{"texts":["E1"],"children":[]},{"texts":["E2"],"children":[]}]}],"hierBranch":"r"}]},"x":1129629.6296296297,"y":0,"w":493827.1604938272,"h":246913.5802469136},{
+    ... 275 more (--show N)
+(f) tables on the corpus, checks               compared    596  floor    596  differences 0
+(f) tables on built inputs, checks             compared   1131  floor   1131  differences 0  listed 25
+(f+) tables on mutated texts, checks           compared   2700  floor   2700  differences 0
+(f) anim on the corpus, checks                 compared    901  floor    901  differences 0
+(f) anim on built inputs, checks               compared    513  floor    513  differences 0  listed 3
+(f+) anim on mutated texts, checks             compared   4200  floor   4200  differences 0
+(f) bytes on the corpus, checks                compared     18  floor     18  differences 0
+(f) bytes on built inputs, checks              compared   1104  floor   1104  differences 0  (TypeScript threw in 23: Rust must refuse those too)
+(f+) bytes on mutated texts, checks            compared      0  floor      0  differences 0
+(f) ident on the corpus, checks                compared   1154  floor   1154  differences 0
+(f) ident on built inputs, checks              compared    862  floor    862  differences 0  listed 44  (TypeScript threw in 12: Rust must refuse those too)
+(f+) ident on mutated texts, checks            compared   4800  floor   4800  differences 0  (TypeScript threw in 69: Rust must refuse those too)
+(f) mtx on the corpus, checks                  compared      0  floor      0  differences 0
+(f) mtx on built inputs, checks                compared   1968  floor   1968  differences 0  (TypeScript threw in 760: Rust must refuse those too)
+(f+) mtx on mutated texts, checks              compared    300  floor    300  differences 0
+(f) theme on the corpus, checks                compared   2652  floor   2652  differences 0
+(f) theme on built inputs, checks              compared   2100  floor   2100  differences 79  listed 27  (TypeScript threw in 20: Rust must refuse those too)
+    - built 150: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:srgbClr val=\"4472C4\"><a:alpha val=\"-50000\"/></a:srgbClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorF)
+      typescript {"value":"#4472C400"}
+      rust       {"value":"#4472C4-7F"}
+    - built 156: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:srgbClr val=\"4472C4\"><a:alpha val=\"-999999999999999999999999999999\"/></a:srgbClr></a:solidFill>", {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorF)
+      typescript {"value":"#4472C400"}
+      rust       {"value":"#4472C4-83D4F80FDED470000000000"}
+    ... 77 more (--show N)
+(f+) theme on mutated texts, checks            compared   3300  floor   3300  differences 11  (TypeScript threw in 222: Rust must refuse those too)
+    - mutation 6: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:srgbClr val=\"4472C4\"><a:shade val=\"99999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999, {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorF)
+      typescript {"value":"#000000"}
+      rust       {"value":"#NANNANNAN"}
+    - mutation 28: pptxTheme.color.resolveColorNode: pptxTheme.color.resolveColorNode("<a:solidFill><a:prstClr val=\"dkBlue\"><a:alpha val=\"-9999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999999, {"name":"a:solidFill","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorF)
+      typescript {"value":"#00008B00"}
+      rust       {"value":"#00008B-8191E174FD8EB80000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"}
+    ... 9 more (--show N)
+(f) placeholder on the corpus, checks          compared   2820  floor   2820  differences 6
+    - packages/pptx-engine/tests/fixtures/01_standard_business.pptx: pptxPlaceholder.placeholder.parseDefRPrStyle: pptxPlaceholder.placeholder.parseDefRPrStyle("<a:defRPr lang=\"en-US\"/>", {"name":"a:defRPr","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F497D","lt2":"#EEECE1","accent1":"#4F81BD","accent2":"#C0504D","accent3":"#9BBB59","accent4":"#8064A2","accent5":"#4BACC6","accent6":"#F79646","hlink":"#0000FF","folHlink":"#800080"},"majorFont":"Calibri","minorFont":"Cal)
+      typescript {"value":{"eaLang":"none"}}
+      rust       {}
+    - packages/pptx-engine/tests/fixtures/01_standard_business.pptx: pptxPlaceholder.placeholder.parseDefRPrStyle: pptxPlaceholder.placeholder.parseDefRPrStyle("<a:defRPr lang=\"en-US\"/>", {"name":"a:defRPr","theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F497D","lt2":"#EEECE1","accent1":"#4F81BD","accent2":"#C0504D","accent3":"#9BBB59","accent4":"#8064A2","accent5":"#4BACC6","accent6":"#F79646","hlink":"#0000FF","folHlink":"#800080"},"majorFont":"Calibri","minorFont":"Cal)
+      typescript {"value":{"eaLang":"none"}}
+      rust       {}
+    ... 4 more (--show N)
+(f) placeholder on built inputs, checks        compared   4889  floor   4889  differences 176  listed 46  (TypeScript threw in 3: Rust must refuse those too)
+    - built 54: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorFont":"Calibri","major)
+      typescript {"value":{"entries":[]}}
+      rust       {"value":{"entries":[{"type":"body","idx":"1","transform":null,"textStyle":{"levels":[{"spaceAfterPct":null},null,null,null,null,null,null,null,null]}}]}}
+    - built 55: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorFont":"Calibri","major)
+      typescript {"value":{"entries":[]}}
+      rust       {"value":{"entries":[{"type":"body","idx":"1","transform":null,"textStyle":{"levels":[{"spaceAfterPct":null},null,null,null,null,null,null,null,null]}}]}}
+    ... 174 more (--show N)
+(f+) placeholder on mutated texts, checks      compared   3600  floor   3600  differences 116  (TypeScript threw in 113: Rust must refuse those too)
+    - mutation 66: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSl, {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorFont":"Calibri","major)
+      typescript {"value":{"entries":[{"type":"body","idx":"1","transform":null,"textStyle":{"levels":[{"spaceAfterPct":1e+117},null,null,null,null,null,null,null,null]}}]}}
+      rust       {"value":{"entries":[{"type":"body","idx":"1","transform":null,"textStyle":{"levels":[{"spaceAfterPct":9.999999999999999e+116},null,null,null,null,null,null,null,null]}}]}}
+    - mutation 84: pptxPlaceholder.placeholder.parsePlaceholderMap: pptxPlaceholder.placeholder.parsePlaceholderMap("<?xml version=\"1.0\" encoding<?xml version=\"1.1\"?>=\"UTF-8\" standalone=\"yes\"?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats<!--.org/officument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentati, {"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#44546A","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000","accent5":"#5B9BD5","accent6":"#70AD47","hlink":"#0563C1","folHlink":"#954F72"},"majorFont":"Calibri Light","minorFont":"Calibri","major)
+      typescript {"value":{"entries":[]}}
+      rust       {"value":{"entries":[{"type":"body","idx":"1","transform":null,"textStyle":{"levels":[{"spaceAfterPct":null},null,null,null,null,null,null,null,null]}}]}}
+    ... 114 more (--show N)
+(f) tablestyle on the corpus, checks           compared     85  floor     85  differences 0
+(f) tablestyle on built inputs, checks         compared  15774  floor  15774  differences 0  listed 14  (TypeScript threw in 14: Rust must refuse those too)
+(f+) tablestyle on mutated texts, checks       compared    900  floor    900  differences 0
+(f) chart on the corpus, checks                compared    107  floor    107  differences 0
+(f) chart on built inputs, checks              compared    683  floor    683  differences 0  (TypeScript threw in 9: Rust must refuse those too)
+(f+) chart on mutated texts, checks            compared    600  floor    599  differences 0  (TypeScript threw in 1: Rust must refuse those too)
+(f) parse on the corpus, checks                compared    219  floor    219  differences 51  (TypeScript threw in 1: Rust must refuse those too)
+    - packages/pptx-engine/tests/fixtures/01_standard_business.pptx: pptxParse.parse.parseDecorations: pptxParse.parse.parseDecorations("<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n<p:sldMaster xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:b, {"ctx":{"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F497D","lt2":"#EEECE1","accent1":"#4F81BD","accent2":"#C0504D","accent3":"#9BBB59","accent4":"#8064A2","accent5":"#4BACC6","accent6":"#F79646","hlink":"#0000FF","folHlink":"#800080"},"majorFont":"Calibri","minorFont":"Calibri","majo)
+      typescript {"value":[{"id":"sp_2","type":"shape","anchor":{"spIndex":-3,"originalXml":"","range":[0,0]},"transform":{"offset":{"x":457200,"y":6356350,"cx":2133600,"cy":365125},"rot":0,"flipH":false,"flipV":false},"placeholder":"dt","name":"Date Placeholder 3","presetGeometry":"rect","text":{"paragraphs":[{"run
+      rust       {"value":[{"id":"sp_2","type":"shape","anchor":{"spIndex":-3,"originalXml":"","range":[0,0]},"transform":{"offset":{"x":457200,"y":6356350,"cx":2133600,"cy":365125},"rot":0,"flipH":false,"flipV":false},"placeholder":"dt","name":"Date Placeholder 3","presetGeometry":"rect","text":{"paragraphs":[{"run
+    - packages/pptx-engine/tests/fixtures/01_standard_business.pptx: pptxParse.parse.parseDecorations: pptxParse.parse.parseDecorations("<?xml version='1.0' encoding='UTF-8' standalone='yes'?>\n<p:sldLayout xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" type=\"vertT, {"ctx":{"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F497D","lt2":"#EEECE1","accent1":"#4F81BD","accent2":"#C0504D","accent3":"#9BBB59","accent4":"#8064A2","accent5":"#4BACC6","accent6":"#F79646","hlink":"#0000FF","folHlink":"#800080"},"majorFont":"Calibri","minorFont":"Calibri","majo)
+      typescript {"value":[{"id":"sp_2","type":"text","anchor":{"spIndex":-3,"originalXml":"","range":[0,0]},"transform":{"offset":{"x":457200,"y":6356350,"cx":2133600,"cy":365125},"rot":0,"flipH":false,"flipV":false},"placeholder":"dt","name":"Date Placeholder 3","text":{"paragraphs":[{"runs":[{"text":"1/27/13","st
+      rust       {"value":[{"id":"sp_2","type":"text","anchor":{"spIndex":-3,"originalXml":"","range":[0,0]},"transform":{"offset":{"x":457200,"y":6356350,"cx":2133600,"cy":365125},"rot":0,"flipH":false,"flipV":false},"placeholder":"dt","name":"Date Placeholder 3","text":{"paragraphs":[{"runs":[{"text":"1/27/13","st
+    ... 49 more (--show N)
+(f) parse on built inputs, checks              compared   1867  floor   1867  differences 480  listed 28  (TypeScript threw in 62: Rust must refuse those too)
+    - built 1: pptxParse.parse.parseSlide: pptxParse.parse.parseSlide("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"h, {"path":"ppt/slides/slide1.xml","layoutPath":"ppt/slideLayouts/slideLayout2.xml","masterPath":"ppt/slideMasters/slideMaster1.xml","ctx":{"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F497D","lt2":"#EEECE1","accent1":"#4F81BD","accent2":"#C0504D","accent3":"#9BBB59","accent4":"#8064A2",)
+      typescript {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.ope
+      rust       {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.ope
+    - built 4: pptxParse.parse.parseSlide: pptxParse.parse.parseSlide("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"h, {"path":"ppt/slides/slide1.xml","layoutPath":"ppt/slideLayouts/slideLayout2.xml","masterPath":"ppt/slideMasters/slideMaster1.xml","ctx":{"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F497D","lt2":"#EEECE1","accent1":"#4F81BD","accent2":"#C0504D","accent3":"#9BBB59","accent4":"#8064A2",)
+      typescript {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.ope
+      rust       {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.ope
+    ... 478 more (--show N)
+(f+) parse on mutated texts, checks            compared   2100  floor   2100  differences 291  listed 1  (TypeScript threw in 271: Rust must refuse those too)
+    - mutation 0: pptxParse.parse.parseSlide: pptxParse.parse.parseSlide("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.orofficeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"htt, {"path":"ppt/slides/slide1.xml","layoutPath":"ppt/slideLayouts/slideLayout1.xml","masterPath":"ppt/slideMasters/slideMaster1.xml","ctx":{"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F2A44","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000",)
+      typescript {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.orofficeDocument/2006/relationships\" xmlns:p=\"http://schemas.openx
+      rust       {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.orofficeDocument/2006/relationships\" xmlns:p=\"http://schemas.openx
+    - mutation 9: pptxParse.parse.parseSlide: pptxParse.parse.parseSlide("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"h, {"path":"ppt/slides/slide1.xml","layoutPath":"ppt/slideLayouts/slideLayout1.xml","masterPath":"ppt/slideMasters/slideMaster1.xml","ctx":{"theme":{"colors":{"dk1":"#000000","lt1":"#FFFFFF","dk2":"#1F2A44","lt2":"#E7E6E6","accent1":"#4472C4","accent2":"#ED7D31","accent3":"#A5A5A5","accent4":"#FFC000",)
+      typescript {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.ope
+      rust       {"value":{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.ope
+    ... 289 more (--show N)
+(f) deckcore on the corpus, checks             compared      0  floor missing  BELOW FLOOR  differences 0
+(f) deckcore on built inputs, checks           compared    929  floor missing  BELOW FLOOR  differences 538  (TypeScript threw in 89: Rust must refuse those too)
+    - built 5: pptxDeckcore.index.openPptx: pptxDeckcore.index.openPptx("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+    - built 8: pptxDeckcore.index.openPptx: pptxDeckcore.index.openPptx("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"h, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationship
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationship
+    ... 536 more (--show N)
+(f+) deckcore on mutated texts, checks         compared   3900  floor missing  BELOW FLOOR  differences 1629  (TypeScript threw in 1377: Rust must refuse those too)
+    - mutation 5: pptxDeckcore.index.openPptx: pptxDeckcore.index.openPptx("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"h, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationship
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationship
+    - mutation 6: pptxDeckcore.index.openPptx: pptxDeckcore.index.openPptx("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\" xmlns:mc=\"h, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationship
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationship
+    ... 1627 more (--show N)
+(f) deckgroups on the corpus, checks           compared      0  floor missing  BELOW FLOOR  differences 0
+(f) deckgroups on built inputs, checks         compared    267  floor missing  BELOW FLOOR  differences 15  (TypeScript threw in 252: Rust must refuse those too)
+    - built 2: pptxDeckGroups.index.reassembleSlideXml: pptxDeckGroups.index.reassembleSlideXml("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:s, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/m
+      rust       {"error":"unknown function pptxDeckGroups.index.reassembleSlideXml"}
+    - built 8: pptxDeckGroups.index.ungroupElement: pptxDeckGroups.index.ungroupElement("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:s, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":false,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationshi
+      rust       {"error":"unknown function pptxDeckGroups.index.ungroupElement"}
+    ... 13 more (--show N)
+(f+) deckgroups on mutated texts, checks       compared   6600  floor missing  BELOW FLOOR  differences 467  (TypeScript threw in 6133: Rust must refuse those too)
+    - mutation 14: pptxDeckGroups.index.copyElementData: pptxDeckGroups.index.copyElementData("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:s, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"xml":"<p:sp><p:nvSpPr><p:cNvPr id=\"3\" name=\"Shape 3\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm rot=\"1200000\"><a:off x=\"1200000\" y=\"100000\"/><a:ext cx=\"600000\" cy=\"400000\"/></a:xfrm><a:prstGeom prst=\"roundRect\"><a:avLst><a:gd name=\"adj\" fmla=\"val 20000\"/
+      rust       {"error":"tag is not closed"}
+    - mutation 142: pptxDeckGroups.index.copyElementData: pptxDeckGroups.index.copyElementData("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:s, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"xml":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 2\"/><p:cNvSpPr txBox=\"1\"/><p:nvPr/></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"100000\" y=\"100000\"/><a:ext cx=\"900000\" cy=\"300000\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom></p:spPr><p:txBody><a:bodyPr/><a:ls
+      rust       {"error":"unknown function pptxDeckGroups.index.copyElementData"}
+    ... 465 more (--show N)
+(f) deckshape on the corpus, checks            compared      0  floor missing  BELOW FLOOR  differences 0
+(f) deckshape on built inputs, checks          compared    749  floor missing  BELOW FLOOR  differences 195  (TypeScript threw in 554: Rust must refuse those too)
+    - built 0: index.editPictureSrcRect: index.editPictureSrcRect("<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/>, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"r":true,"xml":"<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr i
+      rust       {"error":"unknown function index.editPictureSrcRect"}
+    - built 1: index.editPictureSrcRect: index.editPictureSrcRect("<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/>, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"r":false,"xml":"<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr 
+      rust       {"error":"unknown function index.editPictureSrcRect"}
+    ... 193 more (--show N)
+(f+) deckshape on mutated texts, checks        compared   3900  floor missing  BELOW FLOOR  differences 918  (TypeScript threw in 2982: Rust must refuse those too)
+    - mutation 1: index.editPictureSrcRect: index.editPictureSrcRect(":sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/><p, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"r":false,"xml":":sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id
+      rust       {"error":"unknown function index.editPictureSrcRect"}
+    - mutation 2: index.editPictureSrcRect: index.editPictureSrcRect("<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id=\"1\" name=\"\"/><p:cNvGrpSpPr/>, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"r":false,"xml":"<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr 
+      rust       {"error":"unknown function index.editPictureSrcRect"}
+    ... 916 more (--show N)
+(f) deckslides on the corpus, checks           compared      0  floor missing  BELOW FLOOR  differences 0
+(f) deckslides on built inputs, checks         compared    739  floor missing  BELOW FLOOR  differences 215  (TypeScript threw in 13: Rust must refuse those too)
+    - built 3: pptxDeckslides.index.duplicateSlide: pptxDeckslides.index.duplicateSlide("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":{"path":"ppt/slides/slide3.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://
+      rust       {"value":{"value":{"path":"ppt/slides/slide3.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://
+    - built 4: pptxDeckslides.index.duplicateSlide: pptxDeckslides.index.duplicateSlide("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":{"path":"ppt/slides/slide3.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://
+      rust       {"value":{"value":{"path":"ppt/slides/slide3.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://
+    ... 213 more (--show N)
+(f+) deckslides on mutated texts, checks       compared   4800  floor missing  BELOW FLOOR  differences 781  (TypeScript threw in 1642: Rust must refuse those too)
+    - mutation 1: pptxDeckslides.index.duplicateSlide: pptxDeckslides.index.duplicateSlide("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentation<![ml/2006/main\"><p:cSld><p:, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"path":"ppt/slides/slide2.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://sche
+      rust       {"value":{"value":{"path":"ppt/slides/slide2.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://sche
+    - mutation 3: pptxDeckslides.index.duplicateSlide: pptxDeckslides.index.duplicateSlide("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><p:sld xmlns:a=\"http://schemas.openxmlform<w:x>ats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relations\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p:sp, {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":{"path":"ppt/slides/slide2.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><p:sld xmlns:a=\"http://schemas.openxmlform<w:x>ats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relations\" xmlns:p=\"http://sch
+      rust       {"value":{"value":{"path":"ppt/slides/slide2.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?><p:sld xmlns:a=\"http://schemas.openxmlform<w:x>ats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relations\" xmlns:p=\"http://sch
+    ... 779 more (--show N)
+(f) decktables on the corpus, checks           compared      0  floor missing  BELOW FLOOR  differences 0
+(f) decktables on built inputs, checks         compared   1714  floor missing  BELOW FLOOR  differences 4  (TypeScript threw in 104: Rust must refuse those too)
+    - built 1: pptxDecktables.index.ensureTableStylePart: pptxDecktables.index.ensureTableStylePart("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+    - built 2: pptxDecktables.index.ensureTableStylePart: pptxDecktables.index.ensureTableStylePart("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+    ... 2 more (--show N)
+(f+) decktables on mutated texts, checks       compared   2700  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 1111: Rust must refuse those too)
+(f) decktext on the corpus, checks             compared      0  floor missing  BELOW FLOOR  differences 0
+(f) decktext on built inputs, checks           compared   1284  floor missing  BELOW FLOOR  differences 1284
+    - built 0: index.editChartElement: index.editChartElement("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p, {"deck":"UEsDBAoAAAAIAONWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":true,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+      rust       {"error":"unknown function index.editChartElement"}
+    - built 1: index.editChartElement: index.editChartElement("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p, {"deck":"UEsDBAoAAAAIAONWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":true,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+      rust       {"error":"unknown function index.editChartElement"}
+    ... 1282 more (--show N)
+(f+) decktext on mutated texts, checks         compared   2700  floor missing  BELOW FLOOR  differences 1661  (TypeScript threw in 1039: Rust must refuse those too)
+    - mutation 1: index.editChartElement: index.editChartElement("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p, {"deck":"UEsDBAoAAAAIAONWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":false,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relations
+      rust       {"error":"unknown function index.editChartElement"}
+    - mutation 2: index.editChartElement: index.editChartElement("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cSld><p, {"deck":"UEsDBAoAAAAIAONWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"value":true,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+      rust       {"error":"unknown function index.editChartElement"}
+    ... 1659 more (--show N)
+(f) generate on the corpus, checks             compared   2096  floor missing  BELOW FLOOR  differences 4
+    - pptxgenjs text, shape, table and two slides: pptxGenerate.generate.patchTextElementXml: pptxGenerate.generate.patchTextElementXml("<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"5486400\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:txBody><a, {"text":{"paragraphs":[{"runs":[{"text":" 2026 & <text> 한글 😀 ","styleSrc":{"fontSize":"default","bold":"default","italic":"default","color":"run","fontFamily":"default"},"bold":false,"boldImplicit":true,"italic":false,"italicImplicit":true,"underline":false,"fontImplicit":true,"fontSizeImplicit":tr)
+      typescript {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"5486400\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:
+      rust       {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"5486400\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:
+    - pptxgenjs text, shape, table and two slides: pptxGenerate.generate.patchTextElementXml: pptxGenerate.generate.patchTextElementXml("<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:txBody><a, {"text":{"paragraphs":[{"runs":[{"text":"Second slide","styleSrc":{"fontSize":"default","bold":"default","italic":"default","color":"run","fontFamily":"default"},"bold":false,"boldImplicit":true,"italic":false,"italicImplicit":true,"underline":false,"fontImplicit":true,"fontSizeImplicit":true,"eaLan)
+      typescript {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:
+      rust       {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:
+    ... 2 more (--show N)
+(f) generate on built inputs, checks           compared   2772  floor missing  BELOW FLOOR  differences 16  (TypeScript threw in 155: Rust must refuse those too)
+    - built 30: pptxGenerate.generate.rebuildTxBody: pptxGenerate.generate.rebuildTxBody("<p:sp xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:nvSpPr><p:cNvPr id=\"2\" name=\"S\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:p/></p:sp>", {})
+      typescript {"error":"TypeError: Cannot read properties of undefined (reading 'paragraphs')"}
+      rust       {"value":"<p:sp xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:nvSpPr><p:cNvPr id=\"2\" name=\"S\"/><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/><p:txBody><a:p/></p:sp>"}
+    - built 2: pptxGenerate.generate.alternateContentBranches: pptxGenerate.generate.alternateContentBranches("<mc:AlternateContent><mc:Choice Requires=\"x\"/><mc:Fallback/></mc:AlternateContent>", {})
+      typescript {"value":null}
+      rust       {}
+    ... 14 more (--show N)
+(f+) generate on mutated texts, checks         compared   6300  floor missing  BELOW FLOOR  differences 508  (TypeScript threw in 92: Rust must refuse those too)
+    - mutation 93: pptxGenerate.generate.rebuildTxBody: pptxGenerate.generate.rebuildTxBody("<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p':spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:txBody><, {"text":{"paragraphs":[{"runs":[{"text":"Second slide","styleSrc":{"fontSize":"default","bold":"default","italic":"default","color":"run","fontFamily":"default"},"bold":false,"boldImplicit":true,"italic":false,"italicImplicit":true,"underline":false,"fontImplicit":true,"fontSizeImplicit":true,"eaLan)
+      typescript {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p':spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p
+      rust       {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p':spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p
+    - mutation 140: pptxGenerate.generate.rebuildTxBody: pptxGenerate.generate.rebuildTxBody("<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a=:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p:txBody><, {"text":{"paragraphs":[{"runs":[{"text":"Second slide","styleSrc":{"fontSize":"default","bold":"default","italic":"default","color":"run","fontFamily":"default"},"bold":false,"boldImplicit":true,"italic":false,"italicImplicit":true,"underline":false,"fontImplicit":true,"fontSizeImplicit":true,"eaLan)
+      typescript {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a=:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p
+      rust       {"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"2\" name=\"Text 0\"></p:cNvPr><p:cNvSpPr/><p:nvPr></p:nvPr></p:nvSpPr><p:spPr><a:xfrm><a:off x=\"914400\" y=\"914400\"/><a:ext cx=\"3657600\" cy=\"914400\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst></a=:avLst></a:prstGeom><a:noFill/><a:ln></a:ln></p:spPr><p
+    ... 506 more (--show N)
+(f+) generate on mutated arguments, checks     compared   3000  floor missing  BELOW FLOOR  differences 0
+(f) insert on the corpus, checks               compared      0  floor missing  BELOW FLOOR  differences 0
+(f) insert on built inputs, checks             compared    143  floor missing  BELOW FLOOR  differences 81
+    - built 1: pptxInsert.insert.nextCNvPrId: pptxInsert.insert.nextCNvPrId("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":4,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships
+      rust       {"value":{"value":4,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships
+    - built 0: pptxInsert.insert.buildSpXml: pptxInsert.insert.buildSpXml("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"4\" name=\"TextBox 4\"><a:extLst><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{3F2B8C1E-5A4D-4E6F-9B7A-0C1D2E3F4A5B}\"/></a:ext></a:extLst></p:cNvPr><p:c
+      rust       {"value":{"value":"<p:sp><p:nvSpPr><p:cNvPr id=\"4\" name=\"TextBox 4\"><a:extLst><a:ext uri=\"{FF2B5EF4-FFF2-40B4-BE49-F238E27FC236}\"><a16:creationId xmlns:a16=\"http://schemas.microsoft.com/office/drawing/2014/main\" id=\"{3F2B8C1E-5A4D-4E6F-9B7A-0C1D2E3F4A5B}\"/></a:ext></a:extLst></p:cNvPr><p:c
+    ... 79 more (--show N)
+(f+) insert on mutated texts, checks           compared   2100  floor missing  BELOW FLOOR  differences 0  (TypeScript threw in 656: Rust must refuse those too)
+(f) layouts on the corpus, checks              compared    100  floor missing  BELOW FLOOR  differences 0
+(f) layouts on built inputs, checks            compared    253  floor missing  BELOW FLOOR  differences 7  (TypeScript threw in 5: Rust must refuse those too)
+    - built 6: pptxLayouts.layout.parseLayoutPlaceholders: pptxLayouts.layout.parseLayoutPlaceholders("<p:sp><p:nvPr><p:ph type=\"constructor\"/></p:nvPr><a:xfrm><a:off x=\"1\" y=\"2\"/><a:ext cx=\"3\" cy=\"4\"/></a:xfrm></p:sp><p:sp><p:nvPr><p:ph type=\"toString\"/></p:nvPr><a:xfrm><a:off x=\"1\" y=\"2\"/><a:ext cx=\"3\" cy=\"4\"/></a:xfrm></p:sp><p:sp><p:nvPr><p:ph type=\"hasOwnProperty\"/></p:nvP, {})
+      typescript {"value":[{"type":"constructor","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"toString","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"hasOwnProperty","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"valueOf","idx":"","x":1,"y":2,"cx":3,"cy":4,"hi
+      rust       {"value":[{"type":"constructor","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"toString","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"hasOwnProperty","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"valueOf","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"custom","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"Cl
+    - built 0: pptxLayouts.layout.prepareInsertSlideWithLayout: pptxLayouts.layout.prepareInsertSlideWithLayout("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"value":"ppt/slides/slide3.xml","deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocum
+      rust       {"value":{"value":"ppt/slides/slide3.xml","deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocum
+    ... 5 more (--show N)
+(f+) layouts on mutated texts, checks          compared   2700  floor missing  BELOW FLOOR  differences 11  (TypeScript threw in 82: Rust must refuse those too)
+    - mutation 4: pptxLayouts.layout.parseLayoutPlaceholders: pptxLayouts.layout.parseLayoutPlaceholders("<p:sp><p:nvPr><p:ph type=\"constructor\"/></p:nvPr><a:xfrm><a:off x=\"1\" y=\"2\"/><a:ext cx=\"3\" cy=\"4\"/></a:xfrm></p:sp><p:sp><p:nvPr><p:ph type=\"toString\"/></p:nvPr><a:xfrm><a:off x=\"1\" y=\"2\"/><a:ext cx=\"3\" cy=\"4\"/></a:xfrm></p:sp><p:sp><p:nvPr><p:ph type=\"hasOwnProperty\"/></p:nvP, {})
+      typescript {"value":[{"type":"constructor","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"toString","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"hasOwnProperty","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"custom","idx":"","x":1,"y":2,"cx":3,"cy":4,"hin
+      rust       {"value":[{"type":"constructor","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"toString","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"hasOwnProperty","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"custom","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"Click to add text"},{"type":"obj","idx":"","x":1,"y":2,"
+    - mutation 51: pptxLayouts.layout.parseLayoutPlaceholders: pptxLayouts.layout.parseLayoutPlaceholders("<p:sp><p:nvPr><p:ph type=\"constructor\"/></p:nvPr><a:xfrm><a:off x=\"1\" y=\"2\"/><a:ext cx=\"3\" cy=\"4\"/></a:xfrm></p:sp><p:sp><p:nvPr><p:ph type=\"toString\"/></p:nvPr><a:xfrm><a:of\rf x=\"1\" y=\"2\"/><a:ext cx=\"3\" cy=\"4\"/></a:xfrm></p:sp><p:sp><p:nvPr><p:ph type=\"hasOwnProperty\"/></p:n, {})
+      typescript {"value":[{"type":"constructor","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"hasOwnProperty","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"valueOf","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"[function]"},{"type":"custom","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint
+      rust       {"value":[{"type":"constructor","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"hasOwnProperty","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"valueOf","idx":"","x":1,"y":2,"cx":3,"cy":4},{"type":"custom","idx":"","x":1,"y":2,"cx":3,"cy":4,"hint":"Click to add text"},{"type":"obj","idx":"","x":1,"y":2,"c
+    ... 9 more (--show N)
+(f) media on the corpus, checks                compared      0  floor missing  BELOW FLOOR  differences 0
+(f) media on built inputs, checks              compared    380  floor missing  BELOW FLOOR  differences 285
+    - built 0: pptxMedia.media-insert.ensureDefaultContentType: pptxMedia.media-insert.ensureDefaultContentType("", {"deck":"UEsDBAoAAAAIAOJWbF36DOfpJAEAANADAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTS2vCQBDH74V+h2WvYlZ7KKUYPfRx6utgP8CQTHTpvtgZRb99x8RCWtoqtF4Cs/N//Niwk9nGO7XGTDaGUo+LkVYYqljbsCj16/x+eKUVMYQaXAxY6i2Snk3PzybzbUJS4g5U6iVzujaGqiV6oCImDLJpYvbAMuaFSVC9wQLNxWh0aaoYGAMPeZehp5NbbGDlWN1t5LgjyehIq5tOuOsqNaTkbAUse7M)
+      typescript {"value":{"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+    - built 1: pptxMedia.media-insert.ensureDefaultContentType: pptxMedia.media-insert.ensureDefaultContentType("", {"deck":"UEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAGAAAAX3JlbHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAJAAAAZG9jUHJvcHMvUEsDBAoAAAAAAONWbF0AAAAAAAAAAAAAAAAEAAAAcHB0L1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAACgAAAHBwdC9fcmVscy9QSwMECgAAAAAA41ZsXQAAAAAAAAAAAAAAAAsAAABwcHQvY2hhcnRzL1BLAwQKAAAAAADjVmxdAAAAAAAAAAAAAAAAEQA)
+      typescript {"value":{"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\" xmlns:p
+      rust       {"value":{"value":null,"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.openxmlformats.org/drawingml/2006/main\" xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationsh
+    ... 283 more (--show N)
+(f+) media on mutated texts, checks            compared   2100  floor missing  BELOW FLOOR  differences 1296  (TypeScript threw in 475: Rust must refuse those too)
+    - mutation 0: pptxMedia.media-insert.model3dPartOf: pptxMedia.media-insert.model3dPartOf("xaislides-3d&#xD800;:a", {})
+      typescript {"value":null}
+      rust       {}
+    - mutation 1: pptxMedia.media-insert.model3dPartOf: pptxMedia.media-insert.model3dPartOf("aiss&#x1F;lidelid</w:x>es-3d:", {})
+      typescript {"value":null}
+      rust       {}
+    ... 1294 more (--show N)
+(f) packageparts on the corpus, checks         compared      0  floor missing  BELOW FLOOR  differences 0
+(f) packageparts on built inputs, checks       compared   1202  floor missing  BELOW FLOOR  differences 9  (TypeScript threw in 2: Rust must refuse those too)
+    - built 0: pptxPackageparts.notes.unescapeXml: pptxPackageparts.notes.unescapeXml("&#38;lt;", {})
+      typescript {"value":"<"}
+      rust       {"value":"&lt;"}
+    - built 1: pptxPackageparts.notes.unescapeXml: pptxPackageparts.notes.unescapeXml("&#38;amp;", {})
+      typescript {"value":"&"}
+      rust       {"value":"&amp;"}
+    ... 7 more (--show N)
+(f+) packageparts on mutated texts, checks     compared   5700  floor missing  BELOW FLOOR  differences 25  (TypeScript threw in 719: Rust must refuse those too)
+    - mutation 3: pptxPackageparts.comments.getSlideComments: pptxPackageparts.comments.getSlideComments("<?xml verson=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:cmLst xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cm authorId=\"0\" dt=\"2020-01-02T03:04:05.000\" idx=\"1\"><p:pos x=\"10&lt;\" y=\"10\"/><p:text>&amp;lt; &#38;amp; 😀 한글 é</p:text></p:cm></p:cmLst>", {"deck":"UEsDBAoAAAAIAONWbF0Cx4GkNAEAAFkEAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWUy27CMBBF95X6D5a3iBi6qKqKwKKPVV8L+gGWMwGrfskzIPj7ThKQ0qotSIVN5PHcuffYUTKZbbwTa8hoYyjluBhJAcHEyoZFKd/nj8MbKZB0qLSLAUq5BZSz6eXFZL5NgIKnA5ZySZRulUKzBK+xiAkCd+qYvSYu80IlbT70AtTVaHStTAwEgYbUeMjp5B5qvXIkHja83ZFkcCjFXSdsskqpU3LWaOK)
+      typescript {"value":{"value":[{"authorId":0,"author":"Unknown author","initials":"","dt":"2020-01-02T03:04:05.000","idx":1,"text":"&lt; & 😀 한글 é"}],"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.
+      rust       {"value":{"value":[{"authorId":0,"author":"Unknown author","initials":"","dt":"2020-01-02T03:04:05.000","idx":1,"text":"&lt; &amp; 😀 한글 é"}],"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://sche
+    - mutation 60: pptxPackageparts.comments.getSlideComments: pptxPackageparts.comments.getSlideComments("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:cmLst xmlns:p=\"http://schemas.openxmlformats.org/presentationml/2006/main\"><p:cm authorId=\"0\" dt=\"2020-01-02toStringT03:04:05.000\" idx=\"1\"><p:pos x=\"10\" y=\"10\"/><p:text>&amp;lt; &#38;amp; 😀 한글 é</p:text></p:cm></p:cmLs, {"deck":"UEsDBAoAAAAIAONWbF3Wvdw+PwEAAOUEAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWUy2rDMBBF94X+g9A2xEq6KKXECaWPVV+L9AOEPI5F9UIzDsnfV34E3JI2gSYbo9HcufdIxp4tNtawNUTU3uV8mk04A6d8od0q5x/Lp/ENZ0jSFdJ4BznfAvLF/PJittwGQJamHea8Igq3QqCqwErMfACXOqWPVlIq40oEqT7lCsTVZHItlHcEjsbUePD57AFKWRtij5u03ZFEMMjZfSdssnIuQzBaSUp)
+      typescript {"value":{"value":[{"authorId":0,"author":"A&B","initials":"AB","dt":"2020-01-02toStringT03:04:05.000","idx":1,"text":"&lt; & 😀 한글 é"}],"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schemas.o
+      rust       {"value":{"value":[{"authorId":0,"author":"A&B","initials":"AB","dt":"2020-01-02toStringT03:04:05.000","idx":1,"text":"&lt; &amp; 😀 한글 é"}],"deck":{"slides":[{"path":"ppt/slides/slide1.xml","originalXml":"<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\r\n<p:sld xmlns:a=\"http://schem
+    ... 23 more (--show N)
+key order: 0 results equal as JSON differ in the order of their keys, in 0 places
+(f) xml: 1 functions (floor      1); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 1
+    pptxXml.parseObject                      checks    4245  differences      0  key order only      0  distinct results   709  TypeScript threw 253
+(f) leaves: 16 functions (floor     16); with a single distinct result, so not really compared: 0; never threw in TypeScript: 11 of 16
+    pptxLeaves.scan.scanSlide                checks     396  differences      0  key order only      0  distinct results   238  TypeScript threw 136
+    pptxLeaves.xml-utils.asXmlNode           checks     269  differences      0  key order only      0  distinct results    72  TypeScript threw 0
+    pptxLeaves.xml-utils.xmlArray            checks     269  differences      0  key order only      0  distinct results    72  TypeScript threw 0
+    pptxLeaves.xml-utils.decodeNumericCharRefs checks     371  differences      0  key order only      0  distinct results   334  TypeScript threw 0
+    pptxLeaves.xml-utils.escapeXmlText       checks     366  differences      0  key order only      0  distinct results   339  TypeScript threw 0
+    pptxLeaves.xml-utils.escapeXmlAttr       checks     422  differences      0  key order only      0  distinct results   363  TypeScript threw 0
+    pptxLeaves.xml-utils.maxRelationshipIdNumber checks     384  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    pptxLeaves.xml-utils.hasContentTypeOverride checks     440  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxLeaves.xml-utils.creationIdExtXml    checks     338  differences      0  key order only      0  distinct results   334  TypeScript threw 0
+    pptxLeaves.xml-utils.creationIdXml       checks     338  differences      0  key order only      0  distinct results   331  TypeScript threw 0
+    pptxLeaves.xml-utils.hasDefaultFor       checks     423  differences      0  key order only      0  distinct results     3  TypeScript threw 39
+    pptxLeaves.slide-ids.nextSlideId         checks     323  differences      0  key order only      0  distinct results    11  TypeScript threw 0
+    pptxLeaves.named-action.namedActionOf    checks     317  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    pptxLeaves.named-action.namedActionAttr  checks     309  differences      0  key order only      0  distinct results   284  TypeScript threw 0
+    pptxLeaves.table-grid.tableRowGridCols   checks      27  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    pptxLeaves.crc32.crc32                   checks     494  differences      0  key order only      0  distinct results   396  TypeScript threw 0
+(f) package: 10 functions (floor     10); with a single distinct result, so not really compared: 0; never threw in TypeScript: 4 of 10
+    pptxPackage.open                         checks       6  differences      0  key order only      0  distinct results     5  TypeScript threw 2
+    pptxPackage.has                          checks      35  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxPackage.readText                     checks     319  differences      0  key order only      0  distinct results   273  TypeScript threw 0
+    pptxPackage.readBytes                    checks     303  differences      0  key order only      0  distinct results   110  TypeScript threw 0
+    pptxPackage.readRels                     checks     386  differences      0  key order only      0  distinct results   150  TypeScript threw 58
+    pptxPackage.readPresentation             checks     326  differences      0  key order only      0  distinct results    21  TypeScript threw 154
+    pptxPackage.resolveSlideChain            checks     337  differences      0  key order only      0  distinct results    31  TypeScript threw 25
+    pptxPackage.relsPathFor                  checks     493  differences      0  key order only      0  distinct results   359  TypeScript threw 0
+    pptxPackage.resolveTarget                checks     475  differences      0  key order only      0  distinct results   319  TypeScript threw 0
+    pptxPackage.assertZipWithinLimits        checks      10  differences      0  key order only      0  distinct results     2  TypeScript threw 4
+(f) geom: 7 functions (floor      7); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 7
+    pptxGeom.custgeom.evalGuides             checks     154  differences      0  key order only      0  distinct results    81  TypeScript threw 0
+    pptxGeom.custgeom.parseCustGeom          checks     383  differences      0  key order only      0  distinct results   140  TypeScript threw 0
+    pptxGeom.custgeom.CUST_GEOM_PT_COUNT     checks      11  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxGeom.custgeom.validCustGeomPath      checks      65  differences      0  key order only      0  distinct results     3  TypeScript threw 2
+    pptxGeom.custgeom.custGeomXml            checks      10  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxGeom.preset-shape-types.PRESET_SHAPE_TYPES checks     191  differences      0  key order only      0  distinct results   188  TypeScript threw 0
+    pptxGeom.preset-shape-types.isPresetShapeType checks     508  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+(f) layout: 8 functions (floor      8); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 8
+    pptxLayout.align.alignRects              checks     628  differences      0  key order only      0  distinct results   411  TypeScript threw 0
+    pptxLayout.align.distributeRects         checks      86  differences      0  key order only      0  distinct results    47  TypeScript threw 0
+    pptxLayout.dgm-hier.parseHierConstraints checks     311  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    pptxLayout.dgm-hier.layoutHierTree       checks     504  differences    463  key order only      0  distinct results   260  TypeScript threw 0
+    pptxLayout.smartart-layout.layoutShapes  checks     707  differences      0  key order only      0  distinct results   456  TypeScript threw 0
+    pptxLayout.smartart-layout.SMARTART_PALETTE checks      13  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    pptxLayout.format-brush.extractFormat    checks     167  differences      0  key order only      0  distinct results    43  TypeScript threw 0
+    pptxLayout.format-brush.applyFormat      checks     540  differences      0  key order only      0  distinct results    48  TypeScript threw 0
+(f) tables: 10 functions (floor     10); with a single distinct result, so not really compared: 0; never threw in TypeScript: 9 of 10
+    pptxTables.table-edit.TABLE_STYLE_PRESETS checks     316  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    pptxTables.table-edit.ensureTableStyleXml checks     450  differences      0  key order only      0  distinct results   227  TypeScript threw 0
+    pptxTables.table-edit.patchTableStyleXml checks    1164  differences      0  key order only      0  distinct results   842  TypeScript threw 0
+    pptxTables.table-edit.findTableElementInSlide checks     403  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxTables.theme-apply.patchThemeXml     checks     423  differences      0  key order only      0  distinct results   357  TypeScript threw 0
+    pptxTables.theme-apply.applyThemeToArchive checks     339  differences      0  key order only      0  distinct results   327  TypeScript threw 0
+    pptxTables.theme-apply.collectExplicitColors checks     388  differences      0  key order only      0  distinct results    39  TypeScript threw 0
+    pptxTables.theme-apply.buildColorMap     checks      95  differences      0  key order only      0  distinct results    41  TypeScript threw 0
+    pptxTables.theme-apply.recolorXml        checks     510  differences      0  key order only      0  distinct results   358  TypeScript threw 0
+    pptxTables.theme-apply.remapDeckColors   checks     339  differences      0  key order only      0  distinct results   326  TypeScript threw 0
+(f) anim: 15 functions (floor     15); with a single distinct result, so not really compared: 0; never threw in TypeScript: 14 of 15
+    pptxAnim.animation.ANIM_DIRECTIONS       checks     309  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    pptxAnim.animation.ANIM_TRIGGERS         checks     308  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxAnim.animation.ANIM_EFFECTS          checks     328  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    pptxAnim.animation.DEFAULT_MOTION_PATH   checks     309  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    pptxAnim.animation.isMediaEffect         checks     330  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxAnim.animation.animClassOf           checks     330  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxAnim.animation.elementSpid           checks     427  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+    pptxAnim.animation.buildTimingXml        checks      72  differences      0  key order only      0  distinct results    69  TypeScript threw 0
+    pptxAnim.animation.patchSlideTimingXml   checks     467  differences      0  key order only      0  distinct results   274  TypeScript threw 0
+    pptxAnim.animation.readSlideTimingXml    checks     504  differences      0  key order only      0  distinct results   102  TypeScript threw 0
+    pptxAnim.animation.patchSlideTimingIncrementalXml checks     467  differences      0  key order only      0  distinct results    52  TypeScript threw 0
+    pptxAnim.animation.setSlideAnimations    checks     467  differences      0  key order only      0  distinct results   299  TypeScript threw 0
+    pptxAnim.animation.getSlideAnimations    checks     362  differences      0  key order only      0  distinct results    20  TypeScript threw 0
+    pptxAnim.animation.pruneTimingForSpids   checks     391  differences      0  key order only      0  distinct results   297  TypeScript threw 0
+    pptxAnim.animation.cNvPrIdsInXml         checks     543  differences      0  key order only      0  distinct results    27  TypeScript threw 0
+(f) bytes: 7 functions (floor      7); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 7
+    pptxBytes.glb-bounds.glbJson             checks     521  differences      0  key order only      0  distinct results   272  TypeScript threw 0
+    pptxBytes.glb-bounds.glbBounds           checks     521  differences      0  key order only      0  distinct results    60  TypeScript threw 23
+    pptxBytes.chart-workbook.constant        checks       3  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    pptxBytes.chart-workbook.colLetter       checks      27  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    pptxBytes.chart-workbook.chartWorkbookParts checks      12  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+    pptxBytes.chart-workbook.storedZip       checks      26  differences      0  key order only      0  distinct results    23  TypeScript threw 0
+    pptxBytes.chart-workbook.chartWorkbookXlsx checks      12  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+(f) ident: 19 functions (floor     19); with a single distinct result, so not really compared: 0; never threw in TypeScript: 13 of 19
+    pptxIdent.identity.elementDurableId      checks     474  differences      0  key order only      0  distinct results    61  TypeScript threw 0
+    pptxIdent.identity.slideDurableId        checks     509  differences      0  key order only      0  distinct results   364  TypeScript threw 0
+    pptxIdent.identity.elementCNvPrId        checks     474  differences      0  key order only      0  distinct results    24  TypeScript threw 0
+    pptxIdent.identity.matchesElementRef     checks     454  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxIdent.identity.ensureCreationId      checks     439  differences      0  key order only      0  distinct results   431  TypeScript threw 0
+    pptxIdent.identity.groupChildDurableId   checks     342  differences      0  key order only      0  distinct results    32  TypeScript threw 1
+    pptxIdent.redaction-xml.constants        checks       7  differences      0  key order only      0  distinct results     5  TypeScript threw 3
+    pptxIdent.redaction-xml.redactExtXml     checks     347  differences      0  key order only      0  distinct results   319  TypeScript threw 0
+    pptxIdent.redaction-xml.hasRedactExtIn   checks     407  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxIdent.redaction-xml.syncRedactExt    checks     510  differences      0  key order only      0  distinct results   415  TypeScript threw 3
+    pptxIdent.redaction-xml.readRedactLabel  checks     401  differences      0  key order only      0  distinct results    20  TypeScript threw 71
+    pptxIdent.redaction-xml.stripRedactExt   checks     408  differences      0  key order only      0  distinct results   372  TypeScript threw 0
+    pptxIdent.redaction-xml.setRedactExt     checks     542  differences      0  key order only      0  distinct results   442  TypeScript threw 0
+    pptxIdent.model3d.constants              checks      11  differences      0  key order only      0  distinct results     9  TypeScript threw 3
+    pptxIdent.model3d.model3dFraming         checks      18  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    pptxIdent.model3d.model3dXml             checks     351  differences      0  key order only      0  distinct results   330  TypeScript threw 0
+    pptxIdent.model3d.syncModel3dFrame       checks     368  differences      0  key order only      0  distinct results   367  TypeScript threw 0
+    pptxIdent.model3d.readModel3dRotation    checks     363  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    pptxIdent.model3d.setModel3dRotationXml  checks     391  differences      0  key order only      0  distinct results   373  TypeScript threw 0
+(f) mtx: 9 functions (floor      9); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 9
+    pptxMtx.lzcomp.MtxError                  checks     309  differences      0  key order only      0  distinct results   273  TypeScript threw 0
+    pptxMtx.lzcomp.BitWriter                 checks      17  differences      0  key order only      0  distinct results    16  TypeScript threw 0
+    pptxMtx.lzcomp.BitReader                 checks      13  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxMtx.lzcomp.AHuff                     checks     123  differences      0  key order only      0  distinct results   102  TypeScript threw 0
+    pptxMtx.lzcomp.unpackLz                  checks     377  differences      0  key order only      0  distinct results    90  TypeScript threw 274
+    pptxMtx.lzcomp.unpackMtx                 checks     339  differences      0  key order only      0  distinct results    44  TypeScript threw 283
+    pptxMtx.ctf.sanitizeCmap                 checks     361  differences      0  key order only      0  distinct results   186  TypeScript threw 0
+    pptxMtx.ctf.ctfToSfnt                    checks     399  differences      0  key order only      0  distinct results   124  TypeScript threw 203
+    pptxMtx.index.mtxToSfnt                  checks     330  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+(f) theme: 11 functions (floor     11); with a single distinct result, so not really compared: 0; never threw in TypeScript: 7 of 11
+    pptxTheme.theme.sysColorHex              checks     372  differences      0  key order only      0  distinct results    62  TypeScript threw 0
+    pptxTheme.theme.parseTheme               checks     343  differences      0  key order only      0  distinct results   160  TypeScript threw 56
+    pptxTheme.theme.themeWithOverride        checks     407  differences      0  key order only      0  distinct results   137  TypeScript threw 32
+    pptxTheme.theme.eaScriptOfLang           checks     338  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxTheme.theme.resolveFontRef           checks    2185  differences      0  key order only      0  distinct results   179  TypeScript threw 0
+    pptxTheme.theme.resolveSchemeColor       checks     623  differences      0  key order only      0  distinct results    34  TypeScript threw 0
+    pptxTheme.theme.parseClrMap              checks     412  differences      0  key order only      0  distinct results    26  TypeScript threw 0
+    pptxTheme.color.resolveColorNode         checks     982  differences     81  key order only      0  distinct results   176  TypeScript threw 64
+    pptxTheme.color.applyColorMods           checks    1277  differences      9  key order only      0  distinct results   717  TypeScript threw 90
+    pptxTheme.color.hexToRgb                 checks     453  differences      0  key order only      0  distinct results   171  TypeScript threw 0
+    pptxTheme.color.scaleLuminance           checks     660  differences      0  key order only      0  distinct results   194  TypeScript threw 0
+(f) placeholder: 14 functions (floor     14); with a single distinct result, so not really compared: 0; never threw in TypeScript: 10 of 14
+    pptxPlaceholder.placeholder.constants    checks       4  differences      0  key order only      0  distinct results     2  TypeScript threw 3
+    pptxPlaceholder.placeholder.parsePlaceholderMap checks     655  differences     26  key order only      0  distinct results   118  TypeScript threw 0
+    pptxPlaceholder.placeholder.parseDefRPrStyle checks     718  differences    175  key order only      0  distinct results   166  TypeScript threw 76
+    pptxPlaceholder.placeholder.parseLstStyleLevels checks    1008  differences     54  key order only      0  distinct results   172  TypeScript threw 37
+    pptxPlaceholder.placeholder.parseDefaultTextStyle checks     346  differences     21  key order only      0  distinct results    40  TypeScript threw 0
+    pptxPlaceholder.placeholder.parseMasterTextStyles checks     428  differences     22  key order only      0  distinct results    80  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderInsets checks    1093  differences      0  key order only      0  distinct results    13  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderAnchor checks    1093  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderAnchorCtr checks    1093  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    pptxPlaceholder.placeholder.placeholderStyleChain checks    1129  differences      0  key order only      0  distinct results    49  TypeScript threw 0
+    pptxPlaceholder.placeholder.mergeTextStyleChain checks     463  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderFillSpPr checks    1093  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderTransform checks    1093  differences      0  key order only      0  distinct results    49  TypeScript threw 0
+    pptxPlaceholder.placeholder.resolvePlaceholderPresetGeom checks    1093  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+(f) tablestyle: 8 functions (floor      8); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 8
+    pptxTablestyle.table-style.BUILTIN_TABLE_STYLES checks      79  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    pptxTablestyle.table-style.BUILTIN_TABLE_STYLES.length checks      14  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    pptxTablestyle.table-style.LEGACY_NO_STYLE checks       3  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxTablestyle.table-style.builtinTableStyleName checks     431  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    pptxTablestyle.table-style.resolveBuiltinTableStyleId checks     673  differences      0  key order only      0  distinct results    75  TypeScript threw 0
+    pptxTablestyle.table-style.resolveTableStyle checks     927  differences      0  key order only      0  distinct results   265  TypeScript threw 14
+    pptxTablestyle.table-style.cellStyleBorders checks    7316  differences      0  key order only      0  distinct results   228  TypeScript threw 0
+    pptxTablestyle.table-style.cellPartStyle checks    7316  differences      0  key order only      0  distinct results    99  TypeScript threw 0
+(f) chart: 2 functions (floor      2); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 2
+    pptxChart.chart.parseChartXml            checks     942  differences      0  key order only      0  distinct results   346  TypeScript threw 10
+    pptxChart.chartex.parseChartExXml        checks     448  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+(f) parse: 7 functions (floor      7); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 7
+    pptxParse.parse.parseSlide               checks    1367  differences    422  key order only      0  distinct results  1222  TypeScript threw 132
+    pptxParse.parse.parseBackground          checks     552  differences      0  key order only      0  distinct results    34  TypeScript threw 0
+    pptxParse.parse.sliceGroupChildXmls      checks     490  differences      0  key order only      0  distinct results   360  TypeScript threw 0
+    pptxParse.parse.layoutDiagramFallback    checks     514  differences      0  key order only      0  distinct results   201  TypeScript threw 3
+    pptxParse.parse.parseDecorations         checks     576  differences    234  key order only      0  distinct results    97  TypeScript threw 17
+    pptxParse.master-edit.listMasterParts    checks     322  differences      0  key order only      0  distinct results    10  TypeScript threw 53
+    pptxParse.master-edit.parseMasterPart    checks     365  differences    166  key order only      0  distinct results   197  TypeScript threw 129
+(f) deckcore: 13 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 13
+    pptxDeckcore.index.openPptx              checks     341  differences     56  key order only      0  distinct results    75  TypeScript threw 75
+    pptxDeckcore.index.reparseDeck           checks     370  differences    158  key order only      0  distinct results   152  TypeScript threw 98
+    pptxDeckcore.index.savePptx              checks     410  differences    159  key order only      0  distinct results   271  TypeScript threw 117
+    pptxDeckcore.index.commitSaved           checks     383  differences    217  key order only      0  distinct results   220  TypeScript threw 131
+    pptxDeckcore.index.patchSlideXml         checks     345  differences    182  key order only      0  distinct results   193  TypeScript threw 149
+    pptxDeckcore.index.patchedElementXml     checks     556  differences    390  key order only      0  distinct results   399  TypeScript threw 158
+    pptxDeckcore.index.setSlideBackground    checks     343  differences    191  key order only      0  distinct results   209  TypeScript threw 134
+    pptxDeckcore.index.setSlideBackgroundImage checks     358  differences     74  key order only      0  distinct results   103  TypeScript threw 136
+    pptxDeckcore.index.resetSlideBackground  checks     336  differences     55  key order only      0  distinct results    76  TypeScript threw 23
+    pptxDeckcore.index.setSlideBgGraphicsHidden checks     388  differences    108  key order only      0  distinct results   126  TypeScript threw 58
+    pptxDeckcore.index.materializeSlide      checks     347  differences    202  key order only      0  distinct results   213  TypeScript threw 129
+    pptxDeckcore.index.appendRawElements     checks     333  differences    209  key order only      0  distinct results   206  TypeScript threw 118
+    pptxDeckcore.index.addTable              checks     319  differences    166  key order only      0  distinct results   179  TypeScript threw 140
+(f) deckgroups: 23 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 2 of 23
+    pptxDeckGroups.index.copyElementData     checks     311  differences      4  key order only      0  distinct results     5  TypeScript threw 307
+    pptxDeckGroups.index.pasteElements       checks     307  differences      2  key order only      0  distinct results     3  TypeScript threw 305
+    pptxDeckGroups.index.setSlideTransition  checks     332  differences      6  key order only      0  distinct results     7  TypeScript threw 326
+    pptxDeckGroups.index.getSlideTransition  checks     304  differences      5  key order only      0  distinct results     6  TypeScript threw 299
+    pptxDeckGroups.index.setSlideAdvanceTime checks     328  differences      2  key order only      0  distinct results     3  TypeScript threw 326
+    pptxDeckGroups.index.getSlideAdvanceTime checks     304  differences      3  key order only      0  distinct results     4  TypeScript threw 301
+    pptxDeckGroups.index.setSlideHidden      checks     304  differences      3  key order only      0  distinct results     4  TypeScript threw 301
+    pptxDeckGroups.index.getSlideHidden      checks     302  differences      5  key order only      0  distinct results     6  TypeScript threw 297
+    pptxDeckGroups.index.reassembleSlideXml  checks     303  differences     85  key order only      0  distinct results    86  TypeScript threw 218
+    pptxDeckGroups.index.groupElements       checks     312  differences      2  key order only      0  distinct results     3  TypeScript threw 310
+    pptxDeckGroups.index.ungroupElement      checks     310  differences     29  key order only      0  distinct results    30  TypeScript threw 281
+    pptxDeckGroups.index.groupChildSlices    checks     307  differences    307  key order only      0  distinct results   205  TypeScript threw 0
+    pptxDeckGroups.index.patchGroupChildXml  checks     307  differences      1  key order only      0  distinct results     2  TypeScript threw 306
+    pptxDeckGroups.index.findGroupChild      checks     310  differences      2  key order only      0  distinct results     3  TypeScript threw 308
+    pptxDeckGroups.index.editGroupChildTransform checks     310  differences      1  key order only      0  distinct results     2  TypeScript threw 309
+    pptxDeckGroups.index.patchGroupChildText checks     305  differences      2  key order only      0  distinct results     3  TypeScript threw 303
+    pptxDeckGroups.index.setGroupChildFont   checks     311  differences      2  key order only      0  distinct results     3  TypeScript threw 309
+    pptxDeckGroups.index.editGroupChildFill  checks     333  differences      4  key order only      0  distinct results     5  TypeScript threw 329
+    pptxDeckGroups.index.editGroupChildStroke checks     326  differences      4  key order only      0  distinct results     5  TypeScript threw 322
+    pptxDeckGroups.index.strokePatchToModel  checks       6  differences      6  key order only      0  distinct results     6  TypeScript threw 0
+    pptxDeckGroups.index.setGroupChildShapeAdjustValues checks     312  differences      2  key order only      0  distinct results     3  TypeScript threw 310
+    pptxDeckGroups.index.setGroupChildShapePresetGeometry checks     311  differences      4  key order only      0  distinct results     5  TypeScript threw 307
+    pptxDeckGroups.index.setGroupChildShapeCustomGeometry checks     312  differences      1  key order only      0  distinct results     2  TypeScript threw 311
+(f) deckshape: 13 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 13
+    index.editPictureSrcRect                 checks     312  differences    201  key order only      0  distinct results   195  TypeScript threw 111
+    index.setShapePresetGeometry             checks     354  differences      7  key order only      0  distinct results     8  TypeScript threw 347
+    index.setShapeCustomGeometry             checks     372  differences      3  key order only      0  distinct results     4  TypeScript threw 369
+    index.setShapeAdjustValues               checks     354  differences      6  key order only      0  distinct results     7  TypeScript threw 348
+    index.setElementTextAnchor               checks     327  differences      5  key order only      0  distinct results     6  TypeScript threw 322
+    index.autofitGeneratedTextBoxes          checks     302  differences     96  key order only      0  distinct results    97  TypeScript threw 206
+    index.setElementTextBodyProps            checks     408  differences      4  key order only      0  distinct results     5  TypeScript threw 404
+    index.setElementEffects                  checks     444  differences     15  key order only      0  distinct results    16  TypeScript threw 429
+    index.setElementFill                     checks     366  differences      3  key order only      0  distinct results     4  TypeScript threw 363
+    index.setElementImageFill                checks     332  differences      4  key order only      0  distinct results     5  TypeScript threw 328
+    index.setElementRedaction                checks     318  differences    214  key order only      0  distinct results   201  TypeScript threw 104
+    index.setPictureOpacity                  checks     412  differences    316  key order only      0  distinct results   242  TypeScript threw 96
+    index.replacePictureBytes                checks     348  differences    239  key order only      0  distinct results   214  TypeScript threw 109
+(f) deckslides: 24 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 1 of 24
+    pptxDeckslides.index.duplicateSlide      checks     325  differences    179  key order only      0  distinct results   197  TypeScript threw 121
+    pptxDeckslides.index.copySlide           checks      14  differences      4  key order only      0  distinct results    13  TypeScript threw 0
+    pptxDeckslides.index.pasteSlide          checks      32  differences     11  key order only      0  distinct results    28  TypeScript threw 1
+    pptxDeckslides.index.insertBlankSlide    checks     317  differences      6  key order only      0  distinct results    70  TypeScript threw 41
+    pptxDeckslides.index.mergeSlideFromPptx  checks     333  differences     12  key order only      0  distinct results   292  TypeScript threw 0
+    pptxDeckslides.index.extractMergeSlideSource checks       8  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    pptxDeckslides.index.mergeSlideFromSource checks     333  differences     10  key order only      0  distinct results   288  TypeScript threw 6
+    pptxDeckslides.index.insertSlideWithLayout checks      24  differences     11  key order only      0  distinct results    19  TypeScript threw 0
+    pptxDeckslides.index.deleteSlide         checks     326  differences      7  key order only      0  distinct results    17  TypeScript threw 85
+    pptxDeckslides.index.reorderElement      checks     342  differences     30  key order only      0  distinct results   185  TypeScript threw 129
+    pptxDeckslides.index.setSlideLayout      checks     340  differences     84  key order only      0  distinct results   167  TypeScript threw 101
+    pptxDeckslides.index.resetSlideLayout    checks     313  differences    177  key order only      0  distinct results   190  TypeScript threw 119
+    pptxDeckslides.index.setSlideSize        checks     344  differences     68  key order only      0  distinct results   159  TypeScript threw 96
+    pptxDeckslides.index.connectionSiteForSide checks     328  differences     46  key order only      0  distinct results   189  TypeScript threw 126
+    pptxDeckslides.index.updateConnectorsForMoved checks     316  differences      1  key order only      0  distinct results   159  TypeScript threw 152
+    pptxDeckslides.index.setElementConnection checks     351  differences      7  key order only      0  distinct results   202  TypeScript threw 134
+    pptxDeckslides.embeddedFonts.eotToSfnt   checks      23  differences      3  key order only      0  distinct results     7  TypeScript threw 0
+    pptxDeckslides.embeddedFonts.demandKey   checks      12  differences      0  key order only      0  distinct results    12  TypeScript threw 0
+    pptxDeckslides.embeddedFonts.editedGlyphDemand checks     317  differences    150  key order only      0  distinct results   194  TypeScript threw 123
+    pptxDeckslides.embeddedFonts.sfntCmapLookup checks      21  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    pptxDeckslides.embeddedFonts.staleEmbeddedTypefaces checks     114  differences      4  key order only      0  distinct results    17  TypeScript threw 0
+    pptxDeckslides.embeddedFonts.stripEmbeddedFonts checks     352  differences      0  key order only      0  distinct results   152  TypeScript threw 78
+    pptxDeckslides.embeddedFonts.stripStaleEmbeddedFonts checks     339  differences    184  key order only      0  distinct results   169  TypeScript threw 149
+    pptxDeckslides.embeddedFonts.listEmbeddedFonts checks     315  differences      2  key order only      0  distinct results    11  TypeScript threw 194
+(f) decktables: 9 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 9
+    pptxDecktables.index.editTableCellText   checks     458  differences      0  key order only      0  distinct results   252  TypeScript threw 145
+    pptxDecktables.index.editTableStyle      checks     353  differences      0  key order only      0  distinct results   208  TypeScript threw 140
+    pptxDecktables.index.ensureTableStylePart checks     312  differences      3  key order only      0  distinct results    90  TypeScript threw 16
+    pptxDecktables.index.editTableStructure  checks     533  differences      0  key order only      0  distinct results   283  TypeScript threw 157
+    pptxDecktables.index.mergeTableCells     checks     538  differences      1  key order only      0  distinct results   226  TypeScript threw 155
+    pptxDecktables.index.setTableColWidth    checks     555  differences      0  key order only      0  distinct results   307  TypeScript threw 152
+    pptxDecktables.index.setTableRowHeight   checks     555  differences      0  key order only      0  distinct results   306  TypeScript threw 147
+    pptxDecktables.index.resizeTable         checks     402  differences      0  key order only      0  distinct results   235  TypeScript threw 148
+    pptxDecktables.index.setTableCellAnchor  checks     708  differences      0  key order only      0  distinct results   384  TypeScript threw 155
+(f) decktext: 10 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 0 of 10
+    index.editChartElement                   checks     590  differences    483  key order only      0  distinct results   401  TypeScript threw 107
+    index.markChartEditable                  checks     318  differences    198  key order only      0  distinct results   189  TypeScript threw 120
+    index.setElementHidden                   checks     329  differences    215  key order only      0  distinct results   205  TypeScript threw 114
+    index.setElementName                     checks     371  differences    251  key order only      0  distinct results   250  TypeScript threw 120
+    index.getChartElementData                checks     315  differences    199  key order only      0  distinct results   196  TypeScript threw 116
+    index.setElementFont                     checks     386  differences    275  key order only      0  distinct results   265  TypeScript threw 111
+    index.replaceAllInDeck                   checks     404  differences    285  key order only      0  distinct results   244  TypeScript threw 119
+    index.applyParagraphFormat               checks     169  differences    169  key order only      0  distinct results   133  TypeScript threw 0
+    index.setElementParagraphFormat          checks     636  differences    525  key order only      0  distinct results   339  TypeScript threw 111
+    index.setGroupChildParagraphFormat       checks     466  differences    345  key order only      0  distinct results   250  TypeScript threw 121
+(f+) generate: 0 more mutated arguments were refused by the typed reader of the Rust side and compared nothing
+(f) generate: 29 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 2 (pptxGenerate.generate.COORD_MAX, pptxGenerate.generate.TRANSITION_KINDS); never threw in TypeScript: 19 of 29
+    pptxGenerate.generate.patchTextElementXml checks     766  differences      2  key order only      0  distinct results   626  TypeScript threw 0
+    pptxGenerate.generate.patchParagraphPPrXml checks     993  differences      0  key order only      0  distinct results   377  TypeScript threw 243
+    pptxGenerate.generate.patchElementPPr    checks     742  differences      0  key order only      0  distinct results   302  TypeScript threw 0
+    pptxGenerate.generate.szAttr             checks      11  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    pptxGenerate.generate.clampInt           checks       8  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxGenerate.generate.clampEmu           checks       7  differences      0  key order only      0  distinct results     5  TypeScript threw 0
+    pptxGenerate.generate.clampPosEmu        checks       7  differences      0  key order only      0  distinct results     3  TypeScript threw 0
+    pptxGenerate.generate.COORD_MAX          checks       1  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+    pptxGenerate.generate.isConnectorXml     checks     377  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxGenerate.generate.rebuildTxBody      checks     369  differences     12  key order only      0  distinct results   343  TypeScript threw 4
+    pptxGenerate.generate.generateParagraphXml checks    1522  differences      0  key order only      0  distinct results   730  TypeScript threw 0
+    pptxGenerate.generate.alternateContentBranches checks     309  differences    243  key order only      0  distinct results    49  TypeScript threw 0
+    pptxGenerate.generate.topLevelChildren   checks     396  differences      0  key order only      0  distinct results    64  TypeScript threw 0
+    pptxGenerate.generate.patchElementFill   checks    1117  differences      0  key order only      0  distinct results   746  TypeScript threw 0
+    pptxGenerate.generate.patchElementStroke checks     745  differences      0  key order only      0  distinct results   644  TypeScript threw 0
+    pptxGenerate.generate.patchPictureSrcRect checks     360  differences      0  key order only      0  distinct results   343  TypeScript threw 0
+    pptxGenerate.generate.patchSlideBackgroundXml checks     532  differences      0  key order only      0  distinct results   377  TypeScript threw 0
+    pptxGenerate.generate.removeSlideBackgroundXml checks     329  differences      0  key order only      0  distinct results   308  TypeScript threw 0
+    pptxGenerate.generate.patchSlideShowMasterSpXml checks     318  differences      0  key order only      0  distinct results   311  TypeScript threw 0
+    pptxGenerate.generate.TRANSITION_KINDS   checks       1  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+    pptxGenerate.generate.patchSlideTransitionXml checks     684  differences      0  key order only      0  distinct results   388  TypeScript threw 0
+    pptxGenerate.generate.readSlideTransitionXml checks     332  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    pptxGenerate.generate.patchSlideAdvanceTimeXml checks     384  differences      0  key order only      0  distinct results   349  TypeScript threw 0
+    pptxGenerate.generate.readSlideAdvanceTimeXml checks     316  differences    271  key order only      0  distinct results     7  TypeScript threw 0
+    pptxGenerate.generate.patchSlideHiddenXml checks     318  differences      0  key order only      0  distinct results   308  TypeScript threw 0
+    pptxGenerate.generate.readSlideHiddenXml checks     312  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxGenerate.generate.generateXfrmXml    checks    1518  differences      0  key order only      0  distinct results   436  TypeScript threw 0
+    pptxGenerate.generate.patchElementXfrm   checks    1045  differences      0  key order only      0  distinct results   649  TypeScript threw 0
+    pptxGenerate.generate.patchBodyPrAutofit checks     349  differences      0  key order only      0  distinct results   295  TypeScript threw 0
+(f) insert: 17 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 11 of 17
+    pptxInsert.insert.isLineKind             checks     314  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxInsert.insert.nextCNvPrId            checks     304  differences      1  key order only      0  distinct results   221  TypeScript threw 84
+    pptxInsert.insert.buildSpXml             checks      12  differences     11  key order only      0  distinct results    12  TypeScript threw 0
+    pptxInsert.insert.addElement             checks      11  differences     11  key order only      0  distinct results    11  TypeScript threw 0
+    pptxInsert.insert.buildTableXml          checks       6  differences      6  key order only      0  distinct results     6  TypeScript threw 0
+    pptxInsert.insert.buildTableGridXml      checks       4  differences      4  key order only      0  distinct results     4  TypeScript threw 0
+    pptxInsert.insert.addImageMediaAndRel    checks       8  differences      7  key order only      0  distinct results     6  TypeScript threw 0
+    pptxInsert.insert.addPicture             checks       7  differences      7  key order only      0  distinct results     6  TypeScript threw 0
+    pptxInsert.insert.deleteElement          checks       4  differences      4  key order only      0  distinct results     4  TypeScript threw 0
+    pptxInsert.insert.calcBoundingBox        checks     303  differences      1  key order only      0  distinct results   186  TypeScript threw 118
+    pptxInsert.insert.buildGrpSpXml          checks       2  differences      1  key order only      0  distinct results     2  TypeScript threw 0
+    pptxInsert.background-promote.promoteSlideBackground checks     322  differences      0  key order only      0  distinct results   215  TypeScript threw 108
+    pptxInsert.background-promote.isBackgroundLikeElement checks     312  differences      1  key order only      0  distinct results   197  TypeScript threw 116
+    pptxInsert.headerfooter.applyHeaderFooter checks     309  differences      7  key order only      0  distinct results   133  TypeScript threw 112
+    pptxInsert.headerfooter.readHeaderFooter checks     306  differences      1  key order only      0  distinct results   188  TypeScript threw 118
+    pptxInsert.smartart.buildSmartArtXml     checks       8  differences      8  key order only      0  distinct results     8  TypeScript threw 0
+    pptxInsert.smartart.addSmartArt          checks      11  differences     11  key order only      0  distinct results    10  TypeScript threw 0
+(f) layouts: 17 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 3 (pptxLayouts.builtin-layouts.BUILTIN_LAYOUTS, pptxLayouts.blank.BLANK_SLIDE_XML, pptxLayouts.blank.createBlankPptx); never threw in TypeScript: 6 of 17
+    pptxLayouts.layout.parseLayoutPlaceholders checks     348  differences     12  key order only      0  distinct results    69  TypeScript threw 0
+    pptxLayouts.layout.listSlideLayouts      checks     328  differences      0  key order only      0  distinct results    43  TypeScript threw 0
+    pptxLayouts.layout.placeholderSpXml      checks       7  differences      0  key order only      0  distinct results     7  TypeScript threw 0
+    pptxLayouts.layout.prepareInsertSlideWithLayout checks     333  differences      6  key order only      0  distinct results   104  TypeScript threw 42
+    pptxLayouts.builtin-layouts.BUILTIN_LAYOUTS checks       1  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+    pptxLayouts.builtin-layouts.shouldOfferBuiltinLayouts checks       7  differences      0  key order only      0  distinct results     2  TypeScript threw 0
+    pptxLayouts.builtin-layouts.builtinLayoutInfos checks      11  differences      0  key order only      0  distinct results    10  TypeScript threw 0
+    pptxLayouts.builtin-layouts.ensureBuiltinLayout checks     338  differences      0  key order only      0  distinct results   336  TypeScript threw 0
+    pptxLayouts.slide-transfer.collectPart   checks     346  differences      0  key order only      0  distinct results   193  TypeScript threw 31
+    pptxLayouts.slide-transfer.collectSlideBundle checks     337  differences      0  key order only      0  distinct results   198  TypeScript threw 11
+    pptxLayouts.slide-transfer.listLayouts   checks     326  differences      0  key order only      0  distinct results    30  TypeScript threw 0
+    pptxLayouts.slide-transfer.importClipboardParts checks      19  differences      0  key order only      0  distinct results    18  TypeScript threw 2
+    pptxLayouts.slide-transfer.materializeSlideBundle checks       9  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    pptxLayouts.slide-transfer.importSourceLayout checks     324  differences      0  key order only      0  distinct results   318  TypeScript threw 1
+    pptxLayouts.slide-transfer.chooseLayout  checks     317  differences      0  key order only      0  distinct results     4  TypeScript threw 0
+    pptxLayouts.blank.BLANK_SLIDE_XML        checks       1  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+    pptxLayouts.blank.createBlankPptx        checks       1  differences      0  key order only      0  distinct results     1  TypeScript threw 0
+(f) media: 20 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 3 of 20
+    pptxMedia.media-insert.solidPng          checks       8  differences      0  key order only      0  distinct results     8  TypeScript threw 0
+    pptxMedia.media-insert.ensureDefaultContentType checks      14  differences     14  key order only      0  distinct results    12  TypeScript threw 0
+    pptxMedia.media-insert.addMedia          checks      28  differences     22  key order only      0  distinct results    24  TypeScript threw 0
+    pptxMedia.media-insert.addModel3d        checks      12  differences      8  key order only      0  distinct results    10  TypeScript threw 0
+    pptxMedia.media-insert.setModel3dView    checks       8  differences      6  key order only      0  distinct results     7  TypeScript threw 0
+    pptxMedia.media-insert.model3dPartOf     checks     306  differences    264  key order only      0  distinct results    39  TypeScript threw 0
+    pptxMedia.narration.narrationSpids       checks     302  differences    241  key order only      0  distinct results   241  TypeScript threw 61
+    pptxMedia.narration.clearNarration       checks     303  differences    248  key order only      0  distinct results   249  TypeScript threw 55
+    pptxMedia.narration.addNarration         checks       7  differences      7  key order only      0  distinct results     6  TypeScript threw 0
+    pptxMedia.narration.setShowNarration     checks      18  differences     18  key order only      0  distinct results    18  TypeScript threw 0
+    pptxMedia.chart-insert.buildChartSpaceXml checks      37  differences      0  key order only      0  distinct results    36  TypeScript threw 0
+    pptxMedia.chart-insert.writeChartWorkbook checks       7  differences      5  key order only      0  distinct results     6  TypeScript threw 0
+    pptxMedia.chart-insert.addChart          checks      42  differences     38  key order only      0  distinct results    40  TypeScript threw 0
+    pptxMedia.hyperlink.setElementLink       checks     113  differences    112  key order only      0  distinct results    64  TypeScript threw 0
+    pptxMedia.hyperlink.decodeRunLink        checks     322  differences     13  key order only      0  distinct results   297  TypeScript threw 0
+    pptxMedia.hyperlink.encodeRunLink        checks       6  differences      0  key order only      0  distinct results     6  TypeScript threw 0
+    pptxMedia.hyperlink.ensureRunLinkRels    checks      20  differences     19  key order only      0  distinct results    20  TypeScript threw 0
+    pptxMedia.hyperlink.getRunLinks          checks     306  differences    177  key order only      0  distinct results   178  TypeScript threw 128
+    pptxMedia.hyperlink.getElementLink       checks     315  differences    195  key order only      0  distinct results   190  TypeScript threw 120
+    pptxMedia.hyperlink.getSlideLinks        checks     306  differences    194  key order only      0  distinct results   196  TypeScript threw 111
+(f) packageparts: 22 functions (floor missing  BELOW FLOOR); with a single distinct result, so not really compared: 0; never threw in TypeScript: 6 of 22
+    pptxPackageparts.notes.unescapeXml       checks      15  differences      4  key order only      0  distinct results    15  TypeScript threw 0
+    pptxPackageparts.notes.unescapeXml       checks      15  differences      4  key order only      0  distinct results    15  TypeScript threw 0
+    pptxPackageparts.notes.notesPathForSlide checks     314  differences      0  key order only      0  distinct results    39  TypeScript threw 39
+    pptxPackageparts.notes.getSlideNotes     checks     322  differences      0  key order only      0  distinct results    25  TypeScript threw 0
+    pptxPackageparts.notes.setSlideNotes     checks     390  differences      0  key order only      0  distinct results   243  TypeScript threw 8
+    pptxPackageparts.notes.addContentTypeOverride checks     324  differences      0  key order only      0  distinct results   219  TypeScript threw 0
+    pptxPackageparts.notes.appendRelationship checks     324  differences      0  key order only      0  distinct results   199  TypeScript threw 53
+    pptxPackageparts.sections.getSections    checks     320  differences      0  key order only      0  distinct results    99  TypeScript threw 74
+    pptxPackageparts.sections.setSections    checks     329  differences      0  key order only      0  distinct results   194  TypeScript threw 70
+    pptxPackageparts.sections.normalizeSections checks       9  differences      0  key order only      0  distinct results     9  TypeScript threw 0
+    pptxPackageparts.sections.addSection     checks     359  differences      0  key order only      0  distinct results   155  TypeScript threw 65
+    pptxPackageparts.sections.renameSection  checks     322  differences      0  key order only      0  distinct results   109  TypeScript threw 66
+    pptxPackageparts.sections.removeSection  checks     325  differences      0  key order only      0  distinct results   107  TypeScript threw 77
+    pptxPackageparts.sections.moveSlide      checks     366  differences      0  key order only      0  distinct results   128  TypeScript threw 77
+    pptxPackageparts.sections.moveSection    checks     349  differences      0  key order only      0  distinct results    66  TypeScript threw 72
+    pptxPackageparts.comments.getSlideComments checks     353  differences     30  key order only      0  distinct results   144  TypeScript threw 0
+    pptxPackageparts.comments.addSlideComment checks     341  differences      0  key order only      0  distinct results   250  TypeScript threw 0
+    pptxPackageparts.comments.deleteSlideComment checks     348  differences      0  key order only      0  distinct results    55  TypeScript threw 0
+    pptxPackageparts.resource-cleanup.cleanupSupersededSlideResources checks     556  differences      0  key order only      0  distinct results    50  TypeScript threw 4
+    pptxPackageparts.resource-cleanup.cleanupDeletedElementResources checks     384  differences      0  key order only      0  distinct results    47  TypeScript threw 0
+    pptxPackageparts.resource-cleanup.removeRelationshipAndCollectOwnedTarget checks     390  differences      0  key order only      0  distinct results   156  TypeScript threw 51
+    pptxPackageparts.resource-cleanup.removePartWithOwnedResources checks     462  differences      0  key order only      0  distinct results   299  TypeScript threw 65
+(f) listed class chart-xsd-boolean: 89 inputs, 46 differ as listed and are not counted above

@@ -12,11 +12,9 @@
 
 use std::cell::RefCell;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicU64, Ordering};
 
 use jscompat::{JsMap, JsNum, js_regex, truthy};
 use ooxml_pkg::Package;
-use sha2::{Digest, Sha256};
 
 use crate::embedded_fonts::strip_stale_embedded_fonts;
 use crate::generate::{
@@ -110,7 +108,6 @@ thread_local! {
     static UUID_OVERRIDE: RefCell<Option<String>> = const { RefCell::new(None) };
 }
 
-static UUID_COUNTER: AtomicU64 = AtomicU64::new(0);
 
 /// Runs `run` with `random_uuid` answering `uuid` (the gate stubs
 /// `crypto.randomUUID` on the TypeScript side the same way).
@@ -121,33 +118,12 @@ pub fn with_uuid<T>(uuid: &str, run: impl FnOnce() -> T) -> T {
     result
 }
 
-/// `crypto.randomUUID()`: a version-4 UUID, hyphenated, lowercase.
+/// `crypto.randomUUID()`, or the uuid of an enclosing [`with_uuid`].
 pub(crate) fn random_uuid() -> String {
     if let Some(uuid) = UUID_OVERRIDE.with(|slot| slot.borrow().clone()) {
         return uuid;
     }
-    let mut hasher = Sha256::new();
-    hasher.update(UUID_COUNTER.fetch_add(1, Ordering::Relaxed).to_le_bytes());
-    let marker = 0u8;
-    hasher.update((&marker as *const u8 as usize).to_le_bytes());
-    #[cfg(not(target_arch = "wasm32"))]
-    if let Ok(elapsed) = std::time::SystemTime::now().duration_since(std::time::UNIX_EPOCH) {
-        hasher.update(elapsed.as_nanos().to_le_bytes());
-    }
-    let digest = hasher.finalize();
-    let mut bytes = [0u8; 16];
-    bytes.copy_from_slice(digest.get(..16).unwrap_or(&[0u8; 16]));
-    bytes[6] = (bytes[6] & 0x0f) | 0x40;
-    bytes[8] = (bytes[8] & 0x3f) | 0x80;
-    let hex: String = bytes.iter().map(|b| format!("{b:02x}")).collect();
-    format!(
-        "{}-{}-{}-{}-{}",
-        hex.get(0..8).unwrap_or_default(),
-        hex.get(8..12).unwrap_or_default(),
-        hex.get(12..16).unwrap_or_default(),
-        hex.get(16..20).unwrap_or_default(),
-        hex.get(20..32).unwrap_or_default(),
-    )
+    jscompat::random_uuid()
 }
 
 // ── Slide field readers (every key of a model slot may be missing) ─────
