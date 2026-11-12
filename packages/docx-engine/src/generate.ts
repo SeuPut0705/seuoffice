@@ -24,6 +24,7 @@ import type {
   TableCell,
   TableModel,
 } from './types'
+import { EMPHASIS_MARKS, TEXT_EFFECTS } from './types'
 import { escapeXmlAttr, escapeXmlText } from './xml-utils'
 import { resolvePropChangeXml } from './revision-xml'
 import { ownValue } from './own-value'
@@ -3595,6 +3596,7 @@ const RUN_MANAGED_GROUPS: Array<{ key: string; tags: string[] }> = [
   { key: 'strike', tags: ['w:strike'] },
   { key: 'caps', tags: ['w:caps', 'w:smallCaps'] },
   { key: 'dstrike', tags: ['w:dstrike'] },
+  { key: 'textEffect', tags: ['w:outline', 'w:shadow', 'w:emboss', 'w:imprint'] },
   { key: 'vanish', tags: ['w:vanish'] },
   { key: 'color', tags: ['w:color'] },
   { key: 'spacing', tags: ['w:spacing'] },
@@ -3607,6 +3609,7 @@ const RUN_MANAGED_GROUPS: Array<{ key: string; tags: string[] }> = [
   { key: 'shading', tags: ['w:shd'] },
   { key: 'vertAlign', tags: ['w:vertAlign'] },
   { key: 'rtl', tags: ['w:rtl'] },
+  { key: 'em', tags: ['w:em'] },
   { key: 'rPrChange', tags: ['w:rPrChange'] },
 ]
 
@@ -3765,6 +3768,8 @@ function modelRPrChildren(run: Run, insideLink: boolean): PPrChild[] {
   }
   if (run.dstrike !== undefined)
     out.push({ name: 'w:dstrike', xml: onOffXml('w:dstrike', run.dstrike) })
+  if (run.textEffect && TEXT_EFFECTS.includes(run.textEffect))
+    out.push({ name: `w:${run.textEffect}`, xml: `<w:${run.textEffect}/>` })
   if (run.vanishOwn !== undefined)
     out.push({ name: 'w:vanish', xml: onOffXml('w:vanish', run.vanishOwn) })
   if (run.color)
@@ -3792,6 +3797,8 @@ function modelRPrChildren(run: Run, insideLink: boolean): PPrChild[] {
   if (run.vertAlign)
     out.push({ name: 'w:vertAlign', xml: `<w:vertAlign w:val="${run.vertAlign}"/>` })
   if (run.rtl) out.push({ name: 'w:rtl', xml: '<w:rtl/>' })
+  if (run.em && EMPHASIS_MARKS.includes(run.em))
+    out.push({ name: 'w:em', xml: `<w:em w:val="${run.em}"/>` })
   const rPrChange = revisionRPrChangeXml(run)
   if (rPrChange) out.push({ name: 'w:rPrChange', xml: rPrChange })
   return out
@@ -3815,9 +3822,10 @@ export function mergeRPrModel(rawRPr: string, run: Run, insideLink: boolean): st
   const rawOf = (tag: string) => rawChildren.find((c) => c.name === tag)?.xml
   // rtl runs decode bold/italic/size from the Cs twins on the parse side;
   // compare against the same elements or every untouched rtl run would get "rebuilt".
-  // run.cs can be dropped by round-trips that rebuild the Run (editor marks), so an
-  // explicit raw w:rtl re-selects the Cs set on its own.
-  const cs = !!run.cs || rawBool(rawOf('w:rtl'))
+  // The model's own w:rtl decides first: a run turned rtl must carry its bold
+  // in w:bCs, or it reopens plain. run.cs can be dropped by round-trips that
+  // rebuild the Run (editor marks), so an explicit raw w:rtl re-selects the Cs set on its own.
+  const cs = run.rtl ?? (!!run.cs || rawBool(rawOf('w:rtl')))
 
   // Compare model vs raw-encoded values group by group; equal → keep the original bytes
   // (drop the group from fresh)
@@ -3870,6 +3878,17 @@ export function mergeRPrModel(rawRPr: string, run: Run, insideLink: boolean): st
         return rawCaps(rawOf('w:caps'), rawOf('w:smallCaps')) === run.caps
       case 'dstrike':
         return rawBool(rawOf('w:dstrike')) === !!run.dstrike
+      // absent from the model is untouched, as for vanish: a Run built without
+      // them keeps the raw elements (there is no "no effect" in the model)
+      case 'textEffect':
+        return (
+          run.textEffect === undefined ||
+          TEXT_EFFECTS.find((e) => rawBool(rawOf(`w:${e}`))) === run.textEffect
+        )
+      case 'em': {
+        const raw = rawAttr(rawOf('w:em'), 'w:val')
+        return run.em === undefined || (raw !== 'none' ? raw : undefined) === run.em
+      }
       // `vanish` may be style-inherited; only the run's own value is compared
       case 'vanish':
         return run.vanishOwn === undefined || rawOnOff(rawOf('w:vanish')) === run.vanishOwn

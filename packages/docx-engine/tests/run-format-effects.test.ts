@@ -4,7 +4,7 @@
  * style, style-level w:bidi and a field result cut by a paragraph mark.
  */
 import { describe, expect, it } from 'vitest'
-import { parseDocx } from '../src/index'
+import { parseDocx, saveDocx, type Run } from '../src/index'
 import { buildDocx } from './helpers/build-docx'
 
 const W14_NS =
@@ -58,6 +58,41 @@ describe('legacy text effects', () => {
     expect(glow?.radiusPt).toBe(8)
     expect(glow?.alpha).toBe(0.6)
     expect(glow?.color).toMatch(/^[0-9A-F]{6}$/)
+  })
+
+  /** save one paragraph rebuilt from `runs` over a document holding `bodyXml`, and read it back */
+  async function rebuilt(bodyXml: string, edit: (runs: Run[]) => Run[]): Promise<Run[]> {
+    const doc = await parseDocx(await buildDocx({ bodyXml }))
+    const runs = edit(doc.blocks[0].runs ?? [])
+    const saved = await saveDocx(doc, [
+      {
+        kind: 'generated',
+        block: { type: 'paragraph', runs },
+        docxIndex: doc.blocks[0].docxIndex!,
+      },
+    ])
+    return (await parseDocx(saved)).blocks[0].runs ?? []
+  }
+
+  it('writes a text effect and an emphasis mark given to a run that is rebuilt', async () => {
+    const runs = await rebuilt(para(run('<w:b/>', 'plain') + run('<w:i/>', 'raw-less')), (rs) => [
+      { ...rs[0], textEffect: 'emboss', em: 'dot' },
+      // a run with no rPr of its own gets them from the model alone
+      { text: 'fresh', textEffect: 'shadow', em: 'circle' },
+    ])
+    expect(runs.map((r) => [r.text, r.textEffect, r.em, r.bold ?? false])).toEqual([
+      ['plain', 'emboss', 'dot', true],
+      ['fresh', 'shadow', 'circle', false],
+    ])
+  })
+
+  it('keeps the effects of the original rPr when the rebuilt run does not name them', async () => {
+    const runs = await rebuilt(
+      para(run('<w:outline/><w:shadow/><w:em w:val="comma"/>', 'kept')),
+      (rs) => rs.map(({ textEffect: _e, em: _m, ...r }) => ({ ...r, bold: true })),
+    )
+    expect(runs[0]).toMatchObject({ text: 'kept', textEffect: 'outline', em: 'comma', bold: true })
+    expect(runs[0].rawRPr).toContain('<w:shadow/>')
   })
 })
 

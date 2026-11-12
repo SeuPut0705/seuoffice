@@ -50,6 +50,15 @@ export interface TextOutline {
 
 /** w:outline / w:emboss / w:imprint / w:shadow (the legacy Word text effects) */
 export type TextEffect = 'outline' | 'emboss' | 'imprint' | 'shadow'
+/** the order a run's text effect is read in: the first one on is the run's effect */
+export const TEXT_EFFECTS: readonly TextEffect[] = ['outline', 'emboss', 'imprint', 'shadow']
+/** w:em values that mark text (w:val="none" marks nothing) */
+export const EMPHASIS_MARKS: readonly NonNullable<Run['em']>[] = [
+  'dot',
+  'comma',
+  'circle',
+  'underDot',
+]
 
 /** w14:glow halo: color hex without '#', radius in points, alpha 0..1 */
 export interface TextGlow {
@@ -124,7 +133,8 @@ export interface Run {
   shadingDisplay?: string
   /** WordArt text outline (w14:textOutline solidFill). Display only; saving is kept faithful by rawRPr */
   textOutline?: TextOutline
-  /** legacy text effect (w:outline/w:emboss/w:imprint/w:shadow). Display only; saving is kept faithful by rawRPr */
+  /** legacy text effect (w:outline/w:emboss/w:imprint/w:shadow). Written from the model when
+   *  set; absent means untouched (rawRPr keeps whatever the run had) */
   textEffect?: TextEffect
   /** w:dstrike double strikethrough (false = explicit off overriding the style) */
   dstrike?: boolean
@@ -144,7 +154,8 @@ export interface Run {
   effective?: EffectiveRPr
   /** superscript / subscript (w:vertAlign) */
   vertAlign?: 'superscript' | 'subscript'
-  /** East Asian emphasis mark (w:em). Display only; saving is kept faithful by rawRPr */
+  /** East Asian emphasis mark (w:em). Written from the model when set; absent means
+   *  untouched (rawRPr keeps whatever the run had) */
   em?: 'dot' | 'comma' | 'circle' | 'underDot'
   /** hyperlink info; rId references an existing relationship in the original docx.
    *  plain: unstyled run of a bookmark link (Word shows it in the paragraph's ink) */
