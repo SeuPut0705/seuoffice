@@ -13,6 +13,7 @@ interface TabsApiOnWindow {
   aiOfficeTabs: {
     list(): Promise<{ id: string; kind: string }[]>
     detach(id: string): Promise<void>
+    close(id: string): Promise<void>
   }
 }
 
@@ -41,8 +42,14 @@ test.describe('closed Word tabs', () => {
       // every page has its own live renderer before the close
       expect((await docsPages(app)).every((p) => !p.crashed && p.pid > 0)).toBe(true)
 
+      // closed through the tab bar's own API, as a middle click does, without
+      // a Playwright action waiting on the shell while a Word page goes away
       for (let n = 2; n >= 0; n--) {
-        await editorTabs.first().click({ button: 'middle' })
+        await page.evaluate(async () => {
+          const tabs = (window as unknown as TabsApiOnWindow).aiOfficeTabs
+          const tab = (await tabs.list()).find((t) => t.kind === 'docs')
+          if (tab) void tabs.close(tab.id)
+        })
         await expect(editorTabs).toHaveCount(n)
       }
       // the main process answers (it is not wedged) and holds no Word page

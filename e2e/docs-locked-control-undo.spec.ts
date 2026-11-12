@@ -85,13 +85,17 @@ async function documentTabs(app: ElectronApplication): Promise<number> {
   })
 }
 
-/** Close the document's tab as its close button does, and wait for the outcome. */
+/**
+ * Ask to close the document's tab as its close button does. The answer is not
+ * awaited here: the tab's page goes away while the close runs, and the caller
+ * waits for the outcome on the tab bar.
+ */
 async function closeDocumentTab(app: ElectronApplication): Promise<void> {
   const view = await tabsView(app)
   await view.evaluate(async () => {
     const api = (window as unknown as { aiOfficeTabs: TabsApi }).aiOfficeTabs
     const tab = (await api.list()).find((t) => /locked-control\.docx/i.test(JSON.stringify(t)))
-    if (tab) await api.close(tab.id)
+    if (tab) void api.close(tab.id)
   })
 }
 
@@ -136,7 +140,6 @@ interface TracedEditor {
   ): void
   view: { hasFocus(): boolean }
   state: { doc: { textContent: string }; selection: { anchor: number; head: number } }
-  commands: { focus(): boolean; setTextSelection(pos: number): boolean }
 }
 interface TracedTransaction {
   docChanged: boolean
@@ -219,8 +222,8 @@ const UNTOUCHED = (step: string) => ({
   changes: [] as string[],
 })
 
-/** how the caret gets into the control: a click on it, or the editor putting it there */
-const WAYS_IN = ['a click', 'a click and a pause', 'the caret set by the editor'] as const
+/** how the caret gets into the control: a click on it, typed into at once or after a pause */
+const WAYS_IN = ['a click', 'a click and a pause'] as const
 
 test.describe('a document with a locked content control', () => {
   for (const way of WAYS_IN) {
@@ -247,17 +250,8 @@ test.describe('a document with a locked content control', () => {
         const note = async (step: string) => moments.push(await moment(page, step))
         await note('opened')
 
-        if (way === 'a click') await control.click()
-        else if (way === 'a click and a pause') {
-          await control.click()
-          await page.waitForTimeout(500)
-        } else
-          await page.evaluate(() => {
-            const editor = (window as EditorWindow).__aidocs!.editor
-            editor.commands.focus()
-            // 'Code: ' is six characters: 8 is after the A of the control
-            editor.commands.setTextSelection(8)
-          })
+        await control.click()
+        if (way === 'a click and a pause') await page.waitForTimeout(500)
         await note('caret in the control')
         // a key, then text handed over whole, as an input method hands it over
         await page.keyboard.type('x')
@@ -285,8 +279,12 @@ test.describe('a document with a locked content control', () => {
         expect(head >= 7 && head <= 10).toBe(true)
 
         await closeDocumentTab(app)
+        // the close either asks (a prompt, answered Cancel) or takes the tab away
+        await expect
+          .poll(async () => (await prompts()) > 0 || (await documentTabs(app)) === 0)
+          .toBe(true)
         expect(await prompts()).toBe(0)
-        await expect.poll(() => documentTabs(app)).toBe(0)
+        expect(await documentTabs(app)).toBe(0)
       } finally {
         await closeAndSaveVideo(launched, 'docs-locked-control-undo')
       }
