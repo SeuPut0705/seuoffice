@@ -44,13 +44,29 @@ pub enum JsonValue {
     Object(JsObject<JsonValue>),
 }
 
-/// What `JSON.parse` throws.
+/// What `JSON.parse` throws: a `SyntaxError` worded as V8 12.4 words it
+/// (Node 22), positions counted in UTF-16 code units. A lone surrogate in the
+/// message (the token or the excerpt cut inside a pair) is U+FFFD, as
+/// everywhere in this module.
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct JsonSyntaxError;
+pub struct JsonSyntaxError {
+    message: String,
+}
+
+impl JsonSyntaxError {
+    fn new(message: String) -> Self {
+        Self { message }
+    }
+
+    /// `error.message`
+    pub fn message(&self) -> &str {
+        &self.message
+    }
+}
 
 impl fmt::Display for JsonSyntaxError {
     fn fmt(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-        formatter.write_str("SyntaxError: not JSON")
+        write!(formatter, "SyntaxError: {}", self.message)
     }
 }
 
@@ -252,8 +268,27 @@ pub fn json_parse(text: &str) -> Result<JsonValue, JsonSyntaxError> {
     if parser.at == parser.bytes.len() {
         Ok(value)
     } else {
-        Err(JsonSyntaxError)
+        Err(parser.located("Unexpected non-whitespace character after JSON"))
     }
+}
+
+/// V8's `JsonParser::kMaxContextCharacters`.
+const CONTEXT_UNITS: usize = 10;
+
+/// `JsonParser::CalculateFileLocation`: `\r\n` is one line break.
+fn line_and_column(units: &[u16], end: usize) -> (usize, usize) {
+    let (mut line, mut line_start, mut at) = (1, 0, 0);
+    while at < end {
+        if units[at] == 0x0d && at + 1 < end && units[at + 1] == 0x0a {
+            at += 1;
+        }
+        if units[at] == 0x0d || units[at] == 0x0a {
+            line += 1;
+            line_start = at + 1;
+        }
+        at += 1;
+    }
+    (line, 1 + at - line_start)
 }
 
 struct Parser<'a> {
@@ -263,6 +298,66 @@ struct Parser<'a> {
 }
 
 impl Parser<'_> {
+    /// The text in UTF-16 units and the unit position of `at`.
+    fn units(&self) -> (Vec<u16>, usize) {
+        let before = self.text.get(..self.at).unwrap_or_default();
+        (
+            self.text.encode_utf16().collect(),
+            before.encode_utf16().count(),
+        )
+    }
+
+    /// A message of V8's "at position N (line L column C)" templates.
+    fn located(&self, head: &str) -> JsonSyntaxError {
+        let (units, position) = self.units();
+        let (line, column) = line_and_column(&units, position);
+        JsonSyntaxError::new(format!(
+            "{head} at position {position} (line {line} column {column})"
+        ))
+    }
+
+    /// `ReportUnexpectedCharacter` at `at`: the token class of the character
+    /// there picks the message.
+    fn unexpected(&self) -> JsonSyntaxError {
+        let Some(found) = self
+            .text
+            .get(self.at..)
+            .and_then(|rest| rest.chars().next())
+        else {
+            return JsonSyntaxError::new("Unexpected end of JSON input".to_owned());
+        };
+        match found {
+            '0'..='9' | '-' => return self.located("Unexpected number in JSON"),
+            '"' => return self.located("Unexpected string in JSON"),
+            _ => {}
+        }
+        if matches!(
+            self.text,
+            "[object Object]" | "undefined" | "Infinity" | "NaN"
+        ) {
+            return JsonSyntaxError::new(format!("\"{}\" is not valid JSON", self.text));
+        }
+        let (units, position) = self.units();
+        let lossy = |from: usize, to: usize| String::from_utf16_lossy(&units[from..to]);
+        let token = lossy(position, position + 1);
+        let length = units.len();
+        JsonSyntaxError::new(if length < 2 * CONTEXT_UNITS + 1 {
+            format!(
+                "Unexpected token '{token}', \"{}\" is not valid JSON",
+                self.text
+            )
+        } else if position < CONTEXT_UNITS {
+            let excerpt = lossy(0, position + CONTEXT_UNITS);
+            format!("Unexpected token '{token}', \"{excerpt}\"... is not valid JSON")
+        } else if position < length - CONTEXT_UNITS {
+            let excerpt = lossy(position - CONTEXT_UNITS, position + CONTEXT_UNITS);
+            format!("Unexpected token '{token}', ...\"{excerpt}\"... is not valid JSON")
+        } else {
+            let excerpt = lossy(position - CONTEXT_UNITS, length);
+            format!("Unexpected token '{token}', ...\"{excerpt}\" is not valid JSON")
+        })
+    }
+
     fn peek(&self) -> Option<u8> {
         self.bytes.get(self.at).copied()
     }
@@ -273,22 +368,30 @@ impl Parser<'_> {
         }
     }
 
-    fn expect(&mut self, byte: u8) -> Result<(), JsonSyntaxError> {
+    fn expect(&mut self, byte: u8, head: &str) -> Result<(), JsonSyntaxError> {
         if self.peek() == Some(byte) {
             self.at += 1;
             Ok(())
         } else {
-            Err(JsonSyntaxError)
+            Err(self.located(head))
         }
     }
 
+    /// `ScanLiteral`: the first character matched already.
     fn literal(&mut self, word: &str, value: JsonValue) -> Result<JsonValue, JsonSyntaxError> {
-        if self.bytes.get(self.at..self.at + word.len()) == Some(word.as_bytes()) {
-            self.at += word.len();
-            Ok(value)
-        } else {
-            Err(JsonSyntaxError)
+        self.at += 1;
+        for &expected in &word.as_bytes()[1..] {
+            if self.peek() != Some(expected) {
+                return Err(self.unexpected());
+            }
+            self.at += 1;
         }
+        Ok(value)
+    }
+
+    fn too_deep() -> JsonSyntaxError {
+        // V8 parses any depth; this is the limit of `JSON_MAX_DEPTH`
+        JsonSyntaxError::new(format!("JSON is nested deeper than {JSON_MAX_DEPTH}"))
     }
 
     fn value(&mut self, depth: usize) -> Result<JsonValue, JsonSyntaxError> {
@@ -303,13 +406,13 @@ impl Parser<'_> {
             Some(b'f') => self.literal("false", JsonValue::Bool(false)),
             Some(b'n') => self.literal("null", JsonValue::Null),
             Some(b'-' | b'0'..=b'9') => self.number().map(JsonValue::Number),
-            _ => Err(JsonSyntaxError),
+            _ => Err(self.unexpected()),
         }
     }
 
     fn object(&mut self, depth: usize) -> Result<JsonValue, JsonSyntaxError> {
         if depth > JSON_MAX_DEPTH {
-            return Err(JsonSyntaxError);
+            return Err(Self::too_deep());
         }
         self.at += 1;
         let mut object = JsObject::new();
@@ -318,11 +421,13 @@ impl Parser<'_> {
             self.at += 1;
             return Ok(JsonValue::Object(object));
         }
+        let mut key_head = "Expected property name or '}' in JSON";
         loop {
-            self.expect(b'"')?;
+            self.expect(b'"', key_head)?;
+            key_head = "Expected double-quoted property name in JSON";
             let key = self.string()?;
             self.space();
-            self.expect(b':')?;
+            self.expect(b':', "Expected ':' after property name in JSON")?;
             self.space();
             let value = self.value(depth)?;
             object.set(key, value);
@@ -336,14 +441,16 @@ impl Parser<'_> {
                     self.at += 1;
                     return Ok(JsonValue::Object(object));
                 }
-                _ => return Err(JsonSyntaxError),
+                _ => {
+                    return Err(self.located("Expected ',' or '}' after property value in JSON"));
+                }
             }
         }
     }
 
     fn array(&mut self, depth: usize) -> Result<JsonValue, JsonSyntaxError> {
         if depth > JSON_MAX_DEPTH {
-            return Err(JsonSyntaxError);
+            return Err(Self::too_deep());
         }
         self.at += 1;
         let mut items = Vec::new();
@@ -364,7 +471,9 @@ impl Parser<'_> {
                     self.at += 1;
                     return Ok(JsonValue::Array(items));
                 }
-                _ => return Err(JsonSyntaxError),
+                _ => {
+                    return Err(self.located("Expected ',' or ']' after array element in JSON"));
+                }
             }
         }
     }
@@ -383,16 +492,21 @@ impl Parser<'_> {
             self.at += 1;
         }
         match self.peek() {
-            Some(b'0') => self.at += 1,
+            Some(b'0') => {
+                self.at += 1;
+                if matches!(self.peek(), Some(b'0'..=b'9')) {
+                    return Err(self.located("Unexpected number in JSON"));
+                }
+            }
             Some(b'1'..=b'9') => {
                 self.digits();
             }
-            _ => return Err(JsonSyntaxError),
+            _ => return Err(self.located("No number after minus sign in JSON")),
         }
         if self.peek() == Some(b'.') {
             self.at += 1;
             if self.digits() == 0 {
-                return Err(JsonSyntaxError);
+                return Err(self.located("Unterminated fractional number in JSON"));
             }
         }
         if matches!(self.peek(), Some(b'e' | b'E')) {
@@ -401,23 +515,19 @@ impl Parser<'_> {
                 self.at += 1;
             }
             if self.digits() == 0 {
-                return Err(JsonSyntaxError);
+                return Err(self.located("Exponent part is missing a number in JSON"));
             }
         }
         // the JSON number grammar is a part of Number()'s, with the same value
-        self.text
-            .get(from..self.at)
-            .map(to_number)
-            .ok_or(JsonSyntaxError)
+        Ok(to_number(&self.text[from..self.at]))
     }
 
     fn hex4(&mut self) -> Result<u16, JsonSyntaxError> {
         let mut unit = 0u16;
         for _ in 0..4 {
-            let digit = self
-                .peek()
-                .and_then(|byte| char::from(byte).to_digit(16))
-                .ok_or(JsonSyntaxError)?;
+            let Some(digit) = self.peek().and_then(|byte| char::from(byte).to_digit(16)) else {
+                return Err(self.located("Bad Unicode escape in JSON"));
+            };
             unit = unit << 4 | digit as u16;
             self.at += 1;
         }
@@ -443,7 +553,7 @@ impl Parser<'_> {
             if self.at > from {
                 flush(&mut out, &mut high);
                 // the run stops at an ASCII byte, so it ends on a character boundary
-                out.push_str(self.text.get(from..self.at).ok_or(JsonSyntaxError)?);
+                out.push_str(&self.text[from..self.at]);
             }
             match self.peek() {
                 Some(b'"') => {
@@ -453,18 +563,17 @@ impl Parser<'_> {
                 }
                 Some(b'\\') => {
                     self.at += 1;
-                    let escape = self.peek().ok_or(JsonSyntaxError)?;
-                    self.at += 1;
-                    let plain = match escape {
-                        b'"' => '"',
-                        b'\\' => '\\',
-                        b'/' => '/',
-                        b'b' => '\u{8}',
-                        b'f' => '\u{c}',
-                        b'n' => '\n',
-                        b'r' => '\r',
-                        b't' => '\t',
-                        b'u' => {
+                    let plain = match self.peek() {
+                        Some(b'"') => '"',
+                        Some(b'\\') => '\\',
+                        Some(b'/') => '/',
+                        Some(b'b') => '\u{8}',
+                        Some(b'f') => '\u{c}',
+                        Some(b'n') => '\n',
+                        Some(b'r') => '\r',
+                        Some(b't') => '\t',
+                        Some(b'u') => {
+                            self.at += 1;
                             let unit = self.hex4()?;
                             if let Some(first) = high.take() {
                                 if (0xDC00..0xE000).contains(&unit) {
@@ -489,13 +598,29 @@ impl Parser<'_> {
                             }
                             continue;
                         }
-                        _ => return Err(JsonSyntaxError),
+                        // V8 sends a character past Latin-1 to the token
+                        // classes, the rest to "Bad escaped character"
+                        Some(_) => {
+                            let beyond_latin1 = self.text[self.at..]
+                                .chars()
+                                .next()
+                                .is_some_and(|found| u32::from(found) > 0xFF);
+                            return Err(if beyond_latin1 {
+                                self.unexpected()
+                            } else {
+                                self.located("Bad escaped character in JSON")
+                            });
+                        }
+                        None => return Err(self.unexpected()),
                     };
+                    self.at += 1;
                     flush(&mut out, &mut high);
                     out.push(plain);
                 }
-                // the end of the text, or a control character
-                _ => return Err(JsonSyntaxError),
+                None => return Err(self.located("Unterminated string in JSON")),
+                Some(_) => {
+                    return Err(self.located("Bad control character in string literal in JSON"));
+                }
             }
         }
     }
