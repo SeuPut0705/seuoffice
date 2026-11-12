@@ -12,6 +12,18 @@ import type { Override } from './overrides'
 
 export const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '../../..')
 
+/** What rust-table.ts lends a config's row: reading a plain Rust parameter and naming a type. */
+export interface RowTools {
+  readParam(
+    e: ExportInfo,
+    index: number,
+    raw: string,
+    notes: string[],
+  ): { lines: string[]; arg: string } | null
+  qualify(type: string, file: string): { text: string; missing: string | null }
+  firstArgument(text: string): string
+}
+
 export interface EngineConfig {
   name: 'docx' | 'pptx'
   /** repo-relative directory of the package, e.g. packages/docx-engine */
@@ -36,6 +48,8 @@ export interface EngineConfig {
   pluginModule(module: string): boolean
   overrideOf(name: string): Override | undefined
   isHandRoute(name: string): boolean
+  /** routes the table answers that are no export (a class method): name on the wire, to the Rust function of the hand routes module */
+  handRoutes: Readonly<Record<string, string>>
   hostModules: Readonly<Record<string, true>>
   /** text appended to a module */
   append: Readonly<Record<string, string>>
@@ -48,8 +62,12 @@ export interface EngineConfig {
   rustName?(name: string): string | undefined
   /** the Rust file that is a TypeScript module's own, to pick among Rust functions of one name */
   rustModule?(module: string): string | undefined
+  /** the names of `export { a } from './m'` are no use of an import (the generated module drops an import only those named) */
+  dropReexportRefs: boolean
   /** an export nothing outside the package uses is noted, and its module drops it unless something kept names it */
   dropUnused: boolean
+  /** the override writes the row (or part of it) itself: the manifest does not check the Rust signature for a generated row */
+  ownRow?(override: Override | undefined): boolean
   /** a Rust parameter type a row can read, the name of the parameter stripped */
   decodable(type: string): boolean
   /** the Rust parameters that a wire argument stands for (the others are filled by the row) */
@@ -63,9 +81,11 @@ export interface EngineConfig {
   /** the import lines a module's wrappers need, from the text of the wrappers; undefined: the docx default of gen.ts */
   coreImports?(wrappers: string): string[]
   /** the Rust row of an export; undefined: rust-table.ts's one (docx) */
-  row?(e: ExportInfo, notes: string[], fn: string): { code: string } | null
+  row?(e: ExportInfo, notes: string[], fn: string, tools: RowTools): { code: string } | null
   /** the head of the generated Rust table: its doc comment and `use` lines */
   rustHead: string
+  /** statements at the top of the table's `invoke`, before it matches the name (each line indented, newline-terminated) */
+  invokePrelude: string
   /** the table carries the docx-only helpers (spin counts, XNode arguments, package snapshots) */
   rustDocxHelpers: boolean
 }

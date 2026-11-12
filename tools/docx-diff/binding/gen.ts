@@ -63,10 +63,18 @@ interface Module {
   pieces: Piece[]
 }
 
-function identifiersOf(node: ts.Node, into: Set<string>): Set<string> {
-  if (ts.isIdentifier(node)) into.add(node.text)
+function identifiersOf(node: ts.Node, into: Set<string>, shadowed: ReadonlySet<string> = new Set()): Set<string> {
+  if (ts.isIdentifier(node) && !shadowed.has(node.text)) into.add(node.text)
+  // a parameter shadows a module-level name spelled alike, in the function that declares it
+  let inner = shadowed
+  if (config.dropReexportRefs && ts.isFunctionLike(node) && node.parameters.length) {
+    const names = new Set(shadowed)
+    for (const parameter of node.parameters) bindingNames(parameter.name, []).forEach((name) => names.add(name))
+    inner = names
+  }
   ts.forEachChild(node, (child) => {
-    identifiersOf(child, into)
+    if (config.dropReexportRefs && ts.isParameter(node) && child === node.name) return
+    identifiersOf(child, into, inner)
   })
   return into
 }
@@ -86,8 +94,9 @@ const NOW = { $now: 'Date.now()', $nowIso: 'new Date().toISOString()' }
 /** The body of a routed function: what it hands the engine. Null where the declaration cannot be rewritten. */
 function wrapperBody(info: ExportInfo, fn: ts.FunctionDeclaration, override: Override | undefined): string | null {
   const params = fn.parameters
-  if (params.some((p) => !ts.isIdentifier(p.name))) return override?.body ?? null
-  const names = params.map((p) => (p.name as ts.Identifier).text)
+  if (!config.wrapperBody && params.some((p) => !ts.isIdentifier(p.name))) return override?.body ?? null
+  // a destructured parameter is passed whole, under the name `argN` that the signature is rewritten to
+  const names = params.map((p, i) => (ts.isIdentifier(p.name) ? p.name.text : `arg${i}`))
   if (config.wrapperBody) return config.wrapperBody(info, names, override)
   if (override?.body) return override.body
   if (info.route === 'command' || info.route === 'hand') {
@@ -154,6 +163,12 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
         const body = wrapperBody(info, stmt, overrideOf(info.name))
         if (body === null) throw new Error(`${name}.${info.name}: a parameter of this function is not a plain name`)
         let prefix = text.slice(stmt.getFullStart(), stmt.body.getStart(sf))
+        if (stmt.parameters.some((p) => !ts.isIdentifier(p.name))) {
+          const first = stmt.parameters[0]!
+          const last = stmt.parameters[stmt.parameters.length - 1]!
+          const named = stmt.parameters.map((p, i) => (ts.isIdentifier(p.name) ? p.getText(sf) : `arg${i}${p.questionToken ? '?' : ''}${p.type ? `: ${p.type.getText(sf)}` : ''}`))
+          prefix = `${text.slice(stmt.getFullStart(), first.getStart(sf))}${named.join(', ')}${text.slice(last.getEnd(), stmt.body.getStart(sf))}`
+        }
         if (!stmt.type && !OVERRIDES_KEEP_INFERRED.has(info.name)) {
           // the declared type of a function that infers it: spelled out, as the wrapper's `as never` has none
           const spelled = spellType(info.ret.type, name, mod)
@@ -190,7 +205,7 @@ function parseModule(name: string, infoByName: Map<string, ExportInfo>): Module 
     if (piece.wrapped || piece.replaced) {
       const probe = ts.createSourceFile('wrapper.ts', piece.text, ts.ScriptTarget.ES2022, true)
       identifiersOf(probe, piece.refs)
-    } else identifiersOf(stmt, piece.refs)
+    } else if (!(config.dropReexportRefs && ts.isExportDeclaration(stmt) && stmt.moduleSpecifier)) identifiersOf(stmt, piece.refs)
     mod.pieces.push(piece)
   }
   return mod

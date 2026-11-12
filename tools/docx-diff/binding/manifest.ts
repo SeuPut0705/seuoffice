@@ -683,6 +683,7 @@ export function build(): { exports: ExportInfo[] } {
       e.reason = `the port is not public (${e.rust.vis || 'private'}, ${e.rust.reachable ? 'reachable' : 'in a private module'}): ${e.rust.path}`
     } else if (
       !override?.rust &&
+      !config.ownRow?.(override) &&
       (!wire.every(config.decodable) || /&mut|dyn |impl /.test(e.rust.ret))
     ) {
       e.route = 'ts'

@@ -31,10 +31,12 @@ export const docx: EngineConfig = {
   plumbing: ['engine', 'engine-hand'],
   shapesModule: true,
   dropUnused: false,
+  dropReexportRefs: false,
   pluginModule: (module) =>
     module === 'index' || module.startsWith('node/') || module.startsWith('engine-') || module === 'init',
   overrideOf,
   isHandRoute,
+  handRoutes: {},
   hostModules: HOST_MODULES,
   append: APPEND,
   replace: {},
@@ -56,5 +58,6 @@ use serde_json::{Value, json};
 use super::{InvokeEnv, routes};
 
 `,
+  invokePrelude: '',
   rustDocxHelpers: true,
 }

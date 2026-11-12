@@ -225,7 +225,7 @@ function rowOf(e: ExportInfo, notes: string[]): Row | null {
   const fn = `r_${snake(e.name)}`
   if (e.route === 'routes') return { name: e.name, fn, code: '' }
   if (config.row) {
-    const made = config.row(e, notes, fn)
+    const made = config.row(e, notes, fn, { readParam, qualify, firstArgument })
     return made && { name: e.name, fn, code: made.code }
   }
   const rust = e.rust!
@@ -415,10 +415,14 @@ export function rustTable(entries: ExportInfo[]): { text: string; rows: number; 
     const row = rowOf(e, notes)
     if (row) rows.push(row)
   }
-  const arms = rows.map((r) => (r.code ? `        ${JSON.stringify(r.name)} => ${r.fn}(env, args),` : `        ${JSON.stringify(r.name)} => ${config.table.routes}::${snake(r.name)}(env, args),`)).join('\n')
+  const handArms = Object.entries(config.handRoutes).map(([name, path]) => `        ${JSON.stringify(name)} => ${path}(env, args),`)
+  const arms = [
+    ...rows.map((r) => (r.code ? `        ${JSON.stringify(r.name)} => ${r.fn}(env, args),` : `        ${JSON.stringify(r.name)} => ${config.table.routes}::${snake(r.name)}(env, args),`)),
+    ...handArms,
+  ].join('\n')
   const text =
     preamble() +
-    `pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {\n    match name {\n${arms}\n        _ => Err(format!("no function {name}")),\n    }\n}\n\n` +
+    `pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {\n${config.invokePrelude}    match name {\n${arms}\n        _ => Err(format!("no function {name}")),\n    }\n}\n\n` +
     rows.map((r) => r.code).filter(Boolean).join('\n')
   return { text, rows: rows.length, notes }
 }
