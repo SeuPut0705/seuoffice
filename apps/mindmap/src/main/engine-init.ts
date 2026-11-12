@@ -7,3 +7,5 @@ import { fileParseEngineReady, initFileParseEngineSync } from '@seuoffice/file-p
 import engineWasmPath from '../../../../crates/target/wasm32-wasip1/release/office_wasm.wasm?asset'
 
 if (!fileParseEngineReady()) initFileParseEngineSync(readFileSync(engineWasmPath))
+// the worker threads of this process (the shell's index worker) start theirs from the same file
+process.env.SEUOFFICE_WASM ??= engineWasmPath
