@@ -39,7 +39,9 @@ pub struct SlideScan<'a> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum ScanError<'a> {
     NoSpTree,
-    UnexpectedClosingTag { name: &'a str },
+    UnexpectedClosingTag {
+        name: &'a str,
+    },
     UnterminatedSpTree,
     /// The tag search passed the regex bound: a tag of millions of
     /// characters outside quotes.

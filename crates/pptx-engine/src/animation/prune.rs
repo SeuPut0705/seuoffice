@@ -6,7 +6,7 @@ use jscompat::{
     try_js_regex,
 };
 
-use super::model::Slide;
+use crate::types::Slide;
 
 /// The tags `enclosingTagSpan` is called with.
 #[derive(Debug, Clone, Copy)]
@@ -95,7 +95,7 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> Result<bool, 
         return Ok(false);
     }
     let Some(timing) = js_regex!(r"<p:timing>[\s\S]*?<\/p:timing>")
-        .exec(&slide.body_suffix)
+        .exec(slide.body_suffix.as_deref().unwrap_or(""))
         .map(|m| m.as_str().to_owned())
     else {
         return Ok(false);
@@ -199,8 +199,13 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> Result<bool, 
     } else {
         ""
     };
-    slide.body_suffix = slide.body_suffix.replacen(&timing, kept, 1);
-    slide.structure_dirty = true;
+    let replaced = slide
+        .body_suffix
+        .as_deref()
+        .unwrap_or("")
+        .replacen(&timing, kept, 1);
+    slide.body_suffix.set(replaced);
+    slide.structure_dirty.set(true);
     Ok(true)
 }
 

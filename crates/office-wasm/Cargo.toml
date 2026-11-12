@@ -19,6 +19,7 @@ ooxml-xml.workspace = true
 omml.workspace = true
 serde.workspace = true
 serde_json.workspace = true
+sha2.workspace = true
 
 # the wasm build sorts with the host's Intl.Collator; a native build of the tests has none
 [target.'cfg(not(target_arch = "wasm32"))'.dependencies]

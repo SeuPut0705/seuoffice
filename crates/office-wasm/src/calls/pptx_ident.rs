@@ -3,11 +3,13 @@
 //! `anchor.originalXml`) and `args` (`elId`, `nvId`, `noAnchor`), as
 //! tools/pptx-diff/calls-ident.ts builds it.
 
-use jscompat::JsNum;
+use std::sync::Arc;
+
+use jscompat::{JsNum, number_to_string};
 use ooxml_xml::{ObjectOptions, parse_object};
 use pptx_engine::identity::{
-    ByteAnchor, Slide, SlideElement, element_cnvpr_id, element_durable_id, ensure_creation_id,
-    group_child_durable_id, matches_element_ref, slide_durable_id,
+    element_cnvpr_id, element_durable_id, ensure_creation_id, group_child_durable_id,
+    matches_element_ref, slide_durable_id,
 };
 use pptx_engine::model3d::{
     AM3D_NS, GLB_CONTENT_TYPE, GlbBounds, MODEL3D_EMU_PER_METER, MODEL3D_FOV, MODEL3D_LIGHTS,
@@ -19,7 +21,8 @@ use pptx_engine::redaction_xml::{
     REDACT_EL, REDACT_EXT_URI, REDACT_NS, REDACT_PREFIX, has_redact_ext_in, read_redact_label,
     redact_ext_xml, set_redact_ext, strip_redact_ext, sync_redact_ext,
 };
-use serde_json::Value;
+use pptx_engine::types::{ByteAnchor, Slide, SlideElement, TextElement};
+use serde_json::{Value, json};
 
 use super::{Returned, arg, optional, required, value};
 
@@ -40,16 +43,52 @@ const PARSE_ARRAY_NAMES: [&str; 12] = [
     "a:gridCol",
 ];
 
+/// An element that holds only the fields the gate gives: `id`, the bytes of
+/// its anchor and `nvId`.
+pub(super) fn element_with(
+    id: Option<String>,
+    anchor_xml: Option<&str>,
+    nv_id: Option<String>,
+) -> SlideElement {
+    let mut el = TextElement::default();
+    if let Some(id) = id {
+        el.id.set(id);
+    }
+    if let Some(xml) = anchor_xml {
+        el.anchor.set(ByteAnchor {
+            sp_index: 0,
+            original_xml: Arc::from(xml),
+            range: [0, 0],
+            gap_after: None,
+        });
+    }
+    if let Some(nv_id) = nv_id {
+        el.nv_id.set(nv_id);
+    }
+    SlideElement::Text(Box::new(el))
+}
+
+/// `nvId` of the args: the text, or the number as `${nvId}`.
+fn nv_id_arg(args: &Value) -> Result<Option<String>, String> {
+    match args.get("nvId") {
+        None | Some(Value::Null) => Ok(None),
+        Some(Value::String(text)) => Ok(Some(text.clone())),
+        Some(Value::Number(number)) => number
+            .as_f64()
+            .map(|n| Some(number_to_string(n)))
+            .ok_or_else(|| "nvId: not a number".to_owned()),
+        Some(_) => Err("nvId: expected a string or a number".to_owned()),
+    }
+}
+
 /// The element of `text` and `args`: no anchor where `args.noAnchor` is true.
 fn element_of(text: &str, args: &Value) -> Result<SlideElement, String> {
     let no_anchor: Option<bool> = arg(args, "noAnchor")?;
-    Ok(SlideElement {
-        id: arg(args, "elId")?.unwrap_or_default(),
-        anchor: (no_anchor != Some(true)).then(|| ByteAnchor {
-            original_xml: text.to_owned(),
-        }),
-        nv_id: arg(args, "nvId")?,
-    })
+    Ok(element_with(
+        Some(arg(args, "elId")?.unwrap_or_default()),
+        (no_anchor != Some(true)).then_some(text),
+        nv_id_arg(args)?,
+    ))
 }
 
 fn redaction_constant(name: &str) -> Returned {
@@ -79,9 +118,11 @@ fn model3d_constant(name: &str) -> Returned {
 pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
     match function {
         "identity.elementDurableId" => value(element_durable_id(&element_of(text, args)?)),
-        "identity.slideDurableId" => value(slide_durable_id(&Slide {
-            path: text.to_owned(),
-        })),
+        "identity.slideDurableId" => {
+            let mut slide = Slide::default();
+            slide.path.set(text.to_owned());
+            value(slide_durable_id(&slide))
+        }
         "identity.elementCNvPrId" => value(element_cnvpr_id(&element_of(text, args)?)),
         "identity.matchesElementRef" => value(matches_element_ref(
             &element_of(text, args)?,
@@ -90,24 +131,23 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "identity.ensureCreationId" => {
             let mut el = element_of(text, args)?;
             ensure_creation_id(&mut el, &required::<String>(args, "uuid")?);
-            optional(el.anchor)
+            optional(match &el {
+                SlideElement::Text(text) => text
+                    .anchor
+                    .as_ref()
+                    .map(|anchor| json!({ "originalXml": &*anchor.original_xml })),
+                _ => None,
+            })
         }
         "identity.groupChildDurableId" => {
             let grp_no_anchor: Option<bool> = arg(args, "grpNoAnchor")?;
-            let grp = SlideElement {
-                id: String::new(),
-                anchor: (grp_no_anchor != Some(true)).then(|| ByteAnchor {
-                    original_xml: text.to_owned(),
-                }),
-                nv_id: None,
-            };
-            let child = SlideElement {
-                id: String::new(),
-                anchor: Some(ByteAnchor {
-                    original_xml: arg(args, "childXml")?.unwrap_or_default(),
-                }),
-                nv_id: arg(args, "nvId")?,
-            };
+            let grp = element_with(
+                Some(String::new()),
+                (grp_no_anchor != Some(true)).then_some(text),
+                None,
+            );
+            let child_xml: String = arg(args, "childXml")?.unwrap_or_default();
+            let child = element_with(Some(String::new()), Some(&child_xml), nv_id_arg(args)?);
             value(group_child_durable_id(&grp, &child))
         }
         "redaction-xml.constants" => redaction_constant(&required::<String>(args, "name")?),

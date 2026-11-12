@@ -1,8 +1,8 @@
 //! parse.ts 4328-4401: the master and layout decoration layer
 //! (`parseDecorations`, `substituteSlideNum`) and `intOr`.
 
-use std::sync::Arc;
 use jscompat::{Radix, js_regex, number_to_string, parse_int, value_to_string};
+use std::sync::Arc;
 
 use super::context::{DecorationOptions, Node, ParseContext};
 use crate::scan::scan_slide;

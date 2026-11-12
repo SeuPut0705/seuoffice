@@ -2,16 +2,16 @@
 //! from `animEq` to `getSlideAnimations`).
 
 use jscompat::{
-    JsMap, index_of, js_regex, last_index_of, math_max, math_round, number_to_string,
-    to_number,
+    JsMap, index_of, js_regex, last_index_of, math_max, math_round, number_to_string, to_number,
 };
 
-use super::model::{AnimTrigger, IdGen, Slide, SlideAnimation, is_media_effect};
+use super::model::{AnimTrigger, IdGen, SlideAnimation, is_media_effect};
 use super::read::{EffectCtns, find_ctn_end, read_slide_timing_xml};
 use super::write::{
     Placed, append_missing_media_nodes, effect_par_xml, group_par_xml, main_seq_span,
     patch_slide_timing_xml, place_anims, spid_key, timing_re,
 };
+use crate::types::Slide;
 
 fn anim_eq(x: &SlideAnimation, y: &SlideAnimation) -> bool {
     x.spid == y.spid
@@ -386,12 +386,14 @@ pub fn patch_slide_timing_incremental_xml(
 /// Set the slide's whole animation list: the incremental patch where it
 /// applies, else the rebuild of the main sequence.
 pub fn set_slide_animations(slide: &mut Slide, anims: &[SlideAnimation]) {
-    slide.body_suffix = patch_slide_timing_incremental_xml(&slide.body_suffix, anims)
-        .unwrap_or_else(|| patch_slide_timing_xml(&slide.body_suffix, anims));
-    slide.structure_dirty = true;
+    let body_suffix = slide.body_suffix.as_deref().unwrap_or("");
+    let patched = patch_slide_timing_incremental_xml(body_suffix, anims)
+        .unwrap_or_else(|| patch_slide_timing_xml(body_suffix, anims));
+    slide.body_suffix.set(patched);
+    slide.structure_dirty.set(true);
 }
 
 /// The slide's animation list.
 pub fn get_slide_animations(slide: &Slide) -> Vec<SlideAnimation> {
-    read_slide_timing_xml(&slide.body_suffix)
+    read_slide_timing_xml(slide.body_suffix.as_deref().unwrap_or(""))
 }

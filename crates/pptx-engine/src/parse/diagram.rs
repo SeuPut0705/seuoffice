@@ -13,8 +13,8 @@ mod process;
 mod rows;
 mod shapes;
 
-use std::sync::Arc;
 use std::collections::HashSet;
+use std::sync::Arc;
 
 use jscompat::{
     JsMap, Radix, js_regex, math_max, math_min, math_round, number_to_string, number_truthy,
@@ -57,10 +57,7 @@ pub(crate) struct DgmBulletLine<'n> {
 /// `dgmBulletLines`: the depth-first bullet lines of a node's descendants
 /// (lvl 1 is a direct child). The tree is at most `MAX_DGM_TREE_DEPTH + 1`
 /// deep, as `build` makes it.
-pub(crate) fn dgm_bullet_lines<'n>(
-    node: &'n DgmTreeNode<'_>,
-    lvl: f64,
-) -> Vec<DgmBulletLine<'n>> {
+pub(crate) fn dgm_bullet_lines<'n>(node: &'n DgmTreeNode<'_>, lvl: f64) -> Vec<DgmBulletLine<'n>> {
     let mut out = Vec::new();
     for c in &node.children {
         for t in &c.texts {
@@ -711,7 +708,10 @@ pub fn layout_diagram_fallback(
 
     let label_fills = diagram_label_fills(colors_xml, ctx);
     let accent1;
-    let colors: &[String] = match label_fills.get("node1").or_else(|| label_fills.get("node0")) {
+    let colors: &[String] = match label_fills
+        .get("node1")
+        .or_else(|| label_fills.get("node0"))
+    {
         Some(colors) => colors.as_slice(),
         None => {
             accent1 = [super::fill::resolve_color_node(
@@ -827,9 +827,6 @@ pub(crate) fn collect_dgm_run_size(pt: Node<'_>) -> Option<f64> {
     }
     let p = first(body.get("a:p"));
     let r = first(get(p, "a:r"));
-    let sz = parse_int(
-        &value_to_string(get(get(r, "a:rPr"), "@_sz")),
-        Radix::Ten,
-    );
+    let sz = parse_int(&value_to_string(get(get(r, "a:rPr"), "@_sz")), Radix::Ten);
     (sz > 0.0).then_some(sz / 100.0)
 }

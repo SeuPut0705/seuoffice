@@ -1,7 +1,7 @@
 //! parse.ts 179-297: `parseSlide` and `parseBackground`.
 
-use std::sync::Arc;
 use jscompat::{Radix, Slot, js_regex, parse_int, truthy, value_to_string, value_truthy};
+use std::sync::Arc;
 
 use super::context::{ParseContext, SlideParseInput, parse_xml};
 use crate::scan::{SpElement, scan_slide};
@@ -49,17 +49,19 @@ pub fn parse_slide(input: SlideParseInput<'_>) -> Result<Slide, String> {
     }
     let surplus = scan.elements.get(budget..).unwrap_or_default();
     if let (Some(first), Some(last)) = (surplus.first(), surplus.last()) {
-        elements.push(SlideElement::Passthrough(Box::new(super::shape::passthrough(
-            ByteAnchor {
-                sp_index: budget as i64,
-                original_xml: Arc::from(fragment(slide_xml, first.start, last.end)),
-                range: [first.start, last.end],
-                gap_after: gap_after(last),
-            },
-            PassthroughKind::Unknown,
-            None,
-            &ctx,
-        ))));
+        elements.push(SlideElement::Passthrough(Box::new(
+            super::shape::passthrough(
+                ByteAnchor {
+                    sp_index: budget as i64,
+                    original_xml: Arc::from(fragment(slide_xml, first.start, last.end)),
+                    range: [first.start, last.end],
+                    gap_after: gap_after(last),
+                },
+                PassthroughKind::Unknown,
+                None,
+                &ctx,
+            ),
+        )));
     }
     let own_background = parse_background(slide_xml, &ctx);
     let has_own_background = own_background.is_some();
@@ -95,8 +97,7 @@ pub fn parse_slide(input: SlideParseInput<'_>) -> Result<Slide, String> {
                 })
         });
     let master_sp_hidden =
-        js_regex!(r#"<p:sld\b[^>]*\bshowMasterSp=(?:"(?:0|false)"|'(?:0|false)')"#)
-            .test(slide_xml);
+        js_regex!(r#"<p:sld\b[^>]*\bshowMasterSp=(?:"(?:0|false)"|'(?:0|false)')"#).test(slide_xml);
     let bg_own = has_own_background || js_regex!(r"<p:bg[\s>]").test(slide_xml);
 
     Ok(Slide {

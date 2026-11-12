@@ -80,7 +80,12 @@ pub(super) fn hierarchy(f: &mut Fallback<'_>) {
         for (j, k) in kids.iter().enumerate() {
             let fill = f.color_of(k, i);
             f.push(
-                dgm_box(x + j as f64 * (kw + kgap), frame_cy - child_cy, kw, child_cy),
+                dgm_box(
+                    x + j as f64 * (kw + kgap),
+                    frame_cy - child_cy,
+                    kw,
+                    child_cy,
+                ),
                 fill,
                 &text_lines(
                     &k.texts,

@@ -83,7 +83,11 @@ pub(super) fn blip_media_ref<'a>(
 /// `parseLum`
 pub(super) fn parse_lum(blip_node: Node<'_>) -> Option<Lum> {
     let lum = get(blip_node, "a:lum")?;
-    let attrs = if is_object(Some(lum)) { Some(lum) } else { None };
+    let attrs = if is_object(Some(lum)) {
+        Some(lum)
+    } else {
+        None
+    };
     let pct = |v: Node<'_>| {
         let n = match v {
             Some(v) if !v.is_null() => {
@@ -118,7 +122,10 @@ pub(super) fn parse_bi_level(blip_node: Node<'_>) -> Option<f64> {
 }
 
 /// `parseDuotone`
-pub(super) fn parse_duotone(blip_node: Node<'_>, ctx: &ParseContext<'_>) -> Option<(String, String)> {
+pub(super) fn parse_duotone(
+    blip_node: Node<'_>,
+    ctx: &ParseContext<'_>,
+) -> Option<(String, String)> {
     let duo_raw = get(blip_node, "a:duotone");
     if !value_truthy(duo_raw) {
         return get(blip_node, "a:grayscl")
@@ -131,7 +138,9 @@ pub(super) fn parse_duotone(blip_node: Node<'_>, ctx: &ParseContext<'_>) -> Opti
             let mut wrapper = Map::new();
             wrapper.insert(tag.to_owned(), c.clone());
             let wrapper = Value::Object(wrapper);
-            if let Some(resolved) = resolve_color_node(Some(&wrapper), ctx).filter(|s| !s.is_empty()) {
+            if let Some(resolved) =
+                resolve_color_node(Some(&wrapper), ctx).filter(|s| !s.is_empty())
+            {
                 clrs.push((resolved, tag));
             }
         }
@@ -268,8 +277,10 @@ pub(super) fn parse_fill(sp_pr: Node<'_>, ctx: &ParseContext<'_>) -> Option<Fill
 
     let pat = get(sp_pr, "a:pattFill");
     if value_truthy(pat) {
-        let fg = resolve_color_node(get(pat, "a:fgClr"), ctx).unwrap_or_else(|| "#000000".to_owned());
-        let bg = resolve_color_node(get(pat, "a:bgClr"), ctx).unwrap_or_else(|| "#FFFFFF".to_owned());
+        let fg =
+            resolve_color_node(get(pat, "a:fgClr"), ctx).unwrap_or_else(|| "#000000".to_owned());
+        let bg =
+            resolve_color_node(get(pat, "a:bgClr"), ctx).unwrap_or_else(|| "#FFFFFF".to_owned());
         let preset = match get(pat, "@_prst") {
             Some(v) if !v.is_null() => value_to_string(Some(v)),
             _ => "pct50".to_owned(),
@@ -311,7 +322,10 @@ fn parse_grad_fill(grad: Node<'_>, ctx: &ParseContext<'_>) -> Option<Fill> {
         None
     };
     let scaled = lin.is_some()
-        && matches!(get(lin, "@_scaled").and_then(Value::as_str), Some("1" | "true"));
+        && matches!(
+            get(lin, "@_scaled").and_then(Value::as_str),
+            Some("1" | "true")
+        );
     let ftr = get(path, "a:fillToRect");
     // ST_Percentage is 1/1000 % ("50000") or the suffixed form ("50%")
     let frac = |v: Node<'_>| match v {
@@ -351,7 +365,10 @@ fn parse_grad_fill(grad: Node<'_>, ctx: &ParseContext<'_>) -> Option<Fill> {
             b: JsNum(frac(get(ftr, "@_b"))),
         }),
         tile_rect: tile_rect.filter(|t| {
-            number_truthy(t.l.0) || number_truthy(t.t.0) || number_truthy(t.r.0) || number_truthy(t.b.0)
+            number_truthy(t.l.0)
+                || number_truthy(t.t.0)
+                || number_truthy(t.r.0)
+                || number_truthy(t.b.0)
         }),
     }))
 }

@@ -3,6 +3,17 @@ import { ANIM } from './calls-anim'
 import { BYTES } from './calls-bytes'
 import { CHART } from './calls-chart'
 import { PARSE } from './calls-parse'
+import { DECKCORE } from './calls-deckcore'
+import { DECKGROUPS } from './calls-deckgroups'
+import { DECKSHAPE } from './calls-deckshape'
+import { DECKSLIDES } from './calls-deckslides'
+import { DECKTABLES } from './calls-decktables'
+import { DECKTEXT } from './calls-decktext'
+import { GENERATE } from './calls-generate'
+import { INSERT } from './calls-insert'
+import { LAYOUTS } from './calls-layouts'
+import { MEDIA } from './calls-media'
+import { PACKAGEPARTS } from './calls-packageparts'
 import { GEOM } from './calls-geom'
 import { IDENT } from './calls-ident'
 import { LAYOUT } from './calls-layout'
@@ -32,4 +43,15 @@ export const { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls, lis
     tablestyle: TABLESTYLE,
     chart: CHART,
     parse: PARSE,
+    deckcore: DECKCORE,
+    deckgroups: DECKGROUPS,
+    deckshape: DECKSHAPE,
+    deckslides: DECKSLIDES,
+    decktables: DECKTABLES,
+    decktext: DECKTEXT,
+    generate: GENERATE,
+    insert: INSERT,
+    layouts: LAYOUTS,
+    media: MEDIA,
+    packageparts: PACKAGEPARTS,
   })

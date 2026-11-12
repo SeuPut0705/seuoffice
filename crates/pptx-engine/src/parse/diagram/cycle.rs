@@ -7,8 +7,8 @@ use jscompat::{js_regex, math_cos, math_max, math_min, math_round, math_sin};
 
 use super::super::fill::resolve_color_node;
 use super::{
-    DgmFill, DgmLine, DgmSpOpts, DgmTreeNode, Fallback, bullet_lines, dgm_box,
-    dgm_bullet_lines, dgm_sp, dgm_tint, fit_size, text_lines,
+    DgmFill, DgmLine, DgmSpOpts, DgmTreeNode, Fallback, bullet_lines, dgm_box, dgm_bullet_lines,
+    dgm_sp, dgm_tint, fit_size, text_lines,
 };
 
 /// arrow5 (cycle alg, rotPath=alongPath): downArrows on a ring all pointing
@@ -216,9 +216,7 @@ pub(super) fn cycle(f: &mut Fallback<'_>) {
     let Some(first) = roots.first() else {
         return;
     };
-    let central = f
-        .layout_id
-        .is_some_and(|id| js_regex!(r"^radial").test(id));
+    let central = f.layout_id.is_some_and(|id| js_regex!(r"^radial").test(id));
     let ring: &[DgmTreeNode<'_>] = if central {
         if first.children.is_empty() {
             &roots[1..]
@@ -274,4 +272,3 @@ pub(super) fn cycle(f: &mut Fallback<'_>) {
         }
     }
 }
-

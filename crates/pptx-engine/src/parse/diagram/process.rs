@@ -40,7 +40,11 @@ pub(super) fn cards(f: &mut Fallback<'_>) {
             base,
             &bullet_lines(
                 &bullets,
-                fit_size(bh - foot_cy, math_max(bullets.len() as f64, 1.0) * 2.0, 14.0),
+                fit_size(
+                    bh - foot_cy,
+                    math_max(bullets.len() as f64, 1.0) * 2.0,
+                    14.0,
+                ),
             ),
             DgmSpOpts {
                 text_color: Some("#333333"),
@@ -162,17 +166,17 @@ pub(super) fn arrow_bands(f: &mut Fallback<'_>) {
     }
     // primFontSz op=equ: all headers share one size, all cells share one size
     let head_pt = min_of(heads.iter().map(|h| {
-        h.node.size_pt.unwrap_or_else(|| {
-            fit_size_w(h.r#box.cy * 0.78, h.r#box.cx, &h.node.texts, 65.0)
-        })
+        h.node
+            .size_pt
+            .unwrap_or_else(|| fit_size_w(h.r#box.cy * 0.78, h.r#box.cx, &h.node.texts, 65.0))
     }));
     let cell_pt = if cells.is_empty() {
         0.0
     } else {
         min_of(cells.iter().map(|c| {
-            c.node.size_pt.unwrap_or_else(|| {
-                fit_size_w(c.r#box.cy * 0.8, c.r#box.cx, &c.node.texts, 65.0)
-            })
+            c.node
+                .size_pt
+                .unwrap_or_else(|| fit_size_w(c.r#box.cy * 0.8, c.r#box.cx, &c.node.texts, 65.0))
         }))
     };
     for c in &cells {
@@ -240,7 +244,11 @@ pub(super) fn proc_cards(f: &mut Fallback<'_>) {
             base,
             &bullet_lines(
                 &bullets,
-                fit_size(ih - title_cy, math_max(bullets.len() as f64, 1.0) * 1.6, 15.0),
+                fit_size(
+                    ih - title_cy,
+                    math_max(bullets.len() as f64, 1.0) * 1.6,
+                    15.0,
+                ),
             ),
             DgmSpOpts {
                 prst: Some("roundRect"),

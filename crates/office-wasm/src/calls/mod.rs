@@ -32,12 +32,24 @@ mod parse;
 mod pptx_anim;
 mod pptx_bytes;
 mod pptx_chart;
+mod pptx_deck;
+mod pptx_deckcore;
+mod pptx_deckgroups;
+mod pptx_deckshape;
+mod pptx_deckslides;
+mod pptx_decktables;
+mod pptx_decktext;
+mod pptx_generate;
 mod pptx_geom;
 mod pptx_ident;
+mod pptx_insert;
 mod pptx_layout;
+mod pptx_layouts;
 mod pptx_leaves;
+mod pptx_media;
 mod pptx_mtx;
 mod pptx_package;
+mod pptx_packageparts;
 mod pptx_parse;
 mod pptx_placeholder;
 mod pptx_tables;
@@ -119,6 +131,17 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "pptxAnim" => Some(pptx_anim::dispatch(function, text, args)),
         "pptxBytes" => Some(pptx_bytes::dispatch(function, text, args)),
         "pptxChart" => Some(pptx_chart::dispatch(function, text, args)),
+        "pptxDeckcore" => Some(pptx_deckcore::dispatch(function, text, args)),
+        "pptxDeckgroups" => Some(pptx_deckgroups::dispatch(function, text, args)),
+        "pptxDeckshape" => Some(pptx_deckshape::dispatch(function, text, args)),
+        "pptxDeckslides" => Some(pptx_deckslides::dispatch(function, text, args)),
+        "pptxDecktables" => Some(pptx_decktables::dispatch(function, text, args)),
+        "pptxDecktext" => Some(pptx_decktext::dispatch(function, text, args)),
+        "pptxGenerate" => Some(pptx_generate::dispatch(function, text, args)),
+        "pptxInsert" => Some(pptx_insert::dispatch(function, text, args)),
+        "pptxLayouts" => Some(pptx_layouts::dispatch(function, text, args)),
+        "pptxMedia" => Some(pptx_media::dispatch(function, text, args)),
+        "pptxPackageparts" => Some(pptx_packageparts::dispatch(function, text, args)),
         "pptxGeom" => Some(pptx_geom::dispatch(function, text, args)),
         "pptxIdent" => Some(pptx_ident::dispatch(function, text, args)),
         "pptxLayout" => Some(pptx_layout::dispatch(function, text, args)),

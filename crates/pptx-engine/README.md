@@ -102,10 +102,31 @@ shared function is the RGB/HSL conversion (`rgb_to_hsl`, `hsl_to_rgb` of
 `docx-engine/src/theme.rs`); unit 3 compares the arithmetic and extracts it
 only if it is the same to the bit. Nothing else is copied.
 
+## Procedure: whole-engine batches
+
+From 2026-11-12 (decision 0025 rule 5 on main) the rest of the engine is
+ported in batches, not unit by unit:
+
+1. C1, the port: every TypeScript file not yet in Rust (11,713 lines in 19
+   files) at once. The parent writes the contract first (module plan, the
+   signatures of index.ts's `OpenedPptx` and the helpers every module calls,
+   signature conventions, the gate harness `tools/pptx-diff/deck-ops.ts` and
+   `crates/office-wasm/src/calls/pptx_deck.rs`); porters then write their
+   files and their comparisons in parallel, with no build. The parent
+   compiles end to end, runs ONE first comparison and keeps it unedited in
+   `evidence/`, classifies and fixes, and runs ONE runner gate.
+2. C2, the switch: the slides app's calls to `@genoffice/pptx-engine` go to
+   the Rust engine through WASM, and the TypeScript modules are deleted.
+   Fault injection, the ledger tidy and an independent review run once,
+   before the merge to main.
+
+Units 1 to 4 below were ported and proven one unit at a time before this
+change; their faults are run with C2.
+
 ## Unit order
 
 Leaves first, the read side before the save side, as in the Word port.
-Lines are TypeScript lines of the modules of the unit.
+Lines are TypeScript lines of the modules of the unit. Units 5 to 7 are C1.
 
 | Unit | Modules                                                                                                                                                                                                                                                                                      | Lines | Compared as                                                         |
 | ---- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----- | ------------------------------------------------------------------- |

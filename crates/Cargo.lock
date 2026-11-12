@@ -411,6 +411,7 @@ dependencies = [
  "pptx-engine",
  "serde",
  "serde_json",
+ "sha2",
  "zip",
 ]
 
@@ -457,7 +458,9 @@ dependencies = [
 name = "pptx-engine"
 version = "0.1.0"
 dependencies = [
+ "flate2",
  "jscompat",
+ "mtx",
  "ooxml-pkg",
  "ooxml-xml",
  "serde",

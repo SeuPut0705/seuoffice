@@ -2,14 +2,15 @@
 
 use pptx_engine::animation::{
     ANIM_DIRECTIONS, ANIM_EFFECTS, ANIM_TRIGGERS, AnimClass, AnimEffectKind, DEFAULT_MOTION_PATH,
-    ElementAnchor, Slide, SlideAnimation, SlideElement, anim_class_of, build_timing_xml,
-    c_nv_pr_ids_in_xml, element_spid, get_slide_animations, is_media_effect,
-    patch_slide_timing_incremental_xml, patch_slide_timing_xml, prune_timing_for_spids,
-    read_slide_timing_xml, set_slide_animations,
+    SlideAnimation, anim_class_of, build_timing_xml, c_nv_pr_ids_in_xml, element_spid,
+    get_slide_animations, is_media_effect, patch_slide_timing_incremental_xml,
+    patch_slide_timing_xml, prune_timing_for_spids, read_slide_timing_xml, set_slide_animations,
 };
+use pptx_engine::types::Slide;
 use serde::Serialize;
 use serde_json::Value;
 
+use super::pptx_ident::element_with;
 use super::{Returned, arg, required, value};
 
 /// The effect a text names. A text outside the union answers as the
@@ -37,10 +38,12 @@ fn list_constant<T: Serialize>(list: &[T], text: &str, args: &Value) -> Returned
 }
 
 fn slide_of(text: &str, args: &Value) -> Result<Slide, String> {
-    Ok(Slide {
-        body_suffix: text.to_owned(),
-        structure_dirty: arg::<bool>(args, "structureDirty")?.unwrap_or(false),
-    })
+    let mut slide = Slide::default();
+    slide.body_suffix.set(text.to_owned());
+    slide
+        .structure_dirty
+        .set(arg::<bool>(args, "structureDirty")?.unwrap_or(false));
+    Ok(slide)
 }
 
 #[derive(Serialize)]
@@ -65,11 +68,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "animation.isMediaEffect" => value(effect_named(text).is_some_and(is_media_effect)),
         "animation.animClassOf" => value(effect_named(text).map_or(AnimClass::Exit, anim_class_of)),
-        "animation.elementSpid" => value(element_spid(&SlideElement {
-            anchor: ElementAnchor {
-                original_xml: text.to_owned(),
-            },
-        })),
+        "animation.elementSpid" => value(element_spid(&element_with(None, Some(text), None))),
         "animation.buildTimingXml" => {
             let anims: Vec<SlideAnimation> = required(args, "anims")?;
             value(build_timing_xml(&anims))
@@ -103,8 +102,8 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let changed = prune_timing_for_spids(&mut slide, &spids)?;
             value(Pruned {
                 changed,
-                body_suffix: &slide.body_suffix,
-                structure_dirty: slide.structure_dirty,
+                body_suffix: slide.body_suffix.as_deref().unwrap_or(""),
+                structure_dirty: slide.structure_dirty.unwrap_or(false),
             })
         }
         "animation.cNvPrIdsInXml" => value(c_nv_pr_ids_in_xml(text)),

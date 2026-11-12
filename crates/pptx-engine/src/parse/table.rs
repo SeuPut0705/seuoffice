@@ -15,11 +15,11 @@ use crate::table_style::{
     resolve_table_style,
 };
 use crate::theme::resolve_font_ref;
+use crate::types::ByteAnchor;
 use crate::types::{
     CellBevel, ElementType, Fill, TableCell, TableCellBorders, TableElement, TextAnchor,
     TextInsets, assigned,
 };
-use crate::types::ByteAnchor;
 
 /// `node?.[key]` where `node` is an element: a string or a list has no such
 /// key (the keys read here are never indices or string methods).
@@ -69,7 +69,9 @@ pub(super) fn parse_table(
     ctx: &ParseContext<'_>,
 ) -> Result<Option<TableElement>, String> {
     if tbl.is_none_or(Value::is_null) {
-        return Err("TypeError: Cannot read properties of undefined (reading 'a:tblGrid')".to_owned());
+        return Err(
+            "TypeError: Cannot read properties of undefined (reading 'a:tblGrid')".to_owned(),
+        );
     }
     let grid_raw = get(get(tbl, "a:tblGrid"), "a:gridCol");
     let col_widths: Vec<f64> = list(grid_raw)
@@ -179,7 +181,12 @@ pub(super) fn parse_table(
             let inside = style_def
                 .as_ref()
                 .map(|d| cell_style_borders(d, &flags, r as f64, c, n_rows, n_cols));
-            row.push(parse_table_cell(Some(tc), ctx, part.as_ref(), inside.as_ref())?);
+            row.push(parse_table_cell(
+                Some(tc),
+                ctx,
+                part.as_ref(),
+                inside.as_ref(),
+            )?);
         }
         rows.push(row);
     }
@@ -188,9 +195,12 @@ pub(super) fn parse_table(
     let Some(node) = node.filter(|v| !v.is_null()) else {
         return Err("TypeError: Cannot read properties of undefined (reading 'p:xfrm')".to_owned());
     };
-    let name = get(get(get(Some(node), "p:nvGraphicFramePr"), "p:cNvPr"), "@_name")
-        .and_then(Value::as_str)
-        .map(str::to_owned);
+    let name = get(
+        get(get(Some(node), "p:nvGraphicFramePr"), "p:cNvPr"),
+        "@_name",
+    )
+    .and_then(Value::as_str)
+    .map(str::to_owned);
     Ok(Some(TableElement {
         id: Slot::of(id),
         r#type: Slot::of(ElementType::Table),
@@ -260,7 +270,10 @@ fn parse_table_cell(
                 }
             }
             let font = part.font.as_ref();
-            if let Some(latin) = font.and_then(|f| f.latin.as_deref()).filter(|s| !s.is_empty()) {
+            if let Some(latin) = font
+                .and_then(|f| f.latin.as_deref())
+                .filter(|s| !s.is_empty())
+            {
                 level.latin_font.set(latin.to_owned());
                 level.latin_font_ref.delete();
             }
@@ -334,7 +347,12 @@ fn parse_table_cell(
     // Borders on four edges: a:lnL/R/T/B share a:ln's structure; style
     // inside borders as fallback
     let mut borders = TableCellBorders::default();
-    for (key, tag) in [("l", "a:lnL"), ("r", "a:lnR"), ("t", "a:lnT"), ("b", "a:lnB")] {
+    for (key, tag) in [
+        ("l", "a:lnL"),
+        ("r", "a:lnR"),
+        ("t", "a:lnT"),
+        ("b", "a:lnB"),
+    ] {
         let Some(ln) = get(tc_pr, tag).filter(|v| matches!(v, Value::Object(_) | Value::Array(_)))
         else {
             continue;
@@ -353,7 +371,12 @@ fn parse_table_cell(
         }
     }
     if let Some(inside) = inside {
-        for (key, own) in [("l", &inside.l), ("r", &inside.r), ("t", &inside.t), ("b", &inside.b)] {
+        for (key, own) in [
+            ("l", &inside.l),
+            ("r", &inside.r),
+            ("t", &inside.t),
+            ("b", &inside.b),
+        ] {
             if let Some(stroke) = own.as_ref() {
                 let slot = border_slot(&mut borders, key);
                 if slot.is_none() {

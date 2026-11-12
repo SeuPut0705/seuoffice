@@ -215,7 +215,10 @@ pub(crate) fn parse_text_body(
                     // `adj[key] = n` on a plain object: `__proto__` goes to the
                     // prototype setter, which ignores a number, and adds no key
                     if key != "__proto__" {
-                        adj.set(key, JsNum(parse_int(m.get(1).unwrap_or_default(), Radix::Ten)));
+                        adj.set(
+                            key,
+                            JsNum(parse_int(m.get(1).unwrap_or_default(), Radix::Ten)),
+                        );
                     }
                 }
             }
@@ -946,7 +949,9 @@ fn run_of(
     let font_family: Option<String> = match picked {
         None => None,
         Some(Picked::Sym) => sym.clone(),
-        Some(Picked::ThemeMinor) => ctx.theme.and_then(|theme| theme.minor_font.as_ref().cloned()),
+        Some(Picked::ThemeMinor) => ctx
+            .theme
+            .and_then(|theme| theme.minor_font.as_ref().cloned()),
         Some(_) => picked_pair.map(|p| p.f.clone()),
     };
     let latin_family = match (picked, &latin_pair, picked_pair) {
@@ -976,10 +981,8 @@ fn run_of(
             width_emu: JsNum(if w.is_finite() { w } else { 9525.0 }),
         });
     }
-    let run_shadow = parse_shadow(r_pr, ctx).or_else(|| {
-        dflt.and_then(|d| d.shadow.as_ref())
-            .map(ShadowEffect::from)
-    });
+    let run_shadow = parse_shadow(r_pr, ctx)
+        .or_else(|| dflt.and_then(|d| d.shadow.as_ref()).map(ShadowEffect::from));
     let run_glow = parse_glow(r_pr, ctx);
     let reflection = defined(get(get(r_pr, "a:effectLst"), "a:reflection")).is_some();
     let u_attr = get(r_pr, "@_u");
@@ -1012,7 +1015,9 @@ fn run_of(
         };
         if let Some(own) = defined(get(get(r_pr, slot), "@_typeface")) {
             let own = value_to_string(Some(own));
-            return theme_font_source(Some(own.as_str())).unwrap_or("run").to_owned();
+            return theme_font_source(Some(own.as_str()))
+                .unwrap_or("run")
+                .to_owned();
         }
         let r#ref = match which {
             Picked::Latin => dflt.and_then(|d| d.latin_font_ref.as_deref()),

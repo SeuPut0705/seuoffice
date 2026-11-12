@@ -19,8 +19,8 @@ pub use incremental::{
 };
 pub use model::{
     ANIM_DIRECTIONS, ANIM_EFFECTS, ANIM_TRIGGERS, AnimClass, AnimDirection, AnimEffectKind,
-    AnimPreset, AnimTrigger, ElementAnchor, MediaKind, Slide, SlideAnimation, SlideElement,
-    anim_class_of, element_spid, is_media_effect,
+    AnimPreset, AnimTrigger, MediaKind, SlideAnimation, anim_class_of, element_spid,
+    is_media_effect,
 };
 pub use prune::{c_nv_pr_ids_in_xml, prune_timing_for_spids};
 pub use read::read_slide_timing_xml;

@@ -4,6 +4,8 @@
 use jscompat::{JsNum, js_regex, to_number};
 use serde::{Deserialize, Serialize};
 
+use crate::types::SlideElement;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AnimEffectKind {
@@ -116,29 +118,6 @@ pub struct SlideAnimation {
     pub media_kind: Option<MediaKind>,
 }
 
-/// The fields of `Slide` (types.ts) this module reads and writes; the model
-/// port replaces it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Slide {
-    pub body_suffix: String,
-    pub structure_dirty: bool,
-}
-
-/// `SlideElement.anchor` (types.ts), the one field read here; the model port
-/// replaces it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ElementAnchor {
-    pub original_xml: String,
-}
-
-/// The fields of `SlideElement` (types.ts) this module reads; the model port
-/// replaces it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct SlideElement {
-    pub anchor: ElementAnchor,
-}
-
 /// Whether the effect is a media command (play/pause/stop on a video or audio shape).
 pub fn is_media_effect(effect: AnimEffectKind) -> bool {
     matches!(
@@ -162,8 +141,9 @@ pub fn anim_class_of(effect: AnimEffectKind) -> AnimClass {
 
 /// The element's own `<p:cNvPr id>` (the first one; group children follow).
 pub fn element_spid(el: &SlideElement) -> Option<JsNum> {
+    let anchor = crate::with_element!(el, e => e.anchor.as_ref())?;
     js_regex!(r#"<p:cNvPr\s[^>]*\bid=["'](\d+)["']"#)
-        .exec(&el.anchor.original_xml)
+        .exec(&anchor.original_xml)
         .map(|m| JsNum(to_number(m.get(1).unwrap_or_default())))
 }
 
