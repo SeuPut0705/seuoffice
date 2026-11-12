@@ -25,10 +25,10 @@ describe('a page with the brief an earlier version pinned', () => {
   it('keeps exactly one brief tag, in place, once a new brief is pinned', () => {
     const next = { ...parseBrief(PAGE)!, core_hook: 'Ship safer' }
     const updated = injectBrief(PAGE, next)
-    expect(briefTags(updated)).toEqual(['<meta name="seuoffice:brief"'])
+    expect(briefTags(updated)).toEqual(['<meta name="genoffice:brief"'])
     expect(parseBrief(updated)?.core_hook).toBe('Ship safer')
     expect(
-      updated.startsWith('<html><head><meta charset="utf-8"><meta name="seuoffice:brief"'),
+      updated.startsWith('<html><head><meta charset="utf-8"><meta name="genoffice:brief"'),
     ).toBe(true)
     expect(updated.endsWith('<title>Plan</title></head><body><p>x</p></body></html>')).toBe(true)
   })
