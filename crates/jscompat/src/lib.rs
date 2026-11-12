@@ -38,7 +38,8 @@ pub use number::{
 };
 pub use object::{JsObject, Slot, array_index, camel, camel_len};
 pub use regex::{
-    BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexLimit, RegexSyntaxError, TryJsRegex,
+    BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexError, RegexLimit, RegexSyntaxError,
+    TryJsRegex,
 };
 pub use replace::{
     get_substitution, replace_first, replace_first_string, slice_utf16, string_less_than,

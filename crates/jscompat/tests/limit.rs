@@ -45,9 +45,9 @@ fn peak_of(regex: &TryJsRegex, text: &str) -> (Result<bool, RegexLimit>, usize) 
 fn a_search_that_passes_the_bound_refuses_within_it() {
     // a tag whose attributes run on: each character keeps entries on the stack
     let tag = TryJsRegex::new(r#"<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>"#, "").unwrap();
-    // an entry is 48 bytes on a 64-bit target; growing the stack copies it
-    // once, and a search without `u` reads the text as UTF-16 units
-    let room = |text: &str| BACKTRACK_LIMIT * 48 * 5 / 4 + 2 * text.len();
+    // an entry is 40 bytes on a 64-bit target; growing the stack to the bound
+    // copies it once, and a search without `u` may read the text as UTF-16 units
+    let room = |text: &str| BACKTRACK_LIMIT * 40 * 5 / 4 + 2 * text.len();
     let mut answers = Vec::new();
     for length in [1_000_000, 2_000_000, 20_000_000] {
         let text = format!("<{}", "a".repeat(length));
@@ -63,4 +63,16 @@ fn a_search_that_passes_the_bound_refuses_within_it() {
     // a refusal leaves the regex as it was
     let (answer, _) = peak_of(&tag, "<a b=\"c\">");
     assert_eq!(answer, Ok(true));
+
+    // a lookahead that grows its own stack after the stack it sets aside has
+    // grown and given its entries back: the two together stay near the bound
+    let looked = TryJsRegex::new("^(?:(?:a|b)*x|a)(?=(?:a|b)*y)", "").unwrap();
+    let text = "a".repeat(1_000_000);
+    let (answer, peak) = peak_of(&looked, &text);
+    println!(
+        "lookahead over 1M characters: {answer:?}, {} MB at most",
+        peak / 1_000_000
+    );
+    assert_eq!(answer, Ok(false));
+    assert!(peak <= room(&text), "{peak} bytes in the lookahead");
 }
