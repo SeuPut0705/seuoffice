@@ -39,3 +39,25 @@ describe('a page with the brief an earlier version pinned', () => {
     expect(briefTags(PAGE.replace(edit!.old, edit!.new))).toHaveLength(1)
   })
 })
+
+describe('the name a pinned brief is written under', () => {
+  const BRIEF = parseBrief(PAGE)!
+
+  it('stays the name the page already has when re-pinned', () => {
+    const updated = injectBrief(PAGE, { ...BRIEF, core_hook: 'Ship safer' })
+    expect(briefTags(updated)).toEqual(['<meta name="genoffice:brief"'])
+    expect(parseBrief(updated)?.core_hook).toBe('Ship safer')
+  })
+
+  it('stays the new name on a page that already has the new name', () => {
+    const page = PAGE.replace('genoffice:brief', 'seuoffice:brief')
+    const updated = injectBrief(page, { ...BRIEF, core_hook: 'Ship safer' })
+    expect(briefTags(updated)).toEqual(['<meta name="seuoffice:brief"'])
+  })
+
+  it('is the name 0.12.37 reads for a brief pinned the first time', () => {
+    const updated = injectBrief('<html><head><meta charset="utf-8"></head></html>', BRIEF)
+    expect(briefTags(updated)).toEqual(['<meta name="genoffice:brief"'])
+    expect(parseBrief(updated)?.core_hook).toBe('Ship faster')
+  })
+})
