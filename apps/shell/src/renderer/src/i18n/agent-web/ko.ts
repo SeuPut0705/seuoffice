@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   actWebSearch: '웹 검색',
@@ -20,4 +20,4 @@ export const ko = {
   codexFolderNote: '이 두 설정은 프로젝트 폴더마다 따로 기억합니다.',
   providerCodexNoteWeb:
     '명령은 Codex의 격리 공간에서 실행됩니다. 프로젝트 폴더에만 쓸 수 있고, 인터넷은 켜 두지 않으면 막힙니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

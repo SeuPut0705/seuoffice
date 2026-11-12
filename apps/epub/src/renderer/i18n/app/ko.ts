@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   loading: '불러오는 중…',
@@ -63,4 +63,4 @@ export const ko = {
   previewNextPage: '다음 쪽',
   previewPage: '{n}/{total}쪽',
   previewNote: '서점 앱과 단말기마다 쪽 나눔이 조금씩 다릅니다',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

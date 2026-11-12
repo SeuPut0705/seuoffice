@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   appName: '다이어그램',
@@ -53,4 +53,4 @@ export const ko = {
   exportReplaceMsg: '같은 이름의 파일이 {count}개 있습니다.',
   exportReplaceDetail: '바꾸시겠습니까?',
   btnReplace: '바꾸기',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

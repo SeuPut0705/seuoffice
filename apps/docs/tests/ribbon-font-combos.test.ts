@@ -5,6 +5,7 @@ import { Editor } from '@tiptap/core'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { computeFormatState } from '../src/renderer/components/ribbon-format-state'
 import { Ribbon } from '../src/renderer/components/Ribbon'
+import { t } from '../src/renderer/i18n/locale'
 import { ribbonProps } from './helpers/ribbon-props'
 
 const setNative = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!
@@ -98,10 +99,9 @@ describe('ribbon font and size combos', () => {
     key(sizeBox(), 'Enter')
     expect(editor.getAttributes('docTextStyle').sizeHalfPoints).toBe(28)
     render()
-    // the test UI language is zh: 14pt reads as its CJK size name
-    expect(sizeBox().value).toBe('\u56db\u53f7')
+    expect(sizeBox().value).toBe('14')
     act(() => sizeBox().focus())
-    type(sizeBox(), '\u5c0f\u56db')
+    type(sizeBox(), '12')
     key(sizeBox(), 'Enter')
     expect(editor.getAttributes('docTextStyle').sizeHalfPoints).toBe(24)
   })
@@ -148,7 +148,7 @@ describe('ribbon font and size combos', () => {
   it('opens on the common fonts section and commits a list click', () => {
     act(() => host.querySelector<HTMLButtonElement>('.rb-combo-caret')!.click())
     const labels = [...menu()!.querySelectorAll('.rb-menu-group-label')].map((el) => el.textContent)
-    expect(labels[0]).toBe('\u5e38\u7528\u5b57\u4f53')
+    expect(labels[0]).toBe(t('ribbonFontsCommon'))
     const impact = [...menu()!.querySelectorAll<HTMLButtonElement>('button')].find(
       (el) => el.textContent === 'Impact',
     )!

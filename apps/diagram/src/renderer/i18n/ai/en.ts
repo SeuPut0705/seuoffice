@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   aiOpenAssistant: 'Open AI assistant',
   aiCollapsePanel: 'Collapse panel',
@@ -58,4 +56,4 @@ export const en = {
   aiSumReadAttachment: 'Read attachment',
   aiSumImageAttachment: 'Image attachment {name}',
   aiSumReadAttachmentName: 'Read attachment {name}',
-} satisfies Record<keyof typeof zh, string>
+}

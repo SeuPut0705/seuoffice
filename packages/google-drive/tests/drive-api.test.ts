@@ -122,6 +122,33 @@ describe('DriveApi', () => {
     expect(await drive.download('x', 50)).toEqual({ ok: false, kind: 'too-large' })
   })
 
+  it('asks for the bytes of a file over the download fetch, and for everything else over the other', async () => {
+    const asked: string[] = []
+    const fetch: FetchLike = async (url) => {
+      asked.push(`fetch ${new URL(url).pathname}${new URL(url).search}`)
+      return json({ id: 'f1', name: 'a.pdf', mimeType: 'application/pdf' })
+    }
+    const download: FetchLike = async (url, init) => {
+      asked.push(`download ${new URL(url).pathname}${new URL(url).search}`)
+      // the token rides the first hop of a download like any other call
+      expect(new Headers(init?.headers).get('Authorization')).toBe('Bearer tok')
+      return new Response(new Uint8Array([1, 2, 3]))
+    }
+    const drive = new DriveApi({ token: async () => 'tok', fetch, download })
+
+    const bytes = await drive.download('f1', 100)
+    const exported = await drive.export('g1', 'application/pdf', 100)
+    await drive.file('f1')
+
+    expect(bytes.ok && [...bytes.bytes]).toEqual([1, 2, 3])
+    expect(exported.ok && [...exported.bytes]).toEqual([1, 2, 3])
+    expect(asked).toEqual([
+      'download /drive/v3/files/f1?alt=media&supportsAllDrives=true',
+      'download /drive/v3/files/g1/export?mimeType=application%2Fpdf',
+      'fetch /drive/v3/files/f1?fields=id%2Cname%2CmimeType%2CmodifiedTime%2Csize%2Cmd5Checksum%2Cparents%2Ccapabilities%2FcanEdit%2CshortcutDetails&supportsAllDrives=true',
+    ])
+  })
+
   it('replaces a file through a resumable session on the upload host', async () => {
     const session = `${DRIVE_UPLOAD_API}/files?uploadType=resumable&upload_id=s1`
     const { calls, drive } = api((url, init) => {

@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   hlButton: 'AI highlights',
   hlButtonTip:
@@ -85,4 +83,4 @@ export const en = {
   hlAcceptedNotice: 'Added {count} highlights. Save the PDF to put them in the file.',
   hlAcceptedSaved: 'Saved {count} highlights.',
   hlDismissFailed: 'The suggestions could not be dismissed.',
-} satisfies Record<keyof typeof zh, string>
+}

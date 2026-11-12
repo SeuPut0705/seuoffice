@@ -39,7 +39,10 @@ export type DriveConnectionState =
 export interface DriveConnectionOptions {
   client: GoogleClient | null
   vault: TokenVault
+  /** the token exchange and every Drive call but a file's bytes; it must not follow a redirect */
   fetch: FetchLike
+  /** a file's bytes; see `DriveApiOptions.download` */
+  download?: FetchLike | undefined
   now?: () => number
 }
 
@@ -60,6 +63,7 @@ export class DriveConnection {
     this.api = new DriveApi({
       token: (signal) => this.accessTokenFor(signal),
       fetch: options.fetch,
+      download: options.download,
     })
   }
 

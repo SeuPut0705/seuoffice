@@ -174,9 +174,8 @@ describe('EditorContextMenu — Explain in plain words', () => {
 })
 
 describe('Explain in plain words strings', () => {
-  it('has a label and a prompt with the {text} slot in all 21 languages', () => {
+  it('has a label and a prompt with the {text} slot in every UI language', () => {
     const langs = Object.keys(appStrings)
-    expect(langs).toHaveLength(21)
     for (const lang of langs) {
       const s = appStrings[lang as keyof typeof appStrings]
       expect(s.appEasyWords.trim(), lang).not.toBe('')

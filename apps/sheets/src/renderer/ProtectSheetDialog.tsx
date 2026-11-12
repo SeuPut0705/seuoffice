@@ -13,10 +13,10 @@ import {
 } from '@genoffice/xlsx-gateway/gateway/xlsx-protection'
 
 import { useI18n } from './i18n/locale'
-import type { zh } from './i18n/dialogs/zh'
+import type { en } from './i18n/dialogs/en'
 import { useModalDialog } from './modal-dialog'
 
-const PERMISSION_LABELS: Record<SheetProtectionPermission, keyof typeof zh> = {
+const PERMISSION_LABELS: Record<SheetProtectionPermission, keyof typeof en> = {
   selectLockedCells: 'dlgProtAllowSelectLockedCells',
   selectUnlockedCells: 'dlgProtAllowSelectUnlockedCells',
   formatCells: 'dlgProtAllowFormatCells',

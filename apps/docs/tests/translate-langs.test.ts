@@ -19,7 +19,7 @@ const SHIPPED: Array<[TranslateLang, string]> = [
 
 describe('translate language keys', () => {
   it('reproduces the seven keys that already ship, in order', () => {
-    // These strings appear in 21 locale files. A refactor that changed one
+    // These strings appear in every locale file. A refactor that changed one
     // would leave the menu showing a raw key, or nothing at all.
     expect(TRANSLATE_LANGS.slice(0, 7).map((l) => appLangKey(l.code))).toEqual([
       'appLangEnglish',
@@ -35,8 +35,7 @@ describe('translate language keys', () => {
     )
   })
 
-  it('covers every language the UI itself ships', () => {
-    // 21 locales; the translate menu must be able to offer every one of them
+  it('offers all 21 translation target languages', () => {
     expect(TRANSLATE_LANGS).toHaveLength(21)
   })
 

@@ -1,5 +1,3 @@
-import type { Lang } from '@genoffice/i18n'
-
 /**
  * The suite-wide candidate lists live in @genoffice/ui so every app offers the
  * same fonts; this module re-exports them and keeps the docx-specific helpers.
@@ -28,15 +26,15 @@ export function isEastAsianFontName(name: string): boolean {
 }
 
 /**
- * docDefaults w:eastAsia font for new blank documents, matching what Word
- * ships per market (zh → SimSun, ja → Yu Mincho, ko → Malgun Gothic,
- * zh-TW → PMingLiU). English and every other language return undefined —
- * like en-US Word, whose theme leaves the East Asian slot empty and lets
- * per-script substitution kick in only when CJK text actually appears.
- * Latin default stays Calibri for every language.
+ * docDefaults w:eastAsia font for new blank documents, by the document locale
+ * (a documentLocaleFor code), matching what Word ships for each market.
+ * English and every locale without one return undefined, like en-US Word,
+ * whose theme leaves the East Asian slot empty and lets per-script
+ * substitution kick in only when CJK text actually appears. Latin default
+ * stays Calibri for every language.
  */
-export function defaultEastAsiaFontFor(lang: Lang): string | undefined {
-  switch (lang) {
+export function defaultEastAsiaFontFor(locale: string): string | undefined {
+  switch (locale) {
     case 'zh':
       return '宋体'
     case 'ja':

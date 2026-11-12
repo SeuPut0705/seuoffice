@@ -58,6 +58,11 @@
 - 키 제공자의 `providers.<id>.models`는 뒷단만 쓴다. `sanitizeAiSettings`는 화면이 보낸 값을 버리고, 저장하는 쪽은 `withStoredMainFields`(안에서 `withStoredKeyModels`)로 파일의 값을 옮긴다. 이 둘 중 하나가 빠지면 창 하나가 들고 있던 낡은 목록이 새 목록을 덮거나, 화면이 아무 이름이나 목록에 심을 수 있다. 워드·엑셀·슬라이드 뒷단의 `ai:set-settings`가 모두 이 함수를 거친다. 목록 조회는 키가 있는 제공자에만, 앱 시작과 키·주소 변경 때만 나간다. 선택기를 열 때 묻게 바꾸지 않는다. OpenRouter 무료 연결에는 회사 목록을 섞지 않는다(유료 모델이 들어온다).
 - OpenRouter 브라우저 연결의 서버는 루프백 주소(`127.0.0.1`, 되면 `::1`)에만 열고 `/callback` 한 번만 받는다. 열어 두는 시간은 `OPENROUTER_SIGN_IN_TIMEOUT_MS`(10분)이고 취소·끝·시간 초과 어느 쪽이든 닫는다. 키는 뒷단이 설정 파일에 쓰고 화면으로 돌려주지 않는다. 브라우저가 돌아왔을 때 보이는 페이지에는 스크립트와 바깥 자원을 넣지 않는다.
 - `aiFetch`는 503·529와 "오늘 무료 사용량 소진"이 아닌 429를, 답을 읽기 전이고 본문을 다시 보낼 수 있을 때 두 번까지 다시 보낸다(2초, 5초. `Retry-After`가 20초를 넘으면 기다리지 않는다). 취소되면 바로 그만둔다. 테스트에서 거절 응답을 그대로 보고 싶으면 `setAiTransientRetryDelays([])`로 끈다.
+- **자격 증명은 그것을 보낸 출처 밖으로 보내지 않는다.** 자격 증명은 API 키 머리글(`x-api-key`·`x-goog-api-key`·`api-key`·`x-key`), `Authorization`, 쿠키, 주소에 든 키, 본문에 든 로그인 코드·갱신 토큰·client secret이다. 그것을 싣는 요청은 `src/fetch.ts`의 둘 중 하나로만 보낸다.
+  - 내려받기가 아닌 요청(대화, 모델 목록, 키 확인, 로그인·토큰 교환, 올리기, 검색)은 `keyedFetch`다. 리다이렉트를 따라가지 않고 `AiRedirectRefusedError`("키를 보내지 않았다")로 끝나며 "잘못된 키"로 알리지 않는다. 주입받은 fetch 위에서도 같다(넷째 인자).
+  - 자격 증명으로 청하는 내려받기(파일의 바이트)는 `keyedDownload`다. 리다이렉트를 손으로 따라간다: 홉마다 `redirect: 'manual'`, https로만(이 PC의 http 주소로 보낸 요청만 이 PC의 http 주소로), 다섯 번까지(여섯째는 `reason: 'too-many'`). 다른 출처로 갈 때는 누가 청하는지 말하지 않는 머리글(`accept`·`accept-encoding`·`accept-language`·`range`·`user-agent`)만 남기고 나머지를 모두 떼며, 뗀 것은 처음 출처로 돌아와도 다시 붙이지 않는다. 같은 출처 안에서는 그대로 둔다. 303과 POST에 대한 301·302는 본문 없는 GET으로 바꾸고, 본문은 다른 출처에 다시 보내지 않는다. 자격 증명이 주소나 본문에 있으면(`?key=`·`?access_token=`·`user:pass@`는 스스로 알아보고, 그 밖은 `keyOutsideHeaders`) 어떤 리다이렉트도 따라가지 않는다. 떼는 머리글을 이름으로 나열하지 않고 남길 것만 정한 것은, 사용자가 정한 머리글이나 새 벤더의 키 머리글을 놓치지 않기 위해서다.
+  - `aiFetch`를 직접 부르는 곳은 자격 증명이 없는 요청뿐이다: 제공자가 답의 본문으로 알려 준 결과 그림 주소 내려받기(`downloadImage`: OpenAI 꼴 `data[0].url`, DashScope, MiniMax `image_urls`, FLUX `result.sample`), 공개 목록, OIDC 문서. 응답 본문에서 나온 주소에 키를 싣지 않는다(`tests/media-result-download.test.ts`).
+  - 잰 사실(2026-11-12): Electron 43.8.3의 `net.fetch`는 따라간 리다이렉트에서 다른 출처에도 `Authorization`과 그 밖의 머리글을 그대로 다시 보낸다(302·307, GET·POST. 로컬 서버 두 개로 확인). 따라가지 말라고 하면(`manual`·`error`) 3xx를 돌려주지 않고 `Redirect was cancelled`를 던지므로 그 위에서는 손으로 따라갈 수 없다. `fetchSeeingRedirects`가 그런 홉을 Node의 fetch로 다시 물어 주소를 읽는다. Node 22의 fetch는 다른 출처로 갈 때 `Authorization`만 떼고, 벤더의 키 머리글·주소의 쿼리·307의 본문은 그대로 다시 보낸다(전역 dispatcher를 바꿔도 같다. `tests/key-redirect.test.ts`). 테스트의 `net.fetch`는 이 관찰을 본뜬 대역이다.
 - 오늘 무료 사용량 소진은 `aiStreamErrorFields`가 혼잡(`overloaded`)보다 먼저 `free-limit`으로 가른다. 판정은 오류 글에 실린 제공자의 본문으로 한다(OpenRouter `free-models-per-day`와 본문의 `X-RateLimit-Reset`, Gemini의 하루 단위 무료 등급 할당량 이름). 분당 한도는 `free-limit`이 아니다.
 - 입력을 말없이 자르지 않는다. Claude 브리지가 줄이는 것은 이미지 100장(`MAX_CLAUDE_CODE_IMAGES`) 초과분뿐이고, 오래된 것부터 빼며 반드시 `onInputTruncated`를 부른다. 글자는 자르지 않는다.
 - 구독 IPC 채널은 프로세스당 한 번, `ensureSubscriptionIpc`로만 등록한다. 패키징된 앱은 여러 에디터의 메인 코드가 한 프로세스에서 돌고 같은 채널을 두 번 등록하면 예외가 나므로 `registerSubscriptionIpc`를 앱에서 직접 부르지 않는다. 등록은 상태 확인을 시작하지 않는다. 첫 `statuses` 요청이 첫 확인을 시작하므로, AI를 보여 주지 않는 프로세스(headless export 등)는 벤더 프로그램을 띄우지 않는다.
@@ -112,6 +117,7 @@
 
 - FLUX(BFL) 작업 조회 주소는 제공자가 답한 `polling_url`이라도 `https:`이고 제출 주소와 같은 호스트이거나 같은 등록 도메인(사설 접미사 포함, `github.io` 등 호스트별 테넌트는 서로 다름)일 때만 쓴다(`bflPollUrl`, `media-protocols.ts`). 그 밖이면 API 키를 보내지 않고 요청 전에 끝낸다. 사용자가 적은 기본 주소도 같은 규칙이다.
 - FLUX 조회 루프는 중단 신호에 리스너를 하나만 걸고, 루프가 끝나면 한 번 떼어 낸다(`bflPollWaits`).
+- Gemini Files API 올리기 주소는 시작 요청의 답(`x-goog-upload-url`)이 알려 주지만, 시작 요청을 보낸 곳과 출처(scheme·호스트·포트)가 같을 때만 쓴다(`geminiUploadUrl`, `media-protocols.ts`). 다르면 API 키와 파일을 보내지 않고 요청 전에 끝낸다.
 
 ## 테스트
 

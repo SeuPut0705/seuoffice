@@ -9,7 +9,7 @@
 // local server that is very often simply not running. The user agent it would
 // have added is still set, since gateways reject a bare `node`.
 import type { CodexModelCatalog } from './types'
-import { withUserAgent } from './fetch'
+import { keyedFetch, withUserAgent } from './fetch'
 import { endpointUrl, readCappedResponseText } from './protocols/shared'
 import { createStreamWatchdog } from './watchdog'
 
@@ -61,9 +61,12 @@ export async function listCustomModels(
   const watchdog = createStreamWatchdog(undefined, REQUEST_TIMEOUT_MS)
   try {
     return await watchdog.guard(async () => {
-      const response = await fetch(
+      // the global fetch, not aiFetch: a local server that is down is not retried or rescued
+      const response = await keyedFetch(
         endpointUrl(base, 'models'),
         withUserAgent({ headers, signal: watchdog.signal }),
+        undefined,
+        fetch,
       )
       if (!response.ok) return emptyCatalog()
       const text = await readCappedResponseText(response, { maxBytes: MAX_BODY_BYTES })

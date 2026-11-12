@@ -5,6 +5,7 @@
 import { splitXmlChildren } from './generate'
 import { partNamespaces, type PartNamespaces } from './inline-opaque'
 import { WATERMARK_NS, isWatermarkChild } from './watermark'
+import { findStartTag } from './xml-tag'
 
 export type HfRootName = 'w:hdr' | 'w:ftr'
 
@@ -22,10 +23,10 @@ const HF_ROOT_NAMESPACES = partNamespaces(`<w:hdr${HF_ROOT_ATTRS}>`)
  * its original bytes. Null when the part is written anew, root and all.
  */
 export function hfKeptRoot(root: HfRootName, originalXml: string) {
-  const open = new RegExp(`<${root}[^>]*>`).exec(originalXml)?.[0]
+  const rootTag = findStartTag(originalXml, root)
   const closeIdx = originalXml.lastIndexOf(`</${root}>`)
-  if (!open || closeIdx < 0) return null
-  const openIdx = originalXml.indexOf(open)
+  if (!rootTag || closeIdx < 0) return null
+  const { text: open, start: openIdx } = rootTag
   const children = splitXmlChildren(originalXml.slice(openIdx + open.length, closeIdx))
   // a text paragraph whose pictures are all inline blips is fully modelled
   // (the parser keeps them on its runs), so it is regenerated like any text

@@ -14,6 +14,8 @@ import {
   generateTableModelXml,
   parseDocx,
   saveDocx,
+  usableNumber,
+  usablePositionOffset,
 } from '../../../docx-engine/src/index'
 import type {
   CustomNumberingLevel,
@@ -1510,11 +1512,30 @@ const CARD_Z_BASE = 2000
 /** docPr id base for card boxes (patch-time images mint from 9000 up) */
 const CARD_DOCPR_BASE = 7000
 
-/** the card a text block opens, when this page rebuilds it as a text box */
-const cardOf = (block: PageBlock, page: IrPage): CardRegion | undefined =>
-  block.kind === 'text' && block.cardId !== undefined && !page.canvas
-    ? page.cards?.[block.cardId]
-    : undefined
+/**
+ * the card a text block opens, when this page rebuilds it as a text box. A
+ * plate (or page) out of drawing range makes no box, nor does a plate placed
+ * past the int a position is, nor a text block of the card whose box is out
+ * of range (the box insets are measured from them):
+ * its text flows in the body like any other, and the conversion goes on.
+ */
+function cardOf(block: PageBlock, page: IrPage): CardRegion | undefined {
+  if (block.kind !== 'text' || block.cardId === undefined || page.canvas) return undefined
+  const card = page.cards?.[block.cardId]
+  if (!card) return undefined
+  const inRange = (v: number) => usableNumber(v, EMU_PER_PT) !== undefined
+  const boxInRange = ({ x0, y0, x1, y1 }: CardRegion['box']) => [x0, y0, x1, y1].every(inRange)
+  // the box's position is a wp:posOffset, an xsd:int: narrower than a coordinate
+  const placed = () =>
+    usablePositionOffset(card.box.x0, EMU_PER_PT) !== undefined &&
+    usablePositionOffset(page.heightPt - card.box.y1, EMU_PER_PT) !== undefined
+  const usable =
+    boxInRange(card.box) &&
+    inRange(page.heightPt) &&
+    placed() &&
+    page.blocks.every((b) => b.kind !== 'text' || b.cardId !== block.cardId || boxInRange(b.box))
+  return usable ? card : undefined
+}
 
 /** holder spacing for a card: the chain measured to the first TEXT ink, and
  * the box top sits one top-inset above it */

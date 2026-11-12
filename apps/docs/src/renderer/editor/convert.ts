@@ -29,6 +29,8 @@ import {
   generateTableModelXml,
   resolvePropChangeXml,
   inlinePictureDrawingXml,
+  usableNumber,
+  usablePictureSize,
   patchRunPictureXml,
   type RunPictureGeometry,
   NEW_PICTURE_TOKEN_PREFIX,
@@ -2895,7 +2897,7 @@ export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): Save
       } else if (idx !== null && idx !== undefined && originalByIndex.has(idx)) {
         // pasted copy: the anchor is consumed by the first occurrence, so clone from the block's own data
         const original = originalByIndex.get(idx)!
-        const image = imageFromProtectedAttrs(node)
+        const image = imageFromProtectedAttrs(node, original)
         if (image) {
           changedCount++
           pushBlock({ kind: 'image', image })
@@ -2989,16 +2991,20 @@ export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): Save
       } else if (node.attrs?.genImage) {
         changedCount++
         const image = { ...(node.attrs.genImage as NewImage) }
-        if (node.attrs.imageWidthPx) image.widthPx = Number(node.attrs.imageWidthPx)
-        if (node.attrs.imageHeightPx) image.heightPx = Number(node.attrs.imageHeightPx)
+        const liveW = attrNumber(node.attrs.imageWidthPx, EMU_PER_PX)
+        const liveH = attrNumber(node.attrs.imageHeightPx, EMU_PER_PX)
+        if (liveW) image.widthPx = liveW
+        if (liveH) image.heightPx = liveH
         const align = node.attrs.imageAlign as NewImage['align'] | null
         if (align) image.align = align
         // the attrs carry the live state (wrap/drag/position-preset edits
         // mutate them, not the insert-time genImage payload): re-derive the
         // floating position or the drag is silently lost on save
         applyImageFloatAttrs(image, node.attrs)
-        if (node.attrs.imageZOrder != null) image.zOrder = Number(node.attrs.imageZOrder)
-        if (node.attrs.imageRotDeg) image.rotDeg = Number(node.attrs.imageRotDeg)
+        const z = attrNumber(node.attrs.imageZOrder)
+        if (z !== undefined) image.zOrder = z
+        const rot = attrNumber(node.attrs.imageRotDeg)
+        if (rot) image.rotDeg = rot
         if (node.attrs.imageFlipH) image.flipH = true
         if (node.attrs.imageFlipV) image.flipV = true
         pushBlock({ kind: 'image', image })
@@ -3197,8 +3203,8 @@ function applyImageFloatAttrs(image: NewImage, attrs: Record<string, unknown>): 
   const wrap = (attrs.imageWrap as ImageWrap | null) ?? null
   if (wrap) image.wrap = wrap
   else delete image.wrap
-  const offX = attrs.imageOffsetXEmu != null ? Number(attrs.imageOffsetXEmu) : undefined
-  const offY = attrs.imageOffsetYEmu != null ? Number(attrs.imageOffsetYEmu) : undefined
+  const offX = attrNumber(attrs.imageOffsetXEmu)
+  const offY = attrNumber(attrs.imageOffsetYEmu)
   if (wrap && offX !== undefined && offY !== undefined) {
     // NewImage.posOffsetEmu carries one basis for both axes: page wins over
     // margin (relH/relV are only set for page/margin-pinned floats; plain
@@ -3230,22 +3236,35 @@ function applyImageFloatAttrs(image: NewImage, attrs: Record<string, unknown>): 
 }
 
 /** rebuild a pasted image copy from its preview bytes; null when not materializable */
-function imageFromProtectedAttrs(node: PmNode): NewImage | null {
+/**
+ * A picture block rebuilt from its node attributes. Its size is the node's
+ * when that is a usable number; else the size of the picture the copy was
+ * made from, as its file has it (`original`); the default only when that is
+ * no usable size either. A size a peer sent as text must not shrink the copy.
+ */
+function imageFromProtectedAttrs(node: PmNode, original?: Block): NewImage | null {
   if (node.attrs?.blockType !== 'image') return null
   const src = String(node.attrs?.imageDataUrl ?? '')
   const lazy = parseLazyMediaUrl(src)
   const m = lazy ? null : /^data:(image\/(?:png|jpeg|gif));base64,(.+)$/.exec(src)
-  const widthPx = Number(node.attrs?.imageWidthPx)
-  const heightPx = Number(node.attrs?.imageHeightPx)
-  if ((!m && !lazy) || !widthPx || !heightPx) return null
+  // no size at all is not materializable (the caller clones the original bytes)
+  if ((!m && !lazy) || !node.attrs?.imageWidthPx || !node.attrs?.imageHeightPx) return null
+  const w = attrNumber(node.attrs.imageWidthPx, EMU_PER_PX)
+  const h = attrNumber(node.attrs.imageHeightPx, EMU_PER_PX)
+  const size =
+    w !== undefined && h !== undefined && w > 0 && h > 0
+      ? { widthPx: w, heightPx: h }
+      : usablePictureSize(original?.imageWidthPx, original?.imageHeightPx)
   const image: NewImage = lazy
-    ? { base64: '', mime: 'image/png', sourcePart: lazy.partPath, widthPx, heightPx }
-    : { base64: m![2], mime: m![1] as NewImage['mime'], widthPx, heightPx }
+    ? { base64: '', mime: 'image/png', sourcePart: lazy.partPath, ...size }
+    : { base64: m![2], mime: m![1] as NewImage['mime'], ...size }
   const align = node.attrs?.imageAlign as NewImage['align'] | null
   if (align) image.align = align
   applyImageFloatAttrs(image, node.attrs)
-  if (node.attrs?.imageZOrder != null) image.zOrder = Number(node.attrs.imageZOrder)
-  if (node.attrs?.imageRotDeg) image.rotDeg = Number(node.attrs.imageRotDeg)
+  const z = attrNumber(node.attrs?.imageZOrder)
+  if (z !== undefined) image.zOrder = z
+  const rot = attrNumber(node.attrs?.imageRotDeg)
+  if (rot) image.rotDeg = rot
   if (node.attrs?.imageFlipH) image.flipH = true
   if (node.attrs?.imageFlipV) image.flipV = true
   return image
@@ -4188,13 +4207,28 @@ function newPictureBytes(dataUrl: string): { base64: string; mime: NewImage['mim
   return m ? { base64: m[2], mime: m[1] as NewImage['mime'] } : null
 }
 
+/** EMU in one CSS px */
+const EMU_PER_PX = 9525
+
+/**
+ * A numeric node attribute (the editor's state, a peer's step, a value parsed
+ * from the file) as the save may take it: undefined when absent, not a number,
+ * or out of drawing range (usableNumber). Every number the save reads off a
+ * picture node passes here, so a value from the document never stops a save.
+ */
+function attrNumber(value: unknown, emuPerUnit = 1): number | undefined {
+  return value == null || value === '' ? undefined : usableNumber(Number(value), emuPerUnit)
+}
+
 /** a cell picture inserted by the editor has bytes but no drawing yet: emit one
  *  around a placeholder the save resolves once the media part exists */
 function newPictureXml(node: PmNode): string {
-  const widthPx = Number(node.attrs?.widthPx)
-  const heightPx = Number(node.attrs?.heightPx)
   const bytes = newPictureBytes(String(node.attrs?.dataUrl ?? ''))
-  if (!bytes || !(widthPx > 0) || !(heightPx > 0)) return ''
+  if (!bytes) return ''
+  const { widthPx, heightPx } = usablePictureSize(
+    attrNumber(node.attrs?.widthPx, EMU_PER_PX),
+    attrNumber(node.attrs?.heightPx, EMU_PER_PX),
+  )
   let token = newPictureTokenOf.get(node)
   if (!token) {
     token = `${NEW_PICTURE_TOKEN_PREFIX}${++newPictureSeq}`
@@ -4206,7 +4240,7 @@ function newPictureXml(node: PmNode): string {
     docPrId: token,
     widthPx,
     heightPx,
-    rotDeg: node.attrs?.rotDeg ? Number(node.attrs.rotDeg) : undefined,
+    rotDeg: attrNumber(node.attrs?.rotDeg) || undefined,
     flipH: !!node.attrs?.flipH,
     flipV: !!node.attrs?.flipV,
   })

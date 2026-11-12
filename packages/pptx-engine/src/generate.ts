@@ -29,7 +29,7 @@ import type {
   Transform,
   PPrDirty,
 } from './types'
-import { escapeXmlText, escapeXmlAttr } from './xml-utils'
+import { attributeOf, escapeXmlText, escapeXmlAttr } from './xml-utils'
 import { hasRedactExtIn, redactExtXml, syncRedactExt } from './redaction-xml'
 
 type BulletModel = NonNullable<Paragraph['bullet']>
@@ -188,8 +188,8 @@ export function patchParagraphPPrXml(paraXml: string, p: Paragraph, which: PPrDi
       openTag = openTag.replace(re, '')
       return
     }
-    if (re.test(openTag)) openTag = openTag.replace(re, ` ${name}="${escapeXmlAttr(value)}"`)
-    else openTag = openTag.replace(/^<a:pPr/, `<a:pPr ${name}="${escapeXmlAttr(value)}"`)
+    if (re.test(openTag)) openTag = openTag.replace(re, () => ` ${name}="${escapeXmlAttr(value)}"`)
+    else openTag = openTag.replace(/^<a:pPr/, () => `<a:pPr ${name}="${escapeXmlAttr(value)}"`)
   }
   if (which.align) setPPrAttr('algn', p.align ? ALIGN_MAP[p.align] : undefined)
   if (which.rtl) setPPrAttr('rtl', p.rtl != null ? (p.rtl ? '1' : '0') : undefined)
@@ -342,8 +342,6 @@ const posEmuAttr = (v: number) => String(clampPosEmu(v))
 const angleAttr = (v: number) => String(clampInt(v, -2147483648, 2147483647))
 const spcPtsXml = (pt: number) => `<a:spcPts val="${clampInt(pt * 100, 0, 158400)}"/>`
 const spcPctXml = (pct: number) => `<a:spcPct val="${clampInt(pct * 1000, 0, 13200000)}"/>`
-/** Replacement-string form of a fragment: String.replace expands $& / $1 in the replacement. */
-const literal = (s: string) => s.replace(/\$/g, '$$$$')
 
 /** Patch a single <a:r>: replace the <a:t> text + adjust <a:rPr> formatting as needed. */
 function patchRun(runXml: string, run: TextRun): string {
@@ -381,7 +379,8 @@ function patchRunProps(runXml: string, run: TextRun): string {
     // A language the model gained (tagHangulRun on text written into an untagged run) is
     // written; one that is already in the bytes is never replaced
     if (run.lang != null && !/\slang\s*=/.test(tag)) {
-      tag = tag.replace(/^<a:rPr/, `<a:rPr lang="${escapeXmlAttr(run.lang)}"`)
+      const lang = run.lang
+      tag = tag.replace(/^<a:rPr/, () => `<a:rPr lang="${escapeXmlAttr(lang)}"`)
     }
     tag = setBoolAttr(tag, 'b', run.boldImplicit ? undefined : run.bold)
     tag = setBoolAttr(tag, 'i', run.italicImplicit ? undefined : run.italic)
@@ -478,7 +477,9 @@ function patchRunProps(runXml: string, run: TextRun): string {
     // schema order: fill, highlight, the font slots, hlinkClick
     const inner = color + highlight + font + hlinkXml(run)
     const rpr = inner ? `<a:rPr${attrs}>${inner}</a:rPr>` : `<a:rPr${attrs}/>`
-    runXml = runXml.replace(/(<a:r(?:\s[^>]*)?>)/, `$1${rpr}`)
+    // A function, not a string: the rPr holds a font name the user typed and attribute values
+    // from the deck, and a replacement string would expand a `$&` or `$$` in them
+    runXml = runXml.replace(/<a:r(?:\s[^>]*)?>/, (open) => `${open}${rpr}`)
   }
   return runXml
 }
@@ -539,12 +540,10 @@ function ownRPr(runXml: string) {
 /** Sync <a:hlinkClick> in the rPr with the model: no-op when the rId already matches (keeping bytes). */
 function patchRunHlink(runXml: string, run: TextRun): string {
   const existing = /<a:hlinkClick\b[^>]*>/.exec(runXml)?.[0]
-  const existingRId = existing
-    ? (/\br:id=(?:"([^"]*)"|'([^']*)')/.exec(existing)?.slice(1, 3).find(Boolean) ?? undefined)
-    : undefined
-  const existingAction = existing
-    ? (/\baction=(?:"([^"]*)"|'([^']*)')/.exec(existing)?.slice(1, 3).find(Boolean) ?? undefined)
-    : undefined
+  // Read as the parser reads them into the model: decoded (the same value spelled another way
+  // is not a change), and an id that is present but empty is '', which a named action carries
+  const existingRId = existing ? (attributeOf(existing, 'r:id') ?? '') : undefined
+  const existingAction = (existing && attributeOf(existing, 'action')) || undefined
   if (existingRId === run.hyperlinkRId && existingAction === run.hyperlinkAction) return runXml
   // Strip the old one (self-closing or paired)
   runXml = runXml.replace(
@@ -640,25 +639,33 @@ const RPR_KNOWN_CHILDREN = new Set([
  * instructions can all make element-looking text appear where a child is not, so rather than
  * guess, such a run gets exactly the previous behaviour and a:cs is left untouched.
  */
-function patchRunFontUnscannable(runXml: string, escaped: string): string {
-  const esc = literal(escaped)
+function patchRunFontUnscannable(runXml: string, esc: string): string {
   if (/<a:latin\b/.test(runXml)) {
-    runXml = runXml.replace(/(<a:latin\b[^>]*?\btypeface=")[^"]*(")/, `$1${esc}$2`)
+    runXml = runXml.replace(
+      /(<a:latin\b[^>]*?\btypeface=")[^"]*(")/,
+      (_all, open: string, close: string) => `${open}${esc}${close}`,
+    )
     if (/<a:ea\b/.test(runXml)) {
-      runXml = runXml.replace(/(<a:ea\b[^>]*?\btypeface=")[^"]*(")/, `$1${esc}$2`)
+      runXml = runXml.replace(
+        /(<a:ea\b[^>]*?\btypeface=")[^"]*(")/,
+        (_all, open: string, close: string) => `${open}${esc}${close}`,
+      )
     } else {
       runXml = runXml.replace(
-        /(<a:latin\b[^>]*\/>|<a:latin\b[^>]*>[\s\S]*?<\/a:latin>)/,
-        `$1<a:ea typeface="${esc}"/>`,
+        /<a:latin\b[^>]*\/>|<a:latin\b[^>]*>[\s\S]*?<\/a:latin>/,
+        (latin) => `${latin}<a:ea typeface="${esc}"/>`,
       )
     }
     return runXml
   }
   const fonts = `<a:latin typeface="${esc}"/><a:ea typeface="${esc}"/>`
   if (/<a:rPr\b[^>]*\/>/.test(runXml)) {
-    return runXml.replace(/<a:rPr\b([^>]*?)\/>/, `<a:rPr$1>${fonts}</a:rPr>`)
+    return runXml.replace(
+      /<a:rPr\b([^>]*?)\/>/,
+      (_all, attrs: string) => `<a:rPr${attrs}>${fonts}</a:rPr>`,
+    )
   }
-  return runXml.replace(/<\/a:rPr>/, `${fonts}</a:rPr>`)
+  return runXml.replace(/<\/a:rPr>/, () => `${fonts}</a:rPr>`)
 }
 
 /**
@@ -753,7 +760,10 @@ function patchRunColor(runXml: string, color: string): string {
     const existingXml = runXml.slice(existing.start, existing.end)
     // solidFill/srgbClr keeps its modifiers (alpha…) and only changes val
     const patched = /^<a:solidFill>\s*<a:srgbClr\b/.test(existingXml)
-      ? existingXml.replace(/(<a:srgbClr\b[^>]*?\bval=")[^"]*(")/, `$1${hex}$2`)
+      ? existingXml.replace(
+          /(<a:srgbClr\b[^>]*?\bval=")[^"]*(")/,
+          (_all, open: string, close: string) => `${open}${hex}${close}`,
+        )
       : fill
     return runXml.slice(0, existing.start) + patched + runXml.slice(existing.end)
   }
@@ -832,11 +842,13 @@ function setBoolAttr(tag: string, name: string, val: boolean | undefined): strin
 /** Set/replace/delete an attribute. value=undefined means untouched (keep the original value). */
 function setAttr(tag: string, name: string, value: string | undefined, existingRe: RegExp): string {
   if (value === undefined) return tag
+  // Functions, not strings: the value can be an attribute the deck carries (an underline or
+  // strike style), and a replacement string would expand a `$&` or `$$` in it
   if (existingRe.test(tag)) {
-    return tag.replace(existingRe, ` ${name}="${escapeXmlAttr(value)}"`)
+    return tag.replace(existingRe, () => ` ${name}="${escapeXmlAttr(value)}"`)
   }
   // Inject after the tag name (after <a:rPr)
-  return tag.replace(/^<a:rPr/, `<a:rPr ${name}="${escapeXmlAttr(value)}"`)
+  return tag.replace(/^<a:rPr/, () => `<a:rPr ${name}="${escapeXmlAttr(value)}"`)
 }
 
 /**
@@ -1359,7 +1371,7 @@ function setLnAttr(attrs: string, name: string, value: string | null): string {
   const re = new RegExp(`\\s${name}="[^"]*"`)
   if (value === null) return attrs.replace(re, '')
   const decl = `${name}="${value}"`
-  return re.test(attrs) ? attrs.replace(re, ` ${decl}`) : ` ${decl}${attrs}`
+  return re.test(attrs) ? attrs.replace(re, () => ` ${decl}`) : ` ${decl}${attrs}`
 }
 
 /** In-place patch of <a:ln>: change the w/cap/cmpd attributes, replace the fill child and
@@ -1820,6 +1832,6 @@ export function patchBodyPrAutofit(
     (lnSpcReduction ? ` lnSpcReduction="${clampInt(lnSpcReduction * 100000, 0, 13200000)}"` : '')
   return xml.replace(
     /<a:normAutofit\b[^>]*?(?:\/>|>\s*<\/a:normAutofit>)/,
-    `<a:normAutofit${attrs}/>`,
+    () => `<a:normAutofit${attrs}/>`,
   )
 }

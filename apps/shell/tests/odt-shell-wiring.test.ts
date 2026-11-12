@@ -90,7 +90,6 @@ describe('ODT export menus', () => {
   })
 
   it('names the item and the dialog filter in every language', () => {
-    expect(LANGS).toHaveLength(21)
     const english = localeBlock('en')
     const englishOdt = english.match(/menuExportOdt: '([^']*)'/)?.[1]
     expect(englishOdt).toBe('Export as ODT…')

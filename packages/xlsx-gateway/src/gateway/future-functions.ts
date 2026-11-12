@@ -6,9 +6,9 @@
 /// #NAME?.
 
 /// Functions Excel 2007 does not know, keyed by the marker they need.
-const XLWS_FUNCTIONS = new Set(['FILTER', 'SORT'])
+export const XLWS_FUNCTIONS: ReadonlySet<string> = new Set(['FILTER', 'SORT'])
 
-const XLFN_FUNCTIONS = new Set([
+export const XLFN_FUNCTIONS: ReadonlySet<string> = new Set([
   // Excel 2010
   'AGGREGATE',
   'BETA.DIST',

@@ -6,21 +6,7 @@ const CHECKED = (key: string): boolean =>
   /^imageHost(Endpoint|Region|Bucket|AccessKeyId|SecretKey|Token|Owner|Repo|UrlPrefix)$/.test(key)
 
 // "lang:key" pairs whose translation is rightly the same word as the English.
-const SAME_AS_ENGLISH = new Set<string>([
-  'cs:imageHostBucket',
-  'de:imageHostRegion',
-  'de:imageHostBucket',
-  'es:imageHostBucket',
-  'id:imageHostEndpoint',
-  'id:imageHostBucket',
-  'it:imageHostEndpoint',
-  'it:imageHostBucket',
-  'nl:imageHostBucket',
-  'pl:imageHostRegion',
-  'pt:imageHostEndpoint',
-  'pt:imageHostBucket',
-  'vi:imageHostBucket',
-])
+const SAME_AS_ENGLISH = new Set<string>([])
 
 describe('translations', () => {
   it('leave none of the checked strings in English', () => {

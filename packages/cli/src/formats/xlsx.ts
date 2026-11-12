@@ -1088,9 +1088,13 @@ export async function blankWorkbook(sheetName = 'Sheet1'): Promise<Buffer> {
 }
 
 /** CSV → table; numeric-looking cells become numbers like the app's importer. */
-export function csvTable(bytes: Uint8Array, name: string, opts: CsvTableOptions = {}): TableInput {
+export async function csvTable(
+  bytes: Uint8Array,
+  name: string,
+  opts: CsvTableOptions = {},
+): Promise<TableInput> {
   const formats: Record<string, string> = {}
-  const text = decodeCsv(bytes)
+  const text = await decodeCsv(bytes)
   const rows = parseCsv(text, resolveImportDelimiter(text)).map((r, rowIndex) =>
     r.map((v, columnIndex) => {
       if (opts.decimal === ',') {

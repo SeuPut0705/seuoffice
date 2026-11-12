@@ -154,7 +154,14 @@ describe('Parallel search', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(
-        async () => ({ ok: true, json: async () => ({ results: many }) }) as unknown as Response,
+        // a response has a status and headers; the search reads both before the body
+        async () =>
+          ({
+            ok: true,
+            status: 200,
+            headers: new Headers(),
+            json: async () => ({ results: many }),
+          }) as unknown as Response,
       ),
     )
     const found = await webSearch('office', 3, { parallelKey: 'key', prefer: 'parallel' })

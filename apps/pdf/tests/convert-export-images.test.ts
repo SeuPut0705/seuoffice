@@ -157,12 +157,14 @@ function fakeImagesApi(
   return { api, listeners }
 }
 
-const run = (api: EmbeddedImagesApi, prepare = vi.fn(async () => true)) => {
+const run = (
+  api: EmbeddedImagesApi,
+  prepare = vi.fn(async (): Promise<string | null> => 'C:\\docs\\atlas.pdf'),
+) => {
   const notice = vi.fn()
   const onProgress = vi.fn()
   const done = exportEmbeddedImages({
     api,
-    filePath: 'C:\\docs\\atlas.pdf',
     password: 'pw',
     baseName: 'atlas',
     t,
@@ -224,7 +226,7 @@ describe('exportEmbeddedImages', () => {
     const { api } = fakeImagesApi('C:\\out', { ok: false, error: 'failed' })
     const { done } = run(
       api,
-      vi.fn(async () => false),
+      vi.fn(async () => null),
     )
     await done
     expect(api.pickTarget).not.toHaveBeenCalled()

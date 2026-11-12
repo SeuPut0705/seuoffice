@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { strings } from '../src/renderer/i18n/strings'
 
 /**
- * zh defines the key set, every sibling locale must cover it. Each locale
+ * en defines the key set, every sibling locale must cover it. Each locale
  * block here spreads `fillFormStringsFor(lang)` on top of its own keys, so
  * the comparison runs on the effective key set the object exposes. The
  * LangDicts constraint at the `createI18n(strings)` call already turns a
@@ -15,9 +15,9 @@ import { strings } from '../src/renderer/i18n/strings'
 const LOCALES = Object.keys(strings) as Array<keyof typeof strings>
 
 describe('pdf strings — key parity', () => {
-  it('every locale carries exactly the zh key set', () => {
-    const reference = Object.keys(strings.zh).sort()
-    expect(reference.length, 'zh defines the key set').toBeGreaterThan(0)
+  it('every locale carries exactly the en key set', () => {
+    const reference = Object.keys(strings.en).sort()
+    expect(reference.length, 'en defines the key set').toBeGreaterThan(0)
     for (const lang of LOCALES) {
       const keys = Object.keys(strings[lang]).sort()
       const missing = reference.filter((key) => !keys.includes(key))
@@ -28,7 +28,7 @@ describe('pdf strings — key parity', () => {
       ).toEqual([])
       expect(
         extra,
-        `${lang} carries ${extra.length} key(s) zh does not have: ${extra.slice(0, 8).join(', ')}`,
+        `${lang} carries ${extra.length} key(s) en does not have: ${extra.slice(0, 8).join(', ')}`,
       ).toEqual([])
     }
   })

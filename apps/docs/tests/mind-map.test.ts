@@ -14,6 +14,7 @@ import {
   wrapLabel,
 } from '@genoffice/agent-core/mind-map'
 import { AGENT_SYSTEM_PROMPT } from '../src/renderer/ai/protocol'
+import { t } from '../src/renderer/i18n/locale'
 import type { MindMapTreeNode } from '@genoffice/agent-core'
 
 const NUM_IDS = { bullet: null, ordered: null }
@@ -396,7 +397,7 @@ describe('generate_mindmap tool', () => {
     )
     expect(exec.isError).toBeUndefined()
     expect(exec.mutated).toBe(false)
-    expect(exec.summary).toBe('\u751F\u6210\u601D\u7EF4\u5BFC\u56FE')
+    expect(exec.summary).toBe(t('aiSumMindMap'))
     expect(exec.display?.kind).toBe('mindmap')
     expect(exec.display?.tree?.label).toBe('Quarterly Report')
     expect(exec.output).toContain('4 nodes')

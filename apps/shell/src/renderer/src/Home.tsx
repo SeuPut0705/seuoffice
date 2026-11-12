@@ -3117,8 +3117,7 @@ export function Home({
           : hour < 18
             ? 'greetAfternoon'
             : 'greetEvening'
-    const cjk = lang === 'zh' || lang === 'zh-TW' || lang === 'ja'
-    const greeting = `${t(greetKey)}${cjk ? '。' : '. '}`
+    const greeting = `${t(greetKey)}. `
     return (
       <main className="content">
         <section className="quick-start" aria-label={t('secQuickStart')}>

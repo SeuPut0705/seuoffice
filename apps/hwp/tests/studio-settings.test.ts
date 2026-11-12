@@ -35,15 +35,13 @@ describe('seededStudioSettings', () => {
 })
 
 describe('studio locale and url', () => {
-  it('uses Korean for Korean and English for every other UI language', () => {
+  it('uses Korean for Korean and English for English', () => {
     expect(studioLocale('ko')).toBe('ko')
     expect(studioLocale('en')).toBe('en')
-    expect(studioLocale('ja')).toBe('en')
-    expect(studioLocale('zh-TW')).toBe('en')
   })
 
   it('always asks for the embed profile, so the editor cannot swap the tab document', () => {
     expect(studioUrl('ko')).toBe('./studio/index.html?chrome=embed&lang=ko')
-    expect(studioUrl('fr')).toBe('./studio/index.html?chrome=embed&lang=en')
+    expect(studioUrl('en')).toBe('./studio/index.html?chrome=embed&lang=en')
   })
 })

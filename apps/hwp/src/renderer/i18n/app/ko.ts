@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   loading: '문서를 여는 중…',
@@ -31,6 +31,10 @@ export const ko = {
     '파일 구조를 확인하지 못한 문서입니다. 읽고 고칠 수는 있지만 일부 내용이 빠져 보일 수 있고, 원본 파일에 덮어써 저장하지는 않습니다. 저장하려면 "다른 이름으로 저장"으로 사본을 만들어 주세요.',
   saveUnverified:
     '저장하지 않았습니다. 파일 구조를 확인하지 못한 문서라서, 원본에 덮어쓰면 내용이 사라질 수 있습니다. "다른 이름으로 저장"에서 다른 이름으로, 되도록 HWPX로 저장해 주세요.',
+  openedUnverifiedNoCopy:
+    '파일 구조를 확인하지 못한 문서입니다. 일부 내용이 빠져 보일 수 있습니다. 읽을 수는 있지만 여기서는 고친 내용을 저장할 수 없습니다. 데스크톱 앱에서 열거나, 한컴 한글에서 다시 저장한 뒤 열어 주세요.',
+  saveUnverifiedNoCopy:
+    '저장하지 않았습니다. 파일 구조를 확인하지 못한 문서라서 원본에 덮어쓰면 내용이 사라질 수 있고, 여기서는 사본을 따로 저장할 수도 없습니다. 데스크톱 앱에서 열거나, 한컴 한글에서 다시 저장한 뒤 열어 주세요.',
   savedTailsLost:
     '저장했지만, 원본에 있던 바탕쪽이나 메모 일부를 옮기지 못했습니다. 저장한 파일이 한컴 한글에서 열리지 않을 수 있으니 열어서 확인해 주세요.',
   missingFonts:
@@ -281,4 +285,4 @@ export const ko = {
     '글자 수는 공백을 포함해 셉니다. 공백 제외: 전체 {totalNoSpace}. 문서 정보처럼 머리말·꼬리말·각주·미주는 세지 않습니다.',
   charCountHintSelected:
     '공백 포함: 고른 글자 {selected} / 전체 {total}. 공백 제외: 고른 글자 {selectedNoSpace} / 전체 {totalNoSpace}. 문서 정보처럼 머리말·꼬리말·각주·미주는 세지 않습니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

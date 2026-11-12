@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   loading: 'Opening document…',
   editorFailed: 'The editor could not start.',
@@ -31,6 +29,10 @@ export const en = {
     'The structure of this file could not be verified, so some of its content may be missing here. You can read and edit it, but it is not saved over the original: use Save As to keep a copy under another name.',
   saveUnverified:
     'Not saved: the structure of this file could not be verified, so saving over it could lose content. In Save As, save a copy under another name, preferably as HWPX.',
+  openedUnverifiedNoCopy:
+    'The structure of this file could not be verified, so some of its content may be missing here. You can read it, but changes cannot be saved here: open it in the desktop app, or save it again in Hancom Hangul first.',
+  saveUnverifiedNoCopy:
+    'Not saved: the structure of this file could not be verified, so saving over it could lose content, and a copy cannot be saved from here. Open it in the desktop app, or save it again in Hancom Hangul first.',
   savedTailsLost:
     'Saved, but some master pages or memos of the original file could not be carried over, and Hancom Hangul may not open the saved file. Please open it there to check.',
   missingFonts:
@@ -285,4 +287,4 @@ export const en = {
     'Characters are counted with spaces. Without spaces: whole document {totalNoSpace}. As in Document Information, headers, footers, footnotes and endnotes are not counted.',
   charCountHintSelected:
     'With spaces: selected {selected} / whole document {total}. Without spaces: selected {selectedNoSpace} / whole document {totalNoSpace}. As in Document Information, headers, footers, footnotes and endnotes are not counted.',
-} satisfies Record<keyof typeof zh, string>
+}

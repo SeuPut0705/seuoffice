@@ -584,6 +584,20 @@ export class ProjectStore {
   }
 
   /**
+   * What resolveChatForFile would answer, without registering anything: an
+   * unknown file reads as the default project's and gets the chat id its first
+   * resolve would register. For a caller that only looks (a headless export's
+   * hidden window), so the file does not become one of the user's documents:
+   * nothing is created, re-keyed or written.
+   */
+  lookupChatForFile(filePath: string): { projectId: string; chatId: string } {
+    const index = this.readIndex()
+    const projectKey = this.findMapKey(index.fileMap, filePath)
+    const projectId = projectKey !== undefined ? index.fileMap[projectKey]! : 'default'
+    return { projectId, chatId: this.chatIdForPath(filePath, projectId) }
+  }
+
+  /**
    * Called after a file is renamed/moved on disk: the keys in fileMap,
    * project.files and chatIdByPath are updated accordingly, while the chatId
    * stays the same (history needs no relocation).

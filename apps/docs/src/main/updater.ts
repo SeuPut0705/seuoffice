@@ -23,13 +23,6 @@ import { createI18n, getUiLang } from '@genoffice/i18n'
  */
 
 const tUpd = createI18n({
-  zh: {
-    updTitle: '软件更新',
-    updHeadline: '发现新版本',
-    updDesc: '新版本包含性能改进与问题修复，建议立即更新。',
-    updInstall: '立即重启安装',
-    updLater: '稍后再说',
-  },
   en: {
     updTitle: 'Software Update',
     updHeadline: 'A new version is available',
@@ -38,22 +31,6 @@ const tUpd = createI18n({
     updInstall: 'Restart & Install',
     updLater: 'Remind me later',
   },
-  vi: {
-    updTitle: 'Cập nhật phần mềm',
-    updHeadline: 'Đã có phiên bản mới',
-    updDesc:
-      'Bản cập nhật này bao gồm các cải tiến hiệu suất và sửa lỗi. Chúng tôi khuyên bạn nên cập nhật ngay bây giờ.',
-    updInstall: 'Khởi động lại & Cài đặt',
-    updLater: 'Nhắc tôi sau',
-  },
-  ja: {
-    updTitle: 'ソフトウェアアップデート',
-    updHeadline: '新しいバージョンがあります',
-    updDesc:
-      'このアップデートにはパフォーマンス改善とバグ修正が含まれます。今すぐの更新をおすすめします。',
-    updInstall: '再起動してインストール',
-    updLater: '後で通知',
-  },
   ko: {
     updTitle: '소프트웨어 업데이트',
     updHeadline: '새 버전이 있습니다',
@@ -61,130 +38,6 @@ const tUpd = createI18n({
       '이 업데이트에는 성능 개선과 버그 수정이 포함되어 있습니다. 지금 업데이트하는 것을 권장합니다.',
     updInstall: '다시 시작 및 설치',
     updLater: '나중에 알림',
-  },
-  fr: {
-    updTitle: 'Mise à jour logicielle',
-    updHeadline: 'Une nouvelle version est disponible',
-    updDesc:
-      'Cette mise à jour apporte des améliorations de performances et des corrections de bogues. Nous vous recommandons de mettre à jour maintenant.',
-    updInstall: 'Redémarrer et installer',
-    updLater: 'Plus tard',
-  },
-  de: {
-    updTitle: 'Softwareaktualisierung',
-    updHeadline: 'Eine neue Version ist verfügbar',
-    updDesc:
-      'Dieses Update enthält Leistungsverbesserungen und Fehlerbehebungen. Wir empfehlen, jetzt zu aktualisieren.',
-    updInstall: 'Neu starten und installieren',
-    updLater: 'Später erinnern',
-  },
-  es: {
-    updTitle: 'Actualización de software',
-    updHeadline: 'Hay una nueva versión disponible',
-    updDesc:
-      'Esta actualización incluye mejoras de rendimiento y correcciones de errores. Recomendamos actualizar ahora.',
-    updInstall: 'Reiniciar e instalar',
-    updLater: 'Recordar más tarde',
-  },
-  th: {
-    updTitle: 'อัปเดตซอฟต์แวร์',
-    updHeadline: 'มีเวอร์ชันใหม่พร้อมใช้งาน',
-    updDesc: 'การอัปเดตนี้มีการปรับปรุงประสิทธิภาพและแก้ไขข้อบกพร่อง แนะนำให้อัปเดตทันที',
-    updInstall: 'รีสตาร์ทและติดตั้ง',
-    updLater: 'เตือนภายหลัง',
-  },
-  id: {
-    updTitle: 'Pembaruan Perangkat Lunak',
-    updHeadline: 'Versi baru tersedia',
-    updDesc:
-      'Pembaruan ini mencakup peningkatan kinerja dan perbaikan bug. Kami menyarankan untuk memperbarui sekarang.',
-    updInstall: 'Mulai Ulang & Pasang',
-    updLater: 'Ingatkan nanti',
-  },
-  ru: {
-    updTitle: 'Обновление программы',
-    updHeadline: 'Доступна новая версия',
-    updDesc:
-      'Это обновление содержит улучшения производительности и исправления ошибок. Рекомендуем обновиться сейчас.',
-    updInstall: 'Перезапустить и установить',
-    updLater: 'Напомнить позже',
-  },
-  ar: {
-    updTitle: 'تحديث البرنامج',
-    updHeadline: 'يتوفر إصدار جديد',
-    updDesc: 'يتضمن هذا التحديث تحسينات في الأداء وإصلاحات للأخطاء. نوصي بالتحديث الآن.',
-    updInstall: 'إعادة التشغيل والتثبيت',
-    updLater: 'ذكّرني لاحقًا',
-  },
-  pt: {
-    updTitle: 'Atualização de Software',
-    updHeadline: 'Uma nova versão está disponível',
-    updDesc:
-      'Esta atualização inclui melhorias de desempenho e correções de erros. Recomendamos atualizar agora.',
-    updInstall: 'Reiniciar e instalar',
-    updLater: 'Lembrar mais tarde',
-  },
-  it: {
-    updTitle: 'Aggiornamento software',
-    updHeadline: 'È disponibile una nuova versione',
-    updDesc:
-      'Questo aggiornamento include miglioramenti delle prestazioni e correzioni di bug. Consigliamo di aggiornare subito.',
-    updInstall: 'Riavvia e installa',
-    updLater: 'Ricordamelo più tardi',
-  },
-  pl: {
-    updTitle: 'Aktualizacja oprogramowania',
-    updHeadline: 'Dostępna jest nowa wersja',
-    updDesc:
-      'Ta aktualizacja zawiera ulepszenia wydajności i poprawki błędów. Zalecamy aktualizację teraz.',
-    updInstall: 'Uruchom ponownie i zainstaluj',
-    updLater: 'Przypomnij później',
-  },
-  cs: {
-    updTitle: 'Aktualizace softwaru',
-    updHeadline: 'Je k dispozici nová verze',
-    updDesc:
-      'Tato aktualizace obsahuje vylepšení výkonu a opravy chyb. Doporučujeme aktualizovat nyní.',
-    updInstall: 'Restartovat a nainstalovat',
-    updLater: 'Připomenout později',
-  },
-  nl: {
-    updTitle: 'Software-update',
-    updHeadline: 'Er is een nieuwe versie beschikbaar',
-    updDesc:
-      'Deze update bevat prestatieverbeteringen en foutoplossingen. We raden aan nu bij te werken.',
-    updInstall: 'Opnieuw starten en installeren',
-    updLater: 'Later herinneren',
-  },
-  ms: {
-    updTitle: 'Kemas Kini Perisian',
-    updHeadline: 'Versi baharu tersedia',
-    updDesc:
-      'Kemas kini ini merangkumi penambahbaikan prestasi dan pembetulan pepijat. Kami syorkan kemas kini sekarang.',
-    updInstall: 'Mula Semula & Pasang',
-    updLater: 'Ingatkan kemudian',
-  },
-  he: {
-    updTitle: 'עדכון תוכנה',
-    updHeadline: 'גרסה חדשה זמינה',
-    updDesc: 'עדכון זה כולל שיפורי ביצועים ותיקוני באגים. מומלץ לעדכן עכשיו.',
-    updInstall: 'הפעל מחדש והתקן',
-    updLater: 'הזכר לי מאוחר יותר',
-  },
-  hi: {
-    updTitle: 'सॉफ़्टवेयर अपडेट',
-    updHeadline: 'नया संस्करण उपलब्ध है',
-    updDesc:
-      'इस अपडेट में प्रदर्शन सुधार और बग फ़िक्स शामिल हैं। हम अभी अपडेट करने की सलाह देते हैं।',
-    updInstall: 'पुनरारंभ करें और इंस्टॉल करें',
-    updLater: 'बाद में याद दिलाएँ',
-  },
-  'zh-TW': {
-    updTitle: '軟體更新',
-    updHeadline: '發現新版本',
-    updDesc: '新版本包含效能改進與問題修復，建議立即更新。',
-    updInstall: '立即重新啟動安裝',
-    updLater: '稍後再說',
   },
 })
 

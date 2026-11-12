@@ -68,7 +68,7 @@ const state = (phase: UpdateUiState['phase']): UpdateUiState =>
     version: '1.2.3',
     currentVersion: '1.2.2',
     percent: 0,
-    lang: 'zh',
+    lang: 'ko',
     strings: {
       title: 't',
       headline: 'h',

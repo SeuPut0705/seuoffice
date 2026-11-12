@@ -16,13 +16,17 @@ name: seuoffice desktop release
 #   stable  feeds stable.yml / stable-mac.yml, file names end in -stable. Its
 #           updater only takes the release GitHub marks Latest.
 #
-# Release model. Every push to main that touches more than docs builds the next
-# version (the highest v* tag plus one patch, or apps/shell/package.json when
-# that is higher) while CI runs, and publishes it as a GitHub PRE-RELEASE only
-# once the CI and seuoffice workflows pass on the same commit. General
-# (latest) installs get it at once; only the ten newest pre-releases are kept.
-# A tag vX.Y.Z pushed by hand does the same for that version. The workflow
-# never promotes a release. The owner promotes one to stable once checked:
+# Release model (decision 0027). Releases are batched: a push to main builds
+# nothing here. The maintainer starts a release once a batch of merged changes
+# is ready, by running this workflow by hand on main with `release` set
+#   gh workflow run "seuoffice desktop release" --ref main -f release=true
+# which builds the next version (the highest v* tag plus one patch, or
+# apps/shell/package.json when that is higher) and publishes it as a GitHub
+# PRE-RELEASE only once the CI and seuoffice workflows passed on the same
+# commit. General (latest) installs get it at once; only the ten newest
+# pre-releases are kept. A tag vX.Y.Z pushed by hand does the same for that
+# version. The workflow never promotes a release. The owner promotes one to
+# stable once checked:
 #   gh release edit vX.Y.Z --prerelease=false --latest
 #
 # Signing (repository secrets):
@@ -36,21 +40,23 @@ name: seuoffice desktop release
 # staging, not Squirrel). Once a signed release is out, never publish an
 # unsigned one again: a signed install only takes updates from its signer.
 #
-# A run started by hand (workflow_dispatch) on a branch builds and uploads the
-# artifacts only, at the package.json version.
+# A run started by hand without `release` (on any branch) builds and uploads
+# the artifacts only, at the package.json version.
 
 on:
   push:
-    branches: [main]
     tags: ['v*']
-    # a superset of CI's paths-ignore, so CI always runs for a commit this builds
-    paths-ignore: ['**/*.md', 'docs/**']
   workflow_dispatch:
+    inputs:
+      release:
+        description: Publish the next version as a pre-release (main only)
+        type: boolean
+        default: false
 
-# Every publishing run (main pushes and v* tags) shares one queue, so two runs
-# never pick or write the same version at once; a hand-started run keeps its ref's.
+# Every publishing run (release runs and v* tags) shares one queue, so two runs
+# never pick or write the same version at once; a build-only run keeps its ref's.
 concurrency:
-  group: ${{ github.event_name == 'push' && 'seuoffice-desktop-publish' || format('seuoffice-desktop-{0}', github.ref) }}
+  group: ${{ (github.event_name == 'push' || inputs.release) && 'seuoffice-desktop-publish' || format('seuoffice-desktop-{0}', github.ref) }}
   cancel-in-progress: false
 
 permissions:
@@ -76,7 +82,11 @@ jobs:
           if [ "$GITHUB_REF_TYPE" = "tag" ]; then
             version=${GITHUB_REF_NAME#v}
             publish=true
-          elif [ "$GITHUB_EVENT_NAME" = "push" ]; then
+          elif [ "${{ inputs.release }}" = "true" ]; then
+            if [ "$GITHUB_REF" != "refs/heads/main" ]; then
+              echo "::error::a release runs on main only, not $GITHUB_REF"
+              exit 1
+            fi
             highest=$(git ls-remote --tags --refs origin 'refs/tags/v*' | sed 's#.*refs/tags/v##' |
               grep -E '^[0-9]+\.[0-9]+\.[0-9]+$' | sort -V | tail -n 1 || true)
             if [ -z "$highest" ] || [ "$(printf '%s\n%s\n' "$highest" "$base" | sort -V | tail -n 1)" != "$highest" ]; then
@@ -707,9 +717,7 @@ jobs:
               echo "- Mac: 서명 없음(ad hoc). dmg에서 응용 프로그램 폴더로 옮긴 뒤 처음 열 때 막히면, 시스템 설정 → 개인정보 보호 및 보안 → '그래도 열기'를 누른다."
             fi
             echo
-            echo "바뀐 내용: https://github.com/$GITHUB_REPOSITORY/commits/$TAG"
-            echo
-            echo "웹에 붙이는 묶음(seuoffice-embed, seuoffice-web)과 공동 편집 서버 묶음(seuoffice-collab)도 이 릴리스에 있다."
+            echo "바뀐 내용: <https://github.com/$GITHUB_REPOSITORY/commits/$TAG>"
           } > notes.md
           cat notes.md
           {
@@ -718,6 +726,8 @@ jobs:
             echo "미리보기(pre-release)로 냈다. 일반 채널(latest) 설치본이 바로 받는다. 안정 채널로 올리려면:"
             echo
             echo "    gh release edit $TAG --prerelease=false --latest"
+            echo
+            echo "웹에 붙이는 묶음(seuoffice-embed, seuoffice-web)과 공동 편집 서버 묶음(seuoffice-collab)도 이 릴리스에 있다."
             echo
             echo "판 번호 없는 SeuOffice-mac-arm64.dmg와 SeuOffice-windows-x64.exe는 안정 채널 설치 파일의 사본이고, 안정 채널로 올라가면 README의 다운로드 버튼이 이 둘을 받는다. 웹 묶음을 붙이는 쪽은 안정 판의 주소로 설치한다(docs/seuoffice/판-내기.md). 미리보기 판은 10개가 넘으면 지워진다."
           } >> "$GITHUB_STEP_SUMMARY"

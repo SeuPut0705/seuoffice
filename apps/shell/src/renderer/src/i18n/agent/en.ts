@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   windowTitle: 'Agent',
   homeCardSub: 'Work in a folder with Claude Code or Codex',
@@ -99,4 +97,4 @@ export const en = {
   connOff: 'Turned off in this app. Turn it back on under Settings → AI.',
   errOffInApp:
     'This program is turned off in this app, so nothing more was sent. Turn it back on under Settings → AI.',
-} satisfies Record<keyof typeof zh, string>
+}

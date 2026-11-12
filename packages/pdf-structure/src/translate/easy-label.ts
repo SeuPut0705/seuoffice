@@ -4,10 +4,10 @@
  * the result files of the PDF and EPUB editors) carries them in its own
  * language, so a reader can tell it from a plain translation.
  */
-import { isLang, normalizeLang, type Lang } from '../../../i18n/src/index'
+import { translationLanguageOf, type TranslationLanguage } from './language'
 
 /** "easy explanation", in the language it labels */
-const EASY_EXPLANATION_LABELS: Record<Lang, string> = {
+const EASY_EXPLANATION_LABELS: Record<TranslationLanguage, string> = {
   zh: '通俗易懂版',
   en: 'Plain-language version',
   ja: 'やさしい言葉版',
@@ -33,9 +33,9 @@ const EASY_EXPLANATION_LABELS: Record<Lang, string> = {
 
 /**
  * The easy-explanation marker in `lang` (a target language code); a tag that
- * is not one of the 21 is read the way the UI reads a locale (`zh-Hant` →
- * `zh-TW`, unknown → English).
+ * is not one of the 21 is read as a locale (`zh-Hant` → `zh-TW`, unknown →
+ * English).
  */
 export function easyExplanationLabel(lang: string): string {
-  return EASY_EXPLANATION_LABELS[isLang(lang) ? lang : normalizeLang(lang)]
+  return EASY_EXPLANATION_LABELS[translationLanguageOf(lang)]
 }

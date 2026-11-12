@@ -25,18 +25,10 @@
   --ui-cjk: 'Microsoft YaHei', 'PingFang SC';
 }
 
-:root:lang(ja) {
-  --ui-cjk: 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Hiragino Sans';
-}
-
 :root:lang(ko) {
   --ui-cjk: 'Malgun Gothic', 'Apple SD Gothic Neo';
   /* Korean wraps between words, not inside them */
   word-break: keep-all;
-}
-
-:root:lang(zh-TW) {
-  --ui-cjk: 'Microsoft JhengHei', 'PingFang TC';
 }
 
 * {

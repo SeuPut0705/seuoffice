@@ -35,29 +35,7 @@ describe('status-bar selection word count wiring', () => {
   })
 
   it('every locale carries the new key, so no language renders the raw placeholder', () => {
-    const locales = [
-      'ar',
-      'cs',
-      'de',
-      'en',
-      'es',
-      'fr',
-      'he',
-      'hi',
-      'id',
-      'it',
-      'ja',
-      'ko',
-      'ms',
-      'nl',
-      'pl',
-      'pt',
-      'ru',
-      'th',
-      'vi',
-      'zh',
-      'zh-TW',
-    ]
+    const locales = ['en', 'ko']
     for (const loc of locales) {
       const file = join(SRC, 'i18n', 'app', `${loc}.ts`)
       expect(readFileSync(file, 'utf8'), `${loc}.ts`).toContain('appWordCountSelection')

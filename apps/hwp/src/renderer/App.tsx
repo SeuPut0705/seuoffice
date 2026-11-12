@@ -38,7 +38,7 @@ import {
   withChangeNotes,
   type RecoveryCopier,
 } from './recovery-flow'
-import { runSave, type SaveEditorPort } from './save-flow'
+import { openedUnverifiedKey, runSave, saveFailureKey, type SaveEditorPort } from './save-flow'
 import { AUTOSAVE_IDLE_MS, startAutosave } from './autosave-flow'
 import { PASSWORD_FLAG } from '../../scripts/rhwp-patches.mjs'
 import { STUDIO_SETTINGS_KEY, seededStudioSettings, studioUrl } from './studio-settings'
@@ -176,13 +176,16 @@ export default function App() {
    * input box, the editor's 쉬운 말로 풀기 runs at once (`autoRun`)
    */
   const [aiPrefill, setAiPrefill] = useState<AiPrefill | null>(null)
-  // a request sent at once runs once: the dock unmounts under the print preview and mounts
-  // again after it, and must not find the same request waiting there
+  // a request is taken once (sent, or put in the input box): the dock unmounts under the
+  // print preview and mounts again after it, and must not find the same request waiting there
   const takeAiPrefill = useCallback(
     (taken: AiPrefill) => setAiPrefill((current) => afterPrefillTaken(current, taken)),
     [],
   )
-  /** counts changes made through the bridge, so the check panel can read the document again */
+  /**
+   * counts the bridge calls after which the saved file could differ (recovery-flow.ts
+   * `withChangeNotes`), so the check panel can read the document again
+   */
   const [docRevision, setDocRevision] = useState(0)
   /** the memo column beside the document: out or not, independent of the AI dock */
   const [memoOpen, setMemoOpen] = useState(memoPanelInitiallyOpen)
@@ -283,8 +286,11 @@ export default function App() {
         if (disposed) return
         setPhase('ready')
         if (await window.hwpApi.structureUnverified().catch(() => false)) {
-          // said once: the document can be read and edited, and its file is not saved over
-          if (!disposed) setNotice({ tone: 'info', key: 'openedUnverified', sticky: true })
+          // said once: the document can be read, and its file is not saved over; how it can
+          // be kept depends on whether this page has a Save As
+          if (!disposed) {
+            setNotice({ tone: 'info', key: openedUnverifiedKey(window.hwpApi), sticky: true })
+          }
         } else if (await window.hwpApi.trackingDropped().catch(() => false)) {
           if (!disposed) setNotice({ tone: 'info', key: 'openedTracked', sticky: true })
         }
@@ -487,16 +493,7 @@ export default function App() {
           if (!automatic || !propertyFailure) {
             setNotice({
               tone: 'error',
-              key:
-                outcome.reason === 'protected'
-                  ? 'saveProtected'
-                  : outcome.reason === 'tracked'
-                    ? 'saveTracked'
-                    : outcome.reason === 'unverified'
-                      ? 'saveUnverified'
-                      : outcome.reason === 'verify'
-                        ? 'saveVerifyFailed'
-                        : 'saveFailed',
+              key: saveFailureKey(outcome.reason, window.hwpApi),
               ...(outcome.reason === 'verify'
                 ? { detail: t('saveVerifyHint') }
                 : outcome.detail

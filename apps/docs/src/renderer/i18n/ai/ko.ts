@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   aiEmptyDraftTitle: 'AI에게 초안 작성을 맡기세요',
@@ -204,4 +204,4 @@ export const ko = {
   aiMindMapToggleLayout: '레이아웃 전환',
   aiMindMapLayoutTopDown: '위에서 아래로 레이아웃으로 전환',
   aiMindMapLayoutLeftRight: '왼쪽에서 오른쪽 레이아웃으로 전환',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

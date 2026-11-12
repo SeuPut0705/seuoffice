@@ -980,7 +980,7 @@ describe('MCP server card helpers and strings', () => {
   })
 
   it('has every text in every language, with its placeholders', () => {
-    const keys = Object.keys(mcpServersUiStrings.zh) as McpServersStringKey[]
+    const keys = Object.keys(mcpServersUiStrings.en) as McpServersStringKey[]
     for (const lang of LANGS) {
       const table = mcpServersUiStrings[lang] as Record<string, string>
       expect(Object.keys(table).sort(), lang).toEqual([...keys].sort())

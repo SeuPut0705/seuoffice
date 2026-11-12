@@ -510,3 +510,41 @@ describe('parseChartPartXml text sizes and label overrides', () => {
     expect(partial.dataLabels).toEqual({ pct: true, cat: true, fontPt: 18, color: '000000' })
   })
 })
+
+describe('point caches with a hole in their idx run', () => {
+  const crossed = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T
+  const chartex = (pts: string) =>
+    '<cx:chartSpace xmlns:cx="http://schemas.microsoft.com/office/drawing/2014/chartex" ' +
+    'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main">' +
+    '<cx:chartData><cx:data id="0">' +
+    `<cx:strDim type="cat"><cx:lvl ptCount="3">${pts}</cx:lvl></cx:strDim>` +
+    '<cx:numDim type="val"><cx:lvl ptCount="3"><cx:pt idx="0">1</cx:pt><cx:pt idx="2">3</cx:pt></cx:lvl></cx:numDim>' +
+    '</cx:data></cx:chartData>' +
+    '<cx:chart><cx:plotArea><cx:plotAreaRegion>' +
+    '<cx:series layoutId="waterfall"><cx:dataId val="0"/></cx:series>' +
+    '</cx:plotAreaRegion></cx:plotArea></cx:chart></cx:chartSpace>'
+
+  it('a chartEx category hole is the empty string and a value hole a gap, after crossing as JSON', () => {
+    const raw = parseChartPartXml(chartex('<cx:pt idx="0">A</cx:pt><cx:pt idx="2">C</cx:pt>'), 'c')!
+    // in memory too: a sparse array has no entry at 1, which map and forEach skip
+    expect(raw.categories).toStrictEqual(['A', '', 'C'])
+    expect(raw.series[0]!.values).toStrictEqual([1, null, 3])
+    const display = crossed(raw)
+    expect(display.categories).toEqual(['A', '', 'C'])
+    expect(display.series[0]!.values).toEqual([1, null, 3])
+  })
+
+  it('a classic cache answers the same', () => {
+    const xml = chartSpace(
+      '<c:barChart><c:barDir val="col"/><c:grouping val="clustered"/><c:ser><c:idx val="0"/><c:order val="0"/>' +
+        '<c:cat><c:strRef><c:f>S!$A$1:$A$3</c:f><c:strCache><c:ptCount val="3"/>' +
+        '<c:pt idx="0"><c:v>A</c:v></c:pt><c:pt idx="2"><c:v>C</c:v></c:pt></c:strCache></c:strRef></c:cat>' +
+        '<c:val><c:numRef><c:f>S!$B$1:$B$3</c:f><c:numCache><c:ptCount val="3"/>' +
+        '<c:pt idx="0"><c:v>1</c:v></c:pt><c:pt idx="2"><c:v>3</c:v></c:pt></c:numCache></c:numRef></c:val>' +
+        '</c:ser></c:barChart>',
+    )
+    const display = crossed(parseChartPartXml(xml, 'c')!)
+    expect(display.categories).toEqual(['A', '', 'C'])
+    expect(display.series[0]!.values).toEqual([1, null, 3])
+  })
+})

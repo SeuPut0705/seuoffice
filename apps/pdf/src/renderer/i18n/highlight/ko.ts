@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   hlButton: 'AI 핵심 표시',
@@ -80,4 +80,4 @@ export const ko = {
   hlAcceptedNotice: '형광펜 {count}개를 더했습니다. PDF를 저장하면 파일에 들어갑니다.',
   hlAcceptedSaved: '형광펜 {count}개를 저장했습니다.',
   hlDismissFailed: '제안을 버리지 못했습니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

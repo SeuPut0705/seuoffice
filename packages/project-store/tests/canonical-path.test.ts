@@ -190,6 +190,24 @@ describe('canonical path identity', () => {
     })
   })
 
+  it('keeps one membership for a Hangul name that comes in decomposed and then composed', () => {
+    const composed = join(tmpDir, '\ubcf4\uace0\uc11c.docx')
+    const decomposed = composed.normalize('NFD')
+    expect(decomposed).not.toBe(composed)
+    writeFileSync(decomposed, 'doc', 'utf8')
+
+    const first = store.resolveChatForFile(decomposed)
+    const second = store.resolveChatForFile(composed)
+
+    expect(second).toEqual(first)
+    // index.json keys the composed spelling, project.json keeps the one the
+    // file came in under; the two are matched through the key, never as text
+    const index = readIndex(tmpDir)
+    expect(Object.keys(index.fileMap)).toEqual([canonicalPathKey(composed)])
+    expect(Object.keys(index.chatIdByPath ?? {})).toEqual([canonicalPathKey(composed)])
+    expect(store.getProject('default')?.files).toEqual([decomposed])
+  })
+
   it('rename through an equivalent spelling keeps the same chat', () => {
     const filePath = join(tmpDir, 'before.docx')
     writeFileSync(filePath, 'doc', 'utf8')

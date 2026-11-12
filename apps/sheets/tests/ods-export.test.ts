@@ -656,7 +656,7 @@ describe('ODS export', () => {
     expect(messageBoxes[0]?.detail).toMatch(/hide-from-AI marks.*: \?$/im)
   })
 
-  it('says it in each of the 21 languages', async () => {
+  it('says it in each language', async () => {
     redactionPart.text = serializeRedactionPart([
       {
         sheetName: 'Data',
@@ -677,8 +677,7 @@ describe('ODS export', () => {
       lines.add(line)
     }
     // a language without its own line would repeat another's
-    expect(LANGS).toHaveLength(21)
-    expect(lines.size).toBe(21)
+    expect(lines.size).toBe(LANGS.length)
   })
 
   it('never writes over the original .ods of a converted session', async () => {

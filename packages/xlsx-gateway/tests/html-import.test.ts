@@ -67,29 +67,29 @@ describe('looksLikeHtmlWorkbook', () => {
 })
 
 describe('decodeHtmlBuffer', () => {
-  it('honors the charset the page declares', () => {
+  it('honors the charset the page declares', async () => {
     const before = Buffer.from(
       '<html><head><meta charset=euc-kr></head><body><table><tr><td>',
       'latin1',
     )
     const korean = Buffer.from([0xb0, 0xa1, 0xb3, 0xaa, 0xb4, 0xd9])
     const after = Buffer.from('</td></tr></table></body></html>', 'latin1')
-    const html = decodeHtmlBuffer(Buffer.concat([before, korean, after]))
+    const html = await decodeHtmlBuffer(Buffer.concat([before, korean, after]))
     expect(html).toContain('가나다')
   })
 
-  it('ignores a charset declaration that does not fit the bytes', () => {
+  it('ignores a charset declaration that does not fit the bytes', async () => {
     const html = Buffer.concat([
       Buffer.from('<html><head><meta charset=euc-kr></head><body><table><tr><td>', 'latin1'),
       Buffer.from('가나다', 'utf8'),
       Buffer.from('</td></tr></table></body></html>', 'latin1'),
     ])
-    expect(decodeHtmlBuffer(html)).toContain('가나다')
+    expect(await decodeHtmlBuffer(html)).toContain('가나다')
   })
 
-  it('falls back to the CSV charset sniffing without a declaration', () => {
+  it('falls back to the CSV charset sniffing without a declaration', async () => {
     const bytes = Buffer.from('<html><body>caf\u00e9</body></html>', 'latin1')
-    expect(decodeHtmlBuffer(bytes)).toContain('café')
+    expect(await decodeHtmlBuffer(bytes)).toContain('café')
   })
 
   it('decodes named and numeric references', () => {

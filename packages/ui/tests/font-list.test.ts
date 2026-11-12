@@ -6,7 +6,7 @@
 // spellings literally would hide a font that is really installed — in either
 // direction, so both the localized-named and the English-named candidates are covered.
 import { describe, expect, it } from 'vitest'
-import { CJK_FAMILY_ALIASES, SIMPLIFIED_CJK_FAMILIES } from '@genoffice/i18n'
+import { CJK_FAMILY_ALIASES, LANGS, SIMPLIFIED_CJK_FAMILIES } from '@genoffice/i18n'
 import {
   BUILTIN_FONT_FAMILIES,
   familyForTypedName,
@@ -150,23 +150,25 @@ describe('systemFamiliesBesidesCandidates', () => {
 
 describe('candidate lists', () => {
   it('carry Windows, macOS and downloadable names for the same script', () => {
-    const sc = fontFamiliesFor('zh')
+    const sc = fontFamiliesFor('en')
     expect(sc).toContain(candidateFor('SimSun')) // Windows
     expect(sc).toContain('PingFang SC') // macOS
     expect(sc).toContain('Songti SC') // macOS serif
     expect(sc).toContain('Noto Serif SC') // downloadable
   })
 
-  it('offer a serif next to the sans for every CJK script', () => {
-    for (const [lang, sans, serif] of [
-      ['zh', 'Noto Sans SC', 'Noto Serif SC'],
-      ['zh-TW', 'Noto Sans TC', 'Noto Serif TC'],
-      ['ja', 'Noto Sans JP', 'Noto Serif JP'],
-      ['ko', 'Noto Sans KR', 'Noto Serif KR'],
-    ] as const) {
+  it('offer a serif next to the sans for every CJK script, in every ui language', () => {
+    for (const lang of LANGS) {
       const list = fontFamiliesFor(lang)
-      expect(list).toContain(sans)
-      expect(list).toContain(serif)
+      for (const [sans, serif] of [
+        ['Noto Sans SC', 'Noto Serif SC'],
+        ['Noto Sans TC', 'Noto Serif TC'],
+        ['Noto Sans JP', 'Noto Serif JP'],
+        ['Noto Sans KR', 'Noto Serif KR'],
+      ] as const) {
+        expect(list, lang).toContain(sans)
+        expect(list, lang).toContain(serif)
+      }
     }
   })
 

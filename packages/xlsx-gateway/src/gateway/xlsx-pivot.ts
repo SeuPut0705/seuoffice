@@ -90,6 +90,12 @@ export interface PivotDefinition {
   readonly dataFields: readonly PivotDataField[]
   /// page (report-filter) selections: sharedItems index or null for "all".
   readonly pageFields: readonly { readonly field: number; readonly item: number | null }[]
+  /// How the report filters are laid out above the output (location@rowPageCount /
+  /// @colPageCount): rows of filters, and filters side by side in a row (each a label
+  /// and its item, with a blank column between two). Both 0 without filters; both
+  /// absent when the pivot has filters and does not say, so their extent is not known.
+  readonly pageRows?: number | undefined
+  readonly pageColumns?: number | undefined
   /// Value/label filters (pivotFilters): members that fail the filter are hidden
   /// entries in fieldItems; refresh re-applies them against the source data
   /// (value filters aggregate first, then filter).
@@ -210,9 +216,15 @@ export function parsePivotDefinition(
   if (!worksheetSource) {
     unsupported.push('the data source is not a worksheet range (external/consolidated source)')
   }
-  const sourceSheet = decodeEntities(attr(worksheetSource ?? '', 'sheet') ?? '')
-  const sourceRef = attr(worksheetSource ?? '', 'ref') ?? ''
-  if (worksheetSource && (!sourceSheet || !sourceRef)) {
+  // A relationship on the source means the sheet and range are those of
+  // another workbook. This one may hold a sheet of the same name: refreshing
+  // from it, or reading it as the pivot's source, would be wrong data.
+  const external = /\s[\w.-]+:id="/.test(worksheetSource ?? '')
+  const sourceSheet = external ? '' : decodeEntities(attr(worksheetSource ?? '', 'sheet') ?? '')
+  const sourceRef = external ? '' : (attr(worksheetSource ?? '', 'ref') ?? '')
+  if (external) {
+    unsupported.push('the data source is a range of another workbook')
+  } else if (worksheetSource && (!sourceSheet || !sourceRef)) {
     unsupported.push('the data source uses a defined name, recompute not supported yet')
   }
 
@@ -391,6 +403,21 @@ export function parsePivotDefinition(
       }
     },
   )
+  // The extent of the report filters, as the location declares it. A count that is not a
+  // positive whole number is no count. Nothing declared and no filters: there are none.
+  // Anything else that is not two counts leaves the extent unknown; it is not guessed.
+  const pageCount = (name: string): number | undefined => {
+    const count = Number(attr(location, name) ?? '')
+    return Number.isInteger(count) && count > 0 ? count : undefined
+  }
+  const pageRows = pageCount('rowPageCount')
+  const pageColumns = pageCount('colPageCount')
+  const pageLayout =
+    pageRows !== undefined && pageColumns !== undefined
+      ? { pageRows, pageColumns }
+      : pageRows === undefined && pageColumns === undefined && pageFields.length === 0
+        ? { pageRows: 0, pageColumns: 0 }
+        : {}
 
   // Calculated fields may only be data fields: used as a row/column/report-filter
   // dimension they cannot be grouped by formula.
@@ -477,6 +504,7 @@ export function parsePivotDefinition(
     colLines: parseLayoutLines(firstElement(pivotTableXml, 'colItems'), colFields.length),
     dataFields,
     pageFields,
+    ...pageLayout,
     filters,
     sourceSheet,
     sourceRef,

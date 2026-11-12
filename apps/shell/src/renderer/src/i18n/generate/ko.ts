@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   windowTitle: '새 문서 만들기',
@@ -52,4 +52,4 @@ export const ko = {
   convertRedactionFailed: '자료의 가린 부분을 처리할 수 없어 바꾸지 않았습니다.',
   convertTooManySlides: '큰 가지가 너무 많아 PPT 하나로 만들 수 없습니다(슬라이드 {max}장까지).',
   convertFailed: '바꾸지 못했습니다. 다시 시도해 주세요.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

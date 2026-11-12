@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   aiInputPlaceholderGen: 'Describe the deck to generate, or ask anything',
   aiEmptyGenTitle: 'Let AI generate your presentation',
@@ -284,4 +282,4 @@ export const en = {
     'Rich green, navy, and off-white. Double rules and big serif titles, like a magazine cover.',
   aiTplDesc_vellum:
     'Deep navy with warm yellow serif text and one dusty teal accent. Quiet and scholarly.',
-} satisfies Record<keyof typeof zh, string>
+}

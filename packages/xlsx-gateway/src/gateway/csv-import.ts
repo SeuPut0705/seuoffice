@@ -5,6 +5,8 @@
 /// free of node APIs: the half that writes the xlsx archive lives in
 /// csv-import-xlsx, which only the desktop path loads.
 
+import { normalizeEncoding, TextDecoder as StandardDecoder } from '@exodus/bytes/encoding-lite.js'
+
 import { encodeXlsxEscapes } from './xlsx-escapes'
 
 const DELIMITERS = [',', ';', '\t'] as const
@@ -18,12 +20,54 @@ export const MAX_CSV_COLS = 16_384
 // non-ASCII cell into replacement characters.
 const LEGACY_CHARSETS = ['gb18030', 'shift_jis', 'big5', 'euc-kr', 'windows-1252'] as const
 
-function decode(bytes: Uint8Array, charset: string, fatal = false): string | null {
+function decode(
+  bytes: Uint8Array,
+  charset: string,
+  fatal = false,
+  Decoder: typeof TextDecoder = TextDecoder,
+): string | null {
   try {
-    return new TextDecoder(charset, { fatal }).decode(bytes)
+    return new Decoder(charset, { fatal }).decode(bytes)
   } catch {
     return null
   }
+}
+
+/** the charsets whose index tables (about 150 KB) live in @exodus/bytes/encoding.js */
+const MULTI_BYTE: Record<string, true> = {
+  big5: true,
+  'euc-kr': true,
+  'euc-jp': true,
+  'iso-2022-jp': true,
+  shift_jis: true,
+  gbk: true,
+  gb18030: true,
+}
+
+let multiByteDecoder: Promise<typeof TextDecoder> | undefined
+
+/**
+ * Legacy charsets decode by the Encoding Standard, in JavaScript, the way a
+ * browser and the programs that wrote the files read them. Node's own decoder
+ * (the main process, the CLI) reads euc-kr without the 8,822 Unified Hangul
+ * Code syllables, big5 without HKSCS, shift_jis 0x80 as an error, and lacks
+ * x-user-defined. The multi-byte tables load the first time a file needs one;
+ * if they cannot load, the host's decoder still reads what it can.
+ */
+function loadMultiByteDecoder(): Promise<typeof TextDecoder> {
+  // dynamic on purpose: the bundler splits the tables off the renderer's main chunk
+  multiByteDecoder ??= import('@exodus/bytes/encoding.js').then(
+    () => StandardDecoder as typeof TextDecoder,
+    () => TextDecoder,
+  )
+  return multiByteDecoder
+}
+
+/** The decoder for a charset label; only a multi-byte charset loads the tables. */
+export async function decoderFor(label: string): Promise<typeof TextDecoder> {
+  const encoding = normalizeEncoding(label)
+  if (encoding !== null && Object.hasOwn(MULTI_BYTE, encoding)) return loadMultiByteDecoder()
+  return StandardDecoder as typeof TextDecoder
 }
 
 // The 700 most frequent Hangul syllables in general Korean prose (Korean Wikipedia
@@ -85,12 +129,6 @@ function score(text: string): number {
 }
 
 /**
- * Decodes CSV bytes: BOM, then strict UTF-8, then the legacy charsets Excel
- * writes. `preferred` (from the UI language) breaks the ties those charsets
- * produce — GBK and Shift_JIS both decode the same bytes to plausible-looking
- * but different CJK.
- */
-/**
  * UTF-16 without a BOM (Excel writes it; editors strip it): NUL bytes then
  * interleave the text, which strict UTF-8 accepts — so this must run before
  * the UTF-8 attempt or the NULs survive as garbage. NUL bytes never occur in
@@ -113,7 +151,13 @@ function sniffUtf16WithoutBom(bytes: Uint8Array): 'utf-16le' | 'utf-16be' | null
   return oddNul >= evenNul ? 'utf-16le' : 'utf-16be'
 }
 
-export function decodeCsvBuffer(bytes: Uint8Array, preferred?: string): string {
+/**
+ * Decodes CSV bytes: BOM, then strict UTF-8, then the legacy charsets Excel
+ * writes, read by the Encoding Standard. `preferred` (from the language the
+ * install asks for) breaks the ties those charsets produce — GBK and
+ * Shift_JIS both decode the same bytes to plausible-looking but different CJK.
+ */
+export async function decodeCsvBuffer(bytes: Uint8Array, preferred?: string): Promise<string> {
   if (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) {
     return decode(bytes.subarray(3), 'utf-8') ?? ''
   }
@@ -125,12 +169,14 @@ export function decodeCsvBuffer(bytes: Uint8Array, preferred?: string): string {
   const utf8 = decode(bytes, 'utf-8', true)
   if (utf8 !== null) return utf8
 
+  // the candidates below include multi-byte charsets
+  const Decoder = await loadMultiByteDecoder()
   // Korean Excel CSVs (code page 949) decode as plausible GBK too, so without a
   // Korean locale they came out as Chinese. Pick Korean from the bytes alone, but
   // only when the machine's language does not already claim another charset that
   // reads the bytes cleanly, and the text is overwhelmingly Hangul.
-  if (!preferred || preferred === 'euc-kr' || decode(bytes, preferred, true) === null) {
-    const korean = decode(bytes, 'euc-kr', true)
+  if (!preferred || preferred === 'euc-kr' || decode(bytes, preferred, true, Decoder) === null) {
+    const korean = decode(bytes, 'euc-kr', true, Decoder)
     if (korean !== null && looksKorean(korean)) return korean
   }
 
@@ -140,7 +186,7 @@ export function decodeCsvBuffer(bytes: Uint8Array, preferred?: string): string {
   const candidates = preferred ? [preferred, ...LEGACY_CHARSETS] : LEGACY_CHARSETS
   // CJK-only UTF-16 carries too few NUL bytes for the sniffer above; let the scorer pick.
   for (const charset of [...utf16, ...candidates]) {
-    const candidate = decode(bytes, charset)
+    const candidate = decode(bytes, charset, false, Decoder)
     if (candidate === null) continue
     const candidateScore = score(candidate)
     if (candidateScore > bestScore) {

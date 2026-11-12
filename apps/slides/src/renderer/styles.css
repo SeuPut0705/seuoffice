@@ -309,16 +309,8 @@
   --ui-cjk: 'PingFang SC', 'Microsoft YaHei';
 }
 
-:root:lang(ja) {
-  --ui-cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo';
-}
-
 :root:lang(ko) {
   --ui-cjk: 'Apple SD Gothic Neo', 'Malgun Gothic';
-}
-
-:root:lang(zh-TW) {
-  --ui-cjk: 'PingFang TC', 'Microsoft JhengHei';
 }
 
 html,

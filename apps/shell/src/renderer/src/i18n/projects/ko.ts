@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   navProjects: '프로젝트',
@@ -82,4 +82,4 @@ export const ko = {
   reloadFile: '다시 불러오기',
   saveAnyway: '그래도 저장',
   openFileAria: '앱에서 열기: {name}',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

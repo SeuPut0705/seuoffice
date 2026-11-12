@@ -909,24 +909,23 @@ describe('Receiving and handing on skills', () => {
 
   it('has a sentence for every warning rule of the core table', () => {
     for (const rule of SKILL_WARNING_RULES) {
-      expect(Object.keys(skillsUiStrings.zh), rule.id).toContain(rule.messageKey)
+      expect(Object.keys(skillsUiStrings.en), rule.id).toContain(rule.messageKey)
     }
   })
 })
 
-describe('Skills strings in 21 languages', () => {
-  const keys = Object.keys(skillsUiStrings.zh) as SkillsStringKey[]
+describe('Skills strings in every language', () => {
+  const keys = Object.keys(skillsUiStrings.en) as SkillsStringKey[]
   const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
   it('fills every key in every language with the same placeholders', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       const dict = skillsUiStrings[lang] as Record<string, string>
       expect(Object.keys(dict).sort(), lang).toEqual([...keys].sort())
       for (const key of keys) {
         const text = dict[key]!
         expect(text.trim().length, `${lang}.${key}`).toBeGreaterThan(0)
-        expect(placeholders(text), `${lang}.${key}`).toEqual(placeholders(skillsUiStrings.zh[key]))
+        expect(placeholders(text), `${lang}.${key}`).toEqual(placeholders(skillsUiStrings.en[key]))
         expect(text, `${lang}.${key}`).not.toContain(UPSTREAM_PRODUCT_NAME)
         expect(text, `${lang}.${key}`).not.toContain(PRODUCT_NAME)
       }
