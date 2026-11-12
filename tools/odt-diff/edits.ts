@@ -15,6 +15,7 @@ import {
   type SectionInfo,
   type TableModel,
 } from '../docx-diff/reference/index'
+import { mulberry32 } from '../docx-diff/synthetic'
 import { withClock } from './clock'
 import * as ts from './ts'
 
@@ -22,6 +23,18 @@ const { editorSave, editOnly, replaceText, generatedFrom } = ts.helpersBridge
 const { sectionsOf, sectPrRewrite, editedHf, keepAllBut } = ts.helpersPageBridge
 const { patchCells, regenerate, cellRuns, editRuns } = ts.helpersTableEditor
 const { drawingOf, resizeDrawing, PNG_GREY } = ts.helpersObjectsFixtures
+
+/**
+ * The generator of the edits of one document: seeded by its name, so adding
+ * or removing a document leaves the edits of every other one as they were (a
+ * shared generator reshuffled them all, and seeded faults the old choice
+ * reached went unseen).
+ */
+export function editRandomFor(seed: number, name: string): () => number {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < name.length; i++) hash = Math.imul(hash ^ name.charCodeAt(i), 0x01000193)
+  return mulberry32((seed + 30) ^ hash)
+}
 
 export interface EditCase {
   name: string
@@ -91,6 +104,46 @@ export async function editsFor(
     .map(([, i]) => i)
   const add = (name: string, make: Maker): void => {
     candidates.push({ name, make })
+  }
+
+  // made for every document that allows them, outside the sample: the edits a
+  // seeded fault of the save side needs (crates/odt-engine/C3-TRAIL.md, rows 21 to 23)
+  const first = visible[0]
+  const firstXml = first?.originalXml ?? ''
+  const identity = /<w:bookmarkStart\b[^>]*\bw:id="([^"]*)"[^>]*\bw:name="_odtp\d+"[^>]*\/>/.exec(
+    firstXml,
+  )
+  if (first && (first.type === 'paragraph' || first.type === 'heading') && identity) {
+    // the first paragraph rewritten without its identity bookmark, after a new
+    // one: two unmatched elements at the start, the second with one candidate
+    const rewritten = firstXml
+      .replace(identity[0], '')
+      .replace(new RegExp(`<w:bookmarkEnd\\b[^>]*\\bw:id="${identity[1]}"[^>]*/>`), '')
+      .replace(/<\/w:p>$/, '<w:r><w:t xml:space="preserve"> gap</w:t></w:r></w:p>')
+    always.push({
+      name: 'a new paragraph before the first, rewritten without its identity',
+      make: save(docx, (blocks) => [
+        { xml: '<w:p><w:r><w:t>first</w:t></w:r></w:p>' },
+        { xml: rewritten },
+        ...blocks.slice(1).map((_, i) => ({ keep: i + 1 })),
+      ]),
+    })
+  }
+  const commented = visible.findIndex((b) => /<w:commentRangeEnd\b/.test(b.originalXml ?? ''))
+  if (commented >= 0) {
+    const b = visible[commented]!
+    const typed = (b.originalXml ?? '').replace(
+      /<w:commentRangeEnd\b/,
+      '<w:r><w:t>X</w:t></w:r><w:commentRangeEnd',
+    )
+    always.push({
+      name: `type at the end of the comment range of ${commented}`,
+      make: save(docx, (blocks) =>
+        blocks.map((_, i) =>
+          i === commented ? { xml: typed, docxIndex: b.docxIndex as number } : { keep: i },
+        ),
+      ),
+    })
   }
 
   // the text of a paragraph: first, last, a seeded one; typed at the start, inside, at the end, a range deleted

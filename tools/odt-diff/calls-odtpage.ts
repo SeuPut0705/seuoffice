@@ -52,6 +52,8 @@ const LAYOUTS: string[] = [
   '<style:page-layout style:name="pm2"><style:page-layout-properties fo:page-width="29.7cm" fo:page-height="21cm" style:print-orientation="landscape" fo:margin="1.5cm" style:num-format="i"><style:columns fo:column-count="2" fo:column-gap="0.5cm"/></style:page-layout-properties><style:header-style><style:header-footer-properties fo:min-height="1cm" fo:margin-bottom="0.25cm"/></style:header-style></style:page-layout>',
   '<style:page-layout style:name="pm3"><style:page-layout-properties fo:margin-top="1cm" fo:margin="3cm"/><style:footer-style><style:header-footer-properties svg:height="2cm" fo:margin-top="0.5cm"/></style:footer-style></style:page-layout>',
   '<style:page-layout style:name="pm4"/>',
+  // margins of half a twip: a change of exactly 0.5 twip is written
+  '<style:page-layout style:name="pm6"><style:page-layout-properties fo:margin-top="0.025pt" fo:margin-bottom="0.025pt"/></style:page-layout>',
   '<style:page-layout style:name="pm5"><style:page-layout-properties fo:page-width="bad" fo:page-height="1e1cm" style:num-format="1"><style:columns fo:column-count="x" fo:column-gap="1in"/></style:page-layout-properties><style:header-style/></style:page-layout>',
 ]
 
@@ -93,6 +95,7 @@ const SETTINGS_PAIRS: Array<[Record<string, unknown>, Record<string, unknown>]> 
   [settings({ headerDist: undefined }), settings({ marginTop: 3000, headerDist: undefined })],
   [settings(), settings({ marginTop: 0, marginBottom: 0, headerDist: 0, footerDist: 0 })],
   [settings(), settings({ pageWidth: 11906.4, pageHeight: 20000 })],
+  [settings(), settings({ marginTop: 1, marginBottom: 1, headerDist: 1, footerDist: 1 })],
 ]
 
 function layoutsFromDocument(

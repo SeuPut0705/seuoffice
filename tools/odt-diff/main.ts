@@ -35,7 +35,7 @@ import {
 } from './corpus'
 import { callsAfterCorpus, callsOnDocument, callsOnModel, reportCalls } from './calls-run'
 import { registerLedger, reportDivergences } from './divergences'
-import { editsFor } from './edits'
+import { editRandomFor, editsFor } from './edits'
 import { isFailure, tsDocxToOdt } from './ts-side'
 
 // The positive control (see compare-odt.ts): the lines of the report are kept to
@@ -102,7 +102,6 @@ const bump = (key: string, by = 1): void => {
 const seedOdts = await builtOdts(mulberry32(seed + 10))
 const docxes = await docxCases()
 const exportedOdts: OdtCase[] = []
-const editRandom = mulberry32(seed + 30)
 
 if (!callsOnly) {
   for (const docx of docxes) {
@@ -143,7 +142,7 @@ if (!callsOnly) {
     const { edits } = await editsFor(
       opened.docx,
       styles,
-      editRandom,
+      editRandomFor(seed, odt.name),
       odt.kind === 'built' || odt.kind === 'sample' ? editsPerOdt : editsPerDerived,
     )
     for (const edit of edits) {

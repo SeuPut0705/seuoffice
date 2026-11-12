@@ -17,7 +17,7 @@ import {
   mutatedOdts,
   partText,
 } from './corpus'
-import { editsFor } from './edits'
+import { editRandomFor, editsFor } from './edits'
 import { CALL_GROUPS } from './calls-groups'
 import { isFailure, tsDocxToOdt, tsOdtToDocx, tsOdtToText, tsSaveOdt } from './ts-side'
 import { withClock } from './clock'
@@ -95,7 +95,6 @@ let editsFailed = 0
 let unchanged = 0
 let saved = 0
 let saveFailed = 0
-const editRandom = mulberry32(seed + 30)
 const bridges: Array<{ name: string; odt: OdtCase; bridgeJson: string }> = []
 const documents: Array<[string, Map<string, string>]> = []
 for (const odt of all) {
@@ -107,7 +106,7 @@ for (const odt of all) {
     if (!isFailure(await tsOdtToText(odt.bytes))) textOk += 1
     const styles = outcome.value.bridge.styles
     const limit = odt.kind === 'exported' ? 2 : odt.kind === 'mutation' ? 2 : 8
-    const made = await editsFor(outcome.value.docx, styles, editRandom, limit)
+    const made = await editsFor(outcome.value.docx, styles, editRandomFor(seed, odt.name), limit)
     editsFailed += made.failed
     for (const edit of made.edits) {
       edits += 1

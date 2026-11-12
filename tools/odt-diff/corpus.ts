@@ -15,6 +15,7 @@ import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import JSZip from 'jszip'
 import { mutateContainer } from '../docx-diff/package-zips'
+import { parseDocx } from '../docx-diff/reference/index'
 import { withClock } from './clock'
 import * as ts from './ts'
 
@@ -125,6 +126,15 @@ export function builtOptions(): Array<[string, ts.helpersBuildOdt.BuildOdtOption
         body: f.hPara(
           '<text:span text:style-name="T600">semi</text:span> <text:span text:style-name="T599">light</text:span>',
         ),
+      },
+    ],
+    [
+      'table-relative-columns-one-tiny',
+      {
+        extraContentAutomaticStyles:
+          '<style:style style:name="Ca" style:family="table-column"><style:table-column-properties style:rel-column-width="1*"/></style:style>' +
+          '<style:style style:name="Cb" style:family="table-column"><style:table-column-properties style:rel-column-width="99999*"/></style:style>',
+        body: '<table:table table:name="Tiny"><table:table-column table:style-name="Ca"/><table:table-column table:style-name="Cb"/><table:table-row><table:table-cell office:value-type="string"><text:p>a</text:p></table:table-cell><table:table-cell office:value-type="string"><text:p>b</text:p></table:table-cell></table:table-row></table:table>',
       },
     ],
     ['pictures-raw', { pictures: { 'a.png': new Uint8Array([1, 2, 3]) } }],
@@ -1013,7 +1023,46 @@ export async function docxCases(): Promise<DocxCase[]> {
       rendered: renderedFor(name),
     })
   }
+  for (const docx of [...out]) {
+    const twin = await rowFloorTwin(docx.bytes)
+    if (twin)
+      out.push({ name: `${docx.name}, a row as high as its floor`, bytes: twin, tracked: false })
+  }
   return out
+}
+
+/**
+ * The document again with the first row of its first table given, as its
+ * height, the least height the export computes for it (`withRowFloors`): the
+ * export must leave such a row as it is, the case of a docx saved from an ODT
+ * the export wrote. Null where no table row has a floor.
+ */
+async function rowFloorTwin(bytes: Uint8Array): Promise<Uint8Array | null> {
+  const parsed = await withClock(() => parseDocx(bytes)).catch(() => null)
+  if (!parsed) return null
+  const table = parsed.blocks.find((b) => b.type === 'table' && b.table && b.originalXml)
+  if (!table?.table || !table.originalXml) return null
+  const floored = ts.exportRows.withRowFloors(table.table, parsed)
+  const floor = floored.rowHeightsTwips?.[0]
+  if (floored === table.table || floor === null || floor === undefined) return null
+  if ((table.table.rowHeightsTwips?.[0] ?? 0) === floor) return null
+  const xml = table.originalXml
+  const tr = /<w:tr\b[^>]*>/.exec(xml)
+  if (!tr) return null
+  const at = tr.index + tr[0].length
+  const rest = xml.slice(at)
+  const height = `<w:trHeight w:val="${floor}"/>`
+  const row = rest.startsWith('<w:trPr>')
+    ? '<w:trPr>' + height + rest.slice('<w:trPr>'.length).replace(/<w:trHeight\b[^>]*\/>/, '')
+    : `<w:trPr>${height}</w:trPr>` + rest
+  const zip = await JSZip.loadAsync(bytes).catch(() => null)
+  const document = await zip?.file('word/document.xml')?.async('string')
+  if (!zip || !document || !document.includes(xml)) return null
+  zip.file(
+    'word/document.xml',
+    document.replace(xml, () => xml.slice(0, at) + row),
+  )
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
 }
 
 // ---------------------------------------------------------------------------
