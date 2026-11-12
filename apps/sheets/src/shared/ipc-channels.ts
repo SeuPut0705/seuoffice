@@ -131,7 +131,7 @@ export const IPC_CHANNELS = {
   exportCsv: 'workbook:export-csv',
   exportOds: 'workbook:export-ods',
   csvSaveConfirm: 'workbook:csv-save-confirm',
-  csvWithheldRefusal: 'workbook:csv-withheld-refusal',
+  csvWithheldChoice: 'workbook:csv-withheld-choice',
   /** AI create_document: new standalone file in the default folder (no dialog) */
   createDocument: 'workbook:create-document',
   openExternal: 'shell:open-external',

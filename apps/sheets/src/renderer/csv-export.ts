@@ -238,6 +238,8 @@ export function sheetHasFormulas(sheet: CsvWorksheet): boolean {
  * Whether a CSV of this sheet would hand over a cell hidden from the AI: the
  * file is plain text and records no mark, so what a model later reads from it
  * is the value. A mark whose record could not be read withholds every cell.
+ * The person's own CSV holds the real values (never placeholders: that would
+ * corrupt their data); they are asked first, and may export without the marks.
  */
 export function csvWouldExposeWithheld(
   index: RedactionIndex,
@@ -261,11 +263,18 @@ export async function handleExportCsv(ctx: CsvExportContext, targetPath?: string
     const active = activeCsvSheet(runtime)
     if (!active || ctx.lazyWorkbookRef.current !== state) return
     const { sheet, sheetCount } = active
-    // Before anything is serialized or asked: the CSV is not written at all
+    // Before anything is serialized or asked: a CSV records no mark, so the
+    // person chooses. Only an explicit "without the marks" writes the values.
     if (csvWouldExposeWithheld(ctx.redactions(), sheet.getSheetId(), sheet.getSheetName())) {
-      if ((await window.desktopApi.refuseWithheldCsv()) === 'xlsx') ctx.requestSaveAs()
-      else ctx.setMessage(t('appCsvExportCanceled'))
-      return
+      const choice = await window.desktopApi.askWithheldCsv()
+      if (choice === 'xlsx') {
+        ctx.requestSaveAs()
+        return
+      }
+      if (choice === 'cancel') {
+        ctx.setMessage(t('appCsvExportCanceled'))
+        return
+      }
     }
     const content = serializeActiveSheetCsv(
       sheet,

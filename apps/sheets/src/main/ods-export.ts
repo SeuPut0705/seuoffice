@@ -91,7 +91,7 @@ export type OdsExportOutcome =
   /// the person declined the dropped-feature warning; nothing was written
   | { readonly status: 'canceled' }
   /// the workbook hides cells from the AI and ODS cannot keep that; nothing was written
-  | { readonly status: 'redacted' }
+  | { readonly status: 'redacted'; readonly choice: 'xlsx' | 'cancel' }
   /// the placed file could not be opened again; it was removed
   | { readonly status: 'unreadable' }
   | { readonly status: 'failed'; readonly message: string }
@@ -102,19 +102,29 @@ export type OdsExportOutcome =
  * conversion that fails or a warning the person cancels leaves the target
  * exactly as it was. `confirmLoss` runs before anything reaches the target.
  *
- * A workbook that hides cells from the AI is not written at all: the ODS
+ * A workbook that hides cells from the AI is not written silently: the ODS
  * writer carries neither the package part that records the marks nor its
  * defined-name copy, so the copy would hold the cells and nothing that says
- * they were hidden. That is no loss the person can accept, so it is refused
- * before the conversion starts.
+ * they were hidden. Before the conversion starts the person is asked
+ * (`confirmHidden`); only "export without the marks" goes on, and the copy
+ * then holds the real values and no mark carrier.
  */
 export async function exportWorkbookAsOds(input: {
   sidecar: OdsExportSidecar
   sourcePath: string
   targetPath: string
   confirmLoss: (losses: readonly OdsLoss[]) => Promise<boolean>
+  /**
+   * Asked when the workbook hides cells from the AI, before anything is
+   * converted: write the copy without the marks, or write nothing (and either
+   * take the person to Save As .xlsx or leave).
+   */
+  confirmHidden: () => Promise<'export' | 'xlsx' | 'cancel'>
 }): Promise<OdsExportOutcome> {
-  if (await hidesCells(input.sidecar, input.sourcePath)) return { status: 'redacted' }
+  if (await hidesCells(input.sidecar, input.sourcePath)) {
+    const choice = await input.confirmHidden()
+    if (choice !== 'export') return { status: 'redacted', choice }
+  }
   const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-ods-export-'))
   const tempOds = join(workDir, `${basename(input.targetPath).replace(/\.ods$/i, '')}.ods`)
   const verifyXlsx = join(workDir, 'verify.xlsx')

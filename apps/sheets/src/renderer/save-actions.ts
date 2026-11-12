@@ -732,7 +732,8 @@ export async function handleSave(
     }
     const active = activeCsvSheet(ctx.univerRef.current)
     const runtime = ctx.univerRef.current
-    // The CSV records no mark: a withheld cell on the sheet is not written
+    // The CSV records no mark: the person chooses before a withheld cell is
+    // written, and only "export without the marks" writes the real values.
     if (
       active !== null &&
       csvWouldExposeWithheld(
@@ -741,11 +742,12 @@ export async function handleSave(
         active.sheet.getSheetName(),
       )
     ) {
-      if ((await window.desktopApi.refuseWithheldCsv()) === 'xlsx') {
-        return await handleSave(ctx, 'save-as', quiet, explicitTarget)
+      const withheld = await window.desktopApi.askWithheldCsv()
+      if (withheld === 'xlsx') return await handleSave(ctx, 'save-as', quiet, explicitTarget)
+      if (withheld === 'cancel') {
+        ctx.setMessage(t('appSaveCanceled'))
+        return { ok: false }
       }
-      ctx.setMessage(t('appSaveCanceled'))
-      return { ok: false }
     }
     const serialized =
       active === null || runtime === null

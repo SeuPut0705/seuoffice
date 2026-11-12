@@ -687,10 +687,10 @@ const desktopApi: DesktopApi = {
     }
     return result
   },
-  async refuseWithheldCsv() {
-    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.csvWithheldRefusal)
-    if (result !== 'xlsx' && result !== 'cancel') {
-      throw new Error('Invalid CSV refusal response.')
+  async askWithheldCsv() {
+    const result: unknown = await ipcRenderer.invoke(IPC_CHANNELS.csvWithheldChoice)
+    if (result !== 'xlsx' && result !== 'export' && result !== 'cancel') {
+      throw new Error('Invalid CSV choice response.')
     }
     return result
   },

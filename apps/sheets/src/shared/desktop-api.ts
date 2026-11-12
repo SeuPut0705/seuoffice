@@ -3612,8 +3612,10 @@ export interface DesktopApi {
   /// First Save of a CSV session: native "keep this format?" dialog.
   confirmCsvSave(): Promise<'csv' | 'xlsx' | 'cancel'>
   /// A CSV copy of a workbook that hides cells from the AI cannot keep the
-  /// marks: native dialog offering Save as .xlsx (or Cancel). Nothing is written.
-  refuseWithheldCsv(): Promise<'xlsx' | 'cancel'>
+  /// marks: native dialog offering Save as .xlsx, Export CSV without the marks
+  /// (the real values; the marks are gone from that file) or Cancel.
+  /// Nothing is written by the dialog itself.
+  askWithheldCsv(): Promise<'xlsx' | 'export' | 'cancel'>
   /// AI create_document: write a new standalone file into the default save
   /// folder (no dialog) and open it in a new tab.
   createDocument(request: WorkbookCreateDocumentRequest): Promise<WorkbookCreateDocumentResult>
