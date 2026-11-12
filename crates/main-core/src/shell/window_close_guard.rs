@@ -92,6 +92,10 @@ pub enum CloseStep<C> {
     /// `await requestXClose(web_contents, win)` of the family: answer with
     /// `resume(Ok(confirmed))`
     RequestClose(Family, C),
+    /// the walk's first `activateTab` threw inside the async function, so the
+    /// failure is a rejected promise handled one turn later (after the
+    /// `close` event returned): answer with `resume(Err(message))`
+    Rejected(String),
     /// call `win.close()` (its `close` event goes to `on_close` and is let
     /// through), then `after_close`
     CloseWindow,
@@ -206,7 +210,7 @@ impl<C: Clone> ShellCloseGuard<C> {
         // activating dirty tabs animates the split layout; the arrangement
         // must come back whether the close is denied or the settle path runs
         host.begin_exclusive_prompt();
-        let step = self.advance(host);
+        let step = self.advance(host, true);
         CloseEvent {
             prevent_default: true,
             step,
@@ -230,7 +234,7 @@ impl<C: Clone> ShellCloseGuard<C> {
         match phase {
             Phase::Query => {
                 if !value {
-                    return self.advance(host);
+                    return self.advance(host, false);
                 }
                 if let Err(err) = host.activate_tab(&asked.tab.id) {
                     return self.fail(host, &err);
@@ -249,7 +253,7 @@ impl<C: Clone> ShellCloseGuard<C> {
                     self.finally(host);
                     return CloseStep::Done;
                 }
-                self.advance(host)
+                self.advance(host, false)
             }
         }
     }
@@ -272,7 +276,11 @@ impl<C: Clone> ShellCloseGuard<C> {
 
     /// Takes the next tab of the walk and asks for it, or confirms the close
     /// when the walk is over.
-    fn advance<H: CloseGuardHost<Contents = C>>(&mut self, host: &mut H) -> CloseStep<C> {
+    fn advance<H: CloseGuardHost<Contents = C>>(
+        &mut self,
+        host: &mut H,
+        first: bool,
+    ) -> CloseStep<C> {
         let Some(next) = self.queue.pop_front() else {
             // nobody denied it
             self.close_confirmed = true;
@@ -288,6 +296,12 @@ impl<C: Clone> ShellCloseGuard<C> {
             return CloseStep::QueryDocsDirty(contents);
         }
         if let Err(err) = host.activate_tab(&next.tab.id) {
+            if first {
+                // the throw happens before the first `await` of the walk:
+                // the walk's promise rejects, and the catch runs a turn later
+                self.asking = Some((next, Phase::Close));
+                return CloseStep::Rejected(err);
+            }
             return self.fail(host, &err);
         }
         let step = CloseStep::RequestClose(next.family, next.tab.web_contents.clone());

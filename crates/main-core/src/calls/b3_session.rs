@@ -1620,6 +1620,7 @@ fn close_guard_call(args: &[Value], cx: &mut Context) -> Answer {
                     host,
                     guard_answer(spec, &format!("{}:{id}", family_key(family))),
                 ),
+                CloseStep::Rejected(err) => guard.resume(host, Err(err)),
                 CloseStep::CloseWindow => {
                     log.add(vec![Value::from("win.close")]);
                     let event = guard.on_close(host);
