@@ -1,0 +1,804 @@
+[
+  {
+    "name": "integrator: SPLIT_EVEN_RATIO changed (control)",
+    "file": "main-core/src/shell/split_layout.rs",
+    "find": "pub const SPLIT_EVEN_RATIO: f64 = 0.5;",
+    "replace": "pub const SPLIT_EVEN_RATIO: f64 = 0.4;",
+    "fn": ["split-layout.SPLIT_EVEN_RATIO"]
+  },
+  {
+    "name": "min-ratio",
+    "file": "main-core/src/shell/session_record.rs",
+    "find": "const MIN_RATIO: f64 = 0.05;",
+    "replace": "const MIN_RATIO: f64 = 0.06;",
+    "fn": [
+      "session-record.sessionSnapshotFrom",
+      "session-record.parseSessionRecord",
+      "session-record.createSessionRecorder"
+    ]
+  },
+  {
+    "name": "enotdir-missing",
+    "file": "main-core/src/shell/session_record.rs",
+    "find": "code == Some(\"ENOENT\") || code == Some(\"ENOTDIR\")",
+    "replace": "code == Some(\"ENOENT\")",
+    "fn": ["session-record.readSessionRecord", "session-record.createSessionRecorder"]
+  },
+  {
+    "name": "crash-loop",
+    "file": "main-core/src/shell/session_record.rs",
+    "find": "record.restore_run && !record.past_startup",
+    "replace": "record.restore_run || !record.past_startup",
+    "fn": ["session-record.judgePreviousExit"]
+  },
+  {
+    "name": "max-entries",
+    "file": "main-core/src/shell/tab_lifecycle.rs",
+    "find": "if self.stack.len() as f64 > self.max_entries {",
+    "replace": "if self.stack.len() as f64 >= self.max_entries {",
+    "fn": ["tab-lifecycle.createRecentlyClosedTracker"]
+  },
+  {
+    "name": "unclosable",
+    "file": "main-core/src/shell/tab_lifecycle.rs",
+    "find": "if target.id == \"home\" || target.closable == Some(false) {",
+    "replace": "if target.id == \"home\" {",
+    "fn": ["tab-lifecycle.closeTabsInOrder"]
+  },
+  {
+    "name": "dedupe",
+    "file": "main-core/src/shell/tab_lifecycle.rs",
+    "find": "if let Some(at) = self.stack.iter().position(|e| e.file_path == file_path) {",
+    "replace": "if let Some(at) = self.stack.iter().position(|_| false) {",
+    "fn": ["tab-lifecycle.createRecentlyClosedTracker"]
+  },
+  {
+    "name": "first-copy",
+    "file": "main-core/src/shell/tab_duplicate.rs",
+    "find": "let numbered = if i == 1 {",
+    "replace": "let numbered = if i == 2 {",
+    "fn": ["tab-duplicate.duplicateDocumentFile"]
+  },
+  {
+    "name": "recent-not-recorded",
+    "file": "main-core/src/shell/tab_duplicate.rs",
+    "find": "record_recent_file(&target);",
+    "replace": "let _ = &target;",
+    "fn": ["tab-duplicate.duplicateDocumentFile"]
+  },
+  {
+    "name": "sheets-channel",
+    "file": "main-core/src/shell/tab_document_actions.rs",
+    "find": "\"sheets\" => deps.send(&contents, \"menu:action\", command),",
+    "replace": "\"sheets\" => deps.send(&contents, \"menu:command\", command),",
+    "fn": ["tab-document-actions.runTabDocumentAction"]
+  },
+  {
+    "name": "save-as-command",
+    "file": "main-core/src/shell/tab_document_actions.rs",
+    "find": "\"save-as\"\n    } else {",
+    "replace": "\"saveAs\"\n    } else {",
+    "fn": ["tab-document-actions.runTabDocumentAction"]
+  },
+  {
+    "name": "destroyed-ignored",
+    "file": "main-core/src/shell/tab_document_actions.rs",
+    "find": "if deps.is_destroyed(&contents) {",
+    "replace": "if false {",
+    "fn": ["tab-document-actions.runTabDocumentAction"]
+  },
+  {
+    "name": "move-left",
+    "file": "main-core/src/shell/tab_menu.rs",
+    "find": "index > 1,",
+    "replace": "index > 0,",
+    "fn": ["tab-menu.tabMenuTemplate"]
+  },
+  {
+    "name": "label-keep-end",
+    "file": "main-core/src/shell/tab_menu.rs",
+    "find": "let keep_end = ((PATH_LABEL_MAX - 1) as f64 * 0.65).floor() as usize;",
+    "replace": "let keep_end = ((PATH_LABEL_MAX - 1) as f64 * 0.65).ceil() as usize;",
+    "fn": ["tab-menu.pathLabel", "tab-menu.tabMenuTemplate"]
+  },
+  {
+    "name": "jar",
+    "file": "main-core/src/shell/tab_menu.rs",
+    "find": "\".jar\",",
+    "replace": "\".jarx\",",
+    "fn": ["tab-menu.isProgramFile", "tab-menu.tabMenuTemplate"]
+  },
+  {
+    "name": "tab-meta",
+    "file": "main-core/src/shell/tab_shortcuts.rs",
+    "find": "if !input.control || input.meta {",
+    "replace": "if !input.control {",
+    "fn": ["tab-shortcuts.tabShortcutOf", "tab-shortcuts.handleTabShortcut"]
+  },
+  {
+    "name": "mac-close",
+    "file": "main-core/src/shell/tab_shortcuts.rs",
+    "find": "return (input.meta && !input.control).then_some(TabShortcut::Close);",
+    "replace": "return input.meta.then_some(TabShortcut::Close);",
+    "fn": ["tab-shortcuts.tabShortcutOf", "tab-shortcuts.handleTabShortcut"]
+  },
+  {
+    "name": "ratio-limit",
+    "file": "main-core/src/shell/split_layout.rs",
+    "find": "if min >= SPLIT_EVEN_RATIO {",
+    "replace": "if min > SPLIT_EVEN_RATIO {",
+    "fn": ["split-layout.splitRatioLimits", "split-layout.clampSplitRatio"]
+  },
+  {
+    "name": "strip-band",
+    "file": "main-core/src/shell/split_layout.rs",
+    "find": "if y < TAB_STRIP_HEIGHT {",
+    "replace": "if y <= TAB_STRIP_HEIGHT {",
+    "fn": ["split-layout.splitDropZone"]
+  },
+  {
+    "name": "corner-tie",
+    "file": "main-core/src/shell/split_layout.rs",
+    "find": "return Some(if from_right <= from_bottom {",
+    "replace": "return Some(if from_right < from_bottom {",
+    "fn": ["split-layout.splitDropZone"]
+  },
+  {
+    "name": "reported-twice",
+    "file": "main-core/src/shell/open_documents.rs",
+    "find": "if reported.0.insert(key) {",
+    "replace": "if reported.0.insert(key) || true {",
+    "fn": ["open-documents.publishOpenDocuments"]
+  },
+  {
+    "name": "no-dedupe",
+    "file": "main-core/src/shell/open_documents.rs",
+    "find": "if !unique.contains(item) {",
+    "replace": "if true {",
+    "fn": ["open-documents.publishOpenDocuments"]
+  },
+  {
+    "name": "dark",
+    "file": "main-core/src/shell/window_background.rs",
+    "find": "\"#1e1e1e\"",
+    "replace": "\"#1e1e1f\"",
+    "fn": ["window-background.SHELL_BACKGROUND_DARK", "window-background.shellWindowBackground"]
+  },
+  {
+    "name": "light",
+    "file": "main-core/src/shell/window_background.rs",
+    "find": "\"#ffffff\"",
+    "replace": "\"#fffffe\"",
+    "fn": ["window-background.SHELL_BACKGROUND_LIGHT", "window-background.shellWindowBackground"]
+  },
+  {
+    "name": "overlay-color",
+    "file": "main-core/src/shell/title_bar_overlay.rs",
+    "find": "color: \"#2a2a2a\",",
+    "replace": "color: \"#2a2a2b\",",
+    "fn": ["title-bar-overlay.tabStripOverlay"]
+  },
+  {
+    "name": "overlay-round",
+    "file": "main-core/src/shell/title_bar_overlay.rs",
+    "find": "math_round(TAB_STRIP_HEIGHT * scale)",
+    "replace": "(TAB_STRIP_HEIGHT * scale).round()",
+    "fn": ["title-bar-overlay.tabStripOverlay"]
+  },
+  {
+    "name": "skill-relative",
+    "file": "main-core/src/shell/skill_target.rs",
+    "find": "if dir.is_empty() || !is_absolute(dir) {",
+    "replace": "if dir.is_empty() {",
+    "fn": ["skill-target.isInstallableSkillDir"]
+  },
+  {
+    "name": "skill-resolve",
+    "file": "main-core/src/shell/skill_target.rs",
+    "find": "if resolve(&[allowed.as_str()]) == key {",
+    "replace": "if allowed.as_str() == dir {",
+    "fn": ["skill-target.isInstallableSkillDir"]
+  },
+  {
+    "name": "root-itself",
+    "file": "main-core/src/shell/file_targets.rs",
+    "find": "return sources.inside_any_root(path) && !sources.is_any_root(path);",
+    "replace": "return sources.inside_any_root(path);",
+    "fn": ["file-targets.isMoveSource"]
+  },
+  {
+    "name": "tracked",
+    "file": "main-core/src/shell/file_targets.rs",
+    "find": ".any(|tracked| tracked == path)",
+    "replace": ".any(|tracked| tracked.starts_with(path))",
+    "fn": ["file-targets.isUserVisibleFile", "file-targets.isMoveSource"]
+  },
+  {
+    "name": "delete-skipped",
+    "file": "main-core/src/shell/result_store_ipc.rs",
+    "find": "store.delete_all()?;",
+    "replace": "let _ = store.size();",
+    "fn": ["result-store-ipc.registerResultStoreIpc"]
+  },
+  {
+    "name": "size-channel",
+    "file": "main-core/src/shell/result_store_ipc.rs",
+    "find": "\"home:result-store-size\"",
+    "replace": "\"home:result-store-sizes\"",
+    "fn": ["result-store-ipc.registerResultStoreIpc"]
+  },
+  {
+    "name": "guard-clean",
+    "file": "main-core/src/shell/window_close_guard.rs",
+    "find": "if lists.iter().all(Vec::is_empty) {",
+    "replace": "if false {",
+    "fn": ["window-close-guard.installShellCloseGuard"]
+  },
+  {
+    "name": "guard-in-flight",
+    "file": "main-core/src/shell/window_close_guard.rs",
+    "find": "if self.close_prompt_in_flight {",
+    "replace": "if false {",
+    "fn": ["window-close-guard.installShellCloseGuard"]
+  },
+  {
+    "name": "guard-docs-query",
+    "file": "main-core/src/shell/window_close_guard.rs",
+    "find": "if next.family == Family::Docs {",
+    "replace": "if false {",
+    "fn": ["window-close-guard.installShellCloseGuard"]
+  },
+  {
+    "name": "restart-request-noop",
+    "file": "main-core/src/shell/update_restart.rs",
+    "find": "self.restart_requested = true;",
+    "replace": "self.restart_requested = false;",
+    "fn": ["update-restart.requestUpdateRestart", "update-restart.updateRestartRequested"]
+  },
+  {
+    "name": "installer-flag-typo",
+    "file": "main-core/src/shell/update_restart.rs",
+    "find": "argv.contains(&\"--updated\")",
+    "replace": "argv.contains(&\"updated\")",
+    "fn": ["update-restart.reopenedByInstaller"]
+  },
+  {
+    "name": "heading-level-one",
+    "file": "main-core/src/shell/update_notes.rs",
+    "find": "if level <= 1.0 {",
+    "replace": "if level < 1.0 {",
+    "fn": ["update-notes.normalizeReleaseNotes"]
+  },
+  {
+    "name": "section-cap",
+    "file": "main-core/src/shell/update_notes.rs",
+    "find": "pub const MAX_SECTIONS: usize = 12;",
+    "replace": "pub const MAX_SECTIONS: usize = 13;",
+    "fn": ["update-notes.normalizeReleaseNotes"]
+  },
+  {
+    "name": "no-content-kept",
+    "file": "main-core/src/shell/update_notes.rs",
+    "find": "!trimmed.is_empty() && trimmed != \"No content.\"",
+    "replace": "!trimmed.is_empty()",
+    "fn": ["update-notes.normalizeReleaseNotes"]
+  },
+  {
+    "name": "hex-length",
+    "file": "main-core/src/shell/update_resume.rs",
+    "find": "utf16_len(sha512) == 128",
+    "replace": "utf16_len(sha512) == 127",
+    "fn": ["update-resume.installResumeDownload"]
+  },
+  {
+    "name": "416-without-resume",
+    "file": "main-core/src/shell/update_resume.rs",
+    "find": "if response.status == 416 && resume_from > 0 {",
+    "replace": "if response.status == 416 {",
+    "fn": ["update-resume.installResumeDownload"]
+  },
+  {
+    "name": "ok-range",
+    "file": "main-core/src/shell/update_resume.rs",
+    "find": "(200..=299).contains(&response.status)",
+    "replace": "(200..=499).contains(&response.status)",
+    "fn": ["update-resume.installResumeDownload"]
+  },
+  {
+    "name": "translocation-word",
+    "file": "main-core/src/shell/mac_update.rs",
+    "find": "bundle.contains(\"/AppTranslocation/\")",
+    "replace": "bundle.contains(\"AppTranslocation\")",
+    "fn": ["mac-update.macSelfUpdateBlock"]
+  },
+  {
+    "name": "staging-name",
+    "file": "main-core/src/shell/mac_update.rs",
+    "find": "format!(\".{}.update\", basename(bundle, None))",
+    "replace": "format!(\".{}.updates\", basename(bundle, None))",
+    "fn": ["mac-update.macStagingDir", "mac-update.stageMacUpdate", "mac-update.removeMacLeftovers"]
+  },
+  {
+    "name": "one-app-only",
+    "file": "main-core/src/shell/mac_update.rs",
+    "find": "if apps.len() != 1 {",
+    "replace": "if apps.is_empty() {",
+    "fn": ["mac-update.stageMacUpdate"]
+  },
+  {
+    "name": "shell atomic write keeps its temp file when the write fails",
+    "file": "main-core/src/shell/atomic_write.rs",
+    "find": "    if staged.is_err() {",
+    "replace": "    if false {",
+    "fn": ["shell-atomic-write.atomicWriteFile"]
+  },
+  {
+    "name": "shell atomic write names a failed open `openat`",
+    "file": "main-core/src/shell/atomic_write.rs",
+    "find": "fs::File::create(tmp).map_err(|e| node_error(&e, \"open\", tmp))?",
+    "replace": "fs::File::create(tmp).map_err(|e| node_error(&e, \"openat\", tmp))?",
+    "fn": ["shell-atomic-write.atomicWriteFile"]
+  },
+  {
+    "name": "control endpoint hash cut to 15 digits",
+    "file": "main-core/src/shell/control_server.rs",
+    "find": "&hash[..16]",
+    "replace": "&hash[..15]",
+    "fn": ["control-server.controlEndpointPath"]
+  },
+  {
+    "name": "control request size counted in bytes",
+    "file": "main-core/src/shell/control_server.rs",
+    "find": "self.buffer_units += chunk.encode_utf16().count();",
+    "replace": "self.buffer_units += chunk.len();",
+    "fn": ["control-server.serve"]
+  },
+  {
+    "name": "control token compared by length only",
+    "file": "main-core/src/shell/control_server.rs",
+    "find": "a.len() == b.len() && a.iter().zip(b).fold(0u8, |acc, (x, y)| acc | (x ^ y)) == 0",
+    "replace": "a.len() == b.len()",
+    "fn": ["control-server.serve"]
+  },
+  {
+    "name": "control handler message loses a colon",
+    "file": "main-core/src/shell/control_handlers.rs",
+    "find": "format!(\"file not found: {path}\")",
+    "replace": "format!(\"file not found {path}\")",
+    "fn": ["control-handlers.controlHandler"]
+  },
+  {
+    "name": "control handler deadline is inclusive",
+    "file": "main-core/src/shell/control_handlers.rs",
+    "find": "if host.now_ms() > deadline {",
+    "replace": "if host.now_ms() >= deadline {",
+    "fn": ["control-handlers.controlHandler"]
+  },
+  {
+    "name": "control handler: toString is no inherited kind",
+    "file": "main-core/src/shell/control_handlers.rs",
+    "find": "    \"toString\",\n",
+    "replace": "    \"toStringX\",\n",
+    "fn": ["control-handlers.controlHandler"]
+  },
+  {
+    "name": "csv choices admit 512",
+    "file": "main-core/src/shell/csv_import_limit.rs",
+    "find": "[64.0, 128.0, 256.0]",
+    "replace": "[64.0, 128.0, 512.0]",
+    "fn": ["csv-import-limit.csvImportLimitMb"]
+  },
+  {
+    "name": "csv default 128",
+    "file": "main-core/src/shell/csv_import_limit.rs",
+    "find": "CSV_IMPORT_DEFAULT_LIMIT_MB: f64 = 256.0;",
+    "replace": "CSV_IMPORT_DEFAULT_LIMIT_MB: f64 = 128.0;",
+    "fn": ["csv-import-limit.csvImportLimitMb"]
+  },
+  {
+    "name": "mac bundle search one level deeper",
+    "file": "main-core/src/shell/default_app.rs",
+    "find": "for _ in 0..6 {",
+    "replace": "for _ in 0..7 {",
+    "fn": ["default-app.macAppBundlePath"]
+  },
+  {
+    "name": "owners that are objects compare by value",
+    "file": "main-core/src/shell/default_app.rs",
+    "find": "(Some(JsonValue::Array(_) | JsonValue::Object(_)), Some(_)) => false,",
+    "replace": "(Some(JsonValue::Object(_)), Some(_)) => false,",
+    "fn": ["default-app.parseMacStatus"]
+  },
+  {
+    "name": "windows names not deduplicated",
+    "file": "main-core/src/shell/default_app.rs",
+    "find": "if !names.contains(&name) {",
+    "replace": "if true {",
+    "fn": ["default-app.createDefaultAppService"]
+  },
+  {
+    "name": "diagram check never leaves the set",
+    "file": "main-core/src/shell/diagram_open_gate.rs",
+    "find": "self.checking.remove(&path_key(file_path));",
+    "replace": "let _ = path_key(file_path);",
+    "fn": ["diagram-open-gate.openDiagramChecked", "diagram-open-gate.diagramOpenChecking"]
+  },
+  {
+    "name": "diagram second open of a vsdx starts a second check",
+    "file": "main-core/src/shell/diagram_open_gate.rs",
+    "find": "if self.checking.contains(&key) {",
+    "replace": "if false {",
+    "fn": ["diagram-open-gate.openDiagramChecked"]
+  },
+  {
+    "name": "diagram vsdx test is case-blind to nothing",
+    "file": "main-core/src/shell/diagram_open_gate.rs",
+    "find": "js_regex!(r\"\\.vsdx$\", \"i\")",
+    "replace": "js_regex!(r\"\\.vsdx$\")",
+    "fn": ["diagram-open-gate.openDiagramChecked"]
+  },
+  {
+    "name": "password prompt closes the window although it never showed",
+    "file": "main-core/src/shell/document_password_prompt.rs",
+    "find": "if self.prompts[id].shown {",
+    "replace": "if true {",
+    "fn": ["document-password-prompt.createDocumentPasswordPrompt"]
+  },
+  {
+    "name": "password prompt asks after it closed",
+    "file": "main-core/src/shell/document_password_prompt.rs",
+    "find": "if prompt.closed {",
+    "replace": "if false {",
+    "fn": ["document-password-prompt.createDocumentPasswordPrompt"]
+  },
+  {
+    "name": "password prompt never releases the next one",
+    "file": "main-core/src/shell/document_password_prompt.rs",
+    "find": "self.prompts[id].released = true;",
+    "replace": "self.prompts[id].released = false;",
+    "fn": ["document-password-prompt.createDocumentPasswordPrompt"]
+  },
+  {
+    "name": "pdf convert path limit in bytes",
+    "file": "main-core/src/shell/pdf_convert_ui_handlers.rs",
+    "find": "path.encode_utf16().count() > MAX_PATH",
+    "replace": "path.len() > MAX_PATH",
+    "fn": ["pdf-convert-ui-handlers.createPdfConvertUiHandlers"]
+  },
+  {
+    "name": "pdf convert reveals Markdown only",
+    "file": "main-core/src/shell/pdf_convert_ui_handlers.rs",
+    "find": "if !is_revealable(&path) || !self.deps.exists(&path) {",
+    "replace": "if !is_markdown(&path) || !self.deps.exists(&path) {",
+    "fn": ["pdf-convert-ui-handlers.createPdfConvertUiHandlers"]
+  },
+  {
+    "name": "pdf convert does not bring the view back",
+    "file": "main-core/src/shell/pdf_convert_ui_handlers.rs",
+    "find": "self.deps.activate_view(view_id);",
+    "replace": "let _ = view_id;",
+    "fn": ["pdf-convert-ui-handlers.createPdfConvertUiHandlers"]
+  },
+  {
+    "name": "note file extension is case-sensitive",
+    "file": "main-core/src/shell/pdf_note_tabs.rs",
+    "find": "!js_regex!(r\"\\.md$\", \"i\").test(path)",
+    "replace": "!js_regex!(r\"\\.md$\").test(path)",
+    "fn": ["pdf-note-tabs.isNoteFile", "pdf-note-tabs.openNoteTab"]
+  },
+  {
+    "name": "note text queued for a destroyed tab",
+    "file": "main-core/src/shell/pdf_note_tabs.rs",
+    "find": "if contents.is_destroyed() {",
+    "replace": "if false {",
+    "fn": ["pdf-note-tabs.insertIntoNoteTab"]
+  },
+  {
+    "name": "note tab opened before focusing",
+    "file": "main-core/src/shell/pdf_note_tabs.rs",
+    "find": "host.focus_existing(path).or_else(|| host.open_new(path))",
+    "replace": "host.open_new(path).or_else(|| host.focus_existing(path))",
+    "fn": ["pdf-note-tabs.openNoteTab"]
+  },
+  {
+    "name": "pdf save as default path is case-sensitive",
+    "file": "main-core/src/shell/pdf_save_as_formats.rs",
+    "find": "js_regex!(r\"\\.pdf$\", \"i\")",
+    "replace": "js_regex!(r\"\\.pdf$\")",
+    "fn": ["pdf-save-as-formats.pdfSaveAsDefaultPath"]
+  },
+  {
+    "name": "pdf save as extension needs one letter more",
+    "file": "main-core/src/shell/pdf_save_as_formats.rs",
+    "find": "Some(dot) if dot > slash_end =>",
+    "replace": "Some(dot) if dot >= slash_end =>",
+    "fn": ["pdf-save-as-formats.pdfSaveAsPickedPath", "pdf-save-as-formats.pdfSaveAsFormatOf"]
+  },
+  {
+    "name": "pdf save as markdown label lower case",
+    "file": "main-core/src/shell/pdf_save_as_formats.rs",
+    "find": "Label::Literal(\"Markdown\")",
+    "replace": "Label::Literal(\"markdown\")",
+    "fn": ["pdf-save-as-formats.pdfSaveAsFilters"]
+  },
+  {
+    "name": "feedback names Windows in lower case",
+    "file": "main-core/src/shell/feedback.rs",
+    "find": "\"win32\" => \"Windows\".to_string(),",
+    "replace": "\"win32\" => \"windows\".to_string(),",
+    "fn": ["feedback.platformLabel"]
+  },
+  {
+    "name": "feedback details swap OS and language",
+    "file": "main-core/src/shell/feedback.rs",
+    "find": "params.set(\"os\", JsonValue::String(env.os.clone()));",
+    "replace": "params.set(\"os\", JsonValue::String(env.language.clone()));",
+    "fn": ["feedback.feedbackDetails", "feedback.feedbackText"]
+  },
+  {
+    "name": "feedback english cancel label",
+    "file": "main-core/src/shell/feedback.rs",
+    "find": "(\"btnCancel\", \"Cancel\"),",
+    "replace": "(\"btnCancel\", \"Cancel \"),",
+    "fn": ["feedback.FEEDBACK_STRINGS", "feedback.feedbackText"]
+  },
+  {
+    "name": "links: a repeated derived keeps both records",
+    "file": "main-core/src/shell/document_links.rs",
+    "find": "by_derived.retain(|(held, _)| *held != key);",
+    "replace": "let _ = &by_derived;",
+    "fn": ["document-links.parseDocumentLinks"]
+  },
+  {
+    "name": "links: the latest make event wins",
+    "file": "main-core/src/shell/document_links.rs",
+    "find": "event.is_none_or(|best| candidate.at < best.at)",
+    "replace": "event.is_none_or(|best| candidate.at > best.at)",
+    "fn": ["document-links.DocumentLinks", "document-links.documentLinksAt"]
+  },
+  {
+    "name": "links: fresh test is strict",
+    "file": "main-core/src/shell/document_links.rs",
+    "find": "born >= now_ms - FRESH_WINDOW_MS",
+    "replace": "born > now_ms - FRESH_WINDOW_MS",
+    "fn": ["document-links.isFreshlySavedPath"]
+  },
+  {
+    "name": "menu: sublabel on macOS instead",
+    "file": "main-core/src/shell/document_links_menu.rs",
+    "find": "sublabel: if is_mac {",
+    "replace": "sublabel: if !is_mac {",
+    "fn": ["document-links-menu.documentLinkMenuItems"]
+  },
+  {
+    "name": "menu: entries open their name",
+    "file": "main-core/src/shell/document_links_menu.rs",
+    "find": "click: Some(MenuClick::Open(entry.path.clone())),",
+    "replace": "click: Some(MenuClick::Open(entry.name.clone())),",
+    "fn": ["document-links-menu.documentLinkMenuItems"]
+  },
+  {
+    "name": "menu: make item id",
+    "file": "main-core/src/shell/document_links_menu.rs",
+    "find": "id: Some(\"document-links-make\"),",
+    "replace": "id: Some(\"document-links-make2\"),",
+    "fn": ["document-links-menu.documentLinkMenuItems"]
+  },
+  {
+    "name": "integrator: restore index bound",
+    "file": "main-core/src/shell/session_record.rs",
+    "find": "x >= tabs.len() as f64",
+    "replace": "x > tabs.len() as f64",
+    "fn": ["session-record.parseSessionRecord"]
+  },
+  {
+    "name": "integrator: recently closed cap",
+    "file": "main-core/src/shell/tab_lifecycle.rs",
+    "find": "MAX_RECENTLY_CLOSED: f64 = 20.0;",
+    "replace": "MAX_RECENTLY_CLOSED: f64 = 21.0;",
+    "fn": ["tab-lifecycle.MAX_RECENTLY_CLOSED"]
+  },
+  {
+    "name": "integrator: copy numbering starts at 2",
+    "file": "main-core/src/shell/tab_duplicate.rs",
+    "find": "let mut i: u64 = 1;",
+    "replace": "let mut i: u64 = 2;",
+    "fn": ["tab-duplicate.duplicateDocumentFile"]
+  },
+  {
+    "name": "integrator: docs channel",
+    "file": "main-core/src/shell/tab_document_actions.rs",
+    "find": "\"docs\" => deps.send(&contents, \"menu:command\", command),",
+    "replace": "\"docs\" => deps.send(&contents, \"menu:action\", command),",
+    "fn": ["tab-document-actions.runTabDocumentAction"]
+  },
+  {
+    "name": "integrator: move right bound",
+    "file": "main-core/src/shell/tab_menu.rs",
+    "find": "index >= 1 && index < tabs.len() as i64 - 1",
+    "replace": "index >= 0 && index < tabs.len() as i64 - 1",
+    "fn": ["tab-menu.tabMenuTemplate"]
+  },
+  {
+    "name": "integrator: shortcut key case",
+    "file": "main-core/src/shell/tab_shortcuts.rs",
+    "find": "input.key.to_lowercase() != \"w\"",
+    "replace": "input.key != \"w\"",
+    "fn": ["tab-shortcuts.tabShortcutOf", "tab-shortcuts.handleTabShortcut"]
+  },
+  {
+    "name": "integrator: zero width is available",
+    "file": "main-core/src/shell/split_layout.rs",
+    "find": "if available <= 0.0 {",
+    "replace": "if available < 0.0 {",
+    "fn": ["split-layout.splitRatioLimits", "split-layout.clampSplitRatio"]
+  },
+  {
+    "name": "integrator: open documents file name",
+    "file": "main-core/src/shell/open_documents.rs",
+    "find": "\"open-documents.json\"",
+    "replace": "\"open-document.json\"",
+    "fn": ["open-documents.OPEN_DOCUMENTS_FILE"]
+  },
+  {
+    "name": "integrator: family order",
+    "file": "main-core/src/shell/window_close_guard.rs",
+    "find": "    Family::Sheets,\n    Family::Pdf,\n",
+    "replace": "    Family::Pdf,\n    Family::Sheets,\n",
+    "fn": ["window-close-guard.installShellCloseGuard"]
+  },
+  {
+    "name": "integrator: dark flag inverted",
+    "file": "main-core/src/shell/window_background.rs",
+    "find": "    if dark {",
+    "replace": "    if !dark {",
+    "fn": ["window-background.shellWindowBackground"]
+  },
+  {
+    "name": "integrator: strip height",
+    "file": "main-core/src/shell/title_bar_overlay.rs",
+    "find": "TAB_STRIP_HEIGHT: f64 = 40.0;",
+    "replace": "TAB_STRIP_HEIGHT: f64 = 41.0;",
+    "fn": ["title-bar-overlay.tabStripOverlay"]
+  },
+  {
+    "name": "integrator: skill dir unresolved",
+    "file": "main-core/src/shell/skill_target.rs",
+    "find": "let key = resolve(&[dir]);",
+    "replace": "let key = dir.to_owned();",
+    "fn": ["skill-target.isInstallableSkillDir"]
+  },
+  {
+    "name": "integrator: directory test inverted",
+    "file": "main-core/src/shell/file_targets.rs",
+    "find": "if sources.is_directory(path) {",
+    "replace": "if !sources.is_directory(path) {",
+    "fn": ["file-targets.isMoveSource"]
+  },
+  {
+    "name": "integrator: delete channel",
+    "file": "main-core/src/shell/result_store_ipc.rs",
+    "find": "\"home:result-store-delete-all\"",
+    "replace": "\"home:result-store-delete\"",
+    "fn": ["result-store-ipc.registerResultStoreIpc"]
+  },
+  {
+    "name": "integrator: cancel keeps the request",
+    "file": "main-core/src/shell/update_restart.rs",
+    "find": "self.restart_requested = false;",
+    "replace": "self.restart_requested = true;",
+    "fn": ["update-restart.cancelUpdateRestart"]
+  },
+  {
+    "name": "integrator: progress throttle inclusive",
+    "file": "main-core/src/shell/update_resume.rs",
+    "find": "now - last_progress_at < PROGRESS_INTERVAL_MS",
+    "replace": "now - last_progress_at <= PROGRESS_INTERVAL_MS",
+    "fn": ["update-resume.installResumeDownload"]
+  },
+  {
+    "name": "integrator: version length",
+    "file": "main-core/src/shell/update_notes.rs",
+    "find": "MAX_VERSION_CHARS: usize = 64;",
+    "replace": "MAX_VERSION_CHARS: usize = 63;",
+    "fn": ["update-notes.normalizeReleaseNotes"]
+  },
+  {
+    "name": "integrator: opener path",
+    "file": "main-core/src/shell/mac_update.rs",
+    "find": "unwrap_or(\"/usr/bin/open\")",
+    "replace": "unwrap_or(\"/bin/open\")",
+    "fn": ["mac-update.startMacSwap"]
+  },
+  {
+    "name": "integrator: desktop id",
+    "file": "main-core/src/shell/default_app.rs",
+    "find": "\"seuoffice.desktop\";",
+    "replace": "\"seuoffice.desktop2\";",
+    "fn": ["default-app.createDefaultAppService"]
+  },
+  {
+    "name": "integrator: request size inclusive",
+    "file": "main-core/src/shell/control_server.rs",
+    "find": "self.buffer_units > CONTROL_MAX_REQUEST_BYTES",
+    "replace": "self.buffer_units >= CONTROL_MAX_REQUEST_BYTES",
+    "fn": ["control-server.serve"]
+  },
+  {
+    "name": "integrator: ready timeout",
+    "file": "main-core/src/shell/control_handlers.rs",
+    "find": "unwrap_or(20_000.0)",
+    "replace": "unwrap_or(10_000.0)",
+    "fn": ["control-handlers.controlHandler"]
+  },
+  {
+    "name": "integrator: fresh window",
+    "file": "main-core/src/shell/document_links.rs",
+    "find": "FRESH_WINDOW_MS: f64 = 10_000.0;",
+    "replace": "FRESH_WINDOW_MS: f64 = 9_000.0;",
+    "fn": ["document-links.isFreshlySavedPath"]
+  },
+  {
+    "name": "integrator: missing entries enabled",
+    "file": "main-core/src/shell/document_links_menu.rs",
+    "find": "enabled: Some(!entry.missing),",
+    "replace": "enabled: Some(entry.missing),",
+    "fn": ["document-links-menu.documentLinkMenuItems"]
+  },
+  {
+    "name": "integrator: rename retries",
+    "file": "main-core/src/shell/atomic_write.rs",
+    "find": "RENAME_RETRIES: u32 = 4;",
+    "replace": "RENAME_RETRIES: u32 = 3;",
+    "fn": ["shell-atomic-write.atomicWriteFile"]
+  },
+  {
+    "name": "integrator: csv fallback",
+    "file": "main-core/src/shell/csv_import_limit.rs",
+    "find": "        _ => CSV_IMPORT_DEFAULT_LIMIT_MB,\n    };",
+    "replace": "        _ => 128.0,\n    };",
+    "fn": ["csv-import-limit.csvImportLimitMb"]
+  },
+  {
+    "name": "integrator: diagram key keeps case",
+    "file": "main-core/src/shell/diagram_open_gate.rs",
+    "find": "        resolved.to_lowercase()\n",
+    "replace": "        resolved\n",
+    "fn": ["diagram-open-gate.openDiagramChecked", "diagram-open-gate.diagramOpenChecking"]
+  },
+  {
+    "name": "integrator: prompt never marked closed",
+    "file": "main-core/src/shell/document_password_prompt.rs",
+    "find": "        self.prompts[id].closed = true;\n",
+    "replace": "",
+    "fn": ["document-password-prompt.createDocumentPasswordPrompt"]
+  },
+  {
+    "name": "integrator: survey url path",
+    "file": "main-core/src/shell/feedback.rs",
+    "find": "\"https://docs.google.com/forms/d/e/",
+    "replace": "\"https://docs.google.com/form/d/e/",
+    "fn": ["feedback.FEEDBACK_SURVEY_URL"]
+  },
+  {
+    "name": "integrator: path limit",
+    "file": "main-core/src/shell/pdf_convert_ui_handlers.rs",
+    "find": "const MAX_PATH: usize = 4096;",
+    "replace": "const MAX_PATH: usize = 4095;",
+    "fn": ["pdf-convert-ui-handlers.createPdfConvertUiHandlers"]
+  },
+  {
+    "name": "integrator: blank note text accepted",
+    "file": "main-core/src/shell/pdf_note_tabs.rs",
+    "find": "!jscompat::trim(text).is_empty()",
+    "replace": "!text.is_empty()",
+    "fn": ["pdf-note-tabs.insertIntoNoteTab", "pdf-note-tabs.openNoteTab"]
+  },
+  {
+    "name": "integrator: format extension case",
+    "file": "main-core/src/shell/pdf_save_as_formats.rs",
+    "find": "path[dot + 1..].to_lowercase()",
+    "replace": "path[dot + 1..].to_owned()",
+    "fn": ["pdf-save-as-formats.pdfSaveAsFormatOf"]
+  }
+]

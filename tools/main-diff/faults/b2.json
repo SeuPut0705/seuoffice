@@ -1,0 +1,1217 @@
+[
+  {
+    "name": "integrator: htmlLang En returns a wrong tag (control)",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "Lang::En => \"en-US\",",
+    "replace": "Lang::En => \"en-GB\",",
+    "fn": ["i18n.htmlLang"]
+  },
+  {
+    "name": "html-lang-ko",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "Lang::Ko => \"ko-KR\",",
+    "replace": "Lang::Ko => \"ko-US\",",
+    "fn": ["i18n.htmlLang"]
+  },
+  {
+    "name": "rtl-list",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "[\"ar\", \"he\"];",
+    "replace": "[\"ar\", \"hi\"];",
+    "fn": ["i18n.isRtlLang", "i18n.htmlDir"]
+  },
+  {
+    "name": "alt-mod",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "if mods.contains('\\u{2325}') {",
+    "replace": "if mods.contains('\\u{2324}') {",
+    "fn": ["i18n.macShortcutsToWin"]
+  },
+  {
+    "name": "ko-underscore",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "v.starts_with(\"ko_\")",
+    "replace": "v.starts_with(\"ko:\")",
+    "fn": ["i18n.normalizeLang", "i18n.installLang"]
+  },
+  {
+    "name": "zh-tw",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "return \"zh-TW\".to_string();",
+    "replace": "return \"zh-CN\".to_string();",
+    "fn": ["i18n.documentLocaleFor", "i18n.documentLocale"]
+  },
+  {
+    "name": "editors-max",
+    "file": "main-core/src/packages/electron_utils/user_skills_channels.rs",
+    "find": "if items.len() > 32 {",
+    "replace": "if items.len() > 33 {",
+    "fn": ["user-skills-channels.editorsValueOf", "user-skills-channels.statePatchOf"]
+  },
+  {
+    "name": "proto-key",
+    "file": "main-core/src/packages/electron_utils/user_skills_channels.rs",
+    "find": "if key == \"__proto__\" {",
+    "replace": "if key == \"__proto\" {",
+    "fn": ["user-skills-channels.installRequestOf"]
+  },
+  {
+    "name": "body-max",
+    "file": "main-core/src/packages/electron_utils/user_skills_channels.rs",
+    "find": "pub const USER_SKILL_BODY_MAX: usize = 2_000_000;",
+    "replace": "pub const USER_SKILL_BODY_MAX: usize = 2_000_001;",
+    "fn": ["user-skills-channels.USER_SKILL_BODY_MAX", "user-skills-channels.saveInputOf"]
+  },
+  {
+    "name": "mcp-name-max",
+    "file": "main-core/src/packages/electron_utils/mcp_tools_channels.rs",
+    "find": "const NAME_MAX: usize = 256;",
+    "replace": "const NAME_MAX: usize = 255;",
+    "fn": ["mcp-tools-channels.mcpServerNameOf", "mcp-tools-channels.mcpToolCallRequestOf"]
+  },
+  {
+    "name": "mcp-input-type",
+    "file": "main-core/src/packages/electron_utils/mcp_tools_channels.rs",
+    "find": "Some(_) => None,",
+    "replace": "Some(_) => Some(JsObject::new()),",
+    "fn": ["mcp-tools-channels.mcpToolCallRequestOf"]
+  },
+  {
+    "name": "confirm-count",
+    "file": "main-core/src/packages/electron_utils/outbound_channels.rs",
+    "find": "items.len() > MAX_CONFIRM_ADDRESSES",
+    "replace": "items.len() >= MAX_CONFIRM_ADDRESSES",
+    "fn": ["outbound-channels.confirmRequestOf"]
+  },
+  {
+    "name": "confirm-tool",
+    "file": "main-core/src/packages/electron_utils/outbound_channels.rs",
+    "find": "r\"^[a-z_]{1,64}$\"",
+    "replace": "r\"^[a-z_]{1,63}$\"",
+    "fn": ["outbound-channels.confirmRequestOf"]
+  },
+  {
+    "name": "attach-channel",
+    "file": "main-core/src/packages/electron_utils/doc_attach_channels.rs",
+    "find": "\"doc:pick-attachments\"",
+    "replace": "\"doc:pick-attachment\"",
+    "fn": ["doc-attach-channels.DOC_ATTACH_CHANNELS"]
+  },
+  {
+    "name": "first-listener",
+    "file": "main-core/src/packages/electron_utils/project_folder_bridge.rs",
+    "find": "if count == 1 {",
+    "replace": "if count == 2 {",
+    "fn": ["project-folder-bridge.projectFolderBridge"]
+  },
+  {
+    "name": "last-listener",
+    "file": "main-core/src/packages/electron_utils/project_folder_bridge.rs",
+    "find": "if left == 0 {",
+    "replace": "if left == 1 {",
+    "fn": ["project-folder-bridge.projectFolderBridge"]
+  },
+  {
+    "name": "channel-key",
+    "file": "main-core/src/packages/project_store.rs",
+    "find": "(\"setPinned\", \"projectFolder:setPinned\"),",
+    "replace": "(\"setPinned\", \"projectFolder:setPin\"),",
+    "fn": ["folder-api.PROJECT_FOLDER_CHANNELS", "project-folder-bridge.projectFolderBridge"]
+  },
+  {
+    "name": "role-undefined",
+    "file": "main-core/src/packages/electron_utils/split_pane_bridge.rs",
+    "find": "Ok(None) | Err(IpcRejected) => Value::Null,",
+    "replace": "Ok(None) => Value::Null,\n            Err(IpcRejected) => Value::from(0),",
+    "fn": ["split-pane-bridge.splitPaneBridge"]
+  },
+  {
+    "name": "retry-ms",
+    "file": "main-core/src/packages/electron_utils/default_save_dir.rs",
+    "find": "const UNUSABLE_RETRY_MS: f64 = 30_000.0;",
+    "replace": "const UNUSABLE_RETRY_MS: f64 = 20_000.0;",
+    "fn": ["default-save-dir.resolveDefaultSaveDir", "default-save-dir.configuredDefaultSaveDir"]
+  },
+  {
+    "name": "skip-bound",
+    "file": "main-core/src/packages/electron_utils/default_save_dir.rs",
+    "find": "now_ms < *until",
+    "replace": "now_ms <= *until",
+    "fn": ["default-save-dir.resolveDefaultSaveDir", "default-save-dir.defaultSaveDirFallback"]
+  },
+  {
+    "name": "abs-check",
+    "file": "main-core/src/packages/electron_utils/default_save_dir.rs",
+    "find": "Some(JsonValue::String(value)) if is_absolute(value) => Some(value.clone()),",
+    "replace": "Some(JsonValue::String(value)) => Some(value.clone()),",
+    "fn": ["default-save-dir.readDefaultSaveDirSetting"]
+  },
+  {
+    "name": "props-string",
+    "file": "main-core/src/packages/electron_utils/dialog_memory.rs",
+    "find": "Some(JsonValue::String(text)) => text.contains(\"openDirectory\"),",
+    "replace": "Some(JsonValue::String(_)) => false,",
+    "fn": ["dialog-memory.showOpenDialogWithMemory"]
+  },
+  {
+    "name": "bare-name",
+    "file": "main-core/src/packages/electron_utils/dialog_memory.rs",
+    "find": "&& basename(path, None) != path",
+    "replace": "&& basename(path, None) == path",
+    "fn": ["dialog-memory.showOpenDialogWithMemory", "dialog-memory.showSaveDialogWithMemory"]
+  },
+  {
+    "name": "author-max",
+    "file": "main-core/src/packages/electron_utils/author_name.rs",
+    "find": "pub const AUTHOR_NAME_MAX: usize = 120;",
+    "replace": "pub const AUTHOR_NAME_MAX: usize = 121;",
+    "fn": ["author-name.AUTHOR_NAME_MAX", "author-name.sanitizeAuthorName"]
+  },
+  {
+    "name": "author-fallback",
+    "file": "main-core/src/packages/electron_utils/author_name.rs",
+    "find": "const FALLBACK: &str = \"User\";",
+    "replace": "const FALLBACK: &str = \"user\";",
+    "fn": ["author-name.systemAuthorName", "author-name.resolveAuthorName"]
+  },
+  {
+    "name": "bold-italic",
+    "file": "main-core/src/packages/electron_utils/font_store.rs",
+    "find": "\"-BoldItalic\"",
+    "replace": "\"-Bolditalic\"",
+    "fn": ["font-store.installLocalFontFiles"]
+  },
+  {
+    "name": "default-ext",
+    "file": "main-core/src/packages/electron_utils/font_store.rs",
+    "find": ".unwrap_or_else(|| \"ttf\".to_owned())",
+    "replace": ".unwrap_or_else(|| \"otf\".to_owned())",
+    "fn": ["font-store.installLocalFontFiles"]
+  },
+  {
+    "name": "release-tag",
+    "file": "main-core/src/packages/electron_utils/github_menu.rs",
+    "find": "format!(\"{GITHUB_RELEASES_URL}/tag/v{version}\")",
+    "replace": "format!(\"{GITHUB_RELEASES_URL}/tag/{version}\")",
+    "fn": ["github-menu.githubReleaseTagUrl"]
+  },
+  {
+    "name": "hwpx",
+    "file": "main-core/src/packages/electron_utils/hwp_default_format.rs",
+    "find": "Some(JsonValue::String(s)) if s == \"hwpx\"",
+    "replace": "Some(JsonValue::String(s)) if s == \"hwp\"",
+    "fn": [
+      "hwp-default-format.normalizeHwpDefaultFormat",
+      "hwp-default-format.readHwpDefaultFormat"
+    ]
+  },
+  {
+    "name": "pad-width",
+    "file": "main-core/src/packages/electron_utils/numbered_export_paths.rs",
+    "find": "let width = 2.max(",
+    "replace": "let width = 3.max(",
+    "fn": ["numbered-export-paths.numberedExportPaths"]
+  },
+  {
+    "name": "ext-bound",
+    "file": "main-core/src/packages/electron_utils/numbered_export_paths.rs",
+    "find": "(Some(dot), Some(slash)) => dot > slash + 1,",
+    "replace": "(Some(dot), Some(slash)) => dot >= slash + 1,",
+    "fn": ["numbered-export-paths.numberedExportPaths"]
+  },
+  {
+    "name": "mime",
+    "file": "main-core/src/packages/electron_utils/template_font_response.rs",
+    "find": "\"otf\" => Some(\"font/otf\"),",
+    "replace": "\"otf\" => Some(\"font/ttf\"),",
+    "fn": ["template-font-response.templateFontResponse"]
+  },
+  {
+    "name": "status",
+    "file": "main-core/src/packages/electron_utils/template_font_response.rs",
+    "find": "status: 404,",
+    "replace": "status: 403,",
+    "fn": ["template-font-response.templateFontResponse"]
+  },
+  {
+    "name": "repo-dir",
+    "file": "main-core/src/packages/electron_utils/template_fonts_dir.rs",
+    "find": "\"..\", \"..\", TEMPLATE_FONTS_REPO_DIR",
+    "replace": "\"..\", TEMPLATE_FONTS_REPO_DIR",
+    "fn": ["template-fonts-dir.templateFontsDir"]
+  },
+  {
+    "name": "main-frame",
+    "file": "main-core/src/packages/electron_utils/abort_on_destroyed.rs",
+    "find": "is_main_frame.as_deref() != Some(&JsonValue::Bool(false))",
+    "replace": "is_main_frame.as_deref() == Some(&JsonValue::Bool(true))",
+    "fn": ["abort-on-destroyed.abortOnDestroyed"]
+  },
+  {
+    "name": "legacy-nav",
+    "file": "main-core/src/packages/electron_utils/abort_on_destroyed.rs",
+    "find": "main_frame && !in_place",
+    "replace": "main_frame || !in_place",
+    "fn": ["abort-on-destroyed.abortOnDestroyed"]
+  },
+  {
+    "name": "host-check",
+    "file": "main-core/src/packages/ui.rs",
+    "find": "parsed.host_str() != Some(TEMPLATE_FONT_HOST)",
+    "replace": "parsed.host_str() == Some(TEMPLATE_FONT_HOST)",
+    "fn": ["template-fonts.templateFontFileOf", "template-font-response.templateFontResponse"]
+  },
+  {
+    "name": "scheme-check",
+    "file": "main-core/src/packages/ui.rs",
+    "find": "parsed.scheme() != TEMPLATE_FONT_SCHEME",
+    "replace": "parsed.scheme() == TEMPLATE_FONT_SCHEME",
+    "fn": ["template-fonts.templateFontFileOf"]
+  },
+  {
+    "name": "path-strip",
+    "file": "main-core/src/packages/ui.rs",
+    "find": "r\"^\\/+\"",
+    "replace": "r\"^\\/\"",
+    "fn": ["template-fonts.templateFontFileOf"]
+  },
+  {
+    "name": "markdown default ext",
+    "file": "main-core/src/packages/electron_utils/recovery_store.rs",
+    "find": "\"markdown\" => \".md\",",
+    "replace": "\"markdown\" => \".mdx\",",
+    "fn": ["recovery-store.createRecoveryStore"]
+  },
+  {
+    "name": "prune cutoff boundary",
+    "file": "main-core/src/packages/electron_utils/recovery_store.rs",
+    "find": "if mtime >= cutoff {",
+    "replace": "if mtime > cutoff {",
+    "fn": ["recovery-store.createRecoveryStore"]
+  },
+  {
+    "name": "adopt default state",
+    "file": "main-core/src/packages/electron_utils/recovery_store.rs",
+    "find": "adopt_options.state.unwrap_or(RecoveryCopyState::Later)",
+    "replace": "adopt_options.state.unwrap_or(RecoveryCopyState::Undecided)",
+    "fn": ["recovery-store.createRecoveryStore"]
+  },
+  {
+    "name": "file newer than copy",
+    "file": "main-core/src/packages/electron_utils/recovery_store.rs",
+    "find": "file_mtime > copy_mtime_ms",
+    "replace": "file_mtime >= copy_mtime_ms",
+    "fn": ["recovery-store.createRecoveryStore", "recovery-prompt.resolveRecoveryOnOpen"]
+  },
+  {
+    "name": "ticket check dropped",
+    "file": "main-core/src/packages/electron_utils/recovery_store.rs",
+    "find": "if ticket.key != key {",
+    "replace": "if false {",
+    "fn": ["recovery-store.createRecoveryStore"]
+  },
+  {
+    "name": "discard response",
+    "file": "main-core/src/packages/electron_utils/recovery_prompt.rs",
+    "find": "if response == f64::from(DISCARD) {",
+    "replace": "if response >= f64::from(DISCARD) {",
+    "fn": ["recovery-prompt.promptRecoveryForFile"]
+  },
+  {
+    "name": "cancel id",
+    "file": "main-core/src/packages/electron_utils/recovery_prompt.rs",
+    "find": "cancel_id: RESTORE,",
+    "replace": "cancel_id: DISCARD,",
+    "fn": ["recovery-prompt.promptRecoveryForFile", "recovery-prompt.resolveRecoveryOnOpen"]
+  },
+  {
+    "name": "copy not marked loaded",
+    "file": "main-core/src/packages/electron_utils/recovery_prompt.rs",
+    "find": "store.mark_copy_loaded(identity)?;",
+    "replace": "let _ = identity;",
+    "fn": ["recovery-prompt.resolveRecoveryOnOpen"]
+  },
+  {
+    "name": "detail label",
+    "file": "main-core/src/packages/electron_utils/recovery_labels.rs",
+    "find": "detail: t.t(loc, \"detail\", None),",
+    "replace": "detail: t.t(loc, \"restore\", None),",
+    "fn": ["recovery-labels.recoveryPromptLabels"]
+  },
+  {
+    "name": "notice key",
+    "file": "main-core/src/packages/electron_utils/recovery_labels.rs",
+    "find": "\"unprotectable\", None)",
+    "replace": "\"restore\", None)",
+    "fn": ["recovery-labels.unprotectableNoticeText"]
+  },
+  {
+    "name": "english restore text",
+    "file": "main-core/src/packages/electron_utils/recovery_labels.rs",
+    "find": "\"Restore\",",
+    "replace": "\"Restores\",",
+    "fn": ["recovery-labels.recoveryPromptLabels", "recovery-labels.RECOVERY_PROMPT_STRINGS"]
+  },
+  {
+    "name": "overwrite label",
+    "file": "main-core/src/packages/electron_utils/save_conflict_labels.rs",
+    "find": "overwrite: t.t(loc, \"overwrite\", None),",
+    "replace": "overwrite: t.t(loc, \"cancel\", None),",
+    "fn": ["save-conflict-labels.saveConflictLabels"]
+  },
+  {
+    "name": "english overwrite text",
+    "file": "main-core/src/packages/electron_utils/save_conflict_labels.rs",
+    "find": "\"Overwrite\",",
+    "replace": "\"Overwrites\",",
+    "fn": ["save-conflict-labels.saveConflictLabels", "save-conflict-labels.SAVE_CONFLICT_STRINGS"]
+  },
+  {
+    "name": "replace keeps old",
+    "file": "main-core/src/packages/electron_utils/recovery_contract.rs",
+    "find": "Some(entry) => entry.1 = Rc::clone(&contract),",
+    "replace": "Some(_) => {}",
+    "fn": [
+      "recovery-contract.registerRecoveryEditor",
+      "recovery-contract.recoveryEditor",
+      "recovery-contract.recoveryEditors"
+    ]
+  },
+  {
+    "name": "stale unregister removes",
+    "file": "main-core/src/packages/electron_utils/recovery_contract.rs",
+    "find": "&& Rc::ptr_eq(&self.table[at].1, &registration.contract)",
+    "replace": "&& !Rc::ptr_eq(&self.table[at].1, &registration.contract)",
+    "fn": ["recovery-contract.registerRecoveryEditor", "recovery-contract.recoveryEditors"]
+  },
+  {
+    "name": "new kind goes first",
+    "file": "main-core/src/packages/electron_utils/recovery_contract.rs",
+    "find": "None => self.table.push((kind, Rc::clone(&contract))),",
+    "replace": "None => self.table.insert(0, (kind, Rc::clone(&contract))),",
+    "fn": ["recovery-contract.recoveryEditors"]
+  },
+  {
+    "name": "unknown source is clean",
+    "file": "main-core/src/packages/electron_utils/unsaved_files.rs",
+    "find": "Unsaved::Unknown => true,",
+    "replace": "Unsaved::Unknown => false,",
+    "fn": [
+      "unsaved-files.fileHasUnsavedChanges",
+      "unsaved-files.assertFileSaved",
+      "unsaved-files.setOpenFilesSource"
+    ]
+  },
+  {
+    "name": "unknown source keeps items",
+    "file": "main-core/src/packages/electron_utils/unsaved_files.rs",
+    "find": "Unsaved::Unknown => Vec::new(),",
+    "replace": "Unsaved::Unknown => items.to_vec(),",
+    "fn": ["unsaved-files.withoutUnsavedFiles"]
+  },
+  {
+    "name": "clean files counted",
+    "file": "main-core/src/packages/electron_utils/unsaved_files.rs",
+    "find": "if doc.dirty",
+    "replace": "if !doc.dirty",
+    "fn": ["unsaved-files.fileHasUnsavedChanges", "unsaved-files.withoutUnsavedFiles"]
+  },
+  {
+    "name": "proto key set",
+    "file": "main-core/src/packages/electron_utils/legacy_import_prefs.rs",
+    "find": "if kind != \"__proto__\" {",
+    "replace": "if true {",
+    "fn": ["legacy-import-prefs.writeLegacyImportSkip"]
+  },
+  {
+    "name": "clear removes the wrong key",
+    "file": "main-core/src/packages/electron_utils/legacy_import_prefs.rs",
+    "find": ".filter(|(key, _)| *key != kind)",
+    "replace": ".filter(|(key, _)| *key == kind)",
+    "fn": ["legacy-import-prefs.writeLegacyImportSkip"]
+  },
+  {
+    "name": "prompt flag inverted",
+    "file": "main-core/src/packages/electron_utils/legacy_import_prefs.rs",
+    "find": "if !prompt {",
+    "replace": "if prompt {",
+    "fn": ["legacy-import-prefs.writeLegacyImportPrompt"]
+  },
+  {
+    "name": "carrier NAT prefix",
+    "file": "main-core/src/packages/electron_utils/safe_remote_url.rs",
+    "find": "([100, 64, 0, 0], 10),  // carrier NAT",
+    "replace": "([100, 64, 0, 0], 11),  // carrier NAT",
+    "fn": ["safe-remote-url.isBlockedAddress", "safe-remote-url.resolveSafeRemoteTarget"]
+  },
+  {
+    "name": "mapped v4 check",
+    "file": "main-core/src/packages/electron_utils/safe_remote_url.rs",
+    "find": "address[11] == 0xff;",
+    "replace": "address[11] == 0xfe;",
+    "fn": ["safe-remote-url.isBlockedAddress"]
+  },
+  {
+    "name": "hop budget",
+    "file": "main-core/src/packages/electron_utils/safe_remote_url.rs",
+    "find": "jscompat::math_max(max_redirects.floor(), 0.0), 10.0)",
+    "replace": "jscompat::math_max(max_redirects.floor(), 0.0), 11.0)",
+    "fn": ["safe-remote-url.fetchWithSsrfGuard"]
+  },
+  {
+    "name": "every to any",
+    "file": "main-core/src/packages/electron_utils/safe_remote_url.rs",
+    "find": ".all(|a| !is_blocked_address(&a.address) || is_fake_ip_dns_artifact(&a.address))",
+    "replace": ".any(|a| !is_blocked_address(&a.address) || is_fake_ip_dns_artifact(&a.address))",
+    "fn": ["safe-remote-url.resolveSafeRemoteTarget", "safe-remote-url.fetchWithSsrfGuard"]
+  },
+  {
+    "name": "429 not transient",
+    "file": "main-core/src/packages/electron_utils/remote_image.rs",
+    "find": "status == 403 || status == 408 || status == 429 || status >= 500",
+    "replace": "status == 403 || status == 408 || status >= 500",
+    "fn": ["remote-image.fetchRemoteImage"]
+  },
+  {
+    "name": "cap inclusive",
+    "file": "main-core/src/packages/electron_utils/remote_image.rs",
+    "find": "declared > max_bytes",
+    "replace": "declared >= max_bytes",
+    "fn": ["remote-image.readBodyCapped"]
+  },
+  {
+    "name": "image cap",
+    "file": "main-core/src/packages/electron_utils/remote_image.rs",
+    "find": "50 * 1024 * 1024",
+    "replace": "49 * 1024 * 1024",
+    "fn": ["remote-image.MAX_REMOTE_IMAGE_BYTES"]
+  },
+  {
+    "name": "first widest table",
+    "file": "main-core/src/packages/electron_utils/remote_table.rs",
+    "find": "rows.len() > best.len()",
+    "replace": "rows.len() >= best.len()",
+    "fn": ["remote-table.parseHtmlTable"]
+  },
+  {
+    "name": "delimiter tie",
+    "file": "main-core/src/packages/electron_utils/remote_table.rs",
+    "find": "if count > best_count {",
+    "replace": "if count >= best_count {",
+    "fn": ["remote-table.detectDelimiter"]
+  },
+  {
+    "name": "clip length",
+    "file": "main-core/src/packages/electron_utils/remote_table.rs",
+    "find": "Some((MAX_REMOTE_TABLE_CELL_CHARS - 1) as f64)",
+    "replace": "Some(MAX_REMOTE_TABLE_CELL_CHARS as f64)",
+    "fn": ["remote-table.fetchRemoteTable"]
+  },
+  {
+    "name": "png case",
+    "file": "main-core/src/packages/electron_utils/fetch_image_bytes.rs",
+    "find": "ct.contains(\"png\")",
+    "replace": "ct.contains(\"PNG\")",
+    "fn": ["fetch-image-bytes.fetchImageBytes"]
+  },
+  {
+    "name": "empty url",
+    "file": "main-core/src/packages/electron_utils/fetch_image_bytes.rs",
+    "find": "let url = url.filter(|url| !url.is_empty())?;",
+    "replace": "let url = url?;",
+    "fn": ["fetch-image-bytes.fetchImageBytes"]
+  },
+  {
+    "name": "prune age",
+    "file": "main-core/src/packages/electron_utils/generated_images.rs",
+    "find": "24.0 * 60.0 * 60.0 * 1000.0",
+    "replace": "23.0 * 60.0 * 60.0 * 1000.0",
+    "fn": ["generated-images.storeGeneratedImage"]
+  },
+  {
+    "name": "label length in chars",
+    "file": "main-core/src/packages/electron_utils/generated_images.rs",
+    "find": "mime.encode_utf16().count() <= MAX_MIME_LENGTH",
+    "replace": "mime.chars().count() <= MAX_MIME_LENGTH",
+    "fn": ["generated-images.storeGeneratedImage"]
+  },
+  {
+    "name": "constructor label",
+    "file": "main-core/src/packages/electron_utils/generated_images.rs",
+    "find": "\"constructor\" => \"function Object() { [native code] }\",",
+    "replace": "\"constructor\" => \"png\",",
+    "fn": ["generated-images.storeGeneratedImage"]
+  },
+  {
+    "name": "name join check",
+    "file": "main-core/src/packages/electron_utils/generated_images.rs",
+    "find": "path != host::join(&[&dir, &name])",
+    "replace": "false",
+    "fn": ["generated-images.readGeneratedImage"]
+  },
+  {
+    "name": "loopback entry",
+    "file": "main-core/src/packages/electron_utils/main_proxy.rs",
+    "find": ", \"[::1]\"]",
+    "replace": "]",
+    "fn": ["main-proxy.mergeNoProxy"]
+  },
+  {
+    "name": "port rule",
+    "file": "main-core/src/packages/electron_utils/main_proxy.rs",
+    "find": "entry.port != 0.0 && entry.port != port",
+    "replace": "entry.port != 0.0 && entry.port == port",
+    "fn": ["main-proxy.createMainProcessProxyDispatcher", "main-proxy.EnvHttpProxyAgent"]
+  },
+  {
+    "name": "https agent",
+    "file": "main-core/src/packages/electron_utils/main_proxy.rs",
+    "find": "url.scheme() == \"https\" {",
+    "replace": "url.scheme() == \"http\" {",
+    "fn": ["main-proxy.EnvHttpProxyAgent", "main-proxy.createMainProcessProxyDispatcher"]
+  },
+  {
+    "name": "no trim",
+    "file": "main-core/src/packages/electron_utils/safe_external_url.rs",
+    "find": "let text = trim(url?);",
+    "replace": "let text = url?;",
+    "fn": ["safe-external-url.safeExternalUrl"]
+  },
+  {
+    "name": "file allowed",
+    "file": "main-core/src/packages/electron_utils/safe_external_url.rs",
+    "find": "None => DEFAULT_PROTOCOLS.contains(&protocol.as_str()),",
+    "replace": "None => DEFAULT_PROTOCOLS.contains(&protocol.as_str()) || protocol == \"file:\",",
+    "fn": ["safe-external-url.safeExternalUrl"]
+  },
+  {
+    "name": "same url",
+    "file": "main-core/src/packages/electron_utils/navigation_guard.rs",
+    "find": "event.url() != get_url()",
+    "replace": "event.url() == get_url()",
+    "fn": ["navigation-guard.installNavigationGuard"]
+  },
+  {
+    "name": "no flag",
+    "file": "main-core/src/packages/electron_utils/navigation_guard.rs",
+    "find": "    app.set_guard_installed();",
+    "replace": "    let _ = &app;",
+    "fn": ["navigation-guard.installNavigationGuard"]
+  },
+  {
+    "name": "query cap",
+    "file": "main-core/src/packages/electron_utils/renderer_scheme.rs",
+    "find": "MAX_RENDERER_QUERY_ENTRIES: usize = 20;",
+    "replace": "MAX_RENDERER_QUERY_ENTRIES: usize = 21;",
+    "fn": ["renderer-scheme.MAX_RENDERER_QUERY_ENTRIES", "renderer-scheme.rendererUrl"]
+  },
+  {
+    "name": "root is a file",
+    "file": "main-core/src/packages/electron_utils/renderer_scheme.rs",
+    "find": "if file == base {",
+    "replace": "if false {",
+    "fn": ["renderer-scheme.resolveRendererFile"]
+  },
+  {
+    "name": "keep old query",
+    "file": "main-core/src/packages/electron_utils/renderer_scheme.rs",
+    "find": "serializer.clear();",
+    "replace": "",
+    "fn": ["renderer-scheme.rendererUrl"]
+  },
+  {
+    "name": "backslash",
+    "file": "main-core/src/packages/electron_utils/renderer_scheme.rs",
+    "find": "let slashed = js_regex!(r\"\\\\\", \"g\").replace_all(&pathname, |_| \"/\".to_owned());",
+    "replace": "let slashed = pathname.clone();",
+    "fn": ["renderer-scheme.resolveRendererFile"]
+  },
+  {
+    "name": "opaque origin matches",
+    "file": "main-core/src/packages/electron_utils/permission_guard.rs",
+    "find": "if origin == \"null\" { None } else { Some(origin) }",
+    "replace": "Some(origin)",
+    "fn": ["permission-guard.appPageOf"]
+  },
+  {
+    "name": "own frame default",
+    "file": "main-core/src/packages/electron_utils/permission_guard.rs",
+    "find": "ask.own_frame != Some(true)",
+    "replace": "ask.own_frame == Some(false)",
+    "fn": ["permission-guard.permissionAllowed"]
+  },
+  {
+    "name": "any audio",
+    "file": "main-core/src/packages/electron_utils/permission_guard.rs",
+    "find": "media.iter().all(|kind| kind == \"audio\")",
+    "replace": "media.iter().any(|kind| kind == \"audio\")",
+    "fn": ["permission-guard.permissionAllowed"]
+  },
+  {
+    "name": "sandboxed origin",
+    "file": "main-core/src/packages/electron_utils/permission_guard.rs",
+    "find": "origin == \"null\" || origin != contents.frame_origin(top)?",
+    "replace": "origin != contents.frame_origin(top)?",
+    "fn": ["permission-guard.permissionRequestHandler", "permission-guard.permissionCheckHandler"]
+  },
+  {
+    "name": "po-dedupe",
+    "file": "main-core/src/packages/electron_utils/printer_options.rs",
+    "find": "if !values.iter().any(|v| v == value) {",
+    "replace": "if true {",
+    "fn": ["printer-options.parseLpOptions", "printer-options.queryPrinterOptions"]
+  },
+  {
+    "name": "po-translation-trim",
+    "file": "main-core/src/packages/electron_utils/printer_options.rs",
+    "find": "translation: trim(translation).to_owned(),",
+    "replace": "translation: translation.to_owned(),",
+    "fn": ["printer-options.parseLpOptions"]
+  },
+  {
+    "name": "po-exit-code",
+    "file": "main-core/src/packages/electron_utils/printer_options.rs",
+    "find": "code: Some(0),",
+    "replace": "code: _,",
+    "fn": ["printer-options.queryPrinterOptions"]
+  },
+  {
+    "name": "cups-collate",
+    "file": "main-core/src/packages/electron_utils/print_cups.rs",
+    "find": "\"Collate=True\"\n            } else {\n                \"Collate=False\"",
+    "replace": "\"Collate=False\"\n            } else {\n                \"Collate=True\"",
+    "fn": ["print-cups.lpArgumentsFor", "print-cups.printPdfViaCups"]
+  },
+  {
+    "name": "cups-scale-one",
+    "file": "main-core/src/packages/electron_utils/print_cups.rs",
+    "find": "scale: request.scale.filter(|&scale| scale != 1.0),",
+    "replace": "scale: request.scale,",
+    "fn": ["print-cups.printToPdfOptionsFor"]
+  },
+  {
+    "name": "cups-exit-code",
+    "file": "main-core/src/packages/electron_utils/print_cups.rs",
+    "find": "if code == Some(0) {",
+    "replace": "if code.is_some() {",
+    "fn": ["print-cups.printPdfViaCups"]
+  },
+  {
+    "name": "job-copies-max",
+    "file": "main-core/src/packages/electron_utils/print_job.rs",
+    "find": "(1.0..=999.0).contains(&copies)",
+    "replace": "(1.0..=1000.0).contains(&copies)",
+    "fn": ["print-job.printJobOptions"]
+  },
+  {
+    "name": "job-cancel-silent",
+    "file": "main-core/src/packages/electron_utils/print_job.rs",
+    "find": "if !silent && reason.is_some_and(",
+    "replace": "if reason.is_some_and(",
+    "fn": ["print-job.printOutcome"]
+  },
+  {
+    "name": "job-microns-floor",
+    "file": "main-core/src/packages/electron_utils/print_job.rs",
+    "find": "width: math_round(width * MICRONS_PER_INCH),",
+    "replace": "width: (width * MICRONS_PER_INCH).floor(),",
+    "fn": ["print-job.printJobOptions"]
+  },
+  {
+    "name": "win-platform",
+    "file": "main-core/src/packages/electron_utils/print_window.rs",
+    "find": "if options.platform == \"win32\" {",
+    "replace": "if options.platform != \"win32\" {",
+    "fn": ["print-window.printHtmlDocument"]
+  },
+  {
+    "name": "win-canceled",
+    "file": "main-core/src/packages/electron_utils/print_window.rs",
+    "find": "if result.failure_reason == \"Print job canceled\" {",
+    "replace": "if result.failure_reason == \"print job canceled\" {",
+    "fn": ["print-window.printHtmlDocument"]
+  },
+  {
+    "name": "win-probe-log",
+    "file": "main-core/src/packages/electron_utils/print_window.rs",
+    "find": "ExecOutcome::Rejected(message) => log_probe_error(&message),",
+    "replace": "ExecOutcome::Rejected(_) => {}",
+    "fn": ["print-window.loadPrintHtml", "print-window.printHtmlDocument"]
+  },
+  {
+    "name": "pdf-keep-attrs",
+    "file": "main-core/src/packages/electron_utils/print_html_pdf.rs",
+    "find": "element.attrs = Vec::new();",
+    "replace": "let _ = &element.attrs;",
+    "fn": ["print-html-pdf.sanitizePrintableBody", "print-html-pdf.buildPrintableHtml"]
+  },
+  {
+    "name": "pdf-keep-comments",
+    "file": "main-core/src/packages/electron_utils/print_html_pdf.rs",
+    "find": "Node::Comment(_) => {}",
+    "replace": "Node::Comment(_) => safe.push(node),",
+    "fn": ["print-html-pdf.sanitizePrintableBody"]
+  },
+  {
+    "name": "pdf-title-escape",
+    "file": "main-core/src/packages/electron_utils/print_html_pdf.rs",
+    "find": ".replace('<', \"&lt;\")",
+    "replace": ".replace('<', \"<\")",
+    "fn": ["print-html-pdf.buildPrintableHtml"]
+  },
+  {
+    "name": "html-gt",
+    "file": "main-core/src/html.rs",
+    "find": "'>' => out.push_str(\"&gt;\"),",
+    "replace": "'>' => out.push('>'),",
+    "fn": ["print-html-pdf.sanitizePrintableBody", "print-html-pdf.parseSerialize"]
+  },
+  {
+    "name": "html-bom",
+    "file": "main-core/src/html.rs",
+    "find": "discard_bom: false,",
+    "replace": "discard_bom: true,",
+    "fn": ["print-html-pdf.sanitizePrintableBody", "print-html-pdf.parseSerialize"]
+  },
+  {
+    "name": "html-noscript-raw",
+    "file": "main-core/src/html.rs",
+    "find": "UNESCAPED_TEXT.contains(&name) || name == \"noscript\"",
+    "replace": "UNESCAPED_TEXT.contains(&name)",
+    "fn": ["print-html-pdf.parseSerialize"]
+  },
+  {
+    "name": "he-page-min",
+    "file": "main-core/src/packages/electron_utils/headless_export.rs",
+    "find": "|| n < 1.0",
+    "replace": "|| n < 0.0",
+    "fn": ["headless-export.parseHeadlessExportArgv"]
+  },
+  {
+    "name": "he-summary-empty",
+    "file": "main-core/src/packages/electron_utils/headless_export.rs",
+    "find": "0 => format!(\"Ran {input}; nothing was written\"),",
+    "replace": "0 => format!(\"Exported {input} to 0 files\"),",
+    "fn": ["headless-export.headlessSummary", "headless-export.formatHeadlessEnvelope"]
+  },
+  {
+    "name": "he-deadline",
+    "file": "main-core/src/packages/electron_utils/headless_export.rs",
+    "find": "if now() > deadline {",
+    "replace": "if now() >= deadline {",
+    "fn": ["headless-export.pollUntilReady"]
+  },
+  {
+    "name": "hm-store",
+    "file": "main-core/src/packages/electron_utils/headless_mode.rs",
+    "find": "self.headless.store(on, Ordering::SeqCst);",
+    "replace": "self.headless.store(false, Ordering::SeqCst);",
+    "fn": ["headless-mode.setHeadlessMode", "headless-mode.isHeadlessMode"]
+  },
+  {
+    "name": "hm-load",
+    "file": "main-core/src/packages/electron_utils/headless_mode.rs",
+    "find": "self.headless.load(Ordering::SeqCst)",
+    "replace": "!self.headless.load(Ordering::SeqCst)",
+    "fn": ["headless-mode.setHeadlessMode", "headless-mode.isHeadlessMode"]
+  },
+  {
+    "name": "he-pdf-name",
+    "file": "main-core/src/packages/electron_utils/handoff_editors.rs",
+    "find": "HandoffEditor::Pdf => \"pdf\",",
+    "replace": "HandoffEditor::Pdf => \"PDF\",",
+    "fn": [
+      "handoff-editors.HANDOFF_EDITORS",
+      "handoff-editors.isHandoffEditor",
+      "handoff-editors.handoffEditorTakesAttachments"
+    ]
+  },
+  {
+    "name": "he-attach",
+    "file": "main-core/src/packages/electron_utils/handoff_editors.rs",
+    "find": "HANDOFF_ATTACH_EDITORS.contains(&editor)",
+    "replace": "!HANDOFF_ATTACH_EDITORS.contains(&editor)",
+    "fn": [
+      "handoff-editors.handoffEditorTakesAttachments",
+      "generate-handoff.handoffEditorTakesAttachments"
+    ]
+  },
+  {
+    "name": "gh-take-keeps-slot",
+    "file": "main-core/src/packages/electron_utils/generate_handoff.rs",
+    "find": "let handoff = self.queued.delete(web_contents_id)?;",
+    "replace": "let handoff = self.queued.get(web_contents_id)?.clone();",
+    "fn": ["generate-handoff.takeGenerateHandoff"]
+  },
+  {
+    "name": "gh-run-cap",
+    "file": "main-core/src/packages/electron_utils/generate_handoff.rs",
+    "find": "if self.runs.len() > MAX_RUN_EVENTS {",
+    "replace": "if self.runs.len() > MAX_RUN_EVENTS + 1 {",
+    "fn": ["generate-handoff.reportGenerateRunStarted", "generate-handoff.generateRunStartedEvents"]
+  },
+  {
+    "name": "gh-win32-lower",
+    "file": "main-core/src/packages/electron_utils/generate_handoff.rs",
+    "find": "resolved.to_lowercase()",
+    "replace": "resolved",
+    "fn": ["generate-handoff.reportGenerateRunStarted"]
+  },
+  {
+    "name": "gh-ext-case",
+    "file": "main-core/src/packages/electron_utils/generate_handoff.rs",
+    "find": "let extension = base[dot + 1..].to_lowercase();",
+    "replace": "let extension = base[dot + 1..].to_owned();",
+    "fn": ["generate-handoff.handoffEditorForFile"]
+  },
+  {
+    "name": "ENOTEMPTY text",
+    "file": "main-core/src/node_fs.rs",
+    "find": "(\"ENOTEMPTY\", \"directory not empty\")",
+    "replace": "(\"ENOTEMPTY\", \"directory is not empty\")",
+    "fn": ["node-fs.rmdirSync"]
+  },
+  {
+    "name": "EEXIST text",
+    "file": "main-core/src/node_fs.rs",
+    "find": "(\"EEXIST\", \"file already exists\")",
+    "replace": "(\"EEXIST\", \"file exists\")",
+    "fn": ["node-fs.writeFileSync", "node-fs.mkdirSync"]
+  },
+  {
+    "name": "unlink syscall name",
+    "file": "main-core/src/calls/node_fs.rs",
+    "find": "node_error(&e, \"unlink\", path)",
+    "replace": "node_error(&e, \"rm\", path)",
+    "fn": ["node-fs.unlinkSync"]
+  },
+  {
+    "name": "readdir sort",
+    "file": "main-core/src/calls/node_fs.rs",
+    "find": "names.sort();",
+    "replace": "names.sort_by(|a, b| b.cmp(a));",
+    "fn": ["node-fs.readdirSync"]
+  },
+  {
+    "name": "integrator: normalizeLang keeps whitespace",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "let value = raw.map(|text| trim(text).to_lowercase());",
+    "replace": "let value = raw.map(|text| text.to_lowercase());",
+    "fn": ["i18n.normalizeLang"]
+  },
+  {
+    "name": "integrator: template font name typo",
+    "file": "main-core/src/packages/ui.rs",
+    "find": "\"DoHyeon-Regular.ttf\",",
+    "replace": "\"DoHyeon-Regular.otf\",",
+    "fn": ["template-fonts.templateFontFileOf"]
+  },
+  {
+    "name": "integrator: html attr prefix default",
+    "file": "main-core/src/html.rs",
+    "find": "attr.prefix.as_deref().unwrap_or(\"undefined\")",
+    "replace": "attr.prefix.as_deref().unwrap_or(\"\")",
+    "fn": ["print-html-pdf.parseSerialize"]
+  },
+  {
+    "name": "integrator: legacy navigation in-place default",
+    "file": "main-core/src/packages/electron_utils/abort_on_destroyed.rs",
+    "find": "let in_place = args.get(2) == Some(&JsonValue::Bool(true));",
+    "replace": "let in_place = args.get(2) != Some(&JsonValue::Bool(false));",
+    "fn": ["abort-on-destroyed.abortOnDestroyed"]
+  },
+  {
+    "name": "integrator: author cut starts at 1",
+    "file": "main-core/src/packages/electron_utils/author_name.rs",
+    "find": "jscompat::slice_utf16(&collapsed, 0.0, Some(AUTHOR_NAME_MAX as f64))",
+    "replace": "jscompat::slice_utf16(&collapsed, 1.0, Some(AUTHOR_NAME_MAX as f64))",
+    "fn": ["author-name.sanitizeAuthorName"]
+  },
+  {
+    "name": "integrator: save dir checked for read",
+    "file": "main-core/src/packages/electron_utils/default_save_dir.rs",
+    "find": "libc::W_OK) == 0",
+    "replace": "libc::R_OK) == 0",
+    "fn": ["default-save-dir.resolveDefaultSaveDir", "default-save-dir.configuredDefaultSaveDir"]
+  },
+  {
+    "name": "integrator: dialog fallback dir ignored",
+    "file": "main-core/src/packages/electron_utils/dialog_memory.rs",
+    "find": "Some(FallbackDir::Dir(dir)) => Some((*dir).to_owned()),",
+    "replace": "Some(FallbackDir::Dir(_)) => None,",
+    "fn": ["dialog-memory.showOpenDialogWithMemory", "dialog-memory.showSaveDialogWithMemory"]
+  },
+  {
+    "name": "integrator: attach list channel typo",
+    "file": "main-core/src/packages/electron_utils/doc_attach_channels.rs",
+    "find": "\"doc:attach-list\"",
+    "replace": "\"doc:attach-lst\"",
+    "fn": ["doc-attach-channels.DOC_ATTACH_CHANNELS"]
+  },
+  {
+    "name": "integrator: image cap off by one",
+    "file": "main-core/src/packages/electron_utils/fetch_image_bytes.rs",
+    "find": "MAX_REMOTE_IMAGE_BYTES as f64)",
+    "replace": "(MAX_REMOTE_IMAGE_BYTES - 1) as f64)",
+    "fn": ["fetch-image-bytes.fetchImageBytes"]
+  },
+  {
+    "name": "integrator: font extension case kept",
+    "file": "main-core/src/packages/electron_utils/font_store.rs",
+    "find": "m.get(1).map(str::to_lowercase)",
+    "replace": "m.get(1).map(str::to_owned)",
+    "fn": ["font-store.installLocalFontFiles"]
+  },
+  {
+    "name": "integrator: trailing dot accepted",
+    "file": "main-core/src/packages/electron_utils/generate_handoff.rs",
+    "find": "if dot == 0 || dot == base.len() - 1 {",
+    "replace": "if dot == 0 {",
+    "fn": ["generate-handoff.handoffEditorForFile"]
+  },
+  {
+    "name": "integrator: image age inclusive",
+    "file": "main-core/src/packages/electron_utils/generated_images.rs",
+    "find": "now - StatInfo::of(&meta).mtime_ms > MAX_AGE_MS",
+    "replace": "now - StatInfo::of(&meta).mtime_ms >= MAX_AGE_MS",
+    "fn": ["generated-images.storeGeneratedImage"]
+  },
+  {
+    "name": "integrator: release tag v anywhere",
+    "file": "main-core/src/packages/electron_utils/github_menu.rs",
+    "find": "js_regex!(r\"^v\")",
+    "replace": "js_regex!(r\"v\")",
+    "fn": ["github-menu.githubReleaseTagUrl"]
+  },
+  {
+    "name": "integrator: pdf takes attachments",
+    "file": "main-core/src/packages/electron_utils/handoff_editors.rs",
+    "find": "HandoffEditor::Html,\n    HandoffEditor::Mindmap,\n    HandoffEditor::Hwp,\n];\n\npub fn handoff",
+    "replace": "HandoffEditor::Html,\n    HandoffEditor::Mindmap,\n    HandoffEditor::Pdf,\n];\n\npub fn handoff",
+    "fn": [
+      "handoff-editors.HANDOFF_ATTACH_EDITORS",
+      "handoff-editors.handoffEditorTakesAttachments"
+    ]
+  },
+  {
+    "name": "integrator: headless default timeout",
+    "file": "main-core/src/packages/electron_utils/headless_export.rs",
+    "find": "options.timeout_ms.unwrap_or(180_000.0)",
+    "replace": "options.timeout_ms.unwrap_or(120_000.0)",
+    "fn": ["headless-export.pollUntilReady"]
+  },
+  {
+    "name": "integrator: headless starts on",
+    "file": "main-core/src/packages/electron_utils/headless_mode.rs",
+    "find": "headless: AtomicBool::new(false),",
+    "replace": "headless: AtomicBool::new(true),",
+    "fn": ["headless-mode.isHeadlessMode"]
+  },
+  {
+    "name": "integrator: hwp default when file missing",
+    "file": "main-core/src/packages/electron_utils/hwp_default_format.rs",
+    "find": "fs::read(&path) else {\n        return HwpDefaultFormat::Hwp;",
+    "replace": "fs::read(&path) else {\n        return HwpDefaultFormat::Hwpx;",
+    "fn": ["hwp-default-format.readHwpDefaultFormat"]
+  },
+  {
+    "name": "integrator: import prompt inverted",
+    "file": "main-core/src/packages/electron_utils/legacy_import_prefs.rs",
+    "find": "skip_map(&read_settings(settings_path)).is_empty()",
+    "replace": "!skip_map(&read_settings(settings_path)).is_empty()",
+    "fn": ["legacy-import-prefs.readLegacyImportPrompt"]
+  },
+  {
+    "name": "integrator: http default port",
+    "file": "main-core/src/packages/electron_utils/main_proxy.rs",
+    "find": "\"http:\" => 80.0,",
+    "replace": "\"http:\" => 8080.0,",
+    "fn": ["main-proxy.createMainProcessProxyDispatcher", "main-proxy.EnvHttpProxyAgent"]
+  },
+  {
+    "name": "integrator: call id length",
+    "file": "main-core/src/packages/electron_utils/mcp_tools_channels.rs",
+    "find": "const CALL_ID_MAX: usize = 200;",
+    "replace": "const CALL_ID_MAX: usize = 201;",
+    "fn": ["mcp-tools-channels.mcpToolCallRequestOf"]
+  },
+  {
+    "name": "integrator: window open handler dropped",
+    "file": "main-core/src/packages/electron_utils/navigation_guard.rs",
+    "find": "        contents.set_window_open_handler(Box::new(|| WindowOpenAction::Deny));",
+    "replace": "        let _ = WindowOpenAction::Deny;",
+    "fn": ["navigation-guard.installNavigationGuard"]
+  },
+  {
+    "name": "integrator: one page is numbered",
+    "file": "main-core/src/packages/electron_utils/numbered_export_paths.rs",
+    "find": "if pages <= 1.0 {",
+    "replace": "if pages < 1.0 {",
+    "fn": ["numbered-export-paths.numberedExportPaths"]
+  },
+  {
+    "name": "integrator: address length",
+    "file": "main-core/src/packages/electron_utils/outbound_channels.rs",
+    "find": "MAX_CONFIRM_ADDRESS_LENGTH: usize = 4096;",
+    "replace": "MAX_CONFIRM_ADDRESS_LENGTH: usize = 4097;",
+    "fn": ["outbound-channels.confirmRequestOf"]
+  },
+  {
+    "name": "integrator: unknown frame is own",
+    "file": "main-core/src/packages/electron_utils/permission_guard.rs",
+    "find": "own_frame_of(pages, contents, url).unwrap_or(false)",
+    "replace": "own_frame_of(pages, contents, url).unwrap_or(true)",
+    "fn": [
+      "permission-guard.permissionAllowed",
+      "permission-guard.permissionRequestHandler",
+      "permission-guard.permissionCheckHandler"
+    ]
+  },
+  {
+    "name": "integrator: print background default",
+    "file": "main-core/src/packages/electron_utils/print_cups.rs",
+    "find": "print_background: request.print_background.unwrap_or(true)",
+    "replace": "print_background: request.print_background.unwrap_or(false)",
+    "fn": ["print-cups.printToPdfOptionsFor"]
+  },
+  {
+    "name": "integrator: tag case kept",
+    "file": "main-core/src/packages/electron_utils/print_html_pdf.rs",
+    "find": "element.name.to_lowercase()",
+    "replace": "element.name.clone()",
+    "fn": ["print-html-pdf.sanitizePrintableBody", "print-html-pdf.buildPrintableHtml"]
+  },
+  {
+    "name": "integrator: scale 200 excluded",
+    "file": "main-core/src/packages/electron_utils/print_job.rs",
+    "find": "x > 0.0 && x <= 200.0",
+    "replace": "x > 0.0 && x < 200.0",
+    "fn": ["print-job.printJobOptions"]
+  },
+  {
+    "name": "integrator: default dir prefix from file name",
+    "file": "main-core/src/packages/electron_utils/print_window.rs",
+    "find": "dir_prefix.unwrap_or(DEFAULT_DIR_PREFIX)",
+    "replace": "dir_prefix.unwrap_or(DEFAULT_FILE_NAME)",
+    "fn": ["print-window.loadPrintHtml"]
+  },
+  {
+    "name": "integrator: option value length",
+    "file": "main-core/src/packages/electron_utils/printer_options.rs",
+    "find": "{1,64}$\")\n}\n\n/// the groups",
+    "replace": "{1,63}$\")\n}\n\n/// the groups",
+    "fn": ["printer-options.isValidOptionValue", "printer-options.parseLpOptions"]
+  },
+  {
+    "name": "integrator: double unsubscribe goes through",
+    "file": "main-core/src/packages/electron_utils/project_folder_bridge.rs",
+    "find": "        subscription.active = false;\n",
+    "replace": "",
+    "fn": ["project-folder-bridge.projectFolderBridge"]
+  },
+  {
+    "name": "integrator: editors listed newest first",
+    "file": "main-core/src/packages/electron_utils/recovery_contract.rs",
+    "find": "self.table\n            .iter()\n            .map(|(_, contract)| Rc::clone(contract))",
+    "replace": "self.table\n            .iter()\n            .rev()\n            .map(|(_, contract)| Rc::clone(contract))",
+    "fn": ["recovery-contract.recoveryEditors"]
+  },
+  {
+    "name": "integrator: discard label from restore",
+    "file": "main-core/src/packages/electron_utils/recovery_labels.rs",
+    "find": "discard: t.t(loc, \"discard\", None),",
+    "replace": "discard: t.t(loc, \"restore\", None),",
+    "fn": ["recovery-labels.recoveryPromptLabels"]
+  },
+  {
+    "name": "integrator: buttons swapped",
+    "file": "main-core/src/packages/electron_utils/recovery_prompt.rs",
+    "find": "const RESTORE: u32 = 0;\nconst DISCARD: u32 = 1;",
+    "replace": "const RESTORE: u32 = 1;\nconst DISCARD: u32 = 0;",
+    "fn": ["recovery-prompt.promptRecoveryForFile", "recovery-prompt.resolveRecoveryOnOpen"]
+  },
+  {
+    "name": "integrator: copy max age",
+    "file": "main-core/src/packages/electron_utils/recovery_store.rs",
+    "find": "30.0 * 24.0 * 60.0 * 60.0 * 1000.0",
+    "replace": "29.0 * 24.0 * 60.0 * 60.0 * 1000.0",
+    "fn": ["recovery-store.RECOVERY_COPY_MAX_AGE_MS", "recovery-store.createRecoveryStore"]
+  },
+  {
+    "name": "integrator: retry delays swapped",
+    "file": "main-core/src/packages/electron_utils/remote_image.rs",
+    "find": "[500.0, 1500.0]",
+    "replace": "[1500.0, 500.0]",
+    "fn": ["remote-image.fetchRemoteImage"]
+  },
+  {
+    "name": "integrator: row cap exclusive",
+    "file": "main-core/src/packages/electron_utils/remote_table.rs",
+    "find": "rows.len() >= MAX_REMOTE_TABLE_ROWS",
+    "replace": "rows.len() > MAX_REMOTE_TABLE_ROWS",
+    "fn": ["remote-table.parseHtmlTable", "remote-table.parseDelimitedTable"]
+  },
+  {
+    "name": "integrator: first duplicate query key wins",
+    "file": "main-core/src/packages/electron_utils/renderer_scheme.rs",
+    "find": "index <= first || k != key",
+    "replace": "index < first || k != key",
+    "fn": ["renderer-scheme.rendererUrl"]
+  },
+  {
+    "name": "integrator: https not allowed by default",
+    "file": "main-core/src/packages/electron_utils/safe_external_url.rs",
+    "find": "[\"http:\", \"https:\"]",
+    "replace": "[\"http:\", \"http:\"]",
+    "fn": ["safe-external-url.safeExternalUrl"]
+  },
+  {
+    "name": "integrator: mapped prefix too short",
+    "file": "main-core/src/packages/electron_utils/safe_remote_url.rs",
+    "find": "address[..10].iter().all(|b| *b == 0) && address[10] == 0xff",
+    "replace": "address[..9].iter().all(|b| *b == 0) && address[10] == 0xff",
+    "fn": ["safe-remote-url.isBlockedAddress"]
+  },
+  {
+    "name": "integrator: cancel label from detail",
+    "file": "main-core/src/packages/electron_utils/save_conflict_labels.rs",
+    "find": "cancel: t.t(loc, \"cancel\", None),",
+    "replace": "cancel: t.t(loc, \"detail\", None),",
+    "fn": ["save-conflict-labels.saveConflictLabels"]
+  },
+  {
+    "name": "integrator: report focus channel",
+    "file": "main-core/src/packages/electron_utils/split_pane_bridge.rs",
+    "find": "(\"reportFocus\", \"app:view-focused\"),",
+    "replace": "(\"reportFocus\", \"app:view-focus\"),",
+    "fn": ["split-pane-bridge.SPLIT_PANE_CHANNELS"]
+  },
+  {
+    "name": "integrator: unknown font type",
+    "file": "main-core/src/packages/electron_utils/template_font_response.rs",
+    "find": "unwrap_or(\"font/sfnt\")",
+    "replace": "unwrap_or(\"font/ttf\")",
+    "fn": ["template-font-response.templateFontResponse"]
+  },
+  {
+    "name": "integrator: packaged fonts under app path",
+    "file": "main-core/src/packages/electron_utils/template_fonts_dir.rs",
+    "find": "join(&[&host.resources_path(), TEMPLATE_FONTS_DIR_NAME])",
+    "replace": "join(&[&host.get_app_path(), TEMPLATE_FONTS_DIR_NAME])",
+    "fn": ["template-fonts-dir.templateFontsDir"]
+  },
+  {
+    "name": "integrator: links not resolved",
+    "file": "main-core/src/packages/electron_utils/unsaved_files.rs",
+    "find": "if let Ok(real) = fs::canonicalize(&resolved) {",
+    "replace": "if false && let Ok(real) = fs::canonicalize(&resolved) {",
+    "fn": ["unsaved-files.fileHasUnsavedChanges", "unsaved-files.withoutUnsavedFiles"]
+  },
+  {
+    "name": "integrator: bundle max",
+    "file": "main-core/src/packages/electron_utils/user_skills_channels.rs",
+    "find": "USER_SKILL_BUNDLE_MAX: usize = 500;",
+    "replace": "USER_SKILL_BUNDLE_MAX: usize = 501;",
+    "fn": ["user-skills-channels.USER_SKILL_BUNDLE_MAX"]
+  }
+]
