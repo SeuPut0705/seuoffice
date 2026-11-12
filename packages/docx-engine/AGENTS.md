@@ -64,9 +64,9 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - **문단을 다시 써도 줄 안 구조를 잃지 않는다.** 런 단위의 `w:sdt`·`w:smartTag`·`w:customXml`·`w:dir`·`w:bdo`는 `Run.wrap`으로, 글자 없는 `w:permStart`/`w:permEnd`·`w:customXml*Range*`·`w:subDoc`와 런이 하나도 없는 감싸개는 `Run.opaqueXml`로 실려 다시 써진다(본문과 표 칸은 원문 바이트, 머리글·글상자는 직렬화). 예전에는 그 문단에 한 글자만 쳐도 컨트롤이 사라졌다. 시험: `tests/inline-wrappers.test.ts`.
   - **실을 수 없으면 싣지 않는다.** 고치지 않은 문서가 읽히거나 저장되는 결과를 바꾸지 않고는 실을 수 없는 모양은 이 수정 전처럼 읽는다(다시 쓰면 그 감싸개만 사라진다): 필드 결과 안이거나 필드 경계에 걸친 감싸개와 표식, `hyperlink > 감싸개 > ins/del`, `ins > 감싸개 > del`, `w:sdtContent`가 둘이거나 그 밖에 읽을 자식이 있는 깨진 컨트롤. 새 모양을 실으려 할 때도 이 기준을 쓴다: 옛 동작이 바닥이고, 새로운 오동작은 받지 않는다. 시험: `tests/inline-wrappers-reading.test.ts`.
   - **글자 없는 표식은 내용이 아니다.** 빈 줄 판정, "앞의 런"·"마지막 런"을 찾는 자리(메모 범위, 체크 상자, 비교)는 `opaqueXml` 런을 건너뛴다(`neighbouringRun`). 런을 순서대로 다루는 코드를 새로 쓸 때도 그렇게 한다. 시험: `tests/inline-wrappers-neighbours.test.ts`.
-  - **감싸개는 읽은 깊이에 다시 쓰고, 컨트롤 id는 파트에 한 번만 나온다.** `w:ins > w:sdt`와 `w:hyperlink > w:smartTag`의 순서를 지키고 하이퍼링크를 감싸개 경계에서 자르지 않는다. 원본 조각과 `xml` 조각의 id가 먼저 자리를 잡고, 엔진이 런에서 만든 내용 가운데 같은 id가 또 나오면 그쪽만 감싸개 없이 쓴다(`inline-control-ids.ts`). 서로 다른 편집된 표나 글상자에 반복된 id는 걸러지지 않는다. 시험: `tests/inline-control-ids.test.ts`.
+  - **감싸개는 읽은 깊이에 다시 쓰고, 런에서 쓴 컨트롤의 id는 파트에 한 번만 나온다.** `w:ins > w:sdt`와 `w:hyperlink > w:smartTag`의 순서를 지키고 하이퍼링크를 감싸개 경계에서 자르지 않는다. 원본 조각, `xml` 조각, 체크 상자 컨트롤, 블록 컨트롤(`sdtShell`)은 id의 자리만 잡고 절대 벗겨지지 않는다(Word는 글상자의 `mc:Choice`와 `mc:Fallback`에 같은 id를 두 번 쓴다). `Run.wrap`이나 통째 `opaqueXml`로 쓴 컨트롤만, 그 id가 파트에 이미 있으면 감싸개 없이 글자만 쓴다(`inline-control-ids.ts`). 서로 다른 편집된 표나 글상자에 반복된 id는 걸러지지 않는다. 시험: `tests/inline-control-ids.test.ts`.
   - **글자가 바뀐 컨트롤에서는 `w:showingPlcHdr`와 `w:dataBinding`을 뗀다.** 그대로 두면 Word가 친 글자를 자리표시자로 보거나 연결된 값으로 덮는다. 글자가 그대로면 `w:sdtPr`은 바이트 그대로다.
-  - **쓰기 전에 감싸개 바이트를 검사한다.** `wrap.open`/`close`가 허용된 이름의 짝 맞는 한 요소가 아니거나 `opaqueXml`이 허용된 글자 없는 요소가 아니면 그 구조만 버리고 글자는 쓴다. 공동 편집에서는 동료가 이 바이트를 준다.
+  - **실린 바이트는 엄격하게 검사한다.** 태그와 공백만 허용하고, 허용된 감싸개 하나에 허용 목록의 속성 요소만 들 수 있으며, 엄격히 well-formed이고, 파트 루트가 선언한 접두사만 쓸 수 있다. 싣는지는 파싱 때 정한다. 글자만 있는 머리글·꼬리말을 다시 쓸 때 새 루트는 실린 바이트가 쓰는 접두사 선언을 원본 루트에서 가져온다. 검사에 걸린 바이트는 싣지도 쓰지도 않고 글자는 쓴다. 공동 편집에서는 동료가 이 바이트를 주므로, 틀린 타입의 값이 와도 저장은 던지지 않는다. 시험: `tests/inline-wrappers-validity.test.ts`.
   - **다른 문단·문서로 복사되는 런은 `w:sdt`와 표식을 두고 간다**(`runCopiedElsewhere`): 비교의 원본 쪽 런, 메일 머지의 둘째 레코드부터.
 
 ## 테스트
