@@ -26,7 +26,7 @@
  * `pickDraftPath`.
  */
 import type { RenderSlide } from '@genoffice/pptx-render'
-import { suggestFileName } from '@genoffice/ui'
+import { suggestFileName, type FileNameSuggestion } from '@genoffice/ui'
 import { textForModel } from './ai/redact-view'
 
 /**
@@ -56,10 +56,11 @@ function modelTextOfDeck(slides: readonly RenderSlide[]): string {
  * file that may be open elsewhere, referenced from a note, or synced is not
  * something to do behind the reader's back. The dialog is the confirmation.
  *
- * An empty answer means there is no name to offer — no provider, an
- * unreachable one, a refusal, or a reply that sanitised away to nothing — and
- * the reader keeps the name the deck already had.
+ * A failure means there is no name to offer — no provider, an unreachable
+ * one, a refusal, or a reply that sanitised away to nothing — and the reader
+ * keeps the name the deck already had. It carries the reason, which the
+ * caller shows.
  */
-export async function modelSaveAsName(slides: readonly RenderSlide[]): Promise<string> {
+export async function modelSaveAsName(slides: readonly RenderSlide[]): Promise<FileNameSuggestion> {
   return suggestFileName({ content: modelTextOfDeck(slides) })
 }

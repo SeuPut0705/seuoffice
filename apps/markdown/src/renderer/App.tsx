@@ -13,6 +13,7 @@ import {
   onAiRailClick,
   presentationKeyOf,
   rememberAiPanelOpen,
+  runFileNaming,
   useAutoSavePref,
   skillTemplateText,
   templateDocumentOf,
@@ -187,6 +188,8 @@ export default function App() {
     key: StringKey
     params?: Record<string, string | number>
   } | null>(null)
+  /** "Name with AI": that the model is being asked, then why it gave no name; stays, like the export line */
+  const [namingStatus, setNamingStatus] = useState<string | null>(null)
   const [slashState, setSlashState] = useState<SlashMenuState | null>(null)
   const [wikiSuggestState, setWikiSuggestState] = useState<WikiSuggestState | null>(null)
   const [fmOpen, setFmOpen] = useState(false)
@@ -928,16 +931,26 @@ export default function App() {
    * The stem goes into the dialog rather than renaming the file on disk: a file
    * that may be open elsewhere, referenced from a note, or synced is not
    * something to move behind the reader's back. A declined or empty answer
-   * leaves the dialog on the document's current name, so this is a no-op
-   * rather than a failure.
+   * leaves the document on its current name; the status bar says that the
+   * model is being asked, and then, with a toast, why it gave no name.
    */
   const nameWithAi = useCallback(async () => {
     const current = editorRef.current
     if (!current || statusRef.current !== 'ready' || savingRef.current) return
-    const stem = await modelSaveAsName(current)
-    if (!stem) return
+    const stem = await runFileNaming(
+      lang,
+      {
+        running: setNamingStatus,
+        failed: (text) => {
+          setNamingStatus(text)
+          showToast(text, 'error')
+        },
+      },
+      () => modelSaveAsName(current),
+    )
+    if (stem === null) return
     await doSave('saveAs', undefined, false, stem)
-  }, [doSave])
+  }, [doSave, lang])
 
   /**
    * `outPath` (headless export only) skips the save dialog; resolves true when a file was written.
@@ -1606,6 +1619,11 @@ export default function App() {
               {imageExportStatus && (
                 <span className="status-item status-export" role="status">
                   {t(imageExportStatus.key, imageExportStatus.params)}
+                </span>
+              )}
+              {namingStatus && (
+                <span className="status-item status-export" role="status">
+                  {namingStatus}
                 </span>
               )}
               {fileName && <span className="status-item status-file">{fileName}</span>}

@@ -328,7 +328,15 @@ export { AiMark, type AiMarkProps } from './AiMark'
 export { Markdown, type MarkdownNav } from './Markdown'
 export { FILE_NAV_SCHEME, createFileNav, fileNavHref, parseFileNavHref } from './file-nav'
 export { isSymbolFontFamily } from './symbol-fonts'
-export { suggestFileName, type SuggestFileNameOptions } from './ai-naming-client'
+export {
+  fileNamingFailureText,
+  runFileNaming,
+  suggestFileName,
+  type FileNameSuggestion,
+  type FileNamingFailure,
+  type FileNamingStatus,
+  type SuggestFileNameOptions,
+} from './ai-naming-client'
 export {
   BUILTIN_FONT_FAMILIES,
   familyForTypedName,

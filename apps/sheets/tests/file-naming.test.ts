@@ -183,7 +183,10 @@ afterEach(() => {
 
 describe('the name the reader asked for', () => {
   it('is the one the model proposed', async () => {
-    expect(await modelSaveAsName(context(false))).toBe('Q3 customer callbacks')
+    expect(await modelSaveAsName(context(false))).toEqual({
+      ok: true,
+      name: 'Q3 customer callbacks',
+    })
     expect(sent).toHaveLength(1)
   })
 
@@ -252,16 +255,23 @@ describe('the name the reader asked for', () => {
 })
 
 describe('a naming that fails offers no name', () => {
+  const FAILED = { ok: false, reason: 'failed' }
+
   it('offers nothing when the model declines', async () => {
     installBridge({
       suggestFileName: async () => ({ ok: false, reason: 'no-provider' }),
     })
-    expect(await modelSaveAsName(context(false))).toBe('')
+    expect(await modelSaveAsName(context(false))).toEqual(FAILED)
+  })
+
+  it('passes on why the main process sent nothing', async () => {
+    installBridge({ suggestFileName: async () => ({ ok: false, reason: 'notice' }) })
+    expect(await modelSaveAsName(context(false))).toEqual({ ok: false, reason: 'notice' })
   })
 
   it('offers nothing when the model returns an empty name', async () => {
     installBridge(answeringBridge(''))
-    expect(await modelSaveAsName(context(false))).toBe('')
+    expect(await modelSaveAsName(context(false))).toEqual(FAILED)
   })
 
   it('offers nothing when the call throws', async () => {
@@ -270,12 +280,12 @@ describe('a naming that fails offers no name', () => {
         throw new Error('sidecar unreachable')
       },
     })
-    expect(await modelSaveAsName(context(false))).toBe('')
+    expect(await modelSaveAsName(context(false))).toEqual(FAILED)
   })
 
   it('offers nothing when there is no naming bridge at all', async () => {
     vi.stubGlobal('window', {})
-    expect(await modelSaveAsName(context(false))).toBe('')
+    expect(await modelSaveAsName(context(false))).toEqual({ ok: false, reason: 'unavailable' })
   })
 
   it('offers nothing for a workbook with nothing in it', async () => {
@@ -286,7 +296,7 @@ describe('a naming that fails offers no name', () => {
       adapterRef: { current: new InMemoryWorkbookAdapter({ revision: 1, sheets: [] }) },
       redactionLoadRef: { current: loadedRedactions(NO_REDACTIONS) },
     }
-    expect(await modelSaveAsName(empty)).toBe('')
+    expect(await modelSaveAsName(empty)).toEqual({ ok: false, reason: 'no-text' })
     expect(sent).toHaveLength(0)
   })
 })

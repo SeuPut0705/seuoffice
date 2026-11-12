@@ -29,7 +29,7 @@
  * naming would drift from that one the moment a mark was added or cleared, and
  * the drift is silent: the file would simply start carrying a secret.
  */
-import { suggestFileName } from '@genoffice/ui'
+import { suggestFileName, type FileNameSuggestion } from '@genoffice/ui'
 import {
   modelTextOf,
   type ModelViewCell,
@@ -104,10 +104,11 @@ function modelTextOfWorkbook(ctx: WorkbookReadContext): string {
  * file that may be open elsewhere, referenced from a note, or synced is not
  * something to do behind the reader's back. The dialog is the confirmation.
  *
- * An empty answer means "no name to offer" — no provider, an unreachable
- * provider, a refusal, or a reply that sanitised away to nothing. The caller
- * keeps the name it already had, which is the only acceptable outcome.
+ * A failure means "no name to offer" — no provider, an unreachable provider,
+ * a refusal, or a reply that sanitised away to nothing. The caller keeps the
+ * name it already had, which is the only acceptable outcome, and shows the
+ * reason the failure carries.
  */
-export async function modelSaveAsName(ctx: WorkbookReadContext): Promise<string> {
+export async function modelSaveAsName(ctx: WorkbookReadContext): Promise<FileNameSuggestion> {
   return suggestFileName({ content: modelTextOfWorkbook(ctx) })
 }

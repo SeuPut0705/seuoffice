@@ -38,7 +38,8 @@ const NOTICE_SEEN = {
   subscriptionNoticeVersion: AI_SUBSCRIPTION_NOTICE_VERSION,
 }
 
-const NOT_CONNECTED = { ok: false, reason: 'not-connected' }
+/** no provider to name: nothing is connected at all */
+const NOT_CONNECTED = { ok: false, reason: 'not-connected', errorKind: 'not-connected' }
 const NOTICE_FIRST = { ok: false, reason: 'notice' }
 
 describe('resolveNamingProvider', () => {
@@ -125,12 +126,12 @@ describe('resolveNamingProvider', () => {
       }),
       CLAUDE_READY,
     )
-    expect(resolved).toEqual(NOT_CONNECTED)
+    expect(resolved).toEqual({ ...NOT_CONNECTED, provider: 'anthropic' })
   })
 
-  it('declines a selected subscription that is signed out', () => {
+  it('declines a selected subscription that is signed out, and says which one', () => {
     expect(
       resolveNamingProvider(settings({ provider: 'codex', ...NOTICE_SEEN }), CLAUDE_READY),
-    ).toEqual(NOT_CONNECTED)
+    ).toEqual({ ok: false, reason: 'not-connected', errorKind: 'signed-out', provider: 'codex' })
   })
 })

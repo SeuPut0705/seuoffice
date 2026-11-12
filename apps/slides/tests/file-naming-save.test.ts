@@ -7,9 +7,11 @@ import { buildRenderSlide, type RenderSlide } from '@genoffice/pptx-render'
 // the save path and the naming decision.
 vi.mock('../src/renderer/export-render', () => ({ renderSlidesToPngBase64: vi.fn() }))
 vi.mock('../src/renderer/components/toast-bus', () => ({ showToast: vi.fn() }))
-vi.mock('../src/renderer/i18n/locale', () => ({ t: (k: string) => k }))
+vi.mock('../src/renderer/i18n/locale', () => ({ t: (k: string) => k, getLang: () => 'en' }))
 
+import { fileNamingFailureText } from '@genoffice/ui'
 import { nameWithAi, save } from '../src/renderer/file-actions'
+import { showToast } from '../src/renderer/components/toast-bus'
 import type { ActionCtx } from '../src/renderer/action-context'
 
 /**
@@ -63,6 +65,7 @@ function ctxWith(over: {
   path: string | null
   slides?: RenderSlide[]
   editing?: boolean
+  setStatus?: (text: string) => void
 }): ActionCtx {
   return {
     slides: over.slides ?? plainDeck(),
@@ -77,7 +80,7 @@ function ctxWith(over: {
     setEditingCell: () => {},
     setDirty: () => {},
     setPath: () => {},
-    setStatus: () => {},
+    setStatus: over.setStatus ?? (() => {}),
   } as unknown as ActionCtx
 }
 
@@ -178,6 +181,66 @@ describe('the reader asks for a name, and the answer goes to the Save As dialog'
 
     await nameWithAi(() => ctxWith({ path: '/tmp/deck.pptx' }))
 
+    expect(slidesApi.saveAs).not.toHaveBeenCalled()
+  })
+})
+
+describe('the reader is told what the naming is doing', () => {
+  /** what the status line showed, in order */
+  let shown: string[]
+  const deck = () =>
+    ctxWith({ path: '/tmp/deck.pptx', setStatus: (text: string) => shown.push(text) })
+
+  beforeEach(() => {
+    shown = []
+    vi.mocked(showToast).mockClear()
+  })
+
+  it('says it is asking while the model has not answered', async () => {
+    let answer: (reply: unknown) => void = () => {}
+    suggestFileName.mockReturnValue(new Promise((resolve) => (answer = resolve)))
+
+    const pending = nameWithAi(deck)
+    await vi.waitFor(() => expect(suggestFileName).toHaveBeenCalled())
+    expect(shown).toHaveLength(1)
+    expect(shown[0]).not.toBe('')
+
+    answer({ ok: true, name: MODEL_NAME })
+    await pending
+  })
+
+  it('leaves nothing behind when the reader cancels the dialog', async () => {
+    // a canceled Save As answers ok:false without an error
+    slidesApi.saveAs.mockImplementation(async () => {
+      // by the time the dialog is up, the "asking" line is gone again
+      expect(shown.at(-1)).toBe('')
+      return { ok: false }
+    })
+
+    await nameWithAi(deck)
+
+    expect(slidesApi.saveAs).toHaveBeenCalledTimes(1)
+    expect(shown.at(-1)).toBe('')
+    expect(showToast).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    ['the first-connection notice is unread', { reason: 'notice' }, { reason: 'notice' }],
+    ['the provider timed out', { reason: 'timeout' }, { reason: 'timeout' }],
+    ['the provider failed', { reason: 'failed' }, { reason: 'failed' }],
+    [
+      'the subscription is signed out',
+      { reason: 'not-connected', errorKind: 'signed-out', provider: 'codex' },
+      { reason: 'not-connected', kind: 'signed-out', provider: 'codex' },
+    ],
+  ] as const)('says why there is no name: %s', async (_name, reply, failure) => {
+    suggestFileName.mockResolvedValue({ ok: false, ...reply })
+
+    await nameWithAi(deck)
+
+    const why = fileNamingFailureText('en', failure)
+    expect(shown.at(-1)).toBe(why)
+    expect(showToast).toHaveBeenCalledWith(why, 'error')
     expect(slidesApi.saveAs).not.toHaveBeenCalled()
   })
 })

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs'
 import { chatForProvider } from '@genoffice/ai-provider'
 import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
 import { buildNamingInstruction, excerptForNaming, sanitizeFileStem } from './ai-naming'
-import { resolveNamingProvider, type NamingTarget } from './ai-naming-provider'
+import { resolveNamingProvider, type NamingRefusal, type NamingTarget } from './ai-naming-provider'
 
 /** The channel the renderer's "Name with AI…" button calls. */
 export const AI_NAMING_SUGGEST_CHANNEL = 'ai:suggest-file-name'
@@ -26,8 +26,28 @@ function readAiSettingsFile(): unknown {
   }
 }
 
+/** A naming call that has not answered by then is not going to */
+const NAMING_TIMEOUT_MS = 30_000
+
 /**
- * Ask the model for a name, and return it as a bare file stem.
+ * What the channel answers: a name, or why there is none. The editor shows the
+ * reason (`suggestFileName` in @genoffice/ui); a naming that ends without a
+ * word looks like a broken command.
+ */
+export type NamingReply =
+  | { ok: true; name: string }
+  | ({ ok: false } & NamingRefusal)
+  | {
+      ok: false
+      reason:
+        | 'empty-content' // there was no text to name the file from
+        | 'timeout' // the provider did not answer within NAMING_TIMEOUT_MS
+        | 'failed' // the provider answered with an error, or could not be reached
+        | 'empty-name' // the answer held nothing usable as a file name
+    }
+
+/**
+ * Ask the model for a name: a bare file stem, or why it gave none.
  *
  * One one-shot chat on the provider every other AI request would run on, and
  * the first line of its answer. If the provider is unreachable the caller
@@ -38,10 +58,15 @@ async function askModel(
   target: Extract<NamingTarget, { ok: true }>,
   content: string,
   lang: string,
-): Promise<string> {
+): Promise<NamingReply> {
   const controller = new AbortController()
-  // a naming call that has not answered in 30s is not going to
-  const timer = setTimeout(() => controller.abort(), 30_000)
+  const timer = setTimeout(() => controller.abort(), NAMING_TIMEOUT_MS)
+  // a provider cut off by the timer rejects or reports a failed reply, depending
+  // on the provider: either way the reason is the timer, not the provider
+  const failure = (): NamingReply => ({
+    ok: false,
+    reason: controller.signal.aborted ? 'timeout' : 'failed',
+  })
   let out: string
   try {
     const result = await chatForProvider(
@@ -53,17 +78,22 @@ async function askModel(
     )
     if (!result.ok) {
       console.warn('[shell] file naming failed:', result.error)
-      return ''
+      return failure()
     }
     out = result.content ?? ''
   } catch (err) {
     console.warn('[shell] file naming failed:', err)
-    return ''
+    return failure()
   } finally {
     clearTimeout(timer)
   }
   // a model that wrapped the name in a sentence still gets one usable line
-  return sanitizeFileStem(out.split('\n').find((line) => line.trim()) ?? '')
+  const name = sanitizeFileStem(out.split('\n').find((line) => line.trim()) ?? '')
+  // A stem that sanitised away to empty is a *failed* naming, not a successful
+  // one handing back "". The caller's contract is that it keeps whatever name
+  // the document already had, and returning ok:true with an empty name would
+  // instead rename the file to nothing.
+  return name ? { ok: true, name } : { ok: false, reason: 'empty-name' }
 }
 
 /**
@@ -75,23 +105,12 @@ async function askModel(
 export function registerAiNamingIpc(lang: () => string): void {
   ipcMain.handle(
     AI_NAMING_SUGGEST_CHANNEL,
-    async (
-      _event,
-      input: { content?: unknown },
-    ): Promise<{ ok: boolean; name?: string; reason?: string }> => {
+    async (_event, input: { content?: unknown }): Promise<NamingReply> => {
       const content = typeof input?.content === 'string' ? input.content : ''
       if (!content.trim()) return { ok: false, reason: 'empty-content' }
       // decided before anything is built for the model: a refusal sends nothing
       const target = resolveNamingProvider(readAiSettingsFile(), sharedSubscriptionStatuses())
-      if (!target.ok) return { ok: false, reason: target.reason }
-      const name = await askModel(target, content, lang())
-      // A model that returned nothing usable — unreachable, refused, or a
-      // stem that sanitised away to empty — is a *failed* naming,
-      // not a successful one handing back "". The caller's contract is that it
-      // keeps whatever name the document already had, and returning ok:true
-      // with an empty name would instead rename the file to nothing.
-      if (!name) return { ok: false, reason: 'empty-name' }
-      return { ok: true, name }
+      return target.ok ? askModel(target, content, lang()) : target
     },
   )
 }

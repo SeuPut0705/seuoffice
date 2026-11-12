@@ -13,7 +13,12 @@
  * acknowledged in its current wording. Naming has no notice of its own, so it
  * refuses and the editor points the reader at the AI panel, which shows it.
  */
-import type { AiProviderConfig, AiProviderId, AiSubscriptionStatuses } from '@genoffice/ai-provider'
+import type {
+  AiProviderConfig,
+  AiProviderId,
+  AiRunErrorKind,
+  AiSubscriptionStatuses,
+} from '@genoffice/ai-provider'
 import {
   AI_SUBSCRIPTION_NOTICE_VERSION,
   isSubscriptionProvider,
@@ -24,15 +29,18 @@ import {
 
 /** Why no naming request goes out */
 export type NamingRefusal =
-  /** no provider can run: none connected, signed out, half configured */
-  | 'not-connected'
+  /**
+   * No provider can run: none connected, signed out, half configured.
+   * `errorKind` and `provider` are what a blocked AI run reports for the same
+   * state, so the editor words it as the AI panel does.
+   */
+  | { reason: 'not-connected'; errorKind: AiRunErrorKind; provider?: AiProviderId }
   /** a subscription would run, and its first-connection notice is still unread */
-  | 'notice'
+  | { reason: 'notice' }
 
 /** The provider to call and the credentials to call it with, or why none is called */
 export type NamingTarget =
-  | { ok: true; provider: AiProviderId; config: AiProviderConfig }
-  | { ok: false; reason: NamingRefusal }
+  { ok: true; provider: AiProviderId; config: AiProviderConfig } | ({ ok: false } & NamingRefusal)
 
 /**
  * The provider a naming request goes to, or the reason it goes nowhere.
@@ -53,7 +61,14 @@ export function resolveNamingProvider(
   // AI settings reader writes that version back; this read only applies it.
   const settings = normalizeAiSettings(withMigratedSubscriptionNoticeVersion(stored) ?? stored)
   const choice = selectAiProvider(settings, statuses)
-  if (!choice.connected) return { ok: false, reason: 'not-connected' }
+  if (!choice.connected) {
+    return {
+      ok: false,
+      reason: 'not-connected',
+      errorKind: choice.errorKind,
+      ...(choice.provider ? { provider: choice.provider } : {}),
+    }
+  }
   if (
     isSubscriptionProvider(choice.provider) &&
     (settings.subscriptionNoticeVersion ?? 0) < AI_SUBSCRIPTION_NOTICE_VERSION

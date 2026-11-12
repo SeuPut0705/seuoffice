@@ -433,12 +433,14 @@ export function App() {
   const [scaleBox, setScaleBox] = useState<{ w: number; h: number } | null>(null)
   const [dirty, setDirty] = useState(false)
   const [status, setStatus] = useState('')
+  const [namingRunning, setNamingRunning] = useState(false)
   // Status messages auto-dismiss after 4s: operation feedback needs only a brief showing; persistent info (page number/file name) lives on the left and in the title bar
   useEffect(() => {
-    if (!status) return
+    // A naming request can take 30 s: keep its progress up until the answer.
+    if (!status || namingRunning) return
     const t = window.setTimeout(() => setStatus(''), 4000)
     return () => window.clearTimeout(t)
-  }, [status])
+  }, [status, namingRunning])
   const [showThumbs, setShowThumbs] = useState(true)
   // ── Thumbnail sidebar width (drag the divider to resize; persisted) ─────────
   const [thumbsW, setThumbsW] = useState(loadThumbsW)
@@ -1113,7 +1115,14 @@ export function App() {
   }, [autoSave, path, editing, editingCell, save])
 
   const saveAs = useCallback(() => fileActions.saveAs(() => ctxRef.current), [])
-  const nameWithAi = useCallback(() => fileActions.nameWithAi(() => ctxRef.current), [])
+  const nameWithAi = useCallback(async () => {
+    setNamingRunning(true)
+    try {
+      await fileActions.nameWithAi(() => ctxRef.current)
+    } finally {
+      setNamingRunning(false)
+    }
+  }, [])
   const exportImages = useCallback(
     (format: 'png' | 'jpg' = 'png') => fileActions.exportImages(ctxRef.current, format),
     [],

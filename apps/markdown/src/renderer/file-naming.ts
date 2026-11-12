@@ -20,7 +20,7 @@
  * reader's explicit request reaches the model.
  */
 import type { Editor } from '@tiptap/core'
-import { suggestFileName } from '@genoffice/ui'
+import { suggestFileName, type FileNameSuggestion } from '@genoffice/ui'
 import { modelTextOf } from './editor/redact'
 import { deriveAutoFileName } from './auto-file-name'
 
@@ -36,11 +36,12 @@ function modelTextOfDocument(editor: Editor): string {
  * file that may be open elsewhere, referenced from a note, or synced is not
  * something to do behind the reader's back. The dialog is the confirmation.
  *
- * An empty answer is not a failure to report: the model may have no provider,
- * may be unreachable, may decline, or may have nothing to work from, and in
- * every one of those cases the reader keeps the name the document already had.
+ * No name is not an error to throw: the model may have no provider, may be
+ * unreachable, may decline, or may have nothing to work from, and in every
+ * one of those cases the reader keeps the name the document already had. The
+ * failure carries which of them it was, and the caller shows it.
  */
-export async function modelSaveAsName(editor: Editor): Promise<string> {
+export async function modelSaveAsName(editor: Editor): Promise<FileNameSuggestion> {
   return suggestFileName({ content: modelTextOfDocument(editor) })
 }
 

@@ -121,6 +121,7 @@ import {
   type SkillUse,
   docMentionActions,
   presentationKeyOf,
+  runFileNaming,
   type AiComposerDocs,
   type ProjectChatEntry,
   type ProjectChatOpened,
@@ -6098,12 +6099,23 @@ export function App({
    * The stem goes into the dialog rather than renaming the file on disk: a
    * workbook that may be open in another window, referenced from a note, or
    * synced is not something to move behind the reader's back. A declined or
-   * empty answer leaves the dialog on the workbook's current name, so this is a
-   * no-op rather than a failure.
+   * empty answer leaves the workbook on its current name; the status bar says
+   * that the model is being asked, and then, as for a failed save, why it gave
+   * no name.
    */
   async function nameWithAi(): Promise<void> {
-    const stem = await modelSaveAsName(readContext())
-    if (!stem) return
+    const stem = await runFileNaming(
+      getLang(),
+      {
+        running: (text) => setMessage(text ?? ''),
+        failed: (text) => {
+          setMessage(text)
+          showToast(text, 'error')
+        },
+      },
+      () => modelSaveAsName(readContext()),
+    )
+    if (stem === null) return
     await handleSave('save-as', false, undefined, stem)
   }
   closeSaveRef.current = async () => {

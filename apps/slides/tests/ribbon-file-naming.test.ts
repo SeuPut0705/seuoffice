@@ -30,7 +30,9 @@ describe('the slides ribbon can ask the model for a name', () => {
   })
 
   it('the app wires the button to the naming action', () => {
-    expect(appSrc).toMatch(/const nameWithAi = useCallback\(\(\) => fileActions\.nameWithAi\(/)
+    expect(appSrc).toMatch(
+      /const nameWithAi = useCallback\(async \(\) => \{[\s\S]*?await fileActions\.nameWithAi\(\(\) => ctxRef\.current\)/,
+    )
     expect(appSrc).toMatch(/onNameWithAi=\{\(\) => void nameWithAi\(\)\}/)
   })
 

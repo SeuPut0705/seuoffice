@@ -123,14 +123,17 @@ describe('the name is derived from the projected text', () => {
 
 describe('a name is offered only when the model has one', () => {
   it('offers the model name when one does arrive', async () => {
-    expect(await modelSaveAsName(plainDeck())).toBe('\u5ba2\u6237\u56de\u8bbf\u8bb0\u5f55')
+    expect(await modelSaveAsName(plainDeck())).toEqual({
+      ok: true,
+      name: '\u5ba2\u6237\u56de\u8bbf\u8bb0\u5f55',
+    })
   })
 
-  it('offers nothing when the model declines', async () => {
+  it('offers nothing when the model declines, and says it ran out of time', async () => {
     installBridge({
       suggestFileName: async () => ({ ok: false, reason: 'timeout' }),
     })
-    expect(await modelSaveAsName(plainDeck())).toBe('')
+    expect(await modelSaveAsName(plainDeck())).toEqual({ ok: false, reason: 'timeout' })
   })
 
   it('offers nothing when the model errors', async () => {
@@ -139,22 +142,22 @@ describe('a name is offered only when the model has one', () => {
         throw new Error('provider unreachable')
       },
     })
-    expect(await modelSaveAsName(plainDeck())).toBe('')
+    expect(await modelSaveAsName(plainDeck())).toEqual({ ok: false, reason: 'failed' })
   })
 
   it('offers nothing when the model returns an empty name', async () => {
     answer = ''
-    expect(await modelSaveAsName(plainDeck())).toBe('')
+    expect(await modelSaveAsName(plainDeck())).toEqual({ ok: false, reason: 'failed' })
   })
 
   it('offers nothing when there is no naming bridge at all', async () => {
     delete (window as unknown as { aiNamingApi?: unknown }).aiNamingApi
-    expect(await modelSaveAsName(plainDeck())).toBe('')
+    expect(await modelSaveAsName(plainDeck())).toEqual({ ok: false, reason: 'unavailable' })
   })
 
   it('offers nothing for a deck with no text to work from', async () => {
     // An empty deck has no name to derive, so there is nothing worth sending.
-    await modelSaveAsName([])
+    expect(await modelSaveAsName([])).toEqual({ ok: false, reason: 'no-text' })
     expect(sent).toHaveLength(0)
   })
 })

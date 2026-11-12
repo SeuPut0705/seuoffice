@@ -64,7 +64,7 @@ function installBridge(): void {
   ;(window as unknown as { aiNamingApi: unknown }).aiNamingApi = {
     suggestFileName: async (input: { content: string }) => {
       sent.push({ content: input.content })
-      if (!providerConfigured) return { ok: false, reason: 'skip-no-provider' }
+      if (!providerConfigured) return { ok: false, reason: 'not-connected' }
       return answer ? { ok: true, name: answer } : { ok: false, reason: 'empty-name' }
     },
   }
@@ -276,22 +276,41 @@ describe('the manual trigger: the reader asks the model for a name', () => {
 
   it('offers the answer as a complete file name, extension and all', async () => {
     const opened = await namedWithSecret()
-    expect(await suggestedSaveAsName(ctxFor(opened, FILE_NAME, '/tmp/existing.docx'))).toBe(
-      `${ANSWER}.docx`,
-    )
+    expect(await suggestedSaveAsName(ctxFor(opened, FILE_NAME, '/tmp/existing.docx'))).toEqual({
+      ok: true,
+      name: `${ANSWER}.docx`,
+    })
   })
 
   it('proposes nothing when the model has nothing usable', async () => {
-    // '' is the signal that leaves the dialog on the name the document had
+    // a failure is the signal that leaves the document on the name it had
     answer = ''
     const opened = await namedWithSecret()
-    expect(await suggestedSaveAsName(ctxFor(opened, FILE_NAME, '/tmp/existing.docx'))).toBe('')
+    expect(await suggestedSaveAsName(ctxFor(opened, FILE_NAME, '/tmp/existing.docx'))).toEqual({
+      ok: false,
+      reason: 'failed',
+    })
   })
 
-  it('proposes nothing when no provider is configured', async () => {
+  it('proposes nothing when the answer holds nothing a file can be called', async () => {
+    // the name reaches this app as text from a model: what its own sanitizer
+    // leaves nothing of is no name, not a file called ".docx"
+    answer = '///'
+    const opened = await namedWithSecret()
+    expect(await suggestedSaveAsName(ctxFor(opened, FILE_NAME, '/tmp/existing.docx'))).toEqual({
+      ok: false,
+      reason: 'failed',
+    })
+  })
+
+  it('proposes nothing when no provider is configured, and says so', async () => {
     providerConfigured = false
     const opened = await namedWithSecret()
-    expect(await suggestedSaveAsName(ctxFor(opened, FILE_NAME, '/tmp/existing.docx'))).toBe('')
+    expect(await suggestedSaveAsName(ctxFor(opened, FILE_NAME, '/tmp/existing.docx'))).toEqual({
+      ok: false,
+      reason: 'not-connected',
+      kind: 'not-connected',
+    })
   })
 })
 

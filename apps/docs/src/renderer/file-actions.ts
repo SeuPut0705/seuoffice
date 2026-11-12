@@ -7,7 +7,7 @@
  */
 import type { Editor } from '@tiptap/core'
 import { history } from '@tiptap/pm/history'
-import { suggestFileName } from '@genoffice/ui'
+import { suggestFileName, type FileNameSuggestion } from '@genoffice/ui'
 import { modelTextOf, type RedactableNode } from './ai/redact-view'
 import {
   applyPageNumType,
@@ -874,20 +874,22 @@ function docxNameFromStem(stem: string): string | null {
  * The result is the file name offered in the Save As dialog rather than a
  * rename: moving a file that may be open elsewhere, referenced from a note, or
  * synced is not something to do behind the reader's back. The dialog is the
- * confirmation. Returns '' when there is nothing usable, which leaves the
- * dialog on the name the document already has.
+ * confirmation. A failure, when there is nothing usable, leaves the document
+ * on the name it already has and carries the reason for the caller to show.
  *
  * The text handed over is `modelTextOf`, never the editor's document. A selection
  * the reader hid from the model stays hidden from this call too — the file name
  * is the one thing that reaches them after the model has seen the rest of the
  * document, so a leak here would survive the redaction it was meant to outlive.
  */
-export async function suggestedSaveAsName(ctx: FileActionContext): Promise<string> {
+export async function suggestedSaveAsName(ctx: FileActionContext): Promise<FileNameSuggestion> {
   const { editor } = ctx
-  if (!editor) return ''
-  const stem = await suggestFileName({ content: modelTextOfDocument(editor) })
+  if (!editor) return { ok: false, reason: 'no-text' }
+  const suggestion = await suggestFileName({ content: modelTextOfDocument(editor) })
+  if (!suggestion.ok) return suggestion
   // a full file name, extension and all, because this is what the save dialog takes
-  return docxNameFromStem(stem) ?? ''
+  const name = docxNameFromStem(suggestion.name)
+  return name ? { ok: true, name } : { ok: false, reason: 'failed' }
 }
 
 /**

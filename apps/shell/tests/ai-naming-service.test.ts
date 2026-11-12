@@ -162,4 +162,82 @@ describe('ai:suggest-file-name', () => {
       expect(providersAsked()).toEqual(['anthropic'])
     })
   })
+
+  describe('a request that gives no name says why', () => {
+    const TEXT = 'Revenue by region, third quarter'
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('the selected subscription is signed out', async () => {
+      writeSettings({ provider: 'codex', providers: {}, ...NOTICE_SEEN })
+      expect(await suggest(TEXT)).toEqual({
+        ok: false,
+        reason: 'not-connected',
+        errorKind: 'signed-out',
+        provider: 'codex',
+      })
+      expect(providersAsked()).toEqual([])
+    })
+
+    it('no AI is connected at all', async () => {
+      h.statuses = {
+        'claude-code': { provider: 'claude-code', state: 'not-installed', meteredAccepted: false },
+        codex: { provider: 'codex', state: 'signed-out', meteredAccepted: false },
+      }
+      expect(await suggest(TEXT)).toEqual({
+        ok: false,
+        reason: 'not-connected',
+        errorKind: 'not-connected',
+      })
+    })
+
+    it.each([
+      ['rejects', (reject: (e: Error) => void) => reject(new Error('aborted'))],
+      [
+        'reports a failed reply',
+        (_: unknown, resolve: (r: unknown) => void) => resolve({ ok: false, error: 'aborted' }),
+      ],
+    ] as const)('the provider is cut off after 30 seconds and %s', async (_name, settle) => {
+      vi.useFakeTimers()
+      writeSettings({ providers: {}, ...NOTICE_SEEN })
+      h.chat.mockImplementation(
+        (_p: unknown, _c: unknown, _s: unknown, _u: unknown, signal: AbortSignal) =>
+          new Promise((resolve, reject) => {
+            signal.addEventListener('abort', () => settle(reject, resolve))
+          }),
+      )
+      let reply: Reply | undefined
+      void suggest(TEXT).then((r) => (reply = r))
+      await vi.advanceTimersByTimeAsync(29_000)
+      expect(reply).toBeUndefined()
+      await vi.advanceTimersByTimeAsync(1_000)
+      expect(reply).toEqual({ ok: false, reason: 'timeout' })
+    })
+
+    it('the provider answers with an error', async () => {
+      writeSettings({ providers: {}, ...NOTICE_SEEN })
+      h.chat.mockResolvedValue({ ok: false, error: 'HTTP 500' })
+      expect(await suggest(TEXT)).toEqual({ ok: false, reason: 'failed' })
+    })
+
+    it('the provider call throws', async () => {
+      writeSettings({ providers: {}, ...NOTICE_SEEN })
+      h.chat.mockRejectedValue(new Error('spawn ENOENT'))
+      expect(await suggest(TEXT)).toEqual({ ok: false, reason: 'failed' })
+    })
+
+    it('the model answers nothing that can be a file name', async () => {
+      writeSettings({ providers: {}, ...NOTICE_SEEN })
+      h.chat.mockResolvedValue({ ok: true, content: '\n  \n' })
+      expect(await suggest(TEXT)).toEqual({ ok: false, reason: 'empty-name' })
+    })
+
+    it('there is no text to name the file from', async () => {
+      writeSettings({ providers: {}, ...NOTICE_SEEN })
+      expect(await suggest('  \n ')).toEqual({ ok: false, reason: 'empty-content' })
+      expect(providersAsked()).toEqual([])
+    })
+  })
 })

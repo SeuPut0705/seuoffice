@@ -63,7 +63,10 @@ afterEach(() => {
 
 describe('the name the reader asked for', () => {
   it('is the name the model proposed', async () => {
-    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toBe('Checkout rollout notes')
+    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toEqual({
+      ok: true,
+      name: 'Checkout rollout notes',
+    })
     expect(sent).toHaveLength(1)
   })
 
@@ -115,14 +118,16 @@ describe('the name the reader asked for', () => {
 })
 
 describe('a naming that could not happen offers no name', () => {
+  const FAILED = { ok: false, reason: 'failed' }
+
   it('offers nothing when the bridge reports a failure', async () => {
     ok = false
-    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toBe('')
+    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toEqual(FAILED)
   })
 
   it('offers nothing when the model returns an empty name', async () => {
     answer = ''
-    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toBe('')
+    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toEqual(FAILED)
   })
 
   it('offers nothing when the bridge throws', async () => {
@@ -131,17 +136,31 @@ describe('a naming that could not happen offers no name', () => {
         throw new Error('provider unreachable')
       },
     })
-    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toBe('')
+    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toEqual(FAILED)
   })
 
   it('offers nothing when there is no naming bridge at all', async () => {
     delete (window as unknown as { aiNamingApi?: unknown }).aiNamingApi
-    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toBe('')
+    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toEqual({
+      ok: false,
+      reason: 'unavailable',
+    })
   })
 
   it('offers nothing for a page with no text to name', async () => {
-    expect(await modelSaveAsName('', buildParseMap('', 1))).toBe('')
+    expect(await modelSaveAsName('', buildParseMap('', 1))).toEqual({
+      ok: false,
+      reason: 'no-text',
+    })
     expect(sent).toHaveLength(0)
+  })
+
+  it('passes on why the main process sent nothing', async () => {
+    installBridge({ suggestFileName: async () => ({ ok: false, reason: 'notice' }) })
+    expect(await modelSaveAsName(PAGE, buildParseMap(PAGE, 1))).toEqual({
+      ok: false,
+      reason: 'notice',
+    })
   })
 })
 

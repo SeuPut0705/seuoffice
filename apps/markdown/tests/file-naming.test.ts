@@ -122,36 +122,42 @@ describe('the name the reader asks for', () => {
 
   it('returns the name the model proposed', async () => {
     const editor = makeEditor('# Release notes')
-    expect(await modelSaveAsName(editor)).toBe('Quarterly notes')
+    expect(await modelSaveAsName(editor)).toEqual({ ok: true, name: 'Quarterly notes' })
     expect(sent).toHaveLength(1)
   })
 
-  it('returns nothing when the model declines, leaving the dialog on the current name', async () => {
+  it('returns no name when the model declines, leaving the document on its current name', async () => {
     answer = ''
     const editor = makeEditor('# Release notes')
-    expect(await modelSaveAsName(editor)).toBe('')
+    expect(await modelSaveAsName(editor)).toEqual({ ok: false, reason: 'failed' })
   })
 
-  it('returns nothing when the model errors', async () => {
+  it('returns no name when the model errors', async () => {
     installBridge({
       suggestFileName: async () => {
         throw new Error('provider unreachable')
       },
     })
     const editor = makeEditor('# Release notes')
-    expect(await modelSaveAsName(editor)).toBe('')
+    expect(await modelSaveAsName(editor)).toEqual({ ok: false, reason: 'failed' })
   })
 
-  it('returns nothing when there is no naming bridge at all', async () => {
+  it('returns no name when there is no naming bridge at all', async () => {
     delete (window as unknown as { aiNamingApi?: unknown }).aiNamingApi
     const editor = makeEditor('# Release notes')
-    expect(await modelSaveAsName(editor)).toBe('')
+    expect(await modelSaveAsName(editor)).toEqual({ ok: false, reason: 'unavailable' })
   })
 
   it('does not ask the model about a document with nothing to name', async () => {
     const editor = makeEditor('')
-    expect(await modelSaveAsName(editor)).toBe('')
+    expect(await modelSaveAsName(editor)).toEqual({ ok: false, reason: 'no-text' })
     expect(sent).toHaveLength(0)
+  })
+
+  it('passes on why the main process sent nothing', async () => {
+    installBridge({ suggestFileName: async () => ({ ok: false, reason: 'notice' }) })
+    const editor = makeEditor('# Release notes')
+    expect(await modelSaveAsName(editor)).toEqual({ ok: false, reason: 'notice' })
   })
 
   it('is repeatable: a second request asks again', async () => {

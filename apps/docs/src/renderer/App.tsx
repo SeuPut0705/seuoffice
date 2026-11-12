@@ -23,6 +23,7 @@ import {
   ImageViewer,
   aiPanelInitiallyOpen,
   rememberAiPanelOpen,
+  runFileNaming,
   createZoomWheelClassifier,
   presentationKeyOf,
   useAutoSavePref,
@@ -420,7 +421,7 @@ import { stepHangingIndent, stepParagraphIndent } from './editor/indent'
 import { PasswordDialog } from './components/PasswordDialog'
 import { ProtectDialog, type ProtectDialogResult } from './components/ProtectDialog'
 import { PRODUCT_NAME } from '@genoffice/i18n'
-import { t, useI18n } from './i18n/locale'
+import { getLang, t, useI18n } from './i18n/locale'
 import {
   getActiveSubEditor,
   setActiveSubEditor,
@@ -2717,11 +2718,22 @@ export function App() {
    *
    * The stem is a proposal for the Save As dialog, never a rename: the dialog
    * is where the reader confirms, and moving a file that may be open elsewhere
-   * or synced is not ours to do quietly.
+   * or synced is not ours to do quietly. The status line says that the model
+   * is being asked, and then, as for a failed save, why it gave no name.
    */
   const nameWithAi = useCallback(async () => {
-    const proposed = await suggestedSaveAsName(fileCtxRef.current)
-    if (!proposed) return
+    const proposed = await runFileNaming(
+      getLang(),
+      {
+        running: (text) => setStatus(text ?? ''),
+        failed: (text) => {
+          setStatus(text)
+          showToast(text, 'error')
+        },
+      },
+      () => suggestedSaveAsName(fileCtxRef.current),
+    )
+    if (proposed === null) return
     await saveImpl(fileCtxRef.current, true, false, proposed)
   }, [])
 

@@ -24,15 +24,15 @@
  * withheld" (`redact-view.ts`); that is the safe direction to fail in, and this
  * module passes the map the editor already has rather than a second one.
  *
- * ## Nothing to offer is not a failure
+ * ## Nothing to offer keeps the name
  *
- * `suggestFileName` answers '' when there is no name to offer: no provider, an
- * unreachable one, a refusal, or a reply that sanitised away to nothing. The
- * caller keeps the name the document already had, which is the only acceptable
- * outcome — a rename that costs the reader their file name is worse than no
- * rename at all.
+ * `suggestFileName` answers a failure when there is no name to offer: no
+ * provider, an unreachable one, a refusal, or a reply that sanitised away to
+ * nothing. The caller keeps the name the document already had, which is the
+ * only acceptable outcome — a rename that costs the reader their file name is
+ * worse than no rename at all — and shows the reason the failure carries.
  */
-import { suggestFileName } from '@genoffice/ui'
+import { suggestFileName, type FileNameSuggestion } from '@genoffice/ui'
 import { modelTextOf } from './document/redact-view'
 import { deriveAutoFileName, derivePageTitleName } from './document/auto-name'
 import type { ParseMap } from './document/parse-map'
@@ -63,6 +63,6 @@ export function localFileName(source: string, promptName: string | null): string
  * file that may be open elsewhere, referenced from a note, or synced is not
  * something to do behind the reader's back. The dialog is the confirmation.
  */
-export async function modelSaveAsName(source: string, map: ParseMap): Promise<string> {
+export async function modelSaveAsName(source: string, map: ParseMap): Promise<FileNameSuggestion> {
   return suggestFileName({ content: modelTextOfDocument(source, map) })
 }

@@ -20,6 +20,7 @@ import {
   onAiRailClick,
   presentationKeyOf,
   rememberAiPanelOpen,
+  runFileNaming,
   skillTemplateText,
   templateDocumentOf,
   useAiSidebarEnabled,
@@ -259,6 +260,8 @@ export default function App() {
   )
   const [panelDismissedSid, setPanelDismissedSid] = useState<number | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  /** "Name with AI" has its request out: the 4 s of a notice would end before the model answers */
+  const [namingStatus, setNamingStatus] = useState<string | null>(null)
   /** a resize / reorder drag is in progress inside the frame: the floating chrome would only get in the way */
   const [dragging, setDragging] = useState(false)
   /** freshly inserted text element: opens for typing once the reloaded frame reports ready */
@@ -1550,15 +1553,26 @@ export default function App() {
    * The stem goes into the dialog rather than renaming the file on disk: a file
    * that may be open elsewhere, referenced from a note, or synced is not
    * something to move behind the reader's back. A declined or empty answer
-   * leaves the dialog on the page's current name, so this is a no-op rather
-   * than a failure.
+   * leaves the page on its current name; the status bar says that the model
+   * is being asked, and then, as a notice, why it gave no name.
    */
   const nameWithAi = useCallback(async () => {
     if (statusRef.current !== 'ready') return
-    const stem = await modelSaveAsName(textRef.current, getMap())
-    if (!stem) return
+    const stem = await runFileNaming(
+      lang,
+      {
+        running: (text) => {
+          // a previous failure must not cover the next request's progress
+          if (text !== null) setNotice(null)
+          setNamingStatus(text)
+        },
+        failed: setNotice,
+      },
+      () => modelSaveAsName(textRef.current, getMap()),
+    )
+    if (stem === null) return
     await doSave('saveAs', undefined, false, stem)
-  }, [doSave, getMap])
+  }, [doSave, getMap, lang])
 
   const zoomIn = useCallback(() => setZoom((z) => clampZoom(Math.round(z) + ZOOM_STEP)), [])
   const zoomOut = useCallback(() => setZoom((z) => clampZoom(Math.round(z) - ZOOM_STEP)), [])
@@ -2201,6 +2215,10 @@ export default function App() {
             <div className="status-left">
               {notice ? (
                 <span className="status-item status-notice">{notice}</span>
+              ) : namingStatus ? (
+                <span className="status-item status-notice" role="status">
+                  {namingStatus}
+                </span>
               ) : (
                 !path && <span className="status-item status-hint">{t('previewNeedsSave')}</span>
               )}

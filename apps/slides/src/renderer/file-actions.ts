@@ -11,7 +11,7 @@ import type { ActionCtx } from './action-context'
 import { collectExportPdfLinks } from './export-links'
 import { renderSlidesToPdfPages } from './export-pages'
 import { renderSlidesToImageBase64 } from './export-render'
-import { projectPanelText } from '@genoffice/ui'
+import { projectPanelText, runFileNaming } from '@genoffice/ui'
 import { getLang, t } from './i18n/locale'
 import { showToast } from './components/toast-bus'
 
@@ -181,8 +181,8 @@ export async function saveAs(getCtx: () => ActionCtx): Promise<void> {
  * The stem goes into the dialog rather than renaming the file on disk: a deck
  * that may be open elsewhere, presented from another machine, or synced is not
  * something to move behind the reader's back. A declined or empty answer
- * leaves the dialog on the deck's current name, so this is a no-op rather than
- * a failure.
+ * leaves the dialog closed and the deck on its current name; the status line
+ * says that the model is being asked, and then why it gave no name.
  */
 export async function nameWithAi(getCtx: () => ActionCtx): Promise<void> {
   const ctx = getCtx()
@@ -192,8 +192,19 @@ export async function nameWithAi(getCtx: () => ActionCtx): Promise<void> {
   // that commit can replace the deck, so read it again rather than from the
   // snapshot taken before the flush
   const deck = editing ? getCtx() : ctx
-  const stem = await modelSaveAsName(deck.slides)
-  if (!stem) return
+  const stem = await runFileNaming(
+    getLang(),
+    {
+      running: (text) => ctx.setStatus(text ?? ''),
+      // as a failed save: the status line and a toast
+      failed: (text) => {
+        ctx.setStatus(text)
+        showToast(text, 'error')
+      },
+    },
+    () => modelSaveAsName(deck.slides),
+  )
+  if (stem === null) return
   await saveAsWithName(getCtx, `${stem}.pptx`)
 }
 
