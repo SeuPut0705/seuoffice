@@ -153,6 +153,61 @@ struct Sites {
     rejected: usize,
     /// Regexes that read the text ahead of each search (`JsRegex::reads_ahead`).
     reads_ahead: usize,
+    /// Regexes with a loop that keeps entries on the backtrack stack for each
+    /// turn until the match ends: `regress` compiles the loop as `EnterLoop`
+    /// (its body is more than one character matcher) with no small bound.
+    grows_per_turn: usize,
+    /// Regexes with a lazy loop over a character matcher nothing in a part
+    /// stops (`[\s\S]*?`, `.*?`): before each match `regress` walks to where
+    /// the loop could end at most, the end of the text.
+    lazy_walks: usize,
+}
+
+/// The loops of a regex. Whether one keeps stack entries per turn without a
+/// small bound, read from the `Debug` text of the compiled program. And
+/// whether one is a lazy loop without a bound over a single character matcher
+/// that accepts `<`, `>` and a letter, so that nothing in a part stops the
+/// walk `regress` makes ahead of it: read from the pattern, as the atom before
+/// `*?` or `+?`.
+fn loops_of(regex: &JsRegex, pattern: &str) -> (bool, bool) {
+    let program = format!("{regex:?}");
+    let grows = program.split("EnterLoop(").skip(1).any(|fields| {
+        let digits = fields.split("max_iters: ").nth(1).unwrap_or("0");
+        let digits = &digits[..digits
+            .find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(digits.len())];
+        digits.parse::<u64>().unwrap() > 4096
+    });
+    let bytes = pattern.as_bytes();
+    let escaped = |at: usize| {
+        bytes[..at]
+            .iter()
+            .rev()
+            .take_while(|byte| **byte == b'\\')
+            .count()
+            % 2
+            == 1
+    };
+    let lazy = (2..bytes.len()).any(|at| {
+        if bytes[at] != b'?' || !matches!(bytes[at - 1], b'*' | b'+') || escaped(at - 1) {
+            return false;
+        }
+        let end = at - 1;
+        let atom = match bytes[end - 1] {
+            b'.' if !escaped(end - 1) => ".",
+            b']' if !escaped(end - 1) => match (0..end - 1)
+                .rev()
+                .find(|open| bytes[*open] == b'[' && !escaped(*open))
+            {
+                Some(open) => &pattern[open..end],
+                None => return false,
+            },
+            _ if end >= 2 && escaped(end - 1) => &pattern[end - 2..end],
+            _ => return false,
+        };
+        JsRegex::new(&format!("^{atom}{{3}}$"), "").is_ok_and(|class| class.test("<a>"))
+    });
+    (grows, lazy)
 }
 
 /// No pattern literal of the workspace is one `JsRegex::new` refuses where
@@ -167,6 +222,8 @@ fn every_site_of_the_workspace_builds() {
     let mut sites = Sites::default();
     let mut unread: Vec<(String, usize)> = Vec::new();
     let mut restarts: Vec<(String, usize)> = Vec::new();
+    // G: a loop that grows the stack per turn; L: a lazy loop that walks ahead
+    let mut loops: Vec<String> = Vec::new();
     let count_in = |list: &mut Vec<(String, usize)>, name: &str, by: usize| {
         if by > 0 {
             match list.iter_mut().find(|(listed, _)| listed == name) {
@@ -230,6 +287,7 @@ fn every_site_of_the_workspace_builds() {
                 sites.without_u += usize::from(without_u);
                 sites.icase += usize::from(without_u && flags.contains('i'));
                 let (mut counted, mut lookbehind, mut reads_ahead) = (false, false, false);
+                let (mut grows, mut lazy) = (false, false);
                 for (pattern, own) in patterns {
                     // a format! template: what the caller puts in is not known here
                     let pattern = if *own {
@@ -246,7 +304,19 @@ fn every_site_of_the_workspace_builds() {
                     lookbehind |= pattern.contains("(?<=") || pattern.contains("(?<!");
                     // a pattern JavaScript rejects too is a test of that
                     match JsRegex::new(&pattern, flags) {
-                        Ok(regex) => reads_ahead |= regex.reads_ahead(),
+                        Ok(regex) => {
+                            reads_ahead |= regex.reads_ahead();
+                            let (grows_here, lazy_here) = loops_of(&regex, &pattern);
+                            if grows_here || lazy_here {
+                                loops.push(format!(
+                                    "{}{} {name}: /{pattern}/{flags}",
+                                    if grows_here { "G" } else { "-" },
+                                    if lazy_here { "L" } else { "-" }
+                                ));
+                            }
+                            grows |= grows_here;
+                            lazy |= lazy_here;
+                        }
                         Err(error) if error.to_string().contains("as JavaScript matches it") => {
                             panic!("{name}: {error}")
                         }
@@ -256,6 +326,8 @@ fn every_site_of_the_workspace_builds() {
                 sites.counted += usize::from(without_u && counted);
                 sites.lookbehind += usize::from(without_u && lookbehind);
                 sites.reads_ahead += usize::from(reads_ahead);
+                sites.grows_per_turn += usize::from(grows);
+                sites.lazy_walks += usize::from(lazy);
                 if restart.is_some() && !reads_ahead {
                     restarts_here -= 1;
                 }
@@ -266,6 +338,9 @@ fn every_site_of_the_workspace_builds() {
     println!("{sites:?}");
     println!("{unread:?}");
     println!("{restarts:?}");
+    for site in &loops {
+        println!("{site}");
+    }
     let listed = |list: &[(&str, usize)]| -> Vec<(String, usize)> {
         list.iter()
             .map(|(name, count)| ((*name).to_owned(), *count))
