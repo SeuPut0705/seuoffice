@@ -22,7 +22,9 @@ A session that picks this work up starts at
 | `spike-one-run-save` | An experiment, not part of the engine: see its README                                                                                                                                                                                                                  | new                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 
 `docx-engine` is pure: bytes and values in, values out. No I/O, no clock, no
-randomness.
+randomness. Two of its modules are not readers: `model/` holds the Word model
+of `types.ts` (generated, see "The model"), and `generate/` the pure builders
+of `generate.ts`, the save side, over that model.
 
 ## How a module is ported
 
@@ -156,6 +158,45 @@ The model reads `EffectivePPr`, `EffectiveRPr` and the types they name from
 `unknown` are held as JSON values. Their key orders come from the parse
 results and equal the field orders of the structs in `resolve.rs`.
 
+## The model
+
+`docx-engine/src/model/generated.rs` is written by
+`tools/docx-diff/model-gen.ts` from the declarations of
+`packages/docx-engine/src/types.ts` (and those of `resolve-props.ts` it
+imports), read with the TypeScript compiler: 290 types, 156 of them objects.
+Do not edit it; `npm --prefix tools/docx-diff run model-gen` writes it and
+`-- --check` (part of `typecheck` and of `gate`) fails when it is stale.
+
+- **Key order.** `tools/docx-diff/model-orders.json` commits, per object
+  type, the order its keys are written in. A fixed order is a struct that
+  declares and writes its fields in that order. A type marked `"input"`
+  (Run, ParaFormat, CellMargins, TextboxDisplay, Block, StyleDisplay,
+  DocDefaults) follows the path the TypeScript took: it is a `js_object!`,
+  every field a `Slot`, and reading it sets the slots in the order of the
+  input. `model-gen.ts --observe-orders FILE.ndjson` derives the table from
+  captured parse results. **Only parse results vote**: values built from the
+  schema set their keys in whatever order the builder chose, and 32 types
+  were once marked `"input"` by them alone. 68 orders are fixed by evidence,
+  81 are the declaration order of a type no parse result holds with two
+  keys in question.
+- **Strict reading.** An unknown key, a key twice, a missing required key,
+  null where the type has none, a value of another JSON kind, a string no
+  enum holds, an enum written as an object, a `Record<number>` key that is
+  no number and base64 with padding bits set are refused; `model-invalid.ts`
+  builds one value per case from the schema (13,835) and comparison (h)
+  demands a refusal for each. `model/mod.rs` lists the three limits that
+  remain.
+- **Evidence per field.** `model-field-floors.json` holds, for each of the
+  1,663 fields, how many values the parse results held and how many the
+  schema-built values did, apart: 675 fields are seen in parse results, 988
+  only in built values. A built value proves that the Rust reads and writes
+  what the schema says, not that the parser ever produces it.
+  `model-full.ts --write-field-floors` rewrites the file from the gate's own
+  run.
+- **A reader that is wired** takes the model type as its return type and its
+  local struct goes in the same unit (`FieldDisplay`, `TextGlow`, and every
+  reader-local struct of the same shape as a model type).
+
 ## The gate: tools/docx-diff
 
 `npm --prefix tools/docx-diff run gate` builds the wasm and runs every
@@ -172,6 +213,7 @@ entry that no longer reproduces.
 | (e) | the package layer: loading, refusals, normalization, every value read before the body                                                                                      | `compare-package.ts`, `package-zips.ts`, `package-run.ts` |
 | (f) | exported functions of the modules ported since, called by name, one group per module family                                                                                | `calls-spec.ts`, `calls-run.ts`, `calls-<group>.ts`       |
 | (g) | the zips the writer produces, for every blank document option set and for built packages: entries, order and inflated content as JSZip reads them, and every raw zip field | `compare-blank.ts`                                        |
+| (h) | the typed model: what `parseDocx` returns, written as JSON, read as the Rust model and written again, byte for byte; values the model must refuse                          | `compare-model.ts`, `model-run.ts`                        |
 
 A `+` marks seeded mutations of the same inputs. The rule for them: where the
 TypeScript throws, Rust must refuse; where it answers, Rust must answer the
@@ -227,6 +269,14 @@ own. It joins a group:
 A group reports its own line: how many functions, and how many of them only
 ever gave one result. The second number has to be 0.
 
+A function whose input is a model value and no text sets `argMutation` in
+its spec: the runner then mutates its arguments too
+(`calls-arg-mutation.ts`), exchanging values, keys and array elements among
+what the corpus and the built inputs showed under the same key, so a
+mutated value has the types of the seeds in a combination none had. A
+mutation the typed reader of the Rust side refuses is counted and compares
+nothing. A spec takes the model of a corpus document through `fromModel`.
+
 ### What makes a comparison worth its line
 
 - **Count what was compared, and floor it.** A comparison that silently
@@ -268,6 +318,12 @@ a class none of whose inputs differs any more. The classes are short-lived:
 main fixes the TypeScript, the fix is merged here, the entry and its class
 are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
 `zone` runs its TypeScript side in that zone.
+
+The entries named `non-finite-...` are written by
+`tools/docx-diff/ledger-non-finite.ts` from the inputs the drawing specs
+export, one per function and argument; their class is
+`non-finite-number-in-a-drawing`. Run the tool after a change to those
+functions; `-- --check` says whether the entries would change.
 
 ## Known debt
 
@@ -332,34 +388,111 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
 
 ## Next session starts here
 
-State on 2026-11-12, 14:45 KST. The branch is on origin and is pushed at
-every unit boundary (never forced, never to main).
+State on 2026-11-12. The docx work is on `feat/rust-docx-model` from here
+on: the stream that wrote `feat/rust-docx-u1` handed over at 8a6a177bf,
+which is merged here (merged, never rebased). The branch is on origin and is
+pushed at every unit boundary (never forced, never to main).
 
-- `feat/rust-docx-u1`: everything below, on main at 5f03509fd (merged, not
-  rebased). The gate is green on a runner (run 43158707050 on f6071c0f5):
-  1,733,886 checks, 0 differences, 14 ledger entries, none stale, six listed
-  classes (136 inputs set aside as differing), clippy, the tests and
-  cargo-deny pass, wasm 2,483,425 bytes.
-- Case folding under `i` without `u` was a defect of `jscompat` that 679
-  checks over inputs with U+0131, U+017F and U+212A showed; stream D fixed it
-  in `regex.rs` (two commits cherry-picked with `-x`), and those inputs stay
-  in the gate.
-- Other streams start from this branch on origin, on another machine, and
-  merge it at unit boundaries: `feat/rust-docx-model` (B: the Word model
-  types generated from `types.ts` into `docx-engine/src/model/`, then the
-  save side, and the leaves over model types: `ink.ts`,
-  `parse-block-passes.ts`, `lineBoxOf`, `vmlWordArtBox`, the read side of
-  `chart.ts`), `feat/rust-pptx-u1` (C), `feat/rust-fileparse-u1` (D). They
-  add to `ooxml-xml`, `ooxml-pkg`, `jscompat` and the harness behind new
-  functions and options; the Word gate has to stay as it is. The model is
-  not ported here a second time.
-- `EffectivePPr`, `EffectiveRPr`, `ResolveCtx` and the direct and effective
-  formats are in `docx-engine/src/resolve.rs` now: stream B can type them.
-  Structs written here for want of the model, each under the doc line
-  "model type, to be replaced by the generated model": `FieldDisplay`
-  (`fields/display.rs`), `TextGlow` (`drawing_geometry/fill.rs`).
+- What is on it: everything of `feat/rust-docx-u1` (the gate was green there
+  on a runner, run 43159621371: 1,733,886 checks, 0 differences, 14 ledger
+  entries in six classes), the model, the builders of `generate.ts`, and
+  stream D's fix of counted quantifiers over text outside the BMP. The
+  runner result for this head is in the unit report to main.
+- main is ahead (e743228a9 when this was written). Do not merge it until
+  main says its TypeScript fixes are in: the six listed classes go in that
+  merge.
+- Other streams, on other machines: `feat/rust-pptx-u1` (C),
+  `feat/rust-fileparse-u1` (D). They add to `ooxml-xml`, `ooxml-pkg`,
+  `jscompat` and the harness behind new functions and options; the Word gate
+  has to stay as it is. A commit of theirs is taken with `cherry-pick -x`.
+- `jscompat/tests/sites.rs` reads the pattern of every `js_regex!` and
+  `JsRegex::new` of the workspace and fails on a call whose pattern or flags
+  it cannot read: write the literal (or the `format!`) inside the call. A
+  pattern without `u` that can tell a surrogate pair from a character (`.`,
+  a negated class, `\S`, `\W`, `\D`, `\B`, lookbehind) costs a scan of the
+  rest of the text per call on a text holding an astral character: keep new
+  code to single passes, no restart loop over `find_from`.
+- Structs written for want of the model, each under the doc line "model
+  type, to be replaced by the generated model": `FieldDisplay`
+  (`fields/display.rs`), `TextGlow` (`drawing_geometry/fill.rs`). The model
+  has both now.
 
 ### What was done last
+
+**Unit 3: the model and the builders of `generate.ts`** (stream B, on
+`feat/rust-docx-model`, which carries the trunk from here on).
+
+The model (comparison (h)): the first round trip of 9,834 checks had 2,940
+equal (29.9%); 5,579 of the 6,894 differences were key order alone, the rest
+numbers (`null` for NaN refused, `.0` on integers past 2^53, exponent
+spelling). It is at 0 differences over 183 corpus documents, 220 built
+documents, 40 results captured from engine tests, 5,081 schema-built values,
+13,835 values to refuse and 4,757 blocks compared one by one (the block
+checks repeat what the document checks hold). Ten faults (eight by an author
+who saw no input, two of the porter's): eight showed at once; an integer
+past 2^53 and swapped base64 padding masks named values that are now there.
+A fault a round trip cannot see by construction: an enum variant that names
+the wrong string on the way in and on the way out alike. The generator
+writes both from one string, and a consumer shows it (a swapped
+`RevisionXmlMode` would change the builders).
+
+The builders, nine groups of (f), 43 functions (every export of
+`generate.ts` that is a function):
+
+| group | functions | first comparison |
+|---|---|---|
+| `genRpr` | `mergeRPrModel` | 17,144 checks, 0 differences |
+| `genProps` | 11 (pPr merges, paragraph mark, pPrChange, `splitXmlChildren`) | 48,959, 0 |
+| `genDrawing` | 12 picture and shape patches | 7,791, 297 |
+| `genDrawingBuild` | 6 builders and `LINE_KINDS` | 600, 0 |
+| `genText` | 5 (`xmlSegments`, field, formula, cell and text box patches) | 5,383, 0 |
+| `genTable` | `generateTableModelXml`, `generateTableXml` | 1,318, 0 |
+| `genFields` | TOC, caption, index | 1,447, 0 |
+| `genRuns` | `inlineRunsXml` | 4,955, 0 |
+| `genParagraph` | `generateParagraphXml` | 5,959, 0 |
+
+Those first runs were local, on Node 22, before anything was fixed, and are
+in `crates/fixtures/generate-first/`; the porting agents compared nothing
+before them. All 297 differences are one class: a NaN or an infinity among
+the arguments, which the TypeScript writes into an integer attribute. Rust
+never writes one (main's decision); where the TypeScript result holds none,
+Rust gives the TypeScript result. Mutated arguments added 48,000 checks to
+the first run and 23 differences of the same class.
+
+27 faults, each switched on alone in one build: 20 showed at once. Five of
+the seven misses named inputs that are now there (an `rFonts` with
+`eastAsiaTheme` beside a literal face, an empty `w:left` beside `w:start`,
+revisions that differ in their move name only, a fractional rotation, a
+field title of exactly 15 units). Two change nothing a caller can observe:
+every pPr child the builder pushes is in `PPR_CHILD_ORDER`, and the table
+path never resolves a `w:tblGridChange`. The switch was an environment
+variable read by the wasm (`fault(n)` in `jscompat`, the host passing
+`SEU_FAULT`), never committed: one build for all faults, one comparison per
+fault. The first loop of it passed no variable and reported 27 misses; a
+positive control (a fault known to show) is now the first run of such a
+loop.
+
+Not verified, and not ported:
+
+- The order of 81 object types and 988 fields rests on schema-built values
+  alone.
+- A model number that is NaN on the save side: a number crosses the wire as
+  `null`, which the TypeScript side reads as `null` and the Rust as NaN, so
+  no spec sends one outside the drawing functions, where numbers cross as
+  text.
+- `generateIndexFieldXml` sorts with ICU4X (`icu_collator` 2.4, CLDR 49)
+  where Node 22.23.5 has ICU 78 (CLDR 48): equal over 192 corpus and built
+  term lists and 1,500 mutated ones, not proven for every string.
+- The `fix/inline-wrappers` changes of `generate.ts` (`Run.wrap`,
+  `Run.opaqueXml` on the save side) are not on this branch's TypeScript; the
+  model has the two fields.
+- `generateParagraphXml` without a bookmark id allocator reads a counter of
+  the process: the inputs always pass one.
+- `generate/table.rs` holds a private copy of `resolvePropChangeXml` written
+  before the trunk's `revision_xml.rs` was merged, and the builders hold
+  private `Math.max`, number formatting and truthiness helpers: both are to
+  move to the one implementation.
+- `patch.ts` is not started.
 
 **Unit 2: the resolver and the leaves without model types.** About 3,200
 TypeScript lines in 6,600 of Rust, eight groups of (f):
@@ -419,12 +552,10 @@ tool for the latter. A dispatch right after a push can take the previous
 head: read `headSha` of a run before using its result.
 
 **Held locally until `jscompat` has them** (each marked `// to jscompat:`):
-`encodeURIComponent` (`vml/shape.rs`), a port of V8's `Date.parse`
-(`revision_xml.rs`, about 800 lines), and `utf16_shaped`
-(`fields/display.rs`): a counted quantifier (`\S{1,15}`) counts an astral
-character once in `regress` and twice in JavaScript without `/u`. That last
-one is a property of every `js_regex!` with a counted quantifier or a `.`
-over text outside the BMP and belongs with the case folding in `regex.rs`.
+`encodeURIComponent` (`vml/shape.rs`) and a port of V8's `Date.parse`
+(`revision_xml.rs`, about 800 lines). `utf16_shaped` is gone: stream D made
+a regex without `u` read a text outside the BMP by UTF-16 units (see
+"jscompat rules").
 
 
 **Before unit 2**
@@ -489,40 +620,38 @@ for a record keyed by data. No order is in the ledger.
 
 ### What to do, in order
 
-1. **Take stream D's next commit to `regex.rs`** when main names it: a
-   counted quantifier (`\S{1,15}`) counts an astral character once in
-   `regress` and twice in JavaScript without `/u`. Remove `utf16_shaped` of
-   `fields/display.rs` in the commit that takes it. One input still waits
-   for a comparison that can see it: a part named `x.rel\u017f` for
-   `ooxml-pkg/src/load.rs:104` (the package comparison reads no part by such
-   a name, so today it would compare nothing).
-2. **The package comparison reports the first differing path of a value
+1. **The leaves over model types**, each a group of (f): `ink.ts` (153),
+   `parse-block-passes.ts` (240), `lineBoxOf` of
+   `parse-drawing-geometry.ts` and `vmlWordArtBox` of `parse-vml.ts` (the
+   rest of both files is ported), the read side of `chart.ts`
+   (`parseChartPartXml` and its colour helpers, about 700 of 1,084 lines).
+2. **The debt of the builders** listed under unit 3: one `resolvePropChangeXml`
+   (`revision_xml.rs`), the helpers into `jscompat`.
+3. **The package comparison reports the first differing path of a value
    only**, so `styles/headings.rs:31` and `styles/display.rs:350` were never
-   shown apart from the heading difference beside them. Their inputs are in
-   the package "…letters that fold to ASCII only in Unicode"; a fault in
-   each would say whether they are compared.
-3. **Merge main when it has fixed items 11 to 16 and 24**, drop the entries and
-   classes that go stale, and take the model from stream B when it lands:
-   the local structs go, and `lineBoxOf`, `vmlWordArtBox`, `ink.ts`,
-   `parse-block-passes.ts` and the chart reader come with it.
+   shown apart from the heading difference beside them. Make it report every
+   differing path (additive), then show them: their inputs are in the
+   package "…letters that fold to ASCII only in Unicode"; a fault in each
+   says whether they are compared. One input waits for a comparison that can
+   see it: a part named `x.rel\u017f` for `ooxml-pkg/src/load.rs:104` (the
+   package comparison reads no part by such a name).
+4. **Merge main when main says so** (items 11 to 16 and 24 of its list are
+   fixed there), and drop the entries and classes that go stale.
    `lazy-media.ts` (55) is about when the host reads media: decide what of
    it the engine owns before porting it. The decoders of `tiff.ts` and
    `metafile.ts` stay with the host.
-4. **The model**, `types.ts` (2,719 lines), is stream B's: Rust types that
-   serialize to the same JSON, each a struct or a `js_object!` by the rule
-   above. Fetch `origin/feat/rust-docx-model` and read it before wiring.
-5. **`parse.ts`** (9,171 lines, 152 functions, 12 exports). Its functions
-   are not exported, so (f) cannot call them. Compare `parseDocx` as a
-   whole: the model of every corpus document as JSON, block by block, with a
-   count per block type and per field so a partial port shows what is equal
+5. **`parse.ts`** (9,171 lines, 152 functions, 12 exports), leaf first, with
+   the model as its types. Its functions are not exported, so (f) cannot
+   call them. Compare `parseDocx` as a whole: comparison (h) already holds
+   the model of every corpus document as JSON, block by block, with a count
+   per block type and per field, so a partial port shows what is equal
    already. Port by pass: runs, paragraphs, tables, drawings and text boxes,
    the block passes. Then finish `parseNotesXml`'s paragraph reader and
    `applyTocEntryNumbers`, which need it.
-6. The save side (`generate.ts`, `patch.ts`, `text-patch.ts`,
+6. The rest of the save side (`patch.ts`, `text-patch.ts`,
    `style-upsert.ts`, `remove-parts.ts`, `zip-splice.ts`,
    `resource-cleanup.ts`, the writers left out of the modules above) and
-   the features on top (`compare.ts`, `mail-merge.ts`) come after the read
-   side is whole.
+   the features on top (`compare.ts`, `mail-merge.ts`).
 
 One finding is not a port matter and is with main: a run-level content
 control is dropped when its paragraph is saved as a generated block
