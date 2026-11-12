@@ -3,7 +3,7 @@
 ; sections; nothing else of the template is changed.
 ;
 ;   * the Electron install is found through its uninstall key (HKCU\...\Uninstall\<guid>, the one
-;     whose DisplayName is the product name) and this install goes into the same folder
+;     whose DisplayName starts with the product name, "SeuOffice 0.12.37") and this install goes into the same folder
 ;   * the Electron uninstaller runs first, silent and in place, the way electron-builder upgrades
 ;     itself (it unregisters the file types and the PATH entry and keeps %APPDATA%\seuoffice); what it
 ;     leaves of the Electron files is deleted by name
@@ -62,7 +62,10 @@ FunctionEnd
     IntOp $0 $0 + 1
     ; Tauri's own key of an earlier standalone install is not the Electron one
     StrCmp $1 "${PRODUCTNAME}" seu_next
+    ; electron-builder names the entry "<product name> <version>"
     ReadRegStr $2 HKCU "${SEU_UNINSTALL_ROOT}\$1" "DisplayName"
+    StrLen $3 "${PRODUCTNAME}"
+    StrCpy $2 $2 $3
     StrCmp $2 "${PRODUCTNAME}" 0 seu_next
     StrCpy $SeuLegacyKey $1
     ReadRegStr $2 HKCU "${SEU_UNINSTALL_ROOT}\$1" "MainBinaryName"
@@ -119,7 +122,7 @@ FunctionEnd
 ; Clobbers $0-$1.
 !macro SeuAdoptLegacyKey
   StrCpy $0 "${SEU_UNINSTALL_ROOT}\$SeuLegacyKey"
-  !insertmacro SeuCopyString "DisplayName"
+  WriteRegStr HKCU $0 "DisplayName" "${PRODUCTNAME} ${VERSION}"
   !insertmacro SeuCopyString "DisplayIcon"
   !insertmacro SeuCopyString "DisplayVersion"
   !insertmacro SeuCopyString "Publisher"

@@ -28,6 +28,10 @@ function Dump($label) {
     Write-Host "--- reg query $k /s"
     reg query $k /s 2>&1 | Write-Host
   }
+  foreach ($k in @(Entries)) {
+    Write-Host "--- reg query HKCU\Software\$($k.Key) (electron-builder's install key)"
+    reg query "HKCU\Software\$($k.Key)" 2>&1 | Write-Host
+  }
   Write-Host '--- uninstall keys named SeuOffice'
   Get-ChildItem $root | ForEach-Object {
     $p = Get-ItemProperty $_.PSPath
@@ -118,9 +122,12 @@ Check ($null -ne $cfg -and $cfg.mode -eq 'interactive' -and $cfg.doc -eq $Doc) '
 Stop-Installed $installDir
 
 Write-Host '=== uninstall'
-$u = Start-Process -FilePath (Join-Path $installDir 'uninstall.exe') -ArgumentList '/S' -PassThru -Wait
-Start-Sleep 3
-Write-Host "uninstaller exit $($u.ExitCode)"
+$uninstaller = Join-Path $installDir 'uninstall.exe'
+if (Test-Path $uninstaller) {
+  $u = Start-Process -FilePath $uninstaller -ArgumentList '/S' -PassThru -Wait
+  Start-Sleep 3
+  Write-Host "uninstaller exit $($u.ExitCode)"
+} else { Check $false "uninstall.exe exists in $installDir" }
 Dump 'after the uninstaller'
 Check (@(Entries).Count -eq 0) 'no SeuOffice entry after the uninstall'
 Check (Test-Path (Join-Path $ud 'marker.txt')) 'the userData marker survives the uninstall'
