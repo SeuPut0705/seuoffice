@@ -635,6 +635,20 @@ export interface AiHfState {
   titlePg: boolean
   evenOddHf: boolean
   multiSection: boolean
+  /** layout tables (hfModelTableText) of the variants in use that have one */
+  tables?: Partial<Record<HfStateSlot, string>>
+}
+
+export type HfStateSlot =
+  'header' | 'footer' | 'headerFirst' | 'footerFirst' | 'headerEven' | 'footerEven'
+
+const HF_SLOT_NAMES: Record<HfStateSlot, string> = {
+  header: 'header',
+  footer: 'footer',
+  headerFirst: 'first-page header',
+  footerFirst: 'first-page footer',
+  headerEven: 'even-page header',
+  footerEven: 'even-page footer',
 }
 
 function hfContextLines(hf: AiHfState): string[] {
@@ -652,6 +666,13 @@ function hfContextLines(hf: AiHfState): string[] {
     lines.push(
       `- even-page variant: header ${fmt(hf.headerEven ?? '')} | footer ${fmt(hf.footerEven ?? '')}`,
     )
+  }
+  for (const [slot, table] of Object.entries(hf.tables ?? {}) as [HfStateSlot, string][]) {
+    if (table) {
+      lines.push(
+        `- ${HF_SLOT_NAMES[slot]} layout table (read-only; set_header_footer keeps it): ${fmt(table)}`,
+      )
+    }
   }
   if (hf.multiSection) {
     lines.push(

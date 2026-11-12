@@ -102,6 +102,31 @@ export function hfModelText(value: HeaderFooter): string {
 }
 
 /**
+ * The part's layout tables as a model may read them: one line per row, cells
+ * joined with " | " (a cell's paragraphs with a space), each run hidden from AI
+ * as its placeholder; "" when the part has none. Read-only: set_header_footer
+ * keeps the rows as they are.
+ */
+export function hfModelTableText(value: HeaderFooter): string {
+  return hfParasOf(value)
+    .flatMap((p) => (p.cells ? [p.cells] : []))
+    .map((cells) =>
+      cells
+        .map((cell) =>
+          cell.paras
+            .map((runs) =>
+              hfLinesText([
+                modelPieces(runs).map((piece) => ('marker' in piece ? piece.marker : piece.text)),
+              ]),
+            )
+            .join(' '),
+        )
+        .join(' | '),
+    )
+    .join('\n')
+}
+
+/**
  * A model's new text for the part (written against `hfModelText`). Its
  * placeholders must come back exactly as given: each then becomes the hidden
  * runs it stands for, so the person's words and their mark survive the edit,

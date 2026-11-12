@@ -84,16 +84,12 @@ pub fn patch_theme_xml(xml: &str, spec: &ThemeSpec) -> String {
         let Some(color) = truthy(spec.color(key)) else {
             continue;
         };
-        // ledger theme-color-dollar: the TypeScript passes the section as a
-        // replacement string, so a `$&`, `$$`, `$'` or `` $` `` in a color that is
-        // not a color expands into markup; written as given here.
+        // The TypeScript replaces with a function: written as given.
         out = replace_first_with(slot, &out, |_| {
             format!(r#"<a:{key}><a:srgbClr val="{}"/></a:{key}>"#, hex6(color))
         });
     }
-    // ledger theme-name-dollar: the TypeScript writes `$1${name}$2` as a
-    // replacement string, so a `$&`, `$1`, `$'` or `` $` `` in the theme name or
-    // a font name expands into markup inside the attribute; written as given here.
+    // The name and the fonts go in as written (a function replacement in the TypeScript).
     out = between_groups(
         js_regex!(r#"(<a:clrScheme name=")[^"]*(")"#),
         &out,
@@ -326,8 +322,7 @@ pub fn recolor_xml(xml: &str, map: &JsMap<String>) -> String {
         let full = found.as_str();
         let hex = found.get(1).unwrap_or("");
         match truthy(map.get(&hex.to_uppercase()).map(String::as_str)) {
-            // ledger recolor-map-dollar: the TypeScript's `full.replace(hex, to)`
-            // reads `$` patterns in the color the map gives; written as given here.
+            // `full.replace(hex, () => to)`: the color is written as given.
             Some(to) => full.replacen(hex, to, 1),
             None => full.to_owned(),
         }

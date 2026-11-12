@@ -335,6 +335,12 @@ const fn raw_prefix(bytes: &[u8]) -> usize {
 /// `undefined`), and `keys`, `has_no_key` and `assign`. With `deserialize;`
 /// before the struct it also gives `Deserialize`, which sets the keys in the
 /// order of the input and reads `null` as no key.
+///
+/// `deserialize_strict;` gives the `Deserialize` of a model sent over JSON
+/// (`JSON.stringify` of the TypeScript object): it refuses an unknown or a
+/// repeated key, reads each value as the field's own type (so `null` is
+/// NaN in a [`JsNum`](crate::JsNum) and an error elsewhere), and sets every
+/// key present, in the order of the input.
 #[macro_export]
 macro_rules! js_object {
     (
@@ -342,6 +348,12 @@ macro_rules! js_object {
         $($declaration:tt)*
     ) => {
         $crate::js_object! { @declare [deserialize] $($declaration)* }
+    };
+    (
+        deserialize_strict;
+        $($declaration:tt)*
+    ) => {
+        $crate::js_object! { @declare [deserialize_strict] $($declaration)* }
     };
     (
         @declare [$($deserialize:ident)?]
@@ -490,6 +502,61 @@ macro_rules! js_object {
                                 })*
                                 ::core::option::Option::None => {
                                     map.next_value::<$crate::serde::de::IgnoredAny>()?;
+                                }
+                            }
+                        }
+                        ::core::result::Result::Ok(out)
+                    }
+                }
+                deserializer.deserialize_map(Keys)
+            }
+        }
+    };
+    (@deserialize [deserialize_strict] $name:ident { $($field:ident : $ty:ty),* }) => {
+        impl<'de> $crate::serde::Deserialize<'de> for $name {
+            fn deserialize<D: $crate::serde::Deserializer<'de>>(
+                deserializer: D,
+            ) -> ::core::result::Result<Self, D::Error> {
+                struct Keys;
+                impl<'de> $crate::serde::de::Visitor<'de> for Keys {
+                    type Value = $name;
+
+                    fn expecting(
+                        &self,
+                        formatter: &mut ::core::fmt::Formatter,
+                    ) -> ::core::fmt::Result {
+                        formatter.write_str(concat!("an object: ", stringify!($name)))
+                    }
+
+                    fn visit_map<A: $crate::serde::de::MapAccess<'de>>(
+                        self,
+                        mut map: A,
+                    ) -> ::core::result::Result<$name, A::Error> {
+                        use $crate::serde::de::Error as _;
+                        let mut out = <$name>::default();
+                        while let ::core::option::Option::Some(name) =
+                            map.next_key::<::std::string::String>()?
+                        {
+                            let key = KEYS.iter().find(|(_, key)| *key == name);
+                            match key {
+                                $(::core::option::Option::Some((Key::$field, _)) => {
+                                    if out.$field.has_key() {
+                                        return ::core::result::Result::Err(A::Error::custom(
+                                            ::std::format!(
+                                                "duplicate field `{name}` of {}",
+                                                stringify!($name)
+                                            ),
+                                        ));
+                                    }
+                                    out.$field.set(map.next_value::<$ty>()?);
+                                })*
+                                ::core::option::Option::None => {
+                                    return ::core::result::Result::Err(A::Error::custom(
+                                        ::std::format!(
+                                            "unknown field `{name}` of {}",
+                                            stringify!($name)
+                                        ),
+                                    ));
                                 }
                             }
                         }

@@ -15,7 +15,7 @@ use serde::{Deserialize, Serialize};
 use crate::deck::OpenedPptx;
 use crate::notes::{replace_literal, set_entry, unescape_xml};
 use crate::types::Slide;
-use crate::xml_utils::escape_xml_attr;
+use crate::xml_utils::{attribute_of, escape_xml_attr};
 use crate::zip::resolve_target;
 
 /// `SectionInfo`
@@ -94,11 +94,8 @@ fn read_slide_entries(opened: &OpenedPptx) -> Result<Vec<SlideEntry>, String> {
             .exec(m.as_str())
             .and_then(|m| m.get(1))
             .filter(|id| !id.is_empty());
-        let r_id = js_regex!(r#"\br:id="([^"]+)""#)
-            .exec(m.as_str())
-            .and_then(|m| m.get(1))
-            .filter(|id| !id.is_empty());
-        let (Some(sld_id), Some(r_id)) = (sld_id, r_id) else {
+        let r_id = attribute_of(m.as_str(), "r:id").filter(|id| !id.is_empty());
+        let (Some(sld_id), Some(r_id)) = (sld_id, r_id.as_deref()) else {
             continue;
         };
         let path = rels

@@ -124,6 +124,8 @@
     "initials",
     "date",
     "text",
+    "modelText",
+    "markedXml",
     "paraId",
     "image",
     "parentId",
@@ -144,7 +146,7 @@
     "closeBlock",
     "closeOffset"
   ],
-  "InlineContentControl": ["tag", "title", "lock", "id", "text"],
+  "InlineContentControl": ["tag", "title", "lock", "id", "text", "modelText"],
   "TabStop": ["pos", "val", "rel", "leader", "inherited"],
   "ParaBorderLine": ["color", "szPt", "none", "spacePt"],
   "ParaBorderSides": ["t", "b", "l", "r"],
@@ -362,6 +364,7 @@
   "HfPartInfo": ["text", "hasPageNumber", "paras", "images"],
   "NoteRun": [
     "text",
+    "redact",
     "bold",
     "italic",
     "underline",
@@ -378,6 +381,7 @@
   "NoteInfo": [
     "id",
     "text",
+    "modelText",
     "richParas",
     "styleId",
     "zoteroField",

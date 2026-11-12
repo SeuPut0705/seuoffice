@@ -103,7 +103,7 @@ const ROWS = [
 
 const STYLE_ID = '<a:tableStyleId>{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}</a:tableStyleId>'
 
-/** A tblPr in single quotes and with spaces around `=`: see the ledger note on the flag edits. */
+/** A tblPr in single quotes and with spaces around `=`. */
 const QUOTED_TBL_PR = `<a:tblPr firstRow='1' bandRow = "1" lastCol='0'>${STYLE_ID}</a:tblPr>`
 
 const TABLE_TEXTS: string[] = [
@@ -122,6 +122,10 @@ const TABLE_TEXTS: string[] = [
   table('<a:tblPr firstRow="1">', ROWS[0]!),
   table(QUOTED_TBL_PR, ROWS[0]!),
   table('<a:tblPr x="a>b" firstRow="1"></a:tblPr>', ROWS[1]!),
+  table(`<a:tblPr rtl = '1' firstRow="1" firstRow='0'>${STYLE_ID}</a:tblPr>`, ROWS[0]!),
+  table(`<a:tblPr x=" firstRow='1'" bandRow="1" rtl='true'/>`, ROWS[1]!),
+  table(`<a:tblPr\tfirstRow\n=\n"1"\trtl\t=\t"&#49;"/>`, ROWS[2]!),
+  table(`<a:tblPrX rtl="1"/><a:tblPr firstRow="1"/>`, ROWS[0]!),
   // a table nested in a cell: the a:tc span ends at the inner cell's close
   table(
     '<a:tblPr/>',
@@ -154,6 +158,8 @@ const EDITS: Array<Record<string, unknown>> = [
   {},
   ...PRESET_EDITS,
   { tblPrXml: '<a:tblPr rtl="0"/>' },
+  { tblPrXml: "<a:tblPr rtl = '0'/>" },
+  { tblPrXml: '<a:tblPr x=" rtl=\'1\'"/>' },
   { tblPrXml: '' },
   { tblPrXml: 'x<a:tblPr/>' },
   { tblPrXml: '<a:tblPr firstRow="1">$&</a:tblPr>' },
@@ -247,8 +253,8 @@ const EDITS: Array<Record<string, unknown>> = [
 ]
 
 /**
- * ledger tcpr-color-dollar: `$` patterns in a color that is not a color. The
- * TypeScript passes the tcPr it gives a cell as a replacement string.
+ * `$` patterns in a color that is not a color: the tcPr a cell is given is
+ * written as it is.
  */
 const DOLLAR_EDITS: Array<Record<string, unknown>> = [
   { shadingColor: '$&', cells: [{ row: 1, col: 0 }] },
@@ -264,20 +270,10 @@ const DOLLAR_EDITS: Array<Record<string, unknown>> = [
 
 const patchInputs: Input[] = [
   ...TABLE_TEXTS.flatMap((text) =>
-    EDITS.map((edit): Input =>
-      text.includes(QUOTED_TBL_PR) &&
-      edit.tblPrXml === undefined &&
-      ['firstRow', 'lastRow', 'firstCol', 'lastCol', 'bandRow', 'bandCol', 'rtl'].some(
-        (key) => edit[key] !== undefined,
-      )
-        ? // ledger tblpr-attr-quote: TypeScript writes a second firstRow="1" beside
-          // firstRow='1' (or bandRow = "1"), which is not well-formed XML
-          { text, args: { edit }, seed: false }
-        : { text, args: { edit } },
-    ),
+    EDITS.map((edit): Input => ({ text, args: { edit } })),
   ),
   ...TABLE_TEXTS.slice(0, 3).flatMap((text) =>
-    DOLLAR_EDITS.map((edit): Input => ({ text, args: { edit }, seed: false })),
+    DOLLAR_EDITS.map((edit): Input => ({ text, args: { edit } })),
   ),
 ]
 
@@ -335,7 +331,7 @@ const STYLE_IDS: Array<[string, string]> = [
   ['{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}', '<a:tblStyle/>'],
 ]
 
-/** `$` patterns in the replacement string: kept apart, see the ledger notes. */
+/** `$` patterns of the text a replacement writes. */
 const DOLLAR_DEF = '<a:tblStyle styleId="Z">$&|$`|$\'|$$|$1</a:tblStyle>'
 
 const ensureInputs: Input[] = [
@@ -346,21 +342,16 @@ const ensureInputs: Input[] = [
   { text: 'x', args: { styleId: STYLE_IDS[0]![0], styleDefXml: 'd', nullish: 'undefined' } },
   { text: 'x', args: { styleId: '', styleDefXml: 'd', nullish: 'null' } },
   // the callback form expands nothing: the same on both sides
-  // equal here (a function replacement), but a mutation that breaks the
-  // closing tag sends it to the template of ledger tblstylelst-dollar
+  // a mutation that breaks the closing tag would send it to a replacement string
   {
     text: '<a:tblStyleLst def="x"></a:tblStyleLst>',
     args: { styleId: 'Z', styleDefXml: DOLLAR_DEF },
-    seed: false,
   },
-  // ledger tblstylelst-dollar: TypeScript expands the `$&` of a namespace URI into markup
   {
     text: '<a:tblStyleLst xmlns:x="urn:x$&" def="{5C22544A-7EE6-4342-B048-85BDC9FD1C3A}"/>',
     args: { styleId: 'Z', styleDefXml: '<a:tblStyle/>' },
-    seed: false,
   },
-  // ledger tblstylelst-dollar: and those of the definition
-  { text: EMPTY_STYLES, args: { styleId: 'Z', styleDefXml: DOLLAR_DEF }, seed: false },
+  { text: EMPTY_STYLES, args: { styleId: 'Z', styleDefXml: DOLLAR_DEF } },
 ]
 
 const ELEMENTS = [
@@ -486,15 +477,14 @@ const SPECS: ThemeSpec[] = [
 ]
 
 /**
- * ledger theme-color-dollar: `$` patterns in a color that is not a color. The
- * TypeScript passes the scheme slot it writes as a replacement string.
+ * `$` patterns in a color that is not a color: the scheme slot is written as it is.
  */
 const DOLLAR_COLORS: ThemeSpec = {
   name: 'Dollar colors',
   colors: { accent1: '$&1234', accent2: "$'", dk1: '$$' },
 }
 
-/** ledger theme-name-dollar: TypeScript expands `$` patterns of the name and fonts into markup. */
+/** `$` patterns of the name and fonts are written as they are. */
 const DOLLAR_SPECS: ThemeSpec[] = [
   { name: "Q3 $& $1 $$ $' $`", colors: {} },
   { name: 'Fonts', colors: {}, majorFont: '$&', minorFont: '$1x$2' },
@@ -503,7 +493,7 @@ const DOLLAR_SPECS: ThemeSpec[] = [
 
 const patchThemeInputs: Input[] = [
   ...THEME_TEXTS.flatMap((text) => SPECS.map((spec) => ({ text, args: { spec } }))),
-  ...DOLLAR_SPECS.map((spec): Input => ({ text: THEME, args: { spec }, seed: false })),
+  ...DOLLAR_SPECS.map((spec): Input => ({ text: THEME, args: { spec } })),
 ]
 
 const THEME_PARTS: Parts = [
@@ -532,7 +522,6 @@ const applyInputs: Input[] = [
   ...DOLLAR_SPECS.map((spec): Input => ({
     text: THEME,
     args: { parts: THEME_PARTS, textPart: 'ppt/theme/theme1.xml', spec },
-    seed: false,
   })),
 ]
 
@@ -614,8 +603,7 @@ const REMAP_SPECS: ThemeSpec[] = [
 
 const remapInputs: Input[] = [
   ...REMAP_SPECS.map((spec) => ({ args: { parts: SLIDE_PARTS, slides: DECK_SLIDES, spec } })),
-  // ledger recolor-map-dollar: a color that is not a color becomes a value of the map
-  { args: { parts: SLIDE_PARTS, slides: DECK_SLIDES, spec: DOLLAR_COLORS }, seed: false },
+  { args: { parts: SLIDE_PARTS, slides: DECK_SLIDES, spec: DOLLAR_COLORS } },
   {
     text: SLIDE_TEXTS[4]!,
     args: {
@@ -729,7 +717,7 @@ const MAPS: Array<Array<[string, string]>> = [
   [['__proto__', '123456']],
 ]
 
-/** ledger recolor-map-dollar: `$` patterns in the color a map gives. */
+/** `$` patterns in the color a map gives. */
 const DOLLAR_MAPS: Array<Array<[string, string]>> = [
   [['FF0000', '$&']],
   [['FF0000', '$`']],
@@ -880,7 +868,7 @@ export const TABLES: CallSpec[] = [
     built: [
       ...SLIDE_TEXTS.flatMap((text) => MAPS.map((map): Input => ({ text, args: { map } }))),
       ...SLIDE_TEXTS.slice(0, 3).flatMap((text) =>
-        DOLLAR_MAPS.map((map): Input => ({ text, args: { map }, seed: false })),
+        DOLLAR_MAPS.map((map): Input => ({ text, args: { map } })),
       ),
     ],
   },

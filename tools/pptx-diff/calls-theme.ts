@@ -1,7 +1,7 @@
 // Group `theme` of comparison (f): theme.ts and color.ts of
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_theme.rs to `pptxTheme.<module>.<TypeScript name>`.
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
 import {
   applyColorMods,
   hexToRgb,
@@ -37,7 +37,7 @@ const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
  * resolveColorNode and applyColorMods are given. The Rust dispatch holds the
  * same list.
  */
-const parseTsParser = new XMLParser({
+const parseTsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,
