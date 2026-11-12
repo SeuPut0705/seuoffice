@@ -2,6 +2,7 @@ import { crc32, deflateRawSync, inflateRawSync } from 'node:zlib'
 import {
   CTRL_HEADER,
   LIST_HEADER,
+  MAX_STREAM_INFLATE_BYTES,
   PARA_HEADER,
   PARA_TEXT,
   SECTION,
@@ -297,10 +298,17 @@ function zipEntries(zip: Buffer): { entries: ZipEntry[]; centralStart: number } 
   return { entries: ordered, centralStart }
 }
 
+/**
+ * The bytes of an entry, or null for a compression this does not handle. Throws when the
+ * entry is not deflate data, and likewise when it inflates past the ceiling an HWP 5 stream
+ * has: a section as XML is the same section, in the longer form.
+ */
 function entryData(zip: Buffer, entry: ZipEntry): Buffer | null {
   const raw = zip.subarray(entry.dataStart, entry.dataStart + entry.compressedSize)
   if (entry.method === STORED) return Buffer.from(raw)
-  if (entry.method === DEFLATED) return inflateRawSync(raw)
+  if (entry.method === DEFLATED) {
+    return inflateRawSync(raw, { maxOutputLength: MAX_STREAM_INFLATE_BYTES })
+  }
   return null
 }
 
