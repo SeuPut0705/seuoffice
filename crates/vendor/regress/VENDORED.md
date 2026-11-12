@@ -52,6 +52,16 @@ could be offered upstream.
    step, so its capacity stops at the bound and a reallocation holds 1.25
    times it at most. After each match attempt a stack above 4,096 entries is
    shrunk back to that, so one large search does not keep its memory.
+   What the bound costs, with the 2^22 entries `jscompat` sets
+   (`crates/jscompat/tests/limit.rs`, `crates/jscompat/examples/limit_wasm.rs`):
+
+   | Target | Entry | Peak of one search at the bound |
+   | ------ | ----- | ------------------------------- |
+   | 64-bit native | 48 bytes | 251 MB (2^22 × 48 = 201 MB, × 1.25 while the last growth copies) |
+   | wasm32 | 32 bytes, inferred from the growth | linear memory grew by 126–166 MB, to 170–177 MB in all; a wasm memory never shrinks, so a tab keeps it |
+
+   The wasm32 rows are from refused searches over 1.5M and 25M characters
+   on Node 22: 2^22 × 32 = 134 MB, 168 MB with the copy of the last growth.
 2. **A lazy loop over one character matcher takes one character per
    backtrack** (`classicalbacktrack.rs`, `tests/lazy_loop.rs`). It used to
    compute the farthest position the loop could reach before trying the
