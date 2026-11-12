@@ -23,7 +23,7 @@ import {
 } from './placeholder'
 import { isPresetShapeType } from './preset-shape-types'
 import { custGeomXml, parseCustGeom, validCustGeomPath, type CustGeomPath } from './custgeom'
-import { nextSlideId } from './slide-ids'
+import { canListSlide, withSlideListed } from './slide-ids'
 import {
   alternateContentBranches,
   generateParagraphXml,
@@ -1946,6 +1946,15 @@ function nextSlidePath(archive: PackageArchive): string {
 }
 
 /**
+ * Whether a slide can be added to the deck: its slide list is one this engine can write to
+ * (`canListSlide`). Everything that adds a slide asks first, before it writes a part, so a
+ * deck that cannot take the slide is left exactly as it was and the caller gets null.
+ */
+function canAddSlide(archive: PackageArchive): boolean {
+  return canListSlide(archive.readText('ppt/presentation.xml'))
+}
+
+/**
  * Register a new slide part (already written into the archive) with the package
  * and insert it into the deck: add an Override to [Content_Types].xml, register a
  * new sldId/rId in presentation.xml(.rels) (inserted after the sourceIndex slide's
@@ -1954,7 +1963,7 @@ function nextSlidePath(archive: PackageArchive): string {
 function registerNewSlide(opened: OpenedPptx, sourceIndex: number, newPath: string): Slide | null {
   const { deck, archive } = opened
   const src = deck.slides[sourceIndex]
-  if (!src) return null
+  if (!src || !canAddSlide(archive)) return null
 
   const ctPath = '[Content_Types].xml'
   const ct = archive.readText(ctPath)
@@ -1976,6 +1985,12 @@ function registerNewSlide(opened: OpenedPptx, sourceIndex: number, newPath: stri
   if (!presRels || !pres) return null
   const maxRid = maxRelationshipIdNumber(presRels)
   const newRid = `rId${maxRid + 1}`
+  // Listed after the source slide; at the end of the list when that one is not found
+  const srcRid = [...archive.readRels(presPath).values()].find(
+    (r) => resolveTarget(presPath, r.target) === src.path,
+  )?.id
+  const nextPres = withSlideListed(pres, newRid, srcRid)
+  if (nextPres === null) return null
   const relXml = `<Relationship Id="${newRid}" Type="${SLIDE_REL_TYPE}" Target="${newPath.slice('ppt/'.length)}"/>`
   archive.entries.set(
     presRelsPath,
@@ -1984,18 +1999,6 @@ function registerNewSlide(opened: OpenedPptx, sourceIndex: number, newPath: stri
       'utf8',
     ),
   )
-
-  const newSldId = `<p:sldId id="${nextSlideId(pres)}" r:id="${newRid}"/>`
-  // Insert after the source slide's sldId; append to the end of the list when not found
-  const srcRid = [...archive.readRels(presPath).values()].find(
-    (r) => resolveTarget(presPath, r.target) === src.path,
-  )?.id
-  const srcTag = srcRid
-    ? new RegExp(`<p:sldId\\s[^>]*r:id="${srcRid}"[^>]*/>`).exec(pres)?.[0]
-    : undefined
-  const nextPres = srcTag
-    ? pres.replace(srcTag, () => `${srcTag}${newSldId}`)
-    : pres.replace('</p:sldIdLst>', () => `${newSldId}</p:sldIdLst>`)
   archive.entries.set(presPath, Buffer.from(nextPres, 'utf8'))
 
   const slide = parseSlideFromArchive(archive, newPath)
@@ -2018,7 +2021,7 @@ export function duplicateSlide(
 ): Slide | null {
   const { deck, archive } = opened
   const src = deck.slides[sourceIndex]
-  if (!src) return null
+  if (!src || !canAddSlide(archive)) return null
 
   const newPath = nextSlidePath(archive)
   archive.entries.set(newPath, Buffer.from(patchSlideXml(src), 'utf8'))
@@ -2067,7 +2070,7 @@ export function pasteSlide(
   opts?: { keepSourceFormatting?: boolean },
 ): Slide | null {
   const { deck, archive } = opened
-  if (deck.slides.length === 0) return null
+  if (deck.slides.length === 0 || !canAddSlide(archive)) return null
   const anchorIndex = Math.min(Math.max(afterIndex, -1), deck.slides.length - 1)
   const neighbour = deck.slides[anchorIndex] ?? deck.slides[0]
   const layoutPath =
@@ -2097,7 +2100,7 @@ export function pasteSlide(
 export function insertBlankSlide(opened: OpenedPptx, sourceIndex: number): Slide | null {
   const { deck, archive } = opened
   const src = deck.slides[sourceIndex]
-  if (!src) return null
+  if (!src || !canAddSlide(archive)) return null
 
   const newPath = nextSlidePath(archive)
   archive.entries.set(newPath, Buffer.from(BLANK_SLIDE_XML, 'utf8'))
@@ -2247,6 +2250,7 @@ export function mergeSlideFromSource(
   opts: MergeSlideOptions = {},
 ): Slide | null {
   const { deck, archive } = target
+  if (!canAddSlide(archive)) return null
   let slideXml = source.slideXml
   const mediaByPath = new Map(source.media.map((m) => [m.path, m.bytes]))
 
