@@ -1,0 +1,8 @@
+ts	phase	decision	why	evidence	result
+2026-11-12T02:03:05Z	frame	Split 52 source files and 26682 lines into seven leaf-first units	Keep the first unit a test of parity assumptions before product cutover	README.md; ../../tools/pptx-diff/module-graph.mjs	open
+2026-11-12T02:20:00Z	unit1	Reuse the Word gate runner and ordered-key comparison rather than fork them	Both engines require the same coverage and comparison semantics	../../tools/docx-diff/calls-runner.ts; ../../tools/docx-diff/key-order.ts	open
+2026-11-12T02:25:00Z	unit1	Cancelled the local full Word gate; reserve full gates for the GitHub runner	The dispatch permits local crate checks and the new comparison group only	background job bg_4 cancelled	NOT VERIFIED
+2026-11-12T02:52:06.883Z	trail	Timestamps in rows 3 and 4 are approximate ordering markers, not measured action times	The first draft did not capture a clock for those two decisions	This correction row; initial session transcript	corrected
+2026-11-12T02:48:59.525Z	unit1	Kept the initial fixture-loader failure with zero comparisons	An ESM CommonJS constructor mismatch stopped deck generation before the corpus loop	evidence/u1-first.stderr.log	NOT VERIFIED
+2026-11-12T02:51:31.471Z	unit1	Kept the first completed comparison untouched before fixing anything	Measure the port rather than only its repaired answer	evidence/u1-comparison-first.stdout.log; evidence/u1-comparison-first.differences.json	11791 of 11854 equal; 63 differences
+2026-11-12T02:52:06.883Z	unit1	Listed 50 intentional differences as four classes with exact inputs and both answers	Refuse DOCTYPE and split surrogates; do not reproduce two reported TypeScript document defects	../../tools/pptx-diff/divergences.json	open

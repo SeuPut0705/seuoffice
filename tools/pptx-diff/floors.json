@@ -1,0 +1,21 @@
+{
+  "trackedDocuments": 3,
+  "openedDocuments": 3,
+  "corpusSlides": 7,
+  "packageCorpus": 3,
+  "packageCorpusEntries": 99,
+  "packageBuilt": 20,
+  "packageBuiltEntries": 75,
+  "callsXmlCorpus": 1404,
+  "callsXmlBuilt": 2262,
+  "callsXmlMutated": 300,
+  "callsXmlFunctions": 1,
+  "callsLeavesCorpus": 1028,
+  "callsLeavesBuilt": 261,
+  "callsLeavesMutated": 3900,
+  "callsLeavesFunctions": 16,
+  "callsPackageCorpus": 406,
+  "callsPackageBuilt": 87,
+  "callsPackageMutated": 2100,
+  "callsPackageFunctions": 10
+}
