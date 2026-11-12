@@ -29,7 +29,18 @@ import sys
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 OUT = ROOT / "tools/docx-diff/out/faults.txt"
-SEEN = re.compile(r"differences +[1-9]|key order only +[1-9]|in [1-9]\d* places|BELOW FLOOR|not really compared: [1-9]")
+# the lines of a group's report that say how the two sides compare
+TELLING = re.compile(r"^\(f\+?\) |^key order|^ +\S+\.\S+ +checks ")
+
+
+def compare(group: str) -> tuple[str, list[str]]:
+    """One run of the group: its whole output, and the lines that tell."""
+    run = subprocess.run(
+        ["npm", "--prefix", str(ROOT / "tools/docx-diff"), "run", "calls", "--",
+         "--group", group, "--by-function"],
+        capture_output=True, text=True)
+    text = run.stdout + run.stderr
+    return text, [line.strip() for line in text.splitlines() if TELLING.search(line)]
 
 
 def main() -> int:
@@ -43,6 +54,14 @@ def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     broken = 0
     counts = {"caught": 0, "MISSED": 0}
+    # what each group reports without a fault: a fault is caught when its
+    # report differs from that (the tree may hold known differences)
+    baseline = {}
+    for group in sorted({fault.get("group", spec.get("group")) for fault in faults}):
+        text, baseline[group] = compare(group)
+        if "(f) " not in text:
+            print(f"the group {group} does not run without a fault\n{text[-3000:]}")
+            return 1
     with OUT.open("w") as out:
         for fault in faults:
             path = ROOT / fault["file"]
@@ -50,14 +69,10 @@ def main() -> int:
             group = fault.get("group", spec.get("group"))
             try:
                 path.write_text(original.replace(fault["old"], fault["new"]))
-                run = subprocess.run(
-                    ["npm", "--prefix", str(ROOT / "tools/docx-diff"), "run", "calls", "--",
-                     "--group", group, "--by-function"],
-                    capture_output=True, text=True)
+                text, told = compare(group)
             finally:
                 path.write_text(original)
-            text = run.stdout + run.stderr
-            seen = [line.strip() for line in text.splitlines() if SEEN.search(line)]
+            seen = [line for line in told if line not in baseline[group]]
             if "cargo build failed" in text or "(f) " not in text:
                 broken += 1
                 verdict = "DID NOT RUN"
