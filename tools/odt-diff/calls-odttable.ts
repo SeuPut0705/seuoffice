@@ -16,7 +16,7 @@
 
 import type { TableModel } from '../docx-diff/reference/index'
 import { elementFragments } from '../docx-diff/fragments'
-import type { CallSpec, Input } from '../docx-diff/calls-spec'
+import type { CallSpec } from '../docx-diff/calls-spec'
 import { distinct, constantSpec } from './calls-support'
 import { REAL_TABLES } from './real-model'
 import * as ts from './ts'
@@ -39,65 +39,6 @@ const nodesOf = (text: string, kind: ts.coreBody.OdtNodeKind): ts.coreBody.OdtNo
   const body = scan(text)
   return body ? ts.coreBody.nodesOfKind(body.blocks, kind) : []
 }
-
-const starts = (
-  frames: Array<{
-    frame: ts.coreBody.OdtNode
-    textBox: ts.coreBody.OdtNode
-    table: ts.coreBody.OdtNode
-  }>,
-) => frames.map((f) => ({ frame: f.frame.start, textBox: f.textBox.start, table: f.table.start }))
-
-const nodeInput = (
-  parts: ReadonlyMap<string, string>,
-  kind: ts.coreBody.OdtNodeKind,
-  cap: number,
-  filter?: (n: ts.coreBody.OdtNode) => boolean,
-): Input[] => {
-  const content = part(parts, 'content.xml')
-  if (content === undefined) return []
-  const nodes = nodesOf(content, kind)
-  const out: Input[] = []
-  nodes.forEach((node, index) => {
-    if (out.length < cap && (!filter || filter(node))) out.push({ text: content, args: { index } })
-  })
-  return out
-}
-
-const OPENED =
-  '<office:document-content xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0"><office:body><office:text>'
-const CLOSED = '</office:text></office:body></office:document-content>'
-const around = (inner: string): string => OPENED + inner + CLOSED
-
-const cell = (text: string, attrs = ''): string =>
-  `<table:table-cell ${attrs}><text:p>${text}</text:p></table:table-cell>`
-const BUILT_TABLES = [
-  around(
-    `<table:table><table:table-column table:number-columns-repeated="2"/><table:table-row>${cell('a')}${cell('b')}</table:table-row></table:table>`,
-  ),
-  around(
-    `<table:table table:protected="true"><table:table-column/><table:table-column/><table:table-header-rows><table:table-row>${cell('h1', 'table:number-columns-spanned="2"')}<table:covered-table-cell/></table:table-row></table:table-header-rows><table:table-row>${cell('x', 'table:number-rows-spanned="2"')}${cell('y')}</table:table-row><table:table-row><table:covered-table-cell/>${cell('z')}</table:table-row></table:table>`,
-  ),
-  around(
-    `<table:table><table:table-column table:number-columns-repeated="3"/><table:table-row table:number-rows-repeated="2">${cell('a')}<table:table-cell table:number-columns-repeated="2"/></table:table-row><table:table-row>${cell('b')}</table:table-row></table:table>`,
-  ),
-  around(
-    `<table:table><table:table-column/><table:table-row>${cell('host<table:table><table:table-row>' + cell('nested') + '</table:table-row></table:table>')}</table:table-row></table:table>`,
-  ),
-  around('<table:table/>'),
-  around(
-    `<table:table><table:table-row table:number-rows-repeated="5000"><table:table-cell table:number-columns-repeated="5000"/></table:table-row></table:table>`,
-  ),
-  around(
-    `<table:table><table:table-row>${cell('a', 'table:number-columns-spanned="3"')}${cell('b')}</table:table-row><table:table-row>${cell('c')}<table:covered-table-cell/><table:covered-table-cell/><table:covered-table-cell/></table:table-row></table:table>`,
-  ),
-  around(
-    `<table:table><table:table-row><table:covered-table-cell/>${cell('lone')}</table:table-row></table:table>`,
-  ),
-  around(
-    `<table:table><table:table-rows><table:table-row>${cell('a')}</table:table-row></table:table-rows><table:table-column-group><table:table-column/></table:table-column-group></table:table>`,
-  ),
-]
 
 const ELEMENT = { start: 10, end: 90, openEnd: 30, closeStart: 80, selfClosing: false }
 const cellRecords = (): Array<Record<string, unknown>> => [
@@ -127,46 +68,6 @@ const cellRecords = (): Array<Record<string, unknown>> => [
   { kind: 'orphan', start: 10, end: 20, tc: 1 },
   { kind: 'filler', start: -1, end: -1, tc: 3 },
 ]
-const FRAMED = (frame: string): string => around(`<text:p>${frame}</text:p>`)
-const BUILT_FRAMES = [
-  FRAMED(
-    '<draw:frame><draw:text-box><table:table><table:table-row><table:table-cell><text:p>a</text:p></table:table-cell></table:table-row></table:table></draw:text-box></draw:frame>',
-  ),
-  FRAMED(
-    '<draw:frame><draw:text-box><text:p>x</text:p><table:table/></draw:text-box></draw:frame>',
-  ),
-  FRAMED('<draw:frame><draw:text-box><table:table/></draw:text-box><draw:image/></draw:frame>'),
-  FRAMED('<draw:frame><draw:image/></draw:frame>'),
-  FRAMED('<draw:frame><draw:text-box><table:table></table:table></draw:text-box></draw:frame>'),
-  around(
-    '<text:p>before<draw:frame><draw:text-box><table:table><table:table-row><table:table-cell><text:p>a</text:p></table:table-cell></table:table-row></table:table></draw:text-box></draw:frame>after</text:p>',
-  ),
-  around(
-    '<text:h text:outline-level="1"><text:span><draw:frame><draw:text-box><table:table><table:table-row/></table:table></draw:text-box></draw:frame></text:span></text:h>',
-  ),
-  around(
-    '<text:p><text:bookmark text:name="b"/><draw:frame><draw:text-box><table:table><table:table-row/></table:table></draw:text-box></draw:frame>&#32;</text:p>',
-  ),
-  around('<text:p/>'),
-  around('<text:p>plain text only</text:p>'),
-]
-
-const projectGrid = (grid: ts.tableOdfRead.OdfGrid): unknown => ({
-  table: grid.table.start,
-  headerRows: grid.headerRows?.start ?? null,
-  rows: grid.rows.map((r) => ({ node: r.node.start, header: r.header })),
-  columns: grid.columns.map((c) => ({ node: c.node?.start ?? null, repeated: c.repeated })),
-  cells: grid.cells.map((row) =>
-    row.map((c) => ({
-      node: c.node?.start ?? null,
-      kind: c.kind,
-      anchor: c.anchor,
-      colSpan: c.colSpan,
-      rowSpan: c.rowSpan,
-    })),
-  ),
-  structureLocked: grid.structureLocked,
-})
 
 const BORDERS = [
   '0.012cm solid #000000',
@@ -248,15 +149,6 @@ const BORDER_MODELS: Array<Record<string, unknown> | undefined> = [
 ]
 
 const ox0 = (xml: string): ts.tableOoxmlRead.OxTable => ts.tableOoxmlRead.segmentTable(xml)
-const model = (
-  rows: Array<Array<Record<string, unknown>>>,
-  extra: Record<string, unknown> = {},
-): Record<string, unknown> => ({ rows, ...extra })
-const tc = (text: string, extra: Record<string, unknown> = {}): Record<string, unknown> => ({
-  paras: [text],
-  richParas: [{ runs: text ? [{ text }] : [] }],
-  ...extra,
-})
 const TABLE_XML = (rows: string): string =>
   `<w:tbl><w:tblPr/><w:tblGrid><w:gridCol w:w="1"/></w:tblGrid>${rows}</w:tbl>`
 const TC = (inner: string, pr = ''): string =>

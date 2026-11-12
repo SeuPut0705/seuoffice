@@ -165,7 +165,7 @@ export async function compareOpen(
   const typescript = await tsOdtToDocx(odt)
   const rust = rustCall<{ report: unknown }>({ cmd: 'odtToDocx', now: NOW }, [odt])
   if (isFailure(typescript) || isError(rust)) {
-    let difference: string | null = null
+    let difference: string | null
     if (isFailure(typescript) && isError(rust)) difference = errorDifference(typescript, rust)
     else if (isFailure(typescript))
       difference = `TypeScript refuses (${typescript.error.code}: ${typescript.error.message.slice(0, 120)}), Rust opens it`
@@ -306,7 +306,7 @@ export async function compareExport(
     return null
   }
   const rustOdt = rust.blobs[0]
-  let difference: string | null = null
+  let difference: string | null
   if (!rustOdt) difference = 'Rust converted but sent no ODT'
   else
     difference =

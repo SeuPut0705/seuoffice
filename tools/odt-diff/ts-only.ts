@@ -118,14 +118,12 @@ for (const odt of all) {
     }
     bridges.push({ name: odt.name, odt, bridgeJson: outcome.value.bridgeJson })
   }
-  if (odt.kind !== 'mutation' || true) {
-    const parts = new Map<string, string>()
-    for (const name of ['content.xml', 'styles.xml', 'meta.xml', 'META-INF/manifest.xml']) {
-      const text = await partText(odt.bytes, name)
-      if (text !== null) parts.set(name, text)
-    }
-    documents.push([odt.name, parts])
+  const parts = new Map<string, string>()
+  for (const name of ['content.xml', 'styles.xml', 'meta.xml', 'META-INF/manifest.xml']) {
+    const text = await partText(odt.bytes, name)
+    if (text !== null) parts.set(name, text)
   }
+  documents.push([odt.name, parts])
 }
 print(
   `(a) odtToDocx: ${all.length} ODTs, ${opened} open, refused ${JSON.stringify(Object.fromEntries(refused))}`,

@@ -50,7 +50,6 @@ import {
   rootPrefixes,
   startTags,
   textRuns,
-  wire,
   constantSpec,
 } from './calls-support'
 import { buildZip } from '../docx-diff/package-zips'

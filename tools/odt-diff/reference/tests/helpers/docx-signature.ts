@@ -4,7 +4,12 @@
  * fonts, sizes and line spacing. `docxToOdt` is checked by comparing the
  * source docx with the docx `odtToDocx` makes of the result.
  */
-import { type Block, type ParsedDoc, type TableModel, readSections } from '../../../../docx-diff/reference/index'
+import {
+  type Block,
+  type ParsedDoc,
+  type TableModel,
+  readSections,
+} from '../../../../docx-diff/reference/index'
 
 export interface DocSignature {
   paragraphs: number

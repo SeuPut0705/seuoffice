@@ -23,7 +23,7 @@
 //        answer of a function that takes nothing); the names are the keys of the spec at the end of this file.
 
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
-import { bytesArg, bytesOf, distinct, rootPrefixes, wire, constantSpec } from './calls-support'
+import { bytesArg, bytesOf, distinct, wire, constantSpec } from './calls-support'
 import { buildZip } from '../docx-diff/package-zips'
 import { surrogateClasses } from './listed'
 import * as ts from './ts'

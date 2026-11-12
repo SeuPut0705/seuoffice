@@ -218,14 +218,6 @@ const MASTERS: string[] = [
   '<style:master-page style:name="M4" style:page-layout-name="pm1"><style:header/><style:header-left><text:p/></style:header-left><style:footer-first/></style:master-page>',
 ]
 
-const MASTER_OBJECTS = MASTERS.map((xml) => {
-  const wrapped = `<office:document-styles xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:style="${STYLES}" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0"><office:master-styles>${xml}</office:master-styles></office:document-styles>`
-  return ts.coreStyles.readOdtStyles(wrapped, '').masterPages[0] as unknown as Record<
-    string,
-    unknown
-  >
-})
-
 const MASTER_EDITS: Array<Record<string, unknown>> = [
   {},
   { name: 'New' },

@@ -14,7 +14,11 @@
  * changed attributes are patched into the ODF common style, in place, keeping
  * its (Hancom) name and every other byte.
  */
-import { generateParagraphXml, type GeneratedBlock, type ParaFormat } from '../../../../docx-diff/reference/index'
+import {
+  generateParagraphXml,
+  type GeneratedBlock,
+  type ParaFormat,
+} from '../../../../docx-diff/reference/index'
 import type {
   BridgeMap,
   BridgeStyleEntry,

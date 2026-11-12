@@ -21,7 +21,12 @@
  * and a structural change that would move, merge or delete a locked cell
  * leaves the whole table as it was.
  */
-import type { CellBorder, CellBorders, TableCell, TableModel } from '../../../../docx-diff/reference/index'
+import type {
+  CellBorder,
+  CellBorders,
+  TableCell,
+  TableModel,
+} from '../../../../docx-diff/reference/index'
 import {
   type BridgeParagraph,
   type OoxmlToOdfContext,
