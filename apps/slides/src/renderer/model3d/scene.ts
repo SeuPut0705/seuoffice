@@ -37,14 +37,28 @@ export interface ModelView {
 
 const toRadians = (units: number) => ((units / UNITS_PER_DEGREE) * Math.PI) / 180
 
+/**
+ * What a model may read: `data:` URIs, and the `blob:` URLs three.js makes for images kept in
+ * the binary chunk. A model comes from a deck someone else made, and glTF lets it name buffers
+ * and images by any other address (a local file, a network share, a web host, or a relative
+ * path, which resolves against the app's own address); three.js would fetch those.
+ */
+const EMBEDDED_URL = /^(?:data|blob):/i
+
 export async function loadModel(
   bytes: Uint8Array,
   canvas = document.createElement('canvas'),
 ): Promise<ModelView> {
   const THREE = await import('three')
   const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+  // Every loader GLTFLoader makes (buffers, image elements, image bitmaps) asks its manager for
+  // the URL before requesting it. A refused buffer fails the load; a refused image is left out.
+  const manager = new THREE.LoadingManager().setURLModifier((url) => {
+    if (!EMBEDDED_URL.test(url)) throw new Error('3D model refers to a file outside itself')
+    return url
+  })
   const buffer = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-  const gltf = await new GLTFLoader().parseAsync(buffer as ArrayBuffer, '')
+  const gltf = await new GLTFLoader(manager).parseAsync(buffer as ArrayBuffer, '')
 
   const box = new THREE.Box3().setFromObject(gltf.scene)
   const center = box.getCenter(new THREE.Vector3())
