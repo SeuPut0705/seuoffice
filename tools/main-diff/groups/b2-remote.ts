@@ -263,7 +263,9 @@ async function inWorld<T>(
       })
       const close = dispatcher.close.bind(dispatcher)
       dispatcher.close = (...args: unknown[]) => {
-        cx.log('close', url)
+        // undici's promise form of close() calls close(callback) on itself: that
+        // re-entry is not the caller's call and is not logged
+        if (typeof args[0] !== 'function') cx.log('close', url)
         return close(...args)
       }
     }
@@ -2302,7 +2304,7 @@ const FETCH_TABLE_CASES: Case[] = [
   fetchTable({ status: 200, headers: { 'content-type': 'text/plain' }, chunks: ['a\tb\n1\t2'] }),
   fetchTable({ status: 200, headers: { 'content-type': 'application/csv' }, chunks: ['a,b\n1,2'] }),
   fetchTable({ status: 200, headers: { 'content-type': 'Application/CSV' }, chunks: ['a,b\n1,2'] }),
-  fetchTable({ status: 200, headers: { 'content-type': 'text/c\u017fv' }, chunks: ['a,b\n1,2'] }),
+  fetchTable({ status: 200, headers: { 'content-type': 'text/csv; name=\u00e9' }, chunks: ['a,b\n1,2'] }),
   fetchTable({ status: 200, headers: { 'content-type': 'x-text/csv-x' }, chunks: ['a,b\n1,2'] }),
   fetchTable({ status: 200, headers: { 'content-type': 'text/html' }, chunks: ['a,b\n1,2\n'] }),
   fetchTable({ status: 200, chunks: ['a,b\n1,2\n'] }),

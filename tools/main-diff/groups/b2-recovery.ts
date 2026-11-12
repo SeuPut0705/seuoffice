@@ -105,6 +105,16 @@ function constant(value: unknown) {
 
 const maskTmp = (text: string): string => text.replace(/\.[0-9a-f]{12}\.tmp/g, '.<hex>.tmp')
 
+/** the call, with a temp file's random name in a thrown message written `<hex>` */
+function masked<T>(run: () => T): T {
+  try {
+    return run()
+  } catch (error) {
+    if (error instanceof Error) error.message = maskTmp(error.message)
+    throw error
+  }
+}
+
 /** a `[0, 1000)` modification time the case set is kept, the run's real one is masked */
 const maskTime = (value: number): number | string => (value % 1000 === 0 ? value : '<real>')
 
@@ -1819,7 +1829,7 @@ export const group: Group = {
     cases: readSkipCases,
   },
   'legacy-import-prefs.writeLegacyImportSkip': {
-    ts: (a) => writeLegacyImportSkip(a[0] as string, a[1] as 'odt', a[2] as boolean),
+    ts: (a) => masked(() => writeLegacyImportSkip(a[0] as string, a[1] as 'odt', a[2] as boolean)),
     cases: writeSkipCases,
   },
   'legacy-import-prefs.readLegacyImportPrompt': {
@@ -1827,7 +1837,7 @@ export const group: Group = {
     cases: readPromptCases,
   },
   'legacy-import-prefs.writeLegacyImportPrompt': {
-    ts: (a) => writeLegacyImportPrompt(a[0] as string, a[1] as boolean),
+    ts: (a) => masked(() => writeLegacyImportPrompt(a[0] as string, a[1] as boolean)),
     cases: writePromptCases,
   },
 }

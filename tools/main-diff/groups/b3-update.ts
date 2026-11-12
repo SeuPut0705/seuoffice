@@ -146,7 +146,8 @@ const scriptedFetch = (script: Json, cx: TsContext) => {
     init: { headers: unknown; signal?: AbortSignal },
   ): Promise<Response> => {
     const f = (script.fetches as FetchScript[] | undefined)?.[index++]
-    cx.log('fetch', String(url), init.headers)
+    // a copy: the wrapper edits its headers object after the call (the 416 retry)
+    cx.log('fetch', String(url), { ...(init.headers as object) })
     if (f === undefined) throw new Error('no more scripted responses')
     await sleep(f.delayMs ?? 0)
     if (init.signal?.aborted) throw new Error('aborted')

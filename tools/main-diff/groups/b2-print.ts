@@ -2368,23 +2368,26 @@ export const group: Group = {
     [manyConverted(200)],
     [manyConverted(205)],
   ]),
-  'generate-handoff.resetGenerateHandoffsForTest': handoffFn('resetGenerateHandoffsForTest', [
-    [[]],
-    [
+  'generate-handoff.resetGenerateHandoffsForTest': {
+    single: 'every reset leaves the same empty store; the cases differ in what it empties',
+    ...handoffFn('resetGenerateHandoffsForTest', [
+      [[]],
       [
-        step('queueGenerateHandoff', 1, GH('a', 'slides')),
-        step('queueSkillHandoff', 2, SH('s', 'docs')),
-        step('setGenerateTabIdResolver', { table: { '1': 'tab-1' } }),
-        step('recordGenerateConverted', CONVERT(1, ['/c/a'])),
+        [
+          step('queueGenerateHandoff', 1, GH('a', 'slides')),
+          step('queueSkillHandoff', 2, SH('s', 'docs')),
+          step('setGenerateTabIdResolver', { table: { '1': 'tab-1' } }),
+          step('recordGenerateConverted', CONVERT(1, ['/c/a'])),
+        ],
       ],
-    ],
-    [
       [
-        step('queueGenerateHandoff', 1, GH('a', 'slides')),
-        step('takeGenerateHandoff', 'slides', 1),
-        step('reportGenerateRunStarted', 'slides', 1, ['/m/a.docx']),
-        step('queueGenerateHandoff', 3, GH('c', 'html')),
+        [
+          step('queueGenerateHandoff', 1, GH('a', 'slides')),
+          step('takeGenerateHandoff', 'slides', 1),
+          step('reportGenerateRunStarted', 'slides', 1, ['/m/a.docx']),
+          step('queueGenerateHandoff', 3, GH('c', 'html')),
+        ],
       ],
-    ],
-  ]),
+    ]),
+  },
 }
