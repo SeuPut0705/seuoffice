@@ -879,7 +879,7 @@ const tMain = createI18n({
     importSkipConfirm: '다음부터 묻지 않고 변환',
     docImportMsg: '이 .{ext} 문서를 변환할까요?',
     docImportDetail:
-      'GenOffice은 Word 97-2003(.doc) 문서가 아니라 .docx를 편집합니다. 본문, 제목, 목록, 표, 이미지는 변환되지만 각주, 메모, 텍스트 상자는 완전히 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .docx는 이후 저장이 기록되는 독립적인 사본입니다.',
+      'GenOffice 앱은 Word 97-2003(.doc) 문서가 아니라 .docx를 편집합니다. 본문, 제목, 목록, 표, 이미지는 변환되지만 각주, 메모, 텍스트 상자는 완전히 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .docx는 이후 저장이 기록되는 독립적인 사본입니다.',
     docImportConvertBtn: '변환 후 열기',
     docImportOriginalTarget: '원본 문서는 덮어쓸 수 없습니다. 다른 이름을 선택하세요.',
     dlgSaveAs: '다른 이름으로 저장',
