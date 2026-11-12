@@ -19,15 +19,19 @@ def crate(name):
     return m.group(1) if m else None
 
 
-versions = {name: crate(name) for name in ('tauri', 'tauri-runtime-cef', 'tauri-build', 'cef', 'cef-dll-sys')}
+versions = {name: crate(name) for name in ('tauri', 'tauri-runtime-cef', 'tauri-build')}
+versions['cefCrate'] = crate('cef')
 versions['tauriCli'] = json.load(open(os.path.join(here, '..', 'package.json')))['devDependencies']['@tauri-apps/cli']
 cef_path = os.environ.get('CEF_PATH', '')
 for archive in glob.glob(os.path.join(cef_path, '**', 'archive.json'), recursive=True):
     data = json.load(open(archive, encoding='utf-8'))
     versions['cefDistribution'] = data.get('version') or data
-    m = re.search(r'chromium-([0-9.]+)', str(data.get('version', '')))
+    m = re.search(r'chromium-([0-9.]+)', str(data.get('name') or data.get('version') or ''))
     if m:
         versions['chromium'] = m.group(1)
+    m = re.search(r'cef_binary_([^_]+)_', str(data.get('name', '')))
+    if m:
+        versions['cef'] = m.group(1)
     break
 info = {'shell': 'cef', 'os': os_name, 'exe': exe, 'versions': versions, 'buildSeconds': seconds}
 json.dump(info, open(out, 'w', encoding='utf-8'), indent=2)
