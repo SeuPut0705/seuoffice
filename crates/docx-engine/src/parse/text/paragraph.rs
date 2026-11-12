@@ -83,6 +83,7 @@ pub fn run_resolve_of<'a>(
         rctx,
         memo: JsMap::new(),
         para_rtl,
+        diff: ctx.resolve_diff.clone(),
     })
 }
 

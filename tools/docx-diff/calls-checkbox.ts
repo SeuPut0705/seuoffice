@@ -6,8 +6,8 @@ import {
   sdtCheckboxGlyphs,
   sdtCheckboxIsChecked,
   syncSdtCheckbox,
-} from '../../packages/docx-engine/src/checkbox-control'
-import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/checkbox-control'
+import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 

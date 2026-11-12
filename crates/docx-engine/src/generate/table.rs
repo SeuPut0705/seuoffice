@@ -37,8 +37,10 @@ impl From<RegexLimit> for TableXmlError {
     }
 }
 
-#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, serde::Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TableGenOptions {
+    #[serde(default)]
     pub header_row: bool,
 }
 

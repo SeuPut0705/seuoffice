@@ -1,3 +1,5 @@
+// the engine starts before any module that calls it evaluates
+import './engine-init'
 import { createRoot } from 'react-dom/client'
 import { htmlDir, htmlLang, type Lang } from '@genoffice/i18n'
 import App from './App'

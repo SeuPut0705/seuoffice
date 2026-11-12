@@ -11,8 +11,8 @@ import {
   type InlinePictureXmlOptions,
   inlinePictureDrawingXml,
   LINE_KINDS,
-} from '../../packages/docx-engine/src/generate'
-import { ownValue } from '../../packages/docx-engine/src/own-value'
+} from './reference/generate'
+import { ownValue } from './reference/own-value'
 import type { CallSpec, Input } from './calls-spec'
 
 type Opts = Record<string, unknown>

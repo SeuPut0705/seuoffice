@@ -11,7 +11,7 @@ mod extract_runs;
 mod format;
 mod lists;
 mod math;
-mod notes_part;
+pub mod notes_part;
 mod paragraph;
 mod paragraph_block;
 mod runs;

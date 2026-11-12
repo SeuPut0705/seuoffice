@@ -23,7 +23,13 @@ export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@genoffice/i18n', '@genoffice/electron-utils', '@genoffice/odt-engine'],
+        // docx-engine: the engine start-up module (src/main/engine-init.ts) ships as TS source
+        exclude: [
+          '@genoffice/docx-engine',
+          '@genoffice/i18n',
+          '@genoffice/electron-utils',
+          '@genoffice/odt-engine',
+        ],
       }),
     ],
   },

@@ -3,7 +3,7 @@
 
 use jscompat::{JsNum, Radix, js_regex, math_round, pad_start, parse_int, to_string_radix16, trim};
 use ooxml_xml::XNode;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 use crate::theme::ThemeColors;
 
@@ -12,7 +12,7 @@ pub mod fill;
 pub mod line_box;
 
 /// w14:textOutline stroke: hex without '#', width in points, opacity 0..1.
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TextOutline {
     pub color: String,

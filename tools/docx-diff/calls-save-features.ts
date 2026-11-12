@@ -6,10 +6,10 @@
 // the call; a workbook answered in base64 is compared by the parts it holds
 // (the compressed bytes are the deflater's own).
 import JSZip from 'jszip'
-import { applyPropertyChanges, parsePropertyChanges, patchAppPropertiesXml, patchCorePropertiesXml, patchCustomPropertiesXml, type PropertyChanges, type PropertyValue } from '../../packages/docx-engine/src/doc-properties'
-import { buildChartPartXml, buildChartWorkbookXlsxBase64, patchChartPartXml, patchChartWorkbookXlsxBase64, type ChartPatch } from '../../packages/docx-engine/src/chart'
-import { compareBlocks, type CompareOptions } from '../../packages/docx-engine/src/compare'
-import { buildContentControlXml, isContentControlLock, nextContentControlId, type ContentControlSpec } from '../../packages/docx-engine/src/content-control'
+import { applyPropertyChanges, parsePropertyChanges, patchAppPropertiesXml, patchCorePropertiesXml, patchCustomPropertiesXml, type PropertyChanges, type PropertyValue } from './reference/doc-properties'
+import { buildChartPartXml, buildChartWorkbookXlsxBase64, patchChartPartXml, patchChartWorkbookXlsxBase64, type ChartPatch } from './reference/chart'
+import { compareBlocks, type CompareOptions } from './reference/compare'
+import { buildContentControlXml, isContentControlLock, nextContentControlId, type ContentControlSpec } from './reference/content-control'
 import {
   compareOperands,
   conditionHolds,
@@ -28,15 +28,15 @@ import {
   valueOf,
   type MergeData,
   type MergeRecord,
-} from '../../packages/docx-engine/src/mail-merge'
-import type { ParsedDocFull } from '../../packages/docx-engine/src/patch'
-import { buildSourcesItemPropsXml, buildSourcesXml, parseSourcesXml } from '../../packages/docx-engine/src/sources'
-import { applyThemeColors, applyThemeFonts, buildThemeXml } from '../../packages/docx-engine/src/theme'
-import type { Block, ParsedDoc, SourceInfo, ThemeColors, ThemeFonts } from '../../packages/docx-engine/src/types'
-import { pictureWatermarkParagraphXml, watermarkParagraphXml, type PictureWatermarkSpec, type WatermarkSpec } from '../../packages/docx-engine/src/watermark'
-import { revisionDateBefore } from '../../packages/docx-engine/src/revision-xml'
-import { parseLazyMediaUrl } from '../../packages/docx-engine/src/lazy-media'
-import { patchZoteroDocumentDataXml } from '../../packages/docx-engine/src/zotero-doc-props'
+} from './reference/mail-merge'
+import type { ParsedDocFull } from './reference/patch'
+import { buildSourcesItemPropsXml, buildSourcesXml, parseSourcesXml } from './reference/sources'
+import { applyThemeColors, applyThemeFonts, buildThemeXml } from './reference/theme'
+import type { Block, ParsedDoc, SourceInfo, ThemeColors, ThemeFonts } from './reference/types'
+import { pictureWatermarkParagraphXml, watermarkParagraphXml, type PictureWatermarkSpec, type WatermarkSpec } from './reference/watermark'
+import { revisionDateBefore } from './reference/revision-xml'
+import { parseLazyMediaUrl } from './reference/lazy-media'
+import { patchZoteroDocumentDataXml } from './reference/zotero-doc-props'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 
 /** The value as it crosses the wire. */

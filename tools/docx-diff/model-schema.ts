@@ -66,7 +66,7 @@ export interface ModelSchema {
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = resolve(HERE, '../..')
-const ENGINE_SRC = join(REPO_ROOT, 'packages/docx-engine/src')
+const ENGINE_SRC = join(REPO_ROOT, 'tools/docx-diff/reference')
 const TYPES_PATH = join(ENGINE_SRC, 'types.ts')
 export const ORDERS_PATH = join(HERE, 'model-orders.json')
 

@@ -37,6 +37,7 @@ pub mod styles;
 pub mod symbol_fonts;
 pub mod theme;
 pub mod vml;
+pub mod warnings;
 pub mod watermark;
 pub mod xml_number;
 pub mod xml_tag;

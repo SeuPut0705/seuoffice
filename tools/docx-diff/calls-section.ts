@@ -1,6 +1,6 @@
 // Group `section`: the readers of section.ts, watermark.ts and notes.ts, and
 // the parse-vml.ts helpers the watermark readers stand on.
-import { nextNoteId, parseNotesXml, rootAttributes } from '../../packages/docx-engine/src/notes'
+import { nextNoteId, parseNotesXml, rootAttributes } from './reference/notes'
 import {
   anchorRelH,
   anchorRelV,
@@ -11,7 +11,7 @@ import {
   vmlRotationDeg,
   vmlStyleDimPx,
   vmlStyleProp,
-} from '../../packages/docx-engine/src/parse-vml'
+} from './reference/parse-vml'
 import {
   hfReferenceRId,
   hfReferenceTags,
@@ -24,13 +24,13 @@ import {
   sectionFromSectPr,
   sectionSettingsFromXml,
   xmlFlagOn,
-} from '../../packages/docx-engine/src/section'
+} from './reference/section'
 import type {
   HfImage,
   ParsedDoc,
   SectionInfo,
   SectionSettings,
-} from '../../packages/docx-engine/src/types'
+} from './reference/types'
 import {
   isPictureWatermark,
   isPictureWatermarkShape,
@@ -47,7 +47,7 @@ import {
   type PictureWatermarkSpec,
   type Watermark,
   type WatermarkSpec,
-} from '../../packages/docx-engine/src/watermark'
+} from './reference/watermark'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments, tagTokens } from './fragments'
 

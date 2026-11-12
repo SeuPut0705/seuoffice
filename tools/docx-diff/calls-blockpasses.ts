@@ -11,8 +11,8 @@ import {
   blockRunGroups,
   floatTableColumnSpan,
   normalizeImageZOrders,
-} from '../../packages/docx-engine/src/parse-block-passes'
-import type { EffectiveRPr } from '../../packages/docx-engine/src/resolve-props'
+} from './reference/parse-block-passes'
+import type { EffectiveRPr } from './reference/resolve-props'
 import type {
   Block,
   BlockType,
@@ -22,7 +22,7 @@ import type {
   TableCell,
   TableModel,
   TextboxDisplay,
-} from '../../packages/docx-engine/src/types'
+} from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 
 /** The value as it crosses the wire. */

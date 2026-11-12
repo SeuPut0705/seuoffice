@@ -6,9 +6,9 @@ import {
   parseChartPartXml,
   shadeHex,
   tintHex,
-} from '../../packages/docx-engine/src/chart'
-import { readThemeColors } from '../../packages/docx-engine/src/theme'
-import type { ThemeColors } from '../../packages/docx-engine/src/types'
+} from './reference/chart'
+import { readThemeColors } from './reference/theme'
+import type { ThemeColors } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 
 // chart.ts does not export these: the values are its literals

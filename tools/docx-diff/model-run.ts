@@ -1,7 +1,7 @@
 import { spawnSync } from 'node:child_process'
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
-import { parseDocx } from '../../packages/docx-engine/src/parse'
+import { parseDocx } from './reference/parse'
 import { buildDocx } from '../../packages/docx-engine/tests/helpers/build-docx'
 import { builtModelInputs } from './model-built'
 import { buildModelBody, MODEL_BODIES } from './model-bodies'

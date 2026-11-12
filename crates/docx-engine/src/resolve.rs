@@ -166,6 +166,43 @@ impl Serialize for ResolveCtx {
     }
 }
 
+/// The wire form of a context: what `Serialize` writes. The default
+/// paragraph style is found among `styles` by its id.
+impl<'de> Deserialize<'de> for ResolveCtx {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        #[derive(Deserialize)]
+        #[serde(rename_all = "camelCase")]
+        struct Literal {
+            styles: JsMap<StyleInfo>,
+            default_para_style: Option<StyleInfo>,
+            doc_defaults: Option<DocDefaults>,
+            numbering: JsMap<NumberingDef>,
+            theme_fonts: Option<ThemeFonts>,
+            theme_colors: Option<ThemeColors>,
+            compat: ResolveCompat,
+            table: Option<TableCtx>,
+        }
+        let literal = Literal::deserialize(deserializer)?;
+        let default_para_style_key = literal.default_para_style.as_ref().and_then(|style| {
+            literal
+                .styles
+                .iter()
+                .find(|(_, candidate)| candidate.style_id == style.style_id)
+                .map(|(key, _)| key.to_owned())
+        });
+        Ok(ResolveCtx {
+            styles: literal.styles,
+            default_para_style_key,
+            doc_defaults: literal.doc_defaults,
+            numbering: literal.numbering,
+            theme_fonts: literal.theme_fonts,
+            theme_colors: literal.theme_colors,
+            compat: literal.compat,
+            table: literal.table,
+        })
+    }
+}
+
 /// `LineSpacing`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct LineSpacing {
@@ -317,7 +354,8 @@ pub struct EffectiveRPr {
 }
 
 /// `ResolveParaOptions`
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResolveParaOptions {
     /// twips per character for *Chars indents; absent = character indents stay unresolved
     pub char_units: Option<CharUnits>,
@@ -2062,7 +2100,8 @@ pub fn shadow_compare(
 // ---------------------------------------------------------------- context
 
 /// The document `resolveCtxOf` is given.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ResolveDoc {
     pub styles: JsMap<StyleInfo>,
     pub doc_defaults: Option<DocDefaults>,
@@ -2070,6 +2109,7 @@ pub struct ResolveDoc {
     pub theme_fonts: Option<ThemeFonts>,
     pub theme_colors: Option<ThemeColors>,
     pub compatibility_mode: Option<JsNum>,
+    #[serde(rename = "doNotUseHTMLParagraphAutoSpacing")]
     pub do_not_use_html_paragraph_auto_spacing: Option<bool>,
     pub indent_not_numbering_tab_stop: Option<bool>,
 }

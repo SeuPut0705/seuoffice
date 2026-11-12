@@ -62,7 +62,7 @@ pub struct LayoutSettings {
 }
 
 /// `xmlFlagOn` over a tag literal, whose pattern always compiles.
-fn flag(xml: &str, tag: &str) -> Result<Option<bool>, Thrown> {
+pub fn flag(xml: &str, tag: &str) -> Result<Option<bool>, Thrown> {
     let on = xml_flag_on(xml, tag).map_err(|error| error.to_string())?;
     Ok(on.then_some(true))
 }
@@ -107,7 +107,7 @@ pub struct DocNoteProps {
 
 /// The model's `NoteProps` of what `notePropsFromXml` read, its keys set in
 /// the order of its literal.
-fn model_note_props(read: section::NoteProps) -> NoteProps {
+pub fn model_note_props(read: section::NoteProps) -> NoteProps {
     let mut out = NoteProps::default();
     match read.pos {
         Some("pageBottom") => out.pos.set(NotePropsPos::PageBottom),

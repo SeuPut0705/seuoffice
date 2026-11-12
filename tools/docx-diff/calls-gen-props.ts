@@ -12,8 +12,8 @@ import {
   stripParaMarkColor,
   stripParaMarkRevision,
   stripPPrChange,
-} from '../../packages/docx-engine/src/generate'
-import type { ParaFormat } from '../../packages/docx-engine/src/types'
+} from './reference/generate'
+import type { ParaFormat } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 import { pprModelInputs } from './generate-model-inputs'
 

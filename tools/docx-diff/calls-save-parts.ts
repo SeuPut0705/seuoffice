@@ -14,8 +14,8 @@ import {
   planRemoveParts,
   removePartsRefusalMessage,
   removePartsRefusalMessageFor,
-} from '../../packages/docx-engine/src/remove-parts'
-import { cleanupDocxOwnedResources, referencedRelationshipIds } from '../../packages/docx-engine/src/resource-cleanup'
+} from './reference/remove-parts'
+import { cleanupDocxOwnedResources, referencedRelationshipIds } from './reference/resource-cleanup'
 import {
   builtInHeadingStyleUpsert,
   mergeDefaultFontsXml,
@@ -23,7 +23,7 @@ import {
   pendingHeadingLevel,
   upsertStyleXml,
   type StyleUpsert,
-} from '../../packages/docx-engine/src/style-upsert'
+} from './reference/style-upsert'
 import {
   bufferSource,
   lazyMediaHashesIn,
@@ -33,7 +33,7 @@ import {
   writeZip,
   type ZipEntry,
   type ZipFile,
-} from '../../packages/docx-engine/src/zip-splice'
+} from './reference/zip-splice'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { saveInternals } from './save-internals'
 

@@ -9,7 +9,7 @@ import {
   type RevisionResolution,
   type RevisionXmlFilter,
   type RevisionXmlMode,
-} from '../../packages/docx-engine/src/revision-xml'
+} from './reference/revision-xml'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 

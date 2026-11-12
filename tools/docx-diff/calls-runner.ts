@@ -2,7 +2,7 @@
 // of the ported modules, each called by name on both sides: over the corpus,
 // over built inputs and over seeded mutations of both.
 import { isDeepStrictEqual } from 'node:util'
-import type { ParsedDoc } from '../../packages/docx-engine/src/types'
+import type { ParsedDoc } from './reference/types'
 import { ArgPool } from './calls-arg-mutation'
 import type { CallSpec, Input } from './calls-spec'
 import { byFunction, checkOutcome, flush, type Outcome, rustOutcome } from './compare-props'

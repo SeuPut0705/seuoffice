@@ -59,13 +59,17 @@ pub fn auto_space_mode(de: Option<bool>, dn: Option<bool>) -> Option<AutoSpace> 
     })
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TabStop {
     pub pos: JsNum,
     pub val: String,
     /// Only a w:ptab stop has it, written before its leader.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rel: Option<&'static str>,
+    #[serde(
+        default,
+        skip_serializing_if = "Option::is_none",
+        deserialize_with = "jscompat::wire::static_str_opt"
+    )]
+    pub rel: Option<jscompat::wire::StaticStr>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub leader: Option<String>,
 }
@@ -249,9 +253,16 @@ pub fn active_char_indents(chars: Option<&CharIndents>) -> Option<CharIndents> {
 #[derive(Debug, Clone, Copy, Deserialize)]
 pub struct CharUnits {
     /// w:firstLineChars and w:hangingChars: the paragraph's first text run.
+    /// `null` is the NaN `JSON.stringify` wrote.
+    #[serde(deserialize_with = "nan_of_null")]
     pub run: f64,
     /// w:leftChars and w:rightChars: the default paragraph style's font size.
+    #[serde(deserialize_with = "nan_of_null")]
     pub normal: f64,
+}
+
+fn nan_of_null<'de, D: serde::Deserializer<'de>>(deserializer: D) -> Result<f64, D::Error> {
+    Option::<f64>::deserialize(deserializer).map(|number| number.unwrap_or(f64::NAN))
 }
 
 fn number_field(format: &Map<String, Value>, key: &str) -> Option<f64> {

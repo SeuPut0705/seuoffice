@@ -22,6 +22,8 @@ mod space;
 mod string;
 mod uri;
 mod value;
+#[doc(hidden)]
+pub mod wire;
 
 pub use atob::{InvalidCharacterError, atob};
 pub use date::utc_date_parts;

@@ -72,7 +72,8 @@ pub fn is_lazy_media_part(part_path: &str) -> bool {
 pub const MAX_LAZY_PART_CHARS: usize = 512;
 
 /// What `parseLazyMediaUrl` returns.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct LazyMediaUrl {
     pub hash: String,
     pub part_path: String,

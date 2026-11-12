@@ -2,6 +2,8 @@
  * One Hangul export in a worker thread of its own (see hwp-export.ts): it
  * answers once and is terminated by the main process.
  */
+// the Hangul export reads a docx through @genoffice/docx-engine: this thread starts its own engine
+import './engine-init'
 import { readFileSync } from 'node:fs'
 import { parentPort } from 'node:worker_threads'
 import { Docx2HwpError, HwpEngine, docxToHwp } from '@genoffice/docx2hwp'

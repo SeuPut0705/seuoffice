@@ -7,12 +7,12 @@
 import type JSZip from 'jszip'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseInternals } from './parse-internals'
-import { parseNumbering, parseRels } from '../../packages/docx-engine/src/parse-package'
-import type { RelInfo } from '../../packages/docx-engine/src/parse-xml-text'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
-import { resolveCtxOf, type ResolveCtx } from '../../packages/docx-engine/src/resolve-props'
-import { sectionSettingsFromXml } from '../../packages/docx-engine/src/section'
-import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from '../../packages/docx-engine/src/types'
+import { parseNumbering, parseRels } from './reference/parse-package'
+import type { RelInfo } from './reference/parse-xml-text'
+import { parseStyles } from './reference/parse-styles'
+import { resolveCtxOf, type ResolveCtx } from './reference/resolve-props'
+import { sectionSettingsFromXml } from './reference/section'
+import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
 import {
   inlineRawSource,
   inlineWrapContentLocked,
@@ -31,8 +31,8 @@ import {
   sdtFollowsItsText,
   sdtOpenForChangedText,
   validInlineWrap,
-} from '../../packages/docx-engine/src/inline-opaque'
-import { deepXmlParser, nameOf, serializeXNode, type XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/inline-opaque'
+import { deepXmlParser, nameOf, serializeXNode, type XNode } from './reference/xml-utils'
 
 const internals = await parseInternals()
 /** The module-level WeakMaps bindHfImageAnchors reads, exported by the copy. */

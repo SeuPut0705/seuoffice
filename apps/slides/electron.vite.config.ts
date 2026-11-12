@@ -49,6 +49,11 @@ const workspaceAlias = {
   // Metafile (EMF/WMF) rasterizer shared with the docs engine (renderer-only: needs canvas)
   '@genoffice/docx-engine/metafile': resolve(here, '../../packages/docx-engine/src/metafile.ts'),
   '@genoffice/docx-engine/math': resolve(here, '../../packages/docx-engine/src/math.ts'),
+  '@genoffice/docx-engine/init': resolve(here, '../../packages/docx-engine/src/engine-init.ts'),
+  '@genoffice/docx-engine/engine-url': resolve(
+    here,
+    '../../packages/docx-engine/src/engine-url.ts',
+  ),
 }
 
 export default defineConfig({

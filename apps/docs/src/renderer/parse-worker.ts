@@ -1,3 +1,5 @@
+// this worker's own engine instance
+import './engine-init'
 import { parseDocx } from '@genoffice/docx-engine'
 import { odtToDocx } from '@genoffice/odt-engine'
 import type { ParseWorkerRequest, ParseWorkerResponse } from './parse-off-thread'
