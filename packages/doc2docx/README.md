@@ -208,7 +208,8 @@ and writes them as real .docx media parts with drawings:
   picture members, placed through the group's coordinate bounds and child
   anchors. Blip records decode PNG/JPEG/TIFF (UID(s) + tag + bytes), DIB (a
   BITMAPFILEHEADER is prepended, written as .bmp) and WMF/EMF (34-byte
-  metafile header, deflate-compressed data inflated); PICT is skipped.
+  metafile header, deflate-compressed data inflated to at most 64 MiB; a
+  metafile past that is skipped with a warning); PICT is skipped.
   Non-picture shapes (text boxes, autoshapes, lines) are skipped with one
   warning; a missing or truncated blip skips that picture.
 - **Body model** — `readLegacyDocBody` emits `{ type: "image" }` blocks for a

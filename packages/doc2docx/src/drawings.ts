@@ -98,6 +98,15 @@ export interface DrawingSource {
 
 const FSPA_BYTES = 26
 const MAX_SHAPES = 65536
+/**
+ * Largest size one compressed metafile may inflate to. The document alone
+ * declares it (a few kilobytes of deflate data stand for any amount), so the
+ * inflate needs a ceiling of its own. Same value as
+ * MAX_METAFILE_GUNZIP_BYTES in apps/slides/src/main/metafile-fonts.ts and
+ * packages/docx-engine/src/metafile.ts; neither can be imported from here
+ * (an app, and a module that pulls in the canvas metafile renderer).
+ */
+const MAX_METAFILE_INFLATE_BYTES = 64 * 1024 * 1024
 
 /* OfficeArt record types */
 const REC_DGG_CONTAINER = 0xf000
@@ -268,9 +277,14 @@ export function readBlip(
     const raw = bytes.slice(dataStart, dataStart + available)
     if (compression === 0) {
       try {
-        payload = new Uint8Array(inflateSync(raw))
-      } catch {
-        warnings.push('a compressed metafile picture could not be decompressed and was omitted')
+        // maxOutputLength turns a deflate bomb into a throw (caught below)
+        payload = new Uint8Array(inflateSync(raw, { maxOutputLength: MAX_METAFILE_INFLATE_BYTES }))
+      } catch (error) {
+        warnings.push(
+          (error as NodeJS.ErrnoException).code === 'ERR_BUFFER_TOO_LARGE'
+            ? 'a compressed metafile picture expands past the import limit and was omitted'
+            : 'a compressed metafile picture could not be decompressed and was omitted',
+        )
         return undefined
       }
     } else payload = raw
