@@ -10,8 +10,9 @@ use std::f64::consts::PI;
 use std::fmt::Write;
 
 use jscompat::{
-    JsObject, RegexLimit, js_regex, math_atan2, math_cos, math_max, math_min, math_round, math_sign, math_sin,
-    math_tan, number_to_string, to_number, trim, truthy, try_js_regex, value_to_string,
+    JsObject, RegexLimit, js_regex, math_atan2, math_cos, math_max, math_min, math_round,
+    math_sign, math_sin, math_tan, number_to_string, to_number, trim, truthy, try_js_regex,
+    value_to_string,
 };
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -232,7 +233,10 @@ pub fn parse_cust_geom(
     let Some(start) = shape_xml.find("<a:custGeom") else {
         return Ok(None);
     };
-    let Some(end) = shape_xml[start..].find("</a:custGeom>").map(|at| start + at) else {
+    let Some(end) = shape_xml[start..]
+        .find("</a:custGeom>")
+        .map(|at| start + at)
+    else {
         return Ok(None);
     };
     let xml = &shape_xml[start..end];

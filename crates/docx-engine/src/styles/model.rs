@@ -175,6 +175,8 @@ js_object! {
         pub last_row: TableCondFormat,
         pub band1_fill: String,
         pub band2_fill: String,
+        pub band1_horz: TableCondFormat,
+        pub band2_horz: TableCondFormat,
         pub row_band_size: JsNum,
         pub borders: Borders,
         pub cell_mar_twips: CellMargins,
@@ -244,6 +246,12 @@ pub(crate) fn merge_table_display(
     }
     if let Some(m) = deep_cond(a.last_row.as_ref(), b.last_row.as_ref()) {
         merged.last_row.set(m);
+    }
+    if let Some(m) = deep_cond(a.band1_horz.as_ref(), b.band1_horz.as_ref()) {
+        merged.band1_horz.set(m);
+    }
+    if let Some(m) = deep_cond(a.band2_horz.as_ref(), b.band2_horz.as_ref()) {
+        merged.band2_horz.set(m);
     }
     if let Some(m) = deep(
         a.para_spacing.as_ref(),

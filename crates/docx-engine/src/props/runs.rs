@@ -165,6 +165,23 @@ fn comment_ids(run: &Run) -> String {
         .join(",")
 }
 
+/// `sameInlineWrapChain(a.wrap, b.wrap)`: two runs sit in the same chain of
+/// wrapper elements.
+fn same_inline_wrap_chain(a: &Run, b: &Run) -> bool {
+    let chain = |run: &'_ Run| match run.get("wrap") {
+        Some(Value::Array(chain)) => chain.clone(),
+        _ => Vec::new(),
+    };
+    let (x, y) = (chain(a), chain(b));
+    x.len() == y.len()
+        && x.iter().zip(&y).all(|(a, b)| match (a, b) {
+            (Value::Object(a), Value::Object(b)) => ["seq", "open", "close"]
+                .iter()
+                .all(|key| strict_equal(a.get(*key), b.get(*key))),
+            _ => strict_equal(Some(a), Some(b)),
+        })
+}
+
 fn same_style(a: &Run, b: &Run) -> bool {
     // reference markers, index entries, cross-references and inline math are atomic
     let either_truthy = |key| is_truthy(a.get(key)) || is_truthy(b.get(key));
@@ -176,6 +193,10 @@ fn same_style(a: &Run, b: &Run) -> bool {
         .into_iter()
         .any(either_defined)
     {
+        return false;
+    }
+    // runs of different wrapper elements stay apart
+    if !same_inline_wrap_chain(a, b) {
         return false;
     }
     if ["math", "sym", "ruby", "image"]

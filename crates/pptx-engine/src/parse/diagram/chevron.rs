@@ -23,12 +23,7 @@ pub(super) fn chevron_list(f: &mut Fallback<'_>) {
         // rotated 90deg: the box swaps around the accent cell's center so it
         // points down
         f.push(
-            dgm_box(
-                ch_w / 2.0 - ih / 2.0,
-                y + ih / 2.0 - ch_w / 2.0,
-                ih,
-                ch_w,
-            ),
+            dgm_box(ch_w / 2.0 - ih / 2.0, y + ih / 2.0 - ch_w / 2.0, ih, ch_w),
             base,
             &[],
             DgmSpOpts {

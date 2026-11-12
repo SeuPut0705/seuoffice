@@ -586,6 +586,15 @@ export const PROPS_RUN_LISTS: Run[][] = [
     run('e'),
   ],
   [
+    run('a', { wrap: [{ seq: 1, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
+    run('b', { wrap: [{ seq: 1, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
+    run('c', { wrap: [{ seq: 2, open: '<w:smartTag>', close: '</w:smartTag>' }] }),
+    run('d', { wrap: [{ seq: 2, open: '<w:smartTag>', close: '</w:smartTag>' }, { seq: 3, open: '<w:ins>', close: '</w:ins>' }] }),
+    run('e', { wrap: [] }),
+    run('f'),
+    run('g', { wrap: [{ seq: 2, open: '<w:sdt>', close: '</w:sdt>' }] }),
+  ],
+  [
     run('a', { commentIds: ['1', '2'] }),
     run('b', { commentIds: ['1', '2'] }),
     run('c', { commentIds: ['1,2'] }),

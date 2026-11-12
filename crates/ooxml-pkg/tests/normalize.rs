@@ -3,12 +3,23 @@
 //! The parts and the expected texts are in crates/fixtures/package-layer.json,
 //! written by tools/docx-diff/write-fixtures.ts from `normalizeOoxmlXml`.
 
-use ooxml_pkg::{needs_ooxml_normalization, normalize_ooxml_xml};
+use ooxml_pkg::{
+    dedupe_style_refs, has_duplicate_style_refs, needs_ooxml_normalization, normalize_ooxml_xml,
+};
 use serde::Deserialize;
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct Fixtures {
     normalized: Vec<Part>,
+    style_refs: Vec<StyleRefs>,
+}
+
+#[derive(Deserialize)]
+struct StyleRefs {
+    xml: String,
+    duplicated: bool,
+    deduped: String,
 }
 
 #[derive(Deserialize)]
@@ -18,7 +29,7 @@ struct Part {
     normalized: String,
 }
 
-fn parts() -> Vec<Part> {
+fn fixtures() -> Fixtures {
     let fixtures: Fixtures = serde_json::from_str(include_str!(concat!(
         env!("CARGO_MANIFEST_DIR"),
         "/../fixtures/package-layer.json"
@@ -28,7 +39,29 @@ fn parts() -> Vec<Part> {
         fixtures.normalized.len() >= 30,
         "the fixtures hold the parts"
     );
-    fixtures.normalized
+    fixtures
+}
+
+fn parts() -> Vec<Part> {
+    fixtures().normalized
+}
+
+#[test]
+fn repeated_style_refs_leave_the_last_one() {
+    for part in fixtures().style_refs {
+        assert_eq!(
+            has_duplicate_style_refs(&part.xml),
+            Ok(part.duplicated),
+            "hasDuplicateStyleRefs({:?})",
+            part.xml
+        );
+        assert_eq!(
+            dedupe_style_refs(&part.xml),
+            Ok(part.deduped),
+            "dedupeStyleRefs({:?})",
+            part.xml
+        );
+    }
 }
 
 #[test]

@@ -310,6 +310,9 @@ pub struct EffectiveRPr {
     pub shading: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub east_asia_lang: Option<String>,
+    /// toggles whose style-layer XOR inverted the winning layer's own value
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub style_xor: Option<Vec<&'static str>>,
     pub source: JsObject<PropSource>,
 }
 
@@ -1094,7 +1097,13 @@ pub fn resolve_paragraph_props(
 
     let style_id = truthy(style_id).map(str::to_owned);
     let mark_r_pr = p_pr.and_then(|p_pr| p_pr.find_child("w:rPr"));
-    let mark = resolve_run_props(mark_r_pr, style_id.as_deref(), ctx);
+    let mark = resolve_run_props(
+        mark_r_pr,
+        style_id.as_deref(),
+        acc.bidi.unwrap_or_default(),
+        ctx,
+        true,
+    );
     // a w:specVanish mark is a style separator, never a hidden paragraph
     let hidden =
         mark.vanish && !mark_r_pr.is_some_and(|r_pr| on_off_of(r_pr, "w:specVanish") == Some(true));
@@ -1574,15 +1583,16 @@ fn apply_r_layer(
     );
 }
 
-/// `resolveRunProps(rPr, para, ctx)`. Of `para` the TypeScript reads
-/// `para.styleId` only, which is what this takes. A style id the document
-/// does not have falls back to the default paragraph style, as it does for the
-/// paragraph's own properties and as Word shows it; the TypeScript takes no
-/// paragraph style then (divergences.json: `run-of-a-paragraph-whose-style-is-missing`).
+/// `resolveRunProps(rPr, para, ctx, mark)`. Of `para` the TypeScript reads
+/// `para.styleId` and `para.bidi` only, which is what this takes. A style id
+/// the document does not have falls back to the default paragraph style, as it
+/// does for the paragraph's own properties.
 pub fn resolve_run_props(
     r_pr: Option<&XNode>,
     para_style_id: Option<&str>,
+    para_bidi: bool,
     ctx: &ResolveCtx,
+    mark: bool,
 ) -> EffectiveRPr {
     let r_style_id = r_pr.and_then(|r_pr| child_attr(r_pr, "w:rStyle", "w:val"));
     let char_style = truthy(r_style_id).and_then(|id| ctx.styles.get(id));
@@ -1594,12 +1604,16 @@ pub fn resolve_run_props(
             .and_then(|style| style.display.as_ref())
             .and_then(|d| *d.rtl)
     };
-    let cs = r_pr
-        .and_then(|r_pr| on_off_of(r_pr, "w:rtl"))
-        .or_else(|| display_rtl(char_style))
-        .or_else(|| display_rtl(para_style))
-        .or_else(|| ctx.doc_defaults.as_ref().and_then(|d| *d.rtl))
-        == Some(true);
+    // the mark of a bidi paragraph reads the Cs twins even with its own w:rtl
+    // off; w:cs marks the run complex-script outright
+    let cs = (mark && para_bidi)
+        || r_pr.and_then(|r_pr| on_off_of(r_pr, "w:cs")) == Some(true)
+        || r_pr
+            .and_then(|r_pr| on_off_of(r_pr, "w:rtl"))
+            .or_else(|| display_rtl(char_style))
+            .or_else(|| display_rtl(para_style))
+            .or_else(|| ctx.doc_defaults.as_ref().and_then(|d| *d.rtl))
+            == Some(true);
 
     let mut source = JsObject::new();
     let mut acc = RLayer {
@@ -1650,7 +1664,9 @@ pub fn resolve_run_props(
             source.set(t, PropSource::DocDefaults);
         }
     }
+    let mut layer_toggles = Vec::with_capacity(style_layers.len());
     for (mut layer, src) in style_layers {
+        layer_toggles.push((src, TOGGLES.map(|t| layer.toggle(t))));
         apply_r_layer(&mut acc, &mut layer, src, &mut source);
         // toggle properties XOR across the style layers (ECMA-376 17.7.3)
         for t in TOGGLES {
@@ -1679,6 +1695,20 @@ pub fn resolve_run_props(
         }
     }
 
+    // two style layers both turning a toggle on leave it off; an explicit style
+    // off keeps the cascade's own result
+    let mut style_xor = Vec::new();
+    for (at, t) in TOGGLES.into_iter().enumerate() {
+        let winner = layer_toggles
+            .iter()
+            .find(|(src, _)| Some(src) == source.get(t));
+        if winner.is_some_and(|(_, toggles)| toggles[at] == Some(true))
+            && !acc.toggle(t).unwrap_or_default()
+        {
+            style_xor.push(t);
+        }
+    }
+
     let fonts = RunFonts {
         ascii: acc.ascii.filter(|ascii| !ascii.is_empty()),
         east_asia: acc.east_asia.filter(|east_asia| !east_asia.is_empty()),
@@ -1703,6 +1733,7 @@ pub fn resolve_run_props(
         bdr: acc.bdr.flatten(),
         shading: acc.shading.filter(|shading| !shading.is_empty()),
         east_asia_lang: acc.east_asia_lang.filter(|lang| !lang.is_empty()),
+        style_xor: (!style_xor.is_empty()).then_some(style_xor),
         source,
     }
 }

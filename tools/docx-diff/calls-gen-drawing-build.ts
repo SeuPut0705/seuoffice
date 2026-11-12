@@ -14,7 +14,6 @@ import {
 } from '../../packages/docx-engine/src/generate'
 import { ownValue } from '../../packages/docx-engine/src/own-value'
 import type { CallSpec, Input } from './calls-spec'
-import { nonFiniteNumber } from './listed'
 
 type Opts = Record<string, unknown>
 
@@ -310,12 +309,10 @@ export const NON_FINITE_DRAWING_BUILD: Array<{ fn: string; text: string; args: R
   ...nf('buildWordArtParagraphXml', {}, BOX_NF),
 ]
 
-// The inputs of divergences.json are inputs of the comparison too: each falls
-// in the masked class, and the mutations carry its numbers to other places.
+// The non-finite inputs are built inputs of the comparison; the mutations
+// carry their numbers to other places.
 for (const spec of GEN_DRAWING_BUILD) {
   const listed = NON_FINITE_DRAWING_BUILD.filter(({ fn }) => fn === spec.fn)
   if (listed.length === 0) continue
   spec.built.push(...listed.map(({ text, args }) => ({ text, args })))
-  spec.masked = nonFiniteNumber
-  spec.maskedRefuses = true
 }

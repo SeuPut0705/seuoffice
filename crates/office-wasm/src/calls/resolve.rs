@@ -151,9 +151,17 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         }
         "resolveRunProps" | "directRunFormat" => {
             let para_style_id: Option<String> = arg(args, "paraStyleId")?;
+            let para_bidi: Option<bool> = arg(args, "paraBidi")?;
+            let mark: Option<bool> = arg(args, "mark")?;
             with_ctx(args, |ctx| {
                 with_node(text, args, |r_pr| {
-                    let eff = resolve::resolve_run_props(r_pr, para_style_id.as_deref(), ctx);
+                    let eff = resolve::resolve_run_props(
+                        r_pr,
+                        para_style_id.as_deref(),
+                        para_bidi == Some(true),
+                        ctx,
+                        mark == Some(true),
+                    );
                     if function == "resolveRunProps" {
                         value(eff)
                     } else {

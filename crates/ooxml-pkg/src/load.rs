@@ -10,7 +10,10 @@ use crate::gate::{
     assert_zip_inflates_within_limits,
 };
 use crate::jszip::{self, LoadedEntry};
-use crate::normalize::{needs_ooxml_normalization, normalize_ooxml_xml};
+use crate::normalize::{
+    dedupe_style_refs, has_duplicate_style_refs, has_universal_measures, needs_ooxml_normalization,
+    normalize_ooxml_xml,
+};
 use crate::package::{Package, Part};
 
 const EOCD_SIG: u32 = 0x0605_4b50;
@@ -76,6 +79,19 @@ fn neutralize_unicode_path_fields(bytes: &[u8]) -> Option<Vec<u8>> {
     out
 }
 
+/// Parts holding paragraphs whose duplicate style refs get collapsed (last wins).
+fn is_word_part(name: &str) -> bool {
+    js_regex!(r"^word\/[^/]+\.xml$", "i").test(name)
+}
+
+fn is_story_part(name: &str) -> bool {
+    js_regex!(
+        r"^word\/(?:document|header\d*|footer\d*|footnotes|endnotes|comments\w*|glossary\/document)\.xml$",
+        "i"
+    )
+    .test(name)
+}
+
 /// The parts that carry the strict or non-canonical-prefix markers whenever
 /// the package needs normalizing.
 const NORMALIZE_GATE_PARTS: [&str; 3] = [
@@ -86,7 +102,8 @@ const NORMALIZE_GATE_PARTS: [&str; 3] = [
 
 /// ISO Strict OOXML and non-canonical namespace prefixes are normalized at
 /// this single entry point, so the parser's offsets and the save's patches
-/// see the same part text.
+/// see the same part text. Duplicate style refs of the story parts collapse
+/// here too, so every reader sees the winner.
 fn normalize_ooxml_parts(package: &mut Package) -> Result<(), String> {
     let mut needed = false;
     for path in NORMALIZE_GATE_PARTS {
@@ -97,20 +114,29 @@ fn normalize_ooxml_parts(package: &mut Package) -> Result<(), String> {
             break;
         }
     }
-    if !needed {
-        return Ok(());
-    }
-    let mut normalized = Vec::new();
+    let mut changed = Vec::new();
     for part in package.parts() {
-        if part.is_dir || !js_regex!(r"\.(xml|rels)$", "i").test(&part.name) {
+        if part.is_dir {
             continue;
         }
-        let xml = part.text().map_err(|error| error.reason)?;
-        if needs_ooxml_normalization(xml) {
-            normalized.push((part.name.clone(), normalize_ooxml_xml(xml)));
+        let story = is_story_part(&part.name);
+        let word_part = is_word_part(&part.name);
+        if !story && !word_part && (!needed || !js_regex!(r"\.(xml|rels)$", "i").test(&part.name)) {
+            continue;
+        }
+        let original = part.text().map_err(|error| error.reason)?;
+        let mut xml = original.to_owned();
+        if (needed || has_universal_measures(&xml)) && needs_ooxml_normalization(&xml) {
+            xml = normalize_ooxml_xml(&xml);
+        }
+        if story && has_duplicate_style_refs(&xml).map_err(|limit| limit.to_string())? {
+            xml = dedupe_style_refs(&xml).map_err(|limit| limit.to_string())?;
+        }
+        if xml != original {
+            changed.push((part.name.clone(), xml));
         }
     }
-    for (name, xml) in normalized {
+    for (name, xml) in changed {
         package.set_file(name, xml.into_bytes());
     }
     Ok(())

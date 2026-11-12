@@ -354,7 +354,7 @@ fn result_runs(xml: &str, eff: &EffectivePPr, ctx: &ResolveCtx, deleted: bool) -
         let r_pr = r_pr_node_of(inner);
         out.push(ResultRun {
             text,
-            run: resolve_run_props(r_pr.as_ref(), eff.style_id.as_deref(), ctx),
+            run: resolve_run_props(r_pr.as_ref(), eff.style_id.as_deref(), eff.bidi, ctx, false),
         });
     }
     out

@@ -38,7 +38,6 @@ export const {
   reportCalls,
   callsReport,
   listedClasses,
-  maskedClasses,
 } = createCallsRunner({
   altchunk: ALTCHUNK,
   blank: BLANK,

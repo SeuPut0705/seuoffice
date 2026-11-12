@@ -166,7 +166,12 @@ pub(super) fn table_list(f: &mut Fallback<'_>) {
     for (i, k) in kids.iter().enumerate() {
         let fill = f.color_of(k, i + 1);
         f.push(
-            dgm_box(i as f64 * (cw + gap), head_cy + frame_cy * 0.012, cw, frame_cy * 0.62),
+            dgm_box(
+                i as f64 * (cw + gap),
+                head_cy + frame_cy * 0.012,
+                cw,
+                frame_cy * 0.62,
+            ),
             fill,
             &text_lines(
                 &k.texts,

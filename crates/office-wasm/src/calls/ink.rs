@@ -1,7 +1,7 @@
 //! `ink.*`: ink.ts. `constants` answers `args.name`; `INK_REL_RE` is
 //! `text.match(INK_REL_RE)` and `INK_MEDIA_PATH_RE` is `.test(text)`.
 //! `anchoredInkRunXml` takes `args.ink`, `args.rId` and `args.docPrId`, a
-//! null docPrId standing for NaN.
+//! null docPrId standing for NaN. A number with no XML text is the call's error.
 
 use docx_engine::ink;
 use docx_engine::model::NewInkImage;
@@ -29,7 +29,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             &required::<NewInkImage>(args, "ink")?,
             &required::<String>(args, "rId")?,
             arg::<JsNum>(args, "docPrId")?.unwrap_or(JsNum(f64::NAN)),
-        )),
+        )?),
         "stripInkRuns" => value(ink::strip_ink_runs(text)),
         "findInkRuns" => value(ink::find_ink_runs(text)),
         "injectInkRunsIntoParagraph" => value(ink::inject_ink_runs_into_paragraph(

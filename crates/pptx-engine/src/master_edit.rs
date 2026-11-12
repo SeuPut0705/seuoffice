@@ -85,7 +85,9 @@ pub fn list_master_parts(archive: &PackageArchive) -> Result<Vec<MasterPartInfo>
 /// `baseName`: `p.slice(p.lastIndexOf('/') + 1, -4)`, the second index
 /// counted in UTF-16 code units.
 fn base_name(p: &str) -> String {
-    let after_slash = p.rfind('/').map_or(p, |at| p.get(at + 1..).unwrap_or_default());
+    let after_slash = p
+        .rfind('/')
+        .map_or(p, |at| p.get(at + 1..).unwrap_or_default());
     slice_utf16(after_slash, 0.0, Some(-4.0))
 }
 

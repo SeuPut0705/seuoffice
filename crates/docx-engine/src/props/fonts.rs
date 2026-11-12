@@ -84,25 +84,46 @@ fn empty_ea_slot_font(fonts: &ThemeFonts, ea_ref: Option<&str>) -> String {
     theme_lang_ea_slot_font(fonts, ea_ref).unwrap_or_else(|| EMPTY_EA_THEME_FONT.to_owned())
 }
 
-/// The empty-EA-slot face themeFontLang specifically resolves (theme script
-/// table first, then the probed per-language defaults); `None` when only the
-/// generic DengXian applies.
-pub fn theme_lang_ea_slot_font(fonts: &ThemeFonts, ea_ref: Option<&str>) -> Option<String> {
+/// `themeScriptEaFont`: the theme script table's face (`<a:font script=...>`)
+/// of the font group for themeFontLang w:eastAsia. Word lays an EA theme slot
+/// with it whenever the table names one, over the literal `<a:ea>` typeface.
+pub fn theme_script_ea_font(fonts: &ThemeFonts, ea_ref: Option<&str>) -> Option<String> {
     let full = truthy(fonts.ea_lang.as_deref())?.to_lowercase();
-    let lang = before_hyphen(&full);
-    let major = ea_ref == Some("majorEastAsia");
-    let script = ea_lang_script(&full).or_else(|| ea_lang_script(lang));
+    let major = match ea_ref {
+        Some("majorEastAsia") => true,
+        Some("minorEastAsia") => false,
+        _ => return None,
+    };
+    let script = ea_lang_script(&full).or_else(|| ea_lang_script(before_hyphen(&full)))?;
     let table = if major {
         &fonts.major_scripts
     } else {
         &fonts.minor_scripts
     };
-    let from_script = script.and_then(|script| table.as_ref()?.get(script));
-    if let Some(face) = from_script.filter(|face| !face.is_empty()) {
-        return Some(face.clone());
+    table
+        .as_ref()?
+        .get(script)
+        .filter(|face| !face.is_empty())
+        .cloned()
+}
+
+/// The empty-EA-slot face themeFontLang specifically resolves (theme script
+/// table first, then the probed per-language defaults); `None` when only the
+/// generic DengXian applies.
+pub fn theme_lang_ea_slot_font(fonts: &ThemeFonts, ea_ref: Option<&str>) -> Option<String> {
+    if let Some(face) = theme_script_ea_font(fonts, ea_ref) {
+        return Some(face);
     }
-    let (major_face, minor_face) = empty_ea_slot_by_lang(lang)?;
-    Some(if major { major_face } else { minor_face }.to_owned())
+    let full = truthy(fonts.ea_lang.as_deref())?.to_lowercase();
+    let (major_face, minor_face) = empty_ea_slot_by_lang(before_hyphen(&full))?;
+    Some(
+        if ea_ref == Some("majorEastAsia") {
+            major_face
+        } else {
+            minor_face
+        }
+        .to_owned(),
+    )
 }
 
 #[derive(Debug, Default, PartialEq, Serialize)]
@@ -151,15 +172,25 @@ pub fn themed_r_fonts(r_fonts: &XNode, fonts: Option<&ThemeFonts>) -> ThemedRFon
         face.filter(|face| !face.is_empty()).cloned()
     };
     let ea_ref = r_fonts.attr("w:eastAsiaTheme");
-    let themed_ea = theme_val(ea_ref);
-    let ea_slot_empty = themed_ea.is_none()
+    let literal_ea = theme_val(ea_ref);
+    let ea_slot_empty = literal_ea.is_none()
         && fonts.is_some()
         && matches!(ea_ref, Some("majorEastAsia" | "minorEastAsia"));
+    // a filled EA slot still yields to the script table's themeFontLang face
+    let themed_ea = match (literal_ea, fonts) {
+        (Some(literal), Some(fonts)) => {
+            Some(theme_script_ea_font(fonts, ea_ref).unwrap_or(literal))
+        }
+        (literal, _) => literal,
+    };
     let themed_or_empty_slot = |theme_ref: Option<&str>| -> Option<String> {
         let themed = theme_val(theme_ref);
-        let (None, Some(fonts)) = (&themed, fonts) else {
+        let Some(fonts) = fonts else {
             return themed;
         };
+        if let Some(themed) = themed {
+            return Some(theme_script_ea_font(fonts, theme_ref).unwrap_or(themed));
+        }
         match theme_ref {
             Some(cs_ref @ ("majorBidi" | "minorBidi")) => Some(empty_cs_slot_font(fonts, cs_ref)),
             Some("majorEastAsia" | "minorEastAsia") => Some(empty_ea_slot_font(fonts, theme_ref)),

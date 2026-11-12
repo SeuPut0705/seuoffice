@@ -11,6 +11,8 @@ encoding_rs.workspace = true
 jscompat.workspace = true
 ooxml-pkg.workspace = true
 ooxml-xml.workspace = true
+# parseCustGeom of the slides engine, which parse.ts imports
+pptx-engine.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 sha2.workspace = true

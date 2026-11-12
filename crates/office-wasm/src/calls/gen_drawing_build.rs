@@ -1,6 +1,6 @@
 //! The fresh drawing builders of generate.ts, called by name. Each takes its
-//! options object as `args.opts`. A builder refuses a non-finite number the
-//! TypeScript would write into the XML; the refusal is the call's error.
+//! options object as `args.opts`. A builder refuses a number with no XML text
+//! (`docx_engine::xml_number`); the refusal is the call's error.
 
 use docx_engine::generate::drawing_build::{
     build_anchored_textbox_paragraph_xml, build_line_paragraph_xml, build_shape_paragraph_xml,

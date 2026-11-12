@@ -15,9 +15,9 @@
 //! `Slide` and `SlideDeck` carry no `Deserialize`: `CustomGeometry`
 //! (custgeom.rs) and `ChartModel` (chart) have none yet.
 
-use std::sync::Arc;
 use jscompat::{JsNum, JsObject, Slot, js_object};
 use serde::{Deserialize, Serialize};
+use std::sync::Arc;
 
 use crate::chart::ChartModel;
 use crate::placeholder::{Bullet, BulletType};

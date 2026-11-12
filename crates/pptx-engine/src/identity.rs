@@ -238,8 +238,8 @@ pub fn group_child_durable_id(grp: &SlideElement, child: &SlideElement) -> Optio
             ),
             "",
         )
-            .ok()
-            .and_then(|regex| regex.exec(xml))
+        .ok()
+        .and_then(|regex| regex.exec(xml))
         {
             let own = own_cnvpr(xml, &open);
             if let Some(creation) = creation_id_re().exec(own) {

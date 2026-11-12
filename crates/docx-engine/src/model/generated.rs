@@ -1061,8 +1061,8 @@ pub struct EffectiveRPr {
     pub bdr: Option<RunBdr>,
     pub shading: Option<String>,
     pub east_asia_lang: Option<String>,
-    pub source: JsObject<PropSource>,
     pub style_xor: Option<Vec<EffectiveRPrStyleXorItem>>,
+    pub source: JsObject<PropSource>,
 }
 
 /// The keys of `EffectiveRPr`, in declaration order.
@@ -1158,10 +1158,10 @@ impl Serialize for EffectiveRPr {
         if let Some(value) = &self.east_asia_lang {
             map.serialize_entry("eastAsiaLang", value)?;
         }
-        map.serialize_entry("source", &self.source)?;
         if let Some(value) = &self.style_xor {
             map.serialize_entry("styleXor", value)?;
         }
+        map.serialize_entry("source", &self.source)?;
         map.end()
     }
 }
@@ -9692,9 +9692,9 @@ pub struct HfTableCell {
     pub para_props: Option<Vec<Option<HfCellParaProps>>>,
     pub align: Option<ParaAlign>,
     pub fill: Option<String>,
+    pub locked: Option<True>,
     pub v_span: Option<JsNum>,
     pub v_merge_continue: Option<True>,
-    pub locked: Option<True>,
     pub width_pct: Option<JsNum>,
     pub width_twips: Option<JsNum>,
     pub borders: Option<CellBorders>,
@@ -9769,14 +9769,14 @@ impl Serialize for HfTableCell {
         if let Some(value) = &self.fill {
             map.serialize_entry("fill", value)?;
         }
+        if let Some(value) = &self.locked {
+            map.serialize_entry("locked", value)?;
+        }
         if let Some(value) = &self.v_span {
             map.serialize_entry("vSpan", value)?;
         }
         if let Some(value) = &self.v_merge_continue {
             map.serialize_entry("vMergeContinue", value)?;
-        }
-        if let Some(value) = &self.locked {
-            map.serialize_entry("locked", value)?;
         }
         if let Some(value) = &self.width_pct {
             map.serialize_entry("widthPct", value)?;

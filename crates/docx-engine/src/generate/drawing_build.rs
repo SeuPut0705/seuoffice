@@ -8,6 +8,7 @@ use super::props::{PPR_CHILD_ORDER, format_p_pr_children};
 use super::runs::inline_runs_xml;
 use super::{escape_xml_attr, escape_xml_text};
 use crate::model::{ParaFormat, Run};
+use crate::xml_number::{non_finite, xml_id, xml_int};
 
 const EMU_PER_PX: f64 = 9525.0;
 const EMU_PER_PT: f64 = 12700.0;
@@ -60,18 +61,15 @@ fn wire_opt<'de, D: Deserializer<'de>>(d: D) -> Result<Option<f64>, D::Error> {
     Option::<WireNum>::deserialize(d).map(|n| n.map(WireNum::value))
 }
 
-/// The owner's rule for a builder: where the TypeScript would write a
-/// non-finite number into the XML, nothing is built.
-fn refuse_non_finite(name: &str, x: f64) -> Result<(), String> {
-    if x.is_finite() {
-        Ok(())
-    } else {
-        Err(format!("a non-finite number: {name}"))
-    }
+/// `xmlInt(n) ?? nonFinite(option)`: a builder has no earlier value to keep,
+/// so a number with no XML text refuses the call.
+fn emu(option: &str, n: f64) -> Result<String, String> {
+    xml_int(n).ok_or_else(|| non_finite(option))
 }
 
-fn refuse_non_finite_opt(name: &str, x: Option<f64>) -> Result<(), String> {
-    x.map_or(Ok(()), |x| refuse_non_finite(name, x))
+/// `xmlId(id ?? 1) ?? nonFinite('id')`
+fn id_of(id: Option<f64>) -> Result<String, String> {
+    xml_id(id.unwrap_or(1.0)).ok_or_else(|| non_finite("id"))
 }
 
 /// One entry of `LINE_KINDS`.
@@ -131,17 +129,14 @@ fn alternate_paragraph(anchor: &str, vml: &str) -> String {
 
 /// `buildLineParagraphXml`
 pub fn build_line_paragraph_xml(opts: &LineOptions) -> Result<String, String> {
-    refuse_non_finite_opt("widthEmu", opts.width_emu)?;
-    refuse_non_finite_opt("heightEmu", opts.height_emu)?;
-    refuse_non_finite_opt("id", opts.id)?;
     let def = line_kind(&opts.kind)
         .or_else(|| line_kind("line"))
         .expect("LINE_KINDS.line");
     let width_emu = opts.width_emu.unwrap_or(1800000.0);
     let height_emu = opts.height_emu.unwrap_or(114300.0);
-    let id = num(opts.id.unwrap_or(1.0));
+    let id = id_of(opts.id)?;
+    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
     let color_hex = opts.color_hex.as_deref().unwrap_or("000000");
-    let (w, h) = (num(width_emu), num(height_emu));
 
     let ln = format!(
         "<a:ln w=\"12700\"><a:solidFill><a:srgbClr val=\"{color_hex}\"/></a:solidFill>{}{}</a:ln>",
@@ -206,34 +201,31 @@ pub struct InlinePictureXmlOptions {
 pub fn inline_picture_drawing_xml(o: &InlinePictureXmlOptions) -> Result<String, String> {
     let cx = js_max(1.0, math_round(o.width_px * EMU_PER_PX));
     let cy = js_max(1.0, math_round(o.height_px * EMU_PER_PX));
-    refuse_non_finite("widthPx", cx)?;
-    refuse_non_finite("heightPx", cy)?;
+    let (size_cx, size_cy) = (emu("widthPx", cx)?, emu("heightPx", cy)?);
     let rot = if truthy(o.rot_deg) {
         ((math_round(o.rot_deg.unwrap_or(f64::NAN)) % 360.0) + 360.0) % 360.0
     } else {
         0.0
     };
+    let rot_emu = emu("rotDeg", rot * 60000.0)?;
     let rad = (rot * std::f64::consts::PI) / 180.0;
     let bw = (cx * rad.cos()).abs() + (cy * rad.sin()).abs();
     let bh = (cx * rad.sin()).abs() + (cy * rad.cos()).abs();
     let ee_x = js_max(0.0, math_round((bw - cx) / 2.0));
     let ee_y = js_max(0.0, math_round((bh - cy) / 2.0));
-    // an infinite rotation reaches the XML only through the effect extent
-    refuse_non_finite("rotDeg", ee_x)?;
-    refuse_non_finite("rotDeg", ee_y)?;
     let (ee_x, ee_y) = (num(ee_x), num(ee_y));
     let id = match &o.doc_pr_id {
         DocPrId::Text(text) => text.clone(),
-        DocPrId::Number(n) => num(*n),
+        DocPrId::Number(n) => xml_id(*n).ok_or_else(|| non_finite("docPrId"))?,
     };
     let name = format!("Picture {id}");
-    let (cx, cy) = (num(cx), num(cy));
+    let (cx, cy) = (size_cx, size_cy);
     let descr = match str_truthy(&o.alt_text) {
         Some(alt) => format!(" descr=\"{}\"", escape_xml_attr(alt)),
         None => String::new(),
     };
     let rot_attr = if truthy(Some(rot)) {
-        format!(" rot=\"{}\"", num(rot * 60000.0))
+        format!(" rot=\"{rot_emu}\"")
     } else {
         String::new()
     };
@@ -270,15 +262,12 @@ pub struct TextboxOptions {
 pub fn build_textbox_paragraph_xml(opts: Option<&TextboxOptions>) -> Result<String, String> {
     let default = TextboxOptions::default();
     let opts = opts.unwrap_or(&default);
-    refuse_non_finite_opt("widthEmu", opts.width_emu)?;
-    refuse_non_finite_opt("heightEmu", opts.height_emu)?;
-    refuse_non_finite_opt("id", opts.id)?;
     let width_emu = opts.width_emu.unwrap_or(1800000.0);
     let height_emu = opts.height_emu.unwrap_or(1080000.0);
-    let id = num(opts.id.unwrap_or(1.0));
+    let id = id_of(opts.id)?;
+    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
     let fill_hex = opts.fill_hex.as_deref().unwrap_or("FFFFFF");
     let border_hex = opts.border_hex.as_deref().unwrap_or("000000");
-    let (w, h) = (num(width_emu), num(height_emu));
 
     let sp_pr = format!(
         "<wps:spPr><a:xfrm><a:off x=\"0\" y=\"0\"/><a:ext cx=\"{w}\" cy=\"{h}\"/></a:xfrm><a:prstGeom prst=\"rect\"><a:avLst/></a:prstGeom><a:solidFill><a:srgbClr val=\"{fill_hex}\"/></a:solidFill><a:ln><a:solidFill><a:srgbClr val=\"{border_hex}\"/></a:solidFill></a:ln></wps:spPr>"
@@ -381,31 +370,10 @@ fn content_para_xml(p: &TextboxContentParagraph) -> Result<String, String> {
 pub fn build_anchored_textbox_paragraph_xml(
     opts: &AnchoredTextboxOptions,
 ) -> Result<String, String> {
-    refuse_non_finite("xEmu", opts.x_emu)?;
-    refuse_non_finite("yEmu", opts.y_emu)?;
-    refuse_non_finite("widthEmu", opts.width_emu)?;
-    refuse_non_finite("heightEmu", opts.height_emu)?;
-    refuse_non_finite_opt("id", opts.id)?;
-    if let Some(i) = &opts.insets_emu {
-        refuse_non_finite("insetsEmu.l", i.l)?;
-        refuse_non_finite("insetsEmu.t", i.t)?;
-        refuse_non_finite("insetsEmu.r", i.r)?;
-        refuse_non_finite("insetsEmu.b", i.b)?;
-    }
-    refuse_non_finite_opt("zOrder", opts.z_order)?;
-    // null is Math.round(null), 0; a NaN spacing-before is falsy and writes nothing
-    refuse_non_finite_opt("holderLineTwips", opts.holder_line_twips.flatten())?;
-    if let Some(before) = opts
-        .holder_spacing_before_twips
-        .flatten()
-        .filter(|b| !b.is_nan())
-    {
-        refuse_non_finite("holderSpacingBeforeTwips", before)?;
-    }
-    let id = num(opts.id.unwrap_or(1.0));
+    let id = id_of(opts.id)?;
     let (x_emu, y_emu, width_emu, height_emu) =
         (opts.x_emu, opts.y_emu, opts.width_emu, opts.height_emu);
-    let (w, h) = (num(width_emu), num(height_emu));
+    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
 
     let txbx_content = format!(
         "<w:txbxContent>{}</w:txbxContent>",
@@ -459,10 +427,10 @@ pub fn build_anchored_textbox_paragraph_xml(
     });
     let body_pr = format!(
         "<wps:bodyPr wrap=\"square\" lIns=\"{}\" tIns=\"{}\" rIns=\"{}\" bIns=\"{}\" anchor=\"t\"><a:noAutofit/></wps:bodyPr>",
-        num(math_round(ins.l)),
-        num(math_round(ins.t)),
-        num(math_round(ins.r)),
-        num(math_round(ins.b)),
+        emu("insetsEmu.l", ins.l)?,
+        emu("insetsEmu.t", ins.t)?,
+        emu("insetsEmu.r", ins.r)?,
+        emu("insetsEmu.b", ins.b)?,
     );
     let wsp = format!(
         "<wps:wsp xmlns:wps=\"http://schemas.microsoft.com/office/word/2010/wordprocessingShape\"><wps:cNvSpPr txBox=\"1\"/>{sp_pr}<wps:txbx>{txbx_content}</wps:txbx>{body_pr}</wps:wsp>"
@@ -473,12 +441,12 @@ pub fn build_anchored_textbox_paragraph_xml(
     let pos_h = format!(
         "<wp:positionH relativeFrom=\"{}\"><wp:posOffset>{}</wp:posOffset></wp:positionH>",
         if page { "page" } else { "column" },
-        num(math_round(x_emu)),
+        emu("xEmu", x_emu)?,
     );
     let pos_v = format!(
         "<wp:positionV relativeFrom=\"{}\"><wp:posOffset>{}</wp:posOffset></wp:positionV>",
         if page { "page" } else { "paragraph" },
-        num(math_round(y_emu)),
+        emu("yEmu", y_emu)?,
     );
     let wrap_mode = opts
         .wrap
@@ -491,7 +459,7 @@ pub fn build_anchored_textbox_paragraph_xml(
     };
     let anchor = format!(
         "<wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"{}\" behindDoc=\"{}\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/>{pos_h}{pos_v}<wp:extent cx=\"{w}\" cy=\"{h}\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>{wrap_el}<wp:docPr id=\"{id}\" name=\"Region {id}\"/>{graphic}</wp:anchor>",
-        num(251658240.0 + opts.z_order.unwrap_or(0.0)),
+        emu("zOrder", 251658240.0 + opts.z_order.unwrap_or(0.0))?,
         if opts.behind_doc == Some(true) { 1 } else { 0 },
     );
 
@@ -518,7 +486,7 @@ pub fn build_anchored_textbox_paragraph_xml(
             let before = if truthy(before) {
                 format!(
                     " w:before=\"{}\"",
-                    num(math_round(before.unwrap_or(f64::NAN)))
+                    emu("holderSpacingBeforeTwips", before.unwrap_or(f64::NAN))?
                 )
             } else {
                 String::new()
@@ -526,7 +494,7 @@ pub fn build_anchored_textbox_paragraph_xml(
             let line = match opts.holder_line_twips {
                 Some(line) => format!(
                     " w:line=\"{}\" w:lineRule=\"exact\"",
-                    num(math_round(line.unwrap_or(0.0)))
+                    emu("holderLineTwips", line.unwrap_or(0.0))?
                 ),
                 None => String::new(),
             };
@@ -566,15 +534,12 @@ pub struct ShapeOptions {
 
 /// `buildShapeParagraphXml`
 pub fn build_shape_paragraph_xml(opts: &ShapeOptions) -> Result<String, String> {
-    refuse_non_finite_opt("widthEmu", opts.width_emu)?;
-    refuse_non_finite_opt("heightEmu", opts.height_emu)?;
-    refuse_non_finite_opt("id", opts.id)?;
     let width_emu = opts.width_emu.unwrap_or(1800000.0);
     let height_emu = opts.height_emu.unwrap_or(1080000.0);
-    let id = num(opts.id.unwrap_or(1.0));
+    let id = id_of(opts.id)?;
+    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
     let fill_hex = opts.fill_hex.as_deref().unwrap_or("4472C4");
     let border_hex = opts.border_hex.as_deref().unwrap_or("2F5496");
-    let (w, h) = (num(width_emu), num(height_emu));
     let prst = &opts.prst;
     let with_textbox = opts.with_textbox == Some(true);
 
@@ -628,15 +593,12 @@ pub struct WordArtOptions {
 
 /// `buildWordArtParagraphXml`
 pub fn build_word_art_paragraph_xml(opts: &WordArtOptions) -> Result<String, String> {
-    refuse_non_finite_opt("widthEmu", opts.width_emu)?;
-    refuse_non_finite_opt("heightEmu", opts.height_emu)?;
-    refuse_non_finite_opt("id", opts.id)?;
     let width_emu = opts.width_emu.unwrap_or(2700000.0);
     let height_emu = opts.height_emu.unwrap_or(720000.0);
-    let id = num(opts.id.unwrap_or(1.0));
+    let id = id_of(opts.id)?;
+    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
     let color_hex = opts.color_hex.as_deref().unwrap_or("4472C4");
     let text = escape_xml_text(opts.text.as_deref().unwrap_or("WordArt"));
-    let (w, h) = (num(width_emu), num(height_emu));
 
     let r_pr = format!(
         "<w:rPr><w:b/>{}<w:color w:val=\"{color_hex}\"/><w:sz w:val=\"72\"/><w:szCs w:val=\"72\"/></w:rPr>",

@@ -1,0 +1,187 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "parse",
+      "argRefused": 228,
+      "populations": {
+        "corpus": {
+          "compared": 5420,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 175,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 4200,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "argMutated": {
+          "compared": 12000,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "parse.tableSummary",
+          "checks": 410,
+          "differences": 0,
+          "distinctResults": 149,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.tableLacksTcW",
+          "checks": 316,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 58
+        },
+        {
+          "fn": "parse.rowGridEdges",
+          "checks": 647,
+          "differences": 0,
+          "distinctResults": 8,
+          "typescriptThrew": 50
+        },
+        {
+          "fn": "parse.reconcileGridColumns",
+          "checks": 1623,
+          "differences": 0,
+          "distinctResults": 1147,
+          "typescriptThrew": 28
+        },
+        {
+          "fn": "parse.flattenedTableModel",
+          "checks": 309,
+          "differences": 0,
+          "distinctResults": 56,
+          "typescriptThrew": 53
+        },
+        {
+          "fn": "parse.usableTableWidths",
+          "checks": 1529,
+          "differences": 0,
+          "distinctResults": 283,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.isUniformGrid",
+          "checks": 1547,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.rowRevisionOf",
+          "checks": 326,
+          "differences": 0,
+          "distinctResults": 16,
+          "typescriptThrew": 68
+        },
+        {
+          "fn": "parse.tblLookFlags",
+          "checks": 372,
+          "differences": 0,
+          "distinctResults": 9,
+          "typescriptThrew": 87
+        },
+        {
+          "fn": "parse.cellConds",
+          "checks": 2111,
+          "differences": 0,
+          "distinctResults": 16,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.hfMovablePictureFrag",
+          "checks": 322,
+          "differences": 0,
+          "distinctResults": 2,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.anchorDocPrIds",
+          "checks": 309,
+          "differences": 0,
+          "distinctResults": 8,
+          "typescriptThrew": 60
+        },
+        {
+          "fn": "parse.hasDeepChildOutside",
+          "checks": 4265,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 43
+        },
+        {
+          "fn": "parse.hfPartInfo",
+          "checks": 1505,
+          "differences": 0,
+          "distinctResults": 100,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.bindHfImageAnchors",
+          "checks": 1527,
+          "differences": 0,
+          "distinctResults": 595,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.stripHfDeletions",
+          "checks": 383,
+          "differences": 0,
+          "distinctResults": 380,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.hfTblRanges",
+          "checks": 325,
+          "differences": 0,
+          "distinctResults": 26,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.hfCellColumnLeftPx",
+          "checks": 312,
+          "differences": 0,
+          "distinctResults": 14,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.hfOnlyEmptyRuns",
+          "checks": 318,
+          "differences": 0,
+          "distinctResults": 3,
+          "typescriptThrew": 71
+        },
+        {
+          "fn": "parse.hfLine",
+          "checks": 1508,
+          "differences": 0,
+          "distinctResults": 19,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "parse.hfTableFloatOf",
+          "checks": 312,
+          "differences": 0,
+          "distinctResults": 39,
+          "typescriptThrew": 82
+        },
+        {
+          "fn": "parse.withoutResolvedGeometry",
+          "checks": 1519,
+          "differences": 0,
+          "distinctResults": 10,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

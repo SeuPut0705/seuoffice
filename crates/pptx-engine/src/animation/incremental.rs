@@ -2,8 +2,7 @@
 //! from `animEq` to `getSlideAnimations`).
 
 use jscompat::{
-    JsMap, index_of, js_regex, last_index_of, math_max, math_round, number_to_string,
-    to_number,
+    JsMap, index_of, js_regex, last_index_of, math_max, math_round, number_to_string, to_number,
 };
 
 use super::model::{AnimTrigger, IdGen, Slide, SlideAnimation, is_media_effect};

@@ -3,7 +3,6 @@
 // node takes the XML text and the name of the top-level element in
 // `args.node`; the theme crosses as `args.theme`; a section crosses as the
 // w:sectPr text both sides read with sectionSettingsFromXml.
-import { nestedWrapNone } from './listed'
 import {
   colorNodeHex,
   composeGroupCtm,
@@ -911,7 +910,6 @@ export const DRAWING: CallSpec[] = [
   {
     fn: 'drawing.drawingAnchorMeta',
     call: (text) => drawingAnchorMeta(text),
-    listed: nestedWrapNone,
     fromDocument: (parts) => drawingFragmentsOf(parts).map((text) => ({ text })),
     built: FRAGMENTS.map((text) => ({ text })),
   },

@@ -3,12 +3,12 @@
 //! shapes of a chart, `p:graphicFrame` (tables, charts, SmartArt, OLE), the
 //! SmartArt drawing preview and `findDescendantPic`.
 
-use std::sync::Arc;
 use jscompat::{
     JsMap, JsNum, Radix, Slot, js_regex, math_max, math_min, math_round, number_to_string,
     number_truthy, parse_float, parse_int, trim, truthy, value_to_string, value_truthy,
 };
 use serde_json::{Map, Value, json};
+use std::sync::Arc;
 
 use super::context::{Node, ParseContext, parse_xml};
 use super::decor::int_or;
@@ -100,7 +100,12 @@ fn spread(v: Node<'_>) -> Map<String, Value> {
         Some(Value::String(text)) => text
             .encode_utf16()
             .enumerate()
-            .map(|(i, unit)| (i.to_string(), Value::String(String::from_utf16_lossy(&[unit]))))
+            .map(|(i, unit)| {
+                (
+                    i.to_string(),
+                    Value::String(String::from_utf16_lossy(&[unit])),
+                )
+            })
             .collect(),
         _ => Map::new(),
     }
@@ -153,9 +158,7 @@ pub(super) fn parse_picture(
     let mut pic_adjust = parse_av_lst(get(prst_geom, "a:avLst"));
     // Placeholder pictures without their own geometry clip to the layout/master
     // placeholder's shape (e.g. a parallelogram picture placeholder)
-    if truthy(pic_geom).is_none()
-        && !value_truthy(get(sp_pr, "a:custGeom"))
-        && value_truthy(pic_ph)
+    if truthy(pic_geom).is_none() && !value_truthy(get(sp_pr, "a:custGeom")) && value_truthy(pic_ph)
     {
         let inherited_geom = resolve_placeholder_preset_geom(
             ctx.layout_placeholders,
@@ -644,7 +647,8 @@ pub(super) fn graphic_frame_passthrough(
         let pic = find_descendant_pic(data, 0);
         let has_blip = get(get(get(pic, "p:blipFill"), "a:blip"), "@_r:embed").is_some();
         if value_truthy(pic) && has_blip {
-            el.preview_picture.set(parse_picture(pic, anchor, ctx, None)?);
+            el.preview_picture
+                .set(parse_picture(pic, anchor, ctx, None)?);
         } else {
             let alternate = get(data, "mc:AlternateContent");
             let ole_obj = get(data, "p:oleObj")
@@ -706,7 +710,8 @@ fn diagram_text_colors(
         let Some(lst) = truthy(lst) else {
             continue;
         };
-        let Some(cm) = js_regex!(r#"<a:schemeClr val="([^"]+)"|<a:srgbClr val="([^"]+)""#).exec(lst)
+        let Some(cm) =
+            js_regex!(r#"<a:schemeClr val="([^"]+)"|<a:srgbClr val="([^"]+)""#).exec(lst)
         else {
             continue;
         };
@@ -726,8 +731,8 @@ fn diagram_text_colors(
     if lbl_color.is_empty() {
         return out;
     }
-    for m in js_regex!(r#"<dgm:pt modelId="([^"]+)" type="pres"[\s\S]*?<\/dgm:pt>"#)
-        .find_iter(data_xml)
+    for m in
+        js_regex!(r#"<dgm:pt modelId="([^"]+)" type="pres"[\s\S]*?<\/dgm:pt>"#).find_iter(data_xml)
     {
         let lbl = js_regex!(r#"presStyleLbl="([^"]+)""#)
             .exec(m.as_str())
@@ -761,9 +766,8 @@ fn parse_diagram_drawing(
     });
     let xml = js_regex!(r"<a:t(\s[^>]*)?>([^<]*\n[^<]*)<\/a:t>").replace_all(&xml, |m| {
         let attrs = m.get(1).unwrap_or_default();
-        let t = js_regex!(r"\r?\n").replace_all(m.get(2).unwrap_or_default(), |_| {
-            DGM_PARA_BREAK.to_string()
-        });
+        let t = js_regex!(r"\r?\n")
+            .replace_all(m.get(2).unwrap_or_default(), |_| DGM_PARA_BREAK.to_string());
         format!("<a:t{attrs}>{t}</a:t>")
     });
     let Ok(doc) = parse_xml(&xml) else {
@@ -785,9 +789,8 @@ fn parse_diagram_drawing(
         };
         // Text color truth comes from the color part (see diagramTextColors); explicit run
         // colors in the txBody still win since the fontRef is only the inherited fallback
-        let model_id = get(Some(sp), "@_modelId").map_or_else(String::new, |id| {
-            value_to_string(Some(id))
-        });
+        let model_id =
+            get(Some(sp), "@_modelId").map_or_else(String::new, |id| value_to_string(Some(id)));
         let tx_c = tx_colors.and_then(|colors| colors.get(&model_id));
         let recolored;
         let sp = match tx_c.filter(|c| !c.is_empty()) {
@@ -884,10 +887,11 @@ fn parse_diagram_drawing(
 fn split_diagram_paragraphs(body: &mut TextBody) {
     let paragraphs = (*body.paragraphs).as_deref().unwrap_or_default();
     if !paragraphs.iter().any(|p| {
-        (*p.runs)
-            .iter()
-            .flatten()
-            .any(|r| (*r.text).as_deref().is_some_and(|t| t.contains(DGM_PARA_BREAK)))
+        (*p.runs).iter().flatten().any(|r| {
+            (*r.text)
+                .as_deref()
+                .is_some_and(|t| t.contains(DGM_PARA_BREAK))
+        })
     }) {
         return;
     }

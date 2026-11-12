@@ -19,7 +19,10 @@ pub use gate::{
     assert_declared_sizes_within_limits, assert_zip_inflates_within_limits,
 };
 pub use load::{load_docx_package, load_package};
-pub use normalize::{needs_ooxml_normalization, normalize_ooxml_xml};
+pub use normalize::{
+    dedupe_style_refs, has_duplicate_style_refs, has_universal_measures, needs_ooxml_normalization,
+    normalize_ooxml_xml,
+};
 pub use package::{Package, Part, ReadError};
 
 /// Per-entry cap, the `maxPartBytes` of the TypeScript zip gate.

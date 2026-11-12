@@ -59,6 +59,7 @@ enum Group {
     Strike,
     Caps,
     Dstrike,
+    TextEffect,
     Vanish,
     Color,
     Spacing,
@@ -71,11 +72,12 @@ enum Group {
     Shading,
     VertAlign,
     Rtl,
+    Em,
     RPrChange,
 }
 
 /// rPr children modeled by the run model, grouped by modeled field
-const RUN_MANAGED_GROUPS: [(Group, &[&str]); 20] = [
+const RUN_MANAGED_GROUPS: [(Group, &[&str]); 22] = [
     (Group::RStyle, &["w:rStyle"]),
     (Group::RFonts, &["w:rFonts"]),
     (Group::Bold, &["w:b", "w:bCs"]),
@@ -83,6 +85,10 @@ const RUN_MANAGED_GROUPS: [(Group, &[&str]); 20] = [
     (Group::Strike, &["w:strike"]),
     (Group::Caps, &["w:caps", "w:smallCaps"]),
     (Group::Dstrike, &["w:dstrike"]),
+    (
+        Group::TextEffect,
+        &["w:outline", "w:shadow", "w:emboss", "w:imprint"],
+    ),
     (Group::Vanish, &["w:vanish"]),
     (Group::Color, &["w:color"]),
     (Group::Spacing, &["w:spacing"]),
@@ -95,6 +101,7 @@ const RUN_MANAGED_GROUPS: [(Group, &[&str]); 20] = [
     (Group::Shading, &["w:shd"]),
     (Group::VertAlign, &["w:vertAlign"]),
     (Group::Rtl, &["w:rtl"]),
+    (Group::Em, &["w:em"]),
     (Group::RPrChange, &["w:rPrChange"]),
 ];
 
@@ -420,6 +427,15 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
     if let Some(d) = *run.dstrike {
         out.push(child("w:dstrike", on_off_xml("w:dstrike", d)));
     }
+    if let Some(effect) = run.text_effect.as_ref() {
+        let tag = match effect.as_str() {
+            "outline" => "w:outline",
+            "emboss" => "w:emboss",
+            "imprint" => "w:imprint",
+            _ => "w:shadow",
+        };
+        out.push(child(tag, format!("<{tag}/>")));
+    }
     if let Some(v) = *run.vanish_own {
         out.push(child("w:vanish", on_off_xml("w:vanish", v)));
     }
@@ -485,6 +501,9 @@ fn model_r_pr_children(run: &Run, inside_link: bool) -> Vec<Child> {
     if *run.rtl == Some(true) {
         out.push(child("w:rtl", "<w:rtl/>"));
     }
+    if let Some(em) = run.em.as_ref() {
+        out.push(child("w:em", format!("<w:em w:val=\"{}\"/>", em.as_str())));
+    }
     if let Some(change) = revision_r_pr_change_xml(run) {
         out.push(child("w:rPrChange", change));
     }
@@ -537,7 +556,8 @@ pub fn merge_r_pr_model(
             .find(|(name, _)| name == tag)
             .map(|(_, xml)| xml.as_str())
     };
-    let cs = *run.cs == Some(true) || raw_bool(raw_of("w:rtl"));
+    // the model's own w:rtl decides first
+    let cs = (*run.rtl).unwrap_or_else(|| *run.cs == Some(true) || raw_bool(raw_of("w:rtl")));
 
     let mut fresh_by_group: Vec<Vec<Child>> =
         RUN_MANAGED_GROUPS.iter().map(|_| Vec::new()).collect();
@@ -592,6 +612,19 @@ pub fn merge_r_pr_model(
                     == run.caps.as_ref().map(|c| c.as_str())
             }
             Group::Dstrike => raw_bool(raw_of("w:dstrike")) == (*run.dstrike == Some(true)),
+            Group::TextEffect => {
+                // absent from the model is untouched, as for vanish
+                run.text_effect.as_ref().is_none_or(|effect| {
+                    ["outline", "emboss", "imprint", "shadow"]
+                        .into_iter()
+                        .find(|e| raw_bool(raw_of(&format!("w:{e}"))))
+                        == Some(effect.as_str())
+                })
+            }
+            Group::Em => {
+                let raw = raw_attr(raw_of("w:em"), "w:val").filter(|raw| *raw != "none");
+                run.em.as_ref().is_none_or(|em| raw == Some(em.as_str()))
+            }
             Group::Vanish => {
                 run.vanish_own.is_none() || raw_on_off(raw_of("w:vanish")) == *run.vanish_own
             }

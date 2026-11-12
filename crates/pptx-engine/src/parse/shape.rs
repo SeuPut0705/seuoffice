@@ -3,18 +3,18 @@
 //! ends, connectors, glow, reflection, shadow, scene3D, `a:avLst`, groups
 //! and their children, `passthrough` and the `a:xfrm` helpers.
 
-use std::sync::Arc;
 use jscompat::{
-    JsNum, JsObject, Radix, base64, js_regex, try_js_regex, number_truthy, parse_int, sort_by_number,
-    to_number, value_to_string, value_truthy,
+    JsNum, JsObject, Radix, base64, js_regex, number_truthy, parse_int, sort_by_number, to_number,
+    try_js_regex, value_to_string, value_truthy,
 };
 use serde_json::Value;
+use std::sync::Arc;
 
 use super::context::{COORD_MAX, Node, ParseContext};
 use crate::placeholder::{
-    LevelTextStyle, PlaceholderAnchor, PlaceholderLayer, TextStyleLevels,
-    placeholder_style_chain, resolve_placeholder_anchor, resolve_placeholder_anchor_ctr,
-    resolve_placeholder_fill_sp_pr, resolve_placeholder_insets, resolve_placeholder_transform,
+    LevelTextStyle, PlaceholderAnchor, PlaceholderLayer, TextStyleLevels, placeholder_style_chain,
+    resolve_placeholder_anchor, resolve_placeholder_anchor_ctr, resolve_placeholder_fill_sp_pr,
+    resolve_placeholder_insets, resolve_placeholder_transform,
 };
 use crate::scan::SpElement;
 use crate::types::{
@@ -153,8 +153,7 @@ pub(super) fn parse_shape_fragment(
     let semantic_xml = js_regex!(r"<a:br\b[^>]*\/>|<a:br\b[\s\S]*?<\/a:br>")
         .replace_all(&semantic_xml, |_| "<a:r><a:t>\n</a:t></a:r>".to_owned());
     let semantic_xml = js_regex!(r"<a:fld\b").replace_all(&semantic_xml, |_| "<a:r".to_owned());
-    let semantic_xml =
-        js_regex!(r"<\/a:fld>").replace_all(&semantic_xml, |_| "</a:r>".to_owned());
+    let semantic_xml = js_regex!(r"<\/a:fld>").replace_all(&semantic_xml, |_| "</a:r>".to_owned());
     if sp.name == "p:grpSp" && group_exceeds_budget(frag_xml)? {
         return Ok(Some(SlideElement::Passthrough(Box::new(passthrough(
             anchor,
@@ -499,10 +498,7 @@ pub(super) fn parse_sp_shape(
             let ph_clr = super::fill::resolve_color_node(r#ref, ctx);
             let es = if idx > 0.0 {
                 get(
-                    at(
-                        ctx.theme.and_then(|t| t.effect_styles.as_ref()),
-                        idx - 1.0,
-                    ),
+                    at(ctx.theme.and_then(|t| t.effect_styles.as_ref()), idx - 1.0),
                     "a:effectStyle",
                 )
             } else {
@@ -575,9 +571,7 @@ pub(super) fn parse_sp_shape(
         r#type: jscompat::Slot::of(r#type),
         anchor: jscompat::Slot::of(anchor),
         transform: jscompat::Slot::of(transform),
-        placeholder: assigned(
-            ph_truthy.then(|| ph_type.unwrap_or("body").to_owned()),
-        ),
+        placeholder: assigned(ph_truthy.then(|| ph_type.unwrap_or("body").to_owned())),
         tx_box: jscompat::Slot::maybe(tx_box.then_some(true)),
         name: assigned(name),
         preset_geometry: assigned(preset_geometry),
@@ -623,18 +617,16 @@ fn style_ref_stroke(node: Node<'_>, ctx: &ParseContext<'_>) -> Option<Stroke> {
         None
     };
     from_tpl.or_else(|| {
-        ph_clr
-            .filter(|c| !c.is_empty())
-            .map(|color| Stroke {
-                fill: Fill::Solid { color },
-                width: JsNum(12700.0),
-                dash: None,
-                cap: None,
-                join: None,
-                compound: None,
-                head_end: None,
-                tail_end: None,
-            })
+        ph_clr.filter(|c| !c.is_empty()).map(|color| Stroke {
+            fill: Fill::Solid { color },
+            width: JsNum(12700.0),
+            dash: None,
+            cap: None,
+            join: None,
+            compound: None,
+            head_end: None,
+            tail_end: None,
+        })
     })
 }
 
@@ -1407,7 +1399,11 @@ pub(super) fn lacks_ext(xfrm: Node<'_>) -> bool {
 }
 
 /// `withInheritedExt`
-pub(super) fn with_inherited_ext(xfrm: Node<'_>, own: Transform, inherited: Transform) -> Transform {
+pub(super) fn with_inherited_ext(
+    xfrm: Node<'_>,
+    own: Transform,
+    inherited: Transform,
+) -> Transform {
     if !value_truthy(xfrm) {
         return inherited;
     }

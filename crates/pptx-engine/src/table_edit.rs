@@ -703,19 +703,13 @@ fn patch_cells_tc_pr(xml: &str, cells: &[CellRef], edit: &TableStyleEdit) -> Str
         if row < 0.0 || col < 0.0 {
             continue;
         }
-        let Some((tr_start, tr_end)) =
-            nth_span(&xml, TableTag::Row, "</a:tr>", row, 0, xml.len())
+        let Some((tr_start, tr_end)) = nth_span(&xml, TableTag::Row, "</a:tr>", row, 0, xml.len())
         else {
             continue;
         };
-        let Some((tc_start, tc_end)) = nth_span(
-            &xml,
-            TableTag::Cell,
-            "</a:tc>",
-            col,
-            tr_start,
-            tr_end,
-        ) else {
+        let Some((tc_start, tc_end)) =
+            nth_span(&xml, TableTag::Cell, "</a:tc>", col, tr_start, tr_end)
+        else {
             continue;
         };
         let tc_xml = &xml[tc_start..tc_end];
