@@ -8,6 +8,7 @@
  * and Gemini generateContent (inline or Files API).
  */
 
+import { getDomain } from 'tldts'
 import { aiFetch } from './fetch'
 import { endpointUrl } from './protocols/shared'
 import { httpBodyDetail } from './http-error'
@@ -850,43 +851,6 @@ function bflPollWaits(guard: AbortSignal): BflPollWaits {
   }
 }
 
-/** generic second-level labels under a country code: `co.uk`, `com.au`, `or.kr` */
-const COUNTRY_SECOND_LEVELS = new Set([
-  'co',
-  'com',
-  'org',
-  'net',
-  'ac',
-  'gov',
-  'edu',
-  'or',
-  'ne',
-  'go',
-])
-
-/**
- * The registrable domain of a host name (`bfl.ai` for `api.eu1.bfl.ai`), or
- * null for an IP literal or a one-label name, which have none.
- *
- * No public suffix list ships with the app, so the suffix is read as the last
- * label, or the last two for a generic second level under a country code. A
- * host under any other multi-label suffix (`name.workers.dev`,
- * `name.github.io`) is therefore read one label short and matches its
- * neighbours there. That needs a base URL the person set to such a host, and
- * the reply that names the neighbour comes from that host, which was already
- * given the key with the job.
- */
-function registrableDomain(host: string): string | null {
-  const labels = host.replace(/\.$/, '').split('.')
-  const top = labels[labels.length - 1]!
-  // the URL parser writes every IPv4 form as four numbers and IPv6 in brackets
-  if (labels.length < 2 || host.startsWith('[') || /^\d+$/.test(top)) return null
-  const second = labels[labels.length - 2]!
-  const suffixLabels = top.length === 2 && COUNTRY_SECOND_LEVELS.has(second) ? 2 : 1
-  if (labels.length <= suffixLabels) return null
-  return labels.slice(-(suffixLabels + 1)).join('.')
-}
-
 /**
  * Where to poll a queued FLUX job. Every poll carries the API key, so an
  * address the provider's reply names is used only when it is the provider's
@@ -911,10 +875,12 @@ function bflPollUrl(base: string, queued: Record<string, unknown>): string {
       'FLUX generation failed: the provider answered with a polling address that is not a URL. The API key was not sent to it.',
     )
   }
-  const site = registrableDomain(submitted.hostname)
+  // Private suffixes keep separate hosted tenants (alice.github.io and
+  // bob.github.io) from being treated as one provider.
+  const site = getDomain(submitted.hostname, { allowPrivateDomains: true })
   const sameSite =
     poll.hostname === submitted.hostname ||
-    (site !== null && site === registrableDomain(poll.hostname))
+    (site !== null && site === getDomain(poll.hostname, { allowPrivateDomains: true }))
   if (poll.protocol !== 'https:' || !sameSite) {
     throw new Error(
       `FLUX generation failed: the provider answered with a polling address that is not its own (${poll.protocol}//${poll.host.slice(0, 100)}). The API key was not sent to it.`,

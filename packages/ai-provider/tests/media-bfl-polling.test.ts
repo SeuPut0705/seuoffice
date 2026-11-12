@@ -157,6 +157,23 @@ describe('FLUX polling address', () => {
     }
   })
 
+  it.each(['github.io', 'workers.dev', 'co.uk'])(
+    'keeps keys within one registrable tenant under %s',
+    async (suffix) => {
+      const base = `https://api.alice.${suffix}`
+      const regionalUrl = `https://eu.alice.${suffix}/v1/get_result?id=job-1`
+      const regional = bflProvider(regionalUrl)
+      expect((await generate(regional, base)).ok).toBe(true)
+      expect(keyedUrls(regional)).toEqual([`${base}/v1/flux-2-pro`, regionalUrl])
+
+      const foreign = bflProvider(`https://api.bob.${suffix}/v1/get_result?id=job-1`)
+      const result = await generate(foreign, base)
+      expect(result.ok).toBe(false)
+      expect(!result.ok && result.message).toMatch(/polling address/i)
+      expect(foreign.mock.calls.map(([url]) => url)).toEqual([`${base}/v1/flux-2-pro`])
+    },
+  )
+
   it('asks for the exact host when the base URL is an IP address or a one-label name', async () => {
     for (const [base, own, foreign] of [
       [
