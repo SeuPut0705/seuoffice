@@ -2136,11 +2136,17 @@ export interface CommentSummary extends CommentInfo {
 /** Every comment with the block its anchor sits in, ids as reply_comment / resolve_comment / delete_comment take them. */
 export function listComments(doc: OpenDocument): CommentSummary[] {
   const anchors = doc.mods.protocol.commentAnchors(doc.editor)
-  // markedXml is the comment's own XML, hidden words included: never listed
-  return doc.side.comments.map(({ modelText, markedXml: _markedXml, ...c }) => {
+  // markedXml is the comment's own XML, hidden words included: never listed.
+  // A comment holding anything hidden lists no picture: the picture may sit in a hidden run.
+  return doc.side.comments.map(({ modelText, markedXml: _markedXml, image, ...c }) => {
     const a = anchors.get(c.parentId ?? c.id)
     // the text a model may read: a run hidden from AI reads as its placeholder
-    const base = { ...c, text: modelText ?? c.text, done: c.done === true }
+    const base = {
+      ...c,
+      ...(image && modelText === undefined ? { image } : {}),
+      text: modelText ?? c.text,
+      done: c.done === true,
+    }
     return a ? { ...base, blockIndex: a.blockIndex, anchorText: a.excerpt } : base
   })
 }
