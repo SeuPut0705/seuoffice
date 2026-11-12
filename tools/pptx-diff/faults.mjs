@@ -629,6 +629,20 @@ const faults = [
     'Some(Value::String(label)) => Some(label.as_str()),',
   ],
   [
+    'ident-read-unreadable-label-withholds',
+    'pptxIdent.redaction-xml.readRedactLabel',
+    'crates/pptx-engine/src/redaction_xml.rs',
+    '_ => Some("private"),',
+    '_ => None,',
+  ],
+  [
+    'ident-read-mark-any-prefix',
+    'pptxIdent.redaction-xml.readRedactLabel',
+    'crates/pptx-engine/src/redaction_xml.rs',
+    'js_regex!(r"^(?:[\\w.-]+:)?redact$", "")',
+    'js_regex!(r"^(?:go:)?redact$", "")',
+  ],
+  [
     'ident-strip-trim',
     'pptxIdent.redaction-xml.stripRedactExt',
     'crates/pptx-engine/src/redaction_xml.rs',
