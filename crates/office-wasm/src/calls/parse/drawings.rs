@@ -141,9 +141,7 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         },
         "blipEffectsOf" => |text, _| optional(image::blip_effects_of(text)?),
         "extractDiagramText" => |text, args| {
-            with_build_ctx(args, |ctx| {
-                value(diagram::extract_diagram_text(text, ctx)?)
-            })
+            with_build_ctx(args, |ctx| value(diagram::extract_diagram_text(text, ctx)?))
         },
         "extractLockedCanvas" => |text, args| {
             with_build_ctx(args, |ctx| {
@@ -207,11 +205,9 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
         "hasResolvablePicture" => |text, args| {
             with_build_ctx_media(args, |ctx| value(media::has_resolvable_picture(text, ctx)?))
         },
-        "paragraphStrayBox" => |text, args| {
-            with_build_ctx(args, |ctx| {
-                value(textbox::paragraph_stray_box(text, ctx)?)
-            })
-        },
+        "paragraphStrayBox" => {
+            |text, args| with_build_ctx(args, |ctx| value(textbox::paragraph_stray_box(text, ctx)?))
+        }
         "textboxParagraphs" => |text, args| {
             with_build_ctx(args, |ctx| {
                 renumbered(value(textbox::textbox_paragraphs(&node_of(text)?, ctx)?))

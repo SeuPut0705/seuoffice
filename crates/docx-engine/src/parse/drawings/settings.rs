@@ -8,8 +8,8 @@ use serde::Serialize;
 use crate::model::{NoteProps, NotePropsNumRestart, NotePropsPos};
 use crate::package::{Thrown, part_text};
 use crate::section::{self, NotePrTag, note_props_from_xml, xml_flag_on};
-use crate::xml_tag::remove_elements;
 use crate::sources::{SourceInfo, find_sources_part, parse_sources_xml};
+use crate::xml_tag::remove_elements;
 
 const SETTINGS_PATH: &str = "word/settings.xml";
 

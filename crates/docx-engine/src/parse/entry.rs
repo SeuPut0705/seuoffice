@@ -562,7 +562,10 @@ fn parse_docx_with(
     doc.insert("properties".to_owned(), properties);
     doc.insert("comments".to_owned(), json(&comments));
     // `protection: DocProtection | null`: the key is always there, null when none
-    doc.insert("protection".to_owned(), protection.as_ref().map_or(Value::Null, json));
+    doc.insert(
+        "protection".to_owned(),
+        protection.as_ref().map_or(Value::Null, json),
+    );
     doc.insert(
         "writeProtection".to_owned(),
         write_protection.as_ref().map_or(Value::Null, json),

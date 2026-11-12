@@ -129,12 +129,12 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
             )?))
         },
         "sameInlineWrapChain" => same_inline_wrap_chain,
-        "inlineWrapContentLocked" => |_, args| {
-            value(opaque::inline_wrap_content_locked(&open_only_wrap(args)?))
-        },
-        "inlineWrapWritesOnce" => |_, args| {
-            value(opaque::inline_wrap_writes_once(&open_only_wrap(args)?))
-        },
+        "inlineWrapContentLocked" => {
+            |_, args| value(opaque::inline_wrap_content_locked(&open_only_wrap(args)?))
+        }
+        "inlineWrapWritesOnce" => {
+            |_, args| value(opaque::inline_wrap_writes_once(&open_only_wrap(args)?))
+        }
         "sdtFollowsItsText" => |text, _| value(opaque::sdt_follows_its_text(text)),
         "inlineWrapTextOf" => inline_wrap_text_of,
         "sdtOpenForChangedText" => |text, _| {
@@ -724,11 +724,7 @@ fn parse_field_tree(text: &str, _args: &Value) -> Returned {
             i64::from(units.to_utf16(byte as usize))
         }
     };
-    fn frame(
-        tree: &hf_fields::FieldTree,
-        index: usize,
-        at: &dyn Fn(isize) -> i64,
-    ) -> Value {
+    fn frame(tree: &hf_fields::FieldTree, index: usize, at: &dyn Fn(isize) -> i64) -> Value {
         let f = &tree.frames[index];
         json!({
             "start": at(f.start as isize),
@@ -795,7 +791,9 @@ fn shaped_wrap(args: &Value) -> Result<Option<InlineWrap>, String> {
 fn open_only_wrap(args: &Value) -> Result<InlineWrap, String> {
     let open = match args.get("wrap") {
         None | Some(Value::Null) => {
-            return Err("TypeError: Cannot read properties of undefined (reading 'open')".to_owned());
+            return Err(
+                "TypeError: Cannot read properties of undefined (reading 'open')".to_owned(),
+            );
         }
         Some(Value::Object(fields)) => match fields.get("open") {
             None => "undefined".to_owned(),
@@ -906,14 +904,21 @@ fn inline_wrap_text_of(_text: &str, args: &Value) -> Returned {
     // `for (let i = from; i < to; i++) runs[i].del`: an index outside the
     // list reads `undefined`, which throws
     if from < to
-        && (from.fract() != 0.0 || from < 0.0 || from >= runs.len() as f64 || to > runs.len() as f64)
+        && (from.fract() != 0.0
+            || from < 0.0
+            || from >= runs.len() as f64
+            || to > runs.len() as f64)
     {
         return Err("TypeError: Cannot read properties of undefined (reading 'del')".to_owned());
     }
     if from >= to {
         return value("");
     }
-    value(opaque::inline_wrap_text_of(&runs, from as usize, to.ceil() as usize))
+    value(opaque::inline_wrap_text_of(
+        &runs,
+        from as usize,
+        to.ceil() as usize,
+    ))
 }
 
 /// The grouping key the spec passes for `revKeyOf`: the revision record of the run, as JSON.

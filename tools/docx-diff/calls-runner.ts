@@ -233,6 +233,25 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
     }
   }
 
+  /** Bytes a zip entry name holds at most: its length field is 16 bits. */
+  const ZIP_NAME_LIMIT = 0xffff
+
+  /**
+   * A `parts` argument naming a part longer than any zip entry name. Swapping a
+   * part's name and text makes one; JSZip then adds a folder per slash of it,
+   * each a copy of the name, and a 350 KB text filled the gate's JavaScript heap.
+   */
+  function partNameBeyondZip(args: unknown): boolean {
+    const parts = (args as { parts?: unknown } | null)?.parts
+    return (
+      Array.isArray(parts) &&
+      parts.some(
+        (part) =>
+          Array.isArray(part) && typeof part[0] === 'string' && Buffer.byteLength(part[0]) > ZIP_NAME_LIMIT,
+      )
+    )
+  }
+
 
   /** The built inputs and the mutations: run once the corpus has been read. */
   async function callsAfterCorpus(random: () => number): Promise<void> {
@@ -248,7 +267,7 @@ export function createCallsRunner(all: Record<string, CallSpec[]>) {
           for (let tried = 0; done < ARG_FUZZ_CASES && tried < ARG_FUZZ_CASES * 4; tried++) {
             const seed = withArguments.kept[Math.floor(random() * withArguments.kept.length)]!
             const args = withArguments.pool.mutate(seed.args, random)
-            if (args === undefined) continue
+            if (args === undefined || partNameBeyondZip(args)) continue
             const text = seed.text ?? ''
             const rust = rustOutcome(spec.fn, text, args)
             if ('error' in rust && /^the \w+ argument: /.test(rust.error)) {

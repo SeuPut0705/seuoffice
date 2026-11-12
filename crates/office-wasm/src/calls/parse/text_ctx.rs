@@ -157,7 +157,10 @@ fn char_units_of(text: &str, args: &Value) -> Returned {
 /// stays the JSON object it is: the function only reads and sets one key.
 fn attach_inline_content_controls(text: &str, args: &Value) -> Returned {
     let Some(Value::Object(block)) = args.get("block") else {
-        return Err("TypeError: Cannot read properties of non-object (reading 'inlineContentControls')".to_owned());
+        return Err(
+            "TypeError: Cannot read properties of non-object (reading 'inlineContentControls')"
+                .to_owned(),
+        );
     };
     let mut block = block.clone();
     let present = match block.get("inlineContentControls") {
