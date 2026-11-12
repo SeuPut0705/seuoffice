@@ -56,6 +56,37 @@ def diff(a_path, b_path, out_path):
     }
 
 
+def page_diff(a_path, b_path, out_path):
+    """The document page area only: a crop of electron's window searched for in the candidate's
+    over a wide shift, since window chrome (Electron's menu bar on Windows) moves the content."""
+    if not (os.path.exists(a_path) and os.path.exists(b_path)):
+        return None
+    a_full = np.asarray(Image.open(a_path).convert('RGB'), dtype=np.int16)
+    b_full = np.asarray(Image.open(b_path).convert('RGB'), dtype=np.int16)
+    h, w = a_full.shape[:2]
+    y0, y1, x0, x1 = int(h * 0.3), int(h * 0.85), int(w * 0.38), int(w * 0.92)
+    a = a_full[y0:y1, x0:x1]
+    best = None
+    for dy in range(-60, 61, 1):
+        for dx in range(-24, 25, 1):
+            by, bx = y0 + dy, x0 + dx
+            if by < 0 or bx < 0 or by + a.shape[0] > b_full.shape[0] or bx + a.shape[1] > b_full.shape[1]:
+                continue
+            b = b_full[by:by + a.shape[0], bx:bx + a.shape[1]]
+            mean = float(np.abs(a[::4, ::4] - b[::4, ::4]).mean())
+            if best is None or mean < best[0]:
+                best = (mean, dy, dx)
+    if best is None:
+        return None
+    _, dy, dx = best
+    b = b_full[y0 + dy:y0 + dy + a.shape[0], x0 + dx:x0 + dx + a.shape[1]]
+    changed = np.abs(a - b).max(axis=2) > 32
+    vis = np.where(changed[..., None], np.array([255, 0, 0], dtype=np.uint8), (a // 3).astype(np.uint8))
+    Image.fromarray(vis.astype(np.uint8)).save(out_path)
+    return {'crop': [x0, y0, x1, y1], 'shift': [dx, dy], 'changed_pct': round(100 * changed.mean(), 2),
+            'mean_abs': round(float(np.abs(a - b).mean()), 2)}
+
+
 def med(values):
     values = [v for v in values if v is not None]
     return round(statistics.median(values)) if values else None
@@ -116,6 +147,11 @@ def main():
                 os.path.join(d, f'{s}-run{last}.png'),
                 os.path.join(d, f'diff-{s}-vs-electron.png'),
             )
+            summary[s]['page_area_vs_electron'] = page_diff(
+                os.path.join(d, f'electron-run{last}.png'),
+                os.path.join(d, f'{s}-run{last}.png'),
+                os.path.join(d, f'diff-page-{s}-vs-electron.png'),
+            )
         summary[s]['pdf_p1_vs_electron'] = diff(
             os.path.join(d, 'electron-p1.png'),
             os.path.join(d, f'{s}-p1.png'),
@@ -139,6 +175,7 @@ def main():
         ('edit + save', lambda s: f"typed={s['edit_typed']} saved={s['save_ok']}"),
         ('PDF', lambda s: s['pdf']),
         ('screenshot vs electron', lambda s: s.get('screenshot_vs_electron')),
+        ('page area vs electron', lambda s: s.get('page_area_vs_electron')),
         ('PDF p1 vs electron', lambda s: s.get('pdf_p1_vs_electron')),
         ('errors', lambda s: s['errors']),
     ]
