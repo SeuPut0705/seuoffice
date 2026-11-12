@@ -562,6 +562,10 @@ fn decode_simple_glyph(
     // is read keeps a forged count from allocating more than the stream holds.
     let mut flags = Vec::new();
     for _ in 0..total_points {
+        if flags.len() == flags.capacity() {
+            let more = flags.len() as u64 / 2 + 16;
+            reserve(&mut flags, more)?;
+        }
         flags.push(s_in.u8()?);
     }
     let mut min_x = 32767;
@@ -570,8 +574,12 @@ fn decode_simple_glyph(
     let mut max_y = -32768;
     let mut cur_x = 0;
     let mut cur_y = 0;
-    let mut xs = Vec::with_capacity(flags.len());
-    let mut ys = Vec::with_capacity(flags.len());
+    // one coordinate pair a flag: four bytes each for every byte the stream held
+    let mut xs: Vec<i32> = Vec::new();
+    let mut ys: Vec<i32> = Vec::new();
+    if xs.try_reserve(flags.len()).is_err() || ys.try_reserve(flags.len()).is_err() {
+        return Err(MtxError::allocation_failed());
+    }
     for &flag in &flags {
         let enc = TRIPLET[usize::from(flag & 0x7f)];
         let more = enc[0] - 1;

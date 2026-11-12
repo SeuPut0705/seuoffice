@@ -233,8 +233,10 @@ impl AHuff {
         }
         huff.init_weight(ROOT);
         if bit_count2 != 0 {
-            huff.update_weight(huff.symbol_index[256]);
-            huff.update_weight(huff.symbol_index[257]);
+            // a range of 257 has no symbol 257: the TypeScript reads past its
+            // table there (and a write then never returns); no panic here
+            huff.update_weight(huff.symbol_index.get(256).copied().unwrap_or(0));
+            huff.update_weight(huff.symbol_index.get(257).copied().unwrap_or(0));
             for _ in 0..12 {
                 huff.update_weight(huff.symbol_index[range - 3]);
             }

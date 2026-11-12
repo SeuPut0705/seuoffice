@@ -448,6 +448,8 @@ const GLTF_TEXTS: string[] = [
   ),
   scene('[{"mesh":0,"translation":[1,0,0],"children":[0,[0]]}]'),
   scene('[{"mesh":0,"translation":[1,0,0],"children":[[0],[0]]}]'),
+  // 300 children that each name the node again: `visit` nests 300 deep
+  scene(`[{"mesh":0,"translation":[1,0,0],"children":[${Array(300).fill('[0]').join(',')}]}]`),
   scene('[{"children":"1"},{"mesh":0,"translation":[3,3,3]}]'),
   scene('[{"mesh":0,"children":5}]'),
   scene('[{"mesh":0,"children":{}}]'),

@@ -108,6 +108,63 @@ fn items_or_none(
     }
 }
 
+/// What a `for...of` walks, without a copy of an array that is part of the
+/// chunk: a node may list ten thousand children and be visited as often.
+enum Items<'a> {
+    Slice(&'a [JsonValue]),
+    Listed(Vec<Cow<'a, JsonValue>>),
+}
+
+impl<'a> Items<'a> {
+    /// `for (const item of value ?? [])`
+    fn of(value: Option<Cow<'a, JsonValue>>) -> Result<Self, JsTypeError> {
+        match not_nullish(value) {
+            Some(Cow::Borrowed(JsonValue::Array(items))) => Ok(Items::Slice(items)),
+            other => items_or_none(other).map(Items::Listed),
+        }
+    }
+
+    fn get(&self, index: usize) -> Option<Cow<'a, JsonValue>> {
+        match self {
+            Items::Slice(items) => items.get(index).map(Cow::Borrowed),
+            Items::Listed(items) => items.get(index).cloned(),
+        }
+    }
+}
+
+/// One call of `visit` that is walking its children.
+struct Frame<'a> {
+    children: Items<'a>,
+    next: usize,
+    world: Mat4,
+}
+
+/// How deep `visit` may nest. The TypeScript recurses and throws a
+/// RangeError where the host's stack ends, some thousands of calls deep;
+/// this is an error too, at a depth no model has.
+const MAX_DEPTH: usize = 4096;
+
+/// Why there are no bounds: what the TypeScript throws.
+enum Refusal {
+    Type(JsTypeError),
+    TooDeep,
+}
+
+impl From<JsTypeError> for Refusal {
+    fn from(error: JsTypeError) -> Self {
+        Refusal::Type(error)
+    }
+}
+
+impl std::fmt::Display for Refusal {
+    fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Refusal::Type(error) => error.fmt(formatter),
+            Refusal::TooDeep => formatter.write_str("RangeError: Maximum call stack size exceeded"),
+        }
+    }
+}
+
 /// `value?.length === n`
 #[allow(clippy::ptr_arg)]
 fn length_is(value: &Cow<'_, JsonValue>, n: f64) -> bool {
@@ -286,7 +343,7 @@ pub fn glb_bounds(bytes: &[u8]) -> Result<Option<GlbBounds>, String> {
 }
 
 #[allow(clippy::ptr_arg)]
-fn bounds_of(gltf: &Cow<'_, JsonValue>) -> Result<Option<GlbBounds>, JsTypeError> {
+fn bounds_of(gltf: &Cow<'_, JsonValue>) -> Result<Option<GlbBounds>, Refusal> {
     let mut min: Vec3 = [f64::INFINITY; 3];
     let mut max: Vec3 = [f64::NEG_INFINITY; 3];
     let mut visited = HashSet::new();
@@ -299,15 +356,21 @@ fn bounds_of(gltf: &Cow<'_, JsonValue>) -> Result<Option<GlbBounds>, JsTypeError
             read(&scenes, &to_property_key(&index)?)
         }
     };
-    let roots = items_or_none(scene.as_ref().and_then(|scene| read(scene, "nodes")))?;
+    let roots = Items::of(scene.as_ref().and_then(|scene| read(scene, "nodes")))?;
     let nodes = not_nullish(read(gltf, "nodes"));
-    // `visit` recurses depth first; the stack takes the nodes in that order
-    let mut stack: Vec<(Cow<'_, JsonValue>, Mat4)> = roots
-        .into_iter()
-        .rev()
-        .map(|index| (index, IDENTITY))
-        .collect();
-    while let Some((index, parent)) = stack.pop() {
+    // `visit` recurses depth first: a frame is one call walking its children
+    let mut stack = vec![Frame {
+        children: roots,
+        next: 0,
+        world: IDENTITY,
+    }];
+    while let Some(frame) = stack.last_mut() {
+        let Some(index) = frame.children.get(frame.next) else {
+            stack.pop();
+            continue;
+        };
+        frame.next += 1;
+        let parent = frame.world;
         let node = lookup(nodes.as_ref(), &index)?;
         let Some(node) = node.filter(|node| node.truthy()) else {
             continue;
@@ -337,8 +400,15 @@ fn bounds_of(gltf: &Cow<'_, JsonValue>) -> Result<Option<GlbBounds>, JsTypeError
                 }
             }
         }
-        let children = items_or_none(read(&node, "children"))?;
-        stack.extend(children.into_iter().rev().map(|child| (child, world)));
+        let children = Items::of(read(&node, "children"))?;
+        if stack.len() >= MAX_DEPTH {
+            return Err(Refusal::TooDeep);
+        }
+        stack.push(Frame {
+            children,
+            next: 0,
+            world,
+        });
     }
     if !min[0].is_finite() {
         return Ok(None);
