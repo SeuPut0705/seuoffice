@@ -67,14 +67,19 @@ fn onums(args: &[Value], index: usize) -> Result<Vec<Option<f64>>, String> {
         .iter()
         .map(|item| match item {
             Value::Null => Ok(None),
-            item => jscompat::js_f64(item).map(Some).map_err(|error| format!("TypeError: argument {index}: {error}")),
+            item => jscompat::js_f64(item)
+                .map(Some)
+                .map_err(|error| format!("TypeError: argument {index}: {error}")),
         })
         .collect()
 }
 
 /// A list of numbers; a `null` item is NaN.
 fn nums(args: &[Value], index: usize) -> Result<Vec<f64>, String> {
-    Ok(onums(args, index)?.into_iter().map(|item| item.unwrap_or(f64::NAN)).collect())
+    Ok(onums(args, index)?
+        .into_iter()
+        .map(|item| item.unwrap_or(f64::NAN))
+        .collect())
 }
 
 /// A spin count as the TypeScript receives it: any value, `unknown`.
@@ -108,7 +113,8 @@ fn oxnode(args: &[Value], index: usize) -> Result<Option<ooxml_xml::XNode>, Stri
     let Some(xml) = opt::<String>(args, index)? else {
         return Ok(None);
     };
-    let nodes = ooxml_xml::parse_ordered(&xml, MAX_NESTED_TAGS).map_err(|error| error.to_string())?;
+    let nodes =
+        ooxml_xml::parse_ordered(&xml, MAX_NESTED_TAGS).map_err(|error| error.to_string())?;
     Ok(nodes.into_iter().next())
 }
 
@@ -118,12 +124,20 @@ fn snapshot(package: &ooxml_pkg::Package) -> std::collections::HashMap<String, V
         .parts()
         .iter()
         .filter(|part| !part.is_dir)
-        .filter_map(|part| part.bytes().ok().map(|bytes| (part.name.clone(), bytes.to_vec())))
+        .filter_map(|part| {
+            part.bytes()
+                .ok()
+                .map(|bytes| (part.name.clone(), bytes.to_vec()))
+        })
         .collect()
 }
 
 /// What a function changed in its package: `[name, text | blob | null]` per part written or removed.
-fn changes(env: &mut InvokeEnv<'_>, mut before: std::collections::HashMap<String, Vec<u8>>, package: &ooxml_pkg::Package) -> Value {
+fn changes(
+    env: &mut InvokeEnv<'_>,
+    mut before: std::collections::HashMap<String, Vec<u8>>,
+    package: &ooxml_pkg::Package,
+) -> Value {
     let mut out = Vec::new();
     for part in package.parts().iter().filter(|part| !part.is_dir) {
         let Ok(bytes) = part.bytes() else { continue };
@@ -408,7 +422,8 @@ fn r_anchored_ink_run_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::model::NewInkImage = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: jscompat::JsNum = req(args, 2)?;
-    let r = docx_engine::ink::anchored_ink_run_xml(&p0, &p1, p2).map_err(|error| error.to_string())?;
+    let r =
+        docx_engine::ink::anchored_ink_run_xml(&p0, &p1, p2).map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -430,7 +445,13 @@ fn r_apply_image_wrap(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p2: Option<docx_engine::generate::drawing_patch::PosOffset> = opt(args, 2)?;
     let p3: Option<docx_engine::generate::drawing_patch::MarginAlign> = opt(args, 3)?;
     let p4 = onum(args, 4)?;
-    let r = docx_engine::generate::drawing_patch::apply_image_wrap(&p0, p1, p2.as_ref(), p3.as_ref(), p4);
+    let r = docx_engine::generate::drawing_patch::apply_image_wrap(
+        &p0,
+        p1,
+        p2.as_ref(),
+        p3.as_ref(),
+        p4,
+    );
     Ok(Some(to_json(&r)?))
 }
 
@@ -445,7 +466,8 @@ fn r_apply_page_num_type(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<String> = opt(args, 1)?;
     let p2 = onum(args, 2)?;
-    let r = docx_engine::save::save::section_write::apply_page_num_type(&p0, p1.as_deref(), p2).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::save::section_write::apply_page_num_type(&p0, p1.as_deref(), p2)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -453,22 +475,25 @@ fn r_apply_property_changes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = routes::package_of(env, args.get(0).unwrap_or(&Value::Null))?;
     let before = snapshot(&p0);
     let p1: docx_engine::save::features::doc_properties_write::PropertyChanges = req(args, 1)?;
-    let r = docx_engine::save::features::doc_properties_write::apply_property_changes(&mut p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::doc_properties_write::apply_property_changes(&mut p0, &p1)
+        .map_err(|error| error.to_string())?;
     let parts = changes(env, before, &p0);
     Ok(Some(json!({ "$result": Value::Null, "$parts": parts })))
 }
 
 fn r_apply_protected_leading_breaks(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut blocks: Vec<docx_engine::model::Block> = req(args, 0)?;
-        docx_engine::block_passes::apply_protected_leading_breaks(&mut blocks).map_err(|error| error.to_string())?;
-        put(blocks)
+    docx_engine::block_passes::apply_protected_leading_breaks(&mut blocks)
+        .map_err(|error| error.to_string())?;
+    put(blocks)
 }
 
 fn r_apply_remove_parts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = routes::package_of(env, args.get(0).unwrap_or(&Value::Null))?;
     let before = snapshot(&p0);
     let p1: docx_engine::save::parts::remove_parts::RemovePartsOptions = req(args, 1)?;
-    let r = docx_engine::save::parts::remove_parts::apply_remove_parts(&mut p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::parts::remove_parts::apply_remove_parts(&mut p0, &p1)
+        .map_err(|error| error.to_string())?;
     let parts = changes(env, before, &p0);
     Ok(Some(json!({ "$result": to_json(&r)?, "$parts": parts })))
 }
@@ -476,21 +501,24 @@ fn r_apply_remove_parts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_apply_revision_resolutions(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<serde_json::Value> = opt(args, 1)?;
-    let r = docx_engine::revision_xml::apply_revision_resolutions(&p0, p1.as_ref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::revision_xml::apply_revision_resolutions(&p0, p1.as_ref())
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_apply_section_settings(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::model::SectionSettings = req(args, 1)?;
-    let r = docx_engine::save::save::section_write::apply_section_settings(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::save::section_write::apply_section_settings(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_apply_section_start_type(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = docx_engine::save::save::section_write::apply_section_start_type(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::save::section_write::apply_section_start_type(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -514,7 +542,8 @@ fn r_apply_shape_z_order_at(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_apply_title_pg(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: bool = req(args, 1)?;
-    let r = docx_engine::save::save::section_write::apply_title_pg(&p0, p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::save::section_write::apply_title_pg(&p0, p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -522,7 +551,8 @@ fn r_apply_tracked_changes_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: Option<serde_json::Value> = opt(args, 2)?;
-    let r = docx_engine::revision_xml::apply_tracked_changes_xml(&p0, &p1, p2.as_ref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::revision_xml::apply_tracked_changes_xml(&p0, &p1, p2.as_ref())
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -540,7 +570,8 @@ fn r_bibliography_line(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_build_anchored_textbox_paragraph_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::generate::drawing_build::AnchoredTextboxOptions = req(args, 0)?;
-    let r = docx_engine::generate::drawing_build::build_anchored_textbox_paragraph_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::drawing_build::build_anchored_textbox_paragraph_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -554,7 +585,8 @@ fn r_build_blank_docx(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_build_chart_part_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::model::NewChart = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = docx_engine::save::features::chart_write::build_chart_part_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::chart_write::build_chart_part_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -562,19 +594,23 @@ fn r_build_chart_workbook_xlsx_base64(env: &mut InvokeEnv<'_>, args: &[Value]) -
     let p0: Vec<String> = req(args, 0)?;
     let p1: Vec<docx_engine::model::NewChartSeriesItem> = req(args, 1)?;
     let p2 = num(args, 2)?;
-    let r = docx_engine::save::features::chart_write::build_chart_workbook_xlsx_base64(&p0, &p1, p2).map_err(|error| error.to_string())?;
+    let r =
+        docx_engine::save::features::chart_write::build_chart_workbook_xlsx_base64(&p0, &p1, p2)
+            .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_build_content_control_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::save::features::content_control::ContentControlSpec = req(args, 0)?;
-    let r = docx_engine::save::features::content_control::build_content_control_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::content_control::build_content_control_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_build_line_paragraph_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::generate::drawing_build::LineOptions = req(args, 0)?;
-    let r = docx_engine::generate::drawing_build::build_line_paragraph_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::drawing_build::build_line_paragraph_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -582,32 +618,37 @@ fn r_build_notes_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::notes::NoteKind = req(args, 0)?;
     let p1: Vec<docx_engine::model::NoteInfo> = req(args, 1)?;
     let p2: Option<String> = opt(args, 2)?;
-    let r = docx_engine::save::save::notes_write::build_notes_xml(p0, &p1, p2.as_deref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::save::notes_write::build_notes_xml(p0, &p1, p2.as_deref())
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_build_shape_paragraph_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::generate::drawing_build::ShapeOptions = req(args, 0)?;
-    let r = docx_engine::generate::drawing_build::build_shape_paragraph_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::drawing_build::build_shape_paragraph_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_build_textbox_paragraph_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Option<docx_engine::generate::drawing_build::TextboxOptions> = opt(args, 0)?;
-    let r = docx_engine::generate::drawing_build::build_textbox_paragraph_xml(p0.as_ref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::drawing_build::build_textbox_paragraph_xml(p0.as_ref())
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_build_word_art_paragraph_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::generate::drawing_build::WordArtOptions = req(args, 0)?;
-    let r = docx_engine::generate::drawing_build::build_word_art_paragraph_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::drawing_build::build_word_art_paragraph_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_built_in_heading_style_upsert(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = num(args, 0)?;
     let p1: Option<String> = opt(args, 1)?;
-    let r = docx_engine::save::parts::style_upsert::built_in_heading_style_upsert(p0, p1.as_deref());
+    let r =
+        docx_engine::save::parts::style_upsert::built_in_heading_style_upsert(p0, p1.as_deref());
     Ok(Some(to_json(&r)?))
 }
 
@@ -638,11 +679,13 @@ fn r_color_node_hex(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_compare_blocks(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let original: Vec<docx_engine::model::Block> = req(args, 0)?;
-        let revised: Vec<docx_engine::model::Block> = req(args, 1)?;
-        let xml: String = req(args, 2)?;
-        let options = docx_engine::save::features::compare::CompareOptions::from_json(args.get(3));
-        let now: String = req(args, 4)?;
-        put(docx_engine::save::features::compare::compare_block_lists(&original, &revised, &xml, &options, &now))
+    let revised: Vec<docx_engine::model::Block> = req(args, 1)?;
+    let xml: String = req(args, 2)?;
+    let options = docx_engine::save::features::compare::CompareOptions::from_json(args.get(3));
+    let now: String = req(args, 4)?;
+    put(docx_engine::save::features::compare::compare_block_lists(
+        &original, &revised, &xml, &options, &now,
+    ))
 }
 
 fn r_compare_operands(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -650,7 +693,8 @@ fn r_compare_operands(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: docx_engine::save::features::mail_merge::MergeRecord = req(args, 3)?;
-    let r = docx_engine::save::features::mail_merge::compare_operands(&p0, &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::mail_merge::compare_operands(&p0, &p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -671,14 +715,16 @@ fn r_compute_list_values(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_condition_holds(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::save::features::mail_merge::MergeRecord = req(args, 1)?;
-    let r = docx_engine::save::features::mail_merge::condition_holds(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::mail_merge::condition_holds(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_control_effect(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::save::features::mail_merge::MergeRecord = req(args, 1)?;
-    let r = docx_engine::save::features::mail_merge::control_effect(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::mail_merge::control_effect(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -756,7 +802,8 @@ fn r_field_display_of(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<jscompat::JsMap<docx_engine::styles::StyleInfo>> = opt(args, 1)?;
     let p2: Option<docx_engine::resolve::ResolveCtx> = opt(args, 2)?;
-    let r = docx_engine::fields::display::field_display_of(&p0, p1.as_ref(), p2.as_ref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::fields::display::field_display_of(&p0, p1.as_ref(), p2.as_ref())
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -785,58 +832,75 @@ fn r_generate_caption_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_generate_index_field_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Vec<String> = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = docx_engine::generate::fields::generate_index_field_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::fields::generate_index_field_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_generate_paragraph_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let block: docx_engine::model::GeneratedBlock = req(args, 0)?;
-        let ctx = args.get(1).ok_or("TypeError: ctx is missing")?;
-        let heading: docx_engine::model::MapEntries<jscompat::JsNum, String> = field(ctx, "headingStyleIds")?.ok_or("TypeError: ctx.headingStyleIds is missing")?;
-        let list_style: Option<String> = field(ctx, "listParagraphStyleId")?;
-        let has = |key: &str| ctx.get(key).is_some_and(|value| !value.is_null());
-        let host = &*env;
-        let failed: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
-        let ask = |name: &str, arguments: Value| -> Value {
-            host.callback(name, &arguments).unwrap_or_else(|error| {
-                failed.borrow_mut().get_or_insert(error);
-                Value::Null
-            })
-        };
-        let mut hyperlink = |href: &str| -> String {
-            match ask("allocateHyperlinkRel", json!([href])) {
-                Value::String(rel) => rel,
-                other => other.to_string(),
-            }
-        };
-        let mut bookmark = |name: &str| -> f64 { ask("allocateBookmarkId", json!([name])).as_f64().unwrap_or(f64::NAN) };
-        let mut revision = || -> String {
-            match ask("allocateRevisionId", json!([])) {
-                Value::String(id) => id,
-                other => other.to_string(),
-            }
-        };
-        let xml = {
-            let mut context = docx_engine::generate::paragraph::GenerateContext {
-                heading_style_ids: &heading,
-                list_paragraph_style_id: list_style.as_deref(),
-                allocate_hyperlink_rel: &mut hyperlink,
-                allocate_bookmark_id: if has("allocateBookmarkId") { Some(&mut bookmark) } else { None },
-                allocate_revision_id: if has("allocateRevisionId") { Some(&mut revision) } else { None },
-                part: None,
-            };
-            docx_engine::generate::paragraph::generate_paragraph_xml(&block, &mut context)?
-        };
-        if let Some(error) = failed.into_inner() {
-            return Err(error);
+    let ctx = args.get(1).ok_or("TypeError: ctx is missing")?;
+    let heading: docx_engine::model::MapEntries<jscompat::JsNum, String> =
+        field(ctx, "headingStyleIds")?.ok_or("TypeError: ctx.headingStyleIds is missing")?;
+    let list_style: Option<String> = field(ctx, "listParagraphStyleId")?;
+    let has = |key: &str| ctx.get(key).is_some_and(|value| !value.is_null());
+    let host = &*env;
+    let failed: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+    let ask = |name: &str, arguments: Value| -> Value {
+        host.callback(name, &arguments).unwrap_or_else(|error| {
+            failed.borrow_mut().get_or_insert(error);
+            Value::Null
+        })
+    };
+    let mut hyperlink = |href: &str| -> String {
+        match ask("allocateHyperlinkRel", json!([href])) {
+            Value::String(rel) => rel,
+            other => other.to_string(),
         }
-        put(xml)
+    };
+    let mut bookmark = |name: &str| -> f64 {
+        ask("allocateBookmarkId", json!([name]))
+            .as_f64()
+            .unwrap_or(f64::NAN)
+    };
+    let mut revision = || -> String {
+        match ask("allocateRevisionId", json!([])) {
+            Value::String(id) => id,
+            other => other.to_string(),
+        }
+    };
+    let xml = {
+        let mut context = docx_engine::generate::paragraph::GenerateContext {
+            heading_style_ids: &heading,
+            list_paragraph_style_id: list_style.as_deref(),
+            allocate_hyperlink_rel: &mut hyperlink,
+            allocate_bookmark_id: if has("allocateBookmarkId") {
+                Some(&mut bookmark)
+            } else {
+                None
+            },
+            allocate_revision_id: if has("allocateRevisionId") {
+                Some(&mut revision)
+            } else {
+                None
+            },
+            part: None,
+        };
+        docx_engine::generate::paragraph::generate_paragraph_xml(&block, &mut context)?
+    };
+    if let Some(error) = failed.into_inner() {
+        return Err(error);
+    }
+    put(xml)
 }
 
 fn r_generate_table_model_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let model: docx_engine::model::TableModel = req(args, 0)?;
-        let original: Option<String> = opt(args, 1)?;
-        put(docx_engine::generate::table::generate_table_model_xml(&model, original.as_deref(), None).map_err(|error| error.to_string())?)
+    let original: Option<String> = opt(args, 1)?;
+    put(
+        docx_engine::generate::table::generate_table_model_xml(&model, original.as_deref(), None)
+            .map_err(|error| error.to_string())?,
+    )
 }
 
 fn r_generate_table_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -861,9 +925,12 @@ fn r_has_duplicate_style_refs(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_hash_protection_password(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let password: String = req(args, 0)?;
-        let spin = spin_count(args.get(1));
-        let salt = env.blob(args.get(2).unwrap_or(&Value::Null))?;
-        put(docx_engine::protection::hash_protection_password(&password, &spin, salt).map_err(|error| error.to_string())?)
+    let spin = spin_count(args.get(1));
+    let salt = env.blob(args.get(2).unwrap_or(&Value::Null))?;
+    put(
+        docx_engine::protection::hash_protection_password(&password, &spin, salt)
+            .map_err(|error| error.to_string())?,
+    )
 }
 
 fn r_has_universal_measures(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -900,7 +967,8 @@ fn r_hf_reference_type(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_if_branch(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::save::features::mail_merge::MergeRecord = req(args, 1)?;
-    let r = docx_engine::save::features::mail_merge::if_branch(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::mail_merge::if_branch(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -926,23 +994,25 @@ fn r_inline_eq_field_results(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_inline_picture_drawing_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: docx_engine::generate::drawing_build::InlinePictureXmlOptions = req(args, 0)?;
-    let r = docx_engine::generate::drawing_build::inline_picture_drawing_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::drawing_build::inline_picture_drawing_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_inline_runs_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let runs: Vec<docx_engine::model::Run> = req(args, 0)?;
-        let written: Vec<String> = opt(args, 1)?.unwrap_or_default();
-        let fragments: Vec<(usize, String)> = opt(args, 2)?.unwrap_or_default();
-        let mut options = docx_engine::generate::runs::RunsXmlOptions {
-            written: written.into_iter().collect(),
-            fragments: fragments.into_iter().collect(),
-            part: None,
-        };
-        let xml = docx_engine::generate::runs::inline_runs_xml_with(&runs, &mut options).map_err(|error| error.to_string())?;
-        let mut written: Vec<String> = options.written.into_iter().collect();
-        written.sort();
-        Ok(Some(json!({ "xml": xml, "written": written })))
+    let written: Vec<String> = opt(args, 1)?.unwrap_or_default();
+    let fragments: Vec<(usize, String)> = opt(args, 2)?.unwrap_or_default();
+    let mut options = docx_engine::generate::runs::RunsXmlOptions {
+        written: written.into_iter().collect(),
+        fragments: fragments.into_iter().collect(),
+        part: None,
+    };
+    let xml = docx_engine::generate::runs::inline_runs_xml_with(&runs, &mut options)
+        .map_err(|error| error.to_string())?;
+    let mut written: Vec<String> = options.written.into_iter().collect();
+    written.sort();
+    Ok(Some(json!({ "xml": xml, "written": written })))
 }
 
 fn r_inline_wrap_content_locked(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1020,7 +1090,8 @@ fn r_lazy_media_hash_of(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_lazy_media_placeholder(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = docx_engine::lazy_media::lazy_media_placeholder(&p0).map_err(|error| error.to_string())?;
+    let r =
+        docx_engine::lazy_media::lazy_media_placeholder(&p0).map_err(|error| error.to_string())?;
     Ok(Some(env.put_blob(r)))
 }
 
@@ -1071,7 +1142,8 @@ fn r_math_tokens_of(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_merge_block_tree(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Vec<docx_engine::model::Block> = req(args, 0)?;
     let p1: docx_engine::save::features::mail_merge::MergeData = req(args, 1)?;
-    let r = docx_engine::save::features::mail_merge::merge_block_tree(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::mail_merge::merge_block_tree(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1079,7 +1151,8 @@ fn r_merge_cell_para_format(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::model::ParaFormat = req(args, 1)?;
     let p2: Option<docx_engine::model::ParaFormat> = opt(args, 2)?;
-    let r = docx_engine::generate::props::merge_cell_para_format(&p0, &p1, p2.as_ref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::props::merge_cell_para_format(&p0, &p1, p2.as_ref())
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1092,7 +1165,8 @@ fn r_merge_data_from_rows(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_merge_default_fonts_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::save::parts::style_upsert::DefaultFonts = req(args, 1)?;
-    let r = docx_engine::save::parts::style_upsert::merge_default_fonts_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::parts::style_upsert::merge_default_fonts_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1142,7 +1216,13 @@ fn r_merge_p_pr_format(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: Option<docx_engine::model::ParaFormat> = opt(args, 1)?;
     let p2: Option<docx_engine::model::ParaFormat> = opt(args, 2)?;
     let p3: Option<Vec<String>> = opt(args, 3)?;
-    let r = docx_engine::generate::props::merge_p_pr_format(&p0, p1.as_ref(), p2.as_ref(), p3.as_deref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::props::merge_p_pr_format(
+        &p0,
+        p1.as_ref(),
+        p2.as_ref(),
+        p3.as_deref(),
+    )
+    .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1150,7 +1230,8 @@ fn r_merge_records(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Vec<docx_engine::model::Block> = req(args, 0)?;
     let p1: docx_engine::save::features::mail_merge::MergeData = req(args, 1)?;
     let p2: usize = req(args, 2)?;
-    let r = docx_engine::save::features::mail_merge::merge_records(&p0, &p1, p2).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::mail_merge::merge_records(&p0, &p1, p2)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1158,7 +1239,8 @@ fn r_merge_r_pr_model(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::model::Run = req(args, 1)?;
     let p2: bool = req(args, 2)?;
-    let r = docx_engine::generate::rpr::merge_r_pr_model(&p0, &p1, p2).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::rpr::merge_r_pr_model(&p0, &p1, p2)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1178,7 +1260,8 @@ fn r_merge_style_borders(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_merge_style_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Option<String> = opt(args, 0)?;
     let p1: docx_engine::save::parts::style_upsert::StyleUpsert = req(args, 1)?;
-    let r = docx_engine::save::parts::style_upsert::merge_style_xml(p0.as_deref(), &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::parts::style_upsert::merge_style_xml(p0.as_deref(), &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1197,7 +1280,8 @@ fn r_needs_ooxml_normalization(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_next_content_control_id(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = docx_engine::save::features::content_control::next_content_control_id(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::content_control::next_content_control_id(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1284,31 +1368,33 @@ fn r_para_mark_color(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_para_mark_revision_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let kind: String = req(args, 0)?;
-        let record: Option<String> = opt(args, 1)?;
-        let host = &*env;
-        let failed: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
-        let ask = |name: &str, arguments: Value| -> Value {
-            host.callback(name, &arguments).unwrap_or_else(|error| {
-                failed.borrow_mut().get_or_insert(error);
-                Value::Null
-            })
-        };
-        let mut mint = || -> String {
-            match ask("mintId", json!([])) {
-                Value::String(id) => id,
-                other => other.to_string(),
-            }
-        };
-        let xml = docx_engine::generate::props::para_mark_revision_xml(&kind, record.as_deref(), &mut mint);
-        if let Some(error) = failed.into_inner() {
-            return Err(error);
+    let record: Option<String> = opt(args, 1)?;
+    let host = &*env;
+    let failed: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+    let ask = |name: &str, arguments: Value| -> Value {
+        host.callback(name, &arguments).unwrap_or_else(|error| {
+            failed.borrow_mut().get_or_insert(error);
+            Value::Null
+        })
+    };
+    let mut mint = || -> String {
+        match ask("mintId", json!([])) {
+            Value::String(id) => id,
+            other => other.to_string(),
         }
-        put(xml)
+    };
+    let xml =
+        docx_engine::generate::props::para_mark_revision_xml(&kind, record.as_deref(), &mut mint);
+    if let Some(error) = failed.into_inner() {
+        return Err(error);
+    }
+    put(xml)
 }
 
 fn r_parse_app_properties_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = docx_engine::doc_properties::parse_app_properties_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::doc_properties::parse_app_properties_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1316,13 +1402,15 @@ fn r_parse_chart_part_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: Option<docx_engine::theme::ThemeColors> = opt(args, 2)?;
-    let r = docx_engine::chart::parse_chart_part_xml(&p0, &p1, p2.as_ref()).map_err(|error| error.to_string())?;
+    let r = docx_engine::chart::parse_chart_part_xml(&p0, &p1, p2.as_ref())
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_parse_core_properties_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = docx_engine::doc_properties::parse_core_properties_xml(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::doc_properties::parse_core_properties_xml(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1340,19 +1428,26 @@ fn r_parse_custom_property_types_xml(env: &mut InvokeEnv<'_>, args: &[Value]) ->
 
 fn r_parse_lazy_media_url(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = docx_engine::lazy_media::parse_lazy_media_url(&p0).map_err(|error| error.to_string())?;
+    let r =
+        docx_engine::lazy_media::parse_lazy_media_url(&p0).map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_parse_notes_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let xml: String = req(args, 0)?;
-        let kind: docx_engine::notes::NoteKind = req(args, 1)?;
-        put(docx_engine::parse::text::notes_part::parse_notes_standalone(&xml, kind).map_err(|error| error.to_string())?)
+    let kind: docx_engine::notes::NoteKind = req(args, 1)?;
+    put(
+        docx_engine::parse::text::notes_part::parse_notes_standalone(&xml, kind)
+            .map_err(|error| error.to_string())?,
+    )
 }
 
 fn r_parse_property_changes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let input: Value = req(args, 0)?;
-        put(docx_engine::save::features::doc_properties_write::parse_property_changes(&input)?.to_json())
+    put(
+        docx_engine::save::features::doc_properties_write::parse_property_changes(&input)?
+            .to_json(),
+    )
 }
 
 fn r_parse_protection(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1369,7 +1464,8 @@ fn r_parse_sources_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_parse_write_protection(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = routes::package_of(env, args.get(0).unwrap_or(&Value::Null))?;
-    let r = docx_engine::settings::parse_write_protection(&p0).map_err(|error| error.to_string())?;
+    let r =
+        docx_engine::settings::parse_write_protection(&p0).map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1382,21 +1478,24 @@ fn r_parse_zotero_document_data_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> 
 fn r_part_xml_space_preserve(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = docx_engine::props::part_xml_space_preserve(&p0, &p1).map_err(|error| error.to_string())?;
+    let r =
+        docx_engine::props::part_xml_space_preserve(&p0, &p1).map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_patch_app_properties_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: jscompat::JsObject<Option<String>> = req(args, 1)?;
-    let r = docx_engine::save::features::doc_properties_write::patch_app_properties_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::doc_properties_write::patch_app_properties_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_patch_chart_part_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::save::features::chart_write::ChartPatch = req(args, 1)?;
-    let r = docx_engine::save::features::chart_write::patch_chart_part_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::chart_write::patch_chart_part_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1405,21 +1504,28 @@ fn r_patch_chart_workbook_xlsx_base64(env: &mut InvokeEnv<'_>, args: &[Value]) -
     let p1: Vec<String> = req(args, 1)?;
     let p2: Vec<docx_engine::model::NewChartSeriesItem> = req(args, 2)?;
     let p3 = num(args, 3)?;
-    let r = docx_engine::save::features::chart_write::patch_chart_workbook_xlsx_base64(&p0, &p1, &p2, p3);
+    let r = docx_engine::save::features::chart_write::patch_chart_workbook_xlsx_base64(
+        &p0, &p1, &p2, p3,
+    );
     Ok(Some(to_json(&r)?))
 }
 
 fn r_patch_core_properties_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: jscompat::JsObject<Option<String>> = req(args, 1)?;
-    let r = docx_engine::save::features::doc_properties_write::patch_core_properties_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::doc_properties_write::patch_core_properties_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_patch_custom_properties_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let p1: jscompat::JsObject<Option<docx_engine::save::features::doc_properties_write::PropertyValue>> = req(args, 1)?;
-    let r = docx_engine::save::features::doc_properties_write::patch_custom_properties_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let p1: jscompat::JsObject<
+        Option<docx_engine::save::features::doc_properties_write::PropertyValue>,
+    > = req(args, 1)?;
+    let r =
+        docx_engine::save::features::doc_properties_write::patch_custom_properties_xml(&p0, &p1)
+            .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1441,7 +1547,8 @@ fn r_patch_field_paragraph_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_hf_pictures_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::model::NumberRecord<docx_engine::model::HfPictureEdit> = req(args, 1)?;
-    let r = docx_engine::save::save::run_picture::patch_hf_pictures_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::save::run_picture::patch_hf_pictures_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1470,7 +1577,8 @@ fn r_patch_paragraph_texts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_run_picture_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::save::save::run_picture::RunPictureGeometry = req(args, 1)?;
-    let r = docx_engine::save::save::run_picture::patch_run_picture_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::save::run_picture::patch_run_picture_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1483,8 +1591,10 @@ fn r_patch_shape_styles(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_patch_table_cell_texts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let p1: Vec<Option<Vec<Option<docx_engine::generate::text_patch::CellTextsPatch>>>> = req(args, 1)?;
-    let r = docx_engine::generate::text_patch::patch_table_cell_texts(&p0, &p1).map_err(|error| error.to_string())?;
+    let p1: Vec<Option<Vec<Option<docx_engine::generate::text_patch::CellTextsPatch>>>> =
+        req(args, 1)?;
+    let r = docx_engine::generate::text_patch::patch_table_cell_texts(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1498,7 +1608,8 @@ fn r_patch_textbox_heights(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_textbox_paras(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: docx_engine::generate::text_patch::TextboxParasPatchSet = req(args, 1)?;
-    let r = docx_engine::generate::text_patch::patch_textbox_paras(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::text_patch::patch_textbox_paras(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1512,33 +1623,40 @@ fn r_patch_textbox_sizes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_zotero_document_data_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Option<String> = opt(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = docx_engine::save::features::zotero_doc_props::patch_zotero_document_data_xml(p0.as_deref(), &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::features::zotero_doc_props::patch_zotero_document_data_xml(
+        p0.as_deref(),
+        &p1,
+    )
+    .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_pending_heading_level(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let id: String = req(args, 0)?;
-        let seen_in: Vec<String> = opt(args, 3)?.unwrap_or_default();
-        let mut seen: std::collections::HashSet<String> = seen_in.into_iter().collect();
-        let host = &*env;
-        let failed: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
-        let ask = |name: &str, arguments: Value| -> Value {
-            host.callback(name, &arguments).unwrap_or_else(|error| {
-                failed.borrow_mut().get_or_insert(error);
-                Value::Null
-            })
-        };
-        let pending = |style: &str| -> Option<docx_engine::save::parts::style_upsert::StyleUpsert> {
-            serde_json::from_value(ask("pending", json!([style]))).unwrap_or(None)
-        };
-        let existing = |style: &str| -> Option<docx_engine::save::parts::style_upsert::StyleHeadingInfo> {
+    let seen_in: Vec<String> = opt(args, 3)?.unwrap_or_default();
+    let mut seen: std::collections::HashSet<String> = seen_in.into_iter().collect();
+    let host = &*env;
+    let failed: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+    let ask = |name: &str, arguments: Value| -> Value {
+        host.callback(name, &arguments).unwrap_or_else(|error| {
+            failed.borrow_mut().get_or_insert(error);
+            Value::Null
+        })
+    };
+    let pending = |style: &str| -> Option<docx_engine::save::parts::style_upsert::StyleUpsert> {
+        serde_json::from_value(ask("pending", json!([style]))).unwrap_or(None)
+    };
+    let existing =
+        |style: &str| -> Option<docx_engine::save::parts::style_upsert::StyleHeadingInfo> {
             serde_json::from_value(ask("existing", json!([style]))).unwrap_or(None)
         };
-        let level = docx_engine::save::parts::style_upsert::pending_heading_level(&id, &pending, &existing, &mut seen);
-        if let Some(error) = failed.into_inner() {
-            return Err(error);
-        }
-        put(level)
+    let level = docx_engine::save::parts::style_upsert::pending_heading_level(
+        &id, &pending, &existing, &mut seen,
+    );
+    if let Some(error) = failed.into_inner() {
+        return Err(error);
+    }
+    put(level)
 }
 
 fn r_picture_watermark_preview_image(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1557,13 +1675,15 @@ fn r_placeholder_text(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_plan_remove_parts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = env.blob(args.get(0).unwrap_or(&Value::Null))?;
     let p1: docx_engine::save::parts::remove_parts::RemovePartsOptions = req(args, 1)?;
-    let r = docx_engine::save::parts::remove_parts::plan_remove_parts(p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::save::parts::remove_parts::plan_remove_parts(p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
 fn r_read_document_properties(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = routes::package_of(env, args.get(0).unwrap_or(&Value::Null))?;
-    let r = docx_engine::doc_properties::read_document_properties(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::doc_properties::read_document_properties(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1614,12 +1734,13 @@ fn r_read_watermark_text(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_reconcile_grid_columns(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let spans: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 0)?;
-        let row_tcws: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 1)?;
-        let grid_cols: Option<Vec<jscompat::JsNum>> = opt(args, 2)?;
-        match docx_engine::parse::tables::reconcile_grid_spans(&spans, &row_tcws, grid_cols.as_deref())? {
-            None => Ok(None),
-            Some((spans, widths)) => Ok(Some(json!({ "widths": to_json(&widths)?, "spans": spans }))),
-        }
+    let row_tcws: Vec<Vec<Option<jscompat::JsNum>>> = req(args, 1)?;
+    let grid_cols: Option<Vec<jscompat::JsNum>> = opt(args, 2)?;
+    match docx_engine::parse::tables::reconcile_grid_spans(&spans, &row_tcws, grid_cols.as_deref())?
+    {
+        None => Ok(None),
+        Some((spans, widths)) => Ok(Some(json!({ "widths": to_json(&widths)?, "spans": spans }))),
+    }
 }
 
 fn r_remove_elements(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1666,7 +1787,8 @@ fn r_resolve_ctx_of(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_resolve_main_document_path(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = routes::package_of(env, args.get(0).unwrap_or(&Value::Null))?;
-    let r = docx_engine::package::resolve_main_document_path(&p0).map_err(|error| error.to_string())?;
+    let r =
+        docx_engine::package::resolve_main_document_path(&p0).map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1674,7 +1796,8 @@ fn r_resolve_paragraph_props(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = oxnode(args, 0)?;
     let p1: docx_engine::resolve::ResolveCtx = req(args, 1)?;
     let p2: docx_engine::resolve::ResolveParaOptions = req(args, 2)?;
-    let r = docx_engine::resolve::resolve_paragraph_props(p0.as_ref(), &p1, p2).map_err(|error| error.to_string())?;
+    let r = docx_engine::resolve::resolve_paragraph_props(p0.as_ref(), &p1, p2)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1682,7 +1805,8 @@ fn r_resolve_paragraph_props_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out
     let p0: String = req(args, 0)?;
     let p1: docx_engine::resolve::ResolveCtx = req(args, 1)?;
     let p2: docx_engine::resolve::ResolveParaOptions = req(args, 2)?;
-    let r = docx_engine::resolve::resolve_paragraph_props_xml(&p0, &p1, p2).map_err(|error| error.to_string())?;
+    let r = docx_engine::resolve::resolve_paragraph_props_xml(&p0, &p1, p2)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1719,7 +1843,10 @@ fn r_resolve_run_props(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 }
 
 fn r_resolve_spin_count(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
-    put(jscompat::JsNum(docx_engine::protection::resolve_spin_count(&spin_count(args.first())).map_err(|error| error.to_string())?))
+    put(jscompat::JsNum(
+        docx_engine::protection::resolve_spin_count(&spin_count(args.first()))
+            .map_err(|error| error.to_string())?,
+    ))
 }
 
 fn r_revision_date_before(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1734,7 +1861,8 @@ fn r_root_attributes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: Vec<(String, String)> = req(args, 3)?;
-    let r = docx_engine::notes::root_attributes(p0.as_deref(), &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = docx_engine::notes::root_attributes(p0.as_deref(), &p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1746,7 +1874,8 @@ fn r_run_copied_elsewhere(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_run_picture_anchor_of(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = docx_engine::parse::drawings::image::run_picture_anchor_of(&p0).map_err(|error| error.to_string())?;
+    let r = docx_engine::parse::drawings::image::run_picture_anchor_of(&p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1803,7 +1932,8 @@ fn r_set_para_mark_revision(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_set_p_pr_change(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = docx_engine::generate::props::set_p_pr_change(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = docx_engine::generate::props::set_p_pr_change(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1959,14 +2089,17 @@ fn r_value_of(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_verify_protection_password(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let password: String = req(args, 0)?;
-        let record = args.get(1).ok_or("TypeError: protection is missing")?;
-        let record = docx_engine::protection::ProtectionRecord {
-            hash: field(record, "hash")?,
-            salt: field(record, "salt")?,
-            spin_count: spin_count(record.get("spinCount")),
-            algorithm_sid: field(record, "algorithmSid")?,
-        };
-        put(docx_engine::protection::verify_protection_password(&password, &record).map_err(|error| error.to_string())?)
+    let record = args.get(1).ok_or("TypeError: protection is missing")?;
+    let record = docx_engine::protection::ProtectionRecord {
+        hash: field(record, "hash")?,
+        salt: field(record, "salt")?,
+        spin_count: spin_count(record.get("spinCount")),
+        algorithm_sid: field(record, "algorithmSid")?,
+    };
+    put(
+        docx_engine::protection::verify_protection_password(&password, &record)
+            .map_err(|error| error.to_string())?,
+    )
 }
 
 fn r_vml_color_hex(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {

@@ -78,14 +78,19 @@ fn onums(args: &[Value], index: usize) -> Result<Vec<Option<f64>>, String> {
         .iter()
         .map(|item| match item {
             Value::Null => Ok(None),
-            item => jscompat::js_f64(item).map(Some).map_err(|error| format!("TypeError: argument {index}: {error}")),
+            item => jscompat::js_f64(item)
+                .map(Some)
+                .map_err(|error| format!("TypeError: argument {index}: {error}")),
         })
         .collect()
 }
 
 /// A list of numbers; a `null` item is NaN.
 fn nums(args: &[Value], index: usize) -> Result<Vec<f64>, String> {
-    Ok(onums(args, index)?.into_iter().map(|item| item.unwrap_or(f64::NAN)).collect())
+    Ok(onums(args, index)?
+        .into_iter()
+        .map(|item| item.unwrap_or(f64::NAN))
+        .collect())
 }
 
 fn to_json(value: &impl Serialize) -> Result<Value, String> {
@@ -391,8 +396,12 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
         "writeChartWorkbook" => r_write_chart_workbook(env, args),
         "PackageArchive.open" => pptx_routes::package_archive_open(env, args),
         "PackageArchive.readRels" => pptx_routes::package_archive_read_rels(env, args),
-        "PackageArchive.readPresentation" => pptx_routes::package_archive_read_presentation(env, args),
-        "PackageArchive.resolveSlideChain" => pptx_routes::package_archive_resolve_slide_chain(env, args),
+        "PackageArchive.readPresentation" => {
+            pptx_routes::package_archive_read_presentation(env, args)
+        }
+        "PackageArchive.resolveSlideChain" => {
+            pptx_routes::package_archive_resolve_slide_chain(env, args)
+        }
         _ => Err(format!("no function {name}")),
     }
 }
@@ -402,16 +411,21 @@ fn r_add_chart(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::chart_insert::NewChartOptions = req(args, 2)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::chart_insert::add_chart(&mut p0.opened, p1, &p2, &uuid).map_err(|error| error.to_string())?;
+    let r = pptx_engine::chart_insert::add_chart(&mut p0.opened, p1, &p2, &uuid)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_element(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: pptx_engine::insert::NewElementOptions = req(args, 1)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::insert::add_element(&mut p0, &p1, &uuid, env.now_ms).map_err(|error| error.to_string())?;
+    let r = pptx_engine::insert::add_element(&mut p0, &p1, &uuid, env.now_ms)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -421,9 +435,13 @@ fn r_add_image_media_and_rel(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2 = env.blob(args.get(2).unwrap_or(&Value::Null))?;
     let p3: String = req(args, 3)?;
-    let r = pptx_engine::insert::add_image_media_and_rel(&mut p0.opened, p1, p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::insert::add_image_media_and_rel(&mut p0.opened, p1, p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_media(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -431,9 +449,13 @@ fn r_add_media(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::media_insert::NewMediaOptions = req(args, 2)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::media_insert::add_media(&mut p0.opened, p1, &p2, &uuid).map_err(|error| error.to_string())?;
+    let r = pptx_engine::media_insert::add_media(&mut p0.opened, p1, &p2, &uuid)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_model3d(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -441,9 +463,13 @@ fn r_add_model3d(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::media_insert::NewModel3dOptions = req(args, 2)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::media_insert::add_model3d(&mut p0.opened, p1, &p2, &uuid).map_err(|error| error.to_string())?;
+    let r = pptx_engine::media_insert::add_model3d(&mut p0.opened, p1, &p2, &uuid)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_narration(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -451,9 +477,13 @@ fn r_add_narration(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::narration::NarrationAudio = req(args, 2)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::narration::add_narration(&mut p0.opened, p1, &p2, &uuid).map_err(|error| error.to_string())?;
+    let r = pptx_engine::narration::add_narration(&mut p0.opened, p1, &p2, &uuid)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_picture(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -461,9 +491,13 @@ fn r_add_picture(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::insert::NewPictureOptions = req(args, 2)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::insert::add_picture(&mut p0.opened, p1, &p2, &uuid, env.now_ms).map_err(|error| error.to_string())?;
+    let r = pptx_engine::insert::add_picture(&mut p0.opened, p1, &p2, &uuid, env.now_ms)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_section(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -471,9 +505,13 @@ fn r_add_section(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1 = num(args, 1)?;
     let p2: String = req(args, 2)?;
     let mut uuids = || jscompat::random_uuid();
-    let r = pptx_engine::sections::add_section(&mut p0.opened, p1, &p2, &mut uuids).map_err(|error| error.to_string())?;
+    let r = pptx_engine::sections::add_section(&mut p0.opened, p1, &p2, &mut uuids)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_slide_comment(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -481,9 +519,13 @@ fn r_add_slide_comment(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::comments::SlideCommentOptions = req(args, 2)?;
     let p3: String = req(args, 3)?;
-    let r = pptx_engine::comments::add_slide_comment(&mut p0.opened, p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::comments::add_slide_comment(&mut p0.opened, p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_smart_art(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -491,18 +533,26 @@ fn r_add_smart_art(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::smartart::NewSmartArtOptions = req(args, 2)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::smartart::add_smart_art(&mut p0.opened, p1, &p2, &uuid).map_err(|error| error.to_string())?;
+    let r = pptx_engine::smartart::add_smart_art(&mut p0.opened, p1, &p2, &uuid)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_add_table(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::insert::NewTableOptions = req(args, 2)?;
-    let r = pptx_engine::deck::add_table(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::deck::add_table(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_align_rects(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -516,7 +566,8 @@ fn r_align_rects(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_alternate_content_branches(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = pptx_engine::generate::alternate_content_branches(&p0).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::alternate_content_branches(&p0)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -532,9 +583,13 @@ fn r_append_raw_elements(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: Vec<String> = req(args, 2)?;
-    let r = pptx_engine::deck::append_raw_elements(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::append_raw_elements(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_apply_color_mods(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -556,10 +611,22 @@ fn r_apply_format(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_apply_header_footer(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: pptx_engine::headerfooter::HeaderFooterOptions = req(args, 1)?;
-    let p2 = match args.get(2) { None | Some(Value::Null) => None, Some(_) => Some(nums(args, 2)?) };
-    let r = pptx_engine::headerfooter::apply_header_footer(&mut p0.opened, &p1, p2.as_deref(), env.now_ms).map_err(|error| error.to_string())?;
+    let p2 = match args.get(2) {
+        None | Some(Value::Null) => None,
+        Some(_) => Some(nums(args, 2)?),
+    };
+    let r = pptx_engine::headerfooter::apply_header_footer(
+        &mut p0.opened,
+        &p1,
+        p2.as_deref(),
+        env.now_ms,
+    )
+    .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_apply_paragraph_format(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -575,13 +642,20 @@ fn r_apply_theme_to_archive(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: pptx_engine::theme_apply::ThemeSpec = req(args, 1)?;
     let r = pptx_engine::theme_apply::apply_theme_to_archive(&mut p0.archive, &p1);
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_assert_zip_within_limits(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let declared = pptx_routes::declared_parts(at(args, 0))?;
-    let files: Vec<ooxml_pkg::DeclaredPart<'_>> = declared.iter().map(|(name, size)| ooxml_pkg::DeclaredPart { name, usize: *size }).collect();
-    let r = pptx_engine::zip::assert_zip_within_limits(&files).map_err(|error| error.to_string())?;
+    let files: Vec<ooxml_pkg::DeclaredPart<'_>> = declared
+        .iter()
+        .map(|(name, size)| ooxml_pkg::DeclaredPart { name, usize: *size })
+        .collect();
+    let r =
+        pptx_engine::zip::assert_zip_within_limits(&files).map_err(|error| error.to_string())?;
     Ok(Some(pptx::answer(None, vec![])))
 }
 
@@ -705,7 +779,8 @@ fn r_chart_workbook_parts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_chart_workbook_xlsx(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: pptx_engine::chart_workbook::ChartWorkbookData = req(args, 0)?;
-    let r = pptx_engine::chart_workbook::chart_workbook_xlsx(&p0).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::chart_workbook::chart_workbook_xlsx(&p0).map_err(|error| error.to_string())?;
     Ok(Some(pptx::answer(Some(env.put_blob(r)), vec![])))
 }
 
@@ -713,7 +788,8 @@ fn r_choose_layout(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: pptx_engine::slide_transfer::SlideBundle = req(args, 1)?;
     let p2: Option<String> = opt(args, 2)?;
-    let r = pptx_engine::slide_transfer::choose_layout(&p0.archive, &p1, p2.as_deref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::slide_transfer::choose_layout(&p0.archive, &p1, p2.as_deref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -732,17 +808,30 @@ fn r_cleanup_superseded_slide_resources(env: &mut InvokeEnv<'_>, args: &[Value])
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: String = req(args, 3)?;
-    let r = pptx_engine::resource_cleanup::cleanup_superseded_slide_resources(&mut p0.opened, p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::resource_cleanup::cleanup_superseded_slide_resources(
+        &mut p0.opened,
+        p1,
+        &p2,
+        &p3,
+    )
+    .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_clear_narration(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
-    let r = pptx_engine::narration::clear_narration(&mut p0.opened, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::narration::clear_narration(&mut p0.opened, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_c_nv_pr_ids_in_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -762,15 +851,20 @@ fn r_collect_part(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let mut p2: jscompat::JsObject<String> = req(args, 2)?;
     let mut p3: jscompat::JsObject<String> = req(args, 3)?;
-    let r = pptx_engine::slide_transfer::collect_part(&p0.archive, &p1, &mut p2, &mut p3).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(None, vec![(2, to_json(&p2)?), (3, to_json(&p3)?)])))
+    let r = pptx_engine::slide_transfer::collect_part(&p0.archive, &p1, &mut p2, &mut p3)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(pptx::answer(
+        None,
+        vec![(2, to_json(&p2)?), (3, to_json(&p3)?)],
+    )))
 }
 
 fn r_collect_slide_bundle(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::slide_transfer::collect_slide_bundle(&p0.archive, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::slide_transfer::collect_slide_bundle(&p0.archive, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -778,7 +872,10 @@ fn r_collect_slide_bundle(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_commit_saved(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let r = pptx_engine::deck::commit_saved(&mut p0.opened);
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_connection_site_for_side(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -793,17 +890,25 @@ fn r_copy_element_data(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: usize = req(args, 2)?;
-    let r = pptx_engine::deck::clipboard::copy_element_data(&mut p0.opened, p1, p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::clipboard::copy_element_data(&mut p0.opened, p1, p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_copy_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
-    let r = pptx_engine::deck::slides::copy_slide(&mut p0.opened, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::copy_slide(&mut p0.opened, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_create_blank_pptx(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -844,26 +949,38 @@ fn r_delete_element(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::insert::delete_element(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::insert::delete_element(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_delete_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
-    let r = pptx_engine::deck::slides::delete_slide(&mut p0.opened, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::delete_slide(&mut p0.opened, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_delete_slide_comment(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::comments::SlideCommentRef = req(args, 2)?;
-    let r = pptx_engine::comments::delete_slide_comment(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::comments::delete_slide_comment(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_distribute_rects(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -878,9 +995,13 @@ fn r_duplicate_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
     let p2: Option<pptx_engine::deck::slides::DuplicateSlideOptions> = opt(args, 2)?;
-    let r = pptx_engine::deck::slides::duplicate_slide(&mut p0.opened, p1, p2.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::duplicate_slide(&mut p0.opened, p1, p2.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_ea_script_of_lang(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -895,9 +1016,13 @@ fn r_edit_chart_element(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::charts::ChartEditPatch = req(args, 3)?;
-    let r = pptx_engine::deck::charts::edit_chart_element(&mut p0.opened, p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::charts::edit_chart_element(&mut p0.opened, p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_edit_group_child_fill(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -905,7 +1030,8 @@ fn r_edit_group_child_fill(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::generate::FillPatch = req(args, 3)?;
-    let r = pptx_engine::deck::groups::edit_group_child_fill(&mut p0, &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::groups::edit_group_child_fill(&mut p0, &p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -915,7 +1041,8 @@ fn r_edit_group_child_stroke(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: Option<pptx_engine::generate::StrokePatch> = opt(args, 3)?;
-    let r = pptx_engine::deck::groups::edit_group_child_stroke(&mut p0, &p1, &p2, p3.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::groups::edit_group_child_stroke(&mut p0, &p1, &p2, p3.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -926,7 +1053,8 @@ fn r_edit_group_child_transform(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out 
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::types::EmuRect = req(args, 3)?;
     let p4 = num(args, 4)?;
-    let r = pptx_engine::deck::groups::edit_group_child_transform(&mut p0, &p1, &p2, p3, p4).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::groups::edit_group_child_transform(&mut p0, &p1, &p2, p3, p4)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -956,9 +1084,13 @@ fn r_edit_table_structure(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::tables::TableStructureOp = req(args, 3)?;
-    let r = pptx_engine::deck::tables::edit_table_structure(&mut p0.opened, p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::tables::edit_table_structure(&mut p0.opened, p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_edit_table_style(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1002,15 +1134,20 @@ fn r_ensure_builtin_layout(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: pptx_engine::types::SlideSize = req(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::builtin_layouts::ensure_builtin_layout(&mut p0.archive, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::builtin_layouts::ensure_builtin_layout(&mut p0.archive, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_ensure_creation_id(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::SlideElement = req(args, 0)?;
     let uuid = jscompat::random_uuid();
-    let r = pptx_engine::identity::ensure_creation_id(&mut p0, &uuid).map_err(|error| error.to_string())?;
+    let r = pptx_engine::identity::ensure_creation_id(&mut p0, &uuid)
+        .map_err(|error| error.to_string())?;
     Ok(Some(pptx::answer(None, vec![(0, to_json(&p0)?)])))
 }
 
@@ -1020,7 +1157,10 @@ fn r_ensure_run_link_rels(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p2: Vec<pptx_engine::types::Paragraph> = req(args, 2)?;
     let r = pptx_engine::hyperlink::ensure_run_link_rels(&mut p0.opened, p1, &mut p2);
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?), (2, to_json(&p2)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?), (2, to_json(&p2)?)],
+    )))
 }
 
 fn r_ensure_table_style_part(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1028,7 +1168,10 @@ fn r_ensure_table_style_part(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let r = pptx_engine::deck::tables::ensure_table_style_part(&mut p0.opened, &p1, &p2);
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_ensure_table_style_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1043,7 +1186,13 @@ fn r_ensure_table_style_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_eot_to_sfnt(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = env.blob(args.get(0).unwrap_or(&Value::Null))?;
     let r = pptx_engine::embedded_fonts::eot_to_sfnt(p0);
-    Ok(Some(pptx::answer(Some(match r { Some(bytes) => env.put_blob(bytes), None => Value::Null }), vec![])))
+    Ok(Some(pptx::answer(
+        Some(match r {
+            Some(bytes) => env.put_blob(bytes),
+            None => Value::Null,
+        }),
+        vec![],
+    )))
 }
 
 fn r_escape_xml_attr(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1108,7 +1257,11 @@ fn r_find_table_element_in_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out
     let p0: pptx_engine::table_edit::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let r = pptx_engine::table_edit::find_table_element_in_slide(&p0, &p1);
-    let found = r.and_then(|found| p0.elements.iter().position(|element| std::ptr::eq(element, found)));
+    let found = r.and_then(|found| {
+        p0.elements
+            .iter()
+            .position(|element| std::ptr::eq(element, found))
+    });
     reply(found)
 }
 
@@ -1139,7 +1292,8 @@ fn r_get_element_link(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::hyperlink::get_element_link(&p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::hyperlink::get_element_link(&p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1147,7 +1301,8 @@ fn r_get_element_link(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_get_run_links(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
-    let r = pptx_engine::hyperlink::get_run_links(&p0.opened, p1).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::hyperlink::get_run_links(&p0.opened, p1).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1155,7 +1310,8 @@ fn r_get_run_links(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_get_sections(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_opened(env, at(args, 0))?;
     let mut uuids = || jscompat::random_uuid();
-    let r = pptx_engine::sections::get_sections(&p0.opened, &mut uuids).map_err(|error| error.to_string())?;
+    let r = pptx_engine::sections::get_sections(&p0.opened, &mut uuids)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1177,7 +1333,8 @@ fn r_get_slide_animations(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_get_slide_comments(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::comments::get_slide_comments(&p0.archive, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::comments::get_slide_comments(&p0.archive, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1192,7 +1349,8 @@ fn r_get_slide_hidden(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_get_slide_links(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
-    let r = pptx_engine::hyperlink::get_slide_links(&p0.opened, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::hyperlink::get_slide_links(&p0.opened, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1200,7 +1358,8 @@ fn r_get_slide_links(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_get_slide_notes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::notes::get_slide_notes(&p0.archive, &p1).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::notes::get_slide_notes(&p0.archive, &p1).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1222,14 +1381,16 @@ fn r_glb_bounds(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_group_child_durable_id(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: pptx_engine::types::SlideElement = req(args, 0)?;
     let p1: pptx_engine::types::SlideElement = req(args, 1)?;
-    let r = pptx_engine::identity::group_child_durable_id(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::identity::group_child_durable_id(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
 
 fn r_group_child_slices(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = pptx_engine::deck::groups::group_child_slices(&p0).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::deck::groups::group_child_slices(&p0).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1238,9 +1399,13 @@ fn r_group_elements(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: Vec<String> = req(args, 2)?;
-    let r = pptx_engine::deck::groups::group_elements(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::groups::group_elements(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_hangul_lang(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1268,7 +1433,8 @@ fn r_has_default_for(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_has_redact_ext_in(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = pptx_engine::redaction_xml::has_redact_ext_in(&p0).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::redaction_xml::has_redact_ext_in(&p0).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1277,34 +1443,50 @@ fn r_import_clipboard_parts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: jscompat::JsObject<String> = req(args, 1)?;
     let p2: jscompat::JsObject<String> = req(args, 2)?;
-    let r = pptx_engine::slide_transfer::import_clipboard_parts(&mut p0.archive, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::slide_transfer::import_clipboard_parts(&mut p0.archive, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_import_source_layout(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: pptx_engine::slide_transfer::SlideBundle = req(args, 1)?;
-    let r = pptx_engine::slide_transfer::import_source_layout(&mut p0.archive, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::slide_transfer::import_source_layout(&mut p0.archive, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_insert_blank_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
-    let r = pptx_engine::deck::slides::insert_blank_slide(&mut p0.opened, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::insert_blank_slide(&mut p0.opened, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_insert_slide_with_layout(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::deck::slides::insert_slide_with_layout(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::insert_slide_with_layout(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_is_background_like_element(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1352,7 +1534,15 @@ fn r_layout_diagram_fallback(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p6: Option<String> = opt(args, 6)?;
     let data: pptx_engine::parse::ParseContextData = opt(args, 1)?.unwrap_or_default();
     let uids = pptx::uids();
-    let r = pptx_engine::parse::layout_diagram_fallback(&p0, &data.context(&uids), p2, p3, p4.as_deref(), p5.as_deref(), p6.as_deref());
+    let r = pptx_engine::parse::layout_diagram_fallback(
+        &p0,
+        &data.context(&uids),
+        p2,
+        p3,
+        p4.as_deref(),
+        p5.as_deref(),
+        p6.as_deref(),
+    );
     pptx::keep_uids(&uids);
     reply(r?)
 }
@@ -1397,7 +1587,8 @@ fn r_list_layouts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_list_master_parts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
-    let r = pptx_engine::master_edit::list_master_parts(&p0.archive).map_err(|error| error.to_string())?;
+    let r = pptx_engine::master_edit::list_master_parts(&p0.archive)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1420,7 +1611,8 @@ fn r_mark_chart_editable(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_matches_element_ref(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: pptx_engine::types::SlideElement = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::identity::matches_element_ref(&p0, &p1).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::identity::matches_element_ref(&p0, &p1).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1428,9 +1620,13 @@ fn r_matches_element_ref(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_materialize_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
-    let r = pptx_engine::deck::materialize_slide(&mut p0.opened, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::materialize_slide(&mut p0.opened, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_materialize_slide_bundle(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1438,9 +1634,13 @@ fn r_materialize_slide_bundle(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: pptx_engine::slide_transfer::SlideBundle = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: String = req(args, 3)?;
-    let r = pptx_engine::slide_transfer::materialize_slide_bundle(&mut p0.archive, &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::slide_transfer::materialize_slide_bundle(&mut p0.archive, &p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_max_relationship_id_number(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1454,20 +1654,32 @@ fn r_merge_slide_from_pptx(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = env.blob(args.get(1).unwrap_or(&Value::Null))?;
     let layout_from: Option<String> = field(at(args, 2), "layoutFrom")?;
-    let options = pptx_engine::deck::MergeSlideOptions { layout_from: layout_from.as_deref() };
-    let r = pptx_engine::deck::slides::merge_slide_from_pptx(&mut p0.opened, p1, &options).map_err(|error| error.to_string())?;
+    let options = pptx_engine::deck::MergeSlideOptions {
+        layout_from: layout_from.as_deref(),
+    };
+    let r = pptx_engine::deck::slides::merge_slide_from_pptx(&mut p0.opened, p1, &options)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_merge_slide_from_source(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: pptx_engine::deck::slides::MergeSlideSource = req(args, 1)?;
     let layout_from: Option<String> = field(at(args, 2), "layoutFrom")?;
-    let options = pptx_engine::deck::MergeSlideOptions { layout_from: layout_from.as_deref() };
-    let r = pptx_engine::deck::slides::merge_slide_from_source(&mut p0.opened, &p1, &options).map_err(|error| error.to_string())?;
+    let options = pptx_engine::deck::MergeSlideOptions {
+        layout_from: layout_from.as_deref(),
+    };
+    let r = pptx_engine::deck::slides::merge_slide_from_source(&mut p0.opened, &p1, &options)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_merge_table_cells(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1475,9 +1687,13 @@ fn r_merge_table_cells(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::tables::TableMergeOp = req(args, 3)?;
-    let r = pptx_engine::deck::tables::merge_table_cells(&mut p0.opened, p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::tables::merge_table_cells(&mut p0.opened, p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_merge_text_style_chain(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1516,9 +1732,13 @@ fn r_move_section(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: pptx_engine::sections::SectionDirection = req(args, 2)?;
     let mut uuids = || jscompat::random_uuid();
-    let r = pptx_engine::sections::move_section(&mut p0.opened, &p1, p2, &mut uuids).map_err(|error| error.to_string())?;
+    let r = pptx_engine::sections::move_section(&mut p0.opened, &p1, p2, &mut uuids)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_move_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1526,9 +1746,13 @@ fn r_move_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1 = num(args, 1)?;
     let p2 = num(args, 2)?;
     let mut uuids = || jscompat::random_uuid();
-    let r = pptx_engine::sections::move_slide(&mut p0.opened, p1, p2, &mut uuids).map_err(|error| error.to_string())?;
+    let r = pptx_engine::sections::move_slide(&mut p0.opened, p1, p2, &mut uuids)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_named_action_attr(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1577,7 +1801,8 @@ fn r_normalize_sections(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_notes_path_for_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::notes::notes_path_for_slide(&p0.archive, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::notes::notes_path_for_slide(&p0.archive, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1601,7 +1826,8 @@ fn r_parse_background(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_parse_chart_ex_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<pptx_engine::theme::Theme> = opt(args, 1)?;
-    let r = pptx_engine::chartex::parse_chart_ex_xml(&p0, p1.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::chartex::parse_chart_ex_xml(&p0, p1.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1610,8 +1836,15 @@ fn r_parse_chart_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<pptx_engine::theme::Theme> = opt(args, 1)?;
     let ask = pptx_routes::Ask::new(env);
-    let resolve = |node: Option<&Value>| -> Option<pptx_engine::types::Fill> { serde_json::from_value(ask.ask("resolveFill", json!([node]))).unwrap_or(None) };
-    let resolve_fill: Option<&dyn Fn(Option<&Value>) -> Option<pptx_engine::types::Fill>> = if matches!(at(args, 2), Value::Object(_)) { Some(&resolve) } else { None };
+    let resolve = |node: Option<&Value>| -> Option<pptx_engine::types::Fill> {
+        serde_json::from_value(ask.ask("resolveFill", json!([node]))).unwrap_or(None)
+    };
+    let resolve_fill: Option<&dyn Fn(Option<&Value>) -> Option<pptx_engine::types::Fill>> =
+        if matches!(at(args, 2), Value::Object(_)) {
+            Some(&resolve)
+        } else {
+            None
+        };
     let r = pptx_engine::chart::parse_chart_xml(&p0, p1.as_ref(), resolve_fill);
     ask.finish()?;
     reply(r?)
@@ -1630,7 +1863,8 @@ fn r_parse_cust_geom(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1 = num(args, 1)?;
     let p2 = num(args, 2)?;
-    let r = pptx_engine::custgeom::parse_cust_geom(&p0, p1, p2).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::custgeom::parse_cust_geom(&p0, p1, p2).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1673,8 +1907,12 @@ fn r_parse_lst_style_levels(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let source_arg = at(args, 2);
     let media_rels: Option<jscompat::JsMap<String>> = field(source_arg, "mediaRels")?;
     let foreign_part: Option<bool> = field(source_arg, "foreignPart")?;
-    let source = (!source_arg.is_null()).then(|| pptx_engine::placeholder::LstStyleSource { media_rels: media_rels.as_ref(), foreign_part: foreign_part.unwrap_or(false) });
-    let r = pptx_engine::placeholder::parse_lst_style_levels(p0.as_ref(), p1.as_ref(), source.as_ref());
+    let source = (!source_arg.is_null()).then(|| pptx_engine::placeholder::LstStyleSource {
+        media_rels: media_rels.as_ref(),
+        foreign_part: foreign_part.unwrap_or(false),
+    });
+    let r =
+        pptx_engine::placeholder::parse_lst_style_levels(p0.as_ref(), p1.as_ref(), source.as_ref());
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1683,7 +1921,8 @@ fn r_parse_master_part(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: String = req(args, 1)?;
     let uids = pptx::uids();
-    let r = pptx_engine::master_edit::parse_master_part(&p0.archive, &p1, &uids).map_err(|error| error.to_string())?;
+    let r = pptx_engine::master_edit::parse_master_part(&p0.archive, &p1, &uids)
+        .map_err(|error| error.to_string())?;
     pptx::keep_uids(&uids);
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
@@ -1710,12 +1949,19 @@ fn r_parse_placeholder_map(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_parse_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let input = at(args, 0);
     let path: String = field(input, "path")?.ok_or("TypeError: input.path is missing")?;
-    let slide_xml: String = field(input, "slideXml")?.ok_or("TypeError: input.slideXml is missing")?;
+    let slide_xml: String =
+        field(input, "slideXml")?.ok_or("TypeError: input.slideXml is missing")?;
     let layout_path: Option<String> = field(input, "layoutPath")?;
     let master_path: Option<String> = field(input, "masterPath")?;
     let data: pptx_engine::parse::ParseContextData = field(input, "ctx")?.unwrap_or_default();
     let uids = pptx::uids();
-    let r = pptx_engine::parse::parse_slide(pptx_engine::parse::SlideParseInput { path: &path, slide_xml: &slide_xml, layout_path: layout_path.as_deref(), master_path: master_path.as_deref(), ctx: data.context(&uids) });
+    let r = pptx_engine::parse::parse_slide(pptx_engine::parse::SlideParseInput {
+        path: &path,
+        slide_xml: &slide_xml,
+        layout_path: layout_path.as_deref(),
+        master_path: master_path.as_deref(),
+        ctx: data.context(&uids),
+    });
     pptx::keep_uids(&uids);
     reply(r?)
 }
@@ -1732,9 +1978,13 @@ fn r_paste_elements(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: Vec<pptx_engine::deck::clipboard::ElementClipboardItem> = req(args, 2)?;
     let p3: pptx_engine::deck::clipboard::ShiftEmu = req(args, 3)?;
-    let r = pptx_engine::deck::clipboard::paste_elements(&mut p0.opened, p1, &p2, p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::clipboard::paste_elements(&mut p0.opened, p1, &p2, p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_paste_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1742,9 +1992,13 @@ fn r_paste_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1 = num(args, 1)?;
     let p2: pptx_engine::slide_transfer::SlideBundle = req(args, 2)?;
     let p3: Option<pptx_engine::deck::slides::PasteSlideOptions> = opt(args, 3)?;
-    let r = pptx_engine::deck::slides::paste_slide(&mut p0.opened, p1, &p2, p3.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::paste_slide(&mut p0.opened, p1, &p2, p3.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_patch_body_pr_autofit(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1766,7 +2020,8 @@ fn r_patched_element_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_element_fill(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: pptx_engine::generate::FillPatch = req(args, 1)?;
-    let r = pptx_engine::generate::patch_element_fill(&p0, &p1).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::generate::patch_element_fill(&p0, &p1).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1775,7 +2030,8 @@ fn r_patch_element_p_pr(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: pptx_engine::types::TextElement = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: pptx_engine::types::PPrDirty = req(args, 2)?;
-    let r = pptx_engine::generate::patch_element_p_pr(&p0, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::patch_element_p_pr(&p0, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1783,7 +2039,8 @@ fn r_patch_element_p_pr(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_element_stroke(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<pptx_engine::generate::StrokePatch> = opt(args, 1)?;
-    let r = pptx_engine::generate::patch_element_stroke(&p0, p1.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::patch_element_stroke(&p0, p1.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1800,7 +2057,8 @@ fn r_patch_group_child_text(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: pptx_engine::types::TextElement = req(args, 2)?;
-    let r = pptx_engine::deck::groups::patch_group_child_text(&mut p0, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::groups::patch_group_child_text(&mut p0, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -1825,7 +2083,8 @@ fn r_patch_paragraph_p_pr_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: pptx_engine::types::Paragraph = req(args, 1)?;
     let p2: pptx_engine::types::PPrDirty = req(args, 2)?;
-    let r = pptx_engine::generate::patch_paragraph_p_pr_xml(&p0, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::patch_paragraph_p_pr_xml(&p0, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1833,7 +2092,8 @@ fn r_patch_paragraph_p_pr_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_picture_src_rect(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Option<pptx_engine::types::Insets> = opt(args, 1)?;
-    let r = pptx_engine::generate::patch_picture_src_rect(&p0, p1.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::patch_picture_src_rect(&p0, p1.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1865,7 +2125,8 @@ fn r_patch_slide_hidden_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_slide_show_master_sp_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: bool = req(args, 1)?;
-    let r = pptx_engine::generate::patch_slide_show_master_sp_xml(&p0, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::patch_slide_show_master_sp_xml(&p0, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1883,7 +2144,8 @@ fn r_patch_slide_timing_incremental_xml(env: &mut InvokeEnv<'_>, args: &[Value])
 fn r_patch_slide_timing_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: Vec<pptx_engine::animation::SlideAnimation> = req(args, 1)?;
-    let r = pptx_engine::animation::patch_slide_timing_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::animation::patch_slide_timing_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1914,7 +2176,8 @@ fn r_patch_table_style_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_patch_text_element_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: pptx_engine::types::TextElement = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::generate::patch_text_element_xml(&p0, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::patch_text_element_xml(&p0, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1939,7 +2202,13 @@ fn r_placeholder_style_chain(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p3: Option<String> = opt(args, 3)?;
     let p4: Option<String> = opt(args, 4)?;
     let tables = pptx_routes::tables(at(args, 0), at(args, 1), Some(at(args, 2)))?;
-    let r = pptx_engine::placeholder::placeholder_style_chain(tables.layout_placeholders.as_ref(), tables.master_placeholders.as_ref(), tables.master_text_styles.as_ref(), p3.as_deref(), p4.as_deref());
+    let r = pptx_engine::placeholder::placeholder_style_chain(
+        tables.layout_placeholders.as_ref(),
+        tables.master_placeholders.as_ref(),
+        tables.master_text_styles.as_ref(),
+        p3.as_deref(),
+        p4.as_deref(),
+    );
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -1949,9 +2218,13 @@ fn r_prepare_insert_slide_with_layout(env: &mut InvokeEnv<'_>, args: &[Value]) -
     let p1: pptx_engine::types::SlideDeck = req(args, 1)?;
     let p2: usize = req(args, 2)?;
     let p3: String = req(args, 3)?;
-    let r = pptx_engine::layout::prepare_insert_slide_with_layout(&mut p0.archive, &p1, p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::layout::prepare_insert_slide_with_layout(&mut p0.archive, &p1, p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_promote_slide_background(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -1965,7 +2238,8 @@ fn r_promote_slide_background(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_prune_timing_for_spids(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1 = nums(args, 1)?;
-    let r = pptx_engine::animation::prune_timing_for_spids(&mut p0, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::animation::prune_timing_for_spids(&mut p0, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2062,15 +2336,22 @@ fn r_remap_deck_colors(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p2: pptx_engine::theme_apply::ThemeSpec = req(args, 2)?;
     let r = pptx_engine::theme_apply::remap_deck_colors(&mut p0.archive, &p1, &p2);
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_remove_part_with_owned_resources(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_archive(env, at(args, 0))?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::resource_cleanup::remove_part_with_owned_resources(&mut p0.archive, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::resource_cleanup::remove_part_with_owned_resources(&mut p0.archive, &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_remove_section(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2078,9 +2359,13 @@ fn r_remove_section(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: Option<pptx_engine::sections::RemoveSectionOptions> = opt(args, 2)?;
     let mut uuids = || jscompat::random_uuid();
-    let r = pptx_engine::sections::remove_section(&mut p0.opened, &p1, p2.as_ref(), &mut uuids).map_err(|error| error.to_string())?;
+    let r = pptx_engine::sections::remove_section(&mut p0.opened, &p1, p2.as_ref(), &mut uuids)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_remove_slide_background_xml(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2095,9 +2380,13 @@ fn r_rename_section(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let mut uuids = || jscompat::random_uuid();
-    let r = pptx_engine::sections::rename_section(&mut p0.opened, &p1, &p2, &mut uuids).map_err(|error| error.to_string())?;
+    let r = pptx_engine::sections::rename_section(&mut p0.opened, &p1, &p2, &mut uuids)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_reorder_element(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2112,7 +2401,10 @@ fn r_reorder_element(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_reparse_deck(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let r = pptx_engine::deck::reparse_deck(&mut p0.opened).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_replace_all_in_deck(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2120,7 +2412,8 @@ fn r_replace_all_in_deck(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::text::ReplaceOptions = req(args, 3)?;
-    let r = pptx_engine::deck::text::replace_all_in_deck(&mut p0, &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::text::replace_all_in_deck(&mut p0, &p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2132,24 +2425,36 @@ fn r_replace_picture_bytes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p3 = env.blob(args.get(3).unwrap_or(&Value::Null))?;
     let p4: String = req(args, 4)?;
     let p5: bool = req(args, 5)?;
-    let r = pptx_engine::deck::shape::replace_picture_bytes(&mut p0.opened, p1, &p2, p3, &p4, p5).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::shape::replace_picture_bytes(&mut p0.opened, p1, &p2, p3, &p4, p5)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_reset_slide_background(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
-    let r = pptx_engine::deck::background::reset_slide_background(&mut p0.opened, p1).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    let r = pptx_engine::deck::background::reset_slide_background(&mut p0.opened, p1)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_reset_slide_layout(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
-    let r = pptx_engine::deck::slides::reset_slide_layout(&mut p0.opened, p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::reset_slide_layout(&mut p0.opened, p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_resize_table(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2191,7 +2496,12 @@ fn r_resolve_placeholder_anchor(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out 
     let p2: Option<String> = opt(args, 2)?;
     let p3: Option<String> = opt(args, 3)?;
     let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;
-    let r = pptx_engine::placeholder::resolve_placeholder_anchor(tables.layout_placeholders.as_ref(), tables.master_placeholders.as_ref(), p2.as_deref(), p3.as_deref());
+    let r = pptx_engine::placeholder::resolve_placeholder_anchor(
+        tables.layout_placeholders.as_ref(),
+        tables.master_placeholders.as_ref(),
+        p2.as_deref(),
+        p3.as_deref(),
+    );
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2200,7 +2510,12 @@ fn r_resolve_placeholder_fill_sp_pr(env: &mut InvokeEnv<'_>, args: &[Value]) -> 
     let p2: Option<String> = opt(args, 2)?;
     let p3: Option<String> = opt(args, 3)?;
     let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;
-    let r = pptx_engine::placeholder::resolve_placeholder_fill_sp_pr(tables.layout_placeholders.as_ref(), tables.master_placeholders.as_ref(), p2.as_deref(), p3.as_deref());
+    let r = pptx_engine::placeholder::resolve_placeholder_fill_sp_pr(
+        tables.layout_placeholders.as_ref(),
+        tables.master_placeholders.as_ref(),
+        p2.as_deref(),
+        p3.as_deref(),
+    );
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2209,7 +2524,12 @@ fn r_resolve_placeholder_insets(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out 
     let p2: Option<String> = opt(args, 2)?;
     let p3: Option<String> = opt(args, 3)?;
     let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;
-    let r = pptx_engine::placeholder::resolve_placeholder_insets(tables.layout_placeholders.as_ref(), tables.master_placeholders.as_ref(), p2.as_deref(), p3.as_deref());
+    let r = pptx_engine::placeholder::resolve_placeholder_insets(
+        tables.layout_placeholders.as_ref(),
+        tables.master_placeholders.as_ref(),
+        p2.as_deref(),
+        p3.as_deref(),
+    );
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2218,7 +2538,12 @@ fn r_resolve_placeholder_transform(env: &mut InvokeEnv<'_>, args: &[Value]) -> O
     let p2: Option<String> = opt(args, 2)?;
     let p3: Option<String> = opt(args, 3)?;
     let tables = pptx_routes::tables(at(args, 0), at(args, 1), None)?;
-    let r = pptx_engine::placeholder::resolve_placeholder_transform(tables.layout_placeholders.as_ref(), tables.master_placeholders.as_ref(), p2.as_deref(), p3.as_deref());
+    let r = pptx_engine::placeholder::resolve_placeholder_transform(
+        tables.layout_placeholders.as_ref(),
+        tables.master_placeholders.as_ref(),
+        p2.as_deref(),
+        p3.as_deref(),
+    );
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2236,7 +2561,8 @@ fn r_resolve_table_style(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Option<String> = opt(args, 0)?;
     let p1: Option<String> = opt(args, 1)?;
     let p2: Option<pptx_engine::theme::Theme> = opt(args, 2)?;
-    let r = pptx_engine::table_style::resolve_table_style(p0.as_deref(), p1.as_deref(), p2.as_ref());
+    let r =
+        pptx_engine::table_style::resolve_table_style(p0.as_deref(), p1.as_deref(), p2.as_ref());
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2252,7 +2578,10 @@ fn r_resolve_target(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_save_pptx(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let r = pptx_engine::deck::save_pptx(&mut p0.opened).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(Some(env.put_blob(r)), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(env.put_blob(r)),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_scan_slide(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2275,7 +2604,8 @@ fn r_set_element_effects(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: pptx_engine::deck::shape::EffectsPatch = req(args, 2)?;
-    let r = pptx_engine::deck::shape::set_element_effects(&mut p0, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::shape::set_element_effects(&mut p0, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2286,9 +2616,13 @@ fn r_set_element_fill(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::shape::ElementFill = req(args, 3)?;
     let p4: pptx_engine::deck::shape::FillOpts = req(args, 4)?;
-    let r = pptx_engine::deck::shape::set_element_fill(&mut p0.opened, p1, &p2, &p3, &p4).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::shape::set_element_fill(&mut p0.opened, p1, &p2, &p3, &p4)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_element_font(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2296,8 +2630,16 @@ fn r_set_element_font(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: String = req(args, 1)?;
     let p2: pptx_engine::deck::text::ElementFontPatch = req(args, 2)?;
     let ask = pptx_routes::Ask::new(env);
-    let sizes = |size: Option<f64>| -> f64 { ask.ask("sizeMap", json!([size])).as_f64().unwrap_or(f64::NAN) };
-    let size_map: Option<&dyn Fn(Option<f64>) -> f64> = if matches!(at(args, 3), Value::Object(_)) { Some(&sizes) } else { None };
+    let sizes = |size: Option<f64>| -> f64 {
+        ask.ask("sizeMap", json!([size]))
+            .as_f64()
+            .unwrap_or(f64::NAN)
+    };
+    let size_map: Option<&dyn Fn(Option<f64>) -> f64> = if matches!(at(args, 3), Value::Object(_)) {
+        Some(&sizes)
+    } else {
+        None
+    };
     let r = pptx_engine::deck::text::set_element_font(&mut p0, &p1, &p2, size_map);
     ask.finish()?;
     let value = to_json(&r?)?;
@@ -2308,7 +2650,8 @@ fn r_set_element_hidden(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: bool = req(args, 2)?;
-    let r = pptx_engine::deck::charts::set_element_hidden(&mut p0, &p1, p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::charts::set_element_hidden(&mut p0, &p1, p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2319,9 +2662,13 @@ fn r_set_element_image_fill(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::shape::ImageFillSource = req(args, 3)?;
     let p4: pptx_engine::deck::shape::ImageFillOpts = req(args, 4)?;
-    let r = pptx_engine::deck::shape::set_element_image_fill(&mut p0.opened, p1, &p2, &p3, &p4).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::shape::set_element_image_fill(&mut p0.opened, p1, &p2, &p3, &p4)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_element_link(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2329,16 +2676,21 @@ fn r_set_element_link(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: Option<pptx_engine::hyperlink::LinkTarget> = opt(args, 3)?;
-    let r = pptx_engine::hyperlink::set_element_link(&mut p0.opened, p1, &p2, p3.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::hyperlink::set_element_link(&mut p0.opened, p1, &p2, p3.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_element_name(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::deck::charts::set_element_name(&mut p0, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::charts::set_element_name(&mut p0, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2347,8 +2699,12 @@ fn r_set_element_paragraph_format(env: &mut InvokeEnv<'_>, args: &[Value]) -> Ou
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: pptx_engine::deck::text::ParagraphFormatPatch = req(args, 2)?;
-    let p3 = match args.get(3) { None | Some(Value::Null) => None, Some(_) => Some(nums(args, 3)?) };
-    let r = pptx_engine::deck::text::set_element_paragraph_format(&mut p0, &p1, &p2, p3.as_deref()).map_err(|error| error.to_string())?;
+    let p3 = match args.get(3) {
+        None | Some(Value::Null) => None,
+        Some(_) => Some(nums(args, 3)?),
+    };
+    let r = pptx_engine::deck::text::set_element_paragraph_format(&mut p0, &p1, &p2, p3.as_deref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2357,7 +2713,8 @@ fn r_set_element_redaction(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: Option<String> = opt(args, 2)?;
-    let r = pptx_engine::deck::shape::set_element_redaction(&mut p0, &p1, p2.as_deref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::shape::set_element_redaction(&mut p0, &p1, p2.as_deref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2386,8 +2743,16 @@ fn r_set_group_child_font(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::ElementFontPatch = req(args, 3)?;
     let ask = pptx_routes::Ask::new(env);
-    let sizes = |size: Option<f64>| -> f64 { ask.ask("sizeMap", json!([size])).as_f64().unwrap_or(f64::NAN) };
-    let size_map: Option<&dyn Fn(Option<f64>) -> f64> = if matches!(at(args, 4), Value::Object(_)) { Some(&sizes) } else { None };
+    let sizes = |size: Option<f64>| -> f64 {
+        ask.ask("sizeMap", json!([size]))
+            .as_f64()
+            .unwrap_or(f64::NAN)
+    };
+    let size_map: Option<&dyn Fn(Option<f64>) -> f64> = if matches!(at(args, 4), Value::Object(_)) {
+        Some(&sizes)
+    } else {
+        None
+    };
     let r = pptx_engine::deck::groups::set_group_child_font(&mut p0, &p1, &p2, &p3, size_map);
     ask.finish()?;
     let value = to_json(&r?)?;
@@ -2399,8 +2764,18 @@ fn r_set_group_child_paragraph_format(env: &mut InvokeEnv<'_>, args: &[Value]) -
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::deck::text::ParagraphFormatPatch = req(args, 3)?;
-    let p4 = match args.get(4) { None | Some(Value::Null) => None, Some(_) => Some(nums(args, 4)?) };
-    let r = pptx_engine::deck::text::set_group_child_paragraph_format(&mut p0, &p1, &p2, &p3, p4.as_deref()).map_err(|error| error.to_string())?;
+    let p4 = match args.get(4) {
+        None | Some(Value::Null) => None,
+        Some(_) => Some(nums(args, 4)?),
+    };
+    let r = pptx_engine::deck::text::set_group_child_paragraph_format(
+        &mut p0,
+        &p1,
+        &p2,
+        &p3,
+        p4.as_deref(),
+    )
+    .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2410,7 +2785,8 @@ fn r_set_group_child_shape_adjust_values(env: &mut InvokeEnv<'_>, args: &[Value]
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: jscompat::JsObject<jscompat::JsNum> = req(args, 3)?;
-    let r = pptx_engine::deck::groups::set_group_child_shape_adjust_values(&mut p0, &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::groups::set_group_child_shape_adjust_values(&mut p0, &p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2420,7 +2796,9 @@ fn r_set_group_child_shape_custom_geometry(env: &mut InvokeEnv<'_>, args: &[Valu
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: serde_json::Value = req(args, 3)?;
-    let r = pptx_engine::deck::groups::set_group_child_shape_custom_geometry(&mut p0, &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::deck::groups::set_group_child_shape_custom_geometry(&mut p0, &p1, &p2, &p3)
+            .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2430,7 +2808,9 @@ fn r_set_group_child_shape_preset_geometry(env: &mut InvokeEnv<'_>, args: &[Valu
     let p1: String = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: String = req(args, 3)?;
-    let r = pptx_engine::deck::groups::set_group_child_shape_preset_geometry(&mut p0, &p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::deck::groups::set_group_child_shape_preset_geometry(&mut p0, &p1, &p2, &p3)
+            .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2448,9 +2828,13 @@ fn r_set_model3d_view(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
     let p3: pptx_engine::media_insert::Model3dView = req(args, 3)?;
-    let r = pptx_engine::media_insert::set_model3d_view(&mut p0.opened, p1, &p2, &p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::media_insert::set_model3d_view(&mut p0.opened, p1, &p2, &p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_picture_opacity(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2465,7 +2849,8 @@ fn r_set_picture_opacity(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_set_redact_ext(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::redaction_xml::set_redact_ext(&p0, &p1).map_err(|error| error.to_string())?;
+    let r =
+        pptx_engine::redaction_xml::set_redact_ext(&p0, &p1).map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2474,15 +2859,23 @@ fn r_set_sections(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: Vec<pptx_engine::sections::SectionInfo> = req(args, 1)?;
     let mut uuids = || jscompat::random_uuid();
-    let r = pptx_engine::sections::set_sections(&mut p0.opened, &p1, &mut uuids).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    let r = pptx_engine::sections::set_sections(&mut p0.opened, &p1, &mut uuids)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_shape_adjust_values(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: jscompat::JsObject<jscompat::JsNum> = req(args, 2)?;
-    let p2: jscompat::JsObject<f64> = p2.entries().into_iter().map(|(key, value)| (key.to_owned(), value.0)).collect();
+    let p2: jscompat::JsObject<f64> = p2
+        .entries()
+        .into_iter()
+        .map(|(key, value)| (key.to_owned(), value.0))
+        .collect();
     let r = pptx_engine::deck::shape::set_shape_adjust_values(&mut p0, &p1, &p2);
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
@@ -2492,7 +2885,8 @@ fn r_set_shape_custom_geometry(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: Option<serde_json::Value> = opt(args, 2)?;
-    let r = pptx_engine::deck::shape::set_shape_custom_geometry(&mut p0, &p1, p2.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::shape::set_shape_custom_geometry(&mut p0, &p1, p2.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, to_json(&p0)?)])))
 }
@@ -2508,8 +2902,12 @@ fn r_set_shape_preset_geometry(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 
 fn r_set_show_narration(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
-    let r = pptx_engine::narration::set_show_narration(&mut p0.opened).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    let r = pptx_engine::narration::set_show_narration(&mut p0.opened)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_slide_advance_time(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2522,7 +2920,8 @@ fn r_set_slide_advance_time(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_set_slide_animations(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0: pptx_engine::types::Slide = req(args, 0)?;
     let p1: Vec<pptx_engine::animation::SlideAnimation> = req(args, 1)?;
-    let r = pptx_engine::animation::set_slide_animations(&mut p0, &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::animation::set_slide_animations(&mut p0, &p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(pptx::answer(None, vec![(0, to_json(&p0)?)])))
 }
 
@@ -2530,8 +2929,12 @@ fn r_set_slide_background(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::deck::background::SlideBackgroundFill = req(args, 2)?;
-    let r = pptx_engine::deck::background::set_slide_background(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    let r = pptx_engine::deck::background::set_slide_background(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_slide_background_image(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2539,17 +2942,25 @@ fn r_set_slide_background_image(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out 
     let p1: usize = req(args, 1)?;
     let p2: pptx_engine::deck::background::BackgroundImageSource = req(args, 2)?;
     let p3: Option<bool> = opt(args, 3)?;
-    let r = pptx_engine::deck::background::set_slide_background_image(&mut p0.opened, p1, &p2, p3).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::background::set_slide_background_image(&mut p0.opened, p1, &p2, p3)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_slide_bg_graphics_hidden(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: bool = req(args, 2)?;
-    let r = pptx_engine::deck::background::set_slide_bg_graphics_hidden(&mut p0.opened, p1, p2).map_err(|error| error.to_string())?;
-    Ok(Some(pptx::answer(None, vec![(0, pptx::answer_opened(env, p0)?)])))
+    let r = pptx_engine::deck::background::set_slide_bg_graphics_hidden(&mut p0.opened, p1, p2)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(pptx::answer(
+        None,
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_slide_hidden(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2563,27 +2974,39 @@ fn r_set_slide_layout(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::deck::slides::set_slide_layout(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::set_slide_layout(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_slide_notes(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::notes::set_slide_notes(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::notes::set_slide_notes(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_slide_size(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1 = num(args, 1)?;
     let p2 = num(args, 2)?;
-    let r = pptx_engine::deck::slides::set_slide_size(&mut p0.opened, p1, p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::slides::set_slide_size(&mut p0.opened, p1, p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_set_slide_transition(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2669,7 +3092,8 @@ fn r_solid_png(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_stale_embedded_typefaces(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0 = pptx::read_archive(env, at(args, 0))?;
     let demand = pptx_routes::glyph_demand(at(args, 1))?;
-    let r = pptx_engine::embedded_fonts::stale_embedded_typefaces(&p0.archive, &demand).map_err(|error| error.to_string())?;
+    let r = pptx_engine::embedded_fonts::stale_embedded_typefaces(&p0.archive, &demand)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2685,7 +3109,10 @@ fn r_strip_embedded_fonts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p1: Option<std::collections::HashSet<String>> = opt(args, 1)?;
     let r = pptx_engine::embedded_fonts::strip_embedded_fonts(&mut p0.archive, p1.as_ref());
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))],
+    )))
 }
 
 fn r_strip_redact_ext(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2698,9 +3125,13 @@ fn r_strip_redact_ext(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_strip_stale_embedded_fonts(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Vec<pptx_engine::types::Slide> = req(args, 0)?;
     let mut p1 = pptx::read_archive(env, at(args, 1))?;
-    let r = pptx_engine::embedded_fonts::strip_stale_embedded_fonts(&p0, &mut p1.archive).map_err(|error| error.to_string())?;
+    let r = pptx_engine::embedded_fonts::strip_stale_embedded_fonts(&p0, &mut p1.archive)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(1, pptx::answer_archive(env, &p1.sent, &p1.archive))])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(1, pptx::answer_archive(env, &p1.sent, &p1.archive))],
+    )))
 }
 
 fn r_stroke_patch_to_model(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2721,7 +3152,8 @@ fn r_sync_redact_ext(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: Option<String> = opt(args, 2)?;
-    let r = pptx_engine::redaction_xml::sync_redact_ext(&p0, &p1, p2.as_deref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::redaction_xml::sync_redact_ext(&p0, &p1, p2.as_deref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2765,7 +3197,8 @@ fn r_tag_hangul_run(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
 fn r_theme_with_override(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Option<pptx_engine::theme::Theme> = opt(args, 0)?;
     let p1: String = req(args, 1)?;
-    let r = pptx_engine::theme::theme_with_override(p0.as_ref(), &p1).map_err(|error| error.to_string())?;
+    let r = pptx_engine::theme::theme_with_override(p0.as_ref(), &p1)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2774,7 +3207,8 @@ fn r_top_level_children(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: usize = req(args, 1)?;
     let p2: usize = req(args, 2)?;
-    let r = pptx_engine::generate::top_level_children(&p0, p1, p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::generate::top_level_children(&p0, p1, p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2783,9 +3217,13 @@ fn r_ungroup_element(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: usize = req(args, 1)?;
     let p2: String = req(args, 2)?;
-    let r = pptx_engine::deck::groups::ungroup_element(&mut p0.opened, p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::deck::groups::ungroup_element(&mut p0.opened, p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
 
 fn r_update_connectors_for_moved(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
@@ -2798,14 +3236,16 @@ fn r_update_connectors_for_moved(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out
 
 fn r_valid_cust_geom_path(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: Option<serde_json::Value> = opt(args, 0)?;
-    let r = pptx_engine::custgeom::valid_cust_geom_path(p0.as_ref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::custgeom::valid_cust_geom_path(p0.as_ref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
 
 fn r_with_fresh_creation_ids(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
-    let r = pptx_engine::identity::with_fresh_creation_ids(&p0, || jscompat::random_uuid()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::identity::with_fresh_creation_ids(&p0, || jscompat::random_uuid())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2824,7 +3264,8 @@ fn r_with_slide_listed(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let p0: String = req(args, 0)?;
     let p1: String = req(args, 1)?;
     let p2: Option<String> = opt(args, 2)?;
-    let r = pptx_engine::slide_ids::with_slide_listed(&p0, &p1, p2.as_deref()).map_err(|error| error.to_string())?;
+    let r = pptx_engine::slide_ids::with_slide_listed(&p0, &p1, p2.as_deref())
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![])))
 }
@@ -2841,7 +3282,11 @@ fn r_write_chart_workbook(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let mut p0 = pptx::read_opened(env, at(args, 0))?;
     let p1: String = req(args, 1)?;
     let p2: pptx_engine::chart_insert::NewChartOptions = req(args, 2)?;
-    let r = pptx_engine::chart_insert::write_chart_workbook(&mut p0.opened, &p1, &p2).map_err(|error| error.to_string())?;
+    let r = pptx_engine::chart_insert::write_chart_workbook(&mut p0.opened, &p1, &p2)
+        .map_err(|error| error.to_string())?;
     let value = to_json(&r)?;
-    Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_opened(env, p0)?)])))
+    Ok(Some(pptx::answer(
+        Some(value),
+        vec![(0, pptx::answer_opened(env, p0)?)],
+    )))
 }
