@@ -38,7 +38,10 @@ export function evalGuides(
   h: number,
 ): Record<string, number> {
   const ss = Math.min(w, h)
-  const env: Record<string, number> = {
+  // Guide names come from the document. The table has no prototype, so a name such as
+  // `constructor` finds nothing unless a guide defines it, and a guide named `__proto__` is
+  // an entry like any other.
+  const env: Record<string, number> = Object.assign(Object.create(null) as object, {
     w,
     h,
     ss,
@@ -79,7 +82,7 @@ export function evalGuides(
     '3cd8': 8100000,
     '5cd8': 13500000,
     '7cd8': 18900000,
-  }
+  })
   const val = (tok: string | undefined): number => {
     if (tok == null) return 0
     const n = Number(tok)

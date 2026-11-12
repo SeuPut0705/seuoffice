@@ -1,4 +1,4 @@
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import type { HwpDocument } from '@rhwp/core'
 import { call, exportDocument, withNewDocument, withOpenedDocument, type HwpEngine } from './engine'
 import { lowerDocument } from './lower'

@@ -1,5 +1,5 @@
 // one definition, in the package both carriers and both apps can reach
-export { REDACT_EL, REDACT_NS, REDACT_PREFIX } from '@genoffice/agent-core/redact-range'
+export { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 export * from './types'
 export {
   deobfuscateOdttf,
@@ -245,7 +245,13 @@ export {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
-export { DEFAULT_PICTURE_PX, usableNumber, usablePictureSize } from './xml-number'
+export {
+  DEFAULT_PICTURE_PX,
+  usableNumber,
+  usablePictureSize,
+  usablePositionOffset,
+} from './xml-number'
+export { removeElements } from './xml-tag'
 export { bibliographyLine, citationText, parseSourcesXml } from './sources'
 export { parseZoteroDocumentDataXml, patchZoteroDocumentDataXml } from './zotero-doc-props'
 export { readThemeColors, readThemeFonts } from './theme'
@@ -286,6 +292,7 @@ export {
   cleanMoveRangeMarkers,
   countTrackedChangesXml,
   readPropChangeXml,
+  revisionDateBefore,
   revisionDateMs,
   resolvePropChangeXml,
   type PropChangeRecord,

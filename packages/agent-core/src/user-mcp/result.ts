@@ -11,7 +11,7 @@
  * window; the AI windows and the agent relays read that one answer form
  * (`mcpCallAnswerOf`).
  *
- * A file with no imports, exported as `@genoffice/agent-core/user-mcp/result`
+ * A file with no imports, exported as `@seuoffice/agent-core/user-mcp/result`
  * for the main process that makes the calls.
  */
 

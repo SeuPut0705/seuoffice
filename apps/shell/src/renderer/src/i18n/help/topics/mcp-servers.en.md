@@ -1,24 +1,24 @@
 # Connecting MCP servers
 
-An MCP server is a service that offers tools the AI can use from outside the app, such as looking up laws or searching material your team runs. Once you connect a server, the AI windows in GenOffice can call its tools during a chat. You decide, tool by tool, what the AI may use and how.
+An MCP server is a service that offers tools the AI can use from outside the app, such as looking up laws or searching material your team runs. Once you connect a server, the AI windows in SeuOffice can call its tools during a chat. You decide, tool by tool, what the AI may use and how.
 
 ## Adding a server
 
 1. Open **Settings ▸ Integrations** and press **Add a server** on the **MCP servers** card.
 2. Choose how to add it.
-   - **Paste settings text**: paste the whole settings text from the server's guide and press **Read**. GenOffice fills in the fields. If one text holds several servers, you confirm them one at a time. If the text reads a key or a value from a PC variable (`${NAME}`), that field is left empty for you to fill in.
+   - **Paste settings text**: paste the whole settings text from the server's guide and press **Read**. SeuOffice fills in the fields. If one text holds several servers, you confirm them one at a time. If the text reads a key or a value from a PC variable (`${NAME}`), that field is left empty for you to fill in.
    - **Enter it**: type a name and the address. If the server's guide gives you a key, put it in the **Key** field.
 3. Read the notice above the add button and press **Add**.
-4. Once you register, GenOffice checks the connection right away and gets the list of tools. A server that needs a sign-in waits for you instead of opening the browser. Press **Check connection** to see the list of tools the server offers. For a server that needs a sign-in, press **Sign in with the browser** and finish signing in there.
+4. Once you register, SeuOffice checks the connection right away and gets the list of tools. A server that needs a sign-in waits for you instead of opening the browser. Press **Check connection** to see the list of tools the server offers. For a server that needs a sign-in, press **Sign in with the browser** and finish signing in there.
 
 A server name uses letters, digits, `-` and `_`, up to 24 characters. The AI sees this server's tools under names shaped like `mcp__name__tool`. If a skill calls tools by names of that shape, add the server under the same name the skill uses.
 
 ## Servers by address and servers on this PC
 
 - A server **by address** is reached through a web address. Internet addresses must start with `https://`. `http://` works only for this PC and for private-network addresses at home or at work, and you confirm first that keys and document content will travel unencrypted.
-- A server **on this PC** is a program GenOffice runs on this PC. The add screen shows the exact program, its arguments and the names of the environment variables passed to it. It runs for the first time only after you press **Allow to run**. If the command changes later, the server stays stopped until you allow it again.
-- If a server on this PC needs a program this PC does not have (Node.js, or uv for Python servers), GenOffice asks on the server card in Settings whether to download it. It shows the download size, and nothing is downloaded until you press **Download**. Downloaded programs stay inside GenOffice's data folder, and your PC's settings are not changed.
-- A server on this PC starts when it is needed and stops after 10 minutes without use. It also stops when you close GenOffice.
+- A server **on this PC** is a program SeuOffice runs on this PC. The add screen shows the exact program, its arguments and the names of the environment variables passed to it. It runs for the first time only after you press **Allow to run**. If the command changes later, the server stays stopped until you allow it again.
+- If a server on this PC needs a program this PC does not have (Node.js, or uv for Python servers), SeuOffice asks on the server card in Settings whether to download it. It shows the download size, and nothing is downloaded until you press **Download**. Downloaded programs stay inside SeuOffice's data folder, and your PC's settings are not changed.
+- A server on this PC starts when it is needed and stops after 10 minutes without use. It also stops when you close SeuOffice.
 
 ## Choosing what each tool may do
 

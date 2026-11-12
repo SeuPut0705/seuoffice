@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import type { Node as PmNode } from '@tiptap/pm/model'
-import { revisionDateMs } from '@genoffice/docx-engine'
+import { revisionDateBefore, revisionDateMs } from '@seuoffice/docx-engine'
 import {
   applyRevisions,
   collectRevisions,
@@ -273,7 +273,7 @@ export function selectRevisions(
     if (sel.blockIndex !== undefined && e.blockIndex !== sel.blockIndex) return false
     if (sel.blockRange && (e.blockIndex < sel.blockRange[0] || e.blockIndex > sel.blockRange[1]))
       return false
-    if (beforeMs !== null && (!e.date || revisionDateMs(e.date) >= beforeMs)) return false
+    if (beforeMs !== null && !revisionDateBefore(e.date ?? undefined, beforeMs)) return false
     return true
   })
   if (entries.length === 0) {

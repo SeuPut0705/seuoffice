@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import type { AiSubscriptionState, SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
+import type { AiSubscriptionState, SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
 import {
   useSubscriptionConnection,
   type SubscriptionConnection,

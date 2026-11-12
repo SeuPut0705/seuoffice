@@ -74,5 +74,5 @@ export function printPaperOption(
   }
 }
 
-export { printJobOptions } from '@genoffice/electron-utils/print-job'
-export type { PrintDuplex, PrintJobOptions } from '@genoffice/electron-utils/print-job'
+export { printJobOptions } from '@seuoffice/electron-utils/print-job'
+export type { PrintDuplex, PrintJobOptions } from '@seuoffice/electron-utils/print-job'

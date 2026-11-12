@@ -33,7 +33,7 @@
  * swatches show map colours, which are document content.
  */
 import { useEffect, useState, type ReactNode } from 'react'
-import { Dropdown, type DropdownOption } from '@genoffice/ui'
+import { Dropdown, type DropdownOption } from '@seuoffice/ui'
 import {
   ARROW_SHAPES,
   BOUNDARY_SHAPES,
@@ -41,7 +41,7 @@ import {
   LINE_PATTERNS,
   RELATIONSHIP_SHAPES,
   SUMMARY_SHAPES,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { type StringKey, useI18n } from '../i18n/locale'
 import {
   FONT_SIZE_POINTS,

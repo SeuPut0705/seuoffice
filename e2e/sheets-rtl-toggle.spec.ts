@@ -50,7 +50,7 @@ function sheetXml(workbookPath: string): string {
  * the journaling from the mutation never runs (the review finding). */
 test('a save after toggling carries rightToLeft in the file', async () => {
   test.setTimeout(240_000)
-  const scratch = await mkdtemp(join(tmpdir(), 'genoffice-sheets-rtl-e2e-'))
+  const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-sheets-rtl-e2e-'))
   const workbook = join(scratch, 'rtl-toggle.xlsx')
   await copyFile(FIXTURE, workbook)
   const launched = await launchShell({

@@ -302,6 +302,15 @@ const SPECIFIER = /(?<![.\w])(?:from|import|require)\s*\(?\s*['"]([^'"\n]+)['"]/
 
 const IN_NODE_MODULES = /node_modules\/((?:@[^/]+\/)?[^/?]+)/
 
+/**
+ * Workspace packages are this product's own code and are not listed, with two
+ * exceptions kept from before every workspace shared one scope: these two were
+ * resolved like installed packages, which also lists what they depend on (the
+ * browser stand-ins buffer, events, base64-js, ieee754). Dropping them would
+ * drop those four notices, so the file stays as it was.
+ */
+const WORKSPACES_LISTED_WITH_THEIR_DEPENDENCIES = ['@seuoffice/collab', '@seuoffice/web-platform']
+
 /** 'foo/bar' -> 'foo'; '@a/b/c' -> '@a/b'; relative/builtin/workspace -> null */
 function bareName(spec) {
   if (!spec || spec.startsWith('node:')) return null
@@ -311,7 +320,9 @@ function bareName(spec) {
   if (spec.startsWith('.') || spec.startsWith('/')) return null
   const parts = spec.split('/')
   const name = spec.startsWith('@') ? parts.slice(0, 2).join('/') : parts[0]
-  if (BUILTIN.has(name) || name.startsWith('@genoffice/')) return null
+  const ownWorkspace =
+    name.startsWith('@seuoffice/') && !WORKSPACES_LISTED_WITH_THEIR_DEPENDENCIES.includes(name)
+  if (BUILTIN.has(name) || ownWorkspace) return null
   // the specifier regex also fires on prose inside string concatenations
   return NPM_NAME.test(name) ? name : null
 }
@@ -797,6 +808,31 @@ https://www.unicode.org/Public/17.0.0/ucd/EquivalentUnifiedIdeograph.txt
 `
 out += readFileSync(join(ROOT, 'LICENSE-UNICODE.txt'), 'utf8').trim() + '\n'
 
+/**
+ * Third-party source copied into a package's `src/vendor/<name>/` and bundled with that
+ * package, so neither the npm nor the crate scan sees it. Every such directory is found here,
+ * not listed by hand: one added later is noticed without an edit to this file, and one that
+ * lacks its README.md (the attribution: upstream, authors, what was changed) or its LICENSE
+ * is a gap. Both are reproduced verbatim. The repository-level vendor/ directory holds
+ * draw.io and the rhwp engine, which have sections of their own.
+ */
+function vendoredSources() {
+  const found = []
+  for (const src of SRC_GLOBS) {
+    const dir = join(ROOT, src, 'vendor')
+    if (!existsSync(dir)) continue
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.isDirectory()) found.push(join(src, 'vendor', entry.name))
+    }
+  }
+  return found.sort()
+}
+
+/** where the Source Code Form of what this application ships can be had (MPL-2.0 §3.2) */
+const SOURCE_REPO = JSON.parse(readFileSync(join(ROOT, 'package.json'), 'utf8'))
+  .repository.url.replace(/^git\+/, '')
+  .replace(/\.git$/, '')
+
 // Hancom's condition for using its published HWP format document; the wording is fixed
 out += hr('6. Hangul (HWP) document format and trademarks')
 out += `
@@ -942,6 +978,35 @@ if (drawio === null) {
   out += '\ndraw.io release unavailable at generation time; see vendor/drawio/inventory.json.\n'
 } else {
   out += await drawioSection(drawio, loadInventory())
+}
+
+out += hr('8. Third-party source code included in this application')
+out += `
+These directories hold source code of other projects, adapted and compiled into
+the application with the package they sit in. Each one's description (upstream,
+authors, license, what was changed), its license, and the PATENTS or NOTICE
+file that comes with it, if any, are reproduced verbatim. The
+source of each, as shipped, is in the directory named, in this application's
+source repository: ${SOURCE_REPO}
+`
+for (const dir of vendoredSources()) {
+  const read = (file) => {
+    const path = join(ROOT, dir, file)
+    if (existsSync(path)) return readFileSync(path, 'utf8').trim()
+    gap(`${dir} has no ${file}`)
+    return `(${file} missing)`
+  }
+  out += sub(dir)
+  out += `${read('README.md')}\n\n`
+  out += sub(`${dir}/LICENSE`)
+  out += `${read('LICENSE')}\n`
+  // files a license points to (libeot's LICENSE: "Read the PATENTS file"), or that Apache-2.0
+  // 4(d) asks to pass on, travel with it
+  for (const extra of ['PATENTS', 'NOTICE']) {
+    if (!existsSync(join(ROOT, dir, extra))) continue
+    out += sub(`${dir}/${extra}`)
+    out += `${read(extra)}\n`
+  }
 }
 
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {

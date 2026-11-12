@@ -1,8 +1,8 @@
 // @vitest-environment node
 // The open notice, the print sheets, draw.io's start arguments and
-// configuration, recovery copies, and the 21 languages.
+// configuration, recovery copies, and the UI languages.
 import { describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { hasNotices, scanDiagramNotices } from '../src/shared/notices'
 import { buildPrintHtml, inertSvg, isPrintCancel, isPrintPage } from '../src/main/print-document'
 import {
@@ -11,7 +11,6 @@ import {
   HIDDEN_EXPORTS,
   HIDDEN_SUBMENUS,
   REDIRECTED_ACTIONS,
-  drawioLang,
   drawioStartUrl,
 } from '../src/shared/drawio-start'
 import { DiagramCopier } from '../src/renderer/document/recovery-copies'
@@ -94,7 +93,7 @@ describe('print sheets', () => {
 
 describe('draw.io start', () => {
   it('starts embedded, offline, stealth, locked down, in the app language', () => {
-    const url = new URL(drawioStartUrl({ lang: 'zh-TW', dark: false }))
+    const url = new URL(drawioStartUrl({ lang: 'ko', dark: false }))
     expect(url.protocol).toBe('drawio-app:')
     expect(url.pathname).toBe('/index.html')
     const params = Object.fromEntries(url.searchParams)
@@ -104,17 +103,13 @@ describe('draw.io start', () => {
       offline: '1',
       stealth: '1',
       lockdown: '1',
-      lang: 'zh-tw',
+      lang: 'ko',
       noExitBtn: '1',
       saveAndExit: '0',
       browser: '0',
       spin: '1',
     })
     expect(new URL(drawioStartUrl({ lang: 'ko', dark: true })).searchParams.get('dark')).toBe('1')
-  })
-
-  it('maps every app language to one draw.io has', () => {
-    for (const lang of LANGS) expect(drawioLang(lang)).toMatch(/^[a-z]{2}(-tw)?$/)
   })
 
   it('turns draw.io’s AI, web fonts and export links off', () => {
@@ -225,32 +220,15 @@ describe('DiagramCopier', () => {
 })
 
 describe('languages and channels', () => {
-  it('has the same keys in all 21 languages, translated', () => {
-    const keys = Object.keys(appStrings.zh).sort()
-    expect(Object.keys(appStrings)).toHaveLength(21)
+  it('has the same keys in every UI language, translated', () => {
+    const keys = Object.keys(appStrings.en).sort()
     for (const lang of LANGS) {
       expect(Object.keys(appStrings[lang]).sort(), lang).toEqual(keys)
       for (const key of keys)
-        expect(appStrings[lang][key as keyof typeof appStrings.zh], `${lang}.${key}`).not.toBe('')
+        expect(appStrings[lang][key as keyof typeof appStrings.en], `${lang}.${key}`).not.toBe('')
     }
-    // not English copies: the editor's name differs from English where the language has its own word
-    for (const lang of [
-      'ko',
-      'ja',
-      'zh',
-      'zh-TW',
-      'ru',
-      'ar',
-      'he',
-      'hi',
-      'th',
-      'de',
-      'fr',
-      'es',
-      'vi',
-    ] as const) {
-      expect(appStrings[lang].untitled, lang).not.toBe(appStrings.en.untitled)
-    }
+    // not an English copy: the editor's name differs from English where the language has its own word
+    expect(appStrings.ko.untitled).not.toBe(appStrings.en.untitled)
   })
 
   it('starts every channel with diagram: and never repeats one', () => {

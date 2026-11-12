@@ -61,7 +61,7 @@ async function cancelPasswordWindow(page: Page): Promise<void> {
 
 for (const { ext, url, channel, fixture, part } of KINDS) {
   test(`encrypted .${ext} asks for its password, opens and saves encrypted`, async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-locked-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-locked-'))
     const filePath = join(dir, `locked.${ext}`)
     const encrypted = officeCrypto.encrypt(await fixture(), { password: PASSWORD })
     await writeFile(filePath, encrypted)
@@ -144,7 +144,7 @@ for (const { ext, url, channel, fixture, part } of KINDS) {
   })
 
   test(`cancelling the password for .${ext} leaves the file untouched`, async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-locked-cancel-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-locked-cancel-'))
     const filePath = join(dir, `locked.${ext}`)
     const encrypted = officeCrypto.encrypt(await fixture(), { password: PASSWORD })
     await writeFile(filePath, encrypted)

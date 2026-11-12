@@ -45,27 +45,33 @@ const hex6 = (c: string) => c.replace(/^#/, '').slice(0, 6).toUpperCase()
 /** Rewrite a theme XML's clrScheme/fontScheme; returned as-is if the scheme structure is missing. */
 export function patchThemeXml(xml: string, spec: ThemeSpec): string {
   let out = xml
+  // Every replacement below is a function: the name and the fonts are typed by the user, and a
+  // replacement string would expand a `$&` or `$$` in them
   // Colors: replace the whole <a:dk1>…</a:dk1> section per key (sysClr/srgbClr both become srgbClr)
   for (const key of SCHEME_KEYS) {
     const color = spec.colors[key]
     if (!color) continue
     out = out.replace(
       new RegExp(`<a:${key}>[\\s\\S]*?</a:${key}>`),
-      `<a:${key}><a:srgbClr val="${hex6(color)}"/></a:${key}>`,
+      () => `<a:${key}><a:srgbClr val="${hex6(color)}"/></a:${key}>`,
     )
   }
-  out = out.replace(/(<a:clrScheme name=")[^"]*(")/, `$1${escapeXmlAttr(spec.name)}$2`)
+  out = out.replace(
+    /(<a:clrScheme name=")[^"]*(")/,
+    (_all, open: string, close: string) => `${open}${escapeXmlAttr(spec.name)}${close}`,
+  )
   // Fonts: replace only the major/minor Latin typeface; East Asian / cs kept
-  if (spec.majorFont) {
+  const { majorFont, minorFont } = spec
+  if (majorFont) {
     out = out.replace(
       /(<a:majorFont>[\s\S]*?<a:latin[^>]*typeface=")[^"]*(")/,
-      `$1${escapeXmlAttr(spec.majorFont)}$2`,
+      (_all, open: string, close: string) => `${open}${escapeXmlAttr(majorFont)}${close}`,
     )
   }
-  if (spec.minorFont) {
+  if (minorFont) {
     out = out.replace(
       /(<a:minorFont>[\s\S]*?<a:latin[^>]*typeface=")[^"]*(")/,
-      `$1${escapeXmlAttr(spec.minorFont)}$2`,
+      (_all, open: string, close: string) => `${open}${escapeXmlAttr(minorFont)}${close}`,
     )
   }
   return out
@@ -219,7 +225,7 @@ export function recolorXml(xml: string, map: Map<string, string>): string {
   if (map.size === 0) return xml
   return xml.replace(SRGB_RE, (full, hex: string) => {
     const to = map.get(hex.toUpperCase())
-    return to ? full.replace(hex, to) : full
+    return to ? full.replace(hex, () => to) : full
   })
 }
 

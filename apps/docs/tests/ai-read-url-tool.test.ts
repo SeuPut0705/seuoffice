@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { AGENT_SYSTEM_PROMPT } from '../src/renderer/ai/protocol'
 import { AGENT_TOOLS, executeTool } from '../src/renderer/ai/tools'
@@ -171,7 +171,7 @@ describe('read_url execution', () => {
 })
 
 describe('read_url summary strings', () => {
-  it('every one of the 21 languages carries both keys with the placeholders', () => {
+  it('every UI language carries both keys with the placeholders', () => {
     expect(Object.keys(aiStrings).sort()).toEqual([...LANGS].sort())
     for (const [lang, dict] of Object.entries(aiStrings)) {
       const shard = dict as Record<string, string>

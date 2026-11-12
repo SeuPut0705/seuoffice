@@ -13,8 +13,8 @@
  * and reported: broken chapters (not well-formed XML, or text that is not
  * valid in its encoding) and fixed-layout ones.
  */
-import type { InlineRun } from '@genoffice/pdf-structure'
-import type { TranslationBlockKey } from '@genoffice/pdf-structure/store'
+import type { InlineRun } from '@seuoffice/pdf-structure'
+import type { TranslationBlockKey } from '@seuoffice/pdf-structure/store'
 import { openChapter, type OpenChapter } from '../blocks'
 import {
   encodeBlock,

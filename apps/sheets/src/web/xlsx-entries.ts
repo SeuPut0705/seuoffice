@@ -2,7 +2,7 @@
 // one entry's text, and the cells hidden from the model. A view-only page runs
 // this on every open, so nothing here may import the save planner (xlsx-save)
 // or the gateway modules behind it; the planner imports this, not the reverse.
-import { normalizeOoxmlPartPrefix } from '@genoffice/xlsx-gateway/gateway/xlsx-namespace'
+import { normalizeOoxmlPartPrefix } from '@seuoffice/xlsx-gateway/gateway/xlsx-namespace'
 import type { File } from '@seuoffice/web-platform/wasi'
 import { readRedactionEntries, type RedactionPartRead } from '../main/workbook-redaction-entries'
 

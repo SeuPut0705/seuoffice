@@ -1,4 +1,4 @@
-import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
+import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@seuoffice/ui'
 import {
   createAiStreamBridge,
   createWebBridge,
@@ -15,7 +15,6 @@ import {
   webLanguage,
 } from '@seuoffice/web-platform'
 import type { WebDocument } from '@seuoffice/web-platform'
-import type { Lang } from '@genoffice/i18n'
 import { READ_ONLY_ATTRIBUTE } from '../../studio-plugin/read-only.mjs'
 import { hwpFormatOfPath } from '../shared/ipc'
 import type { CommitSaveResult, HwpApi, HwpFormat, SaveMode } from '../shared/ipc'
@@ -131,7 +130,9 @@ const hwpApi: Partial<HwpApi> = {
   },
   trackingDropped: async () => trackingDropped,
   structureUnverified: async () => opened?.hwp.unverified ?? false,
-  getLanguage: async () => webLanguage() as Lang,
+  // one save target, the opened file: the editor's notices do not point at a Save As
+  noSaveAs: true,
+  getLanguage: async () => webLanguage(),
   onLanguageChanged: unsubscribe,
   getTheme: async () => 'system',
   onThemeChanged: unsubscribe,

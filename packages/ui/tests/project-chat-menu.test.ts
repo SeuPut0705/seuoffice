@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { LegacyDocumentChat, ProjectChatListItem } from '@genoffice/project-store'
+import type { LegacyDocumentChat, ProjectChatListItem } from '@seuoffice/project-store'
 import { ProjectChatMenu, type ProjectChatMenuProps } from '../src/ProjectChatMenu'
 
 const NOW = Date.parse('2026-10-29T12:00:00.000Z')

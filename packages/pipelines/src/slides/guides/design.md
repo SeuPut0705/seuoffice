@@ -1,22 +1,22 @@
 # Designing a deck from a spec
 
-The same workflow the IeumOffice app runs when it generates a presentation, written for an agent that does the thinking itself and lets the engine do the building. In the app every stage is a separate model call; here every stage is a separate file, and the CLI checks each file before the next stage may start. Work top-down; never start by placing elements.
+The same workflow the SeuOffice app runs when it generates a presentation, written for an agent that does the thinking itself and lets the engine do the building. In the app every stage is a separate model call; here every stage is a separate file, and the CLI checks each file before the next stage may start. Work top-down; never start by placing elements.
 
 Files of one deck, in a folder of their own (`deck/`):
 
-| Stage         | File                                                         | Check                                                                                                                       |
-| ------------- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------- |
-| 1 style sheet | `deck/style.md`                                              | read it back before every page                                                                                              |
-| 2 outline     | `deck/outline.json`                                          | `ieumoffice slides check deck/outline.json --json`                                                                          |
-| 3 pages       | `deck/pages/01.json`, `02.json`, … one file per outline page | `ieumoffice slides check deck/pages/NN.json --json` after writing each (also against the outline entry and the style sheet) |
-| 4 build       | `deck/deck.pptx`                                             | `ieumoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck/deck.pptx --json`                   |
-| 5 QC          | `deck/shots/*.png`                                           | `ieumoffice slides render`, `ieumoffice slides audit`, `ieumoffice slides replace`                                          |
+| Stage         | File                                                         | Check                                                                                                                      |
+| ------------- | ------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| 1 style sheet | `deck/style.md`                                              | read it back before every page                                                                                             |
+| 2 outline     | `deck/outline.json`                                          | `seuoffice slides check deck/outline.json --json`                                                                          |
+| 3 pages       | `deck/pages/01.json`, `02.json`, … one file per outline page | `seuoffice slides check deck/pages/NN.json --json` after writing each (also against the outline entry and the style sheet) |
+| 4 build       | `deck/deck.pptx`                                             | `seuoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck/deck.pptx --json`                   |
+| 5 QC          | `deck/shots/*.png`                                           | `seuoffice slides render`, `seuoffice slides audit`, `seuoffice slides replace`                                            |
 
 Never put more than one page in a file, and never write a page before its outline entry exists: the build refuses to run until every outline page has its file, and a page written in one focused step with the style sheet and its brief in front of you is what keeps a 20-page deck consistent. Keep the three files together: `slides check`, `create --spec` and `slides replace` look for `outline.json` and `style.md` beside the page files and one folder up, check every page against its outline entry (file `NN.json` is entry `pages[N-1]`) and against the style sheet's colors, and say so in `detail.notes` when either file is missing.
 
 ## 0. Check what the machine can do
 
-Run `ieumoffice capabilities --json` once. It reads IeumOffice's own settings and reports, without a network call, whether web search, image search, image generation and media analysis are available (`detail.<feature>.available`) and by which route (the free search, a key the user entered in Settings, or a subscription login the user allowed for automatic calls). Only when a feature is available may the deck use it; when one is not, work from the material you have and use typography, color blocks and shapes instead of photos. Never ask the user to configure a key just for a deck.
+Run `seuoffice capabilities --json` once. It reads SeuOffice's own settings and reports, without a network call, whether web search, image search, image generation and media analysis are available (`detail.<feature>.available`) and by which route (the free search, a key the user entered in Settings, or a subscription login the user allowed for automatic calls). Only when a feature is available may the deck use it; when one is not, work from the material you have and use typography, color blocks and shapes instead of photos. Never ask the user to configure a key just for a deck.
 
 ## 1. Style sheet first (one per deck)
 
@@ -32,7 +32,7 @@ Decide the design system before any content and write it to `deck/style.md`; re-
   - closing: `closing_cta`, `closing_thank_you`
 - **Overall style**: one sentence describing the design language.
 
-A built-in template is a style sheet already written in this shape: `ieumoffice guide slides templates` lists them, and `ieumoffice guide slides templates <id>` prints one that you can save as `deck/style.md` as is (its fonts ship with IeumOffice). When you use a template's style sheet, the devices it prescribes (a bar on cards, rules beside titles, a fixed frame on every page) take precedence over the anti-patterns in section 4; the rest of this guide still applies.
+A built-in template is a style sheet already written in this shape: `seuoffice guide slides templates` lists them, and `seuoffice guide slides templates <id>` prints one that you can save as `deck/style.md` as is (its fonts ship with SeuOffice). When you use a template's style sheet, the devices it prescribes (a bar on cards, rules beside titles, a fixed frame on every page) take precedence over the anti-patterns in section 4; the rest of this guide still applies.
 
 ## 2. Outline, page by page
 
@@ -54,17 +54,17 @@ Write `deck/outline.json`:
 }
 ```
 
-Then `ieumoffice slides check deck/outline.json --json`: errors (unknown layout, a content layout repeated back to back, placeholder copy, missing core hook) exit 1 and must be fixed in the file; warnings are advice. Rules the check enforces and the ones it cannot:
+Then `seuoffice slides check deck/outline.json --json`: errors (unknown layout, a content layout repeated back to back, placeholder copy, missing core hook) exit 1 and must be fixed in the file; warnings are advice. Rules the check enforces and the ones it cannot:
 
 - A core hook for the whole deck: one sentence with tension, a number or a counter-intuitive contrast.
 - Content pages in one deck must not repeat the same layout variant back to back, and the deck should use at least three different variants.
 - Pick the variant from the content: three parallel points → `three_column_cards`; one key number → `hero_big_number`; comparison → `two_column_comparison` or `two_by_two_grid`; a sequence → `timeline_horizontal`; metrics → `kpi_cards_row`.
-- No placeholders ("XX%", "lorem"): every figure and name comes from the material you have. With web search configured, look up the facts and figures the brief needs before writing pages (`ieumoffice search "<query>" --json`). Without material and without search, tell the user which figures are illustrative; never present invented numbers as facts.
-- Photos: with image search configured, give each photo slot an English query for a concrete scene ("harbor cranes at dawn", not "logistics") and fetch candidates with `ieumoffice search --images "<query>" --max 6 --json`; put a result's `imageUrl` straight into the page's image element (the builder downloads it), and keep its `sourceUrl` (the page the picture came from) for the closing page's credits: the `imageUrl` is often a search-provider proxy that says nothing about origin or license. Give the image box roughly the picture's aspect ratio; a portrait shot squeezed into a flat strip is center-cropped to a sliver and reported by `slides check`. With image generation configured, `ieumoffice image "<prompt>" --aspect 16:9 --out assets/p3.jpg` makes a photo or illustration in the deck's palette. With neither, plan pages that need no photo.
+- No placeholders ("XX%", "lorem"): every figure and name comes from the material you have. With web search configured, look up the facts and figures the brief needs before writing pages (`seuoffice search "<query>" --json`). Without material and without search, tell the user which figures are illustrative; never present invented numbers as facts.
+- Photos: with image search configured, give each photo slot an English query for a concrete scene ("harbor cranes at dawn", not "logistics") and fetch candidates with `seuoffice search --images "<query>" --max 6 --json`; put a result's `imageUrl` straight into the page's image element (the builder downloads it), and keep its `sourceUrl` (the page the picture came from) for the closing page's credits: the `imageUrl` is often a search-provider proxy that says nothing about origin or license. Give the image box roughly the picture's aspect ratio; a portrait shot squeezed into a flat strip is center-cropped to a sliver and reported by `slides check`. With image generation configured, `seuoffice image "<prompt>" --aspect 16:9 --out assets/p3.jpg` makes a photo or illustration in the deck's palette. With neither, plan pages that need no photo.
 
 ## 3. Write each page spec, one file at a time
 
-For page N: re-read `deck/style.md` and the page's outline entry, resolve its `image_queries` to files or URLs, write `deck/pages/NN.json` (two-digit, one page object, see `ieumoffice guide slides spec`) echoing the entry's `title`, `type` and `layout` at the top of the object, and run `ieumoffice slides check deck/pages/NN.json --json`. It builds that page alone and returns dropped elements, unreadable images and the geometry audit (out of bounds, text taller than its box, overlaps), then checks the page against outline entry N (`detail.outline.findings`: an echoed field that disagrees or placeholder copy is an error and exits 1; a title missing from the page text or a planned photo without an image element is a warning) and against the style sheet (`detail.style.offPalette`). Fix the file until `audit`, `findings` and `offPalette` are empty, then move to page N+1. Do not batch pages: one page per step, checked, is the whole point.
+For page N: re-read `deck/style.md` and the page's outline entry, resolve its `image_queries` to files or URLs, write `deck/pages/NN.json` (two-digit, one page object, see `seuoffice guide slides spec`) echoing the entry's `title`, `type` and `layout` at the top of the object, and run `seuoffice slides check deck/pages/NN.json --json`. It builds that page alone and returns dropped elements, unreadable images and the geometry audit (out of bounds, text taller than its box, overlaps), then checks the page against outline entry N (`detail.outline.findings`: an echoed field that disagrees or placeholder copy is an error and exits 1; a title missing from the page text or a planned photo without an image element is a warning) and against the style sheet (`detail.style.offPalette`). Fix the file until `audit`, `findings` and `offPalette` are empty, then move to page N+1. Do not batch pages: one page per step, checked, is the whole point.
 
 Canvas is 1280 × 720 px, origin top-left, integers only; nothing may cross the edges. Elements paint in array order: background and decor shapes first, then images, text last.
 
@@ -95,9 +95,9 @@ Canvas is 1280 × 720 px, origin top-left, integers only; nothing may cross the 
 
 ## 5. Build, look, audit, fix
 
-1. `ieumoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck/deck.pptx --json` (`--outline` may be left out when the file sits beside the folder). Page files are taken in name order; the build refuses to run while an outline page has no file or a page file disagrees with its entry. Read `detail.issues`, `detail.imageFailures`, `detail.outline.findings` and `detail.style.offPalette`: each names the page file.
-2. `ieumoffice slides render deck/deck.pptx --out deck/shots --json` and look at every PNG (needs IeumOffice installed). Check overflow, collisions, contrast, crop, hierarchy, whitespace.
-3. `ieumoffice slides audit deck/deck.pptx --json` for the geometry findings the eye misses. Element ids in the findings are the ones `ieumoffice slides read` and `ieumoffice slides apply` use.
-4. Fix a page in its spec file and put it back with `ieumoffice slides replace deck/deck.pptx --slide <n> --spec deck/pages/NN.json --json` (slide n is page file n+1; the page is checked against outline entry n first); the other slides are untouched. Small nudges can also go through `ieumoffice slides apply` ops (`setTransform`, `setText`, `setTextStyle`, `setFill` …). At most two fix rounds; then report what remains.
+1. `seuoffice create --type pptx --spec deck/pages --outline deck/outline.json --out deck/deck.pptx --json` (`--outline` may be left out when the file sits beside the folder). Page files are taken in name order; the build refuses to run while an outline page has no file or a page file disagrees with its entry. Read `detail.issues`, `detail.imageFailures`, `detail.outline.findings` and `detail.style.offPalette`: each names the page file.
+2. `seuoffice slides render deck/deck.pptx --out deck/shots --json` and look at every PNG (needs SeuOffice installed). Check overflow, collisions, contrast, crop, hierarchy, whitespace.
+3. `seuoffice slides audit deck/deck.pptx --json` for the geometry findings the eye misses. Element ids in the findings are the ones `seuoffice slides read` and `seuoffice slides apply` use.
+4. Fix a page in its spec file and put it back with `seuoffice slides replace deck/deck.pptx --slide <n> --spec deck/pages/NN.json --json` (slide n is page file n+1; the page is checked against outline entry n first); the other slides are untouched. Small nudges can also go through `seuoffice slides apply` ops (`setTransform`, `setText`, `setTextStyle`, `setFill` …). At most two fix rounds; then report what remains.
 
 Only fix objective defects and restrained polish: keep the copy, facts, palette and composition. Do not redesign a page that is already clean.

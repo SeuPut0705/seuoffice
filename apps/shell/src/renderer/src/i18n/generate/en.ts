@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   windowTitle: 'Make a new document',
   kindLabel: 'What to make',
@@ -55,4 +53,4 @@ export const en = {
   convertTooManySlides:
     'The map has too many main branches for one presentation (up to {max} slides).',
   convertFailed: 'The conversion couldn’t be done. Try again.',
-} satisfies Record<keyof typeof zh, string>
+}

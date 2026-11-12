@@ -46,14 +46,14 @@ import {
   printHtmlDocument,
   type PrintDialogOutcome,
   assertFileSaved,
-} from '@genoffice/electron-utils'
-import { fetchImageBytes } from '@genoffice/electron-utils/fetch-image-bytes'
-import { createI18n, getUiLang } from '@genoffice/i18n'
+} from '@seuoffice/electron-utils'
+import { fetchImageBytes } from '@seuoffice/electron-utils/fetch-image-bytes'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 import {
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
-} from '@genoffice/ai-provider/subscription'
-import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
+} from '@seuoffice/ai-provider/subscription'
+import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@seuoffice/ai-search'
 import {
   parseFileToText,
   ATTACHABLE_EXTS,
@@ -63,7 +63,7 @@ import {
   ATTACHABLE_IMAGE_MAX_BYTES,
   diagramPictureExtOf,
   diagramPictureExtOfName,
-} from '@genoffice/file-parse'
+} from '@seuoffice/file-parse'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
 import { atomicWriteFile } from './atomic-write'
 import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/drivers/electron'
@@ -121,32 +121,6 @@ import type {
 } from '../shared/ipc'
 
 const tDlg = createI18n({
-  zh: {
-    dlgSaveTitle: '保存 HTML 文档',
-    filterHtml: 'HTML 文档',
-    filterPdf: 'PDF 文档',
-    filterWord: 'Word 文档',
-    dlgPickImage: '选择图片',
-    filterImages: '图片',
-    untitledFile: '未命名文档',
-    closeUnsavedMsg: '此文档有未保存的更改。',
-    closeUnsavedDetail: '关闭前是否保存？',
-    btnSave: '保存',
-    btnDontSave: '不保存',
-    btnCancel: '取消',
-    dlgAddAttachment: '添加附件',
-    filterSupported: '支持的文件',
-    filterAll: '所有文件',
-    errUnsupportedExt: '暂不支持 .{ext} 类型',
-    errNotFile: '不是文件',
-    errTooLarge: '超过 {mb}MB 上限',
-    errImageTooLarge: '图片超过 5MB 上限',
-    errUnreadable: '无法读取',
-    errFileTooLarge: '文件超过大小上限',
-    errParseFailed: '文件解析失败',
-    errImageNoText: '图片附件不提供文本,已作为图像随用户消息发送,直接看图即可',
-    errNotImage: '不是支持的图片类型',
-  },
   en: {
     dlgSaveTitle: 'Save HTML Document',
     filterHtml: 'HTML Documents',
@@ -172,60 +146,6 @@ const tDlg = createI18n({
     errParseFailed: 'Failed to parse file',
     errImageNoText: 'Image attachments have no text; the image is sent along with the user message',
     errNotImage: 'not a supported image type',
-  },
-  vi: {
-    dlgSaveTitle: 'Lưu tài liệu HTML',
-    filterHtml: 'Tài liệu HTML',
-    filterPdf: 'Tài liệu PDF',
-    filterWord: 'Tài liệu Word',
-    dlgPickImage: 'Chọn một hình ảnh',
-    filterImages: 'Hình ảnh',
-    untitledFile: 'Không có tiêu đề',
-    closeUnsavedMsg: 'Tài liệu này có những thay đổi chưa được lưu.',
-    closeUnsavedDetail: 'Bạn có muốn lưu các thay đổi trước khi đóng không?',
-    btnSave: 'Lưu',
-    btnDontSave: 'Không lưu',
-    btnCancel: 'Hủy',
-    dlgAddAttachment: 'Thêm tệp đính kèm',
-    filterSupported: 'Các tệp được hỗ trợ',
-    filterAll: 'Tất cả các tệp',
-    errUnsupportedExt: 'Tệp .{ext} không được hỗ trợ',
-    errNotFile: 'không phải là tệp',
-    errTooLarge: 'vượt quá giới hạn {mb}MB',
-    errImageTooLarge: 'hình ảnh vượt quá giới hạn 5MB',
-    errUnreadable: 'không thể đọc được',
-    errFileTooLarge: 'Tệp vượt quá giới hạn kích thước',
-    errParseFailed: 'Không thể phân tích tệp',
-    errImageNoText:
-      'Tệp đính kèm hình ảnh không có văn bản; hình ảnh được gửi cùng với tin nhắn của người dùng',
-    errNotImage: 'loại hình ảnh không được hỗ trợ',
-  },
-  ja: {
-    dlgSaveTitle: 'HTML ドキュメントを保存',
-    filterHtml: 'HTML ドキュメント',
-    filterPdf: 'PDF 文書',
-    filterWord: 'Word 文書',
-    dlgPickImage: '画像を選択',
-    filterImages: '画像',
-    untitledFile: '無題',
-    closeUnsavedMsg: 'このドキュメントに未保存の変更があります。',
-    closeUnsavedDetail: '閉じる前に保存しますか？',
-    btnSave: '保存',
-    btnDontSave: '保存しない',
-    btnCancel: 'キャンセル',
-    dlgAddAttachment: '添付ファイルの追加',
-    filterSupported: 'サポートされているファイル',
-    filterAll: 'すべてのファイル',
-    errUnsupportedExt: '.{ext} 形式には対応していません',
-    errNotFile: 'ファイルではありません',
-    errTooLarge: '{mb}MB の上限を超えています',
-    errImageTooLarge: '画像が 5MB の上限を超えています',
-    errUnreadable: '読み取れません',
-    errFileTooLarge: 'ファイルがサイズ上限を超えています',
-    errParseFailed: 'ファイルの解析に失敗しました',
-    errImageNoText:
-      '画像の添付ファイルはテキストを提供しません。画像としてユーザーメッセージと一緒に送信されるため、そのまま画像をご確認ください',
-    errNotImage: 'サポートされていない画像形式です',
   },
   ko: {
     dlgSaveTitle: 'HTML 문서 저장',
@@ -253,437 +173,6 @@ const tDlg = createI18n({
     errImageNoText:
       '이미지 첨부 파일은 텍스트를 제공하지 않으며, 이미지 형태로 사용자 메시지와 함께 전송되므로 이미지를 직접 확인하면 됩니다',
     errNotImage: '지원되지 않는 이미지 형식입니다',
-  },
-  fr: {
-    dlgSaveTitle: 'Enregistrer le document HTML',
-    filterHtml: 'Documents HTML',
-    filterPdf: 'Document PDF',
-    filterWord: 'Document Word',
-    dlgPickImage: 'Choisir une image',
-    filterImages: 'Images',
-    untitledFile: 'Sans titre',
-    closeUnsavedMsg: 'Ce document contient des modifications non enregistrées.',
-    closeUnsavedDetail: 'Voulez-vous les enregistrer avant de fermer ?',
-    btnSave: 'Enregistrer',
-    btnDontSave: 'Ne pas enregistrer',
-    btnCancel: 'Annuler',
-    dlgAddAttachment: 'Ajouter des pièces jointes',
-    filterSupported: 'Fichiers pris en charge',
-    filterAll: 'Tous les fichiers',
-    errUnsupportedExt: 'les fichiers .{ext} ne sont pas pris en charge',
-    errNotFile: "n'est pas un fichier",
-    errTooLarge: 'dépasse la limite de {mb} Mo',
-    errImageTooLarge: "l'image dépasse la limite de 5 Mo",
-    errUnreadable: 'lecture impossible',
-    errFileTooLarge: 'Le fichier dépasse la taille maximale',
-    errParseFailed: "Échec de l'analyse du fichier",
-    errImageNoText:
-      "Les pièces jointes image ne fournissent pas de texte ; l'image est envoyée avec le message de l'utilisateur, consultez-la directement",
-    errNotImage: "type d'image non pris en charge",
-  },
-  de: {
-    dlgSaveTitle: 'HTML-Dokument speichern',
-    filterHtml: 'HTML-Dokumente',
-    filterPdf: 'PDF-Dokument',
-    filterWord: 'Word-Dokument',
-    dlgPickImage: 'Bild auswählen',
-    filterImages: 'Bilder',
-    untitledFile: 'Unbenannt',
-    closeUnsavedMsg: 'Dieses Dokument enthält ungespeicherte Änderungen.',
-    closeUnsavedDetail: 'Vor dem Schließen speichern?',
-    btnSave: 'Speichern',
-    btnDontSave: 'Nicht speichern',
-    btnCancel: 'Abbrechen',
-    dlgAddAttachment: 'Anlagen hinzufügen',
-    filterSupported: 'Unterstützte Dateien',
-    filterAll: 'Alle Dateien',
-    errUnsupportedExt: '.{ext}-Dateien werden nicht unterstützt',
-    errNotFile: 'keine Datei',
-    errTooLarge: 'überschreitet das Limit von {mb} MB',
-    errImageTooLarge: 'Bild überschreitet das Limit von 5 MB',
-    errUnreadable: 'kann nicht gelesen werden',
-    errFileTooLarge: 'Datei überschreitet die maximale Größe',
-    errParseFailed: 'Datei konnte nicht analysiert werden',
-    errImageNoText:
-      'Bildanlagen liefern keinen Text; das Bild wird mit der Benutzernachricht gesendet und kann direkt betrachtet werden',
-    errNotImage: 'kein unterstütztes Bildformat',
-  },
-  es: {
-    dlgSaveTitle: 'Guardar documento HTML',
-    filterHtml: 'Documentos HTML',
-    filterPdf: 'Documento PDF',
-    filterWord: 'Documento de Word',
-    dlgPickImage: 'Elegir imagen',
-    filterImages: 'Imágenes',
-    untitledFile: 'Sin título',
-    closeUnsavedMsg: 'Este documento tiene cambios sin guardar.',
-    closeUnsavedDetail: '¿Quieres guardarlos antes de cerrar?',
-    btnSave: 'Guardar',
-    btnDontSave: 'No guardar',
-    btnCancel: 'Cancelar',
-    dlgAddAttachment: 'Agregar datos adjuntos',
-    filterSupported: 'Archivos compatibles',
-    filterAll: 'Todos los archivos',
-    errUnsupportedExt: 'los archivos .{ext} no son compatibles',
-    errNotFile: 'no es un archivo',
-    errTooLarge: 'supera el límite de {mb} MB',
-    errImageTooLarge: 'la imagen supera el límite de 5 MB',
-    errUnreadable: 'no se puede leer',
-    errFileTooLarge: 'El archivo supera el tamaño máximo',
-    errParseFailed: 'No se pudo analizar el archivo',
-    errImageNoText:
-      'Las imágenes adjuntas no proporcionan texto; la imagen se envía junto con el mensaje del usuario, puedes verla directamente',
-    errNotImage: 'no es un tipo de imagen compatible',
-  },
-  th: {
-    dlgSaveTitle: 'บันทึกเอกสาร HTML',
-    filterHtml: 'เอกสาร HTML',
-    filterPdf: 'เอกสาร PDF',
-    filterWord: 'เอกสาร Word',
-    dlgPickImage: 'เลือกรูปภาพ',
-    filterImages: 'รูปภาพ',
-    untitledFile: 'ไม่มีชื่อ',
-    closeUnsavedMsg: 'เอกสารนี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก',
-    closeUnsavedDetail: 'ต้องการบันทึกก่อนปิดหรือไม่?',
-    btnSave: 'บันทึก',
-    btnDontSave: 'ไม่บันทึก',
-    btnCancel: 'ยกเลิก',
-    dlgAddAttachment: 'เพิ่มสิ่งที่แนบ',
-    filterSupported: 'ไฟล์ที่รองรับ',
-    filterAll: 'ไฟล์ทั้งหมด',
-    errUnsupportedExt: 'ไม่รองรับไฟล์ .{ext}',
-    errNotFile: 'ไม่ใช่ไฟล์',
-    errTooLarge: 'เกินขีดจำกัด {mb}MB',
-    errImageTooLarge: 'รูปภาพเกินขีดจำกัด 5MB',
-    errUnreadable: 'ไม่สามารถอ่านได้',
-    errFileTooLarge: 'ไฟล์เกินขนาดสูงสุด',
-    errParseFailed: 'แยกวิเคราะห์ไฟล์ไม่สำเร็จ',
-    errImageNoText:
-      'สิ่งที่แนบเป็นรูปภาพไม่มีข้อความ รูปจะถูกส่งไปพร้อมข้อความของผู้ใช้ ดูรูปได้โดยตรง',
-    errNotImage: 'ไม่ใช่ชนิดรูปภาพที่รองรับ',
-  },
-  id: {
-    dlgSaveTitle: 'Simpan dokumen HTML',
-    filterHtml: 'Dokumen HTML',
-    filterPdf: 'Dokumen PDF',
-    filterWord: 'Dokumen Word',
-    dlgPickImage: 'Pilih gambar',
-    filterImages: 'Gambar',
-    untitledFile: 'Tanpa judul',
-    closeUnsavedMsg: 'Dokumen ini memiliki perubahan yang belum disimpan.',
-    closeUnsavedDetail: 'Simpan sebelum menutup?',
-    btnSave: 'Simpan',
-    btnDontSave: 'Jangan Simpan',
-    btnCancel: 'Batal',
-    dlgAddAttachment: 'Tambahkan Lampiran',
-    filterSupported: 'File yang Didukung',
-    filterAll: 'Semua File',
-    errUnsupportedExt: 'file .{ext} tidak didukung',
-    errNotFile: 'bukan file',
-    errTooLarge: 'melebihi batas {mb}MB',
-    errImageTooLarge: 'gambar melebihi batas 5MB',
-    errUnreadable: 'tidak dapat dibaca',
-    errFileTooLarge: 'File melebihi batas ukuran',
-    errParseFailed: 'Gagal mengurai file',
-    errImageNoText:
-      'Lampiran gambar tidak menyediakan teks; gambar dikirim bersama pesan pengguna dan dapat dilihat langsung',
-    errNotImage: 'bukan jenis gambar yang didukung',
-  },
-  ru: {
-    dlgSaveTitle: 'Сохранить документ HTML',
-    filterHtml: 'Документы HTML',
-    filterPdf: 'Документ PDF',
-    filterWord: 'Документ Word',
-    dlgPickImage: 'Выберите изображение',
-    filterImages: 'Изображения',
-    untitledFile: 'Без названия',
-    closeUnsavedMsg: 'В этом документе есть несохранённые изменения.',
-    closeUnsavedDetail: 'Сохранить их перед закрытием?',
-    btnSave: 'Сохранить',
-    btnDontSave: 'Не сохранять',
-    btnCancel: 'Отмена',
-    dlgAddAttachment: 'Добавить вложения',
-    filterSupported: 'Поддерживаемые файлы',
-    filterAll: 'Все файлы',
-    errUnsupportedExt: 'файлы .{ext} не поддерживаются',
-    errNotFile: 'не является файлом',
-    errTooLarge: 'превышает лимит {mb} МБ',
-    errImageTooLarge: 'изображение превышает лимит 5 МБ',
-    errUnreadable: 'не удается прочитать',
-    errFileTooLarge: 'Файл превышает максимальный размер',
-    errParseFailed: 'Не удалось разобрать файл',
-    errImageNoText:
-      'Вложенные изображения не содержат текста; изображение отправляется вместе с сообщением пользователя, смотрите его напрямую',
-    errNotImage: 'неподдерживаемый тип изображения',
-  },
-  ar: {
-    dlgSaveTitle: 'حفظ مستند HTML',
-    filterHtml: 'مستندات HTML',
-    filterPdf: 'مستند PDF',
-    filterWord: 'مستند Word',
-    dlgPickImage: 'اختر صورة',
-    filterImages: 'صور',
-    untitledFile: 'بدون عنوان',
-    closeUnsavedMsg: 'يحتوي هذا المستند على تغييرات غير محفوظة.',
-    closeUnsavedDetail: 'هل تريد حفظها قبل الإغلاق؟',
-    btnSave: 'حفظ',
-    btnDontSave: 'عدم الحفظ',
-    btnCancel: 'إلغاء',
-    dlgAddAttachment: 'إضافة مرفقات',
-    filterSupported: 'الملفات المدعومة',
-    filterAll: 'كل الملفات',
-    errUnsupportedExt: 'ملفات .{ext} غير مدعومة',
-    errNotFile: 'ليس ملفًا',
-    errTooLarge: 'يتجاوز الحد {mb}MB',
-    errImageTooLarge: 'الصورة تتجاوز حد 5MB',
-    errUnreadable: 'تعذرت القراءة',
-    errFileTooLarge: 'الملف يتجاوز الحد الأقصى للحجم',
-    errParseFailed: 'فشل تحليل الملف',
-    errImageNoText:
-      'مرفقات الصور لا توفر نصًا؛ تُرسل الصورة مع رسالة المستخدم ويمكن الاطلاع عليها مباشرة',
-    errNotImage: 'ليس نوع صورة مدعومًا',
-  },
-  pt: {
-    dlgSaveTitle: 'Salvar documento HTML',
-    filterHtml: 'Documentos HTML',
-    filterPdf: 'Documento PDF',
-    filterWord: 'Documento do Word',
-    dlgPickImage: 'Escolher imagem',
-    filterImages: 'Imagens',
-    untitledFile: 'Sem título',
-    closeUnsavedMsg: 'Este documento tem alterações não salvas.',
-    closeUnsavedDetail: 'Deseja salvá-las antes de fechar?',
-    btnSave: 'Salvar',
-    btnDontSave: 'Não Salvar',
-    btnCancel: 'Cancelar',
-    dlgAddAttachment: 'Adicionar Anexos',
-    filterSupported: 'Arquivos Compatíveis',
-    filterAll: 'Todos os Arquivos',
-    errUnsupportedExt: 'arquivos .{ext} não são suportados',
-    errNotFile: 'não é um arquivo',
-    errTooLarge: 'excede o limite de {mb}MB',
-    errImageTooLarge: 'a imagem excede o limite de 5MB',
-    errUnreadable: 'não é possível ler',
-    errFileTooLarge: 'O arquivo excede o limite de tamanho',
-    errParseFailed: 'Falha ao analisar o arquivo',
-    errImageNoText:
-      'Anexos de imagem não fornecem texto; a imagem é enviada junto com a mensagem do usuário, basta vê-la diretamente',
-    errNotImage: 'não é um tipo de imagem suportado',
-  },
-  it: {
-    dlgSaveTitle: 'Salva documento HTML',
-    filterHtml: 'Documenti HTML',
-    filterPdf: 'Documento PDF',
-    filterWord: 'Documento Word',
-    dlgPickImage: 'Scegli immagine',
-    filterImages: 'Immagini',
-    untitledFile: 'Senza titolo',
-    closeUnsavedMsg: 'Questo documento contiene modifiche non salvate.',
-    closeUnsavedDetail: 'Vuoi salvarle prima di chiudere?',
-    btnSave: 'Salva',
-    btnDontSave: 'Non salvare',
-    btnCancel: 'Annulla',
-    dlgAddAttachment: 'Aggiungi allegati',
-    filterSupported: 'File supportati',
-    filterAll: 'Tutti i file',
-    errUnsupportedExt: 'i file .{ext} non sono supportati',
-    errNotFile: 'non è un file',
-    errTooLarge: 'supera il limite di {mb} MB',
-    errImageTooLarge: "l'immagine supera il limite di 5 MB",
-    errUnreadable: 'impossibile leggere',
-    errFileTooLarge: 'Il file supera il limite di dimensione',
-    errParseFailed: 'Impossibile analizzare il file',
-    errImageNoText:
-      "Gli allegati immagine non forniscono testo; l'immagine viene inviata insieme al messaggio dell'utente, basta guardarla direttamente",
-    errNotImage: 'tipo di immagine non supportato',
-  },
-  pl: {
-    dlgSaveTitle: 'Zapisz dokument HTML',
-    filterHtml: 'Dokumenty HTML',
-    filterPdf: 'Dokument PDF',
-    filterWord: 'Dokument Word',
-    dlgPickImage: 'Wybierz obraz',
-    filterImages: 'Obrazy',
-    untitledFile: 'Bez tytułu',
-    closeUnsavedMsg: 'Ten dokument ma niezapisane zmiany.',
-    closeUnsavedDetail: 'Czy zapisać je przed zamknięciem?',
-    btnSave: 'Zapisz',
-    btnDontSave: 'Nie zapisuj',
-    btnCancel: 'Anuluj',
-    dlgAddAttachment: 'Dodaj załączniki',
-    filterSupported: 'Obsługiwane pliki',
-    filterAll: 'Wszystkie pliki',
-    errUnsupportedExt: 'pliki .{ext} nie są obsługiwane',
-    errNotFile: 'to nie jest plik',
-    errTooLarge: 'przekracza limit {mb} MB',
-    errImageTooLarge: 'obraz przekracza limit 5 MB',
-    errUnreadable: 'nie można odczytać',
-    errFileTooLarge: 'Plik przekracza limit rozmiaru',
-    errParseFailed: 'Nie udało się przeanalizować pliku',
-    errImageNoText:
-      'Załączniki graficzne nie zawierają tekstu; obraz jest wysyłany razem z wiadomością użytkownika, wystarczy na niego spojrzeć',
-    errNotImage: 'nieobsługiwany typ obrazu',
-  },
-  cs: {
-    dlgSaveTitle: 'Uložit dokument HTML',
-    filterHtml: 'Dokumenty HTML',
-    filterPdf: 'Dokument PDF',
-    filterWord: 'Dokument Word',
-    dlgPickImage: 'Vyberte obrázek',
-    filterImages: 'Obrázky',
-    untitledFile: 'Bez názvu',
-    closeUnsavedMsg: 'Tento dokument obsahuje neuložené změny.',
-    closeUnsavedDetail: 'Chcete je před zavřením uložit?',
-    btnSave: 'Uložit',
-    btnDontSave: 'Neukládat',
-    btnCancel: 'Zrušit',
-    dlgAddAttachment: 'Přidat přílohy',
-    filterSupported: 'Podporované soubory',
-    filterAll: 'Všechny soubory',
-    errUnsupportedExt: 'soubory .{ext} nejsou podporovány',
-    errNotFile: 'není soubor',
-    errTooLarge: 'překračuje limit {mb} MB',
-    errImageTooLarge: 'obrázek překračuje limit 5 MB',
-    errUnreadable: 'nelze přečíst',
-    errFileTooLarge: 'Soubor překračuje limit velikosti',
-    errParseFailed: 'Soubor se nepodařilo zpracovat',
-    errImageNoText:
-      'Obrázkové přílohy neobsahují text; obrázek se odesílá spolu se zprávou uživatele',
-    errNotImage: 'nepodporovaný typ obrázku',
-  },
-  nl: {
-    dlgSaveTitle: 'HTML-document opslaan',
-    filterHtml: 'HTML-documenten',
-    filterPdf: 'PDF-document',
-    filterWord: 'Word-document',
-    dlgPickImage: 'Kies een afbeelding',
-    filterImages: 'Afbeeldingen',
-    untitledFile: 'Naamloos',
-    closeUnsavedMsg: 'Dit document bevat niet-opgeslagen wijzigingen.',
-    closeUnsavedDetail: 'Wilt u ze opslaan voordat u sluit?',
-    btnSave: 'Opslaan',
-    btnDontSave: 'Niet opslaan',
-    btnCancel: 'Annuleren',
-    dlgAddAttachment: 'Bijlagen toevoegen',
-    filterSupported: 'Ondersteunde bestanden',
-    filterAll: 'Alle bestanden',
-    errUnsupportedExt: '.{ext}-bestanden worden niet ondersteund',
-    errNotFile: 'geen bestand',
-    errTooLarge: 'overschrijdt de limiet van {mb} MB',
-    errImageTooLarge: 'afbeelding overschrijdt de limiet van 5 MB',
-    errUnreadable: 'kan niet worden gelezen',
-    errFileTooLarge: 'Bestand overschrijdt de maximale grootte',
-    errParseFailed: 'Kan bestand niet parseren',
-    errImageNoText:
-      'Afbeeldingsbijlagen bevatten geen tekst; de afbeelding wordt samen met het gebruikersbericht verzonden en kan direct worden bekeken',
-    errNotImage: 'geen ondersteund afbeeldingstype',
-  },
-  ms: {
-    dlgSaveTitle: 'Simpan dokumen HTML',
-    filterHtml: 'Dokumen HTML',
-    filterPdf: 'Dokumen PDF',
-    filterWord: 'Dokumen Word',
-    dlgPickImage: 'Pilih imej',
-    filterImages: 'Imej',
-    untitledFile: 'Tanpa tajuk',
-    closeUnsavedMsg: 'Dokumen ini mempunyai perubahan yang belum disimpan.',
-    closeUnsavedDetail: 'Simpan sebelum menutup?',
-    btnSave: 'Simpan',
-    btnDontSave: 'Jangan Simpan',
-    btnCancel: 'Batal',
-    dlgAddAttachment: 'Tambah Lampiran',
-    filterSupported: 'Fail yang Disokong',
-    filterAll: 'Semua Fail',
-    errUnsupportedExt: 'fail .{ext} tidak disokong',
-    errNotFile: 'bukan fail',
-    errTooLarge: 'melebihi had {mb}MB',
-    errImageTooLarge: 'imej melebihi had 5MB',
-    errUnreadable: 'tidak dapat dibaca',
-    errFileTooLarge: 'Fail melebihi had saiz',
-    errParseFailed: 'Gagal menghurai fail',
-    errImageNoText:
-      'Lampiran imej tidak menyediakan teks; imej dihantar bersama mesej pengguna dan boleh dilihat terus',
-    errNotImage: 'bukan jenis imej yang disokong',
-  },
-  he: {
-    dlgSaveTitle: 'שמירת מסמך HTML',
-    filterHtml: 'מסמכי HTML',
-    filterPdf: 'מסמך PDF',
-    filterWord: 'מסמך Word',
-    dlgPickImage: 'בחרו תמונה',
-    filterImages: 'תמונות',
-    untitledFile: 'ללא שם',
-    closeUnsavedMsg: 'במסמך הזה יש שינויים שלא נשמרו.',
-    closeUnsavedDetail: 'האם לשמור אותם לפני הסגירה?',
-    btnSave: 'שמירה',
-    btnDontSave: 'אל תשמור',
-    btnCancel: 'ביטול',
-    dlgAddAttachment: 'הוספת קבצים מצורפים',
-    filterSupported: 'קבצים נתמכים',
-    filterAll: 'כל הקבצים',
-    errUnsupportedExt: 'קובצי .{ext} אינם נתמכים',
-    errNotFile: 'אינו קובץ',
-    errTooLarge: 'חורג מהמגבלה של {mb}MB',
-    errImageTooLarge: 'התמונה חורגת מהמגבלה של 5MB',
-    errUnreadable: 'לא ניתן לקרוא',
-    errFileTooLarge: 'הקובץ חורג ממגבלת הגודל',
-    errParseFailed: 'ניתוח הקובץ נכשל',
-    errImageNoText:
-      'קבצים מצורפים מסוג תמונה אינם מספקים טקסט; התמונה נשלחת יחד עם הודעת המשתמש וניתן לצפות בה ישירות',
-    errNotImage: 'סוג תמונה שאינו נתמך',
-  },
-  hi: {
-    dlgSaveTitle: 'HTML दस्तावेज़ सहेजें',
-    filterHtml: 'HTML दस्तावेज़',
-    filterPdf: 'PDF दस्तावेज़',
-    filterWord: 'Word दस्तावेज़',
-    dlgPickImage: 'छवि चुनें',
-    filterImages: 'छवियाँ',
-    untitledFile: 'शीर्षकहीन',
-    closeUnsavedMsg: 'इस दस्तावेज़ में सहेजे नहीं गए परिवर्तन हैं।',
-    closeUnsavedDetail: 'क्या बंद करने से पहले उन्हें सहेजना चाहते हैं?',
-    btnSave: 'सहेजें',
-    btnDontSave: 'न सहेजें',
-    btnCancel: 'रद्द करें',
-    dlgAddAttachment: 'अनुलग्नक जोड़ें',
-    filterSupported: 'समर्थित फ़ाइलें',
-    filterAll: 'सभी फ़ाइलें',
-    errUnsupportedExt: '.{ext} फ़ाइलें समर्थित नहीं हैं',
-    errNotFile: 'फ़ाइल नहीं है',
-    errTooLarge: '{mb}MB की सीमा से अधिक है',
-    errImageTooLarge: 'छवि 5MB की सीमा से अधिक है',
-    errUnreadable: 'पढ़ा नहीं जा सकता',
-    errFileTooLarge: 'फ़ाइल आकार सीमा से अधिक है',
-    errParseFailed: 'फ़ाइल पार्स करने में विफल',
-    errImageNoText:
-      'छवि अनुलग्नक टेक्स्ट प्रदान नहीं करते; छवि उपयोगकर्ता संदेश के साथ भेजी जाती है, उसे सीधे देखें',
-    errNotImage: 'समर्थित छवि प्रकार नहीं है',
-  },
-  'zh-TW': {
-    dlgSaveTitle: '儲存 HTML 文件',
-    filterHtml: 'HTML 文件',
-    filterPdf: 'PDF 文件',
-    filterWord: 'Word 文件',
-    dlgPickImage: '選擇圖片',
-    filterImages: '圖片',
-    untitledFile: '未命名文件',
-    closeUnsavedMsg: '此文件有未儲存的變更。',
-    closeUnsavedDetail: '關閉前是否儲存？',
-    btnSave: '儲存',
-    btnDontSave: '不儲存',
-    btnCancel: '取消',
-    dlgAddAttachment: '新增附件',
-    filterSupported: '支援的檔案',
-    filterAll: '所有檔案',
-    errUnsupportedExt: '暫不支援 .{ext} 類型',
-    errNotFile: '不是檔案',
-    errTooLarge: '超過 {mb}MB 上限',
-    errImageTooLarge: '圖片超過 5MB 上限',
-    errUnreadable: '無法讀取',
-    errFileTooLarge: '檔案超過大小上限',
-    errParseFailed: '檔案解析失敗',
-    errImageNoText: '圖片附件不提供文字,已作為影像隨使用者訊息傳送,直接看圖即可',
-    errNotImage: '不是支援的圖片類型',
   },
 })
 type DlgKey =
@@ -792,7 +281,7 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
         ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
         : null
   if (!bytes || bytes.byteLength === 0) return null
-  const dir = join(app.getPath('temp'), 'genoffice-pasted')
+  const dir = join(app.getPath('temp'), 'seuoffice-pasted')
   mkdirSync(dir, { recursive: true })
   prunePastedImages(dir)
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')
@@ -827,7 +316,7 @@ interface RuntimePaths {
   preloadPath: string
   rendererUrl?: string
   rendererFile?: string
-  /** Shell router used to open exported PDFs in a new GenOffice tab. */
+  /** Shell router used to open exported PDFs in a new SeuOffice tab. */
   openGeneratedPath?: (path: string) => boolean
   /**
    * Project folders (spec 6): the folder an untitled document's save dialog
@@ -1144,7 +633,7 @@ async function writeHtmlDocx(
   if (docxExportPrepareHook && !(await docxExportPrepareHook(target))) {
     return { ok: true, canceled: true }
   }
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-docx-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-docx-'))
   try {
     const docx = await renderHtmlDocx(html, docPath, workDir)
     await writeFile(target, docx)
@@ -1168,7 +657,7 @@ async function writeHtmlOdt(
   const outcome = await exportOdt({
     pickPath,
     docx: async () => {
-      const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-docx-'))
+      const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-docx-'))
       try {
         return await renderHtmlDocx(html, docPath(), workDir)
       } finally {
@@ -1194,7 +683,7 @@ async function writeHtmlPdf(
   docPath: string | undefined,
   target: string,
 ): Promise<ExportResult> {
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-pdf-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-pdf-'))
   try {
     await writeFile(target, await renderPrintPdf(html, docPath, workDir))
     openExportedPdf(target)
@@ -1243,7 +732,7 @@ function printHtml(html: string, docPath: string | undefined): Promise<PrintDial
     html: buildPreviewDocument(html, base),
     window: new BrowserWindow({ show: false, webPreferences: { sandbox: true } }),
     fileName: 'print.html',
-    dirPrefix: 'genoffice-html-print-',
+    dirPrefix: 'seuoffice-html-print-',
   })
 }
 
@@ -1970,7 +1459,7 @@ function registerHtmlIpc(): void {
           {
             mediaRoots: documentMediaRoots(
               htmlFilePath(e.sender.id),
-              join(app.getPath('temp'), 'genoffice-pasted'),
+              join(app.getPath('temp'), 'seuoffice-pasted'),
             ),
             // screen path: the statuses of the process-wide subscription service decide the route
             context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
@@ -2104,7 +1593,7 @@ function registerHtmlIpc(): void {
     HTML_CHANNELS.printPreview,
     async (e, request: PrintHtmlRequest): Promise<Uint8Array | null> => {
       if (typeof request?.html !== 'string') return null
-      const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-preview-'))
+      const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-preview-'))
       try {
         return await renderPrintPdf(request.html, savePathByWc.get(e.sender.id), workDir)
       } catch (err) {
@@ -2344,7 +1833,7 @@ export function createHtmlView(openPath?: string | null): WebContentsView {
   return view
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/html`, md path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/html`, md path passed via argv */
 export function startHtmlStandalone(): void {
   registerPrivilegedSchemes()
   installNavigationGuard(app)

@@ -1,15 +1,15 @@
-import { attachedImageNote, type AgentSkill, type ToolDisplay } from '@genoffice/agent-core'
+import { attachedImageNote, type AgentSkill, type ToolDisplay } from '@seuoffice/agent-core'
 import type {
   GroupRenderNode,
   PictureRenderNode,
   RenderNode,
   RenderSlide,
   ShapeRenderNode,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import type { AgentToolCall, AgentToolDef, ReadUrlResult, SlideComment } from '../../shared/ipc'
-import { OP_GROUPS, opGuide, opGuideCatalog, opSignatureIndex } from '@genoffice/pptx-ops/op-docs'
-import { auditSlideLayout, formatAudit } from '@genoffice/pipelines/slides/layout-audit'
-import { findSlideTemplate, listSlideTemplates } from '@genoffice/pipelines/slides/templates'
+import { OP_GROUPS, opGuide, opGuideCatalog, opSignatureIndex } from '@seuoffice/pptx-ops/op-docs'
+import { auditSlideLayout, formatAudit } from '@seuoffice/pipelines/slides/layout-audit'
+import { findSlideTemplate, listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
 import { runLayoutScript, type LayoutScriptElement } from './layout-script'
 import {
   extractLayoutSkeleton,
@@ -28,7 +28,6 @@ import {
   type AppliedTemplate,
   type TemplateSelectionState,
 } from './template-selection-state'
-import { brandText } from '@genoffice/i18n'
 import { t } from '../i18n/locale'
 import systemPrompt from './prompts/system.md?raw'
 import { placeholderInstruction } from './redact'
@@ -36,7 +35,7 @@ import { textForModel, redactLabelsOf } from './redact-view'
 import { redactGuardFor } from './redact-guard'
 import { isGenerationStopKind } from './generation-stop'
 import { deckTakesDefaultFonts } from './default-fonts'
-import type { SlidesAiFontRoles } from '@genoffice/ui/slides-ai-fonts'
+import type { SlidesAiFontRoles } from '@seuoffice/ui/slides-ai-fonts'
 
 /**
  * Slides capability as an AgentSkill: deck outline context + three tools (read structure /
@@ -1172,12 +1171,7 @@ export function createSlidesSkill(access: DeckAccess): AgentSkill {
         access.imageAttachmentNames?.() ?? [],
         'pass url=attachment://<name> to insert_web_image',
       )
-      return (
-        brandText(systemPrompt, 'en') +
-        mediaToolsOffNote(hiddenMediaTools(access)) +
-        attached +
-        redact
-      )
+      return systemPrompt + mediaToolsOffNote(hiddenMediaTools(access)) + attached + redact
     },
     // live view: the predicates are re-read before every model request
     get tools() {

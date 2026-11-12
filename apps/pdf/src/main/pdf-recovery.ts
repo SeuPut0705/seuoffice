@@ -30,7 +30,7 @@ import {
   type RecoveryIdentity,
   type RecoveryMessageBox,
   type RecoveryStore,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 
 export type PdfRecoveryWriteResult = 'written' | 'superseded' | 'skipped' | 'failed'
 

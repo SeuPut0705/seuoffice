@@ -9,14 +9,14 @@
  * (styles.css): body text, headings and lists follow it, while code, math
  * and diagrams keep their own faces.
  */
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   createSystemFontSource,
   fontFamiliesFor,
   partitionFontFamilies,
   type SystemFonts,
   useSystemFontSource,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 
 export const EDITOR_FONT_KEY = 'mdapp.editorFont'
 

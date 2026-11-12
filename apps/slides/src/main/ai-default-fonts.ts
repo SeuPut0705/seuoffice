@@ -5,8 +5,8 @@ import {
   normalizeSlidesAiFonts,
   type SlidesAiFontRoles,
   type SlidesAiFonts,
-} from '@genoffice/ui/slides-ai-fonts'
-import type { PageSpec, SpecParagraph } from '@genoffice/pipelines/slides'
+} from '@seuoffice/ui/slides-ai-fonts'
+import type { PageSpec, SpecParagraph } from '@seuoffice/pipelines/slides'
 
 /**
  * The fonts AI slide generation uses when the request names none (Settings › General,
@@ -20,7 +20,7 @@ export interface SettingsPathProvider {
 }
 
 /**
- * The stored choice, or the default for `lang` (the renderer's UI language) when the
+ * The stored choice, or the default for `lang` (the language documents are read for) when the
  * file or the key is missing or unreadable.
  */
 export function readSlidesAiFonts(app: SettingsPathProvider, lang: string): SlidesAiFonts {

@@ -8,7 +8,7 @@ The row at the bottom left of Home opens the settings panel (it reads Connect AI
 
 ## Language
 
-- The settings offer **21 UI languages**: English, Simplified Chinese, Japanese, Korean, French, German, Spanish, Thai, Indonesian, Russian, Arabic, Portuguese, Italian, Polish, Czech, Dutch, Malay, Hebrew, Hindi, Traditional Chinese, Vietnamese.
+- The settings offer **two UI languages**: English and Korean.
 - Switching applies immediately and persists; the native menu bar rebuilds with the language.
 
 ## Theme
@@ -20,11 +20,11 @@ Light / Dark / System. System follows the OS appearance, and the editors re-skin
 - **AI sidebar position** (left or right), **AI panel text size**, and **Spell check in AI chat**.
 - **AI panel** — Off, Collapsed, or Last state.
 - **Auto-save all documents** turns AutoSave on by default in every editor; you can still switch it off for one window.
-- **Save Location** with a **Change** button, and **Default app for Office documents** to claim .docx / .xlsx / .pptx for GenOffice.
+- **Save Location** with a **Change** button, and **Default app for Office documents** to claim .docx / .xlsx / .pptx for SeuOffice.
 - **Save format for new HWP documents** picks whether HWP or HWPX is offered first when you first save a new document. Documents you open keep their own format.
 - **AI slide fonts** sets the fonts AI uses for a new presentation when your request names none. Pick Auto, Sans serif, Serif, or Serif titles, and change the sans-serif and serif font separately. A design template you choose uses its own fonts, and pages added to a presentation in other fonts follow that presentation.
 
-GenOffice does not collect or send usage statistics, so there is no switch for it.
+SeuOffice does not collect or send usage statistics, so there is no switch for it.
 
 ## AI ▸ Advanced
 
@@ -40,7 +40,7 @@ Closed until you open it; most people never need it. The **AI Model** tab holds 
 
 ## Default app bindings
 
-Settings can register GenOffice as the handler for .docx / .xlsx / .pptx / .pdf and friends (platform-level default-app registration; confirm when prompted).
+Settings can register SeuOffice as the handler for .docx / .xlsx / .pptx / .pdf and friends (platform-level default-app registration; confirm when prompted).
 
 ## Third-party notices and updates
 
@@ -49,14 +49,14 @@ Settings can register GenOffice as the handler for .docx / .xlsx / .pptx / .pdf 
 
 ## MCP integration (for advanced users / AI clients)
 
-**Integrations** is the pane that connects GenOffice to a coding agent, and it has its own article: Connecting a coding agent. The short version — pick a route (the command line, or MCP), follow that section, then start a new chat and ask.
+**Integrations** is the pane that connects SeuOffice to a coding agent, and it has its own article: Connecting a coding agent. The short version — pick a route (the command line, or MCP), follow that section, then start a new chat and ask.
 
 Under **Local HTTP server** the app can run the server itself — an enable switch, a port — and **Advanced** adds the health-check URL and the log file. It listens on localhost only.
 
 ## Command-line cheat sheet
 
-| Command             | What it does               |
-| ------------------- | -------------------------- |
-| `ieumoffice <file>` | open a file                |
-| `ieumoffice mcp`    | start the local MCP server |
-| `ieumoffice --help` | every command and flag     |
+| Command            | What it does               |
+| ------------------ | -------------------------- |
+| `seuoffice <file>` | open a file                |
+| `seuoffice mcp`    | start the local MCP server |
+| `seuoffice --help` | every command and flag     |

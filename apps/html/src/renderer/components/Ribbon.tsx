@@ -6,7 +6,7 @@ import {
   aiSubscriptionText,
   useDismissablePopover,
   useRibbonCollapse,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useI18n } from '../i18n/locale'
 import type { StringKey } from '../i18n/locale'
 import type { InsertKind, InsertOptions } from '../document/insert-presets'

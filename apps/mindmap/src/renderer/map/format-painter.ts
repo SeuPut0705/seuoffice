@@ -34,7 +34,7 @@ import {
   type ViewTitleRun,
   type ViewTopicStyle,
   wholeNumber,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import type { ResolvedBranchLine } from './line-resolve'
 import type { StyleEdits, StyleValues } from './line-format'
 import {

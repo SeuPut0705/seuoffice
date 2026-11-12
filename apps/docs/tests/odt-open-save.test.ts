@@ -7,8 +7,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Editor } from '@tiptap/core'
-import { buildBlankDocx, readDocxPartBase64 } from '@genoffice/docx-engine'
-import { docxToOdt, odtToDocx } from '@genoffice/odt-engine'
+import { buildBlankDocx, readDocxPartBase64 } from '@seuoffice/docx-engine'
+import { docxToOdt, odtToDocx } from '@seuoffice/odt-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import type { DocState } from '../src/renderer/doc-state'
 import { isOdtDoc } from '../src/renderer/doc-state'

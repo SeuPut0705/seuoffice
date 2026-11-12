@@ -17,7 +17,7 @@ import {
   type ConnectionSide,
   type Slide,
   type SlideElement,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import {
   GuidedError,
   register,
@@ -109,7 +109,8 @@ const rectsOf = (els: SlideElement[]) =>
 register({
   name: 'alignElements',
   validate(op, ctx) {
-    if (!ALIGN_MODES[String(op.mode)]) {
+    // the mode is the op's: only the table's own names are modes, not `constructor` & co.
+    if (!Object.hasOwn(ALIGN_MODES, String(op.mode))) {
       throw new GuidedError(
         `op "alignElements" needs "mode": ${Object.keys(ALIGN_MODES).join('/')}.`,
       )
@@ -317,7 +318,7 @@ register({
     const from = resolveEndpoint(op, slide, 'from', index)
     const to = resolveEndpoint(op, slide, 'to', index)
     if (from === to) throw new GuidedError('op "addConnector": "from" and "to" must differ.')
-    if (op.kind !== undefined && !CONNECTOR_KINDS[String(op.kind)]) {
+    if (op.kind !== undefined && !Object.hasOwn(CONNECTOR_KINDS, String(op.kind))) {
       throw new GuidedError('op "addConnector": "kind" must be straight/elbow/curved.')
     }
     sideOf(op, 'fromSide')
@@ -352,7 +353,7 @@ register({
     const dash = line.dash ? `<a:prstDash val="${line.dash}"/>` : ''
     el.anchor.originalXml = el.anchor.originalXml
       .replace(/<a:headEnd\b[^>]*\/>|<a:tailEnd\b[^>]*\/>/g, '')
-      .replace('</a:ln>', `${dash}${head}${tail}</a:ln>`)
+      .replace('</a:ln>', () => `${dash}${head}${tail}</a:ln>`)
     // direction lives in the xfrm flips; dirtyTransform makes setElementConnection bake them in
     el.transform = { ...el.transform, flipH: p1.x > p2.x, flipV: p1.y > p2.y }
     el.dirtyTransform = true

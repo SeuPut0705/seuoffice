@@ -56,7 +56,7 @@ const ICNS_TARGETS = ['apps/shell/build/icon.icns', 'apps/docs/build/icon.icns']
 // freedesktop hicolor size set (electron-builder linux.icon points at this dir).
 const LINUX_ICON_DIR = 'apps/shell/build/icons'
 const LINUX_SIZES = [16, 32, 48, 64, 128, 256, 512, 1024]
-const LOCKUP_TARGET = 'apps/shell/src/renderer/src/assets/genoffice-logo.svg'
+const LOCKUP_TARGET = 'apps/shell/src/renderer/src/assets/seuoffice-logo.svg'
 
 const WIN_SIZES = [16, 24, 32, 48, 64, 128, 256]
 

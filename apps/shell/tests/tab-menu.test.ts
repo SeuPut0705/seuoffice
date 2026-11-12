@@ -164,7 +164,7 @@ describe('the tab context menu', () => {
     expect(isProgramFile('report.pdf.exe')).toBe(true)
     expect(isProgramFile('summary.docx.command')).toBe(true)
 
-    // Valid documents supported by GenOffice and external tools must NOT be blocked
+    // Valid documents supported by SeuOffice and external tools must NOT be blocked
     expect(isProgramFile('document.docx')).toBe(false)
     expect(isProgramFile('spreadsheet.xlsx')).toBe(false)
     expect(isProgramFile('presentation.pptx')).toBe(false)
@@ -249,29 +249,7 @@ describe('the tab context menu', () => {
   })
 
   it('uses the main table for every supported locale without English fallback', () => {
-    const locales = [
-      'zh',
-      'en',
-      'vi',
-      'ja',
-      'ko',
-      'fr',
-      'de',
-      'es',
-      'th',
-      'id',
-      'ru',
-      'ar',
-      'pt',
-      'it',
-      'pl',
-      'cs',
-      'nl',
-      'ms',
-      'he',
-      'hi',
-      'zh-TW',
-    ] as const
+    const locales = ['en', 'ko'] as const
     expect(Object.keys(mainMenuStrings).sort()).toEqual([...locales].sort())
     for (const locale of locales) {
       const localized = menu(a, all, { tm: (key) => translateMainMenu(locale, key) }).raw
@@ -288,12 +266,6 @@ describe('the tab context menu', () => {
         expect(item.label?.trim().length).toBeGreaterThan(0)
       }
     }
-    expect(translateMainMenu('vi', 'menuTabCloseOthers')).toBe('Đóng các thẻ khác')
-    expect(translateMainMenu('zh', 'menuTabCloseOthers')).toBe(
-      '\u5173\u95ed\u5176\u4ed6\u6807\u7b7e\u9875',
-    )
-    expect(translateMainMenu('th', 'menuTabSave')).toBe('บันทึก')
-    expect(translateMainMenu('id', 'menuTabSave')).toBe('Simpan')
   })
 })
 

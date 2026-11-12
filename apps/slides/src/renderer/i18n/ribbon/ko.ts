@@ -1,5 +1,5 @@
-import type { zh } from './zh'
-import { ribbonCommonKo } from '@genoffice/i18n'
+import type { en } from './en'
+import { ribbonCommonKo } from '@seuoffice/i18n'
 
 export const ko = {
   ...ribbonCommonKo,
@@ -769,4 +769,4 @@ export const ko = {
   ribbonMergeFragment: '조각',
   ribbonMergeIntersect: '교차',
   ribbonMergeSubtract: '빼기',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

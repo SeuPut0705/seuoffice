@@ -8,7 +8,7 @@ import type {
   ProjectEditor,
   ProjectFolderApi,
   ProjectListItem,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 
 export interface FakeProjectFolder {
   readonly api: ProjectFolderApi

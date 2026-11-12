@@ -4,7 +4,7 @@
  * which sentence each notice or event line says. Pure functions; the
  * components only lay these out.
  */
-import { htmlLang, type Lang } from '@genoffice/i18n'
+import { htmlLang, type Lang } from '@seuoffice/i18n'
 import type {
   AddFolderResult,
   CreateProjectResult,
@@ -17,7 +17,7 @@ import type {
   ProjectMemoryOp,
   ProjectNotice,
   ProjectScreenSection,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import type { ProjectRunPrepared } from './project-skill'
 import { projectPanelText, type ProjectPanelStringKey } from './strings-project-panel'
 

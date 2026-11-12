@@ -2,34 +2,48 @@ import {
   decodeCsvBuffer,
   parseCsv,
   resolveImportDelimiter,
-} from '@genoffice/xlsx-gateway/gateway/csv-import'
-import { csvToXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
-import { normalizeLang, type Lang } from '@genoffice/i18n'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import'
+import { csvToXlsxBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import { cutIndex } from '../preview'
 
 /**
+ * The row of the charset table a locale tag ('ja_JP.UTF-8', 'zh-Hant-TW', 'ko')
+ * falls in. Read from the tag itself, not through the UI language list: the
+ * code page of a file does not depend on which languages the screen has.
+ */
+function charsetLanguage(raw: string | undefined): string | undefined {
+  const value = raw?.trim().toLowerCase()
+  if (!value) return undefined
+  // traditional-script Chinese variants must win over the generic 'zh' prefix
+  if (/^zh[-_](tw|hk|mo|hant)/.test(value)) return 'zh-TW'
+  return ['zh', 'ja', 'ko'].find(
+    (lang) => value === lang || value.startsWith(`${lang}-`) || value.startsWith(`${lang}_`),
+  )
+}
+
+/**
  * The legacy charset Excel writes CSV in on this machine, from the same language the app
- * uses (GENOFFICE_LANG, else the system locale). Without it the CLI broke the tie between
+ * uses (SEUOFFICE_LANG, else the system locale). Without it the CLI broke the tie between
  * GBK and the Korean code page the wrong way and read a Korean Excel CSV as Chinese.
  */
 export function legacyCsvCharset(env: NodeJS.ProcessEnv = process.env): string | undefined {
-  const byLang: Partial<Record<Lang, string>> = {
+  const byLang: Partial<Record<string, string>> = {
     zh: 'gb18030',
     'zh-TW': 'big5',
     ja: 'shift_jis',
     ko: 'euc-kr',
   }
   const raw =
-    env.GENOFFICE_LANG ||
+    env.SEUOFFICE_LANG ||
     env.LC_ALL ||
     env.LC_MESSAGES ||
     env.LANG ||
     Intl.DateTimeFormat().resolvedOptions().locale
-  return byLang[normalizeLang(raw)]
+  return byLang[charsetLanguage(raw) ?? '']
 }
 
 /** CSV bytes as text, with the machine's legacy charset breaking ties. */
-export function decodeCsv(bytes: Uint8Array): string {
+export async function decodeCsv(bytes: Uint8Array): Promise<string> {
   return decodeCsvBuffer(bytes, legacyCsvCharset())
 }
 
@@ -39,8 +53,8 @@ export interface CsvInfo {
   delimiter: string
 }
 
-export function csvInfo(bytes: Uint8Array): CsvInfo {
-  const text = decodeCsv(bytes)
+export async function csvInfo(bytes: Uint8Array): Promise<CsvInfo> {
+  const text = await decodeCsv(bytes)
   const delimiter = resolveImportDelimiter(text)
   const rows = parseCsv(text, delimiter)
   return {
@@ -51,7 +65,7 @@ export function csvInfo(bytes: Uint8Array): CsvInfo {
 }
 
 export async function csvToXlsx(bytes: Uint8Array, sheetName: string): Promise<Uint8Array> {
-  const buf = await csvToXlsxBuffer(decodeCsv(bytes), sheetName)
+  const buf = await csvToXlsxBuffer(await decodeCsv(bytes), sheetName)
   return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength)
 }
 

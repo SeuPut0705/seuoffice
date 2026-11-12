@@ -8,7 +8,7 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { AI_SUBSCRIPTION_STRINGS } from '../src/strings-ai-subscription'
 
 const REPO = fileURLToPath(new URL('../../..', import.meta.url))
@@ -100,8 +100,7 @@ function filesUnder(dir: string): string[] {
 }
 
 describe('the AI entry label', () => {
-  it('is one shared key with a value in all 21 languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('is one shared key with a value in every language', () => {
     for (const lang of LANGS) {
       expect(AI_SUBSCRIPTION_STRINGS[lang].aiAssistant.trim().length, lang).toBeGreaterThan(0)
     }
@@ -223,7 +222,7 @@ describe('reading subscription IPC answers', () => {
     const text = source(`apps/${app}/src/shared/subscription-api.ts`)
     expect(text).not.toMatch(/export function (subscription\w+Of|checkingSubscriptionStatuses)\b/)
     expect(text).not.toMatch(/export function isSubscriptionProviderId\b/)
-    const reexport = text.match(/export \{([^}]*)\} from '@genoffice\/ai-provider\/browser'/)
+    const reexport = text.match(/export \{([^}]*)\} from '@seuoffice\/ai-provider\/browser'/)
     expect(reexport?.[1]).toContain('subscriptionStatusMapOf')
     expect(reexport?.[1]).toContain('subscriptionLaunchResultOf')
     expect(reexport?.[1]).toContain('checkingSubscriptionStatuses')

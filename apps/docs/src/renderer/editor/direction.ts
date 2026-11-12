@@ -1,9 +1,10 @@
 import type { Editor } from '@tiptap/core'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
+import { isRtlLang } from '@seuoffice/i18n'
 import { Extension } from '@tiptap/core'
 import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { Mapping } from '@tiptap/pm/transform'
-import type { ParaFormat, Run } from '@genoffice/docx-engine'
+import type { ParaFormat, Run } from '@seuoffice/docx-engine'
 
 /** paragraph-like blocks that carry the bidi attribute */
 const DIR_BLOCKS = new Set(['docParagraph', 'docHeading', 'docListItem'])
@@ -42,7 +43,7 @@ export function effectiveBidi(attrs: Record<string, unknown>): boolean {
 
 /** UI languages whose users get the paragraph direction buttons by default */
 export function isRtlUiLang(lang: Lang): boolean {
-  return lang === 'ar' || lang === 'he'
+  return isRtlLang(lang)
 }
 
 /** whether any paragraph-like block touched by the selection is RTL */

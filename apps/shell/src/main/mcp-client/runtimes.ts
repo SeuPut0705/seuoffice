@@ -13,7 +13,7 @@ import { constants } from 'node:fs'
 import { access, mkdir, readdir, realpath, rename, rm, stat } from 'node:fs/promises'
 import { homedir } from 'node:os'
 import { basename, dirname, extname, isAbsolute, join } from 'node:path'
-import { commonUnixBinDirs, isFullDir, pathDirs } from '@genoffice/ai-provider/subscription'
+import { commonUnixBinDirs, isFullDir, pathDirs } from '@seuoffice/ai-provider/subscription'
 import {
   RuntimeArchiveError,
   downloadVerifiedArchive,

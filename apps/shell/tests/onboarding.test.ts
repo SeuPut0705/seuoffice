@@ -5,9 +5,9 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AiSubscriptionState, SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
-import { LANGS } from '@genoffice/i18n'
-import { aiSubscriptionText } from '@genoffice/ui'
+import type { AiSubscriptionState, SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
+import { LANGS } from '@seuoffice/i18n'
+import { aiSubscriptionText } from '@seuoffice/ui'
 import { Onboarding } from '../src/renderer/src/Onboarding'
 import { LocaleProvider } from '../src/renderer/src/locale'
 import {
@@ -463,7 +463,6 @@ describe('Onboarding', () => {
 
 describe('welcome copy', () => {
   it('exists in every UI language, as a translation', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       const { onbWelcomeSubtitle, onbWelcomeBody } = strings[lang]
       expect(onbWelcomeSubtitle.trim(), lang).not.toBe('')
@@ -483,6 +482,6 @@ describe('welcome copy', () => {
     expect(body).toContain('Claude')
     expect(body).toContain('ChatGPT')
     // the product is named by the title above, and no vendor of the suite is named at all
-    expect(`${strings[lang].onbWelcomeSubtitle} ${body}`).not.toMatch(/genoffice/i)
+    expect(`${strings[lang].onbWelcomeSubtitle} ${body}`).not.toMatch(/seuoffice/i)
   })
 })

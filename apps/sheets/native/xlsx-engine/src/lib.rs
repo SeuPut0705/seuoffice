@@ -392,11 +392,13 @@ impl WorkbookSessions {
                 &wps_cell_images,
                 &mut cell_image_count,
             )?;
-            let pivot_infos = visuals::read_pivot_tables(&mut archive, &worksheet_path)?;
-            let pivot_ranges = pivot_infos
+            let (pivot_infos, pivots_without_ref) =
+                visuals::read_pivot_tables(&mut archive, &worksheet_path)?;
+            let pivot_ranges: Vec<_> = pivot_infos
                 .iter()
                 .filter_map(|info| parse_range_reference(&info.output_ref))
                 .collect();
+            let pivots_unlocated = pivots_without_ref + pivot_infos.len() - pivot_ranges.len();
             let pivot_tables = pivot_infos
                 .into_iter()
                 .map(|info| {
@@ -467,6 +469,7 @@ impl WorkbookSessions {
                 tables,
                 comments,
                 pivot_ranges,
+                pivots_unlocated,
                 pivot_tables,
                 sparklines,
                 print_area: None,

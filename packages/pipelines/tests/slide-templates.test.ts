@@ -16,11 +16,11 @@ import {
 } from '../src/slides/templates/index'
 
 const loaded = vi.hoisted(() => [] as string[])
-vi.mock('@genoffice/pptx-engine', () => {
+vi.mock('@seuoffice/pptx-engine', () => {
   loaded.push('pptx-engine')
   return {}
 })
-vi.mock('@genoffice/pptx-render', () => {
+vi.mock('@seuoffice/pptx-render', () => {
   loaded.push('pptx-render')
   return {}
 })

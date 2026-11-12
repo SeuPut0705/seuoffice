@@ -154,7 +154,7 @@ export function syncModel3dFrame(xml: string): string {
       )
       .replace(
         /<am3d:objViewport viewportSz="\d+"/,
-        `<am3d:objViewport viewportSz="${Math.max(Number(cx), Number(cy))}"`,
+        () => `<am3d:objViewport viewportSz="${Math.max(Number(cx), Number(cy))}"`,
       )
   }
   return out
@@ -168,7 +168,7 @@ export function readModel3dRotation(xml: string): Model3dRotation {
 }
 
 export function setModel3dRotationXml(xml: string, rot: Model3dRotation): string {
-  if (/<am3d:rot\b[^>]*\/>/.test(xml)) return xml.replace(/<am3d:rot\b[^>]*\/>/, rotXml(rot))
+  if (/<am3d:rot\b[^>]*\/>/.test(xml)) return xml.replace(/<am3d:rot\b[^>]*\/>/, () => rotXml(rot))
   // am3d:rot sits after scale and before postTrans in CT_Model3DTransform
   return xml.replace(/<am3d:postTrans\b|<\/am3d:trans>/, (next) => rotXml(rot) + next)
 }

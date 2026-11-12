@@ -46,7 +46,7 @@ async function thumbCentre(page: Page, idx: number) {
 }
 
 test('dragging a thumbnail to the list edge scrolls the list (issue #312)', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-thumb-drag-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-thumb-drag-'))
   const pdfPath = join(dir, 'numbered.pdf')
   await writeFile(pdfPath, numberedPdf())
 

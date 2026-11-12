@@ -55,24 +55,24 @@ import type {
   StyleColorInput,
   SetDataValidationOperation,
   SetHyperlinkOperation,
-} from '@genoffice/xlsx-gateway/domain/workbook-dsl'
+} from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
 import {
   columnIndex,
   columnLabel,
   parseAddress,
   parseRange,
   rangeCellCount,
-} from '@genoffice/xlsx-gateway/domain/cell-address'
-import { splitSheetRef, type CellBounds } from '@genoffice/xlsx-gateway/domain/chart-visual'
-import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import { normalizeStyleColor, resolveStyleColor } from '@genoffice/xlsx-gateway/domain/style-color'
-import { WORST_FIRST_ICON_SETS } from '@genoffice/xlsx-gateway/gateway/xlsx-cf'
+} from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { splitSheetRef, type CellBounds } from '@seuoffice/xlsx-gateway/domain/chart-visual'
+import { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import { normalizeStyleColor, resolveStyleColor } from '@seuoffice/xlsx-gateway/domain/style-color'
+import { WORST_FIRST_ICON_SETS } from '@seuoffice/xlsx-gateway/gateway/xlsx-cf'
 import type {
   CellFormatState,
   CellScalar,
   CellState,
   WorkbookSnapshot,
-} from '@genoffice/xlsx-gateway/domain/workbook.types'
+} from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import type {
   WorkbookCellStyle,
   WorkbookCfState,
@@ -128,7 +128,7 @@ import {
 import { isPlainArithmeticFormula } from './formula-cached-fallback'
 import { degradeQuadraticFormulaCells } from './formula-cost'
 import { extractFunctionNames } from './formula-functions'
-import { DEFAULT_SHORT_DATE, setSystemShortDate } from '@genoffice/xlsx-gateway/shared/short-date'
+import { DEFAULT_SHORT_DATE, setSystemShortDate } from '@seuoffice/xlsx-gateway/shared/short-date'
 import { getWorkbookMdw, REORDER_JOURNAL_MAX_CELLS, setWorkbookMdw } from './app-constants'
 import { excelRowPitchPx } from './autofit-line-pitch'
 import { batchWrapRowHeights, createUniverWrapMeasurer } from './wrap-row-height-batch'
@@ -201,6 +201,7 @@ import {
   untilCellFontsLoaded,
 } from './cell-font-fallback'
 import { noteFormulaStreamChunk, requestFullRecalcAfterStream } from './formula-stream-hold'
+import { endLoadingNotice, showLoadingNotice } from './loading-notice'
 import { SharedFormulaLookup, indexedFormulas } from './shared-formula-index'
 import { threadStore } from './threaded-comments'
 
@@ -2713,7 +2714,12 @@ function storeSharedFormulaGroups(
 function storeFormulaText(
   state: LazyWorkbookState,
   sheetId: string,
-  cells: readonly { row: number; column: number; formula?: string | undefined }[],
+  cells: readonly {
+    row: number
+    column: number
+    formula?: string | undefined
+    arrayRef?: string | undefined
+  }[],
 ): void {
   let bySheet = state.formulaText.get(sheetId)
   if (!bySheet) {
@@ -2727,7 +2733,15 @@ function storeFormulaText(
     state.formulaTextTruncated.add(sheetId)
   }
   for (const cell of cells) {
-    if (cell.formula) bySheet.set(`${cell.row}:${cell.column}`, cell.formula)
+    if (!cell.formula) continue
+    bySheet.set(`${cell.row}:${cell.column}`, cell.formula)
+    if (!cell.arrayRef) continue
+    let arrays = state.fileArrayRefs.get(sheetId)
+    if (!arrays) {
+      arrays = new Map()
+      state.fileArrayRefs.set(sheetId, arrays)
+    }
+    arrays.set(`${cell.row}:${cell.column}`, cell.arrayRef)
   }
 }
 
@@ -3572,8 +3586,11 @@ async function loadRange(
         isActiveSheet(runtime, sheetId) &&
         (result.indexedThroughRow === null || result.indexedThroughRow < mapped.fileEndRow)
       ) {
-        setMessage(
+        showLoadingNotice(
+          state,
+          sheetId,
           t('appIndexing', { name: sheet?.name ?? sheetId, rows: indexedRows.toLocaleString() }),
+          setMessage,
         )
       }
       const nextStalls =
@@ -3607,17 +3624,19 @@ async function loadRange(
         }, 250)
         state.retryTimers.set(sheetId, timer)
       }
-    } else if (isActiveSheet(runtime, sheetId)) {
-      setMessage(
-        t('appStreamingRows', {
-          name: state.file.name,
-          rows: sheet?.rowCount.toLocaleString() ?? '?',
-        }),
-      )
+    } else {
+      // the sheet is read to its end: nothing is streaming in any more, so the
+      // progress notice goes and no "streaming" line takes its place
+      endLoadingNotice(state, sheetId, setMessage)
     }
   } catch (error: unknown) {
     if (lazyWorkbookRef.current === state && isActiveSheet(runtime, sheetId)) {
-      setMessage(error instanceof Error ? error.message : t('appLoadRangeFailed'))
+      endLoadingNotice(
+        state,
+        sheetId,
+        setMessage,
+        error instanceof Error ? error.message : t('appLoadRangeFailed'),
+      )
     }
   } finally {
     if (state.loadingKeys.get(sheetId) === requestKey) {

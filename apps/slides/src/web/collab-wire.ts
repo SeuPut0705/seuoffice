@@ -19,8 +19,8 @@
  * A person's own text and notes pass the same check before they are applied (collab-side.ts),
  * so a page never sends what its peers would stop on.
  */
-import { NAMED_ACTIONS } from '@genoffice/pptx-engine/named-action'
-import type { EditParagraph, EditRun, LinkTargetOp } from '@genoffice/pptx-ops'
+import { NAMED_ACTIONS } from '@seuoffice/pptx-engine/named-action'
+import type { EditParagraph, EditRun, LinkTargetOp } from '@seuoffice/pptx-ops'
 import type { Autofit, ElementRef, SlidesEdit, SlidesOp } from './collab-ops'
 
 type Json = null | boolean | number | string | Json[] | { [key: string]: Json }

@@ -1,13 +1,13 @@
 import { spawn as nodeSpawn, type ChildProcess } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { appLaunch } from '../resources'
 import { CliError, EXIT } from '../result'
 
 /**
  * Conversions that need an app renderer (Word, Excel and PowerPoint layout,
- * HTML and Markdown print, Word ↔ HTML) run in the GenOffice binary itself through its
- * `--headless-export` entry: Dock hidden, no window, one export, exit. genoffice
+ * HTML and Markdown print, Word ↔ HTML) run in the SeuOffice binary itself through its
+ * `--headless-export` entry: Dock hidden, no window, one export, exit. seuoffice
  * just spawns it and reads the JSON envelope it prints. The app skips the
  * single-instance lock in that mode, so a running GUI does not interfere.
  */
@@ -41,7 +41,7 @@ export async function exportViaApp(
   const launch = appLaunch(env)
   if (!launch) {
     throw new CliError(EXIT.app, `${PRODUCT_NAME} app not found (needed for this conversion)`, {
-      hint: `install ${PRODUCT_NAME}, or set GENOFFICE_APP_BIN to its executable`,
+      hint: `install ${PRODUCT_NAME}, or set SEUOFFICE_APP_BIN to its executable`,
     })
   }
   const args = [

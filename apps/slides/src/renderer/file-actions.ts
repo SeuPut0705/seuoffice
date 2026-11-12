@@ -3,7 +3,7 @@
  * export. Each function takes the ActionCtx built fresh per call.
  * (Printing lives in components/PrintDialog.tsx — preview + options dialog.)
  */
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { ExportPdfLink } from '../shared/ipc'
 import { baseName } from '../shared/base-name'
 import { modelSaveAsName } from './file-naming'
@@ -11,7 +11,7 @@ import type { ActionCtx } from './action-context'
 import { collectExportPdfLinks } from './export-links'
 import { renderSlidesToPdfPages } from './export-pages'
 import { renderSlidesToImageBase64 } from './export-render'
-import { projectPanelText, runFileNaming } from '@genoffice/ui'
+import { projectPanelText, runFileNaming } from '@seuoffice/ui'
 import { getLang, t } from './i18n/locale'
 import { showToast } from './components/toast-bus'
 

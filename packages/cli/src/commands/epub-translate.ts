@@ -25,7 +25,7 @@ import {
   type EpubTranslationOutputKind,
   type EpubTranslationReport,
   type EpubTranslationUnit,
-} from '@genoffice/epub-engine'
+} from '@seuoffice/epub-engine'
 import {
   isTranslationLanguage,
   TRANSLATION_LANGUAGES,

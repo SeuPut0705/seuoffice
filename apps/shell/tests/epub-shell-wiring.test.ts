@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { strings } from '../src/renderer/src/strings'
 
 /**
@@ -145,7 +145,6 @@ describe('the book menu', () => {
   })
 
   it('names its items and the dialog filter in every language', () => {
-    expect(LANGS).toHaveLength(21)
     const keys = ['filterEpub', 'menuFind', 'menuReplace', 'menuTranslateBook']
     const english = localeBlock('en')
     const valueIn = (block: string, key: string) =>

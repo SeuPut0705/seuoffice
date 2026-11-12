@@ -19,7 +19,7 @@ import type { ElectronApplication, Page } from '@playwright/test'
 import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
 import { AI_CHANNELS } from '../../src/shared/ipc'
 import { closeAndSaveVideo, launchShell, waitForPageWithUrl } from '../../../../e2e/helpers'
 
@@ -130,7 +130,7 @@ async function connect(app: ElectronApplication): Promise<void> {
 function mainState(app: ElectronApplication): Promise<MainState> {
   return app.evaluate(() => {
     const g = globalThis as unknown as Record<string | symbol, unknown>
-    const store = g[Symbol.for('genoffice.generate-handoff')] as
+    const store = g[Symbol.for('seuoffice.generate-handoff')] as
       | {
           queued: Map<number, unknown>
           taken: Map<number, unknown>

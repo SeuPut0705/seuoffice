@@ -9,7 +9,7 @@
  * Comparisons go through `paraKeys` / `textKeys`, which apply the same rounding
  * as the OOXML encoding, so an untouched value never reads as changed.
  */
-import type { ParaFormat, Run, TabStop } from '@genoffice/docx-engine'
+import type { ParaFormat, Run, TabStop } from '@seuoffice/docx-engine'
 import { unquoteFamily } from '../core/convert'
 import { halfPointsToPt, lengthToTwips, percent, twips, twipsToCm, twipsToPt } from './units'
 

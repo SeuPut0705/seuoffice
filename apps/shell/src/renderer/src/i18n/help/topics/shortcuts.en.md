@@ -32,7 +32,7 @@ Every editor has its own key bindings, and only a few of them work everywhere. T
 
 - The macOS column uses the familiar symbols: `⌘` Command, `⌥` Option, `⇧` Shift, `⌃` Control.
 - The Windows / Linux column spells them out: `Ctrl`, `Alt`, `Shift`.
-- Where GenOffice genuinely needs different keys on the two platforms, the table shows it. The common cases are `⌃H` for Find & Replace (macOS owns `⌘H` for Hide), `⌥⌘G` for Go To, and Slides' close key.
+- Where SeuOffice genuinely needs different keys on the two platforms, the table shows it. The common cases are `⌃H` for Find & Replace (macOS owns `⌘H` for Hide), `⌥⌘G` for Go To, and Slides' close key.
 - A chord that only works with a selection is written in the Action column rather than given its own column, so a table stays three columns wide.
 
 ## Word
@@ -165,7 +165,7 @@ F1 opens the **User Guide**, not this list. The shortcut sheet is ⌘/ or Ctrl+/
 
 ## Sheets
 
-GenOffice Sheets opens and saves .xlsx workbooks. Most of the shortcuts below are the ones spreadsheet programs commonly use, so many will already be familiar.
+SeuOffice Sheets opens and saves .xlsx workbooks. Most of the shortcuts below are the ones spreadsheet programs commonly use, so many will already be familiar.
 
 > **Editing wins.** Almost every shortcut in Sheets is ignored while you are editing a cell or typing in the **formula bar**, so that typing, moving the caret and Backspace keep their normal text-editing meaning. If a key seems to do nothing, check whether you are mid-edit: press Esc or Enter first, then try again. Commands that act on the selection also do nothing while a dialog is open. Where a chord is an exception to this rule, the table says so.
 
@@ -294,7 +294,7 @@ Excel's filter shortcut, Ctrl+Shift+L, does nothing on Windows or Linux. Press �
 
 ## Slides
 
-GenOffice Slides is a PowerPoint-style presentation editor. Most keys do the same thing wherever you are, but a few change meaning with focus — inside a text box, or while the **thumbnail pane**, **outline pane** or **slide sorter** has keyboard focus. Those cases are marked in the Action column.
+SeuOffice Slides is a PowerPoint-style presentation editor. Most keys do the same thing wherever you are, but a few change meaning with focus — inside a text box, or while the **thumbnail pane**, **outline pane** or **slide sorter** has keyboard focus. Those cases are marked in the Action column.
 
 ### File and app
 
@@ -504,7 +504,7 @@ Escape unwinds one layer at a time — an open dialog first, then the AI popover
 
 ## Markdown
 
-GenOffice Markdown edits Markdown with a live preview alongside.
+SeuOffice Markdown edits Markdown with a live preview alongside.
 
 ### File and view
 
@@ -545,7 +545,7 @@ Applying an empty formula deletes the block instead. The editor also closes on a
 
 ## HTML
 
-GenOffice HTML shows a code editor beside a live preview. The keys that act on a page element apply only when the preview itself has keyboard focus.
+SeuOffice HTML shows a code editor beside a live preview. The keys that act on a page element apply only when the preview itself has keyboard focus.
 
 ### File and source view
 

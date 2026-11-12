@@ -13,16 +13,16 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import JSZip from 'jszip'
 import { vi } from 'vitest'
-import type { AgentMessage, IpcStreamChunk, IpcStreamStart } from '@genoffice/agent-core'
-import type { AiSettings } from '@genoffice/ai-provider'
+import type { AgentMessage, IpcStreamChunk, IpcStreamStart } from '@seuoffice/agent-core'
+import type { AiSettings } from '@seuoffice/ai-provider'
 import {
   buildTranslatedEpub,
   epubDocumentHash,
   epubTranslationUnits,
   openEpub,
   type EpubBook,
-} from '@genoffice/epub-engine'
-import { ResultStore } from '@genoffice/pdf-structure/store'
+} from '@seuoffice/epub-engine'
+import { ResultStore } from '@seuoffice/pdf-structure/store'
 import { bookSummary } from '../../src/main/book-session'
 import { createEpubStoreHandlers } from '../../src/main/store-handlers'
 import type {
@@ -177,7 +177,7 @@ export async function createFakeBackend(
     return { book: opened.book, bytes: next, docHash: await epubDocumentHash(next) }
   }
   const saved = await load(bytes)
-  const dir = mkdtempSync(join(tmpdir(), 'genoffice-epub-translate-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-epub-translate-'))
   const store = new ResultStore(join(dir, 'user-data'))
   const handlers = createEpubStoreHandlers({ store: () => store, knows: () => true })
   const listeners = new Set<(chunk: IpcStreamChunk) => void>()

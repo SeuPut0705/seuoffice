@@ -6,7 +6,7 @@ export type SplitPaneRole = 'focus' | 'secondary'
 /**
  * The split-pane calls an editor's preload exposes as window.aiOfficeSplit.
  * Declared locally on purpose: this package reads the bridge off the window
- * and must not depend on the preload-side package (@genoffice/electron-utils)
+ * and must not depend on the preload-side package (@seuoffice/electron-utils)
  * that builds it.
  */
 export interface SplitPaneBridge {

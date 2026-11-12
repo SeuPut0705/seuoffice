@@ -29,15 +29,15 @@ import {
   isUntitledIdentity,
   newUntitledRecoveryId,
   resolveRecoveryOnOpen,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type {
   RecoveryDeleteReason,
   RecoveryIdentity,
   RecoveryOpenUntitledRequest,
   RecoveryStore,
   RecoveryWriteResult,
-} from '@genoffice/electron-utils'
-import { getUiLang } from '@genoffice/i18n'
+} from '@seuoffice/electron-utils'
+import { getUiLang } from '@seuoffice/i18n'
 
 const KIND = 'mindmap' as const
 const MAP_EXTENSION = '.xmind'

@@ -2,7 +2,7 @@ import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { readBasicWorkbook } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { readBasicWorkbook } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import { csvInfo } from '../src/formats/csv'
 import { run, tempDir } from './helpers'
 
@@ -135,7 +135,7 @@ describe('CSV delimiter consistency across CLI routes', () => {
         columns: fixture.columns,
         delimiter: fixture.delimiter,
       }
-      expect(csvInfo(original)).toEqual(expectedInfo)
+      expect(await csvInfo(original)).toEqual(expectedInfo)
       expect(info.json().detail).toMatchObject(expectedInfo)
 
       const a = await sheetCells(created)
@@ -184,7 +184,7 @@ describe('CSV delimiter consistency across CLI routes', () => {
     })
   }
 
-  it('keeps empty CSV metadata empty', () => {
-    expect(csvInfo(Buffer.from(''))).toEqual({ rows: 0, columns: 0, delimiter: ',' })
+  it('keeps empty CSV metadata empty', async () => {
+    expect(await csvInfo(Buffer.from(''))).toEqual({ rows: 0, columns: 0, delimiter: ',' })
   })
 })

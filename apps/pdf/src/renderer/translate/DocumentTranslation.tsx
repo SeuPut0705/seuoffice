@@ -32,7 +32,7 @@
 import { forwardRef, useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
 import { useSyncExternalStore } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { applyStoredAiReadings } from '../../../../../packages/pdf-structure/src/ai-read'
 import {
   startTranslationJob,
@@ -112,8 +112,9 @@ export interface DocumentTranslationProps {
   session: DocumentJobSession
   /** the PDF's stored title and author (the EPUB's book information) */
   docInfo: { title?: string | undefined; author?: string | undefined }
-  /** save pending edits so the files are written from what is on screen; false = not saved */
-  prepare: () => Promise<boolean>
+  /** save pending edits so the files are written from what is on screen: where the open file
+      is afterwards (the save can move the document), null = not saved */
+  prepare: () => Promise<string | null>
   onNotice: (text: string) => void
   /** open the AI page-reading window (offered for scanned documents) */
   onOpenAiRead?: () => void
@@ -328,11 +329,12 @@ export const DocumentTranslation = forwardRef<DocumentTranslationHandle, Documen
     const writeOutputs = async (run: TranslationRun): Promise<void> => {
       const p = propsRef.current
       if (!p.api || !p.filePath || writingRef.current) return
-      if (!(await p.prepare()) || !aliveRef.current) return
+      // the job reads the file where the save left it, not where it was when the run started
+      const source = await p.prepare()
+      if (source === null || !aliveRef.current) return
       const outputs: ReportState['outputs'] = []
       const failures: string[] = []
       const reports: Array<TranslationResultReport | null> = []
-      const source = p.filePath
       const common: PdfStructureSource = {
         path: source,
         ...(p.password !== undefined ? { password: p.password } : {}),

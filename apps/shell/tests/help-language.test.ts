@@ -5,24 +5,19 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { LocaleProvider } from '../src/renderer/src/locale'
 import { HelpScreen } from '../src/renderer/src/i18n/help/HelpScreen'
 import { helpBody } from '../src/renderer/src/i18n/help/help-registry'
 
 /**
- * The manual ships 21 editions — 294 bodies, 21 sets of titles, 21 figure
- * sets — and every one of them has to be reachable.
+ * The manual ships an edition per UI language, and every one of them has to be
+ * reachable.
  *
  * The screen used to read `document.documentElement.lang`, which is the BCP-47
- * tag (`zh-CN`, `ja-JP`), and then pick between two branches: `zh` or `en`.
- * That left 19 editions unrendered, showed English titles over whatever body
- * matched `startsWith('zh')`, and gave zh-TW readers the zh-CN edition —
- * while the files sat in the bundle the whole time and the mechanical
- * language checker counted them as present.
- *
- * So these assert on rendered output in four languages, including one the old
- * code could not have got right by accident.
+ * tag (`ko-KR`, `en-US`), and then pick a body from it, so an edition sat in
+ * the bundle without ever being rendered. These assert on rendered output with
+ * the document tag set to something the lookups have to reject.
  */
 
 const actEnvironment = globalThis as typeof globalThis & {
@@ -34,10 +29,7 @@ let host: HTMLDivElement
 let root: Root
 
 import gettingStarted from '../src/renderer/src/i18n/help/topics/getting-started.en.md?raw'
-import gettingStartedJa from '../src/renderer/src/i18n/help/topics/getting-started.ja.md?raw'
-import gettingStartedZh from '../src/renderer/src/i18n/help/topics/getting-started.zh.md?raw'
-import gettingStartedZhTW from '../src/renderer/src/i18n/help/topics/getting-started.zh-TW.md?raw'
-import gettingStartedDe from '../src/renderer/src/i18n/help/topics/getting-started.de.md?raw'
+import gettingStartedKo from '../src/renderer/src/i18n/help/topics/getting-started.ko.md?raw'
 import { topicTitle } from '../src/renderer/src/i18n/help/help-titles'
 
 const TOPIC = 'getting-started'
@@ -66,18 +58,12 @@ function proseFrom(markdown: string): string {
 
 const BODIES: Partial<Record<Lang, string>> = {
   en: proseFrom(gettingStarted),
-  ja: proseFrom(gettingStartedJa),
-  zh: proseFrom(gettingStartedZh),
-  'zh-TW': proseFrom(gettingStartedZhTW),
-  de: proseFrom(gettingStartedDe),
+  ko: proseFrom(gettingStartedKo),
 }
 
 const TITLES: Partial<Record<Lang, string>> = {
   en: topicTitle(TOPIC, 'en'),
-  ja: topicTitle(TOPIC, 'ja'),
-  zh: topicTitle(TOPIC, 'zh'),
-  'zh-TW': topicTitle(TOPIC, 'zh-TW'),
-  de: topicTitle(TOPIC, 'de'),
+  ko: topicTitle(TOPIC, 'ko'),
 }
 
 beforeEach(() => {
@@ -171,12 +157,13 @@ describe('the manual renders in the reader’s language', () => {
   })
 
   it("does not hand back another language's body", async () => {
-    // zh and zh-TW are separate files, not a variant of one: the Simplified
-    // text appearing in the Traditional one is the failure `startsWith('zh')`
-    // would have shipped
-    const traditional = (await helpBody(TOPIC, 'zh-TW')) ?? ''
-    expect(traditional).toContain(BODIES['zh-TW']!)
-    expect(traditional).not.toContain(BODIES.zh!)
-    expect(traditional).not.toContain(BODIES.en!)
+    const korean = (await helpBody(TOPIC, 'ko')) ?? ''
+    expect(korean).toContain(BODIES.ko!)
+    expect(korean).not.toContain(BODIES.en!)
+  })
+
+  it('falls back to the English body for a language without an edition', async () => {
+    const body = (await helpBody(TOPIC, 'ja')) ?? ''
+    expect(body).toContain(BODIES.en!)
   })
 })

@@ -1,7 +1,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { hwpToText } from '@genoffice/file-parse/hwp'
+import { hwpToText } from '@seuoffice/file-parse/hwp'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'

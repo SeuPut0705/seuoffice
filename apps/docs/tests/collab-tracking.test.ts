@@ -1,4 +1,4 @@
-import { PAGE_MARK, TOTAL_PAGES_MARK, parseDocx, readSections } from '@genoffice/docx-engine'
+import { PAGE_MARK, TOTAL_PAGES_MARK, parseDocx, readSections } from '@seuoffice/docx-engine'
 import {
   joinCollab,
   type CollabLink,

@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { docxToOdt, isOdtOpenError } from '@genoffice/odt-engine'
+import { docxToOdt, isOdtOpenError } from '@seuoffice/odt-engine'
 import { describe, expect, it } from 'vitest'
 import { odtToText, parseFileToText } from '../src/index'
 import { buildDocxFixture, buildPdfFixture, writeFixture } from './helpers/fixtures'

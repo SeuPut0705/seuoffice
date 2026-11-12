@@ -20,6 +20,7 @@
  * validate translate both directions.
  */
 
+import { keyedFetch } from '@seuoffice/ai-provider'
 /** The endpoint list lives in the shared settings contract: this file used to
     keep its own copy of the union, and adding a route meant editing both. */
 import { isCloudflareEndpoint, type DecisionEndpoint } from '../../shared/home-api'
@@ -374,12 +375,9 @@ export const fetchTransport: JevTransport = async (url, body, key, signal) => {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' }
   // local and unauthenticated servers reject or ignore the header; empty key = none
   if (key.trim()) headers.Authorization = `Bearer ${key.trim()}`
-  const res = await fetch(url, {
-    method: 'POST',
-    headers,
-    body,
-    signal,
-  })
+  // the key and the body's local file excerpts go to the configured endpoint only:
+  // a redirect is not followed
+  const res = await keyedFetch(url, { method: 'POST', headers, body, signal }, undefined, fetch)
   return {
     status: res.status,
     retryAfter: res.headers.get('retry-after') ?? undefined,

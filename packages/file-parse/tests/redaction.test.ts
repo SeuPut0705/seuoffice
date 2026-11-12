@@ -1,6 +1,6 @@
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { REDACT_EL, REDACT_NS } from '@genoffice/agent-core/redact-range'
+import { REDACT_EL, REDACT_NS_WRITTEN } from '@seuoffice/agent-core/redact-range'
 // the writer's own helpers, by path: the marks under test are the ones the deck
 // engine really saves, not a copy of their shape kept in this file
 import { REDACT_EXT_URI, setRedactExt } from '../../pptx-engine/src/redaction-xml'
@@ -12,6 +12,7 @@ import {
   xlsxToText,
 } from '../src/index'
 import { PPTX_REDACT_EXT_URI } from '../src/pptx-redaction'
+import { pivotOutputOf } from '../src/xlsx-formula-redaction'
 import { writeFixture } from './helpers/fixtures'
 // the workbook gateway's own writers: the part and its defined-name copy under
 // test are the ones a save really produces
@@ -21,12 +22,12 @@ import {
   serializeRedactionPart,
   type RedactionMark,
   type SheetRedactionState,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import {
   applyCellEditsToXlsx,
   type SheetStructuralOps,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import type { SheetEditPlan } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { SheetEditPlan } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
 
 /**
  * A file read as another file's material (attachment, knowledge base, search
@@ -237,7 +238,7 @@ describe('pptx: a withheld run reads as its marker', () => {
 
 describe('pptx: a mark that cannot be processed fails the read', () => {
   const ext = (inner: string, uri = REDACT_EXT_URI) =>
-    `<a:extLst><a:ext uri="${uri}" xmlns:go="${REDACT_NS}">${inner}</a:ext></a:extLst>`
+    `<a:extLst><a:ext uri="${uri}" xmlns:go="${REDACT_NS_WRITTEN}">${inner}</a:ext></a:extLst>`
   const broken: Array<[string, string]> = [
     ['an extension with no label element', run(SECRET, `<a:rPr>${ext('')}</a:rPr>`)],
     ['an empty label', run(SECRET, `<a:rPr>${ext(`<${REDACT_EL} label=""/>`)}</a:rPr>`)],
@@ -254,7 +255,7 @@ describe('pptx: a mark that cannot be processed fails the read', () => {
       'the namespace bound to another prefix',
       run(
         SECRET,
-        `<a:rPr><a:extLst><a:ext uri="{OTHER}" xmlns:x="${REDACT_NS}"><x:redact label="x"/></a:ext></a:extLst></a:rPr>`,
+        `<a:rPr><a:extLst><a:ext uri="{OTHER}" xmlns:x="${REDACT_NS_WRITTEN}"><x:redact label="x"/></a:ext></a:extLst></a:rPr>`,
       ),
     ],
     [
@@ -1105,5 +1106,485 @@ describe('xlsx: a save that was not given the marks keeps the cell withheld', ()
     rebuilt.remove(REDACTION_PART)
     const text = await xlsxToText(await rebuilt.generateAsync({ type: 'uint8array' }))
     expect(text).toBe(`# Stock\nItem\n\n# Clients\n${WITHHELD_CLIENTS}`)
+  })
+})
+
+/** a formula cell with the value the last calculation left in the file */
+const formula = (ref: string, text: string, cached: string | number) =>
+  `<c r="${ref}"><f>${text}</f><v>${cached}</v></c>`
+const PRIVATE = '{{private}}'
+/** the Clients sheet with B2 withheld, and whatever else a test puts beside it */
+const clientsWith = (extra: string): BookSheet => ({
+  name: 'Clients',
+  rows:
+    `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}</row>` +
+    `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c>${extra}</row>`,
+})
+
+describe('xlsx: a formula that depends on a withheld cell is withheld too', () => {
+  it('withholds the value of a formula that reads the cell', async () => {
+    const text = await xlsxToText(
+      await savedBook([clientsWith(formula('C2', 'B2', SECRET))], CLIENT_MARKS),
+    )
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE}`)
+  })
+
+  it('follows a chain of three formulas', async () => {
+    const chain =
+      formula('C2', 'B2', SECRET) +
+      formula('D2', 'C2&amp;"x"', `${SECRET}x`) +
+      formula('E2', 'LEFT(D2,11)', SECRET)
+    const text = await xlsxToText(await savedBook([clientsWith(chain)], CLIENT_MARKS))
+    expect(text).toBe(
+      `# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | ${PRIVATE} | ${PRIVATE}`,
+    )
+    expect(text).not.toContain(SECRET)
+  })
+
+  it('withholds a formula on a sheet without marks that points at a marked sheet', async () => {
+    const report: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${formula('A1', 'Clients!B2', SECRET)}${formula('B1', "'Clients'!A2", 'Kim')}</row>`,
+    }
+    const text = await xlsxToText(await savedBook([CLIENTS, report], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n# Report\n${PRIVATE} | Kim`)
+  })
+
+  it('withholds a total over the whole column', async () => {
+    const totals = formula('D2', 'SUM(B:B)', SECRET) + formula('E2', 'COUNTA(A:A)', 2)
+    const text = await xlsxToText(await savedBook([clientsWith(totals)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} |  | ${PRIVATE} | 2`)
+  })
+
+  it('resolves a named range', async () => {
+    const bytes = await book(
+      [clientsWith(formula('C2', 'KimPhone', SECRET) + formula('D2', 'KimName', 'Kim'))],
+      {
+        part: serializeRedactionPart(CLIENT_MARKS),
+        definedNames:
+          '<definedName name="KimPhone">Clients!$B$2</definedName>' +
+          '<definedName name="KimName">Clients!$A$2</definedName>',
+      },
+    )
+    expect(await xlsxToText(bytes)).toBe(
+      `# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | Kim`,
+    )
+  })
+
+  it('withholds what it cannot trace: INDIRECT, and what reads it', async () => {
+    const indirect =
+      formula('C2', 'INDIRECT("B"&amp;2)', SECRET) +
+      formula('D2', 'C2', SECRET) +
+      formula('E2', 'A2', 'Kim')
+    const text = await xlsxToText(await savedBook([clientsWith(indirect)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | ${PRIVATE} | Kim`)
+  })
+
+  it('reads a workbook whose formulas refer to each other in a circle', async () => {
+    const circle =
+      formula('C2', 'D2+B2', SECRET) +
+      formula('D2', 'C2', SECRET) +
+      formula('E2', 'F2', 0) +
+      formula('F2', 'E2', 0)
+    const text = await xlsxToText(await savedBook([clientsWith(circle)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | ${PRIVATE} | 0 | 0`)
+  })
+
+  it('withholds the followers of a shared formula that reach the cell, and only those', async () => {
+    const sheet: BookSheet = {
+      name: 'Clients',
+      rows:
+        `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}` +
+        '<c r="C1" t="str"><f t="shared" ref="C1:C3" si="0">B1</f><v>Phone</v></c></row>' +
+        `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c>` +
+        `<c r="C2"><f t="shared" si="0"/><v>${SECRET}</v></c></row>` +
+        `<row r="3">${inline('A3', 'Lee')}<c r="B3"><v>555</v></c>` +
+        '<c r="C3"><f t="shared" si="0"/><v>555</v></c></row>',
+    }
+    const text = await xlsxToText(await savedBook([sheet], CLIENT_MARKS))
+    expect(text).toBe(
+      `# Clients\nName | Phone | Phone\nKim | ${MARKER} | ${PRIVATE}\nLee | 555 | 555`,
+    )
+  })
+
+  it('withholds every cell an array formula fills', async () => {
+    const sheet: BookSheet = {
+      name: 'Clients',
+      rows:
+        `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}` +
+        '<c r="D1" t="str"><f t="array" ref="D1:D2">B1:B2</f><v>Phone</v></c></row>' +
+        `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c><c r="D2"><v>${SECRET}</v></c></row>`,
+    }
+    const text = await xlsxToText(await savedBook([sheet], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone |  | ${PRIVATE}\nKim | ${MARKER} |  | ${PRIVATE}`)
+  })
+
+  it('withholds the text of a dependent formula that was never calculated', async () => {
+    const text = await xlsxToText(
+      await savedBook(
+        [clientsWith('<c r="C2"><f>B2*1</f></c><c r="D2"><f>A2</f></c>')],
+        CLIENT_MARKS,
+      ),
+    )
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | =A2`)
+  })
+
+  it('traces through a sheet the character budget never reaches', async () => {
+    // Report!A1 reads Ledger!A1, which reads the withheld cell; the budget
+    // ends before Ledger is read for its text.
+    const report: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${formula('A1', 'Ledger!A1', SECRET)}</row>`,
+    }
+    const ledger: BookSheet = {
+      name: 'Ledger',
+      rows: `<row r="1">${formula('A1', 'Clients!B2', SECRET)}</row>`,
+    }
+    const text = await xlsxToText(await savedBook([report, ledger, CLIENTS], CLIENT_MARKS), {
+      maxChars: 12,
+    })
+    expect(text).toBe(`# Report\n${PRIVATE}`)
+  })
+
+  it('withholds a whole sheet that is too large to check for formulas', async () => {
+    const report: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${inline('A1', 'Q'.repeat(2000))}${formula('B1', 'A1', 'Quarter')}</row>`,
+    }
+    // Stock reads a cell of the sheet nobody could check
+    const stock: BookSheet = {
+      name: 'Stock',
+      rows: `<row r="1">${inline('A1', 'Item')}${formula('B1', 'Report!A1', 'Q')}</row>`,
+    }
+    const bytes = await savedBook([CLIENTS, report, stock], CLIENT_MARKS)
+    // Report is past the limit, Clients and Stock are within it
+    const text = await xlsxToText(bytes, { formulaScanMaxBytes: 1500 })
+    expect(text).toBe(
+      `# Clients\n${WITHHELD_CLIENTS}\n\n# Report\n${PRIVATE} | ${PRIVATE}\n\n# Stock\nItem | ${PRIVATE}`,
+    )
+  })
+
+  it('withholds a whole sheet when a formula on it has no address to trace from', async () => {
+    const loose: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${inline('A1', 'Quarter')}<c><f>Clients!B2</f><v>${SECRET}</v></c></row>`,
+    }
+    const text = await xlsxToText(await savedBook([CLIENTS, loose], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n# Report\n${PRIVATE} | ${PRIVATE}`)
+  })
+
+  it('withholds every cell of a what-if data table', async () => {
+    const table: BookSheet = {
+      name: 'Report',
+      rows:
+        `<row r="1">${inline('A1', 'Rate')}<c r="B1"><f t="dataTable" ref="B1:B2" dt2D="0" dtr="0" r1="A9"/><v>1</v></c></row>` +
+        `<row r="2">${inline('A2', 'Kept')}<c r="B2"><v>2</v></c></row>`,
+    }
+    const text = await xlsxToText(await savedBook([CLIENTS, table], CLIENT_MARKS))
+    expect(text).toBe(
+      `# Clients\n${WITHHELD_CLIENTS}\n\n# Report\nRate | ${PRIVATE}\nKept | ${PRIVATE}`,
+    )
+  })
+
+  it('reads formulas written with a namespace prefix', async () => {
+    const prefixed = await JSZip.loadAsync(await savedBook([CLIENTS], CLIENT_MARKS))
+    prefixed.file(
+      'xl/worksheets/sheet1.xml',
+      `${XML_DECL}<x:worksheet xmlns:x="${SHEET_NS}"><x:sheetData>` +
+        `<x:row r="2"><x:c r="B2"><x:v>${SECRET}</x:v></x:c>` +
+        `<x:c r="C2"><x:f>B2</x:f><x:v>${SECRET}</x:v></x:c><x:c r="D2"><x:f>1+1</x:f><x:v>2</x:v></x:c></x:row>` +
+        '</x:sheetData></x:worksheet>',
+    )
+    const text = await xlsxToText(await prefixed.generateAsync({ type: 'uint8array' }))
+    expect(text).toBe(`# Clients\n | ${MARKER} | ${PRIVATE} | 2`)
+  })
+
+  it('still shows a formula that reads no withheld cell', async () => {
+    const plain = formula('C2', 'LEN(A2)', 3) + formula('D2', 'SUM(A:A)', 0)
+    const text = await xlsxToText(await savedBook([clientsWith(plain)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | 3 | 0`)
+  })
+
+  it('changes nothing in a workbook that withholds nothing', async () => {
+    const text = await xlsxToText(
+      await book([
+        clientsWith(formula('C2', 'INDIRECT("B2")', SECRET) + formula('D2', 'B2', SECRET)),
+      ]),
+    )
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${SECRET} | ${SECRET} | ${SECRET}`)
+  })
+
+  it('reads a 5,000-formula sheet in well under two seconds', async () => {
+    let rows = `<row r="1">${inline('A1', 'n')}<c r="B1"><v>${SECRET}</v></c></row>`
+    for (let row = 2; row <= 2501; row += 1) {
+      rows +=
+        `<row r="${row}"><c r="A${row}"><v>${row}</v></c>` +
+        formula(`B${row}`, `B${row - 1}+A${row}`, SECRET) +
+        formula(`C${row}`, `SUM(A$2:A${row})`, row) +
+        '</row>'
+    }
+    const bytes = await savedBook(
+      [{ name: 'Clients', rows }],
+      [{ sheetName: 'Clients', marks: [mark('B1')] }],
+    )
+    const started = performance.now()
+    const text = await xlsxToText(bytes)
+    const elapsed = performance.now() - started
+    expect(text).not.toContain(SECRET)
+    expect(text.split(PRIVATE)).toHaveLength(2501)
+    expect(text).toContain('\n2501 | {{private}} | 2501')
+    expect(elapsed).toBeLessThan(2000)
+  })
+})
+
+const PKG_RELS = 'http://schemas.openxmlformats.org/package/2006/relationships'
+/** The second sheet of these books: a pivot's output at A3:B4, a label beside it, a formula over it. */
+const pivotReport = (extra = ''): BookSheet => ({
+  name: 'Report',
+  rows:
+    extra +
+    `<row r="3">${inline('A3', 'Phone')}${inline('B3', 'Total')}${inline('D3', 'beside')}</row>` +
+    `<row r="4"><c r="A4"><v>${SECRET}</v></c><c r="B4"><v>10</v></c></row>`,
+})
+const REPORT_SHOWN = `# Report\nPhone | Total |  | beside\n${SECRET} | 10`
+const REPORT_WITHHELD = `# Report\n${PRIVATE} | ${PRIVATE} |  | beside\n${PRIVATE} | ${PRIVATE}`
+
+/**
+ * Add a PivotTable to sheet 2 the way Excel writes one: the sheet points at
+ * the pivot part, the pivot part says where its output is and points at its
+ * cache, and the cache says where the data came from.
+ */
+async function withPivot(
+  bytes: Promise<Uint8Array>,
+  pivot: {
+    /** the content of `<cacheSource>`; undefined = the cache part is missing */
+    source: string | undefined
+    /** the pivot part's body; the output's location by default */
+    body?: string
+  },
+): Promise<Uint8Array> {
+  const zip = await JSZip.loadAsync(await bytes)
+  const rels = (type: string, target: string) =>
+    `${XML_DECL}<Relationships xmlns="${PKG_RELS}"><Relationship Id="rId1" Type="${REL_NS}/${type}" Target="${target}"/></Relationships>`
+  zip.file(
+    'xl/worksheets/_rels/sheet2.xml.rels',
+    rels('pivotTable', '../pivotTables/pivotTable1.xml'),
+  )
+  zip.file(
+    'xl/pivotTables/pivotTable1.xml',
+    `${XML_DECL}<pivotTableDefinition xmlns="${SHEET_NS}" name="PivotTable1" cacheId="1">` +
+      (pivot.body ??
+        '<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>') +
+      '</pivotTableDefinition>',
+  )
+  zip.file(
+    'xl/pivotTables/_rels/pivotTable1.xml.rels',
+    rels('pivotCacheDefinition', '../pivotCache/pivotCacheDefinition1.xml'),
+  )
+  if (pivot.source !== undefined) {
+    zip.file(
+      'xl/pivotCache/pivotCacheDefinition1.xml',
+      `${XML_DECL}<pivotCacheDefinition xmlns="${SHEET_NS}" xmlns:r="${REL_NS}">${pivot.source}</pivotCacheDefinition>`,
+    )
+  }
+  return zip.generateAsync({ type: 'uint8array', compression: 'DEFLATE' })
+}
+
+const worksheetSource = (attributes: string) =>
+  `<cacheSource type="worksheet"><worksheetSource ${attributes}/></cacheSource>`
+
+describe('xlsx: the output of a PivotTable built from a withheld cell is withheld too', () => {
+  const read = async (
+    pivot: Parameters<typeof withPivot>[1],
+    report = pivotReport(),
+    marks: BookMarks = { part: serializeRedactionPart(CLIENT_MARKS) },
+  ) => xlsxToText(await withPivot(book([CLIENTS, report], marks), pivot))
+
+  it('withholds the labels and totals when the source range holds the cell', async () => {
+    const text = await read({ source: worksheetSource('ref="A1:B2" sheet="Clients"') })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  it('shows the output of a pivot whose source range holds none', async () => {
+    const text = await read({ source: worksheetSource('ref="A1:A2" sheet="Clients"') })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_SHOWN}`)
+  })
+
+  it('withholds a formula that reads the output', async () => {
+    const text = await read(
+      { source: worksheetSource('ref="A1:B2" sheet="Clients"') },
+      pivotReport(`<row r="1">${formula('F1', 'A4', SECRET)}</row>`),
+    )
+    expect(text).not.toContain(SECRET)
+    expect(text).toContain(`# Report\n |  |  |  |  | ${PRIVATE}`)
+  })
+
+  it('withholds the report-filter cells above the output', async () => {
+    const text = await read(
+      {
+        source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+        body:
+          '<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1" rowPageCount="1" colPageCount="1"/>' +
+          '<pageFields count="1"><pageField fld="1" item="0" hier="-1"/></pageFields>',
+      },
+      pivotReport(`<row r="1">${inline('A1', 'Phone')}<c r="B1"><v>${SECRET}</v></c></row>`),
+    )
+    expect(text).not.toContain(SECRET)
+  })
+
+  it.each([
+    // two filters in one row: label and item, a blank column, label and item (A1:B1, D1:E1)
+    ['side by side, wider than the output', ' rowPageCount="1" colPageCount="2"'],
+    // what cannot be told is not guessed: the filters are somewhere above the output
+    ['without saying how they are laid out', ''],
+    ['with a layout too small to hold them', ' rowPageCount="1" colPageCount="1"'],
+    ['with a layout that is no number', ' rowPageCount="1" colPageCount="x"'],
+  ])('withholds report filters given %s', async (_how, layout) => {
+    const text = await read(
+      {
+        source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+        body:
+          `<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"${layout}/>` +
+          '<pageFields count="2"><pageField fld="0" hier="-1"/><pageField fld="1" item="0" hier="-1"/></pageFields>',
+      },
+      pivotReport(
+        `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Kim')}${inline('D1', 'Phone')}<c r="E1"><v>${SECRET}</v></c></row>`,
+      ),
+    )
+    expect(text).not.toContain(SECRET)
+  })
+
+  it('follows a source given as a defined name', async () => {
+    const named = (range: string): BookMarks => ({
+      part: serializeRedactionPart(CLIENT_MARKS),
+      definedNames: `<definedName name="ClientData">Clients!${range}</definedName>`,
+    })
+    const source = { source: worksheetSource('name="ClientData"') }
+    expect(await read(source, pivotReport(), named('$A$1:$B$2'))).toContain(REPORT_WITHHELD)
+    expect(await read(source, pivotReport(), named('$A$1:$A$2'))).toContain(REPORT_SHOWN)
+  })
+
+  it.each([
+    ['is a table or a name the workbook does not define', worksheetSource('name="Table1"')],
+    ['is in another workbook', worksheetSource('ref="A1:A2" sheet="Clients" r:id="rId1"')],
+    [
+      'is in another workbook, the relationship written with spaces',
+      worksheetSource('ref="A1:A2" sheet="Clients" r:id = "rId1"'),
+    ],
+    [
+      'is in another workbook, the relationship in single quotes',
+      worksheetSource(`ref="A1:A2" sheet="Clients" r:id='rId1'`),
+    ],
+    [
+      'is in another workbook, the relationship under another declared prefix',
+      worksheetSource(`xmlns:rel="${REL_NS}" ref="A1:A2" sheet="Clients" rel:id="rId1"`),
+    ],
+    ['is a database connection', '<cacheSource type="external" connectionId="1"/>'],
+    [
+      'is several ranges consolidated',
+      '<cacheSource type="consolidation"><consolidation/></cacheSource>',
+    ],
+    ['names a sheet the workbook does not have', worksheetSource('ref="A1:A2" sheet="Gone"')],
+    ['has no range', worksheetSource('sheet="Clients"')],
+    ['cannot be read: the cache part is missing', undefined],
+  ])('withholds the output when the source %s', async (_why, source) => {
+    const text = await read({ source })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  it.each([
+    [
+      'a revision id',
+      'xmlns:xr="http://schemas.microsoft.com/office/spreadsheetml/2014/revision" xr:id="{7C5A}"',
+    ],
+    ['an id of no namespace', 'id="7"'],
+    ['text inside another attribute that only looks like one', `comment='a r:id="rId1"'`],
+  ])('does not take %s on the source for another workbook', async (_what, extra) => {
+    const text = await read({ source: worksheetSource(`ref="A1:A2" sheet="Clients" ${extra}`) })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_SHOWN}`)
+  })
+
+  it('withholds the whole sheet when a pivot on it does not say where its output is', async () => {
+    const text = await read({ source: worksheetSource('ref="A1:A2" sheet="Clients"'), body: '' })
+    expect(text).not.toContain(SECRET)
+    expect(text).not.toContain('beside')
+  })
+
+  /** more member items than the megabyte a pivot part's head used to be read to */
+  const MANY_ITEMS = '<item x="0"/>'.repeat(90_000)
+  const BIG_FIELDS = `<pivotFields count="1"><pivotField axis="axisRow"><items count="90000">${MANY_ITEMS}</items></pivotField></pivotFields>`
+
+  it.each([
+    ['and no layout', ''],
+    ['and a layout too small to hold them', ' rowPageCount="1" colPageCount="1"'],
+  ])(
+    'withholds report filters listed after a megabyte of field items, %s',
+    async (_how, layout) => {
+      // the order Excel writes: location, the fields with their items, then the filters
+      const text = await read(
+        {
+          source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+          body:
+            `<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"${layout}/>` +
+            BIG_FIELDS +
+            '<pageFields count="2"><pageField fld="0" hier="-1"/><pageField fld="1" item="0" hier="-1"/></pageFields>',
+        },
+        pivotReport(
+          `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Kim')}${inline('D1', 'Phone')}<c r="E1"><v>${SECRET}</v></c></row>`,
+        ),
+      )
+      expect(text).not.toContain(SECRET)
+    },
+  )
+
+  it('finds an output location written after a megabyte of field items', async () => {
+    const text = await read({
+      source: worksheetSource('ref="A1:B2" sheet="Clients"'),
+      body:
+        BIG_FIELDS + '<location ref="A3:B4" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>',
+    })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  it('withholds the output when the cache names its source after a megabyte of other content', async () => {
+    // a cache opens with its source; one that does not is not searched for it
+    const text = await read({
+      source:
+        `<extLst><ext uri="{0}">${MANY_ITEMS}</ext></extLst>` +
+        worksheetSource('ref="A1:A2" sheet="Clients"'),
+    })
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n${REPORT_WITHHELD}`)
+  })
+
+  describe('a pivot part too large to be read to its end', () => {
+    const cache = `<pivotCacheDefinition>${worksheetSource('ref="A1:A2" sheet="Clients"')}</pivotCacheDefinition>`
+    const WHOLE = { startRow: 0, endRow: 1_048_575, startColumn: 0, endColumn: 16_383 }
+
+    it('takes every row from the top of the sheet to the end of the output', () => {
+      // the filters, if any, are in the part that was not read
+      const head = '<location ref="C5:D9" rowPageCount="1" colPageCount="1"/>'
+      expect(pivotOutputOf({ text: head, truncated: true }, cache).area).toEqual({
+        ...WHOLE,
+        endRow: 8,
+      })
+      expect(pivotOutputOf({ text: head, truncated: false }, cache).area).toEqual({
+        startRow: 2,
+        endRow: 8,
+        startColumn: 2,
+        endColumn: 3,
+      })
+    })
+
+    it('takes the whole sheet when the location was not in what was read', () => {
+      expect(pivotOutputOf({ text: BIG_FIELDS, truncated: true }, cache)).toEqual({
+        area: WHOLE,
+        formula: null,
+      })
+    })
+  })
+
+  it('changes nothing in a workbook that withholds nothing', async () => {
+    const text = await read({ source: undefined }, pivotReport(), {})
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${SECRET}\n\n${REPORT_SHOWN}`)
   })
 })

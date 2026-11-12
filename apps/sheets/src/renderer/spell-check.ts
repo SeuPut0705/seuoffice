@@ -7,7 +7,7 @@
  * tokenising, white-lists, replacement, rich-text rewriting) are
  * unit-tested without Univer or the frame.
  */
-import { formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { formatAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
 
 /** The frame's spell engine, as the preload bridges it from webFrame. */
 export interface SpellEngine {

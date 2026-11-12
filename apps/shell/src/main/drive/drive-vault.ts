@@ -1,5 +1,5 @@
 import { readFile, unlink } from 'node:fs/promises'
-import type { TokenVault } from '@genoffice/google-drive'
+import type { TokenVault } from '@seuoffice/google-drive'
 import { linuxKeyringSeals, type SafeStorageLike } from '../ai-secrets'
 import { atomicWriteFile } from '../atomic-write'
 

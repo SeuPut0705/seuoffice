@@ -105,7 +105,7 @@ import {
   recoveryEditor,
   resetAppShuttingDown,
   type RecoveryStore,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import {
   configurePdfRuntime,
   createPdfView,
@@ -410,11 +410,16 @@ describe('untitled documents', () => {
     expect(store.copyInfo(fileIdentity(working))).toBeNull()
     expect(store.copyInfo(copy)).not.toBeNull()
 
-    // the first save writes the working file, then asks where (the missing original first)
-    expect(await save(view, editedRequest(working))).toMatchObject({ ok: true })
+    // the first save asks where (the missing original first), then writes the working file
+    // and copies it there
     const target = join(makeDir('pdf-recovery-target-'), 'picked.pdf')
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
-    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working, 'Draft.pdf')).toBe(target)
+    expect(await invoke(PDF_CHANNELS.pickUntitledCopyTarget, view, working, 'Draft.pdf')).toBe(true)
+    expect(await save(view, editedRequest(working))).toMatchObject({ ok: true })
+    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working)).toEqual({
+      ok: true,
+      path: target,
+    })
     expect(showSaveDialog.mock.calls[0]![0]).toMatchObject({ defaultPath: missing })
     expect(existsSync(target)).toBe(true)
     expect(store.copyInfo(copy)).toBeNull()
@@ -625,7 +630,11 @@ describe('working files of restored untitled copies', () => {
     const { view, working } = await restoredUntitled()
     const target = join(makeDir('pdf-recovery-adopt-'), 'picked.pdf')
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
-    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working, 'Draft.pdf')).toBe(target)
+    expect(await invoke(PDF_CHANNELS.pickUntitledCopyTarget, view, working, 'Draft.pdf')).toBe(true)
+    expect(await invoke(PDF_CHANNELS.adoptUntitledCopy, view, working)).toEqual({
+      ok: true,
+      path: target,
+    })
     expect(existsSync(target)).toBe(true)
     await vi.waitFor(() => expect(existsSync(working)).toBe(false))
   })

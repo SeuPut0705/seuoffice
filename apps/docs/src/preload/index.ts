@@ -1,22 +1,22 @@
 import { contextBridge, ipcRenderer, webUtils } from 'electron'
-import { driveAiBridge } from '@genoffice/electron-utils/drive-ai-bridge'
-import { mcpToolsBridge } from '@genoffice/electron-utils/mcp-tools-bridge'
-import { outboundBridge } from '@genoffice/electron-utils/outbound-bridge'
-import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import { driveAiBridge } from '@seuoffice/electron-utils/drive-ai-bridge'
+import { mcpToolsBridge } from '@seuoffice/electron-utils/mcp-tools-bridge'
+import { outboundBridge } from '@seuoffice/electron-utils/outbound-bridge'
+import { userSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import {
   PROJECT_FOLDER_BRIDGE_KEY,
   projectFolderBridge,
-} from '@genoffice/electron-utils/project-folder-bridge'
-import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
-import { docAttachBridge } from '@genoffice/electron-utils/doc-attach-bridge'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
-import { splitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
+} from '@seuoffice/electron-utils/project-folder-bridge'
+import { USER_SKILLS_BRIDGE_KEY } from '@seuoffice/electron-utils/user-skills-channels'
+import { docAttachBridge } from '@seuoffice/electron-utils/doc-attach-bridge'
+import { DOC_ATTACH_BRIDGE_KEY } from '@seuoffice/electron-utils/doc-attach-channels'
+import { splitPaneBridge } from '@seuoffice/electron-utils/split-pane-bridge'
 import type { IpcRendererEvent } from 'electron'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
 import { VIEW_IMAGE_CHANNEL } from '../shared/ipc'
 import { subscriptionLaunchResultOf, subscriptionStatusMapOf } from '../shared/subscription-api'
 import type { SubscriptionApi } from '../shared/subscription-api'
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs } from '@seuoffice/ui'
 import type {
   AiChatRequest,
   AiSettings,
@@ -36,17 +36,15 @@ import type {
   MergeOutputRequest,
 } from '../shared/ipc'
 import type { DocFormat } from '../shared/open-file'
-import type { ProjectApi } from '@genoffice/project-store'
-import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+import type { ProjectApi } from '@seuoffice/project-store'
+import { installDropOpenBridge } from '@seuoffice/electron-utils/drop-open'
 
 const api: DesktopApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
+  getDocumentLocale: () => ipcRenderer.invoke('app:get-document-locale'),
   getSystemLocale: () => ipcRenderer.invoke('docs:system-locale'),
   onLanguageChanged: (handler) => {
-    const listener = (
-      _event: IpcRendererEvent,
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => handler(lang)
+    const listener = (_event: IpcRendererEvent, lang: 'en' | 'ko') => handler(lang)
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },

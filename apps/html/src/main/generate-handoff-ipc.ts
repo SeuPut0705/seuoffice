@@ -1,7 +1,7 @@
 import {
   reportGenerateRunStarted,
   takeGenerateHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import { HTML_HANDOFF_CHANNELS } from '../shared/ipc'
 import type { HtmlGenerateHandoff } from '../shared/ipc'
 

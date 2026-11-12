@@ -6,7 +6,7 @@
  * before. Drawing never writes: the file keeps every value it had.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { XmindDocument } from '@genoffice/xmind-engine'
+import type { XmindDocument } from '@seuoffice/xmind-engine'
 import { MapController, type MapHost } from '../src/renderer/map/controller'
 import { DocumentSession } from '../src/renderer/document/session'
 import { mapStrings } from '../src/renderer/i18n/map-strings'

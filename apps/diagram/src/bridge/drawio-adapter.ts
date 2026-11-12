@@ -7,7 +7,7 @@
  * (`SelectPage` executed through the model), so undo walks back across pages
  * as it does for draw.io's own page actions.
  */
-import type { DiagramCell, DiagramGeometry } from '@genoffice/drawio-model'
+import type { DiagramCell, DiagramGeometry } from '@seuoffice/drawio-model'
 import type { LiveDiagram } from './apply-primitives'
 
 declare const mxCell: any

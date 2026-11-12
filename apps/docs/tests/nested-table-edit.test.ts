@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
 import JSZip from 'jszip'
-import { parseDocx, saveDocx, type TableModel } from '@genoffice/docx-engine'
+import { parseDocx, saveDocx, type TableModel } from '@seuoffice/docx-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { buildDocx, NESTED_TABLE_XML } from '../../../packages/docx-engine/tests/helpers/build-docx'

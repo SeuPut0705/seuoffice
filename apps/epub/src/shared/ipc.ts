@@ -14,9 +14,9 @@
  * Later tasks add channels and fields here; they do not rename or change what
  * is listed.
  */
-import type { AiPanelPrefs } from '@genoffice/ui'
-import type { Lang } from '@genoffice/i18n'
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
+import type { AiPanelPrefs } from '@seuoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
 import type {
   BlockEdit,
   BlockKind,
@@ -30,7 +30,7 @@ import type {
   EpubTranslationReport,
   EpubTranslationUnit,
   RangeReplacement,
-} from '@genoffice/epub-engine'
+} from '@seuoffice/epub-engine'
 import type {
   JobKind,
   JobRecordInput,
@@ -38,7 +38,7 @@ import type {
   TranslationBlockEntry,
   TranslationBlockInput,
   TranslationMode,
-} from '@genoffice/pdf-structure/store'
+} from '@seuoffice/pdf-structure/store'
 import type { EpubSubscriptionApi } from './subscription-api'
 
 export const EPUB_CHANNELS = {

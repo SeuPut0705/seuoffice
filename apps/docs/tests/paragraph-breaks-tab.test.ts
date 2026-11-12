@@ -10,7 +10,7 @@ import {
   mergePPrFormat,
   parseDocx,
   type ParaFormat,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import {
@@ -193,6 +193,24 @@ describe('live pagination reads the edited flags off the element', () => {
     expect(block.keepLines).toBe(true)
     expect(block.widowControl).toBe(false)
   })
+
+  it.each([
+    ['self-closing', '<w:pPrChange w:id="1" w:author="A"/>'],
+    [
+      'paired, its close tag ending in white space',
+      '<w:pPrChange w:id="1"><w:pPr/></w:pPrChange >',
+    ],
+  ])(
+    'a picture paragraph whose own %s change record comes first keeps the keepNext after it',
+    (_name, record) => {
+      // the picture is a text box whose own paragraph carries a paired record
+      const xml =
+        `<w:p><w:pPr>${record}<w:keepNext/></w:pPr><w:r><w:drawing><w:txbxContent>` +
+        '<w:p><w:pPr><w:pPrChange w:id="2"><w:pPr><w:jc w:val="left"/></w:pPr></w:pPrChange></w:pPr></w:p>' +
+        '</w:txbxContent></w:drawing></w:r></w:p>'
+      expect(paraFlagsFromXml(xml)).toEqual({ format: { keepNext: true } })
+    },
+  )
 
   it('a picture-only paragraph (image block, no data-para) keeps the keepNext of its own pPr', () => {
     const xml =

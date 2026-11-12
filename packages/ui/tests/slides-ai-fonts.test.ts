@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import {
   DEFAULT_SANS_FONT,
   DEFAULT_SERIF_FONT,

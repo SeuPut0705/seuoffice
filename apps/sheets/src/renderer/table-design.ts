@@ -1,4 +1,4 @@
-import { columnLabel } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { columnLabel } from '@seuoffice/xlsx-gateway/domain/cell-address'
 
 import type { WorkbookFile, WorkbookTableAdd, WorkbookTableEdit } from '../shared/desktop-api'
 import { tableEditFor } from './edit-journal'

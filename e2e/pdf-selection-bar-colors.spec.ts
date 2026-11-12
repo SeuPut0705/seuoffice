@@ -75,7 +75,7 @@ async function expectInside(page: Page, selector: string, container: string): Pr
 }
 
 test('selection bar: three highlighter pens, line markup colors, kept inside the viewer', async () => {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-selbar-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-selbar-'))
   const pdfPath = join(dir, 'twolines.pdf')
   await writeFile(pdfPath, twoLinePdf())
 

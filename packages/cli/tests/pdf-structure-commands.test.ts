@@ -14,10 +14,10 @@ import { run, tempDir, writeMinimalPdf } from './helpers'
 function env(dir: string): NodeJS.ProcessEnv {
   return {
     ...process.env,
-    GENOFFICE_USER_DATA: dir,
-    GENOFFICE_AI_SETTINGS: '',
-    GENOFFICE_AUDIT_LOG: 'off',
-    GENOFFICE_ALLOWED_ROOTS: '',
+    SEUOFFICE_USER_DATA: dir,
+    SEUOFFICE_AI_SETTINGS: '',
+    SEUOFFICE_AUDIT_LOG: 'off',
+    SEUOFFICE_ALLOWED_ROOTS: '',
   }
 }
 

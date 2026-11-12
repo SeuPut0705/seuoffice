@@ -5,7 +5,7 @@ import {
   htmlTablesToXlsxBuffer,
   looksLikeHtmlWorkbook,
   parseHtmlTables,
-} from '@genoffice/xlsx-gateway/gateway/html-import'
+} from '@seuoffice/xlsx-gateway/gateway/html-import'
 
 /// HTML travels through the main process as a string, so it gets the same cap
 /// as a CSV import rather than the sidecar's archive limits.
@@ -54,7 +54,7 @@ export async function convertLegacyWorkbook(
   if ((await stat(source)).size > MAX_HTML_IMPORT_BYTES) {
     return { kind: 'html-too-large', formulasDropped: 0 }
   }
-  const html = decodeHtmlBuffer(await readFile(source), preferredCharset)
+  const html = await decodeHtmlBuffer(await readFile(source), preferredCharset)
   const tables = parseHtmlTables(html)
   if (tables.length === 0) return { kind: 'html-no-table', formulasDropped: 0 }
   await writeFile(target, await htmlTablesToXlsxBuffer(tables))

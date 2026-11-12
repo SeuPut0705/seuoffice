@@ -3,7 +3,7 @@ import { rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { DriveApi, DriveFile } from '@genoffice/google-drive'
+import type { DriveApi, DriveFile } from '@seuoffice/google-drive'
 import { MAX_ATTACH_FILES, downloadPicks } from '../src/main/drive/drive-attach'
 
 const file = (id: string, name: string, mimeType = 'application/pdf'): DriveFile => ({

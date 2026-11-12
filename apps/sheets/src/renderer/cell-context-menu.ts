@@ -16,7 +16,7 @@ import {
   getDisplayValueFromCell,
 } from '@univerjs/core'
 import type { IAccessor, ICommand, IDisposable, ILocales } from '@univerjs/core'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { SheetsSelectionsService, getSheetCommandTarget } from '@univerjs/sheets'
 import {
   ClearSheetsFilterCriteriaCommand,
@@ -38,17 +38,18 @@ import type { IMenuButtonItem, IMenuSelectorItem, MenuSchemaType } from '@univer
 import { getLang, t, tFor, type StringKey } from './i18n/locale'
 import { NUMBER_FORMAT_LABEL, numberFormatCategories } from './number-format'
 import { collectPickListValues, filterCriteriaForText } from './pick-from-list'
+import { holdsHiddenCells } from './redact-move-guard'
 import type { UniverRuntime } from './univer-state'
 import { visualPasteDisabled$ } from './visual-arrange-actions'
 import type { Observable } from 'rxjs'
 
-export const SHELL_COMMAND_ID = 'genoffice.ctx.shell-command'
+export const SHELL_COMMAND_ID = 'seuoffice.ctx.shell-command'
 export const PASTE_SPECIAL_OPEN_COMMAND_ID = 'sheets.paste-special.open'
-export const FILTER_BY_COMMAND_ID = 'genoffice.ctx.filter-by'
-export const PICK_FROM_LIST_COMMAND_ID = 'genoffice.ctx.pick-from-list'
-export const FILTER_MENU_ID = 'genoffice.ctx.filter'
-export const NUMBER_FORMAT_MENU_ID = 'genoffice.ctx.number-format'
-export const CLEAR_FILTER_MENU_ID = 'genoffice.ctx.clear-filter'
+export const FILTER_BY_COMMAND_ID = 'seuoffice.ctx.filter-by'
+export const PICK_FROM_LIST_COMMAND_ID = 'seuoffice.ctx.pick-from-list'
+export const FILTER_MENU_ID = 'seuoffice.ctx.filter'
+export const NUMBER_FORMAT_MENU_ID = 'seuoffice.ctx.number-format'
+export const CLEAR_FILTER_MENU_ID = 'seuoffice.ctx.clear-filter'
 
 export type FilterBy = 'value' | 'fill' | 'font'
 
@@ -98,7 +99,7 @@ export function cellContextMenuLayout(): readonly ContextMenuNode[] {
     params: { by },
   })
   return [
-    shell('genoffice.ctx.ask-ai', 'aiAskBtn', 'ai-ask-selection', ContextMenuGroup.OTHERS, -1),
+    shell('seuoffice.ctx.ask-ai', 'aiAskBtn', 'ai-ask-selection', ContextMenuGroup.OTHERS, -1),
     {
       id: PASTE_SPECIAL_OPEN_COMMAND_ID,
       title: t('appCtxPasteSpecial'),
@@ -109,7 +110,7 @@ export function cellContextMenuLayout(): readonly ContextMenuNode[] {
     },
     {
       ...shell(
-        'genoffice.ctx.paste-visual',
+        'seuoffice.ctx.paste-visual',
         'appCtxPasteVisual',
         'visual:paste',
         ContextMenuGroup.FORMAT,
@@ -137,28 +138,28 @@ export function cellContextMenuLayout(): readonly ContextMenuNode[] {
     },
     // Threaded comments sit beside Univer's note entries (OTHERS, order 0).
     shell(
-      'genoffice.ctx.new-comment',
+      'seuoffice.ctx.new-comment',
       'appCtxNewComment',
       'comment-new',
       ContextMenuGroup.OTHERS,
       0.1,
     ),
     shell(
-      'genoffice.ctx.reply-comment',
+      'seuoffice.ctx.reply-comment',
       'appCtxReplyComment',
       'comment-reply',
       ContextMenuGroup.OTHERS,
       0.2,
     ),
     shell(
-      'genoffice.ctx.delete-comment',
+      'seuoffice.ctx.delete-comment',
       'appCtxDeleteComment',
       'comment-delete',
       ContextMenuGroup.OTHERS,
       0.3,
     ),
     shell(
-      'genoffice.ctx.resolve-comment',
+      'seuoffice.ctx.resolve-comment',
       'appCtxResolveComment',
       'comment-resolve',
       ContextMenuGroup.OTHERS,
@@ -191,7 +192,7 @@ export function cellContextMenuLayout(): readonly ContextMenuNode[] {
       ],
     },
     shell(
-      'genoffice.ctx.format-cells',
+      'seuoffice.ctx.format-cells',
       'appCtxFormatCells',
       'format-cells',
       ContextMenuGroup.OTHERS,
@@ -206,15 +207,15 @@ export function cellContextMenuLayout(): readonly ContextMenuNode[] {
       commandId: PICK_FROM_LIST_COMMAND_ID,
     },
     shell(
-      'genoffice.ctx.define-name',
+      'seuoffice.ctx.define-name',
       'appCtxDefineName',
       'name-manager-open',
       ContextMenuGroup.OTHERS,
       4,
     ),
-    shell('genoffice.ctx.link', 'appCtxLink', 'link-open', ContextMenuGroup.OTHERS, 5),
+    shell('seuoffice.ctx.link', 'appCtxLink', 'link-open', ContextMenuGroup.OTHERS, 5),
     shell(
-      'genoffice.ctx.insert-function',
+      'seuoffice.ctx.insert-function',
       'appCtxInsertFunction',
       'insert-function-open',
       ContextMenuGroup.OTHERS,
@@ -227,7 +228,7 @@ export function cellContextMenuLayout(): readonly ContextMenuNode[] {
 export function headerContextMenuLayout(): readonly ContextMenuNode[] {
   return [
     shell(
-      'genoffice.ctx.format-cells',
+      'seuoffice.ctx.format-cells',
       'appCtxFormatCells',
       'format-cells',
       ContextMenuGroup.LAYOUT,
@@ -309,6 +310,11 @@ function pickFromList(accessor: IAccessor, runtime: UniverRuntime): boolean {
     },
     row,
     worksheet.getRowCount(),
+    // picking an entry writes it into this cell: a copy of the cell it came from
+    (r) =>
+      holdsHiddenCells(runtime, subUnitId, [
+        { startRow: r, endRow: r, startColumn: col, endColumn: col },
+      ]),
   )
   if (entries.length === 0) return false
   const byDisplay = new Map(entries.map((entry) => [entry.display, entry]))
@@ -349,7 +355,7 @@ function pickFromList(accessor: IAccessor, runtime: UniverRuntime): boolean {
   return true
 }
 
-const LOCALE_NAMESPACE = 'genofficeCtx'
+const LOCALE_NAMESPACE = 'seuofficeCtx'
 const localeKey = (key: StringKey): string => `${LOCALE_NAMESPACE}.${key}`
 
 /**

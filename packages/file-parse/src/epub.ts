@@ -1,4 +1,4 @@
-import { extractChapterText, openEpub, type EpubRefusalReason } from '@genoffice/epub-engine/core'
+import { extractChapterText, openEpub, type EpubRefusalReason } from '@seuoffice/epub-engine/core'
 
 /** What each refusal tells the reader (spec §3), in the order the engine checks. */
 const REFUSALS: Record<EpubRefusalReason, string> = {

@@ -6,7 +6,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement, useState, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import type { AgentBridge } from '../src/renderer/ai/agent-bridge'
 import { afterPrefillTaken, type AiPrefill } from '../src/renderer/ai/easy-words'
@@ -88,6 +88,15 @@ describe('hwp AI panel: requests handed over', () => {
     expect(streamed).toEqual([])
   })
 
+  it('shows a request of the document check that was handed over before the panel was there', async () => {
+    // the other order: the request is the app's before the panel mounts (the dock is not
+    // mounted under the print preview)
+    root = createRoot(container)
+    await render({ text: '쪽 번호를 고쳐 주세요.', nonce: 1 })
+    expect(composer()).toBe('쪽 번호를 고쳐 주세요.')
+    expect(streamed).toEqual([])
+  })
+
   it('sends an autoRun request at once, through the usual gate', async () => {
     root = createRoot(container)
     await render(null)
@@ -151,11 +160,89 @@ describe('hwp AI panel: requests handed over', () => {
     expect(streamed).toEqual([])
   })
 
-  it('clears only the autoRun request that was taken', () => {
+  it('puts a request of the document check in the input box once: the panel mounting again does not put it back', async () => {
+    const host: {
+      hand?: (prefill: AiPrefill | null) => void
+      show?: (shown: boolean) => void
+      held?: AiPrefill | null
+    } = {}
+    function Host(): ReactElement | null {
+      const [prefill, setPrefill] = useState<AiPrefill | null>(null)
+      const [shown, setShown] = useState(true)
+      host.hand = setPrefill
+      host.show = setShown
+      host.held = prefill
+      if (!shown) return null
+      return createElement(AiPanel, {
+        bridge: {} as AgentBridge,
+        filePath: null,
+        onCollapse: () => undefined,
+        prefill,
+        onPrefillTaken: (taken: AiPrefill) =>
+          setPrefill((current) => afterPrefillTaken(current, taken)),
+      })
+    }
+    root = createRoot(container)
+    await act(async () => root!.render(createElement(Host)))
+    await settle()
+
+    await act(async () => host.hand!({ text: '쪽 번호를 고쳐 주세요.', nonce: 7 }))
+    await settle()
+    expect(composer()).toBe('쪽 번호를 고쳐 주세요.')
+    // the box has it: the app holds the request no longer
+    expect(host.held).toBeNull()
+
+    // the print preview opens and closes: whatever became of the text (sent, edited, deleted),
+    // the new panel starts with an empty box and not with the old request
+    await act(async () => host.show!(false))
+    await settle()
+    await act(async () => host.show!(true))
+    await settle()
+    expect(composer()).toBe('')
+
+    // the same findings handed over again are a new request
+    await act(async () => host.hand!({ text: '쪽 번호를 고쳐 주세요.', nonce: 8 }))
+    await settle()
+    expect(composer()).toBe('쪽 번호를 고쳐 주세요.')
+    expect(streamed).toEqual([])
+  })
+
+  it('keeps a request handed over while the panel is away, and fills the box when it is back', async () => {
+    // the dock is not mounted under the print preview: a request that arrives then is held
+    // by the app until a panel is there to take it
+    let hand: (prefill: AiPrefill | null) => void = () => undefined
+    let show: (shown: boolean) => void = () => undefined
+    function Host(): ReactElement | null {
+      const [prefill, setPrefill] = useState<AiPrefill | null>(null)
+      const [shown, setShown] = useState(false)
+      hand = setPrefill
+      show = setShown
+      if (!shown) return null
+      return createElement(AiPanel, {
+        bridge: {} as AgentBridge,
+        filePath: null,
+        onCollapse: () => undefined,
+        prefill,
+        onPrefillTaken: (taken: AiPrefill) =>
+          setPrefill((current) => afterPrefillTaken(current, taken)),
+      })
+    }
+    root = createRoot(container)
+    await act(async () => root!.render(createElement(Host)))
+    await act(async () => hand({ text: '쪽 번호를 고쳐 주세요.', nonce: 9 }))
+    await settle()
+    await act(async () => show(true))
+    await settle()
+    expect(composer()).toBe('쪽 번호를 고쳐 주세요.')
+  })
+
+  it('clears only the request that was taken', () => {
     const auto: AiPrefill = { text: 'a', nonce: 5, autoRun: true }
     const newer: AiPrefill = { text: 'b', nonce: 6, autoRun: true }
-    const fill: AiPrefill = { text: 'c', nonce: 5 }
+    const fill: AiPrefill = { text: 'c', nonce: 7 }
     expect(afterPrefillTaken(auto, auto)).toBeNull()
+    expect(afterPrefillTaken(fill, fill)).toBeNull()
+    // a newer request that arrived meanwhile is still to be taken
     expect(afterPrefillTaken(newer, auto)).toBe(newer)
     expect(afterPrefillTaken(fill, auto)).toBe(fill)
     expect(afterPrefillTaken(null, auto)).toBeNull()

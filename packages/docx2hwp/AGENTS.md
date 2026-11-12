@@ -1,4 +1,4 @@
-# docx2hwp (`@genoffice/docx2hwp`)
+# docx2hwp (`@seuoffice/docx2hwp`)
 
 워드 문서(.docx)를 한컴 한글에서 열고 고칠 수 있는 한글 문서(.hwp, .hwpx)로 바꾼다. `docx-engine`이 읽은 문서 모델을 한글 문서 모델로 옮기고, 한글 편집기와 같은 rhwp 엔진(`@rhwp/core`)의 편집 API로 빈 문서에 새로 쓴다. 쪽 그림을 붙이거나 PDF를 거치지 않는다. 옮기지 못한 것은 기능 단위의 목록(`losses`)으로 돌려준다. 계획은 `docs/archive/ieum/plans/docx-to-hwp.md`다.
 
@@ -37,7 +37,7 @@
 - 워드의 내어쓰기는 첫 줄을 왼쪽으로 빼고, 한글의 내어쓰기는 다음 줄을 오른쪽으로 민다. 그래서 한글 왼쪽 여백 = 워드 왼쪽 들여쓰기 + (음수인) 첫 줄 들여쓰기다.
 - 한글의 머리말 칸은 위쪽 여백 아래에 있다. 워드의 위쪽 여백(본문까지)은 한글의 위쪽 여백(= 워드의 머리말 거리)과 머리말 칸으로 나눈다. 용지는 세운 크기로 주고 가로 방향은 표시로 준다.
 - 엔진이 개체 하나(그림, 각주, 표)를 거절하면 장부에 적고 나머지를 쓴다. 글자·서식 호출이 실패하면 변환 전체가 실패한다(서식 없는 문단은 조용한 손실이다).
-- `LOSS_FEATURES`에 기능을 더하면 `apps/docs/src/main/hwp-export.ts`의 이름 표와 `hwp-export-strings.ts`의 21개 언어 문구, 터미널 명령어의 이름 표(`packages/cli/src/formats/docx-hwp.ts`)도 더한다(형 검사가 지킨다). `docs/contracts.md`의 식별자 목록에도 더한다(`packages/cli/tests/convert-docx-hwp.test.ts`가 지킨다). 식별자는 명령어의 `detail.hwp_report`로 밖에 약속한 값이라 이름을 바꾸지 않는다. ODT의 보고 ID(`REPORT_FEATURES`)와 섞지 않는다.
+- `LOSS_FEATURES`에 기능을 더하면 `apps/docs/src/main/hwp-export.ts`의 이름 표와 `hwp-export-strings.ts`의 두 언어 문구, 터미널 명령어의 이름 표(`packages/cli/src/formats/docx-hwp.ts`)도 더한다(형 검사가 지킨다). `docs/contracts.md`의 식별자 목록에도 더한다(`packages/cli/tests/convert-docx-hwp.test.ts`가 지킨다). 식별자는 명령어의 `detail.hwp_report`로 밖에 약속한 값이라 이름을 바꾸지 않는다. ODT의 보고 ID(`REPORT_FEATURES`)와 섞지 않는다.
 
 ## 첫판에서 옮기지 않는 것
 
@@ -52,7 +52,7 @@
 
 ## 테스트
 
-- 패키지 폴더에서 `npx vitest run`, 또는 루트에서 `npm run test -w @genoffice/docx2hwp`. 실제 엔진을 쓴다(`node_modules/@rhwp/core` = `vendor/rhwp-core`).
+- 패키지 폴더에서 `npx vitest run`, 또는 루트에서 `npm run test -w @seuoffice/docx2hwp`. 실제 엔진을 쓴다(`node_modules/@rhwp/core` = `vendor/rhwp-core`).
 - `tests/convert.test.ts`: 시험 문서(`tests/fixtures`의 가정통신문·탭 문서·표 안의 표 문서, `apps/docs/tests/pagination-corpus/docx`의 각주·혼합·기본 견본)를 HWP와 HWPX로 바꾸고 `tests/helpers/read-back.ts`가 엔진으로 다시 열어 요약한다. 가정통신문 본문을 열 번 이은 긴 문서(160문단)가 가정통신문 열 벌과 같게 읽히는지도 본다. 문단 모양은 저장된 XML에서 pt로 읽는다(엔진의 속성 조회는 문단 간격을 다른 배율로 돌려준다).
 - `tests/lower.test.ts`: 엔진 없이 낮추기 규칙. `tests/engine.test.ts`: 엔진을 가져오는 파일과 단위를 만드는 파일이 하나씩인지, 성공과 실패 모두에서 문서가 모두 `free()`되는지.
 - 한컴 한글 확인은 사람이 돌린다: 결과를 한컴 한글 2024로 열어 쪽 수·글자 수를 보고 PDF로 그려 견준다(`tools/odt-hancom/`의 방식).

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest'
 import { NO_REDACTIONS, buildRedactionIndex } from '../src/renderer/ai/redact'
 import { WITHHELD_UNKNOWN } from '../src/renderer/ai/redact-load'
 import { modelTextOf, type ModelViewWorkbook } from '../src/renderer/ai/redact-view'
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 const PHONE = '13800138000'
 const LABEL = '\u5ba2\u6237\u7535\u8bdd'

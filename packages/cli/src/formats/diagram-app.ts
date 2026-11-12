@@ -1,6 +1,6 @@
 import { spawn as nodeSpawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { appLaunch } from '../resources'
 import { CliError, EXIT } from '../result'
 import { describeExit, exitCodeFor, parseEnvelope, waitFor } from './app-export'
@@ -49,10 +49,10 @@ export function diagramAppUnavailable(what: string): CliError {
   return new CliError(
     EXIT.app,
     `${what} needs the ${PRODUCT_NAME} app, which was not found`,
-    { hint: `install ${PRODUCT_NAME}, or set GENOFFICE_APP_BIN to its executable` },
+    { hint: `install ${PRODUCT_NAME}, or set SEUOFFICE_APP_BIN to its executable` },
     {
       reason: 'app_unavailable',
-      suggestion: `install ${PRODUCT_NAME} (or set GENOFFICE_APP_BIN) and run the command again`,
+      suggestion: `install ${PRODUCT_NAME} (or set SEUOFFICE_APP_BIN) and run the command again`,
     },
   )
 }

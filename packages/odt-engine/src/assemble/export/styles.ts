@@ -16,7 +16,7 @@ import type {
   SectionSettings,
   StyleDisplay,
   TabStop,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { PrefixMap, escapeXmlAttr } from '../../core/xml'
 import { twipsToLength } from '../../page/geometry'
 import { numFmtToOdf } from '../../text/lists'

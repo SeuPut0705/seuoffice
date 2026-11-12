@@ -6,7 +6,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import type { PageSpec } from '@genoffice/pipelines/slides'
+import type { PageSpec } from '@seuoffice/pipelines/slides'
+import { documentLocale, normalizeLang, requestedLanguage, setUiLang } from '@seuoffice/i18n'
 import {
   TITLE_ROLE_MIN_PT,
   fillMissingRunFonts,
@@ -44,7 +45,7 @@ describe('readSlidesAiFonts', () => {
     })
   })
 
-  it('without a file or a choice, the UI language picks the default', () => {
+  it('without a file or a choice, the language documents are read for picks the default', () => {
     expect(readSlidesAiFonts(userData(), 'ko').mode).toBe('sans')
     expect(readSlidesAiFonts(userData({ language: 'ja' }), 'ja').mode).toBe('auto')
     expect(readSlidesAiFonts(userData('{not json'), 'en')).toEqual({
@@ -52,6 +53,23 @@ describe('readSlidesAiFonts', () => {
       sans: 'Pretendard',
       serif: 'Noto Serif KR',
     })
+  })
+
+  // the bundled faces have no Japanese or Chinese glyphs, so those installs start on
+  // auto as they did when Japanese and Chinese were UI languages; the UI is English now
+  it.each([
+    ['ja-JP', 'auto'],
+    ['zh-CN', 'auto'],
+    ['ko-KR', 'sans'],
+    ['en-US', 'sans'],
+  ])('starts a %s install on %s whatever the UI language is', (system, mode) => {
+    const requested = requestedLanguage(undefined, system)
+    setUiLang(normalizeLang(requested), requested)
+    try {
+      expect(readSlidesAiFonts(userData(), documentLocale()).mode).toBe(mode)
+    } finally {
+      setUiLang('en')
+    }
   })
 })
 

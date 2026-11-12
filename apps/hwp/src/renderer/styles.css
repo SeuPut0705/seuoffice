@@ -308,7 +308,7 @@ body {
   color: var(--accent);
 }
 
-/* ---- document check: the format rules of @genoffice/doc-rules over the open document ---- */
+/* ---- document check: the format rules of @seuoffice/doc-rules over the open document ---- */
 
 .doc-check {
   position: absolute;

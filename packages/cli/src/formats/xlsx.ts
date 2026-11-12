@@ -1,13 +1,13 @@
 import JSZip from 'jszip'
-import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
+import { assertZipInflatesWithinLimits } from '@seuoffice/docx-engine'
 import * as numfmt from 'numfmt'
 import {
   isNumericCell,
   parseCsv,
   resolveImportDelimiter,
-} from '@genoffice/xlsx-gateway/gateway/csv-import'
-import { blankXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
-import { columnLabel, parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import'
+import { blankXlsxBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
+import { columnLabel, parseAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import {
   XLSX_ZIP_LIMITS,
   assembleWithJsZip,
@@ -19,17 +19,17 @@ import {
   type SheetFormulaValues,
   type SheetStructuralOps,
   type XlsxMutation,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   nextFreeRelationshipId,
   parseRelationships,
   parseSheetElements,
   type SheetEditPlan,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { EMPTY_PAYLOADS, type GatewayPayloads } from './xlsx-gateway-ops'
 import { decodeCsv } from './csv'
-import type { WorkbookStyleEdit } from '@genoffice/xlsx-gateway/shared/edit-schemas'
+import type { WorkbookStyleEdit } from '@seuoffice/xlsx-gateway/shared/edit-schemas'
 import {
   echoStyleColor,
   fillDisplayColor,
@@ -38,11 +38,11 @@ import {
   resolveStyleColor,
   type StyleColor,
   type StyleColorEcho,
-} from '@genoffice/xlsx-gateway/domain/style-color'
+} from '@seuoffice/xlsx-gateway/domain/style-color'
 import {
   parseStylesheetFormats,
   type StylesheetFormats,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-style-read'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-style-read'
 import { access, readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import { atomicWriteFile } from '../../../../apps/sheets/src/main/atomic-write'
@@ -50,7 +50,7 @@ import {
   XlsxSidecarClient,
   type OdsConversionResult,
 } from '../../../../apps/sheets/src/main/xlsx-sidecar-client'
-import { planExternalLinkBreak } from '@genoffice/xlsx-gateway/gateway/xlsx-external-links'
+import { planExternalLinkBreak } from '@seuoffice/xlsx-gateway/gateway/xlsx-external-links'
 import { CliError, EXIT } from '../result'
 import { sheetNotFoundHints } from '../suggest'
 import { xlsxSidecarPath } from '../resources'
@@ -532,7 +532,7 @@ export async function readSheet(path: string, opts: ReadOptions): Promise<SheetR
           pending.push({ row: c.row, column: c.column })
       }
     }
-    // formulas written without a cached value (e.g. by genoffice itself) are evaluated on the fly
+    // formulas written without a cached value (e.g. by seuoffice itself) are evaluated on the fly
     if (pending.length) {
       const box = boundingBox(pending)
       const { cells } = await recalcRange(client, path, meta.name, box)
@@ -1088,9 +1088,13 @@ export async function blankWorkbook(sheetName = 'Sheet1'): Promise<Buffer> {
 }
 
 /** CSV → table; numeric-looking cells become numbers like the app's importer. */
-export function csvTable(bytes: Uint8Array, name: string, opts: CsvTableOptions = {}): TableInput {
+export async function csvTable(
+  bytes: Uint8Array,
+  name: string,
+  opts: CsvTableOptions = {},
+): Promise<TableInput> {
   const formats: Record<string, string> = {}
-  const text = decodeCsv(bytes)
+  const text = await decodeCsv(bytes)
   const rows = parseCsv(text, resolveImportDelimiter(text)).map((r, rowIndex) =>
     r.map((v, columnIndex) => {
       if (opts.decimal === ',') {

@@ -280,21 +280,21 @@ describe('new names', () => {
     expect(validateNewUserSkillName('-a')).toBe('hyphen-edge')
     expect(validateNewUserSkillName('a-')).toBe('hyphen-edge')
     expect(validateNewUserSkillName('a--b')).toBe('double-hyphen')
-    expect(validateNewUserSkillName('genoffice')).toBe('reserved')
-    expect(validateNewUserSkillName('ieumoffice')).toBe('reserved')
+    expect(validateNewUserSkillName('seuoffice')).toBe('reserved')
+    expect(validateNewUserSkillName('seuoffice')).toBe('reserved')
   })
 
   it('knows the reserved names in any case', () => {
-    expect(isReservedUserSkillName('GenOffice')).toBe(true)
-    expect(isReservedUserSkillName('IEUMOFFICE')).toBe(true)
-    expect(isReservedUserSkillName('genoffice-x')).toBe(false)
+    expect(isReservedUserSkillName('SeuOffice')).toBe(true)
+    expect(isReservedUserSkillName('SEUOFFICE')).toBe(true)
+    expect(isReservedUserSkillName('seuoffice-x')).toBe(false)
   })
 
   it('suggests an English name from a title, or a short random one', () => {
     expect(suggestUserSkillName('Meeting Minutes!')).toBe('meeting-minutes')
     expect(suggestUserSkillName('  Café  Notes__v2 ')).toBe('cafe-notes-v2')
     expect(suggestUserSkillName('가정통신문', { random: () => 'ab12cd' })).toBe('skill-ab12cd')
-    expect(suggestUserSkillName('GenOffice', { random: () => 'zz' })).toBe('skill-zz')
+    expect(suggestUserSkillName('SeuOffice', { random: () => 'zz' })).toBe('skill-zz')
     expect(suggestUserSkillName('x'.repeat(80)).length).toBe(64)
     expect(suggestUserSkillName('a'.repeat(63) + ' b')).toBe('a'.repeat(63))
     expect(suggestUserSkillName('Report', { taken: ['report', 'REPORT-2'] })).toBe('report-3')

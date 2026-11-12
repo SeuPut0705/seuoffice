@@ -52,7 +52,7 @@ const clickSettings = (app: ElectronApplication): Promise<boolean> =>
 
 test('every app menu carries a Settings entry that opens the Settings view', async () => {
   test.setTimeout(300_000)
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-settings-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-settings-'))
   const mdPath = join(dir, 'sample.md')
   await writeFile(mdPath, '# Sample\n\nA markdown note.\n')
 

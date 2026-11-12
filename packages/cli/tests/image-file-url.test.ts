@@ -36,9 +36,9 @@ describe('file: image sources', () => {
     await expect(
       readImageSource(pathToFileURL(image).href, {
         cwd: tempDir(),
-        env: { GENOFFICE_ALLOWED_ROOTS: tempDir() },
+        env: { SEUOFFICE_ALLOWED_ROOTS: tempDir() },
       }),
-    ).rejects.toThrow(/outside GENOFFICE_ALLOWED_ROOTS/)
+    ).rejects.toThrow(/outside SEUOFFICE_ALLOWED_ROOTS/)
   })
 
   it.each(['file:relative.png', 'file://remote-host/share/a.png'])(

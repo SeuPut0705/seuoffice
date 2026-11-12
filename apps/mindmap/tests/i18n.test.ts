@@ -1,11 +1,11 @@
 // @vitest-environment node
 /**
- * The dictionaries: 21 languages, one key set, real translations. A missing
- * key is a type error already (each shard is checked against `zh`); these
+ * The dictionaries: every UI language, one key set, real translations. A
+ * missing key is a type error already (each shard is checked against `en`); these
  * tests catch what the types cannot.
  */
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import {
   ARROW_SHAPES,
   BOUNDARY_SHAPES,
@@ -16,7 +16,7 @@ import {
   THEME_BAND_IDS,
   THEME_SKELETON_IDS,
   THEME_VARIANT_IDS,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { strings } from '../src/renderer/i18n/strings'
 import { mapStrings } from '../src/renderer/i18n/map-strings'
 import { BAND_NAME, SKELETON_NAME, VARIANT_NAME } from '../src/renderer/components/ThemePanel'
@@ -30,10 +30,10 @@ import {
 } from '../src/renderer/components/FormatPanel'
 
 const placeholders = (text: string): string[] => (text.match(/\{\w+\}/g) ?? []).sort()
-const keys = Object.keys(strings.zh) as (keyof typeof strings.zh)[]
+const keys = Object.keys(strings.en) as (keyof typeof strings.en)[]
 
 describe('the editor dictionaries', () => {
-  it('cover all 21 languages with the same keys and no empty text', () => {
+  it('cover every UI language with the same keys and no empty text', () => {
     expect(Object.keys(strings).sort()).toEqual([...LANGS].sort())
     for (const lang of LANGS) {
       expect(Object.keys(strings[lang]).sort(), lang).toEqual([...keys].sort())
@@ -52,17 +52,7 @@ describe('the editor dictionaries', () => {
   })
 
   it('are translated: a language with its own script does not carry the English sentence', () => {
-    const ownScript: (keyof typeof strings)[] = [
-      'zh',
-      'zh-TW',
-      'ja',
-      'ko',
-      'th',
-      'ru',
-      'ar',
-      'he',
-      'hi',
-    ]
+    const ownScript: (keyof typeof strings)[] = ['ko']
     for (const lang of ownScript) {
       for (const key of keys) {
         const english = strings.en[key]

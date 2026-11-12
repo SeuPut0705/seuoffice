@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   cvToMarkdown: 'PDF to Markdown',
   cvToEpub: 'PDF to EPUB',
@@ -74,4 +72,4 @@ export const en = {
   imgExportDone: '{count} pictures exported',
   imgExportNone: 'No pictures were found in the pages',
   imgExportFailed: 'Picture export failed: {reason}',
-} satisfies Record<keyof typeof zh, string>
+}

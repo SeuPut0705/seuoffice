@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import { aiRunErrorText } from '../src/ai-subscription'
 import { AiToolsUnsupportedNotice } from '../src/AiToolsUnsupportedNotice'
 import {
@@ -15,13 +15,12 @@ import {
 const KEYS = Object.keys(AI_CONTEXT_STRINGS.en) as AiContextStringKey[]
 
 /** Languages written in another script: a value equal to the English one is an untranslated copy */
-const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+const NON_LATIN: readonly Lang[] = ['ko']
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
 describe('AI_CONTEXT_STRINGS', () => {
-  it('covers all 21 ui languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('has a dictionary for each ui language', () => {
     expect(Object.keys(AI_CONTEXT_STRINGS).sort()).toEqual([...LANGS].sort())
   })
 
@@ -126,7 +125,7 @@ describe('AiToolsUnsupportedNotice', () => {
     expect(host.textContent).toBe(AI_CONTEXT_STRINGS.en.toolsUnsupported)
     expect(host.querySelector('[role="note"]')).not.toBeNull()
 
-    act(() => root.render(createElement(AiToolsUnsupportedNotice, { lang: 'ja' })))
-    expect(host.textContent).toBe(AI_CONTEXT_STRINGS.ja.toolsUnsupported)
+    act(() => root.render(createElement(AiToolsUnsupportedNotice, { lang: 'ko' })))
+    expect(host.textContent).toBe(AI_CONTEXT_STRINGS.ko.toolsUnsupported)
   })
 })

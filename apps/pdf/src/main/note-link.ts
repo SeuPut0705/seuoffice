@@ -15,7 +15,7 @@
  */
 import { access, writeFile } from 'node:fs/promises'
 import { posix, win32 } from 'node:path'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   FoundNoteLink,
   NoteLink,
@@ -324,106 +324,15 @@ export function createNoteLinkService(deps: NoteLinkDeps): NoteLinkService {
 type NoteDialogKey = 'noteWord' | 'dialogTitle' | 'filterMarkdown'
 
 export const NOTE_DIALOG_TEXT: Record<Lang, Record<NoteDialogKey, string>> = {
-  zh: { noteWord: '笔记', dialogTitle: '选择此 PDF 的笔记文件', filterMarkdown: 'Markdown 文档' },
   en: {
     noteWord: 'Note',
     dialogTitle: 'Choose the note file for this PDF',
     filterMarkdown: 'Markdown document',
   },
-  ja: {
-    noteWord: 'ノート',
-    dialogTitle: 'この PDF のノートファイルを選択',
-    filterMarkdown: 'Markdown 文書',
-  },
   ko: {
     noteWord: '노트',
     dialogTitle: '이 PDF의 노트 파일 고르기',
     filterMarkdown: '마크다운 문서',
-  },
-  fr: {
-    noteWord: 'Notes',
-    dialogTitle: 'Choisir le fichier de notes de ce PDF',
-    filterMarkdown: 'Document Markdown',
-  },
-  de: {
-    noteWord: 'Notizen',
-    dialogTitle: 'Notizdatei für dieses PDF wählen',
-    filterMarkdown: 'Markdown-Dokument',
-  },
-  es: {
-    noteWord: 'Notas',
-    dialogTitle: 'Elegir el archivo de notas de este PDF',
-    filterMarkdown: 'Documento Markdown',
-  },
-  th: {
-    noteWord: 'โน้ต',
-    dialogTitle: 'เลือกไฟล์โน้ตของ PDF นี้',
-    filterMarkdown: 'เอกสาร Markdown',
-  },
-  id: {
-    noteWord: 'Catatan',
-    dialogTitle: 'Pilih file catatan untuk PDF ini',
-    filterMarkdown: 'Dokumen Markdown',
-  },
-  ru: {
-    noteWord: 'Заметки',
-    dialogTitle: 'Выберите файл заметок для этого PDF',
-    filterMarkdown: 'Документ Markdown',
-  },
-  ar: {
-    noteWord: 'ملاحظات',
-    dialogTitle: 'اختر ملف الملاحظات لملف PDF هذا',
-    filterMarkdown: 'مستند Markdown',
-  },
-  pt: {
-    noteWord: 'Notas',
-    dialogTitle: 'Escolher o arquivo de notas deste PDF',
-    filterMarkdown: 'Documento Markdown',
-  },
-  it: {
-    noteWord: 'Note',
-    dialogTitle: 'Scegli il file di note di questo PDF',
-    filterMarkdown: 'Documento Markdown',
-  },
-  pl: {
-    noteWord: 'Notatki',
-    dialogTitle: 'Wybierz plik notatek dla tego PDF',
-    filterMarkdown: 'Dokument Markdown',
-  },
-  cs: {
-    noteWord: 'Poznámky',
-    dialogTitle: 'Vyberte soubor poznámek k tomuto PDF',
-    filterMarkdown: 'Dokument Markdown',
-  },
-  nl: {
-    noteWord: 'Notities',
-    dialogTitle: 'Kies het notitiebestand voor deze pdf',
-    filterMarkdown: 'Markdown-document',
-  },
-  ms: {
-    noteWord: 'Nota',
-    dialogTitle: 'Pilih fail nota untuk PDF ini',
-    filterMarkdown: 'Dokumen Markdown',
-  },
-  he: {
-    noteWord: 'הערות',
-    dialogTitle: 'בחירת קובץ ההערות של PDF זה',
-    filterMarkdown: 'מסמך Markdown',
-  },
-  hi: {
-    noteWord: 'नोट',
-    dialogTitle: 'इस PDF की नोट फ़ाइल चुनें',
-    filterMarkdown: 'Markdown दस्तावेज़',
-  },
-  'zh-TW': {
-    noteWord: '筆記',
-    dialogTitle: '選擇此 PDF 的筆記檔案',
-    filterMarkdown: 'Markdown 文件',
-  },
-  vi: {
-    noteWord: 'Ghi chú',
-    dialogTitle: 'Chọn tệp ghi chú cho PDF này',
-    filterMarkdown: 'Tài liệu Markdown',
   },
 }
 

@@ -1,4 +1,4 @@
-import { convertOdpToPptx, OdfConvertError } from '@genoffice/odf2ooxml'
+import { convertOdpToPptx, OdfConvertError } from '@seuoffice/odf2ooxml'
 import { CliError, EXIT } from '../result'
 
 /** .odp → .pptx through the local import filter (same engine as the app's open route). */

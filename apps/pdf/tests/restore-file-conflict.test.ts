@@ -206,12 +206,12 @@ describe('Undo of a page operation after the view itself moved its document', ()
   async function saveToPickedPath(view: OpenView, name: string): Promise<OpenView> {
     const target = join(dirname(view.path), name)
     showSaveDialog.mockResolvedValueOnce({ canceled: false, filePath: target })
-    const adopted = await handlers.get(PDF_CHANNELS.adoptUntitledCopy)!(
-      { sender: { id: view.wcId } },
-      view.path,
-      name,
+    const sender = { sender: { id: view.wcId } }
+    expect(await handlers.get(PDF_CHANNELS.pickUntitledCopyTarget)!(sender, view.path, name)).toBe(
+      true,
     )
-    expect(adopted).toBe(target)
+    const adopted = await handlers.get(PDF_CHANNELS.adoptUntitledCopy)!(sender, view.path)
+    expect(adopted).toEqual({ ok: true, path: target })
     return { ...view, path: target }
   }
 

@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   arButton: 'AI로 페이지 읽기',
@@ -75,4 +75,4 @@ export const ko = {
   jobResumeLater: '나중에',
   searchAiRead: 'AI로 읽은 글에서 찾음',
   searchAiReadTip: 'AI로 읽은 글에는 위치 정보가 없어 그 쪽으로만 이동합니다',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

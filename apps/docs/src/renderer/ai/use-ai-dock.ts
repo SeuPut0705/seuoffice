@@ -4,7 +4,7 @@
  * that rail asks the shell to focus this pane first, so the panel it opens is
  * the visible one. Without the bridge (a standalone editor) nothing changes.
  */
-import { effectiveAiPanelOpen, onAiRailClick, useSplitPaneRole } from '@genoffice/ui'
+import { effectiveAiPanelOpen, onAiRailClick, useSplitPaneRole } from '@seuoffice/ui'
 
 export interface AiDockState {
   /** what the dock renders: a secondary pane's panel is forced to the rail */
@@ -13,10 +13,7 @@ export interface AiDockState {
   onExpand: () => void
 }
 
-export function useAiDock(
-  localOpen: boolean,
-  setLocalOpen: (open: boolean) => void,
-): AiDockState {
+export function useAiDock(localOpen: boolean, setLocalOpen: (open: boolean) => void): AiDockState {
   const { role, requestFocus } = useSplitPaneRole()
   return {
     open: effectiveAiPanelOpen(localOpen, role),

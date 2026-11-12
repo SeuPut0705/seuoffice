@@ -30,7 +30,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactNode, RefObject } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type { TFunc } from '../i18n/locale'
 import { geomDispSize, type PageGeom } from '../annotations'
 import {

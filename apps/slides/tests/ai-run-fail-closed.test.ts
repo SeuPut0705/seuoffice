@@ -78,8 +78,8 @@ vi.mock('electron', () => ({
   WebContentsView: class {},
 }))
 // pass-through spy with a seam: the streaming writer reads the live deck only after the gate
-vi.mock('@genoffice/pptx-engine', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@genoffice/pptx-engine')>()
+vi.mock('@seuoffice/pptx-engine', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@seuoffice/pptx-engine')>()
   return {
     ...actual,
     savePptxToFile: async (...args: Parameters<typeof actual.savePptxToFile>) => {
@@ -99,7 +99,7 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 
-import { createBlankPptx, openPptx } from '@genoffice/pptx-engine'
+import { createBlankPptx, openPptx } from '@seuoffice/pptx-engine'
 import {
   applySessionTxn,
   registerSlidesIpc,

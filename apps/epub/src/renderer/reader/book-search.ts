@@ -5,7 +5,7 @@
  * collapsed. The same text built from the chapter frame's document maps a hit
  * back to a DOM range there, because the frame shows that same copy.
  */
-import { findInText } from '@genoffice/ui'
+import { findInText } from '@seuoffice/ui'
 
 /** Text that is not read: styles, ruby annotations and the like. */
 const SKIPPED = new Set(['style', 'script', 'noscript', 'template', 'title', 'rt', 'rp'])

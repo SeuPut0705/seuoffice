@@ -1,5 +1,5 @@
-import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
-import { aiFetch } from '../fetch'
+import type { AgentMessage, AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
+import { keyedFetch } from '../fetch'
 import { httpBodyDetail } from '../http-error'
 import { opencodeSessionHeaders } from '../providers'
 import { modelEchoesReasoning } from '../registry'
@@ -218,7 +218,7 @@ async function openAiCompatibleTurn(
   // A caller that shapes one request (the local connection test) can cap the
   // output through the options; otherwise the turn's positional cap stands.
   const maxOutputTokens = options.maxTokens ?? maxTokens
-  const response = await aiFetch(endpointUrl(baseUrl, 'chat/completions'), {
+  const response = await keyedFetch(endpointUrl(baseUrl, 'chat/completions'), {
     method: 'POST',
     signal: wd.signal,
     headers: {
@@ -434,7 +434,7 @@ async function chatOpenAiCompatibleTurn(
   user: string,
   options: OpenAiRequestOptions,
 ): Promise<AiChatResponse> {
-  const response = await aiFetch(endpointUrl(baseUrl, 'chat/completions'), {
+  const response = await keyedFetch(endpointUrl(baseUrl, 'chat/completions'), {
     method: 'POST',
     signal: wd.signal,
     headers: {

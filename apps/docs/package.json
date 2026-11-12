@@ -1,5 +1,5 @@
 {
-  "name": "@genoffice/docs",
+  "name": "@seuoffice/docs",
   "productName": "SeuOffice Docs",
   "version": "0.1.0",
   "license": "Apache-2.0",
@@ -18,15 +18,15 @@
     "dist:dir": "electron-vite build && electron-builder --dir"
   },
   "devDependencies": {
-    "@genoffice/agent-core": "*",
-    "@genoffice/i18n": "*",
-    "@genoffice/ai-provider": "*",
-    "@genoffice/ai-search": "*",
-    "@genoffice/compound-file": "*",
-    "@genoffice/docx-engine": "*",
-    "@genoffice/file-parse": "*",
-    "@genoffice/project-store": "*",
-    "@genoffice/ui": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/i18n": "*",
+    "@seuoffice/ai-provider": "*",
+    "@seuoffice/ai-search": "*",
+    "@seuoffice/compound-file": "*",
+    "@seuoffice/docx-engine": "*",
+    "@seuoffice/file-parse": "*",
+    "@seuoffice/project-store": "*",
+    "@seuoffice/ui": "*",
     "@tiptap/core": "3.31.0",
     "@tiptap/extensions": "3.31.0",
     "@tiptap/pm": "3.31.0",
@@ -48,7 +48,7 @@
     "vite": "^7.3.7",
     "vitest": "^4.1.12"
   },
-  "author": "GenOffice",
+  "author": "SeuOffice",
   "build": {
     "appId": "com.genoffice.docs",
     "productName": "SeuOffice Docs",
@@ -92,16 +92,16 @@
     }
   },
   "dependencies": {
-    "@genoffice/docx2hwp": "*",
-    "@genoffice/electron-utils": "*",
-    "@genoffice/font-metrics": "*",
-    "@genoffice/odt-engine": "*",
+    "@seuoffice/docx2hwp": "*",
+    "@seuoffice/electron-utils": "*",
+    "@seuoffice/font-metrics": "*",
+    "@seuoffice/odt-engine": "*",
     "electron-updater": "^6.8.9",
     "pdf-lib": "^1.17.1",
     "pdfjs-dist": "^6.2.108",
-    "@genoffice/pptx-render": "*",
-    "@genoffice/xlsx-gateway": "*",
-    "@genoffice/agent-core": "*",
+    "@seuoffice/pptx-render": "*",
+    "@seuoffice/xlsx-gateway": "*",
+    "@seuoffice/agent-core": "*",
     "@seuoffice/collab": "*",
     "prosemirror-collab": "^1.3.1"
   }

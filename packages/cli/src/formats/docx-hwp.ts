@@ -6,13 +6,13 @@ import {
   type HwpFormat,
   type Loss,
   type LossFeature,
-} from '@genoffice/docx2hwp'
+} from '@seuoffice/docx2hwp'
 import type { CommandContext } from '../registry'
 import { rhwpWasmPath } from '../resources'
 import { CliError, EXIT } from '../result'
 
 /**
- * Word (.docx) to Hangul (.hwp / .hwpx) through @genoffice/docx2hwp, the
+ * Word (.docx) to Hangul (.hwp / .hwpx) through @seuoffice/docx2hwp, the
  * converter the Word editor's "Export as HWP Document" runs. The app runs it in
  * a worker so its windows stay responsive; a command is its own process, so it
  * runs here.

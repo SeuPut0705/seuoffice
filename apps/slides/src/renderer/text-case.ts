@@ -6,7 +6,7 @@
  * length, like ß → SS, is left as it is), so a transformed string can be cut back at the
  * original run and DOM text-node boundaries.
  */
-import type { ShapeRenderNode, TextLine } from '@genoffice/pptx-render'
+import type { ShapeRenderNode, TextLine } from '@seuoffice/pptx-render'
 import type { EditParagraph, EditRun } from '../shared/ipc'
 
 export type CaseMode = 'sentence' | 'lower' | 'upper' | 'title' | 'toggle'

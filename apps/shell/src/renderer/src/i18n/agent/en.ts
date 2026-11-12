@@ -1,10 +1,8 @@
-import type { zh } from './zh'
-
 export const en = {
   windowTitle: 'Agent',
   homeCardSub: 'Work in a folder with Claude Code or Codex',
   intro:
-    'The agent runs your Claude Code or Codex in a folder you choose. It can read the files there, create new ones, use your skills, run scripts and change documents open in GenOffice.',
+    'The agent runs your Claude Code or Codex in a folder you choose. It can read the files there, create new ones, use your skills, run scripts and change documents open in SeuOffice.',
   folderLabel: 'Project folder',
   folderPick: 'Choose a folder…',
   folderNone: 'No folder chosen',
@@ -34,7 +32,7 @@ export const en = {
   warningCommands:
     'Commands the agent runs can change files and use the internet. A document someone sent you can contain hidden instructions.',
   warningRedaction:
-    'Parts you hid from AI stay hidden only in documents open in GenOffice. Files the agent reads from the folder are sent as they are.',
+    'Parts you hid from AI stay hidden only in documents open in SeuOffice. Files the agent reads from the folder are sent as they are.',
   warningUsage:
     'An agent works in many steps and uses more of your subscription than the AI panel.',
   warningAccept: 'I understand',
@@ -99,4 +97,4 @@ export const en = {
   connOff: 'Turned off in this app. Turn it back on under Settings → AI.',
   errOffInApp:
     'This program is turned off in this app, so nothing more was sent. Turn it back on under Settings → AI.',
-} satisfies Record<keyof typeof zh, string>
+}

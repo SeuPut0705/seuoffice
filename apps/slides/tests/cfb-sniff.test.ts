@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { encryptOoxml } from '@genoffice/electron-utils/office-encryption'
+import { encryptOoxml } from '@seuoffice/electron-utils/office-encryption'
 import { cfbKind, isCfbHeader } from '../src/main/cfb-sniff'
 import {
   END,

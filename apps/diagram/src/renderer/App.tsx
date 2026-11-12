@@ -6,9 +6,9 @@
  * the drawing is draw.io's.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { useAutoSavePref, useSplitPaneFocusPing } from '@genoffice/ui'
-import { createDiagramFile, type DiagramFormat } from '@genoffice/drawio-model'
-import type { Lang } from '@genoffice/i18n'
+import { useAutoSavePref, useSplitPaneFocusPing } from '@seuoffice/ui'
+import { createDiagramFile, type DiagramFormat } from '@seuoffice/drawio-model'
+import type { Lang } from '@seuoffice/i18n'
 import type { BridgeEvent, DrawioMenuAction, EmbedEvent } from '../shared/bridge-protocol'
 import { drawioStartUrl } from '../shared/drawio-start'
 import { isHelpKey } from '../bridge/shortcuts'

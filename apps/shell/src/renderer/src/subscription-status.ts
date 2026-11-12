@@ -12,16 +12,16 @@ import {
   subscriptionConnection,
   subscriptionOffIn,
   subscriptionStateOf,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type {
   AiProviderId,
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatus,
   AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import { aiConnectPromptView, aiSubscriptionNoticeDue } from '@genoffice/ui'
-import type { AiConnectPromptView } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { aiConnectPromptView, aiSubscriptionNoticeDue } from '@seuoffice/ui'
+import type { AiConnectPromptView } from '@seuoffice/ui'
 
 /**
  * A provider AI can run on right now, going by its status alone: a

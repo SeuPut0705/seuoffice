@@ -42,10 +42,10 @@ function topicIdsFrom(source) {
 
 /**
  * The languages the manual has to ship, read from the i18n package rather than
- * listed here: a hand-kept copy of the 21 codes is a 21-code list that goes
- * stale the day a language is added, and the failure is silent.
+ * listed here: a hand-kept copy of the codes goes stale the day a language is
+ * added, and the failure is silent.
  *
- * `@genoffice/i18n` exports its TypeScript source, so node cannot import it
+ * `@seuoffice/i18n` exports its TypeScript source, so node cannot import it
  * either — same reason as the ids above. Read as text, and fail loudly rather
  * than quietly checking fewer languages than the app ships.
  */
@@ -69,26 +69,6 @@ const SOURCE = 'en'
 const IDS = topicIdsFrom(readFileSync(REGISTRY, 'utf-8'))
 const LANGS = langsFrom(readFileSync(I18N, 'utf-8'))
 
-/** Latin- or Cyrillic-script languages: any Han character in one of these is a
- *  worker that pasted the CJK source instead of translating it. */
-const NO_HAN = new Set([
-  'fr',
-  'de',
-  'es',
-  'th',
-  'id',
-  'ru',
-  'ar',
-  'pt',
-  'it',
-  'pl',
-  'cs',
-  'nl',
-  'ms',
-  'hi',
-  'vi',
-])
-
 /**
  * The script a language actually writes in.
  *
@@ -97,17 +77,7 @@ const NO_HAN = new Set([
  * cheap to match and proves nothing: an untranslated file matches English
  * perfectly, because it *is* English.
  */
-const SCRIPTS = {
-  zh: /[\u4E00-\u9FFF]/,
-  'zh-TW': /[\u4E00-\u9FFF]/,
-  ja: /[\u3040-\u30FF\u4E00-\u9FFF]/,
-  ko: /[가-힯]/,
-  ru: /[Ѐ-ӿ]/,
-  ar: /[؀-ۿ]/,
-  he: /[֐-׿]/,
-  th: /[฀-๿]/,
-  hi: /[ऀ-ॿ]/,
-}
+const SCRIPTS = { ko: /[가-힯]/ }
 
 /**
  * The longest run of text the two files share, ignoring whitespace and code.
@@ -157,7 +127,6 @@ const links = (t) =>
 const codeFences = (t) => (t.match(/^```/gm) ?? []).length
 const bullets = (t) => (t.match(/^\s*[-*] /gm) ?? []).length
 const numbered = (t) => (t.match(/^\s*\d+\. /gm) ?? []).length
-const HAN = /[\u4E00-\u9FFF]/
 
 let problems = 0
 const fail = (msg) => {
@@ -192,9 +161,6 @@ for (const lang of LANGS) {
     }
     if (links(text).join() !== links(src).join()) {
       structural.push(`${id}: help:// links ${links(text).join()} vs ${links(src).join()}`)
-    }
-    if (NO_HAN.has(lang) && HAN.test(text)) {
-      content.push(`${id}: contains Han characters`)
     }
     // uppercase-only on purpose: "todo" is an ordinary word in Spanish and
     // Portuguese (ignorar todo), and a case-insensitive match flags half a

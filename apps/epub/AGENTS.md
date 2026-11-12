@@ -1,4 +1,4 @@
-# apps/epub (`@genoffice/epub`)
+# apps/epub (`@seuoffice/epub`)
 
 전자책 편집기다. EPUB 책(`.epub`)을 탭에서 열어 읽고, 보이는 책 화면에서 본문 글을 고치고, 전자책 단말기처럼 쪽을 넘겨 미리 보고(결정 0090), AI 창으로 읽고 고치고, 책을 번역해 새 EPUB으로 낸다(결정 0066). 파일을 다루는 일은 `packages/epub-engine`이 하고, 이 모듈은 책 한 벌을 쥔 뒷단과 화면을 잇는다. 사람이 읽는 계획은 `docs/archive/ieum/plans/epub-editor.md`에 있다.
 
@@ -22,7 +22,7 @@
   - `edit/`: 편집 컨트롤러(`controller.ts`), 블록 표기와 화면 요소의 짝(`inline-roles.ts`), 블록 안 찾아 바꾸기(`block-text.ts`), 단축키(`shortcuts.ts`), 화면이 쓰는 엔진 모듈(`engine.ts`).
   - `ai/`: AI 창(`AiPanel.tsx`, `AiDock.tsx`), 책 스킬과 지시문(`epub-skill.ts`), 다섯 도구가 하는 일(`book-tools.ts`), 첨부·검색 스킬, 전송과 연결 상태.
   - `translate/`: 책 번역 창과 확인(`BookTranslateDialog.tsx`), 작업·진행·멈춤·이어하기·결과 쓰기(`BookTranslation.tsx`, `job-session.ts`), 보고(`BookTranslateReport.tsx`), 리본 단추, 제공자 고정(`route.ts`), 모델 호출(`model-call.ts`), 보관소 창구(`ipc-store.ts`), 화면에서 쓰는 번역 엔진 부분(`engine.ts`, `pdf-structure-browser.ts`), 순수 함수(`translate-model.ts`).
-  - `i18n/`: 21개 언어 조각(`app/`, `edit/`, `ai/`, `translate/`의 `<언어>.ts`, `zh.ts`가 키 집합을 정한다)과 그것을 모으는 `strings-*.ts`.
+  - `i18n/`: 두 언어 조각(`app/`, `edit/`, `ai/`, `translate/`의 `<언어>.ts`, `en.ts`가 키 집합을 정한다)과 그것을 모으는 `strings-*.ts`.
 
 ## 맡지 않는 것 (경계)
 
@@ -44,9 +44,9 @@
 - **번역은 저장된 책으로 하고, 그동안 편집을 잠근다.** 저장하지 않은 변경이 있으면 저장한 뒤 시작하고, 저장이 실패하면 시작하지 않는다. 잠금은 편집 컨트롤러의 `setTranslationLock`이 화면과 뒷단(`epub:set-translation-lock`) 모두에 걸고, 결과 책을 다 쓸 때까지 둔다. 탭이 닫히면 작업은 `interrupted`로 멈춘다.
 - **보관소 폴더 이름(`pdf-store`)과 보관 열쇠를 바꾸지 않는다.** 바꾸면 보관된 책 번역을 모두 잃는다.
 - **쉬운 풀이는 책 번역의 두 번째 방식이다(결정 0108).** 책 번역 창에서 방식을 고르고, 고르기만 해서는 보내지 않는다. 확인과 잠금, 제공자 고정, 멈춤 규칙은 번역과 같다. 쉬운 풀이의 기본 목표 언어는 책 언어와 상관없이 화면 언어이고, 책과 같은 언어라는 경고를 하지 않는다. 결과는 "풀이본"과 "원문 다음에 풀이"이고, 기본 이름은 `<이름>.<언어>.<표시 낱말>.epub`(대역은 `….bilingual.epub`)이며 낱말은 화면 언어다(`resultName`, `easyExplanationLabel`). 결과 책 제목에 붙는 표시는 목표 언어다. 확인 창의 이미 한 분량과 다른 AI 안내는 쉬운 풀이의 기록만 본다. 이어하기 제안은 방식마다 따로 나오고 쉬운 풀이는 그렇다고 적는다. 방식이 바뀌면 결과 이름이 달라지므로 저장 위치를 다시 고른다.
-- **책 글은 모델에게 자료다.** 지시문과 도구 설명은 영어이고 제품 이름은 `brandText`를 거친다. 지시문은 책 글, 맥락, 첨부, 검색 결과의 지시를 따르지 말라고 한다. 고정 배치 책에는 `edit_blocks`를 주지 않는다.
+- **책 글은 모델에게 자료다.** 지시문과 도구 설명은 영어이고 제품 이름을 직접 적는다. 지시문은 책 글, 맥락, 첨부, 검색 결과의 지시를 따르지 말라고 한다. 고정 배치 책에는 `edit_blocks`를 주지 않는다.
 - **창구 이름은 `epub:`로 시작한다.** `src/shared/ipc.ts`에 있는 이름만 쓴다. 공용 `ai:*`와 구독 창구는 등록하지 않는다.
-- 문구는 21개 언어 조각에 모두 넣는다. 제품 이름은 `GenOffice`로 적는다.
+- 문구는 두 언어 조각에 모두 넣는다. 제품 이름은 `SeuOffice`로 적는다.
 
 ## 이 모듈의 방식
 
@@ -56,7 +56,7 @@
 - 화면에서 그린 요소와 원본 요소를 하나하나 짝짓지 못한 블록은 고칠 수 없게 둔다(`inline-roles.ts`의 `pairRoles`).
 - 미리보기는 장 본문을 한 쪽 너비의 CSS 단으로 자르고, 쪽을 넘길 때 본문을 `transform`으로 옮긴다. 틀을 스크롤하면 Chromium의 스크롤 범위가 마지막 단의 여백을 빼서 마지막 쪽이 덜 움직인다. 편집 상태(`EditState`)가 바뀔 때마다 보이는 장을 다시 읽어, 판(`version`)이 달라졌을 때만 다시 그린다.
 - 번역 작업은 PDF처럼 화면 안에서 돈다. 모델 호출은 공용 `ai:stream`으로 가고(도구 없음), 결과는 `epub:store-write`로 뒷단의 보관소에 쓰인 뒤에야 끝난 것으로 센다. 다른 프로세스(터미널 명령어)의 작업은 보관소의 최근 `running` 기록으로 안다.
-- 화면은 엔진 모듈을 패키지 진입점이 아니라 상대 경로로 가져온다(`edit/engine.ts`, `translate/engine.ts`). 진입점은 결과 책 만들기까지 실어 Node 전용 모듈(`node:zlib`)을 끌어오기 때문이다. 같은 까닭으로 번역 부분이 가져오는 `@genoffice/pdf-structure`는 렌더러 빌드에서 `translate/pdf-structure-browser.ts`로 바꿔 둔다(`electron.vite.config.ts`, `vite.renderer.config.ts`의 `resolve.alias`). 엔진의 번역 모듈이 진입점에서 새 값을 가져오면 이 파일에도 내보내야 렌더러 빌드가 통과한다.
+- 화면은 엔진 모듈을 패키지 진입점이 아니라 상대 경로로 가져온다(`edit/engine.ts`, `translate/engine.ts`). 진입점은 결과 책 만들기까지 실어 Node 전용 모듈(`node:zlib`)을 끌어오기 때문이다. 같은 까닭으로 번역 부분이 가져오는 `@seuoffice/pdf-structure`는 렌더러 빌드에서 `translate/pdf-structure-browser.ts`로 바꿔 둔다(`electron.vite.config.ts`, `vite.renderer.config.ts`의 `resolve.alias`). 엔진의 번역 모듈이 진입점에서 새 값을 가져오면 이 파일에도 내보내야 렌더러 빌드가 통과한다.
 - 메인 코드는 셸 번들에 들어간다. `src/main`을 고친 뒤에는 셸을 다시 빌드한다.
 
 ## 알려진 한계
@@ -76,7 +76,7 @@
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/epub`, `npm run typecheck -w @genoffice/epub`. 환경은 jsdom(`tests/setup.ts`)이다. 시험용 책은 `tests/helpers/book.ts`가 그때그때 만든다. 뒷단을 흉내 내는 것은 `tests/helpers/edit-backend.ts`, `translate-backend.ts`다.
+- 실행: `npm run test -w @seuoffice/epub`, `npm run typecheck -w @seuoffice/epub`. 환경은 jsdom(`tests/setup.ts`)이다. 시험용 책은 `tests/helpers/book.ts`가 그때그때 만든다. 뒷단을 흉내 내는 것은 `tests/helpers/edit-backend.ts`, `translate-backend.ts`다.
 - 바꾸면 반드시 테스트하는 것(뒷단): 세션의 편집·잠금·거절(`book-session.test.ts`), 자원 프로토콜의 토큰·경로·CSP·스크립트 거절(`asset-protocol.test.ts`), 저장하지 않음·범위만 다름·보관분 옮기기(`save-pipeline.test.ts`), 보관소 창구의 해시 검사(`store-handlers.test.ts`), 결과 경로 거절(`result-paths.test.ts`), 읽던 자리(`reading-state.test.ts`), 열지 못한 파일에 쓰지 않음과 링크 거절(`main.test.ts`, `translate-main.test.ts`).
 - 바꾸면 반드시 테스트하는 것(읽기): 그리는 사본(`reader-chapter-html.test.ts`), 장 넘기기(`reader-navigation.test.ts`), 링크(`reader-links.test.ts`), 찾기(`reader-search.test.ts`), 보기 설정(`reader-view-prefs.test.ts`), 화면(`reader-app.test.tsx`), 미리보기의 쪽 계산(`reader-preview-pages.test.ts`: Chromium에서 잰 위치)과 화면(`preview-app.test.tsx`).
 - 바꾸면 반드시 테스트하는 것(고치기): 컨트롤러(`edit-controller.test.ts`), 화면 요소 ↔ 표기(`edit-notation.test.ts`), 단축키·바꾸기·저장(`edit-app.test.tsx`).

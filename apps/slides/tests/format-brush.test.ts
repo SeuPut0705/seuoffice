@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { RenderNode } from '@genoffice/pptx-render'
+import type { RenderNode } from '@seuoffice/pptx-render'
 import { computeBrushApply, extractBrushFormat } from '../src/renderer/format-brush'
 
 const box = { x: 0, y: 0, w: 100, h: 50, rotationDeg: 0 }

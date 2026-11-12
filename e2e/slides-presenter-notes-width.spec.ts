@@ -2,7 +2,7 @@ import { test, expect, type Locator } from '@playwright/test'
 import { mkdtemp, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createBlankPptx, openPptx, savePptx, setSlideNotes } from '@genoffice/pptx-engine'
+import { createBlankPptx, openPptx, savePptx, setSlideNotes } from '@seuoffice/pptx-engine'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl } from './helpers'
 
 /**
@@ -16,7 +16,7 @@ async function deckWithNotes(): Promise<string> {
   if (!setSlideNotes(opened, 0, 'Speaker notes for the first slide.')) {
     throw new Error('setSlideNotes failed')
   }
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-presenter-notes-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-presenter-notes-'))
   const file = join(dir, 'notes.pptx')
   await writeFile(file, await savePptx(opened))
   return file

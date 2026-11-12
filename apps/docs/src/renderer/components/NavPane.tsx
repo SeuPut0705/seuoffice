@@ -7,7 +7,7 @@ import {
   useState,
   type DragEvent,
 } from 'react'
-import { useDismissablePopover } from '@genoffice/ui'
+import { useDismissablePopover } from '@seuoffice/ui'
 import type { Editor } from '@tiptap/core'
 import type { PageCut } from '../pagination-cuts'
 import type { Node as PmNode } from '@tiptap/pm/model'

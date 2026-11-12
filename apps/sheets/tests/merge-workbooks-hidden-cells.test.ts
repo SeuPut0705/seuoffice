@@ -11,11 +11,11 @@
 import JSZip from 'jszip'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { readBasicWorkbook } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+import { readBasicWorkbook } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 import {
   REDACTION_PART_PATH,
   serializeRedactionPart,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { readRedactionEntries } from '../src/main/workbook-redaction-entries'
 import { mergeAttachedWorkbooks, mergeWorkbooksIntoCurrent } from '../src/renderer/merge-workbooks'
 import type { UniverRuntime } from '../src/renderer/univer-state'

@@ -1,6 +1,12 @@
 import type { NewInkImage } from './types'
 import { escapeXmlAttr } from './xml-utils'
-import { nonFinite, xmlId, xmlInt } from './xml-number'
+import {
+  nonFinite,
+  xmlId,
+  xmlPositionOffset,
+  xmlPositiveCoordinate,
+  xmlUnsignedInt,
+} from './xml-number'
 
 /**
  * Ink annotations (freehand strokes). Each saved annotation is a floating picture —
@@ -52,15 +58,17 @@ export function anchoredInkRunXml(
   docPrId: number,
 ): string {
   // Math.max/min propagate NaN, so sanitize first: a non-finite measurement
-  // would otherwise serialize as cx="NaN" corrupt OOXML.
+  // would otherwise serialize as cx="NaN" corrupt OOXML. A finite one outside
+  // its attribute's range (past an int position, past the widest extent) is
+  // refused, as every builder refuses it.
   const safePx = (v: number, fallback: number): number =>
     Number.isFinite(v) ? Math.round(v * EMU_PER_PX) : fallback
-  const cx = xmlInt(Math.max(1, safePx(ink.widthPx, 1))) ?? nonFinite('widthPx')
-  const cy = xmlInt(Math.max(1, safePx(ink.heightPx, 1))) ?? nonFinite('heightPx')
-  const x = xmlInt(safePx(ink.offsetXPx, 0)) ?? nonFinite('offsetXPx')
-  const y = xmlInt(safePx(ink.offsetYPx, 0)) ?? nonFinite('offsetYPx')
+  const cx = xmlPositiveCoordinate(Math.max(1, safePx(ink.widthPx, 1))) ?? nonFinite('widthPx')
+  const cy = xmlPositiveCoordinate(Math.max(1, safePx(ink.heightPx, 1))) ?? nonFinite('heightPx')
+  const x = xmlPositionOffset(safePx(ink.offsetXPx, 0)) ?? nonFinite('offsetXPx')
+  const y = xmlPositionOffset(safePx(ink.offsetYPx, 0)) ?? nonFinite('offsetYPx')
   const id = xmlId(docPrId) ?? nonFinite('docPrId')
-  const rank = xmlInt(251658240 + docPrId) ?? nonFinite('docPrId')
+  const rank = xmlUnsignedInt(251658240 + docPrId) ?? nonFinite('docPrId')
   const name = `${INK_NAME_PREFIX} ${id}`
   const descr = ink.payload ? ` descr="${escapeXmlAttr(ink.payload)}"` : ''
   return (

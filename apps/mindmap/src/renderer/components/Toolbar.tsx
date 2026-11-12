@@ -12,8 +12,8 @@
  * The four format buttons show what the topic in hand shows; they keep the
  * focus, so while a title is typed they format its selected characters.
  */
-import { AiMark, aiSubscriptionText, Dropdown, type DropdownOption } from '@genoffice/ui'
-import type { ViewLayout } from '@genoffice/xmind-engine'
+import { AiMark, aiSubscriptionText, Dropdown, type DropdownOption } from '@seuoffice/ui'
+import type { ViewLayout } from '@seuoffice/xmind-engine'
 import { useI18n } from '../i18n/locale'
 import type { ExportFormat } from '../../shared/ipc'
 import type { FormatToggle, ShownFormat } from '../map/text-format'

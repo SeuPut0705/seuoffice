@@ -9,13 +9,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import { defaultAiSettings, type AiStreamChunk, type AiStreamRequest } from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
+import { defaultAiSettings, type AiStreamChunk, type AiStreamRequest } from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
 import type {
   ProjectChatAppendedEvent,
   ProjectContextBundle,
   ProjectSelection,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import { AiPanel, type MindmapAiRequest } from '../src/renderer/ai/AiPanel'
 import type { MapAiHost } from '../src/renderer/ai/map-tools'

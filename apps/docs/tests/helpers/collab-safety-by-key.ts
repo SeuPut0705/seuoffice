@@ -37,7 +37,7 @@
  * every page. An object key that names the prototype chain cannot be made
  * safe: `UnsafeValue` is thrown.
  */
-import { ommlToMathML } from '@genoffice/docx-engine'
+import { ommlToMathML } from '@seuoffice/docx-engine'
 import type { Json } from '@seuoffice/collab/client'
 import { inlineMathML } from '../../src/renderer/editor/equation'
 

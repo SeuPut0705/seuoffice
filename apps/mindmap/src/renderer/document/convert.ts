@@ -71,7 +71,7 @@ import {
   type ViewSummaryStyle,
   type ViewTopic,
   type ViewTopicStyle,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import {
   curveToDeltas,
   relationshipArrowStyle,

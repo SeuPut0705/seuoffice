@@ -13,7 +13,7 @@ import {
   MAX_CUSTOM_GRID,
   unsupportedLabelBlocks,
 } from '../src/renderer/mail-merge/layout'
-import type { SectionSettings } from '@genoffice/docx-engine'
+import type { SectionSettings } from '@seuoffice/docx-engine'
 
 const paragraph = (text: string): PmNode => ({
   type: 'docParagraph',

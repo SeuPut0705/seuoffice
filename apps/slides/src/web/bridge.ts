@@ -1,4 +1,4 @@
-import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
+import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@seuoffice/ui'
 import {
   createAiStreamBridge,
   createWebBridge,
@@ -17,7 +17,7 @@ import {
   type PageCollab,
   type WebDocument,
 } from '@seuoffice/web-platform'
-import { setUiLang } from '@genoffice/i18n'
+import { setUiLang } from '@seuoffice/i18n'
 import { getPrivateFontData, listPrivateFontFaces } from '../main/fonts'
 import type { DeckChange, DesktopFilesApi, OpenResult, SlidesApi } from '../shared/ipc'
 import type { SlidesOp } from './collab-ops'

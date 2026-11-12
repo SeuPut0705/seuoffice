@@ -13,16 +13,16 @@ const CP949 = new Uint8Array([
 describe('CSV in the legacy charset of the machine', () => {
   afterEach(() => vi.unstubAllEnvs())
 
-  it('picks the charset from GENOFFICE_LANG, then the locale variables', () => {
-    expect(legacyCsvCharset({ GENOFFICE_LANG: 'ko' })).toBe('euc-kr')
+  it('picks the charset from SEUOFFICE_LANG, then the locale variables', () => {
+    expect(legacyCsvCharset({ SEUOFFICE_LANG: 'ko' })).toBe('euc-kr')
     expect(legacyCsvCharset({ LANG: 'ko_KR.UTF-8' })).toBe('euc-kr')
     expect(legacyCsvCharset({ LC_ALL: 'ja_JP.UTF-8', LANG: 'ko_KR.UTF-8' })).toBe('shift_jis')
-    expect(legacyCsvCharset({ GENOFFICE_LANG: 'zh' })).toBe('gb18030')
-    expect(legacyCsvCharset({ GENOFFICE_LANG: 'en' })).toBeUndefined()
+    expect(legacyCsvCharset({ SEUOFFICE_LANG: 'zh' })).toBe('gb18030')
+    expect(legacyCsvCharset({ SEUOFFICE_LANG: 'en' })).toBeUndefined()
   })
 
   it('reads a Korean Excel CSV as Korean on a Korean machine', async () => {
-    vi.stubEnv('GENOFFICE_LANG', 'ko')
+    vi.stubEnv('SEUOFFICE_LANG', 'ko')
     const dir = tempDir()
     const csv = join(dir, 'menu.csv')
     writeFileSync(csv, CP949)
@@ -38,11 +38,11 @@ describe('CSV in the legacy charset of the machine', () => {
   })
 
   it('reads a Korean Excel CSV as Korean on a non-Korean machine', async () => {
-    vi.stubEnv('GENOFFICE_LANG', '')
+    vi.stubEnv('SEUOFFICE_LANG', '')
     vi.stubEnv('LC_ALL', '')
     vi.stubEnv('LC_MESSAGES', '')
     vi.stubEnv('LANG', 'C.UTF-8')
-    expect(decodeCsv(CP949)).toBe('품목,금액\n라떼,5000\n')
+    expect(await decodeCsv(CP949)).toBe('품목,금액\n라떼,5000\n')
     const dir = tempDir()
     const csv = join(dir, 'menu.csv')
     writeFileSync(csv, CP949)
@@ -56,8 +56,8 @@ describe('CSV in the legacy charset of the machine', () => {
     for (const word of ['품목', '금액', '라떼']) expect(text).toContain(word)
   })
 
-  it('reads a 3000-row Korean address-code CSV on a non-Korean machine', () => {
-    vi.stubEnv('GENOFFICE_LANG', '')
+  it('reads a 3000-row Korean address-code CSV on a non-Korean machine', async () => {
+    vi.stubEnv('SEUOFFICE_LANG', '')
     vi.stubEnv('LC_ALL', '')
     vi.stubEnv('LC_MESSAGES', '')
     vi.stubEnv('LANG', 'C.UTF-8')
@@ -78,7 +78,7 @@ describe('CSV in the legacy charset of the machine', () => {
       bytes.push(...code, 44, ...word.seoul, 32, ...word.jongno, 32, ...word.cheongun, 44)
       bytes.push(...word.exists, 10)
     }
-    const lines = decodeCsv(new Uint8Array(bytes)).trimEnd().split('\n')
+    const lines = (await decodeCsv(new Uint8Array(bytes))).trimEnd().split('\n')
     expect(lines).toHaveLength(3001)
     expect(lines[0]).toBe('법정동코드,법정동명,폐지여부')
     lines

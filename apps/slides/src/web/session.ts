@@ -1,8 +1,8 @@
-import { listEmbeddedFonts, openPptx, parseTheme, type OpenedPptx } from '@genoffice/pptx-engine'
-import carlitoRegular from '@genoffice/ui/fonts/Carlito-Regular.ttf?asset'
-import carlitoBold from '@genoffice/ui/fonts/Carlito-Bold.ttf?asset'
-import carlitoItalic from '@genoffice/ui/fonts/Carlito-Italic.ttf?asset'
-import carlitoBoldItalic from '@genoffice/ui/fonts/Carlito-BoldItalic.ttf?asset'
+import { listEmbeddedFonts, openPptx, parseTheme, type OpenedPptx } from '@seuoffice/pptx-engine'
+import carlitoRegular from '@seuoffice/ui/fonts/Carlito-Regular.ttf?asset'
+import carlitoBold from '@seuoffice/ui/fonts/Carlito-Bold.ttf?asset'
+import carlitoItalic from '@seuoffice/ui/fonts/Carlito-Italic.ttf?asset'
+import carlitoBoldItalic from '@seuoffice/ui/fonts/Carlito-BoldItalic.ttf?asset'
 import hbWasmUrl from '../../../../node_modules/harfbuzzjs/dist/harfbuzz.wasm?asset'
 import { reportError, type WebDocument } from '@seuoffice/web-platform'
 import { registerEmbeddedFonts } from '../main/fonts'
@@ -15,13 +15,13 @@ import {
   type Session,
 } from '../main/session-state'
 import { shapedMetricsReady } from '../main/shaped-metrics'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { OpenResult } from '../shared/ipc'
 import { setDeck } from './deck-reads'
 import { putFile } from './memfs'
 import { loadTemplateFontsFor } from './template-fonts'
 
-const MEDIA_SCHEME = 'genoffice-slide-media://'
+const MEDIA_SCHEME = 'seuoffice-slide-media://'
 const CFB_MAGIC = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1]
 
 /** Files the font code reads at the paths fonts.ts and shaped-metrics.ts know them by */

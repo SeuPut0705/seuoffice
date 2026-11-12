@@ -7,10 +7,16 @@
  *  - insertBlankSlideWithLayout: insert a blank slide after a given position, with
  *    rels pointing at the chosen layout
  */
-import { nextSlideId } from './slide-ids'
+import { canListSlide, withSlideListed } from './slide-ids'
 import type { PackageArchive } from './zip'
 import { resolveTarget, relsPathFor } from './zip'
-import { escapeXmlAttr, hasContentTypeOverride, maxRelationshipIdNumber } from './xml-utils'
+import {
+  cSldNameOf,
+  escapeXmlAttr,
+  hasContentTypeOverride,
+  maxRelationshipIdNumber,
+} from './xml-utils'
+import { ownValue } from './own-value'
 import type { SlideDeck } from './types'
 
 // ── Layout placeholder summary ─────────────────────────────────────────────
@@ -53,10 +59,8 @@ export const PH_HINT_MAP: Record<string, string> = {
 
 export const FUNCTION_TYPES = new Set(['ftr', 'sldNum', 'dt', 'pic'])
 
-/** Quick-parse the <p:cSld> name attribute from the layout XML */
 function parseLayoutName(xml: string, fallback: string): string {
-  const m = /<p:cSld\s[^>]*name="([^"]*)"/.exec(xml)
-  return m?.[1] || fallback
+  return cSldNameOf(xml) || fallback
 }
 
 /** Quick-parse the <p:sldLayout> type attribute from the layout XML */
@@ -95,7 +99,9 @@ export function parseLayoutPlaceholders(xml: string): LayoutPlaceholder[] {
     const cx = parseInt(/\bcx="([^"]*)"/.exec(ext)?.[1] ?? '', 10)
     const cy = parseInt(/\bcy="([^"]*)"/.exec(ext)?.[1] ?? '', 10)
     if (isNaN(x) || isNaN(y) || isNaN(cx) || isNaN(cy)) continue
-    results.push({ type, idx, x, y, cx, cy, hint: PH_HINT_MAP[type] ?? 'Click to add text' })
+    // the placeholder type is the document's: the table answers its own types only
+    const hint = ownValue(PH_HINT_MAP, type) ?? 'Click to add text'
+    results.push({ type, idx, x, y, cx, cy, hint })
   }
   return results
 }
@@ -212,6 +218,8 @@ export function prepareInsertSlideWithLayout(
   const src = deck.slides[sourceIndex]
   if (!src) return null
   if (!archive.readText(layoutPath)) return null
+  // asked before anything is written: a deck that cannot list the slide is left as it was
+  if (!canListSlide(archive.readText('ppt/presentation.xml'))) return null
 
   // Parse the layout placeholders and build the new slide XML with placeholder text boxes
   const layoutXml = archive.readText(layoutPath) ?? ''
@@ -244,7 +252,7 @@ export function prepareInsertSlideWithLayout(
       Buffer.from(
         ct.replace(
           '</Types>',
-          `<Override PartName="/${newPath}" ContentType="${SLIDE_CONTENT_TYPE}"/></Types>`,
+          () => `<Override PartName="/${newPath}" ContentType="${SLIDE_CONTENT_TYPE}"/></Types>`,
         ),
         'utf8',
       ),
@@ -260,6 +268,12 @@ export function prepareInsertSlideWithLayout(
 
   const maxRid = maxRelationshipIdNumber(presRels)
   const newRid = `rId${maxRid + 1}`
+  // Listed after the source slide
+  const srcRid = [...archive.readRels(presPath).values()].find(
+    (r) => resolveTarget(presPath, r.target) === src.path,
+  )?.id
+  const nextPres = withSlideListed(pres, newRid, srcRid)
+  if (nextPres === null) return null
   const relEntry = `<Relationship Id="${newRid}" Type="${SLIDE_REL_TYPE}" Target="${newPath.slice('ppt/'.length)}"/>`
   archive.entries.set(
     presRelsPath,
@@ -268,19 +282,6 @@ export function prepareInsertSlideWithLayout(
       'utf8',
     ),
   )
-
-  const newSldTag = `<p:sldId id="${nextSlideId(pres)}" r:id="${newRid}"/>`
-
-  // Insert after the source slide's sldId
-  const srcRid = [...archive.readRels(presPath).values()].find(
-    (r) => resolveTarget(presPath, r.target) === src.path,
-  )?.id
-  const srcTag = srcRid
-    ? new RegExp(`<p:sldId\\s[^>]*r:id="${srcRid}"[^>]*/>`).exec(pres)?.[0]
-    : undefined
-  const nextPres = srcTag
-    ? pres.replace(srcTag, () => `${srcTag}${newSldTag}`)
-    : pres.replace('</p:sldIdLst>', () => `${newSldTag}</p:sldIdLst>`)
   archive.entries.set(presPath, Buffer.from(nextPres, 'utf8'))
 
   return newPath

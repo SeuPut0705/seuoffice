@@ -18,8 +18,8 @@ describe('malformed document batch entries over MCP', () => {
       cwd: dir,
       env: {
         ...process.env,
-        GENOFFICE_USER_DATA: join(dir, 'user-data'),
-        GENOFFICE_AUDIT_LOG: 'off',
+        SEUOFFICE_USER_DATA: join(dir, 'user-data'),
+        SEUOFFICE_AUDIT_LOG: 'off',
       },
       log: () => {},
       scratchDir: join(dir, 'scratch'),

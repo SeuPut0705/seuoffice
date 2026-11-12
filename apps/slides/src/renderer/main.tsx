@@ -1,23 +1,23 @@
 import React from 'react'
 import { createRoot } from 'react-dom/client'
-import { htmlDir, htmlLang, type Lang } from '@genoffice/i18n'
+import { htmlDir, htmlLang, type Lang } from '@seuoffice/i18n'
 import { App } from './App'
 import { AudienceView } from './components/AudienceView'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
 import type { UiTheme } from '../shared/ipc'
-import '@genoffice/ui/tokens.css'
-import '@genoffice/ui/screentip.css'
-import '@genoffice/ui/ai-model-picker.css'
-import '@genoffice/ui/ai-queue-strip.css'
-import '@genoffice/ui/ai-usage.css'
-import '@genoffice/ui/color-picker.css'
-import '@genoffice/ui/dropdown.css'
-import '@genoffice/ui/ribbon-collapse.css'
-import '@genoffice/ui/markdown.css'
-import '@genoffice/ui/ai-panel-prefs.css'
-import '@genoffice/ui/ai-scope-quote.css'
+import '@seuoffice/ui/tokens.css'
+import '@seuoffice/ui/screentip.css'
+import '@seuoffice/ui/ai-model-picker.css'
+import '@seuoffice/ui/ai-queue-strip.css'
+import '@seuoffice/ui/ai-usage.css'
+import '@seuoffice/ui/color-picker.css'
+import '@seuoffice/ui/dropdown.css'
+import '@seuoffice/ui/ribbon-collapse.css'
+import '@seuoffice/ui/markdown.css'
+import '@seuoffice/ui/ai-panel-prefs.css'
+import '@seuoffice/ui/ai-scope-quote.css'
 import './styles.css'
-import { applyAiPanelPrefs, installScreenTips } from '@genoffice/ui'
+import { applyAiPanelPrefs, installScreenTips } from '@seuoffice/ui'
 
 installScreenTips()
 
@@ -42,13 +42,13 @@ function applyTheme(theme: UiTheme): void {
 }
 
 async function bootstrap(): Promise<void> {
-  let lang: Lang = 'zh'
+  let lang: Lang = 'en'
   let theme: UiTheme = 'system'
   try {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
     ;[lang, theme] = await Promise.all([
-      window.slidesApi.getLanguage().catch(() => 'zh' as const),
+      window.slidesApi.getLanguage().catch(() => 'en' as const),
       window.slidesApi.getTheme().catch(() => 'system' as const),
     ])
   } catch {

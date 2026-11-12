@@ -22,6 +22,7 @@ import {
 } from './model3d'
 import type { EmuRect, Slide } from './types'
 import { creationIdXml, escapeXmlAttr, hasDefaultFor, maxRelationshipIdNumber } from './xml-utils'
+import { ownValue } from './own-value'
 import { relsPathFor } from './zip'
 import { appendRawElements, replacePictureBytes, type OpenedPptx } from './index'
 import { nextCNvPrId } from './insert'
@@ -131,7 +132,8 @@ function appendRels(
     const mode = rel.external ? ' TargetMode="External"' : ''
     xml = xml.replace(
       '</Relationships>',
-      `<Relationship Id="${rid}" Type="${rel.type}" Target="${escapeXmlAttr(rel.target)}"${mode}/></Relationships>`,
+      () =>
+        `<Relationship Id="${rid}" Type="${rel.type}" Target="${escapeXmlAttr(rel.target)}"${mode}/></Relationships>`,
     )
   }
   opened.archive.entries.set(relsPath, Buffer.from(xml, 'utf8'))
@@ -161,7 +163,8 @@ export function addMedia(
   const slide = opened.deck.slides[slideIndex]
   if (!slide) return null
   const ext = opts.ext.toLowerCase()
-  const mime = MEDIA_MIME[ext]
+  // the extension comes from a file name: the table answers its own extensions only
+  const mime = ownValue(MEDIA_MIME, ext)
   if (!mime) return null
 
   // 1) media part + Content_Types

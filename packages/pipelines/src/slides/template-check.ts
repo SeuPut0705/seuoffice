@@ -7,7 +7,7 @@
  * is exported from the `slides` entry and not from the renderer-safe
  * `slides/templates` subpath. It calls neither a model nor the network.
  */
-import { HeuristicMetrics } from '@genoffice/pptx-render'
+import { HeuristicMetrics } from '@seuoffice/pptx-render'
 import { auditDeck } from './audit-deck'
 import { buildPagePptx, parsePageSpec, type PageSpec } from './page-spec'
 import { pageColors, pageText } from './stage-check'

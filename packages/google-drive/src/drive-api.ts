@@ -61,7 +61,14 @@ export type AccessTokenSource = (signal?: AbortSignal) => Promise<string | null>
 
 export interface DriveApiOptions {
   token: AccessTokenSource
+  /** every call but a file's bytes; it must not follow a redirect: each call carries the token */
   fetch: FetchLike
+  /**
+   * A file's bytes (`alt=media`, an export). Drive may answer those with a
+   * redirect to where the bytes are kept, so this one may follow, provided it
+   * leaves the token behind when it leaves the origin. `fetch` when absent.
+   */
+  download?: FetchLike | undefined
 }
 
 const FILE_FIELDS =
@@ -168,13 +175,14 @@ export class DriveApi {
     init: RequestInit,
     signal: AbortSignal | undefined,
     ms = REQUEST_TIMEOUT_MS,
+    send: FetchLike = this.options.fetch,
   ): Promise<Response | DriveError> {
     const token = await this.options.token(signal)
     if (!token) return { ok: false, kind: 'not-connected' }
     try {
       const headers = new Headers(init.headers)
       headers.set('Authorization', `Bearer ${token}`)
-      const response = await this.options.fetch(url, {
+      const response = await send(url, {
         ...init,
         headers,
         signal: timeout(ms, signal),
@@ -257,6 +265,7 @@ export class DriveApi {
       {},
       signal,
       TRANSFER_TIMEOUT_MS,
+      this.options.download,
     )
     if (!(res instanceof Response)) return res
     return readCapped(res, maxBytes)
@@ -275,6 +284,7 @@ export class DriveApi {
       {},
       signal,
       TRANSFER_TIMEOUT_MS,
+      this.options.download,
     )
     if (!(res instanceof Response)) return res
     return readCapped(res, maxBytes)

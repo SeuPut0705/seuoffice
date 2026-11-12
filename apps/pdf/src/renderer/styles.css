@@ -1,4 +1,4 @@
-/* Shared chrome/AI-panel tokens come from @genoffice/ui/tokens.css (imported
+/* Shared chrome/AI-panel tokens come from @seuoffice/ui/tokens.css (imported
  * before this file in main.tsx); only pdf-specific values live here. */
 :root {
   --accent: #c43e1c;
@@ -148,16 +148,8 @@
   --ui-cjk: 'PingFang SC', 'Microsoft YaHei';
 }
 
-:root:lang(ja) {
-  --ui-cjk: 'Hiragino Sans', 'Hiragino Kaku Gothic ProN', 'Yu Gothic UI', 'Yu Gothic', 'Meiryo';
-}
-
 :root:lang(ko) {
   --ui-cjk: 'Apple SD Gothic Neo', 'Malgun Gothic';
-}
-
-:root:lang(zh-TW) {
-  --ui-cjk: 'PingFang TC', 'Microsoft JhengHei';
 }
 
 html,
@@ -1244,7 +1236,7 @@ button {
   color: transparent;
 }
 
-/* Choice widget: shared dropdown (@genoffice/ui gs-dd) sized to the AcroForm
+/* Choice widget: shared dropdown (@seuoffice/ui gs-dd) sized to the AcroForm
  * rect — the wrapper carries the absolute position, the trigger the field look */
 .pdf-form-select {
   position: absolute;
@@ -2913,7 +2905,7 @@ button {
   font-size: 12px;
 }
 
-/* Font picker: shared dropdown (@genoffice/ui gs-dd) sized to the 22px bar row */
+/* Font picker: shared dropdown (@seuoffice/ui gs-dd) sized to the 22px bar row */
 .pdf-textedit-fontsel {
   max-width: 130px;
 }
@@ -3165,7 +3157,7 @@ button {
   min-width: 0;
 }
 
-/* Shared dropdown (@genoffice/ui gs-dd) in modal field rows: matches the
+/* Shared dropdown (@seuoffice/ui gs-dd) in modal field rows: matches the
  * .pdf-modal-input frame (28px, radius 4, 13px) */
 .pdf-field .pdf-modal-dd {
   flex: 1;
@@ -3247,7 +3239,7 @@ button {
   z-index: 8;
 }
 
-/* Positioning-only wrapper: the shared @genoffice/ui .gcp-palette inside
+/* Positioning-only wrapper: the shared @seuoffice/ui .gcp-palette inside
    draws the panel chrome (background, border, radius, shadow). */
 .pdf-color-popover {
   position: absolute;

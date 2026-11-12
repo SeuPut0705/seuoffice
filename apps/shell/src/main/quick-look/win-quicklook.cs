@@ -1,5 +1,5 @@
 // Windows Explorer & Desktop Spacebar Quick Look helper.
-// Runs as a child process of IeumOffice when the user enables Windows Explorer
+// Runs as a child process of SeuOffice when the user enables Windows Explorer
 // Spacebar preview. Watches stdin and exits immediately when the parent closes
 // the pipe so the helper can never outlive the app.
 
@@ -11,7 +11,7 @@ using System.Text;
 using System.Threading;
 using System.Windows.Forms;
 
-namespace IeumOffice.QuickLook
+namespace SeuOffice.QuickLook
 {
     internal static class Program
     {

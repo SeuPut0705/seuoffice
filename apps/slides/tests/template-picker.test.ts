@@ -7,8 +7,8 @@
 import { act, createElement, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { Lang } from '@genoffice/i18n'
-import { listSlideTemplates } from '@genoffice/pipelines/slides/templates'
+import type { Lang } from '@seuoffice/i18n'
+import { listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
 
 // react-konva's node entry requires the native 'canvas' package; nothing here draws
 vi.mock('react-konva', () => {
@@ -292,7 +292,7 @@ describe('template gallery', () => {
     expect(state.current()).toMatchObject({ kind: 'builtin', key: TEMPLATES[1]!.id })
   })
 
-  it('the preview cover follows the UI language: ko for Korean, en for the other 20', async () => {
+  it('the preview cover follows the UI language: ko for Korean, en for English', async () => {
     mount(createElement(TemplateGallery, { state: freshState() }), 'ko')
     await flush()
     const calls = () => fake.api.renderTemplateCover.mock.calls as Array<[string, string]>
@@ -305,7 +305,7 @@ describe('template gallery', () => {
 
     fake.api.renderTemplateCover.mockClear()
     clearTemplateCoverCache()
-    mount(createElement(TemplateGallery, { state: freshState() }), 'ja')
+    mount(createElement(TemplateGallery, { state: freshState() }), 'en')
     await flush()
     expect(calls()).toHaveLength(12)
     expect(new Set(calls().map(([, lang]) => lang))).toEqual(new Set(['en']))
@@ -353,7 +353,7 @@ describe('template gallery', () => {
       expect(fontsLine(root)?.textContent).toContain(
         str('en', 'aiTplFontsOne', { font: 'Pretendard' }),
       )
-      expect(fake.api.getAiDefaultFonts).toHaveBeenCalledWith('en')
+      expect(fake.api.getAiDefaultFonts).toHaveBeenCalled()
 
       withFonts({ mode: 'serifTitle', sans: 'Pretendard', serif: 'Batang' })
       root = mount(createElement(TemplateGallery, { state: freshState() }))

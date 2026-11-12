@@ -2,13 +2,13 @@ import { copyFileSync, existsSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { Docx2HwpError } from '@genoffice/docx2hwp'
+import { Docx2HwpError } from '@seuoffice/docx2hwp'
 import { run, tempDir } from './helpers'
 
 /** The package's two answers this file cannot produce from a real document. */
 const engine = vi.hoisted(() => ({ start: vi.fn(), convert: vi.fn() }))
-vi.mock('@genoffice/docx2hwp', async (importOriginal) => {
-  const real = await importOriginal<typeof import('@genoffice/docx2hwp')>()
+vi.mock('@seuoffice/docx2hwp', async (importOriginal) => {
+  const real = await importOriginal<typeof import('@seuoffice/docx2hwp')>()
   return { ...real, HwpEngine: { start: engine.start }, docxToHwp: engine.convert }
 })
 

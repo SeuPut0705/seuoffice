@@ -1,4 +1,4 @@
-# packages/drawio-model (`@genoffice/drawio-model`)
+# packages/drawio-model (`@seuoffice/drawio-model`)
 
 다이어그램 파일(`.drawio`·`.dio`·`.drawio.svg`·`.drawio.png`)을 읽고, 도형·선 읽기 표를 만들고, 연산을 검사해 기본 변경으로 바꾸고, 그 변경을 XML에 쓰는 순수 모듈이다. 원본 프로그램에서 온 것이 아니라 이 프로젝트가 만든 패키지다. Electron에 묶이지 않고, 편집기 화면·껍데기 앱·터미널 명령어·`packages/file-parse`가 같은 코드를 쓴다. 연산의 뜻은 **이 패키지에만** 있다(기획 8.2, 결정 "연산은 한 모듈로 검사하고 같은 기본 변경으로 바꾼다").
 
@@ -6,7 +6,7 @@
 
 - 형식과 꺼내기(`format.ts`): 형식은 파일 이름 끝으로 정한다(`detectDiagramFormat`, 대소문자 무시, `.drawio.svg`·`.drawio.png`는 두 겹 확장자만). `extractDiagramXml`은 `.drawio`/`.dio`의 UTF-8 글(BOM 기억), SVG 뿌리의 `content` 속성(그대로·URI 인코딩·base64 셋 다), PNG의 `tEXt`/`zTXt`/`iTXt` 덩이(열쇠말 `mxfile` 또는 예전 `mxGraphModel`, 보통 URI 인코딩)에서 draw.io XML을 꺼낸다. 열지 못하는 까닭은 여섯 가지다: `unsupported`(다이어그램 이름이 아님, `.vsdx`는 앱의 가져오기), `no_original`(원본이 들지 않은 SVG·PNG), `corrupt_image`(읽을 수 없는 PNG), `not_xml`(파일·쪽이 XML이나 UTF-8이 아님), `decompress_failed`(압축된 쪽·안에 든 원본을 풀 수 없음), `no_diagram`(`mxfile`/`mxGraphModel`이 없거나 쪽이 하나도 없음).
 - 파일(`file.ts`): `openDiagram`·`parseDiagramXml`이 `DiagramFile`(형식, XML 글, BOM, 쪽 목록과 압축 여부, 상태)을 만든다. 쪽은 압축됐든 아니든 읽고, 빈 `<diagram/>`은 빈 쪽이다. 뿌리가 `mxGraphModel` 하나인 파일은 쪽 하나(`page-1`, `Page-1`)로 읽는다. id 없는 쪽은 `page-N`을 지어 부른다(파일에는 쓰지 않는다). `createDiagramFile`은 압축하지 않은 새 다이어그램이다.
-- 압축(`codec.ts`): draw.io 압축 쪽 = `base64(rawDeflate(encodeURIComponent(xml)))`. deflate 자체는 `PageCodec`으로 받는다. Node에서는 `@genoffice/drawio-model/node`의 `nodePageCodec`(zlib), 화면에서는 draw.io가 이미 싣는 `pako`를 감싸 넘긴다.
+- 압축(`codec.ts`): draw.io 압축 쪽 = `base64(rawDeflate(encodeURIComponent(xml)))`. deflate 자체는 `PageCodec`으로 받는다. Node에서는 `@seuoffice/drawio-model/node`의 `nodePageCodec`(zlib), 화면에서는 draw.io가 이미 싣는 `pako`를 감싸 넘긴다.
 - 쪽 모델(`model.ts`): `<root>` 아래의 `mxCell`과 그것을 감싼 `UserObject`/`object`(id와 라벨 `label`은 감싼 쪽에)를 `DiagramCell`로 읽는다. 편집기는 draw.io에서 쪽마다 `mxGraphModel` XML을 받아 `diagramStateFromPages`로 같은 상태를 만든다.
 - 읽기 표(`table.ts`): 기획 8.1의 `pages`·`page`(shapes, edges, 앱에서만 selected). 라벨은 글자만(HTML 태그를 벗기고 `<br>`·문단 끝은 `\n`, 엔티티 풀기). `shape`는 스타일의 `shape=` 값, 없으면 앞의 낱말, 그것도 없으면 `rectangle`(`rounded=1`이면 `rounded`). `cylinder3`→`cylinder`, `umlActor`→`actor`로 연산 이름에 맞춘다. 낱말 `group`은 `group`, `container=1`·`swimlane`·`table`은 `container`. x·y는 저장된 값 그대로라 `parent`가 있으면 그 도형 기준이다. 선에 딸린 라벨 도형(부모가 선인 도형)은 도형 목록에 넣지 않고 그 선의 라벨에 줄을 바꿔 붙인다. 글 표는 한 요소 한 줄(`|` 구분, 라벨의 줄바꿈은 `\n`, 80자에서 자름)이다(`formatDiagramRead`, 모든 쪽은 `formatDiagramText`).
 - 연산 정의(`ops.ts`): `DIAGRAM_OPS`가 연산마다 이름·설명·입력 스키마(JSON Schema 꼴)·`changes`·`needsApp`를 담은 자료다. AI 도구·MCP 도구·`guide diagram`은 이것에서 만든다. `checkOpInput`이 같은 스키마로 형(유한한 수, 문자열, 문자열 목록), 필수 키, 고르는 값, 모르는 키를 검사한다.
@@ -32,7 +32,7 @@
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/drawio-model`, `npm run typecheck -w @genoffice/drawio-model`.
+- 실행: `npm run test -w @seuoffice/drawio-model`, `npm run typecheck -w @seuoffice/drawio-model`.
 - 시험 파일 `tests/fixtures/`는 draw.io v32.6.9 시험 도구가 이 프로젝트의 `sample.drawio`로 써낸 것이다(`out.drawio` 압축 없음, `out.drawio.svg` 압축된 쪽, `out.drawio.png` `tEXt` 덩이). 나머지는 테스트 코드가 그때그때 만든다.
 - 바꾸면 반드시 테스트하는 것: 세 형식에서 꺼내기와 열지 못하는 까닭(`format.test.ts`), 읽기 표와 글 표(`table.test.ts`), 모든 연산과 거절 이유·id 짓기·묶음 규칙(`plan.test.ts`), 압축 쪽 왕복·고치지 않은 쪽의 바이트 보존·쓴 파일을 다시 연 상태가 계획한 상태와 같은 것(`write.test.ts`).
 - 우리가 쓴 파일이 실제 draw.io에서 열리는지는 자동 테스트로 확인하지 못한다. 실제 프로그램에 올려 확인한다.

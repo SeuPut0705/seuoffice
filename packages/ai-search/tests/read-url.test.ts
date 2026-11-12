@@ -14,7 +14,7 @@ type FetchImpl = typeof fetch
 
 /** The app's settings file, with or without a read_url GitHub token. */
 function settingsFile(githubToken?: string): string {
-  const path = join(mkdtempSync(join(tmpdir(), 'genoffice-read-url-')), 'ai-settings.json')
+  const path = join(mkdtempSync(join(tmpdir(), 'seuoffice-read-url-')), 'ai-settings.json')
   const readUrl = githubToken === undefined ? {} : { readUrl: { githubToken } }
   writeFileSync(path, JSON.stringify({ provider: 'auto', providers: {}, ...readUrl }))
   return path
@@ -655,6 +655,133 @@ describe('readUrlTool GitHub addresses', () => {
     expect(result).toMatchObject({ ok: false, errorCode: 'http_error', status: 404 })
     if (result.ok) throw new Error('expected failure')
     expect(result.error).toContain('404')
+  })
+
+  describe('where the token goes when the read is redirected', () => {
+    // every chain starts at the contents API, which is where the token belongs
+    const start = (repo: string): string =>
+      `https://api.github.com/repos/acme/${repo}/contents/docs/SKILL.md?ref=main`
+    const read = (repo: string, fetchImpl: FetchImpl) =>
+      readUrlTool(settingsFile('github_pat_test'), blob(repo), 0, { fetchImpl })
+    /** per hop, in order: did the request carry the token? */
+    const tokenOnHop = (headers: Array<Record<string, string>>): boolean[] =>
+      headers.map((hop) => Object.values(hop).some((value) => value.includes('github_pat_test')))
+
+    it('keeps it on another path of api.github.com', async () => {
+      const moved = 'https://api.github.com/repositories/42/contents/docs/SKILL.md?ref=main'
+      const { fetchImpl, urls, headers } = recordFetch((url) =>
+        url === start('same-origin')
+          ? redirect(moved, 301)
+          : url === moved
+            ? text('moved')
+            : undefined,
+      )
+      const result = await read('same-origin', fetchImpl)
+      expect(result).toMatchObject({ ok: true, url: moved })
+      expect(urls).toEqual([start('same-origin'), moved])
+      expect(tokenOnHop(headers)).toEqual([true, true])
+    })
+
+    it('does not put it back when the chain returns to api.github.com', async () => {
+      const away = 'https://8.8.8.8/bounce'
+      // an address on the API the other host chose
+      const back = 'https://api.github.com/user/emails'
+      const { fetchImpl, urls, headers } = recordFetch((url) =>
+        url === start('there-and-back')
+          ? redirect(away)
+          : url === away
+            ? redirect(back)
+            : url === back
+              ? text('[]')
+              : undefined,
+      )
+      await read('there-and-back', fetchImpl)
+      expect(urls).toEqual([start('there-and-back'), away, back])
+      expect(tokenOnHop(headers)).toEqual([true, false, false])
+    })
+
+    it('counts another port of api.github.com as another origin', async () => {
+      const otherPort = 'https://api.github.com:8443/repos/acme/port/contents/docs/SKILL.md'
+      const { fetchImpl, urls, headers } = recordFetch((url) =>
+        url === start('port') ? redirect(otherPort) : url === otherPort ? text('x') : undefined,
+      )
+      await read('port', fetchImpl)
+      expect(urls).toEqual([start('port'), otherPort])
+      expect(tokenOnHop(headers)).toEqual([true, false])
+    })
+
+    it('does not follow a redirect to plain http, api.github.com included', async () => {
+      for (const [repo, insecure] of [
+        ['http-same-host', 'http://api.github.com/repos/acme/x/contents/docs/SKILL.md'],
+        ['http-other-host', 'http://8.8.8.8/SKILL.md'],
+      ] as const) {
+        const { fetchImpl, urls, headers } = recordFetch((url) =>
+          url === start(repo) ? redirect(insecure) : text('served over plain http'),
+        )
+        const result = await read(repo, fetchImpl)
+        expect(result, insecure).toMatchObject({ ok: false, errorCode: 'blocked' })
+        expect(urls, insecure).toEqual([start(repo)])
+        expect(tokenOnHop(headers), insecure).toEqual([true])
+      }
+    })
+
+    it('follows five redirects and refuses the sixth', async () => {
+      const hop = (repo: string, n: number): string =>
+        n === 0 ? start(repo) : `https://api.github.com/repositories/${n}/contents/docs/SKILL.md`
+      const chain = (repo: string, length: number) =>
+        recordFetch((url) => {
+          const n = [0, 1, 2, 3, 4, 5, 6].find((i) => hop(repo, i) === url)
+          if (n === undefined) return undefined
+          return n < length ? redirect(hop(repo, n + 1)) : text('arrived')
+        })
+
+      const five = chain('five-hops', 5)
+      expect(await read('five-hops', five.fetchImpl)).toMatchObject({ ok: true })
+      expect(five.urls).toHaveLength(6)
+
+      const six = chain('six-hops', 6)
+      expect(await read('six-hops', six.fetchImpl)).toMatchObject({
+        ok: false,
+        errorCode: 'blocked',
+      })
+      // the sixth redirect was read, and the address it named was not asked
+      expect(six.urls).toHaveLength(6)
+    })
+
+    it('still refuses a private address on a later hop, token or not', async () => {
+      const { fetchImpl, urls } = recordFetch((url) =>
+        url === start('private-hop') ? redirect('https://169.254.169.254/latest/') : undefined,
+      )
+      expect(await read('private-hop', fetchImpl)).toMatchObject({
+        ok: false,
+        errorCode: 'blocked',
+      })
+      expect(urls).toEqual([start('private-hop')])
+    })
+
+    it('sends it only to https://api.github.com when the address is given directly', async () => {
+      for (const direct of [
+        'http://api.github.com/repos/acme/direct-http/contents/docs',
+        'https://api.github.com:8443/repos/acme/direct-port/contents/docs',
+      ]) {
+        const { fetchImpl, urls, headers } = recordFetch(() => text('[]', 'application/json'))
+        await readUrlTool(settingsFile('github_pat_test'), direct, 0, { fetchImpl })
+        expect(urls, direct).toEqual([direct])
+        expect(tokenOnHop(headers), direct).toEqual([false])
+      }
+    })
+
+    it('reads without a token as before: plain http and more than five redirects', async () => {
+      const hop = (n: number): string => `http://8.8.8.8/tokenless-${n}`
+      const { fetchImpl, urls } = recordFetch((url) => {
+        const n = [0, 1, 2, 3, 4, 5, 6, 7].find((i) => hop(i) === url)
+        if (n === undefined) return undefined
+        return n < 7 ? redirect(hop(n + 1)) : text('arrived')
+      })
+      const result = await readUrlTool(settingsFile('github_pat_test'), hop(0), 0, { fetchImpl })
+      expect(result).toMatchObject({ ok: true, url: hop(7) })
+      expect(urls).toHaveLength(8)
+    })
   })
 })
 

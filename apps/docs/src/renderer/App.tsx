@@ -31,7 +31,7 @@ import {
   useSplitPaneFocusPing,
   templateDocumentOf,
   type TemplateDocument,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { commentAnchors, commentIdsAt, wordRangeAtCaret } from './editor/comments'
 import { setFieldInstr, toggleAllFieldCodes, type FieldRange } from './editor/field-codes'
 import { linkTarget } from './editor/link-actions'
@@ -102,7 +102,7 @@ import {
   type Watermark,
   type WatermarkSpec,
   type CommentImage,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type {
   AiDocContent,
   AiSettings,
@@ -420,8 +420,10 @@ import { applyCase, nextCaseMode, selectionText } from './editor/case-transform'
 import { stepHangingIndent, stepParagraphIndent } from './editor/indent'
 import { PasswordDialog } from './components/PasswordDialog'
 import { ProtectDialog, type ProtectDialogResult } from './components/ProtectDialog'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { getLang, t, useI18n } from './i18n/locale'
+import { getDocumentLocale } from './document-locale'
+import { dateTimeFieldText } from './field-date'
 import {
   getActiveSubEditor,
   setActiveSubEditor,
@@ -2995,15 +2997,10 @@ export function App() {
 
   const fieldValue = useCallback(
     (instr: string): string => {
-      const kw = instr.trim().split(/\s+/)[0]?.toUpperCase()
-      const now = new Date()
+      const kw = instr.trim().split(/\s+/)[0]?.toUpperCase() ?? ''
+      const dateTime = dateTimeFieldText(kw, new Date(), getDocumentLocale())
+      if (dateTime !== null) return dateTime
       switch (kw) {
-        case 'DATE':
-        case 'CREATEDATE':
-        case 'SAVEDATE':
-          return now.toLocaleDateString('zh-CN')
-        case 'TIME':
-          return now.toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' })
         case 'NUMPAGES':
           return String(pageInfo.total)
         case 'PAGE':
@@ -7218,9 +7215,9 @@ export function App() {
     if (gap) startGapHfEditRef.current(gap)
   }, [])
 
-  // genoffice CLI (`open --block`, `selection`): the shell evaluates this hook
+  // seuoffice CLI (`open --block`, `selection`): the shell evaluates this hook
   useEffect(() => {
-    ;(window as unknown as Record<string, unknown>).__genofficeControl = (req: ControlRequest) =>
+    ;(window as unknown as Record<string, unknown>).__seuofficeControl = (req: ControlRequest) =>
       handleDocsControl(req, editor, doc !== null)
   })
 

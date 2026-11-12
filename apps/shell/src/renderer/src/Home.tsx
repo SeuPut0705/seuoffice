@@ -4,7 +4,7 @@ import type {
   PointerEvent as ReactPointerEvent,
   ReactElement,
 } from 'react'
-import logoLockup from './assets/genoffice-logo.svg'
+import logoLockup from './assets/seuoffice-logo.svg'
 import { KbAskPanel } from './KbAskPanel'
 import iconDocx from './assets/file-docx.svg'
 import iconXlsx from './assets/file-xlsx.svg'
@@ -37,10 +37,10 @@ import {
   aiSubscriptionText,
   useDismissablePopover,
   useEscapeToClose,
-} from '@genoffice/ui'
-import { isSubscriptionProvider } from '@genoffice/ai-provider/browser'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
-import { productName } from '@genoffice/i18n'
+} from '@seuoffice/ui'
+import { isSubscriptionProvider } from '@seuoffice/ai-provider/browser'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
+import { productName } from '@seuoffice/i18n'
 import { RELEASE_IS_BETA } from '../../shared/release-stage'
 import { fileCountLabel, visiblePageCount } from './counts'
 import { useI18n } from './locale'
@@ -134,7 +134,7 @@ const OPEN_LOCAL_EXTENSIONS =
   '.docx / .doc / .dot / .odt / .xlsx / .xlsm / .xls / .csv / .tsv / .ods / .pptx / .ppt / .odp / .otp / .pdf / .md / .html / .xmind / .mm / .hwp / .hwpx / .epub / .drawio / .dio / .drawio.svg / .drawio.png / .vsdx'
 
 /** drag payload of home file/folder rows (JSON array of absolute paths) */
-const DRAG_PATHS_MIME = 'application/x-genoffice-paths'
+const DRAG_PATHS_MIME = 'application/x-seuoffice-paths'
 /** hovering a collapsed folder this long while dragging expands it */
 const DRAG_EXPAND_DELAY_MS = 600
 /** expanded folders survive a home reload; the selection is per session */
@@ -3117,8 +3117,7 @@ export function Home({
           : hour < 18
             ? 'greetAfternoon'
             : 'greetEvening'
-    const cjk = lang === 'zh' || lang === 'zh-TW' || lang === 'ja'
-    const greeting = `${t(greetKey)}${cjk ? '。' : '. '}`
+    const greeting = `${t(greetKey)}. `
     return (
       <main className="content">
         <section className="quick-start" aria-label={t('secQuickStart')}>

@@ -14,8 +14,8 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join, resolve } from 'node:path'
 import { expect, type ElectronApplication, type Frame, type Page } from '@playwright/test'
-import { diagramStateFromPages, formatDiagramText, openDiagram } from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+import { diagramStateFromPages, formatDiagramText, openDiagram } from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 
 export const DIAGRAM_ASSETS = resolve(__dirname, 'assets/diagram')
 
@@ -26,7 +26,7 @@ const DIAGRAM_PARTITION = 'persist:ieum-diagram'
 export const ON_PC_SCHEMES = ['blob:', 'data:', 'drawio-app:', 'genoffice-app:']
 
 export async function scratchDir(name: string): Promise<string> {
-  return mkdtemp(join(tmpdir(), `genoffice-diagram-${name}-`))
+  return mkdtemp(join(tmpdir(), `seuoffice-diagram-${name}-`))
 }
 
 /** A copy of one fixture in `dir`, under `as` when given. */

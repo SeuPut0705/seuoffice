@@ -60,7 +60,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/electron-utils', () => ({
+vi.mock('@seuoffice/electron-utils', () => ({
   configuredDefaultSaveDir: vi.fn(() => tmpdir()),
   contextMenuLabels: vi.fn(() => ({})),
   installContextMenu: vi.fn(),
@@ -72,18 +72,18 @@ vi.mock('@genoffice/electron-utils', () => ({
   showSaveDialogWithMemory: vi.fn(),
 }))
 
-vi.mock('@genoffice/ai-search', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-search')>()),
+vi.mock('@seuoffice/ai-search', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-search')>()),
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
   documentMediaRoots: vi.fn(() => ['/doc-dir']),
 }))
 
 // the process-wide statuses of the subscription service (registered by the docs main in the shell)
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   sharedSubscriptionStatuses: vi.fn(() => statuses),
 }))
 
-import { abortMediaCalls } from '@genoffice/ai-search'
+import { abortMediaCalls } from '@seuoffice/ai-search'
 import { createMarkdownView } from '../src/main/markdown-main'
 import { MARKDOWN_CHANNELS } from '../src/shared/ipc'
 

@@ -11,9 +11,9 @@ import type {
   AgentSession,
   AgentSessionEvent,
   AgentSessionOptions,
-} from '@genoffice/ai-provider/agent-session'
-import type { AiSubscriptionStatus } from '@genoffice/ai-provider'
-import { normalizeAiSettings } from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider/agent-session'
+import type { AiSubscriptionStatus } from '@seuoffice/ai-provider'
+import { normalizeAiSettings } from '@seuoffice/ai-provider'
 import { createAgentManager } from '../../src/main/agent/agent-sessions'
 import {
   DEFAULT_AGENT_PROJECT_PREFS,
@@ -200,10 +200,9 @@ describe('the window', () => {
     expect(agentWebText('ko', 'permAllowSiteSession')).toBe('이번 세션 동안 이 사이트 허락')
   })
 
-  it('has every web string in all 21 languages', () => {
+  it('has every web string in every language', () => {
     const langs = Object.keys(agentWebStrings)
-    expect(langs).toHaveLength(21)
-    const keys = Object.keys(agentWebStrings.zh)
+    const keys = Object.keys(agentWebStrings.en)
     for (const lang of langs) {
       const dict = agentWebStrings[lang as keyof typeof agentWebStrings] as Record<string, string>
       expect(Object.keys(dict).sort()).toEqual([...keys].sort())

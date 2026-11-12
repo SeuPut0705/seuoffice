@@ -66,7 +66,7 @@ function copyOldHangulFont() {
 rmSync(resolve(web, 'dist'), { recursive: true, force: true })
 
 if (APPS.includes('sheets')) run('node', ['apps/sheets/native/xlsx-wasm/build.mjs'])
-if (APPS.includes('hwp')) run('npm', ['run', 'studio', '-w', '@genoffice/hwp'])
+if (APPS.includes('hwp')) run('npm', ['run', 'studio', '-w', '@seuoffice/hwp'])
 
 for (const app of APPS) {
   console.log(`\n[web] building ${app}`)

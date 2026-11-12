@@ -1,13 +1,13 @@
-# @genoffice/ppt2pptx
+# @seuoffice/ppt2pptx
 
-Legacy PowerPoint 97-2003 import: parse `.ppt` (OLE2/CFB + MS-PPT records) and rebuild it as `.pptx`. Staged like `@genoffice/doc2docx` — stage 1 is the internal editable-text foundation (not user-visible yet); the CLI and the Slides open flow wire it up in the following stages.
+Legacy PowerPoint 97-2003 import: parse `.ppt` (OLE2/CFB + MS-PPT records) and rebuild it as `.pptx`. Staged like `@seuoffice/doc2docx` — stage 1 is the internal editable-text foundation (not user-visible yet); the CLI and the Slides open flow wire it up in the following stages.
 
 ## Stage 1 carries
 
 - the **change directory** the way PowerPoint itself resolves it: CurrentUserAtom → UserEditAtom → PersistDirectoryAtom (`persistId:20|cPersist:12` entries, not an implicit id array) → older generations through `offsetLastEdit` — a sequential walk would read stale generations
 - slide order from the DocumentContainer's SlideListWithText (instance 0 = slides; each SlidePersistAtom carries the persist id of its SlideContainer), the slide surface from the DocumentAtom (576 master units per inch → EMU)
 - every slide's text sequences as **editable text boxes**: the slide's SlideListWithText outline entries (where real PowerPoint stores placeholder title/body text) plus the text boxes nested five levels down under PPDrawing/Escher (OfficeArtClientTextbox), with PowerPoint's runes normalized (`\u000B` → newline, the bullet-in-paragraph marker → space, cp1252 smart quotes named)
-- the OLE2/CFB container opener is the **shared** one in `@genoffice/compound-file` (`openOle2Container`: 8-byte signature, 512-byte header, input/stream caps), with the PowerPoint-specific checks (presentation stream, encrypted headerToken 0xF3D1C4DF) layered on top
+- the OLE2/CFB container opener is the **shared** one in `@seuoffice/compound-file` (`openOle2Container`: 8-byte signature, 512-byte header, input/stream caps), with the PowerPoint-specific checks (presentation stream, encrypted headerToken 0xF3D1C4DF) layered on top
 - an explicit error model (`LegacyPptError`, stable codes, including `encrypted`)
 - **work that follows the file's size**: a slide the list names again (by the same persist id or by another that resolves to the same container) is read once and the repeats are reported in `warnings`; slide containers that overlap are refused (`bad_slide`); a deck is at most 4,096 slides, 4,194,304 characters and 262,144 paragraphs of text (`limits_exceeded` past that)
 - a regression test on the in-repo real deck `packages/file-parse/tests/fixtures/legacy-sample.ppt` (plus the byte builder for the change-directory cases)

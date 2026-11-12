@@ -20,11 +20,12 @@ import {
   parseRange,
   type CellCoordinates,
   type RangeBounds,
-} from '@genoffice/xlsx-gateway/domain/cell-address'
+} from '@seuoffice/xlsx-gateway/domain/cell-address'
 
 import { calculateNow, isManualCalculation } from './calc-options'
 import { t } from './i18n/locale'
 import { beginUndoBatch } from './op-executor'
+import { holdsHiddenCells } from './redact-move-guard'
 import type { UniverRuntime, UniverWorksheet } from './univer-state'
 
 /// Excel caps nothing; we do, because every result cell is a full
@@ -233,6 +234,11 @@ export async function applyDataTable(
   }
   const plan = planDataTable(bounds, rowInput, columnInput)
   if (typeof plan === 'string') throw new Error(errorMessage(plan))
+  // The results are the formula's values written down as constants: worked
+  // out from whatever the formula and the input values in the table hold.
+  if (holdsHiddenCells(runtime, worksheet.getSheetId(), [bounds])) {
+    throw new Error(t('redactMoveRefused'))
+  }
 
   const formulaRange = worksheet.getRange(plan.formulaCell.row, plan.formulaCell.column, 1, 1)
   if (!formulaRange.getFormula()) throw new Error(t('dlgDataTableNeedsFormula'))

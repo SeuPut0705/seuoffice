@@ -18,8 +18,8 @@ import {
   effectiveAiPanelOpen,
   onAiRailClick,
   useSplitPaneRole,
-} from '@genoffice/ui'
-import type { TemplateDocument } from '@genoffice/ui'
+} from '@seuoffice/ui'
+import type { TemplateDocument } from '@seuoffice/ui'
 import { useI18n } from '../i18n/locale'
 import type { AgentBridge } from './agent-bridge'
 import type { AiPrefill } from './easy-words'
@@ -41,7 +41,7 @@ export interface HwpAiDockProps {
    * one with `autoRun` (the editor's 쉬운 말로 풀기) is sent at once
    */
   prefill?: AiPrefill | null
-  /** the panel took an `autoRun` request: clear it so it is not sent again */
+  /** the panel took the request (sent it, or put it in the input box): clear it so it is taken once */
   onPrefillTaken?: (taken: AiPrefill) => void
   /** an AI run holds the document, is out of it again, or is stuck in it (required: the app's saves read it) */
   onRunHold: (state: HoldState) => void

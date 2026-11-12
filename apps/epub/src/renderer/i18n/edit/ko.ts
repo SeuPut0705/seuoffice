@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   editUndo: '실행 취소',
@@ -20,4 +20,4 @@ export const ko = {
   editLocked: '번역 중에는 고칠 수 없습니다',
   editRefused: '이 고침을 적용하지 못했습니다',
   editHistoryFailed: '되돌리기 기록이 책과 맞지 않아 지웠습니다',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

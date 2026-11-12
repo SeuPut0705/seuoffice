@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react'
 import { createPortal } from 'react-dom'
-import { PRODUCT_NAME, type Params } from '@genoffice/i18n'
+import { isRtlLang, PRODUCT_NAME, type Params } from '@seuoffice/i18n'
 import type { AgentMemo, AgentMemoAnchor } from '../../studio-plugin/agent-plugin.mjs'
 import { MEMO_NOT_COPIED_EVENT, MEMO_REMOVED_EVENT } from '../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from './ai/agent-bridge'
@@ -344,7 +344,7 @@ export function MemoPanel({
   onNotice,
 }: MemoPanelProps): ReactElement {
   const { lang, t } = useI18n()
-  const rtl = lang === 'ar' || lang === 'he'
+  const rtl = isRtlLang(lang)
   const titleId = useId()
   const [memos, setMemos] = useState<AgentMemo[]>([])
   const [selectedId, setSelectedId] = useState<number | null>(null)

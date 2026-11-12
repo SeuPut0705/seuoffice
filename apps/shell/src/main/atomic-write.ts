@@ -1,8 +1,8 @@
 import { open, rename, unlink, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
-import { tempPathBeside } from '@genoffice/electron-utils/atomic-write'
+import { tempPathBeside } from '@seuoffice/electron-utils/atomic-write'
 
-export { atomicCopyFile } from '@genoffice/electron-utils/atomic-write'
+export { atomicCopyFile } from '@seuoffice/electron-utils/atomic-write'
 
 const RETRYABLE_RENAME_CODES = new Set(['EPERM', 'EACCES', 'EBUSY'])
 // cloud-sync folders, AV locks and fsync-less filesystems refuse the flush after a

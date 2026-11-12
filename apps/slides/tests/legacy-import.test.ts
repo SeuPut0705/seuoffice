@@ -63,7 +63,7 @@ vi.mock('electron', () => ({
   desktopCapturer: {},
   WebContentsView: class {},
 }))
-vi.mock('@genoffice/electron-utils', async (original) => ({
+vi.mock('@seuoffice/electron-utils', async (original) => ({
   ...(await original<object>()),
   readLegacyImportSkip: () => state.skip,
   writeLegacyImportSkip: (...args: unknown[]) => state.writeSkip(...args),
@@ -86,8 +86,8 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedFamily: () => null,
   shapedMeasure: () => ({ width: 0 }),
 }))
-import { createBlankPptx } from '@genoffice/pptx-engine'
-import { setUiLang } from '@genoffice/i18n'
+import { createBlankPptx } from '@seuoffice/pptx-engine'
+import { setUiLang } from '@seuoffice/i18n'
 import { registerSlidesIpc } from '../src/main/slides-main'
 import { sessions } from '../src/main/session-state'
 import { readFile } from 'node:fs/promises'

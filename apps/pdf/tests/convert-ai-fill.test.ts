@@ -8,14 +8,14 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamChunk } from '@genoffice/agent-core'
+import type { IpcStreamChunk } from '@seuoffice/agent-core'
 import {
   normalizeAiSettings,
   type AiSettings,
   type AiSubscriptionState,
   type SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
-import { createI18n } from '@genoffice/i18n'
+} from '@seuoffice/ai-provider/browser'
+import { createI18n } from '@seuoffice/i18n'
 import { strings } from '../src/renderer/i18n/strings'
 import {
   ConvertDialog,
@@ -161,7 +161,7 @@ async function render(initial: {
     lang: 'en',
     t,
     api: structureApi(),
-    prepare: async () => true,
+    prepare: async () => 'C:\\docs\\ferns.pdf',
     pageText,
     onClose: () => {},
   }

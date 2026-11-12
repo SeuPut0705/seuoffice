@@ -4,7 +4,7 @@
  * named when it goes along as a template.
  */
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import {
   chipRefForSkill,
   handedRequestOf,
@@ -248,11 +248,11 @@ describe("an editor's document as a template", () => {
 })
 
 describe('SKILL_TEMPLATE_STRINGS', () => {
-  const KEYS = Object.keys(SKILL_TEMPLATE_STRINGS.zh) as SkillTemplateStringKey[]
-  const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+  const KEYS = Object.keys(SKILL_TEMPLATE_STRINGS.en) as SkillTemplateStringKey[]
+  const NON_LATIN: readonly Lang[] = ['ko']
   const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 
-  it('has every key, non-empty, with the same placeholders, in all 21 languages', () => {
+  it('has every key, non-empty, with the same placeholders, in every language', () => {
     expect(Object.keys(SKILL_TEMPLATE_STRINGS).sort()).toEqual([...LANGS].sort())
     for (const lang of LANGS) {
       const dict = SKILL_TEMPLATE_STRINGS[lang] as Record<string, string>
@@ -260,7 +260,7 @@ describe('SKILL_TEMPLATE_STRINGS', () => {
       for (const key of KEYS) {
         expect(dict[key]?.trim().length, `${lang}.${key}`).toBeGreaterThan(0)
         expect(placeholders(dict[key]!), `${lang}.${key}`).toEqual(
-          placeholders(SKILL_TEMPLATE_STRINGS.zh[key]),
+          placeholders(SKILL_TEMPLATE_STRINGS.en[key]),
         )
       }
     }

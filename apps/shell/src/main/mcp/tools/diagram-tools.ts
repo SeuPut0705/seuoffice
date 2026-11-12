@@ -1,10 +1,10 @@
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import {
   DIAGRAM_OPS,
   type DiagramOpDefinition,
   type DiagramReadResult,
   type OpPropertySchema,
-} from '@genoffice/drawio-model'
+} from '@seuoffice/drawio-model'
 import { z } from 'zod'
 import type { OpenDocumentTab } from '../../../shared/tabs-api'
 import type { McpToolDefinition } from '../mcp-server'
@@ -14,7 +14,7 @@ import { resolveOpenDocumentOfFamily } from './open-documents-tools'
  * The diagram tools of the in-app MCP server: `read_diagram` (the `read` op)
  * and `apply_diagram_ops` (a list of the ops that change a diagram). They are
  * built from the one definition of the ops (`DIAGRAM_OPS` of
- * `@genoffice/drawio-model`), the same one the editor's AI panel uses, and run
+ * `@seuoffice/drawio-model`), the same one the editor's AI panel uses, and run
  * through the same executor in the editor: one call is one undo step, and when
  * any op is refused nothing changes.
  *

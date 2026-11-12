@@ -4,7 +4,7 @@
  * piece of text, as the docx run model carries it (Run.wrap). No editor
  * imports here: the document converter reads and writes the attribute too.
  */
-import { sameInlineWrap, type InlineWrap, type Run } from '@genoffice/docx-engine'
+import { sameInlineWrap, type InlineWrap, type Run } from '@seuoffice/docx-engine'
 
 export const INLINE_WRAP_MARK = 'inlineWrap'
 
@@ -201,4 +201,97 @@ export function holdsInlineStructure(run: Run | undefined): boolean {
 /** the wrappers a run sits in, as merge / signature key */
 export function inlineStructureKey(run: Run): unknown {
   return run.wrap?.length ? run.wrap.map((w) => [w.seq, w.open, w.close]) : null
+}
+
+// ---- where the wrappers sit: what a "did this block change" test asks ----
+
+/**
+ * One stretch of a paragraph's text that one wrapper covers, in characters of
+ * that text. Each wrapper is counted on its own, whatever else the text sits
+ * in: a smart tag taken off a word inside a control leaves the control
+ * covering what it covered.
+ */
+export interface WrapSpan {
+  /** the wrapper (seq, open, close), and for a stretch read from the editor's JSON the paragraph it is in */
+  wrap: string
+  from: number
+  to: number
+}
+
+/** a wrapper as a span key: the three fields that make two wrappers one element */
+const wrapIdentity = (wrap: InlineWrap): string => JSON.stringify([wrap.seq, wrap.open, wrap.close])
+
+/**
+ * The stretches of a paragraph's text each wrapper covers. Text outside a
+ * wrapper ends its stretch, and a piece without text (a picture) neither
+ * ends nor starts one.
+ */
+function wrapSpans(
+  pieces: Iterable<readonly [wraps: readonly InlineWrap[], length: number]>,
+): WrapSpan[] {
+  const spans: WrapSpan[] = []
+  const open = new Map<string, number>()
+  let at = 0
+  const close = (keep: ReadonlySet<string>): void => {
+    for (const [wrap, from] of open) {
+      if (keep.has(wrap)) continue
+      spans.push({ wrap, from, to: at })
+      open.delete(wrap)
+    }
+  }
+  for (const [wraps, length] of pieces) {
+    if (length === 0) continue
+    const here = new Set(wraps.map(wrapIdentity))
+    close(here)
+    for (const wrap of here) if (!open.has(wrap)) open.set(wrap, at)
+    at += length
+  }
+  close(new Set())
+  return spans
+}
+
+/** the wrapper stretches of a paragraph's runs */
+export function runWrapSpans(runs: readonly Run[]): WrapSpan[] {
+  return wrapSpans(runs.map((run) => [run.wrap ?? [], run.text.length]))
+}
+
+/**
+ * The wrapper stretches of every paragraph under `node` in the editor's JSON.
+ * Each carries the path of its paragraph, so the same wrapper in another
+ * paragraph is another stretch.
+ */
+export function nodeWrapSpans(node: NodeJson): WrapSpan[] {
+  type Json = NodeJson & { content?: Json[]; text?: string; marks?: MarkJson[] }
+  const out: WrapSpan[] = []
+  const walk = (parent: Json, path: string): void => {
+    const content = parent.content ?? []
+    if (!content.some((child) => child.type === 'text')) {
+      content.forEach((child, i) => walk(child, `${path}.${i}`))
+      return
+    }
+    const spans = wrapSpans(
+      content.map((child) => {
+        const chain = child.marks?.find((m) => m.type === INLINE_WRAP_MARK)?.attrs?.chain
+        return [inlineWrapChainOf(chain), child.text?.length ?? 0]
+      }),
+    )
+    for (const span of spans) out.push({ ...span, wrap: `${path}|${span.wrap}` })
+  }
+  walk(node, '')
+  return out
+}
+
+/**
+ * No wrapper the editor shows covers text the file's wrapper does not. One
+ * that grew, moved, or stands where the file has none is an edit, and only
+ * writing the block anew puts it there. One that is gone or covers less is no
+ * difference: no command shrinks a wrapper, it only loses text as a side
+ * effect (a paragraph split inside it and joined again, text put back without
+ * its mark by an AI rewrite, a retyped word or a peer), and that text is still
+ * the file's text, so the block keeps its bytes, the whole wrapper included.
+ */
+export function wrapSpansKept(shown: readonly WrapSpan[], read: readonly WrapSpan[]): boolean {
+  return shown.every((span) =>
+    read.some((r) => r.wrap === span.wrap && r.from <= span.from && span.to <= r.to),
+  )
 }

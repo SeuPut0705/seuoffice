@@ -3,7 +3,7 @@
  * across chapters, and mapping a hit back to the drawn chapter.
  */
 import { describe, expect, it } from 'vitest'
-import { openChapter } from '@genoffice/epub-engine'
+import { openChapter } from '@seuoffice/epub-engine'
 import {
   buildTextIndex,
   normalizeQuery,

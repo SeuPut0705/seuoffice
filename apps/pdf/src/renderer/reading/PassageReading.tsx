@@ -27,8 +27,8 @@ import {
   type ReactElement,
   type ReactNode,
 } from 'react'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
 import {
   AiBlockedNotice,
   AiConnectPrompt,
@@ -38,7 +38,7 @@ import {
   useAiSendGate,
   type AiHeldReason,
   type AiModelPickerBridge,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type { PassageCard } from '../../../../../packages/pdf-structure/src/store/reading'
 import { defaultTargetLanguage } from '../../../../../packages/pdf-structure/src/translate/language'
 import type { AskAnchorRect } from '../AiAskPopover'

@@ -1,5 +1,5 @@
 import { readFileSync } from 'node:fs'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { afterEach, describe, expect, it } from 'vitest'
 import {
   createXmindDocument,

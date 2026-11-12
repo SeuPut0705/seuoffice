@@ -1,6 +1,6 @@
 /** Home tab of the slides ribbon. Extracted from Ribbon.tsx. */
 import { useState } from 'react'
-import { platformShortcuts } from '@genoffice/i18n'
+import { platformShortcuts } from '@seuoffice/i18n'
 import {
   AiMark,
   ColorPicker,
@@ -10,7 +10,7 @@ import {
   matchesFontQuery,
   splitHangulFamilies,
   useScrollWindow,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useI18n } from '../i18n/locale'
 import { saveEditSelection } from '../TextEditOverlay'
 import { armColorInput } from '../color-input'

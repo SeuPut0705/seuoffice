@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   CJK_FAMILY_ALIASES,
   JAPANESE_FAMILIES,
@@ -6,12 +6,12 @@ import {
   KOREAN_FAMILY_READINGS,
   SIMPLIFIED_CJK_FAMILIES,
   TRADITIONAL_CJK_FAMILIES,
-} from '@genoffice/i18n'
+} from '@seuoffice/i18n'
 
 /**
  * Font dropdown candidates grouped by script, ordered per UI language so the
- * fonts a user is most likely to want appear at the top (e.g. Western fonts
- * for the US market, Japanese fonts for the Japanese market). Shared by every
+ * fonts a user is most likely to want appear at the top (Korean fonts first in
+ * the Korean UI, Western fonts first in the English one). Shared by every
  * app's font pickers so the suite offers one consistent list. Windows and
  * macOS names for the same script sit side by side — pickers hide the ones
  * the running machine proves absent (see partitionFontFamilies), so a Windows
@@ -50,30 +50,6 @@ export const BUILTIN_FONT_FAMILIES: readonly string[] = [
 
 export function fontFamiliesFor(lang: Lang): readonly string[] {
   switch (lang) {
-    case 'zh':
-      return [
-        ...SIMPLIFIED_CJK_FAMILIES,
-        ...LATIN,
-        ...JAPANESE_FAMILIES,
-        ...KOREAN_FAMILIES,
-        ...TRADITIONAL_CJK_FAMILIES,
-      ]
-    case 'zh-TW':
-      return [
-        ...TRADITIONAL_CJK_FAMILIES,
-        ...LATIN,
-        ...SIMPLIFIED_CJK_FAMILIES,
-        ...JAPANESE_FAMILIES,
-        ...KOREAN_FAMILIES,
-      ]
-    case 'ja':
-      return [
-        ...JAPANESE_FAMILIES,
-        ...LATIN,
-        ...SIMPLIFIED_CJK_FAMILIES,
-        ...KOREAN_FAMILIES,
-        ...TRADITIONAL_CJK_FAMILIES,
-      ]
     case 'ko':
       return [
         ...KOREAN_FAMILIES,

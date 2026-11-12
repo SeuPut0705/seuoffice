@@ -19,15 +19,16 @@
 /// while the read tools address sheets by id. `buildRedactionIndex` is where
 /// that translation happens, so no call site has to remember it.
 
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 import { parseAddressParts } from '../formula-values'
-import type { CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { RangeBounds } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import type { CellScalar } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import {
   placeholderInstruction as buildInstruction,
   sanitizeLabel as coreSanitizeLabel,
   type PlaceholderSpec,
-} from '@genoffice/agent-core/redact-core'
+} from '@seuoffice/agent-core/redact-core'
 
 /**
  * Clean a label for storage and for the model prompt.
@@ -82,6 +83,20 @@ export interface RedactionIndex {
   labelsFor(sheetId: string): readonly string[]
   /** the raw rectangles, for callers that count an area rather than ask about a cell */
   marksFor(sheetId: string): readonly CellMark[]
+  /**
+   * The cells withheld beyond the marks: formula cells whose value is computed
+   * from a marked cell (see `redact-derived`). `labelAt` already answers for
+   * them; this is for a guard that asks about a rectangle. Absent on an index
+   * that knows only marks.
+   */
+  derivedFor?(sheetId: string): readonly RangeBounds[]
+  /**
+   * The part of `derivedFor` that holds constants rather than formulas: the
+   * output of a PivotTable built from withheld cells. A formula stays withheld
+   * wherever it is copied; these cells do not, so a guard against moving or
+   * copying a hidden cell counts them with the marks.
+   */
+  computedFor?(sheetId: string): readonly RangeBounds[]
   /** every sheet id carrying marks, so callers can decide what to say about them */
   readonly sheetIds: readonly string[]
 }
@@ -137,6 +152,20 @@ export function modelCellValueAt(
   const at = parseAddressParts(address)
   if (!at) return value
   return modelCellValue(index, sheetId, at.row, at.column, value)
+}
+
+/**
+ * Whether a rectangle of a sheet holds a withheld cell: a marked one, or a
+ * cell whose value is computed from one.
+ */
+export function holdsWithheld(index: RedactionIndex, sheetId: string, range: RangeBounds): boolean {
+  if (index.isEmpty) return false
+  const reaches = (area: RangeBounds): boolean =>
+    area.startRow <= range.endRow &&
+    area.endRow >= range.startRow &&
+    area.startColumn <= range.endColumn &&
+    area.endColumn >= range.startColumn
+  return index.marksFor(sheetId).some(reaches) || (index.derivedFor?.(sheetId) ?? []).some(reaches)
 }
 
 /**
@@ -320,4 +349,4 @@ export {
   isWholePlaceholder,
   readPlaceholderLabel,
   type PlaceholderIssue,
-} from '@genoffice/agent-core/redact-core'
+} from '@seuoffice/agent-core/redact-core'

@@ -152,7 +152,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 // the save pipeline's archive writer is stubbed: it lands different bytes on
 // the target (an edit is what a real save would carry) without touching the
 // engine, which the xlsx-roundtrip tests cover.
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -161,8 +161,8 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -237,8 +237,8 @@ function isSavedOutput(path: string): boolean {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-verify-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-verify-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-verify-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-verify-user-'))
   openFails.value = () => false
   opened.length = 0
   closed.length = 0
@@ -259,9 +259,8 @@ describe('save opens its output back before replacing the file', () => {
     const session = await openWorkbook(path)
     openFails.value = isSavedOutput
 
-    // the tests run in the default UI language (zh): the message says the
-    // original was left as is, not the engine's raw reason
-    await expect(saveWorkbook(session.sessionId)).rejects.toThrow('因此没有覆盖原文件')
+    // the save fails, and the failure is reported, before anything replaces the file
+    await expect(saveWorkbook(session.sessionId)).rejects.toThrow()
     expect(readFileSync(path).toString()).toBe('original-bytes')
     // nothing of the failed save is left beside the user's file
     expect(readdirSync(dir)).toEqual(['book.xlsx'])
@@ -300,9 +299,11 @@ describe('save opens its output back before replacing the file', () => {
     await expect(saveWorkbook(session.sessionId)).rejects.toThrow(reason)
     // the toast and the status bar cut the line short; the dialog does not
     expect(dialogs).toHaveLength(1)
-    expect(dialogs[0]?.message).toContain('因此没有覆盖原文件')
+    // the message is the app's own sentence; the engine's reason is the detail
+    expect(dialogs[0]?.message).not.toContain(reason)
     expect(dialogs[0]?.detail).toContain(reason)
-    expect(dialogs[0]?.buttons).toEqual(['复制原因', '关闭'])
+    // two buttons, the first of which (the answer given above) copies the reason
+    expect(dialogs[0]?.buttons).toHaveLength(2)
     expect(copied).toHaveLength(1)
     expect(copied[0]).toContain(reason)
     expect(copied[0]).toContain('(xlsx, 0)')

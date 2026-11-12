@@ -4,8 +4,8 @@ import {
   aiSubscriptionText,
   useModalKeys,
   withAiSubscriptionNoticeSeen,
-} from '@genoffice/ui'
-import type { AiSettings, AiSubscriptionStatuses } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ui'
+import type { AiSettings, AiSubscriptionStatuses } from '@seuoffice/ai-provider/browser'
 import { useI18n } from './locale'
 import { CODEX_MAY_KEEP_HISTORY, changeAiSettings, readAiSettings } from './settings-ai'
 import { firstConnectionNoticeDue } from './subscription-status'

@@ -1,4 +1,4 @@
-# packages/ai-search (`@genoffice/ai-search`)
+# packages/ai-search (`@seuoffice/ai-search`)
 
 AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미디어 분석)와, 그 요청이 무료·키·구독 중 어느 경로에서 시작할지 정하는 라우팅을 담는다. 에디터의 메인 프로세스와 명령줄(`packages/cli`)이 같은 코드를 쓴다.
 
@@ -18,7 +18,7 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 - Codex로 이미지를 "만드는 방법"은 원래 이 모듈의 범위가 아니었지만, 결정 0076으로 CLI 생성기(`codex-image-cli.ts`)를 여기 두었다. 채팅 세션과 분리된 `codex exec` 한 번이며, 채팅의 도구 통제 규칙은 그대로다. 앱이 시작할 때 `apps/docs`의 메인이 등록하고 가용성을 켠다. 무료 요금제에는 이미지 도구가 없으므로 첫 실패에서 그 실행 동안 경로를 숨긴다(요금제 이름으로 미리 추측하지 않는다).
 - 받은 이미지를 문서에 넣는 일, 도구를 모델에게 노출할지 정하는 일은 각 에디터(`apps/*/src/renderer/ai`)의 범위다.
 - 명령의 인자·출력 형식·종료 코드는 `packages/cli`의 범위다. 이 모듈의 도구는 `{ url | text | error, errorCode, resetsAt }` 객체를 돌려줄 뿐이다.
-- Electron을 import하지 않는다. 이 코드는 Electron 없이 도는 명령줄 번들에도 들어가므로 `@genoffice/electron-utils`는 패키지 루트가 아니라 `generated-images`·`remote-image`·`safe-remote-url` 하위 경로로만 import한다(루트는 Electron에 묶인 모듈을 다시 내보낸다).
+- Electron을 import하지 않는다. 이 코드는 Electron 없이 도는 명령줄 번들에도 들어가므로 `@seuoffice/electron-utils`는 패키지 루트가 아니라 `generated-images`·`remote-image`·`safe-remote-url` 하위 경로로만 import한다(루트는 Electron에 묶인 모듈을 다시 내보낸다).
 
 ## 항상 지켜야 하는 것
 
@@ -32,13 +32,15 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 - 도구는 throw하지 않는다. 실패는 `error`와 `errorCode`(`'unavailable'` 또는 `AiRunErrorKind`)로 돌려준다. 문장은 영어이며 도구(모델)가 읽는 용도다. 화면은 `errorCode`로 번역한다.
 - 모델이 준 주소와 경로는 믿지 않는다. 원격 미디어는 `fetchWithSsrfGuard`와 크기 상한을 거치고, 로컬 경로는 `mediaRoots`(열린 문서의 폴더와 첨부 임시 폴더) 안에 있는지 양쪽을 realpath로 풀어 확인한다. `file://` 주소는 `readGeneratedImage`가 이 앱이 만든 이미지일 때만 읽는다.
 - 검색 서비스로 나가는 식별 값(User-Agent, `X-Keenable-Title`, MCP 클라이언트 이름)은 실제 제품 이름(`PRODUCT_NAME`)에서 만든다(`index.ts`, `parallel-mcp.ts`). 키 점검 질의(`KEY_TEST_QUERY`)는 중립 단어로 두는데, 체인이 넘어가는 다른 서비스도 같은 질의를 받기 때문이다(`search-tools.ts`, `tests/wire-identity.test.ts`).
+- 키를 싣는 검색 요청은 리다이렉트를 따라가지 않는다. `index.ts`의 `fetchWithTimeout`은 기본으로 `@seuoffice/ai-provider`의 `keyedFetch`로 보내고, 키가 없다고 밝힌 호출(`keyless: true`, DuckDuckGo 마지막 수단)만 따라간다. 검색 서비스는 키를 자기 머리글(`X-API-KEY` 등)이나 본문(Tavily)으로 받는데, 따라간 리다이렉트는 그것을 답이 가리킨 주소에 그대로 다시 보내기 때문이다. 리다이렉트로 답한 서비스는 "답하지 않음"으로 읽혀 다음 경로로 넘어간다(`tests/search-key-redirect.test.ts`).
+- `read_url`의 GitHub 토큰은 `https://api.github.com` 출처에만 간다(`read-url.ts`의 `GITHUB_API_ORIGIN`). 호스트 이름만 보지 않는다: `http://api.github.com`과 다른 포트는 다른 출처다. 토큰을 싣는 읽기는 `@seuoffice/ai-provider`의 `keyedDownload`로 리다이렉트를 따라간다(규칙은 그 모듈의 `AGENTS.md`: 다른 출처로 갈 때 토큰을 떼고, 다시 `api.github.com`으로 돌아와도 붙이지 않으며, https로만, 다섯 번까지). 홉 하나하나는 `fetchWithSsrfGuard`의 `redirect: 'manual'`로 보내므로 주소 검사와 연결 고정은 모든 홉에 그대로 적용된다. 토큰 없는 읽기는 예전대로 관문이 열 번까지 따라가고 http도 읽는다. 토큰을 `headersForHop`으로 "그 호스트의 홉에만" 주는 방식으로 되돌리지 않는다. 떠났다가 돌아온 홉에 토큰이 다시 붙고, 평문 http 홉에도 붙었다(`tests/read-url.test.ts`의 "where the token goes when the read is redirected").
 
 ## 이 모듈의 방식
 
 - 호출자가 자기 신원을 넘긴다. 에디터 메인은 `{ path: 'screen', statuses: sharedSubscriptionStatuses() }`, 명령줄과 MCP는 `{ path: 'headless', statuses, dataDir }`다. `dataDir`는 `ai-settings.json`이 있는 폴더로, 앱과 모든 명령줄 프로세스가 같은 곳을 써야 차례가 하나로 지켜진다. 컨텍스트를 안 넘기면 "구독이 연결되지 않은 화면 경로"로 취급되어 키와 무료 경로만 쓴다.
 - `statuses`는 상태 서비스의 값이어야 한다. 날것의 감지 결과에는 `meteredAccepted`가 반영되지 않아 동의한 종량제 로그인이 연결로 읽히지 않는다.
 - 도구는 호출 때마다 설정 파일을 새로 읽고(`readAiSettingsFile`) 안에서 `normalizeAiSettings`를 거친다. 사라진 제공자 id가 저장돼 있어도 기본값으로 읽힌다.
-- 이미지 경로는 요청이 시작할 때 한 번 정하고 도중에 바꾸지 않는다(`resolveImageRoute`). Codex 경로는 `codexImageGenerationAvailable()`이 참이고 생성기가 등록됐을 때만 후보다(`codexImageRouteOffered`). `@genoffice/ai-provider`가 이 패키지를 import하면 순환이 되므로 생성기는 "등록"하는 구조다.
+- 이미지 경로는 요청이 시작할 때 한 번 정하고 도중에 바꾸지 않는다(`resolveImageRoute`). Codex 경로는 `codexImageGenerationAvailable()`이 참이고 생성기가 등록됐을 때만 후보다(`codexImageRouteOffered`). `@seuoffice/ai-provider`가 이 패키지를 import하면 순환이 되므로 생성기는 "등록"하는 구조다.
 - 키 제공자가 준 이미지 바이트는 로컬 생성 이미지 저장소(`storeGeneratedImage`)에 두고 `file://` 주소로 돌려준다. 에디터의 삽입 경로가 그 주소를 받는다.
 - 이미지 분석은 사용자가 고른 키 분석 제공자가 채워져 있으면 그쪽으로, 아니면 채팅이 도는 제공자(`chat`)로 간다. `chat` 분석은 비전이 없는 모델, 요청당 20MB를 넘는 이미지(`CHAT_ANALYSIS_MAX_BYTES`)를 거절하고 300초(`CHAT_ANALYSIS_TIMEOUT_MS`)에 끊는다. 영상·음성 분석은 영상을 읽는 키 제공자가 있을 때만 된다.
 - 잠금은 죽은 프로세스를 견딘다. 보유자가 잠금 파일의 수정 시각을 주기적으로 갱신하고, 프로세스가 사라졌거나 갱신이 멈춘 잠금은 넘겨받는다. 장부 쓰기는 임시 파일을 rename하는 방식만 쓴다.
@@ -46,8 +48,8 @@ AI가 쓰는 부가 도구(웹 검색, 이미지 검색, 이미지 생성, 미�
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/ai-search`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/ai-search`.
-- 테스트는 네트워크와 벤더 프로그램에 닿지 않는다. `@genoffice/ai-provider`의 `generateImageWithProvider`·`analyzeMediaWithProvider`·`streamForProvider`를 `vi.mock`으로 바꾸고, 상태는 `tests/routing-helpers.ts`의 `status()`로 만든다. 구독 경로를 타는 테스트에서 `streamForProvider`를 바꾸지 않으면 실제 프로그램이 뜬다.
+- 실행: `npm run test -w @seuoffice/ai-search`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @seuoffice/ai-search`.
+- 테스트는 네트워크와 벤더 프로그램에 닿지 않는다. `@seuoffice/ai-provider`의 `generateImageWithProvider`·`analyzeMediaWithProvider`·`streamForProvider`를 `vi.mock`으로 바꾸고, 상태는 `tests/routing-helpers.ts`의 `status()`로 만든다. 구독 경로를 타는 테스트에서 `streamForProvider`를 바꾸지 않으면 실제 프로그램이 뜬다.
 - 테스트 프로세스의 홈 폴더는 실행기가 바꾼다. `vitest.config.ts`가 `tools/test-home.ts`(OS 임시 폴더 안의 빈 홈)와 `tests/setup-tmpdir.ts`(이 패키지의 임시 폴더를 그 홈 옆으로 옮김)를 `setupFiles`로 부른다. `tests/media-local-path.test.ts`는 작업 폴더와 임시 폴더 어디에도 속하지 않는 곳으로 홈을 쓰는데, 전에는 실제 홈에 `.genoffice-aisearch-outside-*` 폴더를 만들었다. 임시 폴더를 옮기지 않으면 그 폴더가 `tmpdir()` 안에 놓여 테스트의 전제가 깨지므로 두 파일을 함께 둔다.
 - 설정 파일 픽스처에는 `providers` 블록을 항상 넣는다(`writeSettings`). 그 블록이 없는 파일은 제공자 도입 이전 파일로 읽혀 모든 구역이 기본값으로 초기화된다.
 - 바꾸면 반드시 테스트하는 것: 화면·자동 호출 × 스위치 켬·끔 × 구독 `ready`·종량 허용·미연결 조합에서 경로와 보고가 같은 답인지, 환경 변수 키가 선택을 바꾸지 못하는지(`tests/search-free-route.test.ts`), 21번째 이후 요청도 거절되지 않는지, 손상된 장부와 쓸 수 없는 장부가 요청을 막지 않는지, 예전 판의 동의가 꺼짐으로 읽히는지, 죽은 프로세스의 잠금, 동시에 들어온 두 요청이 차례로 도는지.

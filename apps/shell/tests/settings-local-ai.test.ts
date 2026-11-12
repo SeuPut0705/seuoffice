@@ -1,17 +1,17 @@
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import {
   isKeyProviderConfigured,
   removeCustomEndpoint,
   resolveCustomEndpoints,
   selectAiProvider,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type {
   AiCustomEndpoint,
   AiLocalModelProfile,
   AiSettings,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   applyInspection,
   applyPreset,

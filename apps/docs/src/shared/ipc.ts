@@ -91,7 +91,7 @@ export interface MergeOutputResponse {
   error?: string
 }
 
-// ---- AI provider settings/config/streaming: canonical types live in @genoffice/ai-provider ----
+// ---- AI provider settings/config/streaming: canonical types live in @seuoffice/ai-provider ----
 
 import type {
   AiChatRequest,
@@ -99,11 +99,11 @@ import type {
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
-} from '@genoffice/ai-provider'
-import type { AiToolCapabilities, MediaToolErrorCode } from '@genoffice/ai-search'
-import type { HeadlessExportTarget } from '@genoffice/electron-utils/headless-export'
-import type { FaceVerticalMetrics } from '@genoffice/font-metrics'
-import type { AiPanelPrefs, FontFamilyInfo } from '@genoffice/ui'
+} from '@seuoffice/ai-provider'
+import type { AiToolCapabilities, MediaToolErrorCode } from '@seuoffice/ai-search'
+import type { HeadlessExportTarget } from '@seuoffice/electron-utils/headless-export'
+import type { FaceVerticalMetrics } from '@seuoffice/font-metrics'
+import type { AiPanelPrefs, FontFamilyInfo } from '@seuoffice/ui'
 import type { DocFormat, SaveAsKind } from './open-file'
 
 export type { FaceVerticalMetrics }
@@ -117,18 +117,18 @@ export type {
   AiSettings,
   AiStreamChunk,
   AiStreamRequest,
-} from '@genoffice/ai-provider'
-export type { AiToolCapabilities, AiToolCapability } from '@genoffice/ai-search'
-export { AI_PROVIDERS } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider'
+export type { AiToolCapabilities, AiToolCapability } from '@seuoffice/ai-search'
+export { AI_PROVIDERS } from '@seuoffice/ai-provider/browser'
 
-// ---- agent protocol: canonical types live in @genoffice/agent-core ----
+// ---- agent protocol: canonical types live in @seuoffice/agent-core ----
 
 export type {
   AgentMessage,
   AgentToolCall,
   AgentToolDef,
   AgentToolResult,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 
 // ---- chat attachments (local files fed to the agent via tools) ----
 
@@ -431,19 +431,18 @@ export interface MarkdownImage {
  * for the real `<file>_files` folder once the save path is known. User text
  * can never spell it: `_` is escaped on the way out.
  */
-export const MARKDOWN_MEDIA_DIR_TOKEN = '__genoffice_media__'
+export const MARKDOWN_MEDIA_DIR_TOKEN = '__seuoffice_media__'
 
 export interface DesktopApi {
   /** current UI language (persisted by the shell in app-settings.json) */
-  getLanguage(): Promise<'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar'>
+  getLanguage(): Promise<'en' | 'ko'>
+  /** the language documents are read and drawn for (a documentLocaleFor code): date and
+   *  time fields, the order of a generated index. It names more languages than the UI has */
+  getDocumentLocale(): Promise<string>
   /** OS regional-settings locale (BCP 47); Word derives the new-document paper size from it */
   getSystemLocale(): Promise<string>
   /** language switched from the shell home page */
-  onLanguageChanged(
-    handler: (
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => void,
-  ): () => void
+  onLanguageChanged(handler: (lang: 'en' | 'ko') => void): () => void
   /** current UI theme preference (persisted by the shell in app-settings.json) */
   getTheme(): Promise<UiTheme>
   /** theme switched from the shell home page */
@@ -834,8 +833,8 @@ export interface DesktopApi {
   reportViewMenuState(state: { aiSidebar: boolean; darkCanvas: boolean; odt?: boolean }): void
 }
 
-/** mirrors VIEW_IMAGE_CHANNEL in @genoffice/electron-utils (kept literal so the preload stays free of main-only deps) */
-export const VIEW_IMAGE_CHANNEL = 'genoffice:view-image'
+/** mirrors VIEW_IMAGE_CHANNEL in @seuoffice/electron-utils (kept literal so the preload stays free of main-only deps) */
+export const VIEW_IMAGE_CHANNEL = 'seuoffice:view-image'
 
 /** docs:export-hwp: no error and no code = the user canceled */
 export interface HwpExportResult {

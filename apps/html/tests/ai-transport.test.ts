@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamError, IpcSubscriptionUsage } from '@genoffice/agent-core'
-import { defaultAiSettings, type AiStreamChunk, type AiStreamRequest } from '@genoffice/ai-provider'
-import { LANGS } from '@genoffice/i18n'
-import { aiRunErrorText } from '@genoffice/ui'
+import type { IpcStreamError, IpcSubscriptionUsage } from '@seuoffice/agent-core'
+import { defaultAiSettings, type AiStreamChunk, type AiStreamRequest } from '@seuoffice/ai-provider'
+import { LANGS } from '@seuoffice/i18n'
+import { aiRunErrorText } from '@seuoffice/ui'
 import { streamBrief } from '../src/renderer/ai/brief-writer'
 import { blockedRunOf, writerMayRetry } from '../src/renderer/ai/connection'
 import { streamPage } from '../src/renderer/ai/page-writer'
@@ -99,8 +99,8 @@ describe('createElectronTransport', () => {
   })
 
   it("keeps this app's own wording for the transient kinds", async () => {
-    // outside a LocaleProvider the app's module-level language is its default, zh
-    const texts = aiStrings.zh
+    // outside a LocaleProvider the app's module-level language is its default, en
+    const texts = aiStrings.en
     for (const [errorCode, text] of [
       ['timeout', texts.aiTimeoutError],
       ['network', texts.aiNetworkError],

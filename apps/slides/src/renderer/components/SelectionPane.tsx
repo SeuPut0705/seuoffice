@@ -13,7 +13,7 @@ import type {
   RenderNode,
   RenderSlide,
   ShapeRenderNode,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import { useI18n, type StringKey } from '../i18n/locale'
 import { IconEye, IconEyeOff, IconSidebarCollapse } from './icons'
 

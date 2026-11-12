@@ -13,13 +13,13 @@
  */
 import { mkdtemp, readFile, readdir, rm, stat } from 'node:fs/promises'
 import { extname, join } from 'node:path'
-import { setCodexImageGenerationAvailable } from '@genoffice/ai-provider'
+import { setCodexImageGenerationAvailable } from '@seuoffice/ai-provider'
 import {
   resolveSubscriptionProgram,
   runSubscriptionProgram,
   type SubscriptionProgram,
   type SubscriptionRunner,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import type { CodexImageGenerator } from './codex-image-generator'
 import { readAiSettingsFile } from './media-tools'
 

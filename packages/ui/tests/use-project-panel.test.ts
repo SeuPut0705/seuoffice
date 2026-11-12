@@ -2,8 +2,8 @@
 import { act, createElement, type ReactNode } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentMessage } from '@genoffice/agent-core'
-import type { ProjectFolderApi } from '@genoffice/project-store'
+import type { AgentMessage } from '@seuoffice/agent-core'
+import type { ProjectFolderApi } from '@seuoffice/project-store'
 import {
   useProjectPanel,
   type ProjectPanel,

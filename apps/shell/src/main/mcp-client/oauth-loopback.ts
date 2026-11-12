@@ -1,7 +1,7 @@
 import { timingSafeEqual } from 'node:crypto'
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from 'node:http'
 import type { AddressInfo } from 'node:net'
-import { signInPageHtml, type SignInPage } from '@genoffice/google-drive'
+import { signInPageHtml, type SignInPage } from '@seuoffice/google-drive'
 
 /**
  * The one-shot server the browser comes back to after an MCP sign-in (user

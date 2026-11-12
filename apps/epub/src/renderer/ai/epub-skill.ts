@@ -10,9 +10,9 @@
  * A fixed-layout book gets no edit_blocks: the tool list is read each time
  * the model is asked (`tools` is a getter).
  */
-import type { AgentSkill, AgentToolDef } from '@genoffice/agent-core'
-import { brandText, LANGS } from '@genoffice/i18n'
+import type { AgentSkill, AgentToolDef } from '@seuoffice/agent-core'
 import { t } from '../i18n/locale'
+import { TRANSLATION_LANGUAGES } from '../translate/engine'
 import {
   BookTools,
   chapterTitle,
@@ -34,7 +34,7 @@ export const BOOK_TOOL_NAMES = {
 export const SELECTION_CONTEXT_CHARS = 2000
 
 export const EPUB_SYSTEM_PROMPT = [
-  'You are the assistant inside GenOffice EPUB, an editor for EPUB e-books. The user reads a book in the editor and can ask you about it, have you change its text, or have it translated into another language.',
+  'You are the assistant inside SeuOffice EPUB, an editor for EPUB e-books. The user reads a book in the editor and can ask you about it, have you change its text, or have it translated into another language.',
   '',
   '## Reading the book',
   '- Chapters are numbered from 1 in reading order, as read_book lists them (its chapter `index`); every tool takes these numbers. A chapter is a list of text blocks (paragraphs, headings, list items, quotes, table cells, captions, …); each block has an id that is unique only within its chapter.',
@@ -142,7 +142,7 @@ const TRANSLATE_TOOL: AgentToolDef = {
     properties: {
       lang: {
         type: 'string',
-        enum: [...LANGS],
+        enum: [...TRANSLATION_LANGUAGES],
         description:
           'target language code the user asked for (en, ko, ja, zh = Simplified Chinese, zh-TW = Traditional Chinese, …)',
       },
@@ -237,7 +237,7 @@ export function createEpubSkill(deps: EpubSkillDeps): AgentSkill {
   return {
     id: 'epub',
     // the prompt names the product: the upstream name is swapped for this product's
-    systemPrompt: brandText(EPUB_SYSTEM_PROMPT, 'en'),
+    systemPrompt: EPUB_SYSTEM_PROMPT,
     get tools() {
       return bookToolDefs(deps.host())
     },

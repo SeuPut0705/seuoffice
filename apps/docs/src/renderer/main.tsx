@@ -1,26 +1,27 @@
 import { flushSync } from 'react-dom'
 import { createRoot } from 'react-dom/client'
-import { htmlDir, htmlLang, type Lang } from '@genoffice/i18n'
+import { htmlDir, htmlLang, type Lang } from '@seuoffice/i18n'
 import { App } from './App'
 import { setAuthorName } from './author-name'
+import { setDocumentLocale } from './document-locale'
 import { LocaleProvider, setModuleLang } from './i18n/locale'
 import type { DocTheme, UiTheme } from '../shared/ipc'
-import '@genoffice/ui/tokens.css'
-import '@genoffice/ui/screentip.css'
-import '@genoffice/ui/ai-model-picker.css'
-import '@genoffice/ui/ai-queue-strip.css'
-import '@genoffice/ui/ai-usage.css'
-import '@genoffice/ui/color-picker.css'
-import '@genoffice/ui/dropdown.css'
-import '@genoffice/ui/ribbon-collapse.css'
-import '@genoffice/ui/markdown.css'
-import '@genoffice/ui/ai-panel-prefs.css'
-import '@genoffice/ui/ai-scope-quote.css'
-import '@genoffice/ui/image-viewer.css'
+import '@seuoffice/ui/tokens.css'
+import '@seuoffice/ui/screentip.css'
+import '@seuoffice/ui/ai-model-picker.css'
+import '@seuoffice/ui/ai-queue-strip.css'
+import '@seuoffice/ui/ai-usage.css'
+import '@seuoffice/ui/color-picker.css'
+import '@seuoffice/ui/dropdown.css'
+import '@seuoffice/ui/ribbon-collapse.css'
+import '@seuoffice/ui/markdown.css'
+import '@seuoffice/ui/ai-panel-prefs.css'
+import '@seuoffice/ui/ai-scope-quote.css'
+import '@seuoffice/ui/image-viewer.css'
 import './styles.css'
 import './fonts/fonts.css'
-import { applyAiPanelPrefs, installScreenTips } from '@genoffice/ui'
-import { setAltChunkHtmlConverter } from '@genoffice/docx-engine'
+import { applyAiPanelPrefs, installScreenTips } from '@seuoffice/ui'
+import { setAltChunkHtmlConverter } from '@seuoffice/docx-engine'
 import { registerTemplateFonts } from './template-fonts'
 
 installScreenTips()
@@ -42,21 +43,27 @@ function applyDocumentTheme(theme: DocTheme): void {
 }
 
 async function bootstrap(): Promise<void> {
-  let lang: Lang = 'zh'
+  let lang: Lang = 'en'
   let theme: UiTheme = 'system'
   let docTheme: DocTheme = 'follow'
+  let documentLocale: string | undefined
   try {
     // per-promise catch: standalone runs have no app:get-theme handler, and
     // that rejection must not drop a resolved language
-    ;[lang, theme, docTheme] = await Promise.all([
-      window.desktop.getLanguage().catch(() => 'zh' as const),
+    ;[lang, theme, docTheme, documentLocale] = await Promise.all([
+      window.desktop.getLanguage().catch(() => 'en' as const),
       window.desktop.getTheme().catch(() => 'system' as const),
       window.desktop.getDocumentTheme?.().catch(() => 'follow' as const),
+      window.desktop.getDocumentLocale?.().catch(() => undefined),
     ])
   } catch {
     /* dev renderer without the preload bridge */
   }
   setModuleLang(lang)
+  // without an answer, documents are read for the UI language
+  setDocumentLocale(documentLocale ?? lang)
+  // a language chosen in Settings is the language documents are read for from then on
+  window.desktop?.onLanguageChanged(setDocumentLocale)
   document.documentElement.lang = htmlLang(lang)
   document.documentElement.dir = htmlDir(lang)
   applyTheme(theme)

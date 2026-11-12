@@ -7,9 +7,9 @@
  */
 import { useCallback, useRef } from 'react'
 import type { ReactElement } from 'react'
-import type { EpubTranslationOutputKind, EpubTranslationReport } from '@genoffice/epub-engine'
-import type { TranslationMode } from '@genoffice/pdf-structure'
-import { useModalKeys } from '@genoffice/ui'
+import type { EpubTranslationOutputKind, EpubTranslationReport } from '@seuoffice/epub-engine'
+import type { TranslationMode } from '@seuoffice/pdf-structure'
+import { useModalKeys } from '@seuoffice/ui'
 import type { TFunc } from '../i18n/locale'
 import { KIND_KEYS, baseName, originalChapterLines, untranslatedLines } from './translate-model'
 

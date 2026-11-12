@@ -1,11 +1,11 @@
 // Word shows the LTR/RTL paragraph buttons only with an RTL editing language;
-// here that means an RTL UI language or an RTL paragraph under the selection.
+// here that means an RTL paragraph under the selection.
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { Editor } from '@tiptap/core'
 import { TextSelection } from '@tiptap/pm/state'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { computeFormatState } from '../src/renderer/components/ribbon-format-state'
 import { Ribbon } from '../src/renderer/components/Ribbon'
@@ -47,7 +47,7 @@ describe('paragraph direction buttons', () => {
     act(() => root.unmount())
     container.remove()
     editor.destroy()
-    setModuleLang('zh')
+    setModuleLang('en')
   })
 
   function render(lang: Lang) {
@@ -67,7 +67,7 @@ describe('paragraph direction buttons', () => {
     editor.view.dispatch(editor.state.tr.setSelection(TextSelection.create(editor.state.doc, pos)))
   }
 
-  it('hides them in an LTR paragraph under an LTR UI language', () => {
+  it('hides them in an LTR paragraph', () => {
     placeCursor(2)
     expect(render('en')).toBeNull()
   })
@@ -75,10 +75,5 @@ describe('paragraph direction buttons', () => {
   it('shows them when the cursor sits in an RTL paragraph', () => {
     placeCursor(editor.state.doc.content.size - 2)
     expect(render('en')).not.toBeNull()
-  })
-
-  it('always shows them under an RTL UI language', () => {
-    placeCursor(2)
-    expect(render('he')).not.toBeNull()
   })
 })

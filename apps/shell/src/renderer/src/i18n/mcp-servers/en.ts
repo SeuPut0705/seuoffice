@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   title: 'MCP servers',
   desc: 'Connect outside tools for the AI windows, such as a search over laws or a service your team runs. During a chat, the AI calls a server’s tools within what you allow here.',
@@ -200,5 +198,5 @@ export const en = {
   launchSystemFold: 'Basic PC variables: {n}',
   permPaused: 'Not used until you approve the change (then: {perm})',
   permUnusable: 'Can’t be turned on',
-  direction: 'Here, the AI in GenOffice uses tools from outside servers.',
-} satisfies Record<keyof typeof zh, string>
+  direction: 'Here, the AI in SeuOffice uses tools from outside servers.',
+}

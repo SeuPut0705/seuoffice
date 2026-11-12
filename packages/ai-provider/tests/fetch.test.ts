@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import {
   AI_DEFAULT_USER_AGENT,
   aiFetch,

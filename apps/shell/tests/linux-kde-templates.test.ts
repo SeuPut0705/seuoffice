@@ -105,11 +105,11 @@ describe.skipIf(process.platform === 'win32')('Linux post-install scripts in a s
   // the system templates directory swapped runs against a temp tree, so the
   // test needs no root and touches no real system directory.
   function makeRoot(withPayload: boolean) {
-    const root = mkdtempSync(join(tmpdir(), 'genoffice-kde-templates-'))
+    const root = mkdtempSync(join(tmpdir(), 'seuoffice-kde-templates-'))
     const app = join(root, 'opt', 'seuoffice')
     const bin = join(root, 'usr', 'bin')
     const templates = join(root, 'usr', 'share', 'templates')
-    const launcher = join(app, 'resources', 'cli', 'ieumoffice')
+    const launcher = join(app, 'resources', 'cli', 'seuoffice')
     mkdirSync(join(app, 'resources', 'cli'), { recursive: true })
     mkdirSync(bin, { recursive: true })
     writeFileSync(launcher, '#!/bin/sh\n')

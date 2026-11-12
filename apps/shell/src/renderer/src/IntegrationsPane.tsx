@@ -1,5 +1,5 @@
-import { MCP_SERVER_NAME, mcpLaunch, SKILL_NAME, type McpLaunch } from '@genoffice/cli/mcp-launch'
-import { PRODUCT_REPO_SLUG } from '@genoffice/i18n'
+import { MCP_SERVER_NAME, mcpLaunch, SKILL_NAME, type McpLaunch } from '@seuoffice/cli/mcp-launch'
+import { PRODUCT_REPO_SLUG } from '@seuoffice/i18n'
 import { useCallback, useEffect, useState } from 'react'
 import type { TFunc } from './locale'
 import { McpServerSection } from './McpServerSection'
@@ -14,7 +14,7 @@ import {
 } from '../../shared/integrations-api'
 
 // ── Settings → Integrations ─────────────────────────────────
-// Installs the bundled `ieumoffice` skill into the coding agents found on this
+// Installs the bundled `seuoffice` skill into the coding agents found on this
 // machine. Every write starts with a click and shows the absolute path first,
 // because the app does not see the shell's CODEX_HOME-style overrides and the
 // user has to be able to spot a wrong target.

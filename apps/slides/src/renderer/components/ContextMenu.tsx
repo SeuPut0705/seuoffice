@@ -5,7 +5,7 @@
  */
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useEscOverlay } from '../esc-overlay'
-import { platformShortcuts } from '@genoffice/i18n'
+import { platformShortcuts } from '@seuoffice/i18n'
 
 export interface CtxItem {
   label: string

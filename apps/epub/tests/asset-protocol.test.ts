@@ -4,7 +4,7 @@
  * fonts revealed, fixed content types, no scripts, and a CSP on every answer.
  */
 import { describe, expect, it } from 'vitest'
-import { openEpub, type EpubBook } from '@genoffice/epub-engine'
+import { openEpub, type EpubBook } from '@seuoffice/epub-engine'
 import {
   EPUB_ASSET_CSP,
   EPUB_ASSET_SCHEME_PRIVILEGE,

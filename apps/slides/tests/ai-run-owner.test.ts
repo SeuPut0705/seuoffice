@@ -53,9 +53,9 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 // The download is the slow step of insert_web_image: the test decides when it finishes
-vi.mock('@genoffice/electron-utils', async () => {
-  const actual = await vi.importActual<typeof import('@genoffice/electron-utils')>(
-    '@genoffice/electron-utils',
+vi.mock('@seuoffice/electron-utils', async () => {
+  const actual = await vi.importActual<typeof import('@seuoffice/electron-utils')>(
+    '@seuoffice/electron-utils',
   )
   return {
     ...actual,
@@ -68,7 +68,7 @@ vi.mock('@genoffice/electron-utils', async () => {
 })
 vi.mock('../src/main/media-mime', () => ({ rasterImageExt: () => 'png' }))
 
-import { createBlankPptx, openPptx } from '@genoffice/pptx-engine'
+import { createBlankPptx, openPptx } from '@seuoffice/pptx-engine'
 import { registerAiIpc } from '../src/main/ai-ipc'
 import { applySessionTxn, registerSlidesIpc, trackSlidesWebContents } from '../src/main/slides-main'
 import { sessions, takeSnapshot, type Session } from '../src/main/session-state'

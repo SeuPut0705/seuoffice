@@ -1,12 +1,12 @@
 /**
- * Input checks the slide ops of `@genoffice/pptx-ops` do not make, applied
+ * Input checks the slide ops of `@seuoffice/pptx-ops` do not make, applied
  * by the CLI before an op reaches the engine. Each one refuses a value that
  * writes a deck PowerPoint reports as damaged (the repair prompt): a page
  * size outside its accepted range, and a section list that names a slide
  * twice or a slide the deck does not have. pptx-ops stays as it is, so saved
  * output for valid input is unchanged.
  */
-import { parseLength } from '@genoffice/pptx-ops'
+import { parseLength } from '@seuoffice/pptx-ops'
 
 /** The smallest and largest page edge PowerPoint accepts, in EMU (1 and 56 inches); apps/slides uses the same bounds. */
 export const MIN_SLIDE_EMU = 914_400

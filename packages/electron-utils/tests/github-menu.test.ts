@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER } from '@genoffice/i18n'
+import { PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER } from '@seuoffice/i18n'
 import {
   GITHUB_ISSUES_URL,
   GITHUB_LATEST_RELEASE_URL,

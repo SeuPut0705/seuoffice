@@ -38,7 +38,7 @@ vi.mock('electron', () => ({
 }))
 
 import { exportPdf, printWorkbook } from '../src/main/pdf-export'
-import { TEMPLATE_FONT_FACE_REGISTRATIONS } from '@genoffice/ui/template-fonts'
+import { TEMPLATE_FONT_FACE_REGISTRATIONS } from '@seuoffice/ui/template-fonts'
 
 import type { IpcMainInvokeEvent } from 'electron'
 import type { WorkbookExportPdfRequest } from '../src/shared/desktop-api'

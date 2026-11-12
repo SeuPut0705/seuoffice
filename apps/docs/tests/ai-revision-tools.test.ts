@@ -248,6 +248,33 @@ describe('accept_changes / reject_changes tools', () => {
     expect(bodyText(editor)).toBe('Stays.')
   })
 
+  it('a change whose date is no date is not before anything', async () => {
+    const editor = new Editor({
+      element: document.createElement('div'),
+      extensions: editorExtensions,
+      content: {
+        type: 'doc',
+        content: [
+          para(
+            {},
+            text('Base '),
+            text('undated', { type: 'ins', attrs: { author: 'Ann', date: 'someday' } }),
+            text(' and '),
+            text('early', { type: 'ins', attrs: { author: 'Ann', date: '2026-01-01T10:00:00Z' } }),
+          ),
+        ],
+      },
+    })
+    liveEditors.push(editor)
+    const r = await executeTool(
+      editor,
+      { id: 't', name: 'reject_changes', input: { before: '2026-04-01' } },
+      NUM_IDS,
+    )
+    expect(r.output).toContain('Rejected 1 tracked change(s)')
+    expect(bodyText(editor)).toBe('Base undated and ')
+  })
+
   it('refuses a missing or malformed selector without touching the document', async () => {
     const editor = createEditor()
     const snapshot = editor.state.doc.toJSON()

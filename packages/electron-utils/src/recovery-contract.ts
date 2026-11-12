@@ -68,7 +68,7 @@ export interface RecoveryEditorContract {
   isUnprotectable(contents: WebContents): boolean
 }
 
-const REGISTRY = Symbol.for('genoffice.recovery-editors')
+const REGISTRY = Symbol.for('seuoffice.recovery-editors')
 
 function registry(): Map<RecoveryEditorKind, RecoveryEditorContract> {
   const holder = globalThis as unknown as Record<

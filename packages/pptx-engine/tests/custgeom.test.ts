@@ -97,6 +97,41 @@ describe('parseCustGeom', () => {
     expect(geo?.path).toBe('M 0 0 L 0.5 1 Z')
   })
 
+  // a guide name is the document's: it may be a name every object inherits
+  const triangleTo = (x: string, gdLst = '') =>
+    spWrap(
+      `<a:custGeom>${gdLst}<a:pathLst><a:path w="100" h="100">` +
+        `<a:moveTo><a:pt x="${x}" y="0"/></a:moveTo>` +
+        `<a:lnTo><a:pt x="100" y="100"/></a:lnTo>` +
+        `<a:close/></a:path></a:pathLst></a:custGeom>`,
+    )
+
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+    'a point that names no guide (%s) is at 0, like any unknown name',
+    (name) => {
+      expect(parseCustGeom(triangleTo(name), 914400, 914400)?.path).toBe('M 0 0 L 1 1 Z')
+      expect(parseCustGeom(triangleTo('nosuchguide'), 914400, 914400)?.path).toBe('M 0 0 L 1 1 Z')
+    },
+  )
+
+  it.each(['constructor', 'toString', '__proto__', 'hasOwnProperty'])(
+    'a guide named %s keeps its value',
+    (name) => {
+      const gdLst = `<a:gdLst><a:gd name="${name}" fmla="val 50"/></a:gdLst>`
+      expect(parseCustGeom(triangleTo(name, gdLst), 914400, 914400)?.path).toBe('M 0.5 0 L 1 1 Z')
+      // and a later guide can refer to it
+      const env = evalGuides(
+        [
+          { name, fmla: 'val 40' },
+          { name: 'twice', fmla: `*/ ${name} 2 1` },
+        ],
+        1,
+        1,
+      )
+      expect(env.twice).toBe(80)
+    },
+  )
+
   it('quadBezTo/cubicBezTo output in order', () => {
     const xml = spWrap(
       `<a:custGeom><a:pathLst><a:path w="10" h="10">` +

@@ -16,7 +16,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { noteText } from '@genoffice/xmind-engine'
+import { noteText } from '@seuoffice/xmind-engine'
 import { MINDMAP_CHANNELS } from '../src/shared/ipc'
 import { queueMindmapSeedFor, registerMindmapSeedIpc } from '../src/main/seed-main'
 import { openCopiedMap, seededMap } from '../src/renderer/document/open'

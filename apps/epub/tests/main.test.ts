@@ -87,8 +87,8 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { openEpub } from '@genoffice/epub-engine'
-import { ResultStore } from '@genoffice/pdf-structure/store'
+import { openEpub } from '@seuoffice/epub-engine'
+import { ResultStore } from '@seuoffice/pdf-structure/store'
 import {
   configureEpubRuntime,
   createEpubView,
@@ -115,7 +115,7 @@ const openInTab = new Set<string>()
 const migrateJobRecords = vi.fn(async () => 0)
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-epub-main-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-epub-main-'))
   userData.dir = join(dir, 'user-data')
   openInTab.clear()
   migrateJobRecords.mockClear()

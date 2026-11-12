@@ -5,7 +5,7 @@ import type { Fragment, Node as ProseNode } from '@tiptap/pm/model'
 import { TextSelection } from '@tiptap/pm/state'
 import { addRowAfter, deleteRow } from '@tiptap/pm/tables'
 import { editorExtensions } from '../src/renderer/editor/extensions'
-import { parseDocx, saveDocx } from '@genoffice/docx-engine'
+import { parseDocx, saveDocx } from '@seuoffice/docx-engine'
 import {
   blocksToPmDoc,
   pmDocToSavePlan,

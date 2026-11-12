@@ -18,14 +18,14 @@ type Rhwp = typeof import('@rhwp/core')
 let loading: Promise<Rhwp> | null = null
 
 /**
- * GENOFFICE_RHWP_WASM first (the bundled CLI inlines rhwp and says where its
- * wasm sits, as for @genoffice/file-parse/hwp), then node_modules in dev and
+ * SEUOFFICE_RHWP_WASM first (the bundled CLI inlines rhwp and says where its
+ * wasm sits, as for @seuoffice/file-parse/hwp), then node_modules in dev and
  * tests; the packaged app ships no node_modules (everything is bundled), so
  * electron-builder copies the module to Resources/wasm
  * (apps/shell/electron-builder.cjs, like pdfium.wasm).
  */
 function rhwpWasmPath(): string {
-  const fromEnv = process.env.GENOFFICE_RHWP_WASM
+  const fromEnv = process.env.SEUOFFICE_RHWP_WASM
   if (fromEnv) return fromEnv
   try {
     return createRequire(import.meta.url).resolve('@rhwp/core/rhwp_bg.wasm')

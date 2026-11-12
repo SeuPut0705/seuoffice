@@ -15,7 +15,7 @@
  * Pure: it reads the library's nodes and their parents only.
  */
 import type { NodeObj } from 'mind-elixir'
-import type { ViewBoundaryRange } from '@genoffice/xmind-engine'
+import type { ViewBoundaryRange } from '@seuoffice/xmind-engine'
 
 export type BoundaryRefusal =
   'nothing-selected' | 'different-parents' | 'central-mixed' | 'both-sides'

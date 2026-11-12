@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
-import type { ProjectTrustPrompt } from '@genoffice/project-store'
+import { LANGS } from '@seuoffice/i18n'
+import type { ProjectTrustPrompt } from '@seuoffice/project-store'
 import { createCachedCloudResolver } from '../src/main/projects/cloud-cache'
 import {
   PROJECT_DIALOG_STRINGS,
@@ -30,7 +30,7 @@ const prompt = (over: Partial<ProjectTrustPrompt> = {}): ProjectTrustPrompt => (
 
 describe('project dialog texts', () => {
   it('fill every language with the same keys', () => {
-    const keys = Object.keys(PROJECT_DIALOG_STRINGS.zh).sort()
+    const keys = Object.keys(PROJECT_DIALOG_STRINGS.en).sort()
     for (const lang of LANGS) {
       const dict = PROJECT_DIALOG_STRINGS[lang] as Record<string, string>
       expect(Object.keys(dict).sort(), lang).toEqual(keys)

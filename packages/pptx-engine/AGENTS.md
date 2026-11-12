@@ -21,15 +21,24 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 - 저장할 때 슬라이드 파트 이름을 바꾸지 않는다. 슬라이드 영속 id(`s_<n>`)가 파트 경로에서 나온다.
 - `mc:AlternateContent`에 걸린 요소는 모델을 만든 가지에 패치한다. 위치·채움·선·자르기 패치는 같은 태그의 형제 가지에도 똑같이 적용하고, 텍스트 패치는 형제 가지에 적용하지 않는다. Choice 쪽 본문이 수식 같은 다른 어휘일 수 있다.
 - "모델에 숨김" 표시는 실제 글자를 지우지 않는다. 표시는 런의 `a:rPr`(그림은 `nvPr`) 안 `a:extLst` 확장으로 저장하고, 파싱할 때 모델로 읽어 저장할 때 다시 쓴다.
-- 문서 안에 남는 식별자는 바꾸지 않는다: 가리기 확장의 `uri`(`REDACT_EXT_URI`), 가리기 기능의 이름공간 주소(`REDACT_NS`, `@genoffice/agent-core/redact-range`에서 가져온다), 이 앱이 만든 차트를 알아보는 `descr="aislides-chart"`, 3D 모델 참조 표지 `aislides-3d:`.
+- 문서 안에 남는 식별자는 바꾸지 않는다: 가리기 확장의 `uri`(`REDACT_EXT_URI`), 이 앱이 만든 차트를 알아보는 `descr="aislides-chart"`, 3D 모델 참조 표지 `aislides-3d:`. 가리기 기능의 이름공간 주소는 `@seuoffice/agent-core/redact-range`의 규칙을 따른다: 쓸 때는 `REDACT_NS_WRITTEN`, 읽을 때는 접두사 `go:redact`로 알아보므로 두 주소(`REDACT_NAMESPACES`) 모두 읽힌다.
 - 열 때 거부하는 한도는 파트 10,000개, 파트당 512 MiB, 합계 1.5 GiB(`PPTX_ZIP_LIMITS`)다. 파트를 실제로 풀어 보는 검사가 JSZip 로드보다 먼저다.
 - 예산을 넘는 입력은 버리지 않고 원본 바이트를 지닌 `passthrough`로 남긴다: 그룹 중첩 64단계, 한 슬라이드의 도형 10,000개. 그 밖의 상한은 차트 점 1,048,576개·계열 256개, chartEx 점 10,000개, 글자 크기 1pt 이상 4000pt 이하, 표 삽입 75×75다. 슬라이드 id는 256 이상 2147483647 이하에서만 낸다.
 - 관계 대상은 `resolveTarget`으로만 푼다. 스킴이 붙은 대상과 디코딩할 수 없는 대상은 빈 경로가 된다.
 - 자원 정리는 관계를 따라간다. 도형 하나가 그림을 안 쓰게 됐다고 파트를 지우지 않는다. 복제된 슬라이드가 같은 대상을 가리킬 수 있다. 먼저 쓰이지 않는 관계만 끊고, 그 결과 아무 데서도 닿지 않는 파트만 지운다.
 - 기본 진입점은 Node 전용이다(`node:crypto`, `Buffer`). 렌더러가 가져가는 것은 하위 경로 `./custgeom`, `./table-grid`, `./identity`, `./named-action`, `./background-promote`뿐이다. 이 파일들과 그 import 사슬에 Node 의존을 들이면 브라우저 빌드가 깨진다.
-- `@genoffice/agent-core`에서는 `redact-range` 하위 경로만 import한다. 그 패키지의 기본 진입점은 Electron에 닿는다.
+- `@seuoffice/agent-core`에서는 `redact-range` 하위 경로만 import한다. 그 패키지의 기본 진입점은 Electron에 닿는다.
 - `src/vendor/`는 가져온 원본과 바이트가 같아야 한다.
 - 엔진 동작은 원본(GenOffice)의 수정이 병합될 때만 바뀐다. 파일 이동, 재포맷, 이름 변경을 하지 않는다. 예외는 아래 "원본과 다른 점"에 적은 것뿐이고, 더할 때는 사람이 정한다.
+- `replace`/`replaceAll`의 둘째 인자는 `$`가 없는 문자열 리터럴이거나 함수(`() => text`)여야 한다. 변수나 템플릿 문자열을 그대로 넘기면 그 안의 `$&`, `$$`, `$1`, `` $` ``, `$'`가 치환 패턴으로 풀려서, 문서나 사용자가 쓴 글자에 `$`가 있을 때 파트가 깨진다. 시험: `tests/replace-dollar-*.test.ts`.
+- 문서에서 온 값(관계 id, 확장자, 요소 id, 파트 이름)은 `RegExp`에 넣지 않고 글자로 비교한다. 관계 id는 만든 쪽이 정한 이름이라 어떤 모양이든 받는다(`rId7`만이 아니다). 시험: `tests/ids-as-text.test.ts`, `tests/relationship-id-*.test.ts`.
+- XML의 값은 한 번만 푼다. 푸는 함수는 `decodeXml` 하나다. 파서는 `xmlParser`(`xml-parser.ts`)로만 만들고(`new XMLParser`를 직접 쓰지 않는다), 파서가 준 값은 이미 푼 값이므로 다시 풀지 않는다. 원문 태그에서 정규식으로 읽는 속성은 `attributeOf`로 읽는다(따옴표 종류와 무관하게 읽고, 한 번 푼다). 이렇게 해야 `&amp;`, `&#38;`, `&#x26;`가 같은 값이 되고, `X&amp;#38;1`은 `X&#38;1`로 남는다. 읽은 값을 XML에 다시 쓸 때는 `escapeXmlAttr`/`escapeXmlText`를 한 번 거친다. 시험: `tests/decode-once.test.ts`.
+- 남이 만든 파트를 고칠 때 요소 이름의 접두사(`p:`)를 가정하지 않는다. 파트는 같은 이름공간을 기본 이름공간(`xmlns="…"`)이나 다른 접두사로 묶을 수 있으므로, 그 파트가 루트에서 묶은 접두사(`rootPrefixOf`)로 요소를 찾고(`elementRange`, 글자 비교) 같은 접두사로 써 넣는다. 찾을 곳이 없으면 아무것도 쓰기 전에 거절한다(반쯤 쓰지 않는다). 엔진이 새로 만드는 파트는 자기 선언과 함께 `p:`로 쓴다. 시험: `tests/notes-default-namespace.test.ts`.
+- 요소를 속성값으로 찾을 때(확장 `a:ext`의 `uri`, 자리표시자의 `type` 등) `uri="…"`처럼 따옴표와 철자를 박은 정규식으로 찾지 않는다. 태그를 이름으로 찾은 뒤 `attributeOf`로 읽어 글자로 비교한다. 읽는 쪽(파서)은 작은따옴표나 `=` 앞뒤 공백도 같은 값으로 읽으므로, 쓰는 쪽이 한 철자만 찾으면 사용자가 지운 표시가 남거나 같은 확장이 둘 써진다. 시험: `tests/redaction-ext-forms.test.ts`.
+- 문서에서 온 값(색 이름, 스타일 id, `clrMap`이 가리키는 칸 이름 등)으로 일반 객체 표를 찾을 때는 `ownValue`(`own-value.ts`)를 거친다. `constructor`, `toString`, `__proto__` 같은 이름은 모든 객체가 물려받아서, 그대로 `TABLE[value]`로 찾으면 함수나 `Object.prototype`이 나오고 그 뒤에서 슬라이드 읽기가 터진다. 나쁜 값 하나가 슬라이드를 잃게 해서는 안 되며, 이를 막으려고 통째로 `try`로 감싸지 않는다. 시험: `tests/object-key-values-keep-slide.test.ts`.
+- 문서가 정한 이름을 키로 기록할 때(가이드 이름, 글꼴 script, 파트 확장자 등)는 `record[name] = value`나 `Object.assign` 대신 `setOwn`을 쓴다. `__proto__`라는 이름은 대입하면 항목이 생기지 않고 프로토타입이 바뀌어 값이 사라진다. 문서·편집기·AI op에서 온 값으로 엔진 밖(`packages/pptx-ops`)의 표를 찾을 때도 같은 규칙이다(`Object.hasOwn`). 시험: `tests/object-key-values-own.test.ts`, `packages/pptx-ops/tests/op-values-own-keys.test.ts`.
+- 파서가 준 노드는 객체라고 가정하지 않는다. 빈 요소나 글자만 든 요소(`<p:grpSpPr/>`, `<p:spPr>text</p:spPr>`)는 문자열로 나오고, 문자열에 `'a:noFill' in node`를 쓰면 TypeError가 난다. `asXmlNode`로 받거나 `typeof node === 'object'`를 먼저 본다.
+- 차트의 켜고 끄는 값(CT_Boolean: `c:delete`, `c:showVal`, `c:smooth`, `c:overlay` 등)은 `chart.ts`의 `ctBoolean`으로, xsd:boolean 속성(`b`, `i`, `rtl`)은 `xsdBoolean`으로 읽는다. `"1"`과 `"true"`가 참, `"0"`과 `"false"`가 거짓이고, `val` 없이 쓴 요소는 참(스키마 기본값)이다. `=== '1'`이나 `!== '0'`으로 읽으면 다른 프로그램이 쓴 `val="true"`, `val="false"`, `<c:delete/>`가 반대로 읽힌다. 시험: `tests/chart-xsd-boolean.test.ts`.
 
 ## 이 모듈의 방식
 
@@ -53,7 +62,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 
 ## 테스트
 
-- `npm run test -w @genoffice/pptx-engine`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처는 `tests/fixtures/`의 pptx 두 개(라이선스 고지 동봉)와, 테스트가 그때그때 `pptxgenjs`와 `createBlankPptx`로 만드는 덱이다. `npm run fixtures`는 필요 없다.
+- `npm run test -w @seuoffice/pptx-engine`, 또는 패키지 폴더에서 `npx vitest run`. 픽스처는 `tests/fixtures/`의 pptx 두 개(라이선스 고지 동봉)와, 테스트가 그때그때 `pptxgenjs`와 `createBlankPptx`로 만드는 덱이다. `npm run fixtures`는 필요 없다.
 - OOXML 스키마 검사 테스트는 `xmllint`가 PATH에 있을 때만 돈다. 없고 `CI` 환경 변수도 없으면 경고를 찍고 건너뛴다. 건너뛴 채 통과한 결과는 스키마 적합성을 보증하지 않으므로, 생성하는 XML을 바꿨다면 CI 결과까지 확인한다.
 - `corpus-edit-fuzz.test.ts`는 `CORPUS_DIRS`를 줄 때만 돌고, 단언 없이 `FUZZ_OUT`에 보고서를 쓴다.
 - 열기·저장 경로를 바꾸면 "변경 없음 → 파트 바이트 동일"과 "한 요소 편집 → 나머지 바이트 그대로"를 테스트로 증명한다. 새 변경자는 자식 요소가 스키마 순서에 맞는 자리에 들어가는지도 본다.

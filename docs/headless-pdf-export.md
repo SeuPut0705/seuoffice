@@ -74,15 +74,15 @@ Diagrams take more targets and three more switches:
   diagram file only when its bytes open as a diagram.
 - `--page`, `--ops` and `--batch` on any other input are bad arguments (exit 1).
 
-`ieumoffice convert <diagram> --to pdf|png|svg`, `ieumoffice diagram apply`
-(Mermaid, `.drawio.svg` / `.drawio.png`) and `ieumoffice create --type drawio`
+`seuoffice convert <diagram> --to pdf|png|svg`, `seuoffice diagram apply`
+(Mermaid, `.drawio.svg` / `.drawio.png`) and `seuoffice create --type drawio`
 are the callers.
 
 ## How it works
 
 The grammar, the exit codes and the renderer-side waiting helpers live in
 `packages/electron-utils/src/headless-export.ts`; the renderer half is
-imported through the `@genoffice/electron-utils/headless-export` subpath so a
+imported through the `@seuoffice/electron-utils/headless-export` subpath so a
 renderer bundle never pulls in `node:` builtins.
 
 `apps/shell/src/main/headless-export.ts` validates the paths and routes by

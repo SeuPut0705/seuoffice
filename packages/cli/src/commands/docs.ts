@@ -1,5 +1,5 @@
 import { basename, dirname } from 'node:path'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { flagBool, flagString } from '../args'
 import {
   PREVIEW_CHARS,
@@ -89,7 +89,7 @@ export const docsCommand: CommandDef = {
       name: 'ops',
       value: 'file',
       description:
-        'apply: JSON array of ops (apply_ops entries, plus insert_content / replace_blocks with an html field, insert_image / insert_picture / insert_text_box, insert_chart / edit_chart, set_header_footer, set_page_setup / insert_section_break, set_watermark, define_style, add_comment / reply_comment / resolve_comment / delete_comment, accept_changes / reject_changes, insert_footnote / insert_endnote / delete_note, wrap_content_control / unwrap_content_control, remove_parts (strip customXml / web-extension package parts for metadata scrubs)); "-" reads stdin. See `ieumoffice guide docs`.',
+        'apply: JSON array of ops (apply_ops entries, plus insert_content / replace_blocks with an html field, insert_image / insert_picture / insert_text_box, insert_chart / edit_chart, set_header_footer, set_page_setup / insert_section_break, set_watermark, define_style, add_comment / reply_comment / resolve_comment / delete_comment, accept_changes / reject_changes, insert_footnote / insert_endnote / delete_note, wrap_content_control / unwrap_content_control, remove_parts (strip customXml / web-extension package parts for metadata scrubs)); "-" reads stdin. See `seuoffice guide docs`.',
     },
     {
       name: 'track',
@@ -100,7 +100,7 @@ export const docsCommand: CommandDef = {
       name: 'author',
       value: 'name',
       description:
-        'apply --track / compare: author of the tracked changes (compare default: GenOffice)',
+        'apply --track / compare: author of the tracked changes (compare default: SeuOffice)',
     },
     {
       name: 'date',
@@ -131,7 +131,7 @@ export const docsCommand: CommandDef = {
     {
       name: 'force',
       description:
-        'apply / compare: overwrite an existing --out file, or write while GenOffice has the file open',
+        'apply / compare: overwrite an existing --out file, or write while SeuOffice has the file open',
     },
   ],
   async run(args, ctx) {
@@ -159,7 +159,7 @@ export const docsCommand: CommandDef = {
           undefined,
           {
             reason: verb === undefined ? 'missing_argument' : 'invalid_argument',
-            suggestion: 'run `ieumoffice help docs`',
+            suggestion: 'run `seuoffice help docs`',
           },
         )
     }
@@ -262,7 +262,7 @@ function assertOdtApply(path: string, out: string | undefined, track: boolean): 
       {
         reason: 'unsupported',
         suggestion:
-          'apply without --track, or convert to .docx first (`ieumoffice convert <file.odt> --to docx`)',
+          'apply without --track, or convert to .docx first (`seuoffice convert <file.odt> --to docx`)',
       },
     )
   }
@@ -273,7 +273,7 @@ function assertOdtApply(path: string, out: string | undefined, track: boolean): 
       undefined,
       {
         reason: 'invalid_argument',
-        suggestion: `apply in the same format, then run \`ieumoffice convert <file> --to ${extension(out) || '<format>'}\``,
+        suggestion: `apply in the same format, then run \`seuoffice convert <file> --to ${extension(out) || '<format>'}\``,
       },
     )
   }

@@ -7,7 +7,7 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
-import { createI18n } from '@genoffice/i18n'
+import { createI18n } from '@seuoffice/i18n'
 import { strings } from '../src/renderer/i18n/strings'
 import type { TFunc } from '../src/renderer/i18n/locale'
 import { ConvertMenu } from '../src/renderer/convert/ConvertMenu'
@@ -157,12 +157,14 @@ function fakeImagesApi(
   return { api, listeners }
 }
 
-const run = (api: EmbeddedImagesApi, prepare = vi.fn(async () => true)) => {
+const run = (
+  api: EmbeddedImagesApi,
+  prepare = vi.fn(async (): Promise<string | null> => 'C:\\docs\\atlas.pdf'),
+) => {
   const notice = vi.fn()
   const onProgress = vi.fn()
   const done = exportEmbeddedImages({
     api,
-    filePath: 'C:\\docs\\atlas.pdf',
     password: 'pw',
     baseName: 'atlas',
     t,
@@ -224,7 +226,7 @@ describe('exportEmbeddedImages', () => {
     const { api } = fakeImagesApi('C:\\out', { ok: false, error: 'failed' })
     const { done } = run(
       api,
-      vi.fn(async () => false),
+      vi.fn(async () => null),
     )
     await done
     expect(api.pickTarget).not.toHaveBeenCalled()

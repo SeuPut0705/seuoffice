@@ -4,21 +4,21 @@ import { findDocxPath, isWord97Path } from '../src/shared/open-file'
 
 describe('findDocxPath', () => {
   it('finds Finder and Explorer document arguments case-insensitively', () => {
-    expect(findDocxPath(['/Applications/GenOffice Docs.app', '/tmp/Quarterly Plan.docx'])).toBe(
+    expect(findDocxPath(['/Applications/SeuOffice Docs.app', '/tmp/Quarterly Plan.docx'])).toBe(
       '/tmp/Quarterly Plan.docx',
     )
-    expect(findDocxPath(['GenOffice Docs.exe', 'C:\\Users\\Me\\REPORT.DOCX'])).toBe(
+    expect(findDocxPath(['SeuOffice Docs.exe', 'C:\\Users\\Me\\REPORT.DOCX'])).toBe(
       'C:\\Users\\Me\\REPORT.DOCX',
     )
   })
 
   it('ignores Electron switches and unrelated files', () => {
-    expect(findDocxPath(['GenOffice Docs', '--inspect=document.docx', '/tmp/notes.txt'])).toBeNull()
+    expect(findDocxPath(['SeuOffice Docs', '--inspect=document.docx', '/tmp/notes.txt'])).toBeNull()
   })
 
   it('finds legacy Word .doc/.dot arguments, which open as converted copies', () => {
-    expect(findDocxPath(['GenOffice Docs', '/tmp/legacy.doc'])).toBe('/tmp/legacy.doc')
-    expect(findDocxPath(['GenOffice Docs', '/tmp/TEMPLATE.DOT'])).toBe('/tmp/TEMPLATE.DOT')
+    expect(findDocxPath(['SeuOffice Docs', '/tmp/legacy.doc'])).toBe('/tmp/legacy.doc')
+    expect(findDocxPath(['SeuOffice Docs', '/tmp/TEMPLATE.DOT'])).toBe('/tmp/TEMPLATE.DOT')
   })
 })
 

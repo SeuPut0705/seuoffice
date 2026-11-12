@@ -24,6 +24,7 @@ function fakeRuntime(
     getWidth: () => cells[0]?.length ?? 0,
   }
   const sheet = {
+    getSheetId: () => 'sheet-1',
     getMaxRows: () => 1000,
     getMaxColumns: () => 26,
     insertRows: () => sheet,

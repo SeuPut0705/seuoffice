@@ -16,37 +16,16 @@ import type {
   FreeAiConnectResult,
   FreeAiProviderId,
   FreeAiQuota,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import type { UpdateUiState } from './update-api'
-import type { KbFileInfo, KbReadPage, KbSearchHit } from '@genoffice/agent-core'
-import type { AiPanelPrefs } from '@genoffice/ui/ai-panel-prefs'
-import type { SlidesAiFonts } from '@genoffice/ui/slides-ai-fonts'
-import type { FontFamilyInfo } from '@genoffice/ui'
+import type { KbFileInfo, KbReadPage, KbSearchHit } from '@seuoffice/agent-core'
+import type { AiPanelPrefs } from '@seuoffice/ui/ai-panel-prefs'
+import type { SlidesAiFonts } from '@seuoffice/ui/slides-ai-fonts'
+import type { FontFamilyInfo } from '@seuoffice/ui'
 
-/** UI language; kept self-contained here (mirrors Lang in @genoffice/i18n) */
+/** UI language; kept self-contained here (mirrors Lang in @seuoffice/i18n) */
 
-export type UiLanguage =
-  | 'zh'
-  | 'en'
-  | 'ja'
-  | 'ko'
-  | 'fr'
-  | 'de'
-  | 'es'
-  | 'th'
-  | 'id'
-  | 'ru'
-  | 'ar'
-  | 'pt'
-  | 'it'
-  | 'pl'
-  | 'cs'
-  | 'nl'
-  | 'ms'
-  | 'he'
-  | 'hi'
-  | 'zh-TW'
-  | 'vi'
+export type UiLanguage = 'en' | 'ko'
 
 /** UI theme preference */
 export type UiTheme = 'light' | 'dark' | 'system'
@@ -61,7 +40,7 @@ export type DocTheme = 'follow' | 'light' | 'dark'
 /** Format a brand-new Hangul document is first saved as (Settings › General). */
 export type HwpDefaultFormat = 'hwp' | 'hwpx'
 
-/** mirrors AUTHOR_NAME_MAX in @genoffice/electron-utils (the renderer cannot import it) */
+/** mirrors AUTHOR_NAME_MAX in @seuoffice/electron-utils (the renderer cannot import it) */
 export const AUTHOR_NAME_MAX = 120
 
 export interface AuthorNameSetting {
@@ -85,7 +64,7 @@ export interface AutoSaveDefault {
 export {
   CSV_IMPORT_DEFAULT_LIMIT_MB,
   CSV_IMPORT_LIMIT_CHOICES_MB,
-} from '@genoffice/xlsx-gateway/gateway/csv-limits'
+} from '@seuoffice/xlsx-gateway/gateway/csv-limits'
 
 /** local MCP server state (persisted in userData/app-settings.json) */
 export interface McpStatus {
@@ -405,7 +384,7 @@ export interface HomeApi {
   getAiPanelPrefs(): Promise<AiPanelPrefs>
   /** merge + persist; broadcasts 'app:ai-panel-prefs-changed' to all web contents */
   setAiPanelPrefs(patch: Partial<AiPanelPrefs>): Promise<AiPanelPrefs>
-  /** effective default save folder for new/untitled files (configured in userData/app-settings.json, falls back to <Documents>/GenOffice) */
+  /** effective default save folder for new/untitled files (configured in userData/app-settings.json, falls back to <Documents>/SeuOffice) */
   getDefaultSaveDir(): Promise<string>
   /** directory picker to change the default save folder; resolves to the new folder, or null when canceled or the pick was unusable */
   pickDefaultSaveDir(): Promise<string | null>

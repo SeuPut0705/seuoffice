@@ -9,7 +9,7 @@ import {
   type AiSubscriptionState,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import { useAiSendGate, type AiSendGateController } from '../src/use-ai-send-gate'
 
 let host: HTMLDivElement

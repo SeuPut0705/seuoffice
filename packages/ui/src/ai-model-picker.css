@@ -1,5 +1,5 @@
 /* Model chip + its popover (AiModelPicker). Chrome tokens only;
- * each app imports this next to its other @genoffice/ui sheets. */
+ * each app imports this next to its other @seuoffice/ui sheets. */
 
 .ai-model-picker {
   display: inline-flex;

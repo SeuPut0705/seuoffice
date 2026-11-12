@@ -80,7 +80,7 @@ interface HandoffSnapshot {
 test.describe('generate window', () => {
   test('entry points, materials, unsaved save, and the queued hand-off', async () => {
     test.setTimeout(240_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-generate-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-generate-e2e-'))
     const lesson = join(dir, 'lesson.md')
     const big = join(dir, 'reading.txt')
     const outline = join(dir, 'outline.txt')
@@ -100,7 +100,7 @@ test.describe('generate window', () => {
     const handoffs = () =>
       app.evaluate((): HandoffSnapshot => {
         const store = (globalThis as Record<symbol, unknown>)[
-          Symbol.for('genoffice.generate-handoff')
+          Symbol.for('seuoffice.generate-handoff')
         ] as
           | {
               queued: Map<

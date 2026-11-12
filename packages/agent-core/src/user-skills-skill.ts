@@ -64,7 +64,7 @@ const AUTO_SKILL_TITLE_MAX = 120
 
 /**
  * Text files `read_skill_file` reads (spec 5.8). Keep in sync with
- * SKILL_TEXT_EXTENSIONS in @genoffice/ai-provider (this package must not
+ * SKILL_TEXT_EXTENSIONS in @seuoffice/ai-provider (this package must not
  * depend on it: ai-provider imports this package).
  */
 export const SKILL_TEXT_FILE_EXTENSIONS: ReadonlySet<string> = new Set([
@@ -276,7 +276,7 @@ function unescapeAttr(value: string): string {
 
 /**
  * The skill ids of the `<skill id="…">` blocks the app adds to a request for
- * the skills the person chose (see skillRequestText in @genoffice/ui).
+ * the skills the person chose (see skillRequestText in @seuoffice/ui).
  */
 export function attachedSkillIdsOf(text: string): string[] {
   const ids: string[] = []

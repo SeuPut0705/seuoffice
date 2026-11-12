@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import {
   AI_MODEL_PICKER_REFRESH_MS,
   AiModelPicker,

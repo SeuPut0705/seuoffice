@@ -5,7 +5,7 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { Mesh, MeshStandardMaterial, Object3D } from 'three'
-import { NO_ROTATION } from '@genoffice/pptx-engine/model3d'
+import { NO_ROTATION } from '@seuoffice/pptx-engine/model3d'
 import { loadModel, type ModelView } from '../src/renderer/model3d/scene'
 
 const drawn = vi.hoisted((): { scene: Object3D | null } => ({ scene: null }))

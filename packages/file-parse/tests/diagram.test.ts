@@ -2,8 +2,8 @@ import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterAll, describe, expect, it } from 'vitest'
-import { encodeCompressedPage, formatDiagramText, openDiagram } from '@genoffice/drawio-model'
-import { nodePageCodec } from '@genoffice/drawio-model/node'
+import { encodeCompressedPage, formatDiagramText, openDiagram } from '@seuoffice/drawio-model'
+import { nodePageCodec } from '@seuoffice/drawio-model/node'
 import {
   ATTACHABLE_IMAGE_EXTS,
   ATTACHABLE_MAX_BYTES,

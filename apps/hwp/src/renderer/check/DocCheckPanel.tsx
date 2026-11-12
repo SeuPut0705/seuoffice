@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
-import { IconClose } from '@genoffice/ui/icons'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
+import { IconClose } from '@seuoffice/ui/icons'
 import {
   ADMINISTRATION_RULES,
   audit,
@@ -7,7 +7,7 @@ import {
   type Finding,
   type Place,
   type RuleId,
-} from '@genoffice/doc-rules'
+} from '@seuoffice/doc-rules'
 import type { AgentDocumentProfile } from '../../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from '../ai/agent-bridge'
 import { useI18n } from '../i18n/locale'
@@ -46,12 +46,16 @@ interface Props {
   onClose: () => void
   /** Hands a request to the AI panel's input box; it is not sent. */
   onHandOff?: (request: string) => void
-  /** Bumped when the document was changed outside this panel, by an AI run. */
+  /**
+   * A count of the calls that may have changed the document outside this panel (an AI run's
+   * edits). Only a rise while the panel is open means something: the app counts from its
+   * start, so the number is above zero before the panel is ever opened.
+   */
   revision?: number
 }
 
 /**
- * The format check of `@genoffice/doc-rules` over the open document. It reads the document
+ * The format check of `@seuoffice/doc-rules` over the open document. It reads the document
  * once through the editor's plugin and judges it here, with no model and no network: the
  * panel works with AI turned off. The font fix is a plain edit; everything else is handed
  * to the AI as a request the user reads before sending.
@@ -92,10 +96,16 @@ export function DocCheckPanel({ bridge, aiHold, format, onClose, onHandOff, revi
     void run()
   }, [run])
 
-  // an AI run changes the document: read it again once the run has stopped writing
+  // an AI run changes the document: read it again once the run has stopped writing. The
+  // panel has just read it when it opens, so the count it opened with calls for no read:
+  // one would hide the findings and turn the buttons off under the user a moment later.
+  const readAtRevision = useRef(revision)
   useEffect(() => {
-    if (revision === 0) return
-    const timer = setTimeout(() => void run(), REREAD_DELAY_MS)
+    if (revision === readAtRevision.current) return
+    const timer = setTimeout(() => {
+      readAtRevision.current = revision
+      void run()
+    }, REREAD_DELAY_MS)
     return () => clearTimeout(timer)
   }, [revision, run])
 

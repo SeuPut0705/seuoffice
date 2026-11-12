@@ -7,10 +7,10 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import * as opentype from 'opentype.js'
 import { beforeAll, describe, expect, it, vi } from 'vitest'
-import type { RunStyle } from '@genoffice/pptx-render'
-import { templateFontsDir } from '@genoffice/electron-utils/template-fonts-dir'
-import { TEMPLATE_FONTS, TEMPLATE_FONT_FAMILY_NAMES } from '@genoffice/ui/template-fonts'
-import { BUILTIN_FONT_FAMILIES } from '@genoffice/ui'
+import type { RunStyle } from '@seuoffice/pptx-render'
+import { templateFontsDir } from '@seuoffice/electron-utils/template-fonts-dir'
+import { TEMPLATE_FONTS, TEMPLATE_FONT_FAMILY_NAMES } from '@seuoffice/ui/template-fonts'
+import { BUILTIN_FONT_FAMILIES } from '@seuoffice/ui'
 
 /** apps/slides, the app path of a standalone dev run (the shell's apps/shell resolves the same) */
 const APP_PATH = resolve(__dirname, '..')

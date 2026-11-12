@@ -2,7 +2,7 @@ import { Editor } from '@tiptap/core'
 import JSZip from 'jszip'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import { parseDocx, saveDocx, type HeaderFooter, type ParsedDocFull } from '@genoffice/docx-engine'
+import { parseDocx, saveDocx, type HeaderFooter, type ParsedDocFull } from '@seuoffice/docx-engine'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { executeOps } from '../src/renderer/ai/ops'
@@ -233,12 +233,14 @@ describe('editing text beside run-level structure keeps the structure', () => {
     )
   })
 
-  it('text typed at the end of a control lands after it, not in it', async () => {
+  it('text typed at the end of a control joins it', async () => {
     const { editor, parsed } = await open(around(UNLOCKED) + OTHER)
     const end = posOf(editor, '5/6/2024') + '5/6/2024'.length
     editor.chain().setTextSelection(end).insertContent('X').run()
     const { xml } = await save(editor, parsed)
-    expect(skeleton(xml)).toContain(`${UNLOCKED.open}[5/6/2024]${UNLOCKED.close}[X]`)
+    expect(skeleton(xml)).toContain(
+      `${UNLOCKED_EDITED.open}[5/6/2024X]${UNLOCKED_EDITED.close}[ at noon]`,
+    )
   })
 
   it('formatting part of a control keeps one control around all of its runs', async () => {

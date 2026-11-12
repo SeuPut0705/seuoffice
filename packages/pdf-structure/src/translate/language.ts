@@ -1,29 +1,76 @@
 /**
- * Target languages (spec §8): the 21 UI languages. The default is the UI
- * language, or English when the document is already in the UI language. An
- * easy explanation (`mode` 'easy') defaults to the UI language always, also
- * for a document written in it: it is rewritten in plainer words.
+ * Target languages (spec §8): 21 of them, a list of this module's own. What
+ * the screen is written in does not limit what a document is translated into.
+ * The default is the UI language, or English when the document is already in
+ * the UI language. An easy explanation (`mode` 'easy') defaults to the UI
+ * language always, also for a document written in it: it is rewritten in
+ * plainer words.
  *
  * The document language comes from the EPUB writer's script-based guess
  * (guessLanguageFromText), so it inherits that guess's limits: every
  * Latin-script document reads as `en` and every Han-only one as `zh`.
  * Languages are compared by their primary subtag, so a Chinese document
- * matches both Chinese UIs (`zh`, `zh-TW`).
+ * matches both Chinese targets (`zh`, `zh-TW`).
  */
-import { LANGS, isLang, normalizeLang, type Lang } from '../../../i18n/src/index'
 import { guessLanguageFromText, treeSampleText } from '../epub/language'
 import type { TranslationMode } from '../store/job-keys'
 import type { DocumentTree } from '../tree/types'
 
-/** the languages a document can be translated into: the UI languages */
-export const TRANSLATION_LANGUAGES: readonly Lang[] = LANGS
+const TARGETS = [
+  'zh',
+  'en',
+  'ja',
+  'ko',
+  'fr',
+  'de',
+  'es',
+  'th',
+  'id',
+  'ru',
+  'ar',
+  'pt',
+  'it',
+  'pl',
+  'cs',
+  'nl',
+  'ms',
+  'he',
+  'hi',
+  'zh-TW',
+  'vi',
+] as const
 
-export function isTranslationLanguage(code: unknown): code is Lang {
-  return isLang(code)
+/** a language a document can be translated into */
+export type TranslationLanguage = (typeof TARGETS)[number]
+
+/** the languages a document can be translated into, in the order they are offered */
+export const TRANSLATION_LANGUAGES: readonly TranslationLanguage[] = TARGETS
+
+export function isTranslationLanguage(code: unknown): code is TranslationLanguage {
+  return typeof code === 'string' && (TARGETS as readonly string[]).includes(code)
+}
+
+/**
+ * A raw language tag ('zh-Hans', 'pt-BR', 'ko_KR') as a target language;
+ * English when it names none of them.
+ */
+export function translationLanguageOf(raw: string | null | undefined): TranslationLanguage {
+  const value = raw?.trim().toLowerCase()
+  if (!value) return 'en'
+  // traditional-script Chinese variants must win over the generic 'zh' prefix
+  if (/^zh[-_](tw|hk|mo|hant)/.test(value)) return 'zh-TW'
+  for (const lang of TARGETS) {
+    if (lang === 'en' || lang === 'zh-TW') continue
+    if (value === lang || value.startsWith(`${lang}-`) || value.startsWith(`${lang}_`)) return lang
+  }
+  // 'in' and 'iw' are the legacy ISO codes for Indonesian and Hebrew
+  if (/^in\b/.test(value) || /^in[-_]/.test(value)) return 'id'
+  if (/^iw\b/.test(value) || /^iw[-_]/.test(value)) return 'he'
+  return 'en'
 }
 
 /** English names the translation instruction uses */
-const LANGUAGE_NAMES: Record<Lang, string> = {
+const LANGUAGE_NAMES: Record<TranslationLanguage, string> = {
   zh: 'Simplified Chinese',
   en: 'English',
   ja: 'Japanese',
@@ -49,7 +96,7 @@ const LANGUAGE_NAMES: Record<Lang, string> = {
 
 /** English name of a target language; the code itself when unknown */
 export function translationLanguageName(code: string): string {
-  return isLang(code) ? LANGUAGE_NAMES[code] : code
+  return isTranslationLanguage(code) ? LANGUAGE_NAMES[code] : code
 }
 
 const primary = (tag: string): string => tag.toLowerCase().split(/[-_]/)[0]!
@@ -62,8 +109,8 @@ export function defaultTargetLanguage(
   uiLanguage: string,
   documentText: string,
   mode: TranslationMode = 'translate',
-): Lang {
-  const ui = isLang(uiLanguage) ? uiLanguage : normalizeLang(uiLanguage)
+): TranslationLanguage {
+  const ui = translationLanguageOf(uiLanguage)
   if (mode === 'easy') return ui
   const doc = guessLanguageFromText(documentText)
   return doc !== undefined && primary(doc) === primary(ui) ? 'en' : ui
@@ -86,7 +133,7 @@ export function defaultTargetLanguageForTree(
   tree: DocumentTree,
   uiLanguage: string,
   mode: TranslationMode = 'translate',
-): Lang {
+): TranslationLanguage {
   if (mode === 'easy') return defaultTargetLanguage(uiLanguage, '', 'easy')
   return defaultTargetLanguage(
     uiLanguage,

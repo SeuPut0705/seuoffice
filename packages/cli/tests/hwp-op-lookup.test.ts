@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import init, { HwpDocument } from '@rhwp/core'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { run, tempDir } from './helpers'
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 beforeAll(async () => {
   await init({
     module_or_path: readFileSync(createRequire(import.meta.url).resolve('@rhwp/core/rhwp_bg.wasm')),

@@ -14,11 +14,11 @@
 import { CellValueType, numfmt } from '@univerjs/core'
 import { ISheetClipboardService } from '@univerjs/sheets-ui'
 
-import { formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { formatAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { FULL_LOAD_MAX_CELLS } from './app-constants'
 import { clipboardField } from './clipboard-tsv'
-import { getLang, t } from './i18n/locale'
-import { numfmtLocaleFor } from './i18n/numfmt-locale'
+import { t } from './i18n/locale'
+import { numfmtLocale } from './i18n/numfmt-locale'
 import { ensureLazyRangeLoaded, readCopySourceDirect, type RawCopyCell } from './univer-sync'
 import {
   lazySheetMeta,
@@ -41,7 +41,7 @@ export function directCopyField(cell: RawCopyCell | undefined): string {
   if (typeof cell.v === 'number' && pattern && pattern !== 'General') {
     const text = numfmt.format(pattern, cell.v, {
       throws: false,
-      locale: numfmtLocaleFor(getLang()),
+      locale: numfmtLocale(),
     })
     if (typeof text === 'string') return clipboardField({ v: text, t: CellValueType.STRING })
   }

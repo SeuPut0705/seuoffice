@@ -1,5 +1,5 @@
-import type { RenderNode, RenderSlide, ShapeRenderNode } from '@genoffice/pptx-render'
-import type { SlidesAiFontRoles } from '@genoffice/ui/slides-ai-fonts'
+import type { RenderNode, RenderSlide, ShapeRenderNode } from '@seuoffice/pptx-render'
+import type { SlidesAiFontRoles } from '@seuoffice/ui/slides-ai-fonts'
 
 /**
  * The fonts of Settings › General in deck generation (generate_deck).

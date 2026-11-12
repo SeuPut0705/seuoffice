@@ -1,12 +1,12 @@
 import React from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   AiProviderId,
   AiRunErrorKind,
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   aiContinueOption,
   aiRunErrorText,

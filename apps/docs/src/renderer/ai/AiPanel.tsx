@@ -44,10 +44,10 @@ import {
   useProjectPanel,
   type ProjectPanel,
   type ProjectMemoryLine,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import type { Editor } from '@tiptap/core'
-import type { Block } from '@genoffice/docx-engine'
+import type { Block } from '@seuoffice/docx-engine'
 import {
   AgentLoop,
   createKnowledgeBaseSkill,
@@ -60,9 +60,9 @@ import {
   windowMcpUsableServers,
   type MindMapTreeNode,
   toolStepLabel,
-} from '@genoffice/agent-core'
-import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
-import { localModelCapabilities } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/agent-core'
+import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@seuoffice/ai-provider/browser'
+import { localModelCapabilities } from '@seuoffice/ai-provider/browser'
 import type {
   AiSettings,
   AiToolCapabilities,
@@ -81,7 +81,7 @@ import {
   saveAiPanelWidth,
   SentAttachments,
   truncateCardName,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model'
 import { captureRollbackSnapshot, restoreRollbackSnapshot } from './rollback-snapshot'
 import { countWords, findNumId, isBlankDocument, type NumIds } from './protocol'
@@ -134,7 +134,7 @@ import {
 } from './run-state'
 import { useSubscriptionConnection } from './subscription-client'
 import { useI18n, t as tModule, aiLangDirective, type StringKey } from '../i18n/locale'
-import { createFileNav, Markdown } from '@genoffice/ui'
+import { createFileNav, Markdown } from '@seuoffice/ui'
 import {
   AiComposer,
   AiScopeQuote,
@@ -142,13 +142,14 @@ import {
   docMentionActions,
   type AiComposerDocs,
   type AiScopeQuoteData,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
 import { IconNewChat, IconSidebarCollapse } from '../components/icons'
 import { useOdtSession } from '../odt-gate'
+import { isRtlLang } from '@seuoffice/i18n'
 
 interface ToolActivity {
   name: string
@@ -469,7 +470,7 @@ export function AiPanel({
   const onHandedRunDoneRef = useRef(onHandedRunDone)
   onHandedRunDoneRef.current = onHandedRunDone
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
-  const isRtl = lang === 'ar' || lang === 'he'
+  const isRtl = isRtlLang(lang)
   const [input, setInput] = useState('')
   const [busy, setBusy] = useState(false)
   /** messages queued while a reply runs; the pump re-runs them through runWith on settle */

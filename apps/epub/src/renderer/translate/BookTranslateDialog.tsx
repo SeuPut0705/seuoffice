@@ -2,7 +2,7 @@
  * The book translation window (spec §8): the choices, then the pre-start
  * confirmation.
  *
- * - Choices: the target language (one of the 21 UI languages; the default is
+ * - Choices: the target language (one of the 21 target languages; the default is
  *   the UI language, or English when the book is in it), the chapters (spine
  *   order with their contents titles, all chosen by default; damaged and
  *   fixed-layout chapters cannot be chosen and say why), and the results (a
@@ -41,14 +41,14 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import type { AiProviderId, AiSettings } from '@genoffice/ai-provider/browser'
-import type { DocumentJobEstimate, TranslationMode } from '@genoffice/pdf-structure'
+import type { AiProviderId, AiSettings } from '@seuoffice/ai-provider/browser'
+import type { DocumentJobEstimate, TranslationMode } from '@seuoffice/pdf-structure'
 import type {
   EpubSkippedChapter,
   EpubTranslationOutputKind,
   EpubTranslationUnit,
-} from '@genoffice/epub-engine'
-import type { Lang } from '@genoffice/i18n'
+} from '@seuoffice/epub-engine'
+import type { Lang } from '@seuoffice/i18n'
 import {
   AiConnectPrompt,
   AiFirstConnectionNotice,
@@ -56,7 +56,7 @@ import {
   useAiSendGate,
   useModalKeys,
   type AiModelPickerBridge,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type {
   EpubAiApi,
   EpubBookSummary,

@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/core'
-import { parseDocx, saveDocx, type Block, type Run } from '@genoffice/docx-engine'
+import { parseDocx, saveDocx, type Block, type Run } from '@seuoffice/docx-engine'
 import { afterEach, describe, expect, it } from 'vitest'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'

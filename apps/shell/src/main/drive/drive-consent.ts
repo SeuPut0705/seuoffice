@@ -1,4 +1,4 @@
-import { isOpenRouterFreeModel, type AiSettings } from '@genoffice/ai-provider'
+import { isOpenRouterFreeModel, type AiSettings } from '@seuoffice/ai-provider'
 
 /**
  * Whether a provider and model are a free connection (decision 0085). Free

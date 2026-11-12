@@ -6,6 +6,7 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { LANGS } from '@seuoffice/i18n'
 
 import { ChangeWorkbookPasswordDialog } from '../src/renderer/ChangeWorkbookPasswordDialog'
 import { strings } from '../src/renderer/i18n/strings'
@@ -73,7 +74,7 @@ describe('the new password length', () => {
       lang,
       (table as Record<string, string>).appPasswordTooLong,
     ])
-    expect(messages).toHaveLength(21)
+    expect(messages.map(([lang]) => lang).sort()).toEqual([...LANGS].sort())
     for (const [lang, message] of messages) {
       expect(message, lang).toContain('{max}')
       expect(message, lang).toContain('Excel')

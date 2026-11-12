@@ -346,6 +346,7 @@ fn rejects_oversized_ranges() {
         tables: Vec::new(),
         comments: Vec::new(),
         pivot_ranges: Vec::new(),
+        pivots_unlocated: 0,
         pivot_tables: Vec::new(),
         sparklines: Vec::new(),
         print_area: None,
@@ -519,6 +520,7 @@ fn omits_empty_sparklines_field_from_metadata_json() {
         tables: Vec::new(),
         comments: Vec::new(),
         pivot_ranges: Vec::new(),
+        pivots_unlocated: 0,
         pivot_tables: Vec::new(),
         sparklines: Vec::new(),
         print_area: None,
@@ -2572,6 +2574,66 @@ fn pivot_style_light_resolves_band_fill() {
     // Light16 -> accent1 tint 0.8; no theme part, so the default accent.
     assert!(pivot.palette.header_fill.is_some());
     assert!(pivot.styled);
+}
+
+/// A pivot whose output range cannot be read is not dropped silently: the
+/// sheet says how many there are, so a reader that has to know where pivot
+/// output is can tell that it does not.
+#[test]
+fn counts_pivots_whose_output_cannot_be_located() {
+    let pivot = |body: &str| {
+        format!(
+            r#"<pivotTableDefinition xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" name="P" cacheId="1">{body}</pivotTableDefinition>"#
+        )
+    };
+    let located = pivot(r#"<location ref="A8:B11" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>"#);
+    let no_location = pivot("");
+    let no_ref = pivot(r#"<location firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>"#);
+    let no_range = pivot(r#"<location ref="nowhere" firstHeaderRow="1" firstDataRow="1" firstDataCol="1"/>"#);
+    let relationships: String = (1..=5)
+        .map(|n| {
+            format!(
+                r#"<Relationship Id="rId{n}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/pivotTable" Target="../pivotTables/pivotTable{n}.xml"/>"#
+            )
+        })
+        .collect();
+    let sheet_relationships = format!(
+        r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">{relationships}</Relationships>"#
+    );
+    let (_dir, path) = open_fixture(&[
+        (
+            "xl/workbook.xml",
+            r#"<workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="S" sheetId="1" r:id="rId1"/><sheet name="Plain" sheetId="2" r:id="rId2"/></sheets></workbook>"#,
+        ),
+        (
+            "xl/_rels/workbook.xml.rels",
+            r#"<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet2.xml"/></Relationships>"#,
+        ),
+        (
+            "xl/worksheets/sheet1.xml",
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData><row r="8"><c r="A8" t="str"><v>Row Labels</v></c></row></sheetData></worksheet>"#,
+        ),
+        (
+            "xl/worksheets/sheet2.xml",
+            r#"<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData/></worksheet>"#,
+        ),
+        ("xl/worksheets/_rels/sheet1.xml.rels", &sheet_relationships),
+        ("xl/pivotTables/pivotTable1.xml", &located),
+        // pivotTable2.xml: the relationship points at a part that is not there
+        ("xl/pivotTables/pivotTable3.xml", &no_location),
+        ("xl/pivotTables/pivotTable4.xml", &no_ref),
+        ("xl/pivotTables/pivotTable5.xml", &no_range),
+    ]);
+    let mut sessions = WorkbookSessions::new();
+    let metadata = sessions.open(&path).unwrap();
+    let sheet = &metadata.sheets[0];
+    assert_eq!(sheet.pivot_ranges.len(), 1);
+    assert_eq!(sheet.pivots_unlocated, 4);
+    assert!(serde_json::to_string(sheet).unwrap().contains("\"pivotsUnlocated\":4"));
+    // A sheet with nothing to report serializes as it always did.
+    let plain = &metadata.sheets[1];
+    assert_eq!(plain.pivots_unlocated, 0);
+    assert!(!serde_json::to_string(plain).unwrap().contains("pivotsUnlocated"));
 }
 
 /// Light 1-7 with stripes off resolve no fills but stay styled, so the
@@ -4956,7 +5018,7 @@ fn an_uncancelled_open_completes_and_keeps_its_cache_directory() {
 /// A workbook part that lies about its size inflates fully on the XML read path.
 ///
 /// `read_media` is capped by `copy_entry_bounded`, and the docx/pptx hosts run
-/// `@genoffice/zip-gate` before opening at all — but `read_zip_string` is a
+/// `@seuoffice/zip-gate` before opening at all — but `read_zip_string` is a
 /// plain `read_to_string`, and it is how nearly every workbook part is loaded.
 /// `validate_entries` checks the entry *count* and the paths, never the bytes.
 /// A workbook therefore gets a full unbounded allocation out of one crafted

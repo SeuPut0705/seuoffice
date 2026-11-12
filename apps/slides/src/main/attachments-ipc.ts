@@ -8,8 +8,8 @@
 import { app, dialog, ipcMain } from 'electron'
 import { mkdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { basename, join, extname } from 'node:path'
-import { showOpenDialogWithMemory } from '@genoffice/electron-utils'
-import { assertFileSaved } from '@genoffice/electron-utils'
+import { showOpenDialogWithMemory } from '@seuoffice/electron-utils'
+import { assertFileSaved } from '@seuoffice/electron-utils'
 import {
   parseFileToText,
   ATTACHABLE_EXTS,
@@ -19,7 +19,7 @@ import {
   ATTACHABLE_IMAGE_MAX_BYTES,
   diagramPictureExtOf,
   diagramPictureExtOfName,
-} from '@genoffice/file-parse'
+} from '@seuoffice/file-parse'
 import type {
   AttachmentAddResult,
   AttachmentImageResult,
@@ -91,7 +91,7 @@ function savePastedImage(
   // Renderer-driven clipboard bytes hit the temp disk: enforce the same 5MB
   // image cap as file attachments so pastes cannot fill the disk.
   if (bytes.byteLength > ATTACHABLE_IMAGE_MAX_BYTES) return { error: 'too-large' }
-  const dir = join(app.getPath('temp'), 'genoffice-pasted')
+  const dir = join(app.getPath('temp'), 'seuoffice-pasted')
   mkdirSync(dir, { recursive: true })
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')
   const filePath = join(dir, `pasted-${stamp}-${++pastedImageSeq}.${cleanExt}`)
@@ -99,7 +99,7 @@ function savePastedImage(
   return { path: filePath }
 }
 
-/** Extract attachment text via @genoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
+/** Extract attachment text via @seuoffice/file-parse (docx/pdf/pptx/xlsx/plain text) */
 async function extractAttachmentText(filePath: string): Promise<string> {
   // a file open with unsaved changes is not read (before the cache): a
   // withholding mark only reaches the file on save

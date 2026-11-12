@@ -7,8 +7,8 @@ import {
   sealAiSecrets,
   sealSecretValue,
   type AiSecretCodec,
-} from '@genoffice/ai-provider'
-import { writeJsonAtomic } from '@genoffice/electron-utils/atomic-write'
+} from '@seuoffice/ai-provider'
+import { writeJsonAtomic } from '@seuoffice/electron-utils/atomic-write'
 
 /**
  * Keys and tokens in ai-settings.json under the operating system's protection

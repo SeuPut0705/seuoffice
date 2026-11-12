@@ -1,4 +1,4 @@
-/* The agent window. Chrome colours come from @genoffice/ui/tokens.css; the
+/* The agent window. Chrome colours come from @seuoffice/ui/tokens.css; the
  * shell's brand accent and this window's notice tint are defined here, with
  * light, dark and system-dark values. */
 :root {
@@ -34,16 +34,8 @@
   --ui-cjk: 'Microsoft YaHei', 'PingFang SC';
 }
 
-:root:lang(ja) {
-  --ui-cjk: 'Yu Gothic UI', 'Yu Gothic', 'Meiryo', 'Hiragino Sans';
-}
-
 :root:lang(ko) {
   --ui-cjk: 'Malgun Gothic', 'Apple SD Gothic Neo';
-}
-
-:root:lang(zh-TW) {
-  --ui-cjk: 'Microsoft JhengHei', 'PingFang TC';
 }
 
 * {

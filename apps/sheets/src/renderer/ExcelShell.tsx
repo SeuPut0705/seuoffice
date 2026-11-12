@@ -1,6 +1,6 @@
 import type { IFunctionInfo } from '@univerjs/engine-formula'
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
-import { platformShortcuts } from '@genoffice/i18n'
+import { platformShortcuts } from '@seuoffice/i18n'
 import {
   AiMark,
   Dropdown,
@@ -20,7 +20,7 @@ import {
   type OnTemplateSkill,
   type SkillUse,
   type AiComposerDocs,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 
 import {
   BorderAllIcon,
@@ -44,11 +44,11 @@ import { useAiDock } from './ai/use-ai-dock'
 
 import { ColorDropdown } from './ColorDropdown'
 import { FormatCellsDialog } from './FormatCellsDialog'
-import type { SheetPasswordHash } from '@genoffice/xlsx-gateway/gateway/xlsx-protection-hash'
+import type { SheetPasswordHash } from '@seuoffice/xlsx-gateway/gateway/xlsx-protection-hash'
 
 import { AllowEditRangesDialog } from './AllowEditRangesDialog'
 import { ProtectSheetDialog } from './ProtectSheetDialog'
-import type { SheetProtectionAllow } from '@genoffice/xlsx-gateway/gateway/xlsx-protection'
+import type { SheetProtectionAllow } from '@seuoffice/xlsx-gateway/gateway/xlsx-protection'
 import { GoToDialog } from './GoToDialog'
 import { QueriesDialog } from './QueriesDialog'
 import { SheetTabContextMenu } from './SheetTabContextMenu'
@@ -87,8 +87,8 @@ import {
 import { isModalOpen, resolveGlobalShortcut } from './global-shortcuts'
 import { scrollRibbonOnWheel } from './ribbon-wheel'
 
-import type { ChartSeriesVisualState } from '@genoffice/xlsx-gateway/domain/chart-visual'
-import type { ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { ChartSeriesVisualState } from '@seuoffice/xlsx-gateway/domain/chart-visual'
+import type { ChangePlan } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import type {
   AttachmentMeta,
   WorkbookConnection as QueryConnection,

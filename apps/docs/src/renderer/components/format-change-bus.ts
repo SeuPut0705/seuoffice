@@ -1,6 +1,6 @@
 /** Save As format-change confirmation bus, split from FormatChangeHost (component-only
  * module, see toast-bus) so file-actions can ask without importing React code. */
-import type { ConversionReport, ReportFeature } from '@genoffice/odt-engine'
+import type { ConversionReport, ReportFeature } from '@seuoffice/odt-engine'
 import type { DocFormat } from '../../shared/open-file'
 import type { StringKey } from '../i18n/locale'
 

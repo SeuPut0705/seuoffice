@@ -18,7 +18,7 @@ import { ipcMain } from 'electron'
 import {
   reportGenerateRunStarted,
   takeGenerateHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import type { SlidesApi } from '../shared/ipc'
 
 /** invoke → the request left for this tab, or null (none, already taken, another kind) */

@@ -246,11 +246,22 @@ export function pinnedLookup(target: SafeRemoteTarget): PinnedLookup {
 export interface FetchWithSsrfGuardOptions {
   /** Redirect hops to follow. Each hop is revalidated. Defaults to 5. */
   maxRedirects?: number
+  /**
+   * `manual`: one hop only. The address is checked and the connection pinned
+   * as for any hop, and the answer is handed back as it came, a redirect
+   * included, its body unread. The caller follows by asking again, so every
+   * hop of its chain passes the same checks. This is how a request that
+   * carries a credential rides the guard: what may travel to the next address
+   * is decided by the caller's redirect rule (`keyedDownload` of
+   * `@seuoffice/ai-provider`), not here. Defaults to `follow`.
+   */
+  redirect?: 'follow' | 'manual'
   headers?: Record<string, string>
   /**
    * Headers for one hop, replacing `headers` for that hop. Return undefined
-   * to fall back to `headers`. Lets callers keep a bearer token off redirect
-   * targets on other hosts.
+   * to fall back to `headers`. Not a way to carry a credential: it sees one
+   * address at a time, so it cannot keep a header off a hop that returns to
+   * a host the chain already left. Use `redirect: 'manual'` for that.
    */
   headersForHop?: (url: string, hop: number) => Record<string, string> | undefined
   /** Aborts the in-flight request and every later hop of the chain. */
@@ -264,7 +275,7 @@ export type ProxyRouting = (url: URL) => boolean
 
 // Symbol.for: one bundled copy of this package builds the dispatcher (the
 // shell's, or an editor's) and another may run the guarded fetch.
-const PROXY_ROUTING = Symbol.for('genoffice.dispatcher-proxy-routing')
+const PROXY_ROUTING = Symbol.for('seuoffice.dispatcher-proxy-routing')
 
 /**
  * Lets the code that builds a dispatcher state how it routes, so the guard
@@ -340,7 +351,14 @@ export async function fetchWithSsrfGuard(
   rawUrl: string,
   options: FetchWithSsrfGuardOptions = {},
 ): Promise<Response | null> {
-  const { maxRedirects = 5, headers, headersForHop, signal, fetchImpl } = options
+  const {
+    maxRedirects = 5,
+    redirect = 'follow',
+    headers,
+    headersForHop,
+    signal,
+    fetchImpl,
+  } = options
   // maxRedirects arrives from callers (CLI flags, IPC-adjacent config): an
   // Infinity value would follow redirects forever, so normalize to 0..10.
   const hopBudget = Number.isFinite(maxRedirects)
@@ -380,7 +398,7 @@ export async function fetchWithSsrfGuard(
         fetchImpl !== undefined
           ? await fetchImpl(current, init as RequestInit)
           : ((await undici.fetch(current, init as never)) as unknown as Response)
-      if (resp.status < 300 || resp.status >= 400) return resp
+      if (redirect === 'manual' || resp.status < 300 || resp.status >= 400) return resp
       const location = resp.headers.get('location')
       if (!location) return null
       // The redirect hop's body is never read; cancel it so the socket — a

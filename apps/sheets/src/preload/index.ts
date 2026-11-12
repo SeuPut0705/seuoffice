@@ -1,22 +1,22 @@
-import type { AiPanelPrefs } from '@genoffice/ui'
+import type { AiPanelPrefs } from '@seuoffice/ui'
 import { contextBridge, ipcRenderer, webFrame, webUtils } from 'electron'
-import { driveAiBridge } from '@genoffice/electron-utils/drive-ai-bridge'
-import { mcpToolsBridge } from '@genoffice/electron-utils/mcp-tools-bridge'
-import { outboundBridge } from '@genoffice/electron-utils/outbound-bridge'
-import { userSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import { driveAiBridge } from '@seuoffice/electron-utils/drive-ai-bridge'
+import { mcpToolsBridge } from '@seuoffice/electron-utils/mcp-tools-bridge'
+import { outboundBridge } from '@seuoffice/electron-utils/outbound-bridge'
+import { userSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import {
   PROJECT_FOLDER_BRIDGE_KEY,
   projectFolderBridge,
-} from '@genoffice/electron-utils/project-folder-bridge'
-import { USER_SKILLS_BRIDGE_KEY } from '@genoffice/electron-utils/user-skills-channels'
-import { docAttachBridge } from '@genoffice/electron-utils/doc-attach-bridge'
-import { DOC_ATTACH_BRIDGE_KEY } from '@genoffice/electron-utils/doc-attach-channels'
-import { splitPaneBridge } from '@genoffice/electron-utils/split-pane-bridge'
+} from '@seuoffice/electron-utils/project-folder-bridge'
+import { USER_SKILLS_BRIDGE_KEY } from '@seuoffice/electron-utils/user-skills-channels'
+import { docAttachBridge } from '@seuoffice/electron-utils/doc-attach-bridge'
+import { DOC_ATTACH_BRIDGE_KEY } from '@seuoffice/electron-utils/doc-attach-channels'
+import { splitPaneBridge } from '@seuoffice/electron-utils/split-pane-bridge'
 
-import type { AiChatResponse, AiSettings, AiStreamChunk } from '@genoffice/ai-provider'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
-import type { AiToolCapabilities } from '@genoffice/ai-search'
-import type { ProjectApi } from '@genoffice/project-store'
+import type { AiChatResponse, AiSettings, AiStreamChunk } from '@seuoffice/ai-provider'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
+import type { AiToolCapabilities } from '@seuoffice/ai-search'
+import type { ProjectApi } from '@seuoffice/project-store'
 import type {
   AttachmentAddResult,
   AttachmentImageResult,
@@ -93,7 +93,7 @@ import {
   subscriptionStatusMapOf,
   type SubscriptionApi,
 } from '../shared/subscription-api'
-import { installDropOpenBridge } from '@genoffice/electron-utils/drop-open'
+import { installDropOpenBridge } from '@seuoffice/electron-utils/drop-open'
 
 // Subscription channels are registered once per process (by the docs main in
 // the shell). Until that handler exists an invoke rejects; the renderer reads
@@ -157,13 +157,11 @@ const aiSubscription: SubscriptionApi = {
 
 const desktopApi: DesktopApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
+  getDocumentLocale: () => ipcRenderer.invoke(IPC_CHANNELS.documentLocale),
   fontFamilyInfo: (families) => ipcRenderer.invoke('app:font-family-info', families),
   openSourcePath: (path: string) => ipcRenderer.invoke('home:open-path', path),
   onLanguageChanged(handler) {
-    const listener = (
-      _event: Electron.IpcRendererEvent,
-      lang: 'zh' | 'en' | 'ja' | 'ko' | 'fr' | 'de' | 'es' | 'th' | 'id' | 'ru' | 'ar',
-    ) => handler(lang)
+    const listener = (_event: Electron.IpcRendererEvent, lang: 'en' | 'ko') => handler(lang)
     ipcRenderer.on('app:language-changed', listener)
     return () => ipcRenderer.removeListener('app:language-changed', listener)
   },
@@ -1099,11 +1097,11 @@ contextBridge.exposeInMainWorld(PROJECT_FOLDER_BRIDGE_KEY, projectFolderBridge(i
 // The shell's split panes: which pane this view is, and focus requests for it
 contextBridge.exposeInMainWorld('aiOfficeSplit', splitPaneBridge(ipcRenderer))
 
-// Off by default. e2e drivers launch the BUILT app with GENOFFICE_DEBUG_HOOKS=1
-// so the renderer exposes window.__genofficeDebug (see App.tsx) — the dev-only
+// Off by default. e2e drivers launch the BUILT app with SEUOFFICE_DEBUG_HOOKS=1
+// so the renderer exposes window.__seuofficeDebug (see App.tsx) — the dev-only
 // __univerAPI hook does not exist in production bundles.
-if (process.env.GENOFFICE_DEBUG_HOOKS === '1') {
-  contextBridge.exposeInMainWorld('__genofficeDebugHooks', true)
+if (process.env.SEUOFFICE_DEBUG_HOOKS === '1') {
+  contextBridge.exposeInMainWorld('__seuofficeDebugHooks', true)
 }
 
 // open documents dragged from the OS onto this tab as a new shell tab
@@ -1185,7 +1183,8 @@ function parseWorkbookFile(input: unknown): WorkbookFile {
       !Array.isArray(sheet.tables) ||
       !Array.isArray(sheet.comments) ||
       !Array.isArray(sheet.pivotRanges) ||
-      sheet.pivotRanges.length > 1_000
+      sheet.pivotRanges.length > 1_000 ||
+      (sheet.pivotsUnlocated !== undefined && !isNonnegativeInteger(sheet.pivotsUnlocated))
     ) {
       throw new Error('Invalid worksheet metadata.')
     }
@@ -1388,6 +1387,9 @@ function parseWorkbookFile(input: unknown): WorkbookFile {
       tables,
       comments,
       pivotRanges: sheet.pivotRanges.map(parseCellArea),
+      // Pivots the sidecar could not place: dropping this would tell the
+      // renderer that every pivot's output is known.
+      pivotsUnlocated: sheet.pivotsUnlocated ?? 0,
       pivotTables: parsePivotTableInfos(sheet.pivotTables ?? []),
       sparklines: parseSparklineGroups(sheet.sparklines ?? []),
       cellImages: parseCellImages(sheet.cellImages ?? []),

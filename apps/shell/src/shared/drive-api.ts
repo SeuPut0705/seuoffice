@@ -5,7 +5,7 @@
  * Tokens never cross this boundary.
  */
 
-import { DRIVE_AI_CHANNELS } from '@genoffice/electron-utils/drive-ai-channels'
+import { DRIVE_AI_CHANNELS } from '@seuoffice/electron-utils/drive-ai-channels'
 
 export const DRIVE_CHANNELS = {
   state: 'drive:state',

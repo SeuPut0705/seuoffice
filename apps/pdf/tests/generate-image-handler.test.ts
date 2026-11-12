@@ -2,7 +2,7 @@
 import { EventEmitter } from 'node:events'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
 import { PDF_CHANNELS } from '../src/shared/ipc'
 
 type Handler = (event: { sender: FakeContents }, ...args: any[]) => any
@@ -43,18 +43,18 @@ vi.mock('electron', () => ({
 }))
 
 const generateImageTool = vi.fn()
-vi.mock('@genoffice/ai-search', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-search')>()),
+vi.mock('@seuoffice/ai-search', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-search')>()),
   generateImageTool: (...args: unknown[]) => generateImageTool(...args),
 }))
 
 const sharedSubscriptionStatuses = vi.fn()
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   sharedSubscriptionStatuses: () => sharedSubscriptionStatuses(),
 }))
 
-import { abortMediaCalls } from '@genoffice/ai-search'
+import { abortMediaCalls } from '@seuoffice/ai-search'
 import { createPdfView } from '../src/main/pdf-main'
 
 const STATUSES: SubscriptionStatusMap = {

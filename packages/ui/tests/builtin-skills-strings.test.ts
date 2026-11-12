@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { LANGS, type Lang } from '@genoffice/i18n'
+import { LANGS, type Lang } from '@seuoffice/i18n'
 import {
   BUILTIN_SKILL_NAMES,
   BUILTIN_SKILL_STRINGS,
@@ -11,16 +11,15 @@ import {
   type BuiltinSkillStringKey,
 } from '../src/strings-builtin-skills'
 
-const KEYS = Object.keys(BUILTIN_SKILL_STRINGS.zh) as BuiltinSkillStringKey[]
+const KEYS = Object.keys(BUILTIN_SKILL_STRINGS.en) as BuiltinSkillStringKey[]
 
 /** Languages written in another script: a value equal to the English one is an untranslated copy */
-const NON_LATIN: readonly Lang[] = ['zh', 'ja', 'ko', 'th', 'ru', 'ar', 'he', 'hi', 'zh-TW']
+const NON_LATIN: readonly Lang[] = ['ko']
 
 const MANIFEST = join(__dirname, '../../../apps/shell/resources/builtin-skills/builtin-skills.json')
 
 describe('BUILTIN_SKILL_STRINGS', () => {
-  it('covers all 21 ui languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('has a dictionary for each ui language', () => {
     expect(Object.keys(BUILTIN_SKILL_STRINGS).sort()).toEqual([...LANGS].sort())
   })
 

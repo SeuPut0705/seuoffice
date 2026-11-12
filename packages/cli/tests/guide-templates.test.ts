@@ -1,8 +1,8 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
-import { PRODUCT_NAME } from '@genoffice/i18n'
-import { listSlideTemplates, stylePalette } from '@genoffice/pipelines/slides'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
+import { listSlideTemplates, stylePalette } from '@seuoffice/pipelines/slides'
 import { defaultRegistry } from '../src/cli'
 import { loadCatalog } from '../src/commands/guide'
 import { createContext, disposeContext, type McpContext } from '../src/mcp/run'
@@ -130,7 +130,7 @@ describe('guide slides templates over MCP', () => {
   beforeAll(async () => {
     ctx = createContext({
       cwd: tempDir(),
-      env: { ...process.env, GENOFFICE_AUDIT_LOG: 'off' },
+      env: { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' },
       log: () => {},
     })
     const server = await createMcpServer(ctx, { registry, compactSchemas: true })
@@ -176,13 +176,13 @@ describe('guide slides templates over MCP', () => {
   it('serves the list and every template as resources', async () => {
     const { resources } = await client.listResources()
     const uris = resources.map((r) => r.uri)
-    expect(uris).toContain('ieumoffice://guide/slides/templates')
-    for (const t of templates) expect(uris).toContain(`ieumoffice://guide/slides/templates/${t.id}`)
+    expect(uris).toContain('seuoffice://guide/slides/templates')
+    for (const t of templates) expect(uris).toContain(`seuoffice://guide/slides/templates/${t.id}`)
     const t = templates[2]!
-    const read = await client.readResource({ uri: `ieumoffice://guide/slides/templates/${t.id}` })
+    const read = await client.readResource({ uri: `seuoffice://guide/slides/templates/${t.id}` })
     const body = (read.contents[0] as { text: string }).text
     expect(body.startsWith(t.styleSheet)).toBe(true)
-    const listed = await client.readResource({ uri: 'ieumoffice://guide/slides/templates' })
+    const listed = await client.readResource({ uri: 'seuoffice://guide/slides/templates' })
     expect((listed.contents[0] as { text: string }).text).toContain(`${t.id} `)
   })
 })

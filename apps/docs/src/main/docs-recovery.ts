@@ -1,6 +1,6 @@
 /**
  * Crash-recovery bookkeeping of the Word editor on top of the shared recovery
- * store (`@genoffice/electron-utils`).
+ * store (`@seuoffice/electron-utils`).
  *
  * Copies stay where earlier versions put them: `<userData>/docs-autosave`,
  * named sha1(path)[0..16] plus `.docx` (`.odt` for an ODT document), so a copy
@@ -29,7 +29,7 @@ import {
   type RecoveryUntitledIdentity,
   isUntitledIdentity,
   newUntitledRecoveryId,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type { BrowserWindow } from 'electron'
 
 /** how the last close check of a tab ended */

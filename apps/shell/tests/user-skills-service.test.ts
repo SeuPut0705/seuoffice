@@ -11,7 +11,7 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { parseSkillMd } from '@genoffice/ai-provider'
+import { parseSkillMd } from '@seuoffice/ai-provider'
 import { readAppSettings, writeAppSetting } from '../src/main/app-settings'
 import { builtinSkillsDirFor } from '../src/main/user-skills/builtin-dir'
 import {
@@ -33,7 +33,7 @@ let settingsPath: string
 let trash: ReturnType<typeof vi.fn>
 let service: UserSkillsService
 
-const appDir = () => join(home, '.ieumoffice', 'skills')
+const appDir = () => join(home, '.seuoffice', 'skills')
 
 function skill(dir: string, name: string, description: string, extra = '', body = 'Do it.\n') {
   mkdirSync(dir, { recursive: true })
@@ -241,7 +241,7 @@ describe('saving skills', () => {
       reason: 'bad-name',
       problem: 'characters',
     })
-    expect(await service.saveFromCard({ ...card, name: 'ieumoffice' })).toMatchObject({
+    expect(await service.saveFromCard({ ...card, name: 'seuoffice' })).toMatchObject({
       problem: 'reserved',
     })
     expect(await service.saveFromCard({ ...card, description: ' ' })).toMatchObject({

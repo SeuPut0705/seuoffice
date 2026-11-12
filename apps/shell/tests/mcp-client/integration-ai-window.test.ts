@@ -31,12 +31,12 @@ import {
   type McpServerView,
   type McpToolsBridgeLike,
   type McpWindowState,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import {
   createSubscriptionChildRegistry,
   type SubscriptionChildRegistry,
-} from '@genoffice/ai-provider/subscription'
-import { MCP_TOOLS_CHANNELS } from '@genoffice/electron-utils/mcp-tools-channels'
+} from '@seuoffice/ai-provider/subscription'
+import { MCP_TOOLS_CHANNELS } from '@seuoffice/electron-utils/mcp-tools-channels'
 import { createMcpHub, redirectSafeFetch, type McpHub } from '../../src/main/mcp-client/hub'
 import { registerMcpHubIpc, type McpIpcEvent } from '../../src/main/mcp-client/hub-ipc'
 import { createLocalMcpConnection } from '../../src/main/mcp-client/local'

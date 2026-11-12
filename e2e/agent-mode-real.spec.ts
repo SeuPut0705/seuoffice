@@ -206,7 +206,7 @@ test('Claude Code: edits an open document, asks before a command, ends on close'
       .locator('.agent-input')
       .fill(
         'Do exactly these two things, then answer in one short sentence. ' +
-          '1) With the ieumoffice-editor tools, add one new paragraph with exactly the text AGENT-E2E-CLAUDE at the end of the open Word document report.docx. ' +
+          '1) With the seuoffice-editor tools, add one new paragraph with exactly the text AGENT-E2E-CLAUDE at the end of the open Word document report.docx. ' +
           "2) Run this shell command in the project folder: node -e \"require('fs').writeFileSync('agent-cmd.txt','ok')\"",
       )
     await agent.getByRole('button', { name: 'Send' }).click()
@@ -265,7 +265,7 @@ test('Codex: edits an open document, keeps allowed commands in its sandbox, ends
       .locator('.agent-input')
       .fill(
         'Do exactly these two things, then answer in one short sentence. ' +
-          '1) With the ieumoffice-editor tools, add one new paragraph with exactly the text AGENT-E2E-CODEX at the end of the open Word document report.docx. ' +
+          '1) With the seuoffice-editor tools, add one new paragraph with exactly the text AGENT-E2E-CODEX at the end of the open Word document report.docx. ' +
           '2) Run this command in the project folder: cmd /c "echo ok> codex-cmd.txt" ' +
           `3) Run this command: cmd /c "echo x> ${outside}" ` +
           'If a command fails, do not retry it in another form; just say so.',
@@ -377,7 +377,7 @@ test('Codex: edits an open workbook and deck, and the new file opens in a tab', 
     await agent
       .locator('.agent-input')
       .fill(
-        'Do exactly these three things with the ieumoffice-editor tools and your file editing tool, then answer in one short sentence. ' +
+        'Do exactly these three things with the seuoffice-editor tools and your file editing tool, then answer in one short sentence. ' +
           '1) In the open workbook data.xlsx, set cell A1 of the first sheet to the text AGENT-E2E-SHEET. ' +
           '2) In the open presentation deck.pptx, add a text box with exactly the text AGENT-E2E-SLIDE to the first slide. ' +
           '3) Create a new file notes.md in the project folder containing the line AGENT-E2E-NOTE, with your file editing tool (not a shell command).',

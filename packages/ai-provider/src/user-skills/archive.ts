@@ -7,7 +7,7 @@
  */
 import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-import { assertZipInflatesWithinLimits, type ZipLimits } from '@genoffice/zip-gate'
+import { assertZipInflatesWithinLimits, type ZipLimits } from '@seuoffice/zip-gate'
 import JSZip from 'jszip'
 import { MAX_USER_SKILL_BYTES } from './constants'
 import { SkillImportError } from './errors'

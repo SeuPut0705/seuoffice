@@ -88,7 +88,7 @@ let dir: string
 let book: string
 
 beforeEach(async () => {
-  dir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-links-'))
+  dir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-links-'))
   book = join(dir, 'received.xlsx')
   await writeLinkedWorkbook(book, [UNC_TARGET, FILE_HOST_TARGET])
 })
@@ -203,9 +203,9 @@ describe('sheet_links `out` follows the output rules of the other writing tools'
   })
 
   it('refuses a folder outside the allowed roots', async () => {
-    const elsewhere = await mkdtemp(join(tmpdir(), 'genoffice-mcp-elsewhere-'))
+    const elsewhere = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-elsewhere-'))
     try {
-      vi.stubEnv('GENOFFICE_ALLOWED_ROOTS', dir)
+      vi.stubEnv('SEUOFFICE_ALLOWED_ROOTS', dir)
       const out = join(elsewhere, 'severed.xlsx')
       await expect(sheetLinks({ path: book, break: [1], out })).rejects.toThrow(/refusing to write/)
       expect(existsSync(out)).toBe(false)

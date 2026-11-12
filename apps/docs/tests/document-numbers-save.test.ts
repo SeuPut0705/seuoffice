@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
-import { buildBlankDocx, parseDocx, saveDocx, type ParsedDocFull } from '@genoffice/docx-engine'
+import { buildBlankDocx, parseDocx, saveDocx, type ParsedDocFull } from '@seuoffice/docx-engine'
 import { insertTableAt } from '../src/renderer/components/ribbon-tabs'
 import { insertPictureAtSelection } from '../src/renderer/editor/insert-picture'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
@@ -77,6 +77,28 @@ describe('numbers from the document on the save path', () => {
     expect(sizes(reopened)).toHaveLength(2)
     expect(sizes(reopened)[1]).toEqual([96, 96, 0])
   })
+
+  it.each([
+    ['a width that is not a number', { imageWidthPx: 'abc' }],
+    ['a height that is not a number', { imageHeightPx: 'abc' }],
+    ['an infinite width', { imageWidthPx: Infinity }],
+  ] as const)(
+    'a copy of a picture with %s from a peer keeps the size of the picture in the file',
+    async (_name, attrs) => {
+      const { editor, parsed } = await open(
+        await buildDocx({ bodyXml: imagePara('952500'), withImage: true }),
+      )
+      const json = editor.getJSON() as PmNode
+      const original = (json.content as PmNode[])[0]!
+      const copy = structuredClone(original)
+      Object.assign(copy.attrs!, attrs)
+      json.content = [original, copy]
+      expect(sizes(await save(parsed, json))).toEqual([
+        [100, 50, 0],
+        [100, 50, 0],
+      ])
+    },
+  )
 
   it.each([
     ['an infinite rotation', { imageRotDeg: Infinity }, [120, 80, 0]],

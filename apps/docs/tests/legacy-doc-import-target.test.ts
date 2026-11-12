@@ -49,7 +49,7 @@ vi.mock('electron', () => ({
     getPath: (name: string) => join(state.root, name),
     getAppPath: () => state.root,
     getVersion: () => '0.1',
-    getName: () => 'GenOffice',
+    getName: () => 'SeuOffice',
     on: vi.fn(),
   },
   BrowserWindow: class {
@@ -87,7 +87,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   vi.resetModules()
-  state.root = mkdtempSync(join(tmpdir(), 'genoffice-doc-import-'))
+  state.root = mkdtempSync(join(tmpdir(), 'seuoffice-doc-import-'))
   for (const dir of ['userData', 'documents', 'work']) mkdirSync(join(state.root, dir))
   // registerDocsIpc resolves the shipped template fonts under the packaged resources folder
   Object.defineProperty(process, 'resourcesPath', { value: state.root, configurable: true })

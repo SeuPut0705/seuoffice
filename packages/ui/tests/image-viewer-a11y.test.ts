@@ -4,7 +4,7 @@ import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { ImageViewer, type ImageViewerLabels } from '../src/image-viewer'
 import { IMAGE_VIEWER_TITLES } from '../src/strings-image-viewer'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 
 const LABELS: ImageViewerLabels = {
   zoomIn: 'Zoom in',
@@ -72,10 +72,8 @@ describe('shared ImageViewer modal focus', () => {
   })
 
   it('localizes the dialog name', () => {
-    mountViewer('zh')
-    expect(dialog(host).getAttribute('aria-label')).toBe('\u56fe\u7247\u67e5\u770b\u5668')
-    mountViewer('ja')
-    expect(dialog(host).getAttribute('aria-label')).toBe(IMAGE_VIEWER_TITLES.ja)
+    mountViewer('ko')
+    expect(dialog(host).getAttribute('aria-label')).toBe(IMAGE_VIEWER_TITLES.ko)
   })
 
   it('names the dialog in every supported language', () => {

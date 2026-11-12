@@ -24,7 +24,7 @@ import {
   useSyncExternalStore,
 } from 'react'
 import type { ReactElement } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   highlightJobParts,
   startHighlightJob,

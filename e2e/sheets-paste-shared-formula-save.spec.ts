@@ -6,8 +6,8 @@ import { join } from 'node:path'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl } from './helpers'
 import { PRODUCT_NAME } from '../packages/i18n/src/product'
 
-// the preload exposes window.__genofficeDebug only under this env var
-process.env.GENOFFICE_DEBUG_HOOKS = '1'
+// the preload exposes window.__seuofficeDebug only under this env var
+process.env.SEUOFFICE_DEBUG_HOOKS = '1'
 
 /**
  * Regression for "tile-pasted cells vanish after save" (user
@@ -18,7 +18,7 @@ process.env.GENOFFICE_DEBUG_HOOKS = '1'
  */
 test.describe('sheets: tiled paste of formulas survives save', () => {
   test('followers keep their (shifted) formula in the saved xlsx', async () => {
-    const scratch = await mkdtemp(join(tmpdir(), 'genoffice-paste-save-'))
+    const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-paste-save-'))
     const launched = await launchShell({
       onboardingSeen: true,
       videoDir: 'sheets-paste-shared-formula-save',
@@ -58,7 +58,7 @@ test.describe('sheets: tiled paste of formulas survives save', () => {
 
       // source row A1:C1: two values and a formula referencing the row
       await sheets.evaluate(async () => {
-        const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+        const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
           univerAPI: {
             getActiveWorkbook(): {
               getActiveSheet(): {
@@ -81,7 +81,7 @@ test.describe('sheets: tiled paste of formulas survives save', () => {
 
       // tile-paste into A2:C3 — row 3's formula cell becomes an si follower
       await sheets.evaluate(() => {
-        const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+        const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
           univerAPI: {
             getActiveWorkbook(): {
               getActiveSheet(): {

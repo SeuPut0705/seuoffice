@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { OPENROUTER_FREE_MODELS, normalizeAiSettings } from '@genoffice/ai-provider/browser'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
+import { OPENROUTER_FREE_MODELS, normalizeAiSettings } from '@seuoffice/ai-provider/browser'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
 import { FREE_AI_IDLE, freeAiCardView } from '../src/renderer/src/free-ai-cards'
 
 function settings(patch: (s: AiSettings) => void = () => {}): AiSettings {

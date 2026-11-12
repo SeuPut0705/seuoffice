@@ -1,5 +1,5 @@
 import React, { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import {
   docFileName,
   docMentionFirstRow,

@@ -88,7 +88,7 @@ async function cellA1Value(page: Page): Promise<unknown> {
   return page.evaluate(() => {
     const api = (
       window as unknown as {
-        __genofficeDebug: {
+        __seuofficeDebug: {
           univerAPI: {
             getActiveWorkbook(): {
               getActiveSheet(): { getRange(a: string): { getValue(): unknown } }
@@ -96,7 +96,7 @@ async function cellA1Value(page: Page): Promise<unknown> {
           }
         }
       }
-    ).__genofficeDebug.univerAPI
+    ).__seuofficeDebug.univerAPI
     return api.getActiveWorkbook()?.getActiveSheet()?.getRange('A1')?.getValue() ?? null
   })
 }
@@ -124,7 +124,7 @@ async function activeRangeNotation(page: Page): Promise<string | null> {
   return page.evaluate(() => {
     const api = (
       window as unknown as {
-        __genofficeDebug?: {
+        __seuofficeDebug?: {
           univerAPI?: {
             getActiveWorkbook?: () => {
               getActiveSheet?: () => {
@@ -134,7 +134,7 @@ async function activeRangeNotation(page: Page): Promise<string | null> {
           }
         }
       }
-    ).__genofficeDebug?.univerAPI
+    ).__seuofficeDebug?.univerAPI
     return (
       api?.getActiveWorkbook?.()?.getActiveSheet?.()?.getActiveRange?.()?.getA1Notation?.() ?? null
     )
@@ -174,7 +174,7 @@ async function waitForSpareViewReady(app: ElectronApplication): Promise<number> 
           )
           if (!view || view.getVisible() || view.webContents.isLoading()) return null
           const mounted = await view.webContents.executeJavaScript(`
-              window.__genofficeSpareViewReady?.() === true &&
+              window.__seuofficeSpareViewReady?.() === true &&
               document.querySelector('#univer-container canvas') !== null &&
               document.querySelector('#univer-container [contenteditable="true"]') !== null
             `)
@@ -192,7 +192,7 @@ async function waitForSpareViewReady(app: ElectronApplication): Promise<number> 
 }
 
 test('docs: typing works immediately after opening a file from Home', async () => {
-  const scratch = await mkdtemp(join(tmpdir(), 'genoffice-openfocus-e2e-'))
+  const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-openfocus-e2e-'))
   const docx = join(scratch, 'open-focus.docx')
   await copyFile(DOCX, docx)
 
@@ -214,7 +214,7 @@ test('docs: typing works immediately after opening a file from Home', async () =
 })
 
 test('sheets: typing works when a spare view opens the next workbook', async () => {
-  const scratch = await mkdtemp(join(tmpdir(), 'genoffice-openfocus-e2e-'))
+  const scratch = await mkdtemp(join(tmpdir(), 'seuoffice-openfocus-e2e-'))
   const firstXlsx = join(scratch, 'first.xlsx')
   const secondXlsx = join(scratch, 'second.xlsx')
   await copyFile(XLSX, firstXlsx)
@@ -224,7 +224,7 @@ test('sheets: typing works when a spare view opens the next workbook', async () 
     onboardingSeen: true,
     videoDir: 'open-focus-sheets',
     // Keep prewarming enabled: the focus bug only shows when a spare is reused.
-    env: { GENOFFICE_DEBUG_HOOKS: '1', GENOFFICE_NO_SPARE_VIEW: '' },
+    env: { SEUOFFICE_DEBUG_HOOKS: '1', SEUOFFICE_NO_SPARE_VIEW: '' },
   })
   try {
     await openFromHome(launched.app, launched.page, firstXlsx)
@@ -238,7 +238,7 @@ test('sheets: typing works when a spare view opens the next workbook', async () 
     await openFromHome(launched.app, launched.page, secondXlsx)
     await sheets.waitForFunction(
       () =>
-        (window as unknown as { __genofficeDebug?: { univerAPI?: unknown } }).__genofficeDebug
+        (window as unknown as { __seuofficeDebug?: { univerAPI?: unknown } }).__seuofficeDebug
           ?.univerAPI,
       null,
       { timeout: 60_000 },
@@ -318,9 +318,9 @@ test('sheets: typing works when a spare view opens the next workbook', async () 
       const focusCtx = await sheets.evaluate(() => {
         const api = (
           window as unknown as {
-            __genofficeDebug?: { focusContext?: () => Record<string, unknown> }
+            __seuofficeDebug?: { focusContext?: () => Record<string, unknown> }
           }
-        ).__genofficeDebug
+        ).__seuofficeDebug
         return api?.focusContext?.() ?? null
       })
       await sheets.keyboard.press('Enter')

@@ -127,9 +127,9 @@ async function connect(port: number) {
 test.describe('MCP sheet values and addressing', () => {
   test('a repeating formula stays a number in the result, the read and the file', async () => {
     const port = await freeMcpPort()
-    const outDir = await mkdtemp(join(tmpdir(), 'genoffice-sheet-values-'))
+    const outDir = await mkdtemp(join(tmpdir(), 'seuoffice-sheet-values-'))
     const outFile = join(outDir, 'values.xlsx')
-    const userDataDir = await mkdtemp(join(tmpdir(), 'genoffice-sheet-values-userdata-'))
+    const userDataDir = await mkdtemp(join(tmpdir(), 'seuoffice-sheet-values-userdata-'))
     // seed settings that skip onboarding and turn MCP on (launchShell only
     // writes its own file when onboardingSeen/settings are passed)
     const { writeFile } = await import('node:fs/promises')
@@ -201,7 +201,7 @@ test.describe('MCP sheet values and addressing', () => {
 
   test('addresses worksheets by name after a reopen (ids do not survive)', async () => {
     const port = await freeMcpPort()
-    const outDir = await mkdtemp(join(tmpdir(), 'genoffice-sheet-names-'))
+    const outDir = await mkdtemp(join(tmpdir(), 'seuoffice-sheet-names-'))
     const workbookPath = join(outDir, 'two-sheets.xlsx')
     // build a two-sheet workbook with the repo's CLI, the way a user's file exists
     const { execFileSync } = await import('node:child_process')
@@ -219,7 +219,7 @@ test.describe('MCP sheet values and addressing', () => {
     execFileSync(
       process.execPath,
       [
-        join(APP_ROOT, 'packages', 'cli', 'dist', 'genoffice.cjs'),
+        join(APP_ROOT, 'packages', 'cli', 'dist', 'seuoffice.cjs'),
         'create',
         '--type',
         'xlsx',
@@ -232,7 +232,7 @@ test.describe('MCP sheet values and addressing', () => {
     )
     expect(existsSync(workbookPath)).toBe(true)
 
-    const userDataDir = await mkdtemp(join(tmpdir(), 'genoffice-sheet-names-userdata-'))
+    const userDataDir = await mkdtemp(join(tmpdir(), 'seuoffice-sheet-names-userdata-'))
     await writeFile(
       join(userDataDir, 'app-settings.json'),
       JSON.stringify({ onboardingSeen: true, mcpEnabled: true, mcpPort: port }),
@@ -240,7 +240,7 @@ test.describe('MCP sheet values and addressing', () => {
     const launched = await launchShell({
       videoDir: 'mcp-sheet-names',
       userDataDir,
-      env: { GENOFFICE_DEBUG_HOOKS: '1' },
+      env: { SEUOFFICE_DEBUG_HOOKS: '1' },
     })
     const { app, page } = launched
     try {
@@ -249,7 +249,7 @@ test.describe('MCP sheet values and addressing', () => {
 
       // open the user's file through the app's own routing — NOT a session,
       // so its sheet ids are whatever that open produced
-      const opened = await call('open_in_genoffice', { path: workbookPath })
+      const opened = await call('open_in_seuoffice', { path: workbookPath })
       expect(opened.isError, opened.text).toBeFalsy()
       const editorTab = page.locator('.tab-bar .tab-item:not(.tab-home)')
       await expect(editorTab).toHaveCount(1)
@@ -259,7 +259,7 @@ test.describe('MCP sheet values and addressing', () => {
         editorPage.evaluate(() => {
           const api = (
             window as unknown as {
-              __genofficeDebug?: {
+              __seuofficeDebug?: {
                 univerAPI?: {
                   getActiveWorkbook(): {
                     getActiveSheet(): { getSheetName(): string } | null
@@ -267,7 +267,7 @@ test.describe('MCP sheet values and addressing', () => {
                 }
               }
             }
-          ).__genofficeDebug?.univerAPI
+          ).__seuofficeDebug?.univerAPI
           return api?.getActiveWorkbook()?.getActiveSheet()?.getSheetName() ?? null
         })
 

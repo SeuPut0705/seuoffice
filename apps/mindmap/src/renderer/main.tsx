@@ -1,13 +1,13 @@
 import { createRoot } from 'react-dom/client'
-import { htmlDir, htmlLang, type Lang } from '@genoffice/i18n'
+import { htmlDir, htmlLang, type Lang } from '@seuoffice/i18n'
 import App from './App'
 import { LocaleProvider } from './i18n/locale'
 import type { MindmapAiApi, UiTheme } from '../shared/ipc'
-import { applyAiPanelPrefs, installScreenTips } from '@genoffice/ui'
-import '@genoffice/ui/tokens.css'
-import '@genoffice/ui/screentip.css'
-import '@genoffice/ui/dropdown.css'
-import '@genoffice/ui/color-picker.css'
+import { applyAiPanelPrefs, installScreenTips } from '@seuoffice/ui'
+import '@seuoffice/ui/tokens.css'
+import '@seuoffice/ui/screentip.css'
+import '@seuoffice/ui/dropdown.css'
+import '@seuoffice/ui/color-picker.css'
 import 'mind-elixir/style.css'
 import './styles.css'
 import './map.css'
@@ -21,7 +21,7 @@ function applyTheme(theme: UiTheme): void {
 
 void (async () => {
   const [lang, theme] = await Promise.all([
-    window.mindmapApi.getLanguage().catch(() => 'zh' as const),
+    window.mindmapApi.getLanguage().catch(() => 'en' as const),
     window.mindmapApi.getTheme().catch(() => 'system' as const),
   ])
   document.documentElement.lang = htmlLang(lang as Lang)

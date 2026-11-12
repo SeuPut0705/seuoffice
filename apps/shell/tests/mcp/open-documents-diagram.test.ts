@@ -127,8 +127,8 @@ const fixtures = join(__dirname, '../../../../packages/drawio-model/tests/fixtur
 let dir: string
 let saveDir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-mcp-diagram-'))
-  saveDir = mkdtempSync(join(tmpdir(), 'genoffice-mcp-diagram-default-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-mcp-diagram-'))
+  saveDir = mkdtempSync(join(tmpdir(), 'seuoffice-mcp-diagram-default-'))
   configureDiagramRuntime({
     preloadPath: join(dir, 'out', 'preload', 'index.js'),
     rendererFile: join(dir, 'out', 'renderer', 'index.html'),

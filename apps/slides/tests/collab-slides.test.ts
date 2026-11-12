@@ -45,8 +45,8 @@ import {
   type OpenedPptx,
   type SlideElement,
   type TextElement,
-} from '@genoffice/pptx-engine'
-import { runTxn, type EditParagraph } from '@genoffice/pptx-ops'
+} from '@seuoffice/pptx-engine'
+import { runTxn, type EditParagraph } from '@seuoffice/pptx-ops'
 // the kit from its source: this package's vitest config has no seuoffice-source condition
 import { simulate, type SimulatedEditor } from '../../../packages/collab/src/conformance/index'
 import { buildAllRenderSlides, type Session } from '../src/main/session-state'

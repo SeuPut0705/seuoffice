@@ -13,8 +13,9 @@ import {
   mindMapToMermaid,
   parseMindMapTree,
   wrapLabel,
-} from '@genoffice/agent-core/mind-map'
-import type { MindMapTreeNode } from '@genoffice/agent-core'
+} from '@seuoffice/agent-core/mind-map'
+import type { MindMapTreeNode } from '@seuoffice/agent-core'
+import { t } from '../src/renderer/i18n/locale'
 
 // Undestroyed views leave DOMObserver flush timers that fire after jsdom teardown
 // ("document is not defined" unhandled error) — destroy every editor we create.
@@ -399,7 +400,7 @@ describe('generate_mindmap tool', () => {
     )
     expect(exec.isError).toBeUndefined()
     expect(exec.mutated).toBe(false)
-    expect(exec.summary).toBe('\u751F\u6210\u601D\u7EF4\u5BFC\u56FE')
+    expect(exec.summary).toBe(t('aiToolMindMap'))
     expect(exec.display?.kind).toBe('mindmap')
     expect(exec.display?.tree?.label).toBe('Quarterly Report')
     expect(exec.output).toContain('4 nodes')

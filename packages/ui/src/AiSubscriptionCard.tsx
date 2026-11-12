@@ -1,12 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   AiProviderChoice,
   AiSubscriptionProviderId,
   AiSubscriptionStatus,
   AiSubscriptionStatuses,
   SubscriptionLoginMode,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   AI_SIGNING_IN_STALLED_MS,
   aiConnectPromptView,

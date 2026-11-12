@@ -16,7 +16,7 @@
  * entries.
  */
 import type { CustomScheme } from 'electron'
-import { normalizeZipPath, type EpubBook } from '@genoffice/epub-engine'
+import { normalizeZipPath, type EpubBook } from '@seuoffice/epub-engine'
 import { EPUB_ASSET_SCHEME } from '../shared/ipc'
 
 /** Secure and standard: a secure renderer page may load pictures and fonts from it. */

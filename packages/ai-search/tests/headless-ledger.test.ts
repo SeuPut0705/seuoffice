@@ -1,7 +1,7 @@
 import { existsSync, readFileSync, readdirSync, utimesSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { AiRunError } from '@genoffice/ai-provider'
+import { AiRunError } from '@seuoffice/ai-provider'
 import {
   HEADLESS_LEDGER_FILE,
   HEADLESS_LOCK_FILE,

@@ -21,7 +21,7 @@ import {
   type GeneratedBlock,
   type ParaFormat,
   type Run,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import {
   COLOR_BY_INDEX,
   characterFormattingOf,

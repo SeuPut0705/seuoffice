@@ -15,7 +15,7 @@ import {
   type AiStreamChunk,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   aiRunBlockChunk,
   aiSettingsFromStored,

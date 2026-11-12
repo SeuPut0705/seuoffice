@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   navProjects: 'Projects',
   intro:
@@ -61,7 +59,7 @@ export const en = {
   undoFailed: 'Could not undo.',
   removeMemoryAria: 'Delete this memory: {text}',
   filesDesc:
-    'Files the AI can see in this project. Hidden files and the .ieumoffice folder are left out.',
+    'Files the AI can see in this project. Hidden files and the .seuoffice folder are left out.',
   filesEmpty: 'There are no files the AI can see.',
   filesLoadFailed: 'The file list could not be read.',
   filesCount: '{count} files',
@@ -88,4 +86,4 @@ export const en = {
   reloadFile: 'Reload',
   saveAnyway: 'Save anyway',
   openFileAria: 'Open in the app: {name}',
-} satisfies Record<keyof typeof zh, string>
+}

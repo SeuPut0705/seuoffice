@@ -1,10 +1,10 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   windowTitle: '에이전트',
   homeCardSub: '폴더에서 Claude Code·Codex로 일하기',
   intro:
-    '에이전트는 고른 폴더에서 Claude Code나 Codex를 실행합니다. 폴더 안의 파일을 읽고, 새 파일을 만들고, 스킬을 쓰고, 스크립트를 실행하고, GenOffice에 열린 문서를 고칠 수 있습니다.',
+    '에이전트는 고른 폴더에서 Claude Code나 Codex를 실행합니다. 폴더 안의 파일을 읽고, 새 파일을 만들고, 스킬을 쓰고, 스크립트를 실행하고, SeuOffice에 열린 문서를 고칠 수 있습니다.',
   folderLabel: '프로젝트 폴더',
   folderPick: '폴더 고르기…',
   folderNone: '고른 폴더가 없습니다',
@@ -34,7 +34,7 @@ export const ko = {
   warningCommands:
     '에이전트가 실행하는 명령은 파일을 바꾸고 인터넷을 쓸 수 있습니다. 남에게 받은 문서에는 숨은 지시가 들어 있을 수 있습니다.',
   warningRedaction:
-    'AI에게서 가린 부분은 GenOffice에 열린 문서에서만 가려집니다. 에이전트가 폴더에서 직접 읽는 파일은 그대로 보내집니다.',
+    'AI에게서 가린 부분은 SeuOffice에 열린 문서에서만 가려집니다. 에이전트가 폴더에서 직접 읽는 파일은 그대로 보내집니다.',
   warningUsage: '에이전트는 여러 단계로 일하므로 AI 창보다 구독 한도를 많이 씁니다.',
   warningAccept: '이해했습니다',
   start: '시작',
@@ -100,4 +100,4 @@ export const ko = {
   connOff: '이 앱에서 꺼 두었습니다. 설정 → AI에서 다시 쓸 수 있습니다.',
   errOffInApp:
     '이 프로그램을 이 앱에서 꺼 두어 더 보내지 않았습니다. 설정 → AI에서 다시 쓸 수 있습니다.',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

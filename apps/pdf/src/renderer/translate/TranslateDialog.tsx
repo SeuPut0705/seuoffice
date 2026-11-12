@@ -2,7 +2,7 @@
  * The document translation window (spec §8): the choices, then the
  * pre-start confirmation.
  *
- * - Choices: the target language (one of the 21 UI languages; the default is
+ * - Choices: the target language (one of the 21 target languages; the default is
  *   the UI language, or English when the document is in it), the pages, the
  *   output formats (translated PDF, Markdown, EPUB; several at once) and the
  *   bilingual option (Markdown and EPUB: each translation after its paragraph;
@@ -33,8 +33,8 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { ReactElement } from 'react'
-import type { AiProviderId, AiSettings } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
+import type { AiProviderId, AiSettings } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
 import {
   AiConnectPrompt,
   AiFirstConnectionNotice,
@@ -42,7 +42,7 @@ import {
   aiProviderDisplayName,
   useAiSendGate,
   type AiModelPickerBridge,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { applyStoredAiReadings } from '../../../../../packages/pdf-structure/src/ai-read'
 import {
   estimateTranslationJob,

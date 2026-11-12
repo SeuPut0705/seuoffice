@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { generateStrings } from '../src/renderer/src/i18n/strings-generate'
 import { DEFAULT_GENERATE_PROMPTS } from '../src/shared/generate-default-prompts'
 
@@ -9,7 +9,7 @@ import { DEFAULT_GENERATE_PROMPTS } from '../src/shared/generate-default-prompts
  * Fixed by reading the source (index.ts needs a running Electron): the
  * generate path never reaches a provider, the shell wires it once, the tab
  * manager drops an untaken request with its tab, and every string exists in
- * all 21 languages.
+ * every language.
  */
 
 const src = (path: string) => readFileSync(fileURLToPath(new URL(path, import.meta.url)), 'utf8')
@@ -30,7 +30,7 @@ describe('no AI run starts from the generate path', () => {
     for (const path of GENERATE_MODULES) {
       const text = src(path)
       expect(text, path).not.toMatch(
-        /@genoffice\/ai-provider|@genoffice\/agent-core|@genoffice\/ai-search/,
+        /@seuoffice\/ai-provider|@seuoffice\/agent-core|@seuoffice\/ai-search/,
       )
       expect(text, path).not.toMatch(/['"]ai:|subscription/i)
     }
@@ -45,7 +45,7 @@ describe('no AI run starts from the generate path', () => {
   it('reads material text only through the redaction-aware reader', () => {
     const materials = src('../src/main/generate/materials.ts')
     expect(materials).toMatch(
-      /import \{[^}]*\bparseFileToText\b[^}]*\} from '@genoffice\/file-parse'/,
+      /import \{[^}]*\bparseFileToText\b[^}]*\} from '@seuoffice\/file-parse'/,
     )
     expect(materials).not.toMatch(/readFile\(/)
   })
@@ -81,10 +81,9 @@ describe('the shell wiring', () => {
 })
 
 describe('generate strings', () => {
-  const keys = Object.keys(generateStrings.zh).sort()
+  const keys = Object.keys(generateStrings.en).sort()
 
-  it('fills every key in all 21 languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('fills every key in every language', () => {
     for (const lang of LANGS) {
       const dict = generateStrings[lang] as Record<string, string>
       expect(Object.keys(dict).sort(), lang).toEqual(keys)

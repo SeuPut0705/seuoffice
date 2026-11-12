@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { isDocMentionPickable } from './doc-mention-model'
 import type { DocMentionGroup, DocMentionItem } from './doc-mention-types'
 import { docMentionText, type DocMentionStringKey } from './strings-doc-mention'

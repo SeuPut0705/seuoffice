@@ -4,7 +4,13 @@
 /// Values only, like the CSV import: colspan/rowspan become merges and `<br>`
 /// becomes a line break; styles and scripts are dropped.
 
-import { MAX_CSV_COLS, MAX_CSV_ROWS, decodeCsvBuffer, isNumericCell } from './csv-import'
+import {
+  MAX_CSV_COLS,
+  MAX_CSV_ROWS,
+  decodeCsvBuffer,
+  isNumericCell,
+  decoderFor,
+} from './csv-import'
 import { xlsxBufferFromSheets } from './csv-import-xlsx'
 
 /// A workbook with more cells than this would not be usable in the grid and
@@ -125,7 +131,7 @@ export function looksLikeHtmlWorkbook(head: Uint8Array): boolean {
 
 /// Reads the charset the page declares, then falls back to the CSV sniffing
 /// (BOM, strict UTF-8, then the legacy charsets Excel writes).
-export function decodeHtmlBuffer(bytes: Uint8Array, preferred?: string): string {
+export async function decodeHtmlBuffer(bytes: Uint8Array, preferred?: string): Promise<string> {
   const bom =
     (bytes[0] === 0xef && bytes[1] === 0xbb && bytes[2] === 0xbf) ||
     (bytes[0] === 0xff && bytes[1] === 0xfe) ||
@@ -135,7 +141,8 @@ export function decodeHtmlBuffer(bytes: Uint8Array, preferred?: string): string 
     const declared = /<meta\b[^>]*charset\s*=\s*["']?\s*([a-z0-9._:-]+)/i.exec(head)?.[1]
     if (declared !== undefined) {
       try {
-        const decoded = new TextDecoder(declared).decode(bytes)
+        const Decoder = await decoderFor(declared)
+        const decoded = new Decoder(declared).decode(bytes)
         // A wrong declaration (a UTF-8 page labelled euc-kr or the reverse)
         // shows up as replacement characters; let the sniffer try instead.
         if (!decoded.includes('\uFFFD')) return decoded

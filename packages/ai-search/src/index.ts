@@ -9,7 +9,8 @@
  * Without any key that leaves the free route: Parallel's Search MCP, then DuckDuckGo.
  */
 
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { keyedFetch } from '@seuoffice/ai-provider'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import {
   asRecord,
   isCopyrightHost,
@@ -319,7 +320,7 @@ async function parallelWebSearch(
     const raw: unknown[] = Array.isArray(data.results) ? data.results : []
     const results: WebSearchResult[] = []
     for (const item of raw) {
-      // v1 search has no result-count parameter, so GenOffice's limit is applied
+      // v1 search has no result-count parameter, so SeuOffice's limit is applied
       // here. Cut the loop off once the list is full instead of slicing the source
       // first: the URL check below drops entries, and slicing first would both
       // concatenate excerpts for results that are then thrown away and under-fill
@@ -749,7 +750,7 @@ async function duckWebSearch(query: string, maxResults: number): Promise<WebSear
   // DuckDuckGo HTML endpoint (lightweight, no key needed)
   const html = await fetchWithTimeout(
     `https://html.duckduckgo.com/html/?q=${encodeURIComponent(query)}`,
-    { headers: BROWSER_HEADERS, timeoutMs: FALLBACK_TIMEOUT_MS },
+    { headers: BROWSER_HEADERS, timeoutMs: FALLBACK_TIMEOUT_MS, keyless: true },
     async (resp) => {
       if (!resp.ok) throw new Error(`http ${resp.status}`)
       return await resp.text()
@@ -770,7 +771,7 @@ async function duckImageSearch(query: string, maxResults: number): Promise<Image
   // DuckDuckGo i.js needs a vqd token, so it takes two steps
   const tokenHtml = await fetchWithTimeout(
     `https://duckduckgo.com/?q=${encodeURIComponent(query)}`,
-    { headers: BROWSER_HEADERS, timeoutMs: FALLBACK_TIMEOUT_MS },
+    { headers: BROWSER_HEADERS, timeoutMs: FALLBACK_TIMEOUT_MS, keyless: true },
     async (resp) => {
       if (!resp.ok) throw new Error(`http ${resp.status}`)
       return await resp.text()
@@ -783,6 +784,7 @@ async function duckImageSearch(query: string, maxResults: number): Promise<Image
     {
       headers: { ...BROWSER_HEADERS, Referer: 'https://duckduckgo.com/' },
       timeoutMs: FALLBACK_TIMEOUT_MS,
+      keyless: true,
     },
     async (resp) => {
       if (!resp.ok) throw new Error(`http ${resp.status}`)
@@ -811,15 +813,26 @@ async function duckImageSearch(query: string, maxResults: number): Promise<Image
 
 // ── utils ───────────────────────────────────────────────────────────
 
+/**
+ * One request with a time limit. A search backend takes the person's key in a
+ * header of its own, as a Bearer token or in the body, so the request goes out
+ * through `keyedFetch` and ends at a redirect instead of repeating the key at
+ * the address it names. Only a call that says it carries none (`keyless`: the
+ * DuckDuckGo last resort) follows one.
+ */
 async function fetchWithTimeout<T>(
   url: string,
-  init: RequestInit & { timeoutMs?: number },
+  init: RequestInit & { timeoutMs?: number; keyless?: boolean },
   consume: (response: Response) => Promise<T>,
 ): Promise<T> {
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), init.timeoutMs ?? 15000)
   try {
-    const response = await fetch(url, { ...init, signal: controller.signal })
+    const request = { ...init, signal: controller.signal }
+    // the global fetch under both: a search that fails falls to the next backend, with no resend
+    const response = init.keyless
+      ? await fetch(url, request)
+      : await keyedFetch(url, request, undefined, fetch)
     return await consume(response)
   } finally {
     clearTimeout(timer)

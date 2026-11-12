@@ -1,5 +1,5 @@
-import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
-import { aiFetch } from '../fetch'
+import type { AgentMessage, AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
+import { AiRedirectRefusedError, keyedFetch } from '../fetch'
 import { httpBodyDetail } from '../http-error'
 import { opencodeSessionHeaders } from '../providers'
 import type { AiChatResponse, AiProviderConfig, AiTokenUsage } from '../types'
@@ -166,7 +166,7 @@ async function anthropicTurn(
   }
   let response: Response
   try {
-    response = await aiFetch(endpointUrl(baseUrl, 'v1/messages'), {
+    response = await keyedFetch(endpointUrl(baseUrl, 'v1/messages'), {
       method: 'POST',
       signal: wd.signal,
       headers: {
@@ -198,6 +198,8 @@ async function anthropicTurn(
       }),
     })
   } catch (e) {
+    // a refused redirect is the provider's answer, not a failed connection
+    if (e instanceof AiRedirectRefusedError) throw e
     // When fetch fails in the Electron main process, the real reason lives in `cause`
     const err = e as { message?: unknown; cause?: { code?: unknown; message?: unknown } } | null
     const causeText = err?.cause
@@ -337,7 +339,7 @@ export async function chatAnthropic(
   baseUrl = ANTHROPIC_BASE_URL,
   bodyExtras?: Record<string, unknown>,
 ): Promise<AiChatResponse> {
-  const response = await aiFetch(endpointUrl(baseUrl, 'v1/messages'), {
+  const response = await keyedFetch(endpointUrl(baseUrl, 'v1/messages'), {
     method: 'POST',
     signal: wd.signal,
     headers: {

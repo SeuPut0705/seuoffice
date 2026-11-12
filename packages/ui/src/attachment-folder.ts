@@ -1,9 +1,9 @@
 /**
  * Folders the app makes for attachments it fetched itself. The folder right
  * under one of these is a random or file id, meaningless to the person:
- * `<temp>/ieumoffice-drive-attach/<random>/name`, `<data>/drive-cache/<file id>/name`.
+ * `<temp>/seuoffice-drive-attach/<random>/name`, `<data>/drive-cache/<file id>/name`.
  */
-const APP_MADE_PARENTS: ReadonlySet<string> = new Set(['ieumoffice-drive-attach', 'drive-cache'])
+const APP_MADE_PARENTS: ReadonlySet<string> = new Set(['seuoffice-drive-attach', 'drive-cache'])
 
 const DRIVE_ROOT = /^[A-Za-z]:$/
 

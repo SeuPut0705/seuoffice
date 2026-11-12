@@ -38,7 +38,7 @@
  * timeline, a line from one main topic to the next with an arrowhead, drawn
  * apart as the arrowhead of a curve is.
  */
-import type { ThemeBranchShape } from '@genoffice/xmind-engine'
+import type { ThemeBranchShape } from '@seuoffice/xmind-engine'
 import type { BranchLineShape, LinePattern } from './style-values'
 
 /** The boxes the library hands a branch hook (pixels inside the element the path is drawn in). */

@@ -7,9 +7,10 @@ import {
   buildBlankDocx,
   parseDocx,
   saveDocx,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { executeTool } from '../src/renderer/ai/tools'
+import { t } from '../src/renderer/i18n/locale'
 
 /**
  * Guard tests for AI rich generation (tables / code blocks / quotes / TOC):
@@ -233,7 +234,7 @@ describe('insertToc command', () => {
       NUM_IDS,
     )
     expect(exec.isError).toBeFalsy()
-    expect(exec.output).toContain('目录')
+    expect(exec.output).toContain(t('aiCmdToc', { count: 2 }))
 
     const plan = pmDocToSavePlan(editor.getJSON() as PmNode, parsed.blocks)
     const saved = await saveDocx(parsed, plan.saveBlocks)

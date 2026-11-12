@@ -1,5 +1,5 @@
 import { parse, type DefaultTreeAdapterTypes as T } from 'parse5'
-import { sanitizeLabel } from '@genoffice/agent-core/redact-core'
+import { sanitizeLabel } from '@seuoffice/agent-core/redact-core'
 import { RedactionMarkError } from './redaction-error'
 
 /**

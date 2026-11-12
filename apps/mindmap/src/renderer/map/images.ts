@@ -17,7 +17,7 @@
  *
  * Object URLs are kept per entry and revoked when the store is destroyed.
  */
-import type { ViewImage } from '@genoffice/xmind-engine'
+import type { ViewImage } from '@seuoffice/xmind-engine'
 
 /** The folder of the archive pictures live in. */
 const RESOURCE_FOLDER = 'resources/'

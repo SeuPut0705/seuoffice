@@ -39,7 +39,7 @@
  * stopped job): a block without a result stays as it was and is reported.
  */
 import JSZip from 'jszip'
-import { easyExplanationLabel, type TranslationMode } from '@genoffice/pdf-structure'
+import { easyExplanationLabel, type TranslationMode } from '@seuoffice/pdf-structure'
 import { openChapter, type ChapterBlock, type OpenChapter } from '../blocks'
 import { encodeEntryText, type EpubTextEncoding } from '../encoding'
 import { ADOBE_FONT_OBFUSCATION, fontObfuscationKey, obfuscateFont } from '../fonts'

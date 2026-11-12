@@ -41,7 +41,7 @@ document.addEventListener('keydown', (e) => {
 
 test.describe('html editor: slide rail', () => {
   test('a deck gets a slide list, keeps its slide while text is typed and after a reload', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-html-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-html-'))
     const htmlPath = join(dir, 'deck.html')
     await writeFile(htmlPath, SOURCE)
 

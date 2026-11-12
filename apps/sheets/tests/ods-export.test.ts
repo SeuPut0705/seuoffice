@@ -11,10 +11,10 @@ import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSy
 import { readFile, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import { LANGS, setUiLang } from '@genoffice/i18n'
+import { LANGS, setUiLang } from '@seuoffice/i18n'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { IPC_CHANNELS } from '../src/shared/ipc-channels'
-import { serializeRedactionPart } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import { serializeRedactionPart } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { workbookSaveResultSchema } from '../src/shared/desktop-api'
 
 type Handler = (event: { sender: FakeContents }, ...args: unknown[]) => unknown
@@ -242,7 +242,7 @@ vi.mock('../src/main/xlsx-sidecar-client', () => ({
 }))
 
 // the archive writer is stubbed: it lands the bytes it read plus a mark
-vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
+vi.mock('@seuoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   saveWorkbookViaSidecar: async (request: { sourcePath: string; targetPath: string }) => {
     const bytes = await readFile(request.sourcePath)
@@ -251,7 +251,7 @@ vi.mock('@genoffice/xlsx-gateway/gateway/xlsx-package-io', async (importOriginal
   },
 }))
 
-vi.mock('@genoffice/electron-utils/office-encryption', async (importOriginal) => ({
+vi.mock('@seuoffice/electron-utils/office-encryption', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
   isEncryptedOfficeFile: () => true,
   unlockOfficeFile: async () => ({
@@ -261,8 +261,8 @@ vi.mock('@genoffice/electron-utils/office-encryption', async (importOriginal) =>
   }),
 }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
@@ -341,8 +341,8 @@ function exportOdsWithEdits(sessionId: string): unknown {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-ods-export-'))
-  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'genoffice-sheets-ods-export-user-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-ods-export-'))
+  userDataDirRef.value = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-ods-export-user-'))
   convertOdsCalls.length = 0
   saveDialogAnswers.length = 0
   saveDialogs.length = 0
@@ -457,7 +457,7 @@ describe('ODS export', () => {
   })
 
   it('defaults an untitled workbook to the untitled name', async () => {
-    const tempDir = mkdtempSync(join(tmpdir(), 'genoffice-sheets-ods-untitled-'))
+    const tempDir = mkdtempSync(join(tmpdir(), 'seuoffice-sheets-ods-untitled-'))
     try {
       const backing = join(tempDir, 'New Spreadsheet.xlsx')
       writeFileSync(backing, 'blank')
@@ -656,7 +656,7 @@ describe('ODS export', () => {
     expect(messageBoxes[0]?.detail).toMatch(/hide-from-AI marks.*: \?$/im)
   })
 
-  it('says it in each of the 21 languages', async () => {
+  it('says it in each language', async () => {
     redactionPart.text = serializeRedactionPart([
       {
         sheetName: 'Data',
@@ -677,8 +677,7 @@ describe('ODS export', () => {
       lines.add(line)
     }
     // a language without its own line would repeat another's
-    expect(LANGS).toHaveLength(21)
-    expect(lines.size).toBe(21)
+    expect(lines.size).toBe(LANGS.length)
   })
 
   it('never writes over the original .ods of a converted session', async () => {

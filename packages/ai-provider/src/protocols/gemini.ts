@@ -1,5 +1,5 @@
-import type { AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
-import { aiFetch } from '../fetch'
+import type { AgentMessage, AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
+import { keyedFetch } from '../fetch'
 import { httpBodyDetail } from '../http-error'
 import { opencodeSessionHeaders } from '../providers'
 import type { AiChatResponse, AiProviderConfig, AiTokenUsage } from '../types'
@@ -196,7 +196,7 @@ async function geminiTurn(
     cb.onActivity?.()
   }
   const url = endpointUrl(baseUrl, `models/${config.model}:streamGenerateContent`, '?alt=sse')
-  const response = await aiFetch(url, {
+  const response = await keyedFetch(url, {
     method: 'POST',
     signal: wd.signal,
     headers: {
@@ -311,7 +311,7 @@ export async function chatGemini(
   options: GeminiRequestOptions = {},
 ): Promise<AiChatResponse> {
   const url = endpointUrl(baseUrl, `models/${config.model}:generateContent`)
-  const response = await aiFetch(url, {
+  const response = await keyedFetch(url, {
     method: 'POST',
     signal: wd.signal,
     headers: {

@@ -1,3 +1,4 @@
+import { normalizeLang, type Lang } from '@seuoffice/i18n'
 import { receiveOpen } from './embed-channel'
 
 /** A document handed to this page through the embed channel */
@@ -43,7 +44,15 @@ export function editMode(): boolean {
   return new URLSearchParams(location.search).get('mode') === 'edit'
 }
 
-/** `?lang=`, Korean by default */
-export function webLanguage(): string {
+/**
+ * `?lang=` as the host wrote it; Korean when the host passes none. It names more
+ * languages than the UI has: what a document is drawn for follows this value.
+ */
+export function webRequestedLanguage(): string {
   return new URLSearchParams(location.search).get('lang') || 'ko'
+}
+
+/** `?lang=` as a UI language; Korean when the host passes none */
+export function webLanguage(): Lang {
+  return normalizeLang(webRequestedLanguage())
 }

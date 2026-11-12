@@ -5,7 +5,7 @@
  * edited).
  */
 import { describe, expect, it } from 'vitest'
-import { createI18n } from '@genoffice/i18n'
+import { createI18n } from '@seuoffice/i18n'
 import { strings } from '../src/renderer/i18n/strings'
 import {
   labelWithKey,

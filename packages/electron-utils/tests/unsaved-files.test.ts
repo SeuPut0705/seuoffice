@@ -16,7 +16,7 @@ let clean: string
 let closed: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-unsaved-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-unsaved-'))
   open = join(dir, 'plan.pptx')
   clean = join(dir, 'notes.md')
   closed = join(dir, 'closed.docx')
@@ -94,6 +94,6 @@ describe('files open with unsaved changes', () => {
     setOpenFilesSource(() => [{ filePath: open, dirty: true }])
     // a second bundled copy finds the source through the process-wide key
     const holder = globalThis as unknown as Record<symbol, unknown>
-    expect(typeof holder[Symbol.for('genoffice.open-files-source')]).toBe('function')
+    expect(typeof holder[Symbol.for('seuoffice.open-files-source')]).toBe('function')
   })
 })

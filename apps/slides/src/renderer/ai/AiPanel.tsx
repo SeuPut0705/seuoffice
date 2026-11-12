@@ -43,7 +43,7 @@ import {
   type ProjectMemoryLine,
   type SkillChipRef,
   type SkillUse,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import React, { useEffect, useRef, useState, useCallback } from 'react'
 import {
   AgentLoop,
@@ -55,10 +55,10 @@ import {
   windowMcpState,
   windowMcpUsableServers,
   toolStepLabel,
-} from '@genoffice/agent-core'
-import type { RenderSlide } from '@genoffice/pptx-render'
-import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@genoffice/ai-provider/browser'
-import { localContextLimit, localModelCapabilities } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/agent-core'
+import type { RenderSlide } from '@seuoffice/pptx-render'
+import type { AiSubscriptionProviderId, AiSubscriptionUsage } from '@seuoffice/ai-provider/browser'
+import { localContextLimit, localModelCapabilities } from '@seuoffice/ai-provider/browser'
 import type {
   AiSettings,
   AiToolCapabilities,
@@ -75,7 +75,7 @@ import {
   formatAttachmentSize,
   SentAttachments,
   truncateCardName,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   createSlidesSkill,
   type DeckAccess,
@@ -86,7 +86,7 @@ import { extractJsonObject, parseOutlineJson } from './outline-json'
 import { createDeckContextGate } from './deck-context-gate'
 import { buildPageSystemPrompt } from './page-system-prompt'
 import { defaultFontsPageNote, defaultFontsStyleNote } from './default-fonts'
-import { slidesAiFontRoles } from '@genoffice/ui/slides-ai-fonts'
+import { slidesAiFontRoles } from '@seuoffice/ui/slides-ai-fonts'
 import { templateSelectionState } from './template-selection-state'
 import { TemplateStartGallery } from './TemplateGallery'
 import { TemplatePicker } from './TemplatePicker'
@@ -141,12 +141,13 @@ import {
   useChatRunQueue,
   type AiScopeQuoteData,
   type AiTokenUsageView,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import sendEnterOn from '../assets/send-enter-on.png'
 import sendEnterOff from '../assets/send-enter-off.png'
 import sendStop from '../assets/send-stop.png'
 import attachIcon from '../assets/attach-icon.png'
 import { IconNewChat, IconSidebarCollapseLeft } from '../components/icons'
+import { isRtlLang } from '@seuoffice/i18n'
 
 /** Another editor's tool records on a reopened message, shown as one line */
 type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>
@@ -365,7 +366,7 @@ export function AiPanel({
 }: AiPanelProps) {
   const { t, lang } = useI18n()
   // Panel chrome follows the UI language; message text follows its own content (dir=auto below)
-  const isRtl = lang === 'ar' || lang === 'he'
+  const isRtl = isRtlLang(lang)
   const [input, setInput] = useState('')
   // Shared AI panel pref (Settings → General): the bespoke slides composer
   // must honor it like the shared AiComposer does.
@@ -1381,7 +1382,7 @@ export function AiPanel({
       // pptx with pptx-engine primitives — no HTML intermediate.
       // Settings › General fonts as title/body families (null for "auto"); read per generation
       getAiDefaultFonts: async () => {
-        const fonts = await window.slidesApi.getAiDefaultFonts?.(langRef.current)
+        const fonts = await window.slidesApi.getAiDefaultFonts?.()
         return fonts ? slidesAiFontRoles(fonts) : null
       },
       generatePageLocal: async (args) => {

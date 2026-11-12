@@ -2,7 +2,7 @@
  * draw.io's compressed page form: base64 of the raw deflate of
  * `encodeURIComponent(xml)`. The deflate itself is injected (`PageCodec`) so
  * this module stays usable in a renderer: Node callers use `nodePageCodec` from
- * `@genoffice/drawio-model/node`, a renderer can wrap the `pako` that draw.io
+ * `@seuoffice/drawio-model/node`, a renderer can wrap the `pako` that draw.io
  * already loads.
  */
 

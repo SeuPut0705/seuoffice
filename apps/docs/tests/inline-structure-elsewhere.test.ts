@@ -1,7 +1,7 @@
 import { Editor } from '@tiptap/core'
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
-import { parseDocx, saveDocx, type ParsedDocFull } from '@genoffice/docx-engine'
+import { parseDocx, saveDocx, type ParsedDocFull } from '@seuoffice/docx-engine'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import type { AiDocWriter } from '../src/renderer/ai/doc-writer'

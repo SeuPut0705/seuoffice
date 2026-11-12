@@ -2,9 +2,9 @@ import { statSync } from 'node:fs'
 import { mkdtemp, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { parseDocx } from '@genoffice/docx-engine'
-import { protectedCellsOf } from '@genoffice/odt-engine'
-import { openPptx } from '@genoffice/pptx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
+import { protectedCellsOf } from '@seuoffice/odt-engine'
+import { openPptx } from '@seuoffice/pptx-engine'
 import { assertOptionValues, flagString } from '../args'
 import { csvInfo } from '../formats/csv'
 import { hwpInfo } from '../formats/hwp'
@@ -141,7 +141,7 @@ async function describePptx(path: string): Promise<Description> {
 
 async function describeWorkbook(path: string): Promise<Description> {
   if (['xls', 'xlsb', 'ods'].includes(extension(path))) {
-    const directory = await mkdtemp(join(tmpdir(), 'ieumoffice-workbook-info-'))
+    const directory = await mkdtemp(join(tmpdir(), 'seuoffice-workbook-info-'))
     try {
       const converted = join(directory, 'workbook.xlsx')
       await convertLegacyWorkbook(path, converted)
@@ -172,8 +172,8 @@ async function describePdf(path: string, password?: string): Promise<Description
   }
 }
 
-function describeCsv(path: string): Description {
-  const info = csvInfo(readInput(path))
+async function describeCsv(path: string): Promise<Description> {
+  const info = await csvInfo(readInput(path))
   return {
     headline: `${info.rows} rows × ${info.columns} columns`,
     fields: { rows: info.rows, columns: info.columns, delimiter: info.delimiter },

@@ -229,3 +229,20 @@ describe('ink XML helpers', () => {
     )
   })
 })
+
+describe('an ink annotation placed past the int a position is', () => {
+  // inside the widest drawing coordinate, but wp:posOffset is an xsd:int: a
+  // number from the document must not stop the save
+  it.each([
+    ['x', { offsetXPx: 1e6 }],
+    ['y', { offsetYPx: -1e6 }],
+  ])('%s: the save goes on and the ink sits at the column edge', async (_axis, offset) => {
+    const doc = await parseDocx(await buildDocx({ bodyXml: TWO_PARAS }))
+    const saved = await saveDocx(doc, asOriginal(doc), { inks: [makeInk(0, offset)] })
+    const xml = await (await JSZip.loadAsync(saved)).file('word/document.xml')!.async('string')
+    const offsets = [...xml.matchAll(/<wp:posOffset>(-?\d+)<\/wp:posOffset>/g)].map((m) => m[1])
+    expect(offsets).toHaveLength(2)
+    expect(offsets).toContain('0')
+    expect(offsets.every((o) => Math.abs(Number(o)) <= 2147483647)).toBe(true)
+  })
+})

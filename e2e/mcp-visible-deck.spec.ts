@@ -92,9 +92,9 @@ async function waitForHealth(port: number, timeoutMs = 20_000): Promise<void> {
 test.describe('MCP visible deck session', () => {
   test('creates, edits and saves a pptx through a visible slides tab', async () => {
     const port = await freeMcpPort()
-    const outDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-deck-'))
+    const outDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-deck-'))
     const outFile = join(outDir, 'mcp-deck.pptx')
-    const userDataDir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-deck-userdata-'))
+    const userDataDir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-deck-userdata-'))
     await writeFile(
       join(userDataDir, 'app-settings.json'),
       JSON.stringify({ onboardingSeen: true, mcpEnabled: true, mcpPort: port }),

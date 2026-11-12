@@ -3,7 +3,7 @@ import type {
   AgentToolCall,
   AgentToolDef,
   IpcStreamErrorKind,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import type { AiEffort, AiModelEffort } from './effort'
 
 export type AiProviderId =

@@ -7,7 +7,7 @@ import { describe, expect, it } from 'vitest'
 // loads tools/test-home.ts), so a test that forgets to redirect a per-user path
 // cannot reach the folders of the person running the suite. Without it the MCP
 // acceptance test, which runs the real CLI in process, appended to the real
-// ~/.ieumoffice audit log on every run.
+// ~/.seuoffice audit log on every run.
 
 describe('the home folder tests run with', () => {
   it('is a throwaway folder inside the OS temp dir', () => {

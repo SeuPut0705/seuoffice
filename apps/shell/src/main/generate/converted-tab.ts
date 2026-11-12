@@ -5,7 +5,7 @@
  * the conversion happened into this tab from these sources, for the
  * provenance reader (spec 9).
  */
-import type { HandoffWebContents } from '@genoffice/electron-utils/generate-handoff'
+import type { HandoffWebContents } from '@seuoffice/electron-utils/generate-handoff'
 import { queueMarkdownSeedFor } from '../../../../markdown/src/main/seed-main'
 import { queueMindmapSeedFor } from '../../../../mindmap/src/main/seed-main'
 import { queueSlidesSeedFor } from '../../../../slides/src/main/seed-queue'

@@ -3,8 +3,8 @@ import {
   AGENT_APP_MCP_TOOLS,
   comparablePath,
   isInsidePath,
-} from '@genoffice/ai-provider/agent-session'
-import { redactHtmlSource, redactMarkdownSource } from '@genoffice/file-parse'
+} from '@seuoffice/ai-provider/agent-session'
+import { redactHtmlSource, redactMarkdownSource } from '@seuoffice/file-parse'
 import { z } from 'zod'
 import { McpServerService, type McpToolDefinition } from '../mcp/mcp-server'
 import { createDocumentTools, type DocsControl } from '../mcp/tools/document-tools'

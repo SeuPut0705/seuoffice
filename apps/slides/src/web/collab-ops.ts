@@ -15,7 +15,7 @@
  * - what the originator's layout decided after a text edit (autofit size or shrink) travels in
  *   the edit, because another page lays text out at another width.
  */
-import { safeExternalUrl } from '@genoffice/electron-utils/safe-external-url'
+import { safeExternalUrl } from '@seuoffice/electron-utils/safe-external-url'
 import {
   elementDurableId,
   ensureCreationId,
@@ -31,8 +31,8 @@ import {
   type SlideElement,
   type SlideSize,
   type TextElement,
-} from '@genoffice/pptx-engine'
-import { runTxn, type EditParagraph, type Op as PptxOp, type TxnResult } from '@genoffice/pptx-ops'
+} from '@seuoffice/pptx-engine'
+import { runTxn, type EditParagraph, type Op as PptxOp, type TxnResult } from '@seuoffice/pptx-ops'
 import { DECK_LINK_PROTOCOLS } from '../shared/run-link'
 
 /** An element as every page names it */

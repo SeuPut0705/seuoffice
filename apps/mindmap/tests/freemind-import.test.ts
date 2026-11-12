@@ -13,7 +13,7 @@ import {
   sheetToView,
   type ViewSheet,
   type ViewTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import { parseFreeMind } from '../src/renderer/document/freemind'
 import { importedMap } from '../src/renderer/document/open'
 

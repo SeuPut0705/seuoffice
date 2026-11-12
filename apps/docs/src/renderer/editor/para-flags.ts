@@ -1,4 +1,9 @@
-import type { DocDefaults, ParaFormat, StyleDisplay } from '@genoffice/docx-engine'
+import {
+  removeElements,
+  type DocDefaults,
+  type ParaFormat,
+  type StyleDisplay,
+} from '@seuoffice/docx-engine'
 import type { BlockMeta } from '../pagination-types'
 
 export interface DirectParaFlags {
@@ -59,10 +64,9 @@ export function paraFlagsFromXml(xml: string | null | undefined): {
   format?: ParaFormat
   styleId?: string
 } {
+  // the change records go first, each whole: a self-closing one is one element
   const pPr = xml
-    ? /^<w:p\b[^>]*>\s*<w:pPr>([\s\S]*?)<\/w:pPr>/.exec(
-        xml.replace(/<w:pPrChange\b[\s\S]*?<\/w:pPrChange>/g, ''),
-      )?.[1]
+    ? /^<w:p\b[^>]*>\s*<w:pPr>([\s\S]*?)<\/w:pPr>/.exec(removeElements(xml, 'w:pPrChange'))?.[1]
     : undefined
   if (!pPr) return {}
   const onOff = (name: string): boolean | undefined => {

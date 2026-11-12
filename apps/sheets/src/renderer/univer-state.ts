@@ -4,7 +4,7 @@
  * Used by both the App component (App.tsx) and the module-level sync
  * helpers (univer-sync.ts).
  */
-import type { SheetPasswordHash } from '@genoffice/xlsx-gateway/gateway/xlsx-protection-hash'
+import type { SheetPasswordHash } from '@seuoffice/xlsx-gateway/gateway/xlsx-protection-hash'
 import type { SheetProtectionInfo } from './sheet-protection'
 import { BorderType, LocalUndoRedoService, Worksheet, type IRange } from '@univerjs/core'
 import { SheetInterceptorService } from '@univerjs/sheets'
@@ -150,6 +150,11 @@ export interface LazyWorkbookState {
   readonly formulaText: Map<string, Map<string, string>>
   /// Sheets whose formulaText overflowed and was dropped (see storeFormulaText).
   readonly formulaTextTruncated: Set<string>
+  /// The range each array formula of the file fills ('row:col' of its master
+  /// → `ref`, file coordinates), harvested with formulaText. The cells of the
+  /// range hold values computed by the master and carry no formula of their
+  /// own, so whoever asks what depends on a cell needs the range.
+  readonly fileArrayRefs: Map<string, Map<string, string>>
   /// Shared-formula groups per sheet (file coordinates) from the formula
   /// index: followers carry no text of their own there, so their formula is
   /// derived from the master on demand.

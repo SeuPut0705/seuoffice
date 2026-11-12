@@ -31,7 +31,7 @@ export const UNSAVED_CHANGES_MESSAGE =
 
 // Symbol.for: the source survives multiple bundled copies of this module (see
 // navigation-guard.ts), so the copy the shell sets is the one an editor reads
-const SOURCE = Symbol.for('genoffice.open-files-source')
+const SOURCE = Symbol.for('seuoffice.open-files-source')
 
 function holder(): Record<symbol, OpenFilesSource | null | undefined> {
   return globalThis as unknown as Record<symbol, OpenFilesSource | null | undefined>

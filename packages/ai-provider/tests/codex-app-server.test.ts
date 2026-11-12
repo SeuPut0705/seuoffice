@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import type { AgentToolDef } from '@genoffice/agent-core'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import type { AgentToolDef } from '@seuoffice/agent-core'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import { MAX_STREAM_TOOL_CALLS, MAX_TOOL_JSON_CHARS } from '../src/protocols/shared'
 import {
   activePermissionProfileId,
@@ -67,22 +67,22 @@ describe('Codex app-server bridge', () => {
 
   it('confines Codex tool reads to the temp dir through a permission profile', () => {
     const config = { apiKey: '', model: 'gpt-5.6-terra' }
-    const params = codexThreadStartParams(config, '/tmp/genoffice-codex-x', 'profile')
+    const params = codexThreadStartParams(config, '/tmp/seuoffice-codex-x', 'profile')
     expect(params).not.toHaveProperty('sandbox')
     expect(params.approvalPolicy).toBe('never')
     expect(params.config).toEqual({
-      default_permissions: 'genoffice',
+      default_permissions: 'seuoffice',
       permissions: {
-        genoffice: {
-          filesystem: { ':minimal': 'read', '/tmp/genoffice-codex-x': 'read' },
+        seuoffice: {
+          filesystem: { ':minimal': 'read', '/tmp/seuoffice-codex-x': 'read' },
         },
       },
     })
-    expect(codexThreadStartParams(config, '/tmp/genoffice-codex-x', 'read-only')).toMatchObject({
+    expect(codexThreadStartParams(config, '/tmp/seuoffice-codex-x', 'read-only')).toMatchObject({
       sandbox: 'read-only',
     })
-    expect(activePermissionProfileId({ activePermissionProfile: { id: 'genoffice' } })).toBe(
-      'genoffice',
+    expect(activePermissionProfileId({ activePermissionProfile: { id: 'seuoffice' } })).toBe(
+      'seuoffice',
     )
     expect(activePermissionProfileId({ activePermissionProfile: null })).toBeUndefined()
   })

@@ -19,11 +19,11 @@ import {
   type IpcContextGate,
   type IpcStreamError,
   type IpcStreamErrorKind,
-} from '@genoffice/agent-core'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
-import { localContextLimit } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
-import { aiContextConfirmText, aiRunErrorText } from '@genoffice/ui'
+} from '@seuoffice/agent-core'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
+import { localContextLimit } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
+import { aiContextConfirmText, aiRunErrorText } from '@seuoffice/ui'
 import type { EpubAiApi } from '../../shared/ipc'
 import { t } from '../i18n/locale'
 

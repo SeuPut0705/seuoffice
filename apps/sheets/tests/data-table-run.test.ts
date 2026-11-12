@@ -80,7 +80,7 @@ function makeRuntime(
     },
   }
   const commandService = { beforeCommandExecuted: () => undefined }
-  const worksheet = { getRange: range }
+  const worksheet = { getSheetId: () => 'sheet-1', getRange: range }
   const workbook = { getId: () => 'wb', getActiveSheet: () => worksheet }
   const runtime = {
     univer: {

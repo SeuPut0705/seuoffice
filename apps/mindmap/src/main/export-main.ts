@@ -31,7 +31,7 @@ import {
   saveAsSuggestion,
   showSaveDialogWithMemory,
   type PrintDialogWindow,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import { atomicWriteFile } from './atomic-write'
 import { tm } from './i18n-main'
 import { MINDMAP_CHANNELS } from '../shared/ipc'
@@ -243,7 +243,7 @@ function pageWindow(javascript: boolean): BrowserWindow {
 
 /** The page as a one-page landscape A4 PDF. The page is loaded from a temp file: long pages truncate a `data:` address. */
 export async function pageToPdf(html: string): Promise<Buffer> {
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-mindmap-pdf-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-mindmap-pdf-'))
   let win: BrowserWindow | undefined
   const htmlPath = join(workDir, 'map.html')
   const release = allowPageFile(htmlPath)
@@ -374,7 +374,7 @@ export function registerMindmapExportIpc(options: ExportIpcOptions): void {
       html,
       window: printWindow(),
       fileName: 'map.html',
-      dirPrefix: 'genoffice-mindmap-print-',
+      dirPrefix: 'seuoffice-mindmap-print-',
     })
   })
 }

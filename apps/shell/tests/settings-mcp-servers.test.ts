@@ -4,8 +4,8 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
-import type { UserSkillView } from '@genoffice/electron-utils/user-skills-channels'
+import { LANGS } from '@seuoffice/i18n'
+import type { UserSkillView } from '@seuoffice/electron-utils/user-skills-channels'
 import type { HomeApi } from '../src/shared/home-api'
 import type {
   McpPasteView,
@@ -980,7 +980,7 @@ describe('MCP server card helpers and strings', () => {
   })
 
   it('has every text in every language, with its placeholders', () => {
-    const keys = Object.keys(mcpServersUiStrings.zh) as McpServersStringKey[]
+    const keys = Object.keys(mcpServersUiStrings.en) as McpServersStringKey[]
     for (const lang of LANGS) {
       const table = mcpServersUiStrings[lang] as Record<string, string>
       expect(Object.keys(table).sort(), lang).toEqual([...keys].sort())

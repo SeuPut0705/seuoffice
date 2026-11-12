@@ -21,7 +21,7 @@
  * and a structural change that would move, merge or delete a locked cell
  * leaves the whole table as it was.
  */
-import type { CellBorder, CellBorders, TableCell, TableModel } from '@genoffice/docx-engine'
+import type { CellBorder, CellBorders, TableCell, TableModel } from '@seuoffice/docx-engine'
 import {
   type BridgeParagraph,
   type OoxmlToOdfContext,

@@ -1,4 +1,4 @@
-import { proposedTitleOf, type SkillEditorId, type SkillProposal } from '@genoffice/agent-core'
+import { proposedTitleOf, type SkillEditorId, type SkillProposal } from '@seuoffice/agent-core'
 import type { SkillCardStringKey } from './strings-skill-card'
 
 /**

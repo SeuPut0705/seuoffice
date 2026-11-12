@@ -26,22 +26,22 @@ export interface EmbeddedImagesApi {
 
 export interface EmbeddedImagesRun {
   api: EmbeddedImagesApi
-  /** the open file */
-  filePath: string
   password: string | undefined
   /** file name prefix of the written pictures */
   baseName: string
   t: TFunc
-  /** save pending edits first; false = not saved (the editor said why) */
-  prepare: () => Promise<boolean>
+  /** save pending edits first: where the open file is afterwards (the save can move the
+      document), null = not saved (the editor said why) */
+  prepare: () => Promise<string | null>
   onProgress: (done: number, total: number) => void
   notice: (text: string) => void
 }
 
 /** Pick a folder, write the pictures, show the first one in the file manager. */
 export async function exportEmbeddedImages(run: EmbeddedImagesRun): Promise<void> {
-  const { api, filePath, t } = run
-  if (!(await run.prepare())) return
+  const { api, t } = run
+  const filePath = await run.prepare()
+  if (filePath === null) return
   const outDir = await api.pickTarget({
     kind: 'folder',
     path: filePath,

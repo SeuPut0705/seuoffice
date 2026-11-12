@@ -1,7 +1,7 @@
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
-import type { AiToolCapabilities, MediaToolErrorCode } from '@genoffice/ai-search'
-import type { Lang } from '@genoffice/i18n'
-import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
+import type { AiToolCapabilities, MediaToolErrorCode } from '@seuoffice/ai-search'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiPanelPrefs, AutoSaveDefault } from '@seuoffice/ui'
 import type { SubscriptionApi } from './subscription-api'
 
 export const HWP_CHANNELS = {
@@ -339,6 +339,13 @@ export interface HwpApi {
    * keeps of the original could not be read, so `beginSave` refuses to replace that file
    */
   structureUnverified(): Promise<boolean>
+  /**
+   * set by a host whose only save target is the opened file: no Save As under another name
+   * or format and no export (the seuoffice web page). Unset on the desktop. What the editor
+   * tells a person about a file it will not save over follows it: it does not point at a
+   * Save As that is not there.
+   */
+  noSaveAs?: true
   /** resolve where and in which format this save goes (shows the dialog for Save As) */
   beginSave(mode: SaveMode): Promise<BeginSaveResult>
   /** the tabs of exported bytes that have no width yet (see tab-widths in main) */

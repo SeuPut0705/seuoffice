@@ -5,9 +5,9 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Editor, type JSONContent } from '@tiptap/core'
-import { parseDocx } from '@genoffice/docx-engine'
-import { ODT_MIMETYPE, odtToText, type ConversionReport } from '@genoffice/odt-engine'
-import type { Lang } from '@genoffice/i18n'
+import { parseDocx } from '@seuoffice/docx-engine'
+import { ODT_MIMETYPE, odtToText, type ConversionReport } from '@seuoffice/odt-engine'
+import type { Lang } from '@seuoffice/i18n'
 import { buildExtensions } from '../src/renderer/editor/extensions'
 import { exportDocxBytes } from '../src/renderer/export/docxExport'
 import { MARKDOWN_CHANNELS } from '../src/shared/ipc'
@@ -219,28 +219,7 @@ describe('ODT confirmation dialog', () => {
   })
 
   it('every language has its own wording, never the English copy', () => {
-    const langs: Lang[] = [
-      'zh',
-      'ja',
-      'ko',
-      'fr',
-      'de',
-      'es',
-      'th',
-      'vi',
-      'id',
-      'ru',
-      'ar',
-      'pt',
-      'it',
-      'pl',
-      'cs',
-      'nl',
-      'ms',
-      'he',
-      'hi',
-      'zh-TW',
-    ]
+    const langs: Lang[] = ['ko']
     const en = odtReportMessageBox(report, 'en')
     for (const lang of langs) {
       const box = odtReportMessageBox(report, lang)

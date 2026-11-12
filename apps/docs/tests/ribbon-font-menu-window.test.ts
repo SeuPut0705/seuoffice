@@ -7,7 +7,7 @@ import { computeFormatState } from '../src/renderer/components/ribbon-format-sta
 import { Ribbon } from '../src/renderer/components/Ribbon'
 import { ribbonProps } from './helpers/ribbon-props'
 
-// ieum's page-wide font source (system-fonts.ts over @genoffice/ui) reads queryLocalFonts
+// ieum's page-wide font source (system-fonts.ts over @seuoffice/ui) reads queryLocalFonts
 // when its module loads, so the stub has to exist before the imports above run
 const localFonts = vi.hoisted(() => {
   let resolve: (fonts: { family: string }[]) => void = () => {}

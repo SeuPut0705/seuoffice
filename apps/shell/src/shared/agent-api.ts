@@ -1,7 +1,7 @@
-import type { Lang } from '@genoffice/i18n'
-import type { SkillProposal } from '@genoffice/agent-core'
-import type { AiRunErrorKind } from '@genoffice/ai-provider'
-import type { AgentCodexWebSearch, AgentProgramProblem } from '@genoffice/ai-provider/agent-session'
+import type { Lang } from '@seuoffice/i18n'
+import type { SkillProposal } from '@seuoffice/agent-core'
+import type { AiRunErrorKind } from '@seuoffice/ai-provider'
+import type { AgentCodexWebSearch, AgentProgramProblem } from '@seuoffice/ai-provider/agent-session'
 
 /**
  * The agent window (decision 0032): channels and the shapes the window and the

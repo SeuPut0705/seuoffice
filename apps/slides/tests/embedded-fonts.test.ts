@@ -2,7 +2,7 @@ import { existsSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 import * as opentype from 'opentype.js'
-import type { RunStyle } from '@genoffice/pptx-render'
+import type { RunStyle } from '@seuoffice/pptx-render'
 
 vi.mock('../src/main/shaped-metrics', () => ({
   initShapedMetrics: () => {},

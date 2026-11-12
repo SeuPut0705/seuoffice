@@ -11,7 +11,7 @@ import { describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
 import { DOMSerializer } from '@tiptap/pm/model'
 import JSZip from 'jszip'
-import { buildBlankDocx, parseDocx, saveDocx, type Block } from '@genoffice/docx-engine'
+import { buildBlankDocx, parseDocx, saveDocx, type Block } from '@seuoffice/docx-engine'
 import { blocksToPmDoc, pmDocToSavePlan, type PmNode } from '../src/renderer/editor/convert'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 

@@ -9,7 +9,7 @@
  */
 import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Dropdown, type DropdownOption } from '@genoffice/ui'
+import { Dropdown, type DropdownOption } from '@seuoffice/ui'
 import { useI18n } from '../i18n/locale'
 import type { EpubViewPrefs } from '../../shared/ipc'
 import { FONT_SCALES, LINE_HEIGHTS } from '../reader/view-prefs'

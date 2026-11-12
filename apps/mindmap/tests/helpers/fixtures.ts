@@ -9,7 +9,7 @@ import {
   type XmindDocument,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 
 export const IDS = {
   sheet: '11111111-1111-4111-8111-111111111111',

@@ -8,9 +8,9 @@ import {
   type AiStreamRequest,
   type AiSubscriptionProviderId,
   type AiSubscriptionState,
-} from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
-import { aiRunErrorText, aiSubscriptionText } from '@genoffice/ui'
+} from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
+import { aiRunErrorText, aiSubscriptionText } from '@seuoffice/ui'
 import { AiPanel, type HtmlAiDeps } from '../src/renderer/ai/AiPanel'
 import { buildParseMap, type ParseMap } from '../src/renderer/document/parse-map'
 import { aiStrings } from '../src/renderer/i18n/strings-ai'
@@ -23,7 +23,7 @@ import { aiStrings } from '../src/renderer/i18n/strings-ai'
  */
 
 // the panel's own language outside a LocaleProvider is the app default
-const LANG = 'zh'
+const LANG = 'en'
 const DOC = '<!doctype html><html><head><title>T</title></head><body><h1>Hello</h1></body></html>'
 
 const statusMap = (
@@ -595,7 +595,7 @@ describe('AI panel during a turn', () => {
   })
 
   it('keeps the progress line under the reply until the run ends', async () => {
-    const zh = aiStrings.zh
+    const en = aiStrings.en
     let finishSearch: (result: { method: string; images: never[] }) => void = () => undefined
     const main = fakeMain({
       settings: ready(),
@@ -611,11 +611,11 @@ describe('AI panel during a turn', () => {
     const progressOf = (reply: Element | undefined) =>
       reply?.querySelector('.ai-typing[role="status"]')?.getAttribute('aria-label') ?? null
 
-    expect(progressOf(replies().at(-1))).toBe(zh.aiThinking)
+    expect(progressOf(replies().at(-1))).toBe(en.aiThinking)
 
     await main.emit({ type: 'delta', text: 'Looking for a sea photo.' })
     expect(replies().at(-1)!.textContent).toContain('Looking for a sea photo.')
-    expect(progressOf(replies().at(-1))).toBe(zh.aiThinking)
+    expect(progressOf(replies().at(-1))).toBe(en.aiThinking)
 
     await main.emit({
       type: 'tool-call',
@@ -624,13 +624,13 @@ describe('AI panel during a turn', () => {
     await main.emit({ type: 'done' })
     expect(replies()).toHaveLength(1)
     expect(replies()[0]!.textContent).toContain('Looking for a sea photo.')
-    expect(progressOf(replies()[0])).toBe(zh.aiWorking)
+    expect(progressOf(replies()[0])).toBe(en.aiWorking)
 
     finishSearch({ method: 'serper', images: [] })
     await settle()
     expect(main.requests).toHaveLength(2)
     expect(progressOf(replies()[0])).toBeNull()
-    expect(progressOf(replies().at(-1))).toBe(zh.aiThinking)
+    expect(progressOf(replies().at(-1))).toBe(en.aiThinking)
 
     await main.emit({ type: 'delta', text: 'No photo found.' })
     await main.emit({ type: 'done' })
@@ -649,7 +649,7 @@ describe('AI panel during a turn', () => {
 })
 
 describe('AI panel while a card waits on the person', () => {
-  const zh = aiStrings.zh
+  const en = aiStrings.en
   const BRIEF = {
     core_hook: 'Q3 grew 40% while costs fell',
     style: {
@@ -702,18 +702,18 @@ describe('AI panel while a card waits on the person', () => {
 
     expect(host.querySelector('.brief-card')).not.toBeNull()
     expect(liveReply().querySelector('.ai-clarify-chip')?.textContent).toContain(
-      zh.aiWaitingConfirm,
+      en.aiWaitingConfirm,
     )
     expect(liveReply().querySelector('.ai-typing')).toBeNull()
     expect(host.querySelector('.ai-typing-elapsed')).toBeNull()
-    expect(groupLabels()).toEqual([zh.aiWaitingConfirm])
+    expect(groupLabels()).toEqual([en.aiWaitingConfirm])
     const step = host.querySelector('.ai-step-title')!.textContent!
-    expect(step).toContain(zh.aiWaitingConfirm)
-    expect(step).toContain(zh.briefGenerate)
-    expect(step).not.toContain(zh.aiDraftingBrief)
+    expect(step).toContain(en.aiWaitingConfirm)
+    expect(step).toContain(en.briefGenerate)
+    expect(step).not.toContain(en.aiDraftingBrief)
 
     const generate = [...host.querySelectorAll<HTMLButtonElement>('.brief-btn.primary')].find(
-      (b) => b.textContent === zh.briefGenerate,
+      (b) => b.textContent === en.briefGenerate,
     )!
     act(() => generate.click())
     await settle()
@@ -723,7 +723,7 @@ describe('AI panel while a card waits on the person', () => {
     expect(main.requests).toHaveLength(3)
     expect(host.querySelector('.ai-clarify-chip')).toBeNull()
     expect(liveReply().querySelector('.ai-typing')).not.toBeNull()
-    expect(groupLabels()).not.toContain(zh.aiWaitingConfirm)
+    expect(groupLabels()).not.toContain(en.aiWaitingConfirm)
   })
 
   it('shows the questionnaire as waiting for answers until it is skipped', async () => {
@@ -740,10 +740,10 @@ describe('AI panel while a card waits on the person', () => {
     await mountPanel(main)
     await sendMessage('a landing page')
 
-    expect(liveReply().querySelector('.ai-clarify-chip')?.textContent).toContain(zh.aiWaitingAnswer)
+    expect(liveReply().querySelector('.ai-clarify-chip')?.textContent).toContain(en.aiWaitingAnswer)
     expect(liveReply().querySelector('.ai-typing')).toBeNull()
-    expect(groupLabels()).toEqual([zh.aiWaitingAnswer])
-    expect(host.querySelector('.ai-step-title')!.textContent).toBe(zh.aiWaitClarifyStep)
+    expect(groupLabels()).toEqual([en.aiWaitingAnswer])
+    expect(host.querySelector('.ai-step-title')!.textContent).toBe(en.aiWaitClarifyStep)
 
     act(() => host.querySelector<HTMLButtonElement>('.ai-clarify-skip')!.click())
     await settle()
@@ -769,12 +769,12 @@ describe('AI panel while a card waits on the person', () => {
     await sendMessage('write the page')
 
     expect(host.querySelector('.ai-partial-card')).not.toBeNull()
-    expect(liveReply().querySelector('.ai-clarify-chip')?.textContent).toContain(zh.aiWaitingChoice)
+    expect(liveReply().querySelector('.ai-clarify-chip')?.textContent).toContain(en.aiWaitingChoice)
     expect(liveReply().querySelector('.ai-typing')).toBeNull()
-    expect(groupLabels()).toEqual([zh.aiWaitingChoice])
+    expect(groupLabels()).toEqual([en.aiWaitingChoice])
     const step = host.querySelector('.ai-step-title')!.textContent!
-    expect(step).toContain(zh.aiPartialAdopt)
-    expect(step).toContain(zh.aiPartialDiscard)
+    expect(step).toContain(en.aiPartialAdopt)
+    expect(step).toContain(en.aiPartialDiscard)
 
     act(() => host.querySelector<HTMLButtonElement>('.ai-partial-card .brief-btn.primary')!.click())
     await settle()

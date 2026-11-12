@@ -1,11 +1,12 @@
 import { afterEach, describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
-import { AgentLoop, type AgentStreamCallbacks, type AgentTransport } from '@genoffice/agent-core'
+import { AgentLoop, type AgentStreamCallbacks, type AgentTransport } from '@seuoffice/agent-core'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { createDocsSkill } from '../src/renderer/ai/docs-skill'
 import { buildDocContext, countWords, documentTextForWordCount } from '../src/renderer/ai/protocol'
 import { executeTool } from '../src/renderer/ai/tools'
 import { appendStreamedNodes } from '../src/renderer/file-actions'
+import { t as uiText } from '../src/renderer/i18n/locale'
 
 /**
  * End-to-end through the local stack: AgentLoop -> docs skill -> tools ->
@@ -175,7 +176,7 @@ describe('changing heading colors (formatting-command requests)', () => {
     ).toBe(false)
     // The tool result was passed back to the model
     const toolMsg = loop.messages[2] as { role: 'tool'; results: Array<{ output: string }> }
-    expect(toolMsg.results[0].output).toContain('已更新 2 个块的文字样式')
+    expect(toolMsg.results[0].output).toContain(uiText('aiCmdTextStyle', { count: 2 }))
   })
 
   it('invalid commands return an error result, the document is unchanged, and the loop continues', async () => {

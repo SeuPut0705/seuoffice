@@ -1,6 +1,6 @@
 // Contract between the sheets renderer (AI panel) and the main process for the
 // subscription providers (Claude, Codex). The request channels and payloads are
-// the shared ones from @genoffice/ai-provider; the handlers are registered once
+// the shared ones from @seuoffice/ai-provider; the handlers are registered once
 // per process (ensureSubscriptionIpc), by the docs main in the shell and by the
 // sheets main when it runs standalone. Same shape as the shell's
 // window.aiOfficeSubscription (apps/shell/src/shared/subscription-api.ts).
@@ -11,7 +11,7 @@ import type {
   SubscriptionLoginMode,
   SubscriptionMeteredResult,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 // Reading an IPC answer is the same in every app: one implementation, in the shared contract
 export {
@@ -19,7 +19,7 @@ export {
   isSubscriptionProviderId,
   subscriptionLaunchResultOf,
   subscriptionStatusMapOf,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 /** exposed as `window.desktopApi.aiSubscription` by the sheets preload */
 export interface SubscriptionApi {

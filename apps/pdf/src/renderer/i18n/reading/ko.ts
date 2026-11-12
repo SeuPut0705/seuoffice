@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   rdWithKey: '{label} ({key})',
@@ -26,4 +26,4 @@ export const ko = {
   rdUnderlinesTip: '구절 카드가 있는 구절 밑에 옅은 점선을 보입니다',
   rdOpenCard: '구절 카드 열기: {excerpt}',
   rdCardLabel: '구절 카드',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

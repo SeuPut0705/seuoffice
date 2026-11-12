@@ -15,8 +15,8 @@ import {
   webContents,
   type BrowserWindow,
 } from 'electron'
-import type { Lang } from '@genoffice/i18n'
-import { safeExternalUrl } from '@genoffice/electron-utils'
+import type { Lang } from '@seuoffice/i18n'
+import { safeExternalUrl } from '@seuoffice/electron-utils'
 import {
   DriveConnection,
   FOLDER_MIME,
@@ -24,10 +24,9 @@ import {
   isGoogleNative,
   type DriveConnectionState,
   type DriveFile,
-  type FetchLike,
   type GoogleClient,
   type GoogleSignInOptions,
-} from '@genoffice/google-drive'
+} from '@seuoffice/google-drive'
 import { readAppSettings, writeAppSetting } from '../app-settings'
 import {
   DRIVE_AI_ACCESS_KEY,
@@ -48,17 +47,18 @@ import { DriveFiles, type SyncAnswer, type SyncNotice, type SyncQuestion } from 
 import { copyFileName, driveText } from './drive-strings'
 import { createDriveVault, driveTokenSeals } from './drive-vault'
 import { isFreeAi } from './drive-consent'
-import { setAiRunGuard } from '@genoffice/electron-utils/ai-run-guard'
+import { driveFetches } from './drive-fetch'
+import { setAiRunGuard } from '@seuoffice/electron-utils/ai-run-guard'
 
-declare const __GENOFFICE_GOOGLE_CLIENT_ID__: string
-declare const __GENOFFICE_GOOGLE_CLIENT_SECRET__: string
+declare const __SEUOFFICE_GOOGLE_CLIENT_ID__: string
+declare const __SEUOFFICE_GOOGLE_CLIENT_SECRET__: string
 
 /** The Google client this build was made with; null when the build has none (decision 0033) */
 export function buildGoogleClient(): GoogleClient | null {
   const clientId =
-    typeof __GENOFFICE_GOOGLE_CLIENT_ID__ === 'string' ? __GENOFFICE_GOOGLE_CLIENT_ID__ : ''
+    typeof __SEUOFFICE_GOOGLE_CLIENT_ID__ === 'string' ? __SEUOFFICE_GOOGLE_CLIENT_ID__ : ''
   const clientSecret =
-    typeof __GENOFFICE_GOOGLE_CLIENT_SECRET__ === 'string' ? __GENOFFICE_GOOGLE_CLIENT_SECRET__ : ''
+    typeof __SEUOFFICE_GOOGLE_CLIENT_SECRET__ === 'string' ? __SEUOFFICE_GOOGLE_CLIENT_SECRET__ : ''
   return /^[\w.-]+\.apps\.googleusercontent\.com$/.test(clientId) && clientSecret
     ? { clientId, clientSecret }
     : null
@@ -106,7 +106,6 @@ const FREE_AI_REFUSAL =
   'Drive files are not given to the AI in use: it is a free connection that may use what it receives to train models. Tell the person to choose another AI to work with Drive files.'
 
 export function registerDriveIpc(deps: DriveIpcDeps): DriveService {
-  const fetch: FetchLike = (url, init) => net.fetch(url, init)
   const connection = new DriveConnection({
     client: buildGoogleClient(),
     vault: createDriveVault(join(deps.userData(), 'google-drive.json'), {
@@ -114,7 +113,11 @@ export function registerDriveIpc(deps: DriveIpcDeps): DriveService {
       encrypt: (text) => safeStorage.encryptString(text),
       decrypt: (bytes) => safeStorage.decryptString(bytes),
     }),
-    fetch,
+    // the global fetch of the main process is Node's
+    ...driveFetches(
+      (url, init) => net.fetch(url, init),
+      (url, init) => fetch(url, init),
+    ),
   })
   let connecting = false
   let picking = false
@@ -389,7 +392,7 @@ export function registerDriveIpc(deps: DriveIpcDeps): DriveService {
     const got = await downloadPicks(
       connection.api,
       result.picked,
-      join(app.getPath('temp'), 'ieumoffice-drive-attach'),
+      join(app.getPath('temp'), 'seuoffice-drive-attach'),
     )
     return { ok: true, ...got }
   })

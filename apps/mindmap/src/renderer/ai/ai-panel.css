@@ -1194,7 +1194,7 @@
 
 /*
  * ---- the mind map's own placement: a card beside the map, on the side chosen in
- * Settings → General → "AI sidebar position" (@genoffice/ui/ai-panel-prefs.css) ----
+ * Settings → General → "AI sidebar position" (@seuoffice/ui/ai-panel-prefs.css) ----
  *
  * The dock is the stage's last child so the theme, format and note panels keep
  * their place at the end side. On the left (the default, and before the shell's

@@ -21,6 +21,7 @@
 - 읽기에도 상한을 둔다. `loadChat`은 기본 200건, 최대 10,000건이고 파일의 끝 8 MiB만 읽는다. 한 레코드가 그보다 크면 64 MiB까지 뒤로 넓히고, 그래도 줄 경계를 못 찾으면 빈 대화로 연다.
 - 사용자 메시지의 스킬 칩(`skills`, `ChatSkillChip`)은 식별자·출처·제목만 저장한다. 스킬 글은 저장하지 않는다(다시 보낼 때 지금 내용을 다시 읽는다). 메시지당 32개, 식별자 512자, 출처·제목 200자이고 모양이 틀린 칩은 버린다.
 - `default` 프로젝트는 이름 변경과 삭제를 거부한다. 읽히지 않는 `default/project.json`은 새 내용으로 덮지 않고 `.corrupt-<시각>` 이름으로 옮겨 둔다.
+- 보기만 하는 호출자는 `lookupChatForFile`을 쓴다. `resolveChatForFile`과 같은 답을 내지만 기본 프로젝트를 만들지 않고, 맵에 등록하지 않고, 키를 옮기지 않는다. 창 없는 내보내기의 숨은 창이 이 길로 묻는다(변환한 파일이 사용자의 문서 목록에 들어가면 안 된다). `tests/lookup-chat.test.ts`가 저장소 폴더가 바이트 단위로 그대로인지 본다.
 
 ## 이 모듈의 방식
 
@@ -32,7 +33,7 @@
 
 ## 테스트
 
-- `npm run test -w @genoffice/project-store`, 또는 패키지 폴더에서 `npx vitest run`. 테스트마다 `os.tmpdir()` 아래에 임시 저장소를 만든다. 픽스처 파일은 없다.
+- `npm run test -w @seuoffice/project-store`, 또는 패키지 폴더에서 `npx vitest run`. 테스트마다 `os.tmpdir()` 아래에 임시 저장소를 만든다. 픽스처 파일은 없다.
 - 심볼릭 링크 테스트는 링크를 만들 수 있는 환경에서만 돌고, 대소문자 변형 테스트는 Windows에서만 돈다.
 - `tests/store.test.ts`의 `deleteProject > files of a deleted project revert to default`는 Windows에서 변경 이전부터 실패하는 것으로 알려져 있다. 테스트가 `/test/file.docx`라는 POSIX 경로가 `fileMap`의 키로 그대로 남기를 기대하는데, Windows에서는 `/test`가 현재 드라이브의 폴더로 풀리고 그 폴더가 실제로 있으면 키가 `<드라이브>:\test\file.docx`로 저장된다.
 - 경로 키 로직을 바꾸면 예전 표기 조회, 이름 바꾸기, 합치기 경로를 덮는다. 상한을 바꾸면 경계값을 넣는다. 테스트에서 경로를 맵 키와 비교할 때는 `canonicalPathKey`를 거친 값을 쓴다.

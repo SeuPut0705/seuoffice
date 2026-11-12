@@ -1,17 +1,19 @@
 /**
- * The Markdown editor's app-owned asset list, `assets/.genoffice-assets.json`
- * next to the document. Same format and rules as
- * apps/markdown/src/main/asset-lifecycle.ts: files the app wrote (name +
- * SHA-256), and per document the names its saved text references. Files not
- * listed there are the user's and are never touched.
+ * The Markdown editor's app-owned asset list, `assets/.seuoffice-assets.json`
+ * next to the document, or the list an earlier version wrote there under its
+ * old name (`OLD_ASSET_MANIFEST_FILENAMES`), which stays in use. Same format
+ * and rules as apps/markdown/src/main/asset-lifecycle.ts: files the app wrote
+ * (name + SHA-256), and per document the names its saved text references.
+ * Files not listed there are the user's and are never touched.
  *
  * A converted .md file is a finished save, so its pictures go under
  * `documents[<file name>]` (not `pending`, which the editor deletes when an
  * unsaved session is discarded).
  */
+import { OLD_ASSET_MANIFEST_FILENAMES } from '../old-names'
 
-/** stored identifier: do not rename (existing documents rely on it) */
-export const ASSET_MANIFEST_FILENAME = '.genoffice-assets.json'
+/** the list's name in an assets folder that has none yet */
+export const ASSET_MANIFEST_FILENAME = '.seuoffice-assets.json'
 
 export interface OwnedAssetRecord {
   name: string
@@ -36,6 +38,7 @@ function isSafeAssetName(name: string): boolean {
     name !== '.' &&
     name !== '..' &&
     name !== ASSET_MANIFEST_FILENAME &&
+    !OLD_ASSET_MANIFEST_FILENAMES.includes(name) &&
     !name.includes('/') &&
     !name.includes('\\') &&
     !name.includes('\0')

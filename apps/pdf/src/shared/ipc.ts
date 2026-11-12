@@ -1,6 +1,6 @@
-import type { AiPanelPrefs, AutoSaveDefault } from '@genoffice/ui'
-import type { Lang } from '@genoffice/i18n'
-import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@genoffice/ai-provider'
+import type { AiPanelPrefs, AutoSaveDefault } from '@seuoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import type { AiSettings, AiStreamChunk, AiStreamRequest } from '@seuoffice/ai-provider'
 import type { SubscriptionApi } from './subscription-api'
 import type { DocumentTree, InlineRun } from '../../../../packages/pdf-structure/src/tree/types'
 import type { PageFingerprint } from '../../../../packages/pdf-structure/src/tree/extract'
@@ -61,6 +61,7 @@ export const PDF_CHANNELS = {
   isUntitled: 'pdf:is-untitled',
   isUntitledCopy: 'pdf:is-untitled-copy',
   templateBytes: 'pdf:template-bytes',
+  pickUntitledCopyTarget: 'pdf:pick-untitled-copy-target',
   adoptUntitledCopy: 'pdf:adopt-untitled-copy',
   validateTextEdits: 'pdf:validate-text-edits',
   listEditFonts: 'pdf:list-edit-fonts',
@@ -174,7 +175,7 @@ export const PDF_CHANNELS = {
   authorNameChanged: 'app:author-name-changed',
 } as const
 
-export const VISUAL_SIGNATURE_CONTENT_PREFIX = 'GenOffice visual signature field: '
+export const VISUAL_SIGNATURE_CONTENT_PREFIX = 'SeuOffice visual signature field: '
 
 /** Signature strokes: pad pixel coords, scaled proportionally and y-flipped when placed on the page */
 export interface SignatureStrokes {
@@ -781,7 +782,7 @@ export interface PageImageRef {
   aboveText: boolean
 }
 
-/** Editable metadata for a GenOffice static form fill embedded as a page image. */
+/** Editable metadata for a SeuOffice static form fill embedded as a page image. */
 export interface StaticFormFillRecord {
   id: string
   kind: 'text' | 'check' | 'cross'
@@ -959,7 +960,7 @@ export interface SavePdfRequest {
   decryption?: { userPassword: string }
   markups: MarkupInput[]
   /** Author (/T) of the markups and drawings this save adds; a note keeps its own
-      author when it has one. Omitted → 'GenOffice' */
+      author when it has one. Omitted → 'SeuOffice' */
   annotationAuthor?: string
   /** Saved markup annotations to remove (applied before every other stage) */
   annotDeletes?: AnnotDeleteInput[]
@@ -1041,6 +1042,10 @@ export interface PdfAutoRenameResult {
   name?: string
 }
 
+/** Answer to adoptUntitledCopy: where the document is now, or why it is still the untitled
+ *  copy (no place picked for it, or the copy to the picked place failed) */
+export type AdoptUntitledCopyResult = { ok: true; path: string } | { ok: false; error: string }
+
 export type SavePdfResult =
   | {
       ok: true
@@ -1056,7 +1061,7 @@ export interface ValidateTextEditsRequest {
   edits: TextEditInput[]
 }
 
-/** Extract pages into a new PDF written to the GenOffice save dir and opened in a new tab */
+/** Extract pages into a new PDF written to the SeuOffice save dir and opened in a new tab */
 export interface ExtractPagesRequest {
   path: string
   /** Page indices in the file as saved (the renderer flushes first, so visible positions) */
@@ -1179,7 +1184,7 @@ export interface SetPageSizeRequest {
 export type SetPageSizeResult = { ok: true } | { ok: false; error: string }
 
 /** Split every page into a grid of pages (inverse of merge pages), written to the
- * GenOffice save dir and opened in a new tab */
+ * SeuOffice save dir and opened in a new tab */
 export interface SplitPagesRequest {
   path: string
   perPage: 2 | 4 | 9
@@ -1787,11 +1792,16 @@ export interface PdfApi {
   /** The document with its pending edits, as bytes, for a skill's template; nothing is written */
   templateBytes?(request: SavePdfRequest): Promise<Uint8Array | null>
   /**
-   * An untitled copy's first explicit save, after its edits were saved into the
-   * copy: asks where the document goes and makes that file this tab's
-   * document. The chosen path, or null when cancelled.
+   * An untitled copy's first explicit save, step one: asks where the document
+   * goes. Nothing is written; false when the dialog was cancelled.
    */
-  adoptUntitledCopy?(path: string, defaultName: string): Promise<string | null>
+  pickUntitledCopyTarget?(path: string, defaultName: string): Promise<boolean>
+  /**
+   * Step two, after the edits were saved into the copy: copies it to the
+   * picked place and makes that file this tab's document. When that fails the
+   * document stays the untitled copy, unsaved, and the answer says why.
+   */
+  adoptUntitledCopy?(path: string): Promise<AdoptUntitledCopyResult>
   /** Dry-run match of pending text edits against the file: reason null = would apply */
   validateTextEdits(request: ValidateTextEditsRequest): Promise<TextEditValidation[]>
   /** EDIT_FONTS ids whose font file exists on this machine */
@@ -1801,7 +1811,7 @@ export interface PdfApi {
   canDrawText(text: string, font?: string, bold?: boolean, italic?: boolean): Promise<boolean>
   /** Enumerate the content-stream images of every page (for image edit mode) */
   listPageImages(path: string): Promise<PageImageRef[]>
-  /** Read GenOffice static-fill metadata stored inside the PDF. */
+  /** Read SeuOffice static-fill metadata stored inside the PDF. */
   listStaticFormFills(path: string): Promise<StaticFormFillRecord[]>
   /** System-OCR one rendered page image (PNG, base64); null when no engine is
       available on this platform, [] when recognition failed for this image */

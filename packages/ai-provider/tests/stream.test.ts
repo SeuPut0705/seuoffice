@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { AgentMessage, AgentToolCall } from '@genoffice/agent-core'
+import type { AgentMessage, AgentToolCall } from '@seuoffice/agent-core'
 import { AiCreditsError, sseLines, streamForProvider } from '../src/stream'
 import {
   MAX_RESPONSE_BODY_BYTES,

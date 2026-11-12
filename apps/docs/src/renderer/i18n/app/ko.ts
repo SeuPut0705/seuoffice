@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   appScTitle: '키보드 바로 가기',
@@ -659,4 +659,4 @@ export const ko = {
   appCtxResolveComment: '메모 해결',
   appRevisionsAcceptedN: '변경 {n}개 적용됨',
   appRevisionsRejectedN: '변경 {n}개 거부됨',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

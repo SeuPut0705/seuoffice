@@ -6,7 +6,7 @@ import {
   partitionFontFamilies,
   useSystemFontSource,
   type DropdownOption,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   SANS_FONT_SUGGESTIONS,
   SERIF_FONT_SUGGESTIONS,
@@ -16,12 +16,12 @@ import {
   slidesAiFontRoles,
   type SlidesAiFontMode,
   type SlidesAiFonts,
-} from '@genoffice/ui/slides-ai-fonts'
+} from '@seuoffice/ui/slides-ai-fonts'
 import {
   TEMPLATE_FONT_FACE_REGISTRATIONS,
   TEMPLATE_FONT_FAMILY_NAMES,
   templateFontUrl,
-} from '@genoffice/ui/template-fonts'
+} from '@seuoffice/ui/template-fonts'
 import { slidesFontsText, type SlidesFontsStringKey } from './i18n/strings-slides-fonts'
 import { useI18n } from './locale'
 

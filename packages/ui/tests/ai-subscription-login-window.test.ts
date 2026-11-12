@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, productName } from '@genoffice/i18n'
+import { LANGS, productName } from '@seuoffice/i18n'
 import { aiSubscriptionLoginWindowText } from '../src/ai-subscription-login-window'
 import { aiSubscriptionText } from '../src/strings-ai-subscription'
 
@@ -42,16 +42,6 @@ describe('aiSubscriptionLoginWindowText', () => {
           expect(value.trim().length, `${lang} ${provider}`).toBeGreaterThan(0)
         }
       }
-    }
-  })
-
-  it('uses English where a console cannot draw the script, and the language elsewhere', () => {
-    const english = aiSubscriptionLoginWindowText('en', 'claude-code')
-    for (const lang of ['ar', 'he', 'hi', 'th'] as const) {
-      expect(aiSubscriptionLoginWindowText(lang, 'claude-code'), lang).toEqual(english)
-    }
-    for (const lang of ['ko', 'ja', 'zh', 'ru', 'vi'] as const) {
-      expect(aiSubscriptionLoginWindowText(lang, 'claude-code').guide, lang).not.toBe(english.guide)
     }
   })
 })

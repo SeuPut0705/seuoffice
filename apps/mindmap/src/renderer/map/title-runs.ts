@@ -12,7 +12,7 @@
  * the parts read back from the box are the characters it holds, each with the
  * format of the span it sits in, and nothing the box could have taken in.
  */
-import type { ViewRunStyle, ViewTitleRun } from '@genoffice/xmind-engine'
+import type { ViewRunStyle, ViewTitleRun } from '@seuoffice/xmind-engine'
 import {
   decorationValue,
   fontFamilyValue,

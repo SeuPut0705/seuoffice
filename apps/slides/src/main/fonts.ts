@@ -30,15 +30,15 @@ import { basename, dirname, join } from 'node:path'
 import { homedir, tmpdir } from 'node:os'
 import { createHash } from 'node:crypto'
 import * as opentype from 'opentype.js'
-import type { EmbeddedFontFace } from '@genoffice/pptx-engine'
-import { TEMPLATE_FONTS } from '@genoffice/ui/template-fonts'
+import type { EmbeddedFontFace } from '@seuoffice/pptx-engine'
+import { TEMPLATE_FONTS } from '@seuoffice/ui/template-fonts'
 import {
   OpentypeMetrics,
   HeuristicMetrics,
   type FontMetricsProvider,
   type OpentypeFontLike,
   type RunStyle,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import { classifyCjkScript, classifyCjkScriptByNameScript } from '../shared/cjk-script'
 import { scanFontDirs, type ScanTask } from './font-scan'
 import {
@@ -49,10 +49,10 @@ import {
   type ShapedPrefFace,
   gtMeasure,
 } from './shaped-metrics'
-import carlitoRegular from '@genoffice/ui/fonts/Carlito-Regular.ttf?asset'
-import carlitoBold from '@genoffice/ui/fonts/Carlito-Bold.ttf?asset'
-import carlitoItalic from '@genoffice/ui/fonts/Carlito-Italic.ttf?asset'
-import carlitoBoldItalic from '@genoffice/ui/fonts/Carlito-BoldItalic.ttf?asset'
+import carlitoRegular from '@seuoffice/ui/fonts/Carlito-Regular.ttf?asset'
+import carlitoBold from '@seuoffice/ui/fonts/Carlito-Bold.ttf?asset'
+import carlitoItalic from '@seuoffice/ui/fonts/Carlito-Italic.ttf?asset'
+import carlitoBoldItalic from '@seuoffice/ui/fonts/Carlito-BoldItalic.ttf?asset'
 
 /** Fonts shipped with the app (metric substitutes for fonts most decks assume, e.g. Calibri→Carlito). */
 const BUNDLED_FONTS: Record<string, string> = {
@@ -77,7 +77,7 @@ export function getUserFontDir(): string | null {
 }
 
 /**
- * The design templates' shared font set (@genoffice/ui/template-fonts): a second read-only
+ * The design templates' shared font set (@seuoffice/ui/template-fonts): a second read-only
  * source beside the user store, never written to and invisible to Chromium the same way.
  * Indexed by the family list rather than file names: Space Grotesk ships a Bold file only,
  * and Playfair Display one variable file.
@@ -115,7 +115,7 @@ function templateWeightRange(path: string): { weight: string } | undefined {
  * the same private FontFace channel as Office DFonts. Registrations are process-wide and
  * live until the app exits — like PowerPoint keeping embedded fonts while the deck is open.
  */
-const EMBEDDED_FONT_DIR = join(tmpdir(), 'genoffice-embedded-fonts')
+const EMBEDDED_FONT_DIR = join(tmpdir(), 'seuoffice-embedded-fonts')
 /** norm(typeface) -> styleKey ('<bold><italic>') -> extracted sfnt path */
 const embeddedFaces = new Map<string, Map<string, string>>()
 

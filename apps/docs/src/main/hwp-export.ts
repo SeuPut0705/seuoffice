@@ -1,6 +1,6 @@
 /**
  * "Export as HWP Document": the Word editor's own docx becomes a .hwp or
- * .hwpx copy through @genoffice/docx2hwp. The conversion is thousands of
+ * .hwpx copy through @seuoffice/docx2hwp. The conversion is thousands of
  * engine calls, so it runs in a worker thread made for this one job and
  * terminated after it: the windows stay responsive, the engine's memory goes
  * back to the system, and a crashed engine leaves nothing behind.
@@ -15,8 +15,8 @@ import type {
   HwpFormat,
   Loss,
   LossFeature,
-} from '@genoffice/docx2hwp'
-import { createI18n, type Lang } from '@genoffice/i18n'
+} from '@seuoffice/docx2hwp'
+import { createI18n, type Lang } from '@seuoffice/i18n'
 import type { MessageBoxOptions } from 'electron'
 import { HWP_EXPORT_STRINGS } from './hwp-export-strings'
 
@@ -138,7 +138,7 @@ export async function exportHwp(
 }
 
 const tHwp = createI18n(HWP_EXPORT_STRINGS)
-type HwpKey = keyof (typeof HWP_EXPORT_STRINGS)['zh']
+type HwpKey = keyof (typeof HWP_EXPORT_STRINGS)['en']
 
 /** a name for every loss the package reports: a new feature fails the typecheck here */
 const FEATURE_KEY = {

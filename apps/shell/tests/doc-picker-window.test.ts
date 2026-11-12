@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { productName } from '@genoffice/i18n'
-import { DOC_ATTACH_CHANNELS } from '@genoffice/electron-utils/doc-attach-channels'
-import type { DocAttachResult } from '@genoffice/electron-utils/doc-attach-bridge'
+import { productName } from '@seuoffice/i18n'
+import { DOC_ATTACH_CHANNELS } from '@seuoffice/electron-utils/doc-attach-channels'
+import type { DocAttachResult } from '@seuoffice/electron-utils/doc-attach-bridge'
 import {
   DOC_PICKER_CHANNELS,
   type DocListItem,

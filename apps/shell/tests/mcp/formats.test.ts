@@ -157,7 +157,7 @@ describe('withSaveExtension', () => {
 
   it('refuses a dialog-free format change to .odt and points at the CLI conversion', () => {
     expect(() => withSaveExtension('docx', '/tmp/report.odt')).toThrow(
-      /must be saved as \.docx \(got "\.odt"\); save as \.docx, then convert it with `ieumoffice convert <file> --to odt`/,
+      /must be saved as \.docx \(got "\.odt"\); save as \.docx, then convert it with `seuoffice convert <file> --to odt`/,
     )
   })
 })

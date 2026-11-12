@@ -1,4 +1,5 @@
-import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
+import { documentLocaleFor } from '@seuoffice/i18n'
+import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@seuoffice/ui'
 import {
   createAiStreamBridge,
   createWebBridge,
@@ -16,6 +17,7 @@ import {
   waitForDocument,
   webAiSettings,
   webLanguage,
+  webRequestedLanguage,
   type PageCollab,
   type WebDocument,
 } from '@seuoffice/web-platform'
@@ -179,6 +181,7 @@ const ai = createAiStreamBridge()
 
 const desktop: Partial<DesktopApi> = {
   getLanguage: async () => webLanguage() as Awaited<ReturnType<DesktopApi['getLanguage']>>,
+  getDocumentLocale: async () => documentLocaleFor(webRequestedLanguage()),
   onLanguageChanged: unsubscribe,
   getSystemLocale: async () => navigator.language,
   getTheme: async () => 'system',

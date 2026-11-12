@@ -5,8 +5,8 @@ import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import type { Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { LANGS, PRODUCT_REPO_SLUG } from '@genoffice/i18n'
-import type { Lang } from '@genoffice/i18n'
+import { LANGS, PRODUCT_REPO_SLUG } from '@seuoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type { HomeApi } from '../src/shared/home-api'
 import { LocaleProvider } from '../src/renderer/src/locale'
 import { SettingsModal } from '../src/renderer/src/SettingsModal'
@@ -141,7 +141,7 @@ describe('Settings → About', () => {
     ] as const
     for (const lang of LANGS) {
       for (const key of keys) expect(strings[lang][key], `${lang}.${key}`).not.toBe('')
-      expect(strings[lang].setTrademarks, lang).toContain('GenOffice')
+      expect(strings[lang].setTrademarks, lang).toContain('SeuOffice')
       expect(strings[lang].setHwpNotice, lang).toContain('rhwp')
       expect(strings[lang].setDisclaimer, lang).toContain('Apache License 2.0')
       if (lang !== 'en')
@@ -150,14 +150,10 @@ describe('Settings → About', () => {
   })
 
   it('has the link label in every UI language, none of them about stars', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       const label = strings[lang].viewOnGitHub
       expect(label, lang).toContain('GitHub')
       if (lang !== 'en') expect(label, lang).not.toBe(strings.en.viewOnGitHub)
     }
-    // the two Chinese scripts and the two Malay-family languages may share a wording
-    const distinct = new Set(LANGS.map((lang) => strings[lang].viewOnGitHub))
-    expect(distinct.size).toBeGreaterThanOrEqual(LANGS.length - 2)
   })
 })

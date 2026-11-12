@@ -4,8 +4,8 @@ import { writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
 import { StringDecoder } from 'node:string_decoder'
-import type { AgentImage, AgentMessage, AgentToolCall, AgentToolDef } from '@genoffice/agent-core'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import type { AgentImage, AgentMessage, AgentToolCall, AgentToolDef } from '@seuoffice/agent-core'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import type {
   AiChatResponse,
   AiProviderConfig,
@@ -91,7 +91,7 @@ const IDLE_SHUTDOWN_MS = 120_000
 const MAX_NATIVE_SESSIONS = 64
 const MAX_MODEL_PAGES = 10
 const MAX_MCP_STATUS_PAGES = 10
-const CODEX_TEMP_PREFIX = 'genoffice-codex-app-server-'
+const CODEX_TEMP_PREFIX = 'seuoffice-codex-app-server-'
 /**
  * How this client names itself to Codex, which passes it on to OpenAI: the
  * product, not the project it is based on. Also the tag around a turn's payload.
@@ -481,7 +481,7 @@ class CodexAppServerClient {
       return
     }
     if (typeof message.method === 'string' && message.id !== undefined) {
-      // GenOffice deliberately disables Codex-owned tools. Reply instead of
+      // SeuOffice deliberately disables Codex-owned tools. Reply instead of
       // leaving an unexpected server request pending forever.
       this.write({
         id: message.id,
@@ -786,7 +786,7 @@ function incrementalMessages(
   for (let index = 0; index < existing.messageFingerprints.length; index++) {
     if (fingerprint(messages[index]!) !== existing.messageFingerprints[index]) return null
   }
-  // The assistant response is already native app-server history. GenOffice's
+  // The assistant response is already native app-server history. SeuOffice's
   // following tool results or user message are the only new events to inject.
   return messages.slice(existing.messageFingerprints.length).filter((m) => m.role !== 'assistant')
 }
@@ -816,7 +816,7 @@ function finalMessageFromTurn(params: unknown): string {
   return ''
 }
 
-const CODEX_PERMISSION_PROFILE = 'genoffice'
+const CODEX_PERMISSION_PROFILE = 'seuoffice'
 
 /**
  * Codex keeps its own shell tool even when told not to use it, and the plain

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { localContextTokensOf, newCustomEndpointId } from '@genoffice/ai-provider/browser'
+import { localContextTokensOf, newCustomEndpointId } from '@seuoffice/ai-provider/browser'
 import type {
   AiCustomEndpoint,
   AiLocalDiscoveryResult,
@@ -10,7 +10,7 @@ import type {
   AiLocalTestResult,
   AiLocalValueSource,
   AiSettings,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type { StringKey, TFunc } from './locale'
 import {
   LOCAL_PRESET_IDS,

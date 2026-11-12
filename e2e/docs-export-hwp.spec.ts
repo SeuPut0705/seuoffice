@@ -107,7 +107,7 @@ const exists = (path: string) =>
 
 test('Save As .hwpx and .hwp writes Hangul copies and leaves the Word document alone', async () => {
   test.setTimeout(240_000)
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-docs-export-hwp-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-docs-export-hwp-'))
   const docxPath = join(dir, 'notice.docx')
   await copyFile(NOTICE, docxPath)
   const original = await readFile(docxPath)
@@ -155,7 +155,7 @@ test('Save As .hwpx and .hwp writes Hangul copies and leaves the Word document a
 
 test('a copy that loses something is confirmed first: Cancel writes nothing, Save writes', async () => {
   test.setTimeout(240_000)
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-docs-export-hwp-loss-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-docs-export-hwp-loss-'))
   const docxPath = join(dir, 'kitchen.docx')
   await copyFile(KITCHEN_SINK, docxPath)
   const original = await readFile(docxPath)

@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   apPanel: 'Annotations',
   apPanelTip: 'Gather highlights, notes and passage cards in one list',
@@ -52,9 +50,9 @@ export const en = {
   apCopyFailed: "Couldn't copy",
   apOpenMd: 'Open as Markdown document',
   apOpenDocx: 'Open as Word document',
-  apCreateUnavailable: 'New documents can be created only from a PDF opened in GenOffice',
-  apDocxUnavailable: 'Word documents can be created only from a PDF opened in GenOffice',
+  apCreateUnavailable: 'New documents can be created only from a PDF opened in SeuOffice',
+  apDocxUnavailable: 'Word documents can be created only from a PDF opened in SeuOffice',
   apCreateFailed: "Couldn't create the document. {reason}",
   apMdNote: 'Note: {text}',
   apCount: '{count} items',
-} satisfies Record<keyof typeof zh, string>
+}

@@ -7,7 +7,7 @@ import { run } from './helpers'
 
 const dirs: string[] = []
 function empty(ext: string): string {
-  const dir = mkdtempSync(join(tmpdir(), 'ieumoffice-empty-package-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-empty-package-'))
   dirs.push(dir)
   const path = join(dir, `empty.${ext}`)
   writeFileSync(path, '')
@@ -45,7 +45,7 @@ describe('empty packaged inputs', () => {
     const previous = Buffer.from('existing output must survive')
     writeFileSync(output, previous)
     const r = await run(['convert', input, '--to', 'pdf', '--out', output, '--force', '--json'], {
-      env: { GENOFFICE_APP_BIN: join(dirs.at(-1)!, 'missing-app') },
+      env: { SEUOFFICE_APP_BIN: join(dirs.at(-1)!, 'missing-app') },
     })
     expect(r.code).toBe(2)
     expect(r.json()).toMatchObject({
@@ -72,7 +72,7 @@ describe('empty packaged inputs', () => {
   it('does not refuse a zero-byte file for open, which lets the editor start a new document', async () => {
     const input = empty('docx')
     const r = await run(['open', input, '--json'], {
-      env: { GENOFFICE_APP_BIN: join(dirs.at(-1)!, 'missing-app') },
+      env: { SEUOFFICE_APP_BIN: join(dirs.at(-1)!, 'missing-app') },
     })
     // it got as far as launching the (missing) app instead of refusing the input
     expect(r.code).toBe(4)

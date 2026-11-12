@@ -4,7 +4,7 @@
  * and for the first-connection notice, which blocked reply offers to continue,
  * and what happens to the message queue. The gate itself (hold, start, drop,
  * settings writes) is the hook every editor shares and is tested in
- * @genoffice/ui; App.tsx hands its answers to the panel as `subscription`.
+ * @seuoffice/ui; App.tsx hands its answers to the panel as `subscription`.
  */
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
@@ -14,8 +14,8 @@ import {
   type AiSettings,
   type AiSubscriptionState,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import { AI_SUBSCRIPTION_STRINGS, aiSendGate, aiConnectPromptChoice } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { AI_SUBSCRIPTION_STRINGS, aiSendGate, aiConnectPromptChoice } from '@seuoffice/ui'
 import {
   AiChatPanel,
   type AiChatMessage,

@@ -25,7 +25,7 @@ import {
   type AiSubscriptionProviderId,
   type AiSubscriptionStatuses,
   type StreamCallbacks,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 
 /** What an error chunk says about a failure: the text and its machine-readable cause */
 export type AiRunErrorFields = { error: string } & Pick<
@@ -63,7 +63,7 @@ function providerLabel(provider: AiProviderId): string {
 
 /**
  * The text carried by a refusal. Renderers word a refusal themselves from its
- * `errorCode` (aiRunErrorText in @genoffice/ui); this English sentence is only
+ * `errorCode` (aiRunErrorText in @seuoffice/ui); this English sentence is only
  * what a caller without that wording shows.
  */
 function notConnectedText(

@@ -81,7 +81,7 @@ async function settledPageCount(page: Page): Promise<number> {
 test.describe('page break inside a table cell', () => {
   test('breaks the row so the content below lands on a new page', async () => {
     test.setTimeout(300_000)
-    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'genoffice-e2e-cell-break-')))
+    const dir = realpathSync(mkdtempSync(join(tmpdir(), 'seuoffice-e2e-cell-break-')))
     const docPath = join(dir, 'anchor.docx')
     writeFileSync(docPath, await minimalDocx())
 

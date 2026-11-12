@@ -175,7 +175,7 @@ export function ieumPictureHtml(bytes, extension, width, height) {
  * Whether a clipboard picture is only a rendering of the clipboard's text: spreadsheet copies
  * (Excel, the app's sheet editor) put a picture of the cells next to their HTML table, and the
  * table pastes as a table here as it does in Hancom Office. A real picture copy carries no text,
- * or HTML with an <img>. Same rule as `clipboardPictureIsRendering` in @genoffice/ui.
+ * or HTML with an <img>. Same rule as `clipboardPictureIsRendering` in @seuoffice/ui.
  */
 export function ieumPictureIsRendering(html, text) {
   if (/<(table|tr|td|th)\b/i.test(html)) return true

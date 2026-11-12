@@ -102,7 +102,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   hwpToText: vi.fn(async () => ''),
   parseFileToText: vi.fn(async () => ({ kind: 'text', text: '' })),
   ATTACHABLE_EXTS: new Set<string>(),
@@ -119,8 +119,8 @@ import {
   resetAppShuttingDown,
   resumeDiscardedCopies,
   setHeadlessMode,
-} from '@genoffice/electron-utils'
-import type { RecoveryIdentity } from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
+import type { RecoveryIdentity } from '@seuoffice/electron-utils'
 import {
   configureHwpRuntime,
   createHwpView,
@@ -275,7 +275,7 @@ const fileIdentity = (filePath: string): RecoveryIdentity => ({ kind: 'hwp', fil
 
 let dir: string
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-hwp-recovery-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-hwp-recovery-'))
   userData = join(dir, 'userData')
   showSaveDialog.mockReset()
   showSaveDialog.mockResolvedValue({ canceled: true })

@@ -4,11 +4,11 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { UserSkillView } from '@genoffice/electron-utils/user-skills-channels'
+import type { UserSkillView } from '@seuoffice/electron-utils/user-skills-channels'
 import type { HomeApi } from '../src/shared/home-api'
 import { LocaleProvider } from '../src/renderer/src/locale'
 import { SkillsPane } from '../src/renderer/src/skills/SkillsPane'
-import { skillEditorsText } from '@genoffice/ui'
+import { skillEditorsText } from '@seuoffice/ui'
 import { skillsText } from '../src/renderer/src/i18n/strings-skills'
 
 /**

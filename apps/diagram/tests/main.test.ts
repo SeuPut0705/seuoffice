@@ -115,7 +115,7 @@ import {
   requestDiagramSave,
   setDiagramProvisionalTitleHook,
 } from '../src/main/diagram-main'
-import { createRecoveryStore, setHeadlessMode } from '@genoffice/electron-utils'
+import { createRecoveryStore, setHeadlessMode } from '@seuoffice/electron-utils'
 import { writeViewCopy } from '../src/main/recovery-main'
 import { DIAGRAM_CHANNELS } from '../src/shared/ipc'
 import type { OpenFileResult, SaveDiagramResult, SaveTargetResult } from '../src/shared/ipc'
@@ -124,7 +124,7 @@ const fixtures = join(__dirname, '../../../packages/drawio-model/tests/fixtures'
 let dir: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-diagram-main-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-diagram-main-'))
   configureDiagramRuntime({
     preloadPath: join(dir, 'out', 'preload', 'index.js'),
     rendererFile: join(dir, 'out', 'renderer', 'index.html'),

@@ -39,18 +39,35 @@ test.describe('home screen', () => {
     }
   })
 
-  test('renders localized UI when GENOFFICE_LANG=zh-CN', async () => {
+  test('renders Korean UI when SEUOFFICE_LANG=ko-KR', async () => {
     const launched = await launchShell({
       onboardingSeen: true,
-      lang: 'zh-CN',
-      videoDir: 'home-zh-cn',
+      lang: 'ko-KR',
+      videoDir: 'home-ko-kr',
     })
     const { page } = launched
     try {
-      await expect(page.locator('.nav-item .nav-label').first()).toHaveText('最近')
-      await page.screenshot({ path: screenshotPath('home-zh-cn') })
+      await expect(page.locator('html')).toHaveAttribute('lang', 'ko-KR')
+      await expect(page.locator('.nav-item .nav-label').first()).not.toHaveText('Recent')
+      await page.screenshot({ path: screenshotPath('home-ko-kr') })
     } finally {
-      await closeAndSaveVideo(launched, 'home-zh-cn')
+      await closeAndSaveVideo(launched, 'home-ko-kr')
+    }
+  })
+
+  test('renders English UI for a language the app has no UI in', async () => {
+    const launched = await launchShell({
+      onboardingSeen: true,
+      lang: 'ja-JP',
+      videoDir: 'home-ja-jp',
+    })
+    const { page } = launched
+    try {
+      await expect(page.locator('html')).toHaveAttribute('lang', 'en-US')
+      await expect(page.locator('html')).toHaveAttribute('dir', 'ltr')
+      await expect(page.locator('.nav-item .nav-label').first()).toHaveText('Recent')
+    } finally {
+      await closeAndSaveVideo(launched, 'home-ja-jp')
     }
   })
 })

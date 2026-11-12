@@ -1,7 +1,7 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
-  docPickTitle: 'GenOffice 문서에서 첨부',
+  docPickTitle: 'SeuOffice 문서에서 첨부',
   docPickPane: '옆 칸',
   docPickOpen: '열린 문서',
   docPickRecent: '최근 문서',
@@ -15,4 +15,4 @@ export const ko = {
   docPickAttach: '첨부',
   docPickCancel: '취소',
   docPickWorking: '첨부하는 중…',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

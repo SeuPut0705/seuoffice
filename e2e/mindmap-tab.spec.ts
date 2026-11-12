@@ -5,7 +5,7 @@ import { createRequire } from 'node:module'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { test, expect, type ElectronApplication, type Locator, type Page } from '@playwright/test'
-import { createXmindDocumentFromOutline, openXmind } from '@genoffice/xmind-engine'
+import { createXmindDocumentFromOutline, openXmind } from '@seuoffice/xmind-engine'
 import {
   SHELL_DIR,
   closeAndSaveVideo,
@@ -135,7 +135,7 @@ const clickMenuItem = (app: ElectronApplication, top: string, label: string): Pr
 test.describe('mind map editor in the shell', () => {
   test('a new map from the Home card: tab, menu, undo from the menu, save, unsaved-changes prompt', async () => {
     test.setTimeout(240_000)
-    const saveDir = await mkdtemp(join(tmpdir(), 'genoffice-mindmap-new-'))
+    const saveDir = await mkdtemp(join(tmpdir(), 'seuoffice-mindmap-new-'))
     const savedPath = join(saveDir, 'first-map.xmind')
     const launched = await launchShell({ onboardingSeen: true, videoDir: 'mindmap-new' })
     const { app, page } = launched
@@ -334,7 +334,7 @@ test.describe('mind map editor in the shell', () => {
 
   test('a .xmind on the command line opens; recents, filter, Open in New Window and its close prompt', async () => {
     test.setTimeout(240_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-mindmap-argv-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-mindmap-argv-'))
     const mapPath = join(dir, 'trip.xmind')
     await writeMap(mapPath, TRIP_OUTLINE)
     const launched = await launchShell({
@@ -437,8 +437,8 @@ test.describe('mind map editor in the shell', () => {
 
   test('the folder tree, file search, the open dialog and a drop all reach the editor', async () => {
     test.setTimeout(240_000)
-    const root = realpathSync(mkdtempSync(join(tmpdir(), 'genoffice-mindmap-root-')))
-    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'genoffice-mindmap-out-')))
+    const root = realpathSync(mkdtempSync(join(tmpdir(), 'seuoffice-mindmap-root-')))
+    const outside = realpathSync(mkdtempSync(join(tmpdir(), 'seuoffice-mindmap-out-')))
     mkdirSync(join(root, 'Maps'))
     await writeMap(join(root, 'Maps', 'budget.xmind'), '# Money\n\n- Quarterly budget\n  - Rent\n')
     await writeMap(join(outside, 'picked.xmind'), '# Picked\n\n- Picked in the dialog\n  - One\n')
@@ -544,7 +544,7 @@ test.describe('mind map editor in the shell', () => {
   })
 
   test('a headless export of a .xmind is refused with the input-file exit code', async () => {
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-mindmap-headless-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-mindmap-headless-'))
     const mapPath = join(dir, 'trip.xmind')
     const outPath = join(dir, 'trip.pdf')
     await writeMap(mapPath, TRIP_OUTLINE)
@@ -566,7 +566,7 @@ test.describe('mind map editor in the shell', () => {
             outPath,
             '--json',
           ],
-          { env: { ...env, GENOFFICE_USER_DATA: join(dir, 'profile') }, timeout: 60_000 },
+          { env: { ...env, SEUOFFICE_USER_DATA: join(dir, 'profile') }, timeout: 60_000 },
           (error, stdout) => {
             const code = error ? ((error as { code?: number | null }).code ?? null) : 0
             resolve({ code: typeof code === 'number' ? code : null, stdout: String(stdout) })

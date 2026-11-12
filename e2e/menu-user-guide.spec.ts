@@ -33,7 +33,7 @@ const menuReport = (app: ElectronApplication) =>
 test('the manual survives an editor switch that swaps the application menu', async () => {
   test.setTimeout(300_000)
 
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-menu-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-menu-'))
   const fixture = join(dir, 'fixture')
   await cp(join(__dirname, 'assets/font-manager-rubik'), fixture, { recursive: true })
   const slideXml = join(fixture, 'ppt/slides/slide1.xml')

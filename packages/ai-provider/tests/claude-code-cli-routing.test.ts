@@ -1,6 +1,6 @@
 /** The provider router hands the `claude-code-cli` protocol to the Claude Code bridge. */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentMessage, AgentToolDef } from '@genoffice/agent-core'
+import type { AgentMessage, AgentToolDef } from '@seuoffice/agent-core'
 
 const bridge = vi.hoisted(() => ({
   streamClaudeCodeCli: vi.fn(async () => undefined),

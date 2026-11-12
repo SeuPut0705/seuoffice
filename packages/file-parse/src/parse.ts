@@ -1,6 +1,6 @@
 import { open, readFile, stat } from 'node:fs/promises'
 import { extname } from 'node:path'
-import { OdtNotTextError, isOdtOpenError } from '@genoffice/odt-engine'
+import { OdtNotTextError, isOdtOpenError } from '@seuoffice/odt-engine'
 import { DamagedFileError } from './damaged-file'
 import { diagramFormatOf, readDiagramText } from './diagram'
 import { docToText } from './doc'
@@ -14,7 +14,7 @@ import { pptxToText } from './pptx'
 import { xlsxToText } from './xlsx'
 import { xmindToText } from './xmind'
 import { readZipTextParts } from './zip-text-parts'
-import { decodeCsvBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import'
+import { decodeCsvBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import'
 import { redactHtmlSource } from './html-redaction'
 import { redactMarkdownSource } from './markdown-redaction'
 
@@ -34,14 +34,14 @@ export interface ParsedFile {
   damaged?: true
 }
 
-/** No text extraction for images: callers read raw bytes and go multimodal (see @genoffice/ai-provider images support) */
-const IMAGE_MIMES: Record<string, string> = {
-  png: 'image/png',
-  jpg: 'image/jpeg',
-  jpeg: 'image/jpeg',
-  gif: 'image/gif',
-  webp: 'image/webp',
-}
+/** No text extraction for images: callers read raw bytes and go multimodal (see @seuoffice/ai-provider images support) */
+const IMAGE_MIMES = new Map<string, string>([
+  ['png', 'image/png'],
+  ['jpg', 'image/jpeg'],
+  ['jpeg', 'image/jpeg'],
+  ['gif', 'image/gif'],
+  ['webp', 'image/webp'],
+])
 
 const TEXT_EXTS = new Set([
   'txt',
@@ -249,7 +249,7 @@ export async function parseFileToText(
       return { ok: false, kind: 'text', error: e instanceof Error ? e.message : String(e) }
     }
   }
-  const imageMime = IMAGE_MIMES[ext]
+  const imageMime = IMAGE_MIMES.get(ext)
   if (imageMime) return { ok: true, kind: 'image', mime: imageMime }
   try {
     if (TEXT_EXTS.has(ext)) {
@@ -258,7 +258,7 @@ export async function parseFileToText(
         ext === 'csv' || ext === 'tsv'
           ? isUtf32BomDeclared(bytes)
             ? null
-            : decodeCsvBuffer(bytes)
+            : await decodeCsvBuffer(bytes)
           : decodeTextBytes(bytes)
       if (text === null) {
         return {

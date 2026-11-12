@@ -2,7 +2,7 @@
  * The text owner: the block converter for paragraphs, headings and lists,
  * and the free writer for new paragraphs.
  */
-import type { Block } from '@genoffice/docx-engine'
+import type { Block } from '@seuoffice/docx-engine'
 import type { OdtNode } from '../core/body'
 import { walkNodes } from '../core/body'
 import {

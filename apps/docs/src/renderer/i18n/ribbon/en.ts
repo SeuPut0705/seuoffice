@@ -1,5 +1,4 @@
-import type { zh } from './zh'
-import { ribbonCommonEn } from '@genoffice/i18n'
+import { ribbonCommonEn } from '@seuoffice/i18n'
 
 export const en = {
   ...ribbonCommonEn,
@@ -1018,4 +1017,4 @@ export const en = {
   ribbonTcColorPalePink: 'Pale Pink',
   ribbonTcColorLightYellow: 'Light Yellow',
   ribbonTcColorLightOrange: 'Light Orange',
-} satisfies Record<keyof typeof zh, string>
+}

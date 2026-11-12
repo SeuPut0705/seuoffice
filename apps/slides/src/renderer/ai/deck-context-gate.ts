@@ -10,7 +10,7 @@
  * a repair round or the next page never brings the dialog back. A call with no
  * run asks on its own.
  */
-import { contextWarningFor, type ContextWarning } from '@genoffice/agent-core'
+import { contextWarningFor, type ContextWarning } from '@seuoffice/agent-core'
 
 export interface DeckContextGateOptions<S> {
   /** the selected model's window; undefined skips the check (not a local model) */

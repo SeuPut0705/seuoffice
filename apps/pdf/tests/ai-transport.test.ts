@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamChunk, IpcStreamError, IpcSubscriptionUsage } from '@genoffice/agent-core'
-import { normalizeAiSettings } from '@genoffice/ai-provider/browser'
-import { aiRunErrorText } from '@genoffice/ui'
+import type { IpcStreamChunk, IpcStreamError, IpcSubscriptionUsage } from '@seuoffice/agent-core'
+import { normalizeAiSettings } from '@seuoffice/ai-provider/browser'
+import { aiRunErrorText } from '@seuoffice/ui'
 import { createElectronTransport } from '../src/renderer/ai/transport'
 import { strings } from '../src/renderer/i18n/strings'
 
@@ -98,8 +98,8 @@ describe('pdf AI transport', () => {
     ] as const) {
       const turn = startTurn()
       turn.push({ type: 'error', error: 'raw', errorCode: code })
-      // the module-level language of the pdf renderer is zh until a provider mounts
-      expect(turn.errors).toEqual([strings.zh[key]])
+      // the module-level language of the pdf renderer is en until a provider mounts
+      expect(turn.errors).toEqual([strings.en[key]])
       expect(turn.streamErrors[0]?.kind).toBe(code)
     }
   })

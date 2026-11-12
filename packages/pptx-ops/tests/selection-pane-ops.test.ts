@@ -3,7 +3,7 @@
  * letter-spacing round trip through setText and setFont.
  */
 import { describe, it, expect } from 'vitest'
-import { createBlankPptx, openPptx, patchSlideXml, type Paragraph } from '@genoffice/pptx-engine'
+import { createBlankPptx, openPptx, patchSlideXml, type Paragraph } from '@seuoffice/pptx-engine'
 import { runTxn } from '../src/ops/executor'
 import { applyEditParagraphs } from '../src/edit-text'
 import '../src/ops/index'

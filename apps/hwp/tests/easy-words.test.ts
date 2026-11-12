@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { createI18n, type Lang } from '@genoffice/i18n'
+import { createI18n, type Lang } from '@seuoffice/i18n'
 import { strings } from '../src/renderer/i18n/strings'
 import { easyWordsRequest } from '../src/renderer/ai/easy-words'
 
@@ -14,8 +14,7 @@ const LANGS = Object.keys(strings) as Lang[]
 const SELECTED = '본인부담금은 소득 하위 30%에 면제한다.\n신청은 3월 31일까지 한다.'
 
 describe('쉬운 말로 풀기 in the screen languages', () => {
-  it('has a name and a request in all 21 languages', () => {
-    expect(LANGS).toHaveLength(21)
+  it('has a name and a request in every screen language', () => {
     const labels = new Set<string>()
     for (const lang of LANGS) {
       const label = translate(lang, 'easyWordsLabel')
@@ -26,7 +25,7 @@ describe('쉬운 말로 풀기 in the screen languages', () => {
       expect(prompt, lang).not.toContain('{text}')
     }
     // each language writes its own name, not a copy of another's
-    expect(labels.size).toBeGreaterThanOrEqual(20)
+    expect(labels.size).toBe(LANGS.length)
     expect(translate('ko', 'easyWordsLabel')).toBe('쉬운 말로 풀기')
   })
 
@@ -38,8 +37,6 @@ describe('쉬운 말로 풀기 in the screen languages', () => {
     const en = translate('en', 'easyWordsPrompt', { text: SELECTED })
     expect(en).toContain('in English')
     expect(en).toContain('Do not change the document')
-    expect(translate('ja', 'easyWordsPrompt', { text: SELECTED })).toContain('日本語')
-    expect(translate('de', 'easyWordsPrompt', { text: SELECTED })).toContain('auf Deutsch')
   })
 })
 

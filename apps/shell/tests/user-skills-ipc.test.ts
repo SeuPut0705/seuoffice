@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { USER_SKILLS_CHANNELS as C } from '@genoffice/electron-utils/user-skills-channels'
+import { USER_SKILLS_CHANNELS as C } from '@seuoffice/electron-utils/user-skills-channels'
 import type { UserSkillsService } from '../src/main/user-skills/user-skills-service'
 
 /**

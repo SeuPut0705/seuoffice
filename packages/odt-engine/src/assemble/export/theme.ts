@@ -16,7 +16,7 @@
  * cached next to the reference, and the ODT keeps that fallback, which Word
  * would have replaced with the theme's value. One per such reference.
  */
-import type { ParsedDoc, ThemeColors, ThemeFonts } from '@genoffice/docx-engine'
+import type { ParsedDoc, ThemeColors, ThemeFonts } from '@seuoffice/docx-engine'
 
 /** `w:themeColor` value → colour scheme slot (Word's default mapping). */
 const COLOR_SLOTS: Record<string, keyof ThemeColors> = {

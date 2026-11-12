@@ -47,7 +47,7 @@ const parseFileToText = vi.fn(async (_path: string) => ({
   kind: 'text',
   text: 'text as last saved',
 }))
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   parseFileToText: (path: string) => parseFileToText(path),
   ATTACHABLE_EXTS: new Set([
     'txt',
@@ -102,12 +102,12 @@ vi.mock('@genoffice/file-parse', () => ({
   diagramPictureExtOf: () => null,
   diagramPictureExtOfName: () => null,
 }))
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   sharedSubscriptionStatuses: () => ({}),
 }))
 
-import { UNSAVED_CHANGES_MESSAGE, setOpenFilesSource } from '@genoffice/electron-utils'
+import { UNSAVED_CHANGES_MESSAGE, setOpenFilesSource } from '@seuoffice/electron-utils'
 import { createHtmlView } from '../src/main/html-main'
 import { HTML_CHANNELS } from '../src/shared/ipc'
 
@@ -120,7 +120,7 @@ function read(path: string): Promise<ReadResult> {
 }
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-html-attach-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-html-attach-'))
   parseFileToText.mockClear()
 })
 afterEach(() => {

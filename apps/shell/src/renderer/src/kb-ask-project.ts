@@ -10,9 +10,9 @@ import {
   USER_SKILL_TOOL_NAMES,
   type AgentToolCall,
   type ToolExecution,
-} from '@genoffice/agent-core'
-import type { ProjectId, ToolActivity } from '@genoffice/project-store'
-import { PROJECT_TOOLS } from '@genoffice/ui'
+} from '@seuoffice/agent-core'
+import type { ProjectId, ToolActivity } from '@seuoffice/project-store'
+import { PROJECT_TOOLS } from '@seuoffice/ui'
 import type { HomeApi } from '../../shared/home-api'
 
 /** one tool a turn used, badge-shaped; the icon follows the kind */

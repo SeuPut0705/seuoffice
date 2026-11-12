@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
+import { SUBSCRIPTION_IPC_CHANNELS } from '@seuoffice/ai-provider/browser'
 import type { PdfApi } from '../src/shared/ipc'
 import {
   AI_TOOL_CAPABILITIES_CHANNEL,
@@ -28,7 +28,7 @@ vi.mock('electron', () => ({
     removeListener: (channel: string) => removed.push(channel),
   },
 }))
-vi.mock('@genoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: vi.fn() }))
+vi.mock('@seuoffice/electron-utils/drop-open', () => ({ installDropOpenBridge: vi.fn() }))
 
 const CHECKING = checkingSubscriptionStatuses()
 /** an answer that names no ChatGPT status comes from an app without that connection */

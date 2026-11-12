@@ -18,14 +18,14 @@ import { readFile, stat } from 'node:fs/promises'
 import { basename, dirname, join, resolve } from 'node:path'
 import { BrowserWindow, dialog, ipcMain, nativeImage, shell } from 'electron'
 import type { IpcMainInvokeEvent, WebContents } from 'electron'
-import { productName, type Lang } from '@genoffice/i18n'
+import { productName, type Lang } from '@seuoffice/i18n'
 import {
   safeExternalUrl,
   saveAsSuggestion,
   showOpenDialogWithMemory,
   showSaveDialogWithMemory,
-} from '@genoffice/electron-utils'
-import { fileHasUnsavedChanges } from '@genoffice/electron-utils/unsaved-files'
+} from '@seuoffice/electron-utils'
+import { fileHasUnsavedChanges } from '@seuoffice/electron-utils/unsaved-files'
 import { writePdfAtomically } from '../../../../pdf/src/main/atomic-write'
 import { uniqueGeneratedPdfPath } from '../../../../pdf/src/main/generated-output'
 import {

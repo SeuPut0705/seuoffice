@@ -1,5 +1,5 @@
 /* Quick Look modal (in-app) and standalone Explorer Quick Look window.
- * Uses design tokens from @genoffice/ui/tokens.css; custom properties below
+ * Uses design tokens from @seuoffice/ui/tokens.css; custom properties below
  * provide light, dark, and system-dark values. */
 :root {
   --accent: #0f7fff;

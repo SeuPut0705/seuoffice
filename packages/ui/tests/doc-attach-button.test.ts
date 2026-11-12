@@ -2,7 +2,7 @@
 import { act, createElement } from 'react'
 import { createRoot } from 'react-dom/client'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { brandText, LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { DocAttachButton, docPickedOf } from '../src/DocAttachButton'
 import { DOC_ATTACH_STRINGS } from '../src/strings-doc-attach'
 
@@ -38,14 +38,13 @@ describe('docPickedOf', () => {
 
 describe('doc-attach strings', () => {
   it('fills every language, and the button shows the product name', () => {
-    expect(LANGS).toHaveLength(21)
     for (const lang of LANGS) {
       expect(DOC_ATTACH_STRINGS[lang].label.trim().length, lang).toBeGreaterThan(0)
       expect(DOC_ATTACH_STRINGS[lang].busy.trim().length, lang).toBeGreaterThan(0)
     }
     // the dictionary keeps the upstream token; the button produces the product name
-    expect(DOC_ATTACH_STRINGS.en.label).toBe('Attach from GenOffice documents')
-    expect(brandText(DOC_ATTACH_STRINGS.ko.label, 'ko')).toBe('SeuOffice 문서에서 첨부')
+    expect(DOC_ATTACH_STRINGS.en.label).toBe('Attach from SeuOffice documents')
+    expect(DOC_ATTACH_STRINGS.ko.label).toBe('SeuOffice 문서에서 첨부')
   })
 })
 
@@ -93,7 +92,7 @@ describe('DocAttachButton', () => {
     setBridge({ available: async () => true, pick })
     const onPicked = vi.fn()
     await act(async () => {
-      root.render(createElement(DocAttachButton, { lang: 'zh', onPicked }))
+      root.render(createElement(DocAttachButton, { lang: 'ko', onPicked }))
     })
     const button = host.querySelector('button')!
     expect(button).not.toBeNull()

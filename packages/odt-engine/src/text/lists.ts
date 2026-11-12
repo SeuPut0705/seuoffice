@@ -18,7 +18,7 @@ import {
   type CustomNumberingLevel,
   type NumberingDef,
   customLevelXml,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { BridgeList, OdfToOoxmlContext, OoxmlToOdfContext } from '../core/convert'
 import type { OdtListLevel, OdtStyle } from '../core/styles'
 import { escapeXmlAttr } from '../core/xml'

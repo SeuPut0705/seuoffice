@@ -7,8 +7,8 @@ import {
   SEALED_PREFIX,
   setAiSecretCodec,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
-import type * as AiProvider from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
+import type * as AiProvider from '@seuoffice/ai-provider'
 
 /**
  * The naming channel as a window calls it: the settings file on disk, the
@@ -35,11 +35,11 @@ vi.mock('electron', () => ({
     handle: (channel: string, handler: unknown) => h.handlers.set(channel, handler),
   },
 }))
-vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
+vi.mock('@seuoffice/ai-provider', async (importOriginal) => ({
   ...(await importOriginal<typeof AiProvider>()),
   chatForProvider: h.chat,
 }))
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   sharedSubscriptionStatuses: () => h.statuses,
 }))
 

@@ -8,9 +8,9 @@ import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { Editor } from '@tiptap/core'
-import type { AgentStreamCallbacks, IpcStreamError } from '@genoffice/agent-core'
-import { defaultAiSettings, type AiSettings } from '@genoffice/ai-provider'
-import { AI_CONTEXT_STRINGS, aiRunErrorText } from '@genoffice/ui'
+import type { AgentStreamCallbacks, IpcStreamError } from '@seuoffice/agent-core'
+import { defaultAiSettings, type AiSettings } from '@seuoffice/ai-provider'
+import { AI_CONTEXT_STRINGS, aiRunErrorText } from '@seuoffice/ui'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import { createElectronTransport } from '../src/renderer/ai/transport'
@@ -141,9 +141,9 @@ describe('the docs transport context gate', () => {
     expect(confirm).toHaveBeenCalledTimes(1)
     expect(started).toHaveLength(0)
     expect(turn.streamErrors).toEqual([
-      { kind: 'context-limit', message: aiRunErrorText('zh', { kind: 'context-limit' }) },
+      { kind: 'context-limit', message: aiRunErrorText('en', { kind: 'context-limit' }) },
     ])
-    expect(turn.errors).toEqual([aiRunErrorText('zh', { kind: 'context-limit' })])
+    expect(turn.errors).toEqual([aiRunErrorText('en', { kind: 'context-limit' })])
   })
 
   it('asks once for a run: the second turn of the same run starts without a dialog', () => {
@@ -182,7 +182,7 @@ describe('the docs tools-off notice', () => {
       }),
     )
     expect(container.querySelector('.ai-sub-notice')?.textContent).toBe(
-      AI_CONTEXT_STRINGS.zh.toolsUnsupported,
+      AI_CONTEXT_STRINGS.en.toolsUnsupported,
     )
   })
 

@@ -1,5 +1,3 @@
-import type { zh } from './zh'
-
 export const en = {
   blToggle: 'Translation side by side',
   blToggleTip:
@@ -70,4 +68,4 @@ export const en = {
   blEasyDiscardEditAsk: 'Discard your edit and explain again?',
   blEasyEditLabel: 'Edit explanation',
   blEasyTranslateAll: 'Explain all pages simply…',
-} satisfies Record<keyof typeof zh, string>
+}

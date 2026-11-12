@@ -3,7 +3,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { buildDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 
 type IpcHandler = (...args: unknown[]) => unknown
@@ -20,7 +20,7 @@ vi.mock('electron', () => ({
     getPath: (name: string) => join(state.root, name),
     getAppPath: () => state.root,
     getVersion: () => '0.1',
-    getName: () => 'GenOffice',
+    getName: () => 'SeuOffice',
     on: vi.fn(),
   },
   BrowserWindow: class {
@@ -60,7 +60,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   vi.resetModules()
-  state.root = mkdtempSync(join(tmpdir(), 'genoffice-save-as-'))
+  state.root = mkdtempSync(join(tmpdir(), 'seuoffice-save-as-'))
   for (const dir of ['userData', 'documents', 'picked']) mkdirSync(join(state.root, dir))
   // registerDocsIpc resolves the shipped template fonts under the packaged resources folder
   Object.defineProperty(process, 'resourcesPath', { value: state.root, configurable: true })

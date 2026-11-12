@@ -28,9 +28,9 @@ apps/diagram    다이어그램(.drawio) 편집기. 빌드 때 받은 draw.io �
 packages/ai-provider   제공자 목록, 제공자 선택 규칙, 구독 프로그램 실행부, 키 방식 제공자 연결
 packages/ai-search     검색·이미지 생성·미디어 분석 도구, 자동 호출 경로의 구독 요청 차례
 packages/agent-core    AI 실행 반복(모델 → 도구 → 모델), 화면↔뒷단 전송 통로, 가리기
-packages/ui            편집기들이 함께 쓰는 AI 화면 부품과 그 문구(21개 언어)
+packages/ui            편집기들이 함께 쓰는 AI 화면 부품과 그 문구(두 언어)
 packages/i18n          화면 언어 목록, 제품 이름 한 곳 정의
-packages/cli           터미널 명령어 `ieumoffice`, MCP 도구, 에이전트 스킬 설치
+packages/cli           터미널 명령어 `seuoffice`, MCP 도구, 에이전트 스킬 설치
 packages/electron-utils 편집기 뒷단 공용 도구(메뉴, 저장소 주소, 원격 이미지 받기 등), 저장하지 않은 파일 확인,
                        생성 요청을 새 탭에 맡겨 두는 곳(`generate-handoff.ts`)
 packages/odt-engine    ODT 열기(다리 docx로 바꾸기), 고친 부분만 원본 ODT에 되돌려 쓰기, docx → 새 ODT
@@ -50,7 +50,7 @@ apps/sheets/native/xlsx-engine   엑셀 계산·입출력을 맡는 별도 프�
 ```
 
 - 의존 방향은 한쪽이다. `apps/*` → `packages/*`. 패키지끼리는 `ai-provider` → `agent-core`·`i18n`(그래서 `agent-core`는 `ai-provider`를 가져올 수 없다), `ai-search` → `ai-provider`·`electron-utils`, `ui` → `ai-provider`·`agent-core`·`i18n`·`pptx-render`, `odt-engine` → `docx-engine`·`zip-gate`, `cli` → 엔진 패키지·`pdf-structure`·`ai-search`·`ai-provider`·`i18n`, `electron-utils` → `i18n`, `file-parse` → `agent-core`(가리기 이름표)·`xmind-engine`·`epub-engine`·`drawio-model`·`docx-engine`, `xmind-engine` → `zip-gate`·`i18n`, `epub-engine` → `zip-gate`·`pdf-structure`(이름으로. 번역 작업 엔진, 보관소 열쇠의 형, 묶기·답 읽기 도우미). `pdf-structure`는 `pdf2docx`·`i18n`·`ai-provider`(그림 입력 판정)·`agent-core`(형)·`font-metrics`의 소스를 상대 경로로 가져오고, `apps/pdf`·`apps/shell`·`cli`도 `pdf-structure`를 상대 경로로 가져온다. `pdf-structure`는 다른 작업 공간 패키지를 이름으로 가져오지 않고 Electron에 기대지 않는다. `i18n`과 `agent-core`는 다른 작업 공간 패키지에 기대지 않는다.
-- `ai-provider`는 진입점이 나뉘어 있다. 화면(renderer)과 preload가 **값**으로 가져오는 것은 `@genoffice/ai-provider/browser`뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 코드(`/subscription`, `/claude-code-cli`, `/codex-app-server`)는 뒷단에서만 가져온다.
+- `ai-provider`는 진입점이 나뉘어 있다. 화면(renderer)과 preload가 **값**으로 가져오는 것은 `@seuoffice/ai-provider/browser`뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 코드(`/subscription`, `/claude-code-cli`, `/codex-app-server`)는 뒷단에서만 가져온다.
 - 편집기들의 뒷단 코드는 따로 실행되지 않는다. 껍데기 앱을 빌드할 때 함께 묶여, 껍데기 앱의 한 프로세스 안에서 돈다. 그래서 창구 이름(IPC 채널)은 프로세스 전체에서 하나뿐이어야 한다.
 - 편집기 화면은 껍데기 창 위에 얹히는 별도 화면(WebContentsView)이다. 홈 탭만 껍데기 앱 자신의 화면이다.
 
@@ -153,14 +153,14 @@ EPUB 편집기 화면 ── epub:read-chapter·apply-edits·save 등 ──→ 
 ## 사용자 스킬이 지나는 길 (결정 0048)
 
 ```
-설정 → 스킬(화면) ─┐                         ┌─ @genoffice/ai-provider user-skills
+설정 → 스킬(화면) ─┐                         ┌─ @seuoffice/ai-provider user-skills
 편집기 AI 창·홈 AI 질문 ─ aiOfficeUserSkills ─┼→ 껍데기 앱 뒷단 user-skills/ ─┤  출처 읽기·판정, 가져오기·업데이트·내보내기
-에이전트 창(일부) ──────┘   (preload 다리)     │  (쓰기는 ~/.ieumoffice/skills 하나) └─ 깃허브 세 주소
+에이전트 창(일부) ──────┘   (preload 다리)     │  (쓰기는 ~/.seuoffice/skills 하나) └─ 깃허브 세 주소
                                               └→ app-settings.json의 skills 값
 ```
 
-- 스킬을 읽고 쓰는 일은 모두 껍데기 앱 뒷단의 게이트웨이(`apps/shell/src/main/user-skills/`)가 한다. 편집기 렌더러는 파일 시스템을 만지지 않고 다리(`aiOfficeUserSkills`, `@genoffice/electron-utils/user-skills-bridge`)로 부른다.
-- 기본 AI 창: 입력칸의 `/`·`$` 목록과 칩은 `@genoffice/ui`(`useComposerSkills`)에 있다. 보낼 때 칩의 본문을 요청 글에 붙인다. AI가 스스로 쓰는 도구(`use_skill`, `read_skill_file`, `propose_skill`)는 `@genoffice/agent-core`의 기능 묶음(`createBridgedUserSkillsSkill`)이고 편집기의 도구 반복에서 돈다. 구독 프로그램은 여전히 앱 밖에 닿는 도구가 없다(도구 0개, 문서 편집 차례는 응답 형식을 맡는 `StructuredOutput` 하나, 결정 0082).
+- 스킬을 읽고 쓰는 일은 모두 껍데기 앱 뒷단의 게이트웨이(`apps/shell/src/main/user-skills/`)가 한다. 편집기 렌더러는 파일 시스템을 만지지 않고 다리(`aiOfficeUserSkills`, `@seuoffice/electron-utils/user-skills-bridge`)로 부른다. 그림의 `~/.seuoffice`와 아래 프로젝트 폴더의 `.seuoffice`는, 그 폴더가 없고 이전 판이 만든 `.ieumoffice`가 있으면 그 폴더를 그대로 쓴다.
+- 기본 AI 창: 입력칸의 `/`·`$` 목록과 칩은 `@seuoffice/ui`(`useComposerSkills`)에 있다. 보낼 때 칩의 본문을 요청 글에 붙인다. AI가 스스로 쓰는 도구(`use_skill`, `read_skill_file`, `propose_skill`)는 `@seuoffice/agent-core`의 기능 묶음(`createBridgedUserSkillsSkill`)이고 편집기의 도구 반복에서 돈다. 구독 프로그램은 여전히 앱 밖에 닿는 도구가 없다(도구 0개, 문서 편집 차례는 응답 형식을 맡는 `StructuredOutput` 하나, 결정 0082).
 - 양식: 양식 스킬을 부르면 뒷단(`templateTabs`)이 양식 사본을 그 형식 편집기의 제목 없는 새 탭으로 열고, 넘겨주기(`queueSkillHandoffFor`/`takeSkillHandoff`)로 요청과 칩을 그 탭의 AI 창에 넘긴다. 받는 창은 보내기 전 문지기를 거쳐 실행한다. 내용이 있는 문서에서는 먼저 어디에서 할지 묻고, 새 문서를 고르면 저장된 지금 문서의 경로가 넘겨주기의 `attach`로 가서 받는 창의 첨부가 된다(결정 0118).
 - 에이전트 창: 세션을 시작할 때 켜진 스킬이 묶음으로 복사된다(위 "에이전트 모드의 흐름"). 세션 MCP 서버의 `propose_skill`·`propose_skill_install`은 창에 카드와 미리보기를 띄우기만 한다.
 
@@ -174,7 +174,7 @@ EPUB 편집기 화면 ── epub:read-chapter·apply-edits·save 등 ──→ 
 ```
 
 - 서버와 맺는 연결은 허브(`apps/shell/src/main/mcp-client/hub.ts`) 하나가 서버마다 하나씩 쥐고, 모든 창이 함께 쓴다. 보관(`store.ts`, `secrets.ts`), 주소 판정(`address.ts`), 주소 서버와 로그인(`remote.ts`, `oauth.ts`, `oauth-loopback.ts`), 내 PC 서버(`local.ts`, `local-launch.ts`), 실행 환경 받기(`runtimes.ts`, `runtime-pins.ts`, `runtime-archive.ts`), 지문(`fingerprint.ts`), 도구 목록 맞추기(`listing.ts`), 붙여넣기 읽기(`paste.ts`, `toml.ts`)가 그 아래에 있다. 창구는 `hub-ipc.ts`가, 앱에 묶는 일은 `hub-app.ts`가 한다.
-- 편집기 창과 홈 창의 preload는 공용 다리(`@genoffice/electron-utils/mcp-tools-bridge`, `window.aiOfficeMcpTools`)로 도구 목록을 받고 호출한다. 화면이 받는 것은 서버 이름, 상태, 승인된 도구 정의와 안내뿐이다. 주소, 열쇠, 명령은 받지 않는다. 설정 창구(`mcp-servers:*`)는 껍데기 앱의 메인 창만 부를 수 있다.
+- 편집기 창과 홈 창의 preload는 공용 다리(`@seuoffice/electron-utils/mcp-tools-bridge`, `window.aiOfficeMcpTools`)로 도구 목록을 받고 호출한다. 화면이 받는 것은 서버 이름, 상태, 승인된 도구 정의와 안내뿐이다. 주소, 열쇠, 명령은 받지 않는다. 설정 창구(`mcp-servers:*`)는 껍데기 앱의 메인 창만 부를 수 있다.
 - AI 창 쪽 판단은 `packages/agent-core`에 있다. `createUserMcpSkill`(`user-mcp-skill.ts`)이 다리에서 받은 서버 목록으로 도구(`mcp__〈서버〉__〈도구〉`)와 지시문 덩어리를 만들고, `ask` 도구는 화면의 허락 카드(`packages/ui`의 `McpPermissionCard`)에 묻고, 다리로 호출하고, 결과를 `shapeMcpResult`로 거른다. 받은 내용 지키기(`guardReceivedContent`, `user-mcp/keep-inside.ts`)는 드라이브 차단과 주소 확인(`guardOutbound`) 안쪽에 씌워진다. 입력칸 옆의 서버 단추는 `packages/ui`의 `McpServerButton`이다.
 - 한 번의 호출: 모델이 `mcp__…` 도구를 요청 → 화면의 도구 반복이 문지기(인터넷 스위치, 주소 확인, 드라이브, 받은 내용 지키기)와 허락 카드를 거침 → 다리 → 허브가 서버 상태를 보고 연결을 맺거나(처음이면) 내 PC 서버를 띄움 → 서버 → 결과를 화면으로 → 반복이 대화에 붙임. 구독 프로그램은 여전히 한 차례의 답만 내고, 도구는 앱이 실행한다.
 - 에이전트 창: 세션을 시작할 때 `agent/agent-mcp-relay.ts`가 켜진 서버마다 같은 이름의 중계 MCP 서버(루프백, 빈 포트, 세션 토큰)를 열고, 실행부(`packages/ai-provider/src/agent-session/`)가 세션 MCP 설정에 넣는다. 중계는 받은 호출을 같은 허브로 넘기고, `ask` 도구는 에이전트 창의 카드로 묻는다. 서버의 열쇠와 환경 변수는 프로그램에 가지 않는다.
@@ -191,7 +191,7 @@ AI 창(아홉 편집기, 홈 AI 질문)
  │      ↓
  └→ 껍데기 앱 뒷단 apps/shell/src/main/projects/ (프로젝트 길잡이)
         ├→ app-settings.json의 projects   목록·고정·믿음 기록·문서별 선택·installId
-        ├→ <폴더>/.ieumoffice/            지침·기억·대화(쓰기는 확인 함수 하나를 지난다)
+        ├→ <폴더>/.seuoffice/            지침·기억·대화(쓰기는 확인 함수 하나를 지난다)
         ├→ 파일 색인(file-index)          목록·찾기, 클라우드 전용 파일은 이름만
         ├→ parseFileToText               읽기(가리기 적용, 첨부와 같은 길)
         └→ 대화 상자                      믿음 확인, 클라우드 파일 내려받기 확인
@@ -199,8 +199,8 @@ AI 창(아홉 편집기, 홈 AI 질문)
 
 1. **고르기.** 입력 상자 밖 아래 줄의 고르기와 머리의 대화 목록은 `packages/ui`의 부품이다. 창이 처음 열릴 때 무엇이 골라져 있을지는 뒷단이 정한다. 요청을 보낸 창을 알아내 그 창의 문서 경로로 판단하고, 화면이 보낸 경로나 목록을 믿지 않는다.
 2. **맥락.** 공용 프로젝트 스킬(`panelProjectSkill`, `packages/ui`)은 `panelUserSkills` 옆에 있고, 열 곳의 AI 창이 모두 스킬 목록에 펼쳐 넣는다. 프로젝트를 고른 경우에만 스킬 하나를 돌려준다. 보내기 직전에 다리로 맥락(이름·지침·기억·파일 이름 목록·알림)을 한 번 읽어 그 요청 동안 고정한다. 이 내용은 스킬의 지시문(`systemPrompt`) 자리에 들어가, 실행 반복이 `MATERIAL_NOT_INSTRUCTIONS` 뒤에 잇는다. 사용자 메시지에 붙는 매 차례 맥락(`buildContext`)에는 넣지 않는다. 대화 기록에 쌓이지 않게 하고, 주소 판정(`guardOutbound`)에서 사람의 말로 치이지 않게 하려는 것이다. `composeWithDrive`에 넣으면 홈 AI 질문이 빠지므로 그 길은 쓰지 않는다.
-3. **도구.** `project_list_files`·`project_search`·`project_read`·`project_remember`는 다른 앱 도구처럼 화면의 실행 반복에서 불린다. 실행은 다리를 거쳐 뒷단으로 간다. 뒷단은 그 실행의 범위 값을 만들고(결정 0020의 방식에 "프로젝트 폴더" 종류를 더함), 호출마다 경로가 폴더 안이고 숨김·`.ieumoffice/`·`ignore`에 걸리지 않는지 다시 본다. 읽기는 `assertFileSaved` → `parseFileToText`이고, 클라우드 전용 파일이면 먼저 대화 상자로 묻는다. 홈 AI 질문은 같은 범위 값에 별표 범위를 합친다. 구독 프로그램은 여전히 도구가 없다.
-4. **대화.** 프로젝트 대화 훅(`packages/ui`)이 대화 열기·더하기·목록·새 대화를 다리로 부르고, 뒷단이 `.ieumoffice/chats/`에 쓴다. 뒷단은 대화를 연 창들을 대화 id별로 기억해, 한 창에서 메시지가 더해지면 나머지 창에 알린다. 프로젝트를 고르지 않은 창은 예전처럼 `project-store`의 문서별 저장을 쓴다.
+3. **도구.** `project_list_files`·`project_search`·`project_read`·`project_remember`는 다른 앱 도구처럼 화면의 실행 반복에서 불린다. 실행은 다리를 거쳐 뒷단으로 간다. 뒷단은 그 실행의 범위 값을 만들고(결정 0020의 방식에 "프로젝트 폴더" 종류를 더함), 호출마다 경로가 폴더 안이고 숨김·`.seuoffice/`·`ignore`에 걸리지 않는지 다시 본다. 읽기는 `assertFileSaved` → `parseFileToText`이고, 클라우드 전용 파일이면 먼저 대화 상자로 묻는다. 홈 AI 질문은 같은 범위 값에 별표 범위를 합친다. 구독 프로그램은 여전히 도구가 없다.
+4. **대화.** 프로젝트 대화 훅(`packages/ui`)이 대화 열기·더하기·목록·새 대화를 다리로 부르고, 뒷단이 `.seuoffice/chats/`에 쓴다. 뒷단은 대화를 연 창들을 대화 id별로 기억해, 한 창에서 메시지가 더해지면 나머지 창에 알린다. 프로젝트를 고르지 않은 창은 예전처럼 `project-store`의 문서별 저장을 쓴다.
 5. **기억.** `project_remember`의 쓰기는 뒷단이 쓰기 직전 파일을 다시 읽어 고친다. [정리하기]는 화면이 지금 연결된 제공자로 한 번 실행하고(보내기 전 판단을 지난다), 받은 목록을 다리로 넘기면 뒷단이 백업하고 바꾼다.
 6. **새 문서.** 프로젝트를 고른 실행에서 AI가 만든 새 문서의 저장 폴더는 뒷단이 그 탭의 프로젝트로 정하고, 같은 쓰기 확인을 지난다. 편집기 뒷단은 껍데기를 가져오지 않으므로 `configure<편집기>Runtime(...)`으로 받은 함수만 쓴다.
 
@@ -240,8 +240,8 @@ PC가 꺼질 때(Windows는 창의 `query-session-end`·`session-end`, macOS·Li
 ## 바깥에서 들어오는 길 (자동 호출 경로)
 
 ```
-터미널의 `ieumoffice …`  ──┐
-MCP 클라이언트(`ieumoffice mcp`) ─┴→ packages/cli → 문서 엔진(파일 읽기·만들기·변환, PC 안에서 끝남)
+터미널의 `seuoffice …`  ──┐
+MCP 클라이언트(`seuoffice mcp`) ─┴→ packages/cli → 문서 엔진(파일 읽기·만들기·변환, PC 안에서 끝남)
                                          ├→ packages/pdf-structure (PDF 변환·그림·보관소, PC 안에서 끝남)
                                          ├→ packages/ai-search (search / image / media / read-url, 밖으로 나감)
                                          ├→ packages/epub-engine (epub translate의 단위·결과 책, PC 안에서 끝남)
@@ -281,7 +281,7 @@ PDF 편집기 화면 ── pdfApi.structure.* ──→ 셸 메인(pdf-structur
 | 앱 → 구독 프로그램      | 시스템 지시문, 대화, 앱 도구 목록, 첨부 이미지(표준 입력으로). 문서 작업이면 PDF 페이지 그림, 번역할 글 블록(도구 목록 없이)                                                                                                                                           | 사용자 글이 든 명령줄 인자, 요금 경로를 바꾸는 환경변수, 사용자 PC의 개인 설정·훅·MCP 연결 |
 | 구독 프로그램 → 앱      | 글 조각, 구조화된 도구 호출 요청, 사용량, 오류, 계정 이메일(설정 화면 표시용. 저장하지 않는다), 모델 목록                                                                                                                                                              | 로그인 정보, 조직 이름(읽은 즉시 버린다)                                                   |
 | 앱 → 인터넷(직접)       | 키 방식 제공자 요청, 검색어, 검색된 이미지 받기, 주소로 문서 읽기(`read_url`·`read-url`: 입력한 주소가 그 사이트로, GitHub 읽기 토큰은 `api.github.com`에만), 업데이트 확인. 사용자가 켠 경우에만: 파일 검색 재정렬(찾은 문서의 발췌), 마크다운 편집기의 이미지 올리기 | 사용 통계(보내지 않는다)                                                                   |
-| 앱 → 사용자 MCP 서버    | AI가 정한 도구 입력(열린 문서와 첨부의 내용이 들어갈 수 있다), 사람이 넣은 열쇠·헤더(그 서버의 출처로만), 로그인 토큰. 내 PC 서버에는 최소 환경과 등록한 환경 변수                                                                                                     | 앱의 비밀값, 구독 프로그램 관련 변수, `GENOFFICE_*`, 가린 범위의 원문                      |
+| 앱 → 사용자 MCP 서버    | AI가 정한 도구 입력(열린 문서와 첨부의 내용이 들어갈 수 있다), 사람이 넣은 열쇠·헤더(그 서버의 출처로만), 로그인 토큰. 내 PC 서버에는 최소 환경과 등록한 환경 변수                                                                                                     | 앱의 비밀값, 구독 프로그램 관련 변수, `SEUOFFICE_*`, 가린 범위의 원문                      |
 | 화면 ↔ 뒷단             | 설정(정리된 사본), 연결 상태, 스트림 조각. PDF 편집기는 문서 나무, 보관소 읽기·쓰기(뒷단이 계산한 문서 해시로만)                                                                                                                                                       | 프로그램 실행 권한(뒷단에만 있다)                                                          |
 | 셸 메인 ↔ 구조 프로세스 | 작업 하나의 요청(파일 경로, 암호, 페이지 범위, 출력 경로), 진행, 결과                                                                                                                                                                                                  | 다른 작업. 프로세스는 작업 하나가 끝나면 끝난다                                            |
 

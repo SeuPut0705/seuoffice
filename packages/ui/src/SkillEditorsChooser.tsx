@@ -1,6 +1,6 @@
 import React, { useId } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import { SKILL_EDITORS, type SkillEditorId } from '@genoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
+import { SKILL_EDITORS, type SkillEditorId } from '@seuoffice/agent-core'
 import { skillEditorsText } from './strings-skill-editors'
 import './skill-editors.css'
 

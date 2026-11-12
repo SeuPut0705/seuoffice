@@ -22,7 +22,7 @@
  *
  * ## Why there is a second place to read the marks from
  *
- * The part survives Excel and GenOffice, and not everything else. A reader that
+ * The part survives Excel and SeuOffice, and not everything else. A reader that
  * rebuilds the package from its own model drops parts it does not model along
  * with their relationships and content-type overrides — `soffice
  * --convert-to xlsx` leaves none of the three. So every save also writes the
@@ -41,7 +41,7 @@ import { z } from 'zod'
 import {
   readArchiveEntryText,
   type ArchiveClient,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-package-io'
 import { readRedactionEntries, type RedactionPartRead } from './workbook-redaction-entries'
 
 /// Only the entry names are needed, so this stays structural rather than

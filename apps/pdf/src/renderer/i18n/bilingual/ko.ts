@@ -1,4 +1,4 @@
-import type { zh } from './zh'
+import type { en } from './en'
 
 export const ko = {
   blToggle: '번역 나란히',
@@ -70,4 +70,4 @@ export const ko = {
   blEasyDiscardEditAsk: '고친 내용을 버리고 다시 풀이할까요?',
   blEasyEditLabel: '쉬운 풀이 고치기',
   blEasyTranslateAll: '모든 페이지 쉬운 풀이…',
-} satisfies Record<keyof typeof zh, string>
+} satisfies Record<keyof typeof en, string>

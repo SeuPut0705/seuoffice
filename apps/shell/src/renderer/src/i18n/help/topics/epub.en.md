@@ -4,7 +4,7 @@ The e-book editor opens EPUB books (`.epub`) in a tab. You read the book, correc
 
 ## Opening a book
 
-- Open a `.epub` file from the open dialog, by dragging it onto the window, from recent files, the folder tree or the Google Drive list. In Windows it is also offered under "Open with". Installing GenOffice does not make it the default program for `.epub` files.
+- Open a `.epub` file from the open dialog, by dragging it onto the window, from recent files, the folder tree or the Google Drive list. In Windows it is also offered under "Open with". Installing SeuOffice does not make it the default program for `.epub` files.
 - If the book is already open, its tab comes to the front.
 - Copy-protected (DRM) books do not open: open them in the app of the store you bought them from. Damaged files and files that are not EPUB books do not open either, and the reason is shown.
 - **Fixed-layout books** (laid out page by page, like picture books and comics) open for reading only. Editing, AI editing, replace and translation are off, and the status line says why. Reading and asking the AI still work.
@@ -64,9 +64,9 @@ The e-book editor opens EPUB books (`.epub`) in a tab. You read the book, correc
 - The title and the table of contents are translated too. In a bilingual book each paragraph is followed by its translation; in tables, captions and lists the translation goes inside the same cell or item. Its title shows both, as "Original title (Translated title)".
 - Chapters you did not choose stay in the original language in the result.
 - A book written vertically becomes horizontal, unless it is translated into Japanese, Chinese or Korean. Arabic and Hebrew translations read from right to left.
-- What has been translated is kept. If you stop, choose **Export what is translated so far** (the rest stays in the original language) or **Continue later**. When you open a book with an unfinished translation, GenOffice offers to continue it. **Translate again from the start** first deletes the kept translation for that language.
+- What has been translated is kept. If you stop, choose **Export what is translated so far** (the rest stays in the original language) or **Continue later**. When you open a book with an unfinished translation, SeuOffice offers to continue it. **Translate again from the start** first deletes the kept translation for that language.
 - Kept translations count under Settings ▸ General ▸ **Saved AI results**, together with those of PDF documents, and **Delete all** removes them too.
-- The same translation can also run from the [terminal commands](help://cli) as `ieumoffice epub translate`.
+- The same translation can also run from the [terminal commands](help://cli) as `seuoffice epub translate`.
 - Choose **Plain language** under **Mode** to rewrite the book in easy words in the chosen language. The results are a **Plain-language book** and **Original followed by plain language**; their titles are marked as a plain-language version in that language, and their file names carry the mark in the screen language so they differ from a translation’s. The language starts as the screen language and may be the book’s own. The plain-language version is kept apart from translations, continuing it is offered on its own, and the terminal commands do not make it.
 
 ## Not supported yet

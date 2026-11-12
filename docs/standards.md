@@ -4,18 +4,18 @@
 
 이 프로젝트는 원본(GenOffice)의 문서 엔진 개선을 계속 골라 받아온다.
 
-- 코드 내부 이름을 바꾸지 않는다. 패키지 이름(`@genoffice/*`), 환경변수 이름(`GENOFFICE_*`), 코드 안의 식별자, 파일 이름이 대상이다. 바꾸는 것은 화면에 보이는 이름과 PC에 등록되는 이름뿐이다.
+- 내부 이름은 seuoffice다(`@seuoffice/*`, `SEUOFFICE_*`, `seuoffice` 명령). 사용자에게 이미 있는 옛 이름은 `old-names*` 파일에서 계속 읽는다. 설치된 앱의 정체(앱 ID, userData 폴더, ProgId, 업데이트 피드)는 바꾸지 않는다.
 - 손대지 않아도 되는 줄을 건드리지 않는다. 줄바꿈·정렬·순서·이름을 정리 삼아 고치지 않는다. 지울 것은 지우고, 남는 코드는 글자 그대로 둔다.
-- 화면 언어 파일을 지우거나 합치지 않는다. 언어 21개를 모두 유지한다.
+- 화면 언어는 영어와 한국어 둘이다(결정 0024). 두 언어 파일을 지우거나 합치지 않는다.
 - 문서 엔진 패키지의 동작을 바꾸지 않는다. 저장·내보내기 결과가 달라지는 수정이 필요해 보이면 멈추고 사람에게 묻는다.
 
 ## 글과 언어
 
 - 코드, 주석, 커밋 글은 영어다. 영어가 아닌 글은 번역 자원(화면 문구, 도움말)과 사람이 읽는 문서에만 둔다. 검사: `npm run check:english-comments`.
-- 화면 문구는 21개 언어 모두 채운다. 언어별 파일은 키가 서로 같아야 한다. 큰 사전은 언어별 조각 파일(`i18n/<영역>/<언어>.ts`)이고 `zh`가 키 목록을 정한다. 조각마다 `satisfies Record<keyof typeof zh, string>`이 붙어 있어, 키가 빠지거나 남으면 형 검사가 실패한다. 조각들을 다시 하나의 큰 객체로 합치지 않는다.
+- 화면 문구는 두 언어 모두 채운다. 언어별 파일은 키가 서로 같아야 한다. 큰 사전은 언어별 조각 파일(`i18n/<영역>/<언어>.ts`)이고 `en`이 키 목록을 정한다. 조각마다 `satisfies Record<keyof typeof en, string>`이 붙어 있어, 키가 빠지거나 남으면 형 검사가 실패한다. 조각들을 다시 하나의 큰 객체로 합치지 않는다.
 - `useI18n()`의 `t`를 훅 의존성 배열에 넣지 않는다. 참조가 매번 바뀌어 효과가 끝없이 다시 돈다. 키를 저장해 두고 그릴 때 번역한다.
 - 한국어·영어 문구는 직접 쓰고, 나머지 19개는 번역으로 채운다. 영어를 그대로 복사해 채우지 않는다.
-- 앱 안 도움말은 주제마다 21개 언어 파일이 있고, 모든 언어가 영어판과 같은 구조(제목 수, 표의 행 수, 목록 수, 그림과 링크)를 가져야 한다. 검사: `npm run check:help-langs`.
+- 앱 안 도움말은 주제마다 두 언어 파일이 있고, 모든 언어가 영어판과 같은 구조(제목 수, 표의 행 수, 목록 수, 그림과 링크)를 가져야 한다. 검사: `npm run check:help-langs`.
 
 ## 제품 이름
 
@@ -52,13 +52,13 @@
 
 ## 모듈 경계
 
-- 화면(renderer)과 preload 코드가 `@genoffice/ai-provider`에서 **값**으로 가져오는 것은 브라우저용 진입점(`/browser`)뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 진입점은 뒷단에서만 가져온다.
+- 화면(renderer)과 preload 코드가 `@seuoffice/ai-provider`에서 **값**으로 가져오는 것은 브라우저용 진입점(`/browser`)뿐이다. 대표 진입점에서는 형(`import type`)만 가져온다. 프로그램을 실행하는 진입점은 뒷단에서만 가져온다.
 - 편집기 전용 AI 창구는 이름 앞에 편집기 이름을 붙이고(`sheets:ai-…`, `slides:ai-…`), 껍데기 앱 안에서도 항상 불리는 등록 함수에 넣는다. 공용 이름(`ai:…`)은 워드 뒷단이 이미 등록하므로, 같은 이름을 다시 등록하면 실행 중에 죽는다. 원본에서 온 예외가 하나 있다. PPT 편집기는 `ai:generate-image`, `ai:analyze-media` 등 몇 개를 이름을 붙이지 않은 채 등록하고, 그래서 워드 편집기가 같은 일에 `docs:`를 붙인다. 새 창구에는 이 예외를 따르지 않는다.
 - 구독 창구는 앱 뒷단에서 `ensureSubscriptionIpc`로만 등록한다. `registerSubscriptionIpc`를 직접 부르지 않는다. 같은 이름을 두 번 등록하면 실행 중에 죽는다.
 - 실행해 둔 프로그램의 추적 시작(`initSubscriptionChildTracking`)은 프로세스에서 한 번만 한다. 껍데기 앱이 한다.
 - 제공자를 정하는 곳은 `selectAiProvider` 하나다. 편집기가 자기 규칙으로 제공자를 고르거나 다른 제공자로 넘기지 않는다.
 - 보내기 전의 판단은 `packages/ui`의 `aiSendGate`·`useAiSendGate`를 쓴다. 편집기마다 따로 만들지 않는다.
-- 화면에 보이는 AI 실행 오류 글은 `packages/ui`의 `aiRunErrorText`로 만든다. 뒷단에 21개 언어 글을 새로 두지 않는다.
+- 화면에 보이는 AI 실행 오류 글은 `packages/ui`의 `aiRunErrorText`로 만든다. 뒷단에 두 언어 글을 새로 두지 않는다.
 - 앱의 `dependencies`에 적은 작업 공간 패키지는 그 앱의 `externalizeDepsPlugin` `exclude` 목록에도 넣는다. 빠지면 설치본이 실행 직후 죽는다.
 - 첨부할 수 있는 형식 목록은 `packages/file-parse`의 `attachable.ts` 한 곳에 둔다(`ATTACHABLE_EXTS`·`ATTACHABLE_IMAGE_EXTS`·`ATTACHABLE_MAX_BYTES`·`ATTACHABLE_IMAGE_MAX_BYTES`). 편집기마다 자기 목록을 만들지 않는다. 화면(renderer)은 Node에 묶인 `file-parse`를 값으로 읽을 수 없어서 그림 확장자만 각 앱의 몫으로 둘 수 있지만, 그 값은 모든 앱에서 같아야 한다.
 - preload나 화면이 가져다 쓰는 `packages/electron-utils` 모듈이 Electron에 묶여 있으면(루트 진입점), `package.json`의 `exports`에 하위 경로로 내보내 그쪽으로만 가져온다. 루트 진입점을 preload·renderer 번들로 끌어들이지 않는다.

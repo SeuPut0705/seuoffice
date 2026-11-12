@@ -1,5 +1,5 @@
 /**
- * `.ieumoffice/ignore`: files and folders the AI does not see (spec 3).
+ * `.seuoffice/ignore`: files and folders the AI does not see (spec 3).
  *
  * One pattern per line. Blank lines and lines starting with `#` are skipped.
  * `*` matches within one path segment, `?` one character, `**` any number of

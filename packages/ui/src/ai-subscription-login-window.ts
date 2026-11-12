@@ -4,8 +4,8 @@
  * shown when the sign-in did not finish. The main process builds these when it
  * opens the window, so this file imports no React and no renderer code.
  */
-import type { AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
-import { htmlLang, type Lang } from '@genoffice/i18n'
+import type { AiSubscriptionProviderId } from '@seuoffice/ai-provider/browser'
+import { htmlLang, type Lang } from '@seuoffice/i18n'
 import { aiSubscriptionProviderName, aiSubscriptionVendorName } from './ai-subscription'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
 
@@ -14,12 +14,6 @@ export interface AiSubscriptionLoginWindowText {
   guide: string
   closing: string
 }
-
-/**
- * A Windows console draws these scripts unjoined or left to right, so their
- * window shows the English guide; the card in the app stays in the language.
- */
-const CONSOLE_UNREADABLE_LANGS: ReadonlySet<Lang> = new Set<Lang>(['ar', 'he', 'hi', 'th'])
 
 /**
  * Only Claude's sign-in can hand back a code to paste. Codex takes the sign-in
@@ -37,17 +31,16 @@ const STEPS: Record<AiSubscriptionProviderId, readonly AiSubscriptionStringKey[]
   chatgpt: [],
 }
 
-/** The visible sign-in window's words for `provider`, in `lang` where a console can show it */
+/** The visible sign-in window's words for `provider`, in `lang` */
 export function aiSubscriptionLoginWindowText(
   lang: Lang,
   provider: AiSubscriptionProviderId,
 ): AiSubscriptionLoginWindowText {
-  const shown: Lang = CONSOLE_UNREADABLE_LANGS.has(lang) ? 'en' : lang
   const params = {
     provider: aiSubscriptionProviderName(provider),
     vendor: aiSubscriptionVendorName(provider),
   }
-  const text = (key: AiSubscriptionStringKey): string => aiSubscriptionText(shown, key, params)
+  const text = (key: AiSubscriptionStringKey): string => aiSubscriptionText(lang, key, params)
   const steps = STEPS[provider].map((key, index) => `${index + 1}. ${text(key)}`)
   return {
     title: text('loginWindowTitle'),

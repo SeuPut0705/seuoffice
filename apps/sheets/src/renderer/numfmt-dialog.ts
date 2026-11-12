@@ -1,8 +1,8 @@
 import { numfmt } from '@univerjs/core'
 
-import { getSystemShortDate } from '@genoffice/xlsx-gateway/shared/short-date'
+import { getSystemShortDate } from '@seuoffice/xlsx-gateway/shared/short-date'
 import { getLang } from './i18n/locale'
-import { numfmtLocaleFor } from './i18n/numfmt-locale'
+import { numfmtLocale, numfmtLocaleFor } from './i18n/numfmt-locale'
 
 /// Model behind the Format Cells → Number tab: category + sub-options ⇄
 /// OOXML pattern. The ribbon's category dropdown (number-format.ts) derives
@@ -262,15 +262,16 @@ export function numfmtOptionsOf(pattern: string, lang: string = getLang()): Numf
   return { ...defaults, category: 'custom', custom: pattern }
 }
 
+/** how a value looks in a format; `documentLocale` (a document-locale code) overrides the window's */
 export function numfmtPreview(
   pattern: string,
   value: number | string,
-  lang: string = getLang(),
+  documentLocale?: string,
 ): string {
   try {
     return numfmt.format(pattern || 'General', value, {
       throws: false,
-      locale: numfmtLocaleFor(lang),
+      locale: documentLocale === undefined ? numfmtLocale() : numfmtLocaleFor(documentLocale),
     })
   } catch {
     return typeof value === 'string' ? value : String(value)

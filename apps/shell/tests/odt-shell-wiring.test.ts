@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { isSupportedTreeFile } from '../src/main/folder-tree'
 import { EXT_FAMILY } from '../src/main/recent-files'
 
@@ -90,7 +90,6 @@ describe('ODT export menus', () => {
   })
 
   it('names the item and the dialog filter in every language', () => {
-    expect(LANGS).toHaveLength(21)
     const english = localeBlock('en')
     const englishOdt = english.match(/menuExportOdt: '([^']*)'/)?.[1]
     expect(englishOdt).toBe('Export as ODT…')

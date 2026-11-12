@@ -12,13 +12,13 @@ import {
   AiSubscriptionUsageLine,
   aiSubscriptionText,
   useAiSendGate,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import {
   AI_PANEL_WIDTH_DEFAULT,
   clampAiPanelWidth,
   loadAiPanelWidth,
   saveAiPanelWidth,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent, ReactElement, ReactNode } from 'react'
 import {
@@ -30,13 +30,13 @@ import {
   windowMcpState,
   windowMcpUsableServers,
   toolStepLabel,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionUsage,
-} from '@genoffice/ai-provider/browser'
-import { localModelCapabilities } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
+import { localModelCapabilities } from '@seuoffice/ai-provider/browser'
 import {
   AiComposer,
   AiQueueStrip,
@@ -70,7 +70,7 @@ import {
   type ProjectChatEntry,
   type ProjectChatOpened,
   type ProjectMemoryLine,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type { Editor } from '@tiptap/core'
 import { aiLangDirective, t as tGlobal, useI18n } from '../i18n/locale'
 import sendEnterOn from '../assets/send-enter-on.png'
@@ -81,7 +81,7 @@ import { setInactiveSelectionShown } from '../editor/inactiveSelection'
 import { uiOp } from '../editor/ops'
 import { createMarkdownSkill, MARKDOWN_RULES } from './markdown-skill'
 import { MindMapCard } from './MindMapCard'
-import { mindMapToMermaid } from '@genoffice/agent-core/mind-map'
+import { mindMapToMermaid } from '@seuoffice/agent-core/mind-map'
 import {
   buildDocWriterRequest,
   countMarkdownBlocks,
@@ -103,6 +103,7 @@ import {
   type EditQueueItem,
 } from './edit-queue'
 import { DOC_NAV_SCHEME, navigateToBlock, parseDocNavHref } from './doc-nav'
+import { isRtlLang } from '@seuoffice/i18n'
 
 /** Another editor's tool records on a reopened message, shown as one line */
 type OtherEditorTools = NonNullable<ProjectChatEntry['otherEditorTools']>
@@ -1254,7 +1255,7 @@ export function AiPanel({
       ref={asideRef}
       className={`copilot${resizing ? ' ai-panel-resizing' : ''}`}
       style={{ width: '100%' }}
-      dir={lang === 'ar' || lang === 'he' ? 'rtl' : undefined}
+      dir={isRtlLang(lang) ? 'rtl' : undefined}
     >
       <div
         className="ai-panel-resizer"

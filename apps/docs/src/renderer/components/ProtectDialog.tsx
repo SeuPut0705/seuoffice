@@ -17,7 +17,7 @@ import {
   verifyProtectionPassword,
   type DocProtection,
   type WriteProtection,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { useI18n } from '../i18n/locale'
 import { FieldError, PasswordInput } from './PasswordInput'
 import { odtOffNotice } from '../odt-gate'

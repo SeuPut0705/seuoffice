@@ -9,7 +9,7 @@ import {
   type RecoveryOpenUntitledRequest,
   type RecoveryStore,
   type RecoveryUntitledIdentity,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import { discardDocsRecovery, docsRecoveryIdentity } from '../../../docs/src/main/docs-main'
 import {
   createSheetsView,

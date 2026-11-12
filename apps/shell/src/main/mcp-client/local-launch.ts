@@ -12,13 +12,14 @@
  * window can run, is refused instead.
  */
 import { extname, posix, win32 } from 'node:path'
+import { ENV_PREFIX, OLD_ENV_PREFIX } from '@seuoffice/i18n'
 import type { McpRuntimeId, McpRuntimeKit, RuntimeMissing } from './runtimes'
 import type { McpServerConfig } from './store'
 
 /**
  * The system variables a server gets from the app's environment (5.3), a
  * tunable default. Everything else of the app's environment stays behind:
- * its secrets, the subscription programs' variables, `GENOFFICE_*`. On
+ * its secrets, the subscription programs' variables, `SEUOFFICE_*`. On
  * Windows names match without regard to case; elsewhere the lowercase proxy
  * spellings, which many tools read, are taken too.
  */
@@ -56,8 +57,17 @@ export const MCP_LOCAL_WINDOWS_ENV: readonly string[] = [
   'WINDIR',
 ]
 
-/** Registered names the app never passes on, whatever the person typed */
-const NEVER_PASSED = /^GENOFFICE_/i
+/**
+ * Registered names the app never passes on, whatever the person typed: its own
+ * variables, under the prefix of today and the one an earlier version used
+ * (the command still takes those over, see `OLD_ENV_NAMES`).
+ */
+const NEVER_PASSED_PREFIXES: readonly string[] = [ENV_PREFIX, OLD_ENV_PREFIX]
+
+function neverPassed(name: string): boolean {
+  const upper = name.toUpperCase()
+  return NEVER_PASSED_PREFIXES.some((prefix) => upper.startsWith(prefix))
+}
 
 /** Where a variable of the launch comes from, as the confirmation labels it */
 export type PlannedEnvOrigin = 'system' | 'registered' | 'app'
@@ -77,7 +87,7 @@ export interface PlannedLaunchReady {
   addedArgs: string[]
   /** the variable names the program gets; values are never part of the plan */
   env: PlannedEnvVar[]
-  /** registered names the app does not pass on (`GENOFFICE_*`) */
+  /** registered names the app does not pass on (`SEUOFFICE_*` and its earlier prefix) */
   droppedEnv: string[]
   /** the PC's own runtime or one the app downloaded */
   source: 'pc' | 'app'
@@ -222,7 +232,7 @@ export async function prepareLocalLaunch(
   }
   const droppedEnv: string[] = []
   for (const [name, value] of Object.entries(server.env)) {
-    if (NEVER_PASSED.test(name)) droppedEnv.push(name)
+    if (neverPassed(name)) droppedEnv.push(name)
     else put(name, 'registered', value)
   }
   for (const [name, value] of Object.entries(resolved.env)) put(name, 'app', value)

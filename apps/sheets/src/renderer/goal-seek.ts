@@ -4,9 +4,10 @@
  * |f - target| ≤ 0.001). Each guess is a journaled setValue followed by a
  * recalc wait, so the whole run undoes like typing and works in manual mode.
  */
-import { parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { parseAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { calculateNow, isManualCalculation } from './calc-options'
 import { t } from './i18n/locale'
+import { holdsHiddenCells } from './redact-move-guard'
 import type { UniverRuntime } from './univer-state'
 
 export interface GoalSeekResult {
@@ -53,6 +54,20 @@ export async function solveGoalSeek(
   const targetRange = worksheet.getRange(target.row, target.column, 1, 1)
   const changingRange = worksheet.getRange(changing.row, changing.column, 1, 1)
   if (!targetRange.getFormula()) throw new Error(t('appGoalSeekNeedsFormula'))
+  // The solution is worked out from this formula's result and written down as
+  // a plain number, which says what the formula computes from.
+  if (
+    holdsHiddenCells(runtime, worksheet.getSheetId(), [
+      {
+        startRow: target.row,
+        endRow: target.row,
+        startColumn: target.column,
+        endColumn: target.column,
+      },
+    ])
+  ) {
+    throw new Error(t('redactMoveRefused'))
+  }
   // Excel's constraint too: the changing cell must hold a plain number (or
   // nothing) — a formula or text would be destroyed by the solver's writes.
   const originalRaw = changingRange.getValue()

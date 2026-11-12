@@ -12,7 +12,7 @@ import { launchShell, closeAndSaveVideo, screenshotPath } from './helpers'
  */
 
 test('Settings › AI shows the free connections, and a seeded free connection as in use', async () => {
-  const userDataDir = await mkdtemp(join(tmpdir(), 'genoffice-e2e-free-ai-'))
+  const userDataDir = await mkdtemp(join(tmpdir(), 'seuoffice-e2e-free-ai-'))
   await writeFile(
     join(userDataDir, 'ai-settings.json'),
     JSON.stringify({
