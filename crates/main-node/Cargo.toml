@@ -1,0 +1,19 @@
+[package]
+name = "main-node"
+description = "main-core for the Electron main process, as a Node-API addon"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+main-core.workspace = true
+napi.workspace = true
+napi-derive.workspace = true
+serde_json.workspace = true
+
+[build-dependencies]
+napi-build.workspace = true

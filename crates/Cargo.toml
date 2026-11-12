@@ -9,9 +9,12 @@ members = [
   "omml",
   "office-wasm",
   "spike-one-run-save",
+  "main-core",
+  "main-node",
 ]
-# third-party source carried with patches, outside fmt, clippy and the workspace tests
-exclude = ["vendor"]
+# vendor: third-party source carried with patches, outside fmt, clippy and the
+# workspace tests; spike-main-bridge: an experiment with its own lock
+exclude = ["vendor", "spike-main-bridge"]
 resolver = "3"
 
 [workspace.package]
@@ -43,6 +46,13 @@ libm = "0.2"
 regress = { version = "0.12", features = ["utf16"] }
 # shortest float digits with the tie rule of JavaScript
 ryu = "1"
+# errno numbers of the platform, read as Node names them (main-core node_fs)
+libc = "0.2"
+# Node-API: the central process calls main-core in the Electron main process (decision 0029)
+napi = { version = "3", default-features = false, features = ["napi8"] }
+napi-derive = "3"
+napi-build = "2"
+main-core = { path = "main-core" }
 serde = { version = "1", features = ["derive"] }
 # preserve_order: a value keeps its keys in the order they were written, as a
 # JavaScript object does; without it serde_json::Value sorts them
@@ -62,3 +72,10 @@ lto = true
 codegen-units = 1
 panic = "abort"
 strip = true
+
+# the Node-API addon of the central process (main-node): as release, but a
+# panic unwinds, so napi turns it into a JavaScript error instead of ending
+# the Electron main process (decision 0029)
+[profile.node]
+inherits = "release"
+panic = "unwind"
