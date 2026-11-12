@@ -1,4 +1,5 @@
 import { checkPlaceholders, placeholderSource, REDACT_MARK } from './redact'
+import { protectedPreviewOf } from './redact-view'
 import type { Editor } from '@tiptap/core'
 import { Mark, type Node as PmDocNode, type Schema } from '@tiptap/pm/model'
 import type { Transaction } from '@tiptap/pm/state'
