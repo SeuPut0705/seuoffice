@@ -165,8 +165,9 @@ FunctionEnd
   ; SHCNE_ASSOCCHANGED: Explorer re-reads the file types
   System::Call 'shell32::SHChangeNotify(i 0x08000000, i 0, p 0, p 0)'
   ${If} ${Silent}
-    ${GetOptions} $CMDLINE "--force-run" $R0
-    ${IfNot} ${Errors}
+    ; GetOptions does not take a flag with a leading "--", so the command line is searched by hand
+    ${StrLoc} $R0 " $CMDLINE " " --force-run " ">"
+    ${If} $R0 != ""
       Exec '"$INSTDIR\${MAINBINARYNAME}.exe" --updated'
     ${EndIf}
   ${EndIf}
