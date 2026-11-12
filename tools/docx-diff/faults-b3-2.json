@@ -1,0 +1,60 @@
+{
+ "faults": [
+  {
+   "name": "independent: cleanupDocxOwnedResources treats an edge from inside the candidates as shared",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/resource_cleanup.rs",
+   "old": "if candidates.contains(&edge.target) && !candidates.contains(&edge.source) {",
+   "new": "if candidates.contains(&edge.target) && candidates.contains(&edge.source) {"
+  },
+  {
+   "name": "independent: removeHfReference no longer counts the odd variant as the default",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/hf_parts.rs",
+   "old": "matches!(kind_of, None | Some(\"default\") | Some(\"odd\"))",
+   "new": "matches!(kind_of, None | Some(\"default\"))"
+  },
+  {
+   "name": "independent: scrubPersonalMetadata leaves docProps/app.xml Company alone",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/scrub.rs",
+   "old": "&[\"Manager\", \"Company\"],",
+   "new": "&[\"Manager\"],"
+  },
+  {
+   "name": "independent: buildChartPartXml category reference stops one row short",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/chart_write.rs",
+   "old": "&format!(\"Sheet1!$A$2:$A${}\", rows + 1)",
+   "new": "&format!(\"Sheet1!$A$2:$A${}\", rows)"
+  },
+  {
+   "name": "independent: mail merge IF with a bare operand 0 counts as true",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/mail_merge.rs",
+   "old": "Ok(!value.is_empty() && value != \"0\")",
+   "new": "Ok(!value.is_empty())"
+  },
+  {
+   "name": "independent: buildThemeXml writes the lt2 colour into dk2 when the caller gives none",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/theme_write.rs",
+   "old": "\"dk2\" => office.dk2.clone(),",
+   "new": "\"dk2\" => office.lt2.clone(),"
+  },
+  {
+   "name": "independent: compare similarity counts the common words once, not twice",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/compare.rs",
+   "old": "(2 * common) as f64 / (left.len() + right.len()) as f64",
+   "new": "common as f64 / (left.len() + right.len()) as f64"
+  },
+  {
+   "name": "independent: buildSourcesXml writes an InternetSite's publisher as b:Publisher",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/sources_write.rs",
+   "old": "\"InternetSite\" => \"InternetSiteTitle\",",
+   "new": "\"InternetSite\" => \"Publisher\","
+  }
+ ]
+}
