@@ -55,7 +55,7 @@ export function ensureRunLinkRels(
     runs: Array<{ hyperlink?: string; hyperlinkRId?: string; hyperlinkAction?: string }>
   }>,
 ): boolean {
-  return call('ensureRunLinkRels', [opened, slideIndex, paragraphs], { mut: { 0: 'opened', 2: 'json' } }) as never
+  return call('ensureRunLinkRels', [opened, slideIndex, paragraphs], { mut: { 0: 'opened', 2: 'Paragraph[]' } }) as never
 }
 /**
  * All run-level hyperlinks on a slide, resolved live against the rels (parse-time

@@ -49,7 +49,7 @@ export function matchesElementRef(el: SlideElement, id: string): boolean {
  * the close tag keeps schema order (after any hlinkClick).
  */
 export function ensureCreationId(el: SlideElement): void {
-  return call('ensureCreationId', [el], { mut: { 0: 'json' }, undef: true }) as never
+  return call('ensureCreationId', [el], { mut: { 0: 'SlideElement' }, undef: true }) as never
 }
 /**
  * Durable id for a group child. Children carry no byte slice of their own —

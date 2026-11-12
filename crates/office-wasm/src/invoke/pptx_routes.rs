@@ -7,13 +7,10 @@
 use std::cell::RefCell;
 
 use jscompat::JsNum;
-use pptx_engine::chart_workbook::{ChartWorkbookData, ChartWorkbookSeries};
-use pptx_engine::deck::{MergeSlideChainPart, MergeSlideMedia, MergeSlideSource};
 use pptx_engine::embedded_fonts::{GlyphDemand, GlyphSet};
 use pptx_engine::model3d::Model3dXmlOptions;
 use pptx_engine::parse::ParseContextData;
-use pptx_engine::zip::{PackageArchive, Relationship};
-use serde::de::DeserializeOwned;
+use pptx_engine::zip::PackageArchive;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
 
@@ -116,16 +113,6 @@ pub fn tables(
     serde_json::from_value(Value::Object(object)).map_err(|error| format!("TypeError: {error}"))
 }
 
-/// An argument whose `bytes` is text in the binding and a list of numbers in the model.
-pub fn byte_list<T: DeserializeOwned>(value: &Value) -> Result<T, String> {
-    let mut value = value.clone();
-    if let Some(Value::String(text)) = value.get("bytes") {
-        let bytes = jscompat::atob(text).map_err(|error| error.to_string())?;
-        value["bytes"] = Value::Array(bytes.into_iter().map(Value::from).collect());
-    }
-    serde_json::from_value(value).map_err(|error| format!("TypeError: {error}"))
-}
-
 /// `Map<string, Set<number>>` as `GlyphDemand`: its entries, each a list of code points.
 pub fn glyph_demand(value: &Value) -> Result<GlyphDemand, String> {
     let pairs: Vec<(String, Vec<u32>)> =
@@ -181,107 +168,4 @@ impl Model3dArg {
             rot: self.rot,
         }
     }
-}
-
-/// `MergeSlideSource` as the binding sends it: the media bytes are text.
-pub fn merge_source(value: &Value) -> Result<MergeSlideSource, String> {
-    #[derive(Deserialize)]
-    struct Rel {
-        id: String,
-        #[serde(rename = "type")]
-        kind: String,
-        target: String,
-        #[serde(default, rename = "targetMode")]
-        target_mode: Option<String>,
-    }
-    #[derive(Deserialize)]
-    struct Media {
-        path: String,
-        bytes: String,
-    }
-    #[derive(Deserialize)]
-    struct Chain {
-        path: String,
-        bytes: String,
-        #[serde(default)]
-        rels: Option<String>,
-    }
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct Source {
-        src_slide_path: String,
-        slide_xml: String,
-        rels: Vec<Rel>,
-        media: Vec<Media>,
-        layout_chain: Vec<Chain>,
-    }
-    let bytes = |text: &str| jscompat::atob(text).map_err(|error| error.to_string());
-    let source: Source =
-        serde_json::from_value(value.clone()).map_err(|error| format!("TypeError: source: {error}"))?;
-    Ok(MergeSlideSource {
-        src_slide_path: source.src_slide_path,
-        slide_xml: source.slide_xml,
-        rels: source
-            .rels
-            .into_iter()
-            .map(|rel| Relationship {
-                id: rel.id,
-                r#type: rel.kind,
-                target: rel.target,
-                target_mode: rel.target_mode,
-            })
-            .collect(),
-        media: source
-            .media
-            .into_iter()
-            .map(|media| {
-                Ok(MergeSlideMedia {
-                    path: media.path,
-                    bytes: bytes(&media.bytes)?,
-                })
-            })
-            .collect::<Result<_, String>>()?,
-        layout_chain: source
-            .layout_chain
-            .into_iter()
-            .map(|part| {
-                Ok(MergeSlideChainPart {
-                    path: part.path,
-                    bytes: bytes(&part.bytes)?,
-                    rels: part.rels.as_deref().map(bytes).transpose()?,
-                })
-            })
-            .collect::<Result<_, String>>()?,
-    })
-}
-
-/// `ChartWorkbookData` as the binding sends it.
-pub fn workbook_data(value: &Value) -> Result<ChartWorkbookData, String> {
-    #[derive(Deserialize)]
-    struct Series {
-        name: String,
-        values: Vec<Option<JsNum>>,
-    }
-    #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
-    struct Data {
-        categories: Vec<String>,
-        series: Vec<Series>,
-        #[serde(default)]
-        x_values: Option<Vec<JsNum>>,
-    }
-    let data: Data =
-        serde_json::from_value(value.clone()).map_err(|error| format!("TypeError: {error}"))?;
-    Ok(ChartWorkbookData {
-        categories: data.categories,
-        series: data
-            .series
-            .into_iter()
-            .map(|series| ChartWorkbookSeries {
-                name: series.name,
-                values: series.values,
-            })
-            .collect(),
-        x_values: data.x_values,
-    })
 }

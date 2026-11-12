@@ -31,7 +31,7 @@ export interface ChartWorkbookData {
 }
 /** The workbook's parts, by path inside the xlsx package. */
 export function chartWorkbookParts(arg0: ChartWorkbookData): Record<string, string> {
-  return call('chartWorkbookParts', [arg0], { names: ["arg0"] }) as never
+  return call('chartWorkbookParts', [arg0]) as never
 }
 /**
  * A zip of `files`, stored without compression: the chart engines insert charts
@@ -41,5 +41,5 @@ export function storedZip(files: Record<string, string>): Uint8Array {
   return call('storedZip', [files]) as never
 }
 export function chartWorkbookXlsx(data: ChartWorkbookData): Uint8Array {
-  return call('chartWorkbookXlsx', [data], { names: ["data"] }) as never
+  return call('chartWorkbookXlsx', [data]) as never
 }

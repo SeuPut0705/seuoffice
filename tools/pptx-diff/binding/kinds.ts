@@ -50,6 +50,17 @@ export function wireParams(params: string[]): string[] {
 /** A `&mut` type the engine answers back whole, as JSON. */
 const WRITTEN_JSON = /^(?:Slide|SlideDeck|SlideElement|GroupElement|\[Paragraph\]|JsObject<[^>]+>)$/
 
+/** The model types the binding writes back by their shape (packages/pptx-engine/src/engine.ts, `ModelType`). */
+export const MODEL_TYPES = ['SlideDeck', 'Slide', 'SlideElement', 'GroupElement', 'Paragraph'] as const
+
+/** How engine.ts writes a `&mut` JSON argument back: a model type by its TypeScript name, other JSON as `json`. */
+export function writtenAs(type: string): string {
+  const list = /^\[(.+)\]$/.exec(type)
+  const name = list ? list[1]! : type
+  if (!(MODEL_TYPES as readonly string[]).includes(name)) return 'json'
+  return list ? `${name}[]` : name
+}
+
 /** A parameter type the row can read, the name stripped. */
 export function decodable(type: string): boolean {
   const t = type

@@ -180,7 +180,7 @@ export function patchSlideTimingIncrementalXml(
  * whole-slide rebuild on save).
  */
 export function setSlideAnimations(slide: Slide, anims: SlideAnimation[]): void {
-  return call('setSlideAnimations', [slide, anims], { mut: { 0: 'json' }, undef: true }) as never
+  return call('setSlideAnimations', [slide, anims], { mut: { 0: 'Slide' }, undef: true }) as never
 }
 /** Read the current slide's animation list. */
 export function getSlideAnimations(slide: Slide): SlideAnimation[] {
@@ -200,7 +200,7 @@ export function getSlideAnimations(slide: Slide): SlideAnimation[] {
  *   no diagram builds is dropped entirely.
  */
 export function pruneTimingForSpids(slide: Slide, spids: ReadonlySet<number>): boolean {
-  return call('pruneTimingForSpids', [slide, spids], { mut: { 0: 'json' } }) as never
+  return call('pruneTimingForSpids', [slide, spids], { mut: { 0: 'Slide' } }) as never
 }
 /** Every cNvPr id inside an element's XML fragment (group children included). */
 export function cNvPrIdsInXml(xml: string): Set<number> {

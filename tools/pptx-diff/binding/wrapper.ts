@@ -5,7 +5,8 @@
 // (the TypeScript parameters); see overrides.ts.
 import type { ExportInfo } from '../../docx-diff/binding/manifest'
 import type { Override } from '../../docx-diff/binding/overrides'
-import { classify, wireParams } from './kinds'
+import { type PptxOverride, overrideOf } from './overrides'
+import { classify, wireParams, writtenAs } from './kinds'
 
 const NOW: Record<string, string> = { $now: 'Date.now()', $nowIso: 'new Date().toISOString()' }
 const substituteNow = (text: string): string => text.replace(/\$nowIso\b|\$now\b/g, (m) => NOW[m]!)
@@ -38,10 +39,12 @@ export function callOptions(info: ExportInfo, args: string[], withReply: boolean
       if (c.mut) mut.push(`${j}: 'opened'`)
       else read.push(j)
     } else if (c.kind === 'archive' && c.mut) mut.push(`${j}: 'archive'`)
-    else if (c.kind === 'json-mut') mut.push(`${j}: 'json'`)
+    else if (c.kind === 'json-mut') mut.push(`${j}: '${writtenAs(c.type)}'`)
   })
   const options: string[] = []
   if (mut.length) options.push(`mut: { ${mut.join(', ')} }`)
+  const reply = (overrideOf(info.name) as PptxOverride | undefined)?.reply
+  if (reply) options.push(`reply: '${reply}'`)
   if (read.length) options.push(`opened: ${JSON.stringify(read)}`)
   if (named || info.params.some((p) => p.codec === 'callback' || /=>/.test(p.type)))
     options.push(`names: ${JSON.stringify(args.map((a) => (/^[A-Za-z_$][\w$]*$/.test(a) ? a : '')))}`)

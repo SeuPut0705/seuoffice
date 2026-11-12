@@ -17,7 +17,7 @@ import { call } from './engine'
  * structureDirty and its model background is updated.
  */
 export function promoteSlideBackground(slide: Slide, size: SlideSize): boolean {
-  return call('promoteSlideBackground', [slide, size], { mut: { 0: 'json' } }) as never
+  return call('promoteSlideBackground', [slide, size], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Loose predicate for interaction-layer marking: a full-page unrotated textless

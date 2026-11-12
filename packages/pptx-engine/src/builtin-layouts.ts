@@ -76,7 +76,7 @@ export const BUILTIN_LAYOUTS: BuiltinLayoutDef[] = [
 export function shouldOfferBuiltinLayouts(
   layouts: Array<{ name: string; placeholders: unknown[] }>,
 ): boolean {
-  return call('shouldOfferBuiltinLayouts', [layouts]) as never
+  return call('shouldOfferBuiltinLayouts', [layouts], { names: ["layouts"] }) as never
 }
 /**
  * Virtual SlideLayoutInfo entries for the layout picker (path = 'builtin:<key>').

@@ -1,7 +1,7 @@
 // The pptx engine's side of the binding generator's config
 // (tools/docx-diff/binding/config.ts).
 import type { EngineConfig } from '../../docx-diff/binding/config'
-import { decodable, wireParams } from './kinds'
+import { MODEL_TYPES, decodable, wireParams } from './kinds'
 import { PPTX_APPEND, PPTX_HAND_ROUTES, PPTX_REPLACE, type PptxOverride, isHandRoute, overrideOf } from './overrides'
 import { pptxRow } from './rows'
 import { pptxWrapperBody } from './wrapper'
@@ -14,7 +14,7 @@ const RUST_MODULE: Readonly<Record<string, string>> = {
 }
 
 /** the helpers of engine.ts the wrappers call */
-const ENGINE_NAMES = ['call', 'slideIndex', 'forgetSnapshot']
+const ENGINE_NAMES = ['call', 'slideIndex', 'forgetSnapshot', 'shared']
 
 export const pptx: EngineConfig = {
   name: 'pptx',
@@ -27,6 +27,7 @@ export const pptx: EngineConfig = {
   crates: [{ dir: 'crates/pptx-engine/src', crate: 'pptx_engine' }],
   plumbing: ['engine', 'engine-adopt'],
   shapesModule: false,
+  typeShapes: MODEL_TYPES,
   dropUnused: true,
   dropReexportRefs: true,
   pluginModule: (module) =>

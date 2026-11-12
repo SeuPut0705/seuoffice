@@ -20,7 +20,7 @@
  * reordered edits use the latter.
  */
 import type { SlideElement, TextElement, Paragraph, TextRun, Transform, PPrDirty } from './types'
-import { call } from './engine'
+import { call, shared } from './engine'
 
 /**
  * In-place patch of a text/shape element's original XML.
@@ -79,11 +79,12 @@ export function hangulLang(text: string): 'ko-KR' | undefined {
  * this: a source run that had no language stays untagged.
  */
 export function tagHangulRun(run: TextRun): TextRun {
-  return call('tagHangulRun', [run]) as never
+  return shared(run, call('tagHangulRun', [run]) as never)
 }
 /** `tagHangulRun` over every run; the same array when no run needed a tag. */
 export function tagHangulParagraphs(paragraphs: Paragraph[]): Paragraph[] {
-  return (call('tagHangulParagraphs', [paragraphs]) as never as Paragraph[] | null) ?? paragraphs
+  const tagged = call('tagHangulParagraphs', [paragraphs]) as never as Paragraph[] | null
+  return tagged === null ? paragraphs : shared(paragraphs, tagged)
 }
 /**
  * Bytes of a <p:cxnSp>. CT_Connector's sequence is nvCxnSpPr/spPr/style/extLst —

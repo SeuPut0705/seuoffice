@@ -64,7 +64,7 @@ export function placeholderSpXml(
   ph: Pick<LayoutPlaceholder, 'type' | 'idx' | 'x' | 'y' | 'cx' | 'cy'>,
   id: number,
 ): string {
-  return call('placeholderSpXml', [ph, id]) as never
+  return call('placeholderSpXml', [{ hint: '', ...ph }, id]) as never
 }
 /**
  * Insert a blank slide associated with a given layout.

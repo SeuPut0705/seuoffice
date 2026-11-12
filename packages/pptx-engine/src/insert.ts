@@ -63,7 +63,7 @@ export function buildSpXml(slide: Slide, opts: NewElementOptions): string {
 }
 /** Synthesize a new element and hang it on the slide; returns the model element (immediately usable by the render layer). */
 export function addElement(slide: Slide, opts: NewElementOptions): TextElement {
-  call('addElement', [slide, opts], { mut: { 0: 'json' } })
+  call('addElement', [slide, opts], { mut: { 0: 'Slide' } })
   return slide.elements.at(-1) as TextElement
 }
 // ── Table insertion (graphicFrame + a:tbl) ─────────────────────────────
@@ -163,7 +163,7 @@ export function addPicture(
   opts: NewPictureOptions,
 ): PictureElement | null {
   const at = slideIndex(opened, slide)
-  return call('addPicture', [opened, at, opts], { mut: { 0: 'opened' }, names: ["opened","at","opts"] }) as never === null ? null : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)
+  return call('addPicture', [opened, at, opts], { mut: { 0: 'opened' } }) as never === null ? null : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)
 }
 /**
  * Delete by element id and collect relationships/resources no longer used by any

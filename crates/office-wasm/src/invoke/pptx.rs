@@ -13,7 +13,8 @@
 //!   (B4's `$result`/`$parts`): `$out` holds the arguments the engine changed.
 //! - A `{"$blob": n}` inside an argument object that is no archive is the
 //!   request blob `n` as base64 text ([`inline_blobs`]): the option structs of
-//!   the engine read their `bytes` from text, as the gate sends them.
+//!   the engine read their bytes fields through `pptx_engine::json_bytes`,
+//!   which takes base64 (the smallest form of bytes a JSON value holds).
 
 use std::borrow::Cow;
 use std::cell::Cell;
@@ -39,11 +40,10 @@ pub fn uids() -> Uids {
     Uids::starting_at(UID_NEXT.with(Cell::get))
 }
 
-/// Keeps where `uids` stopped for the next call. The counter only moves
-/// forward: a deck opened later starts its own ids at 0, and the ids of an
-/// earlier deck must stay below what later calls draw.
+/// Keeps where `uids` stopped for the next call: every call draws from
+/// [`uids`], a deck opened included (`open_pptx_with`).
 pub fn keep_uids(uids: &Uids) {
-    UID_NEXT.with(|next| next.set(next.get().max(uids.next())));
+    UID_NEXT.with(|next| next.set(uids.next()));
 }
 
 /// An archive as it came, with the request bytes of each part to tell what changed.

@@ -8,7 +8,7 @@ pptx 한 파일의 모델과 저장을 맡는다. `openPptx`가 zip 전체를 �
 
 구현은 Rust(`crates/pptx-engine`)이고, 이 패키지는 WASM(`crates/office-wasm`) 위의 얇은 바인딩이다. 내보낸 이름과 타입은 그대로이고 모델은 JS 객체로 남는다.
 
-- `src/*.ts`의 함수 본문은 `tools/docx-diff/binding/gen.ts --engine pptx`가 만든다. 손으로 고치지 않는다. 손으로 정할 것은 `tools/pptx-diff/binding/overrides.ts`, 인자 종류는 `kinds.ts`에 두고 생성기를 다시 돌린다. 생성기가 손대지 않는 것은 `engine.ts`, `engine-adopt.ts`, `engine-init.ts`, `engine-url.ts`, `src/node/**`다.
+- `src/*.ts`의 함수 본문은 `tools/docx-diff/binding/gen.ts --engine pptx`가 만든다. 손으로 고치지 않는다. 손으로 정할 것은 `tools/pptx-diff/binding/overrides.ts`, 인자 종류는 `kinds.ts`에 두고 생성기를 다시 돌린다. 생성기가 손대지 않는 것은 `engine.ts`, `engine-adopt.ts`, `engine-init.ts`, `engine-url.ts`, `src/node/**`다. `engine-type-shapes.ts`(되써지는 모델 값의 모양: 배열의 빈 자리, Map, Set)는 생성기가 쓴다.
 - 엔진이 바꾸는 인자(`OpenedPptx`, `PackageArchive`, `Slide`, 요소)는 호출마다 통째로 건너가고, 엔진의 답이 부른 쪽 객체에 제자리로 되써진다(`engine-adopt.ts`). 요소는 `id`, 슬라이드는 `path`로 짝지어 같은 객체가 남는다. 아카이브는 바뀐 파트만 새 배열로 갈아 끼운다.
 - 엔진은 시작해야 쓴다. `node` 조건으로 가져오면 저절로 시작하고, 페이지·워커는 `@seuoffice/pptx-engine/init`의 `initPptxEngine(url)`을 한 번 기다린다. vitest 설정은 `setupFiles`에 `packages/engine-wasm/src/node.ts`를 둔다.
 - 비교의 기준인 TypeScript 엔진은 `tools/pptx-diff/reference/`에 얼려 두었다. 고치지 않는다.

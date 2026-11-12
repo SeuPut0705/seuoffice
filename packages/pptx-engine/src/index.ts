@@ -299,7 +299,7 @@ export interface OpenedPptx {
   archive: PackageArchive
 }
 export async function openPptx(bytes: Uint8Array): Promise<OpenedPptx> {
-  const o = call('openPptx', [bytes]) as never as { deck: SlideDeck; archive: Parameters<typeof PackageArchive.fromWire>[0] }
+  const o = call('openPptx', [bytes], { reply: 'opened' }) as never as { deck: SlideDeck; archive: Parameters<typeof PackageArchive.fromWire>[0] }
   return { deck: o.deck, archive: PackageArchive.fromWire(o.archive) }
 }
 /**
@@ -379,11 +379,11 @@ export function commitSaved(opened: OpenedPptx): void {
  * through as original bytes. With no dirty elements the result == originalXml.
  */
 export function patchSlideXml(slide: Slide): string {
-  return call('patchSlideXml', [slide], { mut: { 0: 'json' } }) as never
+  return call('patchSlideXml', [slide], { mut: { 0: 'Slide' } }) as never
 }
 /** One element's current XML slice (dirty elements patch-regenerated, clean elements original bytes). */
 export function patchedElementXml(el: SlideElement): string {
-  return call('patchedElementXml', [el], { mut: { 0: 'json' } }) as never
+  return call('patchedElementXml', [el], { mut: { 0: 'SlideElement' } }) as never
 }
 /**
  * Set a solid or gradient slide background: patch the bodyPrefix and sync the model
@@ -407,7 +407,7 @@ export function setSlideBackgroundImage(
   source: { bytes: Uint8Array; ext: string } | { mediaPath: string },
   tile?: boolean,
 ): string | null {
-  return call('setSlideBackgroundImage', [opened, slideIndex(opened, slide), source, tile], { mut: { 0: 'opened' }, names: ["opened","","source","tile"] }) as never
+  return call('setSlideBackgroundImage', [opened, slideIndex(opened, slide), source, tile], { mut: { 0: 'opened' } }) as never
 }
 /**
  * Remove the slide's own <p:bg> override; the background falls back to the
@@ -433,7 +433,7 @@ export function editPictureSrcRect(
   sourceId: string,
   srcRect: { l: number; t: number; r: number; b: number } | null,
 ): boolean {
-  return call('editPictureSrcRect', [slide, sourceId, srcRect], { mut: { 0: 'json' } }) as never
+  return call('editPictureSrcRect', [slide, sourceId, srcRect], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Change a shape's preset geometry ("Change Shape"): replace <a:prstGeom> (or
@@ -441,7 +441,7 @@ export function editPictureSrcRect(
  * fill, outline, and text. Byte surgery baked directly into originalXml.
  */
 export function setShapePresetGeometry(slide: Slide, elementId: string, prst: string): boolean {
-  return call('setShapePresetGeometry', [slide, elementId, prst], { mut: { 0: 'json' } }) as never
+  return call('setShapePresetGeometry', [slide, elementId, prst], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Replace a shape's geometry with a freeform path ("Edit Points"): <a:prstGeom>
@@ -455,7 +455,7 @@ export function setShapeCustomGeometry(
   elementId: string,
   geom: CustGeomPath,
 ): boolean {
-  return call('setShapeCustomGeometry', [slide, elementId, geom], { mut: { 0: 'json' } }) as never
+  return call('setShapeCustomGeometry', [slide, elementId, geom], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Set a shape's preset-geometry adjust values (the "yellow handle" edit):
@@ -467,7 +467,7 @@ export function setShapeAdjustValues(
   elementId: string,
   adjust: Record<string, number>,
 ): boolean {
-  return call('setShapeAdjustValues', [slide, elementId, adjust], { mut: { 0: 'json' } }) as never
+  return call('setShapeAdjustValues', [slide, elementId, adjust], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Text-box vertical alignment (bodyPr anchor: t/ctr/b). Byte surgery baked directly into originalXml.
@@ -477,7 +477,7 @@ export function setElementTextAnchor(
   elementId: string,
   anchor: 'top' | 'middle' | 'bottom',
 ): boolean {
-  return call('setElementTextAnchor', [slide, elementId, anchor], { mut: { 0: 'json' } }) as never
+  return call('setElementTextAnchor', [slide, elementId, anchor], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Landing-time normalization for generated pages: the cloud html→pptx converter writes text
@@ -487,7 +487,7 @@ export function setElementTextAnchor(
  * Top-level elements only (mirrors the editor's autofit resize).
  */
 export function autofitGeneratedTextBoxes(slide: Slide): number {
-  return call('autofitGeneratedTextBoxes', [slide], { mut: { 0: 'json' } }) as never
+  return call('autofitGeneratedTextBoxes', [slide], { mut: { 0: 'Slide' } }) as never
 }
 /** Patch for setElementTextBodyProps; only the provided fields are written. */
 export interface TextBodyPropsPatch {
@@ -508,7 +508,7 @@ export function setElementTextBodyProps(
   elementId: string,
   patch: TextBodyPropsPatch,
 ): boolean {
-  return call('setElementTextBodyProps', [slide, elementId, patch], { mut: { 0: 'json' } }) as never
+  return call('setElementTextBodyProps', [slide, elementId, patch], { mut: { 0: 'Slide' } }) as never
 }
 /** Patch for setElementEffects; null clears an effect, undefined leaves it untouched. */
 export interface EffectsPatch {
@@ -540,7 +540,7 @@ export interface EffectsPatch {
  * an emptied effectLst is removed entirely.
  */
 export function setElementEffects(slide: Slide, elementId: string, patch: EffectsPatch): boolean {
-  return call('setElementEffects', [slide, elementId, patch], { mut: { 0: 'json' } }) as never
+  return call('setElementEffects', [slide, elementId, patch], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Shape fill (top-level or one-level group child). The XML patch is baked into
@@ -571,7 +571,7 @@ export function setElementImageFill(
   source: { bytes: Uint8Array; ext: string } | { mediaPath: string },
   opts: { tile?: boolean; groupId?: string } = {},
 ): string | null {
-  return call('setElementImageFill', [opened, slideIndex(opened, slide), elementId, source, opts], { mut: { 0: 'opened' }, names: ["opened","","elementId","source","opts"] }) as never
+  return call('setElementImageFill', [opened, slideIndex(opened, slide), elementId, source, opts], { mut: { 0: 'opened' } }) as never
 }
 /**
  * Withhold a picture, video or audio shape from the model, or stop withholding it
@@ -589,14 +589,14 @@ export function setElementImageFill(
  * never regenerated from the model, so this is the only place the mark can live.
  */
 export function setElementRedaction(slide: Slide, sourceId: string, label: string | null): boolean {
-  return call('setElementRedaction', [slide, sourceId, label], { mut: { 0: 'json' } }) as never
+  return call('setElementRedaction', [slide, sourceId, label], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Whole-picture opacity (0..1; ≥1 clears alphaModFix). Byte surgery on the
  * <a:blip> child, baked directly into originalXml (no separate dirty flag).
  */
 export function setPictureOpacity(slide: Slide, sourceId: string, opacity: number): boolean {
-  return call('setPictureOpacity', [slide, sourceId, opacity], { mut: { 0: 'json' } }) as never
+  return call('setPictureOpacity', [slide, sourceId, opacity], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Swap a picture's backing image for new bytes, keeping frame, z-order, border
@@ -743,7 +743,7 @@ export function deleteSlide(opened: OpenedPptx, index: number): boolean {
 export type ReorderDirection = 'front' | 'back' | 'forward' | 'backward'
 /** Adjust an element's z-order (the elements array order is the spTree order); returns whether anything changed. */
 export function reorderElement(slide: Slide, elementId: string, dir: ReorderDirection): boolean {
-  return call('reorderElement', [slide, elementId, dir], { mut: { 0: 'json' } }) as never
+  return call('reorderElement', [slide, elementId, dir], { mut: { 0: 'Slide' } }) as never
 }
 // ── Raw slice append + whole-slide reparse (shared by paste/table insert) ──
 
@@ -772,7 +772,7 @@ export function connectionSiteForSide(el: SlideElement, side: ConnectionSide): n
  * updated (>0 means each is flagged dirtyTransform).
  */
 export function updateConnectorsForMoved(slide: Slide, movedIds: string[]): number {
-  return call('updateConnectorsForMoved', [slide, movedIds], { mut: { 0: 'json' } }) as never
+  return call('updateConnectorsForMoved', [slide, movedIds], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Write/clear a connector's shape attachments (<a:stCxn>/<a:endCxn> in
@@ -788,7 +788,7 @@ export function setElementConnection(
     end?: { id: number; idx: number } | null
   },
 ): boolean {
-  return call('setElementConnection', [slide, elementId, patch], { mut: { 0: 'json' } }) as never
+  return call('setElementConnection', [slide, elementId, patch], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Switch an existing slide's layout: point the slide rels' slideLayout
@@ -854,7 +854,7 @@ export function editTableCellText(
   col: number,
   paragraphs: Paragraph[],
 ): boolean {
-  return call('editTableCellText', [slide, elementId, row, col, paragraphs], { mut: { 0: 'json' } }) as never
+  return call('editTableCellText', [slide, elementId, row, col, paragraphs], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Table style editing (surgical patch of a:tblPr + a:tcPr):
@@ -863,7 +863,7 @@ export function editTableCellText(
  * the save rebuild.
  */
 export function editTableStyle(slide: Slide, elementId: string, edit: TableStyleEdit): boolean {
-  return call('editTableStyle', [slide, elementId, edit], { mut: { 0: 'json' } }) as never
+  return call('editTableStyle', [slide, elementId, edit], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Ensure ppt/tableStyles.xml contains the given custom style (injected the first
@@ -920,7 +920,7 @@ export function editChartElement(
  * styles etc.) is dropped at that point.
  */
 export function markChartEditable(slide: Slide, elementId: string): boolean {
-  return call('markChartEditable', [slide, elementId], { mut: { 0: 'json' } }) as never
+  return call('markChartEditable', [slide, elementId], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Show or hide a top-level element (<p:cNvPr hidden="1">, PowerPoint's Selection Pane eye).
@@ -929,11 +929,11 @@ export function markChartEditable(slide: Slide, elementId: string): boolean {
  * bring the model in line — which also renews every element id on the slide.
  */
 export function setElementHidden(slide: Slide, elementId: string, hidden: boolean): boolean {
-  return call('setElementHidden', [slide, elementId, hidden], { mut: { 0: 'json' } }) as never
+  return call('setElementHidden', [slide, elementId, hidden], { mut: { 0: 'Slide' } }) as never
 }
 /** Rename a top-level element (<p:cNvPr name>, the name the Selection Pane shows). */
 export function setElementName(slide: Slide, elementId: string, name: string): boolean {
-  return call('setElementName', [slide, elementId, name], { mut: { 0: 'json' } }) as never
+  return call('setElementName', [slide, elementId, name], { mut: { 0: 'Slide' } }) as never
 }
 /** Read a chart element's current data (for dialog echo-back). */
 export function getChartElementData(
@@ -974,7 +974,7 @@ export function setElementFont(
   patch: ElementFontPatch,
   sizeMap?: FontSizeMap,
 ): boolean {
-  return call('setElementFont', [slide, elementId, patch, sizeMap], { mut: { 0: 'json' }, names: ["slide","elementId","patch","sizeMap"] }) as never
+  return call('setElementFont', [slide, elementId, patch, sizeMap], { mut: { 0: 'Slide' }, names: ["slide","elementId","patch","sizeMap"] }) as never
 }
 // ── Find/replace ────────────────────────────────────────────────────────
 
@@ -1000,7 +1000,7 @@ export function replaceAllInDeck(
   replace: string,
   opts: ReplaceOptions = {},
 ): { count: number; changedSlides: number[] } {
-  return call('replaceAllInDeck', [deck, find, replace, opts], { mut: { 0: 'json' } }) as never
+  return call('replaceAllInDeck', [deck, find, replace, opts], { mut: { 0: 'SlideDeck' } }) as never
 }
 // ── Paragraph formatting (bullet/line spacing/paragraph spacing/alignment) ──
 
@@ -1044,7 +1044,7 @@ export function applyParagraphFormat(
   paragraphs: Paragraph[],
   patch: ParagraphFormatPatch,
 ): PPrDirty {
-  return call('applyParagraphFormat', [paragraphs, patch], { mut: { 0: 'json' } }) as never
+  return call('applyParagraphFormat', [paragraphs, patch], { mut: { 0: 'Paragraph[]' } }) as never
 }
 /**
  * Change paragraph formatting directly on a selected element (bullet/line
@@ -1058,7 +1058,7 @@ export function setElementParagraphFormat(
   patch: ParagraphFormatPatch,
   paraIndices?: number[],
 ): boolean {
-  return call('setElementParagraphFormat', [slide, elementId, patch, paraIndices], { mut: { 0: 'json' } }) as never
+  return call('setElementParagraphFormat', [slide, elementId, patch, paraIndices], { mut: { 0: 'Slide' } }) as never
 }
 /** Paragraph formatting for a group child (same semantics as setGroupChildFont; the pPr patch is baked straight into the group bytes). */
 export function setGroupChildParagraphFormat(
@@ -1068,7 +1068,7 @@ export function setGroupChildParagraphFormat(
   patch: ParagraphFormatPatch,
   paraIndices?: number[],
 ): boolean {
-  return call('setGroupChildParagraphFormat', [slide, groupId, childId, patch, paraIndices], { mut: { 0: 'json' } }) as never
+  return call('setGroupChildParagraphFormat', [slide, groupId, childId, patch, paraIndices], { mut: { 0: 'Slide' } }) as never
 }
 // ── Table row/column structure editing ──────────────────────────────────
 
@@ -1123,7 +1123,7 @@ export function setTableColWidth(
   col: number,
   wEmu: number,
 ): boolean {
-  return call('setTableColWidth', [slide, elementId, col, wEmu], { mut: { 0: 'json' } }) as never
+  return call('setTableColWidth', [slide, elementId, col, wEmu], { mut: { 0: 'Slide' } }) as never
 }
 /** Set a row's height (EMU): <a:tr h> + frame ext.cy synced (matching setTableColWidth semantics). */
 export function setTableRowHeight(
@@ -1132,7 +1132,7 @@ export function setTableRowHeight(
   row: number,
   hEmu: number,
 ): boolean {
-  return call('setTableRowHeight', [slide, elementId, row, hEmu], { mut: { 0: 'json' } }) as never
+  return call('setTableRowHeight', [slide, elementId, row, hEmu], { mut: { 0: 'Slide' } }) as never
 }
 /**
  * Resize a table by proportionally redistributing <a:gridCol w> and <a:tr h>
@@ -1141,7 +1141,7 @@ export function setTableRowHeight(
  *. The frame ext is synced to the redistributed sums.
  */
 export function resizeTable(slide: Slide, elementId: string, cx: number, cy: number): boolean {
-  return call('resizeTable', [slide, elementId, cx, cy], { mut: { 0: 'json' } }) as never
+  return call('resizeTable', [slide, elementId, cx, cy], { mut: { 0: 'Slide' } }) as never
 }
 /** Cell text vertical alignment (tcPr anchor: t/ctr/b). Byte surgery + model sync. */
 export function setTableCellAnchor(
@@ -1151,7 +1151,7 @@ export function setTableCellAnchor(
   col: number,
   anchor: 'top' | 'middle' | 'bottom',
 ): boolean {
-  return call('setTableCellAnchor', [slide, elementId, row, col, anchor], { mut: { 0: 'json' } }) as never
+  return call('setTableCellAnchor', [slide, elementId, row, col, anchor], { mut: { 0: 'Slide' } }) as never
 }
 // ── Element clipboard ───────────────────────────────────────────────────
 
@@ -1193,7 +1193,7 @@ export function pasteElements(
 
 /** Set/clear the transition (writes bodySuffix, persisted with the whole-slide rebuild on save). */
 export function setSlideTransition(slide: Slide, kind: SlideTransitionKind): void {
-  return call('setSlideTransition', [slide, kind], { mut: { 0: 'json' }, undef: true }) as never
+  return call('setSlideTransition', [slide, kind], { mut: { 0: 'Slide' }, undef: true }) as never
 }
 /** Read the current transition. */
 export function getSlideTransition(slide: Slide): SlideTransitionKind {
@@ -1201,7 +1201,7 @@ export function getSlideTransition(slide: Slide): SlideTransitionKind {
 }
 /** Set/clear the auto-advance time (advTm, ms; saved by rehearsal timing, auto-advances in PowerPoint slideshows). */
 export function setSlideAdvanceTime(slide: Slide, ms: number | null): void {
-  return call('setSlideAdvanceTime', [slide, ms], { mut: { 0: 'json' }, undef: true }) as never
+  return call('setSlideAdvanceTime', [slide, ms], { mut: { 0: 'Slide' }, undef: true }) as never
 }
 /** Read the auto-advance time (ms; null when unset). */
 export function getSlideAdvanceTime(slide: Slide): number | null {
@@ -1211,7 +1211,7 @@ export function getSlideAdvanceTime(slide: Slide): number | null {
 
 /** Hide/unhide a slide (<p:sld show="0">, skipped in PowerPoint slideshows). */
 export function setSlideHidden(slide: Slide, hidden: boolean): void {
-  return call('setSlideHidden', [slide, hidden], { mut: { 0: 'json' }, undef: true }) as never
+  return call('setSlideHidden', [slide, hidden], { mut: { 0: 'Slide' }, undef: true }) as never
 }
 /** Read whether the slide is hidden. */
 export function getSlideHidden(slide: Slide): boolean {
@@ -1284,7 +1284,7 @@ export function patchGroupChildXml(
   child: SlideElement,
   patch: (xml: string) => string,
 ): boolean {
-  return call('patchGroupChildXml', [grp, child.nvId, patch], { mut: { 0: 'json' }, names: ["grp","","patch"] }) as never
+  return call('patchGroupChildXml', [grp, child.nvId, patch], { mut: { 0: 'GroupElement' }, names: ["grp","","patch"] }) as never
 }
 /** Top-level group and its direct child (in-group editing goes one level; a nested subgroup is edited as a whole). */
 export function findGroupChild(
@@ -1305,11 +1305,11 @@ export function editGroupChildTransform(
   offset: { x: number; y: number; cx: number; cy: number },
   rotationDeg: number,
 ): boolean {
-  return call('editGroupChildTransform', [slide, groupId, childId, offset, rotationDeg], { mut: { 0: 'json' } }) as never
+  return call('editGroupChildTransform', [slide, groupId, childId, offset, rotationDeg], { mut: { 0: 'Slide' } }) as never
 }
 /** Group-child text editing: called after model paragraphs are updated; regenerates the slice's txBody. */
 export function patchGroupChildText(slide: Slide, groupId: string, child: TextElement): boolean {
-  return call('patchGroupChildText', [slide, groupId, child], { mut: { 0: 'json' } }) as never
+  return call('patchGroupChildText', [slide, groupId, child], { mut: { 0: 'Slide' } }) as never
 }
 /** Change font/size on a whole group child (same run-level semantics as setElementFont). */
 export function setGroupChildFont(
@@ -1319,7 +1319,7 @@ export function setGroupChildFont(
   patch: ElementFontPatch,
   sizeMap?: FontSizeMap,
 ): boolean {
-  return call('setGroupChildFont', [slide, groupId, childId, patch, sizeMap], { mut: { 0: 'json' }, names: ["slide","groupId","childId","patch","sizeMap"] }) as never
+  return call('setGroupChildFont', [slide, groupId, childId, patch, sizeMap], { mut: { 0: 'Slide' }, names: ["slide","groupId","childId","patch","sizeMap"] }) as never
 }
 /** Group-child fill ('none' | #RRGGBB(AA) | gradient). */
 export function editGroupChildFill(
@@ -1328,7 +1328,7 @@ export function editGroupChildFill(
   childId: string,
   fill: string | GradientFillPatch,
 ): boolean {
-  return call('editGroupChildFill', [slide, groupId, childId, fill], { mut: { 0: 'json' } }) as never
+  return call('editGroupChildFill', [slide, groupId, childId, fill], { mut: { 0: 'Slide' } }) as never
 }
 /** StrokePatch → in-memory Stroke model (mirrors what patchLnXml writes into the XML). */
 export function strokePatchToModel(stroke: StrokePatch): Stroke {
@@ -1340,7 +1340,7 @@ export function editGroupChildStroke(
   childId: string,
   stroke: StrokePatch | null,
 ): boolean {
-  return call('editGroupChildStroke', [slide, groupId, childId, stroke], { mut: { 0: 'json' } }) as never
+  return call('editGroupChildStroke', [slide, groupId, childId, stroke], { mut: { 0: 'Slide' } }) as never
 }
 /** Group-child adjust values (same avLst-swap semantics as setShapeAdjustValues). */
 export function setGroupChildShapeAdjustValues(
@@ -1349,7 +1349,7 @@ export function setGroupChildShapeAdjustValues(
   childId: string,
   adjust: Record<string, number>,
 ): boolean {
-  return call('setGroupChildShapeAdjustValues', [slide, groupId, childId, adjust], { mut: { 0: 'json' } }) as never
+  return call('setGroupChildShapeAdjustValues', [slide, groupId, childId, adjust], { mut: { 0: 'Slide' } }) as never
 }
 /** Group-child "Change Shape" (same geometry-swap semantics as setShapePresetGeometry). */
 export function setGroupChildShapePresetGeometry(
@@ -1358,7 +1358,7 @@ export function setGroupChildShapePresetGeometry(
   childId: string,
   prst: string,
 ): boolean {
-  return call('setGroupChildShapePresetGeometry', [slide, groupId, childId, prst], { mut: { 0: 'json' } }) as never
+  return call('setGroupChildShapePresetGeometry', [slide, groupId, childId, prst], { mut: { 0: 'Slide' } }) as never
 }
 /** Group-child freeform geometry (same semantics as setShapeCustomGeometry). */
 export function setGroupChildShapeCustomGeometry(
@@ -1367,5 +1367,5 @@ export function setGroupChildShapeCustomGeometry(
   childId: string,
   geom: CustGeomPath,
 ): boolean {
-  return call('setGroupChildShapeCustomGeometry', [slide, groupId, childId, geom], { mut: { 0: 'json' } }) as never
+  return call('setGroupChildShapeCustomGeometry', [slide, groupId, childId, geom], { mut: { 0: 'Slide' } }) as never
 }

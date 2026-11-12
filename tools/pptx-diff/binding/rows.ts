@@ -58,6 +58,13 @@ export function pptxRow(e: ExportInfo, notes: string[], fn: string, tools: RowTo
       lines.push(`let mut ${p}: ${type} = req(args, ${wire})?;`)
       passed.push(`&mut ${p}`)
       out.push(`(${wire}, to_json(&${p})?)`)
+    } else if (/^&?JsObject<f64>$/.test(c.type)) {
+      // a JavaScript number: NaN and the infinities cross as their spelling (`JsNum` reads it)
+      lines.push(
+        `let ${p}: jscompat::JsObject<jscompat::JsNum> = req(args, ${wire})?;`,
+        `let ${p}: jscompat::JsObject<f64> = ${p}.entries().into_iter().map(|(key, value)| (key.to_owned(), value.0)).collect();`,
+      )
+      passed.push(c.type.startsWith('&') ? `&${p}` : p)
     } else {
       const read = readParam(e, wire, raw, notes)
       if (!read) return null

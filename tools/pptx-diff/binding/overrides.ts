@@ -29,6 +29,8 @@ export interface PptxOverride extends DocxOverride {
   lines?: string
   /** Rust that ends the row: `r` is what the port returned, `p0`.. the arguments, `{{out}}` the list of arguments it changed */
   ret?: string
+  /** the reply is a model value the body's `$call` revives by its shape (`opened`: a deck the engine opened) */
+  reply?: 'opened'
 }
 
 export type Override = PptxOverride
@@ -52,8 +54,9 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   openPptx: {
     body: `const o = $call(bytes) as { deck: SlideDeck; archive: Parameters<typeof PackageArchive.fromWire>[0] }
   return { deck: o.deck, archive: PackageArchive.fromWire(o.archive) }`,
+    reply: 'opened',
     rust: `let bytes = env.blob(at(args, 0))?;
-    let opened = {{path}}(bytes)?;
+    let opened = {{path}}_with(bytes, pptx::uids())?;
     let value = pptx::answer_new_opened(env, &opened)?;
     Ok(Some(pptx::answer(Some(value), Vec::new())))`,
   },
@@ -121,30 +124,11 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   editedGlyphDemand: { args: ['deck.slides'] },
   stripStaleEmbeddedFonts: { args: ['deck.slides', 'archive'] },
 
-  // ---- the media bytes of these arguments are number lists in the Rust model, text in the binding
-  setSlideBackgroundImage: { body: 'return $call(opened, slideIndex(opened, slide), source, tile)', pass: { 2: '&p2' }, lines: 'let p2 = pptx_routes::byte_list(at(args, 2))?;' },
-  setElementImageFill: { body: 'return $call(opened, slideIndex(opened, slide), elementId, source, opts)', pass: { 3: '&p3' }, lines: 'let p3 = pptx_routes::byte_list(at(args, 3))?;' },
+  // ---- a slide of the opened deck, by index
+  setSlideBackgroundImage: { body: 'return $call(opened, slideIndex(opened, slide), source, tile)' },
+  setElementImageFill: { body: 'return $call(opened, slideIndex(opened, slide), elementId, source, opts)' },
   addPicture: {
     body: 'const at = slideIndex(opened, slide)\n  return $call(opened, at, opts) === null ? null : (opened.deck.slides[at]!.elements.at(-1) as PictureElement)',
-    pass: { 2: '&p2' },
-    lines: 'let p2 = pptx_routes::byte_list(at(args, 2))?;',
-  },
-
-  // ---- a struct the model does not read from JSON
-  chartWorkbookParts: { pass: { 0: '&data' }, lines: 'let data = pptx_routes::workbook_data(at(args, 0))?;' },
-  chartWorkbookXlsx: { pass: { 0: '&data' }, lines: 'let data = pptx_routes::workbook_data(at(args, 0))?;' },
-  groupChildSlices: {
-    ret: `let slices: Vec<Value> = r?
-        .iter()
-        .map(|slice| {
-            let mut out = json!({ "start": slice.start, "end": slice.end, "xml": slice.xml });
-            if let Some(id) = &slice.nv_id {
-                out["nvId"] = json!(id);
-            }
-            out
-        })
-        .collect();
-    reply(slices)`,
   },
 
   // ---- a Rust value that is a function of two layers, an option or an iterator
@@ -154,7 +138,9 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
         Some(done) => reply(done?),
     }`,
   },
-  tagHangulParagraphs: { body: 'return ($call as Paragraph[] | null) ?? paragraphs' },
+  // the TypeScript copies only what it tags: what is left as it was stays the caller's object
+  tagHangulRun: { body: 'return shared(run, $call)' },
+  tagHangulParagraphs: { body: 'const tagged = $call as Paragraph[] | null\n  return tagged === null ? paragraphs : shared(paragraphs, tagged)' },
   calcBoundingBox: {
     rust: `let elements: Vec<pptx_engine::types::SlideElement> = req(args, 0)?;
     reply({{path}}(elements.iter()))`,
@@ -226,35 +212,26 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
     lines: r.lines.map((l) => (l.to === undefined ? { x: l.x, y: l.y, cx: l.cx, cy: l.cy } : { ...l, to: nodes[l.to]! })),
     boxW: r.boxW,
   }`,
-    ret: `fn walk<'n>(list: &'n [pptx_engine::dgm_hier::HierTreeNode], into: &mut Vec<&'n pptx_engine::dgm_hier::HierTreeNode>) {
-        for node in list {
-            into.push(node);
-            walk(&node.children, into);
-        }
+  },
+
+  // ---- the TypeScript takes less than the Rust struct holds
+  placeholderSpXml: { args: ["{ hint: '', ...ph }", 'id'] },
+  shouldOfferBuiltinLayouts: {
+    pass: { 0: '&layouts' },
+    lines: `#[derive(serde::Deserialize)]
+    struct Offered {
+        name: String,
+        placeholders: Vec<serde::de::IgnoredAny>,
     }
-    let Some(layout) = r else {
-        return Ok(Some(pptx::answer(Some(Value::Null), Vec::new())));
-    };
-    let mut nodes = Vec::new();
-    walk(&p0, &mut nodes);
-    let place = |node: &pptx_engine::dgm_hier::HierTreeNode| nodes.iter().position(|other| std::ptr::eq(*other, node));
-    let boxes: Vec<Value> = layout
-        .boxes
-        .iter()
-        .map(|b| json!({ "node": place(b.node), "x": to_json(&b.x).unwrap_or(Value::Null), "y": to_json(&b.y).unwrap_or(Value::Null), "w": to_json(&b.w).unwrap_or(Value::Null), "h": to_json(&b.h).unwrap_or(Value::Null) }))
-        .collect();
-    let lines: Vec<Value> = layout
-        .lines
-        .iter()
-        .map(|l| {
-            let mut line = json!({ "x": to_json(&l.x).unwrap_or(Value::Null), "y": to_json(&l.y).unwrap_or(Value::Null), "cx": to_json(&l.cx).unwrap_or(Value::Null), "cy": to_json(&l.cy).unwrap_or(Value::Null) });
-            if let Some(index) = l.to.and_then(&place) {
-                line["to"] = json!(index);
-            }
-            line
+    let offered: Vec<Offered> = req(args, 0)?;
+    let layouts: Vec<pptx_engine::layout::SlideLayoutInfo> = offered
+        .into_iter()
+        .map(|layout| pptx_engine::layout::SlideLayoutInfo {
+            name: layout.name,
+            placeholders: vec![Default::default(); layout.placeholders.len()],
+            ..Default::default()
         })
-        .collect();
-    reply(json!({ "boxes": boxes, "lines": lines, "boxW": to_json(&layout.box_w)? }))`,
+        .collect();`,
   },
 
   // ---- a parse context the row builds from the ParseContext the TypeScript passes
@@ -322,9 +299,8 @@ export const PPTX_OVERRIDES: Record<string, PptxOverride> = {
   mergeSlideFromSource: {
     args: ['target', 'source', '{ layoutFrom: opts?.layoutFrom?.path }'],
     body: slideOf('target'),
-    pass: { 1: '&source', 2: '&options' },
-    lines: `let source = pptx_routes::merge_source(at(args, 1))?;
-    let layout_from: Option<String> = field(at(args, 2), "layoutFrom")?;
+    pass: { 2: '&options' },
+    lines: `let layout_from: Option<String> = field(at(args, 2), "layoutFrom")?;
     let options = pptx_engine::deck::MergeSlideOptions { layout_from: layout_from.as_deref() };`,
   },
   extractMergeSlideSource: {
