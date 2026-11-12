@@ -112,7 +112,7 @@ import {
   diagramPictureExtOfName,
   rhwpWasmPath,
 } from '@genoffice/file-parse'
-import { convertLegacyDocToDocx } from '../../../../packages/doc2docx/src'
+import { LEGACY_DOC_LIMITS, convertLegacyDocToDocx } from '../../../../packages/doc2docx/src'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
 import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/drivers/electron'
 import {
@@ -4145,6 +4145,18 @@ async function prepareDocumentForOpen(
   parent?: BrowserWindow | undefined,
 ): Promise<string | null> {
   if (!isWord97Path(filePath)) return filePath
+  // Refused by size before anything is read: the converter applies this limit
+  // too, but only to a file already loaded whole into the main process. A
+  // file that cannot be stat'ed fails at the read below, as before.
+  const size = await stat(filePath).then(
+    (info) => info.size,
+    () => null,
+  )
+  if (size !== null && size > LEGACY_DOC_LIMITS.maxBytes) {
+    const mb = LEGACY_DOC_LIMITS.maxBytes / 1024 / 1024
+    await showOpenErrorIn(parent, `${basename(filePath)}: ${tm('errTooLarge', { mb })}`)
+    return null
+  }
   const extension = filePath.slice(-3).toLowerCase()
   if (!readLegacyImportSkip(APP_SETTINGS_PATH(), 'word97')) {
     const options = {

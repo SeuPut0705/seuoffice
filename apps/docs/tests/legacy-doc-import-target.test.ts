@@ -9,11 +9,14 @@ import {
   readdirSync,
   rmSync,
   symlinkSync,
+  truncateSync,
   writeFileSync,
 } from 'node:fs'
+import type * as FsPromises from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeAll, beforeEach, expect, it, vi } from 'vitest'
+import { LEGACY_DOC_LIMITS } from '../../../packages/doc2docx/src'
 
 type IpcHandler = (...args: unknown[]) => unknown
 interface BoxOptions {
@@ -26,7 +29,18 @@ const state = vi.hoisted(() => ({
   pick: vi.fn(),
   // every message box is answered with its first button: "Convert and open" for the import question
   box: vi.fn(async (..._args: unknown[]) => ({ response: 0, checkboxChecked: false })),
+  // every path the main process read whole
+  reads: [] as string[],
 }))
+
+vi.mock('node:fs/promises', async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>()
+  const readFile: typeof actual.readFile = Object.assign((...args: unknown[]) => {
+    state.reads.push(String(args[0]))
+    return Reflect.apply(actual.readFile, actual, args)
+  }, actual.readFile)
+  return { ...actual, readFile }
+})
 
 vi.mock('electron', () => ({
   app: {
@@ -80,6 +94,7 @@ beforeEach(async () => {
   state.handlers.clear()
   state.pick.mockReset()
   state.box.mockClear()
+  state.reads.length = 0
   copyFileSync(
     join(__dirname, '../../../packages/doc2docx/tests/fixtures/text-basic.doc'),
     source(),
@@ -127,6 +142,8 @@ it('converts into the picked .docx and opens that copy', async () => {
   expect(isZip(work('converted.docx'))).toBe(true)
   expect(readFileSync(source())).toEqual(sourceBytes())
   expect(errorBoxes()).toEqual([])
+  // the read of the original is the one the size check below must prevent
+  expect(state.reads).toContain(source())
 })
 
 it('refuses the original as the destination, says so and asks for another name', async () => {
@@ -187,4 +204,20 @@ it('replaces an existing .docx once the dialog returned that very name', async (
   picks(work('draft.doc'), work('draft.doc.docx'))
   expect(await openLegacy()).toMatchObject({ path: work('draft.doc.docx') })
   expect(isZip(work('draft.doc.docx'))).toBe(true)
+})
+
+it('refuses a file over the import limit before reading it or asking anything', async () => {
+  // sparse: the size is there, the bytes are not
+  truncateSync(source(), LEGACY_DOC_LIMITS.maxBytes + 1)
+  picks(work('converted.docx'))
+  expect(await openLegacy()).toBeNull()
+  expect(state.reads).not.toContain(source())
+  const [refusal, ...others] = errorBoxes()
+  expect(others).toEqual([])
+  expect(refusal?.detail).toContain('report.doc')
+  expect(refusal?.detail).toContain(String(LEGACY_DOC_LIMITS.maxBytes / 1024 / 1024))
+  // the conversion question and the destination dialog never came up
+  expect(state.box).toHaveBeenCalledTimes(1)
+  expect(state.pick).not.toHaveBeenCalled()
+  expect(existsSync(work('converted.docx'))).toBe(false)
 })
