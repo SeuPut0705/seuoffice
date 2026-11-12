@@ -110,7 +110,7 @@ import {
   writeElementClipboardImage,
 } from './element-clipboard'
 import { familyInfoFor } from '@genoffice/font-metrics'
-import { getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
+import { brandText, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
 import { ProjectStore } from '@genoffice/project-store'
 import {
   copyElementData,
@@ -1040,9 +1040,8 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
   const detailKey = legacyPpt ? 'pptImportDetail' : 'odpImportDetail'
   const failedTitleKey = legacyPpt ? 'pptImportFailedTitle' : 'odpImportFailedTitle'
   const failedBodyKey = legacyPpt ? 'pptImportFailedBody' : 'odpImportFailedBody'
-  const skipFormat = legacyPpt ? 'ppt' : 'odp'
   const parent = dialogParent()
-  if (!readLegacyImportSkip(APP_SETTINGS_PATH(), skipFormat)) {
+  if (legacyPpt || !readLegacyImportSkip(APP_SETTINGS_PATH(), 'odp')) {
     const options = {
       type: 'warning' as const,
       message: tm('odpImportMsg', { ext: extension }),
@@ -1051,15 +1050,15 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
       defaultId: 0,
       cancelId: 1,
       noLink: true,
-      checkboxLabel: tm('importSkipConfirm'),
+      ...(!legacyPpt ? { checkboxLabel: tm('importSkipConfirm') } : {}),
     }
     const { response, checkboxChecked } = parent
       ? await dialog.showMessageBox(parent, options)
       : await dialog.showMessageBox(options)
     if (response !== 0) return null
-    if (checkboxChecked) {
+    if (!legacyPpt && checkboxChecked) {
       try {
-        writeLegacyImportSkip(APP_SETTINGS_PATH(), skipFormat, true)
+        writeLegacyImportSkip(APP_SETTINGS_PATH(), 'odp', true)
       } catch {
         /* unwritable settings: ask again next time */
       }
@@ -1071,7 +1070,9 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
     {
       defaultPath: join(
         dirname(filePath),
-        basename(filePath).replace(/\.(odp|otp|ppt)$/i, '.pptx'),
+        legacyPpt
+          ? tm('pptImportCopyName', { stem: basename(filePath).replace(/\.ppt$/i, '') })
+          : basename(filePath).replace(/\.(odp|otp)$/i, '.pptx'),
       ),
       filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
     },
@@ -1080,12 +1081,21 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
   if (r.canceled || !r.filePath) return null
   try {
     const source = new Uint8Array(await readFile(filePath))
-    const out = legacyPpt
-      ? (await convertPptToPptx(source)).bytes
-      : (await convertOdpToPptx(source)).pptx
+    const converted = legacyPpt ? await convertPptToPptx(source) : null
+    const out = converted ? converted.bytes : (await convertOdpToPptx(source)).pptx
     // atomic like the Docs and shell copies: a plain write leaves a truncated
     // .pptx where the user expects a deck if the process dies mid-write
     await atomicWriteFile(r.filePath, Buffer.from(out))
+    if (converted?.warnings.length) {
+      const warningOptions = {
+        type: 'warning' as const,
+        message: tm('odpImportMsg', { ext: extension }),
+        detail: brandText(converted.warnings.join('\n'), getUiLang()),
+        buttons: [tm('legacyPptOk')],
+      }
+      if (parent) await dialog.showMessageBox(parent, warningOptions)
+      else await dialog.showMessageBox(warningOptions)
+    }
   } catch {
     const errorOptions = {
       type: 'error' as const,
