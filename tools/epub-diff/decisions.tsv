@@ -1,0 +1,5 @@
+ts	phase	decision	why	evidence	result
+2026-11-12T04:34:13Z	frame	Port the functions of packages/epub-engine that take values and typed trees; leave every function that parses text with saxes or parse5 to a later unit	Those parsers are 2,000 lines of third-party code with no Rust counterpart in the workspace	packages/epub-engine/src; crates/epub-engine/src	25 functions of paths, fonts, sha1, encoding, ranges, writing-mode, container, encryption, package, nav and NCX
+2026-11-12T04:34:13Z	first	Save the first comparison before any fix	Report measured equality	tools/epub-diff/evidence/first-epub.json	2770 checks; 2 differences, one cause: U+0131 matched i under /i
+2026-11-12T04:34:13Z	defect	Fix the cause in jscompat, not in the two EPUB patterns	Every i pattern of the workspace was exposed	crates/jscompat/src/regex.rs; commit 161ea10d9	2770 checks; 0 differences
+2026-11-12T04:34:13Z	gate	Reuse the runner, fault runner and spec of tools/fileparse-diff by import	One runner to keep honest	tools/epub-diff/main.ts; tools/fileparse-diff/faults.ts --dir	open
