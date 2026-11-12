@@ -136,16 +136,28 @@ function typeOf(el: El): RevisionXmlType | undefined {
   }
 }
 
+/** an ISO date and time, T or a space between them; group 1 is the zone designator */
+const ISO_DATE_TIME = /^\d{4}-\d\d-\d\d[T ]\d\d:\d\d(?::\d\d(?:\.\d+)?)?(Z|[+-]\d\d(?::?\d\d)?)?$/i
+
 /**
- * Epoch ms of a revision date (a w:date, or the `before` of a filter). A
- * date-time without a zone designator is UTC: Date.parse reads it as local
- * time, and a filter would pick different changes on machines in different
- * zones. The editor's filter over body revisions reads dates through this too.
+ * Epoch ms of a revision date (a w:date, or the `before` of a filter); NaN
+ * when it is no date. An ISO date-time without a zone designator is UTC:
+ * Date.parse reads it as local time, and a filter would pick different
+ * changes on machines in different zones. Any other form (a date alone, a
+ * date with its zone spelled out) is read as Date.parse reads it. The
+ * editor's filter over body revisions reads dates through this too.
  */
 export function revisionDateMs(iso: string): number {
   const s = iso.trim()
-  const zoneless = /T/i.test(s) && !/(?:Z|[+-]\d\d(?::?\d\d)?)$/i.test(s)
-  return Date.parse(zoneless ? `${s}Z` : s)
+  const dateTime = ISO_DATE_TIME.exec(s)
+  if (!dateTime) return Date.parse(s)
+  const t = s.replace(' ', 'T')
+  return Date.parse(dateTime[1] ? t : `${t}Z`)
+}
+
+/** a change recorded at `date` lies strictly before `beforeMs`; a w:date that is no date does not */
+export function revisionDateBefore(date: string | undefined, beforeMs: number): boolean {
+  return date !== undefined && revisionDateMs(date) < beforeMs
 }
 
 function matches(el: El, filter: RevisionXmlFilter | undefined, type: RevisionXmlType): boolean {
@@ -157,7 +169,7 @@ function matches(el: El, filter: RevisionXmlFilter | undefined, type: RevisionXm
   }
   if (filter.before !== undefined) {
     const date = attrOf(el, 'w:date')
-    if (!date || revisionDateMs(date) >= revisionDateMs(filter.before)) return false
+    if (!revisionDateBefore(date, revisionDateMs(filter.before))) return false
   }
   if (filter.date !== undefined && (attrOf(el, 'w:date') ?? '') !== filter.date) return false
   if (filter.ids !== undefined && !filter.ids.includes(attrOf(el, 'w:id') ?? '')) return false

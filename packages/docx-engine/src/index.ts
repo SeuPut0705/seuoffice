@@ -286,6 +286,7 @@ export {
   cleanMoveRangeMarkers,
   countTrackedChangesXml,
   readPropChangeXml,
+  revisionDateBefore,
   revisionDateMs,
   resolvePropChangeXml,
   type PropChangeRecord,

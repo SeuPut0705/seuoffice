@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { applyTrackedChangesXml } from '../src/revision-xml'
+import { applyTrackedChangesXml, revisionDateMs } from '../src/revision-xml'
 
 /**
  * `before` picks the changes recorded before an instant. A date written
@@ -55,5 +55,30 @@ describe.each(ZONES)('the before filter with the machine in %s', (zone) => {
 
   it('the instant itself is not before', () => {
     expect(kept(['2026-01-15T00:00:00'], '2026-01-15T00:00:00Z')).toEqual(['2026-01-15T00:00:00'])
+  })
+})
+
+describe.each(ZONES)('dates that are not an ISO date-time, with the machine in %s', (zone) => {
+  /** the changes left after rejecting every insertion recorded before `before` */
+  const kept = (dates: string[], before: string) => {
+    process.env.TZ = zone
+    const xml = hdr(`<w:p>${dates.map((d, i) => ins(i + 1, d, d)).join('')}</w:p>`)
+    return texts(applyTrackedChangesXml(xml, 'reject', { before }).xml)
+  }
+
+  it('a date with its zone spelled out reads as that instant', () => {
+    process.env.TZ = zone
+    expect(revisionDateMs('Mon, 01 Jan 2024 10:00:00 GMT')).toBe(Date.UTC(2024, 0, 1, 10))
+    expect(kept(['Mon, 01 Jan 2024 10:00:00 GMT'], '2024-01-01T11:00:00Z')).toEqual([])
+  })
+
+  it('a date and time with a space between them is UTC, like the T form', () => {
+    process.env.TZ = zone
+    expect(revisionDateMs('2024-01-01 10:00:00')).toBe(Date.UTC(2024, 0, 1, 10))
+    expect(revisionDateMs('2024-01-01 10:00')).toBe(Date.UTC(2024, 0, 1, 10))
+  })
+
+  it('a w:date that is no date is not before anything', () => {
+    expect(kept(['someday', '2026-01-14T00:00:00Z'], '2026-01-15T00:00:00Z')).toEqual(['someday'])
   })
 })
