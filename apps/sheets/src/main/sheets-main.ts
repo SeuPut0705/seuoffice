@@ -2717,6 +2717,15 @@ function recordedStateFor(session: SessionInfo, path: string): SaveDiskState | u
 }
 
 /**
+ * The folder a workbook's relative link targets start from: that of the file
+ * the person opened. A password workbook (and a restored copy) runs on a
+ * working copy elsewhere, and "the file beside this one" is not beside that.
+ */
+function externalLinkBaseDir(session: SessionInfo): string {
+  return dirname(session.restoreTarget ?? session.path)
+}
+
+/**
  * The same-document (split view) save guard: when the path is open in another
  * pane and the disk moved past this copy's recorded state, a background save
  * (quiet/AutoSave) defers silently — 'cancel' — while a manual save asks
@@ -4511,7 +4520,10 @@ export function registerSheetsIpc(): void {
     const request = externalLinksRequestSchema.parse(input)
     const session = entry.sessions.get(request.sessionId)
     if (!session) throw new Error('Unknown workbook session.')
-    const result = await entry.client.listExternalLinks({ path: session.path })
+    const result = await entry.client.listExternalLinks({
+      path: session.path,
+      baseDir: externalLinkBaseDir(session),
+    })
     return externalLinksResultSchema.parse(result)
   })
   ipcMain.handle(IPC_CHANNELS.updateExternalLinks, async (event, input: unknown) => {
@@ -4521,7 +4533,13 @@ export function registerSheetsIpc(): void {
     if (!session) throw new Error('Unknown workbook session.')
     // The saved file is what the update must read: the panel saves before it
     // asks, so the on-disk bytes match the grid the values are applied to.
-    const result = await entry.client.updateExternalLinks({ path: session.path })
+    const result = await entry.client.updateExternalLinks({
+      path: session.path,
+      baseDir: externalLinkBaseDir(session),
+      // The panel's Update button is the person asking for the sources it
+      // lists, one on another computer included; nothing else sets this.
+      allowRemoteSources: true,
+    })
     return externalLinksUpdateResultSchema.parse(result)
   })
   // The formula cells referencing each [n] link, with the value a Break would
@@ -4614,7 +4632,10 @@ export function registerSheetsIpc(): void {
       const session = entry.sessions.get(request.data.sessionId)
       if (!session) return
       try {
-        const listing = await entry.client.listExternalLinks({ path: session.path })
+        const listing = await entry.client.listExternalLinks({
+          path: session.path,
+          baseDir: externalLinkBaseDir(session),
+        })
         const source = listing.links.find((link) => link.index === request.data.index)?.source
         // Reveal only real files: a missing source is a silent no-op.
         if (source === null || source === undefined || !existsSync(source)) return
