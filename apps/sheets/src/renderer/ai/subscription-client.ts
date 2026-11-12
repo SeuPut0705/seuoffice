@@ -11,7 +11,6 @@ import {
 } from '@genoffice/ui'
 import type {
   AiSubscriptionProviderId,
-  SubscriptionConnectHelpPath,
   SubscriptionStatusMap,
 } from '@genoffice/ai-provider/browser'
 
@@ -21,8 +20,6 @@ export interface SubscriptionConnection {
   readonly busy: boolean
   /** the connect cards' buttons */
   readonly actions: AiSubscriptionCardActions
-  /** open the website's step-by-step connect help at the guide's path */
-  readonly openConnectHelp: (path: SubscriptionConnectHelpPath | null) => void
   /** look again without a card asking for it (both providers when none is named) */
   readonly refresh: (providers?: AiSubscriptionProviderId[]) => void
 }
@@ -59,7 +56,6 @@ export function useSubscriptionConnection(): SubscriptionConnection {
     statuses: shared.statuses,
     busy: shared.busy,
     actions,
-    openConnectHelp: shared.openConnectHelp,
     refresh: shared.refresh,
   }
 }

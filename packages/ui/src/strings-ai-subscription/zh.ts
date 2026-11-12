@@ -128,7 +128,6 @@ export const zh = {
   guideInfoHint: '还是不行？复制连接信息，发给帮助你的人。其中不包含账户和文件路径。',
   actionCopyInfo: '复制求助信息',
   copyInfoDone: '已复制',
-  actionConnectHelp: '查看每一步的画面演示（韩语页面）',
   guidePathChatGptBody:
     '用 ChatGPT 账号登录，即可在其套餐内使用。无需安装程序。免费套餐可用量较少。',
   guideUseCodex: '这台电脑上已在用 Codex 程序？通过 Codex 连接',

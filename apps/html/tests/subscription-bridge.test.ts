@@ -5,7 +5,6 @@ import { SUBSCRIPTION_IPC_CHANNELS } from '@genoffice/ai-provider/browser'
 import type { HtmlApi } from '../src/shared/ipc'
 import { AI_CHANNELS } from '../src/shared/ipc'
 import {
-  SUBSCRIPTION_CONNECT_HELP_CHANNEL,
   SUBSCRIPTION_INSTALL_HELP_CHANNEL,
   checkingSubscriptionStatuses,
   isSubscriptionProviderId,
@@ -120,7 +119,6 @@ describe('html preload', () => {
         'cancelLogin',
         'login',
         'onChanged',
-        'openConnectHelp',
         'openInstallHelp',
         'recheck',
         'setMeteredAccepted',
@@ -163,7 +161,6 @@ describe('html preload', () => {
     await api.subscription.install('codex')
     await api.subscription.setMeteredAccepted('codex', true)
     await api.subscription.openInstallHelp('claude-code')
-    await api.subscription.openConnectHelp('free')
     expect(electron.invoke.mock.calls).toEqual([
       [SUBSCRIPTION_IPC_CHANNELS.recheck, undefined],
       [SUBSCRIPTION_IPC_CHANNELS.recheck, { providers: ['codex'] }],
@@ -172,7 +169,6 @@ describe('html preload', () => {
       [SUBSCRIPTION_IPC_CHANNELS.install, { provider: 'codex' }],
       [SUBSCRIPTION_IPC_CHANNELS.metered, { provider: 'codex', accepted: true }],
       [SUBSCRIPTION_INSTALL_HELP_CHANNEL, 'claude-code'],
-      [SUBSCRIPTION_CONNECT_HELP_CHANNEL, 'free'],
     ])
   })
 

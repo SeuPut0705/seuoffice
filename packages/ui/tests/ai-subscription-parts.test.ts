@@ -522,10 +522,7 @@ describe('AiConnectPrompt', () => {
   const render = (
     settings: AiSettings,
     statuses: AiSubscriptionStatuses,
-    extra: {
-      onOpenSettings?: () => void
-      onOpenConnectHelp?: (path: 'claude-code' | 'codex' | 'free' | null) => void
-    } = {},
+    extra: { onOpenSettings?: () => void } = {},
   ) => {
     const actions = cardActions()
     act(() =>
@@ -693,24 +690,19 @@ describe('AiConnectPrompt', () => {
     expect(host.querySelector('[data-action="copy-info"]')!.textContent).toBe(en.copyInfoDone)
   })
 
-  it('links to the step-by-step help at the path the guide shows, while nothing is connected', () => {
-    const onOpenConnectHelp = vi.fn()
-    const statuses: AiSubscriptionStatuses = {
+  it('offers the copy action alone under the guide, on the question and on an open path', () => {
+    const helpActions = () =>
+      [...host.querySelectorAll<HTMLElement>('.ai-sub-guide-info [data-action]')].map(
+        (el) => el.dataset.action,
+      )
+    render(defaultAiSettings(), {
       'claude-code': status('claude-code', 'not-installed'),
       codex: status('codex', 'signed-out'),
-    }
-    render(defaultAiSettings(), statuses, { onOpenConnectHelp })
-    expect(host.querySelector('[data-action="connect-help"]')!.textContent).toBe(
-      en.actionConnectHelp,
-    )
-    click('[data-action="connect-help"]')
-    expect(onOpenConnectHelp).toHaveBeenLastCalledWith(null)
+    })
+    expect(helpActions()).toEqual(['copy-info'])
+    expect(host.querySelector('.ai-sub-guide a[href]')).toBeNull()
     click('[data-path="chatgpt"]')
-    click('[data-action="connect-help"]')
-    expect(onOpenConnectHelp).toHaveBeenLastCalledWith('chatgpt')
-    // a host that cannot open it gets no link
-    render(defaultAiSettings(), statuses)
-    expect(host.querySelector('[data-action="connect-help"]')).toBeNull()
+    expect(helpActions()).toEqual(['copy-info'])
   })
 
   it('offers no free way in for a selected provider that cannot run, or without a settings page', () => {

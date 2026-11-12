@@ -1353,7 +1353,6 @@ export function AiPanel({ host, filePath, onCollapse }: AiPanelProps): ReactElem
               onRecheck={subscription.recheck}
               onAcceptMetered={subscription.acceptMetered}
               onOpenInstallHelp={subscription.openInstallHelp}
-              onOpenConnectHelp={subscription.openConnectHelp}
             />
           ) : (
             <AiFirstConnectionNotice

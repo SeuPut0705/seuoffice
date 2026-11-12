@@ -73,7 +73,6 @@ import menuHomeIcon2x from './assets/menu-home@2x.png?asset'
 import { createI18n, isLang, normalizeLang, setUiLang, type Lang } from '@genoffice/i18n'
 import {
   DEV_USER_DATA_DIR_NAME,
-  PRODUCT_CONTACT_EMAIL,
   PRODUCT_NAME,
   USER_DATA_DIR_NAME,
   productName,
@@ -448,7 +447,6 @@ import {
   initSubscriptionChildTracking,
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
-  subscriptionConnectHelpUrl,
   trackedSubscriptionChildCount,
 } from '@genoffice/ai-provider/subscription'
 import { showErrorDialog } from './error-dialog'
@@ -7143,16 +7141,6 @@ function registerHomeIpc(): void {
     void openThirdPartyNotices()
   })
 
-  ipcMain.handle(HOME_CHANNELS.openRightsContact, () => {
-    const url = safeExternalUrl(`mailto:${PRODUCT_CONTACT_EMAIL}`, {
-      allowedProtocols: ['mailto:'],
-    })
-    if (!url) return
-    shell.openExternal(url).catch(() => {
-      // no mail handler registered; the address is shown in Settings to copy by hand
-    })
-  })
-
   // the page is the vendor's fixed install guide; the renderer only names the provider
   ipcMain.handle(SHELL_SUBSCRIPTION_CHANNELS.openInstallHelp, (_event, provider: unknown) => {
     if (!isSubscriptionProviderId(provider)) return
@@ -7160,15 +7148,6 @@ function registerHomeIpc(): void {
     const url = safeExternalUrl(
       provider === 'chatgpt' ? SUBSCRIPTION_CHATGPT_USAGE_URL : SUBSCRIPTION_INSTALL_URLS[provider],
     )
-    if (!url) return
-    shell.openExternal(url).catch(() => {
-      // no browser handler available; nothing actionable for the user here
-    })
-  })
-
-  // the website's connect help: a fixed address, the renderer only names the path
-  ipcMain.handle(SHELL_SUBSCRIPTION_CHANNELS.openConnectHelp, (_event, path: unknown) => {
-    const url = safeExternalUrl(subscriptionConnectHelpUrl(path))
     if (!url) return
     shell.openExternal(url).catch(() => {
       // no browser handler available; nothing actionable for the user here

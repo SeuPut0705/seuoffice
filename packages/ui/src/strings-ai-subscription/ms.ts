@@ -152,7 +152,6 @@ export const ms = {
     'Masih tidak berjaya? Salin maklumat sambungan dan hantar kepada orang yang membantu anda. Maklumat ini tidak mengandungi akaun atau laluan fail.',
   actionCopyInfo: 'Salin maklumat untuk bantuan',
   copyInfoDone: 'Disalin',
-  actionConnectHelp: 'Lihat setiap langkah pada skrin (halaman dalam bahasa Korea)',
   guidePathChatGptBody:
     'Log masuk dengan akaun ChatGPT anda dan gunakan pelan anda. Tiada apa-apa perlu dipasang. Pelan percuma hanya membenarkan sedikit penggunaan.',
   guideUseCodex: 'Sudah menggunakan program Codex pada PC ini? Sambung dengan Codex',
