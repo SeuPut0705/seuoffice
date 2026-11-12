@@ -130,6 +130,16 @@ fn put32(out: &mut Vec<u8>, x: u64) {
 /// A part that cannot be read (its content was damaged when it was loaded)
 /// is an error: JSZip would fail on it the same way.
 pub fn generate(package: &Package, date: f64) -> io::Result<Vec<u8>> {
+    generate_storing(package, date, &|_| false)
+}
+
+/// [`generate`], with the files `stored(name)` names written with method 0
+/// (STORE) instead of deflated: `zip.file(name, data, { compression: 'STORE' })`.
+pub fn generate_storing(
+    package: &Package,
+    date: f64,
+    stored: &dyn Fn(&str) -> bool,
+) -> io::Result<Vec<u8>> {
     let mut out = Vec::new();
     let mut directory = Vec::new();
     for part in package.parts() {
@@ -141,9 +151,12 @@ pub fn generate(package: &Package, date: f64) -> io::Result<Vec<u8>> {
             part.bytes().map_err(io::Error::other)?
         };
         let name = part.name.as_bytes();
-        // JSZip stores folders and empty files, and deflates the rest
+        // JSZip stores folders and empty files, and deflates the rest but
+        // what the caller asks to store
         let (method, stored) = if part.is_dir || data.is_empty() {
             (STORE, Vec::new())
+        } else if stored(&part.name) {
+            (STORE, data.to_vec())
         } else {
             (DEFLATE, deflate(data)?)
         };

@@ -163,19 +163,56 @@ fn edits(args: &Value) -> Result<Option<Vec<Edit>>, String> {
 
 /// `savedEntries` of the TypeScript spec: `[path, text | 'bytes <n> <sha-256>', deflated]`
 /// per file of the package a save writes, in order. JSZip stores an empty file.
+/// The method of each file of a written zip, by name, from its central
+/// directory: whether the zip itself holds the entry deflated (method 8).
+fn written_methods(zip: &[u8]) -> Result<std::collections::HashMap<String, bool>, String> {
+    let u16_at = |at: usize| {
+        zip.get(at..at + 2)
+            .map(|b| u16::from_le_bytes([b[0], b[1]]) as usize)
+            .ok_or("the written zip is cut off")
+    };
+    let u32_at = |at: usize| {
+        zip.get(at..at + 4)
+            .map(|b| u32::from_le_bytes([b[0], b[1], b[2], b[3]]) as usize)
+            .ok_or("the written zip is cut off")
+    };
+    let end = (0..zip.len().saturating_sub(21))
+        .rev()
+        .find(|&at| zip.get(at..at + 4) == Some(b"PK\x05\x06"))
+        .ok_or("the written zip has no central directory")?;
+    let count = u16_at(end + 10)?;
+    let mut at = u32_at(end + 16)?;
+    let mut out = std::collections::HashMap::with_capacity(count);
+    for _ in 0..count {
+        if zip.get(at..at + 4) != Some(b"PK\x01\x02") {
+            return Err("the written zip's central directory is broken".to_owned());
+        }
+        let method = u16_at(at + 10)?;
+        let name_length = u16_at(at + 28)?;
+        let skip = name_length + u16_at(at + 30)? + u16_at(at + 32)?;
+        let name = zip
+            .get(at + 46..at + 46 + name_length)
+            .ok_or("the written zip is cut off")?;
+        out.insert(String::from_utf8_lossy(name).into_owned(), method == 8);
+        at += 46 + skip;
+    }
+    Ok(out)
+}
+
 fn saved_entries(opened: &mut OpenedPptx) -> Result<Value, String> {
-    // the bytes are written first: a save that fails is a failed call
-    save_pptx(opened)?;
+    // the bytes are written first: a save that fails is a failed call; the
+    // method each entry has is the one the written zip holds
+    let methods = written_methods(&save_pptx(opened)?)?;
     let entries: Vec<(String, String, bool)> = build_zip(opened)?
         .into_iter()
-        .map(|(path, bytes, deflate)| {
+        .map(|(path, bytes, _)| {
             let lower = path.to_ascii_lowercase();
             let text = if lower.ends_with(".xml") || lower.ends_with(".rels") {
                 jscompat::text_decoder_decode(&bytes).into_owned()
             } else {
                 format!("bytes {} {:x}", bytes.len(), Sha256::digest(&bytes))
             };
-            let deflated = deflate && !bytes.is_empty();
+            let deflated = methods.get(&path).copied().unwrap_or(false);
             (path, text, deflated)
         })
         .collect();

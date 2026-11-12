@@ -680,14 +680,19 @@ pub fn reparse_deck(opened: &mut OpenedPptx) -> Result<(), String> {
     Ok(())
 }
 
-/// `savePptx`. The zip is written with every entry deflated: `build_zip`
-/// says which entries JSZip stores, and `ooxml_pkg::write::generate` has no
-/// per-entry method.
+/// `savePptx`: the entries `build_zip` does not deflate (media, fonts, other
+/// binaries) are stored, as JSZip writes them with `compression: 'STORE'`.
 pub fn save_pptx(opened: &mut OpenedPptx) -> Result<Vec<u8>, String> {
     let written = build_zip(opened).and_then(|entries| {
+        let stored: std::collections::HashSet<String> = entries
+            .iter()
+            .filter(|(_, _, deflate)| !deflate)
+            .map(|(path, _, _)| path.clone())
+            .collect();
         let package =
             Package::from_parts(entries.into_iter().map(|(path, bytes, _)| (path, bytes)));
-        ooxml_pkg::write::generate(&package, ZIP_DATE).map_err(|error| error.to_string())
+        ooxml_pkg::write::generate_storing(&package, ZIP_DATE, &|name| stored.contains(name))
+            .map_err(|error| error.to_string())
     });
     if written.is_err() {
         // A save that never landed cannot vouch for any edit: drop the snapshot
