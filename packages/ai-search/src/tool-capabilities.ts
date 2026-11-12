@@ -9,7 +9,7 @@
  */
 
 import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
-import { selectedSearchKey } from './search-tools'
+import { keylessSearchBackend, selectedSearchKey } from './search-tools'
 import {
   SCREEN_TOOL_CONTEXT,
   imageGenerationUnavailableMessage,
@@ -71,15 +71,15 @@ export function aiToolCapabilities(
 
   // the same answer the search tools route on: the selected key provider, or the keyless chain
   const search = selectedSearchKey(resolved)?.provider
-  // only Serper and Serply have an image endpoint; every other selection searches images for free
-  const imageSearchKeyed = search === 'serper' || search === 'serply'
+  // only Serper, Serply and SearchApi have an image endpoint; every other selection searches images for free
+  const imageSearchKeyed = search === 'serper' || search === 'serply' || search === 'searchapi'
 
   const image = resolveImageRoute(resolved, context)
   const analysis = resolveImageAnalysisRoute(resolved, context)
   const video = resolveVideoAnalysisRoute(resolved)
 
   return {
-    webSearch: search ? via('key', search) : via('free', 'parallel'),
+    webSearch: search ? via('key', search) : via('free', keylessSearchBackend(resolved)),
     imageSearch: imageSearchKeyed ? via('key', search) : via('free', 'duckduckgo'),
     imageGeneration:
       image.kind === 'none'

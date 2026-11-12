@@ -1,6 +1,25 @@
 import type { zh } from './zh'
 
 export const pl = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Ukryj zaznaczenie przed AI',
+  redactDialogDesc:
+    'Zaznaczona zawartość zostaje w dokumencie i w pliku; model widzi tylko symbol. Nadaj mu nazwę, by wiedział, co oznacza.',
+  redactDialogScope:
+    'Ukrywanie dotyczy tylko AI w tej aplikacji. CLI, narzędzia MCP i eksport bez okienka czytują plik bezpośrednio i nadal widzą te słowa.',
+  redactDialogPlaceholder: 'Nazwa symbolu, np. telefon klienta',
+  redactCancel: 'Anuluj',
+  redactInsert: 'Ukryj',
+  redactEnable: 'Kliknij prawym na zaznaczeniu, aby ukryć je przed modelem.',
+  redactNeedsSavedRow:
+    'Ten wiersz nie jest jeszcze w pliku. Zapisz najpierw, a potem ukryj komórkę.',
+  redactNeedsSavedSheet:
+    'Tego arkusza lub jego kopii nie ma jeszcze w pliku. Zapisz najpierw, a potem zmień to, co jest ukryte.',
+  redactMoveRefused:
+    'Nie wykonano: spowodowałoby to przeniesienie lub skopiowanie komórek ukrytych przed AI, a ich wartości przestałyby być ukryte. Najpierw przestań je ukrywać albo pomiń je w zakresie.',
+  redactRecoveredFromNames:
+    'Inna aplikacja zapisała ten plik od nowa i usunęła rejestr tego, co jest ukryte. Ukryte komórki odtworzono z nazw w skoroszycie; zapisanie przywraca pełny rejestr.',
+
   appMergeWorkbooks: 'Scal skoroszyty',
   appMergeWorkbooksTip: 'Dodaj arkusze z innych plików Excel do tego skoroszytu',
   appMergeWorkbooksPicking: 'Wybierz pliki do scalenia…',
@@ -8,6 +27,8 @@ export const pl = {
   appMergeWorkbooksDone:
     'Scalono {sheets} arkuszy z {files} plików (formuły zaimportowano jako wartości).',
   appMergeWorkbooksFailed: 'Scalanie skoroszytów nie powiodło się.',
+  appMergeWorkbooksHiddenCells:
+    'Niczego nie scalono: {file} zawiera komórki ukryte przed AI, a scalenie przeniosłoby ich wartości bez tego ukrycia. Otwórz ten plik, wyłącz ukrycie tych komórek albo je usuń, zapisz i scal ponownie.',
   appMergeWorkbooksInsertFailed: 'Nie można utworzyć arkusza {sheet}.',
   appMergeWorkbooksLocked: 'Skoroszyt wciąż się wczytuje; scalanie jest teraz niedostępne.',
   appFormulaBarShown: 'Pasek formuły widoczny.',
@@ -537,6 +558,7 @@ export const pl = {
   appBridgeUnavailable:
     'Most plików aplikacji desktopowej jest niedostępny. Uruchom ponownie aplikację Electron.',
   appOpenCanceled: 'Anulowano wybór skoroszytu.',
+  appImportCanceled: 'Anulowano import.',
   appOpeningWorkbook: 'Otwieranie skoroszytu…',
   appOpened: 'Otwarto {name} — zmiany w komórkach zapisujesz z powrotem za pomocą ⌘S.',
   appOpenFailed: 'Nie można otworzyć skoroszytu.',
@@ -633,6 +655,8 @@ export const pl = {
     'Ten typ wykresu nie obsługuje tej edycji; zapisywanie przerwano — cofnij zmianę wykresu.',
   appSaveErrMoveOverlap:
     'Formuła, sformatowany zakres, kształt lub tabela obejmuje przenoszone wiersze; zapisywanie przerwano — cofnij przeniesienie.',
+  appSaveErrHiddenCellsUnreadable:
+    'Nie można odczytać rejestru komórek ukrytych przed AI w tym skoroszycie, dlatego zmian wierszy, kolumn i arkuszy nie da się zapisać: ukryte komórki przestałyby być chronione. Cofnij te zmiany i zapisz ponownie.',
   appFromTextCsvTitle: 'Importuj plik CSV/tekstowy do bieżącego zaznaczenia',
   appCsvImported: 'Zaimportowano {rows} wierszy × {columns} kolumn z pliku do {cell}.',
   appCsvEmpty: 'Plik CSV nie zawiera danych.',
@@ -737,6 +761,7 @@ export const pl = {
   appExportPdfTitle: 'Eksportuj jako PDF',
   appSaveTitle: 'Zapisz (⌘S)',
   appSaveAs: 'Zapisz jako',
+  aiNameFile: 'Nazwij za pomocą AI…',
   appUndo: 'Cofnij',
   appRedo: 'Wykonaj ponownie',
   appQuickAccessCustomize: 'Dostosuj pasek narzędzi Szybki dostęp',
@@ -1191,6 +1216,20 @@ export const pl = {
   appWatchCell: 'Komórka',
   appWatchValue: 'Wartość',
   appWatchFormula: 'Formuła',
+  appLinksPanel: 'Łącza zewnętrzne',
+  appLinksPanelDetail: 'Wyświetlanie, aktualizowanie i zrywanie łączy do innych skoroszytów',
+  appLinksUpdate: 'Aktualizuj wartości',
+  appLinksNone: 'Ten skoroszyt nie ma łączy do innych skoroszytów.',
+  appLinksUnsaved: 'Zapisz ten skoroszyt, zanim wyświetlisz jego łącza zewnętrzne.',
+  appLinksSource: 'Źródło',
+  appLinksStatus: 'Stan',
+  appLinksSheets: 'Arkusze',
+  appLinksLocate: 'Pokaż plik źródłowy',
+  appLinksReachable: 'Dostępne',
+  appLinksBroken: 'Niedostępne',
+  appLinksBreak: 'Przerwij łącze',
+  appLinksBreakConfirm: 'Potwierdź przerwanie',
+  appLinksChangeSource: 'Zmień źródło',
   appGroupCalculation: 'Obliczanie',
   appCalculationOptions: 'Opcje obliczania',
   appCalculationOptionsTitle: 'Przeliczanie automatyczne lub ręczne',
@@ -1207,6 +1246,13 @@ export const pl = {
   appGroupGetData: 'Pobierz dane',
   appFromTextCsv: 'Z pliku tekstowego/CSV',
   appRefreshAll: 'Odśwież wszystko',
+  appRefreshQuery: 'Odśwież zapytanie',
+  appQueryConnectionsTitle: 'Odśwież zapytania skoroszytu',
+  appQueryRefreshing: 'Odświeżanie {name}…',
+  appQueryRefreshed: 'Odświeżono {name} ({rows} wierszy)',
+  appQueryRefreshedClipped:
+    'Odświeżono {name} ({rows} wierszy, {dropped} nie mieści się w zakresie)',
+  appQueryRefreshFailed: 'Nie udało się odświeżyć {name}',
   appWorkbookNoPivot: 'Brak tabel przestawnych w tym skoroszycie.',
   appRefreshAllTitle: 'Odśwież wszystkie tabele przestawne',
   appQueriesConnections: 'Zapytania i połączenia',
@@ -1282,6 +1328,10 @@ export const pl = {
   appFontSizeTip: 'Rozmiar czcionki',
   appZoomIn: 'Powiększ',
   appZoomOut: 'Pomniejsz',
+  appImgActualSize: 'Rzeczywisty rozmiar',
+  appImgFitWindow: 'Dopasuj do okna',
+  appImgSaveAs: 'Zapisz obraz jako…',
+  appImgClose: 'Zamknij (Esc)',
   appZoomSheetTitle: 'Powiększ arkusz',
   appResetZoom: 'Resetuj powiększenie',
   appZoomToSelection: 'Powiększ do zaznaczenia',
@@ -1324,6 +1374,19 @@ export const pl = {
   appOpenFileFirst: 'Najpierw otwórz plik',
   appNoPassword: 'Bez hasła',
   appProtectWorkbook: 'Chroń skoroszyt',
+  appChangePassword: 'Zmień hasło',
+  appWorkbookPasswordChanged: 'Hasło skoroszytu zostało zaktualizowane.',
+  appChangePasswordTitle: 'Zmień hasło skoroszytu',
+  appChangePasswordCopy: 'Wybierz nowe hasło i potwierdź je poniżej.',
+  appNewPasswordLabel: 'Nowe hasło',
+  appConfirmPasswordLabel: 'Potwierdź nowe hasło',
+  appPasswordsMismatch: 'Hasła nie są zgodne.',
+  appPasswordTooLong:
+    'Hasło jest za długie. Użyj najwyżej {max} znaków: dłuższego Excel nie przyjmie.',
+  appPasswordUpdateFailed: 'Nie udało się zaktualizować hasła skoroszytu.',
+  appPasswordUpdating: 'Aktualizowanie…',
+  appUpdatePassword: 'Aktualizuj hasło',
+  appWorkbookNotPasswordProtected: 'Ten skoroszyt nie jest chroniony hasłem otwarcia.',
   appAllowEditRanges: 'Zezwalaj na edytowanie zakresów',
   appGroupClipboard: 'Schowek',
   appPaste: 'Wklej',
@@ -1558,6 +1621,8 @@ export const pl = {
   appVisualSendBackward: 'Przesuń do tyłu',
   appVisualSizeProperties: 'Rozmiar i właściwości…',
   appVisualHyperlink: 'Hiperłącze…',
+  appVisualEmbedInCell: 'Osadź obraz w komórce',
+  appVisualEmbedFailed: 'Nie udało się osadzić tego obrazu w komórce.',
   appVisualDelete: 'Usuń',
   appVisualArranged: 'Obiekt zaktualizowany — zapisz za pomocą ⌘S.',
   appVisualCopied: 'Obiekt skopiowany.',

@@ -109,6 +109,7 @@ async function describeDocx(bytes: Uint8Array, locked = false): Promise<Descript
       footnotes: parsed.footnotes.length,
       endnotes: parsed.endnotes.length,
       protected: locked || parsed.protection !== null,
+      properties: parsed.properties,
     },
   }
 }

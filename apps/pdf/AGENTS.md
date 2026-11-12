@@ -106,6 +106,13 @@ PDF 보기·주석·편집 에디터다. 화면은 PDF.js로 그리고, 저장�
 - 문서 작업 `doc-jobs/model-call.ts`는 `createModelCall` 하나마다 `contextGate` 하나를 만들고 `runId`를 요청에 싣는다. 호출자는 `runId`만 넘긴다.
 - 문맥 확인을 거절하면 그 작업은 `context-limit`으로 멈추고 모델을 부르지 않는다. `InsightsCard`의 `startSingle`과 `runJob`은 서로 다른 실행이다.
 
+## 원본과 다른 점
+
+- 쪽 작업 되돌리기는 파일 바이트 합계 256 MiB(`WRITTEN_HISTORY_BUDGET_BYTES`)와 10단계를 넘지 않는다. 넘으면 가장 먼 단계부터 버리고, 문서 하나가 그 상한보다 크면 되돌리기 단계를 아예 남기지 않는다(`written-history.ts`). 렌더러에 기가바이트를 쥐게 하지 않는다.
+- 되돌리기 단계로 둘 수 없을 만큼 큰 파일에 제자리 쪽 작업(페이지 교체, 페이지 크기, 자르기, PDF 넣기)을 쓰기 전에는 되돌릴 수 없다고 묻는다(`written-history.ts`의 `writeInPlace`, 문구 `pageOpNoUndoConfirm`, 다른 파괴적 작업처럼 `window.confirm`). 취소하면 아무것도 쓰지 않는다. 보류 중인 편집이 있으면 그 편집을 저장하기 전에 묻는다(`agreesToNoUndo`). 동의는 문서마다 한 번이다(`App.tsx`의 `noUndoConsentRef`. 탭에 다른 문서를 열거나 탭을 다시 열면 처음부터 묻는다). 10단계나 합계 상한 때문에 가장 먼 단계가 밀려나는 것은 평범한 되돌리기 깊이라 묻지 않는다. 제자리 쪽 작업을 더하면 `writeInPlace`를 거친다.
+- 쪽 작업 되돌리기는 파일이 이 뷰의 마지막 제자리 쓰기 그대로일 때만 덮어쓴다(`pdf-main.ts`의 `ownWriteStates`, `holdsOwnLastWrite`). 그래서 뷰가 스스로 자기 문서를 쓰거나 옮기는 길은 그 기록을 함께 챙긴다. 새 바이트를 쓰면 `writeOwnFile`을 거치고(저장, 제자리 쪽 작업, 제목 없는 사본을 고른 경로에 저장하는 `adoptUntitledCopy`), 바이트는 그대로 두고 이름만 바꾸면 `moveDiskState`로 기록을 새 경로로 옮긴다(셸의 이름 바꾸기 `pdfFileRenamed`, 내용에서 이름을 따는 `autoRename`). 빠뜨리면 자기 저장 뒤의 되돌리기가 "디스크에서 바뀜"으로 거절된다. 그 뒤에 다른 프로그램이 바꾼 파일은 여전히 거절한다(`tests/restore-file-conflict.test.ts`).
+- 디스크에서 다시 읽기로 버릴 때는 복구 사본을 `discardForDiskReload`(`pdf-main.ts`)로 버린다. 그 밖의 복구 사본 버리기는 `discardPdfRecovery`를 거친다.
+
 ## 테스트
 
 - 실행: `npm run test -w @genoffice/pdf`(또는 이 폴더에서 `npx vitest run`), `npm run typecheck -w @genoffice/pdf`. 환경은 `jsdom`이다.

@@ -14,6 +14,8 @@ export interface ParsedFile {
   kind: ParsedFileKind
   mime?: string
   error?: string
+  /** the file's container is damaged: the reader shows its own message, not `error` */
+  damaged?: true
 }
 
 /** parse an attachment into plain text (or flag it as image / unsupported) */

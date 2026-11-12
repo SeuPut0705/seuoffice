@@ -27,6 +27,10 @@ export const vi = {
     'Tài liệu này có theo dõi thay đổi. Bạn đang thấy nội dung hiện tại đã áp dụng các thay đổi; khi lưu, nội dung này được giữ lại và bản ghi thay đổi bị bỏ đi.',
   saveTracked:
     'Chưa lưu: tài liệu này có theo dõi thay đổi; lưu ở đây sẽ làm mất chúng và có thể tạo ra tệp mà Hancom Hangul không mở được.',
+  openedUnverified:
+    'Không thể xác minh cấu trúc của tệp này nên một phần nội dung có thể bị thiếu ở đây. Bạn vẫn đọc và chỉnh sửa được, nhưng tệp sẽ không được lưu đè lên bản gốc: hãy dùng Lưu dưới dạng để giữ một bản sao với tên khác.',
+  saveUnverified:
+    'Chưa lưu: không thể xác minh cấu trúc của tệp này, và lưu đè lên bản gốc có thể làm mất nội dung. Trong Lưu dưới dạng, hãy lưu một bản sao với tên khác, tốt nhất là ở định dạng HWPX.',
   savedTailsLost:
     'Đã lưu, nhưng không giữ được một số trang chủ hoặc ghi chú của tệp gốc, và Hancom Hangul có thể không mở được tệp đã lưu. Hãy mở để kiểm tra.',
   missingFonts:

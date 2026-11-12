@@ -206,7 +206,9 @@ describe('template font metrics', () => {
 
   it('leaves the line factors alone while the faces are not registered', () => {
     noteTemplateFontFamilies([])
-    expect(lineHeightFactor('Gowun Batang')).toBe(1.3029)
+    // upstream's face resolver paces a Latin-named face Word does not ship at 1.172,
+    // Gowun Batang included (the old Batang-class name match gave it 1.3029)
+    expect(lineHeightFactor('Gowun Batang')).toBe(1.172)
     expect(lineHeightFactor('Pretendard')).toBe(1.172)
   })
 })

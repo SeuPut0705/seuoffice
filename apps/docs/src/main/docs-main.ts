@@ -16,13 +16,14 @@ import {
   mkdtemp,
   readFile,
   readdir,
+  realpath,
   rm,
   stat,
   unlink,
   writeFile,
 } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
-import { basename, dirname, isAbsolute, join, extname } from 'node:path'
+import { basename, dirname, isAbsolute, join, extname, resolve } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import {
   BrowserWindow,
@@ -41,6 +42,7 @@ import {
 import {
   abortOnDestroyed,
   appMenuLabels,
+  appMenuTemplate,
   buildPrintableHtml,
   configuredDefaultSaveDir,
   contextMenuLabels,
@@ -58,6 +60,7 @@ import {
   aboutMenuItem,
   helpCheckUpdatesItems,
   toggleDevToolsItem,
+  settingsMenuItem,
   windowMenuTemplate,
   type HeadlessExportFormat,
   type HeadlessExportTarget,
@@ -74,11 +77,14 @@ import {
   type RecoveryEditorContract,
   type RecoveryIdentity,
   readHwpDefaultFormat,
+  readLegacyImportSkip,
+  writeLegacyImportSkip,
 } from '@genoffice/electron-utils'
 import { aiRunRefusal } from '@genoffice/electron-utils/ai-run-guard'
 import {
   configureExtraFontDirs,
   configureMetricsCache,
+  familyAliases,
   familyInfoFor,
   familyVerticalMetrics,
 } from '@genoffice/font-metrics'
@@ -106,6 +112,7 @@ import {
   diagramPictureExtOfName,
   rhwpWasmPath,
 } from '@genoffice/file-parse'
+import { LEGACY_DOC_LIMITS, convertLegacyDocToDocx } from '../../../../packages/doc2docx/src'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
 import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/drivers/electron'
 import {
@@ -189,7 +196,7 @@ import { MARKDOWN_MEDIA_DIR_TOKEN } from '../shared/ipc'
 import { MERGE_DATA_SOURCE_EXTENSIONS, readMergeDataSource } from './merge-data-source'
 import { mergeOutputFileName, mergeOutputPath } from './merge-output'
 import { ClickClaims } from '../shared/context-menu-claims'
-import { findDocxPath } from '../shared/open-file'
+import { findDocxPath, isWord97Path } from '../shared/open-file'
 import {
   aiChatFailure,
   aiStreamErrorChunk,
@@ -225,6 +232,7 @@ import {
   discardDocPasswordIntents,
   DocxDecryptError,
   docPasswordFor,
+  docxOpenKind,
   encryptDocx,
   forgetDocPasswords,
   isEncryptedDocx,
@@ -253,6 +261,7 @@ import {
 import { copyImageDisplaySize, validCopyImageDataUrl } from './copy-image-guard'
 import {
   printJobOptions,
+  printPaperOption,
   printScaleOption,
   validPrintGeometry,
   validPrintPaper,
@@ -289,6 +298,12 @@ const tMain = createI18n({
     dlgOpenDoc: '打开文档',
     filterWord: 'Word 文档',
     filterOdt: 'OpenDocument 文本',
+    importSkipConfirm: '下次直接转换，不再提示',
+    docImportMsg: '转换 .{ext} 文档？',
+    docImportDetail:
+      'GenOffice 只编辑 .docx，不编辑 Word 97-2003 旧版 .doc。正文、标题、列表、表格和图片会转换过来；脚注、批注和文本框不会完整保留。原文件不会被修改，转换出的 .docx 是一份独立副本，之后的保存都写入它。', // public-hygiene: allow
+    docImportConvertBtn: '转换并打开',
+    docImportOriginalTarget: '不能覆盖原始文档。请选择其他名称。',
     dlgSaveAs: '另存为',
     closeUnsavedMsg: '此文档有未保存的更改。',
     closeUnsavedDetail: '关闭前是否保存？',
@@ -427,6 +442,13 @@ const tMain = createI18n({
     dlgOpenDoc: 'Open Document',
     filterWord: 'Word Documents',
     filterOdt: 'OpenDocument Text',
+    importSkipConfirm: 'Convert without asking next time',
+    docImportMsg: 'Convert this .{ext} document?',
+    docImportDetail:
+      'GenOffice edits .docx, not Word 97-2003 documents. Body text, headings, lists, tables and images carry over; footnotes, comments and text boxes are not fully preserved. The original file is never changed; the converted .docx is a separate copy that later saves write to.',
+    docImportConvertBtn: 'Convert and open',
+    docImportOriginalTarget:
+      'The original document cannot be overwritten. Choose a different name.',
     dlgSaveAs: 'Save As',
     closeUnsavedMsg: 'This document has unsaved changes.',
     closeUnsavedDetail: 'Do you want to save them before closing?',
@@ -565,6 +587,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Mở tài liệu',
     filterWord: 'Tài liệu Word',
     filterOdt: 'Văn bản OpenDocument',
+    importSkipConfirm: 'Lần sau chuyển đổi ngay, không hỏi lại',
+    docImportMsg: 'Chuyển đổi tài liệu .{ext} này?',
+    docImportDetail:
+      'GenOffice chỉnh sửa .docx chứ không chỉnh sửa tài liệu Word 97-2003 (.doc). Nội dung, tiêu đề, danh sách, bảng và hình ảnh được chuyển đổi; chú thích cuối trang, bình luận và hộp văn bản không được giữ đầy đủ. Tệp gốc không bao giờ bị sửa; bản .docx sau chuyển đổi là một bản sao độc lập để tiếp tục chỉnh sửa và lưu.',
+    docImportConvertBtn: 'Chuyển đổi và mở',
+    docImportOriginalTarget: 'Không thể ghi đè tài liệu gốc. Hãy chọn tên khác.',
     dlgSaveAs: 'Lưu dưới dạng',
     closeUnsavedMsg: 'Tài liệu này có những thay đổi chưa được lưu.',
     closeUnsavedDetail: 'Bạn có muốn lưu các thay đổi trước khi đóng không?',
@@ -704,6 +732,12 @@ const tMain = createI18n({
     dlgOpenDoc: '文書を開く',
     filterWord: 'Word 文書',
     filterOdt: 'OpenDocument テキスト',
+    importSkipConfirm: '次回から確認せずに変換する',
+    docImportMsg: 'この .{ext} 文書を変換しますか？',
+    docImportDetail:
+      'GenOffice は Word 97-2003 形式（.doc）ではなく .docx を編集します。本文・見出し・リスト・表・画像は変換されますが、脚注・コメント・テキストボックスは完全には保持されません。元のファイルは変更されず、変換後の .docx は独立したコピーとして以後の保存先になります。',
+    docImportConvertBtn: '変換して開く',
+    docImportOriginalTarget: '元の文書は上書きできません。別の名前を選んでください。',
     dlgSaveAs: '名前を付けて保存',
     closeUnsavedMsg: 'このドキュメントに未保存の変更があります。',
     closeUnsavedDetail: '閉じる前に保存しますか？',
@@ -843,6 +877,12 @@ const tMain = createI18n({
     dlgOpenDoc: '문서 열기',
     filterWord: 'Word 문서',
     filterOdt: 'OpenDocument 텍스트',
+    importSkipConfirm: '다음부터 묻지 않고 변환',
+    docImportMsg: '이 .{ext} 문서를 변환할까요?',
+    docImportDetail:
+      'GenOffice 앱은 Word 97-2003(.doc) 문서가 아니라 .docx를 편집합니다. 본문, 제목, 목록, 표, 이미지는 변환되지만 각주, 메모, 텍스트 상자는 완전히 유지되지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .docx는 이후 저장이 기록되는 독립적인 사본입니다.',
+    docImportConvertBtn: '변환 후 열기',
+    docImportOriginalTarget: '원본 문서는 덮어쓸 수 없습니다. 다른 이름을 선택하세요.',
     dlgSaveAs: '다른 이름으로 저장',
     closeUnsavedMsg: '이 문서에 저장하지 않은 변경 사항이 있습니다.',
     closeUnsavedDetail: '닫기 전에 저장하시겠습니까?',
@@ -982,6 +1022,13 @@ const tMain = createI18n({
     dlgOpenDoc: 'Ouvrir un document',
     filterWord: 'Documents Word',
     filterOdt: 'Texte OpenDocument',
+    importSkipConfirm: 'La prochaine fois, convertir sans demander',
+    docImportMsg: 'Convertir ce document .{ext} ?',
+    docImportDetail:
+      'GenOffice modifie des .docx, pas de documents Word 97-2003 (.doc). Le texte, les titres, les listes, les tableaux et les images sont convertis ; les notes de bas de page, les commentaires et les zones de texte ne sont pas entièrement conservés. Le fichier d’origine n’est jamais modifié ; le .docx converti est une copie distincte où s’effectuent les enregistrements suivants.',
+    docImportConvertBtn: 'Convertir et ouvrir',
+    docImportOriginalTarget:
+      'Le document d’origine ne peut pas être écrasé. Choisissez un autre nom.',
     dlgSaveAs: 'Enregistrer sous',
     closeUnsavedMsg: 'Ce document contient des modifications non enregistrées.',
     closeUnsavedDetail: 'Voulez-vous les enregistrer avant de fermer ?',
@@ -1122,6 +1169,13 @@ const tMain = createI18n({
     dlgOpenDoc: 'Dokument öffnen',
     filterWord: 'Word-Dokumente',
     filterOdt: 'OpenDocument-Text',
+    importSkipConfirm: 'Nächstes Mal ohne Nachfrage konvertieren',
+    docImportMsg: 'Dieses .{ext}-Dokument konvertieren?',
+    docImportDetail:
+      'GenOffice bearbeitet .docx, nicht Word 97-2003-Dokumente (.doc). Text, Überschriften, Listen, Tabellen und Bilder werden übernommen; Fußnoten, Kommentare und Textfelder werden nicht vollständig bewahrt. Die Originaldatei bleibt unverändert; die konvertierte .docx-Kopie ist eigenständig, und spätere Speicherungen landen in ihr.',
+    docImportConvertBtn: 'Konvertieren und öffnen',
+    docImportOriginalTarget:
+      'Das ursprüngliche Dokument darf nicht überschrieben werden. Wählen Sie einen anderen Namen.',
     dlgSaveAs: 'Speichern unter',
     closeUnsavedMsg: 'Dieses Dokument enthält ungespeicherte Änderungen.',
     closeUnsavedDetail: 'Vor dem Schließen speichern?',
@@ -1262,6 +1316,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Abrir documento',
     filterWord: 'Documentos de Word',
     filterOdt: 'Texto OpenDocument',
+    importSkipConfirm: 'La próxima vez, convertir sin preguntar',
+    docImportMsg: '¿Convertir este documento .{ext}?',
+    docImportDetail:
+      'GenOffice edita .docx, no documentos de Word 97-2003 (.doc). El texto, los títulos, las listas, las tablas y las imágenes se convierten; las notas al pie, los comentarios y los cuadros de texto no se conservan por completo. El archivo original nunca se modifica; el .docx convertido es una copia independiente en la que se guardan los cambios posteriores.',
+    docImportConvertBtn: 'Convertir y abrir',
+    docImportOriginalTarget: 'No se puede sobrescribir el documento original. Elija otro nombre.',
     dlgSaveAs: 'Guardar como',
     closeUnsavedMsg: 'Este documento tiene cambios sin guardar.',
     closeUnsavedDetail: '¿Desea guardarlos antes de cerrar?',
@@ -1402,6 +1462,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'เปิดเอกสาร',
     filterWord: 'เอกสาร Word',
     filterOdt: 'ข้อความ OpenDocument',
+    importSkipConfirm: 'ครั้งถัดไปแปลงทันทีโดยไม่ต้องถาม',
+    docImportMsg: 'แปลงเอกสาร .{ext} นี้ไหม?',
+    docImportDetail:
+      'GenOffice แก้ไข .docx ไม่ใช่เอกสาร Word 97-2003 (.doc) ข้อความ หัวข้อ รายการ ตาราง และรูปภาพจะถูกแปลง ส่วนเชิงอรรถ ความคิดเห็น และกล่องข้อความจะไม่ถูกเก็บไว้ทั้งหมด ไฟล์ต้นทางจะไม่ถูกแก้ไข และไฟล์ .docx ที่แปลงแล้วเป็นสำเนาแยกต่างหากที่การบันทึกครั้งต่อไปจะเขียนลง',
+    docImportConvertBtn: 'แปลงแล้วเปิด',
+    docImportOriginalTarget: 'เขียนทับเอกสารต้นฉบับไม่ได้ กรุณาเลือกชื่ออื่น',
     dlgSaveAs: 'บันทึกเป็น',
     closeUnsavedMsg: 'เอกสารนี้มีการเปลี่ยนแปลงที่ยังไม่ได้บันทึก',
     closeUnsavedDetail: 'ต้องการบันทึกก่อนปิดหรือไม่?',
@@ -1541,6 +1607,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Buka Dokumen',
     filterWord: 'Dokumen Word',
     filterOdt: 'Teks OpenDocument',
+    importSkipConfirm: 'Lain kali langsung konversi tanpa bertanya',
+    docImportMsg: 'Konversi dokumen .{ext} ini?',
+    docImportDetail:
+      'GenOffice mengedit .docx, bukan dokumen Word 97-2003 (.doc). Teks isi, judul, daftar, tabel, dan gambar ikut dikonversi; catatan kaki, komentar, dan kotak teks tidak sepenuhnya dipertahankan. File asli tidak pernah diubah; salinan .docx hasil konversi berdiri sendiri dan penyimpanan berikutnya ditulis ke sana.',
+    docImportConvertBtn: 'Konversi dan buka',
+    docImportOriginalTarget: 'Dokumen asli tidak boleh ditimpa. Pilih nama lain.',
     dlgSaveAs: 'Simpan Sebagai',
     closeUnsavedMsg: 'Dokumen ini memiliki perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Simpan sebelum menutup?',
@@ -1680,6 +1752,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Открыть документ',
     filterWord: 'Документы Word',
     filterOdt: 'Текст OpenDocument',
+    importSkipConfirm: 'В следующий раз конвертировать без запроса',
+    docImportMsg: 'Преобразовать этот документ .{ext}?',
+    docImportDetail:
+      'GenOffice редактирует .docx, а не документы Word 97-2003 (.doc). Текст, заголовки, списки, таблицы и изображения переносятся; сноски, примечания и надписи сохраняются не полностью. Исходный файл никогда не изменяется; преобразованный .docx — отдельная копия, в которую записывается дальнейшее сохранение.',
+    docImportConvertBtn: 'Преобразовать и открыть',
+    docImportOriginalTarget: 'Нельзя перезаписать исходный документ. Выберите другое имя.',
     dlgSaveAs: 'Сохранить как',
     closeUnsavedMsg: 'В этом документе есть несохранённые изменения.',
     closeUnsavedDetail: 'Сохранить их перед закрытием?',
@@ -1819,6 +1897,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'فتح مستند',
     filterWord: 'مستندات Word',
     filterOdt: 'نص OpenDocument',
+    importSkipConfirm: 'في المرة القادمة، حوّل دون سؤال',
+    docImportMsg: 'تحويل مستند .{ext} هذا؟',
+    docImportDetail:
+      'يحرّر GenOffice ملفات ‎.docx ولا يحرّر مستندات Word 97-2003 (‎.doc). يُحوَّل النص والعناوين والقوائم والجداول والصور؛ أما الحواشي السفلية والتعليقات ومربعات النص فلا تُحفظ بالكامل. لا يتغيّر الملف الأصلي أبدًا؛ والملف ‎.docx المحوَّل نسخة مستقلة تُكتب فيها عمليات الحفظ اللاحقة.',
+    docImportConvertBtn: 'تحويل وفتح',
+    docImportOriginalTarget: 'لا يمكن استبدال المستند الأصلي. اختر اسمًا آخر.',
     dlgSaveAs: 'حفظ باسم',
     closeUnsavedMsg: 'يحتوي هذا المستند على تغييرات غير محفوظة.',
     closeUnsavedDetail: 'هل تريد حفظها قبل الإغلاق؟',
@@ -1958,6 +2042,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Abrir Documento',
     filterWord: 'Documentos do Word',
     filterOdt: 'Texto OpenDocument',
+    importSkipConfirm: 'Da próxima vez, converter sem perguntar',
+    docImportMsg: 'Converter este documento .{ext}?',
+    docImportDetail:
+      'O GenOffice edita .docx, não documentos do Word 97-2003 (.doc). Texto, títulos, listas, tabelas e imagens são convertidos; notas de rodapé, comentários e caixas de texto não são preservados por completo. O arquivo original nunca é alterado; o .docx convertido é uma cópia independente em que os salvamentos seguintes são gravados.',
+    docImportConvertBtn: 'Converter e abrir',
+    docImportOriginalTarget: 'O documento original não pode ser substituído. Escolha outro nome.',
     dlgSaveAs: 'Salvar Como',
     closeUnsavedMsg: 'Este documento tem alterações não salvas.',
     closeUnsavedDetail: 'Deseja salvá-las antes de fechar?',
@@ -2097,6 +2187,13 @@ const tMain = createI18n({
     dlgOpenDoc: 'Apri documento',
     filterWord: 'Documenti Word',
     filterOdt: 'Testo OpenDocument',
+    importSkipConfirm: 'La prossima volta converti senza chiedere',
+    docImportMsg: 'Convertire questo documento .{ext}?',
+    docImportDetail:
+      'GenOffice modifica .docx, non documenti Word 97-2003 (.doc). Testo, titoli, elenchi, tabelle e immagini vengono convertiti; note a piè di pagina, commenti e caselle di testo non sono conservati completamente. Il file originale non viene mai modificato; il .docx convertito è una copia indipendente su cui vengono salvate le modifiche successive.',
+    docImportConvertBtn: 'Converti e apri',
+    docImportOriginalTarget:
+      'Non è possibile sovrascrivere il documento originale. Scegli un altro nome.',
     dlgSaveAs: 'Salva con nome',
     closeUnsavedMsg: 'Questo documento contiene modifiche non salvate.',
     closeUnsavedDetail: 'Salvarle prima di chiudere?',
@@ -2236,6 +2333,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Otwórz dokument',
     filterWord: 'Dokumenty programu Word',
     filterOdt: 'Tekst OpenDocument',
+    importSkipConfirm: 'Następnym razem konwertuj bez pytania',
+    docImportMsg: 'Skonwertować ten dokument .{ext}?',
+    docImportDetail:
+      'GenOffice edytuje .docx, a nie dokumenty Word 97-2003 (.doc). Tekst, nagłówki, listy, tabele i obrazy są konwertowane; przypisy, komentarze i pola tekstowe nie są zachowywane w całości. Plik oryginalny nigdy nie jest zmieniany; skonwertowany .docx to niezależna kopia, do której trafiają kolejne zapisy.',
+    docImportConvertBtn: 'Konwertuj i otwórz',
+    docImportOriginalTarget: 'Nie można nadpisać oryginalnego dokumentu. Wybierz inną nazwę.',
     dlgSaveAs: 'Zapisz jako',
     closeUnsavedMsg: 'Ten dokument zawiera niezapisane zmiany.',
     closeUnsavedDetail: 'Czy zapisać je przed zamknięciem?',
@@ -2375,6 +2478,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Otevřít dokument',
     filterWord: 'Dokumenty Wordu',
     filterOdt: 'Text OpenDocument',
+    importSkipConfirm: 'Příště převést bez ptaní',
+    docImportMsg: 'Převést tento dokument .{ext}?',
+    docImportDetail:
+      'GenOffice upravuje .docx, nikoli dokumenty Word 97-2003 (.doc). Text, nadpisy, seznamy, tabulky a obrázky se převedou; poznámky pod čarou, komentáře a textová pole se nepřevezmou úplně. Původní soubor se nikdy nemění; převedený .docx je samostatná kopie, do níž se dalším ukládáním zapisuje.',
+    docImportConvertBtn: 'Převést a otevřít',
+    docImportOriginalTarget: 'Původní dokument nelze přepsat. Zvolte jiný název.',
     dlgSaveAs: 'Uložit jako',
     closeUnsavedMsg: 'Tento dokument obsahuje neuložené změny.',
     closeUnsavedDetail: 'Chcete je před zavřením uložit?',
@@ -2514,6 +2623,13 @@ const tMain = createI18n({
     dlgOpenDoc: 'Document openen',
     filterWord: 'Word-documenten',
     filterOdt: 'OpenDocument-tekst',
+    importSkipConfirm: 'Volgende keer converteren zonder te vragen',
+    docImportMsg: 'Dit .{ext}-document converteren?',
+    docImportDetail:
+      'GenOffice bewerkt .docx, geen Word 97-2003-documenten (.doc). Tekst, koppen, lijsten, tabellen en afbeeldingen worden omgezet; voetnoten, opmerkingen en tekstvakken niet volledig. Het oorspronkelijke bestand wordt nooit gewijzigd; de omgezette .docx is een zelfstandige kopie waarin volgende opslaan-acties terechtkomen.',
+    docImportConvertBtn: 'Converteren en openen',
+    docImportOriginalTarget:
+      'Het oorspronkelijke document kan niet worden overschreven. Kies een andere naam.',
     dlgSaveAs: 'Opslaan als',
     closeUnsavedMsg: 'Dit document bevat niet-opgeslagen wijzigingen.',
     closeUnsavedDetail: 'Wilt u ze opslaan voordat u sluit?',
@@ -2653,6 +2769,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'Buka Dokumen',
     filterWord: 'Dokumen Word',
     filterOdt: 'Teks OpenDocument',
+    importSkipConfirm: 'Lain kali terus tukar tanpa bertanya',
+    docImportMsg: 'Tukar dokumen .{ext} ini?',
+    docImportDetail:
+      'GenOffice menyunting .docx, bukan dokumen Word 97-2003 (.doc). Teks kandungan, tajuk, senarai, jadual dan imej ditukar; nota kaki, komen dan kotak teks tidak dikekalkan sepenuhnya. Fail asal tidak pernah diubah; salinan .docx yang ditukar ialah salinan berasingan tempat simpanan seterusnya ditulis.',
+    docImportConvertBtn: 'Tukar dan buka',
+    docImportOriginalTarget: 'Dokumen asal tidak boleh ditimpa. Pilih nama lain.',
     dlgSaveAs: 'Simpan Sebagai',
     closeUnsavedMsg: 'Dokumen ini mempunyai perubahan yang belum disimpan.',
     closeUnsavedDetail: 'Adakah anda mahu menyimpannya sebelum menutup?',
@@ -2792,6 +2914,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'פתיחת מסמך',
     filterWord: 'מסמכי Word',
     filterOdt: 'טקסט OpenDocument',
+    importSkipConfirm: 'בפעם הבאה להמיר בלי לשאול',
+    docImportMsg: 'להמיר את מסמך ה‑.{ext} הזה?',
+    docImportDetail:
+      'GenOffice עורך קבצי ‎.docx ולא מסמכי Word 97-2003 (‎.doc). טקסט, כותרות, רשימות, טבלאות ותמונות מומרים; הערות שוליים, תגובות ותיבות טקסט לא נשמרים במלואם. קובץ המקור לעולם אינו משתנה; קובץ ה‑.docx שהומר הוא עותק נפרד שאליו נכתבות השמירות הבאות.',
+    docImportConvertBtn: 'המר ופתח',
+    docImportOriginalTarget: 'לא ניתן לדרוס את המסמך המקורי. בחרו שם אחר.',
     dlgSaveAs: 'שמירה בשם',
     closeUnsavedMsg: 'במסמך זה יש שינויים שלא נשמרו.',
     closeUnsavedDetail: 'האם לשמור אותם לפני הסגירה?',
@@ -2931,6 +3059,12 @@ const tMain = createI18n({
     dlgOpenDoc: 'दस्तावेज़ खोलें',
     filterWord: 'Word दस्तावेज़',
     filterOdt: 'OpenDocument टेक्स्ट',
+    importSkipConfirm: 'अगली बार बिना पूछे बदलें',
+    docImportMsg: 'इस .{ext} दस्तावेज़ को बदलें?',
+    docImportDetail:
+      'GenOffice Word 97-2003 (.doc) दस्तावेज़ नहीं, .docx संपादित करता है। मुख्य पाठ, शीर्षक, सूचियाँ, तालिकाएँ और चित्र बदल दिए जाते हैं; फुटनोट, टिप्पणियाँ और टेक्स्ट बॉक्स पूरी तरह नहीं रखे जाते। मूल फ़ाइल कभी नहीं बदलती; बदली हुई .docx एक स्वतंत्र प्रति है जिसमें आगे के सेव लिखे जाते हैं।',
+    docImportConvertBtn: 'बदलकर खोलें',
+    docImportOriginalTarget: 'मूल दस्तावेज़ को अधिलेखित नहीं किया जा सकता। दूसरा नाम चुनें।',
     dlgSaveAs: 'इस रूप में सहेजें',
     closeUnsavedMsg: 'इस दस्तावेज़ में सहेजे नहीं गए परिवर्तन हैं।',
     closeUnsavedDetail: 'क्या आप बंद करने से पहले उन्हें सहेजना चाहते हैं?',
@@ -3070,6 +3204,12 @@ const tMain = createI18n({
     dlgOpenDoc: '開啟文件',
     filterWord: 'Word 文件',
     filterOdt: 'OpenDocument 文字',
+    importSkipConfirm: '下次直接轉換，不再提示',
+    docImportMsg: '轉換這個 .{ext} 文件？',
+    docImportDetail:
+      'GenOffice 只編輯 .docx，不編輯 Word 97-2003 舊版 .doc。內文、標題、清單、表格與圖片會轉換過來；註腳、註解與文字方塊不會完整保留。原始檔案不會被修改，轉換後的 .docx 是獨立副本，之後的儲存都寫入它。', // public-hygiene: allow
+    docImportConvertBtn: '轉換並開啟',
+    docImportOriginalTarget: '不能覆寫原始文件。請選擇其他名稱。',
     dlgSaveAs: '另存新檔',
     closeUnsavedMsg: '此文件有未儲存的變更。',
     closeUnsavedDetail: '關閉前是否要儲存？',
@@ -3347,7 +3487,7 @@ async function opensAsPasswordPrompt(filePath: string, wcId: number): Promise<bo
 }
 
 export function openExternalDocx(filePath: string | null): void {
-  if (!filePath || !docFormatOfPath(filePath)) return
+  if (!filePath || (!docFormatOfPath(filePath) && !isWord97Path(filePath))) return
   const win = BrowserWindow.getFocusedWindow() ?? mainWindow
   if (!rendererReady || !win) {
     pendingOpenPath = filePath
@@ -3355,11 +3495,13 @@ export function openExternalDocx(filePath: string | null): void {
   }
   void (async () => {
     const wcId = win.webContents.id
-    if (rendererReady && !(await opensAsPasswordPrompt(filePath, wcId))) {
+    const prepared = await prepareDocumentForOpen(filePath, win)
+    if (!prepared) return null
+    if (rendererReady && !(await opensAsPasswordPrompt(prepared, wcId))) {
       if (!(await requestDocsClose(win.webContents, win))) return
       docsRecovery.settleClosedDocument(wcId, false)
     }
-    return loadDocx(filePath, wcId)
+    return loadDocx(prepared, wcId)
   })()
     .then((result) => {
       if (!result || win.isDestroyed()) return
@@ -3387,6 +3529,7 @@ function readJson<T>(path: string, fallback: T): T {
 // ---- recent files ----
 
 const RECENT_PATH = () => userDataPath('recent.json')
+const APP_SETTINGS_PATH = () => join(app.getPath('userData'), 'app-settings.json')
 
 // the home screen lists all of these; the File menu shows only the first few
 const RECENT_LIMIT = 100
@@ -3874,11 +4017,12 @@ async function takeDocsUntitledCopy(
         ? '.odt'
         : '.docx'
   // an encrypted copy needs its file's password, which only opening that file
-  // can ask for: it stays where it is for when the file is back
+  // can ask for: it stays where it is for when the file is back. So does one
+  // whose container is damaged, which is no document to open
   const taken = await docsRecovery.takeUntitledCopy(contents.id, request.copy, {
     title: request.title,
     ext,
-    accept: (bytes) => !isEncryptedDocx(bytes),
+    accept: (bytes) => docxOpenKind(bytes) === 'plain',
   })
   if (!taken || contents.isDestroyed()) return null
   const suggested = request.saveAsDefaultPath ? basename(request.saveAsDefaultPath) : ''
@@ -3914,11 +4058,144 @@ const docsRecoveryEditor: RecoveryEditorContract = {
 // Word's own .docx ceiling
 const MAX_OPEN_BYTES = 512 * 1024 * 1024
 
-async function showOpenError(wcId: number, detail: string): Promise<void> {
-  const parent = hostWindowFor(webContents.fromId(wcId)) ?? mainWindow
+async function showOpenErrorIn(
+  parent: BrowserWindow | null | undefined,
+  detail: string,
+): Promise<void> {
   const options = { type: 'error' as const, message: tm('dlgOpenDoc'), detail }
   if (parent && !parent.isDestroyed()) await dialog.showMessageBox(parent, options)
   else await dialog.showMessageBox(options)
+}
+
+async function showOpenError(wcId: number, detail: string): Promise<void> {
+  await showOpenErrorIn(hostWindowFor(webContents.fromId(wcId)) ?? mainWindow, detail)
+}
+
+/** `path` through symlinks; a name that does not exist yet resolves through its folder */
+async function canonicalPath(path: string): Promise<string> {
+  const absolute = resolve(path)
+  try {
+    return await realpath(absolute)
+  } catch {
+    try {
+      return join(await realpath(dirname(absolute)), basename(absolute))
+    } catch {
+      return absolute
+    }
+  }
+}
+
+/**
+ * Whether two paths name one file. Case is ignored on every platform, the rule
+ * the Excel editor protects an ODS original with: refusing a name the user can
+ * change is cheaper than writing over the original on a disk that folds case.
+ */
+async function sameFilePath(a: string, b: string): Promise<boolean> {
+  const [left, right] = await Promise.all([canonicalPath(a), canonicalPath(b)])
+  return left.toLowerCase() === right.toLowerCase()
+}
+
+/**
+ * Where the converted copy of a legacy document goes: a .docx that is not the
+ * original, or null when the user cancels. The dialog's .docx filter does not
+ * bind the name typed, so the answer is checked here: the original is refused
+ * and asked again, and a name with another extension gets .docx added, as in
+ * Save As.
+ */
+async function pickLegacyImportTarget(
+  sourcePath: string,
+  parent: BrowserWindow | undefined,
+): Promise<string | null> {
+  let defaultPath = join(
+    dirname(sourcePath),
+    basename(sourcePath).replace(/\.(doc|dot)$/i, '.docx'),
+  )
+  for (;;) {
+    const picked = await showSaveDialogWithMemory(
+      dialog,
+      parent,
+      {
+        title: tm('dlgSaveAs'),
+        defaultPath,
+        filters: [{ name: tm('filterWord'), extensions: ['docx'] }],
+      },
+      defaultSaveDir(),
+    )
+    if (picked.canceled || !picked.filePath) return null
+    if (await sameFilePath(picked.filePath, sourcePath)) {
+      await showOpenErrorIn(parent, tm('docImportOriginalTarget'))
+      continue
+    }
+    if (docFormatOfPath(picked.filePath) === 'docx') return picked.filePath
+    const target = `${picked.filePath}.docx`
+    if (!existsSync(target)) return target
+    // The dialog confirmed the typed name, not this one. Offered under its
+    // full name, replacing the file there is the user's own answer.
+    defaultPath = target
+  }
+}
+
+/**
+ * A legacy Word .doc/.dot opens only as a converted .docx copy: confirm the
+ * lossy import, pick the destination (the sibling .docx by default), convert,
+ * write the file and open it, so every later Save lands in the copy the user
+ * chose and the original is never written. Anything else passes through
+ * unchanged; null cancels the open.
+ */
+async function prepareDocumentForOpen(
+  filePath: string,
+  parent?: BrowserWindow | undefined,
+): Promise<string | null> {
+  if (!isWord97Path(filePath)) return filePath
+  // Refused by size before anything is read: the converter applies this limit
+  // too, but only to a file already loaded whole into the main process. A
+  // file that cannot be stat'ed fails at the read below, as before.
+  const size = await stat(filePath).then(
+    (info) => info.size,
+    () => null,
+  )
+  if (size !== null && size > LEGACY_DOC_LIMITS.maxBytes) {
+    const mb = LEGACY_DOC_LIMITS.maxBytes / 1024 / 1024
+    await showOpenErrorIn(parent, `${basename(filePath)}: ${tm('errTooLarge', { mb })}`)
+    return null
+  }
+  const extension = filePath.slice(-3).toLowerCase()
+  if (!readLegacyImportSkip(APP_SETTINGS_PATH(), 'word97')) {
+    const options = {
+      type: 'warning' as const,
+      message: tm('docImportMsg', { ext: extension }),
+      detail: tm('docImportDetail'),
+      buttons: [tm('docImportConvertBtn'), tm('btnCancel')],
+      defaultId: 0,
+      cancelId: 1,
+      noLink: true,
+      checkboxLabel: tm('importSkipConfirm'),
+    }
+    const { response, checkboxChecked } = parent
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options)
+    if (response !== 0) return null
+    if (checkboxChecked) {
+      try {
+        writeLegacyImportSkip(APP_SETTINGS_PATH(), 'word97', true)
+      } catch {
+        /* unwritable settings: ask again next time */
+      }
+    }
+  }
+  const target = await pickLegacyImportTarget(filePath, parent)
+  if (!target) return null
+  try {
+    const result = await convertLegacyDocToDocx(new Uint8Array(await readFile(filePath)))
+    await atomicWriteFile(target, Buffer.from(result.docx))
+  } catch {
+    const detail = `${basename(filePath)}: ${tm('errUnreadable')}`
+    if (parent && !parent.isDestroyed()) {
+      await dialog.showMessageBox(parent, { type: 'error', message: tm('dlgOpenDoc'), detail })
+    }
+    return null
+  }
+  return target
 }
 
 async function loadDocx(
@@ -3943,7 +4220,14 @@ async function loadDocx(
   // back a marker — the renderer prompts and retries via docs:open-decrypt.
   // No side effects (recents/write grant) until the password checks out.
   let plainBytes: Buffer = original
-  const encrypted = format === 'docx' && isEncryptedDocx(original)
+  const kind = format === 'docx' ? docxOpenKind(original) : 'plain'
+  if (kind === 'damaged') {
+    // a compound file whose container does not hold: no password opens it, so
+    // none is asked for, and it is no docx to hand to the renderer either
+    await showOpenError(wcId, `${basename(filePath)}: ${tm('errUnreadable')}`)
+    return null
+  }
+  const encrypted = kind === 'encrypted'
   if (encrypted) {
     const pwd = password ?? docPasswordFor(wcId, filePath)
     if (!pwd) return { needsPassword: true, path: filePath, name: basename(filePath) }
@@ -3974,7 +4258,7 @@ async function loadDocx(
   // docs:write-recovery); an unreadable copy falls back to the original. No
   // tab holds that copy then: it waits as "later" for the next open of the
   // file instead of staying undecided (which would judge every quit abnormal).
-  if (encrypted && isEncryptedDocx(bytes)) {
+  if (encrypted && docxOpenKind(bytes) !== 'plain') {
     try {
       bytes = await decryptRecoveryCopy(wcId, filePath, bytes)
     } catch {
@@ -4109,7 +4393,7 @@ async function extractAttachmentText(filePath: string): Promise<string> {
   if (stat.size > attachableMaxBytes(capExt)) throw new Error(tm('errFileTooLarge'))
   const parsed = await parseFileToText(filePath)
   if (!parsed.ok || parsed.kind !== 'text' || parsed.text == null) {
-    throw new Error(parsed.error ?? tm('errParseFailed'))
+    throw new Error((!parsed.damaged && parsed.error) || tm('errParseFailed'))
   }
   attachmentTextCache.set(filePath, { stamp, text: parsed.text })
   // keep the cache bounded (a handful of recent files is plenty)
@@ -4898,22 +5182,40 @@ export function registerDocsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:font-family-info')
   ipcMain.handle('app:font-family-info', (_event, families: unknown) => familyInfoFor(families))
+  // the other spellings of the installed faces behind these names: a document
+  // that declares a CJK font by its localized name needs the English spelling
+  // the browser resolves (genoffice#2449). The renderer is not trusted, but
+  // the answer is only font names.
+  ipcMain.handle('docs:font-aliases', (_event, names: unknown) => {
+    if (!Array.isArray(names)) return {}
+    const out: Record<string, readonly string[]> = {}
+    for (const raw of names.slice(0, 512)) {
+      if (typeof raw !== 'string' || raw.length === 0 || raw.length > 256) continue
+      const aliases = familyAliases(raw)
+      if (aliases.length) out[raw] = aliases
+    }
+    return out
+  })
 
   ipcMain.handle('docs:open', async (event) => {
     const result = await openDialog(event, {
       title: tm('dlgOpenDoc'),
       filters: [
-        { name: tm('filterSupported'), extensions: ['docx', 'odt'] },
-        { name: tm('filterWord'), extensions: ['docx'] },
+        { name: tm('filterSupported'), extensions: ['docx', 'odt', 'doc', 'dot'] },
+        { name: tm('filterWord'), extensions: ['docx', 'doc', 'dot'] },
         { name: tm('filterOdt'), extensions: ['odt'] },
       ],
       properties: ['openFile'],
     })
     if (result.canceled || result.filePaths.length === 0) return null
-    return loadDocx(result.filePaths[0], event.sender.id)
+    const prepared = await prepareDocumentForOpen(result.filePaths[0], dialogParent(event))
+    return prepared ? loadDocx(prepared, event.sender.id) : null
   })
 
-  ipcMain.handle('docs:open-path', (event, filePath: string) => loadDocx(filePath, event.sender.id))
+  ipcMain.handle('docs:open-path', async (event, filePath: string) => {
+    const prepared = await prepareDocumentForOpen(filePath, dialogParent(event))
+    return prepared ? loadDocx(prepared, event.sender.id) : null
+  })
 
   // w:altChunk HTML: the same html2docx chain as the HTML app's export, in a
   // hidden window; the renderer parses the result and shows its blocks
@@ -5018,17 +5320,16 @@ export function registerDocsIpc(): void {
     },
   )
 
-  ipcMain.handle('docs:consume-pending-open', (event) => {
+  ipcMain.handle('docs:consume-pending-open', async (event) => {
     rendererReady = true
     // a tab spawned via New Tab loads the document queued for it specifically
     const queued = pendingWindowOpens.get(event.sender.id)
-    if (queued) {
-      pendingWindowOpens.delete(event.sender.id)
-      return loadDocx(queued, event.sender.id)
-    }
-    const filePath = pendingOpenPath
-    pendingOpenPath = null
-    return filePath ? loadDocx(filePath, event.sender.id) : null
+    if (queued) pendingWindowOpens.delete(event.sender.id)
+    const filePath = queued ?? pendingOpenPath
+    if (!queued) pendingOpenPath = null
+    if (!filePath) return null
+    const prepared = await prepareDocumentForOpen(filePath, dialogParent(event))
+    return prepared ? loadDocx(prepared, event.sender.id) : null
   })
 
   /** returns true when this tab was opened via "New Document" and should start blank */
@@ -5679,9 +5980,7 @@ export function registerDocsIpc(): void {
     },
   )
 
-  ipcMain.handle('docs:recent', () =>
-    readJson<string[]>(RECENT_PATH(), []).filter((p) => existsSync(p)),
-  )
+  ipcMain.handle('docs:recent', () => readJson<string[]>(RECENT_PATH(), []))
 
   ipcMain.handle('docs:pick-image', async (event) => {
     const result = await openDialog(event, {
@@ -5736,7 +6035,7 @@ export function registerDocsIpc(): void {
       await writeFile(path, bytes)
     }
     try {
-      if (request.mode === 'single') {
+      if (request.mode === 'single' || request.mode === 'labels') {
         const file = files[0]!
         const name = mergeOutputFileName(file.name)
         const result = await saveDialog(event, {
@@ -5914,6 +6213,10 @@ export function registerDocsIpc(): void {
       margins: { marginType: 'none' as const },
       ...printScale(scale),
       ...printJobOptions(job),
+      // the document's own paper: Chromium prints on Letter unless the job
+      // states one, and an A4 sheet on Letter is taller than the paper — it
+      // splits in two, so the printed page loses its bottom (genoffice#2563)
+      ...printPaperOption(paper),
     }
     // A named printer prints silently, and Chromium's silent print on macOS
     // can drop the job outright — no queue entry, no callback error
@@ -6529,9 +6832,8 @@ export function setDocsMenuGate(gate: () => boolean): void {
 export function buildDocsMenu(): void {
   if (docsMenuGate && !docsMenuGate()) return
   const isMac = process.platform === 'darwin'
-  const recent = readJson<string[]>(RECENT_PATH(), [])
-    .filter((p) => existsSync(p))
-    .slice(0, 10)
+  // Opening a menu must not trigger an automount; validate when the user opens a file.
+  const recent = readJson<string[]>(RECENT_PATH(), []).slice(0, 10)
 
   const recentSubmenu: MenuItemConstructorOptions[] =
     recent.length > 0
@@ -6543,27 +6845,13 @@ export function buildDocsMenu(): void {
         }))
       : [{ label: tm('menuNoRecent'), enabled: false }]
 
+  const labels = appMenuLabels(getUiLang())
+  const appMenu = appMenuTemplate(process.platform, labels, {
+    appLabel: app.name,
+    extra: [settingsMenuItem(labels, () => sendCommand('preferences'))],
+  })
   const template: MenuItemConstructorOptions[] = [
-    ...(isMac
-      ? [
-          {
-            label: app.name,
-            submenu: [
-              { role: 'about' as const },
-              { type: 'separator' as const },
-              { label: tm('menuPreferences'), click: () => sendCommand('preferences') },
-              { type: 'separator' as const },
-              { role: 'services' as const },
-              { type: 'separator' as const },
-              { role: 'hide' as const },
-              { role: 'hideOthers' as const },
-              { role: 'unhide' as const },
-              { type: 'separator' as const },
-              { role: 'quit' as const },
-            ],
-          },
-        ]
-      : []),
+    ...(appMenu ? [appMenu] : []),
     {
       label: tm('menuFile'),
       submenu: [
@@ -6596,6 +6884,9 @@ export function buildDocsMenu(): void {
           accelerator: 'Shift+CmdOrCtrl+S',
           click: () => sendCommand('save-as'),
         },
+        // also in the native File menu, the only entry on macOS: the ribbon's
+        // File tab is Windows/Linux-only
+        { label: labels.nameWithAi, click: () => sendCommand('name-with-ai') },
         { type: 'separator' },
         { label: tm('menuPageSetup'), click: () => sendCommand('page-setup') },
         { label: tm('menuExportPdf'), click: () => sendCommand('export-pdf') },
@@ -6838,10 +7129,8 @@ export function buildDocsMenu(): void {
       submenu: [
         { label: tm('menuWordCount'), click: () => sendCommand('word-count') },
         { label: tm('menuAutoCorrect'), click: () => sendCommand('autocorrect-options') },
-        // Word for Mac keeps Preferences in the application menu
-        ...(isMac
-          ? []
-          : [{ label: tm('menuPreferences'), click: () => sendCommand('preferences') }]),
+        // Word for Mac keeps Settings in the application menu
+        ...(isMac ? [] : [settingsMenuItem(labels, () => sendCommand('preferences'))]),
         { type: 'separator' },
         // Runs the same AI proofread as Review > Editor (renderer shows the one-time ack)
         { label: tm('menuAiProofread'), click: () => sendCommand('ai-proofread') },

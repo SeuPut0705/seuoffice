@@ -44,6 +44,7 @@ const EDIT_MEMBERS = [
   'addImageBytes',
   'addInk',
   'addMediaBytes',
+  'addModel3d',
   'addSection',
   'addSlide',
   'addSlideWithLayout',
@@ -82,11 +83,11 @@ const EDIT_MEMBERS = [
   'editTransformMulti',
   'findReplace',
   'flipElements',
+  'getModel3dData',
   'groupElements',
   'insertImage',
   'insertImageUrl',
   'insertMedia',
-  'insertModel3d',
   'landGeneratedPages',
   'localGeneratePage',
   'masterAddElement',
@@ -105,6 +106,7 @@ const EDIT_MEMBERS = [
   'newBlank',
   'pasteElements',
   'pasteSlide',
+  'pickModel3d',
   'redo',
   'removeSection',
   'removeSectionSlides',
@@ -121,6 +123,7 @@ const EDIT_MEMBERS = [
   'setElementName',
   'setElementParagraphFormat',
   'setLink',
+  'setModel3dView',
   'setNotes',
   'setSections',
   'setShapeAdjust',
@@ -145,10 +148,12 @@ const EDIT_MEMBERS = [
 const SAVE_MEMBERS = [
   'exportImages',
   'exportPdf',
+  'listPrinters',
   'pickExportDir',
   'pickExportPdfPath',
   'pickPictureFile',
   'printSlides',
+  'printerOptions',
   'save',
   'saveAs',
   'saveIntoProject',
@@ -233,8 +238,8 @@ function redrawDeck(redraw: Redraw): void {
 async function joinSlidesCollab(doc: WebDocument): Promise<void> {
   let renderer: SlidesCollabHandles | null = null
   const page = await joinPageCollab<SlidesCollabHandles, SlidesOp>({
-    // 2: ids the engine mints while an edit applies come from the edit, field ids included
-    format: { name: 'pptx', schema: 2 },
+    // 3: rebuilt runs preserve language tags, and newly authored Hangul is tagged ko-KR
+    format: { name: 'pptx', schema: 3 },
     fileName: doc.fileName,
     bytes: doc.bytes,
     // the renderer's own save flow: an open text edit and notes are committed, then the session saves
@@ -337,6 +342,7 @@ const slidesApi: Partial<SlidesApi> = {
   presenterSync: noop,
   presenterInk: noop,
   audienceNav: noop,
+  microphoneRelease: noop,
   // menu, window and shell notifications that never arrive on the web
   onLanguageChanged: unsubscribe,
   onThemeChanged: unsubscribe,
@@ -382,6 +388,7 @@ export function installBridges(): void {
   installWebBridge('slidesApi', createWebBridge<SlidesApi>('slidesApi', slidesApi))
   installWebBridge('desktop', createWebBridge<DesktopFilesApi>('desktop', desktopFiles))
   // aiOfficeDriveAi, aiOfficeOutbound, aiOfficeMcpTools, aiOfficeUserSkills, aiOfficeDocs,
-  // projectApi, projectFolderApi and aiOfficeSplit stay absent: their callers probe the window
-  // for them and read a missing one as "no shell", where an empty bridge would read as a broken one
+  // projectApi, projectFolderApi, aiOfficeSplit and aiNamingApi stay absent: their callers probe
+  // the window for them and read a missing one as "no shell", where an empty bridge would read as
+  // a broken one
 }

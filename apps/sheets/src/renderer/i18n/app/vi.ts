@@ -1,6 +1,24 @@
 import type { zh } from './zh'
 
 export const vi = {
+  // ── Withholding cells from the model ──
+  redactMenuLabel: 'Ẩn phần đã chọn khỏi AI',
+  redactDialogDesc:
+    'Nội dung đã chọn vẫn còn trong tài liệu và tệp; mô hình chỉ thấy placeholder bên dưới. Đặt tên để mô hình biết nó đại diện cho điều gì.',
+  redactDialogScope:
+    'Điều này chỉ áp dụng cho AI trong ứng dụng này. CLI, các công cụ MCP và bản xuất không có cửa sổ đều đọc thẳng tệp, nên chúng vẫn thấy những từ này.',
+  redactDialogPlaceholder: 'Tên placeholder, ví dụ: số điện thoại khách hàng',
+  redactCancel: 'Hủy',
+  redactInsert: 'Ẩn',
+  redactEnable: 'Nhấp chuột phải vào phần đã chọn để ẩn khỏi mô hình.',
+  redactNeedsSavedRow: 'Hàng này chưa có trong tệp. Hãy lưu trước, rồi ẩn ô.',
+  redactNeedsSavedSheet:
+    'Trang tính này hoặc bản sao của nó chưa có trong tệp. Hãy lưu trước, rồi thay đổi những gì đang ẩn.',
+  redactMoveRefused:
+    'Chưa thực hiện: thao tác này sẽ di chuyển hoặc sao chép các ô đang ẩn khỏi AI, khiến giá trị của chúng không còn được ẩn. Hãy bỏ ẩn trước, hoặc loại các ô đó khỏi vùng chọn.',
+  redactRecoveredFromNames:
+    'Ứng dụng khác đã ghi lại tệp này và làm mất bản ghi về những ô đang ẩn. Các ô bị ẩn đã được khôi phục từ các tên trong sổ làm việc; lưu sẽ khôi phục lại toàn bộ bản ghi.',
+
   appMergeWorkbooks: 'Hợp nhất sổ làm việc',
   appMergeWorkbooksTip: 'Thêm các trang tính từ tệp Excel khác vào sổ làm việc này',
   appMergeWorkbooksPicking: 'Chọn các tệp để hợp nhất…',
@@ -8,6 +26,8 @@ export const vi = {
   appMergeWorkbooksDone:
     'Đã hợp nhất {sheets} trang tính từ {files} tệp (công thức được nhập dưới dạng giá trị).',
   appMergeWorkbooksFailed: 'Hợp nhất sổ làm việc thất bại.',
+  appMergeWorkbooksHiddenCells:
+    'Không hợp nhất gì cả: {file} có các ô ẩn khỏi AI, và việc hợp nhất sẽ đưa giá trị của chúng vào đây mà không còn được ẩn. Hãy mở tệp đó, bỏ ẩn hoặc xóa các ô này, lưu lại rồi hợp nhất lần nữa.',
   appMergeWorkbooksInsertFailed: 'Không thể tạo trang tính {sheet}.',
   appMergeWorkbooksLocked: 'Sổ làm việc vẫn đang được tải theo luồng; hiện chưa thể hợp nhất.',
   appFormulaBarShown: 'Đã hiển thị thanh công thức.',
@@ -509,6 +529,7 @@ export const vi = {
   appBridgeUnavailable:
     'Cầu nối tệp trên máy tính để bàn không khả dụng. Khởi động lại ứng dụng Electron.',
   appOpenCanceled: 'Đã hủy chọn sổ làm việc.',
+  appImportCanceled: 'Đã hủy nhập.',
   appOpeningWorkbook: 'Đang mở sổ làm việc…',
   appOpened: 'Đã mở {name} — các chỉnh sửa ô được lưu lại bằng ⌘S.',
   appOpenFailed: 'Không thể mở sổ làm việc.',
@@ -601,6 +622,8 @@ export const vi = {
     'Loại biểu đồ này không hỗ trợ chỉnh sửa đó; đã hủy lưu — hãy hoàn tác thay đổi biểu đồ.',
   appSaveErrMoveOverlap:
     'Một công thức, vùng định dạng, hình vẽ hoặc bảng nằm trải dài qua các hàng đã di chuyển; đã hủy lưu — hãy hoàn tác việc di chuyển.',
+  appSaveErrHiddenCellsUnreadable:
+    'Không đọc được bản ghi về các ô ẩn khỏi AI trong sổ làm việc này, nên không thể lưu thay đổi về hàng, cột và trang tính: các ô bị ẩn sẽ không còn được che nữa. Hãy hoàn tác các thay đổi đó rồi lưu lại.',
   appFromTextCsvTitle: 'Nhập tệp CSV/văn bản vào vùng chọn hiện tại',
   appCsvImported: 'Đã nhập {rows} hàng × {columns} cột từ tệp vào {cell}.',
   appCsvEmpty: 'Tệp CSV không có dữ liệu.',
@@ -704,6 +727,7 @@ export const vi = {
   appExportPdfTitle: 'Xuất dưới dạng PDF',
   appSaveTitle: 'Lưu (⌘S)',
   appSaveAs: 'Lưu dưới dạng',
+  aiNameFile: 'Đặt tên bằng AI…',
   appUndo: 'Hoàn tác',
   appRedo: 'Làm lại',
   appQuickAccessCustomize: 'Tùy chỉnh Thanh công cụ Truy nhập Nhanh',
@@ -1155,6 +1179,20 @@ export const vi = {
   appWatchCell: 'Ô',
   appWatchValue: 'Giá trị',
   appWatchFormula: 'Công thức',
+  appLinksPanel: 'Liên kết ngoài',
+  appLinksPanelDetail: 'Liệt kê, cập nhật và ngắt liên kết đến sổ làm việc khác',
+  appLinksUpdate: 'Cập nhật giá trị',
+  appLinksNone: 'Sổ làm việc này không có liên kết đến sổ làm việc khác.',
+  appLinksUnsaved: 'Hãy lưu sổ làm việc này trước khi liệt kê các liên kết ngoài của nó.',
+  appLinksSource: 'Nguồn',
+  appLinksStatus: 'Trạng thái',
+  appLinksSheets: 'Trang tính',
+  appLinksLocate: 'Mở vị trí tệp nguồn',
+  appLinksReachable: 'Khả dụng',
+  appLinksBroken: 'Không khả dụng',
+  appLinksBreak: 'Ngắt liên kết',
+  appLinksBreakConfirm: 'Xác nhận ngắt',
+  appLinksChangeSource: 'Thay đổi nguồn',
   appGroupCalculation: 'Tính toán',
   appCalculationOptions: 'Tùy chọn tính toán',
   appCalculationOptionsTitle: 'Tính toán lại tự động hoặc thủ công',
@@ -1171,6 +1209,12 @@ export const vi = {
   appGroupGetData: 'Lấy dữ liệu',
   appFromTextCsv: 'Từ Văn bản/CSV',
   appRefreshAll: 'Làm mới tất cả',
+  appRefreshQuery: 'Làm mới truy vấn',
+  appQueryConnectionsTitle: 'Làm mới truy vấn của sổ làm việc',
+  appQueryRefreshing: 'Đang làm mới {name}…',
+  appQueryRefreshed: 'Đã làm mới {name} ({rows} hàng)',
+  appQueryRefreshedClipped: 'Đã làm mới {name} ({rows} hàng, {dropped} hàng vượt vùng)',
+  appQueryRefreshFailed: 'Không thể làm mới {name}',
   appWorkbookNoPivot: 'Không có bảng PivotTable nào trong sổ làm việc này.',
   appRefreshAllTitle: 'Làm mới mọi bảng PivotTable',
   appQueriesConnections: 'Truy vấn & Kết nối',
@@ -1246,6 +1290,10 @@ export const vi = {
   appFontSizeTip: 'Cỡ chữ',
   appZoomIn: 'Phóng to',
   appZoomOut: 'Thu nhỏ',
+  appImgActualSize: 'Kích thước thực',
+  appImgFitWindow: 'Vừa cửa sổ',
+  appImgSaveAs: 'Lưu ảnh thành…',
+  appImgClose: 'Đóng (Esc)',
   appZoomSheetTitle: 'Thu phóng trang tính',
   appResetZoom: 'Đặt lại thu phóng',
   appZoomToSelection: 'Thu phóng tới vùng chọn',
@@ -1288,6 +1336,19 @@ export const vi = {
   appOpenFileFirst: 'Mở một tệp trước',
   appNoPassword: 'Không có mật khẩu',
   appProtectWorkbook: 'Bảo vệ sổ làm việc',
+  appChangePassword: 'Đổi mật khẩu',
+  appWorkbookPasswordChanged: 'Đã cập nhật mật khẩu sổ làm việc.',
+  appChangePasswordTitle: 'Đổi mật khẩu sổ làm việc',
+  appChangePasswordCopy: 'Chọn mật khẩu mới và xác nhận bên dưới.',
+  appNewPasswordLabel: 'Mật khẩu mới',
+  appConfirmPasswordLabel: 'Xác nhận mật khẩu mới',
+  appPasswordsMismatch: 'Mật khẩu không khớp.',
+  appPasswordTooLong:
+    'Mật khẩu quá dài. Hãy dùng tối đa {max} ký tự, độ dài lớn nhất mà Excel chấp nhận.',
+  appPasswordUpdateFailed: 'Không thể cập nhật mật khẩu sổ làm việc.',
+  appPasswordUpdating: 'Đang cập nhật…',
+  appUpdatePassword: 'Cập nhật mật khẩu',
+  appWorkbookNotPasswordProtected: 'Sổ làm việc này không được bảo vệ bằng mật khẩu mở.',
   appAllowEditRanges: 'Cho phép chỉnh sửa các vùng',
   appGroupClipboard: 'Bảng nhớ tạm',
   appPaste: 'Dán',
@@ -1520,6 +1581,8 @@ export const vi = {
   appVisualSendBackward: 'Đưa xuống một lớp',
   appVisualSizeProperties: 'Kích thước và thuộc tính…',
   appVisualHyperlink: 'Siêu liên kết…',
+  appVisualEmbedInCell: 'Nhúng ảnh vào ô',
+  appVisualEmbedFailed: 'Không thể nhúng ảnh này vào ô.',
   appVisualDelete: 'Xóa',
   appVisualArranged: 'Đã cập nhật đối tượng — lưu bằng ⌘S.',
   appVisualCopied: 'Đã sao chép đối tượng.',

@@ -10,6 +10,7 @@
  * stream starts with a FILEPASS record; officecrypto-tool decrypts those too
  * (RC4 / RC4 CryptoAPI) and hands back a plain .xls.
  */
+import { assertCompoundFile, hasOle2Signature } from '@genoffice/compound-file'
 import officeCrypto from 'officecrypto-tool'
 
 const CFB_MAGIC = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
@@ -31,14 +32,42 @@ export function isEncryptedOoxml(bytes: Buffer): boolean {
   return isCfbHeader(bytes) && bytes.includes(ENCRYPTED_STREAM_UTF16)
 }
 
+/**
+ * The library reads a compound file with cfb on its own, and cfb follows a
+ * looping sector chain until memory runs out. So a compound file passes the
+ * shared gate before the library sees it; the gate throws a CompoundFileError
+ * for one it refuses. Bytes without the OLE2 signature are not the gate's to
+ * judge: the library gets them as it always did.
+ */
+function gateCompoundFile(bytes: Uint8Array): void {
+  if (hasOle2Signature(bytes)) assertCompoundFile(bytes)
+}
+
+/**
+ * A file that starts like a compound file and whose container the shared gate
+ * refuses. It is damaged, whatever stream names its bytes hold: no password
+ * opens it and no importer reads it, so a caller says so instead of asking for
+ * a password or naming a format. Bytes without the OLE2 signature are never it.
+ */
+export function isDamagedCompoundFile(bytes: Uint8Array): boolean {
+  if (!isCfbHeader(bytes)) return false
+  try {
+    assertCompoundFile(bytes)
+    return false
+  } catch {
+    return true
+  }
+}
+
 /** Encrypted OOXML, or a legacy .xls/.doc/.ppt that carries an open password. */
 export function isEncryptedOfficeFile(bytes: Buffer): boolean {
   if (!isCfbHeader(bytes)) return false
-  if (bytes.includes(ENCRYPTED_STREAM_UTF16)) return true
   try {
+    gateCompoundFile(bytes)
+    if (bytes.includes(ENCRYPTED_STREAM_UTF16)) return true
     return officeCrypto.isEncrypted(bytes)
   } catch {
-    // a CFB the library cannot walk is not something we can decrypt either
+    // a CFB the gate refuses or the library cannot walk is not something we can decrypt either
     return false
   }
 }
@@ -56,10 +85,12 @@ export class OfficeDecryptError extends Error {
 /**
  * Decrypt to the plain file bytes. Throws OfficeDecryptError with reason
  * 'wrong-password' (verifier mismatch — ask again) or 'unsupported' (a scheme
- * the library cannot read, e.g. XOR obfuscation or Extensible encryption).
+ * the library cannot read, e.g. XOR obfuscation or Extensible encryption, or
+ * a damaged container).
  */
 export async function decryptOfficeFile(bytes: Buffer, password: string): Promise<Buffer> {
   try {
+    gateCompoundFile(bytes)
     return await officeCrypto.decrypt(bytes, { password })
   } catch (err) {
     const message = String((err as Error)?.message ?? err)

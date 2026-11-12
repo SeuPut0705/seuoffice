@@ -1,3 +1,4 @@
+import { CSV_IMPORT_DEFAULT_LIMIT_MB } from '@genoffice/xlsx-gateway/gateway/csv-limits'
 import { DEFAULT_AI_PANEL_PREFS, NO_AUTO_SAVE_DEFAULT } from '@genoffice/ui'
 import {
   collabLink,
@@ -322,10 +323,21 @@ const desktopApi: WebDesktopApi = {
     queuedOpened = openQueuedDocument()
     return queuedOpened
   },
+  // the web open path runs no delimited import in the page: no bar, nothing to stop
+  onImportProgress: unsubscribe,
+  // no shell setting on the web: Data › From Text/CSV keeps the default ceiling
+  getCsvImportLimit: async () => CSV_IMPORT_DEFAULT_LIMIT_MB,
   readWorkbookRange: async (request) => {
     const result = await engine().readRange(request)
     reportOpened()
     return result
+  },
+  readWorkbookRedactions: async (request) => {
+    const session = current
+    if (!session || session.sessionId !== request.sessionId) {
+      throw new Error('Unknown workbook session.')
+    }
+    return engine().readRedactions(session.engineName)
   },
   closeWorkbook: async (sessionId) => {
     // a save already closed the session it replaced
@@ -364,6 +376,11 @@ const desktopApi: WebDesktopApi = {
   onRecoveryNotice: unsubscribe,
   onRecoveryWriteNow: unsubscribe,
   onMcpCommand: unsubscribe,
+  // cross-workbook range picking needs other workbook tabs: the page has none
+  onWorkbookPickArmed: unsubscribe,
+  onWorkbookPickCancelled: unsubscribe,
+  onWorkbookPickSelected: unsubscribe,
+  listWorkbookTabs: async () => ({ tabs: [] }),
   // An AI run applies, reverts and re-applies its edits as one proposal and vetoes everything else
   // meanwhile, remote edits included, so co-editing turns it off
   aiStream: (...args) =>
@@ -383,6 +400,15 @@ const desktopApi: WebDesktopApi = {
   exportPdf: unsupported('sheets.export'),
   exportCsv: unsupported('sheets.export'),
   printWorkbook: unsupported('sheets.print'),
+  // a web query is fetched by main through its SSRF gate: the page lists none, so Refresh query stays hidden
+  listWorkbookConnections: async () => ({ connections: [] }),
+  refreshWorkbookConnection: unsupported('sheets.queryRefresh'),
+  // Listing is the read-only preflight before the panel saves to update links.
+  listExternalLinks: unsupported('sheets.externalLinks'),
+  updateExternalLinks: unsupported('sheets.externalLinks'),
+  // slicer parts are read from the desktop session snapshot: the page restores no panel, and the
+  // open path calls this for every workbook
+  readSlicerState: async () => [],
 }
 
 export function installBridges(): void {
@@ -392,5 +418,6 @@ export function installBridges(): void {
   )
   installWebBridge('nativeSpell', createWebBridge('nativeSpell', {}))
   installWebBridge('__genofficeDebugHooks', createWebBridge('__genofficeDebugHooks', {}))
+  // aiNamingApi stays absent: suggestFileName reads a missing one as "no shell" and offers no name
   if (editMode()) onHostSaveRequest(saveForHost)
 }

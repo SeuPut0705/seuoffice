@@ -22,7 +22,11 @@ import type {
   FileSearchSettings,
   HwpDefaultFormat,
 } from '../../shared/home-api'
-import { AUTHOR_NAME_MAX } from '../../shared/home-api'
+import {
+  AUTHOR_NAME_MAX,
+  CSV_IMPORT_DEFAULT_LIMIT_MB,
+  CSV_IMPORT_LIMIT_CHOICES_MB,
+} from '../../shared/home-api'
 import type { UpdateUiState } from '../../shared/update-api'
 import {
   DEFAULT_MAX_OUTPUT_TOKENS,
@@ -30,6 +34,7 @@ import {
   MIN_MAX_OUTPUT_TOKENS,
   activeCustomEndpoint,
   clampMaxOutputTokens,
+  providerPickerModels,
   customEndpointLabel,
   isSubscriptionProvider,
   keyProviderModels,
@@ -592,7 +597,11 @@ function AiModelPane({
   /** an API-key provider: the fixed catalog plus what the vendor listed for the key (decision 0087) */
   const keyProvider = !meta?.needsBaseUrl && !isSubscriptionProvider(provider)
   const modelOptions = keyProvider
-    ? keyProviderModels(provider, config.model, config.models)
+    ? providerPickerModels(
+        provider,
+        keyProviderModels(provider, config.model, config.models),
+        config.model,
+      )
     : (meta?.models ?? [])
 
   const touch = () => {
@@ -989,9 +998,14 @@ type TestResult = { ok: boolean; error?: string }
 const DECISION_ENDPOINTS: { value: DecisionEndpoint; label: string }[] = [
   { value: 'openrouter', label: 'Jev (OpenRouter)' },
   { value: 'direct', label: 'Jev (TypeSafe API)' },
-  { value: 'perplexity', label: 'Perplexity' },
+  { value: 'perplexity', label: 'Perplexity (v1 27B)' },
+  { value: 'perplexity-v12', label: 'Perplexity (v1.2)' },
+  { value: 'perplexity-flash', label: 'Perplexity (Flash v1.2)' },
   { value: 'liquid', label: 'Liquid AI (d1)' },
-  { value: 'cloudflare', label: 'Cloudflare' },
+  { value: 'liquid-ultra', label: 'Liquid AI (d1-ultra)' },
+  { value: 'openai', label: 'OpenAI (gpt-6-luna)' },
+  { value: 'cloudflare', label: 'Cloudflare (Clef)' },
+  { value: 'cloudflare-flash', label: 'Cloudflare (Clef-flash)' },
   { value: 'kev', label: 'Kev (local)' },
   { value: 'rizzo', label: 'Rizzo Flow (local)' },
   { value: 'custom', label: 'Custom (/v1/systemone)' },
@@ -1502,11 +1516,15 @@ function AiMediaPane({
         <div className="set-field-desc set-ai-note">
           {search.provider === 'parallel'
             ? t('setAiSearchParallelHint')
-            : search.provider === 'serply'
-              ? t('setAiSearchSerplyHint')
-              : searchMeta?.imageSearch
-                ? t('setAiSearchSerperHint')
-                : t('setAiSearchTavilyHint')}
+            : search.provider === 'keenable'
+              ? t('setAiSearchKeenableHint')
+              : search.provider === 'serply'
+                ? t('setAiSearchSerplyHint')
+                : search.provider === 'searchapi'
+                  ? t('setAiSearchSearchApiHint')
+                  : searchMeta?.imageSearch
+                    ? t('setAiSearchSerperHint')
+                    : t('setAiSearchTavilyHint')}
         </div>
         {keyRow('set-ai-search-key', searchKey, searchMeta?.keyPlaceholder ?? 'API Key', (v) =>
           setSearch({
@@ -1685,6 +1703,7 @@ export function SettingsModal({
   }, [target])
   const [theme, setTheme] = useState<UiTheme>('system')
   const [docTheme, setDocTheme] = useState<DocTheme>('follow')
+  const [csvLimitMb, setCsvLimitMb] = useState(CSV_IMPORT_DEFAULT_LIMIT_MB)
   const [saveDir, setSaveDir] = useState('')
   const [hwpFormat, setHwpFormat] = useState<HwpDefaultFormat>('hwp')
   const [autoSaveOn, setAutoSaveOn] = useState(false)
@@ -1694,6 +1713,7 @@ export function SettingsModal({
   const [defaultAppFailed, setDefaultAppFailed] = useState(false)
   const [aiPrefs, setAiPrefs] = useState<AiPanelPrefs>(DEFAULT_AI_PANEL_PREFS)
   const [authorName, setAuthorName] = useState<AuthorNameSetting>({ value: '', fallback: '' })
+  const [legacyImportPrompt, setLegacyImportPrompt] = useState(true)
   const [appVersion, setAppVersion] = useState('')
   const [updateState, setUpdateState] = useState<UpdateUiState | null>(null)
   // one live view of the two subscription connections for the whole dialog
@@ -1720,11 +1740,17 @@ export function SettingsModal({
     void window.aiOffice.getAutoSaveDefault?.().then((v) => {
       if (alive) setAutoSaveOn(v.on)
     })
+    void window.aiOffice.getCsvImportLimit?.().then((mb) => {
+      if (alive && mb > 0) setCsvLimitMb(mb)
+    })
     void window.aiOffice.getDefaultAppStatus?.().then((st) => {
       if (alive) setDefaultApp(st)
     })
     void window.aiOffice.getAiPanelPrefs?.().then((prefs) => {
       if (alive) setAiPrefs(prefs)
+    })
+    void window.aiOffice.getLegacyImportPrompt?.().then((v) => {
+      if (alive) setLegacyImportPrompt(v)
     })
     void window.aiOffice.getAuthorName?.().then((v) => {
       if (alive) setAuthorName(v)
@@ -1940,6 +1966,26 @@ export function SettingsModal({
                 </div>
                 <div className="set-field">
                   <div className="set-field-text">
+                    <label className="set-field-label">{t('csvImportLimit')}</label>
+                  </div>
+                  <Dropdown
+                    className="set-dd"
+                    value={String(csvLimitMb)}
+                    ariaLabel={t('csvImportLimit')}
+                    options={CSV_IMPORT_LIMIT_CHOICES_MB.map((mb) => ({
+                      value: String(mb),
+                      label: `${mb} MB`,
+                    }))}
+                    onPick={(v) => {
+                      const mb = Number(v)
+                      if (!Number.isInteger(mb)) return
+                      setCsvLimitMb(mb)
+                      void window.aiOffice.setCsvImportLimit?.(mb)
+                    }}
+                  />
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
                     <label className="set-field-label">{t('setAiPanelSide')}</label>
                   </div>
                   <Dropdown
@@ -2038,6 +2084,25 @@ export function SettingsModal({
                     onBlur={commitAuthorName}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter') e.currentTarget.blur()
+                    }}
+                  />
+                </div>
+                <div className="set-field">
+                  <div className="set-field-text">
+                    <div className="set-field-stack">
+                      <div className="set-field-label">{t('setLegacyImportPrompt')}</div>
+                      <div className="set-field-desc">{t('setLegacyImportPromptDesc')}</div>
+                    </div>
+                  </div>
+                  <button
+                    className="set-switch"
+                    role="switch"
+                    aria-checked={legacyImportPrompt}
+                    aria-label={t('setLegacyImportPrompt')}
+                    onClick={() => {
+                      const next = !legacyImportPrompt
+                      setLegacyImportPrompt(next)
+                      void window.aiOffice.setLegacyImportPrompt?.(next).then(setLegacyImportPrompt)
                     }}
                   />
                 </div>

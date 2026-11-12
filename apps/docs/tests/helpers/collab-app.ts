@@ -47,6 +47,12 @@ export function fakeApp(fields: Partial<Record<keyof FileActionContext, unknown>
       if (/^set[A-Z]/.test(prop)) return setter(prop[3].toLowerCase() + prop.slice(4))
       return shown[prop]
     },
+    // a spread copies the fields, as it does the App's own context (the save a session makes)
+    ownKeys: () => Object.keys(shown),
+    getOwnPropertyDescriptor: (_target, prop) =>
+      typeof prop === 'string' && prop in shown
+        ? { value: shown[prop], enumerable: true, configurable: true, writable: true }
+        : undefined,
   })
   return {
     context: { current },

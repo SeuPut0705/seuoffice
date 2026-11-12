@@ -1,5 +1,5 @@
 import { Editor } from '@tiptap/core'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it } from 'vitest'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import {
   computeSectionedSlicesF2,
@@ -10,9 +10,26 @@ import {
 
 const cell = { type: 'docTableCell', content: [{ type: 'docParagraph' }] }
 const row = { type: 'docTableRow', content: [cell] }
-const editor = new Editor({ element: document.createElement('div'), extensions: editorExtensions })
+
+/** Editors created during the current test; destroyed in afterEach so ProseMirror's
+ * DOMObserver timers can't fire after the JSDOM environment is torn down. */
+const liveEditors: Editor[] = []
+
+function makeEditor(): Editor {
+  const editor = new Editor({
+    element: document.createElement('div'),
+    extensions: editorExtensions,
+  })
+  liveEditors.push(editor)
+  return editor
+}
+
+afterEach(() => {
+  for (const editor of liveEditors.splice(0)) editor.destroy()
+})
 
 function tableAttrs(attrs: Record<string, unknown>): Record<string, string> {
+  const editor = makeEditor()
   const table = editor.schema.nodeFromJSON({ type: 'docTable', attrs, content: [row] })
   return (editor.schema.nodes.docTable.spec.toDOM!(table) as [string, Record<string, string>])[1]
 }
@@ -137,6 +154,21 @@ describe('keyword-anchored float shifts in the slice engine', () => {
       { blockTop: 0, dyPx: -60 },
       { blockTop: 100, dyPx: 440 },
     ])
+  })
+
+  it('a float lifting over blank lines fits from its lifted top instead of turning the page', () => {
+    // prod corpus 20261020 sample 043: margin-top aligned photo whose anchor
+    // lands after a few empty paragraphs at the top of a page
+    const out: SliceOutputs = { floatVShifts: [] }
+    const blocks = [
+      block(0, 40, { emptyPara: true }),
+      block(40, 40, { emptyPara: true }),
+      block(80, 560, { floated: true, pageRelVyPx: 0, pageRelVAnchor: 'margin' }),
+      block(80, 40),
+    ]
+    const slices = computeSectionedSlicesF2(blocks, geoms, 600, out)
+    expect(slices.filter((s) => s.end > s.start)).toHaveLength(1)
+    expect(out.floatVShifts).toEqual([{ blockTop: 80, dyPx: -80 }])
   })
 
   it('never lifts a float above content already on the page', () => {

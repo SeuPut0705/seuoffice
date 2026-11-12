@@ -17,7 +17,7 @@ import { DISTRIBUTION, ENCRYPTED, FILE_HEADER } from '../src/main/hwp5-file'
 import { fieldKindsOf } from '../src/main/field-kinds'
 import { applySaveFixes } from '../src/main/save-fixes'
 import { sectionTailsOf } from '../src/main/section-tails'
-import { hasTrackedChanges, withoutTrackedChanges } from '../src/main/tracked-changes'
+import { trackedChangesOf, withoutTrackedChanges } from '../src/main/tracked-changes'
 import { bytesMatchFormat } from '../src/main/save-plan'
 import type { SaveBase } from '../src/main/save-fixes'
 import { openHwpFromBytes } from '../src/web/open-hwp'
@@ -125,7 +125,7 @@ function measure(path: string, label: string, known: string | undefined): Row {
   if (excluded) return { ...row, verdict: 'excluded', note: excluded }
 
   // what the app's read does before the editor gets the bytes
-  if (format === 'hwp' && hasTrackedChanges(bytes)) {
+  if (format === 'hwp' && trackedChangesOf(bytes) === 'tracked') {
     const current = withoutTrackedChanges(bytes)
     if (!current) return { ...row, verdict: 'excluded', note: 'tracked changes cannot be dropped' }
     bytes = current

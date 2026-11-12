@@ -4,15 +4,15 @@ import { describe, expect, it } from 'vitest'
 import { fakeApp, run, tempDir, writeMinimalPdf } from './helpers'
 
 describe('convert a Hangul document to PDF', () => {
-  it('lists hwp and hwpx → pdf among the routes and refuses other targets', async () => {
+  it('lists hwp and hwpx → pdf and docx among the routes and refuses other targets', async () => {
     const dir = tempDir()
     const hwpx = join(dir, 'report.hwpx')
     writeFileSync(hwpx, 'PK')
-    const r = await run(['convert', hwpx, '--to', 'docx', '--json'])
+    const r = await run(['convert', hwpx, '--to', 'xlsx', '--json'])
     expect(r.code).toBe(1)
-    expect(r.json().message).toContain('cannot convert .hwpx to .docx')
-    expect(r.json().detail.supported).toMatch(/hwp→pdf/)
-    expect(r.json().detail.supported).toMatch(/hwpx→pdf/)
+    expect(r.json().message).toContain('cannot convert .hwpx to .xlsx')
+    expect(r.json().detail.supported).toMatch(/\bhwp→docx\/pdf\b/)
+    expect(r.json().detail.supported).toMatch(/\bhwpx→docx\/pdf\b/)
   })
 
   it('hands .hwp and .hwpx to the app headless export', async () => {

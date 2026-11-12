@@ -35,8 +35,11 @@ export type AiProviderId =
   | 'atlascloud'
   | 'runcrate'
   | 'cloudgpu'
+  | 'siliconflow'
+  | 'ppio'
   | 'opencode-zen'
   | 'opencode-go'
+  | 'commandcode'
   | 'custom'
   /** seuoffice: an HTTP gateway speaking `gateway-complete`; its token comes per request, never from settings */
   | 'gateway'
@@ -316,7 +319,18 @@ export interface AiProviderMeta {
 
 /** Image generation / media analysis backends (separate from the chat provider) */
 export type AiMediaProviderId =
-  'openai' | 'gemini' | 'doubao' | 'glm' | 'xai' | 'qwen' | 'minimax' | 'deepseek' | 'custom'
+  | 'openai'
+  | 'gemini'
+  | 'doubao'
+  | 'glm'
+  | 'xai'
+  | 'qwen'
+  | 'minimax'
+  | 'deepseek'
+  | 'stability'
+  | 'bfl'
+  | 'microsoft'
+  | 'custom'
 
 /** Media backends configured with a key (or a base URL): every entry of the AI_MEDIA_PROVIDERS catalog */
 export type AiMediaKeyProviderId = AiMediaProviderId
@@ -329,7 +343,8 @@ export type AiAnalysisProviderSelection = 'chat' | AiMediaProviderId
 export type AiVideoAnalysisProviderSelection = 'none' | AiMediaProviderId
 
 /** wire shape of the image endpoint */
-export type AiImageProtocol = 'openai-images' | 'gemini' | 'dashscope' | 'minimax'
+export type AiImageProtocol =
+  'openai-images' | 'gemini' | 'dashscope' | 'minimax' | 'stability' | 'bfl' | 'mai'
 /** wire shape of the understanding endpoint */
 export type AiAnalysisProtocol = 'openai-chat' | 'gemini'
 
@@ -376,8 +391,9 @@ export interface AiMediaSettings {
   provider?: AiMediaProviderId | undefined
 }
 
-/** web/image search backends; Parallel supports both a user key and free keyless search */
-export type AiSearchProviderId = 'serper' | 'serply' | 'tavily' | 'parallel' | 'exa' | 'firecrawl'
+/** web/image search backends; Parallel and Keenable take a user key or run free and keyless */
+export type AiSearchProviderId =
+  'serper' | 'serply' | 'searchapi' | 'tavily' | 'parallel' | 'exa' | 'firecrawl' | 'keenable'
 
 export interface AiSearchProviderMeta {
   id: AiSearchProviderId

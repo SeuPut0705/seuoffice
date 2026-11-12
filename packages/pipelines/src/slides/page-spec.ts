@@ -18,6 +18,7 @@ import {
   openPptx,
   promoteSlideBackground,
   savePptx,
+  tagHangulRun,
   type Paragraph,
   type TextElement,
   type TextRun,
@@ -498,14 +499,17 @@ async function growTextBoxesToContent(
 
 function toEngineParagraphs(paragraphs: SpecParagraph[]): Paragraph[] {
   return paragraphs.map((p) => {
-    const runs: TextRun[] = p.runs.map((r) => ({
-      text: r.text,
-      ...(r.sizePt ? { fontSize: r.sizePt } : {}),
-      ...(r.bold ? { bold: true } : {}),
-      ...(r.italic ? { italic: true } : {}),
-      ...(r.color ? { color: r.color } : {}),
-      ...(r.font ? { fontFamily: r.font, latinFont: r.font, eaFont: r.font } : {}),
-    }))
+    // The spec has no language field: Hangul gets PowerPoint's ko-KR so it wraps by word
+    const runs: TextRun[] = p.runs.map((r) =>
+      tagHangulRun({
+        text: r.text,
+        ...(r.sizePt ? { fontSize: r.sizePt } : {}),
+        ...(r.bold ? { bold: true } : {}),
+        ...(r.italic ? { italic: true } : {}),
+        ...(r.color ? { color: r.color } : {}),
+        ...(r.font ? { fontFamily: r.font, latinFont: r.font, eaFont: r.font } : {}),
+      }),
+    )
     return {
       runs,
       ...(p.align ? { align: p.align } : {}),

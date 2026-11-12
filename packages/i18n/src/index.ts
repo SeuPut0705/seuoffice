@@ -229,3 +229,4 @@ export function createI18n<D extends Record<string, string>>(dicts: LangDicts<D>
 
 export * from './font-names'
 export * from './product'
+export * from './common-ribbon'

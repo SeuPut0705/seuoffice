@@ -8,4 +8,7 @@ export const zhTW = {
   diskIgnore: '忽略',
   diskDismiss: '確定',
   diskReloadFailed: '無法重新載入檔案：{detail}',
+  diskChangedNoUndo: '此檔案已被其他程式變更或刪除，因此未執行此變更的復原或重做。',
+  pageOpNoUndoConfirm:
+    '此檔案（{size}）超過了可為復原保留的大小（{limit}），因此此頁面操作無法復原。是否繼續？',
 } satisfies Record<keyof typeof zh, string>

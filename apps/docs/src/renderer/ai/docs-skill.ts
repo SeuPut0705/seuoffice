@@ -19,15 +19,13 @@ import type { AiNotesAccess } from './note-ops'
 import type { AgentToolDef } from '../../shared/ipc'
 import { isOdtSession } from '../odt-gate'
 import { ODT_SYSTEM_NOTE, odtToolFilter } from './odt-tools'
+import { AI_REVISION_AUTHOR } from './revision-author'
 
 const IMAGE_GEN_OFF_NOTE =
   '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use image_search for imagery.'
 
 const MEDIA_ANALYSIS_OFF_NOTE =
   '\n\nNote: analyze_media is currently unavailable (no media provider: no AI connection that can look at pictures and no media API key in Settings). You cannot see what a picture inside the document shows — tell the user that instead of guessing at its content.'
-
-/** author name on AI-generated tracked revisions (accept/reject via Review) */
-export const AI_REVISION_AUTHOR = 'AI Assistant'
 
 /** tools the AI never gets: resolving tracked changes is the person's call (the CLI keeps them) */
 const PERSON_ONLY_TOOLS = new Set(['accept_changes', 'reject_changes'])

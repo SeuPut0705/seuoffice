@@ -1,6 +1,7 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { basename, join } from 'node:path'
+import { tempPathBeside } from '@genoffice/electron-utils/atomic-write'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import {
   addIgnoreLine,
@@ -143,6 +144,23 @@ describe('isAiVisiblePath', () => {
     expect(isAiVisiblePath(root, 'node_modules/x.md', none)).toBe(false)
     expect(isAiVisiblePath(root, '.ieumoffice/memory.md', none)).toBe(false)
     expect(isAiVisiblePath(root, '.ieumoffice', none, true)).toBe(false)
+  })
+
+  // A save stages `<name>.<12 hex>.tmp` beside the document (no leading dot
+  // since genoffice#2145) and a failed one leaves `<name>.unsaved.tmp` there.
+  it('hides the temp file of a save and the copy a failed save leaves', () => {
+    const staged = basename(tempPathBeside(join(root, 'reports', 'plan.docx')))
+    expect(isAiVisiblePath(root, `reports/${staged}`, none)).toBe(false)
+    expect(isAiVisiblePath(root, staged, none)).toBe(false)
+    expect(isAiVisiblePath(root, 'reports/plan.docx.unsaved.tmp', none)).toBe(false)
+    expect(isAiVisiblePath(root, 'plan.docx.unsaved.tmp', none)).toBe(false)
+  })
+
+  it('keeps a .tmp file or a folder of the person that is no save temp', () => {
+    expect(isAiVisiblePath(root, 'notes.tmp', none)).toBe(true)
+    expect(isAiVisiblePath(root, 'reports/export.final.tmp', none)).toBe(true)
+    // a folder is never a save's temp file, whatever its name
+    expect(isAiVisiblePath(root, 'plan.docx.unsaved.tmp/a.docx', none)).toBe(true)
   })
 
   it('hides the Markdown app-owned assets folder', () => {

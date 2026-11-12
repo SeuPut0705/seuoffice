@@ -41,10 +41,11 @@ ieumoffice sheet read book.xlsx [--sheet Data] [--range A1:D20] [--formats] --js
 ieumoffice sheet apply book.xlsx --cells cells.json    # [{cell:"B2", value|formula, style?, sheet?}]
 ieumoffice sheet apply book.xlsx --ops ops.json [--dry-run]   # workbook DSL: cells, formats, charts, tables, filters, conditional formats, validation, links, notes, panes, page setup, sheets (`ieumoffice guide sheets`)
 ieumoffice sheet check book.xlsx --json                # formula errors, missing-sheet references, broken defined names, chart ranges off the data, ### columns (suggest: set_col_width), placeholder text, existing rules; exit 0
-ieumoffice sheet links book.xlsx                       # external [n] links: stored path, resolved path, reachable, source sheets
-ieumoffice sheet links book.xlsx --update              # re-read reachable sources and write the computed values as the formulas' cached <v> (formulas untouched; unreachable links keep their cache)
+ieumoffice sheet links book.xlsx                       # external [n] links: stored path, resolved path, reachable, source sheets; a source on another computer (\\host\share, file://host/…) or on a drive that may be a network drive is not contacted: reachable is null, unchecked says why
+ieumoffice sheet links book.xlsx --update              # re-read reachable sources and write the computed values as the formulas' cached <v> (formulas untouched; unreachable links and the sources the listing leaves unchecked keep their cache)
+ieumoffice sheet links book.xlsx --update --remote-sources   # also read the unchecked sources (another computer, a possible network drive): the workbook chose that place and Windows signs in to it, so only when the user asked
 ieumoffice sheet links book.xlsx --break 1,2           # break links: formulas become their cached values, the links' parts are removed and surviving links renumber
-ieumoffice create --type docx --from report.md --out report.docx      # or --from fragment.html (restricted HTML)
+ieumoffice create --type docx --from report.md --out report.docx      # or --from fragment.html (restricted HTML); the new file carries Word-like docProps/core.xml + app.xml; --no-generator-fields drops the Application / AppVersion stamps
 ieumoffice convert notes.md --to docx|html
 ieumoffice convert report.docx --to html               # the Word editor's standalone-HTML export
 ieumoffice convert page.html --to docx                 # html2docx, same as the HTML app's Export as Word
@@ -53,17 +54,19 @@ ieumoffice convert book.xlsx --to csv [--sheet Data]   # one sheet, cell text as
 ieumoffice convert book.xlsx --to ods                  # a complete ODS package (also .xlsm→ods); detail.dropped and warnings list the features ODS cannot hold
 ieumoffice convert form.odt --to docx|pdf|md|html      # through the ODT bridge docx (pdf/html: a temporary docx the app exports, always deleted)
 ieumoffice convert letter.doc --to docx                # Word 97-2003 .doc/.dot through the in-process doc2docx importer
+ieumoffice convert old.hwp --to docx                   # .hwp / .hwpx → docx in-process; a failure exits 3 with detail.reason
+ieumoffice convert deck.odp --to pptx                  # also .otp and .ppt → pptx; .ppt is stage 1 only (text boxes and slide size)
 ieumoffice convert report.docx --to odt                # also md→odt and html→odt; warnings[] odt_converted / odt_dropped + detail.odt_report
 ieumoffice capabilities --json                        # which of search, image generation, image/video analysis and the PDF AI jobs work here and by which route (free, key, subscription); no model call
 ieumoffice search "electron headless export" [--images] [--max 6] --json
 ieumoffice read-url https://example.com/guide.md [--offset 50000] --json   # the readable text of an http(s) page (article, document, skill); the address goes to that site; private GitHub files use the app's read-only token
 ieumoffice image "isometric office, soft light" --aspect 16:9 --out hero.png
 ieumoffice media photo.jpg --ask "What text is in this picture?" --json
-ieumoffice docs read report.docx [--range 0-9] [--html] [--full] [--comments] [--revisions] [--header-footer] --json   # blocks (--full: whole text; contentControls chain + inlineContentControls for w:sdt controls), comment threads, tracked changes, header/footer text
-ieumoffice docs apply report.docx --ops ops.json [--dry-run]           # apply_ops entries + insert_content / replace_blocks / insert_image / insert_chart / edit_chart / set_header_footer / reply_comment / resolve_comment
+ieumoffice docs read report.docx [--range 0-9] [--html] [--full] [--comments] [--revisions] [--header-footer] [--properties] --json   # blocks (--full: whole text; contentControls chain + inlineContentControls for w:sdt controls), comment threads, tracked changes, header/footer text, document properties (custom values plus their vt customTypes)
+ieumoffice docs apply report.docx --ops ops.json [--dry-run]           # apply_ops entries + insert_content / replace_blocks / insert_image / insert_chart / edit_chart / set_header_footer / reply_comment / resolve_comment / set_properties (document metadata; numeric/boolean custom values keep or take a typed vt type) / remove_parts (strip customXml + web-extension parts)
 ieumoffice docs check report.docx --json                               # fields without results, broken bookmark references, stale TOC, missing images, empty charts/headings, heading level skips, placeholder text, pending revisions, open comments; exit 0
 ieumoffice docs compare original.docx revised.docx --out redline.docx [--author name] [--date iso] [--granularity word|char] [--ignore formatting,case,whitespace]   # redline: the revised document with the differences marked as tracked insertions and deletions; --json reports the counts
-ieumoffice docs apply form.odt --ops ops.json         # an .odt is written back as .odt (narrow patch); --out keeps .odt; comment / tracked-change / TOC / equation / chart / text box / column / watermark ops → unsupported, locked cells and locked objects → op_rejected
+ieumoffice docs apply form.odt --ops ops.json         # an .odt is written back as .odt (narrow patch); --out keeps .odt; comment / tracked-change / TOC / equation / chart / text box / column / watermark / remove_parts ops → unsupported, locked cells and locked objects → op_rejected
 ieumoffice merge invoice-template.docx --data values.json --out invoice.docx [--force] [--strict]   # fill {{key}} placeholders in a docx/pptx/xlsx template; reports used, unused and unresolved keys (or --data '{"name":"Ada"}')
 ieumoffice pdf read scan.pdf [--page 3 | --range 1-5] [--full] --json     # text layer page by page (pages 1-20 by default, 4000 characters each) with page sizes and metadata; headless pdfium, no app process
 ieumoffice pdf read book.pdf --structured --range 1-5 --json   # same shape, each page's text from the document tree: headings, lists, tables, captions, footnotes (detail.structured: true)
@@ -98,7 +101,7 @@ ieumoffice skill remove codex   # remove a copy this app wrote (here: the older 
 ieumoffice install-cli   # put ieumoffice on the PATH
 ieumoffice mcp --http 3000 [--host 127.0.0.1] [--token secret]   # Streamable HTTP for clients on other machines; omit --http for stdio
 ieumoffice mcp --compact-schemas   # advertise ops/cells/data as plain arrays instead of the per-op schema (smaller tools/list; also GENOFFICE_MCP_COMPACT_SCHEMAS=1)
-ieumoffice mcp install all   # register the stdio server with every coding agent found (or one: claude-code, codex, cursor, gemini, copilot, opencode, windsurf)
+ieumoffice mcp install all   # register the stdio server with every coding agent found (or one: claude-code, codex, cursor, gemini, copilot, opencode, windsurf, dsh)
 ieumoffice mcp list          # each agent's MCP config and whether ieumoffice is registered; `mcp uninstall <agent>` removes the entry
 ```
 
@@ -184,8 +187,9 @@ runs `IeumOffice.exe` as Node on the bundled `genoffice.cjs` with
 `ELECTRON_RUN_AS_NODE=1`, the same entry the app's Settings snippet shows): `~/.claude.json` (Claude Code, user scope; `CLAUDE_CONFIG_DIR`
 honoured), `~/.codex/config.toml` (`[mcp_servers.ieumoffice]`; `CODEX_HOME`),
 `~/.cursor/mcp.json`, `~/.gemini/settings.json`, `~/.copilot/mcp-config.json`
-(Copilot CLI), `~/.config/opencode/opencode.json` and
-`~/.codeium/windsurf/mcp_config.json`. Only the `ieumoffice` key is touched; an
+(Copilot CLI), `~/.config/opencode/opencode.json`,
+`~/.codeium/windsurf/mcp_config.json` and
+`~/.dsh/cordis.patch.yml` (DeepSeek Harness). Only the `ieumoffice` key is touched; an
 entry of that name starting another program is reported as `occupied` and left
 alone unless `--force`, a file that cannot be parsed is reported as `manual`
 with the snippet to paste. `--dir` names the agent's config folder for one

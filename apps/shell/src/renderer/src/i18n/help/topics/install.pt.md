@@ -2,7 +2,7 @@
 
 Todas as versões são publicadas na [página de lançamentos](https://github.com/SeuPut0705/seuoffice/releases/latest) do projeto no GitHub.
 
-## Escolher o ficheiro para a sua máquina
+## Escolher o arquivo para a sua máquina
 
 | Plataforma             | Requisitos                                     | Ficheiro                        |
 | ---------------------- | ---------------------------------------------- | ------------------------------- |

@@ -83,7 +83,7 @@ npm run native:build -w @genoffice/sheets
 
 **(2) 만든 파일을 설치 파일 도구가 찾는 자리에 복사합니다.**
 
-Windows에서 만들면 결과가 `target\release`에 생기는데, 설치 파일 도구는 `target\x86_64-pc-windows-gnu\release`에서 찾습니다. 복사해 두지 않으면 (3)이 "win extraResources source missing"이라며 멈춥니다.
+Windows에서 만들면 결과가 `target\release`에 생기는데, 설치 파일 도구는 `target\x86_64-pc-windows-gnu\release`를 먼저 찾습니다. 그 자리에 파일이 없으면 x64 PC에서는 `target\release`의 것을 대신 씁니다. 하지만 예전에 복사해 둔 파일이 남아 있으면 그것이 먼저 쓰이므로, 아래처럼 매번 복사해 둡니다.
 
 ```powershell
 # PowerShell

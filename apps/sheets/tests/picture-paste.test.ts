@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 
 import {
   fitPictureFrame,
+  htmlIsFromExcel,
   pickTransferImage,
   pictureFileProblem,
   pointInRect,
@@ -36,19 +37,78 @@ describe('pickTransferImage', () => {
     expect(pickTransferImage(data)).not.toBeNull()
   })
 
-  it('leaves spreadsheet cells (table markup plus a rendered bitmap) to the cell paste', () => {
+  it('leaves an Excel copy (its markup plus a rendered bitmap) to the cell paste', () => {
     const data = transfer([stringItem('text/plain'), stringItem('text/html'), imageItem()], {
       'text/plain': '1\t2\n3\t4',
-      'text/html': '<table><tr><td>1</td><td>2</td></tr></table>',
+      'text/html':
+        '<table xmlns:x="urn:schemas-microsoft-com:office:excel"><tr><td class="xl1">1</td></tr></table>',
     })
     expect(pickTransferImage(data)).toBeNull()
   })
 
-  it('leaves plain text with a stray bitmap to the cell paste', () => {
+  // A range copied in this editor carries a picture of the cells next to its
+  // own table markup (copy-picture.ts), and that markup has no Excel marker.
+  // Claiming the picture would float a bitmap where the cells should paste.
+  // The markup is what a paste reads back, not what the copy wrote: the
+  // clipboard hands it over inside a document or behind a charset tag.
+  it.each([
+    ['as written', ''],
+    ['inside the document the clipboard write wraps it in', '<html><head></head><body>'],
+    ["behind the pasteboard's charset tag", "<meta charset='utf-8'>"],
+  ])("leaves this editor's own range copy to the cell paste (%s)", (_name, prefix) => {
+    const data = transfer([stringItem('text/plain'), stringItem('text/html'), imageItem()], {
+      'text/plain': 'a\tb\tc',
+      'text/html':
+        prefix +
+        '<google-sheets-html-origin><table data-copy-id="copy-1" xmlns="http://www.w3.org/1999/xhtml" cellspacing="0" cellpadding="0" dir="ltr" style="table-layout:fixed">' +
+        '<colgroup><col width="88" /><col width="88" /><col width="88" /></colgroup>\n' +
+        '<tbody><tr style="height: 24px;"><td>a</td><td>b</td><td>c</td></tr></tbody></table>',
+    })
+    expect(pickTransferImage(data)).toBeNull()
+  })
+
+  it('claims a picture copied from an Office app, whose HTML carries the Office namespace', () => {
+    const data = transfer([stringItem('text/html'), imageItem()], {
+      'text/html':
+        '<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word"><body><img src="file:///clip_image001.png"></body></html>',
+    })
+    expect(pickTransferImage(data)).not.toBeNull()
+  })
+
+  it('leaves a table copied from an Office app to the cell paste', () => {
+    const data = transfer([stringItem('text/html'), imageItem()], {
+      'text/html':
+        '<html xmlns:o="urn:schemas-microsoft-com:office:office"><body><table><tr><td>1</td></tr></table></body></html>',
+    })
+    expect(pickTransferImage(data)).toBeNull()
+  })
+
+  it('leaves text copied from an Office app (with its incidental bitmap) to the cell paste', () => {
+    const data = transfer([stringItem('text/plain'), stringItem('text/html'), imageItem()], {
+      'text/plain': 'hello',
+      'text/html':
+        '<html xmlns:o="urn:schemas-microsoft-com:office:office"><body><p class="MsoNormal">hello</p></body></html>',
+    })
+    expect(pickTransferImage(data)).toBeNull()
+  })
+
+  // The engine pastes the file of every transfer that carries one, unless the
+  // HTML comes from Excel. A picture left to the engine is a drawing in its
+  // own model, which the save path never sees: it is visible, and it is gone
+  // after the next save (genoffice#2566).
+  it('claims the bitmap of a table copy that is not from Excel', () => {
+    const data = transfer([stringItem('text/plain'), stringItem('text/html'), imageItem()], {
+      'text/plain': '1\t2\n3\t4',
+      'text/html': '<table><tr><td>1</td><td>2</td></tr></table>',
+    })
+    expect(pickTransferImage(data)).not.toBeNull()
+  })
+
+  it('claims the stray bitmap of a text copy, because the engine pastes the file', () => {
     const data = transfer([stringItem('text/plain'), imageItem('image/tiff')], {
       'text/plain': 'hello',
     })
-    expect(pickTransferImage(data)).toBeNull()
+    expect(pickTransferImage(data)).not.toBeNull()
   })
 
   it('ignores transfers without an image file', () => {
@@ -57,6 +117,15 @@ describe('pickTransferImage', () => {
     ).toBeNull()
     expect(pickTransferImage(transfer([]))).toBeNull()
     expect(transferHasImage(transfer([stringItem('text/html')]))).toBe(false)
+  })
+
+  it('reads the Excel markers the engine reads', () => {
+    expect(
+      htmlIsFromExcel('<table xmlns:x="urn:schemas-microsoft-com:office:excel"></table>'),
+    ).toBe(true)
+    expect(htmlIsFromExcel('<td class="xl1">a</td>')).toBe(true)
+    expect(htmlIsFromExcel('<html><body>hi</body></html>')).toBe(false)
+    expect(htmlIsFromExcel('')).toBe(false)
   })
 
   it('reports an image during drag-over even before the file is readable', () => {

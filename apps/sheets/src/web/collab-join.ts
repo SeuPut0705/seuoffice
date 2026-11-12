@@ -3,6 +3,7 @@
  * declares, and the adapter it builds once the renderer shows the workbook.
  */
 import { joinPageCollab, webLanguage, type PageCollab } from '@seuoffice/web-platform'
+import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { handleSave } from '../renderer/save-actions'
 import { setEditRefusalRule } from '../renderer/sheet-protection'
 import { showToast } from '../renderer/toast-bus'
@@ -19,13 +20,15 @@ import { refusalIsSilent, sharedWhileCoEditing } from './collab-refusals'
 export interface SheetsRendererHandles {
   readonly runtime: UniverRuntime
   readonly state: LazyWorkbookState
+  /** Base-file coordinates; the save shifts these with the structural journal. */
+  readonly redactionStates: readonly SheetRedactionState[]
 }
 
 /**
  * Bump `schema` when the op format or what the fingerprint covers changes:
  * pages of two schemas must not share a session.
  */
-const FORMAT = { name: 'xlsx', schema: 2 }
+const FORMAT = { name: 'xlsx', schema: 3 }
 
 const noop = (): void => {}
 
@@ -66,7 +69,7 @@ export function joinSheetsCollab(
     format: FORMAT,
     fileName,
     bytes,
-    adapter({ runtime, state }) {
+    adapter({ runtime, state, redactionStates }) {
       // A streamed workbook holds only the cells on screen, so it cannot replay or save the log;
       // throwing here makes the page report collab_unavailable and the host reopen under its lock.
       if (!state.formulaMode || !state.flags.preloadComplete) {
@@ -85,7 +88,13 @@ export function joinSheetsCollab(
           async produceFile() {
             // 'template' builds the same save request but only writes a copy: no reopen, no re-ided sheets
             const outcome = await handleSave(
-              { ...refs, setMessage: noop, openLazyWorkbook: noop, stashViewRestore: noop },
+              {
+                ...refs,
+                setMessage: noop,
+                openLazyWorkbook: noop,
+                stashViewRestore: noop,
+                redactionStates: () => redactionStates,
+              },
               'template',
               true,
             )

@@ -104,9 +104,8 @@ describe('character-unit indents: saving an indent edit', () => {
     const xml = reparsed.internal.documentXml
     expect(xml).toContain('<w:pPr><w:ind w:firstLineChars="0"/></w:pPr>')
     expect(xml).toContain('<w:pPr><w:ind w:firstLineChars="0"/><w:jc w:val="both"/></w:pPr>')
-    expect(reparsed.blocks[0].format?.align).toBeUndefined()
-    expect(reparsed.blocks[0].format?.indentFirstLine).toBeUndefined()
-    expect(reparsed.blocks[1].format).toMatchObject({ align: 'justify' })
+    expect(reparsed.blocks[0].format).toEqual({})
+    expect(reparsed.blocks[1].format).toEqual({ align: 'justify' })
   })
 
   it('an unrelated edit keeps the paragraphs character-indented', async () => {

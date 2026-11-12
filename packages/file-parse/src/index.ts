@@ -16,6 +16,7 @@ export {
   type DiagramPictureExt,
 } from './attachable'
 export { diagramPictureExtOf, diagramToText } from './diagram'
+export { DamagedFileError } from './damaged-file'
 export { docToText } from './doc'
 export { docxToText } from './docx'
 export { checkedHwpBytes, hwpMemosOf, hwpToText, rhwpWasmPath, type HwpMemo } from './hwp'

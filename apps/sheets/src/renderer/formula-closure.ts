@@ -111,12 +111,20 @@ export function parseFormulaReferences(formula: string): FormulaReference[] {
 }
 
 const EXTERNAL_WORKBOOK_PATTERN = /\[(?:\d+|[^[\]]*\.xl\w*)\]/i
+/// Excel error literals (`=D2*#REF!` after a deleted column). They are values
+/// the engine evaluates, not names; left in place their letters read as a
+/// defined name and the formula is wrongly pinned to its (often absent) cache.
+/// A sheet qualifier (`Sheet1!#REF!`) goes with it, or it would dangle.
+const ERROR_LITERAL_PATTERN =
+  /(?:'(?:[^']|'')*'!|[\p{L}\p{N}_.]+!)?#(?:NULL!|DIV\/0!|VALUE!|REF!|NAME\?|NUM!|N\/A|SPILL!|CALC!|GETTING_DATA)/gu
 
 /// Identifiers in an unquoted formula segment that are neither references,
 /// function calls nor TRUE/FALSE: the defined names it uses.
 function namesInSegment(segment: string): string[] {
   // Strip references (and their qualifiers) so ref letters don't register.
-  const stripped = segment.replace(FORMULA_REFERENCE_PATTERN, (_full, lead: string) => `${lead} `)
+  const stripped = segment
+    .replace(ERROR_LITERAL_PATTERN, ' ')
+    .replace(FORMULA_REFERENCE_PATTERN, (_full, lead: string) => `${lead} `)
   const names: string[] = []
   for (const match of stripped.matchAll(/[\p{L}_][\p{L}\p{N}_.]*/gu)) {
     const before = match.index === 0 ? '' : (stripped[match.index - 1] ?? '')
@@ -199,7 +207,8 @@ function callsIndirect(formula: string): boolean {
 /// Defined names whose formulas the engine recalculates the way Excel does,
 /// lowercased and mapped to their bodies: a single workbook-scoped
 /// definition the engine accepted, with absolute references only, no
-/// INDIRECT call, and no names outside this set. Names defined at
+/// INDIRECT call, no error literal (a broken `#REF!` body keeps the cached
+/// value), and no names outside this set. Names defined at
 /// more than one scope stay out (the engine keys names by text alone and
 /// ignores the sheet-scope precedence), as do names in a reference cycle.
 /// The functions a body calls are checked per using formula, where the
@@ -218,6 +227,7 @@ export function recalculableDefinedNames(
     const only = list.length === 1 ? list[0] : undefined
     if (!only || only.sheetIndex !== undefined || rejected.has(only.name)) continue
     if (hasRelativeReference(only.formula) || callsIndirect(only.formula)) continue
+    if (only.formula.search(ERROR_LITERAL_PATTERN) !== -1) continue
     pending.set(key, only.formula)
   }
   // Accept names bottom-up: a name joins once every name its body uses has.

@@ -98,6 +98,7 @@ const api: HwpApi = {
   untitledCopy: () => ipcRenderer.invoke(HWP_CHANNELS.untitledCopy),
   readFile: (path) => ipcRenderer.invoke(HWP_CHANNELS.readFile, path),
   trackingDropped: () => ipcRenderer.invoke(HWP_CHANNELS.trackingDropped),
+  structureUnverified: () => ipcRenderer.invoke(HWP_CHANNELS.structureUnverified),
   beginSave: (mode) => ipcRenderer.invoke(HWP_CHANNELS.beginSave, mode),
   newTabs: (bytes, format) => ipcRenderer.invoke(HWP_CHANNELS.newTabs, bytes, format),
   commitSave: (bytes, tabs, options) =>

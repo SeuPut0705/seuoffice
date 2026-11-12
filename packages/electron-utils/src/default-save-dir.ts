@@ -70,7 +70,7 @@ function isDirectory(dir: string): boolean {
  * at startup. Creating one level at a time from the nearest existing ancestor
  * fails fast instead.
  */
-function createDirLevels(dir: string): void {
+export function createDirLevels(dir: string): void {
   const missing: string[] = []
   let current = resolve(dir)
   while (!isDirectory(current)) {

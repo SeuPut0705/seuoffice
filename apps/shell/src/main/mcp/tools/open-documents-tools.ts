@@ -213,8 +213,11 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
         'family content tools (insert_content / apply_ops / apply_sheet_ops / apply_slide_ops): no ' +
         'session is needed, and the UI switches to that tab so the user sees the change land. ' +
         'A mind map (kind "mindmap") reads as its outline text; there is no tool that edits one. ' +
-        'PDF tabs are listed but cannot be read or closed here: the pdf app is a viewer, so an ' +
-        'open PDF has no readable or savable state through this tool. HWP tabs can be read ' +
+        'PDF tabs are listed and can be closed, but this tool does not read or save them: the ' +
+        'pdf app is a viewer, so an open PDF has no live editable content. Read a PDF with ' +
+        'read_pdf; it cannot be written back. Closing one just ' +
+        'drops the tab — a PDF with unsaved annotations (its only unsaved state) must be closed ' +
+        'with unsaved:"discard". HWP tabs can be read ' +
         '(paragraphs as lines, tables as " | " rows) but not edited or saved here: "close" on ' +
         'an HWP tab with unsaved changes fails unless unsaved:"discard" is passed. ' +
         'A book (kind "epub") reads as its text in reading order, headings as "#" lines; ' +
@@ -253,8 +256,8 @@ export function createOpenDocumentTools(deps: OpenDocumentsDeps): McpToolDefinit
         if (action === 'read') {
           if (!READABLE_KINDS.has(doc.kind)) {
             throw new Error(
-              `"${doc.title}" is a PDF: the pdf app is a viewer, so an open PDF has no readable ` +
-                'content through this tool',
+              `"${doc.title}" is a PDF: the pdf app is a viewer, so this tool cannot read it — ` +
+                'read_pdf returns its text',
             )
           }
           return {
