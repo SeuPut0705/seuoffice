@@ -51,8 +51,10 @@ could be offered upstream.
    grows by doubling while that stays below a quarter of the bound and then
    to the bound in one step, so its capacity stops at the bound and a
    reallocation holds 1.25 times it at most. A lookaround first gives back
-   the capacity the stack it sets aside does not use, so the two stacks
-   together stay near the bound. After each match attempt a stack above 4,096
+   the capacity the stack it sets aside does not use, keeping room for it to
+   double so that a loop around the lookaround does not reallocate it every
+   turn, and gives back its own stack before the search goes on; with one
+   lookaround the two stacks hold twice the bound at most. After each match attempt a stack above 4,096
    entries is shrunk back to that, so one large search does not keep its
    memory.
    What the bound costs, with the 2^22 entries `jscompat` sets
@@ -65,9 +67,13 @@ could be offered upstream.
 
    The wasm32 rows are from searches over 1M, 1.5M and 25M characters on
    Node 22. Over 25M the text had already grown the memory, and the search
-   grew it by 83,886,080 bytes, 2^22 × 20. The native peak is the same for a
-   lookahead that grows its own stack after the stack it sets aside reached
-   the bound; without giving that capacity back it was 377 MB.
+   grew it by 83,886,080 bytes, 2^22 × 20. With a lookahead entered while a
+   large stack is set aside the native peak was 209 to 263 MB on the three
+   cases of `tests/limit.rs` (377 MB when the stack set aside kept all its
+   capacity). `tests/backtrack_limit.rs` checks that a lookaround inside a
+   loop that grows the stack costs twice for twice the text: shrinking the
+   stack set aside to its length made each turn reallocate it, and 800,000
+   characters did not finish in 15 minutes.
 2. **A lazy loop over one character matcher takes one character per
    backtrack** (`classicalbacktrack.rs`, `tests/lazy_loop.rs`). It used to
    compute the farthest position the loop could reach before trying the
