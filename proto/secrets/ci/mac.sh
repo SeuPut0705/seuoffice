@@ -121,10 +121,14 @@ hdr "T1b the same with the item probe (macOS key read only)"
 run_to 60 "$OPEN" --probe --service "$SVC" --account "$ACCT" > "$WORK/t1b.out" 2> "$WORK/t1b.err"
 say "T1b exit=$? stdout=$(cat "$WORK/t1b.out") stderr=$(cat "$WORK/t1b.err")"
 
-# answer_prompt <label> <button> <seconds to wait first>: press a button in the keychain prompt
+# answer_prompt <label> <button> <seconds to wait first>: type the keychain password into the prompt, press a button
 answer_prompt() {
+  local ui="$REPO/proto/secrets/ci/click-prompt.applescript"
   sleep "$3"; watch_prompt "$1"
-  osascript "$REPO/proto/secrets/ci/click-prompt.applescript" "$KCPW" "$2" 2>&1 | tee "$OUT/$1-ui.txt" | sed "s/^/[$1] ui: /" | tee -a "$F"
+  osascript "$ui" "$KCPW" - 2>&1 | tee "$OUT/$1-ui.txt" | sed "s/^/[$1] ui: /" | tee -a "$F"
+  screencapture -x "$OUT/$1-typed.png" 2>/dev/null
+  osascript "$ui" - "$2" 2>&1 | tee -a "$OUT/$1-ui.txt" | sed "s/^/[$1] ui: /" | tee -a "$F"
+  sleep 3; screencapture -x "$OUT/$1-after.png" 2>/dev/null
 }
 
 hdr "T3 an updated ad hoc build of Electron (cdhash changes) asks for the same item"
@@ -232,7 +236,7 @@ security default-keychain -d user -s "$KC2"
 security list-keychains -d user -s "$KC2" $ORIG_LIST
 
 mkdir -p "$WORK/S1"; ditto "$ORIG_APP" "$WORK/S1/Electron.app"
-codesign -f -s "$SIGN_ID" --deep "$WORK/S1/Electron.app" 2>&1 | tail -2 | tee -a "$F"
+codesign -f -s "$SIGN_ID" --keychain "$KC" --deep "$WORK/S1/Electron.app" 2>&1 | tail -2 | tee -a "$F"
 say "S1 (installed build, self-signed): $(cdhash "$WORK/S1/Electron.app")"
 codesign -d -r- "$WORK/S1/Electron.app" 2>&1 | grep designated | tee -a "$F"
 export BENCH_USER_DATA="$WORK/ud4"
@@ -241,7 +245,7 @@ item_block "$SVC" "$KC2" | sed -n '/access:/,$p' | tee -a "$F"
 
 mkdir -p "$WORK/S2"; ditto "$WORK/S1/Electron.app" "$WORK/S2/Electron.app"
 /usr/libexec/PlistBuddy -c 'Set :CFBundleVersion 43.8.3-build2' "$WORK/S2/Electron.app/Contents/Info.plist"
-codesign -f -s "$SIGN_ID" --deep "$WORK/S2/Electron.app" 2>&1 | tail -2 | tee -a "$F"
+codesign -f -s "$SIGN_ID" --keychain "$KC" --deep "$WORK/S2/Electron.app" 2>&1 | tail -2 | tee -a "$F"
 say "S2 (updated build, same certificate): $(cdhash "$WORK/S2/Electron.app")"
 ( SEED_MODE=decrypt SEED_RESULT="$WORK/s2-dec.json" run_to 40 "$WORK/S2/Electron.app/Contents/MacOS/Electron" "$SEED_DIR" > "$WORK/s2.log" 2>&1; echo "R4 updated exit=$?" > "$WORK/s2.res" ) &
 SPID=$!
