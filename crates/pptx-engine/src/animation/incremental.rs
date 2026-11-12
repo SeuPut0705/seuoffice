@@ -258,7 +258,7 @@ fn append_bld_ps(timing: &str, items: &[&Placed<'_>]) -> String {
 pub fn patch_slide_timing_incremental_xml(
     body_suffix: &str,
     anims: &[SlideAnimation],
-) -> Option<String> {
+) -> Option<Result<String, String>> {
     let timing_m = timing_re().exec(body_suffix)?;
     let timing = timing_m.as_str();
     let old = read_slide_timing_xml(body_suffix);
@@ -314,13 +314,16 @@ pub fn patch_slide_timing_incremental_xml(
             &timing[..child_close],
             &timing[child_close..]
         );
-        let new_timing = append_missing_media_nodes(&new_timing, added, &mut ids);
+        let new_timing = match append_missing_media_nodes(&new_timing, added, &mut ids) {
+            Ok(with_media) => with_media,
+            Err(error) => return Some(Err(error)),
+        };
         let items: Vec<&Placed<'_>> = groups
             .iter()
             .flat_map(|g| g.items.iter().filter(|p| !is_media_effect(p.a.effect)))
             .collect();
         let new_timing = append_bld_ps(&new_timing, &items);
-        return Some(splice(&new_timing));
+        return Some(Ok(splice(&new_timing)));
     }
 
     // B. One item changed
@@ -373,11 +376,11 @@ pub fn patch_slide_timing_incremental_xml(
                 grp_id,
             },
         );
-        return Some(splice(&format!(
+        return Some(Ok(splice(&format!(
             "{}{par}{}",
             &timing[..start],
             &timing[end..]
-        )));
+        ))));
     }
 
     None
@@ -385,12 +388,15 @@ pub fn patch_slide_timing_incremental_xml(
 
 /// Set the slide's whole animation list: the incremental patch where it
 /// applies, else the rebuild of the main sequence.
-pub fn set_slide_animations(slide: &mut Slide, anims: &[SlideAnimation]) {
+pub fn set_slide_animations(slide: &mut Slide, anims: &[SlideAnimation]) -> Result<(), String> {
     let body_suffix = slide.body_suffix.as_deref().unwrap_or("");
-    let patched = patch_slide_timing_incremental_xml(body_suffix, anims)
-        .unwrap_or_else(|| patch_slide_timing_xml(body_suffix, anims));
+    let patched = match patch_slide_timing_incremental_xml(body_suffix, anims) {
+        Some(incremental) => incremental?,
+        None => patch_slide_timing_xml(body_suffix, anims)?,
+    };
     slide.body_suffix.set(patched);
     slide.structure_dirty.set(true);
+    Ok(())
 }
 
 /// The slide's animation list.

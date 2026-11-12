@@ -46,7 +46,9 @@ pub use regex::{
 pub use replace::{
     get_substitution, replace_first, replace_first_string, slice_utf16, string_less_than,
 };
-pub use search::{index_of, last_index_of, prefix_utf16, regex_escape, replace_first_with};
+pub use search::{
+    index_of, last_index_of, prefix_utf16, regex_escape, replace_first_with, try_replace_first_with,
+};
 pub use sort::sort_by_number;
 pub use space::{is_js_space, trim, trim_start};
 pub use string::{pad_start, truthy};

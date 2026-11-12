@@ -2,8 +2,8 @@
 //! element's original XML, and the branch scan of an `<mc:AlternateContent>` anchor.
 
 use jscompat::{
-    JsNum, JsRegex, index_of, js_regex, last_index_of, math_max, math_min, math_round,
-    number_truthy, replace_first_with, try_js_regex,
+    JsNum, index_of, js_regex, last_index_of, math_max, math_min, math_round, number_truthy,
+    replace_first_with, try_js_regex,
 };
 use serde::de::Error as _;
 use serde::{Deserialize, Deserializer, Serialize};
@@ -422,13 +422,24 @@ fn stroke_fill_xml(stroke: Option<&StrokePatch>) -> String {
 
 /// Set/replace/remove one attribute inside an `<a:ln>` attribute string; the value goes in as given.
 fn set_ln_attr(attrs: &str, name: &str, value: Option<&str>) -> Result<String, String> {
-    let re = JsRegex::new(&format!(r#"\s{name}="[^"]*""#), "").map_err(|e| e.to_string())?;
+    // `name` is one of the attributes of an `<a:ln>` this file sets: a literal pattern each
+    macro_rules! attr_re {
+        ($name:literal) => {
+            js_regex!(concat!(r"\s", $name, r#"="[^"]*""#))
+        };
+    }
+    let re = match name {
+        "w" => attr_re!("w"),
+        "cap" => attr_re!("cap"),
+        "cmpd" => attr_re!("cmpd"),
+        _ => return Err(format!("no attribute pattern for {name}")),
+    };
     let Some(value) = value else {
-        return Ok(replace_first_with(&re, attrs, |_| String::new()));
+        return Ok(replace_first_with(re, attrs, |_| String::new()));
     };
     let decl = format!("{name}=\"{value}\"");
     Ok(if re.test(attrs) {
-        replace_first_with(&re, attrs, |_| format!(" {decl}"))
+        replace_first_with(re, attrs, |_| format!(" {decl}"))
     } else {
         format!(" {decl}{attrs}")
     })

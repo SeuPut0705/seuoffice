@@ -71,21 +71,21 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "animation.elementSpid" => value(element_spid(&element_with(None, Some(text), None))),
         "animation.buildTimingXml" => {
             let anims: Vec<SlideAnimation> = required(args, "anims")?;
-            value(build_timing_xml(&anims))
+            value(build_timing_xml(&anims)?)
         }
         "animation.patchSlideTimingXml" => {
             let anims: Vec<SlideAnimation> = required(args, "anims")?;
-            value(patch_slide_timing_xml(text, &anims))
+            value(patch_slide_timing_xml(text, &anims)?)
         }
         "animation.readSlideTimingXml" => value(read_slide_timing_xml(text)),
         "animation.patchSlideTimingIncrementalXml" => {
             let anims: Vec<SlideAnimation> = required(args, "anims")?;
-            value(patch_slide_timing_incremental_xml(text, &anims))
+            value(patch_slide_timing_incremental_xml(text, &anims).transpose()?)
         }
         "animation.setSlideAnimations" => {
             let anims: Vec<SlideAnimation> = required(args, "anims")?;
             let mut slide = slide_of(text, args)?;
-            set_slide_animations(&mut slide, &anims);
+            set_slide_animations(&mut slide, &anims)?;
             value(slide)
         }
         "animation.getSlideAnimations" => value(get_slide_animations(&slide_of(text, args)?)),

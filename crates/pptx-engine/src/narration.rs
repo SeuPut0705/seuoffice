@@ -156,7 +156,7 @@ pub fn add_narration(
         media_kind: Some(MediaKind::Audio),
     }];
     anims.extend(get_slide_animations(slide));
-    set_slide_animations(slide, &anims);
+    set_slide_animations(slide, &anims)?;
     let marked = mark_narration((*slide.body_suffix).as_deref().unwrap_or_default(), spid.0);
     slide.body_suffix.set(marked);
     Ok(Some(added))
@@ -207,10 +207,19 @@ pub fn set_show_narration(opened: &mut OpenedPptx) -> Result<(), String> {
     if let Some(show_pr) = js_regex!(r"<p:showPr\b[^>]*?(\/?)>").exec(&xml) {
         let mut tag = show_pr.as_str().to_owned();
         for (name, value) in flags {
-            let has =
-                JsRegex::new(&format!("\\s{name}=\"[^\"]*\""), "").map_err(|e| e.to_string())?;
+            // `name` is one of the two attributes of `flags`: a literal pattern each
+            macro_rules! attr_re {
+                ($name:literal) => {
+                    js_regex!(concat!(r"\s", $name, r#"="[^"]*""#))
+                };
+            }
+            let has = match name {
+                "showNarration" => attr_re!("showNarration"),
+                "useTimings" => attr_re!("useTimings"),
+                _ => return Err(format!("no attribute pattern for {name}")),
+            };
             tag = if has.test(&tag) {
-                replace_first_string_regex(&has, &tag, &format!(" {name}=\"{value}\""))
+                replace_first_string_regex(has, &tag, &format!(" {name}=\"{value}\""))
             } else {
                 replace_first_string_regex(
                     js_regex!(r"^<p:showPr"),

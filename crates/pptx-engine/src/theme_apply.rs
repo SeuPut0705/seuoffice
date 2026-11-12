@@ -2,8 +2,6 @@
 //! <a:clrScheme> and <a:fontScheme> of every ppt/theme/theme*.xml in place,
 //! and remaps the deck's explicit srgbClr colors onto the new palette.
 
-use std::sync::LazyLock;
-
 use jscompat::{
     JsMap, JsNum, JsObject, JsRegex, Radix, js_regex, math_max, math_min, math_round, pad_start,
     parse_int, replace_first_with, slice_utf16, sort_by_number, string_less_than,
@@ -32,22 +30,31 @@ impl ThemeSpec {
     }
 }
 
-const SCHEME_KEYS: [&str; 12] = [
-    "dk1", "lt1", "dk2", "lt2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
-    "hlink", "folHlink",
-];
-
 /// `new RegExp(`<a:${key}>[\\s\\S]*?</a:${key}>`)` per scheme key.
-static SCHEME_SLOTS: LazyLock<Vec<(&str, JsRegex)>> = LazyLock::new(|| {
-    SCHEME_KEYS
-        .iter()
-        .map(|key| {
-            let slot = JsRegex::new(&format!(r"<a:{key}>[\s\S]*?</a:{key}>"), "")
-                .expect("a scheme key pattern compiles");
-            (*key, slot)
-        })
-        .collect()
-});
+fn scheme_slots() -> [(&'static str, &'static JsRegex); 12] {
+    macro_rules! slot {
+        ($key:literal) => {
+            (
+                $key,
+                js_regex!(concat!("<a:", $key, r">[\s\S]*?</a:", $key, ">")),
+            )
+        };
+    }
+    [
+        slot!("dk1"),
+        slot!("lt1"),
+        slot!("dk2"),
+        slot!("lt2"),
+        slot!("accent1"),
+        slot!("accent2"),
+        slot!("accent3"),
+        slot!("accent4"),
+        slot!("accent5"),
+        slot!("accent6"),
+        slot!("hlink"),
+        slot!("folHlink"),
+    ]
+}
 
 fn hex6(c: &str) -> String {
     slice_utf16(c.strip_prefix('#').unwrap_or(c), 0.0, Some(6.0)).to_uppercase()
@@ -73,7 +80,7 @@ fn between_groups(pattern: &JsRegex, text: &str, value: &str) -> String {
 pub fn patch_theme_xml(xml: &str, spec: &ThemeSpec) -> String {
     let mut out = xml.to_owned();
     // Colors: replace the whole <a:dk1>...</a:dk1> section per key (sysClr/srgbClr both become srgbClr)
-    for (key, slot) in SCHEME_SLOTS.iter() {
+    for (key, slot) in scheme_slots() {
         let Some(color) = truthy(spec.color(key)) else {
             continue;
         };

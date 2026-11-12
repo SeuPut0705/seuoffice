@@ -148,11 +148,13 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             );
             let child_xml: String = arg(args, "childXml")?.unwrap_or_default();
             let child = element_with(Some(String::new()), Some(&child_xml), nv_id_arg(args)?);
-            value(group_child_durable_id(&grp, &child))
+            value(group_child_durable_id(&grp, &child)?)
         }
         "redaction-xml.constants" => redaction_constant(&required::<String>(args, "name")?),
         "redaction-xml.redactExtXml" => value(redact_ext_xml(text)),
-        "redaction-xml.hasRedactExtIn" => value(has_redact_ext_in(text)),
+        "redaction-xml.hasRedactExtIn" => {
+            value(has_redact_ext_in(text).map_err(|error| error.to_string())?)
+        }
         "redaction-xml.syncRedactExt" => {
             let label: Option<String> = arg(args, "label")?;
             value(
@@ -174,10 +176,13 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
                 tree.get(required::<String>(args, "name")?.as_str()),
             ))
         }
-        "redaction-xml.stripRedactExt" => value(strip_redact_ext(text)),
-        "redaction-xml.setRedactExt" => {
-            value(set_redact_ext(text, &required::<String>(args, "label")?))
+        "redaction-xml.stripRedactExt" => {
+            value(strip_redact_ext(text).map_err(|error| error.to_string())?)
         }
+        "redaction-xml.setRedactExt" => value(
+            set_redact_ext(text, &required::<String>(args, "label")?)
+                .map_err(|error| error.to_string())?,
+        ),
         "model3d.constants" => model3d_constant(&required::<String>(args, "name")?),
         "model3d.model3dFraming" => {
             let bounds: Option<GlbBounds> = arg(args, "bounds")?;

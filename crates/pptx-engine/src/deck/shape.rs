@@ -5,8 +5,9 @@
 use std::sync::Arc;
 
 use jscompat::{
-    JsNum, JsObject, JsRegex, Slot, is_js_space, js_regex, math_max, math_min, math_round,
+    JsNum, JsObject, Slot, TryJsRegex, is_js_space, js_regex, math_max, math_min, math_round,
     number_to_string, number_truthy, regex_escape, replace_first_with, trim,
+    try_replace_first_with,
 };
 use serde::{Deserialize, Deserializer};
 use serde_json::Value;
@@ -425,8 +426,23 @@ pub struct TextBodyPropsPatch {
 
 /// `openTag.replace(/\s+name="[^"]*"/, '')`, then `name="value"` first when given.
 fn set_attr(open_tag: &mut String, name: &str, value: Option<&str>) {
-    if let Ok(re) = JsRegex::new(&format!(r#"\s+{name}="[^"]*""#), "") {
-        *open_tag = replace_first_with(&re, open_tag, |_| String::new());
+    // `name` is one of the attributes this file sets: a literal pattern each
+    macro_rules! attr_re {
+        ($name:literal) => {
+            js_regex!(concat!(r"\s+", $name, r#"="[^"]*""#))
+        };
+    }
+    let re = match name {
+        "vert" => Some(attr_re!("vert")),
+        "wrap" => Some(attr_re!("wrap")),
+        "lIns" => Some(attr_re!("lIns")),
+        "tIns" => Some(attr_re!("tIns")),
+        "rIns" => Some(attr_re!("rIns")),
+        "bIns" => Some(attr_re!("bIns")),
+        _ => None,
+    };
+    if let Some(re) = re {
+        *open_tag = replace_first_with(re, open_tag, |_| String::new());
     }
     if let Some(value) = value
         && let Some(rest) = open_tag.strip_prefix("<a:bodyPr")
@@ -1237,7 +1253,7 @@ pub fn set_element_redaction(
     };
     let clean = trim(label.unwrap_or_default());
     let next = if clean.is_empty() {
-        strip_redact_ext(&patched_element_xml(el))
+        strip_redact_ext(&patched_element_xml(el)).map_err(|limit| limit.to_string())?
     } else {
         sync_redact_ext(&patched_element_xml(el), "p:spPr", Some(clean))
             .map_err(|error| error.to_string())?
@@ -1371,7 +1387,7 @@ pub fn replace_picture_bytes(
     );
     if has_model3d && let Some(previous) = previous_rid.filter(|p| !p.is_empty()) {
         // the id comes from the document: escaped, not pasted
-        let re = JsRegex::new(
+        let re = TryJsRegex::new(
             &format!(
                 r#"(<am3d:blip\b[^>]*\br:embed="){}""#,
                 regex_escape(&previous)
@@ -1379,9 +1395,10 @@ pub fn replace_picture_bytes(
             "",
         )
         .map_err(|error| error.to_string())?;
-        xml = replace_first_with(&re, &xml, |m| {
+        xml = try_replace_first_with(&re, &xml, |m| {
             format!("{}{rid}\"", m.get(1).unwrap_or_default())
-        });
+        })
+        .map_err(|limit| limit.to_string())?;
     }
     xml = replace_first_with(
         js_regex!(r"<a:ext\b[^>]*>\s*<\w+:svgBlip\b[\s\S]*?<\/a:ext>"),

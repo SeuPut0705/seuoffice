@@ -3,7 +3,7 @@
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
-use jscompat::{JsRegex, Radix, RegexSyntaxError, js_regex, parse_int, to_number, value_truthy};
+use jscompat::{Radix, RegexError, TryJsRegex, js_regex, parse_int, to_number, value_truthy};
 use serde_json::{Map, Value};
 
 static EMPTY_NODE: LazyLock<Value> = LazyLock::new(|| Value::Object(Map::new()));
@@ -122,9 +122,12 @@ pub fn creation_id_xml(uuid: &str) -> String {
 /// Any `<Default>` already declaring this extension, whatever its attribute
 /// order or quoting. `ext` is pasted into the pattern unescaped, so it can be
 /// a pattern that does not compile: that throws, as `new RegExp` does.
-pub fn has_default_for(ct: &str, ext: &str) -> Result<bool, RegexSyntaxError> {
-    let re = JsRegex::new(&format!(r#"\bExtension\s*=\s*(["']){ext}\1"#), "")?;
-    Ok(js_regex!(r"<Default\b[^>]*\/?>")
-        .find_iter(ct)
-        .any(|tag| re.test(tag.as_str())))
+pub fn has_default_for(ct: &str, ext: &str) -> Result<bool, RegexError> {
+    let re = TryJsRegex::new(&format!(r#"\bExtension\s*=\s*(["']){ext}\1"#), "")?;
+    for tag in js_regex!(r"<Default\b[^>]*\/?>").find_iter(ct) {
+        if re.try_test(tag.as_str())? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }

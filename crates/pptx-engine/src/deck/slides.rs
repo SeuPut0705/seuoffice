@@ -11,7 +11,7 @@
 use std::collections::HashSet;
 
 use jscompat::{
-    JsRegex, js_regex, math_max, math_min, math_round, number_to_string, number_truthy,
+    TryJsRegex, js_regex, math_max, math_min, math_round, number_to_string, number_truthy,
     regex_escape, replace_first_string, replace_first_with, slice_utf16, to_number,
 };
 use serde::{Deserialize, Serialize};
@@ -168,12 +168,13 @@ fn register_new_slide(
         .map(|r| r.id.clone())
         .filter(|id| !id.is_empty());
     let src_tag = match src_rid {
-        Some(rid) => JsRegex::new(
+        Some(rid) => TryJsRegex::new(
             &format!("<p:sldId\\s[^>]*r:id=\"{}\"[^>]*/>", regex_escape(&rid)),
             "",
         )
         .map_err(|error| error.to_string())?
-        .exec(&pres)
+        .try_exec(&pres)
+        .map_err(|limit| limit.to_string())?
         .map(|found| found.as_str().to_owned()),
         None => None,
     };
@@ -396,12 +397,12 @@ pub(crate) fn ensure_default_content_type(
     let Some(ct) = read_nonempty(archive, CT_PATH) else {
         return Ok(());
     };
-    let declared = JsRegex::new(
+    let declared = TryJsRegex::new(
         &format!("<Default\\s[^>]*Extension=\"{}\"", regex_escape(ext)),
         "i",
     )
     .map_err(|error| error.to_string())?;
-    if declared.test(&ct) {
+    if declared.try_test(&ct).map_err(|limit| limit.to_string())? {
         return Ok(());
     }
     // Insert before </Types>, never after the XML declaration's closing angle bracket
@@ -593,18 +594,20 @@ pub fn merge_slide_from_source(
                 )?;
                 let new_rid = next_rid();
                 // Rewrite r:embed / r:link references in the slide XML to the new rId
-                let re = JsRegex::new(
+                let re = TryJsRegex::new(
                     &format!("(r:(?:embed|link)=\")({})(\")", regex_escape(&rel.id)),
                     "",
                 )
                 .map_err(|error| error.to_string())?;
-                let rewritten = re.replace_all(&slide_xml, |m| {
-                    format!(
-                        "{}{new_rid}{}",
-                        m.get(1).unwrap_or_default(),
-                        m.get(3).unwrap_or_default()
-                    )
-                });
+                let rewritten = re
+                    .try_replace_all(&slide_xml, |m| {
+                        format!(
+                            "{}{new_rid}{}",
+                            m.get(1).unwrap_or_default(),
+                            m.get(3).unwrap_or_default()
+                        )
+                    })
+                    .map_err(|limit| limit.to_string())?;
                 slide_xml = rewritten;
                 let rel_target = format!("../media/{}", slice_utf16(&dest_path, 10.0, None));
                 new_rels_lines.push(format!(
@@ -720,12 +723,13 @@ pub fn delete_slide(opened: &mut OpenedPptx, index: f64) -> Result<bool, String>
     };
 
     let escaped = regex_escape(&rid);
-    let Some(sld_tag) = JsRegex::new(
+    let Some(sld_tag) = TryJsRegex::new(
         &format!("<p:sldId\\s[^>]*r:id=[\"']{escaped}[\"'][^>]*/>"),
         "",
     )
     .map_err(|error| error.to_string())?
-    .exec(&pres)
+    .try_exec(&pres)
+    .map_err(|limit| limit.to_string())?
     .map(|found| found.as_str().to_owned()) else {
         return Ok(false);
     };
@@ -734,12 +738,13 @@ pub fn delete_slide(opened: &mut OpenedPptx, index: f64) -> Result<bool, String>
         PRES_PATH,
         &replace_first_string(&pres, &sld_tag, ""),
     );
-    let rel_tag = JsRegex::new(
+    let rel_tag = TryJsRegex::new(
         &format!("<Relationship\\s[^>]*Id=[\"']{escaped}[\"'][^>]*/>"),
         "",
     )
     .map_err(|error| error.to_string())?
-    .exec(&pres_rels)
+    .try_exec(&pres_rels)
+    .map_err(|limit| limit.to_string())?
     .map(|found| found.as_str().to_owned());
     if let Some(rel_tag) = rel_tag {
         set_entry(

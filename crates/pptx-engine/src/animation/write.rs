@@ -2,8 +2,8 @@
 //! slide's timing (animation.ts from `tgtElXml` to `patchSlideTimingXml`).
 
 use jscompat::{
-    JsMap, JsRegex, index_of, js_regex, last_index_of, math_max, math_round, number_to_string,
-    replace_first_with, trim,
+    JsMap, JsRegex, TryJsRegex, index_of, js_regex, last_index_of, math_max, math_round,
+    number_to_string, replace_first_with, trim,
 };
 
 use super::incremental::{Balanced, find_balanced_close, make_gen_after_max_id};
@@ -470,7 +470,7 @@ pub(super) fn missing_media_nodes_xml(
     ids: &mut IdGen,
     anims: &[SlideAnimation],
     existing: &str,
-) -> String {
+) -> Result<String, String> {
     let mut seen: Vec<f64> = Vec::new();
     let mut out = String::new();
     for a in anims {
@@ -479,21 +479,28 @@ pub(super) fn missing_media_nodes_xml(
             continue;
         }
         seen.push(a.spid.0);
-        // new RegExp of a number's text: it always compiles
-        let has = JsRegex::new(
+        let target = TryJsRegex::new(
             &format!(r#"<p:spTgt spid="{}""#, number_to_string(a.spid.0)),
             "",
         )
-        .is_ok_and(|target| {
-            js_regex!(r"<p:(?:video|audio)>[\s\S]*?<\/p:(?:video|audio)>")
-                .find_iter(existing)
-                .any(|node| target.test(node.as_str()))
-        });
+        .map_err(|error| error.to_string())?;
+        let mut has = false;
+        for node in
+            js_regex!(r"<p:(?:video|audio)>[\s\S]*?<\/p:(?:video|audio)>").find_iter(existing)
+        {
+            if target
+                .try_test(node.as_str())
+                .map_err(|limit| limit.to_string())?
+            {
+                has = true;
+                break;
+            }
+        }
         if !has {
             out.push_str(&media_node_xml(ids, a.spid.0, kind));
         }
     }
-    out
+    Ok(out)
 }
 
 const PREV_COND_LST: &str = r#"<p:prevCondLst><p:cond evt="onPrev" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:prevCondLst>"#;
@@ -502,9 +509,9 @@ const NEXT_COND_LST: &str = r#"<p:nextCondLst><p:cond evt="onNext" delay="0"><p:
 /// The whole `<p:timing>`. onClick starts a click group; withPrev and
 /// afterPrev join the current one; a list that starts with another trigger
 /// plays group 0 after the slide transition.
-pub fn build_timing_xml(anims: &[SlideAnimation]) -> String {
+pub fn build_timing_xml(anims: &[SlideAnimation]) -> Result<String, String> {
     if anims.is_empty() {
-        return String::new();
+        return Ok(String::new());
     }
     let mut ids = IdGen::after(0.0);
     let root_id = number_to_string(ids.next());
@@ -514,15 +521,15 @@ pub fn build_timing_xml(anims: &[SlideAnimation]) -> String {
         .map(|g| group_par_xml(&mut ids, g))
         .collect();
     let bld_ps = bld_ps_xml(anims);
-    let media_nodes = missing_media_nodes_xml(&mut ids, anims, "");
+    let media_nodes = missing_media_nodes_xml(&mut ids, anims, "")?;
     let bld_lst = if bld_ps.is_empty() {
         String::new()
     } else {
         format!("<p:bldLst>{bld_ps}</p:bldLst>")
     };
-    format!(
+    Ok(format!(
         r#"<p:timing><p:tnLst><p:par><p:cTn id="{root_id}" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst><p:seq concurrent="1" nextAc="seek"><p:cTn id="{seq_id}" dur="indefinite" nodeType="mainSeq"><p:childTnLst>{group_xml}</p:childTnLst></p:cTn>{PREV_COND_LST}{NEXT_COND_LST}</p:seq>{media_nodes}</p:childTnLst></p:cTn></p:par></p:tnLst>{bld_lst}</p:timing>"#
-    )
+    ))
 }
 
 /// `TIMING_RE`.
@@ -607,11 +614,14 @@ fn rebuild_bld_lst(timing: &str, anims: &[SlideAnimation]) -> String {
 /// their bytes; bldP is rewritten, other bld* kept. An empty list removes the
 /// whole `<p:seq>`, and the whole timing (`""`) when the root has nothing
 /// left. `None` where the structure is unexpected.
-fn rebuild_timing_preserving_xml(timing: &str, anims: &[SlideAnimation]) -> Option<String> {
+fn rebuild_timing_preserving_xml(
+    timing: &str,
+    anims: &[SlideAnimation],
+) -> Option<Result<String, String>> {
     let seq_ctn = main_seq_ctn_re().exec(timing);
     if anims.is_empty() {
         let Some(seq_ctn) = seq_ctn else {
-            return Some(rebuild_bld_lst(timing, anims));
+            return Some(Ok(rebuild_bld_lst(timing, anims)));
         };
         let seq_start = last_index_of(timing, "<p:seq", seq_ctn.start() as i64)?;
         let seq_close = find_balanced_close(timing, seq_start, Balanced::Seq)?;
@@ -621,11 +631,11 @@ fn rebuild_timing_preserving_xml(timing: &str, anims: &[SlideAnimation]) -> Opti
             &timing[seq_close + "</p:seq>".len()..]
         );
         let new_timing = rebuild_bld_lst(&new_timing, anims);
-        return Some(if root_child_tn_lst_empty(&new_timing) {
+        return Some(Ok(if root_child_tn_lst_empty(&new_timing) {
             String::new()
         } else {
             new_timing
-        });
+        }));
     }
 
     let mut ids = make_gen_after_max_id(timing);
@@ -657,60 +667,66 @@ fn rebuild_timing_preserving_xml(timing: &str, anims: &[SlideAnimation]) -> Opti
             &timing[child_close..]
         )
     };
-    let new_timing = append_missing_media_nodes(&new_timing, anims, &mut ids);
-    Some(rebuild_bld_lst(&new_timing, anims))
+    Some(
+        append_missing_media_nodes(&new_timing, anims, &mut ids)
+            .map(|with_media| rebuild_bld_lst(&with_media, anims)),
+    )
 }
 
 pub(super) fn append_missing_media_nodes(
     timing: &str,
     anims: &[SlideAnimation],
     ids: &mut IdGen,
-) -> String {
+) -> Result<String, String> {
     let Some(root) = tm_root_ctn_re().exec(timing) else {
-        return timing.to_owned();
+        return Ok(timing.to_owned());
     };
     let Some(child_open) = index_of(timing, CHILD_TN_LST, root.end()) else {
-        return timing.to_owned();
+        return Ok(timing.to_owned());
     };
     let Some(child_close) = find_balanced_close(timing, child_open, Balanced::ChildTnLst) else {
-        return timing.to_owned();
+        return Ok(timing.to_owned());
     };
     let add = missing_media_nodes_xml(
         ids,
         anims,
         timing.get(child_open..child_close).unwrap_or_default(),
-    );
-    if add.is_empty() {
+    )?;
+    Ok(if add.is_empty() {
         timing.to_owned()
     } else {
         format!("{}{add}{}", &timing[..child_close], &timing[child_close..])
-    }
+    })
 }
 
 /// In-place patch of the bodySuffix's `<p:timing>` (after transition, before
 /// extLst). An existing timing has only its main sequence rebuilt; an empty
 /// list removes the main sequence, and the timing once nothing is left.
-pub fn patch_slide_timing_xml(body_suffix: &str, anims: &[SlideAnimation]) -> String {
+pub fn patch_slide_timing_xml(
+    body_suffix: &str,
+    anims: &[SlideAnimation],
+) -> Result<String, String> {
     if let Some(timing_m) = timing_re().exec(body_suffix)
-        && let Some(rebuilt) = rebuild_timing_preserving_xml(timing_m.as_str(), anims)
+        && let Some(rebuilt) =
+            rebuild_timing_preserving_xml(timing_m.as_str(), anims).transpose()?
     {
-        return format!(
+        return Ok(format!(
             "{}{rebuilt}{}",
             &body_suffix[..timing_m.start()],
             &body_suffix[timing_m.end()..]
-        );
+        ));
     }
     let stripped = replace_first_with(timing_re(), body_suffix, |_| String::new());
     if anims.is_empty() {
-        return stripped;
+        return Ok(stripped);
     }
-    let xml = build_timing_xml(anims);
+    let xml = build_timing_xml(anims)?;
     // Before </p:sld>; with a slide-level <p:extLst> (legal after timing, but
     // PowerPoint writes timing first), before the last extLst
     let ext = stripped.rfind("<p:extLst");
     let sld_end = stripped.rfind("</p:sld>");
     let Some(at) = ext.or(sld_end) else {
-        return stripped;
+        return Ok(stripped);
     };
-    format!("{}{xml}{}", &stripped[..at], &stripped[at..])
+    Ok(format!("{}{xml}{}", &stripped[..at], &stripped[at..]))
 }

@@ -237,14 +237,27 @@ fn align_code(a: TextAlign) -> &'static str {
 
 /// Set or remove one attribute of an `<a:pPr` open tag.
 fn set_p_pr_attr(open_tag: &mut String, name: &str, value: Option<&str>) -> Result<(), String> {
-    let re = JsRegex::new(&format!(r#"\s{name}="[^"]*""#), "").map_err(|e| e.to_string())?;
+    // `name` is one of the attributes of an `<a:pPr>` this file sets: a literal pattern each
+    macro_rules! attr_re {
+        ($name:literal) => {
+            js_regex!(concat!(r"\s", $name, r#"="[^"]*""#))
+        };
+    }
+    let re = match name {
+        "algn" => attr_re!("algn"),
+        "rtl" => attr_re!("rtl"),
+        "lvl" => attr_re!("lvl"),
+        "marL" => attr_re!("marL"),
+        "indent" => attr_re!("indent"),
+        _ => return Err(format!("no attribute pattern for {name}")),
+    };
     let Some(value) = value else {
-        *open_tag = replace_first_with(&re, open_tag, |_| String::new());
+        *open_tag = replace_first_with(re, open_tag, |_| String::new());
         return Ok(());
     };
     let decl = format!(" {name}=\"{}\"", escape_xml_attr(value));
     if re.test(open_tag) {
-        *open_tag = replace_first_with(&re, open_tag, |_| decl.clone());
+        *open_tag = replace_first_with(re, open_tag, |_| decl.clone());
     } else if let Some(rest) = open_tag.strip_prefix("<a:pPr") {
         *open_tag = format!("<a:pPr{decl}{rest}");
     }
@@ -687,7 +700,7 @@ fn patch_run_props(run_xml: &str, run: &TextRun) -> Result<String, String> {
         // "Withheld from the model": apply or clear it when the model disagrees
         if let Some(label) = ts(&run.redact) {
             run_xml = sync_redact_ext(&run_xml, "a:rPr", Some(label)).map_err(|e| e.to_string())?;
-        } else if has_redact_ext_in(&run_xml) {
+        } else if has_redact_ext_in(&run_xml).map_err(|e| e.to_string())? {
             run_xml = sync_redact_ext(&run_xml, "a:rPr", None).map_err(|e| e.to_string())?;
         }
     } else {
@@ -861,8 +874,17 @@ fn own_r_pr(run_xml: &str) -> Result<Option<OwnRPr>, String> {
 
 /// First of the two quote groups of `\b<name>=(?:"..."|'...')` that is non-empty (`find(Boolean)`).
 fn quoted_attr(tag: &str, name: &str) -> Result<Option<String>, String> {
-    let re = JsRegex::new(&format!(r#"\b{name}=(?:"([^"]*)"|'([^']*)')"#), "")
-        .map_err(|e| e.to_string())?;
+    // `name` is one of the attributes this file reads: a literal pattern each
+    macro_rules! quoted_re {
+        ($name:literal) => {
+            js_regex!(concat!(r"\b", $name, r#"=(?:"([^"]*)"|'([^']*)')"#))
+        };
+    }
+    let re = match name {
+        "r:id" => quoted_re!("r:id"),
+        "action" => quoted_re!("action"),
+        _ => return Err(format!("no attribute pattern for {name}")),
+    };
     Ok(re.exec(tag).and_then(|m| {
         [m.get(1), m.get(2)]
             .into_iter()

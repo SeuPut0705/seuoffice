@@ -2,11 +2,9 @@
 //! format schemes of a theme part, the theme font and scheme colour lookups,
 //! and the colour mapping of a master, layout or slide.
 
-use std::sync::LazyLock;
-
 use jscompat::{
-    JsObject, JsRegex, RegexLimit, js_object, js_regex, truthy, try_js_regex, value_to_string,
-    value_truthy,
+    JsObject, JsRegex, RegexLimit, TryJsRegex, js_object, js_regex, truthy, try_js_regex,
+    value_to_string, value_truthy,
 };
 use ooxml_xml::{ObjectOptions, parse_object};
 use serde::{Deserialize, Serialize};
@@ -76,9 +74,12 @@ fn top_level_fragments(xml: &str) -> Result<Vec<&str>, RegexLimit> {
 
 /// `parseStyleList`: the children of `<a:{tag}>`, each parsed on its own.
 fn parse_style_list(theme_xml: &str, tag: &str) -> Result<Option<Vec<Value>>, String> {
-    let list = JsRegex::new(&format!(r"<a:{tag}\b[^>]*>([\s\S]*?)</a:{tag}>"), "")
+    let list = TryJsRegex::new(&format!(r"<a:{tag}\b[^>]*>([\s\S]*?)</a:{tag}>"), "")
         .map_err(|error| error.to_string())?;
-    let Some(m) = list.exec(theme_xml) else {
+    let Some(m) = list
+        .try_exec(theme_xml)
+        .map_err(|limit| limit.to_string())?
+    else {
         return Ok(None);
     };
     let items = top_level_fragments(m.get(1).unwrap_or_default())
@@ -394,28 +395,37 @@ pub fn resolve_scheme_color<'a>(
         .map(String::as_str)
 }
 
-const CLR_MAP_NAMES: [&str; 12] = [
-    "bg1", "tx1", "bg2", "tx2", "accent1", "accent2", "accent3", "accent4", "accent5", "accent6",
-    "hlink", "folHlink",
-];
-
-/// One attribute pattern per name of `CLR_MAP_NAMES`, either quote.
-static CLR_MAP_ATTRIBUTES: LazyLock<Vec<(&'static str, JsRegex)>> = LazyLock::new(|| {
-    CLR_MAP_NAMES
-        .into_iter()
-        .map(|name| {
-            let regex = JsRegex::new(&format!(r#"\b{name}\s*=\s*(["'])(.*?)\1"#), "")
-                .expect("a pattern literal that compiles");
-            (name, regex)
-        })
-        .collect()
-});
+/// One attribute pattern per name of the colour map, either quote.
+fn clr_map_attributes() -> [(&'static str, &'static JsRegex); 12] {
+    macro_rules! attribute {
+        ($name:literal) => {
+            (
+                $name,
+                js_regex!(concat!(r"\b", $name, r#"\s*=\s*(["'])(.*?)\1"#)),
+            )
+        };
+    }
+    [
+        attribute!("bg1"),
+        attribute!("tx1"),
+        attribute!("bg2"),
+        attribute!("tx2"),
+        attribute!("accent1"),
+        attribute!("accent2"),
+        attribute!("accent3"),
+        attribute!("accent4"),
+        attribute!("accent5"),
+        attribute!("accent6"),
+        attribute!("hlink"),
+        attribute!("folHlink"),
+    ]
+}
 
 fn clr_map_from_tag(tag: &str) -> Option<JsObject<String>> {
     let mut out = JsObject::new();
-    for (name, attribute) in CLR_MAP_ATTRIBUTES.iter() {
+    for (name, attribute) in clr_map_attributes() {
         if let Some(v) = truthy(attribute.exec(tag).and_then(|m| m.get(2))) {
-            out.set(*name, v.to_owned());
+            out.set(name, v.to_owned());
         }
     }
     (!out.is_empty()).then_some(out)

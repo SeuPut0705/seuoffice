@@ -3,7 +3,7 @@
 //! engines; where JavaScript counts UTF-16 code units the function says how
 //! it maps.
 
-use crate::{JsMatch, JsRegex};
+use crate::{JsMatch, JsRegex, RegexLimit, TryJsRegex};
 
 /// `text.indexOf(search, from)` for a `from` inside the text, on a character
 /// boundary.
@@ -61,6 +61,23 @@ pub fn replace_first_with(
     out
 }
 
+/// `text.replace(regex, (m) => replacement(m))` of a regex built at run time,
+/// without the `g` flag: the first match only; [`RegexLimit`] if the search stopped.
+pub fn try_replace_first_with(
+    regex: &TryJsRegex,
+    text: &str,
+    replacement: impl FnOnce(&JsMatch<'_>) -> String,
+) -> Result<String, RegexLimit> {
+    let Some(found) = regex.try_exec(text)? else {
+        return Ok(text.to_owned());
+    };
+    let mut out = String::with_capacity(text.len());
+    out.push_str(text.get(..found.start()).unwrap_or_default());
+    out.push_str(&replacement(&found));
+    out.push_str(text.get(found.end()..).unwrap_or_default());
+    Ok(out)
+}
+
 /// Text as a pattern that matches only itself: every syntax character of a
 /// regular expression escaped with a backslash, and `/` too.
 pub fn regex_escape(text: &str) -> String {
@@ -106,6 +123,15 @@ mod tests {
         let plus = crate::TryJsRegex::new(&escaped, "").unwrap();
         assert_eq!(plus.try_test("221"), Ok(false));
         assert_eq!(plus.try_test("+21"), Ok(true));
+    }
+
+    #[test]
+    fn try_replace_first_replaces_one_match() {
+        let regex = TryJsRegex::new("a", "").unwrap();
+        assert_eq!(
+            try_replace_first_with(&regex, "aa", |_| "b".to_owned()).unwrap(),
+            "ba"
+        );
     }
 
     #[test]

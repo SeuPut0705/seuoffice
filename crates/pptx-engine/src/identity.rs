@@ -9,7 +9,7 @@
 
 use std::sync::Arc;
 
-use jscompat::{JsMatch, JsRegex, js_regex, regex_escape, trim, truthy};
+use jscompat::{JsMatch, JsRegex, TryJsRegex, js_regex, regex_escape, trim, truthy};
 
 use crate::types::{ByteAnchor, Slide, SlideElement};
 use crate::with_element;
@@ -194,24 +194,25 @@ fn with_creation_id(xml: &str, uuid: &str) -> Option<String> {
 /// ledger group-child-nvid-pattern: the TypeScript pastes the nvId, which is
 /// the document's `id` attribute, into a pattern as it is, so `(` throws and
 /// `+21` matches no tag. Here the nvId is literal text.
-pub fn group_child_durable_id(grp: &SlideElement, child: &SlideElement) -> Option<String> {
+pub fn group_child_durable_id(
+    grp: &SlideElement,
+    child: &SlideElement,
+) -> Result<Option<String>, String> {
     if let (Some(xml), Some(nv_id)) = (xml_of(grp), nv_id_of(child)) {
-        // an escaped literal always compiles; were it not to, the child's own id answers
-        if let Some(open) = JsRegex::new(
+        let regex = TryJsRegex::new(
             &format!(
                 r#"<p:cNvPr\b[^>]*\bid="{}"[^>]*?(\/?)>"#,
                 regex_escape(nv_id)
             ),
             "",
         )
-        .ok()
-        .and_then(|regex| regex.exec(xml))
-        {
+        .map_err(|error| error.to_string())?;
+        if let Some(open) = regex.try_exec(xml).map_err(|limit| limit.to_string())? {
             let own = own_cnvpr(xml, &open);
             if let Some(creation) = creation_id_re().exec(own) {
-                return Some(guid_form(&creation));
+                return Ok(Some(guid_form(&creation)));
             }
         }
     }
-    element_durable_id(child)
+    Ok(element_durable_id(child))
 }

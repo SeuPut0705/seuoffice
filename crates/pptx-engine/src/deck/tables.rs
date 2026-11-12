@@ -8,8 +8,7 @@ use std::sync::Arc;
 
 use jscompat::{
     JsNum, JsRegex, index_of, js_regex, last_index_of, math_max, math_round, number_to_string,
-    number_truthy, regex_escape, replace_first, replace_first_string, replace_first_with,
-    to_number,
+    number_truthy, replace_first, replace_first_string, replace_first_with, to_number,
 };
 use serde::{Deserialize, Serialize};
 
@@ -94,14 +93,10 @@ fn grid_col_spans(xml: &str) -> Vec<GridColSpan> {
 /// sequential scan suffices). `n` is a number: only an integer inside the count
 /// is ever found.
 fn nth_tag_span(xml: &str, tag: &str, n: f64) -> Option<(usize, usize)> {
-    let owned;
+    // every caller names `a:tr` or `a:tc`
     let open_re: &JsRegex = match tag {
         "a:tr" => js_regex!(r"<a:tr(?:\s[^>]*)?>"),
-        "a:tc" => js_regex!(r"<a:tc(?:\s[^>]*)?>"),
-        _ => {
-            owned = JsRegex::new(&format!(r"<{}(?:\s[^>]*)?>", regex_escape(tag)), "").ok()?;
-            &owned
-        }
+        _ => js_regex!(r"<a:tc(?:\s[^>]*)?>"),
     };
     let close_tag = format!("</{tag}>");
     let mut i = 0usize;
