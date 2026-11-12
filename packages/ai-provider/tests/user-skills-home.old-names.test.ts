@@ -63,6 +63,16 @@ describe('the skills folder an earlier version made', () => {
     expect(await ownSkills(home)).toEqual(['agenda'])
   })
 
+  it('is still the app skills folder when the new one exists but holds nothing yet', async () => {
+    const home = temp()
+    skill(join(home, '.ieumoffice', 'skills'), 'minutes')
+    // made by following the help, before any skill was put in it
+    mkdirSync(join(home, '.seuoffice', 'skills'), { recursive: true })
+    writeFileSync(join(home, '.seuoffice', '.DS_Store'), '')
+    expect(appSkillsDirOf(home)).toBe(join(home, '.ieumoffice', 'skills'))
+    expect(await ownSkills(home)).toEqual(['minutes'])
+  })
+
   it('counts the old home folder even before it has a skills folder', () => {
     const home = temp()
     mkdirSync(join(home, '.ieumoffice'))
