@@ -53,7 +53,7 @@
 
 - **같은 주소를 다시 읽었는데 바뀐 글이 보이지 않는다.** `read_url`은 받은 글을 프로세스 메모리에만 3분 동안, 최종 주소(리다이렉트 뒤)와 요청 주소로 찾아 둔다(8개까지). 명령줄·MCP는 프로세스마다 캐시가 따로다. → 3분이 지나거나 프로세스를 다시 띄우면 새로 받는다. 캐시는 디스크에 쓰지 않는다.
 - **`fetchWithSsrfGuard`가 주소 거절과 호출자 취소를 모두 `null`로 돌려준다.** 가드는 `signal`이 끊겼을 때도, 사설·루프백 주소를 거절할 때도 `null`을 준다. → 어느 쪽인지는 호출자가 따로 본다. `read_url`은 30초 deadline과 호출자 signal을 `AbortSignal.any`로 함께 넘기고, deadline이 끊겼으면 `timeout`, 호출자 쪽이면 취소로 답한다.
-- **리다이렉트를 따라가면 머리글이 다음 홉에도 그대로 간다.** `headersForHop`을 주지 않으면 첫 요청에 준 `headers`가 모든 홉에 붙는다. → 홉마다 달라야 하는 비밀 값은 `headersForHop`으로 그 호스트의 홉에만 준다. `read_url`의 GitHub 토큰은 `api.github.com` 홉에만 실린다.
+- **리다이렉트를 따라가면 머리글이 다음 홉에도 그대로 간다.** `headersForHop`을 주지 않으면 첫 요청에 준 `headers`가 모든 홉에 붙는다. → 비밀 값을 싣는 요청은 관문이 리다이렉트를 따라가게 두지 않는다. `fetchWithSsrfGuard`를 `redirect: 'manual'`로 한 홉씩 부르고, 따라갈지는 `@genoffice/ai-provider`의 `keyedDownload`가 정한다(다른 출처로 갈 때 비밀 값을 떼고, 돌아와도 다시 붙이지 않으며, https로만, 다섯 번까지). `headersForHop`은 호스트 이름만 보고 붙이는 훅이라 비밀 값에 쓰지 않는다: scheme과 포트가 다른 홉, 체인이 한 번 떠났다 돌아온 홉에도 붙는다. `read_url`의 GitHub 토큰은 `https://api.github.com` 출처에만 실린다.
 - **`ai-settings.json`의 키가 `sealed:v1:…`로 보인다(Windows, 키링이 있는 Linux).** 앱이 운영체제 암호화로 봉인한 것이다(결정 0063). → 평문으로 바꿔 적어도 읽히고 다음 저장 때 다시 봉인된다. 다른 PC·계정에서 가져온 파일, Windows에서 데이터 폴더의 `Local State`를 지운 뒤의 파일, Linux에서 키링 항목을 지운 뒤의 파일은 풀리지 않아 빈 키가 된다. 키를 다시 넣는다.
 - **Linux에서 키가 봉인되지 않고 평문으로 남는다.** Electron이 고른 저장소가 `basic_text`(키링 없음, 알아보지 못한 데스크톱)이면 일부러 봉인하지 않는다(`platformSeals`). → 의도된 동작이다. 프로그램에 박힌 키로 감싼 값은 보호가 아니다.
 - **Linux에서 명령줄이 봉인된 키를 못 푼다.** 명령줄이 띄운 앱이 데스크톱 세션의 키링에 닿지 못하면(SSH 접속, `XDG_CURRENT_DESKTOP`이 없는 환경) 다른 저장소를 골라 풀지 못하고 빈 키가 된다. → 데스크톱 세션의 터미널에서 실행하거나 환경 변수 키(`SERPER_API_KEY` 등)를 쓴다.

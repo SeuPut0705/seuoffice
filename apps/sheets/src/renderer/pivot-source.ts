@@ -45,3 +45,19 @@ export function resolvePivotSource(
   }
   return inferContinuousRegion(worksheet, selection.startRow, selection.startColumn) ?? selection
 }
+
+/**
+ * The sheet a file pivot's `sourceSheet` names. A pivot definition is read from
+ * the file and keeps the name the sheet had there, so it is looked up among
+ * the file's sheets and answered as an id: after a rename this session the
+ * current name finds nothing, and after two sheets swapped names it finds the
+ * wrong sheet. Undefined for a source that is not a sheet of this workbook.
+ */
+export function pivotSourceSheetId(
+  state: LazyWorkbookState,
+  sourceSheet: string,
+): string | undefined {
+  if (sourceSheet === '') return undefined
+  const wanted = sourceSheet.toLowerCase()
+  return state.file.sheets.find((sheet) => sheet.name.toLowerCase() === wanted)?.id
+}

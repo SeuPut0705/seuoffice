@@ -122,6 +122,12 @@ pub struct SheetMetadata {
     pub comments: Vec<CommentInfo>,
     /// PivotTable output areas — protected from edits by the renderer.
     pub pivot_ranges: Vec<MergedRange>,
+    /// PivotTable relationships of this sheet whose output range could not be
+    /// read (part missing, no location, no ref, ref not a range). Such a pivot
+    /// is in neither list here, so a reader that must know where pivot output
+    /// is (cells withheld from the model) learns from this that it does not.
+    #[serde(skip_serializing_if = "is_zero")]
+    pub pivots_unlocated: usize,
     /// One entry per pivot table part: enough for the host to read and
     /// parse the definition on demand.
     pub pivot_tables: Vec<PivotTableInfo>,
