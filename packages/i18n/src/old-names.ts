@@ -27,6 +27,8 @@ export const OLD_ENV_NAMES: readonly string[] = [
   'AUDIT_LOG',
   'AUTH_DIR',
   'HB_SUBSET_WASM',
+  'HOME',
+  'LANG',
   'MCP_COMPACT_SCHEMAS',
   'MCP_TOKEN',
   'PDFIUM_WASM',
