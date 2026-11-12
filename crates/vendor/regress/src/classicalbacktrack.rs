@@ -432,9 +432,12 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         let saved_groups = self.s.groups.iat(range.clone()).to_vec();
 
         // A stack set aside keeps its capacity while the lookaround grows its
-        // own: give back what it does not hold, so the two stay near the bound.
-        if self.bts.capacity() > RETAINED_BACKTRACK_CAPACITY + 2 * self.bts.len() {
-            self.bts.shrink_to(RETAINED_BACKTRACK_CAPACITY.max(self.bts.len()));
+        // own: give back what it does not hold, but keep room for it to
+        // double, so that a loop around the lookaround does not grow it back
+        // on its next turn. It is shrunk again only once it has doubled.
+        let keep = RETAINED_BACKTRACK_CAPACITY + 2 * self.bts.len();
+        if self.bts.capacity() > keep {
+            self.bts.shrink_to(keep);
         }
 
         // Start with an "empty" backtrack stack.
@@ -449,8 +452,10 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         // Enter into the lookaround's instruction stream.
         let matched = self.try_at_pos(*input, ip, pos, Dir::new()).is_some();
 
-        // Put back our bts.
+        // Put back our bts, and give back the lookaround's own before more
+        // entries go on ours.
         core::mem::swap(&mut self.bts, &mut saved_bts);
+        drop(saved_bts);
         self.room = saved_room;
         self.ceiling = Self::ceiling_of(self.re, saved_room);
         if self.exceeded {
