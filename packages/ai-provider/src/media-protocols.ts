@@ -624,6 +624,31 @@ async function generateImageGemini(
   return fromBase64(image.data as string, image.mimeType ?? image.mime_type)
 }
 
+/**
+ * Where the bytes of a Files API upload go. The start reply names the address
+ * (`x-goog-upload-url`), and the upload carries the API key and the file, so
+ * the address is used only on the origin the start request went to: Google
+ * answers `generativelanguage.googleapis.com` with an address on that same
+ * host, and a gateway set as the base URL is held to its own origin the same
+ * way. Anything else ends the upload before a request goes out.
+ */
+function geminiUploadUrl(startUrl: string, named: string): string {
+  let upload: URL
+  try {
+    upload = new URL(named)
+  } catch {
+    throw new Error(
+      'Media upload failed: the provider answered with an upload address that is not a URL. The API key was not sent to it.',
+    )
+  }
+  if (upload.origin !== new URL(startUrl).origin) {
+    throw new Error(
+      `Media upload failed: the provider answered with an upload address that is not its own (${upload.protocol}//${upload.host.slice(0, 100)}). The API key was not sent to it.`,
+    )
+  }
+  return upload.href
+}
+
 /** Files API resumable upload (start → upload+finalize → wait for ACTIVE); returns the file_data part */
 async function geminiUploadFile(
   config: AiMediaProviderConfig,
@@ -633,7 +658,8 @@ async function geminiUploadFile(
   const base = geminiBase(config)
   const root = new URL(base)
   root.pathname = trimSlash(root.pathname).replace(/\/v1(beta)?$/, '')
-  const start = await keyedFetch(endpointUrl(root.toString(), '/upload/v1beta/files'), {
+  const startUrl = endpointUrl(root.toString(), '/upload/v1beta/files')
+  const start = await keyedFetch(startUrl, {
     method: 'POST',
     headers: {
       ...geminiHeaders(config),
@@ -646,9 +672,9 @@ async function geminiUploadFile(
     signal,
   })
   if (!start.ok) return failFrom('Media upload failed:', start)
-  const uploadUrl = start.headers.get('x-goog-upload-url')
-  if (!uploadUrl) throw new Error('Media upload failed: no upload URL returned')
-  const upload = await keyedFetch(uploadUrl, {
+  const named = start.headers.get('x-goog-upload-url')
+  if (!named) throw new Error('Media upload failed: no upload URL returned')
+  const upload = await keyedFetch(geminiUploadUrl(startUrl, named), {
     method: 'POST',
     headers: {
       'x-goog-api-key': config.apiKey,

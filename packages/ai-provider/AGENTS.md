@@ -112,6 +112,7 @@
 
 - FLUX(BFL) 작업 조회 주소는 제공자가 답한 `polling_url`이라도 `https:`이고 제출 주소와 같은 호스트이거나 같은 등록 도메인(사설 접미사 포함, `github.io` 등 호스트별 테넌트는 서로 다름)일 때만 쓴다(`bflPollUrl`, `media-protocols.ts`). 그 밖이면 API 키를 보내지 않고 요청 전에 끝낸다. 사용자가 적은 기본 주소도 같은 규칙이다.
 - FLUX 조회 루프는 중단 신호에 리스너를 하나만 걸고, 루프가 끝나면 한 번 떼어 낸다(`bflPollWaits`).
+- Gemini Files API 올리기 주소는 시작 요청의 답(`x-goog-upload-url`)이 알려 주지만, 시작 요청을 보낸 곳과 출처(scheme·호스트·포트)가 같을 때만 쓴다(`geminiUploadUrl`, `media-protocols.ts`). 다르면 API 키와 파일을 보내지 않고 요청 전에 끝낸다.
 
 ## 테스트
 
