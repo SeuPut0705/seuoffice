@@ -21,7 +21,7 @@ import {
 } from '@tiptap/pm/transform'
 import { authorName } from '../author-name'
 import { notifyOdt } from '../odt-gate'
-import { lockedControlRefuses } from './inline-wrap'
+import { lockedControlsIn } from './inline-wrap'
 
 export interface RevisionRange {
   from: number
@@ -270,23 +270,45 @@ function stripTrackMarker(raw: string | null, tag: string, container: string): s
 }
 
 /**
- * Would accepting / rejecting `r` take part of the text of a control locked
- * against editing? Only a stretch of inline text can: an insertion that is
- * rejected, a deletion that is accepted, text carrying both either way.
+ * Removing even a whole control via a revision is not a manual whole-control
+ * delete. A block rewrite may retire its old copy only when this same batch
+ * keeps the identical locked content in the other half of that revision.
  */
-function lockedAgainst(doc: PmNode, r: RevisionRange, mode: 'accept' | 'reject'): boolean {
-  const inserted = r.kind === 'ins' || r.kind === 'moveTo'
-  const deleted = r.kind === 'del' || r.kind === 'moveFrom'
+function lockedAgainst(
+  doc: PmNode,
+  r: RevisionRange,
+  mode: 'accept' | 'reject',
+  ranges: RevisionRange[],
+): boolean {
+  const inserted = ['ins', 'moveTo', 'blockIns', 'rowIns', 'cellIns'].includes(r.kind)
+  const deleted = ['del', 'moveFrom', 'blockDel', 'rowDel', 'cellDel'].includes(r.kind)
   if (!inserted && !deleted && r.kind !== 'both') return false
-  const removesText = mode === 'accept' ? !inserted : !deleted
-  return removesText && lockedControlRefuses(doc, r.from, r.to, false)
+  if (!(mode === 'accept' ? !inserted : !deleted)) return false
+  const controls = lockedControlsIn(doc, r.from, r.to)
+  if (controls.length === 0) return false
+  if (r.kind !== 'blockIns' && r.kind !== 'blockDel') return true
+  const keptKind = mode === 'accept' ? 'blockIns' : 'blockDel'
+  const replacements = ranges
+    .filter(
+      (other) => other.kind === keptKind && other.author === r.author && other.date === r.date,
+    )
+    .flatMap((other) => lockedControlsIn(doc, other.from, other.to))
+  return controls.some((control) => {
+    const at = replacements.findIndex(
+      (other) =>
+        control.text !== null && other.text === control.text && other.mark.eq(control.mark),
+    )
+    if (at < 0) return true
+    replacements.splice(at, 1)
+    return false
+  })
 }
 
 /**
- * Accept or reject `ranges` in one transaction. A change that would take part
- * of the text of a control locked against editing is left pending, so one such
- * change does not hold back the rest of a batch; those are returned, and the
- * user is told once.
+ * Accept or reject `ranges` in one transaction. A change that would remove
+ * locked content without keeping an identical replacement is left pending,
+ * so one such change does not hold back the rest of a batch. Those ranges are
+ * returned, and the user is told once.
  */
 export function applyRevisions(
   editor: Editor,
@@ -297,7 +319,7 @@ export function applyRevisions(
   const { state } = editor
   const tr = state.tr
   tr.setMeta(TRACK_IGNORE, true)
-  const locked = ranges.filter((r) => lockedAgainst(state.doc, r, mode))
+  const locked = ranges.filter((r) => lockedAgainst(state.doc, r, mode, ranges))
   // reverse order keeps earlier positions valid while later ranges mutate
   for (const r of [...ranges].sort((a, b) => b.from - a.from)) {
     if (locked.includes(r)) continue

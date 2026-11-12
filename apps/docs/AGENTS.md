@@ -28,6 +28,7 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - AI 도구 호출에서 온 주소는 `fetchRemoteImage`와 크기 상한을 거친다(웹 검색 결과를 통한 프롬프트 주입이 가능한 값이다). 사설·링크 로컬 주소와 http(s)가 아닌 스킴은 거절된다.
 - 문서 내용은 테마가 다시 칠하지 않는다. 어두운 쪽 표시(`src/renderer/editor/dark-page.ts`)는 화면 전용 변환이다. 작성된 색은 실제 인라인 선언으로 남고, 변환된 값은 `--dk-*` 사용자 정의 속성으로 덧붙여 `.workspace.page-dark` 아래의 화면 전용 규칙이 바꿔 칠한다. 쪽 나눔 미리 보기, 인쇄, PDF 내보내기, 클립보드 HTML은 두 테마에서 같은 결과여야 한다.
 - 저장은 좁은 패치다. 원본 파일이 기준이고, 고친 블록만 OOXML 조각으로 바꿔 원래 `document.xml`에 끼워 넣으며, 손대지 않은 블록과 다른 zip 항목은 바이트 그대로 남는다. 열기·저장 경로를 바꾸면 손대지 않은 내용이 그대로 살아남는지 왕복 테스트로 증명한다.
+- AI 블록 재작성(`ai/protocol.ts`)은 변경 내용 추적 분기 전에 줄 안 구조를 보존한다. 같은 차례의 같은 글이 남으면 잠기지 않은 래퍼와 범위 표식을 다시 붙이고, 잠긴 콘텐츠 컨트롤의 글을 바꾸거나 없애면 거절한다(`appOdtLockedObject` 재사용). 변경 내용 모두 수락·거절도 잠긴 글을 없애는 변경은 남겨 두며, 같은 작업의 다른 블록에 같은 잠긴 컨트롤이 그대로 남는 재작성만 적용한다. 손으로 컨트롤을 통째 지우는 동작은 그대로 허용한다.
 - UI 크롬 색은 토큰만 쓴다(`var(--surface)` 등). 렌더러 CSS에 새 `#hex`·`rgb()`를 넣으면 `npm run check:theme-colors`가 실패한다. 강조색(`--accent` 계열)은 이 앱의 `styles.css`에서 정의한다.
 - 모델에게 주는 system prompt에서 제품을 가리키는 이름은 `brandText(…, 'en')`을 거친다(`ai/protocol.ts`, `ai/doc-writer.ts`). HTTP 사용자 에이전트는 `PRODUCT_NAME`으로 만든다.
 - **AI 첨부가 받는 형식 목록의 기준은 이 에디터의 첨부 목록이다.** 여섯 에디터가 함께 쓰는 목록(`ATTACHABLE_EXTS` 등)은 `packages/file-parse`의 `attachable.ts` 한 곳에 있고, 이 에디터가 받던 글자·코드 확장자가 그 기준이 된다. 다른 에디터는 이 목록을 넓히기만 하고 줄이지 않는다. 그림 확장자처럼 렌더러가 봐야 하는 값은 Node 결합(`file-parse`)을 렌더러로 못 가져오므로 이 앱의 `src/shared/ipc.ts`(`ATTACHMENT_IMAGE_EXTS`)에 그대로 두되 값은 공용 목록과 같게 맞춘다. 목록은 무엇을 첨부할 수 있는지만 정하고, 실제로 읽히는지는 첨부할 때 `parseFileToText`가 정한다.
@@ -78,6 +79,7 @@ Word 문서(.docx)와 ODT(.odt) 에디터다. 그리고 배포되는 앱 전체�
 - `vitest.config.ts`는 workspace 패키지를 `node_modules`가 아니라 이 체크아웃의 소스 경로로 해석한다. 다른 체크아웃의 낡은 코드로 테스트되는 일을 막기 위해서다.
 - ODT에서 꺼 둔 기능·잠금·이름표·붙여넣기: `tests/odt-gating.test.ts`.
 - ODT 열기·저장·다른 이름으로 저장·복구본: `tests/odt-open-save.test.ts`(실제 편집기와 가짜 뒷단), 뒷단 형식 규칙: `tests/odt-doc-format.test.ts`, 개체 그림 열쇠: `tests/odt-objects.test.ts`. 저장 경로를 바꾸면 "연속 두 번 저장"에서 고치지 않은 부분이 바이트 그대로인지 본다.
+- 줄 안 구조의 AI 재작성·잠긴 변경 수락/거절·동시 편집 저장: `tests/inline-wrapper-rewrite.test.ts`. 공동 편집에서 원격 단계를 다시 고치지 않으며, 재배치로 되살아난 같은 컨트롤 식별자는 엔진의 저장 경로가 처리한다. 원본 그대로 복사하는 조각은 고치지 않는다.
 - AI 배선에서 바꾸면 반드시 테스트하는 것(`tests/ai-run.test.ts`, `tests/ai-subscription-panel.test.ts`): 연결되지 않은 요청이 제공자를 부르지 않고 원인과 함께 거절되는지, 오류 조각에 원인 필드가 실리는지, 사용량·입력 축소가 전달되는지, 설정 읽기가 정규화되는지.
 - `claude-code`·`codex` 제공자로 가는 테스트는 브리지를 반드시 mock한다. 안 하면 실제 프로그램이 떠서 개발자의 구독 사용량을 쓴다.
 - Windows에서 `tests/protect-dialog.test.ts`의 "setting a modify password…" 한 건은 변경과 무관하게 실패한다.
