@@ -13,5 +13,7 @@ pub mod pptx;
 pub mod pptx_redaction;
 #[cfg(feature = "redaction")]
 pub mod redaction;
+#[cfg(feature = "xlsx")]
+pub mod xlsx;
 pub mod xlsx_dates;
 pub mod zip_text_parts;
