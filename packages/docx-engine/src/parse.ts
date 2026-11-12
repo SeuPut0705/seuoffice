@@ -10,7 +10,7 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
-import { withheldAsPlaceholders } from './withheld'
+import { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -957,7 +957,9 @@ function inlineContentControlsOf(xml: string): InlineContentControl[] {
       lock: meta.lock,
       id: meta.id,
       text: plainText(content),
-      ...(withheld !== content ? { modelText: plainText(withheld) } : {}),
+      ...(withheld === content
+        ? {}
+        : { modelText: withheld === null ? WITHHELD_ENTRY_TEXT : plainText(withheld) }),
     })
   }
   return out

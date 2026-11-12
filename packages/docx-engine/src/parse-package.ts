@@ -13,7 +13,7 @@ import {
   type XNode,
 } from './xml-utils'
 import { customEnumItems } from './list-markers'
-import { withheldAsPlaceholders } from './withheld'
+import { WITHHELD_ENTRY_TEXT, withheldAsPlaceholders } from './withheld'
 import { decodeNumericCharRefs, onOffOf, type RelInfo } from './parse-xml-text'
 import type {
   CommentImage,
@@ -153,13 +153,26 @@ async function commentImageOf(zip: JSZip, comment: XNode): Promise<CommentImage 
   }
 }
 
-/** each comment's text in a comments part, by id */
-function commentTextsById(xml: string): Map<string, string> {
-  const root = (xmlParser.parse(xml) as XNode[]).find((n) => nameOf(n) === 'w:comments')
+/**
+ * Each comment's text as a model may read it, by id, for the comments that
+ * hide something; one whose marks cannot all be read is withheld whole.
+ */
+function commentModelTexts(xml: string): Map<string, string> {
   const texts = new Map<string, string>()
-  for (const node of root ? findChildren(root, 'w:comment') : []) {
-    const id = attrsOf(node)['w:id']
-    if (id) texts.set(id, findChildren(node, 'w:p').map(resultTextOf).join('\n'))
+  for (const entry of xml.matchAll(/<w:comment\b[^>]*?(?:\/>|>[\s\S]*?<\/w:comment>)/g)) {
+    const view = withheldAsPlaceholders(entry[0])
+    if (view === entry[0]) continue
+    const id = /\sw:id="([^"]*)"/.exec(entry[0])?.[1]
+    if (id === undefined) continue
+    if (view === null) {
+      texts.set(id, WITHHELD_ENTRY_TEXT)
+      continue
+    }
+    const node = (xmlParser.parse(view) as XNode[]).find((n) => nameOf(n) === 'w:comment')
+    texts.set(
+      id,
+      node ? findChildren(node, 'w:p').map(resultTextOf).join('\n') : WITHHELD_ENTRY_TEXT,
+    )
   }
   return texts
 }
@@ -178,8 +191,7 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
   const root = parsed.find((n) => nameOf(n) === 'w:comments')
   if (!root) return []
   // the same comments with every run hidden from AI as its placeholder
-  const view = withheldAsPlaceholders(xml)
-  const modelTexts = view === xml ? null : commentTextsById(view)
+  const modelTexts = commentModelTexts(xml)
   const out: CommentInfo[] = []
   for (const node of findChildren(root, 'w:comment')) {
     const attrs = attrsOf(node)
@@ -194,7 +206,7 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
       initials: attrs['w:initials'],
       date: attrs['w:date'],
       text,
-      ...modelTextOf(modelTexts?.get(attrs['w:id']), text),
+      ...modelTextOf(modelTexts.get(attrs['w:id']), text),
       ...(paraId ? { paraId } : {}),
       ...(image ? { image } : {}),
     })
