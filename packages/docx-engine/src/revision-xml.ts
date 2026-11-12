@@ -346,9 +346,17 @@ function planEdits(
   return { edits, applied }
 }
 
+/**
+ * Order at one start: insertions (zero length) first, in plan order, then the
+ * longest replacement. An insertion stands in front of a replacement that
+ * starts where it does, as it stands behind one that ends there; only an edit
+ * strictly inside a replaced region is moot.
+ */
 function applyEdits(xml: string, edits: Edit[]): string {
-  const sorted = [...edits].sort((a, b) => a.start - b.start || b.end - a.end)
-  // an edit inside a region another edit replaces is moot
+  const sorted = [...edits].sort(
+    (a, b) =>
+      a.start - b.start || Number(a.end > a.start) - Number(b.end > b.start) || b.end - a.end,
+  )
   const kept: Edit[] = []
   let cutoff = -1
   for (const e of sorted) {

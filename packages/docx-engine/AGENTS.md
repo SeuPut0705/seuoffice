@@ -65,6 +65,7 @@ docx 한 파일의 읽기와 쓰기 전부를 맡는다.
 - **LaTeX에서 BMP 밖 글자 하나가 인자 하나다.** 읽기가 UTF-16 단위로 움직여 `x^😀`나 `x_𝒜`가 반쪽 대리 문자 둘이 됐다. 시험: `tests/latex-astral-characters.test.ts`.
 - **대리 범위의 문자 참조(`&#xD800;`)는 U+FFFD로 읽는다.** 문서 속성의 값과 이름, 내용 컨트롤의 `w:tag`, 체크 상자 글리프에서 반쪽 대리 문자가 나왔다. 붙어 있는 두 참조가 한 글자를 이루면 합친다. 입력에 이미 있던 반쪽도 U+FFFD가 된다. 본문 글자(`parse-xml-text.ts`, `generate.ts`)는 전부터 그런 참조를 쓰인 그대로 두고, `resource-cleanup.ts`는 값을 안에서 비교에만 써서 그대로 뒀다. 시험: `tests/char-ref-surrogates.test.ts`.
 - **짝 잃은 이동 범위 표식만으로 무편집 저장을 다시 쓰지 않는다.** 원본 #2557은 고아 표식이 있으면 빠른 반환을 막았지만, 이 저장소는 원본 바이트 반환을 유지한다. 명시적인 수락·거절은 `dropOrphanMoveRanges`로 정리를 요청한다. 시험: `tests/move-range-cleanup.test.ts`, `tests/transitional-normalize-unedited-save.test.ts`.
+- **서식 변경을 거절하면 기록이 `w:pPr`의 첫 자식이어도 옛 서식이 돌아온다.** 같은 자리에서 시작하는 두 편집 가운데 길이 0인 끼워 넣기가 "다른 편집에 덮인 것"으로 버려져, 추적을 켜고 가운데 맞춤을 지운 문단을 거절해도 맞춤이 돌아오지 않았다. 같은 패스에서 문단 표식 `w:rPr`이 통째로 지워질 때도 같았다. `applyEdits`의 순서는 "같은 시작에서는 끼워 넣기가 먼저(계획 순서대로), 그다음 가장 긴 바꾸기"이고, 바뀌는 구간의 안쪽에 있는 편집만 버린다. 시험: `tests/revision-edit-order.test.ts`.
 
 ## 테스트
 
