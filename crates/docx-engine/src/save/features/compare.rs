@@ -1022,6 +1022,7 @@ fn generated_from(block: &Block, runs: Vec<Run>) -> GeneratedBlock {
             kind: match list.kind {
                 BlockListKind::Bullet => GeneratedBlockListKind::Bullet,
                 BlockListKind::Ordered => GeneratedBlockListKind::Ordered,
+                BlockListKind::Unlisted(ref text) => GeneratedBlockListKind::Unlisted(text.clone()),
             },
             num_id: list.num_id.clone(),
             ilvl: list.ilvl,

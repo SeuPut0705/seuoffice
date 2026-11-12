@@ -81,5 +81,11 @@ export function markerTabAdvance(
   defaultTab = 720,
   customStops: number[] = [],
 ): number | null {
-  return invoke('markerTabAdvance', [markerStart, markerWidth, textIndent, defaultTab, customStops]) as never
+  return invoke('markerTabAdvance', [
+    markerStart,
+    markerWidth,
+    textIndent,
+    defaultTab,
+    customStops,
+  ]) as never
 }

@@ -83,9 +83,13 @@ export const MODEL_SOURCE = {
   commit: 'c673f0f71416ac850805840cda5c2e243d32d6ca',
 }
 
-/** A file of the repository as the pinned commit holds it. */
+/** A file of the repository as the pinned commit holds it: the frozen
+ * reference copy was packages/docx-engine/src there. */
 function sourceAt(path: string): string {
-  const at = `${MODEL_SOURCE.commit}:${relative(REPO_ROOT, path).replaceAll('\\', '/')}`
+  const home = relative(REPO_ROOT, path)
+    .replaceAll('\\', '/')
+    .replace(/^tools\/docx-diff\/reference\//, 'packages/docx-engine/src/')
+  const at = `${MODEL_SOURCE.commit}:${home}`
   try {
     return execFileSync('git', ['show', at], {
       cwd: REPO_ROOT,

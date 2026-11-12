@@ -407,7 +407,7 @@ impl BlockConverter for TableBlockConverter {
                             .borrow()
                             .blocks
                             .first()
-                            .and_then(|b| (*b.r#type).map(BlockType::as_str))
+                            .and_then(|b| (*b.r#type).as_ref().map(BlockType::as_str))
                             .unwrap_or("element")
                     )),
                 }

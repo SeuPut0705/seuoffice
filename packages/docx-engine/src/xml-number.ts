@@ -19,7 +19,9 @@ export const DEFAULT_PICTURE_PX = 96
  * what still slips through.
  */
 export function usableNumber(value: unknown, emuPerUnit = 1): number | undefined {
-  return invoke('usableNumber', [typeof value === 'number' ? value : NaN, emuPerUnit], { undef: true }) as never
+  return invoke('usableNumber', [typeof value === 'number' ? value : NaN, emuPerUnit], {
+    undef: true,
+  }) as never
 }
 /** A picture's size in px: both sides when both are usable and positive, else the default square. */
 export function usablePictureSize(
@@ -38,5 +40,7 @@ export function usablePictureSize(
  * outside the xsd:int a position is (narrower than the widest coordinate).
  */
 export function usablePositionOffset(value: unknown, emuPerUnit = 1): number | undefined {
-  return invoke('usablePositionOffset', [typeof value === 'number' ? value : NaN, emuPerUnit], { undef: true }) as never
+  return invoke('usablePositionOffset', [typeof value === 'number' ? value : NaN, emuPerUnit], {
+    undef: true,
+  }) as never
 }

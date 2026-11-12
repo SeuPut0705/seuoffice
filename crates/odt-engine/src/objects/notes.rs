@@ -38,8 +38,7 @@ use crate::text::props::{para_format_from_odf, text_format_from_odf};
 use super::analyze::{plain_text_of, sub_elements};
 use super::model::{NoteKind, OBJECTS_OWNER, ObjectNote};
 use super::state::{
-    append_to_lazy_part, edited_note, forward_state, lazy_part, note_key, save_state, slice_u16,
-    source_of,
+    append_to_lazy_part, edited_note, forward_state, lazy_part, save_state, slice_u16, source_of,
 };
 
 /// `W_NS`
@@ -599,7 +598,7 @@ fn rewrite_body(
 /// document's other citations.
 fn citation_for(
     rctx: &OoxmlToOdfContext,
-    kind: NoteKind,
+    kind: &str,
     id: &str,
     template: Option<&ObjectNote>,
 ) -> String {
@@ -607,7 +606,7 @@ fn citation_for(
         .edited
         .note_numbers
         .as_ref()
-        .and_then(|numbers| numbers.get(&format!("{}:{id}", kind.as_str())));
+        .and_then(|numbers| numbers.get(&format!("{kind}:{id}")));
     let number = match n {
         None => id.to_string(),
         Some(n) => number_to_string(n.0),
@@ -620,11 +619,12 @@ fn citation_for(
     number
 }
 
-/// The objects `NoteKind` of a note reference run.
-fn note_kind_of(kind: RunNoteRefKind) -> NoteKind {
+/// The list `editedNote` reads for a reference kind: the footnotes for
+/// `footnote`, the endnotes for every other string.
+fn edited_list_kind(kind: &RunNoteRefKind) -> NoteKind {
     match kind {
         RunNoteRefKind::Footnote => NoteKind::Footnote,
-        RunNoteRefKind::Endnote => NoteKind::Endnote,
+        _ => NoteKind::Endnote,
     }
 }
 
@@ -636,10 +636,10 @@ pub fn notes_run_writer(
     _env: &ParagraphWriteEnv<'_>,
 ) -> Result<String, OdtError> {
     let st = save_state(rctx)?;
-    let kind = note_kind_of(r#ref.kind);
-    let key = note_key(kind, &r#ref.id);
+    let kind = r#ref.kind.as_str();
+    let key = format!("{kind}:{}", r#ref.id);
     let note = st.borrow().note(&key).cloned();
-    let edited = edited_note(rctx, kind, &r#ref.id);
+    let edited = edited_note(rctx, edited_list_kind(&r#ref.kind), &r#ref.id);
     if let Some(note) = note {
         if st.borrow().emitted_notes.contains(&key) {
             rctx.warn("a repeated note reference was dropped");
@@ -676,7 +676,7 @@ pub fn notes_run_writer(
         st.ext
             .notes
             .iter()
-            .find(|x| x.kind == kind && !x.paragraphs.is_empty())
+            .find(|x| x.kind.as_str() == kind && !x.paragraphs.is_empty())
             .or_else(|| st.ext.notes.iter().find(|x| !x.paragraphs.is_empty()))
             .cloned()
     };
@@ -699,6 +699,6 @@ pub fn notes_run_writer(
     };
     Ok(format!(
         "<text:note text:note-class=\"{}\">{inner}</text:note>",
-        kind.as_str()
+        kind
     ))
 }

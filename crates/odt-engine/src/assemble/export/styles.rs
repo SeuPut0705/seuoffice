@@ -203,13 +203,14 @@ fn truthy_str(s: Option<&str>) -> Option<&str> {
 /// `paraFormatOf`
 fn para_format_of(d: &StyleDisplay) -> ParaFormat {
     let mut f = ParaFormat::default();
-    if let Some(align) = *d.align {
+    if let Some(align) = (*d.align).as_ref().filter(|a| !a.as_str().is_empty()) {
         f.align.set(match align {
             StyleDisplayAlign::Left => ParaAlign::Left,
             StyleDisplayAlign::Center => ParaAlign::Center,
             StyleDisplayAlign::Right => ParaAlign::Right,
             StyleDisplayAlign::Justify => ParaAlign::Justify,
             StyleDisplayAlign::Distribute => ParaAlign::Distribute,
+            StyleDisplayAlign::Unlisted(s) => ParaAlign::Unlisted(s.clone()),
         });
     }
     if let Some(n) = *d.indent_left_twips {
@@ -227,10 +228,10 @@ fn para_format_of(d: &StyleDisplay) -> ParaFormat {
     if let Some(n) = *d.space_after_twips {
         f.space_after.set(n);
     }
-    match *d.line_rule {
+    match (*d.line_rule).as_ref() {
         Some(rule @ (StyleDisplayLineRule::Exact | StyleDisplayLineRule::AtLeast)) => {
             if let Some(raw) = truthy_num(num(&d.line_raw_twips)) {
-                f.line_rule.set(if rule == StyleDisplayLineRule::Exact {
+                f.line_rule.set(if rule == &StyleDisplayLineRule::Exact {
                     ParaFormatLineRule::Exact
                 } else {
                     ParaFormatLineRule::AtLeast
@@ -297,10 +298,11 @@ impl<'a> TextSource<'a> {
             east_asia_font: d.east_asia_font.as_deref(),
             cs_font: d.cs_font.as_deref(),
             char_spacing_twips: num(&d.char_spacing_twips),
-            caps: d.caps.map(|caps| match caps {
+            caps: (*d.caps).as_ref().map(|caps| match caps {
                 StyleDisplayCaps::All => RunCaps::All,
                 StyleDisplayCaps::Small => RunCaps::Small,
                 StyleDisplayCaps::None => RunCaps::None,
+                StyleDisplayCaps::Unlisted(s) => RunCaps::Unlisted(s.clone()),
             }),
             shading: d.shading.as_deref(),
         }
@@ -343,8 +345,12 @@ fn text_format_of(d: &TextSource<'_>) -> TextFormat {
     if let Some(spacing) = truthy_num(d.char_spacing_twips) {
         f.char_spacing_twips.set(JsNum(spacing));
     }
-    if let Some(caps) = d.caps.filter(|caps| *caps != RunCaps::None) {
-        f.caps.set(caps);
+    if let Some(caps) = d
+        .caps
+        .as_ref()
+        .filter(|caps| **caps != RunCaps::None && !caps.as_str().is_empty())
+    {
+        f.caps.set(caps.clone());
     }
     if let Some(shading) = truthy_str(d.shading) {
         f.shading.set(shading.to_owned());
@@ -430,7 +436,7 @@ pub fn document_defaults(defaults: Option<&DocDefaults>) -> DocumentDefaults {
     let d = defaults.unwrap_or(&empty);
     let mut format = ParaFormat::default();
     format.align.set(ParaAlign::Left);
-    let line_rule = *d.line_rule;
+    let line_rule = (*d.line_rule).as_ref();
     if matches!(
         line_rule,
         Some(DocDefaultsLineRule::Exact | DocDefaultsLineRule::AtLeast)
@@ -438,7 +444,7 @@ pub fn document_defaults(defaults: Option<&DocDefaults>) -> DocumentDefaults {
         if let Some(raw) = truthy_num(num(&d.line_raw_twips)) {
             format
                 .line_rule
-                .set(if line_rule == Some(DocDefaultsLineRule::Exact) {
+                .set(if line_rule == Some(&DocDefaultsLineRule::Exact) {
                     ParaFormatLineRule::Exact
                 } else {
                     ParaFormatLineRule::AtLeast

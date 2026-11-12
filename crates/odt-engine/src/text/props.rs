@@ -226,14 +226,14 @@ pub fn para_keys(f: Option<&ParaFormat>) -> ParaKeys {
     let empty = ParaFormat::default();
     let fmt = f.unwrap_or(&empty);
     let mut line: Option<String> = None;
-    let rule = *fmt.line_rule;
+    let rule = (*fmt.line_rule).as_ref();
     let raw = fmt.line_raw_twips.map(|n| n.0);
     if matches!(
         rule,
         Some(ParaFormatLineRule::Exact | ParaFormatLineRule::AtLeast)
     ) && raw.is_some_and(number_truthy)
     {
-        let name = if rule == Some(ParaFormatLineRule::Exact) {
+        let name = if rule == Some(&ParaFormatLineRule::Exact) {
             "exact"
         } else {
             "atLeast"
@@ -260,7 +260,7 @@ pub fn para_keys(f: Option<&ParaFormat>) -> ParaKeys {
         .filter(|t| t.rel.is_none() && t.inherited.is_none())
         .collect();
     ParaKeys {
-        align: fmt.align.map(|a| a.as_str().to_owned()),
+        align: (*fmt.align).as_ref().map(|a| a.as_str().to_owned()),
         indent_left: num(*fmt.indent_left),
         indent_right: num(*fmt.indent_right),
         indent_first_line: num(*fmt.indent_first_line),
@@ -291,7 +291,7 @@ pub fn para_keys(f: Option<&ParaFormat>) -> ParaKeys {
                             "{}:{}:{}",
                             t.val.as_str(),
                             number_to_string(math_round(t.pos.0)),
-                            t.leader.map_or("none", |l| l.as_str())
+                            t.leader.as_ref().map_or("none", |l| l.as_str())
                         )
                     })
                     .collect::<Vec<_>>()
@@ -352,12 +352,14 @@ fn cm(value: Option<JsNum>) -> Option<String> {
 }
 
 /// `ALIGN_TO_ODF[a]`
-fn align_to_odf(a: ParaAlign) -> &'static str {
+/// A string outside the table has no entry (`undefined`).
+fn align_to_odf(a: &ParaAlign) -> Option<&'static str> {
     match a {
-        ParaAlign::Left => "start",
-        ParaAlign::Right => "end",
-        ParaAlign::Center => "center",
-        ParaAlign::Justify | ParaAlign::Distribute => "justify",
+        ParaAlign::Left => Some("start"),
+        ParaAlign::Right => Some("end"),
+        ParaAlign::Center => Some("center"),
+        ParaAlign::Justify | ParaAlign::Distribute => Some("justify"),
+        ParaAlign::Unlisted(_) => None,
     }
 }
 
@@ -424,9 +426,13 @@ pub fn para_overrides(
             // a cleared value removes the attribute: the paragraph then takes its
             // common style's value, as the docx paragraph takes its style's
             ParaKey::Align => {
-                let a = *edited.align;
-                attrs.set("fo:text-align", a.map(|a| align_to_odf(a).to_owned()));
-                if a == Some(ParaAlign::Distribute) {
+                // an empty string is falsy: no alignment
+                let a = (*edited.align).as_ref().filter(|a| !a.as_str().is_empty());
+                attrs.set(
+                    "fo:text-align",
+                    a.map(|a| align_to_odf(a).unwrap_or("start").to_owned()),
+                );
+                if a == Some(&ParaAlign::Distribute) {
                     attrs.set("fo:text-align-last", Some("justify".to_owned()));
                 } else if original.align.as_deref() == Some("distribute") {
                     attrs.set("fo:text-align-last", None);
@@ -444,7 +450,7 @@ pub fn para_overrides(
             }
             ParaKey::SpaceAfter => attrs.set("fo:margin-bottom", cm(*edited.space_after)),
             ParaKey::Line => {
-                let rule = *edited.line_rule;
+                let rule = (*edited.line_rule).as_ref();
                 let raw = edited.line_raw_twips.map(|n| n.0);
                 if matches!(
                     rule,
@@ -452,7 +458,7 @@ pub fn para_overrides(
                 ) && raw.is_some_and(number_truthy)
                 {
                     let raw = raw.unwrap_or(0.0);
-                    if rule == Some(ParaFormatLineRule::Exact) {
+                    if rule == Some(&ParaFormatLineRule::Exact) {
                         attrs.set("fo:line-height", Some(twips_to_cm(raw)));
                         attrs.set("style:line-height-at-least", None);
                     } else {
@@ -733,10 +739,10 @@ pub fn text_keys(f: Option<&TextFormat>) -> TextKeys {
         italic: r.italic.unwrap_or(false),
         underline: r.underline.unwrap_or(false),
         strike: r.strike.unwrap_or(false),
-        vert_align: r.vert_align.map(|v| v.as_str().to_owned()),
-        caps: r
-            .caps
-            .filter(|c| *c != RunCaps::None)
+        vert_align: (*r.vert_align).as_ref().map(|v| v.as_str().to_owned()),
+        caps: (*r.caps)
+            .as_ref()
+            .filter(|c| **c != RunCaps::None && !c.as_str().is_empty())
             .map(|c| c.as_str().to_owned()),
         color: r
             .color

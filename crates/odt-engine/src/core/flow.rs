@@ -786,8 +786,8 @@ fn write_free(
                     .borrow()
                     .blocks
                     .first()
-                    .and_then(|b| (*b.r#type).map(BlockType::as_str))
-                    .unwrap_or("element");
+                    .and_then(|b| (*b.r#type).as_ref().map(|t| t.as_str().to_owned()))
+                    .unwrap_or_else(|| "element".to_owned());
                 rctx.warn(&format!("dropped a new {kind} with no writer"));
             }
         }

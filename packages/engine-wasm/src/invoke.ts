@@ -5,12 +5,7 @@
 // infinities by their spelling) and the reply back into what the TypeScript
 // function returned (Maps and Sets where `Shape` says, bytes from the reply
 // blobs), and an engine refusal into the error the TypeScript threw.
-import {
-  EngineError,
-  engineCall,
-  type EngineCallback,
-  type EngineReply,
-} from './index'
+import { EngineError, engineCall, type EngineCallback, type EngineReply } from './index'
 
 /** Where a Map, a Set or a list of them sits in a reply: a binding's generator writes it from the declared return type. */
 export interface Shape {
@@ -73,7 +68,8 @@ interface InvokeReply {
 
 /** What one request carries besides its JSON: the blobs and the functions it may call back. */
 interface Wire {
-  blobs: Uint8Array[]
+  /** bytes, and texts too long to cross in the JSON header */
+  blobs: Array<Uint8Array | string>
   /** callback name to slot */
   slots: Record<string, number>
   handlers: Record<number, EngineCallback>
@@ -83,7 +79,12 @@ interface Wire {
 /** `record[key] = value` as an own entry, `__proto__` included (the own-value rule of the engines). */
 function setOwn(record: Record<string, unknown>, key: string, value: unknown): void {
   if (key === '__proto__')
-    Object.defineProperty(record, key, { value, enumerable: true, writable: true, configurable: true })
+    Object.defineProperty(record, key, {
+      value,
+      enumerable: true,
+      writable: true,
+      configurable: true,
+    })
   else record[key] = value
 }
 
@@ -95,12 +96,38 @@ function bytesOf(value: unknown): Uint8Array | null {
   return null
 }
 
+/**
+ * A text longer than this crosses as a request blob (`{"$text": n}`), written
+ * into the engine's memory as UTF-8 once: in the JSON header it would be
+ * escaped, parsed and copied again in the engine.
+ */
+const LONG_TEXT = 1 << 16
+
+/** The ES2024 string methods, in every host the engine runs in (Node 20, Chromium 111). */
+interface WellFormed {
+  isWellFormed(): boolean
+  toWellFormed(): string
+}
+
+function wellFormed(value: string): string {
+  const text = value as string & WellFormed
+  return text.isWellFormed() ? value : text.toWellFormed()
+}
+
 /** One argument as JSON; `key` names a function the engine may call back. */
 function encode(value: unknown, wire: Wire, key: string): unknown {
   if (value === undefined || value === null) return null
   // JSON has no NaN and no infinity: they cross as their spelling (jscompat::js_f64 reads it)
   if (typeof value === 'number') return Number.isFinite(value) ? value : String(value)
-  if (typeof value === 'string' || typeof value === 'boolean') return value
+  if (typeof value === 'string') {
+    // a lone surrogate has no UTF-8: it crosses as U+FFFD, one unit for one,
+    // so UTF-16 offsets into the text still hold
+    const text = wellFormed(value)
+    if (text.length <= LONG_TEXT) return text
+    wire.blobs.push(text)
+    return { $text: wire.blobs.length - 1 }
+  }
+  if (typeof value === 'boolean') return value
   if (typeof value === 'function') {
     let slot = 1
     while (slot in wire.handlers) slot++
@@ -172,6 +199,8 @@ export function revive(
   if (isMarker(object, '$blob')) return blobs[object.$blob as number]
   if (isMarker(object, '$bytes')) return base64Bytes(object.$bytes as string)
   if (isMarker(object, '$input')) return input
+  // a NaN or an infinity, which JSON cannot carry (jscompat::writing_for_host)
+  if (isMarker(object, '$num')) return Number(object.$num)
   const out: Record<string, unknown> = {}
   for (const [name, inner] of Object.entries(object)) {
     const at = shape?.k === 'obj' ? shape.f?.[name] : shape?.k === 'rec' ? shape.v : undefined
@@ -226,7 +255,7 @@ export function engineErrorOf(error: EngineError): Error {
 /** `engineCall`, throwing what the TypeScript threw where the engine refuses (`engineErrorOf`). */
 export function callEngine<Header extends object>(
   command: object,
-  blobs?: readonly Uint8Array[],
+  blobs?: readonly (Uint8Array | string)[],
   callbacks?: Readonly<Record<number, EngineCallback>>,
 ): EngineReply<Header> {
   try {
@@ -243,7 +272,12 @@ export function engineInvokeRaw(
   options: InvokeOptions = {},
   answered?: Answered,
 ): Raw {
-  const wire: Wire = { blobs: [], slots: {}, handlers: { ...options.extraCallbacks }, field: options.field }
+  const wire: Wire = {
+    blobs: [],
+    slots: {},
+    handlers: { ...options.extraCallbacks },
+    field: options.field,
+  }
   const encoded = args.map((arg, i) => encode(arg, wire, options.names?.[i] ?? ''))
   // an answer that is bytes names its place after the blobs of the arguments
   const shifted = (entry: string | null | { $blob: number }): string | null | { $blob: number } =>
@@ -276,7 +310,10 @@ export function engineInvokeRaw(
   return {
     value: owed.length
       ? undefined
-      : sameBytesAs(revive(value, reply.blobs, options.shape), wire.blobs),
+      : sameBytesAs(
+          revive(value, reply.blobs, options.shape),
+          wire.blobs.filter((blob) => typeof blob !== 'string'),
+        ),
     owed,
     blobs: reply.blobs,
   }

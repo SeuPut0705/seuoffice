@@ -265,8 +265,9 @@ fn paragraph_floor(
 /// defaults'.
 fn line_of(para: &ParaFormat, display: &StyleDisplay, base: &ParaFormat) -> Line {
     let of = |f: &ParaFormat| Line {
-        rule: f.line_rule.map(|rule| match rule {
-            ParaFormatLineRule::Auto => LineRule::Auto,
+        // any other string reads as the automatic rule (`lineFloor` falls through)
+        rule: (*f.line_rule).as_ref().map(|rule| match rule {
+            ParaFormatLineRule::Auto | ParaFormatLineRule::Unlisted(_) => LineRule::Auto,
             ParaFormatLineRule::AtLeast => LineRule::AtLeast,
             ParaFormatLineRule::Exact => LineRule::Exact,
         }),

@@ -370,7 +370,7 @@ pub fn paragraph_to_ooxml(
             r#type: GeneratedBlockType::ListItem,
             style_id: style.style_id.clone(),
             list: Some(GeneratedBlockList {
-                kind: list.kind,
+                kind: list.kind.clone(),
                 num_id: list.item.num_id.clone(),
                 ilvl: JsNum(math_min(8.0, list.item.level as f64)),
             }),

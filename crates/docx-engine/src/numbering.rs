@@ -25,7 +25,7 @@ js_object! {
         pub custom_format: String,
         pub suff: String,
         pub is_lgl: bool,
-        pub lvl_jc: &'static str,
+        pub lvl_jc: String,
         pub p_style: String,
         pub lvl_restart: JsNum,
         pub bidi: bool,
@@ -178,8 +178,8 @@ fn parse_numbering_level(lvl_node: &XNode) -> NumberingLevel {
         level.is_lgl.set(true);
     }
     level.lvl_jc.set_some(match val_of(lvl_node, "w:lvlJc") {
-        Some("right" | "end") => Some("right"),
-        Some("center") => Some("center"),
+        Some("right" | "end") => Some("right".to_owned()),
+        Some("center") => Some("center".to_owned()),
         _ => None,
     });
     level

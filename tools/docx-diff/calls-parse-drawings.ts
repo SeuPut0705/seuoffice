@@ -1322,7 +1322,9 @@ function sectSlicesOf(parts: ReadonlyMap<string, string>): Array<[number, string
     (m) => [m.index ?? 0, m[0]] as [number, string],
   )
   const size = slices.reduce((sum, [, text]) => sum + text.length, 0)
-  return size > 60_000 || slices.some(([, text]) => /[^\x00-\x7f]/.test(text)) ? undefined : slices
+  return size > 60_000 || slices.some(([, text]) => /[\u0080-\uffff]/.test(text))
+    ? undefined
+    : slices
 }
 
 /** The arguments a BuildContext crosses as, at the call; undefined where it is not one this side can rebuild. */

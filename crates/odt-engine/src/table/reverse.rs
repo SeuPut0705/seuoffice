@@ -2521,7 +2521,7 @@ pub fn new_table_odf(
     let total = widths.iter().fold(0.0, |a, b| a + b);
     const DEFAULT_BORDER: &str = "0.018cm solid #000000";
     let tb = model.borders.as_ref();
-    let align_key = model.align.map_or("left", TableModelAlign::as_str);
+    let align_key = model.align.as_ref().map_or("left", TableModelAlign::as_str);
     let table_style = derive(
         rctx,
         &key_of(json!(["new-table", total, align_key])),
@@ -2569,7 +2569,7 @@ pub fn new_table_odf(
                 .row_height_rules
                 .as_ref()
                 .and_then(|v| v.get(r))
-                .copied()
+                .cloned()
                 .flatten()
                 == Some(TableModelRowHeightRulesItem::Exact);
             row_style = Some(derive(

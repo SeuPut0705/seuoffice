@@ -17,12 +17,11 @@ import { Comparison, describeTextDifference, engine } from './harness'
 import { modelJson } from './model-wire'
 
 const encode = new TextEncoder()
-const decode = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
 
 /** Pinned: the TypeScript reads the clock where an option is absent. */
 const SAVED_AT = '2024-05-06T07:08:09.123Z'
 /** Documents the comparison must reach: the corpus is 185 files, some of them encrypted. */
-const DOCUMENT_FLOOR = 100
+const DOCUMENT_FLOOR = 183
 
 const documents = new Comparison('(i) saveDocx, corpus documents saved', DOCUMENT_FLOOR)
 const variantsRun = new Map<string, Comparison>()
@@ -69,7 +68,8 @@ const GENERATED_KEYS = [
 
 /** The GeneratedBlock of a text block the editor rebuilt from its model. */
 function generatedOf(block: Block): GeneratedBlock | undefined {
-  if (block.type !== 'paragraph' && block.type !== 'heading' && block.type !== 'listItem') return undefined
+  if (block.type !== 'paragraph' && block.type !== 'heading' && block.type !== 'listItem')
+    return undefined
   if (!block.runs) return undefined
   const out: Record<string, unknown> = {}
   for (const key of GENERATED_KEYS) {
@@ -83,7 +83,9 @@ const PNG =
   'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
 
 const originals = (doc: ParsedDocFull): SaveBlock[] =>
-  doc.blocks.filter((b) => !b.hidden).map((b): SaveBlock => ({ kind: 'original', docxIndex: b.docxIndex as number }))
+  doc.blocks
+    .filter((b) => !b.hidden)
+    .map((b): SaveBlock => ({ kind: 'original', docxIndex: b.docxIndex as number }))
 
 const SECTION = {
   pageWidth: 11906,
@@ -109,35 +111,105 @@ function variantsOf(doc: ParsedDocFull): Variant[] {
   const inserted: SaveBlock[] = [
     ...base.slice(0, 1),
     { kind: 'xml', xml: '<w:p><w:r><w:t>inserted fragment</w:t></w:r></w:p>' },
-    { kind: 'image', image: { base64: PNG, mime: 'image/png', widthPx: 24, heightPx: 12, altText: 'dot' } },
-    { kind: 'images', images: [
-      { base64: PNG, mime: 'image/png', widthPx: 10, heightPx: 10, wrap: 'square-left', posOffsetEmu: { x: 100, y: 200 } },
-      { base64: PNG, mime: 'image/png', widthPx: 12, heightPx: 12, wrap: 'behind', posH: 'center', posV: 'top', zOrder: 3 },
-    ] },
-    { kind: 'chart', chart: { kind: 'bar', title: 'T', categories: ['a', 'b'], series: [{ name: 's', values: [1, null] }] }, extentPx: { w: 300, h: 200 } },
+    {
+      kind: 'image',
+      image: { base64: PNG, mime: 'image/png', widthPx: 24, heightPx: 12, altText: 'dot' },
+    },
+    {
+      kind: 'images',
+      images: [
+        {
+          base64: PNG,
+          mime: 'image/png',
+          widthPx: 10,
+          heightPx: 10,
+          wrap: 'square-left',
+          posOffsetEmu: { x: 100, y: 200 },
+        },
+        {
+          base64: PNG,
+          mime: 'image/png',
+          widthPx: 12,
+          heightPx: 12,
+          wrap: 'behind',
+          posH: 'center',
+          posV: 'top',
+          zOrder: 3,
+        },
+      ],
+    },
+    {
+      kind: 'chart',
+      chart: {
+        kind: 'bar',
+        title: 'T',
+        categories: ['a', 'b'],
+        series: [{ name: 's', values: [1, null] }],
+      },
+      extentPx: { w: 300, h: 200 },
+    },
     {
       kind: 'generated',
-      block: { type: 'heading', level: 3, runs: [{ text: 'A new heading' }, { text: ' link', link: 'https://example.com/a?b=1&c=2' }], bookmarks: ['bm1'] } as unknown as GeneratedBlock,
+      block: {
+        type: 'heading',
+        level: 3,
+        runs: [
+          { text: 'A new heading' },
+          { text: ' link', link: { href: 'https://example.com/a?b=1&c=2' } },
+        ],
+        bookmarks: ['bm1'],
+      } as unknown as GeneratedBlock,
     },
-    { kind: 'generated', block: { type: 'listItem', list: { kind: 'bullet', numId: '1', ilvl: 0 }, runs: [{ text: 'item', bold: true }] } },
+    {
+      kind: 'generated',
+      block: {
+        type: 'listItem',
+        list: { kind: 'bullet', numId: '1', ilvl: 0 },
+        runs: [{ text: 'item', bold: true }],
+      },
+    },
     ...base.slice(1),
   ]
   const revised: SaveBlock[] = base.map((b, index): SaveBlock => {
     const block = visible[index] ? generatedOf(visible[index]!) : undefined
     if (index !== 0 || !block) return b
-    return { kind: 'generated', block, docxIndex: visible[index]!.docxIndex as number, revision: { kind: 'ins', author: 'Ann', date: '2024-01-02T03:04:05Z', id: '' } }
+    return {
+      kind: 'generated',
+      block,
+      docxIndex: visible[index]!.docxIndex as number,
+      revision: { kind: 'ins', author: 'Ann', date: '2024-01-02T03:04:05Z', id: '' },
+    }
   })
   const firstTwo = visible.slice(0, 2).map((b) => b.docxIndex as number)
   return [
     { name: 'unchanged', blocks: base, options: {} },
-    { name: 'touched', blocks: base, options: { savedAt: SAVED_AT, trackRevisions: doc.trackRevisions ?? false, mirrorMargins: doc.mirrorMargins ?? false, evenAndOddHeaders: doc.evenAndOddHeaders ?? false } },
+    {
+      name: 'touched',
+      blocks: base,
+      options: {
+        savedAt: SAVED_AT,
+        trackRevisions: doc.trackRevisions ?? false,
+        mirrorMargins: doc.mirrorMargins ?? false,
+        evenAndOddHeaders: doc.evenAndOddHeaders ?? false,
+      },
+    },
     { name: 'regenerated blocks', blocks: regenerated, options: { savedAt: SAVED_AT } },
     { name: 'inserted blocks', blocks: inserted, options: { savedAt: SAVED_AT, pageCount: 3 } },
-    { name: 'tracked insertion', blocks: revised, options: { savedAt: SAVED_AT, revisionIdFloor: 500 } },
+    {
+      name: 'tracked insertion',
+      blocks: revised,
+      options: { savedAt: SAVED_AT, revisionIdFloor: 500 },
+    },
     {
       name: 'comments, notes and sources',
       blocks: base,
-      options: { savedAt: SAVED_AT, comments: doc.comments, footnotes: doc.footnotes, endnotes: doc.endnotes, sources: doc.sources },
+      options: {
+        savedAt: SAVED_AT,
+        comments: doc.comments,
+        footnotes: doc.footnotes,
+        endnotes: doc.endnotes,
+        sources: doc.sources,
+      },
     },
     {
       name: 'headers and footers',
@@ -158,7 +230,13 @@ function variantsOf(doc: ParsedDocFull): Variant[] {
     {
       name: 'page setup',
       blocks: base,
-      options: { savedAt: SAVED_AT, section: SECTION, pgNumType: { fmt: 'decimal', start: 3 }, pageColor: 'FFFF00', sectionStartType: 'continuous' },
+      options: {
+        savedAt: SAVED_AT,
+        section: SECTION,
+        pgNumType: { fmt: 'decimal', start: 3 },
+        pageColor: 'FFFF00',
+        sectionStartType: 'continuous',
+      },
     },
     {
       name: 'numbering',
@@ -166,7 +244,10 @@ function variantsOf(doc: ParsedDocFull): Variant[] {
       options: {
         savedAt: SAVED_AT,
         numbering: {
-          newDefs: [{ numId: '900', kind: 'bullet' }, { numId: '901', kind: 'ordered' }],
+          newDefs: [
+            { numId: '900', kind: 'bullet' },
+            { numId: '901', kind: 'ordered' },
+          ],
           restartNums: [{ numId: '902', abstractNumId: '0', startOverrides: { 0: 3 } }],
           picBullets: [{ id: 7, base64: PNG, mime: 'image/png' }],
         },
@@ -193,14 +274,41 @@ function variantsOf(doc: ParsedDocFull): Variant[] {
         properties: { core: { title: 'Saved title' } },
       },
     },
-    { name: 'zotero data', blocks: base, options: { savedAt: SAVED_AT, zoteroDocumentData: '<data data-version="3"/>' } },
+    {
+      name: 'zotero data',
+      blocks: base,
+      options: { savedAt: SAVED_AT, zoteroDocumentData: '<data data-version="3"/>' },
+    },
     {
       name: 'content controls',
       blocks: base,
-      options: { savedAt: SAVED_AT, contentControls: { wrap: [{ docxIndexes: firstTwo, spec: { tag: 'wrapped', title: 'Wrapped' } }], unwrap: [{ tag: 'none' }] } },
+      options: {
+        savedAt: SAVED_AT,
+        contentControls: {
+          wrap: [{ docxIndexes: firstTwo, spec: { tag: 'wrapped', title: 'Wrapped' } }],
+          unwrap: [{ tag: 'none' }],
+        },
+      },
     },
-    { name: 'inks', blocks: base, options: { savedAt: SAVED_AT, inks: [{ blockIndex: 0, base64: PNG, widthPx: 20, heightPx: 20, offsetXPx: 5, offsetYPx: 6 }] } },
-    { name: 'move ranges and parts removed', blocks: base, options: { savedAt: SAVED_AT, dropOrphanMoveRanges: true, removeParts: { kinds: ['customXml'] } } },
+    {
+      name: 'inks',
+      blocks: base,
+      options: {
+        savedAt: SAVED_AT,
+        inks: [
+          { blockIndex: 0, base64: PNG, widthPx: 20, heightPx: 20, offsetXPx: 5, offsetYPx: 6 },
+        ],
+      },
+    },
+    {
+      name: 'move ranges and parts removed',
+      blocks: base,
+      options: {
+        savedAt: SAVED_AT,
+        dropOrphanMoveRanges: true,
+        removeParts: { kinds: ['customXml'] },
+      },
+    },
   ]
 }
 
@@ -258,7 +366,8 @@ function rustSave(docx: Uint8Array, model: string, variant: Variant, nowMs: numb
     { cmd: 'saveDocx', blocks: variant.blocks, options: variant.options, nowMs },
     [docx, encode.encode(model)],
   )
-  if (failed(reply.header)) return { error: `${reply.header.error.code}: ${reply.header.error.message}` }
+  if (failed(reply.header))
+    return { error: `${reply.header.error.code}: ${reply.header.error.message}` }
   if (!reply.header.model || reply.blobs.length !== 1) throw new Error('invalid saveDocx reply')
   return { bytes: reply.blobs[0]! }
 }
@@ -294,15 +403,27 @@ async function compareVariant(
       into.record(null)
       return
     }
-    into.record(thrown !== undefined ? `${label}: only TypeScript refused: ${thrown}` : `${label}: only Rust refused: ${rust.error}`)
+    into.record(
+      thrown !== undefined
+        ? `${label}: only TypeScript refused: ${thrown}`
+        : `${label}: only Rust refused: ${rust.error}`,
+    )
     if (rust.error !== undefined) refusals.push(`${label}: ${rust.error}`)
     return
   }
-  into.record((await packageDifference(typescript!, rust.bytes!)) === null ? null : `${label}: ${await packageDifference(typescript!, rust.bytes!)}`)
+  into.record(
+    (await packageDifference(typescript!, rust.bytes!)) === null
+      ? null
+      : `${label}: ${await packageDifference(typescript!, rust.bytes!)}`,
+  )
 }
 
 /** `doc` is what the TypeScript parseDocx returned for `bytes`. */
-export async function saveOnDocument(where: string, bytes: Uint8Array, doc: ParsedDocFull): Promise<void> {
+export async function saveOnDocument(
+  where: string,
+  bytes: Uint8Array,
+  doc: ParsedDocFull,
+): Promise<void> {
   const model = modelWithoutBytes(doc)
   documents.record(null)
   for (const variant of variantsOf(doc)) {
@@ -321,19 +442,36 @@ const BLANK_OPTIONS = [
 /** Edited models of blank documents: what the corpus does not hold. */
 export async function saveAfterCorpus(): Promise<void> {
   for (const [index, options] of BLANK_OPTIONS.entries()) {
-    const docx = await buildBlankDocx({ ...options, createdAt: new Date(Date.UTC(2024, 0, 1)) } as Parameters<typeof buildBlankDocx>[0])
+    const docx = await buildBlankDocx({
+      ...options,
+      createdAt: new Date(Date.UTC(2024, 0, 1)),
+    } as Parameters<typeof buildBlankDocx>[0])
     const doc = (await parseDocx(docx)) as ParsedDocFull
     const where = `blank document ${index}`
     const model = modelWithoutBytes(doc)
     for (const variant of variantsOf(doc)) {
-      await compareVariant(population(blankVariants, variant.name), where, doc, docx, model, variant)
+      await compareVariant(
+        population(blankVariants, variant.name),
+        where,
+        doc,
+        docx,
+        model,
+        variant,
+      )
     }
     // an edit round trip: the saved document reopened, edited and saved again
     const saved = await saveDocx(doc, variantsOf(doc)[3]!.blocks, { savedAt: SAVED_AT })
     const again = (await parseDocx(saved)) as ParsedDocFull
     const reopened = modelWithoutBytes(again)
     for (const variant of variantsOf(again)) {
-      await compareVariant(population(blankVariants, `reopened, ${variant.name}`), `${where} reopened`, again, saved, reopened, variant)
+      await compareVariant(
+        population(blankVariants, `reopened, ${variant.name}`),
+        `${where} reopened`,
+        again,
+        saved,
+        reopened,
+        variant,
+      )
     }
   }
 }
@@ -356,5 +494,7 @@ export function reportSave(): void {
     refusals,
   }
   mkdirSync(dirname(path), { recursive: true })
-  writeFileSync(path, JSON.stringify(report, null, 2) + '\n', { flag: process.argv.includes('--first') ? 'wx' : 'w' })
+  writeFileSync(path, JSON.stringify(report, null, 2) + '\n', {
+    flag: process.argv.includes('--first') ? 'wx' : 'w',
+  })
 }

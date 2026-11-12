@@ -3,7 +3,7 @@
 //! comments and processing instructions stay byte-identical.
 
 use jscompat::{RegexError, RegexLimit, TryJsRegex, regex_escape};
-use ooxml_pkg::Package;
+use ooxml_pkg::{Package, PartName};
 
 use super::markup::{namespace_prefixes, opaque_markup_end, xml_tag_end};
 use super::thrown;
@@ -202,7 +202,7 @@ pub fn scrub_people_metadata(xml: &str) -> Result<String, RegexError> {
 /// glossary and people data all receive the same namespace-aware treatment.
 /// Custom XML/properties and binary parts are deliberately untouched.
 pub fn scrub_personal_metadata(zip: &mut Package) -> Result<(), String> {
-    let names: Vec<(String, bool)> = zip
+    let names: Vec<(PartName, bool)> = zip
         .parts()
         .iter()
         .map(|part| (part.name.clone(), part.is_dir))

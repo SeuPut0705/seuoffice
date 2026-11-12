@@ -357,7 +357,7 @@ pub fn list_style_from_numbering(
                 .and_then(|l| l.indent_left)
                 .map_or(720.0 * level as f64, |n| n.0);
             let hanging = l.and_then(|l| l.hanging).map_or(360.0, |n| n.0);
-            let followed_by = match l.and_then(|l| l.suff) {
+            let followed_by = match l.and_then(|l| l.suff.as_ref()) {
                 Some(NumberingLevelSuff::Space) => "space",
                 Some(NumberingLevelSuff::Nothing) => "nothing",
                 _ => "listtab",

@@ -649,27 +649,31 @@ pub fn run_picture_anchor_of(drawing_xml: &str) -> Result<RunPictureAnchor, Thro
         return Ok(anchor);
     }
     let meta = image_meta(drawing_xml, None)?;
-    anchor.wrap = *meta.image_wrap;
+    anchor.wrap = (*meta.image_wrap).clone();
     anchor.offset_x_emu = *meta.image_offset_x_emu;
     anchor.offset_y_emu = *meta.image_offset_y_emu;
-    anchor.rel_v = meta.image_rel_v.map(|rel| match rel {
+    anchor.rel_v = (*meta.image_rel_v).clone().map(|rel| match rel {
         BlockImageRelV::Page => RunImageRelV::Page,
         BlockImageRelV::Margin => RunImageRelV::Margin,
         BlockImageRelV::Line => RunImageRelV::Line,
+        BlockImageRelV::Unlisted(text) => RunImageRelV::Unlisted(text),
     });
-    anchor.rel_h = meta.image_rel_h.map(|rel| match rel {
+    anchor.rel_h = (*meta.image_rel_h).clone().map(|rel| match rel {
         BlockImageRelH::Page => RunImageRelH::Page,
         BlockImageRelH::Margin => RunImageRelH::Margin,
+        BlockImageRelH::Unlisted(text) => RunImageRelH::Unlisted(text),
     });
-    anchor.pos_h = meta.image_pos_h.map(|pos| match pos {
+    anchor.pos_h = (*meta.image_pos_h).clone().map(|pos| match pos {
         BlockImagePosH::Left => RunImagePosH::Left,
         BlockImagePosH::Center => RunImagePosH::Center,
         BlockImagePosH::Right => RunImagePosH::Right,
+        BlockImagePosH::Unlisted(text) => RunImagePosH::Unlisted(text),
     });
-    anchor.pos_v = meta.image_pos_v.map(|pos| match pos {
+    anchor.pos_v = (*meta.image_pos_v).clone().map(|pos| match pos {
         BlockImagePosV::Top => RunImagePosV::Top,
         BlockImagePosV::Center => RunImagePosV::Center,
         BlockImagePosV::Bottom => RunImagePosV::Bottom,
+        BlockImagePosV::Unlisted(text) => RunImagePosV::Unlisted(text),
     });
     anchor.wrap_dist_top_emu = *meta.image_wrap_dist_top_emu;
     anchor.wrap_dist_bottom_emu = *meta.image_wrap_dist_bottom_emu;

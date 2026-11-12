@@ -171,7 +171,7 @@ const IMAGES: Array<Record<string, unknown>> = [
   { base64: 'AAAA', mime: 'image/png', widthPx: 10, heightPx: 20 },
   { base64: '', mime: 'image/jpeg', widthPx: 0, heightPx: 5, rotDeg: 1e300, zOrder: 1e300 },
   { base64: 'AA', mime: 'image/gif', widthPx: -3, heightPx: 4, rotDeg: 45, zOrder: 2, posOffsetEmu: { x: 1e300, y: 0 } },
-  { base64: 'AA', mime: 'image/png', widthPx: 1e300, heightPx: 3, posOffsetEmu: { x: 5, y: 6, relativeTo: 'page' }, paraSpacing: { beforeTwips: 1e300, afterTwips: 12, lineTwips: 240, lineRule: 'auto' } },
+  { base64: 'AA', mime: 'image/png', widthPx: 1e300, heightPx: 3, posOffsetEmu: { x: 5, y: 6, relativeTo: 'page' }, paraSpacing: { beforeTwips: 1e300, afterTwips: 12, lineTwips: 240, lineRule: 'exact' } },
   { base64: 'AA', mime: 'image/png', widthPx: 8, heightPx: 3, paraSpacing: {} },
 ]
 

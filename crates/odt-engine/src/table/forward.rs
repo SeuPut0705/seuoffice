@@ -872,7 +872,7 @@ fn convert_cell_content(
                         },
                         kind: kinds
                             .get(l.depth.min(8))
-                            .copied()
+                            .cloned()
                             .unwrap_or(GeneratedBlockListKind::Ordered),
                     });
                 }

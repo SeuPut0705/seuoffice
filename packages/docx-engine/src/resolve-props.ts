@@ -9,7 +9,19 @@
  */
 import { type XNode } from './xml-utils'
 import { type CharUnits } from './parse-props'
-import type { CharIndents, DocDefaults, NumberingDef, NumberingLevel, ParaAlign, ParaBorderSides, Run, StyleInfo, TabStop, ThemeColors, ThemeFonts } from './types'
+import type {
+  CharIndents,
+  DocDefaults,
+  NumberingDef,
+  NumberingLevel,
+  ParaAlign,
+  ParaBorderSides,
+  Run,
+  StyleInfo,
+  TabStop,
+  ThemeColors,
+  ThemeFonts,
+} from './types'
 import { invoke, xnodeArg } from './engine'
 
 export type PropSource =
@@ -183,7 +195,12 @@ export function resolveCtxOf(doc: {
   doNotUseHTMLParagraphAutoSpacing?: boolean
   indentNotNumberingTabStop?: boolean
 }): ResolveCtx {
-  return invoke('resolveCtxOf', [doc], { shape: {"k":"obj","f":{"styles":{"k":"map"},"numbering":{"k":"map"},"styleMemo":{"k":"map"}}} }) as never
+  return invoke('resolveCtxOf', [doc], {
+    shape: {
+      k: 'obj',
+      f: { styles: { k: 'map' }, numbering: { k: 'map' }, styleMemo: { k: 'map' } },
+    },
+  }) as never
 }
 export interface EffectiveSpacingTwips {
   before: number

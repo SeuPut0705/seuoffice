@@ -92,9 +92,10 @@ pub fn edited_paragraph_from_table_paragraph(p: &TableParagraph) -> EditedParagr
         level: None,
         outline_only: None,
         list: p.list.as_ref().map(|l| BlockList {
-            kind: match l.kind {
+            kind: match &l.kind {
                 TableParagraphListKind::Bullet => BlockListKind::Bullet,
                 TableParagraphListKind::Ordered => BlockListKind::Ordered,
+                TableParagraphListKind::Unlisted(s) => BlockListKind::Unlisted(s.clone()),
             },
             num_id: l.num_id.clone(),
             ilvl: l.ilvl,

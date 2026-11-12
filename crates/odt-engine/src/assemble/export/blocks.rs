@@ -356,12 +356,13 @@ impl<'a> BlockNormaliser<'a> {
             out.char_spacing_twips.set(v);
         }
         if out.caps.is_none()
-            && let Some(v) = *display.caps
+            && let Some(v) = (*display.caps).as_ref().filter(|v| v.as_str() != "auto")
         {
             out.caps.set(match v {
                 StyleDisplayCaps::All => RunCaps::All,
                 StyleDisplayCaps::Small => RunCaps::Small,
                 StyleDisplayCaps::None => RunCaps::None,
+                StyleDisplayCaps::Unlisted(s) => RunCaps::Unlisted(s.clone()),
             });
         }
         if out.shading.is_none()
@@ -706,10 +707,10 @@ impl<'a> BlockNormaliser<'a> {
                 piece.format.set(format);
                 piece
                     .r#type
-                    .set(if *block.r#type == Some(BlockType::ListItem) {
+                    .set(if (*block.r#type).as_ref() == Some(&BlockType::ListItem) {
                         BlockType::Paragraph
                     } else {
-                        (*block.r#type).unwrap_or(BlockType::Paragraph)
+                        (*block.r#type).clone().unwrap_or(BlockType::Paragraph)
                     });
                 piece.list.assign(None);
             }
@@ -775,7 +776,7 @@ impl<'a> BlockNormaliser<'a> {
                 blocks: vec![block],
             }
         };
-        let kind = *b.r#type;
+        let kind = (*b.r#type).as_ref();
         if matches!(
             kind,
             Some(BlockType::Paragraph | BlockType::Heading | BlockType::ListItem)
@@ -783,7 +784,7 @@ impl<'a> BlockNormaliser<'a> {
             let paragraph = self.paragraph(b);
             return Some(item(paragraph));
         }
-        if kind == Some(BlockType::Table)
+        if kind == Some(&BlockType::Table)
             && let Some(model) = b.table.as_ref()
         {
             let table = self.table_model(model, &mut ObjectKeys::new(docx_index(b)));
@@ -791,19 +792,20 @@ impl<'a> BlockNormaliser<'a> {
             next.table.set(table);
             return Some(item(next));
         }
-        if kind == Some(BlockType::Image) {
+        if kind == Some(&BlockType::Image) {
             let xml = original_xml(b);
             let picture = self.picture_from_xml(xml, b.image_data_url.as_deref())?;
             let p_pr = leading_p_pr(xml);
             let style_id = p_style_of(p_pr);
             let mut format = read_ooxml_p_pr(p_pr);
             if format.align.is_none()
-                && let Some(align) = *b.image_align
+                && let Some(align) = (*b.image_align).as_ref().filter(|a| !a.as_str().is_empty())
             {
                 format.align.set(match align {
                     BlockImageAlign::Left => ParaAlign::Left,
                     BlockImageAlign::Center => ParaAlign::Center,
                     BlockImageAlign::Right => ParaAlign::Right,
+                    BlockImageAlign::Unlisted(s) => ParaAlign::Unlisted(s.clone()),
                 });
             }
             let mut next = b.clone();
@@ -843,13 +845,13 @@ impl<'a> BlockNormaliser<'a> {
                     tail.text.set(format!("\t{right}"));
                     runs.push(tail);
                 }
-                let leader = fd.leader.unwrap_or(TabStopLeader::Dot);
+                let leader = fd.leader.clone().unwrap_or(TabStopLeader::Dot);
                 let mut format = (*b.format).clone().unwrap_or_default();
                 format.tab_stops.set(vec![TabStop {
                     pos: JsNum(9000.0),
                     val: TabStopVal::Right,
                     rel: None,
-                    leader: Some(leader),
+                    leader: Some(leader.clone()),
                     inherited: None,
                 }]);
                 let xml = original_xml(b);

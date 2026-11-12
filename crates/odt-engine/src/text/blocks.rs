@@ -80,7 +80,7 @@ fn list_to_ooxml(
                                         header,
                                         continuation: !first,
                                     },
-                                    kind: inst.kinds.get(level).copied().unwrap_or(
+                                    kind: inst.kinds.get(level).cloned().unwrap_or(
                                         docx_engine::model::GeneratedBlockListKind::Ordered,
                                     ),
                                 }),
@@ -385,8 +385,8 @@ pub fn write_text_items(
                             .borrow()
                             .blocks
                             .first()
-                            .and_then(|b| *b.r#type)
-                            .map_or("element", |t| t.as_str());
+                            .and_then(|b| (*b.r#type).as_ref().map(|t| t.as_str().to_owned()))
+                            .unwrap_or_else(|| "element".to_owned());
                         rctx.warn(&format!("dropped a new {kind} with no writer"));
                     }
                 }
@@ -436,14 +436,14 @@ pub fn write_text_items(
         if let Some(origin) = &origin {
             follows = Some(origin.clone());
         }
-        let block_type = *block.r#type;
+        let block_type = (*block.r#type).as_ref();
         let list: Option<(String, f64, bool, bool)> =
-            if block_type == Some(BlockType::ListItem) && block.list.is_some() {
+            if block_type == Some(&BlockType::ListItem) && block.list.is_some() {
                 block
                     .list
                     .as_ref()
                     .map(|l| (l.num_id.clone(), l.ilvl.0, false, false))
-            } else if block_type == Some(BlockType::Paragraph)
+            } else if block_type == Some(&BlockType::Paragraph)
                 && origin
                     .as_ref()
                     .and_then(|o| o.list.as_ref())

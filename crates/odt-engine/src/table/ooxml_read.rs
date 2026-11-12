@@ -374,7 +374,7 @@ pub fn edited_grid<'a>(model: &'a TableModel, ox: &'a OxTable) -> EditedGrid<'a>
             } else {
                 None
             };
-            let continues = cell.v_merge.is_some_and(|v| v == TableCellVMerge::Continue)
+            let continues = (*cell.v_merge).as_ref() == Some(&TableCellVMerge::Continue)
                 && above.is_some_and(|a| {
                     let above = &anchors[a];
                     above.col == c && above.row + above.row_span == r

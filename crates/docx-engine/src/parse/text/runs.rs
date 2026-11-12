@@ -178,7 +178,10 @@ pub fn note_run_of(run: &Run, base: &EffectiveRPr) -> NoteRun {
     if let Some(font_ascii) = truthy(font_ascii) {
         out.font_ascii = Some(font_ascii.to_owned());
     }
-    let caps = (*run.caps).map_or(base.caps.as_str(), RunCaps::as_str);
+    let caps = run
+        .caps
+        .as_ref()
+        .map_or(base.caps.as_str(), RunCaps::as_str);
     out.caps = match caps {
         "all" => Some(NoteRunCaps::All),
         "small" => Some(NoteRunCaps::Small),
@@ -250,8 +253,8 @@ pub fn note_numbers_of(
             if sect_depth > depth {
                 sect_depth = -1;
                 for kind in [NoteKind::Footnote, NoteKind::Endnote] {
-                    if props(kind).and_then(|p| *p.num_restart)
-                        == Some(NotePropsNumRestart::EachSect)
+                    if props(kind).and_then(|p| p.num_restart.as_ref())
+                        == Some(&NotePropsNumRestart::EachSect)
                     {
                         count[kind as usize] = 0.0;
                     }

@@ -344,28 +344,36 @@ impl<'de> Deserialize<'de> for PropChangeInfo {
     }
 }
 
-/// `PropChangeInfo.resolved`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `PropChangeInfo.resolved`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PropChangeInfoResolved {
-    #[serde(rename = "accept")]
     Accept,
-    #[serde(rename = "reject")]
     Reject,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl PropChangeInfoResolved {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Accept => "accept",
             Self::Reject => "reject",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for PropChangeInfoResolved {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for PropChangeInfoResolved {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "PropChangeInfo.resolved", |text| match text {
+        wire::string_enum(deserializer, "PropChangeInfo.resolved", Self::Unlisted, |text| match text {
             "accept" => Some(Self::Accept),
             "reject" => Some(Self::Reject),
             _ => None,
@@ -456,34 +464,40 @@ impl<'de> Deserialize<'de> for TextOutline {
     }
 }
 
-/// `TextEffect`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextEffect`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextEffect {
-    #[serde(rename = "outline")]
     Outline,
-    #[serde(rename = "emboss")]
     Emboss,
-    #[serde(rename = "imprint")]
     Imprint,
-    #[serde(rename = "shadow")]
     Shadow,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextEffect {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Outline => "outline",
             Self::Emboss => "emboss",
             Self::Imprint => "imprint",
             Self::Shadow => "shadow",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextEffect {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextEffect {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextEffect", |text| match text {
+        wire::string_enum(deserializer, "TextEffect", Self::Unlisted, |text| match text {
             "outline" => Some(Self::Outline),
             "emboss" => Some(Self::Emboss),
             "imprint" => Some(Self::Imprint),
@@ -949,31 +963,38 @@ impl<'de> Deserialize<'de> for RunThemeRFonts {
     }
 }
 
-/// `Run.caps`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.caps`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunCaps {
-    #[serde(rename = "all")]
     All,
-    #[serde(rename = "small")]
     Small,
-    #[serde(rename = "none")]
     None,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunCaps {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::All => "all",
             Self::Small => "small",
             Self::None => "none",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunCaps {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunCaps {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.caps", |text| match text {
+        wire::string_enum(deserializer, "Run.caps", Self::Unlisted, |text| match text {
             "all" => Some(Self::All),
             "small" => Some(Self::Small),
             "none" => Some(Self::None),
@@ -1361,31 +1382,38 @@ impl<'de> Deserialize<'de> for EffectiveRPrFonts {
     }
 }
 
-/// `EffectiveRPr.caps`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `EffectiveRPr.caps`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EffectiveRPrCaps {
-    #[serde(rename = "none")]
     None,
-    #[serde(rename = "all")]
     All,
-    #[serde(rename = "small")]
     Small,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl EffectiveRPrCaps {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::None => "none",
             Self::All => "all",
             Self::Small => "small",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for EffectiveRPrCaps {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for EffectiveRPrCaps {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "EffectiveRPr.caps", |text| match text {
+        wire::string_enum(deserializer, "EffectiveRPr.caps", Self::Unlisted, |text| match text {
             "none" => Some(Self::None),
             "all" => Some(Self::All),
             "small" => Some(Self::Small),
@@ -1394,28 +1422,36 @@ impl<'de> Deserialize<'de> for EffectiveRPrCaps {
     }
 }
 
-/// `EffectiveRPr.vertAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `EffectiveRPr.vertAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EffectiveRPrVertAlign {
-    #[serde(rename = "superscript")]
     Superscript,
-    #[serde(rename = "subscript")]
     Subscript,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl EffectiveRPrVertAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Superscript => "superscript",
             Self::Subscript => "subscript",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for EffectiveRPrVertAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for EffectiveRPrVertAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "EffectiveRPr.vertAlign", |text| match text {
+        wire::string_enum(deserializer, "EffectiveRPr.vertAlign", Self::Unlisted, |text| match text {
             "superscript" => Some(Self::Superscript),
             "subscript" => Some(Self::Subscript),
             _ => None,
@@ -1423,28 +1459,24 @@ impl<'de> Deserialize<'de> for EffectiveRPrVertAlign {
     }
 }
 
-/// `PropSource`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `PropSource`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum PropSource {
-    #[serde(rename = "direct")]
     Direct,
-    #[serde(rename = "numbering")]
     Numbering,
-    #[serde(rename = "paraStyle")]
     ParaStyle,
-    #[serde(rename = "charStyle")]
     CharStyle,
-    #[serde(rename = "tableStyle")]
     TableStyle,
-    #[serde(rename = "docDefaults")]
     DocDefaults,
-    #[serde(rename = "builtin")]
     Builtin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl PropSource {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Direct => "direct",
             Self::Numbering => "numbering",
@@ -1453,13 +1485,20 @@ impl PropSource {
             Self::TableStyle => "tableStyle",
             Self::DocDefaults => "docDefaults",
             Self::Builtin => "builtin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for PropSource {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for PropSource {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "PropSource", |text| match text {
+        wire::string_enum(deserializer, "PropSource", Self::Unlisted, |text| match text {
             "direct" => Some(Self::Direct),
             "numbering" => Some(Self::Numbering),
             "paraStyle" => Some(Self::ParaStyle),
@@ -1472,34 +1511,40 @@ impl<'de> Deserialize<'de> for PropSource {
     }
 }
 
-/// `EffectiveRPr.styleXor[]`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `EffectiveRPr.styleXor[]`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EffectiveRPrStyleXorItem {
-    #[serde(rename = "bold")]
     Bold,
-    #[serde(rename = "italic")]
     Italic,
-    #[serde(rename = "strike")]
     Strike,
-    #[serde(rename = "vanish")]
     Vanish,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl EffectiveRPrStyleXorItem {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bold => "bold",
             Self::Italic => "italic",
             Self::Strike => "strike",
             Self::Vanish => "vanish",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for EffectiveRPrStyleXorItem {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for EffectiveRPrStyleXorItem {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "EffectiveRPr.styleXor[]", |text| match text {
+        wire::string_enum(deserializer, "EffectiveRPr.styleXor[]", Self::Unlisted, |text| match text {
             "bold" => Some(Self::Bold),
             "italic" => Some(Self::Italic),
             "strike" => Some(Self::Strike),
@@ -1509,28 +1554,36 @@ impl<'de> Deserialize<'de> for EffectiveRPrStyleXorItem {
     }
 }
 
-/// `Run.vertAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.vertAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunVertAlign {
-    #[serde(rename = "superscript")]
     Superscript,
-    #[serde(rename = "subscript")]
     Subscript,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunVertAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Superscript => "superscript",
             Self::Subscript => "subscript",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunVertAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunVertAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.vertAlign", |text| match text {
+        wire::string_enum(deserializer, "Run.vertAlign", Self::Unlisted, |text| match text {
             "superscript" => Some(Self::Superscript),
             "subscript" => Some(Self::Subscript),
             _ => None,
@@ -1538,34 +1591,40 @@ impl<'de> Deserialize<'de> for RunVertAlign {
     }
 }
 
-/// `Run.em`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.em`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunEm {
-    #[serde(rename = "dot")]
     Dot,
-    #[serde(rename = "comma")]
     Comma,
-    #[serde(rename = "circle")]
     Circle,
-    #[serde(rename = "underDot")]
     UnderDot,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunEm {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Dot => "dot",
             Self::Comma => "comma",
             Self::Circle => "circle",
             Self::UnderDot => "underDot",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunEm {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunEm {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.em", |text| match text {
+        wire::string_enum(deserializer, "Run.em", Self::Unlisted, |text| match text {
             "dot" => Some(Self::Dot),
             "comma" => Some(Self::Comma),
             "circle" => Some(Self::Circle),
@@ -1743,28 +1802,36 @@ impl<'de> Deserialize<'de> for RunNoteRef {
     }
 }
 
-/// `Run.noteRef.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.noteRef.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunNoteRefKind {
-    #[serde(rename = "footnote")]
     Footnote,
-    #[serde(rename = "endnote")]
     Endnote,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunNoteRefKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Footnote => "footnote",
             Self::Endnote => "endnote",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunNoteRefKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunNoteRefKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.noteRef.kind", |text| match text {
+        wire::string_enum(deserializer, "Run.noteRef.kind", Self::Unlisted, |text| match text {
             "footnote" => Some(Self::Footnote),
             "endnote" => Some(Self::Endnote),
             _ => None,
@@ -1772,34 +1839,40 @@ impl<'de> Deserialize<'de> for RunNoteRefKind {
     }
 }
 
-/// `Run.zoteroFieldPart`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.zoteroFieldPart`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunZoteroFieldPart {
-    #[serde(rename = "single")]
     Single,
-    #[serde(rename = "begin")]
     Begin,
-    #[serde(rename = "inside")]
     Inside,
-    #[serde(rename = "end")]
     End,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunZoteroFieldPart {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Single => "single",
             Self::Begin => "begin",
             Self::Inside => "inside",
             Self::End => "end",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunZoteroFieldPart {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunZoteroFieldPart {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.zoteroFieldPart", |text| match text {
+        wire::string_enum(deserializer, "Run.zoteroFieldPart", Self::Unlisted, |text| match text {
             "single" => Some(Self::Single),
             "begin" => Some(Self::Begin),
             "inside" => Some(Self::Inside),
@@ -1906,28 +1979,36 @@ impl<'de> Deserialize<'de> for InlineWrap {
     }
 }
 
-/// `InlineWrap.inside`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `InlineWrap.inside`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum InlineWrapInside {
-    #[serde(rename = "revision")]
     Revision,
-    #[serde(rename = "link")]
     Link,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl InlineWrapInside {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Revision => "revision",
             Self::Link => "link",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for InlineWrapInside {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for InlineWrapInside {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "InlineWrap.inside", |text| match text {
+        wire::string_enum(deserializer, "InlineWrap.inside", Self::Unlisted, |text| match text {
             "revision" => Some(Self::Revision),
             "link" => Some(Self::Link),
             _ => None,
@@ -2283,28 +2364,36 @@ impl<'de> Deserialize<'de> for RunRPrChangeOld {
     }
 }
 
-/// `Run.rPrChange.old.vertAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.rPrChange.old.vertAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunRPrChangeOldVertAlign {
-    #[serde(rename = "superscript")]
     Superscript,
-    #[serde(rename = "subscript")]
     Subscript,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunRPrChangeOldVertAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Superscript => "superscript",
             Self::Subscript => "subscript",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunRPrChangeOldVertAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunRPrChangeOldVertAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.rPrChange.old.vertAlign", |text| match text {
+        wire::string_enum(deserializer, "Run.rPrChange.old.vertAlign", Self::Unlisted, |text| match text {
             "superscript" => Some(Self::Superscript),
             "subscript" => Some(Self::Subscript),
             _ => None,
@@ -2312,31 +2401,38 @@ impl<'de> Deserialize<'de> for RunRPrChangeOldVertAlign {
     }
 }
 
-/// `Run.rPrChange.old.caps`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.rPrChange.old.caps`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunRPrChangeOldCaps {
-    #[serde(rename = "all")]
     All,
-    #[serde(rename = "small")]
     Small,
-    #[serde(rename = "none")]
     None,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunRPrChangeOldCaps {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::All => "all",
             Self::Small => "small",
             Self::None => "none",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunRPrChangeOldCaps {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunRPrChangeOldCaps {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.rPrChange.old.caps", |text| match text {
+        wire::string_enum(deserializer, "Run.rPrChange.old.caps", Self::Unlisted, |text| match text {
             "all" => Some(Self::All),
             "small" => Some(Self::Small),
             "none" => Some(Self::None),
@@ -2823,32 +2919,26 @@ impl<'de> Deserialize<'de> for RunImage {
     }
 }
 
-/// `ImageWrap`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ImageWrap`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ImageWrap {
-    #[serde(rename = "square-left")]
     SquareLeft,
-    #[serde(rename = "square-right")]
     SquareRight,
-    #[serde(rename = "tight-left")]
     TightLeft,
-    #[serde(rename = "tight-right")]
     TightRight,
-    #[serde(rename = "through-left")]
     ThroughLeft,
-    #[serde(rename = "through-right")]
     ThroughRight,
-    #[serde(rename = "topBottom")]
     TopBottom,
-    #[serde(rename = "behind")]
     Behind,
-    #[serde(rename = "front")]
     Front,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ImageWrap {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::SquareLeft => "square-left",
             Self::SquareRight => "square-right",
@@ -2859,13 +2949,20 @@ impl ImageWrap {
             Self::TopBottom => "topBottom",
             Self::Behind => "behind",
             Self::Front => "front",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ImageWrap {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ImageWrap {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ImageWrap", |text| match text {
+        wire::string_enum(deserializer, "ImageWrap", Self::Unlisted, |text| match text {
             "square-left" => Some(Self::SquareLeft),
             "square-right" => Some(Self::SquareRight),
             "tight-left" => Some(Self::TightLeft),
@@ -2880,31 +2977,38 @@ impl<'de> Deserialize<'de> for ImageWrap {
     }
 }
 
-/// `Run.image.relV`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.image.relV`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunImageRelV {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "line")]
     Line,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunImageRelV {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Line => "line",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunImageRelV {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunImageRelV {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.image.relV", |text| match text {
+        wire::string_enum(deserializer, "Run.image.relV", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "line" => Some(Self::Line),
@@ -2913,28 +3017,36 @@ impl<'de> Deserialize<'de> for RunImageRelV {
     }
 }
 
-/// `Run.image.relH`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.image.relH`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunImageRelH {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunImageRelH {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunImageRelH {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunImageRelH {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.image.relH", |text| match text {
+        wire::string_enum(deserializer, "Run.image.relH", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             _ => None,
@@ -2942,31 +3054,38 @@ impl<'de> Deserialize<'de> for RunImageRelH {
     }
 }
 
-/// `Run.image.posH`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.image.posH`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunImagePosH {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunImagePosH {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunImagePosH {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunImagePosH {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.image.posH", |text| match text {
+        wire::string_enum(deserializer, "Run.image.posH", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -2975,31 +3094,38 @@ impl<'de> Deserialize<'de> for RunImagePosH {
     }
 }
 
-/// `Run.image.posV`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.image.posV`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunImagePosV {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunImagePosV {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunImagePosV {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunImagePosV {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.image.posV", |text| match text {
+        wire::string_enum(deserializer, "Run.image.posV", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -3279,28 +3405,36 @@ impl<'de> Deserialize<'de> for RunImageRule {
     }
 }
 
-/// `Run.image.rule.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Run.image.rule.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RunImageRuleAlign {
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RunImageRuleAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RunImageRuleAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RunImageRuleAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Run.image.rule.align", |text| match text {
+        wire::string_enum(deserializer, "Run.image.rule.align", Self::Unlisted, |text| match text {
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
             _ => None,
@@ -3578,31 +3712,38 @@ impl<'de> Deserialize<'de> for NewImage {
     }
 }
 
-/// `NewImage.mime`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NewImage.mime`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NewImageMime {
-    #[serde(rename = "image/png")]
     ImagePng,
-    #[serde(rename = "image/jpeg")]
     ImageJpeg,
-    #[serde(rename = "image/gif")]
     ImageGif,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NewImageMime {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::ImagePng => "image/png",
             Self::ImageJpeg => "image/jpeg",
             Self::ImageGif => "image/gif",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NewImageMime {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NewImageMime {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NewImage.mime", |text| match text {
+        wire::string_enum(deserializer, "NewImage.mime", Self::Unlisted, |text| match text {
             "image/png" => Some(Self::ImagePng),
             "image/jpeg" => Some(Self::ImageJpeg),
             "image/gif" => Some(Self::ImageGif),
@@ -3611,31 +3752,38 @@ impl<'de> Deserialize<'de> for NewImageMime {
     }
 }
 
-/// `NewImage.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NewImage.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NewImageAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NewImageAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NewImageAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NewImageAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NewImage.align", |text| match text {
+        wire::string_enum(deserializer, "NewImage.align", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -3727,28 +3875,36 @@ impl<'de> Deserialize<'de> for NewImagePosOffsetEmu {
     }
 }
 
-/// `NewImage.posOffsetEmu.relativeTo`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NewImage.posOffsetEmu.relativeTo`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NewImagePosOffsetEmuRelativeTo {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NewImagePosOffsetEmuRelativeTo {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NewImagePosOffsetEmuRelativeTo {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NewImagePosOffsetEmuRelativeTo {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NewImage.posOffsetEmu.relativeTo", |text| match text {
+        wire::string_enum(deserializer, "NewImage.posOffsetEmu.relativeTo", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             _ => None,
@@ -3756,31 +3912,38 @@ impl<'de> Deserialize<'de> for NewImagePosOffsetEmuRelativeTo {
     }
 }
 
-/// `NewImage.posH`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NewImage.posH`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NewImagePosH {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NewImagePosH {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NewImagePosH {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NewImagePosH {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NewImage.posH", |text| match text {
+        wire::string_enum(deserializer, "NewImage.posH", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -3789,31 +3952,38 @@ impl<'de> Deserialize<'de> for NewImagePosH {
     }
 }
 
-/// `NewImage.posV`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NewImage.posV`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NewImagePosV {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NewImagePosV {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NewImagePosV {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NewImagePosV {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NewImage.posV", |text| match text {
+        wire::string_enum(deserializer, "NewImage.posV", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -3917,28 +4087,36 @@ impl<'de> Deserialize<'de> for NewImageParaSpacing {
     }
 }
 
-/// `NewImage.paraSpacing.lineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NewImage.paraSpacing.lineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NewImageParaSpacingLineRule {
-    #[serde(rename = "exact")]
     Exact,
-    #[serde(rename = "atLeast")]
     AtLeast,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NewImageParaSpacingLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Exact => "exact",
             Self::AtLeast => "atLeast",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NewImageParaSpacingLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NewImageParaSpacingLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NewImage.paraSpacing.lineRule", |text| match text {
+        wire::string_enum(deserializer, "NewImage.paraSpacing.lineRule", Self::Unlisted, |text| match text {
             "exact" => Some(Self::Exact),
             "atLeast" => Some(Self::AtLeast),
             _ => None,
@@ -4075,37 +4253,42 @@ impl<'de> Deserialize<'de> for CommentInfo {
     }
 }
 
-/// `ParaAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "justify")]
     Justify,
-    #[serde(rename = "distribute")]
     Distribute,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
             Self::Justify => "justify",
             Self::Distribute => "distribute",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaAlign", |text| match text {
+        wire::string_enum(deserializer, "ParaAlign", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -4269,37 +4452,42 @@ impl<'de> Deserialize<'de> for SdtShell {
     }
 }
 
-/// `SdtShell.controlType`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `SdtShell.controlType`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SdtShellControlType {
-    #[serde(rename = "text")]
     Text,
-    #[serde(rename = "date")]
     Date,
-    #[serde(rename = "dropdown")]
     Dropdown,
-    #[serde(rename = "checkbox")]
     Checkbox,
-    #[serde(rename = "unknown")]
     Unknown,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl SdtShellControlType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Text => "text",
             Self::Date => "date",
             Self::Dropdown => "dropdown",
             Self::Checkbox => "checkbox",
             Self::Unknown => "unknown",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for SdtShellControlType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for SdtShellControlType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "SdtShell.controlType", |text| match text {
+        wire::string_enum(deserializer, "SdtShell.controlType", Self::Unlisted, |text| match text {
             "text" => Some(Self::Text),
             "date" => Some(Self::Date),
             "dropdown" => Some(Self::Dropdown),
@@ -4502,26 +4690,23 @@ impl<'de> Deserialize<'de> for TabStop {
     }
 }
 
-/// `TabStop.val`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TabStop.val`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TabStopVal {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "decimal")]
     Decimal,
-    #[serde(rename = "bar")]
     Bar,
-    #[serde(rename = "clear")]
     Clear,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TabStopVal {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
@@ -4529,13 +4714,20 @@ impl TabStopVal {
             Self::Decimal => "decimal",
             Self::Bar => "bar",
             Self::Clear => "clear",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TabStopVal {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TabStopVal {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TabStop.val", |text| match text {
+        wire::string_enum(deserializer, "TabStop.val", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -4547,26 +4739,23 @@ impl<'de> Deserialize<'de> for TabStopVal {
     }
 }
 
-/// `TabStop.leader`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TabStop.leader`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TabStopLeader {
-    #[serde(rename = "none")]
     None,
-    #[serde(rename = "dot")]
     Dot,
-    #[serde(rename = "hyphen")]
     Hyphen,
-    #[serde(rename = "underscore")]
     Underscore,
-    #[serde(rename = "heavy")]
     Heavy,
-    #[serde(rename = "middleDot")]
     MiddleDot,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TabStopLeader {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::None => "none",
             Self::Dot => "dot",
@@ -4574,13 +4763,20 @@ impl TabStopLeader {
             Self::Underscore => "underscore",
             Self::Heavy => "heavy",
             Self::MiddleDot => "middleDot",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TabStopLeader {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TabStopLeader {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TabStop.leader", |text| match text {
+        wire::string_enum(deserializer, "TabStop.leader", Self::Unlisted, |text| match text {
             "none" => Some(Self::None),
             "dot" => Some(Self::Dot),
             "hyphen" => Some(Self::Hyphen),
@@ -4592,25 +4788,34 @@ impl<'de> Deserialize<'de> for TabStopLeader {
     }
 }
 
-/// `TabStop.rel`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TabStop.rel`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TabStopRel {
-    #[serde(rename = "margin")]
     Margin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TabStopRel {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Margin => "margin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TabStopRel {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TabStopRel {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TabStop.rel", |text| match text {
+        wire::string_enum(deserializer, "TabStop.rel", Self::Unlisted, |text| match text {
             "margin" => Some(Self::Margin),
             _ => None,
         })
@@ -4968,28 +5173,36 @@ impl<'de> Deserialize<'de> for ParaFrame {
     }
 }
 
-/// `ParaFrame.hRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrame.hRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameHRule {
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameHRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameHRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameHRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrame.hRule", |text| match text {
+        wire::string_enum(deserializer, "ParaFrame.hRule", Self::Unlisted, |text| match text {
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
             _ => None,
@@ -4997,31 +5210,38 @@ impl<'de> Deserialize<'de> for ParaFrameHRule {
     }
 }
 
-/// `ParaFrame.hAnchor`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrame.hAnchor`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameHAnchor {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "text")]
     Text,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameHAnchor {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Text => "text",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameHAnchor {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameHAnchor {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrame.hAnchor", |text| match text {
+        wire::string_enum(deserializer, "ParaFrame.hAnchor", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "text" => Some(Self::Text),
@@ -5030,31 +5250,38 @@ impl<'de> Deserialize<'de> for ParaFrameHAnchor {
     }
 }
 
-/// `ParaFrame.vAnchor`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrame.vAnchor`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameVAnchor {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "text")]
     Text,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameVAnchor {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Text => "text",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameVAnchor {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameVAnchor {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrame.vAnchor", |text| match text {
+        wire::string_enum(deserializer, "ParaFrame.vAnchor", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "text" => Some(Self::Text),
@@ -5063,26 +5290,23 @@ impl<'de> Deserialize<'de> for ParaFrameVAnchor {
     }
 }
 
-/// `ParaFrame.wrap`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrame.wrap`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameWrap {
-    #[serde(rename = "none")]
     None,
-    #[serde(rename = "around")]
     Around,
-    #[serde(rename = "through")]
     Through,
-    #[serde(rename = "notBeside")]
     NotBeside,
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "tight")]
     Tight,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameWrap {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::None => "none",
             Self::Around => "around",
@@ -5090,13 +5314,20 @@ impl ParaFrameWrap {
             Self::NotBeside => "notBeside",
             Self::Auto => "auto",
             Self::Tight => "tight",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameWrap {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameWrap {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrame.wrap", |text| match text {
+        wire::string_enum(deserializer, "ParaFrame.wrap", Self::Unlisted, |text| match text {
             "none" => Some(Self::None),
             "around" => Some(Self::Around),
             "through" => Some(Self::Through),
@@ -5108,37 +5339,42 @@ impl<'de> Deserialize<'de> for ParaFrameWrap {
     }
 }
 
-/// `ParaFrame.xAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrame.xAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameXAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "inside")]
     Inside,
-    #[serde(rename = "outside")]
     Outside,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameXAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
             Self::Inside => "inside",
             Self::Outside => "outside",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameXAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameXAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrame.xAlign", |text| match text {
+        wire::string_enum(deserializer, "ParaFrame.xAlign", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -5149,26 +5385,23 @@ impl<'de> Deserialize<'de> for ParaFrameXAlign {
     }
 }
 
-/// `ParaFrame.yAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrame.yAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameYAlign {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
-    #[serde(rename = "inside")]
     Inside,
-    #[serde(rename = "outside")]
     Outside,
-    #[serde(rename = "inline")]
     Inline,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameYAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
@@ -5176,13 +5409,20 @@ impl ParaFrameYAlign {
             Self::Inside => "inside",
             Self::Outside => "outside",
             Self::Inline => "inline",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameYAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameYAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrame.yAlign", |text| match text {
+        wire::string_enum(deserializer, "ParaFrame.yAlign", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -5194,31 +5434,38 @@ impl<'de> Deserialize<'de> for ParaFrameYAlign {
     }
 }
 
-/// `TextFlowDirection`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextFlowDirection`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextFlowDirection {
-    #[serde(rename = "tbRl")]
     TbRl,
-    #[serde(rename = "tbRlV")]
     TbRlV,
-    #[serde(rename = "btLr")]
     BtLr,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextFlowDirection {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::TbRl => "tbRl",
             Self::TbRlV => "tbRlV",
             Self::BtLr => "btLr",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextFlowDirection {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextFlowDirection {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextFlowDirection", |text| match text {
+        wire::string_enum(deserializer, "TextFlowDirection", Self::Unlisted, |text| match text {
             "tbRl" => Some(Self::TbRl),
             "tbRlV" => Some(Self::TbRlV),
             "btLr" => Some(Self::BtLr),
@@ -5433,28 +5680,36 @@ impl<'de> Deserialize<'de> for ParaFrameBox {
     }
 }
 
-/// `ParaFrameBox.hRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrameBox.hRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameBoxHRule {
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameBoxHRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameBoxHRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameBoxHRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrameBox.hRule", |text| match text {
+        wire::string_enum(deserializer, "ParaFrameBox.hRule", Self::Unlisted, |text| match text {
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
             _ => None,
@@ -5462,28 +5717,36 @@ impl<'de> Deserialize<'de> for ParaFrameBoxHRule {
     }
 }
 
-/// `ParaFrameBox.floatSide`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFrameBox.floatSide`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFrameBoxFloatSide {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFrameBoxFloatSide {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFrameBoxFloatSide {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFrameBoxFloatSide {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFrameBox.floatSide", |text| match text {
+        wire::string_enum(deserializer, "ParaFrameBox.floatSide", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "right" => Some(Self::Right),
             _ => None,
@@ -5854,31 +6117,38 @@ impl<'de> Deserialize<'de> for ParaFormat {
     }
 }
 
-/// `ParaFormat.lineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFormat.lineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFormatLineRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFormatLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFormatLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFormatLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFormat.lineRule", |text| match text {
+        wire::string_enum(deserializer, "ParaFormat.lineRule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -6239,28 +6509,36 @@ impl<'de> Deserialize<'de> for ParaFormatDropCap {
     }
 }
 
-/// `ParaFormat.dropCap.type`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ParaFormat.dropCap.type`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ParaFormatDropCapType {
-    #[serde(rename = "drop")]
     Drop,
-    #[serde(rename = "margin")]
     Margin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ParaFormatDropCapType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Drop => "drop",
             Self::Margin => "margin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ParaFormatDropCapType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ParaFormatDropCapType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ParaFormat.dropCap.type", |text| match text {
+        wire::string_enum(deserializer, "ParaFormat.dropCap.type", Self::Unlisted, |text| match text {
             "drop" => Some(Self::Drop),
             "margin" => Some(Self::Margin),
             _ => None,
@@ -6746,31 +7024,38 @@ impl<'de> Deserialize<'de> for LineSpacing {
     }
 }
 
-/// `LineSpacing.rule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `LineSpacing.rule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LineSpacingRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl LineSpacingRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for LineSpacingRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for LineSpacingRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "LineSpacing.rule", |text| match text {
+        wire::string_enum(deserializer, "LineSpacing.rule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -7095,31 +7380,38 @@ impl<'de> Deserialize<'de> for NumberingLevel {
     }
 }
 
-/// `NumberingLevel.suff`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NumberingLevel.suff`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NumberingLevelSuff {
-    #[serde(rename = "tab")]
     Tab,
-    #[serde(rename = "space")]
     Space,
-    #[serde(rename = "nothing")]
     Nothing,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NumberingLevelSuff {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Tab => "tab",
             Self::Space => "space",
             Self::Nothing => "nothing",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NumberingLevelSuff {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NumberingLevelSuff {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NumberingLevel.suff", |text| match text {
+        wire::string_enum(deserializer, "NumberingLevel.suff", Self::Unlisted, |text| match text {
             "tab" => Some(Self::Tab),
             "space" => Some(Self::Space),
             "nothing" => Some(Self::Nothing),
@@ -7128,31 +7420,38 @@ impl<'de> Deserialize<'de> for NumberingLevelSuff {
     }
 }
 
-/// `NumberingLevel.lvlJc`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NumberingLevel.lvlJc`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NumberingLevelLvlJc {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NumberingLevelLvlJc {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NumberingLevelLvlJc {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NumberingLevelLvlJc {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NumberingLevel.lvlJc", |text| match text {
+        wire::string_enum(deserializer, "NumberingLevel.lvlJc", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -7250,31 +7549,38 @@ impl<'de> Deserialize<'de> for LineNumbering {
     }
 }
 
-/// `LineNumbering.restart`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `LineNumbering.restart`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum LineNumberingRestart {
-    #[serde(rename = "continuous")]
     Continuous,
-    #[serde(rename = "newPage")]
     NewPage,
-    #[serde(rename = "newSection")]
     NewSection,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl LineNumberingRestart {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Continuous => "continuous",
             Self::NewPage => "newPage",
             Self::NewSection => "newSection",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for LineNumberingRestart {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for LineNumberingRestart {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "LineNumbering.restart", |text| match text {
+        wire::string_enum(deserializer, "LineNumbering.restart", Self::Unlisted, |text| match text {
             "continuous" => Some(Self::Continuous),
             "newPage" => Some(Self::NewPage),
             "newSection" => Some(Self::NewSection),
@@ -7368,34 +7674,40 @@ impl<'de> Deserialize<'de> for DocGrid {
     }
 }
 
-/// `DocGrid.type`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `DocGrid.type`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DocGridType {
-    #[serde(rename = "default")]
     Default,
-    #[serde(rename = "lines")]
     Lines,
-    #[serde(rename = "linesAndChars")]
     LinesAndChars,
-    #[serde(rename = "snapToChars")]
     SnapToChars,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl DocGridType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Default => "default",
             Self::Lines => "lines",
             Self::LinesAndChars => "linesAndChars",
             Self::SnapToChars => "snapToChars",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for DocGridType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for DocGridType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "DocGrid.type", |text| match text {
+        wire::string_enum(deserializer, "DocGrid.type", Self::Unlisted, |text| match text {
             "default" => Some(Self::Default),
             "lines" => Some(Self::Lines),
             "linesAndChars" => Some(Self::LinesAndChars),
@@ -7480,34 +7792,40 @@ impl<'de> Deserialize<'de> for NoteProps {
     }
 }
 
-/// `NoteProps.pos`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NoteProps.pos`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NotePropsPos {
-    #[serde(rename = "pageBottom")]
     PageBottom,
-    #[serde(rename = "beneathText")]
     BeneathText,
-    #[serde(rename = "sectEnd")]
     SectEnd,
-    #[serde(rename = "docEnd")]
     DocEnd,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NotePropsPos {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::PageBottom => "pageBottom",
             Self::BeneathText => "beneathText",
             Self::SectEnd => "sectEnd",
             Self::DocEnd => "docEnd",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NotePropsPos {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NotePropsPos {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NoteProps.pos", |text| match text {
+        wire::string_enum(deserializer, "NoteProps.pos", Self::Unlisted, |text| match text {
             "pageBottom" => Some(Self::PageBottom),
             "beneathText" => Some(Self::BeneathText),
             "sectEnd" => Some(Self::SectEnd),
@@ -7517,31 +7835,38 @@ impl<'de> Deserialize<'de> for NotePropsPos {
     }
 }
 
-/// `NoteProps.numRestart`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NoteProps.numRestart`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NotePropsNumRestart {
-    #[serde(rename = "continuous")]
     Continuous,
-    #[serde(rename = "eachSect")]
     EachSect,
-    #[serde(rename = "eachPage")]
     EachPage,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NotePropsNumRestart {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Continuous => "continuous",
             Self::EachSect => "eachSect",
             Self::EachPage => "eachPage",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NotePropsNumRestart {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NotePropsNumRestart {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NoteProps.numRestart", |text| match text {
+        wire::string_enum(deserializer, "NoteProps.numRestart", Self::Unlisted, |text| match text {
             "continuous" => Some(Self::Continuous),
             "eachSect" => Some(Self::EachSect),
             "eachPage" => Some(Self::EachPage),
@@ -7795,28 +8120,36 @@ impl<'de> Deserialize<'de> for SectionSettings {
     }
 }
 
-/// `SectionSettings.orientation`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `SectionSettings.orientation`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SectionSettingsOrientation {
-    #[serde(rename = "portrait")]
     Portrait,
-    #[serde(rename = "landscape")]
     Landscape,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl SectionSettingsOrientation {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Portrait => "portrait",
             Self::Landscape => "landscape",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for SectionSettingsOrientation {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for SectionSettingsOrientation {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "SectionSettings.orientation", |text| match text {
+        wire::string_enum(deserializer, "SectionSettings.orientation", Self::Unlisted, |text| match text {
             "portrait" => Some(Self::Portrait),
             "landscape" => Some(Self::Landscape),
             _ => None,
@@ -7939,28 +8272,36 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderProps {
     }
 }
 
-/// `SectionSettings.pageBorderProps.display`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `SectionSettings.pageBorderProps.display`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SectionSettingsPageBorderPropsDisplay {
-    #[serde(rename = "firstPage")]
     FirstPage,
-    #[serde(rename = "notFirstPage")]
     NotFirstPage,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl SectionSettingsPageBorderPropsDisplay {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::FirstPage => "firstPage",
             Self::NotFirstPage => "notFirstPage",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for SectionSettingsPageBorderPropsDisplay {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsDisplay {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "SectionSettings.pageBorderProps.display", |text| match text {
+        wire::string_enum(deserializer, "SectionSettings.pageBorderProps.display", Self::Unlisted, |text| match text {
             "firstPage" => Some(Self::FirstPage),
             "notFirstPage" => Some(Self::NotFirstPage),
             _ => None,
@@ -7968,28 +8309,36 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsDisplay {
     }
 }
 
-/// `SectionSettings.pageBorderProps.offsetFrom`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `SectionSettings.pageBorderProps.offsetFrom`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SectionSettingsPageBorderPropsOffsetFrom {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "text")]
     Text,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl SectionSettingsPageBorderPropsOffsetFrom {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Text => "text",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for SectionSettingsPageBorderPropsOffsetFrom {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsOffsetFrom {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "SectionSettings.pageBorderProps.offsetFrom", |text| match text {
+        wire::string_enum(deserializer, "SectionSettings.pageBorderProps.offsetFrom", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "text" => Some(Self::Text),
             _ => None,
@@ -7997,25 +8346,34 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsOffsetFrom {
     }
 }
 
-/// `SectionSettings.pageBorderProps.zOrder`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `SectionSettings.pageBorderProps.zOrder`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SectionSettingsPageBorderPropsZOrder {
-    #[serde(rename = "back")]
     Back,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl SectionSettingsPageBorderPropsZOrder {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Back => "back",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for SectionSettingsPageBorderPropsZOrder {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsZOrder {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "SectionSettings.pageBorderProps.zOrder", |text| match text {
+        wire::string_enum(deserializer, "SectionSettings.pageBorderProps.zOrder", Self::Unlisted, |text| match text {
             "back" => Some(Self::Back),
             _ => None,
         })
@@ -8230,34 +8588,40 @@ impl<'de> Deserialize<'de> for SectionSettingsPageBorderPropsSidesValue {
     }
 }
 
-/// `SectionSettings.vAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `SectionSettings.vAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SectionSettingsVAlign {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "both")]
     Both,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl SectionSettingsVAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Both => "both",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for SectionSettingsVAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for SectionSettingsVAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "SectionSettings.vAlign", |text| match text {
+        wire::string_enum(deserializer, "SectionSettings.vAlign", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "both" => Some(Self::Both),
@@ -8402,37 +8766,42 @@ impl<'de> Deserialize<'de> for SectionInfo {
     }
 }
 
-/// `SectionInfo.startType`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `SectionInfo.startType`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum SectionInfoStartType {
-    #[serde(rename = "nextPage")]
     NextPage,
-    #[serde(rename = "continuous")]
     Continuous,
-    #[serde(rename = "evenPage")]
     EvenPage,
-    #[serde(rename = "oddPage")]
     OddPage,
-    #[serde(rename = "nextColumn")]
     NextColumn,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl SectionInfoStartType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::NextPage => "nextPage",
             Self::Continuous => "continuous",
             Self::EvenPage => "evenPage",
             Self::OddPage => "oddPage",
             Self::NextColumn => "nextColumn",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for SectionInfoStartType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for SectionInfoStartType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "SectionInfo.startType", |text| match text {
+        wire::string_enum(deserializer, "SectionInfo.startType", Self::Unlisted, |text| match text {
             "nextPage" => Some(Self::NextPage),
             "continuous" => Some(Self::Continuous),
             "evenPage" => Some(Self::EvenPage),
@@ -8986,31 +9355,38 @@ impl<'de> Deserialize<'de> for HfParagraph {
     }
 }
 
-/// `HfParagraph.frameXAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfParagraph.frameXAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfParagraphFrameXAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfParagraphFrameXAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfParagraphFrameXAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfParagraphFrameXAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfParagraph.frameXAlign", |text| match text {
+        wire::string_enum(deserializer, "HfParagraph.frameXAlign", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -9303,31 +9679,38 @@ impl<'de> Deserialize<'de> for HfImage {
     }
 }
 
-/// `HfImage.posH`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfImage.posH`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfImagePosH {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfImagePosH {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfImagePosH {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfImagePosH {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfImage.posH", |text| match text {
+        wire::string_enum(deserializer, "HfImage.posH", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -9336,31 +9719,38 @@ impl<'de> Deserialize<'de> for HfImagePosH {
     }
 }
 
-/// `HfImage.posV`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfImage.posV`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfImagePosV {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfImagePosV {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfImagePosV {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfImagePosV {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfImage.posV", |text| match text {
+        wire::string_enum(deserializer, "HfImage.posV", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -9369,34 +9759,40 @@ impl<'de> Deserialize<'de> for HfImagePosV {
     }
 }
 
-/// `HfImage.posHRel`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfImage.posHRel`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfImagePosHRel {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "leftMargin")]
     LeftMargin,
-    #[serde(rename = "rightMargin")]
     RightMargin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfImagePosHRel {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::LeftMargin => "leftMargin",
             Self::RightMargin => "rightMargin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfImagePosHRel {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfImagePosHRel {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfImage.posHRel", |text| match text {
+        wire::string_enum(deserializer, "HfImage.posHRel", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "leftMargin" => Some(Self::LeftMargin),
@@ -9406,37 +9802,42 @@ impl<'de> Deserialize<'de> for HfImagePosHRel {
     }
 }
 
-/// `HfImage.posVRel`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfImage.posVRel`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfImagePosVRel {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "paragraph")]
     Paragraph,
-    #[serde(rename = "topMargin")]
     TopMargin,
-    #[serde(rename = "bottomMargin")]
     BottomMargin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfImagePosVRel {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Paragraph => "paragraph",
             Self::TopMargin => "topMargin",
             Self::BottomMargin => "bottomMargin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfImagePosVRel {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfImagePosVRel {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfImage.posVRel", |text| match text {
+        wire::string_enum(deserializer, "HfImage.posVRel", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "paragraph" => Some(Self::Paragraph),
@@ -9447,37 +9848,42 @@ impl<'de> Deserialize<'de> for HfImagePosVRel {
     }
 }
 
-/// `HfImage.wrap`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfImage.wrap`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfImageWrap {
-    #[serde(rename = "none")]
     None,
-    #[serde(rename = "square")]
     Square,
-    #[serde(rename = "tight")]
     Tight,
-    #[serde(rename = "through")]
     Through,
-    #[serde(rename = "topBottom")]
     TopBottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfImageWrap {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::None => "none",
             Self::Square => "square",
             Self::Tight => "tight",
             Self::Through => "through",
             Self::TopBottom => "topBottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfImageWrap {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfImageWrap {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfImage.wrap", |text| match text {
+        wire::string_enum(deserializer, "HfImage.wrap", Self::Unlisted, |text| match text {
             "none" => Some(Self::None),
             "square" => Some(Self::Square),
             "tight" => Some(Self::Tight),
@@ -9668,31 +10074,38 @@ impl<'de> Deserialize<'de> for HfImageWordArt {
     }
 }
 
-/// `HfImage.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfImage.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfImageAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfImageAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfImageAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfImageAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfImage.align", |text| match text {
+        wire::string_enum(deserializer, "HfImage.align", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -9875,31 +10288,38 @@ impl<'de> Deserialize<'de> for HfImageWrapDistPx {
     }
 }
 
-/// `HfTextBox.vAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTextBox.vAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTextBoxVAlign {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTextBoxVAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTextBoxVAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTextBoxVAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTextBox.vAlign", |text| match text {
+        wire::string_enum(deserializer, "HfTextBox.vAlign", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -9908,31 +10328,38 @@ impl<'de> Deserialize<'de> for HfTextBoxVAlign {
     }
 }
 
-/// `HfParagraph.ptabAligns[]`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfParagraph.ptabAligns[]`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfParagraphPtabAlignsItem {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfParagraphPtabAlignsItem {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfParagraphPtabAlignsItem {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfParagraphPtabAlignsItem {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfParagraph.ptabAligns[]", |text| match text {
+        wire::string_enum(deserializer, "HfParagraph.ptabAligns[]", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -10449,31 +10876,38 @@ impl<'de> Deserialize<'de> for CellBorder {
     }
 }
 
-/// `HfTableCell.vAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTableCell.vAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTableCellVAlign {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTableCellVAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTableCellVAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTableCellVAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTableCell.vAlign", |text| match text {
+        wire::string_enum(deserializer, "HfTableCell.vAlign", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -10700,28 +11134,36 @@ impl<'de> Deserialize<'de> for HfTableRow {
     }
 }
 
-/// `HfTableRow.heightRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTableRow.heightRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTableRowHeightRule {
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTableRowHeightRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTableRowHeightRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTableRowHeightRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTableRow.heightRule", |text| match text {
+        wire::string_enum(deserializer, "HfTableRow.heightRule", Self::Unlisted, |text| match text {
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
             _ => None,
@@ -10729,28 +11171,36 @@ impl<'de> Deserialize<'de> for HfTableRowHeightRule {
     }
 }
 
-/// `HfTableRow.tabOverflow`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTableRow.tabOverflow`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTableRowTabOverflow {
-    #[serde(rename = "wrap")]
     Wrap,
-    #[serde(rename = "clip")]
     Clip,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTableRowTabOverflow {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Wrap => "wrap",
             Self::Clip => "clip",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTableRowTabOverflow {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTableRowTabOverflow {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTableRow.tabOverflow", |text| match text {
+        wire::string_enum(deserializer, "HfTableRow.tabOverflow", Self::Unlisted, |text| match text {
             "wrap" => Some(Self::Wrap),
             "clip" => Some(Self::Clip),
             _ => None,
@@ -10833,28 +11283,36 @@ impl<'de> Deserialize<'de> for HfTableRowSource {
     }
 }
 
-/// `HfTableRow.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTableRow.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTableRowAlign {
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTableRowAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTableRowAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTableRowAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTableRow.align", |text| match text {
+        wire::string_enum(deserializer, "HfTableRow.align", Self::Unlisted, |text| match text {
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
             _ => None,
@@ -10965,31 +11423,38 @@ impl<'de> Deserialize<'de> for HfTableFloat {
     }
 }
 
-/// `HfTableFloat.horzAnchor`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTableFloat.horzAnchor`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTableFloatHorzAnchor {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "text")]
     Text,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTableFloatHorzAnchor {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Text => "text",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTableFloatHorzAnchor {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTableFloatHorzAnchor {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTableFloat.horzAnchor", |text| match text {
+        wire::string_enum(deserializer, "HfTableFloat.horzAnchor", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "text" => Some(Self::Text),
@@ -10998,31 +11463,38 @@ impl<'de> Deserialize<'de> for HfTableFloatHorzAnchor {
     }
 }
 
-/// `HfTableFloat.vertAnchor`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTableFloat.vertAnchor`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTableFloatVertAnchor {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "text")]
     Text,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTableFloatVertAnchor {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Text => "text",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTableFloatVertAnchor {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTableFloatVertAnchor {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTableFloat.vertAnchor", |text| match text {
+        wire::string_enum(deserializer, "HfTableFloat.vertAnchor", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "text" => Some(Self::Text),
@@ -11031,37 +11503,42 @@ impl<'de> Deserialize<'de> for HfTableFloatVertAnchor {
     }
 }
 
-/// `HfTableFloat.xSpec`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `HfTableFloat.xSpec`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum HfTableFloatXSpec {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "inside")]
     Inside,
-    #[serde(rename = "outside")]
     Outside,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl HfTableFloatXSpec {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
             Self::Inside => "inside",
             Self::Outside => "outside",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for HfTableFloatXSpec {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for HfTableFloatXSpec {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "HfTableFloat.xSpec", |text| match text {
+        wire::string_enum(deserializer, "HfTableFloat.xSpec", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -11527,28 +12004,36 @@ impl<'de> Deserialize<'de> for RevisionResolution {
     }
 }
 
-/// `RevisionXmlMode`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `RevisionXmlMode`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RevisionXmlMode {
-    #[serde(rename = "accept")]
     Accept,
-    #[serde(rename = "reject")]
     Reject,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RevisionXmlMode {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Accept => "accept",
             Self::Reject => "reject",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RevisionXmlMode {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RevisionXmlMode {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "RevisionXmlMode", |text| match text {
+        wire::string_enum(deserializer, "RevisionXmlMode", Self::Unlisted, |text| match text {
             "accept" => Some(Self::Accept),
             "reject" => Some(Self::Reject),
             _ => None,
@@ -11659,34 +12144,40 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
     }
 }
 
-/// `RevisionXmlType`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `RevisionXmlType`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum RevisionXmlType {
-    #[serde(rename = "insertion")]
     Insertion,
-    #[serde(rename = "deletion")]
     Deletion,
-    #[serde(rename = "formatting")]
     Formatting,
-    #[serde(rename = "move")]
     Move,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl RevisionXmlType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Insertion => "insertion",
             Self::Deletion => "deletion",
             Self::Formatting => "formatting",
             Self::Move => "move",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for RevisionXmlType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for RevisionXmlType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "RevisionXmlType", |text| match text {
+        wire::string_enum(deserializer, "RevisionXmlType", Self::Unlisted, |text| match text {
             "insertion" => Some(Self::Insertion),
             "deletion" => Some(Self::Deletion),
             "formatting" => Some(Self::Formatting),
@@ -11950,31 +12441,38 @@ impl<'de> Deserialize<'de> for NoteRun {
     }
 }
 
-/// `NoteRun.caps`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NoteRun.caps`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NoteRunCaps {
-    #[serde(rename = "all")]
     All,
-    #[serde(rename = "small")]
     Small,
-    #[serde(rename = "none")]
     None,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NoteRunCaps {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::All => "all",
             Self::Small => "small",
             Self::None => "none",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NoteRunCaps {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NoteRunCaps {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NoteRun.caps", |text| match text {
+        wire::string_enum(deserializer, "NoteRun.caps", Self::Unlisted, |text| match text {
             "all" => Some(Self::All),
             "small" => Some(Self::Small),
             "none" => Some(Self::None),
@@ -12201,31 +12699,38 @@ impl<'de> Deserialize<'de> for NoteInfoSpacing {
     }
 }
 
-/// `NoteInfo.spacing.lineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NoteInfo.spacing.lineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NoteInfoSpacingLineRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NoteInfoSpacingLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NoteInfoSpacingLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NoteInfoSpacingLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NoteInfo.spacing.lineRule", |text| match text {
+        wire::string_enum(deserializer, "NoteInfo.spacing.lineRule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -12700,31 +13205,38 @@ impl<'de> Deserialize<'de> for FieldDisplay {
     }
 }
 
-/// `FieldDisplay.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `FieldDisplay.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldDisplayKind {
-    #[serde(rename = "tocLine")]
     TocLine,
-    #[serde(rename = "text")]
     Text,
-    #[serde(rename = "pageBreak")]
     PageBreak,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl FieldDisplayKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::TocLine => "tocLine",
             Self::Text => "text",
             Self::PageBreak => "pageBreak",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for FieldDisplayKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for FieldDisplayKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "FieldDisplay.kind", |text| match text {
+        wire::string_enum(deserializer, "FieldDisplay.kind", Self::Unlisted, |text| match text {
             "tocLine" => Some(Self::TocLine),
             "text" => Some(Self::Text),
             "pageBreak" => Some(Self::PageBreak),
@@ -12733,34 +13245,40 @@ impl<'de> Deserialize<'de> for FieldDisplayKind {
     }
 }
 
-/// `FieldDisplay.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `FieldDisplay.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldDisplayAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "justify")]
     Justify,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl FieldDisplayAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
             Self::Justify => "justify",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for FieldDisplayAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for FieldDisplayAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "FieldDisplay.align", |text| match text {
+        wire::string_enum(deserializer, "FieldDisplay.align", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -12770,31 +13288,38 @@ impl<'de> Deserialize<'de> for FieldDisplayAlign {
     }
 }
 
-/// `FieldDisplay.lineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `FieldDisplay.lineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FieldDisplayLineRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl FieldDisplayLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for FieldDisplayLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for FieldDisplayLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "FieldDisplay.lineRule", |text| match text {
+        wire::string_enum(deserializer, "FieldDisplay.lineRule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -12976,34 +13501,40 @@ impl<'de> Deserialize<'de> for FormulaDisplay {
     }
 }
 
-/// `FormulaDisplay.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `FormulaDisplay.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FormulaDisplayAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "centerGroup")]
     CenterGroup,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl FormulaDisplayAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Right => "right",
             Self::Center => "center",
             Self::CenterGroup => "centerGroup",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for FormulaDisplayAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for FormulaDisplayAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "FormulaDisplay.align", |text| match text {
+        wire::string_enum(deserializer, "FormulaDisplay.align", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "right" => Some(Self::Right),
             "center" => Some(Self::Center),
@@ -13404,30 +13935,25 @@ impl<'de> Deserialize<'de> for ChartDisplay {
     }
 }
 
-/// `ChartDisplay.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ChartDisplay.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ChartDisplayKind {
-    #[serde(rename = "bar")]
     Bar,
-    #[serde(rename = "line")]
     Line,
-    #[serde(rename = "pie")]
     Pie,
-    #[serde(rename = "area")]
     Area,
-    #[serde(rename = "scatter")]
     Scatter,
-    #[serde(rename = "bubble")]
     Bubble,
-    #[serde(rename = "radar")]
     Radar,
-    #[serde(rename = "other")]
     Other,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ChartDisplayKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bar => "bar",
             Self::Line => "line",
@@ -13437,13 +13963,20 @@ impl ChartDisplayKind {
             Self::Bubble => "bubble",
             Self::Radar => "radar",
             Self::Other => "other",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ChartDisplayKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ChartDisplayKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ChartDisplay.kind", |text| match text {
+        wire::string_enum(deserializer, "ChartDisplay.kind", Self::Unlisted, |text| match text {
             "bar" => Some(Self::Bar),
             "line" => Some(Self::Line),
             "pie" => Some(Self::Pie),
@@ -13457,28 +13990,36 @@ impl<'de> Deserialize<'de> for ChartDisplayKind {
     }
 }
 
-/// `ChartDisplay.grouping`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ChartDisplay.grouping`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ChartDisplayGrouping {
-    #[serde(rename = "stacked")]
     Stacked,
-    #[serde(rename = "percentStacked")]
     PercentStacked,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ChartDisplayGrouping {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Stacked => "stacked",
             Self::PercentStacked => "percentStacked",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ChartDisplayGrouping {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ChartDisplayGrouping {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ChartDisplay.grouping", |text| match text {
+        wire::string_enum(deserializer, "ChartDisplay.grouping", Self::Unlisted, |text| match text {
             "stacked" => Some(Self::Stacked),
             "percentStacked" => Some(Self::PercentStacked),
             _ => None,
@@ -13486,31 +14027,38 @@ impl<'de> Deserialize<'de> for ChartDisplayGrouping {
     }
 }
 
-/// `ChartDisplay.radarStyle`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ChartDisplay.radarStyle`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ChartDisplayRadarStyle {
-    #[serde(rename = "standard")]
     Standard,
-    #[serde(rename = "marker")]
     Marker,
-    #[serde(rename = "filled")]
     Filled,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ChartDisplayRadarStyle {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Standard => "standard",
             Self::Marker => "marker",
             Self::Filled => "filled",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ChartDisplayRadarStyle {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ChartDisplayRadarStyle {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ChartDisplay.radarStyle", |text| match text {
+        wire::string_enum(deserializer, "ChartDisplay.radarStyle", Self::Unlisted, |text| match text {
             "standard" => Some(Self::Standard),
             "marker" => Some(Self::Marker),
             "filled" => Some(Self::Filled),
@@ -13630,37 +14178,42 @@ impl<'de> Deserialize<'de> for ChartDisplayDataLabels {
     }
 }
 
-/// `ChartDisplay.legendPos`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ChartDisplay.legendPos`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ChartDisplayLegendPos {
-    #[serde(rename = "b")]
     B,
-    #[serde(rename = "l")]
     L,
-    #[serde(rename = "r")]
     R,
-    #[serde(rename = "t")]
     T,
-    #[serde(rename = "tr")]
     Tr,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ChartDisplayLegendPos {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::B => "b",
             Self::L => "l",
             Self::R => "r",
             Self::T => "t",
             Self::Tr => "tr",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ChartDisplayLegendPos {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ChartDisplayLegendPos {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ChartDisplay.legendPos", |text| match text {
+        wire::string_enum(deserializer, "ChartDisplay.legendPos", Self::Unlisted, |text| match text {
             "b" => Some(Self::B),
             "l" => Some(Self::L),
             "r" => Some(Self::R),
@@ -13766,23 +14319,25 @@ impl<'de> Deserialize<'de> for ChartDisplayDataTable {
     }
 }
 
-/// `DiagramShape`
-#[derive(Debug, Clone, PartialEq)]
-pub struct DiagramShape {
-    pub x_px: JsNum,
-    pub y_px: JsNum,
-    pub w_px: JsNum,
-    pub h_px: JsNum,
-    pub ln_hex: Option<String>,
-    pub ln_w_px: Option<JsNum>,
-    pub fill_rect: Option<DiagramShapeFillRect>,
-    pub rot_deg: Option<JsNum>,
-    pub prst: Option<String>,
-    pub fill_hex: Option<String>,
-    pub image_data_url: Option<String>,
-    pub texts: Option<Vec<String>>,
-    pub font_size_pt: Option<JsNum>,
-    pub text_color_hex: Option<String>,
+jscompat::js_object! {
+    /// `DiagramShape`: the keys go out in the order they were set
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct DiagramShape {
+        pub x_px: JsNum,
+        pub y_px: JsNum,
+        pub w_px: JsNum,
+        pub h_px: JsNum,
+        pub prst: String,
+        pub fill_hex: String,
+        pub ln_hex: String,
+        pub ln_w_px: JsNum,
+        pub image_data_url: String,
+        pub fill_rect: DiagramShapeFillRect,
+        pub texts: Vec<String>,
+        pub font_size_pt: JsNum,
+        pub text_color_hex: String,
+        pub rot_deg: JsNum,
+    }
 }
 
 /// The keys of `DiagramShape`, in declaration order.
@@ -13834,47 +14389,6 @@ impl FieldKey for DiagramShapeKey {
 
 const _: () = assert!(DiagramShapeKey::NAMES.len() <= wire::MAX_KEYS);
 
-impl Serialize for DiagramShape {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(None)?;
-        map.serialize_entry("xPx", &self.x_px)?;
-        map.serialize_entry("yPx", &self.y_px)?;
-        map.serialize_entry("wPx", &self.w_px)?;
-        map.serialize_entry("hPx", &self.h_px)?;
-        if let Some(value) = &self.ln_hex {
-            map.serialize_entry("lnHex", value)?;
-        }
-        if let Some(value) = &self.ln_w_px {
-            map.serialize_entry("lnWPx", value)?;
-        }
-        if let Some(value) = &self.fill_rect {
-            map.serialize_entry("fillRect", value)?;
-        }
-        if let Some(value) = &self.rot_deg {
-            map.serialize_entry("rotDeg", value)?;
-        }
-        if let Some(value) = &self.prst {
-            map.serialize_entry("prst", value)?;
-        }
-        if let Some(value) = &self.fill_hex {
-            map.serialize_entry("fillHex", value)?;
-        }
-        if let Some(value) = &self.image_data_url {
-            map.serialize_entry("imageDataUrl", value)?;
-        }
-        if let Some(value) = &self.texts {
-            map.serialize_entry("texts", value)?;
-        }
-        if let Some(value) = &self.font_size_pt {
-            map.serialize_entry("fontSizePt", value)?;
-        }
-        if let Some(value) = &self.text_color_hex {
-            map.serialize_entry("textColorHex", value)?;
-        }
-        map.end()
-    }
-}
-
 impl<'de> Deserialize<'de> for DiagramShape {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
         struct Fields;
@@ -13887,20 +14401,7 @@ impl<'de> Deserialize<'de> for DiagramShape {
 
             fn visit_map<A: MapAccess<'de>>(self, mut map: A) -> Result<DiagramShape, A::Error> {
                 let mut seen = Seen::default();
-                let mut v_x_px = None;
-                let mut v_y_px = None;
-                let mut v_w_px = None;
-                let mut v_h_px = None;
-                let mut v_prst = None;
-                let mut v_fill_hex = None;
-                let mut v_ln_hex = None;
-                let mut v_ln_w_px = None;
-                let mut v_image_data_url = None;
-                let mut v_fill_rect = None;
-                let mut v_texts = None;
-                let mut v_font_size_pt = None;
-                let mut v_text_color_hex = None;
-                let mut v_rot_deg = None;
+                let mut b_0 = DiagramShape::default();
                 while let Some(Key(key)) = map.next_key::<Key<DiagramShapeKey>>()? {
                     let Some(key) = key else {
                         map.next_value::<serde::de::IgnoredAny>()?;
@@ -13910,23 +14411,35 @@ impl<'de> Deserialize<'de> for DiagramShape {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
-                        DiagramShapeKey::XPx => v_x_px = Some(map.next_value()?),
-                        DiagramShapeKey::YPx => v_y_px = Some(map.next_value()?),
-                        DiagramShapeKey::WPx => v_w_px = Some(map.next_value()?),
-                        DiagramShapeKey::HPx => v_h_px = Some(map.next_value()?),
-                        DiagramShapeKey::Prst => v_prst = Some(map.next_value()?),
-                        DiagramShapeKey::FillHex => v_fill_hex = Some(map.next_value()?),
-                        DiagramShapeKey::LnHex => v_ln_hex = Some(map.next_value()?),
-                        DiagramShapeKey::LnWPx => v_ln_w_px = Some(map.next_value()?),
-                        DiagramShapeKey::ImageDataUrl => v_image_data_url = Some(map.next_value()?),
-                        DiagramShapeKey::FillRect => v_fill_rect = Some(map.next_value()?),
-                        DiagramShapeKey::Texts => v_texts = Some(map.next_value()?),
-                        DiagramShapeKey::FontSizePt => v_font_size_pt = Some(map.next_value()?),
-                        DiagramShapeKey::TextColorHex => v_text_color_hex = Some(map.next_value()?),
-                        DiagramShapeKey::RotDeg => v_rot_deg = Some(map.next_value()?),
+                        DiagramShapeKey::XPx => b_0.x_px.set(map.next_value()?),
+                        DiagramShapeKey::YPx => b_0.y_px.set(map.next_value()?),
+                        DiagramShapeKey::WPx => b_0.w_px.set(map.next_value()?),
+                        DiagramShapeKey::HPx => b_0.h_px.set(map.next_value()?),
+                        DiagramShapeKey::Prst => b_0.prst.set(map.next_value()?),
+                        DiagramShapeKey::FillHex => b_0.fill_hex.set(map.next_value()?),
+                        DiagramShapeKey::LnHex => b_0.ln_hex.set(map.next_value()?),
+                        DiagramShapeKey::LnWPx => b_0.ln_w_px.set(map.next_value()?),
+                        DiagramShapeKey::ImageDataUrl => b_0.image_data_url.set(map.next_value()?),
+                        DiagramShapeKey::FillRect => b_0.fill_rect.set(map.next_value()?),
+                        DiagramShapeKey::Texts => b_0.texts.set(map.next_value()?),
+                        DiagramShapeKey::FontSizePt => b_0.font_size_pt.set(map.next_value()?),
+                        DiagramShapeKey::TextColorHex => b_0.text_color_hex.set(map.next_value()?),
+                        DiagramShapeKey::RotDeg => b_0.rot_deg.set(map.next_value()?),
                     }
                 }
-                Ok(DiagramShape { x_px: v_x_px.ok_or_else(|| A::Error::missing_field("xPx"))?, y_px: v_y_px.ok_or_else(|| A::Error::missing_field("yPx"))?, w_px: v_w_px.ok_or_else(|| A::Error::missing_field("wPx"))?, h_px: v_h_px.ok_or_else(|| A::Error::missing_field("hPx"))?, prst: v_prst, fill_hex: v_fill_hex, ln_hex: v_ln_hex, ln_w_px: v_ln_w_px, image_data_url: v_image_data_url, fill_rect: v_fill_rect, texts: v_texts, font_size_pt: v_font_size_pt, text_color_hex: v_text_color_hex, rot_deg: v_rot_deg })
+                if !b_0.x_px.has_key() {
+                    return Err(A::Error::missing_field("xPx"));
+                }
+                if !b_0.y_px.has_key() {
+                    return Err(A::Error::missing_field("yPx"));
+                }
+                if !b_0.w_px.has_key() {
+                    return Err(A::Error::missing_field("wPx"));
+                }
+                if !b_0.h_px.has_key() {
+                    return Err(A::Error::missing_field("hPx"));
+                }
+                Ok(b_0)
             }
         }
         deserializer.deserialize_map(Fields)
@@ -14222,31 +14735,38 @@ impl<'de> Deserialize<'de> for NewChart {
     }
 }
 
-/// `NewChart.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `NewChart.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum NewChartKind {
-    #[serde(rename = "bar")]
     Bar,
-    #[serde(rename = "line")]
     Line,
-    #[serde(rename = "pie")]
     Pie,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl NewChartKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bar => "bar",
             Self::Line => "line",
             Self::Pie => "pie",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for NewChartKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for NewChartKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "NewChart.kind", |text| match text {
+        wire::string_enum(deserializer, "NewChart.kind", Self::Unlisted, |text| match text {
             "bar" => Some(Self::Bar),
             "line" => Some(Self::Line),
             "pie" => Some(Self::Pie),
@@ -14783,28 +15303,36 @@ impl<'de> Deserialize<'de> for TableParagraphList {
     }
 }
 
-/// `TableParagraph.list.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableParagraph.list.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableParagraphListKind {
-    #[serde(rename = "bullet")]
     Bullet,
-    #[serde(rename = "ordered")]
     Ordered,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableParagraphListKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bullet => "bullet",
             Self::Ordered => "ordered",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableParagraphListKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableParagraphListKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableParagraph.list.kind", |text| match text {
+        wire::string_enum(deserializer, "TableParagraph.list.kind", Self::Unlisted, |text| match text {
             "bullet" => Some(Self::Bullet),
             "ordered" => Some(Self::Ordered),
             _ => None,
@@ -15447,31 +15975,38 @@ impl<'de> Deserialize<'de> for TableModel {
     }
 }
 
-/// `TableAutoFitMode`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableAutoFitMode`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableAutoFitMode {
-    #[serde(rename = "contents")]
     Contents,
-    #[serde(rename = "window")]
     Window,
-    #[serde(rename = "fixed")]
     Fixed,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableAutoFitMode {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Contents => "contents",
             Self::Window => "window",
             Self::Fixed => "fixed",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableAutoFitMode {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableAutoFitMode {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableAutoFitMode", |text| match text {
+        wire::string_enum(deserializer, "TableAutoFitMode", Self::Unlisted, |text| match text {
             "contents" => Some(Self::Contents),
             "window" => Some(Self::Window),
             "fixed" => Some(Self::Fixed),
@@ -15480,31 +16015,38 @@ impl<'de> Deserialize<'de> for TableAutoFitMode {
     }
 }
 
-/// `TableModel.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.align", |text| match text {
+        wire::string_enum(deserializer, "TableModel.align", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -15628,31 +16170,38 @@ impl<'de> Deserialize<'de> for TableModelFloatPos {
     }
 }
 
-/// `TableModel.floatPos.horzAnchor`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.floatPos.horzAnchor`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelFloatPosHorzAnchor {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "text")]
     Text,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelFloatPosHorzAnchor {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Text => "text",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelFloatPosHorzAnchor {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelFloatPosHorzAnchor {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.floatPos.horzAnchor", |text| match text {
+        wire::string_enum(deserializer, "TableModel.floatPos.horzAnchor", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "text" => Some(Self::Text),
@@ -15661,31 +16210,38 @@ impl<'de> Deserialize<'de> for TableModelFloatPosHorzAnchor {
     }
 }
 
-/// `TableModel.floatPos.vertAnchor`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.floatPos.vertAnchor`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelFloatPosVertAnchor {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "text")]
     Text,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelFloatPosVertAnchor {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Text => "text",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelFloatPosVertAnchor {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelFloatPosVertAnchor {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.floatPos.vertAnchor", |text| match text {
+        wire::string_enum(deserializer, "TableModel.floatPos.vertAnchor", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "text" => Some(Self::Text),
@@ -15694,37 +16250,42 @@ impl<'de> Deserialize<'de> for TableModelFloatPosVertAnchor {
     }
 }
 
-/// `TableModel.floatPos.xSpec`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.floatPos.xSpec`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelFloatPosXSpec {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "inside")]
     Inside,
-    #[serde(rename = "outside")]
     Outside,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelFloatPosXSpec {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
             Self::Inside => "inside",
             Self::Outside => "outside",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelFloatPosXSpec {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelFloatPosXSpec {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.floatPos.xSpec", |text| match text {
+        wire::string_enum(deserializer, "TableModel.floatPos.xSpec", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -15735,37 +16296,42 @@ impl<'de> Deserialize<'de> for TableModelFloatPosXSpec {
     }
 }
 
-/// `TableModel.floatPos.ySpec`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.floatPos.ySpec`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelFloatPosYSpec {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
-    #[serde(rename = "inside")]
     Inside,
-    #[serde(rename = "outside")]
     Outside,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelFloatPosYSpec {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
             Self::Inside => "inside",
             Self::Outside => "outside",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelFloatPosYSpec {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelFloatPosYSpec {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.floatPos.ySpec", |text| match text {
+        wire::string_enum(deserializer, "TableModel.floatPos.ySpec", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -15776,28 +16342,36 @@ impl<'de> Deserialize<'de> for TableModelFloatPosYSpec {
     }
 }
 
-/// `TableModel.floatSide`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.floatSide`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelFloatSide {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelFloatSide {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelFloatSide {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelFloatSide {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.floatSide", |text| match text {
+        wire::string_enum(deserializer, "TableModel.floatSide", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "right" => Some(Self::Right),
             _ => None,
@@ -15805,28 +16379,36 @@ impl<'de> Deserialize<'de> for TableModelFloatSide {
     }
 }
 
-/// `TableModel.rowHeightRules[]`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.rowHeightRules[]`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelRowHeightRulesItem {
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelRowHeightRulesItem {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelRowHeightRulesItem {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelRowHeightRulesItem {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.rowHeightRules[]", |text| match text {
+        wire::string_enum(deserializer, "TableModel.rowHeightRules[]", Self::Unlisted, |text| match text {
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
             _ => None,
@@ -15941,28 +16523,36 @@ impl<'de> Deserialize<'de> for TableModelRowRevisionsItem {
     }
 }
 
-/// `TableModel.rowRevisions[].kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableModel.rowRevisions[].kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableModelRowRevisionsItemKind {
-    #[serde(rename = "ins")]
     Ins,
-    #[serde(rename = "del")]
     Del,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableModelRowRevisionsItemKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Ins => "ins",
             Self::Del => "del",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableModelRowRevisionsItemKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableModelRowRevisionsItemKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableModel.rowRevisions[].kind", |text| match text {
+        wire::string_enum(deserializer, "TableModel.rowRevisions[].kind", Self::Unlisted, |text| match text {
             "ins" => Some(Self::Ins),
             "del" => Some(Self::Del),
             _ => None,
@@ -16501,28 +17091,36 @@ impl<'de> Deserialize<'de> for TextboxDisplayTextOutline {
     }
 }
 
-/// `TextboxDisplay.vAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextboxDisplay.vAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextboxDisplayVAlign {
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextboxDisplayVAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextboxDisplayVAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextboxDisplayVAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextboxDisplay.vAlign", |text| match text {
+        wire::string_enum(deserializer, "TextboxDisplay.vAlign", Self::Unlisted, |text| match text {
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
             _ => None,
@@ -17075,28 +17673,36 @@ impl<'de> Deserialize<'de> for TextboxListMarker {
     }
 }
 
-/// `TextboxListMarker.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextboxListMarker.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextboxListMarkerKind {
-    #[serde(rename = "bullet")]
     Bullet,
-    #[serde(rename = "ordered")]
     Ordered,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextboxListMarkerKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bullet => "bullet",
             Self::Ordered => "ordered",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextboxListMarkerKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextboxListMarkerKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextboxListMarker.kind", |text| match text {
+        wire::string_enum(deserializer, "TextboxListMarker.kind", Self::Unlisted, |text| match text {
             "bullet" => Some(Self::Bullet),
             "ordered" => Some(Self::Ordered),
             _ => None,
@@ -17104,28 +17710,36 @@ impl<'de> Deserialize<'de> for TextboxListMarkerKind {
     }
 }
 
-/// `TextboxDisplay.pageRelVFrom`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextboxDisplay.pageRelVFrom`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextboxDisplayPageRelVFrom {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextboxDisplayPageRelVFrom {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextboxDisplayPageRelVFrom {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextboxDisplayPageRelVFrom {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextboxDisplay.pageRelVFrom", |text| match text {
+        wire::string_enum(deserializer, "TextboxDisplay.pageRelVFrom", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             _ => None,
@@ -17133,25 +17747,34 @@ impl<'de> Deserialize<'de> for TextboxDisplayPageRelVFrom {
     }
 }
 
-/// `TextboxDisplay.pageRelXFrom`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextboxDisplay.pageRelXFrom`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextboxDisplayPageRelXFrom {
-    #[serde(rename = "page")]
     Page,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextboxDisplayPageRelXFrom {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextboxDisplayPageRelXFrom {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextboxDisplayPageRelXFrom {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextboxDisplay.pageRelXFrom", |text| match text {
+        wire::string_enum(deserializer, "TextboxDisplay.pageRelXFrom", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             _ => None,
         })
@@ -17245,28 +17868,36 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapDistPx {
     }
 }
 
-/// `TextboxDisplay.wrapSide`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextboxDisplay.wrapSide`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextboxDisplayWrapSide {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextboxDisplayWrapSide {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextboxDisplayWrapSide {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextboxDisplayWrapSide {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextboxDisplay.wrapSide", |text| match text {
+        wire::string_enum(deserializer, "TextboxDisplay.wrapSide", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "right" => Some(Self::Right),
             _ => None,
@@ -17274,28 +17905,36 @@ impl<'de> Deserialize<'de> for TextboxDisplayWrapSide {
     }
 }
 
-/// `TextboxDisplay.borderDash`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TextboxDisplay.borderDash`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TextboxDisplayBorderDash {
-    #[serde(rename = "dashed")]
     Dashed,
-    #[serde(rename = "dotted")]
     Dotted,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TextboxDisplayBorderDash {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Dashed => "dashed",
             Self::Dotted => "dotted",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TextboxDisplayBorderDash {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TextboxDisplayBorderDash {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TextboxDisplay.borderDash", |text| match text {
+        wire::string_enum(deserializer, "TextboxDisplay.borderDash", Self::Unlisted, |text| match text {
             "dashed" => Some(Self::Dashed),
             "dotted" => Some(Self::Dotted),
             _ => None,
@@ -17303,28 +17942,36 @@ impl<'de> Deserialize<'de> for TextboxDisplayBorderDash {
     }
 }
 
-/// `TableCell.vMerge`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableCell.vMerge`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableCellVMerge {
-    #[serde(rename = "restart")]
     Restart,
-    #[serde(rename = "continue")]
     Continue,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableCellVMerge {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Restart => "restart",
             Self::Continue => "continue",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableCellVMerge {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableCellVMerge {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableCell.vMerge", |text| match text {
+        wire::string_enum(deserializer, "TableCell.vMerge", Self::Unlisted, |text| match text {
             "restart" => Some(Self::Restart),
             "continue" => Some(Self::Continue),
             _ => None,
@@ -17332,31 +17979,38 @@ impl<'de> Deserialize<'de> for TableCellVMerge {
     }
 }
 
-/// `TableCell.vAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableCell.vAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableCellVAlign {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableCellVAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableCellVAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableCellVAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableCell.vAlign", |text| match text {
+        wire::string_enum(deserializer, "TableCell.vAlign", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -17365,31 +18019,38 @@ impl<'de> Deserialize<'de> for TableCellVAlign {
     }
 }
 
-/// `TableCell.textDirection`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableCell.textDirection`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableCellTextDirection {
-    #[serde(rename = "tbRl")]
     TbRl,
-    #[serde(rename = "btLr")]
     BtLr,
-    #[serde(rename = "lrTb")]
     LrTb,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableCellTextDirection {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::TbRl => "tbRl",
             Self::BtLr => "btLr",
             Self::LrTb => "lrTb",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableCellTextDirection {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableCellTextDirection {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableCell.textDirection", |text| match text {
+        wire::string_enum(deserializer, "TableCell.textDirection", Self::Unlisted, |text| match text {
             "tbRl" => Some(Self::TbRl),
             "btLr" => Some(Self::BtLr),
             "lrTb" => Some(Self::LrTb),
@@ -17398,28 +18059,36 @@ impl<'de> Deserialize<'de> for TableCellTextDirection {
     }
 }
 
-/// `TableCell.hMerge`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableCell.hMerge`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableCellHMerge {
-    #[serde(rename = "restart")]
     Restart,
-    #[serde(rename = "continue")]
     Continue,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableCellHMerge {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Restart => "restart",
             Self::Continue => "continue",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableCellHMerge {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableCellHMerge {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableCell.hMerge", |text| match text {
+        wire::string_enum(deserializer, "TableCell.hMerge", Self::Unlisted, |text| match text {
             "restart" => Some(Self::Restart),
             "continue" => Some(Self::Continue),
             _ => None,
@@ -17534,28 +18203,36 @@ impl<'de> Deserialize<'de> for TableCellCellRevision {
     }
 }
 
-/// `TableCell.cellRevision.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableCell.cellRevision.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableCellCellRevisionKind {
-    #[serde(rename = "ins")]
     Ins,
-    #[serde(rename = "del")]
     Del,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableCellCellRevisionKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Ins => "ins",
             Self::Del => "del",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableCellCellRevisionKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableCellCellRevisionKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableCell.cellRevision.kind", |text| match text {
+        wire::string_enum(deserializer, "TableCell.cellRevision.kind", Self::Unlisted, |text| match text {
             "ins" => Some(Self::Ins),
             "del" => Some(Self::Del),
             _ => None,
@@ -17775,26 +18452,23 @@ impl<'de> Deserialize<'de> for InkInfo {
     }
 }
 
-/// `BlockType`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `BlockType`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockType {
-    #[serde(rename = "paragraph")]
     Paragraph,
-    #[serde(rename = "heading")]
     Heading,
-    #[serde(rename = "listItem")]
     ListItem,
-    #[serde(rename = "table")]
     Table,
-    #[serde(rename = "image")]
     Image,
-    #[serde(rename = "passthrough")]
     Passthrough,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Paragraph => "paragraph",
             Self::Heading => "heading",
@@ -17802,13 +18476,20 @@ impl BlockType {
             Self::Table => "table",
             Self::Image => "image",
             Self::Passthrough => "passthrough",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "BlockType", |text| match text {
+        wire::string_enum(deserializer, "BlockType", Self::Unlisted, |text| match text {
             "paragraph" => Some(Self::Paragraph),
             "heading" => Some(Self::Heading),
             "listItem" => Some(Self::ListItem),
@@ -18550,28 +19231,36 @@ impl<'de> Deserialize<'de> for BlockList {
     }
 }
 
-/// `Block.list.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.list.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockListKind {
-    #[serde(rename = "bullet")]
     Bullet,
-    #[serde(rename = "ordered")]
     Ordered,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockListKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bullet => "bullet",
             Self::Ordered => "ordered",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockListKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockListKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.list.kind", |text| match text {
+        wire::string_enum(deserializer, "Block.list.kind", Self::Unlisted, |text| match text {
             "bullet" => Some(Self::Bullet),
             "ordered" => Some(Self::Ordered),
             _ => None,
@@ -18753,31 +19442,38 @@ impl<'de> Deserialize<'de> for BlockImageFillRect {
     }
 }
 
-/// `Block.imageParagraphLineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.imageParagraphLineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockImageParagraphLineRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockImageParagraphLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockImageParagraphLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockImageParagraphLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.imageParagraphLineRule", |text| match text {
+        wire::string_enum(deserializer, "Block.imageParagraphLineRule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -18873,31 +19569,38 @@ impl<'de> Deserialize<'de> for BlockAnchorLine {
     }
 }
 
-/// `Block.anchorLine.clear`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.anchorLine.clear`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockAnchorLineClear {
-    #[serde(rename = "all")]
     All,
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockAnchorLineClear {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::All => "all",
             Self::Left => "left",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockAnchorLineClear {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockAnchorLineClear {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.anchorLine.clear", |text| match text {
+        wire::string_enum(deserializer, "Block.anchorLine.clear", Self::Unlisted, |text| match text {
             "all" => Some(Self::All),
             "left" => Some(Self::Left),
             "right" => Some(Self::Right),
@@ -18906,31 +19609,38 @@ impl<'de> Deserialize<'de> for BlockAnchorLineClear {
     }
 }
 
-/// `Block.imageAlign`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.imageAlign`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockImageAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockImageAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockImageAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockImageAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.imageAlign", |text| match text {
+        wire::string_enum(deserializer, "Block.imageAlign", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -18939,31 +19649,38 @@ impl<'de> Deserialize<'de> for BlockImageAlign {
     }
 }
 
-/// `Block.imageRelV`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.imageRelV`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockImageRelV {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
-    #[serde(rename = "line")]
     Line,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockImageRelV {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
             Self::Line => "line",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockImageRelV {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockImageRelV {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.imageRelV", |text| match text {
+        wire::string_enum(deserializer, "Block.imageRelV", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             "line" => Some(Self::Line),
@@ -18972,28 +19689,36 @@ impl<'de> Deserialize<'de> for BlockImageRelV {
     }
 }
 
-/// `Block.imageRelH`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.imageRelH`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockImageRelH {
-    #[serde(rename = "page")]
     Page,
-    #[serde(rename = "margin")]
     Margin,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockImageRelH {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Page => "page",
             Self::Margin => "margin",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockImageRelH {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockImageRelH {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.imageRelH", |text| match text {
+        wire::string_enum(deserializer, "Block.imageRelH", Self::Unlisted, |text| match text {
             "page" => Some(Self::Page),
             "margin" => Some(Self::Margin),
             _ => None,
@@ -19001,31 +19726,38 @@ impl<'de> Deserialize<'de> for BlockImageRelH {
     }
 }
 
-/// `Block.imagePosH`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.imagePosH`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockImagePosH {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockImagePosH {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockImagePosH {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockImagePosH {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.imagePosH", |text| match text {
+        wire::string_enum(deserializer, "Block.imagePosH", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -19034,31 +19766,38 @@ impl<'de> Deserialize<'de> for BlockImagePosH {
     }
 }
 
-/// `Block.imagePosV`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.imagePosV`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockImagePosV {
-    #[serde(rename = "top")]
     Top,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "bottom")]
     Bottom,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockImagePosV {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Top => "top",
             Self::Center => "center",
             Self::Bottom => "bottom",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockImagePosV {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockImagePosV {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.imagePosV", |text| match text {
+        wire::string_enum(deserializer, "Block.imagePosV", Self::Unlisted, |text| match text {
             "top" => Some(Self::Top),
             "center" => Some(Self::Center),
             "bottom" => Some(Self::Bottom),
@@ -19217,28 +19956,36 @@ impl<'de> Deserialize<'de> for BlockStrayList {
     }
 }
 
-/// `Block.moveRevision`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.moveRevision`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockMoveRevision {
-    #[serde(rename = "from")]
     From,
-    #[serde(rename = "to")]
     To,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockMoveRevision {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::From => "from",
             Self::To => "to",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockMoveRevision {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockMoveRevision {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.moveRevision", |text| match text {
+        wire::string_enum(deserializer, "Block.moveRevision", Self::Unlisted, |text| match text {
             "from" => Some(Self::From),
             "to" => Some(Self::To),
             _ => None,
@@ -19818,31 +20565,38 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfoOld {
     }
 }
 
-/// `Block.pPrChangeInfo.old.type`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.pPrChangeInfo.old.type`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockPPrChangeInfoOldType {
-    #[serde(rename = "docParagraph")]
     DocParagraph,
-    #[serde(rename = "docHeading")]
     DocHeading,
-    #[serde(rename = "docListItem")]
     DocListItem,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockPPrChangeInfoOldType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::DocParagraph => "docParagraph",
             Self::DocHeading => "docHeading",
             Self::DocListItem => "docListItem",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockPPrChangeInfoOldType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockPPrChangeInfoOldType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.pPrChangeInfo.old.type", |text| match text {
+        wire::string_enum(deserializer, "Block.pPrChangeInfo.old.type", Self::Unlisted, |text| match text {
             "docParagraph" => Some(Self::DocParagraph),
             "docHeading" => Some(Self::DocHeading),
             "docListItem" => Some(Self::DocListItem),
@@ -19851,28 +20605,36 @@ impl<'de> Deserialize<'de> for BlockPPrChangeInfoOldType {
     }
 }
 
-/// `Block.pPrChangeInfo.old.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.pPrChangeInfo.old.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockPPrChangeInfoOldKind {
-    #[serde(rename = "bullet")]
     Bullet,
-    #[serde(rename = "ordered")]
     Ordered,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockPPrChangeInfoOldKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bullet => "bullet",
             Self::Ordered => "ordered",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockPPrChangeInfoOldKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockPPrChangeInfoOldKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.pPrChangeInfo.old.kind", |text| match text {
+        wire::string_enum(deserializer, "Block.pPrChangeInfo.old.kind", Self::Unlisted, |text| match text {
             "bullet" => Some(Self::Bullet),
             "ordered" => Some(Self::Ordered),
             _ => None,
@@ -19987,28 +20749,36 @@ impl<'de> Deserialize<'de> for BlockBlockRevision {
     }
 }
 
-/// `Block.blockRevision.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `Block.blockRevision.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum BlockBlockRevisionKind {
-    #[serde(rename = "ins")]
     Ins,
-    #[serde(rename = "del")]
     Del,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl BlockBlockRevisionKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Ins => "ins",
             Self::Del => "del",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for BlockBlockRevisionKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for BlockBlockRevisionKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "Block.blockRevision.kind", |text| match text {
+        wire::string_enum(deserializer, "Block.blockRevision.kind", Self::Unlisted, |text| match text {
             "ins" => Some(Self::Ins),
             "del" => Some(Self::Del),
             _ => None,
@@ -20396,25 +21166,34 @@ impl<'de> Deserialize<'de> for FinalBlockV0 {
     }
 }
 
-/// `FinalBlock|0.source`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `FinalBlock|0.source`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FinalBlockV0Source {
-    #[serde(rename = "original")]
     Original,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl FinalBlockV0Source {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Original => "original",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for FinalBlockV0Source {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for FinalBlockV0Source {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "FinalBlock|0.source", |text| match text {
+        wire::string_enum(deserializer, "FinalBlock|0.source", Self::Unlisted, |text| match text {
             "original" => Some(Self::Original),
             _ => None,
         })
@@ -20496,25 +21275,34 @@ impl<'de> Deserialize<'de> for FinalBlockV1 {
     }
 }
 
-/// `FinalBlock|1.source`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `FinalBlock|1.source`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum FinalBlockV1Source {
-    #[serde(rename = "generated")]
     Generated,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl FinalBlockV1Source {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Generated => "generated",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for FinalBlockV1Source {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for FinalBlockV1Source {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "FinalBlock|1.source", |text| match text {
+        wire::string_enum(deserializer, "FinalBlock|1.source", Self::Unlisted, |text| match text {
             "generated" => Some(Self::Generated),
             _ => None,
         })
@@ -20535,8 +21323,8 @@ pub struct GeneratedBlock {
     pub hidden_bookmarks: Option<Vec<String>>,
     pub comment_starts: Option<Vec<String>>,
     pub comment_ends: Option<Vec<String>>,
-    pub runs: Vec<Run>,
     pub sdt_shell: Option<SdtShell>,
+    pub runs: Vec<Run>,
     pub p_pr_change: Option<Option<String>>,
     pub para_mark_del: Option<Option<String>>,
     pub para_mark_ins: Option<Option<String>>,
@@ -20641,10 +21429,10 @@ impl Serialize for GeneratedBlock {
         if let Some(value) = &self.comment_ends {
             map.serialize_entry("commentEnds", value)?;
         }
-        map.serialize_entry("runs", &self.runs)?;
         if let Some(value) = &self.sdt_shell {
             map.serialize_entry("sdtShell", value)?;
         }
+        map.serialize_entry("runs", &self.runs)?;
         if let Some(value) = &self.p_pr_change {
             map.serialize_entry("pPrChange", value)?;
         }
@@ -20740,31 +21528,38 @@ impl<'de> Deserialize<'de> for GeneratedBlock {
     }
 }
 
-/// `GeneratedBlock.type`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `GeneratedBlock.type`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GeneratedBlockType {
-    #[serde(rename = "paragraph")]
     Paragraph,
-    #[serde(rename = "heading")]
     Heading,
-    #[serde(rename = "listItem")]
     ListItem,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl GeneratedBlockType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Paragraph => "paragraph",
             Self::Heading => "heading",
             Self::ListItem => "listItem",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for GeneratedBlockType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for GeneratedBlockType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "GeneratedBlock.type", |text| match text {
+        wire::string_enum(deserializer, "GeneratedBlock.type", Self::Unlisted, |text| match text {
             "paragraph" => Some(Self::Paragraph),
             "heading" => Some(Self::Heading),
             "listItem" => Some(Self::ListItem),
@@ -20854,28 +21649,36 @@ impl<'de> Deserialize<'de> for GeneratedBlockList {
     }
 }
 
-/// `GeneratedBlock.list.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `GeneratedBlock.list.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GeneratedBlockListKind {
-    #[serde(rename = "bullet")]
     Bullet,
-    #[serde(rename = "ordered")]
     Ordered,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl GeneratedBlockListKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Bullet => "bullet",
             Self::Ordered => "ordered",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for GeneratedBlockListKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for GeneratedBlockListKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "GeneratedBlock.list.kind", |text| match text {
+        wire::string_enum(deserializer, "GeneratedBlock.list.kind", Self::Unlisted, |text| match text {
             "bullet" => Some(Self::Bullet),
             "ordered" => Some(Self::Ordered),
             _ => None,
@@ -20990,28 +21793,36 @@ impl<'de> Deserialize<'de> for GeneratedBlockBlockRevision {
     }
 }
 
-/// `GeneratedBlock.blockRevision.kind`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `GeneratedBlock.blockRevision.kind`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum GeneratedBlockBlockRevisionKind {
-    #[serde(rename = "ins")]
     Ins,
-    #[serde(rename = "del")]
     Del,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl GeneratedBlockBlockRevisionKind {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Ins => "ins",
             Self::Del => "del",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for GeneratedBlockBlockRevisionKind {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for GeneratedBlockBlockRevisionKind {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "GeneratedBlock.blockRevision.kind", |text| match text {
+        wire::string_enum(deserializer, "GeneratedBlock.blockRevision.kind", Self::Unlisted, |text| match text {
             "ins" => Some(Self::Ins),
             "del" => Some(Self::Del),
             _ => None,
@@ -21278,31 +22089,38 @@ impl<'de> Deserialize<'de> for StyleDisplay {
     }
 }
 
-/// `StyleDisplay.caps`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `StyleDisplay.caps`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StyleDisplayCaps {
-    #[serde(rename = "all")]
     All,
-    #[serde(rename = "small")]
     Small,
-    #[serde(rename = "none")]
     None,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl StyleDisplayCaps {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::All => "all",
             Self::Small => "small",
             Self::None => "none",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for StyleDisplayCaps {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for StyleDisplayCaps {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "StyleDisplay.caps", |text| match text {
+        wire::string_enum(deserializer, "StyleDisplay.caps", Self::Unlisted, |text| match text {
             "all" => Some(Self::All),
             "small" => Some(Self::Small),
             "none" => Some(Self::None),
@@ -21311,31 +22129,38 @@ impl<'de> Deserialize<'de> for StyleDisplayCaps {
     }
 }
 
-/// `StyleDisplay.lineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `StyleDisplay.lineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StyleDisplayLineRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl StyleDisplayLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for StyleDisplayLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for StyleDisplayLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "StyleDisplay.lineRule", |text| match text {
+        wire::string_enum(deserializer, "StyleDisplay.lineRule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -21344,37 +22169,42 @@ impl<'de> Deserialize<'de> for StyleDisplayLineRule {
     }
 }
 
-/// `StyleDisplay.align`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `StyleDisplay.align`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StyleDisplayAlign {
-    #[serde(rename = "left")]
     Left,
-    #[serde(rename = "center")]
     Center,
-    #[serde(rename = "right")]
     Right,
-    #[serde(rename = "justify")]
     Justify,
-    #[serde(rename = "distribute")]
     Distribute,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl StyleDisplayAlign {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Left => "left",
             Self::Center => "center",
             Self::Right => "right",
             Self::Justify => "justify",
             Self::Distribute => "distribute",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for StyleDisplayAlign {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for StyleDisplayAlign {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "StyleDisplay.align", |text| match text {
+        wire::string_enum(deserializer, "StyleDisplay.align", Self::Unlisted, |text| match text {
             "left" => Some(Self::Left),
             "center" => Some(Self::Center),
             "right" => Some(Self::Right),
@@ -21544,31 +22374,38 @@ impl<'de> Deserialize<'de> for TableCondFormat {
     }
 }
 
-/// `TableCondFormat.caps`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableCondFormat.caps`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableCondFormatCaps {
-    #[serde(rename = "all")]
     All,
-    #[serde(rename = "small")]
     Small,
-    #[serde(rename = "none")]
     None,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableCondFormatCaps {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::All => "all",
             Self::Small => "small",
             Self::None => "none",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableCondFormatCaps {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableCondFormatCaps {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableCondFormat.caps", |text| match text {
+        wire::string_enum(deserializer, "TableCondFormat.caps", Self::Unlisted, |text| match text {
             "all" => Some(Self::All),
             "small" => Some(Self::Small),
             "none" => Some(Self::None),
@@ -21680,31 +22517,38 @@ impl<'de> Deserialize<'de> for TableParaSpacing {
     }
 }
 
-/// `TableParaSpacing.lineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `TableParaSpacing.lineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TableParaSpacingLineRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl TableParaSpacingLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for TableParaSpacingLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for TableParaSpacingLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "TableParaSpacing.lineRule", |text| match text {
+        wire::string_enum(deserializer, "TableParaSpacing.lineRule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -22128,31 +22972,38 @@ impl<'de> Deserialize<'de> for StyleInfo {
     }
 }
 
-/// `StyleInfo.type`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `StyleInfo.type`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum StyleInfoType {
-    #[serde(rename = "paragraph")]
     Paragraph,
-    #[serde(rename = "character")]
     Character,
-    #[serde(rename = "table")]
     Table,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl StyleInfoType {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Paragraph => "paragraph",
             Self::Character => "character",
             Self::Table => "table",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for StyleInfoType {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for StyleInfoType {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "StyleInfo.type", |text| match text {
+        wire::string_enum(deserializer, "StyleInfo.type", Self::Unlisted, |text| match text {
             "paragraph" => Some(Self::Paragraph),
             "character" => Some(Self::Character),
             "table" => Some(Self::Table),
@@ -22449,31 +23300,38 @@ impl<'de> Deserialize<'de> for DocDefaults {
     }
 }
 
-/// `DocDefaults.lineRule`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `DocDefaults.lineRule`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum DocDefaultsLineRule {
-    #[serde(rename = "auto")]
     Auto,
-    #[serde(rename = "atLeast")]
     AtLeast,
-    #[serde(rename = "exact")]
     Exact,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl DocDefaultsLineRule {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Auto => "auto",
             Self::AtLeast => "atLeast",
             Self::Exact => "exact",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for DocDefaultsLineRule {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for DocDefaultsLineRule {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "DocDefaults.lineRule", |text| match text {
+        wire::string_enum(deserializer, "DocDefaults.lineRule", Self::Unlisted, |text| match text {
             "auto" => Some(Self::Auto),
             "atLeast" => Some(Self::AtLeast),
             "exact" => Some(Self::Exact),
@@ -23237,34 +24095,40 @@ impl<'de> Deserialize<'de> for EmbeddedFontRef {
     }
 }
 
-/// `EmbeddedFontSlot`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `EmbeddedFontSlot`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum EmbeddedFontSlot {
-    #[serde(rename = "regular")]
     Regular,
-    #[serde(rename = "bold")]
     Bold,
-    #[serde(rename = "italic")]
     Italic,
-    #[serde(rename = "boldItalic")]
     BoldItalic,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl EmbeddedFontSlot {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Regular => "regular",
             Self::Bold => "bold",
             Self::Italic => "italic",
             Self::BoldItalic => "boldItalic",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for EmbeddedFontSlot {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for EmbeddedFontSlot {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "EmbeddedFontSlot", |text| match text {
+        wire::string_enum(deserializer, "EmbeddedFontSlot", Self::Unlisted, |text| match text {
             "regular" => Some(Self::Regular),
             "bold" => Some(Self::Bold),
             "italic" => Some(Self::Italic),
@@ -24308,12 +25172,12 @@ pub struct ParsedDocFull {
     pub auto_hyphenation: Option<bool>,
     pub default_tab_stop_twips: Option<JsNum>,
     pub balance_dbcs_spacing: Option<bool>,
+    pub use_f_e_layout: Option<bool>,
     pub compress_punctuation: Option<bool>,
     pub adjust_line_height_in_table: Option<bool>,
     pub indent_not_numbering_tab_stop: Option<bool>,
     pub do_not_expand_shift_return: Option<bool>,
     pub do_not_use_h_t_m_l_paragraph_auto_spacing: Option<bool>,
-    pub use_f_e_layout: Option<bool>,
     pub header_first: Option<Option<HfPartInfo>>,
     pub footer_first: Option<Option<HfPartInfo>>,
     pub header_even: Option<Option<HfPartInfo>>,
@@ -24551,6 +25415,9 @@ impl Serialize for ParsedDocFull {
         if let Some(value) = &self.balance_dbcs_spacing {
             map.serialize_entry("balanceDbcsSpacing", value)?;
         }
+        if let Some(value) = &self.use_f_e_layout {
+            map.serialize_entry("useFELayout", value)?;
+        }
         if let Some(value) = &self.compress_punctuation {
             map.serialize_entry("compressPunctuation", value)?;
         }
@@ -24565,9 +25432,6 @@ impl Serialize for ParsedDocFull {
         }
         if let Some(value) = &self.do_not_use_h_t_m_l_paragraph_auto_spacing {
             map.serialize_entry("doNotUseHTMLParagraphAutoSpacing", value)?;
-        }
-        if let Some(value) = &self.use_f_e_layout {
-            map.serialize_entry("useFELayout", value)?;
         }
         if let Some(value) = &self.header_first {
             map.serialize_entry("headerFirst", value)?;
@@ -25099,31 +25963,38 @@ impl<'de> Deserialize<'de> for ResolveDiff {
     }
 }
 
-/// `ResolveDiff.surface`
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize)]
+/// `ResolveDiff.surface`. `Unlisted` is a string the type does not name: the
+/// TypeScript keeps whatever an attribute held, so a reading in
+/// `jscompat::reading_leniently` keeps it too; a strict reading refuses it.
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum ResolveDiffSurface {
-    #[serde(rename = "body")]
     Body,
-    #[serde(rename = "cell")]
     Cell,
-    #[serde(rename = "run")]
     Run,
+    Unlisted(std::sync::Arc<str>),
 }
 
 impl ResolveDiffSurface {
     /// The string the TypeScript holds.
-    pub fn as_str(self) -> &'static str {
+    pub fn as_str(&self) -> &str {
         match self {
             Self::Body => "body",
             Self::Cell => "cell",
             Self::Run => "run",
+            Self::Unlisted(text) => text,
         }
+    }
+}
+
+impl Serialize for ResolveDiffSurface {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        serializer.serialize_str(self.as_str())
     }
 }
 
 impl<'de> Deserialize<'de> for ResolveDiffSurface {
     fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
-        wire::string_enum(deserializer, "ResolveDiff.surface", |text| match text {
+        wire::string_enum(deserializer, "ResolveDiff.surface", Self::Unlisted, |text| match text {
             "body" => Some(Self::Body),
             "cell" => Some(Self::Cell),
             "run" => Some(Self::Run),

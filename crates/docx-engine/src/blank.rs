@@ -336,7 +336,7 @@ pub fn custom_level_from_numbering_level(level: &NumberingLevel) -> CustomNumber
         start: *level.start,
         custom_format: owned(truthy(level.custom_format.as_deref())),
         suff: owned(truthy(level.suff.as_deref())),
-        lvl_jc: level.lvl_jc.and_then(|jc| match jc {
+        lvl_jc: level.lvl_jc.as_deref().and_then(|jc| match jc {
             "left" => Some(LvlJc::Left),
             "center" => Some(LvlJc::Center),
             "right" => Some(LvlJc::Right),
@@ -369,7 +369,7 @@ pub fn numbering_level_from_custom(
         hanging: Slot::of(l.hanging.unwrap_or(JsNum(360.0))),
         custom_format: Slot::maybe(owned(truthy(l.custom_format.as_deref()))),
         suff: Slot::maybe(owned(truthy(l.suff.as_deref()))),
-        lvl_jc: Slot::maybe(l.lvl_jc.map(LvlJc::as_str)),
+        lvl_jc: Slot::maybe(l.lvl_jc.map(|jc| jc.as_str().to_owned())),
         font: Slot::maybe(owned(truthy(l.font.as_deref()))),
         sz_half_points: Slot::maybe(number_truthy(l.sz_half_points)),
         color: Slot::maybe(owned(truthy(l.color.as_deref()))),
