@@ -217,7 +217,11 @@ jobs:
   main-faults:
     if: ${{ inputs.main_faults }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
 
@@ -238,6 +242,7 @@ jobs:
         shell: bash
         env:
           FAULTS: ${{ inputs.main_faults }}
+          FAULT_SHARD: ${{ matrix.shard }}/6
         run: |
           mkdir -p tools/main-diff/out
           node tools/main-diff/faults.mjs "$FAULTS" 2>&1 | tee tools/main-diff/out/faults.txt
@@ -246,7 +251,7 @@ jobs:
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: main-diff-faults
+          name: main-diff-faults-${{ matrix.shard }}
           path: tools/main-diff/out
           if-no-files-found: ignore
 

@@ -23,6 +23,11 @@ import { fileURLToPath } from 'node:url'
 const tool = dirname(fileURLToPath(import.meta.url))
 const crates = resolve(tool, '../../crates')
 const files = process.argv[2].split(',').filter(Boolean)
+// FAULT_SHARD=i/n runs the entries whose index is i modulo n, and each file's
+// positive control in every shard
+const [shard, shards] = (process.env.FAULT_SHARD ?? '0/1').split('/').map(Number)
+// each fault rebuilds the addon: unoptimized and incremental, unless asked otherwise
+process.env.MAIN_DIFF_PROFILE ??= 'node-faults'
 const results = []
 
 function compare(fns) {
@@ -35,6 +40,7 @@ for (const file of files) {
   const faults = JSON.parse(readFileSync(resolve(file), 'utf8'))
   console.log(`\n${file}`)
   for (const [i, fault] of faults.entries()) {
+    if (i !== 0 && i % shards !== shard) continue
     const path = join(crates, fault.file)
     const original = readFileSync(path, 'utf8')
     const count = original.split(fault.find).length - 1

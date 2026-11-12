@@ -7,9 +7,11 @@ import { fileURLToPath } from 'node:url'
 
 const tool = dirname(fileURLToPath(import.meta.url))
 const crates = resolve(tool, '../../crates')
+// MAIN_DIFF_PROFILE=node-faults builds unoptimized, for faults.mjs
+const profile = process.env.MAIN_DIFF_PROFILE ?? 'node'
 execFileSync(
   'cargo',
-  ['build', '--manifest-path', join(crates, 'Cargo.toml'), '-p', 'main-node', '--profile', 'node'],
+  ['build', '--manifest-path', join(crates, 'Cargo.toml'), '-p', 'main-node', '--profile', profile],
   {
     stdio: 'inherit',
   },
@@ -23,4 +25,4 @@ const lib = {
 // once: overwriting an addon a running process has loaded can end that process
 const addon = process.env.MAIN_DIFF_ADDON ?? join(tool, 'out', 'main_node.node')
 mkdirSync(dirname(addon), { recursive: true })
-copyFileSync(join(crates, 'target', 'node', lib), addon)
+copyFileSync(join(crates, 'target', profile === 'dev' ? 'debug' : profile, lib), addon)

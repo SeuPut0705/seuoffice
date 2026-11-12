@@ -81,3 +81,9 @@ strip = true
 [profile.node]
 inherits = "release"
 panic = "unwind"
+
+# the addon as fault injection builds it, once per fault: unoptimized and
+# incremental, so a fault rebuilds main-core alone in seconds
+[profile.node-faults]
+inherits = "dev"
+panic = "unwind"
