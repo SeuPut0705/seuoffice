@@ -58,7 +58,9 @@ enum BacktrackInsn<Input: InputIndexer> {
     NonGreedyLoop1Char {
         continuation: IP,
         min: Input::Position,
-        max: Input::Position,
+        /// Iterations the loop may still take beyond `min`. Whether the next
+        /// character matches is checked when the loop is backtracked into.
+        remaining: usize,
     },
 }
 
@@ -264,25 +266,6 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         Some((min_pos, max_pos))
     }
 
-    // Compute the maximum position from a starting position, up to a limit.
-    // This is used for lazy computation in non-greedy loops.
-    fn compute_max_pos<Dir: Direction, Scm: SingleCharMatcher<Input, Dir>>(
-        input: &Input,
-        mut pos: Input::Position,
-        limit: usize,
-        dir: Dir,
-        matcher: Scm,
-    ) -> Input::Position {
-        for _ in 0..limit {
-            let saved = pos;
-            if !matcher.matches(input, dir, &mut pos) {
-                pos = saved;
-                break;
-            }
-        }
-        pos
-    }
-
     // Helper function to extract the duplicated match blocks that handle different instruction types
     // with different matcher functions. This significantly reduces code duplication and compile times.
     fn with_scm_loop_impl<Dir: Direction>(
@@ -358,72 +341,6 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         }
     }
 
-    // Helper function for compute_max_pos to avoid duplication
-    fn with_scm_compute_max<Dir: Direction>(
-        re: &CompiledRegex,
-        input: &Input,
-        pos: Input::Position,
-        limit: usize,
-        dir: Dir,
-        ip: IP,
-    ) -> Option<Input::Position> {
-        let result = match re.insns.iat(ip + 1) {
-            &Insn::Char(c) => {
-                let c = <<Input as InputIndexer>::Element as ElementType>::try_from(c)?;
-                Self::compute_max_pos(input, pos, limit, dir, scm::Char { c })
-            }
-            &Insn::Bracket(idx) => {
-                let bc = &re.brackets[idx];
-                Self::compute_max_pos(input, pos, limit, dir, scm::Bracket { bc })
-            }
-            Insn::AsciiBracket(bitmap) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteSet { bytes: bitmap })
-            }
-            Insn::MatchAny => Self::compute_max_pos(input, pos, limit, dir, scm::MatchAny::new()),
-            Insn::MatchAnyExceptLineTerminator => Self::compute_max_pos(
-                input,
-                pos,
-                limit,
-                dir,
-                scm::MatchAnyExceptLineTerminator::new(),
-            ),
-            Insn::CharSet(chars) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::CharSet { chars })
-            }
-            &Insn::ByteSet2(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteArraySet(bytes))
-            }
-            &Insn::ByteSet3(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteArraySet(bytes))
-            }
-            &Insn::ByteSet4(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteArraySet(bytes))
-            }
-            Insn::ByteSeq1(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteSeq(bytes))
-            }
-            Insn::ByteSeq2(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteSeq(bytes))
-            }
-            Insn::ByteSeq3(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteSeq(bytes))
-            }
-            Insn::ByteSeq4(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteSeq(bytes))
-            }
-            Insn::ByteSeq5(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteSeq(bytes))
-            }
-            Insn::ByteSeq6(bytes) => {
-                Self::compute_max_pos(input, pos, limit, dir, scm::MatchByteSeq(bytes))
-            }
-            _ => {
-                unreachable!("Missing SCM: {:?}", re.insns.iat(ip + 1));
-            }
-        };
-        Some(result)
-    }
-
     // Given that ip points at a loop whose body matches exactly one character, run
     // a "single character loop". The big idea here is that we don't need to save
     // our position every iteration: we know that our loop body matches a single
@@ -440,24 +357,30 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         ip: IP,
         greedy: bool,
     ) -> Option<IP> {
-        // For non-greedy loops, we can avoid computing the maximum match eagerly.
-        // We'll only compute it when we need to set up backtracking.
-        let (min_pos, max_pos) = if greedy {
-            // For greedy loops, compute both min and max positions
-            Self::with_scm_loop_impl(self.re, input, *pos, min, max, dir, ip)?
-        } else {
-            // For non-greedy loops, initially only compute the minimum position
+        // Oh no where is the continuation? It's one past the loop body, which is one
+        // past the loop. Strap in!
+        let continuation = ip + 2;
+        if !greedy {
+            // A non-greedy loop takes its minimum and goes on. Each backtrack
+            // into it takes one more character, checked then: the farthest
+            // the loop could reach is never computed, which would cost the
+            // rest of the input for every match.
             let (min_pos, _) = Self::with_scm_loop_impl(self.re, input, *pos, min, min, dir, ip)?;
-
-            // For non-greedy loops, we only compute the max position if we need to set up backtracking
-            let max_pos = if min < max {
-                // We need to compute the max for backtracking purposes
-                Self::with_scm_compute_max(self.re, input, min_pos, max - min, dir, ip)?
-            } else {
-                min_pos
-            };
-            (min_pos, max_pos)
-        };
+            if min < max {
+                Self::push_bounded(
+                    &mut self.bts,
+                    self.ceiling,
+                    BacktrackInsn::NonGreedyLoop1Char {
+                        continuation,
+                        min: min_pos,
+                        remaining: max - min,
+                    },
+                );
+            }
+            *pos = min_pos;
+            return Some(continuation);
+        }
+        let (min_pos, max_pos) = Self::with_scm_loop_impl(self.re, input, *pos, min, max, dir, ip)?;
 
         debug_assert!(
             if Dir::FORWARD {
@@ -468,29 +391,21 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
             "min should be <= (>=) max if cursor is tracking forwards (backwards)"
         );
 
-        // Oh no where is the continuation? It's one past the loop body, which is one
-        // past the loop. Strap in!
-        let continuation = ip + 2;
         if min_pos != max_pos {
             // Backtracking is possible.
-            let bti = if greedy {
+            Self::push_bounded(
+                &mut self.bts,
+                self.ceiling,
                 BacktrackInsn::GreedyLoop1Char {
                     continuation,
                     min: min_pos,
                     max: max_pos,
-                }
-            } else {
-                BacktrackInsn::NonGreedyLoop1Char {
-                    continuation,
-                    min: min_pos,
-                    max: max_pos,
-                }
-            };
-            Self::push_bounded(&mut self.bts, self.ceiling, bti);
+                },
+            );
         }
 
-        // Start at the max (min) if greedy (nongreedy).
-        *pos = if greedy { max_pos } else { min_pos };
+        // Start at the max.
+        *pos = max_pos;
         Some(continuation)
     }
 
@@ -560,7 +475,7 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
         input: &Input,
         ip: &mut IP,
         pos: &mut Input::Position,
-        _dir: Dir,
+        dir: Dir,
     ) -> bool {
         loop {
             // We always have a single Exhausted instruction backstopping our stack,
@@ -654,33 +569,26 @@ impl<'a, Input: InputIndexer> MatchAttempter<'a, Input> {
                     return true;
                 }
 
-                BacktrackInsn::NonGreedyLoop1Char {
+BacktrackInsn::NonGreedyLoop1Char {
                     continuation,
                     min,
-                    max,
+                    remaining,
                 } => {
-                    // The match failed at the min location.
-                    debug_assert!(
-                        if Dir::FORWARD { max >= min } else { max <= min },
-                        "max should be >= min (or <= if tracking backwards)"
-                    );
-                    if *max == *min {
+                    // The match failed at the min location: take one more
+                    // character, if the loop may and the character matches.
+                    let taken = if *remaining == 0 {
+                        None
+                    } else {
+                        Self::with_scm_loop_impl(self.re, input, *min, 1, 1, dir, *continuation - 2)
+                    };
+                    let Some((newmin, _)) = taken else {
                         // We have backtracked this loop as far as possible.
                         self.bts.pop();
                         continue;
-                    }
-                    // Move in the direction of the cursor.
-                    let newmin = if Dir::FORWARD {
-                        input.next_right_pos(*min)
-                    } else {
-                        input.next_left_pos(*min)
                     };
-                    if let Some(newmin) = newmin {
-                        *pos = newmin;
-                        *min = newmin;
-                    } else {
-                        rs_unreachable!("Should always be able to advance since min != max")
-                    }
+                    *pos = newmin;
+                    *min = newmin;
+                    *remaining -= 1;
                     *ip = *continuation;
                     return true;
                 }

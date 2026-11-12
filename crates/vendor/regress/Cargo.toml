@@ -62,6 +62,10 @@ name = "escape_tests"
 path = "tests/escape_tests.rs"
 
 [[test]]
+name = "lazy_loop"
+path = "tests/lazy_loop.rs"
+
+[[test]]
 name = "pattern_tests"
 path = "tests/pattern_tests.rs"
 
