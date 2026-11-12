@@ -206,9 +206,12 @@ function refusedByLock(step: Step, doc: PmNode): boolean {
       return step instanceof AddMarkStep && holdsLockedContent(doc, step.from, step.to)
     }
     if (name !== INLINE_WRAP_MARK) return false
-    // the wrapper mark is the control: taking it off its text, or putting
-    // another in its place, changes what the lock covers
+    // the wrapper mark is the control: taking it off its text, putting another
+    // in its place, or stretching it over other text changes what the lock covers
     const removes = step instanceof RemoveMarkStep
+    const brought = removes
+      ? NO_WRAPS
+      : inlineWrapChainOf(step.mark.attrs.chain).filter(inlineWrapContentLocked)
     let changed = false
     doc.nodesBetween(step.from, step.to, (node) => {
       if (changed) return false
@@ -216,6 +219,7 @@ function refusedByLock(step: Step, doc: PmNode): boolean {
       if (lockedWrapsOf(node).length > 0 && step.mark.isInSet(node.marks) === removes) {
         changed = true
       }
+      if (brought.some((wrap) => !sitsIn(node, wrap))) changed = true
       return false
     })
     return changed
