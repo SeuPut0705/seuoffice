@@ -713,6 +713,8 @@ const BINDING_BODIES = [
   BOUND_SDT('{aaaa-1111}'),
   BOUND_SDT('{BBBB-2222}') + BOUND_SDT('AAAA-1111'),
   BOUND_SDT('{cccc-3333}'),
+  // a GUID with white space around it still names the store (normalizeItemId trims it)
+  BOUND_SDT(' \t{aaaa-1111}\n '),
   `<w:sdt><w:sdtPr><w:id w:val="9"/><w15:dataBinding xmlns:w15="x" w:storeItemID='{aaaa-1111}'/></w:sdtPr><w:sdtContent/></w:sdt>`,
 ]
 

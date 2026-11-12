@@ -80,6 +80,7 @@ const NOTES_LISTS: Array<Array<Record<string, unknown>>> = [
   [{ id: '3', text: 'new\nnote' }],
   [{ id: '4', text: '', richParas: [[{ text: 'rich', bold: true, italic: true, underline: true, strike: true, color: 'ff0000', sizeHalfPoints: 30, fontAscii: 'Arial', font: 'MS Gothic' }, { text: 'ins', ins: { author: 'A', date: '2024-01-01T00:00:00Z', id: '7001' } }, { text: 'del', del: { author: 'B' } }], [{ text: 'second' }]] }],
   [{ id: '5', text: 'a & b < c', richParas: [] }, { id: '6', text: '' }],
+  [{ id: '7', text: '', richParas: [[{ text: 'a & b < c' }, { text: 'x < y & z', del: { author: 'B' } }], [{ text: '<w:t>&amp;</w:t>', bold: true }]] }],
 ]
 
 const PICTURE_PART = `<w:hdr ${W}><w:p><w:r><w:drawing><wp:anchor simplePos="1"><wp:simplePos x="0" y="0"/><wp:positionH relativeFrom="margin"><wp:posOffset>1</wp:posOffset></wp:positionH><wp:positionV relativeFrom="margin"><wp:posOffset>2</wp:posOffset></wp:positionV><wp:extent cx="952500" cy="952500"/><wp:wrapNone/><a:graphic><a:graphicData><pic:pic><pic:blipFill><a:blip r:embed="rId1"/></pic:blipFill><pic:spPr><a:xfrm><a:ext cx="952500" cy="952500"/></a:xfrm></pic:spPr></pic:pic></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p><w:p><w:r><w:drawing><wp:inline><wp:extent cx="1" cy="1"/></wp:inline></w:drawing></w:r></w:p><w:p><w:r><w:drawing><wp:anchor><wp:extent cx="2" cy="2"/><a:blip r:embed="rId2"/><pic:pic/></wp:anchor></w:drawing></w:r></w:p></w:hdr>`

@@ -57,13 +57,6 @@
    "new": "w15:parentId="
   },
   {
-   "name": "porter: setAppElement skips only elements before its own slot (index < at, not <=)",
-   "group": "save",
-   "file": "crates/docx-engine/src/save/features/doc_properties_write.rs",
-   "old": "if at.is_some_and(|at| index <= at) {",
-   "new": "if at.is_some_and(|at| index < at) {"
-  },
-  {
    "name": "porter: mergeOutputFileName fills {Column} without trimming the column name",
    "group": "save",
    "file": "crates/docx-engine/src/save/features/mail_merge.rs",
