@@ -86,7 +86,7 @@ pub fn parse_chart_part_xml(
     };
     let scatter_style = child_val("c:scatterStyle");
     let radar_style_val = child_val("c:radarStyle");
-    let radar_style = (kind == ChartDisplayKind::Radar).then(|| match radar_style_val {
+    let radar_style = (kind == ChartDisplayKind::Radar).then_some(match radar_style_val {
         Some("filled") => ChartDisplayRadarStyle::Filled,
         Some("marker") => ChartDisplayRadarStyle::Marker,
         _ => ChartDisplayRadarStyle::Standard,
@@ -244,10 +244,11 @@ pub fn parse_chart_part_xml(
     let title_font_pt = text_props(chart.find_child("c:title"), None).0;
     let mut title = chart_title(chart);
     // Office names a single-series chart's auto title after the series
-    if title.as_deref() == Some("Chart Title") && series.len() == 1 {
-        if let Some(name) = series[0].name.as_ref().filter(|name| !name.is_empty()) {
-            title = Some(name.clone());
-        }
+    if title.as_deref() == Some("Chart Title")
+        && series.len() == 1
+        && let Some(name) = series[0].name.as_ref().filter(|name| !name.is_empty())
+    {
+        title = Some(name.clone());
     }
     let mut out = ChartDisplay {
         part_path: Slot::of(part_path.to_owned()),
@@ -812,7 +813,7 @@ fn chartex_points(dim: &XNode) -> Vec<Option<String>> {
     let mut out: Vec<Option<String>> = Vec::new();
     for pt in lvl.find_children("cx:pt") {
         let idx = parse_int(pt.attr("idx").unwrap_or(""), Radix::Ten);
-        if idx.is_finite() && idx >= 0.0 && idx < MAX_CHART_CACHE_POINTS {
+        if idx.is_finite() && (0.0..MAX_CHART_CACHE_POINTS).contains(&idx) {
             let idx = idx as usize;
             if idx >= out.len() {
                 out.resize(idx + 1, None);
