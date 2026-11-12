@@ -157,11 +157,6 @@ describe('the gate refuses', () => {
       'corrupt',
     ],
     [
-      'a header with the wrong byte order',
-      () => patched((v) => v.setUint16(28, 0, true)),
-      'corrupt',
-    ],
-    [
       'a FAT loop among entries for sectors the file does not have',
       () =>
         rawCompound({
@@ -344,6 +339,15 @@ describe('a sound compound file still opens', () => {
     const bytes = rawCompound({ ...soundTables, entries: [ROOT, STREAM], unusedEntries: 'zeros' })
     expect(opened(bytes).get('Data')?.length).toBe(4096)
   })
+
+  for (const mark of [0xffff, 0xfeff, 0x0000]) {
+    it(`a file whose byte-order field holds 0x${mark.toString(16).padStart(4, '0')}`, () => {
+      // some writers leave another value there; cfb skips the field, and so did every reader
+      // before the gate
+      const bytes = patched((v) => v.setUint16(28, mark, true))
+      expect(opened(bytes).get('Data')?.length).toBe(4096)
+    })
+  }
 
   it('a file without small streams whose unused mini FAT and mini stream starts name a sector', () => {
     const bytes = rawCompound({

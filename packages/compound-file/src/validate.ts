@@ -163,9 +163,8 @@ export function assertCompoundFile(bytes: Uint8Array): void {
   const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
   const u32 = (at: number): number => view.getUint32(at, true)
 
-  if (view.getUint16(28, true) !== 0xfffe) {
-    refuse('corrupt', 'the header does not declare little-endian byte order')
-  }
+  // The byte-order field (offset 28) is not checked: some writers leave another value there, the
+  // file is read as little-endian whatever it says, and every check below still applies.
   const major = view.getUint16(MAJOR_VERSION, true)
   const sectorShift = view.getUint16(SECTOR_SHIFT, true)
   if (!((major === 3 && sectorShift === 9) || (major === 4 && sectorShift === 12))) {
