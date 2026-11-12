@@ -16,7 +16,12 @@ if (which === 'napi') {
   const s = now()
   const child = spawn(join(release, 'sidecar'), [], { stdio: ['pipe', 'pipe', 'inherit'] })
   const body = Buffer.from('{"name":"x","args":1}')
-  const head = Buffer.alloc(5); head.writeUInt32LE(body.length + 1, 0); head[4] = 1
-  child.stdout.once('data', () => { console.log(Math.round(now() - s)); child.stdin.end() })
+  const head = Buffer.alloc(5)
+  head.writeUInt32LE(body.length + 1, 0)
+  head[4] = 1
+  child.stdout.once('data', () => {
+    console.log(Math.round(now() - s))
+    child.stdin.end()
+  })
   child.stdin.write(Buffer.concat([head, body]))
 }

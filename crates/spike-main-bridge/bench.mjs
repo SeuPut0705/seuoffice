@@ -12,7 +12,11 @@ import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const release = join(here, 'target', 'release')
-const libName = { darwin: 'libspike_main_bridge.dylib', linux: 'libspike_main_bridge.so', win32: 'spike_main_bridge.dll' }[process.platform]
+const libName = {
+  darwin: 'libspike_main_bridge.dylib',
+  linux: 'libspike_main_bridge.so',
+  win32: 'spike_main_bridge.dll',
+}[process.platform]
 const addonPath = join(release, 'spike_main_bridge.node')
 copyFileSync(join(release, libName), addonPath)
 const sidecarPath = join(release, process.platform === 'win32' ? 'sidecar.exe' : 'sidecar')
@@ -147,7 +151,10 @@ async function sidecarPings() {
   return JSON.parse((await sidecar.request(3, Buffer.from(String(PINGS)))).toString('utf8'))
 }
 
-const results = { napi: { small: [], big: [], pings: [] }, sidecar: { small: [], big: [], pings: [] } }
+const results = {
+  napi: { small: [], big: [], pings: [] },
+  sidecar: { small: [], big: [], pings: [] },
+}
 for (let r = 0; r < rounds; r++) {
   const order = r % 2 === 0 ? ['napi', 'sidecar'] : ['sidecar', 'napi']
   for (const which of order) {
@@ -172,12 +179,20 @@ const fmt = (x) => Math.round(x * 10) / 10
 console.log(
   JSON.stringify(
     {
-      runtime: process.versions.electron ? `electron ${process.versions.electron} (node ${process.versions.node})` : `node ${process.versions.node}`,
+      runtime: process.versions.electron
+        ? `electron ${process.versions.electron} (node ${process.versions.node})`
+        : `node ${process.versions.node}`,
       platform: `${process.platform}-${process.arch}`,
       rounds,
       startUs: { napiLoad: fmt(napiLoadUs), sidecarSpawnToFirstReply: fmt(sidecarFirstReplyUs) },
-      jsToRustSmallJsonUs: { napi: fmt(median(results.napi.small)), sidecar: fmt(median(results.sidecar.small)) },
-      jsToRust1MiBUs: { napi: fmt(median(results.napi.big)), sidecar: fmt(median(results.sidecar.big)) },
+      jsToRustSmallJsonUs: {
+        napi: fmt(median(results.napi.small)),
+        sidecar: fmt(median(results.sidecar.small)),
+      },
+      jsToRust1MiBUs: {
+        napi: fmt(median(results.napi.big)),
+        sidecar: fmt(median(results.sidecar.big)),
+      },
       rustToJsUs: {
         napi: fmt(median(results.napi.pings)),
         napiP99: fmt(results.napi.pingsP99),
