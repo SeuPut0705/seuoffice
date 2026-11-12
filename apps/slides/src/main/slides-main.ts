@@ -21,7 +21,7 @@ import {
 } from 'electron'
 import type { WebContents } from 'electron'
 import { execFile } from 'node:child_process'
-import { readFile, writeFile, rm, mkdir, open } from 'node:fs/promises'
+import { readFile, writeFile, rm, mkdir, open, realpath, stat } from 'node:fs/promises'
 import { randomUUID } from 'node:crypto'
 import { existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { basename, dirname, isAbsolute, join, resolve } from 'node:path'
@@ -93,7 +93,7 @@ import { matchesElementRef } from '@genoffice/pptx-engine/identity'
 import { buildPagePptx, parsePageSpec } from '@genoffice/pipelines/slides'
 import { fillMissingRunFonts, parseFontRoles } from './ai-default-fonts'
 import { convertOdpToPptx } from '../../../../packages/odf2ooxml/src'
-import { convertPptToPptx } from '../../../../packages/ppt2pptx/src'
+import { convertPptToPptx, PPT_LIMITS } from '../../../../packages/ppt2pptx/src'
 import { sniffImageMime } from './media-mime'
 import {
   newPasteCascade,
@@ -1023,13 +1023,58 @@ async function recoveredOpenBytes(
   return { bytes: new Uint8Array(copy), recovered: true }
 }
 
+async function showPresentationError(detail: string): Promise<void> {
+  const options = { type: 'error' as const, message: PRODUCT_NAME, detail }
+  const parent = dialogParent()
+  if (parent) await dialog.showMessageBox(parent, options)
+  else await dialog.showMessageBox(options)
+}
+
+/** Resolve symlink aliases, including an existing parent of a new destination. */
+async function canonicalPresentationPath(path: string): Promise<string> {
+  const absolute = resolve(path)
+  try {
+    return await realpath(absolute)
+  } catch {
+    try {
+      return join(await realpath(dirname(absolute)), basename(absolute))
+    } catch {
+      return absolute
+    }
+  }
+}
+
+/** As in Docs, conservatively protect originals even on case-folding disks. */
+async function pickPresentationImportTarget(
+  sourcePath: string,
+  defaultPath: string,
+): Promise<string | null> {
+  const original = (await canonicalPresentationPath(sourcePath)).toLowerCase()
+  for (;;) {
+    const picked = await showSaveDialogWithMemory(
+      dialog,
+      dialogParent(),
+      { defaultPath, filters: [{ name: 'PowerPoint', extensions: ['pptx'] }] },
+      getDraftsDir(),
+    )
+    if (picked.canceled || !picked.filePath) return null
+    if ((await canonicalPresentationPath(picked.filePath)).toLowerCase() === original) {
+      await showPresentationError(tm('importOriginalTarget'))
+      continue
+    }
+    if (deckExtension(picked.filePath) === 'pptx') return picked.filePath
+    const target = `${picked.filePath}.pptx`
+    if (!existsSync(target)) return target
+    // The OS confirmed the typed name, not the appended name. Ask about the actual copy.
+    defaultPath = target
+  }
+}
+
 /**
- * An .odp opens only as a converted .pptx deck: confirm the lossy import,
- * pick the destination (the sibling .pptx by default), convert, write the
- * file and open it — the explicit-destination flow the PDF "Export as
- * PowerPoint" path already uses, so every later Save lands in the copy the
- * user chose. Anything that is not an .odp passes through unchanged; null
- * cancels the open.
+ * Legacy decks open as separate .pptx copies. PPT stage 1 is text-only and
+ * always discloses that loss; ODF retains its optional confirmation.
+ * Canonical destination checks protect the original, and an appended suffix
+ * is confirmed by the OS before any existing copy is replaced. Null cancels.
  */
 async function preparePresentationForOpen(filePath: string): Promise<string | null> {
   const extension = deckExtension(filePath)
@@ -1041,6 +1086,11 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
   const failedTitleKey = legacyPpt ? 'pptImportFailedTitle' : 'odpImportFailedTitle'
   const failedBodyKey = legacyPpt ? 'pptImportFailedBody' : 'odpImportFailedBody'
   const parent = dialogParent()
+  // The converter also checks this, but only after its input is in memory.
+  if (legacyPpt && ((await stat(filePath).catch(() => null))?.size ?? 0) > PPT_LIMITS.maxBytes) {
+    await showPresentationError(tm('errTooLarge', { mb: PPT_LIMITS.maxBytes / 1024 / 1024 }))
+    return null
+  }
   if (legacyPpt || !readLegacyImportSkip(APP_SETTINGS_PATH(), 'odp')) {
     const options = {
       type: 'warning' as const,
@@ -1064,28 +1114,23 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
       }
     }
   }
-  const r = await showSaveDialogWithMemory(
-    dialog,
-    parent,
-    {
-      defaultPath: join(
-        dirname(filePath),
-        legacyPpt
-          ? tm('pptImportCopyName', { stem: basename(filePath).replace(/\.ppt$/i, '') })
-          : basename(filePath).replace(/\.(odp|otp)$/i, '.pptx'),
-      ),
-      filters: [{ name: 'PowerPoint', extensions: ['pptx'] }],
-    },
-    getDraftsDir(),
+  const target = await pickPresentationImportTarget(
+    filePath,
+    join(
+      dirname(filePath),
+      legacyPpt
+        ? tm('pptImportCopyName', { stem: basename(filePath).replace(/\.ppt$/i, '') })
+        : basename(filePath).replace(/\.(odp|otp)$/i, '.pptx'),
+    ),
   )
-  if (r.canceled || !r.filePath) return null
+  if (!target) return null
   try {
     const source = new Uint8Array(await readFile(filePath))
     const converted = legacyPpt ? await convertPptToPptx(source) : null
     const out = converted ? converted.bytes : (await convertOdpToPptx(source)).pptx
     // atomic like the Docs and shell copies: a plain write leaves a truncated
     // .pptx where the user expects a deck if the process dies mid-write
-    await atomicWriteFile(r.filePath, Buffer.from(out))
+    await atomicWriteFile(target, Buffer.from(out))
     if (converted?.warnings.length) {
       const warningOptions = {
         type: 'warning' as const,
@@ -1106,7 +1151,7 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
     else await dialog.showMessageBox(errorOptions)
     return null
   }
-  return r.filePath
+  return target
 }
 
 /**

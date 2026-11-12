@@ -2,6 +2,7 @@ import { openPptContainer } from './container'
 import { parsePptPresentation } from './ppt'
 import { writePptxPresentation } from './pptx-writer'
 
+export { PPT_LIMITS } from './container'
 export { LegacyPptError, LEGACY_PPT_ERROR_CODES, type LegacyPptErrorCode } from './errors'
 export type { PptPresentation, PptSlide, PptSlideText } from './ppt'
 export { parsePptPresentation } from './ppt'

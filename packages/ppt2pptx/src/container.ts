@@ -4,7 +4,7 @@ import { LegacyPptError } from './errors'
 import { ENCRYPTED_CURRENT_USER_TOKEN, currentUserInfo } from './ppt'
 
 /** Caps mirror the other legacy importers: fail fast, never walk gigabytes. */
-const PPT_LIMITS: Ole2Limits = {
+export const PPT_LIMITS: Ole2Limits = {
   maxBytes: 256 * 1024 * 1024,
   maxStreamBytes: 128 * 1024 * 1024,
 }

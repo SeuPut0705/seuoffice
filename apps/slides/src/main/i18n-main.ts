@@ -38,6 +38,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice 会把演示文稿重建为可编辑的文本框，保持原来的幻灯片顺序和尺寸；形状位置、图片和文字格式暂不保留。原文件不会被改动，转换出的 .pptx 是一个独立副本，之后的保存都写入它。',
     pptImportCopyName: '{stem} (仅文本).pptx',
+    importOriginalTarget: '请选择其他名称，以保留原始演示文稿。',
     pptImportFailedTitle: '无法转换这个 .ppt',
     pptImportFailedBody: '文件可能已损坏，或不是有效的 PowerPoint 97-2003 演示文稿。',
     legacyPptTitle: '无法打开 .ppt 旧格式',
@@ -155,6 +156,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice rebuilds the deck as editable text boxes, in the original slide order and size; shape geometry, images and text formatting are not carried over yet. The original file is never changed; the converted .pptx is a separate copy that later saves write to.',
     pptImportCopyName: '{stem} (text only).pptx',
+    importOriginalTarget: 'Choose a different name to keep the original presentation unchanged.',
     pptImportFailedTitle: 'Cannot convert this .ppt',
     pptImportFailedBody: 'The file may be damaged or not a valid PowerPoint 97-2003 presentation.',
     legacyPptTitle: 'Cannot open legacy .ppt',
@@ -272,6 +274,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice dựng lại bản trình bày thành các hộp văn bản có thể chỉnh sửa, theo thứ tự và kích thước slide gốc; vị trí hình khối, hình ảnh và định dạng chữ chưa được giữ lại. Tệp gốc không bị thay đổi; tệp .pptx đã chuyển đổi là bản sao riêng mà các lần lưu sau ghi vào.',
     pptImportCopyName: '{stem} (chỉ văn bản).pptx',
+    importOriginalTarget: 'Chọn tên khác để giữ nguyên bản trình bày gốc.',
     pptImportFailedTitle: 'Không thể chuyển đổi tệp .ppt này',
     pptImportFailedBody:
       'Tệp có thể bị hỏng hoặc không phải bản trình bày PowerPoint 97-2003 hợp lệ.',
@@ -394,6 +397,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice はデッキを、元のスライドの順序とサイズのまま編集可能なテキストボックスとして再構成します。図形の位置、画像、文字書式はまだ反映されません。元のファイルは変更されず、変換された .pptx はそれ以降の保存先となる独立したコピーです。',
     pptImportCopyName: '{stem} (テキストのみ).pptx',
+    importOriginalTarget: '元のプレゼンテーションを保護するため、別の名前を選んでください。',
     pptImportFailedTitle: 'この .ppt を変換できません',
     pptImportFailedBody:
       'ファイルが壊れているか、有効な PowerPoint 97-2003 プレゼンテーションではない可能性があります。',
@@ -517,6 +521,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice는 데크를 원본 슬라이드 순서와 크기대로 편집 가능한 텍스트 상자로 다시 만듭니다. 도형 위치, 이미지, 텍스트 서식은 아직 옮겨지지 않습니다. 원본 파일은 변경되지 않으며, 변환된 .pptx는 이후 저장이 기록되는 별도의 사본입니다.',
     pptImportCopyName: '{stem} (텍스트만).pptx',
+    importOriginalTarget: '원본 프레젠테이션을 보존하려면 다른 이름을 선택하세요.',
     pptImportFailedTitle: '이 .ppt를 변환할 수 없습니다',
     pptImportFailedBody:
       '파일이 손상되었거나 유효한 PowerPoint 97-2003 프레젠테이션이 아닐 수 있습니다.',
@@ -636,6 +641,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice reconstruit le deck en zones de texte modifiables, dans l’ordre et à la taille d’origine des diapositives ; la géométrie des formes, les images et la mise en forme du texte ne sont pas encore conservées. Le fichier d’origine n’est jamais modifié ; le .pptx converti est une copie distincte sur laquelle les enregistrements suivants écrivent.',
     pptImportCopyName: '{stem} (texte seul).pptx',
+    importOriginalTarget: 'Choisissez un autre nom pour préserver la présentation originale.',
     pptImportFailedTitle: 'Impossible de convertir ce .ppt',
     pptImportFailedBody:
       'Le fichier est peut-être endommagé ou n’est pas une présentation PowerPoint 97-2003 valide.',
@@ -761,6 +767,8 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice baut das Deck als editierbare Textfelder in der ursprünglichen Folienreihenfolge und -größe wieder auf; Formgeometrie, Bilder und Textformatierung werden noch nicht übernommen. Die Originaldatei wird nie verändert; die konvertierte .pptx ist eine separate Kopie, in die spätere Speicherungen schreiben.',
     pptImportCopyName: '{stem} (nur Text).pptx',
+    importOriginalTarget:
+      'Wählen Sie einen anderen Namen, um die Originalpräsentation zu erhalten.',
     pptImportFailedTitle: 'Diese .ppt kann nicht konvertiert werden',
     pptImportFailedBody:
       'Die Datei ist möglicherweise beschädigt oder keine gültige PowerPoint-97-2003-Präsentation.',
@@ -885,6 +893,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice reconstruye la presentación como cuadros de texto editables, en el orden y tamaño originales de las diapositivas; la geometría de las formas, las imágenes y el formato del texto aún no se conservan. El archivo original nunca se modifica; el .pptx convertido es una copia aparte en la que se escriben los guardados posteriores.',
     pptImportCopyName: '{stem} (solo texto).pptx',
+    importOriginalTarget: 'Elija otro nombre para conservar la presentación original.',
     pptImportFailedTitle: 'No se puede convertir este .ppt',
     pptImportFailedBody:
       'El archivo puede estar dañado o no ser una presentación válida de PowerPoint 97-2003.',
@@ -1008,6 +1017,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice สร้างเดคใหม่เป็นกล่องข้อความที่แก้ไขได้ตามลำดับและขนาดสไลด์เดิม; ตำแหน่งรูปทรง รูปภาพ และการจัดรูปแบบข้อความยังไม่ถูกนำมาด้วย ไฟล์ต้นฉบับจะไม่ถูกแก้ไข; ไฟล์ .pptx ที่แปลงแล้วเป็นสำเนาแยกต่างหากที่การบันทึกครั้งถัดไปจะเขียนลงไป',
     pptImportCopyName: '{stem} (ข้อความเท่านั้น).pptx',
+    importOriginalTarget: 'เลือกชื่ออื่นเพื่อเก็บงานนำเสนอต้นฉบับไว้โดยไม่เปลี่ยนแปลง',
     pptImportFailedTitle: 'ไม่สามารถแปลงไฟล์ .ppt นี้',
     pptImportFailedBody: 'ไฟล์อาจเสียหายหรือไม่ใช่งานนำเสนอ PowerPoint 97-2003 ที่ถูกต้อง',
     legacyPptTitle: 'ไม่สามารถเปิดไฟล์ .ppt',
@@ -1126,6 +1136,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice membangun kembali dek sebagai kotak teks yang dapat diedit, dalam urutan dan ukuran slide asli; geometri bentuk, gambar, dan pemformatan teks belum dibawa. File asli tidak pernah diubah; .pptx yang dikonversi adalah salinan terpisah yang ditulis oleh penyimpanan berikutnya.',
     pptImportCopyName: '{stem} (teks saja).pptx',
+    importOriginalTarget: 'Pilih nama lain agar presentasi asli tetap utuh.',
     pptImportFailedTitle: 'Tidak dapat mengonversi .ppt ini',
     pptImportFailedBody: 'File mungkin rusak atau bukan presentasi PowerPoint 97-2003 yang valid.',
     legacyPptTitle: 'Tidak dapat membuka format .ppt',
@@ -1248,6 +1259,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice пересобирает презентацию в редактируемые текстовые блоки, сохраняя порядок и размер исходных слайдов; геометрия фигур, изображения и форматирование текста пока не переносятся. Исходный файл не меняется; преобразованный .pptx — отдельная копия, в которую пишутся последующие сохранения.',
     pptImportCopyName: '{stem} (только текст).pptx',
+    importOriginalTarget: 'Выберите другое имя, чтобы сохранить исходную презентацию.',
     pptImportFailedTitle: 'Не удалось преобразовать этот .ppt',
     pptImportFailedBody:
       'Возможно, файл повреждён или это не действительная презентация PowerPoint 97-2003.',
@@ -1370,6 +1382,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'يعيد GenOffice بناء العرض كمربعات نص قابلة للتحرير، بترتيب الشرائح وأبعادها الأصلية؛ لا يتم نقل موضع الأشكال أو الصور أو تنسيق النص بعد. الملف الأصلي لا يتغير أبداً؛ ملف .pptx المحوَّل نسخة منفصلة تُكتب فيها عمليات الحفظ اللاحقة.',
     pptImportCopyName: '{stem} (نص فقط).pptx',
+    importOriginalTarget: 'اختر اسماً آخر للحفاظ على العرض التقديمي الأصلي دون تغيير.',
     pptImportFailedTitle: 'لا يمكن تحويل ملف .ppt هذا',
     pptImportFailedBody:
       'قد يكون الملف تالفاً أو ليس عرضاً تقديمياً صالحاً بصيغة PowerPoint 97-2003.',
@@ -1489,6 +1502,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'O GenOffice reconstrói a apresentação como caixas de texto editáveis, na ordem e tamanho originais dos slides; geometria das formas, imagens e formatação de texto ainda não são transportadas. O arquivo original nunca é alterado; o .pptx convertido é uma cópia separada em que os salvamentos seguintes gravam.',
     pptImportCopyName: '{stem} (somente texto).pptx',
+    importOriginalTarget: 'Escolha outro nome para preservar a apresentação original.',
     pptImportFailedTitle: 'Não é possível converter este .ppt',
     pptImportFailedBody:
       'O arquivo pode estar danificado ou não é uma apresentação válida do PowerPoint 97-2003.',
@@ -1612,6 +1626,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice ricostruisce il deck come caselle di testo modificabili, nell’ordine e con le dimensioni originali delle diapositive; geometria delle forme, immagini e formattazione del testo non sono ancora trasferite. Il file originale non viene mai modificato; il .pptx convertito è una copia separata su cui vengono scritti i salvataggi successivi.',
     pptImportCopyName: '{stem} (solo testo).pptx',
+    importOriginalTarget: 'Scegli un altro nome per conservare la presentazione originale.',
     pptImportFailedTitle: 'Impossibile convertire questo .ppt',
     pptImportFailedBody:
       'Il file potrebbe essere danneggiato o non essere una presentazione PowerPoint 97-2003 valida.',
@@ -1737,6 +1752,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice przebudowuje prezentację na edytowalne pola tekstowe, w oryginalnej kolejności i rozmiarze slajdów; geometria kształtów, obrazy i formatowanie tekstu nie są jeszcze przenoszone. Oryginalny plik nigdy nie jest zmieniany; przekonwertowany .pptx to osobna kopia, do której zapisują się kolejne zapisy.',
     pptImportCopyName: '{stem} (tylko tekst).pptx',
+    importOriginalTarget: 'Wybierz inną nazwę, aby zachować oryginalną prezentację.',
     pptImportFailedTitle: 'Nie można przekonwertować tego pliku .ppt',
     pptImportFailedBody:
       'Plik może być uszkodzony lub nie jest prawidłową prezentacją PowerPoint 97-2003.',
@@ -1859,6 +1875,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice prezentaci znovu sestaví jako upravitelná textová pole, v původním pořadí a velikosti snímků; geometrie tvarů, obrázky a formátování textu se zatím nepřenášejí. Původní soubor se nikdy nemění; převedený .pptx je samostatná kopie, do které se zapisují další uložení.',
     pptImportCopyName: '{stem} (pouze text).pptx',
+    importOriginalTarget: 'Zvolte jiný název, aby původní prezentace zůstala beze změny.',
     pptImportFailedTitle: 'Tento .ppt nelze převést',
     pptImportFailedBody:
       'Soubor může být poškozený nebo jde o neplatnou prezentaci PowerPoint 97-2003.',
@@ -1980,6 +1997,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice bouwt de deck opnieuw op als bewerkbare tekstvakken, in de oorspronkelijke slidevolgorde en -grootte; vormgeometrie, afbeeldingen en tekstopmaak worden nog niet overgezet. Het originele bestand wordt nooit gewijzigd; de geconverteerde .pptx is een aparte kopie waar latere opslagen naar schrijven.',
     pptImportCopyName: '{stem} (alleen tekst).pptx',
+    importOriginalTarget: 'Kies een andere naam om de oorspronkelijke presentatie te behouden.',
     pptImportFailedTitle: 'Deze .ppt kan niet worden geconverteerd',
     pptImportFailedBody:
       'Het bestand is mogelijk beschadigd of geen geldige PowerPoint 97-2003-presentatie.',
@@ -2102,6 +2120,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice membina semula dek sebagai kotak teks yang boleh disunting, mengikut urutan dan saiz slaid asal; geometri bentuk, imej dan pemformatan teks belum dibawa. Fail asal tidak pernah diubah; .pptx yang ditukar ialah salinan berasingan yang ditulis oleh simpanan berikutnya.',
     pptImportCopyName: '{stem} (teks sahaja).pptx',
+    importOriginalTarget: 'Pilih nama lain untuk mengekalkan pembentangan asal.',
     pptImportFailedTitle: 'Tidak dapat menukar .ppt ini',
     pptImportFailedBody: 'Fail mungkin rosak atau bukan pembentangan PowerPoint 97-2003 yang sah.',
     legacyPptTitle: 'Tidak dapat membuka format .ppt lama',
@@ -2222,6 +2241,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice בונה מחדש את החפיסה כתיבות טקסט הניתנות לעריכה, בסדר ובגודל המקוריים של השקופיות; מיקום צורות, תמונות ועיצוב טקסט עדיין לא מועברים. הקובץ המקורי לעולם אינו משתנה; ה-.pptx המומר הוא עותק נפרד שאליו נכתבות השמירות הבאות.',
     pptImportCopyName: '{stem} (טקסט בלבד).pptx',
+    importOriginalTarget: 'בחרו שם אחר כדי לשמור על המצגת המקורית ללא שינוי.',
     pptImportFailedTitle: 'לא ניתן להמיר את קובץ ה-.ppt הזה',
     pptImportFailedBody: 'ייתכן שהקובץ פגום או שאינו מצגת PowerPoint 97-2003 תקינה.',
     legacyPptTitle: 'לא ניתן לפתוח את הפורמט הישן .ppt',
@@ -2339,6 +2359,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice प्रस्तुति को संपादन योग्य टेक्स्ट बॉक्स के रूप में, मूल स्लाइड क्रम और आकार में फिर से बनाता है; आकृतियों की स्थिति, चित्र और टेक्स्ट फ़ॉर्मैटिंग अभी नहीं लाए जाते। मूल फ़ाइल कभी नहीं बदलती; रूपांतरित .pptx एक अलग प्रति है जिसमें आगे के सेव लिखे जाते हैं।',
     pptImportCopyName: '{stem} (केवल पाठ).pptx',
+    importOriginalTarget: 'मूल प्रस्तुति को अपरिवर्तित रखने के लिए दूसरा नाम चुनें।',
     pptImportFailedTitle: 'इस .ppt को बदला नहीं जा सकता',
     pptImportFailedBody:
       'फ़ाइल क्षतिग्रस्त हो सकती है या मान्य PowerPoint 97-2003 प्रस्तुति नहीं है।',
@@ -2460,6 +2481,7 @@ export const tMain = createI18n({
     pptImportDetail:
       'GenOffice 會把簡報重建為可編輯的文字方塊，保持原來的投影片順序和尺寸；形狀位置、圖片和文字格式暫不保留。原檔案不會被改動，轉換出的 .pptx 是一個獨立副本，之後的儲存都寫入它。',
     pptImportCopyName: '{stem} (僅文字).pptx',
+    importOriginalTarget: '請選擇其他名稱，以保留原始簡報。',
     pptImportFailedTitle: '無法轉換這個 .ppt',
     pptImportFailedBody: '檔案可能已損毀，或不是有效的 PowerPoint 97-2003 簡報。',
     legacyPptTitle: '無法開啟 .ppt 舊格式',

@@ -1,7 +1,16 @@
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  existsSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  symlinkSync,
+  truncateSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
+import type * as FsPromises from 'node:fs/promises'
 
 const state = vi.hoisted(() => ({
   dir: '',
@@ -13,6 +22,10 @@ const state = vi.hoisted(() => ({
   save: vi.fn(),
   message: vi.fn(),
 }))
+vi.mock('node:fs/promises', async (original) => {
+  const actual = await original<typeof FsPromises>()
+  return { ...actual, readFile: vi.fn(actual.readFile) }
+})
 vi.mock('electron', () => ({
   app: {
     getPath: () => state.dir || tmpdir(),
@@ -77,11 +90,12 @@ import { createBlankPptx } from '@genoffice/pptx-engine'
 import { setUiLang } from '@genoffice/i18n'
 import { registerSlidesIpc } from '../src/main/slides-main'
 import { sessions } from '../src/main/session-state'
+import { readFile } from 'node:fs/promises'
 
 const sender = { id: 1, isDestroyed: () => false, once: () => {}, on: () => {}, send: () => {} }
 async function openSource(ext = 'ppt') {
   const source = join(state.dir, `original.${ext}`)
-  writeFileSync(source, 'original bytes')
+  if (!existsSync(source)) writeFileSync(source, 'original bytes')
   const fn = state.handlers.get('slides:open-path')! as (
     ...args: unknown[]
   ) => Promise<{ path: string } | null>
@@ -100,6 +114,7 @@ beforeEach(() => {
   state.message.mockReset().mockResolvedValue({ response: 0, checkboxChecked: true })
   state.writeSkip.mockReset()
   state.save.mockReset().mockResolvedValue({ canceled: true })
+  vi.mocked(readFile).mockClear()
 })
 afterEach(() => {
   sessions.clear()
@@ -142,5 +157,60 @@ describe('legacy presentation loss disclosure', () => {
     state.message.mockClear()
     await openSource(ext)
     expect(state.message).not.toHaveBeenCalled()
+  })
+})
+
+describe('legacy presentation copy target and input size', () => {
+  it.each(['ppt', 'odp', 'otp'])(
+    'refuses the %s original and asks again without writing it',
+    async (ext) => {
+      const source = join(state.dir, `original.${ext}`)
+      state.save
+        .mockResolvedValueOnce({ canceled: false, filePath: source })
+        .mockResolvedValueOnce({ canceled: true })
+      expect(await openSource(ext)).toBeNull()
+      expect(state.save).toHaveBeenCalledTimes(2)
+      expect(readFileSync(source, 'utf8')).toBe('original bytes')
+    },
+  )
+  it.each(['symlink', 'case-fold'])('refuses an original %s alias', async (kind) => {
+    const source = join(state.dir, 'original.ppt')
+    writeFileSync(source, 'original bytes')
+    const alias = join(state.dir, kind === 'symlink' ? 'alias.pptx' : 'ORIGINAL.PPT')
+    if (kind === 'symlink') symlinkSync(source, alias)
+    state.save
+      .mockResolvedValueOnce({ canceled: false, filePath: alias })
+      .mockResolvedValueOnce({ canceled: true })
+    expect(await openSource()).toBeNull()
+    expect(state.save).toHaveBeenCalledTimes(2)
+    expect(readFileSync(source, 'utf8')).toBe('original bytes')
+  })
+  it('appends .pptx to another extension', async () => {
+    const typed = join(state.dir, 'copy.odp')
+    state.save.mockResolvedValueOnce({ canceled: false, filePath: typed })
+    expect((await openSource())?.path).toBe(`${typed}.pptx`)
+    expect(existsSync(typed)).toBe(false)
+    expect(readFileSync(`${typed}.pptx`)).toEqual(Buffer.from(state.bytes))
+  })
+  it('asks the OS about the appended name before replacing an existing copy', async () => {
+    const typed = join(state.dir, 'copy.odp')
+    const target = `${typed}.pptx`
+    writeFileSync(target, 'existing copy')
+    state.save
+      .mockResolvedValueOnce({ canceled: false, filePath: typed })
+      .mockResolvedValueOnce({ canceled: true })
+    expect(await openSource()).toBeNull()
+    expect(state.save.mock.calls[1]![2].defaultPath).toBe(target)
+    expect(readFileSync(target, 'utf8')).toBe('existing copy')
+  })
+  it('refuses PPT above 256 MiB before reading or asking for conversion', async () => {
+    const source = join(state.dir, 'original.ppt')
+    writeFileSync(source, '')
+    truncateSync(source, 256 * 1024 * 1024 + 1)
+    expect(await openSource()).toBeNull()
+    expect(readFile).not.toHaveBeenCalled()
+    expect(state.save).not.toHaveBeenCalled()
+    expect(state.message.mock.calls[0]![0]).toMatchObject({ type: 'error' })
+    expect(state.message.mock.calls[0]![0].detail).toContain('256')
   })
 })
