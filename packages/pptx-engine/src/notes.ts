@@ -165,9 +165,11 @@ export function appendRelationship(
       '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>'
   const maxRid = maxRelationshipIdNumber(xml)
   const rid = `rId${maxRid + 1}`
+  // A function, not a string: the target can be a part name the deck chose (the slide a notes
+  // slide belongs to), and a replacement string would expand a `$&` or `$$` in it
   xml = xml.replace(
     '</Relationships>',
-    `<Relationship Id="${rid}" Type="${type}" Target="${target}"/></Relationships>`,
+    () => `<Relationship Id="${rid}" Type="${type}" Target="${target}"/></Relationships>`,
   )
   setEntry(archive, relsPath, xml)
   return rid

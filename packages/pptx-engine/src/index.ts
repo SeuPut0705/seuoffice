@@ -2587,11 +2587,13 @@ export function setSlideLayout(
     'g',
   )
   let next: string | null = null
+  // Functions, not strings: the target is a part name the deck chose, and a replacement string
+  // would expand a `$&` or `$$` in it
   for (const m of rels.matchAll(existing)) {
     if (!m[0].includes('slideLayout')) continue
     next =
       rels.slice(0, m.index) +
-      m[0].replace(/\bTarget="[^"]*"/, `Target="${escapeXmlAttr(relTarget)}"`) +
+      m[0].replace(/\bTarget="[^"]*"/, () => `Target="${escapeXmlAttr(relTarget)}"`) +
       rels.slice(m.index! + m[0].length)
     break
   }
@@ -2599,7 +2601,8 @@ export function setSlideLayout(
     const maxRid = maxRelationshipIdNumber(rels)
     next = rels.replace(
       '</Relationships>',
-      `<Relationship Id="rId${maxRid + 1}" Type="${LAYOUT_REL_TYPE}" Target="${escapeXmlAttr(relTarget)}"/></Relationships>`,
+      () =>
+        `<Relationship Id="rId${maxRid + 1}" Type="${LAYOUT_REL_TYPE}" Target="${escapeXmlAttr(relTarget)}"/></Relationships>`,
     )
   }
   opened.archive.entries.set(relsPath, Buffer.from(next, 'utf8'))

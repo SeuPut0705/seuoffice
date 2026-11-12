@@ -362,9 +362,11 @@ function ensureContentTypes(
       if (!hasContentTypeOverride(ct, targetPath))
         ct = ct.replace('</Types>', () => `${override}</Types>`)
     } else if (!new RegExp(`<Default[^>]*Extension="${key}"`, 'i').test(ct)) {
+      // A function, not a string: the extension and its content type come from the source deck,
+      // and a replacement string would expand a `$&` or `$$` in them
       ct = ct.replace(
         '</Types>',
-        `<Default Extension="${key}" ContentType="${contentType}"/></Types>`,
+        () => `<Default Extension="${key}" ContentType="${contentType}"/></Types>`,
       )
     }
   }
@@ -420,9 +422,11 @@ function registerMaster(archive: PackageArchive, masterPath: string): boolean {
   archive.entries.set(
     presRelsPath,
     Buffer.from(
+      // a function for the same reason: the master keeps the part name the source deck gave it
       presRels.replace(
         '</Relationships>',
-        `<Relationship Id="${rid}" Type="${MASTER_REL_TYPE}" Target="${escapeAttr(relative(PRES_PATH, masterPath))}"/></Relationships>`,
+        () =>
+          `<Relationship Id="${rid}" Type="${MASTER_REL_TYPE}" Target="${escapeAttr(relative(PRES_PATH, masterPath))}"/></Relationships>`,
       ),
       'utf8',
     ),
@@ -436,7 +440,7 @@ function registerMaster(archive: PackageArchive, masterPath: string): boolean {
     Buffer.from(
       pres.replace(
         '</p:sldMasterIdLst>',
-        `<p:sldMasterId id="${maxId + 1}" r:id="${rid}"/></p:sldMasterIdLst>`,
+        () => `<p:sldMasterId id="${maxId + 1}" r:id="${rid}"/></p:sldMasterIdLst>`,
       ),
       'utf8',
     ),
