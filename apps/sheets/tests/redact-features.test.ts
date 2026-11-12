@@ -167,12 +167,14 @@ function fileCtx(options: {
   const editJournal = createEditJournal()
   options.journal?.(editJournal)
   const marks = buildRedactionIndex(
-    [
-      {
-        sheetName: 'Customers',
-        marks: options.marks.map((mark) => ({ ...mark, label: 'client phone' })),
-      },
-    ],
+    options.marks.length === 0
+      ? []
+      : [
+          {
+            sheetName: 'Customers',
+            marks: options.marks.map((mark) => ({ ...mark, label: 'client phone' })),
+          },
+        ],
     [{ id: 'sh1', name: 'Customers' }],
   )
   const derived = options.derived ?? []
@@ -395,5 +397,60 @@ describe('get_workbook_context: the names of the columns the person selected', (
   it('are given when no header cell is hidden', () => {
     const info = getActiveSheetInfo(fileCtx({ marks: [B2_B10] }), selection)
     expect(info.selectionColumns).toEqual(['Name', PHONE_HEADER])
+  })
+})
+
+describe('get_workbook_context: chart titles', () => {
+  // A title is typed, or it is the text of a cell: a linked title, or the name
+  // of the only series, which is the header cell of its column. The chart the
+  // session holds carries the text, not where it came from.
+  const chart = (id: string, chartPath?: string) => ({
+    id,
+    kind: 'chart',
+    sheetId: 'sh1',
+    ...(chartPath ? { chartPath } : {}),
+    chart: {
+      title: PHONE_HEADER,
+      chartTypes: ['barChart'],
+      series: [
+        { name: PHONE_HEADER, categories: ['Kim'], values: [1], valuesRef: 'Customers!$B$2' },
+      ],
+    },
+  })
+  const FILE_CHART = chart('visual-1', 'xl/charts/chart1.xml')
+
+  it('are withheld in a workbook with hidden cells: the text may be a hidden cell', () => {
+    const info = getActiveSheetInfo(fileCtx({ marks: [B1], visuals: [FILE_CHART] }))
+    expect(JSON.stringify(info)).not.toContain(PHONE_HEADER)
+    expect(info.charts).toEqual([
+      { path: 'xl/charts/chart1.xml', title: '{{private}}', types: 'barChart', sheetId: 'sh1' },
+    ])
+  })
+
+  it('are withheld for a chart made this session too: its title is its series name', () => {
+    const info = getActiveSheetInfo(
+      fileCtx({
+        marks: [B1],
+        journal: (journal) => journal.visualAdds.push(chart('added-chart-1') as never),
+      }),
+    )
+    expect(info.charts?.map((entry) => entry.title)).toEqual(['{{private}}'])
+  })
+
+  it('are given once the title was typed this session', () => {
+    const info = getActiveSheetInfo(
+      fileCtx({
+        marks: [B1],
+        visuals: [FILE_CHART],
+        journal: (journal) =>
+          journal.chartEdits.set('xl/charts/chart1.xml', { title: 'Phones by client' } as never),
+      }),
+    )
+    expect(info.charts?.map((entry) => entry.title)).toEqual(['Phones by client'])
+  })
+
+  it('are given in a workbook without hidden cells', () => {
+    const info = getActiveSheetInfo(fileCtx({ marks: [], visuals: [FILE_CHART] }))
+    expect(info.charts?.map((entry) => entry.title)).toEqual([PHONE_HEADER])
   })
 })

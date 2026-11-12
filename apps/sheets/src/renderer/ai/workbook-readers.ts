@@ -452,6 +452,19 @@ export function getActiveSheetInfo(
   const frozenFields = frozenLabel
     ? { selectionFrozen: true, ...(columns ? { selectionColumns: columns } : {}) }
     : {}
+  // A chart's title is either typed or the text of a cell: a title linked to
+  // a cell, or the name of the chart's only series, which is a header cell.
+  // The chart the session holds carries the text and not where it came from,
+  // so in a workbook that withholds anything the title is withheld unless it
+  // was typed this session. Series values and category labels are not handed
+  // to the model at all.
+  const withholdsCells = !redactionsOf(ctx).isEmpty
+  const chartTitle = (title: string, typed?: string): string =>
+    typed !== undefined
+      ? typed
+      : withholdsCells && title !== ''
+        ? placeholderSource(UNKNOWN_REDACTION_LABEL)
+        : title
   const state = ctx.lazyWorkbookRef.current
   if (state) {
     const worksheet = workbook?.getActiveSheet()
@@ -488,12 +501,18 @@ export function getActiveSheetInfo(
       // doubles as the edit_chart path.
       charts: [...state.file.visuals, ...state.editJournal.visualAdds]
         .filter((visual) => visual.kind === 'chart' && (visual.chartPath || visual.chart))
-        .map((visual) => ({
-          path: visual.chartPath ?? visual.id,
-          title: visual.chart?.title ?? '',
-          types: visual.chart?.chartTypes.join('+') ?? '',
-          sheetId: visual.sheetId,
-        })),
+        .map((visual) => {
+          const path = visual.chartPath ?? visual.id
+          return {
+            path,
+            title: chartTitle(
+              visual.chart?.title ?? '',
+              state.editJournal.chartEdits.get(path)?.title,
+            ),
+            types: visual.chart?.chartTypes.join('+') ?? '',
+            sheetId: visual.sheetId,
+          }
+        }),
     }
   }
   const snapshot = ctx.adapterRef.current.getSnapshot()
@@ -528,7 +547,7 @@ export function getActiveSheetInfo(
     charts: snapshot.sheets.flatMap((entry) =>
       (entry.visuals ?? []).map((visual) => ({
         path: visual.id,
-        title: visual.chart.title,
+        title: chartTitle(visual.chart.title),
         types: visual.chart.chartTypes.join('+'),
         sheetId: visual.sheetId,
       })),
