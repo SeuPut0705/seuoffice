@@ -25,6 +25,17 @@ describe('slide id allocation', () => {
   })
 
   it.each([
+    ['spaces around the equals sign', '<p:sldId id = "256" r:id = "rId2"/>', 257],
+    ['a line break before the value', '<p:sldId id=\n"300" r:id="rId2"/>', 301],
+    ['the id after the relationship id', '<p:sldId r:id="rId2" id="256"/>', 257],
+    // a relationship id may be all digits: it is not the slide id
+    ['a relationship id made of digits', '<p:sldId r:id="900" id="256"/>', 257],
+    ['a relationship id made of digits, last', '<p:sldId id="256" r:id="900"/>', 257],
+  ])('reads a slide id written with %s', (_what, tag, next) => {
+    expect(nextSlideId(`<p:sldIdLst>${tag}</p:sldIdLst>`)).toBe(next)
+  })
+
+  it.each([
     ['duplicateSlide', (o: Awaited<ReturnType<typeof openPptx>>) => duplicateSlide(o, 0)],
     [
       'insertSlideWithLayout',

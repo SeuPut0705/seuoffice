@@ -5,7 +5,9 @@ const SLIDE_ID_MAX = 2147483647
 /** Next p:sldId/@id for a presentation part: max+1, or the lowest free id once a deck sits at the ceiling. */
 export function nextSlideId(presXml: string): number {
   const used = new Set<number>()
-  for (const m of presXml.matchAll(/<p:sldId\s[^>]*\bid=(?:"(\d+)"|'(\d+)')/g)) {
+  // The attribute named `id` itself (not `r:id`, whose value may be digits too), with the
+  // white space XML allows around `=`.
+  for (const m of presXml.matchAll(/<p:sldId\s(?:[^>]*\s)?id\s*=\s*(?:"(\d+)"|'(\d+)')/g)) {
     // Out-of-range values are invalid per ST_SlideId; ignoring them keeps a
     // single hostile attribute from forcing the ceiling scan below.
     const n = Number(m[1] ?? m[2])
