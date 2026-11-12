@@ -22,7 +22,8 @@ pub use number::{
 };
 pub use object::{JsObject, Slot, array_index, camel, camel_len};
 pub use regex::{
-    BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexLimit, RegexSyntaxError, TryJsRegex,
+    BACKTRACK_LIMIT, JsMatch, JsMatches, JsRegex, RegexError, RegexLimit, RegexSyntaxError,
+    TryJsRegex,
 };
 pub use space::{is_js_space, trim, trim_start};
 pub use string::{pad_start, truthy};

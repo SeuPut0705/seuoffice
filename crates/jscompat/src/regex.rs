@@ -44,9 +44,9 @@ use std::fmt;
 ///
 /// A loop whose body is more than one character matcher keeps entries for
 /// each turn until the match attempt ends; every other pattern keeps a number
-/// set by the pattern. One entry is 48 bytes on a 64-bit target, so the bound
-/// is 201 MB, and the counting allocator measured a peak of 252 MB while the
-/// stack makes its last step to the bound. On one unclosed tag read by
+/// set by the pattern. One entry is 40 bytes on a 64-bit target, so the bound
+/// is 168 MB, and the counting allocator measured a peak of 209 MB while the
+/// stack makes its last step to the bound (`tests/limit.rs`). On one unclosed tag read by
 /// `<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` (three entries per character) it
 /// answers up to 1.39M characters and stops from 1.40M; V8 answers up to 8M
 /// and throws a `RangeError` from 9M (Node 22.23.5). Between the two a search
@@ -548,6 +548,38 @@ impl fmt::Display for RegexSyntaxError {
 }
 
 impl std::error::Error for RegexSyntaxError {}
+
+/// What `new RegExp(pattern).exec(text)` throws for a pattern built at run
+/// time: a `SyntaxError` from the constructor, or the search stopped at the
+/// bound where V8 throws a `RangeError`.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum RegexError {
+    Syntax(RegexSyntaxError),
+    Limit(RegexLimit),
+}
+
+impl fmt::Display for RegexError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            RegexError::Syntax(error) => error.fmt(f),
+            RegexError::Limit(limit) => limit.fmt(f),
+        }
+    }
+}
+
+impl std::error::Error for RegexError {}
+
+impl From<RegexSyntaxError> for RegexError {
+    fn from(error: RegexSyntaxError) -> Self {
+        RegexError::Syntax(error)
+    }
+}
+
+impl From<RegexLimit> for RegexError {
+    fn from(limit: RegexLimit) -> Self {
+        RegexError::Limit(limit)
+    }
+}
 
 /// One match: `m[0]`, `m[1]`... of JavaScript, and `m.index` as a byte offset.
 #[derive(Debug, Clone)]
