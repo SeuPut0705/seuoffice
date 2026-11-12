@@ -10,8 +10,7 @@ use crate::props::{
     para_border_sides_of, row_band_size_of, shd_display_fill, tab_stops_of, themed_r_fonts,
 };
 use crate::styles::model::{
-    Margins, StyleDisplay, TabStops, TableCondFormat, TableParaSpacing, TableStyleDisplay,
-    WholeTable,
+    StyleDisplay, TableCondFormat, TableParaSpacing, TableStyleDisplay, WholeTable,
 };
 use crate::styles::run_border_of;
 use crate::theme::{ThemeColors, ThemeFonts};
@@ -40,12 +39,13 @@ fn one_or_true(value: &str) -> bool {
 }
 
 /// w:pPr spacing and w:jc a table style (or one of its conditions) hands its
-/// cell paragraphs: `(paraSpacing, paraJc)`.
-fn table_para_props(p_pr: Option<&XNode>) -> (Option<TableParaSpacing>, Option<String>) {
+/// cell paragraphs: `(paraJc, paraSpacing)`, the order the TypeScript sets
+/// them in, so `Object.assign` of the result takes them in that order.
+fn table_para_props(p_pr: Option<&XNode>) -> (Option<String>, Option<TableParaSpacing>) {
     let mut para_jc = None;
     let mut para_spacing = None;
     let Some(p_pr) = p_pr else {
-        return (para_spacing, para_jc);
+        return (para_jc, para_spacing);
     };
     let jc = child_attr(p_pr, "w:jc", "w:val");
     if let Some(jc) = truthy(jc) {
@@ -55,26 +55,27 @@ fn table_para_props(p_pr: Option<&XNode>) -> (Option<TableParaSpacing>, Option<S
         let mut ps = TableParaSpacing::default();
         let before = parse_int(spacing.attr("w:before").unwrap_or(""), Radix::Ten);
         if before >= 0.0 && spacing.attr("w:before").is_some() {
-            ps.before_twips = Some(JsNum(before));
+            ps.before_twips.set(JsNum(before));
         }
         let after = parse_int(spacing.attr("w:after").unwrap_or(""), Radix::Ten);
         if after >= 0.0 && spacing.attr("w:after").is_some() {
-            ps.after_twips = Some(JsNum(after));
+            ps.after_twips.set(JsNum(after));
         }
         let line = line_twips_of(spacing.attr("w:line"));
         if line > 0.0 {
-            ps.line_raw_twips = Some(JsNum(line));
+            ps.line_raw_twips.set(JsNum(line));
             let rule = spacing.attr("w:lineRule").unwrap_or("auto");
-            ps.line_rule = Some(rule.to_owned());
+            ps.line_rule.set(rule.to_owned());
             if rule == "auto" {
-                ps.line_spacing = Some(JsNum(math_round(line / 240.0 * 100.0) / 100.0));
+                ps.line_spacing
+                    .set(JsNum(math_round(line / 240.0 * 100.0) / 100.0));
             }
         }
-        if ps != TableParaSpacing::default() {
+        if !ps.has_no_key() {
             para_spacing = Some(ps);
         }
     }
-    (para_spacing, para_jc)
+    (para_jc, para_spacing)
 }
 
 /// `w:caps` ('all') / `w:smallCaps` ('small'), 'none' for an explicit off.
@@ -116,9 +117,7 @@ pub(crate) fn table_style_display_of(
             .filter(|fill| !fill.is_empty())
     };
     let base_fill = shd_fill(style_node.find_child("w:tcPr"));
-    if base_fill.is_some() {
-        display.fill = base_fill;
-    }
+    display.fill.set_some(base_fill);
     let sz_half_of = |r_pr: Option<&XNode>| -> Option<JsNum> {
         let val = parse_int(
             r_pr.and_then(|r_pr| child_attr(r_pr, "w:sz", "w:val"))
@@ -131,25 +130,21 @@ pub(crate) fn table_style_display_of(
     if let Some(style_r_pr) = style_r_pr {
         let mut whole_table = WholeTable::default();
         let color = color_from(Some(style_r_pr), theme).filter(|color| !color.is_empty());
-        if color.is_some() {
-            whole_table.color = color;
-        }
+        whole_table.color.set_some(color);
         if bool_prop(style_r_pr, "w:b") {
-            whole_table.bold = Some(true);
+            whole_table.bold.set(true);
         }
         if bool_prop(style_r_pr, "w:i") {
-            whole_table.italic = Some(true);
+            whole_table.italic.set(true);
         }
         let sz = sz_half_of(Some(style_r_pr));
-        if sz.is_some() {
-            whole_table.size_half_points = sz;
-        }
+        whole_table.size_half_points.set_some(sz);
         let kern = child_attr(style_r_pr, "w:kern", "w:val");
         if let Some(kern) = kern {
-            whole_table.kern_half_points = Some(int_or_zero(kern));
+            whole_table.kern_half_points.set(int_or_zero(kern));
         }
-        if whole_table != WholeTable::default() {
-            display.whole_table = Some(whole_table);
+        if !whole_table.has_no_key() {
+            display.whole_table.set(whole_table);
         }
     }
     for cond in style_node.find_children("w:tblStylePr") {
@@ -159,87 +154,60 @@ pub(crate) fn table_style_display_of(
         if let Some(kind @ ("firstRow" | "firstCol" | "lastCol" | "lastRow")) = kind {
             let r_pr = cond.find_child("w:rPr");
             let mut fmt = TableCondFormat::default();
-            if fill.is_some() {
-                fmt.fill = fill;
-            }
+            fmt.fill.set_some(fill);
             if r_pr.is_some_and(|r_pr| bool_prop(r_pr, "w:b")) {
-                fmt.bold = Some(true);
+                fmt.bold.set(true);
             }
             if r_pr.is_some_and(|r_pr| bool_prop(r_pr, "w:i")) {
-                fmt.italic = Some(true);
+                fmt.italic.set(true);
             }
             let color = color_from(r_pr, theme).filter(|color| !color.is_empty());
-            if color.is_some() {
-                fmt.color = color;
-            }
+            fmt.color.set_some(color);
             let sz = sz_half_of(r_pr);
-            if sz.is_some() {
-                fmt.size_half_points = sz;
-            }
+            fmt.size_half_points.set_some(sz);
             if let Some(r_pr) = r_pr {
-                fmt.caps = caps_of(r_pr);
+                fmt.caps.set_some(caps_of(r_pr));
                 let empty = XNode::empty();
                 let rf = themed_r_fonts(r_pr.find_child("w:rFonts").unwrap_or(&empty), theme_fonts);
                 if let Some(ascii) = truthy(rf.ascii.as_deref()) {
-                    fmt.font_ascii = Some(ascii.to_owned());
+                    fmt.font_ascii.set(ascii.to_owned());
                 }
-                let spc = char_spacing_of(r_pr);
-                if spc.is_some() {
-                    fmt.char_spacing_twips = spc;
-                }
+                fmt.char_spacing_twips.set_some(char_spacing_of(r_pr));
             }
             let borders = merged_border_lines_of(tc_pr, "w:tcBorders", false);
-            if borders.is_some() {
-                fmt.borders = borders;
-            }
+            fmt.borders.set_some(borders);
             let tc_mar = cell_margins_of(tc_pr.and_then(|tc_pr| tc_pr.find_child("w:tcMar")));
-            if let Some(tc_mar) = tc_mar {
-                fmt.cell_mar_twips = Some(Margins(tc_mar));
-            }
-            let (para_spacing, para_jc) = table_para_props(cond.find_child("w:pPr"));
-            if para_spacing.is_some() {
-                fmt.para_spacing = para_spacing;
-            }
-            if para_jc.is_some() {
-                fmt.para_jc = para_jc;
-            }
-            if fmt != TableCondFormat::default() {
+            fmt.cell_mar_twips.set_some(tc_mar);
+            let (para_jc, para_spacing) = table_para_props(cond.find_child("w:pPr"));
+            fmt.para_jc.set_some(para_jc);
+            fmt.para_spacing.set_some(para_spacing);
+            if !fmt.has_no_key() {
                 let slot = match kind {
                     "firstRow" => &mut display.first_row,
                     "firstCol" => &mut display.first_col,
                     "lastCol" => &mut display.last_col,
                     _ => &mut display.last_row,
                 };
-                *slot = Some(fmt);
+                slot.set(fmt);
             }
         } else if kind == Some("band1Horz") && fill.is_some() {
-            display.band1_fill = fill;
+            display.band1_fill.set_some(fill);
         } else if kind == Some("band2Horz") && fill.is_some() {
-            display.band2_fill = fill;
+            display.band2_fill.set_some(fill);
         }
     }
     let style_tbl_pr = style_node.find_child("w:tblPr");
     let band_size = row_band_size_of(style_tbl_pr);
-    if let Some(band_size) = band_size {
-        display.row_band_size = Some(JsNum(band_size));
-    }
+    display.row_band_size.set_some(band_size.map(JsNum));
     let borders = merged_border_lines_of(style_tbl_pr, "w:tblBorders", true);
-    if borders.is_some() {
-        display.borders = borders;
-    }
+    display.borders.set_some(borders);
     let cell_mar =
         cell_margins_of(style_tbl_pr.and_then(|tbl_pr| tbl_pr.find_child("w:tblCellMar")));
-    if let Some(cell_mar) = cell_mar {
-        display.cell_mar_twips = Some(Margins(cell_mar));
-    }
-    let (para_spacing, para_jc) = table_para_props(style_node.find_child("w:pPr"));
-    if para_spacing.is_some() {
-        display.para_spacing = para_spacing;
-    }
-    if para_jc.is_some() {
-        display.para_jc = para_jc;
-    }
-    (display != TableStyleDisplay::default()).then_some(display)
+    display.cell_mar_twips.set_some(cell_mar);
+    let (para_jc, para_spacing) = table_para_props(style_node.find_child("w:pPr"));
+    display.para_jc.set_some(para_jc);
+    display.para_spacing.set_some(para_spacing);
+    (!display.has_no_key()).then_some(display)
 }
 
 /// Display-only formatting the style contributes on screen.
@@ -253,96 +221,68 @@ pub(crate) fn style_display_of(
     if let Some(r_pr) = r_pr {
         let sz = child_attr(r_pr, "w:sz", "w:val");
         if let Some(sz) = truthy(sz) {
-            display.size_half_points = Some(int_or_undefined(sz));
+            display.size_half_points.assign(int_or_undefined(sz));
         }
         // `colorFrom(...) ?? autoColorOf(...)`: an empty colour is not nullish
         let color = color_from(Some(r_pr), theme)
             .or_else(|| auto_color_of(Some(r_pr)).map(str::to_owned))
             .filter(|color| !color.is_empty());
-        if color.is_some() {
-            display.color = color;
-        }
-        let bold = on_off_of(r_pr, "w:b");
-        if bold.is_some() {
-            display.bold = bold;
-        }
-        let italic = on_off_of(r_pr, "w:i");
-        if italic.is_some() {
-            display.italic = italic;
-        }
-        let bold_cs = on_off_of(r_pr, "w:bCs");
-        if bold_cs.is_some() {
-            display.bold_cs = bold_cs;
-        }
-        let italic_cs = on_off_of(r_pr, "w:iCs");
-        if italic_cs.is_some() {
-            display.italic_cs = italic_cs;
-        }
+        display.color.set_some(color);
+        display.bold.set_some(on_off_of(r_pr, "w:b"));
+        display.italic.set_some(on_off_of(r_pr, "w:i"));
+        display.bold_cs.set_some(on_off_of(r_pr, "w:bCs"));
+        display.italic_cs.set_some(on_off_of(r_pr, "w:iCs"));
         let sz_cs = child_attr(r_pr, "w:szCs", "w:val");
         if let Some(sz_cs) = truthy(sz_cs) {
-            display.size_cs_half_points = Some(int_or_undefined(sz_cs));
+            display.size_cs_half_points.assign(int_or_undefined(sz_cs));
         }
-        let rtl = on_off_of(r_pr, "w:rtl");
-        if rtl.is_some() {
-            display.rtl = rtl;
-        }
+        display.rtl.set_some(on_off_of(r_pr, "w:rtl"));
         let u = child_attr(r_pr, "w:u", "w:val");
         if let Some(u) = truthy(u) {
-            display.underline = Some(u != "none");
+            display.underline.set(u != "none");
         }
-        let strike = on_off_of(r_pr, "w:strike");
-        if strike.is_some() {
-            display.strike = strike;
-        }
+        display.strike.set_some(on_off_of(r_pr, "w:strike"));
         let bdr = r_pr.find_child("w:bdr").and_then(run_border_of);
-        if bdr.is_some() {
-            display.bdr = bdr;
-        }
+        display.bdr.set_some(bdr);
         let empty = XNode::empty();
         let rf = themed_r_fonts(r_pr.find_child("w:rFonts").unwrap_or(&empty), theme_fonts);
         // `??`, not `||`: an empty eastAsia literal is the font and is falsy below
         let font = rf.east_asia.clone().or_else(|| rf.ascii.clone());
         if let Some(ascii) = truthy(rf.ascii.as_deref()) {
-            display.font_ascii = Some(ascii.to_owned());
+            display.font_ascii.set(ascii.to_owned());
         }
         if let Some(east_asia) = truthy(rf.east_asia.as_deref()).filter(|_| !rf.ea_slot_empty) {
-            display.east_asia_font = Some(east_asia.to_owned());
+            display.east_asia_font.set(east_asia.to_owned());
         }
         if let Some(cs) = truthy(rf.cs.as_deref()) {
-            display.cs_font = Some(cs.to_owned());
+            display.cs_font.set(cs.to_owned());
         }
         if let Some(font) = truthy(font.as_deref()) {
-            display.font = Some(font.to_owned());
+            display.font.set(font.to_owned());
         }
         if rf.ea_slot_empty && truthy(font.as_deref()).is_some() && font == rf.east_asia {
-            display.ea_slot_empty = Some(true);
+            display.ea_slot_empty.set(true);
         }
-        let spc = char_spacing_of(r_pr);
-        if spc.is_some() {
-            display.char_spacing_twips = spc;
-        }
+        display.char_spacing_twips.set_some(char_spacing_of(r_pr));
         let kern = child_attr(r_pr, "w:kern", "w:val");
         if let Some(kern) = kern {
-            display.kern_half_points = Some(int_or_zero(kern));
+            display.kern_half_points.set(int_or_zero(kern));
         }
         let ea_lang = child_attr(r_pr, "w:lang", "w:eastAsia");
         if let Some(ea_lang) = truthy(ea_lang) {
-            display.east_asia_lang = Some(ea_lang.to_owned());
+            display.east_asia_lang.set(ea_lang.to_owned());
         }
-        display.caps = caps_of(r_pr);
+        display.caps.set_some(caps_of(r_pr));
         let shading =
             shd_display_fill(r_pr.find_child("w:shd"), theme).filter(|fill| !fill.is_empty());
-        if shading.is_some() {
-            display.shading = shading;
-        }
-        let outline = w14_text_outline_of(r_pr, theme);
-        if outline.is_some() {
-            display.text_outline = outline;
-        }
+        display.shading.set_some(shading);
+        display
+            .text_outline
+            .set_some(w14_text_outline_of(r_pr, theme));
         // w:specVanish marks a style separator, not hidden text
         let vanish = on_off_of(r_pr, "w:vanish");
         if vanish.is_some() && on_off_of(r_pr, "w:specVanish") != Some(true) {
-            display.vanish = vanish;
+            display.vanish.set_some(vanish);
         }
     }
     let p_pr = style_node.find_child("w:pPr");
@@ -352,43 +292,55 @@ pub(crate) fn style_display_of(
         let line = line_twips_of(spacing_attr("w:line"));
         if line > 0.0 {
             let rule = spacing_attr("w:lineRule").unwrap_or("auto");
-            display.line_rule = Some(rule.to_owned());
-            display.line_raw_twips = Some(JsNum(line));
+            display.line_rule.set(rule.to_owned());
+            display.line_raw_twips.set(JsNum(line));
             if rule == "auto" {
-                display.line_spacing = Some(JsNum(line / 240.0));
+                display.line_spacing.set(JsNum(line / 240.0));
             }
         }
         if let Some(before) = spacing_attr("w:before") {
-            display.space_before_twips = Some(int_or_zero(before));
+            display.space_before_twips.set(int_or_zero(before));
         }
         if let Some(after) = spacing_attr("w:after") {
-            display.space_after_twips = Some(int_or_zero(after));
+            display.space_after_twips.set(int_or_zero(after));
         }
         if let Some(auto) = spacing_attr("w:beforeAutospacing") {
-            display.space_before_auto = Some(one_or_true(auto));
+            display.space_before_auto.set(one_or_true(auto));
         }
         if let Some(auto) = spacing_attr("w:afterAutospacing") {
-            display.space_after_auto = Some(one_or_true(auto));
+            display.space_after_auto.set(one_or_true(auto));
         }
         if bool_prop(p_pr, "w:keepNext") {
-            display.keep_next = Some(true);
+            display.keep_next.set(true);
         }
         if bool_prop(p_pr, "w:keepLines") {
-            display.keep_lines = Some(true);
+            display.keep_lines.set(true);
         }
-        display.suppress_line_numbers = on_off_of(p_pr, "w:suppressLineNumbers");
-        display.page_break_before = on_off_of(p_pr, "w:pageBreakBefore");
-        display.widow_control = on_off_of(p_pr, "w:widowControl");
-        display.suppress_auto_hyphens = on_off_of(p_pr, "w:suppressAutoHyphens");
-        display.contextual_spacing = on_off_of(p_pr, "w:contextualSpacing");
+        display
+            .suppress_line_numbers
+            .set_some(on_off_of(p_pr, "w:suppressLineNumbers"));
+        display
+            .page_break_before
+            .set_some(on_off_of(p_pr, "w:pageBreakBefore"));
+        display
+            .widow_control
+            .set_some(on_off_of(p_pr, "w:widowControl"));
+        display
+            .suppress_auto_hyphens
+            .set_some(on_off_of(p_pr, "w:suppressAutoHyphens"));
+        display
+            .contextual_spacing
+            .set_some(on_off_of(p_pr, "w:contextualSpacing"));
         let auto_space = auto_space_flags_of(p_pr);
-        display.auto_space_de = auto_space.de;
-        display.auto_space_dn = auto_space.dn;
-        display.word_wrap = on_off_of(p_pr, "w:wordWrap");
-        display.overflow_punct = on_off_of(p_pr, "w:overflowPunct");
+        display.auto_space_d_e.set_some(auto_space.de);
+        display.auto_space_d_n.set_some(auto_space.dn);
+        display.word_wrap.set_some(on_off_of(p_pr, "w:wordWrap"));
+        display
+            .overflow_punct
+            .set_some(on_off_of(p_pr, "w:overflowPunct"));
         let jc = child_attr(p_pr, "w:jc", "w:val");
         if let Some(jc @ ("center" | "right" | "left" | "justify")) = jc {
-            display.align = Some(match jc {
+            display.align.set(match jc {
                 "center" => "center",
                 "right" => "right",
                 "left" => "left",
@@ -397,43 +349,30 @@ pub(crate) fn style_display_of(
         } else if jc == Some("both")
             || js_regex!("kashida$|^thaiDistribute$", "i").test(jc.unwrap_or(""))
         {
-            display.align = Some("justify");
+            display.align.set("justify");
         } else if jc == Some("distribute") {
-            display.align = Some("distribute");
+            display.align.set("distribute");
         }
-        display.bidi = on_off_of(p_pr, "w:bidi");
+        display.bidi.set_some(on_off_of(p_pr, "w:bidi"));
         let shd = p_pr.find_child("w:shd");
         let shd_disp = shd_display_fill(shd, theme).filter(|fill| !fill.is_empty());
         if shd_disp.is_some() {
-            display.shading_fill = shd_disp;
+            display.shading_fill.set_some(shd_disp);
         } else if shd.is_some() {
-            display.shading_fill = Some("auto".to_owned());
+            display.shading_fill.set("auto".to_owned());
         }
-        let border_sides = para_border_sides_of(p_pr, theme);
-        if border_sides.is_some() {
-            display.border_sides = border_sides;
-        }
-        let stops = tab_stops_of(p_pr);
-        if let Some(stops) = stops {
-            display.tab_stops = Some(TabStops(stops));
-        }
+        display
+            .border_sides
+            .set_some(para_border_sides_of(p_pr, theme));
+        display.tab_stops.set_some(tab_stops_of(p_pr));
         if let Some(ind) = p_pr.find_child("w:ind") {
             let indent = indent_twips_of(ind);
-            if indent.left.is_some() {
-                display.indent_left_twips = indent.left;
-            }
-            if indent.right.is_some() {
-                display.indent_right_twips = indent.right;
-            }
-            if indent.first_line.is_some() {
-                display.indent_first_line_twips = indent.first_line;
-            }
+            display.indent_left_twips.set_some(indent.left);
+            display.indent_right_twips.set_some(indent.right);
+            display.indent_first_line_twips.set_some(indent.first_line);
             // character-unit indents depend on each paragraph's text; kept raw
             // (explicit zeros included, they cancel an inherited value)
-            let chars = char_indents_of(Some(ind));
-            if chars.is_some() {
-                display.indent_chars = chars;
-            }
+            display.indent_chars.set_some(char_indents_of(Some(ind)));
         }
     }
     (!display.has_no_key()).then_some(display)

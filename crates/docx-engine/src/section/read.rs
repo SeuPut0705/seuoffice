@@ -66,6 +66,12 @@ pub struct SectionSettings {
     pub gutter: Option<JsNum>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub gutter_at_top: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub header_dist: Option<JsNum>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub footer_dist: Option<JsNum>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub v_align: Option<&'static str>,
     pub page_border: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub page_border_props: Option<PageBorderProps>,
@@ -78,12 +84,6 @@ pub struct SectionSettings {
     pub line_numbers: Option<LineNumbering>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bidi: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub header_dist: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub footer_dist: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub v_align: Option<&'static str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub doc_grid: Option<DocGrid>,
     #[serde(skip_serializing_if = "Option::is_none")]

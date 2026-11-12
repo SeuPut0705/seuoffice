@@ -3,12 +3,12 @@
 //! watermark previews as. Word implements a watermark as a VML shape inside
 //! the page header that floats behind the body text.
 
-use jscompat::{JsNum, js_regex, math_round, parse_float, truthy};
+use jscompat::{JsNum, Slot, js_object, js_regex, math_round, parse_float, truthy};
 use serde::{Deserialize, Serialize};
 
 use crate::vml::{
-    Dim, FloatAnchor, math_max, math_min, style_prop, vml_color_hex, vml_float_anchor,
-    vml_fraction, vml_rotation_deg, vml_style_dim_px,
+    Dim, math_max, math_min, set_float_anchor, style_prop, vml_color_hex, vml_fraction,
+    vml_rotation_deg, vml_style_dim_px,
 };
 
 /// `new RegExp(`\\s${key}="([^"]*)"`).exec(tag)?.[1]` for a literal key.
@@ -33,40 +33,38 @@ pub struct Washout {
 #[serde(rename_all = "camelCase")]
 pub struct WordArt {
     pub text: String,
+    pub color_hex: String,
+    pub opacity: JsNum,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub font_family: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub bold: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub italic: Option<bool>,
-    pub color_hex: String,
-    pub opacity: JsNum,
 }
 
-/// A display-only image of a header/footer part: the fields the watermark
-/// readers set (`HfImage` of types.ts).
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct HfImage {
-    pub data_url: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub width_px: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub height_px: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub floating: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub behind: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub watermark: Option<bool>,
-    #[serde(flatten)]
-    pub anchor: FloatAnchor,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub washout: Option<Washout>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rotation_deg: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub word_art: Option<WordArt>,
+js_object! {
+    /// A display-only image of a header/footer part: the fields the watermark
+    /// readers set (`HfImage` of types.ts). Each reader writes its keys in an
+    /// order of its own.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct HfImage {
+        pub data_url: String,
+        pub width_px: JsNum,
+        pub height_px: JsNum,
+        pub floating: bool,
+        pub behind: bool,
+        pub watermark: bool,
+        pub pos_h: &'static str,
+        pub pos_v: &'static str,
+        pub pos_x_px: JsNum,
+        pub pos_y_px: JsNum,
+        pub pos_h_rel: &'static str,
+        pub pos_v_rel: &'static str,
+        pub washout: Washout,
+        pub rotation_deg: JsNum,
+        pub word_art: WordArt,
+    }
 }
 
 /// A box in points.
@@ -185,11 +183,11 @@ pub fn read_watermark_shape(pict_xml: &str) -> Option<HfImage> {
         .and_then(|fill_tag| vml_fraction(shape_attr!(fill_tag, "opacity")))
         .unwrap_or(1.0);
     let mut img = HfImage {
-        data_url: String::new(),
-        width_px: Some(JsNum(width_px)),
-        height_px: Some(JsNum(height_px)),
-        floating: Some(true),
-        word_art: Some(WordArt {
+        data_url: Slot::of(String::new()),
+        width_px: Slot::of(JsNum(width_px)),
+        height_px: Slot::of(JsNum(height_px)),
+        floating: Slot::of(true),
+        word_art: Slot::of(WordArt {
             text,
             color_hex,
             opacity: JsNum(math_max(0.0, math_min(1.0, opacity))),
@@ -204,12 +202,12 @@ pub fn read_watermark_shape(pict_xml: &str) -> Option<HfImage> {
         ..HfImage::default()
     };
     if js_regex!(r"z-index:\s*-").test(style) {
-        img.behind = Some(true);
+        img.behind.set(true);
     }
     if let Some(rot) = vml_rotation_deg(style) {
-        img.rotation_deg = Some(JsNum(rot));
+        img.rotation_deg.set(JsNum(rot));
     }
-    vml_float_anchor(style, &mut img.anchor);
+    set_float_anchor!(style, img);
     Some(img)
 }
 
@@ -243,23 +241,23 @@ pub fn picture_watermark_preview_image(
 ) -> HfImage {
     let size = picture_watermark_box_pt(spec, margin_box);
     HfImage {
-        data_url: format!("data:{};base64,{}", spec.image.mime, spec.image.base64),
-        width_px: Some(JsNum(math_round((size.width_pt.0 * 96.0) / 72.0))),
-        height_px: Some(JsNum(math_round((size.height_pt.0 * 96.0) / 72.0))),
-        floating: Some(true),
-        behind: Some(true),
-        watermark: Some(true),
-        anchor: FloatAnchor {
-            pos_h: Some("center"),
-            pos_v: Some("center"),
-            pos_h_rel: Some("margin"),
-            pos_v_rel: Some("margin"),
-            ..FloatAnchor::default()
-        },
-        washout: (spec.washout != Some(false)).then_some(Washout {
+        data_url: Slot::of(format!(
+            "data:{};base64,{}",
+            spec.image.mime, spec.image.base64
+        )),
+        width_px: Slot::of(JsNum(math_round((size.width_pt.0 * 96.0) / 72.0))),
+        height_px: Slot::of(JsNum(math_round((size.height_pt.0 * 96.0) / 72.0))),
+        floating: Slot::of(true),
+        behind: Slot::of(true),
+        watermark: Slot::of(true),
+        pos_h: Slot::of("center"),
+        pos_v: Slot::of("center"),
+        pos_h_rel: Slot::of("margin"),
+        pos_v_rel: Slot::of("margin"),
+        washout: Slot::maybe((spec.washout != Some(false)).then_some(Washout {
             gain: JsNum(0.3),
             black_level: JsNum(0.35),
-        }),
+        })),
         ..HfImage::default()
     }
 }
@@ -288,20 +286,17 @@ pub fn text_watermark_preview_image(spec: &WatermarkSpec) -> HfImage {
     let size = text_watermark_box_pt(spec);
     let color = spec.color_hex.as_deref().unwrap_or("C0C0C0");
     HfImage {
-        data_url: String::new(),
-        width_px: Some(JsNum(math_round((size.width_pt.0 * 96.0) / 72.0))),
-        height_px: Some(JsNum(math_round((size.height_pt.0 * 96.0) / 72.0))),
-        floating: Some(true),
-        behind: Some(true),
-        anchor: FloatAnchor {
-            pos_h: Some("center"),
-            pos_v: Some("center"),
-            pos_h_rel: Some("margin"),
-            pos_v_rel: Some("margin"),
-            ..FloatAnchor::default()
-        },
-        rotation_deg: (spec.diagonal != Some(false)).then_some(JsNum(315.0)),
-        word_art: Some(WordArt {
+        data_url: Slot::of(String::new()),
+        width_px: Slot::of(JsNum(math_round((size.width_pt.0 * 96.0) / 72.0))),
+        height_px: Slot::of(JsNum(math_round((size.height_pt.0 * 96.0) / 72.0))),
+        floating: Slot::of(true),
+        behind: Slot::of(true),
+        pos_h: Slot::of("center"),
+        pos_v: Slot::of("center"),
+        pos_h_rel: Slot::of("margin"),
+        pos_v_rel: Slot::of("margin"),
+        rotation_deg: Slot::maybe((spec.diagonal != Some(false)).then_some(JsNum(315.0))),
+        word_art: Slot::of(WordArt {
             text: spec.text.clone(),
             color_hex: color.strip_prefix('#').unwrap_or(color).to_uppercase(),
             opacity: JsNum(math_max(0.0, math_min(1.0, spec.opacity.unwrap_or(0.5)))),

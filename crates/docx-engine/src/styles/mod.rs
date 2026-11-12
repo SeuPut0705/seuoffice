@@ -9,26 +9,25 @@ pub use headings::{HeadingStyles, heading_styles_of};
 
 use std::collections::{HashMap, HashSet};
 
-use jscompat::{JsNum, Radix, js_regex, parse_int, truthy};
+use jscompat::{JsNum, Radix, Slot, js_regex, parse_int, truthy};
 use ooxml_pkg::Package;
 use ooxml_xml::{XNode, parse_ordered};
 use serde::Serialize;
 
 pub use model::{
-    DocDefaults, Margins, NumPr, SpreadSlot, StyleDisplay, StyleInfo, TabStops, TableCondFormat,
-    TableParaSpacing, TableStyleDisplay, WholeTable,
+    DocDefaults, NumPr, StyleDisplay, StyleInfo, TableCondFormat, TableParaSpacing,
+    TableStyleDisplay, WholeTable,
 };
 
 use crate::props::{
-    ParaBorderSides, Side, XML_PARSER_MAX_NESTED_TAGS, char_indents_of, ea_lang_default_font,
-    indent_twips_of, merge_char_indents, para_border_sides_of, theme_lang_ea_slot_font,
-    themed_r_fonts,
+    XML_PARSER_MAX_NESTED_TAGS, char_indents_of, ea_lang_default_font, indent_twips_of,
+    merge_char_indents, para_border_sides_of, theme_lang_ea_slot_font, themed_r_fonts,
 };
 use crate::section::xml_flag_on;
 use crate::theme::{ThemeColors, ThemeFonts};
 use crate::xml_text::{color_from, line_twips_of, on_off_of, strip_hash};
 use display::{style_display_of, table_style_display_of};
-use model::{clone_tab_stop, merge_table_display};
+use model::{merge_table_display, run_keys_fill};
 
 /// A JavaScript `Map` keyed by string: a later `set` on a key keeps its
 /// first position, `delete` drops the entry.
@@ -59,22 +58,25 @@ impl<V> JsMap<V> {
 /// lays paragraphs out with Word's built-in Normal spacing (after 8pt, and 1.15
 /// for paragraphs without their own w:line), for every font and compat mode;
 /// an empty `<w:pPrDefault/>` or any explicit spacing switches the built-in off.
-fn assign_built_in_para_defaults(dd: &mut DocDefaults) {
-    dd.space_after_twips = Some(JsNum(160.0));
-    dd.line_raw_twips = Some(JsNum(276.0));
-    dd.line_rule = Some("auto".to_owned());
-    dd.line_spacing = Some(JsNum(1.15));
+fn built_in_para_defaults() -> DocDefaults {
+    DocDefaults {
+        space_after_twips: Slot::of(JsNum(160.0)),
+        line_raw_twips: Slot::of(JsNum(276.0)),
+        line_rule: Slot::of("auto".to_owned()),
+        line_spacing: Slot::of(JsNum(1.15)),
+        ..DocDefaults::default()
+    }
 }
 
 /// Word probe 2026-09-12 (Word 365): a package with no styles part at all lays
 /// its text out in Word's built-in Normal, Aptos 12pt on top of the spacing above.
 fn built_in_doc_defaults() -> DocDefaults {
     let mut dd = DocDefaults {
-        ascii_font: Some("Aptos".to_owned()),
-        size_half_points: Some(Some(JsNum(24.0))),
+        ascii_font: Slot::of("Aptos".to_owned()),
+        size_half_points: Slot::of(JsNum(24.0)),
         ..DocDefaults::default()
     };
-    assign_built_in_para_defaults(&mut dd);
+    dd.assign(&built_in_para_defaults());
     dd
 }
 
@@ -84,14 +86,17 @@ fn built_in_doc_defaults() -> DocDefaults {
 const NORMAL_TEMPLATE_SPACE_AFTER_TWIPS: f64 = 160.0;
 const NORMAL_TEMPLATE_LINE_RAW_TWIPS: f64 = 278.0;
 
-fn assign_normal_template_defaults(dd: &mut DocDefaults) {
-    dd.size_half_points = Some(Some(JsNum(24.0)));
-    dd.size_cs_half_points = Some(Some(JsNum(24.0)));
-    dd.kern_half_points = Some(JsNum(2.0));
-    dd.space_after_twips = Some(JsNum(NORMAL_TEMPLATE_SPACE_AFTER_TWIPS));
-    dd.line_raw_twips = Some(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS));
-    dd.line_rule = Some("auto".to_owned());
-    dd.line_spacing = Some(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS / 240.0));
+fn normal_template_defaults() -> DocDefaults {
+    DocDefaults {
+        size_half_points: Slot::of(JsNum(24.0)),
+        size_cs_half_points: Slot::of(JsNum(24.0)),
+        kern_half_points: Slot::of(JsNum(2.0)),
+        space_after_twips: Slot::of(JsNum(NORMAL_TEMPLATE_SPACE_AFTER_TWIPS)),
+        line_raw_twips: Slot::of(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS)),
+        line_rule: Slot::of("auto".to_owned()),
+        line_spacing: Slot::of(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS / 240.0)),
+        ..DocDefaults::default()
+    }
 }
 
 /// `Err` where reading settings.xml throws.
@@ -115,32 +120,37 @@ fn normal_template_overrides(dd: &DocDefaults) -> Option<StyleDisplay> {
         .space_after_twips
         .is_some_and(|after| after.0 != NORMAL_TEMPLATE_SPACE_AFTER_TWIPS)
     {
-        own.space_after_twips = Some(JsNum(NORMAL_TEMPLATE_SPACE_AFTER_TWIPS));
+        own.space_after_twips
+            .set(JsNum(NORMAL_TEMPLATE_SPACE_AFTER_TWIPS));
     }
-    let same_line = dd.line_raw_twips == Some(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS))
+    let same_line = *dd.line_raw_twips == Some(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS))
         && dd.line_rule.as_deref().unwrap_or("auto") == "auto";
     if dd.line_raw_twips.is_some() && !same_line {
-        own.line_raw_twips = Some(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS));
-        own.line_rule = Some("auto".to_owned());
-        own.line_spacing = Some(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS / 240.0));
+        own.line_raw_twips
+            .set(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS));
+        own.line_rule.set("auto".to_owned());
+        own.line_spacing
+            .set(JsNum(NORMAL_TEMPLATE_LINE_RAW_TWIPS / 240.0));
     }
     (!own.has_no_key()).then_some(own)
 }
 
+/// `{ ...kept, ...NORMAL_TEMPLATE_DEFAULTS }`, `kept` being `dd` without the
+/// keys the template drops.
 fn apply_normal_template(mut dd: DocDefaults) -> DocDefaults {
-    dd.space_before_twips = None;
-    dd.space_before_auto = None;
-    dd.space_after_auto = None;
-    dd.bold = None;
-    dd.italic = None;
-    dd.color = None;
-    dd.border_sides = None;
-    dd.indent_left_twips = None;
-    dd.indent_right_twips = None;
-    dd.indent_first_line_twips = None;
-    dd.widow_control = None;
-    dd.suppress_auto_hyphens = None;
-    assign_normal_template_defaults(&mut dd);
+    dd.space_before_twips.delete();
+    dd.space_before_auto.delete();
+    dd.space_after_auto.delete();
+    dd.bold.delete();
+    dd.italic.delete();
+    dd.color.delete();
+    dd.border_sides.delete();
+    dd.indent_left_twips.delete();
+    dd.indent_right_twips.delete();
+    dd.indent_first_line_twips.delete();
+    dd.widow_control.delete();
+    dd.suppress_auto_hyphens.delete();
+    dd.assign(&normal_template_defaults());
     dd
 }
 
@@ -193,24 +203,6 @@ fn int_or_zero(text: &str) -> JsNum {
     JsNum(if n.is_nan() { 0.0 } else { n })
 }
 
-/// `{ ...parent, ...own }` of two pBdr side sets: a declared side (drawn or
-/// reset) of `own` wins.
-fn sides_over(own: &ParaBorderSides, parent: &ParaBorderSides) -> ParaBorderSides {
-    let pick = |own: &Side, parent: &Side| {
-        if *own == Side::Undeclared {
-            parent.clone()
-        } else {
-            own.clone()
-        }
-    };
-    ParaBorderSides {
-        t: pick(&own.t, &parent.t),
-        b: pick(&own.b, &parent.b),
-        l: pick(&own.l, &parent.l),
-        r: pick(&own.r, &parent.r),
-    }
-}
-
 pub struct ParsedStyles {
     /// `styles` of parseStyles: the Map entries in insertion order.
     pub styles: Vec<(String, StyleInfo)>,
@@ -254,39 +246,49 @@ impl Resolver<'_> {
         let info = &mut self.styles[idx].1;
         if let Some(parent_display) = parent.as_ref().and_then(|parent| parent.display.as_ref()) {
             let own = info.display.take();
-            let mut merged = own.clone().unwrap_or_default().over(parent_display);
+            let mut merged = parent_display.clone();
+            if let Some(own) = &own {
+                merged.assign(own);
+            }
             // w:ind character attributes layer per component: a child's
             // twips-only w:ind keeps the parent's *Chars, a child's explicit zero cancels it
             if let (Some(parent_chars), Some(own_chars)) = (
-                &parent_display.indent_chars,
+                &*parent_display.indent_chars,
                 own.as_ref().and_then(|own| own.indent_chars.as_ref()),
             ) {
-                merged.indent_chars =
-                    merge_char_indents(Some(parent_chars.clone()), Some(own_chars.clone()));
+                merged.indent_chars.assign(merge_char_indents(
+                    Some(parent_chars.clone()),
+                    Some(own_chars.clone()),
+                ));
             }
             // pBdr merges per side too: a child's explicit none cancels one parent side only
             if let (Some(parent_sides), Some(own_sides)) = (
-                &parent_display.border_sides,
+                &*parent_display.border_sides,
                 own.as_ref().and_then(|own| own.border_sides.as_ref()),
             ) {
-                merged.border_sides = Some(sides_over(own_sides, parent_sides));
+                let mut sides = parent_sides.clone();
+                sides.assign(own_sides);
+                merged.border_sides.set(sides);
             }
             // w:tabs merge per position: a child stop (or w:val="clear") replaces
             // the parent's stop at that position, the rest of the parent's stops stay
             if let (Some(parent_stops), Some(own_stops)) = (
-                &parent_display.tab_stops,
+                &*parent_display.tab_stops,
                 own.as_ref().and_then(|own| own.tab_stops.as_ref()),
             ) {
                 let mut stops: Vec<_> = parent_stops
-                    .0
                     .iter()
-                    .filter(|p| !own_stops.0.iter().any(|o| o.pos == p.pos))
-                    .chain(own_stops.0.iter().filter(|o| o.val != "clear"))
-                    .map(clone_tab_stop)
+                    .filter(|p| !own_stops.iter().any(|o| o.pos == p.pos))
+                    .chain(own_stops.iter().filter(|o| o.val != "clear"))
+                    .cloned()
                     .collect();
                 // positions are finite, so the comparator is total
                 stops.sort_by(|a, b| a.pos.0.total_cmp(&b.pos.0));
-                merged.tab_stops = (!stops.is_empty()).then_some(TabStops(stops));
+                if stops.is_empty() {
+                    merged.tab_stops.delete();
+                } else {
+                    merged.tab_stops.set(stops);
+                }
             }
             info.display = (!merged.has_no_key()).then_some(merged);
         }
@@ -343,18 +345,18 @@ pub fn parse_styles(
             .and_then(|r_pr_default| r_pr_default.find_child("w:rPr"));
         let sz = r_pr.and_then(|r_pr| child_attr(r_pr, "w:sz", "w:val"));
         if let Some(sz) = truthy(sz) {
-            dd.size_half_points = Some(int_or_undefined(sz));
+            dd.size_half_points.assign(int_or_undefined(sz));
         }
         let sz_cs = r_pr.and_then(|r_pr| child_attr(r_pr, "w:szCs", "w:val"));
         if let Some(sz_cs) = truthy(sz_cs) {
-            dd.size_cs_half_points = Some(int_or_undefined(sz_cs));
+            dd.size_cs_half_points.assign(int_or_undefined(sz_cs));
         }
         let rf_attrs = r_pr
             .and_then(|r_pr| r_pr.find_child("w:rFonts"))
             .unwrap_or(&empty);
         let dd_rf = themed_r_fonts(rf_attrs, theme_fonts);
         if let Some(ascii) = truthy(dd_rf.ascii.as_deref().or(dd_rf.h_ansi.as_deref())) {
-            dd.ascii_font = Some(ascii.to_owned());
+            dd.ascii_font.set(ascii.to_owned());
         }
         // no Latin slot at all and no theme to take it from (docx-npm output):
         // Word falls back to its legacy Times New Roman, not the Office theme body face
@@ -362,21 +364,21 @@ pub fn parse_styles(
             && truthy(rf_attrs.attr("w:asciiTheme")).is_none()
             && truthy(rf_attrs.attr("w:hAnsiTheme")).is_none()
         {
-            dd.ascii_font = Some("Times New Roman".to_owned());
+            dd.ascii_font.set("Times New Roman".to_owned());
             if truthy(sz).is_none() {
-                dd.size_half_points = Some(Some(JsNum(20.0)));
+                dd.size_half_points.set(JsNum(20.0));
             }
         }
         // docDefaults keeps the lang-based backfill below for the empty-slot case
         if let Some(east_asia) = truthy(dd_rf.east_asia.as_deref()).filter(|_| !dd_rf.ea_slot_empty)
         {
-            dd.east_asia_font = Some(east_asia.to_owned());
+            dd.east_asia_font.set(east_asia.to_owned());
         }
         if truthy(rf_attrs.attr("w:eastAsiaTheme")).is_some() {
-            dd.ea_theme_slot = Some(true);
+            dd.ea_theme_slot.set(true);
         }
         if let Some(cs) = truthy(dd_rf.cs.as_deref()) {
-            dd.cs_font = Some(cs.to_owned());
+            dd.cs_font.set(cs.to_owned());
         }
         // Empty EA slot + w:lang w:eastAsia backfill: when the backfill would
         // fire, a face settings.xml themeFontLang resolves outranks the
@@ -384,9 +386,9 @@ pub fn parse_styles(
         // stays empty: themeFontLang alone must not invent a doc-level EA face.
         let ea_lang = r_pr.and_then(|r_pr| child_attr(r_pr, "w:lang", "w:eastAsia"));
         if let Some(ea_lang) = truthy(ea_lang) {
-            dd.east_asia_lang = Some(ea_lang.to_owned());
+            dd.east_asia_lang.set(ea_lang.to_owned());
         }
-        if let (None, Some(ea_lang)) = (&dd.east_asia_font, truthy(ea_lang))
+        if let (None, Some(ea_lang)) = (&*dd.east_asia_font, truthy(ea_lang))
             && let Some(ea_default) = ea_lang_default_font(&ea_lang.to_lowercase())
         {
             let dd_ea_theme = match theme_fonts {
@@ -396,44 +398,43 @@ pub fn parse_styles(
                 ),
                 _ => None,
             };
-            dd.east_asia_font = Some(dd_ea_theme.unwrap_or_else(|| ea_default.to_owned()));
-            dd.ea_from_lang = Some(true);
+            dd.east_asia_font
+                .set(dd_ea_theme.unwrap_or_else(|| ea_default.to_owned()));
+            dd.ea_from_lang.set(true);
             if dd_rf.ea_slot_empty {
-                dd.ea_slot_empty = Some(true);
+                dd.ea_slot_empty.set(true);
             }
         }
         if let Some(r_pr) = r_pr {
             if on_off_of(r_pr, "w:b") == Some(true) {
-                dd.bold = Some(true);
+                dd.bold.set(true);
             }
             if on_off_of(r_pr, "w:i") == Some(true) {
-                dd.italic = Some(true);
+                dd.italic.set(true);
             }
             if on_off_of(r_pr, "w:bCs") == Some(true) {
-                dd.bold_cs = Some(true);
+                dd.bold_cs.set(true);
             }
             if on_off_of(r_pr, "w:iCs") == Some(true) {
-                dd.italic_cs = Some(true);
+                dd.italic_cs.set(true);
             }
             let color = color_from(Some(r_pr), theme).filter(|color| !color.is_empty());
-            if color.is_some() {
-                dd.color = color;
-            }
+            dd.color.set_some(color);
             let kern = child_attr(r_pr, "w:kern", "w:val");
             if let Some(kern) = kern {
-                dd.kern_half_points = Some(int_or_zero(kern));
+                dd.kern_half_points.set(int_or_zero(kern));
             }
             let lang = child_attr(r_pr, "w:lang", "w:val");
             if let Some(lang) = truthy(lang) {
-                dd.lang = Some(lang.to_owned());
+                dd.lang.set(lang.to_owned());
             }
             if on_off_of(r_pr, "w:rtl") == Some(true) {
-                dd.rtl = Some(true);
+                dd.rtl.set(true);
             }
         }
         let p_pr_default = defaults_node.find_child("w:pPrDefault");
         if p_pr_default.is_none() {
-            assign_built_in_para_defaults(&mut dd);
+            dd.assign(&built_in_para_defaults());
         } else {
             declared_p_pr_default = true;
         }
@@ -444,60 +445,47 @@ pub fn parse_styles(
             let line = line_twips_of(Some(line));
             let rule = spacing_attr("w:lineRule").unwrap_or("auto");
             if line > 0.0 {
-                dd.line_raw_twips = Some(JsNum(line));
-                dd.line_rule = Some(rule.to_owned());
+                dd.line_raw_twips.set(JsNum(line));
+                dd.line_rule.set(rule.to_owned());
                 if rule == "auto" {
-                    dd.line_spacing = Some(JsNum(line / 240.0));
+                    dd.line_spacing.set(JsNum(line / 240.0));
                 }
             }
         }
         if let Some(before) = spacing_attr("w:before") {
-            dd.space_before_twips = Some(int_or_zero(before));
+            dd.space_before_twips.set(int_or_zero(before));
         }
         if let Some(after) = spacing_attr("w:after") {
-            dd.space_after_twips = Some(int_or_zero(after));
+            dd.space_after_twips.set(int_or_zero(after));
         }
         if let Some(auto) = spacing_attr("w:beforeAutospacing") {
-            dd.space_before_auto = Some(auto == "1" || auto == "true");
+            dd.space_before_auto.set(auto == "1" || auto == "true");
         }
         if let Some(auto) = spacing_attr("w:afterAutospacing") {
-            dd.space_after_auto = Some(auto == "1" || auto == "true");
+            dd.space_after_auto.set(auto == "1" || auto == "true");
         }
         if p_pr.is_some_and(|p_pr| on_off_of(p_pr, "w:suppressAutoHyphens") == Some(true)) {
-            dd.suppress_auto_hyphens = Some(true);
+            dd.suppress_auto_hyphens.set(true);
         }
         if p_pr.is_some_and(|p_pr| on_off_of(p_pr, "w:bidi") == Some(true)) {
-            dd.bidi = Some(true);
+            dd.bidi.set(true);
         }
         if p_pr.is_some_and(|p_pr| on_off_of(p_pr, "w:widowControl") == Some(false)) {
-            dd.widow_control = Some(false);
+            dd.widow_control.set(false);
         }
         let dd_borders = p_pr.and_then(|p_pr| para_border_sides_of(p_pr, theme));
-        if dd_borders.is_some() {
-            dd.border_sides = dd_borders;
-        }
+        dd.border_sides.set_some(dd_borders);
         let dd_ind = p_pr.and_then(|p_pr| p_pr.find_child("w:ind"));
         if let Some(dd_ind) = dd_ind {
             let indent = indent_twips_of(dd_ind);
-            if indent.left.is_some() {
-                dd.indent_left_twips = indent.left;
-            }
-            if indent.right.is_some() {
-                dd.indent_right_twips = indent.right;
-            }
-            if indent.first_line.is_some() {
-                dd.indent_first_line_twips = indent.first_line;
-            }
-            let chars = char_indents_of(Some(dd_ind));
-            if chars.is_some() {
-                dd.indent_chars = chars;
-            }
+            dd.indent_left_twips.set_some(indent.left);
+            dd.indent_right_twips.set_some(indent.right);
+            dd.indent_first_line_twips.set_some(indent.first_line);
+            dd.indent_chars.set_some(char_indents_of(Some(dd_ind)));
         }
-        doc_defaults = (dd != DocDefaults::default()).then_some(dd);
+        doc_defaults = (!dd.has_no_key()).then_some(dd);
     } else {
-        let mut dd = DocDefaults::default();
-        assign_built_in_para_defaults(&mut dd);
-        doc_defaults = Some(dd);
+        doc_defaults = Some(built_in_para_defaults());
     }
     let linked_template = links_normal_template(package)?;
     // only values the package wrote itself count; the built-in fallback above is not a declaration
@@ -682,19 +670,21 @@ pub fn parse_styles(
             }
             let mut d = info.display.take().unwrap_or_default();
             if d.indent_left_twips.is_none() && dd.indent_left_twips.is_some() {
-                d.indent_left_twips = dd.indent_left_twips;
+                d.indent_left_twips.assign(*dd.indent_left_twips);
             }
             if d.indent_right_twips.is_none() && dd.indent_right_twips.is_some() {
-                d.indent_right_twips = dd.indent_right_twips;
+                d.indent_right_twips.assign(*dd.indent_right_twips);
             }
             if d.indent_first_line_twips.is_none() && dd.indent_first_line_twips.is_some() {
-                d.indent_first_line_twips = dd.indent_first_line_twips;
+                d.indent_first_line_twips
+                    .assign(*dd.indent_first_line_twips);
             }
-            if let Some(dd_chars) = &dd.indent_chars {
-                d.indent_chars = match d.indent_chars.take() {
-                    Some(chars) => merge_char_indents(Some(dd_chars.clone()), Some(chars)),
+            if let Some(dd_chars) = &*dd.indent_chars {
+                let chars = match d.indent_chars.as_ref() {
+                    Some(chars) => merge_char_indents(Some(dd_chars.clone()), Some(chars.clone())),
                     None => Some(dd_chars.clone()),
                 };
+                d.indent_chars.assign(chars);
             }
             info.display = Some(d);
         }
@@ -708,10 +698,11 @@ pub fn parse_styles(
                 continue;
             }
             let mut d = info.display.take().unwrap_or_default();
-            d.border_sides = Some(match &d.border_sides {
-                Some(own) => sides_over(own, dd_sides),
-                None => dd_sides.clone(),
-            });
+            let mut sides = dd_sides.clone();
+            if let Some(own) = &*d.border_sides {
+                sides.assign(own);
+            }
+            d.border_sides.set(sides);
             info.display = Some(d);
         }
     }
@@ -731,12 +722,15 @@ pub fn parse_styles(
             if styles[own].1.kind != "character" || styles[other].1.kind != "paragraph" {
                 continue;
             }
-            let Some(other_display) = styles[other].1.display.clone() else {
+            let Some(other_display) = &styles[other].1.display else {
                 continue;
             };
-            let mut display = styles[own].1.display.clone().unwrap_or_default();
-            if display.fill_run_keys(&other_display) {
-                styles[own].1.display = Some(display);
+            let mut fill = run_keys_fill(styles[own].1.display.as_ref(), other_display);
+            if !fill.has_no_key() {
+                if let Some(display) = &styles[own].1.display {
+                    fill.assign(display);
+                }
+                styles[own].1.display = Some(fill);
             }
         }
         if styles[a].1.kind == "character" && styles[b].1.kind == "paragraph" {
@@ -774,15 +768,15 @@ pub fn style_run_format(display: Option<&StyleDisplay>, cs: bool) -> StyleRunFor
     };
     if cs {
         StyleRunFormat {
-            bold: display.bold_cs,
-            italic: display.italic_cs,
-            size_half_points: display.size_cs_half_points.flatten(),
+            bold: *display.bold_cs,
+            italic: *display.italic_cs,
+            size_half_points: *display.size_cs_half_points,
         }
     } else {
         StyleRunFormat {
-            bold: display.bold,
-            italic: display.italic,
-            size_half_points: display.size_half_points.flatten(),
+            bold: *display.bold,
+            italic: *display.italic,
+            size_half_points: *display.size_half_points,
         }
     }
 }
@@ -805,15 +799,15 @@ pub fn para_cs_format(
     CsFormat {
         size_half_points: p
             .size_half_points
-            .or(doc_defaults.and_then(|dd| dd.size_cs_half_points.flatten()))
+            .or(doc_defaults.and_then(|dd| *dd.size_cs_half_points))
             .unwrap_or(JsNum(20.0)),
         bold: p
             .bold
-            .or(doc_defaults.and_then(|dd| dd.bold_cs))
+            .or(doc_defaults.and_then(|dd| *dd.bold_cs))
             .unwrap_or(false),
         italic: p
             .italic
-            .or(doc_defaults.and_then(|dd| dd.italic_cs))
+            .or(doc_defaults.and_then(|dd| *dd.italic_cs))
             .unwrap_or(false),
     }
 }

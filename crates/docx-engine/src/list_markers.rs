@@ -510,7 +510,7 @@ fn bullet_info(text: String, level: &NumberingLevel) -> ListMarkerInfo {
     match font {
         Some(font) if is_symbol_font(Some(font)) => ListMarkerInfo {
             text,
-            symbol_char: Some(to_symbol_pua(&level.lvl_text)),
+            symbol_char: Some(to_symbol_pua(level.lvl_text())),
             symbol_font: Some(font.to_owned()),
             ..ListMarkerInfo::default()
         },
@@ -549,7 +549,7 @@ fn marker_info(
     let lvl = max0(item.ilvl.0);
     let level = def.levels.get(&number_to_string(lvl))?;
 
-    if level.num_fmt == "bullet" {
+    if level.num_fmt() == "bullet" {
         // the lvlText of a picture bullet is a placeholder glyph, never shown
         if level.pic_bullet_id.is_some() {
             return Some(match truthy(level.pic_bullet_src.as_deref()) {
@@ -566,21 +566,21 @@ fn marker_info(
         }
         // symbol-encoded marker fonts (Wingdings "l" = black circle): decode by font first
         let decoded = truthy(level.font.as_deref())
-            .and_then(|font| decode_symbol_text(font, &level.lvl_text, false));
+            .and_then(|font| decode_symbol_text(font, level.lvl_text(), false));
         if let Some(text_font) = truthy(level.font.as_deref().map(trim))
             && !is_symbol_font(Some(text_font))
-            && js_regex!(r"^[^\s\uf000-\uf0ff]+$").test(&level.lvl_text)
+            && js_regex!(r"^[^\s\uf000-\uf0ff]+$").test(level.lvl_text())
         {
             return Some(ListMarkerInfo {
-                text: level.lvl_text.clone(),
+                text: level.lvl_text().to_owned(),
                 font: Some(text_font.to_owned()),
                 ..ListMarkerInfo::default()
             });
         }
         let glyph = decoded
             .clone()
-            .or_else(|| bullet_glyph(&level.lvl_text).map(str::to_owned))
-            .unwrap_or_else(|| level.lvl_text.clone());
+            .or_else(|| bullet_glyph(level.lvl_text()).map(str::to_owned))
+            .unwrap_or_else(|| level.lvl_text().to_owned());
         // undecodable symbol-font glyphs, private-use or empty ones fall back to the per-level default
         if glyph.is_empty()
             || js_regex!(r"[\ue000-\uf8ff]").test(&glyph)
@@ -621,7 +621,7 @@ fn marker_info(
                 set_counter(&mut c, a, start.0);
             }
             _ => {
-                let start = def.levels.get(&a.to_string()).map_or(1.0, |l| l.start.0);
+                let start = def.levels.get(&a.to_string()).map_or(1.0, |l| l.start());
                 set_counter(&mut c, a, start);
             }
         }
@@ -633,7 +633,7 @@ fn marker_info(
             set_counter(&mut c, lvl_index, start.0);
         }
         _ => {
-            let previous = counter(&c, lvl_index).unwrap_or(level.start.0 - 1.0);
+            let previous = counter(&c, lvl_index).unwrap_or(level.start() - 1.0);
             set_counter(&mut c, lvl_index, previous + 1.0);
         }
     }
@@ -642,7 +642,7 @@ fn marker_info(
         counters.set(def.abstract_num_id.clone(), c.clone());
     }
 
-    let marker = js_regex!(r"%(\d)", "g").replace_all(&level.lvl_text, |found| {
+    let marker = js_regex!(r"%(\d)", "g").replace_all(level.lvl_text(), |found| {
         let d = found.get(1).unwrap_or_default();
         let ref_lvl = d.parse::<f64>().unwrap_or(f64::NAN) - 1.0;
         let ref_def = def.levels.get(&number_to_string(ref_lvl));
@@ -651,17 +651,17 @@ fn marker_info(
         } else {
             None
         }
-        .or(ref_def.map(|l| l.start.0))
+        .or(ref_def.map(|l| l.start()))
         .unwrap_or(1.0);
-        let fmt = ref_def.map_or("decimal", |l| l.num_fmt.as_str());
-        if level.is_lgl == Some(true) && !ARABIC_FORMATS.contains(&fmt) {
+        let fmt = ref_def.map_or("decimal", |l| l.num_fmt());
+        if *level.is_lgl == Some(true) && !ARABIC_FORMATS.contains(&fmt) {
             return number_to_string(value);
         }
         format_number(value, fmt, ref_def.and_then(|l| l.custom_format.as_deref()))
     });
     // numFmt "none": an explicit empty marker (Word shows nothing) so renderer
     // counter fallbacks don't kick in on the null
-    if marker.is_empty() && level.num_fmt != "none" {
+    if marker.is_empty() && level.num_fmt() != "none" {
         return None;
     }
     Some(ListMarkerInfo {

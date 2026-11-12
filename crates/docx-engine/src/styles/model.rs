@@ -1,7 +1,7 @@
 //! The values parse-styles.ts returns (`StyleInfo`, `StyleDisplay`,
 //! `TableStyleDisplay`, `DocDefaults` of packages/docx-engine/src/types.ts).
 
-use jscompat::JsNum;
+use jscompat::{JsNum, Slot, js_object};
 use serde::ser::SerializeStruct;
 use serde::{Serialize, Serializer};
 
@@ -9,474 +9,250 @@ use crate::drawing_geometry::TextOutline;
 use crate::props::{Borders, CellMargins, CharIndents, ParaBorderSides, TabStop};
 use crate::styles::RunBorder;
 
-/// A field the TypeScript can hold as a key with the value `undefined`
-/// (`parseInt(sz, 10) || undefined`). Such a key is absent from the JSON but
-/// still wins an object spread and still counts in `Object.keys`:
-/// `None` is no key, `Some(None)` the key holding `undefined`.
-pub type SpreadSlot<T> = Option<Option<T>>;
-
-fn unset<T: Copy>(slot: &SpreadSlot<T>) -> bool {
-    slot.flatten().is_none()
-}
-
-/// Display-only formatting a paragraph or character style contributes.
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct StyleDisplay {
-    #[serde(skip_serializing_if = "unset")]
-    pub size_half_points: SpreadSlot<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub kern_half_points: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub italic: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bold_cs: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub italic_cs: Option<bool>,
-    #[serde(skip_serializing_if = "unset")]
-    pub size_cs_half_points: SpreadSlot<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rtl: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub underline: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub strike: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bdr: Option<RunBorder>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub east_asia_font: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font_ascii: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ea_slot_empty: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cs_font: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub char_spacing_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tab_stops: Option<TabStops>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub caps: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub shading: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub text_outline: Option<TextOutline>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_spacing: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_rule: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_raw_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_before_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_after_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_before_auto: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_after_auto: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_left_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_right_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_first_line_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_chars: Option<CharIndents>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub keep_next: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub keep_lines: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub suppress_line_numbers: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub page_break_before: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub widow_control: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub suppress_auto_hyphens: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub contextual_spacing: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub align: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bidi: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub shading_fill: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub border_sides: Option<ParaBorderSides>,
-    #[serde(rename = "autoSpaceDE", skip_serializing_if = "Option::is_none")]
-    pub auto_space_de: Option<bool>,
-    #[serde(rename = "autoSpaceDN", skip_serializing_if = "Option::is_none")]
-    pub auto_space_dn: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub word_wrap: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub overflow_punct: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub east_asia_lang: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub vanish: Option<bool>,
-}
-
-impl StyleDisplay {
-    /// `Object.keys(display).length === 0`
-    pub fn has_no_key(&self) -> bool {
-        *self == Self::default()
+js_object! {
+    /// Display-only formatting a paragraph or character style contributes.
+    /// Its keys follow the code that made it: the basedOn spread, the
+    /// docDefaults indent and border fill-in, the linked-style run fill.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct StyleDisplay {
+        pub size_half_points: JsNum,
+        pub color: String,
+        pub bold: bool,
+        pub italic: bool,
+        pub bold_cs: bool,
+        pub italic_cs: bool,
+        pub size_cs_half_points: JsNum,
+        pub rtl: bool,
+        pub underline: bool,
+        pub strike: bool,
+        pub bdr: RunBorder,
+        pub font_ascii: String,
+        pub east_asia_font: String,
+        pub cs_font: String,
+        pub font: String,
+        pub ea_slot_empty: bool,
+        pub char_spacing_twips: JsNum,
+        pub kern_half_points: JsNum,
+        pub east_asia_lang: String,
+        pub caps: &'static str,
+        pub shading: String,
+        pub text_outline: TextOutline,
+        pub vanish: bool,
+        pub line_rule: String,
+        pub line_raw_twips: JsNum,
+        pub line_spacing: JsNum,
+        pub space_before_twips: JsNum,
+        pub space_after_twips: JsNum,
+        pub space_before_auto: bool,
+        pub space_after_auto: bool,
+        pub keep_next: bool,
+        pub keep_lines: bool,
+        pub suppress_line_numbers: bool,
+        pub page_break_before: bool,
+        pub widow_control: bool,
+        pub suppress_auto_hyphens: bool,
+        pub contextual_spacing: bool,
+        /// `autoSpaceDE`
+        pub auto_space_d_e: bool,
+        /// `autoSpaceDN`
+        pub auto_space_d_n: bool,
+        pub word_wrap: bool,
+        pub overflow_punct: bool,
+        pub align: &'static str,
+        pub bidi: bool,
+        pub shading_fill: String,
+        pub border_sides: ParaBorderSides,
+        pub tab_stops: Vec<TabStop>,
+        pub indent_left_twips: JsNum,
+        pub indent_right_twips: JsNum,
+        pub indent_first_line_twips: JsNum,
+        pub indent_chars: CharIndents,
     }
+}
 
-    /// `{ ...parent, ...self }`: every key `self` holds wins.
-    pub fn over(self, parent: &StyleDisplay) -> StyleDisplay {
-        let p = parent.clone();
-        StyleDisplay {
-            size_half_points: self.size_half_points.or(p.size_half_points),
-            kern_half_points: self.kern_half_points.or(p.kern_half_points),
-            color: self.color.or(p.color),
-            bold: self.bold.or(p.bold),
-            italic: self.italic.or(p.italic),
-            bold_cs: self.bold_cs.or(p.bold_cs),
-            italic_cs: self.italic_cs.or(p.italic_cs),
-            size_cs_half_points: self.size_cs_half_points.or(p.size_cs_half_points),
-            rtl: self.rtl.or(p.rtl),
-            underline: self.underline.or(p.underline),
-            strike: self.strike.or(p.strike),
-            bdr: self.bdr.or(p.bdr),
-            east_asia_font: self.east_asia_font.or(p.east_asia_font),
-            font: self.font.or(p.font),
-            font_ascii: self.font_ascii.or(p.font_ascii),
-            ea_slot_empty: self.ea_slot_empty.or(p.ea_slot_empty),
-            cs_font: self.cs_font.or(p.cs_font),
-            char_spacing_twips: self.char_spacing_twips.or(p.char_spacing_twips),
-            tab_stops: self.tab_stops.or(p.tab_stops),
-            caps: self.caps.or(p.caps),
-            shading: self.shading.or(p.shading),
-            text_outline: self.text_outline.or(p.text_outline),
-            line_spacing: self.line_spacing.or(p.line_spacing),
-            line_rule: self.line_rule.or(p.line_rule),
-            line_raw_twips: self.line_raw_twips.or(p.line_raw_twips),
-            space_before_twips: self.space_before_twips.or(p.space_before_twips),
-            space_after_twips: self.space_after_twips.or(p.space_after_twips),
-            space_before_auto: self.space_before_auto.or(p.space_before_auto),
-            space_after_auto: self.space_after_auto.or(p.space_after_auto),
-            indent_left_twips: self.indent_left_twips.or(p.indent_left_twips),
-            indent_right_twips: self.indent_right_twips.or(p.indent_right_twips),
-            indent_first_line_twips: self.indent_first_line_twips.or(p.indent_first_line_twips),
-            indent_chars: self.indent_chars.or(p.indent_chars),
-            keep_next: self.keep_next.or(p.keep_next),
-            keep_lines: self.keep_lines.or(p.keep_lines),
-            suppress_line_numbers: self.suppress_line_numbers.or(p.suppress_line_numbers),
-            page_break_before: self.page_break_before.or(p.page_break_before),
-            widow_control: self.widow_control.or(p.widow_control),
-            suppress_auto_hyphens: self.suppress_auto_hyphens.or(p.suppress_auto_hyphens),
-            contextual_spacing: self.contextual_spacing.or(p.contextual_spacing),
-            align: self.align.or(p.align),
-            bidi: self.bidi.or(p.bidi),
-            shading_fill: self.shading_fill.or(p.shading_fill),
-            border_sides: self.border_sides.or(p.border_sides),
-            auto_space_de: self.auto_space_de.or(p.auto_space_de),
-            auto_space_dn: self.auto_space_dn.or(p.auto_space_dn),
-            word_wrap: self.word_wrap.or(p.word_wrap),
-            overflow_punct: self.overflow_punct.or(p.overflow_punct),
-            east_asia_lang: self.east_asia_lang.or(p.east_asia_lang),
-            vanish: self.vanish.or(p.vanish),
+/// The `fill` a linked character style takes from its paragraph twin: each
+/// RUN_KEYS key, in that order, that `own` holds no value for and `other` does.
+pub(crate) fn run_keys_fill(own: Option<&StyleDisplay>, other: &StyleDisplay) -> StyleDisplay {
+    fn take<T: Clone>(fill: &mut Slot<T>, own: &Slot<T>, other: &Slot<T>) {
+        if let (None, Some(value)) = (&**own, &**other) {
+            fill.set(value.clone());
         }
     }
+    let none = StyleDisplay::default();
+    let own = own.unwrap_or(&none);
+    let mut fill = StyleDisplay::default();
+    take(
+        &mut fill.size_half_points,
+        &own.size_half_points,
+        &other.size_half_points,
+    );
+    take(&mut fill.color, &own.color, &other.color);
+    take(&mut fill.bold, &own.bold, &other.bold);
+    take(&mut fill.italic, &own.italic, &other.italic);
+    take(&mut fill.bold_cs, &own.bold_cs, &other.bold_cs);
+    take(&mut fill.italic_cs, &own.italic_cs, &other.italic_cs);
+    take(
+        &mut fill.size_cs_half_points,
+        &own.size_cs_half_points,
+        &other.size_cs_half_points,
+    );
+    take(&mut fill.rtl, &own.rtl, &other.rtl);
+    take(&mut fill.underline, &own.underline, &other.underline);
+    take(&mut fill.strike, &own.strike, &other.strike);
+    take(&mut fill.font, &own.font, &other.font);
+    take(&mut fill.font_ascii, &own.font_ascii, &other.font_ascii);
+    take(
+        &mut fill.east_asia_font,
+        &own.east_asia_font,
+        &other.east_asia_font,
+    );
+    take(&mut fill.cs_font, &own.cs_font, &other.cs_font);
+    take(&mut fill.caps, &own.caps, &other.caps);
+    take(&mut fill.bdr, &own.bdr, &other.bdr);
+    take(&mut fill.shading, &own.shading, &other.shading);
+    take(
+        &mut fill.text_outline,
+        &own.text_outline,
+        &other.text_outline,
+    );
+    fill
+}
 
-    /// The RUN_KEYS a linked character style takes from its paragraph twin:
-    /// a key `self` does not hold at all takes `other`'s defined value.
-    /// Returns whether any key was filled (`Object.keys(fill).length > 0`).
-    pub fn fill_run_keys(&mut self, other: &StyleDisplay) -> bool {
-        fn fill<T: Clone>(own: &mut Option<T>, other: &Option<T>, any: &mut bool) {
-            if own.is_none() && other.is_some() {
-                *own = other.clone();
-                *any = true;
-            }
-        }
-        // `self.display?.[key] === undefined`: a key holding undefined is
-        // undefined here, yet the later `{ ...fill, ...self }` lets it win
-        fn fill_slot(own: &mut SpreadSlot<JsNum>, other: &SpreadSlot<JsNum>, any: &mut bool) {
-            if own.flatten().is_none() && other.flatten().is_some() {
-                *any = true;
-                if own.is_none() {
-                    *own = *other;
-                }
-            }
-        }
-        let mut any = false;
-        fill_slot(
-            &mut self.size_half_points,
-            &other.size_half_points,
-            &mut any,
-        );
-        fill(&mut self.color, &other.color, &mut any);
-        fill(&mut self.bold, &other.bold, &mut any);
-        fill(&mut self.italic, &other.italic, &mut any);
-        fill(&mut self.bold_cs, &other.bold_cs, &mut any);
-        fill(&mut self.italic_cs, &other.italic_cs, &mut any);
-        fill_slot(
-            &mut self.size_cs_half_points,
-            &other.size_cs_half_points,
-            &mut any,
-        );
-        fill(&mut self.rtl, &other.rtl, &mut any);
-        fill(&mut self.underline, &other.underline, &mut any);
-        fill(&mut self.strike, &other.strike, &mut any);
-        fill(&mut self.font, &other.font, &mut any);
-        fill(&mut self.font_ascii, &other.font_ascii, &mut any);
-        fill(&mut self.east_asia_font, &other.east_asia_font, &mut any);
-        fill(&mut self.cs_font, &other.cs_font, &mut any);
-        fill(&mut self.caps, &other.caps, &mut any);
-        fill(&mut self.bdr, &other.bdr, &mut any);
-        fill(&mut self.shading, &other.shading, &mut any);
-        fill(&mut self.text_outline, &other.text_outline, &mut any);
-        any
+js_object! {
+    /// `TableCondFormat['paraSpacing']`; mergeTableDisplay spreads it.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct TableParaSpacing {
+        pub before_twips: JsNum,
+        pub after_twips: JsNum,
+        pub line_raw_twips: JsNum,
+        pub line_rule: String,
+        pub line_spacing: JsNum,
     }
 }
 
-/// `TabStop[]`; the props type carries no `Clone`.
-#[derive(Debug, PartialEq, Serialize)]
-#[serde(transparent)]
-pub struct TabStops(pub Vec<TabStop>);
-
-impl Clone for TabStops {
-    fn clone(&self) -> Self {
-        TabStops(self.0.iter().map(clone_tab_stop).collect())
+js_object! {
+    /// Run and cell formatting one w:tblStylePr condition contributes;
+    /// mergeTableDisplay spreads it.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct TableCondFormat {
+        pub fill: String,
+        pub bold: bool,
+        pub italic: bool,
+        pub color: String,
+        pub size_half_points: JsNum,
+        pub caps: &'static str,
+        pub font_ascii: String,
+        pub char_spacing_twips: JsNum,
+        pub borders: Borders,
+        pub cell_mar_twips: CellMargins,
+        pub para_jc: String,
+        pub para_spacing: TableParaSpacing,
     }
 }
 
-pub(crate) fn clone_tab_stop(stop: &TabStop) -> TabStop {
-    TabStop {
-        pos: stop.pos,
-        val: stop.val.clone(),
-        leader: stop.leader.clone(),
-        rel: stop.rel,
+js_object! {
+    /// `TableStyleDisplay['wholeTable']`; mergeTableDisplay spreads it.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct WholeTable {
+        pub color: String,
+        pub bold: bool,
+        pub italic: bool,
+        pub size_half_points: JsNum,
+        pub kern_half_points: JsNum,
     }
 }
 
-/// `CellMargins`; the props type carries no `Clone`.
-#[derive(Debug, PartialEq, Serialize)]
-#[serde(transparent)]
-pub struct Margins(pub CellMargins);
-
-impl Clone for Margins {
-    fn clone(&self) -> Self {
-        Margins(CellMargins {
-            top: self.0.top,
-            left: self.0.left,
-            bottom: self.0.bottom,
-            right: self.0.right,
-        })
+js_object! {
+    /// Display-only formatting a table style contributes. The conditions
+    /// come in document order, and mergeTableDisplay spreads it.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct TableStyleDisplay {
+        pub fill: String,
+        pub whole_table: WholeTable,
+        pub first_row: TableCondFormat,
+        pub first_col: TableCondFormat,
+        pub last_col: TableCondFormat,
+        pub last_row: TableCondFormat,
+        pub band1_fill: String,
+        pub band2_fill: String,
+        pub row_band_size: JsNum,
+        pub borders: Borders,
+        pub cell_mar_twips: CellMargins,
+        pub para_jc: String,
+        pub para_spacing: TableParaSpacing,
     }
-}
-
-impl Margins {
-    /// `{ ...parent, ...self }`
-    fn over(&self, parent: &Margins) -> Margins {
-        Margins(CellMargins {
-            top: self.0.top.or(parent.0.top),
-            left: self.0.left.or(parent.0.left),
-            bottom: self.0.bottom.or(parent.0.bottom),
-            right: self.0.right.or(parent.0.right),
-        })
-    }
-}
-
-/// `{ ...parent, ...child }` of two border sets.
-fn borders_over(child: &Borders, parent: &Borders) -> Borders {
-    let c = child.clone();
-    let p = parent.clone();
-    Borders {
-        top: c.top.or(p.top),
-        left: c.left.or(p.left),
-        bottom: c.bottom.or(p.bottom),
-        right: c.right.or(p.right),
-        inside_h: c.inside_h.or(p.inside_h),
-        inside_v: c.inside_v.or(p.inside_v),
-        tl2br: c.tl2br.or(p.tl2br),
-        tr2bl: c.tr2bl.or(p.tr2bl),
-    }
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableParaSpacing {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub before_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub after_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_raw_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_rule: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_spacing: Option<JsNum>,
-}
-
-/// Run and cell formatting one w:tblStylePr condition contributes.
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableCondFormat {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fill: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub italic: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub size_half_points: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub caps: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font_ascii: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub char_spacing_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub borders: Option<Borders>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cell_mar_twips: Option<Margins>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub para_spacing: Option<TableParaSpacing>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub para_jc: Option<String>,
-}
-
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct WholeTable {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub italic: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub size_half_points: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub kern_half_points: Option<JsNum>,
-}
-
-/// Display-only formatting a table style contributes.
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct TableStyleDisplay {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub fill: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub whole_table: Option<WholeTable>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_row: Option<TableCondFormat>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_col: Option<TableCondFormat>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_col: Option<TableCondFormat>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub last_row: Option<TableCondFormat>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub band1_fill: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub band2_fill: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub row_band_size: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub borders: Option<Borders>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cell_mar_twips: Option<Margins>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub para_spacing: Option<TableParaSpacing>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub para_jc: Option<String>,
 }
 
 /// `{ ...(a ?? {}), ...(b ?? {}) }` of one DEEP key, `None` when both are absent.
-fn deep<T: Clone>(a: &Option<T>, b: &Option<T>, over: impl Fn(&T, &T) -> T) -> Option<T> {
-    match (a, b) {
-        (Some(a), Some(b)) => Some(over(b, a)),
-        _ => b.clone().or_else(|| a.clone()),
+fn deep<T: Clone + Default>(a: Option<&T>, b: Option<&T>, assign: fn(&mut T, &T)) -> Option<T> {
+    if a.is_none() && b.is_none() {
+        return None;
     }
+    let mut m = a.cloned().unwrap_or_default();
+    if let Some(b) = b {
+        assign(&mut m, b);
+    }
+    Some(m)
 }
 
-/// `{ ...a, ...b }` of a TableCondFormat, with `borders` and `cellMarTwips`
-/// merged per side when both hold them.
-fn cond_over(b: &TableCondFormat, a: &TableCondFormat) -> TableCondFormat {
-    let (b, a) = (b.clone(), a.clone());
-    TableCondFormat {
-        fill: b.fill.or(a.fill),
-        bold: b.bold.or(a.bold),
-        italic: b.italic.or(a.italic),
-        color: b.color.or(a.color),
-        size_half_points: b.size_half_points.or(a.size_half_points),
-        caps: b.caps.or(a.caps),
-        font_ascii: b.font_ascii.or(a.font_ascii),
-        char_spacing_twips: b.char_spacing_twips.or(a.char_spacing_twips),
-        borders: match (&a.borders, &b.borders) {
-            (Some(ab), Some(bb)) => Some(borders_over(bb, ab)),
-            _ => b.borders.or(a.borders),
-        },
-        cell_mar_twips: match (&a.cell_mar_twips, &b.cell_mar_twips) {
-            (Some(am), Some(bm)) => Some(bm.over(am)),
-            _ => b.cell_mar_twips.or(a.cell_mar_twips),
-        },
-        para_spacing: b.para_spacing.or(a.para_spacing),
-        para_jc: b.para_jc.or(a.para_jc),
+/// `deep` of a TableCondFormat, with `borders` and `cellMarTwips` spread per
+/// side when both hold them.
+fn deep_cond(a: Option<&TableCondFormat>, b: Option<&TableCondFormat>) -> Option<TableCondFormat> {
+    let mut m = deep(a, b, TableCondFormat::assign)?;
+    if let (Some(a), Some(b)) = (a, b) {
+        if let (Some(a_side), Some(b_side)) = (&*a.borders, &*b.borders) {
+            let mut side = a_side.clone();
+            side.assign(b_side);
+            m.borders.set(side);
+        }
+        if let (Some(a_side), Some(b_side)) = (&*a.cell_mar_twips, &*b.cell_mar_twips) {
+            let mut side = a_side.clone();
+            side.assign(b_side);
+            m.cell_mar_twips.set(side);
+        }
     }
+    Some(m)
 }
 
-fn whole_table_over(b: &WholeTable, a: &WholeTable) -> WholeTable {
-    let (b, a) = (b.clone(), a.clone());
-    WholeTable {
-        color: b.color.or(a.color),
-        bold: b.bold.or(a.bold),
-        italic: b.italic.or(a.italic),
-        size_half_points: b.size_half_points.or(a.size_half_points),
-        kern_half_points: b.kern_half_points.or(a.kern_half_points),
-    }
-}
-
-fn para_spacing_over(b: &TableParaSpacing, a: &TableParaSpacing) -> TableParaSpacing {
-    let (b, a) = (b.clone(), a.clone());
-    TableParaSpacing {
-        before_twips: b.before_twips.or(a.before_twips),
-        after_twips: b.after_twips.or(a.after_twips),
-        line_raw_twips: b.line_raw_twips.or(a.line_raw_twips),
-        line_rule: b.line_rule.or(a.line_rule),
-        line_spacing: b.line_spacing.or(a.line_spacing),
-    }
-}
-
-/// `mergeTableDisplay`. The parent is never empty, so neither is the result.
+/// `mergeTableDisplay`.
 pub(crate) fn merge_table_display(
     parent: &TableStyleDisplay,
     child: Option<&TableStyleDisplay>,
 ) -> Option<TableStyleDisplay> {
-    let empty = TableStyleDisplay::default();
-    let c = child.unwrap_or(&empty);
-    let merged = TableStyleDisplay {
-        fill: c.fill.clone().or_else(|| parent.fill.clone()),
-        whole_table: deep(&parent.whole_table, &c.whole_table, whole_table_over),
-        first_row: deep(&parent.first_row, &c.first_row, cond_over),
-        first_col: deep(&parent.first_col, &c.first_col, cond_over),
-        last_col: deep(&parent.last_col, &c.last_col, cond_over),
-        last_row: deep(&parent.last_row, &c.last_row, cond_over),
-        band1_fill: c.band1_fill.clone().or_else(|| parent.band1_fill.clone()),
-        band2_fill: c.band2_fill.clone().or_else(|| parent.band2_fill.clone()),
-        row_band_size: c.row_band_size.or(parent.row_band_size),
-        borders: c.borders.clone().or_else(|| parent.borders.clone()),
-        cell_mar_twips: c
-            .cell_mar_twips
-            .clone()
-            .or_else(|| parent.cell_mar_twips.clone()),
-        para_spacing: deep(&parent.para_spacing, &c.para_spacing, para_spacing_over),
-        para_jc: c.para_jc.clone().or_else(|| parent.para_jc.clone()),
-    };
-    (merged != empty).then_some(merged)
+    let mut merged = parent.clone();
+    if let Some(child) = child {
+        merged.assign(child);
+    }
+    // `child?.[key]`: no child holds no key
+    let none = TableStyleDisplay::default();
+    let (a, b) = (parent, child.unwrap_or(&none));
+    if let Some(m) = deep(
+        a.whole_table.as_ref(),
+        b.whole_table.as_ref(),
+        WholeTable::assign,
+    ) {
+        merged.whole_table.set(m);
+    }
+    if let Some(m) = deep_cond(a.first_row.as_ref(), b.first_row.as_ref()) {
+        merged.first_row.set(m);
+    }
+    if let Some(m) = deep_cond(a.first_col.as_ref(), b.first_col.as_ref()) {
+        merged.first_col.set(m);
+    }
+    if let Some(m) = deep_cond(a.last_col.as_ref(), b.last_col.as_ref()) {
+        merged.last_col.set(m);
+    }
+    if let Some(m) = deep_cond(a.last_row.as_ref(), b.last_row.as_ref()) {
+        merged.last_row.set(m);
+    }
+    if let Some(m) = deep(
+        a.para_spacing.as_ref(),
+        b.para_spacing.as_ref(),
+        TableParaSpacing::assign,
+    ) {
+        merged.para_spacing.set(m);
+    }
+    (!merged.has_no_key()).then_some(merged)
 }
 
 /// `StyleInfo['numPr']`: `'none'` is an explicit w:numId 0.
@@ -500,6 +276,9 @@ impl Serialize for NumPr {
     }
 }
 
+/// The fields in the order of the object literal parseStyles writes, then the
+/// two keys it adds later in the order it adds them; every other later write
+/// replaces a key the literal already holds.
 #[derive(Debug, Clone, PartialEq, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct StyleInfo {
@@ -537,72 +316,43 @@ pub struct StyleInfo {
     pub linked_char_shell: Option<bool>,
 }
 
-/// Document-wide defaults from styles.xml w:docDefaults.
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct DocDefaults {
-    #[serde(skip_serializing_if = "unset")]
-    pub size_half_points: SpreadSlot<JsNum>,
-    #[serde(skip_serializing_if = "unset")]
-    pub size_cs_half_points: SpreadSlot<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bold_cs: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub italic_cs: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub widow_control: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_left_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_right_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_first_line_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_chars: Option<CharIndents>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub kern_half_points: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ascii_font: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub east_asia_font: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ea_slot_empty: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ea_from_lang: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub ea_theme_slot: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub cs_font: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub italic: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_spacing: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_rule: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub line_raw_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_before_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_after_twips: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_before_auto: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub space_after_auto: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub lang: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub rtl: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bidi: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub east_asia_lang: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub suppress_auto_hyphens: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub border_sides: Option<ParaBorderSides>,
+js_object! {
+    /// Document-wide defaults from styles.xml w:docDefaults. Its keys follow
+    /// the code that made it: sizeHalfPoints and eastAsiaFont are each set at
+    /// two places, and the built-in defaults are spread or assigned in.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct DocDefaults {
+        pub size_half_points: JsNum,
+        pub size_cs_half_points: JsNum,
+        pub ascii_font: String,
+        pub east_asia_font: String,
+        pub ea_theme_slot: bool,
+        pub cs_font: String,
+        pub east_asia_lang: String,
+        pub ea_from_lang: bool,
+        pub ea_slot_empty: bool,
+        pub bold: bool,
+        pub italic: bool,
+        pub bold_cs: bool,
+        pub italic_cs: bool,
+        pub color: String,
+        pub kern_half_points: JsNum,
+        pub lang: String,
+        pub rtl: bool,
+        pub line_raw_twips: JsNum,
+        pub line_rule: String,
+        pub line_spacing: JsNum,
+        pub space_before_twips: JsNum,
+        pub space_after_twips: JsNum,
+        pub space_before_auto: bool,
+        pub space_after_auto: bool,
+        pub suppress_auto_hyphens: bool,
+        pub bidi: bool,
+        pub widow_control: bool,
+        pub border_sides: ParaBorderSides,
+        pub indent_left_twips: JsNum,
+        pub indent_right_twips: JsNum,
+        pub indent_first_line_twips: JsNum,
+        pub indent_chars: CharIndents,
+    }
 }

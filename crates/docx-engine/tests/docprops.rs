@@ -39,7 +39,7 @@ fn custom_properties_are_an_object_table() {
         r#"<property name="7"><vt:i4>5</vt:i4></vt:i8></property>"#,
     );
     let json = serde_json::to_string(&parse_custom_properties_xml(xml)).unwrap_or_default();
-    assert_eq!(json, r#"[["7","5"],["b","2"],["__proto__","p"]]"#);
+    assert_eq!(json, r#"{"7":"5","b":"2","__proto__":"p"}"#);
 }
 
 #[test]

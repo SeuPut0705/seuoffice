@@ -41,7 +41,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let numbering = parse_numbering(&package)?;
             let mut levels = Map::new();
             for (num_id, def) in numbering.defs.iter() {
-                for (ilvl, level) in &def.levels {
+                for (ilvl, level) in def.levels.entries() {
                     let custom = custom_level_from_numbering_level(level);
                     levels.insert(
                         format!("{num_id} {ilvl}"),

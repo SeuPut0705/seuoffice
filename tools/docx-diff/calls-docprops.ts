@@ -49,9 +49,7 @@ type Record_ = Pick<DocProtection, 'hash' | 'salt' | 'spinCount' | 'algorithmSid
 const CONSTANTS: Record<string, unknown> = {
   CORE_PROPERTY_KEYS,
   APP_PROPERTY_KEYS,
-  emptyDocumentProperties: Object.fromEntries(
-    Object.entries(emptyDocumentProperties()).map(([key, table]) => [key, Object.entries(table)]),
-  ),
+  emptyDocumentProperties: emptyDocumentProperties(),
   CORE_PROPERTIES_PATH,
   APP_PROPERTIES_PATH,
   CORE_PROPERTIES_CONTENT_TYPE,
@@ -456,39 +454,31 @@ export const DOCPROPS: CallSpec[] = [
   },
   {
     fn: 'docprops.parseCorePropertiesXml',
-    call: (text) => Object.entries(parseCorePropertiesXml(text)),
+    call: (text) => parseCorePropertiesXml(text),
     fromDocument: part(CORE_PROPERTIES_PATH),
     built: CORE_BUILT.map((text) => ({ text })),
   },
   {
     fn: 'docprops.parseAppPropertiesXml',
-    call: (text) => Object.entries(parseAppPropertiesXml(text)),
+    call: (text) => parseAppPropertiesXml(text),
     fromDocument: part(APP_PROPERTIES_PATH),
     built: APP_BUILT.map((text) => ({ text })),
   },
   {
     fn: 'docprops.parseCustomPropertiesXml',
-    call: (text) => Object.entries(parseCustomPropertiesXml(text)),
+    call: (text) => parseCustomPropertiesXml(text),
     fromDocument: part(CUSTOM_PROPERTIES_PATH),
     built: [...CUSTOM_BUILT, ...ZOTERO_BUILT].map((text) => ({ text })),
   },
   {
     fn: 'docprops.parseCustomPropertyTypesXml',
-    call: (text) => Object.entries(parseCustomPropertyTypesXml(text)),
+    call: (text) => parseCustomPropertyTypesXml(text),
     fromDocument: part(CUSTOM_PROPERTIES_PATH),
     built: [...CUSTOM_BUILT, ...ZOTERO_BUILT].map((text) => ({ text })),
   },
   {
     fn: 'docprops.readDocumentProperties',
-    call: async (_text, args) => {
-      const { core, app, custom, customTypes } = await readDocumentProperties(zipOf(args.parts))
-      return {
-        core: Object.entries(core),
-        app: Object.entries(app),
-        custom: Object.entries(custom),
-        customTypes: Object.entries(customTypes),
-      }
-    },
+    call: (_text, args) => readDocumentProperties(zipOf(args.parts)),
     fromDocument: packageOf('docProps/'),
     built: DOC_PROPS_PACKAGES,
     mutation: 'none',

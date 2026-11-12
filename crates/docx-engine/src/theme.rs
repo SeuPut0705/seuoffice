@@ -2,10 +2,9 @@
 //! `parseTheme` of parse.ts): the font pair, the palette, and the resolution
 //! of a w:themeColor reference.
 
-use std::collections::BTreeMap;
-
 use jscompat::{
-    JsRegex, Radix, js_regex, math_round, pad_start, parse_int, to_string_radix16, trim, truthy,
+    JsObject, JsRegex, Radix, js_regex, math_round, pad_start, parse_int, to_string_radix16, trim,
+    truthy,
 };
 use ooxml_pkg::Package;
 use serde::{Deserialize, Serialize};
@@ -96,20 +95,20 @@ pub struct ThemeFonts {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub major_east_asia: Option<String>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub major_cs: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub minor_cs: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub major_cs: Option<String>,
+    /// Per-script faces (`<a:font script="Hang" typeface="..."/>`) of each font group.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub major_scripts: Option<JsObject<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub minor_scripts: Option<JsObject<String>>,
     /// settings.xml w:themeFontLang w:eastAsia
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub ea_lang: Option<String>,
     /// settings.xml w:themeFontLang w:bidi
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub bidi_lang: Option<String>,
-    /// Per-script faces (`<a:font script="Hang" typeface="..."/>`) of each font group.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub major_scripts: Option<BTreeMap<String, String>>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub minor_scripts: Option<BTreeMap<String, String>>,
 }
 
 /// The first `<tag ...>...</tag>` of the part. `tag` is one of the fixed
@@ -130,9 +129,9 @@ fn font_of(xml: &str, tag: &str) -> Option<String> {
 }
 
 /// Per-script faces of a font group.
-fn script_fonts_of(xml: &str, tag: &str) -> Option<BTreeMap<String, String>> {
+fn script_fonts_of(xml: &str, tag: &str) -> Option<JsObject<String>> {
     let section = section_of(xml, tag)?;
-    let out: BTreeMap<String, String> = js_regex!(r#"<a:font script="([^"]+)" typeface="([^"]+)""#)
+    let out: JsObject<String> = js_regex!(r#"<a:font script="([^"]+)" typeface="([^"]+)""#)
         .find_iter(section)
         .map(|found| {
             (

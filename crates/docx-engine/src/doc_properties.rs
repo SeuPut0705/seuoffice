@@ -6,10 +6,9 @@ pub mod zotero;
 
 use std::sync::LazyLock;
 
-use jscompat::{JsRegex, js_regex};
+use jscompat::{JsObject, JsRegex, js_regex};
 use ooxml_pkg::{Package, ReadError};
 use serde::Serialize;
-use serde::ser::{SerializeSeq, Serializer};
 
 use self::zotero::{
     CUSTOM_PROPERTIES_PATH, PROPERTY_RE, attr_name, decode_xml_text, property_text,
@@ -72,58 +71,8 @@ pub const APP_PROPERTIES: [(&str, &str); 17] = [
 ];
 
 /// A plain JavaScript object used as a table of strings, written with
-/// `setOwn(out, key, value)`: every key is an own entry, `__proto__` too.
-/// It serializes in object order: array-index keys first, ascending, then the
-/// rest in insertion order.
-#[derive(Debug, Clone, Default, PartialEq, Eq)]
-pub struct Record(Vec<(String, String)>);
-
-impl Record {
-    fn set(&mut self, key: &str, value: String) {
-        match self.0.iter_mut().find(|(have, _)| have == key) {
-            Some(entry) => entry.1 = value,
-            None => self.0.push((key.to_owned(), value)),
-        }
-    }
-
-    pub fn get(&self, key: &str) -> Option<&str> {
-        self.0
-            .iter()
-            .find(|(have, _)| have == key)
-            .map(|(_, value)| value.as_str())
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
-}
-
-/// The index a JavaScript object orders a key by, when the key is an array
-/// index ("0", "17", not "017").
-fn array_index(key: &str) -> Option<u32> {
-    let canonical = key == "0" || !key.starts_with('0');
-    let all_digits = !key.is_empty() && key.bytes().all(|byte| byte.is_ascii_digit());
-    (canonical && all_digits)
-        .then(|| key.parse::<u32>().ok())
-        .flatten()
-        .filter(|index| *index != u32::MAX)
-}
-
-impl Serialize for Record {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut entries: Vec<&(String, String)> = self.0.iter().collect();
-        entries.sort_by_key(|(key, _)| match array_index(key) {
-            Some(index) => (0, index),
-            None => (1, 0),
-        });
-        // as `Object.entries`: JSON objects lose their key order on the wire
-        let mut list = serializer.serialize_seq(Some(entries.len()))?;
-        for (key, value) in entries {
-            list.serialize_element(&(key, value))?;
-        }
-        list.end()
-    }
-}
+/// `setOwn(out, key, value)`.
+pub type Record = JsObject<String>;
 
 /// The document properties of a .docx, read from its three docProps parts.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize)]
@@ -168,7 +117,7 @@ fn element_texts(xml: &str, elements: &[(&str, JsRegex)]) -> Record {
     let mut out = Record::default();
     for (key, element) in elements {
         if let Some(found) = element.exec(xml) {
-            out.set(key, decode_xml_text(found.get(3).unwrap_or("")));
+            out.set(*key, decode_xml_text(found.get(3).unwrap_or("")));
         }
     }
     out

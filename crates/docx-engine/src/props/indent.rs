@@ -1,6 +1,6 @@
 //! Tab stops, indents and the paragraph mark of an empty paragraph.
 
-use jscompat::{JsNum, Radix, math_round, number_to_string, parse_int, truthy};
+use jscompat::{JsNum, Radix, js_object, math_round, number_to_string, parse_int, truthy};
 use ooxml_xml::XNode;
 use serde::{Deserialize, Serialize};
 use serde_json::{Map, Value};
@@ -59,14 +59,15 @@ pub fn auto_space_mode(de: Option<bool>, dn: Option<bool>) -> Option<AutoSpace> 
     })
 }
 
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize)]
 pub struct TabStop {
     pub pos: JsNum,
     pub val: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub leader: Option<String>,
+    /// Only a w:ptab stop has it, written before its leader.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub rel: Option<&'static str>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub leader: Option<String>,
 }
 
 const TAB_LEADERS: [&str; 5] = ["dot", "hyphen", "underscore", "heavy", "middleDot"];
@@ -165,22 +166,23 @@ pub fn indent_twips_of(ind: &XNode) -> IndentTwips {
     }
 }
 
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct CharIndents {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub left: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub right: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub first_line: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub hanging: Option<JsNum>,
+js_object! {
+    deserialize;
+    /// Character-unit indents (`CharIndents`). The order of its keys follows
+    /// the code that made it: `mergeCharIndents` spreads one and deletes keys.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct CharIndents {
+        pub left: JsNum,
+        pub right: JsNum,
+        pub first_line: JsNum,
+        pub hanging: JsNum,
+    }
 }
 
 impl CharIndents {
+    /// `Object.keys(chars).length > 0 ? chars : undefined`
     fn non_empty(self) -> Option<Self> {
-        (self != Self::default()).then_some(self)
+        (!self.has_no_key()).then_some(self)
     }
 }
 
@@ -193,13 +195,20 @@ pub fn char_indents_of(ind: Option<&XNode>) -> Option<CharIndents> {
         value.is_finite().then_some(JsNum(value))
     };
     let not_negative = |value: Option<JsNum>| value.filter(|value| value.0 >= 0.0);
-    CharIndents {
-        left: num("w:leftChars", Some("w:startChars")),
-        right: num("w:rightChars", Some("w:endChars")),
-        first_line: not_negative(num("w:firstLineChars", None)),
-        hanging: not_negative(num("w:hangingChars", None)),
-    }
-    .non_empty()
+    let mut chars = CharIndents::default();
+    chars
+        .left
+        .set_some(num("w:leftChars", Some("w:startChars")));
+    chars
+        .right
+        .set_some(num("w:rightChars", Some("w:endChars")));
+    chars
+        .first_line
+        .set_some(not_negative(num("w:firstLineChars", None)));
+    chars
+        .hanging
+        .set_some(not_negative(num("w:hangingChars", None)));
+    chars.non_empty()
 }
 
 /// Layers one w:ind's character-unit attributes over inherited ones: a *Chars
@@ -212,30 +221,28 @@ pub fn merge_char_indents(
     let (Some(base), Some(over)) = (&base, &over) else {
         return base.or(over);
     };
-    let special = over.first_line.is_some() || over.hanging.is_some();
-    Some(CharIndents {
-        left: over.left.or(base.left),
-        right: over.right.or(base.right),
-        first_line: if special {
-            over.first_line
-        } else {
-            base.first_line
-        },
-        hanging: if special { over.hanging } else { base.hanging },
-    })
+    let mut merged = base.clone();
+    merged.left.set_some(*over.left);
+    merged.right.set_some(*over.right);
+    if over.first_line.is_some() || over.hanging.is_some() {
+        merged.first_line.delete();
+        merged.hanging.delete();
+        merged.first_line.set_some(*over.first_line);
+        merged.hanging.set_some(*over.hanging);
+    }
+    Some(merged)
 }
 
 /// The character indents that lay out: an explicit zero means "absolute" and drops out.
 pub fn active_char_indents(chars: Option<&CharIndents>) -> Option<CharIndents> {
     let active = |value: Option<JsNum>| value.filter(|value| value.0 != 0.0 && !value.0.is_nan());
     let chars = chars?;
-    CharIndents {
-        left: active(chars.left),
-        right: active(chars.right),
-        first_line: active(chars.first_line),
-        hanging: active(chars.hanging),
-    }
-    .non_empty()
+    let mut out = CharIndents::default();
+    out.left.set_some(active(*chars.left));
+    out.right.set_some(active(*chars.right));
+    out.first_line.set_some(active(*chars.first_line));
+    out.hanging.set_some(active(*chars.hanging));
+    out.non_empty()
 }
 
 /// Twips of one "character" for each family of character-unit indents.
@@ -275,7 +282,7 @@ pub fn resolve_char_indents(
     let twips_first = indent_first_line
         .filter(|value| *value > 0.0)
         .unwrap_or(0.0);
-    let hanging = match (chars.hanging, chars.first_line) {
+    let hanging = match (*chars.hanging, *chars.first_line) {
         (Some(hanging), _) => twips(hanging, units.run),
         (None, Some(_)) => 0.0,
         (None, None) => twips_hanging,
@@ -296,9 +303,10 @@ pub fn resolve_char_indents(
     } else if first_line > 0.0 {
         set_number(&mut f, "indentFirstLine", first_line);
     } else if indent_first_line.is_some_and(|value| value != 0.0 && !value.is_nan()) {
-        f.remove("indentFirstLine");
+        // not `remove`: that moves the last key into the place of the one removed
+        f.shift_remove("indentFirstLine");
     }
-    if let Some(right) = chars.right {
+    if let Some(right) = *chars.right {
         set_number(&mut f, "indentRight", twips(right, units.normal));
     }
     f

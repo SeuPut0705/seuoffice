@@ -1,9 +1,10 @@
 //! word/numbering.xml as per-numId level definitions (`parseNumbering` of
 //! packages/docx-engine/src/parse-package.ts).
 
-use std::collections::BTreeMap;
-
-use jscompat::{JsMap, JsNum, Radix, js_regex, number_to_string, parse_int, trim, truthy};
+use jscompat::{
+    JsMap, JsNum, JsObject, Radix, Slot, js_object, js_regex, number_to_string, parse_int, trim,
+    truthy,
+};
 use ooxml_pkg::Package;
 use ooxml_xml::XNode;
 use serde::Serialize;
@@ -11,55 +12,56 @@ use serde::Serialize;
 use crate::package::{Thrown, parse_part, part_text};
 use crate::xml_text::{decode_numeric_char_refs, on_off_of};
 
-/// One w:lvl of a numbering definition.
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct NumberingLevel {
-    pub num_fmt: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub custom_format: Option<String>,
-    pub lvl_text: String,
-    pub start: JsNum,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub suff: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub is_lgl: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub lvl_jc: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub p_style: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub lvl_restart: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bidi: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tab_stop: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_left: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub indent_right: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub hanging: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub first_line: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub sz_half_points: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bold: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub italic: Option<bool>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub font: Option<String>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pic_bullet_id: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub pic_bullet_src: Option<String>,
+js_object! {
+    /// One w:lvl of a numbering definition. The reader of the part and the
+    /// list dialogs (`numberingLevelFromCustom`) write its keys in orders of
+    /// their own.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct NumberingLevel {
+        pub num_fmt: String,
+        pub lvl_text: String,
+        pub start: JsNum,
+        pub custom_format: String,
+        pub suff: String,
+        pub is_lgl: bool,
+        pub lvl_jc: &'static str,
+        pub p_style: String,
+        pub lvl_restart: JsNum,
+        pub bidi: bool,
+        pub tab_stop: JsNum,
+        pub indent_left: JsNum,
+        pub indent_right: JsNum,
+        pub hanging: JsNum,
+        pub first_line: JsNum,
+        pub sz_half_points: JsNum,
+        pub color: String,
+        pub bold: bool,
+        pub italic: bool,
+        pub font: String,
+        pub pic_bullet_id: JsNum,
+        pub pic_bullet_src: String,
+    }
+}
+
+impl NumberingLevel {
+    /// `level.numFmt`: every level has it.
+    pub fn num_fmt(&self) -> &str {
+        self.num_fmt.as_deref().unwrap_or_default()
+    }
+
+    /// `level.lvlText`: every level has it.
+    pub fn lvl_text(&self) -> &str {
+        self.lvl_text.as_deref().unwrap_or_default()
+    }
+
+    /// `level.start`: every level has it.
+    pub fn start(&self) -> f64 {
+        self.start.map_or(0.0, |start| start.0)
+    }
 }
 
 /// Levels by ilvl. The key is the number as JavaScript writes an object key.
-pub type Levels = BTreeMap<String, NumberingLevel>;
+pub type Levels = JsObject<NumberingLevel>;
 
 /// One w:num of word/numbering.xml: the levels of its abstractNum with the
 /// overrides applied.
@@ -71,7 +73,7 @@ pub struct NumberingDef {
     pub abstract_num_id: String,
     pub levels: Levels,
     /// ilvl to the w:startOverride value.
-    pub start_overrides: BTreeMap<String, JsNum>,
+    pub start_overrides: JsObject<JsNum>,
 }
 
 #[derive(Debug, Default, Serialize)]
@@ -153,70 +155,85 @@ fn parse_numbering_level(lvl_node: &XNode) -> NumberingLevel {
     let start = parse_int(val_of(lvl_node, "w:start").unwrap_or("0"), Radix::Ten);
     let (num_fmt, custom_format) = num_fmt_of_level(lvl_node);
     let mut level = NumberingLevel {
-        num_fmt: num_fmt.unwrap_or("decimal").to_owned(),
-        lvl_text: decode_numeric_char_refs(val_of(lvl_node, "w:lvlText").unwrap_or(""))
-            .into_owned(),
-        start: JsNum(if start.is_finite() { start } else { 0.0 }),
-        custom_format: truthy(custom_format).map(str::to_owned),
+        num_fmt: Slot::of(num_fmt.unwrap_or("decimal").to_owned()),
+        lvl_text: Slot::of(
+            decode_numeric_char_refs(val_of(lvl_node, "w:lvlText").unwrap_or("")).into_owned(),
+        ),
+        start: Slot::of(JsNum(if start.is_finite() { start } else { 0.0 })),
         ..NumberingLevel::default()
     };
-    level.suff = val_of(lvl_node, "w:suff")
-        .filter(|suff| matches!(*suff, "space" | "nothing" | "tab"))
-        .map(str::to_owned);
+    level
+        .custom_format
+        .set_some(truthy(custom_format).map(str::to_owned));
+    level.suff.set_some(
+        val_of(lvl_node, "w:suff")
+            .filter(|suff| matches!(*suff, "space" | "nothing" | "tab"))
+            .map(str::to_owned),
+    );
     if lvl_node
         .find_child("w:isLgl")
         .is_some_and(|is_lgl| !is_switched_off(is_lgl.attr("w:val")))
     {
-        level.is_lgl = Some(true);
+        level.is_lgl.set(true);
     }
-    level.lvl_jc = match val_of(lvl_node, "w:lvlJc") {
+    level.lvl_jc.set_some(match val_of(lvl_node, "w:lvlJc") {
         Some("right" | "end") => Some("right"),
         Some("center") => Some("center"),
         _ => None,
-    };
-    level.p_style = truthy(val_of(lvl_node, "w:pStyle")).map(str::to_owned);
-    level.lvl_restart = finite(int_of(val_of(lvl_node, "w:lvlRestart")));
+    });
+    level
+        .p_style
+        .set_some(truthy(val_of(lvl_node, "w:pStyle")).map(str::to_owned));
+    level
+        .lvl_restart
+        .set_some(finite(int_of(val_of(lvl_node, "w:lvlRestart"))));
     let lvl_p_pr = lvl_node.find_child("w:pPr");
     if lvl_p_pr.is_some_and(|p_pr| on_off_of(p_pr, "w:bidi") == Some(true)) {
-        level.bidi = Some(true);
+        level.bidi.set(true);
     }
     let tabs = lvl_p_pr.and_then(|p_pr| p_pr.find_child("w:tabs"));
-    level.tab_stop = tabs.and_then(|tabs| {
+    level.tab_stop.set_some(tabs.and_then(|tabs| {
         finite(int_of(
             tabs.find_child("w:tab").and_then(|tab| tab.attr("w:pos")),
         ))
-    });
+    }));
     if let Some(ind) = lvl_p_pr.and_then(|p_pr| p_pr.find_child("w:ind")) {
         // an explicit 0 is a real value, and an absent left is 0 too; left
         // and right are the logical start and end
         let left = int_of(ind.attr("w:left").or(ind.attr("w:start")));
-        level.indent_left = Some(JsNum(if left.is_finite() { left } else { 0.0 }));
-        level.indent_right = finite(int_of(ind.attr("w:right").or(ind.attr("w:end"))));
+        level
+            .indent_left
+            .set(JsNum(if left.is_finite() { left } else { 0.0 }));
+        level
+            .indent_right
+            .set_some(finite(int_of(ind.attr("w:right").or(ind.attr("w:end")))));
         let hanging = int_of(ind.attr("w:hanging"));
         if hanging > 0.0 {
-            level.hanging = Some(JsNum(hanging));
+            level.hanging.set(JsNum(hanging));
         }
         let first_line = int_of(ind.attr("w:firstLine"));
         if level.hanging.is_none() && first_line >= 0.0 {
-            level.first_line = Some(JsNum(first_line));
+            level.first_line.set(JsNum(first_line));
         }
     }
     let lvl_r_pr = lvl_node.find_child("w:rPr");
     let sz = lvl_r_pr.map_or(f64::NAN, |r_pr| int_of(val_of(r_pr, "w:sz")));
     if sz > 0.0 {
-        level.sz_half_points = Some(JsNum(sz));
+        level.sz_half_points.set(JsNum(sz));
     }
-    level.color = lvl_r_pr
-        .and_then(|r_pr| val_of(r_pr, "w:color"))
-        .filter(|color| js_regex!("^[0-9a-f]{6}$", "i").test(color))
-        .map(str::to_uppercase);
+    level.color.set_some(
+        lvl_r_pr
+            .and_then(|r_pr| val_of(r_pr, "w:color"))
+            .filter(|color| js_regex!("^[0-9a-f]{6}$", "i").test(color))
+            .map(str::to_uppercase),
+    );
     let flag = |name: &str| {
         lvl_r_pr
             .and_then(|r_pr| r_pr.find_child(name))
             .is_some_and(|element| !is_switched_off(element.attr("w:val")))
     };
-    level.bold = flag("w:b").then_some(true);
-    level.italic = flag("w:i").then_some(true);
+    level.bold.set_some(flag("w:b").then_some(true));
+    level.italic.set_some(flag("w:i").then_some(true));
     let fonts = lvl_r_pr.and_then(|r_pr| r_pr.find_child("w:rFonts"));
     let font = fonts.and_then(|fonts| {
         fonts
@@ -224,8 +241,10 @@ fn parse_numbering_level(lvl_node: &XNode) -> NumberingLevel {
             .or(fonts.attr("w:hAnsi"))
             .or(fonts.attr("w:eastAsia"))
     });
-    level.font = truthy(font).map(str::to_owned);
-    level.pic_bullet_id = finite(int_of(val_of(lvl_node, "w:lvlPicBulletId")));
+    level.font.set_some(truthy(font).map(str::to_owned));
+    level
+        .pic_bullet_id
+        .set_some(finite(int_of(val_of(lvl_node, "w:lvlPicBulletId"))));
     level
 }
 
@@ -294,7 +313,7 @@ pub fn parse_numbering(package: &Package) -> Result<Numbering, Thrown> {
         for lvl in abs.find_children("w:lvl") {
             let ilvl = int_of(lvl.attr("w:ilvl"));
             if ilvl.is_finite() {
-                levels.insert(level_key(ilvl), parse_numbering_level(lvl));
+                levels.set(level_key(ilvl), parse_numbering_level(lvl));
             }
         }
         abs_levels.set(abs_id, levels);
@@ -324,8 +343,11 @@ pub fn parse_numbering(package: &Package) -> Result<Numbering, Thrown> {
             }
         }
         if target != abs_id {
+            // `{ ...abstractLevels.get(target), ...abstractLevels.get(absId) }`
             let mut merged = abs_levels.get(target).cloned().unwrap_or_default();
-            merged.extend(abs_levels.get(abs_id).cloned().unwrap_or_default());
+            if let Some(own) = abs_levels.get(abs_id) {
+                merged.assign(own);
+            }
             abs_levels.set(abs_id, merged);
         }
     }
@@ -337,7 +359,7 @@ pub fn parse_numbering(package: &Package) -> Result<Numbering, Thrown> {
             continue;
         };
         let mut levels = abs_levels.get(abs_id).cloned().unwrap_or_default();
-        let mut start_overrides = BTreeMap::new();
+        let mut start_overrides = JsObject::new();
         for over in num.find_children("w:lvlOverride") {
             let ilvl = int_of(over.attr("w:ilvl"));
             if !ilvl.is_finite() {
@@ -346,16 +368,16 @@ pub fn parse_numbering(package: &Package) -> Result<Numbering, Thrown> {
             if let Some(start_val) = val_of(over, "w:startOverride") {
                 let n = parse_int(start_val, Radix::Ten);
                 if n.is_finite() {
-                    start_overrides.insert(level_key(ilvl), JsNum(n));
+                    start_overrides.set(level_key(ilvl), JsNum(n));
                 }
             }
             if let Some(lvl) = over.find_child("w:lvl") {
-                levels.insert(level_key(ilvl), parse_numbering_level(lvl));
+                levels.set(level_key(ilvl), parse_numbering_level(lvl));
             }
         }
         let format = if levels
             .get("0")
-            .is_some_and(|level| level.num_fmt == "bullet")
+            .is_some_and(|level| level.num_fmt.as_deref() == Some("bullet"))
         {
             "bullet"
         } else {

@@ -3,8 +3,10 @@
 //! `vmlStyleDimPx`, `vmlRotationDeg`, `anchorRelH`, `anchorRelV`,
 //! `vmlFloatAnchor`, `vmlFraction`, `vmlColorHex`.
 
-use jscompat::{JsNum, JsRegex, RegexSyntaxError, js_regex, math_round, parse_float, trim, truthy};
-use serde::{Deserialize, Serialize};
+use jscompat::{
+    JsNum, JsRegex, RegexSyntaxError, js_object, js_regex, math_round, parse_float, trim, truthy,
+};
+use serde::Deserialize;
 
 /// `vmlStyleProp(style, key)` for a literal key: the pattern compiles once per
 /// call site instead of once per call.
@@ -136,56 +138,67 @@ pub fn anchor_rel_v(rel: Option<&str>) -> &'static str {
     }
 }
 
-/// The float anchor fields of a header/footer image (`Pick<HfImage, 'posH' |
-/// 'posV' | 'posXPx' | 'posYPx' | 'posHRel' | 'posVRel'>`).
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct FloatAnchor {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pos_h: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pos_v: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pos_x_px: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pos_y_px: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pos_h_rel: Option<&'static str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pos_v_rel: Option<&'static str>,
+js_object! {
+    /// The float anchor fields of a header/footer image (`Pick<HfImage, 'posH' |
+    /// 'posV' | 'posXPx' | 'posYPx' | 'posHRel' | 'posVRel'>`).
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct FloatAnchor {
+        pub pos_h: &'static str,
+        pub pos_v: &'static str,
+        pub pos_x_px: JsNum,
+        pub pos_y_px: JsNum,
+        pub pos_h_rel: &'static str,
+        pub pos_v_rel: &'static str,
+    }
 }
+
+/// `vmlFloatAnchor(style, out)` on any object that has the float anchor keys:
+/// the keys are set on `out` itself, after the keys it has.
+macro_rules! set_float_anchor {
+    ($style:expr, $out:expr) => {{
+        let style: &str = $style;
+        $out.pos_h_rel
+            .set($crate::vml::anchor_rel_h($crate::vml::style_prop!(
+                style,
+                "mso-position-horizontal-relative"
+            )));
+        $out.pos_v_rel
+            .set($crate::vml::anchor_rel_v($crate::vml::style_prop!(
+                style,
+                "mso-position-vertical-relative"
+            )));
+        let pos_h = $crate::vml::style_prop!(style, "mso-position-horizontal");
+        let pos_v = $crate::vml::style_prop!(style, "mso-position-vertical");
+        match pos_h {
+            Some("left") => $out.pos_h.set("left"),
+            Some("center") => $out.pos_h.set("center"),
+            Some("right") => $out.pos_h.set("right"),
+            _ => {
+                let px = $crate::vml::vml_length_px($crate::vml::style_prop!(style, "margin-left"))
+                    .unwrap_or(0.0);
+                $out.pos_x_px
+                    .set(::jscompat::JsNum(::jscompat::math_round(px)));
+            }
+        }
+        match pos_v {
+            Some("top") => $out.pos_v.set("top"),
+            Some("center") => $out.pos_v.set("center"),
+            Some("bottom") => $out.pos_v.set("bottom"),
+            _ => {
+                let px = $crate::vml::vml_length_px($crate::vml::style_prop!(style, "margin-top"))
+                    .unwrap_or(0.0);
+                $out.pos_y_px
+                    .set(::jscompat::JsNum(::jscompat::math_round(px)));
+            }
+        }
+    }};
+}
+pub(crate) use set_float_anchor;
 
 /// position:absolute placement of a VML shape as header/footer float anchor
 /// fields. A keyword alignment wins over the margin offsets.
 pub fn vml_float_anchor(style: &str, out: &mut FloatAnchor) {
-    out.pos_h_rel = Some(anchor_rel_h(style_prop!(
-        style,
-        "mso-position-horizontal-relative"
-    )));
-    out.pos_v_rel = Some(anchor_rel_v(style_prop!(
-        style,
-        "mso-position-vertical-relative"
-    )));
-    let pos_h = style_prop!(style, "mso-position-horizontal");
-    let pos_v = style_prop!(style, "mso-position-vertical");
-    match pos_h {
-        Some("left") => out.pos_h = Some("left"),
-        Some("center") => out.pos_h = Some("center"),
-        Some("right") => out.pos_h = Some("right"),
-        _ => {
-            let px = vml_length_px(style_prop!(style, "margin-left")).unwrap_or(0.0);
-            out.pos_x_px = Some(JsNum(math_round(px)));
-        }
-    }
-    match pos_v {
-        Some("top") => out.pos_v = Some("top"),
-        Some("center") => out.pos_v = Some("center"),
-        Some("bottom") => out.pos_v = Some("bottom"),
-        _ => {
-            let px = vml_length_px(style_prop!(style, "margin-top")).unwrap_or(0.0);
-            out.pos_y_px = Some(JsNum(math_round(px)));
-        }
-    }
+    set_float_anchor!(style, out);
 }
 
 /// VML fixed-point or fraction ("32768f" = 0.5, ".5", "1") as a number.

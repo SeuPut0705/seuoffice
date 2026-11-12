@@ -1,7 +1,7 @@
 //! Shading, table look, borders and cell margins.
 
 use jscompat::{
-    JsNum, Radix, js_regex, math_round, pad_start, parse_int, to_int32, to_number,
+    JsNum, Radix, Slot, js_object, js_regex, math_round, pad_start, parse_int, to_int32, to_number,
     to_string_radix16, truthy,
 };
 use ooxml_xml::XNode;
@@ -125,26 +125,21 @@ pub struct BorderLine {
     pub color: Option<String>,
 }
 
-/// Table-level borders (with the inner lines) or cell-level borders (with the diagonals).
-#[derive(Debug, Clone, Default, PartialEq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Borders {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub top: Option<BorderLine>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub left: Option<BorderLine>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bottom: Option<BorderLine>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub right: Option<BorderLine>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub inside_h: Option<BorderLine>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub inside_v: Option<BorderLine>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tl2br: Option<BorderLine>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub tr2bl: Option<BorderLine>,
+js_object! {
+    /// Table-level borders (with the inner lines) or cell-level borders (with
+    /// the diagonals). A side is a key from the first tag that gives it, and
+    /// duplicated containers and the table styles spread one over another.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct Borders {
+        pub top: BorderLine,
+        pub left: BorderLine,
+        pub bottom: BorderLine,
+        pub right: BorderLine,
+        pub inside_h: BorderLine,
+        pub inside_v: BorderLine,
+        pub tl2br: BorderLine,
+        pub tr2bl: BorderLine,
+    }
 }
 
 fn border_lines_of(node: &XNode, with_inside: bool) -> Option<Borders> {
@@ -162,9 +157,9 @@ fn border_lines_of(node: &XNode, with_inside: bool) -> Option<Borders> {
         })
     };
     // the first tag that yields a line wins its side: w:left before w:start
-    let first = |side: &mut Option<BorderLine>, tag| {
+    let first = |side: &mut Slot<BorderLine>, tag| {
         if side.is_none() {
-            *side = line_of(tag);
+            side.set_some(line_of(tag));
         }
     };
     first(&mut borders.top, "w:top");
@@ -181,7 +176,7 @@ fn border_lines_of(node: &XNode, with_inside: bool) -> Option<Borders> {
         first(&mut borders.tl2br, "w:tl2br");
         first(&mut borders.tr2bl, "w:tr2bl");
     }
-    (borders != Borders::default()).then_some(borders)
+    (!borders.has_no_key()).then_some(borders)
 }
 
 /// Duplicated border containers (two w:tcBorders in one tcPr): Word merges
@@ -196,56 +191,46 @@ pub fn merged_border_lines_of(
         let Some(lines) = border_lines_of(node, with_inside) else {
             continue;
         };
-        let base = merged.take().unwrap_or_default();
-        merged = Some(Borders {
-            top: lines.top.or(base.top),
-            left: lines.left.or(base.left),
-            bottom: lines.bottom.or(base.bottom),
-            right: lines.right.or(base.right),
-            inside_h: lines.inside_h.or(base.inside_h),
-            inside_v: lines.inside_v.or(base.inside_v),
-            tl2br: lines.tl2br.or(base.tl2br),
-            tr2bl: lines.tr2bl.or(base.tr2bl),
-        });
+        // `{ ...merged, ...lines }`
+        let mut over = merged.take().unwrap_or_default();
+        over.assign(&lines);
+        merged = Some(over);
     }
     merged
 }
 
-/// Declared look of one w:pBdr side.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ParaBorderLine {
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub color: Option<String>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub sz_pt: Option<JsNum>,
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub space_pt: Option<JsNum>,
-    /// w:val none or nil with a w:space: no line, but the space still pads the paragraph.
-    #[serde(default, skip_serializing_if = "std::ops::Not::not")]
-    pub none: bool,
+js_object! {
+    deserialize;
+    /// Declared look of one w:pBdr side. `none` is w:val none or nil with a
+    /// w:space: no line, but the space still pads the paragraph.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct ParaBorderLine {
+        pub none: bool,
+        pub color: String,
+        pub sz_pt: JsNum,
+        pub space_pt: JsNum,
+    }
 }
 
-/// One side of w:pBdr: not declared, reset (`null` in the model), or a line.
-#[derive(Debug, Clone, Default, PartialEq)]
+impl ParaBorderLine {
+    /// `line.none`: the key holds true.
+    fn is_none_line(&self) -> bool {
+        *self.none == Some(true)
+    }
+}
+
+/// One declared side of w:pBdr: reset (`null` in the model), or a line.
+#[derive(Debug, Clone, PartialEq)]
 pub enum Side {
-    #[default]
-    Undeclared,
     Reset,
     Line(ParaBorderLine),
-}
-
-impl Side {
-    fn is_undeclared(&self) -> bool {
-        *self == Self::Undeclared
-    }
 }
 
 impl Serialize for Side {
     fn serialize<S: serde::Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         match self {
             Self::Line(line) => line.serialize(serializer),
-            Self::Undeclared | Self::Reset => serializer.serialize_unit(),
+            Self::Reset => serializer.serialize_unit(),
         }
     }
 }
@@ -259,21 +244,54 @@ impl<'de> Deserialize<'de> for Side {
     }
 }
 
-/// Per-side w:pBdr lines.
-#[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]
-pub struct ParaBorderSides {
-    #[serde(default, skip_serializing_if = "Side::is_undeclared")]
-    pub t: Side,
-    #[serde(default, skip_serializing_if = "Side::is_undeclared")]
-    pub b: Side,
-    #[serde(default, skip_serializing_if = "Side::is_undeclared")]
-    pub l: Side,
-    #[serde(default, skip_serializing_if = "Side::is_undeclared")]
-    pub r: Side,
+js_object! {
+    /// Per-side w:pBdr lines. A side that is not declared is no key; the
+    /// styles spread one of these over another.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct ParaBorderSides {
+        pub t: Side,
+        pub b: Side,
+        pub l: Side,
+        pub r: Side,
+    }
+}
+
+/// Not the one `js_object!` writes: there `null` is no key, here it is a reset side.
+impl<'de> Deserialize<'de> for ParaBorderSides {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        struct Sides;
+        impl<'de> serde::de::Visitor<'de> for Sides {
+            type Value = ParaBorderSides;
+
+            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
+                formatter.write_str("the sides of a paragraph border")
+            }
+
+            fn visit_map<A: serde::de::MapAccess<'de>>(
+                self,
+                mut map: A,
+            ) -> Result<ParaBorderSides, A::Error> {
+                let mut sides = ParaBorderSides::default();
+                while let Some(key) = map.next_key::<String>()? {
+                    match key.as_str() {
+                        "t" => sides.t.set(map.next_value()?),
+                        "b" => sides.b.set(map.next_value()?),
+                        "l" => sides.l.set(map.next_value()?),
+                        "r" => sides.r.set(map.next_value()?),
+                        _ => {
+                            map.next_value::<serde::de::IgnoredAny>()?;
+                        }
+                    }
+                }
+                Ok(sides)
+            }
+        }
+        deserializer.deserialize_map(Sides)
+    }
 }
 
 impl ParaBorderSides {
-    fn sides(&self) -> [(char, &Side); 4] {
+    pub fn sides(&self) -> [(char, &Slot<Side>); 4] {
         [
             ('t', &self.t),
             ('b', &self.b),
@@ -282,7 +300,7 @@ impl ParaBorderSides {
         ]
     }
 
-    fn side_mut(&mut self, ch: char) -> &mut Side {
+    pub fn side_mut(&mut self, ch: char) -> &mut Slot<Side> {
         match ch {
             't' => &mut self.t,
             'b' => &mut self.b,
@@ -300,26 +318,23 @@ pub fn para_border_sides_of(p_pr: &XNode, theme: Option<&ThemeColors>) -> Option
     if containers.is_empty() {
         return None;
     }
-    let side_of = |tag: &str| -> Side {
-        let Some(element) = containers
+    let side_of = |tag: &str| -> Option<Side> {
+        let element = containers
             .iter()
             .rev()
-            .find_map(|container| container.find_child(tag))
-        else {
-            return Side::Undeclared;
-        };
+            .find_map(|container| container.find_child(tag))?;
         let int_attr = |key| parse_int(element.attr(key).unwrap_or(""), Radix::Ten);
         let positive = |value: f64| (value.is_finite() && value > 0.0).then_some(value);
         let space = positive(int_attr("w:space"));
         if matches!(element.attr("w:val"), Some("none" | "nil")) {
-            return match space {
+            return Some(match space {
                 Some(space) => Side::Line(ParaBorderLine {
-                    none: true,
-                    space_pt: Some(JsNum(space)),
+                    none: Slot::of(true),
+                    space_pt: Slot::of(JsNum(space)),
                     ..ParaBorderLine::default()
                 }),
                 None => Side::Reset,
-            };
+            });
         }
         let themed =
             truthy(element.attr("w:themeColor"))
@@ -337,20 +352,20 @@ pub fn para_border_sides_of(p_pr: &XNode, theme: Option<&ThemeColors>) -> Option
                 .filter(|color| *color != "auto")
                 .map(|color| strip_hash(color).to_owned())
         };
-        Side::Line(ParaBorderLine {
-            color: themed.filter(|hex| !hex.is_empty()).or_else(literal),
-            sz_pt: positive(int_attr("w:sz")).map(|sz| JsNum(sz / 8.0)),
-            space_pt: space.map(JsNum),
-            none: false,
-        })
+        let mut line = ParaBorderLine::default();
+        line.color
+            .set_some(themed.filter(|hex| !hex.is_empty()).or_else(literal));
+        line.sz_pt
+            .set_some(positive(int_attr("w:sz")).map(|sz| JsNum(sz / 8.0)));
+        line.space_pt.set_some(space.map(JsNum));
+        Some(Side::Line(line))
     };
-    let sides = ParaBorderSides {
-        t: side_of("w:top"),
-        b: side_of("w:bottom"),
-        l: side_of("w:left"),
-        r: side_of("w:right"),
-    };
-    (sides != ParaBorderSides::default()).then_some(sides)
+    let mut sides = ParaBorderSides::default();
+    sides.t.set_some(side_of("w:top"));
+    sides.b.set_some(side_of("w:bottom"));
+    sides.l.set_some(side_of("w:left"));
+    sides.r.set_some(side_of("w:right"));
+    (!sides.has_no_key()).then_some(sides)
 }
 
 /// The sides of a paragraph format that carry a value per side.
@@ -430,16 +445,16 @@ pub fn para_borders_of(sides: &ParaBorderSides) -> ParaBorderModel {
     let mut lines = PerSide::default();
     let mut pad = PerSide::default();
     for (ch, side) in sides.sides() {
-        match side {
-            Side::Undeclared => {}
-            Side::Reset => reset.push(ch),
-            Side::Line(line) if line.none => {
+        match &**side {
+            None => {}
+            Some(Side::Reset) => reset.push(ch),
+            Some(Side::Line(line)) if line.is_none_line() => {
                 reset.push(ch);
                 if let Some(space) = line.space_pt.filter(is_nonzero) {
                     pad.set(ch, space);
                 }
             }
-            Side::Line(line) => {
+            Some(Side::Line(line)) => {
                 borders.push(ch);
                 if line.color.is_some() || line.sz_pt.is_some() || line.space_pt.is_some() {
                     lines.set(ch, line.clone());
@@ -475,15 +490,20 @@ pub fn merge_style_borders(
             .and_then(|direct| direct.border_pad.as_ref()?.get(ch))
             .filter(|pad| is_nonzero(pad));
         if drawn.contains(ch) {
-            *merged.side_mut(ch) = Side::Line(direct_line.cloned().unwrap_or_default());
+            merged
+                .side_mut(ch)
+                .set(Side::Line(direct_line.cloned().unwrap_or_default()));
         } else if let Some(pad) = direct_pad {
-            *merged.side_mut(ch) = Side::Line(ParaBorderLine {
-                none: true,
-                space_pt: Some(*pad),
+            merged.side_mut(ch).set(Side::Line(ParaBorderLine {
+                none: Slot::of(true),
+                space_pt: Slot::of(*pad),
                 ..ParaBorderLine::default()
-            });
-        } else if matches!(side, Side::Line(_)) && !drawn.contains(ch) && !reset.contains(ch) {
-            *merged.side_mut(ch) = side.clone();
+            }));
+        } else if let Some(Side::Line(line)) = &**side
+            && !drawn.contains(ch)
+            && !reset.contains(ch)
+        {
+            merged.side_mut(ch).set(Side::Line(line.clone()));
         }
     }
     ParaBorderModel {
@@ -492,16 +512,16 @@ pub fn merge_style_borders(
     }
 }
 
-#[derive(Debug, Default, PartialEq, Serialize)]
-pub struct CellMargins {
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub top: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub left: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub bottom: Option<JsNum>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub right: Option<JsNum>,
+js_object! {
+    /// Cell margins in twips (`CellMargins`). A side is a key from the first
+    /// tag that gives it, so `w:start` after `w:right` puts left after right.
+    #[derive(Debug, Clone, PartialEq)]
+    pub struct CellMargins {
+        pub top: JsNum,
+        pub left: JsNum,
+        pub bottom: JsNum,
+        pub right: JsNum,
+    }
 }
 
 /// Cell margins in twips. Sides in a unit other than dxa are skipped.
@@ -518,9 +538,9 @@ pub fn cell_margins_of(node: Option<&XNode>) -> Option<CellMargins> {
         let width = attr("w:w").map_or(f64::NAN, to_number);
         (width.is_finite() && width >= 0.0).then_some(JsNum(width))
     };
-    let first = |side: &mut Option<JsNum>, tag| {
+    let first = |side: &mut Slot<JsNum>, tag| {
         if side.is_none() {
-            *side = width_of(tag);
+            side.set_some(width_of(tag));
         }
     };
     first(&mut margins.top, "w:top");
@@ -529,5 +549,5 @@ pub fn cell_margins_of(node: Option<&XNode>) -> Option<CellMargins> {
     first(&mut margins.right, "w:right");
     first(&mut margins.left, "w:start");
     first(&mut margins.right, "w:end");
-    (margins != CellMargins::default()).then_some(margins)
+    (!margins.has_no_key()).then_some(margins)
 }

@@ -5,7 +5,7 @@ mod locale;
 
 use std::sync::LazyLock;
 
-use jscompat::{JsNum, js_regex, math_round, number_to_string, truthy};
+use jscompat::{JsNum, Slot, js_regex, math_round, number_to_string, truthy};
 use ooxml_pkg::Package;
 use ooxml_pkg::write::{UtcDate, generate};
 use serde::{Deserialize, Serialize};
@@ -321,8 +321,8 @@ fn owned(text: Option<&str>) -> Option<String> {
 /// A parsed level in the shape the define/adjust dialogs edit
 pub fn custom_level_from_numbering_level(level: &NumberingLevel) -> CustomNumberingLevel {
     CustomNumberingLevel {
-        num_fmt: level.num_fmt.clone(),
-        lvl_text: level.lvl_text.clone(),
+        num_fmt: level.num_fmt().to_owned(),
+        lvl_text: level.lvl_text().to_owned(),
         indent_left: level.indent_left.unwrap_or(JsNum(0.0)),
         hanging: Some(
             level
@@ -333,7 +333,7 @@ pub fn custom_level_from_numbering_level(level: &NumberingLevel) -> CustomNumber
                     0.0
                 })),
         ),
-        start: Some(level.start),
+        start: *level.start,
         custom_format: owned(truthy(level.custom_format.as_deref())),
         suff: owned(truthy(level.suff.as_deref())),
         lvl_jc: level.lvl_jc.and_then(|jc| match jc {
@@ -343,15 +343,15 @@ pub fn custom_level_from_numbering_level(level: &NumberingLevel) -> CustomNumber
             _ => None,
         }),
         font: owned(truthy(level.font.as_deref())),
-        sz_half_points: number_truthy(level.sz_half_points),
+        sz_half_points: number_truthy(*level.sz_half_points),
         color: owned(truthy(level.color.as_deref())),
         is_lgl: level.is_lgl.filter(|on| *on),
-        pic_bullet_id: level.pic_bullet_id,
+        pic_bullet_id: *level.pic_bullet_id,
         bold: level.bold.filter(|on| *on),
         italic: level.italic.filter(|on| *on),
-        tab_stop: level.tab_stop,
+        tab_stop: *level.tab_stop,
         p_style: owned(truthy(level.p_style.as_deref())),
-        lvl_restart: level.lvl_restart,
+        lvl_restart: *level.lvl_restart,
     }
 }
 
@@ -360,26 +360,27 @@ pub fn numbering_level_from_custom(
     l: &CustomNumberingLevel,
     pic_bullet_src: Option<&str>,
 ) -> NumberingLevel {
+    // the keys in the order numberingLevelFromCustom sets them
     NumberingLevel {
-        num_fmt: l.num_fmt.clone(),
-        lvl_text: l.lvl_text.clone(),
-        start: l.start.unwrap_or(JsNum(1.0)),
-        indent_left: Some(l.indent_left),
-        hanging: Some(l.hanging.unwrap_or(JsNum(360.0))),
-        custom_format: owned(truthy(l.custom_format.as_deref())),
-        suff: owned(truthy(l.suff.as_deref())),
-        lvl_jc: l.lvl_jc.map(LvlJc::as_str),
-        font: owned(truthy(l.font.as_deref())),
-        sz_half_points: number_truthy(l.sz_half_points),
-        color: owned(truthy(l.color.as_deref())),
-        is_lgl: l.is_lgl.filter(|on| *on),
-        pic_bullet_id: l.pic_bullet_id,
-        pic_bullet_src: owned(truthy(pic_bullet_src)),
-        bold: l.bold.filter(|on| *on),
-        italic: l.italic.filter(|on| *on),
-        tab_stop: l.tab_stop,
-        p_style: owned(truthy(l.p_style.as_deref())),
-        lvl_restart: l.lvl_restart,
+        num_fmt: Slot::of(l.num_fmt.clone()),
+        lvl_text: Slot::of(l.lvl_text.clone()),
+        start: Slot::of(l.start.unwrap_or(JsNum(1.0))),
+        indent_left: Slot::of(l.indent_left),
+        hanging: Slot::of(l.hanging.unwrap_or(JsNum(360.0))),
+        custom_format: Slot::maybe(owned(truthy(l.custom_format.as_deref()))),
+        suff: Slot::maybe(owned(truthy(l.suff.as_deref()))),
+        lvl_jc: Slot::maybe(l.lvl_jc.map(LvlJc::as_str)),
+        font: Slot::maybe(owned(truthy(l.font.as_deref()))),
+        sz_half_points: Slot::maybe(number_truthy(l.sz_half_points)),
+        color: Slot::maybe(owned(truthy(l.color.as_deref()))),
+        is_lgl: Slot::maybe(l.is_lgl.filter(|on| *on)),
+        pic_bullet_id: Slot::maybe(l.pic_bullet_id),
+        pic_bullet_src: Slot::maybe(owned(truthy(pic_bullet_src))),
+        bold: Slot::maybe(l.bold.filter(|on| *on)),
+        italic: Slot::maybe(l.italic.filter(|on| *on)),
+        tab_stop: Slot::maybe(l.tab_stop),
+        p_style: Slot::maybe(owned(truthy(l.p_style.as_deref()))),
+        lvl_restart: Slot::maybe(l.lvl_restart),
         ..NumberingLevel::default()
     }
 }

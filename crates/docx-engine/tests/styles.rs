@@ -6,6 +6,7 @@ use docx_engine::styles::{
     DocDefaults, StyleDisplay, para_cs_format, parse_styles, style_run_format,
 };
 use docx_engine::theme::{ThemeColors, ThemeFonts};
+use jscompat::{JsNum, Slot};
 use ooxml_pkg::Package;
 use serde_json::{Value, json};
 
@@ -264,19 +265,37 @@ fn odd_numerics() {
     );
 }
 
+/// The order of the keys every spread, `Object.assign` and `delete` of
+/// parseStyles leaves: a per-side pBdr spread, a tab merge that empties, the
+/// docDefaults indent and border fill-in, a linked style taking run keys
+/// around a key holding undefined, mergeTableDisplay with both sides of a
+/// condition, and the Times New Roman and w:lang paths of docDefaults.
+#[test]
+fn key_order_of_spreads() {
+    let files = [(
+        "word/styles.xml",
+        r#"<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:docDefaults><w:rPrDefault><w:rPr><w:szCs w:val="24"/><w:lang w:val="en-US" w:eastAsia="ko-KR"/><w:b/></w:rPr></w:rPrDefault><w:pPrDefault><w:pPr><w:pBdr><w:left w:val="single" w:sz="4"/></w:pBdr><w:ind w:right="100" w:leftChars="30"/></w:pPr></w:pPrDefault></w:docDefaults><w:style w:type="paragraph" w:styleId="P1"><w:name w:val="P1"/><w:link w:val="C1"/><w:pPr><w:pBdr><w:bottom w:val="single" w:sz="8"/></w:pBdr><w:tabs><w:tab w:val="left" w:pos="720"/></w:tabs><w:ind w:firstLineChars="100"/></w:pPr><w:rPr><w:color w:val="FF0000"/><w:sz w:val="28"/><w:b/></w:rPr></w:style><w:style w:type="paragraph" w:styleId="P2"><w:name w:val="P2"/><w:basedOn w:val="P1"/><w:pPr><w:pBdr><w:top w:val="nil"/></w:pBdr><w:tabs><w:tab w:val="clear" w:pos="720"/></w:tabs><w:ind w:left="200" w:leftChars="50"/></w:pPr><w:rPr><w:i/></w:rPr></w:style><w:style w:type="character" w:styleId="C1"><w:name w:val="C1"/><w:link w:val="P1"/><w:rPr><w:sz w:val="abc"/><w:i/></w:rPr></w:style><w:style w:type="table" w:styleId="T0"><w:name w:val="T0"/><w:rPr><w:color w:val="00FF00"/></w:rPr><w:pPr><w:spacing w:after="10"/></w:pPr><w:tblPr><w:tblCellMar><w:right w:w="50" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblStylePr w:type="firstRow"><w:rPr><w:b/></w:rPr><w:tcPr><w:tcBorders><w:top w:val="single"/></w:tcBorders><w:tcMar><w:left w:w="5" w:type="dxa"/></w:tcMar></w:tcPr></w:tblStylePr></w:style><w:style w:type="table" w:styleId="T1"><w:name w:val="T1"/><w:basedOn w:val="T0"/><w:rPr><w:i/><w:color w:val="0000FF"/></w:rPr><w:pPr><w:jc w:val="center"/><w:spacing w:before="20" w:after="30"/></w:pPr><w:tblPr><w:tblBorders><w:top w:val="single"/></w:tblBorders><w:tblCellMar><w:top w:w="7" w:type="dxa"/></w:tblCellMar></w:tblPr><w:tblStylePr w:type="lastRow"><w:tcPr><w:shd w:fill="AAAAAA"/></w:tcPr></w:tblStylePr><w:tblStylePr w:type="firstRow"><w:tcPr><w:shd w:fill="BBBBBB"/><w:tcBorders><w:bottom w:val="double"/></w:tcBorders><w:tcMar><w:top w:w="9" w:type="dxa"/></w:tcMar></w:tcPr></w:tblStylePr></w:style></w:styles>"#,
+    )];
+    assert_eq!(
+        serde_json::to_string(&run(&files, false)).expect("serializes"),
+        r#"{"styles":[["P1",{"styleId":"P1","name":"P1","type":"paragraph","display":{"sizeHalfPoints":28,"color":"FF0000","bold":true,"borderSides":{"l":{"szPt":0.5},"b":{"szPt":1}},"tabStops":[{"pos":720,"val":"left"}],"indentChars":{"left":30,"firstLine":100},"indentRightTwips":100}}],["P2",{"styleId":"P2","name":"P2","type":"paragraph","basedOn":"P1","display":{"sizeHalfPoints":28,"color":"FF0000","bold":true,"borderSides":{"l":{"szPt":0.5},"b":{"szPt":1},"t":null},"indentChars":{"left":50,"firstLine":100},"italic":true,"indentLeftTwips":200,"indentRightTwips":100}}],["C1",{"styleId":"C1","name":"C1","type":"character","display":{"color":"FF0000","bold":true,"italic":true},"linkedCharShell":true}],["T0",{"styleId":"T0","name":"T0","type":"table","tableDisplay":{"wholeTable":{"color":"00FF00"},"firstRow":{"bold":true,"borders":{"top":{"style":"single"}},"cellMarTwips":{"left":5}},"cellMarTwips":{"right":50},"paraSpacing":{"afterTwips":10}}}],["T1",{"styleId":"T1","name":"T1","type":"table","basedOn":"T0","tableDisplay":{"wholeTable":{"color":"0000FF","italic":true},"firstRow":{"bold":true,"borders":{"top":{"style":"single"},"bottom":{"style":"double"}},"cellMarTwips":{"left":5,"top":9},"fill":"BBBBBB"},"cellMarTwips":{"top":7},"paraSpacing":{"afterTwips":30,"beforeTwips":20},"lastRow":{"fill":"AAAAAA"},"borders":{"top":{"style":"single"}},"paraJc":"center"}}]],"docDefaults":{"sizeCsHalfPoints":24,"asciiFont":"Times New Roman","sizeHalfPoints":20,"eastAsiaLang":"ko-KR","eastAsiaFont":"Malgun Gothic","eaFromLang":true,"bold":true,"lang":"en-US","borderSides":{"l":{"szPt":0.5}},"indentRightTwips":100,"indentChars":{"left":30}}}"#
+    );
+}
+
 /// Word's rtl selection: Cs twins for rtl runs, base props otherwise, no cross-fallback.
 #[test]
 fn style_run_format_and_para_cs_format() {
     let display = StyleDisplay {
-        bold_cs: Some(true),
-        size_half_points: Some(Some(jscompat::JsNum(30.0))),
-        bold: Some(false),
-        italic: Some(true),
+        bold_cs: Slot::of(true),
+        size_half_points: Slot::of(JsNum(30.0)),
+        bold: Slot::of(false),
+        italic: Slot::of(true),
         ..StyleDisplay::default()
     };
     let dd = DocDefaults {
-        size_cs_half_points: Some(Some(jscompat::JsNum(26.0))),
-        italic_cs: Some(true),
+        size_cs_half_points: Slot::of(JsNum(26.0)),
+        italic_cs: Slot::of(true),
         ..DocDefaults::default()
     };
     assert_eq!(

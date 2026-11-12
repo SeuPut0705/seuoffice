@@ -160,16 +160,17 @@ fn read(package: &Package) -> Opened {
             fonts
                 .iter()
                 .map(|font| {
+                    // `({ data, ...font }) => ({ ...font, length, hash })`
                     let mut value = json!({
                         "family": font.family,
                         "bold": font.bold,
                         "italic": font.italic,
-                        "length": font.data.len(),
-                        "hash": fnv1a(&font.data),
                     });
                     if let Some(line_metrics) = font.line_metrics {
                         value["lineMetrics"] = json!(line_metrics);
                     }
+                    value["length"] = json!(font.data.len());
+                    value["hash"] = json!(fnv1a(&font.data));
                     value
                 })
                 .collect::<Vec<_>>()

@@ -29,7 +29,7 @@ fn defs_of(text: &str, args: &Value) -> Result<JsMap<NumberingDef>, String> {
             continue;
         };
         for level in def.levels.values_mut() {
-            let Some(pic_id) = level.pic_bullet_id else {
+            let Some(pic_id) = *level.pic_bullet_id else {
                 continue;
             };
             if level
@@ -45,7 +45,7 @@ fn defs_of(text: &str, args: &Value) -> Result<JsMap<NumberingDef>, String> {
                 .rev()
                 .find(|(id, src)| *id == pic_id.0 && !src.is_empty())
             {
-                level.pic_bullet_src = Some(src.clone());
+                level.pic_bullet_src.set(src.clone());
             }
         }
     }
