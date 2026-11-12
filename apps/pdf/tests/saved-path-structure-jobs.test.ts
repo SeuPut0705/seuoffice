@@ -78,6 +78,10 @@ import type { SavePdfRequest, SavePdfResult } from '../src/shared/ipc'
 const translate = createI18n(strings)
 const t: ConvertDialogProps['t'] = (key, params) => translate('en', key, params)
 
+// these tests do real file work behind a dialog: room for a busy machine (read when the
+// tests below are defined)
+vi.setConfig({ testTimeout: 20_000 })
+
 const tempDirs = new Set<string>()
 let root: Root | null = null
 let container: HTMLDivElement | null = null
@@ -219,17 +223,13 @@ async function untitledCopy() {
   }
 }
 
-const settle = () =>
-  act(async () => {
-    for (let i = 0; i < 20; i++) await new Promise((resolve) => setTimeout(resolve, 0))
-  })
-
 /** The conversion dialog as the editor shows it; `filePath` is where the document was when it opened */
 async function convertDialog(props: Partial<ConvertDialogProps> & Pick<ConvertDialogProps, 'api'>) {
   const onClose = vi.fn()
-  container = document.createElement('div')
-  document.body.appendChild(container)
-  root = createRoot(container)
+  const el = document.createElement('div')
+  container = el
+  document.body.appendChild(el)
+  root = createRoot(el)
   await act(async () =>
     root!.render(
       createElement(ConvertDialog, {
@@ -248,8 +248,23 @@ async function convertDialog(props: Partial<ConvertDialogProps> & Pick<ConvertDi
       } as ConvertDialogProps),
     ),
   )
-  await settle()
-  return { el: container, onClose }
+  /**
+   * Lets the dialog work until its run has ended: it closed, or it shows why it could not
+   * go on. Between a click and that end lie the save of the edits, the copy to the picked
+   * file and the job, which are real file work and take as long as the machine makes them
+   * take. A fixed number of turns ran out before the job on a busy runner.
+   */
+  const runEnded = () =>
+    act(async () => {
+      await vi.waitFor(
+        () => {
+          const ended = onClose.mock.calls.length > 0 || el.querySelector('[data-error="run"]')
+          expect(ended).toBeTruthy()
+        },
+        { timeout: 15_000, interval: 10 },
+      )
+    })
+  return { el, onClose, runEnded }
 }
 
 describe('a structure job whose save of the pending edits moves the document', () => {
@@ -269,7 +284,11 @@ describe('a structure job whose save of the pending edits moves the document', (
       await copy.structure.convert(copy.ctx, { ...source, format: 'md', outPath: 'x.md' }),
     ).toEqual(refused)
     expect(
-      await copy.structure.extractImages(copy.ctx, { ...source, outDir: copy.dir, baseName: 'x' }),
+      await copy.structure.extractImages(copy.ctx, {
+        ...source,
+        outDir: copy.dir,
+        baseName: 'x',
+      }),
     ).toEqual(refused)
     expect(
       await copy.structure.writeBack(copy.ctx, {
@@ -309,13 +328,13 @@ describe('a structure job whose save of the pending edits moves the document', (
     const target = join(copy.dir, 'Report.md')
     copy.picks.push(target)
 
-    const { el, onClose } = await convertDialog({
+    const { el, onClose, runEnded } = await convertDialog({
       api: copy.api,
       filePath: copy.path,
       prepare: copy.saveMovesDocument,
     })
     await act(async () => (el.querySelector('[data-action="convert"]') as HTMLElement).click())
-    await settle()
+    await runEnded()
 
     expect(copy.jobs).toMatchObject([
       { op: 'markdown', source: { pdfPath: copy.picked }, outPath: target },
@@ -333,12 +352,13 @@ describe('a structure job whose save of the pending edits moves the document', (
     // the shell's Save As dialog picked the target while the working file was the document
     expect(copy.structure.grantTarget(copy.wcId, copy.path, target, 'md')).toBe(true)
 
-    const { el, onClose } = await convertDialog({
+    const { el, onClose, runEnded } = await convertDialog({
       api: copy.api,
       filePath: copy.path,
       initialTarget: target,
       prepare: copy.saveMovesDocument,
     })
+    await runEnded()
 
     expect(copy.jobs).toMatchObject([
       { op: 'markdown', source: { pdfPath: copy.picked }, outPath: target },
@@ -353,14 +373,15 @@ describe('a structure job whose save of the pending edits moves the document', (
     const target = join(dirname(copy.path), 'Draft.md')
     copy.picks.push(target)
 
-    const { el } = await convertDialog({
+    const { el, onClose, runEnded } = await convertDialog({
       api: copy.api,
       filePath: copy.path,
       prepare: async () => copy.path,
     })
     await act(async () => (el.querySelector('[data-action="convert"]') as HTMLElement).click())
-    await settle()
+    await runEnded()
 
     expect(copy.jobs).toMatchObject([{ op: 'markdown', source: { pdfPath: copy.path } }])
+    expect(onClose).toHaveBeenCalled()
   })
 })
