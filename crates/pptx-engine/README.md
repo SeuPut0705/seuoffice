@@ -352,9 +352,38 @@ TypeScript either). `dgm_hier` recurses once a tree level; JSON arguments
 stop at 128 levels, and the model port of unit 4 has to bound it when it
 builds the tree from a document.
 
-Not fixed here, and not of this unit alone: the regular expression engine
-keeps its backtracking positions on the heap, a few a character for a
-pattern like the tag scanner of `custgeom.rs`, so one unclosed tag of about
-twenty million characters can exhaust wasm memory. Every pattern with a
-loop over document text in both engines shares it; a size limit on a part
-before it reaches a pattern would close it. Reported to main.
+### Debt: the backtracking stack of the regular expression engine
+
+Not fixed here and not of this unit alone; it blocks switching any Rust
+engine into the app. regress 0.12 keeps its backtracking positions in a
+private `Vec` with no bound, three entries of 32 bytes a character for a
+pattern that loops over an alternation, like the tag scanner of
+`custgeom.rs`, `<\/?(?:[^<>"']|"[^"]*"|'[^']*')*>` (the tag scanner of
+`animation/prune.rs` is of the same kind). Measured on 2026-11-12 with one
+unclosed `<` followed by N characters `a` inside an `a:custGeom`, through
+`parseCustGeom`, one process per N:
+
+| N     | Release wasm32 of the gate (Node 22) | TypeScript (Node 22)                           |
+| ----- | ------------------------------------ | ---------------------------------------------- |
+| 1M    | answers, 157 ms, memory 172 MB       | answers, 9 ms                                  |
+| 5M    | answers, 688 ms, 683 MB              | answers, 41 ms                                 |
+| 6M    | answers, 982 ms, 1.36 GB             | answers, 46 ms                                 |
+| 8M    | answers, 1.14 s, 1.36 GB             | answers, 69 ms                                 |
+| 9M    | not run                              | `RangeError: Maximum call stack size exceeded` |
+| 10M   | answers, 1.42 s, 1.36 GB             | RangeError, 39 ms                              |
+| 20M   | answers, 2.95 s, 2.73 GB             | RangeError, 104 ms                             |
+| 22.0M | answers, 2.33 s, 2.73 GB             | not run                                        |
+| 22.4M | aborts (`RuntimeError: unreachable`) | not run                                        |
+| 50M   | aborts                               | RangeError, 48 ms                              |
+
+The Rust passes one second near 6 million characters and aborts the module
+at 22.4 million, where the next buffer would be 4.29 GB; wasm memory is not
+returned, so a call that answers still leaves it grown. The TypeScript never
+hangs or grows: V8 bounds its own regexp stack and throws from 9 million
+on. So between 9 and 22.4 million the TypeScript throws and the Rust
+answers `undefined`; no gate input is that large, and there is no ledger
+class for it. The zip gate admits such a part (10,000 parts and 1.5 GB in
+all, no limit on one part). Main's decision: no size cap on a part; the
+bound belongs in `jscompat` and the stream that owns `jscompat`'s pattern
+sites does it (another executor measured against V8's answers, else a
+budget or hand-written scanners).
