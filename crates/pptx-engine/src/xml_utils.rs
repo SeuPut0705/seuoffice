@@ -40,10 +40,11 @@ pub fn decode_numeric_char_refs(text: &str) -> String {
             None => to_number(reference.get(2).unwrap_or_default()),
             Some(hex) => parse_int(hex, Radix::Sixteen),
         };
-        if code <= 1_114_111.0 && !(55_296.0..=57_343.0).contains(&code) {
-            if let Some(ch) = char::from_u32(code as u32) {
-                return ch.to_string();
-            }
+        if code <= 1_114_111.0
+            && !(55_296.0..=57_343.0).contains(&code)
+            && let Some(ch) = char::from_u32(code as u32)
+        {
+            return ch.to_string();
         }
         reference.as_str().to_owned()
     })
