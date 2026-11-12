@@ -739,7 +739,11 @@ fn diagram_text_colors(
             .and_then(|lbl| lbl.get(1));
         let c = truthy(lbl).and_then(|lbl| lbl_color.get(lbl));
         if let Some(c) = c.filter(|c| !c.is_empty()) {
-            out.set(m.get(1).unwrap_or_default(), c.clone());
+            // decoded: looked up by the drawing shape's modelId, which the parser reads
+            out.set(
+                crate::xml_utils::decode_xml(m.get(1).unwrap_or_default()),
+                c.clone(),
+            );
         }
     }
     out

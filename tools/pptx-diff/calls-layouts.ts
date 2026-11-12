@@ -30,7 +30,7 @@ import {
 } from '../../packages/pptx-engine/src/slide-transfer'
 import { PackageArchive } from '../../packages/pptx-engine/src/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
-import { deckInput, deckOp } from './deck-ops'
+import { deckInput, deckNamed, deckOp } from './deck-ops'
 
 type Parts = Array<[string, string]>
 type Args = Record<string, unknown>
@@ -263,6 +263,12 @@ const LAYOUT_TEXTS: Input[] = [
   { text: '<p:cSld name="Z"/><p:sldLayout type="late"/>', args: {} },
   { text: '<p:cSld\tname="T"/><p:sldLayout\ntype="blank"/>', args: {} },
   { text: '<p:cSldname="no"/><p:sldLayoutX type="no"/>', args: {} },
+  // the name as the reader has it: decoded once, any quotes, spaced `=`, other attributes first
+  { text: '<p:sldLayout><p:cSld note="a>b" name = \'A &amp; B &#65;\'/></p:sldLayout>', args: {} },
+  { text: '<p:sldLayout><p:cSld name="&amp;lt; &#x1F600;"/></p:sldLayout>', args: {} },
+  { text: '<p:sldLayout><p:cSld name=""/></p:sldLayout>', args: {} },
+  { text: '<p:sldLayout><p:cSld/></p:sldLayout>', args: {} },
+  { text: '<p:sldLayout><p:cSldx name="no"/><p:cSld name="late"/></p:sldLayout>', args: {} },
 ]
 
 const LAYOUT_DECK_ENTRIES: Parts = [
@@ -372,6 +378,35 @@ const ENSURE: Input[] = [
       ),
       size: SIZE_169,
       key: 'blank',
+    },
+  },
+  // a master part named with `&` and `$&`: written escaped into the layout rels, and as typed elsewhere
+  {
+    args: {
+      parts: [
+        [CT, types(dflt('xml', 'application/xml'))],
+        ['ppt/slideMasters/m&1$&.xml', masterXml(LAYOUT_IDS([2147483649, 'rId1']))],
+        ['ppt/slideMasters/_rels/m&1$&.xml.rels', rels(rel('rId1', 'slideLayout', '../slideLayouts/slideLayout1.xml'))],
+        [LAYOUT_1, layoutXml('Foreign', 'custom', '')],
+        [
+          'ppt/slideLayouts/_rels/slideLayout1.xml.rels',
+          rels(rel('rId1', 'slideMaster', '../slideMasters/m&amp;1$&amp;.xml')),
+        ],
+      ],
+      size: SIZE_169,
+      key: 'twoContent',
+    },
+  },
+  // a master whose clrMap holds `$` forms, and none of the layout id list
+  {
+    args: {
+      parts: replacing(
+        bareDeck(),
+        MASTER_1,
+        '<p:sldMaster xmlns:a="a" xmlns:p="p" xmlns:r="r"><p:cSld><p:spTree/></p:cSld><p:clrMap bg1="$&amp;" note="$1$$"/></p:sldMaster>',
+      ),
+      size: SIZE_169,
+      key: 'titleContent',
     },
   },
   // content types: missing, empty, an override present already, no </Types>
@@ -513,11 +548,31 @@ const ODD_NAMES: Parts = [
   ['ppt/_rels/o.v.xml.rels', rels(rel('rId1', 'x', 'ovxxml'), rel('rId2', 'x', 'b[1].xml'))],
 ]
 
+/** Content types spelled the way XML allows: spaced `=`, single quotes, references, other attributes. */
+const NEW_FORMS: Parts = [
+  [
+    CT,
+    `<Types><Override ContentType="x/q&amp;a" PartName = '/ppt/q&amp;a.xml'/>` +
+      `<Override PartName="/ppt/note.xml" ContentType = 'x/&#110;ote' note="a>b"/>` +
+      `<Default note="a>b" Extension = 'BIN' ContentType = 'application/x-b&quot;'/>` +
+      `<Default Extension="__proto__" ContentType="text/p"/><Default Extension="constructor" ContentType=""/></Types>`,
+  ],
+  ['ppt/q&a.xml', 'q'],
+  ['ppt/note.xml', 'n'],
+  ['ppt/a.bin', 'b'],
+  ['ppt/a.__proto__', 'p'],
+  ['ppt/a.constructor', 'c'],
+  ['ppt/_rels/q&a.xml.rels', rels(rel('rId1', 'x', 'a.bin'), rel('rId2', 'x', 'a.__proto__'))],
+]
+
 const COLLECT_INPUTS: Input[] = [
   collectInput(DECK, 'ppt/media/image1.png'),
   collectInput(DECK, 'ppt/charts/chart1.xml'),
   collectInput(DECK, LAYOUT_1),
   collectInput(DECK, MASTER_1),
+  ...['ppt/q&a.xml', 'ppt/note.xml', 'ppt/a.bin', 'ppt/a.__proto__', 'ppt/a.constructor'].map((path) =>
+    collectInput(NEW_FORMS, path),
+  ),
   collectInput(DECK, 'ppt/missing.xml'),
   collectInput(DECK, ''),
   collectInput(CYCLE, 'ppt/a.xml'),
@@ -556,7 +611,6 @@ const COLLECT_INPUTS: Input[] = [
       ],
       partPath: 'ppt/x.(',
     },
-    seed: false,
   },
   {
     args: {
@@ -566,7 +620,6 @@ const COLLECT_INPUTS: Input[] = [
       ],
       partPath: 'ppt/x.[',
     },
-    seed: false,
   },
   // an empty content types part: no pattern is built
   {
@@ -853,7 +906,6 @@ const IMPORT_CLIP_INPUTS: Input[] = [
       parts: TARGET,
       clip: { parts: {}, contentTypes: { 'a(': 'image/x' } },
     },
-    seed: false,
   },
   {
     args: {
@@ -931,6 +983,26 @@ const MATERIALIZE_INPUTS: Input[] = [
       ],
     },
     TARGET,
+    { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 },
+  ),
+  // ids and content types read decoded are written escaped, and `$` stays as typed
+  bundleInputs(
+    {
+      ...BUNDLE,
+      rels: [
+        { id: 'a&b"<c>', type: `${REL}/hyperlink`, target: 'https://e.com/', external: true },
+        { id: "i'd", type: `${REL}/slideLayout`, target: 'ppt/slideLayouts/slideLayout1.xml', layout: true },
+        { id: 'rId4', type: `${REL}/image`, target: 'ppt/media/image1.png' },
+      ],
+      parts: { 'ppt/media/image1.png': 'AQID', 'ppt/media/new$&.x&y': 'AQID', 'ppt/z.a$&b': 'AQID' },
+      contentTypes: { 'ppt/media/new$&.x&y': 'image/x&y"<z>', 'a$&b': 'text/$&"q"', 'x&y': 'a/b' },
+    },
+    TARGET,
+    { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 },
+  ),
+  bundleInputs(
+    { ...BUNDLE, contentTypes: { png: 'image/png', 'a$&b': 'text/$$' }, parts: { ...BUNDLE.parts, 'ppt/z.a$&b': 'AQID' } },
+    replacing(TARGET, CT, `<Types><Default Extension = 'png' ContentType='image/png'/><Default Extension="BIN" ContentType="x/y"/></Types>`),
     { slidePath: 'ppt/slides/slide1.xml', layoutPath: LAYOUT_1 },
   ),
   // the bundle holds a name the target already has, a root part, an empty rels part
@@ -1029,10 +1101,23 @@ const partsOf = (parts: ReadonlyMap<string, string>, name: RegExp): Array<[strin
 
 const LAYOUT_PART = /^ppt\/slide(?:Layouts|Masters)\/[^/]+\.xml$/
 
+/** presentation.xml of the blank deck written so the slide list can or cannot take a new slide. */
+const BLANK_PRES = (await PackageArchive.open(Buffer.from(deckNamed('blank deck'), 'base64'))).readText(
+  'ppt/presentation.xml',
+)!
+const PRES_FORMS: string[] = [
+  BLANK_PRES.replace('<p:sldIdLst>', '<p:sldIdLst xmlns:q="x">'),
+  BLANK_PRES.replace(/<(\/?)p:(sldIdLst|sldId)\b/g, '<$1$2'),
+  BLANK_PRES.replace(/<p:sldId\b([^>]*?)\/>/g, '<p:sldId$1><p:extLst><p:ext uri="x"/></p:extLst></p:sldId>'),
+  BLANK_PRES.replace(/ r:id="(rId\d+)"/, " r:id = '$1'"),
+  BLANK_PRES.replace('<p:sldIdLst>', '<p:sldIdLst >'),
+  BLANK_PRES.replace('</p:sldIdLst>', '</p:sldIdLst >'),
+]
+
 const ph1 = { type: 'title', idx: '', x: 1, y: 2, cx: 3, cy: 4, hint: 'Click to add title' }
 
-// ledger inherited-key-layout-hint: PH_HINT_MAP is a plain object, so a placeholder type named like
-// an inherited member makes the TypeScript's hint a function; the Rust gives no hint
+// PH_HINT_MAP is read through ownValue: a placeholder type named like an inherited member gets the
+// default hint
 const INHERITED_HINT_TEXT = ['constructor', 'toString', 'hasOwnProperty', 'valueOf']
   .map(
     (t) =>
@@ -1050,7 +1135,7 @@ export const LAYOUTS: CallSpec[] = [
         .map(([, text]) => ({ text })),
     built: [
       ...PLACEHOLDER_TEXTS.map((text) => ({ text })),
-      { text: INHERITED_HINT_TEXT, seed: false as const },
+      { text: INHERITED_HINT_TEXT },
     ],
   },
   {
@@ -1136,6 +1221,13 @@ export const LAYOUTS: CallSpec[] = [
           'blank deck',
           { sourceIndex: 0, layoutPath: 'ppt/slideLayouts/slideLayout1.xml' },
           { part: 'ppt/slideLayouts/slideLayout1.xml', text },
+        ),
+      ),
+      ...PRES_FORMS.map((text) =>
+        deckInput(
+          'blank deck',
+          { sourceIndex: 0, layoutPath: 'ppt/slideLayouts/slideLayout1.xml' },
+          { part: 'ppt/presentation.xml', text },
         ),
       ),
       deckInput('blank deck', { sourceIndex: 0, layoutPath: 'ppt/slideLayouts/slideLayout1.xml' }),

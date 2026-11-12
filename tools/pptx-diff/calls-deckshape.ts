@@ -67,6 +67,20 @@ const PIC_TEXTS = [
       '</a:graphicData></a:graphic></p:graphicFrame></mc:Choice>' +
       `<mc:Fallback>${pic(2, BLIP)}</mc:Fallback></mc:AlternateContent>`,
   ),
+  // the references as XML allows: spaced `=`, single quotes, a reference, an extra attribute first
+  slideXml(pic(2, "<a:blip r:embed = 'rId9' r:link = \"rId8\"/>")),
+  slideXml(pic(2, '<a:blip r:embed="rId&#57;"/>')),
+  slideXml(pic(2, "<a:blip note=\"a>b\" r:link = 'rId8'/>")),
+  slideXml(
+    '<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006">' +
+      '<mc:Choice Requires="am3d" xmlns:am3d="http://schemas.microsoft.com/office/drawing/2017/model3d">' +
+      '<p:graphicFrame><p:nvGraphicFramePr><p:cNvPr id="2" name="3D"/><p:cNvGraphicFramePr/><p:nvPr/></p:nvGraphicFramePr>' +
+      '<p:xfrm><a:off x="0" y="0"/><a:ext cx="1" cy="1"/></p:xfrm><a:graphic>' +
+      '<a:graphicData uri="http://schemas.microsoft.com/office/drawing/2017/model3d">' +
+      '<am3d:model3d r:embed="rId7"><am3d:raster rName="Office3DEngine" rVer="16.0.8326"><am3d:blip r:embed = \'rId&#57;\'/><am3d:blip note="a>b" r:embed="rId9"/><am3d:blip r:embed="rId7"/></am3d:raster></am3d:model3d>' +
+      '</a:graphicData></a:graphic></p:graphicFrame></mc:Choice>' +
+      `<mc:Fallback>${pic(2, "<a:blip r:embed = 'rId&#57;'/>")}</mc:Fallback></mc:AlternateContent>`,
+  ),
 ]
 const SHAPES = slideXml(
   sp(2, XFRM + '<a:prstGeom prst="rect"><a:avLst><a:gd name="adj" fmla="val 1"/></a:avLst></a:prstGeom><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>'),

@@ -4,9 +4,7 @@
 //! whose `showWhenStopped="0"` hides it during the show, and presProps'
 //! `<p:showPr showNarration="1">` for the whole deck.
 
-use jscompat::{
-    JsNum, JsRegex, js_regex, number_to_string, replace_first_string, replace_first_with, to_number,
-};
+use jscompat::{JsNum, js_regex, number_to_string, replace_first_with, to_number};
 use serde::Deserialize;
 
 use crate::animation::{
@@ -16,7 +14,7 @@ use crate::animation::{
 use crate::deck::OpenedPptx;
 use crate::insert::delete_element;
 use crate::media_insert::{NewMediaKind, NewMediaOptions, add_media};
-use crate::notes::{add_content_type_override, append_relationship};
+use crate::notes::{add_content_type_override, append_relationship, replace_literal};
 use crate::types::{EmuRect, Slide};
 use crate::zip::resolve_target;
 
@@ -219,17 +217,15 @@ pub fn set_show_narration(opened: &mut OpenedPptx) -> Result<(), String> {
                 _ => return Err(format!("no attribute pattern for {name}")),
             };
             tag = if has.test(&tag) {
-                replace_first_string_regex(has, &tag, &format!(" {name}=\"{value}\""))
+                replace_first_with(has, &tag, |_| format!(" {name}=\"{value}\""))
             } else {
-                replace_first_string_regex(
-                    js_regex!(r"^<p:showPr"),
-                    &tag,
-                    &format!("<p:showPr {name}=\"{value}\""),
-                )
+                replace_first_with(js_regex!(r"^<p:showPr"), &tag, |_| {
+                    format!("<p:showPr {name}=\"{value}\"")
+                })
             };
         }
-        // a string pattern and a string replacement: the `$` patterns of the tag apply
-        next = replace_first_string(&xml, show_pr.as_str(), &tag);
+        // a function replacement: the tag is the deck's own, written as given
+        next = replace_literal(&xml, show_pr.as_str(), &tag);
     } else {
         let element = "<p:showPr showNarration=\"1\" useTimings=\"1\"/>";
         let self_closed =
@@ -253,10 +249,4 @@ pub fn set_show_narration(opened: &mut OpenedPptx) -> Result<(), String> {
         opened.archive.entries_mut().set(path, next.into_bytes());
     }
     Ok(())
-}
-
-/// `text.replace(regex, replacement)` of a regex without `g` and without groups, the
-/// replacement given without `$` patterns.
-fn replace_first_string_regex(regex: &JsRegex, text: &str, replacement: &str) -> String {
-    jscompat::replace_first(regex, 0, text, replacement)
 }

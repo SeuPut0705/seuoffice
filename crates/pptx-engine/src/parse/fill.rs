@@ -180,11 +180,10 @@ pub(super) fn parse_clr_change(blip_node: Node<'_>, ctx: &ParseContext<'_>) -> O
     }
 }
 
-/// `parseFill`. A non-empty text where an element is expected (`'a:noFill'
-/// in "text"`) throws a TypeError in the TypeScript; the table's signature
-/// cannot throw, so here it reads as an element without children.
+/// `parseFill`. An element holding only text parses as a string: no fill of
+/// its own.
 pub(super) fn parse_fill(sp_pr: Node<'_>, ctx: &ParseContext<'_>) -> Option<Fill> {
-    if !value_truthy(sp_pr) {
+    if !value_truthy(sp_pr) || !matches!(sp_pr, Some(Value::Object(_) | Value::Array(_))) {
         return None;
     }
     if get(sp_pr, "a:noFill").is_some() {

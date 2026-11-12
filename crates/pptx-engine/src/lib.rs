@@ -30,6 +30,7 @@ pub mod model3d;
 pub mod named_action;
 pub mod narration;
 pub mod notes;
+pub mod own_value;
 pub mod parse;
 pub mod placeholder;
 pub mod preset_shape_types;

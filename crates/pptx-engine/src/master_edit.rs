@@ -11,6 +11,7 @@ use crate::parse::{
 use crate::placeholder::{parse_master_text_styles, parse_placeholder_map};
 use crate::theme::{parse_clr_map, parse_theme};
 use crate::types::Slide;
+use crate::xml_utils::c_sld_name_of;
 use crate::zip::{PackageArchive, resolve_target};
 
 /// `kind` of a [`MasterPartInfo`].
@@ -41,8 +42,7 @@ fn part_num(p: &str) -> f64 {
 
 /// `cSldName`
 fn c_sld_name(xml: Option<&str>, fallback: String) -> String {
-    let m = truthy(xml).and_then(|xml| js_regex!(r#"<p:cSld\s[^>]*name="([^"]*)""#).exec(xml));
-    match truthy(m.and_then(|m| m.get(1))) {
+    match truthy(truthy(xml).and_then(c_sld_name_of).as_deref()) {
         Some(name) => name.to_owned(),
         None => fallback,
     }

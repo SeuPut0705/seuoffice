@@ -4,14 +4,15 @@
 //! Read-only: layout parts are never written back.
 
 use jscompat::{
-    JsNum, Radix, TryJsRegex, js_regex, math_max, number_to_string, parse_int,
-    replace_first_string, slice_utf16, sort_by_number,
+    JsNum, Radix, js_regex, math_max, number_to_string, parse_int, slice_utf16, sort_by_number,
 };
 use serde::{Deserialize, Serialize};
 
-use crate::slide_ids::next_slide_id;
+use crate::slide_ids::{can_list_slide, with_slide_listed};
 use crate::types::SlideDeck;
-use crate::xml_utils::{escape_xml_attr, has_content_type_override, max_relationship_id_number};
+use crate::xml_utils::{
+    c_sld_name_of, escape_xml_attr, has_content_type_override, max_relationship_id_number,
+};
 use crate::zip::{PackageArchive, rels_path_for, resolve_target};
 
 // -- Layout placeholder summary -------------------------------------------------
@@ -30,11 +31,8 @@ pub struct LayoutPlaceholder {
     pub y: JsNum,
     pub cx: JsNum,
     pub cy: JsNum,
-    /// Editor default hint text (shown in the empty box). `None` where
-    /// `PH_HINT_MAP[type]` is an inherited property of `Object.prototype`
-    /// (`constructor`, `toString`, ...): a function, which JSON leaves out.
-    #[serde(default, skip_serializing_if = "Option::is_none")]
-    pub hint: Option<String>,
+    /// Editor default hint text (shown in the empty box)
+    pub hint: String,
 }
 
 /// Description of one slideLayout
@@ -85,16 +83,13 @@ pub(crate) fn is_object_prototype_name(name: &str) -> bool {
     )
 }
 
-/// `PH_HINT_MAP[type] ?? 'Click to add text'`: `None` where the lookup finds a
-/// property inherited from `Object.prototype` (not nullish, but no string).
-pub fn hint_for(ph_type: &str) -> Option<String> {
-    if let Some((_, hint)) = PH_HINT_MAP.iter().find(|(key, _)| *key == ph_type) {
-        return Some((*hint).to_owned());
-    }
-    if is_object_prototype_name(ph_type) {
-        return None;
-    }
-    Some("Click to add text".to_owned())
+/// `ownValue(PH_HINT_MAP, type) ?? 'Click to add text'`: the table answers its own types only.
+pub fn hint_for(ph_type: &str) -> String {
+    PH_HINT_MAP
+        .iter()
+        .find(|(key, _)| *key == ph_type)
+        .map_or("Click to add text", |(_, hint)| hint)
+        .to_owned()
 }
 
 /// `text.replace(needle, () => replacement)`: the first occurrence of a string
@@ -112,14 +107,11 @@ pub(crate) fn replace_literal(text: &str, needle: &str, replacement: &str) -> St
     }
 }
 
-/// Quick-parse the <p:cSld> name attribute from the layout XML
+/// The name the layout gives itself (`cSldNameOf`), or the fallback
 fn parse_layout_name(xml: &str, fallback: &str) -> String {
-    js_regex!(r#"<p:cSld\s[^>]*name="([^"]*)""#)
-        .exec(xml)
-        .and_then(|found| found.get(1))
+    c_sld_name_of(xml)
         .filter(|name| !name.is_empty())
-        .unwrap_or(fallback)
-        .to_owned()
+        .unwrap_or_else(|| fallback.to_owned())
 }
 
 /// Quick-parse the <p:sldLayout> type attribute from the layout XML
@@ -357,6 +349,10 @@ pub fn prepare_insert_slide_with_layout(
     {
         return Ok(None);
     }
+    // asked before anything is written: a deck that cannot list the slide is left as it was
+    if !can_list_slide(archive.read_text("ppt/presentation.xml").as_deref()) {
+        return Ok(None);
+    }
 
     // Parse the layout placeholders and build the new slide XML with placeholder text boxes
     let layout_xml = archive.read_text(layout_path).unwrap_or_default();
@@ -390,7 +386,7 @@ pub fn prepare_insert_slide_with_layout(
         .map(|ct| ct.into_owned())
         && !has_content_type_override(&ct, &new_path)
     {
-        let next = replace_first_string(
+        let next = replace_literal(
             &ct,
             "</Types>",
             &format!(
@@ -416,6 +412,17 @@ pub fn prepare_insert_slide_with_layout(
 
     let max_rid = max_relationship_id_number(&pres_rels);
     let new_rid = format!("rId{}", number_to_string(max_rid + 1.0));
+    // Listed after the source slide
+    let src_rid = archive
+        .read_rels(pres_path)?
+        .values()
+        .find(|rel| resolve_target(pres_path, &rel.target) == crate::deck::slide_path(src))
+        .map(|rel| rel.id.clone());
+    let Some(next_pres) = with_slide_listed(&pres, &new_rid, src_rid.as_deref())
+        .map_err(|error| error.to_string())?
+    else {
+        return Ok(None);
+    };
     let rel_entry = format!(
         "<Relationship Id=\"{new_rid}\" Type=\"{SLIDE_REL_TYPE}\" Target=\"{}\"/>",
         new_path.get("ppt/".len()..).unwrap_or_default()
@@ -429,39 +436,6 @@ pub fn prepare_insert_slide_with_layout(
         )
         .into_bytes(),
     );
-
-    let new_sld_tag = format!(
-        "<p:sldId id=\"{}\" r:id=\"{new_rid}\"/>",
-        next_slide_id(&pres).map_err(|error| error.to_string())?
-    );
-
-    // Insert after the source slide's sldId
-    let src_rid = archive
-        .read_rels(pres_path)?
-        .values()
-        .find(|rel| resolve_target(pres_path, &rel.target) == crate::deck::slide_path(src))
-        .map(|rel| rel.id.clone())
-        .filter(|id| !id.is_empty());
-    let src_tag = match src_rid {
-        Some(rid) => {
-            // the id is pasted into the pattern as it is: a hostile one can fail to compile
-            let pattern = format!(r#"<p:sldId\s[^>]*r:id="{rid}"[^>]*/>"#);
-            TryJsRegex::new(&pattern, "")
-                .map_err(|error| error.to_string())?
-                .try_exec(&pres)
-                .map_err(|error| error.to_string())?
-                .map(|found| found.as_str().to_owned())
-        }
-        None => None,
-    };
-    let next_pres = match src_tag {
-        Some(tag) => replace_literal(&pres, &tag, &format!("{tag}{new_sld_tag}")),
-        None => replace_literal(
-            &pres,
-            "</p:sldIdLst>",
-            &format!("{new_sld_tag}</p:sldIdLst>"),
-        ),
-    };
     archive.entries_mut().set(pres_path, next_pres.into_bytes());
 
     Ok(Some(new_path))

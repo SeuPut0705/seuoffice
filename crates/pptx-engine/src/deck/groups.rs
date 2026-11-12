@@ -29,6 +29,7 @@ use crate::types::{
     ElementType, EmuRect, Fill, GradientFill, GroupElement, LineCap, Slide, SlideElement, Stroke,
     TextElement, Transform,
 };
+use crate::xml_utils::attribute_of;
 
 /// `slide.elements`; empty where the slide has none.
 fn elements(slide: &Slide) -> &[SlideElement] {
@@ -84,9 +85,14 @@ pub fn group_elements(
         // Refs resolve like every other op, deduplicated
         let mut targets: Vec<usize> = Vec::new();
         for id in source_ids {
-            if let Some(at) = elements(slide)
-                .iter()
-                .position(|e| matches_element_ref(e, id))
+            let mut found = None;
+            for (at, e) in elements(slide).iter().enumerate() {
+                if matches_element_ref(e, id)? {
+                    found = Some(at);
+                    break;
+                }
+            }
+            if let Some(at) = found
                 && !targets.contains(&at)
             {
                 targets.push(at);
@@ -338,10 +344,11 @@ pub fn group_child_slices(grp_xml: &str) -> Result<Vec<GroupChildSlice>, String>
             continue;
         }
         let xml = grp_xml.get(m.start()..end).unwrap_or_default();
-        let nv_id = js_regex!(r#"<p:cNvPr\b[^>]*\bid="([^"]+)""#)
+        // decoded, like the child's nvId the parser read
+        let nv_id = js_regex!(r"<p:cNvPr\b[^>]*>")
             .exec(xml)
-            .and_then(|f| f.get(1))
-            .map(str::to_owned);
+            .and_then(|f| attribute_of(f.as_str(), "id"))
+            .filter(|id| !id.is_empty());
         slices.push(GroupChildSlice {
             start: m.start(),
             end,

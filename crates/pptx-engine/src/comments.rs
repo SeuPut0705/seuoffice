@@ -9,9 +9,7 @@
 //! The TypeScript stamps a new comment with `new Date().toISOString()`; the
 //! engine reads no clock, so [`add_slide_comment`] takes that text as `dt`.
 
-use jscompat::{
-    JsMap, JsNum, js_regex, number_to_string, replace_first_string, replace_first_with, to_number,
-};
+use jscompat::{JsMap, JsNum, js_regex, number_to_string, replace_first_with, to_number};
 use serde::{Deserialize, Serialize};
 
 use crate::deck::OpenedPptx;
@@ -65,8 +63,8 @@ pub struct SlideCommentRef {
     pub idx: f64,
 }
 
-/// `addContentTypeOverride` of this file: the replacement is a string, so the
-/// `$` patterns of the part path and content type apply.
+/// `addContentTypeOverride` of this file: the replacement is a function, so the part path and
+/// content type are written as given.
 fn add_content_type_override(archive: &mut PackageArchive, part_path: &str, content_type: &str) {
     let ct_path = "[Content_Types].xml";
     let Some(ct) = archive
@@ -79,7 +77,7 @@ fn add_content_type_override(archive: &mut PackageArchive, part_path: &str, cont
     if has_content_type_override(&ct, part_path) {
         return;
     }
-    let next = replace_first_string(
+    let next = replace_literal(
         &ct,
         "</Types>",
         &format!("<Override PartName=\"/{part_path}\" ContentType=\"{content_type}\"/></Types>"),

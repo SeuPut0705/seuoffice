@@ -10,19 +10,30 @@ import {
   NAMED_ACTIONS,
 } from '../../packages/pptx-engine/src/named-action'
 import { scanSlide } from '../../packages/pptx-engine/src/scan'
-import { nextSlideId } from '../../packages/pptx-engine/src/slide-ids'
+import {
+  canListSlide,
+  nextSlideId,
+  withSlideListed,
+  withSlideUnlisted,
+} from '../../packages/pptx-engine/src/slide-ids'
 import { tableRowGridCols } from '../../packages/pptx-engine/src/table-grid'
 import {
   asXmlNode,
+  attributeOf,
+  cSldNameOf,
   creationIdExtXml,
   creationIdXml,
-  decodeNumericCharRefs,
+  decodeXml,
+  defaultContentTypeFor,
+  elementRange,
   percentFraction,
   escapeXmlAttr,
   escapeXmlText,
   hasContentTypeOverride,
   hasDefaultFor,
   maxRelationshipIdNumber,
+  rootPrefixOf,
+  withRelationshipIds,
   xmlArray,
 } from '../../packages/pptx-engine/src/xml-utils'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
@@ -190,6 +201,16 @@ const NODE_VALUES: unknown[] = [
 const nodeInputs: Input[] = [{}, ...NODE_VALUES.map((value) => ({ args: { value } }))]
 
 const DECODE_TEXTS = [
+  '&amp;&lt;&gt;&quot;&apos;',
+  'r&amp;1|r&#38;1|r&#x26;1|rId&#49;',
+  'X&amp;#38;1',
+  '&amp;amp;',
+  '&#1;&#8;&#9;&#xA;&#xD;&#xB;&#x1F;&#x20;',
+  '&#X41;&#x4a;&#x4A;',
+  '&AMP;&Amp;&nbsp;&copy;&apos',
+  '&#65 ;&# 65;&#+65;',
+  '&',
+  '&&amp;&',
   '&#65;',
   '&#x41;&#X41;',
   '&#x1F600;',
@@ -269,6 +290,99 @@ const CONTENT_TYPES = CT(
     '<Override PartName=""/>',
 )
 
+const P_NS = 'http://schemas.openxmlformats.org/presentationml/2006/main'
+const A_NS = 'http://schemas.openxmlformats.org/drawingml/2006/main'
+const ATTRIBUTE_ELEMENTS = [
+  '<a a="1" b="2"/>',
+  "<a a='1' b=\"2\">",
+  '<a\ta\n=\r"1"/>',
+  '<a a = "x&amp;y&#38;z&#x26;"/>',
+  '<a a="1" a="2"/>',
+  '<a:b r:id="rId&#49;" name=\'q"r\'/>',
+  '<a id="1">',
+  '<a><b id="inner"/></a>',
+  '<a x="a>b" id="after"/>',
+  '<a id="unclosed',
+  '<a id=1/>',
+  '<a ID="1" Id="2"/>',
+  '<a xmlns:p="u" xmlns:p="v"/>',
+  '<a name="\u{1F600}&#x1F600;"/>',
+  'a name="no-open-tag">',
+  '',
+  '<a name="constructor" __proto__="x"/>',
+  '<a name=""/>',
+]
+const ROOT_XMLS = [
+  `<?xml version="1.0"?><p:sld xmlns:p="${P_NS}" xmlns:a="${A_NS}"/>`,
+  `<p:sld xmlns:a="${A_NS}" xmlns:p="${P_NS}"/>`,
+  `<sld xmlns="${P_NS}"/>`,
+  `<a:sld xmlns:a="${A_NS}" xmlns:p="${P_NS}" xmlns="${P_NS}"/>`,
+  `<p:sld xmlns:q="${P_NS}" xmlns:p="urn:x"/>`,
+  `<sld xmlns='${P_NS}'/>`,
+  `<sld xmlns = "${P_NS}" />`,
+  `<p:sld xmlns:p="${P_NS.replace('/main', '/m&#97;in')}"/>`,
+  `<p:sld xmlns:p="a&amp;b"/>`,
+  '<!-- c --><!DOCTYPE x><x:y xmlns:x="urn:x"/>',
+  '<?xml version="1.0"?>',
+  '<sld',
+  '',
+  '<p:sld xmlns:p=\'a"b\'>',
+  `<sld xmlns:="${P_NS}" xmlnsp="${P_NS}" xmlns:p:q="${P_NS}"/>`,
+  `<p:sld xmlns:p="${P_NS}" xmlns:p="urn:x"/>`,
+  `<s:sld xmlns:s="">`,
+  '<a:b xmlns:a=">"/>',
+]
+const RANGE_XMLS = [
+  '<a:t>x</a:t>',
+  '<a:t/>',
+  '<a:t />',
+  '<a:t><a:t>in</a:t></a:t><a:t>after</a:t>',
+  '<a:t>unclosed',
+  '</a:t><a:t>x</a:t>',
+  '<a:t x=">">y</a:t>',
+  "<a:t x='>'>y</a:t>",
+  '<a:t/><a:t>x</a:t>',
+  '<a:t>x</a:t><a:t/>',
+  '<a:t><a:t/></a:t>',
+  '<a:tx>no</a:tx><a:t>yes</a:t>',
+  '<!-- <a:t>c</a:t> --><a:t>real</a:t>',
+  '<?pi a:t?><a:t>x</a:t>',
+  '<![CDATA[<a:t>c</a:t>]]><a:t>x</a:t>',
+  '<b><b><b/></b></b><b/>',
+  '\u{1F600}<a:t>\u{1F600}</a:t>\u{1F600}',
+  '<q:é>é</q:é>',
+  '<a:t\n>x</a:t\n>',
+  '<a:t>x</ a:t></a:t>',
+  '<p:x a="1"/>',
+  '',
+]
+const REL_XMLS = [
+  '<a:blip r:embed="rId1"/>',
+  "<a:blip r:embed='rId1' r:link='rId2'/>",
+  '<a:blip r:embed = "rId&#49;"/>',
+  '<a:blip r:embed="rId1"/><a:blip r:embed="rId2"/>',
+  '<a:blip r:embed="rId2" r:id="rId1"/>',
+  '<a:blip xr:embed="rId1" r:embed2="rId1"/>',
+  '<a:blip r:embed="r&amp;1"/>',
+  '<a:blip r:embed="constructor" r:id="__proto__"/>',
+  '<a:blip r:embed=\'it"s\'/>',
+  '<a:blip r:embed="rId1" a:embed="rId1"/>',
+  '<a:blip r:embed=""/>',
+  '<a:blip r:embed=rId1/>',
+  '',
+]
+const REL_ID_MAPS: Record<string, string>[] = [
+  {},
+  { rId1: 'rId2' },
+  { rId1: 'rId2', rId2: 'rId1' },
+  { rId1: '$&' },
+  { rId1: "it's" },
+  { rId1: 'a"b' },
+  { 'r&1': 'x<y' },
+  { rId1: 'rId$1$$' },
+  JSON.parse('{"constructor":"c","__proto__":"p"}') as Record<string, string>,
+  { '': 'empty' },
+]
 const PART_PATHS = [
   'ppt/presentation.xml',
   'ppt/slides/slide1.xml',
@@ -344,11 +458,33 @@ const PRESENTATIONS = [
   ),
   presentation(sldIds('<p:sldId id="00300"/>', '<p:sldId r:id="rId2" id="500"/>')),
   presentation(sldIds('<p:sldId id="300" r:id="7"/>')),
-  // ledger slide-id-xml-whitespace: the TypeScript misses this id
   presentation(sldIds('<p:sldId id = "600"/>', '<p:sldId id="-700"/>', '<p:sldId id="7e2"/>')),
   presentation(sldIds(`<p:sldId id="${'9'.repeat(400)}"/>`, '<p:sldId id="1000"/>')),
   presentation(sldIds('<p:sldId/>', '<p:sldIdLst id="900"/>', '<p:sldId\u00a0id="901"/>')),
   presentation(sldIds('<p:sldId id="2147483646"/>')),
+]
+
+/** Presentation parts for the list writers: every form of list, entry and r:id the writers read. */
+const LISTED_PRESENTATIONS = [
+  ...PRESENTATIONS,
+  presentation(sldIds('<p:sldId id="256" r:id="rId2"/>', '<p:sldId id="257" r:id="rId3"/>')),
+  presentation(sldIds("<p:sldId id='256' r:id='rId2'/>", '<p:sldId id="257" r:id = "rId3"/>')),
+  presentation(sldIds('<p:sldId id="256" r:id="rId&#50;"/>', '<p:sldId id="257" r:id="rId3"/>')),
+  presentation(sldIds('<p:sldId id="256" r:id="rId2"><p:extLst/></p:sldId>', '<p:sldId id="257" r:id="rId3"/>')),
+  presentation(sldIds('<p:sldId id="256" r:id="rId2"><p:ext>$&</p:ext></p:sldId >')),
+  presentation('<p:sldIdLst />'),
+  presentation('<p:sldIdLst></p:sldIdLst >'),
+  presentation('<p:sldIdLst/>'),
+  presentation('<sldIdLst><sldId id="256" r:id="rId2"/></sldIdLst>'),
+  presentation('<x:sldIdLst><x:sldId id="256" r:id="rId2"/></x:sldIdLst>'),
+  presentation('<p:sldIdLst><p:sldId id="256" r:id="rId2"/>'),
+  presentation(sldIds('<p:sldId id="256" r:id="rId2"/>') + sldIds('<p:sldId id="300" r:id="rId3"/>')),
+  presentation(sldIds('<p:sldId id="2147483647" r:id="rId2"/>', '<p:sldId id="2147483646"/>')),
+  presentation(sldIds('<p:sldId id="256" xr:id="rId2"/>', '<p:sldId id="257" r:id="rId2" r:id="rId3"/>')),
+  presentation(sldIds('<p:sldId id="256" r:id=\'a"b\'/>', '<p:sldId id="257" r:id="rId3"/>')),
+  presentation(sldIds('<p:sldId id="256" r:id="r&amp;1"/>')),
+  presentation(sldIds('<p:sldId id="256" r:id="constructor"/>')),
+  '',
 ]
 
 const ACTIONS = [
@@ -454,8 +590,8 @@ export const LEAVES: CallSpec[] = [
     ],
   },
   {
-    fn: 'pptxLeaves.xml-utils.decodeNumericCharRefs',
-    call: (text) => decodeNumericCharRefs(text),
+    fn: 'pptxLeaves.xml-utils.decodeXml',
+    call: (text) => decodeXml(text),
     fromDocument: (parts) => [
       ...[...parts.values()].filter((text) => text.includes('&#')).map((text) => ({ text })),
       ...capturesOf(partsMatching(parts, SLIDE_PART), /<a:t>([^<]*)<\/a:t>/g, 20).map((text) => ({
@@ -540,14 +676,159 @@ export const LEAVES: CallSpec[] = [
     ]),
   },
   {
+    fn: 'pptxLeaves.xml-utils.defaultContentTypeFor',
+    call: (text, args) => defaultContentTypeFor(text, args.ext as string),
+    fromDocument: (parts) => {
+      const text = parts.get('[Content_Types].xml')
+      if (text === undefined) return []
+      return [...capturesOf([text], /\bExtension="([^"]*)"/g), 'png', 'jpeg'].map((ext) => ({
+        text,
+        args: { ext },
+      }))
+    },
+    built: [...EXTS, 'JPEG', 'Gif', 'pn&#103;', 'toString', '__proto__', 'constructor'].flatMap((ext) => [
+      { text: CONTENT_TYPES, args: { ext } },
+      { text: CT(''), args: { ext } },
+      { text: CT('<Default Extension="p&#110;g" ContentType="a&amp;b"/>'), args: { ext } },
+      { text: CT("<Default Extension='toString' ContentType='t'/><Default Extension=\"__proto__\"/>"), args: { ext } },
+      { text: CT('<Default Extension="PnG"/><Default Extension="png" ContentType="second"/>'), args: { ext } },
+      { text: CT('<Default Extension="png" ContentType="image/png"'), args: { ext } },
+    ]),
+  },
+  {
+    fn: 'pptxLeaves.xml-utils.attributeOf',
+    call: (text, args) => attributeOf(text, args.name as string),
+    fromDocument: (parts) =>
+      capturesOf(partsMatching(parts, SHAPE_TREE_PART), /<p:cNvPr\b[^>]*>/g, 20).map((text) => ({
+        text,
+        args: { name: 'name' },
+      })),
+    built: [
+      ...ATTRIBUTE_ELEMENTS.flatMap((text) =>
+        ['a', 'r:id', 'name', 'Id', 'x', 'id', 'xmlns:p', ''].map((name) => ({ text, args: { name } })),
+      ),
+    ],
+  },
+  {
+    fn: 'pptxLeaves.xml-utils.rootPrefixOf',
+    call: (text, args) => rootPrefixOf(text, args.ns as string),
+    fromDocument: (parts) =>
+      [...parts.values()].slice(0, 30).map((text) => ({
+        text,
+        args: { ns: 'http://schemas.openxmlformats.org/presentationml/2006/main' },
+      })),
+    built: ROOT_XMLS.flatMap((text) =>
+      [P_NS, A_NS, 'urn:x', '', 'a&b'].map((ns) => ({ text, args: { ns } })),
+    ),
+  },
+  {
+    fn: 'pptxLeaves.xml-utils.elementRange',
+    call: (text, args) => elementRange(text, args.name as string, args.from as number | undefined),
+    fromDocument: (parts) =>
+      partsMatching(parts, SLIDE_PART)
+        .slice(0, 3)
+        .flatMap((text) => ['p:spTree', 'p:sp', 'p:cSld', 'a:p', 'p:nvSpPr'].map((name) => ({ text, args: { name } }))),
+    built: RANGE_XMLS.flatMap((text) =>
+      [
+        { name: 'a:t' },
+        { name: 'p:x' },
+        { name: 'a:t', from: 5 },
+        { name: 'a:t', from: 9999 },
+        { name: 'a:t', from: -3 },
+        { name: 'b' },
+        { name: 'q:é' },
+        { name: '' },
+      ].map((args) => ({ text, args })),
+    ),
+  },
+  {
+    fn: 'pptxLeaves.xml-utils.cSldNameOf',
+    call: (text) => cSldNameOf(text),
+    fromDocument: (parts) => partsMatching(parts, SLIDE_PART).map((text) => ({ text })),
+    built: [
+      '<p:cSld name="Title"/>',
+      "<p:cSld name='Title &amp; Co'>",
+      '<p:cSld\nname = "a&#38;b" x="1">',
+      '<p:cSld>',
+      '<p:cSld name="">',
+      '<p:cSldx name="no"/>',
+      '<p:cSld xname="no" name="yes"/>',
+      '<p:cSld name="a>b">',
+      '<p:cSld name="x" name="y">',
+      '<p:cSld',
+      '',
+      '<q:cSld name="no"/>',
+      '<p:cSld name="\u{1F600}"/>',
+    ].map((text) => ({ text })),
+  },
+  {
+    fn: 'pptxLeaves.xml-utils.withRelationshipIds',
+    call: (text, args) =>
+      withRelationshipIds(
+        text,
+        args.names as string[],
+        new Map(Object.entries(args.ids as Record<string, string>)),
+      ),
+    fromDocument: (parts) =>
+      partsMatching(parts, SLIDE_PART)
+        .slice(0, 3)
+        .map((text) => ({
+          text,
+          args: { names: ['embed', 'id', 'link'], ids: { rId1: 'rId10', rId2: 'rId1' } },
+        })),
+    built: REL_XMLS.flatMap((text) =>
+      REL_ID_MAPS.map((ids) => ({ text, args: { names: ['embed', 'id'], ids } })),
+    ),
+  },
+  {
     fn: 'pptxLeaves.slide-ids.nextSlideId',
     call: (text) => nextSlideId(text),
     fromDocument: (parts) => {
       const text = parts.get('ppt/presentation.xml')
       return text === undefined ? [] : [{ text }]
     },
-    built: PRESENTATIONS.map((text) =>
-      text.includes('id = "600"') ? { text, seed: false } : { text },
+    built: PRESENTATIONS.map((text) => ({ text })),
+  },
+  {
+    fn: 'pptxLeaves.slide-ids.canListSlide',
+    call: (text, args) => canListSlide(args.absent === true ? null : text),
+    fromDocument: (parts) => {
+      const text = parts.get('ppt/presentation.xml')
+      return text === undefined ? [] : [{ text }]
+    },
+    built: [
+      ...LISTED_PRESENTATIONS.map((text) => ({ text })),
+      { text: '', args: { absent: true } },
+    ],
+  },
+  {
+    fn: 'pptxLeaves.slide-ids.withSlideListed',
+    call: (text, args) => withSlideListed(text, args.rid as string, args.afterRid as string | undefined),
+    fromDocument: (parts) => {
+      const text = parts.get('ppt/presentation.xml')
+      return text === undefined ? [] : [{ text, args: { rid: 'rId99' } }]
+    },
+    built: LISTED_PRESENTATIONS.flatMap((text) => [
+      { text, args: { rid: 'rId99' } },
+      { text, args: { rid: 'rId99', afterRid: 'rId2' } },
+      { text, args: { rid: 'rId99', afterRid: 'rId&#50;' } },
+      { text, args: { rid: 'rId99', afterRid: 'nothing' } },
+      { text, args: { rid: 'rId99', afterRid: 'constructor' } },
+      { text, args: { rid: 'a$&b', afterRid: '' } },
+    ]),
+  },
+  {
+    fn: 'pptxLeaves.slide-ids.withSlideUnlisted',
+    call: (text, args) => withSlideUnlisted(text, args.rid as string),
+    fromDocument: (parts) => {
+      const text = parts.get('ppt/presentation.xml')
+      return text === undefined ? [] : [{ text, args: { rid: 'rId2' } }]
+    },
+    built: LISTED_PRESENTATIONS.flatMap((text) =>
+      ['rId2', 'rId3', 'rId&#50;', 'nothing', 'constructor', '', 'r&amp;1'].map((rid) => ({
+        text,
+        args: { rid },
+      })),
     ),
   },
   {

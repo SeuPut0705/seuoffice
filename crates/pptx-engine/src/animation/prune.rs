@@ -86,10 +86,7 @@ const MAX_TIMING_COLLAPSE_PASSES: usize = 64;
 /// diagram build is dropped. `spids` holds the values of the set in its
 /// order, without repeats.
 ///
-/// Ledger `anim-prune-dollar-patterns`: the TypeScript puts the pruned
-/// timing back with `bodySuffix.replace(timing, xml)`, which reads `$&`,
-/// `$'`, `` $` `` and `$$` in the timing as replacement patterns. Here the
-/// pruned timing is put back as it is.
+/// The pruned timing is put back as it is (the TypeScript replaces with a function).
 pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> Result<bool, String> {
     if spids.is_empty() {
         return Ok(false);

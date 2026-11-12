@@ -160,8 +160,7 @@ pub fn eval_guides(gds: &[Guide], w: f64, h: f64) -> JsObject<f64> {
             "tan" => x * math_tan(a2r(y)),
             _ => 0.0,
         };
-        // a guide named `__proto__` is an entry like any other here; the
-        // TypeScript's plain assignment drops it (ledger custgeom-inherited-guide)
+        // the table has no prototype: a guide named `__proto__` is an entry like any other
         env.set(gd.name.clone(), out);
     }
     env

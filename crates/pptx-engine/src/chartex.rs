@@ -2,8 +2,9 @@
 //! namespace, ppt/charts/chartExN.xml as a `ChartModel`. Supported
 //! layoutIds: funnel and sunburst; any other is `None` (the chip).
 
+use crate::xml_utils::xml_parse_object as parse_object;
 use jscompat::{JsNum, parse_float};
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use serde_json::Value;
 
 use crate::chart::{

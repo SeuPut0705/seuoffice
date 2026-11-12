@@ -347,6 +347,13 @@ const RUN_FONTS: string[] = [
   '<a:r><a:rPr><a:ln><a:solidFill><a:srgbClr val="111111"/></a:solidFill></a:ln><a:effectLst/></a:rPr><a:t>x</a:t></a:r>',
   '<a:r><a:rPr/><a:t/></a:r>',
   '<a:r><a:rPr b="0" i="1" u="sng" strike="sngStrike" baseline="30000" spc="5" sz="100"/><a:t xml:space="preserve"> y </a:t></a:r>',
+  // the link as XML reads it: single quotes, spaced `=`, references, an empty id, none at all
+  '<a:r><a:rPr><a:hlinkClick r:id = \'rId9\' action="x"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick r:id="rId&#57;"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick r:id="" action="ppaction://hlinkshowjump?jump=lastslide"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick action=\'ppaction://hlinkshowjump?jump=lastslide\' r:id=\'\'/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick note="a>b" r:id="rId9"/></a:rPr><a:t>x</a:t></a:r>',
+  '<a:r><a:rPr><a:hlinkClick/></a:rPr><a:t>x</a:t></a:r>',
 ]
 
 const RUNS: Array<Args> = wire([
@@ -365,6 +372,9 @@ const RUNS: Array<Args> = wire([
   { text: 'x', paraMark: true, color: '#010101' },
   { text: 'x', fontSize: 1e999, baseline: 1e999, letterSpacing: 1e12, letterSpacingEdited: true },
   { text: '\u{1F600}', kern: 1.234, capExplicit: 'small', letterSpacing: 0.005, baseline: 0.0004, fontSize: 0.005 },
+  // text the deck or the user typed, with the `$` forms of a replacement string
+  { text: 'f', fontFamily: 'A$&B$1$$', latinFont: "$'$`", underline: true, underlineStyle: '$&', lang: 'x$&y' },
+  { text: 'g', hyperlinkRId: '', hyperlinkAction: 'ppaction://hlinkshowjump?jump=firstslide' },
 ])
 
 /** A wrapper element carrying the model's text body, so the Rust side builds the same value. */

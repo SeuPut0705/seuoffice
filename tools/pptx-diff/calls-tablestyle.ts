@@ -2,7 +2,7 @@
 // packages/pptx-engine. The Rust side answers in
 // crates/office-wasm/src/calls/pptx_tablestyle.rs to
 // `pptxTablestyle.table-style.<TypeScript name>`.
-import { XMLParser } from 'fast-xml-parser'
+import { xmlParser } from '../../packages/pptx-engine/src/xml-parser'
 import { tableRowGridCols } from '../../packages/pptx-engine/src/table-grid'
 import {
   BUILTIN_TABLE_STYLES,
@@ -27,7 +27,7 @@ type Parts = ReadonlyMap<string, string>
 const wire = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T
 
 /** The parser of packages/pptx-engine/src/parse.ts, which reads the tables. */
-const parseTsParser = new XMLParser({
+const parseTsParser = xmlParser({
   ignoreAttributes: false,
   attributeNamePrefix: '@_',
   trimValues: false,

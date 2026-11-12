@@ -1,7 +1,8 @@
 //! `pptxXml.*`: the object tree fast-xml-parser's `XMLParser` gives the slides
 //! engine, under the options of each parser the engine builds.
 
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
+use pptx_engine::xml_utils::xml_parse_object as parse_object;
 use serde_json::Value;
 
 use super::{Returned, arg, value};

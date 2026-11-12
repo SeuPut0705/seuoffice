@@ -3,17 +3,14 @@
 //! inside a run's `<a:rPr>`, or inside a picture's `<p:spPr>`. The deck keeps
 //! the real words; only the model's view swaps them for the label.
 
-use jscompat::{
-    RegexError, RegexLimit, TryJsRegex, is_js_space, js_regex, replace_first_with, trim, truthy,
-    try_js_regex,
-};
+use jscompat::{TryJsRegex, is_js_space, js_regex, trim, truthy, try_js_regex};
 use serde_json::Value;
 
-use crate::xml_utils::{as_xml_node, escape_xml_attr, xml_array};
+use crate::xml_utils::{as_xml_node, attribute_of, element_range, escape_xml_attr, xml_array};
 
-/// `REDACT_NS` of packages/agent-core/src/redact-range.ts, which
-/// redaction-xml.ts re-exports.
-pub const REDACT_NS: &str = "https://genspark.ai/genoffice/redaction/2026";
+/// `REDACT_NS_WRITTEN` of packages/agent-core/src/redact-range.ts (the old
+/// namespace, still the one written), which redaction-xml.ts re-exports.
+pub const REDACT_NS_WRITTEN: &str = "https://genspark.ai/genoffice/redaction/2026";
 /// `REDACT_PREFIX` of packages/agent-core/src/redact-range.ts.
 pub const REDACT_PREFIX: &str = "go";
 /// `REDACT_EL` of packages/agent-core/src/redact-range.ts:
@@ -28,26 +25,28 @@ pub const REDACT_EXT_URI: &str = "{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}";
 /// declared on the `a:ext` itself; `label` is unprefixed on purpose.
 pub fn redact_ext_xml(label: &str) -> String {
     format!(
-        r#"<a:ext uri="{REDACT_EXT_URI}" xmlns:{REDACT_PREFIX}="{REDACT_NS}"><{REDACT_EL} label="{}"/></a:ext>"#,
+        r#"<a:ext uri="{REDACT_EXT_URI}" xmlns:{REDACT_PREFIX}="{REDACT_NS_WRITTEN}"><{REDACT_EL} label="{}"/></a:ext>"#,
         escape_xml_attr(label)
     )
 }
 
 /// True when the fragment already carries our mark.
-pub fn has_redact_ext_in(xml: &str) -> Result<bool, RegexLimit> {
-    our_ext_re().try_test(xml)
+pub fn has_redact_ext_in(xml: &str) -> Result<bool, String> {
+    Ok(!our_ext_ranges(xml)?.is_empty())
 }
 
 /// Sync our mark on the element named `tag` inside `xml`: `a:rPr` for a run,
 /// `p:spPr` for a picture. No `label` removes it. `tag` is pasted into the
 /// pattern unescaped, as the TypeScript does: one that does not compile
 /// throws.
-pub fn sync_redact_ext(xml: &str, tag: &str, label: Option<&str>) -> Result<String, RegexError> {
+pub fn sync_redact_ext(xml: &str, tag: &str, label: Option<&str>) -> Result<String, String> {
     let Some(open) = TryJsRegex::new(
         &format!(r"<{tag}\b[^>]*?/>|<{tag}\b[^>]*?>[\s\S]*?</{tag}>"),
         "",
-    )?
-    .try_exec(xml)?
+    )
+    .map_err(|error| error.to_string())?
+    .try_exec(xml)
+    .map_err(|error| error.to_string())?
     else {
         return Ok(xml.to_owned());
     };
@@ -65,9 +64,12 @@ pub fn sync_redact_ext(xml: &str, tag: &str, label: Option<&str>) -> Result<Stri
     ))
 }
 
-/// One `<a:ext>` matching our URI.
+/// One `<a:ext>` matching our URI among the node's own extension lists. A node should hold one
+/// list; a deck that holds two parses as an array, and reading it as a single node would miss a
+/// mark in either.
 fn our_ext(ext_lst: Option<&Value>) -> Option<&Value> {
-    xml_array(as_xml_node(ext_lst).get("a:ext"))
+    xml_array(ext_lst)
+        .flat_map(|list| xml_array(list.get("a:ext")))
         .find(|ext| ext.get("@_uri").and_then(Value::as_str) == Some(REDACT_EXT_URI))
 }
 
@@ -80,56 +82,62 @@ pub fn read_redact_label(node: Option<&Value>) -> Option<&str> {
     }
 }
 
-/// Our `<a:ext>`, whether self-closing or paired. After the `uri` attribute, a
-/// well-formed tag that closes itself is attributes (`(?:\s+name=value)*`), then
-/// white space, then `/>`.
-const OUR_EXT_PATTERN: &str = r#"<a:ext\b[^>]*\buri="{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}"(?:(?:\s+[^\s=<>"'/]+\s*=\s*(?:"[^"<]*"|'[^'<]*'))*\s*/>|[^>]*(?:/>|>[\s\S]*?</a:ext>))"#;
+/// Where each of our `<a:ext>` lies in raw XML, self-closing or paired, in document order. An
+/// extension is ours by its `uri` as XML reads it (`attribute_of`: any quotes, any white space
+/// around `=`, references decoded), which is how the parser finds it on the way in.
+fn our_ext_ranges(xml: &str) -> Result<Vec<(usize, usize)>, String> {
+    let mut out: Vec<(usize, usize)> = Vec::new();
+    for open in try_js_regex!(r#"<a:ext\b(?:[^>"']|"[^"]*"|'[^']*')*>"#).try_find_iter(xml) {
+        let open = open.map_err(|limit| limit.to_string())?;
+        if open.start() < out.last().map_or(0, |range| range.1) {
+            continue;
+        }
+        if attribute_of(open.as_str(), "uri").as_deref() != Some(REDACT_EXT_URI) {
+            continue;
+        }
+        if let Some(ext) = element_range(xml, "a:ext", open.start())? {
+            out.push((ext.start, ext.end));
+        }
+    }
+    Ok(out)
+}
 
-/// The opening tag of an `<a:extLst>` that is well-formed: attributes, then
-/// white space, then `>`.
-const WELL_FORMED_EXTLST_OPEN: &str =
-    r#"^<a:extLst(?:\s+[^\s=<>"'/]+\s*=\s*(?:"[^"<]*"|'[^'<]*'))*\s*>"#;
-
-/// Our `<a:ext>` as raw bytes, whether self-closing or paired.
-///
-/// ledger redact-self-closing-ext-swallows-next: the TypeScript pattern is
-/// the second alternative alone. Its `[^>]*` takes the `/` of a self-closing
-/// tag and then reads `>` as the end of an opening tag, so a self-closing
-/// extension of ours followed by another extension matches through that one's
-/// `</a:ext>`. Here a well-formed tag that closes itself is the whole match;
-/// text that is not such a tag is read as the TypeScript reads it.
-fn our_ext_re() -> &'static TryJsRegex {
-    try_js_regex!(OUR_EXT_PATTERN)
+/// `xml` without the ranges, which are in document order and do not overlap.
+fn without(xml: &str, ranges: &[(usize, usize)]) -> String {
+    let mut out = String::with_capacity(xml.len());
+    let mut at = 0;
+    for &(start, end) in ranges {
+        out.push_str(xml.get(at..start).unwrap_or_default());
+        at = end;
+    }
+    out.push_str(xml.get(at..).unwrap_or_default());
+    out
 }
 
 /// Remove our extension from a raw `<a:rPr>` or `<p:spPr>`, leaving
 /// everything else.
-pub fn strip_redact_ext(xml: &str) -> Result<String, RegexLimit> {
-    let without_ours = our_ext_re().try_replace_all(xml, |_| String::new())?;
-    let mut stopped = None;
-    // an apply/unapply cycle would otherwise leave an empty <a:extLst> behind.
-    // ledger redact-strip-drops-extlst-attributes: the TypeScript writes a list
-    // that still holds something back as `<a:extLst>inner</a:extLst>`, without
-    // the attributes it had (a namespace declaration its content may need).
-    // A list whose opening tag is well-formed is kept as it is here.
-    let pruned = js_regex!(r"<a:extLst\b[^>]*?\/>|<a:extLst\b[^>]*>([\s\S]*?)<\/a:extLst>")
-        .replace_all(&without_ours, |list| match list.get(1) {
-            Some(inner) if !trim(inner).is_empty() => {
-                match try_js_regex!(WELL_FORMED_EXTLST_OPEN).try_test(list.as_str()) {
-                    Ok(true) => list.as_str().to_owned(),
-                    Ok(false) => format!("<a:extLst>{inner}</a:extLst>"),
-                    Err(limit) => {
-                        stopped = Some(limit);
-                        String::new()
-                    }
-                }
-            }
-            _ => String::new(),
-        });
-    if let Some(limit) = stopped {
-        return Err(limit);
+pub fn strip_redact_ext(xml: &str) -> Result<String, String> {
+    let mut out = xml.to_owned();
+    // last first, so the offsets of the earlier ones stay valid
+    for (ours_start, ours_end) in our_ext_ranges(xml)?.into_iter().rev() {
+        let mut start = ours_start;
+        let mut end = ours_end;
+        // The list goes with it only when our extension was all it held: an apply/unapply
+        // cycle would otherwise leave an empty <a:extLst> behind. A list that still holds
+        // another extension, and every list we were never in, keeps its bytes.
+        let open = js_regex!(r"<a:extLst\b[^>]*>\s*$").exec(out.get(..start).unwrap_or_default());
+        let close = js_regex!(r"^\s*<\/a:extLst\s*>").exec(out.get(end..).unwrap_or_default());
+        if let (Some(open), Some(close)) = (open, close) {
+            start = open.start();
+            end += close.as_str().len();
+        }
+        out = format!(
+            "{}{}",
+            out.get(..start).unwrap_or_default(),
+            out.get(end..).unwrap_or_default()
+        );
     }
-    Ok(collapse_empty_props(&pruned))
+    Ok(collapse_empty_props(&out))
 }
 
 /// Adding the mark gives a self-closing `<a:rPr/>` the paired form; take it
@@ -150,7 +158,7 @@ fn collapse_empty_props(xml: &str) -> String {
 /// Put the mark in a raw `<a:rPr>` (or `nvPr`) string, replacing any
 /// previous one. The node's inner XML is kept verbatim; a self-closing node
 /// gains a paired form because the mark needs a child.
-pub fn set_redact_ext(props_xml: &str, label: &str) -> Result<String, RegexLimit> {
+pub fn set_redact_ext(props_xml: &str, label: &str) -> Result<String, String> {
     let ext = redact_ext_xml(label);
     let Some(open) = js_regex!(r"<([\w:]+)\b[^>]*?(\/?)>").exec(props_xml) else {
         return Ok(props_xml.to_owned());
@@ -182,27 +190,29 @@ pub fn set_redact_ext(props_xml: &str, label: &str) -> Result<String, RegexLimit
     ))
 }
 
-/// Replace our extension inside an existing `<a:extLst>`, or add one to the
-/// inner XML.
-fn splice_ext_lst(inner: &str, ext: &str) -> Result<String, RegexLimit> {
-    let Some(list) = js_regex!(r"<a:extLst\b[^>]*?(?:\/>|>[\s\S]*?<\/a:extLst>)").exec(inner)
-    else {
-        // extLst is the last child both schemas allow here
-        return Ok(format!("{inner}<a:extLst>{ext}</a:extLst>"));
-    };
-    let kept = our_ext_re().try_replace_all(list.as_str(), |_| String::new())?;
-    // our own extension goes last so a re-apply replaces rather than appends.
-    // ledger redact-label-dollar: the TypeScript passes it to replace as a
-    // replacement string, which reads `$$`, `$&`, `` $` `` and `$'` in the
-    // label as patterns; it goes in as written here.
-    let next = if kept.contains("</a:extLst>") {
-        kept.replacen("</a:extLst>", &format!("{ext}</a:extLst>"), 1)
-    } else {
-        replace_first_with(js_regex!(r"\/>$"), &kept, |_| format!(">{ext}</a:extLst>"))
-    };
-    Ok(format!(
-        "{}{next}{}",
-        inner.get(..list.start()).unwrap_or_default(),
-        inner.get(list.end()..).unwrap_or_default(),
-    ))
+/// The node's inner XML with the mark in the node's OWN extension list, replacing any mark
+/// already in the node. The own list is the node's last child (both schemas put extLst last), and
+/// it is the only one the reader looks in; a list earlier in the node belongs to a child.
+fn splice_ext_lst(inner: &str, ext: &str) -> Result<String, String> {
+    // a mark already in the node goes first, wherever it sits, so a re-apply replaces it
+    let kept = without(inner, &our_ext_ranges(inner)?);
+    let body = kept.trim_end_matches(is_js_space);
+    let tail = kept.get(body.len()..).unwrap_or_default();
+    // the last thing in the node closes its last child, so a list ending here is the node's own
+    if let Some(close) = js_regex!(r"<\/a:extLst\s*>$").exec(body) {
+        return Ok(format!(
+            "{}{ext}{}{tail}",
+            body.get(..close.start()).unwrap_or_default(),
+            body.get(close.start()..).unwrap_or_default(),
+        ));
+    }
+    if let Some(list) = js_regex!(r"<a:extLst\b[^>]*\/>$").exec(body) {
+        let head = list.as_str().strip_suffix("/>").unwrap_or(list.as_str());
+        return Ok(format!(
+            "{}{head}>{ext}</a:extLst>{tail}",
+            body.get(..list.start()).unwrap_or_default(),
+        ));
+    }
+    // no list of its own: extLst is the last child both schemas allow here
+    Ok(format!("{kept}<a:extLst>{ext}</a:extLst>"))
 }

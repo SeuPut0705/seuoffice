@@ -4,8 +4,8 @@ use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use jscompat::{
-    Radix, RegexError, TryJsRegex, js_regex, parse_float, parse_int, to_number, trim,
-    value_to_string, value_truthy,
+    JsMap, Radix, js_regex, parse_float, parse_int, to_number, trim, try_js_regex, value_to_string,
+    value_truthy,
 };
 use serde_json::{Map, Value};
 
@@ -35,21 +35,210 @@ pub fn xml_array(v: Option<&Value>) -> impl Iterator<Item = &Value> {
         .chain(single)
 }
 
-/// Numeric character references decoded where they name a Unicode scalar
-/// value; any other is kept as written.
-pub fn decode_numeric_char_refs(text: &str) -> String {
-    js_regex!(r"&#(?:x([0-9a-fA-F]+)|(\d+));").replace_all(text, |reference| {
-        let code = match reference.get(1) {
-            None => to_number(reference.get(2).unwrap_or_default()),
-            Some(hex) => parse_int(hex, Radix::Sixteen),
-        };
-        if code <= 1_114_111.0
-            && !(55_296.0..=57_343.0).contains(&code)
-            && let Some(ch) = char::from_u32(code as u32)
-        {
-            return ch.to_string();
+/// Where the first element of `element_range` lies: byte offsets into the text.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct ElementRange {
+    pub start: usize,
+    pub end: usize,
+    pub content_start: usize,
+    pub content_end: usize,
+}
+
+/// `decodeXml`: the five predefined entities and the numeric references, in one
+/// pass. A reference to NUL or a C0 control XML 1.0 forbids is dropped; one that
+/// names no Unicode scalar value stays as written.
+pub fn decode_xml(raw: &str) -> String {
+    decoded(raw).into_owned()
+}
+
+/// The decoder `xmlParser` installs (`ENTITY_DECODER.decode`); the second
+/// argument (the declared XML version) plays no part.
+pub fn decode_xml_cow(raw: &str, _xml_1_1: bool) -> Cow<'_, str> {
+    decoded(raw)
+}
+
+fn decoded(raw: &str) -> Cow<'_, str> {
+    if !raw.contains('&') {
+        return Cow::Borrowed(raw);
+    }
+    Cow::Owned(
+        js_regex!(r"&(?:#x([0-9a-fA-F]+)|#(\d+)|(amp|lt|gt|quot|apos));").replace_all(
+            raw,
+            |reference| {
+                if let Some(named) = reference.get(3) {
+                    return match named {
+                        "amp" => "&",
+                        "lt" => "<",
+                        "gt" => ">",
+                        "quot" => "\"",
+                        _ => "'",
+                    }
+                    .to_owned();
+                }
+                let code = match reference.get(1) {
+                    Some(hex) => parse_int(hex, Radix::Sixteen),
+                    None => to_number(reference.get(2).unwrap_or_default()),
+                };
+                if code > 1_114_111.0 || (55_296.0..=57_343.0).contains(&code) {
+                    return reference.as_str().to_owned();
+                }
+                if code < 32.0 && code != 9.0 && code != 10.0 && code != 13.0 {
+                    return String::new();
+                }
+                char::from_u32(code as u32)
+                    .map(String::from)
+                    .unwrap_or_else(|| reference.as_str().to_owned())
+            },
+        ),
+    )
+}
+
+/// `parseObject` with the engine's entity decoder: every `new XMLParser(...)`
+/// of the engine is `xmlParser(...)`.
+pub fn xml_parse_object(
+    xml: &str,
+    options: &ooxml_xml::ObjectOptions<'_>,
+) -> Result<Value, ooxml_xml::ParseError> {
+    ooxml_xml::parse_object_with(xml, options, decode_xml_cow)
+}
+
+/// `attributeOf`: the decoded value of attribute `name` in the open tag of
+/// `element`, whatever its quotes and spacing.
+pub fn attribute_of(element: &str, name: &str) -> Option<String> {
+    let open_tag = match element.find('>') {
+        Some(at) => element.get(..=at).unwrap_or_default(),
+        None => "",
+    };
+    for attr in js_regex!(r#"\s([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#).find_iter(open_tag) {
+        if attr.get(1) == Some(name) {
+            return Some(decode_xml(
+                attr.get(2).or_else(|| attr.get(3)).unwrap_or_default(),
+            ));
         }
-        reference.as_str().to_owned()
+    }
+    None
+}
+
+/// `rootPrefixOf`: the prefix, with its colon, under which the root element
+/// binds namespace `ns` (`""` for a default binding); `None` when it binds none.
+pub fn root_prefix_of(xml: &str, ns: &str) -> Result<Option<String>, String> {
+    let Some(root) = try_js_regex!(r#"<(?![?!])(?:[^>"']|"[^"]*"|'[^']*')*>"#)
+        .try_exec(xml)
+        .map_err(|e| e.to_string())?
+    else {
+        return Ok(None);
+    };
+    let root = root.as_str();
+    let own = js_regex!(r"^<([^\s/>:]+:)?")
+        .exec(root)
+        .and_then(|m| m.get(1))
+        .unwrap_or_default();
+    let mut found: Option<String> = None;
+    for attr in js_regex!(r#"\s([^\s=/>]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#).find_iter(root) {
+        let name = attr.get(1).unwrap_or_default();
+        if name != "xmlns" && !name.starts_with("xmlns:") {
+            continue;
+        }
+        if decode_xml(attr.get(2).or_else(|| attr.get(3)).unwrap_or_default()) != ns {
+            continue;
+        }
+        let prefix = if name == "xmlns" {
+            String::new()
+        } else {
+            format!("{}:", name.get("xmlns:".len()..).unwrap_or_default())
+        };
+        if prefix == own {
+            return Ok(Some(prefix));
+        }
+        if found.is_none() {
+            found = Some(prefix);
+        }
+    }
+    Ok(found)
+}
+
+/// `elementRange`: where the first element named `name` at or after `from`
+/// lies: its open tag through its close tag, or its empty tag. `None` when
+/// there is none, or it is not closed.
+pub fn element_range(xml: &str, name: &str, from: usize) -> Result<Option<ElementRange>, String> {
+    let tags = try_js_regex!(r#"<(\/?)([^\s/>!?]+)(?:[^>"']|"[^"]*"|'[^']*')*?(\/?)>"#);
+    let mut start: Option<usize> = None;
+    let mut content_start = 0;
+    let mut depth: i64 = 0;
+    // the pattern starts at `<` and reads nothing behind it, so a search of the
+    // tail is `lastIndex = from`; offsets are shifted back by `from`
+    let Some(tail) = xml.get(from..) else {
+        return Ok(None);
+    };
+    for tag in tags.try_find_iter(tail) {
+        let tag = tag.map_err(|e| e.to_string())?;
+        if tag.get(2) != Some(name) {
+            continue;
+        }
+        let end = from + tag.end();
+        if tag.get(1).is_some_and(|slash| !slash.is_empty()) {
+            if let Some(start) = start {
+                depth -= 1;
+                if depth == 0 {
+                    return Ok(Some(ElementRange {
+                        start,
+                        end,
+                        content_start,
+                        content_end: from + tag.start(),
+                    }));
+                }
+            }
+        } else if tag.get(3).is_some_and(|slash| !slash.is_empty()) {
+            if start.is_none() {
+                return Ok(Some(ElementRange {
+                    start: from + tag.start(),
+                    end,
+                    content_start: end,
+                    content_end: end,
+                }));
+            }
+        } else {
+            if start.is_none() {
+                start = Some(from + tag.start());
+                content_start = end;
+            }
+            depth += 1;
+        }
+    }
+    Ok(None)
+}
+
+/// `cSldNameOf`: the name a slide, layout or master part gives itself.
+pub fn c_sld_name_of(part_xml: &str) -> Option<String> {
+    let c_sld = js_regex!(r"<p:cSld\b[^>]*>").exec(part_xml)?;
+    attribute_of(c_sld.as_str(), "name")
+}
+
+/// `withRelationshipIds`: each `r:<name>` reference (for `names`) whose id is a
+/// key of `ids` re-pointed at the id it maps to, in one pass.
+pub fn with_relationship_ids(xml: &str, names: &[&str], ids: &JsMap<String>) -> String {
+    if ids.is_empty() {
+        return xml.to_owned();
+    }
+    js_regex!(r#"\br:(\w+)(\s*=\s*)(?:"([^"]*)"|'([^']*)')"#).replace_all(xml, |m| {
+        let name = m.get(1).unwrap_or_default();
+        let double = m.get(3);
+        let single = m.get(4);
+        let to = if names.contains(&name) {
+            ids.get(&decode_xml(double.or(single).unwrap_or_default()))
+        } else {
+            None
+        };
+        let Some(to) = to else {
+            return m.as_str().to_owned();
+        };
+        let value = escape_xml_attr(to);
+        let equals = m.get(2).unwrap_or_default();
+        if double.is_none() {
+            format!("r:{name}{equals}'{}'", value.replace('\'', "&apos;"))
+        } else {
+            format!("r:{name}{equals}\"{value}\"")
+        }
     })
 }
 
@@ -102,12 +291,16 @@ pub fn escape_xml_attr(text: &str) -> String {
 }
 
 /// Highest rIdN already present in a .rels part, the Id attribute read with
-/// either quote. A number: a run of digits past 2^53 rounds, and past 1e308
-/// is Infinity.
+/// either quote and decoded. A number: a run of digits past 2^53 rounds, and
+/// past 1e308 is Infinity.
 pub fn max_relationship_id_number(rels_xml: &str) -> f64 {
     let mut max = 0.0;
-    for found in js_regex!(r#"\bId\s*=\s*(["'])rId(\d+)\1"#).find_iter(rels_xml) {
-        let n = to_number(found.get(2).unwrap_or_default());
+    for found in js_regex!(r#"\bId\s*=\s*(?:"([^"]*)"|'([^']*)')"#).find_iter(rels_xml) {
+        let id = decode_xml(found.get(1).or_else(|| found.get(2)).unwrap_or_default());
+        let n = js_regex!(r"^rId(\d+)$")
+            .exec(&id)
+            .and_then(|m| m.get(1))
+            .map_or(0.0, to_number);
         if n > max {
             max = n;
         }
@@ -115,13 +308,13 @@ pub fn max_relationship_id_number(rels_xml: &str) -> f64 {
     max
 }
 
-/// Whether [Content_Types].xml already declares an Override for the part,
-/// the PartName attribute read with either quote.
+/// Whether [Content_Types].xml already declares an Override for the part, the
+/// PartName attribute read with either quote and decoded.
 pub fn has_content_type_override(content_types: &str, part_path: &str) -> bool {
     let wanted = format!("/{part_path}");
-    js_regex!(r#"\bPartName\s*=\s*(["'])(.*?)\1"#)
+    js_regex!(r"<Override\b[^>]*>")
         .find_iter(content_types)
-        .any(|found| found.get(2) == Some(wanted.as_str()))
+        .any(|tag| attribute_of(tag.as_str(), "PartName").as_deref() == Some(wanted.as_str()))
 }
 
 /// `creationIdExtXml`: the a16:creationId extension of a newborn
@@ -140,15 +333,20 @@ pub fn creation_id_xml(uuid: &str) -> String {
     format!("<a:extLst>{}</a:extLst>", creation_id_ext_xml(uuid))
 }
 
-/// Any `<Default>` already declaring this extension, whatever its attribute
-/// order or quoting. `ext` is pasted into the pattern unescaped, so it can be
-/// a pattern that does not compile: that throws, as `new RegExp` does.
-pub fn has_default_for(ct: &str, ext: &str) -> Result<bool, RegexError> {
-    let re = TryJsRegex::new(&format!(r#"\bExtension\s*=\s*(["']){ext}\1"#), "")?;
+/// The content type [Content_Types].xml declares by default for this
+/// extension (compared without regard to case); `None` when it declares none.
+pub fn default_content_type_for(ct: &str, ext: &str) -> Option<String> {
+    let wanted = ext.to_lowercase();
     for tag in js_regex!(r"<Default\b[^>]*\/?>").find_iter(ct) {
-        if re.try_test(tag.as_str())? {
-            return Ok(true);
+        if attribute_of(tag.as_str(), "Extension").map(|e| e.to_lowercase()) == Some(wanted.clone())
+        {
+            return Some(attribute_of(tag.as_str(), "ContentType").unwrap_or_default());
         }
     }
-    Ok(false)
+    None
+}
+
+/// Any `<Default>` already declaring this extension.
+pub fn has_default_for(ct: &str, ext: &str) -> bool {
+    default_content_type_for(ct, ext).is_some()
 }

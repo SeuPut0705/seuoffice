@@ -4,12 +4,13 @@
 //! as packages/pptx-engine/src/parse.ts parses it, as
 //! tools/pptx-diff/calls-theme.ts does.
 
-use ooxml_xml::{ObjectOptions, parse_object};
+use ooxml_xml::ObjectOptions;
 use pptx_engine::color::{apply_color_mods, hex_to_rgb, resolve_color_node, scale_luminance};
 use pptx_engine::theme::{
     EaScript, Theme, ea_script_of_lang, parse_clr_map, parse_theme, resolve_font_ref,
     resolve_scheme_color, sys_color_hex, theme_with_override,
 };
+use pptx_engine::xml_utils::xml_parse_object as parse_object;
 use serde_json::Value;
 
 use super::{Returned, arg, optional, required, value};

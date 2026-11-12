@@ -16,6 +16,7 @@ use crate::types::{
     EaLang, FontScriptHint, PPrDirty, PPrExplicit, Paragraph, ParagraphBullet,
     ParagraphDefaultRunProps, TextAlign, TextAnchor, TextBody, TextElement, TextRun,
 };
+use crate::xml_utils::attribute_of;
 
 use jscompat::math_round;
 
@@ -931,35 +932,18 @@ fn own_r_pr(run_xml: &str) -> Result<Option<OwnRPr>, String> {
     }))
 }
 
-/// First of the two quote groups of `\b<name>=(?:"..."|'...')` that is non-empty (`find(Boolean)`).
-fn quoted_attr(tag: &str, name: &str) -> Result<Option<String>, String> {
-    // `name` is one of the attributes this file reads: a literal pattern each
-    macro_rules! quoted_re {
-        ($name:literal) => {
-            js_regex!(concat!(r"\b", $name, r#"=(?:"([^"]*)"|'([^']*)')"#))
-        };
-    }
-    let re = match name {
-        "r:id" => quoted_re!("r:id"),
-        "action" => quoted_re!("action"),
-        _ => return Err(format!("no attribute pattern for {name}")),
-    };
-    Ok(re.exec(tag).and_then(|m| {
-        [m.get(1), m.get(2)]
-            .into_iter()
-            .flatten()
-            .find(|g| !g.is_empty())
-            .map(str::to_owned)
-    }))
-}
-
 /// Sync `<a:hlinkClick>` in the rPr with the model: no-op when the rId already matches.
 fn patch_run_hlink(run_xml: &str, run: &TextRun) -> Result<String, String> {
     let existing = js_regex!(r"<a:hlinkClick\b[^>]*>")
         .exec(run_xml)
         .map(|m| m.as_str());
+    // Read as the parser reads them into the model: decoded (the same value spelled another way
+    // is not a change), and an id that is present but empty is '', which a named action carries
     let (existing_r_id, existing_action) = match existing {
-        Some(tag) => (quoted_attr(tag, "r:id")?, quoted_attr(tag, "action")?),
+        Some(tag) => (
+            Some(attribute_of(tag, "r:id").unwrap_or_default()),
+            attribute_of(tag, "action").filter(|action| !action.is_empty()),
+        ),
         None => (None, None),
     };
     if existing_r_id.as_deref() == run.hyperlink_r_id.as_deref()
