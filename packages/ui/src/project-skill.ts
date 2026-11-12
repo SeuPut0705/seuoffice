@@ -1,6 +1,6 @@
 import type { Lang } from '@seuoffice/i18n'
 import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@seuoffice/agent-core'
-import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store/folder-api'
 import type {
   PROJECT_TOOL_NAMES,
   ProjectContextBundle,
