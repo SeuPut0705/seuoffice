@@ -2176,13 +2176,15 @@ export interface RevisionSummary {
   text: string
   /** formatting changes: `field: old → new` pairs */
   change?: string
+  /** present when the change covers words hidden from AI (left to the person to accept or reject) */
+  hidden?: true
 }
 
 /** Pending tracked changes in document order, ids as accept_changes / reject_changes take them. */
 export function listRevisions(doc: OpenDocument): RevisionSummary[] {
   return doc.mods.revisionOps
     .listRevisionEntries(doc.editor.state.doc)
-    .map(({ from: _from, to: _to, ...rest }) => rest)
+    .map(({ from: _from, to: _to, hidden, ...rest }) => (hidden ? { ...rest, hidden } : rest))
 }
 
 const CONTENT_OPS = [
