@@ -569,4 +569,3 @@ is responsible for saying so.
 
 Open an issue at
 [github.com/SeuPut0705/seuoffice/issues](https://github.com/SeuPut0705/seuoffice/issues).
-For a suspected security problem, follow [SECURITY.md](SECURITY.md) instead.

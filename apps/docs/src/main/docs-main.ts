@@ -4486,7 +4486,7 @@ const keyModelRefresher = createKeyModelRefresher({
  * a key that changed. False when the payload is not settings at all.
  */
 function writeRendererAiSettings(settings: unknown): boolean {
-  // SECURITY.md: payloads are schema-checked in the main process. The settings
+  // Renderer payloads are schema-checked in the main process. The settings
   // file feeds cliPath into spawn() and baseUrl receives the provider's API key,
   // so the renderer's copy is sanitized before it touches disk.
   const sanitized = sanitizeAiSettings(settings)

@@ -1,0 +1,94 @@
+name: seuoffice rust
+
+# The Rust document engine (crates/) and its parity gate against the TypeScript
+# engine (tools/docx-diff), on a GitHub runner. Decision 0025.
+#
+# crates/ lives on a branch until its first unit is merged, so this file does
+# nothing on main yet: start it on that branch by hand,
+#   gh workflow run "seuoffice rust" --ref <branch>
+# It runs on its own for a push that touches the crates or the gate once they
+# are on main. The workstation that develops the port is shared and slow, which
+# is why the full gate runs here.
+
+on:
+  push:
+    branches: [main]
+    paths: ['crates/**', 'tools/docx-diff/**', 'packages/docx-engine/src/**']
+  workflow_dispatch:
+
+concurrency:
+  group: seuoffice-rust-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  crates:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the Rust engine in this tree
+        id: has
+        run: |
+          if [ -f crates/Cargo.toml ]; then echo "crates=true" >> "$GITHUB_OUTPUT"; else echo "crates=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Rust toolchain with the WASI target
+        if: steps.has.outputs.crates == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal --component rustfmt --component clippy
+          rustup default stable
+          rustup target add wasm32-wasip1
+          rustc --version
+
+      - uses: actions/cache@v4
+        if: steps.has.outputs.crates == 'true'
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            crates/target
+          key: seuoffice-rust-${{ runner.os }}-${{ hashFiles('crates/Cargo.lock') }}
+          restore-keys: seuoffice-rust-${{ runner.os }}-
+
+      - name: Format
+        if: steps.has.outputs.crates == 'true'
+        run: cargo fmt --manifest-path crates/Cargo.toml --all -- --check
+
+      - name: Clippy
+        if: steps.has.outputs.crates == 'true'
+        run: cargo clippy --manifest-path crates/Cargo.toml --workspace --all-targets -- -D warnings
+
+      - name: Unit tests
+        if: steps.has.outputs.crates == 'true'
+        run: cargo test --manifest-path crates/Cargo.toml --workspace
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.crates == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.has.outputs.crates == 'true'
+        run: npm ci
+
+      - name: Gate harness typecheck and tests
+        if: steps.has.outputs.crates == 'true'
+        run: |
+          npm --prefix tools/docx-diff run typecheck
+          npm --prefix tools/docx-diff run test
+
+      - name: Parity gate
+        if: steps.has.outputs.crates == 'true'
+        run: npm --prefix tools/docx-diff run gate
+
+      - name: Keep the gate output
+        if: always() && steps.has.outputs.crates == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: docx-diff-out
+          path: tools/docx-diff/out
+          if-no-files-found: ignore
