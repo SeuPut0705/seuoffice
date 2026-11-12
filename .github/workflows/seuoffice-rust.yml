@@ -158,8 +158,8 @@ jobs:
           if-no-files-found: ignore
 
   # The central process on Windows (decision 0029): the functions whose Rust
-  # reads the platform (the file identity of fs.statSync) against the
-  # TypeScript on the same machine. The Linux job compares everything else.
+  # reads the platform (the file identity of fs.statSync, the file error
+  # table of node-fs) against the TypeScript on the same machine. The Linux job compares everything else.
   main-windows:
     if: ${{ !inputs.faults }}
     runs-on: windows-latest
@@ -194,7 +194,14 @@ jobs:
         shell: bash
         run: |
           mkdir -p tools/main-diff/out
+          # two runs, each its own filter; the second must not hide the first's failure
+          set +e
+          status=0
           npm --prefix tools/main-diff run gate -- --fn rename-validation.isSameFile --fn rename-validation.pdfSaveAsTarget --show 40 2>&1 | tee tools/main-diff/out/gate.txt
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+          npm --prefix tools/main-diff run gate -- --group node-fs --show 40 2>&1 | tee tools/main-diff/out/gate-node-fs.txt
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+          exit $status
 
       - name: Keep the Windows comparison
         if: ${{ always() && steps.has.outputs.main == 'true' }}
