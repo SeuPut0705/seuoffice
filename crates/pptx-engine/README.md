@@ -410,3 +410,79 @@ Two of the five were chosen by the reviewers who had not seen the porters'
 lists. A probe whose comparison ends without its tally is reported as
 ABORTED and fails the run, so a fault has to show as a difference of its
 function.
+
+## Unit 3 local proof
+
+The theme chain: `theme.ts`, `color.ts`, `placeholder.ts`, `table-style.ts`,
+`chart.ts`, `chartex.ts` (3,834 lines), with the subset of `types.ts` they
+need in `types.rs`. Each group's first comparison is kept unchanged in
+`evidence/u3-<group>-first.*`; the theme group's spec did not load the first
+time (a name declared twice) and that run is kept as
+`evidence/u3-theme-load-failure.*`.
+
+| Group         | Source files             | Functions | First checks | Different | Equal    |
+| ------------- | ------------------------ | --------- | ------------ | --------- | -------- |
+| `theme`       | `theme.ts`, `color.ts`   | 11        | 7,232        | 29        | 99.599%  |
+| `placeholder` | `placeholder.ts`         | 14        | 11,309       | 46        | 99.593%  |
+| `tablestyle`  | `table-style.ts`         | 8         | 16,749       | 14        | 99.916%  |
+| `chart`       | `chart.ts`, `chartex.ts` | 2         | 1,433        | 47        | 96.720%  |
+| Unit          |                          | 35        | 36,723       | 136       | 99.6297% |
+
+The commit of the placeholder group says 12,309 checks; the log says 11,309.
+
+Two of the 136 were errors of the port: two theme colors of the tracked decks
+one step off after the gamma curve of a tint, because `f64::powf` is not V8's
+`Math.pow` in the last bit. `jscompat::math_pow` uses the `libm` crate
+(fdlibm) now, and a seeded sweep of 600 colors through tint and shade was
+added. The other 134 are TypeScript defects written right in Rust, one ledger
+class each, reported to main:
+
+| Class                              | First differences | What the TypeScript does                                                                    |
+| ---------------------------------- | ----------------- | ------------------------------------------------------------------------------------------- |
+| `inherited-key-color-prst`         | 14                | `prstClr val="constructor"` (and the other inherited names) throws                          |
+| `inherited-key-theme-clrmap`       | 12                | A master clrMap value like `constructor` answers a function; the color node then throws     |
+| `theme-script-font-proto`          | 1                 | `a:font script="__proto__"` sets the prototype and the font is lost                         |
+| `inherited-key-placeholder-anchor` | 26                | `bodyPr anchor="constructor"` gives a function as the anchor                                |
+| `inherited-key-placeholder-align`  | 20                | `algn="constructor"` gives a function as the alignment                                      |
+| `inherited-key-table-style-id`     | 14                | A `tableStyleId` of an inherited name throws                                                |
+| `chart-xsd-boolean`                | 47                | CT_Boolean `val="true"`, `val="false"` and no `val` read against ECMA-376 at about 45 sites |
+
+`chart-xsd-boolean` is named by a test of the text (`CallSpec.listed` in
+`calls-chart.ts`), since a mutation that leaves an attribute without a value
+makes the same tree as `<c:delete/>`; the ledger check requires every class
+a spec names to have its entry and an input that still differs. Every site
+reads through `chart::node::xsd_bool` with the TypeScript's reading as a
+parameter (`TsBoolRead::EqOne` or `NotZero`):
+`rg -n "xsd_bool\(" crates/pptx-engine/src/chart` lists them.
+
+No replacement string of these files holds document or caller text, and none
+builds a pattern from such text. Read and found safe: `color.ts:335`,
+`theme.ts:68`, `:280`, `table-style.ts:220`, `:247`, `:256`, `:257`,
+`chart.ts:1295` to `:1302`.
+
+The tracked decks have no chart part, no `p:ph` in the new fixture, and one
+custom and one built-in table style: charts and most of the placeholder and
+table-style branches rest on built inputs and seeded mutations.
+`chart.ts`'s fill resolution (`parseFill`) is a function argument and cannot
+cross JSON: both sides are given the same stand-in, and the real one comes
+with unit 4.
+
+### Unit 3 faults and aborts
+
+69 fault probes for the unit's new groups (the porters' one or two per
+function, nine chosen for placeholder, table-style and theme and eight for
+charts by reviewers who had not seen those lists), plus the eight theme probes
+committed with that group. Locally 67 of the 69 were caught. The two that
+passed and what closed them: `ts-color-srgb-case` (no table style wrote its
+color in lower case; a style with `a0b1c2` was added) and
+`chart-chartex-negative-idx` (no chartEx level had a point with a negative
+`idx`; one was added after `idx` 0). Both are rerun on the runner.
+
+A read-only audit found three ways a forged chart part exhausts wasm memory,
+none a panic: point arrays sized by one large `idx` in each of 256 series,
+an unbounded number of chartEx levels of up to 10,000 cells each, and a
+chartEx point color at index 4,294,967,294 serialised hole by hole. The first
+two allocate fallibly now and return `RangeError: Array buffer allocation
+failed`; the third refuses past (2^29 - 24) / 5 entries with `RangeError:
+Invalid string length`, where V8's own serialisation fails, so both sides
+refuse. No cap that changes an answer was added.
