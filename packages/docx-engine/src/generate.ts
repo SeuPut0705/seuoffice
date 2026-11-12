@@ -28,6 +28,7 @@ import { escapeXmlAttr, escapeXmlText } from './xml-utils'
 import { resolvePropChangeXml } from './revision-xml'
 import { ownValue } from './own-value'
 import { nonFinite, xmlDecimal, xmlId, xmlInt } from './xml-number'
+import { removeElements } from './xml-tag'
 
 export interface GenerateContext {
   /** heading level -> styleId existing in the original styles.xml */
@@ -2249,13 +2250,8 @@ export function resolveParaMarkRPrChange(rawPPr: string, mode: 'accept' | 'rejec
 }
 
 export function stripPPrChange(rawPPr: string): string {
-  // pPrChange nests a <w:pPr> inside it, so we need depth-aware removal.
-  // Pattern: <w:pPrChange ...> ... </w:pPrChange>
-  const start = rawPPr.indexOf('<w:pPrChange')
-  if (start === -1) return rawPPr
-  const end = rawPPr.indexOf('</w:pPrChange>', start)
-  if (end === -1) return rawPPr
-  return rawPPr.slice(0, start) + rawPPr.slice(end + '</w:pPrChange>'.length)
+  // pPrChange nests a <w:pPr> inside it; a self-closing record is one element
+  return removeElements(rawPPr, 'w:pPrChange', 1)
 }
 
 /** Build a pPrChange child from the editor's JSON snapshot of the previous properties. */

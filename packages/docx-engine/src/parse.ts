@@ -259,6 +259,7 @@ import {
 } from './inline-opaque'
 import { paraCsFormat, parseStyles } from './parse-styles'
 import { ownValue, setOwn } from './own-value'
+import { removeElements } from './xml-tag'
 import {
   VML_PICT_RID_RE,
   VML_WORDART_RE,
@@ -7078,7 +7079,7 @@ async function parseNoteProps(
 ): Promise<{ footnoteProps?: NoteProps; endnoteProps?: NoteProps }> {
   const settingsXml = (await zip.file('word/settings.xml')?.async('string')) ?? ''
   // a tracked w:sectPrChange embeds the previous sectPr after the live one
-  const bodyXml = documentXml.replace(/<w:sectPrChange\b[\s\S]*?<\/w:sectPrChange>/g, '')
+  const bodyXml = removeElements(documentXml, 'w:sectPrChange')
   const at = bodyXml.lastIndexOf('<w:sectPr')
   const lastSectPr = at >= 0 ? bodyXml.slice(at) : ''
   const merged = (tag: 'w:footnotePr' | 'w:endnotePr'): NoteProps | undefined => {
