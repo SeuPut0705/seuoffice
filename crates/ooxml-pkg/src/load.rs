@@ -120,9 +120,15 @@ fn normalize_ooxml_parts(package: &mut Package) -> Result<(), String> {
 pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
     let prepared = neutralize_unicode_path_fields(bytes);
     let prepared = prepared.as_deref().unwrap_or(bytes);
-    // metered inflation first: past this point no part is larger than a limit
-    assert_zip_inflates_within_limits(prepared, &DEFAULT_ZIP_LIMITS)?;
-    let entries = jszip::load(prepared)?;
+    let mut package = load_zip_package(prepared)?;
+    normalize_ooxml_parts(&mut package)?;
+    Ok(package)
+}
+
+/// Metered zip loading with JSZip's names and no Word-only normalization.
+pub fn load_zip_package(bytes: &[u8]) -> Result<Package, String> {
+    assert_zip_inflates_within_limits(bytes, &DEFAULT_ZIP_LIMITS)?;
+    let entries = jszip::load(bytes)?;
     let mut package = Package::default();
     // what `assertZipWithinLimits` reads from the zip object: a later entry of
     // the same name replaces the earlier one
@@ -149,6 +155,5 @@ pub fn load_docx_package(bytes: &[u8]) -> Result<Package, String> {
             .collect();
         assert_declared_sizes_within_limits(&parts, &DEFAULT_ZIP_LIMITS)?;
     }
-    normalize_ooxml_parts(&mut package)?;
     Ok(package)
 }

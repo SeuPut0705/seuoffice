@@ -18,7 +18,7 @@ pub use gate::{
     DEFAULT_ZIP_LIMITS, DeclaredPart, INFLATE_FAILURE, ZipLimits,
     assert_declared_sizes_within_limits, assert_zip_inflates_within_limits,
 };
-pub use load::load_docx_package;
+pub use load::{load_docx_package, load_zip_package};
 pub use normalize::{needs_ooxml_normalization, normalize_ooxml_xml};
 pub use package::{Package, Part, ReadError};
 
