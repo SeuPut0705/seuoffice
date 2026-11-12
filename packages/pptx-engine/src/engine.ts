@@ -13,7 +13,7 @@ import { adopt, adoptArchive, type ArchiveChanges } from './engine-adopt'
 import { TYPE_SHAPES } from './engine-type-shapes'
 import type { OpenedPptx } from './index'
 import type { Slide } from './types'
-import type { PackageArchive } from './zip'
+import { PackageArchive } from './zip'
 
 /** A model type the engine answers whole, by its TypeScript name. */
 export type ModelType = 'Slide' | 'SlideDeck' | 'SlideElement' | 'GroupElement' | 'Paragraph[]'
@@ -68,11 +68,36 @@ export function forgetSnapshot(opened: OpenedPptx): void {
   saveSnapshots.delete(opened)
 }
 
+const utf8 = new TextEncoder()
+
+/**
+ * An archive as the engine reads it. The TypeScript engine read each part
+ * through `readText`/`readBytes`, so a caller could hand it a view over an
+ * archive that answers some parts otherwise (the CLI reads notes through one
+ * that withholds runs hidden from AI). The engine reads the entries: a view
+ * crosses as the parts it answers, an XML part rewritten where its `readText`
+ * differs from the archive's own.
+ */
+function archiveArg(archive: PackageArchive): unknown {
+  if (Object.getPrototypeOf(archive) === PackageArchive.prototype) return archive
+  const own = PackageArchive.prototype
+  const entries = new Map<string, Uint8Array>()
+  for (const [path, stored] of archive.entries) {
+    let bytes = archive.readBytes(path) ?? stored
+    if (/\.(?:xml|rels)$/.test(path)) {
+      const text = archive.readText(path)
+      if (text !== null && text !== own.readText.call(archive, path)) bytes = utf8.encode(text)
+    }
+    entries.set(path, bytes)
+  }
+  return { entries, originalHash: archive.originalHash }
+}
+
 /** An opened deck as the engine reads it: the deck, the archive and its save snapshot. */
 function openedArg(opened: OpenedPptx): unknown {
   return {
     deck: opened.deck,
-    archive: opened.archive,
+    archive: archiveArg(opened.archive),
     saveSnapshot: saveSnapshots.get(opened) ?? null,
   }
 }
@@ -172,7 +197,11 @@ export function call(fn: string, args: readonly unknown[], options: CallOptions 
   ensureEngine()
   const mut = options.mut ?? {}
   const wire = args.map((arg, i) =>
-    mut[i] === 'opened' || options.opened?.includes(i) ? openedArg(arg as OpenedPptx) : arg,
+    mut[i] === 'opened' || options.opened?.includes(i)
+      ? openedArg(arg as OpenedPptx)
+      : arg instanceof PackageArchive
+        ? archiveArg(arg)
+        : arg,
   )
   const answer = withHostRandomness(
     () =>
