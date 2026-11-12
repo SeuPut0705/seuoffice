@@ -3,6 +3,7 @@ import { basename, extname, isAbsolute, resolve } from 'node:path'
 import { inflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
 import JSZip from 'jszip'
+import { readCompoundFile } from '@genoffice/compound-file'
 import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
 import { parseFileToText, type ParsedFile } from '@genoffice/file-parse'
 import {
@@ -81,7 +82,8 @@ function toDataUrl(bytes: Uint8Array, mime: string): string | undefined {
  */
 function extractHwp5Thumbnail(bytes: Buffer): string | undefined {
   try {
-    const cfb = CFB.read(bytes, { type: 'buffer' })
+    // through the compound-file gate: a container whose chains loop is refused, not followed
+    const cfb = readCompoundFile(bytes)
     const entry = CFB.find(cfb, '/PrvImage') ?? CFB.find(cfb, 'PrvImage')
     if (!entry?.content || entry.content.length < 8) return undefined
     const raw = Buffer.from(entry.content as Uint8Array)

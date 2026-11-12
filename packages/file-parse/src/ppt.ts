@@ -1,4 +1,5 @@
 import * as CFB from 'cfb'
+import { assertCompoundFile } from '@genoffice/compound-file'
 import './vendor'
 
 type LegacyPptGlobals = typeof globalThis & {
@@ -29,6 +30,8 @@ function normalizeText(text: string): string {
 
 /** Extract one readable text section per slide from a legacy PowerPoint 97-2003 file. */
 export async function pptToText(bytes: Uint8Array): Promise<string> {
+  // the parser hands the bytes to cfb as they are, which follows a looping chain forever
+  assertCompoundFile(bytes)
   const pptParser = (await import('ppt-to-text')).default
   const presentation = pptParser.readBuffer(Buffer.from(bytes))
   const slides = pptParser.utils.to_text(presentation)

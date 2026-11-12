@@ -1,4 +1,5 @@
 import * as CFB from 'cfb'
+import { readCompoundFile } from '@genoffice/compound-file'
 import { SECTION, openHwp, sectionCount, writeContainer } from './hwp5-file'
 
 const SIGNATURE = 'HWP Document File'
@@ -11,9 +12,7 @@ type LinkedEntry = CFB.CFB$Entry & { L: number; R: number; C: number }
 
 /** The file's header and container when it is an HWP file with tracked changes, else null. */
 function trackedContainer(file: Uint8Array): { cfb: CFB.CFB$Container; header: Buffer } | null {
-  const cfb = CFB.read(Buffer.from(file.buffer, file.byteOffset, file.byteLength), {
-    type: 'buffer',
-  })
+  const cfb = readCompoundFile(file)
   const header = CFB.find(cfb, '/FileHeader')
   if (!header?.content || header.content.length < 40) return null
   const bytes = Buffer.from(header.content as Uint8Array)

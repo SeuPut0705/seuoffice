@@ -1,5 +1,6 @@
 import { deflateRawSync, inflateRawSync } from 'node:zlib'
 import * as CFB from 'cfb'
+import { hasOle2Signature, readCompoundFile } from '@genoffice/compound-file'
 
 /**
  * Reading and rewriting HWP 5 files (a compound file whose DocInfo and BodyText streams are
@@ -59,11 +60,15 @@ export interface OpenedHwp {
   compressed: boolean
 }
 
-/** A plain HWP 5 container, or null: not one, or one whose streams are not readable here. */
+/**
+ * A plain HWP 5 container, or null: not one, or one whose streams are not readable here.
+ * A compound file whose sector tables or directory cannot be followed to an end is refused
+ * with a CompoundFileError before the container library reads it.
+ */
 export function openHwp(file: Uint8Array): OpenedHwp | null {
-  const cfb = CFB.read(Buffer.from(file.buffer, file.byteOffset, file.byteLength), {
-    type: 'buffer',
-  })
+  // an HWPX is a zip, which the container library would inflate whole to find no HWP in it
+  if (!hasOle2Signature(file)) return null
+  const cfb = readCompoundFile(file)
   const header = CFB.find(cfb, FILE_HEADER)
   if (!header?.content || header.content.length < 40) return null
   const bytes = Buffer.from(header.content as Uint8Array)

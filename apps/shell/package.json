@@ -23,6 +23,7 @@
     "@genoffice/agent-core": "*",
     "@genoffice/ai-provider": "*",
     "@genoffice/ai-search": "*",
+    "@genoffice/compound-file": "*",
     "@genoffice/docs": "*",
     "@genoffice/docx-engine": "*",
     "@genoffice/electron-utils": "*",

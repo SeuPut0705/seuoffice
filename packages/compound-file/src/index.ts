@@ -1,21 +1,37 @@
 import * as CFB from 'cfb'
 
+import {
+  CompoundFileError,
+  assertCompoundFile,
+  isCompoundFileError,
+  type Ole2FailureCode,
+} from './validate'
+
+export {
+  CompoundFileError,
+  MAX_DIRECTORY_ENTRIES,
+  MAX_STORAGE_DEPTH,
+  OLE2_HEADER_BYTES,
+  OLE2_MAGIC,
+  assertCompoundFile,
+  hasOle2Signature,
+  isCompoundFileError,
+  type Ole2FailureCode,
+} from './validate'
+
 /**
  * The OLE2/CFB container opener shared by the legacy Office importers (the
  * .doc reader in @genoffice/doc2docx, the .ppt reader in @genoffice/ppt2pptx,
- * and any .xls reader that comes along).
+ * and any .xls reader that comes along), and the gate every other reader of a
+ * compound file passes first (the HWP 5 readers, the attachment parsers).
  *
- * It validates the compound-file signature and the 512-byte header before
- * cfb parses anything, caps the input and every stream, and hands back owned
- * stream bytes so a later mutation of the container cannot change a parsed
- * part. Callers layer their own format checks (WordDocument / PowerPoint
- * Document / Workbook) and map the failure codes onto their own error model.
+ * The gate (`assertCompoundFile`, see validate.ts) checks the signature, the
+ * header, the sector tables and the directory before cfb parses anything. The
+ * opener then caps the input and every stream, and hands back owned stream
+ * bytes so a later mutation of the container cannot change a parsed part.
+ * Callers layer their own format checks (WordDocument / PowerPoint Document /
+ * Workbook) and map the failure codes onto their own error model.
  */
-
-/** An OLE2/CFB compound document starts with this 8-byte signature. */
-export const OLE2_MAGIC = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1] as const
-/** A compound file is at least its 512-byte header. */
-export const OLE2_HEADER_BYTES = 512
 
 /** The size caps of the shared opener; each legacy importer picks its own. */
 export interface Ole2Limits {
@@ -33,9 +49,6 @@ export interface Ole2Streams {
   streams(): string[]
 }
 
-/** Stable failure codes of the opener; callers map them onto their own error type. */
-export type Ole2FailureCode = 'not_cfb' | 'truncated' | 'limits_exceeded' | 'corrupt'
-
 export type Ole2OpenResult =
   | { readonly ok: true; readonly container: Ole2Streams }
   | { readonly ok: false; readonly code: Ole2FailureCode; readonly detail: string }
@@ -44,16 +57,15 @@ function failure(code: Ole2FailureCode, detail: string): Ole2OpenResult {
   return { ok: false, code, detail }
 }
 
-export function hasOle2Signature(bytes: Uint8Array): boolean {
-  if (bytes.length < OLE2_MAGIC.length) return false
-  return OLE2_MAGIC.every((value, index) => bytes[index] === value)
-}
-
 /** the stream's own bytes, so a later mutation of the CFB container cannot change a parsed part */
 function toOwnedBytes(content: unknown): Uint8Array {
-  if (content instanceof Uint8Array) return new Uint8Array(content)
+  // any view, not `instanceof Uint8Array`: cfb hands a Buffer back for a Buffer, and under
+  // jsdom a Node Buffer is not an instance of the page's Uint8Array
+  if (ArrayBuffer.isView(content)) {
+    return new Uint8Array(content.buffer, content.byteOffset, content.byteLength).slice()
+  }
   if (Array.isArray(content)) return Uint8Array.from(content as number[])
-  // cfb always stores Array<number> / Uint8Array for stream content
+  // cfb stores Array<number> or a byte view for stream content, and nothing for an empty stream
   return new Uint8Array(0)
 }
 
@@ -65,20 +77,40 @@ function streamNameOf(path: string, fallback: string): string {
   return relative || fallback
 }
 
-function errorText(error: unknown): string {
-  return error instanceof Error ? error.message : String(error)
-}
-
 /** cfb seeds every new container with this producer marker; it carries no document data */
 const cfbProducerStream = (name: string): boolean => name.startsWith('\u0001')
 
 /**
+ * The cfb container of a compound file, for a reader that works on the
+ * container itself (finds entries, rewrites streams). The bytes pass the gate
+ * first; a CompoundFileError says why they did not, or that cfb could not read
+ * what passed.
+ */
+export function readCompoundFile(bytes: Uint8Array): CFB.CFB$Container {
+  assertCompoundFile(bytes)
+  // cfb slices a Buffer into views; any other array it copies into arrays of
+  // numbers, at several times the size the gate's copy budget counts on
+  const input =
+    typeof Buffer === 'undefined' || Buffer.isBuffer(bytes)
+      ? bytes
+      : Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+  try {
+    // 'buffer' input is parsed directly (cfb would otherwise treat a Uint8Array as a base64 string)
+    return CFB.read(input, { type: 'buffer' })
+  } catch (error) {
+    throw new CompoundFileError(
+      'corrupt',
+      `the OLE2 container cannot be read (${error instanceof Error ? error.message : String(error)})`,
+    )
+  }
+}
+
+/**
  * Open an OLE2 compound file and expose its document streams.
  *
- * Validates the 8-byte signature and the 512-byte header, caps the input and
- * every stored stream, and skips cfb's producer-marker streams. A file that
- * passes this check is a real compound document, not an OOXML part renamed to
- * a legacy extension.
+ * Caps the input, passes it through the gate, caps every stored stream, and
+ * skips cfb's producer-marker streams. A file that passes is a real compound
+ * document, not an OOXML part renamed to a legacy extension.
  */
 export function openOle2Container(bytes: Uint8Array, limits: Ole2Limits): Ole2OpenResult {
   if (bytes.length === 0) return failure('not_cfb', 'the file is empty')
@@ -88,23 +120,13 @@ export function openOle2Container(bytes: Uint8Array, limits: Ole2Limits): Ole2Op
       `the file is ${bytes.length} bytes, over the ${limits.maxBytes}-byte limit`,
     )
   }
-  if (!hasOle2Signature(bytes)) {
-    return failure('not_cfb', 'the file does not start with the OLE2 compound-document signature')
-  }
-  if (bytes.length < OLE2_HEADER_BYTES) {
-    return failure(
-      'truncated',
-      `the file is ${bytes.length} bytes, shorter than the 512-byte OLE2 header`,
-    )
-  }
 
   let container: CFB.CFB$Container
   try {
-    // cfb's own reader: 'buffer' input is parsed directly (it would otherwise
-    // treat a Uint8Array as a base64 string)
-    container = CFB.read(bytes, { type: 'buffer' })
+    container = readCompoundFile(bytes)
   } catch (error) {
-    return failure('corrupt', `the OLE2 container cannot be read (${errorText(error)})`)
+    if (isCompoundFileError(error)) return failure(error.code, error.detail)
+    throw error
   }
 
   const streams = new Map<string, Uint8Array>()

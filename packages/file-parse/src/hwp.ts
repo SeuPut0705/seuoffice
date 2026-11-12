@@ -1,6 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { join } from 'node:path'
+import { assertCompoundFile } from '@genoffice/compound-file'
 import { assertZipInflatesWithinLimits } from '@genoffice/docx-engine'
 
 /**
@@ -270,14 +271,24 @@ export interface HwpMemo {
 }
 
 /**
+ * The gates a container passes before the engine gets its bytes. The engine reads what it
+ * finds: an HWPX is a zip it inflates itself, a Hangul 5 file a compound file whose sector
+ * chains it follows.
+ */
+async function assertContainerWithinLimits(bytes: Uint8Array): Promise<void> {
+  if (bytes[0] === 0x50 && bytes[1] === 0x4b) await assertZipInflatesWithinLimits(bytes)
+  if (bytes[0] === 0xd0 && bytes[1] === 0xcf && bytes[2] === 0x11 && bytes[3] === 0xe0) {
+    assertCompoundFile(bytes)
+  }
+}
+
+/**
  * The memos of an HWP / HWPX document, as the engine holds them. Records in the bytes
  * the engine does not model are not listed; a caller checking a save counts those
  * separately from the raw file.
  */
 export async function hwpMemosOf(bytes: Uint8Array): Promise<HwpMemo[]> {
-  // HWPX is a zip, and the engine inflates it itself: the gate the other zip formats
-  // pass runs before the engine gets the bytes
-  if (bytes[0] === 0x50 && bytes[1] === 0x4b) await assertZipInflatesWithinLimits(bytes)
+  await assertContainerWithinLimits(bytes)
   const { HwpDocument } = await loadEngine()
   let doc: HwpDocument
   try {
@@ -299,7 +310,8 @@ export async function hwpMemosOf(bytes: Uint8Array): Promise<HwpMemo[]> {
 /**
  * The bytes of an `.hwp` / `.hwpx` file, checked as parseFileToText checks them before the
  * engine gets them: the content must be what the name says (an HWPX is a zip; an HWP is
- * Hangul 5, Hangul 3, or an HWPX under the old name), and a zip must pass the zip gate.
+ * Hangul 5, Hangul 3, or an HWPX under the old name), a zip must pass the zip gate and a
+ * Hangul 5 file the compound-file gate.
  * For a caller that opens the document with the engine itself, such as the HWP editor
  * reading the formatting of an attached document. Throws when a check fails.
  */
@@ -309,15 +321,13 @@ export async function checkedHwpBytes(bytes: Uint8Array, ext: string): Promise<U
   const hwp3 = Buffer.from(bytes.subarray(0, 17)).toString('latin1') === 'HWP Document File'
   const fits = ext === 'hwpx' ? zip : ext === 'hwp' ? zip || ole || hwp3 : false
   if (!fits) throw new Error(`Content mismatch: the .${ext} file is not a Hangul document`)
-  if (zip) await assertZipInflatesWithinLimits(bytes)
+  await assertContainerWithinLimits(bytes)
   return bytes
 }
 
 /** The text of an HWP / HWPX document: paragraphs as lines, data tables as " | " rows. */
 export async function hwpToText(bytes: Uint8Array): Promise<string> {
-  // HWPX is a zip, and the engine inflates it itself: the gate the other zip formats
-  // pass runs before the engine gets the bytes
-  if (bytes[0] === 0x50 && bytes[1] === 0x4b) await assertZipInflatesWithinLimits(bytes)
+  await assertContainerWithinLimits(bytes)
   const { HwpDocument } = await loadEngine()
   let doc: HwpDocument
   try {

@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@genoffice/agent-core": "*",
+    "@genoffice/compound-file": "*",
     "@genoffice/docx-engine": "*",
     "@genoffice/drawio-model": "*",
     "@genoffice/epub-engine": "*",
