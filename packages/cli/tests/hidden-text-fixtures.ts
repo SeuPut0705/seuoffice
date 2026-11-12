@@ -43,7 +43,12 @@ export async function hiddenDocx(dir: string, ns: string, name = 'hidden.docx'):
  * A deck whose slide text and speaker notes each hold a run marked hidden from
  * AI, written the way the slide editor writes the mark (its own helper).
  */
-export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<string> {
+export async function hiddenPptx(
+  dir: string,
+  name = 'hidden.pptx',
+  /** the mark with no prefix, its namespace declared on itself, as another writer may spell it */
+  unprefixed = false,
+): Promise<string> {
   const { run } = await import('./helpers')
   const spec = join(dir, 'deck.json')
   writeFileSync(
@@ -81,7 +86,14 @@ export async function hiddenPptx(dir: string, name = 'hidden.pptx'): Promise<str
         `<a:r>${setRedactExt(rPr ?? '<a:rPr lang="en-US"/>', LABEL)}<a:t>${SECRET}</a:t></a:r>`,
     )
     expect(marked).not.toBe(xml)
-    zip.file(part, marked)
+    zip.file(
+      part,
+      unprefixed
+        ? marked
+            .replace(/ xmlns:go="[^"]*"/g, '')
+            .replace(/<go:redact /g, `<redact xmlns="${OLD_REDACT_NS}" `)
+        : marked,
+    )
   }
   writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
   return file
@@ -129,12 +141,37 @@ export async function hiddenXlsx(
 
 const W_NS = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
 
-/** A run marked hidden from AI the way the document editor writes one, its prefix bound on the element. */
-function hiddenRun(ns: string, text: string): string {
-  return (
-    '<w:r><w:rPr><w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>' +
-    `<go:redact xmlns:go="${ns}" w:label="${LABEL}"/></w:rPr><w:t>${text}</w:t></w:r>`
-  )
+/**
+ * The rPr of a run marked hidden from AI. `go` is how the document editor
+ * writes it; the others are spellings another writer may use for the same
+ * mark: another prefix, no prefix with the namespace declared on the mark,
+ * and no prefix with the namespace declared on the rPr around it.
+ */
+export type MarkSpelling = 'go' | 'other prefix' | 'unprefixed' | 'unprefixed, inherited'
+export const MARK_SPELLINGS: MarkSpelling[] = [
+  'go',
+  'other prefix',
+  'unprefixed',
+  'unprefixed, inherited',
+]
+
+function markedRPr(ns: string, spelling: MarkSpelling): string {
+  const bdr = '<w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>'
+  switch (spelling) {
+    case 'go':
+      return `<w:rPr>${bdr}<go:redact xmlns:go="${ns}" w:label="${LABEL}"/></w:rPr>`
+    case 'other prefix':
+      return `<w:rPr>${bdr}<gx:redact xmlns:gx="${ns}" w:label="${LABEL}"/></w:rPr>`
+    case 'unprefixed':
+      return `<w:rPr>${bdr}<redact xmlns="${ns}" w:label="${LABEL}"/></w:rPr>`
+    case 'unprefixed, inherited':
+      return `<w:rPr xmlns="${ns}">${bdr}<redact w:label="${LABEL}"/></w:rPr>`
+  }
+}
+
+/** A run marked hidden from AI. */
+function hiddenRunOf(ns: string, text: string, spelling: MarkSpelling = 'go'): string {
+  return `<w:r>${markedRPr(ns, spelling)}<w:t>${text}</w:t></w:r>`
 }
 
 function plainRun(text: string): string {
@@ -142,20 +179,26 @@ function plainRun(text: string): string {
 }
 
 /**
- * A docx whose header, footer, comment and footnote each hold a run marked
- * hidden from AI: `${SECRET}` followed by H, F, C or N, after a plain lead-in
- * (`Head `, `Foot `, `Note: `, `See `).
+ * A docx whose body, header, footer, comment and footnote each hold a run
+ * marked hidden from AI under `spelling`: `${SECRET}` followed by B, H, F, C
+ * or N, after a plain lead-in (`Body text and `, `Head `, `Foot `, `Note: `,
+ * `See `).
  */
 export async function hiddenStoriesDocx(
   dir: string,
   ns: string,
   name = 'stories.docx',
+  spelling: MarkSpelling = 'go',
 ): Promise<string> {
+  const hiddenRun = (namespace: string, text: string) => hiddenRunOf(namespace, text, spelling)
   const bytes = await buildDocx({
     bodyXml:
       '<w:p><w:commentRangeStart w:id="1"/>' +
       plainRun('Body text') +
-      '<w:commentRangeEnd w:id="1"/><w:r><w:commentReference w:id="1"/></w:r>' +
+      '<w:commentRangeEnd w:id="1"/>' +
+      plainRun(' and ') +
+      hiddenRun(ns, `${SECRET}B`) +
+      '<w:r><w:commentReference w:id="1"/></w:r>' +
       '<w:r><w:footnoteReference w:id="1"/></w:r></w:p>',
     headerXml: `<w:p>${plainRun('Head ')}${hiddenRun(ns, `${SECRET}H`)}</w:p>`,
     footerXml: `<w:p>${plainRun('Foot ')}${hiddenRun(ns, `${SECRET}F`)}</w:p>`,

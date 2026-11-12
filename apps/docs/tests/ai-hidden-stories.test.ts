@@ -11,6 +11,7 @@ import { executeTool } from '../src/renderer/ai/tools'
 import { hfModelText } from '../src/renderer/editor/hf-text'
 import {
   hiddenStoriesDocx,
+  MARK_SPELLINGS,
   NAMESPACES,
   PLACEHOLDER,
   SECRET,
@@ -44,8 +45,15 @@ function createEditor(): Editor {
 const NUM_IDS = { bullet: null, ordered: null }
 
 describe("the app's AI readers: header, footer, comment and note text hidden from AI", () => {
-  it.each(NAMESPACES)('read as the placeholder when the label is under %s', async (_n, ns) => {
-    const file = await hiddenStoriesDocx(mkdtempSync(join(tmpdir(), 'ai-hidden-stories-')), ns)
+  it.each(
+    NAMESPACES.flatMap(([name, ns]) => MARK_SPELLINGS.map((spelling) => [name, ns, spelling])),
+  )('read as the placeholder under %s (%s), the mark spelled %s', async (_n, ns, spelling) => {
+    const file = await hiddenStoriesDocx(
+      mkdtempSync(join(tmpdir(), 'ai-hidden-stories-')),
+      ns!,
+      'stories.docx',
+      spelling as (typeof MARK_SPELLINGS)[number],
+    )
     const parsed = await parseDocx(new Uint8Array(readFileSync(file)))
     const editor = createEditor()
 

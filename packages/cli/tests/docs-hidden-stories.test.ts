@@ -3,7 +3,13 @@ import { join } from 'node:path'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { buildDocx } from '../../docx-engine/tests/helpers/build-docx'
-import { hiddenStoriesDocx, NAMESPACES, PLACEHOLDER, SECRET } from './hidden-text-fixtures'
+import {
+  hiddenStoriesDocx,
+  MARK_SPELLINGS,
+  NAMESPACES,
+  PLACEHOLDER,
+  SECRET,
+} from './hidden-text-fixtures'
 import { run, tempDir } from './helpers'
 
 async function part(file: string, path: string): Promise<string> {
@@ -34,6 +40,29 @@ describe('docs read: header, footer, comment and note text hidden from AI', () =
     expect(detail.headerFooter.header).toBe(`Head ${PLACEHOLDER}`)
     expect(detail.headerFooter.footer).toBe(`Foot ${PLACEHOLDER}`)
     expect(detail.headerFooter.sections[0].header).toBe(`Head ${PLACEHOLDER}`)
+    expect(detail.comments[0].text).toBe(`Note: ${PLACEHOLDER}`)
+    expect(detail.notes[0].text).toBe(`See ${PLACEHOLDER}`)
+  })
+})
+
+describe('docs read: the mark however its namespace is written', () => {
+  it.each(MARK_SPELLINGS)('withholds a mark spelled %s', async (spelling) => {
+    const file = await hiddenStoriesDocx(tempDir(), NAMESPACES[1]![1], 'spelled.docx', spelling)
+    const read = await run([
+      'docs',
+      'read',
+      file,
+      '--full',
+      '--header-footer',
+      '--comments',
+      '--notes',
+      '--json',
+    ])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    const detail = read.json().detail
+    expect(detail.items[0].text).toBe(`Body text and ${PLACEHOLDER}`)
+    expect(detail.headerFooter.header).toBe(`Head ${PLACEHOLDER}`)
     expect(detail.comments[0].text).toBe(`Note: ${PLACEHOLDER}`)
     expect(detail.notes[0].text).toBe(`See ${PLACEHOLDER}`)
   })

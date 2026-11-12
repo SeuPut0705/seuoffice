@@ -18,6 +18,14 @@ describe('slides read: a run hidden from AI', () => {
     expect(page.notes).toBe(PLACEHOLDER)
   })
 
+  it('withholds a mark written with no prefix, its namespace declared on itself', async () => {
+    const file = await hiddenPptx(tempDir(), 'unprefixed.pptx', true)
+    const read = await run(['slides', 'read', file, '--full', '--json'])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    expect(read.json().detail.pages[0].elements[0].text).toBe(`Call ${PLACEHOLDER} now`)
+  })
+
   it('an unmarked deck reads exactly as before', async () => {
     const dir = tempDir()
     const spec = join(dir, 'deck.json')
