@@ -538,6 +538,9 @@ const IPS = [
   '12345::1',
   '::ffff:198.18.0.1',
   '::ffff:198.17.0.1',
+  '0:0:0:0:1:ffff:a00:1',
+  '::1:ffff:10.0.0.1',
+  '0:0:0:0:ffff:ffff:a00:1',
 ]
 
 const RAW_URLS: (string | number | null)[] = [
@@ -1903,6 +1906,23 @@ const IMAGE_BYTES_CASES: Case[] = [
     'a generated webp is labelled by its content type: jpeg',
   ),
   caseOf(['file:///etc/hosts', W({})], 'a file outside the store'),
+  caseOf(
+    [
+      'https://img.example.com/a',
+      W({
+        dns: DNS,
+        mock: true,
+        routes: {
+          'https://img.example.com/a': {
+            status: 200,
+            headers: { 'content-type': 'image/png', 'content-length': '52428800' },
+            chunks: ['x'],
+          },
+        },
+      }),
+    ],
+    'a declared length of exactly the cap is read',
+  ),
 ]
 
 const UU = 'aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee'

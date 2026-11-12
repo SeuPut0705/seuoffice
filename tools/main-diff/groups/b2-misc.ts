@@ -1400,6 +1400,16 @@ const resolveCases: Case[] = [
     args: ['$DIR/cfg', ['$DIR/fb'], [{ at: 0 }, { at: 1, mkdir: '$DIR/other' }]],
     note: 'a usable folder stays usable',
   },
+  {
+    args: ['$DIR/ro', ['$DIR/fb']],
+    files: { ro: { dir: true, mode: 0o555 } },
+    note: 'an existing configured folder that can be read but not written is skipped',
+  },
+  {
+    args: [null, ['$DIR/ro', '$DIR/ok']],
+    files: { ro: { dir: true, mode: 0o555 } },
+    note: 'an existing read-only fallback is skipped',
+  },
 ]
 
 const defaultSaveDir: Record<string, FnSpec> = {
@@ -1541,6 +1551,11 @@ const defaultSaveDir: Record<string, FnSpec> = {
         ],
         files: { ro: { dir: true, mode: 0o555 } },
         note: 'Documents comes back after the wait',
+      },
+      {
+        args: [{ userData: '$DIR/ud', documents: '$DIR/docs', home: '$DIR/home' }],
+        files: { [`docs/${PRODUCT_NAME}`]: { dir: true, mode: 0o555 } },
+        note: 'an existing Documents folder that cannot be written falls to home',
       },
     ],
   },
@@ -2304,6 +2319,16 @@ const templateFonts: Record<string, FnSpec> = {
       ['seuoffice-docx-media://template-fonts/pretendard-bold.otf'],
       ['seuoffice-docx-media://template-fonts/' + '\u{1F600}'],
       ['seuoffice-docx-media://template-fonts/Pretendard-Bold.otf%00'],
+      ['seuoffice-docx-media://template-fonts/NotoSerifKR-Regular.otf'],
+      ['seuoffice-docx-media://template-fonts/NotoSerifKR-Bold.otf'],
+      ['seuoffice-docx-media://template-fonts/BlackHanSans-Regular.ttf'],
+      ['seuoffice-docx-media://template-fonts/DoHyeon-Regular.ttf'],
+      ['seuoffice-docx-media://template-fonts/GowunDodum-Regular.ttf'],
+      ['seuoffice-docx-media://template-fonts/GowunBatang-Regular.ttf'],
+      ['seuoffice-docx-media://template-fonts/GowunBatang-Bold.ttf'],
+      ['seuoffice-docx-media://template-fonts/BebasNeue-Regular.ttf'],
+      ['seuoffice-docx-media://template-fonts/SpaceGrotesk-Bold.ttf'],
+      ['seuoffice-docx-media://template-fonts/ArchivoBlack-Regular.ttf'],
     ),
   },
 }

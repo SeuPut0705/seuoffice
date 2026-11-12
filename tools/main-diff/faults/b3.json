@@ -585,10 +585,10 @@
     "fn": ["document-links-menu.documentLinkMenuItems"]
   },
   {
-    "name": "integrator: restore index bound",
+    "name": "integrator: split side may be detached",
     "file": "main-core/src/shell/session_record.rs",
-    "find": "x >= tabs.len() as f64",
-    "replace": "x > tabs.len() as f64",
+    "find": "(!tabs[index].detached).then_some(index)",
+    "replace": "Some(index)",
     "fn": ["session-record.parseSessionRecord"]
   },
   {
@@ -746,10 +746,10 @@
     "fn": ["document-links-menu.documentLinkMenuItems"]
   },
   {
-    "name": "integrator: rename retries",
+    "name": "integrator: rename error paths swapped",
     "file": "main-core/src/shell/atomic_write.rs",
-    "find": "RENAME_RETRIES: u32 = 4;",
-    "replace": "RENAME_RETRIES: u32 = 3;",
+    "find": "node_error2(&e, \"rename\", &tmp, file_path)",
+    "replace": "node_error2(&e, \"rename\", file_path, &tmp)",
     "fn": ["shell-atomic-write.atomicWriteFile"]
   },
   {
@@ -760,10 +760,10 @@
     "fn": ["csv-import-limit.csvImportLimitMb"]
   },
   {
-    "name": "integrator: diagram key keeps case",
+    "name": "integrator: refused diagram reported as opened",
     "file": "main-core/src/shell/diagram_open_gate.rs",
-    "find": "        resolved.to_lowercase()\n",
-    "replace": "        resolved\n",
+    "find": "opened: false,",
+    "replace": "opened: true,",
     "fn": ["diagram-open-gate.openDiagramChecked", "diagram-open-gate.diagramOpenChecking"]
   },
   {

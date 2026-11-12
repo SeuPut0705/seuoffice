@@ -1399,6 +1399,13 @@ const docsList = {
     { filePath: D('sub/../c.docx'), dirty: 1 },
   ],
 }
+/** the open files spelt through a link: /proc/self/root on Linux, /private on macOS */
+const linkedList = {
+  returns: [
+    { filePath: `/proc/self/root${D('a.docx')}`, dirty: true },
+    { filePath: `/private${D('b.docx')}`, dirty: true },
+  ],
+}
 const unsavedFiles: Record<string, FileSpec> = {
   'a.docx': 'a',
   'b.docx': 'b',
@@ -1438,6 +1445,10 @@ const hasCases: Case[] = [
   ),
   hasCase({ returns: [{ dirty: true, filePath: 5 }] }, D('a.docx'), 'a path that is no string'),
   hasCase({ returns: [{ dirty: false, filePath: 5 }] }, D('a.docx'), 'clean: the path is not read'),
+  hasCase(linkedList, D('a.docx'), 'a listed path through a link is the file itself'),
+  hasCase(linkedList, D('b.docx'), 'the same through the macOS link'),
+  hasCase(linkedList, D('c.docx'), 'a file that is not listed'),
+  hasCase(docsList, `/proc/self/root${D('a.docx')}`, 'asked through /proc/self/root'),
 ]
 
 // ---- legacy-import-prefs ----
@@ -1818,6 +1829,22 @@ export const group: Group = {
         args: [docsList, [D('a.docx'), D('a.docx'), D('b.docx'), D('b.docx')]],
         files: unsavedFiles,
         note: 'duplicates stay',
+      },
+      {
+        args: [
+          linkedList,
+          [D('a.docx'), D('b.docx'), D('c.docx'), `/proc/self/root${D('c.docx')}`],
+        ],
+        files: unsavedFiles,
+        note: 'items matched to the open files through links',
+      },
+      {
+        args: [
+          docsList,
+          [D('a.docx'), `/proc/self/root${D('a.docx')}`, `/private${D('a.docx')}`, D('b.docx')],
+        ],
+        files: unsavedFiles,
+        note: 'items spelt through links match the open file',
       },
     ],
   },

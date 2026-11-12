@@ -515,10 +515,10 @@
     "fn": ["fetch-image-bytes.fetchImageBytes"]
   },
   {
-    "name": "empty url",
+    "name": "response must be ok",
     "file": "main-core/src/packages/electron_utils/fetch_image_bytes.rs",
-    "find": "let url = url.filter(|url| !url.is_empty())?;",
-    "replace": "let url = url?;",
+    "find": "if !resp.ok() {",
+    "replace": "if false {",
     "fn": ["fetch-image-bytes.fetchImageBytes"]
   },
   {
@@ -529,10 +529,10 @@
     "fn": ["generated-images.storeGeneratedImage"]
   },
   {
-    "name": "label length in chars",
+    "name": "jpg label",
     "file": "main-core/src/packages/electron_utils/generated_images.rs",
-    "find": "mime.encode_utf16().count() <= MAX_MIME_LENGTH",
-    "replace": "mime.chars().count() <= MAX_MIME_LENGTH",
+    "find": "\"image/jpeg\" | \"image/jpg\" => \"jpg\",",
+    "replace": "\"image/jpeg\" => \"jpg\",",
     "fn": ["generated-images.storeGeneratedImage"]
   },
   {
@@ -606,10 +606,10 @@
     "fn": ["renderer-scheme.MAX_RENDERER_QUERY_ENTRIES", "renderer-scheme.rendererUrl"]
   },
   {
-    "name": "root is a file",
+    "name": "path length cap",
     "file": "main-core/src/packages/electron_utils/renderer_scheme.rs",
-    "find": "if file == base {",
-    "replace": "if false {",
+    "find": "pathname.encode_utf16().count() > 4096",
+    "replace": "pathname.encode_utf16().count() >= 4096",
     "fn": ["renderer-scheme.resolveRendererFile"]
   },
   {
@@ -907,10 +907,10 @@
     "fn": ["template-fonts.templateFontFileOf"]
   },
   {
-    "name": "integrator: html attr prefix default",
+    "name": "integrator: xmlns attribute keeps its prefix",
     "file": "main-core/src/html_parse.rs",
-    "find": "attr.prefix.as_deref().unwrap_or(\"undefined\")",
-    "replace": "attr.prefix.as_deref().unwrap_or(\"\")",
+    "find": "if attr.name != \"xmlns\" {",
+    "replace": "if true {",
     "fn": ["print-html-pdf.parseSerialize"]
   },
   {
@@ -963,10 +963,10 @@
     "fn": ["font-store.installLocalFontFiles"]
   },
   {
-    "name": "integrator: trailing dot accepted",
+    "name": "integrator: htm opens markdown",
     "file": "main-core/src/packages/electron_utils/generate_handoff.rs",
-    "find": "if dot == 0 || dot == base.len() - 1 {",
-    "replace": "if dot == 0 {",
+    "find": "(\"htm\", HandoffEditor::Html),",
+    "replace": "(\"htm\", HandoffEditor::Markdown),",
     "fn": ["generate-handoff.handoffEditorForFile"]
   },
   {
@@ -1001,10 +1001,10 @@
     "fn": ["headless-export.pollUntilReady"]
   },
   {
-    "name": "integrator: headless starts on",
-    "file": "main-core/src/packages/electron_utils/headless_mode.rs",
-    "find": "headless: AtomicBool::new(false),",
-    "replace": "headless: AtomicBool::new(true),",
+    "name": "integrator: headless flag inverted on set",
+    "file": "main-core/src/calls/b2_print.rs",
+    "find": "Some(Value::Bool(on)) => mode.set_headless_mode(*on),",
+    "replace": "Some(Value::Bool(on)) => mode.set_headless_mode(!*on),",
     "fn": ["headless-mode.isHeadlessMode"]
   },
   {
@@ -1187,10 +1187,10 @@
     "fn": ["split-pane-bridge.SPLIT_PANE_CHANNELS"]
   },
   {
-    "name": "integrator: unknown font type",
+    "name": "integrator: font content length off by one",
     "file": "main-core/src/packages/electron_utils/template_font_response.rs",
-    "find": "unwrap_or(\"font/sfnt\")",
-    "replace": "unwrap_or(\"font/ttf\")",
+    "find": "(\"Content-Length\".to_owned(), bytes.len().to_string()),",
+    "replace": "(\"Content-Length\".to_owned(), (bytes.len() + 1).to_string()),",
     "fn": ["template-font-response.templateFontResponse"]
   },
   {

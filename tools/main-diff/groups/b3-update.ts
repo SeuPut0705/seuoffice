@@ -632,6 +632,11 @@ const resumeCases: Case[] = [
     files: {},
     note: 'pending folder missing: the rename fails',
   },
+  {
+    args: [dl({ progress: true, clockStep: 250 }, [ok200()])],
+    files: PENDING,
+    note: 'progress: a chunk exactly 250 ms after the last report is reported',
+  },
 ]
 
 export const group: Group = {

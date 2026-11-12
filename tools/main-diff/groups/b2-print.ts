@@ -1696,6 +1696,7 @@ export const group: Group = {
       [{ readyAfter: -1, stall: 'negative budget \u00e9\u{1F600}', timeoutMs: -1, pollMs: 5 }],
       [{ readyAfter: 5, stall: 'x', timeoutMs: 50, pollMs: 10 }],
       [{ readyAfter: 6, stall: 'x', timeoutMs: 50, pollMs: 10 }],
+      [{ readyAfter: -1, stall: 'default budget', timeoutMs: null, pollMs: 60000 }],
     ),
   },
   'headless-export.documentFontsSettled': {

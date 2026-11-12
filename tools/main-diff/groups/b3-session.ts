@@ -504,6 +504,14 @@ const RAW_RECORDS: [string, unknown][] = [
   ]),
   ['split an array', rec({ tabs: [tab('docs', 'a'), tab('docs', 'b')], split: [] })],
   ['split null', rec({ tabs: [tab('docs', 'a')], split: null })],
+  [
+    'split b at the tab count',
+    rec({ tabs: [tab('docs', 'a'), tab('docs', 'b')], split: { ...SPLIT_OK, b: 2 } }),
+  ],
+  [
+    'split a at the tab count',
+    rec({ tabs: [tab('docs', 'a'), tab('docs', 'b')], split: { ...SPLIT_OK, a: 2, b: 0 } }),
+  ],
 ]
 
 function sessionPathCases(): Case[] {
@@ -1730,6 +1738,8 @@ const dropPoints: [number, number, number, number][] = [
   [10, 100, 1000, NaN],
   [-5, 100, 50, 50],
   [100, 1e308, 1000, 700],
+  [900, 40, 1000, 700],
+  [500, 40, 1000, 40],
 ]
 
 const SPLIT = { aTabId: 'a', bTabId: 'b', orientation: 'side', focus: 'a' }
