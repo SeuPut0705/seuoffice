@@ -115,8 +115,8 @@ pub fn tables(
 
 /// `Map<string, Set<number>>` as `GlyphDemand`: its entries, each a list of code points.
 pub fn glyph_demand(value: &Value) -> Result<GlyphDemand, String> {
-    let pairs: Vec<(String, Vec<u32>)> =
-        serde_json::from_value(value.clone()).map_err(|error| format!("TypeError: demand: {error}"))?;
+    let pairs: Vec<(String, Vec<u32>)> = serde_json::from_value(value.clone())
+        .map_err(|error| format!("TypeError: demand: {error}"))?;
     let mut demand = GlyphDemand::new();
     for (key, code_points) in pairs {
         let mut set = GlyphSet::default();
@@ -138,7 +138,10 @@ pub fn declared_parts(value: &Value) -> Result<Vec<(String, f64)>, String> {
     }
     let parts: Vec<Declared> =
         serde_json::from_value(value.clone()).map_err(|error| format!("TypeError: {error}"))?;
-    Ok(parts.into_iter().map(|part| (part.name, part.size.0)).collect())
+    Ok(parts
+        .into_iter()
+        .map(|part| (part.name, part.size.0))
+        .collect())
 }
 
 /// `Model3dXmlOptions` as the binding sends it.

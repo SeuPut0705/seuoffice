@@ -84,11 +84,18 @@ pub fn read_archive<'a>(env: &InvokeEnv<'a>, value: &Value) -> Result<SentArchiv
 }
 
 /// What changed in `archive` since it was sent: `{ changed, paths }`.
-pub fn answer_archive(env: &mut InvokeEnv<'_>, sent: &HashMap<String, &[u8]>, archive: &PackageArchive) -> Value {
+pub fn answer_archive(
+    env: &mut InvokeEnv<'_>,
+    sent: &HashMap<String, &[u8]>,
+    archive: &PackageArchive,
+) -> Value {
     let entries = archive.entries();
     let mut changed: Vec<(String, Value)> = Vec::new();
     for (path, bytes) in entries.iter() {
-        if sent.get(path).is_some_and(|before| *before == bytes.as_slice()) {
+        if sent
+            .get(path)
+            .is_some_and(|before| *before == bytes.as_slice())
+        {
             continue;
         }
         changed.push((path.to_owned(), env.put_blob(bytes.clone())));
@@ -102,11 +109,21 @@ pub fn answer_archive(env: &mut InvokeEnv<'_>, sent: &HashMap<String, &[u8]>, ar
     let mut out = Map::new();
     out.insert(
         "changed".to_owned(),
-        Value::Array(changed.into_iter().map(|(path, bytes)| Value::Array(vec![Value::String(path), bytes])).collect()),
+        Value::Array(
+            changed
+                .into_iter()
+                .map(|(path, bytes)| Value::Array(vec![Value::String(path), bytes]))
+                .collect(),
+        ),
     );
     out.insert(
         "paths".to_owned(),
-        Value::Array(entries.keys().map(|path| Value::String(path.to_owned())).collect()),
+        Value::Array(
+            entries
+                .keys()
+                .map(|path| Value::String(path.to_owned()))
+                .collect(),
+        ),
     );
     Value::Object(out)
 }
@@ -150,7 +167,10 @@ pub fn answer_opened(env: &mut InvokeEnv<'_>, sent: SentOpened<'_>) -> Result<Va
         "deck".to_owned(),
         serde_json::to_value(&opened.deck).map_err(|error| error.to_string())?,
     );
-    out.insert("archive".to_owned(), answer_archive(env, &sent, &opened.archive));
+    out.insert(
+        "archive".to_owned(),
+        answer_archive(env, &sent, &opened.archive),
+    );
     out.insert(
         "saveSnapshot".to_owned(),
         match &opened.save_snapshot {
@@ -158,7 +178,12 @@ pub fn answer_opened(env: &mut InvokeEnv<'_>, sent: SentOpened<'_>) -> Result<Va
             Some(snapshot) => Value::Array(
                 snapshot
                     .iter()
-                    .map(|(path, xml)| Value::Array(vec![Value::String(path.to_owned()), Value::String(xml.clone())]))
+                    .map(|(path, xml)| {
+                        Value::Array(vec![
+                            Value::String(path.to_owned()),
+                            Value::String(xml.clone()),
+                        ])
+                    })
                     .collect(),
             ),
         },
@@ -172,7 +197,12 @@ pub fn answer_archive_whole(env: &mut InvokeEnv<'_>, archive: &PackageArchive) -
     let entries = archive
         .entries()
         .iter()
-        .map(|(path, bytes)| Value::Array(vec![Value::String(path.to_owned()), env.put_blob(bytes.clone())]))
+        .map(|(path, bytes)| {
+            Value::Array(vec![
+                Value::String(path.to_owned()),
+                env.put_blob(bytes.clone()),
+            ])
+        })
         .collect();
     let mut out = Map::new();
     out.insert("entries".to_owned(), Value::Array(entries));
@@ -192,17 +222,27 @@ pub fn answer_new_opened(env: &mut InvokeEnv<'_>, opened: &OpenedPptx) -> Result
         "deck".to_owned(),
         serde_json::to_value(&opened.deck).map_err(|error| error.to_string())?,
     );
-    out.insert("archive".to_owned(), answer_archive_whole(env, &opened.archive));
+    out.insert(
+        "archive".to_owned(),
+        answer_archive_whole(env, &opened.archive),
+    );
     Ok(Value::Object(out))
 }
 
 /// `args` with every `{"$blob": n}` below the top level of an argument written
 /// as the base64 text of the blob. An archive (`entries` and `originalHash`)
 /// keeps its blobs: `read_archive` reads them.
-pub fn inline_blobs<'v>(env: &InvokeEnv<'_>, args: &'v [Value]) -> Result<Cow<'v, [Value]>, String> {
+pub fn inline_blobs<'v>(
+    env: &InvokeEnv<'_>,
+    args: &'v [Value],
+) -> Result<Cow<'v, [Value]>, String> {
     fn holds_blob(value: &Value) -> bool {
         match value {
-            Value::Object(map) if map.contains_key("entries") && map.contains_key("originalHash") => false,
+            Value::Object(map)
+                if map.contains_key("entries") && map.contains_key("originalHash") =>
+            {
+                false
+            }
             Value::Object(map) if map.len() == 1 && map.contains_key("$blob") => true,
             Value::Object(map) => map.values().any(holds_blob),
             Value::Array(items) => items.iter().any(holds_blob),
@@ -211,7 +251,8 @@ pub fn inline_blobs<'v>(env: &InvokeEnv<'_>, args: &'v [Value]) -> Result<Cow<'v
     }
     fn inline(env: &InvokeEnv<'_>, value: &mut Value) -> Result<(), String> {
         match value {
-            Value::Object(map) if map.contains_key("entries") && map.contains_key("originalHash") => {}
+            Value::Object(map)
+                if map.contains_key("entries") && map.contains_key("originalHash") => {}
             Value::Object(map) if map.len() == 1 && map.contains_key("$blob") => {
                 let bytes = env.blob(&Value::Object(map.clone()))?;
                 *value = Value::String(jscompat::base64(bytes));
@@ -255,7 +296,11 @@ pub fn answer(value: Option<Value>, out: Vec<(usize, Value)>) -> Value {
     if !out.is_empty() {
         reply.insert(
             "$out".to_owned(),
-            Value::Object(out.into_iter().map(|(index, value)| (index.to_string(), value)).collect()),
+            Value::Object(
+                out.into_iter()
+                    .map(|(index, value)| (index.to_string(), value))
+                    .collect(),
+            ),
         );
     }
     Value::Object(reply)
