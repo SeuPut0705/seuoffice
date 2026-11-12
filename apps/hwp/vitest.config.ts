@@ -7,6 +7,8 @@ export default defineConfig({
   resolve: { conditions: ['seuoffice-source', ...defaultClientConditions] },
   test: {
     include: ['tests/**/*.test.ts'],
+    // the engine behind @seuoffice/file-parse starts here, before the mains' engine-init reads its ?asset path
+    setupFiles: ['../../packages/engine-wasm/src/node.ts'],
     environment: 'node',
     testTimeout: 20000,
   },

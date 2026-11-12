@@ -4,7 +4,8 @@ export default defineConfig({
   test: {
     include: ['tests/**/*.test.ts'],
     environment: 'jsdom',
-    setupFiles: ['tests/setup.ts'],
+    // the engine behind @seuoffice/file-parse starts here, before the mains' engine-init reads its ?asset path
+    setupFiles: ['../../packages/engine-wasm/src/node.ts', 'tests/setup.ts'],
     testTimeout: 20000,
   },
 })
