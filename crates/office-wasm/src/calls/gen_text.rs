@@ -33,7 +33,8 @@ fn byte_at_unit(text: &str, unit: usize) -> usize {
 /// `indexOf` truncates `from` and clamps it at 0, and every offset compared
 /// with `to` is an integer, so `o < to` is `o < ceil(to)`.
 fn xml_segments16(text: &str, tag: &str, from: f64, to: f64) -> Vec<Segment16> {
-    if !(from < to) {
+    // `!(from < to)`: no segment where either bound is NaN
+    if from.is_nan() || to.is_nan() || from >= to {
         return Vec::new();
     }
     let len16 = text.encode_utf16().count() as f64;
