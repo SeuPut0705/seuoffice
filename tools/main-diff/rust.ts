@@ -8,5 +8,9 @@ const addon = require(addonPath) as { call(name: string, request: string): strin
 
 /** The Rust answer of `name` in the wire form of `main_core::calls`. */
 export function rustCall(name: string, args: unknown[], now: number): string {
-  return addon.call(name, JSON.stringify({ args, now }))
+  // JSON writes an undefined argument as null, which the specs before it read
+  // as left out; one at the end is dropped, which is how Rust reads `undefined`
+  const given = [...args]
+  while (given.length > 0 && given[given.length - 1] === undefined) given.pop()
+  return addon.call(name, JSON.stringify({ args: given, now }))
 }
