@@ -7,7 +7,7 @@ import { repoRoot } from '../docx-diff/harness'
 import { HOST_STEPS } from '../../packages/file-parse/src/host-steps'
 
 /**
- * `sourceElements` of packages/file-parse/src/html-redaction.ts, copied as it
+ * `sourceElements` of tools/fileparse-diff/reference/html-redaction.ts, copied as it
  * is: the gate (html-cases.ts) fails when that file no longer holds this text.
  */
 export const SOURCE_ELEMENTS_TEXT = String.raw`function sourceElements(source: string): SourceElement[] {

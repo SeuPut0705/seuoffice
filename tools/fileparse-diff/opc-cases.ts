@@ -1,4 +1,4 @@
-import { resolveTarget } from '../../packages/file-parse/src/opc'
+import { resolveTarget } from './reference/opc'
 import type { Spec } from './spec'
 
 export const SPECS: Spec[] = [{

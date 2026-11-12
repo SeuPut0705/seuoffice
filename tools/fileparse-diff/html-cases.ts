@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { repoRoot } from '../docx-diff/harness'
-import { redactHtmlSource } from '../../packages/file-parse/src/html-redaction'
+import { redactHtmlSource } from './reference/html-redaction'
 import { SOURCE_ELEMENTS_TEXT } from './host-steps-fileparse'
 import type { Input, Spec } from './spec'
 
@@ -50,7 +50,7 @@ const PAGES: Record<string, string> = {
 }
 
 function built(): Input[] {
-  const source = readFileSync(resolve(repoRoot, 'packages/file-parse/src/html-redaction.ts'), 'utf8')
+  const source = readFileSync(resolve(repoRoot, 'tools/fileparse-diff/reference/html-redaction.ts'), 'utf8')
   // the host step is a copy of sourceElements: the copy must still be the code
   if (!source.includes(SOURCE_ELEMENTS_TEXT)) {
     throw new Error('html-redaction.ts no longer holds the sourceElements that host-steps-fileparse.ts copies')

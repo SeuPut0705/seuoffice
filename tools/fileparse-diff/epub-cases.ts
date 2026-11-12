@@ -1,4 +1,4 @@
-import { epubToText } from '../../packages/file-parse/src/epub'
+import { epubToText } from './reference/epub'
 import { builtBooks } from '../epub-diff/epub-fixtures'
 import { hostileZipInputs } from './hostile'
 import type { Input, Spec } from './spec'

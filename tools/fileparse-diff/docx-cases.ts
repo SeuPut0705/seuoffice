@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { docxToText } from '../../packages/file-parse/src/docx'
+import { docxToText } from './reference/docx'
 import type { Input, Spec } from './spec'
 import { fixtureBytes } from './zip-fixture'
 
