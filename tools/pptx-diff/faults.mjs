@@ -2175,6 +2175,28 @@ const faults = [
     '.and_then(|g| g.stops.get(g.stops.len() / 2))',
     '.and_then(|g| g.stops.get((g.stops.len() - 1) / 2))',
   ],
+  // the written-out balanced scan and the single effect search (regex bound work)
+  [
+    'anim-effect-ctns-straddle-restart',
+    'pptxAnim.animation.readSlideTimingXml',
+    leaf + 'animation/read.rs',
+    '            if end > last_index {\n                self.base = last_index;',
+    '            if false {\n                self.base = last_index;',
+  ],
+  [
+    'anim-tag-matches-self-closing',
+    'pptxAnim.animation.readSlideTimingXml',
+    leaf + 'animation/incremental.rs',
+    'self_closing: gt > 0 && tail.as_bytes()[gt - 1] == b\'/\',',
+    'self_closing: false,',
+  ],
+  [
+    'anim-tag-matches-close-first',
+    'pptxAnim.animation.readSlideTimingXml',
+    leaf + 'animation/incremental.rs',
+    '(Some(o), Some(c)) if c < o => (c, true),',
+    '(Some(o), Some(c)) if c > o => (c, true),',
+  ],
 ]
 
 const out = resolve(here, 'out/faults')
