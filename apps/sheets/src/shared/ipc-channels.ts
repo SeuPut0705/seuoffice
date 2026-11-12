@@ -136,6 +136,8 @@ export const IPC_CHANNELS = {
   openExternal: 'shell:open-external',
   menuAction: 'menu:action',
   userDisplayName: 'user:display-name',
+  /** the language documents are read and drawn for (a document-locale code) */
+  documentLocale: 'app:get-document-locale',
   aiGetSettings: 'ai:get-settings',
   aiSetSettings: 'ai:set-settings',
   aiSettingsChanged: 'ai:settings-changed',

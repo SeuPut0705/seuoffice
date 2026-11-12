@@ -157,6 +157,7 @@ const aiSubscription: SubscriptionApi = {
 
 const desktopApi: DesktopApi = {
   getLanguage: () => ipcRenderer.invoke('app:get-language'),
+  getDocumentLocale: () => ipcRenderer.invoke(IPC_CHANNELS.documentLocale),
   fontFamilyInfo: (families) => ipcRenderer.invoke('app:font-family-info', families),
   openSourcePath: (path: string) => ipcRenderer.invoke('home:open-path', path),
   onLanguageChanged(handler) {

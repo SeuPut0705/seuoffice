@@ -20,7 +20,7 @@ import {
   writeFile,
 } from 'node:fs/promises'
 import { refreshCsvDigest } from './csv-digest'
-import { engineLocale } from './engine-locale'
+import { documentLocale, legacyCsvCharset } from './document-locale'
 import { ImportRegistry } from './import-registry'
 import { createServer } from 'node:http'
 import { basename, dirname, isAbsolute, join, resolve as resolvePath, extname } from 'node:path'
@@ -2351,6 +2351,7 @@ export function registerSheetsIpc(): void {
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:get-language')
   ipcMain.handle('app:get-language', () => getUiLang())
+  ipcMain.handle(IPC_CHANNELS.documentLocale, () => documentLocale())
 
   // shared with the other editor modules — last (identical) registration wins
   ipcMain.removeHandler('app:font-family-info')
@@ -3649,7 +3650,7 @@ export function registerSheetsIpc(): void {
       // large workbook opens slower here than it did the first time; give it
       // the headroom the archive commands of the same save get.
       stagedOpen = sidecarOpenResultSchema.parse(
-        await client.open(stagedPath, engineLocale(), systemShortDate(), {
+        await client.open(stagedPath, documentLocale(), systemShortDate(), {
           timeoutMs: SAVE_REOPEN_TIMEOUT_MS,
         }),
       )
@@ -4553,7 +4554,7 @@ async function openWorkbookSession(
       await Promise.all([
         staged?.opened ??
           client
-            .open(snapshotPath, engineLocale(), systemShortDate())
+            .open(snapshotPath, documentLocale(), systemShortDate())
             .then((result) => sidecarOpenResultSchema.parse(result)),
         sha256File(snapshotPath),
         stat(snapshotPath),
@@ -4644,17 +4645,6 @@ async function openEmptyXlsx(path: string): Promise<{
     throw error
   }
   return { openPath, importTempDir: directory, restoreTarget: path, emptySource: true }
-}
-
-/** which legacy charset an Excel CSV most likely uses, judged by the UI language */
-function legacyCsvCharset(): string | undefined {
-  const byLang: Partial<Record<string, string>> = {
-    zh: 'gb18030',
-    'zh-TW': 'big5',
-    ja: 'shift_jis',
-    ko: 'euc-kr',
-  }
-  return byLang[getUiLang()]
 }
 
 /// .xls and .ods open path: an HTML table export is read here, a real container

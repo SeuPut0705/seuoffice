@@ -3465,6 +3465,10 @@ export interface DesktopApi {
   fontFamilyInfo(families: readonly string[]): Promise<Array<[string, FontFamilyInfo]>>
   /** current UI language (persisted by the shell in app-settings.json) */
   getLanguage(): Promise<'en' | 'ko'>
+  /** the language documents are read and drawn for: number formats and the legacy
+   *  code page guess follow it. A document-locale code, worked out from the language
+   *  the install asks for; it names more languages than the UI has */
+  getDocumentLocale(): Promise<string>
   /** language switched from the shell home page */
   onLanguageChanged(handler: (lang: 'en' | 'ko') => void): () => void
   /** current UI theme preference (persisted by the shell in app-settings.json) */

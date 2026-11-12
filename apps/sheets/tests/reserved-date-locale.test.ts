@@ -8,7 +8,7 @@ import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest'
 import { z } from 'zod'
 
 import { getUiLang, normalizeLang, requestedLanguage, setUiLang } from '@genoffice/i18n'
-import { engineLocale } from '../src/main/engine-locale'
+import { documentLocale } from '../src/main/document-locale'
 import { XlsxSidecarClient } from '../src/main/xlsx-sidecar-client'
 
 // Builtin number formats 27-36 and 50-58 record no pattern in the file; the
@@ -69,7 +69,7 @@ describe('date formats a workbook leaves to its viewer', () => {
       startInstall(undefined, system)
       expect(getUiLang()).toBe('en')
 
-      const patterns = await patternsOpenedWith(engineLocale())
+      const patterns = await patternsOpenedWith(documentLocale())
 
       expect(patterns).toEqual(await patternsOpenedWith(former))
       expect(patterns).not.toEqual(await patternsOpenedWith('en'))
@@ -80,14 +80,14 @@ describe('date formats a workbook leaves to its viewer', () => {
     startInstall('ja', 'ko-KR')
     expect(getUiLang()).toBe('en')
 
-    expect(await patternsOpenedWith(engineLocale())).toEqual(await patternsOpenedWith('ja'))
+    expect(await patternsOpenedWith(documentLocale())).toEqual(await patternsOpenedWith('ja'))
   })
 
   it('reads a workbook on a Korean system the Korean way', async () => {
     startInstall(undefined, 'ko-KR')
     expect(getUiLang()).toBe('ko')
 
-    const patterns = await patternsOpenedWith(engineLocale())
+    const patterns = await patternsOpenedWith(documentLocale())
 
     expect(patterns).toEqual(await patternsOpenedWith('ko'))
     expect(patterns).not.toEqual(await patternsOpenedWith('en'))
@@ -95,17 +95,17 @@ describe('date formats a workbook leaves to its viewer', () => {
 
   it('lets a stored choice win over the system: English on a Japanese system, Korean on an English one', async () => {
     startInstall('en', 'ja-JP')
-    expect(await patternsOpenedWith(engineLocale())).toEqual(await patternsOpenedWith('en'))
+    expect(await patternsOpenedWith(documentLocale())).toEqual(await patternsOpenedWith('en'))
 
     startInstall('ko', 'en-US')
-    expect(await patternsOpenedWith(engineLocale())).toEqual(await patternsOpenedWith('ko'))
+    expect(await patternsOpenedWith(documentLocale())).toEqual(await patternsOpenedWith('ko'))
   })
 
   it('follows a language chosen in Settings after the start', async () => {
     startInstall(undefined, 'ja-JP')
     setUiLang('ko')
 
-    expect(await patternsOpenedWith(engineLocale())).toEqual(await patternsOpenedWith('ko'))
+    expect(await patternsOpenedWith(documentLocale())).toEqual(await patternsOpenedWith('ko'))
   })
 })
 function sidecarBinaryPath(): string {
