@@ -23055,6 +23055,7 @@ pub struct ParsedDoc {
     pub gutter_at_top: Option<bool>,
     pub compatibility_mode: Option<JsNum>,
     pub auto_hyphenation: Option<bool>,
+    pub default_tab_stop_twips: Option<JsNum>,
     pub balance_dbcs_spacing: Option<bool>,
     pub use_f_e_layout: Option<bool>,
     pub compress_punctuation: Option<bool>,
@@ -23062,7 +23063,6 @@ pub struct ParsedDoc {
     pub indent_not_numbering_tab_stop: Option<bool>,
     pub do_not_expand_shift_return: Option<bool>,
     pub do_not_use_h_t_m_l_paragraph_auto_spacing: Option<bool>,
-    pub default_tab_stop_twips: Option<JsNum>,
     pub header_first: Option<Option<HfPartInfo>>,
     pub footer_first: Option<Option<HfPartInfo>>,
     pub header_even: Option<Option<HfPartInfo>>,
@@ -23291,6 +23291,9 @@ impl Serialize for ParsedDoc {
         if let Some(value) = &self.auto_hyphenation {
             map.serialize_entry("autoHyphenation", value)?;
         }
+        if let Some(value) = &self.default_tab_stop_twips {
+            map.serialize_entry("defaultTabStopTwips", value)?;
+        }
         if let Some(value) = &self.balance_dbcs_spacing {
             map.serialize_entry("balanceDbcsSpacing", value)?;
         }
@@ -23311,9 +23314,6 @@ impl Serialize for ParsedDoc {
         }
         if let Some(value) = &self.do_not_use_h_t_m_l_paragraph_auto_spacing {
             map.serialize_entry("doNotUseHTMLParagraphAutoSpacing", value)?;
-        }
-        if let Some(value) = &self.default_tab_stop_twips {
-            map.serialize_entry("defaultTabStopTwips", value)?;
         }
         if let Some(value) = &self.header_first {
             map.serialize_entry("headerFirst", value)?;
@@ -23694,13 +23694,13 @@ pub struct ParsedDocFull {
     pub gutter_at_top: Option<bool>,
     pub compatibility_mode: Option<JsNum>,
     pub auto_hyphenation: Option<bool>,
+    pub default_tab_stop_twips: Option<JsNum>,
     pub balance_dbcs_spacing: Option<bool>,
     pub compress_punctuation: Option<bool>,
     pub adjust_line_height_in_table: Option<bool>,
     pub indent_not_numbering_tab_stop: Option<bool>,
     pub do_not_expand_shift_return: Option<bool>,
     pub do_not_use_h_t_m_l_paragraph_auto_spacing: Option<bool>,
-    pub default_tab_stop_twips: Option<JsNum>,
     pub use_f_e_layout: Option<bool>,
     pub header_first: Option<Option<HfPartInfo>>,
     pub footer_first: Option<Option<HfPartInfo>>,
@@ -23933,6 +23933,9 @@ impl Serialize for ParsedDocFull {
         if let Some(value) = &self.auto_hyphenation {
             map.serialize_entry("autoHyphenation", value)?;
         }
+        if let Some(value) = &self.default_tab_stop_twips {
+            map.serialize_entry("defaultTabStopTwips", value)?;
+        }
         if let Some(value) = &self.balance_dbcs_spacing {
             map.serialize_entry("balanceDbcsSpacing", value)?;
         }
@@ -23950,9 +23953,6 @@ impl Serialize for ParsedDocFull {
         }
         if let Some(value) = &self.do_not_use_h_t_m_l_paragraph_auto_spacing {
             map.serialize_entry("doNotUseHTMLParagraphAutoSpacing", value)?;
-        }
-        if let Some(value) = &self.default_tab_stop_twips {
-            map.serialize_entry("defaultTabStopTwips", value)?;
         }
         if let Some(value) = &self.use_f_e_layout {
             map.serialize_entry("useFELayout", value)?;
