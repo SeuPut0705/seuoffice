@@ -10,6 +10,7 @@ use crate::node_fs::{code_of, node_error};
 
 const PENDING_DIR: &str = "pending";
 const UPDATE_INFO_FILE: &str = "update-info.json";
+const BLOCK_MAP_FILE: &str = "current.blockmap";
 
 /// `Log`: one call per line, the arguments in order.
 pub type Log<'a> = &'a mut dyn FnMut(&[&str]);
@@ -97,5 +98,7 @@ pub fn prune_update_cache(cache_dir: &str, running_version: &str, log: Log) -> b
         return true;
     }
     // the record goes only with the file it names, so a failed removal is retried
-    removed(&pending_dir, &file_name, log) && removed(&pending_dir, UPDATE_INFO_FILE, log)
+    removed(&pending_dir, &file_name, log)
+        && removed(&pending_dir, BLOCK_MAP_FILE, log)
+        && removed(&pending_dir, UPDATE_INFO_FILE, log)
 }

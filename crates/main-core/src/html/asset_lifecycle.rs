@@ -33,7 +33,7 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
 use crate::html::atomic_write::atomic_write_file;
-use crate::html::old_names::OLD_ASSET_MANIFEST_FILENAMES;
+use crate::html::old_names::{ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES};
 use crate::node_fs::{NodeError, namespaced, node_error, node_error_fd};
 use crate::packages::i18n::existing_or_current;
 
@@ -347,7 +347,12 @@ fn manifest_path_in(assets_dir: &str) -> String {
         ASSET_MANIFEST_FILENAME,
         &OLD_ASSET_MANIFEST_FILENAMES,
         |old| exists_sync(&join(&[assets_dir, old])),
+        None,
     );
+    // neither exists: a new folder gets the name 0.12.37 can read
+    if name == ASSET_MANIFEST_FILENAME && !exists_sync(&join(&[assets_dir, &name])) {
+        return join(&[assets_dir, ASSET_MANIFEST_FILENAME_WRITTEN]);
+    }
     join(&[assets_dir, &name])
 }
 

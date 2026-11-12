@@ -63,9 +63,9 @@ use crate::packages::electron_utils::user_skills_channels::{
 use crate::packages::i18n::{
     self, DEV_USER_DATA_DIR_NAME, ENV_PREFIX, I18n, LANGS, OLD_APP_MCP_SERVER_NAMES,
     OLD_CLI_BUNDLE_FILES, OLD_CLI_COMMANDS, OLD_ENV_NAMES, OLD_ENV_PREFIX, OLD_HOME_DIR_NAMES,
-    OLD_MCP_SERVER_NAMES, OLD_MCP_TOOL_NAMES, OLD_PROJECT_DATA_DIR_NAMES, OLD_SKILL_NAMES,
-    PRODUCT_NAME, PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER, PRODUCT_REPO_SLUG, UPSTREAM_PRODUCT_NAME,
-    USER_DATA_DIR_NAME,
+    OLD_MCP_RESOURCE_SCHEMES, OLD_MCP_SERVER_NAMES, OLD_MCP_TOOL_NAMES, OLD_PROJECT_DATA_DIR_NAMES,
+    OLD_SKILL_NAMES, PRODUCT_NAME, PRODUCT_REPO_NAME, PRODUCT_REPO_OWNER, PRODUCT_REPO_SLUG,
+    UPSTREAM_PRODUCT_NAME, USER_DATA_DIR_NAME,
 };
 use crate::packages::project_store::{
     PROJECT_FOLDER_BRIDGE_KEY, PROJECT_FOLDER_CHANNELS, PROJECT_FOLDER_EVENTS,
@@ -139,6 +139,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         "i18n.OLD_APP_MCP_SERVER_NAMES" => Ok(Some(strings(&OLD_APP_MCP_SERVER_NAMES))),
         "i18n.OLD_SKILL_NAMES" => Ok(Some(strings(&OLD_SKILL_NAMES))),
         "i18n.OLD_MCP_TOOL_NAMES" => Ok(Some(pairs(&OLD_MCP_TOOL_NAMES))),
+        "i18n.OLD_MCP_RESOURCE_SCHEMES" => Ok(Some(strings(&OLD_MCP_RESOURCE_SCHEMES))),
         "i18n.existingOrCurrent" => existing_or_current_call(args, cx),
 
         // ---------- user-skills-channels ----------
@@ -513,10 +514,31 @@ fn existing_or_current_call(args: &[Value], cx: &mut Context) -> Answer {
     let old: Vec<String> = string_list(args, 1)?;
     let existing: Vec<String> = string_list(args, 2)?;
     let old_refs: Vec<&str> = old.iter().map(String::as_str).collect();
-    let answer = i18n::existing_or_current(current, &old_refs, |name| {
-        cx.logs.push(vec![Value::from(name)]);
-        existing.iter().any(|e| e == name)
-    });
+    // `inUse` (argument 3), a list like `exists`, logged as ["inUse", name]
+    let in_use_list: Option<Vec<String>> = match arg(args, 3) {
+        None | Some(Value::Null) => None,
+        Some(_) => Some(string_list(args, 3)?),
+    };
+    let logs = std::cell::RefCell::new(Vec::new());
+    let mut in_use = |name: &str| {
+        logs.borrow_mut()
+            .push(vec![Value::from("inUse"), Value::from(name)]);
+        in_use_list
+            .as_ref()
+            .is_some_and(|l| l.iter().any(|e| e == name))
+    };
+    let answer = i18n::existing_or_current(
+        current,
+        &old_refs,
+        |name| {
+            logs.borrow_mut().push(vec![Value::from(name)]);
+            existing.iter().any(|e| e == name)
+        },
+        in_use_list
+            .is_some()
+            .then_some(&mut in_use as &mut dyn FnMut(&str) -> bool),
+    );
+    cx.logs.extend(logs.into_inner());
     Ok(Some(Value::from(answer)))
 }
 

@@ -1,0 +1,63 @@
+[
+  {
+    "name": "d8 html new folder keeps the newer name",
+    "file": "main-core/src/html/asset_lifecycle.rs",
+    "find": "return join(&[assets_dir, ASSET_MANIFEST_FILENAME_WRITTEN]);",
+    "replace": "return join(&[assets_dir, ASSET_MANIFEST_FILENAME]);",
+    "fn": [
+      "html/asset-lifecycle.copyImageIntoOwnedAssets",
+      "html/asset-lifecycle.writeImageIntoOwnedAssets",
+      "html/asset-lifecycle.readOwnedAssetManifest",
+      "html/asset-lifecycle.prepareAssetsForSaveAs"
+    ]
+  },
+  {
+    "name": "d8 markdown new folder keeps the newer name",
+    "file": "main-core/src/markdown/asset_lifecycle.rs",
+    "find": "return join(&[assets_dir, ASSET_MANIFEST_FILENAME_WRITTEN]);",
+    "replace": "return join(&[assets_dir, ASSET_MANIFEST_FILENAME]);",
+    "fn": [
+      "markdown/asset-lifecycle.copyImageIntoOwnedAssets",
+      "markdown/asset-lifecycle.writeImageIntoOwnedAssets",
+      "markdown/asset-lifecycle.readOwnedAssetManifest",
+      "markdown/asset-lifecycle.prepareAssetsForSaveAs"
+    ]
+  },
+  {
+    "name": "d8 block map failure ignored",
+    "file": "main-core/src/shell/update_cache.rs",
+    "find": "&& removed(&pending_dir, BLOCK_MAP_FILE, log)",
+    "replace": "&& (removed(&pending_dir, BLOCK_MAP_FILE, log) || true)",
+    "fn": [
+      "update-cache.pruneUpdateCache"
+    ]
+  },
+  {
+    "name": "d8 inUse ignored",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "Some(in_use) => in_use(current),",
+    "replace": "Some(_) => exists(current),",
+    "fn": [
+      "i18n.existingOrCurrent"
+    ]
+  },
+  {
+    "name": "d8 HOME not adopted",
+    "file": "main-core/src/packages/i18n.rs",
+    "find": "    \"HOME\",\n",
+    "replace": "    \"HOMEDIR\",\n",
+    "fn": [
+      "i18n.OLD_ENV_NAMES",
+      "i18n.adoptOldEnv"
+    ]
+  },
+  {
+    "name": "d8 block map never removed",
+    "file": "main-core/src/shell/update_cache.rs",
+    "find": "&& removed(&pending_dir, BLOCK_MAP_FILE, log)",
+    "replace": "&& true",
+    "fn": [
+      "update-cache.pruneUpdateCache"
+    ]
+  }
+]

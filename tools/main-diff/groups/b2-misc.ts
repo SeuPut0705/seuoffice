@@ -51,6 +51,7 @@ import {
   OLD_MCP_SERVER_NAMES,
   OLD_APP_MCP_SERVER_NAMES,
   OLD_SKILL_NAMES,
+  OLD_MCP_RESOURCE_SCHEMES,
   OLD_MCP_TOOL_NAMES,
   existingOrCurrent,
   type Lang,
@@ -475,12 +476,21 @@ const i18nGroup: Record<string, FnSpec> = {
   'i18n.OLD_APP_MCP_SERVER_NAMES': constant(() => [...OLD_APP_MCP_SERVER_NAMES]),
   'i18n.OLD_SKILL_NAMES': constant(() => [...OLD_SKILL_NAMES]),
   'i18n.OLD_MCP_TOOL_NAMES': constant(() => ({ ...OLD_MCP_TOOL_NAMES })),
+  'i18n.OLD_MCP_RESOURCE_SCHEMES': constant(() => [...OLD_MCP_RESOURCE_SCHEMES]),
   'i18n.existingOrCurrent': {
     ts: (a, cx) => {
       const present = new Set(a[2] as string[])
-      return existingOrCurrent(a[0] as string, a[1] as string[], (name) => {
+      const exists = (name: string) => {
         cx.log(name)
         return present.has(name)
+      }
+      // a fourth argument is `inUse`, given as the names in use
+      if (a[3] === undefined || a[3] === null)
+        return existingOrCurrent(a[0] as string, a[1] as string[], exists)
+      const used = new Set(a[3] as string[])
+      return existingOrCurrent(a[0] as string, a[1] as string[], exists, (name) => {
+        cx.log('inUse', name)
+        return used.has(name)
       })
     },
     cases: each(
@@ -491,6 +501,10 @@ const i18nGroup: Record<string, FnSpec> = {
       ['new', [], ['new']],
       ['new', [], []],
       ['', ['a'], ['a']],
+      ['new', ['old1'], ['new', 'old1'], []],
+      ['new', ['old1'], ['new', 'old1'], ['new']],
+      ['new', ['old1'], ['new'], []],
+      ['new', [], ['new'], []],
     ),
   },
 }

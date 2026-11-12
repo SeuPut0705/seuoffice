@@ -24,7 +24,7 @@ use super::fs_util::{
     copy_file_excl, is_path_inside, mkdir_p, plain_error, read_file_utf8, rm_file, sha256_file,
     write_file_excl,
 };
-use super::old_names::OLD_ASSET_MANIFEST_FILENAMES;
+use super::old_names::{ASSET_MANIFEST_FILENAME_WRITTEN, OLD_ASSET_MANIFEST_FILENAMES};
 use super::ord_map::OrdMap;
 use crate::node_fs::{NodeError, namespaced, node_error};
 use crate::packages::electron_utils::atomic_write::atomic_write_file;
@@ -46,7 +46,14 @@ fn manifest_path_in(assets_dir: &str) -> String {
         ASSET_MANIFEST_FILENAME,
         &OLD_ASSET_MANIFEST_FILENAMES,
         |old| fs::metadata(namespaced(&join(&[assets_dir, old]))).is_ok(),
+        None,
     );
+    // neither exists: a new folder gets the name 0.12.37 can read
+    if name == ASSET_MANIFEST_FILENAME
+        && fs::metadata(namespaced(&join(&[assets_dir, &name]))).is_err()
+    {
+        return join(&[assets_dir, ASSET_MANIFEST_FILENAME_WRITTEN]);
+    }
     join(&[assets_dir, &name])
 }
 

@@ -463,6 +463,34 @@ export const group: Group = {
           files: { [P + 'temp-1.2.3-x.exe']: 'partial', [P + 'update-info.json']: info(exe) },
           note: 'partial download untouched',
         },
+        {
+          args: run('1.2.3'),
+          files: {
+            [P + exe]: 'i',
+            [P + 'current.blockmap']: 'b',
+            [P + 'update-info.json']: info(exe),
+          },
+          note: 'the block map goes with the installed download',
+        },
+        {
+          args: run('1.2.2'),
+          files: {
+            [P + exe]: 'i',
+            [P + 'current.blockmap']: 'b',
+            [P + 'update-info.json']: info(exe),
+          },
+          note: 'the block map of a newer download stays',
+        },
+        {
+          args: run('1.2.3'),
+          files: {
+            [P + exe]: 'i',
+            [P + 'current.blockmap']: { dir: true },
+            [P + 'current.blockmap/x']: 'held',
+            [P + 'update-info.json']: info(exe),
+          },
+          note: 'a block map that cannot go keeps the record for a retry',
+        },
       ]
       return cases
     })(),

@@ -279,13 +279,15 @@ pub const PRODUCT_REPO_SLUG: &str = "SeuPut0705/seuoffice";
 pub const OLD_ENV_PREFIX: &str = "GENOFFICE_";
 pub const ENV_PREFIX: &str = "SEUOFFICE_";
 
-pub const OLD_ENV_NAMES: [&str; 12] = [
+pub const OLD_ENV_NAMES: [&str; 14] = [
     "AI_SETTINGS",
     "ALLOWED_ROOTS",
     "APP_BIN",
     "AUDIT_LOG",
     "AUTH_DIR",
     "HB_SUBSET_WASM",
+    "HOME",
+    "LANG",
     "MCP_COMPACT_SCHEMAS",
     "MCP_TOKEN",
     "PDFIUM_WASM",
@@ -323,13 +325,23 @@ pub const OLD_SKILL_NAMES: [&str; 1] = ["ieumoffice"];
 /// `OLD_MCP_TOOL_NAMES`, as (old, new) pairs.
 pub const OLD_MCP_TOOL_NAMES: [(&str, &str); 1] = [("open_in_genoffice", "open_in_seuoffice")];
 
+/// `OLD_MCP_RESOURCE_SCHEMES`: the scheme of the MCP resources
+/// (`<scheme>://guide/...`) the agent skill of an earlier version names.
+pub const OLD_MCP_RESOURCE_SCHEMES: [&str; 1] = ["ieumoffice"];
+
 /// `existingOrCurrent(current, oldNames, exists)`
 pub fn existing_or_current(
     current: &str,
     old_names: &[&str],
     mut exists: impl FnMut(&str) -> bool,
+    in_use: Option<&mut dyn FnMut(&str) -> bool>,
 ) -> String {
-    if exists(current) {
+    // `inUse` defaults to `exists`: the current name wins once it is in use
+    let current_in_use = match in_use {
+        Some(in_use) => in_use(current),
+        None => exists(current),
+    };
+    if current_in_use {
         return current.to_string();
     }
     old_names
