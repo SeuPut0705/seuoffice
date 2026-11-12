@@ -7,6 +7,7 @@ import {
   type ReadsSheet,
 } from '@seuoffice/xlsx-gateway/gateway/formula-reads'
 import { relationshipIdOf } from '@seuoffice/xlsx-gateway/gateway/xlsx-namespace'
+import { xmlElements } from '@seuoffice/xlsx-gateway/gateway/xlsx-xml-scan'
 
 /**
  * The formula cells of a workbook whose value comes from a withheld cell.
@@ -51,11 +52,15 @@ const WHOLE_SHEET: RangeBounds = {
   endColumn: MAX_COLUMN,
 }
 
-/** an opening `<c …>`, or an `<f …>` with its body, each with any namespace prefix */
-const CELL_OR_FORMULA =
-  /<(?:[\w.-]+:)?c(?=[\s/>])([^>]*)>|<(?:[\w.-]+:)?f(?=[\s/>])([^>]*?)(?:\/>|>([\s\S]*?)<\/(?:[\w.-]+:)?f>)/g
-const SHEET_DATA_OPEN = /<(?:[\w.-]+:)?sheetData(?=[\s>])/
-const SHEET_DATA_CLOSE = /<\/(?:[\w.-]+:)?sheetData>/
+/**
+ * What the scan stops at inside `<sheetData>`: a comment, a CDATA section or a
+ * processing instruction (each read whole: a tag inside them is not one), and
+ * the tags of `sheetData`, `c` and `f`, each with any namespace prefix. An
+ * attribute run is consumed as quoted strings, so a `>` in a value does not
+ * end the tag. Text can hold no `<`, so no other stop can be a false one.
+ */
+const SCAN_STOP =
+  /<!--[\s\S]*?-->|<!\[CDATA\[([\s\S]*?)\]\]>|<\?[\s\S]*?\?>|<(\/?)(?:[\w.-]+:)?(sheetData|c|f)(?=[\s/>])((?:"[^"]*"|'[^']*'|[^>"'])*)>/g
 const CELL_REF = /^([A-Za-z]{1,3})([1-9]\d{0,6})$/
 
 function attribute(attributes: string, name: string): string | undefined {
@@ -121,36 +126,26 @@ const UNSCANNED: SheetFormulas = { formulas: [], unknown: [WHOLE_SHEET], formula
 
 /** The formulas of one worksheet part, from its raw XML. */
 export function scanSheetFormulas(xml: string): SheetFormulas {
-  const open = SHEET_DATA_OPEN.exec(xml)
-  if (!open) return { formulas: [], unknown: [], formulaCells: new Set() }
-  const close = SHEET_DATA_CLOSE.exec(xml)
-  const data = xml.slice(open.index, close ? close.index : xml.length)
-
   const result: SheetFormulas = { formulas: [], unknown: [], formulaCells: new Set() }
   const masters = new Map<string, { formula: string; row: number; column: number }>()
   const followers: { si: string; row: number; column: number }[] = []
-  /** the address of the cell being read; null between cells and for one that has none */
+  /** the address of the cell being read; null when it has none, undefined between cells */
   let current: { row: number; column: number } | null | undefined
-  CELL_OR_FORMULA.lastIndex = 0
-  for (let match = CELL_OR_FORMULA.exec(data); match; match = CELL_OR_FORMULA.exec(data)) {
-    if (match[1] !== undefined) {
-      // a self-closed cell holds no formula
-      current = match[1].endsWith('/') ? undefined : cellAt(attribute(match[1], 'r'))
-      continue
-    }
-    // An `<f>` outside a cell, or in a cell that cannot be placed: nothing on
-    // this sheet can be said to be free of it.
-    if (!current) return UNSCANNED
-    const at = current
+  let inData = false
+  /** the `<f>` being read: its attributes and the text so far */
+  let formula: { attributes: string; text: string; at: { row: number; column: number } } | null =
+    null
+  let sawData = false
+  let last = 0
+  const finish = (attributes: string, body: string, at: { row: number; column: number }) => {
     result.formulaCells.add(cellKey(at.row, at.column))
-    const attributes = match[2] ?? ''
     const kind = attribute(attributes, 't')
-    const text = decodeEntities(match[3] ?? '').trim()
+    const text = body.trim()
     if (kind === 'dataTable') {
       const table = rangeAt(attribute(attributes, 'ref'))
-      if (!table) return UNSCANNED
+      if (!table) return false
       result.unknown.push(table)
-      continue
+      return true
     }
     if (kind === 'shared') {
       const si = attribute(attributes, 'si')
@@ -160,20 +155,63 @@ export function scanSheetFormulas(xml: string): SheetFormulas {
         masters.set(si, { formula: text, ...at })
         result.formulas.push({ area: cellArea(at), formula: text })
       }
-      continue
+      return true
     }
     if (text === '') {
       result.unknown.push(cellArea(at))
-      continue
+      return true
     }
     if (kind === 'array') {
       const filled = rangeAt(attribute(attributes, 'ref'))
-      if (!filled) return UNSCANNED
+      if (!filled) return false
       result.formulas.push({ area: filled, formula: text })
-      continue
+      return true
     }
     result.formulas.push({ area: cellArea(at), formula: text })
+    return true
   }
+  SCAN_STOP.lastIndex = 0
+  for (let match = SCAN_STOP.exec(xml); match; match = SCAN_STOP.exec(xml)) {
+    if (formula !== null) formula.text += decodeEntities(xml.slice(last, match.index))
+    last = match.index + match[0].length
+    if (match[3] === undefined) {
+      // CDATA is the formula's text as it is; a comment or an instruction is nothing
+      if (formula !== null && match[1] !== undefined) formula.text += match[1]
+      continue
+    }
+    const closing = match[2] === '/'
+    const attributes = match[4] ?? ''
+    const selfClosed = !closing && attributes.endsWith('/')
+    if (match[3] === 'sheetData') {
+      if (closing) inData = false
+      else if (!selfClosed) inData = sawData = true
+      continue
+    }
+    if (!inData) continue
+    if (match[3] === 'c') {
+      // a self-closed cell holds no formula
+      current = closing || selfClosed ? undefined : cellAt(attribute(attributes, 'r'))
+      continue
+    }
+    if (closing) {
+      if (formula !== null) {
+        if (!finish(formula.attributes, formula.text, formula.at)) return UNSCANNED
+        formula = null
+      }
+      continue
+    }
+    // An `<f>` outside a cell, or in a cell that cannot be placed: nothing on
+    // this sheet can be said to be free of it.
+    if (!current) return UNSCANNED
+    if (selfClosed) {
+      if (!finish(attributes, '', current)) return UNSCANNED
+    } else {
+      formula = { attributes, text: '', at: current }
+    }
+  }
+  // a formula the part ends in the middle of is a formula nothing is known of
+  if (formula !== null) return UNSCANNED
+  if (!sawData) return { formulas: [], unknown: [], formulaCells: new Set() }
   for (const follower of followers) {
     const master = masters.get(follower.si)
     if (!master) {
@@ -213,12 +251,6 @@ export interface PivotOutput {
   readonly formula: string | null
 }
 
-const element = (name: string): RegExp => new RegExp(`<(?:[\\w.-]+:)?${name}(?=[\\s/>])([^>]*)>`)
-const LOCATION = element('location')
-const CACHE_SOURCE = element('cacheSource')
-const WORKSHEET_SOURCE = element('worksheetSource')
-const PAGE_FIELD = /<(?:[\w.-]+:)?pageField(?=[\s/>])/g
-
 /**
  * Where a pivot's output is and what it was computed from, read off its
  * `pivotTableDefinition` part (`truncated` when the part was larger than what
@@ -237,8 +269,8 @@ export function pivotOutputOf(
   cacheXml: string | undefined,
 ): PivotOutput {
   const pivotXml = pivot?.text ?? ''
-  const location = LOCATION.exec(pivotXml)?.[1]
-  const output = rangeAt(location === undefined ? undefined : attribute(location, 'ref'))
+  const location = xmlElements(pivotXml, 'location')[0]?.attributes
+  const output = rangeAt(location?.get('ref'))
   if (location === undefined || output === null) return { area: WHOLE_SHEET, formula: null }
   const upToOutputEnd = { ...output, startRow: 0, startColumn: 0, endColumn: WHOLE_SHEET.endColumn }
   // The filters are listed after the fields and their items, megabytes into a
@@ -254,9 +286,9 @@ export function pivotOutputOf(
   // none. A layout that is not two counts, or does not hold every filter, leaves their
   // extent unknown, and it is not guessed: every row from the top of the sheet down to the
   // end of the output is the pivot's, in every column.
-  const filters = pivotXml.match(PAGE_FIELD)?.length ?? 0
+  const filters = xmlElements(pivotXml, 'pageField').length
   const count = (name: string): number => {
-    const value = Number(attribute(location, name) ?? '')
+    const value = Number(location.get(name) ?? '')
     return Number.isInteger(value) && value > 0 ? value : 0
   }
   const pageRows = count('rowPageCount')
@@ -278,25 +310,24 @@ export function pivotOutputOf(
 }
 
 function pivotSourceFormula(cacheXml: string | undefined): string | null {
-  const cacheSource = CACHE_SOURCE.exec(cacheXml ?? '')?.[1]
-  const sourceElement = WORKSHEET_SOURCE.exec(cacheXml ?? '')
-  const source = sourceElement?.[1]
-  if (cacheSource === undefined || sourceElement === null || source === undefined) return null
-  if (attribute(cacheSource, 'type') !== 'worksheet') return null
+  const cache = cacheXml ?? ''
+  const cacheSource = xmlElements(cache, 'cacheSource')[0]
+  const sourceElement = xmlElements(cache, 'worksheetSource')[0]
+  if (cacheSource === undefined || sourceElement === undefined) return null
+  if (cacheSource.attributes.get('type') !== 'worksheet') return null
   // A relationship on the source: the range is in another workbook. Told the
   // way the workbook gateway tells it for the editor, so the two agree.
-  const before = (cacheXml ?? '').slice(0, sourceElement.index)
-  if (relationshipIdOf(sourceElement[0], before) !== undefined) return null
-  const ref = attribute(source, 'ref')
-  const sheet = attribute(source, 'sheet')
-  const name = attribute(source, 'name')
+  const tag = cache.slice(sourceElement.start, sourceElement.openEnd)
+  if (relationshipIdOf(tag, cache.slice(0, sourceElement.start)) !== undefined) return null
+  const { attributes } = sourceElement
+  const ref = attributes.get('ref')
+  const sheet = attributes.get('sheet')
+  const name = attributes.get('name')
   if (ref !== undefined && sheet !== undefined) {
     if (rangeAt(ref) === null) return null
-    return `='${decodeEntities(sheet).replaceAll("'", "''")}'!${ref.replaceAll('$', '')}`
+    return `='${sheet.replaceAll("'", "''")}'!${ref.replaceAll('$', '')}`
   }
-  if (ref === undefined && sheet === undefined && name !== undefined) {
-    return `=${decodeEntities(name)}`
-  }
+  if (ref === undefined && sheet === undefined && name !== undefined) return `=${name}`
   return null
 }
 

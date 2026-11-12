@@ -18,6 +18,26 @@ export const HF_ROOT_ATTRS =
 const HF_ROOT_NAMESPACES = partNamespaces(`<w:hdr${HF_ROOT_ATTRS}>`)
 
 /**
+ * The opening tag of a header/footer part written anew. Content the rewrite
+ * keeps from the original part (a picture's drawing, a run's mark) uses the
+ * prefixes the original root declares and may be named in its mc:Ignorable,
+ * so the new root is the original's with the prefixes of HF_ROOT_ATTRS added
+ * where it lacks them.
+ */
+export function hfRootOpen(root: HfRootName, originalXml: string | null): string {
+  const fresh = `<${root}${HF_ROOT_ATTRS}>`
+  const original = originalXml ? findStartTag(originalXml, root) : null
+  if (!original || original.text.endsWith('/>')) return fresh
+  let open = original.text
+  for (const [, prefix, uri] of HF_ROOT_ATTRS.matchAll(/xmlns:([\w.-]+)="([^"]*)"/g)) {
+    if (!new RegExp(`\\sxmlns:${prefix}\\s*=`).test(open)) {
+      open = open.replace(/\s*>$/, ` xmlns:${prefix}="${uri}">`)
+    }
+  }
+  return open
+}
+
+/**
  * The original part split at its root, when the rewritten part keeps that
  * root: it holds something besides text paragraphs (a table, a block control,
  * a paragraph with a drawing the text model does not carry), which stays as

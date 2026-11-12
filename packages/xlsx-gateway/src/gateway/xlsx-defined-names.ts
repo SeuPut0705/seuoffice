@@ -4,6 +4,7 @@
 /// — stay byte-verbatim.
 
 import { withFutureFunctionMarkers } from './future-functions'
+import { prefixOf, rootNamespaceElements } from './xlsx-xml-scan'
 
 export class DefinedNameError extends Error {}
 
@@ -30,11 +31,11 @@ const CELL_REF_PATTERN = /^(?:[A-Za-z]{1,3}[0-9]+|[Rr][0-9]*[Cc][0-9]*)$/
 export function applyDefinedNamesState(workbookXml: string, state: DefinedNamesState): string {
   const preserved = new Set(state.preserveNames)
   const preservedKeys = new Set<string>()
-  for (const match of workbookXml.matchAll(/<definedName\b[^>]*>/g)) {
-    const name = /\bname="([^"]*)"/.exec(match[0])?.[1]
-    if (name === undefined || !preserved.has(unescapeXml(name))) continue
-    const scope = /\blocalSheetId="(\d+)"/.exec(match[0])?.[1]
-    preservedKeys.add(`${unescapeXml(name)}\u0000${scope === undefined ? -1 : Number(scope)}`)
+  for (const element of rootNamespaceElements(workbookXml, 'definedName')) {
+    const name = element.attributes.get('name')
+    if (name === undefined || !preserved.has(name)) continue
+    const scope = element.attributes.get('localSheetId')
+    preservedKeys.add(`${name}\u0000${scope === undefined ? -1 : Number(scope)}`)
   }
   const seen = new Set<string>()
   for (const entry of state.names) {
@@ -54,18 +55,14 @@ export function applyDefinedNamesState(workbookXml: string, state: DefinedNamesS
 
   // Drop every modeled entry from the existing section, keeping built-ins,
   // hidden names, and preserve-listed ones in place.
-  const xml = workbookXml.replace(
-    /<definedName\b[^>]*>[\s\S]*?<\/definedName>|<definedName\b[^>]*\/>/g,
-    (element) => {
-      const name = /\bname="([^"]*)"/.exec(element)?.[1] ?? ''
-      const unescaped = unescapeXml(name)
-      const keep =
-        unescaped.startsWith('_xlnm') ||
-        /\bhidden="(?:1|true)"/.test(element) ||
-        preserved.has(unescaped)
-      return keep ? element : ''
-    },
-  )
+  let xml = workbookXml
+  for (const element of rootNamespaceElements(workbookXml, 'definedName').reverse()) {
+    const name = element.attributes.get('name') ?? ''
+    const hidden = element.attributes.get('hidden')
+    const keep =
+      name.startsWith('_xlnm') || hidden === '1' || hidden === 'true' || preserved.has(name)
+    if (!keep) xml = xml.slice(0, element.start) + xml.slice(element.end)
+  }
 
   const additions = state.names
     .map(
@@ -90,34 +87,47 @@ export function applyDefinedNamesState(workbookXml: string, state: DefinedNamesS
  * present — so it is done once here rather than twice.
  */
 export function appendDefinedNames(workbookXml: string, additions: string): string {
-  const section = /<definedNames\b[^>]*>([\s\S]*?)<\/definedNames>|<definedNames\b[^>]*\/>/.exec(
-    workbookXml,
-  )
+  const section = rootNamespaceElements(workbookXml, 'definedNames')[0]
   if (section) {
-    const inner = (section[1] ?? '') + additions
-    const replacement = inner === '' ? '' : `<definedNames>${inner}</definedNames>`
-    return (
-      workbookXml.slice(0, section.index) +
-      replacement +
-      workbookXml.slice(section.index + section[0].length)
-    )
+    const prefixed = withPrefix(additions, prefixOf(section.name))
+    if (section.closeStart === section.end) {
+      // written self-closed: open it to hold the entries, or drop it when there are none
+      if (additions === '') return workbookXml
+      const name = section.name
+      const open = workbookXml.slice(section.start, section.openEnd).replace(/\s*\/>$/, '>')
+      return (
+        workbookXml.slice(0, section.start) +
+        `${open}${prefixed}</${name}>` +
+        workbookXml.slice(section.end)
+      )
+    }
+    const inner = workbookXml.slice(section.openEnd, section.closeStart) + prefixed
+    if (inner === '') {
+      return workbookXml.slice(0, section.start) + workbookXml.slice(section.end)
+    }
+    return workbookXml.slice(0, section.openEnd) + inner + workbookXml.slice(section.closeStart)
   }
   if (additions === '') return workbookXml
   // Schema order: definedNames follows sheets (and functionGroups/externalReferences).
-  const anchor = /<\/sheets>|<sheets\b[^>]*\/>/.exec(workbookXml)
+  const anchor = rootNamespaceElements(workbookXml, 'sheets')[0]
   if (!anchor) throw new DefinedNameError('workbook.xml has no sheets element.')
-  const groups = /<functionGroups\b[^>]*>[\s\S]*?<\/functionGroups>|<functionGroups\b[^>]*\/>/.exec(
-    workbookXml,
-  )
-  const externals =
-    /<externalReferences\b[^>]*>[\s\S]*?<\/externalReferences>|<externalReferences\b[^>]*\/>/.exec(
-      workbookXml,
-    )
-  let at = externals ? externals.index + externals[0].length : anchor.index + anchor[0].length
+  const groups = rootNamespaceElements(workbookXml, 'functionGroups')[0]
+  const externals = rootNamespaceElements(workbookXml, 'externalReferences')[0]
+  let at = externals ? externals.end : anchor.end
   // functionGroups only counts when externalReferences is absent: the later
   // element is the one the section must follow
-  if (!externals && groups) at = groups.index + groups[0].length
-  return `${workbookXml.slice(0, at)}<definedNames>${additions}</definedNames>${workbookXml.slice(at)}`
+  if (!externals && groups) at = groups.end
+  const prefix = prefixOf(anchor.name)
+  const name = prefix === '' ? 'definedNames' : `${prefix}:definedNames`
+  return `${workbookXml.slice(0, at)}<${name}>${withPrefix(additions, prefix)}</${name}>${workbookXml.slice(at)}`
+}
+
+/// The entries are written for the default namespace; a part that binds the
+/// namespace to a prefix needs them in it.
+function withPrefix(entries: string, prefix: string): string {
+  return prefix === ''
+    ? entries
+    : entries.replace(/<(\/?)definedName(?=[\s>/])/g, `<$1${prefix}:definedName`)
 }
 
 /** Shared by table names, which follow the same rules (minus the `_xlnm` reservation). */
@@ -139,14 +149,6 @@ function validateName(name: string): void {
   if (name.startsWith('_xlnm')) {
     throw new DefinedNameError('Names starting with "_xlnm" are reserved by Excel.')
   }
-}
-
-export function unescapeXml(input: string): string {
-  return input
-    .replaceAll('&quot;', '"')
-    .replaceAll('&lt;', '<')
-    .replaceAll('&gt;', '>')
-    .replaceAll('&amp;', '&')
 }
 
 export function escapeXmlText(input: string): string {

@@ -1,4 +1,4 @@
-import { placeholderInstruction } from './redact'
+import { collectPlaceholders, placeholderInstruction, readPlaceholderLabel } from './redact'
 import { redactLabelsOf } from './redact-view'
 import type { Editor } from '@tiptap/core'
 import { attachedImageNote, type AgentSkill } from '@seuoffice/agent-core'
@@ -20,6 +20,13 @@ import type { AgentToolDef } from '../../shared/ipc'
 import { isOdtSession } from '../odt-gate'
 import { ODT_SYSTEM_NOTE, odtToolFilter } from './odt-tools'
 import { AI_REVISION_AUTHOR } from './revision-author'
+
+/** the labels of the placeholders in a model text, none for an entry that hides nothing */
+function placeholderLabels(modelText: string | undefined): string[] {
+  return (modelText === undefined ? [] : collectPlaceholders(modelText)).flatMap(
+    (marker) => readPlaceholderLabel(marker) ?? [],
+  )
+}
 
 const IMAGE_GEN_OFF_NOTE =
   '\n\nNote: generate_image is currently unavailable (no image provider: no Codex subscription connected and no image API key in Settings). Do not call or promise it; use image_search for imagery.'
@@ -80,9 +87,16 @@ export function createDocsSkill(
       // document without spans pays nothing and the model is not told to
       // look for markers that are not there
       const editor = getEditor()
-      const labels = editor
-        ? redactLabelsOf(editor.getJSON() as unknown as Parameters<typeof redactLabelsOf>[0])
-        : []
+      const labels = [
+        ...(editor
+          ? redactLabelsOf(editor.getJSON() as unknown as Parameters<typeof redactLabelsOf>[0])
+          : []),
+        // a comment or note carries a model text exactly when it hides something
+        ...(getComments?.()?.list() ?? []).flatMap((c) => placeholderLabels(c.modelText)),
+        ...(['footnote', 'endnote'] as const).flatMap((kind) =>
+          (getNotes?.()?.list(kind) ?? []).flatMap((n) => placeholderLabels(n.modelText)),
+        ),
+      ]
       const redact = labels.length > 0 ? `\n\n${placeholderInstruction(labels)}` : ''
       const odt = isOdtSession() ? ODT_SYSTEM_NOTE : ''
       const attached = attachedImageNote(

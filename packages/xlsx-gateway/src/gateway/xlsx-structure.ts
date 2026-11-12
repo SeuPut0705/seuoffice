@@ -7,6 +7,7 @@
 import type { WorkbookStyleEdit } from '../shared/edit-schemas'
 import { MAX_GRID_COLUMNS, MAX_GRID_ROWS } from '../shared/grid-bounds'
 import { decodeXmlText } from './xlsx-escapes'
+import { canonicalXmlSpelling } from './xlsx-xml-scan'
 
 export type StructuralOp =
   | {
@@ -173,7 +174,11 @@ export function applyStructuralOps(
   /// whenever such ops exist).
   resolveColStyle?: (baseXfIndex: number, delta: WorkbookStyleEdit) => number,
 ): string {
-  let xml = ops.length === 0 ? worksheetXml : inferWorksheetAddresses(worksheetXml)
+  // The patterns below read one spelling of a tag, and the marks of withheld
+  // cells move with the cells: a sheet written another way is rewritten as
+  // that spelling first, never half-shifted.
+  let xml =
+    ops.length === 0 ? worksheetXml : inferWorksheetAddresses(canonicalXmlSpelling(worksheetXml))
   let outlineTouched = false
   for (let at = 0; at < ops.length; at += 1) {
     const op = ops[at]!

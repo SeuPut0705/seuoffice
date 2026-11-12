@@ -1,5 +1,11 @@
 import { FORMULA_REFERENCE_PATTERN, qualifierMatches } from './xlsx-structure'
 import { ensureRelationshipNamespace } from './xlsx-namespace'
+import {
+  decodeXmlEntities,
+  elementText,
+  rewriteElementTexts,
+  rootNamespaceElements,
+} from './xlsx-xml-scan'
 
 /// '>' is legal inside XML attribute values (sheet names can carry it), so
 /// element scans consume quoted runs atomically instead of using [^>]*.
@@ -135,6 +141,8 @@ export function formulaReferencesSheet(formula: string, sheetName: string): bool
   return found
 }
 
+const FORMULA_ELEMENTS: ReadonlySet<string> = new Set(['f', 'formula', 'formula1', 'formula2'])
+
 /// Rewrites qualified references in a worksheet part: formula bodies, CF/DV
 /// rule formulas, and internal hyperlink anchors.
 export function renameSheetReferencesInWorksheet(
@@ -142,17 +150,9 @@ export function renameSheetReferencesInWorksheet(
   oldName: string,
   newName: string,
 ): string {
-  // Self-closing `<f .../>` (shared-formula followers) must not match, or
-  // the XML up to the next `</f>` would be swallowed as a formula body.
-  let xml = worksheetXml.replace(
-    /<f\b([^>]*[^/>])?>([\s\S]*?)<\/f>/g,
-    (_full, attributes: string | undefined, body: string) =>
-      `<f${attributes ?? ''}>${escapeXmlText(renameSheetInFormula(decodeEntities(body), oldName, newName))}</f>`,
-  )
-  xml = xml.replace(
-    /<(formula[12]?)>([\s\S]*?)<\/\1>/g,
-    (_full, tag: string, body: string) =>
-      `<${tag}>${escapeXmlText(renameSheetInFormula(decodeEntities(body), oldName, newName))}</${tag}>`,
+  // A self-closed `<f/>` (a shared-formula follower) holds no formula.
+  const xml = rewriteElementTexts(worksheetXml, FORMULA_ELEMENTS, (formula) =>
+    renameSheetInFormula(formula, oldName, newName),
   )
   return xml.replace(
     new RegExp(`(<hyperlink\\b${TAG_ATTRIBUTES}\\blocation=")([^"]+)(")`, 'g'),
@@ -184,7 +184,7 @@ export function renameSheetReferencesInChart(
   return chartXml.replace(
     /(<c:f>)([\s\S]*?)(<\/c:f>)/g,
     (_full, open: string, body: string, close: string) =>
-      `${open}${escapeXmlText(renameSheetInFormula(decodeEntities(body), oldName, newName))}${close}`,
+      `${open}${escapeXmlText(renameSheetInFormula(decodeXmlEntities(body), oldName, newName))}${close}`,
   )
 }
 
@@ -194,11 +194,17 @@ export function renameSheetReferencesInDefinedNames(
   oldName: string,
   newName: string,
 ): string {
-  return workbookXml.replace(
-    /(<definedName\b[^>]*>)([\s\S]*?)(<\/definedName>)/g,
-    (_full, open: string, body: string, close: string) =>
-      `${open}${escapeXmlText(renameSheetInFormula(decodeEntities(body), oldName, newName))}${close}`,
-  )
+  let result = workbookXml
+  for (const element of rootNamespaceElements(workbookXml, 'definedName').reverse()) {
+    if (element.closeStart === element.end) continue
+    const formula = elementText(workbookXml, element)
+    const renamed = renameSheetInFormula(formula, oldName, newName)
+    // an entry that names nothing renamed keeps its bytes: comments and CDATA in it are the producer's
+    if (renamed === formula) continue
+    result =
+      result.slice(0, element.openEnd) + escapeXmlText(renamed) + result.slice(element.closeStart)
+  }
+  return result
 }
 
 export function worksheetReferencesSheet(worksheetXml: string, sheetName: string): boolean {
@@ -207,7 +213,7 @@ export function worksheetReferencesSheet(worksheetXml: string, sheetName: string
     /<(?:formula[12]?)>([\s\S]*?)<\/(?:formula[12]?)>/g,
   ]) {
     for (const match of worksheetXml.matchAll(pattern)) {
-      if (formulaReferencesSheet(decodeEntities(match[1] ?? ''), sheetName)) return true
+      if (formulaReferencesSheet(decodeXmlEntities(match[1] ?? ''), sheetName)) return true
     }
   }
   return false
@@ -215,7 +221,7 @@ export function worksheetReferencesSheet(worksheetXml: string, sheetName: string
 
 export function chartReferencesSheet(chartXml: string, sheetName: string): boolean {
   for (const match of chartXml.matchAll(/<c:f>([\s\S]*?)<\/c:f>/g)) {
-    if (formulaReferencesSheet(decodeEntities(match[1] ?? ''), sheetName)) return true
+    if (formulaReferencesSheet(decodeXmlEntities(match[1] ?? ''), sheetName)) return true
   }
   return false
 }
@@ -303,22 +309,20 @@ export interface SheetElement {
 
 export function parseSheetElements(workbookXml: string): SheetElement[] {
   const elements: SheetElement[] = []
-  for (const match of workbookXml.matchAll(
-    new RegExp(`<sheet\\b${TAG_ATTRIBUTES}(?:/>|>[\\s\\S]*?</sheet>)`, 'g'),
-  )) {
-    const xml = match[0]
-    const name = readAttribute(xml, 'name')
+  for (const element of rootNamespaceElements(workbookXml, 'sheet')) {
+    const name = element.attributes.get('name')
     if (name === undefined) continue
-    const state = readAttribute(xml, 'state')
+    const state = element.attributes.get('state')
     elements.push({
-      xml,
-      name: decodeAttribute(name),
+      xml: workbookXml.slice(element.start, element.end),
+      name,
       hidden: state === 'hidden' || state === 'veryHidden',
       veryHidden: state === 'veryHidden',
       // The relationships namespace is conventionally bound to "r", but any
       // prefix is legal — fall back to whatever prefix the producer chose.
       relationshipId:
-        readAttribute(xml, 'r:id') ?? /(?:^|\s)[A-Za-z_][\w.-]*:id="([^"]*)"/.exec(xml)?.[1],
+        element.attributes.get('r:id') ??
+        [...element.attributes].find(([attribute]) => /^[A-Za-z_][\w.-]*:id$/.test(attribute))?.[1],
     })
   }
   return elements
@@ -393,7 +397,10 @@ export function applySheetPlanToWorkbookXml(
     const xml =
       newName === undefined
         ? element.xml
-        : element.xml.replace(/\bname="[^"]*"/, () => `name="${escapeXmlAttribute(newName)}"`)
+        : element.xml.replace(
+            /(\sname\s*=\s*)(?:"[^"]*"|'[^']*')/,
+            (_match, assign: string) => `${assign}"${escapeXmlAttribute(newName)}"`,
+          )
     finalElements.set(newName ?? element.name, { xml, hidden: element.hidden })
   }
   for (const addition of additions) {
@@ -423,10 +430,13 @@ export function applySheetPlanToWorkbookXml(
   }
 
   const sheetsInner = plan.order.map((name) => finalElements.get(name)?.xml ?? '').join('')
-  let result = workbookXml.replace(
-    /<sheets>[\s\S]*?<\/sheets>/,
-    () => `<sheets>${sheetsInner}</sheets>`,
-  )
+  const sheetsElement = rootNamespaceElements(workbookXml, 'sheets')[0]
+  let result =
+    sheetsElement === undefined || sheetsElement.closeStart === sheetsElement.end
+      ? workbookXml
+      : workbookXml.slice(0, sheetsElement.openEnd) +
+        sheetsInner +
+        workbookXml.slice(sheetsElement.closeStart)
 
   // Defined-name scopes are positional (localSheetId = tab index).
   const oldIndexToNew = (oldIndex: number): number | null => {
@@ -434,15 +444,25 @@ export function applySheetPlanToWorkbookXml(
     if (originalName === undefined || removedSet.has(originalName)) return null
     return plan.order.indexOf(renameByOriginal.get(originalName) ?? originalName)
   }
-  result = result.replace(
-    /<definedName\b[^>]*?\blocalSheetId="([0-9]+)"[^>]*>[\s\S]*?<\/definedName>/g,
-    (full, localId: string) => {
-      const mapped = oldIndexToNew(Number(localId))
-      if (mapped === null) return ''
-      return full.replace(/\blocalSheetId="[0-9]+"/, () => `localSheetId="${mapped}"`)
-    },
+  for (const element of rootNamespaceElements(result, 'definedName').reverse()) {
+    const localId = element.attributes.get('localSheetId')
+    if (localId === undefined) continue
+    const mapped = oldIndexToNew(Number(localId))
+    result =
+      mapped === null
+        ? result.slice(0, element.start) + result.slice(element.end)
+        : result.slice(0, element.start) +
+          result
+            .slice(element.start, element.openEnd)
+            .replace(/(\blocalSheetId\s*=\s*)(?:"[0-9]+"|'[0-9]+')/, `$1"${mapped}"`) +
+          result.slice(element.openEnd)
+  }
+  const emptyNames = rootNamespaceElements(result, 'definedNames').find(
+    (element) => result.slice(element.openEnd, element.closeStart).trim() === '',
   )
-  result = result.replace(/<definedNames>\s*<\/definedNames>/, '')
+  if (emptyNames !== undefined) {
+    result = result.slice(0, emptyNames.start) + result.slice(emptyNames.end)
+  }
 
   result = result.replace(
     /(<workbookView\b[^>]*?\bactiveTab=")([0-9]+)(")/,
@@ -592,7 +612,7 @@ export function definedNamesUseToken(
     const localId = readAttribute(`<definedName${match[1] ?? ''}/>`, 'localSheetId')
     if (localId !== undefined && removedLocalIds.has(Number(localId))) continue
     if (
-      decodeEntities(match[2] ?? '')
+      decodeXmlEntities(match[2] ?? '')
         .toLowerCase()
         .includes(needle)
     )
@@ -641,44 +661,23 @@ export function definedNamesReferenceSheet(
   for (const match of workbookXml.matchAll(/<definedName\b([^>]*)>([\s\S]*?)<\/definedName>/g)) {
     const localId = readAttribute(`<definedName${match[1] ?? ''}/>`, 'localSheetId')
     if (localId !== undefined && removedLocalIds.has(Number(localId))) continue
-    if (formulaReferencesSheet(decodeEntities(match[2] ?? ''), sheetName)) return true
+    if (formulaReferencesSheet(decodeXmlEntities(match[2] ?? ''), sheetName)) return true
   }
   return false
 }
 
 export function readAttribute(elementXml: string, name: string): string | undefined {
-  return new RegExp(`(?:^|\\s)${escapeRegExp(name)}="([^"]*)"`).exec(elementXml)?.[1]
+  const match = new RegExp(`(?:^|\\s)${escapeRegExp(name)}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`).exec(
+    elementXml,
+  )
+  return match?.[1] ?? match?.[2]
 }
 
 export function escapeRegExp(input: string): string {
   return input.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
-const NAMED_ENTITIES: Record<string, string> = {
-  quot: '"',
-  apos: "'",
-  lt: '<',
-  gt: '>',
-  amp: '&',
-}
-
-/// Single-pass decode of the XML named entities plus numeric character
-/// references (&#dd; / &#xhh;) — producers may encode non-ASCII sheet names
-/// as numeric references, which sequential replaceAll would miss.
-function decodeEntities(input: string): string {
-  return input.replace(
-    /&(?:#x([0-9A-Fa-f]+)|#([0-9]+)|(quot|apos|lt|gt|amp));/g,
-    (match, hex: string | undefined, dec: string | undefined, named: string | undefined) => {
-      if (named !== undefined) return NAMED_ENTITIES[named] ?? match
-      const code = hex !== undefined ? Number.parseInt(hex, 16) : Number(dec)
-      return code <= 0x10ffff ? String.fromCodePoint(code) : match
-    },
-  )
-}
-
-export function decodeAttribute(input: string): string {
-  return decodeEntities(input)
-}
+export const decodeAttribute = decodeXmlEntities
 
 function escapeXmlText(input: string): string {
   return input.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;')

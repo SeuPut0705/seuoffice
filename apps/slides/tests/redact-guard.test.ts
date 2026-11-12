@@ -211,14 +211,20 @@ describe('the distinction that keeps the feature usable', () => {
     ).toBeNull()
   })
 
-  it('a needle straddling a run boundary is left to the op, which cannot match it either', () => {
-    // Layout breaks a run on a case transition, and the executor documents that
-    // a match spanning two differently formatted runs is not replaced. The guard
-    // and the op therefore share a granularity, and neither damages a span for
-    // a needle that crosses one — worth pinning, since a guard that DID refuse
-    // here would be a false positive on every multi-token word.
+  it('a needle across the tokens of one withheld run is a hit', () => {
+    // Layout breaks a run into tokens (a case transition, a wrapped word), but the op matches
+    // inside the model's run, which is whole: a guard that looked at one token at a time let
+    // this needle through to the words it is meant to protect.
     const keyed = deck(SP(2, '4000000', run(setRedactExt(RPR, 'api key'), 'sk-ABC123secret')))
-    expect(redactGuardFor({ op: 'findReplace', find: 'sk-abc123secret' }, keyed)).toBeNull()
+    expect(redactGuardFor({ op: 'findReplace', find: 'sk-abc123secret' }, keyed)).not.toBeNull()
+  })
+
+  it('a needle across a plain run and a withheld one is left to the op, which cannot match it', () => {
+    // the executor documents that a match spanning two differently formatted runs is not replaced
+    const mixed = deck(
+      SP(2, '4000000', run(RPR, 'Key: ') + run(setRedactExt(RPR, 'api key'), 'sk-ABC123secret')),
+    )
+    expect(redactGuardFor({ op: 'findReplace', find: 'key: sk-abc' }, mixed)).toBeNull()
   })
 
   it('an op that is not object-shaped is not the guard’s business', () => {

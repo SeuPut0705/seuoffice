@@ -152,7 +152,7 @@ export function applyOps(opened: OpenedPptx, ops: Op[], opts: ApplyOptions): Txn
     if (reason) refused.set(index, reason)
   })
   if (refused.size === 0)
-    return runTxn(opened, { ops, isolation: opts.isolation, dryRun: opts.dryRun })
+    return runTxn(opened, { ops, isolation: opts.isolation, dryRun: opts.dryRun, withhold: true })
   const atomic = (opts.isolation ?? 'atomic') === 'atomic'
   const own: OpFailure[] = [...refused].map(([index, error]) => ({
     index,
@@ -172,6 +172,7 @@ export function applyOps(opened: OpenedPptx, ops: Op[], opts: ApplyOptions): Txn
           ops: kept.map((index) => ops[index]!),
           isolation: opts.isolation,
           dryRun: opts.dryRun,
+          withhold: true,
         })
   const failures = [
     ...own,
@@ -347,9 +348,12 @@ function summarizeElement(
     type: el.type,
     box: { x: offset.x, y: offset.y, cx: offset.cx, cy: offset.cy },
   }
-  if (el.name) out.name = el.name
+  // an element withheld from AI (a picture, a video) is named by its marker: its own name is
+  // the person's words about it, and so is the address it links to
+  if (el.redact) out.name = placeholderSource(el.redact)
+  else if (el.name) out.name = el.name
   if (el.placeholder) out.placeholder = el.placeholder
-  const link = links.get(el.id)
+  const link = el.redact ? undefined : links.get(el.id)
   if (link) out.link = link
   switch (el.type) {
     case 'text':

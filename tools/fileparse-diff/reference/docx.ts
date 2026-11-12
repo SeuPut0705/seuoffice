@@ -206,7 +206,22 @@ interface Table {
   row: string[] | null
 }
 
-const TOKEN = /<(\/?)([\w:.-]+)([^>]*?)(\/?)>|([^<]+)/g
+/**
+ * One token of a part, read the way an XML parser reads it: a comment, a
+ * processing instruction or a declaration (skipped), a CDATA section (its
+ * text), a tag whose attribute values may hold `>` or `/>` inside their
+ * quotes, or text.
+ */
+const TOKEN =
+  /<!--[\s\S]*?-->|<\?[\s\S]*?\?>|<!\[CDATA\[([\s\S]*?)\]\]>|<![^>]*>|<(\/?)([\w:.-]+)((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>|([^<]+)/g
+
+/** an attribute's value in a tag's attribute text, any quotes, white space around `=` */
+function attrValue(attrs: string, name: string): string | undefined {
+  const m = new RegExp(
+    `(?:^|\\s)${name.replace(/[.:]/g, '\\$&')}\\s*=\\s*(?:"([^"]*)"|'([^']*)')`,
+  ).exec(attrs)
+  return m ? (m[1] ?? m[2]) : undefined
+}
 
 /** subtrees whose text is not part of the readable document */
 const SKIP_SUBTREES = new Set([
@@ -300,14 +315,20 @@ function scanBody(
       }
       return
     }
-    const [, close, name, attrs, selfClose, text] = m
+    const [, cdata, close, name, attrs, selfClose, text] = m
+    if (cdata !== undefined) {
+      if (inText && !skip && !runHidden) appendText(cdata)
+      continue
+    }
     if (text !== undefined) {
       if (inText && !skip && !runHidden) appendText(decodeEntities(text))
       continue
     }
+    // a comment, a processing instruction or a declaration holds no text
+    if (name === undefined) continue
     const opening = !close
     if (opening && name !== undefined && isRedactElement(redactElements, name, attrs!)) {
-      const label = /(?:^|\s)w:label="([^"]*)"/.exec(attrs!)?.[1]
+      const label = attrValue(attrs!, 'w:label')
       if (!label) throw new RedactionMarkError('a mark carries no label')
       // outside a run (a paragraph mark's properties) there are no words to withhold
       if (runLabels.length > 0) runLabels[runLabels.length - 1] ??= decodeEntities(label)
@@ -485,8 +506,8 @@ function redactElementNames(xml: string): Set<string> & { count: number; namespa
   if (!names.namespaced && !/<[\w.-]+:redact\b/.test(xml)) {
     return names
   }
-  for (const m of xml.matchAll(/xmlns:([\w.-]+)="([^"]*)"/g)) {
-    if (REDACT_NAMESPACES.includes(m[2]!)) names.add(`${m[1]}:redact`)
+  for (const m of xml.matchAll(/xmlns:([\w.-]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) {
+    if (REDACT_NAMESPACES.includes(m[2] ?? m[3]!)) names.add(`${m[1]}:redact`)
   }
   names.count = countMarks(xml, names.namespaced)
   return names
@@ -504,7 +525,7 @@ function countMarks(xml: string, namespaced: boolean): number {
 function isRedactElement(names: Set<string>, name: string, attrs: string): boolean {
   if (names.has(name)) return true
   if (name !== 'redact') return false
-  const ns = /(?:^|\s)xmlns=(["'])([^"']*)\1/.exec(attrs)?.[2]
+  const ns = attrValue(attrs, 'xmlns')
   return ns !== undefined && REDACT_NAMESPACES.includes(ns)
 }
 

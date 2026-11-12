@@ -600,6 +600,7 @@ register({
         firstOnly: op.firstOnly as boolean | undefined,
         slideIndex: op.slideIndex as number | undefined,
         elementId: op.elementId as string | undefined,
+        skipWithheld: ctx.withhold === true,
       },
     )
     if (!count) {

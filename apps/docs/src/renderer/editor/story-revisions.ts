@@ -428,7 +428,7 @@ export function resolveNotes(
       ...rest,
       richParas,
       text,
-      ...(modelText !== undefined && modelText !== text ? { modelText } : {}),
+      ...(modelText !== undefined ? { modelText } : {}),
       revisionsResolved: [...(note.revisionsResolved ?? []), ...resolutionOf(mine, mode, all)],
     }
   })
