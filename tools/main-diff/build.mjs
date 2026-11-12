@@ -1,5 +1,5 @@
 // Builds the Node-API addon of crates/main-node and puts it where rust.ts
-// loads it (out/main_node.node).
+// loads it (out/main_node.node, or MAIN_DIFF_ADDON).
 import { execFileSync } from 'node:child_process'
 import { copyFileSync, mkdirSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -19,5 +19,8 @@ const lib = {
   linux: 'libmain_node.so',
   win32: 'main_node.dll',
 }[process.platform]
-mkdirSync(join(tool, 'out'), { recursive: true })
-copyFileSync(join(crates, 'target', 'node', lib), join(tool, 'out', 'main_node.node'))
+// MAIN_DIFF_ADDON names another place for it, so two comparisons can run at
+// once: overwriting an addon a running process has loaded can end that process
+const addon = process.env.MAIN_DIFF_ADDON ?? join(tool, 'out', 'main_node.node')
+mkdirSync(dirname(addon), { recursive: true })
+copyFileSync(join(crates, 'target', 'node', lib), addon)

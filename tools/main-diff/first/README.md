@@ -15,3 +15,12 @@ anything was fixed: the measure of the port (decision 0029, crates/README.md).
   - the dispatcher refusing `writeProjectsSettings(path, undefined)`, which the
     TypeScript normalizes to an empty registry (1, fixed).
     The porters compared nothing before this run.
+- `b2-b3-gate.txt`: batches 2 and 3 with the libuv error table (group
+  `node-fs`), run 43263867963 of `seuoffice rust` at 8599708b5, 2026-11-13.
+  25,418 checks over 518 functions, 25,294 equal, 118 differences in six
+  modules (safe-remote-url 49, remote-table 47, remote-image 15,
+  update-resume 4, legacy-import-prefs 2, window-close-guard 1), and 95
+  functions with a single answer, most of them constants without the
+  `single` waiver. `node-fs-windows-gate.txt`: the same run's group `node-fs`
+  on windows-latest, 61 checks, 47 differences. The porters compared nothing
+  before this run.

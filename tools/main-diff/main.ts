@@ -223,7 +223,7 @@ for (const [groupName, group] of Object.entries(groups) as [string, Group][]) {
   }
 }
 
-const out = join(tool, 'out')
+const out = process.env.MAIN_DIFF_OUT ?? join(tool, 'out')
 mkdirSync(out, { recursive: true })
 writeFileSync(join(out, 'report.json'), JSON.stringify({ report, differences }, null, 2))
 

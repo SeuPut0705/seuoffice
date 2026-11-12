@@ -1,0 +1,794 @@
+
+> main-diff@0.1.0 gate
+> node build.mjs && tsx main.ts --show 40
+
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling cfg-if v1.0.5
+   Compiling libc v0.2.191
+   Compiling stable_deref_trait v1.2.1
+   Compiling smallvec v1.16.5
+   Compiling siphasher v1.0.4
+   Compiling serde_core v1.0.229
+   Compiling phf_shared v0.14.0
+   Compiling fastrand v2.5.0
+   Compiling phf_generator v0.14.0
+   Compiling memchr v2.8.3
+   Compiling syn v3.0.10
+   Compiling serde v1.0.229
+   Compiling parking_lot_core v0.9.12
+   Compiling version_check v0.9.5
+   Compiling scopeguard v1.2.0
+   Compiling generic-array v0.14.7
+   Compiling lock_api v0.4.14
+   Compiling string_cache_codegen v0.11.2
+   Compiling phf_codegen v0.14.0
+   Compiling new_debug_unreachable v1.0.6
+   Compiling utf_types v1.0.0
+   Compiling writeable v0.6.4
+   Compiling typenum v1.20.1
+   Compiling litemap v0.8.3
+   Compiling utf8_iter v1.1.0
+   Compiling web_atoms v0.3.0
+   Compiling parking_lot v0.12.5
+   Compiling icu_normalizer_data v2.4.0
+   Compiling precomputed-hash v0.1.1
+   Compiling icu_properties_data v2.4.0
+   Compiling phf v0.14.0
+   Compiling tendril v0.5.1
+   Compiling block-buffer v0.10.4
+   Compiling crypto-common v0.1.7
+   Compiling log v0.4.35
+   Compiling futures-core v0.3.34
+   Compiling zmij v1.0.23
+   Compiling futures-sink v0.3.34
+   Compiling napi-build v2.6.0
+   Compiling futures-channel v0.3.34
+   Compiling digest v0.10.7
+   Compiling serde_json v1.0.154
+   Compiling hashbrown v0.17.1
+   Compiling getrandom v0.4.3
+   Compiling equivalent v1.0.3
+   Compiling cpufeatures v0.2.17
+   Compiling libm v0.2.16
+   Compiling futures-io v0.3.34
+   Compiling synstructure v0.14.0
+   Compiling slab v0.4.12
+   Compiling futures-task v0.3.34
+   Compiling pin-project-lite v0.2.17
+   Compiling indexmap v2.14.2
+   Compiling napi-sys v3.4.1
+   Compiling unicode-segmentation v1.13.3
+   Compiling itoa v1.0.19
+   Compiling foldhash v0.2.0
+   Compiling percent-encoding v2.3.2
+   Compiling form_urlencoded v1.2.2
+   Compiling convert_case v0.12.0
+   Compiling sha1 v0.10.7
+   Compiling zerofrom-derive v0.1.8
+   Compiling yoke-derive v0.8.4
+   Compiling zerovec-derive v0.11.7
+   Compiling zerofrom v0.1.8
+   Compiling yoke v0.8.4
+   Compiling displaydoc v0.2.7
+   Compiling serde_derive v1.0.229
+   Compiling zerotrie v0.2.5
+   Compiling futures-macro v0.3.34
+   Compiling zerovec v0.11.9
+   Compiling napi v3.16.2
+   Compiling regress v0.12.0 (/home/runner/work/seuoffice/seuoffice/crates/vendor/regress)
+   Compiling tinystr v0.8.5
+   Compiling potential_utf v0.1.6
+   Compiling icu_collections v2.4.0
+   Compiling icu_locale_core v2.4.0
+   Compiling futures-util v0.3.34
+   Compiling icu_provider v2.4.0
+   Compiling icu_normalizer v2.4.0
+   Compiling string_cache v0.11.0
+   Compiling icu_properties v2.4.0
+   Compiling markup5ever v0.40.0
+   Compiling xml5ever v0.40.0
+   Compiling futures-executor v0.3.34
+   Compiling html5ever v0.40.1
+   Compiling libloading v0.9.0
+   Compiling idna_adapter v1.2.2
+   Compiling idna v1.1.0
+   Compiling semver v1.0.28
+   Compiling ryu v1.0.23
+   Compiling url v2.5.8
+   Compiling jscompat v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/jscompat)
+   Compiling markup5ever_rcdom v0.40.1+unofficial
+   Compiling napi-derive-backend v7.0.1
+   Compiling futures v0.3.34
+   Compiling sha2 v0.10.9
+   Compiling main-node v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/main-node)
+   Compiling ctor v1.0.13
+   Compiling bitflags v2.13.2
+   Compiling nohash-hasher v0.2.0
+   Compiling rustc-hash v2.1.3
+   Compiling main-core v0.1.0 (/home/runner/work/seuoffice/seuoffice/crates/main-core)
+   Compiling napi-derive v3.7.1
+    Finished `node` profile [optimized] target(s) in 40.57s
+(node:10292) [UNDICI-EHPA] Warning: EnvHttpProxyAgent is experimental, expect them to change at any time.
+(Use `node --trace-warnings ...` to show where the warning was created)
+path.posix.sep: 1 checks, 0 differences, 0 listed, 1 distinct
+path.posix.delimiter: 1 checks, 0 differences, 0 listed, 1 distinct
+path.posix.resolve: 689 checks, 0 differences, 0 listed, 472 distinct
+path.posix.normalize: 519 checks, 0 differences, 0 listed, 415 distinct
+path.posix.isAbsolute: 511 checks, 0 differences, 0 listed, 10 distinct
+path.posix.dirname: 511 checks, 0 differences, 0 listed, 93 distinct
+path.posix.extname: 511 checks, 0 differences, 0 listed, 79 distinct
+path.posix.parse: 511 checks, 0 differences, 0 listed, 405 distinct
+path.posix.join: 915 checks, 0 differences, 0 listed, 752 distinct
+path.posix.relative: 736 checks, 0 differences, 1 listed, 387 distinct
+path.posix.toNamespacedPath: 209 checks, 0 differences, 0 listed, 183 distinct
+path.posix.basename: 1782 checks, 0 differences, 0 listed, 346 distinct
+path.posix.format: 1118 checks, 0 differences, 3 listed, 661 distinct
+path.win32.sep: 1 checks, 0 differences, 0 listed, 1 distinct
+path.win32.delimiter: 1 checks, 0 differences, 0 listed, 1 distinct
+path.win32.resolve: 1277 checks, 0 differences, 0 listed, 479 distinct
+path.win32.normalize: 519 checks, 0 differences, 0 listed, 387 distinct
+path.win32.isAbsolute: 511 checks, 0 differences, 0 listed, 10 distinct
+path.win32.dirname: 511 checks, 0 differences, 0 listed, 200 distinct
+path.win32.extname: 511 checks, 0 differences, 0 listed, 48 distinct
+path.win32.parse: 511 checks, 0 differences, 0 listed, 406 distinct
+path.win32.join: 915 checks, 0 differences, 0 listed, 721 distinct
+path.win32.relative: 784 checks, 0 differences, 0 listed, 271 distinct
+path.win32.toNamespacedPath: 359 checks, 0 differences, 0 listed, 303 distinct
+path.win32.basename: 1782 checks, 0 differences, 0 listed, 253 distinct
+path.win32.format: 1118 checks, 0 differences, 2 listed, 687 distinct
+update-attempt.INSTALL_ATTEMPT_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+update-attempt.nextAttemptTries: 9 checks, 0 differences, 0 listed, 6 distinct
+update-attempt.recordInstallAttempt: 9 checks, 0 differences, 0 listed, 9 distinct
+update-attempt.readInstallAttempt: 27 checks, 0 differences, 0 listed, 27 distinct
+update-attempt.clearInstallAttempt: 4 checks, 0 differences, 0 listed, 3 distinct
+update-attempt.installDidNotApply: 6 checks, 0 differences, 0 listed, 2 distinct
+update-attempt.installFailureLevel: 8 checks, 0 differences, 0 listed, 3 distinct
+update-attempt.installDirWritable: 11 checks, 0 differences, 0 listed, 7 distinct
+update-cache.pruneUpdateCache: 33 checks, 0 differences, 0 listed, 25 distinct
+update-build-channel.buildChannelFromAppUpdateYml: 29 checks, 0 differences, 0 listed, 2 distinct
+update-build-channel.packagedUpdateChannel: 9 checks, 0 differences, 0 listed, 8 distinct
+update-log.UPDATE_LOG_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+update-log.UPDATE_LOG_MAX_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+update-log.createUpdateLog: 46 checks, 0 differences, 0 listed, 38 distinct
+update-log.createUpdateSteps: 24 checks, 0 differences, 0 listed, 24 distinct
+update-log.fileBytes: 11 checks, 0 differences, 0 listed, 7 distinct
+launch-paths.LAUNCHABLE_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.LAUNCHABLE_DOUBLE_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.LAUNCHABLE_UNCLAIMED_EXTS: 2 checks, 0 differences, 0 listed, 2 distinct
+launch-paths.collectLaunchPaths: 36 checks, 0 differences, 0 listed, 22 distinct
+states.normalizeUserSkillSettings: 16 checks, 0 differences, 0 listed, 9 distinct
+folder-api.isValidProjectId: 19 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readAppSettings: 18 checks, 0 differences, 0 listed, 17 distinct
+app-settings.writeAppSettings: 26 checks, 0 differences, 0 listed, 19 distinct
+app-settings.writeAppSetting: 12 checks, 0 differences, 0 listed, 11 distinct
+app-settings.writeAppSettingThen: 5 checks, 0 differences, 0 listed, 5 distinct
+app-settings.SKILLS_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.AGENT_SKILL_NOTICE_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.AGENT_PROJECT_PREFS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.PROJECTS_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.DEFAULT_AGENT_PROJECT_PREF: 2 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readSkillSettings: 6 checks, 0 differences, 0 listed, 6 distinct
+app-settings.writeSkillSettings: 7 checks, 0 differences, 0 listed, 7 distinct
+app-settings.updateSkillSettings: 9 checks, 0 differences, 0 listed, 8 distinct
+app-settings.agentSkillNoticeDue: 16 checks, 0 differences, 0 listed, 16 distinct
+app-settings.markAgentSkillNoticeSeen: 4 checks, 0 differences, 0 listed, 4 distinct
+app-settings.writeAgentPrefs: 10 checks, 0 differences, 0 listed, 9 distinct
+app-settings.normalizeAgentProjectPrefs: 6 checks, 0 differences, 0 listed, 2 distinct
+app-settings.readAgentProjectPref: 11 checks, 0 differences, 0 listed, 7 distinct
+app-settings.writeAgentProjectPref: 10 checks, 0 differences, 0 listed, 9 distinct
+app-settings.normalizeProjectsSettings: 13 checks, 0 differences, 0 listed, 6 distinct
+app-settings.readProjectsSettings: 4 checks, 0 differences, 0 listed, 4 distinct
+app-settings.writeProjectsSettings: 14 checks, 0 differences, 0 listed, 7 distinct
+app-settings.updateProjectsSettings: 15 checks, 0 differences, 0 listed, 13 distinct
+folder-roots.FOLDER_ROOTS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+folder-roots.readExtraRoots: 8 checks, 0 differences, 0 listed, 6 distinct
+folder-roots.withExtraRoot: 6 checks, 0 differences, 0 listed, 4 distinct
+folder-roots.withoutExtraRoot: 5 checks, 0 differences, 0 listed, 4 distinct
+folder-roots.describeExtraRoot: 13 checks, 0 differences, 0 listed, 13 distinct
+split-memory.SPLIT_MEMORY_SETTING_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+split-memory.readSplitMemory: 27 checks, 0 differences, 0 listed, 27 distinct
+split-memory.writeSplitMemory: 23 checks, 0 differences, 0 listed, 15 distinct
+split-memory.clearSplitMemory: 5 checks, 0 differences, 0 listed, 4 distinct
+window-bounds.WINDOW_BOUNDS_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_DEFAULT_WIDTH: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_DEFAULT_HEIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_MIN_WIDTH: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.SHELL_WINDOW_MIN_HEIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.WINDOW_BOUNDS_SAVE_DEBOUNCE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.WINDOW_BOUNDS_SETTLE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.parseShellWindowState: 23 checks, 0 differences, 0 listed, 10 distinct
+window-bounds.isShellWindowVisible: 22 checks, 0 differences, 0 listed, 2 distinct
+window-bounds.readShellWindowState: 9 checks, 0 differences, 0 listed, 9 distinct
+window-bounds.applyShellWindowState: 5 checks, 0 differences, 0 listed, 5 distinct
+window-bounds.installShellWindowBoundsPersistence: 21 checks, 0 differences, 0 listed, 12 distinct
+app-routing.DOCX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.ODT_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.WORD97_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.ODS_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.XLSX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.PPTX_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.PDF_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.HTML_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.MINDMAP_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.HWP_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.EPUB_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.DIAGRAM_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.TEXT_RE: 56 checks, 0 differences, 0 listed, 2 distinct
+app-routing.documentExtension: 61 checks, 0 differences, 0 listed, 50 distinct
+app-routing.appForPath: 56 checks, 0 differences, 0 listed, 11 distinct
+app-routing.renameStaysInApp: 40 checks, 0 differences, 0 listed, 2 distinct
+recent-files.STAT_PATHS_MAX: 2 checks, 0 differences, 0 listed, 2 distinct
+recent-files.EXT_FAMILY: 2 checks, 0 differences, 0 listed, 2 distinct
+recent-files.statPathEntries: 5 checks, 0 differences, 0 listed, 5 distinct
+recent-files.statPathEntriesAsync: 5 checks, 0 differences, 0 listed, 5 distinct
+recent-files.capStatPaths: 7 checks, 0 differences, 0 listed, 5 distinct
+recent-files.normalizeRecentQuery: 32 checks, 0 differences, 0 listed, 16 distinct
+recent-files.matchesExtFamily: 21 checks, 0 differences, 0 listed, 3 distinct
+recent-files.pageRecentPaths: 18 checks, 0 differences, 0 listed, 15 distinct
+rename-validation.RENAME_ILLEGAL_NAME_CHARS: 17 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isValidRawRenameName: 58 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isValidRenameName: 58 checks, 0 differences, 0 listed, 2 distinct
+rename-validation.isSameFile: 13 checks, 0 differences, 0 listed, 9 distinct
+rename-validation.pdfSaveAsTarget: 10 checks, 0 differences, 0 listed, 7 distinct
+crash-log.CRASH_LOG_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-log.CRASH_LOG_MAX_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-log.crashLine: 32 checks, 0 differences, 0 listed, 23 distinct
+crash-log.errorReason: 17 checks, 0 differences, 0 listed, 11 distinct
+crash-log.appendCrashLog: 17 checks, 0 differences, 0 listed, 16 distinct
+crash-heartbeat.HEARTBEAT_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-heartbeat.HEARTBEAT_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+crash-heartbeat.heartbeatPath: 7 checks, 0 differences, 0 listed, 7 distinct
+crash-heartbeat.parseHeartbeat: 28 checks, 0 differences, 0 listed, 10 distinct
+crash-heartbeat.goneEntryFrom: 8 checks, 0 differences, 0 listed, 6 distinct
+crash-heartbeat.startHeartbeat: 17 checks, 0 differences, 0 listed, 12 distinct
+atomic-write.isSaveTempName: 22 checks, 0 differences, 0 listed, 2 distinct
+atomic-write.tempPathBeside: 12 checks, 0 differences, 0 listed, 10 distinct
+atomic-write.atomicWriteFile: 13 checks, 0 differences, 0 listed, 10 distinct
+atomic-write.atomicCopyFile: 9 checks, 0 differences, 0 listed, 8 distinct
+atomic-write.atomicMoveFile: 8 checks, 0 differences, 0 listed, 7 distinct
+atomic-write.atomicWriteVia: 7 checks, 0 differences, 0 listed, 5 distinct
+atomic-write.writeJsonAtomic: 18 checks, 0 differences, 0 listed, 17 distinct
+node-fs.readFileSync: 8 checks, 0 differences, 0 listed, 8 distinct
+node-fs.writeFileSync: 13 checks, 0 differences, 0 listed, 13 distinct
+node-fs.mkdirSync: 7 checks, 0 differences, 0 listed, 7 distinct
+node-fs.rmdirSync: 5 checks, 0 differences, 0 listed, 5 distinct
+node-fs.renameSync: 8 checks, 0 differences, 0 listed, 8 distinct
+node-fs.unlinkSync: 6 checks, 0 differences, 0 listed, 6 distinct
+node-fs.openSync: 6 checks, 0 differences, 0 listed, 6 distinct
+node-fs.readdirSync: 6 checks, 0 differences, 0 listed, 6 distinct
+node-fs.rmdirAsCwd: 1 checks, 0 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+node-fs.readThroughLoop: 1 checks, 0 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+i18n.LANGS: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.isLang: 11 checks, 0 differences, 0 listed, 2 distinct
+i18n.normalizeLang: 19 checks, 0 differences, 0 listed, 2 distinct
+i18n.requestedLanguage: 11 checks, 0 differences, 0 listed, 6 distinct
+i18n.installLang: 8 checks, 0 differences, 0 listed, 2 distinct
+i18n.htmlLang: 2 checks, 0 differences, 0 listed, 2 distinct
+i18n.isRtlLang: 8 checks, 0 differences, 0 listed, 2 distinct
+i18n.htmlDir: 8 checks, 0 differences, 0 listed, 2 distinct
+i18n.macShortcutsToWin: 30 checks, 0 differences, 0 listed, 29 distinct
+i18n.platformShortcuts: 30 checks, 0 differences, 0 listed, 29 distinct
+i18n.format: 22 checks, 0 differences, 0 listed, 20 distinct
+i18n.createI18n: 9 checks, 0 differences, 0 listed, 8 distinct
+i18n.documentLocaleFor: 36 checks, 0 differences, 0 listed, 13 distinct
+i18n.documentLocale: 7 checks, 0 differences, 0 listed, 5 distinct
+i18n.productName: 8 checks, 0 differences, 0 listed, 1 distinct
+i18n.UPSTREAM_PRODUCT_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.USER_DATA_DIR_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.DEV_USER_DATA_DIR_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_REPO_OWNER: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_REPO_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.PRODUCT_REPO_SLUG: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_ENV_PREFIX: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.ENV_PREFIX: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_ENV_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.adoptOldEnv: 7 checks, 0 differences, 0 listed, 7 distinct
+i18n.OLD_HOME_DIR_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_PROJECT_DATA_DIR_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_CLI_COMMANDS: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_CLI_BUNDLE_FILES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_MCP_SERVER_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_APP_MCP_SERVER_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_SKILL_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.OLD_MCP_TOOL_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+i18n.existingOrCurrent: 7 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.USER_SKILLS_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.USER_SKILLS_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.USER_SKILL_PREVIEW_TEXT_MAX_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.skillIdOf: 13 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.invokeOf: 8 checks, 0 differences, 0 listed, 3 distinct
+user-skills-channels.editorsValueOf: 16 checks, 0 differences, 0 listed, 8 distinct
+user-skills-channels.statePatchOf: 13 checks, 0 differences, 0 listed, 6 distinct
+user-skills-channels.USER_SKILL_BODY_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.saveInputOf: 22 checks, 0 differences, 0 listed, 9 distinct
+user-skills-channels.USER_SKILL_TEMPLATE_MAX_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.cardSaveInputOf: 24 checks, 0 differences, 0 listed, 7 distinct
+user-skills-channels.USER_SKILL_PASTE_MAX_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.importTextOf: 9 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.USER_SKILL_BUNDLE_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.skillIdListOf: 12 checks, 0 differences, 0 listed, 4 distinct
+user-skills-channels.installRequestOf: 17 checks, 0 differences, 0 listed, 8 distinct
+user-skills-channels.skillViewsOf: 6 checks, 0 differences, 0 listed, 3 distinct
+user-skills-channels.skillsResultOf: 9 checks, 0 differences, 0 listed, 4 distinct
+user-skills-channels.USER_SKILL_HANDOFF_TEXT_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+user-skills-channels.templateOpenInputOf: 18 checks, 0 differences, 0 listed, 7 distinct
+user-skills-channels.previewInputOf: 17 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.handoffTargetOf: 11 checks, 0 differences, 0 listed, 5 distinct
+user-skills-channels.previewEndedOf: 14 checks, 0 differences, 0 listed, 6 distinct
+mcp-tools-channels.MCP_TOOLS_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+mcp-tools-channels.MCP_TOOLS_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+mcp-tools-channels.mcpServerNameOf: 9 checks, 0 differences, 0 listed, 4 distinct
+mcp-tools-channels.mcpCallIdOf: 9 checks, 0 differences, 0 listed, 4 distinct
+mcp-tools-channels.mcpToolCallRequestOf: 17 checks, 0 differences, 0 listed, 5 distinct
+outbound-channels.OUTBOUND_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+outbound-channels.MAX_CONFIRM_ADDRESSES: 1 checks, 0 differences, 0 listed, 1 distinct
+outbound-channels.MAX_CONFIRM_ADDRESS_LENGTH: 1 checks, 0 differences, 0 listed, 1 distinct
+outbound-channels.confirmRequestOf: 27 checks, 0 differences, 0 listed, 8 distinct
+doc-attach-channels.DOC_ATTACH_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+doc-attach-channels.DOC_ATTACH_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_EVENTS: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_LISTEN_CHANNEL: 1 checks, 0 differences, 0 listed, 1 distinct
+folder-api.PROJECT_FOLDER_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+project-folder-bridge.PROJECT_FOLDER_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+project-folder-bridge.projectFolderBridge: 9 checks, 0 differences, 0 listed, 9 distinct
+split-pane-bridge.SPLIT_PANE_CHANNELS: 1 checks, 0 differences, 0 listed, 1 distinct
+split-pane-bridge.SPLIT_PANE_BRIDGE_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+split-pane-bridge.splitPaneBridge: 8 checks, 0 differences, 0 listed, 6 distinct
+default-save-dir.DEFAULT_SAVE_DIR_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+default-save-dir.readDefaultSaveDirSetting: 12 checks, 0 differences, 0 listed, 12 distinct
+default-save-dir.createDirLevels: 7 checks, 0 differences, 0 listed, 6 distinct
+default-save-dir.isUsableSaveDir: 6 checks, 0 differences, 0 listed, 4 distinct
+default-save-dir.resolveDefaultSaveDir: 13 checks, 0 differences, 0 listed, 12 distinct
+default-save-dir.defaultSaveDirFallback: 13 checks, 0 differences, 0 listed, 12 distinct
+default-save-dir.documentsDirOrFallback: 7 checks, 0 differences, 0 listed, 4 distinct
+default-save-dir.configuredDefaultSaveDir: 10 checks, 0 differences, 0 listed, 10 distinct
+dialog-memory.showOpenDialogWithMemory: 17 checks, 0 differences, 0 listed, 17 distinct
+dialog-memory.showSaveDialogWithMemory: 13 checks, 0 differences, 0 listed, 12 distinct
+dialog-memory.saveAsSuggestion: 7 checks, 0 differences, 0 listed, 5 distinct
+author-name.AUTHOR_NAME_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+author-name.AUTHOR_NAME_MAX: 1 checks, 0 differences, 0 listed, 1 distinct
+author-name.sanitizeAuthorName: 16 checks, 0 differences, 0 listed, 9 distinct
+author-name.readAuthorNameSetting: 10 checks, 0 differences, 0 listed, 10 distinct
+author-name.systemAuthorName: 7 checks, 0 differences, 0 listed, 5 distinct
+author-name.resolveAuthorName: 6 checks, 0 differences, 0 listed, 5 distinct
+author-name.configuredAuthorName: 4 checks, 0 differences, 0 listed, 4 distinct
+font-store.installLocalFontFiles: 13 checks, 0 differences, 0 listed, 13 distinct
+github-menu.GITHUB_REPO_OWNER: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_SLUG: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_REPO_DISPLAY: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_ISSUES_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_NEW_ISSUE_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_RELEASES_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.GITHUB_LATEST_RELEASE_URL: 1 checks, 0 differences, 0 listed, 1 distinct
+github-menu.githubReleaseTagUrl: 8 checks, 0 differences, 0 listed, 6 distinct
+hwp-default-format.HWP_DEFAULT_FORMAT_KEY: 1 checks, 0 differences, 0 listed, 1 distinct
+hwp-default-format.normalizeHwpDefaultFormat: 9 checks, 0 differences, 0 listed, 2 distinct
+hwp-default-format.readHwpDefaultFormat: 8 checks, 0 differences, 0 listed, 7 distinct
+numbered-export-paths.numberedExportPaths: 29 checks, 0 differences, 0 listed, 22 distinct
+template-font-response.templateFontResponse: 11 checks, 0 differences, 0 listed, 10 distinct
+template-fonts.TEMPLATE_FONT_SCHEME: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts.TEMPLATE_FONT_HOST: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts.TEMPLATE_FONT_FILES: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts.templateFontFileOf: 68 checks, 0 differences, 0 listed, 4 distinct
+template-fonts-dir.TEMPLATE_FONTS_DIR_NAME: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts-dir.TEMPLATE_FONTS_REPO_DIR: 1 checks, 0 differences, 0 listed, 1 distinct
+template-fonts-dir.templateFontsDir: 7 checks, 0 differences, 0 listed, 5 distinct
+abort-on-destroyed.abortOnDestroyed: 25 checks, 0 differences, 0 listed, 10 distinct
+recovery-contract.registerRecoveryEditor: 3 checks, 0 differences, 0 listed, 3 distinct
+recovery-contract.recoveryEditor: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-contract.recoveryEditors: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-labels.RECOVERY_PROMPT_STRINGS: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-labels.recoveryPromptLabels: 35 checks, 0 differences, 0 listed, 16 distinct
+recovery-labels.unprotectableNoticeText: 19 checks, 0 differences, 0 listed, 2 distinct
+save-conflict-labels.SAVE_CONFLICT_STRINGS: 2 checks, 0 differences, 0 listed, 2 distinct
+save-conflict-labels.saveConflictLabels: 19 checks, 0 differences, 0 listed, 2 distinct
+recovery-prompt.promptRecoveryForFile: 11 checks, 0 differences, 0 listed, 6 distinct
+recovery-prompt.resolveRecoveryOnOpen: 15 checks, 0 differences, 0 listed, 14 distinct
+recovery-store.RECOVERY_EDITOR_KINDS: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.RECOVERY_COPY_MAX_AGE_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.recoveryFolderName: 6 checks, 0 differences, 0 listed, 6 distinct
+recovery-store.isRecoveryEditorKind: 17 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.isUntitledIdentity: 7 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.createRecoveryStore: 33 checks, 0 differences, 0 listed, 33 distinct
+recovery-store.recoveryRunId: 3 checks, 0 differences, 0 listed, 3 distinct
+recovery-store.markAppShuttingDown: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.resetAppShuttingDown: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.isAppShuttingDown: 3 checks, 0 differences, 0 listed, 3 distinct
+recovery-store.resumeDiscardedCopies: 2 checks, 0 differences, 0 listed, 2 distinct
+recovery-store.newUntitledRecoveryId: 3 checks, 0 differences, 0 listed, 3 distinct
+unsaved-files.UNSAVED_CHANGES_MESSAGE: 2 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.setOpenFilesSource: 6 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.fileHasUnsavedChanges: 23 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.assertFileSaved: 23 checks, 0 differences, 0 listed, 2 distinct
+unsaved-files.withoutUnsavedFiles: 7 checks, 0 differences, 0 listed, 4 distinct
+legacy-import-prefs.LEGACY_IMPORT_SKIP_KEY: 2 checks, 0 differences, 0 listed, 2 distinct
+legacy-import-prefs.LEGACY_IMPORT_KINDS: 2 checks, 0 differences, 0 listed, 2 distinct
+legacy-import-prefs.readLegacyImportSkip: 14 checks, 0 differences, 0 listed, 10 distinct
+legacy-import-prefs.writeLegacyImportSkip: 61 checks, 1 differences, 0 listed, 31 distinct
+legacy-import-prefs.readLegacyImportPrompt: 15 checks, 0 differences, 0 listed, 15 distinct
+legacy-import-prefs.writeLegacyImportPrompt: 31 checks, 1 differences, 0 listed, 11 distinct
+safe-remote-url.isFakeIpDnsArtifact: 96 checks, 0 differences, 0 listed, 2 distinct
+safe-remote-url.isBlockedAddress: 96 checks, 0 differences, 0 listed, 2 distinct
+safe-remote-url.isIP: 96 checks, 0 differences, 0 listed, 3 distinct
+safe-remote-url.resolveSafeRemoteTarget: 88 checks, 0 differences, 0 listed, 32 distinct
+safe-remote-url.isSafeRemoteUrl: 84 checks, 0 differences, 0 listed, 21 distinct
+safe-remote-url.pinnedLookup: 35 checks, 0 differences, 0 listed, 12 distinct
+safe-remote-url.fetchWithSsrfGuard: 61 checks, 49 differences, 0 listed, 46 distinct
+remote-image.MAX_REMOTE_IMAGE_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-image.ResponseTooLargeError: 13 checks, 0 differences, 0 listed, 13 distinct
+remote-image.readBodyCapped: 25 checks, 0 differences, 0 listed, 10 distinct
+remote-image.remoteImageHeaders: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-image.fetchRemoteImage: 25 checks, 15 differences, 0 listed, 20 distinct
+fetch-image-bytes.fetchImageBytes: 23 checks, 0 differences, 0 listed, 16 distinct
+generated-images.GENERATED_IMAGE_DIR: 1 checks, 0 differences, 0 listed, 1 distinct
+generated-images.MAX_GENERATED_IMAGE_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+generated-images.storeGeneratedImage: 42 checks, 0 differences, 0 listed, 15 distinct
+generated-images.readGeneratedImage: 37 checks, 0 differences, 0 listed, 6 distinct
+remote-table.MAX_REMOTE_TABLE_BYTES: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.MAX_REMOTE_TABLE_ROWS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.MAX_REMOTE_TABLE_COLUMNS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.MAX_REMOTE_TABLE_CELL_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.REMOTE_TABLE_TIMEOUT_MS: 1 checks, 0 differences, 0 listed, 1 distinct
+remote-table.parseHtmlTable: 59 checks, 1 differences, 0 listed, 46 distinct
+remote-table.detectDelimiter: 36 checks, 0 differences, 0 listed, 3 distinct
+remote-table.parseDelimitedRow: 33 checks, 0 differences, 0 listed, 22 distinct
+remote-table.parseDelimitedTable: 42 checks, 0 differences, 0 listed, 34 distinct
+remote-table.fetchRemoteTable: 51 checks, 46 differences, 0 listed, 26 distinct
+main-proxy.mergeNoProxy: 10 checks, 0 differences, 0 listed, 9 distinct
+main-proxy.createMainProcessProxyDispatcher: 51 checks, 0 differences, 0 listed, 12 distinct
+main-proxy.EnvHttpProxyAgent: 30 checks, 0 differences, 0 listed, 9 distinct
+safe-external-url.safeExternalUrl: 122 checks, 0 differences, 0 listed, 23 distinct
+navigation-guard.installNavigationGuard: 7 checks, 0 differences, 0 listed, 6 distinct
+renderer-scheme.RENDERER_SCHEME: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.RENDERER_SCHEME_PRIVILEGE: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.DOCX_MEDIA_SCHEME_PRIVILEGE: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.SLIDE_MEDIA_SCHEME_PRIVILEGE: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.MAX_RENDERER_QUERY_ENTRIES: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.MAX_RENDERER_QUERY_CHARS: 1 checks, 0 differences, 0 listed, 1 distinct
+renderer-scheme.rendererUrl: 63 checks, 0 differences, 0 listed, 51 distinct
+renderer-scheme.resolveRendererFile: 79 checks, 0 differences, 0 listed, 28 distinct
+permission-guard.appPageOf: 109 checks, 0 differences, 0 listed, 22 distinct
+permission-guard.permissionAllowed: 141 checks, 0 differences, 0 listed, 6 distinct
+permission-guard.permissionRequestHandler: 312 checks, 0 differences, 0 listed, 4 distinct
+permission-guard.permissionCheckHandler: 310 checks, 0 differences, 0 listed, 4 distinct
+permission-guard.installPermissionGuard: 4 checks, 0 differences, 0 listed, 4 distinct
+printer-options.DRIVER_OPTION_NAMES: 1 checks, 0 differences, 0 listed, 1 distinct
+printer-options.isValidOptionName: 22 checks, 0 differences, 0 listed, 2 distinct
+printer-options.isValidOptionValue: 22 checks, 0 differences, 0 listed, 2 distinct
+printer-options.parseLpOptions: 33 checks, 0 differences, 0 listed, 19 distinct
+printer-options.queryPrinterOptions: 11 checks, 0 differences, 0 listed, 6 distinct
+print-cups.lpArgumentsFor: 20 checks, 0 differences, 0 listed, 18 distinct
+print-cups.printToPdfOptionsFor: 18 checks, 0 differences, 0 listed, 13 distinct
+print-cups.printPdfViaCups: 14 checks, 0 differences, 0 listed, 13 distinct
+print-job.printJobOptions: 55 checks, 0 differences, 0 listed, 22 distinct
+print-job.printOutcome: 17 checks, 0 differences, 0 listed, 6 distinct
+print-window.PRINT_READY_SCRIPT: 1 checks, 0 differences, 0 listed, 1 distinct
+print-window.loadPrintHtml: 10 checks, 0 differences, 0 listed, 10 distinct
+print-window.printHtmlDocument: 25 checks, 0 differences, 0 listed, 20 distinct
+print-html-pdf.sanitizePrintableBody: 145 checks, 0 differences, 0 listed, 100 distinct
+print-html-pdf.buildPrintableHtml: 40 checks, 0 differences, 0 listed, 36 distinct
+print-html-pdf.printHtmlToPdf: 8 checks, 0 differences, 0 listed, 8 distinct
+print-html-pdf.parseSerialize: 188 checks, 0 differences, 0 listed, 178 distinct
+headless-mode.setHeadlessMode: 2 checks, 0 differences, 0 listed, 2 distinct
+headless-mode.isHeadlessMode: 2 checks, 0 differences, 0 listed, 2 distinct
+handoff-editors.HANDOFF_EDITORS: 1 checks, 0 differences, 0 listed, 1 distinct
+handoff-editors.isHandoffEditor: 29 checks, 0 differences, 0 listed, 2 distinct
+handoff-editors.HANDOFF_ATTACH_EDITORS: 1 checks, 0 differences, 0 listed, 1 distinct
+handoff-editors.handoffEditorTakesAttachments: 18 checks, 0 differences, 0 listed, 2 distinct
+headless-export.DIAGRAM_FILE_TARGETS: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.DIAGRAM_BATCH_MODES: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.HEADLESS_TARGETS: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.isDiagramFileTarget: 17 checks, 0 differences, 0 listed, 2 distinct
+headless-export.HEADLESS_EXPORT_FLAG: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.HEADLESS_EXIT: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.headlessModuleFor: 42 checks, 0 differences, 0 listed, 8 distinct
+headless-export.HEADLESS_SUPPORTED_EXTENSIONS: 1 checks, 0 differences, 0 listed, 1 distinct
+headless-export.parseHeadlessExportArgv: 70 checks, 0 differences, 0 listed, 55 distinct
+headless-export.headlessSummary: 18 checks, 0 differences, 0 listed, 13 distinct
+headless-export.formatHeadlessEnvelope: 36 checks, 0 differences, 0 listed, 28 distinct
+headless-export.headlessExitCode: 20 checks, 0 differences, 0 listed, 4 distinct
+headless-export.headlessSleep: 6 checks, 0 differences, 0 listed, 6 distinct
+headless-export.pollUntilReady: 14 checks, 0 differences, 0 listed, 13 distinct
+headless-export.documentFontsSettled: 7 checks, 0 differences, 0 listed, 5 distinct
+headless-export.runHeadlessRendererExport: 9 checks, 0 differences, 0 listed, 8 distinct
+generate-handoff.handoffEditorForFile: 45 checks, 0 differences, 0 listed, 9 distinct
+generate-handoff.HANDOFF_EDITORS: 1 checks, 0 differences, 0 listed, 1 distinct
+generate-handoff.isHandoffEditor: 8 checks, 0 differences, 0 listed, 2 distinct
+generate-handoff.handoffEditorTakesAttachments: 7 checks, 0 differences, 0 listed, 2 distinct
+generate-handoff.queueGenerateHandoff: 12 checks, 0 differences, 0 listed, 12 distinct
+generate-handoff.queueGenerateHandoffFor: 6 checks, 0 differences, 0 listed, 6 distinct
+generate-handoff.takeGenerateHandoff: 13 checks, 0 differences, 0 listed, 7 distinct
+generate-handoff.dropGenerateHandoff: 6 checks, 0 differences, 0 listed, 4 distinct
+generate-handoff.queueSkillHandoff: 7 checks, 0 differences, 0 listed, 7 distinct
+generate-handoff.queueSkillHandoffFor: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.takeSkillHandoff: 10 checks, 0 differences, 0 listed, 6 distinct
+generate-handoff.queuedSkillHandoffs: 4 checks, 0 differences, 0 listed, 4 distinct
+generate-handoff.queuedGenerateHandoffs: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.setGenerateTabIdResolver: 5 checks, 0 differences, 0 listed, 2 distinct
+generate-handoff.reportGenerateRunStarted: 32 checks, 0 differences, 0 listed, 16 distinct
+generate-handoff.generateRunStartedEvents: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.recordGenerateConverted: 13 checks, 0 differences, 0 listed, 13 distinct
+generate-handoff.generateConvertedEvents: 5 checks, 0 differences, 0 listed, 5 distinct
+generate-handoff.resetGenerateHandoffsForTest: 3 checks, 0 differences, 0 listed, 1 distinct  FLOOR: fewer than two distinct answers
+session-record.SESSION_RECORD_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.SESSION_RECORD_WRITE_DELAY_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.CRASH_LOOP_WINDOW_MS: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.sessionSnapshotFrom: 19 checks, 0 differences, 0 listed, 14 distinct
+session-record.parseSessionRecord: 44 checks, 0 differences, 0 listed, 17 distinct
+session-record.sessionRecordPath: 7 checks, 0 differences, 0 listed, 6 distinct
+session-record.readSessionRecord: 11 checks, 0 differences, 0 listed, 11 distinct
+session-record.judgePreviousExit: 16 checks, 0 differences, 0 listed, 8 distinct
+session-record.sessionRestoreLayout: 5 checks, 0 differences, 0 listed, 5 distinct
+session-record.createSessionRecorder: 16 checks, 0 differences, 0 listed, 16 distinct
+session-record.initSessionRecord: 3 checks, 0 differences, 0 listed, 3 distinct
+session-record.sessionRecorder: 3 checks, 0 differences, 0 listed, 3 distinct
+session-record.noteSessionChanged: 4 checks, 0 differences, 0 listed, 4 distinct
+session-record.markSessionCleanExit: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.holdSessionTabsForUpdateRestart: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.markSessionUpdateRestart: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.markSessionClosedToTray: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.markSessionOsEnd: 2 checks, 0 differences, 0 listed, 2 distinct
+session-record.resetSessionRecordForTests: 2 checks, 0 differences, 0 listed, 2 distinct
+tab-lifecycle.MAX_RECENTLY_CLOSED: 2 checks, 0 differences, 0 listed, 2 distinct
+tab-lifecycle.closeTabsInOrder: 8 checks, 0 differences, 0 listed, 6 distinct
+tab-lifecycle.createRecentlyClosedTracker: 14 checks, 0 differences, 0 listed, 14 distinct
+tab-duplicate.duplicateDocumentFile: 12 checks, 0 differences, 0 listed, 12 distinct
+tab-document-actions.runTabDocumentAction: 44 checks, 0 differences, 0 listed, 36 distinct
+tab-menu.isProgramFile: 29 checks, 0 differences, 0 listed, 2 distinct
+tab-menu.baseName: 10 checks, 0 differences, 0 listed, 5 distinct
+tab-menu.pathLabel: 9 checks, 0 differences, 0 listed, 8 distinct
+tab-menu.tabMenuTemplate: 13 checks, 0 differences, 0 listed, 13 distinct
+tab-shortcuts.tabShortcutOf: 100 checks, 0 differences, 0 listed, 4 distinct
+tab-shortcuts.handleTabShortcut: 13 checks, 0 differences, 0 listed, 9 distinct
+split-layout.SPLIT_EVEN_RATIO: 2 checks, 0 differences, 0 listed, 2 distinct
+split-layout.splitAvailablePx: 28 checks, 0 differences, 0 listed, 14 distinct
+split-layout.splitRatioLimits: 28 checks, 0 differences, 0 listed, 10 distinct
+split-layout.clampSplitRatio: 100 checks, 0 differences, 0 listed, 12 distinct
+split-layout.paneRects: 100 checks, 0 differences, 0 listed, 75 distinct
+split-layout.splitDropZone: 20 checks, 0 differences, 0 listed, 3 distinct
+split-layout.decideSplitDrop: 14 checks, 0 differences, 0 listed, 9 distinct
+split-layout.activationMode: 16 checks, 0 differences, 0 listed, 4 distinct
+split-layout.splitSurvivor: 5 checks, 0 differences, 0 listed, 3 distinct
+split-layout.oppositeDocumentId: 11 checks, 0 differences, 0 listed, 3 distinct
+open-documents.OPEN_DOCUMENTS_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+open-documents.publishOpenDocuments: 10 checks, 0 differences, 0 listed, 10 distinct
+open-documents.clearOpenDocuments: 3 checks, 0 differences, 0 listed, 2 distinct
+window-background.SHELL_BACKGROUND_LIGHT: 2 checks, 0 differences, 0 listed, 2 distinct
+window-background.SHELL_BACKGROUND_DARK: 2 checks, 0 differences, 0 listed, 2 distinct
+window-background.shellWindowBackground: 2 checks, 0 differences, 0 listed, 2 distinct
+title-bar-overlay.tabStripOverlay: 12 checks, 0 differences, 0 listed, 11 distinct
+skill-target.isInstallableSkillDir: 19 checks, 0 differences, 0 listed, 2 distinct
+file-targets.isUserVisibleFile: 15 checks, 0 differences, 0 listed, 12 distinct
+file-targets.isMoveSource: 15 checks, 0 differences, 0 listed, 12 distinct
+result-store-ipc.registerResultStoreIpc: 12 checks, 0 differences, 0 listed, 10 distinct
+window-close-guard.installShellCloseGuard: 16 checks, 1 differences, 0 listed, 16 distinct
+update-restart.requestUpdateRestart: 4 checks, 0 differences, 0 listed, 2 distinct
+update-restart.cancelUpdateRestart: 4 checks, 0 differences, 0 listed, 2 distinct
+update-restart.updateRestartRequested: 4 checks, 0 differences, 0 listed, 2 distinct
+update-restart.reopenedByInstaller: 6 checks, 0 differences, 0 listed, 2 distinct
+update-notes.normalizeReleaseNotes: 91 checks, 0 differences, 0 listed, 75 distinct
+update-resume.installResumeDownload: 66 checks, 4 differences, 0 listed, 39 distinct
+mac-update.macAppBundle: 13 checks, 0 differences, 0 listed, 5 distinct
+mac-update.macStagingDir: 5 checks, 0 differences, 0 listed, 4 distinct
+mac-update.macPreviousDir: 5 checks, 0 differences, 0 listed, 4 distinct
+mac-update.macSelfUpdateBlock: 9 checks, 0 differences, 0 listed, 8 distinct
+mac-update.removeMacLeftovers: 5 checks, 0 differences, 0 listed, 4 distinct
+mac-update.runProgram: 8 checks, 0 differences, 0 listed, 8 distinct
+mac-update.stageMacUpdate: 16 checks, 0 differences, 0 listed, 14 distinct
+mac-update.installMacStaging: 8 checks, 0 differences, 0 listed, 5 distinct
+mac-update.MAC_SWAP_SCRIPT: 1 checks, 0 differences, 0 listed, 1 distinct
+mac-update.startMacSwap: 11 checks, 0 differences, 0 listed, 9 distinct
+shell-atomic-write.atomicWriteFile: 10 checks, 0 differences, 0 listed, 9 distinct
+shell-atomic-write.atomicCopyFile: 6 checks, 0 differences, 0 listed, 5 distinct
+control-protocol.CONTROL_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+control-protocol.CONTROL_PROTOCOL: 2 checks, 0 differences, 0 listed, 2 distinct
+control-protocol.CONTROL_MAX_REQUEST_BYTES: 2 checks, 0 differences, 0 listed, 2 distinct
+csv-import-limit.csvImportLimitMb: 17 checks, 0 differences, 0 listed, 3 distinct
+feedback.FEEDBACK_SURVEY_URL: 2 checks, 0 differences, 0 listed, 2 distinct
+feedback.FEEDBACK_STRINGS: 2 checks, 0 differences, 0 listed, 2 distinct
+feedback.feedbackText: 20 checks, 0 differences, 0 listed, 17 distinct
+feedback.platformLabel: 12 checks, 0 differences, 0 listed, 12 distinct
+feedback.feedbackDetails: 6 checks, 0 differences, 0 listed, 6 distinct
+pdf-save-as-formats.pdfSaveAsFilters: 3 checks, 0 differences, 0 listed, 3 distinct
+pdf-save-as-formats.pdfSaveAsDefaultPath: 41 checks, 0 differences, 0 listed, 37 distinct
+pdf-save-as-formats.pdfSaveAsPickedPath: 41 checks, 0 differences, 0 listed, 39 distinct
+pdf-save-as-formats.pdfSaveAsFormatOf: 41 checks, 0 differences, 0 listed, 7 distinct
+control-server.controlEndpointPath: 24 checks, 0 differences, 0 listed, 15 distinct
+control-server.parseEnvelope: 39 checks, 0 differences, 0 listed, 12 distinct
+control-server.startControlServer: 5 checks, 0 differences, 0 listed, 4 distinct
+control-server.serve: 36 checks, 0 differences, 0 listed, 14 distinct
+control-handlers.controlHandler: 29 checks, 0 differences, 0 listed, 29 distinct
+default-app.OFFICE_TYPES: 2 checks, 0 differences, 0 listed, 2 distinct
+default-app.execFileRunner: 11 checks, 0 differences, 0 listed, 11 distinct
+default-app.macAppBundlePath: 20 checks, 0 differences, 0 listed, 6 distinct
+default-app.parseMacStatus: 32 checks, 0 differences, 0 listed, 19 distinct
+default-app.parseLinuxStatus: 11 checks, 0 differences, 0 listed, 8 distinct
+default-app.parseRegValue: 27 checks, 0 differences, 0 listed, 15 distinct
+default-app.createDefaultAppService: 33 checks, 0 differences, 0 listed, 25 distinct
+diagram-open-gate.openDiagramChecked: 15 checks, 0 differences, 0 listed, 15 distinct
+diagram-open-gate.diagramOpenChecking: 15 checks, 0 differences, 0 listed, 15 distinct
+document-password-prompt.createDocumentPasswordPrompt: 15 checks, 0 differences, 0 listed, 14 distinct
+pdf-convert-ui-handlers.createPdfConvertUiHandlers: 19 checks, 0 differences, 0 listed, 15 distinct
+pdf-note-tabs.isNoteFile: 16 checks, 0 differences, 0 listed, 2 distinct
+pdf-note-tabs.openNoteTab: 24 checks, 0 differences, 0 listed, 6 distinct
+pdf-note-tabs.insertIntoNoteTab: 84 checks, 0 differences, 0 listed, 9 distinct
+document-links.DOCUMENT_LINKS_FILE: 2 checks, 0 differences, 0 listed, 2 distinct
+document-links.linkPathKey: 21 checks, 0 differences, 0 listed, 13 distinct
+document-links.parseDocumentLinks: 38 checks, 0 differences, 0 listed, 17 distinct
+document-links.readDocumentLinksFile: 9 checks, 0 differences, 0 listed, 4 distinct
+document-links.handoffStoreEvents: 7 checks, 0 differences, 0 listed, 7 distinct
+document-links.watchMakeEvents: 5 checks, 0 differences, 0 listed, 5 distinct
+document-links.isFreshlySavedPath: 12 checks, 0 differences, 0 listed, 6 distinct
+document-links.DocumentLinks: 26 checks, 0 differences, 0 listed, 26 distinct
+document-links.documentLinksAt: 9 checks, 0 differences, 0 listed, 9 distinct
+document-links.documentLinkMenuModel: 8 checks, 0 differences, 0 listed, 7 distinct
+document-links-menu.documentLinkMenuItems: 16 checks, 0 differences, 0 listed, 14 distinct
+
+DIFF legacy-import-prefs.writeLegacyImportSkip case 59 (a folder where the file is)
+  typescript: {"answer":"{\"error\":{\"code\":\"EISDIR\",\"message\":\"EISDIR: illegal operation on a directory, rename '$DIR/app-settings.json.c702fe2860b7.tmp' -> '$DIR/app-settings.json'\"}}","files":{"app-settings.json":"dir 755"}}
+  rust:       {"answer":"{\"error\":{\"code\":\"EISDIR\",\"message\":\"EISDIR: illegal operation on a directory, rename '$DIR/app-settings.json.<hex>.tmp' -> '$DIR/app-settings.json'\"}}","files":{"app-settings.json":"dir 755"}}
+
+DIFF legacy-import-prefs.writeLegacyImportPrompt case 30 (a folder where the file is)
+  typescript: {"answer":"{\"error\":{\"code\":\"EISDIR\",\"message\":\"EISDIR: illegal operation on a directory, rename '$DIR/app-settings.json.387d425469be.tmp' -> '$DIR/app-settings.json'\"}}","files":{"app-settings.json":"dir 755"}}
+  rust:       {"answer":"{\"error\":{\"code\":\"EISDIR\",\"message\":\"EISDIR: illegal operation on a directory, rename '$DIR/app-settings.json.<hex>.tmp' -> '$DIR/app-settings.json'\"}}","files":{"app-settings.json":"dir 755"}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 0 (a public host)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"68656c6c6f\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"],[\"close\",\"http://example.com/\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"68656c6c6f\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 1 (a live signal rides along)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"68656c6c6f\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,true,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"],[\"close\",\"http://example.com/\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"68656c6c6f\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,true,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 2 (a 404 is handed back)
+  typescript: {"answer":"{\"value\":{\"status\":404,\"ok\":false,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"6e6f\"},\"logs\":[[\"dns\",\"img.example.com\"],[\"fetch\",\"https://img.example.com/a.png\",null,false,[{\"address\":\"93.184.216.35\",\"family\":4}]],[\"close\",\"https://img.example.com/a.png\"],[\"close\",\"https://img.example.com/a.png\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":404,\"ok\":false,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"6e6f\"},\"logs\":[[\"dns\",\"img.example.com\"],[\"fetch\",\"https://img.example.com/a.png\",null,false,[{\"address\":\"93.184.216.35\",\"family\":4}]],[\"close\",\"https://img.example.com/a.png\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 8 (a fake-ip answer is allowed)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"fake.example\"],[\"fetch\",\"http://fake.example/\",null,false,[{\"address\":\"198.18.0.7\",\"family\":4}]],[\"close\",\"http://fake.example/\"],[\"close\",\"http://fake.example/\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"fake.example\"],[\"fetch\",\"http://fake.example/\",null,false,[{\"address\":\"198.18.0.7\",\"family\":4}]],[\"close\",\"http://fake.example/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 9 (both families pinned)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"dual.example\"],[\"fetch\",\"http://dual.example/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4},{\"address\":\"2606:2800:220:1:248:1893:25c8:1946\",\"family\":6}]],[\"close\",\"http://dual.example/\"],[\"close\",\"http://dual.example/\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"dual.example\"],[\"fetch\",\"http://dual.example/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4},{\"address\":\"2606:2800:220:1:248:1893:25c8:1946\",\"family\":6}]],[\"close\",\"http://dual.example/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 10 (the transport throws for a URL it has no route for)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"no route: http://example.com/\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"],[\"close\",\"http://example.com/\"]]}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"no route: http://example.com/\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 11 (the transport throws)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"transport down: http://example.com/\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"],[\"close\",\"http://example.com/\"]]}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"transport down: http://example.com/\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 12 (a throw with a live signal that is not aborted is rethrown)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"transport down: http://example.com/\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,true,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"],[\"close\",\"http://example.com/\"]]}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"transport down: http://example.com/\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,true,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 13 (a throw after an abort is null)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,true,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"],[\"close\",\"http://example.com/\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/\",null,true,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 16 (the same lookup without a signal)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"slow.example\"],[\"fetch\",\"http://slow.example/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://slow.example/\"],[\"close\",\"http://slow.example/\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"slow.example\"],[\"fetch\",\"http://slow.example/\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://slow.example/\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 17 (a redirect is followed and its body cancelled)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"img.example.com\"],[\"fetch\",\"http://img.example.com/b\",null,false,[{\"address\":\"93.184.216.35\",\"family\":4}]],[\"close\",\"http://img.example.com/b\"],[\"close\",\"http://img.example.com/b\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"img.example.com\"],[\"fetch\",\"http://img.example.com/b\",null,false,[{\"address\":\"93.184.216.35\",\"family\":4}]],[\"close\",\"http://img.example.com/b\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 18 (a relative Location)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b?x=1#f\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b?x=1#f\"],[\"close\",\"http://example.com/b?x=1#f\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b?x=1#f\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b?x=1#f\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 19 (a Location relative to the directory)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/dir/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/dir/a\"],[\"close\",\"http://example.com/dir/a\"],[\"close\",\"http://example.com/dir/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/dir/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/dir/b\"],[\"close\",\"http://example.com/dir/b\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/dir/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/dir/a\"],[\"close\",\"http://example.com/dir/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/dir/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/dir/b\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 20 (a scheme-relative Location)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"cdn.example.net\"],[\"fetch\",\"http://cdn.example.net/x\",null,false,[{\"address\":\"93.184.216.36\",\"family\":4}]],[\"close\",\"http://cdn.example.net/x\"],[\"close\",\"http://cdn.example.net/x\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"cdn.example.net\"],[\"fetch\",\"http://cdn.example.net/x\",null,false,[{\"address\":\"93.184.216.36\",\"family\":4}]],[\"close\",\"http://cdn.example.net/x\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 21 (a public host that bounces to loopback)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 22 (a bounce to a private resolution)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"internal.example\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"internal.example\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 23 (a bounce to a file URL)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 24 (no Location)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 25 (an empty Location)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 26 (a Location that does not parse)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 27 (a redirect without a body)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"],[\"close\",\"http://example.com/b\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 28 (399 is a redirect)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"],[\"close\",\"http://example.com/b\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"656e64\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 29 (400 is not)
+  typescript: {"answer":"{\"value\":{\"status\":400,\"ok\":false,\"contentType\":null,\"contentLength\":null,\"location\":\"http://example.com/b\",\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":400,\"ok\":false,\"contentType\":null,\"contentLength\":null,\"location\":\"http://example.com/b\",\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 30 (299 is handed back)
+  typescript: {"answer":"{\"value\":{\"status\":299,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":299,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 31 (a redirect loop runs out of hops)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 32 (no hops to follow)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 33 (one hop)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 34 (a fractional budget is floored)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 35 (a negative budget is zero)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 36 (a budget over ten is ten)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 37 (an infinite budget is five)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 38 (NaN is five)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 39 (minus infinity is five)
+  typescript: {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":null,\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 40 (the hop that fits the budget answers)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"7468697264\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"7468697264\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 41 (manual hands the redirect back)
+  typescript: {"answer":"{\"value\":{\"status\":302,\"ok\":false,\"contentType\":null,\"contentLength\":null,\"location\":\"http://example.com/b\",\"body\":\"6d6f766564\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":302,\"ok\":false,\"contentType\":null,\"contentLength\":null,\"location\":\"http://example.com/b\",\"body\":\"6d6f766564\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 42 (manual with an ordinary answer)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/a\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 43 (follow)
+  typescript: {"answer":"{\"error\":{\"code\":null,\"message\":\"no route: http://example.com/b\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"],[\"close\",\"http://example.com/b\"]]}","files":{}}
+  rust:       {"answer":"{\"error\":{\"code\":null,\"message\":\"no route: http://example.com/b\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"]]}","files":{}}
+
+DIFF safe-remote-url.fetchWithSsrfGuard case 44 (only the exact word is manual)
+  typescript: {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"],[\"close\",\"http://example.com/b\"]]}","files":{}}
+  rust:       {"answer":"{\"value\":{\"status\":200,\"ok\":true,\"contentType\":null,\"contentLength\":null,\"location\":null,\"body\":\"78\"},\"logs\":[[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/a\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"cancel\",\"http://example.com/a\"],[\"close\",\"http://example.com/a\"],[\"dns\",\"example.com\"],[\"fetch\",\"http://example.com/b\",null,false,[{\"address\":\"93.184.216.34\",\"family\":4}]],[\"close\",\"http://example.com/b\"]]}","files":{}}
+
+25418 checks, 25294 equal, 118 differences, 6 listed, 518 functions
