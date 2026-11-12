@@ -810,6 +810,41 @@ function findCTnEnd(xml: string, openEnd: number): number {
   return xml.length
 }
 
+/** One effect of the main sequence that the model holds. */
+interface ModeledEffect {
+  /** Offset of the effect's <p:cTn> open tag in the timing */
+  at: number
+  /** Attributes of that open tag */
+  attrs: string
+  /** Content of the effect cTn */
+  body: string
+  /** The shape it targets */
+  spid: number
+}
+
+/**
+ * The effects the model holds, in document order: each cTn of the main sequence that carries
+ * presetClass and targets a shape. An effect aimed at anything else (<p:inkTgt>, an ink replay)
+ * has no model. The reader and the incremental writer both walk this, so "the nth effect" means
+ * the same node to each: a writer that counted an unmodeled effect replaced the wrong one.
+ */
+function* modeledEffects(timing: string): Generator<ModeledEffect> {
+  // Only the main sequence: interactiveSeq trigger animations etc. are not modeled, avoiding mistakenly absorbing them as click animations on rewrite
+  const seq = mainSeqSpan(timing)
+  if (!seq) return
+  const re = /<p:cTn\b([^>]*\bpresetClass="[^"]*"[^>]*)>/g
+  re.lastIndex = seq.start
+  let m: RegExpExecArray | null
+  while ((m = re.exec(timing)) !== null && m.index < seq.end) {
+    const bodyEnd = findCTnEnd(timing, re.lastIndex)
+    const body = timing.slice(re.lastIndex, bodyEnd)
+    re.lastIndex = bodyEnd
+    const spid = /<p:spTgt\s[^>]*\bspid="(\d+)"/.exec(body)?.[1]
+    if (spid === undefined) continue
+    yield { at: m.index, attrs: m[1]!, body, spid: Number(spid) }
+  }
+}
+
 /**
  * Read the bodySuffix's animation list (for UI echo + slideshow).
  * Parses every effect cTn carrying presetClass; delay is derived back to the user
@@ -819,30 +854,16 @@ function findCTnEnd(xml: string, openEnd: number): number {
 export function readSlideTimingXml(bodySuffix: string): SlideAnimation[] {
   const timing = TIMING_RE.exec(bodySuffix)?.[0]
   if (!timing) return []
-  // Read only the main sequence: interactiveSeq trigger animations etc. are not modeled, avoiding mistakenly absorbing them as click animations on rewrite
-  const seq = mainSeqSpan(timing)
-  if (!seq) return []
   const out: SlideAnimation[] = []
-  const re = /<p:cTn\b([^>]*\bpresetClass="[^"]*"[^>]*)>/g
-  re.lastIndex = seq.start
-  let m: RegExpExecArray | null
   let prevStart = 0
   let prevEnd = 0
-  while ((m = re.exec(timing)) !== null && m.index < seq.end) {
-    const attrs = m[1]!
+  for (const { at, attrs, body, spid } of modeledEffects(timing)) {
     const cls = /\bpresetClass="([^"]*)"/.exec(attrs)?.[1] ?? 'entr'
     const pid = Number(/\bpresetID="(\d+)"/.exec(attrs)?.[1] ?? '0')
     const psub = Number(/\bpresetSubtype="(\d+)"/.exec(attrs)?.[1] ?? '0')
     const nodeType = /\bnodeType="([^"]*)"/.exec(attrs)?.[1] ?? 'clickEffect'
     const trigger: AnimTrigger =
       nodeType === 'withEffect' ? 'withPrev' : nodeType === 'afterEffect' ? 'afterPrev' : 'onClick'
-    const bodyEnd = findCTnEnd(timing, re.lastIndex)
-    const body = timing.slice(re.lastIndex, bodyEnd)
-    re.lastIndex = bodyEnd
-
-    const spidM = /<p:spTgt\s[^>]*\bspid="(\d+)"/.exec(body)
-    if (!spidM) continue
-    const spid = Number(spidM[1])
     // Start: the effect cTn's own stCondLst (first cond delay at the body start)
     const startMs = Number(/^\s*<p:stCondLst><p:cond delay="(\d+)"/.exec(body)?.[1] ?? '0')
     // Duration: the largest numeric dur among the behaviors
@@ -862,7 +883,7 @@ export function readSlideTimingXml(bodySuffix: string): SlideAnimation[] {
       if (cmd.startsWith('playFrom') && cmd !== MEDIA_CMD.mediaPlay) modeled = false
     }
     if (effect === 'appear' || effect === 'disappear' || isMediaEffect(effect)) durationMs = 0
-    const parStart = timing.lastIndexOf('<p:par', m.index)
+    const parStart = timing.lastIndexOf('<p:par', at)
     const parClose = parStart >= 0 ? findBalancedClose(timing, parStart, 'p:par') : -1
 
     if (trigger === 'onClick') {
@@ -926,20 +947,12 @@ function findBalancedClose(xml: string, openStart: number, tag: string): number 
   return -1
 }
 
-/** Span in the timing of the nth effect <p:par> (cTn with presetClass inside the main sequence); order matches readSlideTimingXml. */
+/** Span in the timing of the <p:par> of the nth effect readSlideTimingXml returns. */
 function nthEffectParSpan(timing: string, n: number): { start: number; end: number } | null {
-  const seq = mainSeqSpan(timing)
-  if (!seq) return null
-  const re = /<p:cTn\b[^>]*\bpresetClass="[^"]*"[^>]*>/g
-  re.lastIndex = seq.start
-  let m: RegExpExecArray | null
   let i = 0
-  while ((m = re.exec(timing)) !== null && m.index < seq.end) {
-    if (i++ < n) {
-      re.lastIndex = findCTnEnd(timing, re.lastIndex)
-      continue
-    }
-    const parStart = timing.lastIndexOf('<p:par', m.index)
+  for (const { at } of modeledEffects(timing)) {
+    if (i++ < n) continue
+    const parStart = timing.lastIndexOf('<p:par', at)
     if (parStart < 0) return null
     const closeAt = findBalancedClose(timing, parStart, 'p:par')
     if (closeAt < 0) return null
