@@ -101,7 +101,11 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
                 serde_json::to_value(path).map_err(|error| error.to_string())
             })
         }
-        "builtin-layouts.BUILTIN_LAYOUTS" => value(BUILTIN_LAYOUTS),
+        "constants" => match required::<String>(args, "name")?.as_str() {
+            "BUILTIN_LAYOUTS" => value(BUILTIN_LAYOUTS),
+            "BLANK_SLIDE_XML" => value(BLANK_SLIDE_XML),
+            name => Err(format!("no constant {name}")),
+        },
         "builtin-layouts.shouldOfferBuiltinLayouts" => {
             let layouts: Vec<SlideLayoutInfo> = required(args, "layouts")?;
             value(should_offer_builtin_layouts(&layouts))
@@ -177,12 +181,15 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
                 neighbour.as_deref(),
             )?)
         }
-        "blank.BLANK_SLIDE_XML" => value(BLANK_SLIDE_XML),
         "blank.createBlankPptx" => {
             // the clock only stamps the zip entries; the entries are what is compared
             let bytes = create_blank_pptx(1_700_000_000_000.0)?;
-            let opened = PackageArchive::open(&bytes)?;
-            value(entries_of(&opened))
+            let entries = entries_of(&PackageArchive::open(&bytes)?);
+            let at = required::<f64>(args, "at")?;
+            let entry = (at >= 0.0 && at.fract() == 0.0)
+                .then(|| entries.get(at as usize))
+                .flatten();
+            value((entries.len(), entry))
         }
         _ => Err(format!("no function pptxLayouts.{function}")),
     }
