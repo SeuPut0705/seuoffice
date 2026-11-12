@@ -1,5 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  rmSync,
+  writeFileSync,
+} from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { HttpError } from 'builder-util-runtime'
@@ -796,6 +804,28 @@ describe('initAutoUpdater', () => {
       await flushAsync()
       expect(existsSync(installer)).toBe(false)
     })
+
+    // The installer that reopened the app runs on for a few seconds and holds
+    // its own file (Windows answers EPERM); a folder without write permission
+    // makes the removal fail the same way here.
+    it.skipIf(process.platform === 'win32')(
+      'is removed a little later when the installer still held it at the start',
+      async () => {
+        const { cacheDir, installer } = staleCache()
+        updaterState.cacheHelper = () => Promise.resolve({ cacheDir })
+        chmodSync(join(cacheDir, 'pending'), 0o555)
+        try {
+          const { initAutoUpdater } = await loadUpdater()
+          initAutoUpdater(() => null)
+          await flushAsync()
+          expect(existsSync(installer)).toBe(true)
+        } finally {
+          chmodSync(join(cacheDir, 'pending'), 0o755)
+        }
+        await vi.advanceTimersByTimeAsync(60_000)
+        expect(existsSync(installer)).toBe(false)
+      },
+    )
 
     it('stays once a download is running', async () => {
       const { cacheDir, installer } = staleCache()

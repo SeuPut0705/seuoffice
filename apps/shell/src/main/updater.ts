@@ -136,6 +136,10 @@ const tUpd = createI18n({
 const FIRST_CHECK_DELAY_MS = 15_000
 // hourly: the latest channel gets a release for every green push to main
 const RECHECK_INTERVAL_MS = 60 * 60 * 1000
+// a cache file the installer still held at the start: tried again this often,
+// this many times (the installer ends seconds after the app is back)
+const CACHE_RETRY_DELAY_MS = 30_000
+const CACHE_RETRIES = 4
 
 // After this many failed download/apply attempts for the same version the
 // dialog stops offering "retry" and guides the user to a manual download
@@ -696,13 +700,15 @@ export function initAutoUpdater(
   // What the last update left in electron-updater's download cache goes at a
   // start (update-cache.ts). The folder is the updater's to name (it reads
   // the name from app-update.yml); nothing is removed once a download runs
-  // or a finished one waits for the restart.
+  // or a finished one waits for the restart. The installer that reopened the
+  // app outlives it by seconds and holds its own file meanwhile, so a removal
+  // that failed is tried again a little later, a few times.
   // AppUpdater.getOrCreateDownloadHelper is private in its typings; what it
   // answers is checked before use, like `install` above
   const cacheOwner = autoUpdater as unknown as {
     getOrCreateDownloadHelper?: () => Promise<{ cacheDir?: unknown } | null>
   }
-  const clearInstalledCache = async (): Promise<void> => {
+  const clearInstalledCache = async (triesLeft: number): Promise<void> => {
     try {
       const helper = await cacheOwner.getOrCreateDownloadHelper?.()
       if (typeof helper?.cacheDir !== 'string') {
@@ -710,12 +716,19 @@ export function initAutoUpdater(
         return
       }
       if (downloadInFlight || phase === 'downloaded') return
-      pruneUpdateCache({ cacheDir: helper.cacheDir, runningVersion: app.getVersion(), log })
+      const cleared = pruneUpdateCache({
+        cacheDir: helper.cacheDir,
+        runningVersion: app.getVersion(),
+        log,
+      })
+      if (!cleared && triesLeft > 0) {
+        setTimeout(() => void clearInstalledCache(triesLeft - 1), CACHE_RETRY_DELAY_MS)
+      }
     } catch (err) {
       log('the update cache was not looked at:', err instanceof Error ? err.message : String(err))
     }
   }
-  void clearInstalledCache()
+  void clearInstalledCache(CACHE_RETRIES)
 
   const check = (): void => {
     // turned off: only an explicit check (Help › Check for Updates…, a channel switch) asks the feed

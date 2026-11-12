@@ -82,24 +82,28 @@ function installedOrOlder(fileName: string, runningVersion: string): boolean {
 
 /**
  * Removes the installer copies the running version no longer needs. Call it at
- * a start, before any download can run. Never throws; a file that cannot be
- * removed (the installer may still hold it) is logged and tried again at the
- * next start.
+ * a start, before any download can run. Never throws. Returns false when a
+ * file that should go stayed: the installer that reopened the app still runs
+ * for a few seconds and holds its own file (EPERM), so the caller tries again
+ * a little later.
  */
 export function pruneUpdateCache(options: {
   cacheDir: string
   runningVersion: string
   log: Log
-}): void {
+}): boolean {
   const { cacheDir, runningVersion, log } = options
   try {
-    removed(cacheDir, INSTALLER_COPY, log)
+    const copyGone = removed(cacheDir, INSTALLER_COPY, log)
     const pendingDir = join(cacheDir, PENDING_DIR)
     const fileName = downloadedFileName(pendingDir)
-    if (fileName === null || !installedOrOlder(fileName, runningVersion)) return
+    if (fileName === null || !installedOrOlder(fileName, runningVersion)) return copyGone
     // the record goes only with the file it names, so a failed removal is retried
-    if (removed(pendingDir, fileName, log)) removed(pendingDir, UPDATE_INFO_FILE, log)
+    return (
+      removed(pendingDir, fileName, log) && removed(pendingDir, UPDATE_INFO_FILE, log) && copyGone
+    )
   } catch (err) {
     log('the update cache was not cleared:', err instanceof Error ? err.message : String(err))
+    return false
   }
 }
