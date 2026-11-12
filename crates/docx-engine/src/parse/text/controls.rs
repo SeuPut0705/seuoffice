@@ -27,6 +27,7 @@ pub fn inline_content_controls_of(xml: &str) -> Result<Vec<InlineContentControl>
             lock: meta.lock,
             id: meta.id,
             text: plain_text(content),
+            model_text: None,
         });
     }
     Ok(out)

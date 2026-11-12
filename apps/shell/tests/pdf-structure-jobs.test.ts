@@ -133,7 +133,7 @@ describe('markdown output', () => {
     expect(ref).not.toBeNull()
     const name = ref![1]!
     expect(existsSync(join(dir, 'assets', name))).toBe(true)
-    const manifest = JSON.parse(readFileSync(join(dir, 'assets', '.seuoffice-assets.json'), 'utf8'))
+    const manifest = JSON.parse(readFileSync(join(dir, 'assets', '.genoffice-assets.json'), 'utf8'))
     expect(manifest.documents['book.md']).toEqual([name])
     expect(manifest.files.map((f: { name: string }) => f.name)).toEqual([name])
 
@@ -174,7 +174,7 @@ describe('markdown output', () => {
     expect(errorMessageOf(err).error).toBe('asset-conflict')
     expect(readFileSync(join(target, 'assets', name), 'utf8')).toBe("the user's own file")
     expect(existsSync(join(target, 'book.md'))).toBe(false)
-    expect(existsSync(join(target, 'assets', '.seuoffice-assets.json'))).toBe(false)
+    expect(existsSync(join(target, 'assets', '.genoffice-assets.json'))).toBe(false)
   })
 
   it('uses an identical file the user put there without taking it over', async () => {
@@ -194,7 +194,7 @@ describe('markdown output', () => {
     expect(value).toMatchObject({ assetsWritten: 0, assetsReused: 1 })
     expect(readFileSync(join(target, 'book.md'), 'utf8')).toContain(`assets/${name}`)
     // not listed: the editor must never delete the user's file
-    expect(existsSync(join(target, 'assets', '.seuoffice-assets.json'))).toBe(false)
+    expect(existsSync(join(target, 'assets', '.genoffice-assets.json'))).toBe(false)
   })
 
   it('refuses an unreadable asset list rather than replacing it', async () => {

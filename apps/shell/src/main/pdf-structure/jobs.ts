@@ -47,6 +47,7 @@ import {
   extractDocumentTree,
   extractEmbeddedImages,
   mergeAssetManifest,
+  ASSET_MANIFEST_FILENAME_WRITTEN,
   OLD_ASSET_MANIFEST_FILENAMES,
   PageRangeError,
   parseAssetManifest,
@@ -269,11 +270,13 @@ export async function writeMarkdownOutput(
   conversion: MarkdownConversion,
 ): Promise<{ assetsWritten: number; assetsReused: number }> {
   const assetsDir = join(dirname(outPath), ASSETS_DIR)
-  const manifestName = existingOrCurrent(
+  let manifestName = existingOrCurrent(
     ASSET_MANIFEST_FILENAME,
     OLD_ASSET_MANIFEST_FILENAMES,
     (old) => existsSync(join(assetsDir, old)),
   )
+  // neither exists: a new folder gets the name 0.12.37 can read
+  if (!existsSync(join(assetsDir, manifestName))) manifestName = ASSET_MANIFEST_FILENAME_WRITTEN
   const manifestPath = join(assetsDir, manifestName)
   const existingBuf = await readOptional(manifestPath)
   const existing = existingBuf === null ? null : existingBuf.toString('utf8')

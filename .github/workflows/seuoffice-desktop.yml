@@ -224,7 +224,7 @@ jobs:
       # a release build should carry the Drive client; say so when it does not
       - name: The Google Drive client is in the build
         env:
-          HAS_CLIENT: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
+          HAS_CLIENT: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID != '' || secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
         run: |
           if [ "$HAS_CLIENT" != "true" ]; then
             echo "::warning::SEUOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"
@@ -482,7 +482,7 @@ jobs:
 
       - name: The Google Drive client is in the build
         env:
-          HAS_CLIENT: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID || secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
+          HAS_CLIENT: ${{ secrets.SEUOFFICE_GOOGLE_CLIENT_ID != '' || secrets.GENOFFICE_GOOGLE_CLIENT_ID != '' }}
         run: |
           if [ "$HAS_CLIENT" != "true" ]; then
             echo "::warning::SEUOFFICE_GOOGLE_CLIENT_ID is not set; this build ships without Google Drive"

@@ -337,15 +337,20 @@ export function clipSheetXml(xml: string, budgetChars: number, truncated = false
   return `${head.slice(0, last.index + last[0].length)}</${ns}sheetData></${ns}worksheet>`
 }
 
-/** extract sheet text from an xlsx: one "# SheetName" section per sheet, cells joined with " | " */
-export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}): Promise<string> {
-  const maxChars = opts.maxChars ?? Infinity
-  let used = 0
-  // The declared-size pass below is advisory; this metered gate is the one that
-  // holds when a part lies about its size (GH #759).
-  await assertZipInflatesWithinLimits(bytes)
-  const zip = await JSZip.loadAsync(bytes)
-  assertZipWithinLimits(zip)
+interface WorkbookIndex {
+  workbook: Record<string, any>
+  sheets: Array<Record<string, unknown>>
+  /** relationship id -> part path, from the workbook's own relationships */
+  relTargets: Map<string, string>
+  stylesPath: string
+  sharedStringsPath: string
+  date1904: boolean
+  /** xl/_rels/workbook.xml.rels as written, undefined when the part is missing */
+  relsXml: string | undefined
+}
+
+/** Sheet order, names and parts, as workbook.xml and its relationships give them. */
+async function readWorkbookIndex(zip: JSZip): Promise<WorkbookIndex> {
   const workbookXml = await zipText(zip, 'xl/workbook.xml')
   if (!workbookXml) throw new Error('Invalid xlsx: missing xl/workbook.xml')
 
@@ -373,22 +378,27 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
     }
   }
 
-  const dateStyles = await loadDateStyles(zip, stylesPath)
-  const shared: string[] = []
-  const sharedXml = await zipText(zip, sharedStringsPath)
-  if (sharedXml) {
-    const sst = parser.parse(sharedXml) as Record<string, any>
-    for (const si of asArray(sst.sst?.si) as Array<Record<string, unknown>>) {
-      shared.push(sharedStringText(si))
-    }
-  }
+  return { workbook, sheets, relTargets, stylesPath, sharedStringsPath, date1904, relsXml }
+}
+
+/**
+ * The cells a workbook withholds from a model, and the cells that compute from
+ * them. Read before any cell is: a record of withheld cells that cannot be
+ * read fails the whole workbook, and no sheet is handed over without its marks.
+ */
+async function readWithheldCells(
+  zip: JSZip,
+  workbook: Record<string, any>,
+  sheets: Array<Record<string, unknown>>,
+  relTargets: Map<string, string>,
+  scanLimit: number,
+) {
   // Read before any cell is: a record of withheld cells that cannot be read
   // fails the whole workbook, and no sheet is handed over without its marks.
   const sheetNames = sheets.map((sheet) => String(sheet['@_name'] ?? ''))
   const redactions = await readXlsxRedactions(zip, sheetNames)
   // Nor without the formulas that compute from those cells, which may sit on
   // any sheet and reach the cell through any other.
-  const scanLimit = opts.formulaScanMaxBytes ?? FORMULA_SCAN_MAX_BYTES
   const derived =
     redactions.size === 0
       ? undefined
@@ -410,6 +420,66 @@ export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}):
               : [],
           ),
         )
+
+  return { sheetNames, redactions, derived }
+}
+
+/**
+ * A reader for the cells of a workbook that its sheet editor withholds from a
+ * model: `marker(sheet, ref, hasFormula)` is the placeholder to give instead
+ * of the cell's value and formula, or null when the cell reads as itself. A
+ * workbook that withholds nothing gives null; one whose record cannot be read
+ * throws RedactionMarkError.
+ */
+export async function xlsxWithheldCells(
+  bytes: Uint8Array,
+): Promise<((sheet: string, ref: string, hasFormula: boolean) => string | null) | null> {
+  await assertZipInflatesWithinLimits(bytes)
+  const zip = await JSZip.loadAsync(bytes)
+  assertZipWithinLimits(zip)
+  const { workbook, sheets, relTargets } = await readWorkbookIndex(zip)
+  const { redactions, derived, sheetNames } = await readWithheldCells(
+    zip,
+    workbook,
+    sheets,
+    relTargets,
+    FORMULA_SCAN_MAX_BYTES,
+  )
+  if (redactions.size === 0) return null
+  return (sheet, ref, hasFormula) => {
+    const index = sheetNames.indexOf(sheet)
+    return withheldCellMarker(redactions.get(sheet), ref, derived?.[index], hasFormula)
+  }
+}
+
+/** extract sheet text from an xlsx: one "# SheetName" section per sheet, cells joined with " | " */
+export async function xlsxToText(bytes: Uint8Array, opts: XlsxTextOptions = {}): Promise<string> {
+  const maxChars = opts.maxChars ?? Infinity
+  let used = 0
+  // The declared-size pass below is advisory; this metered gate is the one that
+  // holds when a part lies about its size (GH #759).
+  await assertZipInflatesWithinLimits(bytes)
+  const zip = await JSZip.loadAsync(bytes)
+  assertZipWithinLimits(zip)
+  const { workbook, sheets, relTargets, stylesPath, sharedStringsPath, date1904, relsXml } =
+    await readWorkbookIndex(zip)
+
+  const dateStyles = await loadDateStyles(zip, stylesPath)
+  const shared: string[] = []
+  const sharedXml = await zipText(zip, sharedStringsPath)
+  if (sharedXml) {
+    const sst = parser.parse(sharedXml) as Record<string, any>
+    for (const si of asArray(sst.sst?.si) as Array<Record<string, unknown>>) {
+      shared.push(sharedStringText(si))
+    }
+  }
+  const { sheetNames, redactions, derived } = await readWithheldCells(
+    zip,
+    workbook,
+    sheets,
+    relTargets,
+    opts.formulaScanMaxBytes ?? FORMULA_SCAN_MAX_BYTES,
+  )
 
   const sections: string[] = []
   let sheetsWithData = 0

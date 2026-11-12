@@ -92,12 +92,16 @@ function withoutModuleMains(extraResources) {
  * electron-builder writes the installer's .blockmap only for its 7z package
  * (differentialPackage), so writeInstallerBlockmap writes it: the updater
  * downloads only the blocks that changed (updater.ts), and the release
- * workflow checks and uploads the file.
+ * workflow checks and uploads the file. The block map's update info (size,
+ * sha512, blockMapSize) goes on the event as the 7z path puts it there, so
+ * the feed lists the installer's size: without it the updater refuses the
+ * differential download ('size mismatch ... newSize: undefined') and fetches
+ * the whole installer.
  */
 async function writeInstallerBlockmap(event) {
   if (event.target?.name !== 'nsis' || !event.file.endsWith('.exe')) return
   const { buildBlockMap } = require('app-builder-lib/out/targets/blockmap/blockmap')
-  await buildBlockMap(event.file, 'gzip', `${event.file}.blockmap`)
+  event.updateInfo = await buildBlockMap(event.file, 'gzip', `${event.file}.blockmap`)
 }
 
 /** @type {import('electron-builder').Configuration} */

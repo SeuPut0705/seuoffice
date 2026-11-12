@@ -136,3 +136,16 @@ export function textHasComplexScript(text: string): boolean {
     text,
   )
 }
+
+/**
+ * The XML with every comment, CDATA section and processing instruction blanked
+ * to spaces, same length: a writer finds tags in it and slices the original at
+ * the same offsets, so markup written inside one (`<!-- </w:p> -->`, a hidden
+ * run's `<![CDATA[</w:comment>]]>`) is never taken for a tag.
+ */
+export function maskOpaque(xml: string): string {
+  if (!xml.includes('<!') && !xml.includes('<?')) return xml
+  return xml.replace(/<!--[\s\S]*?-->|<!\[CDATA\[[\s\S]*?\]\]>|<\?[\s\S]*?\?>/g, (m) =>
+    ' '.repeat(m.length),
+  )
+}

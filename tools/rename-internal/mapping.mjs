@@ -269,6 +269,11 @@ export const EXTRA_FONT_FAMILIES = [
 /** Lines kept whole in the named files: code that names another program or the original work on purpose */
 export const KEEP_LINES = [
   {
+    files: ['AGENTS.md', 'CLAUDE.md'],
+    line: /옛 이름\(`~\/\.ieumoffice`, `GENOFFICE_\*`/,
+    why: 'the root rule lists the old names that are still read for compatibility; the sentence is about the old names',
+  },
+  {
     files: ['packages/cli/src/agent-mcp.ts'],
     line: /UPSTREAM_LAUNCHER_NAMES\s*=/,
     why: "the original product's launcher names, recognised so its entries are never taken for ours",

@@ -80,7 +80,7 @@ export const ORDERS_PATH = join(HERE, 'model-orders.json')
  */
 export const MODEL_SOURCE = {
   ref: 'origin/main',
-  commit: 'c673f0f71416ac850805840cda5c2e243d32d6ca',
+  commit: '0aeee843a4684e0359d296f70435f1396ae09967',
 }
 
 /** A file of the repository as the pinned commit holds it: the frozen
@@ -98,7 +98,9 @@ function sourceAt(path: string): string {
       maxBuffer: 64 << 20,
     })
   } catch (error) {
-    throw new SchemaError(`cannot read ${at} (${MODEL_SOURCE.ref}); fetch it, a shallow clone lacks it: ${String(error)}`)
+    throw new SchemaError(
+      `cannot read ${at} (${MODEL_SOURCE.ref}); fetch it, a shallow clone lacks it: ${String(error)}`,
+    )
   }
 }
 
@@ -199,14 +201,20 @@ class Extractor {
       (statement): statement is ts.FunctionDeclaration =>
         ts.isFunctionDeclaration(statement) && statement.name?.text === functionName,
     )
-    if (!declaration) throw new SchemaError(`${relative(REPO_ROOT, module.path)} declares no ${functionName}`)
+    if (!declaration)
+      throw new SchemaError(`${relative(REPO_ROOT, module.path)} declares no ${functionName}`)
     const returned = declaration.type ?? fail(declaration.name!, 'no declared return type')
     const promise = referenceOf(returned)
-    if (promise?.name !== 'Promise' || promise.args.length !== 1 || module.declarations.has('Promise')) {
+    if (
+      promise?.name !== 'Promise' ||
+      promise.args.length !== 1 ||
+      module.declarations.has('Promise')
+    ) {
       fail(returned, 'a return type that is no Promise<T>')
     }
     const node = this.node(module, promise.args[0]!, name, 'other')
-    if (node.kind !== 'ref' || node.name !== name) fail(returned, `the result is no object type of its own`)
+    if (node.kind !== 'ref' || node.name !== name)
+      fail(returned, `the result is no object type of its own`)
   }
 
   /** The schema name of a declared type, building its definition when first met. */
@@ -225,9 +233,15 @@ class Extractor {
       for (const base of bases) merge(fields, this.shapeFields(module, base, name), base)
       merge(fields, this.members(module, declaration, name), declaration)
       const only = bases.length === 1 ? referenceOf(bases[0]!) : undefined
-      const resolved = only && only.args.length === 0 && this.resolve(module, only.name, declaration)
+      const resolved =
+        only && only.args.length === 0 && this.resolve(module, only.name, declaration)
       const base = resolved ? resolved.declaration.name.text : undefined
-      this.types.set(name, { kind: 'object', name, fields, ...(base === undefined ? {} : { base }) })
+      this.types.set(name, {
+        kind: 'object',
+        name,
+        fields,
+        ...(base === undefined ? {} : { base }),
+      })
       return name
     }
     const node = this.node(module, declaration.type, name, 'other')
@@ -248,11 +262,14 @@ class Extractor {
    */
   private pendingMember(module: Module, node: ts.TypeNode, key: string): Field | undefined {
     const reference = referenceOf(node)
-    const resolved = reference && reference.args.length === 0 && this.resolve(module, reference.name, node)
+    const resolved =
+      reference && reference.args.length === 0 && this.resolve(module, reference.name, node)
     if (!resolved || !ts.isInterfaceDeclaration(resolved.declaration)) return undefined
     const name = resolved.declaration.name.text
     if (this.types.get(name) !== null) return undefined
-    const member = resolved.declaration.members.find((candidate) => candidate.name?.getText() === key)
+    const member = resolved.declaration.members.find(
+      (candidate) => candidate.name?.getText() === key,
+    )
     return member && this.field(resolved.module, member, name)
   }
 
@@ -339,7 +356,11 @@ class Extractor {
   ): Field[] {
     if (ts.isParenthesizedTypeNode(node)) return this.shapeFields(module, node.type, path)
     if (ts.isTypeLiteralNode(node)) {
-      return merge([], node.members.map((member) => this.field(module, member, path)), node)
+      return merge(
+        [],
+        node.members.map((member) => this.field(module, member, path)),
+        node,
+      )
     }
     if (ts.isIntersectionTypeNode(node)) {
       const fields: Field[] = []
@@ -408,7 +429,11 @@ class Extractor {
       return {
         kind: 'tuple',
         elements: node.elements.map((element, at) => {
-          if (ts.isNamedTupleMember(element) || ts.isOptionalTypeNode(element) || ts.isRestTypeNode(element)) {
+          if (
+            ts.isNamedTupleMember(element) ||
+            ts.isOptionalTypeNode(element) ||
+            ts.isRestTypeNode(element)
+          ) {
             fail(element, 'a named, optional or rest tuple element')
           }
           return this.node(module, element, `${path}[${at}]`, 'other')
@@ -420,7 +445,9 @@ class Extractor {
       const key = stringLiteral(node.indexType) ?? fail(node, 'an index that is no string literal')
       const field =
         this.pendingMember(module, node.objectType, key) ??
-        this.shapeFields(module, node.objectType, path).find((candidate) => candidate.name === key) ??
+        this.shapeFields(module, node.objectType, path).find(
+          (candidate) => candidate.name === key,
+        ) ??
         fail(node, `no field ${key}`)
       if (field.optional && where !== 'optionalField') {
         fail(node, 'an optional field read where undefined is not allowed')
@@ -588,7 +615,13 @@ export function walkWire(schema: ModelSchema, type: string, value: unknown, onOb
 
 const fieldTables = new WeakMap<TypeDef, Map<string, Field>>()
 
-function check(schema: ModelSchema, node: SchemaNode, value: unknown, path: string, onObject: Visit): void {
+function check(
+  schema: ModelSchema,
+  node: SchemaNode,
+  value: unknown,
+  path: string,
+  onObject: Visit,
+): void {
   const expect = (what: string): never => {
     throw new WireError(path, `expected ${what}, got ${describe(value)}`)
   }
@@ -609,13 +642,17 @@ function check(schema: ModelSchema, node: SchemaNode, value: unknown, path: stri
       return
     case 'array':
       if (!Array.isArray(value)) return expect('an array')
-      value.forEach((element, at) => check(schema, node.element, element, pointer(path, at), onObject))
+      value.forEach((element, at) =>
+        check(schema, node.element, element, pointer(path, at), onObject),
+      )
       return
     case 'tuple':
       if (!Array.isArray(value) || value.length !== node.elements.length) {
         return expect(`an array of ${node.elements.length}`)
       }
-      node.elements.forEach((element, at) => check(schema, element, value[at], pointer(path, at), onObject))
+      node.elements.forEach((element, at) =>
+        check(schema, element, value[at], pointer(path, at), onObject),
+      )
       return
     case 'nullable':
       if (value !== null) check(schema, node.inner, value, path, onObject)
@@ -693,7 +730,10 @@ function checkDefinition(
   }
   if (definition.kind === 'enum') {
     if (typeof value !== 'string' || !definition.values.includes(value)) {
-      throw new WireError(path, `expected one of ${definition.values.join(', ')} (${definition.name}), got ${JSON.stringify(value)}`)
+      throw new WireError(
+        path,
+        `expected one of ${definition.values.join(', ')} (${definition.name}), got ${JSON.stringify(value)}`,
+      )
     }
     return
   }
@@ -707,7 +747,8 @@ function checkDefinition(
   }
   const keys = Object.keys(value).filter((key) => value[key] !== undefined)
   for (const key of keys) {
-    if (!fields.has(key)) throw new WireError(pointer(path, key), `${definition.name} has no key ${key}`)
+    if (!fields.has(key))
+      throw new WireError(pointer(path, key), `${definition.name} has no key ${key}`)
   }
   for (const field of definition.fields) {
     if (!field.optional && value[field.name] === undefined) {

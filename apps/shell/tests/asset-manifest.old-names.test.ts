@@ -67,19 +67,3 @@ describe('an assets folder whose list has the old name', () => {
     expect(existsSync(join(dir, 'assets', NEW_MANIFEST))).toBe(false)
   })
 })
-
-describe('a fresh assets folder', () => {
-  it('gets the list under the new name only', async () => {
-    const converted = picture('converted')
-    await writeMarkdownOutput(join(dir, 'book.md'), {
-      markdown: `![](${converted.path})\n`,
-      assets: [converted],
-      manifestEntries: [{ name: converted.name, sha256: converted.sha256 }],
-      warnings: [],
-    })
-
-    expect(existsSync(join(dir, 'assets', NEW_MANIFEST))).toBe(true)
-    expect(existsSync(join(dir, 'assets', OLD_MANIFEST))).toBe(false)
-    expect(isHiddenEntry(dir, 'assets', true)).toBe(true)
-  })
-})
