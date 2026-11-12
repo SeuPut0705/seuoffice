@@ -62,3 +62,6 @@ export type {
   EpubSaveRefusalReason,
   EpubSaveResult,
 } from './save'
+// what @seuoffice/file-parse hands the Rust EPUB reader as a host step
+export { parseHtml } from './xml'
+export type { XmlElement } from './xml'
