@@ -9,6 +9,13 @@ import { launchShell, closeAndSaveVideo } from './helpers'
  * documents, eight `docs/index.html?mode=tab` pages still listed).
  */
 
+interface TabsApiOnWindow {
+  aiOfficeTabs: {
+    list(): Promise<{ id: string; kind: string }[]>
+    detach(id: string): Promise<void>
+  }
+}
+
 /** the Word editor pages the main process still holds */
 const docsPages = (app: ElectronApplication) =>
   app.evaluate(({ webContents }) =>
@@ -48,6 +55,49 @@ test.describe('closed Word tabs', () => {
       await expect.poll(async () => (await docsPages(app)).length).toBe(1)
     } finally {
       await closeAndSaveVideo(launched, 'docs-closed-tab-views')
+    }
+  })
+
+  test('a document moved to a window of its own and closed there leaves no Word page either', async () => {
+    const launched = await launchShell({
+      onboardingSeen: true,
+      videoDir: 'docs-closed-window-views',
+    })
+    const { app, page } = launched
+    try {
+      const windowIds = () =>
+        app.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((w) => w.id))
+      const home = page.locator('.tab-bar .tab-item.tab-home')
+      const editorTabs = page.locator('.tab-bar .tab-item:not(.tab-home)')
+      await page.locator('.quick-card').first().click()
+      await expect(editorTabs).toHaveCount(1)
+      await expect.poll(async () => (await docsPages(app)).length).toBe(1)
+
+      const before = await windowIds()
+      await page.evaluate(async () => {
+        const tabs = (window as unknown as TabsApiOnWindow).aiOfficeTabs
+        const tab = (await tabs.list()).find((t) => t.kind === 'docs')
+        if (tab) await tabs.detach(tab.id)
+      })
+      await expect(editorTabs).toHaveCount(0)
+      await expect.poll(async () => (await windowIds()).length).toBe(before.length + 1)
+      // the same page moved: it is still the one Word page, with its renderer alive
+      expect((await docsPages(app)).map((p) => !p.crashed && p.pid > 0)).toEqual([true])
+
+      await app.evaluate(({ BrowserWindow }, kept) => {
+        for (const w of BrowserWindow.getAllWindows()) if (!kept.includes(w.id)) w.close()
+      }, before)
+      await expect.poll(windowIds).toEqual(before)
+      // the main process answers (it is not wedged) and holds no Word page
+      await expect.poll(() => docsPages(app), { timeout: 20_000 }).toEqual([])
+
+      // and a Word tab still opens afterwards
+      await home.click()
+      await page.locator('.quick-card').first().click()
+      await expect(editorTabs).toHaveCount(1)
+      await expect.poll(async () => (await docsPages(app)).length).toBe(1)
+    } finally {
+      await closeAndSaveVideo(launched, 'docs-closed-window-views')
     }
   })
 })
