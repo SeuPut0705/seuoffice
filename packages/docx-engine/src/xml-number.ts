@@ -80,3 +80,13 @@ export function usablePictureSize(
     ? { widthPx: w, heightPx: h }
     : { widthPx: DEFAULT_PICTURE_PX, heightPx: DEFAULT_PICTURE_PX }
 }
+
+/**
+ * A number from the document as a wp:posOffset may take it, in units of
+ * `emuPerUnit` EMU: undefined when it is no finite number or, in EMU, lies
+ * outside the xsd:int a position is (narrower than the widest coordinate).
+ */
+export function usablePositionOffset(value: unknown, emuPerUnit = 1): number | undefined {
+  if (typeof value !== 'number') return undefined
+  return xmlPositionOffset(value * emuPerUnit) === null ? undefined : value
+}

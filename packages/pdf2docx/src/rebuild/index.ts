@@ -15,7 +15,7 @@ import {
   parseDocx,
   saveDocx,
   usableNumber,
-  xmlPositionOffset,
+  usablePositionOffset,
 } from '../../../docx-engine/src/index'
 import type {
   CustomNumberingLevel,
@@ -1527,8 +1527,8 @@ function cardOf(block: PageBlock, page: IrPage): CardRegion | undefined {
   const boxInRange = ({ x0, y0, x1, y1 }: CardRegion['box']) => [x0, y0, x1, y1].every(inRange)
   // the box's position is a wp:posOffset, an xsd:int: narrower than a coordinate
   const placed = () =>
-    xmlPositionOffset(card.box.x0 * EMU_PER_PT) !== null &&
-    xmlPositionOffset((page.heightPt - card.box.y1) * EMU_PER_PT) !== null
+    usablePositionOffset(card.box.x0, EMU_PER_PT) !== undefined &&
+    usablePositionOffset(page.heightPt - card.box.y1, EMU_PER_PT) !== undefined
   const usable =
     boxInRange(card.box) &&
     inRange(page.heightPt) &&

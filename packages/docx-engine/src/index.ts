@@ -249,7 +249,7 @@ export {
   DEFAULT_PICTURE_PX,
   usableNumber,
   usablePictureSize,
-  xmlPositionOffset,
+  usablePositionOffset,
 } from './xml-number'
 export { removeElements } from './xml-tag'
 export { bibliographyLine, citationText, parseSourcesXml } from './sources'

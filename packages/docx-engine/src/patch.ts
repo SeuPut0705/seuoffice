@@ -131,7 +131,13 @@ import { applyPropertyChanges, type PropertyChanges } from './doc-properties'
 import { patchHfPicturesXml } from './run-picture'
 import { ownValue } from './own-value'
 import { findStartTag, removeElements } from './xml-tag'
-import { EMU_PER_PX, usableNumber, usablePictureSize, xmlPositiveCoordinate } from './xml-number'
+import {
+  EMU_PER_PX,
+  usableNumber,
+  usablePictureSize,
+  usablePositionOffset,
+  xmlPositiveCoordinate,
+} from './xml-number'
 
 /**
  * Relationship attributes are read quote-agnostically and with any spacing
@@ -1157,8 +1163,8 @@ export async function saveDocx(
       {
         ...ink,
         ...usablePictureSize(ink.widthPx, ink.heightPx),
-        offsetXPx: usableNumber(ink.offsetXPx, EMU_PER_PX) ?? 0,
-        offsetYPx: usableNumber(ink.offsetYPx, EMU_PER_PX) ?? 0,
+        offsetXPx: usablePositionOffset(ink.offsetXPx, EMU_PER_PX) ?? 0,
+        offsetYPx: usablePositionOffset(ink.offsetYPx, EMU_PER_PX) ?? 0,
       },
       rId,
       9000 + inkSeq,
