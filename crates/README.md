@@ -202,6 +202,20 @@ differ, with the answer of each side and the reason. The gate checks each
 entry still reproduces as listed, so the ledger cannot go stale. A divergence
 is listed, never coded around in the harness.
 
+An entry pins one input. Where main decided that the Rust is right and the
+TypeScript is to be fixed (a missing paragraph style, single-quoted revision
+attributes), or where the answer is the host's (legacy charsets on Node),
+corpus documents and mutations fall in the same class. A spec names the
+class of an input with `CallSpec.listed` (the predicates are in
+`tools/docx-diff/listed.ts`, each over the input alone). Such an input is
+still called on both sides: equal, it is a check like any other; different,
+it is counted on the line `(f) listed class <id>` and not as a difference.
+What else differs in an input that differs under its class is not seen:
+that is the price, so a class stays narrow and goes with its entry when the
+TypeScript is fixed. The gate fails on a class without an entry and on a
+class none of whose inputs differs any more. The gate runs in UTC
+(`host.ts`); an entry with `zone` runs its TypeScript side in that zone.
+
 ## Known debt
 
 - `Package` holds every entry inflated; JSZip inflates on read. Fine for the
@@ -381,22 +395,41 @@ From the owner, for every unit:
 - English Conventional Commits, one change each, each building and passing
   its tests. Comments in English, no CJK ideographs (escape them in
   literals).
-- The whole gate, clippy and the tests of the whole workspace run on a
-  GitHub runner, not on this machine, which is shared and slow:
+- The whole gate, clippy, the tests of the whole workspace and the wasm
+  release build run on a GitHub runner, not on this machine, which is shared
+  and slow (a suite waited ten times its run time in the queue here):
   `gh workflow run "seuoffice rust" --ref <branch>`, then
-  `gh run watch <id> --exit-status` in the background. The run uploads
-  `tools/docx-diff/out`. Fault batches go to runners too, several at once:
-  a branch `rust-faults/<name>` per batch, pushed, started, and deleted
-  afterwards by whoever made it.
-- Locally only `cargo check -p <crate>`, `cargo test -p <crate>` and one
-  group of (f) (`npm --prefix tools/docx-diff run calls -- --group <name>`),
-  each through `tools/docx-diff/heavy.sh <command>`: one heavy command at a
-  time on the machine, and none between 03:30 and 05:00 KST. Never remove
-  `/tmp/heavy.lock` by hand and never kill by name. `tsc`, eslint, prettier
-  and a single `tsx` script need no lock. Every subagent goes by the same.
+  `gh run watch <id> --exit-status` in the background. The job runs every
+  check even after one failed and uploads `tools/docx-diff/out`, with the
+  whole gate output in `gate.txt` (`gh run download <id> -n docx-diff-out`).
+- Faults go to a runner too: a file of faults for `tools/docx-diff/faults.py`
+  on a branch `rust-faults/<name>`, pushed, started with
+  `gh workflow run "seuoffice rust" --ref rust-faults/<name> -f faults=<file>`
+  and deleted afterwards by whoever made it. The result is the artifact
+  `docx-diff-faults`. One ref runs one job at a time: a second start on the
+  same branch cancels the first.
+- Locally only `cargo check -p <crate>` and `cargo test -p <crate>` for the
+  crate being ported, through `tools/docx-diff/heavy.sh <command>`, which
+  hands the command to the machine's queue (`/tmp/heavy.sh`): one heavy
+  command at a time, none between 03:30 and 05:00 KST, and a refusal (exit
+  75) when three already wait. No clippy, no gate, no `calls --group` and no
+  wasm build here. Never remove `/tmp/heavy.lock` by hand and never kill by
+  name. `tsc`, eslint, prettier and a single `tsx` script need no lock, on
+  Node 22. At most two subagents at a time on this machine, each by the
+  same rules; more hands are asked of main, who opens streams elsewhere.
 - The first comparison run of a newly ported module is saved untouched
-  before anything is fixed: it is the measure of the port. A comparison a
-  subagent made privately does not count; the gate does.
+  before anything is fixed: it is the measure of the port. It is a runner's
+  run: the artifact, with its summary committed in the unit's report. A
+  comparison a subagent made privately does not count; the gate does.
+- An input of (f) holds no lone surrogate: JSON cannot carry one to Rust and
+  the runner names the input that does. Say so in a brief that asks for
+  inputs over UTF-16.
+- Every case-insensitive or Unicode-sensitive primitive of `jscompat` (a
+  pattern with `i`, a case mapping, a trim, a word boundary) gets inputs
+  outside ASCII in each gate that uses it: U+0131, U+017F and U+212A fold to
+  `i`, `s` and `k` under Unicode case folding and not under a JavaScript
+  `/i` without `/u`. The corpus is ASCII in the places these patterns read,
+  so only built inputs see it.
 - A function counts as compared when it gave at least two distinct results
   and a seeded fault in it is caught. The one who integrates seeds a fault
   of their own per group, chosen without looking at the porter's list. A
@@ -405,8 +438,11 @@ From the owner, for every unit:
   rounded down where they follow a seeded generator.
 - A difference is listed in `divergences.json` with both answers and the
   reason, and the gate checks it still reproduces. It is never coded around,
-  in the Rust or in the harness. A TypeScript defect is reported to main,
-  not reproduced and not silently avoided. The DOCTYPE refusal is final.
+  in the Rust or in the harness. A TypeScript defect is reported to main at
+  once with its input and ported as it is until main decides: where the
+  TypeScript result is wrong by the format's rules or loses content a user
+  can reach, main has the Rust right from the start, and the difference is
+  an entry with its class. The DOCTYPE refusal is final.
 - A JavaScript operation gets one implementation, in `jscompat`.
 - `ooxml-xml` keeps yielding positions: the edit model of stage 4 starts
   from byte ranges (decision 0025 on main), for which `spike-one-run-save`
