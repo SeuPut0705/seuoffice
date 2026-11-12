@@ -73,10 +73,9 @@ export function redactExtXml(label: string): string {
 
 /** True when the fragment already carries our mark. */
 export function hasRedactExtIn(xml: string): boolean {
-  // a /g regex keeps its lastIndex between .test() calls, so the answer would
-  // alternate true/false on consecutive runs — this runs once per run per save
-  OUR_EXT_RE.lastIndex = 0
-  return OUR_EXT_RE.test(xml)
+  // not the /g pattern: that one keeps its lastIndex after a hit, so the next search with it,
+  // in another string, would start from the middle
+  return OUR_EXT_ONCE_RE.test(xml)
 }
 
 /**
@@ -112,24 +111,36 @@ export function readRedactLabel(node: unknown): string | undefined {
   return typeof label === 'string' && label !== '' ? label : undefined
 }
 
-/** Our `<a:ext>` as raw bytes, whether self-closing or paired. */
-const OUR_EXT_RE = new RegExp(
-  `<a:ext\\b[^>]*\\buri="${REDACT_EXT_URI}"[^>]*(?:/>|>[\\s\\S]*?</a:ext>)`,
-  'g',
-)
-
-/** An `<a:extLst>` left holding nothing, either form. */
-const EMPTY_EXTLST_RE = /<a:extLst\b[^>]*?\/>|<a:extLst\b[^>]*>([\s\S]*?)<\/a:extLst>/g
+/**
+ * Our `<a:ext>` as raw bytes, whether self-closing or paired. After the uri the open tag is read
+ * up to its own end without taking the `/` of `/>`: taken, a self-closing tag would fall through
+ * to the paired form and run on to the `</a:ext>` of whatever extension follows it.
+ */
+const OUR_EXT =
+  `<a:ext\\b[^>]*\\buri="${REDACT_EXT_URI}"` + '(?:[^>/]|/(?!>))*(?:/>|>[\\s\\S]*?</a:ext>)'
+const OUR_EXT_RE = new RegExp(OUR_EXT, 'g')
+const OUR_EXT_ONCE_RE = new RegExp(OUR_EXT)
 
 /** Remove our extension from a raw `<a:rPr>` / `<p:spPr>` string, leaving everything else. */
 export function stripRedactExt(xml: string): string {
-  const withoutOurs = xml.replace(OUR_EXT_RE, '')
-  // an apply/unapply cycle would otherwise leave an empty <a:extLst> behind,
-  // and they would accumulate in a deck someone toggles marks in
-  const pruned = withoutOurs.replace(EMPTY_EXTLST_RE, (_all, inner: string | undefined) =>
-    inner?.trim() ? `<a:extLst>${inner}</a:extLst>` : '',
-  )
-  return collapseEmptyProps(pruned)
+  let out = xml
+  // last first, so the offsets of the earlier ones stay valid
+  for (const ours of [...xml.matchAll(OUR_EXT_RE)].reverse()) {
+    let start = ours.index
+    let end = start + ours[0].length
+    // The list goes with it only when our extension was all it held: an apply/unapply cycle
+    // would otherwise leave an empty <a:extLst> behind, and they would accumulate in a deck
+    // someone toggles marks in. A list that still holds another extension, and every list we
+    // were never in, keeps its bytes, attributes included.
+    const open = /<a:extLst\b[^>]*>\s*$/.exec(out.slice(0, start))
+    const close = /^\s*<\/a:extLst>/.exec(out.slice(end))
+    if (open && close) {
+      start = open.index
+      end += close[0].length
+    }
+    out = out.slice(0, start) + out.slice(end)
+  }
+  return collapseEmptyProps(out)
 }
 
 /**
