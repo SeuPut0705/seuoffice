@@ -18,4 +18,6 @@ allow = [
   "Unlicense",
   "CC0-1.0",
   "BSL-1.0",
+  # libloading, under napi (main-node)
+  "ISC",
 ]
