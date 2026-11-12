@@ -128,7 +128,7 @@ jobs:
         if: steps.cand.outcome == 'success'
         run: |
           set -euo pipefail
-          rel=$(python -c "import json;print(json.load(open('$RUNNER_TEMP/cand/build-info.json'))['exe'])")
+          rel=$(python -c "import json,sys;print(json.load(open(sys.argv[1]))['exe'])" "$RUNNER_TEMP/cand/build-info.json")
           if [ "$OSK" = mac ]; then
             mkdir -p "$RUNNER_TEMP/cand-app"
             ditto -x -k "$(ls "$RUNNER_TEMP"/cand/*.zip | head -1)" "$RUNNER_TEMP/cand-app"
