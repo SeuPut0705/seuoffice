@@ -21,10 +21,12 @@ mod random;
 mod regex;
 mod replace;
 mod search;
+mod sha1;
 mod sort;
 mod space;
 mod string;
 mod uri;
+mod uri_encode;
 mod value;
 #[doc(hidden)]
 pub mod wire;
@@ -62,10 +64,12 @@ pub use replace::{
 pub use search::{
     index_of, last_index_of, prefix_utf16, regex_escape, replace_first_with, try_replace_first_with,
 };
+pub use sha1::sha1_hex;
 pub use sort::sort_by_number;
 pub use space::{is_js_space, trim, trim_start};
 pub use string::{pad_start, truthy};
 pub use uri::{UriError, base64, decode_uri_component};
+pub use uri_encode::encode_uri_component;
 pub use value::{value_to_string, value_truthy};
 
 /// For the code [`js_object!`] writes.

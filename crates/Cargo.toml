@@ -59,6 +59,8 @@ serde = { version = "1", features = ["derive"] }
 serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
 # SHA-512 of the document protection hash
 sha2 = "0.10"
+# SHA-1 of crypto.createHash('sha1') in the central process (jscompat::sha1_hex)
+sha1 = "0.10"
 zip = { version = "9", default-features = false, features = ["deflate-flate2-zlib-rs"] }
 
 # regress 0.12.0 with a bounded backtrack stack and lazy loops that do not walk
