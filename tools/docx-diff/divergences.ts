@@ -7,14 +7,17 @@ import { openOnce } from './compare-package'
 import { rustRoundTrip, typescriptRoundTrip } from './compare-xml'
 import { rustEntries, textWithoutBuffer } from './compare-zip'
 import { toolDir } from './harness'
-import { hostDependentContainers, oddContainers } from './package-zips'
+import { oddContainers } from './package-zips'
 
 /** A known difference, with what each side returns for the input. */
 type Divergence = { id: string; typescript: unknown; rust: unknown; reason: string } & (
   | { comparison: 'roundTripXml'; fragment: string }
   | { comparison: 'zipTextWithoutBuffer'; entryHex: string }
-  /** A container of package-zips.ts by name: what loading it gives. */
-  | { comparison: 'loadDocx'; container: string }
+  /**
+   * A container of package-zips.ts by name: what loading it gives. With
+   * `host: node` the TypeScript side is the loader on Node as it is.
+   */
+  | { comparison: 'loadDocx'; container: string; host?: 'node' }
   /** A function of comparison (f), by the name of its spec. */
   | { comparison: 'call'; fn: string; text: string; args?: Record<string, unknown> }
 )
@@ -28,11 +31,12 @@ async function outcomes(entry: Divergence): Promise<{ typescript: unknown; rust:
   }
   if (entry.comparison === 'call') return callOutcomes(entry.fn, entry.text, entry.args ?? {})
   if (entry.comparison === 'loadDocx') {
-    const docx =
-      oddContainers().find(([name]) => name === entry.container)?.[1] ??
-      hostDependentContainers()[entry.container]
+    const docx = oddContainers().find(([name]) => name === entry.container)?.[1]
     if (!docx) return { typescript: 'no such container', rust: 'no such container' }
-    return { typescript: openOnce('typescript', docx), rust: openOnce('rust', docx) }
+    return {
+      typescript: openOnce('typescript', docx, entry.host ?? 'product'),
+      rust: openOnce('rust', docx),
+    }
   }
   const zip = new JSZip()
   zip.file('entry', Buffer.from(entry.entryHex, 'hex'))

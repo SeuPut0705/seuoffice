@@ -571,9 +571,22 @@ export function oddContainers(): Array<[name: string, docx: Uint8Array]> {
       replaced('word/styles.xml', { payload: cut, declaredSize: 3 }),
     ),
     'empty deflate data': buildZip(replaced('word/styles.xml', { payload: new Uint8Array(0) })),
-    // over what the part declares, the declaration is what both hosts refuse it for
+    // refused as the product's hosts refuse them (host.ts); Node as it is reads past them
+    'bytes after the deflate stream': buildZip(
+      replaced('word/styles.xml', { payload: afterTheStream(STYLES) }),
+    ),
+    // over what the part declares, the declaration is what it is refused for
     'bytes after the deflate stream of a part that under-declares': buildZip(
       replaced('word/styles.xml', { payload: afterTheStream(STYLES), declaredSize: 9 }),
+    ),
+    'one byte after a deflate stream of 300 KB': buildZip(
+      replaced('word/styles.xml', {
+        data: STYLES.padEnd(300_000, ' '),
+        payload: concat([
+          deflateRawSync(encoder.encode(STYLES.padEnd(300_000, ' '))),
+          Uint8Array.from([0]),
+        ]),
+      }),
     ),
     'an unsupported compression method': buildZip(replaced('word/styles.xml', { method: 12 })),
     'an unsupported method on an entry the end record does not count': buildZip(
@@ -904,22 +917,6 @@ export function hostileContainers(): Record<string, Uint8Array> {
 
 const afterTheStream = (text: string): Uint8Array =>
   concat([deflateRawSync(encoder.encode(text)), encoder.encode('trailing')])
-
-/**
- * Containers the TypeScript loader answers for by its host, so the gate's
- * host (Node 22) is not the product's: divergences.json lists each with what
- * was measured. They stay out of the comparison of the built containers.
- *
- * Bytes after the end of a deflate stream: the Compression Streams standard
- * makes them an error and Chromium refuses them, Node 22 reads past them.
- */
-export function hostDependentContainers(): Record<string, Uint8Array> {
-  return {
-    'bytes after the deflate stream': buildZip(
-      replaced('word/styles.xml', { payload: afterTheStream(STYLES) }),
-    ),
-  }
-}
 
 const S = 'http://purl.oclc.org/ooxml/'
 const STRICT_W = `${S}wordprocessingml/main`
