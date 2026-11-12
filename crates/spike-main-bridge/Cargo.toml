@@ -1,0 +1,25 @@
+[package]
+name = "spike-main-bridge"
+description = "Experiment: one call from the Electron main process into Rust and back, by Node-API and by a sidecar process"
+version = "0.1.0"
+edition = "2024"
+license = "Apache-2.0"
+publish = false
+
+# outside the crates workspace: its own lock and target, so the gate never builds it
+[workspace]
+
+[lib]
+crate-type = ["cdylib"]
+
+[dependencies]
+napi = { version = "3", default-features = false, features = ["napi8"] }
+napi-derive = "3"
+serde_json = { version = "1", features = ["preserve_order"] }
+
+[build-dependencies]
+napi-build = "2"
+
+[profile.release]
+lto = true
+codegen-units = 1
