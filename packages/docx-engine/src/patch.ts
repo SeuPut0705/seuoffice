@@ -1,3 +1,4 @@
+import { decodeEntities } from './parse-xml-text'
 import { ContentControlPart } from './inline-control-ids'
 import JSZip from 'jszip'
 import {
@@ -1569,9 +1570,7 @@ export async function saveDocx(
     if (originalCommentsXml) {
       const origRelsFile = zip.file('word/_rels/comments.xml.rels')
       const origRels = origRelsFile ? await origRelsFile.async('string') : null
-      for (const m of originalCommentsXml.match(/<w:comment\s[^>]*>[\s\S]*?<\/w:comment>/g) ?? []) {
-        const id = /w:id="([^"]+)"/.exec(m)?.[1]
-        if (!id) continue
+      for (const { id, xml: m } of commentEntries(originalCommentsXml)) {
         const blipRel = /r:embed="([^"]+)"/.exec(m)?.[1]
         const rel =
           blipRel && origRels
@@ -2871,6 +2870,28 @@ const COMMENTS_NS =
   'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
   'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"'
 
+/**
+ * Each `<w:comment>` of a comments part with its id, read the way the parser
+ * reads the tag (any quotes, white space around =, '>' inside a value): a
+ * comment the save cannot find is written anew from its plain text, and loses
+ * its runs, a hidden-from-AI mark included.
+ */
+function commentEntries(xml: string): Array<{ id: string; xml: string }> {
+  const out: Array<{ id: string; xml: string }> = []
+  const open = /<w:comment\b((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g
+  let m: RegExpExecArray | null
+  while ((m = open.exec(xml)) !== null) {
+    const end = m[2] ? open.lastIndex : xml.indexOf('</w:comment>', open.lastIndex)
+    if (end < 0) break
+    const close = m[2] ? end : end + '</w:comment>'.length
+    const id = /(?:^|\s)w:id\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(m[1]!)
+    const value = id ? (id[1] ?? id[2]) : undefined
+    if (value) out.push({ id: decodeEntities(value), xml: xml.slice(m.index, close) })
+    open.lastIndex = close
+  }
+  return out
+}
+
 function buildCommentsXml(
   comments: CommentInfo[],
   originalXml: string | null,
@@ -2882,9 +2903,8 @@ function buildCommentsXml(
 ): string {
   const originals = new Map<string, { text: string; xml: string }>()
   if (originalXml) {
-    for (const m of originalXml.match(/<w:comment\s[^>]*>[\s\S]*?<\/w:comment>/g) ?? []) {
-      const id = /w:id="([^"]+)"/.exec(m)?.[1]
-      if (id) originals.set(id, { text: commentPlainText(m), xml: m })
+    for (const { id, xml: m } of commentEntries(originalXml)) {
+      originals.set(id, { text: commentPlainText(m), xml: m })
     }
   }
   const body = comments
