@@ -5,6 +5,8 @@
  * part rewritten from that cut tag is not well-formed.
  */
 
+import { maskOpaque } from './xml-utils'
+
 export interface StartTag {
   start: number
   /** just past the tag's own closing `>` */
@@ -69,4 +71,58 @@ export function removeElements(xml: string, name: string, limit = Infinity): str
     from = tag.start
   }
   return out
+}
+
+/** the index of the `>` that ends the start tag whose name ends at `from`, read through quoted attribute values; -1 when it never ends */
+function startTagEnd(xml: string, from: number): number {
+  for (let quote = '', i = from; i < xml.length; i++) {
+    const c = xml[i]!
+    if (quote) {
+      if (c === quote) quote = ''
+    } else if (c === '"' || c === "'") quote = c
+    else if (c === '>') return i
+  }
+  return -1
+}
+
+/**
+ * Top-level segments of `tag` between [from, to), depth-aware for nesting.
+ * Tags are read the way an XML parser reads them: markup inside a comment, a
+ * CDATA section or a processing instruction is no tag, a `>` inside a quoted
+ * attribute value does not end the tag, and an end tag may hold white space
+ * before its `>`.
+ */
+export function xmlSegments(
+  xml: string,
+  tag: string,
+  from: number,
+  to: number,
+): Array<{ start: number; end: number }> {
+  const masked = maskOpaque(xml)
+  const name = tag.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  // an open tag's name ends at white space, `/` or `>` (`w:tr` is not `w:trPr`)
+  const tags = new RegExp(`<${name}(?=[\\s/>])|</${name}\\s*>`, 'g')
+  tags.lastIndex = from
+  const segs: Array<{ start: number; end: number }> = []
+  let depth = 0
+  let segStart = -1
+  for (let m = tags.exec(masked); m !== null && m.index < to; m = tags.exec(masked)) {
+    if (m[0].startsWith('</')) {
+      if (depth === 0) break
+      depth--
+      if (depth === 0) segs.push({ start: segStart, end: m.index + m[0].length })
+      continue
+    }
+    const gt = startTagEnd(masked, m.index + m[0].length)
+    if (gt === -1) break
+    tags.lastIndex = gt + 1
+    // a trailing self-closing element (Word's empty <w:p/>) has no close tag after it
+    if (masked.charAt(gt - 1) === '/') {
+      if (depth === 0) segs.push({ start: m.index, end: gt + 1 })
+      continue
+    }
+    if (depth === 0) segStart = m.index
+    depth++
+  }
+  return segs
 }

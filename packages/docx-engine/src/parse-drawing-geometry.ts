@@ -4,6 +4,7 @@ import { attrsOf, childrenOf, findChild, nameOf, type XNode } from './xml-utils'
 import { EMU_PER_PX } from './parse-xml-text'
 import { DEFAULT_THEME_COLORS } from './theme'
 import { ownValue } from './own-value'
+import { xmlSegments } from './xml-tag'
 import type { SectionSettings, TextGlow, TextOutline, TextboxDisplay, ThemeColors } from './types'
 
 /**
@@ -256,40 +257,8 @@ export interface DrawingAnchorMeta {
  * fragment). Used to attach each drawing's own anchor placement to the shapes
  * it carries — a paragraph can anchor several drawings at distinct offsets.
  */
-/** next `<w:drawing>` open tag at or after `from`, attributes tolerated
- *  (`<w:drawing mc:MustUnderstand="wps">`, TestFiles mcdoc) */
-function drawingOpenAt(xml: string, from: number): number {
-  const re = /<w:drawing[\s>]/g
-  re.lastIndex = from
-  return re.exec(xml)?.index ?? -1
-}
-
 export function topLevelDrawings(xml: string): string[] {
-  const out: string[] = []
-  let i = 0
-  for (;;) {
-    const start = drawingOpenAt(xml, i)
-    if (start === -1) break
-    let depth = 0
-    let j = start
-    for (;;) {
-      const open = drawingOpenAt(xml, j + 1)
-      const close = xml.indexOf('</w:drawing>', j + 1)
-      if (close === -1) return out // malformed; bail with what we have
-      if (open !== -1 && open < close) {
-        depth++
-        j = open
-      } else if (depth > 0) {
-        depth--
-        j = close
-      } else {
-        out.push(xml.slice(start, close + '</w:drawing>'.length))
-        i = close + '</w:drawing>'.length
-        break
-      }
-    }
-  }
-  return out
+  return xmlSegments(xml, 'w:drawing', 0, xml.length).map((seg) => xml.slice(seg.start, seg.end))
 }
 
 export function drawingAnchorMeta(frag: string): DrawingAnchorMeta {
