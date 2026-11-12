@@ -12,8 +12,8 @@ import {
   vmlWordArtBox,
   type VmlGroupScale,
   type VmlOrigin,
-} from '../../packages/docx-engine/src/parse-vml'
-import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/parse-vml'
+import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments, tagTokens } from './fragments'
 

@@ -1,4 +1,4 @@
-import { serializeXNode, type XNode, xmlParser } from '../../packages/docx-engine/src/xml-utils'
+import { serializeXNode, type XNode, xmlParser } from './reference/xml-utils'
 import { failed } from './engine'
 import { type Comparison, engine } from './harness'
 

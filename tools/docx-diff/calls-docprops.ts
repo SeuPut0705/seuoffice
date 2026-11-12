@@ -15,14 +15,14 @@ import {
   parseCustomPropertiesXml,
   parseCustomPropertyTypesXml,
   readDocumentProperties,
-} from '../../packages/docx-engine/src/doc-properties'
+} from './reference/doc-properties'
 import {
   DEFAULT_SPIN_COUNT,
   hashProtectionPassword,
   MAX_SPIN_COUNT,
   resolveSpinCount,
   verifyProtectionPassword,
-} from '../../packages/docx-engine/src/protection'
+} from './reference/protection'
 import {
   bibliographyLine,
   citationText,
@@ -30,8 +30,8 @@ import {
   findSourcesPart,
   parseSourcesXml,
   SOURCES_NS,
-} from '../../packages/docx-engine/src/sources'
-import type { DocProtection, SourceInfo } from '../../packages/docx-engine/src/types'
+} from './reference/sources'
+import type { DocProtection, SourceInfo } from './reference/types'
 import {
   attrValue,
   CUSTOM_PROPERTIES_CONTENT_TYPE,
@@ -41,7 +41,7 @@ import {
   parseZoteroDocumentDataXml,
   propertyText,
   readZoteroDocumentData,
-} from '../../packages/docx-engine/src/zotero-doc-props'
+} from './reference/zotero-doc-props'
 import { type CallSpec, type Input, zipOf } from './calls-spec'
 
 type Record_ = Pick<DocProtection, 'hash' | 'salt' | 'spinCount' | 'algorithmSid'>

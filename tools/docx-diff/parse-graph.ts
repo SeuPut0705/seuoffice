@@ -4,7 +4,7 @@
 //
 //   npx tsx tools/docx-diff/parse-graph.ts [MODULE.ts] [--json OUT]
 //
-// The default module is packages/docx-engine/src/parse.ts. A function counts
+// The default module is tools/docx-diff/reference/parse.ts. A function counts
 // as ported when a `/// \`name\`` doc comment in crates/ names it.
 import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
@@ -25,7 +25,7 @@ interface Fn {
 const args = process.argv.slice(2)
 const jsonAt = args.indexOf('--json')
 const out = jsonAt >= 0 ? args.splice(jsonAt, 2)[1] : undefined
-const path = resolve(repoRoot, args[0] ?? 'packages/docx-engine/src/parse.ts')
+const path = resolve(repoRoot, args[0] ?? 'tools/docx-diff/reference/parse.ts')
 const source = ts.createSourceFile(path, readFileSync(path, 'utf8'), ts.ScriptTarget.Latest, true)
 const line = (pos: number): number => source.getLineAndCharacterOfPosition(pos).line + 1
 

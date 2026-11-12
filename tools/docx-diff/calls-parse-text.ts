@@ -10,12 +10,13 @@
 // numbering, a header's may have no styles; any other value (a nested parse,
 // a table of styles merged into later) is not an input. A ResolveCtx crosses
 // as `args.parts`, `args.compat` and `args.table`.
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
-import { resolveCtxOf, type ResolveCtx } from '../../packages/docx-engine/src/resolve-props'
-import { scanBody } from '../../packages/docx-engine/src/scan'
-import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from '../../packages/docx-engine/src/types'
-import { nameOf, serializeXNode, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+import { parseNumbering } from './reference/parse-package'
+import { parseStyles } from './reference/parse-styles'
+import { resolveCtxOf, type ResolveCtx } from './reference/resolve-props'
+import { scanBody } from './reference/scan'
+import type { DocDefaults, NumberingDef, StyleInfo, ThemeColors, ThemeFonts } from './reference/types'
+import { parseNotesXml, type NoteKind, type NoteParagraphReader } from './reference/notes'
+import { nameOf, serializeXNode, xmlParser, type XNode } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseInternals } from './parse-internals'
 
@@ -514,6 +515,493 @@ const NOTE_ARGS: Array<Record<string, unknown>> = [
 ]
 
 // ---------------------------------------------------------------- the specs
+
+// ---------------------------------------------------------------- whole-context readers
+
+/**
+ * A whole BuildContext of `args`: every member of `buildCtxOf` present, the
+ * resolver of `rctxOf`, no relationships, notes, media or section index. The
+ * Rust side (calls/parse/text_ctx.rs) builds the same.
+ */
+async function fullCtxOf(args: Record<string, unknown>): Promise<Record<string, unknown>> {
+  const parsed = await parsedOf(args.parts)
+  const resolver = await rctxOf(args)
+  const namespaces = args.partNamespaces as Array<[string, string]> | undefined
+  return {
+    styles: parsed.styles,
+    numbering: parsed.numbering,
+    numFormats: parsed.numFormats,
+    ...(parsed.docDefaults ? { docDefaults: parsed.docDefaults } : {}),
+    ...(parsed.defaultParaStyle ? { defaultParaStyle: parsed.defaultParaStyle } : {}),
+    themeColors: parsed.themeColors,
+    themeFonts: parsed.themeFonts,
+    rels: new Map(),
+    chartParts: {},
+    noteNumbers: new Map(),
+    sdtGroupSeq: 0,
+    resolver,
+    compat: resolver.compat,
+    ...(typeof args.compatibilityMode === 'number' ? { compatibilityMode: args.compatibilityMode } : {}),
+    xmlSpacePreserve: args.xmlSpacePreserve === true,
+    ...(namespaces ? { partNamespaces: new Map(namespaces) } : {}),
+  }
+}
+
+/** The ctx part of the arguments of a captured whole context: undefined where it is not the document's own. */
+function fullCtxArgs(parts: ReadonlyMap<string, string>, ctx: unknown): Record<string, unknown> | undefined {
+  const members = membersOf(parts, ctx, ['styles', 'numbering'])
+  if (!members || members.length < 2) return undefined
+  const context = ctx as { resolver?: ResolveCtx; compat?: ResolveCtx['compat']; compatibilityMode?: unknown; xmlSpacePreserve?: unknown; partNamespaces?: unknown }
+  const compat = context.resolver?.compat ?? context.compat
+  return {
+    compat: {
+      compatibilityMode: compat?.mode ?? (typeof context.compatibilityMode === 'number' ? context.compatibilityMode : 0),
+      doNotUseHTMLParagraphAutoSpacing: compat?.additiveParaSpacing ?? false,
+      indentNotNumberingTabStop: compat?.indentNotNumberingTabStop ?? false,
+    },
+    ...(typeof context.compatibilityMode === 'number' ? { compatibilityMode: context.compatibilityMode } : {}),
+    ...(context.xmlSpacePreserve === true ? { xmlSpacePreserve: true } : {}),
+    ...(context.partNamespaces instanceof Map ? { partNamespaces: [...context.partNamespaces] } : {}),
+  }
+}
+
+/** Parts of a paragraph the bare context cannot answer for: relationships, media, comments, shapes. */
+const NEEDS_DOCUMENT = /r:id=|r:embed|r:link|r:pict|<w:drawing|<w:pict|<w:object|mc:AlternateContent|Reference\b|<w:sdt\b|w:fldChar|<w:tbl\b/
+
+const P_XMLS: string[] = [
+  '<w:p/>',
+  '<w:p><w:r><w:t>plain</w:t></w:r></w:p>',
+  '<w:p><w:pPr><w:jc w:val="center"/><w:ind w:left="720" w:firstLine="360"/><w:spacing w:before="120" w:after="60" w:line="360" w:lineRule="auto"/></w:pPr><w:r><w:rPr><w:b/></w:rPr><w:t>bold</w:t></w:r></w:p>',
+  '<w:p><w:pPr><w:pStyle w:val="Heading1"/></w:pPr><w:r><w:t xml:space="preserve"> spaced </w:t></w:r></w:p>',
+  '<w:p><w:pPr><w:pStyle w:val="RtlPara"/><w:numPr><w:ilvl w:val="1"/><w:numId w:val="1"/></w:numPr></w:pPr><w:r><w:rPr><w:rtl/><w:szCs w:val="44"/></w:rPr><w:t>rtl</w:t></w:r></w:p>',
+  '<w:p><w:pPr><w:ind w:leftChars="200" w:firstLineChars="100"/></w:pPr><w:r><w:rPr><w:sz w:val="40"/></w:rPr><w:t>chars</w:t></w:r></w:p>',
+  '<w:p><w:r><w:t>a</w:t><w:tab/><w:t>b</w:t><w:br/><w:br w:type="page"/><w:t>c</w:t></w:r></w:p>',
+  '<w:p><w:fldSimple w:instr=" PAGE "><w:r><w:t>1</w:t></w:r></w:fldSimple></w:p>',
+  '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText xml:space="preserve"> TOC \\o "1-3" </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>result</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>',
+  '<w:p><w:hyperlink w:anchor="x"><w:r><w:t>link</w:t></w:r></w:hyperlink><w:hyperlink w:tooltip="t"><w:r><w:t>none</w:t></w:r></w:hyperlink></w:p>',
+  '<w:p><w:ins w:id="1" w:author="A" w:date="2020-01-01T00:00:00Z"><w:r><w:t>in</w:t></w:r></w:ins><w:del w:id="2" w:author="B"><w:r><w:delText>gone</w:delText></w:r></w:del></w:p>',
+  '<w:p><w:r><w:sym w:font="Wingdings" w:char="F0FC"/><w:t>x</w:t><w:sym w:font="Symbol" w:char="F061"/></w:r></w:p>',
+  '<w:p><w:r><w:rPr><w:rStyle w:val="Strong"/><w:i/><w:color w:val="FF0000"/><w:sz w:val="40"/><w:vertAlign w:val="superscript"/><w:u w:val="single"/><w:highlight w:val="yellow"/></w:rPr><w:t> x </w:t></w:r></w:p>',
+  '<w:p><w:bookmarkStart w:id="0" w:name="b"/><w:smartTag w:uri="u" w:element="e"><w:r><w:t>s</w:t></w:r></w:smartTag><w:bookmarkEnd w:id="0"/></w:p>',
+  '<w:p><w:sdt><w:sdtPr><w:alias w:val="A"/><w:tag w:val="t"/></w:sdtPr><w:sdtContent><w:r><w:t>c</w:t></w:r></w:sdtContent></w:sdt></w:p>',
+  '<w:p><m:oMath><m:r><m:t>x</m:t></m:r></m:oMath><w:r><w:t>after</w:t></w:r></w:p>',
+  '<w:p><m:oMathPara><m:oMath><m:r><m:t>y</m:t></m:r></m:oMath></m:oMathPara></w:p>',
+  '<w:p><w:r><w:ruby><w:rubyPr><w:rubyAlign w:val="center"/></w:rubyPr><w:rt><w:r><w:t>rt</w:t></w:r></w:rt><w:rubyBase><w:r><w:t>base</w:t></w:r></w:rubyBase></w:ruby></w:r></w:p>',
+  '<w:p><w:r><w:t>one</w:t></w:r><w:r><w:t>two</w:t></w:r><w:r><w:rPr><w:b/></w:rPr><w:t>three</w:t></w:r></w:p>',
+  '<w:p><w:r><w:noBreakHyphen/><w:softHyphen/><w:cr/><w:t>\u00a0nbsp</w:t></w:r></w:p>',
+  '<w:p><w:pPr><w:rPr><w:sz w:val="48"/></w:rPr></w:pPr></w:p>',
+  '<w:p><w:r><w:fldChar w:fldCharType="begin"/></w:r><w:r><w:instrText> ADDIN ZOTERO_ITEM CSL_CITATION {} </w:instrText></w:r><w:r><w:fldChar w:fldCharType="separate"/></w:r><w:r><w:t>(Smith)</w:t></w:r><w:r><w:fldChar w:fldCharType="end"/></w:r></w:p>',
+  '<w:p><w:r><w:drawing><wp:anchor distL="0" distR="0"><wp:positionH relativeFrom="column"><wp:posOffset>95250</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>9525</wp:posOffset></wp:positionV><wp:extent cx="5000000" cy="9525"/><a:graphic><a:graphicData><wps:wsp><wps:spPr><a:ln w="9525"><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill></a:ln></wps:spPr></wps:wsp></a:graphicData></a:graphic></wp:anchor></w:drawing></w:r></w:p>',
+  '<w:p><w:pPr><w:pStyle w:val="Body"/></w:pPr><w:r><w:drawing><wp:anchor><wp:positionH relativeFrom="page"><wp:posOffset>0</wp:posOffset></wp:positionH><wp:positionV relativeFrom="paragraph"><wp:posOffset>0</wp:posOffset></wp:positionV><wp:extent cx="100" cy="100"/></wp:anchor></w:drawing></w:r><w:r><w:t>text</w:t></w:r></w:p>',
+  '<w:p><w:pPr><w:tabs><w:tab w:val="left" w:pos="720"/><w:tab w:val="clear" w:pos="1440"/></w:tabs><w:shd w:val="clear" w:fill="FFFF00"/></w:pPr><w:r><w:t>tabs</w:t></w:r></w:p>',
+  '<w:p><w:r><w:t>unclosed',
+  '<w:r><w:t>not a paragraph</w:t></w:r>',
+]
+
+const BLOCK_BASE = { id: 'b0', docxIndex: 0 }
+
+/** Every paragraph over each package, with the context knobs turned in turn. */
+function paraBuilt(extra: (index: number) => Record<string, unknown> = () => ({})): Input[] {
+  const inputs: Input[] = []
+  P_XMLS.forEach((text, index) => {
+    const parts = PACKAGES[index % PACKAGES.length]!
+    inputs.push({ text, args: { parts, ...extra(index) } })
+    inputs.push({
+      text,
+      args: {
+        parts: RICH,
+        compat: { compatibilityMode: 15 },
+        xmlSpacePreserve: index % 2 === 0,
+        partNamespaces: [['w', 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'], ['m', 'http://schemas.openxmlformats.org/officeDocument/2006/math']],
+        ...extra(index + 1),
+      },
+    })
+  })
+  return inputs
+}
+
+/** A paragraph of a document the bare context stands for. */
+const plainParagraph = (xml: unknown): xml is string => typeof xml === 'string' && !NEEDS_DOCUMENT.test(xml)
+
+const PARA_OF = (text: string): { text: string; node?: string } => ({ text })
+
+const THEME_FLAGS = [false, true]
+const STYLE_BIDIS = [undefined, false, true]
+
+const P_PRS_DEFINED = P_PRS.filter((p): p is string => p !== undefined)
+
+/** A pPr node over each package, style and theme flag. */
+function pPrBuilt(extra: (index: number) => Record<string, unknown>): Input[] {
+  return P_PRS_DEFINED.flatMap((p, index) =>
+    [RICH, PLAIN, BARE].map((parts, at) => ({ text: p, args: { parts, node: 'w:pPr', ...extra(index + at) } })),
+  )
+}
+
+const P_NODE_RUNS: Array<Array<Record<string, unknown>>> = [
+  [],
+  [{ text: '' }],
+  [{ text: 'a' }],
+  [{ text: '', sizeHalfPoints: 99 }, { text: 'b', sizeHalfPoints: 30 }],
+  [{ text: 'c', styleId: 'Strong' }],
+  [{ text: 'd', styleId: 'Missing' }],
+  [{ text: 'e', sizeHalfPoints: 0 }],
+]
+
+const SIZE_PARAS = [
+  '<w:p/>',
+  '<w:p><w:pPr><w:rPr><w:sz w:val="44"/></w:rPr></w:pPr></w:p>',
+  '<w:p><w:pPr><w:rPr><w:szCs w:val="26"/><w:rtl/></w:rPr></w:pPr></w:p>',
+  '<w:p><w:pPr><w:bidi/></w:pPr><w:r><w:t>a</w:t></w:r></w:p>',
+]
+
+function sizeBuilt(): Input[] {
+  const inputs: Input[] = []
+  P_NODE_RUNS.forEach((runs, index) => {
+    SIZE_PARAS.forEach((pNode, at) => {
+      for (const styleId of [undefined, 'Body', 'Heading1', 'RtlPara', 'Missing']) {
+        const own = at % 2 === 0
+        inputs.push({
+          text: own ? '' : (/<w:pPr>.*<\/w:pPr>/.exec(pNode)?.[0] ?? ''),
+          args: {
+            parts: PACKAGES[(index + at) % PACKAGES.length]!,
+            runs,
+            pNode,
+            ...(own ? {} : { node: 'w:pPr' }),
+            ...(styleId === undefined ? {} : { styleId }),
+          },
+        })
+      }
+    })
+  })
+  return inputs
+}
+
+const NOTES_PARTS: string[] = [
+  `<w:footnotes ${W}><w:footnote w:type="separator" w:id="-1"><w:p><w:r><w:separator/></w:r></w:p></w:footnote><w:footnote w:id="1"><w:p><w:pPr><w:pStyle w:val="FootnoteText"/></w:pPr><w:r><w:rPr><w:rStyle w:val="FootnoteReference"/></w:rPr><w:footnoteRef/></w:r><w:r><w:t xml:space="preserve"> First </w:t></w:r><w:r><w:rPr><w:b/><w:i/><w:color w:val="ff0000"/><w:sz w:val="30"/><w:rFonts w:ascii="Arial"/><w:caps/></w:rPr><w:t>styled</w:t></w:r></w:p></w:footnote><w:footnote w:id="2"><w:p><w:r><w:t>one</w:t></w:r></w:p><w:p><w:pPr><w:jc w:val="right"/><w:spacing w:before="100" w:after="50" w:line="300" w:lineRule="exact"/></w:pPr><w:ins w:id="9" w:author="Z"><w:r><w:t>two</w:t></w:r></w:ins></w:p></w:footnote></w:footnotes>`,
+  `<w:endnotes ${W}><w:endnote w:id="1"><w:p><w:r><w:t>end</w:t></w:r></w:p></w:endnote><w:endnote w:id="x"><w:p><w:r><w:t>bad id</w:t></w:r></w:p></w:endnote></w:endnotes>`,
+  `<w:footnotes ${W}><w:footnote w:id="3"><w:p><w:r><w:drawing/></w:r><w:r><w:t>pic</w:t></w:r></w:p></w:footnote><w:footnote w:id="4"/><w:footnote w:id="5"><w:p/></w:footnote></w:footnotes>`,
+  `<w:footnotes ${W}/>`,
+  'not xml',
+  '',
+]
+
+/** A TypeScript spec for a function of one paragraph's XML and the context. */
+function paragraphSpec(fn: string, call: (xml: string, ctx: Record<string, unknown>) => unknown, extra?: Partial<CallSpec>): CallSpec {
+  return {
+    fn: `parse.${fn}`,
+    call: async (text, args) => call(text, await fullCtxOf(args)),
+    fromParse: {
+      fn,
+      input: ([xml, ctx], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        if (!own || !plainParagraph(xml)) return undefined
+        return withParts(fn, parts, { text: xml, args: own })
+      },
+    },
+    built: paraBuilt(),
+    ...extra,
+  }
+}
+
+const PARSE_TEXT_B2: CallSpec[] = [
+  {
+    fn: 'parse.outlineOnlyHeading',
+    call: async (text, args) => internals.outlineOnlyHeading!(nodeOf(text, args), args.styleId, await fullCtxOf(args)),
+    fromParse: {
+      fn: 'outlineOnlyHeading',
+      input: ([pPr, styleId, ctx], parts) => {
+        const p = nodeInput(pPr)
+        const own = fullCtxArgs(parts, ctx)
+        if (!p || !own || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        return withParts('outlineOnlyHeading', parts, {
+          text: p.text,
+          args: { ...own, ...(p.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+        })
+      },
+    },
+    built: [
+      ...NODE_BUILT,
+      ...['<w:pPr><w:outlineLvl w:val="2"/></w:pPr>', '<w:pPr><w:outlineLvl w:val="9"/><w:pStyle w:val="Heading1"/></w:pPr>', '<w:pPr/>'].flatMap((p) =>
+        STYLE_IDS.map((styleId) => ({ text: p, args: { parts: RICH, node: 'w:pPr', ...(styleId === undefined ? {} : { styleId }) } })),
+      ),
+    ],
+    mutation: 'none',
+  },
+  {
+    fn: 'parse.inheritedCsFont',
+    call: async (_text, args) => internals.inheritedCsFont!(args.rStyleId, args.pStyleId, await fullCtxOf(args)),
+    fromParse: {
+      fn: 'inheritedCsFont',
+      input: ([rStyleId, pStyleId, ctx], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        if (!own || (rStyleId !== undefined && typeof rStyleId !== 'string') || (pStyleId !== undefined && typeof pStyleId !== 'string')) return undefined
+        return withParts('inheritedCsFont', parts, {
+          args: { ...own, ...(rStyleId === undefined ? {} : { rStyleId }), ...(pStyleId === undefined ? {} : { pStyleId }) },
+        })
+      },
+    },
+    built: PACKAGES.flatMap((parts) =>
+      STYLE_IDS.flatMap((rStyleId, index) =>
+        [STYLE_IDS[(index * 5 + 3) % STYLE_IDS.length], undefined].map((pStyleId) => ({
+          args: { parts, ...(rStyleId === undefined ? {} : { rStyleId }), ...(pStyleId === undefined ? {} : { pStyleId }) },
+        })),
+      ),
+    ),
+    mutation: 'none',
+  },
+  {
+    fn: 'parse.paraCsSize',
+    call: async (_text, args) => internals.paraCsSize!(await fullCtxOf(args), args.styleId),
+    fromParse: {
+      fn: 'paraCsSize',
+      input: ([ctx, styleId], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        if (!own || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        return withParts('paraCsSize', parts, { args: { ...own, ...(styleId === undefined ? {} : { styleId }) } })
+      },
+    },
+    built: PACKAGES.flatMap((parts) => STYLE_IDS.map((styleId) => ({ args: { parts, ...(styleId === undefined ? {} : { styleId }) } }))),
+    mutation: 'none',
+  },
+  {
+    fn: 'parse.paraTextSizeHalfPoints',
+    call: async (text, args) =>
+      internals.paraTextSizeHalfPoints!(await fullCtxOf(args), args.runs, named(args.pNode as string, 'w:p'), nodeOf(text, args), args.styleId),
+    fromParse: {
+      fn: 'paraTextSizeHalfPoints',
+      input: ([ctx, runs, pNode, pPr, styleId], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        const p = nodeInput(pPr)
+        if (!own || !Array.isArray(runs) || !isNode(pNode) || (pPr !== undefined && !p) || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        return withParts('paraTextSizeHalfPoints', parts, {
+          text: p?.text ?? '',
+          args: { ...own, runs: json(runs), pNode: serializeXNode(pNode), ...(p?.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+        })
+      },
+    },
+    built: sizeBuilt(),
+    mutation: 'none',
+    argMutation: true,
+  },
+  {
+    fn: 'parse.charUnitsOf',
+    call: async (text, args) =>
+      internals.charUnitsOf!(await fullCtxOf(args), args.runs, named(args.pNode as string, 'w:p'), nodeOf(text, args), args.styleId, undefined),
+    fromParse: {
+      fn: 'charUnitsOf',
+      input: ([ctx, runs, pNode, pPr, styleId, docOffset], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        const p = nodeInput(pPr)
+        if (docOffset !== undefined || !own || !Array.isArray(runs) || !isNode(pNode) || (pPr !== undefined && !p) || (styleId !== undefined && typeof styleId !== 'string')) return undefined
+        return withParts('charUnitsOf', parts, {
+          text: p?.text ?? '',
+          args: { ...own, runs: json(runs), pNode: serializeXNode(pNode), ...(p?.node ? { node: p.node } : {}), ...(styleId === undefined ? {} : { styleId }) },
+        })
+      },
+    },
+    built: sizeBuilt(),
+    mutation: 'none',
+    argMutation: true,
+  },
+  {
+    fn: 'parse.extractParaFormat',
+    call: async (text, args) => {
+      const parsed = await parsedOf(args.parts)
+      return internals.extractParaFormat!(nodeOf(text, args), args.theme ? parsed.themeColors : undefined, args.styleBidi)
+    },
+    fromParse: {
+      fn: 'extractParaFormat',
+      input: ([pPr, theme, styleBidi], parts) => {
+        const p = nodeInput(pPr)
+        if (!p || !p.node || (styleBidi !== undefined && typeof styleBidi !== 'boolean')) return undefined
+        if (theme !== undefined && theme !== null && typeof theme !== 'object') return undefined
+        return withParts('extractParaFormat', parts, {
+          text: p.text,
+          args: { node: p.node, theme: theme !== undefined && theme !== null, ...(styleBidi === undefined ? {} : { styleBidi }) },
+        })
+      },
+    },
+    built: pPrBuilt((index) => ({ theme: index % 2 === 0, ...(STYLE_BIDIS[index % 3] === undefined ? {} : { styleBidi: STYLE_BIDIS[index % 3] }) })),
+    mutation: 'none',
+  },
+  {
+    fn: 'parse.pPrOnlyFormat',
+    call: async (text, args) => {
+      const parsed = await parsedOf(args.parts)
+      return internals.pPrOnlyFormat!(nodeOf(text, args), args.theme ? parsed.themeColors : undefined)
+    },
+    fromParse: {
+      fn: 'pPrOnlyFormat',
+      input: ([pPr, theme], parts) => {
+        const p = nodeInput(pPr)
+        if (!p || !p.node || (theme !== undefined && theme !== null && typeof theme !== 'object')) return undefined
+        return withParts('pPrOnlyFormat', parts, { text: p.text, args: { node: p.node, theme: theme !== undefined && theme !== null } })
+      },
+    },
+    built: pPrBuilt((index) => ({ theme: index % 2 === 0 })),
+    mutation: 'none',
+  },
+  {
+    fn: 'parse.resolvedParaFormat',
+    call: async (text, args) => {
+      const parsed = await parsedOf(args.parts)
+      return internals.resolvedParaFormat!(args.eff, nodeOf(text, args), args.theme ? parsed.themeColors : undefined)
+    },
+    fromParse: {
+      fn: 'resolvedParaFormat',
+      input: ([eff, pPr, theme], parts) => {
+        const p = nodeInput(pPr)
+        if (!eff || typeof eff !== 'object' || (pPr !== undefined && !p) || (theme !== undefined && theme !== null && typeof theme !== 'object')) return undefined
+        return withParts('resolvedParaFormat', parts, {
+          text: p?.text ?? '',
+          args: { eff: json(eff), ...(p?.node ? { node: p.node } : {}), theme: theme !== undefined && theme !== null },
+        })
+      },
+    },
+    built: EFFS.flatMap((eff, index) =>
+      [undefined, ...P_PRS_DEFINED.filter((_, at) => at % 3 === index % 3)].map((p, at) => ({
+        text: p ?? '',
+        args: { parts: PACKAGES[(index + at) % PACKAGES.length]!, eff, ...(p === undefined ? {} : { node: 'w:pPr' }), theme: at % 2 === 0 },
+      })),
+    ),
+    mutation: 'none',
+    argMutation: true,
+  },
+  paragraphSpec('anchorLineOf', (xml, ctx) => internals.anchorLineOf!(xml, ctx), { mutation: 'none' }),
+  paragraphSpec('strayAnchorLine', (xml, ctx) => internals.strayAnchorLine!(xml, ctx), { mutation: 'none' }),
+  paragraphSpec('anchoredRuleOverlays', (xml, ctx) => internals.anchoredRuleOverlays!(xml, ctx), { mutation: 'none' }),
+  {
+    fn: 'parse.cellResolverOf',
+    call: async (_text, args) => {
+      const scoped = internals.cellResolverOf!(await fullCtxOf(args), args.tableStyleId, args.cond) as ResolveCtx
+      return { table: scoped.table, compat: scoped.compat }
+    },
+    fromParse: {
+      fn: 'cellResolverOf',
+      input: ([ctx, tableStyleId, cond], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        if (!own || !Array.isArray(cond) || (tableStyleId !== undefined && typeof tableStyleId !== 'string')) return undefined
+        return withParts('cellResolverOf', parts, { args: { ...own, cond: json(cond), ...(tableStyleId === undefined ? {} : { tableStyleId }) } })
+      },
+    },
+    built: PACKAGES.flatMap((parts) =>
+      [undefined, '', 'TableGrid', 'constructor'].flatMap((tableStyleId) =>
+        [[], [{ type: 'firstRow' }], [{ type: 'band1Horz' }, { type: 'lastCol' }]].map((cond) => ({
+          args: { parts, compat: { compatibilityMode: 15 }, cond, ...(tableStyleId === undefined ? {} : { tableStyleId }) },
+        })),
+      ),
+    ),
+    mutation: 'none',
+    argMutation: true,
+  },
+  {
+    fn: 'parse.attachInlineContentControls',
+    call: (text, args) => {
+      const block = json(args.block as Record<string, unknown>)
+      internals.attachInlineContentControls!(block, text)
+      return block
+    },
+    fromParse: {
+      fn: 'attachInlineContentControls',
+      input: ([block, xml]) => {
+        if (!block || typeof block !== 'object' || typeof xml !== 'string') return undefined
+        return { text: xml, args: { block: json(block) } }
+      },
+    },
+    built: [
+      ...P_XMLS,
+      '<w:p><w:sdt><w:sdtPr><w:alias w:val="A"/><w:tag w:val="t"/></w:sdtPr><w:sdtContent><w:r><w:t>c</w:t></w:r></w:sdtContent></w:sdt></w:p>',
+      '<w:pPr/><w:sdt><w:sdtContent/></w:sdt>',
+      '<w:pxx><w:sdt><w:sdtContent/></w:sdt></w:pxx>',
+    ].flatMap((text) => [
+      { text, args: { block: { id: 'b0', docxIndex: 0, type: 'paragraph', runs: [] } } },
+      {
+        text,
+        args: { block: { id: 'b0', docxIndex: 0, type: 'paragraph', runs: [], inlineContentControls: [{ alias: 'kept' }] } },
+      },
+    ]),
+    mutation: 'none',
+    argMutation: true,
+  },
+  {
+    fn: 'parse.extractRuns',
+    call: async (text, args) => {
+      const ctx = await fullCtxOf(args)
+      const pNode = (xmlParser.parse(text) as XNode[]).find((node) => nameOf(node) === 'w:p')
+      return internals.extractRuns!(pNode, ctx, args.math, args.ruby, args.withImages, args.zotero)
+    },
+    fromParse: {
+      fn: 'extractRuns',
+      input: ([pNode, ctx, math, ruby, withImages, zotero, para, raw], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        if (!own || !isNode(pNode) || para !== undefined || raw !== undefined) return undefined
+        const xml = serializeXNode(pNode)
+        if (!plainParagraph(xml) || !Array.isArray(math ?? []) || !Array.isArray(ruby ?? [])) return undefined
+        return withParts('extractRuns', parts, {
+          text: xml,
+          args: {
+            ...own,
+            ...(math ? { math: json(math) } : {}),
+            ...(ruby ? { ruby: json(ruby) } : {}),
+            ...(withImages ? { withImages: true } : {}),
+            ...(zotero ? { zotero: json(zotero) } : {}),
+          },
+        })
+      },
+    },
+    built: [
+      ...paraBuilt(),
+      ...P_XMLS.flatMap((text) => [
+        {
+          text,
+          args: {
+            parts: RICH,
+            math: ['<m:oMath><m:r><m:t>x</m:t></m:r></m:oMath>', '<m:oMathPara/>'],
+            ruby: ['<w:ruby/>'],
+            withImages: true,
+            zotero: { id: 7, instruction: 'ADDIN ZOTERO_ITEM {}', part: 'single' },
+          },
+        },
+        { text, args: { parts: PLAIN, withImages: true, zotero: { id: 2, instruction: ' ADDIN ZOTERO_BIBL ', part: 'begin' } } },
+      ]),
+    ],
+    mutation: 'none',
+  },
+  {
+    fn: 'parse.buildTextParagraph',
+    call: async (text, args) =>
+      internals.buildTextParagraph!(
+        { id: args.id, docxIndex: args.docxIndex, originalXml: text },
+        text,
+        await fullCtxOf(args),
+        args.withImages,
+        undefined,
+        args.zotero,
+      ),
+    fromParse: {
+      fn: 'buildTextParagraph',
+      input: ([base, xml, ctx, withImages, docOffset, zotero], parts) => {
+        const own = fullCtxArgs(parts, ctx)
+        const b = base as { id?: unknown; docxIndex?: unknown; originalXml?: unknown } | undefined
+        if (!own || docOffset !== undefined || !plainParagraph(xml) || !b || typeof b.id !== 'string' || typeof b.docxIndex !== 'number' || b.originalXml !== xml) return undefined
+        return withParts('buildTextParagraph', parts, {
+          text: xml,
+          args: { ...own, id: b.id, docxIndex: b.docxIndex, ...(withImages ? { withImages: true } : {}), ...(zotero ? { zotero: json(zotero) } : {}) },
+        })
+      },
+    },
+    built: paraBuilt(() => ({ id: 'b3', docxIndex: 3 })).flatMap((input) => [
+      input,
+      { ...input, args: { ...input.args, withImages: true } },
+    ]),
+    mutation: 'none',
+  },
+  {
+    fn: 'parse.standaloneNoteParagraphReader',
+    call: (text, args) => parseNotesXml(text, args.kind as NoteKind, internals.standaloneNoteParagraphReader!() as NoteParagraphReader),
+    built: NOTES_PARTS.flatMap((text) => (['footnote', 'endnote'] as const).map((kind) => ({ text, args: { kind } }))),
+  },
+]
 
 export const PARSE_TEXT: CallSpec[] = [
   {
@@ -1064,6 +1552,7 @@ export const PARSE_TEXT: CallSpec[] = [
     ),
     argMutation: true,
   },
+  ...PARSE_TEXT_B2,
 ]
 
 /** The calls of effectiveRunOf made so far on each RunResolve, by key. */

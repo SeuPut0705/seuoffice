@@ -474,6 +474,9 @@ macro_rules! js_object {
                         self,
                         mut map: A,
                     ) -> ::core::result::Result<$name, A::Error> {
+                        // the expansion uses one or both, by the field types
+                        #[allow(unused_imports)]
+                        use $crate::wire::{Owned as _, StaticStrRead as _};
                         let mut out = <$name>::default();
                         while let ::core::option::Option::Some(name) =
                             map.next_key::<::std::string::String>()?
@@ -482,7 +485,7 @@ macro_rules! js_object {
                             match key {
                                 $(::core::option::Option::Some((Key::$field, _)) => {
                                     out.$field.set_some(
-                                        map.next_value::<::core::option::Option<$ty>>()?,
+                                        (&$crate::wire::Probe::<$ty>::new()).read(&mut map)?,
                                     );
                                 })*
                                 ::core::option::Option::None => {

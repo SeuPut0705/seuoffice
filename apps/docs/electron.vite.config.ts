@@ -14,6 +14,14 @@ const localAlias = {
     __dirname,
     '../../packages/docx-engine/src/zip-splice.ts',
   ),
+  '@seuoffice/docx-engine/init': resolve(
+    __dirname,
+    '../../packages/docx-engine/src/engine-init.ts',
+  ),
+  '@seuoffice/docx-engine/engine-url': resolve(
+    __dirname,
+    '../../packages/docx-engine/src/engine-url.ts',
+  ),
   '@seuoffice/docx-engine': resolve(__dirname, '../../packages/docx-engine/src/index.ts'),
   '@seuoffice/odt-engine': resolve(__dirname, '../../packages/odt-engine/src/index.ts'),
   '@seuoffice/docx2hwp': resolve(__dirname, '../../packages/docx2hwp/src/index.ts'),

@@ -6,7 +6,8 @@
   "type": "module",
   "description": "The one loader of the Rust engines' WASM build (crates/office-wasm): instantiate once at startup, then call synchronously; shared by the engine bindings",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./node": "./src/node.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

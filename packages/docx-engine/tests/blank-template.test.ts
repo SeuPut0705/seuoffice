@@ -96,7 +96,8 @@ describe('blank document template (new-document / AI generation base)', () => {
       'ListParagraph',
     ])
       expect(ids, id).toContain(id)
-    expect(doc.styles.get('Heading2')).toMatchObject({ uiPriority: 9, semiHidden: undefined })
+    expect(doc.styles.get('Heading2')).toMatchObject({ uiPriority: 9 })
+    expect(doc.styles.get('Heading2')?.semiHidden).toBeUndefined()
     expect(doc.styles.get('Heading3')).toMatchObject({
       uiPriority: 9,
       semiHidden: true,

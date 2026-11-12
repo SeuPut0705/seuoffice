@@ -80,55 +80,5 @@
       "value": "data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%20100%2050%22%3E%3Cpath%20d%3D%22M%200%200.01%20L%200%200%20C%200%200%200%200.01%200%200.01%20L%200%200.01%22%20fill%3D%22%231f497d%22%2F%3E%3C%2Fsvg%3E"
     },
     "reason": "TypeScript defect, the class of the same id in tools/pptx-diff/divergences.json (reported 2026-11-12, fix pending on main). parseCustGeom of pptx-engine/src/custgeom.ts reads guide values from a plain object by a document name (lines 86 and 283) and assigns them by name (line 150): a name every object inherits (constructor, toString, valueOf, __proto__...) answers with a function or the prototype, NaN in the path, a guide named __proto__ is lost, and an arc whose radius is NaN draws nothing. The Rust (pptx_engine::custgeom::parse_cust_geom) reads own guides only: an unknown name is 0 like any undefined guide, and a __proto__ guide is stored. Class predicate: custgeomInheritedGuide of listed.ts."
-  },
-  {
-    "id": "revision-before-not-a-string",
-    "comparison": "call",
-    "fn": "revision.applyTrackedChangesXml",
-    "text": "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:ins w:id=\"1\" w:author=\"kim\" w:date=\"Mon, 01 Jan 2024 05:00:00 GMT\"><w:r><w:t>a</w:t></w:r></w:ins></w:p></w:body></w:document>",
-    "args": {
-      "mode": "accept",
-      "filter": {
-        "before": null
-      }
-    },
-    "typescript": {
-      "error": "TypeError: Cannot read properties of null (reading 'trim')"
-    },
-    "rust": {
-      "value": {
-        "xml": "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>",
-        "applied": 1,
-        "remaining": 0
-      }
-    },
-    "reason": "TypeScript defect, a known follow-up on main (2026-11-12). A before filter that is not a string throws in revisionDateMs (iso.trim is not a function); Rust reads it as the string JavaScript would make of it, which names no date, so no change is before it. The class is any call whose before is not a string."
-  },
-  {
-    "id": "revision-date-with-a-t-in-a-word-read-as-zoneless",
-    "comparison": "call",
-    "fn": "revision.applyTrackedChangesXml",
-    "text": "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:ins w:id=\"1\" w:author=\"kim\" w:date=\"Mon, 01 Jan 2024 05:00:00 GMT\"><w:r><w:t>a</w:t></w:r></w:ins></w:p></w:body></w:document>",
-    "args": {
-      "mode": "accept",
-      "filter": {
-        "before": "2024-01-01T00:00:00Z"
-      }
-    },
-    "typescript": {
-      "value": {
-        "xml": "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:r><w:t>a</w:t></w:r></w:p></w:body></w:document>",
-        "applied": 1,
-        "remaining": 0
-      }
-    },
-    "rust": {
-      "value": {
-        "xml": "<w:document xmlns:w=\"http://schemas.openxmlformats.org/wordprocessingml/2006/main\"><w:body><w:p><w:ins w:id=\"1\" w:author=\"kim\" w:date=\"Mon, 01 Jan 2024 05:00:00 GMT\"><w:r><w:t>a</w:t></w:r></w:ins></w:p></w:body></w:document>",
-        "applied": 0,
-        "remaining": 1
-      }
-    },
-    "reason": "TypeScript defect, a known follow-up on main (2026-11-12). revisionDateMs (revision-xml.ts) reads a date that holds a T and ends in no zone designator as UTC by appending Z; an RFC 1123 date holds its T in a word (Mon, Tue, GMT), so Date.parse of the date plus Z is NaN and the change compares as before every date. Rust reads the date as Date.parse does once the zone-less ISO form is excluded. The class is any date of a call with a before filter whose T is in a word."
   }
 ]

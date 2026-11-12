@@ -1,0 +1,3295 @@
+[
+ {
+  "name": "REDACT_EL",
+  "kind": "const",
+  "async": false,
+  "file": "../../agent-core/src/redact-range.ts",
+  "sig": "\"go:redact\"",
+  "risks": []
+ },
+ {
+  "name": "REDACT_NS",
+  "kind": "const",
+  "async": false,
+  "file": "../../agent-core/src/redact-range.ts",
+  "sig": "\"https://genspark.ai/genoffice/redaction/2026\"",
+  "risks": []
+ },
+ {
+  "name": "REDACT_PREFIX",
+  "kind": "const",
+  "async": false,
+  "file": "../../agent-core/src/redact-range.ts",
+  "sig": "\"go\"",
+  "risks": []
+ },
+ {
+  "name": "deobfuscateOdttf",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(bytes: Uint8Array, fontKey: string | undefined): Uint8Array",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "isSfnt",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(bytes: Uint8Array): boolean",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "parseFontTable",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(xml: string): FontTableEntry[]",
+  "risks": []
+ },
+ {
+  "name": "readEmbeddedFonts",
+  "kind": "function",
+  "async": true,
+  "file": "font-table.ts",
+  "sig": "(zip: JSZip, fontTable: readonly FontTableEntry[]): Promise<EmbeddedFont[]>",
+  "risks": [
+   "jszip"
+  ]
+ },
+ {
+  "name": "sfntLineMetrics",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(bytes: Uint8Array): EmbeddedFontLineMetrics | null",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "decodeEntities",
+  "kind": "function",
+  "async": false,
+  "file": "parse-xml-text.ts",
+  "sig": "(text: string): string",
+  "risks": []
+ },
+ {
+  "name": "sdtCheckboxGlyphs",
+  "kind": "function",
+  "async": false,
+  "file": "checkbox-control.ts",
+  "sig": "(sdtPrXml: string): CheckboxGlyphs",
+  "risks": []
+ },
+ {
+  "name": "sdtCheckboxIsChecked",
+  "kind": "function",
+  "async": false,
+  "file": "checkbox-control.ts",
+  "sig": "(sdtPrXml: string, glyph: string): boolean",
+  "risks": []
+ },
+ {
+  "name": "inlineWrapContentLocked",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(wrap: InlineWrap): boolean",
+  "risks": []
+ },
+ {
+  "name": "runCopiedElsewhere",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(run: Run): Run",
+  "risks": []
+ },
+ {
+  "name": "sameInlineWrap",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(a: InlineWrap | undefined, b: InlineWrap | undefined): boolean",
+  "risks": []
+ },
+ {
+  "name": "sameInlineWrapChain",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(a: readonly InlineWrap[] | undefined, b: readonly InlineWrap[] | undefined): boolean",
+  "risks": []
+ },
+ {
+  "name": "buildContentControlXml",
+  "kind": "function",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "(spec: ContentControlSpec): ContentControlShell",
+  "risks": []
+ },
+ {
+  "name": "isContentControlLock",
+  "kind": "function",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "(value: unknown): value is ContentControlLock",
+  "risks": []
+ },
+ {
+  "name": "nextContentControlId",
+  "kind": "function",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "(documentXml: string): number",
+  "risks": []
+ },
+ {
+  "name": "CONTENT_CONTROL_LOCKS",
+  "kind": "const",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "readonly [\"none\", \"sdtLocked\", \"contentLocked\", \"sdtContentLocked\"]",
+  "risks": []
+ },
+ {
+  "name": "ContentControlLock",
+  "kind": "type",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ContentControlShell",
+  "kind": "type",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ContentControlSpec",
+  "kind": "type",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "parseDocx",
+  "kind": "function",
+  "async": true,
+  "file": "parse.ts",
+  "sig": "(bytes: Uint8Array, options?: ParseOptions): Promise<ParsedDoc & { extras: ParseExtras; }>",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "reconcileGridColumns",
+  "kind": "function",
+  "async": false,
+  "file": "parse.ts",
+  "sig": "(rows: TableCell[][], rowTcws: Array<Array<number | undefined>>, gridCols: number[] | undefined): number[] | undefined",
+  "risks": []
+ },
+ {
+  "name": "paraCsFormat",
+  "kind": "function",
+  "async": false,
+  "file": "parse-styles.ts",
+  "sig": "(paraStyle: StyleDisplay | undefined, docDefaults: DocDefaults | undefined): CsFormat",
+  "risks": []
+ },
+ {
+  "name": "styleRunFormat",
+  "kind": "function",
+  "async": false,
+  "file": "parse-styles.ts",
+  "sig": "(display: StyleDisplay | undefined, cs: boolean): Pick<StyleDisplay, \"bold\" | \"italic\" | \"sizeHalfPoints\">",
+  "risks": []
+ },
+ {
+  "name": "ParseExtras",
+  "kind": "type",
+  "async": false,
+  "file": "parse.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParseOptions",
+  "kind": "type",
+  "async": false,
+  "file": "parse.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "compareOperands",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(left: string, op: string, right: string, record: MergeRecord): boolean",
+  "risks": []
+ },
+ {
+  "name": "conditionHolds",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): boolean",
+  "risks": []
+ },
+ {
+  "name": "controlEffect",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): ControlEffect | null",
+  "risks": []
+ },
+ {
+  "name": "ifBranch",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): string",
+  "risks": []
+ },
+ {
+  "name": "mergeBlockTree",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(blocks: readonly Block[], data: MergeData): Block[][]",
+  "risks": []
+ },
+ {
+  "name": "mergeDataFromRows",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(rows: readonly (readonly string[])[]): MergeData",
+  "risks": []
+ },
+ {
+  "name": "mergeFieldInstruction",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(name: string): string",
+  "risks": []
+ },
+ {
+  "name": "mergeFieldName",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string): string | null",
+  "risks": []
+ },
+ {
+  "name": "mergeFieldSwitches",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string): MergeFieldSwitches",
+  "risks": []
+ },
+ {
+  "name": "mergeFieldText",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): string",
+  "risks": []
+ },
+ {
+  "name": "mergeOutputFileName",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(pattern: string, record: MergeRecord, fields: readonly string[]): string",
+  "risks": []
+ },
+ {
+  "name": "mergeRecords",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(blocks: readonly Block[], data: MergeData, startIndex?: number): { blocks: Block[]; cursor: MergeCursorState; }",
+  "risks": []
+ },
+ {
+  "name": "placeholderText",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(name: string): string",
+  "risks": []
+ },
+ {
+  "name": "splitInstruction",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string): [keyword: string, rest: string]",
+  "risks": []
+ },
+ {
+  "name": "valueOf",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(record: MergeRecord, name: string): string",
+  "risks": []
+ },
+ {
+  "name": "ControlEffect",
+  "kind": "type",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "MergeCursorState",
+  "kind": "type",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "MergeData",
+  "kind": "type",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "MergeFieldSwitches",
+  "kind": "type",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "MergeRecord",
+  "kind": "type",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "assertZipInflatesWithinLimits",
+  "kind": "function",
+  "async": true,
+  "file": "../../zip-gate/src/index.ts",
+  "sig": "(bytes: Uint8Array, limits?: ZipLimits): Promise<void>",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "assertZipWithinLimits",
+  "kind": "function",
+  "async": false,
+  "file": "zip-load.ts",
+  "sig": "(zip: JSZip): void",
+  "risks": [
+   "jszip"
+  ]
+ },
+ {
+  "name": "DOCX_ZIP_LIMITS",
+  "kind": "const",
+  "async": false,
+  "file": "../../zip-gate/src/index.ts",
+  "sig": "{ readonly maxParts: 10000; readonly maxPartBytes: number; readonly maxTotalBytes: number; }",
+  "risks": []
+ },
+ {
+  "name": "LAZY_MEDIA_SCHEME",
+  "kind": "const",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "\"genoffice-docx-media\"",
+  "risks": []
+ },
+ {
+  "name": "isLazyMediaPart",
+  "kind": "function",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "(partPath: string): boolean",
+  "risks": []
+ },
+ {
+  "name": "lazyMediaUrl",
+  "kind": "function",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "(hash: string, partPath: string): string",
+  "risks": []
+ },
+ {
+  "name": "parseLazyMediaUrl",
+  "kind": "function",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "(url: string): { hash: string; partPath: string; } | null",
+  "risks": []
+ },
+ {
+  "name": "setAltChunkHtmlConverter",
+  "kind": "function",
+  "async": false,
+  "file": "alt-chunk.ts",
+  "sig": "(fn: AltChunkHtmlConverter | null): void",
+  "risks": []
+ },
+ {
+  "name": "AltChunkHtmlConverter",
+  "kind": "type",
+  "async": false,
+  "file": "alt-chunk.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "tocLevelOf",
+  "kind": "function",
+  "async": false,
+  "file": "parse-fields.ts",
+  "sig": "(styleId: string, styles?: Map<string, StyleInfo>): number | null",
+  "risks": [
+   "map/set"
+  ]
+ },
+ {
+  "name": "EMPTY_EA_THEME_FONT",
+  "kind": "const",
+  "async": false,
+  "file": "parse-props.ts",
+  "sig": "\"DengXian\"",
+  "risks": []
+ },
+ {
+  "name": "mergeStyleBorders",
+  "kind": "function",
+  "async": false,
+  "file": "parse-props.ts",
+  "sig": "(sides: ParaBorderSides, direct: ParaBorderModel | undefined): Pick<ParaFormat, \"borders\" | \"borderLines\" | \"borderPad\">",
+  "risks": []
+ },
+ {
+  "name": "themeLangEaSlotFont",
+  "kind": "function",
+  "async": false,
+  "file": "parse-props.ts",
+  "sig": "(fonts: ThemeFonts, eaRef: string | undefined): string | undefined",
+  "risks": []
+ },
+ {
+  "name": "APP_PROPERTIES_PATH",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"docProps/app.xml\"",
+  "risks": []
+ },
+ {
+  "name": "APP_PROPERTY_KEYS",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "string[]",
+  "risks": []
+ },
+ {
+  "name": "CORE_PROPERTIES_PATH",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"docProps/core.xml\"",
+  "risks": []
+ },
+ {
+  "name": "CORE_PROPERTY_KEYS",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "string[]",
+  "risks": []
+ },
+ {
+  "name": "NEW_DOCUMENT_APPLICATION",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"GenOffice\"",
+  "risks": []
+ },
+ {
+  "name": "NEW_DOCUMENT_APP_VERSION",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"0.1.0\"",
+  "risks": []
+ },
+ {
+  "name": "NEW_DOCUMENT_TEMPLATE",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"Normal.dotm\"",
+  "risks": []
+ },
+ {
+  "name": "applyPropertyChanges",
+  "kind": "function",
+  "async": true,
+  "file": "doc-properties.ts",
+  "sig": "(zip: JSZip, changes: PropertyChanges): Promise<void>",
+  "risks": [
+   "jszip"
+  ]
+ },
+ {
+  "name": "emptyDocumentProperties",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(): DocumentProperties",
+  "risks": []
+ },
+ {
+  "name": "newDocumentAppPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(opts?: { application?: string; appVersion?: string; template?: string; omitGeneratorFields?: boolean; }): string",
+  "risks": []
+ },
+ {
+  "name": "newDocumentCorePropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(created?: Date): string",
+  "risks": [
+   "date"
+  ]
+ },
+ {
+  "name": "parseAppPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": []
+ },
+ {
+  "name": "parseCorePropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": []
+ },
+ {
+  "name": "parseCustomPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": []
+ },
+ {
+  "name": "parseCustomPropertyTypesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": []
+ },
+ {
+  "name": "parsePropertyChanges",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(input: Record<string, unknown>): PropertyChanges",
+  "risks": []
+ },
+ {
+  "name": "patchAppPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string, changes: Record<string, string | null>): string",
+  "risks": []
+ },
+ {
+  "name": "patchCorePropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string, changes: Record<string, string | null>): string",
+  "risks": []
+ },
+ {
+  "name": "patchCustomPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string, changes: Record<string, PropertyValue | null>): string",
+  "risks": []
+ },
+ {
+  "name": "readDocumentProperties",
+  "kind": "function",
+  "async": true,
+  "file": "doc-properties.ts",
+  "sig": "(zip: JSZip): Promise<DocumentProperties>",
+  "risks": [
+   "jszip"
+  ]
+ },
+ {
+  "name": "w3cdtfStamp",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(date: Date): string",
+  "risks": [
+   "date"
+  ]
+ },
+ {
+  "name": "DocumentProperties",
+  "kind": "type",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "PropertyChanges",
+  "kind": "type",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "PropertyValue",
+  "kind": "type",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "saveDocx",
+  "kind": "function",
+  "async": true,
+  "file": "patch.ts",
+  "sig": "(parsed: ParsedDocFull, finalBlocks: SaveBlock[], options?: SaveOptions): Promise<Uint8Array>",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "findChartWorkbookPath",
+  "kind": "function",
+  "async": true,
+  "file": "patch.ts",
+  "sig": "(docxBytes: Uint8Array, chartPath: string): Promise<string | null>",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "missingHeadingLevels",
+  "kind": "function",
+  "async": false,
+  "file": "patch.ts",
+  "sig": "(blocks: readonly SaveBlock[], headingStyleIds: ReadonlyMap<number, string>): number[]",
+  "risks": []
+ },
+ {
+  "name": "readDocxPartBase64",
+  "kind": "function",
+  "async": true,
+  "file": "patch.ts",
+  "sig": "(docxBytes: Uint8Array, path: string): Promise<string | null>",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "SaveBlock",
+  "kind": "type",
+  "async": false,
+  "file": "patch.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "SaveOptions",
+  "kind": "type",
+  "async": false,
+  "file": "patch.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "StyleUpsert",
+  "kind": "type",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParsedDocFull",
+  "kind": "type",
+  "async": false,
+  "file": "patch.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "REMOVE_PARTS_KINDS",
+  "kind": "const",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "readonly [\"customXml\", \"webExtensions\"]",
+  "risks": []
+ },
+ {
+  "name": "applyRemoveParts",
+  "kind": "function",
+  "async": true,
+  "file": "remove-parts.ts",
+  "sig": "(zip: JSZip, options: RemovePartsOptions): Promise<RemovePartsPlan>",
+  "risks": [
+   "jszip"
+  ]
+ },
+ {
+  "name": "planRemoveParts",
+  "kind": "function",
+  "async": true,
+  "file": "remove-parts.ts",
+  "sig": "(bytes: Uint8Array, options: RemovePartsOptions): Promise<RemovePartsPlan>",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "removePartsRefusalMessage",
+  "kind": "function",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "(bindings: RemovedPartBinding[]): string",
+  "risks": []
+ },
+ {
+  "name": "removePartsRefusalMessageFor",
+  "kind": "function",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "(refusedPaths: string[]): string",
+  "risks": []
+ },
+ {
+  "name": "RemovePartsKind",
+  "kind": "type",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RemovePartsOptions",
+  "kind": "type",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RemovePartsPlan",
+  "kind": "type",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RemovedPartBinding",
+  "kind": "type",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TABLE_HEADER_FILL",
+  "kind": "const",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "\"F2F2F2\"",
+  "risks": []
+ },
+ {
+  "name": "applyImageWrap",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, wrap: ImageWrap | null, posOffset?: { x: number; y: number; relativeTo?: \"page\" | \"margin\"; }, marginAlign?: { h: \"left\" | \"center\" | \"right\"; v: \"top\" | \"center\" | \"bottom\"; }, zOrder?: number): string",
+  "risks": []
+ },
+ {
+  "name": "applyImageZOrder",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, zOrder?: number): string",
+  "risks": []
+ },
+ {
+  "name": "applyShapeWrapAt",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, location: ShapeDrawingLocation, wrap: ImageWrap | null, zOrder?: number): string",
+  "risks": []
+ },
+ {
+  "name": "applyShapeZOrderAt",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, location: ShapeDrawingLocation, zOrder: number): string",
+  "risks": []
+ },
+ {
+  "name": "ShapeDrawingLocation",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "buildAnchoredTextboxParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: AnchoredTextboxOptions): string",
+  "risks": []
+ },
+ {
+  "name": "buildShapeParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: { prst: string; widthEmu?: number; heightEmu?: number; id?: number; fillHex?: string; borderHex?: string; withTextbox?: boolean; }): string",
+  "risks": []
+ },
+ {
+  "name": "buildTextboxParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts?: { widthEmu?: number; heightEmu?: number; id?: number; fillHex?: string; borderHex?: string; }): string",
+  "risks": []
+ },
+ {
+  "name": "buildWordArtParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: { text?: string; colorHex?: string; italic?: boolean; widthEmu?: number; heightEmu?: number; id?: number; }): string",
+  "risks": []
+ },
+ {
+  "name": "AnchoredTextboxOptions",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextboxContentParagraph",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "generateCaptionXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(label: string, number: number, text: string): string",
+  "risks": []
+ },
+ {
+  "name": "generateIndexFieldXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(terms: string[], locale?: string): string[]",
+  "risks": []
+ },
+ {
+  "name": "generateParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(block: GeneratedBlock, ctx: GenerateContext): string",
+  "risks": []
+ },
+ {
+  "name": "mergeRPrModel",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawRPr: string, run: Run, insideLink: boolean): string",
+  "risks": []
+ },
+ {
+  "name": "generateTableModelXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(model: TableModel, originalTableXml?: string, part?: ContentControlPart): string",
+  "risks": []
+ },
+ {
+  "name": "generateTableXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rows: number, cols: number, opts?: TableGenOptions): string",
+  "risks": []
+ },
+ {
+  "name": "generateTocFieldXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(entries: TocEntry[]): string[]",
+  "risks": []
+ },
+ {
+  "name": "mergePPrFormat",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, format: ParaFormat | undefined, original?: ParaFormat, onlyTags?: ReadonlySet<string>): string",
+  "risks": []
+ },
+ {
+  "name": "setPPrChange",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, changeJson: string): string",
+  "risks": []
+ },
+ {
+  "name": "stripPPrChange",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string): string",
+  "risks": []
+ },
+ {
+  "name": "paraMarkRevisionXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(kind: \"del\" | \"ins\", record: string | null | undefined, mintId?: () => string): string",
+  "risks": [
+   "callback?"
+  ]
+ },
+ {
+  "name": "setParaMarkRevision",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, markerXml: string): string",
+  "risks": []
+ },
+ {
+  "name": "stripParaMarkRevision",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, kind: \"del\" | \"ins\"): string",
+  "risks": []
+ },
+ {
+  "name": "resolveParaMarkRPrChange",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, mode: \"accept\" | \"reject\"): string",
+  "risks": []
+ },
+ {
+  "name": "paraMarkColor",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string): string | undefined",
+  "risks": []
+ },
+ {
+  "name": "stripParaMarkColor",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string): string",
+  "risks": []
+ },
+ {
+  "name": "patchFieldParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, patch: FieldTextPatch): string",
+  "risks": []
+ },
+ {
+  "name": "patchImageParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, patch: ImagePatch): string",
+  "risks": []
+ },
+ {
+  "name": "patchMathTokens",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, tokens: readonly string[]): string",
+  "risks": []
+ },
+ {
+  "name": "patchTableCellTexts",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(tableXml: string, texts: ReadonlyArray<ReadonlyArray<CellTextsPatch | null | undefined> | null | undefined>, part?: ContentControlPart): string",
+  "risks": []
+ },
+ {
+  "name": "patchTextboxHeights",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, heightsPx: ReadonlyArray<number | null | undefined>): string",
+  "risks": []
+ },
+ {
+  "name": "patchTextboxParas",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, patches: TextboxParasPatchSet): string",
+  "risks": []
+ },
+ {
+  "name": "patchTextboxSizes",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, sizes: ReadonlyArray<TextboxSizePatch | null | undefined>): string",
+  "risks": []
+ },
+ {
+  "name": "patchShapeStyles",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, styles: ReadonlyArray<ShapeStylePatch | null | undefined>): string",
+  "risks": []
+ },
+ {
+  "name": "ShapeStylePatch",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "patchDrawingExtent",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, wPx: number, hPx: number): string",
+  "risks": []
+ },
+ {
+  "name": "buildLineParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: { kind: string; widthEmu?: number; heightEmu?: number; id?: number; colorHex?: string; }): string",
+  "risks": []
+ },
+ {
+  "name": "LINE_KINDS",
+  "kind": "const",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "Record<string, { prst: string; head?: boolean; tail?: boolean; }>",
+  "risks": []
+ },
+ {
+  "name": "TextboxSizePatch",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CellParaPatch",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CellTextsPatch",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "FieldTextPatch",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "GenerateContext",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ImagePatch",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextboxParaPatch",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextboxParasPatchSet",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "inlinePictureDrawingXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(o: InlinePictureXmlOptions): string",
+  "risks": []
+ },
+ {
+  "name": "resizeInlinePictureXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, widthPx: number, heightPx: number): string",
+  "risks": []
+ },
+ {
+  "name": "NEW_PICTURE_TOKEN_PREFIX",
+  "kind": "const",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "\"aidocs-new-pic-\"",
+  "risks": []
+ },
+ {
+  "name": "InlinePictureXmlOptions",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableGenOptions",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TocEntry",
+  "kind": "type",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "buildChartPartXml",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(chart: NewChart, externalDataRId?: string): string",
+  "risks": []
+ },
+ {
+  "name": "buildChartWorkbookXlsxBase64",
+  "kind": "function",
+  "async": true,
+  "file": "chart.ts",
+  "sig": "(categories: string[], series: Array<{ name: string; values: (number | null)[]; }>): Promise<string>",
+  "risks": []
+ },
+ {
+  "name": "patchChartWorkbookXlsxBase64",
+  "kind": "function",
+  "async": true,
+  "file": "chart.ts",
+  "sig": "(base64: string, categories: string[], series: Array<{ name: string; values: (number | null)[]; }>): Promise<string | null>",
+  "risks": []
+ },
+ {
+  "name": "parseChartPartXml",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(xml: string, partPath: string, theme?: ThemeColors | null): ChartDisplay | null",
+  "risks": []
+ },
+ {
+  "name": "patchChartPartXml",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(xml: string, patch: ChartPatch): string",
+  "risks": []
+ },
+ {
+  "name": "lumHex",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(hex: string, mod: number, off: number): string",
+  "risks": []
+ },
+ {
+  "name": "colLetter",
+  "kind": "const",
+  "async": false,
+  "file": "../../pptx-engine/src/chart-workbook.ts",
+  "sig": "(i: number): string",
+  "risks": []
+ },
+ {
+  "name": "CHART_WORKBOOK_REL_TYPE",
+  "kind": "const",
+  "async": false,
+  "file": "../../pptx-engine/src/chart-workbook.ts",
+  "sig": "\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/package\"",
+  "risks": []
+ },
+ {
+  "name": "ChartPatch",
+  "kind": "type",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ChartSeriesPatch",
+  "kind": "type",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "latexToOmml",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(latex: string): string",
+  "risks": []
+ },
+ {
+  "name": "mathParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(omml: string, align?: \"left\" | \"center\" | \"right\"): string",
+  "risks": []
+ },
+ {
+  "name": "mathTokensOf",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(xml: string): string[]",
+  "risks": []
+ },
+ {
+  "name": "ommlFragmentsOf",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(paragraphXml: string): string[]",
+  "risks": []
+ },
+ {
+  "name": "ommlToLatex",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(ommlXml: string): string | null",
+  "risks": []
+ },
+ {
+  "name": "ommlToMathML",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(ommlXml: string): string",
+  "risks": []
+ },
+ {
+  "name": "patchHfPicturesXml",
+  "kind": "function",
+  "async": false,
+  "file": "run-picture.ts",
+  "sig": "(partXml: string, edits: Record<number, HfPictureEdit>): string",
+  "risks": []
+ },
+ {
+  "name": "patchRunPictureXml",
+  "kind": "function",
+  "async": false,
+  "file": "run-picture.ts",
+  "sig": "(xml: string, next: RunPictureGeometry): string",
+  "risks": []
+ },
+ {
+  "name": "RunPictureGeometry",
+  "kind": "type",
+  "async": false,
+  "file": "run-picture.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "scanBody",
+  "kind": "function",
+  "async": false,
+  "file": "scan.ts",
+  "sig": "(documentXml: string): BodyScan",
+  "risks": []
+ },
+ {
+  "name": "BodyElement",
+  "kind": "type",
+  "async": false,
+  "file": "scan.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "BodyScan",
+  "kind": "type",
+  "async": false,
+  "file": "scan.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "BLANK_BULLET_NUM_ID",
+  "kind": "const",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "\"1\"",
+  "risks": []
+ },
+ {
+  "name": "BLANK_ORDERED_NUM_ID",
+  "kind": "const",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "\"2\"",
+  "risks": []
+ },
+ {
+  "name": "buildBlankDocx",
+  "kind": "function",
+  "async": true,
+  "file": "blank.ts",
+  "sig": "(options?: BlankDocxOptions): Promise<Uint8Array>",
+  "risks": [
+   "bytes"
+  ]
+ },
+ {
+  "name": "customLevelFromNumberingLevel",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(level: NumberingLevel): CustomNumberingLevel",
+  "risks": []
+ },
+ {
+  "name": "customLevelXml",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(l: CustomNumberingLevel, ilvl: number): string",
+  "risks": []
+ },
+ {
+  "name": "mergeLevelXml",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(existing: string, l: CustomNumberingLevel, ilvl: number): string",
+  "risks": []
+ },
+ {
+  "name": "numberingLevelFromCustom",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(l: CustomNumberingLevel, picBulletSrc?: string): NumberingLevel",
+  "risks": []
+ },
+ {
+  "name": "paperSizeForLocale",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(locale: string | null | undefined): BlankPaperSize",
+  "risks": []
+ },
+ {
+  "name": "paperSizeForRegion",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(region: string | null | undefined): BlankPaperSize",
+  "risks": []
+ },
+ {
+  "name": "BlankDocxOptions",
+  "kind": "type",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "BlankPaperSize",
+  "kind": "type",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CustomNumberingLevel",
+  "kind": "type",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "DEFAULT_SECTION",
+  "kind": "const",
+  "async": false,
+  "file": "section.ts",
+  "sig": "SectionSettings",
+  "risks": []
+ },
+ {
+  "name": "applySectionSettings",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, settings: SectionSettings): string",
+  "risks": []
+ },
+ {
+  "name": "applyPageNumType",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, fmt: string | undefined, start: number | undefined): string",
+  "risks": []
+ },
+ {
+  "name": "applySectionStartType",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, type: \"nextPage\" | \"continuous\" | \"evenPage\" | \"oddPage\" | \"nextColumn\"): string",
+  "risks": []
+ },
+ {
+  "name": "applyTitlePg",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, on: boolean): string",
+  "risks": []
+ },
+ {
+  "name": "sectionFromSectPr",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, firstBlockIndex: number, lastBlockIndex: number, gutterAtTop?: boolean): SectionInfo",
+  "risks": []
+ },
+ {
+  "name": "readPageColor",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(parsed: ParsedDoc): string | null",
+  "risks": []
+ },
+ {
+  "name": "readSections",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(parsed: ParsedDoc): SectionInfo[]",
+  "risks": []
+ },
+ {
+  "name": "readSectionSettings",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(parsed: ParsedDoc): SectionSettings",
+  "risks": []
+ },
+ {
+  "name": "sectionSettingsFromXml",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(xml: string, opts?: { gutterAtTop?: boolean; }): SectionSettings",
+  "risks": []
+ },
+ {
+  "name": "pageBordersXml",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(props: SectionSettings[\"pageBorderProps\"]): string",
+  "risks": []
+ },
+ {
+  "name": "LINE_BORDER_VALS",
+  "kind": "const",
+  "async": false,
+  "file": "section.ts",
+  "sig": "Set<string>",
+  "risks": [
+   "map/set"
+  ]
+ },
+ {
+  "name": "notePropsFromXml",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(xml: string, tag: \"w:footnotePr\" | \"w:endnotePr\"): NoteProps | undefined",
+  "risks": []
+ },
+ {
+  "name": "xmlFlagOn",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(xml: string, tag: string): boolean",
+  "risks": []
+ },
+ {
+  "name": "nextNoteId",
+  "kind": "function",
+  "async": false,
+  "file": "notes.ts",
+  "sig": "(notes: NoteInfo[]): string",
+  "risks": []
+ },
+ {
+  "name": "parseNotesXml",
+  "kind": "function",
+  "async": false,
+  "file": "notes.ts",
+  "sig": "(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[]",
+  "risks": []
+ },
+ {
+  "name": "NoteKind",
+  "kind": "type",
+  "async": false,
+  "file": "notes.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "isPictureWatermark",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(wm: Watermark): wm is PictureWatermarkSpec",
+  "risks": []
+ },
+ {
+  "name": "pictureWatermarkPreviewImage",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(spec: PictureWatermarkSpec, marginBox: { widthPt: number; heightPt: number; } | null): HfImage",
+  "risks": []
+ },
+ {
+  "name": "textWatermarkPreviewImage",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(spec: WatermarkSpec): HfImage",
+  "risks": []
+ },
+ {
+  "name": "textWatermarkBoxPt",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(spec: WatermarkSpec): { widthPt: number; heightPt: number; }",
+  "risks": []
+ },
+ {
+  "name": "readPictureWatermark",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(headerXml: string): PictureWatermarkInfo | null",
+  "risks": []
+ },
+ {
+  "name": "readWatermarkText",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(headerXml: string): string | null",
+  "risks": []
+ },
+ {
+  "name": "PictureWatermarkInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "PictureWatermarkSpec",
+  "kind": "type",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "Watermark",
+  "kind": "type",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "WatermarkSpec",
+  "kind": "type",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "builtInHeadingStyleUpsert",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(level: number, defaultParagraphStyleId: string | undefined): StyleUpsert",
+  "risks": []
+ },
+ {
+  "name": "mergeStyleXml",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(existing: string | null, up: StyleUpsert): string",
+  "risks": []
+ },
+ {
+  "name": "mergeDefaultFontsXml",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(xml: string, fonts: DefaultFonts): string",
+  "risks": []
+ },
+ {
+  "name": "DefaultFonts",
+  "kind": "type",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "pendingHeadingLevel",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(styleId: string, pending: (id: string) => StyleUpsert | undefined, existing: (id: string) => StyleHeadingInfo | undefined, seen?: Set<string>): number | undefined",
+  "risks": [
+   "map/set",
+   "callback?"
+  ]
+ },
+ {
+  "name": "StyleHeadingInfo",
+  "kind": "type",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "StyleParaProps",
+  "kind": "type",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "StyleRunProps",
+  "kind": "type",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "INK_NAME_PREFIX",
+  "kind": "const",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "\"aidocs-ink\"",
+  "risks": []
+ },
+ {
+  "name": "anchoredInkRunXml",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(ink: Pick<NewInkImage, \"widthPx\" | \"heightPx\" | \"offsetXPx\" | \"offsetYPx\" | \"payload\">, rId: string, docPrId: number): string",
+  "risks": []
+ },
+ {
+  "name": "findInkRuns",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(paragraphXml: string): InkRunMatch[]",
+  "risks": []
+ },
+ {
+  "name": "injectInkRunsIntoParagraph",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(xml: string, runsXml: string): string | null",
+  "risks": []
+ },
+ {
+  "name": "stripInkRuns",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(xml: string): string",
+  "risks": []
+ },
+ {
+  "name": "DEFAULT_PICTURE_PX",
+  "kind": "const",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "96",
+  "risks": []
+ },
+ {
+  "name": "usableNumber",
+  "kind": "function",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "(value: unknown, emuPerUnit?: number): number | undefined",
+  "risks": []
+ },
+ {
+  "name": "usablePictureSize",
+  "kind": "function",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "(widthPx: unknown, heightPx: unknown): { widthPx: number; heightPx: number; }",
+  "risks": []
+ },
+ {
+  "name": "usablePositionOffset",
+  "kind": "function",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "(value: unknown, emuPerUnit?: number): number | undefined",
+  "risks": []
+ },
+ {
+  "name": "removeElements",
+  "kind": "function",
+  "async": false,
+  "file": "xml-tag.ts",
+  "sig": "(xml: string, name: string, limit?: number): string",
+  "risks": []
+ },
+ {
+  "name": "bibliographyLine",
+  "kind": "function",
+  "async": false,
+  "file": "sources.ts",
+  "sig": "(source: SourceInfo): string",
+  "risks": []
+ },
+ {
+  "name": "citationText",
+  "kind": "function",
+  "async": false,
+  "file": "sources.ts",
+  "sig": "(source: SourceInfo): string",
+  "risks": []
+ },
+ {
+  "name": "parseSourcesXml",
+  "kind": "function",
+  "async": false,
+  "file": "sources.ts",
+  "sig": "(xml: string): SourceInfo[]",
+  "risks": []
+ },
+ {
+  "name": "parseZoteroDocumentDataXml",
+  "kind": "function",
+  "async": false,
+  "file": "zotero-doc-props.ts",
+  "sig": "(xml: string): string",
+  "risks": []
+ },
+ {
+  "name": "patchZoteroDocumentDataXml",
+  "kind": "function",
+  "async": false,
+  "file": "zotero-doc-props.ts",
+  "sig": "(xml: string | null, data: string): string",
+  "risks": []
+ },
+ {
+  "name": "readThemeColors",
+  "kind": "function",
+  "async": false,
+  "file": "theme.ts",
+  "sig": "(themeXml: string): ThemeColors | null",
+  "risks": []
+ },
+ {
+  "name": "readThemeFonts",
+  "kind": "function",
+  "async": false,
+  "file": "theme.ts",
+  "sig": "(themeXml: string): ThemeFonts | null",
+  "risks": []
+ },
+ {
+  "name": "DEFAULT_SPIN_COUNT",
+  "kind": "const",
+  "async": false,
+  "file": "protection.ts",
+  "sig": "100000",
+  "risks": []
+ },
+ {
+  "name": "MAX_SPIN_COUNT",
+  "kind": "const",
+  "async": false,
+  "file": "protection.ts",
+  "sig": "1000000",
+  "risks": []
+ },
+ {
+  "name": "hashProtectionPassword",
+  "kind": "function",
+  "async": true,
+  "file": "protection.ts",
+  "sig": "(password: string, spinCount?: number): Promise<{ hash: string; salt: string; spinCount: number; algorithmSid: number; }>",
+  "risks": []
+ },
+ {
+  "name": "resolveSpinCount",
+  "kind": "function",
+  "async": false,
+  "file": "protection.ts",
+  "sig": "(raw: unknown): number",
+  "risks": []
+ },
+ {
+  "name": "verifyProtectionPassword",
+  "kind": "function",
+  "async": true,
+  "file": "protection.ts",
+  "sig": "(password: string, protection: Pick<DocProtection, \"hash\" | \"salt\" | \"spinCount\" | \"algorithmSid\">): Promise<boolean>",
+  "risks": []
+ },
+ {
+  "name": "decodeSymbolChar",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string, code: number): string | null",
+  "risks": []
+ },
+ {
+  "name": "decodeSymbolText",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string, text: string, opts?: { textGlyphsOnly?: boolean; }): string | null",
+  "risks": []
+ },
+ {
+  "name": "isSymbolFont",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string | null | undefined): boolean",
+  "risks": []
+ },
+ {
+  "name": "symbolGlyph",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string, charHex: string): string | null",
+  "risks": []
+ },
+ {
+  "name": "symbolPuaChar",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(charHex: string): string | null",
+  "risks": []
+ },
+ {
+  "name": "toSymbolPua",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(text: string): string",
+  "risks": []
+ },
+ {
+  "name": "BulletSubstitute",
+  "kind": "type",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "substituteBullet",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(glyph: string): BulletSubstitute | null",
+  "risks": []
+ },
+ {
+  "name": "markerFallbackFace",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(glyph: string, face: string): string | null",
+  "risks": []
+ },
+ {
+  "name": "SEGOE_UI_SYMBOL_RE",
+  "kind": "const",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "RegExp",
+  "risks": []
+ },
+ {
+  "name": "computeListMarkerInfos",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(items: ListItemRef[], defs: Map<string, NumberingDef>): (ListMarkerInfo | null)[]",
+  "risks": [
+   "map/set"
+  ]
+ },
+ {
+  "name": "computeListMarkers",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(items: ListItemRef[], defs: Map<string, NumberingDef>): (string | null)[]",
+  "risks": [
+   "map/set"
+  ]
+ },
+ {
+  "name": "computeListValues",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(items: ListItemRef[], defs: Map<string, NumberingDef>): number[]",
+  "risks": [
+   "map/set"
+  ]
+ },
+ {
+  "name": "customEnumItems",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(format: string): string[] | null",
+  "risks": []
+ },
+ {
+  "name": "formatNumber",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(rawValue: number, numFmt: string, customFormat?: string): string",
+  "risks": []
+ },
+ {
+  "name": "markerTabAdvance",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(markerStart: number, markerWidth: number, textIndent: number, defaultTab?: number, customStops?: number[]): number | null",
+  "risks": []
+ },
+ {
+  "name": "ListItemRef",
+  "kind": "type",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ListMarkerInfo",
+  "kind": "type",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "previewFontSettings",
+  "kind": "function",
+  "async": true,
+  "file": "font-settings.ts",
+  "sig": "(parsed: ParsedDoc, upserts: StyleUpsert[], defaults?: DefaultFonts): Promise<{ styles: Map<string, import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/packages/docx-engine/src/types\").StyleInfo>; docDefaults?: import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/packages/docx-engine/src/types\").DocDefaults; }>",
+  "risks": [
+   "map/set"
+  ]
+ },
+ {
+  "name": "applyRevisionResolutions",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, resolutions: readonly RevisionResolution[] | undefined): string",
+  "risks": []
+ },
+ {
+  "name": "applyTrackedChangesXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, mode: RevisionXmlMode, filter?: RevisionXmlFilter): RevisionXmlResult",
+  "risks": []
+ },
+ {
+  "name": "cleanMoveRangeMarkers",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string): { xml: string; removed: number; }",
+  "risks": []
+ },
+ {
+  "name": "countTrackedChangesXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string): number",
+  "risks": []
+ },
+ {
+  "name": "readPropChangeXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, changeName: string): PropChangeRecord | undefined",
+  "risks": []
+ },
+ {
+  "name": "revisionDateBefore",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(date: string | undefined, beforeMs: number): boolean",
+  "risks": []
+ },
+ {
+  "name": "revisionDateMs",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(iso: string): number",
+  "risks": []
+ },
+ {
+  "name": "resolvePropChangeXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, changeName: string, mode: RevisionXmlMode): string",
+  "risks": []
+ },
+ {
+  "name": "PropChangeRecord",
+  "kind": "type",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RevisionResolution",
+  "kind": "type",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RevisionXmlFilter",
+  "kind": "type",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RevisionXmlMode",
+  "kind": "type",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RevisionXmlResult",
+  "kind": "type",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RevisionXmlType",
+  "kind": "type",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "resolveParagraphProps",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(pPr: XNode | undefined, ctx: ResolveCtx, opts?: ResolveParaOptions): EffectivePPr",
+  "risks": []
+ },
+ {
+  "name": "resolveCtxOf",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(doc: { styles: Map<string, StyleInfo>; docDefaults?: DocDefaults; numbering: Map<string, NumberingDef>; themeFonts?: ThemeFonts | null; themeColors?: ThemeColors | null; compatibilityMode?: number; doNotUseHTMLParagraphAutoSpacing?: boolean; indentNotNumberingTabStop?: boolean; }): ResolveCtx",
+  "risks": [
+   "map/set"
+  ]
+ },
+ {
+  "name": "resolveParagraphPropsXml",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(xml: string, ctx: ResolveCtx, opts?: ResolveParaOptions): EffectivePPr",
+  "risks": []
+ },
+ {
+  "name": "resolveRunProps",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(rPr: XNode | undefined, para: EffectivePPr, ctx: ResolveCtx, mark?: boolean): EffectiveRPr",
+  "risks": []
+ },
+ {
+  "name": "shadowCompare",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(legacy: object | undefined, resolved: object | undefined, keys?: readonly string[]): ResolveDiff[]",
+  "risks": []
+ },
+ {
+  "name": "EffectivePPr",
+  "kind": "type",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "EffectiveRPr",
+  "kind": "type",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "PropSource",
+  "kind": "type",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ResolveCompat",
+  "kind": "type",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ResolveCtx",
+  "kind": "type",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ResolveDiff",
+  "kind": "type",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableCond",
+  "kind": "type",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "compareBlocks",
+  "kind": "function",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "(original: ParsedDocFull, revised: ParsedDocFull, options?: CompareOptions): { blocks: SaveBlock[]; summary: CompareSummary; nextRevisionId: number; }",
+  "risks": []
+ },
+ {
+  "name": "compareDocuments",
+  "kind": "function",
+  "async": true,
+  "file": "compare.ts",
+  "sig": "(original: ParsedDocFull, revised: ParsedDocFull, options?: CompareOptions): Promise<CompareResult>",
+  "risks": []
+ },
+ {
+  "name": "DEFAULT_COMPARE_AUTHOR",
+  "kind": "const",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "\"GenOffice\"",
+  "risks": []
+ },
+ {
+  "name": "CompareGranularity",
+  "kind": "type",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CompareIgnore",
+  "kind": "type",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CompareOptions",
+  "kind": "type",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CompareResult",
+  "kind": "type",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CompareSummary",
+  "kind": "type",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "keepsHangulKanaSingle",
+  "kind": "function",
+  "async": false,
+  "file": "parse-block-passes.ts",
+  "sig": "(font: string | undefined): boolean",
+  "risks": []
+ },
+ {
+  "name": "charClass",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): CharClass",
+  "risks": []
+ },
+ {
+  "name": "isCjkLetterChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": []
+ },
+ {
+  "name": "isDoubleByteChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": []
+ },
+ {
+  "name": "isEastAsianChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": []
+ },
+ {
+  "name": "isEastAsianLangTag",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(tag: string | null | undefined, korean?: boolean): boolean",
+  "risks": []
+ },
+ {
+  "name": "isHangulChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": []
+ },
+ {
+  "name": "isLatinAlnumChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": []
+ },
+ {
+  "name": "textHasEastAsian",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(text: string): boolean",
+  "risks": []
+ },
+ {
+  "name": "textHasHangulChars",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(text: string): boolean",
+  "risks": []
+ },
+ {
+  "name": "CharClass",
+  "kind": "type",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RevisionInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "PropChangeInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextOutline",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextEffect",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TEXT_EFFECTS",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "readonly TextEffect[]",
+  "risks": []
+ },
+ {
+  "name": "EMPHASIS_MARKS",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "readonly NonNullable<\"dot\" | \"comma\" | \"circle\" | \"underDot\" | undefined>[]",
+  "risks": []
+ },
+ {
+  "name": "TextGlow",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "Run",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CommentImage",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CommentInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParaAlign",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "SdtShell",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "InlineContentControl",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "InlineWrap",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TabStop",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParaBorderLine",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParaBorderSides",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParaFrame",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextFlowDirection",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ImageEffects",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParaFrameBox",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CharIndents",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "AutoSpace",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParaFormat",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "LineNumbering",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "DocGrid",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NoteProps",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "SectionSettings",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "SectionInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfParagraph",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfTableRow",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfTableFloat",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfCellParaProps",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfTextBox",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfTableCell",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NumberingLevel",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NumberingDef",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HeaderFooter",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfPictureEdit",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TOTAL_PAGES_MARK",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "\"\"",
+  "risks": []
+ },
+ {
+  "name": "PAGE_MARK",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "\"\"",
+  "risks": []
+ },
+ {
+  "name": "SECTION_PAGES_MARK",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "\"\"",
+  "risks": []
+ },
+ {
+  "name": "HfImage",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "HfPartInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NoteRun",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NoteInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "FieldRun",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "FieldDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "FormulaDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ChartAxis",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ChartSeries",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ChartDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "DiagramShape",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "DiagramDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NewChart",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableParagraph",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CellBorder",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CellBorders",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableBorders",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "CellMargins",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableCell",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableAutoFitMode",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableLook",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableModel",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NewInkImage",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "InkInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ImageWrap",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "NewImage",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "BlockType",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "StrayIndent",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "RuleOverlay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "Block",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextboxListMarker",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextboxParaDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TextboxDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "FinalBlock",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "GeneratedBlock",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "StyleDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableCondFormat",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableParaSpacing",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "TableStyleDisplay",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "StyleInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "DocDefaults",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "DocProtection",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "WriteProtection",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "SourceInfo",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ThemeFonts",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "FontTableEntry",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "EmbeddedFontSlot",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "EmbeddedFontRef",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "EmbeddedFontLineMetrics",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "EmbeddedFont",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ThemeColors",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ },
+ {
+  "name": "ParsedDoc",
+  "kind": "type",
+  "async": false,
+  "file": "types.ts",
+  "sig": "",
+  "risks": []
+ }
+]

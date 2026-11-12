@@ -3,7 +3,7 @@
 // out/parse-internals.ts in which every top-level function is exported and
 // every function declaration first reports its arguments to `captureHook`.
 // The copy is the same code: only `export ` and that one statement are added,
-// and the relative imports point back at packages/docx-engine/src.
+// and the relative imports point back at tools/docx-diff/reference.
 //
 // `parseInternals()` imports the copy. `captureCalls(run)` runs `run` with a
 // sink installed, so that a parseDocx of the copy over one corpus document
@@ -34,7 +34,7 @@ export async function captureCalls<T>(capture: Captured, run: () => Promise<T>):
   }
 }
 
-const SOURCE = resolve(repoRoot, 'packages/docx-engine/src/parse.ts')
+const SOURCE = resolve(repoRoot, 'tools/docx-diff/reference/parse.ts')
 const COPY = resolve(toolDir, 'out/parse-internals.ts')
 
 function writeCopy(): void {

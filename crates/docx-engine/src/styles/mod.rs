@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use jscompat::{JsNum, Radix, Slot, js_regex, parse_int, truthy};
 use ooxml_pkg::Package;
 use ooxml_xml::{XNode, parse_ordered};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 pub use model::{
     DocDefaults, NumPr, StyleDisplay, StyleInfo, TableCondFormat, TableParaSpacing,
@@ -324,11 +324,24 @@ pub fn parse_styles(
     theme_fonts: Option<&ThemeFonts>,
 ) -> Result<ParsedStyles, String> {
     // the TypeScript reads the part inside its try: a damaged part degrades too
-    let Ok(Some(xml)) = package.text("word/styles.xml") else {
-        return Ok(ParsedStyles::degraded());
+    let xml = match package.text("word/styles.xml") {
+        Ok(Some(xml)) => xml,
+        Ok(None) => return Ok(ParsedStyles::degraded()),
+        Err(error) => {
+            crate::warnings::warn(format!(
+                "styles.xml unparseable, styles degraded to empty: {error}"
+            ));
+            return Ok(ParsedStyles::degraded());
+        }
     };
-    let Ok(parsed) = parse_ordered(xml, XML_PARSER_MAX_NESTED_TAGS) else {
-        return Ok(ParsedStyles::degraded());
+    let parsed = match parse_ordered(xml, XML_PARSER_MAX_NESTED_TAGS) {
+        Ok(parsed) => parsed,
+        Err(error) => {
+            crate::warnings::warn(format!(
+                "styles.xml unparseable, styles degraded to empty: {error}"
+            ));
+            return Ok(ParsedStyles::degraded());
+        }
     };
     let Some(root) = parsed.iter().find(|node| node.name() == Some("w:styles")) else {
         return Ok(ParsedStyles::degraded());
@@ -812,7 +825,7 @@ pub fn para_cs_format(
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct RunBorder {
     pub val: String,
     pub sz: JsNum,

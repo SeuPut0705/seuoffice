@@ -9,8 +9,8 @@ import {
   hasDuplicateStyleRefs,
   needsOoxmlNormalization,
   normalizeOoxmlXml,
-} from '../../packages/docx-engine/src/ooxml-normalize'
-import { resolveRelationshipTargetPath } from '../../packages/docx-engine/src/parse-package'
+} from './reference/ooxml-normalize'
+import { resolveRelationshipTargetPath } from './reference/parse-package'
 import { typescriptOpen } from './compare-package'
 import { repoRoot } from './harness'
 import { oddContainers, STRICT_PARTS } from './package-zips'

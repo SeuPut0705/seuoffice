@@ -172,6 +172,8 @@ struct ZipEntry<'a> {
     version_made_by: i64,
     bit_flag: i64,
     compression_method: &'a [u8],
+    /// the DOS time (low half) and date (high half) of the central directory
+    dos_date_time: i64,
     compressed_size: i64,
     uncompressed_size: i64,
     extra_fields_length: i64,
@@ -198,8 +200,7 @@ impl<'a> ZipEntry<'a> {
         reader.skip(2)?;
         entry.bit_flag = reader.read_int(2)?;
         entry.compression_method = reader.read_data(2)?;
-        // the date
-        reader.read_int(4)?;
+        entry.dos_date_time = reader.read_int(4)?;
         // the checksum, which loadAsync does not verify
         reader.read_int(4)?;
         entry.compressed_size = reader.read_int(4)?;
@@ -357,6 +358,26 @@ pub struct LoadedEntry {
     pub uncompressed_size: Option<f64>,
     /// The content, or what reading it throws.
     pub content: Result<Vec<u8>, String>,
+    /// `entry.date` as a time value: JSZip reads the DOS time and date as UTC.
+    pub date: f64,
+}
+
+/// `DataReader.readDate`: `new Date(Date.UTC(...))` of the DOS fields, each
+/// field normalized the way `Date.UTC` carries it (month 13, day 0).
+fn dos_time_value(dos: i64) -> f64 {
+    let year = ((dos >> 25) & 0x7f) + 1980;
+    let month = ((dos >> 21) & 0x0f) - 1;
+    let day = (dos >> 16) & 0x1f;
+    let (hours, minutes, seconds) = ((dos >> 11) & 0x1f, (dos >> 5) & 0x3f, (dos & 0x1f) << 1);
+    // days_from_civil of Howard Hinnant's date algorithms, for the first of the month
+    let (y, m) = (year + month.div_euclid(12), month.rem_euclid(12) + 1);
+    let y = if m <= 2 { y - 1 } else { y };
+    let era = y.div_euclid(400);
+    let year_of_era = y - era * 400;
+    let day_of_year = (153 * (if m > 2 { m - 3 } else { m + 9 }) + 2) / 5;
+    let day_of_era = year_of_era * 365 + year_of_era / 4 - year_of_era / 100 + day_of_year;
+    let days = era * 146_097 + day_of_era - 719_468 + day - 1;
+    (days * 86_400_000 + hours * 3_600_000 + minutes * 60_000 + seconds * 1000) as f64
 }
 
 /// `JSZip.loadAsync(bytes)`: the entries in central directory order.
@@ -402,6 +423,7 @@ pub fn load(data: &[u8]) -> Result<Vec<LoadedEntry>, String> {
             name,
             is_dir,
             uncompressed_size: (!stored_empty).then_some(file.uncompressed_size as f64),
+            date: dos_time_value(file.dos_date_time),
             content: if stored_empty {
                 Ok(Vec::new())
             } else {

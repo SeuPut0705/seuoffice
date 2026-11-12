@@ -8,7 +8,9 @@ use serde::Serialize;
 
 use crate::generate::escape_xml_attr;
 use crate::model::NewInkImage;
-use crate::xml_number::{non_finite, xml_id, xml_int};
+use crate::xml_number::{
+    non_finite, xml_id, xml_position_offset, xml_positive_coordinate, xml_unsigned_int,
+};
 
 /// `INK_NAME_PREFIX`
 pub const INK_NAME_PREFIX: &str = "aidocs-ink";
@@ -53,15 +55,17 @@ pub fn anchored_ink_run_xml(
             fallback
         }
     };
-    let cx =
-        xml_int(math_max(1.0, safe_px(ink.width_px, 1.0))).ok_or_else(|| non_finite("widthPx"))?;
-    let cy = xml_int(math_max(1.0, safe_px(ink.height_px, 1.0)))
+    let cx = xml_positive_coordinate(math_max(1.0, safe_px(ink.width_px, 1.0)))
+        .ok_or_else(|| non_finite("widthPx"))?;
+    let cy = xml_positive_coordinate(math_max(1.0, safe_px(ink.height_px, 1.0)))
         .ok_or_else(|| non_finite("heightPx"))?;
-    let x = xml_int(safe_px(ink.offset_x_px, 0.0)).ok_or_else(|| non_finite("offsetXPx"))?;
-    let y = xml_int(safe_px(ink.offset_y_px, 0.0)).ok_or_else(|| non_finite("offsetYPx"))?;
+    let x = xml_position_offset(safe_px(ink.offset_x_px, 0.0))
+        .ok_or_else(|| non_finite("offsetXPx"))?;
+    let y = xml_position_offset(safe_px(ink.offset_y_px, 0.0))
+        .ok_or_else(|| non_finite("offsetYPx"))?;
     let id = xml_id(doc_pr_id.0).ok_or_else(|| non_finite("docPrId"))?;
     let relative_height =
-        xml_int(251658240.0 + doc_pr_id.0).ok_or_else(|| non_finite("docPrId"))?;
+        xml_unsigned_int(251658240.0 + doc_pr_id.0).ok_or_else(|| non_finite("docPrId"))?;
     let name = format!("{INK_NAME_PREFIX} {id}");
     let descr = match ink.payload.as_deref() {
         Some(payload) if !payload.is_empty() => format!(" descr=\"{}\"", escape_xml_attr(payload)),

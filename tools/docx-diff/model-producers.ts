@@ -1,5 +1,5 @@
 // The second line of evidence for model-orders.json: the producers in the
-// TypeScript source. It reads every file of packages/docx-engine/src with the
+// TypeScript source. It reads every file of tools/docx-diff/reference with the
 // compiler's type checker and finds each object literal whose contextual type
 // is a model type, then the keys that literal can write in order: its own
 // keys and spreads (a spread of a variable a literal initialized counts that
@@ -147,7 +147,7 @@ const EXCUSED: Excused[] = [
 ]
 
 const root = resolve(import.meta.dirname, '../..')
-const src = join(root, 'packages/docx-engine/src')
+const src = join(root, 'tools/docx-diff/reference')
 const files = readdirSync(src, { recursive: true, encoding: 'utf8' })
   .filter((name) => name.endsWith('.ts') && !name.endsWith('.test.ts') && !name.endsWith('.d.ts'))
   .map((name) => join(src, name))

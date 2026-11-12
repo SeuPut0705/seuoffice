@@ -80,7 +80,7 @@ fn emu_to_px(_text: &str, args: &Value) -> Returned {
 /// The top-level element of `text` named `node` (none: `undefined`), as the
 /// TypeScript side picks it from `xmlParser.parse(text)`; `Err` where the
 /// parser refuses.
-fn with_named(
+pub(super) fn with_named(
     text: &str,
     node: Option<&str>,
     call: impl FnOnce(Option<&XNode>) -> Returned,
@@ -91,7 +91,11 @@ fn with_named(
 }
 
 /// [`with_named`] with the element `args.node`.
-fn with_node(text: &str, args: &Value, call: impl FnOnce(Option<&XNode>) -> Returned) -> Returned {
+pub(super) fn with_node(
+    text: &str,
+    args: &Value,
+    call: impl FnOnce(Option<&XNode>) -> Returned,
+) -> Returned {
     let node: Option<String> = arg(args, "node")?;
     with_named(text, node.as_deref(), call)
 }
@@ -293,9 +297,11 @@ fn effective_run_of(text: &str, args: &Value) -> Returned {
     let earlier: Option<EarlierArg> = arg(args, "earlier")?;
     with_ctx(args, |rctx| {
         let mut res = RunResolve {
-            eff: &eff,
+            eff: std::borrow::Cow::Borrowed(&eff),
             rctx,
             memo: JsMap::new(),
+            para_rtl: None,
+            diff: None,
         };
         if let Some(earlier) = &earlier {
             with_named(&earlier.text, earlier.node.as_deref(), |r_pr| {

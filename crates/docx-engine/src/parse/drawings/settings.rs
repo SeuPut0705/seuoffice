@@ -62,7 +62,7 @@ pub struct LayoutSettings {
 }
 
 /// `xmlFlagOn` over a tag literal, whose pattern always compiles.
-fn flag(xml: &str, tag: &str) -> Result<Option<bool>, Thrown> {
+pub fn flag(xml: &str, tag: &str) -> Result<Option<bool>, Thrown> {
     let on = xml_flag_on(xml, tag).map_err(|error| error.to_string())?;
     Ok(on.then_some(true))
 }
@@ -107,7 +107,7 @@ pub struct DocNoteProps {
 
 /// The model's `NoteProps` of what `notePropsFromXml` read, its keys set in
 /// the order of its literal.
-fn model_note_props(read: section::NoteProps) -> NoteProps {
+pub fn model_note_props(read: section::NoteProps) -> NoteProps {
     let mut out = NoteProps::default();
     match read.pos {
         Some("pageBottom") => out.pos.set(NotePropsPos::PageBottom),
@@ -132,8 +132,7 @@ fn model_note_props(read: section::NoteProps) -> NoteProps {
 pub fn parse_note_props(zip: &Package, document_xml: &str) -> Result<DocNoteProps, Thrown> {
     let settings_xml = part_text(zip, SETTINGS_PATH)?.unwrap_or("");
     // a tracked w:sectPrChange embeds the previous sectPr after the live one
-    let body_xml = js_regex!(r"<w:sectPrChange\b[\s\S]*?<\/w:sectPrChange>")
-        .replace_all(document_xml, |_| String::new());
+    let body_xml = crate::xml_tag::remove_elements(document_xml, "w:sectPrChange", None);
     let last_sect_pr = body_xml.rfind("<w:sectPr").map_or("", |at| &body_xml[at..]);
     let merged = |tag: NotePrTag| {
         let base = note_props_from_xml(settings_xml, tag).map(model_note_props);

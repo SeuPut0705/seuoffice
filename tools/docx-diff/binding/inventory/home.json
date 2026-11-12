@@ -1,0 +1,3880 @@
+[
+ {
+  "name": "REDACT_EL",
+  "kind": "const",
+  "async": false,
+  "file": "../../agent-core/src/redact-range.ts",
+  "sig": "\"go:redact\"",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "pptxIdent"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/body.rs",
+   "pptx-engine/src/redaction_xml.rs"
+  ]
+ },
+ {
+  "name": "REDACT_NS",
+  "kind": "const",
+  "async": false,
+  "file": "../../agent-core/src/redact-range.ts",
+  "sig": "\"https://genspark.ai/genoffice/redaction/2026\"",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "pptxIdent"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/body.rs",
+   "pptx-engine/src/redaction_xml.rs"
+  ]
+ },
+ {
+  "name": "REDACT_PREFIX",
+  "kind": "const",
+  "async": false,
+  "file": "../../agent-core/src/redact-range.ts",
+  "sig": "\"go\"",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "pptxIdent"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/body.rs",
+   "pptx-engine/src/redaction_xml.rs"
+  ]
+ },
+ {
+  "name": "deobfuscateOdttf",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(bytes: Uint8Array, fontKey: string | undefined): Uint8Array",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/font_table.rs"
+  ]
+ },
+ {
+  "name": "isSfnt",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(bytes: Uint8Array): boolean",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/font_table.rs"
+  ]
+ },
+ {
+  "name": "parseFontTable",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(xml: string): FontTableEntry[]",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/font_table.rs"
+  ]
+ },
+ {
+  "name": "readEmbeddedFonts",
+  "kind": "function",
+  "async": true,
+  "file": "font-table.ts",
+  "sig": "(zip: JSZip, fontTable: readonly FontTableEntry[]): Promise<EmbeddedFont[]>",
+  "risks": [
+   "jszip"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/font_table.rs"
+  ]
+ },
+ {
+  "name": "sfntLineMetrics",
+  "kind": "function",
+  "async": false,
+  "file": "font-table.ts",
+  "sig": "(bytes: Uint8Array): EmbeddedFontLineMetrics | null",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/font_table.rs"
+  ]
+ },
+ {
+  "name": "decodeEntities",
+  "kind": "function",
+  "async": false,
+  "file": "parse-xml-text.ts",
+  "sig": "(text: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "props"
+  ],
+  "fn": [
+   "docx-engine/src/sources.rs",
+   "docx-engine/src/xml_text.rs",
+   "ooxml-xml/src/ordered.rs"
+  ]
+ },
+ {
+  "name": "sdtCheckboxGlyphs",
+  "kind": "function",
+  "async": false,
+  "file": "checkbox-control.ts",
+  "sig": "(sdtPrXml: string): CheckboxGlyphs",
+  "risks": [],
+  "rust": [
+   "de/checkbox_control.rs"
+  ],
+  "route": [
+   "checkbox"
+  ],
+  "fn": [
+   "docx-engine/src/checkbox_control.rs"
+  ]
+ },
+ {
+  "name": "sdtCheckboxIsChecked",
+  "kind": "function",
+  "async": false,
+  "file": "checkbox-control.ts",
+  "sig": "(sdtPrXml: string, glyph: string): boolean",
+  "risks": [],
+  "rust": [
+   "de/checkbox_control.rs"
+  ],
+  "route": [
+   "checkbox"
+  ],
+  "fn": [
+   "docx-engine/src/checkbox_control.rs"
+  ]
+ },
+ {
+  "name": "inlineWrapContentLocked",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(wrap: InlineWrap): boolean",
+  "risks": [],
+  "rust": [
+   "de/inline_opaque.rs"
+  ],
+  "route": [
+   "parse"
+  ],
+  "fn": [
+   "docx-engine/src/inline_opaque.rs"
+  ]
+ },
+ {
+  "name": "runCopiedElsewhere",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(run: Run): Run",
+  "risks": [],
+  "rust": [
+   "de/inline_opaque.rs"
+  ],
+  "route": [
+   "parse"
+  ],
+  "fn": [
+   "docx-engine/src/inline_opaque.rs"
+  ]
+ },
+ {
+  "name": "sameInlineWrap",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(a: InlineWrap | undefined, b: InlineWrap | undefined): boolean",
+  "risks": [],
+  "rust": [
+   "de/inline_opaque.rs"
+  ],
+  "route": [
+   "parse"
+  ],
+  "fn": [
+   "docx-engine/src/inline_opaque.rs",
+   "office-wasm/src/calls/parse/tables.rs"
+  ]
+ },
+ {
+  "name": "sameInlineWrapChain",
+  "kind": "function",
+  "async": false,
+  "file": "inline-opaque.ts",
+  "sig": "(a: readonly InlineWrap[] | undefined, b: readonly InlineWrap[] | undefined): boolean",
+  "risks": [],
+  "rust": [
+   "de/inline_opaque.rs",
+   "de/props/runs.rs"
+  ],
+  "route": [
+   "parse"
+  ],
+  "fn": [
+   "docx-engine/src/inline_opaque.rs",
+   "docx-engine/src/props/runs.rs",
+   "office-wasm/src/calls/parse/tables.rs"
+  ]
+ },
+ {
+  "name": "buildContentControlXml",
+  "kind": "function",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "(spec: ContentControlSpec): ContentControlShell",
+  "risks": [],
+  "rust": [
+   "de/save/features/content_control.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/content_control.rs"
+  ]
+ },
+ {
+  "name": "isContentControlLock",
+  "kind": "function",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "(value: unknown): value is ContentControlLock",
+  "risks": [],
+  "rust": [
+   "de/save/features/content_control.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/content_control.rs"
+  ]
+ },
+ {
+  "name": "nextContentControlId",
+  "kind": "function",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "(documentXml: string): number",
+  "risks": [],
+  "rust": [
+   "de/save/features/content_control.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/content_control.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "CONTENT_CONTROL_LOCKS",
+  "kind": "const",
+  "async": false,
+  "file": "content-control.ts",
+  "sig": "readonly [\"none\", \"sdtLocked\", \"contentLocked\", \"sdtContentLocked\"]",
+  "risks": [],
+  "rust": [
+   "de/save/features/content_control.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/features/content_control.rs"
+  ]
+ },
+ {
+  "name": "parseDocx",
+  "kind": "function",
+  "async": true,
+  "file": "parse.ts",
+  "sig": "(bytes: Uint8Array, options?: ParseOptions): Promise<ParsedDoc & { extras: ParseExtras; }>",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [
+   "de/parse/entry.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/parse/entry.rs"
+  ]
+ },
+ {
+  "name": "reconcileGridColumns",
+  "kind": "function",
+  "async": false,
+  "file": "parse.ts",
+  "sig": "(rows: TableCell[][], rowTcws: Array<Array<number | undefined>>, gridCols: number[] | undefined): number[] | undefined",
+  "risks": [],
+  "rust": [
+   "de/parse/tables.rs"
+  ],
+  "route": [
+   "parse"
+  ],
+  "fn": [
+   "docx-engine/src/parse/tables.rs",
+   "office-wasm/src/calls/parse/tables.rs"
+  ]
+ },
+ {
+  "name": "paraCsFormat",
+  "kind": "function",
+  "async": false,
+  "file": "parse-styles.ts",
+  "sig": "(paraStyle: StyleDisplay | undefined, docDefaults: DocDefaults | undefined): CsFormat",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/styles/mod.rs"
+  ]
+ },
+ {
+  "name": "styleRunFormat",
+  "kind": "function",
+  "async": false,
+  "file": "parse-styles.ts",
+  "sig": "(display: StyleDisplay | undefined, cs: boolean): Pick<StyleDisplay, \"bold\" | \"italic\" | \"sizeHalfPoints\">",
+  "risks": [],
+  "rust": [
+   "de/styles/mod.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/styles/mod.rs"
+  ]
+ },
+ {
+  "name": "compareOperands",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(left: string, op: string, right: string, record: MergeRecord): boolean",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "conditionHolds",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): boolean",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "controlEffect",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): ControlEffect | null",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "ifBranch",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeBlockTree",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(blocks: readonly Block[], data: MergeData): Block[][]",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeDataFromRows",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(rows: readonly (readonly string[])[]): MergeData",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeFieldInstruction",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(name: string): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeFieldName",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string): string | null",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeFieldSwitches",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string): MergeFieldSwitches",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeFieldText",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string, record: MergeRecord): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeOutputFileName",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(pattern: string, record: MergeRecord, fields: readonly string[]): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "mergeRecords",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(blocks: readonly Block[], data: MergeData, startIndex?: number): { blocks: Block[]; cursor: MergeCursorState; }",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "placeholderText",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(name: string): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "splitInstruction",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(instr: string): [keyword: string, rest: string]",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs"
+  ]
+ },
+ {
+  "name": "valueOf",
+  "kind": "function",
+  "async": false,
+  "file": "mail-merge.ts",
+  "sig": "(record: MergeRecord, name: string): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/mail_merge.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/mail_merge.rs",
+   "omml/src/tables.rs"
+  ]
+ },
+ {
+  "name": "assertZipInflatesWithinLimits",
+  "kind": "function",
+  "async": true,
+  "file": "../../zip-gate/src/index.ts",
+  "sig": "(bytes: Uint8Array, limits?: ZipLimits): Promise<void>",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "ooxml-pkg/src/gate.rs"
+  ]
+ },
+ {
+  "name": "assertZipWithinLimits",
+  "kind": "function",
+  "async": false,
+  "file": "zip-load.ts",
+  "sig": "(zip: JSZip): void",
+  "risks": [
+   "jszip"
+  ],
+  "rust": [],
+  "route": [
+   "pptxPackage"
+  ],
+  "fn": [
+   "pptx-engine/src/zip.rs"
+  ]
+ },
+ {
+  "name": "DOCX_ZIP_LIMITS",
+  "kind": "const",
+  "async": false,
+  "file": "../../zip-gate/src/index.ts",
+  "sig": "{ readonly maxParts: 10000; readonly maxPartBytes: number; readonly maxTotalBytes: number; }",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": []
+ },
+ {
+  "name": "LAZY_MEDIA_SCHEME",
+  "kind": "const",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "\"genoffice-docx-media\"",
+  "risks": [],
+  "rust": [
+   "de/lazy_media.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/lazy_media.rs"
+  ]
+ },
+ {
+  "name": "isLazyMediaPart",
+  "kind": "function",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "(partPath: string): boolean",
+  "risks": [],
+  "rust": [
+   "de/lazy_media.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/lazy_media.rs"
+  ]
+ },
+ {
+  "name": "lazyMediaUrl",
+  "kind": "function",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "(hash: string, partPath: string): string",
+  "risks": [],
+  "rust": [
+   "de/lazy_media.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/lazy_media.rs"
+  ]
+ },
+ {
+  "name": "parseLazyMediaUrl",
+  "kind": "function",
+  "async": false,
+  "file": "lazy-media.ts",
+  "sig": "(url: string): { hash: string; partPath: string; } | null",
+  "risks": [],
+  "rust": [
+   "de/lazy_media.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/lazy_media.rs"
+  ]
+ },
+ {
+  "name": "setAltChunkHtmlConverter",
+  "kind": "function",
+  "async": false,
+  "file": "alt-chunk.ts",
+  "sig": "(fn: AltChunkHtmlConverter | null): void",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": []
+ },
+ {
+  "name": "tocLevelOf",
+  "kind": "function",
+  "async": false,
+  "file": "parse-fields.ts",
+  "sig": "(styleId: string, styles?: Map<string, StyleInfo>): number | null",
+  "risks": [
+   "map/set"
+  ],
+  "rust": [],
+  "route": [
+   "fields"
+  ],
+  "fn": [
+   "docx-engine/src/fields.rs"
+  ]
+ },
+ {
+  "name": "EMPTY_EA_THEME_FONT",
+  "kind": "const",
+  "async": false,
+  "file": "parse-props.ts",
+  "sig": "\"DengXian\"",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/props/fonts.rs"
+  ]
+ },
+ {
+  "name": "mergeStyleBorders",
+  "kind": "function",
+  "async": false,
+  "file": "parse-props.ts",
+  "sig": "(sides: ParaBorderSides, direct: ParaBorderModel | undefined): Pick<ParaFormat, \"borders\" | \"borderLines\" | \"borderPad\">",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "props"
+  ],
+  "fn": [
+   "docx-engine/src/props/borders.rs"
+  ]
+ },
+ {
+  "name": "themeLangEaSlotFont",
+  "kind": "function",
+  "async": false,
+  "file": "parse-props.ts",
+  "sig": "(fonts: ThemeFonts, eaRef: string | undefined): string | undefined",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "props"
+  ],
+  "fn": [
+   "docx-engine/src/props/fonts.rs"
+  ]
+ },
+ {
+  "name": "APP_PROPERTIES_PATH",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"docProps/app.xml\"",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs",
+   "docx-engine/src/doc_properties.rs"
+  ]
+ },
+ {
+  "name": "APP_PROPERTY_KEYS",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "string[]",
+  "risks": [],
+  "rust": [
+   "de/save/features/doc_properties_write.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": []
+ },
+ {
+  "name": "CORE_PROPERTIES_PATH",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"docProps/core.xml\"",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs",
+   "docx-engine/src/doc_properties.rs"
+  ]
+ },
+ {
+  "name": "CORE_PROPERTY_KEYS",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "string[]",
+  "risks": [],
+  "rust": [
+   "de/doc_properties.rs",
+   "de/save/features/doc_properties_write.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": []
+ },
+ {
+  "name": "NEW_DOCUMENT_APPLICATION",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"GenOffice\"",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "NEW_DOCUMENT_APP_VERSION",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"0.1.0\"",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "NEW_DOCUMENT_TEMPLATE",
+  "kind": "const",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "\"Normal.dotm\"",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "applyPropertyChanges",
+  "kind": "function",
+  "async": true,
+  "file": "doc-properties.ts",
+  "sig": "(zip: JSZip, changes: PropertyChanges): Promise<void>",
+  "risks": [
+   "jszip"
+  ],
+  "rust": [
+   "de/save/features/doc_properties_write.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/doc_properties_write.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "emptyDocumentProperties",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(): DocumentProperties",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "docprops"
+  ],
+  "fn": []
+ },
+ {
+  "name": "newDocumentAppPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(opts?: { application?: string; appVersion?: string; template?: string; omitGeneratorFields?: boolean; }): string",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "newDocumentCorePropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(created?: Date): string",
+  "risks": [
+   "date"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "parseAppPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": [],
+  "rust": [
+   "de/doc_properties.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/doc_properties.rs"
+  ]
+ },
+ {
+  "name": "parseCorePropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": [],
+  "rust": [
+   "de/doc_properties.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/doc_properties.rs"
+  ]
+ },
+ {
+  "name": "parseCustomPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": [],
+  "rust": [
+   "de/doc_properties.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/doc_properties.rs"
+  ]
+ },
+ {
+  "name": "parseCustomPropertyTypesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string): Record<string, string>",
+  "risks": [],
+  "rust": [
+   "de/doc_properties.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/doc_properties.rs"
+  ]
+ },
+ {
+  "name": "parsePropertyChanges",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(input: Record<string, unknown>): PropertyChanges",
+  "risks": [],
+  "rust": [
+   "de/save/features/doc_properties_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/doc_properties_write.rs"
+  ]
+ },
+ {
+  "name": "patchAppPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string, changes: Record<string, string | null>): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/doc_properties_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/doc_properties_write.rs"
+  ]
+ },
+ {
+  "name": "patchCorePropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string, changes: Record<string, string | null>): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/doc_properties_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/doc_properties_write.rs"
+  ]
+ },
+ {
+  "name": "patchCustomPropertiesXml",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(xml: string, changes: Record<string, PropertyValue | null>): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/doc_properties_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/doc_properties_write.rs"
+  ]
+ },
+ {
+  "name": "readDocumentProperties",
+  "kind": "function",
+  "async": true,
+  "file": "doc-properties.ts",
+  "sig": "(zip: JSZip): Promise<DocumentProperties>",
+  "risks": [
+   "jszip"
+  ],
+  "rust": [
+   "de/doc_properties.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/doc_properties.rs"
+  ]
+ },
+ {
+  "name": "w3cdtfStamp",
+  "kind": "function",
+  "async": false,
+  "file": "doc-properties.ts",
+  "sig": "(date: Date): string",
+  "risks": [
+   "date"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "saveDocx",
+  "kind": "function",
+  "async": true,
+  "file": "patch.ts",
+  "sig": "(parsed: ParsedDocFull, finalBlocks: SaveBlock[], options?: SaveOptions): Promise<Uint8Array>",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [
+   "de/save/save.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/save.rs",
+   "office-wasm/src/lib.rs"
+  ]
+ },
+ {
+  "name": "findChartWorkbookPath",
+  "kind": "function",
+  "async": true,
+  "file": "patch.ts",
+  "sig": "(docxBytes: Uint8Array, chartPath: string): Promise<string | null>",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [
+   "de/save/save/helpers.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/save/helpers.rs"
+  ]
+ },
+ {
+  "name": "missingHeadingLevels",
+  "kind": "function",
+  "async": false,
+  "file": "patch.ts",
+  "sig": "(blocks: readonly SaveBlock[], headingStyleIds: ReadonlyMap<number, string>): number[]",
+  "risks": [],
+  "rust": [
+   "de/save/save/helpers.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/helpers.rs",
+   "office-wasm/src/calls/save/save.rs"
+  ]
+ },
+ {
+  "name": "readDocxPartBase64",
+  "kind": "function",
+  "async": true,
+  "file": "patch.ts",
+  "sig": "(docxBytes: Uint8Array, path: string): Promise<string | null>",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [
+   "de/save/save/helpers.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/save/helpers.rs"
+  ]
+ },
+ {
+  "name": "REMOVE_PARTS_KINDS",
+  "kind": "const",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "readonly [\"customXml\", \"webExtensions\"]",
+  "risks": [],
+  "rust": [
+   "de/save/parts/remove_parts.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/parts/remove_parts.rs"
+  ]
+ },
+ {
+  "name": "applyRemoveParts",
+  "kind": "function",
+  "async": true,
+  "file": "remove-parts.ts",
+  "sig": "(zip: JSZip, options: RemovePartsOptions): Promise<RemovePartsPlan>",
+  "risks": [
+   "jszip"
+  ],
+  "rust": [
+   "de/save/parts/remove_parts.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/remove_parts.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "planRemoveParts",
+  "kind": "function",
+  "async": true,
+  "file": "remove-parts.ts",
+  "sig": "(bytes: Uint8Array, options: RemovePartsOptions): Promise<RemovePartsPlan>",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [
+   "de/save/parts/remove_parts.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/remove_parts.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "removePartsRefusalMessage",
+  "kind": "function",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "(bindings: RemovedPartBinding[]): string",
+  "risks": [],
+  "rust": [
+   "de/save/parts/remove_parts.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/remove_parts.rs"
+  ]
+ },
+ {
+  "name": "removePartsRefusalMessageFor",
+  "kind": "function",
+  "async": false,
+  "file": "remove-parts.ts",
+  "sig": "(refusedPaths: string[]): string",
+  "risks": [],
+  "rust": [
+   "de/save/parts/remove_parts.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/remove_parts.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "TABLE_HEADER_FILL",
+  "kind": "const",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "\"F2F2F2\"",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/generate/table.rs"
+  ]
+ },
+ {
+  "name": "applyImageWrap",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, wrap: ImageWrap | null, posOffset?: { x: number; y: number; relativeTo?: \"page\" | \"margin\"; }, marginAlign?: { h: \"left\" | \"center\" | \"right\"; v: \"top\" | \"center\" | \"bottom\"; }, zOrder?: number): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "applyImageZOrder",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, zOrder?: number): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "applyShapeWrapAt",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, location: ShapeDrawingLocation, wrap: ImageWrap | null, zOrder?: number): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "applyShapeZOrderAt",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, location: ShapeDrawingLocation, zOrder: number): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "buildAnchoredTextboxParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: AnchoredTextboxOptions): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_build.rs"
+  ],
+  "route": [
+   "genDrawingBuild"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_build.rs"
+  ]
+ },
+ {
+  "name": "buildShapeParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: { prst: string; widthEmu?: number; heightEmu?: number; id?: number; fillHex?: string; borderHex?: string; withTextbox?: boolean; }): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_build.rs"
+  ],
+  "route": [
+   "genDrawingBuild"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_build.rs"
+  ]
+ },
+ {
+  "name": "buildTextboxParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts?: { widthEmu?: number; heightEmu?: number; id?: number; fillHex?: string; borderHex?: string; }): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_build.rs"
+  ],
+  "route": [
+   "genDrawingBuild"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_build.rs"
+  ]
+ },
+ {
+  "name": "buildWordArtParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: { text?: string; colorHex?: string; italic?: boolean; widthEmu?: number; heightEmu?: number; id?: number; }): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_build.rs"
+  ],
+  "route": [
+   "genDrawingBuild"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_build.rs"
+  ]
+ },
+ {
+  "name": "generateCaptionXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(label: string, number: number, text: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genFields"
+  ],
+  "fn": [
+   "docx-engine/src/generate/fields.rs"
+  ]
+ },
+ {
+  "name": "generateIndexFieldXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(terms: string[], locale?: string): string[]",
+  "risks": [],
+  "rust": [
+   "de/generate/fields.rs"
+  ],
+  "route": [
+   "genFields"
+  ],
+  "fn": [
+   "docx-engine/src/generate/fields.rs"
+  ]
+ },
+ {
+  "name": "generateParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(block: GeneratedBlock, ctx: GenerateContext): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genParagraph"
+  ],
+  "fn": [
+   "docx-engine/src/generate/paragraph.rs",
+   "spike-one-run-save/src/way_a.rs"
+  ]
+ },
+ {
+  "name": "mergeRPrModel",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawRPr: string, run: Run, insideLink: boolean): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genRpr"
+  ],
+  "fn": [
+   "docx-engine/src/generate/rpr.rs"
+  ]
+ },
+ {
+  "name": "generateTableModelXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(model: TableModel, originalTableXml?: string, part?: ContentControlPart): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genTable"
+  ],
+  "fn": [
+   "docx-engine/src/generate/table.rs"
+  ]
+ },
+ {
+  "name": "generateTableXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rows: number, cols: number, opts?: TableGenOptions): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genTable"
+  ],
+  "fn": [
+   "docx-engine/src/generate/table.rs"
+  ]
+ },
+ {
+  "name": "generateTocFieldXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(entries: TocEntry[]): string[]",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genFields"
+  ],
+  "fn": [
+   "docx-engine/src/generate/fields.rs"
+  ]
+ },
+ {
+  "name": "mergePPrFormat",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, format: ParaFormat | undefined, original?: ParaFormat, onlyTags?: ReadonlySet<string>): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "setPPrChange",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, changeJson: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "stripPPrChange",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "paraMarkRevisionXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(kind: \"del\" | \"ins\", record: string | null | undefined, mintId?: () => string): string",
+  "risks": [
+   "callback?"
+  ],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "setParaMarkRevision",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, markerXml: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "stripParaMarkRevision",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, kind: \"del\" | \"ins\"): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "resolveParaMarkRPrChange",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string, mode: \"accept\" | \"reject\"): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "paraMarkColor",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string): string | undefined",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "stripParaMarkColor",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(rawPPr: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genProps"
+  ],
+  "fn": [
+   "docx-engine/src/generate/props.rs"
+  ]
+ },
+ {
+  "name": "patchFieldParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, patch: FieldTextPatch): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genText"
+  ],
+  "fn": [
+   "docx-engine/src/generate/text_patch.rs"
+  ]
+ },
+ {
+  "name": "patchImageParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, patch: ImagePatch): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "patchMathTokens",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, tokens: readonly string[]): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genText"
+  ],
+  "fn": [
+   "docx-engine/src/generate/text_patch.rs"
+  ]
+ },
+ {
+  "name": "patchTableCellTexts",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(tableXml: string, texts: ReadonlyArray<ReadonlyArray<CellTextsPatch | null | undefined> | null | undefined>, part?: ContentControlPart): string",
+  "risks": [],
+  "rust": [
+   "de/generate/text_patch.rs"
+  ],
+  "route": [
+   "genText"
+  ],
+  "fn": [
+   "docx-engine/src/generate/text_patch.rs"
+  ]
+ },
+ {
+  "name": "patchTextboxHeights",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, heightsPx: ReadonlyArray<number | null | undefined>): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "patchTextboxParas",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, patches: TextboxParasPatchSet): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genText"
+  ],
+  "fn": [
+   "docx-engine/src/generate/text_patch.rs"
+  ]
+ },
+ {
+  "name": "patchTextboxSizes",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, sizes: ReadonlyArray<TextboxSizePatch | null | undefined>): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "patchShapeStyles",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, styles: ReadonlyArray<ShapeStylePatch | null | undefined>): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "patchDrawingExtent",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(paragraphXml: string, wPx: number, hPx: number): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "buildLineParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(opts: { kind: string; widthEmu?: number; heightEmu?: number; id?: number; colorHex?: string; }): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_build.rs"
+  ],
+  "route": [
+   "genDrawingBuild"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_build.rs"
+  ]
+ },
+ {
+  "name": "LINE_KINDS",
+  "kind": "const",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "Record<string, { prst: string; head?: boolean; tail?: boolean; }>",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "genDrawingBuild"
+  ],
+  "fn": []
+ },
+ {
+  "name": "inlinePictureDrawingXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(o: InlinePictureXmlOptions): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_build.rs"
+  ],
+  "route": [
+   "genDrawingBuild"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_build.rs"
+  ]
+ },
+ {
+  "name": "resizeInlinePictureXml",
+  "kind": "function",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "(xml: string, widthPx: number, heightPx: number): string",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_patch.rs"
+  ],
+  "route": [
+   "genDrawing"
+  ],
+  "fn": [
+   "docx-engine/src/generate/drawing_patch.rs"
+  ]
+ },
+ {
+  "name": "NEW_PICTURE_TOKEN_PREFIX",
+  "kind": "const",
+  "async": false,
+  "file": "generate.ts",
+  "sig": "\"aidocs-new-pic-\"",
+  "risks": [],
+  "rust": [
+   "de/generate/drawing_build.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/generate/drawing_build.rs"
+  ]
+ },
+ {
+  "name": "buildChartPartXml",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(chart: NewChart, externalDataRId?: string): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/chart_write.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/chart_write.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "buildChartWorkbookXlsxBase64",
+  "kind": "function",
+  "async": true,
+  "file": "chart.ts",
+  "sig": "(categories: string[], series: Array<{ name: string; values: (number | null)[]; }>): Promise<string>",
+  "risks": [],
+  "rust": [
+   "de/save/features/chart_write.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/chart_write.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "patchChartWorkbookXlsxBase64",
+  "kind": "function",
+  "async": true,
+  "file": "chart.ts",
+  "sig": "(base64: string, categories: string[], series: Array<{ name: string; values: (number | null)[]; }>): Promise<string | null>",
+  "risks": [],
+  "rust": [
+   "de/save/features/chart_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/chart_write.rs"
+  ]
+ },
+ {
+  "name": "parseChartPartXml",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(xml: string, partPath: string, theme?: ThemeColors | null): ChartDisplay | null",
+  "risks": [],
+  "rust": [
+   "de/chart.rs"
+  ],
+  "route": [
+   "chart"
+  ],
+  "fn": [
+   "docx-engine/src/chart.rs"
+  ]
+ },
+ {
+  "name": "patchChartPartXml",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(xml: string, patch: ChartPatch): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/chart_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/chart_write.rs"
+  ]
+ },
+ {
+  "name": "lumHex",
+  "kind": "function",
+  "async": false,
+  "file": "chart.ts",
+  "sig": "(hex: string, mod: number, off: number): string",
+  "risks": [],
+  "rust": [
+   "de/chart.rs"
+  ],
+  "route": [
+   "chart"
+  ],
+  "fn": [
+   "docx-engine/src/chart.rs"
+  ]
+ },
+ {
+  "name": "colLetter",
+  "kind": "const",
+  "async": false,
+  "file": "../../pptx-engine/src/chart-workbook.ts",
+  "sig": "(i: number): string",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "pptx-engine/src/chart_workbook.rs"
+  ]
+ },
+ {
+  "name": "CHART_WORKBOOK_REL_TYPE",
+  "kind": "const",
+  "async": false,
+  "file": "../../pptx-engine/src/chart-workbook.ts",
+  "sig": "\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/package\"",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "pptxBytes"
+  ],
+  "fn": [
+   "pptx-engine/src/chart_workbook.rs"
+  ]
+ },
+ {
+  "name": "latexToOmml",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(latex: string): string",
+  "risks": [],
+  "rust": [
+   "crates/omml/src/latex_to_omml.rs"
+  ],
+  "route": [
+   "math"
+  ],
+  "fn": [
+   "omml/src/latex_to_omml.rs"
+  ]
+ },
+ {
+  "name": "mathParagraphXml",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(omml: string, align?: \"left\" | \"center\" | \"right\"): string",
+  "risks": [],
+  "rust": [
+   "crates/omml/src/latex_to_omml.rs"
+  ],
+  "route": [
+   "math"
+  ],
+  "fn": [
+   "omml/src/latex_to_omml.rs"
+  ]
+ },
+ {
+  "name": "mathTokensOf",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(xml: string): string[]",
+  "risks": [],
+  "rust": [
+   "crates/omml/src/fragments.rs"
+  ],
+  "route": [
+   "math"
+  ],
+  "fn": [
+   "omml/src/fragments.rs"
+  ]
+ },
+ {
+  "name": "ommlFragmentsOf",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(paragraphXml: string): string[]",
+  "risks": [],
+  "rust": [
+   "crates/omml/src/fragments.rs"
+  ],
+  "route": [
+   "math"
+  ],
+  "fn": [
+   "omml/src/fragments.rs"
+  ]
+ },
+ {
+  "name": "ommlToLatex",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(ommlXml: string): string | null",
+  "risks": [],
+  "rust": [
+   "crates/omml/src/omml_to_latex.rs"
+  ],
+  "route": [
+   "math"
+  ],
+  "fn": [
+   "omml/src/omml_to_latex.rs"
+  ]
+ },
+ {
+  "name": "ommlToMathML",
+  "kind": "function",
+  "async": false,
+  "file": "math.ts",
+  "sig": "(ommlXml: string): string",
+  "risks": [],
+  "rust": [
+   "crates/omml/src/mathml.rs"
+  ],
+  "route": [
+   "math"
+  ],
+  "fn": []
+ },
+ {
+  "name": "patchHfPicturesXml",
+  "kind": "function",
+  "async": false,
+  "file": "run-picture.ts",
+  "sig": "(partXml: string, edits: Record<number, HfPictureEdit>): string",
+  "risks": [],
+  "rust": [
+   "de/save/save/run_picture.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/run_picture.rs"
+  ]
+ },
+ {
+  "name": "patchRunPictureXml",
+  "kind": "function",
+  "async": false,
+  "file": "run-picture.ts",
+  "sig": "(xml: string, next: RunPictureGeometry): string",
+  "risks": [],
+  "rust": [
+   "de/save/save/run_picture.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/run_picture.rs"
+  ]
+ },
+ {
+  "name": "scanBody",
+  "kind": "function",
+  "async": false,
+  "file": "scan.ts",
+  "sig": "(documentXml: string): BodyScan",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/scan.rs"
+  ]
+ },
+ {
+  "name": "BLANK_BULLET_NUM_ID",
+  "kind": "const",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "\"1\"",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "BLANK_ORDERED_NUM_ID",
+  "kind": "const",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "\"2\"",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "buildBlankDocx",
+  "kind": "function",
+  "async": true,
+  "file": "blank.ts",
+  "sig": "(options?: BlankDocxOptions): Promise<Uint8Array>",
+  "risks": [
+   "bytes"
+  ],
+  "rust": [],
+  "route": [
+   "blank"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "customLevelFromNumberingLevel",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(level: NumberingLevel): CustomNumberingLevel",
+  "risks": [],
+  "rust": [
+   "de/blank.rs"
+  ],
+  "route": [
+   "blank"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "customLevelXml",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(l: CustomNumberingLevel, ilvl: number): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "blank"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "mergeLevelXml",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(existing: string, l: CustomNumberingLevel, ilvl: number): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "blank"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "numberingLevelFromCustom",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(l: CustomNumberingLevel, picBulletSrc?: string): NumberingLevel",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "blank"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "paperSizeForLocale",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(locale: string | null | undefined): BlankPaperSize",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "blank"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "paperSizeForRegion",
+  "kind": "function",
+  "async": false,
+  "file": "blank.ts",
+  "sig": "(region: string | null | undefined): BlankPaperSize",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "blank"
+  ],
+  "fn": [
+   "docx-engine/src/blank.rs"
+  ]
+ },
+ {
+  "name": "DEFAULT_SECTION",
+  "kind": "const",
+  "async": false,
+  "file": "section.ts",
+  "sig": "SectionSettings",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "applySectionSettings",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, settings: SectionSettings): string",
+  "risks": [],
+  "rust": [
+   "de/save/save/section_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/section_write.rs"
+  ]
+ },
+ {
+  "name": "applyPageNumType",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, fmt: string | undefined, start: number | undefined): string",
+  "risks": [],
+  "rust": [
+   "de/save/save/section_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/section_write.rs"
+  ]
+ },
+ {
+  "name": "applySectionStartType",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, type: \"nextPage\" | \"continuous\" | \"evenPage\" | \"oddPage\" | \"nextColumn\"): string",
+  "risks": [],
+  "rust": [
+   "de/save/save/section_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/section_write.rs"
+  ]
+ },
+ {
+  "name": "applyTitlePg",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, on: boolean): string",
+  "risks": [],
+  "rust": [
+   "de/save/save/section_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/section_write.rs"
+  ]
+ },
+ {
+  "name": "sectionFromSectPr",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(sectPrXml: string, firstBlockIndex: number, lastBlockIndex: number, gutterAtTop?: boolean): SectionInfo",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "readPageColor",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(parsed: ParsedDoc): string | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "readSections",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(parsed: ParsedDoc): SectionInfo[]",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "readSectionSettings",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(parsed: ParsedDoc): SectionSettings",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "sectionSettingsFromXml",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(xml: string, opts?: { gutterAtTop?: boolean; }): SectionSettings",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "pageBordersXml",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(props: SectionSettings[\"pageBorderProps\"]): string",
+  "risks": [],
+  "rust": [
+   "de/save/save/section_write.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/section_write.rs"
+  ]
+ },
+ {
+  "name": "LINE_BORDER_VALS",
+  "kind": "const",
+  "async": false,
+  "file": "section.ts",
+  "sig": "Set<string>",
+  "risks": [
+   "map/set"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "notePropsFromXml",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(xml: string, tag: \"w:footnotePr\" | \"w:endnotePr\"): NoteProps | undefined",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/section/read.rs"
+  ]
+ },
+ {
+  "name": "xmlFlagOn",
+  "kind": "function",
+  "async": false,
+  "file": "section.ts",
+  "sig": "(xml: string, tag: string): boolean",
+  "risks": [],
+  "rust": [
+   "de/parse/drawings/settings.rs"
+  ],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/section.rs"
+  ]
+ },
+ {
+  "name": "nextNoteId",
+  "kind": "function",
+  "async": false,
+  "file": "notes.ts",
+  "sig": "(notes: NoteInfo[]): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/notes.rs"
+  ]
+ },
+ {
+  "name": "parseNotesXml",
+  "kind": "function",
+  "async": false,
+  "file": "notes.ts",
+  "sig": "(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[]",
+  "risks": [],
+  "rust": [
+   "de/notes.rs"
+  ],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/notes.rs"
+  ]
+ },
+ {
+  "name": "isPictureWatermark",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(wm: Watermark): wm is PictureWatermarkSpec",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/watermark.rs"
+  ]
+ },
+ {
+  "name": "pictureWatermarkPreviewImage",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(spec: PictureWatermarkSpec, marginBox: { widthPt: number; heightPt: number; } | null): HfImage",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/watermark.rs"
+  ]
+ },
+ {
+  "name": "textWatermarkPreviewImage",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(spec: WatermarkSpec): HfImage",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/watermark.rs"
+  ]
+ },
+ {
+  "name": "textWatermarkBoxPt",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(spec: WatermarkSpec): { widthPt: number; heightPt: number; }",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/watermark.rs"
+  ]
+ },
+ {
+  "name": "readPictureWatermark",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(headerXml: string): PictureWatermarkInfo | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/watermark.rs"
+  ]
+ },
+ {
+  "name": "readWatermarkText",
+  "kind": "function",
+  "async": false,
+  "file": "watermark.ts",
+  "sig": "(headerXml: string): string | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "section"
+  ],
+  "fn": [
+   "docx-engine/src/watermark.rs"
+  ]
+ },
+ {
+  "name": "builtInHeadingStyleUpsert",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(level: number, defaultParagraphStyleId: string | undefined): StyleUpsert",
+  "risks": [],
+  "rust": [
+   "de/save/parts/style_upsert.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/style_upsert.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "mergeStyleXml",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(existing: string | null, up: StyleUpsert): string",
+  "risks": [],
+  "rust": [
+   "de/save/parts/style_upsert.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/style_upsert.rs"
+  ]
+ },
+ {
+  "name": "mergeDefaultFontsXml",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(xml: string, fonts: DefaultFonts): string",
+  "risks": [],
+  "rust": [
+   "de/save/parts/style_upsert.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/style_upsert.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "pendingHeadingLevel",
+  "kind": "function",
+  "async": false,
+  "file": "style-upsert.ts",
+  "sig": "(styleId: string, pending: (id: string) => StyleUpsert | undefined, existing: (id: string) => StyleHeadingInfo | undefined, seen?: Set<string>): number | undefined",
+  "risks": [
+   "map/set",
+   "callback?"
+  ],
+  "rust": [
+   "de/save/parts/style_upsert.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/parts/style_upsert.rs"
+  ]
+ },
+ {
+  "name": "INK_NAME_PREFIX",
+  "kind": "const",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "\"aidocs-ink\"",
+  "risks": [],
+  "rust": [
+   "de/ink.rs"
+  ],
+  "route": [
+   "ink"
+  ],
+  "fn": [
+   "docx-engine/src/ink.rs"
+  ]
+ },
+ {
+  "name": "anchoredInkRunXml",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(ink: Pick<NewInkImage, \"widthPx\" | \"heightPx\" | \"offsetXPx\" | \"offsetYPx\" | \"payload\">, rId: string, docPrId: number): string",
+  "risks": [],
+  "rust": [
+   "de/ink.rs"
+  ],
+  "route": [
+   "ink"
+  ],
+  "fn": [
+   "docx-engine/src/ink.rs"
+  ]
+ },
+ {
+  "name": "findInkRuns",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(paragraphXml: string): InkRunMatch[]",
+  "risks": [],
+  "rust": [
+   "de/ink.rs"
+  ],
+  "route": [
+   "ink"
+  ],
+  "fn": [
+   "docx-engine/src/ink.rs"
+  ]
+ },
+ {
+  "name": "injectInkRunsIntoParagraph",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(xml: string, runsXml: string): string | null",
+  "risks": [],
+  "rust": [
+   "de/ink.rs"
+  ],
+  "route": [
+   "ink"
+  ],
+  "fn": [
+   "docx-engine/src/ink.rs"
+  ]
+ },
+ {
+  "name": "stripInkRuns",
+  "kind": "function",
+  "async": false,
+  "file": "ink.ts",
+  "sig": "(xml: string): string",
+  "risks": [],
+  "rust": [
+   "de/ink.rs"
+  ],
+  "route": [
+   "ink"
+  ],
+  "fn": [
+   "docx-engine/src/ink.rs"
+  ]
+ },
+ {
+  "name": "DEFAULT_PICTURE_PX",
+  "kind": "const",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "96",
+  "risks": [],
+  "rust": [
+   "de/save/save/xml_number_usable.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/save/xml_number_usable.rs"
+  ]
+ },
+ {
+  "name": "usableNumber",
+  "kind": "function",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "(value: unknown, emuPerUnit?: number): number | undefined",
+  "risks": [],
+  "rust": [
+   "de/save/save/xml_number_usable.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/xml_number_usable.rs"
+  ]
+ },
+ {
+  "name": "usablePictureSize",
+  "kind": "function",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "(widthPx: unknown, heightPx: unknown): { widthPx: number; heightPx: number; }",
+  "risks": [],
+  "rust": [
+   "de/save/save/xml_number_usable.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/xml_number_usable.rs"
+  ]
+ },
+ {
+  "name": "usablePositionOffset",
+  "kind": "function",
+  "async": false,
+  "file": "xml-number.ts",
+  "sig": "(value: unknown, emuPerUnit?: number): number | undefined",
+  "risks": [],
+  "rust": [
+   "de/save/save/xml_number_usable.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/save/xml_number_usable.rs"
+  ]
+ },
+ {
+  "name": "removeElements",
+  "kind": "function",
+  "async": false,
+  "file": "xml-tag.ts",
+  "sig": "(xml: string, name: string, limit?: number): string",
+  "risks": [],
+  "rust": [
+   "de/xml_tag.rs"
+  ],
+  "route": [
+   "xmltag"
+  ],
+  "fn": [
+   "docx-engine/src/xml_tag.rs"
+  ]
+ },
+ {
+  "name": "bibliographyLine",
+  "kind": "function",
+  "async": false,
+  "file": "sources.ts",
+  "sig": "(source: SourceInfo): string",
+  "risks": [],
+  "rust": [
+   "de/sources.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/sources.rs"
+  ]
+ },
+ {
+  "name": "citationText",
+  "kind": "function",
+  "async": false,
+  "file": "sources.ts",
+  "sig": "(source: SourceInfo): string",
+  "risks": [],
+  "rust": [
+   "de/sources.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/sources.rs"
+  ]
+ },
+ {
+  "name": "parseSourcesXml",
+  "kind": "function",
+  "async": false,
+  "file": "sources.ts",
+  "sig": "(xml: string): SourceInfo[]",
+  "risks": [],
+  "rust": [
+   "de/sources.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/sources.rs"
+  ]
+ },
+ {
+  "name": "parseZoteroDocumentDataXml",
+  "kind": "function",
+  "async": false,
+  "file": "zotero-doc-props.ts",
+  "sig": "(xml: string): string",
+  "risks": [],
+  "rust": [
+   "de/doc_properties/zotero.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/doc_properties/zotero.rs"
+  ]
+ },
+ {
+  "name": "patchZoteroDocumentDataXml",
+  "kind": "function",
+  "async": false,
+  "file": "zotero-doc-props.ts",
+  "sig": "(xml: string | null, data: string): string",
+  "risks": [],
+  "rust": [
+   "de/save/features/zotero_doc_props.rs",
+   "de/save/save/external.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/zotero_doc_props.rs",
+   "docx-engine/src/save/save/external.rs"
+  ]
+ },
+ {
+  "name": "readThemeColors",
+  "kind": "function",
+  "async": false,
+  "file": "theme.ts",
+  "sig": "(themeXml: string): ThemeColors | null",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/theme.rs"
+  ]
+ },
+ {
+  "name": "readThemeFonts",
+  "kind": "function",
+  "async": false,
+  "file": "theme.ts",
+  "sig": "(themeXml: string): ThemeFonts | null",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/theme.rs"
+  ]
+ },
+ {
+  "name": "DEFAULT_SPIN_COUNT",
+  "kind": "const",
+  "async": false,
+  "file": "protection.ts",
+  "sig": "100000",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/protection.rs"
+  ]
+ },
+ {
+  "name": "MAX_SPIN_COUNT",
+  "kind": "const",
+  "async": false,
+  "file": "protection.ts",
+  "sig": "1000000",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/protection.rs"
+  ]
+ },
+ {
+  "name": "hashProtectionPassword",
+  "kind": "function",
+  "async": true,
+  "file": "protection.ts",
+  "sig": "(password: string, spinCount?: number): Promise<{ hash: string; salt: string; spinCount: number; algorithmSid: number; }>",
+  "risks": [],
+  "rust": [
+   "de/protection.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/protection.rs"
+  ]
+ },
+ {
+  "name": "resolveSpinCount",
+  "kind": "function",
+  "async": false,
+  "file": "protection.ts",
+  "sig": "(raw: unknown): number",
+  "risks": [],
+  "rust": [
+   "de/protection.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/protection.rs"
+  ]
+ },
+ {
+  "name": "verifyProtectionPassword",
+  "kind": "function",
+  "async": true,
+  "file": "protection.ts",
+  "sig": "(password: string, protection: Pick<DocProtection, \"hash\" | \"salt\" | \"spinCount\" | \"algorithmSid\">): Promise<boolean>",
+  "risks": [],
+  "rust": [
+   "de/protection.rs"
+  ],
+  "route": [
+   "docprops"
+  ],
+  "fn": [
+   "docx-engine/src/protection.rs"
+  ]
+ },
+ {
+  "name": "decodeSymbolChar",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string, code: number): string | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/symbol_fonts.rs"
+  ]
+ },
+ {
+  "name": "decodeSymbolText",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string, text: string, opts?: { textGlyphsOnly?: boolean; }): string | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/symbol_fonts.rs"
+  ]
+ },
+ {
+  "name": "isSymbolFont",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string | null | undefined): boolean",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/symbol_fonts.rs"
+  ]
+ },
+ {
+  "name": "symbolGlyph",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(font: string, charHex: string): string | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/symbol_fonts.rs"
+  ]
+ },
+ {
+  "name": "symbolPuaChar",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(charHex: string): string | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/symbol_fonts.rs"
+  ]
+ },
+ {
+  "name": "toSymbolPua",
+  "kind": "function",
+  "async": false,
+  "file": "symbol-fonts.ts",
+  "sig": "(text: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/symbol_fonts.rs"
+  ]
+ },
+ {
+  "name": "substituteBullet",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(glyph: string): BulletSubstitute | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "markerFallbackFace",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(glyph: string, face: string): string | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "SEGOE_UI_SYMBOL_RE",
+  "kind": "const",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "RegExp",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "computeListMarkerInfos",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(items: ListItemRef[], defs: Map<string, NumberingDef>): (ListMarkerInfo | null)[]",
+  "risks": [
+   "map/set"
+  ],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "computeListMarkers",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(items: ListItemRef[], defs: Map<string, NumberingDef>): (string | null)[]",
+  "risks": [
+   "map/set"
+  ],
+  "rust": [],
+  "route": [],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "computeListValues",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(items: ListItemRef[], defs: Map<string, NumberingDef>): number[]",
+  "risks": [
+   "map/set"
+  ],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "customEnumItems",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(format: string): string[] | null",
+  "risks": [],
+  "rust": [
+   "de/numbering.rs"
+  ],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "formatNumber",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(rawValue: number, numFmt: string, customFormat?: string): string",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "markerTabAdvance",
+  "kind": "function",
+  "async": false,
+  "file": "list-markers.ts",
+  "sig": "(markerStart: number, markerWidth: number, textIndent: number, defaultTab?: number, customStops?: number[]): number | null",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "markers"
+  ],
+  "fn": [
+   "docx-engine/src/list_markers.rs"
+  ]
+ },
+ {
+  "name": "previewFontSettings",
+  "kind": "function",
+  "async": true,
+  "file": "font-settings.ts",
+  "sig": "(parsed: ParsedDoc, upserts: StyleUpsert[], defaults?: DefaultFonts): Promise<{ styles: Map<string, import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/packages/docx-engine/src/types\").StyleInfo>; docDefaults?: import(\"C:/Users/admin/.omp/work/seuoffice-rust-b/packages/docx-engine/src/types\").DocDefaults; }>",
+  "risks": [
+   "map/set"
+  ],
+  "rust": [
+   "de/save/features/index_exports.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/features/index_exports.rs"
+  ]
+ },
+ {
+  "name": "applyRevisionResolutions",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, resolutions: readonly RevisionResolution[] | undefined): string",
+  "risks": [],
+  "rust": [
+   "de/revision_xml.rs"
+  ],
+  "route": [
+   "revision"
+  ],
+  "fn": [
+   "docx-engine/src/revision_xml.rs"
+  ]
+ },
+ {
+  "name": "applyTrackedChangesXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, mode: RevisionXmlMode, filter?: RevisionXmlFilter): RevisionXmlResult",
+  "risks": [],
+  "rust": [
+   "de/revision_xml.rs"
+  ],
+  "route": [
+   "revision"
+  ],
+  "fn": [
+   "docx-engine/src/revision_xml.rs"
+  ]
+ },
+ {
+  "name": "cleanMoveRangeMarkers",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string): { xml: string; removed: number; }",
+  "risks": [],
+  "rust": [
+   "de/revision_xml.rs"
+  ],
+  "route": [
+   "revision"
+  ],
+  "fn": [
+   "docx-engine/src/revision_xml.rs"
+  ]
+ },
+ {
+  "name": "countTrackedChangesXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string): number",
+  "risks": [],
+  "rust": [
+   "de/revision_xml.rs"
+  ],
+  "route": [
+   "revision"
+  ],
+  "fn": [
+   "docx-engine/src/revision_xml.rs"
+  ]
+ },
+ {
+  "name": "readPropChangeXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, changeName: string): PropChangeRecord | undefined",
+  "risks": [],
+  "rust": [
+   "de/revision_xml.rs"
+  ],
+  "route": [
+   "revision"
+  ],
+  "fn": [
+   "docx-engine/src/revision_xml.rs"
+  ]
+ },
+ {
+  "name": "revisionDateBefore",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(date: string | undefined, beforeMs: number): boolean",
+  "risks": [],
+  "rust": [
+   "de/save/features/index_exports.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/index_exports.rs"
+  ]
+ },
+ {
+  "name": "revisionDateMs",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(iso: string): number",
+  "risks": [],
+  "rust": [
+   "de/revision_xml.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/revision_xml.rs"
+  ]
+ },
+ {
+  "name": "resolvePropChangeXml",
+  "kind": "function",
+  "async": false,
+  "file": "revision-xml.ts",
+  "sig": "(xml: string, changeName: string, mode: RevisionXmlMode): string",
+  "risks": [],
+  "rust": [
+   "de/generate/table.rs",
+   "de/revision_xml.rs"
+  ],
+  "route": [
+   "revision"
+  ],
+  "fn": [
+   "docx-engine/src/generate/table.rs",
+   "docx-engine/src/revision_xml.rs"
+  ]
+ },
+ {
+  "name": "resolveParagraphProps",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(pPr: XNode | undefined, ctx: ResolveCtx, opts?: ResolveParaOptions): EffectivePPr",
+  "risks": [],
+  "rust": [
+   "de/resolve.rs"
+  ],
+  "route": [
+   "resolve"
+  ],
+  "fn": [
+   "docx-engine/src/resolve.rs"
+  ]
+ },
+ {
+  "name": "resolveCtxOf",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(doc: { styles: Map<string, StyleInfo>; docDefaults?: DocDefaults; numbering: Map<string, NumberingDef>; themeFonts?: ThemeFonts | null; themeColors?: ThemeColors | null; compatibilityMode?: number; doNotUseHTMLParagraphAutoSpacing?: boolean; indentNotNumberingTabStop?: boolean; }): ResolveCtx",
+  "risks": [
+   "map/set"
+  ],
+  "rust": [
+   "de/resolve.rs"
+  ],
+  "route": [
+   "resolve"
+  ],
+  "fn": [
+   "docx-engine/src/resolve.rs"
+  ]
+ },
+ {
+  "name": "resolveParagraphPropsXml",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(xml: string, ctx: ResolveCtx, opts?: ResolveParaOptions): EffectivePPr",
+  "risks": [],
+  "rust": [
+   "de/resolve.rs"
+  ],
+  "route": [
+   "resolve"
+  ],
+  "fn": [
+   "docx-engine/src/resolve.rs"
+  ]
+ },
+ {
+  "name": "resolveRunProps",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(rPr: XNode | undefined, para: EffectivePPr, ctx: ResolveCtx, mark?: boolean): EffectiveRPr",
+  "risks": [],
+  "rust": [
+   "de/resolve.rs"
+  ],
+  "route": [
+   "resolve"
+  ],
+  "fn": [
+   "docx-engine/src/resolve.rs"
+  ]
+ },
+ {
+  "name": "shadowCompare",
+  "kind": "function",
+  "async": false,
+  "file": "resolve-props.ts",
+  "sig": "(legacy: object | undefined, resolved: object | undefined, keys?: readonly string[]): ResolveDiff[]",
+  "risks": [],
+  "rust": [],
+  "route": [
+   "resolve"
+  ],
+  "fn": [
+   "docx-engine/src/resolve.rs"
+  ]
+ },
+ {
+  "name": "compareBlocks",
+  "kind": "function",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "(original: ParsedDocFull, revised: ParsedDocFull, options?: CompareOptions): { blocks: SaveBlock[]; summary: CompareSummary; nextRevisionId: number; }",
+  "risks": [],
+  "rust": [
+   "de/save/features/compare.rs"
+  ],
+  "route": [
+   "save"
+  ],
+  "fn": [
+   "docx-engine/src/save/features/compare.rs",
+   "office-wasm/src/calls/save/features.rs"
+  ]
+ },
+ {
+  "name": "compareDocuments",
+  "kind": "function",
+  "async": true,
+  "file": "compare.ts",
+  "sig": "(original: ParsedDocFull, revised: ParsedDocFull, options?: CompareOptions): Promise<CompareResult>",
+  "risks": [],
+  "rust": [
+   "de/save/features/compare.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/features/compare.rs",
+   "office-wasm/src/calls/save/features.rs",
+   "office-wasm/src/lib.rs"
+  ]
+ },
+ {
+  "name": "DEFAULT_COMPARE_AUTHOR",
+  "kind": "const",
+  "async": false,
+  "file": "compare.ts",
+  "sig": "\"GenOffice\"",
+  "risks": [],
+  "rust": [
+   "de/save/features/compare.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/save/features/compare.rs"
+  ]
+ },
+ {
+  "name": "keepsHangulKanaSingle",
+  "kind": "function",
+  "async": false,
+  "file": "parse-block-passes.ts",
+  "sig": "(font: string | undefined): boolean",
+  "risks": [],
+  "rust": [
+   "de/block_passes.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/block_passes.rs"
+  ]
+ },
+ {
+  "name": "charClass",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): CharClass",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "isCjkLetterChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "isDoubleByteChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "isEastAsianChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "isEastAsianLangTag",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(tag: string | null | undefined, korean?: boolean): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "isHangulChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "isLatinAlnumChar",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(cp: number): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "textHasEastAsian",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(text: string): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "textHasHangulChars",
+  "kind": "function",
+  "async": false,
+  "file": "char-class.ts",
+  "sig": "(text: string): boolean",
+  "risks": [],
+  "rust": [
+   "de/char_class.rs"
+  ],
+  "route": [
+   "charclass"
+  ],
+  "fn": [
+   "docx-engine/src/char_class.rs"
+  ]
+ },
+ {
+  "name": "TEXT_EFFECTS",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "readonly TextEffect[]",
+  "risks": [],
+  "rust": [
+   "de/parse/text/build_run.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/parse/text/build_run.rs"
+  ]
+ },
+ {
+  "name": "EMPHASIS_MARKS",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "readonly NonNullable<\"dot\" | \"comma\" | \"circle\" | \"underDot\" | undefined>[]",
+  "risks": [],
+  "rust": [],
+  "route": [],
+  "fn": []
+ },
+ {
+  "name": "TOTAL_PAGES_MARK",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "\"\ue000\"",
+  "risks": [],
+  "rust": [
+   "de/parse/tables/hf_fields.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/parse/tables/hf_fields.rs"
+  ]
+ },
+ {
+  "name": "PAGE_MARK",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "\"\ue001\"",
+  "risks": [],
+  "rust": [
+   "de/parse/tables/hf_fields.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/parse/tables/hf_fields.rs"
+  ]
+ },
+ {
+  "name": "SECTION_PAGES_MARK",
+  "kind": "const",
+  "async": false,
+  "file": "types.ts",
+  "sig": "\"\ue002\"",
+  "risks": [],
+  "rust": [
+   "de/parse/tables/hf_fields.rs"
+  ],
+  "route": [],
+  "fn": [
+   "docx-engine/src/parse/tables/hf_fields.rs"
+  ]
+ }
+]

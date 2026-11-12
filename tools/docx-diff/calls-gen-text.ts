@@ -10,7 +10,7 @@ import {
   type CellTextsPatch,
   type FieldTextPatch,
   type TextboxParasPatchSet,
-} from '../../packages/docx-engine/src/generate'
+} from './reference/generate'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 

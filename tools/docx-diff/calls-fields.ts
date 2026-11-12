@@ -1,7 +1,7 @@
 // Group `fields`: parse-fields.ts (the readers that need no resolved property
 // chain), eq-field.ts, parse-sdt.ts and field-balance.ts.
-import { eqFieldToOmml, inlineEqFieldResults } from '../../packages/docx-engine/src/eq-field'
-import { balanceFieldChars } from '../../packages/docx-engine/src/field-balance'
+import { eqFieldToOmml, inlineEqFieldResults } from './reference/eq-field'
+import { balanceFieldChars } from './reference/field-balance'
 import {
   additiveSpacingOf,
   directLineOf,
@@ -13,23 +13,23 @@ import {
   rPrNodeOf,
   tagAttr,
   tocLevelOf,
-} from '../../packages/docx-engine/src/parse-fields'
+} from './reference/parse-fields'
 import {
   parseSdtBlock,
   sdtMeta,
   sdtRanges,
   sdtTableXml,
   splitSdtParts,
-} from '../../packages/docx-engine/src/parse-sdt'
-import { decodeEntities } from '../../packages/docx-engine/src/parse-xml-text'
+} from './reference/parse-sdt'
+import { decodeEntities } from './reference/parse-xml-text'
 import {
   resolveCtxOf,
   resolveParagraphPropsXml,
   type EffectivePPr,
   type ResolveCtx,
-} from '../../packages/docx-engine/src/resolve-props'
-import type { StyleInfo } from '../../packages/docx-engine/src/types'
-import type { XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/resolve-props'
+import type { StyleInfo } from './reference/types'
+import type { XNode } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 

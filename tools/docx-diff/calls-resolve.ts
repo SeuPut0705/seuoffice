@@ -2,9 +2,9 @@
 // properties. The context of a call is built on both sides from `args.parts`
 // (styles, numbering, theme) by the readers already ported, with the compat
 // values of `args.compat` and the table of `args.table` set on it.
-import type { CharUnits } from '../../packages/docx-engine/src/parse-props'
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
-import { parseStyles } from '../../packages/docx-engine/src/parse-styles'
+import type { CharUnits } from './reference/parse-props'
+import { parseNumbering } from './reference/parse-package'
+import { parseStyles } from './reference/parse-styles'
 import {
   AUTO_SPACING_TWIPS,
   autoSpacingTwips,
@@ -25,15 +25,15 @@ import {
   type ResolveCtx,
   type ResolveParaOptions,
   type TableCond,
-} from '../../packages/docx-engine/src/resolve-props'
+} from './reference/resolve-props'
 import type {
   DocDefaults,
   NumberingDef,
   StyleInfo,
   ThemeColors,
   ThemeFonts,
-} from '../../packages/docx-engine/src/types'
-import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/types'
+import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import { zipOf, type CallSpec, type Input } from './calls-spec'
 import { parseTheme } from './compare-package'
 import { elementFragments, tagTokens } from './fragments'

@@ -1,5 +1,7 @@
 // first: variables set under the old prefix are taken over before anything reads its own
 import '@seuoffice/i18n/old-names-env'
+// the engine starts before any module that calls it evaluates
+import './engine-init'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'

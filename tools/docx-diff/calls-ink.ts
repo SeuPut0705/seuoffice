@@ -9,8 +9,8 @@ import {
   INK_REL_RE,
   injectInkRunsIntoParagraph,
   stripInkRuns,
-} from '../../packages/docx-engine/src/ink'
-import type { NewInkImage } from '../../packages/docx-engine/src/types'
+} from './reference/ink'
+import type { NewInkImage } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 

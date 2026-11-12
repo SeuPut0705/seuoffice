@@ -371,8 +371,8 @@ entry still reproduces as listed, so the ledger cannot go stale. A divergence
 is listed, never coded around in the harness.
 
 An entry pins one input. Where main decided that the Rust is right and the
-TypeScript is to be fixed (a revision date with its T in a word, a custom
-geometry guide named after an Object.prototype member), corpus documents and mutations fall in the same class. A spec names the
+TypeScript is to be fixed (a custom geometry guide named after an
+Object.prototype member), corpus documents and mutations fall in the same class. A spec names the
 class of an input with `CallSpec.listed` (the predicates are in
 `tools/docx-diff/listed.ts`, each over the input alone). Such an input is
 still called on both sides: equal, it is a check like any other; different,
@@ -452,12 +452,15 @@ are deleted in that commit. The gate runs in UTC (`host.ts`); an entry with
   subtags taken from one ICU (`tools/docx-diff/blank-locale-table.mjs` says
   which and regenerates it). The TypeScript asks the host's `Intl.Locale`, so
   another ICU can answer differently for rare tags.
-- `generateIndexFieldXml` sorts as `a.localeCompare(b, 'zh-CN')`, which
-  asks the host's ICU. The wasm build asks the host too: `office-wasm`
-  imports `seu_host.host_collate(a_ptr, a_len, b_ptr, b_len) -> i32`, two
-  UTF-8 strings of its memory, answered by one `Intl.Collator('zh-CN')` of
-  the host (`tools/docx-diff/engine.ts`). A host that instantiates the wasm
-  must supply it. A native build sorts with ICU4X instead (feature
+- `generateIndexFieldXml(terms, locale = 'zh-CN')` sorts as
+  `a.localeCompare(b, locale)`, which asks the host's ICU. The wasm build
+  asks the host too: `office-wasm` imports
+  `seu_host.host_collate(a_ptr, a_len, b_ptr, b_len, locale_ptr, locale_len) -> i32`,
+  three UTF-8 strings of its memory, answered by an `Intl.Collator(locale)`
+  of the host (`tools/docx-diff/engine.ts`), or `i32::MIN` where Intl
+  refuses the locale (the call then throws, as `localeCompare` does once two
+  terms compare). A host that instantiates the wasm must supply it.
+  A native build sorts with ICU4X instead (feature
   `icu-collation` of `docx-engine`, CLDR 49 where Node 22 has CLDR 48), so
   a native and a wasm sort can differ where the two CLDRs do. Each member
   names the feature: the workspace dependency has it off, and `office-wasm`

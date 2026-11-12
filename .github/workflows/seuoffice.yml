@@ -38,6 +38,8 @@ jobs:
         with:
           targets: wasm32-wasip1
       - run: npm ci --ignore-scripts
+      # the docx engine of every module is crates/office-wasm
+      - run: npm run build:wasm
       - run: npx playwright install --with-deps chromium
       - run: npm run typecheck -w @seuoffice/web-platform -w @seuoffice/embed -w @seuoffice/collab -w @seuoffice/web
       - run: npm run test -w @seuoffice/web-platform -w @seuoffice/embed -w @seuoffice/collab

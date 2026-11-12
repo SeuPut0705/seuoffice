@@ -8,7 +8,10 @@ use jscompat::{
 
 use super::text_patch::{para_plain_text, xml_segments};
 use crate::model::ImageWrap;
-use crate::xml_number::{xml_decimal, xml_int};
+use crate::xml_number::{
+    xml_decimal, xml_int, xml_position_offset, xml_positive_coordinate, xml_unsigned_int,
+};
+use serde::{Deserialize, Deserializer};
 
 const EMU_PER_PX: f64 = 9525.0;
 
@@ -51,16 +54,34 @@ fn replace_str(text: &str, pattern: &str, template: &str) -> String {
     }
 }
 
+/// A field that tells `undefined` (absent) from `null` (`Some(None)`).
+pub(crate) fn nullable<'de, D, T>(deserializer: D) -> Result<Option<Option<T>>, D::Error>
+where
+    D: Deserializer<'de>,
+    T: Deserialize<'de>,
+{
+    Option::<T>::deserialize(deserializer).map(Some)
+}
+
 /// `ImagePatch`. `align` is `None` for undefined and `Some(None)` for null.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ImagePatch {
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub width_px: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub height_px: Option<f64>,
+    #[serde(default, deserialize_with = "nullable")]
     pub align: Option<Option<String>>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub pos_offset_x: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub pos_offset_y: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub rot_deg: Option<f64>,
+    #[serde(default)]
     pub flip_h: Option<bool>,
+    #[serde(default)]
     pub flip_v: Option<bool>,
 }
 
@@ -111,26 +132,18 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
     }
     let touch_size = num_truthy(patch.width_px) && num_truthy(patch.height_px);
     if touch_size {
+        // a size with no ST_PositiveCoordinate text keeps the extents
         let to_emu = |px: f64| {
             px.is_finite()
-                .then(|| js_max(1.0, math_round(px * EMU_PER_PX)))
+                .then(|| xml_positive_coordinate(js_max(1.0, px * EMU_PER_PX)))
+                .flatten()
         };
         let cx = to_emu(patch.width_px.unwrap_or(f64::NAN));
         let cy = to_emu(patch.height_px.unwrap_or(f64::NAN));
         if let (Some(cx), Some(cy)) = (cx, cy) {
             let resize = |tag: &str| {
-                let tag = replace_first(
-                    js_regex!(r#"cx="\d+""#),
-                    0,
-                    tag,
-                    &format!("cx=\"{}\"", num(cx)),
-                );
-                replace_first(
-                    js_regex!(r#"cy="\d+""#),
-                    0,
-                    &tag,
-                    &format!("cy=\"{}\"", num(cy)),
-                )
+                let tag = replace_first(js_regex!(r#"cx="\d+""#), 0, tag, &format!("cx=\"{cx}\""));
+                replace_first(js_regex!(r#"cy="\d+""#), 0, &tag, &format!("cy=\"{cy}\""))
             };
             out = replace_first_with(js_regex!(r"<wp:extent[^>]*\/?>"), &out, |m| {
                 resize(m.as_str())
@@ -214,25 +227,24 @@ pub fn patch_image_paragraph_xml(xml: &str, patch: &ImagePatch) -> String {
             }
         }
     }
-    let finite_offset = |v: f64| v.is_finite().then(|| math_round(v));
-    if let Some(x) = patch.pos_offset_x.and_then(finite_offset) {
+    if let Some(x) = patch.pos_offset_x.and_then(xml_position_offset) {
         out = replace_first(
             js_regex!(
                 r"(<wp:positionH[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionH>)"
             ),
             2,
             &out,
-            &format!("$1<wp:posOffset>{}</wp:posOffset>$2", num(x)),
+            &format!("$1<wp:posOffset>{x}</wp:posOffset>$2"),
         );
     }
-    if let Some(y) = patch.pos_offset_y.and_then(finite_offset) {
+    if let Some(y) = patch.pos_offset_y.and_then(xml_position_offset) {
         out = replace_first(
             js_regex!(
                 r"(<wp:positionV[^>]*>[\s\S]*?)<wp:posOffset>-?\d+<\/wp:posOffset>([\s\S]*?<\/wp:positionV>)"
             ),
             2,
             &out,
-            &format!("$1<wp:posOffset>{}</wp:posOffset>$2", num(y)),
+            &format!("$1<wp:posOffset>{y}</wp:posOffset>$2"),
         );
     }
     out
@@ -252,7 +264,7 @@ fn remove_wraps(xml: &str) -> String {
 /// `applyImageZOrder`. A rank with no XML text (`xml_number`) leaves the
 /// drawing as it was.
 pub fn apply_image_z_order(xml: &str, z_order: Option<f64>) -> String {
-    let Some(rank) = xml_int(251658240.0 + z_order.unwrap_or(0.0)) else {
+    let Some(rank) = xml_unsigned_int(251658240.0 + z_order.unwrap_or(0.0)) else {
         return xml.to_owned();
     };
     replace_first(
@@ -264,15 +276,19 @@ pub fn apply_image_z_order(xml: &str, z_order: Option<f64>) -> String {
 }
 
 /// `posOffset` of `applyImageWrap`; `relative_to` is `'page' | 'margin'`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct PosOffset {
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub x: f64,
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub y: f64,
+    #[serde(default)]
     pub relative_to: Option<String>,
 }
 
 /// `marginAlign` of `applyImageWrap`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct MarginAlign {
     pub h: String,
     pub v: String,
@@ -364,14 +380,14 @@ pub fn apply_image_wrap(
         }
     };
     if let Some(pos) = pos_offset {
-        position_h = match xml_int(pos.x) {
+        position_h = match xml_position_offset(pos.x) {
             None => kept_h.unwrap_or(position_h),
             Some(x) => format!(
                 "<wp:positionH relativeFrom=\"{}\"><wp:posOffset>{x}</wp:posOffset></wp:positionH>",
                 pos.relative_to.as_deref().unwrap_or("column")
             ),
         };
-        position_v = match xml_int(pos.y) {
+        position_v = match xml_position_offset(pos.y) {
             None => kept_v.unwrap_or(position_v),
             Some(y) => format!(
                 "<wp:positionV relativeFrom=\"{}\"><wp:posOffset>{y}</wp:posOffset></wp:positionV>",
@@ -398,7 +414,7 @@ pub fn apply_image_wrap(
         None if wrap == "topBottom" => "<wp:wrapTopAndBottom/>",
         None => "<wp:wrapNone/>",
     };
-    let rank = xml_int(251658240.0 + z_order.unwrap_or(0.0))
+    let rank = xml_unsigned_int(251658240.0 + z_order.unwrap_or(0.0))
         .or(kept_rank)
         .unwrap_or_else(|| "251658240".to_owned());
     let anchor_open = format!(
@@ -443,9 +459,12 @@ fn box_drawing_segments(paragraph_xml: &str) -> Vec<(usize, usize)> {
 }
 
 /// `ShapeDrawingLocation`. `box_index` is a number: only an array index finds a drawing.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ShapeDrawingLocation {
+    #[serde(default)]
     pub shape_id: Option<String>,
+    #[serde(deserialize_with = "jscompat::js_f64")]
     pub box_index: f64,
 }
 
@@ -474,7 +493,7 @@ fn shape_drawing_segment(
 }
 
 fn set_anchor_rank(drawing_xml: &str, z_order: f64) -> String {
-    let Some(rank) = xml_int(251658240.0 + z_order) else {
+    let Some(rank) = xml_unsigned_int(251658240.0 + z_order) else {
         return drawing_xml.to_owned();
     };
     replace_first_with(js_regex!(r"<wp:anchor[^>]*>"), drawing_xml, |m| {
@@ -669,7 +688,7 @@ fn set_vml_style_length(xml: &str, re: &JsRegex, px: f64) -> String {
 /// least 1) and the px the VML style takes from the same clamp, or `None` when
 /// the EMU has no plain-digit text.
 fn box_length(px: f64) -> Option<(String, f64)> {
-    let emu = xml_int(js_max(1.0, px * EMU_PER_PX))?;
+    let emu = xml_positive_coordinate(js_max(1.0, px * EMU_PER_PX))?;
     Some((emu, js_max(1.0 / EMU_PER_PX, px)))
 }
 
@@ -752,9 +771,12 @@ fn is_box_drawing(drawing_xml: &str) -> bool {
 }
 
 /// `TextboxSizePatch`; `None` is null or undefined.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct TextboxSizePatch {
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub w_px: Option<f64>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_opt")]
     pub h_px: Option<f64>,
 }
 
@@ -836,11 +858,16 @@ pub fn patch_textbox_sizes(paragraph_xml: &str, sizes: &[Option<TextboxSizePatch
 }
 
 /// `ShapeStylePatch`: `None` is undefined (keep), `Some(None)` is null.
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ShapeStylePatch {
+    #[serde(default, deserialize_with = "nullable")]
     pub fill_hex: Option<Option<String>>,
+    #[serde(default, deserialize_with = "nullable")]
     pub border_hex: Option<Option<String>>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_nullable")]
     pub rot_deg: Option<Option<f64>>,
+    #[serde(default, deserialize_with = "jscompat::js_f64_nullable")]
     pub border_width_px: Option<Option<f64>>,
 }
 
@@ -1015,8 +1042,8 @@ pub fn patch_shape_styles(paragraph_xml: &str, styles: &[Option<ShapeStylePatch>
 
 /// `patchDrawingExtent`
 pub fn patch_drawing_extent(paragraph_xml: &str, w_px: f64, h_px: f64) -> String {
-    let cx = xml_int(js_max(1.0, w_px * EMU_PER_PX));
-    let cy = xml_int(js_max(1.0, h_px * EMU_PER_PX));
+    let cx = xml_positive_coordinate(js_max(1.0, w_px * EMU_PER_PX));
+    let cy = xml_positive_coordinate(js_max(1.0, h_px * EMU_PER_PX));
     let mut out = paragraph_xml.to_owned();
     let mut set = |re: &JsRegex, digits: &Option<String>| {
         if let Some(digits) = digits {
@@ -1054,8 +1081,8 @@ fn resize_drawing_extents(xml: &str, width_px: f64, height_px: f64) -> String {
     if width_px.is_nan() || width_px <= 0.0 || height_px.is_nan() || height_px <= 0.0 {
         return xml.to_owned();
     }
-    let cx = xml_int(js_max(1.0, width_px * EMU_PER_PX));
-    let cy = xml_int(js_max(1.0, height_px * EMU_PER_PX));
+    let cx = xml_positive_coordinate(js_max(1.0, width_px * EMU_PER_PX));
+    let cy = xml_positive_coordinate(js_max(1.0, height_px * EMU_PER_PX));
     let Some(extent) = js_regex!(r#"<wp:extent\b[^>]*\bcx="(\d+)"[^>]*\bcy="(\d+)""#).exec(xml)
     else {
         return xml.to_owned();

@@ -115,7 +115,7 @@ pub fn table_look_of(tbl_pr: Option<&XNode>) -> TableLook {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BorderLine {
     pub style: String,
@@ -126,6 +126,7 @@ pub struct BorderLine {
 }
 
 js_object! {
+    deserialize;
     /// Table-level borders (with the inner lines) or cell-level borders (with
     /// the diagonals). A side is a key from the first tag that gives it, and
     /// duplicated containers and the table styles spread one over another.
@@ -513,6 +514,7 @@ pub fn merge_style_borders(
 }
 
 js_object! {
+    deserialize;
     /// Cell margins in twips (`CellMargins`). A side is a key from the first
     /// tag that gives it, so `w:start` after `w:right` puts left after right.
     #[derive(Debug, Clone, PartialEq)]

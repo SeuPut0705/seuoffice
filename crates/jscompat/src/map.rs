@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use serde::Serialize;
 use serde::ser::{SerializeSeq, Serializer};
+use serde::{Deserialize, Deserializer, Serialize};
 
 /// A JavaScript `Map` with string keys: entries stay in insertion order, and
 /// setting a key again keeps its place and replaces the value.
@@ -98,6 +98,14 @@ impl<V: Serialize> Serialize for JsMap<V> {
             pairs.serialize_element(entry)?;
         }
         pairs.end()
+    }
+}
+
+/// `new Map(entries)` over the `[key, value]` pairs the map serializes as.
+impl<'de, V: Deserialize<'de>> Deserialize<'de> for JsMap<V> {
+    fn deserialize<D: Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let pairs = Vec::<(String, V)>::deserialize(deserializer)?;
+        Ok(pairs.into_iter().collect())
     }
 }
 

@@ -19,9 +19,13 @@ use crate::xml_text::on_off_of;
 /// the resolver context its runs read through, and one resolved run per
 /// distinct rPr key.
 pub struct RunResolve<'a> {
-    pub eff: &'a resolve::EffectivePPr,
+    pub eff: std::borrow::Cow<'a, resolve::EffectivePPr>,
     pub rctx: &'a ResolveCtx,
     pub memo: JsMap<resolve::EffectiveRPr>,
+    /// the paragraph style chain's w:rtl (the inherited value of a run without its own flag)
+    pub para_rtl: Option<bool>,
+    /// shadow mode collector (`diff`)
+    pub diff: Option<std::rc::Rc<std::cell::RefCell<Vec<super::context::ShadowDiff>>>>,
 }
 
 /// `effectiveRunOf`: the run properties of `r_pr` resolved over the

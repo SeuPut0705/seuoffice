@@ -5,50 +5,6 @@
 
 type Args = Record<string, unknown>
 
-/** The filters of a revision call: its own, or those of its resolutions. */
-function revisionFilters(args: Args): object[] {
-  const resolutions = Array.isArray(args.resolutions) ? (args.resolutions as unknown[]) : []
-  return [
-    args.filter,
-    ...resolutions.map((resolution) =>
-      resolution && typeof resolution === 'object' && 'filter' in resolution ? resolution.filter : undefined,
-    ),
-  ].filter((filter): filter is object => !!filter && typeof filter === 'object')
-}
-
-/**
- * main's revisionDateMs reads a date that holds a T and ends in no zone as
- * UTC by appending Z: a date whose T is in a word ("GMT", "Tue") then no
- * longer parses, where Date.parse read it.
- */
-function readAsZoneless(date: string): boolean {
-  const s = date.trim()
-  return (
-    /T/i.test(s) &&
-    !/(?:Z|[+-]\d\d(?::?\d\d)?)$/i.test(s) &&
-    Number.isNaN(Date.parse(`${s}Z`)) &&
-    !Number.isNaN(Date.parse(s))
-  )
-}
-
-/**
- * The two known follow-ups of main's revision date filter: a `before` that is
- * not a string throws in the TypeScript (`iso.trim`), and a date with a T in a
- * word reads as NaN (readAsZoneless). Only a call with a `before` filter reads
- * dates.
- */
-export function revisionDateClass(text: string, args: Args): string | undefined {
-  const befores = revisionFilters(args)
-    .flatMap((filter) => ('before' in filter ? [filter.before] : []))
-  if (befores.length === 0) return undefined
-  if (befores.some((before) => typeof before !== 'string')) return 'revision-before-not-a-string'
-  const dates = [...text.matchAll(/\sw:date\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map((m) => m[1] ?? m[2] ?? '')
-  const strings = befores.filter((before): before is string => typeof before === 'string')
-  return [...strings, ...dates].some(readAsZoneless)
-    ? 'revision-date-with-a-t-in-a-word-read-as-zoneless'
-    : undefined
-}
-
 /** The names every plain object inherits from `Object.prototype`. */
 const OBJECT_PROTOTYPE_MEMBERS = new Set([
   'constructor',

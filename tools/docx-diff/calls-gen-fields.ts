@@ -4,7 +4,7 @@ import {
   generateIndexFieldXml,
   generateTocFieldXml,
   type TocEntry,
-} from '../../packages/docx-engine/src/generate'
+} from './reference/generate'
 import type { CallSpec, Input } from './calls-spec'
 
 interface Para {
@@ -132,9 +132,18 @@ export const GEN_FIELDS: CallSpec[] = [
   {
     fn: 'genFields.generateIndexFieldXml',
     argMutation: true,
-    call: (_text, args) => generateIndexFieldXml(args.terms as string[]),
+    call: (_text, args) =>
+      args.locale === undefined
+        ? generateIndexFieldXml(args.terms as string[])
+        : generateIndexFieldXml(args.terms as string[], String(args.locale)),
     fromDocument: (parts) => [{ args: { terms: termsOf(parts) } }],
-    built: TERMS.map((terms) => ({ args: { terms } })),
+    built: [
+      ...TERMS.map((terms) => ({ args: { terms } })),
+      // the locale of the document's language; a tag Intl refuses throws once two terms compare
+      ...TERMS.slice(0, 6).flatMap((terms) =>
+        ['ko-KR', 'ja-JP', 'en-US', 'de-u-co-phonebk', 'zh-CN-u-co-stroke', 'xx', 'en_US', ''].map((locale) => ({ args: { terms, locale } })),
+      ),
+    ],
     mutation: 'none',
   },
 ]

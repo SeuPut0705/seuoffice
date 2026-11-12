@@ -10,8 +10,8 @@ import {
   markerTabAdvance,
   SEGOE_UI_SYMBOL_RE,
   substituteBullet,
-} from '../../packages/docx-engine/src/list-markers'
-import { parseNumbering } from '../../packages/docx-engine/src/parse-package'
+} from './reference/list-markers'
+import { parseNumbering } from './reference/parse-package'
 import {
   decodeSymbolChar,
   decodeSymbolText,
@@ -19,8 +19,8 @@ import {
   symbolGlyph,
   symbolPuaChar,
   toSymbolPua,
-} from '../../packages/docx-engine/src/symbol-fonts'
-import type { NumberingDef } from '../../packages/docx-engine/src/types'
+} from './reference/symbol-fonts'
+import type { NumberingDef } from './reference/types'
 import { type CallSpec, type Input, zipOf } from './calls-spec'
 
 const FONTS = [

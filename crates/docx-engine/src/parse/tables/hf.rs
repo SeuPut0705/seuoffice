@@ -116,6 +116,15 @@ pub fn strip_hf_deletions(xml: &str) -> Result<String, RegexLimit> {
 /// elements of a part.
 pub fn hf_tbl_ranges(xml: &str) -> Vec<(u32, u32)> {
     let units = Utf16Map::new(xml);
+    hf_tbl_ranges_bytes(xml)
+        .into_iter()
+        .map(|(start, end)| (units.to_utf16(start), units.to_utf16(end)))
+        .collect()
+}
+
+/// `hfTblRanges` as byte offsets of `xml`, which is what the readers of a
+/// part compare match indexes with.
+pub fn hf_tbl_ranges_bytes(xml: &str) -> Vec<(usize, usize)> {
     let mut out = Vec::new();
     let mut depth = 0u32;
     let mut start = 0;
@@ -124,12 +133,12 @@ pub fn hf_tbl_ranges(xml: &str) -> Vec<(u32, u32)> {
             if depth > 0 {
                 depth -= 1;
                 if depth == 0 {
-                    out.push((start, units.to_utf16(found.end())));
+                    out.push((start, found.end()));
                 }
             }
         } else {
             if depth == 0 {
-                start = units.to_utf16(found.start());
+                start = found.start();
             }
             depth += 1;
         }
@@ -155,17 +164,33 @@ fn byte_at_unit(text: &str, end: f64) -> usize {
 /// cell holding UTF-16 offset `at`: `w:tblInd` plus the grid columns of the
 /// cells before it in its row.
 pub fn hf_cell_column_left_px(xml: &str, at: f64) -> f64 {
+    let units = Utf16Map::new(xml);
+    cell_column_left_px(
+        xml,
+        |start| f64::from(units.to_utf16(start)) < at,
+        byte_at_unit(xml, at),
+    )
+}
+
+/// `hfCellColumnLeftPx` for an `at` that is a byte offset of `xml` (a match
+/// index, as the readers of a part count).
+pub fn hf_cell_column_left_px_at(xml: &str, at: usize) -> f64 {
+    cell_column_left_px(xml, |start| start < at, at.min(xml.len()))
+}
+
+/// The body of `hfCellColumnLeftPx`: `before` says whether the byte offset
+/// of a tag lies before `at`, `at_byte` is `at` as a byte offset.
+fn cell_column_left_px(xml: &str, before: impl Fn(usize) -> bool, at_byte: usize) -> f64 {
     struct Open {
         start: usize,
         first_row: Option<usize>,
         row: Option<usize>,
     }
-    let units = Utf16Map::new(xml);
     // innermost table still open at `at`, with its first row and the row holding `at`
     let mut open: Vec<Open> = Vec::new();
     for found in js_regex!(r"<w:tbl[\s>]|<\/w:tbl>|<w:tr[\s>]")
         .find_iter(xml)
-        .take_while(|found| f64::from(units.to_utf16(found.start())) < at)
+        .take_while(|found| before(found.start()))
     {
         if found.as_str() == "</w:tbl>" {
             open.pop();
@@ -209,7 +234,7 @@ pub fn hf_cell_column_left_px(xml: &str, at: f64) -> f64 {
         .find_iter(grid_text)
         .map(|found| parse_int(found.get(1).unwrap_or(""), Radix::Ten))
         .collect();
-    let row_end = byte_at_unit(xml, at).max(*row_start);
+    let row_end = at_byte.max(*row_start);
     let before = js_regex!(r"<w:tbl[\s>][\s\S]*?<\/w:tbl>", "g")
         .replace_all(&xml[*row_start..row_end], |_| String::new());
     let cells: Vec<&str> = js_regex!(r"<w:tc[\s>]([\s\S]*?)(?=<w:p[\s>]|<w:tc[\s>]|$)")

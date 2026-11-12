@@ -1,5 +1,6 @@
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use crate::inline_opaque::ContentControlPart;
 use crate::model::{GeneratedBlock, MapEntries};
 use jscompat::{JsNum, math_max, math_min, number_to_string, replace_first_string};
 
@@ -11,6 +12,11 @@ pub struct GenerateContext<'a> {
     pub allocate_hyperlink_rel: &'a mut dyn FnMut(&str) -> String,
     pub allocate_bookmark_id: Option<&'a mut dyn FnMut(&str) -> f64>,
     pub allocate_revision_id: Option<&'a mut dyn FnMut() -> String>,
+    /// The part the block is written into. With it the run writer checks that
+    /// the part root declares the prefixes of the bytes a run carries, and marks
+    /// the controls it writes from runs so the part can let a repeated id give
+    /// way (`ContentControlPart::finish`, which the caller runs over the part).
+    pub part: Option<&'a ContentControlPart>,
 }
 
 static STANDALONE_BOOKMARK_SEQ: AtomicU64 = AtomicU64::new(0);
@@ -47,6 +53,7 @@ pub fn generate_paragraph_xml(
             ctx.allocate_revision_id
                 .as_mut()
                 .map(|callback| &mut **callback as &mut dyn FnMut() -> String),
+            ctx.part,
         )
         .map_err(|limit| limit.to_string())?,
     );

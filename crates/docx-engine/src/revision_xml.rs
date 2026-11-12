@@ -148,26 +148,25 @@ fn scan(xml: &str) -> Vec<El<'_>> {
     out
 }
 
-/// `attrOf`, with the pattern of each name written out. The TypeScript reads
-/// `\s${name}="([^"]*)"`, so an attribute in single quotes is absent to it and
-/// a filter by author, id or date never matches such an element; here either
-/// quote is read (divergences.json: `revision-attribute-in-single-quotes`).
-fn attr_of<'a>(el: &El<'a>, pattern: &JsRegex) -> Option<&'a str> {
-    pattern
-        .exec(el.attrs)
-        .and_then(|found| found.get(1).or(found.get(2)))
+/// `attrOf`: an attribute of a tag, in either quote. It walks the tag, so text
+/// inside another value is not taken for it.
+fn attr_of<'a>(el: &El<'a>, name: &str) -> Option<&'a str> {
+    js_regex!(r#"([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')"#, "g")
+        .find_iter(el.attrs)
+        .find(|found| found.get(1) == Some(name))
+        .and_then(|found| found.get(2).or(found.get(3)))
 }
 
 fn author_of<'a>(el: &El<'a>) -> Option<&'a str> {
-    attr_of(el, js_regex!(r#"\sw:author=(?:"([^"]*)"|'([^']*)')"#))
+    attr_of(el, "w:author")
 }
 
 fn date_of<'a>(el: &El<'a>) -> Option<&'a str> {
-    attr_of(el, js_regex!(r#"\sw:date=(?:"([^"]*)"|'([^']*)')"#))
+    attr_of(el, "w:date")
 }
 
 fn id_of<'a>(el: &El<'a>) -> Option<&'a str> {
-    attr_of(el, js_regex!(r#"\sw:id=(?:"([^"]*)"|'([^']*)')"#))
+    attr_of(el, "w:id")
 }
 
 /// `PROP_CHANGE[name]` for its own keys. An inherited name (`constructor`)
@@ -261,13 +260,10 @@ fn matches(
         }
     }
     if let Some(before) = filter.get("before") {
-        match truthy(date_of(el)) {
-            None => return Ok(false),
-            Some(date) => {
-                if date_parse(date) >= date_parse(&js_string(before)) {
-                    return Ok(false);
-                }
-            }
+        // `revisionDateBefore`: a w:date that is no date is never before
+        let before_ms = revision_date_ms(&js_string(before));
+        if !date_of(el).is_some_and(|date| revision_date_ms(date) < before_ms) {
+            return Ok(false);
         }
     }
     if let Some(wanted) = filter.get("date")
@@ -759,6 +755,44 @@ pub fn count_tracked_changes_xml(xml: &str) -> usize {
     scan(xml).iter().filter(|el| type_of(el).is_some()).count()
 }
 
+/// `checkFilter`: a `before` the engine can compare against is a string that
+/// is a date; anything else is refused, by name, before a part is touched.
+fn check_filter(filter: Option<&Value>) -> Result<(), String> {
+    let Some(before) = filter
+        .and_then(Value::as_object)
+        .and_then(|f| f.get("before"))
+    else {
+        return Ok(());
+    };
+    match before {
+        Value::String(text) if !revision_date_ms(text).is_nan() => Ok(()),
+        _ => Err(format!(
+            "Error: revision filter: before must be an ISO date such as 2026-09-01 or 2026-09-01T12:00:00Z, got {}",
+            serde_json::to_string(before).unwrap_or_default()
+        )),
+    }
+}
+
+/// `revisionDateMs`: epoch ms of a revision date, NaN when it is no date. An
+/// ISO date-time without a zone designator is UTC; any other form is read as
+/// `Date.parse` reads it.
+pub fn revision_date_ms(iso: &str) -> f64 {
+    let s = trim(iso);
+    let Some(date_time) = js_regex!(
+        r"^\d{4}-\d\d-\d\d[T ]\d\d:\d\d(?::\d\d(?:\.\d+)?)?(Z|[+-]\d\d(?::?\d\d)?)?$",
+        "i"
+    )
+    .exec(s) else {
+        return date_parse(s);
+    };
+    let t = s.replacen(' ', "T", 1);
+    if date_time.get(1).is_some() {
+        date_parse(&t)
+    } else {
+        date_parse(&format!("{t}Z"))
+    }
+}
+
 /// `applyTrackedChangesXml`. `mode` is any string, as at run time: one that is
 /// neither `accept` nor `reject` unwraps every change and reverts every record.
 /// `filter` is the JSON value the TypeScript receives; `Err` where it throws.
@@ -767,6 +801,7 @@ pub fn apply_tracked_changes_xml<'a>(
     mode: &str,
     filter: Option<&Value>,
 ) -> Result<RevisionXmlResult<'a>, String> {
+    check_filter(filter)?;
     if count_tracked_changes_xml(xml) == 0 {
         // nothing countable is left, but a part whose move markup lost its partner
         // (the move was resolved earlier, e.g. in the body) still gets the orphan
@@ -872,20 +907,11 @@ pub fn read_prop_change_xml<'a>(xml: &'a str, change_name: &str) -> Option<PropC
     Some(PropChangeRecord {
         author: author_of(change).unwrap_or(""),
         date: truthy(date_of(change)),
-        date_utc: truthy(attr_of(
-            change,
-            js_regex!(r#"\sw16du:dateUtc=(?:"([^"]*)"|'([^']*)')"#),
-        )),
+        date_utc: truthy(attr_of(change, "w16du:dateUtc")),
         id: truthy(id_of(change)),
         old_xml: old.map_or("", |old| slice(xml, old.inner_start, old.inner_end)),
-        v_merge: truthy(attr_of(
-            change,
-            js_regex!(r#"\sw:vMerge=(?:"([^"]*)"|'([^']*)')"#),
-        )),
-        v_merge_orig: truthy(attr_of(
-            change,
-            js_regex!(r#"\sw:vMergeOrig=(?:"([^"]*)"|'([^']*)')"#),
-        )),
+        v_merge: truthy(attr_of(change, "w:vMerge")),
+        v_merge_orig: truthy(attr_of(change, "w:vMergeOrig")),
     })
 }
 

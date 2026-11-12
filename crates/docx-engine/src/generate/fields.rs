@@ -6,7 +6,7 @@ use icu_collator::options::CollatorOptions;
 #[cfg(feature = "icu-collation")]
 use icu_collator::{Collator, CollatorBorrowed};
 #[cfg(feature = "icu-collation")]
-use icu_locale_core::locale;
+use icu_locale_core::Locale;
 use jscompat::{JsNum, math_max, math_min, number_to_string, trim};
 use serde::Deserialize;
 
@@ -102,32 +102,59 @@ compile_error!(
     "docx-engine needs the `icu-collation` feature outside wasm32: only a wasm host supplies the INDEX field collator"
 );
 
-/// `new Intl.Collator('zh-CN')`: the default (pinyin) collation, tertiary strength
+/// The message of the RangeError `localeCompare` throws on a locale that is
+/// no language tag.
+const BAD_LOCALE: &str = "RangeError: Incorrect locale information provided";
+
+/// `new Intl.Collator(locale)`: the default collation, tertiary strength. A
+/// locale the compiled data lacks falls back to the root collation, where a
+/// host falls back to its own default: one of the CLDR differences of the
+/// native build.
 #[cfg(feature = "icu-collation")]
-fn zh_cn_collator() -> CollatorBorrowed<'static> {
-    Collator::try_new(locale!("zh-CN").into(), CollatorOptions::default())
-        .expect("compiled collation data holds zh")
+fn collator(locale: &str) -> Result<CollatorBorrowed<'static>, String> {
+    let locale = Locale::try_from_str(locale).map_err(|_| BAD_LOCALE.to_owned())?;
+    Collator::try_new((&locale).into(), CollatorOptions::default())
+        .map_err(|_| BAD_LOCALE.to_owned())
 }
 
-/// `new Intl.Collator('zh-CN').compare(a, b)` of the host. ECMA-402 (20.1.1)
-/// defines `a.localeCompare(b, 'zh-CN')` as exactly that comparison, so the
-/// host's answer is the TypeScript's answer on the same engine.
+/// `new Intl.Collator(locale).compare(a, b)` of the host, `None` when the host
+/// refuses the locale. ECMA-402 (20.1.1) defines `a.localeCompare(b, locale)`
+/// as exactly that comparison, so the host's answer is the TypeScript's
+/// answer on the same engine.
 #[cfg(all(target_arch = "wasm32", not(feature = "icu-collation")))]
-fn host_compare(a: &str, b: &str) -> std::cmp::Ordering {
+fn host_compare(a: &str, b: &str, locale: &str) -> Option<std::cmp::Ordering> {
     #[link(wasm_import_module = "seu_host")]
     unsafe extern "C" {
         /// Compares two UTF-8 strings of this module's memory as
-        /// `Intl.Collator('zh-CN').compare` does: below, at or above zero.
-        fn host_collate(a_ptr: *const u8, a_len: u32, b_ptr: *const u8, b_len: u32) -> i32;
+        /// `Intl.Collator(locale).compare` does: below, at or above zero, or
+        /// `i32::MIN` when the locale is no language tag.
+        fn host_collate(
+            a_ptr: *const u8,
+            a_len: u32,
+            b_ptr: *const u8,
+            b_len: u32,
+            locale_ptr: *const u8,
+            locale_len: u32,
+        ) -> i32;
     }
-    // SAFETY: both strings are live and valid UTF-8 for the call; the host only reads them.
-    // A length fits u32: usize is 32 bits on wasm32.
-    let sign = unsafe { host_collate(a.as_ptr(), a.len() as u32, b.as_ptr(), b.len() as u32) };
-    sign.cmp(&0)
+    // SAFETY: the three strings are live and valid UTF-8 for the call; the host
+    // only reads them. A length fits u32: usize is 32 bits on wasm32.
+    let sign = unsafe {
+        host_collate(
+            a.as_ptr(),
+            a.len() as u32,
+            b.as_ptr(),
+            b.len() as u32,
+            locale.as_ptr(),
+            locale.len() as u32,
+        )
+    };
+    (sign != i32::MIN).then(|| sign.cmp(&0))
 }
 
-/// INDEX field as one w:p per cached entry line, sorted as `localeCompare(b, 'zh-CN')` sorts
-pub fn generate_index_field_xml(terms: &[String]) -> Vec<String> {
+/// `generateIndexFieldXml(terms, locale)`: the INDEX field as one w:p per
+/// cached entry line, sorted as `localeCompare(b, locale)` sorts.
+pub fn generate_index_field_xml(terms: &[String], locale: &str) -> Result<Vec<String>, String> {
     let mut unique: Vec<&str> = Vec::new();
     for term in terms {
         let t = trim(term);
@@ -136,16 +163,30 @@ pub fn generate_index_field_xml(terms: &[String]) -> Vec<String> {
         }
     }
     if unique.is_empty() {
-        return Vec::new();
+        return Ok(Vec::new());
     }
-    // Array.prototype.sort is stable, as is sort_by
-    #[cfg(feature = "icu-collation")]
-    {
-        let collator = zh_cn_collator();
-        unique.sort_by(|a, b| collator.compare(a, b));
+    // Array.prototype.sort is stable, as is sort_by; it compares nothing, and
+    // so refuses no locale, for one term
+    if unique.len() > 1 {
+        #[cfg(feature = "icu-collation")]
+        {
+            let collator = collator(locale)?;
+            unique.sort_by(|a, b| collator.compare(a, b));
+        }
+        #[cfg(not(feature = "icu-collation"))]
+        {
+            let mut refused = false;
+            unique.sort_by(|a, b| {
+                host_compare(a, b, locale).unwrap_or_else(|| {
+                    refused = true;
+                    std::cmp::Ordering::Equal
+                })
+            });
+            if refused {
+                return Err(BAD_LOCALE.to_owned());
+            }
+        }
     }
-    #[cfg(not(feature = "icu-collation"))]
-    unique.sort_by(|a, b| host_compare(a, b));
     let begin = "<w:r><w:fldChar w:fldCharType=\"begin\" w:dirty=\"true\"/></w:r>\
                  <w:r><w:instrText xml:space=\"preserve\"> INDEX \\c \"2\" </w:instrText></w:r>\
                  <w:r><w:fldChar w:fldCharType=\"separate\"/></w:r>";
@@ -153,7 +194,7 @@ pub fn generate_index_field_xml(terms: &[String]) -> Vec<String> {
     let p_pr = "<w:pPr><w:tabs><w:tab w:val=\"right\" w:leader=\"dot\" w:pos=\"4300\"/></w:tabs>\
                 <w:rPr><w:noProof/></w:rPr></w:pPr>";
     let last_index = unique.len() - 1;
-    unique
+    Ok(unique
         .iter()
         .enumerate()
         .map(|(i, term)| {
@@ -165,5 +206,5 @@ pub fn generate_index_field_xml(terms: &[String]) -> Vec<String> {
                 if i == last_index { end } else { "" },
             )
         })
-        .collect()
+        .collect())
 }

@@ -23,5 +23,5 @@ pub fn xml_flag_on(xml: &str, tag: &str) -> Result<bool, RegexError> {
     }
     Ok(false)
 }
-mod read;
+pub mod read;
 pub use read::*;

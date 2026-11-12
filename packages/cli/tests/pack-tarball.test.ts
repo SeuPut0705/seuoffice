@@ -19,6 +19,7 @@ function resources(): string {
     'wasm/pdfium.wasm',
     'wasm/rhwp_bg.wasm',
     'wasm/hb-subset.wasm',
+    'wasm/office_wasm.wasm',
     'native/xlsx-sidecar',
   ]
   for (const file of files) {
@@ -75,6 +76,7 @@ describe('pack-tarball', () => {
       'seuoffice-cli/wasm/pdfium.wasm',
       'seuoffice-cli/wasm/rhwp_bg.wasm',
       'seuoffice-cli/wasm/hb-subset.wasm',
+      'seuoffice-cli/wasm/office_wasm.wasm',
       'seuoffice-cli/native/xlsx-sidecar',
       'seuoffice-cli/LICENSE',
       'seuoffice-cli/NOTICE',

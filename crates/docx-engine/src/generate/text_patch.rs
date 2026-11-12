@@ -12,8 +12,9 @@ use ooxml_xml::Utf16Map;
 use serde::{Deserialize, Deserializer};
 
 use super::props::merge_cell_para_format;
-use super::runs::runs_xml;
+use super::runs::runs_xml_in;
 use super::{escape_xml_text, split_xml_children};
+use crate::inline_opaque::ContentControlPart;
 use crate::model::{ParaFormat, Run};
 
 /// `xml.indexOf(needle, from)` for an ASCII needle: a match always starts on
@@ -401,6 +402,7 @@ fn carried_runs_of(p_xml: &str, emitted_media: &[&str]) -> Result<String, RegexL
 fn patch_cell_xml(
     tc_xml: &str,
     paras: &[Option<CellParaPatch>],
+    part: &ContentControlPart,
 ) -> Result<Option<String>, RegexLimit> {
     if index_of(tc_xml, "<w:tbl", 1).is_some() {
         return Ok(None);
@@ -457,7 +459,7 @@ fn patch_cell_xml(
                 };
                 let emitted = match &rich.xml {
                     Some(xml) => xml.clone(),
-                    None => runs_xml(&rich.runs, None)?,
+                    None => runs_xml_in(&rich.runs, part)?,
                 };
                 let emitted_media = media_r_ids(&emitted);
                 let keep = if aligned {
@@ -552,10 +554,23 @@ pub struct NestedCellTexts {
     pub nested: Option<Vec<Option<TableTexts>>>,
 }
 
-/// Replace cell texts inside a <w:tbl> fragment.
+/// `patchTableCellTexts(tableXml, texts)`: replace cell texts inside a
+/// <w:tbl> fragment, the content controls written from runs given way to by
+/// the ids the fragment holds.
 pub fn patch_table_cell_texts(
     table_xml: &str,
     texts: &[Option<Vec<Option<CellTextsPatch>>>],
+) -> Result<String, RegexLimit> {
+    let scope = ContentControlPart::new(&[table_xml], None);
+    scope.finish(&patch_table_cell_texts_with(table_xml, texts, &scope)?)
+}
+
+/// `patchTableCellTexts(tableXml, texts, part)`: the fragment is a piece of
+/// `part`, whose caller finishes it.
+pub fn patch_table_cell_texts_with(
+    table_xml: &str,
+    texts: &[Option<Vec<Option<CellTextsPatch>>>],
+    part: &ContentControlPart,
 ) -> Result<String, RegexLimit> {
     let mut out = String::new();
     let mut cursor = 0;
@@ -575,9 +590,9 @@ pub fn patch_table_cell_texts(
             };
             let tc_xml = &table_xml[tc.start..tc.end];
             let patched = match entry {
-                CellTextsPatch::Paras(paras) => patch_cell_xml(tc_xml, paras)?,
+                CellTextsPatch::Paras(paras) => patch_cell_xml(tc_xml, paras, part)?,
                 CellTextsPatch::Nested(nested) => {
-                    patch_nested_in_cell(tc_xml, nested.nested.as_deref())?
+                    patch_nested_in_cell(tc_xml, nested.nested.as_deref(), part)?
                 }
             };
             let Some(patched) = patched else { continue };
@@ -594,6 +609,7 @@ pub fn patch_table_cell_texts(
 fn patch_nested_in_cell(
     tc_xml: &str,
     nested: Option<&[Option<TableTexts>]>,
+    part: &ContentControlPart,
 ) -> Result<Option<String>, RegexLimit> {
     let Some(nested) = nested.filter(|nested| !nested.is_empty()) else {
         return Ok(None);
@@ -612,7 +628,11 @@ fn patch_nested_in_cell(
             continue;
         };
         out.push_str(&tc_xml[cursor..seg.start]);
-        out.push_str(&patch_table_cell_texts(&tc_xml[seg.start..seg.end], grid)?);
+        out.push_str(&patch_table_cell_texts_with(
+            &tc_xml[seg.start..seg.end],
+            grid,
+            part,
+        )?);
         cursor = seg.end;
     }
     out.push_str(&tc_xml[cursor..]);
@@ -808,6 +828,7 @@ fn p_pr_with_jc(p_pr: &str, align: Option<TextboxAlign>) -> String {
 fn patch_txbx_content(
     seg_xml: &str,
     paras: &[Option<TextboxParaPatch>],
+    part: &ContentControlPart,
 ) -> Result<String, RegexLimit> {
     let Some(open) = js_regex!(r"^<w:txbxContent(?: [^>]*)?>").exec(seg_xml) else {
         return Ok(seg_xml.to_owned());
@@ -840,7 +861,7 @@ fn patch_txbx_content(
         // no rel allocation inside textboxes
         out.push_str(&format!(
             "<w:p>{p_pr}{}</w:p>",
-            runs_xml(&patch.runs, None)?
+            runs_xml_in(&patch.runs, part)?
         ));
     }
     out.push_str("</w:txbxContent>");
@@ -870,6 +891,7 @@ pub fn patch_textbox_paras(
     paragraph_xml: &str,
     patches: &TextboxParasPatchSet,
 ) -> Result<String, RegexLimit> {
+    let part = ContentControlPart::new(&[paragraph_xml], None);
     let by_index = patches.by_index.as_deref().unwrap_or_default();
     let segs = xml_segments(paragraph_xml, "w:txbxContent", 0, paragraph_xml.len());
     let mut xml = paragraph_xml.to_owned();
@@ -898,6 +920,7 @@ pub fn patch_textbox_paras(
             out.push_str(&patch_txbx_content(
                 &paragraph_xml[seg.start..seg.end],
                 paras,
+                &part,
             )?);
             cursor = seg.end;
         }
@@ -905,13 +928,17 @@ pub fn patch_textbox_paras(
         xml = out;
     }
     for entry in patches.inject.as_deref().unwrap_or_default() {
-        xml = inject_shape_text(&xml, entry)?;
+        xml = inject_shape_text(&xml, entry, &part)?;
     }
-    Ok(xml)
+    part.finish(&xml)
 }
 
 /// First text on a shape that has no <w:txbxContent>.
-fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> Result<String, RegexLimit> {
+fn inject_shape_text(
+    paragraph_xml: &str,
+    entry: &ShapeTextInject,
+    part: &ContentControlPart,
+) -> Result<String, RegexLimit> {
     for seg in xml_segments(paragraph_xml, "wps:wsp", 0, paragraph_xml.len()) {
         let mut shape_xml = paragraph_xml[seg.start..seg.end].to_owned();
         let id = js_regex!(r#"<wps:cNvPr\b[^>]*\bid="([^"]+)""#)
@@ -932,7 +959,7 @@ fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> Result<Str
             shape_xml = format!(
                 "{}{}{}",
                 &shape_xml[..content.start],
-                patch_txbx_content(&shape_xml[content.start..content.end], &paras)?,
+                patch_txbx_content(&shape_xml[content.start..content.end], &paras, part)?,
                 &shape_xml[content.end..]
             );
         } else {
@@ -944,7 +971,7 @@ fn inject_shape_text(paragraph_xml: &str, entry: &ShapeTextInject) -> Result<Str
                         &p_pr_with_ind_left("", p.indent_left.flatten().map(|n| n.0)),
                         p.align.flatten(),
                     );
-                    Ok(format!("<w:p>{p_pr}{}</w:p>", runs_xml(&p.runs, None)?))
+                    Ok(format!("<w:p>{p_pr}{}</w:p>", runs_xml_in(&p.runs, part)?))
                 })
                 .collect::<Result<_, RegexLimit>>()?;
             let txbx = format!("<wps:txbx><w:txbxContent>{body}</w:txbxContent></wps:txbx>");

@@ -23,11 +23,11 @@ import {
   w14TextFillHex,
   type DrawingAnchorMeta,
   type GroupCtm,
-} from '../../packages/docx-engine/src/parse-drawing-geometry'
-import { sectionSettingsFromXml } from '../../packages/docx-engine/src/section'
-import { readThemeColors } from '../../packages/docx-engine/src/theme'
-import type { ThemeColors } from '../../packages/docx-engine/src/types'
-import { nameOf, xmlParser, type XNode } from '../../packages/docx-engine/src/xml-utils'
+} from './reference/parse-drawing-geometry'
+import { sectionSettingsFromXml } from './reference/section'
+import { readThemeColors } from './reference/theme'
+import type { ThemeColors } from './reference/types'
+import { nameOf, xmlParser, type XNode } from './reference/xml-utils'
 import type { CallSpec, Input } from './calls-spec'
 import { elementFragments } from './fragments'
 

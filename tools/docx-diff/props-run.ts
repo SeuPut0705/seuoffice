@@ -1,8 +1,8 @@
 // Comparison (d): the property readers, over the corpus, synthetic texts,
 // broken elements, model values and seeded mutations.
-import { fieldInstructions } from '../../packages/docx-engine/src/parse-props'
-import { DEFAULT_THEME_COLORS } from '../../packages/docx-engine/src/theme'
-import type { Run } from '../../packages/docx-engine/src/types'
+import { fieldInstructions } from './reference/parse-props'
+import { DEFAULT_THEME_COLORS } from './reference/theme'
+import type { Run } from './reference/types'
 import {
   brokenAtTheRoot,
   byFunction,
