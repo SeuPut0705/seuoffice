@@ -305,6 +305,11 @@ function richPackages(): Record<string, EntrySpec[]> {
     '</w:abstractNum>' +
     '<w:abstractNum w:abstractNumId="1"><w:numStyleLink w:val="ListStyle"/>' +
     lvl('0', '<w:start w:val="9"/>') +
+    // keys that are no array index keep the order they were set in: the levels of the
+    // linked abstractNum first; and 10 comes after 2, which text order would not give
+    lvl('-3', '<w:start w:val="1"/>') +
+    lvl('-1', '') +
+    lvl('10', '') +
     '</w:abstractNum>' +
     '<w:abstractNum w:abstractNumId="2"><w:styleLink w:val="ListStyle"/><w:numStyleLink w:val="Other"/>' +
     lvl('0', '<w:numFmt w:val="bullet"/>') +
@@ -312,6 +317,8 @@ function richPackages(): Record<string, EntrySpec[]> {
     '</w:abstractNum>' +
     '<w:abstractNum w:abstractNumId="3"><w:styleLink w:val="Other"/><w:numStyleLink w:val="ListStyle"/>' +
     lvl('2', '<w:numFmt w:val="ordinal"/>') +
+    lvl('-2', '') +
+    lvl('-3', '') +
     '</w:abstractNum>' +
     '<w:abstractNum><w:lvl w:ilvl="0"/></w:abstractNum>' +
     '<w:abstractNum w:abstractNumId="7"><w:lvl w:ilvl="0"/></w:abstractNum><w:abstractNum w:abstractNumId="7"/>' +
