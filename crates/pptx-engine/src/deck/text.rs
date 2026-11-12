@@ -246,6 +246,10 @@ pub struct ReplaceOptions {
     /// Restrict to one slide/element (the "Replace" button acts on the currently hit element)
     pub slide_index: Option<f64>,
     pub element_id: Option<String>,
+    /// Text a person hid from AI is out of the search: no match inside it or
+    /// across it, and no count for one. For an agent, whose answer would
+    /// otherwise tell it the words are there.
+    pub skip_withheld: Option<bool>,
 }
 
 /// What `replaceAllInDeck` answers.
@@ -322,19 +326,24 @@ struct Replacer {
     /// `Infinity` or 1
     budget: f64,
     count: usize,
+    /// `opts.skipWithheld === true`
+    skip_withheld: bool,
 }
 
-/// `isBarrier`: a field run or an <a:br/> soft-break sentinel is a hard barrier.
-fn is_barrier(r: &TextRun) -> bool {
-    r.field.as_deref().is_some_and(|f| !f.is_empty()) || r.text.as_deref() == Some("\n")
+/// `isBarrier`: a field run or an <a:br/> soft-break sentinel is a hard
+/// barrier, and so is a run hidden from AI when the search skips those.
+fn is_barrier(r: &TextRun, skip_withheld: bool) -> bool {
+    r.field.as_deref().is_some_and(|f| !f.is_empty())
+        || r.text.as_deref() == Some("\n")
+        || (skip_withheld && r.redact.as_deref().is_some_and(|label| !label.is_empty()))
 }
 
 /// `segmentsOf`: matches may only span the consecutive plain runs between barriers.
-fn segments_of(p: &Paragraph) -> Vec<Vec<usize>> {
+fn segments_of(p: &Paragraph, skip_withheld: bool) -> Vec<Vec<usize>> {
     let mut segments: Vec<Vec<usize>> = Vec::new();
     let mut current: Vec<usize> = Vec::new();
     for (i, r) in p.runs.as_deref().unwrap_or(&[]).iter().enumerate() {
-        if is_barrier(r) {
+        if is_barrier(r, skip_withheld) {
             if !current.is_empty() {
                 segments.push(std::mem::take(&mut current));
             }
@@ -452,7 +461,7 @@ impl Replacer {
             if self.budget <= 0.0 {
                 return hit;
             }
-            for segment in segments_of(p) {
+            for segment in segments_of(p, self.skip_withheld) {
                 if self.budget <= 0.0 {
                     return hit;
                 }
@@ -496,6 +505,7 @@ pub fn replace_all_in_deck(
             f64::INFINITY
         },
         count: 0,
+        skip_withheld: opts.skip_withheld == Some(true),
     };
     let mut changed: BTreeSet<usize> = BTreeSet::new();
 

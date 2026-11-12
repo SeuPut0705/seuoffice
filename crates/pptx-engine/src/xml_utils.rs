@@ -214,6 +214,42 @@ pub fn c_sld_name_of(part_xml: &str) -> Option<String> {
     attribute_of(c_sld.as_str(), "name")
 }
 
+/// `canonicalXml`: a part's XML in the one spelling the engine's patchers look
+/// for: no comments, no CDATA sections (their text escaped instead) and no white
+/// space before the `>` of an end tag.
+///
+/// Reading and saving search the XML text for `</a:r>`, `</a:p>`, `</p:txBody>`
+/// and the like. A comment or a CDATA section can hold those very words, and
+/// `</a:p >` is the end tag `</a:p>` as XML reads it, so a search that looked
+/// for one spelling cut a run or a paragraph in the wrong place. Applied once
+/// where a slide is read. What XML reads is unchanged.
+pub fn canonical_xml(xml: &str) -> Result<Cow<'_, str>, String> {
+    if !js_regex!(r"<!--|<!\[CDATA\[|<\/[^>]*\s>").test(xml) {
+        return Ok(Cow::Borrowed(xml));
+    }
+    // a comment, a CDATA section, or any tag (quote-aware, so a `>` inside a
+    // value ends nothing)
+    try_js_regex!(r#"<!--[\s\S]*?-->|<!\[CDATA\[([\s\S]*?)\]\]>|<(?:[^>"']|"[^"]*"|'[^']*')*>"#)
+        .try_replace_all(xml, |markup| {
+            let text = markup.as_str();
+            if text.starts_with("<!--") {
+                return String::new();
+            }
+            if let Some(cdata) = markup.get(1) {
+                return escape_xml_text(cdata);
+            }
+            if !text.starts_with("</") {
+                return text.to_owned();
+            }
+            match js_regex!(r"\s+>$").exec(text) {
+                Some(space) => format!("{}>", &text[..space.start()]),
+                None => text.to_owned(),
+            }
+        })
+        .map(Cow::Owned)
+        .map_err(|error| error.to_string())
+}
+
 /// `withRelationshipIds`: each `r:<name>` reference (for `names`) whose id is a
 /// key of `ids` re-pointed at the id it maps to, in one pass.
 pub fn with_relationship_ids(xml: &str, names: &[&str], ids: &JsMap<String>) -> String {

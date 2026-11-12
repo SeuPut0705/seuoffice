@@ -2211,6 +2211,42 @@ const faults = [
     '(Some(o), Some(c)) if c < o => (c, true),',
     '(Some(o), Some(c)) if c > o => (c, true),',
   ],
+  // main 288118079: one spelling of a slide, and runs hidden from AI out of a search
+  [
+    'canonical-comment-kept',
+    'pptxLeaves.xml-utils.canonicalXml',
+    leaf + 'xml_utils.rs',
+    'if text.starts_with("<!--") {\n                return String::new();',
+    'if text.starts_with("<!--") {\n                return text.to_owned();',
+  ],
+  [
+    'canonical-cdata-unescaped',
+    'pptxLeaves.xml-utils.canonicalXml',
+    leaf + 'xml_utils.rs',
+    'return escape_xml_text(cdata);',
+    'return cdata.to_owned();',
+  ],
+  [
+    'canonical-end-tag-space-kept',
+    'pptxLeaves.xml-utils.canonicalXml',
+    leaf + 'xml_utils.rs',
+    'Some(space) => format!("{}>", &text[..space.start()]),',
+    'Some(_) => text.to_owned(),',
+  ],
+  [
+    'parse-slide-raw-spelling',
+    'pptxParse.parse.parseSlide',
+    leaf + 'parse/slide.rs',
+    'let canonical = crate::xml_utils::canonical_xml(slide_xml)?;',
+    'let canonical = std::borrow::Cow::<str>::Borrowed(slide_xml);',
+  ],
+  [
+    'replace-withheld-not-barrier',
+    'pptxDecktext.index.replaceAllInDeck',
+    leaf + 'deck/text.rs',
+    '|| (skip_withheld && r.redact',
+    '|| (!skip_withheld && r.redact',
+  ],
 ]
 
 const out = resolve(here, 'out/faults')
