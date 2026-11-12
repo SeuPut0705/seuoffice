@@ -21,7 +21,7 @@ const COMPACT_KEY = MAC ? 'Alt+Meta+KeyK' : 'Control+Alt+KeyK'
  */
 test('pdf: compact ribbon fits every tab without clipping', async () => {
   test.setTimeout(240_000)
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-pdf-ribbon-compact-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-pdf-ribbon-compact-'))
   const pdfPath = join(dir, 'blank.pdf')
   const blank = await PDFDocument.create()
   blank.addPage([612, 792])

@@ -17,11 +17,11 @@ import {
   onAiRailClick,
   rememberAiPanelOpen,
   useSplitPaneRole,
-} from '@genoffice/ui'
-import '@genoffice/ui/ai-model-picker.css'
-import '@genoffice/ui/ai-queue-strip.css'
-import '@genoffice/ui/ai-usage.css'
-import '@genoffice/ui/ai-panel-prefs.css'
+} from '@seuoffice/ui'
+import '@seuoffice/ui/ai-model-picker.css'
+import '@seuoffice/ui/ai-queue-strip.css'
+import '@seuoffice/ui/ai-usage.css'
+import '@seuoffice/ui/ai-panel-prefs.css'
 import './ai-panel.css'
 import type { DiagramAiApi } from '../../shared/ipc'
 import type { DrawioFrame } from '../drawio/frame-client'

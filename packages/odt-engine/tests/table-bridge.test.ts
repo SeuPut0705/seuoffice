@@ -3,7 +3,7 @@
  * merges/widths/heights/cell look are mapped, an unedited round trip writes
  * nothing, and the locked cells are published in `ext.table`.
  */
-import { type Block, parseDocx } from '@genoffice/docx-engine'
+import { type Block, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { type TableExt, isProtectedCell, protectedCellsOf } from '../src/table'
 import { editorSave, odtToBridge, writeBack } from './helpers/bridge'

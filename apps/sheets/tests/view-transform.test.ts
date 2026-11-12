@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import type { StructuralOp } from '@genoffice/xlsx-gateway/gateway/xlsx-structure'
+import type { StructuralOp } from '@seuoffice/xlsx-gateway/gateway/xlsx-structure'
 import {
   fileRangeToScreenRange,
   fileRangeToScreenRanges,

@@ -1,4 +1,4 @@
-import { assertCompoundFile, isCompoundFileError } from '@genoffice/compound-file'
+import { assertCompoundFile, isCompoundFileError } from '@seuoffice/compound-file'
 
 /**
  * A file the compound-file gate refuses, as the readers of this package report it. The

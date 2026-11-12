@@ -3,7 +3,7 @@
  * rest is the initial state of the skill's source. Every AI window follows the
  * same result. Project skills of the agent window are always on.
  */
-import { skillEditorScope, skillEditorsChoiceOf } from '@genoffice/agent-core/skill-editors'
+import { skillEditorScope, skillEditorsChoiceOf } from '@seuoffice/agent-core/skill-editors'
 import { USER_SKILL_PRIORITY } from './constants'
 import { parseUserSkillId } from './names'
 import type {

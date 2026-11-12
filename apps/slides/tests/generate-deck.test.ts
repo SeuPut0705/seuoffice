@@ -10,7 +10,7 @@ import {
   MAX_APPROX_PAGES,
   type DeckAccess,
 } from '../src/renderer/ai/slides-skill'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { AgentToolCall } from '../src/shared/ipc'
 
 function makeAccess(opts?: {

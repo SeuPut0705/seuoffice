@@ -1,12 +1,12 @@
 import { createRoot } from 'react-dom/client'
-import { htmlDir, htmlLang, type Lang } from '@genoffice/i18n'
+import { htmlDir, htmlLang, type Lang } from '@seuoffice/i18n'
 import App from './App'
 import { startHeadlessPage } from './headless'
 import { LocaleProvider } from './i18n/locale'
 import { applyTheme } from './theme'
 import { registerVisioImporter } from './document/visio-import'
 import type { UiTheme } from '../shared/ipc'
-import '@genoffice/ui/tokens.css'
+import '@seuoffice/ui/tokens.css'
 import './styles.css'
 
 registerVisioImporter()

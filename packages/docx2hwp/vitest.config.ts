@@ -9,7 +9,7 @@ const local = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 export default defineConfig({
   resolve: {
     alias: {
-      '@genoffice/docx-engine': local('../docx-engine/src/index.ts'),
+      '@seuoffice/docx-engine': local('../docx-engine/src/index.ts'),
     },
   },
   test: {

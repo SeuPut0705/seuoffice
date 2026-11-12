@@ -17,7 +17,7 @@ import {
   createSubscriptionChildRegistry,
   leftoverRecordFile,
   type SubscriptionChildRegistry,
-} from '@genoffice/ai-provider/subscription'
+} from '@seuoffice/ai-provider/subscription'
 import { planFingerprint, serverLaunchFingerprint } from '../../src/main/mcp-client/fingerprint'
 import {
   MCP_LOCAL_SYSTEM_ENV,
@@ -130,7 +130,7 @@ function recordingSpawn(): { calls: SpawnCall[]; spawn: NonNullable<LocalMcpDeps
 
 const BASE_ENV: NodeJS.ProcessEnv = {
   ...process.env,
-  GENOFFICE_SECRET_THING: 'genoffice-secret',
+  SEUOFFICE_SECRET_THING: 'seuoffice-secret',
   ANTHROPIC_API_KEY: 'sk-ant-secret',
   OPENAI_API_KEY: 'sk-openai-secret',
   CLAUDE_CODE_OAUTH_TOKEN: 'oauth-secret',
@@ -158,7 +158,7 @@ describe('the command that will run', () => {
     const names = ready.env.map((v) => v.name)
     expect(ready.env).toContainEqual({ name: 'MY_TOKEN', origin: 'registered' })
     expect(names).toContain('PATH')
-    expect(names.some((n) => n.startsWith('GENOFFICE_'))).toBe(false)
+    expect(names.some((n) => n.startsWith('SEUOFFICE_'))).toBe(false)
     expect(names).not.toContain('ANTHROPIC_API_KEY')
     expect(names).not.toContain('SOME_APP_TOKEN')
     expect(JSON.stringify(plan)).not.toContain('tok-value')
@@ -361,12 +361,12 @@ describe('a running server', () => {
 
   it('gives the server the minimal system variables and its registered ones, nothing of the app', async () => {
     const connection = await connect(
-      localServer({ env: { MY_TOKEN: 'tok-value', GENOFFICE_INJECTED: 'x' } }),
+      localServer({ env: { MY_TOKEN: 'tok-value', SEUOFFICE_INJECTED: 'x' } }),
     )
     const env = JSON.parse(textOf(await connection.callTool('env', {}))) as Record<string, string>
     expect(env.MY_TOKEN).toBe('tok-value')
     const names = Object.keys(env)
-    expect(names.some((n) => n.toUpperCase().startsWith('GENOFFICE_'))).toBe(false)
+    expect(names.some((n) => n.toUpperCase().startsWith('SEUOFFICE_'))).toBe(false)
     for (const secret of [
       'ANTHROPIC_API_KEY',
       'OPENAI_API_KEY',

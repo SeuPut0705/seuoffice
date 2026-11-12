@@ -8,10 +8,9 @@
  * no body yet still needs a title so the sidebar never shows an empty row.
  */
 
-import { brandText } from '@genoffice/i18n'
 import type { HelpGroupId } from './help-registry'
 
-/** The languages the manual has titles for; `@genoffice/i18n`'s list, minus none. */
+/** The languages the manual has titles for; `@seuoffice/i18n`'s list, minus none. */
 export const HELP_TITLE_LANGS = ['en', 'ko'] as const
 
 export type HelpTitleLang = (typeof HELP_TITLE_LANGS)[number]
@@ -138,8 +137,8 @@ const TOPIC_TITLES: Record<string, Record<HelpTitleLang, string>> = {
     ko: '설정, 언어, 테마와 MCP 연동',
   },
   install: {
-    en: 'Installing GenOffice',
-    ko: 'GenOffice 설치',
+    en: 'Installing SeuOffice',
+    ko: 'SeuOffice 설치',
   },
   cli: {
     en: 'Command line and agents',
@@ -163,5 +162,5 @@ export function groupTitle(id: HelpGroupId, lang: string): string {
 export function topicTitle(id: string, lang: string): string {
   const row = TOPIC_TITLES[id]
   // the table spells the product name as upstream does; show this product's
-  return brandText((row?.[lang as HelpTitleLang] ?? row?.en ?? id) as string, lang)
+  return (row?.[lang as HelpTitleLang] ?? row?.en ?? id) as string
 }

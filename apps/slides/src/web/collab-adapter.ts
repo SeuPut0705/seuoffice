@@ -16,9 +16,9 @@ import {
   slideDurableId,
   type OpenedPptx,
   type TextElement,
-} from '@genoffice/pptx-engine'
-import type { EditParagraph } from '@genoffice/pptx-ops'
-import type { RenderSlide } from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-engine'
+import type { EditParagraph } from '@seuoffice/pptx-ops'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { CollabAdapter } from '@seuoffice/collab/client'
 import { applyAutofitResize, syncAutofitScale } from '../main/autofit-writeback'
 import { rebuildSlide, type Session } from '../main/session-state'

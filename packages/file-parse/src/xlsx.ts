@@ -1,7 +1,7 @@
 import JSZip from 'jszip'
-import { parseAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
-import { offsetFormulaRefs } from '@genoffice/xlsx-gateway/domain/formula-shift'
-import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@genoffice/docx-engine'
+import { parseAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
+import { offsetFormulaRefs } from '@seuoffice/xlsx-gateway/domain/formula-shift'
+import { assertZipInflatesWithinLimits, assertZipWithinLimits } from '@seuoffice/docx-engine'
 import { resolveTarget } from './opc'
 import { XMLParser } from 'fast-xml-parser'
 import {
@@ -10,7 +10,7 @@ import {
   formatSerial,
   type DateFormatParts,
 } from './xlsx-dates'
-import { decodeXlsxEscapes } from '@genoffice/xlsx-gateway/gateway/xlsx-escapes'
+import { decodeXlsxEscapes } from '@seuoffice/xlsx-gateway/gateway/xlsx-escapes'
 import { readXlsxRedactions, withheldCellMarker } from './xlsx-redaction'
 import {
   FORMULA_SCAN_MAX_BYTES,
@@ -527,9 +527,14 @@ async function countDrawingPictures(
   return 0
 }
 
-/// A pivot part opens with its `<location>` and a cache definition with its
-/// `<cacheSource>`; the member lists that follow can run to megabytes.
-const PIVOT_PART_HEAD_BYTES = 1024 * 1024
+/// A cache definition opens with its `<cacheSource>`; the member lists that
+/// follow can run to megabytes, and one that names its source later is not
+/// searched for it (the pivot's output is then withheld untraced).
+const PIVOT_CACHE_HEAD_BYTES = 1024 * 1024
+/// A pivot part is read whole: its `<location>` comes first, but its report
+/// filters (`<pageFields>`) come after the fields and every item of them. One
+/// larger than this is read as far as this and treated as not fully known.
+const PIVOT_PART_MAX_BYTES = FORMULA_SCAN_MAX_BYTES
 
 /** the relationships of one kind a part declares, as part paths; external ones are left out */
 async function relatedParts(zip: JSZip, partPath: string, kind: string): Promise<string[]> {
@@ -555,10 +560,10 @@ async function sheetPivotOutputs(zip: JSZip, sheetPath: string): Promise<PivotOu
     const [cachePath] = await relatedParts(zip, pivotPath, 'pivotCacheDefinition')
     outputs.push(
       pivotOutputOf(
-        (await zipTextPrefix(zip, pivotPath, PIVOT_PART_HEAD_BYTES))?.text,
+        await zipTextPrefix(zip, pivotPath, PIVOT_PART_MAX_BYTES),
         cachePath === undefined
           ? undefined
-          : (await zipTextPrefix(zip, cachePath, PIVOT_PART_HEAD_BYTES))?.text,
+          : (await zipTextPrefix(zip, cachePath, PIVOT_CACHE_HEAD_BYTES))?.text,
       ),
     )
   }

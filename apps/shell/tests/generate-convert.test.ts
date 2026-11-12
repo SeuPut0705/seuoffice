@@ -8,9 +8,9 @@ import {
   outlineToSheets,
   sheetsToOutline,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
-import { openPptx } from '@genoffice/pptx-engine'
-import { parseFileToText } from '@genoffice/file-parse'
+} from '@seuoffice/xmind-engine'
+import { openPptx } from '@seuoffice/pptx-engine'
+import { parseFileToText } from '@seuoffice/file-parse'
 import {
   buildDeck,
   convertSource,

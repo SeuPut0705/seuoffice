@@ -25,12 +25,12 @@
 ## 이 체크아웃을 빌드하기
 
 ```bash
-npm run build -w @genoffice/cli     # packages/cli/dist/genoffice.cjs: 모든 스크립트가 이것을 부른다
-npm run build -w @genoffice/docs    # PDF 내보내기(편집기 쪽 수)에만 필요
-npm run build -w @genoffice/shell
+npm run build -w @seuoffice/cli     # packages/cli/dist/seuoffice.cjs: 모든 스크립트가 이것을 부른다
+npm run build -w @seuoffice/docs    # PDF 내보내기(편집기 쪽 수)에만 필요
+npm run build -w @seuoffice/shell
 ```
 
-명령줄은 체크아웃 안에서 돌면 이 체크아웃의 `node_modules/electron`으로 `apps/shell`을 띄워 PDF를 만든다. 설치한 앱이나 다른 빌드를 쓰려면 `GENOFFICE_APP_BIN=<실행 파일>`을 준다.
+명령줄은 체크아웃 안에서 돌면 이 체크아웃의 `node_modules/electron`으로 `apps/shell`을 띄워 PDF를 만든다. 설치한 앱이나 다른 빌드를 쓰려면 `SEUOFFICE_APP_BIN=<실행 파일>`을 준다.
 
 ## 순서
 

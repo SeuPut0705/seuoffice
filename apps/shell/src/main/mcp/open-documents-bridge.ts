@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import type { WebContents } from 'electron'
 import type { OpenDocumentTab } from '../../shared/tabs-api'
 import type { OpenDocumentsControl } from './tools/open-documents-tools'

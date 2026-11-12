@@ -10,7 +10,7 @@ import {
   createXmindDocumentFromOutline,
   openXmind,
   type XmindOpenStatus,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import type { MindmapCopySeed, MindmapOutlineSeed } from '../../shared/ipc'
 import { freeMindToXmind, parseFreeMind } from './freemind'
 import { DocumentSession } from './session'

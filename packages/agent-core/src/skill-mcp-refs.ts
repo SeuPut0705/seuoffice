@@ -7,8 +7,8 @@
  * no MCP server, and any tool call can fail, so the model is told to say
  * which step it could not do instead of writing as if it did it.
  *
- * A file with no imports, exported as `@genoffice/agent-core/skill-mcp-refs`:
- * `@genoffice/ai-provider` reads it while it reads skill folders, and an
+ * A file with no imports, exported as `@seuoffice/agent-core/skill-mcp-refs`:
+ * `@seuoffice/ai-provider` reads it while it reads skill folders, and an
  * editor's main process that leaves that package unbundled loads this source
  * as it is at run time.
  */

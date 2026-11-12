@@ -8,9 +8,9 @@ import {
   type AiStreamRequest,
   type AiSubscriptionProviderId,
   type AiSubscriptionState,
-} from '@genoffice/ai-provider'
-import type { SubscriptionStatusMap } from '@genoffice/ai-provider/browser'
-import { aiRunErrorText, aiSubscriptionText } from '@genoffice/ui'
+} from '@seuoffice/ai-provider'
+import type { SubscriptionStatusMap } from '@seuoffice/ai-provider/browser'
+import { aiRunErrorText, aiSubscriptionText } from '@seuoffice/ui'
 import { AiPanel, type HtmlAiDeps } from '../src/renderer/ai/AiPanel'
 import { buildParseMap, type ParseMap } from '../src/renderer/document/parse-map'
 import { aiStrings } from '../src/renderer/i18n/strings-ai'

@@ -1,6 +1,6 @@
 /**
  * Model file naming for the HTML editor: the app-side half of
- * `suggestFileName` (`@genoffice/ui`).
+ * `suggestFileName` (`@seuoffice/ui`).
  *
  * ## The reader asks, the model answers
  *
@@ -32,7 +32,7 @@
  * only acceptable outcome — a rename that costs the reader their file name is
  * worse than no rename at all — and shows the reason the failure carries.
  */
-import { suggestFileName, type FileNameSuggestion } from '@genoffice/ui'
+import { suggestFileName, type FileNameSuggestion } from '@seuoffice/ui'
 import { modelTextOf } from './document/redact-view'
 import { deriveAutoFileName, derivePageTitleName } from './document/auto-name'
 import type { ParseMap } from './document/parse-map'

@@ -22,7 +22,7 @@ import type {
   Run,
   TableModel,
   TableParagraph,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { EditedItem } from '../../core/convert'
 import { PrefixMap, decodeXmlEntities, walkElements } from '../../core/xml'
 import { stripParagraphSectPr } from '../../page/sectpr'

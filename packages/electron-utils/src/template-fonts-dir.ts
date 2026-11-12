@@ -1,5 +1,5 @@
 /// Where the design templates' shared font set lives (the data list is
-/// @genoffice/ui/template-fonts). The files ship once, as
+/// @seuoffice/ui/template-fonts). The files ship once, as
 /// resources/template-fonts beside the editor modules
 /// (apps/shell/electron-builder.cjs); a dev run reads the checkout's folder.
 /// No fs, no Electron: callers pass the app facts in, so code without

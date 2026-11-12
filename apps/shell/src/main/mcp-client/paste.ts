@@ -1,4 +1,4 @@
-import { isValidServerName, suggestServerNameFrom } from '@genoffice/agent-core/user-mcp/names'
+import { isValidServerName, suggestServerNameFrom } from '@seuoffice/agent-core/user-mcp/names'
 import type { McpServerKind, McpTransport } from '../../shared/mcp-servers-api'
 import { TomlError, parseToml } from './toml'
 

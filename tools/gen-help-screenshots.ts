@@ -18,11 +18,11 @@
  * capture that *cannot* pick up the developer's account: a scratch HOME, a
  * scratch userData, and a scratch samples folder, all discarded afterwards.
  *
- * ## Why HOME and not just GENOFFICE_USER_DATA
+ * ## Why HOME and not just SEUOFFICE_USER_DATA
  *
  * userData holds the app's own settings, but the command-line launcher record
- * lives under the home directory (`~/.ieumoffice`), and GENOFFICE_USER_DATA says
- * nothing about that. HOME and `GENOFFICE_AUTH_DIR` keep it inside the scratch
+ * lives under the home directory (`~/.seuoffice`), and SEUOFFICE_USER_DATA says
+ * nothing about that. HOME and `SEUOFFICE_AUTH_DIR` keep it inside the scratch
  * profile too, so nothing of the developer's own session is read or written.
  *
  * ## Why the AI programs are hidden from the capture
@@ -106,7 +106,7 @@ interface Scratch {
 }
 
 async function makeScratch(): Promise<Scratch> {
-  const root = mkdtempSync(join(tmpdir(), 'genoffice-help-shots-'))
+  const root = mkdtempSync(join(tmpdir(), 'seuoffice-help-shots-'))
   const home = join(root, 'home')
   const userData = join(root, 'userdata')
   const samples = join(root, 'help-samples')
@@ -213,10 +213,10 @@ async function launch(scratch: Scratch, lang: string): Promise<ElectronApplicati
     env: {
       ...withoutAiPrograms(hostEnv, scratch.home),
       HOME: scratch.home,
-      GENOFFICE_USER_DATA: scratch.userData,
-      GENOFFICE_AUTH_DIR: join(scratch.home, HOME_DIR_NAME),
-      GENOFFICE_NO_SPARE_VIEW: '1',
-      GENOFFICE_LANG: lang,
+      SEUOFFICE_USER_DATA: scratch.userData,
+      SEUOFFICE_AUTH_DIR: join(scratch.home, HOME_DIR_NAME),
+      SEUOFFICE_NO_SPARE_VIEW: '1',
+      SEUOFFICE_LANG: lang,
     },
   })
 }

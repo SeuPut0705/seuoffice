@@ -108,7 +108,7 @@ afterEach(() => {
   vi.unstubAllEnvs()
 })
 
-describe('ieumoffice sheet links', () => {
+describe('seuoffice sheet links', () => {
   it.skipIf(!sidecar)('lists the links with resolved sources and reachability', async () => {
     const dir = tempDir()
     await writeSource(join(dir, 'source.xlsx'))

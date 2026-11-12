@@ -6,7 +6,7 @@ import { fileURLToPath } from 'node:url'
 import { APP_BINARY_NAME, SKILL_NAME } from './names'
 
 /**
- * Two layouts: packaged (Resources/cli/genoffice.cjs next to Resources/wasm,
+ * Two layouts: packaged (Resources/cli/seuoffice.cjs next to Resources/wasm,
  * Resources/native, Resources/ocr — see apps/shell/electron-builder.cjs) and
  * the dev checkout (packages/cli/{src,dist} inside the monorepo).
  */
@@ -31,7 +31,7 @@ export function repoRoot(): string | null {
     const pkg = join(dir, 'package.json')
     if (existsSync(pkg)) {
       try {
-        if (JSON.parse(readFileSync(pkg, 'utf-8')).name === 'genoffice') {
+        if (JSON.parse(readFileSync(pkg, 'utf-8')).name === 'seuoffice') {
           cachedRepo = dir
           return dir
         }
@@ -46,7 +46,7 @@ export function repoRoot(): string | null {
 }
 
 export function pdfiumWasmPath(): string {
-  if (process.env.GENOFFICE_PDFIUM_WASM) return process.env.GENOFFICE_PDFIUM_WASM
+  if (process.env.SEUOFFICE_PDFIUM_WASM) return process.env.SEUOFFICE_PDFIUM_WASM
   const packaged = packagedResourcesDir()
   if (packaged) return join(packaged, 'wasm', 'pdfium.wasm')
   const root = repoRoot()
@@ -55,7 +55,7 @@ export function pdfiumWasmPath(): string {
       return createRequire(join(root, 'package.json')).resolve('@embedpdf/pdfium/pdfium.wasm')
     } catch {}
   }
-  throw new Error('pdfium.wasm not found (set GENOFFICE_PDFIUM_WASM)')
+  throw new Error('pdfium.wasm not found (set SEUOFFICE_PDFIUM_WASM)')
 }
 
 /**
@@ -66,7 +66,7 @@ export function pdfiumWasmPath(): string {
  * line resolves the path itself and hands it over.
  */
 export function hbSubsetWasmPath(): string {
-  if (process.env.GENOFFICE_HB_SUBSET_WASM) return process.env.GENOFFICE_HB_SUBSET_WASM
+  if (process.env.SEUOFFICE_HB_SUBSET_WASM) return process.env.SEUOFFICE_HB_SUBSET_WASM
   const packaged = packagedResourcesDir()
   if (packaged) return join(packaged, 'wasm', 'hb-subset.wasm')
   const root = repoRoot()
@@ -84,12 +84,12 @@ export function hbSubsetWasmPath(): string {
       } catch {}
     }
   }
-  throw new Error('hb-subset.wasm not found (set GENOFFICE_HB_SUBSET_WASM)')
+  throw new Error('hb-subset.wasm not found (set SEUOFFICE_HB_SUBSET_WASM)')
 }
 
-/** The rhwp engine that reads HWP / HWPX documents (see @genoffice/file-parse/hwp). */
+/** The rhwp engine that reads HWP / HWPX documents (see @seuoffice/file-parse/hwp). */
 export function rhwpWasmPath(): string {
-  if (process.env.GENOFFICE_RHWP_WASM) return process.env.GENOFFICE_RHWP_WASM
+  if (process.env.SEUOFFICE_RHWP_WASM) return process.env.SEUOFFICE_RHWP_WASM
   const packaged = packagedResourcesDir()
   if (packaged) return join(packaged, 'wasm', 'rhwp_bg.wasm')
   const root = repoRoot()
@@ -98,7 +98,7 @@ export function rhwpWasmPath(): string {
       return createRequire(join(root, 'package.json')).resolve('@rhwp/core/rhwp_bg.wasm')
     } catch {}
   }
-  throw new Error('rhwp_bg.wasm not found (set GENOFFICE_RHWP_WASM)')
+  throw new Error('rhwp_bg.wasm not found (set SEUOFFICE_RHWP_WASM)')
 }
 
 /** The Rust document engine (crates/office-wasm) behind @genoffice/docx-engine. */
@@ -134,7 +134,7 @@ export function ocrHelperPath(): string | null {
   return candidates.find((p) => existsSync(p)) ?? null
 }
 
-/** skills/ieumoffice/SKILL.md as shipped beside this bundle (Resources/cli/skills) or in the checkout. */
+/** skills/seuoffice/SKILL.md as shipped beside this bundle (Resources/cli/skills) or in the checkout. */
 export function bundledSkillPath(): string | null {
   const packaged = packagedResourcesDir()
   const candidates = [
@@ -157,7 +157,7 @@ export interface AppLaunch {
  * Only this product's own install locations are probed: an upstream GenOffice on the machine is never started.
  */
 export function appLaunch(env: NodeJS.ProcessEnv = process.env): AppLaunch | null {
-  if (env.GENOFFICE_APP_BIN) return { command: env.GENOFFICE_APP_BIN, args: [] }
+  if (env.SEUOFFICE_APP_BIN) return { command: env.SEUOFFICE_APP_BIN, args: [] }
   if (packagedResourcesDir() && process.versions.electron) {
     return { command: process.execPath, args: [] }
   }

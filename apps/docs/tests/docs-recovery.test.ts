@@ -30,7 +30,7 @@ import {
   resumeDiscardedCopies,
   setHeadlessMode,
   type RecoveryMessageBox,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import { createDocsRecovery, type DocsRecovery } from '../src/main/docs-recovery'
 import { recoveryExtFor } from '../src/main/doc-format'
 

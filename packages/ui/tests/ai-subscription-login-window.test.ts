@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { LANGS, productName } from '@genoffice/i18n'
+import { LANGS, productName } from '@seuoffice/i18n'
 import { aiSubscriptionLoginWindowText } from '../src/ai-subscription-login-window'
 import { aiSubscriptionText } from '../src/strings-ai-subscription'
 

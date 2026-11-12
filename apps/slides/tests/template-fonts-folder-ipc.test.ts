@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { tmpdir } from 'node:os'
 import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { templateFontsDir } from '@genoffice/electron-utils/template-fonts-dir'
+import { templateFontsDir } from '@seuoffice/electron-utils/template-fonts-dir'
 
 const CHANNEL = 'slides:open-template-fonts-folder'
 const APP_PATH = resolve(__dirname, '..')

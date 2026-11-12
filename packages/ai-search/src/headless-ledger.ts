@@ -28,7 +28,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { join } from 'node:path'
-import { AiRunError } from '@genoffice/ai-provider'
+import { AiRunError } from '@seuoffice/ai-provider'
 
 /** The span the count of requests covers: the last hour. */
 export const HEADLESS_SUBSCRIPTION_WINDOW_MS = 60 * 60 * 1000

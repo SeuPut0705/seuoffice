@@ -13,7 +13,7 @@ import { CliError, EXIT } from '../result'
 
 /**
  * `diagram read` and `diagram apply`: draw.io diagrams with the ops the
- * in-app AI uses (`@genoffice/drawio-model`). `.drawio`/`.dio` edits run in
+ * in-app AI uses (`@seuoffice/drawio-model`). `.drawio`/`.dio` edits run in
  * this process and keep untouched pages byte for byte; writing a
  * `.drawio.svg`/`.drawio.png` or running `insert_mermaid` needs the app
  * (windowless, `--headless-export`).
@@ -34,7 +34,7 @@ export const diagramCommand: CommandDef = {
       name: 'ops',
       value: 'JSON|@file|-',
       description:
-        'apply: JSON array of ops, each { "op": "<name>", ...fields } (read, add_shape, add_edge, update, delete, add_page, rename_page, delete_page, insert_mermaid), inline, @<file>, a file path, or "-" for stdin. See `ieumoffice guide diagram`.',
+        'apply: JSON array of ops, each { "op": "<name>", ...fields } (read, add_shape, add_edge, update, delete, add_page, rename_page, delete_page, insert_mermaid), inline, @<file>, a file path, or "-" for stdin. See `seuoffice guide diagram`.',
     },
     ...BATCH_OPTIONS,
     {
@@ -44,7 +44,7 @@ export const diagramCommand: CommandDef = {
     },
     {
       name: 'force',
-      description: 'apply: overwrite an existing --out, or write a file open in GenOffice',
+      description: 'apply: overwrite an existing --out, or write a file open in SeuOffice',
     },
   ],
   async run(args, ctx) {
@@ -82,7 +82,7 @@ export const diagramCommand: CommandDef = {
       undefined,
       {
         reason: verb === undefined ? 'missing_argument' : 'invalid_argument',
-        suggestion: 'run `ieumoffice help diagram`',
+        suggestion: 'run `seuoffice help diagram`',
       },
     )
   },

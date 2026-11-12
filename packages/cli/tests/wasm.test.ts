@@ -29,7 +29,7 @@ describe('WebAssembly out of memory', () => {
 
   it('leaves other failures alone', () => {
     expect(wasmMemoryFailure(new Error('file not found'))).toBeNull()
-    expect(wasmMemoryFailure('no pdfium.wasm (set GENOFFICE_PDFIUM_WASM)')).toBeNull()
+    expect(wasmMemoryFailure('no pdfium.wasm (set SEUOFFICE_PDFIUM_WASM)')).toBeNull()
   })
 
   it('does not re-wrap an answer that is already resource_limit', () => {

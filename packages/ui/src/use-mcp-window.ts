@@ -4,7 +4,7 @@ import {
   type McpPermissionRequest,
   type McpServerView,
   type McpWindowState,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 
 const NO_SERVERS: readonly McpServerView[] = []
 const NO_SERVERS_OFF: ReadonlySet<string> = new Set()

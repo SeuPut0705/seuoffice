@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { brandText, type Lang } from '@genoffice/i18n'
+import { type Lang } from '@seuoffice/i18n'
 import { DOC_ATTACH_STRINGS } from './strings-doc-attach'
 import type { DocMentionListResult } from './doc-mention-types'
 
@@ -64,7 +64,7 @@ export function DocAttachButton({
     }
   }, [])
   if (!ready) return null
-  const label = brandText((DOC_ATTACH_STRINGS[lang] ?? DOC_ATTACH_STRINGS.en).label, lang)
+  const label = (DOC_ATTACH_STRINGS[lang] ?? DOC_ATTACH_STRINGS.en).label
   const pick = async () => {
     const b = bridge()
     if (!b || busy) return

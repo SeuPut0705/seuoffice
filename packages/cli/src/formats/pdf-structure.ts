@@ -5,7 +5,7 @@
  * and the OCR engine are set up the way the other PDF commands set them up
  * (formats/pdf.ts).
  */
-import { extract, PdfLoadError, type PdfiumModule } from '@genoffice/pdf2docx'
+import { extract, PdfLoadError, type PdfiumModule } from '@seuoffice/pdf2docx'
 import {
   applyStoredAiReadings,
   extractDocumentTree,
@@ -14,7 +14,7 @@ import {
 } from '../../../pdf-structure/src'
 import { documentHash, ResultStore } from '../../../pdf-structure/src/store'
 import { pageFingerprint } from '../../../pdf-structure/src/tree/pdfium-doc'
-import { genofficeUserDataDir } from '../gui'
+import { seuofficeUserDataDir } from '../gui'
 import { CliError, EXIT } from '../result'
 import { loadPdfium, ocr } from './pdf'
 
@@ -23,7 +23,7 @@ export const AI_READ_RENDER_SCALE = 175 / 72
 
 /** The store the app uses: `<userData>/pdf-store`, in the same folder as the app's. */
 export function resultStore(env: NodeJS.ProcessEnv): ResultStore {
-  return new ResultStore(genofficeUserDataDir(env))
+  return new ResultStore(seuofficeUserDataDir(env))
 }
 
 export { documentHash }

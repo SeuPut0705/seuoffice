@@ -30,7 +30,7 @@ function sseBody(lines: string[]): Response {
   })
 }
 
-function toolCallStream(name = 'ieumoffice_probe'): Response {
+function toolCallStream(name = 'seuoffice_probe'): Response {
   const call = {
     choices: [
       {
@@ -167,7 +167,7 @@ describe('testLocalModel', () => {
     }>
     expect(probes).toHaveLength(1)
     expect(probes[0]!.type).toBe('function')
-    expect(probes[0]!.function.name).toBe('ieumoffice_probe')
+    expect(probes[0]!.function.name).toBe('seuoffice_probe')
     expect(probes[0]!.function.parameters.required).toEqual(['ok'])
     expect(probes[0]!.function.parameters.properties).toHaveProperty('ok')
   })
@@ -322,7 +322,7 @@ describe('testLocalModel', () => {
     stubFetch((url, init) => {
       if (url === TAGS_URL) return jsonBody({ models: [{ name: MODEL }] })
       const body = JSON.parse(String((init as RequestInit).body)) as Record<string, unknown>
-      return toolBodyOf(body) ? toolCallStream('ieumoffice_other') : textChat()
+      return toolBodyOf(body) ? toolCallStream('seuoffice_other') : textChat()
     })
 
     const result = await testLocalModel({ baseUrl: BASE, model: MODEL })

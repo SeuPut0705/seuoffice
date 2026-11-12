@@ -1,7 +1,7 @@
 // The texts the edited copies carry, so Hangul's reading can be searched for them.
 export const MARK_TEXT = {
   text: '이음글자검증',
-  para: '이음오피스검증문단',
+  para: 'SeuOffice검증문단',
   cell: '검증채움',
   header: '이음머리검증',
   footnote: '이음각주검증',

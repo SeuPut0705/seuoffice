@@ -1,10 +1,12 @@
+// first: variables set under the old prefix are taken over before anything reads its own
+import '@seuoffice/i18n/old-names-env'
 // the engine starts before any module that calls it evaluates
 import './engine-init'
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { setAiSecretCodec } from '@genoffice/ai-provider'
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { setAiSecretCodec } from '@seuoffice/ai-provider'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { flagBool, parseArgs } from './args'
 import { appendAudit } from './audit'
 import { cliSecretCodecFor } from './secrets'
@@ -43,14 +45,13 @@ import {
   type Warning,
 } from './result'
 import { didYouMean } from './suggest'
-import { branded } from './names'
 import { wasmMemoryFailure } from './wasm'
 
-declare const __GENOFFICE_VERSION__: string | undefined
+declare const __SEUOFFICE_VERSION__: string | undefined
 
-/** The @genoffice/cli package version: inlined by build.mjs, read from disk when running from source. */
+/** The @seuoffice/cli package version: inlined by build.mjs, read from disk when running from source. */
 export const VERSION: string =
-  typeof __GENOFFICE_VERSION__ === 'string' ? __GENOFFICE_VERSION__ : devVersion()
+  typeof __SEUOFFICE_VERSION__ === 'string' ? __SEUOFFICE_VERSION__ : devVersion()
 
 function devVersion(): string {
   try {
@@ -131,7 +132,7 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
   }
 
   if (flagBool(args, 'version')) {
-    io.stdout(json ? JSON.stringify({ status: 'ok', version: VERSION }) : `ieumoffice ${VERSION}`)
+    io.stdout(json ? JSON.stringify({ status: 'ok', version: VERSION }) : `seuoffice ${VERSION}`)
     return EXIT.ok
   }
   if (name === null || (name === 'help' && args.positionals.length === 0)) {
@@ -152,7 +153,7 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
               name,
               registry.list().map((d) => d.name),
             ),
-            'run `ieumoffice help` for the command list',
+            'run `seuoffice help` for the command list',
           ),
         },
       ),
@@ -173,7 +174,7 @@ export async function runCli(argv: readonly string[], opts: RunOptions = {}): Pr
           reason: 'unknown_option',
           suggestion: withGuess(
             didYouMean(unknown[0]!, known),
-            `run \`ieumoffice help ${def.name}\` for its options`,
+            `run \`seuoffice help ${def.name}\` for its options`,
             '--',
           ),
         },
@@ -261,12 +262,12 @@ function globalHelp(registry: CommandRegistry): string {
   const defs = registry.list()
   const width = Math.max(...defs.map((d) => d.name.length))
   return [
-    `ieumoffice ${VERSION} — ${PRODUCT_NAME} command line`,
+    `seuoffice ${VERSION} — ${PRODUCT_NAME} command line`,
     '',
-    'Usage: ieumoffice <command> [options]',
+    'Usage: seuoffice <command> [options]',
     '',
     'Commands:',
-    ...defs.map((d) => `  ${d.name.padEnd(width)}  ${branded(d.summary)}`),
+    ...defs.map((d) => `  ${d.name.padEnd(width)}  ${d.summary}`),
     '',
     'Global options:',
     '  --json     machine-readable output (one JSON object on stdout)',
@@ -287,7 +288,7 @@ if (isMain) {
   const exit = (code: number) => process.stdout.write('', () => process.exit(code))
   runCli(process.argv.slice(2)).then(exit, (err) => {
     process.stderr.write(
-      `ieumoffice: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}\n`,
+      `seuoffice: ${err instanceof Error ? (err.stack ?? err.message) : String(err)}\n`,
     )
     exit(EXIT.conversion)
   })

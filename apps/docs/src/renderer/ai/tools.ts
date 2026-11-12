@@ -1,7 +1,7 @@
 import type { Editor } from '@tiptap/core'
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model'
-import type { ChartDisplay, CommentInfo, NewChart, NoteInfo } from '@genoffice/docx-engine'
-import type { ToolDisplay } from '@genoffice/agent-core'
+import type { ChartDisplay, CommentInfo, NewChart, NoteInfo } from '@seuoffice/docx-engine'
+import type { ToolDisplay } from '@seuoffice/agent-core'
 import type {
   AgentToolCall,
   AgentToolDef,
@@ -9,8 +9,8 @@ import type {
   ReadUrlResult,
 } from '../../shared/ipc'
 import { t } from '../i18n/locale'
-import { MIND_MAP_LIMITS, MIND_MAP_TOOL, parseMindMapTree } from '@genoffice/agent-core/mind-map'
-import { undoDoubledEscapes } from '@genoffice/agent-core/doubled-escapes'
+import { MIND_MAP_LIMITS, MIND_MAP_TOOL, parseMindMapTree } from '@seuoffice/agent-core/mind-map'
+import { undoDoubledEscapes } from '@seuoffice/agent-core/doubled-escapes'
 import { executeOps, opNames } from './ops'
 import { odtGuardRefusalText, odtToolRefusal, startOdtToolCall } from './odt-tools'
 import { clipExcerpt, repliesOf, resolveCommentAnchor } from './comment-ops'

@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest'
 import {
   TEMPLATE_FONTS_DIR_NAME,
   TEMPLATE_FONTS_REPO_DIR,
-} from '@genoffice/electron-utils/template-fonts-dir'
+} from '@seuoffice/electron-utils/template-fonts-dir'
 
 const require = createRequire(import.meta.url)
 const SHELL = resolve(import.meta.dirname, '..')

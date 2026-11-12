@@ -1,6 +1,6 @@
 /**
  * Agent mode (decision 0032). Node-only entry point
- * `@genoffice/ai-provider/agent-session`: it starts the user's Claude Code or
+ * `@seuoffice/ai-provider/agent-session`: it starts the user's Claude Code or
  * Codex with their own tools in a project folder.
  */
 export * from './agent-session/types'

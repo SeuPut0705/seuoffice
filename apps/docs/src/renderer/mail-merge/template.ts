@@ -4,7 +4,7 @@ import {
   mergeFieldText,
   splitInstruction,
   type MergeRecord,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import type { PmNode } from '../editor/convert'
 import { withoutUniqueStructure } from '../editor/inline-wrap-chain'
 

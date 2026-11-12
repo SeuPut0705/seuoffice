@@ -18,7 +18,7 @@ let home: string
 let builtin: string
 let service: UserSkillsService
 
-const appDir = () => join(home, '.ieumoffice', 'skills')
+const appDir = () => join(home, '.seuoffice', 'skills')
 const fileOf = (name: string) => readFileSync(join(appDir(), name, 'SKILL.md'), 'utf8')
 const viewOf = async (id: string) => (await service.list()).find((view) => view.id === id)
 

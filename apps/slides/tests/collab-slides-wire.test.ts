@@ -4,7 +4,7 @@
  * engine then stops this page's session instead of applying the change.
  */
 import { describe, expect, it } from 'vitest'
-import type { EditParagraph } from '@genoffice/pptx-ops'
+import type { EditParagraph } from '@seuoffice/pptx-ops'
 import { GONE, WIRE_LIMITS, decodeOp, encodeOp, unshareable } from '../src/web/collab-wire'
 
 const AT = { slide: 's_1', el: 'e_1a2b3c4d' }

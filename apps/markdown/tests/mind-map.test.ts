@@ -13,8 +13,8 @@ import {
   mindMapToMermaid,
   parseMindMapTree,
   wrapLabel,
-} from '@genoffice/agent-core/mind-map'
-import type { MindMapTreeNode } from '@genoffice/agent-core'
+} from '@seuoffice/agent-core/mind-map'
+import type { MindMapTreeNode } from '@seuoffice/agent-core'
 import { t } from '../src/renderer/i18n/locale'
 
 // Undestroyed views leave DOMObserver flush timers that fire after jsdom teardown

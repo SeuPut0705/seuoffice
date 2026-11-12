@@ -25,7 +25,7 @@
  *   The two measure from the same point, so the numbers carry over as they
  *   are; the functions copy them and are the one place that says so.
  */
-import type { ViewCurve, ViewRelationshipStyle } from '@genoffice/xmind-engine'
+import type { ViewCurve, ViewRelationshipStyle } from '@seuoffice/xmind-engine'
 import { linePatternDash } from './branches'
 import {
   type ArrowShape,

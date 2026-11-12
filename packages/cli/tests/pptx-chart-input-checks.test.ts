@@ -7,7 +7,7 @@
 import { readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { NewChartKind, OpenedPptx } from '@genoffice/pptx-engine'
+import type { NewChartKind, OpenedPptx } from '@seuoffice/pptx-engine'
 import { applyOps, blankDeck } from '../src/formats/pptx'
 import { refuseChartOp } from '../src/formats/pptx-chart-checks'
 import { run, tempDir } from './helpers'

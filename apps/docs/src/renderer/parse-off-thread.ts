@@ -1,5 +1,5 @@
-import { parseDocx } from '@genoffice/docx-engine'
-import { odtToDocx, type BridgeMap, type ConversionReport } from '@genoffice/odt-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
+import { odtToDocx, type BridgeMap, type ConversionReport } from '@seuoffice/odt-engine'
 
 type Parsed = Awaited<ReturnType<typeof parseDocx>>
 

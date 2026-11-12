@@ -18,9 +18,9 @@ import type {
   IpcContextGate,
   IpcStreamError,
   IpcStreamErrorKind,
-} from '@genoffice/agent-core'
-import type { AiSettings } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
+} from '@seuoffice/agent-core'
+import type { AiSettings } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
 import { createElectronTransport } from '../ai/transport'
 
 /** longest answer one call may return (a dense page is well under it) */

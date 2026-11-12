@@ -3,7 +3,7 @@
  * main-process side of the mind map editor.
  *
  * The shell's "make" opens a new untitled map tab and queues one request for
- * that tab's webContents (`@genoffice/electron-utils/generate-handoff`). The
+ * that tab's webContents (`@seuoffice/electron-utils/generate-handoff`). The
  * editor in the tab takes it here, once: a second take, a reload or another
  * tab gets nothing. A view made for a file never takes. Nothing here starts a
  * run; the renderer's AI panel starts it through its send gate, with the
@@ -18,7 +18,7 @@ import { ipcMain } from 'electron'
 import {
   reportGenerateRunStarted,
   takeGenerateHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import { MINDMAP_CHANNELS } from '../shared/ipc'
 import type { MindmapHandoff } from '../shared/ipc'
 

@@ -6,7 +6,7 @@
  * characters, nothing more.
  */
 
-import type { ToolNameProblem } from '@genoffice/agent-core/user-mcp/names'
+import type { ToolNameProblem } from '@seuoffice/agent-core/user-mcp/names'
 
 /** How a tool may run (12.2) */
 export const MCP_PERMISSIONS = ['always', 'ask', 'off'] as const

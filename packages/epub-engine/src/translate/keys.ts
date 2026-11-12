@@ -16,8 +16,8 @@
  *
  * Changing any value here loses every stored book translation.
  */
-import { runsText, sha256Hex, type InlineRun } from '@genoffice/pdf-structure'
-import type { TranslationBlockKey } from '@genoffice/pdf-structure/store'
+import { runsText, sha256Hex, type InlineRun } from '@seuoffice/pdf-structure'
+import type { TranslationBlockKey } from '@seuoffice/pdf-structure/store'
 
 /** the text the title and contents fingerprint is made from; never change it */
 export const EPUB_METADATA_FINGERPRINT_SOURCE = 'epub-translation:title-and-contents'

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Editor } from '@tiptap/core'
-import { mergeFieldInstruction } from '@genoffice/docx-engine'
+import { mergeFieldInstruction } from '@seuoffice/docx-engine'
 import type { MergeDataSource } from '../../shared/ipc'
 import type { MailMergeRequest, MailMergeResponse } from '../mail-merge/output'
 import { useI18n } from '../i18n/locale'

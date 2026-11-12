@@ -4,8 +4,8 @@
  * name at all in the query the settings test sends.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AiSearchProviderId } from '@genoffice/ai-provider'
-import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@genoffice/i18n'
+import type { AiSearchProviderId } from '@seuoffice/ai-provider'
+import { PRODUCT_NAME, UPSTREAM_PRODUCT_NAME } from '@seuoffice/i18n'
 import { imageSearch, webSearch, type SearchOptions } from '../src/index'
 import { testSearchProvider } from '../src/search-tools'
 

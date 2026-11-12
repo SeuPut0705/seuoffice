@@ -1,11 +1,11 @@
 import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { buildBlankDocx } from '@genoffice/docx-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
 import { closeDocument, listFields, openDocumentFile } from '../src/formats/docx'
-const tempDir = () => mkdtempSync(join(tmpdir(), 'ieumoffice-field-test-'))
+const tempDir = () => mkdtempSync(join(tmpdir(), 'seuoffice-field-test-'))
 
 const complex = (instruction: string, result: string) =>
   '<w:r><w:fldChar w:fldCharType="begin"/></w:r>' +

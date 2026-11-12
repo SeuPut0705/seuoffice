@@ -2,12 +2,15 @@
 /// readable text to the model, at most READ_URL_PAGE_CHARS at a time. HTML is
 /// converted (html-text.ts); JSON, XML and plain text pass through unchanged.
 /// GitHub blob addresses are rewritten to raw.githubusercontent.com, or to the
-/// contents API when the settings carry a token — the token travels only to
-/// api.github.com, per hop. The tool never throws: every failure is an object
+/// contents API when the settings carry a token. The token goes to
+/// https://api.github.com and to no other origin: a read that carries it
+/// follows redirects by the credential rule (`keyedDownload`), each hop through
+/// the SSRF guard. The tool never throws: every failure is an object
 /// with an English sentence and one of the ReadUrlErrorCode values.
 
-import { ResponseTooLargeError, readBodyCapped } from '@genoffice/electron-utils/remote-image'
-import { fetchWithSsrfGuard } from '@genoffice/electron-utils/safe-remote-url'
+import { AiRedirectRefusedError, keyedDownload } from '@seuoffice/ai-provider'
+import { ResponseTooLargeError, readBodyCapped } from '@seuoffice/electron-utils/remote-image'
+import { fetchWithSsrfGuard } from '@seuoffice/electron-utils/safe-remote-url'
 import { htmlToText } from './html-text'
 import { readAiSettingsFile } from './media-tools'
 
@@ -17,8 +20,10 @@ export const READ_URL_PAGE_CHARS = 50_000
 export const READ_URL_MAX_BYTES = 10 * 1024 * 1024
 /** One request's whole budget: connect, redirects and body read together. */
 export const READ_URL_TIMEOUT_MS = 30_000
-/** The guard follows at most ten redirects; every hop is checked. */
+/** A read without the token follows at most ten redirects; every hop is checked. */
 const READ_URL_MAX_REDIRECTS = 10
+/** The one origin the GitHub token is for: the host alone would also name its plain-http and other-port addresses */
+const GITHUB_API_ORIGIN = 'https://api.github.com'
 /** Pages held in process memory, per final address, so a page's continuations do not re-download. */
 const READ_URL_CACHE_TTL_MS = 3 * 60_000
 const READ_URL_CACHE_MAX_ENTRIES = 8
@@ -153,7 +158,7 @@ function githubRequest(
     const url = target.toString()
     // a contents address the model gave directly carries the token too, but not the raw Accept:
     // its own answer (a directory listing, file metadata) is what should be read
-    return { url, blobApi: false, tokenForApi: token !== '' && hostOf(url) === 'api.github.com' }
+    return { url, blobApi: false, tokenForApi: token !== '' && target.origin === GITHUB_API_ORIGIN }
   }
   if (!token) {
     return {
@@ -169,14 +174,13 @@ function githubRequest(
   }
 }
 
-/** Headers for one hop: the token only ever rides an api.github.com request of this chain. */
-function hopHeaders(
-  hopUrl: string,
+/** Headers of the request as it first goes out; what a redirect may carry on is not decided here */
+function requestHeaders(
   request: { blobApi: boolean; tokenForApi: boolean },
   token: string,
 ): Record<string, string> {
   const base = { 'User-Agent': USER_AGENT }
-  if (!request.tokenForApi || !token || hostOf(hopUrl) !== 'api.github.com') return base
+  if (!request.tokenForApi) return base
   return request.blobApi
     ? { ...base, Accept: GITHUB_RAW_ACCEPT, Authorization: `Bearer ${token}` }
     : { ...base, Authorization: `Bearer ${token}` }
@@ -427,17 +431,59 @@ export async function readUrlTool(
     return baseFetch(input, init)
   }
 
+  const headers = requestHeaders(request, token)
   let response: Response | null
+  // set when the guard refused an address of a chain followed by hand
+  let blockedHop = false
   try {
-    response = await fetchWithSsrfGuard(request.url, {
-      maxRedirects: READ_URL_MAX_REDIRECTS,
-      headers: { 'User-Agent': USER_AGENT },
-      headersForHop: (hopUrl) => hopHeaders(hopUrl, request, token),
-      signal,
-      fetchImpl: trackingFetch,
-    })
+    if (request.tokenForApi) {
+      // The token is a credential: it is never sent to another origin, and not put
+      // back once a redirect left api.github.com. `keyedDownload` holds that rule
+      // (https only, five redirects); each hop it asks for goes through the guard
+      // on its own, so the address checks and the pinned connection apply to every one.
+      response = await keyedDownload(
+        request.url,
+        { headers, signal },
+        {
+          base: async (hopUrl, init) => {
+            const answer = await fetchWithSsrfGuard(hopUrl, {
+              redirect: 'manual',
+              headers: init.headers as Record<string, string>,
+              signal,
+              fetchImpl: trackingFetch,
+            })
+            if (!answer) {
+              blockedHop = true
+              throw new Error('refused by the address check')
+            }
+            return answer
+          },
+        },
+      )
+    } else {
+      response = await fetchWithSsrfGuard(request.url, {
+        maxRedirects: READ_URL_MAX_REDIRECTS,
+        headers,
+        signal,
+        fetchImpl: trackingFetch,
+      })
+    }
   } catch (err) {
-    return stoppedFailure() ?? failure('network', `Could not reach the address: ${errorText(err)}`)
+    if (blockedHop) {
+      response = null
+    } else if (err instanceof AiRedirectRefusedError) {
+      return (
+        stoppedFailure() ??
+        failure(
+          'blocked',
+          `Stopped at a redirect while reading with the GitHub token. ${err.message.replaceAll('API key', 'GitHub token')}`,
+        )
+      )
+    } else {
+      return (
+        stoppedFailure() ?? failure('network', `Could not reach the address: ${errorText(err)}`)
+      )
+    }
   }
   if (!response) {
     return (

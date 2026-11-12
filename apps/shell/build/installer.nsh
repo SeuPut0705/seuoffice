@@ -1,5 +1,5 @@
-; Keeps the genoffice command line (resources\cli, holding genoffice.cmd and the
-; extension-less genoffice for Git Bash) on the installing user's PATH for the
+; Keeps the seuoffice command line (resources\cli, holding seuoffice.cmd and the
+; extension-less seuoffice for Git Bash) on the installing user's PATH for the
 ; lifetime of the install. The value is read and written unexpanded
 ; (REG_EXPAND_SZ) so entries such as %USERPROFILE%\bin survive, and Explorer
 ; is told about the change so terminals opened afterwards see it.
@@ -9,16 +9,16 @@
 !include "WinMessages.nsh"
 !include "StrFunc.nsh"
 
-!define GENOFFICE_PATH_MAX 7900
+!define SEUOFFICE_PATH_MAX 7900
 
 ; Scope templates to our ProgIDs (electron-builder uses win.fileAssociations.name).
 ; A shared .ext\ShellNew would overwrite Office/WPS templates. OOXML files
 ; must be copied from valid packages, never created with NullFile.
-!macro GenOfficeRegisterShellNew EXT PROGID
+!macro SeuOfficeRegisterShellNew EXT PROGID
   WriteRegStr SHELL_CONTEXT "Software\Classes\.${EXT}\${PROGID}\ShellNew" "FileName" "$INSTDIR\resources\shell-new\blank.${EXT}"
 !macroend
 
-!macro GenOfficeUnregisterShellNew EXT PROGID
+!macro SeuOfficeUnregisterShellNew EXT PROGID
   ; Only remove our own registration, including when uninstalling for an update.
   ReadRegStr $0 SHELL_CONTEXT "Software\Classes\.${EXT}\${PROGID}\ShellNew" "FileName"
   ${If} $0 == "$INSTDIR\resources\shell-new\blank.${EXT}"
@@ -32,20 +32,20 @@
 ; write .odt's default value (APP_ASSOCIATE) and take over the user's ODT
 ; program, so ODT is registered here instead. ODT opens in the Word tab, so the
 ; ProgId borrows the Word icon the installer already places for .docx.
-!define GENOFFICE_ODT_PROGID "seuoffice.OpenDocumentText"
+!define SEUOFFICE_ODT_PROGID "seuoffice.OpenDocumentText"
 
-!macro GenOfficeRegisterOpenWithOdt
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}" "" "OpenDocument Text"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}\DefaultIcon" "" "$INSTDIR\resources\docx.ico"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}\shell\open\command" "" '"$appExe" "%1"'
-  WriteRegNone SHELL_CONTEXT "Software\Classes\.odt\OpenWithProgids" "${GENOFFICE_ODT_PROGID}"
+!macro SeuOfficeRegisterOpenWithOdt
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODT_PROGID}" "" "OpenDocument Text"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODT_PROGID}\DefaultIcon" "" "$INSTDIR\resources\docx.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODT_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.odt\OpenWithProgids" "${SEUOFFICE_ODT_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterOpenWithOdt
+!macro SeuOfficeUnregisterOpenWithOdt
   ; Only our value and our ProgId: the .odt key, its default value and other
   ; programs' OpenWithProgids entries belong to whoever wrote them.
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\.odt\OpenWithProgids" "${GENOFFICE_ODT_PROGID}"
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODT_PROGID}"
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.odt\OpenWithProgids" "${SEUOFFICE_ODT_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODT_PROGID}"
 !macroend
 
 ; .ods is offered in Explorer's "Open with" for the same reason: it opens as a
@@ -53,20 +53,20 @@
 ; user's ODS program would hide that the original is not what gets written
 ; back. The spreadsheet opens in the Sheets tab, so the ProgId borrows the
 ; spreadsheet icon the installer already places for .xlsx.
-!define GENOFFICE_ODS_PROGID "seuoffice.OpenDocumentSpreadsheet"
+!define SEUOFFICE_ODS_PROGID "seuoffice.OpenDocumentSpreadsheet"
 
-!macro GenOfficeRegisterOpenWithOds
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODS_PROGID}" "" "OpenDocument Spreadsheet"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODS_PROGID}\DefaultIcon" "" "$INSTDIR\resources\xlsx.ico"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODS_PROGID}\shell\open\command" "" '"$appExe" "%1"'
-  WriteRegNone SHELL_CONTEXT "Software\Classes\.ods\OpenWithProgids" "${GENOFFICE_ODS_PROGID}"
+!macro SeuOfficeRegisterOpenWithOds
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODS_PROGID}" "" "OpenDocument Spreadsheet"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODS_PROGID}\DefaultIcon" "" "$INSTDIR\resources\xlsx.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODS_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.ods\OpenWithProgids" "${SEUOFFICE_ODS_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterOpenWithOds
+!macro SeuOfficeUnregisterOpenWithOds
   ; Only our value and our ProgId: the .ods key, its default value and other
   ; programs' OpenWithProgids entries belong to whoever wrote them.
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\.ods\OpenWithProgids" "${GENOFFICE_ODS_PROGID}"
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_ODS_PROGID}"
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.ods\OpenWithProgids" "${SEUOFFICE_ODS_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${SEUOFFICE_ODS_PROGID}"
 !macroend
 
 ; .hwp, .hwpx, .xmind, .epub and .vsdx are offered in Explorer's "Open with" and
@@ -81,71 +81,71 @@
 ; mind-map, book or diagram icon instead of the bare app icon. The ProgIds match
 ; the name-to-ProgId rule electron-builder.cjs uses for its Windows list
 ; (see tests/product-identity.test.ts).
-!define GENOFFICE_HWP_PROGID "seuoffice.HWPDocument"
-!define GENOFFICE_HWPX_PROGID "seuoffice.HWPXDocument"
-!define GENOFFICE_MINDMAP_PROGID "seuoffice.MindMap"
-!define GENOFFICE_EPUB_PROGID "seuoffice.EPUBBook"
+!define SEUOFFICE_HWP_PROGID "seuoffice.HWPDocument"
+!define SEUOFFICE_HWPX_PROGID "seuoffice.HWPXDocument"
+!define SEUOFFICE_MINDMAP_PROGID "seuoffice.MindMap"
+!define SEUOFFICE_EPUB_PROGID "seuoffice.EPUBBook"
 ; a Visio drawing opens as a new diagram (it is never written), with the diagram icon
-!define GENOFFICE_VSDX_PROGID "seuoffice.VSDXDrawing"
+!define SEUOFFICE_VSDX_PROGID "seuoffice.VSDXDrawing"
 
-!macro GenOfficeRegisterOpenWithHwp
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}" "" "HWP Document"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}\DefaultIcon" "" "$INSTDIR\resources\hwp.ico"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}\shell\open\command" "" '"$appExe" "%1"'
-  WriteRegNone SHELL_CONTEXT "Software\Classes\.hwp\OpenWithProgids" "${GENOFFICE_HWP_PROGID}"
+!macro SeuOfficeRegisterOpenWithHwp
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWP_PROGID}" "" "HWP Document"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWP_PROGID}\DefaultIcon" "" "$INSTDIR\resources\hwp.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWP_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.hwp\OpenWithProgids" "${SEUOFFICE_HWP_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterOpenWithHwp
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\.hwp\OpenWithProgids" "${GENOFFICE_HWP_PROGID}"
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWP_PROGID}"
+!macro SeuOfficeUnregisterOpenWithHwp
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.hwp\OpenWithProgids" "${SEUOFFICE_HWP_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWP_PROGID}"
 !macroend
 
-!macro GenOfficeRegisterOpenWithHwpx
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}" "" "HWPX Document"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}\DefaultIcon" "" "$INSTDIR\resources\hwp.ico"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}\shell\open\command" "" '"$appExe" "%1"'
-  WriteRegNone SHELL_CONTEXT "Software\Classes\.hwpx\OpenWithProgids" "${GENOFFICE_HWPX_PROGID}"
+!macro SeuOfficeRegisterOpenWithHwpx
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWPX_PROGID}" "" "HWPX Document"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWPX_PROGID}\DefaultIcon" "" "$INSTDIR\resources\hwp.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWPX_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.hwpx\OpenWithProgids" "${SEUOFFICE_HWPX_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterOpenWithHwpx
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\.hwpx\OpenWithProgids" "${GENOFFICE_HWPX_PROGID}"
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_HWPX_PROGID}"
+!macro SeuOfficeUnregisterOpenWithHwpx
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.hwpx\OpenWithProgids" "${SEUOFFICE_HWPX_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${SEUOFFICE_HWPX_PROGID}"
 !macroend
 
-!macro GenOfficeRegisterOpenWithMindmap
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}" "" "Mind Map"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}\DefaultIcon" "" "$INSTDIR\resources\mindmap.ico"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}\shell\open\command" "" '"$appExe" "%1"'
-  WriteRegNone SHELL_CONTEXT "Software\Classes\.xmind\OpenWithProgids" "${GENOFFICE_MINDMAP_PROGID}"
+!macro SeuOfficeRegisterOpenWithMindmap
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_MINDMAP_PROGID}" "" "Mind Map"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_MINDMAP_PROGID}\DefaultIcon" "" "$INSTDIR\resources\mindmap.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_MINDMAP_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.xmind\OpenWithProgids" "${SEUOFFICE_MINDMAP_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterOpenWithMindmap
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\.xmind\OpenWithProgids" "${GENOFFICE_MINDMAP_PROGID}"
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_MINDMAP_PROGID}"
+!macro SeuOfficeUnregisterOpenWithMindmap
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.xmind\OpenWithProgids" "${SEUOFFICE_MINDMAP_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${SEUOFFICE_MINDMAP_PROGID}"
 !macroend
 
-!macro GenOfficeRegisterOpenWithEpub
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_EPUB_PROGID}" "" "EPUB Book"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_EPUB_PROGID}\DefaultIcon" "" "$INSTDIR\resources\epub.ico"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_EPUB_PROGID}\shell\open\command" "" '"$appExe" "%1"'
-  WriteRegNone SHELL_CONTEXT "Software\Classes\.epub\OpenWithProgids" "${GENOFFICE_EPUB_PROGID}"
+!macro SeuOfficeRegisterOpenWithEpub
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_EPUB_PROGID}" "" "EPUB Book"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_EPUB_PROGID}\DefaultIcon" "" "$INSTDIR\resources\epub.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_EPUB_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.epub\OpenWithProgids" "${SEUOFFICE_EPUB_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterOpenWithEpub
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\.epub\OpenWithProgids" "${GENOFFICE_EPUB_PROGID}"
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_EPUB_PROGID}"
+!macro SeuOfficeUnregisterOpenWithEpub
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.epub\OpenWithProgids" "${SEUOFFICE_EPUB_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${SEUOFFICE_EPUB_PROGID}"
 !macroend
 
-!macro GenOfficeRegisterOpenWithVsdx
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_VSDX_PROGID}" "" "VSDX Drawing"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_VSDX_PROGID}\DefaultIcon" "" "$INSTDIR\resources\diagram.ico"
-  WriteRegStr SHELL_CONTEXT "Software\Classes\${GENOFFICE_VSDX_PROGID}\shell\open\command" "" '"$appExe" "%1"'
-  WriteRegNone SHELL_CONTEXT "Software\Classes\.vsdx\OpenWithProgids" "${GENOFFICE_VSDX_PROGID}"
+!macro SeuOfficeRegisterOpenWithVsdx
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_VSDX_PROGID}" "" "VSDX Drawing"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_VSDX_PROGID}\DefaultIcon" "" "$INSTDIR\resources\diagram.ico"
+  WriteRegStr SHELL_CONTEXT "Software\Classes\${SEUOFFICE_VSDX_PROGID}\shell\open\command" "" '"$appExe" "%1"'
+  WriteRegNone SHELL_CONTEXT "Software\Classes\.vsdx\OpenWithProgids" "${SEUOFFICE_VSDX_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterOpenWithVsdx
-  DeleteRegValue SHELL_CONTEXT "Software\Classes\.vsdx\OpenWithProgids" "${GENOFFICE_VSDX_PROGID}"
-  DeleteRegKey SHELL_CONTEXT "Software\Classes\${GENOFFICE_VSDX_PROGID}"
+!macro SeuOfficeUnregisterOpenWithVsdx
+  DeleteRegValue SHELL_CONTEXT "Software\Classes\.vsdx\OpenWithProgids" "${SEUOFFICE_VSDX_PROGID}"
+  DeleteRegKey SHELL_CONTEXT "Software\Classes\${SEUOFFICE_VSDX_PROGID}"
 !macroend
 
 ; Windows' "Default apps" page picks an app by its registered capabilities and
@@ -158,39 +158,39 @@
 ; (whose DefaultIcon is the document icon). The .hwp/.hwpx/.xmind/.epub/.vsdx/.odt ProgIds
 ; are the product-own Open-With ones defined above; the rest are the ProgIds
 ; electron-builder writes for the Windows file associations.
-!define GENOFFICE_CAPABILITIES_KEY "Software\seuoffice\Capabilities"
+!define SEUOFFICE_CAPABILITIES_KEY "Software\seuoffice\Capabilities"
 
-!macro GenOfficeRegisterApplicationCapabilities
-  WriteRegStr SHELL_CONTEXT "Software\RegisteredApplications" "${PRODUCT_NAME}" "${GENOFFICE_CAPABILITIES_KEY}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}" "ApplicationName" "${PRODUCT_NAME}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}" "ApplicationIcon" "$appExe,0"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".docx" "seuoffice.WordDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsx" "seuoffice.ExcelWorkbook"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsm" "seuoffice.ExcelMacroEnabledWorkbook"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xls" "seuoffice.Excel972003Workbook"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pptx" "seuoffice.PowerPointPresentation"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".csv" "seuoffice.CSVDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".tsv" "seuoffice.TSVDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pdf" "seuoffice.PDFDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".md" "seuoffice.MarkdownDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".markdown" "seuoffice.MarkdownDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".html" "seuoffice.HTMLDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".htm" "seuoffice.HTMLDocument"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".hwp" "${GENOFFICE_HWP_PROGID}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".hwpx" "${GENOFFICE_HWPX_PROGID}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xmind" "${GENOFFICE_MINDMAP_PROGID}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".epub" "${GENOFFICE_EPUB_PROGID}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".drawio" "seuoffice.Diagram"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".dio" "seuoffice.Diagram"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".vsdx" "${GENOFFICE_VSDX_PROGID}"
-  WriteRegStr SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}\FileAssociations" ".odt" "${GENOFFICE_ODT_PROGID}"
+!macro SeuOfficeRegisterApplicationCapabilities
+  WriteRegStr SHELL_CONTEXT "Software\RegisteredApplications" "${PRODUCT_NAME}" "${SEUOFFICE_CAPABILITIES_KEY}"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}" "ApplicationName" "${PRODUCT_NAME}"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}" "ApplicationIcon" "$appExe,0"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".docx" "seuoffice.WordDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsx" "seuoffice.ExcelWorkbook"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xlsm" "seuoffice.ExcelMacroEnabledWorkbook"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xls" "seuoffice.Excel972003Workbook"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pptx" "seuoffice.PowerPointPresentation"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".csv" "seuoffice.CSVDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".tsv" "seuoffice.TSVDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".pdf" "seuoffice.PDFDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".md" "seuoffice.MarkdownDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".markdown" "seuoffice.MarkdownDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".html" "seuoffice.HTMLDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".htm" "seuoffice.HTMLDocument"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".hwp" "${SEUOFFICE_HWP_PROGID}"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".hwpx" "${SEUOFFICE_HWPX_PROGID}"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".xmind" "${SEUOFFICE_MINDMAP_PROGID}"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".epub" "${SEUOFFICE_EPUB_PROGID}"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".drawio" "seuoffice.Diagram"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".dio" "seuoffice.Diagram"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".vsdx" "${SEUOFFICE_VSDX_PROGID}"
+  WriteRegStr SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}\FileAssociations" ".odt" "${SEUOFFICE_ODT_PROGID}"
 !macroend
 
-!macro GenOfficeUnregisterApplicationCapabilities
+!macro SeuOfficeUnregisterApplicationCapabilities
   ; only our registration and our key; a future sibling under Software\seuoffice
   ; keeps that parent alive
   DeleteRegValue SHELL_CONTEXT "Software\RegisteredApplications" "${PRODUCT_NAME}"
-  DeleteRegKey SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}"
+  DeleteRegKey SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}"
   DeleteRegKey /ifempty SHELL_CONTEXT "Software\seuoffice"
 !macroend
 
@@ -225,7 +225,7 @@
     ${StdUtils.ExecShellAsUser} $0 "$launchLink" "open" "$1"
   FunctionEnd
 
-  Function GenOfficeFinishPagePre
+  Function SeuOfficeFinishPagePre
     ${if} ${isUpdated}
     ${andIf} ${isForceRun}
       ; otherwise the app window opens behind this one
@@ -237,50 +237,59 @@
 
   !define MUI_FINISHPAGE_RUN
   !define MUI_FINISHPAGE_RUN_FUNCTION "StartApp"
-  !define MUI_PAGE_CUSTOMFUNCTION_PRE GenOfficeFinishPagePre
+  !define MUI_PAGE_CUSTOMFUNCTION_PRE SeuOfficeFinishPagePre
   !insertmacro MUI_PAGE_FINISH
 !macroend
 
 !macro customInstall
   Push "$INSTDIR\resources\cli"
-  Call GenOfficeAddToUserPath
-  !insertmacro GenOfficeRegisterShellNew "docx" "seuoffice.WordDocument"
-  !insertmacro GenOfficeRegisterShellNew "xlsx" "seuoffice.ExcelWorkbook"
-  !insertmacro GenOfficeRegisterShellNew "pptx" "seuoffice.PowerPointPresentation"
-  !insertmacro GenOfficeRegisterOpenWithOdt
-  !insertmacro GenOfficeRegisterOpenWithOds
-  !insertmacro GenOfficeRegisterOpenWithHwp
-  !insertmacro GenOfficeRegisterOpenWithHwpx
-  !insertmacro GenOfficeRegisterOpenWithMindmap
-  !insertmacro GenOfficeRegisterOpenWithEpub
-  !insertmacro GenOfficeRegisterOpenWithVsdx
-  !insertmacro GenOfficeRegisterApplicationCapabilities
+  Call SeuOfficeAddToUserPath
+  !insertmacro SeuOfficeRegisterShellNew "docx" "seuoffice.WordDocument"
+  !insertmacro SeuOfficeRegisterShellNew "xlsx" "seuoffice.ExcelWorkbook"
+  !insertmacro SeuOfficeRegisterShellNew "pptx" "seuoffice.PowerPointPresentation"
+  !insertmacro SeuOfficeRegisterOpenWithOdt
+  !insertmacro SeuOfficeRegisterOpenWithOds
+  !insertmacro SeuOfficeRegisterOpenWithHwp
+  !insertmacro SeuOfficeRegisterOpenWithHwpx
+  !insertmacro SeuOfficeRegisterOpenWithMindmap
+  !insertmacro SeuOfficeRegisterOpenWithEpub
+  !insertmacro SeuOfficeRegisterOpenWithVsdx
+  !insertmacro SeuOfficeRegisterApplicationCapabilities
   !insertmacro UPDATEFILEASSOC
 !macroend
 
 !macro customUnInstall
-  Push "$INSTDIR\resources\cli"
-  Call un.GenOfficeRemoveFromUserPath
+  ; An update (the old version's uninstaller, run with --updated) keeps the
+  ; install folder, so the CLI's PATH entry stays: removing it here and adding
+  ; it back in the installer broadcast the change to every window twice, each
+  ; broadcast waiting up to 5 s per window that does not answer.
+  ${ifNot} ${isUpdated}
+    Push "$INSTDIR\resources\cli"
+    Call un.SeuOfficeRemoveFromUserPath
+  ${endIf}
   Push $0
-  !insertmacro GenOfficeUnregisterShellNew "docx" "seuoffice.WordDocument"
-  !insertmacro GenOfficeUnregisterShellNew "xlsx" "seuoffice.ExcelWorkbook"
-  !insertmacro GenOfficeUnregisterShellNew "pptx" "seuoffice.PowerPointPresentation"
-  !insertmacro GenOfficeUnregisterOpenWithOdt
-  !insertmacro GenOfficeUnregisterOpenWithOds
-  !insertmacro GenOfficeUnregisterOpenWithHwp
-  !insertmacro GenOfficeUnregisterOpenWithHwpx
-  !insertmacro GenOfficeUnregisterOpenWithMindmap
-  !insertmacro GenOfficeUnregisterOpenWithEpub
-  !insertmacro GenOfficeUnregisterOpenWithVsdx
-  !insertmacro GenOfficeUnregisterApplicationCapabilities
+  !insertmacro SeuOfficeUnregisterShellNew "docx" "seuoffice.WordDocument"
+  !insertmacro SeuOfficeUnregisterShellNew "xlsx" "seuoffice.ExcelWorkbook"
+  !insertmacro SeuOfficeUnregisterShellNew "pptx" "seuoffice.PowerPointPresentation"
+  !insertmacro SeuOfficeUnregisterOpenWithOdt
+  !insertmacro SeuOfficeUnregisterOpenWithOds
+  !insertmacro SeuOfficeUnregisterOpenWithHwp
+  !insertmacro SeuOfficeUnregisterOpenWithHwpx
+  !insertmacro SeuOfficeUnregisterOpenWithMindmap
+  !insertmacro SeuOfficeUnregisterOpenWithEpub
+  !insertmacro SeuOfficeUnregisterOpenWithVsdx
+  !insertmacro SeuOfficeUnregisterApplicationCapabilities
   Pop $0
-  !insertmacro UPDATEFILEASSOC
+  ; the installer that runs next tells Explorer once, after registering again
+  ${ifNot} ${isUpdated}
+    !insertmacro UPDATEFILEASSOC
+  ${endIf}
 !macroend
 
 !ifndef BUILD_UNINSTALLER
 ${StrStr}
 
-Function GenOfficeAddToUserPath
+Function SeuOfficeAddToUserPath
   Exch $0 ; directory
   Push $1
   Push $2
@@ -288,7 +297,7 @@ Function GenOfficeAddToUserPath
   ReadRegStr $1 HKCU "Environment" "Path"
   StrLen $2 $1
   ; leave an already oversized PATH alone rather than truncate it
-  IntCmp $2 ${GENOFFICE_PATH_MAX} done 0 done
+  IntCmp $2 ${SEUOFFICE_PATH_MAX} done 0 done
   ${StrStr} $3 ";$1;" ";$0;"
   StrCmp $3 "" 0 done
   StrCmp $1 "" 0 +3
@@ -310,7 +319,7 @@ FunctionEnd
 ${UnStrStr}
 ${UnStrRep}
 
-Function un.GenOfficeRemoveFromUserPath
+Function un.SeuOfficeRemoveFromUserPath
   Exch $0 ; directory
   Push $1
   Push $2

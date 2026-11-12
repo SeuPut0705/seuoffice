@@ -3,7 +3,7 @@
  * The latter has an EncryptedPackage stream in its directory (stream name in UTF-16LE), which is used to pick the message shown.
  * A file with that magic number whose container does not hold is neither: it is damaged.
  */
-import { isDamagedCompoundFile } from '@genoffice/electron-utils/office-encryption'
+import { isDamagedCompoundFile } from '@seuoffice/electron-utils/office-encryption'
 
 const CFB_MAGIC = Buffer.from([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1])
 const ENCRYPTED_STREAM_UTF16 = Buffer.from('EncryptedPackage', 'utf16le')

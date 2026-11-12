@@ -5,9 +5,9 @@
  * nothing here reaches a provider.
  */
 import { describe, expect, it, vi } from 'vitest'
-import { listSlideTemplates } from '@genoffice/pipelines/slides/templates'
-import type { RenderSlide } from '@genoffice/pptx-render'
-import type { SlidesAiFontRoles } from '@genoffice/ui/slides-ai-fonts'
+import { listSlideTemplates } from '@seuoffice/pipelines/slides/templates'
+import type { RenderSlide } from '@seuoffice/pptx-render'
+import type { SlidesAiFontRoles } from '@seuoffice/ui/slides-ai-fonts'
 import { createSlidesSkill, type DeckAccess } from '../src/renderer/ai/slides-skill'
 import { createTemplateSelectionState } from '../src/renderer/ai/template-selection-state'
 import { normalizeTemplateSelection } from '../src/shared/template-selection'

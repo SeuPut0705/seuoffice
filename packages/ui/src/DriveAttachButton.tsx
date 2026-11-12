@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { DRIVE_ATTACH_STRINGS } from './strings-drive-attach'
 
 /** The Drive calls an editor's preload exposes as window.aiOfficeDriveAi */

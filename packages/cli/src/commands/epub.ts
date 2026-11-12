@@ -21,7 +21,7 @@ const VERB_OPTIONS: Record<Verb, readonly string[]> = {
 export const epubCommand: CommandDef = {
   name: 'epub',
   summary:
-    'Translate an EPUB book with the AI provider configured in GenOffice into a translated or bilingual book, and report what the result store holds for it.',
+    'Translate an EPUB book with the AI provider configured in SeuOffice into a translated or bilingual book, and report what the result store holds for it.',
   usage:
     'epub translate <file.epub> --to <lang> [--chapters <list>] [--kind translated,bilingual] [--out <path>] [--partial] [--restart] [--yes] [--allow-paid] [--force] | epub status <file.epub>',
   options: [
@@ -73,7 +73,7 @@ export const epubCommand: CommandDef = {
         { verbs: [...VERBS] },
         {
           reason: verb === undefined ? 'missing_argument' : 'invalid_argument',
-          suggestion: 'run `ieumoffice help epub`',
+          suggestion: 'run `seuoffice help epub`',
         },
       )
     }
@@ -86,7 +86,7 @@ export const epubCommand: CommandDef = {
         EXIT.usage,
         `epub ${v} does not take ${extra.map((f) => `--${f}`).join(', ')}`,
         { options: VERB_OPTIONS[v].map((o) => `--${o}`) },
-        { reason: 'unknown_option', suggestion: 'run `ieumoffice help epub`' },
+        { reason: 'unknown_option', suggestion: 'run `seuoffice help epub`' },
       )
     }
     const path = epubInput(file, ctx)
@@ -108,7 +108,7 @@ function epubInput(file: string | undefined, ctx: CommandContext): string {
       { reason: 'not-epub' },
       {
         reason: 'unsupported',
-        suggestion: 'pass a .epub book; `ieumoffice pdf translate` translates PDFs',
+        suggestion: 'pass a .epub book; `seuoffice pdf translate` translates PDFs',
       },
     )
   }

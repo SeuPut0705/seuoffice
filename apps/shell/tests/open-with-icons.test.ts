@@ -49,48 +49,48 @@ const OPEN_WITH = [
   {
     ext: 'hwp',
     progId: 'seuoffice.HWPDocument',
-    define: 'GENOFFICE_HWP_PROGID',
+    define: 'SEUOFFICE_HWP_PROGID',
     name: 'HWP Document',
     icon: 'hwp.ico',
-    register: 'GenOfficeRegisterOpenWithHwp',
-    unregister: 'GenOfficeUnregisterOpenWithHwp',
+    register: 'SeuOfficeRegisterOpenWithHwp',
+    unregister: 'SeuOfficeUnregisterOpenWithHwp',
   },
   {
     ext: 'hwpx',
     progId: 'seuoffice.HWPXDocument',
-    define: 'GENOFFICE_HWPX_PROGID',
+    define: 'SEUOFFICE_HWPX_PROGID',
     name: 'HWPX Document',
     icon: 'hwp.ico',
-    register: 'GenOfficeRegisterOpenWithHwpx',
-    unregister: 'GenOfficeUnregisterOpenWithHwpx',
+    register: 'SeuOfficeRegisterOpenWithHwpx',
+    unregister: 'SeuOfficeUnregisterOpenWithHwpx',
   },
   {
     ext: 'xmind',
     progId: 'seuoffice.MindMap',
-    define: 'GENOFFICE_MINDMAP_PROGID',
+    define: 'SEUOFFICE_MINDMAP_PROGID',
     name: 'Mind Map',
     icon: 'mindmap.ico',
-    register: 'GenOfficeRegisterOpenWithMindmap',
-    unregister: 'GenOfficeUnregisterOpenWithMindmap',
+    register: 'SeuOfficeRegisterOpenWithMindmap',
+    unregister: 'SeuOfficeUnregisterOpenWithMindmap',
   },
   {
     ext: 'epub',
     progId: 'seuoffice.EPUBBook',
-    define: 'GENOFFICE_EPUB_PROGID',
+    define: 'SEUOFFICE_EPUB_PROGID',
     name: 'EPUB Book',
     icon: 'epub.ico',
-    register: 'GenOfficeRegisterOpenWithEpub',
-    unregister: 'GenOfficeUnregisterOpenWithEpub',
+    register: 'SeuOfficeRegisterOpenWithEpub',
+    unregister: 'SeuOfficeUnregisterOpenWithEpub',
   },
   {
     // a Visio drawing opens as a new diagram: the diagram icon
     ext: 'vsdx',
     progId: 'seuoffice.VSDXDrawing',
-    define: 'GENOFFICE_VSDX_PROGID',
+    define: 'SEUOFFICE_VSDX_PROGID',
     name: 'VSDX Drawing',
     icon: 'diagram.ico',
-    register: 'GenOfficeRegisterOpenWithVsdx',
-    unregister: 'GenOfficeUnregisterOpenWithVsdx',
+    register: 'SeuOfficeRegisterOpenWithVsdx',
+    unregister: 'SeuOfficeUnregisterOpenWithVsdx',
   },
 ] as const
 
@@ -180,10 +180,10 @@ describe('the seuoffice Default-apps registration', () => {
 
   function declaredAssociations(): Map<string, string> {
     const defines = new Map(
-      [...nsh.matchAll(/!define\s+(GENOFFICE_\w+_PROGID)\s+"([^"]+)"/g)].map((m) => [m[1], m[2]]),
+      [...nsh.matchAll(/!define\s+(SEUOFFICE_\w+_PROGID)\s+"([^"]+)"/g)].map((m) => [m[1], m[2]]),
     )
     const declared = new Map<string, string>()
-    for (const line of instructions('GenOfficeRegisterApplicationCapabilities')) {
+    for (const line of instructions('SeuOfficeRegisterApplicationCapabilities')) {
       const match = /FileAssociations" "\.([a-z0-9]+)" "([^"]+)"/.exec(line)
       if (match) {
         declared.set(
@@ -196,16 +196,16 @@ describe('the seuoffice Default-apps registration', () => {
   }
 
   it('registers the product with its own capabilities key', () => {
-    const body = instructions('GenOfficeRegisterApplicationCapabilities')
+    const body = instructions('SeuOfficeRegisterApplicationCapabilities')
     expect(body).toContain(
-      `WriteRegStr SHELL_CONTEXT "Software\\RegisteredApplications" "\${PRODUCT_NAME}" "\${GENOFFICE_CAPABILITIES_KEY}"`,
+      `WriteRegStr SHELL_CONTEXT "Software\\RegisteredApplications" "\${PRODUCT_NAME}" "\${SEUOFFICE_CAPABILITIES_KEY}"`,
     )
-    expect(nsh).toContain(`!define GENOFFICE_CAPABILITIES_KEY "${CAPABILITIES}"`)
+    expect(nsh).toContain(`!define SEUOFFICE_CAPABILITIES_KEY "${CAPABILITIES}"`)
     expect(body).toContain(
-      `WriteRegStr SHELL_CONTEXT "\${GENOFFICE_CAPABILITIES_KEY}" "ApplicationName" "\${PRODUCT_NAME}"`,
+      `WriteRegStr SHELL_CONTEXT "\${SEUOFFICE_CAPABILITIES_KEY}" "ApplicationName" "\${PRODUCT_NAME}"`,
     )
     expect(body).toContain(
-      `WriteRegStr SHELL_CONTEXT "\${GENOFFICE_CAPABILITIES_KEY}" "ApplicationIcon" "$appExe,0"`,
+      `WriteRegStr SHELL_CONTEXT "\${SEUOFFICE_CAPABILITIES_KEY}" "ApplicationIcon" "$appExe,0"`,
     )
   })
 
@@ -230,26 +230,26 @@ describe('the seuoffice Default-apps registration', () => {
   })
 
   it('never writes an extension default, only the capability entry', () => {
-    for (const line of instructions('GenOfficeRegisterApplicationCapabilities')) {
+    for (const line of instructions('SeuOfficeRegisterApplicationCapabilities')) {
       expect(line).not.toMatch(/"Software\\Classes\\\./)
       expect(line).not.toContain('"Software\\Classes\\.hwp" ""')
     }
   })
 
   it('removes only its registration and capabilities key on uninstall', () => {
-    expect(instructions('GenOfficeUnregisterApplicationCapabilities')).toEqual([
+    expect(instructions('SeuOfficeUnregisterApplicationCapabilities')).toEqual([
       'DeleteRegValue SHELL_CONTEXT "Software\\RegisteredApplications" "${PRODUCT_NAME}"',
-      'DeleteRegKey SHELL_CONTEXT "${GENOFFICE_CAPABILITIES_KEY}"',
+      'DeleteRegKey SHELL_CONTEXT "${SEUOFFICE_CAPABILITIES_KEY}"',
       'DeleteRegKey /ifempty SHELL_CONTEXT "Software\\seuoffice"',
     ])
   })
 
   it('runs on install and uninstall with the other file registrations', () => {
     expect(macroBody('customInstall')).toContain(
-      '!insertmacro GenOfficeRegisterApplicationCapabilities',
+      '!insertmacro SeuOfficeRegisterApplicationCapabilities',
     )
     expect(macroBody('customUnInstall')).toContain(
-      '!insertmacro GenOfficeUnregisterApplicationCapabilities',
+      '!insertmacro SeuOfficeUnregisterApplicationCapabilities',
     )
   })
 })

@@ -25,7 +25,7 @@ export type CompareGranularity = 'word' | 'char'
 /** what the comparison leaves out */
 export type CompareIgnore = 'formatting' | 'case' | 'whitespace'
 export interface CompareOptions {
-  /** author recorded on every revision; default "GenOffice" */
+  /** author recorded on every revision; default "SeuOffice" */
   author?: string
   /** ISO timestamp recorded on every revision; default: now */
   date?: string

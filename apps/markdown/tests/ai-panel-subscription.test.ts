@@ -6,7 +6,7 @@ import {
   type AiSettings,
   type AiSubscriptionState,
   type SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { AiPanel, type MarkdownAiDeps } from '../src/renderer/ai/AiPanel'
 
 // The panel under the subscription contract, mounted against a fake preload

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import { htmlLang, type Lang } from '@genoffice/i18n'
-import type { UserSkillImportPreview } from '@genoffice/electron-utils/user-skills-channels'
+import { htmlLang, type Lang } from '@seuoffice/i18n'
+import type { UserSkillImportPreview } from '@seuoffice/electron-utils/user-skills-channels'
 import { skillsText } from '../i18n/strings-skills'
 import { agentSkillsText } from '../i18n/strings-agent-skills'
 import { SkillImportPreviewDialog } from '../skills/SkillImport'

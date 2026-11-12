@@ -3,7 +3,7 @@ import { join } from 'node:path'
 
 import { describe, expect, it } from 'vitest'
 
-import { parsePivotDefinition } from '@genoffice/xlsx-gateway/gateway/xlsx-pivot'
+import { parsePivotDefinition } from '@seuoffice/xlsx-gateway/gateway/xlsx-pivot'
 import { restoreSlicerPanels } from '../src/renderer/pivot-actions'
 import type { LazyWorkbookState } from '../src/renderer/univer-state'
 import type { WorkbookSlicerPart } from '../src/shared/desktop-api'

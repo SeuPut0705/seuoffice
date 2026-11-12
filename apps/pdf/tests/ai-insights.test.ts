@@ -7,7 +7,7 @@
  * "sending" is a call to a fake model.
  */
 import { describe, expect, it, vi } from 'vitest'
-import type { AgentStreamRequest } from '@genoffice/agent-core'
+import type { AgentStreamRequest } from '@seuoffice/agent-core'
 import { DocumentJobRegistry } from '../../../packages/pdf-structure/src/jobs'
 import {
   AI_READ_CLOSE_TAG,

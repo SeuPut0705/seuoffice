@@ -77,7 +77,7 @@ export const sheetCommand: CommandDef = {
       name: 'ops',
       value: 'file',
       description:
-        'apply: JSON array of workbook DSL ops (the in-app propose_operations vocabulary; `ieumoffice guide sheets`); "-" reads stdin',
+        'apply: JSON array of workbook DSL ops (the in-app propose_operations vocabulary; `seuoffice guide sheets`); "-" reads stdin',
     },
     { name: 'dry-run', description: 'apply --ops: validate and print the plan without writing' },
     ...BATCH_OPTIONS,
@@ -85,7 +85,7 @@ export const sheetCommand: CommandDef = {
     {
       name: 'force',
       description:
-        'apply/links: overwrite an existing --out file, or write while GenOffice has the file open',
+        'apply/links: overwrite an existing --out file, or write while SeuOffice has the file open',
     },
     {
       name: 'update',
@@ -123,7 +123,7 @@ export const sheetCommand: CommandDef = {
           undefined,
           {
             reason: verb === undefined ? 'missing_argument' : 'invalid_argument',
-            suggestion: 'run `ieumoffice help sheet`',
+            suggestion: 'run `seuoffice help sheet`',
           },
         )
     }
@@ -231,7 +231,7 @@ async function links(
     )
   }
   // --break and --update write, so they honour --out/--force, the allowed
-  // write roots and the "open in GenOffice" guard like apply does
+  // write roots and the "open in SeuOffice" guard like apply does
   const writeOutput = () =>
     resolveOutput(flagString(args, 'out'), ctx, {
       fallback: path,

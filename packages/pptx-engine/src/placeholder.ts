@@ -19,6 +19,7 @@ import { xmlParser } from './xml-parser'
 import type { Transform, TextAlign } from './types'
 import { type EaScript, type Theme, eaScriptOfLang, resolveFontRef } from './theme'
 import { resolveColorNode } from './color'
+import { ownValue } from './own-value'
 import { asXmlNode, percentFraction, xmlArray, type XmlNode } from './xml-utils'
 
 /** Spec (and PowerPoint UI) ceiling for <a:buAutoNum startAt>. */
@@ -233,7 +234,7 @@ export function parsePlaceholderMap(
     const transform = frame ? parseXfrmNode(sp['p:xfrm']) : parseXfrmNode(spPr['a:xfrm'])
     const textStyle = parseLstStyleLevels(asXmlNode(sp['p:txBody'])['a:lstStyle'], theme, src)
     const bodyPrNode = asXmlNode(asXmlNode(sp['p:txBody'])['a:bodyPr'])
-    const anchor = ANCHOR_MAP[String(bodyPrNode['@_anchor'] ?? '')]
+    const anchor = ownValue(ANCHOR_MAP, String(bodyPrNode['@_anchor'] ?? ''))
     const anchorCtrRaw = bodyPrNode['@_anchorCtr']
     const anchorCtr =
       anchorCtrRaw != null ? String(anchorCtrRaw) === '1' || anchorCtrRaw === 'true' : undefined
@@ -317,7 +318,8 @@ function parseLvlPPr(
   const pPr = asXmlNode(pPrRaw)
   const out: LevelTextStyle = {}
   const algn = String(pPr['@_algn'] ?? '')
-  if (algn && ALIGN_MAP[algn]) out.align = ALIGN_MAP[algn]
+  const align = ownValue(ALIGN_MAP, algn)
+  if (align) out.align = align
   const lineHeight = spcPctVal(pPr['a:lnSpc'])
   const lineExact = spcPtsVal(pPr['a:lnSpc'])
   if (lineHeight != null) out.lineHeight = lineHeight

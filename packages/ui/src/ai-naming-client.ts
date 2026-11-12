@@ -21,8 +21,8 @@
  * all. It also tells the reader why (`fileNamingFailureText`): a command that
  * ends without a word looks broken.
  */
-import type { AiProviderId, AiRunErrorKind } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
+import type { AiProviderId, AiRunErrorKind } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
 import { aiRunErrorText } from './ai-subscription'
 import { aiNamingText } from './strings-ai-naming'
 import { aiSubscriptionText } from './strings-ai-subscription'

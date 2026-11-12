@@ -1,7 +1,7 @@
 import { spawnSync, type SpawnSyncReturns } from 'node:child_process'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname } from 'node:path'
-import { isSealedSecret, sealedAiSecretsIn, type AiSecretCodec } from '@genoffice/ai-provider'
+import { isSealedSecret, sealedAiSecretsIn, type AiSecretCodec } from '@seuoffice/ai-provider'
 import { aiSettingsPath } from './cloud'
 import { appLaunch } from './resources'
 
@@ -65,7 +65,7 @@ export function cliSecretCodec(
     const childEnv: NodeJS.ProcessEnv = {
       ...env,
       // an unpacked app honours this; an installed one already uses this folder
-      GENOFFICE_USER_DATA: dirname(aiSettingsPath(env)),
+      SEUOFFICE_USER_DATA: dirname(aiSettingsPath(env)),
     }
     delete childEnv.ELECTRON_RUN_AS_NODE
     const result = spawn(launch.command, [...launch.args, REVEAL_FLAG], {

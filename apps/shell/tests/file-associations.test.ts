@@ -33,7 +33,7 @@ const INSTALLER_OPEN_WITH_EXTS: ReadonlySet<string> = new Set([
 const installerScript = readFileSync(resolve(import.meta.dirname, '../build/installer.nsh'), 'utf8')
 
 describe('packaged file associations', () => {
-  // The OS can only offer GenOffice in "Open With" (mac CFBundleDocumentTypes,
+  // The OS can only offer SeuOffice in "Open With" (mac CFBundleDocumentTypes,
   // the Linux desktop MimeType list, the NSIS ProgIds) for types the bundle
   // declares. A routing entry without a matching declaration means a file the
   // app opens fine can never reach it from Finder/Explorer — the .txt/.json

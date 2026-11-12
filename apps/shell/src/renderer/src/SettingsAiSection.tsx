@@ -11,10 +11,10 @@ import {
   aiSubscriptionProviderName,
   aiSubscriptionStatusOf,
   aiSubscriptionText,
-} from '@genoffice/ui'
-import type { Lang } from '@genoffice/i18n'
-import { AI_SUBSCRIPTION_PROVIDERS, selectAiProvider } from '@genoffice/ai-provider/browser'
-import type { AiSettings, AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ui'
+import type { Lang } from '@seuoffice/i18n'
+import { AI_SUBSCRIPTION_PROVIDERS, selectAiProvider } from '@seuoffice/ai-provider/browser'
+import type { AiSettings, AiSubscriptionProviderId } from '@seuoffice/ai-provider/browser'
 import { FreeAiCards } from './FreeAiCards'
 import { LocalAiSection } from './LocalAiSection'
 import type { TFunc } from './locale'

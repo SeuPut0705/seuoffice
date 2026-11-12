@@ -1,6 +1,6 @@
 /**
  * Model file naming for the sheets editor: the app-side half of
- * `suggestFileName` (`@genoffice/ui`).
+ * `suggestFileName` (`@seuoffice/ui`).
  *
  * ## A name only when the reader asks for one
  *
@@ -29,7 +29,7 @@
  * naming would drift from that one the moment a mark was added or cleared, and
  * the drift is silent: the file would simply start carrying a secret.
  */
-import { suggestFileName, type FileNameSuggestion } from '@genoffice/ui'
+import { suggestFileName, type FileNameSuggestion } from '@seuoffice/ui'
 import {
   modelTextOf,
   type ModelViewCell,
@@ -39,7 +39,7 @@ import {
 import { redactionsOf, type WorkbookReadContext } from './ai/workbook-readers'
 import { lazyCellReader } from './univer-sync'
 import { lazySheetScreenExtent } from './univer-state'
-import { columnLabel } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { columnLabel } from '@seuoffice/xlsx-gateway/domain/cell-address'
 
 /**
  * A file name is read off the first sheets: a sketch of a few hundred cells

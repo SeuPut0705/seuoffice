@@ -15,7 +15,7 @@ import {
   type AgentMessage,
   type AgentStreamCallbacks,
   type AgentTransport,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import {
   REDO_GATE,
   RUN_LOCK_GATE,

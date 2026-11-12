@@ -14,12 +14,19 @@ import { createHash } from 'node:crypto'
 import { lstat, mkdir, mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { basename, dirname, join, resolve } from 'node:path'
+import { OLD_TRACKED_TEMP_PREFIXES } from './old-names'
+
+/** Every temporary folder name this module creates */
+export const TRACKED_TEMP_PREFIXES = [
+  'seuoffice-codex-app-server-',
+  'seuoffice-claude-code-',
+] as const
 
 /** Every temporary folder name this module is allowed to remove */
-export const TRACKED_TEMP_PREFIXES = [
-  'genoffice-codex-app-server-',
-  'genoffice-claude-code-',
-] as const
+const REMOVABLE_TEMP_PREFIXES: readonly string[] = [
+  ...TRACKED_TEMP_PREFIXES,
+  ...OLD_TRACKED_TEMP_PREFIXES,
+]
 
 const RECORD_PREFIX = 'ai-temp-dir-'
 const RECORD_VERSION = 1
@@ -58,7 +65,7 @@ function comparable(path: string): string {
 function isTrackedPath(path: string, tempRoot: string): boolean {
   const full = resolve(path)
   if (comparable(dirname(full)) !== comparable(tempRoot)) return false
-  return TRACKED_TEMP_PREFIXES.some((prefix) => basename(full).startsWith(prefix))
+  return REMOVABLE_TEMP_PREFIXES.some((prefix) => basename(full).startsWith(prefix))
 }
 
 function validRecord(text: string): TempDirRecord | null {

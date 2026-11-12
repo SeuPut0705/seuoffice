@@ -24,8 +24,8 @@ import {
   type AiRunErrorKind,
   type AiSettings,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import { aiProviderDisplayName, aiSubscriptionModelName } from '@genoffice/ui'
+} from '@seuoffice/ai-provider/browser'
+import { aiProviderDisplayName, aiSubscriptionModelName } from '@seuoffice/ui'
 
 export type DocumentJobRoute =
   /** settings or statuses not known yet */

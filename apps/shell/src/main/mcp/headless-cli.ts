@@ -4,7 +4,7 @@ import { join } from 'node:path'
 import { cliErrorMessage, type CliJsonOk, type CliRunOutcome, type CliRunner } from './cli-runner'
 
 /**
- * Thin helpers that turn an MCP tool's arguments into a `genoffice` CLI
+ * Thin helpers that turn an MCP tool's arguments into a `seuoffice` CLI
  * invocation. The headless MCP tools are a client of the CLI, not a second
  * implementation of the engines: input that arrives inline (markdown, a row
  * matrix, an ops array) is staged to a temp file, the CLI writes the output,
@@ -13,7 +13,7 @@ import { cliErrorMessage, type CliJsonOk, type CliRunOutcome, type CliRunner } f
 
 /** run `fn` with a scratch directory that is always removed afterwards */
 async function withTempDir<T>(fn: (dir: string) => Promise<T>): Promise<T> {
-  const dir = await mkdtemp(join(tmpdir(), 'genoffice-mcp-'))
+  const dir = await mkdtemp(join(tmpdir(), 'seuoffice-mcp-'))
   try {
     return await fn(dir)
   } finally {
@@ -165,7 +165,7 @@ export async function mergeTemplateViaCli(
  * `sheet links <path>`: list, refresh (`--update`) or break (`--break`, 1-based
  * indices) a workbook's external links. Mutations default to writing in place
  * and honour `--out`/`--force` — the CLI routes them through the same
- * output/allow-list/open-in-GenOffice guards `sheet apply` uses.
+ * output/allow-list/open-in-SeuOffice guards `sheet apply` uses.
  */
 export async function sheetLinksViaCli(
   runner: CliRunner,

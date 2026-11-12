@@ -5,9 +5,9 @@ import { join } from 'node:path'
 import type { Page } from '@playwright/test'
 import { launchShell, closeAndSaveVideo, waitForPageWithUrl, screenshotPath } from './helpers'
 
-// the preload exposes window.__genofficeDebug only under this env var; the
+// the preload exposes window.__seuofficeDebug only under this env var; the
 // spec reads cell data and merges through Univer's Facade
-process.env.GENOFFICE_DEBUG_HOOKS = '1'
+process.env.SEUOFFICE_DEBUG_HOOKS = '1'
 
 /**
  * Two reports from 2026-11-02, both of which the AI path already handled:
@@ -57,7 +57,7 @@ type DebugApi = {
 
 async function merges(sheets: Page): Promise<Area[]> {
   return sheets.evaluate(() => {
-    const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as DebugApi
+    const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as DebugApi
     return debug.univerAPI
       .getActiveWorkbook()
       .getActiveSheet()
@@ -75,7 +75,7 @@ async function merges(sheets: Page): Promise<Area[]> {
 async function probeCell(sheets: Page, row: number, col: number): Promise<CellProbe> {
   return sheets.evaluate(
     ({ row, col }) => {
-      const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as DebugApi
+      const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as DebugApi
       const range = debug.univerAPI.getActiveWorkbook().getActiveSheet().getRange(row, col)
       const cell = range.getCellData()
       const runs = cell?.p?.body?.textRuns
@@ -90,7 +90,7 @@ async function probeCell(sheets: Page, row: number, col: number): Promise<CellPr
 }
 
 async function openBlankWorkbook(videoDir: string) {
-  const scratch = await mkdtemp(join(tmpdir(), `genoffice-${videoDir}-`))
+  const scratch = await mkdtemp(join(tmpdir(), `seuoffice-${videoDir}-`))
   const launched = await launchShell({ onboardingSeen: true, videoDir })
   const { app, page } = launched
   await app.evaluate(({ app: electronApp }, dir) => {
@@ -107,7 +107,7 @@ async function openBlankWorkbook(videoDir: string) {
   const cell = async (row: number, col: number) =>
     sheets.evaluate(
       ({ row, col }) => {
-        const debug = (window as unknown as Record<string, unknown>).__genofficeDebug as {
+        const debug = (window as unknown as Record<string, unknown>).__seuofficeDebug as {
           univerAPI: {
             getActiveWorkbook(): {
               getActiveSheet(): {

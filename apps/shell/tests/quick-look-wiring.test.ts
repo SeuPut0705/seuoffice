@@ -44,7 +44,7 @@ describe('the Quick Look preview window and its wiring', () => {
     const window = bundled(valueImports(src('../src/preload/quick-look.ts')))
     expect(home.filter((path) => window.includes(path))).toEqual([])
     // the window preload bundles nothing but its own api module: the shell
-    // preload already bundles @genoffice/i18n transitively, and importing it
+    // preload already bundles @seuoffice/i18n transitively, and importing it
     // here too would form a shared chunk even though the paths differ.
     expect(window).toEqual(['../shared/quick-look-api'])
   })

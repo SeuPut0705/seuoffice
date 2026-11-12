@@ -4,12 +4,12 @@
 // from the web build's shared font folder. The renderer then draws them through the private-face
 // bytes (privateFontFaces / privateFontData), as on the desktop.
 import { join } from 'node:path'
-import type { PackageArchive } from '@genoffice/pptx-engine'
+import type { PackageArchive } from '@seuoffice/pptx-engine'
 import {
   TEMPLATE_FONTS,
   templateFontUrl,
   type TemplateFontFamily,
-} from '@genoffice/ui/template-fonts'
+} from '@seuoffice/ui/template-fonts'
 import { setTemplateFontDir } from '../main/fonts'
 import { putFile } from './memfs'
 

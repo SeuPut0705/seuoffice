@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { createUpdateLog } from '../src/main/update-log'
+import { createUpdateLog, createUpdateSteps } from '../src/main/update-log'
 
 /** The update record in the data folder (src/main/update-log.ts). */
 
@@ -55,5 +55,58 @@ describe('update record', () => {
   it('never throws when the file cannot be written', () => {
     const log = createUpdateLog(join(dir, 'missing', 'update-log.txt'))
     expect(() => log.info('x')).not.toThrow()
+  })
+})
+
+describe('update steps', () => {
+  it('writes each step as a phase line, the end of a span with its milliseconds', () => {
+    const lines: string[] = []
+    let clock = 1000
+    const step = createUpdateSteps(
+      (line) => lines.push(line),
+      () => clock,
+    )
+    step('download-start', { version: '0.2.0' })
+    clock += 21_873.4
+    step('download-end', { version: '0.2.0', bytes: 232_783_832, transferred: null })
+    step('quit-requested')
+    expect(lines).toEqual([
+      'phase download-start version=0.2.0',
+      'phase download-end ms=21873 version=0.2.0 bytes=232783832',
+      'phase quit-requested',
+    ])
+  })
+
+  it('leaves the milliseconds out of an end whose start it did not see, or saw already ended', () => {
+    const lines: string[] = []
+    const step = createUpdateSteps(
+      (line) => lines.push(line),
+      () => 5,
+    )
+    step('verify-end')
+    step('unpack-start')
+    step('unpack-end')
+    step('unpack-end')
+    expect(lines).toEqual([
+      'phase verify-end',
+      'phase unpack-start',
+      'phase unpack-end ms=0',
+      'phase unpack-end',
+    ])
+  })
+
+  it('keeps every value one word, so a line splits on spaces', () => {
+    const lines: string[] = []
+    createUpdateSteps((line) => lines.push(line))('check-end', { found: 'net error\nagain' })
+    expect(lines).toEqual(['phase check-end found=net_error_again'])
+  })
+
+  it('lands in the record as timestamped lines', () => {
+    const file = join(dir, 'update-log.txt')
+    const log = createUpdateLog(file, 64 * 1024, fixedNow)
+    createUpdateSteps((line) => log.info(line))('installer-start', { version: '0.2.0' })
+    expect(readFileSync(file, 'utf8')).toBe(
+      '2026-10-26T01:02:03.000Z info phase installer-start version=0.2.0\n',
+    )
   })
 })

@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 
-import { Dropdown, fontFamilyLabel } from '@genoffice/ui'
+import { Dropdown, fontFamilyLabel } from '@seuoffice/ui'
 
 import { ColorDropdown } from './ColorDropdown'
 import { draftFromSelection, formatCellsCommands, type FormatCellsDraft } from './format-cells'

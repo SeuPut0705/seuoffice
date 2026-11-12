@@ -1,17 +1,17 @@
 /**
  * The renderer's side of the subscription connection. The state machine and
  * the cards' actions are shared by every editor and the shell
- * (`@genoffice/ui`); this file only names the bridge this window exposes.
+ * (`@seuoffice/ui`); this file only names the bridge this window exposes.
  */
 import {
   useSubscriptionConnection as useSharedSubscriptionConnection,
   type SubscriptionLaunchKind,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type {
   AiSubscriptionProviderId,
   SubscriptionLoginMode,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type { SubscriptionApi } from '../../shared/subscription-api'
 
 declare global {

@@ -255,7 +255,7 @@ async function startWindow(
 }
 
 const WINDOW_TEXT: SubscriptionLoginWindowText = {
-  title: 'GenOffice – Claude',
+  title: 'SeuOffice – Claude',
   guide: '1. "quoted" $env:PATH; calc\n2. second line',
   closing: 'Press Enter',
 }

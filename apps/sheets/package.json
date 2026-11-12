@@ -1,6 +1,6 @@
 {
-  "name": "@genoffice/sheets",
-  "productName": "GenOffice Sheets",
+  "name": "@seuoffice/sheets",
+  "productName": "SeuOffice Sheets",
   "version": "0.1.0",
   "private": true,
   "description": "Cross-platform AI-native spreadsheet compatibility prototype",
@@ -24,17 +24,17 @@
   },
   "dependencies": {
     "@fluentui/react-icons": "^2.0.333",
-    "@genoffice/agent-core": "*",
-    "@genoffice/ai-provider": "*",
-    "@genoffice/ai-search": "*",
-    "@genoffice/docx-engine": "*",
-    "@genoffice/electron-utils": "*",
-    "@genoffice/file-parse": "*",
-    "@genoffice/font-metrics": "*",
-    "@genoffice/i18n": "*",
-    "@genoffice/ui": "*",
-    "@genoffice/pptx-render": "*",
-    "@genoffice/xlsx-gateway": "*",
+    "@seuoffice/agent-core": "*",
+    "@seuoffice/ai-provider": "*",
+    "@seuoffice/ai-search": "*",
+    "@seuoffice/docx-engine": "*",
+    "@seuoffice/electron-utils": "*",
+    "@seuoffice/file-parse": "*",
+    "@seuoffice/font-metrics": "*",
+    "@seuoffice/i18n": "*",
+    "@seuoffice/ui": "*",
+    "@seuoffice/pptx-render": "*",
+    "@seuoffice/xlsx-gateway": "*",
     "@univerjs/core": "^0.25.1",
     "@univerjs/data-validation": "^0.25.1",
     "@univerjs/engine-render": "^0.25.1",
@@ -59,7 +59,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@genoffice/project-store": "*",
+    "@seuoffice/project-store": "*",
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
@@ -71,5 +71,5 @@
     "vite": "^7.3.7",
     "vitest": "^4.1.12"
   },
-  "author": "GenOffice"
+  "author": "SeuOffice"
 }

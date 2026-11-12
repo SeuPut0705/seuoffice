@@ -7,7 +7,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { act, createElement, useEffect, useState } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
-import type { XmindSheet } from '@genoffice/xmind-engine'
+import type { XmindSheet } from '@seuoffice/xmind-engine'
 import { FORMAT_TAB_KEY, FormatPanel } from '../src/renderer/components/FormatPanel'
 import { formatModel } from '../src/renderer/components/format-model'
 import { noticeText } from '../src/renderer/components/map-notices'

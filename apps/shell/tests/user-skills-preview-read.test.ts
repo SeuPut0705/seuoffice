@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync 
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { USER_SKILL_PREVIEW_TEXT_MAX_CHARS as MAX } from '@genoffice/electron-utils/user-skills-channels'
+import { USER_SKILL_PREVIEW_TEXT_MAX_CHARS as MAX } from '@seuoffice/electron-utils/user-skills-channels'
 import {
   createUserSkillsService,
   importPreviewOf,
@@ -74,7 +74,7 @@ describe('opening a found skill in the preview', () => {
       file: { text: '# Colors\n', truncated: false },
     })
     // looking installs nothing
-    expect(existsSync(join(home, '.ieumoffice', 'skills', 'deck'))).toBe(false)
+    expect(existsSync(join(home, '.seuoffice', 'skills', 'deck'))).toBe(false)
   })
 
   it('cuts a long body and a long file at the display limit and says so', async () => {

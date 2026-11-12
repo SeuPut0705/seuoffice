@@ -1,61 +1,61 @@
 /* Bundled metric substitutes for fonts most decks assume but macOS/Linux lack:
  * Carlito ↔ Calibri (document content rendering — the canvas font chains in
  * konva-adapter.ts list Carlito right after Calibri). The files are the suite's
- * shared copy (@genoffice/ui/fonts); their internal family name is "Carlito GO"
+ * shared copy (@seuoffice/ui/fonts); their internal family name is "Carlito GO"
  * (docs' Vietnamese-diacritics rebuild), which is what the main-process metrics
  * report as the draw family — declare both names. */
 @font-face {
   font-family: 'Carlito';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   font-weight: normal;
   font-style: normal;
   font-display: block;
 }
 @font-face {
   font-family: 'Carlito';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   font-weight: bold;
   font-style: normal;
   font-display: block;
 }
 @font-face {
   font-family: 'Carlito';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   font-weight: normal;
   font-style: italic;
   font-display: block;
 }
 @font-face {
   font-family: 'Carlito';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   font-weight: bold;
   font-style: italic;
   font-display: block;
 }
 @font-face {
   font-family: 'Carlito GO';
-  src: url('@genoffice/ui/fonts/Carlito-Regular.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   font-weight: normal;
   font-style: normal;
   font-display: block;
 }
 @font-face {
   font-family: 'Carlito GO';
-  src: url('@genoffice/ui/fonts/Carlito-Bold.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   font-weight: bold;
   font-style: normal;
   font-display: block;
 }
 @font-face {
   font-family: 'Carlito GO';
-  src: url('@genoffice/ui/fonts/Carlito-Italic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   font-weight: normal;
   font-style: italic;
   font-display: block;
 }
 @font-face {
   font-family: 'Carlito GO';
-  src: url('@genoffice/ui/fonts/Carlito-BoldItalic.ttf');
+  src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   font-weight: bold;
   font-style: italic;
   font-display: block;
@@ -63,7 +63,7 @@
 
 /* Per-app accent (powerpoint-orange family) + slides-only tokens.
  * Chrome tokens (surface/text/border/…, AI panel --color-*) come from
- * @genoffice/ui/tokens.css; nothing here may shadow those names. */
+ * @seuoffice/ui/tokens.css; nothing here may shadow those names. */
 :root {
   --accent: #c43e1c;
   --accent-dark: #a33517;
@@ -539,6 +539,9 @@ button {
   top: calc(100% + 2px);
   left: 0;
   z-index: 60;
+  /* as wide as its longest row: the box hangs off the narrow File tab, so left
+     to itself it shrinks to min-width and a long label with a shortcut wraps */
+  width: max-content;
   min-width: 210px;
   background: var(--surface);
   border: 1px solid var(--border-strong);
@@ -551,7 +554,9 @@ button {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 24px;
   width: 100%;
+  white-space: nowrap;
   border: none;
   background: none;
   padding: 8px 12px;
@@ -4284,7 +4289,7 @@ body.vib .slide-list {
   box-shadow: var(--slides-thumb-shadow);
 }
 
-/* Shared dropdown (@genoffice/ui gs-dd) app sizing: format-pane rows, the
+/* Shared dropdown (@seuoffice/ui gs-dd) app sizing: format-pane rows, the
  * ribbon animation-timing group, and modal dialogs */
 .fp-prow .gs-dd {
   width: 120px;
@@ -5005,7 +5010,7 @@ body.vib .slide-list {
   border-radius: 1px;
 }
 
-/* Anchor positioning for the shared Word-style color panel (@genoffice/ui
+/* Anchor positioning for the shared Word-style color panel (@seuoffice/ui
    .gcp-palette draws the chrome; this wrapper only places it under the trigger). */
 .rb-color-pop {
   position: fixed;

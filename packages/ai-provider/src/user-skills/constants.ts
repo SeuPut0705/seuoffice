@@ -31,7 +31,7 @@ export const MAX_USER_SKILL_FILES = 5_000
  * program's skill and this app's own command-line skill. Defined once in
  * agent-core (which this package builds on) for the windows' lists too.
  */
-export { RESERVED_USER_SKILL_NAMES } from '@genoffice/agent-core/user-skill-names'
+export { RESERVED_USER_SKILL_NAMES } from '@seuoffice/agent-core/user-skill-names'
 
 /** A file with one of these extensions makes a skill "with scripts" */
 export const SKILL_SCRIPT_EXTENSIONS: ReadonlySet<string> = new Set([

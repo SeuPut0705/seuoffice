@@ -1,9 +1,9 @@
-import { createI18n, defineStrings, type Lang, type Params } from '@genoffice/i18n'
+import { createI18n, defineStrings, type Lang, type Params } from '@seuoffice/i18n'
 import { en } from './doc-picker/en'
 import { ko } from './doc-picker/ko'
 
 /**
- * The "Attach from GenOffice documents" window: strings for its three groups,
+ * The "Attach from SeuOffice documents" window: strings for its three groups,
  * its notices and its buttons. Sharded per language; `en` defines the key set.
  */
 export const docPickerStrings = defineStrings({

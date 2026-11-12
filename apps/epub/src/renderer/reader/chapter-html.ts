@@ -25,10 +25,10 @@
 export const BLOCK_ATTR = 'data-epub-block'
 
 /** The `<style>` in the frame's head that carries the view settings. */
-export const VIEW_STYLE_ID = 'genoffice-epub-view'
+export const VIEW_STYLE_ID = 'seuoffice-epub-view'
 
 /** A temporary marker written into the chapter text before it is parsed. */
-const MARK_ATTR = 'data-genoffice-epub-block-mark'
+const MARK_ATTR = 'data-seuoffice-epub-block-mark'
 
 const XHTML_NS = 'http://www.w3.org/1999/xhtml'
 

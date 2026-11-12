@@ -1,47 +1,47 @@
 # 코딩 에이전트 연결
 
-GenOffice는 Model Context Protocol을 말하므로, 코딩 에이전트가 앱이 쓰는 바로 그 엔진으로 문서를 읽고, 쓰고, 렌더링할 수 있습니다. 에이전트가 파일 형식을 추측하는 일은 없습니다. executor가 검증하는 바로 그 정의에서 타입이 붙은 op 스키마를 받습니다.
+SeuOffice는 Model Context Protocol을 말하므로, 코딩 에이전트가 앱이 쓰는 바로 그 엔진으로 문서를 읽고, 쓰고, 렌더링할 수 있습니다. 에이전트가 파일 형식을 추측하는 일은 없습니다. executor가 검증하는 바로 그 정의에서 타입이 붙은 op 스키마를 받습니다.
 
 ## 앱에서 등록하기
 
 **설정 ▸ 연동**이 할 일입니다. 이 패널은 두 부분으로 나뉘어 있어서, 한쪽만 써도 되고 둘 다 써도 됩니다.
 
-**스킬.**이 컴퓨터에서 찾은 코딩 에이전트마다 한 줄씩 나옵니다(Claude Code, Windsurf, 그리고 Codex·Cursor·Gemini CLI·Copilot CLI·OpenCode가 함께 읽는 공용 폴더 `~/.agents`). 각 줄에는 **설치**, **업데이트**, **제거**가 있고, 여기에 **다른 폴더에 설치…**, **스킬 다운로드 (zip)**, **경로 복사**가 더해집니다. 어시스턴트가 목록에 없다면, `SKILL.md`를 읽는 폴더를 GenOffice에 지정하거나, zip을 저장해 두었다가 어시스턴트가 직접 설치하게 하면 됩니다. 스킬과 MCP는 나란히 둘 수 있습니다. 어시스턴트가 둘 중 하나를 고르고, 하는 일은 똑같습니다. 예전에 그 다섯 도구의 전용 폴더에 설치한 사본은 공용 폴더 줄 아래에 그대로 나오고 계속 업데이트됩니다. 공용 폴더에 스킬을 설치한 뒤에는 그 사본을 지워도 됩니다.
+**스킬.**이 컴퓨터에서 찾은 코딩 에이전트마다 한 줄씩 나옵니다(Claude Code, Windsurf, 그리고 Codex·Cursor·Gemini CLI·Copilot CLI·OpenCode가 함께 읽는 공용 폴더 `~/.agents`). 각 줄에는 **설치**, **업데이트**, **제거**가 있고, 여기에 **다른 폴더에 설치…**, **스킬 다운로드 (zip)**, **경로 복사**가 더해집니다. 어시스턴트가 목록에 없다면, `SKILL.md`를 읽는 폴더를 SeuOffice에 지정하거나, zip을 저장해 두었다가 어시스턴트가 직접 설치하게 하면 됩니다. 스킬과 MCP는 나란히 둘 수 있습니다. 어시스턴트가 둘 중 하나를 고르고, 하는 일은 똑같습니다. 예전에 그 다섯 도구의 전용 폴더에 설치한 사본은 공용 폴더 줄 아래에 그대로 나오고 계속 업데이트됩니다. 공용 폴더에 스킬을 설치한 뒤에는 그 사본을 지워도 됩니다.
 
-**MCP.**두 가지 경로를 고를 수 있습니다. **어시스턴트가 실행(권장)**에서는 표시된 설정을 클라이언트에 넣으면 어시스턴트가 서버를 직접 띄웁니다. **로컬 HTTP 서버**는 앱이 대신 실행해 줍니다. 어느 쪽이든 어시스턴트는 결국 GenOffice를 통해 일하고, 당신은 명령을 직접 입력하지 않습니다.
+**MCP.**두 가지 경로를 고를 수 있습니다. **어시스턴트가 실행(권장)**에서는 표시된 설정을 클라이언트에 넣으면 어시스턴트가 서버를 직접 띄웁니다. **로컬 HTTP 서버**는 앱이 대신 실행해 줍니다. 어느 쪽이든 어시스턴트는 결국 SeuOffice를 통해 일하고, 당신은 명령을 직접 입력하지 않습니다.
 
 **사용해 보기** 어시스턴트에서 새 대화를 열고 평소 말투로 요청하세요. 예:
 
 - “~/Downloads/report.md를 Word 문서로 만들어 줘”
 - “3분기 실적을 소개하는 6장짜리 슬라이드를 만들어 줘”
-- “budget.xlsx를 PDF로 변환해서 GenOffice에서 열어 줘”
+- “budget.xlsx를 PDF로 변환해서 SeuOffice에서 열어 줘”
 
 ## 명령줄에서 등록하기
 
 같은 일을 터미널에서도 할 수 있습니다. 이것이 고급 경로이고, 패널이 찾지 못하는 곳에 에이전트가 있을 때 쓰는 방법입니다.
 
 ```sh
-ieumoffice mcp install all
+seuoffice mcp install all
 ```
 
-이 컴퓨터에 있는 코딩 에이전트를 찾아, 각자의 설정에 stdio 서버 항목을 씁니다. 그 파일의 나머지는 있는 그대로 둡니다. 항목 이름은 `ieumoffice`입니다. Claude Code에 손으로 등록한다면 `claude mcp add --transport stdio ieumoffice -- ieumoffice mcp`가 같은 일을 합니다.
+이 컴퓨터에 있는 코딩 에이전트를 찾아, 각자의 설정에 stdio 서버 항목을 씁니다. 그 파일의 나머지는 있는 그대로 둡니다. 항목 이름은 `seuoffice`입니다. Claude Code에 손으로 등록한다면 `claude mcp add --transport stdio seuoffice -- seuoffice mcp`가 같은 일을 합니다.
 
 ```sh
-ieumoffice mcp list             # where each agent stands
-ieumoffice mcp install cursor    # just one
-ieumoffice mcp uninstall cursor  # take it back out
+seuoffice mcp list             # where each agent stands
+seuoffice mcp install cursor    # just one
+seuoffice mcp uninstall cursor  # take it back out
 ```
 
 평소와 다른 곳에 설치한 에이전트에는 `--dir <path>`를 줍니다. `--force`는 이미 있는 항목을 다시 씁니다.
 
-서버가 받는 것은 `ieumoffice mcp --help` 한 화면에 다 들어 있습니다. 등록, 제거, 목록 형태, HTTP로 서비스하기, 그리고 두 스키마 플래그까지.
+서버가 받는 것은 `seuoffice mcp --help` 한 화면에 다 들어 있습니다. 등록, 제거, 목록 형태, HTTP로 서비스하기, 그리고 두 스키마 플래그까지.
 
 ## 어시스턴트 없이 실행하기
 
 다른 컴퓨터에 있는 클라이언트라면 HTTP로 내보내세요.
 
 ```sh
-ieumoffice mcp --http 8765 --token <secret>
+seuoffice mcp --http 8765 --token <secret>
 ```
 
 `--host <addr>`는 어디에서 받을지를 바꿉니다. 클라이언트에는 같은 토큰을 넘기세요.
@@ -61,7 +61,7 @@ HTTP로도 파일이 오갑니다. `PUT /files/<name>`으로 하나를 올리고
 
 ## 검색·이미지·미디어: 에이전트가 쓸 수 있는 것
 
-`ieumoffice` 명령이나 MCP 클라이언트에서 들어온 요청은 사용자가 앱 화면에서 직접 시킨 것이 아닙니다. 그래서 GenOffice는 이런 요청을 조심해서 다룹니다.
+`seuoffice` 명령이나 MCP 클라이언트에서 들어온 요청은 사용자가 앱 화면에서 직접 시킨 것이 아닙니다. 그래서 SeuOffice는 이런 요청을 조심해서 다룹니다.
 
 - **검색**은 언제나 되고, 기본은 무료입니다. 검색 제공업체의 키는 골라 둔 경우에만 씁니다.
 - **그림 만들기**에는 이미지 제공업체의 키가 필요합니다. 이 버전에서는 구독으로 이미지를 만들지 않습니다.
@@ -80,22 +80,22 @@ HTTP로도 파일이 오갑니다. `PUT /files/<name>`으로 하나를 올리고
 
 ## 스키마와 더 작은 예산
 
-`apply`와 `create`는 `ops`, `cells`, `data` 매개변수를 op마다 타입이 붙은 스키마로 알립니다. 그 스키마는 `ieumoffice guide <domain> --json`에서 만들어집니다. 정확하지만 크지는 않습니다. 컨텍스트 창이 좁은 클라이언트는 대신 단순 배열을 요청할 수 있습니다:
+`apply`와 `create`는 `ops`, `cells`, `data` 매개변수를 op마다 타입이 붙은 스키마로 알립니다. 그 스키마는 `seuoffice guide <domain> --json`에서 만들어집니다. 정확하지만 크지는 않습니다. 컨텍스트 창이 좁은 클라이언트는 대신 단순 배열을 요청할 수 있습니다:
 
 ```sh
-ieumoffice mcp --compact-schemas
-GENOFFICE_MCP_COMPACT_SCHEMAS=1 ieumoffice mcp
+seuoffice mcp --compact-schemas
+SEUOFFICE_MCP_COMPACT_SCHEMAS=1 seuoffice mcp
 ```
 
 ## 스킬이 필요한 이유
 
-op 어휘를 모르는 에이전트는 추측합니다. 스킬에는 레퍼런스와 디자인 가이드가 들어 있습니다. `ieumoffice guide`가 출력하는 것과 같은 내용이라, 어시스턴트가 실제로 읽어 본 스펙에 맞춰 op를 쓰게 됩니다. 위 패널에서 설치하거나, 터미널의 `ieumoffice skill`로 넣으세요.
+op 어휘를 모르는 에이전트는 추측합니다. 스킬에는 레퍼런스와 디자인 가이드가 들어 있습니다. `seuoffice guide`가 출력하는 것과 같은 내용이라, 어시스턴트가 실제로 읽어 본 스펙에 맞춰 op를 쓰게 됩니다. 위 패널에서 설치하거나, 터미널의 `seuoffice skill`로 넣으세요.
 
 ## 앱 안에서 무엇에 닿을 수 있나
 
-서버는 디스크의 파일로만 제한되지 않습니다. GenOffice가 실행되는 동안, 에이전트는 창을 통해서도 일할 수 있습니다.
+서버는 디스크의 파일로만 제한되지 않습니다. SeuOffice가 실행되는 동안, 에이전트는 창을 통해서도 일할 수 있습니다.
 
-- **`open_in_genoffice`**는 파일을 탭으로 열고 그 탭을 활성화합니다.
+- **`open_in_seuoffice`**는 파일을 탭으로 열고 그 탭을 활성화합니다.
 - **`open_documents`**는 열어 둔 모든 문서를 id, 형식, 경로, 저장 안 된 변경이 있는지까지 나열하고, 문서 하나를 읽거나 제자리에 저장하거나 닫습니다. 닫을 때는 먼저 저장하지만, 버리라고 하면 저장하지 않습니다.
 - **콘텐츠 도구들**은 그 id(또는 경로)를 `document` 인자로 받으므로, 편집은 이미 열어 둔 탭에 반영되고 창도 그 탭으로 넘어갑니다.
 

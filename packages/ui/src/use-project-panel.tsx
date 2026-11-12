@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
-import type { AgentTransport } from '@genoffice/agent-core'
-import type { Lang } from '@genoffice/i18n'
+import type { AgentTransport } from '@seuoffice/agent-core'
+import type { Lang } from '@seuoffice/i18n'
 import type {
   AddFolderResult,
   CreateProjectResult,
@@ -9,7 +9,7 @@ import type {
   ProjectId,
   ProjectListItem,
   ProjectNotice,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import type { AiSendGate } from './ai-send-gate'
 import {
   consolidateProjectMemory,

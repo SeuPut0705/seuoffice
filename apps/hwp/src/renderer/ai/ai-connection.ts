@@ -1,12 +1,12 @@
 /**
  * What the AI panel does under the subscription contract, as a plain function:
  * which run errors get the blocked notice. Whether a send may start is the
- * send gate every editor shares (`useAiSendGate` in @genoffice/ui). The panel
+ * send gate every editor shares (`useAiSendGate` in @seuoffice/ui). The panel
  * only lays these answers out, so the rules are testable without a DOM.
  */
-import type { IpcStreamError } from '@genoffice/agent-core'
-import type { AiProviderId } from '@genoffice/ai-provider/browser'
-import { isAiBlockedRunKind, type AiBlockedRunKind } from '@genoffice/ui'
+import type { IpcStreamError } from '@seuoffice/agent-core'
+import type { AiProviderId } from '@seuoffice/ai-provider/browser'
+import { isAiBlockedRunKind, type AiBlockedRunKind } from '@seuoffice/ui'
 
 /** A run that stopped because its connection cannot go on (rendered as the blocked notice) */
 export interface AiBlockedRun {

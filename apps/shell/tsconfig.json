@@ -8,19 +8,19 @@
     // node_modules would otherwise typecheck against another checkout) —
     // same mapping as packages/pdf2docx/tsconfig.json
     "paths": {
-      "@genoffice/docx-engine": ["../../packages/docx-engine/src/index.ts"],
-      "@genoffice/font-metrics": ["../../packages/font-metrics/src/index.ts"],
-      "@genoffice/electron-utils/headless-export": [
+      "@seuoffice/docx-engine": ["../../packages/docx-engine/src/index.ts"],
+      "@seuoffice/font-metrics": ["../../packages/font-metrics/src/index.ts"],
+      "@seuoffice/electron-utils/headless-export": [
         "../../packages/electron-utils/src/headless-export.ts"
       ],
-      "@genoffice/electron-utils": ["../../packages/electron-utils/src/index.ts"],
-      "@genoffice/ai-provider": ["../../packages/ai-provider/src/index.ts"],
-      "@genoffice/i18n": ["../../packages/i18n/src/index.ts"],
-      "@genoffice/ui": ["../../packages/ui/src/index.ts"],
-      "@genoffice/pptx-engine": ["../../packages/pptx-engine/src/index.ts"],
-      "@genoffice/cli/install": ["../../packages/cli/src/install.ts"],
-      "@genoffice/cli/agent-skills": ["../../packages/cli/src/agent-skills.ts"],
-      "@genoffice/cli/control-protocol": ["../../packages/cli/src/control-protocol.ts"]
+      "@seuoffice/electron-utils": ["../../packages/electron-utils/src/index.ts"],
+      "@seuoffice/ai-provider": ["../../packages/ai-provider/src/index.ts"],
+      "@seuoffice/i18n": ["../../packages/i18n/src/index.ts"],
+      "@seuoffice/ui": ["../../packages/ui/src/index.ts"],
+      "@seuoffice/pptx-engine": ["../../packages/pptx-engine/src/index.ts"],
+      "@seuoffice/cli/install": ["../../packages/cli/src/install.ts"],
+      "@seuoffice/cli/agent-skills": ["../../packages/cli/src/agent-skills.ts"],
+      "@seuoffice/cli/control-protocol": ["../../packages/cli/src/control-protocol.ts"]
     }
   },
   // The ambient declarations come first: two of them declare 'bidi-js', and the

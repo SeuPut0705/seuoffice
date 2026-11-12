@@ -1,4 +1,4 @@
-import { atomicWriteFile } from '@genoffice/electron-utils/atomic-write'
+import { atomicWriteFile } from '@seuoffice/electron-utils/atomic-write'
 
 /**
  * Shared temp + rename writer: retries the transient Windows EPERM/EBUSY rename

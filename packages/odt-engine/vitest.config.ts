@@ -9,8 +9,8 @@ const local = (rel: string) => fileURLToPath(new URL(rel, import.meta.url))
 export default defineConfig({
   resolve: {
     alias: {
-      '@genoffice/docx-engine': local('../docx-engine/src/index.ts'),
-      '@genoffice/zip-gate': local('../zip-gate/src/index.ts'),
+      '@seuoffice/docx-engine': local('../docx-engine/src/index.ts'),
+      '@seuoffice/zip-gate': local('../zip-gate/src/index.ts'),
     },
   },
   test: {

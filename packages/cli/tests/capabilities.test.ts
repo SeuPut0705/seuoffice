@@ -4,22 +4,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   HEADLESS_SUBSCRIPTION_CONSENT_VERSION,
   setCodexImageGenerationAvailable,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   createMeteredAcceptanceFileStore,
   detectSubscriptionLogin,
   meteredLoginFingerprint,
   type SubscriptionDetection,
-} from '@genoffice/ai-provider/subscription'
-import * as aiSearch from '@genoffice/ai-search'
+} from '@seuoffice/ai-provider/subscription'
+import * as aiSearch from '@seuoffice/ai-search'
 import { run, tempDir } from './helpers'
 
 // capabilities asks the subscription CLIs for their status when a subscription could answer;
 // the check is replaced so no test starts a real one
 const fakes = vi.hoisted(() => ({ detect: vi.fn() }))
 
-vi.mock('@genoffice/ai-provider/subscription', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider/subscription')>()),
+vi.mock('@seuoffice/ai-provider/subscription', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider/subscription')>()),
   detectSubscriptionLogin: fakes.detect,
 }))
 
@@ -66,10 +66,10 @@ const ON = {
 }
 
 function envFor(settings: string, app = ''): NodeJS.ProcessEnv {
-  return { ...process.env, GENOFFICE_AI_SETTINGS: settings, GENOFFICE_APP_BIN: app }
+  return { ...process.env, SEUOFFICE_AI_SETTINGS: settings, SEUOFFICE_APP_BIN: app }
 }
 
-describe('genoffice capabilities', () => {
+describe('seuoffice capabilities', () => {
   it('pins the shape for a machine with nothing set: free search, the rest unavailable with its hint', async () => {
     const dir = tempDir()
     const settings = join(dir, 'missing.json')
@@ -114,7 +114,7 @@ describe('genoffice capabilities', () => {
 
   it('answers with the text the tools themselves answer with', async () => {
     const dir = tempDir()
-    const env = { ...envFor(join(dir, 'missing.json')), GENOFFICE_AUDIT_LOG: 'off' }
+    const env = { ...envFor(join(dir, 'missing.json')), SEUOFFICE_AUDIT_LOG: 'off' }
     const photo = join(dir, 'photo.png')
     writeFileSync(photo, 'not really a png')
     const caps = (await run(['capabilities', '--json'], { env })).json().detail
@@ -280,7 +280,7 @@ describe('genoffice capabilities', () => {
     const audit = join(dir, 'audit.jsonl')
     for (const format of [['--json'], []]) {
       const r = await run(['capabilities', ...format], {
-        env: { ...envFor(settings), GENOFFICE_AUDIT_LOG: audit },
+        env: { ...envFor(settings), SEUOFFICE_AUDIT_LOG: audit },
       })
       expect(r.code).toBe(0)
       expect(`${r.stdout}\n${r.stderr}`).not.toMatch(/school\.kr|jun\.il/)

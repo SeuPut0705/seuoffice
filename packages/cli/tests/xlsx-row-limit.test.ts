@@ -23,7 +23,7 @@ vi.mock('../../../apps/sheets/src/main/xlsx-sidecar-client', () => ({
   },
 }))
 
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 const cells = [
   { row: 0, column: 0, value: 1 },
   { row: 0, column: 1, value: 2, formula: '1+1' },

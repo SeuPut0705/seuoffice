@@ -20,8 +20,8 @@ import {
   attachableMaxBytes,
   parseFileToText,
   type ParsedFile,
-} from '@genoffice/file-parse'
-import { fileHasUnsavedChanges } from '@genoffice/electron-utils/unsaved-files'
+} from '@seuoffice/file-parse'
+import { fileHasUnsavedChanges } from '@seuoffice/electron-utils/unsaved-files'
 import type { AiTargetKind, MaterialProblem } from '../../shared/generate-api'
 import {
   LONG_MATERIAL_NOTICE_CHARS,

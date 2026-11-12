@@ -1,6 +1,6 @@
 import type { MessageBoxOptions, OpenDialogOptions } from 'electron'
-import { createI18n, defineStrings, type Lang } from '@genoffice/i18n'
-import type { ProjectTrustAnswer, ProjectTrustPrompt } from '@genoffice/project-store'
+import { createI18n, defineStrings, type Lang } from '@seuoffice/i18n'
+import type { ProjectTrustAnswer, ProjectTrustPrompt } from '@seuoffice/project-store'
 
 /**
  * The shell main process's project folder dialogs (decision 0088): the

@@ -45,7 +45,7 @@ function topicIdsFrom(source) {
  * listed here: a hand-kept copy of the codes goes stale the day a language is
  * added, and the failure is silent.
  *
- * `@genoffice/i18n` exports its TypeScript source, so node cannot import it
+ * `@seuoffice/i18n` exports its TypeScript source, so node cannot import it
  * either — same reason as the ids above. Read as text, and fail loudly rather
  * than quietly checking fewer languages than the app ships.
  */

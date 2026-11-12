@@ -77,7 +77,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { setOpenPathProbe } from '@genoffice/electron-utils'
+import { setOpenPathProbe } from '@seuoffice/electron-utils'
 import { createMarkdownView } from '../src/main/markdown-main'
 import { MARKDOWN_CHANNELS } from '../src/shared/ipc'
 import type { SaveMarkdownResult } from '../src/shared/ipc'
@@ -107,7 +107,10 @@ const read = (contents: FakeWebContents, path: string) =>
   handlers.get(MARKDOWN_CHANNELS.readFile)!({ sender: contents }, path) as Promise<string>
 
 const save = (contents: FakeWebContents, request: unknown) =>
-  handlers.get(MARKDOWN_CHANNELS.save)!({ sender: contents }, request) as Promise<SaveMarkdownResult>
+  handlers.get(MARKDOWN_CHANNELS.save)!(
+    { sender: contents },
+    request,
+  ) as Promise<SaveMarkdownResult>
 
 async function openedView(path: string): Promise<FakeWebContents> {
   const view = createMarkdownView(path)
@@ -122,9 +125,10 @@ describe('a save with no copy pair is unchanged', () => {
     const contents = await openedView(path)
     writeFileSync(path, '# Changed elsewhere')
 
-    expect(await save(contents, { text: '# Mine', imageSources: [], mode: 'save' })).toMatchObject(
-      { ok: true, path },
-    )
+    expect(await save(contents, { text: '# Mine', imageSources: [], mode: 'save' })).toMatchObject({
+      ok: true,
+      path,
+    })
     expect(readFileSync(path, 'utf8')).toBe('# Mine')
     expect(showMessageBox).not.toHaveBeenCalled()
   })
@@ -167,9 +171,10 @@ describe('a copy pair holds this document (the path is open in another pane)', (
     setOpenPathProbe((each) => each === path)
     showMessageBox.mockResolvedValue({ response: 0, checkboxChecked: false })
 
-    expect(await save(contents, { text: '# Mine', imageSources: [], mode: 'save' })).toMatchObject(
-      { ok: true, path },
-    )
+    expect(await save(contents, { text: '# Mine', imageSources: [], mode: 'save' })).toMatchObject({
+      ok: true,
+      path,
+    })
     expect(readFileSync(path, 'utf8')).toBe('# Mine')
 
     // the record was refreshed on save: the disk still matches it, so no second question
@@ -185,9 +190,10 @@ describe('a copy pair holds this document (the path is open in another pane)', (
     const contents = await openedView(path)
     setOpenPathProbe((each) => each === path)
 
-    expect(await save(contents, { text: '# Mine', imageSources: [], mode: 'save' })).toMatchObject(
-      { ok: true, path },
-    )
+    expect(await save(contents, { text: '# Mine', imageSources: [], mode: 'save' })).toMatchObject({
+      ok: true,
+      path,
+    })
     expect(showMessageBox).not.toHaveBeenCalled()
   })
 })

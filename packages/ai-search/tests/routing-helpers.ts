@@ -5,9 +5,9 @@ import type {
   AiSubscriptionProviderId,
   AiSubscriptionState,
   AiSubscriptionStatus,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 
-export function tempDir(prefix = 'genoffice-ai-routing-'): string {
+export function tempDir(prefix = 'seuoffice-ai-routing-'): string {
   return mkdtempSync(join(tmpdir(), prefix))
 }
 

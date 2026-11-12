@@ -9,7 +9,7 @@ export function resolveDark(theme: UiTheme, systemDark: boolean): boolean {
 const darkQuery = (): MediaQueryList | null =>
   typeof window.matchMedia === 'function' ? window.matchMedia('(prefers-color-scheme: dark)') : null
 
-/** The page's own colors follow the app theme (tokens in @genoffice/ui). */
+/** The page's own colors follow the app theme (tokens in @seuoffice/ui). */
 export function applyTheme(theme: UiTheme): void {
   if (theme === 'system') document.documentElement.removeAttribute('data-theme')
   else document.documentElement.setAttribute('data-theme', theme)

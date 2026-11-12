@@ -95,7 +95,7 @@ async function stubAi(app: ElectronApplication): Promise<void> {
 test.describe('ask narrowed to a starred group', () => {
   test('the choice, the narrowed run, and main refusing files outside the group', async () => {
     test.setTimeout(180_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-kb-group-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-kb-group-e2e-'))
     const a1 = join(dir, 'lease-rules.md')
     const a2 = join(dir, 'house-notes.md')
     const b1 = join(dir, 'salaries.md')

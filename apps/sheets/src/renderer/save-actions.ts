@@ -33,12 +33,12 @@ import {
   handleExportCsv,
   serializeActiveSheetCsv,
 } from './csv-export'
-import type { CellScalar, CellState } from '@genoffice/xlsx-gateway/domain/workbook.types'
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { CellScalar, CellState } from '@seuoffice/xlsx-gateway/domain/workbook.types'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 /// The slicerState member of a save request (zod: non-strict object shape).
 type WorkbookSlicerSaveState = NonNullable<WorkbookSaveRequest['slicerState']>
 import type { ExternalLinkOps } from '../shared/desktop-api'
-import { formatAddress } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { formatAddress } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { isErrorResult, verifiedFormulaValues } from './formula-values'
 import { COORDINATE_SHIFTING_OPS } from './formula-cached-fallback'
 import { t } from './i18n/locale'

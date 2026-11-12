@@ -1,4 +1,4 @@
-import { defineStrings } from '@genoffice/i18n'
+import { defineStrings } from '@seuoffice/i18n'
 
 /**
  * The HWP export's confirmation box, shown by the main process before the

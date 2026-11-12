@@ -5,7 +5,7 @@
  * become pictures (rendered, fallback, or a label box) and the report lists
  * what changed.
  */
-import { parseDocx } from '@genoffice/docx-engine'
+import { parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { docxToOdt, odtToDocx, odtToText } from '../src'
 import { openOdt, readOdtPackage } from '../src/core'

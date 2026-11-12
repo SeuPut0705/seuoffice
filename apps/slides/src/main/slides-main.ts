@@ -1,7 +1,7 @@
 /* the engine starts before any module that calls it evaluates */
 import './engine-init'
 /**
- * GenOffice Slides main process — pptx parsing/render-tree building/edit application/saving all live
+ * SeuOffice Slides main process — pptx parsing/render-tree building/edit application/saving all live
  * here (Node side). The renderer only gets plain-data RenderSlide; edit intents are sent back
  * here to apply. Structure mirrors apps/docs: exports embeddable configure/register/start for
  * future shell reuse.
@@ -37,11 +37,11 @@ import {
 } from './save-as-formats'
 import { exportSlidesPdf } from './pdf-export'
 import { printSlidesHtml } from './print-window'
-import { shutdownSubscriptionChildren } from '@genoffice/ai-provider/subscription'
-import { loadPrintHtml } from '@genoffice/electron-utils/print-window'
-import { printOutcome, printJobOptions } from '@genoffice/electron-utils/print-job'
-import { printPdfViaCups, printToPdfOptionsFor } from '@genoffice/electron-utils/print-cups'
-import { queryPrinterOptions, DRIVER_OPTION_NAMES } from '@genoffice/electron-utils/printer-options'
+import { shutdownSubscriptionChildren } from '@seuoffice/ai-provider/subscription'
+import { loadPrintHtml } from '@seuoffice/electron-utils/print-window'
+import { printOutcome, printJobOptions } from '@seuoffice/electron-utils/print-job'
+import { printPdfViaCups, printToPdfOptionsFor } from '@seuoffice/electron-utils/print-cups'
+import { queryPrinterOptions, DRIVER_OPTION_NAMES } from '@seuoffice/electron-utils/printer-options'
 import {
   appMenuLabels,
   appMenuTemplate,
@@ -80,8 +80,8 @@ import {
   type RecoveryOpenUntitledRequest,
   readLegacyImportSkip,
   writeLegacyImportSkip,
-} from '@genoffice/electron-utils'
-import { createMainProcessProxyDispatcher } from '@genoffice/electron-utils/main-proxy'
+} from '@seuoffice/electron-utils'
+import { createMainProcessProxyDispatcher } from '@seuoffice/electron-utils/main-proxy'
 import { installPermissionGuard } from '../../../../packages/electron-utils/src/permission-guard'
 import {
   resolveGroupChildId,
@@ -90,14 +90,14 @@ import {
   type TxnRequest,
   type TxnResult,
   mapScriptOps,
-} from '@genoffice/pptx-ops'
-import { matchesElementRef } from '@genoffice/pptx-engine/identity'
-import { buildPagePptx, parsePageSpec } from '@genoffice/pipelines/slides'
+} from '@seuoffice/pptx-ops'
+import { matchesElementRef } from '@seuoffice/pptx-engine/identity'
+import { buildPagePptx, parsePageSpec } from '@seuoffice/pipelines/slides'
 import { fillMissingRunFonts, parseFontRoles } from './ai-default-fonts'
 import { convertOdpToPptx } from '../../../../packages/odf2ooxml/src'
 import { convertPptToPptx, PPT_LIMITS } from '../../../../packages/ppt2pptx/src'
 import { sniffImageMime } from './media-mime'
-import { ATTACHABLE_MAX_BYTES, ATTACHABLE_IMAGE_MAX_BYTES } from '@genoffice/file-parse'
+import { ATTACHABLE_MAX_BYTES, ATTACHABLE_IMAGE_MAX_BYTES } from '@seuoffice/file-parse'
 import {
   newPasteCascade,
   pageKey,
@@ -112,9 +112,9 @@ import {
   isElementClipboardToken,
   writeElementClipboardImage,
 } from './element-clipboard'
-import { familyInfoFor } from '@genoffice/font-metrics'
-import { brandText, getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@genoffice/i18n'
-import { ProjectStore } from '@genoffice/project-store'
+import { familyInfoFor } from '@seuoffice/font-metrics'
+import { getUiLang, normalizeLang, PRODUCT_NAME, setUiLang } from '@seuoffice/i18n'
+import { ProjectStore } from '@seuoffice/project-store'
 import {
   copyElementData,
   findGroupChild,
@@ -163,19 +163,19 @@ import {
   type OpenedPptx,
   type Paragraph,
   type Slide,
-} from '@genoffice/pptx-engine'
+} from '@seuoffice/pptx-engine'
 import {
   buildRenderSlide,
   EMU_PER_PX_96,
   imageDpiFromBytes,
   type RenderSlide,
-} from '@genoffice/pptx-render'
+} from '@seuoffice/pptx-render'
 import { applyAutofitResize, syncAutofitScale } from './autofit-writeback'
 import { applyTxnToSession } from './session-txn'
 import { DEFAULT_PICTURE_DPI, pictureFrame } from './picture-frame'
 import { refineComplexWidths, shapedMetricsReady } from './shaped-metrics'
 import { cfbKind, isCfbHeader } from './cfb-sniff'
-import { atomicWriteFile, atomicWriteVia } from '@genoffice/electron-utils/atomic-write'
+import { atomicWriteFile, atomicWriteVia } from '@seuoffice/electron-utils/atomic-write'
 import {
   decryptOfficeFile,
   encryptOoxml,
@@ -183,7 +183,7 @@ import {
   OfficeDecryptError,
   unlockOfficeFile,
   type OfficePasswordAsk,
-} from '@genoffice/electron-utils/office-encryption'
+} from '@seuoffice/electron-utils/office-encryption'
 import { unplayableAudioCodec } from './mp4-audio-sniff'
 import { audioFrame, videoFrame, videoSize, type Point, type Size } from './video-size'
 import { AUDIO_EXTS, VIDEO_EXTS } from '../shared/media-kinds'
@@ -1154,7 +1154,7 @@ async function preparePresentationForOpen(filePath: string): Promise<string | nu
       const warningOptions = {
         type: 'warning' as const,
         message: tm('odpImportMsg', { ext: extension }),
-        detail: brandText(converted.warnings.join('\n'), getUiLang()),
+        detail: converted.warnings.join('\n'),
         buttons: [tm('legacyPptOk')],
       }
       if (parent) await dialog.showMessageBox(parent, warningOptions)
@@ -1686,7 +1686,7 @@ export function registerSlidesIpc(): void {
   // Screen recording: source dispatch for the renderer's navigator.mediaDevices.getDisplayMedia.
   // macOS prefers the system picker (with its permission flow), falling back to the first screen.
   void app.whenReady().then(() => {
-    electronSession.defaultSession.protocol.handle('genoffice-slide-media', (request) => {
+    electronSession.defaultSession.protocol.handle('seuoffice-slide-media', (request) => {
       const media = readSlideMedia(request.url)
       if (!media) return new Response(null, { status: 404 })
       return new Response(media.body as BodyInit, {
@@ -2246,7 +2246,7 @@ export function registerSlidesIpc(): void {
         console.log(
           `[local-slide] page generated: bytes=${bytes.length} imageFails=${imageFailures.length} ms=${Date.now() - started}`,
         )
-        const dir = join(app.getPath('temp'), 'genoffice-local-pages')
+        const dir = join(app.getPath('temp'), 'seuoffice-local-pages')
         mkdirSync(dir, { recursive: true })
         const path = join(dir, `${randomUUID()}.pptx`)
         await writeFile(path, bytes)
@@ -2545,7 +2545,7 @@ export function registerSlidesIpc(): void {
     return rebuilt ? { slide: rebuilt, sourceId: r.records![0]!.created![0]! } : null
   })
 
-  // Shim over the canonical op (see @genoffice/pptx-ops): the op owns validation/mutation/journal;
+  // Shim over the canonical op (see @seuoffice/pptx-ops): the op owns validation/mutation/journal;
   // the shim keeps session lookup, undo bookkeeping, and RenderSlide rebuilding.
   ipcMain.handle('slides:delete-element', (e, op: DeleteElementOp) => {
     const session = sessions.get(e.sender.id)
@@ -2983,7 +2983,7 @@ export function registerSlidesIpc(): void {
     const pngs = op.pngs?.length === bundles.length ? op.pngs : undefined
     slideClipboard = { bundles, ...(pngs ? { pngs } : {}) }
     // Marker so plain ⌘V knows the latest copy was a slide (element copies / external copies overwrite it)
-    clipboard.writeBuffer('io.genoffice.slides.slide', Buffer.from('1'))
+    clipboard.writeBuffer('io.seuoffice.slides.slide', Buffer.from('1'))
     return true
   })
 
@@ -3953,7 +3953,7 @@ export function registerSlidesIpc(): void {
   }
 
   ipcMain.handle('slides:clipboard-external', () => {
-    if (slideClipboard && clipboardMarker('io.genoffice.slides.slide')) return { kind: 'slide' }
+    if (slideClipboard && clipboardMarker('io.seuoffice.slides.slide')) return { kind: 'slide' }
     if (elementClipboard && elementClipboardMarkerMatches(elementClipboard.token))
       return { kind: 'internal' }
     const img = clipboard.readImage()
@@ -3965,7 +3965,7 @@ export function registerSlidesIpc(): void {
 
   // Menu-enable probe: is there anything a paste would act on? (no image decode)
   ipcMain.handle('slides:clipboard-probe', () => {
-    if (slideClipboard && clipboardMarker('io.genoffice.slides.slide')) return true
+    if (slideClipboard && clipboardMarker('io.seuoffice.slides.slide')) return true
     if (elementClipboard && elementClipboardMarkerMatches(elementClipboard.token)) return true
     if (clipboard.availableFormats().some((f) => f.startsWith('image/'))) return true
     return clipboard.readText().trim().length > 0
@@ -5345,7 +5345,7 @@ export function registerSlidesIpc(): void {
         const win = buildWindow(false)
         let tempDir: string | null = null
         try {
-          tempDir = (await loadPrintHtml(win, html, 'slides.html', 'genoffice-slides-print-'))
+          tempDir = (await loadPrintHtml(win, html, 'slides.html', 'seuoffice-slides-print-'))
             .tempDir
           if (process.platform === 'darwin') {
             // Chromium's silent print can drop a job outright on macOS — no
@@ -5908,11 +5908,11 @@ export function startSlidesStandalone(): void {
     app.commandLine.appendSwitch('remote-debugging-port', process.env.SLIDES_CDP_PORT)
     app.commandLine.appendSwitch('remote-allow-origins', '*')
   }
-  // GENOFFICE_USER_DATA: test drivers point this at a scratch dir so automated
+  // SEUOFFICE_USER_DATA: test drivers point this at a scratch dir so automated
   // instances get their own userData AND single-instance lock (the lock is scoped
   // to userData), allowing parallel instances alongside a normal dev run.
-  if (!app.isPackaged && process.env.GENOFFICE_USER_DATA) {
-    app.setPath('userData', process.env.GENOFFICE_USER_DATA)
+  if (!app.isPackaged && process.env.SEUOFFICE_USER_DATA) {
+    app.setPath('userData', process.env.SEUOFFICE_USER_DATA)
   }
   // The main process's Node fetch (undici) does not use the system proxy by default, so access
   // from mainland China to overseas LLM APIs like api.anthropic.com hits ETIMEDOUT on direct
@@ -5949,7 +5949,7 @@ export function startSlidesStandalone(): void {
 
   app.whenReady().then(async () => {
     installRendererProtocol({ slides: join(__dirname, '../renderer') })
-    const requestedLang = process.env.GENOFFICE_LANG ?? app.getLocale()
+    const requestedLang = process.env.SEUOFFICE_LANG ?? app.getLocale()
     setUiLang(normalizeLang(requestedLang), requestedLang)
     registerSlidesIpc()
     registerAiIpc()

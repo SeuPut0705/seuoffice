@@ -761,7 +761,7 @@ fn styles_xml(registry: &StyleRegistry, pages: &PageStyles, drawing_styles: &str
 
 fn meta_xml() -> String {
     format!(
-        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="{ODF_VERSION}"><office:meta><meta:generator>GenOffice</meta:generator></office:meta></office:document-meta>"#
+        r#"<?xml version="1.0" encoding="UTF-8"?><office:document-meta xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" office:version="{ODF_VERSION}"><office:meta><meta:generator>SeuOffice</meta:generator></office:meta></office:document-meta>"#
     )
 }
 

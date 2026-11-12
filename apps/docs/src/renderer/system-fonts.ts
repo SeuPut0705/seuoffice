@@ -1,5 +1,5 @@
-import { createSystemFontSource, useSystemFontSource, type SystemFonts } from '@genoffice/ui'
-import { TEMPLATE_FONT_FAMILY_NAMES } from '@genoffice/ui/template-fonts'
+import { createSystemFontSource, useSystemFontSource, type SystemFonts } from '@seuoffice/ui'
+import { TEMPLATE_FONT_FAMILY_NAMES } from '@seuoffice/ui/template-fonts'
 import { setFontAliasLookup } from './line-metrics'
 
 /// The families to ask the main process about: the enumeration plus the bundled

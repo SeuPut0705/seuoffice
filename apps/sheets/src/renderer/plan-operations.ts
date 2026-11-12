@@ -14,13 +14,13 @@ import {
   parseRange,
   rangeCellCount,
   type RangeBounds,
-} from '@genoffice/xlsx-gateway/domain/cell-address'
+} from '@seuoffice/xlsx-gateway/domain/cell-address'
 import {
   CHART_EDIT_TYPES,
   chartDataFromColumns,
   chartDataFromValues,
-} from '@genoffice/xlsx-gateway/domain/chart-visual'
-import type { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
+} from '@seuoffice/xlsx-gateway/domain/chart-visual'
+import type { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
 import {
   convertToValuesBatchError,
   copyTargetBounds,
@@ -31,21 +31,22 @@ import {
   workbookCommandBatchSchema,
   type PrimitiveOperation,
   type WorkbookOperation,
-} from '@genoffice/xlsx-gateway/domain/workbook-dsl'
-import type { ApplyOutcome, ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
-import { offsetFormulaRefs } from '@genoffice/xlsx-gateway/domain/formula-shift'
+} from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
+import type { ApplyOutcome, ChangePlan } from '@seuoffice/xlsx-gateway/domain/workbook.types'
+import { offsetFormulaRefs } from '@seuoffice/xlsx-gateway/domain/formula-shift'
 import {
   qualifierMatches,
   shiftCellArea,
   shiftFormulaText,
   StructuralShiftError,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-structure'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-structure'
 import { MAX_PATCH_ENTRY_BYTES } from '../shared/desktop-api'
 import { isSheetRemoved } from './edit-journal'
 import { cellKey, parseFormulaReferences } from './formula-closure'
 import { fillFormulaCostError, quadraticFormulaError, type FormulaCostSheet } from './formula-cost'
 import { t, type StringKey } from './i18n/locale'
 import { buildLazyChangePlan } from './lazy-plan'
+import { withholdsCells } from './redact-move-guard'
 import {
   lazyCellEditable,
   lazyRangeEditable,
@@ -381,9 +382,15 @@ export function proposeOperations(
           for (const pivot of sheetMeta.pivotTables) {
             const definition = state.pivotDefinitions.get(pivot.path)
             if (definition && definition.unsupported.length > 0) {
+              // The reasons quote field names, which are the text of header
+              // cells: left out when the workbook withholds cells from AI.
+              const runtime = ctx.univerRef.current
               return {
                 ok: false,
-                error: `Pivot table ${pivot.path} does not support recompute: ${definition.unsupported.join('; ')}`,
+                error:
+                  runtime && withholdsCells(runtime)
+                    ? `Pivot table ${pivot.path} does not support recompute.`
+                    : `Pivot table ${pivot.path} does not support recompute: ${definition.unsupported.join('; ')}`,
               }
             }
           }

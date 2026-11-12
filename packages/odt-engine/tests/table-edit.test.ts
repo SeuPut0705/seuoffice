@@ -9,7 +9,7 @@ import {
   generateTableXml,
   parseDocx,
   patchTableCellTexts,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import type { TableExt } from '../src/table'
 import { type EditorOp, editorSave, odtToBridge, replaceText, writeBack } from './helpers/bridge'

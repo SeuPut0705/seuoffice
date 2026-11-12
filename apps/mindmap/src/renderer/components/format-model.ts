@@ -28,7 +28,7 @@ import {
   RELATIONSHIP_SHAPE_PREFIX,
   SUMMARY_SHAPE_PREFIX,
   type ViewLayout,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import type { MapController } from '../map/controller'
 import type {
   ArrowShape,

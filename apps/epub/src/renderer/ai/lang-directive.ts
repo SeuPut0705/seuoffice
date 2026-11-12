@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 
 /** Appended to the AI system prompt: reply in the user's message language, falling back to the UI language (same wording as docs/slides/pdf) */
 const AI_LANG_DIRECTIVES: Record<Lang, string> = {

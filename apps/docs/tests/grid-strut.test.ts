@@ -8,7 +8,7 @@
  */
 import { Editor } from '@tiptap/core'
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { parseDocx, type ParsedDocFull } from '@genoffice/docx-engine'
+import { parseDocx, type ParsedDocFull } from '@seuoffice/docx-engine'
 import { buildKitchenSinkDocx } from '../../../packages/docx-engine/tests/helpers/build-docx'
 import { docBodyEaFont, docStyleCss } from '../src/renderer/doc-style-css'
 import { editorExtensions } from '../src/renderer/editor/extensions'

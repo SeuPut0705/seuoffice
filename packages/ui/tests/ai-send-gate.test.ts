@@ -6,7 +6,7 @@ import {
   type AiSubscriptionState,
   type AiSubscriptionStatus,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 import {
   AI_SUBSCRIPTION_NOTICE_VERSION,
   aiConnectPromptChoice,

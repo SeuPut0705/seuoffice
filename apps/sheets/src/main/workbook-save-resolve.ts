@@ -1,6 +1,6 @@
-import type { CellEdit, SheetStructuralOps } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import type { StreamingSaveRequest } from '@genoffice/xlsx-gateway/gateway/xlsx-package-io'
-import type { SheetEditPlan } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+import type { CellEdit, SheetStructuralOps } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { StreamingSaveRequest } from '@seuoffice/xlsx-gateway/gateway/xlsx-package-io'
+import type { SheetEditPlan } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
 import type { WorkbookSaveRequest } from '../shared/desktop-api'
 
 /** A streaming save without its archive endpoints: every edit addressed by file sheet name. */

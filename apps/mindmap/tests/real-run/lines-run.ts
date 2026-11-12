@@ -13,7 +13,7 @@
  *
  * Not part of `npm test`: it needs a build and opens a window.
  *
- *   npm run build -w @genoffice/mindmap
+ *   npm run build -w @seuoffice/mindmap
  *   npx tsx apps/mindmap/tests/real-run/lines-run.ts
  *
  * Screenshots, the profile and the file it wrote go to MINDMAP_REAL_RUN_OUT (a
@@ -32,7 +32,7 @@ import {
   openXmind,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 
 const APP_DIR = resolve(dirname(fileURLToPath(import.meta.url)), '../..')
 const OUT = process.env.MINDMAP_REAL_RUN_OUT ?? mkdtempSync(join(tmpdir(), 'mindmap-lines-run-'))
@@ -274,8 +274,8 @@ async function main(): Promise<void> {
     args: [APP_DIR, file],
     env: {
       ...hostEnv,
-      GENOFFICE_USER_DATA: mkdtempSync(join(OUT, 'profile-')),
-      GENOFFICE_LANG: 'ko',
+      SEUOFFICE_USER_DATA: mkdtempSync(join(OUT, 'profile-')),
+      SEUOFFICE_LANG: 'ko',
     },
   })
   let shownPage: Page | null = null

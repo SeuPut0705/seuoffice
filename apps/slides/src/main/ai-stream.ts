@@ -17,7 +17,7 @@ import {
   type AiStreamRequest,
   type AiSubscriptionProviderId,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
+} from '@seuoffice/ai-provider'
 
 /** What ai-settings.json holds, as the app reads it: removed and unknown selections fall to their defaults */
 export function storedAiSettings(stored: unknown): AiSettings {

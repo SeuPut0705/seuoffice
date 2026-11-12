@@ -6,7 +6,7 @@ import type { App, ContextMenuParams, MenuItemConstructorOptions, WebContents } 
 import { saveImageFromUrl } from './save-image'
 
 /** Native "View Image" hands the src to the renderer, which owns the viewer overlay */
-export const VIEW_IMAGE_CHANNEL = 'genoffice:view-image'
+export const VIEW_IMAGE_CHANNEL = 'seuoffice:view-image'
 
 export interface ContextMenuLabels {
   cut: string
@@ -104,8 +104,8 @@ function buildEditItems(params: BuildParams, labels: ContextMenuLabels): Context
 }
 
 // Symbol.for: survives multiple bundled copies (see navigation-guard.ts).
-const INSTALLED = Symbol.for('genoffice.context-menu-installed')
-const INTERCEPTORS = Symbol.for('genoffice.context-menu-interceptors')
+const INSTALLED = Symbol.for('seuoffice.context-menu-installed')
+const INTERCEPTORS = Symbol.for('seuoffice.context-menu-interceptors')
 
 /** Resolves true when the renderer showed its own menu for this right-click. */
 export type ContextMenuInterceptor = (

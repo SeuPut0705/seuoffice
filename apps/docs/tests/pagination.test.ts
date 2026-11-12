@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import type { FieldDisplay, SectionInfo } from '@genoffice/docx-engine'
+import type { FieldDisplay, SectionInfo } from '@seuoffice/docx-engine'
 import {
   type SliceOutputs,
   appendEndnotesBlock,

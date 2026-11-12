@@ -5,15 +5,15 @@ import { defaultRegistry, runCli } from '../src/cli'
 import { commandHelp } from '../src/registry'
 
 // Help/registry/README/skill sync: every command and option in the registry must
-// surface in `genoffice help`, in the CLI README examples and in the genoffice
+// surface in `seuoffice help`, in the CLI README examples and in the seuoffice
 // agent skill, so adding a flag without documenting it fails loudly instead of
 // drifting. Fast and deterministic: in-process runCli plus file reads only.
 
 const REPO = resolve(__dirname, '../../..')
 const README_PATH = resolve(__dirname, '..', 'README.md')
 const SKILL_CANDIDATES = [
-  resolve(REPO, 'skills/ieumoffice/SKILL.md'),
-  resolve(__dirname, '..', 'skills/ieumoffice/SKILL.md'),
+  resolve(REPO, 'skills/seuoffice/SKILL.md'),
+  resolve(__dirname, '..', 'skills/seuoffice/SKILL.md'),
 ]
 
 function readFirst(paths: string[], label: string): { path: string; text: string } {
@@ -29,8 +29,8 @@ function readFirst(paths: string[], label: string): { path: string; text: string
 
 const readme = readFileSync(README_PATH, 'utf-8')
 // The command name the CLI README spells in its examples.
-const README_COMMAND = 'ieumoffice'
-const skillFile = readFirst(SKILL_CANDIDATES, 'ieumoffice SKILL.md')
+const README_COMMAND = 'seuoffice'
+const skillFile = readFirst(SKILL_CANDIDATES, 'seuoffice SKILL.md')
 
 function fencesOf(markdown: string): string {
   return [...markdown.matchAll(/```[\s\S]*?```/g)].map((m) => m[0]).join('\n')
@@ -59,7 +59,7 @@ async function helpFor(argv: string[]): Promise<string> {
 /**
  * Host-only commands the agent skill legitimately omits: `install-cli` puts the
  * launcher on the PATH, not a document workflow an agent reads the skill for.
- * It must stay in `genoffice help` and the CLI README. Enforced in both
+ * It must stay in `seuoffice help` and the CLI README. Enforced in both
  * directions below, so extending the skill (or dropping a command) fails loudly
  * instead of silently changing coverage.
  */
@@ -67,7 +67,7 @@ const SKILL_COMMAND_OMISSIONS = new Map([['install-cli', 'host setup, not a docu
 
 /**
  * Flags the README example fences legitimately omit: the fences show one common
- * invocation per command while `genoffice help <command>` is the complete
+ * invocation per command while `seuoffice help <command>` is the complete
  * reference. Enforced exactly like the skill omissions: a new flag must gain a
  * fence example or be added here deliberately, and removing a flag without
  * updating this set fails.
@@ -120,15 +120,15 @@ describe('cli help/registry/readme/skill sync', () => {
     }
   })
 
-  it('lists every registry command and global flag in genoffice help', async () => {
+  it('lists every registry command and global flag in seuoffice help', async () => {
     const global = norm(await helpFor(['help']))
     const names = defaultRegistry()
       .list()
       .map((d) => d.name)
     const missing = names.filter((n) => !global.includes(n))
-    expect(missing, `ieumoffice help is missing commands: ${missing.join(', ')}`).toEqual([])
+    expect(missing, `seuoffice help is missing commands: ${missing.join(', ')}`).toEqual([])
     for (const flag of ['--json', '--help', '--version']) {
-      expect(global.includes(flag), `ieumoffice help is missing global flag ${flag}`).toBe(true)
+      expect(global.includes(flag), `seuoffice help is missing global flag ${flag}`).toBe(true)
     }
   })
 
@@ -137,7 +137,7 @@ describe('cli help/registry/readme/skill sync', () => {
     for (const def of defaultRegistry().list()) {
       const built = norm(commandHelp(def))
       const shown = norm(await helpFor(['help', def.name]))
-      if (!shown.includes(norm(`usage: ieumoffice ${def.usage}`))) {
+      if (!shown.includes(norm(`usage: seuoffice ${def.usage}`))) {
         gaps.push(`${def.name}: 'help ${def.name}' omits its usage line`)
       }
       for (const opt of def.options ?? []) {
@@ -166,12 +166,12 @@ describe('cli help/registry/readme/skill sync', () => {
     ).toEqual([])
   })
 
-  it('covers every command in the genoffice skill except documented host-only ones', () => {
+  it('covers every command in the seuoffice skill except documented host-only ones', () => {
     const body = norm(skillFile.text)
     const names = defaultRegistry()
       .list()
       .map((d) => d.name)
-    const missing = names.filter((n) => !body.includes(norm(`ieumoffice ${n}`)))
+    const missing = names.filter((n) => !body.includes(norm(`seuoffice ${n}`)))
     const unexpected = missing.filter((n) => !SKILL_COMMAND_OMISSIONS.has(n))
     const stale = [...SKILL_COMMAND_OMISSIONS.keys()].filter((n) => !missing.includes(n))
     expect(

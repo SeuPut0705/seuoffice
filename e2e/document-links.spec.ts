@@ -3,7 +3,7 @@ import { existsSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
 import { test, expect, type ElectronApplication, type Page } from '@playwright/test'
-import { createXmindDocumentFromOutline } from '@genoffice/xmind-engine'
+import { createXmindDocumentFromOutline } from '@seuoffice/xmind-engine'
 import { closeAndSaveVideo, launchShell, screenshotPath, waitForPageWithUrl } from './helpers'
 
 /**
@@ -131,7 +131,7 @@ const OUTLINE = ['# Plan', '', '- Trip', '  - Day one', '  - Day two', ''].join(
 test.describe('provenance records', () => {
   test('convert, save, menus, rename, missing source, make from this', async () => {
     test.setTimeout(300_000)
-    const dir = await mkdtemp(join(tmpdir(), 'genoffice-links-e2e-'))
+    const dir = await mkdtemp(join(tmpdir(), 'seuoffice-links-e2e-'))
     const saveDir = join(dir, 'saved')
     await mkdir(saveDir)
     const map = join(dir, 'plan.xmind')

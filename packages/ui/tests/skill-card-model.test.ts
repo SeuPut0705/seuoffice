@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { attachedSkillIdsOf, type SkillProposal } from '@genoffice/agent-core'
+import { attachedSkillIdsOf, type SkillProposal } from '@seuoffice/agent-core'
 import {
   initialSkillCardDraft,
   isSkillCardSavedMessage,

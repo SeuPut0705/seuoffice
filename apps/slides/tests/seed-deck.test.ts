@@ -44,8 +44,8 @@ vi.mock('../src/main/shaped-metrics', () => ({
   shapedMeasure: () => ({ width: 0 }),
 }))
 
-import { createBlankPptx, openPptx, savePptx } from '@genoffice/pptx-engine'
-import { runTxn } from '@genoffice/pptx-ops'
+import { createBlankPptx, openPptx, savePptx } from '@seuoffice/pptx-engine'
+import { runTxn } from '@seuoffice/pptx-ops'
 import { registerSlidesIpc, slidesIsDirty } from '../src/main/slides-main'
 import { sessions } from '../src/main/session-state'
 import { queueSlidesSeedFor, takeSlidesSeed } from '../src/main/seed-queue'

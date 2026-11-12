@@ -1,12 +1,12 @@
 import { readFile } from 'node:fs/promises'
 import { basename, extname } from 'node:path'
-import { mergeDataFromRows, type MergeRecord } from '@genoffice/docx-engine'
+import { mergeDataFromRows, type MergeRecord } from '@seuoffice/docx-engine'
 import {
   decodeCsvBuffer,
   parseCsv,
   resolveImportDelimiter,
-} from '@genoffice/xlsx-gateway/gateway/csv-import'
-import { readSheetRows } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+} from '@seuoffice/xlsx-gateway/gateway/csv-import'
+import { readSheetRows } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 
 /**
  * The data source of a mail merge: the local spreadsheet the records come

@@ -11,7 +11,7 @@ import {
 } from './constants'
 import type { UserSkillSource } from './types'
 
-/** `genoffice` and `ieumoffice`, in any case, are never read or made */
+/** The upstream app's skill and this app's own, under any name it has had, in any case, are never read or made */
 export function isReservedUserSkillName(name: string): boolean {
   return RESERVED_USER_SKILL_NAMES.has(name.trim().toLowerCase())
 }

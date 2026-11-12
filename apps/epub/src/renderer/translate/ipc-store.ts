@@ -14,12 +14,12 @@
  * easy results and record. A plain translation's requests carry no mode, as
  * before.
  */
-import type { StartEpubTranslationJobOptions } from '@genoffice/epub-engine'
+import type { StartEpubTranslationJobOptions } from '@seuoffice/epub-engine'
 import type {
   StoredTranslation,
   TranslationBlockEntry,
   TranslationMode,
-} from '@genoffice/pdf-structure/store'
+} from '@seuoffice/pdf-structure/store'
 import { blockKeyString } from '../../../../../packages/pdf-structure/src/store/keys'
 import type {
   EpubErrorCode,

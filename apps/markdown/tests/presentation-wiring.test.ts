@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest'
 
 /**
  * F5 wiring for the Markdown presenter. The key classification is in
- * `@genoffice/ui`; this pins the editor side: fullscreen, the source pane
+ * `@seuoffice/ui`; this pins the editor side: fullscreen, the source pane
  * stepping aside, and the chrome the show hides.
  */
 describe('Markdown presentation wiring', () => {

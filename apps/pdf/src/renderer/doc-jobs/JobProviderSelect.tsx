@@ -21,8 +21,8 @@ import {
   subscriptionStateOf,
   type AiSettings,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
+} from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
 import {
   aiProviderPickerGroups,
   aiProviderPickerSelection,
@@ -32,7 +32,7 @@ import {
   withAiProviderSelection,
   type AiModelPickerBridge,
   type AiProviderPickerSelection,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 
 export interface JobProviderOption {
   /** `auto`, a provider id, or `custom:<endpoint id>` */

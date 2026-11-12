@@ -12,7 +12,7 @@ import { dirname, join } from 'node:path'
 import * as CFB from 'cfb'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
 import init, { HwpDocument } from '@rhwp/core'
-import { CompoundFileError, assertCompoundFile } from '@genoffice/compound-file'
+import { CompoundFileError, assertCompoundFile } from '@seuoffice/compound-file'
 
 type Handler = (event: unknown, ...args: unknown[]) => unknown
 const handlers = new Map<string, Handler>()
@@ -72,7 +72,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-vi.mock('@genoffice/file-parse', () => ({
+vi.mock('@seuoffice/file-parse', () => ({
   hwpToText: vi.fn(async () => ''),
   parseFileToText: vi.fn(async () => ({ kind: 'text', text: '' })),
   ATTACHABLE_EXTS: new Set<string>(),
@@ -96,7 +96,7 @@ beforeAll(async () => {
 let dir: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-hwp-unverified-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-hwp-unverified-'))
   showSaveDialog.mockReset()
   showSaveDialog.mockResolvedValue({ canceled: true })
 })

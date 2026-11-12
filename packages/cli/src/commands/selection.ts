@@ -1,4 +1,4 @@
-import { PRODUCT_NAME } from '@genoffice/i18n'
+import { PRODUCT_NAME } from '@seuoffice/i18n'
 import { controlEndpoint, controlRequest } from '../control'
 import { resolveInput } from '../fs'
 import type { CommandDef } from '../registry'
@@ -8,7 +8,7 @@ import { CliError, EXIT } from '../result'
 export const selectionCommand: CommandDef = {
   name: 'selection',
   summary:
-    "What the user has selected in the GenOffice editor showing this file (the user's own pointer for 'this one', 'here').",
+    "What the user has selected in the SeuOffice editor showing this file (the user's own pointer for 'this one', 'here').",
   usage: 'selection <file> --json',
   async run(args, ctx) {
     const path = resolveInput(args.positionals[0], ctx)
@@ -16,7 +16,7 @@ export const selectionCommand: CommandDef = {
     if (!endpoint) {
       throw new CliError(EXIT.app, `${PRODUCT_NAME} is not running`, undefined, {
         reason: 'app_unavailable',
-        suggestion: `run \`ieumoffice open ${path}\` and ask the user to select something`,
+        suggestion: `run \`seuoffice open ${path}\` and ask the user to select something`,
       })
     }
     const result = await controlRequest(endpoint, { cmd: 'selection', path })

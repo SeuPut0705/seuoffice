@@ -24,20 +24,20 @@ describe('installCliLink', () => {
     const dir = tempDir()
     const bin = join(dir, 'bin')
     mkdirSync(bin)
-    const launcher = join(dir, 'app', 'ieumoffice')
+    const launcher = join(dir, 'app', 'seuoffice')
     mkdirSync(join(dir, 'app'))
     writeFileSync(launcher, '#!/bin/sh\n')
     expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: [bin] }).status).toBe(
       'missing',
     )
     const first = installCliLink({ launcher, platform: 'linux', candidateDirs: [bin] })
-    expect(first).toEqual({ status: 'linked', location: join(bin, 'ieumoffice') })
-    expect(readlinkSync(join(bin, 'ieumoffice'))).toBe(launcher)
+    expect(first).toEqual({ status: 'linked', location: join(bin, 'seuoffice') })
+    expect(readlinkSync(join(bin, 'seuoffice'))).toBe(launcher)
     const again = installCliLink({ launcher, platform: 'linux', candidateDirs: [bin] })
     expect(again.status).toBe('present')
     expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: [bin] })).toEqual({
       status: 'present',
-      location: join(bin, 'ieumoffice'),
+      location: join(bin, 'seuoffice'),
     })
   })
 
@@ -45,28 +45,28 @@ describe('installCliLink', () => {
     const dir = tempDir()
     const bin = join(dir, 'bin')
     mkdirSync(bin)
-    const launcher = join(dir, 'new-app', 'cli', 'ieumoffice')
+    const launcher = join(dir, 'new-app', 'cli', 'seuoffice')
     mkdirSync(join(dir, 'new-app', 'cli'), { recursive: true })
     writeFileSync(launcher, '')
-    symlinkSync(join(dir, 'old-app', 'cli', 'ieumoffice'), join(bin, 'ieumoffice'))
+    symlinkSync(join(dir, 'old-app', 'cli', 'seuoffice'), join(bin, 'seuoffice'))
     expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: [bin] }).status).toBe(
       'missing',
     )
     expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [bin] }).status).toBe(
       'linked',
     )
-    expect(readlinkSync(join(bin, 'ieumoffice'))).toBe(launcher)
+    expect(readlinkSync(join(bin, 'seuoffice'))).toBe(launcher)
 
     const npm = join(dir, 'npm-bin')
     mkdirSync(npm)
-    const npmTarget = join(dir, 'lib', 'node_modules', 'ieumoffice', 'bin', 'ieumoffice.js')
+    const npmTarget = join(dir, 'lib', 'node_modules', 'seuoffice', 'bin', 'seuoffice.js')
     mkdirSync(join(npmTarget, '..'), { recursive: true })
     writeFileSync(npmTarget, '')
-    symlinkSync(npmTarget, join(npm, 'ieumoffice'))
+    symlinkSync(npmTarget, join(npm, 'seuoffice'))
     expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [npm] }).status).toBe(
       'occupied',
     )
-    expect(readlinkSync(join(npm, 'ieumoffice'))).toBe(npmTarget)
+    expect(readlinkSync(join(npm, 'seuoffice'))).toBe(npmTarget)
     expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: [npm] }).status).toBe(
       'occupied',
     )
@@ -74,22 +74,22 @@ describe('installCliLink', () => {
     mkdirSync(spare)
     expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: [npm, spare] })).toEqual({
       status: 'missing',
-      location: join(spare, 'ieumoffice'),
+      location: join(spare, 'seuoffice'),
       manual: expect.any(String),
     })
     expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [npm, spare] })).toEqual({
       status: 'linked',
-      location: join(spare, 'ieumoffice'),
+      location: join(spare, 'seuoffice'),
     })
 
     const taken = join(dir, 'taken')
     mkdirSync(taken)
-    writeFileSync(join(taken, 'ieumoffice'), 'someone else')
+    writeFileSync(join(taken, 'seuoffice'), 'someone else')
     const occupied = installCliLink({ launcher, platform: 'linux', candidateDirs: [taken] })
     expect(occupied.status).toBe('occupied')
     expect(occupied.manual).toContain('sudo')
     expect(occupied.manual).toContain('ln -sf')
-    expect(lstatSync(join(taken, 'ieumoffice')).isSymbolicLink()).toBe(false)
+    expect(lstatSync(join(taken, 'seuoffice')).isSymbolicLink()).toBe(false)
     expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: [taken] }).status).toBe(
       'occupied',
     )
@@ -107,58 +107,58 @@ describe('installCliLink', () => {
     }
   })
 
-  it('owns only launchers shipped with the app, not any path ending in /cli/genoffice (genoffice#895)', () => {
+  it('owns only launchers shipped with the app, not any path ending in /cli/seuoffice (genoffice#895)', () => {
     const dir = tempDir()
-    const launcher = join(dir, 'IeumOffice.app', 'Contents', 'Resources', 'cli', 'ieumoffice')
+    const launcher = join(dir, 'IeumOffice.app', 'Contents', 'Resources', 'cli', 'seuoffice')
     mkdirSync(join(launcher, '..'), { recursive: true })
     writeFileSync(launcher, '#!/bin/sh\n')
-    writeFileSync(join(launcher, '..', 'genoffice.cjs'), '')
+    writeFileSync(join(launcher, '..', 'seuoffice.cjs'), '')
 
-    const vendor = join(dir, 'opt', 'vendor', 'cli', 'ieumoffice')
+    const vendor = join(dir, 'opt', 'vendor', 'cli', 'seuoffice')
     mkdirSync(join(vendor, '..'), { recursive: true })
     writeFileSync(vendor, '#!/bin/sh\necho vendor\n')
     expect(isOurLauncher(vendor, launcher)).toBe(false)
     const bin = join(dir, 'bin')
     mkdirSync(bin)
-    symlinkSync(vendor, join(bin, 'ieumoffice'))
+    symlinkSync(vendor, join(bin, 'seuoffice'))
     expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [bin] })).toEqual({
       status: 'occupied',
-      location: join(bin, 'ieumoffice'),
+      location: join(bin, 'seuoffice'),
       manual: expect.any(String),
     })
-    expect(readlinkSync(join(bin, 'ieumoffice'))).toBe(vendor)
+    expect(readlinkSync(join(bin, 'seuoffice'))).toBe(vendor)
     expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: [bin] }).status).toBe(
       'occupied',
     )
 
     const dead = join(dir, 'dead-bin')
     mkdirSync(dead)
-    symlinkSync(join(dir, 'gone', 'cli', 'ieumoffice'), join(dead, 'ieumoffice'))
+    symlinkSync(join(dir, 'gone', 'cli', 'seuoffice'), join(dead, 'seuoffice'))
     expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [dead] }).status).toBe(
       'linked',
     )
-    expect(readlinkSync(join(dead, 'ieumoffice'))).toBe(launcher)
+    expect(readlinkSync(join(dead, 'seuoffice'))).toBe(launcher)
 
-    const older = join(dir, 'opt', 'IeumOffice', 'resources', 'cli', 'ieumoffice')
+    const older = join(dir, 'opt', 'IeumOffice', 'resources', 'cli', 'seuoffice')
     mkdirSync(join(older, '..'), { recursive: true })
     writeFileSync(older, '#!/bin/sh\n')
-    writeFileSync(join(older, '..', 'genoffice.cjs'), '')
+    writeFileSync(join(older, '..', 'seuoffice.cjs'), '')
     expect(isOurLauncher(older, launcher)).toBe(true)
     const upgraded = join(dir, 'upgraded-bin')
     mkdirSync(upgraded)
-    symlinkSync(older, join(upgraded, 'ieumoffice'))
+    symlinkSync(older, join(upgraded, 'seuoffice'))
     expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [upgraded] }).status).toBe(
       'linked',
     )
-    expect(readlinkSync(join(upgraded, 'ieumoffice'))).toBe(launcher)
+    expect(readlinkSync(join(upgraded, 'seuoffice'))).toBe(launcher)
 
     const alias = join(dir, 'Applications')
     symlinkSync(join(dir, 'IeumOffice.app'), alias, 'dir')
-    const viaAlias = join(alias, 'Contents', 'Resources', 'cli', 'ieumoffice')
+    const viaAlias = join(alias, 'Contents', 'Resources', 'cli', 'seuoffice')
     expect(isOurLauncher(viaAlias, launcher)).toBe(true)
     const relative = join(dir, 'relative-bin')
     mkdirSync(relative)
-    symlinkSync(join('..', 'opt', 'vendor', 'cli', 'ieumoffice'), join(relative, 'ieumoffice'))
+    symlinkSync(join('..', 'opt', 'vendor', 'cli', 'seuoffice'), join(relative, 'seuoffice'))
     expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [relative] }).status).toBe(
       'occupied',
     )
@@ -166,12 +166,12 @@ describe('installCliLink', () => {
 
   it('reports a missing /usr/local/bin as unwritable instead of skipping it', () => {
     const dir = tempDir()
-    const launcher = join(dir, 'ieumoffice')
+    const launcher = join(dir, 'seuoffice')
     writeFileSync(launcher, '')
     const absent = join(dir, 'no-such-bin')
     const r = installCliLink({ launcher, platform: 'linux', candidateDirs: [absent] })
     expect(r.status).toBe('unwritable')
-    expect(r.location).toBe(join(absent, 'ieumoffice'))
+    expect(r.location).toBe(join(absent, 'seuoffice'))
     expect(r.manual).toContain('mkdir -p /usr/local/bin')
     expect(defaultCandidateDirs('darwin')[0]).toBe('/usr/local/bin')
 
@@ -181,7 +181,7 @@ describe('installCliLink', () => {
     expect(inspectCliLink({ launcher, platform: 'darwin', candidateDirs: [absent, brew] })).toEqual(
       {
         status: 'missing',
-        location: join(brew, 'ieumoffice'),
+        location: join(brew, 'seuoffice'),
         manual: expect.stringContaining('ln -sf'),
       },
     )
@@ -204,7 +204,7 @@ describe('installCliLink', () => {
       join(home, '.local', 'bin'),
     ])
 
-    const launcher = join(home, 'app', 'ieumoffice')
+    const launcher = join(home, 'app', 'seuoffice')
     mkdirSync(join(home, 'app'))
     writeFileSync(launcher, '#!/bin/sh\n')
     const locked = join(home, 'locked')
@@ -217,25 +217,25 @@ describe('installCliLink', () => {
       if (process.getuid?.() === 0) return
       expect(inspectCliLink({ launcher, platform: 'linux', candidateDirs: dirs, env })).toEqual({
         status: 'missing',
-        location: join(userBin, 'ieumoffice'),
+        location: join(userBin, 'seuoffice'),
         manual: expect.stringContaining('sudo'),
         pathHint: 'export PATH="$HOME/.local/bin:$PATH"',
       })
       expect(existsSync(userBin)).toBe(false)
       expect(installCliLink({ launcher, platform: 'linux', candidateDirs: dirs, env })).toEqual({
         status: 'linked',
-        location: join(userBin, 'ieumoffice'),
+        location: join(userBin, 'seuoffice'),
         pathHint: 'export PATH="$HOME/.local/bin:$PATH"',
       })
-      expect(readlinkSync(join(userBin, 'ieumoffice'))).toBe(launcher)
+      expect(readlinkSync(join(userBin, 'seuoffice'))).toBe(launcher)
       const onPath = { ...env, PATH: `${userBin}/:${env.PATH}` }
       expect(
         installCliLink({ launcher, platform: 'linux', candidateDirs: dirs, env: onPath }),
-      ).toEqual({ status: 'present', location: join(userBin, 'ieumoffice') })
+      ).toEqual({ status: 'present', location: join(userBin, 'seuoffice') })
       // an explicit non-user dir never gets created or a PATH hint
       const absent = join(home, 'no-such-bin')
       expect(installCliLink({ launcher, platform: 'linux', candidateDirs: [absent], env })).toEqual(
-        { status: 'unwritable', location: join(absent, 'ieumoffice'), manual: expect.any(String) },
+        { status: 'unwritable', location: join(absent, 'seuoffice'), manual: expect.any(String) },
       )
       expect(existsSync(absent)).toBe(false)
     } finally {
@@ -259,8 +259,8 @@ describe('installCliLink', () => {
       return { ok: true, stdout: scripts.length === 1 ? 'linked\n' : 'present\n' }
     }
     const launcher =
-      "C:\\Users\\O'Brien\\AppData\\Local\\Programs\\IeumOffice\\resources\\ieumoffice\\ieumoffice.cmd"
-    const dir = "C:\\Users\\O'Brien\\AppData\\Local\\Programs\\IeumOffice\\resources\\ieumoffice"
+      "C:\\Users\\O'Brien\\AppData\\Local\\Programs\\IeumOffice\\resources\\seuoffice\\seuoffice.cmd"
+    const dir = "C:\\Users\\O'Brien\\AppData\\Local\\Programs\\IeumOffice\\resources\\seuoffice"
     const first = installCliLink({ launcher, platform: 'win32', runPowerShell: run })
     expect(first).toEqual({ status: 'linked', location: dir })
     expect(scripts[0]).toContain("$dir = 'C:\\Users\\O''Brien\\AppData")
@@ -282,14 +282,14 @@ describe('installCliLink', () => {
 
   it('inspects the Windows PATH read-only', () => {
     const scripts: string[] = []
-    const launcher = 'C:\\IeumOffice\\resources\\ieumoffice\\ieumoffice.cmd'
+    const launcher = 'C:\\IeumOffice\\resources\\seuoffice\\seuoffice.cmd'
     const present = inspectCliLink({
       launcher,
       platform: 'win32',
       runPowerShell: (s) => (scripts.push(s), { ok: true, stdout: 'present\n' }),
     })
     expect(present.status).toBe('present')
-    expect(present.location).toBe('C:\\IeumOffice\\resources\\ieumoffice')
+    expect(present.location).toBe('C:\\IeumOffice\\resources\\seuoffice')
     expect(scripts[0]).not.toContain('SetValue')
     const missing = inspectCliLink({
       launcher,
@@ -337,7 +337,7 @@ describe('the Homebrew prefix is never written uninvited (genoffice#1914)', () =
 
   it('does not break the unwritable report when the only system dir was the brew prefix', () => {
     const home = tempDir()
-    const launcher = join(home, 'app', 'ieumoffice')
+    const launcher = join(home, 'app', 'seuoffice')
     mkdirSync(join(home, 'app'))
     writeFileSync(launcher, '#!/bin/sh\n')
     const r = installCliLink({
@@ -351,7 +351,7 @@ describe('the Homebrew prefix is never written uninvited (genoffice#1914)', () =
       ),
     })
     expect(r.status).toBe('linked')
-    expect(r.location).toBe(join(home, '.local', 'bin', 'ieumoffice'))
+    expect(r.location).toBe(join(home, '.local', 'bin', 'seuoffice'))
   })
   it('leaves a Homebrew-prefix directory alone even when it is the one writable', () => {
     // the shape that produced the report: every system dir is unwritable, and
@@ -360,7 +360,7 @@ describe('the Homebrew prefix is never written uninvited (genoffice#1914)', () =
     const locked = join(home, 'locked')
     mkdirSync(locked)
     chmodSync(locked, 0o555)
-    const launcher = join(home, 'app', 'ieumoffice')
+    const launcher = join(home, 'app', 'seuoffice')
     mkdirSync(join(home, 'app'))
     writeFileSync(launcher, '#!/bin/sh\n')
     const userBin = join(home, '.local', 'bin')
@@ -373,9 +373,9 @@ describe('the Homebrew prefix is never written uninvited (genoffice#1914)', () =
         candidateDirs: [locked, userBin],
       })
       expect(r.status).toBe('linked')
-      expect(r.location).toBe(join(userBin, 'ieumoffice'))
+      expect(r.location).toBe(join(userBin, 'seuoffice'))
       // nothing landed anywhere but the directory we were told to consider
-      expect(existsSync(join(userBin, 'ieumoffice'))).toBe(true)
+      expect(existsSync(join(userBin, 'seuoffice'))).toBe(true)
     } finally {
       chmodSync(locked, 0o755)
     }

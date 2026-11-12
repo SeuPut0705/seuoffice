@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
-import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+import type { Lang } from '@seuoffice/i18n'
+import type { UserSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import {
   SkillCardLine,
   SkillCardPreviewLine,
@@ -9,7 +9,7 @@ import {
   skillCardText,
   skillTemplateText,
   type SkillCardTemplateContext,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type {
   AgentSkillProposalPayload,
   AgentTemplateCandidateView,

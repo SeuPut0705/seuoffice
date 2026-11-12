@@ -47,15 +47,15 @@ import {
   registerRendererScheme,
   shouldDeferAutoSave,
   showSaveDialogWithMemory,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type {
   RecoveryIdentity,
   RecoveryOpenFileRequest,
   RecoveryOpenUntitledRequest,
   SaveDiskState,
-} from '@genoffice/electron-utils'
-import { getUiLang, normalizeLang, setUiLang } from '@genoffice/i18n'
-import { openXmind } from '@genoffice/xmind-engine'
+} from '@seuoffice/electron-utils'
+import { getUiLang, normalizeLang, setUiLang } from '@seuoffice/i18n'
+import { openXmind } from '@seuoffice/xmind-engine'
 import { registerMindmapAiIpc } from './ai-attachments'
 import { registerMindmapImageIpc } from './ai-image'
 import { registerLinkPreviewIpc } from './link-preview'
@@ -806,7 +806,7 @@ function registerMindmapIpc(): void {
   // the AI panel's pictures: search result or generated file → bytes for the renderer
   registerMindmapImageIpc({
     filePathOf: (wcId) => savePathByWc.get(wcId) ?? null,
-    pastedImageDir: join(app.getPath('temp'), 'genoffice-pasted'),
+    pastedImageDir: join(app.getPath('temp'), 'seuoffice-pasted'),
   })
   // a link's picture and title, read only when the person asks for them in the link dialog
   registerLinkPreviewIpc()
@@ -905,7 +905,7 @@ export function createMindmapView(openPath?: string | null): WebContentsView {
   return view
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/mindmap`, a map path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/mindmap`, a map path passed via argv */
 export function startMindmapStandalone(): void {
   registerRendererScheme()
   installNavigationGuard(app)
@@ -916,10 +916,10 @@ export function startMindmapStandalone(): void {
     rendererFile: join(__dirname, '../renderer/index.html'),
   })
   // A scratch profile for scripted runs, the same variable the shell reads.
-  if (process.env.GENOFFICE_USER_DATA) app.setPath('userData', process.env.GENOFFICE_USER_DATA)
+  if (process.env.SEUOFFICE_USER_DATA) app.setPath('userData', process.env.SEUOFFICE_USER_DATA)
   void app.whenReady().then(() => {
     // there is no shell to say which language the user picked
-    setUiLang(normalizeLang(process.env.GENOFFICE_LANG ?? app.getLocale()))
+    setUiLang(normalizeLang(process.env.SEUOFFICE_LANG ?? app.getLocale()))
     installRendererProtocol({ mindmap: join(__dirname, '../renderer') })
     registerMindmapIpc()
     const win = new BrowserWindow({

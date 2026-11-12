@@ -1,4 +1,4 @@
-# odt-engine (`@genoffice/odt-engine`)
+# odt-engine (`@seuoffice/odt-engine`)
 
 OpenDocument Text(`.odt`)를 워드 편집기가 다루는 docx로 바꾸고, 편집 결과를 원본 ODT에 고친 곳만 끼워 넣어 저장한다. 원본 ODT가 없는 문서는 ODT로 통째로 바꾼다.
 
@@ -465,19 +465,19 @@ type ReportFeature = 'toc' | 'chart' | 'equation' | 'shape' | 'textbox' | 'colum
 
 ## 테스트
 
-- `npm run test -w @genoffice/odt-engine`. 실제 정부 파일은 저장소에 넣지 않고, 한컴 ODT의 특징을 흉내 낸 합성 파일로 시험한다.
+- `npm run test -w @seuoffice/odt-engine`. 실제 정부 파일은 저장소에 넣지 않고, 한컴 ODT의 특징을 흉내 낸 합성 파일로 시험한다.
 - 합성 파일 생성기는 `tests/helpers/`에 있다. 모든 층의 테스트가 함께 쓴다.
   - `build-odt.ts`: `buildOdt(options)`/`buildOdtPackage(options)`. 기본값이 한컴과 같다(항목 이름순이라 `mimetype`이 맨 앞이 아니고 압축됨, `office:version` 없음, 문단마다 자동 스타일과 탭 목록, 머리글·바닥글이 있는 바탕쪽 둘). `body`, `extraContentAutomaticStyles`, `extraCommonStyles`, `masterStyles`, `pictures`, `extraEntries`, `overrideParts`, `encrypted`, `mimetype`, `generator`로 무엇이든 바꿔 넣는다.
   - `hancom-fragments.ts`: 한컴 모양의 조각(`hPara`, `hTable`, `hCell`, `hFramedTable`, `hFieldBookmark`, `hFootnote`, `hAnnotation`, `hImageFrame`, `hFormulaObject`, `hCustomShape` 등). 조각은 쓴 문자열을 그대로 돌려주므로 테스트가 "범위로 자른 원문 = 조각"을 바로 비교할 수 있다.
   - `hancom-sample.ts`: 위 특징을 모두 담은 문서 하나(글상자 안의 표, 본문 표, 셀 안의 표, 병합·가려진 셀, 잠긴 셀, 누름틀 책갈피, 그림, 각주, 메모, 수식 개체, 도형, 목록, 구역, 차례, 같은 바탕쪽을 쓰는 여러 구역).
   - `bridge.ts`: `odtToBridge`(열기, 지도는 JSON 왕복), `editorSave`(편집기처럼 `rawPPr`을 다시 쓰거나 합쳐 `saveDocx`로 저장; `keep`/`edit`/`insert`/`xml`), `editOnly`, `replaceText`, `writeBack`(편집된 docx를 원본 ODT 문자열에 되돌려 씀). 다른 층의 왕복 시험도 이것을 쓴다.
   - `text-fixtures.ts`: 글자 층 시험 문서(누름틀, 제목, 링크, 목록, 쪽 나누기, 공백, 필드·각주, 지우기용 강한 글자 모양).
-- 실제 파일 점검은 저장소 밖에서만 한다: `ODT_CORPUS=<폴더> npm run test -w @genoffice/odt-engine`. 변수가 없으면 `tests/core-corpus.test.ts`, `tests/text-corpus.test.ts`는 건너뛴다. 글자 층 점검은 모든 문단(셀·글상자·머리글 포함)을 변환해 다리 docx에서 같은 글자로 읽히는지, 편집 없이 되돌려 쓰면(`rawPPr` 지름길 없이 모든 속성을 비교해도) 같은 글자이고 새 스타일이 없는지, 편집 없는 저장이 원본과 같은지, 문단 하나를 고치면 그 문단만 바뀌는지 본다.
+- 실제 파일 점검은 저장소 밖에서만 한다: `ODT_CORPUS=<폴더> npm run test -w @seuoffice/odt-engine`. 변수가 없으면 `tests/core-corpus.test.ts`, `tests/text-corpus.test.ts`는 건너뛴다. 글자 층 점검은 모든 문단(셀·글상자·머리글 포함)을 변환해 다리 docx에서 같은 글자로 읽히는지, 편집 없이 되돌려 쓰면(`rawPPr` 지름길 없이 모든 속성을 비교해도) 같은 글자이고 새 스타일이 없는지, 편집 없는 저장이 원본과 같은지, 문단 하나를 고치면 그 문단만 바뀌는지 본다.
 - 조립 층 시험:
   - `tests/assemble-api.test.ts`: 공개 API로 편집 없는 저장 = 원본 바이트, 문단·칸·그림·머리글 하나씩 고치면 그 파트의 그 요소만 바뀜(다른 항목의 푼 바이트 같음, `mimetype` 맨 앞·무압축, 원래 순서), meta.xml은 개인 정보 제거 때만, 암호 ODT는 `OdtEncryptedError`, ODT→docx 보고, `odtToText`(글상자 표, 셀 안 표, 각주).
   - `tests/assemble-integration.test.ts`: 층 사이 고침(구역 안 표의 `identify`, 칸 안 각주, as-char 그림 뒤 공백, 칸 안 그림, 글상자 표로 끝나는 쪽 흐름).
   - `tests/assemble-export.test.ts`: `docxToOdt` 패키지 표준, 다시 읽은 내용(문단·글자·표 격자·그림·각주·쪽·머리글·기본 글꼴/크기/줄 간격)이 원본 docx와 같음, 제목·목록·링크·글자 모양, 구역별 바탕쪽(모양이 같아도 따로), 머리글 위치 계산, 이어지는 구역의 단(`text:section`)과 쪽 전체 단, 한컴이 다르게 읽는 것(제목을 `text:p`로, 문단 속 쪽 나누기, 표 행 높이 바닥, 공용 스타일의 모양 전체), 다리 docx 이름의 그림, 대체 그림·이름표·편집기 그림, 보고(테마는 테마가 답하지 못하는 참조만, 거울 여백은 보고하지 않음).
   - 도우미: `tests/helpers/api.ts`(공개 API 왕복, 패키지 비교), `build-docx.ts`/`docx-fixtures.ts`(합성 docx, 모든 기능을 담은 `kitchenSink`), `docx-signature.ts`(docx를 비교할 수 있는 값으로).
-- 층 사이 시험: `ODT_FULL_REGISTRY=1 npm run test -w @genoffice/odt-engine`이면 모든 층의 시험이 조립 등록 순서와 조립 저장 순서(`tests/helpers/full.ts`)로 돈다. 일부러 일부 층만 등록해야 뜻이 있는 시험 4개는 이때 건너뛴다.
+- 층 사이 시험: `ODT_FULL_REGISTRY=1 npm run test -w @seuoffice/odt-engine`이면 모든 층의 시험이 조립 등록 순서와 조립 저장 순서(`tests/helpers/full.ts`)로 돈다. 일부러 일부 층만 등록해야 뜻이 있는 시험 4개는 이때 건너뛴다.
 - `ODT_CORPUS`가 있으면 `tests/assemble-corpus.test.ts`가 공개 API로 66개를 모두 열고, 편집 없는 저장이 원본 바이트와 같은지, 문단 하나·칸 하나·여백 하나 편집이 그 파트의 그 요소(새 자동 스타일 빼고)만 바꾸는지 보고, 가장 큰 파일의 열기·저장 시간을 찍는다. `tests/assemble-export-corpus.test.ts`는 `<ODT_CORPUS>/docx`의 docx를 `docxToOdt`로 바꿔 `<ODT_CORPUS>/out-docx2odt`(저장소 밖)에 쓰고, 다시 읽어 내용이 같은지 본다. 받은 ODT 66개를 연 다리 docx도 `docxToOdt`로 새 ODT를 만들어 같은지 본다(편집기에서 연 ODT를 다른 이름으로 ODT 저장하는 경우). 말뭉치 점검은 `out-`으로 시작하는 폴더를 건너뛴다.
 - 말뭉치 결과(2026-10-15): 66/66 열림, 편집 없는 저장 66/66 바이트 같음, 문단 편집 54개·칸 편집 57개·여백 편집 65개 파일 모두 해당 요소만 바뀜(나머지는 고를 요소가 없음). docx 27개와 받은 ODT 66개의 다리 docx 모두 새 ODT로 바꿔 다시 읽은 내용 같음. ODF 검사기(odfvalidator 0.13, ODF 1.3): docx→ODT 결과 93개 모두 오류 0(목록 시작 값 0을 쓰던 것을 고친 뒤). 받은 ODT 13개를 고쳐 저장하면 오류가 원본보다 늘지 않음(다시 묶기로 패키지 오류가 2개에서 3개 줄어듦). 시간: 가장 큰 파일(6.7MB) 열기 약 0.4초에서 1초, 편집 없는 저장 약 0.5초, content.xml이 가장 큰 파일(12.5MB) 열기 약 1.4초에서 2초, 편집 없는 저장 약 3초.

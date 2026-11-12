@@ -24,8 +24,8 @@ import type {
   JobSummary,
   RunningDocumentJob,
   TranslationMode,
-} from '@genoffice/pdf-structure'
-import type { JobStatus } from '@genoffice/pdf-structure/store'
+} from '@seuoffice/pdf-structure'
+import type { JobStatus } from '@seuoffice/pdf-structure/store'
 import { DocumentJobBusyError, documentJobs } from './engine'
 
 export interface BookJobView {

@@ -8,7 +8,7 @@ import {
   openXmind,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import {
   closeAndSaveVideo,
   launchShell,

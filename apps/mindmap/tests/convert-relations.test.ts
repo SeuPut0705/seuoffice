@@ -7,7 +7,7 @@
  */
 import { describe, expect, it } from 'vitest'
 import type { MindElixirData } from 'mind-elixir'
-import { reconcileSheet, sheetToView, type ViewSheet } from '@genoffice/xmind-engine'
+import { reconcileSheet, sheetToView, type ViewSheet } from '@seuoffice/xmind-engine'
 import {
   type MapArrow,
   type MapSummary,

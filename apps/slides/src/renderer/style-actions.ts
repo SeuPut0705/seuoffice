@@ -3,7 +3,7 @@
  * format, fill/stroke, background, theme, table style, and chart edits.
  * Functions read the latest App state through ActionCtx.
  */
-import type { RenderSlide, ShapeRenderNode } from '@genoffice/pptx-render'
+import type { RenderSlide, ShapeRenderNode } from '@seuoffice/pptx-render'
 import { mergeSlideUpdate } from '../shared/slide-update'
 import type {
   EditBackgroundOp,
@@ -12,7 +12,7 @@ import type {
   EditTableStyleOp,
   GradientFillSpec,
 } from '../shared/ipc'
-import type { FontSizeStep } from '@genoffice/pptx-ops/font-size'
+import type { FontSizeStep } from '@seuoffice/pptx-ops/font-size'
 import type { ActionCtx } from './action-context'
 import { FIT_WIDTH } from './app-constants'
 import {

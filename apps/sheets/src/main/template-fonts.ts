@@ -11,12 +11,12 @@ import { pathToFileURL } from 'node:url'
 
 import { app, protocol } from 'electron'
 
-import { templateFontResponse } from '@genoffice/electron-utils/template-font-response'
-import { templateFontsDir } from '@genoffice/electron-utils/template-fonts-dir'
+import { templateFontResponse } from '@seuoffice/electron-utils/template-font-response'
+import { templateFontsDir } from '@seuoffice/electron-utils/template-fonts-dir'
 import {
   TEMPLATE_FONT_FACE_REGISTRATIONS,
   TEMPLATE_FONT_SCHEME,
-} from '@genoffice/ui/template-fonts'
+} from '@seuoffice/ui/template-fonts'
 
 /// The installed folder (resources/template-fonts), or the checkout's in a dev run.
 /// The app path is the shell's when this code runs inside the shell and the sheets

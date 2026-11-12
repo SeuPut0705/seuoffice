@@ -10,8 +10,8 @@
  * hold such drawings, their relationships and `[Content_Types].xml` are
  * rewritten.
  */
-import { readDocxPartBase64 } from '@genoffice/docx-engine'
-import { parseKeepName, type ObjectKind } from '@genoffice/odt-engine'
+import { readDocxPartBase64 } from '@seuoffice/docx-engine'
+import { parseKeepName, type ObjectKind } from '@seuoffice/odt-engine'
 import { docPrNameOf, odtSession } from './odt-gate'
 import { renderLabelPng } from './odt-label-png'
 

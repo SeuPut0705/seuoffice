@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { LANGS } from '@genoffice/i18n'
+import { LANGS } from '@seuoffice/i18n'
 import { isSupportedTreeFile } from '../src/main/folder-tree'
 import { EXT_FAMILY } from '../src/main/recent-files'
 

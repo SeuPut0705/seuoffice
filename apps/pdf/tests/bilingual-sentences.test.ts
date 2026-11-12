@@ -11,7 +11,7 @@
 import { act, createElement, type ReactElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createI18n } from '@genoffice/i18n'
+import { createI18n } from '@seuoffice/i18n'
 import { translationBlockKeys } from '../../../packages/pdf-structure/src/store/keys'
 import type { TranslationBlockEntry } from '../../../packages/pdf-structure/src/store/store'
 import { translationUnits } from '../../../packages/pdf-structure/src/translate'

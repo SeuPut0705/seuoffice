@@ -152,10 +152,12 @@ function fileCtx(options: {
   definitions?: [string, object][]
   journal?: (journal: ReturnType<typeof createEditJournal>) => void
   visuals?: object[]
+  /** the file name of a second sheet (`sh2`) that swapped names with Customers this session */
+  swappedWith?: string
 }): WorkbookReadContext {
   const worksheet = {
     getSheetId: () => 'sh1',
-    getSheetName: () => 'Customers',
+    getSheetName: () => options.swappedWith ?? 'Customers',
     getFreeze: () => ({ xSplit: 0, ySplit: 0 }),
     getDataValidations: () => [],
     getConditionalFormattingRules: () => [],
@@ -195,6 +197,7 @@ function fileCtx(options: {
     labelsFor: (sheetId) => marks.labelsFor(sheetId),
     derivedFor: () => derived,
   }
+  const other = { getSheetId: () => 'sh2', getSheetName: () => 'Customers' }
   return {
     univerRef: {
       current: {
@@ -202,7 +205,7 @@ function fileCtx(options: {
           getActiveWorkbook: () => ({
             getActiveSheet: () => worksheet,
             getSheetBySheetId: () => worksheet,
-            getSheets: () => [worksheet],
+            getSheets: () => (options.swappedWith === undefined ? [worksheet] : [worksheet, other]),
             getDefinedNames: () => [],
             getActiveRange: () => null,
           }),
@@ -225,6 +228,19 @@ function fileCtx(options: {
               pivotTables: options.pivotTables ?? [],
               pivotRanges: [],
             },
+            ...(options.swappedWith === undefined
+              ? []
+              : [
+                  {
+                    id: 'sh2',
+                    name: options.swappedWith,
+                    rowCount: 10,
+                    columnCount: 4,
+                    tables: [],
+                    pivotTables: [],
+                    pivotRanges: [],
+                  },
+                ]),
           ],
         },
         editJournal,
@@ -325,6 +341,142 @@ describe('read_sheet_features: names and rule values that are copies of a hidden
     )
     expect(output).not.toContain(PHONE_HEADER)
     expect(output).toContain('rows[{{private}}] cols[{{private}}] values[{{private}}]')
+  })
+
+  it('looks for the source header on the sheet the file named, after two sheets swapped names', () => {
+    // The file says the source is "Customers": that is sh1, now called
+    // Archive, and not the sheet that took the name.
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        pivotTables: PIVOT,
+        definitions: [definition({ sourceSheet: 'Customers', sourceRef: 'A1:B10' })],
+        swappedWith: 'Archive',
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('rows[{{client phone}}] cols[Name] values[{{client phone}}]')
+  })
+
+  // A row inserted at the top this session: every cell of the sheet is one
+  // row lower on screen than in the file, and the marks are asked on screen.
+  const rowInsertedOnTop = (journal: ReturnType<typeof createEditJournal>) =>
+    journal.structuralOps.set('sh1', [{ kind: 'insert-rows', index: 0, count: 1 }])
+  const B2 = { startRow: 1, endRow: 1, startColumn: 1, endColumn: 1 }
+
+  it('follows a table whose header a row inserted this session moved down', () => {
+    const output = readSheetFeatures(
+      fileCtx({ marks: [B2], tables: [FILE_TABLE], journal: rowInsertedOnTop }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('- Clients: A2:B11 columns[Name, {{client phone}}]')
+  })
+
+  it('follows a pivot source whose header a row inserted this session moved down', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B2],
+        pivotTables: PIVOT,
+        definitions: [definition({ sourceSheet: 'Customers', sourceRef: 'A1:B10' })],
+        journal: rowInsertedOnTop,
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain(
+      'rows[{{client phone}}] cols[Name] values[{{client phone}}] source=Customers!A2:B11',
+    )
+  })
+
+  it('withholds the names whose header row was deleted this session: the cell cannot be asked', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B2_B10],
+        tables: [FILE_TABLE],
+        journal: (journal) =>
+          journal.structuralOps.set('sh1', [{ kind: 'remove-rows', index: 0, count: 1 }]),
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('columns[{{private}}, {{private}}]')
+  })
+
+  /** A pivot over A1:B10 whose third cache field is not a source column. */
+  const withExtraField = (
+    extra: object,
+    reasons: string[] = [],
+    second: object = { name: PHONE_HEADER },
+  ) =>
+    [
+      'pivot1',
+      {
+        outputRef: 'E3:F9',
+        fields: [{ name: 'Name' }, second, extra],
+        rowFields: [2],
+        colFields: [1],
+        dataFields: [{ name: 'Count of Name', field: 0 }],
+        pageFields: [],
+        unsupported: reasons,
+        sourceSheet: 'Customers',
+        sourceRef: 'A1:B10',
+      },
+    ] as [string, object]
+  // Excel names a manual group after its base field: "<header>2"
+  const GROUP_OF_PHONE = { name: `${PHONE_HEADER}2` }
+
+  it('withholds the name of a group field Excel added when its source holds a hidden cell', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        pivotTables: PIVOT,
+        definitions: [
+          withExtraField(GROUP_OF_PHONE, [
+            `grouped field "${PHONE_HEADER}" does not support recompute`,
+          ]),
+        ],
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('rows[{{private}}] cols[{{client phone}}] values[Count of Name]')
+    // the reason quotes field names: it is given without them
+    expect(output).toContain('(recompute unsupported)')
+  })
+
+  it('prints a group field when nothing in the source is hidden', () => {
+    const elsewhere = { startRow: 20, endRow: 20, startColumn: 3, endColumn: 3 }
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [elsewhere],
+        pivotTables: PIVOT,
+        definitions: [withExtraField(GROUP_OF_PHONE)],
+      }),
+    )
+    expect(output).toContain(`rows[${PHONE_HEADER}2] cols[${PHONE_HEADER}]`)
+  })
+
+  it('prints a calculated field, which the person named, whatever the source holds', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        pivotTables: PIVOT,
+        definitions: [withExtraField({ name: 'Margin', formula: 'Name*2' })],
+      }),
+    )
+    expect(output).toContain('rows[Margin] cols[{{client phone}}]')
+  })
+
+  it('withholds a field grouped in place when its column holds a hidden cell', () => {
+    // the header "Signed" is not hidden; the dates under it are
+    const grouped = { name: 'Signed', grouping: { kind: 'date', dateUnit: 'month' } }
+    const definition = withExtraField({ name: 'Margin', formula: 'Name*2' }, [], grouped)
+    const output = readSheetFeatures(
+      fileCtx({ marks: [B2_B10], pivotTables: PIVOT, definitions: [definition] }),
+    )
+    expect(output).toContain('rows[Margin] cols[{{private}}]')
+    // and ungrouped, the same field is named by its visible header
+    const plain = withExtraField({ name: 'Margin', formula: 'Name*2' }, [], { name: 'Signed' })
+    expect(
+      readSheetFeatures(fileCtx({ marks: [B2_B10], pivotTables: PIVOT, definitions: [plain] })),
+    ).toContain('rows[Margin] cols[Signed]')
   })
 
   it('drops the kept values of a filter column that holds a hidden cell', () => {
@@ -452,5 +604,49 @@ describe('get_workbook_context: chart titles', () => {
   it('are given in a workbook without hidden cells', () => {
     const info = getActiveSheetInfo(fileCtx({ marks: [], visuals: [FILE_CHART] }))
     expect(info.charts?.map((entry) => entry.title)).toEqual([PHONE_HEADER])
+  })
+})
+
+describe('read_sheet_features: the text of shapes', () => {
+  // A shape's text is typed, or it is linked to a cell (`=Sheet1!B2` in the
+  // formula bar with the shape selected) and then shows that cell's text. The
+  // file's shapes reach the session as their text alone, with no word of a link.
+  const shape = (id: string, text: string, kind = 'shape') => ({
+    id,
+    kind,
+    sheetId: 'sh1',
+    shapeType: 'rect',
+    text,
+    anchor: { fromRow: 3, fromColumn: 4 },
+  })
+
+  it("withholds the text of the file's shapes in a workbook with hidden cells", () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        visuals: [shape('visual-1', PHONE_HEADER), shape('visual-2', PHONE_HEADER, 'slicer')],
+      }),
+    )
+    expect(output).not.toContain(PHONE_HEADER)
+    expect(output).toContain('- shape rect @ E4 text "{{private}}"')
+    expect(output).toContain('- slicer @ E4 text "{{private}}"')
+  })
+
+  it('prints the text of a shape made this session, which was typed', () => {
+    const output = readSheetFeatures(
+      fileCtx({
+        marks: [B1],
+        journal: (journal) =>
+          journal.visualAdds.push(shape('added-shape-1', 'Quarterly notes') as never),
+      }),
+    )
+    expect(output).toContain('- shape rect @ E4 text "Quarterly notes"')
+  })
+
+  it('prints every shape text in a workbook without hidden cells', () => {
+    const output = readSheetFeatures(
+      fileCtx({ marks: [], visuals: [shape('visual-1', PHONE_HEADER)] }),
+    )
+    expect(output).toContain(`- shape rect @ E4 text "${PHONE_HEADER}"`)
   })
 })

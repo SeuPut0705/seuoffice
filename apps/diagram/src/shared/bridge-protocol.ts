@@ -16,7 +16,7 @@
  * Everything here is free of Electron and of the DOM types beyond
  * `MessageEvent`, so both sides and the tests share it.
  */
-import type { DiagramPrimitive } from '@genoffice/drawio-model'
+import type { DiagramPrimitive } from '@seuoffice/drawio-model'
 
 /** The custom scheme the draw.io files are served from (never `file://`). */
 export const DRAWIO_SCHEME = 'drawio-app'

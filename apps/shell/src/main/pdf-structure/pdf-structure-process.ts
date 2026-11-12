@@ -5,6 +5,8 @@
  * pdf2docx-local.ts does, runs the job and answers. The parent ends the
  * process after the answer, on cancel, and when the document's tab closes.
  */
+// first: variables set under the old prefix are taken over before anything reads its own
+import '@seuoffice/i18n/old-names-env'
 import { readFileSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import type { OcrEngine, PdfiumModule } from '../../../../../packages/pdf2docx/src'
@@ -35,7 +37,7 @@ function loadPdfium(wasmPath: string): () => Promise<PdfiumModule> {
       const wasmBinary = raw.buffer.slice(raw.byteOffset, raw.byteOffset + raw.byteLength)
       // thisProgram: emscripten writes argv[1] through an ASCII-only path;
       // a CJK document path would abort init (see pdf2docx-local.ts)
-      const wrapped = (await init({ wasmBinary, thisProgram: 'genoffice-pdf' })) as {
+      const wrapped = (await init({ wasmBinary, thisProgram: 'seuoffice-pdf' })) as {
         pdfium?: unknown
       }
       const m = (wrapped.pdfium ?? wrapped) as PdfiumModule & { _PDFiumExt_Init(): void }

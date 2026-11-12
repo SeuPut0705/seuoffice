@@ -6,11 +6,11 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 // node_modules is a symlink into the main checkout, so bare specifiers would
 // silently bundle the other checkout's (possibly stale) code.
 const localAlias = {
-  '@genoffice/docx-engine/lazy-media': resolve(
+  '@seuoffice/docx-engine/lazy-media': resolve(
     __dirname,
     '../../packages/docx-engine/src/lazy-media.ts',
   ),
-  '@genoffice/docx-engine/zip-splice': resolve(
+  '@seuoffice/docx-engine/zip-splice': resolve(
     __dirname,
     '../../packages/docx-engine/src/zip-splice.ts',
   ),
@@ -27,23 +27,25 @@ const localAlias = {
 export default defineConfig({
   // Main and preload use only electron + node builtins; bundle everything so
   // the packaged app doesn't rely on node_modules at runtime.
-  // @genoffice/* deps ship as raw TS source with extensionless imports, so they
+  // @seuoffice/* deps ship as raw TS source with extensionless imports, so they
   // must be bundled — externalizing them yields ERR_MODULE_NOT_FOUND under Node
   // (same setup as apps/slides).
   main: {
     plugins: [
       externalizeDepsPlugin({
         exclude: [
-          '@genoffice/docx-engine',
+          // TS source whose modules import each other without extensions
+          '@seuoffice/agent-core',
+          '@seuoffice/docx-engine',
           // the Hangul export's converter, run in its worker thread
-          '@genoffice/docx2hwp',
-          '@genoffice/electron-utils',
-          '@genoffice/font-metrics',
-          '@genoffice/odt-engine',
+          '@seuoffice/docx2hwp',
+          '@seuoffice/electron-utils',
+          '@seuoffice/font-metrics',
+          '@seuoffice/odt-engine',
           // the template font list the media scheme serves from
-          '@genoffice/ui',
+          '@seuoffice/ui',
           // the mail merge's CSV and workbook readers
-          '@genoffice/xlsx-gateway',
+          '@seuoffice/xlsx-gateway',
         ],
       }),
     ],
@@ -52,13 +54,13 @@ export default defineConfig({
   preload: {
     // Sandboxed preload scripts cannot require arbitrary npm packages at
     // runtime, so the drop-open bridge must be bundled, not externalized.
-    plugins: [externalizeDepsPlugin({ exclude: ['@genoffice/electron-utils'] })],
+    plugins: [externalizeDepsPlugin({ exclude: ['@seuoffice/electron-utils'] })],
   },
   renderer: {
     plugins: [react()],
     resolve: { alias: localAlias },
     server: {
-      // Overridable so multiple genoffice dev instances can coexist (default 5173).
+      // Overridable so multiple seuoffice dev instances can coexist (default 5173).
       port: Number(process.env.DOCS_DEV_PORT) || 5173,
       strictPort: Boolean(process.env.DOCS_DEV_PORT),
     },

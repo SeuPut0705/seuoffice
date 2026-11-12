@@ -4,21 +4,21 @@
  * The main process decides everything about a skill (`UserSkillView.can`);
  * this only arranges it for the screen.
  */
-import type { Lang } from '@genoffice/i18n'
-import { unusableMcpServers } from '@genoffice/agent-core/skill-mcp-refs'
+import type { Lang } from '@seuoffice/i18n'
+import { unusableMcpServers } from '@seuoffice/agent-core/skill-mcp-refs'
 import {
   builtinSkillDesc,
   isBuiltinSkillName,
   skillDisplayName,
   skillEditorsText,
-} from '@genoffice/ui'
-import type { UserSkillsBridge } from '@genoffice/electron-utils/user-skills-bridge'
+} from '@seuoffice/ui'
+import type { UserSkillsBridge } from '@seuoffice/electron-utils/user-skills-bridge'
 import type {
   UserSkillNameProblem,
   UserSkillUnreadable,
   UserSkillView,
   UserSkillsFailReason,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 import { skillsText, type SkillsStringKey } from '../i18n/strings-skills'
 
 /** The settings screen's skills bridge (src/preload/index.ts); absent outside the shell */

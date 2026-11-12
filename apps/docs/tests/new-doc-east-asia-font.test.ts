@@ -12,7 +12,7 @@ import {
   normalizeLang,
   requestedLanguage,
   setUiLang,
-} from '@genoffice/i18n'
+} from '@seuoffice/i18n'
 import { setDocumentLocale } from '../src/renderer/document-locale'
 import { blankDocxBytes } from '../src/renderer/file-actions'
 

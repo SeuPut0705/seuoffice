@@ -9,8 +9,8 @@
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { Editor } from '@tiptap/core'
-import { docxToOdt } from '@genoffice/odt-engine'
-import { buildBlankDocx } from '@genoffice/docx-engine'
+import { docxToOdt } from '@seuoffice/odt-engine'
+import { buildBlankDocx } from '@seuoffice/docx-engine'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import type { DocState } from '../src/renderer/doc-state'
 import type { OpenDocxResult } from '../src/shared/ipc'

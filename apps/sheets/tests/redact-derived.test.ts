@@ -20,7 +20,7 @@ import '@univerjs/sheets/facade'
 import { UniverSheetsFormulaPlugin } from '@univerjs/sheets-formula'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 
 import { aggregateWorkbookRange } from '../src/renderer/ai/aggregate-range'
 import { loadedRedactions } from '../src/renderer/ai/redact-load'
@@ -28,7 +28,12 @@ import { readCells, type WorkbookReadContext } from '../src/renderer/ai/workbook
 import { findWorkbookCells } from '../src/renderer/ai/workbook-search'
 import { redactGuardForOps } from '../src/renderer/ai/redact-guard'
 import { redactionIndexOf } from '../src/renderer/ai/redact-load'
-import { createEditJournal, recordSetRangeValues } from '../src/renderer/edit-journal'
+import {
+  createEditJournal,
+  recordSetRangeValues,
+  recordSheetDuplicate,
+  recordSheetRename,
+} from '../src/renderer/edit-journal'
 import {
   createDerivedCells,
   installDerivedCellsInvalidation,
@@ -683,5 +688,179 @@ describe('what the in-app AI reads from the output of a PivotTable', () => {
     const index = redactionIndexOf(session.ctx.redactionLoadRef!.current)
     expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [3], cols: [4] })).toBe(true)
     expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [8], cols: [4] })).toBe(false)
+  })
+
+  it('finds the source by the name the file gave its sheet, after the sheets swapped names', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Data', sourceRef: 'A1:B2' })
+    swapSheetNames(session)
+    expect(session.read('s2', 'E4')).toBe(PRIVATE)
+    expect(session.read('s2', 'F4')).toBe(PRIVATE)
+  })
+
+  it('does not take the sheet that now carries the name for the source', () => {
+    // the pivot summarises its own sheet, which holds nothing hidden
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Report', sourceRef: 'A1:B2' })
+    swapSheetNames(session)
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
+
+  it('still finds the source after it alone was renamed', () => {
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Report', sourceRef: 'A1:B2' })
+    session.runtime.univerAPI.getActiveWorkbook()!.getSheetBySheetId('s2')!.setName('Summary')
+    session.mark(HIDDEN_B2)
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
+
+  /**
+   * A pivot part of Report the reader could not place (no part, no location,
+   * a location that is not a range): its cells are somewhere on the sheet, and
+   * neither its output range nor its definition is listed.
+   */
+  function withUnlocatedPivot(session: Session): Session {
+    const file = session.state.file as unknown as { sheets: object[] }
+    file.sheets = FILE_SHEETS.map((sheet) => ({
+      ...sheet,
+      pivotRanges: [],
+      pivotTables: [],
+      pivotsUnlocated: sheet.id === 's2' ? 1 : 0,
+    }))
+    session.mark(HIDDEN_B2)
+    return session
+  }
+
+  it('withholds the whole sheet when a pivot on it could not be located', () => {
+    const session = withUnlocatedPivot(open(CLIENTS, { ...OUTPUT, A1: { v: 'Q1' } }))
+    expect(session.read('s2', 'E4')).toBe(PRIVATE)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
+    expect(session.read('s2', 'J40')).toBe(PRIVATE)
+    // the other sheet is read as usual
+    expect(session.read('s1', 'A2')).toBe('Kim')
+    // and a person copying from it is copying what may be the hidden value
+    const index = redactionIndexOf(session.ctx.redactionLoadRef!.current)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: 's2', rows: [0], cols: [0] })).toBe(true)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: 's1', rows: [1], cols: [0] })).toBe(false)
+  })
+
+  it('reads such a sheet as usual in a workbook without hidden cells', () => {
+    const session = withUnlocatedPivot(open(CLIENTS, OUTPUT))
+    session.mark([])
+    expect(session.read('s2', 'E4')).toBe(SECRET)
+  })
+
+  /**
+   * Duplicate Report as Univer does it (the copy holds the cells as values) and
+   * record it as the app does when the copy-sheet command lands: the copy's
+   * sheet id against its source in `journal.sheets.added`.
+   */
+  function duplicate(session: Session, sourceId: string, name: string): string {
+    const workbook = session.runtime.univerAPI.getActiveWorkbook()!
+    const copy = workbook.duplicateSheet(workbook.getSheetBySheetId(sourceId)!)
+    copy.setName(name)
+    recordSheetDuplicate(session.state.editJournal, copy.getSheetId(), name, sourceId)
+    session.mark(HIDDEN_B2)
+    return copy.getSheetId()
+  }
+  const sessionPivotOnReport = (session: Session): void => {
+    session.state.editJournal.pivotAdds.push({
+      sheetId: 's2',
+      sourceSheetId: 's1',
+      sourceArea: { startRow: 0, endRow: 1, startColumn: 0, endColumn: 1 },
+      location: OUTPUT_AREA,
+    } as never)
+  }
+
+  it('withholds the output on a copy of the sheet made this session', async () => {
+    // A pivot made this session: the sheet it is on may be duplicated (a file
+    // pivot's sheet may not, see App's copy-sheet gate).
+    const session = open(CLIENTS, OUTPUT)
+    sessionPivotOnReport(session)
+    const copy = duplicate(session, 's2', 'Report (2)')
+    expect(session.read(copy, 'E4')).toBe(PRIVATE)
+    expect(session.read(copy, 'F4')).toBe(PRIVATE)
+    // and every other reader asks the same index
+    const found = await findWorkbookCells(session.ctx, {
+      query: '138',
+      regex: false,
+      lookIn: 'both',
+      errorsOnly: false,
+      maxResults: 10,
+    })
+    expect(found.matches).toEqual([])
+    const index = redactionIndexOf(session.ctx.redactionLoadRef!.current)
+    expect(pasteSourceHoldsHidden(index, { subUnitId: copy, rows: [3], cols: [4] })).toBe(true)
+  })
+
+  it('follows the copy through rows inserted in it afterwards, and a copy of the copy', () => {
+    const session = open(CLIENTS, OUTPUT)
+    sessionPivotOnReport(session)
+    const copy = duplicate(session, 's2', 'Report (2)')
+    const workbook = session.runtime.univerAPI.getActiveWorkbook()!
+    workbook.getSheetBySheetId(copy)!.insertRowsBefore(0, 1)
+    session.state.editJournal.structuralOps.set(copy, [{ kind: 'insert-rows', index: 0, count: 1 }])
+    session.mark(HIDDEN_B2)
+    expect(session.read(copy, 'E5')).toBe(PRIVATE)
+    const copyOfCopy = duplicate(session, copy, 'Report (3)')
+    expect(session.read(copyOfCopy, 'E5')).toBe(PRIVATE)
+  })
+
+  it('withholds the output of a file pivot on a copy too', () => {
+    // Not reachable today (duplicating such a sheet is refused) but the index
+    // must not depend on that.
+    const session = withPivot(open(CLIENTS, OUTPUT), { sourceSheet: 'Data', sourceRef: 'A1:B2' })
+    const copy = duplicate(session, 's2', 'Report (2)')
+    expect(session.read(copy, 'E4')).toBe(PRIVATE)
+  })
+
+  it('reads the copy as usual when the source holds nothing hidden', () => {
+    const session = open(CLIENTS, OUTPUT)
+    session.state.editJournal.pivotAdds.push({
+      sheetId: 's2',
+      sourceSheetId: 's1',
+      sourceArea: { startRow: 0, endRow: 1, startColumn: 0, endColumn: 0 },
+      location: OUTPUT_AREA,
+    } as never)
+    const copy = duplicate(session, 's2', 'Report (2)')
+    expect(session.read(copy, 'E4')).toBe(SECRET)
+  })
+})
+
+/** Data becomes Report and Report becomes Data, by way of a third name. */
+function swapSheetNames(session: Session): void {
+  const workbook = session.runtime.univerAPI.getActiveWorkbook()!
+  workbook.getSheetBySheetId('s1')!.setName('Tmp')
+  workbook.getSheetBySheetId('s2')!.setName('Data')
+  workbook.getSheetBySheetId('s1')!.setName('Report')
+  recordSheetRename(session.state.editJournal, 's1', 'Report', 'Data')
+  recordSheetRename(session.state.editJournal, 's2', 'Data', 'Report')
+  session.mark(HIDDEN_B2)
+}
+
+describe('after two sheets swapped names this session', () => {
+  it('a formula on the other sheet still reads the hidden cell', () => {
+    const session = open(CLIENTS, {
+      A1: { f: '=Data!B2', v: SECRET },
+      B1: { f: '=Data!A2', v: 'Kim' },
+    })
+    swapSheetNames(session)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
+    expect(session.read('s2', 'B1')).not.toBe(PRIVATE)
+  })
+
+  it('a defined name still points at the hidden cell', () => {
+    const session = open(CLIENTS, { A1: { f: '=KimPhone', v: SECRET } })
+    session.defineName('KimPhone', 'Data!$B$2')
+    swapSheetNames(session)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
+  })
+
+  it('a formula the grid no longer holds, typed before the swap, is not read by its old sheet name', () => {
+    // The row scrolled out of a streamed grid: the journal keeps the formula
+    // as it was typed, and nothing rewrites it when a sheet is renamed.
+    const session = open(CLIENTS, { A1: { v: SECRET } })
+    recordSetRangeValues(session.state.editJournal, 's2', {
+      0: { 0: { f: '=Data!B2', v: SECRET } },
+    })
+    swapSheetNames(session)
+    expect(session.read('s2', 'A1')).toBe(PRIVATE)
   })
 })

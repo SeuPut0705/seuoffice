@@ -2,6 +2,7 @@ import { execFile, spawn } from 'node:child_process'
 import { mkdirSync, readdirSync, rmSync } from 'node:fs'
 import { basename, dirname, join } from 'node:path'
 import { installDirWritable } from './update-attempt'
+import type { UpdateStep } from './update-log'
 
 /**
  * The Mac app installs its own updates, without Squirrel.Mac (decision 0097).
@@ -61,7 +62,7 @@ export function macSelfUpdateBlock(
   const bundle = macAppBundle(execPath)
   if (bundle === null) return 'not-an-app-bundle'
   if (bundle.includes('/AppTranslocation/')) return 'translocated'
-  if (!writable(dirname(bundle), `.ieumoffice-update-check-${process.pid}`)) return 'read-only'
+  if (!writable(dirname(bundle), `.seuoffice-update-check-${process.pid}`)) return 'read-only'
   return null
 }
 
@@ -108,13 +109,18 @@ export async function stageMacUpdate(options: {
   bundle: string
   version: string
   run?: RunProgram
+  /** marks where unpacking and checking start and end (update-log.ts) */
+  step?: (step: UpdateStep) => void
 }): Promise<string> {
-  const { zip, bundle, version, run = runProgram } = options
+  const { zip, bundle, version, run = runProgram, step = () => {} } = options
   const staging = macStagingDir(bundle)
   rmSync(staging, { recursive: true, force: true })
   mkdirSync(staging)
   try {
+    step('unpack-start')
     await run('/usr/bin/ditto', ['-x', '-k', zip, staging])
+    step('unpack-end')
+    step('verify-start')
     const apps = readdirSync(staging).filter((name) => name.endsWith('.app'))
     if (apps.length !== 1) throw new Error(`the update holds ${apps.length} apps, not one`)
     const staged = join(staging, apps[0])
@@ -130,6 +136,7 @@ export async function stageMacUpdate(options: {
       throw new Error(`the update is ${stagedId}, not ${installedId}`)
     }
     await run('/usr/bin/codesign', ['--verify', '--deep', '--strict', staged])
+    step('verify-end')
     return staged
   } catch (err) {
     rmSync(staging, { recursive: true, force: true })
@@ -179,7 +186,8 @@ export function installMacStaging(
  * $6 the update record (update-log.txt), $7 the program that opens the app.
  * Both renames stay on one volume, so each is a single step. Whatever happens,
  * the bundle at $2 is opened again with --updated, which brings back the
- * documents that were open.
+ * documents that were open. The `phase` notes mark the swap's steps in the
+ * record, like the app's own (update-log.ts).
  */
 export const MAC_SWAP_SCRIPT = `pid=$1 app=$2 staged=$3 staging=$4 previous=$5 log=$6 opener=$7
 note() { printf '%s info [swap] %s\\n' "$(/bin/date -u +%Y-%m-%dT%H:%M:%SZ)" "$1" >> "$log" 2>/dev/null; }
@@ -192,11 +200,13 @@ while kill -0 "$pid" 2>/dev/null; do
   fi
   /bin/sleep 0.1
 done
+note 'phase swap-start'
 /bin/rm -rf "$previous"
+installed=0
 if /bin/mv "$app" "$previous"; then
   if /bin/mv "$staged" "$app"; then
     note 'installed the new version'
-    /bin/rm -rf "$previous" "$staging"
+    installed=1
   else
     note 'could not move the new version in; putting the previous one back'
     /bin/mv "$previous" "$app" || note "could not put the previous version back from $previous"
@@ -204,7 +214,10 @@ if /bin/mv "$app" "$previous"; then
 else
   note 'could not move the running version aside; the update was not installed'
 fi
+note 'phase relaunch'
 "$opener" "$app" --args --updated
+# the old bundle goes once the new one is opening, not before
+if [ "$installed" = 1 ]; then /bin/rm -rf "$previous" "$staging"; fi
 `
 
 /**
@@ -226,7 +239,7 @@ export function startMacSwap(options: {
       [
         '-c',
         MAC_SWAP_SCRIPT,
-        'ieumoffice-update',
+        'seuoffice-update',
         String(pid),
         bundle,
         staged,

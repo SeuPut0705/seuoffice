@@ -125,12 +125,13 @@
   - 인쇄 가운데 맞춤, 시작 쪽 번호, 인쇄 순서, 메모 인쇄는 세션 모델이 읽지 않는다. 내보내기가 시트 파트에서 `</sheetData>` 뒤만 따로 읽어 옮긴다(`read_print_extras`). 칸을 다시 훑지 않도록 압축을 풀면서 그 자리만 찾고, 못 읽으면 기본값으로 둔다. 시작 쪽 번호가 없으면 `continue`를 적는다(적지 않으면 판독기가 시트마다 1쪽부터 센다).
   - 옮기지 않는 것: 머리글 그림, 시트 보호 암호, 와일드카드·색·상위 N 필터 조건, 채우기 무늬.
   - 시험: `ods_export::tests` 전체, `ods_styles::tests` 전체, `ods_print::tests` 전체, `odf_formula::tests`의 `to_odf` 시험들, `main.rs`의 `convert_to_ods_reports_the_package_it_wrote`.
+- **출력 범위를 읽지 못한 피벗을 센다.** 시트의 `pivotTable` 관계 가운데 파트가 없거나, `<location>`이 없거나, `ref`가 없거나, `ref`가 범위가 아닌 것은 `pivotRanges`·`pivotTables`에 넣을 수 없다. 원본은 그냥 건너뛰었다. 그러면 편집기는 그 시트에 피벗이 있는 줄 모르고 출력 셀을 일반 셀로 읽어, 가린 셀로 만든 피벗의 값이 AI에 간다(`file-parse`는 이런 시트를 통째로 가린다). 건너뛰는 그 자리에서 세어 시트 메타데이터 `pivotsUnlocated`로 낸다(`visuals.rs`의 `read_pivot_tables`가 앞의 세 경우를, `lib.rs`가 범위가 아닌 `ref`를 센다). 0이면 직렬화하지 않으므로 그런 피벗이 없는 파일의 응답은 한 글자도 바뀌지 않는다. 웹의 엔진(`native/xlsx-wasm`)도 같은 코드다. 받는 쪽은 `desktop-api.ts`의 `pivotsUnlocated`(예전 실행 파일이면 0)이고, 0이 아니면 그 시트 전체를 피벗 출력으로 다뤄야 한다. 건너뛰는 갈래를 더하면 같이 센다. 시험: `tests.rs`의 `counts_pivots_whose_output_cannot_be_located`, `apps/sheets/tests/pivots-unlocated-wire.test.ts`.
 
 ## 테스트
 
-- 빌드 PC의 PATH에는 `cargo`가 없다. Git Bash에서 `export PATH="$HOME/.cargo/bin:$PATH"`를 먼저 하고 이 폴더에서 `cargo test`를 돌린다. 저장소 어디서든 `npm run native:test -w @genoffice/sheets`로도 같다.
+- 빌드 PC의 PATH에는 `cargo`가 없다. Git Bash에서 `export PATH="$HOME/.cargo/bin:$PATH"`를 먼저 하고 이 폴더에서 `cargo test`를 돌린다. 저장소 어디서든 `npm run native:test -w @seuoffice/sheets`로도 같다.
 - 테스트는 `src/tests.rs`, `src/visuals/tests.rs`와 `archive.rs`·`main.rs`·`recalc.rs`·`find.rs` 등의 `mod tests`에 있다. 따로 둔 `tests/` 폴더나 픽스처 파일은 없다. 통합 문서는 `open_fixture(&[(항목 이름, XML)])`로 테스트 안에서 만든다.
-- `cargo test`는 `target/release`의 실행 파일을 다시 만들지 않는다. `apps/sheets/tests`의 사이드카 테스트(`xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts`, `xlsx-recalc.test.ts`, `xlsx-borders.test.ts`, `ole-roundtrip.test.ts`)는 `XLSX_SIDECAR_PATH`를 읽지 않고 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. Rust를 고친 뒤 `cargo build --release`(또는 `npm run native:build -w @genoffice/sheets`) 없이 돌리면 예전 실행 파일을 시험하게 된다.
+- `cargo test`는 `target/release`의 실행 파일을 다시 만들지 않는다. `apps/sheets/tests`의 사이드카 테스트(`xlsx-sidecar.test.ts`, `xlsx-streaming-save.test.ts`, `xlsx-recalc.test.ts`, `xlsx-borders.test.ts`, `ole-roundtrip.test.ts`)는 `XLSX_SIDECAR_PATH`를 읽지 않고 `native/xlsx-engine/target/release/`의 실행 파일을 직접 연다. Rust를 고친 뒤 `cargo build --release`(또는 `npm run native:build -w @seuoffice/sheets`) 없이 돌리면 예전 실행 파일을 시험하게 된다.
 - `XLSX_SIDECAR_PATH`를 읽는 곳은 둘이다. CLI의 `xlsxSidecarPath()`는 이 값을 가장 먼저 본다. 시트 뒷단의 `resolveSidecarPath()`는 주입된 `runtime.sidecarPath` 다음에 보는데, shell이 항상 경로를 주입하므로 통합 앱에서는 이 변수가 효과가 없고 시트 단독 실행에서만 적용된다.
 - `packages/cli/tests`의 사이드카 테스트는 실행 파일을 찾지 못하면 `skipIf`로 건너뛴다. 실패가 없다는 것만 보지 말고 건너뛴 수를 본다.
 - 바꾼 곳에 따라 반드시 덮는 것:

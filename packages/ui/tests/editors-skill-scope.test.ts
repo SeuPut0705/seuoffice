@@ -7,7 +7,7 @@ import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
-import { SKILL_EDITORS, type SkillEditorId } from '@genoffice/agent-core'
+import { SKILL_EDITORS, type SkillEditorId } from '@seuoffice/agent-core'
 
 const REPO = fileURLToPath(new URL('../../..', import.meta.url))
 const source = (path: string): string => readFileSync(join(REPO, path), 'utf8')

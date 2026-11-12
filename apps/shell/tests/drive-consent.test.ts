@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { normalizeAiSettings } from '@genoffice/ai-provider'
+import { normalizeAiSettings } from '@seuoffice/ai-provider'
 import { freeAiInUse, isFreeAi } from '../src/main/drive/drive-consent'
 
 const settings = (provider: string, models: Record<string, string> = {}) =>

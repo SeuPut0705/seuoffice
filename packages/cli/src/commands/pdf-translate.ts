@@ -215,7 +215,7 @@ export async function pdfTranslate(
     throw new CliError(EXIT.usage, 'there is no text to translate on these pages', undefined, {
       reason: 'unsupported',
       suggestion:
-        'a scanned PDF has no text layer: read its pages with `ieumoffice pdf ai-read` first',
+        'a scanned PDF has no text layer: read its pages with `seuoffice pdf ai-read` first',
     })
   }
   const model = { provider: route.provider, model: route.model }

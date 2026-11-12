@@ -4,9 +4,9 @@
  * `aiRunErrorText`, with the reset time of a rate limit), and the percentage
  * of the resume offer.
  */
-import type { AiProviderId, AiRunErrorKind } from '@genoffice/ai-provider/browser'
-import type { Lang } from '@genoffice/i18n'
-import { aiRunErrorText } from '@genoffice/ui'
+import type { AiProviderId, AiRunErrorKind } from '@seuoffice/ai-provider/browser'
+import type { Lang } from '@seuoffice/i18n'
+import { aiRunErrorText } from '@seuoffice/ui'
 import type { JobSummary } from '../../../../../packages/pdf-structure/src/jobs'
 import type { JobProgress } from '../../../../../packages/pdf-structure/src/store/store'
 import type { TFunc } from '../i18n/locale'

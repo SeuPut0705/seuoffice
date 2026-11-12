@@ -3,7 +3,7 @@
  * question before closing a diagram with unsaved changes), in the app's
  * language. They live in the editor's one dictionary (`renderer/i18n/app`).
  */
-import { createI18n, getUiLang, type Params } from '@genoffice/i18n'
+import { createI18n, getUiLang, type Params } from '@seuoffice/i18n'
 import { appStrings } from '../renderer/i18n/strings-app'
 
 const translate = createI18n(appStrings)

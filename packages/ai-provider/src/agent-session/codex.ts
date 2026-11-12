@@ -73,7 +73,7 @@ export class AgentSandboxUnavailableError extends Error {
     this.name = 'AgentSandboxUnavailableError'
   }
 }
-export const CODEX_AGENT_PROFILE = 'ieumoffice-agent'
+export const CODEX_AGENT_PROFILE = 'seuoffice-agent'
 const REQUEST_TIMEOUT_MS = 30_000
 /**
  * Opening the thread applies the permission profile, and Codex's Windows sandbox

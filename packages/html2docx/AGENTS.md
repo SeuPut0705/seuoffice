@@ -32,7 +32,7 @@ HTML 문서를 Word 문서로 바꾼다. 실제 Chromium에 페이지를 띄워 
 
 ## 테스트
 
-- `npm run test -w @genoffice/html2docx`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃이 길다(테스트 90초, 훅 60초).
+- `npm run test -w @seuoffice/html2docx`, 또는 패키지 폴더에서 `npx vitest run`. 타임아웃이 길다(테스트 90초, 훅 60초).
 - `tests/features.test.ts`와 `tests/pagebg-restore.test.ts`는 로컬에 설치된 Chrome을 Playwright로 띄운다. Chrome을 찾는 후보 경로가 macOS와 Linux 것뿐이라, Windows에서는 `CHROME_PATH`를 주지 않으면 `beforeAll`에서 `Chrome/Chromium not found`로 파일 전체가 실패한다. 이 두 파일은 Windows에서 변경 이전부터 실패하는 것으로 알려져 있다. Chromium을 내려받는 코드는 없다.
 - 나머지 테스트 파일은 브라우저 없이 IR 검증과 생성 계층을 직접 부르며 Windows에서 통과한다.
 - 추출과 분류 규칙을 바꾸면 Chrome이 있는 환경에서 `features.test.ts`에 HTML 입력과 기대하는 OOXML을 사례로 추가한다. 생성 계층만 바꾸면 브라우저 없는 테스트로 덮을 수 있다.

@@ -20,7 +20,7 @@ import {
 import { UniverSheetsPlugin } from '@univerjs/sheets'
 import '@univerjs/sheets/facade'
 import { FUniver } from '@univerjs/core/lib/facade'
-import type { WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
+import type { WorkbookOperation } from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
 import { describe, expect, it } from 'vitest'
 
 import { expandOverMerges, planRibbonMerge } from '../src/renderer/merge-selection'

@@ -129,10 +129,10 @@ async function main(): Promise<void> {
       env: {
         ...withoutAiPrograms(hostEnv, home),
         HOME: home,
-        GENOFFICE_USER_DATA: userData,
-        GENOFFICE_AUTH_DIR: join(home, HOME_DIR_NAME),
-        GENOFFICE_NO_SPARE_VIEW: '1',
-        GENOFFICE_LANG: lang,
+        SEUOFFICE_USER_DATA: userData,
+        SEUOFFICE_AUTH_DIR: join(home, HOME_DIR_NAME),
+        SEUOFFICE_NO_SPARE_VIEW: '1',
+        SEUOFFICE_LANG: lang,
       },
     })
 

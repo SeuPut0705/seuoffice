@@ -6,7 +6,7 @@
  */
 import JSZip from 'jszip'
 import { describe, expect, it } from 'vitest'
-import { blankXlsxBuffer } from '@genoffice/xlsx-gateway/gateway/csv-import-xlsx'
+import { blankXlsxBuffer } from '@seuoffice/xlsx-gateway/gateway/csv-import-xlsx'
 import {
   assembleWithJsZip,
   createBufferEntrySource,
@@ -14,8 +14,8 @@ import {
   type CellEdit,
   type SheetStructuralOps,
   type SheetTableAddition,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import type { SheetEditPlan } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { SheetEditPlan } from '@seuoffice/xlsx-gateway/gateway/xlsx-sheets'
 
 async function save(
   source: Buffer,

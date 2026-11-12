@@ -23,7 +23,7 @@ import {
   type DiagramReadResult,
   type DiagramState,
   type MermaidConverter,
-} from '@genoffice/drawio-model'
+} from '@seuoffice/drawio-model'
 import type { DiagramApplyStep } from '../../shared/bridge-protocol'
 import type { DrawioFrame } from '../drawio/frame-client'
 import { convertMermaidInEditor, plannedMermaidCells, type MermaidConversion } from './mermaid'

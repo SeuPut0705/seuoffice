@@ -1,6 +1,6 @@
 import type { Editor } from '@tiptap/core'
 import { NodeSelection } from '@tiptap/pm/state'
-import type { ImageWrap, TextboxDisplay } from '@genoffice/docx-engine'
+import type { ImageWrap, TextboxDisplay } from '@seuoffice/docx-engine'
 import { selectedBoxIndex } from './selected-box'
 
 const EMU_PER_PX = 9525

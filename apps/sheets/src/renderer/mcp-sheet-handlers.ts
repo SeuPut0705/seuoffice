@@ -3,13 +3,13 @@
  * the transport). Kept out of App.tsx so the answers an external agent gets can
  * be exercised without mounting the app; App supplies the live refs.
  */
-import type { WorkbookOperation } from '@genoffice/xlsx-gateway/domain/workbook-dsl'
+import type { WorkbookOperation } from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
 import type {
   ApplyOutcome,
   CellScalar,
   CellState,
   ChangePlan,
-} from '@genoffice/xlsx-gateway/domain/workbook.types'
+} from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { redactionIndexOf, type RedactionLoad } from './ai/redact-load'
 import { redactGuardForOps } from './ai/redact-guard'
 import type { SheetRef } from './mcp-sheet-refs'

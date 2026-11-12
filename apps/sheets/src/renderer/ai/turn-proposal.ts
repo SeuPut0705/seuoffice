@@ -10,12 +10,12 @@
  * recorded ChangePlans (cell diff, formats, renames, structural ops), not a
  * second copy of the document.
  */
-import { parseRange, rangeCellCount } from '@genoffice/xlsx-gateway/domain/cell-address'
+import { parseRange, rangeCellCount } from '@seuoffice/xlsx-gateway/domain/cell-address'
 import {
   copyTargetBounds,
   type CopyRangeOperation,
-} from '@genoffice/xlsx-gateway/domain/workbook-dsl'
-import type { ApplyOutcome, ChangePlan } from '@genoffice/xlsx-gateway/domain/workbook.types'
+} from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
+import type { ApplyOutcome, ChangePlan } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 
 /** An apply result that also says how many undo steps the apply left behind. */
 export interface AppliedOutcome extends ApplyOutcome {

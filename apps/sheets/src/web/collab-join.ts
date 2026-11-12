@@ -3,7 +3,7 @@
  * declares, and the adapter it builds once the renderer shows the workbook.
  */
 import { joinPageCollab, webLanguage, type PageCollab } from '@seuoffice/web-platform'
-import type { SheetRedactionState } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
+import type { SheetRedactionState } from '@seuoffice/xlsx-gateway/gateway/xlsx-redaction'
 import { handleSave } from '../renderer/save-actions'
 import { setEditRefusalRule } from '../renderer/sheet-protection'
 import { showToast } from '../renderer/toast-bus'

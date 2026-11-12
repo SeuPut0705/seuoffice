@@ -12,7 +12,7 @@ import {
   openChapter,
   type ChapterBlock,
   type OpenChapter,
-} from '@genoffice/epub-engine'
+} from '@seuoffice/epub-engine'
 import { buildChapterHtml } from '../src/renderer/reader/chapter-html'
 import {
   domNotation,

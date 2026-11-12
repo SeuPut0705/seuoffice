@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-vi.mock('@genoffice/ai-provider', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-provider')>()),
+vi.mock('@seuoffice/ai-provider', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-provider')>()),
   analyzeMediaWithProvider: vi.fn(),
   streamForProvider: vi.fn(),
 }))
 
-import { AiRunError, analyzeMediaWithProvider, streamForProvider } from '@genoffice/ai-provider'
+import { AiRunError, analyzeMediaWithProvider, streamForProvider } from '@seuoffice/ai-provider'
 import { analyzeMediaTool } from '../src/media-tools'
 import type { AiToolCallContext } from '../src/tool-routing'
 import { dataUrl, keyMedia, status, writeSettings } from './routing-helpers'

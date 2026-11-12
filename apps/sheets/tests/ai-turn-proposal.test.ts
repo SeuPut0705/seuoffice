@@ -4,9 +4,9 @@ import {
   type AgentStreamCallbacks,
   type AgentTransport,
   type ToolExecution,
-} from '@genoffice/agent-core'
-import { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import type { ChangePlan, WorkbookSnapshot } from '@genoffice/xlsx-gateway/domain/workbook.types'
+} from '@seuoffice/agent-core'
+import { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import type { ChangePlan, WorkbookSnapshot } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { describe, expect, it } from 'vitest'
 
 import { createWorkbookSkill } from '../src/renderer/ai/workbook-skill'

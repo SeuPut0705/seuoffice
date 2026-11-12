@@ -8,7 +8,7 @@
  * which only counts them (headlessSubscriptionUsage reports the count).
  */
 
-import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider'
+import { normalizeAiSettings, type AiSettings } from '@seuoffice/ai-provider'
 import { keylessSearchBackend, selectedSearchKey } from './search-tools'
 import {
   SCREEN_TOOL_CONTEXT,

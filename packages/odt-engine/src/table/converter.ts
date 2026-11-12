@@ -2,7 +2,7 @@
  * The table owner: the block converter for body-level tables and paragraphs
  * holding framed tables, and the free writer for tables the editor created.
  */
-import type { Block } from '@genoffice/docx-engine'
+import type { Block } from '@seuoffice/docx-engine'
 import type { OdtNode } from '../core/body'
 import type {
   BlockConverter,

@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
-import { MCP_TOOLS_CHANNELS } from '@genoffice/electron-utils/mcp-tools-channels'
+import { MCP_TOOLS_CHANNELS } from '@seuoffice/electron-utils/mcp-tools-channels'
 import type { McpHub } from '../../src/main/mcp-client/hub'
 import {
   MCP_SETTINGS_CHANNEL_NAMES,

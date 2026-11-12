@@ -1381,18 +1381,23 @@ fn pivot_row_kinds(document: &Document) -> String {
         .collect()
 }
 
+/// The pivot tables whose output is on this sheet, and how many of the
+/// sheet's pivot table relationships had to be left out because the part is
+/// missing or does not say where its output is.
 pub fn read_pivot_tables(
     archive: &mut ZipArchive<File>,
     worksheet_path: &str,
-) -> Result<Vec<PivotPartInfo>, SidecarError> {
+) -> Result<(Vec<PivotPartInfo>, usize), SidecarError> {
     let relationships = read_relationships(archive, worksheet_path)?;
     let mut infos = Vec::new();
+    let mut unlocated = 0;
     for relationship in relationships.values() {
         if !relationship.relationship_type.ends_with("/pivotTable") {
             continue;
         }
         let pivot_path = resolve_part_target(worksheet_path, &relationship.target)?;
         let Some(xml) = read_optional_xml(archive, &pivot_path)? else {
+            unlocated += 1;
             continue;
         };
         let document = parse_document(&xml, &pivot_path)?;
@@ -1400,9 +1405,11 @@ pub fn read_pivot_tables(
             .descendants()
             .find(|node| node.has_tag_name("location"))
         else {
+            unlocated += 1;
             continue;
         };
         let Some(output_ref) = location.attribute("ref") else {
+            unlocated += 1;
             continue;
         };
         let first_data_row = location
@@ -1449,7 +1456,7 @@ pub fn read_pivot_tables(
             row_kinds,
         });
     }
-    Ok(infos)
+    Ok((infos, unlocated))
 }
 
 /// One comment as the reader found it, before it becomes a `CommentInfo`.

@@ -50,7 +50,7 @@ export interface MarkdownConversion {
   markdown: string
   /** distinct pictures, in first-use order */
   assets: MarkdownAsset[]
-  /** entries to register in `assets/.genoffice-assets.json` (see mergeAssetManifest) */
+  /** entries to register in `assets/.seuoffice-assets.json` (see mergeAssetManifest) */
   manifestEntries: OwnedAssetRecord[]
   warnings: MarkdownWarning[]
 }

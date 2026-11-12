@@ -20,13 +20,13 @@ import {
   type AiProviderId,
   type AiSettings,
   type AiSubscriptionStatuses,
-} from '@genoffice/ai-provider'
-import type { AgentMessage } from '@genoffice/agent-core'
+} from '@seuoffice/ai-provider'
+import type { AgentMessage } from '@seuoffice/agent-core'
 import {
   headlessSubscriptionBlocked,
   runHeadlessSubscriptionCall,
   type AiToolCallContext,
-} from '@genoffice/ai-search'
+} from '@seuoffice/ai-search'
 import { aiReadVisionCheck } from '../../pdf-structure/src'
 
 export type PdfAiJob = 'ai-read' | 'translate' | 'epub-translate'
@@ -66,7 +66,7 @@ const FEATURE: Record<PdfAiJob, string> = {
 
 /**
  * The statuses the choice may look at: on a blocked automatic call a ready
- * subscription login does not count (as in @genoffice/ai-search tool-routing),
+ * subscription login does not count (as in @seuoffice/ai-search tool-routing),
  * a metered login stays, because using it is the user's own selection.
  */
 function visibleStatuses(settings: AiSettings, context: AiToolCallContext): AiSubscriptionStatuses {

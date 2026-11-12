@@ -17,8 +17,8 @@ import type {
   SubscriptionMeteredResult,
   SubscriptionOffResult,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
-import { checkingSubscriptionStatuses } from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
+import { checkingSubscriptionStatuses } from '@seuoffice/ai-provider/browser'
 import { AI_SUBSCRIPTION_INSTALL_HELP_URLS } from './ai-subscription'
 
 /** The part of a preload's subscription bridge this hook calls */

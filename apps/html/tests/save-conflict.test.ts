@@ -80,7 +80,7 @@ vi.mock('electron', () => ({
   },
 }))
 
-import { setOpenPathProbe } from '@genoffice/electron-utils'
+import { setOpenPathProbe } from '@seuoffice/electron-utils'
 import { createHtmlView } from '../src/main/html-main'
 import { HTML_CHANNELS } from '../src/shared/ipc'
 import type { SaveHtmlResult } from '../src/shared/ipc'
@@ -125,9 +125,9 @@ describe('a save with no copy pair is unchanged', () => {
     const contents = await openedView(path)
     writeFileSync(path, '<p>Changed elsewhere</p>')
 
-    expect(await save(contents, { text: '<p>Mine</p>', imageSources: [], mode: 'save' })).toMatchObject(
-      { ok: true, path },
-    )
+    expect(
+      await save(contents, { text: '<p>Mine</p>', imageSources: [], mode: 'save' }),
+    ).toMatchObject({ ok: true, path })
     expect(readFileSync(path, 'utf8')).toBe('<p>Mine</p>')
     expect(showMessageBox).not.toHaveBeenCalled()
   })
@@ -170,9 +170,9 @@ describe('a copy pair holds this document (the path is open in another pane)', (
     setOpenPathProbe((each) => each === path)
     showMessageBox.mockResolvedValue({ response: 0, checkboxChecked: false })
 
-    expect(await save(contents, { text: '<p>Mine</p>', imageSources: [], mode: 'save' })).toMatchObject(
-      { ok: true, path },
-    )
+    expect(
+      await save(contents, { text: '<p>Mine</p>', imageSources: [], mode: 'save' }),
+    ).toMatchObject({ ok: true, path })
     expect(readFileSync(path, 'utf8')).toBe('<p>Mine</p>')
 
     // the record was refreshed on save: the disk still matches it, so no second question
@@ -188,9 +188,9 @@ describe('a copy pair holds this document (the path is open in another pane)', (
     const contents = await openedView(path)
     setOpenPathProbe((each) => each === path)
 
-    expect(await save(contents, { text: '<p>Mine</p>', imageSources: [], mode: 'save' })).toMatchObject(
-      { ok: true, path },
-    )
+    expect(
+      await save(contents, { text: '<p>Mine</p>', imageSources: [], mode: 'save' }),
+    ).toMatchObject({ ok: true, path })
     expect(showMessageBox).not.toHaveBeenCalled()
   })
 })

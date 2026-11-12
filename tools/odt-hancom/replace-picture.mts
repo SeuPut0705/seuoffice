@@ -7,8 +7,8 @@
 //
 // Prints one JSON line: { status: "ok", block, name } or { status: "skip", reason }.
 import { readFileSync, writeFileSync } from 'node:fs'
-import { type SaveBlock, parseDocx, saveDocx } from '@genoffice/docx-engine'
-import { odtToDocx, saveOdt } from '@genoffice/odt-engine'
+import { type SaveBlock, parseDocx, saveDocx } from '@seuoffice/docx-engine'
+import { odtToDocx, saveOdt } from '@seuoffice/odt-engine'
 
 const [input, output, picture] = process.argv.slice(2)
 if (!input || !output || !picture) {

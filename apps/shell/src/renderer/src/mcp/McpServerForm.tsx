@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { serverNameProblem, suggestServerNameFrom } from '@genoffice/agent-core/user-mcp/names'
+import { serverNameProblem, suggestServerNameFrom } from '@seuoffice/agent-core/user-mcp/names'
 import {
   plainHttpReach,
   type McpPastedServerView,

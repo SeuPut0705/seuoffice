@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { defaultAiSettings } from '@genoffice/ai-provider'
+import { defaultAiSettings } from '@seuoffice/ai-provider'
 import type {
   AiSettings,
   AiSubscriptionProviderId,
   AiSubscriptionStatus,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import {
   aiConnectHint,
   firstConnectionNoticeDue,

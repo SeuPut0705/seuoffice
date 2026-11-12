@@ -1,4 +1,4 @@
-import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@genoffice/agent-core'
+import type { AgentSkill, AgentToolCall, AgentToolDef, ToolExecution } from '@seuoffice/agent-core'
 import { t } from '../i18n/locale'
 import type { ElementEntry, ParseMap } from '../document/parse-map'
 import { compileOps, type HtmlOp, type OpError } from '../document/ops'
@@ -9,6 +9,7 @@ import type { ImageSearchResult } from '../../shared/ipc'
 import { buildProjection, type RedactionProjection } from './redact'
 import { redactGuardForOps } from './redact-guard'
 import {
+  BRIEF_META_NAME,
   briefPinEdit,
   briefSummary,
   injectBrief,
@@ -922,7 +923,7 @@ export function createHtmlSkillCore(access: HtmlDocAccess): {
       }
       const brief = parseBrief(text)
       const briefBlock = brief
-        ? `\n\n## Brief (pinned in <meta name="genoffice:brief">)\n${briefSummary(brief)}\nNew content follows this core hook and style; a restyle starts by updating the --brief-* variables and this meta via plan_page.`
+        ? `\n\n## Brief (pinned in <meta name="${BRIEF_META_NAME}">)\n${briefSummary(brief)}\nNew content follows this core hook and style; a restyle starts by updating the --brief-* variables and this meta via plan_page.`
         : ''
       const budget =
         CONTEXT_MAX_CHARS - head.join('\n').length - selection.length - briefBlock.length - 40
@@ -1219,7 +1220,7 @@ export function createHtmlSkillCore(access: HtmlDocAccess): {
             return {
               output: `Brief confirmed (${mode}).${edited}\n${briefSummary(decision.brief)}\n${
                 pinned
-                  ? 'The brief is now pinned in <head> (meta name="genoffice:brief"). '
+                  ? `The brief is now pinned in <head> (meta name="${BRIEF_META_NAME}"). `
                   : 'The pinned brief was already current. '
               }${
                 mode === 'restyle'

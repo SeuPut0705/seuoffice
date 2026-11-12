@@ -57,18 +57,18 @@ vi.mock('electron', () => ({
 }))
 // this workspace's test aliases do not reach the rest of these packages, and
 // the handlers under test use none of them
-vi.mock('@genoffice/ai-search', async () => ({
+vi.mock('@seuoffice/ai-search', async () => ({
   ...(await import('../../../packages/ai-search/src/media-call-abort')),
   documentMediaRoots: () => [],
 }))
-vi.mock('@genoffice/ai-provider/subscription', () => ({
+vi.mock('@seuoffice/ai-provider/subscription', () => ({
   ensureSubscriptionIpc: () => ({}),
   sharedSubscriptionStatuses: () => ({}),
 }))
-vi.mock('@genoffice/ai-provider/codex-app-server', () => ({
+vi.mock('@seuoffice/ai-provider/codex-app-server', () => ({
   shutdownCodexAppServers: () => {},
 }))
-vi.mock('@genoffice/ai-provider/custom-models', () => ({}))
+vi.mock('@seuoffice/ai-provider/custom-models', () => ({}))
 vi.mock('../src/main/lazy-media', () => ({
   registerLazyMediaProtocol: () => {},
   materializeLazyDocx: async (bytes: Buffer) => ({ bytes, hashes: new Set<string>() }),
@@ -81,8 +81,8 @@ vi.mock('../src/main/lazy-media', () => ({
 }))
 vi.mock('../src/main/lazy-media-inline', () => ({}))
 
-import { getUiLang, setUiLang } from '@genoffice/i18n'
-import type { Lang } from '@genoffice/i18n'
+import { getUiLang, setUiLang } from '@seuoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import { registerDocsIpc } from '../src/main/docs-main'
 import type { DecryptOpenResult, OpenDocxResult } from '../src/shared/ipc'
 import { fatCycleFile } from '../../../packages/compound-file/tests/helpers/raw-compound'

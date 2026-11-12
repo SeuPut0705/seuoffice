@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { AgentToolCall } from '@genoffice/agent-core'
+import type { AgentToolCall } from '@seuoffice/agent-core'
 import type { AttachmentMeta, AttachmentReadResult } from '../src/shared/ipc'
 import { createFilesSkill } from '../src/renderer/ai/files-skill'
 

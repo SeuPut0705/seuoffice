@@ -1,5 +1,5 @@
-import { hwpToText } from '@genoffice/file-parse/hwp'
-import { convertHwpToDocx, HwpConvertError } from '@genoffice/hwp2docx'
+import { hwpToText } from '@seuoffice/file-parse/hwp'
+import { convertHwpToDocx, HwpConvertError } from '@seuoffice/hwp2docx'
 import { rhwpWasmPath } from '../resources'
 import { CliError, EXIT } from '../result'
 
@@ -14,7 +14,7 @@ export const HWP_PREVIEW_CHARS = 20_000
 export async function hwpText(bytes: Uint8Array): Promise<string> {
   // the reader looks in node_modules first; a packaged CLI has none, so it is told
   // where the engine sits beside this bundle (src/resources.ts)
-  process.env.GENOFFICE_RHWP_WASM ??= rhwpWasmPath()
+  process.env.SEUOFFICE_RHWP_WASM ??= rhwpWasmPath()
   return hwpToText(bytes)
 }
 
@@ -29,7 +29,7 @@ export async function convertHwp(input: Uint8Array): Promise<{
   bytes: Uint8Array
   detail: Record<string, unknown>
 }> {
-  process.env.GENOFFICE_RHWP_WASM ??= rhwpWasmPath()
+  process.env.SEUOFFICE_RHWP_WASM ??= rhwpWasmPath()
   try {
     const result = await convertHwpToDocx(input)
     return {

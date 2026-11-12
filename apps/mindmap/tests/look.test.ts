@@ -14,7 +14,7 @@ import {
   themeLook,
   writeSheetTheme,
   type ThemeId,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 import {
   type BranchBoxes,
   mainBranchPath,

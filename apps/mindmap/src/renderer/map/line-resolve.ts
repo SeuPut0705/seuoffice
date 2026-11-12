@@ -25,7 +25,7 @@
  * from here too, inherited ones included (the format painter).
  */
 import type { NodeObj } from 'mind-elixir'
-import type { ThemeBranchShape, ThemeLook, ViewBranchLine } from '@genoffice/xmind-engine'
+import type { ThemeBranchShape, ThemeLook, ViewBranchLine } from '@seuoffice/xmind-engine'
 import {
   type BranchLineShape,
   isPickableBranchShape,

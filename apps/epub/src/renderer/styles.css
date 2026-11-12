@@ -1,6 +1,6 @@
 /*
  * The editor's chrome: ribbon, table of contents, search, chapter frame,
- * status line. Every colour here is a token from @genoffice/ui (tokens.css)
+ * status line. Every colour here is a token from @seuoffice/ui (tokens.css)
  * and follows the app's light or dark setting. The chapter inside the frame is
  * book content: it keeps the book's own colours, drawn on the paper below or,
  * in the dark view, on the night colours. Those are the reading view's own
@@ -85,7 +85,7 @@ body,
   -webkit-app-region: drag;
 }
 
-html.genoffice-popover-open .ribbon-tabs {
+html.seuoffice-popover-open .ribbon-tabs {
   -webkit-app-region: no-drag;
 }
 

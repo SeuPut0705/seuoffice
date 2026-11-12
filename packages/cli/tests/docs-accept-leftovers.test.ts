@@ -1,5 +1,5 @@
 /**
- * genoffice#2337 (move-range half): genoffice docs apply accept_changes / reject_changes
+ * genoffice#2337 (move-range half): seuoffice docs apply accept_changes / reject_changes
  * {all:true} used to leave w:moveFromRangeEnd / w:moveToRangeEnd behind in the
  * paragraphs Word wrote them into (the following, untouched paragraphs). The
  * fixture is the issue's synthetic document (JSZip + XML strings: python-docx
@@ -82,7 +82,7 @@ function writeOps(dir: string, ops: unknown[]): string {
   return opsPath
 }
 
-describe('genoffice docs apply accept/reject move-range leftovers', () => {
+describe('seuoffice docs apply accept/reject move-range leftovers', () => {
   it('accept all removes the cross-paragraph move range ends', async () => {
     const dir = tempDir()
     const file = await buildFixture(join(dir, 'accept.docx'), ISSUE_BODY)

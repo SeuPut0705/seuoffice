@@ -290,7 +290,7 @@ import {
   spliceCharColors,
 } from './color-runs'
 import type { CharStyle } from './color-runs'
-import { platformShortcuts } from '@genoffice/i18n'
+import { platformShortcuts } from '@seuoffice/i18n'
 import {
   AiMark,
   Dropdown,
@@ -308,7 +308,7 @@ import {
   useSplitPaneRole,
   templateDocumentOf,
   type TemplateDocument,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import { useI18n } from './i18n/locale'
 import { useAutosave } from './useAutosave'
 import { useRecoveryCopies } from './recovery/useRecoveryCopies'
@@ -2609,9 +2609,9 @@ export default function App() {
     return () => document.removeEventListener('fullscreenchange', onFullScreenChange)
   }, [presenting, fitPageForPresentation, exitPresent])
 
-  // genoffice CLI (`open --page`, `selection`): the shell evaluates this hook
+  // seuoffice CLI (`open --page`, `selection`): the shell evaluates this hook
   useEffect(() => {
-    ;(window as unknown as Record<string, unknown>).__genofficeControl = (req: ControlRequest) =>
+    ;(window as unknown as Record<string, unknown>).__seuofficeControl = (req: ControlRequest) =>
       handlePdfControl(req, {
         loaded: doc !== null,
         pageCount,

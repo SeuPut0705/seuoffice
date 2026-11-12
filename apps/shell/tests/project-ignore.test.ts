@@ -1,8 +1,9 @@
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { basename, join } from 'node:path'
-import { tempPathBeside } from '@genoffice/electron-utils/atomic-write'
+import { tempPathBeside } from '@seuoffice/electron-utils/atomic-write'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import {
   addIgnoreLine,
   compileIgnore,
@@ -11,7 +12,9 @@ import {
 } from '../src/main/projects/ignore'
 import { isAiVisiblePath } from '../src/main/projects/visibility'
 
-/** `.ieumoffice/ignore` syntax (spec 3) and "is this file visible to AI" */
+/** `ignore` syntax (spec 3) and "is this file visible to AI" */
+
+const { dataDir } = PROJECT_FOLDER_NAMES
 
 describe('compileIgnore', () => {
   const sensitive = (text: string) => compileIgnore(text, { caseInsensitive: false })
@@ -136,14 +139,14 @@ describe('isAiVisiblePath', () => {
     expect(isAiVisiblePath(root, 'a/b.docx', none)).toBe(true)
   })
 
-  it('hides dot entries, Office lock files, OS junk and .ieumoffice', () => {
+  it('hides dot entries, Office lock files, OS junk and .seuoffice', () => {
     expect(isAiVisiblePath(root, '.hidden.docx', none)).toBe(false)
     expect(isAiVisiblePath(root, '.git/config', none)).toBe(false)
     expect(isAiVisiblePath(root, '~$report.docx', none)).toBe(false)
     expect(isAiVisiblePath(root, 'Thumbs.db', none)).toBe(false)
     expect(isAiVisiblePath(root, 'node_modules/x.md', none)).toBe(false)
-    expect(isAiVisiblePath(root, '.ieumoffice/memory.md', none)).toBe(false)
-    expect(isAiVisiblePath(root, '.ieumoffice', none, true)).toBe(false)
+    expect(isAiVisiblePath(root, `${dataDir}/memory.md`, none)).toBe(false)
+    expect(isAiVisiblePath(root, dataDir, none, true)).toBe(false)
   })
 
   // A save stages `<name>.<12 hex>.tmp` beside the document (no leading dot
@@ -165,7 +168,7 @@ describe('isAiVisiblePath', () => {
 
   it('hides the Markdown app-owned assets folder', () => {
     mkdirSync(join(root, 'notes', 'assets'), { recursive: true })
-    writeFileSync(join(root, 'notes', 'assets', '.genoffice-assets.json'), '{}')
+    writeFileSync(join(root, 'notes', 'assets', '.seuoffice-assets.json'), '{}')
     expect(isAiVisiblePath(root, 'notes/assets/pic.png', none)).toBe(false)
   })
 

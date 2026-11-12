@@ -11,7 +11,7 @@
  * `stream: true`) plus images as `input_image` parts. A request OpenAI turns
  * down for an unsupported part fails with that part named.
  */
-import type { AgentMessage, AgentToolDef } from '@genoffice/agent-core'
+import type { AgentMessage, AgentToolDef } from '@seuoffice/agent-core'
 import {
   buildClaudeCodeInput,
   ClaudeCodeStructureError,

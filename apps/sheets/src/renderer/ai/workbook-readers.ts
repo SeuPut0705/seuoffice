@@ -10,13 +10,15 @@ import {
   parseAddress,
   parseRange,
   type RangeBounds,
-} from '@genoffice/xlsx-gateway/domain/cell-address'
+} from '@seuoffice/xlsx-gateway/domain/cell-address'
 import { MAX_PATCH_ENTRY_BYTES } from '../../shared/desktop-api'
-import type { InMemoryWorkbookAdapter } from '@genoffice/xlsx-gateway/domain/in-memory-workbook'
-import type { CellFormatState, CellScalar } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { InMemoryWorkbookAdapter } from '@seuoffice/xlsx-gateway/domain/in-memory-workbook'
+import type { CellFormatState, CellScalar } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import { planFileTableRegistrations } from '../file-tables'
+import { pivotSourceSheetId } from '../pivot-source'
 import { toSelectionFormat } from '../selection-format'
 import { lazyCellReader } from '../univer-sync'
+import { fileRangeToScreenRange, fileToScreen } from '../view-transform'
 import { lazySheetScreenExtent, type LazyWorkbookState, type UniverRuntime } from '../univer-state'
 import type { ActiveSheetInfo, FrozenSelection } from './tools'
 import { holdsWithheld, NO_REDACTIONS, placeholderSource, type RedactionIndex } from './redact'
@@ -102,15 +104,35 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
     const withheld = redactions.labelAt(headerSheetId, row, column)
     return withheld === null ? name : placeholderSource(withheld)
   }
+  // What the file knows (a table's range, a pivot's source) is in the file's
+  // coordinates; the marks are asked where the cells are on screen now, after
+  // the rows and columns inserted or removed this session.
+  const opsOf = (id: string) => state?.editJournal.structuralOps.get(id) ?? []
+  const onScreen = (id: string, range: RangeBounds): RangeBounds | null =>
+    opsOf(id).length === 0 ? range : fileRangeToScreenRange(opsOf(id), range)
+  const nameFromFileCell = (
+    name: string | undefined,
+    headerSheetId: string,
+    fileRow: number,
+    fileColumn: number,
+  ): string | undefined => {
+    if (redactions.isEmpty) return name
+    const row = fileToScreen(opsOf(headerSheetId), 'row', fileRow)
+    const column = fileToScreen(opsOf(headerSheetId), 'column', fileColumn)
+    // The header cell was deleted this session. The name outlives it, and
+    // whether the cell was hidden can no longer be asked.
+    if (row === null || column === null) return placeholderSource(UNKNOWN_REDACTION_LABEL)
+    return nameFrom(name, headerSheetId, row, column)
+  }
   const tableLines: string[] = []
   if (state) {
     for (const table of planFileTableRegistrations(state.file.sheets)) {
       if (table.sheetId !== sheetId) continue
       const columns = (table.columns ?? []).map((name, index) =>
-        nameFrom(name, sheetId, table.range.startRow, table.range.startColumn + index),
+        nameFromFileCell(name, sheetId, table.range.startRow, table.range.startColumn + index),
       )
       tableLines.push(
-        `- ${table.tableName}: ${a1(table.range)} columns[${columns.join(', ')}] (from file; structure read-only)`,
+        `- ${table.tableName}: ${a1(onScreen(sheetId, table.range) ?? table.range)} columns[${columns.join(', ')}] (from file; structure read-only)`,
       )
     }
     for (const table of state.editJournal.tableAdds) {
@@ -139,13 +161,13 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       }
       // Field names are the header row of the source range. A source that is
       // not a range of this workbook cannot say which cell a name came from,
-      // so in a workbook that withholds anything every name is withheld.
-      const sourceSheetId = workbook
-        .getSheets()
-        .find(
-          (sheet) => sheet.getSheetName().toLowerCase() === definition.sourceSheet.toLowerCase(),
-        )
-        ?.getSheetId()
+      // so in a workbook that withholds anything every name is withheld. The
+      // definition names the sheet as the file did, whatever it is called now.
+      const fileSourceId = state ? pivotSourceSheetId(state, definition.sourceSheet) : undefined
+      const sourceSheetId =
+        fileSourceId !== undefined && workbook.getSheetBySheetId(fileSourceId)
+          ? fileSourceId
+          : undefined
       let source: RangeBounds | null = null
       try {
         if (sourceSheetId !== undefined)
@@ -153,14 +175,34 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       } catch {
         // a named or external source
       }
+      const unknownName = placeholderSource(UNKNOWN_REDACTION_LABEL)
+      /** whether a part of the source range (in file coordinates) holds a withheld cell now */
+      const sourceHoldsWithheld = (sheet: string, part: RangeBounds): boolean => {
+        const now = onScreen(sheet, part)
+        return now === null || holdsWithheld(redactions, sheet, now)
+      }
       const fieldName = (field: number, name: string | undefined): string | undefined => {
         if (redactions.isEmpty) return name
-        if (source === null || sourceSheetId === undefined) {
-          return placeholderSource(UNKNOWN_REDACTION_LABEL)
+        if (source === null || sourceSheetId === undefined) return unknownName
+        const cacheField = definition.fields[field]
+        if (field > source.endColumn - source.startColumn) {
+          // Past the source's columns. A calculated field is named by the
+          // person. Anything else is a group Excel added (Years, Quarters,
+          // "Phone2"): it is named after a base field and its members are
+          // built from that column, and the definition does not say which
+          // one, so any withheld cell in the source withholds it.
+          if (cacheField?.formula !== undefined) return name
+          return sourceHoldsWithheld(sourceSheetId, source) ? unknownName : name
         }
-        // past the source's columns: a calculated field, named by the person
-        if (field > source.endColumn - source.startColumn) return name
-        return nameFrom(name, sourceSheetId, source.startRow, source.startColumn + field)
+        const column = source.startColumn + field
+        // A field grouped in place: its members are made from its column.
+        if (
+          cacheField?.grouping !== undefined &&
+          sourceHoldsWithheld(sourceSheetId, { ...source, startColumn: column, endColumn: column })
+        ) {
+          return unknownName
+        }
+        return nameFromFileCell(name, sourceSheetId, source.startRow, column)
       }
       const axis = (fields: readonly number[]): (string | undefined)[] =>
         fields
@@ -172,12 +214,22 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
       const values = definition.dataFields.map((dataField) =>
         fieldName(dataField.field, dataField.name),
       )
+      // where the source is now: the sheet under its current name, the range on screen
+      const sourceNow =
+        sourceSheetId === undefined || source === null ? null : onScreen(sourceSheetId, source)
+      const sourceLabel =
+        sourceNow === null
+          ? `${definition.sourceSheet}!${definition.sourceRef}`
+          : `${workbook.getSheetBySheetId(sourceSheetId!)?.getSheetName() ?? definition.sourceSheet}!${a1(sourceNow)}`
       lines.push(
         `- ${pivot.outputRef}: rows[${rows.join(',')}] cols[${cols.join(',')}] values[${values.join(',')}]` +
-          ` source=${definition.sourceSheet}!${definition.sourceRef}` +
-          (definition.unsupported.length > 0
-            ? ` (recompute unsupported: ${definition.unsupported.join('; ')})`
-            : ' (recomputable)'),
+          ` source=${sourceLabel}` +
+          // The reasons quote field names: given whole only when nothing is withheld.
+          (definition.unsupported.length === 0
+            ? ' (recomputable)'
+            : redactions.isEmpty
+              ? ` (recompute unsupported: ${definition.unsupported.join('; ')})`
+              : ' (recompute unsupported)'),
       )
     }
   } else if (fileMeta && fileMeta.pivotRanges.length > 0) {
@@ -344,10 +396,18 @@ export function readSheetFeatures(ctx: WorkbookReadContext, sheetIdInput?: strin
               : visual.kind === 'slicer'
                 ? 'slicer'
                 : `shape ${visual.shapeType ?? ''}`
+        // A shape's text is typed or linked to a cell, and a slicer is
+        // captioned with a field name, which is a header cell. The session
+        // holds the text and not where it came from, so in a workbook that
+        // withholds anything only text typed this session is given.
+        const text =
+          redactions.isEmpty || visual.id.startsWith('added-shape-')
+            ? visual.text
+            : placeholderSource(UNKNOWN_REDACTION_LABEL)
         lines.push(
           `- ${label} @ ` +
             `${columnLabel(visual.anchor.fromColumn)}${visual.anchor.fromRow + 1}` +
-            `${visual.text ? ` text "${visual.text}"` : ''} (${origin})`,
+            `${visual.text ? ` text "${text}"` : ''} (${origin})`,
         )
       }
     }

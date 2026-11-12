@@ -1,5 +1,5 @@
 import JSZip from 'jszip'
-import { assertDeclaredSizesWithinLimits, assertZipInflatesWithinLimits } from '@genoffice/zip-gate'
+import { assertDeclaredSizesWithinLimits, assertZipInflatesWithinLimits } from '@seuoffice/zip-gate'
 import {
   dedupeStyleRefs,
   hasDuplicateStyleRefs,
@@ -9,15 +9,15 @@ import {
 } from './ooxml-normalize'
 
 // Re-exported for the engine's public API (index.ts) and the CLI's pre-open
-// check: the implementations live in @genoffice/zip-gate so the pptx engine
+// check: the implementations live in @seuoffice/zip-gate so the pptx engine
 // and the attachment parsers share one metered-inflation gate (see #759).
 export {
   assertDeclaredSizesWithinLimits,
   assertZipInflatesWithinLimits,
   type DeclaredPart,
   type ZipLimits,
-} from '@genoffice/zip-gate'
-export { DEFAULT_ZIP_LIMITS as DOCX_ZIP_LIMITS } from '@genoffice/zip-gate'
+} from '@seuoffice/zip-gate'
+export { DEFAULT_ZIP_LIMITS as DOCX_ZIP_LIMITS } from '@seuoffice/zip-gate'
 
 const EOCD_SIG = 0x06054b50
 const CENTRAL_SIG = 0x02014b50

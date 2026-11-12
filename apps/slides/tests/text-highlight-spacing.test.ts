@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { layoutText, makeViewport, HeuristicMetrics } from '@genoffice/pptx-render'
-import type { Paragraph } from '@genoffice/pptx-engine'
+import { layoutText, makeViewport, HeuristicMetrics } from '@seuoffice/pptx-render'
+import type { Paragraph } from '@seuoffice/pptx-engine'
 import { extractParagraphs, populateEditorDom } from '../src/renderer/TextEditOverlay'
 
 const vp = makeViewport({ cx: 12192000, cy: 6858000 }, 1280)

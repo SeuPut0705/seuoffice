@@ -8,9 +8,9 @@
  * saved file.
  */
 import { describe, expect, it } from 'vitest'
-import { createBlankPptx, openPptx, savePptx, type OpenedPptx } from '@genoffice/pptx-engine'
-import { runTxn } from '@genoffice/pptx-ops'
-import { buildRenderSlide, EMU_PER_PX_96, HeuristicMetrics } from '@genoffice/pptx-render'
+import { createBlankPptx, openPptx, savePptx, type OpenedPptx } from '@seuoffice/pptx-engine'
+import { runTxn } from '@seuoffice/pptx-ops'
+import { buildRenderSlide, EMU_PER_PX_96, HeuristicMetrics } from '@seuoffice/pptx-render'
 
 // Nine space-delimited words; the longest (6 syllables at 24pt = 192px) fits the box
 const SENTENCE = '올해 매출은 지난해보다 크게 늘었고 신규 고객도 꾸준히 증가했습니다'

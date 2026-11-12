@@ -1,6 +1,6 @@
 /**
  * The diagram's AI tools, made from the one definition of the ops
- * (`DIAGRAM_OPS` of `@genoffice/drawio-model`): `read_diagram` is the `read`
+ * (`DIAGRAM_OPS` of `@seuoffice/drawio-model`): `read_diagram` is the `read`
  * op, `apply_diagram_ops` carries a list of the ops that change the diagram.
  * The MCP tools and `guide diagram` are made from the same definitions, so a
  * new op or a changed description reaches every caller at once.
@@ -9,12 +9,12 @@
  * op is refused, nothing changes and every op's outcome comes back so the
  * model can fix the list and send it again (`applyLiveOps`).
  */
-import type { AgentToolDef } from '@genoffice/agent-core'
+import type { AgentToolDef } from '@seuoffice/agent-core'
 import {
   DIAGRAM_OPS,
   type DiagramOpDefinition,
   type OpPropertySchema,
-} from '@genoffice/drawio-model'
+} from '@seuoffice/drawio-model'
 import { formatApplyResult, type LiveApplyResult, type LivePageRead } from '../document/live-ops'
 
 export const DIAGRAM_TOOL_NAMES = {

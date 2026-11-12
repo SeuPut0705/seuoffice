@@ -48,7 +48,7 @@ import type {
   SdtShell,
   TableModel,
   TextboxDisplay,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 
 export type Leaf =
   'kept' | 'text' | 'token' | 'link' | 'picture' | 'cssString' | 'mathml' | 'inlineMathml' | 'marks'
@@ -486,6 +486,7 @@ export const NODE_ATTRS: { readonly [type: string]: Fields } = {
     // the opened table's signatures: the save compares the table against them
     originalStructure: 'kept',
     originalFormatting: 'kept',
+    originalWraps: 'kept',
     // the merged-away cells, each `{row, column, cell}`: read back at the save only
     continuationCells: CONTENT,
     blockRevision: REVISION,

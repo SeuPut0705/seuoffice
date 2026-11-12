@@ -1,12 +1,12 @@
 /**
  * The AI panel's side of the subscription connection. The state machine and
- * the cards' actions are shared by every editor (`@genoffice/ui`); this file
+ * the cards' actions are shared by every editor (`@seuoffice/ui`); this file
  * only names the bridge this window exposes.
  */
 import {
   useSubscriptionConnection as useSharedSubscriptionConnection,
   type SubscriptionConnection,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 
 export type { SubscriptionConnection }
 

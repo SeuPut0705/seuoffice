@@ -22,12 +22,12 @@ import {
   newCustomEndpointId,
   removeCustomEndpoint,
   resolveCustomEndpoints,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import type {
   AiCustomEndpoint,
   AiLocalModelProfile,
   AiSettings,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 export type LocalPreset = 'ollama' | 'lmstudio' | 'vllm' | 'other'
 

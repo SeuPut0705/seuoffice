@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react'
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type { SkillCardTemplateContext } from './SkillProposalCard'
 import { skillCardText } from './strings-skill-card'
 import { skillTemplateText } from './strings-skill-template'

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { parseCsv, resolveImportDelimiter } from '@genoffice/xlsx-gateway/gateway/csv-import'
+import { parseCsv, resolveImportDelimiter } from '@seuoffice/xlsx-gateway/gateway/csv-import'
 import { importCsvText, type DataToolsContext } from '../src/renderer/data-tools-actions'
 
 /// Data > From Text/CSV must split a file exactly the way opening it as a .csv

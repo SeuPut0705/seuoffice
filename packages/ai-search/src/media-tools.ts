@@ -22,15 +22,15 @@ import {
   type AiSettings,
   type LegacyAiSettings,
   type MediaBlob,
-} from '@genoffice/ai-provider'
-// deep imports: the package root re-exports Electron-bound modules, and this file also runs in the genoffice CLI
-import { readGeneratedImage, storeGeneratedImage } from '@genoffice/electron-utils/generated-images'
+} from '@seuoffice/ai-provider'
+// deep imports: the package root re-exports Electron-bound modules, and this file also runs in the seuoffice CLI
+import { readGeneratedImage, storeGeneratedImage } from '@seuoffice/electron-utils/generated-images'
 import {
   ResponseTooLargeError,
   fetchRemoteImage,
   readBodyCapped,
-} from '@genoffice/electron-utils/remote-image'
-import { fetchWithSsrfGuard } from '@genoffice/electron-utils/safe-remote-url'
+} from '@seuoffice/electron-utils/remote-image'
+import { fetchWithSsrfGuard } from '@seuoffice/electron-utils/safe-remote-url'
 import { analyzeImagesWithChatProvider } from './chat-analysis'
 import { codexImageGenerator, type CodexImageRequest } from './codex-image-generator'
 import { runHeadlessSubscriptionCall } from './headless-ledger'

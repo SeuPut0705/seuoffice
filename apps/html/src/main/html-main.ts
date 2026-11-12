@@ -48,14 +48,14 @@ import {
   printHtmlDocument,
   type PrintDialogOutcome,
   assertFileSaved,
-} from '@genoffice/electron-utils'
-import { fetchImageBytes } from '@genoffice/electron-utils/fetch-image-bytes'
-import { createI18n, getUiLang } from '@genoffice/i18n'
+} from '@seuoffice/electron-utils'
+import { fetchImageBytes } from '@seuoffice/electron-utils/fetch-image-bytes'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
 import {
   sharedSubscriptionStatuses,
   shutdownSubscriptionChildren,
-} from '@genoffice/ai-provider/subscription'
-import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
+} from '@seuoffice/ai-provider/subscription'
+import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@seuoffice/ai-search'
 import {
   parseFileToText,
   ATTACHABLE_EXTS,
@@ -65,7 +65,7 @@ import {
   ATTACHABLE_IMAGE_MAX_BYTES,
   diagramPictureExtOf,
   diagramPictureExtOfName,
-} from '@genoffice/file-parse'
+} from '@seuoffice/file-parse'
 import { convertHtmlToDocx } from '../../../../packages/html2docx/src'
 import { atomicWriteFile } from './atomic-write'
 import { ElectronBrowserDriver } from '../../../../packages/html2docx/src/drivers/electron'
@@ -283,7 +283,7 @@ function savePastedImage(data: unknown, ext: unknown): string | null {
         ? Buffer.from(data.buffer, data.byteOffset, data.byteLength)
         : null
   if (!bytes || bytes.byteLength === 0) return null
-  const dir = join(app.getPath('temp'), 'genoffice-pasted')
+  const dir = join(app.getPath('temp'), 'seuoffice-pasted')
   mkdirSync(dir, { recursive: true })
   prunePastedImages(dir)
   const stamp = new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')
@@ -318,7 +318,7 @@ interface RuntimePaths {
   preloadPath: string
   rendererUrl?: string
   rendererFile?: string
-  /** Shell router used to open exported PDFs in a new GenOffice tab. */
+  /** Shell router used to open exported PDFs in a new SeuOffice tab. */
   openGeneratedPath?: (path: string) => boolean
   /**
    * Project folders (spec 6): the folder an untitled document's save dialog
@@ -635,7 +635,7 @@ async function writeHtmlDocx(
   if (docxExportPrepareHook && !(await docxExportPrepareHook(target))) {
     return { ok: true, canceled: true }
   }
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-docx-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-docx-'))
   try {
     const docx = await renderHtmlDocx(html, docPath, workDir)
     await writeFile(target, docx)
@@ -659,7 +659,7 @@ async function writeHtmlOdt(
   const outcome = await exportOdt({
     pickPath,
     docx: async () => {
-      const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-docx-'))
+      const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-docx-'))
       try {
         return await renderHtmlDocx(html, docPath(), workDir)
       } finally {
@@ -685,7 +685,7 @@ async function writeHtmlPdf(
   docPath: string | undefined,
   target: string,
 ): Promise<ExportResult> {
-  const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-pdf-'))
+  const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-pdf-'))
   try {
     await writeFile(target, await renderPrintPdf(html, docPath, workDir))
     openExportedPdf(target)
@@ -734,7 +734,7 @@ function printHtml(html: string, docPath: string | undefined): Promise<PrintDial
     html: buildPreviewDocument(html, base),
     window: new BrowserWindow({ show: false, webPreferences: { sandbox: true } }),
     fileName: 'print.html',
-    dirPrefix: 'genoffice-html-print-',
+    dirPrefix: 'seuoffice-html-print-',
   })
 }
 
@@ -1461,7 +1461,7 @@ function registerHtmlIpc(): void {
           {
             mediaRoots: documentMediaRoots(
               htmlFilePath(e.sender.id),
-              join(app.getPath('temp'), 'genoffice-pasted'),
+              join(app.getPath('temp'), 'seuoffice-pasted'),
             ),
             // screen path: the statuses of the process-wide subscription service decide the route
             context: { path: 'screen', statuses: sharedSubscriptionStatuses() },
@@ -1595,7 +1595,7 @@ function registerHtmlIpc(): void {
     HTML_CHANNELS.printPreview,
     async (e, request: PrintHtmlRequest): Promise<Uint8Array | null> => {
       if (typeof request?.html !== 'string') return null
-      const workDir = await mkdtemp(join(tmpdir(), 'genoffice-html-preview-'))
+      const workDir = await mkdtemp(join(tmpdir(), 'seuoffice-html-preview-'))
       try {
         return await renderPrintPdf(request.html, savePathByWc.get(e.sender.id), workDir)
       } catch (err) {
@@ -1835,7 +1835,7 @@ export function createHtmlView(openPath?: string | null): WebContentsView {
   return view
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/html`, md path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/html`, md path passed via argv */
 export function startHtmlStandalone(): void {
   registerPrivilegedSchemes()
   installNavigationGuard(app)

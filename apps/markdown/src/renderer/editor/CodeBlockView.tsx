@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { NodeViewContent, NodeViewWrapper } from '@tiptap/react'
 import type { NodeViewProps } from '@tiptap/react'
-import { Dropdown } from '@genoffice/ui'
+import { Dropdown } from '@seuoffice/ui'
 import { t } from '../i18n/locale'
 import { DIAGRAM_LANGUAGES, diagramLanguage, renderDiagram } from './diagrams'
 import { isGanttSource } from './mermaid'

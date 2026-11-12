@@ -7,12 +7,12 @@
 import { act, createElement } from 'react'
 import { createRoot, type Root } from 'react-dom/client'
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamChunk } from '@genoffice/agent-core'
+import type { IpcStreamChunk } from '@seuoffice/agent-core'
 import {
   normalizeAiSettings,
   type AiSettings,
   type SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 import { AiPanel } from '../src/renderer/ai/AiPanel'
 import { LocaleProvider } from '../src/renderer/i18n/locale'
 import type { PdfAppDeps } from '../src/renderer/ai/tools'

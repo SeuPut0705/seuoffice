@@ -1,7 +1,7 @@
 import { existsSync } from 'node:fs'
 import { readFile } from 'node:fs/promises'
 import { basename, extname, isAbsolute } from 'node:path'
-import { hwpToText } from '@genoffice/file-parse'
+import { hwpToText } from '@seuoffice/file-parse'
 import { z } from 'zod'
 import type { McpToolDefinition } from '../mcp-server'
 

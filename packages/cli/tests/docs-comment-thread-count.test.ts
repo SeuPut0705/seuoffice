@@ -1,4 +1,4 @@
-import { buildBlankDocx, type CommentInfo } from '@genoffice/docx-engine'
+import { buildBlankDocx, type CommentInfo } from '@seuoffice/docx-engine'
 import { expect, it } from 'vitest'
 import { openDocument, closeDocument } from '../src/formats/docx'
 import { checkDocument } from '../src/formats/docx-check'

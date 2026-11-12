@@ -25,7 +25,7 @@ import {
   type HandoffEditor,
   type HandoffWebContents,
   type SkillHandoff,
-} from '@genoffice/electron-utils/generate-handoff'
+} from '@seuoffice/electron-utils/generate-handoff'
 import {
   USER_SKILLS_CHANNELS,
   type UserSkillPreviewEnded,
@@ -34,7 +34,7 @@ import {
   type UserSkillsFail,
   type UserSkillsFailReason,
   type UserSkillsResult,
-} from '@genoffice/electron-utils/user-skills-channels'
+} from '@seuoffice/electron-utils/user-skills-channels'
 
 /** A byte copy of a document, ready to open in its editor */
 export interface TemplateCopy {

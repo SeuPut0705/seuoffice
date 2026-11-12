@@ -5,8 +5,8 @@
  * apart from the opening code so the shell can queue without loading the
  * editor's layout machinery.
  */
-import type { RecoveryIdentity } from '@genoffice/electron-utils'
-import type { HandoffWebContents } from '@genoffice/electron-utils/generate-handoff'
+import type { RecoveryIdentity } from '@seuoffice/electron-utils'
+import type { HandoffWebContents } from '@seuoffice/electron-utils/generate-handoff'
 
 export interface SlidesSeedOptions {
   /**

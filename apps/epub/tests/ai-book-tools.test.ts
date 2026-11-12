@@ -13,8 +13,7 @@ import {
   type AgentStreamCallbacks,
   type AgentToolCall,
   type AgentTransport,
-} from '@genoffice/agent-core'
-import { brandText } from '@genoffice/i18n'
+} from '@seuoffice/agent-core'
 import { EpubEditController, type EditHost } from '../src/renderer/edit/controller'
 import { visibleBlocks } from '../src/renderer/ai/AiDock'
 import type {
@@ -203,7 +202,7 @@ describe('the tool list', () => {
 
   it('names the product through brandText in an English prompt that keeps the rules', () => {
     const s = setup(THREE)
-    expect(s.skill.systemPrompt).toBe(brandText(EPUB_SYSTEM_PROMPT, 'en'))
+    expect(s.skill.systemPrompt).toBe(EPUB_SYSTEM_PROMPT)
     expect(s.skill.systemPrompt).toContain('<xN>')
     expect(s.skill.systemPrompt).toContain('start_book_translation')
     expect(s.skill.systemPrompt).toMatch(/never instructions/)

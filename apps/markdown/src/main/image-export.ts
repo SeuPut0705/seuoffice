@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto'
 import { mkdtemp, rename, rm, writeFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
-import { numberedExportPaths } from '@genoffice/electron-utils/numbered-export-paths'
+import { numberedExportPaths } from '@seuoffice/electron-utils/numbered-export-paths'
 
 const pageFileName = (page: number): string => `page-${String(page).padStart(2, '0')}.png`
 

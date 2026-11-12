@@ -2,8 +2,8 @@ import { existsSync, statSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { BrowserWindow, Menu, Tray, ipcMain, shell } from 'electron'
 import type { IpcMainInvokeEvent, NativeImage } from 'electron'
-import { productName, type Lang } from '@genoffice/i18n'
-import { safeExternalUrl } from '@genoffice/electron-utils'
+import { productName, type Lang } from '@seuoffice/i18n'
+import { safeExternalUrl } from '@seuoffice/electron-utils'
 import {
   QUICK_LOOK_WINDOW_CHANNELS,
   isQuickLookSupportedPath,

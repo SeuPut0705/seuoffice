@@ -1,4 +1,4 @@
-import { PAGE_MARK, sectionSettingsFromXml } from '@genoffice/docx-engine'
+import { PAGE_MARK, sectionSettingsFromXml } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { openOdt } from '../src/core'
 import {

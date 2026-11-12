@@ -5,8 +5,8 @@
 //   node tools/odt-hancom/export.mjs [--corpus DIR] [--run DIR] [--only REGEX] [--no-pdf]
 //
 // The PDF export starts the app: with a checkout the CLI runs <repo>/node_modules/electron on
-// apps/shell (build it first: `npm run build -w @genoffice/docs` and `-w @genoffice/shell`), or
-// the binary GENOFFICE_APP_BIN names. Output under <run>/export: odt/, pdf/, export.json.
+// apps/shell (build it first: `npm run build -w @seuoffice/docs` and `-w @seuoffice/shell`), or
+// the binary SEUOFFICE_APP_BIN names. Output under <run>/export: odt/, pdf/, export.json.
 import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs'
 import { basename, join } from 'node:path'
 import { corpusDir, parseArgs, readZip, runCli, runDir } from './lib.mjs'

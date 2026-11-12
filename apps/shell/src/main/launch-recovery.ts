@@ -5,7 +5,7 @@ import {
   type RecoveryCopyInfo,
   type RecoveryIdentity,
   type RecoveryLaunchDecision,
-} from '@genoffice/electron-utils'
+} from '@seuoffice/electron-utils'
 import type { DocumentTabKind } from '../shared/tabs-api'
 import type { SplitOrientation } from '../shared/split-view-api'
 import type {

@@ -1,4 +1,4 @@
-import { createI18n, defineStrings, normalizeLang } from '@genoffice/i18n'
+import { createI18n, defineStrings, normalizeLang } from '@seuoffice/i18n'
 
 /**
  * Wording for the same-document save conflict prompt raised by

@@ -1,5 +1,4 @@
-import { streamText, type AgentMessage, type AgentTransport } from '@genoffice/agent-core'
-import { brandText } from '@genoffice/i18n'
+import { streamText, type AgentMessage, type AgentTransport } from '@seuoffice/agent-core'
 import type { PlanMode } from './tools'
 
 /**
@@ -27,7 +26,7 @@ export type BriefPlanResult =
   { ok: true; raw: Record<string, unknown> } | { ok: false; error: string }
 
 const SYSTEM = [
-  'You are the brief writer of GenOffice HTML, a design-first editor for single-file HTML pages. From the conversation transcript you receive, draft the brief the user will confirm before the system writes the page.',
+  'You are the brief writer of SeuOffice HTML, a design-first editor for single-file HTML pages. From the conversation transcript you receive, draft the brief the user will confirm before the system writes the page.',
   '',
   '## The brief',
   '- core_hook: one sentence with tension, ideally a number or contrast.',
@@ -93,7 +92,7 @@ export function buildBriefWriterRequest(
       ? `\n\n## Current page (head and start of body)\n${clip(spec.page, PAGE_CAP)}`
       : ''
   return {
-    system: brandText(SYSTEM, 'en') + langDirective,
+    system: SYSTEM + langDirective,
     user: `## Conversation\n${transcriptOf(messages)}\n\n## Task\n${MODE_TASK[spec.mode]}${notes}${page}\n\nWrite the brief JSON now.`,
   }
 }

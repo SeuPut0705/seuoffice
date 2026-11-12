@@ -7,7 +7,7 @@
  * original compressed data (same method, same CRC), so their uncompressed
  * bytes cannot change; new and changed entries are deflated.
  */
-import { streamBytes } from '@genoffice/zip-gate'
+import { streamBytes } from '@seuoffice/zip-gate'
 import type { OdtEntry } from '../core/package'
 
 /** One entry to write. */

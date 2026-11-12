@@ -1,7 +1,7 @@
 /** read_comments tool + the deck-context comment hint. */
 import { describe, it, expect } from 'vitest'
 import { createSlidesSkill, type DeckAccess } from '../src/renderer/ai/slides-skill'
-import type { RenderSlide } from '@genoffice/pptx-render'
+import type { RenderSlide } from '@seuoffice/pptx-render'
 import type { AgentToolCall, SlideComment } from '../src/shared/ipc'
 
 const slide = (hidden = false) =>

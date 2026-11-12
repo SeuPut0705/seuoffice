@@ -14,7 +14,7 @@ const PAST_ONE_CHUNK_CAP = 1024 * 1024 + 1024
 const dirs: string[] = []
 
 function tempDir(): string {
-  const dir = mkdtempSync(join(tmpdir(), 'genoffice-ops-'))
+  const dir = mkdtempSync(join(tmpdir(), 'seuoffice-ops-'))
   dirs.push(dir)
   return dir
 }
@@ -24,7 +24,7 @@ afterEach(() => {
 })
 
 function ctx(cwd: string) {
-  return { cwd, env: { ...process.env, GENOFFICE_ALLOWED_ROOTS: '' } }
+  return { cwd, env: { ...process.env, SEUOFFICE_ALLOWED_ROOTS: '' } }
 }
 
 function fileOf(dir: string, name: string, text: string): string {

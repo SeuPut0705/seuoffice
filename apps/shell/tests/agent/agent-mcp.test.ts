@@ -101,7 +101,7 @@ describe('the tool set', () => {
       'create_docx',
       'create_pptx',
       'create_xlsx',
-      'open_in_genoffice',
+      'open_in_seuoffice',
     ]) {
       expect(names).not.toContain(absent)
     }

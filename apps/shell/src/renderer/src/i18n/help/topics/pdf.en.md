@@ -124,7 +124,7 @@ Press **E** or **T**, or the explain and translate chips in the **Ask AI** box, 
 - View ▸ **Annotations** lists, in the left sidebar, this document's highlights, underlines, strikethroughs, notes and drawings, markups not saved yet, and passage cards. Markups show the text under them.
 - Filter by kind, color, page range or text, and sort by page or by creation order.
 - Click an item to jump there with a short flash. A note opens its margin thread; a card opens the card.
-- The panel menu's **Copy as Markdown**, **Open as Markdown document** and **Open as Word document** use the list as currently filtered. No AI is involved. New documents can only be made from a PDF opened inside GenOffice.
+- The panel menu's **Copy as Markdown**, **Open as Markdown document** and **Open as Word document** use the list as currently filtered. No AI is involved. New documents can only be made from a PDF opened inside SeuOffice.
 
 ## Translation side by side
 
@@ -156,4 +156,4 @@ Press **E** or **T**, or the explain and translate chips in the **Ask AI** box, 
 - The first time you press **Open note** (View tab or the **Annotations** panel), a save dialog opens, by default in the PDF's folder with the name "PDF name note.md". After that, the note opens straight away in a Markdown tab.
 - If you pick a file that already exists, Windows may ask whether to replace it, but the file is not overwritten: it is linked as the note as it is.
 - **Add to note** (on cards, panel items and the document overview) puts a quote and a page link at the end of the note's tab and leaves it unsaved; you save it in the note tab yourself. The link opens the PDF at that page in other programs such as a browser.
-- A PDF that was never saved shows "Save the PDF first". Notes only work for PDFs opened inside GenOffice.
+- A PDF that was never saved shows "Save the PDF first". Notes only work for PDFs opened inside SeuOffice.

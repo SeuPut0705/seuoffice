@@ -5,8 +5,8 @@
  * fails with `context-limit`; a later call of the same job does not ask again.
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import type { IpcStreamChunk } from '@genoffice/agent-core'
-import { normalizeAiSettings, type AiSettings } from '@genoffice/ai-provider/browser'
+import type { IpcStreamChunk } from '@seuoffice/agent-core'
+import { normalizeAiSettings, type AiSettings } from '@seuoffice/ai-provider/browser'
 import { createModelCall, ModelCallError } from '../src/renderer/doc-jobs/model-call'
 
 /** ASCII text that estimates to exactly `tokens` tokens (4 ASCII characters per token) */

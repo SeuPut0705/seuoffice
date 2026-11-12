@@ -4,8 +4,8 @@
  * shown when the sign-in did not finish. The main process builds these when it
  * opens the window, so this file imports no React and no renderer code.
  */
-import type { AiSubscriptionProviderId } from '@genoffice/ai-provider/browser'
-import { htmlLang, type Lang } from '@genoffice/i18n'
+import type { AiSubscriptionProviderId } from '@seuoffice/ai-provider/browser'
+import { htmlLang, type Lang } from '@seuoffice/i18n'
 import { aiSubscriptionProviderName, aiSubscriptionVendorName } from './ai-subscription'
 import { aiSubscriptionText, type AiSubscriptionStringKey } from './strings-ai-subscription'
 

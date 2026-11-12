@@ -16,7 +16,7 @@
 import { useCallback, useEffect, useId, useRef, useState } from 'react'
 import type { KeyboardEvent as ReactKeyboardEvent, ReactElement } from 'react'
 import { createPortal } from 'react-dom'
-import { isRtlLang, PRODUCT_NAME, type Params } from '@genoffice/i18n'
+import { isRtlLang, PRODUCT_NAME, type Params } from '@seuoffice/i18n'
 import type { AgentMemo, AgentMemoAnchor } from '../../studio-plugin/agent-plugin.mjs'
 import { MEMO_NOT_COPIED_EVENT, MEMO_REMOVED_EVENT } from '../../studio-plugin/agent-plugin.mjs'
 import type { AgentBridge } from './ai/agent-bridge'

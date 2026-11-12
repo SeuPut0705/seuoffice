@@ -7,7 +7,7 @@ import {
   type McpPermissionAnswer,
   type McpToolsBridgeLike,
   type McpWindowState,
-} from '@genoffice/agent-core'
+} from '@seuoffice/agent-core'
 import { McpPermissionCard } from '../src/McpPermissionCard'
 
 function fakeBridge(): McpToolsBridgeLike {

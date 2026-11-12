@@ -1,6 +1,6 @@
 import type { LazyWorkbookState, UniverWorksheet } from './univer-state'
 import { inferContinuousRegion, type TableRegion } from './table-actions'
-import { shiftCellArea, StructuralShiftError } from '@genoffice/xlsx-gateway/gateway/xlsx-structure'
+import { shiftCellArea, StructuralShiftError } from '@seuoffice/xlsx-gateway/gateway/xlsx-structure'
 
 /// Infer only from a complete model: unloaded cells look like blank boundaries.
 /// Explicit selections are always authoritative, including single-row ranges.
@@ -44,4 +44,20 @@ export function resolvePivotSource(
     if (table.sheetId === sheetId && contains(table.area)) return table.area
   }
   return inferContinuousRegion(worksheet, selection.startRow, selection.startColumn) ?? selection
+}
+
+/**
+ * The sheet a file pivot's `sourceSheet` names. A pivot definition is read from
+ * the file and keeps the name the sheet had there, so it is looked up among
+ * the file's sheets and answered as an id: after a rename this session the
+ * current name finds nothing, and after two sheets swapped names it finds the
+ * wrong sheet. Undefined for a source that is not a sheet of this workbook.
+ */
+export function pivotSourceSheetId(
+  state: LazyWorkbookState,
+  sourceSheet: string,
+): string | undefined {
+  if (sourceSheet === '') return undefined
+  const wanted = sourceSheet.toLowerCase()
+  return state.file.sheets.find((sheet) => sheet.name.toLowerCase() === wanted)?.id
 }

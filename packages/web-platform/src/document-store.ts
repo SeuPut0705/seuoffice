@@ -1,4 +1,4 @@
-import { normalizeLang, type Lang } from '@genoffice/i18n'
+import { normalizeLang, type Lang } from '@seuoffice/i18n'
 import { receiveOpen } from './embed-channel'
 
 /** A document handed to this page through the embed channel */

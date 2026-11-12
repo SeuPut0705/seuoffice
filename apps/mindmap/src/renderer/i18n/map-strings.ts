@@ -1,4 +1,4 @@
-import type { Lang } from '@genoffice/i18n'
+import type { Lang } from '@seuoffice/i18n'
 import type { MapStrings } from '../map/controller'
 import { translateIn } from './locale'
 

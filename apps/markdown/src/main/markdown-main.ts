@@ -36,11 +36,11 @@ import {
   registerRecoveryEditor,
   registerRendererScheme,
   rendererUrl,
-} from '@genoffice/electron-utils'
-import type { RecoveryIdentity, SaveDiskState } from '@genoffice/electron-utils'
-import { createI18n, getUiLang } from '@genoffice/i18n'
-import { sharedSubscriptionStatuses } from '@genoffice/ai-provider/subscription'
-import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@genoffice/ai-search'
+} from '@seuoffice/electron-utils'
+import type { RecoveryIdentity, SaveDiskState } from '@seuoffice/electron-utils'
+import { createI18n, getUiLang } from '@seuoffice/i18n'
+import { sharedSubscriptionStatuses } from '@seuoffice/ai-provider/subscription'
+import { generateImageTool, documentMediaRoots, withMediaCallSignal } from '@seuoffice/ai-search'
 import { ImageExportSessions } from './image-export'
 import { printMarkdownDocument } from './print-document'
 import { printMarkdownPdf } from './print-pdf'
@@ -166,7 +166,7 @@ interface RuntimePaths {
   preloadPath: string
   rendererUrl?: string
   rendererFile?: string
-  /** Shell router used to open exported PDFs in a new GenOffice tab. */
+  /** Shell router used to open exported PDFs in a new SeuOffice tab. */
   openGeneratedPath?: (path: string) => boolean
   /**
    * Project folders (spec 6): the folder an untitled document's save dialog
@@ -1573,7 +1573,7 @@ export function createMarkdownView(openPath?: string | null): WebContentsView {
   return view
 }
 
-/** Standalone window mode: `npm run dev -w @genoffice/markdown`, md path passed via argv */
+/** Standalone window mode: `npm run dev -w @seuoffice/markdown`, md path passed via argv */
 export function startMarkdownStandalone(): void {
   registerRendererScheme()
   installNavigationGuard(app)

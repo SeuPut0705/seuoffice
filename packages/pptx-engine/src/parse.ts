@@ -72,7 +72,8 @@ import {
   type TablePartStyle,
   type TableStyleFlags,
 } from './table-style'
-import { decodeXml, percentFraction } from './xml-utils'
+import { ownValue, setOwn } from './own-value'
+import { asXmlNode, decodeXml, percentFraction } from './xml-utils'
 import { readRedactLabel } from './redaction-xml'
 
 const parser = xmlParser({
@@ -675,7 +676,8 @@ function parseStroke(
   }
   const capMap: Record<string, Stroke['cap']> = { flat: 'flat', rnd: 'round', sq: 'square' }
   const dash = ln['a:prstDash']?.['@_val']
-  const cap = ln['@_cap'] ? capMap[ln['@_cap']] : undefined
+  // the attribute values below are the document's: each table answers its own keys only
+  const cap = ln['@_cap'] ? ownValue(capMap, String(ln['@_cap'])) : undefined
   const cmpdMap: Record<string, Stroke['compound']> = {
     sng: 'sng',
     dbl: 'dbl',
@@ -683,7 +685,7 @@ function parseStroke(
     thinThick: 'thinThick',
     tri: 'tri',
   }
-  const compound = ln['@_cmpd'] ? cmpdMap[ln['@_cmpd']] : undefined
+  const compound = ln['@_cmpd'] ? ownValue(cmpdMap, String(ln['@_cmpd'])) : undefined
   const join: Stroke['join'] =
     'a:round' in ln ? 'round' : 'a:bevel' in ln ? 'bevel' : 'a:miter' in ln ? 'miter' : undefined
   const headEnd = parseArrowEnd(ln['a:headEnd'])
@@ -710,8 +712,8 @@ function parseArrowEnd(node: any): ArrowEnd | undefined {
   const sizeMap: Record<string, ArrowEndSize> = { sm: 'sm', med: 'med', lg: 'lg' }
   return {
     type,
-    ...(wRaw ? { w: sizeMap[wRaw] ?? 'med' } : {}),
-    ...(lenRaw ? { len: sizeMap[lenRaw] ?? 'med' } : {}),
+    ...(wRaw ? { w: ownValue(sizeMap, String(wRaw)) ?? 'med' } : {}),
+    ...(lenRaw ? { len: ownValue(sizeMap, String(lenRaw)) ?? 'med' } : {}),
   }
 }
 
@@ -869,7 +871,8 @@ function parseAvLst(avLst: any): Record<string, number> | undefined {
   for (const gd of list) {
     const name = gd?.['@_name']
     const m = /^val\s+(-?\d+)/.exec(String(gd?.['@_fmla'] ?? ''))
-    if (name && m) out[name] = parseInt(m[1]!, 10)
+    // a guide named `__proto__` is an entry like any other
+    if (name && m) setOwn(out, String(name), parseInt(m[1]!, 10))
   }
   return Object.keys(out).length ? out : undefined
 }
@@ -967,7 +970,8 @@ function parseGroup(
   depth = 0,
   budget: GroupParseBudget = { remaining: MAX_GROUP_DESCENDANTS },
 ): GroupElement {
-  const grpSpPr = node['p:grpSpPr'] ?? {}
+  // an empty or text-only <p:grpSpPr> parses as a string: a group without properties
+  const grpSpPr: any = asXmlNode(node['p:grpSpPr'])
   const xfrm = grpSpPr['a:xfrm']
   const transform = parseXfrm(xfrm)
   const name = node['p:nvGrpSpPr']?.['p:cNvPr']?.['@_name']
@@ -2001,7 +2005,11 @@ export function layoutDiagramFallback(
   const colorOf = (node: DgmTreeNode, i: number): string | { spPr: any } => {
     if (node.spPr) return { spPr: node.spPr }
     const slot = node.styleLbl ? labelFills.get(node.styleLbl) : undefined
-    return slot ? slot[(node.styleIdx ?? 0) % slot.length]! : colors[i % colors.length]!
+    // presStyleIdx is the document's: -1 (the schema's "none"), or one too long to be a number,
+    // names no slot, and such a node takes the color cycle like one with no recorded slot
+    const idx = node.styleIdx ?? 0
+    const own = slot && Number.isSafeInteger(idx) && idx >= 0 ? slot[idx % slot.length] : undefined
+    return own ?? colors[i % colors.length]!
   }
   const hasHierarchy = roots.some((r) => r.children.length)
   const sps: any[] = []
@@ -3317,7 +3325,7 @@ function parseTableCell(
     const text = parseTextBody(tc['a:txBody'], ctx, styleChain)
     // Cell vertical alignment and insets come from tcPr (bodyPr is usually empty in tables)
     const anchorMap: Record<string, TextBody['anchor']> = { t: 'top', ctr: 'middle', b: 'bottom' }
-    if (tcPr['@_anchor']) text.anchor = anchorMap[tcPr['@_anchor']]
+    if (tcPr['@_anchor']) text.anchor = ownValue(anchorMap, String(tcPr['@_anchor']))
     text.insets = {
       l: intOr(tcPr['@_marL'], 91440),
       r: intOr(tcPr['@_marR'], 91440),
@@ -3490,7 +3498,8 @@ function parseClrChange(
 }
 
 function parseFill(spPr: any, ctx: ParseContext): Fill | undefined {
-  if (!spPr) return undefined
+  // an element holding only text parses as a string: no fill of its own
+  if (!spPr || typeof spPr !== 'object') return undefined
   if ('a:noFill' in spPr) return { type: 'none' }
   // <a:grpFill/>: inherit the enclosing group's grpSpPr fill
   if ('a:grpFill' in spPr) return ctx.groupFill
@@ -3746,7 +3755,7 @@ function parseTextBody(
       const gds = warpNode['a:avLst']?.['a:gd']
       for (const gd of Array.isArray(gds) ? gds : gds ? [gds] : []) {
         const m = /^val (-?\d+)$/.exec(String(gd['@_fmla'] ?? ''))
-        if (gd['@_name'] && m) adj[String(gd['@_name'])] = parseInt(m[1]!, 10)
+        if (gd['@_name'] && m) setOwn(adj, String(gd['@_name']), parseInt(m[1]!, 10))
       }
       txWarp = { prst, ...(Object.keys(adj).length ? { adj } : {}) }
     }
@@ -3754,7 +3763,7 @@ function parseTextBody(
 
   return {
     paragraphs,
-    anchor: bodyPr['@_anchor'] ? anchorMap[bodyPr['@_anchor']] : undefined,
+    anchor: bodyPr['@_anchor'] ? ownValue(anchorMap, String(bodyPr['@_anchor'])) : undefined,
     ...(bodyPr['@_anchorCtr'] != null
       ? { anchorCtr: String(bodyPr['@_anchorCtr']) === '1' || bodyPr['@_anchorCtr'] === 'true' }
       : {}),
@@ -3977,7 +3986,7 @@ function parseParagraph(
 
   return {
     runs,
-    align: pPr['@_algn'] ? alignMap[pPr['@_algn']] : dflt?.align,
+    align: pPr['@_algn'] ? ownValue(alignMap, String(pPr['@_algn'])) : dflt?.align,
     ...(pPr['@_algn'] || dflt?.align != null
       ? { alignSrc: pPr['@_algn'] ? 'paragraph' : (dflt?.src?.align ?? 'inherited') }
       : {}),

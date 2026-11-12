@@ -1,4 +1,4 @@
-import { type ParsedDocFull, parseDocx, saveDocx, scanBody } from '@genoffice/docx-engine'
+import { type ParsedDocFull, parseDocx, saveDocx, scanBody } from '@seuoffice/docx-engine'
 import JSZip from 'jszip'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { type BridgeMap, editedItems } from '../src/core'

@@ -49,7 +49,7 @@ import {
   writeSheetTheme,
   type XmindSheet,
   type XmindTopic,
-} from '@genoffice/xmind-engine'
+} from '@seuoffice/xmind-engine'
 
 export interface LookRunTools {
   out: string

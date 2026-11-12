@@ -7,12 +7,12 @@ import {
   type ProjectHashedFile,
   type ProjectId,
   type ProjectTrustPrompt,
-} from '@genoffice/project-store'
+} from '@seuoffice/project-store'
 import {
+  dataDirName,
   hashText,
   plainFileIn,
   plainFolderEntries,
-  readDataText,
   readFolderText,
 } from './folder-files'
 import { memoryHasContent } from './memory'
@@ -25,10 +25,12 @@ import { memoryHasContent } from './memory'
  * records the answer.
  */
 
-const { dataDir, chatsDir, chatInfoExt, chatMessagesExt } = PROJECT_FOLDER_NAMES
+const { chatsDir, chatInfoExt, chatMessagesExt } = PROJECT_FOLDER_NAMES
 
 /** The texts the trust record hashes, read as they are now (null when absent) */
 export interface HashedTexts {
+  /** The data folder name `instructions` and `memory` were read from (`dataDirName`) */
+  dataDir: string
   instructions: string | null
   memory: string | null
   agents: string | null
@@ -36,13 +38,14 @@ export interface HashedTexts {
 }
 
 export async function readHashedTexts(root: string): Promise<HashedTexts> {
+  const dataDir = dataDirName(root)
   const [instructions, memory, agents, claude] = await Promise.all([
-    readDataText(root, PROJECT_FOLDER_NAMES.instructionsFile),
-    readDataText(root, PROJECT_FOLDER_NAMES.memoryFile),
+    readFolderText(root, [dataDir, PROJECT_FOLDER_NAMES.instructionsFile]),
+    readFolderText(root, [dataDir, PROJECT_FOLDER_NAMES.memoryFile]),
     readFolderText(root, [PROJECT_FOLDER_NAMES.rootAgentsFile]),
     readFolderText(root, [PROJECT_FOLDER_NAMES.rootClaudeFile]),
   ])
-  return { instructions, memory, agents, claude }
+  return { dataDir, instructions, memory, agents, claude }
 }
 
 /** Hashes of the present texts, keyed as in the trust record */
@@ -97,6 +100,7 @@ export async function hasForeignMessage(
   root: string,
   chatId: ProjectId,
   installId: string,
+  dataDir: string = dataDirName(root),
 ): Promise<boolean> {
   const path = await plainFileIn(root, [dataDir, chatsDir, `${chatId}${chatMessagesExt}`])
   if (!path) return false
@@ -132,6 +136,7 @@ export async function listForeignChats(
   root: string,
   projectId: ProjectId,
   installId: string,
+  dataDir: string = dataDirName(root),
 ): Promise<ProjectForeignChat[]> {
   const out: ProjectForeignChat[] = []
   const names = await plainFolderEntries(root, [dataDir, chatsDir])
@@ -141,7 +146,7 @@ export async function listForeignChats(
     if (!isValidProjectId(id)) continue
     const info = parseChatInfo(await readFolderText(root, [dataDir, chatsDir, name]), id)
     if (!info || info.projectId !== projectId) continue
-    if (info.origin !== installId || (await hasForeignMessage(root, id, installId))) {
+    if (info.origin !== installId || (await hasForeignMessage(root, id, installId, dataDir))) {
       out.push({ id, title: info.title, updatedAt: info.updatedAt })
     }
   }
@@ -166,7 +171,12 @@ export interface TrustScan {
 /** What the trust prompt shows for a folder, and whether it has to be shown */
 export async function scanForTrust(input: TrustScanInput): Promise<TrustScan> {
   const texts = await readHashedTexts(input.root)
-  const foreignChats = await listForeignChats(input.root, input.projectId, input.installId)
+  const foreignChats = await listForeignChats(
+    input.root,
+    input.projectId,
+    input.installId,
+    texts.dataDir,
+  )
   const prompt: ProjectTrustPrompt = {
     projectId: input.projectId,
     name: input.name,

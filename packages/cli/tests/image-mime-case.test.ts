@@ -3,15 +3,15 @@ import { join } from 'node:path'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { run, tempDir } from './helpers'
 
-const env = { ...process.env, GENOFFICE_AUDIT_LOG: 'off' }
+const env = { ...process.env, SEUOFFICE_AUDIT_LOG: 'off' }
 
 const fakes = vi.hoisted(() => ({ generate: vi.fn(), fetch: vi.fn() }))
-vi.mock('@genoffice/ai-search', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/ai-search')>()),
+vi.mock('@seuoffice/ai-search', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/ai-search')>()),
   generateImageTool: fakes.generate,
 }))
-vi.mock('@genoffice/electron-utils/remote-image', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@genoffice/electron-utils/remote-image')>()),
+vi.mock('@seuoffice/electron-utils/remote-image', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@seuoffice/electron-utils/remote-image')>()),
   fetchRemoteImage: fakes.fetch,
 }))
 vi.mock('../src/cloud', async (importOriginal) => ({

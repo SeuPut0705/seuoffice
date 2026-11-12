@@ -13,9 +13,12 @@ import {
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { PROJECT_FOLDER_NAMES } from '@seuoffice/project-store'
 import { ProjectWriteGuard, ProjectWriteRefused } from '../src/main/projects/write-guard'
 
 /** The single write guard for project folders (spec 3, invariants 3 and 9) */
+
+const { dataDir } = PROJECT_FOLDER_NAMES
 
 let base: string
 let root: string
@@ -55,18 +58,18 @@ function linkFile(target: string, path: string): boolean {
 }
 
 describe('data writes', () => {
-  it('creates .ieumoffice lazily on the first write only', async () => {
-    expect(guard.dataPath(root, 'memory.md')).toBe(join(root, '.ieumoffice', 'memory.md'))
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+  it('creates .seuoffice lazily on the first write only', async () => {
+    expect(guard.dataPath(root, 'memory.md')).toBe(join(root, dataDir, 'memory.md'))
+    expect(existsSync(join(root, dataDir))).toBe(false)
     await guard.writeData(root, 'chats/a.json', '{}')
-    expect(readFileSync(join(root, '.ieumoffice', 'chats', 'a.json'), 'utf8')).toBe('{}')
+    expect(readFileSync(join(root, dataDir, 'chats', 'a.json'), 'utf8')).toBe('{}')
   })
 
   it('writes through a temporary file and leaves no temporary files behind', async () => {
     await guard.writeData(root, 'memory.md', 'one')
     await guard.writeData(root, 'memory.md', 'two')
-    expect(readFileSync(join(root, '.ieumoffice', 'memory.md'), 'utf8')).toBe('two')
-    expect(readdirSync(join(root, '.ieumoffice'))).toEqual(['memory.md'])
+    expect(readFileSync(join(root, dataDir, 'memory.md'), 'utf8')).toBe('two')
+    expect(readdirSync(join(root, dataDir))).toEqual(['memory.md'])
   })
 
   it('refuses .. and absolute and stream paths', async () => {
@@ -80,20 +83,20 @@ describe('data writes', () => {
       await expect(guard.writeData(root, rel, 'x')).rejects.toBeInstanceOf(ProjectWriteRefused)
     }
     expect(existsSync(join(base, 'x.md'))).toBe(false)
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(root, dataDir))).toBe(false)
   })
 
-  it('refuses a linked .ieumoffice folder', async () => {
-    if (!linkDir(outside, join(root, '.ieumoffice'))) return
+  it('refuses a linked .seuoffice folder', async () => {
+    if (!linkDir(outside, join(root, dataDir))) return
     await expect(guard.writeData(root, 'memory.md', 'x')).rejects.toBeInstanceOf(
       ProjectWriteRefused,
     )
     expect(existsSync(join(outside, 'memory.md'))).toBe(false)
   })
 
-  it('refuses a linked folder inside .ieumoffice', async () => {
-    mkdirSync(join(root, '.ieumoffice'))
-    if (!linkDir(outside, join(root, '.ieumoffice', 'chats'))) return
+  it('refuses a linked folder inside .seuoffice', async () => {
+    mkdirSync(join(root, dataDir))
+    if (!linkDir(outside, join(root, dataDir, 'chats'))) return
     await expect(guard.writeData(root, 'chats/a.json', 'x')).rejects.toBeInstanceOf(
       ProjectWriteRefused,
     )
@@ -101,9 +104,9 @@ describe('data writes', () => {
   })
 
   it('refuses a linked target file', async () => {
-    mkdirSync(join(root, '.ieumoffice'))
+    mkdirSync(join(root, dataDir))
     writeFileSync(join(outside, 'target.md'), 'keep')
-    if (!linkFile(join(outside, 'target.md'), join(root, '.ieumoffice', 'memory.md'))) return
+    if (!linkFile(join(outside, 'target.md'), join(root, dataDir, 'memory.md'))) return
     await expect(guard.writeData(root, 'memory.md', 'x')).rejects.toBeInstanceOf(
       ProjectWriteRefused,
     )
@@ -128,10 +131,10 @@ describe('data writes', () => {
   it('appends without following a hard link', async () => {
     await guard.appendData(root, 'chats/a.jsonl', 'one\n')
     await guard.appendData(root, 'chats/a.jsonl', 'two\n')
-    expect(readFileSync(join(root, '.ieumoffice', 'chats', 'a.jsonl'), 'utf8')).toBe('one\ntwo\n')
+    expect(readFileSync(join(root, dataDir, 'chats', 'a.jsonl'), 'utf8')).toBe('one\ntwo\n')
     writeFileSync(join(outside, 'victim.jsonl'), 'keep')
     try {
-      linkSync(join(outside, 'victim.jsonl'), join(root, '.ieumoffice', 'chats', 'b.jsonl'))
+      linkSync(join(outside, 'victim.jsonl'), join(root, dataDir, 'chats', 'b.jsonl'))
     } catch {
       return
     }
@@ -154,7 +157,7 @@ describe('data writes', () => {
     })
     await Promise.all([first, second])
     expect(order).toEqual(['first saw nothing', 'second saw A'])
-    expect(readFileSync(join(root, '.ieumoffice', 'memory.md'), 'utf8')).toBe('AB')
+    expect(readFileSync(join(root, dataDir, 'memory.md'), 'utf8')).toBe('AB')
   })
 
   it('a failed write does not block the next one in the queue', async () => {
@@ -164,19 +167,19 @@ describe('data writes', () => {
     const next = guard.writeData(root, 'memory.md', 'ok')
     await expect(failing).rejects.toThrow('boom')
     await next
-    expect(readFileSync(join(root, '.ieumoffice', 'memory.md'), 'utf8')).toBe('ok')
+    expect(readFileSync(join(root, dataDir, 'memory.md'), 'utf8')).toBe('ok')
   })
 
   it('an update that returns null writes nothing and creates nothing', async () => {
     const result = await guard.updateData(root, 'memory.md', () => null)
     expect(result.written).toBe(false)
-    expect(existsSync(join(root, '.ieumoffice'))).toBe(false)
+    expect(existsSync(join(root, dataDir))).toBe(false)
   })
 
   it('removes a data file and refuses removal outside', async () => {
     await guard.writeData(root, 'memory.20261029-101010.bak.md', 'x')
     await guard.removeData(root, 'memory.20261029-101010.bak.md')
-    expect(existsSync(join(root, '.ieumoffice', 'memory.20261029-101010.bak.md'))).toBe(false)
+    expect(existsSync(join(root, dataDir, 'memory.20261029-101010.bak.md'))).toBe(false)
     await expect(guard.removeData(root, '../outside')).rejects.toBeInstanceOf(ProjectWriteRefused)
     expect(existsSync(outside)).toBe(true)
   })
@@ -199,10 +202,10 @@ describe('new documents (spec 6)', () => {
     expect(readFileSync(target, 'utf8')).toBe('keep')
   })
 
-  it('refuses outside the folder, inside .ieumoffice, and through ..', async () => {
+  it('refuses outside the folder, inside .seuoffice, and through ..', async () => {
     for (const target of [
       join(outside, 'a.docx'),
-      join(root, '.ieumoffice', 'a.docx'),
+      join(root, dataDir, 'a.docx'),
       `${root}${process.platform === 'win32' ? '\\' : '/'}..${process.platform === 'win32' ? '\\' : '/'}a.docx`,
       'relative.docx',
     ]) {

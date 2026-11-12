@@ -1,6 +1,6 @@
 /**
  * The AI panel's side of the subscription connection. The state machine and
- * the cards' actions are shared by every editor (`@genoffice/ui`); this file
+ * the cards' actions are shared by every editor (`@seuoffice/ui`); this file
  * only names the bridge this window exposes and lays its actions out for the
  * connect card.
  */
@@ -8,11 +8,11 @@ import { useMemo } from 'react'
 import {
   useSubscriptionConnection as useSharedSubscriptionConnection,
   type AiSubscriptionCardActions,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type {
   AiSubscriptionProviderId,
   SubscriptionStatusMap,
-} from '@genoffice/ai-provider/browser'
+} from '@seuoffice/ai-provider/browser'
 
 export interface SubscriptionConnection {
   readonly statuses: SubscriptionStatusMap

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { ObjectMatrix, type ICellData } from '@univerjs/core'
-import type { CellState } from '@genoffice/xlsx-gateway/domain/workbook.types'
+import type { CellState } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 import {
   clearVerifiedFormulaValues,
   formulaTargetsFromOps,

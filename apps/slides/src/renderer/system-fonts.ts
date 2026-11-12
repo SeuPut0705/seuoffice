@@ -3,8 +3,8 @@ import {
   partitionFontFamilies,
   useSystemFontSource,
   type SystemFonts,
-} from '@genoffice/ui'
-import { TEMPLATE_FONT_FAMILY_NAMES } from '@genoffice/ui/template-fonts'
+} from '@seuoffice/ui'
+import { TEMPLATE_FONT_FAMILY_NAMES } from '@seuoffice/ui/template-fonts'
 
 /// The enumeration names every family in English only, so the main process
 /// reads the Korean names from the font files; without them the list still works.

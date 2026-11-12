@@ -16,7 +16,7 @@
  * blocks go to the registered `FreeWriter`s. Blocks that never had OOXML are
  * re-emitted at their original place among the surviving blocks.
  */
-import type { Block, ParsedDoc } from '@genoffice/docx-engine'
+import type { Block, ParsedDoc } from '@seuoffice/docx-engine'
 import type { OdtNode } from './body'
 import {
   type AlignedItem,

@@ -1,6 +1,6 @@
 /**
  * The AI panel's side of the subscription connection. The state machine and
- * the cards' actions are shared by every editor (`@genoffice/ui`); this file
+ * the cards' actions are shared by every editor (`@seuoffice/ui`); this file
  * only names the bridge this window exposes. The `attemptSubscription` helper
  * stays here for the PDF screens that call the bridge directly.
  *
@@ -11,7 +11,7 @@
 import {
   useSubscriptionConnection as useSharedSubscriptionConnection,
   type SubscriptionConnection,
-} from '@genoffice/ui'
+} from '@seuoffice/ui'
 import type { SubscriptionApi } from '../../shared/subscription-api'
 
 export type { SubscriptionConnection }

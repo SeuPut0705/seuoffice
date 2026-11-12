@@ -10,7 +10,7 @@ import {
   SHEET_PROTECTION_PERMISSIONS,
   type SheetProtectionAllow,
   type SheetProtectionPermission,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-protection'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-protection'
 
 import { useI18n } from './i18n/locale'
 import type { en } from './i18n/dialogs/en'

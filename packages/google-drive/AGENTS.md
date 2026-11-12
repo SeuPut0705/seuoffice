@@ -1,4 +1,4 @@
-# packages/google-drive (`@genoffice/google-drive`)
+# packages/google-drive (`@seuoffice/google-drive`)
 
 Google 드라이브 연결의 뒷단(main) 코드다. 시스템 브라우저로 하는 Google 로그인(OAuth PKCE, 루프백 주소)과 같은 흐름의 Google 선택 창, 접근 토큰을 새로 받아 두는 연결 하나, 앱이 쓰는 드라이브 REST 호출(목록, 검색, 내려받기, 내보내기, 올리기)을 담는다. 결정 기록 0033, 0085.
 
@@ -32,6 +32,6 @@ Google 드라이브 연결의 뒷단(main) 코드다. 시스템 브라우저로 
 
 ## 테스트
 
-- 실행: `npm run test -w @genoffice/google-drive`, `npm run typecheck -w @genoffice/google-drive`.
+- 실행: `npm run test -w @seuoffice/google-drive`, `npm run typecheck -w @seuoffice/google-drive`.
 - 테스트는 Google에 닿지 않는다. 모든 호출은 주입한 `fetch`를 지난다. 로그인 테스트는 루프백 서버를 실제로 열고, 브라우저 대신 테스트가 그 주소를 부른다.
 - 바꾸면 반드시 테스트하는 것: 선택 창 요청의 `trigger_onepick`·`allow_multiple`, 고른 ID 거르기, 고르기가 이전 토큰을 폐기하지 않는지, `state`가 다른 콜백을 무시하는지, 갱신 실패 종류별로 연결이 남거나 끝나는지, 동시에 들어온 호출이 갱신을 한 번만 하는지, 올리기 세션 주소 검사, 크기 상한.

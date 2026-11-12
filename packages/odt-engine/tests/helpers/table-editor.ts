@@ -13,7 +13,7 @@ import {
   type TableModel,
   generateTableModelXml,
   patchTableCellTexts,
-} from '@genoffice/docx-engine'
+} from '@seuoffice/docx-engine'
 import { ConversionRegistry } from '../../src/core'
 import { registerTableConverters } from '../../src/table'
 import { registerTextConverters } from '../../src/text'

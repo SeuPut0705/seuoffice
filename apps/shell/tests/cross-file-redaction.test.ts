@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   UNSAVED_CHANGES_MESSAGE,
   setOpenFilesSource,
-} from '@genoffice/electron-utils/unsaved-files'
+} from '@seuoffice/electron-utils/unsaved-files'
 // the deck engine's own writer, by path: the mark under test is the saved one
 import { setRedactExt } from '../../../packages/pptx-engine/src/redaction-xml'
 import type { JevTransport } from '../src/main/file-index/decider'
@@ -70,7 +70,7 @@ let store: FileIndexStore
 let dbPath: string
 
 beforeEach(() => {
-  dir = mkdtempSync(join(tmpdir(), 'genoffice-withheld-'))
+  dir = mkdtempSync(join(tmpdir(), 'seuoffice-withheld-'))
   dbPath = join(dir, 'index.db')
   store = new FileIndexStore(dbPath)
 })

@@ -40,16 +40,23 @@
  * character border there.
  */
 
-import { asXmlNode, escapeXmlAttr, xmlArray, type XmlNode } from './xml-utils'
+import {
+  asXmlNode,
+  attributeOf,
+  elementRange,
+  escapeXmlAttr,
+  xmlArray,
+  type XmlNode,
+} from './xml-utils'
 
 /**
  * A fixed URI for our extension. Office's convention is that the `uri` is a
  * GUID identifying the extension's schema, so it must be stable: a deck that
  * round-trips through this engine has to land on the same value.
  */
-export { REDACT_EL, REDACT_NS, REDACT_PREFIX } from '@genoffice/agent-core/redact-range'
+export { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 
-import { REDACT_EL, REDACT_NS, REDACT_PREFIX } from '@genoffice/agent-core/redact-range'
+import { REDACT_EL, REDACT_NS_WRITTEN, REDACT_PREFIX } from '@seuoffice/agent-core/redact-range'
 
 export const REDACT_EXT_URI = '{9F1B2C3D-4E5F-4A6B-8C7D-9E0F1A2B3C4D}'
 
@@ -66,16 +73,14 @@ export function redactExtXml(label: string): string {
   // prefix's namespace, and this part is DrawingML: a `w:label` here would be a
   // second unbound prefix, the same parse error as the element's own.
   return (
-    `<a:ext uri="${REDACT_EXT_URI}" xmlns:${REDACT_PREFIX}="${REDACT_NS}">` +
+    `<a:ext uri="${REDACT_EXT_URI}" xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}">` +
     `<${REDACT_EL} label="${escapeXmlAttr(label)}"/></a:ext>`
   )
 }
 
 /** True when the fragment already carries our mark. */
 export function hasRedactExtIn(xml: string): boolean {
-  // not the /g pattern: that one keeps its lastIndex after a hit, so the next search with it,
-  // in another string, would start from the middle
-  return OUR_EXT_ONCE_RE.test(xml)
+  return ourExtRanges(xml).length > 0
 }
 
 /**
@@ -116,29 +121,49 @@ export function readRedactLabel(node: unknown): string | undefined {
   return typeof label === 'string' && label !== '' ? label : undefined
 }
 
+const EXT_OPEN = /<a:ext\b(?:[^>"']|"[^"]*"|'[^']*')*>/g
+
 /**
- * Our `<a:ext>` as raw bytes, whether self-closing or paired. After the uri the open tag is read
- * up to its own end without taking the `/` of `/>`: taken, a self-closing tag would fall through
- * to the paired form and run on to the `</a:ext>` of whatever extension follows it.
+ * Where each of our `<a:ext>` lies in raw XML, self-closing or paired, in document order. An
+ * extension is ours by its `uri` as XML reads it (`attributeOf`: any quotes, any white space
+ * around `=`, references decoded), which is how the parser finds it on the way in: a writer
+ * that looked for one spelling kept a mark the user cleared, or wrote a second one beside it.
  */
-const OUR_EXT =
-  `<a:ext\\b[^>]*\\buri="${REDACT_EXT_URI}"` + '(?:[^>/]|/(?!>))*(?:/>|>[\\s\\S]*?</a:ext>)'
-const OUR_EXT_RE = new RegExp(OUR_EXT, 'g')
-const OUR_EXT_ONCE_RE = new RegExp(OUR_EXT)
+function ourExtRanges(xml: string): { start: number; end: number }[] {
+  const out: { start: number; end: number }[] = []
+  for (const open of xml.matchAll(EXT_OPEN)) {
+    if (open.index < (out.at(-1)?.end ?? 0)) continue
+    if (attributeOf(open[0], 'uri') !== REDACT_EXT_URI) continue
+    const ext = elementRange(xml, 'a:ext', open.index)
+    if (ext) out.push({ start: ext.start, end: ext.end })
+  }
+  return out
+}
+
+/** `xml` without the ranges, which are in document order and do not overlap. */
+function without(xml: string, ranges: { start: number; end: number }[]): string {
+  let out = ''
+  let at = 0
+  for (const range of ranges) {
+    out += xml.slice(at, range.start)
+    at = range.end
+  }
+  return out + xml.slice(at)
+}
 
 /** Remove our extension from a raw `<a:rPr>` / `<p:spPr>` string, leaving everything else. */
 export function stripRedactExt(xml: string): string {
   let out = xml
   // last first, so the offsets of the earlier ones stay valid
-  for (const ours of [...xml.matchAll(OUR_EXT_RE)].reverse()) {
-    let start = ours.index
-    let end = start + ours[0].length
+  for (const ours of ourExtRanges(xml).reverse()) {
+    let start = ours.start
+    let end = ours.end
     // The list goes with it only when our extension was all it held: an apply/unapply cycle
     // would otherwise leave an empty <a:extLst> behind, and they would accumulate in a deck
     // someone toggles marks in. A list that still holds another extension, and every list we
     // were never in, keeps its bytes, attributes included.
     const open = /<a:extLst\b[^>]*>\s*$/.exec(out.slice(0, start))
-    const close = /^\s*<\/a:extLst>/.exec(out.slice(end))
+    const close = /^\s*<\/a:extLst\s*>/.exec(out.slice(end))
     if (open && close) {
       start = open.index
       end += close[0].length
@@ -208,21 +233,18 @@ export function setRedactExt(propsXml: string, label: string): string {
  */
 function spliceExtLst(inner: string, ext: string): string {
   // a mark already in the node goes first, wherever it sits, so a re-apply replaces it
-  const kept = inner.replace(OUR_EXT_RE, '')
+  const kept = without(inner, ourExtRanges(inner))
   const body = kept.trimEnd()
   const tail = kept.slice(body.length)
   // the last thing in the node closes its last child, so a list ending here is the node's own
-  const close = '</a:extLst>'
-  if (body.endsWith(close)) {
-    const at = body.length - close.length
-    return body.slice(0, at) + ext + close + tail
-  }
+  const close = /<\/a:extLst\s*>$/.exec(body)
+  if (close) return body.slice(0, close.index) + ext + body.slice(close.index) + tail
   const selfClosing = /<a:extLst\b[^>]*\/>$/.exec(body)
   if (selfClosing) {
     const head = selfClosing[0].slice(0, -2)
-    return `${body.slice(0, selfClosing.index)}${head}>${ext}${close}${tail}`
+    return `${body.slice(0, selfClosing.index)}${head}>${ext}</a:extLst>${tail}`
   }
   // no list of its own: extLst is the last child both schemas allow here — prepending it
   // before a:solidFill/a:latin/a:xfrm is a strict-validation failure
-  return `${kept}<a:extLst>${ext}${close}`
+  return `${kept}<a:extLst>${ext}</a:extLst>`
 }

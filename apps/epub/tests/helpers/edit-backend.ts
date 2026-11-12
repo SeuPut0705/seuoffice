@@ -14,7 +14,7 @@ import {
   type ChapterMap,
   type OpenChapter,
   type RangeReplacement,
-} from '@genoffice/epub-engine'
+} from '@seuoffice/epub-engine'
 import { invertReplacements } from '../../src/main/book-session'
 import type {
   EpubApplyEditsRequest,

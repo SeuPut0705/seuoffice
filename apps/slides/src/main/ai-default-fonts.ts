@@ -5,8 +5,8 @@ import {
   normalizeSlidesAiFonts,
   type SlidesAiFontRoles,
   type SlidesAiFonts,
-} from '@genoffice/ui/slides-ai-fonts'
-import type { PageSpec, SpecParagraph } from '@genoffice/pipelines/slides'
+} from '@seuoffice/ui/slides-ai-fonts'
+import type { PageSpec, SpecParagraph } from '@seuoffice/pipelines/slides'
 
 /**
  * The fonts AI slide generation uses when the request names none (Settings › General,

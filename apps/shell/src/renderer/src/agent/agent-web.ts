@@ -24,7 +24,7 @@ export function agentPermissionChoices(action: AgentActionView): AgentPermission
 }
 
 /** The app's own MCP server, whose tools the window names by what they do */
-const APP_MCP_SERVER = 'ieumoffice-editor'
+const APP_MCP_SERVER = 'seuoffice-editor'
 
 /**
  * The person's MCP server and tool a program's tool line names, or undefined

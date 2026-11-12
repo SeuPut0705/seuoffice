@@ -4,7 +4,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { outlineToSheets, type XmindTopic } from '@genoffice/xmind-engine'
+import { outlineToSheets, type XmindTopic } from '@seuoffice/xmind-engine'
 import { EDIT_OPS } from '../src/renderer/ai/map-tools'
 import { MAP_TOOL_NAMES } from '../src/renderer/ai/mindmap-skill'
 

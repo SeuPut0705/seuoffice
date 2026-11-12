@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import type { McpServerView } from '@genoffice/agent-core'
+import type { McpServerView } from '@seuoffice/agent-core'
 import {
   MCP_DESCRIPTION_PREVIEW_CHARS,
   MCP_INPUT_PREVIEW_CHARS,

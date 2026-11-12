@@ -12,8 +12,8 @@ import {
   assembleWithJsZip,
   createBufferEntrySource,
   planCellEditsToXlsx,
-} from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
-import type { SheetPivotAddition } from '@genoffice/xlsx-gateway/gateway/xlsx-gateway'
+} from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
+import type { SheetPivotAddition } from '@seuoffice/xlsx-gateway/gateway/xlsx-gateway'
 
 /// Round-trips a pivot-carrying save through LibreOffice: a headless convert
 /// re-parses the whole package, so a malformed pivot part fails the convert
