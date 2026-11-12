@@ -33,6 +33,9 @@ omml = { path = "omml" }
 encoding_rs = "0.8"
 # the inflater the zip crate already uses; entries are read without its CRC check
 flate2 = { version = "1.1", default-features = false, features = ["zlib-rs"] }
+# the platform's random source (WASI random_get on wasm32): Math.random and
+# crypto.randomUUID
+getrandom = "0.4"
 # fdlibm in Rust: Math.pow as V8 computes it, whatever libm the platform has
 libm = "0.2"
 # ECMAScript regular expressions: patterns are ported by copying them;

@@ -11,7 +11,7 @@ use serde::Serialize;
 use serde_json::Value;
 
 use crate::theme::{Theme, resolve_scheme_color, sys_color_hex};
-use crate::xml_utils::{as_xml_node, xml_array};
+use crate::xml_utils::{as_xml_node, percent_fraction, xml_array};
 
 /// `String(value ?? '')`
 fn string_or_empty(value: Option<&Value>) -> String {
@@ -297,29 +297,37 @@ const PRESET_COLORS: &[(&str, &str)] = &[
     ("yellowGreen", "#9ACD32"),
 ];
 
-/// The `val` of every `k` child of `mods`, as `parseInt(val, 10) || 0`
-/// over `unit`, in document order; a child without `val` is skipped.
-fn vals(mods: Option<&Value>, k: &str, unit: f64) -> Vec<f64> {
+/// The `val` of every `k` child of `mods` as `percentFraction(v) ?? 0`, in
+/// document order; a child without `val` is skipped.
+fn vals(mods: Option<&Value>, k: &str) -> Vec<f64> {
     xml_array(mods.and_then(|mods| mods.get(k)))
         .filter_map(|n| n.get("@_val").filter(|v| !v.is_null()))
-        .map(|v| {
-            let parsed = parse_int(&value_to_string(Some(v)), Radix::Ten);
-            (if number_truthy(parsed) { parsed } else { 0.0 }) / unit
-        })
+        .map(|v| percent_fraction(Some(v)).unwrap_or(0.0))
         .collect()
 }
 
 fn last(mods: Option<&Value>, k: &str) -> Option<f64> {
-    vals(mods, k, 100_000.0).last().copied()
+    vals(mods, k).last().copied()
 }
 
 fn product(mods: Option<&Value>, k: &str) -> Option<f64> {
-    let v = vals(mods, k, 100_000.0);
+    let v = vals(mods, k);
     (!v.is_empty()).then(|| v.iter().fold(1.0, |a, b| a * b))
 }
 
-fn sum(mods: Option<&Value>, k: &str, unit: f64) -> Option<f64> {
-    let v = vals(mods, k, unit);
+/// `sum`: percentages add as fractions; `raw_divisor` (hueOff, an angle in
+/// 1/60000 degree) reads the value as `parseInt(raw, 10) || 0` over it.
+fn sum(mods: Option<&Value>, k: &str, raw_divisor: Option<f64>) -> Option<f64> {
+    let v: Vec<f64> = xml_array(mods.and_then(|mods| mods.get(k)))
+        .filter_map(|n| n.get("@_val").filter(|v| !v.is_null()))
+        .map(|raw| match raw_divisor {
+            Some(divisor) if divisor != 0.0 => {
+                let parsed = parse_int(&value_to_string(Some(raw)), Radix::Ten);
+                (if number_truthy(parsed) { parsed } else { 0.0 }) / divisor
+            }
+            _ => percent_fraction(Some(raw)).unwrap_or(0.0),
+        })
+        .collect();
     (!v.is_empty()).then(|| v.iter().fold(0.0, |a, b| a + b))
 }
 
@@ -330,12 +338,12 @@ pub fn apply_color_mods(hex: &str, mods: Option<&Value>) -> String {
     let Rgb { r, g, b } = hex_to_rgb(hex);
     let (mut r, mut g, mut b) = (r.0, g.0, b.0);
     let lum_mod = product(mods, "a:lumMod");
-    let lum_off = sum(mods, "a:lumOff", 100_000.0);
+    let lum_off = sum(mods, "a:lumOff", None);
     let shade = product(mods, "a:shade");
     let tint = product(mods, "a:tint");
     // hueOff counts 1/60000 degree
-    let hue_off = sum(mods, "a:hueOff", 60_000.0);
-    let sat_off = sum(mods, "a:satOff", 100_000.0);
+    let hue_off = sum(mods, "a:hueOff", Some(60_000.0));
+    let sat_off = sum(mods, "a:satOff", None);
     if hue_off.is_some_and(|v| v != 0.0) || sat_off.is_some_and(|v| v != 0.0) {
         let (h, s, l) = rgb_to_hsl(r, g, b);
         let h2 = (((h + hue_off.unwrap_or(0.0) / 360.0) % 1.0) + 1.0) % 1.0;
@@ -377,7 +385,9 @@ pub fn apply_color_mods(hex: &str, mods: Option<&Value>) -> String {
     if let Some(alpha) = last(mods, "a:alpha")
         && alpha < 1.0
     {
-        let alpha = pad_start(&to_string_radix16(math_round(alpha * 255.0)), 2, '0');
+        // Broken input can carry a negative alpha: clamp so the suffix stays two hex digits
+        let byte = math_max(0.0, math_min(255.0, math_round(alpha * 255.0)));
+        let alpha = pad_start(&to_string_radix16(byte), 2, '0');
         out.push_str(&alpha.to_uppercase());
     }
     out

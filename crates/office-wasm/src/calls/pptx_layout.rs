@@ -6,7 +6,7 @@ use std::collections::HashMap;
 use jscompat::JsNum;
 use pptx_engine::align::{AlignRect, align_rects, distribute_rects};
 use pptx_engine::dgm_hier::{
-    HierConstraints, HierLineRect, HierTreeNode, layout_hier_tree, parse_hier_constraints,
+    HierConstraints, HierTreeNode, layout_hier_tree, parse_hier_constraints,
 };
 use pptx_engine::format_brush::{CopiedFormat, TextElement, apply_format, extract_format};
 use pptx_engine::smartart_layout::{SMARTART_PALETTE, layout_shapes};
@@ -26,11 +26,23 @@ struct WireBox<'a> {
     h: JsNum,
 }
 
+/// A line of `layoutHierTree`; `to` is the node object itself, present only
+/// where the TypeScript spreads it in.
+#[derive(Serialize)]
+struct WireLine<'a> {
+    x: JsNum,
+    y: JsNum,
+    cx: JsNum,
+    cy: JsNum,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    to: Option<&'a Value>,
+}
+
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct WireHierLayout<'a> {
     boxes: Vec<WireBox<'a>>,
-    lines: &'a [HierLineRect],
+    lines: Vec<WireLine<'a>>,
     box_w: JsNum,
 }
 
@@ -83,9 +95,31 @@ fn layout_hier_tree_call(text: &str, args: &Value) -> Returned {
                 .ok_or_else(|| "a box of a node not in the roots".to_owned())
         })
         .collect::<Result<Vec<_>, _>>()?;
+    let lines = geo
+        .lines
+        .iter()
+        .map(|ln| {
+            let to = match ln.to {
+                Some(node) => Some(
+                    nodes
+                        .get(&std::ptr::from_ref(node))
+                        .copied()
+                        .ok_or_else(|| "a line to a node not in the roots".to_owned())?,
+                ),
+                None => None,
+            };
+            Ok(WireLine {
+                x: ln.x,
+                y: ln.y,
+                cx: ln.cx,
+                cy: ln.cy,
+                to,
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()?;
     value(WireHierLayout {
         boxes,
-        lines: &geo.lines,
+        lines,
         box_w: geo.box_w,
     })
 }

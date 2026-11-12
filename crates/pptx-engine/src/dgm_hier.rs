@@ -1,4 +1,5 @@
-//! Hierarchy-family (orgChart1) diagram layout interpreter
+//! Hierarchy-family (orgChart1, and the built-in hierarchy1) diagram layout
+//! interpreter
 //! (packages/pptx-engine/src/dgm-hier.ts). All geometry before the final
 //! scaling is in units of one box width.
 
@@ -39,19 +40,22 @@ pub struct HierBox<'a> {
     pub h: JsNum,
 }
 
-/// A connector as the rect it spans.
-#[derive(Debug, Clone, Copy, PartialEq, Serialize)]
-pub struct HierLineRect {
+/// A connector as the rect it spans. `to` is the child node of the connection
+/// this segment draws (the trunk segment shared by a parent's children points
+/// at the first child).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct HierLineRect<'a> {
     pub x: JsNum,
     pub y: JsNum,
     pub cx: JsNum,
     pub cy: JsNum,
+    pub to: Option<&'a HierTreeNode>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct HierLayout<'a> {
     pub boxes: Vec<HierBox<'a>>,
-    pub lines: Vec<HierLineRect>,
+    pub lines: Vec<HierLineRect<'a>>,
     pub box_w: JsNum,
 }
 
@@ -80,18 +84,37 @@ pub fn parse_hier_constraints(layout_xml: Option<&str>) -> HierConstraints {
             None
         }
     };
+    // The box and gap facts hang off the node composite. Office's orgChart1 names
+    // it rootComposite1; the built-in hierarchy1 layout names it composite.
     cons.box_aspect = fact(js_regex!(
-        r#"<dgm:constr type="h" for="des" forName="rootComposite1?"[^>]*refForName="rootComposite1?"[^>]*fact="([\d.]+)""#
+        r#"<dgm:constr type="h" for="des" forName="(?:rootComposite1?|composite)"[^>]*refForName="(?:rootComposite1?|composite)"[^>]*fact="([\d.]+)""#
     ))
     .map_or(cons.box_aspect, JsNum);
     cons.sib_sp = fact(js_regex!(
-        r#"<dgm:constr type="sibSp"[^>]*refForName="rootComposite1?"[^>]*fact="([\d.]+)""#
+        r#"<dgm:constr type="sibSp"[^>]*refForName="(?:rootComposite1?|composite)"[^>]*fact="([\d.]+)""#
     ))
     .map_or(cons.sib_sp, JsNum);
-    cons.sp = fact(js_regex!(
-        r#"<dgm:constr type="sp" for="des" forName="hierRoot1"[^>]*fact="([\d.]+)""#
-    ))
-    .map_or(cons.sp, JsNum);
+    // Row gap: measured against a sibling box width (orgChart1) or against the
+    // composite height (hierarchy1), so a height reference scales by the aspect.
+    if let Some(sp) = js_regex!(
+        r#"<dgm:constr type="sp" for="des" forName="hierRoot1"[^>]*?refType="(w|h)"[^>]*?fact="([\d.]+)""#
+    )
+    .exec(layout_xml)
+    {
+        let v = parse_float(sp.get(2).unwrap_or_default());
+        if v.is_finite() && v > 0.0 {
+            cons.sp = JsNum(if sp.get(1) == Some("h") {
+                v * cons.box_aspect.0
+            } else {
+                v
+            });
+        }
+    } else {
+        cons.sp = fact(js_regex!(
+            r#"<dgm:constr type="sp" for="des" forName="hierRoot1"[^>]*fact="([\d.]+)""#
+        ))
+        .map_or(cons.sp, JsNum);
+    }
     let conn_w = fact(js_regex!(
         r#"<dgm:constr type="w" for="ch" forName="rootConnector1?"[^>]*fact="([\d.]+)""#
     ));
@@ -111,11 +134,12 @@ pub fn parse_hier_constraints(layout_xml: Option<&str>) -> HierConstraints {
 }
 
 #[derive(Debug, Clone, Copy)]
-struct Line {
+struct Line<'a> {
     x1: f64,
     y1: f64,
     x2: f64,
     y2: f64,
+    to: Option<&'a HierTreeNode>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -133,7 +157,7 @@ struct Sub<'a> {
     l: Vec<Option<f64>>,
     r: Vec<Option<f64>>,
     boxes: Vec<SubBox<'a>>,
-    lines: Vec<Line>,
+    lines: Vec<Line<'a>>,
 }
 
 /// `a[i]`, `None` where JavaScript reads `undefined`.
@@ -235,6 +259,7 @@ fn shift_sub<'a>(sub: &Sub<'a>, dx: f64, d_row: usize, into: &mut Sub<'a>, dy: f
     }
     for ln in &sub.lines {
         into.lines.push(Line {
+            to: ln.to,
             x1: ln.x1 + dx,
             y1: ln.y1 + dy,
             x2: ln.x2 + dx,
@@ -320,6 +345,7 @@ impl Ctx {
                     y1: asst_mid_y,
                     x2: trunk_x,
                     y2: asst_mid_y,
+                    to: Some(a),
                 });
                 let l = math_min(at(&out.l, 1).unwrap_or(f64::INFINITY), right - 1.0);
                 set(&mut out.l, 1, l);
@@ -335,6 +361,7 @@ impl Ctx {
                 y1: bh,
                 x2: trunk_x,
                 y2: self.row_top(1) + bh / 2.0,
+                to: assts.first().copied(),
             });
             return out;
         }
@@ -370,27 +397,31 @@ impl Ctx {
                 y1: bh,
                 x2: trunk_x,
                 y2: bus_y,
+                to: kids.first().copied(),
             });
-            for (sub, off) in subs.iter().zip(&offs) {
+            for (i, (sub, off)) in subs.iter().zip(&offs).enumerate() {
+                let to = kids.get(i).copied();
                 let cx = off - mid;
                 out.lines.push(Line {
                     x1: trunk_x,
                     y1: bus_y,
                     x2: cx,
                     y2: bus_y,
+                    to,
                 });
                 out.lines.push(Line {
                     x1: cx,
                     y1: bus_y,
                     x2: cx,
                     y2: self.row_top(child_row0),
+                    to,
                 });
                 shift_sub(sub, cx, child_row0, &mut out, self.row_top(child_row0));
             }
         } else {
             let mut row = child_row0;
             let mut last_mid_y = bh;
-            for sub in &subs {
+            for (i, sub) in subs.iter().enumerate() {
                 let cx = mir * (cons.hang_indent.0 - 0.5 + 0.5);
                 let mid_y = self.row_top(row) + bh / 2.0;
                 out.lines.push(Line {
@@ -398,6 +429,7 @@ impl Ctx {
                     y1: mid_y,
                     x2: cx - mir * 0.5,
                     y2: mid_y,
+                    to: kids.get(i).copied(),
                 });
                 shift_sub(sub, cx, row, &mut out, self.row_top(row));
                 last_mid_y = mid_y;
@@ -408,6 +440,7 @@ impl Ctx {
                 y1: bh,
                 x2: trunk_x,
                 y2: last_mid_y,
+                to: kids.first().copied(),
             });
         }
         out
@@ -513,6 +546,7 @@ pub fn layout_hier_tree<'a>(
             y: JsNum(off_y + math_min(ln.y1, ln.y2) * scale),
             cx: JsNum((ln.x2 - ln.x1).abs() * scale),
             cy: JsNum((ln.y2 - ln.y1).abs() * scale),
+            to: ln.to,
         })
         .collect();
     Some(HierLayout {

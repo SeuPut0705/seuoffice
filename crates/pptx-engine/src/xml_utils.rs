@@ -3,7 +3,10 @@
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
-use jscompat::{JsRegex, Radix, RegexSyntaxError, js_regex, parse_int, to_number, value_truthy};
+use jscompat::{
+    Radix, RegexError, TryJsRegex, js_regex, parse_float, parse_int, to_number, trim,
+    value_to_string, value_truthy,
+};
 use serde_json::{Map, Value};
 
 static EMPTY_NODE: LazyLock<Value> = LazyLock::new(|| Value::Object(Map::new()));
@@ -47,6 +50,24 @@ pub fn decode_numeric_char_refs(text: &str) -> String {
             return ch.to_string();
         }
         reference.as_str().to_owned()
+    })
+}
+
+/// `percentFraction`: an ST_Percentage as a fraction of one. The schema form is
+/// an integer in 1/1000 % ("50000"); Google Slides writes the suffixed form
+/// ("50%"). `None` for a missing or non-numeric value.
+pub fn percent_fraction(raw: Option<&Value>) -> Option<f64> {
+    let raw = raw.filter(|v| !v.is_null())?;
+    let text = value_to_string(Some(raw));
+    let text = trim(&text);
+    let n = parse_float(text);
+    if !n.is_finite() {
+        return None;
+    }
+    Some(if text.ends_with('%') {
+        n / 100.0
+    } else {
+        n / 100_000.0
     })
 }
 
@@ -122,9 +143,12 @@ pub fn creation_id_xml(uuid: &str) -> String {
 /// Any `<Default>` already declaring this extension, whatever its attribute
 /// order or quoting. `ext` is pasted into the pattern unescaped, so it can be
 /// a pattern that does not compile: that throws, as `new RegExp` does.
-pub fn has_default_for(ct: &str, ext: &str) -> Result<bool, RegexSyntaxError> {
-    let re = JsRegex::new(&format!(r#"\bExtension\s*=\s*(["']){ext}\1"#), "")?;
-    Ok(js_regex!(r"<Default\b[^>]*\/?>")
-        .find_iter(ct)
-        .any(|tag| re.test(tag.as_str())))
+pub fn has_default_for(ct: &str, ext: &str) -> Result<bool, RegexError> {
+    let re = TryJsRegex::new(&format!(r#"\bExtension\s*=\s*(["']){ext}\1"#), "")?;
+    for tag in js_regex!(r"<Default\b[^>]*\/?>").find_iter(ct) {
+        if re.try_test(tag.as_str())? {
+            return Ok(true);
+        }
+    }
+    Ok(false)
 }

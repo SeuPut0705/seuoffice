@@ -2,11 +2,11 @@
 //! fragment (animation.ts from `enclosingTagSpan` to the end).
 
 use jscompat::{
-    JsNum, JsRegex, index_of, js_regex, last_index_of, number_to_string, prefix_utf16, to_number,
-    try_js_regex,
+    JsNum, JsRegex, TryJsRegex, index_of, js_regex, last_index_of, number_to_string, prefix_utf16,
+    to_number, try_js_regex,
 };
 
-use super::model::Slide;
+use crate::types::Slide;
 
 /// The tags `enclosingTagSpan` is called with.
 #[derive(Debug, Clone, Copy)]
@@ -95,7 +95,7 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> Result<bool, 
         return Ok(false);
     }
     let Some(timing) = js_regex!(r"<p:timing>[\s\S]*?<\/p:timing>")
-        .exec(&slide.body_suffix)
+        .exec(slide.body_suffix.as_deref().unwrap_or(""))
         .map(|m| m.as_str().to_owned())
     else {
         return Ok(false);
@@ -158,15 +158,15 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> Result<bool, 
     }
     for &id in spids {
         let id = number_to_string(id);
-        // new RegExp of a number's text: it always compiles
-        let Ok(re) = JsRegex::new(
+        let re = TryJsRegex::new(
             &format!(r#"<p:bldP spid="{id}"[^>]*/>|<p:bldP spid="{id}"[^>]*>[\s\S]*?</p:bldP>"#),
             "",
-        ) else {
-            continue;
-        };
-        if re.test(&xml) {
-            xml = re.replace_all(&xml, |_| String::new());
+        )
+        .map_err(|error| error.to_string())?;
+        if re.try_test(&xml).map_err(|limit| limit.to_string())? {
+            xml = re
+                .try_replace_all(&xml, |_| String::new())
+                .map_err(|limit| limit.to_string())?;
             changed = true;
         }
     }
@@ -199,8 +199,13 @@ pub fn prune_timing_for_spids(slide: &mut Slide, spids: &[f64]) -> Result<bool, 
     } else {
         ""
     };
-    slide.body_suffix = slide.body_suffix.replacen(&timing, kept, 1);
-    slide.structure_dirty = true;
+    let replaced = slide
+        .body_suffix
+        .as_deref()
+        .unwrap_or("")
+        .replacen(&timing, kept, 1);
+    slide.body_suffix.set(replaced);
+    slide.structure_dirty.set(true);
     Ok(true)
 }
 

@@ -7,56 +7,13 @@
 //! in the fragment: a group embeds its children's bytes, and a wrapper
 //! without a creationId must not take a child's.
 
-use std::borrow::Cow;
+use std::sync::Arc;
 
-use jscompat::{JsMatch, JsNum, JsRegex, js_regex, number_to_string, regex_escape, trim, truthy};
-use serde::{Deserialize, Serialize};
+use jscompat::{JsMatch, JsRegex, TryJsRegex, js_regex, regex_escape, trim, truthy};
 
+use crate::types::{ByteAnchor, Slide, SlideElement};
+use crate::with_element;
 use crate::xml_utils::{creation_id_ext_xml, creation_id_xml};
-
-/// `ByteAnchor` with the one field identity.ts reads and writes. The port of
-/// types.ts replaces it.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ByteAnchor {
-    pub original_xml: String,
-}
-
-/// `nvId`: the model holds the `<p:cNvPr id>` text, identity.ts also takes a
-/// number.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(untagged)]
-pub enum NvId {
-    Number(JsNum),
-    Text(String),
-}
-
-impl NvId {
-    /// `${nvId}`
-    fn text(&self) -> Cow<'_, str> {
-        match self {
-            Self::Number(number) => Cow::Owned(number_to_string(number.0)),
-            Self::Text(text) => Cow::Borrowed(text),
-        }
-    }
-}
-
-/// The fields of `SlideElement` identity.ts reads, and the anchor
-/// `ensureCreationId` writes. The port of types.ts replaces it.
-#[derive(Debug, Clone, PartialEq)]
-pub struct SlideElement {
-    pub id: String,
-    /// Read as `el.anchor?.originalXml`.
-    pub anchor: Option<ByteAnchor>,
-    pub nv_id: Option<NvId>,
-}
-
-/// The field of `Slide` `slideDurableId` reads. The port of types.ts
-/// replaces it.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Slide {
-    pub path: String,
-}
 
 const CNVPR_CLOSE: &str = "</p:cNvPr>";
 
@@ -70,16 +27,22 @@ fn cnvpr_open_re() -> &'static JsRegex {
 
 /// `el.anchor?.originalXml`, `None` where JavaScript reads it as false.
 fn xml_of(el: &SlideElement) -> Option<&str> {
-    truthy(
-        el.anchor
-            .as_ref()
-            .map(|anchor| anchor.original_xml.as_str()),
-    )
+    truthy(with_element!(el, e => e.anchor.as_ref().map(|anchor| &*anchor.original_xml)))
+}
+
+/// `el.nvId`, the text of the element's `<p:cNvPr id>`.
+fn nv_id_of(el: &SlideElement) -> Option<&str> {
+    with_element!(el, e => e.nv_id.as_deref())
+}
+
+/// `el.anchor`, to be written.
+fn anchor_mut(el: &mut SlideElement) -> Option<&mut ByteAnchor> {
+    with_element!(el, e => e.anchor.as_mut())
 }
 
 /// `e_<nvId>`, `None` without an nvId (`nvId != null` in the TypeScript).
 fn nv_id_form(el: &SlideElement) -> Option<String> {
-    el.nv_id.as_ref().map(|nv_id| format!("e_{}", nv_id.text()))
+    nv_id_of(el).map(|nv_id| format!("e_{nv_id}"))
 }
 
 /// The element's own `<p:cNvPr>`: the tag when self-closing, else up to its
@@ -124,14 +87,17 @@ pub fn element_durable_id(el: &SlideElement) -> Option<String> {
 }
 
 pub fn slide_durable_id(slide: &Slide) -> String {
-    if let Some(number) = js_regex!(r"slide(\d+)\.xml$").exec(&slide.path) {
+    if let Some(number) =
+        js_regex!(r"slide(\d+)\.xml$").exec(slide.path.as_deref().unwrap_or_default())
+    {
         return format!("s_{}", number.get(1).unwrap_or_default());
     }
     // the TypeScript class matches each UTF-16 unit, so a character outside
     // the BMP becomes two underscores
-    let flat = js_regex!(r"[^a-zA-Z0-9]").replace_all(&slide.path, |other| {
-        "_".repeat(other.as_str().encode_utf16().count())
-    });
+    let flat = js_regex!(r"[^a-zA-Z0-9]")
+        .replace_all(slide.path.as_deref().unwrap_or_default(), |other| {
+            "_".repeat(other.as_str().encode_utf16().count())
+        });
     format!("s_{flat}")
 }
 
@@ -147,7 +113,7 @@ pub fn element_cnvpr_id(el: &SlideElement) -> Option<String> {
 
 /// A ref matches the parse-time id, the durable id or the cNvPr form.
 pub fn matches_element_ref(el: &SlideElement, id: &str) -> bool {
-    el.id == id
+    el.id() == id
         || element_durable_id(el).as_deref() == Some(id)
         || element_cnvpr_id(el).as_deref() == Some(id)
 }
@@ -156,11 +122,11 @@ pub fn matches_element_ref(el: &SlideElement, id: &str) -> bool {
 /// one. `uuid` is what `crypto.randomUUID()` gives `creationIdXml` and
 /// `creationIdExtXml`; at most one is drawn.
 pub fn ensure_creation_id(el: &mut SlideElement, uuid: &str) {
-    let Some(anchor) = el.anchor.as_mut() else {
+    let Some(anchor) = anchor_mut(el) else {
         return;
     };
     if let Some(next) = with_creation_id(&anchor.original_xml, uuid) {
-        anchor.original_xml = next;
+        anchor.original_xml = Arc::from(next);
     }
 }
 
@@ -228,24 +194,25 @@ fn with_creation_id(xml: &str, uuid: &str) -> Option<String> {
 /// ledger group-child-nvid-pattern: the TypeScript pastes the nvId, which is
 /// the document's `id` attribute, into a pattern as it is, so `(` throws and
 /// `+21` matches no tag. Here the nvId is literal text.
-pub fn group_child_durable_id(grp: &SlideElement, child: &SlideElement) -> Option<String> {
-    if let (Some(xml), Some(nv_id)) = (xml_of(grp), child.nv_id.as_ref()) {
-        // an escaped literal always compiles; were it not to, the child's own id answers
-        if let Some(open) = JsRegex::new(
+pub fn group_child_durable_id(
+    grp: &SlideElement,
+    child: &SlideElement,
+) -> Result<Option<String>, String> {
+    if let (Some(xml), Some(nv_id)) = (xml_of(grp), nv_id_of(child)) {
+        let regex = TryJsRegex::new(
             &format!(
                 r#"<p:cNvPr\b[^>]*\bid="{}"[^>]*?(\/?)>"#,
-                regex_escape(&nv_id.text())
+                regex_escape(nv_id)
             ),
             "",
         )
-        .ok()
-        .and_then(|regex| regex.exec(xml))
-        {
+        .map_err(|error| error.to_string())?;
+        if let Some(open) = regex.try_exec(xml).map_err(|limit| limit.to_string())? {
             let own = own_cnvpr(xml, &open);
             if let Some(creation) = creation_id_re().exec(own) {
-                return Some(guid_form(&creation));
+                return Ok(Some(guid_form(&creation)));
             }
         }
     }
-    element_durable_id(child)
+    Ok(element_durable_id(child))
 }

@@ -1,6 +1,6 @@
 // Every tracked PPTX, built decks and adversarial inputs, through the shared Word gate.
 import { execFileSync } from 'node:child_process'
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -24,7 +24,7 @@ import { registerLedger, reportDivergences } from './divergences'
 
 useFloors(fileURLToPath(new URL('floors.json', import.meta.url)))
 registerLedger()
-observeDifferences()
+observeDifferences(option('--keep', 40))
 const callsOnly = process.argv.includes('--calls-only')
 const corpusPackages = callsOnly
   ? null
@@ -112,19 +112,20 @@ if (process.argv.includes('--group') && !callsOnly) {
 }
 const outputDir = process.env.PPTX_DIFF_OUT ?? fileURLToPath(new URL('out', import.meta.url))
 mkdirSync(outputDir, { recursive: true })
-const fullDifferences = JSON.stringify(observedDifferences, null, 2) + '\n'
-writeFileSync(
-  resolve(outputDir, callsOnly ? 'calls-differences.json' : 'differences.json'),
-  fullDifferences,
-)
+// One difference per line: a run with whole decks in its differences passes
+// the longest string V8 can build as one JSON text.
+const lines = (): string[] => observedDifferences.map((difference) => JSON.stringify(difference))
+const writeLines = (path: string, flag: string): void => {
+  writeFileSync(path, '', { flag })
+  for (const line of lines()) appendFileSync(path, line + '\n')
+}
+writeLines(resolve(outputDir, callsOnly ? 'calls-differences.jsonl' : 'differences.jsonl'), 'w')
 const firstAt = process.argv.indexOf('--record-first')
 if (firstAt !== -1) {
   const unit = process.argv[firstAt + 1]
   if (!unit || !/^[a-z0-9-]+$/.test(unit)) throw new Error('invalid first-run unit name')
   const evidence = resolve(repoRoot, 'crates/pptx-engine/evidence')
   mkdirSync(evidence, { recursive: true })
-  writeFileSync(resolve(evidence, `${unit}-first.differences.json`), fullDifferences, {
-    flag: 'wx',
-  })
+  writeLines(resolve(evidence, `${unit}-first.differences.jsonl`), 'wx')
 }
 process.exit(gateHasFailed() ? 1 : 0)

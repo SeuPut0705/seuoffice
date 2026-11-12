@@ -332,6 +332,18 @@ pub enum FontScriptHint {
     Tc,
 }
 
+/// `eaLang` of a `TextRun` or level style: the line-breaking language's East
+/// Asian script, `none` for a tag that is not East Asian (en-US).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum EaLang {
+    Ja,
+    Ko,
+    Sc,
+    Tc,
+    None,
+}
+
 /// `outline` of a `TextRun`.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -387,6 +399,9 @@ js_object! {
         pub font_family: String,
         pub latin_family: String,
         pub font_script_hint: FontScriptHint,
+        pub ea_lang: EaLang,
+        pub lang: String,
+        pub alt_lang: String,
         pub color: ResolvedColor,
         pub color_follows_theme: bool,
         pub color_node_xml: String,
@@ -1043,6 +1058,36 @@ pub enum SlideElement {
     Table(Box<TableElement>),
     Chart(Box<ChartElement>),
     Passthrough(Box<PassthroughElement>),
+}
+
+/// `el.<field>` of any element: every variant has the fields of
+/// `SlideElementBase` (`id`, `type`, `anchor`, `transform`, `nvId`, the dirty
+/// flags), so `with_element!(el, e => &mut e.dirty)` reads or writes one of
+/// them whatever the element is.
+#[macro_export]
+macro_rules! with_element {
+    ($el:expr, $e:ident => $body:expr) => {
+        match $el {
+            $crate::types::SlideElement::Text($e) => $body,
+            $crate::types::SlideElement::Picture($e) => $body,
+            $crate::types::SlideElement::Group($e) => $body,
+            $crate::types::SlideElement::Table($e) => $body,
+            $crate::types::SlideElement::Chart($e) => $body,
+            $crate::types::SlideElement::Passthrough($e) => $body,
+        }
+    };
+}
+
+impl SlideElement {
+    /// `el.id`; '' where the element has none.
+    pub fn id(&self) -> &str {
+        with_element!(self, e => (*e.id).as_deref().unwrap_or(""))
+    }
+
+    /// `el.type`
+    pub fn element_type(&self) -> Option<ElementType> {
+        with_element!(self, e => *e.r#type)
+    }
 }
 
 // ── Slide / presentation ───────────────────────────────────────────────

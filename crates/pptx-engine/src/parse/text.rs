@@ -18,7 +18,8 @@ use super::shape::{parse_glow, parse_shadow};
 use crate::named_action::named_action_of;
 use crate::placeholder::{
     BulletType, LevelTextStyle, LstStyleSource, MAX_AUTO_NUM_START, PlaceholderInsets, StyleSource,
-    TextStyleLevels, merge_text_style_chain, parse_def_r_pr_style, parse_lst_style_levels,
+    TextStyleLevels, ea_lang_of, merge_text_style_chain, parse_def_r_pr_style,
+    parse_lst_style_levels,
 };
 use crate::redaction_xml::read_redact_label;
 use crate::theme::{EaScript, ea_script_of_lang, resolve_font_ref};
@@ -27,7 +28,7 @@ use crate::types::{
     ParagraphDefaultRunProps, RunGradient, RunStyleSource, ShadowEffect, TabStop, TextAlign,
     TextAnchor, TextBody, TextInsets, TextOutline, TextRun, TextVert, TxWarp,
 };
-use crate::xml_utils::decode_numeric_char_refs;
+use crate::xml_utils::{decode_numeric_char_refs, percent_fraction};
 
 /// `node?.[key]` where `node` is an element: a string or a list has no such
 /// key (the keys read here are never indices or string methods).
@@ -154,11 +155,7 @@ pub(crate) fn parse_text_body(
         } else {
             None
         };
-        let n = match defined(v) {
-            Some(v) => parse_int(&value_to_string(Some(v)), Radix::Ten),
-            None => f64::NAN,
-        };
-        (n.is_finite() && n > 0.0).then(|| n / 100000.0)
+        percent_fraction(v).filter(|&ratio| ratio > 0.0)
     };
     let font_scale = naf_attr("@_fontScale");
     let ln_spc_reduction = naf_attr("@_lnSpcReduction");
@@ -278,10 +275,20 @@ pub(crate) fn parse_text_body(
     Ok(body)
 }
 
-/// `spcPct`: `<a:spcPct val="150000"/>` as 150 (%).
+/// `spcPct`: `<a:spcPct val="150000"/>` or `val="150%"` as 150 (%).
 pub(crate) fn spc_pct(node: Node<'_>) -> Option<f64> {
-    let v = defined(get(get(node, "a:spcPct"), "@_val"))?;
-    Some(or0(int(Some(v))) / 1000.0)
+    let ratio = percent_fraction(get(get(node, "a:spcPct"), "@_val"))?;
+    Some(ratio * 100.0)
+}
+
+/// `hundredthsOr`: `sz`/`spc` are integer hundredths of a point; a malformed
+/// value falls back rather than poisoning layout with NaN.
+fn hundredths_or(v: Node<'_>, dflt: Option<f64>) -> Option<f64> {
+    let Some(v) = defined(v) else {
+        return dflt;
+    };
+    let n = parse_int(&value_to_string(Some(v)), Radix::Ten);
+    if n.is_nan() { dflt } else { Some(n / 100.0) }
 }
 
 /// `spcPts`: `<a:spcPts val="2400"/>` as 24 (pt).
@@ -845,6 +852,16 @@ fn run_of(
     };
     let run_lang_script = ea_script_of_lang(get(r_pr, "@_altLang"))
         .or_else(|| ea_script_of_lang(get(r_pr, "@_lang")));
+    // Line-breaking rules follow the language tag alone (not the text's script): a run's own
+    // lang/altLang overrides the inherited level default (an explicit en-US has no EA rules);
+    // no tag anywhere leaves eaLang unset for the layout's default editing language
+    let own_lang =
+        defined(get(r_pr, "@_altLang")).is_some() || defined(get(r_pr, "@_lang")).is_some();
+    let ea_lang = if own_lang {
+        Some(ea_lang_of(run_lang_script))
+    } else {
+        dflt.and_then(|d| *d.ea_lang)
+    };
     let ea_script = run_lang_script
         .or_else(|| {
             if js_regex!(r"[\u3040-\u30ff\u31f0-\u31ff]").test(&text) {
@@ -1036,9 +1053,12 @@ fn run_of(
             .collect::<Vec<_>>()
             .join(" via ")
     };
-    let sz = get(r_pr, "@_sz");
+    // sz/spc are integer hundredths. `?? dflt` does not catch NaN, so one malformed
+    // attribute used to put NaN into every downstream glyph size and line height.
+    let own_font_size = hundredths_or(get(r_pr, "@_sz"), None);
+    let own_letter_spacing = hundredths_or(get(r_pr, "@_spc"), None);
     let style_src = RunStyleSource {
-        font_size: if value_truthy(sz) {
+        font_size: if own_font_size.is_some() {
             "run".to_owned()
         } else {
             inherited(
@@ -1136,30 +1156,36 @@ fn run_of(
     if !value_truthy(latin_raw) && !value_truthy(ea_raw) {
         run.font_implicit.set(true);
     }
-    run.font_size.assign(if value_truthy(sz) {
-        Some(JsNum(int(sz) / 100.0))
-    } else {
-        dflt.and_then(|d| *d.font_size)
+    run.font_size.assign(match own_font_size {
+        Some(size) => Some(JsNum(size)),
+        None => dflt.and_then(|d| *d.font_size),
     });
-    if !value_truthy(sz) {
+    if own_font_size.is_none() {
         run.font_size_implicit.set(true);
     }
-    let spc = get(r_pr, "@_spc");
-    if value_truthy(spc) {
-        run.letter_spacing.set(JsNum(int(spc) / 100.0));
+    if let Some(spacing) = own_letter_spacing {
+        run.letter_spacing.set(JsNum(spacing));
     }
     if let Some(kern) = defined(get(r_pr, "@_kern")) {
         run.kern.set(JsNum(or0(int(Some(kern))) / 100.0));
     }
     let baseline = get(r_pr, "@_baseline");
     if value_truthy(baseline) {
-        run.baseline.set(JsNum(int(baseline) / 1000.0));
+        run.baseline
+            .set(JsNum(percent_fraction(baseline).unwrap_or(0.0) * 100.0));
     }
     run.font_family.assign(font_family);
     if let Some(latin_family) = latin_family.filter(|f| !f.is_empty()) {
         run.latin_family.set(latin_family);
     }
     run.font_script_hint.set_some(font_script_hint);
+    run.ea_lang.set_some(ea_lang);
+    if let Some(lang) = defined(get(r_pr, "@_lang")) {
+        run.lang.set(value_to_string(Some(lang)));
+    }
+    if let Some(alt_lang) = defined(get(r_pr, "@_altLang")) {
+        run.alt_lang.set(value_to_string(Some(alt_lang)));
+    }
     run.color.assign(color);
     if color_follows_theme {
         run.color_follows_theme.set(true);
