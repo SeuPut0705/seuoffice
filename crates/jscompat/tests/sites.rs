@@ -1,6 +1,8 @@
-//! Every `js_regex!` and `JsRegex::new` call of the workspace, read from the
-//! source: no pattern literal is one `JsRegex::new` refuses, and the calls
-//! this test cannot read are known by name.
+//! Every regex the workspace builds, read from the source: no pattern is one
+//! `JsRegex::new` refuses where JavaScript builds it; no `JsRegex` holds a
+//! pattern whose search can pass `BACKTRACK_LIMIT`, or one this test cannot
+//! read, so its searches cannot fail; and no search is restarted once per
+//! match with a regex that reads the text ahead, but for those listed.
 
 use std::fs;
 use std::path::Path;
@@ -106,22 +108,9 @@ fn rust_files(dir: &Path, found: &mut Vec<std::path::PathBuf>) {
     }
 }
 
-/// Calls this test cannot read, by file: the pattern or the flags are not a
-/// literal of the call. A new one fails this test, so that its pattern is
-/// read by a person: the patterns of these are ASCII, without `i`, except
-/// `compile` of settings.rs, which passes "" or "i" over an ASCII template
-/// around the namespace prefixes of the document.
-const NOT_LITERAL: &[(&str, usize)] = &[
-    ("docx-engine/src/drawing_geometry/anchor.rs", 1),
-    ("docx-engine/src/sdt.rs", 5),
-    ("docx-engine/src/settings.rs", 1),
-    ("docx-engine/src/vml/shape.rs", 2),
-    // the macro itself
-    ("jscompat/src/regex.rs", 1),
-];
-
-/// Calls of `find_from` whose regex reads the text ahead of each search, or
-/// is not written at the call so that this test cannot tell. `find_from` is
+/// Calls of `find_from` and `try_find_from` whose regex reads the text ahead
+/// of each search, or is not written at the call so that this test cannot
+/// tell. `find_from` is
 /// how a loop restarts a search once per match; with such a regex every
 /// restart reads the rest of the text again (measured: 2,000 restarts over
 /// 2 MB took 0.5 s, and 31 s where the text holds a character outside the
@@ -155,6 +144,86 @@ struct Sites {
     rejected: usize,
     /// Regexes that read the text ahead of each search (`JsRegex::reads_ahead`).
     reads_ahead: usize,
+    /// Regexes with a loop that keeps entries on the backtrack stack for each
+    /// turn until the match ends: `regress` compiles the loop as `EnterLoop`
+    /// (its body is more than one character matcher), and the loops of the
+    /// pattern may turn more than 4,096 times together. Each is a `TryJsRegex`.
+    grows_per_turn: usize,
+    /// Regexes with a lazy loop over a character matcher nothing in a part
+    /// stops (`[\s\S]*?`, `.*?`). Information only: the vendored regress takes
+    /// one character per backtrack there, where 0.12.0 walked to the end.
+    lazy_walks: usize,
+    /// Regexes built as a `TryJsRegex`.
+    fallible: usize,
+}
+
+/// The loops of a regex. Whether one keeps stack entries per turn without a
+/// small bound, read from the `Debug` text of the compiled program. And
+/// whether one is a lazy loop without a bound over a single character matcher
+/// that accepts `<`, `>` and a letter, so that nothing in a part stops the
+/// walk `regress` makes ahead of it: read from the pattern, as the atom before
+/// `*?` or `+?`.
+fn loops_of(regex: &JsRegex, pattern: &str) -> (bool, bool) {
+    let program = format!("{regex:?}");
+    // the turns of all its loops multiplied, as if each were inside the others
+    let turns = program
+        .split("EnterLoop(")
+        .skip(1)
+        .fold(1u64, |turns, fields| {
+            let digits = fields.split("max_iters: ").nth(1).unwrap_or("0");
+            let digits = &digits[..digits
+                .find(|c: char| !c.is_ascii_digit())
+                .unwrap_or(digits.len())];
+            turns.saturating_mul(digits.parse::<u64>().unwrap().max(1))
+        });
+    let grows = turns > 4096;
+    let bytes = pattern.as_bytes();
+    let escaped = |at: usize| {
+        bytes[..at]
+            .iter()
+            .rev()
+            .take_while(|byte| **byte == b'\\')
+            .count()
+            % 2
+            == 1
+    };
+    let lazy = (2..bytes.len()).any(|at| {
+        if bytes[at] != b'?' || !matches!(bytes[at - 1], b'*' | b'+') || escaped(at - 1) {
+            return false;
+        }
+        let end = at - 1;
+        let atom = match bytes[end - 1] {
+            b'.' if !escaped(end - 1) => ".",
+            b']' if !escaped(end - 1) => match (0..end - 1)
+                .rev()
+                .find(|open| bytes[*open] == b'[' && !escaped(*open))
+            {
+                Some(open) => &pattern[open..end],
+                None => return false,
+            },
+            _ if end >= 2 && escaped(end - 1) => &pattern[end - 2..end],
+            _ => return false,
+        };
+        JsRegex::new(&format!("^{atom}{{3}}$"), "").is_ok_and(|class| class.test("<a>"))
+    });
+    (grows, lazy)
+}
+
+/// The literal a `const NAME: &str = ...;` of `source` holds, for a call whose
+/// pattern is the name of a constant of the same file.
+fn constant(source: &str, call: &str) -> Option<String> {
+    let name = call[..call.find([',', ')'])?].trim();
+    if name.is_empty()
+        || !name
+            .chars()
+            .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit() || c == '_')
+    {
+        return None;
+    }
+    let declared = source.find(&format!("const {name}: &str ="))?;
+    let value = &source[declared + name.len() + 13..];
+    let (literals, _, _) = literals_of_call(&format!("{});", &value[..value.find(";\n")?]));
+    literals.into_iter().next().map(|(literal, _)| literal)
 }
 
 /// No pattern literal of the workspace is one `JsRegex::new` refuses where
@@ -167,8 +236,12 @@ fn every_site_of_the_workspace_builds() {
     rust_files(workspace, &mut files);
     files.sort();
     let mut sites = Sites::default();
-    let mut unread: Vec<(String, usize)> = Vec::new();
+    // calls whose searches cannot fail, with a pattern that can pass the bound or that is not read here
+    let mut infallible_growing: Vec<String> = Vec::new();
+    let mut infallible_unread: Vec<String> = Vec::new();
     let mut restarts: Vec<(String, usize)> = Vec::new();
+    // G: a loop that grows the stack per turn; L: a lazy loop that walks ahead
+    let mut loops: Vec<String> = Vec::new();
     let count_in = |list: &mut Vec<(String, usize)>, name: &str, by: usize| {
         if by > 0 {
             match list.iter_mut().find(|(listed, _)| listed == name) {
@@ -192,39 +265,51 @@ fn every_site_of_the_workspace_builds() {
         let mut restarts_here = if name.starts_with("jscompat/") {
             0
         } else {
-            source.matches(".find_from(").count()
+            source.matches(".find_from(").count() + source.matches(".try_find_from(").count()
         };
-        for opener in ["js_regex!(", "JsRegex::new("] {
+        for opener in [
+            "js_regex!(",
+            "JsRegex::new(",
+            "try_js_regex!(",
+            "TryJsRegex::new(",
+        ] {
+            let fallible = opener.starts_with('t') || opener.starts_with('T');
             for (start, _) in source.match_indices(opener) {
+                // `js_regex!(` is also the end of `try_js_regex!(`
+                if source[..start].ends_with(|c: char| c.is_ascii_alphanumeric() || c == '_') {
+                    continue;
+                }
                 let call_start = start + opener.len();
-                let (literals, ends_in_a_literal, call_length) =
+                let (mut literals, ends_in_a_literal, call_length) =
                     literals_of_call(&source[call_start..]);
+                // a pattern held in a constant of the file
+                if let Some(literal) = constant(&source, &source[call_start..]) {
+                    literals.insert(0, (literal, true));
+                }
                 // `js_regex!(...).find_from(`: the regex of a restart, read here
-                let restart = source[call_start + call_length..]
-                    .trim_start()
-                    .starts_with(".find_from(")
-                    .then(|| {
-                        call_start
-                            + call_length
-                            + source[call_start + call_length..]
-                                .find(".find_from(")
-                                .unwrap()
-                    });
+                let after = source[call_start + call_length..].trim_start();
+                let restart =
+                    after.starts_with(".find_from(") || after.starts_with(".try_find_from(");
+                let line = source[..start].matches('\n').count() + 1;
                 let is_flags = |text: &str| text.chars().all(|flag| "dgimsuvy".contains(flag));
                 let (flags, patterns) = match literals.split_last() {
                     // `JsRegex::new` always takes its flags last
                     Some(((flags, true), patterns))
                         if ends_in_a_literal
                             && is_flags(flags)
-                            && (!patterns.is_empty() || opener == "JsRegex::new(") =>
+                            && (!patterns.is_empty() || opener.ends_with("::new(")) =>
                     {
                         (flags.as_str(), patterns)
                     }
-                    _ if opener == "JsRegex::new(" => ("", &[][..]),
+                    _ if opener.ends_with("::new(") => ("", &[][..]),
                     _ => ("", &literals[..]),
                 };
+                sites.fallible += usize::from(fallible);
                 if patterns.is_empty() {
-                    count_in(&mut unread, &name, 1);
+                    // the regex module passes on the patterns of its callers
+                    if !fallible && name != "jscompat/src/regex.rs" {
+                        infallible_unread.push(format!("{name}:{line}"));
+                    }
                     continue;
                 }
                 let without_u = !flags.contains(['u', 'v']);
@@ -232,6 +317,7 @@ fn every_site_of_the_workspace_builds() {
                 sites.without_u += usize::from(without_u);
                 sites.icase += usize::from(without_u && flags.contains('i'));
                 let (mut counted, mut lookbehind, mut reads_ahead) = (false, false, false);
+                let (mut grows, mut lazy) = (false, false);
                 for (pattern, own) in patterns {
                     // a format! template: what the caller puts in is not known here
                     let pattern = if *own {
@@ -248,7 +334,19 @@ fn every_site_of_the_workspace_builds() {
                     lookbehind |= pattern.contains("(?<=") || pattern.contains("(?<!");
                     // a pattern JavaScript rejects too is a test of that
                     match JsRegex::new(&pattern, flags) {
-                        Ok(regex) => reads_ahead |= regex.reads_ahead(),
+                        Ok(regex) => {
+                            reads_ahead |= regex.reads_ahead();
+                            let (grows_here, lazy_here) = loops_of(&regex, &pattern);
+                            if grows_here || lazy_here {
+                                loops.push(format!(
+                                    "{}{} {name}: /{pattern}/{flags}",
+                                    if grows_here { "G" } else { "-" },
+                                    if lazy_here { "L" } else { "-" }
+                                ));
+                            }
+                            grows |= grows_here;
+                            lazy |= lazy_here;
+                        }
                         Err(error) if error.to_string().contains("as JavaScript matches it") => {
                             panic!("{name}: {error}")
                         }
@@ -258,7 +356,12 @@ fn every_site_of_the_workspace_builds() {
                 sites.counted += usize::from(without_u && counted);
                 sites.lookbehind += usize::from(without_u && lookbehind);
                 sites.reads_ahead += usize::from(reads_ahead);
-                if restart.is_some() && !reads_ahead {
+                sites.grows_per_turn += usize::from(grows);
+                sites.lazy_walks += usize::from(lazy);
+                if grows && !fallible {
+                    infallible_growing.push(format!("{name}:{line}"));
+                }
+                if restart && !reads_ahead {
                     restarts_here -= 1;
                 }
             }
@@ -266,14 +369,23 @@ fn every_site_of_the_workspace_builds() {
         count_in(&mut restarts, &name, restarts_here);
     }
     println!("{sites:?}");
-    println!("{unread:?}");
     println!("{restarts:?}");
+    for site in &loops {
+        println!("{site}");
+    }
     let listed = |list: &[(&str, usize)]| -> Vec<(String, usize)> {
         list.iter()
             .map(|(name, count)| ((*name).to_owned(), *count))
             .collect()
     };
     assert_eq!(restarts, listed(RESTARTS_THAT_MAY_READ_AHEAD));
-    assert_eq!(unread, listed(NOT_LITERAL));
+    assert!(
+        infallible_growing.is_empty(),
+        "a JsRegex whose search can pass the bound; build it as a TryJsRegex: {infallible_growing:?}"
+    );
+    assert!(
+        infallible_unread.is_empty(),
+        "a JsRegex whose pattern this test cannot read; write it at the call or in a const of the file, or build a TryJsRegex: {infallible_unread:?}"
+    );
     assert!(sites.read > 0);
 }
