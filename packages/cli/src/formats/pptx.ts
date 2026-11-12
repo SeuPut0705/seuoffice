@@ -1,4 +1,6 @@
 import { existsSync, readFileSync } from 'node:fs'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import { redactPptxPartXml } from '@seuoffice/file-parse/redaction'
 import { extname } from 'node:path'
 import { assertAllowed, type PathContext } from '../fs'
 import { isAbsolute, resolve } from 'node:path'
@@ -315,7 +317,7 @@ function summarizeSlide(
   const animations = listSlideAnimations(slide)
   if (animations.length) out.animations = animations
   if (full) {
-    const notes = getSlideNotes(opened.archive, slide.path)
+    const notes = getSlideNotes(withheldNotesView(opened.archive), slide.path)
     if (notes) out.notes = notes
   }
   if (comments) {
@@ -413,8 +415,25 @@ function effectiveStyle(paragraphs: Paragraph[]): EffectiveStyle | undefined {
   }
 }
 
-function paragraphsText(paragraphs: { runs: { text: string }[] }[]): string {
-  return paragraphs.map((p) => p.runs.map((r) => r.text).join('')).join('\n')
+/** a run hidden from AI reads as its placeholder, as in the slide editor's AI reader */
+function paragraphsText(paragraphs: { runs: { text: string; redact?: string }[] }[]): string {
+  return paragraphs
+    .map((p) => p.runs.map((r) => (r.redact ? placeholderSource(r.redact) : r.text)).join(''))
+    .join('\n')
+}
+
+/**
+ * The archive as a reader of notes may see it: a notes part reads with every
+ * run hidden from AI already rewritten to its placeholder (the gate the
+ * attachment reader puts the same parts through).
+ */
+function withheldNotesView(archive: OpenedPptx['archive']): OpenedPptx['archive'] {
+  return Object.assign(Object.create(archive) as OpenedPptx['archive'], {
+    readText: (path: string) => {
+      const xml = archive.readText(path)
+      return xml && /^ppt\/notesSlides\/[^/]+\.xml$/.test(path) ? redactPptxPartXml(xml) : xml
+    },
+  })
 }
 
 function round(n: number): number {
