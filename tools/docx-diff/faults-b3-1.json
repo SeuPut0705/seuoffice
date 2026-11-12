@@ -1,0 +1,60 @@
+{
+ "faults": [
+  {
+   "name": "porter: setAppElement skips only elements before its own slot (index < at, not <=)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/doc_properties_write.rs",
+   "old": "if at.is_some_and(|at| index <= at) {",
+   "new": "if at.is_some_and(|at| index < at) {"
+  },
+  {
+   "name": "porter: mergeOutputFileName fills {Column} without trimming the column name",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/mail_merge.rs",
+   "old": "value_of(record, trim(found.get(1).unwrap_or_default())).to_owned()",
+   "new": "value_of(record, found.get(1).unwrap_or_default()).to_owned()"
+  },
+  {
+   "name": "porter: buildContentControlXml attribute escape drops the < to &lt; replacement",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/content_control.rs",
+   "old": ".replace('<', \"&lt;\")",
+   "new": ".replace('<', \"<\")"
+  },
+  {
+   "name": "porter: chart tag_range ends one byte short of the closing tag",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/features/chart_write.rs",
+   "old": "end: end + tag.len() + 3,",
+   "new": "end: end + tag.len() + 2,"
+  },
+  {
+   "name": "independent: replaceAbstractNumLevel inserts a missing level before the first lower level",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/helpers.rs",
+   "old": "if parse_int(found.get(1).unwrap_or_default(), Radix::Ten) > ilvl {",
+   "new": "if parse_int(found.get(1).unwrap_or_default(), Radix::Ten) < ilvl {"
+  },
+  {
+   "name": "independent: pageBordersXml sizes a border line in quarter points (x4, not x8)",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/section_write.rs",
+   "old": "math_round(side.width_pt.0 * 8.0)",
+   "new": "math_round(side.width_pt.0 * 4.0)"
+  },
+  {
+   "name": "independent: patchRunPictureXml positions a new horizontal offset from page, not column",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/save/run_picture.rs",
+   "old": "rel_h.unwrap_or(\"column\"),",
+   "new": "rel_h.unwrap_or(\"page\"),"
+  },
+  {
+   "name": "independent: writeZip counts the local header as 29 bytes, so central offsets are one short per entry",
+   "group": "save",
+   "file": "crates/docx-engine/src/save/parts/zip_splice.rs",
+   "old": "offset += 30 + meta.name_bytes.len() as u64 + data.len() as u64;",
+   "new": "offset += 29 + meta.name_bytes.len() as u64 + data.len() as u64;"
+  }
+ ]
+}
