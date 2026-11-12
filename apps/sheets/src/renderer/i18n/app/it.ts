@@ -662,6 +662,8 @@ export const it = {
     'Questo tipo di grafico non supporta tale modifica; salvataggio interrotto — annulla la modifica del grafico.',
   appSaveErrMoveOverlap:
     'Una formula, un intervallo formattato, una forma o una tabella attraversa le righe spostate; salvataggio interrotto — annulla lo spostamento.',
+  appSaveErrHiddenCellsUnreadable:
+    'Impossibile leggere il registro delle celle nascoste all’IA in questa cartella di lavoro, quindi le modifiche a righe, colonne e fogli non possono essere salvate: le celle nascoste non sarebbero più protette. Annulla queste modifiche e salva di nuovo.',
   appFromTextCsvTitle: 'Importa un file CSV/di testo nella selezione corrente',
   appCsvImported: 'Importate {rows} righe × {columns} colonne dal file in {cell}.',
   appCsvEmpty: 'Il file CSV non contiene dati.',

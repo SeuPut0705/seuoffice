@@ -676,6 +676,8 @@ export const de = {
     'Dieser Diagrammtyp unterstützt diese Bearbeitung nicht; Speichern abgebrochen — machen Sie die Diagrammänderung rückgängig.',
   appSaveErrMoveOverlap:
     'Eine Formel, ein formatierter Bereich, eine Form oder eine Tabelle erstreckt sich über die verschobenen Zeilen; Speichern abgebrochen — machen Sie die Verschiebung rückgängig.',
+  appSaveErrHiddenCellsUnreadable:
+    'Der Eintrag über die vor der KI verborgenen Zellen dieser Arbeitsmappe ist nicht lesbar, daher können Änderungen an Zeilen, Spalten und Blättern nicht gespeichert werden: Die verborgenen Zellen wären danach nicht mehr geschützt. Machen Sie diese Änderungen rückgängig und speichern Sie erneut.',
   appFromTextCsvTitle: 'CSV-/Textdatei in die aktuelle Auswahl importieren',
   appCsvImported: '{rows} Zeilen × {columns} Spalten aus der Datei nach {cell} importiert.',
   appCsvEmpty: 'Die CSV-Datei enthält keine Daten.',

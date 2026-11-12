@@ -628,6 +628,8 @@ export const cs = {
     'Tento typ grafu danou úpravu nepodporuje; ukládání přerušeno — vraťte změnu grafu zpět.',
   appSaveErrMoveOverlap:
     'Přes přesouvané řádky zasahuje vzorec, formátovaná oblast, kresba nebo tabulka; ukládání přerušeno — vraťte přesun zpět.',
+  appSaveErrHiddenCellsUnreadable:
+    'Záznam o buňkách skrytých před AI v tomto sešitě nelze přečíst, proto změny řádků, sloupců a listů nelze uložit: skryté buňky by přestaly být chráněné. Vraťte tyto změny zpět a uložte znovu.',
   appFromTextCsvTitle: 'Importovat soubor CSV/text do aktuálního výběru',
   appCsvImported: 'Importováno {rows} řádků × {columns} sloupců ze souboru do {cell}.',
   appCsvEmpty: 'Soubor CSV neobsahuje žádná data.',

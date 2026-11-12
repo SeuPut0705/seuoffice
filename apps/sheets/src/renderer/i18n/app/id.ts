@@ -627,6 +627,8 @@ export const id = {
     'Jenis bagan ini tidak mendukung pengeditan tersebut; penyimpanan dibatalkan — urungkan perubahan bagan itu.',
   appSaveErrMoveOverlap:
     'Ada rumus, rentang berformat, bentuk, atau tabel yang melintasi baris yang dipindahkan; penyimpanan dibatalkan — urungkan pemindahan itu.',
+  appSaveErrHiddenCellsUnreadable:
+    'Catatan sel yang disembunyikan dari AI di buku kerja ini tidak dapat dibaca, sehingga perubahan baris, kolom, dan lembar tidak dapat disimpan: sel yang disembunyikan tidak akan terlindungi lagi. Urungkan perubahan itu, lalu simpan lagi.',
   appFromTextCsvTitle: 'Impor file CSV/teks ke pilihan saat ini',
   appCsvImported: 'Mengimpor {rows} baris × {columns} kolom dari file ke {cell}.',
   appCsvEmpty: 'File CSV tidak berisi data.',

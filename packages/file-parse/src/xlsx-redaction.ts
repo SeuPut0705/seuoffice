@@ -2,12 +2,10 @@ import type JSZip from 'jszip'
 import { sanitizeLabel } from '@genoffice/agent-core/redact-core'
 import {
   REDACTION_PART_PATH,
-  parseRedactionNameMirror,
-  parseRedactionPart,
+  readRedactionRecord,
   type RedactionMark,
   type SheetRedactionState,
 } from '@genoffice/xlsx-gateway/gateway/xlsx-redaction'
-import { parseSheetElements } from '@genoffice/xlsx-gateway/gateway/xlsx-sheets'
 import { RedactionMarkError } from './redaction-error'
 
 /**
@@ -20,11 +18,12 @@ import { RedactionMarkError } from './redaction-error'
  * neither its value nor its formula (apps/sheets `main/workbook-redactions.ts`,
  * `renderer/ai/redact.ts`).
  *
- * The record is parsed by the gateway's own parsers, the ones the editor
- * calls, and the two copies are consulted in the editor's order: the part
- * when it reads, the defined names when the part is missing or damaged. What
- * the editor answers with "unreadable" (and then withholds every cell) fails
- * the read here.
+ * The record is read by the gateway's own reader, the one a save uses when it
+ * has to move the marks itself, and the two copies are consulted in the
+ * editor's order: the part when it reads, the defined names when the part is
+ * missing or damaged (an empty copy beside a damaged part is not "no marks").
+ * What the editor answers with "unreadable" (and then withholds every cell)
+ * fails the read here.
  *
  * Two places are stricter than the editor, never looser. A part naming a
  * sheet the workbook does not have fails the read, where the editor drops
@@ -45,27 +44,14 @@ const CELL_REF = /^([A-Za-z]{1,3})([1-9]\d{0,6})$/
 export type XlsxRedactions = ReadonlyMap<string, readonly RedactionMark[]>
 
 async function readStates(zip: JSZip, workbookXml: string): Promise<SheetRedactionState[]> {
-  const part = zip.file(REDACTION_PART_PATH)
-  let partDamaged = false
-  if (part) {
-    try {
-      return parseRedactionPart(await part.async('text'))
-    } catch {
-      partDamaged = true
-    }
-  }
   try {
-    const mirrored = parseRedactionNameMirror(
+    return await readRedactionRecord(
+      async () => zip.file(REDACTION_PART_PATH)?.async('text'),
       workbookXml,
-      parseSheetElements(workbookXml).map((sheet) => sheet.name),
     )
-    // the copy in the defined names answers for a damaged part only when it
-    // has marks to give: an empty copy beside a damaged part is not "no marks"
-    if (!partDamaged || mirrored.length > 0) return mirrored
   } catch {
-    // falls through to the refusal: the copy is damaged too
+    throw new RedactionMarkError('the record of the cells withheld in this workbook cannot be read')
   }
-  throw new RedactionMarkError('the record of the cells withheld in this workbook cannot be read')
 }
 
 /**

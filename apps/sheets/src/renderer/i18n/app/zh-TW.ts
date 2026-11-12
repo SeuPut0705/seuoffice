@@ -548,6 +548,8 @@ export const zhTW = {
   appSaveErrChartUnsupported: '這個圖表類型不支援該編輯，儲存已中止——請復原該圖表變更。',
   appSaveErrMoveOverlap:
     '有公式、格式範圍、圖形或表格橫跨被移動的列——這次儲存已中止，請復原該移動。',
+  appSaveErrHiddenCellsUnreadable:
+    '讀不出這個活頁簿裡對 AI 隱藏的儲存格記錄，所以列、欄和工作表的變更無法儲存——儲存後隱藏的儲存格會失去遮蔽。請復原這些變更後再儲存。',
   appFromTextCsvTitle: '把 CSV/文字檔匯入到目前的選取範圍',
   appCsvImported: '已從檔案匯入 {rows} 列 × {columns} 欄到 {cell}。',
   appCsvEmpty: 'CSV 檔案裡沒有資料。',

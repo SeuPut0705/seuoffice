@@ -121,7 +121,11 @@ export interface StreamingSaveRequest {
   readonly workbookProtectionState?: { readonly lockStructure: boolean } | null | undefined
   readonly protectedRangeStates?: readonly SheetProtectedRangesState[] | undefined
   readonly tabColorStates?: readonly SheetTabColorState[] | undefined
-  /** null/undefined = the caller does not know the marks; the part is left as it is */
+  /**
+   * null/undefined = the caller does not know the marks. The part is left as
+   * it is, unless the save moves rows, columns or sheets: then the gateway
+   * moves the package's own record, or refuses when it cannot read it.
+   */
   readonly redactionStates?: readonly SheetRedactionState[] | null | undefined
 }
 

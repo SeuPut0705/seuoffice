@@ -662,6 +662,8 @@ export const nl = {
     'Dit grafiektype ondersteunt die bewerking niet; opslaan afgebroken — maak de grafiekwijziging ongedaan.',
   appSaveErrMoveOverlap:
     'Een formule, opgemaakt bereik, vorm of tabel loopt over de verplaatste rijen; opslaan afgebroken — maak de verplaatsing ongedaan.',
+  appSaveErrHiddenCellsUnreadable:
+    'Het overzicht van de voor de AI verborgen cellen in deze werkmap is onleesbaar, dus wijzigingen in rijen, kolommen en bladen kunnen niet worden opgeslagen: de verborgen cellen zouden dan niet meer afgeschermd zijn. Maak die wijzigingen ongedaan en sla opnieuw op.',
   appFromTextCsvTitle: 'Een CSV-/tekstbestand in de huidige selectie importeren',
   appCsvImported: '{rows} rijen × {columns} kolommen uit het bestand geïmporteerd naar {cell}.',
   appCsvEmpty: 'Het CSV-bestand bevat geen gegevens.',

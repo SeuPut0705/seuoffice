@@ -34,7 +34,7 @@ import { shiftCellArea, type StructuralOp } from './xlsx-structure'
 /// entry it was not told to replace byte-for-byte (`archive.rs:209`), and
 /// `readArchiveEntryText` reads any entry back, so no engine API was needed.
 
-import { nextFreeRelationshipId } from './xlsx-sheets'
+import { nextFreeRelationshipId, parseSheetElements, type SheetEditPlan } from './xlsx-sheets'
 import { appendDefinedNames, escapeXmlText, unescapeXml } from './xlsx-defined-names'
 
 export class RedactionError extends Error {}
@@ -299,6 +299,91 @@ export function rekeyRedactionStates(
     rekeyed.push({ sheetName: addition.name, marks: moved([...marks.values()], addition.name) })
   }
   return rekeyed
+}
+
+/**
+ * The marks a package records, read the way every reader of them reads: the
+ * part when it parses, the copy in the defined names when the part is missing
+ * or damaged. `readPart` answers undefined for a package without the part; a
+ * read that fails counts as a damaged part.
+ *
+ * Throws when neither copy can answer. An empty copy in the defined names
+ * beside a damaged part is not "no marks": the part recorded something.
+ */
+export async function readRedactionRecord(
+  readPart: () => Promise<string | undefined>,
+  workbookXml: string,
+): Promise<SheetRedactionState[]> {
+  let damage: string | null = null
+  try {
+    const text = await readPart()
+    if (text !== undefined) return parseRedactionPart(text)
+  } catch (err) {
+    damage = err instanceof Error ? err.message : String(err)
+  }
+  const mirrored = parseRedactionNameMirror(
+    workbookXml,
+    parseSheetElements(workbookXml).map((sheet) => sheet.name),
+  )
+  if (damage !== null && mirrored.length === 0) throw new RedactionError(damage)
+  return mirrored
+}
+
+/**
+ * Whether a save moves cells, or changes which sheet a name or a tab position
+ * stands for. A mark is recorded by exactly those: a rectangle, a sheet name
+ * in the part, a tab position in the defined names. Cell values, sizes,
+ * visibility and formats leave all three alone.
+ */
+export function saveMovesRedactions(
+  structuralOps: readonly { readonly ops: readonly StructuralOp[] }[],
+  sheetPlan: SheetEditPlan | undefined,
+  fileSheetNames: readonly string[],
+): boolean {
+  // the ops shiftCellArea moves a rectangle through
+  if (structuralOps.some(({ ops }) => ops.some((op) => 'index' in op))) return true
+  if (sheetPlan === undefined) return false
+  return (
+    sheetPlan.renames.length > 0 ||
+    sheetPlan.removals.length > 0 ||
+    sheetPlan.additions.length > 0 ||
+    sheetPlan.order.length !== fileSheetNames.length ||
+    sheetPlan.order.some((name, index) => name !== fileSheetNames[index])
+  )
+}
+
+/**
+ * The marks of the package itself, for a save that has to move them without
+ * having been given them; null when the package records none.
+ *
+ * A caller that does not know the marks (the editor until its read of the
+ * part finishes, any tool that never reads it) used to leave them where they
+ * were while the same save moved the cells: the hidden value became readable
+ * one row down and its neighbour was hidden instead. The gateway is the one
+ * place every save passes through, so it reads the record here. When it
+ * cannot, the save is refused: writing the moved cells under marks nobody can
+ * place would publish them. The wording is matched by the sheet editor's
+ * SAVE_ERROR_PATTERNS.
+ */
+export async function recordedRedactionStates(
+  pkg: Pick<RedactionPackage, 'has' | 'readText'>,
+  workbookXml: string,
+): Promise<SheetRedactionState[] | null> {
+  let recorded: SheetRedactionState[]
+  try {
+    recorded = await readRedactionRecord(
+      async () =>
+        (await pkg.has(REDACTION_PART_PATH)) ? pkg.readText(REDACTION_PART_PATH) : undefined,
+      workbookXml,
+    )
+  } catch (err) {
+    throw new RedactionError(
+      'The record of the cells hidden from AI cannot be read, so this save cannot move rows, ' +
+        'columns or sheets: the hidden cells would no longer be covered. Undo the row, column ' +
+        `and sheet changes and save again. (${err instanceof Error ? err.message : String(err)})`,
+    )
+  }
+  return recorded.some((state) => state.marks.length > 0) ? recorded : null
 }
 
 /**

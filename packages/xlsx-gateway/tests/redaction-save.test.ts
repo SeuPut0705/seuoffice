@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from 'node:fs/promises'
+import { mkdtemp, readFile, readdir, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { crc32 } from 'node:zlib'
@@ -6,8 +6,10 @@ import { crc32 } from 'node:zlib'
 import JSZip from 'jszip'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 
+import type { ChangePlan } from '../src/domain/workbook.types'
 import {
   applyCellEditsToXlsx,
+  applyPlanToXlsx,
   readBasicWorkbook,
   type SheetStructuralOps,
 } from '../src/gateway/xlsx-gateway'
@@ -15,11 +17,12 @@ import { saveWorkbookViaSidecar, type ArchiveClient } from '../src/gateway/xlsx-
 import {
   REDACTION_PART_PATH,
   applyRedactionNameMirror,
+  parseRedactionNameMirror,
   parseRedactionPart,
   serializeRedactionPart,
   type SheetRedactionState,
 } from '../src/gateway/xlsx-redaction'
-import type { SheetEditPlan } from '../src/gateway/xlsx-sheets'
+import { parseSheetElements, type SheetEditPlan } from '../src/gateway/xlsx-sheets'
 
 /// A cell hidden from AI has to stay hidden through every save, whatever the
 /// save does to the workbook and whatever the caller knows about the marks.
@@ -36,7 +39,9 @@ const text = (ref: string, value: string) =>
   `<c r="${ref}" t="inlineStr"><is><t>${value}</t></is></c>`
 
 /// Data: the hidden phone at B2, a neighbour below it. Other: nothing hidden.
-async function workbook(marks: { part?: string; mirror?: boolean } = {}): Promise<Buffer> {
+/// `part: null` is a workbook another program rebuilt: the part is gone and
+/// only the copy in the defined names is left.
+async function workbook(marks: { part?: string | null; mirror?: boolean } = {}): Promise<Buffer> {
   const zip = new JSZip()
   const sheets = ['Data', 'Other']
   let workbookXml =
@@ -84,7 +89,9 @@ async function workbook(marks: { part?: string; mirror?: boolean } = {}): Promis
     'xl/worksheets/sheet2.xml',
     `<worksheet xmlns="${NS}"><sheetData><row r="1">${text('A1', 'stock')}</row></sheetData></worksheet>`,
   )
-  zip.file(REDACTION_PART_PATH, marks.part ?? serializeRedactionPart(MARKS))
+  if (marks.part !== null) {
+    zip.file(REDACTION_PART_PATH, marks.part ?? serializeRedactionPart(MARKS))
+  }
   return zip.generateAsync({ type: 'nodebuffer' })
 }
 
@@ -213,10 +220,24 @@ function address(row: number, column: number): string {
 /// What the saved file withholds and what it hands over:
 /// `hidden` is the value under every mark, as `Sheet!B2=value`;
 /// `exposed` is every cell that holds the secret with no mark over it.
-async function read(bytes: Buffer): Promise<{ hidden: string[]; exposed: string[] }> {
+/// The marks are read from the part, or from the defined names as a reader
+/// would after another program dropped the part.
+async function read(
+  bytes: Buffer,
+  record: 'part' | 'names' = 'part',
+): Promise<{ hidden: string[]; exposed: string[] }> {
   const zip = await JSZip.loadAsync(bytes)
   const part = await zip.file(REDACTION_PART_PATH)?.async('string')
-  const states = part === undefined ? [] : parseRedactionPart(part)
+  const workbookXml = (await zip.file('xl/workbook.xml')?.async('string')) ?? ''
+  const states =
+    record === 'names'
+      ? parseRedactionNameMirror(
+          workbookXml,
+          parseSheetElements(workbookXml).map((sheet) => sheet.name),
+        )
+      : part === undefined
+        ? []
+        : parseRedactionPart(part)
   const { snapshot } = await readBasicWorkbook(bytes)
   const hidden: string[] = []
   const exposed: string[] = []
@@ -380,5 +401,217 @@ describe.each(ASSEMBLERS)('a duplicated sheet keeps its hidden cells (%s)', (_pa
         states: MARKS,
       }),
     ).rejects.toThrow(/Data \(2\)/)
+  })
+})
+
+const DAMAGED_PART = '{"version":1,"sheets":['
+const INSERT_ROW_ABOVE: readonly SheetStructuralOps[] = [
+  { sheetName: 'Data', ops: [{ kind: 'insert-rows', index: 0, count: 1 }] },
+]
+const REFUSAL = /cells hidden from AI cannot be read/
+
+async function partText(bytes: Buffer): Promise<string | undefined> {
+  return (await JSZip.loadAsync(bytes)).file(REDACTION_PART_PATH)?.async('string')
+}
+
+/// The editor sends no marks right after opening a workbook and after every
+/// save, until its own read of the part has finished; other callers never
+/// read it at all. The marks still have to follow the cells.
+describe.each(ASSEMBLERS)('a save that was not given the marks (%s)', (_path, save) => {
+  /// Both records of the saved file agree on what is hidden.
+  async function expectHidden(saved: Buffer, hidden: string[]): Promise<void> {
+    expect(await read(saved)).toEqual({ hidden, exposed: [] })
+    expect(await read(saved, 'names')).toEqual({ hidden, exposed: [] })
+  }
+
+  it('moves the mark with a row inserted above it', async () => {
+    const saved = await save(await workbook(), { ops: INSERT_ROW_ABOVE, states: null })
+    await expectHidden(saved, [`Data!B3=${SECRET}`])
+  })
+
+  it('moves the mark with a column inserted before it', async () => {
+    const saved = await save(await workbook(), {
+      ops: [{ sheetName: 'Data', ops: [{ kind: 'insert-cols', index: 0, count: 1 }] }],
+      states: null,
+    })
+    await expectHidden(saved, [`Data!C2=${SECRET}`])
+  })
+
+  it('drops the mark with the row that held the value', async () => {
+    const saved = await save(await workbook(), {
+      ops: [{ sheetName: 'Data', ops: [{ kind: 'remove-rows', index: 1, count: 1 }] }],
+      states: null,
+    })
+    await expectHidden(saved, [])
+    expect(await partText(saved)).toBeUndefined()
+  })
+
+  it('follows a renamed sheet', async () => {
+    const saved = await save(await workbook(), {
+      plan: {
+        renames: [{ sheetName: 'Data', newName: 'Clients' }],
+        removals: [],
+        additions: [],
+        order: ['Clients', 'Other'],
+      },
+      states: null,
+    })
+    await expectHidden(saved, [`Clients!B2=${SECRET}`])
+  })
+
+  it('leaves no mark behind for a removed sheet', async () => {
+    const saved = await save(await workbook(), {
+      plan: { renames: [], removals: ['Data'], additions: [], order: ['Other'] },
+      states: null,
+    })
+    await expectHidden(saved, [])
+    expect(await partText(saved)).toBeUndefined()
+  })
+
+  it('keeps the defined-name copy on the sheet when the tabs are reordered', async () => {
+    // The copy in the defined names records the sheet by position: left as it
+    // was, it would point at "Other" once the part is gone.
+    const saved = await save(await workbook(), {
+      plan: {
+        renames: [],
+        removals: [],
+        additions: [],
+        order: ['Other', 'Data'],
+        orderChanged: true,
+      },
+      states: null,
+    })
+    await expectHidden(saved, [`Data!B2=${SECRET}`])
+  })
+
+  it('hides the copy of a hidden cell on a duplicated sheet', async () => {
+    const saved = await save(await workbook(), {
+      plan: {
+        renames: [],
+        removals: [],
+        additions: [copyOf('Data (2)')],
+        order: ['Data', 'Other', 'Data (2)'],
+      },
+      states: null,
+    })
+    await expectHidden(saved, [`Data (2)!B2=${SECRET}`, `Data!B2=${SECRET}`])
+  })
+
+  it('reads the marks from the defined names when the part is damaged', async () => {
+    const saved = await save(await workbook({ part: DAMAGED_PART }), {
+      ops: INSERT_ROW_ABOVE,
+      states: null,
+    })
+    await expectHidden(saved, [`Data!B3=${SECRET}`])
+  })
+
+  it('reads the marks from the defined names when the part is gone, and restores it', async () => {
+    const saved = await save(await workbook({ part: null }), {
+      ops: INSERT_ROW_ABOVE,
+      states: null,
+    })
+    await expectHidden(saved, [`Data!B3=${SECRET}`])
+  })
+
+  it('refuses to move rows when neither record of the marks can be read', async () => {
+    await expect(
+      save(await workbook({ part: DAMAGED_PART, mirror: false }), {
+        ops: INSERT_ROW_ABOVE,
+        states: null,
+      }),
+    ).rejects.toThrow(REFUSAL)
+  })
+
+  it('refuses to rename a sheet when neither record of the marks can be read', async () => {
+    await expect(
+      save(await workbook({ part: DAMAGED_PART, mirror: false }), {
+        plan: {
+          renames: [{ sheetName: 'Data', newName: 'Clients' }],
+          removals: [],
+          additions: [],
+          order: ['Clients', 'Other'],
+        },
+        states: null,
+      }),
+    ).rejects.toThrow(REFUSAL)
+  })
+
+  it('leaves the part byte-identical when only cell values change', async () => {
+    // not the bytes this gateway would write: a rewrite would show
+    const part = JSON.stringify({ version: 1, sheets: [{ name: 'Data', marks: [B2] }] })
+    const saved = await save(await workbook({ part }), {
+      edits: [{ sheetName: 'Other', row: 4, column: 0, writeValue: true, cell: { value: 7 } }],
+      states: null,
+    })
+    expect(await partText(saved)).toBe(part)
+    await expectHidden(saved, [`Data!B2=${SECRET}`])
+  })
+
+  it('still saves values and row heights over a record it cannot read', async () => {
+    // Nothing here moves a cell, so nothing has to be known about the marks:
+    // the damaged part stays exactly as it was for the reader to refuse.
+    const saved = await save(await workbook({ part: DAMAGED_PART, mirror: false }), {
+      edits: [{ sheetName: 'Other', row: 4, column: 0, writeValue: true, cell: { value: 7 } }],
+      ops: [{ sheetName: 'Data', ops: [{ kind: 'set-row-size', start: 0, end: 0, size: 30 }] }],
+      states: null,
+    })
+    expect(await partText(saved)).toBe(DAMAGED_PART)
+  })
+
+  it('adds no record to a workbook that hides nothing', async () => {
+    const saved = await save(await workbook({ part: null, mirror: false }), {
+      ops: INSERT_ROW_ABOVE,
+      states: null,
+    })
+    expect(await partText(saved)).toBeUndefined()
+    expect(await read(saved, 'names')).toEqual({ hidden: [], exposed: [`Data!B3`] })
+  })
+})
+
+describe('a refused save', () => {
+  it('leaves the file on disk as it was, with nothing beside it', async () => {
+    const folder = await mkdtemp(join(directory, 'refused-'))
+    const path = join(folder, 'book.xlsx')
+    const source = await workbook({ part: DAMAGED_PART, mirror: false })
+    await writeFile(path, source)
+    await expect(
+      saveWorkbookViaSidecar({
+        client: archiveStub(),
+        sourcePath: path,
+        targetPath: path,
+        edits: [],
+        structuralOps: INSERT_ROW_ABOVE,
+        redactionStates: null,
+      }),
+    ).rejects.toThrow(REFUSAL)
+    expect(Buffer.compare(await readFile(path), source)).toBe(0)
+    expect(await readdir(folder)).toEqual(['book.xlsx'])
+  })
+})
+
+describe('a sheet renamed through a change plan', () => {
+  const rename: ChangePlan = {
+    transactionId: 'rename',
+    baseRevision: 0,
+    cellChanges: [],
+    sheetRenames: [{ sheetId: 'sheet-1', before: 'Data', after: 'Clients' }],
+    structuralChanges: [],
+    formatChanges: [],
+    warnings: [],
+  }
+
+  it('takes its marks to the new name', async () => {
+    const saved = await applyPlanToXlsx(await workbook(), rename, { 'sheet-1': 'Data' })
+    const hidden = [`Clients!B2=${SECRET}`]
+    expect(await read(saved.buffer)).toEqual({ hidden, exposed: [] })
+    expect(await read(saved.buffer, 'names')).toEqual({ hidden, exposed: [] })
+  })
+
+  it('is refused when neither record of the marks can be read', async () => {
+    await expect(
+      applyPlanToXlsx(await workbook({ part: DAMAGED_PART, mirror: false }), rename, {
+        'sheet-1': 'Data',
+      }),
+    ).rejects.toThrow(REFUSAL)
   })
 })

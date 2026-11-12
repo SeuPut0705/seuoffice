@@ -556,6 +556,8 @@ export const zh = {
   appSaveErrChartUnsupported: '这个图表类型不支持该编辑，保存已中止——请撤销该图表改动。',
   appSaveErrMoveOverlap:
     '有公式、格式范围、图形或表格横跨被移动的行——这次保存已中止，请撤销该移动。',
+  appSaveErrHiddenCellsUnreadable:
+    '读不出这个工作簿里对 AI 隐藏的单元格记录，所以行、列和工作表的改动无法保存——保存后隐藏的单元格会失去遮挡。请撤销这些改动后再保存。',
   appFromTextCsvTitle: '把 CSV/文本文件导入到当前选区',
   appCsvImported: '已从文件导入 {rows} 行 × {columns} 列到 {cell}。',
   appCsvEmpty: 'CSV 文件里没有数据。',

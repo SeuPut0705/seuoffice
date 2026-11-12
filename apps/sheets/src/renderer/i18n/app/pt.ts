@@ -666,6 +666,8 @@ export const pt = {
     'Este tipo de gráfico não suporta essa edição; salvamento cancelado — desfaça a alteração do gráfico.',
   appSaveErrMoveOverlap:
     'Uma fórmula, um intervalo formatado, uma forma ou uma tabela atravessa as linhas movidas; salvamento cancelado — desfaça a movimentação.',
+  appSaveErrHiddenCellsUnreadable:
+    'Não foi possível ler o registro das células ocultas da IA nesta pasta de trabalho; por isso, alterações em linhas, colunas e planilhas não podem ser salvas: as células ocultas deixariam de estar protegidas. Desfaça essas alterações e salve novamente.',
   appFromTextCsvTitle: 'Importar um arquivo CSV/texto para a seleção atual',
   appCsvImported: '{rows} linhas × {columns} colunas importadas do arquivo para {cell}.',
   appCsvEmpty: 'O arquivo CSV não contém dados.',

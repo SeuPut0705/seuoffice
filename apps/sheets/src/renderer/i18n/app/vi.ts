@@ -618,6 +618,8 @@ export const vi = {
     'Loại biểu đồ này không hỗ trợ chỉnh sửa đó; đã hủy lưu — hãy hoàn tác thay đổi biểu đồ.',
   appSaveErrMoveOverlap:
     'Một công thức, vùng định dạng, hình vẽ hoặc bảng nằm trải dài qua các hàng đã di chuyển; đã hủy lưu — hãy hoàn tác việc di chuyển.',
+  appSaveErrHiddenCellsUnreadable:
+    'Không đọc được bản ghi về các ô ẩn khỏi AI trong sổ làm việc này, nên không thể lưu thay đổi về hàng, cột và trang tính: các ô bị ẩn sẽ không còn được che nữa. Hãy hoàn tác các thay đổi đó rồi lưu lại.',
   appFromTextCsvTitle: 'Nhập tệp CSV/văn bản vào vùng chọn hiện tại',
   appCsvImported: 'Đã nhập {rows} hàng × {columns} cột từ tệp vào {cell}.',
   appCsvEmpty: 'Tệp CSV không có dữ liệu.',

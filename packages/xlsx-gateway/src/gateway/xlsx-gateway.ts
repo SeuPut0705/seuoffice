@@ -128,7 +128,9 @@ import { applySheetNotes, type SheetNote } from './xlsx-notes'
 import {
   applyRedactionNameMirror,
   applyRedactionPart,
+  recordedRedactionStates,
   rekeyRedactionStates,
+  saveMovesRedactions,
   type SheetRedactionState,
 } from './xlsx-redaction'
 import {
@@ -777,8 +779,9 @@ export async function applyPlanToXlsx(
   const pkg = new PackageEditor(await createBufferEntrySource(source))
   const touchedEntries = new Set<string>()
 
+  const workbookPath = 'xl/workbook.xml'
+  const fileWorkbookXml = await pkg.readText(workbookPath)
   for (const rename of plan.sheetRenames) {
-    const workbookPath = 'xl/workbook.xml'
     const workbookXml = await pkg.readText(workbookPath)
     const currentName = sheetNamesById[rename.sheetId]
     if (!currentName) throw new Error(`Missing XLSX sheet mapping for ${rename.sheetId}.`)
@@ -786,6 +789,27 @@ export async function applyPlanToXlsx(
       throw new Error(`Sheet ${rename.sheetId} no longer has the expected name.`)
     pkg.write(workbookPath, replaceSheetName(workbookXml, currentName, rename.after))
     touchedEntries.add(workbookPath)
+  }
+  // A change plan knows nothing of the withheld cells, and the part names
+  // them by sheet: a rename has to take the marks along or they are orphaned.
+  const recorded =
+    plan.sheetRenames.length > 0 ? await recordedRedactionStates(pkg, fileWorkbookXml) : null
+  if (recorded !== null) {
+    const rekeyed = rekeyRedactionStates(
+      recorded,
+      plan.sheetRenames.map((rename) => ({ sheetName: rename.before, newName: rename.after })),
+      [],
+    )
+    await applyRedactionPart(pkg, touchedEntries, rekeyed)
+    const renamedXml = await pkg.readText(workbookPath)
+    pkg.write(
+      workbookPath,
+      applyRedactionNameMirror(
+        renamedXml,
+        rekeyed,
+        parseSheetElements(renamedXml).map((sheet) => sheet.name),
+      ),
+    )
   }
 
   for (const change of plan.cellChanges) {
@@ -1424,14 +1448,26 @@ export async function planCellEditsToXlsx(
   // Withheld cells travel in a package part of their own, so they are written
   // here rather than with the worksheets. A sheet renamed, removed or copied
   // in this same save takes its marks with it first — see rekeyRedactionStates.
-  // An empty list clears the part (the reader un-hid everything); null leaves
-  // it untouched, because a caller that never loaded the marks must not drop
-  // them.
+  // An empty list clears the part (the reader un-hid everything). null is a
+  // caller that never loaded the marks: it must not drop them, so the part is
+  // left untouched — unless this save moves what the marks are recorded by,
+  // in which case the package's own record is moved exactly as a caller's
+  // would be (see recordedRedactionStates), read through `pkg` like every
+  // other part so both assemblers behave the same.
+  const statesToMove =
+    redactionStates ??
+    (saveMovesRedactions(
+      structuralOps,
+      sheetPlan,
+      parseSheetElements(originalWorkbookXml).map((sheet) => sheet.name),
+    )
+      ? await recordedRedactionStates(pkg, originalWorkbookXml)
+      : null)
   const rekeyed =
-    redactionStates === null
+    statesToMove === null
       ? null
       : rekeyRedactionStates(
-          redactionStates,
+          statesToMove,
           sheetPlan?.renames ?? [],
           sheetPlan?.removals ?? [],
           structuralOps,

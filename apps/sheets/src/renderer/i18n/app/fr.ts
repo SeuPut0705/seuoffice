@@ -687,6 +687,8 @@ export const fr = {
     'Ce type de graphique ne prend pas en charge cette modification ; enregistrement interrompu — annulez la modification du graphique.',
   appSaveErrMoveOverlap:
     'Une formule, une plage mise en forme, une forme ou un tableau chevauche les lignes déplacées ; enregistrement interrompu — annulez le déplacement.',
+  appSaveErrHiddenCellsUnreadable:
+    'La trace des cellules masquées à l’IA dans ce classeur est illisible ; les modifications de lignes, de colonnes et de feuilles ne peuvent donc pas être enregistrées : les cellules masquées ne seraient plus protégées. Annulez ces modifications, puis enregistrez de nouveau.',
   appFromTextCsvTitle: 'Importer un fichier CSV/texte dans la sélection actuelle',
   appCsvImported: '{rows} lignes × {columns} colonnes importées du fichier vers {cell}.',
   appCsvEmpty: 'Le fichier CSV ne contient aucune donnée.',

@@ -630,6 +630,8 @@ export const ko = {
     '이 차트 종류는 해당 편집을 지원하지 않아 저장을 중단했습니다. 차트 변경을 실행 취소하세요.',
   appSaveErrMoveOverlap:
     '수식, 서식 범위, 도형 또는 표가 이동한 행에 걸쳐 있어 저장을 중단했습니다. 해당 이동을 실행 취소하세요.',
+  appSaveErrHiddenCellsUnreadable:
+    'AI에서 숨긴 셀의 기록을 읽을 수 없어 이 통합 문서의 행, 열, 시트 변경을 저장할 수 없습니다. 저장하면 숨긴 셀이 더는 가려지지 않습니다. 해당 변경을 실행 취소한 뒤 다시 저장하세요.',
   appFromTextCsvTitle: 'CSV/텍스트 파일을 현재 선택 영역으로 가져오기',
   appCsvImported: '파일에서 {rows}행 × {columns}열을 {cell} 위치로 가져왔습니다.',
   appCsvEmpty: 'CSV 파일에 데이터가 없습니다.',

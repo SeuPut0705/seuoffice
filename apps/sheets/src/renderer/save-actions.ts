@@ -1087,6 +1087,7 @@ const SAVE_ERROR_PATTERNS = [
   ['overlaps the moved rows', 'appSaveErrMoveOverlap'],
   ['Moving the header row of table', 'appSaveErrMoveOverlap'],
   ['Moving the totals row of table', 'appSaveErrMoveOverlap'],
+  ['cells hidden from AI cannot be read', 'appSaveErrHiddenCellsUnreadable'],
 ] as const
 
 export function localizeSaveError(message: string): string | null {

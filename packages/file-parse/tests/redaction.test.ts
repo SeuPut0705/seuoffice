@@ -1017,3 +1017,84 @@ describe('xlsx: a sheet duplicated by a save keeps its cells withheld', () => {
     expect(await xlsxToText(saved)).toBe(`# Stock\nItem\n\n# Kept copy\n${WITHHELD_CLIENTS}`)
   })
 })
+
+describe('xlsx: a save that was not given the marks keeps the cell withheld', () => {
+  // the editor right after opening a workbook, or a caller that never reads the part
+  const UNKNOWN = null
+
+  it('after a row is inserted above the cell', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      ops: [{ sheetName: 'Clients', ops: [{ kind: 'insert-rows', index: 1, count: 1 }] }],
+      states: UNKNOWN,
+    })
+    const text = await xlsxToText(saved)
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n# Stock\nItem`)
+    expect(text).not.toContain(SECRET)
+  })
+
+  it('after a column is inserted before the cell', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      ops: [{ sheetName: 'Clients', ops: [{ kind: 'insert-cols', index: 1, count: 1 }] }],
+      states: UNKNOWN,
+    })
+    expect(await xlsxToText(saved)).toBe(
+      `# Clients\nName |  | Phone\nKim |  | ${MARKER}\n\n# Stock\nItem`,
+    )
+  })
+
+  it('after the sheet is renamed', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: {
+        renames: [{ sheetName: 'Clients', newName: 'Customers' }],
+        removals: [],
+        additions: [],
+        order: ['Customers', 'Stock'],
+      },
+      states: UNKNOWN,
+    })
+    expect(await xlsxToText(saved)).toBe(`# Customers\n${WITHHELD_CLIENTS}\n\n# Stock\nItem`)
+  })
+
+  it('and reads the rest of the workbook after the sheet is removed', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: { renames: [], removals: ['Clients'], additions: [], order: ['Stock'] },
+      states: UNKNOWN,
+    })
+    expect(await xlsxToText(saved)).toBe('# Stock\nItem')
+  })
+
+  it('on a duplicated sheet too', async () => {
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: {
+        renames: [],
+        removals: [],
+        additions: [{ name: 'Clients (2)', sourceSheetName: 'Clients' }],
+        order: ['Clients', 'Stock', 'Clients (2)'],
+      },
+      states: UNKNOWN,
+    })
+    expect(await xlsxToText(saved)).toBe(
+      `# Clients\n${WITHHELD_CLIENTS}\n\n# Stock\nItem\n\n# Clients (2)\n${WITHHELD_CLIENTS}`,
+    )
+  })
+
+  it('after the tabs are reordered and another program drops the part', async () => {
+    // the tabs are reordered by a save that does not know the marks, then a
+    // program that rebuilds the package drops the part: what is left is the
+    // copy in the defined names, which records the sheet by position
+    const saved = await gatewaySave(savedBook([CLIENTS, STOCK], CLIENT_MARKS), {
+      plan: {
+        renames: [],
+        removals: [],
+        additions: [],
+        order: ['Stock', 'Clients'],
+        orderChanged: true,
+      },
+      states: UNKNOWN,
+    })
+    const rebuilt = await JSZip.loadAsync(saved)
+    rebuilt.remove(REDACTION_PART)
+    const text = await xlsxToText(await rebuilt.generateAsync({ type: 'uint8array' }))
+    expect(text).toBe(`# Stock\nItem\n\n# Clients\n${WITHHELD_CLIENTS}`)
+  })
+})

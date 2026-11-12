@@ -608,6 +608,8 @@ export const en = {
     'This chart type does not support that edit; save aborted — undo the chart change.',
   appSaveErrMoveOverlap:
     'A formula, formatted range, drawing, or table spans the moved rows; save aborted — undo the move.',
+  appSaveErrHiddenCellsUnreadable:
+    'The record of the cells hidden from AI in this workbook cannot be read, so row, column, and sheet changes cannot be saved: the hidden cells would no longer be covered. Undo those changes, then save again.',
   appFromTextCsvTitle: 'Import a CSV/text file into the current selection',
   appCsvImported: 'Imported {rows} rows × {columns} columns from the file into {cell}.',
   appCsvEmpty: 'The CSV file has no data.',

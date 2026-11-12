@@ -628,6 +628,8 @@ export const ms = {
     'Jenis carta ini tidak menyokong suntingan itu; penyimpanan dihentikan — buat asal perubahan carta tersebut.',
   appSaveErrMoveOverlap:
     'Terdapat formula, julat berformat, bentuk atau jadual merentangi baris yang dialihkan; penyimpanan dihentikan — buat asal pengalihan itu.',
+  appSaveErrHiddenCellsUnreadable:
+    'Rekod sel yang disembunyikan daripada AI dalam buku kerja ini tidak dapat dibaca, jadi perubahan baris, lajur dan helaian tidak dapat disimpan: sel yang disembunyikan tidak akan dilindungi lagi. Buat asal perubahan itu, kemudian simpan semula.',
   appFromTextCsvTitle: 'Import fail CSV/teks ke pilihan semasa',
   appCsvImported: 'Mengimport {rows} baris × {columns} lajur daripada fail ke {cell}.',
   appCsvEmpty: 'Fail CSV tiada data.',

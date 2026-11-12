@@ -668,6 +668,8 @@ export const es = {
     'Este tipo de gráfico no admite esa edición; guardado cancelado — deshaga el cambio del gráfico.',
   appSaveErrMoveOverlap:
     'Una fórmula, un rango con formato, una forma o una tabla abarca las filas movidas; guardado cancelado — deshaga el movimiento.',
+  appSaveErrHiddenCellsUnreadable:
+    'No se puede leer el registro de las celdas ocultas a la IA en este libro, por lo que no se pueden guardar los cambios de filas, columnas y hojas: las celdas ocultas dejarían de estar protegidas. Deshaga esos cambios y vuelva a guardar.',
   appFromTextCsvTitle: 'Importar un archivo CSV/de texto en la selección actual',
   appCsvImported: 'Se importaron {rows} filas × {columns} columnas del archivo en {cell}.',
   appCsvEmpty: 'El archivo CSV no contiene datos.',

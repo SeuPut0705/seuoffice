@@ -651,6 +651,8 @@ export const pl = {
     'Ten typ wykresu nie obsługuje tej edycji; zapisywanie przerwano — cofnij zmianę wykresu.',
   appSaveErrMoveOverlap:
     'Formuła, sformatowany zakres, kształt lub tabela obejmuje przenoszone wiersze; zapisywanie przerwano — cofnij przeniesienie.',
+  appSaveErrHiddenCellsUnreadable:
+    'Nie można odczytać rejestru komórek ukrytych przed AI w tym skoroszycie, dlatego zmian wierszy, kolumn i arkuszy nie da się zapisać: ukryte komórki przestałyby być chronione. Cofnij te zmiany i zapisz ponownie.',
   appFromTextCsvTitle: 'Importuj plik CSV/tekstowy do bieżącego zaznaczenia',
   appCsvImported: 'Zaimportowano {rows} wierszy × {columns} kolumn z pliku do {cell}.',
   appCsvEmpty: 'Plik CSV nie zawiera danych.',
