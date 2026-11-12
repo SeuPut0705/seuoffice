@@ -113,3 +113,73 @@ export async function hiddenStoriesDocx(
   writeFileSync(file, bytes)
   return file
 }
+
+/**
+ * The same tags written another valid way, as another producer may write
+ * them. Each changes the XML text a pattern reads and leaves the document the
+ * XML parser reads as it was (but `prefix`, which renames the main namespace's
+ * prefix, so a reader that names `w:` reads nothing at all).
+ */
+export const TAG_MUTATIONS = {
+  'single quotes': (xml: string) =>
+    xml.replace(/<[^>!?]+>/g, (tag) => tag.replace(/="([^"]*)"/g, "='$1'")),
+  'spaces around =': (xml: string) =>
+    xml.replace(/<[^>!?]+>/g, (tag) => tag.replace(/(\s[\w:.-]+)=(["'])/g, '$1 = $2')),
+  '> and /> inside values': (xml: string) =>
+    xml
+      .replace(/<(w:r|w:comment|w:footnote|w:sdt)(?=[\s>])/g, '<$1 w:x="a/>b>c"')
+      .replace(/<w:p(?=[\s>])/g, '<w:p w:x="a>b"'),
+  comments: (xml: string) =>
+    xml
+      .replace(/(<w:r(?:\s[^>]*)?>)/g, '$1<!-- </w:r></w:p> <go:redact w:label="x"/> -->')
+      .replace(/<\/w:t>/g, '<!-- </w:t> --></w:t>'),
+  CDATA: (xml: string) =>
+    xml.replace(
+      new RegExp(`<w:t([^>]*)>(${SECRET}[A-Z]?)</w:t>`, 'g'),
+      '<w:t$1><![CDATA[</w:r></w:p>]]><![CDATA[$2]]></w:t>',
+    ),
+  'namespace prefix': (xml: string) =>
+    xml
+      .replace(/xmlns:w=/g, 'xmlns:ww=')
+      .replace(/(<\/?)w:/g, '$1ww:')
+      .replace(/(\s)w:/g, '$1ww:'),
+} satisfies Record<string, (xml: string) => string>
+
+export type TagMutation = keyof typeof TAG_MUTATIONS | 'all'
+export const TAG_MUTATION_NAMES = [...Object.keys(TAG_MUTATIONS), 'all'] as TagMutation[]
+
+function mutate(xml: string, mutation: TagMutation): string {
+  if (mutation !== 'all') return TAG_MUTATIONS[mutation](xml)
+  const order: Array<keyof typeof TAG_MUTATIONS> = [
+    'single quotes',
+    'spaces around =',
+    'CDATA',
+    'comments',
+    '> and /> inside values',
+  ]
+  return order.reduce((out, name) => TAG_MUTATIONS[name](out), xml)
+}
+
+/** hiddenStoriesDocx with every word/*.xml part's tags rewritten by `mutation`. */
+export async function mutatedStoriesDocx(dir: string, mutation: TagMutation): Promise<string> {
+  const { default: JSZip } = await import('jszip')
+  const { readFileSync } = await import('node:fs')
+  const file = await hiddenStoriesDocx(dir, OWN_REDACT_NS, `mutated.docx`)
+  const zip = await JSZip.loadAsync(readFileSync(file))
+  // and an inline content control holding a hidden run, in a paragraph of its own
+  const documentXml = await zip.file('word/document.xml')!.async('string')
+  zip.file(
+    'word/document.xml',
+    documentXml.replace(
+      '<w:sectPr',
+      '<w:p><w:sdt><w:sdtPr><w:tag w:val="phone"/></w:sdtPr><w:sdtContent>' +
+        `${hiddenRunOf(OWN_REDACT_NS, `${SECRET}S`)}</w:sdtContent></w:sdt></w:p><w:sectPr`,
+    ),
+  )
+  for (const path of Object.keys(zip.files)) {
+    if (!/^word\/[^/]+\.xml$/.test(path)) continue
+    zip.file(path, mutate(await zip.file(path)!.async('string'), mutation))
+  }
+  writeFileSync(file, await zip.generateAsync({ type: 'uint8array' }))
+  return file
+}

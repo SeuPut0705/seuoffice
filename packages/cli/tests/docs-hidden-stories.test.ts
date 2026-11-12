@@ -178,3 +178,37 @@ describe('docs read: a content control holding text hidden from AI', () => {
     })
   })
 })
+
+describe('docs read: a comment whose open tag is spelled another valid way', () => {
+  const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+  it.each([`w:id='1' w:author="K"`, `w:id = "1" w:author="K"`, `w:author="a/>b" w:id="1"`])(
+    'withholds the hidden run of <w:comment %s>',
+    async (attrs) => {
+      const dir = tempDir()
+      const file = join(dir, 'comment-tag.docx')
+      writeFileSync(
+        file,
+        await buildDocx({
+          bodyXml:
+            '<w:p><w:commentRangeStart w:id="1"/><w:r><w:t>Body</w:t></w:r><w:commentRangeEnd w:id="1"/>' +
+            '<w:r><w:commentReference w:id="1"/></w:r></w:p>',
+          extraParts: [
+            {
+              path: 'word/comments.xml',
+              contentType:
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml',
+              xml:
+                `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments ${W}>` +
+                `<w:comment ${attrs}><w:p><w:r><w:t xml:space="preserve">Note: </w:t></w:r>` +
+                `<w:r><w:rPr><go:redact xmlns:go="${NAMESPACES[1]![1]}" w:label="client phone"/></w:rPr><w:t>${SECRET}</w:t></w:r>` +
+                '</w:p></w:comment></w:comments>',
+            },
+          ],
+        }),
+      )
+      const read = await run(['docs', 'read', file, '--comments', '--json'])
+      expect(read.code).toBe(0)
+      expect(read.stdout).not.toContain(SECRET)
+    },
+  )
+})
