@@ -1,0 +1,62 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "genText",
+      "populations": {
+        "corpus": {
+          "compared": 3462,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 421,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 1500,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "genText.xmlSegments",
+          "checks": 3688,
+          "differences": 0,
+          "distinctResults": 1517,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genText.patchFieldParagraphXml",
+          "checks": 359,
+          "differences": 0,
+          "distinctResults": 333,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genText.patchMathTokens",
+          "checks": 322,
+          "differences": 0,
+          "distinctResults": 309,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genText.patchTableCellTexts",
+          "checks": 598,
+          "differences": 0,
+          "distinctResults": 525,
+          "typescriptThrew": 0
+        },
+        {
+          "fn": "genText.patchTextboxParas",
+          "checks": 416,
+          "differences": 0,
+          "distinctResults": 353,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}

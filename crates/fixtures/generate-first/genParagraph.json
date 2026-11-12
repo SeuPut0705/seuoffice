@@ -1,0 +1,34 @@
+{
+  "node": "v22.23.5",
+  "groups": [
+    {
+      "name": "genParagraph",
+      "populations": {
+        "corpus": {
+          "compared": 5913,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "built": {
+          "compared": 46,
+          "differences": [],
+          "keyOrderOnly": 0
+        },
+        "mutated": {
+          "compared": 0,
+          "differences": [],
+          "keyOrderOnly": 0
+        }
+      },
+      "functions": [
+        {
+          "fn": "genParagraph.generateParagraphXml",
+          "checks": 5959,
+          "differences": 0,
+          "distinctResults": 1684,
+          "typescriptThrew": 0
+        }
+      ]
+    }
+  ]
+}
