@@ -633,12 +633,20 @@ function callArity(body: string | undefined): number | undefined {
   let depth = 0
   let count = 0
   let any = false
+  let comma = false
   for (let i = at + '$call'.length; i < body.length; i++) {
     const c = body[i]!
+    const closing = ')]}'.includes(c)
     if ('([{'.includes(c)) depth++
-    else if (')]}'.includes(c) && --depth === 0) break
-    else if (c === ',' && depth === 1) count++
-    else if (depth >= 1 && !/\s/.test(c)) any = true
+    else if (closing && --depth === 0) break
+    if (/\s/.test(c) || depth < 1) continue
+    // a comma opens another argument only where something follows it (a trailing comma opens none)
+    if (comma && !closing) {
+      count++
+      comma = false
+    }
+    if (c === ',' && depth === 1) comma = true
+    else any = true
   }
   return any ? count + 1 : 0
 }

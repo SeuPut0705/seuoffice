@@ -5942,7 +5942,7 @@
    ],
    "rust": null,
    "route": "ts",
-   "reason": "the engine has no file system: savePptx gives the bytes and the host streams them to the file (written in APPEND)"
+   "reason": "the engine has no file system: savePptx gives the bytes and the host writes them to the file (hand-written piece, PPTX_REPLACE)"
   },
   {
    "module": "index",
@@ -21800,8 +21800,7 @@
     "ret": "Result<(), String>",
     "reachable": true
    },
-   "route": "ts",
-   "reason": "arity differs: TypeScript 1 (zip), Rust 1"
+   "route": "table"
   },
   {
    "module": "zip",

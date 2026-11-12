@@ -36,7 +36,7 @@ export type Override = PptxOverride
 /** The exports that stay TypeScript: no engine call, the module keeps them as they are. */
 export const PPTX_TS_ONLY: Readonly<Record<string, string>> = {
   savePptxToFile:
-    'the engine has no file system: savePptx gives the bytes and the host streams them to the file (written in APPEND)',
+    'the engine has no file system: savePptx gives the bytes and the host writes them to the file (hand-written piece, PPTX_REPLACE)',
   ownValue: 'a JavaScript-object helper the host code of pptx-ops calls on its own tables; Rust has its own over JsMap',
   setOwn: 'the same, writing a key of a JavaScript object',
   xmlParser: 'answers a fast-xml-parser instance the host parses with; the engine parses inside each call',

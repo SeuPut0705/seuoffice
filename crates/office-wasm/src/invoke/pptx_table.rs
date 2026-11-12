@@ -120,6 +120,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: &[Value]) -> Out {
         "applyHeaderFooter" => r_apply_header_footer(env, args),
         "applyParagraphFormat" => r_apply_paragraph_format(env, args),
         "applyThemeToArchive" => r_apply_theme_to_archive(env, args),
+        "assertZipWithinLimits" => r_assert_zip_within_limits(env, args),
         "attributeOf" => r_attribute_of(env, args),
         "autofitGeneratedTextBoxes" => r_autofit_generated_text_boxes(env, args),
         "buildChartSpaceXml" => r_build_chart_space_xml(env, args),
@@ -575,6 +576,13 @@ fn r_apply_theme_to_archive(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
     let r = pptx_engine::theme_apply::apply_theme_to_archive(&mut p0.archive, &p1);
     let value = to_json(&r)?;
     Ok(Some(pptx::answer(Some(value), vec![(0, pptx::answer_archive(env, &p0.sent, &p0.archive))])))
+}
+
+fn r_assert_zip_within_limits(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
+    let declared = pptx_routes::declared_parts(at(args, 0))?;
+    let files: Vec<ooxml_pkg::DeclaredPart<'_>> = declared.iter().map(|(name, size)| ooxml_pkg::DeclaredPart { name, usize: *size }).collect();
+    let r = pptx_engine::zip::assert_zip_within_limits(&files).map_err(|error| error.to_string())?;
+    Ok(Some(pptx::answer(None, vec![])))
 }
 
 fn r_attribute_of(env: &mut InvokeEnv<'_>, args: &[Value]) -> Out {
