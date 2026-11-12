@@ -765,6 +765,7 @@ export const CORE: CallSpec[] = [
   },
   {
     fn: 'odtCore.OdtStyleTable.resolve',
+    listed: surrogateClasses,
     call: (text, args) => {
       const table = ts.coreStyles.readOdtStyles(text, args.contentXml as string)
       return (

@@ -101,6 +101,32 @@ export function builtOptions(): Array<[string, ts.helpersBuildOdt.BuildOdtOption
   const out: Array<[string, ts.helpersBuildOdt.BuildOdtOptions]> = [
     // core-open
     ['default', {}],
+    // inputs the first fault round asked for: a common style two parents deep
+    // whose ancestors disagree, a weight of exactly 600 and a size that rounds
+    // to 0 half points, and a page length of -0.5 twips
+    [
+      'style-chain-three-deep',
+      {
+        extraCommonStyles:
+          '<style:style style:name="Grand" style:family="paragraph"><style:paragraph-properties fo:margin-left="1cm" fo:text-align="end"/><style:text-properties fo:font-size="10pt" fo:color="#111111"/></style:style>' +
+          '<style:style style:name="Mid" style:family="paragraph" style:parent-style-name="Grand"><style:paragraph-properties fo:margin-left="2cm" fo:text-align="center"/><style:text-properties fo:font-size="14pt" fo:color="#222222"/></style:style>' +
+          '<style:style style:name="Leaf" style:family="paragraph" style:parent-style-name="Mid"/>',
+        extraContentAutomaticStyles:
+          '<style:style style:name="PL" style:family="paragraph" style:parent-style-name="Leaf"/>',
+        body: '<text:p text:style-name="Leaf">chain</text:p><text:p text:style-name="PL">auto over the chain</text:p>',
+      },
+    ],
+    [
+      'text-weight-600-size-tiny',
+      {
+        extraContentAutomaticStyles:
+          '<style:style style:name="T600" style:family="text"><style:text-properties fo:font-weight="600" fo:font-size="0.1pt"/></style:style>' +
+          '<style:style style:name="T599" style:family="text"><style:text-properties fo:font-weight="599"/></style:style>',
+        body: f.hPara(
+          '<text:span text:style-name="T600">semi</text:span> <text:span text:style-name="T599">light</text:span>',
+        ),
+      },
+    ],
     ['pictures-raw', { pictures: { 'a.png': new Uint8Array([1, 2, 3]) } }],
     ['mimetype-first-1.3', { mimetypeFirst: true, officeVersion: '1.3' }],
     [
@@ -201,6 +227,19 @@ export function builtOptions(): Array<[string, ts.helpersBuildOdt.BuildOdtOption
     ],
     ['page-no-regions', singleRun({})],
     ['page-columns', pageDoc({ layouts: [layoutXml('Mpm1', { columns: 2 }), layoutXml('Mpm2')] })],
+    [
+      'page-negative-half-twip',
+      pageDoc({
+        layouts: [
+          layoutXml('Mpm1', {
+            width: '-0.025pt',
+            height: '-0.075pt',
+            margins: ['-0.025pt', '-0.025pt', '1cm', '1cm'],
+          }),
+          layoutXml('Mpm2'),
+        ],
+      }),
+    ],
     [
       'page-roman',
       pageDoc({ layouts: [layoutXml('Mpm1', { numFormat: 'i' }), layoutXml('Mpm2')] }),

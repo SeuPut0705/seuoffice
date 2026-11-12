@@ -1446,7 +1446,7 @@ export const TEXT: CallSpec[] = [
     call: (_t, args) => run(args.value as number),
     built: [
       0, 1, -1, 567, 1440, -1440, 0.5, 1e-9, -1e-9, 12345.678, 1e21, 2.5, -0.0001, 100, 21, 1e6,
-      3.00049, 0.0005, 0.005,
+      3.00049, 0.0005, 0.005, 2e21, 2e22,
     ].map((value) => ({ args: { value } })),
     mutation: 'none',
   })),
