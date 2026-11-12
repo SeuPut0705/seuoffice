@@ -19,7 +19,7 @@ import {
   rgb,
 } from 'pdf-lib'
 import type { PDFPage } from 'pdf-lib'
-import { VISUAL_SIGNATURE_CONTENT_PREFIX } from '../shared/ipc'
+import { VISUAL_SIGNATURE_CONTENT_PREFIX_WRITTEN } from '../shared/ipc'
 import {
   decryptDocument,
   encryptDocument,
@@ -115,7 +115,7 @@ function setVisualSignatureMetadata(annot: PDFDict, fieldName: string | undefine
   annot.set(PDFName.of('GenOfficeFormField'), PDFHexString.fromText(fieldName))
   annot.set(
     PDFName.of('Contents'),
-    PDFHexString.fromText(`${VISUAL_SIGNATURE_CONTENT_PREFIX}${fieldName}`),
+    PDFHexString.fromText(`${VISUAL_SIGNATURE_CONTENT_PREFIX_WRITTEN}${fieldName}`),
   )
 }
 

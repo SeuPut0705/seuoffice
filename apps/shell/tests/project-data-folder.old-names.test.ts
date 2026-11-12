@@ -183,6 +183,20 @@ describe('a project made before the rename', () => {
     expect(readdirSync(join(root, OLD, 'chats')).sort()).toEqual(['chat1.json', 'chat1.jsonl'])
   })
 
+  it('keeps the old data folder when an empty one appears under the new name', async () => {
+    const root = folder('old-project')
+    plantProject(root, OLD, 'p-old')
+    // a person made the folder the help names, and has put nothing in it yet
+    mkdirSync(join(root, NEW, 'chats'), { recursive: true })
+    writeFileSync(join(root, NEW, '.DS_Store'), '')
+    const project = await addOk(root)
+
+    expect(project.id).toBe('p-old')
+    expect((await guide.saveInstructions(project.id, 'saved now')).status).toBe('ok')
+    expect(readFileSync(join(root, OLD, 'instructions.md'), 'utf8')).toBe('saved now')
+    expect(existsSync(join(root, NEW, 'instructions.md'))).toBe(false)
+  })
+
   it('does not take a linked old data folder for the real one', async (ctx) => {
     const root = folder('linked')
     const elsewhere = folder('elsewhere')

@@ -168,3 +168,24 @@ describe('Mac signing', () => {
     )
   })
 })
+
+describe('the Windows update feed', () => {
+  it('records the installer size the differential download checks against', async () => {
+    const { mkdtempSync, writeFileSync, statSync, existsSync } = await import('node:fs')
+    const { tmpdir } = await import('node:os')
+    const dir = mkdtempSync(join(tmpdir(), 'seu-feed-'))
+    const file = join(dir, 'SeuOffice-Setup-1.0.0.exe')
+    writeFileSync(file, Buffer.alloc(300_000, 7))
+    const event: { file: string; target: { name: string }; updateInfo?: Record<string, unknown> } =
+      {
+        file,
+        target: { name: 'nsis' },
+      }
+    await loadRelease().artifactBuildCompleted(event)
+    expect(existsSync(`${file}.blockmap`)).toBe(true)
+    expect(event.updateInfo).toMatchObject({
+      size: statSync(file).size,
+      sha512: expect.any(String),
+    })
+  })
+})

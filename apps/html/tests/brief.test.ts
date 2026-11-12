@@ -6,6 +6,7 @@ import {
   parseBrief,
   type Brief,
 } from '../src/renderer/document/brief'
+import { BRIEF_META_NAME_WRITTEN } from '../src/renderer/document/old-names'
 
 const brief: Brief = {
   core_hook: "Q3 grew 40% while costs fell — here's how",
@@ -45,7 +46,7 @@ const brief: Brief = {
 describe('brief persistence', () => {
   it('round-trips through the meta tag with quotes and angle brackets escaped', () => {
     const tag = briefMetaTag(brief)
-    expect(tag.startsWith(`<meta name="seuoffice:brief" content='`)).toBe(true)
+    expect(tag.startsWith(`<meta name="${BRIEF_META_NAME_WRITTEN}" content='`)).toBe(true)
     expect(tag).not.toContain("here's") // the apostrophe inside the single-quoted attribute is escaped
     const back = parseBrief(`<html><head>${tag}</head></html>`)
     expect(back?.core_hook).toBe(brief.core_hook)
@@ -62,21 +63,23 @@ describe('brief persistence', () => {
 
   it('injects after <meta charset>, else after <head>, else creates a head, and refreshes in place', () => {
     const a = injectBrief('<html><head><meta charset="utf-8"><title>x</title></head></html>', brief)
-    expect(a).toMatch(/<meta charset="utf-8">\n<meta name="seuoffice:brief"/)
+    expect(a).toContain(`<meta charset="utf-8">\n<meta name="${BRIEF_META_NAME_WRITTEN}"`)
     const b = injectBrief('<html><head><title>x</title></head></html>', brief)
-    expect(b).toMatch(/<head>\n<meta name="seuoffice:brief"/)
+    expect(b).toContain(`<head>\n<meta name="${BRIEF_META_NAME_WRITTEN}"`)
     const c = injectBrief('<html><body></body></html>', brief)
-    expect(c).toMatch(/<html>\n<head><meta name="seuoffice:brief"/)
+    expect(c).toContain(`<html>\n<head><meta name="${BRIEF_META_NAME_WRITTEN}"`)
     const d = injectBrief('<p>frag</p>', brief)
-    expect(d.startsWith('<meta name="seuoffice:brief"')).toBe(true)
+    expect(d.startsWith(`<meta name="${BRIEF_META_NAME_WRITTEN}"`)).toBe(true)
     const refreshed = injectBrief(a, { ...brief, core_hook: 'changed' })
-    expect((refreshed.match(/seuoffice:brief/g) ?? []).length).toBe(1)
+    expect((refreshed.match(/:brief/g) ?? []).length).toBe(1)
     expect(parseBrief(refreshed)?.core_hook).toBe('changed')
   })
 
   it('ignores malformed meta and summarizes compactly', () => {
-    expect(parseBrief(`<meta name="seuoffice:brief" content='{not json'>`)).toBeNull()
-    expect(parseBrief(`<meta name="seuoffice:brief" content='{"core_hook":1}'>`)).toBeNull()
+    expect(parseBrief(`<meta name="${BRIEF_META_NAME_WRITTEN}" content='{not json'>`)).toBeNull()
+    expect(
+      parseBrief(`<meta name="${BRIEF_META_NAME_WRITTEN}" content='{"core_hook":1}'>`),
+    ).toBeNull()
     const s = briefSummary(brief)
     expect(s).toContain('core hook: Q3 grew 40%')
     expect(s).toContain('style: Boardroom navy — executive')

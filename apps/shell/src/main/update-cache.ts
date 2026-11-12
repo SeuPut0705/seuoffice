@@ -6,10 +6,13 @@ import { basename, join } from 'node:path'
  * (`%LOCALAPPDATA%\seuoffice-updater`, `~/Library/Caches/seuoffice-updater`,
  * `~/.cache/seuoffice-updater`), and what a start of the app removes from it.
  *
- * - `pending/<installer>` and `pending/update-info.json`: the download.
+ * - `pending/<installer>`, `pending/update-info.json` and
+ *   `pending/current.blockmap`: the download and its block map.
  *   electron-updater empties `pending/` when the next download starts or one
  *   fails, never after an install, so the installer of the version that is
- *   now running stays until the next update (the Mac zip likewise).
+ *   now running stays until the next update (the Mac zip likewise). The
+ *   block map was copied to `current.blockmap` beside `pending/`, the copy
+ *   the next differential download reads.
  * - `installer.exe` (Windows) and `update.zip` (Mac): the running version's
  *   own file, which the NSIS installer copies there at the end of every
  *   install and electron-updater after every Mac download. The next update
@@ -25,6 +28,7 @@ import { basename, join } from 'node:path'
 
 const PENDING_DIR = 'pending'
 const UPDATE_INFO_FILE = 'update-info.json'
+const BLOCK_MAP_FILE = 'current.blockmap'
 
 type Log = (...args: unknown[]) => void
 
@@ -97,7 +101,11 @@ export function pruneUpdateCache(options: {
     const fileName = downloadedFileName(pendingDir)
     if (fileName === null || !installedOrOlder(fileName, runningVersion)) return true
     // the record goes only with the file it names, so a failed removal is retried
-    return removed(pendingDir, fileName, log) && removed(pendingDir, UPDATE_INFO_FILE, log)
+    return (
+      removed(pendingDir, fileName, log) &&
+      removed(pendingDir, BLOCK_MAP_FILE, log) &&
+      removed(pendingDir, UPDATE_INFO_FILE, log)
+    )
   } catch (err) {
     log('the update cache was not cleared:', err instanceof Error ? err.message : String(err))
     return false

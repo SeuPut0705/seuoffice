@@ -4,7 +4,7 @@
  * skill folder whose path or real place is inside it is skipped before it is
  * opened.
  */
-import { existsSync, type Dirent } from 'node:fs'
+import { existsSync, readdirSync, type Dirent } from 'node:fs'
 import { readFile, readdir, realpath, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { OLD_HOME_DIR_NAMES, existingOrCurrent } from '@seuoffice/i18n'
@@ -43,14 +43,40 @@ export async function isInsideCodexHome(path: string, homeDir: string): Promise<
 }
 
 /**
+ * Whether `dir` holds a file anywhere in its first few levels (a `.DS_Store`
+ * does not count): a folder made by hand with nothing put in it yet holds no
+ * data. Missing (or not a folder): no. Any other failure to read it (no
+ * permission, an I/O error) says nothing about what it holds, so it counts as
+ * holding data: the folder in use is kept rather than switched for another.
+ */
+export function folderHoldsData(dir: string, depth = 3): boolean {
+  let entries: Dirent[]
+  try {
+    entries = readdirSync(dir, { withFileTypes: true })
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code
+    return code !== 'ENOENT' && code !== 'ENOTDIR'
+  }
+  return entries.some((entry) =>
+    entry.isDirectory()
+      ? depth > 1 && folderHoldsData(join(dir, entry.name), depth - 1)
+      : entry.name !== '.DS_Store',
+  )
+}
+
+/**
  * The app's folder under the home folder (`~/.seuoffice`): skills a person
- * made, the CLI audit log, the launcher record. Where only a folder an earlier
- * version made under its old name exists, that one is used as it is; once
- * `~/.seuoffice` exists it is used whatever appears beside it later.
+ * made, the CLI audit log, the launcher record. Where a folder an earlier
+ * version made under its old name exists and `~/.seuoffice` holds no data yet,
+ * the old one is used as it is; once `~/.seuoffice` holds data it is used
+ * whatever appears beside it later.
  */
 export function appHomeDir(homeDir: string): string {
-  const name = existingOrCurrent('.seuoffice', OLD_HOME_DIR_NAMES, (candidate) =>
-    existsSync(join(homeDir, candidate)),
+  const name = existingOrCurrent(
+    '.seuoffice',
+    OLD_HOME_DIR_NAMES,
+    (candidate) => existsSync(join(homeDir, candidate)),
+    (candidate) => folderHoldsData(join(homeDir, candidate)),
   )
   return join(homeDir, name)
 }

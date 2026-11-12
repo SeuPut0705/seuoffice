@@ -923,9 +923,13 @@ export function buildCommentsContext(editor: Editor, comments: CommentInfo[], al
       ? `block ${anchor.blockIndex}, anchored text "${anchor.excerpt}"`
       : 'anchor missing'
     const state = all && root.done === true ? ' [resolved]' : ''
-    lines.push(`- id ${root.id} by ${root.author} (${where})${state}: ${clip(root.text, 300)}`)
+    lines.push(
+      `- id ${root.id} by ${root.author} (${where})${state}: ${clip(root.modelText ?? root.text, 300)}`,
+    )
     for (const reply of comments.filter((c) => c.parentId === root.id)) {
-      lines.push(`  - reply id ${reply.id} by ${reply.author}: ${clip(reply.text, 300)}`)
+      lines.push(
+        `  - reply id ${reply.id} by ${reply.author}: ${clip(reply.modelText ?? reply.text, 300)}`,
+      )
     }
   }
   if (!all && roots.length > shown.length) {

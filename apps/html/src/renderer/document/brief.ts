@@ -4,7 +4,7 @@
  * (and re-opens) stay anchored to it. Stored as JSON in a meta tag; the page
  * itself is expected to expose the palette/typography as --brief-* variables.
  */
-import { OLD_BRIEF_META_NAMES } from './old-names'
+import { BRIEF_META_NAME_WRITTEN, OLD_BRIEF_META_NAMES } from './old-names'
 
 export interface BriefStyle {
   /** short direction name shown on the style tile, e.g. "Editorial serif" */
@@ -88,9 +88,10 @@ export function parseBrief(html: string): Brief | null {
   }
 }
 
-export function briefMetaTag(brief: Brief): string {
+/** `name` is the tag's own name when it is re-pinned; a new pin is written under the name 0.12.37 reads. */
+export function briefMetaTag(brief: Brief, name: string = BRIEF_META_NAME_WRITTEN): string {
   const json = JSON.stringify({ ...brief, alternatives: undefined, user_edited: undefined })
-  return `<meta name="${BRIEF_META_NAME}" content='${encodeAttr(json)}'>`
+  return `<meta name="${name}" content='${encodeAttr(json)}'>`
 }
 
 /**
@@ -99,9 +100,13 @@ export function briefMetaTag(brief: Brief): string {
  * meta is already current or nothing in the document can anchor it.
  */
 export function briefPinEdit(html: string, brief: Brief): { old: string; new: string } | null {
-  const tag = briefMetaTag(brief)
   const existing = META_RE.exec(html)?.[0]
-  if (existing) return existing === tag ? null : { old: existing, new: tag }
+  if (existing) {
+    const name = /name\s*=\s*["']([^"']*)["']/i.exec(existing)?.[1]
+    const kept = briefMetaTag(brief, name)
+    return existing === kept ? null : { old: existing, new: kept }
+  }
+  const tag = briefMetaTag(brief)
   for (const re of [/<meta\s+charset[^>]*>/i, /<head(?:\s[^>]*)?>/i]) {
     const anchor = re.exec(html)?.[0]
     if (anchor) return { old: anchor, new: `${anchor}\n${tag}` }
