@@ -137,3 +137,57 @@ pub fn odt_to_text(blobs: &[&[u8]]) -> Value {
         Err(reply) => reply,
     }
 }
+
+/// `invoke` of the exports of `@seuoffice/odt-engine` that are not one of the
+/// four commands above: `odt.<name>` with the TypeScript arguments
+/// positionally. The binding sends of a bridge map only `ext.table`, the one
+/// value these read.
+pub fn invoke(function: &str, args: &[Value]) -> Result<Option<Value>, String> {
+    let ext_of = |index: usize| -> Result<serde_json::Map<String, Value>, String> {
+        match args.get(index).and_then(|map| map.get("ext")) {
+            Some(Value::Object(ext)) => Ok(ext.clone()),
+            _ => Err(format!("TypeError: argument {index} has no ext")),
+        }
+    };
+    let value = match function {
+        "protectedCellsOf" => {
+            serde_json::to_value(odt_engine::table::protected_cells_of(&ext_of(0)?))
+        }
+        "isProtectedCell" => {
+            let cell = cell_address(args.get(1).unwrap_or(&Value::Null))?;
+            serde_json::to_value(odt_engine::table::is_protected_cell(&ext_of(0)?, &cell))
+        }
+        "parseKeepName" => {
+            let name = args.first().and_then(Value::as_str).unwrap_or_default();
+            serde_json::to_value(odt_engine::objects::parse_keep_name(name))
+        }
+        _ => return Err(format!("no function odt.{function}")),
+    };
+    value.map(Some).map_err(|error| error.to_string())
+}
+
+/// The `cell` argument of `isProtectedCell`: by `col` when the object has the
+/// key (`'col' in cell`), else by `tc`.
+fn cell_address(cell: &Value) -> Result<odt_engine::table::CellAddress, String> {
+    let index = |key: &str| -> Result<usize, String> {
+        cell.get(key)
+            .and_then(Value::as_u64)
+            .map(|n| n as usize)
+            .ok_or_else(|| format!("TypeError: cell.{key} is not an index"))
+    };
+    let path = match cell.get("path") {
+        None | Some(Value::Null) => Vec::new(),
+        Some(path) => serde_json::from_value(path.clone()).map_err(|error| error.to_string())?,
+    };
+    let column = if cell.get("col").is_some() {
+        odt_engine::table::CellColumn::Col(index("col")?)
+    } else {
+        odt_engine::table::CellColumn::Tc(index("tc")?)
+    };
+    Ok(odt_engine::table::CellAddress {
+        table: index("table")?,
+        path,
+        row: index("row")?,
+        column,
+    })
+}
