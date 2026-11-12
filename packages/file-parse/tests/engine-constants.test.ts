@@ -8,6 +8,7 @@ import {
 import { callEngine } from '../src/engine'
 import { WHOLE_ZIP_READ_MAX_BYTES } from '../src/parse'
 import { PPTX_REDACT_EXT_URI } from '../src/pptx-redaction'
+import { UNKNOWN_CELL_MARKER } from '../src/xlsx'
 
 /**
  * The constants this package exports stay TypeScript literals; the readers in
@@ -25,6 +26,7 @@ describe('the exported constants and the Rust readers', () => {
       ATTACHABLE_IMAGE_MAX_BYTES,
       WHOLE_ZIP_READ_MAX_BYTES,
       PPTX_REDACT_EXT_URI,
+      UNKNOWN_CELL_MARKER,
     }).toEqual({
       ...rust,
       ATTACHABLE_EXTS: [...(rust.ATTACHABLE_EXTS as string[])].sort(),
