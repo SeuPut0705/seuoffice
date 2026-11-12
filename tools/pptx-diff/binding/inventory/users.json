@@ -1,0 +1,1290 @@
+{
+ "alignRects": {
+  "prod": 1,
+  "test": 1
+ },
+ "distributeRects": {
+  "prod": 1,
+  "test": 1
+ },
+ "isMediaEffect": {
+  "prod": 1,
+  "test": 1
+ },
+ "animClassOf": {
+  "prod": 4,
+  "test": 3
+ },
+ "elementSpid": {
+  "prod": 6,
+  "test": 5
+ },
+ "buildTimingXml": {
+  "prod": 0,
+  "test": 5
+ },
+ "patchSlideTimingXml": {
+  "prod": 0,
+  "test": 2
+ },
+ "readSlideTimingXml": {
+  "prod": 0,
+  "test": 4
+ },
+ "patchSlideTimingIncrementalXml": {
+  "prod": 0,
+  "test": 3
+ },
+ "setSlideAnimations": {
+  "prod": 2,
+  "test": 5
+ },
+ "getSlideAnimations": {
+  "prod": 3,
+  "test": 9
+ },
+ "pruneTimingForSpids": {
+  "prod": 0,
+  "test": 3
+ },
+ "cNvPrIdsInXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "promoteSlideBackground": {
+  "prod": 5,
+  "test": 1
+ },
+ "isBackgroundLikeElement": {
+  "prod": 1,
+  "test": 1
+ },
+ "createBlankPptx": {
+  "prod": 9,
+  "test": 100
+ },
+ "shouldOfferBuiltinLayouts": {
+  "prod": 1,
+  "test": 1
+ },
+ "builtinLayoutInfos": {
+  "prod": 1,
+  "test": 1
+ },
+ "ensureBuiltinLayout": {
+  "prod": 1,
+  "test": 2
+ },
+ "buildChartSpaceXml": {
+  "prod": 0,
+  "test": 2
+ },
+ "writeChartWorkbook": {
+  "prod": 0,
+  "test": 0
+ },
+ "addChart": {
+  "prod": 9,
+  "test": 13
+ },
+ "chartWorkbookParts": {
+  "prod": 1,
+  "test": 0
+ },
+ "storedZip": {
+  "prod": 0,
+  "test": 1
+ },
+ "chartWorkbookXlsx": {
+  "prod": 0,
+  "test": 0
+ },
+ "colLetter": {
+  "prod": 2,
+  "test": 1
+ },
+ "parseChartXml": {
+  "prod": 0,
+  "test": 7
+ },
+ "parseChartExXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "resolveColorNode": {
+  "prod": 0,
+  "test": 5
+ },
+ "applyColorMods": {
+  "prod": 1,
+  "test": 3
+ },
+ "hexToRgb": {
+  "prod": 4,
+  "test": 2
+ },
+ "scaleLuminance": {
+  "prod": 0,
+  "test": 0
+ },
+ "getSlideComments": {
+  "prod": 4,
+  "test": 2
+ },
+ "addSlideComment": {
+  "prod": 1,
+  "test": 4
+ },
+ "deleteSlideComment": {
+  "prod": 1,
+  "test": 1
+ },
+ "crc32": {
+  "prod": 14,
+  "test": 19
+ },
+ "evalGuides": {
+  "prod": 0,
+  "test": 1
+ },
+ "parseCustGeom": {
+  "prod": 2,
+  "test": 3
+ },
+ "validCustGeomPath": {
+  "prod": 1,
+  "test": 1
+ },
+ "custGeomXml": {
+  "prod": 0,
+  "test": 3
+ },
+ "parseHierConstraints": {
+  "prod": 1,
+  "test": 2
+ },
+ "layoutHierTree": {
+  "prod": 1,
+  "test": 2
+ },
+ "eotToSfnt": {
+  "prod": 0,
+  "test": 1
+ },
+ "demandKey": {
+  "prod": 0,
+  "test": 0
+ },
+ "editedGlyphDemand": {
+  "prod": 0,
+  "test": 0
+ },
+ "sfntCmapLookup": {
+  "prod": 0,
+  "test": 1
+ },
+ "staleEmbeddedTypefaces": {
+  "prod": 0,
+  "test": 1
+ },
+ "stripEmbeddedFonts": {
+  "prod": 0,
+  "test": 2
+ },
+ "stripStaleEmbeddedFonts": {
+  "prod": 0,
+  "test": 0
+ },
+ "listEmbeddedFonts": {
+  "prod": 2,
+  "test": 1
+ },
+ "extractFormat": {
+  "prod": 0,
+  "test": 1
+ },
+ "applyFormat": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchTextElementXml": {
+  "prod": 0,
+  "test": 14
+ },
+ "patchParagraphPPrXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "patchElementPPr": {
+  "prod": 0,
+  "test": 0
+ },
+ "szAttr": {
+  "prod": 0,
+  "test": 1
+ },
+ "clampInt": {
+  "prod": 1,
+  "test": 2
+ },
+ "hangulLang": {
+  "prod": 0,
+  "test": 0
+ },
+ "tagHangulRun": {
+  "prod": 2,
+  "test": 1
+ },
+ "tagHangulParagraphs": {
+  "prod": 1,
+  "test": 1
+ },
+ "isConnectorXml": {
+  "prod": 2,
+  "test": 1
+ },
+ "rebuildTxBody": {
+  "prod": 0,
+  "test": 4
+ },
+ "generateParagraphXml": {
+  "prod": 10,
+  "test": 29
+ },
+ "alternateContentBranches": {
+  "prod": 0,
+  "test": 0
+ },
+ "topLevelChildren": {
+  "prod": 0,
+  "test": 0
+ },
+ "patchElementFill": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchElementStroke": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchPictureSrcRect": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchSlideBackgroundXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "removeSlideBackgroundXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "patchSlideShowMasterSpXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchSlideTransitionXml": {
+  "prod": 0,
+  "test": 2
+ },
+ "readSlideTransitionXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchSlideAdvanceTimeXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "readSlideAdvanceTimeXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchSlideHiddenXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "readSlideHiddenXml": {
+  "prod": 1,
+  "test": 0
+ },
+ "generateXfrmXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "patchElementXfrm": {
+  "prod": 0,
+  "test": 3
+ },
+ "patchBodyPrAutofit": {
+  "prod": 2,
+  "test": 1
+ },
+ "clampEmu": {
+  "prod": 0,
+  "test": 0
+ },
+ "clampPosEmu": {
+  "prod": 0,
+  "test": 1
+ },
+ "glbJson": {
+  "prod": 0,
+  "test": 0
+ },
+ "glbBounds": {
+  "prod": 0,
+  "test": 1
+ },
+ "applyHeaderFooter": {
+  "prod": 6,
+  "test": 4
+ },
+ "readHeaderFooter": {
+  "prod": 2,
+  "test": 1
+ },
+ "setElementLink": {
+  "prod": 1,
+  "test": 8
+ },
+ "decodeRunLink": {
+  "prod": 0,
+  "test": 0
+ },
+ "encodeRunLink": {
+  "prod": 1,
+  "test": 0
+ },
+ "ensureRunLinkRels": {
+  "prod": 2,
+  "test": 6
+ },
+ "getRunLinks": {
+  "prod": 6,
+  "test": 5
+ },
+ "getElementLink": {
+  "prod": 2,
+  "test": 3
+ },
+ "getSlideLinks": {
+  "prod": 7,
+  "test": 4
+ },
+ "withFreshCreationIds": {
+  "prod": 0,
+  "test": 0
+ },
+ "elementDurableId": {
+  "prod": 9,
+  "test": 5
+ },
+ "slideDurableId": {
+  "prod": 12,
+  "test": 4
+ },
+ "elementCNvPrId": {
+  "prod": 0,
+  "test": 1
+ },
+ "matchesElementRef": {
+  "prod": 9,
+  "test": 1
+ },
+ "ensureCreationId": {
+  "prod": 2,
+  "test": 2
+ },
+ "groupChildDurableId": {
+  "prod": 3,
+  "test": 3
+ },
+ "openPptx": {
+  "prod": 16,
+  "test": 140
+ },
+ "reparseDeck": {
+  "prod": 2,
+  "test": 1
+ },
+ "savePptx": {
+  "prod": 10,
+  "test": 89
+ },
+ "savePptxToFile": {
+  "prod": 1,
+  "test": 4
+ },
+ "commitSaved": {
+  "prod": 3,
+  "test": 3
+ },
+ "patchSlideXml": {
+  "prod": 3,
+  "test": 12
+ },
+ "patchedElementXml": {
+  "prod": 0,
+  "test": 2
+ },
+ "setSlideBackground": {
+  "prod": 1,
+  "test": 4
+ },
+ "setSlideBackgroundImage": {
+  "prod": 1,
+  "test": 3
+ },
+ "resetSlideBackground": {
+  "prod": 1,
+  "test": 2
+ },
+ "setSlideBgGraphicsHidden": {
+  "prod": 1,
+  "test": 1
+ },
+ "editPictureSrcRect": {
+  "prod": 7,
+  "test": 4
+ },
+ "setShapePresetGeometry": {
+  "prod": 1,
+  "test": 3
+ },
+ "setShapeCustomGeometry": {
+  "prod": 3,
+  "test": 1
+ },
+ "setShapeAdjustValues": {
+  "prod": 1,
+  "test": 3
+ },
+ "setElementTextAnchor": {
+  "prod": 1,
+  "test": 2
+ },
+ "autofitGeneratedTextBoxes": {
+  "prod": 2,
+  "test": 1
+ },
+ "setElementTextBodyProps": {
+  "prod": 1,
+  "test": 2
+ },
+ "setElementEffects": {
+  "prod": 1,
+  "test": 3
+ },
+ "setElementFill": {
+  "prod": 1,
+  "test": 5
+ },
+ "setElementImageFill": {
+  "prod": 1,
+  "test": 2
+ },
+ "setElementRedaction": {
+  "prod": 1,
+  "test": 3
+ },
+ "setPictureOpacity": {
+  "prod": 3,
+  "test": 6
+ },
+ "replacePictureBytes": {
+  "prod": 7,
+  "test": 6
+ },
+ "duplicateSlide": {
+  "prod": 10,
+  "test": 16
+ },
+ "copySlide": {
+  "prod": 1,
+  "test": 7
+ },
+ "pasteSlide": {
+  "prod": 6,
+  "test": 9
+ },
+ "insertBlankSlide": {
+  "prod": 3,
+  "test": 8
+ },
+ "mergeSlideFromPptx": {
+  "prod": 3,
+  "test": 4
+ },
+ "extractMergeSlideSource": {
+  "prod": 2,
+  "test": 2
+ },
+ "mergeSlideFromSource": {
+  "prod": 1,
+  "test": 1
+ },
+ "insertSlideWithLayout": {
+  "prod": 1,
+  "test": 5
+ },
+ "deleteSlide": {
+  "prod": 13,
+  "test": 13
+ },
+ "reorderElement": {
+  "prod": 6,
+  "test": 4
+ },
+ "materializeSlide": {
+  "prod": 7,
+  "test": 3
+ },
+ "connectionSiteForSide": {
+  "prod": 1,
+  "test": 0
+ },
+ "updateConnectorsForMoved": {
+  "prod": 2,
+  "test": 2
+ },
+ "setElementConnection": {
+  "prod": 2,
+  "test": 1
+ },
+ "setSlideLayout": {
+  "prod": 7,
+  "test": 5
+ },
+ "resetSlideLayout": {
+  "prod": 1,
+  "test": 1
+ },
+ "setSlideSize": {
+  "prod": 10,
+  "test": 3
+ },
+ "appendRawElements": {
+  "prod": 1,
+  "test": 3
+ },
+ "addTable": {
+  "prod": 13,
+  "test": 25
+ },
+ "editTableCellText": {
+  "prod": 1,
+  "test": 6
+ },
+ "editTableStyle": {
+  "prod": 6,
+  "test": 2
+ },
+ "ensureTableStylePart": {
+  "prod": 1,
+  "test": 0
+ },
+ "editChartElement": {
+  "prod": 2,
+  "test": 3
+ },
+ "markChartEditable": {
+  "prod": 1,
+  "test": 1
+ },
+ "setElementHidden": {
+  "prod": 6,
+  "test": 2
+ },
+ "setElementName": {
+  "prod": 5,
+  "test": 2
+ },
+ "getChartElementData": {
+  "prod": 1,
+  "test": 1
+ },
+ "setElementFont": {
+  "prod": 7,
+  "test": 10
+ },
+ "replaceAllInDeck": {
+  "prod": 1,
+  "test": 2
+ },
+ "applyParagraphFormat": {
+  "prod": 1,
+  "test": 0
+ },
+ "setElementParagraphFormat": {
+  "prod": 8,
+  "test": 6
+ },
+ "setGroupChildParagraphFormat": {
+  "prod": 1,
+  "test": 1
+ },
+ "editTableStructure": {
+  "prod": 1,
+  "test": 2
+ },
+ "mergeTableCells": {
+  "prod": 2,
+  "test": 12
+ },
+ "setTableColWidth": {
+  "prod": 6,
+  "test": 4
+ },
+ "setTableRowHeight": {
+  "prod": 6,
+  "test": 3
+ },
+ "resizeTable": {
+  "prod": 2,
+  "test": 1
+ },
+ "setTableCellAnchor": {
+  "prod": 6,
+  "test": 2
+ },
+ "copyElementData": {
+  "prod": 1,
+  "test": 9
+ },
+ "pasteElements": {
+  "prod": 7,
+  "test": 8
+ },
+ "setSlideTransition": {
+  "prod": 1,
+  "test": 3
+ },
+ "getSlideTransition": {
+  "prod": 2,
+  "test": 1
+ },
+ "setSlideAdvanceTime": {
+  "prod": 1,
+  "test": 1
+ },
+ "getSlideAdvanceTime": {
+  "prod": 1,
+  "test": 0
+ },
+ "setSlideHidden": {
+  "prod": 4,
+  "test": 1
+ },
+ "getSlideHidden": {
+  "prod": 2,
+  "test": 1
+ },
+ "reassembleSlideXml": {
+  "prod": 0,
+  "test": 4
+ },
+ "groupElements": {
+  "prod": 6,
+  "test": 11
+ },
+ "ungroupElement": {
+  "prod": 10,
+  "test": 4
+ },
+ "groupChildSlices": {
+  "prod": 1,
+  "test": 2
+ },
+ "patchGroupChildXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "findGroupChild": {
+  "prod": 4,
+  "test": 1
+ },
+ "editGroupChildTransform": {
+  "prod": 1,
+  "test": 2
+ },
+ "patchGroupChildText": {
+  "prod": 1,
+  "test": 3
+ },
+ "setGroupChildFont": {
+  "prod": 1,
+  "test": 2
+ },
+ "editGroupChildFill": {
+  "prod": 0,
+  "test": 2
+ },
+ "strokePatchToModel": {
+  "prod": 1,
+  "test": 3
+ },
+ "editGroupChildStroke": {
+  "prod": 1,
+  "test": 2
+ },
+ "setGroupChildShapeAdjustValues": {
+  "prod": 1,
+  "test": 1
+ },
+ "setGroupChildShapePresetGeometry": {
+  "prod": 1,
+  "test": 1
+ },
+ "setGroupChildShapeCustomGeometry": {
+  "prod": 1,
+  "test": 0
+ },
+ "isLineKind": {
+  "prod": 0,
+  "test": 1
+ },
+ "nextCNvPrId": {
+  "prod": 0,
+  "test": 1
+ },
+ "buildSpXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "addElement": {
+  "prod": 23,
+  "test": 81
+ },
+ "buildTableXml": {
+  "prod": 1,
+  "test": 1
+ },
+ "buildTableGridXml": {
+  "prod": 2,
+  "test": 2
+ },
+ "addImageMediaAndRel": {
+  "prod": 1,
+  "test": 0
+ },
+ "addPicture": {
+  "prod": 13,
+  "test": 19
+ },
+ "deleteElement": {
+  "prod": 12,
+  "test": 10
+ },
+ "calcBoundingBox": {
+  "prod": 0,
+  "test": 1
+ },
+ "buildGrpSpXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "parseLayoutPlaceholders": {
+  "prod": 0,
+  "test": 1
+ },
+ "listSlideLayouts": {
+  "prod": 4,
+  "test": 5
+ },
+ "placeholderSpXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "prepareInsertSlideWithLayout": {
+  "prod": 0,
+  "test": 0
+ },
+ "listMasterParts": {
+  "prod": 2,
+  "test": 3
+ },
+ "parseMasterPart": {
+  "prod": 2,
+  "test": 4
+ },
+ "solidPng": {
+  "prod": 2,
+  "test": 6
+ },
+ "ensureDefaultContentType": {
+  "prod": 0,
+  "test": 0
+ },
+ "addMedia": {
+  "prod": 5,
+  "test": 7
+ },
+ "addModel3d": {
+  "prod": 6,
+  "test": 6
+ },
+ "setModel3dView": {
+  "prod": 6,
+  "test": 2
+ },
+ "model3dPartOf": {
+  "prod": 0,
+  "test": 0
+ },
+ "model3dFraming": {
+  "prod": 1,
+  "test": 1
+ },
+ "model3dXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "syncModel3dFrame": {
+  "prod": 0,
+  "test": 0
+ },
+ "readModel3dRotation": {
+  "prod": 0,
+  "test": 1
+ },
+ "setModel3dRotationXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "namedActionOf": {
+  "prod": 0,
+  "test": 0
+ },
+ "namedActionAttr": {
+  "prod": 0,
+  "test": 0
+ },
+ "narrationSpids": {
+  "prod": 1,
+  "test": 3
+ },
+ "clearNarration": {
+  "prod": 6,
+  "test": 2
+ },
+ "addNarration": {
+  "prod": 2,
+  "test": 2
+ },
+ "setShowNarration": {
+  "prod": 1,
+  "test": 2
+ },
+ "notesPathForSlide": {
+  "prod": 0,
+  "test": 3
+ },
+ "getSlideNotes": {
+  "prod": 3,
+  "test": 9
+ },
+ "setSlideNotes": {
+  "prod": 1,
+  "test": 8
+ },
+ "addContentTypeOverride": {
+  "prod": 1,
+  "test": 0
+ },
+ "appendRelationship": {
+  "prod": 7,
+  "test": 0
+ },
+ "unescapeXml": {
+  "prod": 7,
+  "test": 2
+ },
+ "ownValue": {
+  "prod": 21,
+  "test": 0
+ },
+ "setOwn": {
+  "prod": 6,
+  "test": 0
+ },
+ "parseSlide": {
+  "prod": 1,
+  "test": 61
+ },
+ "parseBackground": {
+  "prod": 0,
+  "test": 0
+ },
+ "sliceGroupChildXmls": {
+  "prod": 0,
+  "test": 1
+ },
+ "layoutDiagramFallback": {
+  "prod": 0,
+  "test": 1
+ },
+ "parseDecorations": {
+  "prod": 0,
+  "test": 3
+ },
+ "parsePlaceholderMap": {
+  "prod": 0,
+  "test": 8
+ },
+ "parseDefRPrStyle": {
+  "prod": 0,
+  "test": 0
+ },
+ "parseLstStyleLevels": {
+  "prod": 0,
+  "test": 2
+ },
+ "parseDefaultTextStyle": {
+  "prod": 0,
+  "test": 3
+ },
+ "parseMasterTextStyles": {
+  "prod": 0,
+  "test": 2
+ },
+ "resolvePlaceholderInsets": {
+  "prod": 0,
+  "test": 1
+ },
+ "resolvePlaceholderAnchor": {
+  "prod": 0,
+  "test": 2
+ },
+ "resolvePlaceholderAnchorCtr": {
+  "prod": 0,
+  "test": 0
+ },
+ "placeholderStyleChain": {
+  "prod": 0,
+  "test": 1
+ },
+ "mergeTextStyleChain": {
+  "prod": 0,
+  "test": 0
+ },
+ "resolvePlaceholderFillSpPr": {
+  "prod": 0,
+  "test": 1
+ },
+ "resolvePlaceholderTransform": {
+  "prod": 0,
+  "test": 1
+ },
+ "resolvePlaceholderPresetGeom": {
+  "prod": 0,
+  "test": 0
+ },
+ "isPresetShapeType": {
+  "prod": 0,
+  "test": 0
+ },
+ "redactExtXml": {
+  "prod": 0,
+  "test": 4
+ },
+ "hasRedactExtIn": {
+  "prod": 0,
+  "test": 3
+ },
+ "syncRedactExt": {
+  "prod": 0,
+  "test": 1
+ },
+ "readRedactLabel": {
+  "prod": 0,
+  "test": 5
+ },
+ "stripRedactExt": {
+  "prod": 0,
+  "test": 4
+ },
+ "setRedactExt": {
+  "prod": 0,
+  "test": 16
+ },
+ "cleanupSupersededSlideResources": {
+  "prod": 1,
+  "test": 1
+ },
+ "cleanupDeletedElementResources": {
+  "prod": 0,
+  "test": 0
+ },
+ "removeRelationshipAndCollectOwnedTarget": {
+  "prod": 0,
+  "test": 0
+ },
+ "removePartWithOwnedResources": {
+  "prod": 0,
+  "test": 0
+ },
+ "scanSlide": {
+  "prod": 0,
+  "test": 1
+ },
+ "getSections": {
+  "prod": 5,
+  "test": 2
+ },
+ "setSections": {
+  "prod": 12,
+  "test": 5
+ },
+ "normalizeSections": {
+  "prod": 1,
+  "test": 1
+ },
+ "addSection": {
+  "prod": 7,
+  "test": 3
+ },
+ "renameSection": {
+  "prod": 6,
+  "test": 1
+ },
+ "removeSection": {
+  "prod": 7,
+  "test": 1
+ },
+ "moveSlide": {
+  "prod": 12,
+  "test": 6
+ },
+ "moveSection": {
+  "prod": 6,
+  "test": 2
+ },
+ "nextSlideId": {
+  "prod": 0,
+  "test": 3
+ },
+ "canListSlide": {
+  "prod": 0,
+  "test": 0
+ },
+ "withSlideListed": {
+  "prod": 0,
+  "test": 0
+ },
+ "withSlideUnlisted": {
+  "prod": 0,
+  "test": 0
+ },
+ "collectPart": {
+  "prod": 0,
+  "test": 0
+ },
+ "collectSlideBundle": {
+  "prod": 0,
+  "test": 0
+ },
+ "listLayouts": {
+  "prod": 0,
+  "test": 2
+ },
+ "importClipboardParts": {
+  "prod": 0,
+  "test": 0
+ },
+ "materializeSlideBundle": {
+  "prod": 0,
+  "test": 1
+ },
+ "importSourceLayout": {
+  "prod": 0,
+  "test": 0
+ },
+ "chooseLayout": {
+  "prod": 0,
+  "test": 1
+ },
+ "layoutShapes": {
+  "prod": 1,
+  "test": 0
+ },
+ "buildSmartArtXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "addSmartArt": {
+  "prod": 7,
+  "test": 4
+ },
+ "ensureTableStyleXml": {
+  "prod": 0,
+  "test": 2
+ },
+ "patchTableStyleXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "findTableElementInSlide": {
+  "prod": 0,
+  "test": 0
+ },
+ "tableRowGridCols": {
+  "prod": 1,
+  "test": 1
+ },
+ "builtinTableStyleName": {
+  "prod": 1,
+  "test": 0
+ },
+ "resolveBuiltinTableStyleId": {
+  "prod": 1,
+  "test": 0
+ },
+ "resolveTableStyle": {
+  "prod": 1,
+  "test": 5
+ },
+ "cellStyleBorders": {
+  "prod": 0,
+  "test": 0
+ },
+ "cellPartStyle": {
+  "prod": 0,
+  "test": 0
+ },
+ "patchThemeXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "applyThemeToArchive": {
+  "prod": 1,
+  "test": 3
+ },
+ "collectExplicitColors": {
+  "prod": 0,
+  "test": 0
+ },
+ "buildColorMap": {
+  "prod": 0,
+  "test": 1
+ },
+ "recolorXml": {
+  "prod": 0,
+  "test": 1
+ },
+ "remapDeckColors": {
+  "prod": 1,
+  "test": 2
+ },
+ "sysColorHex": {
+  "prod": 0,
+  "test": 1
+ },
+ "parseTheme": {
+  "prod": 8,
+  "test": 9
+ },
+ "themeWithOverride": {
+  "prod": 0,
+  "test": 1
+ },
+ "eaScriptOfLang": {
+  "prod": 0,
+  "test": 1
+ },
+ "resolveFontRef": {
+  "prod": 0,
+  "test": 2
+ },
+ "resolveSchemeColor": {
+  "prod": 1,
+  "test": 2
+ },
+ "parseClrMap": {
+  "prod": 1,
+  "test": 2
+ },
+ "xmlParser": {
+  "prod": 20,
+  "test": 2
+ },
+ "asXmlNode": {
+  "prod": 0,
+  "test": 0
+ },
+ "xmlArray": {
+  "prod": 0,
+  "test": 0
+ },
+ "decodeXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "attributeOf": {
+  "prod": 3,
+  "test": 3
+ },
+ "rootPrefixOf": {
+  "prod": 0,
+  "test": 0
+ },
+ "elementRange": {
+  "prod": 0,
+  "test": 0
+ },
+ "cSldNameOf": {
+  "prod": 0,
+  "test": 0
+ },
+ "withRelationshipIds": {
+  "prod": 0,
+  "test": 0
+ },
+ "percentFraction": {
+  "prod": 0,
+  "test": 0
+ },
+ "escapeXmlText": {
+  "prod": 33,
+  "test": 4
+ },
+ "escapeXmlAttr": {
+  "prod": 36,
+  "test": 4
+ },
+ "maxRelationshipIdNumber": {
+  "prod": 1,
+  "test": 2
+ },
+ "hasContentTypeOverride": {
+  "prod": 0,
+  "test": 2
+ },
+ "creationIdExtXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "creationIdXml": {
+  "prod": 0,
+  "test": 0
+ },
+ "defaultContentTypeFor": {
+  "prod": 0,
+  "test": 1
+ },
+ "hasDefaultFor": {
+  "prod": 0,
+  "test": 1
+ },
+ "assertZipWithinLimits": {
+  "prod": 8,
+  "test": 1
+ },
+ "relsPathFor": {
+  "prod": 12,
+  "test": 17
+ },
+ "resolveTarget": {
+  "prod": 14,
+  "test": 12
+ }
+}
