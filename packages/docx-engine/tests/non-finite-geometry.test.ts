@@ -121,37 +121,42 @@ describe('patches keep the XML when a number is not representable', () => {
     expect(patchTextboxHeights(TEXTBOX, [h])).toBe(TEXTBOX)
   })
 
-  it('patchTextboxHeights height = -Infinity keeps the clamped extent and the VML height', () => {
+  // the twins agree: DrawingML clamps to 1 EMU, VML to its two-decimal 0pt
+  it('patchTextboxHeights height = -Infinity writes the clamped size into both twins', () => {
     const out = patchTextboxHeights(TEXTBOX, [-Infinity])
-    expect(out).toBe(TEXTBOX.replaceAll('cy="1704975"', 'cy="1"'))
+    expect(out).toBe(
+      TEXTBOX.replaceAll('cy="1704975"', 'cy="1"').replace('height:134.25pt', 'height:0pt'),
+    )
     expectClean(out)
   })
 
-  it('patchTextboxHeights height = 1e22 writes no exponent', () => {
-    const out = patchTextboxHeights(TEXTBOX, [1e22])
-    expect(out).toBe(TEXTBOX)
+  // 1e20 px has VML points in plain digits but no EMU: neither twin changes
+  it.each([1e20, 1e22])('patchTextboxHeights height = %s changes neither twin', (h) => {
+    expect(patchTextboxHeights(TEXTBOX, [h])).toBe(TEXTBOX)
   })
 
   // 1e22 px: neither the EMU extent nor the VML points have plain-digit text
-  it.each([NaN, Infinity, 1e22])('patchTextboxSizes width = %s', (w) => {
+  it.each([NaN, Infinity, 1e20, 1e22])('patchTextboxSizes width = %s', (w) => {
     const out = patchTextboxSizes(TEXTBOX, [{ wPx: w, hPx: 240 }])
     expect(out).toBe(patchTextboxSizes(TEXTBOX, [{ hPx: 240 }]))
     expectClean(out)
   })
 
-  it.each([NaN, Infinity, 1e22])('patchTextboxSizes height = %s', (h) => {
+  it.each([NaN, Infinity, 1e20, 1e22])('patchTextboxSizes height = %s', (h) => {
     const out = patchTextboxSizes(TEXTBOX, [{ wPx: 300, hPx: h }])
     expect(out).toBe(patchTextboxSizes(TEXTBOX, [{ wPx: 300 }]))
     expect(out).toContain('<a:spAutoFit/>')
     expectClean(out)
   })
 
-  it('patchTextboxSizes -Infinity keeps the clamped extents and the VML size', () => {
+  it('patchTextboxSizes -Infinity writes the clamped size into both twins', () => {
     expect(patchTextboxSizes(TEXTBOX, [{ wPx: -Infinity }])).toBe(
-      TEXTBOX.replaceAll('cx="6038850"', 'cx="1"'),
+      TEXTBOX.replaceAll('cx="6038850"', 'cx="1"').replace('width:475.5pt', 'width:0pt'),
     )
     expect(patchTextboxSizes(TEXTBOX, [{ hPx: -Infinity }])).toBe(
-      TEXTBOX.replaceAll('cy="1704975"', 'cy="1"').replace('<a:spAutoFit/>', '<a:noAutofit/>'),
+      TEXTBOX.replaceAll('cy="1704975"', 'cy="1"')
+        .replace('<a:spAutoFit/>', '<a:noAutofit/>')
+        .replace('height:134.25pt', 'height:0pt'),
     )
   })
 

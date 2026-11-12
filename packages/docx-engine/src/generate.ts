@@ -1112,6 +1112,16 @@ function setVmlStyleLength(xml: string, prop: 'width' | 'height', px: number): s
   )
 }
 
+/**
+ * One box length as both twins write it: DrawingML's EMU (at least 1) and the
+ * px the VML style takes from the same clamp, or null when the EMU has no
+ * plain-digit text, so the twins never disagree on a box's size.
+ */
+function boxLength(px: number): { emu: string; px: number } | null {
+  const emu = xmlInt(Math.max(1, px * EMU_PER_PX))
+  return emu === null ? null : { emu, px: Math.max(1 / EMU_PER_PX, px) }
+}
+
 /** Resize fixed DrawingML textboxes while preserving their anchors and styling. */
 export function patchTextboxHeights(
   paragraphXml: string,
@@ -1128,8 +1138,8 @@ export function patchTextboxHeights(
     boxIndex++
     const heightPx = heightsPx[boxIndex]
     if (!heightPx) continue
-    const cy = xmlInt(Math.max(1, heightPx * EMU_PER_PX))
-    if (cy === null) continue
+    const cy = boxLength(heightPx)?.emu
+    if (cy === undefined) continue
     const resized = setShapeExt(
       drawingXml.replace(/(<wp:extent\b[^>]*\bcy=")\d+(")/, `$1${cy}$2`),
       { cy },
@@ -1144,8 +1154,8 @@ export function patchTextboxHeights(
     if (!fallback.includes('<w:txbxContent') || paraPlainText(fallback) === '') return fallback
     fallbackIndex++
     const heightPx = heightsPx[fallbackIndex]
-    if (!heightPx) return fallback
-    return setVmlStyleLength(fallback, 'height', heightPx)
+    const height = heightPx ? boxLength(heightPx) : null
+    return height ? setVmlStyleLength(fallback, 'height', height.px) : fallback
   })
   return resizedXml
 }
@@ -1183,13 +1193,13 @@ export function patchTextboxSizes(
     const size = sizes[boxIndex]
     if (!size || (size.wPx == null && size.hPx == null)) continue
     let resized = drawingXml
-    const cx = size.wPx == null ? null : xmlInt(Math.max(1, size.wPx * EMU_PER_PX))
+    const cx = size.wPx == null ? null : (boxLength(size.wPx)?.emu ?? null)
     if (cx !== null) {
       resized = setShapeExt(resized.replace(/(<wp:extent\b[^>]*\bcx=")\d+(")/, `$1${cx}$2`), {
         cx,
       })
     }
-    const cy = size.hPx == null ? null : xmlInt(Math.max(1, size.hPx * EMU_PER_PX))
+    const cy = size.hPx == null ? null : (boxLength(size.hPx)?.emu ?? null)
     if (cy !== null) {
       resized = setShapeExt(resized.replace(/(<wp:extent\b[^>]*\bcy=")\d+(")/, `$1${cy}$2`), {
         cy,
@@ -1213,8 +1223,10 @@ export function patchTextboxSizes(
     const size = sizes[fallbackIndex]
     if (!size) return fallback
     let next = fallback
-    if (size.hPx != null) next = setVmlStyleLength(next, 'height', size.hPx)
-    if (size.wPx != null) next = setVmlStyleLength(next, 'width', size.wPx)
+    const height = size.hPx == null ? null : boxLength(size.hPx)
+    const width = size.wPx == null ? null : boxLength(size.wPx)
+    if (height) next = setVmlStyleLength(next, 'height', height.px)
+    if (width) next = setVmlStyleLength(next, 'width', width.px)
     return next
   })
   return resizedXml
