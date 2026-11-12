@@ -49,6 +49,6 @@ seuoffice는 웹과 PC(Windows)에서 문서를 보고 고치고 AI로 편집하
 ## 문서
 
 - `docs/seuoffice/`와 이 파일은 한국어로 쓴다. 코드 주석은 영어로 쓴다. `check:english-comments`가 문서와 주석의 한자를 막으니 한자를 쓰지 않는다.
-- 결정은 `docs/seuoffice/decisions/NNNN-제목.md`(맥락, 결정, 버린 대안, 결과)로 남기고 `index.md`에 한 줄 더한다. 상위 `docs/tracking/`은 이음오피스 것이라 건드리지 않는다.
+- 결정은 `docs/seuoffice/decisions/NNNN-제목.md`(맥락, 결정, 버린 대안, 결과)로 남기고 `index.md`에 한 줄 더한다. 이음오피스의 기록은 `docs/archive/ieum/`에 닫아 두었고 고치지 않는다.
 - 단계 일을 끝내면 같은 커밋에서 `docs/seuoffice/로드맵.md` 상태를 고친다. 웹 브리지가 데스크톱과 다르게 동작하는 메서드를 만들면 `web-gaps.md`에 적는다.
 - 이 파일을 고치면 `CLAUDE.md`도 같은 내용으로 고친다.

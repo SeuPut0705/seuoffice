@@ -177,7 +177,7 @@ jobs:
           GENOFFICE_GOOGLE_CLIENT_SECRET: ${{ secrets.GENOFFICE_GOOGLE_CLIENT_SECRET }}
 
       # the Windows config reads the sidecar from the x86_64-pc-windows-gnu
-      # folder (docs/releasing.ko.md, 4-(2)); the hand build copies it the same way
+      # folder; a hand build copies it the same way (docs/archive/ieum/releasing.ko.md, 4-(2))
       - name: Place the xlsx sidecar
         run: |
           set -euo pipefail
