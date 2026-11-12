@@ -754,14 +754,17 @@ for a record keyed by data. No order is in the ledger.
 1. **The debt of the builders** listed under unit 3: one `resolvePropChangeXml`
    (`revision_xml.rs`), the helpers into `jscompat`, and the civil date of
    `chart.rs` (`Date.UTC`, `getUTC*`) into `jscompat`.
-2. **The package comparison reports the first differing path of a value
-   only**, so `styles/headings.rs:31` and `styles/display.rs:350` were never
-   shown apart from the heading difference beside them. Make it report every
-   differing path (additive), then show them: their inputs are in the
-   package "…letters that fold to ASCII only in Unicode"; a fault in each
-   says whether they are compared. One input waits for a comparison that can
-   see it: a part named `x.rel\u017f` for `ooxml-pkg/src/load.rs:104` (the
-   package comparison reads no part by such a name).
+2. **Done: the package comparison reports every differing path of a value.**
+   The report line keeps the first path with both values and adds the count
+   and the first `--show N` paths; `out/package-paths.json` holds every
+   differing value with all its paths. `package-only.ts` runs (e) over the
+   built containers alone (`--only TEXT`, `SEUOFFICE_WASM` for a wasm built
+   elsewhere). Faults, each alone in a HEAD copy (`"i"` to `"iu"`), against
+   0 differences unfaulted: `styles/headings.rs:31` shows at
+   `headingStyles/value/listParagraphStyleId`, `styles/display.rs:350` at
+   three `display` paths of `styles`, and `ooxml-pkg/src/load.rs:105` at the
+   length and hash of `word/x.rel\u017f`, the part of "a Strict package"
+   that stays Strict because `/i` without `/u` does not fold U+017F to `s`.
 3. **Merge main when main says so** (items 11 to 16 and 24 of its list are
    fixed there), and drop the entries and classes that go stale.
    `lazy-media.ts` (55) is about when the host reads media: decide what of

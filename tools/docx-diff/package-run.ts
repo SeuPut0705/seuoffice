@@ -10,6 +10,7 @@ import {
   openOnce,
   rustParts,
   typescriptParts,
+  writePathReport,
 } from './compare-package'
 import { mutateProps } from './compare-props'
 import { mutate } from './compare-xml'
@@ -174,6 +175,7 @@ export function reportPackage(): void {
       `no longer the text parse.ts holds: ${drifted}`,
   )
   if (drifted > 0) failGate()
+  writePathReport()
   console.log(
     `(e) distinct refusals of the TypeScript loader among the built containers: ${refusals.size} ` +
       `(${atFloor(refusals.size, 'refusalKinds')})`,
