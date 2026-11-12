@@ -77,6 +77,43 @@ const MULTI_BYTE: Record<string, true> = {
   gb18030: true,
 }
 
+/** the multi-byte tables could not be loaded: said once, not per chunk */
+let tablesMissingReported = false
+
+/**
+ * The decoder that has the multi-byte tables, or null when they cannot be
+ * loaded. The import is dynamic on purpose: the bundler splits the tables off
+ * the renderer's main chunk, and a split chunk can be missing. The decoder is
+ * the one the tables' module exports, not the light module's: a loader that
+ * runs this file as CommonJS (tsx with a CommonJS entry) gives `require` and
+ * `import()` two instances of the package, and the tables register on the
+ * instance `import()` returned.
+ */
+async function multiByteDecoder(): Promise<typeof TextDecoder | null> {
+  try {
+    return (await import('@exodus/bytes/encoding.js')).TextDecoder
+  } catch (error) {
+    if (!tablesMissingReported) {
+      tablesMissingReported = true
+      console.warn('altChunk: legacy charset tables unavailable, decoding with the host:', error)
+    }
+    return null
+  }
+}
+
+/**
+ * The host's own decoder for `encoding`, used only when the tables cannot be
+ * loaded: it differs from the standard on a few characters, which beats a
+ * chunk read as windows-1252. Null when the host lacks the encoding.
+ */
+function hostDecoder(encoding: string): { decode(bytes: Uint8Array): string } | null {
+  try {
+    return new globalThis.TextDecoder(encoding)
+  } catch {
+    return null
+  }
+}
+
 async function decodeWithCharset(bytes: Uint8Array, charset: string | undefined): Promise<string> {
   const label = (charset ?? '')
     .trim()
@@ -85,10 +122,18 @@ async function decodeWithCharset(bytes: Uint8Array, charset: string | undefined)
   for (const candidate of [label, 'utf-8']) {
     const encoding = candidate ? normalizeEncoding(candidate) : null
     if (!encoding) continue
-    // dynamic on purpose: the bundler splits the tables off the renderer's main chunk
-    if (Object.hasOwn(MULTI_BYTE, encoding)) await import('@exodus/bytes/encoding.js')
+    let Decoder = TextDecoder
+    if (Object.hasOwn(MULTI_BYTE, encoding)) {
+      const withTables = await multiByteDecoder()
+      if (!withTables) {
+        const host = hostDecoder(encoding)
+        if (host) return host.decode(bytes)
+        continue
+      }
+      Decoder = withTables
+    }
     try {
-      return new TextDecoder(encoding, { fatal: candidate === 'utf-8' }).decode(bytes)
+      return new Decoder(encoding, { fatal: candidate === 'utf-8' }).decode(bytes)
     } catch {
       /* the replacement encoding, or invalid utf-8: try the next */
     }

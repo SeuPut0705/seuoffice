@@ -130,8 +130,14 @@ import {
 import { applyPropertyChanges, type PropertyChanges } from './doc-properties'
 import { patchHfPicturesXml } from './run-picture'
 import { ownValue } from './own-value'
-import { findStartTag } from './xml-tag'
-import { EMU_PER_PX, usableNumber, usablePictureSize } from './xml-number'
+import { findStartTag, removeElements } from './xml-tag'
+import {
+  EMU_PER_PX,
+  usableNumber,
+  usablePictureSize,
+  usablePositionOffset,
+  xmlPositiveCoordinate,
+} from './xml-number'
 
 /**
  * Relationship attributes are read quote-agnostically and with any spacing
@@ -1114,8 +1120,11 @@ export async function saveDocx(
     })
 
     const docPrId = DOCPR_ID_BASE + ++docPrSeq
-    const cx = extentPx ? Math.max(1, Math.round(extentPx.w * 9525)) : 5486400
-    const cy = extentPx ? Math.max(1, Math.round(extentPx.h * 9525)) : 3200400
+    // a size past the widest extent (or none) takes the default chart size
+    const cx =
+      (extentPx && xmlPositiveCoordinate(Math.max(1, extentPx.w * EMU_PER_PX))) || '5486400'
+    const cy =
+      (extentPx && xmlPositiveCoordinate(Math.max(1, extentPx.h * EMU_PER_PX))) || '3200400'
     return (
       '<w:p><w:r><w:drawing><wp:inline distT="0" distB="0" distL="0" distR="0">' +
       `<wp:extent cx="${cx}" cy="${cy}"/>` +
@@ -1154,8 +1163,8 @@ export async function saveDocx(
       {
         ...ink,
         ...usablePictureSize(ink.widthPx, ink.heightPx),
-        offsetXPx: usableNumber(ink.offsetXPx, EMU_PER_PX) ?? 0,
-        offsetYPx: usableNumber(ink.offsetYPx, EMU_PER_PX) ?? 0,
+        offsetXPx: usablePositionOffset(ink.offsetXPx, EMU_PER_PX) ?? 0,
+        offsetYPx: usablePositionOffset(ink.offsetYPx, EMU_PER_PX) ?? 0,
       },
       rId,
       9000 + inkSeq,
@@ -3286,11 +3295,9 @@ function applyPageColor(documentXml: string, color: string | null): string {
   // self-closing form left the paired copy behind, so a save emitted two
   // w:background children; CT_Document admits one and Word then reports the
   // file as corrupt. Strip the pair whole, VML child included, and re-emit the
-  // canonical self-closing form, for the same reason stripElement() does.
-  let xml = documentXml.replace(
-    /<w:background[^>]*\/>|<w:background[^>]*>[\s\S]*?<\/w:background>/g,
-    '',
-  )
+  // canonical self-closing form, for the same reason stripElement() does. The
+  // start tag is read past a quoted > in an attribute value (findStartTag).
+  let xml = removeElements(documentXml, 'w:background')
   if (color) {
     const root = findStartTag(xml, 'w:document')
     if (root)

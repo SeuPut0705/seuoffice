@@ -96,3 +96,19 @@ describe('page color set on a document that already has a w:background', () => {
     expect(readPageColor(await parseDocx(resaved))).toBe('FFF2CC')
   })
 })
+
+describe('page color set on a document whose w:background holds a quoted >', () => {
+  // a > inside an attribute value ends no tag: a scan up to the first > read
+  // the element as unclosed and left it, so the save wrote a second one
+  it.each([
+    ['self-closing', '<w:background w:color="FFFFFF" w:themeColor="a>b"/>'],
+    [
+      'paired',
+      '<w:background w:color="FFFFFF" w:themeColor="a>b"><v:background id="_x0000_s1025"/></w:background>',
+    ],
+  ])('the %s one is replaced so exactly one remains', async (_name, background) => {
+    const xml = await docXmlOf(await saveWithPageColor(background, 'FFF2CC'))
+    expect(count(xml, 'w:background')).toBe(1)
+    expect(xml).toMatch(/<w:document[^>]*><w:background w:color="FFF2CC"\/>/)
+  })
+})

@@ -2872,7 +2872,7 @@ export function pmDocToSavePlan(inputDoc: PmNode, originalBlocks: Block[]): Save
       } else if (idx !== null && idx !== undefined && originalByIndex.has(idx)) {
         // pasted copy: the anchor is consumed by the first occurrence, so clone from the block's own data
         const original = originalByIndex.get(idx)!
-        const image = imageFromProtectedAttrs(node)
+        const image = imageFromProtectedAttrs(node, original)
         if (image) {
           changedCount++
           pushBlock({ kind: 'image', image })
@@ -3210,17 +3210,25 @@ function applyImageFloatAttrs(image: NewImage, attrs: Record<string, unknown>): 
 }
 
 /** rebuild a pasted image copy from its preview bytes; null when not materializable */
-function imageFromProtectedAttrs(node: PmNode): NewImage | null {
+/**
+ * A picture block rebuilt from its node attributes. Its size is the node's
+ * when that is a usable number; else the size of the picture the copy was
+ * made from, as its file has it (`original`); the default only when that is
+ * no usable size either. A size a peer sent as text must not shrink the copy.
+ */
+function imageFromProtectedAttrs(node: PmNode, original?: Block): NewImage | null {
   if (node.attrs?.blockType !== 'image') return null
   const src = String(node.attrs?.imageDataUrl ?? '')
   const lazy = parseLazyMediaUrl(src)
   const m = lazy ? null : /^data:(image\/(?:png|jpeg|gif));base64,(.+)$/.exec(src)
   // no size at all is not materializable (the caller clones the original bytes)
   if ((!m && !lazy) || !node.attrs?.imageWidthPx || !node.attrs?.imageHeightPx) return null
-  const size = usablePictureSize(
-    attrNumber(node.attrs?.imageWidthPx, EMU_PER_PX),
-    attrNumber(node.attrs?.imageHeightPx, EMU_PER_PX),
-  )
+  const w = attrNumber(node.attrs.imageWidthPx, EMU_PER_PX)
+  const h = attrNumber(node.attrs.imageHeightPx, EMU_PER_PX)
+  const size =
+    w !== undefined && h !== undefined && w > 0 && h > 0
+      ? { widthPx: w, heightPx: h }
+      : usablePictureSize(original?.imageWidthPx, original?.imageHeightPx)
   const image: NewImage = lazy
     ? { base64: '', mime: 'image/png', sourcePart: lazy.partPath, ...size }
     : { base64: m![2], mime: m![1] as NewImage['mime'], ...size }

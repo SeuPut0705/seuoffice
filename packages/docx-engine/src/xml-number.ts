@@ -11,6 +11,26 @@ export function xmlInt(n: number): string | null {
   return Number.isSafeInteger(rounded) ? String(rounded) : null
 }
 
+/** `n` rounded, as plain digits, when it lies in [min, max]; else null. */
+function xmlIntIn(n: number, min: number, max: number): string | null {
+  // the value may come from a node attribute or a peer: null rounds to 0 and
+  // '12' to 12, but neither is a number the caller meant to write
+  if (typeof n !== 'number') return null
+  const rounded = Math.round(n)
+  return Number.isSafeInteger(rounded) && rounded >= min && rounded <= max ? String(rounded) : null
+}
+
+/** wp:posOffset (ST_PositionOffset, an xsd:int), in EMU */
+export const xmlPositionOffset = (emu: number): string | null =>
+  xmlIntIn(emu, -2147483648, 2147483647)
+
+/** an extent's cx / cy (ST_PositiveCoordinate), in EMU */
+export const xmlPositiveCoordinate = (emu: number): string | null =>
+  xmlIntIn(emu, 0, MAX_COORDINATE_EMU)
+
+/** an xsd:unsignedInt: wp:anchor relativeHeight, distT / distB / distL / distR */
+export const xmlUnsignedInt = (n: number): string | null => xmlIntIn(n, 0, 4294967295)
+
 /**
  * An id must already be an integer: rounding 2.5 to a neighbour could
  * duplicate an id the part already holds.
@@ -62,4 +82,14 @@ export function usablePictureSize(
   return w !== undefined && h !== undefined && w > 0 && h > 0
     ? { widthPx: w, heightPx: h }
     : { widthPx: DEFAULT_PICTURE_PX, heightPx: DEFAULT_PICTURE_PX }
+}
+
+/**
+ * A number from the document as a wp:posOffset may take it, in units of
+ * `emuPerUnit` EMU: undefined when it is no finite number or, in EMU, lies
+ * outside the xsd:int a position is (narrower than the widest coordinate).
+ */
+export function usablePositionOffset(value: unknown, emuPerUnit = 1): number | undefined {
+  if (typeof value !== 'number') return undefined
+  return xmlPositionOffset(value * emuPerUnit) === null ? undefined : value
 }
