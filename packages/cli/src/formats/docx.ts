@@ -1488,7 +1488,8 @@ export function listNotes(doc: OpenDocument): NoteSummary[] {
         id: n.id,
         ...(num !== undefined ? { num } : {}),
         ...(blockIndex !== undefined ? { blockIndex } : {}),
-        text: n.text,
+        // the text a model may read: a run hidden from AI reads as its placeholder
+        text: n.modelText ?? n.text,
       }
     })
   return [...summarize('footnote', doc.side.footnotes), ...summarize('endnote', doc.side.endnotes)]
@@ -1754,14 +1755,14 @@ function sectionHfText(
   variant: HfView,
 ): string {
   const value = resolveSectionHf(doc, sections, si, kind, variant)
-  return value ? doc.mods.hfText.hfEditText(value) : ''
+  return value ? doc.mods.hfText.hfModelText(value) : ''
 }
 
 export function headerFooterState(doc: OpenDocument): HeaderFooterState {
   const { side } = doc
   const textOf = (slot: HfSlot) => {
     const v = side.hf[slot]
-    return v ? doc.mods.hfText.hfEditText(v) : ''
+    return v ? doc.mods.hfText.hfModelText(v) : ''
   }
   const sections = readSections(doc.parsed)
   return {
@@ -1798,6 +1799,9 @@ function headerFooterAccess(doc: OpenDocument): {
   return {
     read: () => headerFooterState(doc),
     set: (kind, view, text) => {
+      const slot = slotOf(kind, view)
+      const next = doc.mods.hfText.applyHfModelText(side.hf[slot] ?? null, text)
+      if (typeof next === 'string') return next
       if (view === 'first' && !side.titlePg) {
         side.titlePg = true
         side.titlePgDirty = true
@@ -1806,8 +1810,7 @@ function headerFooterAccess(doc: OpenDocument): {
         side.evenOddHf = true
         side.evenOddHfDirty = true
       }
-      const slot = slotOf(kind, view)
-      side.hf[slot] = doc.mods.hfText.applyHfText(side.hf[slot] ?? null, text)
+      side.hf[slot] = next
       side.hfDirty.add(slot)
       return null
     },
@@ -1856,14 +1859,15 @@ function setSectionHeaderFooter(
       error:
         'set_header_footer{section} addresses the saved sections; apply the section break in its own `seuoffice docs apply` first, then edit the header/footer',
     }
+  const next = doc.mods.hfText.applyHfModelText(
+    resolveSectionHf(doc, sections, section, kind, view),
+    text,
+  )
+  if (typeof next === 'string') return { error: next }
   if (view === 'even' && !side.evenOddHf) {
     side.evenOddHf = true
     side.evenOddHfDirty = true
   }
-  const next = doc.mods.hfText.applyHfText(
-    resolveSectionHf(doc, sections, section, kind, view),
-    text,
-  )
   const slot = slotOf(kind, view)
   if (section === sections.length - 1) {
     if (view === 'first' && !side.titlePg) {
@@ -2081,9 +2085,10 @@ export interface CommentSummary extends CommentInfo {
 /** Every comment with the block its anchor sits in, ids as reply_comment / resolve_comment / delete_comment take them. */
 export function listComments(doc: OpenDocument): CommentSummary[] {
   const anchors = doc.mods.protocol.commentAnchors(doc.editor)
-  return doc.side.comments.map((c) => {
+  return doc.side.comments.map(({ modelText, ...c }) => {
     const a = anchors.get(c.parentId ?? c.id)
-    const base = { ...c, done: c.done === true }
+    // the text a model may read: a run hidden from AI reads as its placeholder
+    const base = { ...c, text: modelText ?? c.text, done: c.done === true }
     return a ? { ...base, blockIndex: a.blockIndex, anchorText: a.excerpt } : base
   })
 }

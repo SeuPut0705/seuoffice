@@ -13,6 +13,7 @@ import {
   type XNode,
 } from './xml-utils'
 import { customEnumItems } from './list-markers'
+import { withheldAsPlaceholders } from './withheld'
 import { decodeNumericCharRefs, onOffOf, type RelInfo } from './parse-xml-text'
 import type {
   CommentImage,
@@ -152,13 +153,33 @@ async function commentImageOf(zip: JSZip, comment: XNode): Promise<CommentImage 
   }
 }
 
+/** each comment's text in a comments part, by id */
+function commentTextsById(xml: string): Map<string, string> {
+  const root = (xmlParser.parse(xml) as XNode[]).find((n) => nameOf(n) === 'w:comments')
+  const texts = new Map<string, string>()
+  for (const node of root ? findChildren(root, 'w:comment') : []) {
+    const id = attrsOf(node)['w:id']
+    if (id) texts.set(id, findChildren(node, 'w:p').map(resultTextOf).join('\n'))
+  }
+  return texts
+}
+
+/** the model's text of a comment, kept only where it differs from what the comment says */
+function modelTextOf(modelText: string | undefined, text: string): { modelText?: string } {
+  return modelText !== undefined && modelText !== text ? { modelText } : {}
+}
+
 /** word/comments.xml (+ reply/resolved relations from commentsExtended) -> display list, file order */
 export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
   const file = zip.file('word/comments.xml')
   if (!file) return []
-  const parsed = xmlParser.parse(await file.async('string')) as XNode[]
+  const xml = await file.async('string')
+  const parsed = xmlParser.parse(xml) as XNode[]
   const root = parsed.find((n) => nameOf(n) === 'w:comments')
   if (!root) return []
+  // the same comments with every run hidden from AI as its placeholder
+  const view = withheldAsPlaceholders(xml)
+  const modelTexts = view === xml ? null : commentTextsById(view)
   const out: CommentInfo[] = []
   for (const node of findChildren(root, 'w:comment')) {
     const attrs = attrsOf(node)
@@ -166,12 +187,14 @@ export async function parseComments(zip: JSZip): Promise<CommentInfo[]> {
     const paras = findChildren(node, 'w:p')
     const paraId = paras.length > 0 ? attrsOf(paras[paras.length - 1])['w14:paraId'] : undefined
     const image = await commentImageOf(zip, node)
+    const text = paras.map(resultTextOf).join('\n')
     out.push({
       id: attrs['w:id'],
       author: attrs['w:author'] ?? '',
       initials: attrs['w:initials'],
       date: attrs['w:date'],
-      text: paras.map(resultTextOf).join('\n'),
+      text,
+      ...modelTextOf(modelTexts?.get(attrs['w:id']), text),
       ...(paraId ? { paraId } : {}),
       ...(image ? { image } : {}),
     })
