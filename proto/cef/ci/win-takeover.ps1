@@ -82,7 +82,9 @@ Dump-Registry 'before the prototype installer' | Tee-Object -FilePath (Join-Path
 
 # 3. the move-over, exactly as electron-updater calls it
 $t = Get-Date
-$proc = Start-Process -FilePath $Installer -ArgumentList '--updated', '/S', '--force-run' -PassThru -Wait
+# no -Wait: it would also wait for the app --force-run starts
+$proc = Start-Process -FilePath $Installer -ArgumentList '--updated', '/S', '--force-run' -PassThru
+if (-not $proc.WaitForExit(300000)) { $proc.Kill(); Fail 'the installer did not finish in 5 minutes' }
 Write-Host ("prototype installer exit code {0}, {1:n0}s" -f $proc.ExitCode, ((Get-Date) - $t).TotalSeconds)
 if ($proc.ExitCode -ne 0) { Fail "installer exit code $($proc.ExitCode)" }
 

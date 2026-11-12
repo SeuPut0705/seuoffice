@@ -268,6 +268,7 @@ jobs:
       - name: take over the electron-builder install (silent, as electron-updater runs it)
         id: takeover
         if: always() && steps.package.outcome == 'success'
+        timeout-minutes: 15
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path "$env:RUNNER_TEMP\smoke" | Out-Null
@@ -277,6 +278,7 @@ jobs:
       - name: smoke (bench, pdf, OSCrypt probe) on the installed app
         id: smoke
         if: always() && steps.package.outcome == 'success'
+        timeout-minutes: 15
         run: |
           mkdir -p "$RUNNER_TEMP/smoke"
           exe=$(cat "$RUNNER_TEMP/smoke/installed-exe.txt" 2>/dev/null || true)
