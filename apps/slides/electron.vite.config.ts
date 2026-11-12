@@ -61,6 +61,7 @@ export default defineConfig({
     plugins: [
       externalizeDepsPlugin({
         exclude: [
+          '@seuoffice/agent-core',
           '@seuoffice/pptx-engine',
           '@seuoffice/pptx-ops',
           '@seuoffice/pptx-render',

@@ -23,7 +23,12 @@ export default defineConfig({
   main: {
     plugins: [
       externalizeDepsPlugin({
-        exclude: ['@seuoffice/i18n', '@seuoffice/electron-utils', '@seuoffice/odt-engine'],
+        exclude: [
+          '@seuoffice/i18n',
+          '@seuoffice/electron-utils',
+          '@seuoffice/odt-engine',
+          '@seuoffice/agent-core',
+        ],
       }),
     ],
   },

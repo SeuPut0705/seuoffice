@@ -29,6 +29,8 @@ export default defineConfig({
     plugins: [
       externalizeDepsPlugin({
         exclude: [
+          // TS source whose modules import each other without extensions
+          '@seuoffice/agent-core',
           '@seuoffice/docx-engine',
           // the Hangul export's converter, run in its worker thread
           '@seuoffice/docx2hwp',
