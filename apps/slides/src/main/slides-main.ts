@@ -1294,6 +1294,7 @@ interface UnlockedDeck {
  * .ppt (97-2003 binary compound document) is unsupported: show an actionable message instead of a parse error.
  * Detection uses the magic number rather than the extension -- a binary ppt with a renamed suffix is caught too. A CFB containing an
  * EncryptedPackage stream is a password-protected pptx: ask for its password and hand back the decrypted package.
+ * A CFB whose container does not hold is damaged: no password is asked for, and the message says the file is damaged.
  * Resolves 'plain' for an ordinary pptx and 'rejected' when the file will not open (the user was told why, or cancelled the prompt).
  */
 async function preparePptxOpen(path: string): Promise<'plain' | 'rejected' | UnlockedDeck> {
@@ -1317,9 +1318,14 @@ async function preparePptxOpen(path: string): Promise<'plain' | 'rejected' | Unl
     // on read failure, fall back to the legacy-format message
   }
   const parent = dialogParent()
-  // a headless export has no one to ask, so an encrypted deck is simply not opened
-  if (bytes !== null && cfbKind(bytes) === 'encrypted' && isHeadlessMode()) return 'rejected'
-  if (bytes !== null && cfbKind(bytes) === 'encrypted') {
+  const kind = bytes === null ? null : cfbKind(bytes)
+  // a headless export has no one to ask or tell, so such a deck is simply not opened
+  if ((kind === 'encrypted' || kind === 'damaged') && isHeadlessMode()) return 'rejected'
+  if (kind === 'damaged') {
+    await showPresentationError(tm('pptImportFailedBody'))
+    return 'rejected'
+  }
+  if (bytes !== null && kind === 'encrypted') {
     const prompt = passwordPromptFactory?.(parent, basename(path))
     let unlocked: Awaited<ReturnType<typeof unlockOfficeFile>> | 'failed'
     try {
@@ -1340,7 +1346,7 @@ async function preparePptxOpen(path: string): Promise<'plain' | 'rejected' | Unl
       return { bytes: new Uint8Array(unlocked.bytes), password: unlocked.password }
     }
   }
-  const encrypted = bytes !== null && cfbKind(bytes) === 'encrypted'
+  const encrypted = kind === 'encrypted'
   const options = {
     type: 'warning' as const,
     buttons: [tm('legacyPptOk')],

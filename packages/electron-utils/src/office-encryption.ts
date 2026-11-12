@@ -43,6 +43,22 @@ function gateCompoundFile(bytes: Uint8Array): void {
   if (hasOle2Signature(bytes)) assertCompoundFile(bytes)
 }
 
+/**
+ * A file that starts like a compound file and whose container the shared gate
+ * refuses. It is damaged, whatever stream names its bytes hold: no password
+ * opens it and no importer reads it, so a caller says so instead of asking for
+ * a password or naming a format. Bytes without the OLE2 signature are never it.
+ */
+export function isDamagedCompoundFile(bytes: Uint8Array): boolean {
+  if (!isCfbHeader(bytes)) return false
+  try {
+    assertCompoundFile(bytes)
+    return false
+  } catch {
+    return true
+  }
+}
+
 /** Encrypted OOXML, or a legacy .xls/.doc/.ppt that carries an open password. */
 export function isEncryptedOfficeFile(bytes: Buffer): boolean {
   if (!isCfbHeader(bytes)) return false

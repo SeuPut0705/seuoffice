@@ -5,6 +5,7 @@ import {
   decryptOfficeFile,
   encryptOoxml,
   isCfbHeader,
+  isDamagedCompoundFile,
   isEncryptedOfficeFile,
   isEncryptedOoxml,
   OfficeDecryptError,
@@ -132,6 +133,27 @@ describe('a hostile compound file', () => {
     expect(err).toBeInstanceOf(OfficeDecryptError)
     expect((err as OfficeDecryptError).reason).toBe('unsupported')
     expect(calls).toEqual([])
+  })
+})
+
+describe('isDamagedCompoundFile', () => {
+  it('is true for a compound file the gate refuses, whatever names it holds', () => {
+    expect(isDamagedCompoundFile(fatCycleFile('EncryptedPackage'))).toBe(true)
+    for (const { build } of HOSTILE_FILES) expect(isDamagedCompoundFile(build())).toBe(true)
+  })
+
+  it('is false for a sound protected file and for bytes that are no compound file', () => {
+    expect(isDamagedCompoundFile(encryptOoxml(plain, 'pw'))).toBe(false)
+    expect(isDamagedCompoundFile(plain)).toBe(false)
+    expect(isDamagedCompoundFile(new Uint8Array(0))).toBe(false)
+  })
+
+  it('is true for a protected file with one header field wrong', () => {
+    const bytes = encryptOoxml(plain, 'pw')
+    // the header counts one FAT sector more than the file lists
+    bytes.writeUInt32LE(bytes.readUInt32LE(44) + 1, 44)
+    expect(isEncryptedOfficeFile(bytes)).toBe(false)
+    expect(isDamagedCompoundFile(bytes)).toBe(true)
   })
 })
 
