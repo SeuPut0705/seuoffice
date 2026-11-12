@@ -2,14 +2,13 @@ import { describe, expect, it } from 'vitest'
 import { Editor } from '@tiptap/core'
 import { editorExtensions } from '../src/renderer/editor/extensions'
 import {
-  COVER_END_MARK,
   COVER_PRESETS,
-  COVER_START_MARK,
   buildCoverNodes,
   coverPageRange,
   insertCoverPage,
   removeCoverPage,
 } from '../src/renderer/editor/cover-pages'
+import { OLD_COVER_END_MARKS, OLD_COVER_START_MARKS } from '../src/renderer/editor/old-names'
 import { t } from '../src/renderer/i18n/locale'
 
 const TITLE = t('editorCoverTitle')
@@ -106,10 +105,10 @@ describe('removeCoverPage', () => {
     editor.destroy()
   })
 
-  it('marks the first cover paragraph and the trailing break with hidden bookmarks', () => {
+  it('marks the first cover paragraph and the trailing break with hidden bookmarks 0.12.37 also finds', () => {
     const nodes = buildCoverNodes(COVER_PRESETS[0])
-    expect(nodes[0].attrs?.hiddenBookmarks).toEqual([COVER_START_MARK])
-    expect(nodes[nodes.length - 1].attrs?.hiddenBookmarks).toEqual([COVER_END_MARK])
+    expect(nodes[0].attrs?.hiddenBookmarks).toEqual([OLD_COVER_START_MARKS[0]])
+    expect(nodes[nodes.length - 1].attrs?.hiddenBookmarks).toEqual([OLD_COVER_END_MARKS[0]])
   })
 
   it('removes exactly the inserted cover and its page break, keeping the body', () => {
