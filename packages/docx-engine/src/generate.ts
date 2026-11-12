@@ -114,7 +114,9 @@ export function patchImageParagraphXml(xml: string, patch: ImagePatch): string {
   if (patch.widthPx && patch.heightPx) {
     // A size with no ST_PositiveCoordinate text (cx="Infinity", or past the
     // widest extent) is schema-invalid: skip the resize, keep the extents.
-    const toEmu = (px: number): string | null => xmlPositiveCoordinate(Math.max(1, px * EMU_PER_PX))
+    // -Infinity is no small size: Math.max(1, ...) would turn it into 1 EMU
+    const toEmu = (px: number): string | null =>
+      Number.isFinite(px) ? xmlPositiveCoordinate(Math.max(1, px * EMU_PER_PX)) : null
     const cx = toEmu(patch.widthPx)
     const cy = toEmu(patch.heightPx)
     if (cx !== null && cy !== null) {

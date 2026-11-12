@@ -115,6 +115,37 @@ describe('patchImageParagraphXml', () => {
   })
 })
 
+describe('a size or an offset that is no number keeps what the drawing holds', () => {
+  const xml =
+    '<w:p><w:r><w:drawing><wp:inline><wp:extent cx="952500" cy="476250"/>' +
+    '<a:graphic><pic:pic><pic:spPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="952500" cy="476250"/></a:xfrm></pic:spPr></pic:pic></a:graphic>' +
+    '</wp:inline></w:drawing></w:r></w:p>'
+
+  // a peer's attribute or a copied block may hold any of these
+  it.each([
+    ['-Infinity', -Infinity],
+    ['NaN', Number.NaN],
+    ['Infinity', Infinity],
+    ['a numeric string', '192'],
+  ])('a width of %s keeps the extent', (_name, widthPx) => {
+    expect(patchImageParagraphXml(xml, { widthPx: widthPx as number, heightPx: 96 })).toBe(xml)
+    expect(patchImageParagraphXml(xml, { widthPx: 96, heightPx: widthPx as number })).toBe(xml)
+  })
+
+  it.each([
+    ['null', null],
+    ['a numeric string', '12700'],
+    ['an empty string', ''],
+  ])('an offset of %s keeps the position', (_name, offset) => {
+    expect(
+      patchImageParagraphXml(ANCHOR_IMAGE_XML, {
+        posOffsetX: offset as unknown as number,
+        posOffsetY: offset as unknown as number,
+      }),
+    ).toBe(ANCHOR_IMAGE_XML)
+  })
+})
+
 describe('image posOffset (free-position drag)', () => {
   it('parses posOffset from anchor images', async () => {
     const doc = await parseDocx(await buildDocx({ bodyXml: ANCHOR_IMAGE_XML, withImage: true }))

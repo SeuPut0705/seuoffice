@@ -13,6 +13,9 @@ export function xmlInt(n: number): string | null {
 
 /** `n` rounded, as plain digits, when it lies in [min, max]; else null. */
 function xmlIntIn(n: number, min: number, max: number): string | null {
+  // the value may come from a node attribute or a peer: null rounds to 0 and
+  // '12' to 12, but neither is a number the caller meant to write
+  if (typeof n !== 'number') return null
   const rounded = Math.round(n)
   return Number.isSafeInteger(rounded) && rounded >= min && rounded <= max ? String(rounded) : null
 }
