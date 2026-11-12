@@ -1,7 +1,9 @@
 //! The four commands of the odt engine (`crates/odt-engine/C3-PLAN.md`, "The
-//! wire"): what `@seuoffice/odt-engine` and `tools/odt-diff` call.
+//! wire"): what `@seuoffice/odt-engine` and `tools/odt-diff` call. They are
+//! product calls, so the docx model values they read inside (`parseDocx` of
+//! the edited docx) are read as the TypeScript reads them, as `invoke` does.
 
-use jscompat::JsMap;
+use jscompat::{JsMap, reading_leniently};
 use odt_engine::assemble::{self, RenderedObject, SavedOdt};
 use odt_engine::core::{HostNow, OdtError};
 use serde::Deserialize;
@@ -56,7 +58,7 @@ pub fn odt_to_docx(blobs: &[&[u8]], now: WireNow, reply_blobs: &mut Vec<Vec<u8>>
         Ok(odt) => odt,
         Err(reply) => return reply,
     };
-    match assemble::odt_to_docx(odt, now.into()) {
+    match reading_leniently(|| assemble::odt_to_docx(odt, now.into())) {
         Ok(result) => match serde_json::to_vec(&result.bridge) {
             Ok(bridge) => {
                 reply_blobs.push(result.docx_bytes);
@@ -81,7 +83,7 @@ pub fn save_odt(blobs: &[&[u8]], now: WireNow, reply_blobs: &mut Vec<Vec<u8>>) -
         Ok(bridge) => bridge,
         Err(error) => return invalid(format!("bridge: {error}")),
     };
-    match assemble::save_odt(odt, &bridge, edited, now.into()) {
+    match reading_leniently(|| assemble::save_odt(odt, &bridge, edited, now.into())) {
         Ok(SavedOdt::Unchanged) => json!({ "unchanged": true }),
         Ok(SavedOdt::Bytes(bytes)) => {
             reply_blobs.push(bytes);
@@ -118,7 +120,7 @@ pub fn docx_to_odt(
             },
         );
     }
-    match assemble::docx_to_odt(docx, &objects, now.into()) {
+    match reading_leniently(|| assemble::docx_to_odt(docx, &objects, now.into())) {
         Ok(result) => {
             reply_blobs.push(result.odt_bytes);
             json!({ "report": result.report })
@@ -129,7 +131,7 @@ pub fn docx_to_odt(
 
 /// `odtToText`: blob 0 the ODT. Reply `{ text }`.
 pub fn odt_to_text(blobs: &[&[u8]]) -> Value {
-    match blob(blobs, 0).map(assemble::odt_to_text) {
+    match blob(blobs, 0).map(|odt| reading_leniently(|| assemble::odt_to_text(odt))) {
         Ok(Ok(text)) => json!({ "text": text }),
         Ok(Err(error)) => failure(error),
         Err(reply) => reply,
