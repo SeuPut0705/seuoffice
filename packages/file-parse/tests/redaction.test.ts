@@ -1107,3 +1107,231 @@ describe('xlsx: a save that was not given the marks keeps the cell withheld', ()
     expect(text).toBe(`# Stock\nItem\n\n# Clients\n${WITHHELD_CLIENTS}`)
   })
 })
+
+/** a formula cell with the value the last calculation left in the file */
+const formula = (ref: string, text: string, cached: string | number) =>
+  `<c r="${ref}"><f>${text}</f><v>${cached}</v></c>`
+const PRIVATE = '{{private}}'
+/** the Clients sheet with B2 withheld, and whatever else a test puts beside it */
+const clientsWith = (extra: string): BookSheet => ({
+  name: 'Clients',
+  rows:
+    `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}</row>` +
+    `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c>${extra}</row>`,
+})
+
+describe('xlsx: a formula that depends on a withheld cell is withheld too', () => {
+  it('withholds the value of a formula that reads the cell', async () => {
+    const text = await xlsxToText(
+      await savedBook([clientsWith(formula('C2', 'B2', SECRET))], CLIENT_MARKS),
+    )
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE}`)
+  })
+
+  it('follows a chain of three formulas', async () => {
+    const chain =
+      formula('C2', 'B2', SECRET) +
+      formula('D2', 'C2&amp;"x"', `${SECRET}x`) +
+      formula('E2', 'LEFT(D2,11)', SECRET)
+    const text = await xlsxToText(await savedBook([clientsWith(chain)], CLIENT_MARKS))
+    expect(text).toBe(
+      `# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | ${PRIVATE} | ${PRIVATE}`,
+    )
+    expect(text).not.toContain(SECRET)
+  })
+
+  it('withholds a formula on a sheet without marks that points at a marked sheet', async () => {
+    const report: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${formula('A1', 'Clients!B2', SECRET)}${formula('B1', "'Clients'!A2", 'Kim')}</row>`,
+    }
+    const text = await xlsxToText(await savedBook([CLIENTS, report], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n# Report\n${PRIVATE} | Kim`)
+  })
+
+  it('withholds a total over the whole column', async () => {
+    const totals = formula('D2', 'SUM(B:B)', SECRET) + formula('E2', 'COUNTA(A:A)', 2)
+    const text = await xlsxToText(await savedBook([clientsWith(totals)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} |  | ${PRIVATE} | 2`)
+  })
+
+  it('resolves a named range', async () => {
+    const bytes = await book(
+      [clientsWith(formula('C2', 'KimPhone', SECRET) + formula('D2', 'KimName', 'Kim'))],
+      {
+        part: serializeRedactionPart(CLIENT_MARKS),
+        definedNames:
+          '<definedName name="KimPhone">Clients!$B$2</definedName>' +
+          '<definedName name="KimName">Clients!$A$2</definedName>',
+      },
+    )
+    expect(await xlsxToText(bytes)).toBe(
+      `# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | Kim`,
+    )
+  })
+
+  it('withholds what it cannot trace: INDIRECT, and what reads it', async () => {
+    const indirect =
+      formula('C2', 'INDIRECT("B"&amp;2)', SECRET) +
+      formula('D2', 'C2', SECRET) +
+      formula('E2', 'A2', 'Kim')
+    const text = await xlsxToText(await savedBook([clientsWith(indirect)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | ${PRIVATE} | Kim`)
+  })
+
+  it('reads a workbook whose formulas refer to each other in a circle', async () => {
+    const circle =
+      formula('C2', 'D2+B2', SECRET) +
+      formula('D2', 'C2', SECRET) +
+      formula('E2', 'F2', 0) +
+      formula('F2', 'E2', 0)
+    const text = await xlsxToText(await savedBook([clientsWith(circle)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | ${PRIVATE} | 0 | 0`)
+  })
+
+  it('withholds the followers of a shared formula that reach the cell, and only those', async () => {
+    const sheet: BookSheet = {
+      name: 'Clients',
+      rows:
+        `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}` +
+        '<c r="C1" t="str"><f t="shared" ref="C1:C3" si="0">B1</f><v>Phone</v></c></row>' +
+        `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c>` +
+        `<c r="C2"><f t="shared" si="0"/><v>${SECRET}</v></c></row>` +
+        `<row r="3">${inline('A3', 'Lee')}<c r="B3"><v>555</v></c>` +
+        '<c r="C3"><f t="shared" si="0"/><v>555</v></c></row>',
+    }
+    const text = await xlsxToText(await savedBook([sheet], CLIENT_MARKS))
+    expect(text).toBe(
+      `# Clients\nName | Phone | Phone\nKim | ${MARKER} | ${PRIVATE}\nLee | 555 | 555`,
+    )
+  })
+
+  it('withholds every cell an array formula fills', async () => {
+    const sheet: BookSheet = {
+      name: 'Clients',
+      rows:
+        `<row r="1">${inline('A1', 'Name')}${inline('B1', 'Phone')}` +
+        '<c r="D1" t="str"><f t="array" ref="D1:D2">B1:B2</f><v>Phone</v></c></row>' +
+        `<row r="2">${inline('A2', 'Kim')}<c r="B2"><v>${SECRET}</v></c><c r="D2"><v>${SECRET}</v></c></row>`,
+    }
+    const text = await xlsxToText(await savedBook([sheet], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone |  | ${PRIVATE}\nKim | ${MARKER} |  | ${PRIVATE}`)
+  })
+
+  it('withholds the text of a dependent formula that was never calculated', async () => {
+    const text = await xlsxToText(
+      await savedBook(
+        [clientsWith('<c r="C2"><f>B2*1</f></c><c r="D2"><f>A2</f></c>')],
+        CLIENT_MARKS,
+      ),
+    )
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | ${PRIVATE} | =A2`)
+  })
+
+  it('traces through a sheet the character budget never reaches', async () => {
+    // Report!A1 reads Ledger!A1, which reads the withheld cell; the budget
+    // ends before Ledger is read for its text.
+    const report: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${formula('A1', 'Ledger!A1', SECRET)}</row>`,
+    }
+    const ledger: BookSheet = {
+      name: 'Ledger',
+      rows: `<row r="1">${formula('A1', 'Clients!B2', SECRET)}</row>`,
+    }
+    const text = await xlsxToText(await savedBook([report, ledger, CLIENTS], CLIENT_MARKS), {
+      maxChars: 12,
+    })
+    expect(text).toBe(`# Report\n${PRIVATE}`)
+  })
+
+  it('withholds a whole sheet that is too large to check for formulas', async () => {
+    const report: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${inline('A1', 'Q'.repeat(2000))}${formula('B1', 'A1', 'Quarter')}</row>`,
+    }
+    // Stock reads a cell of the sheet nobody could check
+    const stock: BookSheet = {
+      name: 'Stock',
+      rows: `<row r="1">${inline('A1', 'Item')}${formula('B1', 'Report!A1', 'Q')}</row>`,
+    }
+    const bytes = await savedBook([CLIENTS, report, stock], CLIENT_MARKS)
+    // Report is past the limit, Clients and Stock are within it
+    const text = await xlsxToText(bytes, { formulaScanMaxBytes: 1500 })
+    expect(text).toBe(
+      `# Clients\n${WITHHELD_CLIENTS}\n\n# Report\n${PRIVATE} | ${PRIVATE}\n\n# Stock\nItem | ${PRIVATE}`,
+    )
+  })
+
+  it('withholds a whole sheet when a formula on it has no address to trace from', async () => {
+    const loose: BookSheet = {
+      name: 'Report',
+      rows: `<row r="1">${inline('A1', 'Quarter')}<c><f>Clients!B2</f><v>${SECRET}</v></c></row>`,
+    }
+    const text = await xlsxToText(await savedBook([CLIENTS, loose], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\n${WITHHELD_CLIENTS}\n\n# Report\n${PRIVATE} | ${PRIVATE}`)
+  })
+
+  it('withholds every cell of a what-if data table', async () => {
+    const table: BookSheet = {
+      name: 'Report',
+      rows:
+        `<row r="1">${inline('A1', 'Rate')}<c r="B1"><f t="dataTable" ref="B1:B2" dt2D="0" dtr="0" r1="A9"/><v>1</v></c></row>` +
+        `<row r="2">${inline('A2', 'Kept')}<c r="B2"><v>2</v></c></row>`,
+    }
+    const text = await xlsxToText(await savedBook([CLIENTS, table], CLIENT_MARKS))
+    expect(text).toBe(
+      `# Clients\n${WITHHELD_CLIENTS}\n\n# Report\nRate | ${PRIVATE}\nKept | ${PRIVATE}`,
+    )
+  })
+
+  it('reads formulas written with a namespace prefix', async () => {
+    const prefixed = await JSZip.loadAsync(await savedBook([CLIENTS], CLIENT_MARKS))
+    prefixed.file(
+      'xl/worksheets/sheet1.xml',
+      `${XML_DECL}<x:worksheet xmlns:x="${SHEET_NS}"><x:sheetData>` +
+        `<x:row r="2"><x:c r="B2"><x:v>${SECRET}</x:v></x:c>` +
+        `<x:c r="C2"><x:f>B2</x:f><x:v>${SECRET}</x:v></x:c><x:c r="D2"><x:f>1+1</x:f><x:v>2</x:v></x:c></x:row>` +
+        '</x:sheetData></x:worksheet>',
+    )
+    const text = await xlsxToText(await prefixed.generateAsync({ type: 'uint8array' }))
+    expect(text).toBe(`# Clients\n | ${MARKER} | ${PRIVATE} | 2`)
+  })
+
+  it('still shows a formula that reads no withheld cell', async () => {
+    const plain = formula('C2', 'LEN(A2)', 3) + formula('D2', 'SUM(A:A)', 0)
+    const text = await xlsxToText(await savedBook([clientsWith(plain)], CLIENT_MARKS))
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${MARKER} | 3 | 0`)
+  })
+
+  it('changes nothing in a workbook that withholds nothing', async () => {
+    const text = await xlsxToText(
+      await book([
+        clientsWith(formula('C2', 'INDIRECT("B2")', SECRET) + formula('D2', 'B2', SECRET)),
+      ]),
+    )
+    expect(text).toBe(`# Clients\nName | Phone\nKim | ${SECRET} | ${SECRET} | ${SECRET}`)
+  })
+
+  it('reads a 5,000-formula sheet in well under two seconds', async () => {
+    let rows = `<row r="1">${inline('A1', 'n')}<c r="B1"><v>${SECRET}</v></c></row>`
+    for (let row = 2; row <= 2501; row += 1) {
+      rows +=
+        `<row r="${row}"><c r="A${row}"><v>${row}</v></c>` +
+        formula(`B${row}`, `B${row - 1}+A${row}`, SECRET) +
+        formula(`C${row}`, `SUM(A$2:A${row})`, row) +
+        '</row>'
+    }
+    const bytes = await savedBook(
+      [{ name: 'Clients', rows }],
+      [{ sheetName: 'Clients', marks: [mark('B1')] }],
+    )
+    const started = performance.now()
+    const text = await xlsxToText(bytes)
+    const elapsed = performance.now() - started
+    expect(text).not.toContain(SECRET)
+    expect(text.split(PRIVATE)).toHaveLength(2501)
+    expect(text).toContain('\n2501 | {{private}} | 2501')
+    expect(elapsed).toBeLessThan(2000)
+  })
+})
