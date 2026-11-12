@@ -1,3 +1,5 @@
+// before anything of the engine: it sets the host the engine runs on
+import './host'
 import { readFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
