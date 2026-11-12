@@ -176,8 +176,8 @@ export default function App() {
    * input box, the editor's 쉬운 말로 풀기 runs at once (`autoRun`)
    */
   const [aiPrefill, setAiPrefill] = useState<AiPrefill | null>(null)
-  // a request sent at once runs once: the dock unmounts under the print preview and mounts
-  // again after it, and must not find the same request waiting there
+  // a request is taken once (sent, or put in the input box): the dock unmounts under the
+  // print preview and mounts again after it, and must not find the same request waiting there
   const takeAiPrefill = useCallback(
     (taken: AiPrefill) => setAiPrefill((current) => afterPrefillTaken(current, taken)),
     [],

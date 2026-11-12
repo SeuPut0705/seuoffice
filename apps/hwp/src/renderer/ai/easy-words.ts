@@ -9,12 +9,13 @@ export interface AiPrefill {
 }
 
 /**
- * The handed request once the panel has taken `taken`: an `autoRun` one is cleared, so a
- * panel that mounts again (the print preview closing, a reload) does not send it a second
- * time; anything else (a newer request, one that only fills the input box) stays.
+ * The handed request once the panel has taken `taken` (sent an `autoRun` one, put any other
+ * in its input box): it is cleared, so a panel that mounts again (the print preview closing,
+ * a reload) neither sends it a second time nor puts it back in the box. A newer request that
+ * arrived meanwhile stays to be taken.
  */
 export function afterPrefillTaken(current: AiPrefill | null, taken: AiPrefill): AiPrefill | null {
-  return current?.autoRun && current.nonce === taken.nonce ? null : current
+  return current?.nonce === taken.nonce ? null : current
 }
 
 type Translate = (key: 'easyWordsPrompt', params?: Params) => string
