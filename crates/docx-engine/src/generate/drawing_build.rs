@@ -8,7 +8,9 @@ use super::props::{PPR_CHILD_ORDER, format_p_pr_children};
 use super::runs::inline_runs_xml;
 use super::{escape_xml_attr, escape_xml_text};
 use crate::model::{ParaFormat, Run};
-use crate::xml_number::{non_finite, xml_id, xml_int};
+use crate::xml_number::{
+    non_finite, xml_id, xml_int, xml_position_offset, xml_positive_coordinate, xml_unsigned_int,
+};
 
 const EMU_PER_PX: f64 = 9525.0;
 const EMU_PER_PT: f64 = 12700.0;
@@ -65,6 +67,16 @@ fn wire_opt<'de, D: Deserializer<'de>>(d: D) -> Result<Option<f64>, D::Error> {
 /// so a number with no XML text refuses the call.
 fn emu(option: &str, n: f64) -> Result<String, String> {
     xml_int(n).ok_or_else(|| non_finite(option))
+}
+
+/// `xmlPositiveCoordinate(n) ?? nonFinite(option)`: an extent's cx / cy.
+fn extent(option: &str, n: f64) -> Result<String, String> {
+    xml_positive_coordinate(n).ok_or_else(|| non_finite(option))
+}
+
+/// `xmlPositionOffset(n) ?? nonFinite(option)`: a wp:posOffset.
+fn offset(option: &str, n: f64) -> Result<String, String> {
+    xml_position_offset(n).ok_or_else(|| non_finite(option))
 }
 
 /// `xmlId(id ?? 1) ?? nonFinite('id')`
@@ -135,7 +147,10 @@ pub fn build_line_paragraph_xml(opts: &LineOptions) -> Result<String, String> {
     let width_emu = opts.width_emu.unwrap_or(1800000.0);
     let height_emu = opts.height_emu.unwrap_or(114300.0);
     let id = id_of(opts.id)?;
-    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
+    let (w, h) = (
+        extent("widthEmu", width_emu)?,
+        extent("heightEmu", height_emu)?,
+    );
     let color_hex = opts.color_hex.as_deref().unwrap_or("000000");
 
     let ln = format!(
@@ -201,7 +216,7 @@ pub struct InlinePictureXmlOptions {
 pub fn inline_picture_drawing_xml(o: &InlinePictureXmlOptions) -> Result<String, String> {
     let cx = js_max(1.0, math_round(o.width_px * EMU_PER_PX));
     let cy = js_max(1.0, math_round(o.height_px * EMU_PER_PX));
-    let (size_cx, size_cy) = (emu("widthPx", cx)?, emu("heightPx", cy)?);
+    let (size_cx, size_cy) = (extent("widthPx", cx)?, extent("heightPx", cy)?);
     let rot = if truthy(o.rot_deg) {
         ((math_round(o.rot_deg.unwrap_or(f64::NAN)) % 360.0) + 360.0) % 360.0
     } else {
@@ -265,7 +280,10 @@ pub fn build_textbox_paragraph_xml(opts: Option<&TextboxOptions>) -> Result<Stri
     let width_emu = opts.width_emu.unwrap_or(1800000.0);
     let height_emu = opts.height_emu.unwrap_or(1080000.0);
     let id = id_of(opts.id)?;
-    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
+    let (w, h) = (
+        extent("widthEmu", width_emu)?,
+        extent("heightEmu", height_emu)?,
+    );
     let fill_hex = opts.fill_hex.as_deref().unwrap_or("FFFFFF");
     let border_hex = opts.border_hex.as_deref().unwrap_or("000000");
 
@@ -373,7 +391,10 @@ pub fn build_anchored_textbox_paragraph_xml(
     let id = id_of(opts.id)?;
     let (x_emu, y_emu, width_emu, height_emu) =
         (opts.x_emu, opts.y_emu, opts.width_emu, opts.height_emu);
-    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
+    let (w, h) = (
+        extent("widthEmu", width_emu)?,
+        extent("heightEmu", height_emu)?,
+    );
 
     let txbx_content = format!(
         "<w:txbxContent>{}</w:txbxContent>",
@@ -441,12 +462,12 @@ pub fn build_anchored_textbox_paragraph_xml(
     let pos_h = format!(
         "<wp:positionH relativeFrom=\"{}\"><wp:posOffset>{}</wp:posOffset></wp:positionH>",
         if page { "page" } else { "column" },
-        emu("xEmu", x_emu)?,
+        offset("xEmu", x_emu)?,
     );
     let pos_v = format!(
         "<wp:positionV relativeFrom=\"{}\"><wp:posOffset>{}</wp:posOffset></wp:positionV>",
         if page { "page" } else { "paragraph" },
-        emu("yEmu", y_emu)?,
+        offset("yEmu", y_emu)?,
     );
     let wrap_mode = opts
         .wrap
@@ -459,7 +480,8 @@ pub fn build_anchored_textbox_paragraph_xml(
     };
     let anchor = format!(
         "<wp:anchor xmlns:wp=\"http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing\" distT=\"0\" distB=\"0\" distL=\"0\" distR=\"0\" simplePos=\"0\" relativeHeight=\"{}\" behindDoc=\"{}\" locked=\"0\" layoutInCell=\"1\" allowOverlap=\"1\"><wp:simplePos x=\"0\" y=\"0\"/>{pos_h}{pos_v}<wp:extent cx=\"{w}\" cy=\"{h}\"/><wp:effectExtent l=\"0\" t=\"0\" r=\"0\" b=\"0\"/>{wrap_el}<wp:docPr id=\"{id}\" name=\"Region {id}\"/>{graphic}</wp:anchor>",
-        emu("zOrder", 251658240.0 + opts.z_order.unwrap_or(0.0))?,
+        xml_unsigned_int(251658240.0 + opts.z_order.unwrap_or(0.0))
+            .ok_or_else(|| non_finite("zOrder"))?,
         if opts.behind_doc == Some(true) { 1 } else { 0 },
     );
 
@@ -537,7 +559,10 @@ pub fn build_shape_paragraph_xml(opts: &ShapeOptions) -> Result<String, String> 
     let width_emu = opts.width_emu.unwrap_or(1800000.0);
     let height_emu = opts.height_emu.unwrap_or(1080000.0);
     let id = id_of(opts.id)?;
-    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
+    let (w, h) = (
+        extent("widthEmu", width_emu)?,
+        extent("heightEmu", height_emu)?,
+    );
     let fill_hex = opts.fill_hex.as_deref().unwrap_or("4472C4");
     let border_hex = opts.border_hex.as_deref().unwrap_or("2F5496");
     let prst = &opts.prst;
@@ -596,7 +621,10 @@ pub fn build_word_art_paragraph_xml(opts: &WordArtOptions) -> Result<String, Str
     let width_emu = opts.width_emu.unwrap_or(2700000.0);
     let height_emu = opts.height_emu.unwrap_or(720000.0);
     let id = id_of(opts.id)?;
-    let (w, h) = (emu("widthEmu", width_emu)?, emu("heightEmu", height_emu)?);
+    let (w, h) = (
+        extent("widthEmu", width_emu)?,
+        extent("heightEmu", height_emu)?,
+    );
     let color_hex = opts.color_hex.as_deref().unwrap_or("4472C4");
     let text = escape_xml_text(opts.text.as_deref().unwrap_or("WordArt"));
 

@@ -20,7 +20,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let model: TableModel = required(args, "model")?;
             let original = (!text.is_empty()).then_some(text);
             value(
-                table::generate_table_model_xml(&model, original)
+                table::generate_table_model_xml(&model, original, None)
                     .map_err(|error| error.to_string())?,
             )
         }

@@ -25,6 +25,7 @@ import { MATH } from './calls-math'
 import { PARSE } from './calls-parse'
 import { RESOLVE } from './calls-resolve'
 import { REVISION } from './calls-revision'
+import { SAVE } from './calls-save'
 import { createCallsRunner } from './calls-runner'
 import { SECTION } from './calls-section'
 import { VML } from './calls-vml'
@@ -56,6 +57,7 @@ export const {
   math: MATH,
   resolve: RESOLVE,
   revision: REVISION,
+  save: SAVE,
   section: SECTION,
   vml: VML,
   xmltag: XMLTAG,

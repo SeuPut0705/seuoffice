@@ -7,18 +7,28 @@
 use docx_engine::model::{
     Block, HfImage, HfTextBox, SectionSettings, TextboxDisplay, TextboxParaDisplay,
 };
+use docx_engine::numbering::parse_numbering;
 use docx_engine::package::RelInfo;
+use docx_engine::parse::drawings::host::{MediaEnv, NoHost};
 use docx_engine::parse::drawings::media::{self, ChartContext};
 use docx_engine::parse::drawings::picture::{self, AnchorPos};
-use docx_engine::parse::drawings::{settings, vml};
+use docx_engine::parse::drawings::settings::parse_settings_flag;
+use docx_engine::parse::drawings::{diagram, hf_textbox, image, settings, textbox, vml};
+use docx_engine::parse::text::{BuildContext, SectionIndex};
 use docx_engine::props::XML_PARSER_MAX_NESTED_TAGS;
+use docx_engine::scan::scan_body;
 use docx_engine::theme::ThemeColors;
+use ooxml_pkg::Package;
+use std::cell::RefCell;
+use std::rc::Rc;
+
 use jscompat::{JsMap, JsNum, JsObject};
 use ooxml_xml::{XNode, parse_ordered};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::super::resolve::with_ctx;
 use super::super::{Returned, arg, optional, package, required, value};
 
 /// None: not a function of this module.
@@ -88,6 +98,142 @@ pub fn dispatch(function: &str, text_arg: &str, args: &Value) -> Option<Returned
             )?)
         },
         "extractChart" => extract_chart,
+        "imagePartMime" => |_, args| {
+            let media = MediaEnv::new(&NoHost);
+            optional(media::image_part_mime(
+                &package(args)?,
+                &required::<String>(args, "path")?,
+                &media,
+            )?)
+        },
+        "pictureColumnGeom" => |text, args| {
+            optional(picture::picture_column_geom(
+                &meta_of(args)?,
+                text,
+                section_arg(args)?.as_ref(),
+            ))
+        },
+        "pictureBesideFloatTable" => picture_beside_float_table,
+        "pictureOverhangsColumn" => |text, args| {
+            value(picture::picture_overhangs_column(
+                &meta_of(args)?,
+                text,
+                section_arg(args)?.as_ref(),
+            ))
+        },
+        "vmlStrokeChildOff" => |text, _| value(vml::vml_stroke_child_off(&node_of(text)?)),
+        "hasDeepChild" => |text, args| {
+            let names: Vec<String> = required(args, "names")?;
+            let names: Vec<&str> = names.iter().map(String::as_str).collect();
+            value(vml::has_deep_child(&node_of(text)?, &names))
+        },
+        "hasFloatingVmlPicture" => |text, _| value(vml::has_floating_vml_picture(&node_of(text)?)),
+        "hfTextBoxOfAnchor" => {
+            |text, _| without_id(value(hf_textbox::hf_text_box_of_anchor(&node_of(text)?)))
+        }
+        "hfTextBoxOfVml" => {
+            |text, _| without_id(value(hf_textbox::hf_text_box_of_vml(&node_of(text)?)?))
+        }
+        "readVmlInset" => |text, args| {
+            let mut box_: HfTextBox = required(args, "box")?;
+            hf_textbox::read_vml_inset(&node_of(text)?, &mut box_);
+            value(box_)
+        },
+        "blipEffectsOf" => |text, _| optional(image::blip_effects_of(text)?),
+        "extractDiagramText" => |text, args| {
+            with_build_ctx(args, |ctx| {
+                optional(diagram::extract_diagram_text(text, ctx)?)
+            })
+        },
+        "extractLockedCanvas" => |text, args| {
+            with_build_ctx(args, |ctx| {
+                optional(diagram::extract_locked_canvas(text, ctx)?)
+            })
+        },
+        "extractDiagramDrawing" => |text, args| {
+            with_build_ctx(args, |ctx| {
+                optional(diagram::extract_diagram_drawing(text, ctx)?)
+            })
+        },
+        "imageMeta" => |text, args| {
+            if args.get("parts").is_none() {
+                return value(image::image_meta(text, None)?);
+            }
+            with_build_ctx(args, |ctx| value(image::image_meta(text, Some(ctx))?))
+        },
+        "runPictureAnchorOf" => |text, _| value(image::run_picture_anchor_of(text)?),
+        "readMediaPartDataUrl" => |_, args| {
+            let media = MediaEnv::new(&NoHost);
+            value(media::read_media_part_data_url(
+                &package(args)?,
+                &required::<String>(args, "partPath")?,
+                &media,
+            )?)
+        },
+        "mediaPartDataUrl" => |_, args| {
+            let media = MediaEnv::new(&NoHost);
+            value(media::media_part_data_url(
+                &package(args)?,
+                &required::<String>(args, "partPath")?,
+                &media,
+            )?)
+        },
+        "mediaDataUrl" => |_, args| {
+            let media = MediaEnv::new(&NoHost);
+            value(media::media_data_url(
+                &package(args)?,
+                &rels_of(args)?,
+                &required::<String>(args, "rId")?,
+                arg::<String>(args, "sourcePath")?
+                    .as_deref()
+                    .unwrap_or("word/document.xml"),
+                &media,
+            )?)
+        },
+        "oleDisplay" => {
+            |text, args| with_build_ctx(args, |ctx| value(media::ole_display(text, ctx)?))
+        }
+        "extractImage" => {
+            |text, args| with_build_ctx(args, |ctx| value(media::extract_image(text, ctx)?))
+        }
+        "resolvePicBullets" => resolve_pic_bullets,
+        "tableBlipMedia" => table_blip_media,
+        "resolveBlipMedia" => |text, args| {
+            with_build_ctx_media(args, |ctx| {
+                media::resolve_blip_media(text, ctx)?;
+                Ok(None)
+            })
+        },
+        "hasResolvablePicture" => |text, args| {
+            with_build_ctx_media(args, |ctx| value(media::has_resolvable_picture(text, ctx)?))
+        },
+        "paragraphStrayBox" => |text, args| {
+            with_build_ctx(args, |ctx| {
+                optional(textbox::paragraph_stray_box(text, ctx)?)
+            })
+        },
+        "textboxParagraphs" => |text, args| {
+            with_build_ctx(args, |ctx| {
+                renumbered(value(textbox::textbox_paragraphs(&node_of(text)?, ctx)?))
+            })
+        },
+        "txbxTableParas" => |text, args| {
+            with_build_ctx(args, |ctx| {
+                value(textbox::txbx_table_paras(&node_of(text)?, ctx)?)
+            })
+        },
+        "collectTxbxParas" => collect_txbx_paras,
+        "txbxContentParas" => |text, args| {
+            let doc_offset: Option<usize> = arg(args, "docOffset")?;
+            with_build_ctx(args, |ctx| {
+                value(textbox::txbx_content_paras(
+                    &node_of(text)?,
+                    ctx,
+                    doc_offset,
+                )?)
+            })
+        },
+        "extractTextboxes" => extract_textboxes,
         _ => return None,
     };
     Some(call(text_arg, args))
@@ -223,14 +369,12 @@ fn media_part_src(_text: &str, args: &Value) -> Returned {
     let file = zip
         .file(&part_path)
         .ok_or("TypeError: Cannot read properties of null")?;
-    let mut lazy_hashes = Vec::new();
-    let src = media::media_part_src(
-        file,
-        &part_path,
-        &required::<String>(args, "mime")?,
-        &mut lazy_hashes,
-    )?;
-    value(MediaPartSrc { src, lazy_hashes })
+    let media = MediaEnv::new(&NoHost);
+    let src = media::media_part_src(file, &part_path, &required::<String>(args, "mime")?, &media)?;
+    value(MediaPartSrc {
+        src,
+        lazy_hashes: media.lazy_hashes(),
+    })
 }
 
 /// What the TypeScript side answers for `extractChart`: the display, and
@@ -248,7 +392,7 @@ fn extract_chart(text: &str, args: &Value) -> Returned {
     let source_path: Option<String> = arg(args, "sourcePath")?;
     let theme_colors: Option<ThemeColors> = arg(args, "themeColors")?;
     let mut chart_parts: JsObject<String> = required(args, "chartParts")?;
-    let display = media::extract_chart(
+    let display = media::extract_chart_part(
         text,
         &mut ChartContext {
             zip: &zip,
@@ -261,5 +405,281 @@ fn extract_chart(text: &str, args: &Value) -> Returned {
     value(ExtractChart {
         display,
         chart_parts,
+    })
+}
+
+/// `args.sect`: the section of the call, `None` where the TypeScript passes
+/// `undefined`.
+fn section_arg(args: &Value) -> Result<Option<SectionSettings>, String> {
+    arg(args, "sect")
+}
+
+/// The `image*` keys of `args.meta` the picture readers read, as a `Block`
+/// holding only those keys that are present. A wrap the model does not name
+/// is not kept.
+fn meta_of(args: &Value) -> Result<Block, String> {
+    let meta: Value = required(args, "meta")?;
+    let mut block = Block::default();
+    block.image_wrap.set_some(
+        meta.get("imageWrap")
+            .and_then(|wrap| serde_json::from_value(wrap.clone()).ok()),
+    );
+    block.image_width_px.set_some(arg(&meta, "imageWidthPx")?);
+    block.image_height_px.set_some(arg(&meta, "imageHeightPx")?);
+    block.image_rot_deg.set_some(arg(&meta, "imageRotDeg")?);
+    block
+        .image_offset_x_emu
+        .set_some(arg(&meta, "imageOffsetXEmu")?);
+    block
+        .image_wrap_dist_left_emu
+        .set_some(arg(&meta, "imageWrapDistLeftEmu")?);
+    block
+        .image_wrap_dist_right_emu
+        .set_some(arg(&meta, "imageWrapDistRightEmu")?);
+    Ok(block)
+}
+
+fn picture_beside_float_table(text: &str, args: &Value) -> Returned {
+    #[derive(Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Table {
+        left_twips: JsNum,
+        right_twips: JsNum,
+    }
+    let table: Table = required(args, "table")?;
+    value(picture::picture_beside_float_table(
+        &meta_of(args)?,
+        text,
+        &docx_engine::parse::text::FloatTableAhead {
+            left_twips: table.left_twips,
+            right_twips: table.right_twips,
+        },
+        section_arg(args)?.as_ref(),
+    ))
+}
+
+/// A text box's `id` is the count of the boxes the process built: the two
+/// sides do not share it, so it is left out.
+fn without_id(result: Returned) -> Returned {
+    result.map(|answer| {
+        answer.map(|mut answer| {
+            if let Value::Object(map) = &mut answer {
+                map.shift_remove("id");
+            }
+            answer
+        })
+    })
+}
+
+/// The ids of the text boxes in paragraphs, numbered in the order they first
+/// appear (`box.id` of each `HfParagraph`).
+fn renumbered(result: Returned) -> Returned {
+    result.map(|answer| {
+        answer.map(|mut answer| {
+            let mut seen: Vec<Value> = Vec::new();
+            if let Value::Array(paras) = &mut answer {
+                for para in paras {
+                    let id = para.pointer_mut("/box/id");
+                    if let Some(id) = id {
+                        let at = match seen.iter().position(|known| known == id) {
+                            Some(at) => at,
+                            None => {
+                                seen.push(id.clone());
+                                seen.len() - 1
+                            }
+                        };
+                        *id = Value::from(at + 1);
+                    }
+                }
+            }
+            answer
+        })
+    })
+}
+
+/// The document.xml `args.sectSlices` stand for: each `[index, text]` of the
+/// w:sectPr slices at its index, ASCII spaces between.
+fn document_of_slices(slices: &[(usize, String)]) -> String {
+    let mut xml = String::new();
+    for (index, text) in slices {
+        while xml.len() < *index {
+            xml.push(' ');
+        }
+        xml.push_str(text);
+    }
+    xml
+}
+
+/// A `BuildContext` of the arguments, the way the TypeScript spec builds it:
+/// `args.parts` hold what the context's styles, numbering and theme come
+/// from; `args.extra` the package the call reads through `ctx.zip`;
+/// `args.hf` makes it a header's (no zip, numbering or chart parts); the rest
+/// are the members the document's own context holds.
+fn with_build_ctx(args: &Value, call: impl FnOnce(&BuildContext<'_>) -> Returned) -> Returned {
+    let extra: Vec<(String, String)> = arg(args, "extra")?.unwrap_or_default();
+    let zip = Package::from_parts(extra);
+    let media = MediaEnv::new(&NoHost);
+    let hf = arg::<bool>(args, "hf")?.unwrap_or(false);
+    let package = package(args)?;
+    with_ctx(args, |resolver| {
+        let mut ctx = BuildContext::bare(&zip, Rc::new(resolver.clone()), &media);
+        if !hf {
+            ctx.has_numbering = true;
+            ctx.num_formats = Some(parse_numbering(&package)?.formats);
+            ctx.source_path = arg(args, "sourcePath")?;
+        }
+        ctx.rels = rels_of(args)?;
+        if let Some(chart_parts) = arg::<JsObject<String>>(args, "chartParts")? {
+            ctx.chart_parts = RefCell::new(chart_parts);
+        }
+        if args.get("mediaByRid").is_some_and(|media| !media.is_null()) {
+            ctx.media_by_rid = Some(RefCell::new(map_of::<String>(args, "mediaByRid")?));
+        }
+        if args
+            .get("externalTxbxByRid")
+            .is_some_and(|parts| !parts.is_null())
+        {
+            ctx.external_txbx_by_rid = Some(map_of::<String>(args, "externalTxbxByRid")?);
+        }
+        if args
+            .get("vmlShapeTypes")
+            .is_some_and(|types| !types.is_null())
+        {
+            ctx.vml_shape_types = Some(map_of::<JsObject<String>>(args, "vmlShapeTypes")?);
+        }
+        if args.get("noteNumbers").is_some() {
+            ctx.note_numbers = map_of::<JsNum>(args, "noteNumbers")?;
+        }
+        if args.get("partNamespaces").is_some() {
+            ctx.part_namespaces = Some(map_of::<String>(args, "partNamespaces")?);
+        }
+        ctx.xml_space_preserve = arg::<bool>(args, "xmlSpacePreserve")?.unwrap_or(false);
+        ctx.compatibility_mode = arg(args, "compatibilityMode")?;
+        if let Some(id) = arg::<f64>(args, "nextZoteroFieldId")? {
+            ctx.next_zotero_field_id.set(id);
+        }
+        if let Some(ids) = arg::<Vec<String>>(args, "referenceOnlyComments")? {
+            ctx.reference_only_comments = Some(ids.into_iter().collect());
+        }
+        if let Some(slices) = arg::<Vec<(usize, String)>>(args, "sectSlices")? {
+            ctx.section_at = Some(SectionIndex::new(
+                &document_of_slices(&slices),
+                Some(parse_settings_flag(&package, "w:gutterAtTop")?),
+            ));
+        }
+        call(&ctx)
+    })
+}
+
+/// [`with_build_ctx`] for a function that writes `ctx.mediaByRid`: the answer
+/// is `{ value, mediaByRid }`, the map after the call.
+fn with_build_ctx_media(
+    args: &Value,
+    call: impl FnOnce(&BuildContext<'_>) -> Returned,
+) -> Returned {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct After {
+        #[serde(skip_serializing_if = "Option::is_none")]
+        value: Option<Value>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        media_by_rid: Option<JsMap<String>>,
+    }
+    with_build_ctx(args, |ctx| {
+        let answered = call(ctx)?;
+        value(After {
+            value: answered,
+            media_by_rid: ctx
+                .media_by_rid
+                .as_ref()
+                .map(|media| media.borrow().clone()),
+        })
+    })
+}
+
+fn resolve_pic_bullets(_text: &str, args: &Value) -> Returned {
+    let zip = package(args)?;
+    let media = MediaEnv::new(&NoHost);
+    let numbering = parse_numbering(&zip)?;
+    let mut defs = numbering.defs;
+    media::resolve_pic_bullets(&zip, &mut defs, &numbering.pic_bullets, &media)?;
+    value(defs)
+}
+
+fn table_blip_media(text: &str, args: &Value) -> Returned {
+    let zip = package(args)?;
+    let media = MediaEnv::new(&NoHost);
+    let scan = scan_body(text).map_err(|error| error.to_string())?;
+    value(media::table_blip_media(
+        &scan.elements,
+        text,
+        &zip,
+        &rels_of(args)?,
+        arg::<String>(args, "sourcePath")?
+            .as_deref()
+            .unwrap_or("word/document.xml"),
+        &media,
+    )?)
+}
+
+/// `collectTxbxParas` over a fresh output: the paragraphs, and the list items
+/// by the index of their paragraph.
+fn collect_txbx_paras(text: &str, args: &Value) -> Returned {
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Item {
+        index: usize,
+        list_ref: docx_engine::parse::text::ParaListRef,
+        text_size_half: JsNum,
+    }
+    #[derive(Serialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Collected {
+        out: Vec<TextboxParaDisplay>,
+        list_items: Vec<Item>,
+    }
+    let doc_offset: Option<usize> = arg(args, "docOffset")?;
+    with_build_ctx(args, |ctx| {
+        let mut out = Vec::new();
+        let mut items = Vec::new();
+        textbox::collect_txbx_paras(&node_of(text)?, ctx, doc_offset, &mut out, &mut items)?;
+        value(Collected {
+            out,
+            list_items: items
+                .into_iter()
+                .map(|item| Item {
+                    index: item.index,
+                    list_ref: item.list_ref,
+                    text_size_half: item.text_size_half,
+                })
+                .collect(),
+        })
+    })
+}
+
+fn extract_textboxes(text: &str, args: &Value) -> Returned {
+    /// `ExtractTextboxOpts`: what the TypeScript passes.
+    #[derive(Default, Deserialize)]
+    #[serde(rename_all = "camelCase")]
+    struct Opts {
+        shapes: Option<bool>,
+        pictures: Option<bool>,
+        section: Option<SectionSettings>,
+        doc_offset: Option<usize>,
+        first_page: Option<bool>,
+    }
+    let opts: Opts = arg(args, "opts")?.unwrap_or_default();
+    with_build_ctx(args, |ctx| {
+        value(textbox::extract_textboxes(
+            text,
+            ctx,
+            textbox::ExtractTextboxOpts {
+                shapes: opts.shapes.unwrap_or(false),
+                pictures: opts.pictures.unwrap_or(false),
+                section: opts.section.as_ref(),
+                doc_offset: opts.doc_offset,
+                first_page: opts.first_page.unwrap_or(false),
+            },
+        )?)
     })
 }

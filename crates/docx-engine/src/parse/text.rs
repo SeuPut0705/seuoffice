@@ -1,17 +1,36 @@
 //! The text of runs (`w:t`, `w:br` and their kin) and the leaf readers of
 //! paragraphs, runs and styles.
 
+mod build_block;
+mod build_run;
+mod build_run_old;
+mod context;
 mod controls;
+mod convert;
+mod extract_runs;
 mod format;
 mod lists;
 mod math;
+mod notes_part;
+mod paragraph;
+mod paragraph_block;
 mod runs;
+mod toc;
 
+pub use build_block::*;
+pub use build_run::*;
+pub use context::*;
 pub use controls::*;
+pub use convert::*;
+pub use extract_runs::*;
 pub use format::*;
 pub use lists::*;
 pub use math::*;
+pub use notes_part::*;
+pub use paragraph::*;
+pub use paragraph_block::*;
 pub use runs::*;
+pub use toc::*;
 
 use jscompat::math_round;
 

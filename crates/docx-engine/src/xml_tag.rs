@@ -87,7 +87,6 @@ pub fn find_start_tag<'t>(xml: &'t str, name: TagName<'_>, from: usize) -> Optio
 /// one as one element, a paired one to its own close tag (the element does
 /// not nest itself). `limit` stops after that many.
 pub fn remove_elements(xml: &str, name: &str, limit: Option<usize>) -> String {
-    let close = format!("</{name}>");
     let mut out = xml.to_owned();
     let mut from = 0;
     let mut removed = 0;
@@ -97,14 +96,31 @@ pub fn remove_elements(xml: &str, name: &str, limit: Option<usize>) -> String {
         };
         let (start, mut end) = (tag.start, tag.end);
         if !tag.self_closing {
-            let Some(at) = out[end..].find(&close) else {
+            let Some(close_end) = close_tag_end(&out, name, end) else {
                 break;
             };
-            end += at + close.len();
+            end = close_end;
         }
         out.replace_range(start..end, "");
         from = start;
         removed += 1;
     }
     out
+}
+
+/// The end of the first `</name\s*>` at or after byte `from`: a close tag may
+/// hold white space before its `>`, as XML allows.
+fn close_tag_end(xml: &str, name: &str, from: usize) -> Option<usize> {
+    let open = format!("</{name}");
+    let mut at = from;
+    while let Some(found) = xml[at..].find(&open) {
+        let after = at + found + open.len();
+        let rest = &xml[after..];
+        let spaces = rest.len() - rest.trim_start_matches(is_js_space).len();
+        if rest[spaces..].starts_with('>') {
+            return Some(after + spaces + 1);
+        }
+        at = after;
+    }
+    None
 }

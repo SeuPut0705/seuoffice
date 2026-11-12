@@ -3,12 +3,14 @@
 //! picture geometry.
 
 use jscompat::{JsMap, JsMatch, JsNum, JsObject, js_regex, math_max, math_round, parse_float};
+use ooxml_xml::XNode;
 
 use super::{EMU_PER_PT, EMU_PER_PX, EMU_PER_TWIP};
 use crate::model::{
     Block, BlockImageAlign, BlockImagePosH, BlockImagePosV, ImageWrap, RunImageRule,
     RunImageRuleAlign, SectionSettings, TextboxDisplay, TextboxDisplayPageRelVFrom,
 };
+use crate::parse::tables::hf::has_deep_child_outside;
 use crate::vml::shape::{VML_PICT_RID_RE, vml_shape_svg};
 
 /// The first capture of a match.
@@ -241,4 +243,35 @@ pub fn vml_image_meta(xml: &str) -> Block {
         }
     }
     meta
+}
+
+/// `vmlStrokeChildOff`: a v:stroke child that switches the stroke off.
+pub fn vml_stroke_child_off(shape: &XNode) -> bool {
+    shape
+        .find_child("v:stroke")
+        .is_some_and(|stroke| vml_flag_off(stroke.attr("on")))
+}
+
+/// `hasDeepChild`: depth-first search for any descendant with one of the
+/// given names.
+pub fn has_deep_child(node: &XNode, names: &[&str]) -> bool {
+    has_deep_child_outside(node, names, None)
+}
+
+/// `hasFloatingVmlPicture`: any descendant floating VML picture shape
+/// (watermarks), drawn at its anchor and never in the flow. Textbox shapes are
+/// excluded: their own content decides.
+pub fn has_floating_vml_picture(node: &XNode) -> bool {
+    for child in node.children() {
+        if child.name().is_some_and(|name| name.starts_with("v:"))
+            && js_regex!(r"position:\s*absolute").test(child.attr("style").unwrap_or(""))
+            && !has_deep_child(child, &["w:txbxContent"])
+        {
+            return true;
+        }
+        if has_floating_vml_picture(child) {
+            return true;
+        }
+    }
+    false
 }

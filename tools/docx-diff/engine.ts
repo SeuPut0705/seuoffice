@@ -27,8 +27,19 @@ export function failed(header: object): header is EngineFailure {
 
 const encoder = new TextEncoder()
 const decoder = new TextDecoder('utf-8', { fatal: true, ignoreBOM: true })
-// the collator of generateIndexFieldXml's `a.localeCompare(b, 'zh-CN')`
-const collator = new Intl.Collator('zh-CN')
+// the collators of generateIndexFieldXml's `a.localeCompare(b, locale)`, by locale;
+// null for a locale Intl refuses, which the import answers with i32::MIN
+const collators = new Map<string, Intl.Collator | null>()
+const collatorOf = (locale: string): Intl.Collator | null => {
+  if (!collators.has(locale)) {
+    try {
+      collators.set(locale, new Intl.Collator(locale))
+    } catch {
+      collators.set(locale, null)
+    }
+  }
+  return collators.get(locale) ?? null
+}
 
 export class Engine {
   private constructor(private readonly exports: EngineExports) {}
@@ -39,8 +50,17 @@ export class Engine {
     const instance = new WebAssembly.Instance(module, {
       wasi_snapshot_preview1: wasi.wasiImport,
       seu_host: {
-        host_collate: (a: number, aLength: number, b: number, bLength: number): number => {
+        host_collate: (
+          a: number,
+          aLength: number,
+          b: number,
+          bLength: number,
+          locale: number,
+          localeLength: number,
+        ): number => {
           const { buffer } = exports.memory
+          const collator = collatorOf(decoder.decode(new Uint8Array(buffer, locale, localeLength)))
+          if (!collator) return -2147483648
           return collator.compare(
             decoder.decode(new Uint8Array(buffer, a, aLength)),
             decoder.decode(new Uint8Array(buffer, b, bLength)),

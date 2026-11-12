@@ -7,8 +7,9 @@ use jscompat::{
 };
 
 use super::props::merge_p_pr_format;
-use super::runs::runs_xml;
+use super::runs::runs_xml_in;
 use super::{escape_xml_attr, split_xml_children};
+use crate::inline_opaque::ContentControlPart;
 use crate::model::{
     CellBorder, CellBorders, CellMargins, ParaFormat, PropChangeInfo, PropChangeInfoResolved, Run,
     TableAutoFitMode, TableCell, TableCellTextDirection, TableCellVAlign, TableCellVMerge,
@@ -430,6 +431,7 @@ fn paragraph_xml(
     format: &ParaFormat,
     runs: &[Run],
     list: Option<&TableParagraphList>,
+    part: &ContentControlPart,
 ) -> Result<String, TableXmlError> {
     let num_pr = list.map_or_else(String::new, |list| {
         format!(
@@ -445,7 +447,7 @@ fn paragraph_xml(
         None,
         None,
     )?;
-    Ok(format!("<w:p>{p_pr}{}</w:p>", runs_xml(runs, None)?))
+    Ok(format!("<w:p>{p_pr}{}</w:p>", runs_xml_in(runs, part)?))
 }
 
 /// `items.splice(at, 0, …)` index for `at = Math.min(anchor, length)`.
@@ -462,7 +464,11 @@ fn splice_index(anchor: f64, para_count: usize, items_len: usize) -> usize {
     }
 }
 
-fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError> {
+fn table_cell_xml(
+    cell: &TableCell,
+    width: f64,
+    part: &ContentControlPart,
+) -> Result<String, TableXmlError> {
     // Surgical rawTcPr patch: modeled children are replaced/inserted in schema order;
     // unmodeled ones keep their original bytes
     let raw_tc_pr = match cell.raw_tc_pr.as_deref().filter(|raw| !raw.is_empty()) {
@@ -572,7 +578,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
     {
         Some(rich) => rich
             .iter()
-            .map(|p| paragraph_xml(&p.para_format, &p.runs, p.list.as_ref()))
+            .map(|p| paragraph_xml(&p.para_format, &p.runs, p.list.as_ref(), part))
             .collect::<Result<_, _>>()?,
         None => {
             let empty = [String::new()];
@@ -592,7 +598,7 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
                         run.color.assign((*cell.color).clone());
                         vec![run]
                     };
-                    paragraph_xml(&format, &runs, None)
+                    paragraph_xml(&format, &runs, None, part)
                 })
                 .collect::<Result<_, _>>()?
         }
@@ -609,7 +615,13 @@ fn table_cell_xml(cell: &TableCell, width: f64) -> Result<String, TableXmlError>
             .and_then(|anchors| anchors.get(i))
             .map_or(para_count as f64, |n| n.0);
         let at = splice_index(anchor, para_count, items.len());
-        items.insert(at, (true, generate_table_model_xml(&nested[i], None)?));
+        items.insert(
+            at,
+            (
+                true,
+                generate_table_model_xml(&nested[i], None, Some(part))?,
+            ),
+        );
     }
     let tail = if items.last().is_none_or(|(tbl, _)| *tbl) {
         "<w:p/>"
@@ -765,6 +777,7 @@ fn row_xml(
     ri: usize,
     row: &[TableCell],
     widths: &[f64],
+    part: &ContentControlPart,
 ) -> Result<String, TableXmlError> {
     let mut grid_column = 0.0;
     let mut cells = String::new();
@@ -787,7 +800,7 @@ fn row_xml(
             }
             continue;
         }
-        cells.push_str(&table_cell_xml(cell, width)?);
+        cells.push_str(&table_cell_xml(cell, width, part)?);
         cell_count += 1;
     }
     // trPr: original bytes passed through; row height is replaced/inserted/removed per the model
@@ -921,7 +934,16 @@ fn row_xml(
 pub fn generate_table_model_xml(
     model: &TableModel,
     original_table_xml: Option<&str>,
+    part: Option<&ContentControlPart>,
 ) -> Result<String, TableXmlError> {
+    let own;
+    let scope = match part {
+        Some(part) => part,
+        None => {
+            own = ContentControlPart::new(&[original_table_xml.unwrap_or_default()], None);
+            &own
+        }
+    };
     // the widest row decides the column count
     let pct = model.col_widths_pct.as_deref();
     let mut column_count = js_max(1.0, pct.map_or(0.0, |pct| pct.len() as f64));
@@ -1014,7 +1036,7 @@ pub fn generate_table_model_xml(
     let grid = format!("<w:tblGrid>{cols}{grid_record}</w:tblGrid>");
     let mut rows = String::new();
     for (ri, row) in model.rows.iter().enumerate() {
-        rows.push_str(&row_xml(model, ri, row, &widths)?);
+        rows.push_str(&row_xml(model, ri, row, &widths, scope)?);
     }
     let original_tbl_pr = original_table_xml
         .filter(|xml| !xml.is_empty())
@@ -1188,7 +1210,12 @@ pub fn generate_table_model_xml(
             (!description.is_empty()).then_some(tag.as_str()),
         )?;
     }
-    Ok(format!("<w:tbl>{tbl_pr}{grid}{rows}</w:tbl>"))
+    let xml = format!("<w:tbl>{tbl_pr}{grid}{rows}</w:tbl>");
+    if part.is_some() {
+        Ok(xml)
+    } else {
+        Ok(scope.finish(&xml)?)
+    }
 }
 
 /// `String.prototype.repeat(count)` for a count already known not to be negative.
