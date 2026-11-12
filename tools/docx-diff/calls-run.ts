@@ -6,6 +6,7 @@ import { DOCPROPS } from './calls-docprops'
 import { FIELDS } from './calls-fields'
 import { MARKERS } from './calls-markers'
 import { MATH } from './calls-math'
+import { RESOLVE } from './calls-resolve'
 import { SECTION } from './calls-section'
 import type { CallSpec, Input } from './calls-spec'
 import { byFunction, checkOutcome, flush, type Outcome, rustOutcome } from './compare-props'
@@ -36,6 +37,7 @@ const groups: Group[] = Object.entries({
   fields: FIELDS,
   markers: MARKERS,
   math: MATH,
+  resolve: RESOLVE,
   section: SECTION,
 })
   .filter(([name, specs]) => specs.length > 0 && (ONLY_GROUP ?? name) === name)

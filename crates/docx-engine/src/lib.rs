@@ -13,6 +13,7 @@ pub mod numbering;
 pub mod package;
 pub mod props;
 pub mod protection;
+pub mod resolve;
 pub mod scan;
 pub mod sdt;
 pub mod section;

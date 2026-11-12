@@ -144,7 +144,7 @@ async function contentTypesOf(zip: JSZip) {
 }
 
 /** `parseTheme` and `readThemeFontLang` of parse.ts. */
-async function parseTheme(
+export async function parseTheme(
   zip: JSZip,
 ): Promise<{ fonts: ThemeFonts | null; colors: ThemeColors | null }> {
   const file = zip.file(THEME_PART_PATH)

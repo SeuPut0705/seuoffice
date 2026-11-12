@@ -7,83 +7,15 @@
 //! second `computeListMarkers` of list-markers.ts. The functions below that
 //! read a resolved paragraph take it as a value ([`EffectivePPr`]).
 
-use std::collections::HashMap;
-
 use jscompat::{
     JsMap, JsNum, JsRegex, Radix, RegexSyntaxError, js_regex, math_round, parse_int, trim,
 };
 use ooxml_xml::{XNode, parse_ordered};
-use serde::{Deserialize, Deserializer, Serialize};
+use serde::Serialize;
 
 use crate::props::XML_PARSER_MAX_NESTED_TAGS;
+use crate::resolve::{EffectivePPr, PropSource, ResolveCtx};
 use crate::styles::StyleInfo;
-
-/// A number of a resolved paragraph as it arrives in JSON: `null` stands for
-/// the NaN or infinity `JSON.stringify` wrote there.
-fn js_number<'de, D: Deserializer<'de>>(deserializer: D) -> Result<JsNum, D::Error> {
-    Option::<f64>::deserialize(deserializer).map(|number| JsNum(number.unwrap_or(f64::NAN)))
-}
-
-/// `LineSpacing` of resolve-props.ts.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct LineSpacing {
-    pub rule: String,
-    #[serde(deserialize_with = "js_number")]
-    pub raw: JsNum,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ParaIndent {
-    #[serde(deserialize_with = "js_number")]
-    pub left: JsNum,
-    #[serde(deserialize_with = "js_number")]
-    pub right: JsNum,
-    #[serde(deserialize_with = "js_number")]
-    pub first_line: JsNum,
-}
-
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ParaSpacing {
-    #[serde(deserialize_with = "js_number")]
-    pub before: JsNum,
-    #[serde(deserialize_with = "js_number")]
-    pub after: JsNum,
-    pub before_auto: bool,
-    pub after_auto: bool,
-    #[serde(default)]
-    pub line: Option<LineSpacing>,
-}
-
-/// The part of resolve-props.ts `EffectivePPr` these readers use: the
-/// paragraph's resolved spacing and indents, and where each property came from.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct EffectivePPr {
-    pub indent: ParaIndent,
-    pub spacing: ParaSpacing,
-    /// property name to its `PropSource` (`direct`, `paraStyle`, ...)
-    pub source: HashMap<String, String>,
-}
-
-impl EffectivePPr {
-    fn source_is(&self, key: &str, source: &str) -> bool {
-        self.source.get(key).is_some_and(|found| found == source)
-    }
-}
-
-/// The part of resolve-props.ts `ResolveCompat` these readers use.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct ResolveCompat {
-    pub additive_para_spacing: bool,
-}
-
-/// The part of resolve-props.ts `ResolveCtx` these readers use.
-#[derive(Debug, Clone, PartialEq, Deserialize)]
-pub struct ResolveCtx {
-    pub compat: ResolveCompat,
-}
 
 /// `directParaGeometry`'s `Pick<FieldDisplay, ...>`.
 #[derive(Debug, Default, PartialEq, Serialize)]
@@ -169,7 +101,7 @@ pub fn tag_attr<'a>(
 /// Direct paragraph geometry Word applies over the style: before/after spacing
 /// and w:ind. Only direct-sourced values travel inline.
 pub fn direct_para_geometry(eff: &EffectivePPr) -> ParaGeometry {
-    let direct = |key: &str| eff.source_is(key, "direct");
+    let direct = |key: &str| eff.source.get(key) == Some(&PropSource::Direct);
     ParaGeometry {
         space_before_twips: direct("spaceBefore").then_some(eff.spacing.before),
         space_after_twips: direct("spaceAfter").then_some(eff.spacing.after),
@@ -187,7 +119,7 @@ pub fn direct_line_of(eff: &EffectivePPr) -> DirectLine {
         return DirectLine::default();
     };
     // `line.raw <= 0` is false for NaN, which goes on
-    if !eff.source_is("line", "direct") || line.raw.0 <= 0.0 {
+    if eff.source.get("line") != Some(&PropSource::Direct) || line.raw.0 <= 0.0 {
         return DirectLine::default();
     }
     DirectLine {

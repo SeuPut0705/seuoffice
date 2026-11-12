@@ -11,6 +11,7 @@ mod docprops;
 mod fields;
 mod markers;
 mod math;
+mod resolve;
 mod section;
 
 /// What a call gives: a value, nothing where the TypeScript function returns
@@ -59,6 +60,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "fields" => Some(fields::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
+        "resolve" => Some(resolve::dispatch(function, text, args)),
         "section" => Some(section::dispatch(function, text, args)),
         _ => None,
     }
