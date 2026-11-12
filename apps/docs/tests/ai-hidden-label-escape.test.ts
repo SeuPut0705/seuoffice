@@ -43,11 +43,10 @@ describe('a hidden picture block whose label no co-editing token may hold', () =
     const parsed = await parseDocx(bytes)
     const hiddenBlocks = parsed.blocks.filter((b) => b.redact !== undefined)
     expect(hiddenBlocks.length).toBeGreaterThan(0)
-    const pm = blocksToPmDoc(parsed.blocks) as unknown as { content: unknown[] }
     const editor = new Editor({
       element: document.createElement('div'),
       extensions: editorExtensions,
-      content: pm,
+      content: blocksToPmDoc(parsed.blocks) as never,
     })
     editors.add(editor)
     const doc = editor.state.doc.toJSON()
