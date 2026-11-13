@@ -1,0 +1,853 @@
+[
+  {
+    "name": "toml line counts from zero",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": ".matches('\\n').count() + 1",
+    "replace": ".matches('\\n').count()",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a quote right before the closing three is kept",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "while extra < 2 && self.byte_at(3 + extra) == Some(b'\"') {",
+    "replace": "while extra < 1 && self.byte_at(3 + extra) == Some(b'\"') {",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml carriage return is no blank",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "Some('\\n' | '\\r')",
+    "replace": "Some('\\n')",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a negative infinity loses its sign",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "return sign * f64::INFINITY;",
+    "replace": "return f64::INFINITY;",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a radix number loses its sign",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "return sign * to_number(body);",
+    "replace": "return to_number(body);",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a surrogate escape is allowed",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "(0xd800..=0xdfff).contains(&code)",
+    "replace": "(0xd801..=0xdfff).contains(&code)",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a header under an array of tables goes to its first table",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "JsonValue::Array(list) => match list.last_mut() {",
+    "replace": "JsonValue::Array(list) => match list.first_mut() {",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml an array of tables over a table keeps the table",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "if !matches!(table.get(part), Some(JsonValue::Array(_))) {",
+    "replace": "if table.get(part).is_none() {",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a literal string may span lines",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "(Some(end), Some(newline)) if newline < end => {",
+    "replace": "(Some(end), Some(newline)) if newline > end => {",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml escape e is another character",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "Some('e') => Ok('\\u{1b}')",
+    "replace": "Some('e') => Ok('\\u{1c}')",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a line-ending backslash keeps the line break",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "Some(' ' | '\\t' | '\\r' | '\\n')",
+    "replace": "Some(' ' | '\\t' | '\\r')",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml false is read as four characters",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "self.pos += 5;",
+    "replace": "self.pos += 4;",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml nesting limit too low",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "const MAX_NESTING: usize = 2000;",
+    "replace": "const MAX_NESTING: usize = 5;",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a bare key may not hold a dash",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "'0'..='9' | '_' | '-'",
+    "replace": "'0'..='9' | '_'",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a multi-line string keeps the first line break",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "fn multi_basic_string(&mut self) -> Result<String, TomlError> {\n        self.pos += 3;\n        if self.starts_with(\"\\r\\n\") {\n            self.pos += 2;\n        } else if self.peek() == Some('\\n') {\n            self.pos += 1;\n        }",
+    "replace": "fn multi_basic_string(&mut self) -> Result<String, TomlError> {\n        self.pos += 3;",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "toml a byte order mark stays",
+    "file": "main-core/src/shell/mcp_client/toml.rs",
+    "find": "text.strip_prefix('\\u{feff}').unwrap_or(text)",
+    "replace": "text",
+    "fn": [
+      "toml.parseToml"
+    ]
+  },
+  {
+    "name": "paste Authorization is looked up as written",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": ".find(|h| h.to_lowercase() == \"authorization\")",
+    "replace": ".find(|h| h == \"Authorization\")",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste args of a remote server are kept",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "Some(JsonValue::Array(items)) if local =>",
+    "replace": "Some(JsonValue::Array(items)) =>",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste sse reads as auto",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "\"sse\" => Some(McpTransport::Sse),",
+    "replace": "\"sse\" => Some(McpTransport::Auto),",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste streamableHttp is unknown",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "\"http\" | \"streamable-http\" | \"streamableHttp\" | \"streamable_http\"",
+    "replace": "\"http\" | \"streamable-http\" | \"streamable_http\"",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste lines before a body are not added",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "Some(at) if at > 0 => input[..at].matches('\\n').count(),",
+    "replace": "Some(at) if at > 0 => 0,",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste a TOML line is not shifted by the prose",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "unreadable(Some(error.line + lines_before(input, body)))",
+    "replace": "unreadable(Some(error.line))",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste a stack overflow names a line",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "!error.stack_overflow && ",
+    "replace": "",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste names are taken in their own case",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "taken.insert(name.to_lowercase());",
+    "replace": "taken.insert(name.clone());",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste the headers win over http_headers swapped",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "merged.assign(&text_record(raw.get(\"headers\")));",
+    "replace": "merged.assign(&text_record(raw.get(\"http_headers\")));",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste a number is dropped from args",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "JsonValue::Number(n) => Some(number_to_string(*n)),",
+    "replace": "JsonValue::Number(_) => None,",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste an empty key variable name counts",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": ".filter(|v| !v.is_empty())\n        .map(str::to_owned);",
+    "replace": ".map(str::to_owned);",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste a command wins over nothing",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "let local = !command.is_empty();",
+    "replace": "let local = command.is_empty();",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "paste a placeholder with env: is not read",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "(?:env:)?",
+    "replace": "",
+    "fn": [
+      "paste.placeholderVariable"
+    ]
+  },
+  {
+    "name": "paste a placeholder inside text is not read",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": "\\$\\{\\s*",
+    "replace": "^\\$\\{\\s*",
+    "fn": [
+      "paste.placeholderVariable"
+    ]
+  },
+  {
+    "name": "paste a JSON line from the position counts from zero",
+    "file": "main-core/src/shell/mcp_client/paste.rs",
+    "find": ".matches('\\n')\n            .count()\n            + 1,",
+    "replace": ".matches('\\n')\n            .count(),",
+    "fn": [
+      "paste.parseMcpPaste"
+    ]
+  },
+  {
+    "name": "launch -- does not stop the yes scan",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "if arg == \"--\" || !arg.starts_with('-') {",
+    "replace": "if !arg.starts_with('-') {",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch --yes=true is no yes",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "if arg == \"-y\" || arg == \"--yes\" || arg == \"--yes=true\" {",
+    "replace": "if arg == \"-y\" || arg == \"--yes\" {",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch trailing dots are not dropped",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "win32::extname(path.trim_end_matches(['.', ' '])).to_lowercase()",
+    "replace": "win32::extname(path).to_lowercase()",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch .bat is allowed",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "if ext == \".cmd\" || ext == \".bat\" {",
+    "replace": "if ext == \".cmd\" {",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch .com is no program",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "if ext != \".exe\" && ext != \".com\" {",
+    "replace": "if ext != \".exe\" {",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch the old prefix is passed on",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": ".any(|prefix| upper.starts_with(prefix))",
+    "replace": ".any(|prefix| name.starts_with(prefix))",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch the PATH delimiter is swapped",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "let delimiter = if platform == \"win32\" { \";\" } else { \":\" };",
+    "replace": "let delimiter = if platform == \"win32\" { \":\" } else { \";\" };",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch names match with case on Windows",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "name.to_uppercase()\n    } else {",
+    "replace": "name.to_owned()\n    } else {",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch a replaced variable keeps its place",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "entries.delete(&env_key(name, platform));",
+    "replace": "",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch an empty PATH is joined",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "Some((_, _, value)) if !value.is_empty() => vec![value.as_str()],",
+    "replace": "Some((_, _, value)) => vec![value.as_str()],",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch npx is another name",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": ".as_deref() == Some(\"npx\")",
+    "replace": ".as_deref() == Some(\"npm\")",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch a path is a bare command",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "if trimmed.is_empty() || trimmed.contains(['\\\\', '/']) {",
+    "replace": "if trimmed.is_empty() {",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch the bare name keeps its extension on Windows",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "if platform != \"win32\" {\n        return Some(trimmed.to_owned());",
+    "replace": "if false {\n        return Some(trimmed.to_owned());",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch Windows variable names match with case",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": ".find(|key| key.to_uppercase() == upper)",
+    "replace": ".find(|key| *key == name)",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch the Windows extension is read as the host reads it",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "let ext = windows_extension(&resolved.command);",
+    "replace": "let ext = host::extname(&resolved.command).to_lowercase();",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "launch absolute is judged by the other platform",
+    "file": "main-core/src/shell/mcp_client/local_launch.rs",
+    "find": "let absolute = if platform == \"win32\" {",
+    "replace": "let absolute = if platform != \"win32\" {",
+    "fn": [
+      "local-launch.prepareLocalLaunch",
+      "local-launch.plannedLaunch"
+    ]
+  },
+  {
+    "name": "download a response without ok is read",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "Some(body) if ok => body,",
+    "replace": "Some(body) => body,",
+    "fn": [
+      "runtime-archive.downloadVerifiedArchive"
+    ]
+  },
+  {
+    "name": "download the pinned size may be exceeded by a chunk",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if received > archive.bytes {",
+    "replace": "if received >= archive.bytes {",
+    "fn": [
+      "runtime-archive.downloadVerifiedArchive"
+    ]
+  },
+  {
+    "name": "download the pinned hash is compared as written",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "digest != archive.sha256.to_lowercase()",
+    "replace": "digest != archive.sha256",
+    "fn": [
+      "runtime-archive.downloadVerifiedArchive"
+    ]
+  },
+  {
+    "name": "extract the file bits are kept as written",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "bits | 0o600",
+    "replace": "bits",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract set-id bits are kept",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "(m as u64 & 0o777) as u32",
+    "replace": "(m as u64 & 0o7777) as u32",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract an escaping name is allowed",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if segments.iter().any(|s| s == \"..\") {",
+    "replace": "if false {",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a sibling folder counts as inside",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "full.starts_with(&format!(\"{base}{}\", separator()))",
+    "replace": "full.starts_with(&base)",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a symbolic link with no target is made",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if link.is_empty()",
+    "replace": "if false",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract the checksum is not checked",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "sum == numeric(block, 148, 8)",
+    "replace": "true",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract data is padded down",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": ".ceil() * BLOCK as f64",
+    "replace": ".floor() * BLOCK as f64",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract the ustar prefix is always read",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "let ustar = c_string(&header, 257, 6).starts_with(\"ustar\");",
+    "replace": "let ustar = true;",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a folder is not made",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if kind == b'5' {",
+    "replace": "if kind == b'6' {",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a pax link path is read as the path",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "            .get(\"path\")",
+    "replace": "            .get(\"linkpath\")",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a GNU long name is kept as the link",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "b'L' => long_name = Some(c_string(body, 0, body.len())),",
+    "replace": "b'L' => long_link = Some(c_string(body, 0, body.len())),",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a global pax header is a file",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if matches!(kind, b'x' | b'L' | b'K' | b'g') {",
+    "replace": "if matches!(kind, b'x' | b'L' | b'K') {",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a contiguous file is skipped",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "&& (kind == b'0' || kind == b'7')",
+    "replace": "&& (kind == b'0')",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a folder entry of a zip is a file",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if entry.is_dir {",
+    "replace": "if false {",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a truncated gzip is worded otherwise",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "\"unexpected end of file\"",
+    "replace": "\"unexpected EOF\"",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a non-gzip file is worded otherwise",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "\"incorrect header check\"",
+    "replace": "\"invalid header\"",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract the checksum field is summed",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if (148..156).contains(&index) {",
+    "replace": "if (148..155).contains(&index) {",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a base-256 size is read as octal",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "if field[0] & 0x80 != 0 {",
+    "replace": "if field[0] & 0x80 == 7 {",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a hard link source outside is copied",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "Ok(info) if info.is_file() => {}",
+    "replace": "Ok(_) => {}",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "extract a file with a drive letter is relative",
+    "file": "main-core/src/shell/mcp_client/runtime_archive.rs",
+    "find": "matches!((chars.next(), chars.next()), (Some(c), Some(':')) if c.is_ascii_alphabetic())",
+    "replace": "false",
+    "fn": [
+      "runtime-archive.extractRuntimeArchive"
+    ]
+  },
+  {
+    "name": "store a memory-only secret is never listed",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "if !memory_only.is_empty() {",
+    "replace": "if false {",
+    "fn": [
+      "store.scenario"
+    ]
+  },
+  {
+    "name": "store a damaged file is not kept",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "if self.damaged {",
+    "replace": "if false {",
+    "fn": [
+      "store.scenario"
+    ]
+  },
+  {
+    "name": "store a damaged file is forgotten at once",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "self.damaged = true;",
+    "replace": "self.damaged = false;",
+    "fn": [
+      "store.scenario"
+    ]
+  },
+  {
+    "name": "store signedIn is inverted",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "(\"signedIn\", JsonValue::Bool(!oauth.tokens.is_empty())),",
+    "replace": "(\"signedIn\", JsonValue::Bool(oauth.tokens.is_empty())),",
+    "fn": [
+      "store.scenario"
+    ]
+  },
+  {
+    "name": "store a change that answers a file is ignored",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "let next = change(&mut draft).unwrap_or(draft);",
+    "replace": "let _ = change(&mut draft);\n        let next = draft;",
+    "fn": [
+      "store.scenario"
+    ]
+  },
+  {
+    "name": "store a removal of nothing saves",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "if !self.state.servers.iter().any(|s| s.id == id) {",
+    "replace": "if false {",
+    "fn": [
+      "store.scenario"
+    ]
+  },
+  {
+    "name": "store the file writes a remote server as local",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "if matches!(s.kind, McpServerKind::Remote) {",
+    "replace": "if matches!(s.kind, McpServerKind::Local) {",
+    "fn": [
+      "store.scenario",
+      "store.serializeMcpServersFile"
+    ]
+  },
+  {
+    "name": "store new tools are not deduplicated",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "if tools.get(&name).is_some() && !new_tools.contains(&name) {",
+    "replace": "if !new_tools.contains(&name) {",
+    "fn": [
+      "store.scenario",
+      "store.normalizeMcpServersFile"
+    ]
+  },
+  {
+    "name": "store enabled reads only true",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "enabled: !matches!(record.get(\"enabled\"), Some(JsonValue::Bool(false))),",
+    "replace": "enabled: matches!(record.get(\"enabled\"), Some(JsonValue::Bool(true))),",
+    "fn": [
+      "store.scenario",
+      "store.normalizeMcpServersFile"
+    ]
+  },
+  {
+    "name": "store a remote server keeps its approval",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "approved_launch: if local {",
+    "replace": "approved_launch: if !local {",
+    "fn": [
+      "store.scenario",
+      "store.normalizeMcpServersFile"
+    ]
+  },
+  {
+    "name": "store kind reads remote for local",
+    "file": "main-core/src/shell/mcp_client/store.rs",
+    "find": "Some(JsonValue::String(k)) if k == \"local\" => McpServerKind::Local,",
+    "replace": "Some(JsonValue::String(k)) if k == \"remote\" => McpServerKind::Local,",
+    "fn": [
+      "store.scenario",
+      "store.normalizeMcpServersFile"
+    ]
+  },
+  {
+    "name": "secrets the sealed prefix is left off",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "Ok(format!(\"{SEALED_PREFIX}{}\", base64(&bytes)))",
+    "replace": "Ok(base64(&bytes))",
+    "fn": [
+      "secrets.safeStorageMcpCodec"
+    ]
+  },
+  {
+    "name": "secrets a plain value opens under no key",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "if !sealed_form(sealed) || !self.storage.is_encryption_available() {",
+    "replace": "if !sealed_form(sealed) && !self.storage.is_encryption_available() {",
+    "fn": [
+      "secrets.safeStorageMcpCodec"
+    ]
+  },
+  {
+    "name": "secrets a reference names its prefix with a dot",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "f(v, &format!(\"{prefix}:{k}\"))",
+    "replace": "f(v, &format!(\"{prefix}.{k}\"))",
+    "fn": [
+      "secrets.mapServerSecrets",
+      "secrets.sealServerSecrets",
+      "secrets.openServerSecrets"
+    ]
+  },
+  {
+    "name": "secrets an empty value is sealed",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "if value.is_empty() || sealed_form(value) {",
+    "replace": "if sealed_form(value) {",
+    "fn": [
+      "secrets.sealServerSecrets"
+    ]
+  },
+  {
+    "name": "secrets a PC that cannot seal still seals",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "if can_seal {",
+    "replace": "if true {",
+    "fn": [
+      "secrets.sealServerSecrets"
+    ]
+  },
+  {
+    "name": "secrets a plain value is opened",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "if !sealed_form(value) {",
+    "replace": "if sealed_form(value) {",
+    "fn": [
+      "secrets.openServerSecrets"
+    ]
+  },
+  {
+    "name": "secrets a memory-only secret reads as saved",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "state: if memory_only { \"memory-only\" } else { \"saved\" },",
+    "replace": "state: if memory_only { \"saved\" } else { \"memory-only\" },",
+    "fn": [
+      "secrets.secretView"
+    ]
+  },
+  {
+    "name": "secrets eight characters show no last four",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": ">= MIN_LENGTH_TO_SHOW_LAST4",
+    "replace": "> MIN_LENGTH_TO_SHOW_LAST4",
+    "fn": [
+      "secrets.secretView"
+    ]
+  },
+  {
+    "name": "secrets the last three are shown",
+    "file": "main-core/src/shell/mcp_client/secrets.rs",
+    "find": "slice_utf16(value, -4.0, None)",
+    "replace": "slice_utf16(value, -3.0, None)",
+    "fn": [
+      "secrets.secretView"
+    ]
+  },
+  {
+    "name": "pins the key joins arch first",
+    "file": "main-core/src/shell/mcp_client/runtime_pins.rs",
+    "find": "let key = format!(\"{platform}-{arch}\");",
+    "replace": "let key = format!(\"{arch}-{platform}\");",
+    "fn": [
+      "runtime-pins.mcpRuntimePlatformKey"
+    ]
+  },
+  {
+    "name": "pins a pinned size is off by one",
+    "file": "main-core/src/shell/mcp_client/runtime_pins.rs",
+    "find": "14_235_670,",
+    "replace": "14_235_671,",
+    "fn": [
+      "runtime-pins.MCP_RUNTIME_PINS"
+    ]
+  }
+]
