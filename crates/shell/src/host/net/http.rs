@@ -256,13 +256,15 @@ impl Inner {
                 reclaim(&mut st, body);
             }
             trim(&mut st, source_id);
-            drop(st);
+            // posted under the lock: a read taken after these cannot be
+            // answered before them (posting only queues for the core thread)
             for (sink, read, answer) in answers {
                 match answer {
                     Ok(answer) => sink.done(read, answer),
                     Err(error) => sink.failed(read, error),
                 }
             }
+            drop(st);
             inner.pull(source_id);
         }));
     }
@@ -521,11 +523,12 @@ impl Net for HttpNet {
                 } else {
                     reclaim(&mut st, body);
                 }
-                drop(st);
+                // under the lock, as `pull` answers: in the order taken
                 match answer {
                     Ok(answer) => sink.done(id, answer),
                     Err(error) => sink.failed(id, error),
                 }
+                drop(st);
             }
             None => {
                 let source = st
