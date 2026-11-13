@@ -221,7 +221,8 @@ export interface HiddenWord {
 /**
  * The words a document hides from AI: each run of hidden text whole, and each
  * of its words (letters or digits, however short: a Korean word is often two
- * syllables), lower-cased.
+ * syllables), lower-cased. A protected block hidden from AI keeps its words
+ * in its XML, not in runs: every word of its visible text counts as hidden.
  */
 export function hiddenWordsOf(node: RedactableNode): HiddenWord[] {
   const out: HiddenWord[] = []
@@ -231,6 +232,12 @@ export function hiddenWordsOf(node: RedactableNode): HiddenWord[] {
     for (const word of whole.match(/[\p{L}\p{N}]+/gu) ?? []) out.push({ word, label })
   }
   const visit = (n: RedactableNode) => {
+    const blockLabel = withheldBlockLabel(n)
+    if (blockLabel !== undefined) {
+      const display = n.attrs?.fieldDisplay as { left?: unknown; right?: unknown } | null
+      for (const text of [n.attrs?.previewText, display?.left, display?.right])
+        if (typeof text === 'string') add(text, blockLabel)
+    }
     if (!Array.isArray(n.content)) return
     // the hidden text nodes that touch read as one run: formatting may split it
     let run = ''
