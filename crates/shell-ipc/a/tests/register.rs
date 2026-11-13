@@ -11,6 +11,7 @@ use shell_contract::ipc::{
     CallContext, ChannelKind, EventSink, Handler, RegisterError, Registry, Responder, Sender,
     Target,
 };
+use shell_contract::provided::Provided;
 use shell_contract::runtime::{AppPaths, CancelToken, PathName, Services, Thread, Views, Workers};
 use shell_contract::{Batch, CHANNELS, Hosts, IpcError, IpcValue, Surface, ViewId, WindowId};
 
@@ -18,6 +19,7 @@ use shell_contract::{Batch, CHANNELS, Hosts, IpcError, IpcValue, Surface, ViewId
 #[derive(Default)]
 struct Checked {
     handlers: BTreeMap<&'static str, (ChannelKind, Rc<dyn Handler>)>,
+    provided: Rc<Provided>,
 }
 
 impl Registry for Checked {
@@ -46,6 +48,10 @@ impl Registry for Checked {
             return Err(RegisterError::Twice(channel));
         }
         Ok(())
+    }
+
+    fn provided(&self) -> Rc<Provided> {
+        self.provided.clone()
     }
 }
 

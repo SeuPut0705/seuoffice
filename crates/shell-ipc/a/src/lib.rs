@@ -48,10 +48,11 @@ macro_rules! all_ports {
 }
 
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
+    let provided = registry.provided();
     macro_rules! register_each {
         ($($port:ident),*) => {$(
             let factory = services.hosts.need::<Factory<dyn ports::$port>>(Batch::A)?;
-            port::register_port(registry, (factory.0)(services))?;
+            port::register_port(registry, (factory.0)(services, &provided))?;
         )*};
     }
     all_ports!(register_each);
@@ -81,7 +82,7 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     macro_rules! insert_each {
         ($($port:ident),*) => {$(
             let answers = case.clone();
-            hosts.insert(Factory::<dyn ports::$port>::new(move |_| {
+            hosts.insert(Factory::<dyn ports::$port>::new(move |_, _| {
                 Rc::new(probe::Fake::new(&answers))
             }));
         )*};

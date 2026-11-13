@@ -14,11 +14,13 @@ use std::rc::Rc;
 use std::sync::Arc;
 
 use shell_contract::ipc::{CallContext, ChannelKind, Handler, RegisterError, Registry, Responder};
+use shell_contract::provided::Provided;
 use shell_contract::runtime::Services;
 use shell_contract::{Batch, IpcValue};
 
-/// Builds a port on the core thread from the shell's services
-pub type Build<P> = dyn Fn(&Services) -> Rc<P> + Send + Sync;
+/// Builds a port on the core thread from the shell's services and what the
+/// other batches provide (looked up at call time, so batch order is free)
+pub type Build<P> = dyn Fn(&Services, &Rc<Provided>) -> Rc<P> + Send + Sync;
 
 /// The host that builds port `P` on the core thread: `Hosts` holds
 /// `Factory<dyn ports::X>` for every port
@@ -31,7 +33,7 @@ impl<P: ?Sized> Clone for Factory<P> {
 }
 
 impl<P: ?Sized> Factory<P> {
-    pub fn new(build: impl Fn(&Services) -> Rc<P> + Send + Sync + 'static) -> Self {
+    pub fn new(build: impl Fn(&Services, &Rc<Provided>) -> Rc<P> + Send + Sync + 'static) -> Self {
         Factory(Arc::new(build))
     }
 }
