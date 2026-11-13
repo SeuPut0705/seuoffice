@@ -59,6 +59,21 @@ pub trait DocumentEditors {
     /// the renderer runs the export. `format` is the app's own name for it
     /// (`"pdf"`, `"docx"`, ...)
     fn export_request(&self, view: ViewId, format: &str);
+
+    /// The document's file (`savePathByWc.get(contents)`), `None` while it
+    /// is unsaved
+    fn document_path(&self, view: ViewId) -> Option<PathBuf>;
+
+    /// hwp only: the PDF file this view chose in Save As or was handed in a
+    /// headless run (`pdfSaveAsByWc ?? headlessPdfByWc`), taken once
+    fn take_pdf_grant(&self, _view: ViewId) -> Option<PathBuf> {
+        None
+    }
+
+    /// docs only: the view's writer is gone (`tornDownWcIds`)
+    fn torn_down(&self, _view: ViewId) -> bool {
+        false
+    }
 }
 
 /// The editor of the app that shows `view`, if any
@@ -116,6 +131,10 @@ mod tests {
             self.asked
                 .borrow_mut()
                 .push(format!("export {} {format}", view.0));
+        }
+        fn document_path(&self, view: ViewId) -> Option<PathBuf> {
+            self.owns(view)
+                .then(|| PathBuf::from(format!("/doc/{}", view.0)))
         }
     }
 
