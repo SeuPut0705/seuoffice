@@ -16,6 +16,7 @@ import { group as b4Hwp } from './b4-hwp.ts'
 import { group as b5Ai } from './b5-ai.ts'
 import { group as b6Apps } from './b6-apps.ts'
 import { group as b6Shell } from './b6-shell.ts'
+import { group as b6Tabs } from './b6-tabs.ts'
 import { group as b6Utils } from './b6-utils.ts'
 import { group as files } from './files.ts'
 import { group as nodeFs } from './node-fs.ts'
@@ -48,4 +49,5 @@ export const groups: Record<string, Group> = {
   'b6-utils': b6Utils,
   'b6-shell': b6Shell,
   'b6-apps': b6Apps,
+  'b6-tabs': b6Tabs,
 }
