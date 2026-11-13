@@ -997,6 +997,7 @@ version = "0.1.0"
 name = "shell-ipc-a"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 
@@ -1004,6 +1005,7 @@ dependencies = [
 name = "shell-ipc-d1"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 
@@ -1011,6 +1013,7 @@ dependencies = [
 name = "shell-ipc-d2"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 
@@ -1018,6 +1021,7 @@ dependencies = [
 name = "shell-ipc-m"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 
@@ -1025,6 +1029,7 @@ dependencies = [
 name = "shell-ipc-u"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 
@@ -1032,6 +1037,7 @@ dependencies = [
 name = "shell-ipc-w"
 version = "0.1.0"
 dependencies = [
+ "serde_json",
  "shell-contract",
 ]
 
