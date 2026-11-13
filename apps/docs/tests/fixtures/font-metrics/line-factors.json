@@ -87,22 +87,6 @@
     1.3617,
     1.172
   ],
-  "'SeuOffice Batang'": [
-    1.172,
-    1.172
-  ],
-  "'SeuOffice Batang','SeuOffice Serif KR'": [
-    1.172,
-    1.172
-  ],
-  "'SeuOffice Hiragino Sans'": [
-    1.3,
-    1.3
-  ],
-  "'SeuOffice Sans KR'": [
-    1.172,
-    1.172
-  ],
   "'KR Theme Latin GO'": [
     1.172,
     1.172
@@ -174,6 +158,22 @@
   "'Segoe UI GO'": [
     1.15,
     1.15
+  ],
+  "'SeuOffice Batang'": [
+    1.172,
+    1.172
+  ],
+  "'SeuOffice Batang','SeuOffice Serif KR'": [
+    1.172,
+    1.172
+  ],
+  "'SeuOffice Hiragino Sans'": [
+    1.3,
+    1.3
+  ],
+  "'SeuOffice Sans KR'": [
+    1.172,
+    1.172
   ],
   "'SimSun'": [
     1.3,
@@ -1145,90 +1145,6 @@
   ],
   "Geeza Pro": [
     1.3617,
-    1.172
-  ],
-  "SeuOffice Batang": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Bengali": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Box Drawing": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice DM Sans": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Fullwidth TC": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Gothic KR": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Heiti TC": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Hiragino Mincho": [
-    1.3,
-    1.3
-  ],
-  "SeuOffice Hiragino Sans": [
-    1.3,
-    1.3
-  ],
-  "SeuOffice MS Mincho": [
-    1.3,
-    1.3
-  ],
-  "SeuOffice MingLiU": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Myungjo": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice PUA Blank": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Poppins": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Sans KR": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Serif KR": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice SimSun Latin": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Songti SC": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Songti TC": [
-    1.172,
-    1.172
-  ],
-  "SeuOffice Tamil": [
-    1,
-    1
-  ],
-  "SeuOffice YaHei Latin": [
-    1.172,
     1.172
   ],
   "Georgia": [
@@ -2613,6 +2529,90 @@
   ],
   "Selawik Semibold": [
     1.3301,
+    1.172
+  ],
+  "SeuOffice Batang": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Bengali": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Box Drawing": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice DM Sans": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Fullwidth TC": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Gothic KR": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Heiti TC": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Hiragino Mincho": [
+    1.3,
+    1.3
+  ],
+  "SeuOffice Hiragino Sans": [
+    1.3,
+    1.3
+  ],
+  "SeuOffice MS Mincho": [
+    1.3,
+    1.3
+  ],
+  "SeuOffice MingLiU": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Myungjo": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice PUA Blank": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Poppins": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Sans KR": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Serif KR": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice SimSun Latin": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Songti SC": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Songti TC": [
+    1.172,
+    1.172
+  ],
+  "SeuOffice Tamil": [
+    1,
+    1
+  ],
+  "SeuOffice YaHei Latin": [
+    1.172,
     1.172
   ],
   "Shonar Bangla": [
