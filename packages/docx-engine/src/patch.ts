@@ -2560,7 +2560,7 @@ function withWatermarkNs(openTag: string): string {
     'xmlns:o="urn:schemas-microsoft-com:office:office"',
     'xmlns:w10="urn:schemas-microsoft-com:office:word"',
   ]) {
-    if (!out.includes(ns.split('=')[0] + '=')) out = out.replace(/>$/, ` ${ns}>`)
+    if (!new RegExp(`\\s${ns.split('=')[0]}\\s*=`).test(out)) out = out.replace(/>$/, ` ${ns}>`)
   }
   return out
 }
