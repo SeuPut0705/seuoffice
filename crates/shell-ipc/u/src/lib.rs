@@ -38,11 +38,12 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
     let main_window: MainWindowHost = services.hosts.need(Batch::U)?;
     let windows: UpdateWindowsHost = services.hosts.need(Batch::U)?;
     let control: UpdaterControlHost = services.hosts.need(Batch::U)?;
-    update_check::provide(&registry.provided(), control);
+    update_check::provide(&registry.provided(), control.clone());
     let window =
         update_window::UpdateWindow::new(services.events.clone(), windows, main_window.clone());
     update_window::register(registry, window)?;
     launch_list::register(registry, launch_list::LaunchList::new(main_window))?;
+    control.started();
     #[cfg(feature = "probe")]
     probe::seed(&services.hosts);
     Ok(())

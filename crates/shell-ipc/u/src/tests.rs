@@ -139,6 +139,7 @@ impl UpdateWindows for Windows {
 #[derive(Default)]
 struct Updater(Mutex<u32>);
 impl crate::UpdaterControl for Updater {
+    fn started(&self) {}
     fn available(&self) -> bool {
         true
     }

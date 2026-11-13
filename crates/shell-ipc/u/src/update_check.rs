@@ -10,6 +10,9 @@ use shell_contract::app_actions::UpdateCheck;
 
 /// U's updater host. Called on the core thread.
 pub trait UpdaterControl: Send + Sync {
+    /// Batch U has registered: the update window takes calls, so the host
+    /// starts the updater (`initAutoUpdater` at app ready)
+    fn started(&self);
     /// an updater runs: a packaged build on a platform that updates itself
     fn available(&self) -> bool;
     /// `Updater::check_for_updates_now`; the host runs the step it returns

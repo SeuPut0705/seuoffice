@@ -78,6 +78,7 @@ struct FakeUpdater {
 }
 
 impl UpdaterControl for FakeUpdater {
+    fn started(&self) {}
     fn available(&self) -> bool {
         self.available
     }
