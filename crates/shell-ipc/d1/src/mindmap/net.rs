@@ -11,7 +11,7 @@
 //! hop's per-hop agent answers a connect-time lookup with.
 
 use std::collections::VecDeque;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use main_core::packages::electron_utils::safe_remote_url::{
     FetchError, FetchInit, Fetcher, GlobalDispatcher, LookupAddress, LookupOptions, PinnedAnswer,
@@ -114,7 +114,7 @@ impl Fetcher for FakeFetcher {
         if self.0.proxy {
             GlobalDispatcher::Plain(vec![Some("proxy agent".to_owned())])
         } else {
-            GlobalDispatcher::Declared(Rc::new(|_| false))
+            GlobalDispatcher::Declared(Arc::new(|_| false))
         }
     }
 
