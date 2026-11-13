@@ -2,6 +2,7 @@
 // plain-text extraction, on/off and measurement attribute readers.
 import { attrsOf, findChild, type XNode } from './xml-utils'
 import { resolveThemeColor } from './theme'
+import { canonicalXmlSyntax } from './ooxml-normalize'
 import type { ThemeColors } from './types'
 
 export interface RelInfo {
@@ -75,7 +76,8 @@ export function onOffTagIn(xml: string, name: string): boolean | undefined {
   return !['0', 'false', 'none', 'off'].includes(raw.toLowerCase())
 }
 
-export function plainText(xml: string): string {
+export function plainText(source: string): string {
+  const xml = canonicalXmlSyntax(source)
   const texts: string[] = []
   // a space at cell boundaries keeps table text from gluing together
   const re = /<w:t(?:\s[^>]*)?>([\s\S]*?)<\/w:t>|<\/w:tc>/g

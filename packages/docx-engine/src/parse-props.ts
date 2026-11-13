@@ -1,6 +1,8 @@
 // Pure XML -> value readers for paragraph, run and table-cell properties
 // (no document context, no recursion into block builders).
+import { maskOpaque } from './xml-utils'
 import type { ParaBorderSides, ParaFormat, Run, ThemeFonts } from './types'
+import { findStartTag } from './xml-tag'
 import { invoke } from './engine'
 
 /** No run un-hides itself and nothing anchors here (bookmarks, comments, sectPr,
@@ -8,6 +10,46 @@ import { invoke } from './engine'
  *  fine: the hidden item still advances the counter (see hiddenParagraph) */
 export function staysVanished(xml: string): boolean {
   return invoke('staysVanished', [xml]) as never
+}
+/**
+ * Exact <w:pPr>...</w:pPr> slice of a paragraph (depth-aware: pPrChange nests
+ * another w:pPr inside). undefined when the paragraph has no properties.
+ */
+export function rawPPrOf(xml: string): string | undefined {
+  // tags are found in the XML with its comments and CDATA blanked, so their
+  // text is never a tag; the slice is of the XML itself
+  const masked = maskOpaque(xml)
+  // the paragraph's own pPr must be the first child of w:p; a later match
+  // would belong to nested content (textbox paragraphs)
+  const openEnd = findStartTag(masked)?.end
+  if (openEnd === undefined) return undefined
+  // pretty-printed sources put whitespace between <w:p> and its pPr
+  const start = openEnd + (/^\s*/.exec(masked.slice(openEnd))?.[0].length ?? 0)
+  if (!masked.startsWith('<w:pPr', start)) return undefined
+  const re = /<w:pPr(?=[\s/>])|<\/w:pPr\s*>/g
+  re.lastIndex = start
+  let depth = 0
+  let match: RegExpExecArray | null
+  while ((match = re.exec(masked)) !== null) {
+    if (match[0].startsWith('</')) {
+      depth--
+      if (depth === 0) return xml.slice(start, match.index + match[0].length)
+    } else {
+      // self-closing <w:pPr/> never opens
+      const tag = findStartTag(masked, 'w:pPr', match.index)
+      if (tag?.selfClosing) {
+        if (depth === 0) return xml.slice(start, tag.end)
+        re.lastIndex = tag.end
+        continue
+      }
+      depth++
+    }
+  }
+  return undefined
+}
+/** drop textbox content so "does the paragraph itself have text" checks work */
+export function stripTextboxes(xml: string): string {
+  return invoke('stripTextboxes', [xml]) as never
 }
 /** twips of one "character" for each family of character-unit indents */
 export interface CharUnits {

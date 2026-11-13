@@ -73,7 +73,7 @@ import {
   type TableStyleFlags,
 } from './table-style'
 import { ownValue, setOwn } from './own-value'
-import { asXmlNode, decodeXml, percentFraction } from './xml-utils'
+import { asXmlNode, canonicalXml, decodeXml, percentFraction } from './xml-utils'
 import { readRedactLabel } from './redaction-xml'
 
 const parser = xmlParser({
@@ -178,7 +178,8 @@ function uid(prefix: string): string {
 }
 
 export function parseSlide(input: SlideParseInput): Slide {
-  const { slideXml, path, layoutPath, masterPath, ctx } = input
+  const { path, layoutPath, masterPath, ctx } = input
+  const slideXml = canonicalXml(input.slideXml)
   const scan = scanSlide(slideXml)
 
   // Parse each shape's XML fragment with fast-xml-parser (independent parses, naturally aligned with scan order)
@@ -1489,6 +1490,13 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
     if (model) {
       const cNvPr = node['p:nvGraphicFramePr']?.['p:cNvPr']
       const descr: string | undefined = cNvPr?.['@_descr'] || undefined
+      // the overlay shapes' own words count too: they are drawn on the chart
+      const redact =
+        model.redact ??
+        userShapes
+          .flatMap((shape) => shape.text?.paragraphs ?? [])
+          .flatMap((p) => p.runs)
+          .find((r) => r.redact)?.redact
       return {
         id: uid('chart'),
         type: 'chart',
@@ -1496,6 +1504,7 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
         transform: frameXfrm,
         name: cNvPr?.['@_name'],
         ...(descr ? { descr } : {}),
+        ...(redact ? { redact } : {}),
         chart: model,
         ...(userShapes.length ? { userShapes } : {}),
       } satisfies ChartElement

@@ -198,6 +198,30 @@ export function escapeXmlAttr(text: string): string {
   return escapeXmlText(text).replace(/"/g, '&quot;')
 }
 
+const NON_CANONICAL = /<!--|<!\[CDATA\[|<\/[^>]*\s>/
+/** a comment, a CDATA section, or any tag (quote-aware, so a `>` inside a value ends nothing) */
+const MARKUP = /<!--[\s\S]*?-->|<!\[CDATA\[([\s\S]*?)\]\]>|<(?:[^>"']|"[^"]*"|'[^']*')*>/g
+
+/**
+ * A part's XML in the one spelling the engine's patchers look for: no comments, no CDATA
+ * sections (their text escaped instead) and no white space before the `>` of an end tag.
+ *
+ * Reading and saving search the XML text for `</a:r>`, `</a:p>`, `</p:txBody>` and the like.
+ * A comment or a CDATA section can hold those very words, and `</a:p >` is the end tag
+ * `</a:p>` as XML reads it, so a search that looked for one spelling cut a run or a
+ * paragraph in the wrong place: an edit went missing, or the saved part did not parse.
+ * Applied once where a slide is read, so every patcher after it sees what it was written for.
+ * What XML reads is unchanged.
+ */
+export function canonicalXml(xml: string): string {
+  if (!NON_CANONICAL.test(xml)) return xml
+  return xml.replace(MARKUP, (markup, cdata: string | undefined) => {
+    if (markup.startsWith('<!--')) return ''
+    if (cdata !== undefined) return escapeXmlText(cdata)
+    return markup.startsWith('</') ? markup.replace(/\s+>$/, '>') : markup
+  })
+}
+
 const RELATIONSHIP_ID = /\bId\s*=\s*(?:"([^"]*)"|'([^']*)')/g
 
 /**

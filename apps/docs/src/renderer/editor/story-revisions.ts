@@ -18,7 +18,8 @@ import type {
   TextboxDisplay,
   TextboxParaDisplay,
 } from '@seuoffice/docx-engine'
-import { noteModelText, WITHHELD_ENTRY_TEXT } from '@seuoffice/docx-engine'
+import { noteModelText, withheldLabelOf, WITHHELD_ENTRY_TEXT } from '@seuoffice/docx-engine'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
 import type { Node as PmNode } from '@tiptap/pm/model'
 import type { HfView } from '../doc-state'
 import { editKey, ownHf, type HfKind, type HfSectionState } from '../hf-sections'
@@ -33,8 +34,12 @@ export interface StoryLocation {
   kind: StoryKind
   /** unique within the current models; re-resolved against them before an action */
   id: string
-  /** the changed text as the list shows it */
+  /** the changed text as the list shows it (the person's own view: the real words) */
   text: string
+  /** the same text as a model may read it: each run hidden from AI as its placeholder */
+  modelText: string
+  /** a run of the change is hidden from AI */
+  hidden: boolean
   record: RevisionInfo
   type: StoryRevisionType
   /** footnote / endnote: the note's w:id */
@@ -77,6 +82,33 @@ interface RunSite {
   textbox?: StoryLocation['textbox']
 }
 
+/**
+ * The text of a run list as a model may read it: each run hidden from AI as its
+ * placeholder (neighbours under one label as one). The label comes from the
+ * parser's own read of the run (`redact` on a note's run, the mark in a run's
+ * serialised rPr), never from the words.
+ */
+const hiddenLabelOf = (run: AnyRun): string | null =>
+  (run as NoteRun).redact !== undefined
+    ? (run as NoteRun).redact!
+    : withheldLabelOf((run as Run).rawRPr)
+
+function modelTextOfRuns(runs: readonly AnyRun[]): string {
+  let out = ''
+  let last: string | null = null
+  for (const run of runs) {
+    const label = hiddenLabelOf(run)
+    if (label === null) {
+      out += run.text
+      last = null
+    } else {
+      if (label !== last) out += placeholderSource(label)
+      last = label
+    }
+  }
+  return out.replace(/\s+/g, ' ').trim()
+}
+
 /** contiguous runs sharing one ins / del / rPrChange record become one revision */
 function runRevisions(runs: readonly AnyRun[], site: RunSite): StoryRevision[] {
   const out: StoryRevision[] = []
@@ -109,6 +141,8 @@ function runRevisions(runs: readonly AnyRun[], site: RunSite): StoryRevision[] {
         kind: site.kind,
         id: `${site.kind}:${site.partKey}:${site.para}:${cell}:${start}:${type}`,
         text,
+        modelText: modelTextOfRuns(runs.slice(start, end)),
+        hidden: runs.slice(start, end).some((r) => hiddenLabelOf(r) !== null),
         record,
         type,
         ...(site.noteId ? { noteId: site.noteId } : {}),
@@ -428,7 +462,7 @@ export function resolveNotes(
       ...rest,
       richParas,
       text,
-      ...(modelText !== undefined && modelText !== text ? { modelText } : {}),
+      ...(modelText !== undefined ? { modelText } : {}),
       revisionsResolved: [...(note.revisionsResolved ?? []), ...resolutionOf(mine, mode, all)],
     }
   })

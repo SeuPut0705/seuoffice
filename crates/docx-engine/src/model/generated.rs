@@ -12073,6 +12073,7 @@ pub struct RevisionXmlFilter {
     pub before: Option<String>,
     pub date: Option<String>,
     pub ids: Option<Vec<String>>,
+    pub keep_hidden: Option<bool>,
 }
 
 /// The keys of `RevisionXmlFilter`, in declaration order.
@@ -12083,10 +12084,11 @@ pub enum RevisionXmlFilterKey {
     Before,
     Date,
     Ids,
+    KeepHidden,
 }
 
 impl FieldKey for RevisionXmlFilterKey {
-    const NAMES: &'static [&'static str] = &["author", "type", "before", "date", "ids"];
+    const NAMES: &'static [&'static str] = &["author", "type", "before", "date", "ids", "keepHidden"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -12095,6 +12097,7 @@ impl FieldKey for RevisionXmlFilterKey {
             "before" => Some(Self::Before),
             "date" => Some(Self::Date),
             "ids" => Some(Self::Ids),
+            "keepHidden" => Some(Self::KeepHidden),
             _ => None,
         }
     }
@@ -12124,6 +12127,9 @@ impl Serialize for RevisionXmlFilter {
         if let Some(value) = &self.ids {
             map.serialize_entry("ids", value)?;
         }
+        if let Some(value) = &self.keep_hidden {
+            map.serialize_entry("keepHidden", value)?;
+        }
         map.end()
     }
 }
@@ -12145,6 +12151,7 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
                 let mut v_before = None;
                 let mut v_date = None;
                 let mut v_ids = None;
+                let mut v_keep_hidden = None;
                 while let Some(Key(key)) = map.next_key::<Key<RevisionXmlFilterKey>>()? {
                     let Some(key) = key else {
                         map.next_value::<serde::de::IgnoredAny>()?;
@@ -12159,9 +12166,10 @@ impl<'de> Deserialize<'de> for RevisionXmlFilter {
                         RevisionXmlFilterKey::Before => v_before = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RevisionXmlFilterKey::Date => v_date = map.next_value::<wire::OrAbsent<String>>()?.0,
                         RevisionXmlFilterKey::Ids => v_ids = map.next_value::<wire::OrAbsent<Vec<String>>>()?.0,
+                        RevisionXmlFilterKey::KeepHidden => v_keep_hidden = map.next_value::<wire::OrAbsent<bool>>()?.0,
                     }
                 }
-                Ok(RevisionXmlFilter { author: v_author, r#type: v_type, before: v_before, date: v_date, ids: v_ids })
+                Ok(RevisionXmlFilter { author: v_author, r#type: v_type, before: v_before, date: v_date, ids: v_ids, keep_hidden: v_keep_hidden })
             }
         }
         deserializer.deserialize_map(Fields)
@@ -13816,6 +13824,7 @@ jscompat::js_object! {
     /// `ChartDisplay`: the keys go out in the order they were set
     #[derive(Debug, Clone, PartialEq)]
     pub struct ChartDisplay {
+        pub redact: String,
         pub part_path: String,
         pub kind: ChartDisplayKind,
         pub horizontal: bool,
@@ -13845,6 +13854,7 @@ jscompat::js_object! {
 /// The keys of `ChartDisplay`, in declaration order.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ChartDisplayKey {
+    Redact,
     PartPath,
     Kind,
     Horizontal,
@@ -13871,10 +13881,11 @@ pub enum ChartDisplayKey {
 }
 
 impl FieldKey for ChartDisplayKey {
-    const NAMES: &'static [&'static str] = &["partPath", "kind", "horizontal", "grouping", "markers", "radarStyle", "holePct", "explosionPct", "dataLabels", "titleFontPt", "legendFontPt", "legendPos", "noLegend", "frameLine", "xAxis", "yAxis", "dataTable", "title", "categories", "series", "palette", "widthPx", "heightPx"];
+    const NAMES: &'static [&'static str] = &["redact", "partPath", "kind", "horizontal", "grouping", "markers", "radarStyle", "holePct", "explosionPct", "dataLabels", "titleFontPt", "legendFontPt", "legendPos", "noLegend", "frameLine", "xAxis", "yAxis", "dataTable", "title", "categories", "series", "palette", "widthPx", "heightPx"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
+            "redact" => Some(Self::Redact),
             "partPath" => Some(Self::PartPath),
             "kind" => Some(Self::Kind),
             "horizontal" => Some(Self::Horizontal),
@@ -13931,6 +13942,7 @@ impl<'de> Deserialize<'de> for ChartDisplay {
                         return Err(A::Error::duplicate_field(key.name()));
                     }
                     match key {
+                        ChartDisplayKey::Redact => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.redact.set(value) },
                         ChartDisplayKey::PartPath => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.part_path.set(value) },
                         ChartDisplayKey::Kind => if let Some(value) = map.next_value::<wire::OrAbsent<ChartDisplayKind>>()?.0 { b_0.kind.set(value) },
                         ChartDisplayKey::Horizontal => if let Some(value) = map.next_value::<wire::OrAbsent<bool>>()?.0 { b_0.horizontal.set(value) },
@@ -18710,6 +18722,7 @@ jscompat::js_object! {
         pub runs: Vec<Run>,
         pub label: String,
         pub preview_text: String,
+        pub redact: String,
         pub image_data_url: SharedStr,
         pub ole_prog_id: String,
         pub image_width_px: JsNum,
@@ -18813,6 +18826,7 @@ pub enum BlockKey {
     Runs,
     Label,
     PreviewText,
+    Redact,
     ImageDataUrl,
     OleProgId,
     ImageWidthPx,
@@ -18895,7 +18909,7 @@ pub enum BlockKey {
 }
 
 impl FieldKey for BlockKey {
-    const NAMES: &'static [&'static str] = &["id", "type", "docxIndex", "originalXml", "altChunk", "level", "outlineOnly", "styleId", "list", "format", "bookmarks", "hiddenBookmarks", "commentStarts", "commentEnds", "rawPPr", "runs", "label", "previewText", "imageDataUrl", "oleProgId", "imageWidthPx", "imageHeightPx", "imageCrop", "imageEffects", "imageFillRect", "imageLeadingText", "imageLeadingFont", "imageLeadingExplicitSpaceWidthPx", "imageLeadingImplicitSpaceCount", "imageParagraphIndentLeft", "imageParagraphIndentRight", "imageParagraphIndentFirstLine", "imageParagraphSpaceBefore", "imageParagraphSpaceAfter", "imageParagraphSpaceBeforeAuto", "imageParagraphSpaceAfterAuto", "imageParagraphAdditiveSpacing", "imageParagraphLineTwips", "imageParagraphLineRule", "imageMarkFont", "imageMarkFontEastAsia", "imageMarkSizeHalfPoints", "imageEffectExtentTopPx", "imageEffectExtentBottomPx", "anchorLine", "ruleOverlays", "imageAlign", "imageIndentLeftTwips", "imageWrap", "imageBand", "imageWrapDistTopEmu", "imageWrapDistBottomEmu", "imageWrapDistLeftEmu", "imageWrapDistRightEmu", "imageZOrder", "imageZOrderNormalized", "imageOffsetXEmu", "imageOffsetYEmu", "imageRelV", "imageRelH", "imageAnchorLocked", "imagePosH", "imagePosV", "imageRotDeg", "imageFlipH", "imageFlipV", "imageBorder", "table", "fieldDisplay", "hidden", "decorative", "ruleColorHex", "ruleThicknessPx", "ruleWidthPx", "brokenImage", "invisibleMarker", "textboxes", "anchorSnapToGrid", "strayRuns", "strayStyleId", "strayIndent", "strayAlign", "strayList", "formulaDisplay", "chartDisplay", "diagramDisplay", "sdtShell", "sdtShells", "inlineContentControls", "moveRevision", "pPrChangeInfo", "blockRevision", "paraMarkDel", "paraMarkIns", "paraMarkRPrChange", "numberingChange", "sectPrChange"];
+    const NAMES: &'static [&'static str] = &["id", "type", "docxIndex", "originalXml", "altChunk", "level", "outlineOnly", "styleId", "list", "format", "bookmarks", "hiddenBookmarks", "commentStarts", "commentEnds", "rawPPr", "runs", "label", "previewText", "redact", "imageDataUrl", "oleProgId", "imageWidthPx", "imageHeightPx", "imageCrop", "imageEffects", "imageFillRect", "imageLeadingText", "imageLeadingFont", "imageLeadingExplicitSpaceWidthPx", "imageLeadingImplicitSpaceCount", "imageParagraphIndentLeft", "imageParagraphIndentRight", "imageParagraphIndentFirstLine", "imageParagraphSpaceBefore", "imageParagraphSpaceAfter", "imageParagraphSpaceBeforeAuto", "imageParagraphSpaceAfterAuto", "imageParagraphAdditiveSpacing", "imageParagraphLineTwips", "imageParagraphLineRule", "imageMarkFont", "imageMarkFontEastAsia", "imageMarkSizeHalfPoints", "imageEffectExtentTopPx", "imageEffectExtentBottomPx", "anchorLine", "ruleOverlays", "imageAlign", "imageIndentLeftTwips", "imageWrap", "imageBand", "imageWrapDistTopEmu", "imageWrapDistBottomEmu", "imageWrapDistLeftEmu", "imageWrapDistRightEmu", "imageZOrder", "imageZOrderNormalized", "imageOffsetXEmu", "imageOffsetYEmu", "imageRelV", "imageRelH", "imageAnchorLocked", "imagePosH", "imagePosV", "imageRotDeg", "imageFlipH", "imageFlipV", "imageBorder", "table", "fieldDisplay", "hidden", "decorative", "ruleColorHex", "ruleThicknessPx", "ruleWidthPx", "brokenImage", "invisibleMarker", "textboxes", "anchorSnapToGrid", "strayRuns", "strayStyleId", "strayIndent", "strayAlign", "strayList", "formulaDisplay", "chartDisplay", "diagramDisplay", "sdtShell", "sdtShells", "inlineContentControls", "moveRevision", "pPrChangeInfo", "blockRevision", "paraMarkDel", "paraMarkIns", "paraMarkRPrChange", "numberingChange", "sectPrChange"];
 
     fn from_name(name: &str) -> Option<Self> {
         match name {
@@ -18917,6 +18931,7 @@ impl FieldKey for BlockKey {
             "runs" => Some(Self::Runs),
             "label" => Some(Self::Label),
             "previewText" => Some(Self::PreviewText),
+            "redact" => Some(Self::Redact),
             "imageDataUrl" => Some(Self::ImageDataUrl),
             "oleProgId" => Some(Self::OleProgId),
             "imageWidthPx" => Some(Self::ImageWidthPx),
@@ -19047,6 +19062,7 @@ impl<'de> Deserialize<'de> for Block {
                         BlockKey::Runs => if let Some(value) = map.next_value::<wire::OrAbsent<Vec<Run>>>()?.0 { b_0.runs.set(value) },
                         BlockKey::Label => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.label.set(value) },
                         BlockKey::PreviewText => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.preview_text.set(value) },
+                        BlockKey::Redact => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.redact.set(value) },
                         BlockKey::ImageDataUrl => if let Some(value) = map.next_value::<wire::OrAbsent<SharedStr>>()?.0 { b_0.image_data_url.set(value) },
                         BlockKey::OleProgId => if let Some(value) = map.next_value::<wire::OrAbsent<String>>()?.0 { b_0.ole_prog_id.set(value) },
                         BlockKey::ImageWidthPx => b_0.image_width_px.set(map.next_value()?),

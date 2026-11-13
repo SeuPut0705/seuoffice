@@ -1655,6 +1655,14 @@ async function executeTool(
           summary: t('aiSumScriptNoop', { n: idx + 1 }),
         }
       }
+      // A text edit of an element holding a span withheld from the model is the
+      // same damage as the setText op, so it meets the same guard. The script
+      // is atomic, so a refusal leaves the page as it was.
+      for (const edit of r.edits) {
+        if (edit.kind !== 'text') continue
+        const guard = redactGuardFor({ op: 'setText', target: { slide: idx, el: edit.id } }, slides)
+        if (guard) return fail(t('aiFailScript'), `setText('${edit.id}'): ${guard.reason}`)
+      }
       // ── Dispatch: the whole script is ONE transaction — the collected primitives go
       //   to the main process in a single IPC and apply atomically through the op
       //   executor (any failure rolls the deck back there and returns a guided error).
@@ -2001,6 +2009,14 @@ async function executeTool(
           t('aiFailRegen'),
           'The current environment does not support the page-redo pipeline',
         )
+      // a redo replaces the whole page, and every span withheld on it with it
+      const dropped = redactGuardFor({ op: 'deleteSlide', target: { slide: idx } }, slides)
+      if (dropped) {
+        return fail(
+          t('aiFailRegen'),
+          `this page holds text withheld from the model ({{${dropped.label}}}) and a redo would drop it. Edit the page with apply_ops, or clear the mark first if you really mean to replace it.`,
+        )
+      }
       const brief = String(call.input.brief ?? '').trim()
       if (!brief) return fail(t('aiFailRegen'), 'brief must not be empty')
       // Figure-provenance gate
@@ -2870,6 +2886,9 @@ async function executeTool(
       const sourceId = String(call.input.sourceId ?? '')
       if (!slides[idx])
         return fail(t('aiFailChartEdit'), `slideIndex out of range (0-${slides.length - 1})`)
+      // the edit rewrites the chart part wholesale, the hidden words in it with it
+      const guard = redactGuardFor({ op: 'setChart', target: { slide: idx, el: sourceId } }, slides)
+      if (guard) return fail(t('aiFailChartEdit'), guard.reason)
       const op: import('../../shared/ipc').EditChartOp = { slideIndex: idx, sourceId }
       if (call.input.kind != null)
         op.kind = String(call.input.kind) as import('../../shared/ipc').EditChartOp['kind']

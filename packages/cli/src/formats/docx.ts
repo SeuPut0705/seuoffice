@@ -492,7 +492,9 @@ async function applyRevisionOp(
   const body = ops.applyRevisionSelection(doc.editor, sel, mode)
   let elsewhere = 0
   if (!bodyOnly) {
+    // the parts it never loads: changes that would remove words hidden from AI stay pending
     const filter: RevisionXmlFilter = {
+      keepHidden: true,
       ...(sel.author !== undefined ? { author: sel.author } : {}),
       ...(sel.type !== undefined ? { type: sel.type } : {}),
       ...(sel.before !== undefined ? { before: sel.before } : {}),
@@ -526,6 +528,7 @@ async function applyRevisionOp(
   if (done.length)
     parts.push(`${done.length} tracked change(s) (${done.map((e) => e.id).join(', ')})`)
   if (elsewhere) parts.push(`${elsewhere} in headers, footers and notes`)
+  const withheld = 'error' in body ? [] : body.withheld
   const left = ops.listRevisionEntries(doc.editor.state.doc)
   const leftElsewhere = await countRevisionsElsewhere(doc)
   const still: string[] = []
@@ -534,8 +537,10 @@ async function applyRevisionOp(
     still.push(
       `${left.length ? 'and' : 'Still'} ${leftElsewhere} in headers, footers and notes${bodyOnly ? ' (ids address the body; all: true or author / type / before reach them)' : ''}`,
     )
+  const withheldNote =
+    withheld.length > 0 ? ` ${ops.withheldNote(withheld)}. Do not retry them.` : ''
   return {
-    output: `${verb} ${parts.join(' and ')}. ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
+    output: `${verb} ${parts.join(' and ')}.${withheldNote} ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
   }
 }
 
@@ -647,7 +652,12 @@ export function describeDocument(
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
     // the text is the AI readers' view: a span hidden from AI reads as its placeholder
-    const { text, truncated } = clipText(blockText(modelViewOf(doc, node)), maxChars)
+    const view = modelViewOf(doc, node)
+    // a picture hidden from AI has no words: the block lists as its placeholder
+    const { text, truncated } = clipText(
+      typeof view.attrs.redact === 'string' ? String(view.attrs.previewText) : blockText(view),
+      maxChars,
+    )
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -839,16 +849,18 @@ export function documentHtml(doc: OpenDocument): ExportHtml {
     flush(index - 1)
     // pending tracked deletions are dropped, as serializeRangeToHtml drops them
     if (doc.mods.protocol.isTrackedDeleted(node)) return
-    const formula = node.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
+    // a block hidden from AI (a picture) reads as its placeholder, as it does in every AI reader
+    const view = modelViewOf(doc, node)
+    const formula = view.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
     if (formula?.latex) {
       parts.push(`<div data-type="block-math" data-latex="${escapeHtml(formula.latex)}"></div>`)
     } else if (formula?.tokens?.length) {
       formulasAsText++
       parts.push(`<p>${escapeHtml(formula.tokens.join(' '))}</p>`)
-    } else if (node.attrs.blockType === 'image') {
+    } else if (view.attrs.blockType === 'image' && typeof view.attrs.redact !== 'string') {
       skipped.images++
     } else {
-      const preview = String(node.attrs.previewText ?? '')
+      const preview = String(view.attrs.previewText ?? '')
         .replace(/\s+/g, ' ')
         .trim()
       if (preview) parts.push(`<p>${escapeHtml(preview)}</p>`)
@@ -2138,7 +2150,7 @@ export function listComments(doc: OpenDocument): CommentSummary[] {
   const anchors = doc.mods.protocol.commentAnchors(doc.editor)
   // markedXml is the comment's own XML, hidden words included: never listed.
   // A comment holding a mark lists no picture: the picture may sit in a hidden run.
-  // modelText alone is no sign of a mark: it is left out when it reads like the text.
+  // modelText is present exactly when the comment carries a mark, even when it reads like the text.
   return doc.side.comments.map(({ modelText, markedXml, image, ...c }) => {
     const a = anchors.get(c.parentId ?? c.id)
     const marked = markedXml !== undefined || modelText !== undefined
@@ -2164,13 +2176,15 @@ export interface RevisionSummary {
   text: string
   /** formatting changes: `field: old → new` pairs */
   change?: string
+  /** present when the change covers words hidden from AI (left to the person to accept or reject) */
+  hidden?: true
 }
 
 /** Pending tracked changes in document order, ids as accept_changes / reject_changes take them. */
 export function listRevisions(doc: OpenDocument): RevisionSummary[] {
   return doc.mods.revisionOps
     .listRevisionEntries(doc.editor.state.doc)
-    .map(({ from: _from, to: _to, ...rest }) => rest)
+    .map(({ from: _from, to: _to, hidden, ...rest }) => (hidden ? { ...rest, hidden } : rest))
 }
 
 const CONTENT_OPS = [
