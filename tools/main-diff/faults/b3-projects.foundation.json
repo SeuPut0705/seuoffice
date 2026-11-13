@@ -98,9 +98,9 @@
     "fn": ["folder-files.plainFileIn", "folder-files.readFolderText", "trust.readHashedTexts"]
   },
   {
-    "name": "folder-files: a link on the way is followed",
+    "name": "folder-files: a link on the way is no folder",
     "file": "main-core/src/shell/projects/folder_files.rs",
-    "find": "if info.file_type().is_symlink() {",
+    "find": "if !last && !info.is_dir() {",
     "replace": "if false {",
     "fn": [
       "folder-files.plainFileIn",
@@ -148,10 +148,10 @@
     "fn": ["folder-files.readProjectFile"]
   },
   {
-    "name": "visibility: the data folder is only hidden below the root's second level",
+    "name": "visibility: a drive letter path is judged like any other",
     "file": "main-core/src/shell/projects/visibility.rs",
-    "find": "if index == 0 && is_data_dir_name(name) {",
-    "replace": "if index == 1 && is_data_dir_name(name) {",
+    "find": "|| (first.is_some_and(|c| c.is_ascii_alphabetic()) && chars.next() == Some(':'))",
+    "replace": "|| false",
     "fn": ["visibility.isAiVisiblePath"]
   },
   {

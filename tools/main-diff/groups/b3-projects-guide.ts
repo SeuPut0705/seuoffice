@@ -15,7 +15,9 @@
  * - `dir` is `$DIR`; every string of the scenario that starts with it is
  *   written below the real path of `dir` (the project folders are canonical
  *   paths and a temporary folder may lie under a link), and what comes back
- *   keeps the real path, which each side's comparison writes as `$DIR`;
+ *   keeps the real path, which each side's comparison writes as `$DIR`; the
+ *   keys of an object are such strings too (a stored record of a document is
+ *   keyed by its path, written with the literal `$DIR`);
  * - `home`, `userData` and `defaultParent` default to `<dir>/home`,
  *   `<dir>/userData` and `<dir>/parent`, made before the run; the settings
  *   file is `<userData>/app-settings.json`, holding `{ projects: settings }`
@@ -94,7 +96,9 @@ function deep(value: unknown, map: (text: string) => string): unknown {
   if (typeof value === 'string') return map(value)
   if (Array.isArray(value)) return value.map((item) => deep(item, map))
   if (value && typeof value === 'object') {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, deep(item, map)]))
+    return Object.fromEntries(
+      Object.entries(value).map(([key, item]) => [map(key), deep(item, map)]),
+    )
   }
   return value
 }
@@ -111,8 +115,13 @@ function failure(error: unknown): unknown {
 async function runScenario(raw: Scenario, cx: TsContext): Promise<unknown> {
   const dir = raw.dir
   const real = realpathSync(dir)
+  // the keys of the stored records are paths too, and the case writes them with the literal `$DIR`
   const spec = deep(raw, (text) =>
-    text.startsWith(dir) ? real + text.slice(dir.length) : text,
+    text.startsWith(dir)
+      ? real + text.slice(dir.length)
+      : text.startsWith('$DIR')
+        ? real + text.slice('$DIR'.length)
+        : text,
   ) as Scenario
   const home = spec.home ?? `${real}/home`
   const userData = spec.userData ?? `${real}/userData`
@@ -1341,6 +1350,39 @@ const cases: Case[] = [
     {
       'hintfolder/.seuoffice/project.json': projectFile('h1', 'Hinted'),
       'hintfolder/AGENTS.md': AGENTS,
+      'hintfolder/sub/x.docx': 'x',
+    },
+  ),
+  scenario(
+    'an update that keeps the text does not make project.json',
+    run(
+      [
+        op('updateData', { id: 'p1', rel: 'absent.md', mode: 'keep' }),
+        op('updateData', { id: 'p1', rel: 'notes/a.md', mode: 'keep' }),
+      ],
+      { settings: stored({ list: [entry('p1', 'alpha')], trust: { p1: used() } }) },
+    ),
+    { 'alpha/a.txt': 'a', 'alpha/.seuoffice/notes/a.md': 'kept' },
+  ),
+  scenario(
+    'the hint takes back the "no project" record of the document it adopts',
+    run(
+      [
+        op('adoptHint', { doc: `${D}/hintfolder/sub/x.docx` }),
+        op('selection', { target: { kind: 'document', path: `${D}/hintfolder/sub/x.docx` } }),
+        settingsFile,
+      ],
+      {
+        ids: ['h1'],
+        settings: stored({
+          optedOutDocuments: { [`${D}/hintfolder/sub/x.docx`]: { projectId: 'h1' } },
+        }),
+        trust: ['use'],
+      },
+    ),
+    {
+      'hintfolder/.seuoffice/project.json': projectFile('h1', 'Hinted'),
+      'hintfolder/.seuoffice/instructions.md': 'Hint rules.\n',
       'hintfolder/sub/x.docx': 'x',
     },
   ),

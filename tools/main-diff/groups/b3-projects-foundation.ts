@@ -403,6 +403,11 @@ const IGNORE_CASES: IgnoreCase[] = [
     ],
     note: 'one star segment and a question mark segment',
   },
+  {
+    text: 'build/**\n',
+    probes: [['build/a'], ['build/a/b.txt'], ['build', true], ['other/build/x'], ['builds/a']],
+    note: 'a trailing double star takes the files below its folder',
+  },
 ]
 
 const ignoreSpec: Group = {

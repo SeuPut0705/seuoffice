@@ -455,9 +455,9 @@
     "fn": ["project-tools.ProjectFolderTools"]
   },
   {
-    "name": "project-tools: the name on disk is not judged again",
+    "name": "project-tools: the name as given is not judged before the disk is asked",
     "file": "main-core/src/shell/projects/project_tools.rs",
-    "find": "self.judge(visibility, &segments)?",
+    "find": "self.judge(visibility, &asked)?",
     "replace": "None::<ProjectReadRefusal>",
     "fn": ["project-tools.ProjectFolderTools"]
   },

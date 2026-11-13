@@ -1464,6 +1464,19 @@ const cases: Case[] = [
     },
     'the window of 8 MiB begins inside a line: the cut line is dropped',
   ),
+  scenario(
+    {},
+    [
+      attach('c1', '$DIR/proj/A.docx'),
+      attach('c1', '$DIR/proj/B.docx'),
+      reply('c1', 'first', {}, inDocs('C.docx')),
+      info('c1'),
+      reply('c1', 'second', {}, inDocs('D.docx')),
+      info('c1'),
+    ],
+    {},
+    'documents attached before the first write are written once, not again after the next message',
+  ),
 ]
 
 export const chats: Group = {

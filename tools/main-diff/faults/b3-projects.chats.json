@@ -777,11 +777,11 @@
     "fn": ["chat-store.scenario"]
   },
   {
-    "name": "stand-ins: macos is not darwin",
+    "name": "stand-ins: desktop.ini is not OS junk",
     "file": "main-core/src/shell/projects/stand_ins.rs",
-    "find": "\"macos\" => \"darwin\",",
-    "replace": "\"macos\" => \"macos\",",
-    "fn": ["chat-store.scenario"]
+    "find": "const HIDDEN_FILE_NAMES: [&str; 2] = [\"thumbs.db\", \"desktop.ini\"];",
+    "replace": "const HIDDEN_FILE_NAMES: [&str; 2] = [\"thumbs.db\", \"desktop.in\"];",
+    "fn": ["folder-tree.isHiddenEntry"]
   },
   {
     "name": "chat-store: the read warning of a state names another chat",

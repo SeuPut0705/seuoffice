@@ -686,7 +686,9 @@ const addFolder = handlerFn('addFolder', [
       {
         answers: {
           'guide.addFolder': asks(added('p1'), instructionsPrompt as never),
-          'dialogs.askTrust': 'view',
+          // a second question (only a fault asks it) gets a closed box, so a
+          // fault that loops back to the question ends instead of hanging
+          'dialogs.askTrust': { $seq: ['view', null] },
           'dialogs.waitForReturn': false,
         },
       },
@@ -2189,6 +2191,42 @@ const scenarios: Case[] = [
     'a platform that folds case',
   ),
   scenarioCase({}, [call('noSuchRequest', HOME, {})], {}, 'a request that has no handler'),
+  scenarioCase(
+    { gone: [HOME], answers: { 'chats.chatInfo': { documents: [], lastEditor: 'home' } } },
+    [
+      call('openProjectScreen', HOME, P1),
+      call('openDocumentChat', HOME, ref()),
+      listen(HOME, 'onOpenProjectScreen'),
+      listen(HOME, 'onOpenChat'),
+    ],
+    {},
+    'an event that finds its window gone drops the window and all that was held for it',
+  ),
+  scenarioCase(
+    {},
+    [call('openProjectScreen', HOME, P1), op('forget', HOME), listen(HOME, 'onOpenProjectScreen')],
+    {},
+    'a closed window keeps nothing that was held for it',
+  ),
+  scenarioCase(
+    {
+      answers: {
+        'chats.append': {
+          $events: [{ event: appended('c9') }],
+          then: { status: 'saved', message: message(1) },
+        },
+      },
+    },
+    [
+      ...listenAll(SHEETS),
+      call('newChat', SHEETS, P1),
+      post(DOCS, 'c9'),
+      call('setSelection', SHEETS, { projectId: null }),
+      post(DOCS, 'c9'),
+    ],
+    {},
+    'choosing no project stops a window showing the chat it opened (the event is of that chat)',
+  ),
 ]
 
 // ---------------------------------------------------------------------------

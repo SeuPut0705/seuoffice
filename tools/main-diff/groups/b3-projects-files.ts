@@ -1403,6 +1403,39 @@ const TOOLS_CASES: Case[] = [
     files: TOOL_FILES,
     note: 'the spelling on disk is judged too (a disk that ignores case)',
   },
+  {
+    args: [
+      baseCfg({
+        platform: 'darwin',
+        projects: { p: { dir: 'p', fold: true } },
+        cloud: { answers: {} },
+        listCloud: null,
+      }),
+      [
+        open1,
+        { op: 'listFiles', owner: 1, raw: scoped({ prefix: 'mixed' }) },
+        { op: 'listFiles', owner: 1, raw: scoped({ prefix: 'MIXED/up' }) },
+        { op: 'listFiles', owner: 1, raw: scoped({ prefix: 'Mixed/Up' }) },
+      ],
+    ],
+    files: { ...TOOL_FILES, 'p/Mixed/Up.md': { text: 'mixed case', mtimeMs: sec(7000) } },
+    note: 'darwin: a prefix is compared with the folded path of a file named with capitals',
+  },
+  {
+    args: [
+      baseCfg(),
+      [
+        open1,
+        read('.seuoffice/nope.md'),
+        read('sub/.nope.md'),
+        read('.git/missing.txt'),
+        read('node_modules/x.md'),
+        read('sub/nope.md'),
+      ],
+    ],
+    files: TOOL_FILES,
+    note: 'read: a hidden name is refused as hidden before the disk is asked, absent or not',
+  },
 ]
 
 // ---------------------------------------------------------------------------

@@ -94,7 +94,7 @@ fn map_strings(value: &Value, map: &dyn Fn(&str) -> String) -> Value {
         Value::Object(fields) => Value::Object(
             fields
                 .iter()
-                .map(|(key, item)| (key.clone(), map_strings(item, map)))
+                .map(|(key, item)| (map(key), map_strings(item, map)))
                 .collect(),
         ),
         other => other.clone(),
@@ -321,7 +321,11 @@ fn scenario_call(args: &[Value], cx: &mut Context) -> Answer {
     let raw = arg(args, 0).ok_or_else(|| bad("scenario"))?;
     let dir = text_of(raw, "dir")?.to_owned();
     let real = real_path_native(&dir).ok_or_else(|| bad("the folder of the case"))?;
-    let spec = map_strings(raw, &|text| match text.strip_prefix(&dir) {
+    // the keys of the stored records are paths too, and the case writes them with the literal `$DIR`
+    let spec = map_strings(raw, &|text| match text
+        .strip_prefix(&dir)
+        .or_else(|| text.strip_prefix("$DIR"))
+    {
         Some(rest) => format!("{real}{rest}"),
         None => text.to_owned(),
     });

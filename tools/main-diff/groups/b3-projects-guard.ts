@@ -1947,6 +1947,20 @@ const placerCases: Case[] = [
     DOC_FILES,
     'the folder the save dialog opens in',
   ),
+  placerCase(
+    { projects: PROJECTS, windows: WINDOWS },
+    [
+      {
+        op: 'preset',
+        id: 3,
+        placement: { projectId: 'p1', root: `${D}/proj2`, dir: `${D}/proj2` },
+      },
+      { op: 'placementFor', id: 3 },
+      { op: 'presetProjectOf', id: 3 },
+    ],
+    DOC_FILES,
+    'a preset of another project with the same root is not used',
+  ),
 ]
 
 function placerScenario(): FnSpec['ts'] {
