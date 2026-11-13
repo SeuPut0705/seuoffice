@@ -14,13 +14,15 @@
 //! | `tabs::WindowsHost` | stub: the window system of the tab strip ([`super::window::Windows`] has the Tauri half) |
 //! | `tabs::TabHooks` (provided, on the core thread) | stub, [`register_hooks`] |
 
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use shell_contract::Hosts;
 use shell_contract::ipc::{RegisterError, Registry};
-use shell_contract::runtime::Services;
+use shell_contract::provided::Provided;
+use shell_contract::runtime::{Services, Thread, run_on};
 use shell_ipc_w::doc_picker::{DocPickerSourcesHost, DocPickerWindowHost};
 use shell_ipc_w::editor_files::{
     Clock, ClockHost, DocsTabsHost, FileParseHost, OpenFilesHost, SheetsTabsHost, UiLanguageHost,
@@ -81,14 +83,41 @@ fn install_hosts(hosts: &mut Hosts) {
     );
 }
 
+thread_local! {
+    /// What the batches provide each other, kept on the core thread for the
+    /// shell's own hosts whose calls start elsewhere (a menu click, a worker)
+    static CORE_PROVIDED: RefCell<Option<Rc<Provided>>> = const { RefCell::new(None) };
+}
+
+/// The core thread, once the batches registered on it
+static CORE: OnceLock<Arc<dyn Thread>> = OnceLock::new();
+
+/// Runs `job` with the core thread's [`Provided`]: at once on the core
+/// thread, else through `run_on(core, ..)`. `None` before the batches registered.
+#[allow(dead_code)]
+pub(crate) fn on_core<R: Send + 'static>(
+    job: impl FnOnce(&Provided) -> R + Send + 'static,
+) -> Option<R> {
+    let core = CORE.get()?;
+    let run = move || CORE_PROVIDED.with(|p| p.borrow().as_deref().map(job));
+    if core.is_current() {
+        run()
+    } else {
+        run_on(core.as_ref(), run)
+    }
+}
+
 /// The batch that comes before the six: it adds what the shell provides on
 /// the core thread. `tabs::register` takes the first `TabHooks` it finds.
 pub fn register_hooks(
     registry: &mut dyn Registry,
-    _services: &Services,
+    services: &Services,
 ) -> Result<(), RegisterError> {
+    let _ = CORE.set(services.core.clone());
+    let provided = registry.provided();
     let hooks: Rc<dyn TabHooks> = Rc::new(Unbuilt);
-    registry.provided().add::<dyn TabHooks>(hooks);
+    provided.add::<dyn TabHooks>(hooks);
+    CORE_PROVIDED.with(|p| *p.borrow_mut() = Some(provided));
     Ok(())
 }
 
