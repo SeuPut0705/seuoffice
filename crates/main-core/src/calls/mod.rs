@@ -18,6 +18,7 @@ mod b2_remote;
 mod b3_session;
 mod b3_shell;
 mod b3_update;
+mod b3b4_rest;
 mod b4_docs;
 mod b4_fonts;
 mod b4_html;
@@ -110,6 +111,7 @@ const GROUPS: &[Group] = &[
     b2_cli::call,
     b4_fonts::call,
     b4_pdf_store::call,
+    b3b4_rest::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.

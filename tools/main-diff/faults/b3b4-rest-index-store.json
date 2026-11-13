@@ -1,0 +1,1304 @@
+[
+  {
+    "name": "indexer request timeout is shorter",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "pub const WORKER_REQUEST_TIMEOUT_MS: f64 = 120_000.0;",
+    "replace": "pub const WORKER_REQUEST_TIMEOUT_MS: f64 = 100_000.0;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "decider takes 21 documents",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "pub const MAX_DOCS: usize = 20;",
+    "replace": "pub const MAX_DOCS: usize = 21;",
+    "fn": ["decider.MAX_DOCS", "decider.prepare", "rerank.SearchReranker"]
+  },
+  {
+    "name": "decider query clip is one short",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const MAX_QUERY_CHARS: usize = 512;",
+    "replace": "const MAX_QUERY_CHARS: usize = 511;",
+    "fn": ["decider.prepare"]
+  },
+  {
+    "name": "decider title clip is one short",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const MAX_TITLE_CHARS: usize = 128;",
+    "replace": "const MAX_TITLE_CHARS: usize = 127;",
+    "fn": ["decider.prepare"]
+  },
+  {
+    "name": "decider text clip is one short",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const MAX_TEXT_CHARS: usize = 1200;",
+    "replace": "const MAX_TEXT_CHARS: usize = 1199;",
+    "fn": ["decider.prepare", "rerank.SearchReranker"]
+  },
+  {
+    "name": "decider body budget is smaller",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const MAX_BODY_BYTES: usize = 24 * 1024;",
+    "replace": "const MAX_BODY_BYTES: usize = 20 * 1024;",
+    "fn": ["decider.prepare", "rerank.SearchReranker"]
+  },
+  {
+    "name": "decider response limit is doubled",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const MAX_RESPONSE_BYTES: usize = 1024 * 1024;",
+    "replace": "const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;",
+    "fn": ["decider.evaluate", "rerank.probeDecision"]
+  },
+  {
+    "name": "decider response limit includes its size",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if r.body.len() > MAX_RESPONSE_BYTES {",
+    "replace": "if r.body.len() >= MAX_RESPONSE_BYTES {",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider budget is 5 s",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const TIMEOUT_MS: f64 = 4000.0;",
+    "replace": "const TIMEOUT_MS: f64 = 5000.0;",
+    "fn": ["decider.evaluate", "rerank.probeDecision"]
+  },
+  {
+    "name": "decider tolerance is wider",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const PROB_TOLERANCE: f64 = 0.02;",
+    "replace": "const PROB_TOLERANCE: f64 = 0.05;",
+    "fn": ["decider.validate", "decider.evaluate"]
+  },
+  {
+    "name": "decider tolerance is narrower",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const PROB_TOLERANCE: f64 = 0.02;",
+    "replace": "const PROB_TOLERANCE: f64 = 0.01;",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider rizzo is hosted",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "    endpoint == DecisionEndpoint::Kev\n        || endpoint == DecisionEndpoint::Rizzo",
+    "replace": "    endpoint == DecisionEndpoint::Kev",
+    "fn": ["decider.isLocalEndpoint"]
+  },
+  {
+    "name": "decider custom is hosted",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "\n        || endpoint == DecisionEndpoint::Custom\n",
+    "replace": "\n",
+    "fn": ["decider.isLocalEndpoint"]
+  },
+  {
+    "name": "decider blank custom URL passes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if base.is_empty() {",
+    "replace": "if base.is_empty() && false {",
+    "fn": ["decider.endpointUrl"]
+  },
+  {
+    "name": "decider blank account passes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if account.is_empty() {",
+    "replace": "if account.is_empty() && false {",
+    "fn": ["decider.endpointUrl"]
+  },
+  {
+    "name": "decider https is refused",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if url.scheme() == \"https\" {",
+    "replace": "if false {",
+    "fn": ["decider.endpointUrl"]
+  },
+  {
+    "name": "decider plain http accepted anywhere",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if url.scheme() == \"http\" && loopback.test(&url_host(&url)) {",
+    "replace": "if url.scheme() == \"http\" {",
+    "fn": ["decider.endpointUrl"]
+  },
+  {
+    "name": "decider bad URL reads as insecure",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "return Err(DecisionError::of(\"bad-url\"));",
+    "replace": "return Err(DecisionError::of(\"insecure-url\"));",
+    "fn": ["decider.endpointUrl"]
+  },
+  {
+    "name": "decider custom model default differs",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "\"decision\".to_owned()",
+    "replace": "\"default\".to_owned()",
+    "fn": ["decider.bodyModel"]
+  },
+  {
+    "name": "decider blank cloudflare model kept",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "return if typed.is_empty() {",
+    "replace": "return if false {",
+    "fn": ["decider.endpointUrl", "decider.bodyModel"]
+  },
+  {
+    "name": "decider cloudflare id is the first segment",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "path.rsplit('/').next()",
+    "replace": "path.split('/').next()",
+    "fn": ["decider.bodyModel"]
+  },
+  {
+    "name": "decider cloudflare omni refused",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "\"clef\" | \"clef-flash\" | \"clef-omni\"",
+    "replace": "\"clef\" | \"clef-flash\"",
+    "fn": ["decider.bodyModel"]
+  },
+  {
+    "name": "decider direct model changes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "(\"https://api.typesafe.ai/v1/systemone\", \"jev-1.13.0\")",
+    "replace": "(\"https://api.typesafe.ai/v1/systemone\", \"jev-1.13.1\")",
+    "fn": ["decider.bodyModel", "decider.prepare", "decider.validate"]
+  },
+  {
+    "name": "decider perplexity flash model changes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "\"pplx-decider-flash-v1.2\"",
+    "replace": "\"pplx-decider-flash-v1.3\"",
+    "fn": ["decider.bodyModel", "decider.prepare"]
+  },
+  {
+    "name": "decider liquid ultra URL changes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "(\"https://api.liquid.ai/decisions/v1/systemone\", \"d1-ultra\")",
+    "replace": "(\"https://api.liquid.ai/decisions/v1/systemone\", \"d1-max\")",
+    "fn": ["decider.bodyModel"]
+  },
+  {
+    "name": "decider openai URL changes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "\"https://api.openai.com/v1/decisions\"",
+    "replace": "\"https://api.openai.com/v1/decision\"",
+    "fn": ["decider.endpointUrl", "decider.evaluate"]
+  },
+  {
+    "name": "decider kev port changes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "const KEV_URL: &str = \"http://127.0.0.1:8009/v1/systemone\";",
+    "replace": "const KEV_URL: &str = \"http://127.0.0.1:8010/v1/systemone\";",
+    "fn": ["decider.endpointUrl", "decider.evaluate"]
+  },
+  {
+    "name": "decider rizzo model changes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "\"rizzo-latest\"",
+    "replace": "\"rizzo-newest\"",
+    "fn": ["decider.bodyModel"]
+  },
+  {
+    "name": "decider blank query passes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if trim(query).is_empty() {",
+    "replace": "if query.is_empty() {",
+    "fn": ["decider.prepare", "decider.evaluate"]
+  },
+  {
+    "name": "decider takes one document too many",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "for d in docs.iter().take(MAX_DOCS) {",
+    "replace": "for d in docs.iter().take(MAX_DOCS + 1) {",
+    "fn": ["decider.prepare"]
+  },
+  {
+    "name": "decider keeps the document that overflows",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "            documents.pop();\n            break;",
+    "replace": "            break;",
+    "fn": ["decider.prepare", "rerank.SearchReranker"]
+  },
+  {
+    "name": "decider openai levels start at one",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "(\"label\", string(&value.to_string())),",
+    "replace": "(\"label\", string(&(value + 1).to_string())),",
+    "fn": ["decider.prepare"]
+  },
+  {
+    "name": "decider openrouter keeps zero retention off",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "(\"zdr\", JsonValue::Bool(true)),",
+    "replace": "(\"zdr\", JsonValue::Bool(false)),",
+    "fn": ["decider.prepare"]
+  },
+  {
+    "name": "decider openrouter allows data collection",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "(\"data_collection\", string(\"deny\")),",
+    "replace": "(\"data_collection\", string(\"allow\")),",
+    "fn": ["decider.prepare"]
+  },
+  {
+    "name": "decider cloudflare envelope kept",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "Ok(r.get(\"result\").unwrap_or(raw))",
+    "replace": "Ok(raw)",
+    "fn": ["decider.validate", "decider.evaluate", "rerank.probeDecision"]
+  },
+  {
+    "name": "decider envelope on every route",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if !is_cloudflare_endpoint(endpoint) {\n        return Ok(raw);",
+    "replace": "if true {\n        return Ok(raw);",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider fractional token count passes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if n.trunc() != n {",
+    "replace": "if false {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider negative cost passes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "cost = Some(num(Some(spent), 0.0, MAX_SAFE_INTEGER)?);",
+    "replace": "cost = Some(num(Some(spent), -1.0, MAX_SAFE_INTEGER)?);",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider negative token count passes",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "let n = num(Some(tokens), 0.0, MAX_SAFE_INTEGER)?;",
+    "replace": "let n = num(Some(tokens), -5.0, MAX_SAFE_INTEGER)?;",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider direct model unchecked",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if !matches!(r.get(\"model\"), Some(JsonValue::String(m)) if m == pinned) {",
+    "replace": "if false {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider openrouter snapshot digits relaxed",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "r\"^typesafe\\/jev-1\\.13(?:-\\d{8})?$\"",
+    "replace": "r\"^typesafe\\/jev-1\\.13(?:-\\d{4,8})?$\"",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider provider warning ignored",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if matches!(r.get(\"warnings\"), Some(JsonValue::Array(w)) if !w.is_empty()) {",
+    "replace": "if false {",
+    "fn": ["decider.validate", "rerank.probeDecision"]
+  },
+  {
+    "name": "decider answers object kept without three keys",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if p.len() != 3 || (sum - 1.0).abs() > PROB_TOLERANCE {",
+    "replace": "if (sum - 1.0).abs() > PROB_TOLERANCE {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider confidence may reach 2",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "num(a.get(\"confidence\"), 0.0, 1.0)?;\n        let p = obj(a.get(\"probabilities\"))?;",
+    "replace": "num(a.get(\"confidence\"), 0.0, 2.0)?;\n        let p = obj(a.get(\"probabilities\"))?;",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider score may reach 3",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "let score = num(a.get(\"score\"), 0.0, 2.0)?;\n        num(a.get(\"confidence\"), 0.0, 1.0)?;\n        let p = obj(",
+    "replace": "let score = num(a.get(\"score\"), 0.0, 3.0)?;\n        num(a.get(\"confidence\"), 0.0, 1.0)?;\n        let p = obj(",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider answer type unchecked",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "let a = obj(answers.get(&format!(\"d{i}\")))?;\n        if !matches!(a.get(\"type\"), Some(JsonValue::String(t)) if t == \"score\") {",
+    "replace": "let a = obj(answers.get(&format!(\"d{i}\")))?;\n        if false {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider expectation unchecked",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if p.len() != 3 || (sum - 1.0).abs() > PROB_TOLERANCE {\n            return Err(invalid_response());\n        }\n        if (score - values[1] - 2.0 * values[2]).abs() > PROB_TOLERANCE {",
+    "replace": "if p.len() != 3 || (sum - 1.0).abs() > PROB_TOLERANCE {\n            return Err(invalid_response());\n        }\n        if false {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider openai answer type unchecked",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "let a = obj(found)?;\n        if !matches!(a.get(\"type\"), Some(JsonValue::String(t)) if t == \"score\") {",
+    "replace": "let a = obj(found)?;\n        if false {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider openai rows may exceed three",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if rows.len() != 3 || (sum - 1.0).abs() > PROB_TOLERANCE {",
+    "replace": "if (sum - 1.0).abs() > PROB_TOLERANCE {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider openai expectation unchecked",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if rows.len() != 3 || (sum - 1.0).abs() > PROB_TOLERANCE {\n            return Err(invalid_response());\n        }\n        if (score - values[1] - 2.0 * values[2]).abs() > PROB_TOLERANCE {",
+    "replace": "if rows.len() != 3 || (sum - 1.0).abs() > PROB_TOLERANCE {\n            return Err(invalid_response());\n        }\n        if false {",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider openai first duplicate answer wins",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "Some(slot) => slot.1 = entry,",
+    "replace": "Some(_) => {}",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider openai confidence may reach 2",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "num(a.get(\"confidence\"), 0.0, 1.0)?;\n        let Some(JsonValue::Array(probabilities))",
+    "replace": "num(a.get(\"confidence\"), 0.0, 2.0)?;\n        let Some(JsonValue::Array(probabilities))",
+    "fn": ["decider.validate"]
+  },
+  {
+    "name": "decider key check does not trim",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if !is_local_endpoint(opts.endpoint) && trim(&opts.key).is_empty() {",
+    "replace": "if !is_local_endpoint(opts.endpoint) && opts.key.is_empty() {",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider retries only 429",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "(r.status == 429.0 || r.status == 529.0) && attempt == 0",
+    "replace": "r.status == 429.0 && attempt == 0",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider retries every attempt",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "&& attempt == 0 {",
+    "replace": "&& attempt < 2 {",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider default wait is long",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "None => 250.0,",
+    "replace": "None => 5000.0,",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider retry-after in tenths of a second",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "seconds * 1000.0",
+    "replace": "seconds * 100.0",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider retry-after date counted backwards",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "date_parse(retry_after) - transport.now_ms()",
+    "replace": "date_parse(retry_after) + transport.now_ms()",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider waits up to the deadline",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "math_max(0.0, wait) >= deadline - transport.now_ms()",
+    "replace": "math_max(0.0, wait) > deadline - transport.now_ms()",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider unreadable wait retried",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if !wait.is_finite() || math_max(0.0, wait)",
+    "replace": "if math_max(0.0, wait)",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider 204 is a reply",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if r.status != 200.0 {",
+    "replace": "if r.status != 200.0 && r.status != 204.0 {",
+    "fn": ["decider.evaluate"]
+  },
+  {
+    "name": "decider fetch key not trimmed for the check",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "if !trim(key).is_empty() {",
+    "replace": "if !key.is_empty() {",
+    "fn": ["decider.fetchTransport"]
+  },
+  {
+    "name": "decider fetch sends the key untrimmed",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "format!(\"Bearer {}\", trim(key))",
+    "replace": "format!(\"Bearer {}\", key)",
+    "fn": ["decider.fetchTransport"]
+  },
+  {
+    "name": "decider fetch content type",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "\"application/json\".to_owned()",
+    "replace": "\"text/plain\".to_owned()",
+    "fn": ["decider.fetchTransport"]
+  },
+  {
+    "name": "decider fetch method",
+    "file": "main-core/src/shell/file_index/decider.rs",
+    "find": "method: \"POST\",",
+    "replace": "method: \"PUT\",",
+    "fn": ["decider.fetchTransport"]
+  },
+  {
+    "name": "rerank excerpts are shorter",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "const EXCERPT_CHARS: f64 = 1200.0;",
+    "replace": "const EXCERPT_CHARS: f64 = 1000.0;",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank cache lives 20 minutes",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "const CACHE_TTL_MS: f64 = 30.0 * 60.0 * 1000.0;",
+    "replace": "const CACHE_TTL_MS: f64 = 20.0 * 60.0 * 1000.0;",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank cache lives 40 minutes",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "const CACHE_TTL_MS: f64 = 30.0 * 60.0 * 1000.0;",
+    "replace": "const CACHE_TTL_MS: f64 = 40.0 * 60.0 * 1000.0;",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank cache holds 199",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "const CACHE_MAX: usize = 200;",
+    "replace": "const CACHE_MAX: usize = 199;",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank cache holds 201",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "const CACHE_MAX: usize = 200;",
+    "replace": "const CACHE_MAX: usize = 201;",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank settings default to reranking",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "        rerank: false,\n        endpoint: DecisionEndpoint::Openrouter,",
+    "replace": "        rerank: true,\n        endpoint: DecisionEndpoint::Openrouter,",
+    "fn": ["rerank.DEFAULT_FILE_SEARCH_SETTINGS"]
+  },
+  {
+    "name": "rerank default cloudflare model",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "cloudflare_model: \"@cf/cloudflare/clef\".to_owned(),",
+    "replace": "cloudflare_model: \"@cf/cloudflare/clef-flash\".to_owned(),",
+    "fn": ["rerank.DEFAULT_FILE_SEARCH_SETTINGS", "rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank key cut at 511",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "Some(JsonValue::String(s)) => slice_utf16(trim(s), 0.0, Some(512.0)),",
+    "replace": "Some(JsonValue::String(s)) => slice_utf16(trim(s), 0.0, Some(511.0)),",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank key not trimmed",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "Some(JsonValue::String(s)) => slice_utf16(trim(s), 0.0, Some(512.0)),",
+    "replace": "Some(JsonValue::String(s)) => slice_utf16(s, 0.0, Some(512.0)),",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank custom URL cut at 511",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "custom_base_url: text(read(r, \"customBaseUrl\").as_deref(), 512.0),",
+    "replace": "custom_base_url: text(read(r, \"customBaseUrl\").as_deref(), 511.0),",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank custom model cut at 127",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "custom_model: text(read(r, \"customModel\").as_deref(), 128.0),",
+    "replace": "custom_model: text(read(r, \"customModel\").as_deref(), 127.0),",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank account cut at 127",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "cloudflare_account_id: text(read(r, \"cloudflareAccountId\").as_deref(), 128.0),",
+    "replace": "cloudflare_account_id: text(read(r, \"cloudflareAccountId\").as_deref(), 127.0),",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank cloudflare model cut at 255",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "let cloudflare_model = text(read(r, \"cloudflareModel\").as_deref(), 256.0);",
+    "replace": "let cloudflare_model = text(read(r, \"cloudflareModel\").as_deref(), 255.0);",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank blank cloudflare model kept",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "cloudflare_model: if cloudflare_model.is_empty() {",
+    "replace": "cloudflare_model: if false {",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank string true enables",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "rerank: matches!(read(r, \"rerank\").as_deref(), Some(JsonValue::Bool(true))),",
+    "replace": "rerank: matches!(read(r, \"rerank\").as_deref(), Some(JsonValue::String(_) | JsonValue::Bool(true))),",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank null endpoint hides the legacy one",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "Some(v) if !matches!(*v, JsonValue::Null) => Some(v),\n        _ => match b {",
+    "replace": "Some(v) => Some(v),\n        _ => match b {",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank legacy endpoint ignored",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "read(r, \"jevEndpoint\")",
+    "replace": "read(r, \"jevEndpointX\")",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank legacy keys ignored",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "read(r, \"jevKeys\")",
+    "replace": "read(r, \"jevKeysX\")",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank unknown endpoint falls to direct",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": ".unwrap_or(DecisionEndpoint::Openrouter);",
+    "replace": ".unwrap_or(DecisionEndpoint::Direct);",
+    "fn": ["rerank.normalizeFileSearchSettings"]
+  },
+  {
+    "name": "rerank call options lose the key",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "key: s.keys.get(s.endpoint).to_owned(),",
+    "replace": "key: String::new(),",
+    "fn": ["rerank.SearchReranker", "rerank.probeDecision"]
+  },
+  {
+    "name": "rerank ignores the rerank switch",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "if !settings.rerank || (!is_local_endpoint(settings.endpoint) && opts.key.is_empty()) {",
+    "replace": "if !is_local_endpoint(settings.endpoint) && opts.key.is_empty() {",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank local servers need a key",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "(!is_local_endpoint(settings.endpoint) && opts.key.is_empty())",
+    "replace": "opts.key.is_empty()",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank blank custom URL passes",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "&& trim(&settings.custom_base_url).is_empty()",
+    "replace": "&& settings.custom_base_url.is_empty()",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank blank account passes",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "&& trim(&settings.cloudflare_account_id).is_empty()",
+    "replace": "&& settings.cloudflare_account_id.is_empty()",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank judges one document",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "if hits.len() < 2 {",
+    "replace": "if hits.len() < 1 {",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank judges 21 documents",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "saved.len().min(MAX_DOCS)",
+    "replace": "saved.len().min(MAX_DOCS + 1)",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank cache ignores the custom model",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "            settings.custom_model.clone(),\n",
+    "replace": "",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank cache ignores the query",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "            q.to_owned(),\n        ];\n",
+    "replace": "        ];\n",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank never joins a request",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "if self.inflight.contains(&cache_key) {",
+    "replace": "if false {",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank request never leaves the flight",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "self.inflight.retain(|key| *key != job.cache_key);",
+    "replace": "",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank orders worst first",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "let by_score = b.1 - a.1;",
+    "replace": "let by_score = a.1 - b.1;",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "rerank ties reverse",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "a.2 as f64 - b.2 as f64",
+    "replace": "b.2 as f64 - a.2 as f64",
+    "fn": ["rerank.SearchReranker"]
+  },
+  {
+    "name": "probe key check does not trim",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "if !is_local_endpoint(settings.endpoint) && trim(&opts.key).is_empty() {",
+    "replace": "if !is_local_endpoint(settings.endpoint) && opts.key.is_empty() {",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe missing URL text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"missing-url\" => \"Enter the server URL\",",
+    "replace": "\"missing-url\" => \"Enter the URL\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe insecure URL text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"insecure-url\" => \"Server URL must be https:// (http:// only for this machine)\",",
+    "replace": "\"insecure-url\" => \"Server URL must be https://\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe rate limit text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"rate-limit\" => \"Rate limited \\u{2014} try again shortly\",",
+    "replace": "\"rate-limit\" => \"Rate limited\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe model mismatch text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"model-mismatch\" => \"The endpoint answered with a different model\",",
+    "replace": "\"model-mismatch\" => \"Wrong model\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe warning text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"provider-warning\" => \"The provider reported a warning\",",
+    "replace": "\"provider-warning\" => \"Warning\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe too large text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"response-too-large\" => \"The reply was too large\",",
+    "replace": "\"response-too-large\" => \"Too large\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe invalid text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"invalid-response\" => \"The endpoint returned an unexpected reply\",",
+    "replace": "\"invalid-response\" => \"Unexpected reply\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe unsupported model text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"unsupported-model\" => \"Cloudflare only serves clef, clef-flash and clef-omni\",",
+    "replace": "\"unsupported-model\" => \"Unsupported model\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe account text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"missing-account\" => \"Enter the Cloudflare account ID\",",
+    "replace": "\"missing-account\" => \"Enter the account ID\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe bad URL text",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "\"bad-url\" => \"Server URL is not a valid address\",",
+    "replace": "\"bad-url\" => \"Bad URL\",",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe http code with no digits",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "r\"^http-(\\d+)$\"",
+    "replace": "r\"^http-(\\d*)$\"",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe http label",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "format!(\"HTTP {}\", m.get(1).unwrap_or(\"\"))",
+    "replace": "format!(\"Http {}\", m.get(1).unwrap_or(\"\"))",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe proto message shown",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "None if code == \"__proto__\" => Some(Value::Object(Map::new())),",
+    "replace": "None if code == \"__proto__\" => Some(Value::from(code.clone())),",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "probe inherited method shown",
+    "file": "main-core/src/shell/file_index/rerank.rs",
+    "find": "None if inherited_string(&code).is_some() => None,",
+    "replace": "None if false => None,",
+    "fn": ["rerank.probeDecision"]
+  },
+  {
+    "name": "store tokenizer version bumped",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "const TOKENIZER_VERSION: u32 = 2;",
+    "replace": "const TOKENIZER_VERSION: u32 = 3;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store extract version bumped",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "const EXTRACT_VERSION: u32 = 2;",
+    "replace": "const EXTRACT_VERSION: u32 = 3;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store tokenizer stamp mismatch kept",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "if store.meta(\"tokenizer\")?.as_deref() != Some(tokenizer.as_str()) {\n            store.exec(\"DROP TABLE IF EXISTS file_fts; DELETE FROM files;\")?;",
+    "replace": "if store.meta(\"tokenizer\")?.as_deref() != Some(tokenizer.as_str()) {\n            store.exec(\"SELECT 1\")?;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store extract stamp mismatch kept",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "if store.meta(\"extract\")?.as_deref() != Some(extract.as_str()) {\n            store.exec(\"DROP TABLE IF EXISTS file_fts; DELETE FROM files;\")?;",
+    "replace": "if store.meta(\"extract\")?.as_deref() != Some(extract.as_str()) {\n            store.exec(\"SELECT 1\")?;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store tokenizer stamp not written",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "store.set_meta(\"tokenizer\", &tokenizer)?;",
+    "replace": "",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store extract stamp not written",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "store.set_meta(\"extract\", &extract)?;",
+    "replace": "",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store relaxed coverage is stricter",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "const RELAXED_MIN_COVERAGE: f64 = 0.5;",
+    "replace": "const RELAXED_MIN_COVERAGE: f64 = 0.9;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store relaxed coverage is looser",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "const RELAXED_MIN_COVERAGE: f64 = 0.5;",
+    "replace": "const RELAXED_MIN_COVERAGE: f64 = 0.3;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store relaxed needs two tokens",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "const RELAXED_MIN_TOKENS: usize = 3;",
+    "replace": "const RELAXED_MIN_TOKENS: usize = 2;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store relaxed needs four tokens",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "const RELAXED_MIN_TOKENS: usize = 3;",
+    "replace": "const RELAXED_MIN_TOKENS: usize = 4;",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store exact hit also counted relaxed",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "if exact_ids.contains(&id) {",
+    "replace": "if false {",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store exact needles not kept",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "                c.add_needle(&term.text);\n",
+    "replace": "",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store exclusions need all terms",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "MatchJoin::Or,",
+    "replace": "MatchJoin::And,",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store within ignored",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "Some(within) => fetched.into_iter().filter(|r| within(&r.path)).collect(),",
+    "replace": "Some(_) => fetched,",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store all-term files not preferred",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "let rows: Vec<Row> = if full_count > 0 {",
+    "replace": "let rows: Vec<Row> = if false {",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store every file is a full match",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "c.exact + c.relaxed == wanted",
+    "replace": "c.exact + c.relaxed > 0",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store name prefix not preferred",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "if r.name.to_lowercase().starts_with(first.as_str()) {",
+    "replace": "if false {",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store term count not ranked",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "-((c.exact + c.relaxed) as f64),",
+    "replace": "0.0,",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store name and folder hits not ranked",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "if meta { 0.0 } else { 1.0 },",
+    "replace": "0.0,",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store exact count not ranked",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "-(c.exact as f64),\n",
+    "replace": "0.0,\n",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store score not ranked",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "                    c.score,\n",
+    "replace": "                    0.0,\n",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store oldest first",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "-r.mtime_ms,",
+    "replace": "r.mtime_ms,",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store default page is 40",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "_ => 50.0,",
+    "replace": "_ => 40.0,",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store page cap is 300",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "math_min(200.0, limit)",
+    "replace": "math_min(300.0, limit)",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store excerpt of zero chars attached",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "opts.excerpt_chars.filter(|c| *c != 0.0 && !c.is_nan())",
+    "replace": "opts.excerpt_chars.filter(|c| !c.is_nan())",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store extension filter case kept",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": ".map(|exts| exts.iter().map(|e| e.to_lowercase()).collect())",
+    "replace": ".map(|exts| exts.iter().cloned().collect())",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store body cut later",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "Some(MAX_BODY_CHARS as f64)",
+    "replace": "Some(MAX_BODY_CHARS as f64 + 1000.0)",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store upsert does not replace",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "if let Some(id) = existing {",
+    "replace": "if let Some(id) = existing.filter(|_| false) {",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store name-only status text",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "IndexStatus::NameOnly => \"name-only\",",
+    "replace": "IndexStatus::NameOnly => \"nameonly\",",
+    "fn": ["store.FileIndexStore", "indexer.FileIndexer"]
+  },
+  {
+    "name": "store cloud rows read as errors",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "            \"cloud\" => IndexStatus::Cloud,\n",
+    "replace": "",
+    "fn": ["store.FileIndexStore", "indexer.FileIndexer"]
+  },
+  {
+    "name": "store scores weigh the body first",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "bm25(file_fts, 10.0, 5.0, 1.0, 10.0, 5.0, 1.0)",
+    "replace": "bm25(file_fts, 1.0, 5.0, 10.0, 1.0, 5.0, 10.0)",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store keeps diacritics",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "tokenize='unicode61 remove_diacritics 2'",
+    "replace": "tokenize='unicode61 remove_diacritics 0'",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store index keeps deleted rows",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "content='', contentless_delete=1,",
+    "replace": "content='',",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store excerpts without the token needles",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "std::iter::once(t.text.as_str()).chain(t.tokens.bi.iter().map(String::as_str))",
+    "replace": "std::iter::once(t.text.as_str())",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store size change ignored on disk",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "now.mtime_ms == *mtime_ms && now.size_bytes == *size_bytes",
+    "replace": "now.mtime_ms == *mtime_ms",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "store time change ignored on disk",
+    "file": "main-core/src/shell/file_index/store.rs",
+    "find": "now.mtime_ms == *mtime_ms && now.size_bytes == *size_bytes",
+    "replace": "now.size_bytes == *size_bytes",
+    "fn": ["store.FileIndexStore"]
+  },
+  {
+    "name": "indexer rescan debounce is shorter",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "pub const RESCAN_DEBOUNCE_MS: f64 = 1500.0;",
+    "replace": "pub const RESCAN_DEBOUNCE_MS: f64 = 1000.0;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer heap limit is doubled",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "pub const WORKER_HEAP_LIMIT_MB: f64 = 256.0;",
+    "replace": "pub const WORKER_HEAP_LIMIT_MB: f64 = 512.0;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer idle recycle is slower",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "pub const WORKER_IDLE_MS: f64 = 5_000.0;",
+    "replace": "pub const WORKER_IDLE_MS: f64 = 6_000.0;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer name-only batch is 63",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "const NAME_ONLY_BATCH: usize = 64;",
+    "replace": "const NAME_ONLY_BATCH: usize = 63;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer refresh keeps the old timer",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        if self.rescan_timer {\n            host.clear_timer(TimerKind::Rescan);\n        }\n        self.rescan_timer = true;",
+    "replace": "        self.rescan_timer = true;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer refresh after stop",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "pub fn refresh(&mut self, host: &mut dyn IndexerHost) {\n        if self.stopped {",
+    "replace": "pub fn refresh(&mut self, host: &mut dyn IndexerHost) {\n        if false {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer scan after stop",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "fn start_scan(&mut self, host: &mut dyn IndexerHost, store: &FileIndexStore) {\n        if self.stopped {",
+    "replace": "fn start_scan(&mut self, host: &mut dyn IndexerHost, store: &FileIndexStore) {\n        if false {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer scan mid-scan forgotten",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "self.scan_requested = true;",
+    "replace": "self.scan_requested = false;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer scan time not kept",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "self.last_scan_at = host.now_ms();",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer truncated walk counts as complete",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "                if truncated {\n                    task.complete = false;\n                }",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer failed walk still diffs",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "WorkerResponse::Extract { .. } => task.walked = false,",
+    "replace": "WorkerResponse::Extract { .. } => {}",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer vanished files kept",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        if task.complete {\n            let gone",
+    "replace": "        if false {\n            let gone",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer size change ignored",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "                && k.size_bytes == f.size_bytes\n",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer time change ignored",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "                && k.mtime_ms == f.mtime_ms\n",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer cloud files not looked at again",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "                if k.status == IndexStatus::Cloud {",
+    "replace": "                if false {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer asks nameOnly for nothing",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "let call = if paths.is_empty() {",
+    "replace": "let call = if false {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer failing source extracts everything",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "            Err(()) => task\n                .changed\n                .iter()\n                .chain(task.recheck.iter())\n                .map(|f| f.path.clone())\n                .collect(),",
+    "replace": "            Err(()) => HashSet::new(),",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer rechecked cloud file extracted anyway",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "            if !name_only.contains(&f.path) {",
+    "replace": "            if true {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer queues a file twice",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "if self.queued.contains(&file.path) {",
+    "replace": "if false {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer cloud rows get the name-only status",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "self.apply(store, &st, Extracted::NameOnly, IndexStatus::Cloud);",
+    "replace": "self.apply(store, &st, Extracted::NameOnly, IndexStatus::NameOnly);",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer name-only extraction is a cloud row",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "self.apply(store, &st, result, IndexStatus::NameOnly);",
+    "replace": "self.apply(store, &st, result, IndexStatus::Cloud);",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer errors recorded as text",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "Extracted::Error(_) => store.upsert(f, None, IndexStatus::Error),",
+    "replace": "Extracted::Error(_) => store.upsert(f, None, IndexStatus::NameOnly),",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer text recorded as name only",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "Extracted::Text(text) => store.upsert(f, Some(&text), IndexStatus::Ok),",
+    "replace": "Extracted::Text(text) => store.upsert(f, Some(&text), IndexStatus::NameOnly),",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer extra paths not filtered",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "if task.seen.has(&p) || !is_supported_tree_file(&p) {",
+    "replace": "if task.seen.has(&p) {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer idle timer kept",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        if self.idle_timer {\n            host.clear_timer(TimerKind::Idle);\n        }\n        self.idle_timer = true;",
+    "replace": "        self.idle_timer = true;",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer idle timer kept when a worker starts",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        if self.idle_timer {\n            host.clear_timer(TimerKind::Idle);\n            self.idle_timer = false;\n        }",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer retires a busy worker",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "                if !(self.scanning",
+    "replace": "                if (self.scanning",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer recycled worker still counted",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "    fn recycle_worker(&mut self, host: &mut dyn IndexerHost) {\n        if let Some(worker) = self.worker.take() {",
+    "replace": "    fn recycle_worker(&mut self, host: &mut dyn IndexerHost) {\n        if let Some(worker) = self.worker {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer request timeout not set",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        host.set_timer(TimerKind::Request(id), self.config.request_timeout_ms);\n",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer failed post keeps the timer",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "            host.clear_timer(TimerKind::Request(id));\n            self.take_waiting(id);",
+    "replace": "            self.take_waiting(id);",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer answered request keeps the timer",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        if let Some(waiter) = self.take_waiting(id) {\n            host.clear_timer(TimerKind::Request(id));",
+    "replace": "        if let Some(waiter) = self.take_waiting(id) {",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer requests not tied to their worker",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "            ids.push(id);",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer exited worker still current",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        if self.worker == Some(worker) {\n            self.worker = None;\n        }",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer dropped request keeps its timer",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "            host.clear_timer(TimerKind::Request(id));\n            self.ready.push_back(Ready::Response(\n                waiter.awaiter,\n                WorkerResponse::Extract {\n                    id,\n                    result: Extracted::Error(\"worker exited\".to_owned()),",
+    "replace": "            self.ready.push_back(Ready::Response(\n                waiter.awaiter,\n                WorkerResponse::Extract {\n                    id,\n                    result: Extracted::Error(\"worker exited\".to_owned()),",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer wedged worker not recycled",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "                let waiter = self.take_waiting(id);\n                self.recycle_worker(host);",
+    "replace": "                let waiter = self.take_waiting(id);",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer stop keeps the queue",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        self.queue.clear();\n        self.queued.clear();",
+    "replace": "",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer stop keeps the worker",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "        self.queued.clear();\n        if let Some(worker) = self.worker.take() {\n            host.terminate(worker);\n        }",
+    "replace": "        self.queued.clear();",
+    "fn": ["indexer.FileIndexer"]
+  },
+  {
+    "name": "indexer mid-scan refresh dropped",
+    "file": "main-core/src/shell/file_index/indexer.rs",
+    "find": "            self.scan_requested = false;\n            self.start_scan(host, store);",
+    "replace": "            self.scan_requested = false;",
+    "fn": ["indexer.FileIndexer"]
+  }
+]
