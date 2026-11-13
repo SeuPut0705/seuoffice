@@ -1,0 +1,240 @@
+[
+  {
+    "name": "remove-recent keeps the star of a missing file",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "list.into_iter().filter(|p| !exists_sync(p)).collect();",
+    "replace": "list.into_iter().filter(|p| exists_sync(p)).collect();",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "starred sorts oldest first",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "b.mtime_ms\n                    .partial_cmp(&a.mtime_ms)",
+    "replace": "a.mtime_ms\n                    .partial_cmp(&b.mtime_ms)",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "starred group filter is inverted",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "== Some(g.as_str())",
+    "replace": "!= Some(g.as_str())",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "set-starred-group always clears the group",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "&read_starred_items(&h.starred_path), &paths, group);",
+    "replace": "&read_starred_items(&h.starred_path), &paths, None);",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "unstar-paths does nothing",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "h.remove_starred_files(&string_paths(args.first()))?;",
+    "replace": "let _ = &h;",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "stat-paths is not capped",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "cap_stat_paths(&string_paths(args.first()))",
+    "replace": "string_paths(args.first())",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "search offset is not floored",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "map_or(0.0, |n| n.floor().max(0.0))",
+    "replace": "map_or(0.0, |n| n.max(0.0))",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "search rescans after half a minute",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "home.search.refresh_if_stale(60_000.0)",
+    "replace": "home.search.refresh_if_stale(30_000.0)",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "search leaves the star flag off",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "IpcValue::Bool(starred.contains(&path))",
+    "replace": "IpcValue::Bool(false)",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "rerank judges 21 paths",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": ".take(20)",
+    "replace": ".take(21)",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "open-path takes a longer path",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "p.encode_utf16().count() <= 4096",
+    "replace": "p.encode_utf16().count() <= 4097",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "open-path does not ask the index to rescan",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        h.host.open_document_path(path);\n        h.search.refresh();\n",
+    "replace": "        h.host.open_document_path(path);\n",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "browse names Word files without .dot",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "filter(Msg::FilterWord, &[\"docx\", \"doc\", \"dot\"]),",
+    "replace": "filter(Msg::FilterWord, &[\"docx\", \"doc\"]),",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "browse opens over the first window",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "h.open_dialog(Some(cx.sender.window), &options)",
+    "replace": "h.open_dialog(Some(WindowId(1)), &options)",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "reveal does not check the path exists",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "if let Some(path) = as_str(args.first()).filter(|p| exists_sync(p)) {",
+    "replace": "if let Some(path) = as_str(args.first()) {",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "rename trims before it validates",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "if !is_valid_raw_rename_name(new_name) {",
+    "replace": "if !is_valid_raw_rename_name(trim(new_name)) {",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "rename to the same name goes on",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        if target == path {",
+    "replace": "        if false && target == path {",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "rename onto the file's own hard link fails",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "if exists_sync(&target) && !is_same_file(path, &target) {",
+    "replace": "if exists_sync(&target) {",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "rename leaves the recents list as it was",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        self.replace_recent_file(old_path, new_path)?;\n",
+    "replace": "        let _ = &self.recent_path;\n",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "the slides list is not a tracked source",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        paths.extend(self.host.slides_recent_files());\n",
+    "replace": "",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "the project store is not a tracked source",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        paths.extend(self.host.project_file_paths());\n",
+    "replace": "",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "duplicate copies files nobody lists",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        if !is_user_visible_file(Some(path), &mut h.targets()) {\n            return Ok(IpcValue::Undefined);\n        }\n        let message",
+    "replace": "        let message",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "delete trashes folders",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "map_or(true, |m| m.is_file())",
+    "replace": "map_or(true, |_| true)",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "delete keeps the stars",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        h.remove_starred_files(&list)?;\n",
+    "replace": "        let _ = &list;\n",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "delete does not trash",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "            let _ = h.os.trash_item(Path::new(path));\n",
+    "replace": "            let _ = path;\n",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "the save folder fallback is said every time",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "if self.save_dir_noticed.replace(true) {",
+    "replace": "if false && self.save_dir_noticed.replace(true) {",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "the fallback notice swaps the folders",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": ".replace(\"{using}\", &fallback.using)",
+    "replace": ".replace(\"{using}\", &fallback.blocked)",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "the save folder can be removed",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "        removable: false,",
+    "replace": "        removable: true,",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "add-root adds a file as a root",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "if !describe_extra_root(picked).readable {",
+    "replace": "if false && !describe_extra_root(picked).readable {",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "add-root dialog has another title",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "Msg::DlgAddFolderRoot if ko => \"홈에 폴더 추가\",",
+    "replace": "Msg::DlgAddFolderRoot if ko => \"홈에 폴더 더하기\",",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "drop sends folders to the open pipeline",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "if !describe_extra_root(&path).readable {",
+    "replace": "if describe_extra_root(&path).readable {",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "remove-root removes every root",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "without_extra_root(&h.extra_folder_roots()?, path);",
+    "replace": "without_extra_root(&h.extra_folder_roots()?, \"\");",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "a change in a root is told to a view nobody has",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "events.emit(Target::All,",
+    "replace": "events.emit(Target::Window(WindowId(99)),",
+    "groups": ["w/home-files"]
+  },
+  {
+    "name": "a change in a root does not rescan the index",
+    "file": "shell-ipc/w/src/home_files.rs",
+    "find": "                search.refresh();\n",
+    "replace": "",
+    "groups": ["w/home-files"]
+  }
+]

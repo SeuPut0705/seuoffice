@@ -1,0 +1,142 @@
+[
+  {
+    "name": "doc:attach-available answers false",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "|_, _| Ok(IpcValue::Bool(true)),",
+    "replace": "|_, _| Ok(IpcValue::Bool(false)),",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a second asker finds the window cancelled, not busy",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "return reply.reply(Ok(failed(\"busy\")));",
+    "replace": "return reply.reply(Ok(failed(\"cancelled\")));",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "finishing leaves the window open",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "self.0.window.close();",
+    "replace": "let _ = ();",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "closing the window does not cancel the pick",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "settle.reply(Ok(failed(\"cancelled\")));",
+    "replace": "drop(settle);",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the list is not remembered for the choice",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "c.0.lock().last_items = Some(items);",
+    "replace": "let _ = items;",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the @ list loses the asking view",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "asker.web_contents_id = Some(cx.sender.view.0);",
+    "replace": "asker.web_contents_id = None;",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the picker is not modal",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "self.control.open(Some(parent), asker, reply);",
+    "replace": "self.control.open(None, asker, reply);",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the picker title changes",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "\"SeuOffice 문서에서 첨부\"",
+    "replace": "\"SeuOffice 문서에서 첨부하기\"",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the picker is narrower",
+    "file": "shell-ipc/w/src/doc_picker.rs",
+    "find": "width: 720,",
+    "replace": "width: 700,",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a modified document can be picked",
+    "file": "main-core/src/shell/doc_picker/picker.rs",
+    "find": ".filter(|item| item.state == DocItemState::Ok)",
+    "replace": ".filter(|item| item.state != DocItemState::Missing)",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a document ticked twice is handed twice",
+    "file": "main-core/src/shell/doc_picker/picker.rs",
+    "find": "if !attachable.contains(id) || !seen.insert(id) {",
+    "replace": "if !attachable.contains(id) {",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "twenty-one documents may be attached",
+    "file": "main-core/src/shell/doc_picker/picker.rs",
+    "find": "const MAX_PICKS: usize = 20;",
+    "replace": "const MAX_PICKS: usize = 21;",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a document with unsaved changes is listed as saved",
+    "file": "main-core/src/shell/doc_picker/doc_list.rs",
+    "find": "Some(_) if self.dirty_keys.contains(&key) => DocItemState::Modified,",
+    "replace": "",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a never-saved document is named differently",
+    "file": "main-core/src/shell/doc_picker/doc_list.rs",
+    "find": "format!(\"unsaved:{}\", doc.id)",
+    "replace": "format!(\"unsaved-{}\", doc.id)",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the pane document is not listed first",
+    "file": "main-core/src/shell/doc_picker/doc_list.rs",
+    "find": "list.include_open(others[index], DocItemGroup::Pane);",
+    "replace": "list.include_open(others[index], DocItemGroup::Open);",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the asking document is listed",
+    "file": "main-core/src/shell/doc_picker/doc_list.rs",
+    "find": "if self.asker_key.as_deref() == Some(key.as_str()) || self.seen.contains(&key) {",
+    "replace": "if self.seen.contains(&key) {",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a file past the size cap is listed",
+    "file": "main-core/src/shell/doc_picker/doc_list.rs",
+    "find": "if size.is_some_and(|size| size > cap_for(&ext)) {",
+    "replace": "if false {",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a missing file is in the @ list",
+    "file": "main-core/src/shell/doc_picker/doc_list.rs",
+    "find": ".filter(|item| item.state != DocItemState::Missing)",
+    "replace": ".filter(|_| true)",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "a mention is named by its title",
+    "file": "main-core/src/shell/doc_picker/doc_list.rs",
+    "find": "basename(&item.id, None)",
+    "replace": "item.title.clone()",
+    "groups": ["w/doc-picker"]
+  },
+  {
+    "name": "the size cap of a text file is ten times larger",
+    "file": "main-core/src/shell/doc_picker/attachable.rs",
+    "find": "pub const ATTACHABLE_MAX_BYTES: f64 = 50.0 * 1024.0 * 1024.0;",
+    "replace": "pub const ATTACHABLE_MAX_BYTES: f64 = 500.0 * 1024.0 * 1024.0;",
+    "groups": ["w/doc-picker"]
+  }
+]

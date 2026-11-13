@@ -94,8 +94,11 @@ export function substitute<T>(value: T, dir: string): T {
 
 /** `dir` written as `$DIR`, also inside JSON strings where a Windows path's backslashes are escaped */
 export function unsubstitute(text: string, dir: string): string {
-  const once = JSON.stringify(dir).slice(1, -1)
-  const twice = JSON.stringify(once).slice(1, -1)
-  for (const form of [twice, once, dir]) text = text.split(form).join('$DIR')
+  // also the folder in lower case: a path key folds case on macOS and Windows
+  for (const folder of [dir, dir.toLowerCase()]) {
+    const once = JSON.stringify(folder).slice(1, -1)
+    const twice = JSON.stringify(once).slice(1, -1)
+    for (const form of [twice, once, folder]) text = text.split(form).join('$DIR')
+  }
   return text
 }

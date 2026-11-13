@@ -43,7 +43,7 @@ use crate::shell::tab_document_actions::{
 };
 use crate::shell::tab_duplicate::{DuplicateFileDeps, duplicate_document_file};
 use crate::shell::tab_lifecycle::{
-    MAX_RECENTLY_CLOSED, TabCloseManager, TabCloseTarget, close_tabs_in_order,
+    CloseInOrder, CloseInOrderStep, MAX_RECENTLY_CLOSED, TabCloseManager, TabCloseTarget,
     create_recently_closed_tracker,
 };
 use crate::shell::tab_menu::{
@@ -633,7 +633,9 @@ impl TabCloseManager for FakeCloseManager<'_> {
     fn list(&mut self) -> Vec<TabCloseTarget> {
         self.tabs.clone()
     }
+}
 
+impl FakeCloseManager<'_> {
     fn close_tab(&mut self, id: &str) {
         self.log.add(vec![Value::from("closeTab"), Value::from(id)]);
         let removed: Vec<String> = match self.behavior.get(id) {
@@ -674,7 +676,11 @@ fn close_tabs_call(args: &[Value], cx: &mut Context) -> Answer {
             .unwrap_or(&empty),
         log: &log,
     };
-    close_tabs_in_order(&mut manager, &ids);
+    let (mut run, mut step) = CloseInOrder::start(&mut manager, &ids);
+    while let CloseInOrderStep::CloseTab(id) = step {
+        manager.close_tab(&id);
+        step = run.resume(&mut manager);
+    }
     log.drain_into(cx);
     Ok(None)
 }
