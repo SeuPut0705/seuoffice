@@ -125,6 +125,9 @@ pub trait DocsShell: Send + Sync {
     fn file_opened(&self, view: ViewId, path: &str);
     /// `shellHooks.newDocumentDir(wcId)`: a project folder for a new document
     fn new_document_dir(&self, view: ViewId) -> Option<String>;
+    /// `shellHooks?.writeNewDocument` is set (a shell that files new
+    /// documents into projects)
+    fn writes_new_documents(&self) -> bool;
     /// `shellHooks.writeNewDocument`: `None` when there is no such hook
     /// (`write` undefined in the TypeScript); `Some(Ok(None))` when the panel
     /// has no project. Runs on a worker.
@@ -563,13 +566,16 @@ mod fake {
             self.answer("new_document_dir")
                 .and_then(|v| v.as_str().map(str::to_owned))
         }
+        fn writes_new_documents(&self) -> bool {
+            self.case.lock().unwrap()["write_new_document"] != "none"
+        }
         fn write_new_document(
             &self,
             view: ViewId,
             file_name: &str,
             bytes: Vec<u8>,
         ) -> Option<Result<Option<String>, String>> {
-            if self.case.lock().unwrap()["write_new_document"] == "none" {
+            if !self.writes_new_documents() {
                 return None;
             }
             self.log(json!(["writeNewDocument", view.0, file_name, hex(&bytes)]));

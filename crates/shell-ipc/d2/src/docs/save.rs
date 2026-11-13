@@ -501,7 +501,8 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
             let view = cx.sender.view;
             let skipped = || Obj::new().set("ok", false).set("skipped", true).done();
             // an orphaned renderer, or a document that has its file already
-            if d.is_torn_down(view) || d.open_doc.contains(view) {
+            if !d.shell.writes_new_documents() || d.is_torn_down(view) || d.open_doc.contains(view)
+            {
                 return responder.reply(Ok(skipped()));
             }
             let (Some(default_name), Some(_)) =
