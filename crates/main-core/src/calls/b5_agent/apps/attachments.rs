@@ -9,7 +9,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs;
 use std::rc::Rc;
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, UNIX_EPOCH};
 
 use jscompat::{JsObject, JsonValue, json_value_from_serde, json_value_to_serde};
 use serde_json::{Map, Value};

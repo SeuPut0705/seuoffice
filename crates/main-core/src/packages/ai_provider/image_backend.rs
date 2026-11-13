@@ -156,7 +156,7 @@ pub fn resolve_image_backend(
     }
     if selection != "codex"
         && selection != "none"
-        && let Some((meta, config)) = usable_key_config(settings, Some(&text(selection)))
+        && let Some((meta, config)) = usable_key_config(settings, Some(&text(selection.as_str())))
     {
         return AiImageBackend::Key {
             provider: meta.id,

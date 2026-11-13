@@ -517,9 +517,6 @@ struct Host {
     user_data: String,
     temp: String,
     windows: Vec<bool>,
-    streams: ActiveStreams,
-    calls: Rc<RefCell<MediaCalls>>,
-    senders: Senders,
     guard: RealGuard,
 }
 
@@ -814,9 +811,6 @@ impl World {
             windows,
             spec: host_spec.clone(),
             log: Rc::clone(&log),
-            streams: streams.clone(),
-            calls: Rc::clone(&calls),
-            senders: Rc::clone(&senders),
             guard: RealGuard,
         };
         let natives = Natives {
