@@ -1100,109 +1100,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -4420,101 +4319,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -5061,6 +4874,10 @@
         "shape": {
           "k": "obj",
           "f": {
+            "deck": {
+              "k": "ref",
+              "n": "SlideDeck"
+            },
             "archive": {
               "k": "obj",
               "f": {
@@ -5106,6 +4923,10 @@
         "shape": {
           "k": "obj",
           "f": {
+            "deck": {
+              "k": "ref",
+              "n": "SlideDeck"
+            },
             "archive": {
               "k": "obj",
               "f": {
@@ -5698,7 +5519,7 @@
         },
         {
           "name": "anchor",
-          "type": "\"top\" | \"bottom\" | \"middle\"",
+          "type": "\"top\" | \"middle\" | \"bottom\"",
           "optional": false,
           "rest": false,
           "codec": "json"
@@ -6191,101 +6012,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -6393,101 +6128,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -6542,101 +6191,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -6693,101 +6256,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -6881,101 +6358,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -7036,101 +6427,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -7267,101 +6572,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -7545,101 +6764,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -7689,101 +6822,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -7885,109 +6932,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -8041,109 +6987,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -8893,109 +7738,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -9061,109 +7805,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -9384,7 +8027,7 @@
         },
         {
           "name": "anchor",
-          "type": "\"top\" | \"bottom\" | \"middle\"",
+          "type": "\"top\" | \"middle\" | \"bottom\"",
           "optional": false,
           "rest": false,
           "codec": "json"
@@ -9505,109 +8148,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -9918,109 +8460,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -10076,101 +8517,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -10309,114 +8664,12 @@
           "k": "obj",
           "f": {
             "grp": {
-              "k": "obj",
-              "f": {
-                "children": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "GroupElement"
             },
             "child": {
-              "k": "obj",
-              "f": {
-                "children": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "SlideElement"
             }
           }
         },
@@ -12132,101 +10385,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -12393,109 +10560,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -12554,109 +10620,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -13356,109 +11321,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -13913,101 +11777,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -14162,51 +11940,8 @@
         "shape": {
           "k": "arr",
           "v": {
-            "k": "obj",
-            "f": {
-              "chart": {
-                "k": "obj",
-                "f": {
-                  "series": {
-                    "k": "arr",
-                    "v": {
-                      "k": "obj",
-                      "f": {
-                        "pointColors": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointFills": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointNoFill": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointLines": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointExplosionPct": {
-                          "k": "arr",
-                          "u": true
-                        }
-                      }
-                    }
-                  },
-                  "sunburst": {
-                    "k": "obj",
-                    "f": {
-                      "pointColors": {
-                        "k": "arr",
-                        "u": true
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "k": "ref",
+            "n": "SlideElement"
           }
         },
         "bytes": false
@@ -14266,51 +12001,8 @@
         "shape": {
           "k": "arr",
           "v": {
-            "k": "obj",
-            "f": {
-              "chart": {
-                "k": "obj",
-                "f": {
-                  "series": {
-                    "k": "arr",
-                    "v": {
-                      "k": "obj",
-                      "f": {
-                        "pointColors": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointFills": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointNoFill": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointLines": {
-                          "k": "arr",
-                          "u": true
-                        },
-                        "pointExplosionPct": {
-                          "k": "arr",
-                          "u": true
-                        }
-                      }
-                    }
-                  },
-                  "sunburst": {
-                    "k": "obj",
-                    "f": {
-                      "pointColors": {
-                        "k": "arr",
-                        "u": true
-                      }
-                    }
-                  }
-                }
-              }
-            }
+            "k": "ref",
+            "n": "SlideElement"
           }
         },
         "bytes": false
@@ -14816,7 +12508,7 @@
         }
       ],
       "ret": {
-        "type": "\"top\" | \"bottom\" | \"middle\" | undefined",
+        "type": "\"top\" | \"middle\" | \"bottom\" | undefined",
         "null": false,
         "undef": true,
         "shape": null,
@@ -17051,109 +14743,8 @@
           "k": "obj",
           "f": {
             "slide": {
-              "k": "obj",
-              "f": {
-                "elements": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                },
-                "decorations": {
-                  "k": "arr",
-                  "v": {
-                    "k": "obj",
-                    "f": {
-                      "chart": {
-                        "k": "obj",
-                        "f": {
-                          "series": {
-                            "k": "arr",
-                            "v": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointFills": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointNoFill": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointLines": {
-                                  "k": "arr",
-                                  "u": true
-                                },
-                                "pointExplosionPct": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          },
-                          "sunburst": {
-                            "k": "obj",
-                            "f": {
-                              "pointColors": {
-                                "k": "arr",
-                                "u": true
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
-              }
+              "k": "ref",
+              "n": "Slide"
             }
           }
         },
@@ -18765,51 +16356,8 @@
             "children": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -18921,51 +16469,57 @@
             "children": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
+                "k": "ref",
+                "n": "SlideElement"
+              }
+            },
+            "chart": {
+              "k": "obj",
+              "f": {
+                "series": {
+                  "k": "arr",
+                  "v": {
                     "k": "obj",
                     "f": {
-                      "series": {
+                      "pointColors": {
                         "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
+                        "u": true
                       },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
+                      "pointFills": {
+                        "k": "arr",
+                        "u": true
+                      },
+                      "pointNoFill": {
+                        "k": "arr",
+                        "u": true
+                      },
+                      "pointLines": {
+                        "k": "arr",
+                        "u": true
+                      },
+                      "pointExplosionPct": {
+                        "k": "arr",
+                        "u": true
                       }
                     }
                   }
+                },
+                "sunburst": {
+                  "k": "obj",
+                  "f": {
+                    "pointColors": {
+                      "k": "arr",
+                      "u": true
+                    }
+                  }
                 }
+              }
+            },
+            "previewShapes": {
+              "k": "arr",
+              "v": {
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -18992,101 +16546,15 @@
             "elements": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             },
             "decorations": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "chart": {
-                    "k": "obj",
-                    "f": {
-                      "series": {
-                        "k": "arr",
-                        "v": {
-                          "k": "obj",
-                          "f": {
-                            "pointColors": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointFills": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointNoFill": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointLines": {
-                              "k": "arr",
-                              "u": true
-                            },
-                            "pointExplosionPct": {
-                              "k": "arr",
-                              "u": true
-                            }
-                          }
-                        }
-                      },
-                      "sunburst": {
-                        "k": "obj",
-                        "f": {
-                          "pointColors": {
-                            "k": "arr",
-                            "u": true
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "SlideElement"
               }
             }
           }
@@ -19130,109 +16598,8 @@
             "slides": {
               "k": "arr",
               "v": {
-                "k": "obj",
-                "f": {
-                  "elements": {
-                    "k": "arr",
-                    "v": {
-                      "k": "obj",
-                      "f": {
-                        "chart": {
-                          "k": "obj",
-                          "f": {
-                            "series": {
-                              "k": "arr",
-                              "v": {
-                                "k": "obj",
-                                "f": {
-                                  "pointColors": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointFills": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointNoFill": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointLines": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointExplosionPct": {
-                                    "k": "arr",
-                                    "u": true
-                                  }
-                                }
-                              }
-                            },
-                            "sunburst": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  },
-                  "decorations": {
-                    "k": "arr",
-                    "v": {
-                      "k": "obj",
-                      "f": {
-                        "chart": {
-                          "k": "obj",
-                          "f": {
-                            "series": {
-                              "k": "arr",
-                              "v": {
-                                "k": "obj",
-                                "f": {
-                                  "pointColors": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointFills": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointNoFill": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointLines": {
-                                    "k": "arr",
-                                    "u": true
-                                  },
-                                  "pointExplosionPct": {
-                                    "k": "arr",
-                                    "u": true
-                                  }
-                                }
-                              }
-                            },
-                            "sunburst": {
-                              "k": "obj",
-                              "f": {
-                                "pointColors": {
-                                  "k": "arr",
-                                  "u": true
-                                }
-                              }
-                            }
-                          }
-                        }
-                      }
-                    }
-                  }
-                }
+                "k": "ref",
+                "n": "Slide"
               }
             }
           }

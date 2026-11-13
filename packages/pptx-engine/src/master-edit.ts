@@ -35,60 +35,8 @@ export function parseMasterPart(archive: PackageArchive, partPath: string): Slid
     shape: {
       k: 'obj',
       f: {
-        elements: {
-          k: 'arr',
-          v: {
-            k: 'obj',
-            f: {
-              chart: {
-                k: 'obj',
-                f: {
-                  series: {
-                    k: 'arr',
-                    v: {
-                      k: 'obj',
-                      f: {
-                        pointColors: { k: 'arr', u: true },
-                        pointFills: { k: 'arr', u: true },
-                        pointNoFill: { k: 'arr', u: true },
-                        pointLines: { k: 'arr', u: true },
-                        pointExplosionPct: { k: 'arr', u: true },
-                      },
-                    },
-                  },
-                  sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
-                },
-              },
-            },
-          },
-        },
-        decorations: {
-          k: 'arr',
-          v: {
-            k: 'obj',
-            f: {
-              chart: {
-                k: 'obj',
-                f: {
-                  series: {
-                    k: 'arr',
-                    v: {
-                      k: 'obj',
-                      f: {
-                        pointColors: { k: 'arr', u: true },
-                        pointFills: { k: 'arr', u: true },
-                        pointNoFill: { k: 'arr', u: true },
-                        pointLines: { k: 'arr', u: true },
-                        pointExplosionPct: { k: 'arr', u: true },
-                      },
-                    },
-                  },
-                  sunburst: { k: 'obj', f: { pointColors: { k: 'arr', u: true } } },
-                },
-              },
-            },
-          },
-        },
+        elements: { k: 'arr', v: { k: 'ref', n: 'SlideElement' } },
+        decorations: { k: 'arr', v: { k: 'ref', n: 'SlideElement' } },
       },
     },
   }) as never

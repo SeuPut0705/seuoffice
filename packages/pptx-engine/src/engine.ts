@@ -217,6 +217,7 @@ function callEngine(fn: string, args: readonly unknown[], options: CallOptions):
         fnPrefix: 'pptx.',
         names: options.names,
         shape: answerShape(options, mut),
+        types: TYPE_SHAPES,
       }) as Answer,
   )
   for (const [index, value] of Object.entries(answer.$out ?? {})) {

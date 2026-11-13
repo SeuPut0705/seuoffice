@@ -32,13 +32,15 @@ export interface ParamInfo {
 }
 
 export interface Shape {
-  /** map | set | arr | tuple | obj | rec */
+  /** map | set | arr | tuple | obj | rec | ref */
   k: string
   /** an array whose holes are undefined */
   u?: true
   v?: Shape
   items?: Array<Shape | null>
   f?: Record<string, Shape>
+  /** ref: the shape of this model type (`config.typeShapes`), which the binding hands the codec */
+  n?: string
 }
 
 export interface RustInfo {
@@ -97,40 +99,72 @@ function nameOfSymbol(type: ts.Type): string {
   return type.aliasSymbol?.getName() ?? type.getSymbol()?.getName() ?? ''
 }
 
+/** The shape of a place a union fills: every member's Maps, Sets and holes, not the first member's. */
+function mergeShapes(a: Shape, b: Shape): Shape {
+  if (a.k !== b.k || a.n !== b.n) return a
+  const out: Shape = { ...a }
+  if (b.u) out.u = true
+  if (b.v) out.v = a.v ? mergeShapes(a.v, b.v) : b.v
+  if (b.f) {
+    const fields = { ...a.f }
+    for (const [name, shape] of Object.entries(b.f))
+      fields[name] = fields[name] ? mergeShapes(fields[name], shape) : shape
+    out.f = fields
+  }
+  if (b.items) {
+    const length = Math.max(a.items?.length ?? 0, b.items.length)
+    out.items = Array.from({ length }, (_, i) => {
+      const [x, y] = [a.items?.[i] ?? null, b.items![i] ?? null]
+      return x && y ? mergeShapes(x, y) : (x ?? y)
+    })
+  }
+  return out
+}
+
+const NO_REFS: ReadonlySet<string> = new Set()
+
+/**
+ * Where a Map, a Set or an array with holes sits in a value of `type`. Below the root, a type
+ * named in `refs` is a `ref` to its own shape (not as a union member, which is merged), so a
+ * type that holds itself, a group's children, is shaped at any depth.
+ */
 function shapeOf(
   checker: ts.TypeChecker,
   type: ts.Type,
   depth: number,
   stack: Set<number>,
   limit = 7,
+  refs = NO_REFS,
+  member = false,
 ): Shape | null {
   if (depth > limit) return null
+  const name = nameOfSymbol(type)
+  if (depth > 0 && !member && refs.has(name)) return { k: 'ref', n: name }
+  const inner = (t: ts.Type, asMember = false): Shape | null =>
+    shapeOf(checker, t, asMember ? depth : depth + 1, stack, limit, refs, asMember)
   if (type.isUnion()) {
-    for (const member of type.types) {
-      if (member.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)) continue
-      const shape = shapeOf(checker, member, depth, stack, limit)
-      if (shape) return shape
+    let merged: Shape | null = null
+    for (const t of type.types) {
+      if (t.flags & (ts.TypeFlags.Null | ts.TypeFlags.Undefined)) continue
+      const shape = inner(t, true)
+      if (shape) merged = merged ? mergeShapes(merged, shape) : shape
     }
-    return null
+    return merged
   }
   if (type.isIntersection()) {
     const fields: Record<string, Shape> = {}
-    for (const member of type.types) {
-      const shape = shapeOf(checker, member, depth, stack, limit)
+    for (const t of type.types) {
+      const shape = inner(t, true)
       if (shape?.k === 'obj') Object.assign(fields, shape.f)
       else if (shape) return shape
     }
     return Object.keys(fields).length ? { k: 'obj', f: fields } : null
   }
-  const name = nameOfSymbol(type)
   const args = checker.getTypeArguments(type as ts.TypeReference)
-  if (name === 'Map' || name === 'ReadonlyMap')
-    return {
-      k: 'map',
-      ...(args[1] && shapeOf(checker, args[1], depth + 1, stack, limit)
-        ? { v: shapeOf(checker, args[1], depth + 1, stack, limit)! }
-        : {}),
-    }
+  if (name === 'Map' || name === 'ReadonlyMap') {
+    const value = args[1] && inner(args[1])
+    return { k: 'map', ...(value ? { v: value } : {}) }
+  }
   if (name === 'Set' || name === 'ReadonlySet') return { k: 'set' }
   if (name === 'Uint8Array' || name === 'ArrayBuffer') return null
   const id = (type as unknown as { id: number }).id
@@ -138,8 +172,8 @@ function shapeOf(
   stack.add(id)
   try {
     if (checker.isArrayType(type)) {
-      const element = checker.getTypeArguments(type as ts.TypeReference)[0]!
-      const item = shapeOf(checker, element, depth + 1, stack, limit)
+      const element = args[0]!
+      const item = inner(element)
       // `Array<X | undefined>`: JSON writes the holes as null, the TypeScript held undefined
       const holes =
         element.isUnion() &&
@@ -149,9 +183,7 @@ function shapeOf(
       return { k: 'arr', ...(holes ? { u: true } : {}), ...(item ? { v: item } : {}) }
     }
     if (checker.isTupleType(type)) {
-      const items = checker
-        .getTypeArguments(type as ts.TypeReference)
-        .map((t) => shapeOf(checker, t, depth + 1, stack, limit))
+      const items = args.map((t) => inner(t))
       return items.some(Boolean) ? { k: 'tuple', items } : null
     }
     if (type.flags & ts.TypeFlags.Object) {
@@ -159,18 +191,12 @@ function shapeOf(
       for (const prop of checker.getPropertiesOfType(type)) {
         const decl = prop.valueDeclaration ?? prop.declarations?.[0]
         if (!decl) continue
-        const shape = shapeOf(
-          checker,
-          checker.getTypeOfSymbolAtLocation(prop, decl),
-          depth + 1,
-          stack,
-          limit,
-        )
+        const shape = inner(checker.getTypeOfSymbolAtLocation(prop, decl))
         if (shape) fields[prop.getName()] = shape
       }
       const index = checker.getIndexInfoOfType(type, ts.IndexKind.String)
       if (index) {
-        const shape = shapeOf(checker, index.type, depth + 1, stack, limit)
+        const shape = inner(index.type)
         if (shape && !Object.keys(fields).length) return { k: 'rec', v: shape }
       }
       return Object.keys(fields).length ? { k: 'obj', f: fields } : null
@@ -199,9 +225,40 @@ function codecOf(type: string): ParamInfo['codec'] {
 /** a printed type with the checkout's own path left out: the manifest is the same in every worktree */
 const repoRelative = (type: string): string => type.split(`${ROOT}/`).join('')
 
+/**
+ * The model types a shape may `ref`: those that have a shape of their own. A type whose shape is
+ * empty once the refs to the dropped ones are gone is dropped too, until none is left to drop.
+ */
+function shapedModelTypes(
+  program: ts.Program,
+  checker: ts.TypeChecker,
+  files: readonly string[],
+): ReadonlySet<string> {
+  const declared = new Map<string, ts.Type>()
+  for (const file of files) {
+    const moduleSymbol = checker.getSymbolAtLocation(program.getSourceFile(file)!)
+    if (!moduleSymbol) continue
+    for (const symbol of checker.getExportsOfModule(moduleSymbol)) {
+      const name = symbol.getName()
+      if (!config.typeShapes?.includes(name) || declared.has(name)) continue
+      const target = symbol.flags & ts.SymbolFlags.Alias ? checker.getAliasedSymbol(symbol) : symbol
+      declared.set(name, checker.getDeclaredTypeOfSymbol(target))
+    }
+  }
+  let refs: ReadonlySet<string> = new Set(declared.keys())
+  for (;;) {
+    const kept = new Set(
+      [...refs].filter((name) => shapeOf(checker, declared.get(name)!, 0, new Set(), 12, refs)),
+    )
+    if (kept.size === refs.size) return kept
+    refs = kept
+  }
+}
+
 function typescriptExports(): ExportInfo[] {
   const { program, files } = typescriptProgram()
   const checker = program.getTypeChecker()
+  const refs = shapedModelTypes(program, checker, files)
   const out: ExportInfo[] = []
   for (const file of files) {
     const source = program.getSourceFile(file)!
@@ -242,7 +299,14 @@ function typescriptExports(): ExportInfo[] {
       // a model type whose values the binding writes back into the caller's objects:
       // deeper than a reply, since a deck holds its charts four levels further down
       if (kind === 'type' && config.typeShapes?.includes(info.name))
-        info.ret.shape = shapeOf(checker, checker.getDeclaredTypeOfSymbol(target), 0, new Set(), 12)
+        info.ret.shape = shapeOf(
+          checker,
+          checker.getDeclaredTypeOfSymbol(target),
+          0,
+          new Set(),
+          12,
+          refs,
+        )
       if (kind === 'function') {
         const signatures = checker.getTypeOfSymbolAtLocation(target, decl).getCallSignatures()
         const signature = signatures[0]
@@ -279,7 +343,7 @@ function typescriptExports(): ExportInfo[] {
             ).slice(0, 300),
             null: members.some((m) => m.flags & ts.TypeFlags.Null),
             undef: members.some((m) => m.flags & (ts.TypeFlags.Undefined | ts.TypeFlags.Void)),
-            shape: shapeOf(checker, returned, 0, new Set()),
+            shape: shapeOf(checker, returned, 0, new Set(), 7, refs),
             bytes: /Uint8Array/.test(checker.typeToString(returned, decl)),
           }
         }
