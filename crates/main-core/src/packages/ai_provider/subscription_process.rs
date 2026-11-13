@@ -454,3 +454,632 @@ impl SubscriptionChildRegistry {
         }
     }
 }
+
+// ── Starting a program, and the registry on the runtime ──
+//
+// The part of `process.ts` the MCP modules did not need: `spawnSubscriptionProgram`,
+// `runSubscriptionProgram`, and `sharedSubscriptionChildRegistry()` as the
+// registry above wired to [`Rt`]. The TypeScript's `defaultRegistry` is the
+// [`SharedChildRegistry`] the caller owns. Its record file is written through
+// the runtime's file system, one write after another in the order asked (the
+// TypeScript's `writes` promise chain): the three steps of one `persist()`
+// (`mkdir`, write, rename) are one link, and a failed step ends that link
+// only. `rmSync` of `shutdown()` is queued like the other writes, since the
+// runtime has no synchronous file system call; the record is gone once the
+// queue is ([`SharedChildRegistry::flushed`]). `process.kill` of a negative
+// pid is a command the host carries out, a host that cannot signal a group
+// signals the process alone, as `signalGroup` does after its first attempt.
+
+use std::cell::RefCell;
+use std::collections::VecDeque;
+use std::rc::Rc;
+
+use crate::packages::ai_provider::subscription_env::{
+    SubscriptionEnvOptions, subscription_child_env,
+};
+use crate::packages::ai_provider::subscription_locate::SubscriptionProgram;
+use crate::packages::ai_provider::task::{
+    Child, ChildEvent, FsOp, Id, JsError, LocalBoxFuture, Rt, Settle, Signal as AbortSignal,
+    SpawnRequest, Stdio,
+};
+
+/// The record file writes not done yet
+#[derive(Default)]
+struct WriteQueue {
+    /// links: the steps of one `persist()`, or one removal
+    chains: VecDeque<Vec<FsOp>>,
+    running: bool,
+    /// `flushed()` callers
+    waiters: Vec<Settle<()>>,
+}
+
+/// Starts the task that carries the queued writes out, unless it runs.
+fn drain_writes(rt: &Rt, queue: &Rc<RefCell<WriteQueue>>) {
+    {
+        let mut pending = queue.borrow_mut();
+        if pending.running || pending.chains.is_empty() {
+            return;
+        }
+        pending.running = true;
+    }
+    let rt_task = rt.clone();
+    let queue_task = queue.clone();
+    rt.spawn_local(async move {
+        loop {
+            let chain = queue_task.borrow_mut().chains.pop_front();
+            let Some(chain) = chain else {
+                break;
+            };
+            for op in chain {
+                // a step that fails ends the write quietly
+                if rt_task.fs(op).await.is_err() {
+                    break;
+                }
+            }
+        }
+        let waiters = {
+            let mut pending = queue_task.borrow_mut();
+            pending.running = false;
+            std::mem::take(&mut pending.waiters)
+        };
+        for waiter in waiters {
+            waiter.settle(());
+        }
+    });
+}
+
+/// What the registry calls of the machine, on the runtime
+struct RtChildHost<'a> {
+    rt: &'a Rt,
+    owner_started_at: f64,
+    queue: &'a RefCell<WriteQueue>,
+}
+
+impl RtChildHost<'_> {
+    fn new_chain(&self, op: FsOp) {
+        self.queue.borrow_mut().chains.push_back(vec![op]);
+    }
+
+    fn continue_chain(&self, op: FsOp) {
+        let mut queue = self.queue.borrow_mut();
+        match queue.chains.back_mut() {
+            Some(chain) => chain.push(op),
+            None => queue.chains.push_back(vec![op]),
+        }
+    }
+}
+
+impl SubscriptionChildHost for RtChildHost<'_> {
+    fn now_ms(&mut self) -> f64 {
+        self.rt.now()
+    }
+
+    fn owner(&self) -> (f64, f64) {
+        (self.rt.pid(), self.owner_started_at)
+    }
+
+    fn kill_tree(&mut self, pid: f64) -> Result<(), String> {
+        kill_process_tree_rt(self.rt, Some(pid), true);
+        Ok(())
+    }
+
+    fn mkdir_p(&mut self, dir: &str) -> Result<(), String> {
+        self.new_chain(FsOp::Mkdir {
+            path: dir.to_owned(),
+            recursive: true,
+            mode: None,
+        });
+        Ok(())
+    }
+
+    fn write_file(&mut self, path: &str, text: &str) -> Result<(), String> {
+        self.continue_chain(FsOp::WriteFile {
+            path: path.to_owned(),
+            data: text.as_bytes().to_vec(),
+            mode: None,
+            flag: None,
+        });
+        Ok(())
+    }
+
+    fn rename(&mut self, from: &str, to: &str) -> Result<(), String> {
+        self.continue_chain(FsOp::Rename {
+            from: from.to_owned(),
+            to: to.to_owned(),
+        });
+        Ok(())
+    }
+
+    fn remove_sync(&mut self, path: &str) -> Result<(), String> {
+        self.remove(path)
+    }
+
+    fn remove(&mut self, path: &str) -> Result<(), String> {
+        self.new_chain(FsOp::Rm {
+            path: path.to_owned(),
+            recursive: false,
+            force: true,
+        });
+        Ok(())
+    }
+}
+
+struct SharedInner {
+    registry: RefCell<SubscriptionChildRegistry>,
+    queue: Rc<RefCell<WriteQueue>>,
+    owner_started_at: f64,
+}
+
+/// `sharedSubscriptionChildRegistry()`: the registry of the app, which the
+/// caller owns (one per app; cloning it is cheap and shares it).
+#[derive(Clone)]
+pub struct SharedChildRegistry {
+    inner: Rc<SharedInner>,
+}
+
+impl SharedChildRegistry {
+    /// `owner_started_at` is `SUBSCRIPTION_OWNER_STARTED_AT`: when this
+    /// process started, by its own clock (`Math.round(Date.now() -
+    /// process.uptime() * 1000)`); it identifies the process as the owner of
+    /// a record.
+    pub fn new(owner_started_at: f64) -> Self {
+        SharedChildRegistry {
+            inner: Rc::new(SharedInner {
+                registry: RefCell::new(create_subscription_child_registry()),
+                queue: Rc::new(RefCell::new(WriteQueue::default())),
+                owner_started_at,
+            }),
+        }
+    }
+
+    /// `SUBSCRIPTION_OWNER_STARTED_AT`
+    pub fn owner_started_at(&self) -> f64 {
+        self.inner.owner_started_at
+    }
+
+    fn with_host<R>(
+        &self,
+        rt: &Rt,
+        run: impl FnOnce(&mut SubscriptionChildRegistry, &mut RtChildHost<'_>) -> R,
+    ) -> R {
+        let mut host = RtChildHost {
+            rt,
+            owner_started_at: self.inner.owner_started_at,
+            queue: &self.inner.queue,
+        };
+        let answer = run(&mut self.inner.registry.borrow_mut(), &mut host);
+        drain_writes(rt, &self.inner.queue);
+        answer
+    }
+
+    /// `track(child, info)` for a child whose pid is `pid`: the ticket
+    /// [`SharedChildRegistry::forget`] takes; `None` for a child without a valid pid
+    pub fn track(&self, rt: &Rt, pid: Option<f64>, info: &TrackedChildInfo) -> Option<ChildTicket> {
+        self.with_host(rt, |registry, host| registry.track(pid, info, host))
+    }
+
+    /// `forget()` of the function `track` returns
+    pub fn forget(&self, rt: &Rt, ticket: ChildTicket) {
+        self.with_host(rt, |registry, host| registry.forget(ticket, host));
+    }
+
+    /// `shutdown()`: end every registered child with its process tree
+    pub fn shutdown(&self, rt: &Rt) {
+        self.with_host(rt, |registry, host| registry.shutdown(host));
+    }
+
+    /// `size`
+    pub fn size(&self) -> usize {
+        self.inner.registry.borrow().size()
+    }
+
+    /// `recordIn(dir)`: keep a record of the registered children in `dir`
+    /// (`None`: stop), for the next start to clean up
+    pub fn record_in(&self, rt: &Rt, dir: Option<&str>) {
+        self.with_host(rt, |registry, host| registry.record_in(dir, host));
+    }
+
+    /// `flushed()`: answers once the record on disk reflects every change so far
+    pub async fn flushed(&self, rt: &Rt) {
+        let waiter = {
+            let mut queue = self.inner.queue.borrow_mut();
+            if !queue.running && queue.chains.is_empty() {
+                return;
+            }
+            let (settle, wait) = rt.deferred::<()>();
+            queue.waiters.push(settle);
+            wait
+        };
+        waiter.await;
+    }
+}
+
+/// `trackSubscriptionChild(child, info)`: register a child that was not
+/// started through [`spawn_subscription_program`], so that
+/// [`shutdown_subscription_children`] ends it too; it is forgotten when it
+/// exits. The ticket is what the function the TypeScript returns forgets it with.
+pub fn track_subscription_child(
+    rt: &Rt,
+    shared: &SharedChildRegistry,
+    child: &Child,
+    info: &TrackedChildInfo,
+) -> Option<ChildTicket> {
+    let ticket = shared.track(rt, child.pid(), info)?;
+    let rt_exit = rt.clone();
+    let shared_exit = shared.clone();
+    child.on(move |event| {
+        if matches!(event, ChildEvent::Exit { .. }) {
+            shared_exit.forget(&rt_exit, ticket);
+        }
+    });
+    Some(ticket)
+}
+
+/// `shutdownSubscriptionChildren()`: end every subscription CLI this app
+/// started, with its descendants. Safe to call more than once.
+pub fn shutdown_subscription_children(rt: &Rt, shared: &SharedChildRegistry) {
+    shared.shutdown(rt);
+}
+
+/// `trackedSubscriptionChildCount()`
+pub fn tracked_subscription_child_count(shared: &SharedChildRegistry) -> usize {
+    shared.size()
+}
+
+/// `SubscriptionSpawnOptions.registry`: where the child is registered
+#[derive(Clone, Default)]
+pub enum RegistryChoice {
+    /// absent: the shared registry
+    #[default]
+    Shared,
+    /// `null`: none
+    None,
+    /// a registry of its own
+    Custom(SharedChildRegistry),
+}
+
+/// `registry?.track(child, info)`, with the shared registry for
+/// [`RegistryChoice::Shared`]
+pub fn track_child(
+    rt: &Rt,
+    shared: &SharedChildRegistry,
+    registry: &RegistryChoice,
+    child: &Child,
+    info: &TrackedChildInfo,
+) {
+    match registry {
+        RegistryChoice::Shared => {
+            track_subscription_child(rt, shared, child, info);
+        }
+        RegistryChoice::None => {}
+        RegistryChoice::Custom(custom) => {
+            track_subscription_child(rt, custom, child, info);
+        }
+    }
+}
+
+/// `killProcessTree(pid, { force })` on the runtime: the Windows branch
+/// starts `taskkill` as a child of its own (its start is left to run beside
+/// the caller, as the TypeScript does not wait for it), the POSIX branch
+/// signals the group and arms the grace timer.
+pub fn kill_process_tree_rt(rt: &Rt, pid: Option<f64>, force: bool) {
+    kill_process_tree(
+        pid,
+        &KillTreeOptions {
+            force,
+            ..KillTreeOptions::default()
+        },
+        &mut RtKillHost { rt: rt.clone() },
+    );
+}
+
+/// What `killProcessTree` calls of the process, on the runtime
+struct RtKillHost {
+    rt: Rt,
+}
+
+impl KillHost for RtKillHost {
+    fn process_platform(&self) -> String {
+        self.rt.platform()
+    }
+
+    fn env_var(&self, key: &str) -> Option<String> {
+        self.rt.env(key)
+    }
+
+    fn kill(&mut self, pid: f64, signal: Option<Signal>) -> Result<(), String> {
+        // the runtime reports no failure of a signal
+        self.rt.kill_pid(pid, signal.map(Signal::as_str));
+        Ok(())
+    }
+
+    fn spawn_killer(
+        &mut self,
+        pid: f64,
+        command: &str,
+        args: &[String],
+        options: &KillerSpawn,
+    ) -> Result<u64, String> {
+        let request = SpawnRequest {
+            command: command.to_owned(),
+            args: args.to_vec(),
+            cwd: Some(options.cwd.clone()),
+            env: None,
+            stdio: [Stdio::Ignore; 3],
+            detached: false,
+            windows_hide: options.windows_hide,
+            shell: None,
+        };
+        let rt = self.rt.clone();
+        let mut start: LocalBoxFuture<()> = Box::pin(async move {
+            match rt.spawn(request).await {
+                Ok(killer) => {
+                    let rt_error = rt.clone();
+                    killer.on(move |event| {
+                        if matches!(event, ChildEvent::Error(_)) {
+                            on_killer_error(
+                                pid,
+                                &mut RtKillHost {
+                                    rt: rt_error.clone(),
+                                },
+                            );
+                        }
+                    });
+                }
+                // spawn threw
+                Err(_) => on_killer_error(pid, &mut RtKillHost { rt: rt.clone() }),
+            }
+        });
+        // `spawn(...)` of the TypeScript starts the process now: the command is queued by the
+        // first poll, and the rest (the listener) waits for the answer
+        let mut cx = std::task::Context::from_waker(std::task::Waker::noop());
+        if start.as_mut().poll(&mut cx).is_pending() {
+            self.rt.spawn_local(start);
+        }
+        Ok(0)
+    }
+
+    fn unref_killer(&mut self, _killer: u64) -> Result<(), String> {
+        Ok(())
+    }
+
+    fn set_kill_timeout(&mut self, ms: f64, pid: f64) -> u64 {
+        let rt = self.rt.clone();
+        self.rt.set_timeout(ms, move || {
+            on_kill_timeout(pid, &mut RtKillHost { rt });
+        })
+    }
+
+    fn unref_timer(&mut self, _timer: u64) {}
+}
+
+/// `SubscriptionSpawnOptions`
+#[derive(Clone, Default)]
+pub struct SubscriptionSpawnOptions {
+    pub cwd: Option<String>,
+    /// default: three pipes
+    pub stdio: Option<[Stdio; 3]>,
+    /// environment to sanitise; the app's own when absent
+    pub base_env: Option<Vec<(String, String)>>,
+    /// variables for this run, applied after the sanitising
+    pub env: Vec<(String, String)>,
+    pub platform: Option<String>,
+    /// where the child is registered
+    pub registry: RegistryChoice,
+}
+
+/// `spawnSubscriptionProgram(program, args, options)`: start a located CLI:
+/// its resolved file, an argument list, the sanitised environment, no shell.
+/// The child is registered for shutdown, and on POSIX leads its own process
+/// group so the whole group can be ended. An `Err` is what `spawn` threw.
+pub async fn spawn_subscription_program(
+    rt: &Rt,
+    shared: &SharedChildRegistry,
+    program: &SubscriptionProgram,
+    args: &[String],
+    options: &SubscriptionSpawnOptions,
+) -> Result<Child, JsError> {
+    let platform = options.platform.clone().unwrap_or_else(|| rt.platform());
+    // `{ ...program.env, ...options.env }`
+    let mut extra: JsObject<String> = JsObject::new();
+    for (name, value) in program.env.iter().chain(options.env.iter()) {
+        extra.set(name.clone(), value.clone());
+    }
+    let env = subscription_child_env(
+        rt,
+        &SubscriptionEnvOptions {
+            base: options.base_env.clone(),
+            platform: Some(platform.clone()),
+            command: Some(program.command.clone()),
+            extra: extra
+                .entries()
+                .into_iter()
+                .map(|(name, value)| (name.to_owned(), value.clone()))
+                .collect(),
+        },
+    );
+    let mut spawn_args = program.prefix_args.clone();
+    spawn_args.extend(args.iter().cloned());
+    let child = rt
+        .spawn(SpawnRequest {
+            command: program.command.clone(),
+            args: spawn_args,
+            cwd: options.cwd.clone(),
+            env: Some(env),
+            stdio: options.stdio.unwrap_or([Stdio::Pipe; 3]),
+            // POSIX: a process group of its own, so the group can be signalled. Windows ends trees by
+            // pid, and a detached child there would only lose its console.
+            detached: platform != "win32",
+            windows_hide: true,
+            shell: None,
+        })
+        .await?;
+    track_child(
+        rt,
+        shared,
+        &options.registry,
+        &child,
+        &TrackedChildInfo {
+            provider: program.provider.clone(),
+            command: program.command.clone(),
+            started_at: None,
+        },
+    );
+    Ok(child)
+}
+
+/// `SubscriptionCommandResult`
+#[derive(Debug, Clone, PartialEq)]
+pub struct SubscriptionCommandResult {
+    /// `None` when the program was ended by a signal
+    pub code: Option<f64>,
+    pub stdout: String,
+    pub stderr: String,
+}
+
+/// `SubscriptionRunOptions`
+#[derive(Clone)]
+pub struct SubscriptionRunOptions {
+    /// the caller gave up: the program is ended and the run rejects
+    pub signal: AbortSignal,
+    pub timeout_ms: f64,
+    pub base_env: Option<Vec<(String, String)>>,
+    pub cwd: Option<String>,
+}
+
+/// `SubscriptionRunner`: runs one CLI command to its end;
+/// [`run_subscription_program`] is the real one
+pub type SubscriptionRunner = Rc<
+    dyn Fn(
+        Rt,
+        SubscriptionProgram,
+        Vec<String>,
+        SubscriptionRunOptions,
+    ) -> LocalBoxFuture<Result<SubscriptionCommandResult, JsError>>,
+>;
+
+/// `MAX_COMMAND_OUTPUT_BYTES`
+const MAX_COMMAND_OUTPUT_BYTES: usize = 256 * 1024;
+
+/// `abortError()`
+fn abort_error() -> JsError {
+    JsError::error("The command was cancelled").named("AbortError")
+}
+
+/// What a run has collected, and the two things that end it
+#[derive(Default)]
+struct RunState {
+    stdout: Vec<u8>,
+    stderr: Vec<u8>,
+    size: usize,
+    settled: bool,
+    timer: Option<Id>,
+    abort_listener: Option<Id>,
+}
+
+/// `runSubscriptionProgram(program, args, options)`: run a short CLI command
+/// (version, login status) and collect its output. stdin is closed from the
+/// start, because both CLIs wait on an open stdin. The working directory is
+/// the temp dir, so no project-level configuration of some other directory
+/// applies.
+pub async fn run_subscription_program(
+    rt: &Rt,
+    shared: &SharedChildRegistry,
+    program: &SubscriptionProgram,
+    args: &[String],
+    options: &SubscriptionRunOptions,
+) -> Result<SubscriptionCommandResult, JsError> {
+    if options.signal.aborted() {
+        return Err(abort_error());
+    }
+    let child = spawn_subscription_program(
+        rt,
+        shared,
+        program,
+        args,
+        &SubscriptionSpawnOptions {
+            cwd: Some(options.cwd.clone().unwrap_or_else(|| rt.tmpdir())),
+            stdio: Some([Stdio::Ignore, Stdio::Pipe, Stdio::Pipe]),
+            base_env: options.base_env.clone(),
+            ..SubscriptionSpawnOptions::default()
+        },
+    )
+    .await?;
+    let (settle, wait) = rt.deferred::<Result<SubscriptionCommandResult, JsError>>();
+    let state = Rc::new(RefCell::new(RunState::default()));
+    // `finish(error, code)`
+    let finish: Rc<dyn Fn(Option<JsError>, Option<f64>)> = {
+        let rt = rt.clone();
+        let state = state.clone();
+        let signal = options.signal.clone();
+        let pid = child.pid();
+        Rc::new(move |error: Option<JsError>, code: Option<f64>| {
+            {
+                let mut run = state.borrow_mut();
+                if run.settled {
+                    return;
+                }
+                run.settled = true;
+            }
+            let (timer, listener) = {
+                let run = state.borrow();
+                (run.timer, run.abort_listener)
+            };
+            rt.clear_timeout(timer);
+            if let Some(listener) = listener {
+                signal.off(listener);
+            }
+            match error {
+                Some(error) => {
+                    kill_process_tree_rt(&rt, pid, true);
+                    settle.settle(Err(error));
+                }
+                None => {
+                    let run = state.borrow();
+                    settle.settle(Ok(SubscriptionCommandResult {
+                        code,
+                        stdout: String::from_utf8_lossy(&run.stdout).into_owned(),
+                        stderr: String::from_utf8_lossy(&run.stderr).into_owned(),
+                    }));
+                }
+            }
+        })
+    };
+    let on_timeout = finish.clone();
+    let timeout_ms = options.timeout_ms;
+    let timer = rt.set_timeout(timeout_ms, move || {
+        on_timeout(
+            Some(JsError::error(format!(
+                "The command did not finish within {} ms",
+                number_to_string(timeout_ms)
+            ))),
+            None,
+        );
+    });
+    state.borrow_mut().timer = Some(timer);
+    let on_abort = finish.clone();
+    let listener = options
+        .signal
+        .on_abort(move |_| on_abort(Some(abort_error()), None));
+    state.borrow_mut().abort_listener = Some(listener);
+    let on_event = finish;
+    let collected = state;
+    child.on(move |event| match event {
+        ChildEvent::Stdout(chunk) | ChildEvent::Stderr(chunk) => {
+            let mut run = collected.borrow_mut();
+            if run.size >= MAX_COMMAND_OUTPUT_BYTES {
+                return;
+            }
+            run.size += chunk.len();
+            if matches!(event, ChildEvent::Stdout(_)) {
+                run.stdout.extend_from_slice(chunk);
+            } else {
+                run.stderr.extend_from_slice(chunk);
+            }
+        }
+        ChildEvent::Error(error) => on_event(Some(error.clone()), None),
+        ChildEvent::Close { code, .. } => on_event(None, *code),
+        ChildEvent::Exit { .. } => {}
+    });
+    wait.await
+}
