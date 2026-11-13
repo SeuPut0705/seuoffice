@@ -303,13 +303,15 @@ export function withRedactRoot(partXml: string): string {
   const add = (attr: string) => {
     tag = `<${name} ${attr}${tag.slice(name.length + 1)}`
   }
+  // a namespace may be spelled with character references: compared as read, written as it was
   const prefixOf = (uri: string) =>
     [...tagAttributes(tag)]
-      .find(([attr, a]) => attr.startsWith('xmlns:') && a.value === uri)?.[0]
+      .find(([attr, a]) => attr.startsWith('xmlns:') && decodeEntities(a.value) === uri)?.[0]
       .slice('xmlns:'.length)
   const ownPrefix = tagAttributes(tag).get(`xmlns:${REDACT_PREFIX}`)?.value
   // the namespaces the part's marks are in
-  const used = REDACT_NAMESPACES.filter((ns) => partXml.includes(ns))
+  const decoded = decodeEntities(partXml)
+  const used = REDACT_NAMESPACES.filter((ns) => decoded.includes(ns))
   if (ownPrefix === undefined && partXml.includes(`<${REDACT_EL}`)) {
     add(`xmlns:${REDACT_PREFIX}="${REDACT_NS_WRITTEN}"`)
     if (!used.includes(REDACT_NS_WRITTEN)) used.unshift(REDACT_NS_WRITTEN)
