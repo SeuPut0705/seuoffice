@@ -14,12 +14,23 @@ const S = koStrings()
 const files: Record<string, FileSpec> = { userData: { dir: true } }
 const threeTabs = [invoke('home:new-doc'), invoke('home:new-markdown'), invoke('home:new-slide')]
 const as = (view: number) => ({ view })
-const menu = (picks: (string | null)[], more: Record<string, unknown> = {}) => world({ menus: picks, ...more })
+const menu = (picks: (string | null)[], more: Record<string, unknown> = {}) =>
+  world({ menus: picks, ...more })
 const tabMenu = (id: string) => invoke('tabs:show-tab-menu', id, 5, 6)
 const splitState = invoke('tabs:get-split')
 const role = (view: number) => ({ channel: 'app:get-split-role', ...as(view), args: [] })
-const focusPane = (view: number) => ({ channel: 'tabs:focus-pane', kind: 'send' as const, ...as(view), args: [] })
-const viewFocused = (view: number) => ({ channel: 'app:view-focused', kind: 'send' as const, ...as(view), args: [] })
+const focusPane = (view: number) => ({
+  channel: 'tabs:focus-pane',
+  kind: 'send' as const,
+  ...as(view),
+  args: [],
+})
+const viewFocused = (view: number) => ({
+  channel: 'app:view-focused',
+  kind: 'send' as const,
+  ...as(view),
+  args: [],
+})
 const ratio = (value: unknown) => send('tabs:set-split-ratio', value)
 const drag = (x: unknown, y: unknown) => send('tabs:drag-torn-window', x, y)
 const tearOff = (id: unknown, x: unknown, y: unknown) => invoke('tabs:tear-off', id, x, y)
@@ -84,14 +95,28 @@ const cases: Case[] = [
     views: withViews(3),
     files,
     hosts: menu([S.menuSplitRight]),
-    calls: [...threeTabs, tabMenu('t2'), invoke('tabs:close', 't3'), splitState, invoke('tabs:close', 't2'), splitState],
+    calls: [
+      ...threeTabs,
+      tabMenu('t2'),
+      invoke('tabs:close', 't3'),
+      splitState,
+      invoke('tabs:close', 't2'),
+      splitState,
+    ],
   },
   {
     note: 'the focus pings of a view that is not in a split change nothing',
     views: withViews(2),
     files,
     hosts: world(),
-    calls: [invoke('home:new-doc'), focusPane(100), viewFocused(100), role(100), splitState, ratio(0.5)],
+    calls: [
+      invoke('home:new-doc'),
+      focusPane(100),
+      viewFocused(100),
+      role(100),
+      splitState,
+      ratio(0.5),
+    ],
   },
   // ---- drag a tab out of the strip ----
   {
@@ -217,7 +242,10 @@ const cases: Case[] = [
     note: 'split beside: two windows share the screen; the cursor is over the strip',
     views: withViews(3),
     files,
-    hosts: menu([S.menuTabSplitBeside], { cursor: { x: 600, y: 20 }, workArea: { x: 0, y: 25, width: 1440, height: 875 } }),
+    hosts: menu([S.menuTabSplitBeside], {
+      cursor: { x: 600, y: 20 },
+      workArea: { x: 0, y: 25, width: 1440, height: 875 },
+    }),
     calls: [...threeTabs, tabMenu('t2'), invoke('tabs:list')],
   },
 ]

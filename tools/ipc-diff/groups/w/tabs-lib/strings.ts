@@ -9,13 +9,21 @@ import { resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
-const ENTRY = resolve(fileURLToPath(import.meta.url), '../../../../../../apps/shell/src/main/index.ts')
+const ENTRY = resolve(
+  fileURLToPath(import.meta.url),
+  '../../../../../../apps/shell/src/main/index.ts',
+)
 
 let cached: Record<string, string> | undefined
 
 export function koStrings(): Record<string, string> {
   if (cached) return cached
-  const source = ts.createSourceFile(ENTRY, readFileSync(ENTRY, 'utf8'), ts.ScriptTarget.Latest, true)
+  const source = ts.createSourceFile(
+    ENTRY,
+    readFileSync(ENTRY, 'utf8'),
+    ts.ScriptTarget.Latest,
+    true,
+  )
   const out: Record<string, string> = {}
   const visit = (node: ts.Node): void => {
     if (

@@ -36,7 +36,11 @@ const newSheetless = [newDoc, newMarkdown, newSlide]
 const files = { 'documents/notes.md': '# notes\n', 'documents/report.docx': 'PK' }
 const dropNotes = send('app:open-dropped-files', ['$DIR/documents/notes.md'])
 const menuFor = (picks: (string | null)[], more: Record<string, unknown> = {}) =>
-  world({ menus: picks, homeKinds: ['docx', 'xlsx', 'pptx', 'md', 'html', 'xmind', 'drawio', 'hwp', 'pdf'], ...more })
+  world({
+    menus: picks,
+    homeKinds: ['docx', 'xlsx', 'pptx', 'md', 'html', 'xmind', 'drawio', 'hwp', 'pdf'],
+    ...more,
+  })
 
 const cases: Case[] = [
   {
@@ -250,7 +254,18 @@ const cases: Case[] = [
     files: {
       'userData/app-settings.json': JSON.stringify({
         homeKinds: {
-          order: ['docx', 'xlsx', 'pptx', 'md', 'html', 'xmind', 'drawio', 'hwp', 'pdf', 'pdfTools'],
+          order: [
+            'docx',
+            'xlsx',
+            'pptx',
+            'md',
+            'html',
+            'xmind',
+            'drawio',
+            'hwp',
+            'pdf',
+            'pdfTools',
+          ],
           hidden: ['docx', 'xlsx', 'pptx', 'md', 'html', 'xmind', 'drawio', 'hwp'],
         },
       }),
@@ -264,7 +279,14 @@ const cases: Case[] = [
     hosts: menuFor(['파일 열기', null], {
       strings: { ...S, menuCheckUpdates: '업데이트 확인…' },
       appMenu: [
-        { label: '파일', submenu: [{ label: '파일 열기' }, { type: 'separator' }, { label: '닫기', enabled: false }] },
+        {
+          label: '파일',
+          submenu: [
+            { label: '파일 열기' },
+            { type: 'separator' },
+            { label: '닫기', enabled: false },
+          ],
+        },
         { label: '도움말', submenu: [{ label: '정보' }] },
         { label: '창', enabled: false },
       ],
