@@ -1,0 +1,387 @@
+[
+  {
+    "name": "project-guide: the use time is written once per 59 seconds, not 60",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "PROJECT_TOUCH_WRITE_MS: f64 = 60_000.0;",
+    "replace": "PROJECT_TOUCH_WRITE_MS: f64 = 59_000.0;",
+    "fn": ["project-guide.PROJECT_TOUCH_WRITE_MS"]
+  },
+  {
+    "name": "project-guide: two memory backups are kept, not three",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "pub const MEMORY_BACKUPS_KEPT: usize = 3;",
+    "replace": "pub const MEMORY_BACKUPS_KEPT: usize = 2;",
+    "fn": ["project-guide.MEMORY_BACKUPS_KEPT", "project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: pinned projects come last",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "return if a.pinned { -1.0 } else { 1.0 };",
+    "replace": "return if a.pinned { 1.0 } else { -1.0 };",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the oldest project is listed first",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "locale_compare(&b.last_used_at, &a.last_used_at)",
+    "replace": "locale_compare(&a.last_used_at, &b.last_used_at)",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a project without switches has memory off",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "    memory_enabled: true,",
+    "replace": "    memory_enabled: false,",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a copy is treated as a moved folder and keeps the original id in its project.json",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if identity == FolderIdentity::Copied {",
+    "replace": "if identity == FolderIdentity::Moved {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a copy whose id could not be written is not remembered as needing a fix",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if wrote != ProjectWriteResult::Ok {",
+    "replace": "if wrote == ProjectWriteResult::Ok {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a stale list entry at the folder's path stays",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "next.list.retain(|item| item.id != *stale);",
+    "replace": "let _ = stale;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a moved folder keeps its old use time",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "listed.last_used_at = at.clone();",
+    "replace": "let _ = &at;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the opt-out records of a moved project stay at the old path",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "rebase_opt_outs(next, &id, &previous.path, &root, platform);",
+    "replace": "let _ = &previous;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a copy does not inherit the trust of its original",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "next.trust.set(id.as_str(), source);",
+    "replace": "let _ = source;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a copy does not inherit the switches of its original",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "next.settings.set(id.as_str(), switches);",
+    "replace": "let _ = switches;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a new id that a listed project uses is taken",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "settings.trust.get(&id).is_none() && !settings.list.iter().any(|item| item.id == id)",
+    "replace": "settings.trust.get(&id).is_none()",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a new id that has a trust record is taken",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "settings.trust.get(&id).is_none() && !settings.list.iter().any(|item| item.id == id)",
+    "replace": "!settings.list.iter().any(|item| item.id == id)",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: an invalid new id is accepted",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if !is_valid_project_id(&id) {",
+    "replace": "if false {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a closed trust prompt on the project screen adds trust",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "None => return Ok(DecideTrustResult::Cancelled),",
+    "replace": "None => return Ok(DecideTrustResult::Ok { trust: ProjectTrustDecision::Use }),",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a project already trusted is asked again",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if self.trust_state(id) == ProjectTrustState::Use {",
+    "replace": "if self.trust_state(id) != ProjectTrustState::Use {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: \"without\" drops the recorded hashes",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": ".map(|record| record.hashes.clone())",
+    "replace": ".map(|_| JsObject::new())",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a project without a trust record is reported as without, not unconfirmed",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "None => ProjectTrustState::Unconfirmed,",
+    "replace": "None => ProjectTrustState::Without,",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a listed project without a trust record is trusted",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "None => ProjectTrustDecision::Without,",
+    "replace": "None => ProjectTrustDecision::Use,",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a missing folder is read as present",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if !is_folder(&root) {",
+    "replace": "if false {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a changed file's new hash is not recorded",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if !assembled.hash_updates.is_empty() {",
+    "replace": "if false {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the visibility rule key does not tell case folding",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if folds { \"i\" } else { \"s\" }",
+    "replace": "if folds { \"s\" } else { \"i\" }",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the memory file is listed as a conflict copy of itself",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "&& name.to_lowercase() != project_folder_name(\"memoryFile\")",
+    "replace": "&& true",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the memory switch is not set",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "current.memory_enabled = memory_enabled;",
+    "replace": "let _ = memory_enabled;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the sync notice is shown on every read",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": ".any(|shown| shown == id)\n        {",
+    "replace": ".any(|shown| shown != id)\n        {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the OneDrive variable is not read for the service",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "for key in [\"OneDrive\", \"OneDriveConsumer\", \"OneDriveCommercial\"]",
+    "replace": "for key in [\"OneDriveConsumer\", \"OneDriveCommercial\"]",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a use time at the edge of the interval waits",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "now_ms - last >= self.touch_write_ms",
+    "replace": "now_ms - last > self.touch_write_ms",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the timer waits the wrong time",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "self.touch_write_ms - now_ms",
+    "replace": "self.touch_write_ms + now_ms",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: an older use time replaces a newer one",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "js_greater(at, &entry.last_used_at)",
+    "replace": "!js_greater(at, &entry.last_used_at)",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: choosing a project does not count as using it",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "self.touch(project_id)?;",
+    "replace": "let _ = project_id;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a failed write does not mark the project unwritable",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "self.mark_unwritable(id);",
+    "replace": "let _ = id;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a project already unwritable is written to anyway",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "        if self.is_unwritable(id) {\n            return Ok(ProjectWriteResult::Unwritable);\n        }\n        let root = entry.path;",
+    "replace": "        let root = entry.path;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a rename is tried on an unwritable project",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "        if self.is_unwritable(id) {\n            return Ok(ProjectWriteResult::Unwritable);\n        }\n        Ok(self.try_write(id, || {",
+    "replace": "        Ok(self.try_write(id, || {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a project.json naming a listed project elsewhere is kept",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "Some(text) if self.guide.id_needs_fix(self.id, &self.root, text) => {",
+    "replace": "Some(_) if false => {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the id of an original at the same path is replaced",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "Some(original) => !same_path(&original.path, root, &self.platform),",
+    "replace": "Some(original) => same_path(&original.path, root, &self.platform),",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a write that changes nothing still makes project.json",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if next.is_some() {",
+    "replace": "if true {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a rename resets the creation time",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "let existing = current.and_then(parse_created_at);",
+    "replace": "let existing: Option<String> = None;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a name of the longest length is refused",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "name.chars().count() > PROJECT_NAME_MAX_CHARS",
+    "replace": "name.chars().count() >= PROJECT_NAME_MAX_CHARS",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: an existing folder is adopted only when asked and listed",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "args.use_existing == Some(true) || listed",
+    "replace": "args.use_existing == Some(true) && listed",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a re-picked folder is added as a new project",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "self.adopt(folder_path, ask_trust, Some(id))",
+    "replace": "self.adopt(folder_path, ask_trust, None)",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: \"remove from list\" keeps the entry",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "self.update(|settings| drop_from_list(settings, id))?;",
+    "replace": "self.update(|_| ())?;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: pinning sets the opposite",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "entry.pinned = pinned;",
+    "replace": "entry.pinned = !pinned;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: project.json is written by name in any case",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": ".replace('\\\\', \"/\").to_lowercase()",
+    "replace": ".replace('\\\\', \"/\")",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a drive-letter path is an ignore path",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "|| js_regex!(r\"^[A-Za-z]:\").test(rel_path)",
+    "replace": "|| false",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: instructions record the memory hash",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "(ProjectHashedFile::Instructions, Some(hash_text(text)))",
+    "replace": "(ProjectHashedFile::Memory, Some(hash_text(text)))",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the AI may remember while memory is off",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if !settings_of(id, &self.read()).memory_enabled {",
+    "replace": "if settings_of(id, &self.read()).memory_enabled {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the AI may remember under \"without\"",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if self.trust_state(id) != ProjectTrustState::Use {",
+    "replace": "if self.trust_state(id) == ProjectTrustState::Use {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: four memory backups stay",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": ".skip(MEMORY_BACKUPS_KEPT)",
+    "replace": ".skip(MEMORY_BACKUPS_KEPT + 1)",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a taken backup name moves by two seconds",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "at += 1000.0;",
+    "replace": "at += 2000.0;",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: backups are listed oldest first",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "        names.reverse();\n",
+    "replace": "",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: an older backup than the newest is restored",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if *newest != args.backup_name {",
+    "replace": "if *newest == args.backup_name {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a chat id that is not valid is recorded",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "if !is_valid_project_id(chat_id) {",
+    "replace": "if false {",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: a choice is answered as it was before it was recorded",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "selection.project_id.as_deref() == project_id",
+    "replace": "selection.project_id.as_deref() != project_id",
+    "fn": ["project-guide.scenario"]
+  },
+  {
+    "name": "project-guide: the document does not use the folder its hint added",
+    "file": "main-core/src/shell/projects/project_guide.rs",
+    "find": "self.set_selection(&target, Some(&project.id))?;",
+    "replace": "let _ = project;",
+    "fn": ["project-guide.scenario"]
+  }
+]
