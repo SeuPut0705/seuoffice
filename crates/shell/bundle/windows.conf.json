@@ -31,6 +31,7 @@
       "../../skills/seuoffice/SKILL.md": "resources/cli/skills/seuoffice/SKILL.md",
       "../../packages/cli/dist/node_modules": "resources/cli/node_modules",
       "bundle/out/node": "resources/cli/node",
+      "bundle/out/app-update.yml": "resources/app-update.yml",
       "../../packages/ui/template-fonts": "resources/template-fonts",
       "../../apps/sheets/native/xlsx-engine/target/x86_64-pc-windows-gnu/release/xlsx-sidecar.exe": "resources/native/xlsx-sidecar.exe",
       "../../packages/pdf2docx/ocr-helper/win-ocr.exe": "resources/ocr/win-ocr.exe",
@@ -131,6 +132,7 @@
     "windows": {
       "nsis": {
         "installMode": "currentUser",
+        "compression": "none",
         "installerHooks": "bundle/hooks.nsh",
         "installerIcon": "../../apps/shell/build/icon.ico"
       }

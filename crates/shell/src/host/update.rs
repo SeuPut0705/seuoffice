@@ -16,6 +16,7 @@
 //! core thread has run `on_will_quit`, which starts the installer (Windows)
 //! or schedules the bundle swap (macOS), as Electron's `will-quit` did.
 
+mod differential;
 mod feed;
 
 use std::cell::RefCell;
@@ -62,8 +63,15 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
         views: cx.views.clone(),
     });
     hosts.insert(windows);
+    // Electron's `process.resourcesPath`, where the bundle config puts
+    // app-update.yml: `Contents/Resources`, `<install folder>\resources`
+    let resources = cx.app.path().resource_dir().ok();
     let control: UpdaterControlHost = Arc::new(Control {
-        resources: cx.app.path().resource_dir().ok(),
+        resources: if cfg!(windows) {
+            resources.map(|dir| dir.join("resources"))
+        } else {
+            resources
+        },
     });
     hosts.insert(control);
 }

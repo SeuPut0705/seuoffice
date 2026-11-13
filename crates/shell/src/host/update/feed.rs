@@ -12,19 +12,30 @@
 //! the release notes are every newer release's body, as `fullChangelog`.
 //!
 //! The download goes to `<cache>/<updaterCacheDirName>/pending/<file>`, the
-//! folder electron-updater used, so `update_cache` prunes what either left.
-//! A file already there with the right sha512 is not downloaded again; a
-//! partial one (`<file>.part`) is resumed with a range request. The whole
-//! file is downloaded: electron-updater's block-map differential download is
-//! not done here.
+//! folder electron-updater used, with its `update-info.json`, so
+//! `update_cache` prunes what either left. A file already there with the
+//! right sha512 is not downloaded again.
+//!
+//! As electron-updater did, the download is differential first
+//! (`differential.rs`): the old file is the installer the last install kept
+//! (`<cache>/<updaterCacheDirName>/installer.exe`, which `hooks.nsh` copies
+//! there as electron-builder's installer did) or the zip the last macOS
+//! update downloaded (`update.zip`), its block map `current.blockmap` beside
+//! it, else the old version's `.blockmap` from the release. Unchanged blocks
+//! are copied from the old file, the others downloaded one range request each
+//! (the GitHub provider's way, no multipart ranges), and the result must match
+//! the feed's sha512. Anything that goes wrong falls back to the whole file,
+//! whose partial download (`<file>.part`) is resumed with a range request.
 
 use std::fs::{self, File, OpenOptions};
-use std::io::{Read, Write};
+use std::io::{Read, Seek, SeekFrom, Write};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use base64::Engine;
+
+use super::differential::{BlockMap, Op, plan};
 use main_core::shell::updater::{CheckResult, UpdateError, UpdaterEvent, UpdaterSetting};
 use serde_json::{Value, json};
 use sha2::{Digest, Sha512};
@@ -93,6 +104,48 @@ pub struct Found {
     /// where the files are: the release's tag folder, or the generic url
     pub base: String,
     pub file: ReleaseFile,
+    /// the running version, whose release has the old block map
+    pub current: String,
+}
+
+/// The new file's block map beside it in `pending`, and the old file's in the cache
+const BLOCK_MAP_FILE: &str = "current.blockmap";
+/// What the next differential download copies from: the file the last
+/// install or update left in the cache folder
+const OLD_FILE: &str = if cfg!(target_os = "macos") {
+    "update.zip"
+} else {
+    "installer.exe"
+};
+
+/// Why a differential download did not give the file
+enum Differential {
+    Cancelled,
+    Failed(String),
+}
+
+impl From<std::io::Error> for Differential {
+    fn from(error: std::io::Error) -> Self {
+        Differential::Failed(error.to_string())
+    }
+}
+
+impl From<reqwest::Error> for Differential {
+    fn from(error: reqwest::Error) -> Self {
+        Differential::Failed(error.to_string())
+    }
+}
+
+impl From<&str> for Differential {
+    fn from(reason: &str) -> Self {
+        Differential::Failed(reason.to_owned())
+    }
+}
+
+impl From<String> for Differential {
+    fn from(reason: String) -> Self {
+        Differential::Failed(reason)
+    }
 }
 
 /// What a check did: the events it emitted, its end, and the release to download
@@ -250,6 +303,7 @@ impl Feed {
             version: info.version,
             base,
             file,
+            current: current.to_owned(),
         };
         Ok((result, Some(found), notes))
     }
@@ -292,8 +346,30 @@ impl Feed {
         {
             return Ok(target);
         }
+        // a block map an earlier round left belongs to another file
+        let _ = fs::remove_file(pending.join(BLOCK_MAP_FILE));
         let part = pending.join(format!("{name}.part"));
         let client = client()?;
+        // a partial whole download resumes; otherwise the blocks come first
+        if !part.exists() {
+            let diff = pending.join(format!("{name}.diff"));
+            match self.download_differential(&client, found, &pending, &diff, cancel, emit) {
+                Ok(()) => {
+                    fs::rename(&diff, &part).map_err(io)?;
+                    return self.keep(found, &pending, &part, &target);
+                }
+                Err(Differential::Cancelled) => {
+                    let _ = fs::remove_file(&diff);
+                    return Err(cancelled());
+                }
+                Err(Differential::Failed(reason)) => {
+                    let _ = fs::remove_file(&diff);
+                    eprintln!(
+                        "shell: cannot download differentially, downloading the whole file: {reason}"
+                    );
+                }
+            }
+        }
         let url = format!("{}{}", found.base, found.file.url);
         let have = fs::metadata(&part).map_or(0, |m| m.len());
         let mut request = client.get(&url);
@@ -327,7 +403,7 @@ impl Feed {
         let mut buf = vec![0u8; 256 * 1024];
         loop {
             if cancel.load(Ordering::Acquire) {
-                return Err(coded("ERR_UPDATER_DOWNLOAD_CANCELLED", "cancelled"));
+                return Err(cancelled());
             }
             let n = response.read(&mut buf).map_err(io)?;
             if n == 0 {
@@ -335,16 +411,7 @@ impl Feed {
             }
             out.write_all(&buf[..n]).map_err(io)?;
             transferred += n as u64;
-            if total > 0 {
-                let percent = (transferred as f64 * 100.0 / total as f64).floor();
-                if percent > last_percent {
-                    last_percent = percent;
-                    emit(UpdaterEvent::DownloadProgress {
-                        transferred: transferred as f64,
-                        percent: transferred as f64 * 100.0 / total as f64,
-                    });
-                }
-            }
+            progress(emit, transferred, total, &mut last_percent);
         }
         out.sync_all().map_err(io)?;
         drop(out);
@@ -356,14 +423,167 @@ impl Feed {
                 found.file.sha512
             )));
         }
-        // only the checked file of this version stays
-        for entry in fs::read_dir(&pending).map_err(io)?.flatten() {
-            if entry.path() != part {
-                let _ = fs::remove_file(entry.path());
+        self.keep(found, &pending, &part, &target)
+    }
+
+    /// The checked file becomes the pending update: only it, its block map
+    /// and its `update-info.json` stay in `pending`. On macOS the zip and its
+    /// block map are also what the next update copies blocks from; on Windows
+    /// the installer puts itself there once it installed (`hooks.nsh`).
+    fn keep(
+        &self,
+        found: &Found,
+        pending: &Path,
+        part: &Path,
+        target: &Path,
+    ) -> Result<PathBuf, UpdateError> {
+        let block_map = pending.join(BLOCK_MAP_FILE);
+        for entry in fs::read_dir(pending).map_err(io)?.flatten() {
+            let path = entry.path();
+            if path != part && path != block_map {
+                let _ = fs::remove_file(path);
             }
         }
-        fs::rename(&part, &target).map_err(io)?;
-        Ok(target)
+        fs::rename(part, target).map_err(io)?;
+        let file_name = target.file_name().map(|n| n.to_string_lossy().into_owned());
+        // electron-updater's DownloadedUpdateHelper record, which update_cache reads
+        let info = json!({
+            "fileName": file_name,
+            "sha512": found.file.sha512,
+            "isAdminRightsRequired": false,
+        });
+        fs::write(pending.join("update-info.json"), info.to_string()).map_err(io)?;
+        if cfg!(target_os = "macos") {
+            let cache = self.cache_dir();
+            if fs::copy(target, cache.join(OLD_FILE)).is_err()
+                || fs::copy(&block_map, cache.join(BLOCK_MAP_FILE)).is_err()
+            {
+                // a stale block map beside a fresh zip would only fail later
+                let _ = fs::remove_file(cache.join(BLOCK_MAP_FILE));
+            }
+        }
+        Ok(target.to_path_buf())
+    }
+
+    /// `differentialDownloadInstaller`: writes `out` from the old file's
+    /// blocks and range requests; the new block map stays in `pending`
+    fn download_differential(
+        &self,
+        client: &reqwest::blocking::Client,
+        found: &Found,
+        pending: &Path,
+        out: &Path,
+        cancel: &AtomicBool,
+        emit: &dyn Fn(UpdaterEvent),
+    ) -> Result<(), Differential> {
+        let cache = self.cache_dir();
+        let old_path = cache.join(OLD_FILE);
+        if !old_path.is_file() {
+            return Err(format!("no {OLD_FILE} in the cache (a first update)").into());
+        }
+        let size = found
+            .file
+            .size
+            .ok_or("the feed lists no size for the file")?;
+        let url = format!("{}{}", found.base, found.file.url);
+        let new_bytes = get_bytes(client, &format!("{url}.blockmap"))?;
+        let new_map = BlockMap::parse(&new_bytes)?;
+        fs::write(pending.join(BLOCK_MAP_FILE), &new_bytes)?;
+        let cached = fs::read(cache.join(BLOCK_MAP_FILE))
+            .ok()
+            .and_then(|b| BlockMap::parse(&b).ok());
+        let old_map = match cached {
+            Some(map) => map,
+            // the old version's file is named as the new one with its version
+            None => BlockMap::parse(&get_bytes(
+                client,
+                &format!("{}.blockmap", url.replace(&found.version, &found.current)),
+            )?)?,
+        };
+        let ops = plan(&old_map, &new_map)?;
+        let planned: u64 = ops.iter().map(Op::len).sum();
+        if planned != size {
+            return Err(
+                format!("the block map covers {planned} bytes, the file has {size}").into(),
+            );
+        }
+        let to_download: u64 = ops
+            .iter()
+            .filter(|op| matches!(op, Op::Download(_)))
+            .map(Op::len)
+            .sum();
+        let mut old = File::open(&old_path)?;
+        let mut writer = Hashing {
+            out: std::io::BufWriter::with_capacity(1 << 20, File::create(out)?),
+            hash: Sha512::new(),
+        };
+        // the redirect target of the first request serves the rest, as
+        // electron-updater kept it
+        let mut actual = url;
+        let mut requests = 0u32;
+        let mut transferred = 0u64;
+        let mut last_percent = -1.0;
+        let mut buf = vec![0u8; 256 * 1024];
+        for op in &ops {
+            if cancel.load(Ordering::Acquire) {
+                return Err(Differential::Cancelled);
+            }
+            match op {
+                Op::Copy(range) => {
+                    old.seek(SeekFrom::Start(range.start))?;
+                    let copied = std::io::copy(&mut (&mut old).take(op.len()), &mut writer)?;
+                    if copied != op.len() {
+                        return Err(format!("{OLD_FILE} is shorter than its block map").into());
+                    }
+                }
+                Op::Download(range) => {
+                    let mut response = client
+                        .get(&actual)
+                        .header("Range", format!("bytes={}-{}", range.start, range.end - 1))
+                        .send()?;
+                    if response.status().as_u16() != 206 {
+                        return Err(format!(
+                            "a range request was answered {}",
+                            response.status().as_u16()
+                        )
+                        .into());
+                    }
+                    actual = response.url().to_string();
+                    let mut got = 0u64;
+                    loop {
+                        if cancel.load(Ordering::Acquire) {
+                            return Err(Differential::Cancelled);
+                        }
+                        let n = response.read(&mut buf)?;
+                        if n == 0 {
+                            break;
+                        }
+                        writer.write_all(&buf[..n])?;
+                        got += n as u64;
+                        transferred += n as u64;
+                        progress(emit, transferred, to_download, &mut last_percent);
+                    }
+                    if got != op.len() {
+                        return Err(format!("a range gave {got} bytes of {}", op.len()).into());
+                    }
+                    // electron-updater rests a second every 100 ranges
+                    requests += 1;
+                    if requests.is_multiple_of(100) {
+                        std::thread::sleep(Duration::from_secs(1));
+                    }
+                }
+            }
+        }
+        writer.out.flush()?;
+        writer.out.get_ref().sync_all()?;
+        let sum = base64::engine::general_purpose::STANDARD.encode(writer.hash.finalize());
+        if sum != found.file.sha512 {
+            return Err(format!(
+                "sha512 checksum mismatch after the differential download: {OLD_FILE} and its block map disagree"
+            )
+            .into());
+        }
+        Ok(())
     }
 
     /// `updater.install(isSilent, isForceRunAfter)` of electron-updater's
@@ -424,6 +644,52 @@ fn get_text(client: &reqwest::blocking::Client, url: &str) -> Result<String, Upd
         return Err(http(status));
     }
     response.text().map_err(net)
+}
+
+/// A whole small file (a block map)
+fn get_bytes(client: &reqwest::blocking::Client, url: &str) -> Result<Vec<u8>, String> {
+    let response = client.get(url).send().map_err(|e| e.to_string())?;
+    let status = response.status().as_u16();
+    if status >= 400 {
+        return Err(format!("{url} answered {status}"));
+    }
+    Ok(response.bytes().map_err(|e| e.to_string())?.to_vec())
+}
+
+/// The file being written, hashed as it goes
+struct Hashing {
+    out: std::io::BufWriter<File>,
+    hash: Sha512,
+}
+
+impl Write for Hashing {
+    fn write(&mut self, data: &[u8]) -> std::io::Result<usize> {
+        let n = self.out.write(data)?;
+        self.hash.update(&data[..n]);
+        Ok(n)
+    }
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.out.flush()
+    }
+}
+
+/// `download-progress` once per whole percent of `total`
+fn progress(emit: &dyn Fn(UpdaterEvent), transferred: u64, total: u64, last_percent: &mut f64) {
+    if total == 0 {
+        return;
+    }
+    let percent = transferred as f64 * 100.0 / total as f64;
+    if percent.floor() > *last_percent {
+        *last_percent = percent.floor();
+        emit(UpdaterEvent::DownloadProgress {
+            transferred: transferred as f64,
+            percent,
+        });
+    }
+}
+
+fn cancelled() -> UpdateError {
+    coded("ERR_UPDATER_DOWNLOAD_CANCELLED", "cancelled")
 }
 
 /// The tag `/releases/latest` redirects to (`.../releases/tag/<tag>`)
@@ -790,5 +1056,168 @@ releaseDate: '2026-11-14T00:00:00.000Z'
         );
         assert!(same.events.is_empty() && same.found.is_none());
         let _ = fs::remove_dir_all(dir);
+    }
+
+    /// A release server: the new file (ranges too) and both block maps;
+    /// answers the request lines it got
+    fn release_server(
+        new_file: Vec<u8>,
+        maps: Vec<(&'static str, Vec<u8>)>,
+    ) -> (u16, std::sync::Arc<std::sync::Mutex<Vec<String>>>) {
+        let listener = std::net::TcpListener::bind("127.0.0.1:0").unwrap();
+        let port = listener.local_addr().unwrap().port();
+        let seen = std::sync::Arc::new(std::sync::Mutex::new(Vec::new()));
+        let log = seen.clone();
+        std::thread::spawn(move || {
+            for mut stream in listener.incoming().flatten() {
+                let mut head = Vec::new();
+                let mut byte = [0u8; 1];
+                while !head.ends_with(b"\r\n\r\n") && stream.read(&mut byte).unwrap_or(0) == 1 {
+                    head.push(byte[0]);
+                }
+                let head = String::from_utf8_lossy(&head).to_lowercase();
+                let path = head.split(' ').nth(1).unwrap_or("").to_owned();
+                let range = head
+                    .lines()
+                    .find_map(|l| l.strip_prefix("range: bytes="))
+                    .and_then(|r| r.split_once('-'))
+                    .map(|(a, b)| a.parse::<usize>().unwrap()..b.parse::<usize>().unwrap() + 1);
+                log.lock().unwrap().push(match &range {
+                    Some(r) => format!("{path} {}-{}", r.start, r.end),
+                    None => path.clone(),
+                });
+                let (status, body) = if path == "/seuoffice-setup-0.13.0.exe" {
+                    match range {
+                        Some(r) => ("206 Partial Content", new_file[r].to_vec()),
+                        None => ("200 OK", new_file.clone()),
+                    }
+                } else if let Some((_, map)) =
+                    maps.iter().find(|(name, _)| path == format!("/{name}"))
+                {
+                    ("200 OK", map.clone())
+                } else {
+                    ("404 Not Found", Vec::new())
+                };
+                let _ = write!(
+                    stream,
+                    "HTTP/1.1 {status}\r\ncontent-length: {}\r\nconnection: close\r\n\r\n",
+                    body.len()
+                );
+                let _ = stream.write_all(&body);
+            }
+        });
+        (port, seen)
+    }
+
+    fn gzip_map(blocks: &[(&str, usize)]) -> Vec<u8> {
+        let files = json!([{
+            "name": "file",
+            "offset": 0,
+            "checksums": blocks.iter().map(|b| b.0).collect::<Vec<_>>(),
+            "sizes": blocks.iter().map(|b| b.1).collect::<Vec<_>>(),
+        }]);
+        let text = json!({ "version": "2", "files": files }).to_string();
+        let mut gz = flate2::write::GzEncoder::new(Vec::new(), flate2::Compression::default());
+        gz.write_all(text.as_bytes()).unwrap();
+        gz.finish().unwrap()
+    }
+
+    fn block(seed: u8, len: usize) -> Vec<u8> {
+        (0..len)
+            .map(|i| (i as u8).wrapping_mul(31).wrapping_add(seed))
+            .collect()
+    }
+
+    #[test]
+    fn an_update_downloads_only_the_changed_blocks_and_falls_back_to_the_whole_file() {
+        let (a, b, c, x, y) = (
+            block(1, 5000),
+            block(2, 3000),
+            block(3, 4000),
+            block(4, 1000),
+            block(5, 2000),
+        );
+        let old_file = [a.clone(), b, c.clone()].concat();
+        let new_file = [a, x, c, y].concat();
+        let (port, seen) = release_server(
+            new_file.clone(),
+            vec![
+                (
+                    "seuoffice-setup-0.13.0.exe.blockmap",
+                    gzip_map(&[("A", 5000), ("X", 1000), ("C", 4000), ("Y", 2000)]),
+                ),
+                (
+                    "seuoffice-setup-0.12.41.exe.blockmap",
+                    gzip_map(&[("A", 5000), ("B", 3000), ("C", 4000)]),
+                ),
+            ],
+        );
+        let cache = std::env::temp_dir().join(format!("seuoffice-diff-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&cache);
+        fs::create_dir_all(&cache).unwrap();
+        let mut feed = Feed::new(FeedConfig {
+            provider: Provider::Generic {
+                url: format!("http://127.0.0.1:{port}/"),
+            },
+            // an absolute name replaces the cache folder
+            cache_name: cache.to_string_lossy().into_owned(),
+        });
+        let sha512 = base64::engine::general_purpose::STANDARD.encode(Sha512::digest(&new_file));
+        feed.found = Some(Found {
+            version: "0.13.0".into(),
+            base: format!("http://127.0.0.1:{port}/"),
+            file: ReleaseFile {
+                url: "seuoffice-setup-0.13.0.exe".into(),
+                sha512,
+                size: Some(new_file.len() as u64),
+            },
+            current: "0.12.41".into(),
+        });
+        let events = std::sync::Mutex::new(Vec::new());
+        let emit = |e: UpdaterEvent| events.lock().unwrap().push(e);
+        let target = cache.join("pending").join("seuoffice-setup-0.13.0.exe");
+
+        // the old file and no cached block map: the old one comes from the release
+        fs::write(cache.join(OLD_FILE), &old_file).unwrap();
+        assert_eq!(feed.download(&AtomicBool::new(false), &emit), None);
+        assert_eq!(fs::read(&target).unwrap(), new_file);
+        assert_eq!(
+            *seen.lock().unwrap(),
+            vec![
+                "/seuoffice-setup-0.13.0.exe.blockmap",
+                "/seuoffice-setup-0.12.41.exe.blockmap",
+                "/seuoffice-setup-0.13.0.exe 5000-6000",
+                "/seuoffice-setup-0.13.0.exe 10000-12000",
+            ]
+        );
+        assert!(cache.join("pending").join(BLOCK_MAP_FILE).is_file());
+        let info: Value =
+            serde_json::from_slice(&fs::read(cache.join("pending/update-info.json")).unwrap())
+                .unwrap();
+        assert_eq!(info["fileName"], "seuoffice-setup-0.13.0.exe");
+        assert!(matches!(
+            events.lock().unwrap().last(),
+            Some(UpdaterEvent::UpdateDownloaded { version, .. }) if version == "0.13.0"
+        ));
+        if cfg!(target_os = "macos") {
+            // the next update copies from this zip and its block map
+            assert_eq!(fs::read(cache.join(OLD_FILE)).unwrap(), new_file);
+            assert!(cache.join(BLOCK_MAP_FILE).is_file());
+        }
+
+        // an old file that does not match its block map: the whole file
+        fs::remove_dir_all(cache.join("pending")).unwrap();
+        let _ = fs::remove_file(cache.join(BLOCK_MAP_FILE));
+        let mut broken = old_file.clone();
+        broken[0] ^= 0xff;
+        fs::write(cache.join(OLD_FILE), &broken).unwrap();
+        seen.lock().unwrap().clear();
+        assert_eq!(feed.download(&AtomicBool::new(false), &emit), None);
+        assert_eq!(fs::read(&target).unwrap(), new_file);
+        assert_eq!(
+            seen.lock().unwrap().last().map(String::as_str),
+            Some("/seuoffice-setup-0.13.0.exe")
+        );
+        let _ = fs::remove_dir_all(&cache);
     }
 }

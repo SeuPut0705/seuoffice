@@ -31,6 +31,7 @@
       "../../skills/seuoffice/SKILL.md": "cli/skills/seuoffice/SKILL.md",
       "../../packages/cli/dist/node_modules": "cli/node_modules",
       "bundle/out/node": "cli/node",
+      "bundle/out/app-update.yml": "app-update.yml",
       "../../packages/ui/template-fonts": "template-fonts",
       "../../apps/sheets/native/xlsx-engine/target/release/xlsx-sidecar": "native/xlsx-sidecar",
       "../../packages/pdf2docx/ocr-helper/vision-ocr": "ocr/vision-ocr"

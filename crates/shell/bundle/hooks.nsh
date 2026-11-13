@@ -42,6 +42,17 @@
 !define SEUOFFICE_PATH_MAX 7900
 ; RunOnce takes 260 characters at most: the entry runs this script
 !define SEUOFFICE_RESTORE_SCRIPT "$LOCALAPPDATA\seuoffice-restore-previous.cmd"
+; the updater's cache (app-update.yml's updaterCacheDirName): the next update
+; copies the blocks it already has from the installer kept here
+!define SEUOFFICE_UPDATER_CACHE "$LOCALAPPDATA\seuoffice-updater"
+
+; Each file compressed on its own (zlib, NSIS's default), not one solid LZMA
+; stream (Tauri's default): an unchanged file then keeps its bytes from one
+; release to the next, so the block-map download copies it instead of
+; fetching it again. windows.conf.json turns compression off ("none") for the
+; template's head, where SetCompressor would have to be; it comes back here,
+; before any file of the app.
+SetCompress auto
 
 !include TextFunc.nsh
 !include WinMessages.nsh
@@ -331,6 +342,16 @@ Var SeuOfficePrevious
   ${If} $SeuOfficeOldKey != ""
     DeleteRegKey HKCU "${SEUOFFICE_UNINSTALL_ROOT}\$SeuOfficeOldKey"
     DeleteRegKey HKCU "Software\$SeuOfficeOldKey"
+  ${EndIf}
+
+  ; what the next update copies blocks from, as electron-builder's installer
+  ; kept itself: this installer, and its block map when the updater
+  ; downloaded one beside it (otherwise the updater fetches this version's)
+  CreateDirectory "${SEUOFFICE_UPDATER_CACHE}"
+  Delete "${SEUOFFICE_UPDATER_CACHE}\current.blockmap"
+  CopyFiles /SILENT "$EXEPATH" "${SEUOFFICE_UPDATER_CACHE}\installer.exe"
+  ${If} ${FileExists} "$EXEDIR\current.blockmap"
+    CopyFiles /SILENT "$EXEDIR\current.blockmap" "${SEUOFFICE_UPDATER_CACHE}\current.blockmap"
   ${EndIf}
 
   ; electron-updater's --force-run, outside an update that started the app above
