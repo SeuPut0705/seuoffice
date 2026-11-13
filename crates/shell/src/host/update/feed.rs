@@ -34,6 +34,8 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::Duration;
 
 use base64::Engine;
+use reqwest::header::{RANGE, USER_AGENT};
+use tauri::async_runtime::block_on;
 
 use super::differential::{BlockMap, Op, plan};
 use main_core::shell::updater::{CheckResult, UpdateError, UpdaterEvent, UpdaterSetting};
@@ -126,12 +128,6 @@ enum Differential {
 
 impl From<std::io::Error> for Differential {
     fn from(error: std::io::Error) -> Self {
-        Differential::Failed(error.to_string())
-    }
-}
-
-impl From<reqwest::Error> for Differential {
-    fn from(error: reqwest::Error) -> Self {
         Differential::Failed(error.to_string())
     }
 }
@@ -240,12 +236,11 @@ impl Feed {
         &self,
         current: &str,
     ) -> Result<(CheckResult, Option<Found>, Value), UpdateError> {
-        let client = client()?;
         let (base, entries) = match &self.config.provider {
             Provider::Generic { url } => (url.clone(), Vec::new()),
             Provider::GitHub { owner, repo } => {
                 let site = format!("https://github.com/{owner}/{repo}");
-                let atom = get_text(&client, &format!("{site}/releases.atom"))?;
+                let atom = get_text(&format!("{site}/releases.atom"))?;
                 let entries = atom_entries(&atom);
                 let tag = if self.allow_prerelease {
                     entries
@@ -253,12 +248,12 @@ impl Feed {
                         .map(|e| e.tag.clone())
                         .ok_or_else(|| no_release("no release in the feed"))?
                 } else {
-                    latest_release_tag(&client, &site)?
+                    latest_release_tag(&site)?
                 };
                 (format!("{site}/releases/download/{tag}/"), entries)
             }
         };
-        let yml = get_text(&client, &format!("{base}{}", self.channel_file()))?;
+        let yml = get_text(&format!("{base}{}", self.channel_file()))?;
         let info = ChannelFile::parse(&yml).ok_or_else(|| {
             coded(
                 "ERR_UPDATER_INVALID_RELEASE_FEED",
@@ -349,11 +344,10 @@ impl Feed {
         // a block map an earlier round left belongs to another file
         let _ = fs::remove_file(pending.join(BLOCK_MAP_FILE));
         let part = pending.join(format!("{name}.part"));
-        let client = client()?;
         // a partial whole download resumes; otherwise the blocks come first
         if !part.exists() {
             let diff = pending.join(format!("{name}.diff"));
-            match self.download_differential(&client, found, &pending, &diff, cancel, emit) {
+            match self.download_differential(found, &pending, &diff, cancel, emit) {
                 Ok(()) => {
                     fs::rename(&diff, &part).map_err(io)?;
                     return self.keep(found, &pending, &part, &target);
@@ -372,11 +366,8 @@ impl Feed {
         }
         let url = format!("{}{}", found.base, found.file.url);
         let have = fs::metadata(&part).map_or(0, |m| m.len());
-        let mut request = client.get(&url);
-        if have > 0 {
-            request = request.header("Range", format!("bytes={have}-"));
-        }
-        let mut response = request.send().map_err(net)?;
+        let range = (have > 0).then(|| format!("bytes={have}-"));
+        let mut response = send(&url, range).map_err(io)?;
         let status = response.status().as_u16();
         if status >= 400 {
             return Err(http(status));
@@ -400,17 +391,15 @@ impl Feed {
             .unwrap_or(0);
         let mut transferred = if resumed { have } else { 0 };
         let mut last_percent = -1.0;
-        let mut buf = vec![0u8; 256 * 1024];
         loop {
             if cancel.load(Ordering::Acquire) {
                 return Err(cancelled());
             }
-            let n = response.read(&mut buf).map_err(io)?;
-            if n == 0 {
+            let Some(chunk) = next_chunk(&mut response).map_err(io)? else {
                 break;
-            }
-            out.write_all(&buf[..n]).map_err(io)?;
-            transferred += n as u64;
+            };
+            out.write_all(&chunk).map_err(io)?;
+            transferred += chunk.len() as u64;
             progress(emit, transferred, total, &mut last_percent);
         }
         out.sync_all().map_err(io)?;
@@ -469,7 +458,6 @@ impl Feed {
     /// blocks and range requests; the new block map stays in `pending`
     fn download_differential(
         &self,
-        client: &reqwest::blocking::Client,
         found: &Found,
         pending: &Path,
         out: &Path,
@@ -486,7 +474,7 @@ impl Feed {
             .size
             .ok_or("the feed lists no size for the file")?;
         let url = format!("{}{}", found.base, found.file.url);
-        let new_bytes = get_bytes(client, &format!("{url}.blockmap"))?;
+        let new_bytes = get_bytes(&format!("{url}.blockmap"))?;
         let new_map = BlockMap::parse(&new_bytes)?;
         fs::write(pending.join(BLOCK_MAP_FILE), &new_bytes)?;
         let cached = fs::read(cache.join(BLOCK_MAP_FILE))
@@ -495,10 +483,10 @@ impl Feed {
         let old_map = match cached {
             Some(map) => map,
             // the old version's file is named as the new one with its version
-            None => BlockMap::parse(&get_bytes(
-                client,
-                &format!("{}.blockmap", url.replace(&found.version, &found.current)),
-            )?)?,
+            None => BlockMap::parse(&get_bytes(&format!(
+                "{}.blockmap",
+                url.replace(&found.version, &found.current)
+            ))?)?,
         };
         let ops = plan(&old_map, &new_map)?;
         let planned: u64 = ops.iter().map(Op::len).sum();
@@ -523,7 +511,6 @@ impl Feed {
         let mut requests = 0u32;
         let mut transferred = 0u64;
         let mut last_percent = -1.0;
-        let mut buf = vec![0u8; 256 * 1024];
         for op in &ops {
             if cancel.load(Ordering::Acquire) {
                 return Err(Differential::Cancelled);
@@ -537,10 +524,8 @@ impl Feed {
                     }
                 }
                 Op::Download(range) => {
-                    let mut response = client
-                        .get(&actual)
-                        .header("Range", format!("bytes={}-{}", range.start, range.end - 1))
-                        .send()?;
+                    let bytes = format!("bytes={}-{}", range.start, range.end - 1);
+                    let mut response = send(&actual, Some(bytes))?;
                     if response.status().as_u16() != 206 {
                         return Err(format!(
                             "a range request was answered {}",
@@ -554,13 +539,12 @@ impl Feed {
                         if cancel.load(Ordering::Acquire) {
                             return Err(Differential::Cancelled);
                         }
-                        let n = response.read(&mut buf)?;
-                        if n == 0 {
+                        let Some(chunk) = next_chunk(&mut response)? else {
                             break;
-                        }
-                        writer.write_all(&buf[..n])?;
-                        got += n as u64;
-                        transferred += n as u64;
+                        };
+                        writer.write_all(&chunk)?;
+                        got += chunk.len() as u64;
+                        transferred += chunk.len() as u64;
                         progress(emit, transferred, to_download, &mut last_percent);
                     }
                     if got != op.len() {
@@ -629,31 +613,67 @@ fn detach(_: &mut std::process::Command) {}
 
 // ---- HTTP ----
 
-fn client() -> Result<reqwest::blocking::Client, UpdateError> {
-    reqwest::blocking::Client::builder()
-        .user_agent(format!("SeuOffice/{}", super::app_version()))
-        .connect_timeout(Duration::from_secs(30))
-        .build()
-        .map_err(net)
+/// How long a request may wait for its answer, or a body for its next piece
+const STALL: Duration = Duration::from_secs(60);
+
+/// A GET through the shell's one HTTP client (`host/net/http.rs`): the
+/// system proxy and TLS, a loopback feed direct, redirects followed. The
+/// download runs on a thread of its own, which waits for the async client.
+fn send(url: &str, range: Option<String>) -> std::io::Result<reqwest::Response> {
+    let mut request = crate::host::net::http::client(url, true)
+        .get(url)
+        .header(USER_AGENT, format!("SeuOffice/{}", super::app_version()));
+    if let Some(range) = range {
+        request = request.header(RANGE, range);
+    }
+    // the timer belongs to the runtime: made inside it
+    match block_on(async { tokio::time::timeout(STALL, request.send()).await }) {
+        Ok(response) => response.map_err(std::io::Error::other),
+        Err(_) => Err(stalled(url)),
+    }
 }
 
-fn get_text(client: &reqwest::blocking::Client, url: &str) -> Result<String, UpdateError> {
-    let response = client.get(url).send().map_err(net)?;
+/// The next piece of a body, `None` at its end
+fn next_chunk(response: &mut reqwest::Response) -> std::io::Result<Option<bytes::Bytes>> {
+    let url = response.url().to_string();
+    match block_on(async { tokio::time::timeout(STALL, response.chunk()).await }) {
+        Ok(chunk) => chunk.map_err(std::io::Error::other),
+        Err(_) => Err(stalled(&url)),
+    }
+}
+
+fn stalled(url: &str) -> std::io::Error {
+    std::io::Error::new(
+        std::io::ErrorKind::TimedOut,
+        format!("{url} sent nothing for {} s", STALL.as_secs()),
+    )
+}
+
+/// A whole small file (the feed, a block map)
+fn get_whole(url: &str) -> std::io::Result<(u16, Vec<u8>)> {
+    let mut response = send(url, None)?;
     let status = response.status().as_u16();
+    let mut body = Vec::new();
+    while let Some(chunk) = next_chunk(&mut response)? {
+        body.extend_from_slice(&chunk);
+    }
+    Ok((status, body))
+}
+
+fn get_text(url: &str) -> Result<String, UpdateError> {
+    let (status, body) = get_whole(url).map_err(io)?;
     if status >= 400 {
         return Err(http(status));
     }
-    response.text().map_err(net)
+    Ok(String::from_utf8_lossy(&body).into_owned())
 }
 
-/// A whole small file (a block map)
-fn get_bytes(client: &reqwest::blocking::Client, url: &str) -> Result<Vec<u8>, String> {
-    let response = client.get(url).send().map_err(|e| e.to_string())?;
-    let status = response.status().as_u16();
+fn get_bytes(url: &str) -> Result<Vec<u8>, String> {
+    let (status, body) = get_whole(url).map_err(|e| e.to_string())?;
     if status >= 400 {
         return Err(format!("{url} answered {status}"));
     }
-    Ok(response.bytes().map_err(|e| e.to_string())?.to_vec())
+    Ok(body)
 }
 
 /// The file being written, hashed as it goes
@@ -693,14 +713,8 @@ fn cancelled() -> UpdateError {
 }
 
 /// The tag `/releases/latest` redirects to (`.../releases/tag/<tag>`)
-fn latest_release_tag(
-    client: &reqwest::blocking::Client,
-    site: &str,
-) -> Result<String, UpdateError> {
-    let response = client
-        .get(format!("{site}/releases/latest"))
-        .send()
-        .map_err(net)?;
+fn latest_release_tag(site: &str) -> Result<String, UpdateError> {
+    let response = send(&format!("{site}/releases/latest"), None).map_err(io)?;
     let status = response.status().as_u16();
     if status >= 400 {
         return Err(http(status));
@@ -735,10 +749,6 @@ fn http(status: u16) -> UpdateError {
         &format!("HTTP_ERROR_{status}"),
         &format!("HttpError: {status}"),
     )
-}
-
-fn net(error: reqwest::Error) -> UpdateError {
-    plain(&error.to_string())
 }
 
 fn io(error: std::io::Error) -> UpdateError {
