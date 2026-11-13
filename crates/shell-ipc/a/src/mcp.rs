@@ -40,8 +40,8 @@ use main_core::node_fs::NodeError;
 use main_core::packages::i18n::Lang;
 use main_core::shell::ai_secrets::SafeStorageLike;
 use main_core::shell::mcp_client::hub::{
-    ConnId, ConnOutcome, LocalConnection, LocalState, McpHub, McpHubHost, OpId, RemoteConnection,
-    SharedStore, Ticket,
+    ChangedNotice, ConnId, ConnOutcome, LocalConnection, LocalState, McpHub, McpHubHost, OpId,
+    RemoteConnection, SharedStore, Ticket,
 };
 use main_core::shell::mcp_client::hub_ipc::{
     IpcReply, IpcValue as HubValue, McpHubIpc, McpHubIpcHost,
@@ -401,17 +401,17 @@ impl Hub {
     fn pump(&self) {
         loop {
             let settled = self.ipc.borrow_mut().take_settled();
-            let changed = self.ipc.borrow_mut().take_changed();
-            let quiet = settled.is_empty() && !changed;
+            let notices = self.ipc.borrow_mut().take_changed();
+            let quiet = settled.is_empty() && notices.is_empty();
             for (ticket, value) in settled {
                 let reply = self.pending.borrow_mut().remove(&ticket);
                 if let Some(reply) = reply {
                     reply.reply(answer(value));
                 }
             }
-            if changed {
+            for notice in &notices {
                 let mut host = IpcHost { env: &self.env };
-                self.ipc.borrow_mut().on_changed(&mut host);
+                self.ipc.borrow_mut().on_changed(&mut host, notice);
             }
             if quiet {
                 return;
@@ -518,9 +518,14 @@ impl Hub {
                 let _ = retry.send(local::Msg::Retry);
             }
         }
-        let plan = self.ipc.borrow().hub.planned_launch(&waiting.server_id);
+        // `notify()` then `plannedLaunchOf(id)`: its first `await` runs the
+        // queued notice with the view as it is before the plan is computed
+        let notice = ChangedNotice {
+            view: self.ipc.borrow().hub.settings_view(),
+        };
         let mut host = IpcHost { env: &self.env };
-        self.ipc.borrow_mut().on_changed(&mut host);
+        self.ipc.borrow_mut().on_changed(&mut host, &notice);
+        let plan = self.ipc.borrow_mut().hub.planned_launch(&waiting.server_id);
         self.pump();
         waiting.reply.reply(Ok(from_json(&plan)));
     }

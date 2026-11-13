@@ -95,6 +95,24 @@ function pushRead(log: unknown[], path: string): void {
   log.push(...run)
 }
 
+const realImmediate = globalThis.setImmediate
+
+/**
+ * Until the disk work the module started (`inspectMaterial`'s `stat`) is done:
+ * the harness waits only a few ticks, which a loaded machine can outrun, while
+ * the Rust side is always drained before it answers
+ */
+async function quiet(): Promise<void> {
+  for (let calm = 0, round = 0; calm < 6 && round < 20_000; round++) {
+    await new Promise<void>((resolve) => realImmediate(resolve))
+    const busy = process
+      .getActiveResourcesInfo()
+      .some((name) => name.startsWith('FSReq') || name === 'CloseReq')
+    calm = busy ? 0 : calm + 1
+    if (busy) await new Promise<void>((resolve) => setTimeout(resolve, 1))
+  }
+}
+
 const FILE_PARSE = 'ipc-diff:file-parse'
 const STRINGS = 'ipc-diff:strings-generate'
 const realFile = new URL('../../../../packages/file-parse/src/index.ts', import.meta.url).href
@@ -652,6 +670,17 @@ export const group: Group = {
         save: save as never,
       },
     })
+    // every handler answers once the disk work it started is done
+    const invoke = cx.electron.handlers.invoke
+    for (const [channel, handler] of [...invoke]) {
+      invoke.set(channel, async (...args: unknown[]) => {
+        try {
+          return await handler(...args)
+        } finally {
+          await quiet()
+        }
+      })
+    }
   },
   cases,
   single: {
