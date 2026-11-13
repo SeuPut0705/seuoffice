@@ -187,6 +187,11 @@ fn open_first_window(windows: &Windows, options: &Options) -> Result<(), String>
             size: (1280.0, 860.0),
             min_size: None,
             visible: true,
+            decorations: true,
+            transparent: false,
+            resizable: true,
+            parent: None,
+            focus: true,
             main,
             view: ViewSpec {
                 url: url.into(),
@@ -243,6 +248,10 @@ static ROOTS: OnceLock<Vec<(String, String)>> = OnceLock::new();
 
 #[tauri_runtime_cef::cef_entry_point]
 fn main() {
+    // another instance takes this launch's files and arguments; this one ends
+    if host::os::hand_over_to_running_instance() {
+        return;
+    }
     let options = Options::read();
     // the measurement runs unwatched: its path is always traced
     if options.measure.is_some() || std::env::var("SEUOFFICE_SHELL_TRACE").is_ok_and(|v| v == "1") {
@@ -390,6 +399,7 @@ fn main() {
             start(handle, services, windows, paths, options);
             Ok(())
         })
-        .run(tauri::generate_context!())
-        .expect("error while running the tauri application");
+        .build(tauri::generate_context!())
+        .expect("error while building the tauri application")
+        .run(|app, event| host::on_run_event(app, &event));
 }
