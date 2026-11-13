@@ -84,6 +84,16 @@ impl Clients {
     }
 }
 
+/// The shell's one HTTP client for a request to `url`: the system proxy and
+/// TLS, a loopback address direct, and up to 20 redirects followed when
+/// `follow` (a 3xx handed back otherwise). Every caller in the process shares
+/// these clients and their connection pools; a worker without a runtime of its
+/// own drives a request with `tauri::async_runtime::block_on`.
+pub fn client(url: &str, follow: bool) -> reqwest::Client {
+    static CLIENTS: std::sync::OnceLock<Clients> = std::sync::OnceLock::new();
+    CLIENTS.get_or_init(Clients::new).pick(url, follow).clone()
+}
+
 /// `localhost` (and its subdomains), 127.0.0.0/8 and `[::1]`
 fn is_loopback(url: &str) -> bool {
     let Ok(url) = reqwest::Url::parse(url) else {
@@ -144,7 +154,6 @@ pub struct HttpNet(Arc<Inner>);
 
 struct Inner {
     spawn: Spawn,
-    clients: Clients,
     state: Mutex<State>,
 }
 
@@ -152,7 +161,6 @@ impl HttpNet {
     pub fn new(spawn: Spawn) -> HttpNet {
         HttpNet(Arc::new(Inner {
             spawn,
-            clients: Clients::new(),
             state: Mutex::default(),
         }))
     }
@@ -273,9 +281,9 @@ fn take_next(st: &mut State, body: Id) -> Option<Result<Answer, JsError>> {
 
 // ---- fetch ----
 
-fn request_builder(clients: &Clients, url: &str, request: &Request) -> reqwest::RequestBuilder {
+fn request_builder(url: &str, request: &Request) -> reqwest::RequestBuilder {
     let follow = matches!(request.redirect.as_deref(), None | Some("follow"));
-    let client = clients.pick(url, follow);
+    let client = client(url, follow);
     let method = request.method.as_deref().unwrap_or("GET").to_uppercase();
     let method = reqwest::Method::from_bytes(method.as_bytes()).unwrap_or(reqwest::Method::GET);
     let form = matches!(request.body, Some(RequestBody::Form(_)));
@@ -422,7 +430,7 @@ impl Net for HttpNet {
             sink.failed(id, JsError::type_error("fetch failed"));
             return;
         }
-        let builder = request_builder(&self.0.clients, &url, &request);
+        let builder = request_builder(&url, &request);
         let method = request.method.clone().unwrap_or_else(|| "GET".into());
         let redirect = request.redirect.clone();
         let inner = self.0.clone();
