@@ -43,6 +43,12 @@ on:
         description: A faults file for tools/main-diff/faults.mjs (the central process), run beside the gates
         required: false
         default: ''
+      # branch-local: stage 2 does not touch the slides engine; a merge
+      # candidate leaves it false
+      skip_pptx_faults:
+        description: Skip the slides fault shards (stage 2 branch runs only)
+        type: boolean
+        default: false
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -431,13 +437,14 @@ jobs:
   # One Rust fault at a time through the slides gate: each must be caught.
   pptx-faults:
     needs: quick
-    if: ${{ !inputs.faults }}
+    if: ${{ !inputs.faults && !inputs.skip_pptx_faults }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    # a shard runs 40 probes of about two minutes each; a slow runner needs past 90
+    timeout-minutes: 120
     strategy:
       fail-fast: false
       matrix:
-        shard: [0, 1, 2, 3]
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
 
@@ -474,7 +481,7 @@ jobs:
 
       - name: Slides fault probes
         if: steps.has.outputs.pptx == 'true'
-        run: npm --prefix tools/pptx-diff run faults -- --shard ${{ matrix.shard }}/4
+        run: npm --prefix tools/pptx-diff run faults -- --shard ${{ matrix.shard }}/8
 
       - name: Keep the fault probe output
         if: always() && steps.has.outputs.pptx == 'true'
