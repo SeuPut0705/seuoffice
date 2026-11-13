@@ -1053,8 +1053,35 @@ for (const dir of vendoredSources()) {
   }
 }
 
+// the AI mark (apps/shell/build/brand/ai-mark.svg, packages/ui/src/AiMark.tsx) adapts the
+// geometry of two Lucide icons; ISC asks for its notice with every copy, and `circle` comes
+// from Feather under MIT
+out += hr('9. Icon geometry adapted from Lucide')
+out += `
+The AI button mark adapts the geometry of the Lucide icons \`circle\` and
+\`message-square\` (https://lucide.dev, https://github.com/lucide-icons/lucide).
+Lucide marks \`circle\` as derived from the Feather project.
+`
+out += sub('Lucide — ISC License')
+out += `Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+`
+out += sub('Feather (the Lucide icons derived from it, among them circle) — MIT License')
+out += `Copyright (c) 2013-present Cole Bemis\n\n${MIT_PERMISSION}\n`
+
 const officeCrates = officeWasmCrates()
-out += hr('9. Rust crates (office engines, compiled into office_wasm.wasm)')
+out += hr('10. Rust crates (office engines, compiled into office_wasm.wasm)')
 out += `
 The document engines ship as office_wasm.wasm, built from crates/ of this
 application's source repository, under the license and NOTICE of the work
@@ -1099,32 +1126,6 @@ if (officeCrates === null) {
     }
   }
 }
-// the AI mark (apps/shell/build/brand/ai-mark.svg, packages/ui/src/AiMark.tsx) adapts the
-// geometry of two Lucide icons; ISC asks for its notice with every copy, and `circle` comes
-// from Feather under MIT
-out += hr('10. Icon geometry adapted from Lucide')
-out += `
-The AI button mark adapts the geometry of the Lucide icons \`circle\` and
-\`message-square\` (https://lucide.dev, https://github.com/lucide-icons/lucide).
-Lucide marks \`circle\` as derived from the Feather project.
-`
-out += sub('Lucide — ISC License')
-out += `Copyright (c) 2026 Lucide Icons and Contributors
-
-Permission to use, copy, modify, and/or distribute this software for any
-purpose with or without fee is hereby granted, provided that the above
-copyright notice and this permission notice appear in all copies.
-
-THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
-WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
-MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
-ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
-OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
-`
-out += sub('Feather (the Lucide icons derived from it, among them circle) — MIT License')
-out += `Copyright (c) 2013-present Cole Bemis\n\n${MIT_PERMISSION}\n`
 
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {
   if (!out.includes(term)) {

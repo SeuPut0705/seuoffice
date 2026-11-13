@@ -11,13 +11,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="macOS 다운로드 (Apple Silicon)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="macOS 다운로드 (Apple Silicon)"></a>
   &nbsp;
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Windows 다운로드 (x64)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Windows 다운로드 (x64)"></a>
 </p>
 
 <p align="center">
-  <sub>Apple Silicon Mac · Windows x64 · 무료 · 소스 공개(FSL-1.1-ALv2) · <a href="https://github.com/SeuPut0705/seuoffice/releases">모든 판과 미리보기 판</a></sub>
+  <sub>Apple Silicon Mac · Windows x64 · 무료 · 소스 공개(FSL-1.1-ALv2) · <a href="https://github.com/seuput-inc/seuoffice/releases">모든 판과 미리보기 판</a></sub>
 </p>
 
 <p align="center">
@@ -133,10 +133,10 @@ const doc = openDocument(viewer, {
 
 ## 소유와 경계
 
-- SeuOffice는 스풋(GitHub SeuPut0705)의 개인 자산이다. 스풋 개인 시간과 비용으로 만들며, 유유헬스케어와의 계약 산출물이 아니다. 유유헬스케어는 SeuOffice를 가져다 쓰는 사용자다.
-- 유유헬스케어 저장소(`yuyuhealthcare/yuyu-mos`)의 코드·설정·데이터는 이 저장소에 가져오지 않는다. 유유 실데이터와 고객 원본 문서도 넣지 않는다. 시험은 모의 문서와 권리가 확인된 문서로 한다.
-- 유유 메신저·업무 앱에 SeuOffice를 연결하는 코드(첨부를 보기 창에 넘기는 일, 권한 확인)는 yuyu-mos 쪽에 있다. SeuOffice는 "바이트 + 파일 이름 → 화면" 부품(`@seuoffice/embed`)과 정적 웹 묶음을 내놓는다.
-- 저장소 전체를 공개한다(`docs/seuoffice/decisions/0007-전부-공개.md`). v0.12.41의 소스부터는 오픈 소스가 아니라 소스 공개(FSL-1.1-ALv2)다(`docs/seuoffice/decisions/0031-라이선스-FSL.md`). 유유헬스케어는 판 번호가 붙은 `@seuoffice/*` 묶음과 유유용 안정 판 PC 프로그램을 받아 쓰며, 따로 사용 허락 문서는 없다.
+- SeuOffice는 스풋(GitHub SeuPut0705)의 개인 자산이다. 스풋 개인 시간과 비용으로 만든다.
+- 다른 회사·고객의 코드, 설정, 실데이터와 고객 원본 문서는 이 저장소에 넣지 않는다. 시험은 모의 문서와 권리가 확인된 문서로 한다.
+- 다른 앱에 SeuOffice를 붙이는 코드(첨부를 보기 창에 넘기는 일, 권한 확인)는 붙이는 쪽 저장소에 둔다. SeuOffice는 "바이트 + 파일 이름 → 화면" 부품(`@seuoffice/embed`)과 정적 웹 묶음을 내놓는다.
+- 저장소 전체를 공개한다(`docs/seuoffice/decisions/0007-전부-공개.md`). v0.12.41의 소스부터는 오픈 소스가 아니라 소스 공개(FSL-1.1-ALv2)다(`docs/seuoffice/decisions/0031-라이선스-FSL.md`).
 
 ## 개발
 

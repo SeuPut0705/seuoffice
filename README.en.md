@@ -11,13 +11,13 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="Download for macOS (Apple Silicon)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-mac-arm64.dmg"><img src="docs/seuoffice/readme/download-mac.svg" width="300" alt="Download for macOS (Apple Silicon)"></a>
   &nbsp;
-  <a href="https://github.com/SeuPut0705/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Download for Windows (x64)"></a>
+  <a href="https://github.com/seuput-inc/seuoffice/releases/latest/download/SeuOffice-windows-x64.exe"><img src="docs/seuoffice/readme/download-windows.svg" width="300" alt="Download for Windows (x64)"></a>
 </p>
 
 <p align="center">
-  <sub>Apple Silicon Mac · Windows x64 · Free · Source-available (FSL-1.1-ALv2) · <a href="https://github.com/SeuPut0705/seuoffice/releases">All versions and preview versions</a></sub>
+  <sub>Apple Silicon Mac · Windows x64 · Free · Source-available (FSL-1.1-ALv2) · <a href="https://github.com/seuput-inc/seuoffice/releases">All versions and preview versions</a></sub>
 </p>
 
 <p align="center">
@@ -133,10 +133,10 @@ What to keep to in operation:
 
 ## Ownership and boundaries
 
-- SeuOffice is the personal asset of SeuPut (GitHub SeuPut0705). It is made on SeuPut's own time and at SeuPut's own cost, and is not a deliverable of a contract with Yuyu Healthcare. Yuyu Healthcare is a user that takes SeuOffice and uses it.
-- The code, settings and data of the Yuyu Healthcare repository (`yuyuhealthcare/yuyu-mos`) are not brought into this repository. Neither are Yuyu's real data or customers' original documents. Tests use mock documents and documents whose rights have been checked.
-- The code that connects SeuOffice to Yuyu's messenger and work apps (handing an attachment to the viewer, checking permissions) lives in yuyu-mos. SeuOffice provides a "bytes + file name → screen" part (`@seuoffice/embed`) and a static web bundle.
-- The whole repository is public (`docs/seuoffice/decisions/0007-전부-공개.md`). From the v0.12.41 source on it is source-available under FSL-1.1-ALv2, not open source (`docs/seuoffice/decisions/0031-라이선스-FSL.md`). Yuyu Healthcare takes the versioned `@seuoffice/*` bundles and the stable PC app for Yuyu, and there is no separate permission document.
+- SeuOffice is the personal asset of SeuPut (GitHub SeuPut0705). It is made on SeuPut's own time and at SeuPut's own cost.
+- Code, settings, real data and original customer documents of other companies are not brought into this repository. Tests use mock documents and documents whose rights have been checked.
+- The code that embeds SeuOffice in another app (handing an attachment to the viewer, checking permissions) lives in that app's repository. SeuOffice provides a "bytes + file name → screen" part (`@seuoffice/embed`) and a static web bundle.
+- The whole repository is public (`docs/seuoffice/decisions/0007-전부-공개.md`). From the v0.12.41 source on it is source-available under FSL-1.1-ALv2, not open source (`docs/seuoffice/decisions/0031-라이선스-FSL.md`).
 
 ## Development
 

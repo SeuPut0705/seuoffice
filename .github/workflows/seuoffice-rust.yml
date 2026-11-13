@@ -177,7 +177,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 240
     steps:
+      # the model group reads the declarations at MODEL_SOURCE's commit
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # the hwp reader compiles rhwp from upstream v0.9.0 with vendor/rhwp-core's
       # patches; cargo resolves that path dependency on every call, so it is

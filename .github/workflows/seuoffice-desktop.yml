@@ -70,6 +70,15 @@ jobs:
       version: ${{ steps.pick.outputs.version }}
       publish: ${{ steps.pick.outputs.publish }}
     steps:
+      # only the release-notes files and their checker: nothing here builds
+      - name: Checkout the release notes
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          sparse-checkout: |
+            tools/check-release-notes.mjs
+            docs/seuoffice/판-노트
+          sparse-checkout-cone-mode: false
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
@@ -103,6 +112,12 @@ jobs:
           echo "version=$version" >> "$GITHUB_OUTPUT"
           echo "publish=$publish" >> "$GITHUB_OUTPUT"
           echo "version $version, publish $publish"
+
+      # the update window shows the release body: a release without notes a person
+      # can read does not start building
+      - name: Check the release notes
+        if: steps.pick.outputs.publish == 'true'
+        run: node tools/check-release-notes.mjs "${{ steps.pick.outputs.version }}"
 
   windows:
     needs: version
@@ -286,7 +301,7 @@ jobs:
             has_line "$dir/$feed" "path: $installer" || { echo "$feed path is not $installer"; exit 1; }
             local update="$dir/win-unpacked/resources/app-update.yml"
             test -f "$update" || { echo "missing: $update"; exit 1; }
-            for line in "channel: $channel" "repo: seuoffice" "owner: SeuPut0705"; do
+            for line in "channel: $channel" "repo: seuoffice" "owner: seuput-inc"; do
               has_line "$update" "$line" || { echo "$update lacks '$line'"; exit 1; }
             done
           }
@@ -540,7 +555,7 @@ jobs:
             [ "$built" = "$version" ] || { echo "$feed says $built, package.json $version"; exit 1; }
             grep -qF "url: $zip" "$dir/$feed" || { echo "$feed does not name $zip"; exit 1; }
             local update="$app/Contents/Resources/app-update.yml"
-            for line in "channel: $channel" "repo: seuoffice" "owner: SeuPut0705"; do
+            for line in "channel: $channel" "repo: seuoffice" "owner: seuput-inc"; do
               grep -Fxq -- "$line" "$update" || { echo "$update lacks '$line'"; exit 1; }
             done
 
@@ -677,14 +692,15 @@ jobs:
       GH_REPO: ${{ github.repository }}
     steps:
       # nothing is published for a commit the test workflows reject; a re-run of
-      # this job after a CI re-run waits again
+      # this job after a CI re-run waits again. A run started by hand counts too:
+      # CI skips a Markdown-only push, and `gh workflow run CI --ref main` covers it
       - name: Wait for CI and seuoffice on this commit
         run: |
           set -euo pipefail
           start=$SECONDS
           for workflow in ci.yml seuoffice.yml; do
             while :; do
-              run=$(gh run list --workflow "$workflow" --commit "$GITHUB_SHA" --event push --limit 1 \
+              run=$(gh run list --workflow "$workflow" --commit "$GITHUB_SHA" --limit 1 \
                 --json status,conclusion,url --jq '.[0] // empty | [.status, .conclusion, .url] | @tsv')
               if [ -z "$run" ]; then
                 if [ $((SECONDS - start)) -gt 900 ]; then
@@ -713,22 +729,10 @@ jobs:
           MAC_SIGNED: ${{ needs.mac.outputs.signed }}
         run: |
           set -euo pipefail
-          {
-            echo "SeuOffice $TAG — Apple Silicon Mac, x64 Windows."
-            echo
-            if [ "$WINDOWS_SIGNED" = "true" ]; then
-              echo "- Windows: 서명됨."
-            else
-              echo "- Windows: 서명 없음. 처음 설치할 때 'Windows의 PC 보호' 창이 뜨면 '추가 정보' → '실행'을 누른다."
-            fi
-            if [ "$MAC_SIGNED" = "true" ]; then
-              echo "- Mac: Developer ID 서명과 공증됨."
-            else
-              echo "- Mac: 서명 없음(ad hoc). dmg에서 응용 프로그램 폴더로 옮긴 뒤 처음 열 때 막히면, 시스템 설정 → 개인정보 보호 및 보안 → '그래도 열기'를 누른다."
-            fi
-            echo
-            echo "바뀐 내용: <https://github.com/$GITHUB_REPOSITORY/commits/$TAG>"
-          } > notes.md
+          # the body is what changed, in the person's words: the update window shows
+          # all of it. How to get past an unsigned build's first-open warning is in
+          # the README's download section, not here.
+          node tools/check-release-notes.mjs "${TAG#v}" --print > notes.md
           cat notes.md
           {
             echo "### $TAG"
@@ -736,6 +740,8 @@ jobs:
             echo "미리보기(pre-release)로 냈다. 일반 채널(latest) 설치본이 바로 받는다. 안정 채널로 올리려면:"
             echo
             echo "    gh release edit $TAG --prerelease=false --latest"
+            echo
+            echo "서명: Windows $([ "$WINDOWS_SIGNED" = "true" ] && echo 됨 || echo 없음), Mac $([ "$MAC_SIGNED" = "true" ] && echo 'Developer ID와 공증' || echo '없음(ad hoc)')."
             echo
             echo "웹에 붙이는 묶음(seuoffice-embed, seuoffice-web)과 공동 편집 서버 묶음(seuoffice-collab)도 이 릴리스에 있다."
             echo
