@@ -77,6 +77,7 @@ describe('pack-tarball', () => {
       'seuoffice-cli/wasm/hb-subset.wasm',
       'seuoffice-cli/native/xlsx-sidecar',
       'seuoffice-cli/LICENSE',
+      'seuoffice-cli/LICENSE-APACHE',
       'seuoffice-cli/NOTICE',
       'seuoffice-cli/THIRD-PARTY-NOTICES.txt',
     ]) {

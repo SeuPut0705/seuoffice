@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/docx2hwp",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "Word (.docx) to Hangul (.hwp / .hwpx): the docx-engine model rebuilt through the rhwp engine, with a report of what could not be carried",

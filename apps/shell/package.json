@@ -2,7 +2,7 @@
   "name": "@seuoffice/shell",
   "productName": "SeuOffice",
   "version": "0.12.12",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "homepage": "https://github.com/SeuPut0705/seuoffice",
   "private": true,
   "description": "SeuOffice",

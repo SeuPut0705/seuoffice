@@ -121,6 +121,7 @@ const LINUX_SIDECAR =
 function assertExtraResourceSources() {
   for (const rel of [
     '../../LICENSE',
+    '../../LICENSE-APACHE',
     '../../NOTICE',
     '../../LICENSE-UNICODE.txt',
     '../../node_modules/electron/dist/LICENSES.chromium.html',
@@ -713,11 +714,17 @@ const config = {
   },
   files: ['out/**'],
   extraResources: [
-    // Apache-2.0 §4(a)/(d): every copy carries the license and the NOTICE of
-    // the work; NOTICE refers to LICENSE-UNICODE.txt for the Unicode data
+    // every copy carries the license (FSL-1.1-ALv2), the Apache License 2.0
+    // that the GenOffice and IeumOffice parts stay under, and the NOTICE of the
+    // work (Apache-2.0 §4(a)/(d)); NOTICE refers to LICENSE-UNICODE.txt for the
+    // Unicode data
     {
       from: '../../LICENSE',
       to: 'LICENSE.txt',
+    },
+    {
+      from: '../../LICENSE-APACHE',
+      to: 'LICENSE-APACHE.txt',
     },
     {
       from: '../../NOTICE',

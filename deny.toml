@@ -29,6 +29,11 @@ allow = [
   "IJG",
 ]
 
+# our own crates (publish = false) carry the project's licence, FSL-1.1-ALv2;
+# the list above is for what they depend on
+[licenses.private]
+ignore = true
+
 [bans]
 # a crate pulled in at two versions is reported, not failed
 multiple-versions = "warn"

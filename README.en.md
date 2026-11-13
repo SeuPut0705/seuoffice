@@ -17,7 +17,7 @@
 </p>
 
 <p align="center">
-  <sub>Apple Silicon Mac · Windows x64 · Free · Apache-2.0 · <a href="https://github.com/SeuPut0705/seuoffice/releases">All versions and preview versions</a></sub>
+  <sub>Apple Silicon Mac · Windows x64 · Free · Source-available (FSL-1.1-ALv2) · <a href="https://github.com/SeuPut0705/seuoffice/releases">All versions and preview versions</a></sub>
 </p>
 
 <p align="center">
@@ -136,7 +136,7 @@ What to keep to in operation:
 - SeuOffice is the personal asset of SeuPut (GitHub SeuPut0705). It is made on SeuPut's own time and at SeuPut's own cost, and is not a deliverable of a contract with Yuyu Healthcare. Yuyu Healthcare is a user that takes SeuOffice and uses it.
 - The code, settings and data of the Yuyu Healthcare repository (`yuyuhealthcare/yuyu-mos`) are not brought into this repository. Neither are Yuyu's real data or customers' original documents. Tests use mock documents and documents whose rights have been checked.
 - The code that connects SeuOffice to Yuyu's messenger and work apps (handing an attachment to the viewer, checking permissions) lives in yuyu-mos. SeuOffice provides a "bytes + file name → screen" part (`@seuoffice/embed`) and a static web bundle.
-- The whole repository is public under Apache-2.0 (`docs/seuoffice/decisions/0007-전부-공개.md`). Yuyu Healthcare takes the versioned `@seuoffice/*` bundles and the stable PC app for Yuyu, and there is no separate permission document.
+- The whole repository is public (`docs/seuoffice/decisions/0007-전부-공개.md`). From <FSL_FIRST_VERSION> it is source-available under FSL-1.1-ALv2, not open source (`docs/seuoffice/decisions/0031-라이선스-FSL.md`, draft). Yuyu Healthcare takes the versioned `@seuoffice/*` bundles and the stable PC app for Yuyu; whether that use is a permitted purpose under the FSL, or needs a separate grant, is settled in decision 0031.
 
 ## Development
 
@@ -145,7 +145,7 @@ What to keep to in operation:
 
 ## License and origin
 
-- Apache-2.0 (`LICENSE`). The notices are in `NOTICE`.
+- From <FSL_FIRST_VERSION>, FSL-1.1-ALv2 (`LICENSE`): you may use, modify and redistribute it for any purpose other than a competing use, and each version is also available under Apache-2.0 two years after its release. Earlier versions, and the parts that come from GenOffice and IeumOffice, are under Apache-2.0 (`LICENSE-APACHE`). The notices are in `NOTICE`.
 - Based on: IeumOffice https://github.com/pblsketch/ieumoffice (imported at commit aea1414), and its original, GenOffice https://github.com/genspark-ai/genoffice. GenOffice's `ee/` (Enterprise License) is not included.
 - The Hangul engine rhwp (MIT, Edward Kim) and its IeumOffice-patched build (`vendor/rhwp-core`).
 
@@ -186,6 +186,8 @@ what this software is based on, what it works with and which files it opens.
 
 ### No warranty
 
-SeuOffice is provided as is, without warranties of any kind, under sections 7
-and 8 of the Apache License 2.0. AI-generated content can be wrong: check it
-before you use it. Making sure you have the right to use it is up to you.
+SeuOffice is provided as is, without warranties of any kind, under the
+disclaimer of the Functional Source License 1.1 (and, for the parts under it,
+sections 7 and 8 of the Apache License 2.0). AI-generated content can be wrong:
+check it before you use it. Making sure you have the right to use it is up to
+you.

@@ -10,8 +10,9 @@
  *
  * The Chromium part is too large (18MB); electron-builder extraResources ships
  * LICENSES.chromium.html separately, referenced from the body text. The repo's
- * own LICENSE (Apache-2.0) ships beside it as LICENSE.txt; the NOTICE that
- * license requires to travel with the work opens the generated file.
+ * own LICENSE (FSL-1.1-ALv2) ships beside it as LICENSE.txt and the Apache
+ * License 2.0 as LICENSE-APACHE.txt; the NOTICE the Apache License requires to
+ * travel with the work opens the generated file.
  *
  * The two Rust sections need cargo, and the rhwp one a sparse checkout of the
  * rhwp tag (manifests only, cached under node_modules/.cache). Without them a
@@ -605,13 +606,15 @@ const seed = importedNames()
 const { resolved, missing } = closure(seed)
 resolved.sort(([a], [b]) => a.localeCompare(b))
 
-// Apache-2.0 §4(d): the NOTICE of the work travels with every copy; LICENSE.txt is §4(a)
+// Apache-2.0 §4(d): the NOTICE of the work travels with every copy; LICENSE-APACHE.txt is §4(a)
 const NOTICE = readFileSync(join(ROOT, 'NOTICE'), 'utf8').trim()
 
 let out = `${NOTICE}
 
-The Apache License, Version 2.0, under which the work above is distributed,
-is reproduced in LICENSE.txt next to this file.
+The Functional Source License, Version 1.1, Apache 2.0 Future License, under
+which seuoffice is distributed, is reproduced in LICENSE.txt next to this file,
+and the Apache License, Version 2.0, under which the works above are
+distributed, in LICENSE-APACHE.txt.
 `
 
 out += hr(HEADER)

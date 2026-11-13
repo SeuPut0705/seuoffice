@@ -2,7 +2,7 @@
   "name": "@seuoffice/hwp",
   "productName": "SeuOffice HWP",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "HWP/HWPX editor module: hosts the rhwp-studio editor in a shell tab and owns open/save",
   "main": "out/main/index.js",

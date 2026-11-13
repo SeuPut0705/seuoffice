@@ -282,3 +282,15 @@ GenOffice Enterprise License.
 seuoffice is not affiliated with, sponsored by or endorsed by Mainfunc, Inc.
 or the IeumOffice contributors. The names GenOffice and IeumOffice
 (이음오피스) identify the original works only.
+
+Licence of seuoffice from <FSL_FIRST_VERSION>
+
+Versions of seuoffice up to and including the one before <FSL_FIRST_VERSION>
+(commit <FSL_FIRST_COMMIT>) were distributed under the Apache License,
+Version 2.0, and stay under it. From <FSL_FIRST_VERSION> on, seuoffice
+modifications Copyright <YEAR> <LICENSOR> are licensed under the Functional
+Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2), in
+LICENSE (shipped as LICENSE.txt). The Apache License 2.0 that the notices
+above refer to, and that still governs the parts of GenOffice, IeumOffice and
+the third-party components they name, is in LICENSE-APACHE (shipped as
+LICENSE-APACHE.txt).

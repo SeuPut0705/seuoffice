@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/web",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "description": "seuoffice in the browser: a launcher page and the suite apps built as static files",
   "repository": {
     "type": "git",
@@ -18,6 +18,7 @@
     "dist",
     "README.md",
     "LICENSE",
+    "LICENSE-APACHE",
     "NOTICE"
   ],
   "scripts": {

@@ -55,19 +55,19 @@
   },
   {
     "files": "apps/shell/build/brand/ai-mark.svg",
-    "licence": "Apache-2.0 AND ISC AND MIT",
+    "licence": "FSL-1.1-ALv2 AND ISC AND MIT",
     "record": "NOTICE",
     "source": "original composition whose geometry is adapted from Lucide (ISC) and Feather (MIT)"
   },
   {
     "files": "apps/shell/build/brand/**",
-    "licence": "Apache-2.0",
+    "licence": "FSL-1.1-ALv2",
     "record": "NOTICE",
     "source": "SeuOffice app icon and logo sources, original; the wordmark is Roboto Bold (Apache-2.0) outlines"
   },
   {
     "files": "apps/shell/src/renderer/src/assets/seuoffice-logo.svg",
-    "licence": "Apache-2.0",
+    "licence": "FSL-1.1-ALv2",
     "record": "NOTICE",
     "source": "copy of apps/shell/build/brand/logo-lockup.svg made by tools/gen-brand-assets.mjs"
   },
@@ -85,25 +85,25 @@
   },
   {
     "files": "apps/shell/build/icon*",
-    "licence": "Apache-2.0",
+    "licence": "FSL-1.1-ALv2",
     "record": "tools/gen-brand-assets.mjs",
     "source": "app icon rasterised from apps/shell/build/brand"
   },
   {
     "files": "apps/shell/build/icons/**",
-    "licence": "Apache-2.0",
+    "licence": "FSL-1.1-ALv2",
     "record": "tools/gen-brand-assets.mjs",
     "source": "app icon rasterised from apps/shell/build/brand"
   },
   {
     "files": "apps/docs/build/icon*",
-    "licence": "Apache-2.0",
+    "licence": "FSL-1.1-ALv2",
     "record": "tools/gen-brand-assets.mjs",
     "source": "app icon rasterised from apps/shell/build/brand"
   },
   {
     "files": "apps/*/src/renderer/**/app-icon.png",
-    "licence": "Apache-2.0",
+    "licence": "FSL-1.1-ALv2",
     "record": "tools/gen-brand-assets.mjs",
     "source": "app icon rasterised from apps/shell/build/brand"
   },
@@ -259,7 +259,7 @@
   },
   {
     "files": "skills/seuoffice/**",
-    "licence": "Apache-2.0",
+    "licence": "FSL-1.1-ALv2",
     "record": "LICENSE",
     "source": "the seuoffice CLI skill, written for this project"
   },

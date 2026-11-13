@@ -181,22 +181,28 @@ interface ExtraResource {
 }
 
 describe('license files in the installer', () => {
-  it('ships the license, the NOTICE and the Unicode license of the work as resources', () => {
+  it('ships both licenses, the NOTICE and the Unicode license of the work as resources', () => {
     const config = require(join(shellRoot, 'electron-builder.cjs')) as {
       extraResources: ExtraResource[]
     }
     const shipped = new Map(config.extraResources.map((e) => [e.to, e.from]))
     expect(shipped.get('LICENSE.txt')).toBe('../../LICENSE')
+    expect(shipped.get('LICENSE-APACHE.txt')).toBe('../../LICENSE-APACHE')
     expect(shipped.get('NOTICE.txt')).toBe('../../NOTICE')
     expect(shipped.get('LICENSE-UNICODE.txt')).toBe('../../LICENSE-UNICODE.txt')
     expect(shipped.get('THIRD-PARTY-NOTICES.txt')).toBe('build/THIRD-PARTY-NOTICES.txt')
-    for (const to of ['LICENSE.txt', 'NOTICE.txt', 'LICENSE-UNICODE.txt']) {
+    for (const to of ['LICENSE.txt', 'LICENSE-APACHE.txt', 'NOTICE.txt', 'LICENSE-UNICODE.txt']) {
       expect(existsSync(resolve(shellRoot, shipped.get(to)!)), to).toBe(true)
     }
-    // packaging asserts the three sources exist, as it does for the wasm files
+    // packaging asserts the four sources exist, as it does for the wasm files
     const builder = readFileSync(join(shellRoot, 'electron-builder.cjs'), 'utf8')
     const assertion = builder.slice(builder.indexOf('function assertExtraResourceSources'))
-    for (const rel of ['../../LICENSE', '../../NOTICE', '../../LICENSE-UNICODE.txt']) {
+    for (const rel of [
+      '../../LICENSE',
+      '../../LICENSE-APACHE',
+      '../../NOTICE',
+      '../../LICENSE-UNICODE.txt',
+    ]) {
       expect(assertion.slice(0, assertion.indexOf('}\n'))).toContain(`'${rel}'`)
     }
   })
