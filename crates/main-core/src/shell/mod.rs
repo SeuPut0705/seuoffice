@@ -62,6 +62,7 @@ pub mod update_notes;
 pub mod update_restart;
 pub mod update_resume;
 pub mod updater;
+pub mod user_skills;
 pub mod window_background;
 pub mod window_bounds;
 pub mod window_close_guard;

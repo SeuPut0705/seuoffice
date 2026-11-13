@@ -1316,3 +1316,122 @@ fn window_call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
         _ => return None,
     })
 }
+
+// ---- agent-window: the skill tools ---------------------------------------------
+
+/// the `d` of `agentSkillToolsFor` the scenario scripts: each call of a
+/// service is one log line, as the TypeScript's fake writes it
+struct ToolsDeps<'a> {
+    v: &'a Value,
+    calls: usize,
+    keys: usize,
+    log: Vec<Vec<Value>>,
+}
+
+impl AgentSkillToolsDeps for ToolsDeps<'_> {
+    fn window_open(&mut self) -> bool {
+        let script = list(self.v, "window");
+        let at = self.calls.min(script.len().saturating_sub(1));
+        self.calls += 1;
+        // the TypeScript's `context.openTabs()` sits between the first and
+        // the second call of `window()`: the snapshot's call, logged where it
+        // was made
+        if self.calls == 2 {
+            self.log.push(vec![json!("openTabs")]);
+        }
+        let open = script.get(at) == Some(&Value::Bool(true));
+        self.log.push(vec![json!("window"), json!(open)]);
+        open
+    }
+
+    fn send_to_window(&mut self, channel: &str, payload: &Value) {
+        self.log
+            .push(vec![json!("send"), json!(channel), payload.clone()]);
+    }
+
+    fn list_skills(&mut self) -> Option<Result<Vec<AgentSkillListEntry>, Failure>> {
+        let skills = self.v.get("list")?;
+        self.log.push(vec![json!("listSkills")]);
+        Some(match skills {
+            Value::String(_) => Err(Failure("list".to_owned())),
+            other => Ok(other
+                .as_array()
+                .map_or(&[][..], Vec::as_slice)
+                .iter()
+                .map(list_entry_of)
+                .collect()),
+        })
+    }
+
+    fn session_skills(&mut self) -> Vec<AgentSessionSkillName> {
+        let Some(skills) = self.v.get("sessionSkills") else {
+            return Vec::new();
+        };
+        self.log.push(vec![json!("sessionSkills")]);
+        skills
+            .as_array()
+            .map_or(&[][..], Vec::as_slice)
+            .iter()
+            .map(|skill| AgentSessionSkillName {
+                id: text(skill, "id"),
+                name: text(skill, "name"),
+            })
+            .collect()
+    }
+
+    fn keep(&mut self, shown: ShownProposal) {
+        self.log.push(vec![
+            json!("keep"),
+            json!({
+                "ownerId": shown.owner_id,
+                "sessionId": shown.session_id,
+                "proposal": to_value(&shown.proposal),
+                "candidates": to_value(&shown.candidates),
+            }),
+        ]);
+    }
+
+    fn new_key(&mut self) -> String {
+        self.log.push(vec![json!("newKey")]);
+        let key = texts(self.v, "keys").get(self.keys).cloned();
+        self.keys += 1;
+        key.unwrap_or_default()
+    }
+}
+
+/// `agent-window.agentSkillToolsFor.proposeSkill` / `.proposeInstall`: the
+/// tool of the scenario in argument 0, over the services it scripts. The open
+/// tabs are the snapshot the shell gathers first (`context.openTabs()`): the
+/// case's `tabs`, an empty list where the case makes the query throw.
+fn tools_call(args: &[Value], cx: &mut Context, propose_skill: bool) -> Answer {
+    let scenario = need(args, 0)?;
+    let mut deps = ToolsDeps {
+        v: scenario,
+        calls: 0,
+        keys: 0,
+        log: Vec::new(),
+    };
+    let project_root = text(scenario, "projectRoot");
+    let tools = AgentSkillTools {
+        session: AgentMcpSession {
+            owner_id: 5,
+            session_id: "s1",
+        },
+        project_root: &project_root,
+        platform: node_platform(),
+    };
+    let done = if propose_skill {
+        let tabs: Vec<AgentOpenTab> = match scenario.get("tabs") {
+            Some(Value::Array(tabs)) => tabs.iter().map(tab_of).collect(),
+            _ => Vec::new(),
+        };
+        tools.propose_skill(&proposal_input_of(need(args, 1)?), &tabs, &mut deps)
+    } else {
+        tools.propose_install(str_arg(args, 1)?, &mut deps)
+    };
+    cx.logs.extend(deps.log);
+    Ok(Some(match done {
+        Ok(()) => json!("shown"),
+        Err(message) => json!({ "threw": message }),
+    }))
+}

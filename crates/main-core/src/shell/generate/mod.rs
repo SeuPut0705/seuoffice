@@ -4,6 +4,7 @@
 
 pub mod convert;
 pub mod converted_tab;
+pub mod generate_api;
 pub mod generate_window;
 pub mod limits;
 pub mod materials;
