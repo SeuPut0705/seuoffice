@@ -15,293 +15,224 @@
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "params.client_id.as_deref().is_none_or(str::is_empty)",
     "replace": "params.client_id.is_none()",
-    "fn": [
-      "chatgpt/oauth.chatGptAuthorizeUrl"
-    ]
+    "fn": ["chatgpt/oauth.chatGptAuthorizeUrl"]
   },
   {
     "name": "authorize url: scopes are comma separated",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "CHATGPT_SCOPES.join(\" \")",
     "replace": "CHATGPT_SCOPES.join(\",\")",
-    "fn": [
-      "chatgpt/oauth.chatGptAuthorizeUrl",
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/oauth.chatGptAuthorizeUrl", "chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "pkce challenge hashes another text",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "Sha256::digest(verifier.as_bytes())",
     "replace": "Sha256::digest(b\"x\")",
-    "fn": [
-      "chatgpt/oauth.chatGptPkcePair"
-    ]
+    "fn": ["chatgpt/oauth.chatGptPkcePair"]
   },
   {
     "name": "attempt values swap state and nonce",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "    (state, nonce)\n}",
     "replace": "    (nonce, state)\n}",
-    "fn": [
-      "chatgpt/oauth.chatGptAttemptValues"
-    ]
+    "fn": ["chatgpt/oauth.chatGptAttemptValues"]
   },
   {
     "name": "callback: any method is answered",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "req.method != \"GET\"",
     "replace": "false",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "callback: any path is answered",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "url.path() != path",
     "replace": "false",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "callback: a second request is answered again",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "|| answered.get()",
     "replace": "|| false",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "callback: any state is accepted",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "get(\"state\").as_deref() != Some(state.as_str())",
     "replace": "false",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "callback: a client id of another registration is accepted",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "named != wanted_client",
     "replace": "false",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "callback: one missing part is not incomplete",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "code.is_none() || client_id.is_none()",
     "replace": "code.is_none() && client_id.is_none()",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "callback: the error code of any shape is passed on",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "subscription_login_error_code_test(&error)",
     "replace": "true",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "callback: the wait lasts five minutes",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "10.0 * 60.0 * 1000.0",
     "replace": "5.0 * 60.0 * 1000.0",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback",
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback", "chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "callback: the server is never closed",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "    server.close();",
     "replace": "    let _ = &server;",
-    "fn": [
-      "chatgpt/oauth.waitForChatGptCallback"
-    ]
+    "fn": ["chatgpt/oauth.waitForChatGptCallback"]
   },
   {
     "name": "exchange: 403 is no refusal",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "status == 400.0 || status == 401.0 || status == 403.0",
     "replace": "status == 400.0 || status == 401.0",
-    "fn": [
-      "chatgpt/oauth.exchangeChatGptCode"
-    ]
+    "fn": ["chatgpt/oauth.exchangeChatGptCode"]
   },
   {
     "name": "exchange: another oauth error counts as a used code",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "oauth_error.as_deref() == Some(\"invalid_grant\")",
     "replace": "oauth_error.as_deref() == Some(\"invalid_request\")",
-    "fn": [
-      "chatgpt/oauth.exchangeChatGptCode"
-    ]
+    "fn": ["chatgpt/oauth.exchangeChatGptCode"]
   },
   {
     "name": "exchange: a block page counts as a resend",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "why != \"blocked\"",
     "replace": "why != \"busy\"",
-    "fn": [
-      "chatgpt/oauth.exchangeChatGptCode"
-    ]
+    "fn": ["chatgpt/oauth.exchangeChatGptCode"]
   },
   {
     "name": "token set: a missing lifetime is half an hour",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "_ => 3600.0",
     "replace": "_ => 1800.0",
-    "fn": [
-      "chatgpt/oauth.exchangeChatGptCode",
-      "chatgpt/oauth.refreshChatGptTokens"
-    ]
+    "fn": ["chatgpt/oauth.exchangeChatGptCode", "chatgpt/oauth.refreshChatGptTokens"]
   },
   {
     "name": "token set: a missing scope is not marked",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "scope_missing: scope.is_none()",
     "replace": "scope_missing: false",
-    "fn": [
-      "chatgpt/oauth.exchangeChatGptCode",
-      "chatgpt/oauth.refreshChatGptTokens"
-    ]
+    "fn": ["chatgpt/oauth.exchangeChatGptCode", "chatgpt/oauth.refreshChatGptTokens"]
   },
   {
     "name": "refresh: a 401 is no sign-out",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "UNUSABLE_GRANT_ERRORS.contains(&code) || status == 401.0",
     "replace": "UNUSABLE_GRANT_ERRORS.contains(&code)",
-    "fn": [
-      "chatgpt/oauth.refreshChatGptTokens"
-    ]
+    "fn": ["chatgpt/oauth.refreshChatGptTokens"]
   },
   {
     "name": "refresh: a reused refresh token is not final",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "\"refresh_token_reused\"",
     "replace": "\"refresh_token_reusedx\"",
-    "fn": [
-      "chatgpt/oauth.refreshChatGptTokens"
-    ]
+    "fn": ["chatgpt/oauth.refreshChatGptTokens"]
   },
   {
     "name": "refresh: a 429 is not a client error",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "(400.0..500.0)",
     "replace": "(400.0..429.0)",
-    "fn": [
-      "chatgpt/oauth.refreshChatGptTokens"
-    ]
+    "fn": ["chatgpt/oauth.refreshChatGptTokens"]
   },
   {
     "name": "revoke: any host that starts with the issuer gets the token",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "parsed.origin().ascii_serialization() != CHATGPT_ISSUER",
     "replace": "!parsed.origin().ascii_serialization().starts_with(CHATGPT_ISSUER)",
-    "fn": [
-      "chatgpt/oauth.revokeChatGptSession"
-    ]
+    "fn": ["chatgpt/oauth.revokeChatGptSession"]
   },
   {
     "name": "signing keys: a key that is no object is kept",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": ".filter(|key| as_record(key).is_some())",
     "replace": ".filter(|_| true)",
-    "fn": [
-      "chatgpt/oauth.fetchChatGptSigningKeys"
-    ]
+    "fn": ["chatgpt/oauth.fetchChatGptSigningKeys"]
   },
   {
     "name": "id token: no clock skew",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "CLOCK_SKEW_SECONDS: f64 = 300.0",
     "replace": "CLOCK_SKEW_SECONDS: f64 = 0.0",
-    "fn": [
-      "chatgpt/oauth.verifyChatGptIdToken"
-    ]
+    "fn": ["chatgpt/oauth.verifyChatGptIdToken"]
   },
   {
     "name": "id token: an audience list needs to be empty",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "audiences.contains(&wanted)",
     "replace": "audiences.is_empty()",
-    "fn": [
-      "chatgpt/oauth.verifyChatGptIdToken"
-    ]
+    "fn": ["chatgpt/oauth.verifyChatGptIdToken"]
   },
   {
     "name": "id token: the nonce is not checked",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "&& as_str(prop(&payload, \"nonce\")) != Some(nonce.as_str())",
     "replace": "&& false",
-    "fn": [
-      "chatgpt/oauth.verifyChatGptIdToken",
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/oauth.verifyChatGptIdToken", "chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "id token: the kid does not select keys",
     "file": "main-core/src/packages/ai_provider/chatgpt_oauth.rs",
     "find": "Some(kid) if !kid.is_empty() => {",
     "replace": "Some(_) if false => {",
-    "fn": [
-      "chatgpt/oauth.verifyChatGptIdToken"
-    ]
+    "fn": ["chatgpt/oauth.verifyChatGptIdToken"]
   },
   {
     "name": "host id: the id has 35 characters",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "{36}",
     "replace": "{35}",
-    "fn": [
-      "chatgpt/credentials.chatGptConnectionOf"
-    ]
+    "fn": ["chatgpt/credentials.chatGptConnectionOf"]
   },
   {
     "name": "record: a subject is counted in bytes",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "length16(s) <= 256",
     "replace": "s.chars().count() <= 256",
-    "fn": [
-      "chatgpt/credentials.chatGptConnectionOf"
-    ]
+    "fn": ["chatgpt/credentials.chatGptConnectionOf"]
   },
   {
     "name": "record: a callback path may have five parts",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "{1,4}",
     "replace": "{1,5}",
-    "fn": [
-      "chatgpt/credentials.chatGptConnectionOf"
-    ]
+    "fn": ["chatgpt/credentials.chatGptConnectionOf"]
   },
   {
     "name": "record: a client id may have 257 characters",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "{1,256}",
     "replace": "{1,257}",
-    "fn": [
-      "chatgpt/credentials.chatGptConnectionOf"
-    ]
+    "fn": ["chatgpt/credentials.chatGptConnectionOf"]
   },
   {
     "name": "record: one token is a session",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "access_token.is_empty() || refresh_token.is_empty()",
     "replace": "access_token.is_empty() && refresh_token.is_empty()",
-    "fn": [
-      "chatgpt/credentials.chatGptConnectionOf"
-    ]
+    "fn": ["chatgpt/credentials.chatGptConnectionOf"]
   },
   {
     "name": "stored: the refresh token goes plain",
@@ -318,455 +249,349 @@
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "if let Some(subject) = non_empty(&record.subject) {",
     "replace": "if let Some(subject) = record.subject.as_deref() {",
-    "fn": [
-      "chatgpt/credentials.storedChatGptConnection"
-    ]
+    "fn": ["chatgpt/credentials.storedChatGptConnection"]
   },
   {
     "name": "file store: a failed write leaves its temp file",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "path: temp,",
     "replace": "path: format!(\"{temp}x\"),",
-    "fn": [
-      "chatgpt/credentials.createChatGptConnectionFileStore"
-    ]
+    "fn": ["chatgpt/credentials.createChatGptConnectionFileStore"]
   },
   {
     "name": "file store: every read of a missing file is a new host",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "let kept = fresh.get_or_insert_with(|| {",
     "replace": "let mut scratch = None::<ChatGptConnectionRecord>;\n                    let _ = &mut fresh;\n                    let kept = scratch.get_or_insert_with(|| {",
-    "fn": [
-      "chatgpt/credentials.createChatGptConnectionFileStore"
-    ]
+    "fn": ["chatgpt/credentials.createChatGptConnectionFileStore"]
   },
   {
     "name": "host id has no urn prefix",
     "file": "main-core/src/packages/ai_provider/chatgpt_credentials.rs",
     "find": "format!(\"urn:uuid:{}\"",
     "replace": "format!(\"uuid:{}\"",
-    "fn": [
-      "chatgpt/credentials.newChatGptHostId"
-    ]
+    "fn": ["chatgpt/credentials.newChatGptHostId"]
   },
   {
     "name": "connection: the refresh margin is ten seconds",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "CHATGPT_REFRESH_MARGIN_MS: f64 = 60_000.0",
     "replace": "CHATGPT_REFRESH_MARGIN_MS: f64 = 10_000.0",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: a failed refresh serves an expired token",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "session.expires_at > self.now(rt)",
     "replace": "session.expires_at < self.now(rt)",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: a sign-out of the refresh keeps the session",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "deps.store.write(rt, forget_session(&record)).await?;\n                self.set_account(None);",
     "replace": "self.set_account(None);",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: the old id token is not kept",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "next.id_token.is_none() && kept.is_some()",
     "replace": "next.id_token.is_none() && false",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: a refresh in flight is not shared",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "if let Some(running) = running {",
     "replace": "if let Some(running) = running.filter(|_| false) {",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: a stored client id signs in on the new path",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "CHATGPT_LEGACY_CALLBACK_PATH.to_owned()",
     "replace": "CHATGPT_CALLBACK_PATH.to_owned()",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: a missing scope field is a missing plan scope",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "\"scope-missing\"",
     "replace": "\"plan-scope-missing\"",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: the plan scope is not required",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "!tokens.scopes.iter().any(",
     "replace": "tokens.scopes.iter().any(",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: a missing id token is invalid",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "\"id-token-missing\"",
     "replace": "\"id-token-invalid\"",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: unreadable signing keys are an invalid token",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "\"signing-keys\"",
     "replace": "\"id-token-invalid\"",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: an abort during the key fetch is no cancel",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "options.signal.as_ref().is_some_and(Signal::aborted)",
     "replace": "false",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: the cancel message is spelled differently",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "JsError::error(\"cancelled\")",
     "replace": "JsError::error(\"canceled\")",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: a sign-out does not revoke",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "if let (Some(session), Some(client_id)) = (&record.session, present(&record.client_id))",
     "replace": "if let (Some(session), Some(client_id)) = (&None::<ChatGptSession>, present(&record.client_id))",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: dropping a signed-out record writes it",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "if record.session.is_none() {",
     "replace": "if false {",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: nobody is told of a dropped session",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "if !had {",
     "replace": "if had {",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "connection: the account of a sign-in is not kept",
     "file": "main-core/src/packages/ai_provider/chatgpt_connection.rs",
     "find": "self.set_account(identity.email.clone());",
     "replace": "self.set_account(None);",
-    "fn": [
-      "chatgpt/connection.createChatGptConnection"
-    ]
+    "fn": ["chatgpt/connection.createChatGptConnection"]
   },
   {
     "name": "status: the login method is metered",
     "file": "main-core/src/packages/ai_provider/chatgpt_status.rs",
     "find": "\"subscription\"",
     "replace": "\"metered\"",
-    "fn": [
-      "chatgpt/status.detectChatGptConnection"
-    ]
+    "fn": ["chatgpt/status.detectChatGptConnection"]
   },
   {
     "name": "status: the error text of an unreadable connection",
     "file": "main-core/src/packages/ai_provider/chatgpt_status.rs",
     "find": "The ChatGPT connection could not be read",
     "replace": "The ChatGPT connection is unreadable",
-    "fn": [
-      "chatgpt/status.detectChatGptConnection"
-    ]
+    "fn": ["chatgpt/status.detectChatGptConnection"]
   },
   {
     "name": "status: a signed-in state is signed out",
     "file": "main-core/src/packages/ai_provider/chatgpt_status.rs",
     "find": "if !state.signed_in {",
     "replace": "if state.signed_in {",
-    "fn": [
-      "chatgpt/status.detectChatGptConnection"
-    ]
+    "fn": ["chatgpt/status.detectChatGptConnection"]
   },
   {
     "name": "responses: the model list is read for ten seconds",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "MODEL_LIST_TIMEOUT_MS: f64 = 15_000.0",
     "replace": "MODEL_LIST_TIMEOUT_MS: f64 = 10_000.0",
-    "fn": [
-      "chatgpt/responses.readChatGptModels"
-    ]
+    "fn": ["chatgpt/responses.readChatGptModels"]
   },
   {
     "name": "responses: a used-up plan is a rate_limit",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "\"rate-limit\"",
     "replace": "\"rate_limit\"",
-    "fn": [
-      "chatgpt/responses.chatGptFailure"
-    ]
+    "fn": ["chatgpt/responses.chatGptFailure"]
   },
   {
     "name": "responses: an invalid user is no sign-out",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "status == 401.0 || code == \"subscription_sharing_invalid_user\"",
     "replace": "status == 401.0",
-    "fn": [
-      "chatgpt/responses.chatGptFailure"
-    ]
+    "fn": ["chatgpt/responses.chatGptFailure"]
   },
   {
     "name": "responses: a refused session is not dropped",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "let _ = connection.drop_session(rt).await;",
     "replace": "let _ = connection;",
-    "fn": [
-      "chatgpt/responses.chatGptFailure"
-    ]
+    "fn": ["chatgpt/responses.chatGptFailure"]
   },
   {
     "name": "responses: an error text is cut at 400",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "slice_to(s, 500)",
     "replace": "slice_to(s, 400)",
-    "fn": [
-      "chatgpt/responses.chatGptFailure"
-    ]
+    "fn": ["chatgpt/responses.chatGptFailure"]
   },
   {
     "name": "responses: a failure without text",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "\"request failed\"",
     "replace": "\"failed\"",
-    "fn": [
-      "chatgpt/responses.chatGptFailure"
-    ]
+    "fn": ["chatgpt/responses.chatGptFailure"]
   },
   {
     "name": "responses: a cut by another reason is max tokens",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "Some(\"max_output_tokens\")",
     "replace": "Some(\"max_output_token\")",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: a failure event of the run is always wrapped",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "|| failure.is(\"AiRunError\")",
     "replace": "",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: a failure before any text has no empty-stream mark",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "\"{} {EMPTY_STREAM_MARK}\", failure.message",
     "replace": "\"{}\", failure.message",
-    "fn": [
-      "chatgpt/responses.streamChatGpt",
-      "chatgpt/responses.chatChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt", "chatgpt/responses.chatChatGpt"]
   },
   {
     "name": "responses: a stream cut in tool arguments words it otherwise",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "the stream ended early",
     "replace": "the stream ended",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: text without a completed event is complete",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "if !completed {",
     "replace": "if !completed && raw.is_empty() {",
-    "fn": [
-      "chatgpt/responses.streamChatGpt",
-      "chatgpt/responses.chatChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt", "chatgpt/responses.chatChatGpt"]
   },
   {
     "name": "responses: usage is named in snake case",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "\"inputTokens\"",
     "replace": "\"input_tokens\"",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: an incomplete answer reports no max tokens",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "outcome.stop_reason == \"max_tokens\"",
     "replace": "outcome.stop_reason == \"incomplete\"",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: the text the scanner sent is sent again",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "turn.text.strip_prefix(emitted.as_str())",
     "replace": "turn.text.strip_prefix(\"\")",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: a structure error after text reads as before any",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "if !emitted.is_empty() {",
     "replace": "if emitted.is_empty() {",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: the instructions have no closing tag",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "</instructions>",
     "replace": "</instruction>",
-    "fn": [
-      "chatgpt/responses.chatGptInputParts",
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.chatGptInputParts", "chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: instructions are joined with one newline",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "join(\"\\n\\n\")",
     "replace": "join(\"\\n\")",
-    "fn": [
-      "chatgpt/responses.chatGptInputParts"
-    ]
+    "fn": ["chatgpt/responses.chatGptInputParts"]
   },
   {
     "name": "responses: the request is stored",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "(\"store\", JsonValue::Bool(false))",
     "replace": "(\"store\", JsonValue::Bool(true))",
-    "fn": [
-      "chatgpt/responses.chatGptRequestBody"
-    ]
+    "fn": ["chatgpt/responses.chatGptRequestBody"]
   },
   {
     "name": "responses: a bad model name is sent",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "if !is_model_name(&chosen) {",
     "replace": "if false {",
-    "fn": [
-      "chatgpt/responses.streamChatGpt",
-      "chatgpt/responses.chatChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt", "chatgpt/responses.chatChatGpt"]
   },
   {
     "name": "responses: hidden models are listed",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "!= Some(\"list\")",
     "replace": "!= Some(\"hide\")",
-    "fn": [
-      "chatgpt/responses.chatGptModelsOf"
-    ]
+    "fn": ["chatgpt/responses.chatGptModelsOf"]
   },
   {
     "name": "responses: an empty display name is a label",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "Some(name) if !name.is_empty() => name",
     "replace": "Some(name) => name",
-    "fn": [
-      "chatgpt/responses.chatGptModelsOf"
-    ]
+    "fn": ["chatgpt/responses.chatGptModelsOf"]
   },
   {
     "name": "responses: no registered connection is used",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "None => self.module.borrow().chatgpt_connection()",
     "replace": "None => None",
-    "fn": [
-      "chatgpt/responses.listChatGptModels",
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.listChatGptModels", "chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: the idle timeout is one second",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "create_stream_watchdog(rt, Some(&cb.signal), None, None)",
     "replace": "create_stream_watchdog(rt, Some(&cb.signal), None, Some(1000.0))",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: activity does not re-arm the watchdog",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "touch.touch();",
     "replace": "",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: truncated input is not announced",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "if input.truncated",
     "replace": "if false && input.truncated",
-    "fn": [
-      "chatgpt/responses.streamChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt"]
   },
   {
     "name": "responses: the accept header",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "\"text/event-stream\"",
     "replace": "\"application/json\"",
-    "fn": [
-      "chatgpt/responses.streamChatGpt",
-      "chatgpt/responses.chatChatGpt"
-    ]
+    "fn": ["chatgpt/responses.streamChatGpt", "chatgpt/responses.chatChatGpt"]
   },
   {
     "name": "responses: the plain instructions come first",
     "file": "main-core/src/packages/ai_provider/chatgpt_responses.rs",
     "find": "&[system.to_owned(), PLAIN_INSTRUCTIONS.to_owned()]",
     "replace": "&[PLAIN_INSTRUCTIONS.to_owned(), system.to_owned()]",
-    "fn": [
-      "chatgpt/responses.chatChatGpt"
-    ]
+    "fn": ["chatgpt/responses.chatChatGpt"]
   }
 ]
