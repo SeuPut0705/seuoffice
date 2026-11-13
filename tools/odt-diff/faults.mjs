@@ -222,7 +222,9 @@ const env = {
   ...process.env,
   CARGO_BUILD_JOBS: '4',
   CARGO_TARGET_DIR: target,
-  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/debug/office_wasm.wasm'),
+  // probe-dev (crates/Cargo.toml): the dev profile's checks at opt-level 1, so
+  // a wire-command fault's whole gate takes minutes instead of over an hour
+  SEUOFFICE_WASM: resolve(target, 'wasm32-wasip1/probe-dev/office_wasm.wasm'),
 }
 if (process.argv.includes('--inventory')) {
   let stale = 0
@@ -270,6 +272,8 @@ const args = [
   resolve(workspace, 'crates/Cargo.toml'),
   '-p',
   'office-wasm',
+  '--profile',
+  'probe-dev',
   '-j4',
 ]
 const run = (program, programArgs, extraEnv = {}) =>

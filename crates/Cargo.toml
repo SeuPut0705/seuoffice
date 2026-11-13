@@ -73,3 +73,12 @@ opt-level = 1
 lto = false
 codegen-units = 16
 incremental = true
+
+# The fault probes of tools/odt-diff: the dev semantics they were written
+# against (overflow checks, debug assertions, unwinding panics) at opt-level 1.
+# A wire-command fault runs the whole gate, which took about 83 minutes on an
+# opt-level 0 wasm and runs in minutes on an optimised one; the optimiser
+# changes no behaviour of the code it compiles.
+[profile.probe-dev]
+inherits = "dev"
+opt-level = 1
