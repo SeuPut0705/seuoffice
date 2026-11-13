@@ -42,27 +42,6 @@
     "groups": ["d2/hwp-main"]
   },
   {
-    "name": "one lost memo is not reported",
-    "file": "shell-ipc/d2/src/hwp/editor.rs",
-    "find": "if landed.memos_lost > 0 {",
-    "replace": "if landed.memos_lost > 1 {",
-    "groups": ["d2/hwp-main"]
-  },
-  {
-    "name": "the Settings default format hwpx is read as hwp",
-    "file": "shell-ipc/d2/src/hwp/editor.rs",
-    "find": "HwpDefaultFormat::Hwpx => HwpFormat::Hwpx,",
-    "replace": "HwpDefaultFormat::Hwpx => HwpFormat::Hwp,",
-    "groups": ["d2/hwp-main"]
-  },
-  {
-    "name": "a new document ignores its project folder",
-    "file": "shell-ipc/d2/src/hwp/editor.rs",
-    "find": "None => self.shell.new_document_dir(view),",
-    "replace": "None => None,",
-    "groups": ["d2/hwp-main"]
-  },
-  {
     "name": "recovery-begin always answers hwp",
     "file": "shell-ipc/d2/src/hwp/recovery.rs",
     "find": "(\"format\", format.as_str().into_ipc()),",
@@ -103,5 +82,26 @@
     "find": ".filter(|url| is_image_data_url(url))",
     "replace": ".filter(|_| true)",
     "groups": ["d2/hwp-attach"]
+  },
+  {
+    "name": "a close that saves never asks the renderer",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "self.emit(view, \"hwp:close-save-request\", vec![]);",
+    "replace": "",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "tracking-dropped answers whether the file was tracked",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "v.tracking_dropped = read.dropped;",
+    "replace": "v.tracking_dropped = read.tracked;",
+    "groups": ["d2/hwp-main"]
+  },
+  {
+    "name": "a skill template copy is opened as the file itself",
+    "file": "shell-ipc/d2/src/hwp/editor.rs",
+    "find": "UntitledOption::Copy => Some(basename(path, None)),",
+    "replace": "UntitledOption::Copy => None,",
+    "groups": ["d2/hwp-main"]
   }
 ]
