@@ -290,6 +290,12 @@ jobs:
     if: ${{ !inputs.faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 120
+    # every fault rebuilds the wasm: one job ran out of time at about 16 of
+    # them, so eight jobs each take every eighth fault
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5, 6, 7]
     steps:
       - uses: actions/checkout@v4
 
@@ -336,12 +342,12 @@ jobs:
         run: node crates/office-wasm/build.mjs
       - name: Attachment seeded faults
         if: steps.has.outputs.gate == 'true'
-        run: npm --prefix tools/fileparse-diff run faults
+        run: npm --prefix tools/fileparse-diff run faults -- --shard ${{ matrix.shard }}/8
       - name: Keep the fault evidence
         if: always() && steps.has.outputs.gate == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: fileparse-faults-out
+          name: fileparse-faults-out-${{ matrix.shard }}
           path: |
             tools/fileparse-diff/out/faults-*/summary.json
             tools/fileparse-diff/out/faults-*/*.json
