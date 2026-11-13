@@ -166,7 +166,8 @@ impl ViewState {
     }
 }
 
-type TitleSource = Box<dyn Fn(ViewId) -> Option<String>>;
+/// the shell's title of an untitled view's tab
+pub(crate) type TitleSource = Box<dyn Fn(ViewId) -> Option<String>>;
 
 /// `createTextRecovery(host)`
 pub(crate) struct TextRecovery {
@@ -680,7 +681,6 @@ impl TextRecovery {
     }
 
     /// where the title of an untitled copy comes from first (the shell's tab title)
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell sets it"))]
     pub(crate) fn set_title_source(&self, source: Option<TitleSource>) {
         *self.title_source.borrow_mut() = source;
     }
@@ -688,7 +688,6 @@ impl TextRecovery {
     /// The OS is ending the session: ask every view with unsaved changes for
     /// its copy now; `done` runs when each answered or timed out
     /// (`contract.writeCopiesNow`)
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
     pub(crate) fn write_copies_now(self: &Rc<Self>, done: impl FnOnce() + 'static) {
         let targets: Vec<ViewId> = self
             .views
@@ -739,7 +738,6 @@ impl TextRecovery {
     }
 
     /// `contract.openFileWithDecision`: load `file_path` into a view the shell made
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
     pub(crate) fn open_file_with_decision(&self, view: ViewId, request: &RecoveryOpenFileRequest) {
         self.track(view);
         (self.host.adopt_file)(view, &request.file_path);
@@ -750,10 +748,10 @@ impl TextRecovery {
     }
 
     /// `contract.openUntitledCopy`: load a copy into a view as an untitled tab
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
     pub(crate) fn open_untitled_copy(&self, view: ViewId, request: &RecoveryOpenUntitledRequest) {
-        if let Some(state) = self.views.borrow_mut().entry(view).or_default().into() {
-            let state: &mut ViewState = state;
+        {
+            let mut views = self.views.borrow_mut();
+            let state = views.entry(view).or_default();
             state.untitled = Some(request.copy.clone());
             state.untitled_seed = Some(request.copy.clone());
             state.title = Some(request.title.clone());
@@ -763,13 +761,11 @@ impl TextRecovery {
     }
 
     /// `contract.isUnprotectable`: every copy here is plain text the user could have saved
-    #[allow(dead_code, reason = "the shell's recovery registry calls it")]
     pub(crate) fn is_unprotectable(&self, _view: ViewId) -> bool {
         false
     }
 
     /// `kind` of the contract the shell registers
-    #[allow(dead_code, reason = "the shell's recovery registry calls it")]
     pub(crate) fn kind(&self) -> &'static str {
         self.host.kind
     }

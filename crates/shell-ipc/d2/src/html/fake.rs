@@ -80,6 +80,7 @@ impl Answers {
         }
     }
 
+    #[cfg(test)]
     pub(crate) fn called(&self, prefix: &str) -> Vec<String> {
         self.calls
             .lock()

@@ -151,8 +151,10 @@ struct HtmlState {
     present_fs_release: Option<Timer>,
 }
 
-/// The HTML editor: its documents and the calls other areas make into it
-pub(crate) struct HtmlEditors {
+/// The HTML editor: its documents and the calls other areas make into it.
+/// The calls both text editors share (view set-up, recovery contract) come
+/// from [`text_document_editors!`].
+pub struct HtmlEditors {
     docs: Rc<TextDocs>,
     state: Rc<RefCell<HtmlState>>,
     seeds: ViewMap<String>,
@@ -164,41 +166,21 @@ text_document_editors!(HtmlEditors);
 
 impl HtmlEditors {
     /// `queueHtmlSeedFor(contents, text)`: text a new untitled tab starts with
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
-    pub(crate) fn queue_seed(&self, view: ViewId, text: &str) {
+    pub fn queue_seed(&self, view: ViewId, text: &str) {
         if !self.docs.is_destroyed(view) {
             self.seeds.insert(view, text.to_owned());
         }
     }
 
-    /// `grantAndTrack(view, openPath)` of `createHtmlView`: the shell made a
-    /// view for this editor
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
-    pub(crate) fn track_view(&self, view: ViewId, open_path: Option<&Path>) {
-        let path = open_path.map(|p| p.to_string_lossy().into_owned());
-        self.docs.track(view, path.as_deref())
-    }
-
-    /// `htmlDiscardPendingAssets(contents)`
-    #[cfg_attr(not(test), allow(dead_code, reason = "MCP calls it"))]
-    pub(crate) fn discard_pending_assets(&self, view: ViewId) {
-        self.docs.discard_pending_assets(view)
-    }
-
-    /// `sendHtmlPrintRequest` is M's; the preview protocol (`html-preview://`)
-    /// reads what the renderer pushed last, with the document's base
-    #[cfg_attr(not(test), allow(dead_code, reason = "the preview scheme reads it"))]
-    pub(crate) fn preview_text(&self, view: ViewId) -> Option<String> {
+    /// The preview protocol (`html-preview://`) reads what the renderer
+    /// pushed last, with the document's base
+    pub fn preview_text(&self, view: ViewId) -> Option<String> {
         self.previews.get(view)
     }
 
     /// `exportHtmlHeadless(input, outPath, format, timeoutMs)` on the hidden
     /// view the shell made for it
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "the shell's headless entry calls it")
-    )]
-    pub(crate) fn export_headless(
+    pub fn export_headless(
         &self,
         view: ViewId,
         input: &str,
@@ -217,18 +199,6 @@ impl HtmlEditors {
             timeout,
             then,
         )
-    }
-
-    /// `htmlIsDirty(webContentsId)`
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
-    pub(crate) fn is_dirty(&self, view: ViewId) -> bool {
-        self.docs.is_dirty(view)
-    }
-
-    /// The view's renderer died (`render-process-gone`)
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell reports it"))]
-    pub(crate) fn renderer_gone(&self, view: ViewId, reason: &str) {
-        self.docs.renderer_gone(view, reason)
     }
 }
 

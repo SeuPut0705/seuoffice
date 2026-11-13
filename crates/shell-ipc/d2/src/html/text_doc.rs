@@ -852,10 +852,6 @@ impl TextDocs {
     /// `input`, takes `target` with `consume-headless-export` and reports with
     /// `headless-export-done`; `then` gets the report, or the timeout's error.
     /// The shell destroys the hidden window afterwards.
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "the shell's headless entry calls it")
-    )]
     pub(crate) fn headless_export(
         self: &Rc<Self>,
         view: ViewId,
@@ -898,7 +894,6 @@ impl TextDocs {
 
     /// The view's renderer process died (`render-process-gone`): its copy
     /// outlives it, and a headless export waiting on it fails
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell reports it"))]
     pub(crate) fn renderer_gone(&self, view: ViewId, reason: &str) {
         self.recovery.view_crashed(view);
         self.settle_headless(
@@ -1101,6 +1096,80 @@ macro_rules! text_document_editors {
             }
             fn document_path(&self, view: shell_contract::ViewId) -> Option<std::path::PathBuf> {
                 self.docs.save_path(view).map(Into::into)
+            }
+        }
+
+        impl $editors {
+            /// `grantAndTrack(view, openPath)` of `create<App>View`: the shell
+            /// made a view for this editor, opening `open_path` when it exists
+            pub fn track_view(&self, view: shell_contract::ViewId, open_path: Option<&std::path::Path>) {
+                let path = open_path.map(|p| p.to_string_lossy().into_owned());
+                self.docs.track(view, path.as_deref())
+            }
+
+            /// `<app>DiscardPendingAssets(contents)`: closing without saving
+            pub fn discard_pending_assets(&self, view: shell_contract::ViewId) {
+                self.docs.discard_pending_assets(view)
+            }
+
+            /// `<app>IsDirty(webContentsId)`
+            pub fn is_dirty(&self, view: shell_contract::ViewId) -> bool {
+                self.docs.is_dirty(view)
+            }
+
+            /// The view's renderer died (`render-process-gone`)
+            pub fn renderer_gone(&self, view: shell_contract::ViewId, reason: &str) {
+                self.docs.renderer_gone(view, reason)
+            }
+
+            /// `<app>RecoveryIdentity(webContentsId)`
+            pub fn recovery_identity(
+                &self,
+                view: shell_contract::ViewId,
+            ) -> Option<main_core::packages::electron_utils::recovery_store::RecoveryIdentity> {
+                self.docs.recovery().identity_of(view)
+            }
+
+            /// `set<App>RecoveryTitleSource(source)`
+            pub fn set_recovery_title_source(
+                &self,
+                source: Option<Box<dyn Fn(shell_contract::ViewId) -> Option<String>>>,
+            ) {
+                self.docs.recovery().set_title_source(source)
+            }
+
+            /// The recovery contract's `kind`
+            pub fn recovery_kind(&self) -> &'static str {
+                self.docs.recovery().kind()
+            }
+
+            /// The recovery contract's `writeCopiesNow`: `done` runs when
+            /// every dirty view answered or timed out
+            pub fn write_copies_now(&self, done: Box<dyn FnOnce()>) {
+                self.docs.recovery().write_copies_now(done)
+            }
+
+            /// The recovery contract's `openFileWithDecision`
+            pub fn open_file_with_decision(
+                &self,
+                view: shell_contract::ViewId,
+                request: &main_core::packages::electron_utils::recovery_contract::RecoveryOpenFileRequest,
+            ) {
+                self.docs.recovery().open_file_with_decision(view, request)
+            }
+
+            /// The recovery contract's `openUntitledCopy`
+            pub fn open_untitled_copy(
+                &self,
+                view: shell_contract::ViewId,
+                request: &main_core::packages::electron_utils::recovery_contract::RecoveryOpenUntitledRequest,
+            ) {
+                self.docs.recovery().open_untitled_copy(view, request)
+            }
+
+            /// The recovery contract's `isUnprotectable`
+            pub fn is_unprotectable(&self, view: shell_contract::ViewId) -> bool {
+                self.docs.recovery().is_unprotectable(view)
             }
         }
     };

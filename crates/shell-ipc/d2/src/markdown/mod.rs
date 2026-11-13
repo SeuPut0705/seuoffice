@@ -89,8 +89,10 @@ pub trait MarkdownShell: Send + Sync {
 
 pub type MarkdownShellHost = Arc<dyn MarkdownShell>;
 
-/// The Markdown editor: its documents and the calls other areas make into it
-pub(crate) struct MarkdownEditors {
+/// The Markdown editor: its documents and the calls other areas make into it.
+/// The calls both text editors share (view set-up, recovery contract) come
+/// from [`text_document_editors!`].
+pub struct MarkdownEditors {
     docs: Rc<TextDocs>,
     seeds: ViewMap<String>,
     /// `queueMarkdownNoteAppendFor`'s pending texts by view: the note and its texts
@@ -115,8 +117,7 @@ fn same_path(a: &str, b: &str) -> bool {
 
 impl MarkdownEditors {
     /// `queueMarkdownSeedFor(contents, text)`: text a new untitled tab starts with
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
-    pub(crate) fn queue_seed(&self, view: ViewId, text: &str) {
+    pub fn queue_seed(&self, view: ViewId, text: &str) {
         if !self.docs.is_destroyed(view) {
             self.seeds.insert(view, text.to_owned());
         }
@@ -125,8 +126,7 @@ impl MarkdownEditors {
     /// `queueMarkdownNoteAppendFor(contents, notePath, text)`: text for the
     /// note the view shows (the PDF editor's "Add to note"); the renderer
     /// takes it after `markdown:note-append-ready`
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
-    pub(crate) fn queue_note_append(&self, view: ViewId, note_path: &str, text: &str) {
+    pub fn queue_note_append(&self, view: ViewId, note_path: &str, text: &str) {
         if self.docs.is_destroyed(view) {
             return;
         }
@@ -143,32 +143,9 @@ impl MarkdownEditors {
             .emit(Target::View(view), "markdown:note-append-ready", Vec::new());
     }
 
-    /// `grantAndTrack(view, openPath)` of `createMarkdownView`
-    #[cfg_attr(not(test), allow(dead_code, reason = "the shell calls it"))]
-    pub(crate) fn track_view(&self, view: ViewId, open_path: Option<&Path>) {
-        let path = open_path.map(|p| p.to_string_lossy().into_owned());
-        self.docs.track(view, path.as_deref())
-    }
-
-    /// `markdownDiscardPendingAssets(contents)`
-    #[allow(dead_code, reason = "MCP calls it")]
-    pub(crate) fn discard_pending_assets(&self, view: ViewId) {
-        self.docs.discard_pending_assets(view)
-    }
-
-    /// `markdownIsDirty(webContentsId)`
-    #[allow(dead_code, reason = "the shell calls it")]
-    pub(crate) fn is_dirty(&self, view: ViewId) -> bool {
-        self.docs.is_dirty(view)
-    }
-
     /// `exportMarkdownPdfHeadless(input, outPath, timeoutMs)` on the hidden
     /// view the shell made for it
-    #[cfg_attr(
-        not(test),
-        allow(dead_code, reason = "the shell's headless entry calls it")
-    )]
-    pub(crate) fn export_pdf_headless(
+    pub fn export_pdf_headless(
         &self,
         view: ViewId,
         input: &str,
@@ -178,12 +155,6 @@ impl MarkdownEditors {
     ) {
         self.docs
             .headless_export(view, input, out_path.into_ipc(), timeout, then)
-    }
-
-    /// The view's renderer died (`render-process-gone`)
-    #[allow(dead_code, reason = "the shell reports it")]
-    pub(crate) fn renderer_gone(&self, view: ViewId, reason: &str) {
-        self.docs.renderer_gone(view, reason)
     }
 }
 
