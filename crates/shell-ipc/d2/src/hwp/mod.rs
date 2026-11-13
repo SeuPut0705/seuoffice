@@ -34,7 +34,7 @@ use attachments::ParsedFile;
 
 use crate::kit::Entry;
 
-pub(crate) use editor::HwpEditors;
+pub use editor::{HEADLESS_TIMEOUT_MS, HwpEditors, UntitledOption};
 
 /// What an HWP file says of tracked changes (`TrackedChanges` of
 /// tracked-changes.ts)

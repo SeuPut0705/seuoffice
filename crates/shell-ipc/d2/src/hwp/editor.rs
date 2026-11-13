@@ -93,8 +93,7 @@ const READ_TEXT_TIMEOUT: Duration = Duration::from_millis(30_000);
 /// `READ_TEXT_RETRY_MS`: how often the request is sent again unanswered
 const READ_TEXT_RETRY: Duration = Duration::from_millis(250);
 /// `exportHwpPdfHeadless`'s default `timeoutMs`
-#[cfg_attr(not(test), allow(dead_code))]
-pub(crate) const HEADLESS_TIMEOUT_MS: u64 = 180_000;
+pub const HEADLESS_TIMEOUT_MS: u64 = 180_000;
 /// Why a save stood down: the file moved on disk after this copy read or wrote it
 const EXTERNAL_MODIFIED: &str = "hwp: external-modified";
 
@@ -161,8 +160,7 @@ struct Headless {
 
 /// `HwpViewOptions.untitledCopy`
 #[derive(Clone, Debug, PartialEq)]
-#[cfg_attr(not(test), allow(dead_code))]
-pub(crate) enum UntitledOption {
+pub enum UntitledOption {
     No,
     /// `true`: a skill template's copy, named as its file
     Copy,
@@ -1602,7 +1600,7 @@ pub(super) fn tab_spots(spots: &[main_core::hwp::tab_widths::TabSpot]) -> IpcVal
 
 /// The Hangul editor as other areas call it (the functions hwp-main.ts
 /// exported), and its recovery contract
-pub(crate) struct HwpEditors(pub(super) Rc<Hwp>);
+pub struct HwpEditors(pub(super) Rc<Hwp>);
 
 impl DocumentEditors for HwpEditors {
     fn owns(&self, view: ViewId) -> bool {
@@ -1689,29 +1687,27 @@ impl RecoveryEditorContract<ViewId> for HwpEditors {
     }
 }
 
-/// What other areas call that the contract's traits do not carry (reached
-/// from the tests until the shell's callers are wired)
-#[cfg_attr(not(test), allow(dead_code))]
+/// What the shell calls that the contract's traits do not carry
 impl HwpEditors {
     /// `createHwpView(openPath, options)`'s `grantAndTrack`
-    pub(crate) fn grant_and_track(
-        &self,
-        view: ViewId,
-        open_path: Option<&str>,
-        untitled: UntitledOption,
-    ) {
+    pub fn grant_and_track(&self, view: ViewId, open_path: Option<&str>, untitled: UntitledOption) {
         self.0.grant_and_track(view, open_path, untitled)
     }
-    pub(crate) fn is_dirty(&self, view: ViewId) -> bool {
+    /// `hwpIsDirty(webContentsId)`
+    pub fn is_dirty(&self, view: ViewId) -> bool {
         self.0.is_dirty(view)
     }
-    pub(crate) fn memo_modal_open(&self, view: ViewId) -> bool {
+    /// `hwpMemoModalOpen(webContentsId)`
+    pub fn memo_modal_open(&self, view: ViewId) -> bool {
         self.0.memo_modal_open(view)
     }
-    pub(crate) fn request_preview(&self, view: ViewId, action: &str) {
+    /// `requestHwpPreview(contents, action)`: `"open"` or `"print"`
+    pub fn request_preview(&self, view: ViewId, action: &str) {
         self.0.request_preview(view, action)
     }
-    pub(crate) fn export_hwp_pdf_headless(
+    /// `exportHwpPdfHeadless(input, outPath, timeoutMs)`; the default
+    /// timeout is [`HEADLESS_TIMEOUT_MS`]
+    pub fn export_hwp_pdf_headless(
         &self,
         input: &str,
         out_path: &str,
@@ -1721,32 +1717,37 @@ impl HwpEditors {
         self.0
             .export_hwp_pdf_headless(input, out_path, timeout_ms, then)
     }
-    pub(crate) fn render_process_gone(&self, view: ViewId, reason: &str) {
+    /// the view's `render-process-gone`
+    pub fn render_process_gone(&self, view: ViewId, reason: &str) {
         self.0.render_process_gone(view, reason)
     }
-    pub(crate) fn did_start_navigation(&self, view: ViewId, main_frame: bool, same_document: bool) {
+    /// the view's `did-start-navigation`
+    pub fn did_start_navigation(&self, view: ViewId, main_frame: bool, same_document: bool) {
         self.0.did_start_navigation(view, main_frame, same_document)
     }
-    pub(crate) fn before_input(&self, view: ViewId, input: &KeyInput) -> bool {
+    /// the view's `before-input-event`: true when the key is taken
+    /// (`event.preventDefault()`)
+    pub fn before_input(&self, view: ViewId, input: &KeyInput) -> bool {
         self.0.before_input(view, input)
     }
-    pub(crate) fn window_open(&self, url: &str) {
+    /// the view's `setWindowOpenHandler`
+    pub fn window_open(&self, url: &str) {
         self.0.window_open(url)
     }
     /// `hwpRecoveryIdentity(contents)`
-    pub(crate) fn recovery_identity(&self, view: ViewId) -> Option<RecoveryIdentity> {
+    pub fn recovery_identity(&self, view: ViewId) -> Option<RecoveryIdentity> {
         self.0
             .with_recovery(|r, e, _| r.hwp_recovery_identity(e, wc(view)))
     }
     /// `setHwpRecoveryTitle(contents, title)`
-    pub(crate) fn set_recovery_title(&self, view: ViewId, title: &str) {
+    pub fn set_recovery_title(&self, view: ViewId, title: &str) {
         self.0
             .recovery
             .borrow_mut()
             .set_hwp_recovery_title(wc(view), title)
     }
     /// `hwpDiscardRecoveryCopy(contents)`
-    pub(crate) fn discard_recovery_copy(&self, view: ViewId) {
+    pub fn discard_recovery_copy(&self, view: ViewId) {
         self.0.discard_recovery_copy(view)
     }
 }
