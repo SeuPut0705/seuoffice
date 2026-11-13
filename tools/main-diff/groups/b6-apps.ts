@@ -125,8 +125,7 @@ async function describe(res: Response, kind: 'text' | 'hex'): Promise<J> {
 // slides/element-clipboard
 // ---------------------------------------------------------------------------
 
-const clipboardModule = (): Promise<J> =>
-  import('../../../apps/slides/src/main/element-clipboard.ts')
+const clipboardModule = (): Promise<J> => import('../../../apps/slides/src/main/element-clipboard.ts')
 
 /** the clipboard and `nativeImage` of a case (see calls/b6_apps.rs `ClipFake`) */
 function useClipboard(spec: J, log: (...args: unknown[]) => void): void {
@@ -680,8 +679,7 @@ const previewProtocol: Group = {
 // markdown/print-document, markdown/print-pdf
 // ---------------------------------------------------------------------------
 
-const printDocumentModule = (): Promise<J> =>
-  import('../../../apps/markdown/src/main/print-document.ts')
+const printDocumentModule = (): Promise<J> => import('../../../apps/markdown/src/main/print-document.ts')
 const printPdfModule = (): Promise<J> => import('../../../apps/markdown/src/main/print-pdf.ts')
 
 interface WindowScript {
