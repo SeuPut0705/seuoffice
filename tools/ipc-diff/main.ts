@@ -181,15 +181,21 @@ async function typescriptSide(group: Group, c: Case, dir: string): Promise<unkno
       const run = group.triggers?.[call.name ?? '']
       if (!run) answer = { thrown: `unknown trigger ${call.name}` }
       else {
-        try {
-          const e = new Encoder()
-          const value = e.value(
-            await run({ ...cx, contents: electron.contents }, view.view, call.args),
-          )
-          answer = { value, buffers: e.buffers.map(hex) }
-        } catch (err) {
-          answer = { error: String(err) }
+        const outcome = async (): Promise<Record<string, unknown>> => {
+          try {
+            const e = new Encoder()
+            const value = e.value(
+              await run({ ...cx, contents: electron.contents }, view.view, call.args),
+            )
+            return { value, buffers: e.buffers.map(hex) }
+          } catch (err) {
+            return { error: String(err) }
+          }
         }
+        if (call.defer) {
+          deferred.set(index, outcome())
+          answer = { deferred: true }
+        } else answer = await outcome()
       }
     } else if (kind === 'send') {
       const listeners = electron.handlers.on.get(call.channel) ?? []

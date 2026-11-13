@@ -30,7 +30,7 @@ export interface Call {
   /** the buffers the arguments point at, as hex */
   buffers?: string[]
   /**
-   * an invoke left pending: its answer is `{deferred: true}` and the reply is
+   * an invoke or a trigger left pending: its answer is `{deferred: true}` and the reply is
    * taken by a later `{await: <this call's index>}` step, so a renderer round
    * trip (the handler waits for another call of the renderer) runs its full path
    */
