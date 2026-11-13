@@ -809,7 +809,6 @@ mod tests {
         rig: Rig,
         port: Rc<McpHubPort>,
         net: Arc<ServerNet>,
-        os: Arc<Os>,
         ui: Arc<Ui>,
     }
 
@@ -823,7 +822,7 @@ mod tests {
             &rig.services,
             net.clone(),
             Arc::new(Shell),
-            os.clone(),
+            os,
             Arc::new(Window(Some(ViewId(1)))),
             ui.clone(),
             Arc::new(Storage),
@@ -832,7 +831,6 @@ mod tests {
             rig,
             port,
             net,
-            os,
             ui,
         }
     }
