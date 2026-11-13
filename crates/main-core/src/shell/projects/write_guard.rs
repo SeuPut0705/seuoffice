@@ -349,7 +349,7 @@ impl ProjectWriteGuard {
     ) -> Result<(), WriteGuardError> {
         let (dir, target) = self.locate(root, rel_path, data_dir)?;
         let existing = self.prepare_data(root, &dir, rel_path, true)?;
-        if existing.is_some_and(|info| link_count(&info) > 1) {
+        if existing.is_some_and(|info| link_count(&target, &info) > 1) {
             return Err(ProjectWriteRefused::new(ProjectWriteRefusal::HardLink, target).into());
         }
         append_text(&target, text)?;
