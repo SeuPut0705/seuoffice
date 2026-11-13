@@ -1223,5 +1223,68 @@
     "find": "IpcValue::Number(page.total_chars as f64)",
     "replace": "IpcValue::Number(page.offset)",
     "groups": ["a/knowledge-base"]
+  },
+  {
+    "name": "the prefs a window sets are not written",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "let _ = write_agent_prefs(&self.sh.app_settings(), &prefs.to_json());",
+    "replace": "let _ = &prefs;",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "project skills are turned on when asked off",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            on,\n            PLATFORM,",
+    "replace": "            !on,\n            PLATFORM,",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the folder dialog asks for nothing",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "                properties,\n                ..FileDialog::default()",
+    "replace": "                properties: Vec::new(),\n                ..FileDialog::default()",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "an allow lasts only once",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            answer.scope.as_deref(),",
+    "replace": "            None,",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the window gets no event of its own session",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "if i64::from(view.0) != owner_id ||",
+    "replace": "if i64::from(view.0) == owner_id ||",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "the project skills stay in a session that was not allowed them",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "object.get(\"source\")\n                                        != Some(&JsonValue::String(\"project\".into()))",
+    "replace": "object.get(\"source\")\n                                        == Some(&JsonValue::String(\"project\".into()))",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "answer answers null instead of undefined",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "                    agent_answer(host, manager, sender, a(0), a(1), a(2), a(3));\n                    IpcValue::Undefined",
+    "replace": "                    agent_answer(host, manager, sender, a(0), a(1), a(2), a(3));\n                    IpcValue::Null",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a message refused by the program is answered as sent",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "reply.reply(Ok(IpcValue::Bool(job.resume(answer))));",
+    "replace": "reply.reply(Ok(IpcValue::Bool({ let _ = job.resume(answer); true })));",
+    "groups": ["a/agent-window"]
+  },
+  {
+    "name": "a session event does not reach the manager",
+    "file": "shell-ipc/a/src/agent/machine.rs",
+    "find": "            .on_event(&mut w.host.io, owner_id, session_id, event);",
+    "replace": "            .on_event(&mut w.host.io, owner_id, session_id, &JsonValue::Null);",
+    "groups": ["a/agent-window"]
   }
 ]
