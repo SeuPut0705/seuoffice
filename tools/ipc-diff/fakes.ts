@@ -323,6 +323,27 @@ export function caseElectron(dir: string, c: Case): CaseElectron {
       createFromBuffer: (png: Buffer) => image(Buffer.from(png)),
       createEmpty: () => image(Buffer.alloc(0)),
     },
+    // screen capture (sheets, slides): access is `media.<kind>` of
+    // hosts.shared (`granted` by default), the sources `media.sources`
+    // (`[{id, name}]`, empty thumbnails); each call is one log line
+    systemPreferences: {
+      getMediaAccessStatus: (kind: string) => {
+        log.push(['systemPreferences.getMediaAccessStatus', kind])
+        return String((shared.media ?? {})[kind] ?? 'granted')
+      },
+      askForMediaAccess: async (kind: string) => {
+        log.push(['systemPreferences.askForMediaAccess', kind])
+        return ((shared.media ?? {})[kind] ?? 'granted') === 'granted'
+      },
+    },
+    desktopCapturer: {
+      getSources: async (options: unknown) => {
+        log.push(['desktopCapturer.getSources', new Encoder().value(options)])
+        const sources = ((shared.media ?? {}).sources ?? []) as { id: string; name: string }[]
+        const empty = { ...image(Buffer.alloc(0)), toDataURL: () => '' }
+        return sources.map((s) => ({ id: s.id, name: s.name, thumbnail: empty, display_id: '' }))
+      },
+    },
   }
   return electron
 }
