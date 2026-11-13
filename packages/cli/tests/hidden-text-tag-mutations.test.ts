@@ -32,6 +32,14 @@ describe.each(TAG_MUTATION_NAMES)('tags rewritten: %s', (mutation) => {
     ])
     expect(read.stdout).not.toContain(SECRET)
     expect(read.stderr).not.toContain(SECRET)
+    // and nothing goes missing: the note and the comment are listed, withheld
+    const detail = read.json().detail
+    expect(detail.notes.map((n: { id: string; text: string }) => [n.id, n.text])).toEqual([
+      ['1', 'See {{client phone}}'],
+    ])
+    expect(detail.comments.map((c: { id: string; text: string }) => [c.id, c.text])).toEqual([
+      ['1', 'Note: {{client phone}}'],
+    ])
   })
 
   it('an attachment read hands over no hidden word', async () => {

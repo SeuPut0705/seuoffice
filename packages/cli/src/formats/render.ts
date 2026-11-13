@@ -5,6 +5,7 @@ import { basename, extname, isAbsolute, join, resolve } from 'node:path'
 import { assertAllowed, readInput, type PathContext } from '../fs'
 import { CliError, EXIT } from '../result'
 import { exportViaApp } from './app-export'
+import { refuseHiddenContent } from './render-guard'
 import { rasterizePdf } from './slide-spec'
 
 /** Documents the app can print to PDF, plus PDF itself (rasterized directly). */
@@ -77,6 +78,7 @@ export async function renderToPngs(
       { reason: 'unsupported' },
     )
   }
+  await refuseHiddenContent(path, opts.only)
   const tmpPdf = ext === 'pdf' ? null : join(tmpdir(), `seuoffice-render-${randomUUID()}.pdf`)
   try {
     if (tmpPdf) await exportViaApp(path, 'pdf', tmpPdf, { env: ctx.env, log: opts.log })

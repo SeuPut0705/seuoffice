@@ -46,11 +46,21 @@ function linesOf(node: { text?: { lines?: TextLine[] } }): TextLine[] {
   return node.text?.lines ?? []
 }
 
+/** Every laid-out line of a node's own text: a shape's, or every cell's of a table. */
+export function ownLinesOf(node: RenderNode): TextLine[] {
+  if (isTextNode(node)) return linesOf(node)
+  return node.type === 'table' ? node.cells.flatMap(linesOf) : []
+}
+
 /**
  * A shape's text, tab-separated cells for a table — the same shape the existing
  * `nodeText` produced, with withheld runs swapped for their markers.
  */
 export function textForModel(node: RenderNode, forDisplay = false): string {
+  if (node.type === 'chart') {
+    // a chart with text hidden from AI reads as its marker, whole: its words are drawn by the renderer
+    return !forDisplay && node.redact ? placeholderSource(node.redact) : ''
+  }
   if (node.type === 'picture') {
     // a withheld picture reads as its marker so the model can see something is
     // there and write around it. The reader's own view stays empty: a picture
@@ -116,12 +126,11 @@ export function redactLabelsOf(slide: { nodes: RenderNode[] }): string[] {
         visit(n.children)
         continue
       }
-      if (n.type === 'picture' && n.redact) {
+      if ((n.type === 'picture' || n.type === 'chart') && n.redact) {
         seen.add(n.redact)
         continue
       }
-      if (!isTextNode(n)) continue
-      for (const line of linesOf(n)) {
+      for (const line of ownLinesOf(n)) {
         for (const r of line.runs) if (r.redact) seen.add(r.redact)
       }
     }

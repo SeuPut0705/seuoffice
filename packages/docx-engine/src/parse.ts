@@ -10,7 +10,14 @@ import { isTiffMime, tiffToDataUrlAsync } from './tiff'
 import { ommlEndsWithBreak, ommlFragmentsOf, ommlToLatex, ommlToMathML } from './math'
 import { splitXmlChildren } from './generate'
 import { readPropChangeXml } from './revision-xml'
-import { parseEntry, runsText, withheldText } from './withheld'
+import {
+  parseEntry,
+  runsText,
+  withheldBlockLabel,
+  withheldLabelOf,
+  withheldPartLabel,
+  withheldText,
+} from './withheld'
 import { NOTE_PART_PATH, parseNotesXml, type NoteParagraphReader } from './notes'
 import { scanBody, type BodyElement } from './scan'
 import {
@@ -92,6 +99,7 @@ import {
   childrenThroughSdt,
   findChild,
   findChildren,
+  maskOpaque,
   nameOf,
   serializeXNode,
   textOf,
@@ -260,7 +268,8 @@ import {
 } from './inline-opaque'
 import { paraCsFormat, parseStyles } from './parse-styles'
 import { ownValue, setOwn } from './own-value'
-import { removeElements } from './xml-tag'
+import { elementInner, findStartTag, removeElements, removeSegments } from './xml-tag'
+import { canonicalXmlSyntax } from './ooxml-normalize'
 import {
   VML_PICT_RID_RE,
   VML_WORDART_RE,
@@ -382,6 +391,15 @@ export interface ParseOptions {
   shadowResolve?: boolean
 }
 
+/**
+ * The text of a part that is only read: written the usual way (see
+ * canonicalXmlSyntax), so the patterns that read it need not know every
+ * spelling. The document part and the parts the save path splices keep their bytes.
+ */
+async function partText(file: JSZip.JSZipObject): Promise<string> {
+  return canonicalXmlSyntax(await file.async('string'))
+}
+
 export async function parseDocx(
   bytes: Uint8Array,
   options: ParseOptions = {},
@@ -423,7 +441,7 @@ export async function parseDocx(
   // the same goes for the other docProps parts: a broken one is simply empty
   const properties = await readDocumentProperties(zip).catch(() => emptyDocumentProperties())
   const fontTableFile = zip.file(FONT_TABLE_PART_PATH)
-  const fontTable = fontTableFile ? parseFontTable(await fontTableFile.async('string')) : []
+  const fontTable = fontTableFile ? parseFontTable(await partText(fontTableFile)) : []
   const embeddedFonts = await readEmbeddedFonts(zip, fontTable)
 
   const rangedCommentIds = new Set(
@@ -997,7 +1015,27 @@ function attachInlineContentControls(block: Block, xml: string): void {
   if (inline.length > 0) block.inlineContentControls = inline
 }
 
+/**
+ * A block shown as a whole unit (a picture, a drawing) whose picture sits in a
+ * run marked hidden from AI carries the mark's label: the unit has no run for
+ * the mark to sit on, and its image, preview text and description are the
+ * run's content.
+ */
 async function buildBlock(
+  el: BodyElement,
+  index: number,
+  xml: string,
+  ctx: BuildContext,
+  zoteroField?: ZoteroFieldParagraph,
+): Promise<Block> {
+  const block = await buildBlockOf(el, index, xml, ctx, zoteroField)
+  if (block.type !== 'image' && block.type !== 'passthrough') return block
+  // a chart whose rich text holds a mark is hidden whole, as a picture in a hidden run is
+  const redact = withheldBlockLabel(xml) ?? block.chartDisplay?.redact ?? null
+  return redact === null ? block : { ...block, redact }
+}
+
+async function buildBlockOf(
   el: BodyElement,
   index: number,
   xml: string,
@@ -1140,10 +1178,8 @@ async function buildBlock(
   // aidocs-ink runs are parsed separately into ParsedDoc.inks and re-emitted
   // from the save options; hide them from detection so an annotated text
   // paragraph stays an editable paragraph instead of a protected drawing.
-  const detect = stripInkRuns(
-    xml.includes('<mc:Fallback')
-      ? xml.replace(/<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>/g, '')
-      : xml,
+  const detect = canonicalXmlSyntax(
+    stripInkRuns(xml.includes('<mc:Fallback') ? removeSegments(xml, 'mc:Fallback') : xml),
   )
 
   // Paragraph: certain constructs are protected as whole passthrough blocks.
@@ -2400,11 +2436,7 @@ function vmlHrRule(hrRect: string): NonNullable<NonNullable<Run['image']>['rule'
 // or w:txbxContent, so their m:oMath copies are dropped to keep fragment indexes
 // aligned with the visited nodes.
 function mathSourceXmlOf(xml: string): string {
-  return stripTextboxes(
-    xml.includes('<mc:Fallback')
-      ? xml.replace(/<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>/g, '')
-      : xml,
-  )
+  return stripTextboxes(xml.includes('<mc:Fallback') ? removeSegments(xml, 'mc:Fallback') : xml)
 }
 
 function buildTextParagraph(
@@ -4386,6 +4418,16 @@ function foldFieldCodeParagraphs(blocks: Block[], ctx: BuildContext): void {
 const XE_INSTR_RE = /^\s*XE\s+(?:"([^"]*)"|(\S+))/
 const REF_INSTR_RE = /^\s*REF\s+(?:"([^"]+)"|([^\s\\]+))/
 
+/**
+ * A field's result is shown as one run, whatever runs cached it: when a person
+ * hid any of them from AI, the result carries that mark (the whole result is
+ * hidden: its words cannot be told apart once merged).
+ */
+function hiddenResultMark(cached: readonly Run[]): Pick<Run, 'rawRPr'> {
+  const hidden = cached.find((r) => withheldLabelOf(r.rawRPr) !== null)
+  return hidden?.rawRPr ? { rawRPr: hidden.rawRPr } : {}
+}
+
 const RESULT_FORMAT_SKIP = new Set([
   'text',
   'image',
@@ -4533,7 +4575,10 @@ function extractRuns(
       )
     }
     if (!src) return {}
-    return Object.fromEntries(Object.entries(src).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
+    return {
+      ...Object.fromEntries(Object.entries(src).filter(([k]) => !RESULT_FORMAT_SKIP.has(k))),
+      ...hiddenResultMark(fieldCachedRuns),
+    }
   }
   // reference-only comments (bare w:commentReference, LibreOffice style) anchor
   // on the nearest run; refs seen before any run attach to the next one
@@ -4605,6 +4650,7 @@ function extractRuns(
                 text: fieldCached || name,
                 refField: name,
                 refInstr: fieldInstr,
+                ...hiddenResultMark(fieldCachedRuns),
                 ...(fieldDirty ? { fldDirty: true } : {}),
               },
               rev,
@@ -4824,9 +4870,12 @@ function extractRuns(
     walk(childrenOf(node), link, rev)
     const cached = runs.splice(first)
     const text = cached.map((r) => r.text).join('')
-    const format = cached[0]
-      ? Object.fromEntries(Object.entries(cached[0]).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
-      : {}
+    const format = {
+      ...(cached[0]
+        ? Object.fromEntries(Object.entries(cached[0]).filter(([k]) => !RESULT_FORMAT_SKIP.has(k)))
+        : {}),
+      ...hiddenResultMark(cached),
+    }
     const dirty = /^(?:true|1)$/.test(String(attrsOf(node)['w:dirty'] ?? ''))
     if (xe) pushRun({ text: '', xeTerm: xe[1] ?? xe[2] }, rev)
     else if (ref) {
@@ -5375,7 +5424,8 @@ function legacyDirectRunFormat(
   return run
 }
 
-function tableSummary(xml: string): { label: string; previewText: string } {
+function tableSummary(source: string): { label: string; previewText: string } {
+  const xml = canonicalXmlSyntax(source)
   const rows = (xml.match(/<w:tr[\s>]/g) ?? []).length
   const firstRow = /<w:tr[\s>][\s\S]*?<\/w:tr>/.exec(xml)?.[0] ?? ''
   const cols = (firstRow.match(/<w:tc[\s>]/g) ?? []).length
@@ -5989,12 +6039,9 @@ function rowRevisionOf(trPr: XNode): ({ kind: 'ins' | 'del' } & RevisionInfo) | 
  */
 function attachRawTablePr(xml: string, model: TableModel, rawTrPrs: Array<string | null>): void {
   const rows = model.rows
-  const open = /<w:tbl[\s>]/.exec(xml)
+  const open = findStartTag(maskOpaque(xml), 'w:tbl')
   if (!open) return
-  const innerStart = xml.indexOf('>', open.index) + 1
-  const innerEnd = xml.lastIndexOf('</w:tbl>')
-  if (innerStart <= 0 || innerEnd < 0) return
-  const tblKids = splitXmlChildren(xml.slice(innerStart, innerEnd))
+  const tblKids = splitXmlChildren(elementInner(xml.slice(open.start)))
   const tblPr = tblKids.find((c) => c.name === 'w:tblPr')
   const tblPrChange = tblPr && propChangeInfo(tblPr.xml, 'w:tblPrChange')
   if (tblPrChange) model.tblPrChange = tblPrChange
@@ -6007,9 +6054,7 @@ function attachRawTablePr(xml: string, model: TableModel, rawTrPrs: Array<string
   const rawTblPrExs: Array<string | null> = rows.map(() => null)
   const rowTblPrExChanges: Array<PropChangeInfo | null> = rows.map(() => null)
   trs.forEach((tr, ri) => {
-    const trOpenEnd = tr.xml.indexOf('>') + 1
-    const trInner = tr.xml.slice(trOpenEnd, tr.xml.lastIndexOf('</w:tr>'))
-    const kids = splitXmlChildren(trInner)
+    const kids = splitXmlChildren(elementInner(tr.xml))
     const trPr = kids.find((k) => k.name === 'w:trPr')
     if (trPr) {
       rawTrPrs[ri] = trPr.xml
@@ -6025,9 +6070,7 @@ function attachRawTablePr(xml: string, model: TableModel, rawTrPrs: Array<string
     const targets = rows[ri].filter((cell) => !cell.gridGap)
     if (tcs.length !== targets.length) return
     tcs.forEach((tc, ci) => {
-      const tcOpenEnd = tc.xml.indexOf('>') + 1
-      const tcInner = tc.xml.slice(tcOpenEnd, tc.xml.lastIndexOf('</w:tc>'))
-      const tcPr = splitXmlChildren(tcInner).find((k) => k.name === 'w:tcPr')
+      const tcPr = splitXmlChildren(elementInner(tc.xml)).find((k) => k.name === 'w:tcPr')
       if (!tcPr) return
       targets[ci].rawTcPr = tcPr.xml
       const tcPrChange = propChangeInfo(tcPr.xml, 'w:tcPrChange')
@@ -6365,7 +6408,7 @@ function extractCell(
       // fallback like buildBlock's detect, or each shape extracts twice
       const rawPXml = serializeXNode(p)
       const pXml = rawPXml.includes('<mc:Fallback')
-        ? rawPXml.replace(/<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>/g, '')
+        ? removeSegments(rawPXml, 'mc:Fallback')
         : rawPXml
       if (pXml.includes('<wp:anchor') || /<w:pict[\s>]/.test(pXml)) {
         // two or more pictures anchored in one cell paragraph sit at their own
@@ -6781,7 +6824,7 @@ async function hfGroupPictures(
   frag: string,
   sourcePath = 'word/document.xml',
 ): Promise<HfImage[] | null> {
-  const body = frag.replace(/<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>/g, '')
+  const body = removeSegments(frag, 'mc:Fallback')
   const anchor: Pick<HfImage, 'posH' | 'posV' | 'posXPx' | 'posYPx' | 'posHRel' | 'posVRel'> = {}
   readAnchorPos(body, anchor)
   if (anchor.posXPx == null || anchor.posYPx == null) return null
@@ -6852,7 +6895,7 @@ async function hfGroupPictures(
 function hfShapeDrawingSvg(frag: string): string | null {
   if (!frag.includes('<wps:wsp') || frag.includes('<w:txbxContent')) return null
   // Word pairs DrawingML shapes with a VML twin in mc:Fallback
-  const body = frag.replace(/<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>/g, '')
+  const body = removeSegments(frag, 'mc:Fallback')
   const attrNum = (tag: string, key: string): number | null => {
     const v = new RegExp(`${key}="(-?\\d+)"`).exec(tag)?.[1]
     return v == null ? null : parseInt(v, 10)
@@ -7056,7 +7099,7 @@ async function hfTableMedia(
 async function parseCompatibilityMode(zip: JSZip): Promise<number> {
   const file = zip.file('word/settings.xml')
   if (!file) return 0
-  const xml = await file.async('string')
+  const xml = await partText(file)
   // attribute order is generator-specific (w:val may precede w:name)
   for (const tag of xml.match(/<w:compatSetting\b[^>]*>/g) ?? []) {
     if (!/\sw:name="compatibilityMode"/.test(tag)) continue
@@ -7080,7 +7123,7 @@ async function parseLayoutSettings(zip: JSZip): Promise<{
 }> {
   const file = zip.file('word/settings.xml')
   if (!file) return {}
-  const xml = await file.async('string')
+  const xml = await partText(file)
   const tab = /<w:defaultTabStop[^>]*w:val="(-?\d+)"/.exec(xml)
   const csc = /<w:characterSpacingControl[^>]*w:val="(\w+)"/.exec(xml)
   return {
@@ -7105,7 +7148,8 @@ async function parseNoteProps(
   zip: JSZip,
   documentXml: string,
 ): Promise<{ footnoteProps?: NoteProps; endnoteProps?: NoteProps }> {
-  const settingsXml = (await zip.file('word/settings.xml')?.async('string')) ?? ''
+  const settingsFile = zip.file('word/settings.xml')
+  const settingsXml = settingsFile ? await partText(settingsFile) : ''
   // a tracked w:sectPrChange embeds the previous sectPr after the live one
   const bodyXml = removeElements(documentXml, 'w:sectPrChange')
   const at = bodyXml.lastIndexOf('<w:sectPr')
@@ -7184,7 +7228,7 @@ function noteNumbersOf(
 async function parseSettingsFlag(zip: JSZip, tag: string): Promise<boolean> {
   const file = zip.file('word/settings.xml')
   if (!file) return false
-  return xmlFlagOn(await file.async('string'), tag)
+  return xmlFlagOn(await partText(file), tag)
 }
 
 /** A complex field in the part XML: its own span, its own instruction text and
@@ -7359,7 +7403,7 @@ function hfContentFromXml(
   // mc:AlternateContent carries the same textbox twice (DrawingML Choice + VML
   // Fallback); keeping both prints the content twice (e.g. duplicated "— PAGE —"
   // page numbers), so only the Choice branch feeds text/paragraph extraction
-  let cleaned = xml.replace(/<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>/g, '')
+  let cleaned = removeSegments(xml, 'mc:Fallback')
   // rewrite the complex fields by nesting depth: a child's end must not close
   // its parent (genoffice#2458 — the lazy begin-to-end span stopped at the
   // nested end and took the child's separate/cache for the parent's)
@@ -7455,7 +7499,7 @@ async function readHeaderFooterPart(
   if (!path) return null
   const file = zip.file(path)
   if (!file) return null
-  const xml = stripHfDeletions(await file.async('string'))
+  const xml = stripHfDeletions(await partText(file))
   const content = hfContentFromXml(
     xml,
     kind,
@@ -7493,7 +7537,7 @@ async function parseAllHfParts(
     if (!path) continue
     const file = zip.file(path)
     if (!file) continue
-    const xml = stripHfDeletions(await file.async('string'))
+    const xml = stripHfDeletions(await partText(file))
     const content = hfContentFromXml(
       xml,
       kind,
@@ -8280,7 +8324,7 @@ async function parseNotesPart(
 ): Promise<NoteInfo[]> {
   const file = zip.file(NOTE_PART_PATH[kind])
   if (!file) return []
-  return parseNotesXml(await file.async('string'), kind, noteParagraphReader(ctx))
+  return parseNotesXml(await partText(file), kind, noteParagraphReader(ctx))
 }
 
 /** reader for a notes part on its own (no styles: builtin defaults; tests, tools) */
@@ -8336,6 +8380,8 @@ function noteParagraphReader(ctx: BuildContext): NoteParagraphReader {
 /** a note display run: the run's direct look over the paragraph's resolved base */
 function noteRunOf(run: Run, base: EffectiveRPr): NoteRun {
   const out: NoteRun = { text: run.text }
+  const redact = withheldLabelOf(run.rawRPr)
+  if (redact !== null) out.redact = redact
   const cs = run.effective?.cs ? run.effective : undefined
   if (run.bold ?? cs?.bold ?? base.bold) out.bold = true
   if (run.italic ?? cs?.italic ?? base.italic) out.italic = true
@@ -8361,7 +8407,7 @@ function noteRunOf(run: Run, base: EffectiveRPr): NoteRun {
 async function parseSources(zip: JSZip): Promise<SourceInfo[]> {
   const path = await findSourcesPart(zip)
   if (!path) return []
-  return parseSourcesXml(await zip.file(path)!.async('string'))
+  return parseSourcesXml(await partText(zip.file(path)!))
 }
 
 async function parseTheme(
@@ -8372,7 +8418,7 @@ async function parseTheme(
   // the color context (themeless docx4j/mc test docs, sample real_run2 09/10)
   const file = zip.file(THEME_PART_PATH)
   if (!file) return { fonts: null, colors: { ...DEFAULT_THEME_COLORS } }
-  const xml = await file.async('string')
+  const xml = await partText(file)
   const fonts = readThemeFonts(xml)
   if (fonts) {
     const { eaLang, bidiLang } = await readThemeFontLang(zip)
@@ -8386,7 +8432,7 @@ async function parseTheme(
 async function readThemeFontLang(zip: JSZip): Promise<{ eaLang?: string; bidiLang?: string }> {
   const file = zip.file('word/settings.xml')
   if (!file) return {}
-  const tag = /<w:themeFontLang\b[^>]*>/.exec(await file.async('string'))?.[0]
+  const tag = /<w:themeFontLang\b[^>]*>/.exec(await partText(file))?.[0]
   if (!tag) return {}
   return {
     eaLang: /\bw:eastAsia="([^"]+)"/.exec(tag)?.[1],
@@ -8578,7 +8624,8 @@ export type RunPictureAnchor = Pick<
  * in-line picture). The save diffs the editor's geometry against this, so a
  * picture nobody moved keeps its bytes.
  */
-export function runPictureAnchorOf(drawingXml: string): RunPictureAnchor {
+export function runPictureAnchorOf(source: string): RunPictureAnchor {
+  const drawingXml = canonicalXmlSyntax(source)
   const anchor: RunPictureAnchor = {}
   if (!/<wp:anchor[\s>]/.test(drawingXml)) return anchor
   const meta = imageMeta(drawingXml)
@@ -8606,7 +8653,8 @@ export function runPictureAnchorOf(drawingXml: string): RunPictureAnchor {
   return anchor
 }
 
-function imageMeta(xml: string, ctx?: BuildContext): ImageMeta {
+function imageMeta(source: string, ctx?: BuildContext): ImageMeta {
+  const xml = canonicalXmlSyntax(source)
   const meta: ImageMeta = {}
   const drawingAt = xml.search(/<w:(?:drawing|pict)[\s>]/)
   if (drawingAt >= 0 && /^<w:p[\s>]/.test(xml)) {
@@ -8642,7 +8690,7 @@ function imageMeta(xml: string, ctx?: BuildContext): ImageMeta {
     if (ctx) {
       const rctx = resolverOf(ctx)
       // the host pPr only: a text box's own paragraphs carry their own properties
-      const hostPPr = /^<w:p\b[^>]*>\s*(<w:pPr>[\s\S]*?<\/w:pPr>)/.exec(xml)?.[1] ?? ''
+      const hostPPr = rawPPrOf(xml) ?? ''
       const eff = resolveParagraphPropsXml(hostPPr, rctx)
       const g = directParaGeometry(eff)
       const floating = /<wp:anchor[\s>]/.test(xml)
@@ -9001,7 +9049,7 @@ async function externalTxbxParts(
     if (!rel || rel.targetMode === 'External') continue
     const path = resolveRelationshipTargetPath(sourcePath, rel.target)
     const file = path ? zip.file(path) : null
-    if (file) out.set(rId, await file.async('string'))
+    if (file) out.set(rId, await partText(file))
   }
   return out
 }
@@ -9130,7 +9178,7 @@ async function extractDiagramText(xml: string, ctx: BuildContext): Promise<strin
   const path = relPartPath(ctx, /r:dm\s*=\s*["']([^"']+)["']/.exec(xml)?.[1])
   const file = path ? ctx.zip.file(path) : null
   if (!file) return null
-  const dataXml = await file.async('string')
+  const dataXml = await partText(file)
   // node texts by modelId (pres/transition points carry no content text)
   const ptTexts = new Map<string, string>()
   for (const m of dataXml.matchAll(/<dgm:pt modelId="([^"]+)"([^>]*)>([\s\S]*?)<\/dgm:pt>/g)) {
@@ -9527,9 +9575,11 @@ async function extractChart(xml: string, ctx: BuildContext): Promise<ChartDispla
   if (!path) return null
   const file = ctx.zip.file(path)
   if (!file) return null
-  const partXml = await file.async('string')
+  const partXml = await partText(file)
   const display = parseChartPartXml(partXml, path, ctx.themeColors)
   if (display) {
+    const redact = withheldPartLabel(partXml)
+    if (redact !== null) display.redact = redact
     // chartex (cx:) parts are display-only degrades: the data-edit patcher
     // speaks classic c: syntax, so keeping them out makes edits no-ops
     // instead of corruption

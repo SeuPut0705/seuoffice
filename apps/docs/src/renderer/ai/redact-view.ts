@@ -3,6 +3,7 @@ import {
   type WithheldMark,
   type WithheldNode,
 } from '@seuoffice/agent-core/redact-range'
+import { decodeBlockLabel } from '../editor/block-redact-label'
 import { REDACT_MARK, placeholderSource } from './redact'
 
 /**
@@ -135,8 +136,44 @@ export function redactTextBetween(
   })
 }
 
+/**
+ * A whole-unit block (a picture, a drawing) whose picture sits in a run marked
+ * hidden from AI: the label of the mark, or undefined when it is not hidden.
+ * The block has no run for a mark to sit on; the parser lifts the label here.
+ */
+export function withheldBlockLabel(node: RedactableNode): string | undefined {
+  const stored = node.attrs?.redact
+  return nameOf(node) === 'docProtected' && typeof stored === 'string'
+    ? decodeBlockLabel(stored)
+    : undefined
+}
+
+/** What a model reads as the preview of a protected block: the placeholder of a hidden one, else its own preview text. */
+export function protectedPreviewOf(attrs: Record<string, unknown> | undefined): string {
+  const stored = attrs?.redact
+  return typeof stored === 'string'
+    ? placeholderSource(decodeBlockLabel(stored))
+    : String(attrs?.previewText ?? '')
+}
+
 /** The same document with spans replaced, for callers that need the nodes. */
 export function redactNode<T extends RedactableNode>(node: T): T {
+  const hiddenBlock = withheldBlockLabel(node)
+  if (hiddenBlock !== undefined) {
+    // nothing of the block travels but its place: no picture, preview text,
+    // description or display data of what a hidden run holds
+    return {
+      type: 'docProtected',
+      attrs: {
+        docxIndex: node.attrs?.docxIndex ?? null,
+        blockType: node.attrs?.blockType ?? 'passthrough',
+        label: node.attrs?.label ?? '',
+        previewText: placeholderSource(hiddenBlock),
+        // as stored, so that what reads it again decodes it once
+        redact: node.attrs?.redact,
+      },
+    } as unknown as T
+  }
   if (isWithheld(node)) {
     if (isPicture(node)) {
       // a picture's `src` and inlined `dataUrl` are exactly what must not
@@ -156,6 +193,8 @@ export function redactLabelsOf(node: RedactableNode): string[] {
   const out: string[] = []
   const visit = (n: RedactableNode) => {
     if (isWithheld(n)) out.push(labelOf(n))
+    const block = withheldBlockLabel(n)
+    if (block !== undefined) out.push(block)
     if (Array.isArray(n.content)) n.content.forEach(visit)
   }
   visit(node)
@@ -166,7 +205,7 @@ export function redactLabelsOf(node: RedactableNode): string[] {
 export function redactionCount(node: RedactableNode): number {
   let n = 0
   const visit = (x: RedactableNode) => {
-    if (isWithheld(x)) n++
+    if (isWithheld(x) || withheldBlockLabel(x) !== undefined) n++
     if (Array.isArray(x.content)) x.content.forEach(visit)
   }
   visit(node)

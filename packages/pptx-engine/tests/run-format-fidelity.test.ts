@@ -308,8 +308,8 @@ describe('complex-script font follows the font change', () => {
     const out = refont(
       '<a:r><a:rPr lang="ar-SA"><a:latin typeface="Old"/></a:rPr ><a:t>\u0645\u0631\u062d\u0628\u0627</a:t></a:r>',
     )
-    // the closing tag survives intact rather than being spliced through
-    expect(out).toContain('</a:rPr >')
+    // the closing tag is not spliced through (the slide is read with its end tags spelled without the space)
+    expect(out).toMatch(/<\/a:rPr\s*>/)
     expect(out).not.toContain('<<')
     expect(slotOrder(out)).toEqual(['latin', 'ea', 'cs'])
     expect(/<a:latin[^>]*typeface="([^"]*)"/.exec(out)?.[1]).toBe('Amiri')

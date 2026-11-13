@@ -31,6 +31,7 @@ import { countWords, documentTextForWordCount, leafTextForWordCount } from '../w
 import { blockRangePositions, isTrackedDeleted, liveText } from './doc-utils'
 import {
   modelTextOf,
+  protectedPreviewOf,
   projectedNodeText,
   redactNode,
   redactTextBetween,
@@ -609,9 +610,7 @@ export function serializeRangeToHtml(
       } else {
         const label = String(node.attrs?.label ?? node.attrs?.blockType ?? 'content')
         // fields (TOC lines, page numbers, dates…) expose their visible result text
-        const preview = String(node.attrs?.previewText ?? '')
-          .replace(/\s+/g, ' ')
-          .trim()
+        const preview = protectedPreviewOf(node.attrs).replace(/\s+/g, ' ').trim()
         parts.push(
           `<p>[Protected content: ${escapeHtml(label)}${preview ? ` — visible text: "${escapeHtml(clip(preview, 300))}"` : ''}, kept as is]</p>`,
         )
@@ -635,6 +634,20 @@ export interface AiHfState {
   titlePg: boolean
   evenOddHf: boolean
   multiSection: boolean
+  /** layout tables (hfModelTableText) of the variants in use that have one */
+  tables?: Partial<Record<HfStateSlot, string>>
+}
+
+export type HfStateSlot =
+  'header' | 'footer' | 'headerFirst' | 'footerFirst' | 'headerEven' | 'footerEven'
+
+const HF_SLOT_NAMES: Record<HfStateSlot, string> = {
+  header: 'header',
+  footer: 'footer',
+  headerFirst: 'first-page header',
+  footerFirst: 'first-page footer',
+  headerEven: 'even-page header',
+  footerEven: 'even-page footer',
 }
 
 function hfContextLines(hf: AiHfState): string[] {
@@ -652,6 +665,13 @@ function hfContextLines(hf: AiHfState): string[] {
     lines.push(
       `- even-page variant: header ${fmt(hf.headerEven ?? '')} | footer ${fmt(hf.footerEven ?? '')}`,
     )
+  }
+  for (const [slot, table] of Object.entries(hf.tables ?? {}) as [HfStateSlot, string][]) {
+    if (table) {
+      lines.push(
+        `- ${HF_SLOT_NAMES[slot]} layout table (read-only; set_header_footer keeps it): ${fmt(table)}`,
+      )
+    }
   }
   if (hf.multiSection) {
     lines.push(
@@ -698,7 +718,7 @@ export function buildDocumentContext(
       // protected blocks can only be block-level deletions (blockRevision)
       deleted = isTrackedDeleted(node)
       type = String(node.attrs.label || node.attrs.blockType || 'protected')
-      preview = String(node.attrs.previewText ?? '')
+      preview = protectedPreviewOf(node.attrs)
       // A picture carries no text of its own: an empty preview reads as "this
       // content is invisible to me", so name the way to actually see it.
       if (node.attrs.blockType === 'image' && !preview) {

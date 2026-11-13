@@ -11,6 +11,7 @@ export { listSlideAnimations, type AnimationEntry } from './animation-ops'
 export { equationRun } from './equation-ops'
 export { runTxn, type TxnRequest, type TxnResult, type OpFailure } from './executor'
 export { normalizeLengthUnits, parseLength } from './units'
+export { slideWithheldLabel } from './withhold-guard'
 export {
   elementDurableId,
   GuidedError,

@@ -28,6 +28,7 @@ import {
   readSections,
   readSectionSettings,
   saveDocx,
+  docxHoldsHiddenContent,
   type Block,
   type CommentInfo,
   type DocProtection,
@@ -73,6 +74,7 @@ import {
 } from './odt-gate'
 import { labelPlaceholdersInDocx } from './odt-label-docx'
 import { confirmFormatChange } from './components/format-change-bus'
+import { assertNoMarks, MarkedOdtError, planOdtWrite, type OdtWritePlan } from './marked-odt'
 import { PHASED_APPEND } from './editor/streaming-tail-guard'
 import { docTextLength, docWeight, openTierFor } from './large-document'
 import { documentToMarkdown } from './export-markdown'
@@ -908,7 +910,13 @@ export async function templateDocBytes(ctx: FileActionContext): Promise<Uint8Arr
   window.dispatchEvent(new Event('ai-docs-commit-tables'))
   const docx = await buildDocBytes(ctx)
   if (!docx) return null
-  if (isOdtDoc(doc)) return odtBytesFor(doc.odt, docx)
+  if (isOdtDoc(doc)) {
+    // marked content cannot go into an ODT: no template copy
+    return odtBytesFor(doc.odt, docx).catch((err: unknown) => {
+      if (err instanceof MarkedOdtError) return null
+      throw err
+    })
+  }
   if (doc.parsed.extras.lazyMediaHashes.length === 0) return docx
   const full = await window.desktop.materializeDocx(toArrayBuffer(docx))
   return full ? fetchDocBytes(full.dataUrl) : null
@@ -1095,8 +1103,13 @@ export async function writeRecoveryCopy(
     const docx = await buildDocBytes(ctx)
     if (!docx) return 'skipped'
     // an ODT tab's copy is the ODT a save would write now: restoring it opens
-    // an ODT document again, and its save writes ODT
-    const bytes = isOdtDoc(doc) ? await odtBytesFor(doc.odt, docx) : docx
+    // an ODT document again, and its save writes ODT. An ODT cannot hold the
+    // mark that hides content from AI: such a tab's copy is its docx (marks
+    // kept), kept in an untitled slot that names the ODT as its original, so
+    // it restores as a docx draft of that tab and its save follows the normal
+    // path (saving over the .odt meets the marked-ODT refusal).
+    const asDocx = isOdtDoc(doc) && (await docxHoldsHiddenContent(docx))
+    const bytes = isOdtDoc(doc) && !asDocx ? await odtBytesFor(doc.odt, docx) : docx
     const last = lastRecoveryCopy
     // not the bytes: two serializations a tick apart differ in their time stamps
     const unchanged =
@@ -1111,9 +1124,17 @@ export async function writeRecoveryCopy(
     }
     if (unchanged) return 'skipped'
     const result = await window.desktop.writeRecoveryCopy(
-      doc.filePath,
+      asDocx ? null : doc.filePath,
       toArrayBuffer(bytes),
-      doc.filePath ? undefined : { title: doc.fileName, format: isOdtDoc(doc) ? 'odt' : 'docx' },
+      asDocx
+        ? {
+            title: doc.fileName,
+            format: 'docx',
+            ...(doc.filePath ? { originalPath: doc.filePath } : {}),
+          }
+        : doc.filePath
+          ? undefined
+          : { title: doc.fileName, format: isOdtDoc(doc) ? 'odt' : 'docx' },
     )
     if (result.ok) {
       lastRecoveryCopy = { generation, saves, path: doc.filePath, bytes }
@@ -1302,8 +1323,36 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
 }
 
 /** The edited bridge docx written back into the document's ODT (no edit → the ODT's own bytes). */
-export function odtBytesFor(baseline: OdtBaseline, editedDocx: Uint8Array): Promise<Uint8Array> {
-  return saveOdt({ originalOdt: baseline.original, bridge: baseline.bridge, editedDocx })
+export async function odtBytesFor(
+  baseline: OdtBaseline,
+  editedDocx: Uint8Array,
+): Promise<Uint8Array> {
+  // an ODT cannot hold the mark that hides content from AI: callers that can
+  // ask plan the write first (planOdtWrite) and hand over the cleared docx
+  return saveOdt({
+    originalOdt: baseline.original,
+    bridge: baseline.bridge,
+    editedDocx: await assertNoMarks(editedDocx),
+  })
+}
+
+/** a save that stops before writing because its docx holds content hidden from AI */
+class OdtWriteStopped extends Error {
+  constructor(readonly plan: Exclude<OdtWritePlan, { kind: 'write' }>) {
+    super('no ODT written')
+  }
+}
+
+/**
+ * What a write of `docx` as ODT may use: the docx itself, or the marks-cleared
+ * copy the person chose; throws OdtWriteStopped when marked content is declined
+ * or Word was chosen instead. `silent`: nobody can be asked (an automatic or an
+ * MCP-driven save), so marked content is declined.
+ */
+async function docxForOdt(docx: Uint8Array, silent: boolean): Promise<Uint8Array> {
+  const plan = await planOdtWrite(docx, silent ? null : () => window.desktop.confirmMarkedOdt())
+  if (plan.kind !== 'write') throw new OdtWriteStopped(plan)
+  return plan.docx
 }
 
 /** a docx → ODT conversion drops the document's open password: say so in the list */
@@ -1379,6 +1428,8 @@ async function saveOnce(
   explicitTarget?: ExplicitSaveTarget,
   /** a never-saved document into its panel's project (spec 6), no dialog */
   intoProject = false,
+  /** the format the Save As dialog lists first (default: the document's own) */
+  pickFormat?: DocFormat,
 ): Promise<boolean> {
   const { doc, editor } = ctx
   if (!doc || !editor) return false
@@ -1401,8 +1452,10 @@ async function saveOnce(
     // what lands on disk: the edited docx itself, or for an ODT document that
     // docx written back into its ODT (unchanged → the ODT's own bytes)
     let bytes = docx
+    // nobody can be asked to clear marks in an automatic, an MCP-driven or a project save
+    const silent = auto || !!explicitTarget || intoProject
     const fileBytes = async (): Promise<ArrayBuffer> => {
-      if (isOdtDoc(doc)) bytes = await odtBytesFor(doc.odt, docx)
+      if (isOdtDoc(doc)) bytes = await odtBytesFor(doc.odt, await docxForOdt(docx, silent))
       return toArrayBuffer(bytes)
     }
     // a pathless snapshot may belong to a document that an earlier queued pass
@@ -1492,7 +1545,7 @@ async function saveOnce(
         const pick = await window.desktop.pickSaveAsPath(
           dialogName,
           doc.filePath ?? doc.saveAsDefaultPath ?? null,
-          format,
+          pickFormat ?? format,
           saveAs,
         )
         if (!pick) return false
@@ -1503,7 +1556,9 @@ async function saveOnce(
         }
         const target = docFormatOfPath(pick.path) ?? format
         if (target !== format) {
-          return await saveWithFormatChange(ctx, editor, doc, pick.path, docx, target, auto)
+          // an ODT cannot hold content hidden from AI: Word, cleared marks, or nothing
+          const writable = target === 'odt' ? await docxForOdt(docx, silent) : docx
+          return await saveWithFormatChange(ctx, editor, doc, pick.path, writable, target, auto)
         }
         result = await window.desktop.saveDocxAs(pick.path, await fileBytes(), doc.filePath)
       } else {
@@ -1690,12 +1745,48 @@ async function saveOnce(
     if (!auto) showToast(t('appSaved'))
     return true
   } catch (err) {
+    if (err instanceof OdtWriteStopped) {
+      ctx.saveInFlightRef.current = false
+      return await odtWriteStopped(ctx, err.plan, { auto, explicitTarget, intoProject, newDocName })
+    }
     ctx.setStatus(t('appSaveFailed', { error: String(err) }))
     if (!auto) showToast(t('appSaveFailed', { error: String(err) }), 'error')
     return false
   } finally {
     ctx.saveInFlightRef.current = false
   }
+}
+
+/**
+ * A save stopped because marked content cannot go into an ODT. Declined by the
+ * person: nothing to say. Declined because nobody could be asked: say why.
+ * Word chosen: Save As again with Word listed first.
+ */
+async function odtWriteStopped(
+  ctx: FileActionContext,
+  plan: Exclude<OdtWritePlan, { kind: 'write' }>,
+  how: {
+    auto: boolean
+    explicitTarget: ExplicitSaveTarget | undefined
+    intoProject: boolean
+    newDocName: string | undefined
+  },
+): Promise<boolean> {
+  if (plan.kind === 'save-as-docx') {
+    return saveOnce(ctx, true, false, how.newDocName, undefined, false, 'docx')
+  }
+  if (how.explicitTarget) {
+    const error = t('appMarkedOdtRefused')
+    ctx.setStatus(t('appSaveFailed', { error }))
+    how.explicitTarget.onError?.(error)
+  } else if (how.auto) {
+    ctx.setStatus(t('appMarkedOdtAutoSkipped'))
+  } else if (how.intoProject) {
+    ctx.setStatus(t('appMarkedOdtRefused'))
+  } else {
+    ctx.setStatus('')
+  }
+  return false
 }
 
 /**

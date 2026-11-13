@@ -222,6 +222,44 @@ describe('restoring', () => {
     expect(tab.send).not.toHaveBeenCalledWith('docs:opened', expect.anything())
   })
 
+  it("a marked ODT tab's docx copy restores as a docx draft that offers the .odt as its first Save As", async () => {
+    const writer = newTab()
+    const original = join(userFolder, 'form.odt')
+    const written = await invoke<{ ok: boolean }>(
+      'docs:write-recovery',
+      writer,
+      null,
+      bytesOf('docx with marks'),
+      { title: 'form.odt', format: 'docx', originalPath: original },
+    )
+    expect(written).toEqual({ ok: true })
+    const identity = docsRecoveryIdentity(writer.id)!
+    expect(identity).toMatchObject({ ext: '.docx' })
+    expect(store.copyInfo(identity)).toMatchObject({ title: 'form.odt', originalPath: original })
+    // the file's own (.odt) slot is untouched
+    expect(store.copyInfo(fileCopy(original))).toBeNull()
+
+    const tab = newTab()
+    const opening = recoveryEditor('docs')!.openUntitledCopy(tab as never, {
+      copy: identity,
+      title: 'form.odt',
+      saveAsDefaultPath: original,
+    })
+    const first = await invoke<{
+      name: string
+      path: string
+      untitledCopy?: boolean
+      saveAsDefaultPath?: string
+    } | null>('docs:consume-copy', tab)
+    await opening
+    expect(first).toMatchObject({
+      name: 'form.docx',
+      path: 'form.docx',
+      untitledCopy: true,
+      saveAsDefaultPath: original,
+    })
+  })
+
   it('a copy that cannot be decrypted opens the file and waits as "later"', async () => {
     const tab = newTab()
     await invoke('docs:consume-copy', tab)

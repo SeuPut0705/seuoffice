@@ -48,3 +48,54 @@ describe('saving notes keeps a hidden run however the note tag is spelled', () =
     expect(first.modelText).toBe(`See ${PLACEHOLDER}`)
   })
 })
+
+describe('an edited note whose hidden run holds CDATA keeps its mark', () => {
+  it('keeps the mark when the note text changes', async () => {
+    const JSZip = (await import('jszip')).default
+    const zip = await JSZip.loadAsync(await notedDocx('w:id="1"'))
+    const xml = await zip.file('word/footnotes.xml')!.async('string')
+    zip.file(
+      'word/footnotes.xml',
+      xml.replace(`<w:t>${SECRET}</w:t>`, `<w:t><![CDATA[${SECRET}]]></w:t>`),
+    )
+    const doc = await parseDocx(await zip.generateAsync({ type: 'uint8array' }))
+    expect(doc.footnotes[0]!.modelText).toBe(`See ${PLACEHOLDER}`)
+    const blocks = doc.blocks
+      .filter((block) => !block.hidden)
+      .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+    const { richParas: _rich, ...note } = doc.footnotes[0]!
+    const saved = await saveDocx(doc, blocks, { footnotes: [{ ...note, text: `Read ${SECRET}` }] })
+    const first = (await parseDocx(saved)).footnotes.find((n) => n.id === '1')!
+    expect(first.text).toBe(`Read ${SECRET}`)
+    expect(first.modelText).toBe(`Read ${PLACEHOLDER}`)
+  })
+})
+
+describe("an edit that cannot be patched around a note's hidden runs", () => {
+  it.each([`See ${SECRET}\nmore`, `Read: ${SECRET} more`])(
+    'saves %j with every word of the note hidden',
+    async (text) => {
+      const doc = await parseDocx(await notedDocx('w:id="1"'))
+      const blocks = doc.blocks
+        .filter((block) => !block.hidden)
+        .map((block): SaveBlock => ({ kind: 'original', docxIndex: block.docxIndex! }))
+      const { richParas: _rich, ...note } = doc.footnotes[0]!
+      const saved = await saveDocx(doc, blocks, {
+        footnotes: [
+          { ...note, text },
+          { id: '5', text: 'plain' },
+        ],
+      })
+      const reopened = await parseDocx(saved)
+      const first = reopened.footnotes.find((n) => n.id === '1')!
+      expect(first.text).toBe(text)
+      expect(first.modelText).toBe(
+        text
+          .split('\n')
+          .map(() => PLACEHOLDER)
+          .join('\n'),
+      )
+      expect(reopened.footnotes.find((n) => n.id === '5')?.text).toBe('plain')
+    },
+  )
+})

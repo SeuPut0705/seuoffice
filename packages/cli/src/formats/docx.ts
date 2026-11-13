@@ -492,7 +492,9 @@ async function applyRevisionOp(
   const body = ops.applyRevisionSelection(doc.editor, sel, mode)
   let elsewhere = 0
   if (!bodyOnly) {
+    // the parts it never loads: changes that would remove words hidden from AI stay pending
     const filter: RevisionXmlFilter = {
+      keepHidden: true,
       ...(sel.author !== undefined ? { author: sel.author } : {}),
       ...(sel.type !== undefined ? { type: sel.type } : {}),
       ...(sel.before !== undefined ? { before: sel.before } : {}),
@@ -526,6 +528,7 @@ async function applyRevisionOp(
   if (done.length)
     parts.push(`${done.length} tracked change(s) (${done.map((e) => e.id).join(', ')})`)
   if (elsewhere) parts.push(`${elsewhere} in headers, footers and notes`)
+  const withheld = 'error' in body ? [] : body.withheld
   const left = ops.listRevisionEntries(doc.editor.state.doc)
   const leftElsewhere = await countRevisionsElsewhere(doc)
   const still: string[] = []
@@ -534,8 +537,10 @@ async function applyRevisionOp(
     still.push(
       `${left.length ? 'and' : 'Still'} ${leftElsewhere} in headers, footers and notes${bodyOnly ? ' (ids address the body; all: true or author / type / before reach them)' : ''}`,
     )
+  const withheldNote =
+    withheld.length > 0 ? ` ${ops.withheldNote(withheld)}. Do not retry them.` : ''
   return {
-    output: `${verb} ${parts.join(' and ')}. ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
+    output: `${verb} ${parts.join(' and ')}.${withheldNote} ${still.length ? `${still.join(' ')}.` : 'No tracked changes remain.'}`,
   }
 }
 
@@ -647,7 +652,12 @@ export function describeDocument(
   for (let i = start; i <= Math.min(end, root.childCount - 1); i++) {
     const node = root.child(i)
     // the text is the AI readers' view: a span hidden from AI reads as its placeholder
-    const { text, truncated } = clipText(blockText(modelViewOf(doc, node)), maxChars)
+    const view = modelViewOf(doc, node)
+    // a picture hidden from AI has no words: the block lists as its placeholder
+    const { text, truncated } = clipText(
+      typeof view.attrs.redact === 'string' ? String(view.attrs.previewText) : blockText(view),
+      maxChars,
+    )
     out.push({
       index: i,
       type: node.type.name.replace(/^doc/, '').toLowerCase(),
@@ -839,16 +849,18 @@ export function documentHtml(doc: OpenDocument): ExportHtml {
     flush(index - 1)
     // pending tracked deletions are dropped, as serializeRangeToHtml drops them
     if (doc.mods.protocol.isTrackedDeleted(node)) return
-    const formula = node.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
+    // a block hidden from AI (a picture) reads as its placeholder, as it does in every AI reader
+    const view = modelViewOf(doc, node)
+    const formula = view.attrs.formulaDisplay as { tokens?: string[]; latex?: string } | null
     if (formula?.latex) {
       parts.push(`<div data-type="block-math" data-latex="${escapeHtml(formula.latex)}"></div>`)
     } else if (formula?.tokens?.length) {
       formulasAsText++
       parts.push(`<p>${escapeHtml(formula.tokens.join(' '))}</p>`)
-    } else if (node.attrs.blockType === 'image') {
+    } else if (view.attrs.blockType === 'image' && typeof view.attrs.redact !== 'string') {
       skipped.images++
     } else {
-      const preview = String(node.attrs.previewText ?? '')
+      const preview = String(view.attrs.previewText ?? '')
         .replace(/\s+/g, ' ')
         .trim()
       if (preview) parts.push(`<p>${escapeHtml(preview)}</p>`)
@@ -1651,6 +1663,8 @@ export interface HeaderFooterSectionState {
   footerFirst: string | null
   headerEven: string | null
   footerEven: string | null
+  /** layout tables of the section's variants in use, read-only; absent when none */
+  tables?: HfTables
 }
 
 export interface HeaderFooterState {
@@ -1671,6 +1685,30 @@ export interface HeaderFooterState {
   sections: HeaderFooterSectionState[]
   /** the default header's watermark: text, picture, or none; pending set_watermark results included */
   watermark: WatermarkState
+  /** layout tables of the variants in use, read-only (rows on lines, cells joined by " | "); absent when none */
+  tables?: HfTables
+}
+
+/** layout-table text per header/footer variant, as a model may read it */
+export type HfTables = Partial<Record<HfSlot, string>>
+
+/** the layout tables of the variants in use that have one, or undefined */
+function hfTables(
+  doc: OpenDocument,
+  valueOf: (slot: HfSlot) => HeaderFooter | null | undefined,
+  titlePg: boolean,
+  evenOddHf: boolean,
+): HfTables | undefined {
+  const tables: HfTables = {}
+  const slots: HfSlot[] = ['header', 'footer']
+  if (titlePg) slots.push('headerFirst', 'footerFirst')
+  if (evenOddHf) slots.push('headerEven', 'footerEven')
+  for (const slot of slots) {
+    const value = valueOf(slot)
+    const table = value ? doc.mods.hfText.hfModelTableText(value) : ''
+    if (table) tables[slot] = table
+  }
+  return Object.keys(tables).length > 0 ? tables : undefined
 }
 
 export type WatermarkState =
@@ -1789,9 +1827,30 @@ export function headerFooterState(doc: OpenDocument): HeaderFooterState {
       footerFirst: section.titlePg ? sectionHfText(doc, sections, index, 'footer', 'first') : null,
       headerEven: side.evenOddHf ? sectionHfText(doc, sections, index, 'header', 'even') : null,
       footerEven: side.evenOddHf ? sectionHfText(doc, sections, index, 'footer', 'even') : null,
+      ...tablesField(
+        hfTables(
+          doc,
+          (slot) => resolveSectionHf(doc, sections, index, slotKind(slot), slotView(slot)),
+          section.titlePg === true,
+          side.evenOddHf,
+        ),
+      ),
     })),
     watermark: watermarkState(doc),
+    ...tablesField(hfTables(doc, (slot) => side.hf[slot], side.titlePg, side.evenOddHf)),
   }
+}
+
+function tablesField(tables: HfTables | undefined): { tables?: HfTables } {
+  return tables ? { tables } : {}
+}
+
+function slotKind(slot: HfSlot): 'header' | 'footer' {
+  return slot.startsWith('header') ? 'header' : 'footer'
+}
+
+function slotView(slot: HfSlot): HfView {
+  return slot.endsWith('First') ? 'first' : slot.endsWith('Even') ? 'even' : 'default'
 }
 
 /** The default variant is written to the trailing section's part, as the app does for single-section documents. */
@@ -2089,10 +2148,19 @@ export interface CommentSummary extends CommentInfo {
 /** Every comment with the block its anchor sits in, ids as reply_comment / resolve_comment / delete_comment take them. */
 export function listComments(doc: OpenDocument): CommentSummary[] {
   const anchors = doc.mods.protocol.commentAnchors(doc.editor)
-  return doc.side.comments.map(({ modelText, ...c }) => {
+  // markedXml is the comment's own XML, hidden words included: never listed.
+  // A comment holding a mark lists no picture: the picture may sit in a hidden run.
+  // modelText is present exactly when the comment carries a mark, even when it reads like the text.
+  return doc.side.comments.map(({ modelText, markedXml, image, ...c }) => {
     const a = anchors.get(c.parentId ?? c.id)
+    const marked = markedXml !== undefined || modelText !== undefined
     // the text a model may read: a run hidden from AI reads as its placeholder
-    const base = { ...c, text: modelText ?? c.text, done: c.done === true }
+    const base = {
+      ...c,
+      ...(image && !marked ? { image } : {}),
+      text: modelText ?? c.text,
+      done: c.done === true,
+    }
     return a ? { ...base, blockIndex: a.blockIndex, anchorText: a.excerpt } : base
   })
 }
@@ -2108,13 +2176,15 @@ export interface RevisionSummary {
   text: string
   /** formatting changes: `field: old → new` pairs */
   change?: string
+  /** present when the change covers words hidden from AI (left to the person to accept or reject) */
+  hidden?: true
 }
 
 /** Pending tracked changes in document order, ids as accept_changes / reject_changes take them. */
 export function listRevisions(doc: OpenDocument): RevisionSummary[] {
   return doc.mods.revisionOps
     .listRevisionEntries(doc.editor.state.doc)
-    .map(({ from: _from, to: _to, ...rest }) => rest)
+    .map(({ from: _from, to: _to, hidden, ...rest }) => (hidden ? { ...rest, hidden } : rest))
 }
 
 const CONTENT_OPS = [

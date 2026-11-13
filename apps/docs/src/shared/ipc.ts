@@ -520,13 +520,16 @@ export interface DesktopApi {
   /**
    * Crash-recovery copy of a dirty document, stored under userData. `path`
    * null: a never-saved document (its copy stays in app data under the tab's
-   * untitled slot; `meta` names it and gives its format). `failed`: a disk
+   * untitled slot; `meta` names it and gives its format; `originalPath`: the
+   * file the document came from, offered as the first Save As, for a draft
+   * that cannot be written back to it, as a marked ODT tab's docx copy).
+   * `failed`: a disk
    * error, back off before the next try.
    */
   writeRecoveryCopy(
     path: string | null,
     data: ArrayBuffer,
-    meta?: { title: string; format: 'docx' | 'odt' },
+    meta?: { title: string; format: 'docx' | 'odt'; originalPath?: string },
   ): Promise<{ ok: boolean; failed?: boolean }>
   /** the OS is ending the session: write the recovery copy now, then call `done` */
   onWriteRecoveryNow?(handler: (done: () => void) => void): () => void
@@ -569,6 +572,9 @@ export interface DesktopApi {
     format: DocFormat,
     offerExports?: boolean,
   ): Promise<{ path: string; kind?: SaveAsKind; dir?: string; pdfPath?: string } | null>
+  /** Content hidden from AI cannot be written into an ODT: asks the person (one
+   *  message box) to save as Word instead, or to clear the marks and write the ODT */
+  confirmMarkedOdt(): Promise<'docx' | 'clear' | 'cancel'>
   /** Save As, step two: write to the path step one returned (nothing else is
    *  accepted), docx or ODT bytes as its extension says. sourcePath: the
    *  document's current path — a docx write uses its desired next-save password

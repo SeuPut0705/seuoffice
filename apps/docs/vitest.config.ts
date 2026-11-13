@@ -37,6 +37,9 @@ export default defineConfig({
       '@seuoffice/electron-utils/atomic-write': local(
         '../../packages/electron-utils/src/atomic-write.ts',
       ),
+      '@seuoffice/electron-utils/marked-odt': local(
+        '../../packages/electron-utils/src/marked-odt.ts',
+      ),
       '@seuoffice/electron-utils/safe-external-url': local(
         '../../packages/electron-utils/src/safe-external-url.ts',
       ),

@@ -179,6 +179,32 @@ describe('docs read: a content control holding text hidden from AI', () => {
   })
 })
 
+describe('docs read: a header layout table holding text hidden from AI', () => {
+  it('lists the table with each hidden cell run as its placeholder', async () => {
+    const ns = NAMESPACES[1]![1]
+    const dir = tempDir()
+    const file = join(dir, 'header-table.docx')
+    writeFileSync(
+      file,
+      await buildDocx({
+        bodyXml: '<w:p><w:r><w:t>Body</w:t></w:r></w:p>',
+        headerXml:
+          '<w:p><w:r><w:t>Title</w:t></w:r></w:p>' +
+          '<w:tbl><w:tblPr><w:tblW w:w="0" w:type="auto"/></w:tblPr><w:tblGrid><w:gridCol w:w="4000"/><w:gridCol w:w="4000"/></w:tblGrid>' +
+          '<w:tr><w:tc><w:p><w:r><w:t>Left</w:t></w:r></w:p></w:tc><w:tc><w:p>' +
+          `<w:r><w:rPr><go:redact xmlns:go="${ns}" w:label="client phone"/></w:rPr><w:t>${SECRET}</w:t></w:r>` +
+          '</w:p></w:tc></w:tr></w:tbl><w:p/>',
+      }),
+    )
+    const read = await run(['docs', 'read', file, '--header-footer', '--json'])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(SECRET)
+    const hf = read.json().detail.headerFooter
+    expect(hf.tables).toEqual({ header: `Left | ${PLACEHOLDER}` })
+    expect(hf.sections[0].tables).toEqual({ header: `Left | ${PLACEHOLDER}` })
+  })
+})
+
 describe('docs read: a comment whose open tag is spelled another valid way', () => {
   const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
   it.each([`w:id='1' w:author="K"`, `w:id = "1" w:author="K"`, `w:author="a/>b" w:id="1"`])(
@@ -211,6 +237,58 @@ describe('docs read: a comment whose open tag is spelled another valid way', () 
       expect(read.stdout).not.toContain(SECRET)
     },
   )
+})
+
+describe('docs read: a picture in a comment that holds words hidden from AI', () => {
+  it.each([
+    ['a picture alone', ''],
+    // the hidden run's own words equal its placeholder, so the model text equals the text
+    ['a picture beside words that read like the placeholder', '<w:t>{{id card}}</w:t>'],
+  ])('lists the comment without the picture bytes: %s', async (_case, runText) => {
+    const W = 'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"'
+    const DRAW =
+      'xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" ' +
+      'xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" ' +
+      'xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture" ' +
+      'xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"'
+    // a 1x1 png whose bytes are themselves the private content
+    const PNG =
+      'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=='
+    const dir = tempDir()
+    const file = join(dir, 'comment-picture.docx')
+    const bytes = await buildDocx({
+      bodyXml:
+        '<w:p><w:commentRangeStart w:id="1"/><w:r><w:t>Body</w:t></w:r><w:commentRangeEnd w:id="1"/>' +
+        '<w:r><w:commentReference w:id="1"/></w:r></w:p>',
+      extraParts: [
+        {
+          path: 'word/comments.xml',
+          contentType:
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.comments+xml',
+          xml:
+            `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><w:comments ${W} ${DRAW}>` +
+            '<w:comment w:id="1" w:author="K"><w:p><w:r><w:t xml:space="preserve">Card: </w:t></w:r>' +
+            `<w:r><w:rPr><go:redact xmlns:go="${NAMESPACES[1]![1]}" w:label="id card"/></w:rPr>` +
+            '<w:drawing><wp:inline><wp:extent cx="9525" cy="9525"/><a:graphic><a:graphicData><pic:pic>' +
+            '<pic:blipFill><a:blip r:embed="rIdImg"/></pic:blipFill></pic:pic></a:graphicData></a:graphic>' +
+            `</wp:inline></w:drawing>${runText}</w:r></w:p></w:comment></w:comments>`,
+        },
+      ],
+    })
+    const zip = await JSZip.loadAsync(bytes)
+    zip.file(
+      'word/_rels/comments.xml.rels',
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+        '<Relationship Id="rIdImg" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/card.png"/></Relationships>',
+    )
+    zip.file('word/media/card.png', PNG, { base64: true })
+    writeFileSync(file, await zip.generateAsync({ type: 'nodebuffer' }))
+
+    const read = await run(['docs', 'read', file, '--comments', '--json'])
+    expect(read.code).toBe(0)
+    expect(read.stdout).not.toContain(PNG.slice(0, 40))
+    expect(read.stdout).toContain('{{id card}}')
+  })
 })
 
 describe('docs apply: add_comment and words hidden from AI', () => {

@@ -567,6 +567,10 @@ export const ko = {
   appOdtEncrypted:
     '"{name}" 파일에는 암호가 걸려 있어 열 수 없습니다. 암호를 건 프로그램(예: 한컴오피스)에서 암호를 푼 뒤 다시 열어 주세요.',
   appSavingAsFormat: '{format} 형식으로 저장하는 중…',
+  appMarkedOdtRefused:
+    'AI에게 숨긴 내용이 있는 문서는 ODT 파일에 담을 수 없습니다. .docx로 저장하거나 표시를 먼저 지우세요.',
+  appMarkedOdtAutoSkipped:
+    '자동 저장하지 않았습니다. AI에게 숨긴 내용은 ODT 파일에 담을 수 없습니다. .docx로 저장하거나 표시를 지우세요.',
   appSaveFormatMismatch: '파일 확장자가 문서 형식(.{ext})과 같아야 합니다.',
   appFormatChangeTitleOdt: 'ODT로 저장',
   appFormatChangeTitleDocx: 'Word 문서(.docx)로 저장',

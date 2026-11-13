@@ -1,4 +1,3 @@
-import { decodeEntities } from './parse-xml-text'
 import { ContentControlPart } from './inline-control-ids'
 import JSZip from 'jszip'
 import {
@@ -32,7 +31,7 @@ import {
   injectInkRunsIntoParagraph,
   stripInkRuns,
 } from './ink'
-import { HF_ROOT_ATTRS, hfKeptRoot, hfWrapNamespaces } from './hf-root'
+import { hfKeptRoot, hfRootOpen, hfWrapNamespaces } from './hf-root'
 import { partNamespaces } from './inline-opaque'
 import { resolveRelationshipTargetPath } from './parse-package'
 import {
@@ -116,8 +115,16 @@ import {
   watermarkParagraphXml,
   type Watermark,
 } from './watermark'
-import { escapeXmlAttr, escapeXmlText, findChildren, maskOpaque } from './xml-utils'
-import { parseEntry, runsText } from './withheld'
+import { escapeXmlAttr, escapeXmlText, findChildren } from './xml-utils'
+import { commentEntries } from './comment-slices'
+import {
+  firstMarkLabel,
+  hasWithheldTrace,
+  overWithheld,
+  parseEntry,
+  runsText,
+  withRedactNamespace,
+} from './withheld'
 import {
   buildContentControlXml,
   nextContentControlId,
@@ -2857,7 +2864,7 @@ function headerFooterPartXml(
   }
   return controls.finish(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-      `<${root}${HF_ROOT_ATTRS}>${body}</${root}>`,
+      `${hfRootOpen(root, originalXml)}${body}</${root}>`,
   )
 }
 
@@ -2870,34 +2877,6 @@ function headerFooterPartXml(
 const COMMENTS_NS =
   'xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" ' +
   'xmlns:w14="http://schemas.microsoft.com/office/word/2010/wordml"'
-
-/**
- * Each `<w:comment>` of a comments part with its id, read the way the parser
- * reads the tag (any quotes, white space around =, '>' inside a value): a
- * comment the save cannot find is written anew from its plain text, and loses
- * its runs, a hidden-from-AI mark included.
- */
-function commentEntries(xml: string): Array<{ id: string; xml: string }> {
-  const out: Array<{ id: string; xml: string }> = []
-  const open = /<w:comment\b((?:[^>"']|"[^"]*"|'[^']*')*?)(\/?)>/g
-  const endTag = /<\/w:comment\s*>/g
-  // tags are found where comments and CDATA cannot fake one; bytes come from xml
-  const masked = maskOpaque(xml)
-  let m: RegExpExecArray | null
-  while ((m = open.exec(masked)) !== null) {
-    let close = open.lastIndex
-    if (!m[2]) {
-      endTag.lastIndex = open.lastIndex
-      if (!endTag.exec(masked)) break
-      close = endTag.lastIndex
-    }
-    const id = /(?:^|\s)w:id\s*=\s*(?:"([^"]*)"|'([^']*)')/.exec(m[1]!)
-    const value = id ? (id[1] ?? id[2]) : undefined
-    if (value) out.push({ id: decodeEntities(value), xml: xml.slice(m.index, close) })
-    open.lastIndex = close
-  }
-  return out
-}
 
 function buildCommentsXml(
   comments: CommentInfo[],
@@ -2926,6 +2905,9 @@ function buildCommentsXml(
         const patched = patchParagraphTexts(orig.xml, c.text)
         if (patched !== null) return patched
       }
+      // an edit that cannot be patched around hidden runs: written anew, every
+      // word of the comment is hidden under the first label it carried
+      const hiddenLabel = orig && hasWithheldTrace(orig.xml) ? firstMarkLabel(orig.xml) : null
       const attrs =
         `w:id="${escapeXmlAttr(c.id)}" w:author="${escapeXmlAttr(c.author)}"` +
         (c.initials ? ` w:initials="${escapeXmlAttr(c.initials)}"` : '') +
@@ -2943,7 +2925,8 @@ function buildCommentsXml(
       if (run && paras.length > 0) {
         paras[paras.length - 1] = paras[paras.length - 1]!.replace(/<\/w:p>$/, `${run}</w:p>`)
       }
-      return `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      const entry = `<w:comment ${attrs}>${paras.join('')}</w:comment>`
+      return hiddenLabel === null ? entry : overWithheld(entry, hiddenLabel)
     })
     .join('')
   // Rebuilt comments always emit w14:paraId (ensured above), so w14 must be bound even
@@ -2958,7 +2941,10 @@ function buildCommentsXml(
         }
       : {}),
   })
-  return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`
+  return withRedactNamespace(
+    `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<w:comments ${ns}>${body}</w:comments>`,
+    'w:comments',
+  )
 }
 
 /** word/commentsExtended.xml: one commentEx per comment (reply parent-child + resolved flag) */

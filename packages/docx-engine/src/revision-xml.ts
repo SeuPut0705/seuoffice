@@ -21,6 +21,12 @@ export interface RevisionXmlFilter {
   date?: string
   /** w:id of the wrapper / record */
   ids?: string[]
+  /**
+   * leave pending the changes that would remove words a person hid from AI (a
+   * deletion accepted, an insertion rejected, a row either way): for callers acting
+   * for a model, which cannot see the words it would be taking away
+   */
+  keepHidden?: boolean
 }
 
 /** one accept / reject the editor applied to a part it holds as a display model */
@@ -252,6 +258,28 @@ function removeMarker(els: El[], el: El): Edit {
   return remove(target)
 }
 
+const MARK_ELEMENT = /(?:^|:)redact$/
+const EDITOR_BORDER =
+  /^<w:bdr\s+w:val\s*=\s*["']single["']\s+w:sz\s*=\s*["']6["']\s+w:color\s*=\s*["']6B4FC0["']\s*\/>$/
+
+/**
+ * The mark that hides a run from AI, in the run's current properties, with the
+ * border the editor draws beside it. It is not formatting, so a record of the
+ * old formatting never holds it, and putting the old properties back must not
+ * take it away.
+ */
+function hiddenMarkIn(els: El[], xml: string, holder: El): { marks: El[]; border: El[] } {
+  const kids = children(els, holder)
+  const marks = kids.filter((c) => MARK_ELEMENT.test(c.name))
+  const border = marks.flatMap((m) => {
+    const before = kids[kids.indexOf(m) - 1]
+    return before?.name === 'w:bdr' && EDITOR_BORDER.test(xml.slice(before.start, before.end))
+      ? [before]
+      : []
+  })
+  return { marks, border }
+}
+
 /** restore the pre-change properties recorded in a *Change element */
 function revertPropChange(els: El[], xml: string, change: El): Edit[] {
   const holderName = PROP_CHANGE[change.name]!
@@ -276,6 +304,22 @@ function revertPropChange(els: El[], xml: string, change: El): Edit[] {
       .join('')
     return [{ start: holder.innerStart, end: holder.innerEnd, text: refs + oldInner }]
   }
+  if (holderName === 'w:rPr') {
+    const { marks, border } = hiddenMarkIn(els, xml, holder)
+    if (marks.length > 0) {
+      const keep = new Set<El>([...marks, ...border])
+      // the old properties may hold the border already: it is not drawn twice
+      const oldHasBorder = /<w:bdr\b/.test(oldInner)
+      const dropped = children(els, holder).filter(
+        (c) => !keep.has(c) && !(c.selfClosing && /^w:(?:ins|del|moveFrom|moveTo)$/.test(c.name)),
+      )
+      return [
+        ...dropped.map(remove),
+        { start: holder.innerEnd, end: holder.innerEnd, text: oldInner },
+        ...(oldHasBorder ? border.map(remove) : []),
+      ]
+    }
+  }
   // the holder's own tracked markers (paragraph-mark / row ins, del, move) are
   // separate revisions: edit around them so their own removal in the same pass
   // is not swallowed by a whole-holder replacement
@@ -291,6 +335,20 @@ function revertPropChange(els: El[], xml: string, change: El): Edit[] {
   if (!oldInner.trim() && holderName !== 'w:tblPr' && holderName !== 'w:tblGrid')
     return [remove(holder)]
   return [{ start: holder.innerStart, end: holder.innerEnd, text: oldInner }]
+}
+
+/** whether acting on the change would remove content that holds the mark hiding it from AI */
+function removesHiddenWords(els: El[], el: El, mode: RevisionXmlMode): boolean {
+  if (el.name !== 'w:ins' && el.name !== 'w:del') return false
+  const drops = el.name === 'w:ins' ? mode === 'reject' : mode === 'accept'
+  if (!drops) return false
+  const slot = markerSlot(els, el)
+  if (slot === 'paraMark' || slot === 'other') return false
+  const target = slot === 'row' ? ancestor(els, el, 'w:tr') : el
+  if (!target) return false
+  return els.some(
+    (c) => MARK_ELEMENT.test(c.name) && c.start >= target.start && c.end <= target.end,
+  )
 }
 
 function planEdits(
@@ -352,6 +410,7 @@ function planEdits(
     if (RANGE_MARKERS.has(el.name)) continue
     const type = typeOf(el)
     if (!type || !matches(el, filter, type)) continue
+    if (filter?.keepHidden && removesHiddenWords(els, el, mode)) continue
     applied++
     switch (el.name) {
       case 'w:ins':

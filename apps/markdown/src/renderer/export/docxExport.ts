@@ -4,6 +4,7 @@ import {
   TABLE_HEADER_FILL,
   buildBlankDocx,
   generateTableModelXml,
+  hiddenRunProperties,
   latexToOmml,
   mathParagraphXml,
   parseDocx,
@@ -49,25 +50,37 @@ const CODE_FILL = 'F2F3F5'
 
 // ── inline content → Run[] ──
 
+/** the label of the mark that hides this node from AI, or undefined when it is not hidden */
+function hiddenLabelOf(node: JSONContent): string | undefined {
+  const mark = node.marks?.find((m) => m.type === 'redaction')
+  return mark ? String(mark.attrs?.label ?? 'private') : undefined
+}
+
+/** the run with the mark a hidden node carries: every reader of the .docx withholds it */
+function withHiddenMark(run: Run, node: JSONContent): Run {
+  const label = hiddenLabelOf(node)
+  return label === undefined ? run : { ...run, rawRPr: hiddenRunProperties(label) }
+}
+
 function runsFromInline(content: JSONContent[] | undefined): Run[] {
   const runs: Run[] = []
   for (const child of content ?? []) {
     if (child.type === 'hardBreak') {
-      runs.push({ text: '\n' })
+      runs.push(withHiddenMark({ text: '\n' }, child))
       continue
     }
     if (child.type === 'inlineMath') {
       // Run[] cannot carry OMML — keep the LaTeX source visible instead
       const latex = String(child.attrs?.latex ?? '')
-      if (latex) runs.push({ text: `$${latex}$`, font: CODE_FONT })
+      if (latex) runs.push(withHiddenMark({ text: `$${latex}$`, font: CODE_FONT }, child))
       continue
     }
     if (child.type === 'image') {
-      runs.push(altTextRun(child))
+      runs.push(withHiddenMark(altTextRun(child), child))
       continue
     }
     if (child.type === 'footnoteReference') {
-      runs.push({ text: `[^${String(child.attrs?.label ?? '')}]` })
+      runs.push(withHiddenMark({ text: `[^${String(child.attrs?.label ?? '')}]` }, child))
       continue
     }
     if (child.type !== 'text' || !child.text) continue
@@ -81,7 +94,7 @@ function runsFromInline(content: JSONContent[] | undefined): Run[] {
         run.link = { href: mark.attrs.href }
       }
     }
-    runs.push(run)
+    runs.push(withHiddenMark(run, child))
   }
   return runs
 }
@@ -89,6 +102,17 @@ function runsFromInline(content: JSONContent[] | undefined): Run[] {
 function plainText(node: JSONContent): string {
   if (node.type === 'text') return node.text ?? ''
   return (node.content ?? []).map(plainText).join('')
+}
+
+/** the text of a node as runs: each text node keeps the mark that hides it from AI */
+function textRunsOf(node: JSONContent): Run[] {
+  if (node.type === 'text') return node.text ? [withHiddenMark({ text: node.text }, node)] : []
+  return (node.content ?? []).flatMap(textRunsOf)
+}
+
+/** whether any text, or atom, under the node is hidden from AI */
+function holdsHidden(node: JSONContent): boolean {
+  return hiddenLabelOf(node) !== undefined || (node.content ?? []).some(holdsHidden)
 }
 
 // ── mapping walker ──
@@ -125,7 +149,10 @@ function pushTextblock(
   content: JSONContent[] | undefined,
   block: (runs: Run[]) => GeneratedBlock,
 ): void {
-  if (!content?.some((child) => child.type === 'image')) {
+  // a picture hidden from AI is not embedded: its alt text goes out under the mark (runsFromInline)
+  const isPicture = (child: JSONContent) =>
+    child.type === 'image' && hiddenLabelOf(child) === undefined
+  if (!content?.some(isPicture)) {
     pushParagraph(ctx, block(runsFromInline(content)))
     return
   }
@@ -137,7 +164,7 @@ function pushTextblock(
     segment = []
   }
   for (const child of content) {
-    if (child.type !== 'image') {
+    if (!isPicture(child)) {
       segment.push(child)
       continue
     }
@@ -270,11 +297,12 @@ function walkBlock(ctx: WalkContext, node: JSONContent, base?: ParaFormat): void
       const source = plainText(node)
       const code: GeneratedBlock = {
         type: 'paragraph',
-        runs: [{ text: source, font: CODE_FONT, sizeHalfPoints: 19 }],
+        runs: textRunsOf(node).map((run) => ({ ...run, font: CODE_FONT, sizeHalfPoints: 19 })),
         format: mergeFormat(base, { shadingFill: CODE_FILL }),
       }
       const language = diagramLanguage(node.attrs?.language)
-      if (language && ctx.renderDiagram && source.trim()) {
+      // a diagram is drawn from its source: one that holds hidden words stays code, under the mark
+      if (language && ctx.renderDiagram && source.trim() && !holdsHidden(node)) {
         ctx.pendingDiagrams.push({ index: ctx.blocks.length, source, language })
       }
       pushParagraph(ctx, code)
@@ -324,8 +352,8 @@ function walkBlock(ctx: WalkContext, node: JSONContent, base?: ParaFormat): void
     }
     default: {
       // unknown block: keep its text so nothing silently disappears
-      const text = plainText(node)
-      if (text.trim()) pushParagraph(ctx, { type: 'paragraph', runs: [{ text }], format: base })
+      const runs = textRunsOf(node)
+      if (plainText(node).trim()) pushParagraph(ctx, { type: 'paragraph', runs, format: base })
     }
   }
 }

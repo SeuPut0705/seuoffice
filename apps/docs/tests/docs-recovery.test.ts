@@ -194,6 +194,32 @@ describe('opening a file with a copy', () => {
   })
 })
 
+describe('an ODT tab whose content got marked (docx copy under an untitled slot)', () => {
+  const writeMarked = (tab: number, original: string) =>
+    recovery.writeCopy(tab, { untitledExt: '.docx' }, () => Buffer.from('docx'), 'a.odt', original)
+
+  it('drops the stale ODT copy the tab wrote before: only the docx copy is offered', async () => {
+    const odt = userDoc('a.odt')
+    await write(TAB, odt, 'odt era')
+    expect(recovery.store.copyInfo(recovery.fileIdentity(odt))).not.toBeNull()
+    expect(await writeMarked(TAB, odt)).toBe('written')
+    expect(recovery.store.copyInfo(recovery.fileIdentity(odt))).toBeNull()
+    const slot = recovery.untitledOf(TAB)!
+    expect(slot.ext).toBe('.docx')
+    expect(recovery.store.copyInfo(slot)).toMatchObject({ title: 'a.odt', originalPath: odt })
+    expect((await open(odt)).action).toBe('original')
+  })
+
+  it('drops the docx copy again once the tab writes its ODT copy (marks cleared)', async () => {
+    const odt = userDoc('a.odt')
+    await writeMarked(TAB, odt)
+    const slot = recovery.untitledOf(TAB)!
+    await write(TAB, odt, 'odt again')
+    expect(recovery.store.copyInfo(slot)).toBeNull()
+    expect(recovery.store.copyInfo(recovery.fileIdentity(odt))).not.toBeNull()
+  })
+})
+
 describe('never-saved documents', () => {
   it('keep their copy in app data only, never in a user folder', async () => {
     const result = await recovery.writeCopy(

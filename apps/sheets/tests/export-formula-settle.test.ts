@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
+import { NO_REDACTIONS } from '../src/renderer/ai/redact'
 import { handleExportCsv } from '../src/renderer/csv-export'
 import { createEditJournal } from '../src/renderer/edit-journal'
 import { FORMULA_SETTLE_TIMEOUT_MS } from '../src/renderer/formula-settle'
@@ -94,7 +95,7 @@ function harness(pendingFormula = true) {
     setMessage: () => undefined,
   }
   return {
-    csvContext: { ...refs, requestSaveAs: () => undefined },
+    csvContext: { ...refs, requestSaveAs: () => undefined, redactions: () => NO_REDACTIONS },
     pageLayoutContext: {
       ...refs,
       setPendingEdits: vi.fn(),

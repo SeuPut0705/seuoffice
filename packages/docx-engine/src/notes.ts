@@ -11,7 +11,16 @@ import {
   serializeXNode,
   type XNode,
 } from './xml-utils'
-import { parseEntry, runsText, withheldText } from './withheld'
+import { placeholderSource } from '@seuoffice/agent-core/redact-core'
+import {
+  firstMarkLabel,
+  hasWithheldTrace,
+  overWithheld,
+  parseEntry,
+  runsText,
+  withheldText,
+  withRedactNamespace,
+} from './withheld'
 
 /**
  * Footnotes / endnotes part handling (word/footnotes.xml, word/endnotes.xml).
@@ -92,6 +101,30 @@ export interface NoteParagraph {
 /** supplied by the document parser; without it notes carry plain text only */
 export type NoteParagraphReader = (pXml: string) => NoteParagraph
 
+/**
+ * A note's text as a model may read it, from its display runs: each run hidden
+ * from AI as its placeholder (neighbours under one label as one), undefined
+ * when no run hides anything. Kept in step with the runs when a person accepts
+ * or rejects a change in the note.
+ */
+export function noteModelText(richParas: readonly NoteRun[][]): string | undefined {
+  if (!richParas.some((runs) => runs.some((r) => r.redact !== undefined && !r.del)))
+    return undefined
+  return richParas
+    .map((runs) => {
+      let line = ''
+      let label: string | undefined
+      for (const run of runs) {
+        if (run.del) continue
+        if (run.redact === undefined) line += run.text
+        else if (run.redact !== label) line += placeholderSource(run.redact)
+        label = run.redact
+      }
+      return line
+    })
+    .join('\n')
+}
+
 /** real notes (separator entries excluded), in file order */
 export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphReader): NoteInfo[] {
   // the entries as the parser finds them: markup inside CDATA is text, not a note
@@ -125,7 +158,7 @@ export function parseNotesXml(xml: string, kind: NoteKind, read?: NoteParagraphR
     return {
       id,
       text,
-      ...(modelText !== undefined && modelText !== text ? { modelText } : {}),
+      ...(modelText !== undefined ? { modelText } : {}),
       ...(first ? { richParas } : {}),
       ...(styleId ? { styleId } : {}),
       ...(/ADDIN\s+(?:ZOTERO_|CSL_)/.test(entryXml) ? { zoteroField: true as const } : {}),
@@ -330,6 +363,18 @@ function noteEntryXml(kind: NoteKind, note: NoteInfo, revAttrs: NoteRevAttrs): s
   return `<${entry} w:id="${escapeXmlAttr(note.id)}">${paras.join('')}</${entry}>`
 }
 
+/** the runs of a note's own XML that hold a picture, a drawing or an object: each as a run of its own, without the run's properties */
+function pictureRunsOf(entryXml: string): string[] {
+  const drawings = entryXml.match(/<w:(drawing|pict|object)(?:\s[^>]*)?>[\s\S]*?<\/w:\1>/g)
+  return (drawings ?? []).map((drawing) => `<w:r>${drawing}</w:r>`)
+}
+
+/** `entryXml` with the pictures of the entry it replaces at the end of its last paragraph, as comments keep theirs */
+function withPictureRuns(entryXml: string, originalEntryXml: string): string {
+  const runs = pictureRunsOf(originalEntryXml).join('')
+  return runs === '' ? entryXml : entryXml.replace(/<\/w:p>(?![\s\S]*<\/w:p>)/, `${runs}</w:p>`)
+}
+
 /**
  * Regenerate the notes part from the full desired list. Structural entries
  * (separator/continuation) from the original part are kept byte-identical;
@@ -367,12 +412,19 @@ export function buildNotesXml(
       const patched = patchParagraphTexts(orig.xml, n.text, {
         stripFirstParaLeadingSpace: true,
       })
-      return patched ?? noteEntryXml(kind, n, revAttrs)
+      if (patched !== null) return patched
+      // an edit that cannot be patched around hidden runs: written anew, every
+      // word of the note is hidden under the first label it carried
+      // The note's pictures ride into the new entry: a picture is no text, and
+      // one that sat in a hidden run is hidden with the rest of the note.
+      const entry = withPictureRuns(noteEntryXml(kind, n, revAttrs), orig.xml)
+      return hasWithheldTrace(orig.xml) ? overWithheld(entry, firstMarkLabel(orig.xml)) : entry
     })
     .join('')
-  return (
+  return withRedactNamespace(
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n' +
-    `<${ROOT[kind]} ${rootAttributes(originalXml, ROOT[kind], NOTE_NS)}>${structural}${body}</${ROOT[kind]}>`
+      `<${ROOT[kind]} ${rootAttributes(originalXml, ROOT[kind], NOTE_NS)}>${structural}${body}</${ROOT[kind]}>`,
+    ROOT[kind],
   )
 }
 
