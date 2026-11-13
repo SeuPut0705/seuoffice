@@ -113,16 +113,17 @@ waits for, the case's views, `CasePaths` under the folder, an `EventSink` that r
   `OsShellHost`, `ClipboardHost`, `ContentsHost`, `MainWindowHost`, and the process's one
   `Arc<Mutex<SharedRecoveryState>>`. They answer from `hosts.shared`:
 
-  | key               | shape                                                                                                               |
-  | ----------------- | ------------------------------------------------------------------------------------------------------------------- |
-  | `dialogs.open`    | list of answers, one per `showOpenDialog`: a list of paths, or `null` (cancelled); cancelled when the list runs out |
-  | `dialogs.save`    | the same for `showSaveDialog`: a path or `null`                                                                     |
-  | `dialogs.message` | `[{response, checkboxChecked}]` per `showMessageBox`; `{response: 0}` when it runs out                              |
-  | `osShell`         | `{openPath: "<error text>", openExternalError, trashError}`; all succeed by default                                 |
-  | `clipboard`       | `{text, html, imagePng: hex, formats: [...]}` before the case                                                       |
-  | `contents`        | `{capturePng: hex, pdf: hex, print: bool, zoom: {"<view>": factor}}`                                                |
-  | `mainWindow`      | `{view, window}`; the first `Shell` view by default                                                                 |
-  | `recoveryRunId`   | the run id of the recovery state, `0000000000000000` by default                                                     |
+  | key               | shape                                                                                                                                                |
+  | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
+  | `dialogs.open`    | list of answers, one per `showOpenDialog`: a list of paths, or `null` (cancelled); cancelled when the list runs out                                  |
+  | `dialogs.save`    | the same for `showSaveDialog`: a path or `null`                                                                                                      |
+  | `dialogs.message` | `[{response, checkboxChecked}]` per `showMessageBox`; `{response: 0}` when it runs out                                                               |
+  | `osShell`         | `{openPath: "<error text>", openExternalError, trashError}`; all succeed by default                                                                  |
+  | `clipboard`       | `{text, html, imagePng: hex, formats: [...]}` before the case                                                                                        |
+  | `contents`        | `{capturePng: hex, pdf: hex, print: bool, zoom: {"<view>": factor}}`                                                                                 |
+  | `mainWindow`      | `{view, window}`; the first `Shell` view by default                                                                                                  |
+  | `media`           | TypeScript only (no Rust host yet): `{screen, microphone: "granted"\|"denied", sources: [{id, name}]}` for `systemPreferences` and `desktopCapturer` |
+  | `recoveryRunId`   | the run id of the recovery state, `0000000000000000` by default                                                                                      |
 
   Each call is one log line named after the Electron call it fakes:
   `["dialog.showOpenDialog", parentWindowId|null, options]`, `["shell.openPath", path]`,
