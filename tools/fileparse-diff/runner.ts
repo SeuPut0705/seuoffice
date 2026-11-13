@@ -143,7 +143,7 @@ async function mutant(spec: Spec, from: Input, label: string, random: () => numb
 /**
  * Compares every spec's TypeScript with the Rust engine over its corpus, built
  * and mutated populations, replays the ledger, and reports. Reads `--group`,
- * `--seed`, `--fuzz` and `--save` from the command line. The gate's failed flag
+ * `--shard`, `--seed`, `--fuzz` and `--save` from the command line. The gate's failed flag
  * and the comparisons live in docx-diff's harness, so one process runs one suite.
  * Returns whether the gate passed.
  */
@@ -157,7 +157,12 @@ export async function runSuite(config: SuiteConfig): Promise<boolean> {
   const onlyGroup = groupArg < 0 ? undefined : process.argv[groupArg + 1]
   if (onlyGroup !== undefined && !(onlyGroup in groups)) throw new Error(`Unknown group ${onlyGroup}`)
   const selectedGroups = Object.keys(groups).filter(name => onlyGroup === undefined || name === onlyGroup)
-  const specs = selectedGroups.flatMap(name => groups[name]!)
+  const selectedSpecs = selectedGroups.flatMap(name => groups[name]!)
+  /** `--shard i/n`: every n-th spec from the i-th, so n jobs share the gate and none is left out. */
+  const shardArg = process.argv.indexOf('--shard')
+  const [shard, shards] = shardArg < 0 ? [0, 1] : process.argv[shardArg + 1]!.split('/').map(Number) as [number, number]
+  if (!(Number.isInteger(shard) && Number.isInteger(shards) && shard >= 0 && shard < shards)) throw new Error('--shard takes i/n with 0 <= i < n')
+  const specs = selectedSpecs.filter((_, index) => index % shards === shard)
   const allSpecs = Object.values(groups).flat()
   const seed = option('--seed', 20261112)
   const fuzz = option('--fuzz', 100)
@@ -316,6 +321,13 @@ export async function runSuite(config: SuiteConfig): Promise<boolean> {
     console.log(`${`functions.${group}`.padEnd(46)} specs    ${String(count).padStart(6)}  ${atFloor(count, floorOf(`functions.${group}`))}`)
   }
   if (missingFloors.length > 0) console.error(`Missing from floors.json: ${missingFloors.join(', ')}`)
+  // a shard compares some of the specs; the floors of the others are known from the specs alone
+  for (const spec of selectedSpecs.filter(spec => !specs.includes(spec))) {
+    expectedFloors.add(`${spec.fn}.corpus`)
+    expectedFloors.add(`${spec.fn}.built`)
+    if (spec.mutation !== 'none') expectedFloors.add(`${spec.fn}.mutated`)
+    if (spec.isActive) expectedFloors.add(`${spec.fn}.activeCorpus`)
+  }
   const unknownFloors = onlyGroup === undefined ? Object.keys(floors).filter(key => !expectedFloors.has(key)) : []
   if (unknownFloors.length > 0) {
     console.error(`Floors no group or function of this gate has: ${unknownFloors.join(', ')}`)

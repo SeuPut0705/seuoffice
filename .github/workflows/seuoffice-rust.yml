@@ -227,10 +227,16 @@ jobs:
           path: tools/docx-diff/out
           if-no-files-found: ignore
 
+  # The attachment gate over four shards of its specs: one job ran 46-58 of its
+  # 60 minutes and reached the limit
   fileparse:
     if: ${{ !inputs.faults && !inputs.rhwp_core }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3]
     steps:
       - uses: actions/checkout@v4
 
@@ -281,12 +287,12 @@ jobs:
         # time, and hwp-cases.ts holds memos on both sides of its changes
         env:
           TZ: America/New_York
-        run: npm --prefix tools/fileparse-diff run gate -- --save out/ci.json
+        run: npm --prefix tools/fileparse-diff run gate -- --shard ${{ matrix.shard }}/4 --save out/ci-${{ matrix.shard }}.json
       - name: Keep the attachment gate output
         if: always() && steps.has.outputs.gate == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: fileparse-diff-out
+          name: fileparse-diff-out-${{ matrix.shard }}
           path: tools/fileparse-diff/out
           if-no-files-found: error
 
