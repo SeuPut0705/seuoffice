@@ -1,7 +1,7 @@
 {
   "source": "packages/docx-engine/tests/fixtures/truths/arabic-cs-face-pitch/probe.docx",
   "paragraphs": 4,
-  "hashes": ["3451967cbf8a5734", "dcb8114e2d02ed66", "8d05af044f09ec4c", "64da9918905dad96"],
+  "hashes": ["6d81bf5008173e8a", "39ceb8c9fa8a5ca6", "bd3db2893135ea4d", "6e4a864e2fd521f5"],
   "cellParagraphs": 0,
   "cellHashes": [],
   "boxParagraphs": 0,

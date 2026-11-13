@@ -14,8 +14,9 @@ import { undoDoubledEscapes } from '@seuoffice/agent-core/doubled-escapes'
 import { executeOps, opNames } from './ops'
 import { odtGuardRefusalText, odtToolRefusal, startOdtToolCall } from './odt-tools'
 import { clipExcerpt, repliesOf, resolveCommentAnchor } from './comment-ops'
-import { redactTextBetween } from './redact-view'
+import { redactTextBetween, withheldBlockLabel, type RedactableNode } from './redact-view'
 import { insertPictureAtSelection } from '../editor/insert-picture'
+import { asModelEdit } from '../editor/redaction'
 import {
   PAGE_SETUP_TOOL,
   SECTION_BREAK_TOOL,
@@ -770,6 +771,10 @@ const fail = (summary: string, output: string): ToolExecution => ({
   summary,
 })
 
+/** one answer for any change to a note that holds hidden words, whatever was asked of it */
+const hiddenNoteRefusal = (kind: NoteKind, id: string): string =>
+  `${kind} ${id} holds text the person hid from AI and cannot be changed here; tell the person what to change and let them edit the note`
+
 const clipText = (text: string, max: number): string =>
   text.length > max ? `${text.slice(0, max)}…` : text
 
@@ -1317,14 +1322,16 @@ async function insertImageBytes(
     // freshness baseline stale, so only our own insertion may mark the doc
     // seen. Checked right before the write — there is no async gap after.
     const userEditedDuringFetch = editedExternally(editor)
-    insertPictureAtSelection(editor, {
-      dataUrl,
-      base64,
-      mime,
-      widthPx: w,
-      heightPx: h,
-      label: labels.blockLabel,
-    })
+    asModelEdit(() =>
+      insertPictureAtSelection(editor, {
+        dataUrl,
+        base64,
+        mime,
+        widthPx: w,
+        heightPx: h,
+        label: labels.blockLabel,
+      }),
+    )
     if (!userEditedDuringFetch) markDocSeen(editor)
     return {
       output: `Inserted the image (${w}×${h}px).`,
@@ -1376,24 +1383,26 @@ export function executeTool(
   attachments?: AiAttachmentAccess,
 ): ToolExecution | Promise<ToolExecution> {
   // an ODT document: switched-off features are refused, and so are edits the
-  // editor guard turned away (protected cells, locked placeholders)
+  // editor guard turned away (protected cells, locked placeholders, hidden content)
   const odtRefusal = odtToolRefusal(call)
   if (odtRefusal) return fail(t('appOdtOff'), odtRefusal)
   startOdtToolCall()
-  const result = executeToolUnguarded(
-    editor,
-    withDoubledEscapesUndone(call),
-    numIds,
-    track,
-    signal,
-    frozen,
-    comments,
-    hf,
-    writer,
-    pageSetup,
-    extras,
-    notes,
-    attachments,
+  const result = asModelEdit(() =>
+    executeToolUnguarded(
+      editor,
+      withDoubledEscapesUndone(call),
+      numIds,
+      track,
+      signal,
+      frozen,
+      comments,
+      hf,
+      writer,
+      pageSetup,
+      extras,
+      notes,
+      attachments,
+    ),
   )
   const settleOdt = (exec: ToolExecution): ToolExecution => {
     const refused = odtGuardRefusalText()
@@ -1814,6 +1823,12 @@ function executeSyncTool(
         return fail(t('aiSumEditChart'), 'blockIndex invalid or out of range')
       }
       const node = editor.state.doc.child(idx)
+      // a block the person hid from AI: its data is not the model's to read or rewrite
+      if (withheldBlockLabel(node.toJSON() as RedactableNode) !== undefined)
+        return fail(
+          t('aiSumEditChart'),
+          `block ${idx} holds content the person hid from AI and cannot be edited here; tell the person what to change and let them edit it`,
+        )
       // native docx charts are passthrough blocks + chartDisplay; AI/UI-created ones are blockType 'chart'
       const display =
         node.type.name === 'docProtected' ? (node.attrs.chartDisplay as ChartDisplay | null) : null
@@ -2030,8 +2045,11 @@ function executeSyncTool(
       if (kind !== 'footnote' && kind !== 'endnote')
         return fail(summary, 'kind must be "footnote" or "endnote"')
       const id = String(call.input.id ?? '').trim()
-      if (!notes.list(kind).some((n) => n.id === id))
+      const note = notes.list(kind).find((n) => n.id === id)
+      if (!note)
         return fail(summary, `no ${kind} with id ${id}; call read_notes for the current ids`)
+      // removing the note removes the words the person hid with it
+      if (note.modelText !== undefined) return fail(summary, hiddenNoteRefusal(kind, id))
       const locked = notes.protectedMarkBlock?.(kind, id)
       if (locked !== null && locked !== undefined) {
         return fail(
@@ -2040,6 +2058,12 @@ function executeSyncTool(
         )
       }
       const removed = removeNoteRefs(editor, kind, id)
+      // the editor refused to remove the mark: a note without its mark is a note lost
+      if (removed === null)
+        return fail(
+          summary,
+          `the reference mark of ${kind} ${id} could not be removed; the note was left in place`,
+        )
       notes.remove(kind, id)
       return {
         output: `Deleted ${kind} ${id}${removed ? ' and its reference mark' : ' (it had no reference mark in the text)'}.`,
@@ -2070,11 +2094,7 @@ function executeSyncTool(
       const { kind, note } = found[0]!
       // the note's own text is not the model's to see, so it is not the model's to rewrite;
       // the answer must not tell whether the hidden words hold what it looks for
-      if (note.modelText !== undefined)
-        return fail(
-          summary,
-          `${kind} ${id} holds text the person hid from AI and cannot be edited here; tell the person what to change and let them edit the note`,
-        )
+      if (note.modelText !== undefined) return fail(summary, hiddenNoteRefusal(kind, id))
       const find = typeof call.input.find === 'string' ? call.input.find : ''
       if (!find) return fail(summary, 'find must not be empty')
       const replace = call.input.replace == null ? '' : String(call.input.replace)
@@ -2151,6 +2171,12 @@ function executeSyncTool(
           `comment ${id} has ${replies.length} repl${replies.length === 1 ? 'y' : 'ies'} (${replies.map((r) => r.id).join(', ')}); set withReplies: true to delete the whole thread`,
         )
       }
+      // deleting the comment deletes the words the person hid in it
+      if ([target, ...replies].some((c) => c.modelText !== undefined))
+        return fail(
+          t('aiSumDeleteComment'),
+          `comment ${id}${replies.length > 0 ? ' or a reply to it' : ''} holds text the person hid from AI and cannot be deleted here; tell the person which comment to remove and let them delete it`,
+        )
       if (!comments.remove(id))
         return fail(t('aiSumDeleteComment'), `comment ${id} could not be deleted`)
       const gone = [id, ...replies.map((r) => r.id)]

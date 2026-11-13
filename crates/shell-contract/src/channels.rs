@@ -345,7 +345,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec(
         "app:auto-save-default-changed",
         &[Event],
-        M,
+        W,
         &[
             Diagram, Docs, Epub, Html, Hwp, Markdown, Mindmap, Pdf, Sheets, Slides,
         ],
@@ -353,7 +353,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec(
         "app:chrome-pressed",
         &[Event],
-        M,
+        W,
         &[
             Diagram, Docs, Epub, Html, Markdown, Mindmap, Pdf, Sheets, Shell, Slides,
         ],
@@ -446,7 +446,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec(
         "app:split-role-changed",
         &[Event],
-        M,
+        W,
         &[
             Diagram, Docs, Epub, Html, Hwp, Markdown, Mindmap, Pdf, Sheets, Slides,
         ],
@@ -2105,7 +2105,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
     spec("slides:find-replace", &[Invoke], D1, &[Slides]),
     spec("slides:flip-elements", &[Invoke], D1, &[Slides]),
     spec("slides:font-install-local", &[Invoke], D1, &[Slides]),
-    spec("slides:fonts-changed", &[Event], M, &[Slides]),
+    spec("slides:fonts-changed", &[Event], D1, &[Slides]),
     spec("slides:get-all-comments", &[Invoke], D1, &[Slides]),
     spec("slides:get-animations", &[Invoke], D1, &[Slides]),
     spec("slides:get-chart-data", &[Invoke], D1, &[Slides]),

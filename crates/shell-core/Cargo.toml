@@ -1,0 +1,19 @@
+[package]
+name = "shell-core"
+description = "The stage 3 shell's IPC core without Tauri: the wire form of IpcValue, the channel table with its start-up checks, the core thread and the dispatch to it"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+# No Tauri here: crates/shell (Tauri 3 + CEF) and crates/ipc-probe (the Rust
+# side of tools/ipc-diff, on a Linux runner without CEF) both build on it.
+[dependencies]
+shell-contract = { path = "../shell-contract" }
+serde_json.workspace = true
+shell-ipc-u = { path = "../shell-ipc/u" }
+shell-ipc-a = { path = "../shell-ipc/a" }
+shell-ipc-m = { path = "../shell-ipc/m" }
+shell-ipc-w = { path = "../shell-ipc/w" }
+shell-ipc-d1 = { path = "../shell-ipc/d1" }
+shell-ipc-d2 = { path = "../shell-ipc/d2" }

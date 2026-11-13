@@ -1,0 +1,37 @@
+[
+  {
+    "name": "keepInTray defaults to on",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "    keep_in_tray: false,\n};",
+    "replace": "    keep_in_tray: true,\n};",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "set-settings ignores the saved value of the other flag",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "keep_in_tray: flag(\"keepInTray\", current.keep_in_tray),",
+    "replace": "keep_in_tray: flag(\"keepInTray\", DEFAULT.keep_in_tray),",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "set-settings writes under another key",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "write_app_setting(&settings_path, \"quickLook\"",
+    "replace": "write_app_setting(&settings_path, \"quicklook\"",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "a write error is swallowed",
+    "file": "shell-ipc/w/src/quick_look.rs",
+    "find": "                .map_err(node_error)?;",
+    "replace": "                .ok();",
+    "groups": ["w/quick-look"]
+  },
+  {
+    "name": "dispatch skips the surface check",
+    "file": "shell-core/src/dispatch.rs",
+    "find": "if !spec.surfaces.contains(&sender.surface) {",
+    "replace": "if false && !spec.surfaces.contains(&sender.surface) {",
+    "groups": ["w/quick-look"]
+  }
+]

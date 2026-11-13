@@ -1619,6 +1619,8 @@ export default function App() {
       if (!result.ok) {
         console.error('[html] export failed:', result.error)
         setNotice(t('exportFailed'))
+        // the command-line export reports why nothing was written (a marked page, for one)
+        if (outPath) throw new Error(result.error)
         return false
       }
       if ('skipped' in result && result.skipped?.length) {

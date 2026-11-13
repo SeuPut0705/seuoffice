@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/zip-gate",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "Metered-inflation zip bomb gate shared by the docx and pptx engines: reject archives whose parts inflate past what they declare, before any caller materialises them",

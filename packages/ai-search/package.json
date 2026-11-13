@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/ai-search",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "Shared web/image search (Serper, Serply, SearchApi, Tavily, Parallel, DuckDuckGo fallback) for docs/sheets/slides AI. No Electron deps; runs in main process (Node fetch).",

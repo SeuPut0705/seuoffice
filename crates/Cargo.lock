@@ -476,6 +476,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "ipc-probe"
+version = "0.1.0"
+dependencies = [
+ "main-core",
+ "serde_json",
+ "shell-contract",
+ "shell-core",
+ "shell-ipc-a",
+ "shell-ipc-d1",
+ "shell-ipc-d2",
+ "shell-ipc-m",
+ "shell-ipc-u",
+ "shell-ipc-w",
+]
+
+[[package]]
 name = "itoa"
 version = "1.0.19"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -994,6 +1010,20 @@ name = "shell-contract"
 version = "0.1.0"
 
 [[package]]
+name = "shell-core"
+version = "0.1.0"
+dependencies = [
+ "serde_json",
+ "shell-contract",
+ "shell-ipc-a",
+ "shell-ipc-d1",
+ "shell-ipc-d2",
+ "shell-ipc-m",
+ "shell-ipc-u",
+ "shell-ipc-w",
+]
+
+[[package]]
 name = "shell-ipc-a"
 version = "0.1.0"
 dependencies = [
@@ -1037,6 +1067,8 @@ dependencies = [
 name = "shell-ipc-w"
 version = "0.1.0"
 dependencies = [
+ "jscompat",
+ "main-core",
  "serde_json",
  "shell-contract",
 ]

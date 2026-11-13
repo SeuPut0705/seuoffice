@@ -1,7 +1,7 @@
 {
   "source": "packages/docx-engine/tests/fixtures/truths/render-hf-rtl-neutral-size/probe.docx",
   "paragraphs": 2,
-  "hashes": ["7eefb77974a47a04", "5956646719ed45ee"],
+  "hashes": ["a73c40deca289d0e", "d72e9bba8ce1f248"],
   "cellParagraphs": 0,
   "cellHashes": [],
   "boxParagraphs": 0,

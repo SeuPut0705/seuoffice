@@ -1,0 +1,14 @@
+{
+  "name": "ipc-diff",
+  "version": "0.1.0",
+  "license": "Apache-2.0",
+  "private": true,
+  "type": "module",
+  "description": "Parity gate of stage 3: each IPC channel's Rust handler (crates/shell-ipc, through crates/ipc-probe) against its TypeScript ipcMain handler",
+  "scripts": {
+    "build": "node build.mjs",
+    "gate": "node build.mjs && tsx main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  }
+}

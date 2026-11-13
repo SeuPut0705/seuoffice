@@ -14,10 +14,16 @@ members = [
   "shell-contract",
   # one crate per stage 3 area batch: shell-ipc/u, a, m, w, d1, d2
   "shell-ipc/*",
+  # the shell's IPC core without Tauri (wire form, channel table, dispatch)
+  # and the Rust side of tools/ipc-diff (stage 3, batch W)
+  "shell-core",
+  "ipc-probe",
 ]
 # vendor: third-party source carried with patches, outside fmt, clippy and the
 # workspace tests; spike-main-bridge: an experiment with its own lock
-exclude = ["vendor", "spike-main-bridge"]
+# shell: the Tauri 3 + CEF app, its own workspace and lock, built on the Mac
+# and Windows runners only (CEF is a download of about 1 GB)
+exclude = ["vendor", "spike-main-bridge", "shell"]
 resolver = "3"
 
 [workspace.package]
