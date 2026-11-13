@@ -151,6 +151,10 @@ impl From<NodeError> for WriteGuardError {
     }
 }
 
+/// The `change` of `updateData`: the current text (`None` when absent) to the
+/// new text, `None` to leave the file alone, or what the change fails with
+pub type DataChange<'r, E> = &'r mut dyn FnMut(Option<&str>) -> Result<Option<String>, E>;
+
 /// `DataUpdateResult`
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct DataUpdateResult {
@@ -361,7 +365,7 @@ impl ProjectWriteGuard {
         &self,
         root: &str,
         rel_path: &str,
-        change: &mut dyn FnMut(Option<&str>) -> Result<Option<String>, E>,
+        change: DataChange<'_, E>,
         data_dir: Option<&str>,
     ) -> Result<DataUpdateResult, E> {
         fn lift<E: From<WriteGuardError>>(error: impl Into<WriteGuardError>) -> E {

@@ -148,6 +148,11 @@ impl std::fmt::Display for ChatStoreError {
 
 impl std::error::Error for ChatStoreError {}
 
+/// The `change` of `ChatStoreGuide::update_data`: the current text and the
+/// install id supplier to the text to write (`None`: write nothing)
+pub type ChatDataChange<'r> =
+    &'r mut dyn FnMut(Option<&str>, &mut dyn FnMut() -> String) -> Option<String>;
+
 /// `ChatStoreGuide`: the guide calls the chat store uses. A path is `None`
 /// (`null`) where the guide knows no such project or the path is refused.
 pub trait ChatStoreGuide {
@@ -169,7 +174,7 @@ pub trait ChatStoreGuide {
         &mut self,
         id: &str,
         rel_path: &str,
-        change: &mut dyn FnMut(Option<&str>, &mut dyn FnMut() -> String) -> Option<String>,
+        change: ChatDataChange<'_>,
         data_dir: Option<&str>,
     ) -> DataUpdateOutcome;
 

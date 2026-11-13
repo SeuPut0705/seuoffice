@@ -379,8 +379,7 @@ pub fn download_prompt_options(lang: Lang, file_name: &str) -> MessageBoxOptions
 fn folder_base_name(folder_path: &str) -> &str {
     folder_path
         .split(['\\', '/'])
-        .filter(|part| !part.is_empty())
-        .next_back()
+        .rfind(|part| !part.is_empty())
         .unwrap_or(folder_path)
 }
 

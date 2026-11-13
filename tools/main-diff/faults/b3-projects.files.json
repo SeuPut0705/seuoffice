@@ -728,8 +728,8 @@
   {
     "name": "project-dialog-text: an empty path part is a folder name",
     "file": "main-core/src/shell/projects/project_dialog_text.rs",
-    "find": ".filter(|part| !part.is_empty())",
-    "replace": ".filter(|_part| true)",
+    "find": ".rfind(|part| !part.is_empty())",
+    "replace": ".rfind(|_part| true)",
     "fn": ["project-dialog-text.useExistingPromptOptions"]
   },
   {

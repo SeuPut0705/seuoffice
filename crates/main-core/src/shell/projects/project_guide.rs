@@ -54,7 +54,7 @@ use jscompat::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::chat_store::ChatStoreGuide;
+use super::chat_store::{ChatDataChange, ChatStoreGuide};
 use super::cloud_files::{SyncFolderOptions, is_under_known_sync_folder};
 use super::context::assemble_trusted_context;
 use super::folder_files::{
@@ -85,7 +85,8 @@ use super::stand_ins::process_platform;
 use super::trust::{TrustScanInput, read_hashed_texts, scan_for_trust};
 use super::visibility::is_ai_visible_path;
 use super::write_guard::{
-    DataUpdateResult, ProjectWriteGuard, ProjectWriteRefusal, ProjectWriteRefused, WriteGuardError,
+    DataChange, DataUpdateResult, ProjectWriteGuard, ProjectWriteRefusal, ProjectWriteRefused,
+    WriteGuardError,
 };
 use crate::node_fs::{NodeError, namespaced};
 use crate::packages::electron_utils::default_save_dir::Thrown;
@@ -238,6 +239,9 @@ pub type EnvLookup = Box<dyn Fn(&str) -> Option<String>>;
 /// context (spec 5.4 item 4)
 pub type ContextFilesProvider = Box<dyn FnMut(&ContextFilesRequest) -> ContextFiles>;
 
+/// `console.warn(label, error)` of `ProjectGuideDeps.warn`
+pub type WarnFn = Box<dyn FnMut(&str, &str)>;
+
 /// `ProjectGuideDeps`
 pub struct ProjectGuideDeps {
     /// `<userData>/app-settings.json`
@@ -274,7 +278,7 @@ pub struct ProjectGuideDeps {
     pub local_date: Box<dyn FnMut(f64) -> LocalDateParts>,
     /// `console.warn(label, error)`, `error` being its message; absent:
     /// nothing is printed
-    pub warn: Option<Box<dyn FnMut(&str, &str)>>,
+    pub warn: Option<WarnFn>,
 }
 
 /// `PROJECT_TOUCH_WRITE_MS`: a project's "last used" time is written to
@@ -528,10 +532,7 @@ fn assert_folder_relative(rel_path: &str) -> Result<(), GuideError> {
     if trim(rel_path).is_empty()
         || js_regex!(r"^[\\/]").test(rel_path)
         || js_regex!(r"^[A-Za-z]:").test(rel_path)
-        || js_regex!(r"[\\/]")
-            .split(rel_path)
-            .iter()
-            .any(|segment| *segment == "..")
+        || js_regex!(r"[\\/]").split(rel_path).contains(&"..")
     {
         return Err(GuideError::plain(
             "expected a path relative to the project folder",
@@ -614,7 +615,7 @@ impl DataWriter<'_> {
     fn update(
         &self,
         rel_path: &str,
-        change: &mut dyn FnMut(Option<&str>) -> Result<Option<String>, GuideError>,
+        change: DataChange<'_, GuideError>,
     ) -> Result<DataUpdateResult, GuideError> {
         self.guide.guard.update_data::<GuideError>(
             &self.root,
@@ -653,7 +654,7 @@ pub struct ProjectGuide {
     language: RefCell<Box<dyn FnMut() -> String>>,
     context_files: Option<RefCell<ContextFilesProvider>>,
     local_date: RefCell<Box<dyn FnMut(f64) -> LocalDateParts>>,
-    warn: RefCell<Option<Box<dyn FnMut(&str, &str)>>>,
+    warn: RefCell<Option<WarnFn>>,
     guard: ProjectWriteGuard,
     /// Projects whose `.seuoffice/` could not be written during this app run
     unwritable: RefCell<Vec<ProjectId>>,
@@ -1599,7 +1600,7 @@ impl ProjectGuide {
         &self,
         id: &str,
         rel_path: &str,
-        change: &mut dyn FnMut(Option<&str>) -> Result<Option<String>, GuideError>,
+        change: DataChange<'_, GuideError>,
         data_dir: Option<&str>,
     ) -> Result<DataUpdateOutcome, GuideError> {
         assert_not_project_file(rel_path)?;
@@ -2493,7 +2494,7 @@ macro_rules! guide_traits {
                 &mut self,
                 id: &str,
                 rel_path: &str,
-                change: &mut dyn FnMut(Option<&str>, &mut dyn FnMut() -> String) -> Option<String>,
+                change: ChatDataChange<'_>,
                 data_dir: Option<&str>,
             ) -> DataUpdateOutcome {
                 let guide = self.guide();

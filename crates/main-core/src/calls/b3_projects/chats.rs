@@ -24,9 +24,9 @@ use crate::packages::project_store::{
 };
 use crate::shell::projects::chat_store::{
     CHAT_STATE_CACHE_LIMIT, CHAT_TITLE_CHARS, CHAT_TITLE_MAX_CHARS, ChatAppendedEvent,
-    ChatAppendedListener, ChatSender, ChatStoreError, ChatStoreGuide, ChatStoreHost,
-    ChatStoreOptions, FOREIGN_SCAN_CACHE_LIMIT, ListenerId, MAX_PENDING_OPENING_MESSAGES,
-    ProjectChatStore, default_new_id,
+    ChatAppendedListener, ChatDataChange, ChatSender, ChatStoreError, ChatStoreGuide,
+    ChatStoreHost, ChatStoreOptions, FOREIGN_SCAN_CACHE_LIMIT, ListenerId,
+    MAX_PENDING_OPENING_MESSAGES, ProjectChatStore, default_new_id,
 };
 use crate::shell::projects::folder_files::data_dir_name;
 use crate::shell::projects::paths::{canonical_path, relative_inside};
@@ -238,7 +238,7 @@ impl ChatStoreGuide for FakeGuide {
         &mut self,
         id: &str,
         rel_path: &str,
-        change: &mut dyn FnMut(Option<&str>, &mut dyn FnMut() -> String) -> Option<String>,
+        change: ChatDataChange<'_>,
         data_dir: Option<&str>,
     ) -> DataUpdateOutcome {
         let path = path_of(&self.world.borrow(), id, rel_path, data_dir);
