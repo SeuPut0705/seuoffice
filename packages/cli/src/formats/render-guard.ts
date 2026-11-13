@@ -1,5 +1,5 @@
 import { readFile } from 'node:fs/promises'
-import { extname, posix } from 'node:path'
+import { extname } from 'node:path'
 import {
   fileHoldsHiddenContent,
   HIDDEN_CONTENT_EXTENSIONS,
@@ -7,6 +7,7 @@ import {
   xmlHoldsMark,
 } from '@seuoffice/file-parse/hidden-content'
 import JSZip from 'jszip'
+import { PackageArchive, resolveTarget } from '@seuoffice/pptx-engine'
 import { CliError, EXIT } from '../result'
 import { openDeck } from './pptx'
 import { withheldCellsIn } from './xlsx'
@@ -23,15 +24,15 @@ import { withheldCellsIn } from './xlsx'
 
 /**
  * A slide's own part and the SmartArt parts it points to: a diagram's words
- * (and their marks) live in its data part, which the slide draws from.
+ * (and their marks) live in its data part, which the slide draws from. The
+ * targets are read the way the engine reads them (rooted, percent-encoded).
  */
-async function slideParts(zip: JSZip, slidePath: string): Promise<string[]> {
-  const relsPath = slidePath.replace(/([^/]+)$/, '_rels/$1.rels')
-  const rels = (await zip.file(relsPath)?.async('string')) ?? ''
-  const targets = [...rels.matchAll(/\bTarget\s*=\s*(?:"([^"]*)"|'([^']*)')/g)]
-    .map((m) => posix.normalize(posix.join(posix.dirname(slidePath), m[1] ?? m[2] ?? '')))
-    .filter((path) => path.startsWith('ppt/diagrams/'))
-  return [slidePath, ...targets]
+function slideParts(archive: PackageArchive, slidePath: string): string[] {
+  const diagrams = [...archive.readRels(slidePath).values()]
+    .filter((rel) => /\/diagram\w*$/i.test(rel.type))
+    .map((rel) => resolveTarget(slidePath, rel.target))
+    .filter(Boolean)
+  return [slidePath, ...diagrams]
 }
 
 /** a deck's slides (or its slide `only`), a deck the engine cannot lay out judged by every slide and diagram part */
@@ -39,12 +40,13 @@ async function deckHoldsMark(bytes: Uint8Array, only: number | undefined): Promi
   const zip = await JSZip.loadAsync(bytes).catch(() => null)
   if (!zip) return false
   const opened = await openDeck(bytes).catch(() => null)
-  if (!opened) return packageHoldsMark(zip, /^ppt\/(?:slides|diagrams)\/[^/]+\.xml$/)
+  const archive = opened ? await PackageArchive.open(bytes).catch(() => null) : null
+  if (!opened || !archive) return packageHoldsMark(zip, /^ppt\/(?:slides|diagrams)\/[^/]+\.xml$/)
   for (const [index, slide] of opened.deck.slides.entries()) {
     if (only !== undefined && index !== only) continue
-    for (const path of await slideParts(zip, slide.path)) {
-      const part = zip.file(path)
-      if (part && xmlHoldsMark(await part.async('string'))) return true
+    for (const path of slideParts(archive, slide.path)) {
+      const xml = archive.readText(path)
+      if (xml !== null && xmlHoldsMark(xml)) return true
     }
   }
   return false
