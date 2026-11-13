@@ -3,7 +3,7 @@
 # the xlsx sidecar (apps/sheets/native/xlsx-engine), its WASI build
 # (apps/sheets/native/xlsx-wasm) and the rhwp engine built into
 # vendor/rhwp-core. Run one locally with
-#   cargo deny --manifest-path <Cargo.toml> check --config deny.toml licenses bans
+#   cargo deny --config deny.toml --manifest-path <Cargo.toml> check licenses bans
 #
 # A dependency must offer at least one licence from the list (cargo-deny takes
 # the most favourable branch of an OR expression). Each one only asks for its
