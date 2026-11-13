@@ -2,6 +2,8 @@
 //! one file per TypeScript file.
 
 pub mod ai_default_fonts;
+pub mod ai_ipc;
+pub mod ai_proposal;
 pub mod cfb_sniff;
 pub mod element_clipboard;
 pub mod export_images;
