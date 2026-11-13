@@ -31,7 +31,7 @@ import {
   writeFileSync,
 } from 'node:fs'
 import { tmpdir } from 'node:os'
-import { dirname, join, relative } from 'node:path'
+import { basename, dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { rustCall } from './rust.ts'
 import type { Case, FileSpec, FnSpec, Group, TsContext } from './types.ts'
@@ -175,11 +175,14 @@ async function side(
     const wire = await run(substitute(c.args, dir) as unknown[], dir)
     const files = snapshot(dir)
     // the folder appears as written and inside one or two JSON strings, where
-    // a Windows path's backslashes are escaped once or twice
+    // a Windows path's backslashes are escaped once or twice; its own name
+    // (`main-diff-` and a random suffix, different on each side) also appears
+    // alone, as the folder name of a file at its top
     const once = JSON.stringify(dir).slice(1, -1)
     const twice = JSON.stringify(once).slice(1, -1)
     let text = JSON.stringify({ answer: wire, files })
     for (const form of [twice, once, dir]) text = text.split(form).join('$DIR')
+    text = text.split(basename(dir)).join('$DIRNAME')
     return text
   } finally {
     cleanUp(dir)

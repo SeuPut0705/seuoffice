@@ -18,14 +18,14 @@
 //! the hub's events and takes the answers with [`McpHubIpc::take_settled`].
 //! `once('destroyed')` of a sender is [`McpHubIpc::sender_destroyed`], which
 //! the adapter calls after [`McpHubIpcHost::watch_destroyed`] asked for it.
-//! `hub.onChanged(...)` is [`McpHubIpc::on_changed`], which the caller runs
-//! whenever [`McpHubIpc::take_changed`] says so. The preload-bridge type
+//! `hub.onChanged(...)` is [`McpHubIpc::on_changed`], which the caller runs for
+//! each notice [`McpHubIpc::take_changed`] returns. The preload-bridge type
 //! assertion (`McpToolsBridgeFitsSkill`) is a compile-time check in TypeScript
 //! and has no counterpart.
 
 use jscompat::{JsonValue, number_to_string};
 
-use super::hub::{HubAnswer, HubResult, McpHub, Reply, Ticket};
+use super::hub::{ChangedNotice, HubAnswer, HubResult, McpHub, Reply, Ticket};
 use super::hub_input::{
     boolean_of, mcp_server_input_of, mcp_server_patch_of, paste_text_of, permission_of_input,
     plan_fingerprint_of, server_id_of, tool_name_of,
@@ -177,18 +177,19 @@ impl<'h> McpHubIpc<'h> {
             .collect()
     }
 
-    /// whether the hub has something the windows show to tell them of
-    /// (`hub.onChanged`'s coalesced microtask); run [`Self::on_changed`] when it does
-    pub fn take_changed(&mut self) -> bool {
+    /// the notices `hub.onChanged` told its listeners of during the step the caller
+    /// drove (see `hub`'s module doc), in order; run [`Self::on_changed`] for each
+    pub fn take_changed(&mut self) -> Vec<ChangedNotice> {
         self.hub.take_changed()
     }
 
-    /// the listener `registerMcpHubIpc` gives `hub.onChanged`: tell every
-    /// window of a change, and the shell window with the settings view
-    pub fn on_changed<X: McpHubIpcHost>(&mut self, host: &mut X) {
+    /// the listener `registerMcpHubIpc` gives `hub.onChanged`, for one notice: tell
+    /// every window of a change, and the shell window with the settings view the
+    /// listener read when the notice fired (`notice.view`)
+    pub fn on_changed<X: McpHubIpcHost>(&mut self, host: &mut X, notice: &ChangedNotice) {
         host.broadcast_tools_changed();
         if host.settings_window_open() {
-            host.send_settings_changed(&self.hub.settings_view());
+            host.send_settings_changed(&notice.view);
         }
     }
 
