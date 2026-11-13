@@ -99,7 +99,7 @@ pub fn edited_comment_model_text(
             &first_mark_label(marked_xml),
         )),
     };
-    Ok(model_text.filter(|model_text| model_text != text))
+    Ok(model_text)
 }
 
 /// The first picture a comment carries. The blip's relationship resolves
@@ -216,7 +216,7 @@ pub fn parse_comments(package: &Package) -> Result<Vec<CommentInfo>, Thrown> {
             author: node.attr("w:author").unwrap_or("").to_owned(),
             initials: node.attr("w:initials").map(str::to_owned),
             date: node.attr("w:date").map(str::to_owned),
-            model_text: comment_model_text(node).filter(|model_text| *model_text != comment_text),
+            model_text: comment_model_text(node),
             marked_xml: if has_mark_element(node) {
                 slices.get(id).cloned()
             } else {

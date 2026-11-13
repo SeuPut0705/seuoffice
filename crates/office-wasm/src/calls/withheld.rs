@@ -43,8 +43,8 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let absent: Option<bool> = super::arg(args, "absent")?;
             value(withheld_label_of((absent != Some(true)).then_some(text)))
         }
-        "withheldPartLabel" => optional(withheld_part_label(text)),
-        "withheldBlockLabel" => optional(withheld_block_label(text)),
+        "withheldPartLabel" => value(withheld_part_label(text)),
+        "withheldBlockLabel" => value(withheld_block_label(text)),
         "hiddenRunProperties" => value(hidden_run_properties(text)),
         "hasWithheldTrace" => value(has_withheld_trace(text)),
         "hasMarkElement" => over_node(text, |node| value(has_mark_element(node))),
