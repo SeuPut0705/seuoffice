@@ -1,0 +1,191 @@
+[
+  {
+    "name": "json schema writes a number for a string",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "Kind::String => json.set(\"type\", text(\"string\")),",
+    "replace": "Kind::String => json.set(\"type\", text(\"number\")),",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "optional keeps the wrapped description over its own",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if json.get(key).is_none() {",
+    "replace": "if true {",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "int does not widen the minimum",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "narrow_min(&mut minimum, MIN_SAFE_INTEGER);",
+    "replace": "let _ = MIN_SAFE_INTEGER;",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "a later minimum may lower the bound",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "(*aggregate).is_none_or(|current| value > current)",
+    "replace": "(*aggregate).is_none_or(|current| value < current)",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "required lists the optional keys",
+    "file": "main-core/src/packages/zod.rs",
+    "find": ".filter(|(_, field)| !optional_in(field))",
+    "replace": ".filter(|(_, field)| optional_in(field))",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "a loose object lists itself closed",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "json.set(\"additionalProperties\", JsonValue::Object(Obj::new()));",
+    "replace": "json.set(\"additionalProperties\", JsonValue::Bool(false));",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "a record with no enum keys lists required",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "&& !keys.is_empty()",
+    "replace": "&& keys.is_empty()",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "a union of one type stays an array",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "let type_value = if types.len() == 1 {",
+    "replace": "let type_value = if types.len() == 0 {",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "a union folds branches that are not bare types",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if entries.len() != 1 || entries[0].0 != \"type\" {",
+    "replace": "if entries[0].0 != \"type\" {",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "a numeric record key keeps a string member",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if has(\"string\") || !(has(\"number\") || has(\"integer\")) {",
+    "replace": "if !(has(\"number\") || has(\"integer\")) {",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "an integer record key takes the number pattern",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "let pattern = if has(\"number\") {",
+    "replace": "let pattern = if has(\"number\") || has(\"integer\") {",
+    "fn": ["zod.toJsonSchema"]
+  },
+  {
+    "name": "optional keys are listed as required",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "Kind::Union(options) => options.iter().any(optional_in),",
+    "replace": "Kind::Union(options) => options.iter().all(optional_in),",
+    "fn": ["zod.toJsonSchema", "zod.safeParse"]
+  },
+  {
+    "name": "shape keys are read in reverse",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "for (key, schema) in shape {",
+    "replace": "for (key, schema) in shape.iter().rev() {",
+    "fn": ["zod.toJsonSchema", "zod.safeParse"]
+  },
+  {
+    "name": "a missing key without issues is worded as invalid input",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "\"Invalid input: expected nonoptional, received undefined\".to_owned()",
+    "replace": "\"Invalid input\".to_owned()",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "a loose object copies __proto__",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if fields.iter().any(|(known, _)| known == key) || key == \"__proto__\" {",
+    "replace": "if fields.iter().any(|(known, _)| known == key) {",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "a nested object keeps unknown keys",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "Kind::Object { shape, loose } => run_object(shape, *loose, input),",
+    "replace": "Kind::Object { shape, loose } => run_object(shape, true, input),",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "array length checks stop at any issue",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if explicitly_aborted(&issues) {",
+    "replace": "if aborted(&issues) {",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "an oversized array is read element by element",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "&& length > cap",
+    "replace": "&& length > cap + 1000.0",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "one option that did not abort does not speak for the union",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if not_aborted.len() == 1",
+    "replace": "if not_aborted.len() == 99",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "a union of one option is read as a union",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if options.len() == 1 {",
+    "replace": "if options.len() == 99 {",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "the integer check does not stop the checks after it",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "Some(&JsonValue::Number(x)),\n                        Some(false),",
+    "replace": "Some(&JsonValue::Number(x)),\n                        Some(true),",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "a numeric record key is not retried as a number",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if !key_result.issues.is_empty() && is_number_key(key) {",
+    "replace": "if !key_result.issues.is_empty() && is_number_key(key) && false {",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "an index in a path is written as a key",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "out.push_str(&format!(\"[{segment_text}]\"));",
+    "replace": "out.push_str(&format!(\".{segment_text}\"));",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "messages are joined by a space",
+    "file": "main-core/src/packages/zod.rs",
+    "find": ".join(\"\\n\")",
+    "replace": ".join(\" \")",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "one enum value is worded as a list",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if values.len() == 1 {",
+    "replace": "if values.len() == 99 {",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "an array minimum is worded exclusive",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "format!(\"Too small: expected array to have >={limit} items\")",
+    "replace": "format!(\"Too small: expected array to have >{limit} items\")",
+    "fn": ["zod.safeParse"]
+  },
+  {
+    "name": "unrecognized keys are never plural",
+    "file": "main-core/src/packages/zod.rs",
+    "find": "if keys.len() > 1 { \"s\" } else { \"\" },",
+    "replace": "\"\",",
+    "fn": ["zod.safeParse"]
+  }
+]
