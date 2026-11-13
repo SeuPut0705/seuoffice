@@ -592,8 +592,9 @@ struct BodyState {
     signal: Option<Id>,
     /// the fetch whose stream this body (or a clone of it) reads
     source: Id,
-    /// the `Cmd::Read` in flight, which a cancel of the body ends
-    read: Option<Id>,
+    /// the `Cmd::Read`s in flight (a reader takes several `read()` calls at
+    /// once), which a cancel of the body ends
+    reads: Vec<Id>,
 }
 
 /// The stream of one fetch, which `response.clone()` tees: it is cancelled
@@ -786,7 +787,7 @@ impl Rt {
                                 done: false,
                                 signal: signal.map(|s| s.id),
                                 source: id,
-                                read: None,
+                                reads: Vec::new(),
                             },
                         );
                         st.sources.insert(
@@ -1001,8 +1002,9 @@ impl Rt {
             id,
         });
         let op = self.op(signal.as_ref(), |id| Cmd::Read { id, body });
+        let id = op.id;
         if let Some(b) = self.0.st.borrow_mut().bodies.get_mut(&body) {
-            b.read = Some(op.id);
+            b.reads.push(id);
         }
         let outcome = op.await;
         // `reader.cancel()` took the read: it ends as `{ done: true }`, and
@@ -1013,7 +1015,13 @@ impl Rt {
             .borrow_mut()
             .bodies
             .get_mut(&body)
-            .is_none_or(|b| b.read.take().is_none());
+            .is_none_or(|b| match b.reads.iter().position(|r| *r == id) {
+                Some(at) => {
+                    b.reads.remove(at);
+                    false
+                }
+                None => true,
+            });
         if cancelled {
             return Ok(None);
         }
@@ -1056,7 +1064,7 @@ impl Rt {
             return;
         }
         b.done = true;
-        let read = b.read.take();
+        let reads = std::mem::take(&mut b.reads);
         let source = b.source;
         if let Some(src) = st.sources.get_mut(&source) {
             src.live = src.live.saturating_sub(1);
@@ -1066,7 +1074,7 @@ impl Rt {
             }
         }
         drop(st);
-        if let Some(read) = read {
+        for read in reads {
             self.settle(read, Ok(Answer::End));
         }
     }
@@ -1084,7 +1092,7 @@ impl Rt {
                 done,
                 signal,
                 source,
-                read: None,
+                reads: Vec::new(),
             },
         );
         if !done && let Some(src) = st.sources.get_mut(&source) {
