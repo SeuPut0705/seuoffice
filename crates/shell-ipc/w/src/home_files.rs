@@ -24,12 +24,9 @@ use main_core::docs::starred_files::{
 use main_core::node_fs::NodeError;
 use main_core::packages::electron_utils::atomic_write::write_json_atomic;
 use main_core::packages::electron_utils::default_save_dir::{
-    PathProvider, SaveDirState, Thrown as SaveDirThrown, configured_default_save_dir,
-    default_save_dir_fallback,
+    PathProvider, Thrown as SaveDirThrown, configured_default_save_dir, default_save_dir_fallback,
 };
-use main_core::packages::electron_utils::dialog_memory::{
-    Dialog, DialogMemory, show_open_dialog_with_memory,
-};
+use main_core::packages::electron_utils::dialog_memory::{Dialog, show_open_dialog_with_memory};
 use main_core::packages::electron_utils::message_box::ParentWindow;
 use main_core::packages::i18n::{Lang, install_lang, normalize_lang};
 use main_core::shell::app_routing::rename_stays_in_app;
@@ -581,9 +578,9 @@ struct Home {
     os: OsShellHost,
     main_window: MainWindowHost,
     provided: Rc<Provided>,
-    save_dir: RefCell<SaveDirState>,
+    save_dir: crate::SharedSaveDirState,
     save_dir_noticed: Cell<bool>,
-    dialog_memory: RefCell<DialogMemory>,
+    dialog_memory: crate::SharedDialogMemory,
     error_dialog: RefCell<ErrorDialog>,
 }
 
@@ -741,7 +738,7 @@ impl Home {
     fn default_save_dir(&self) -> Result<String, IpcError> {
         configured_default_save_dir(
             &Paths(self.paths.as_ref()),
-            &mut self.save_dir.borrow_mut(),
+            &mut self.save_dir.lock().unwrap(),
             self.host.now_ms(),
         )
         .map_err(|e| error(e.0))
@@ -927,7 +924,7 @@ impl Home {
 
     /// `noticeSaveDirFallback()`: once per run
     fn notice_save_dir_fallback(&self) {
-        let Some(fallback) = default_save_dir_fallback(&self.save_dir.borrow()) else {
+        let Some(fallback) = default_save_dir_fallback(&self.save_dir.lock().unwrap()) else {
             return;
         };
         if self.save_dir_noticed.replace(true) {
@@ -984,7 +981,7 @@ impl Home {
         options: &JsObject<JsonValue>,
     ) -> (bool, Vec<String>) {
         let result = show_open_dialog_with_memory(
-            &mut self.dialog_memory.borrow_mut(),
+            &mut self.dialog_memory.lock().unwrap(),
             &mut OpenDialog {
                 dialogs: &self.dialogs,
             },
@@ -1156,9 +1153,9 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
         os: services.hosts.need(Batch::W)?,
         main_window: services.hosts.need(Batch::W)?,
         provided: registry.provided(),
-        save_dir: RefCell::default(),
+        save_dir: services.hosts.need(Batch::W)?,
         save_dir_noticed: Cell::new(false),
-        dialog_memory: RefCell::default(),
+        dialog_memory: services.hosts.need(Batch::W)?,
         error_dialog: RefCell::default(),
     });
     let invoke = ChannelKind::Invoke;

@@ -499,6 +499,7 @@ pub fn register(
         views: services.views.clone(),
         paths: services.paths.clone(),
         provided: registry.provided(),
+        save_dir: hosts.need(Batch::W)?,
     };
     legacy::register(registry, &shell.legacy, &shell.home)?;
     let projects = Projects::new(shell);

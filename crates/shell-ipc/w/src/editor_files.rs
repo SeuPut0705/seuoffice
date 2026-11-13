@@ -7,7 +7,7 @@
 //! (`setDocsShellHooks`), the open documents' dirty state (`setOpenFilesSource`),
 //! `@seuoffice/file-parse`, the UI language, the clock, and the sheets tabs.
 
-use std::cell::{Cell, RefCell};
+use std::cell::Cell;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::rc::Rc;
@@ -17,9 +17,7 @@ use std::time::UNIX_EPOCH;
 use jscompat::node_path::host::{basename, extname, is_absolute, join};
 use jscompat::{JsObject, JsonValue, base64, to_iso_string};
 use main_core::node_fs::node_error as fs_error;
-use main_core::packages::electron_utils::dialog_memory::{
-    Dialog, DialogMemory, show_open_dialog_with_memory,
-};
+use main_core::packages::electron_utils::dialog_memory::{Dialog, show_open_dialog_with_memory};
 use main_core::packages::electron_utils::safe_external_url::safe_external_url;
 use main_core::packages::electron_utils::unsaved_files::{
     OpenFileState, OpenFilesHolder, OpenFilesSourceFailed, assert_file_saved,
@@ -922,18 +920,6 @@ where
     registry.register(Batch::W, channel, kind, Rc::new(handler))
 }
 
-/// The dialog memory of the process (`lastUsedDirectoryByDialog.get(dialog)`):
-/// every module that opens files with a memory shares the one in `provided`
-fn dialog_memory(registry: &dyn Registry) -> Rc<RefCell<DialogMemory>> {
-    let provided = registry.provided();
-    if let Some(memory) = provided.all::<RefCell<DialogMemory>>().into_iter().next() {
-        return memory;
-    }
-    let memory = Rc::new(RefCell::new(DialogMemory::new()));
-    provided.add::<RefCell<DialogMemory>>(memory.clone());
-    memory
-}
-
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
     let hosts = &services.hosts;
     let dialogs: DialogsHost = hosts.need(Batch::W)?;
@@ -953,7 +939,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
         open_files: hosts.need(Batch::W)?,
         cache: Arc::default(),
     };
-    let memory = dialog_memory(registry);
+    let memory: crate::SharedDialogMemory = hosts.need(Batch::W)?;
     let temp = services.paths.path(PathName::Temp);
     let home = services.paths.path(PathName::Home);
 
@@ -997,7 +983,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
         );
         let mut dialog = HostDialog(dialogs.clone());
         let result = show_open_dialog_with_memory(
-            &mut memory.borrow_mut(),
+            &mut memory.lock().unwrap(),
             &mut dialog,
             parent.as_ref(),
             &options,

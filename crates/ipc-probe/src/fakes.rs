@@ -18,6 +18,7 @@ use shell_contract::value::IpcValue;
 use shell_contract::{
     ClipboardHost, ContentsHost, DialogsHost, Hosts, MainWindowHost, OsShellHost, Surface,
 };
+use shell_ipc_w::{SharedDialogMemory, SharedSaveDirState};
 
 use crate::{ProbeLog, hex, unhex};
 
@@ -379,4 +380,10 @@ pub fn insert_shared(hosts: &mut Hosts, case: &Value, views: &[Sender], log: &Pr
     let run_id = case["recoveryRunId"].as_str().unwrap_or("0000000000000000");
     let recovery = Arc::new(Mutex::new(SharedRecoveryState::new(run_id)));
     hosts.insert(recovery);
+    // the process's one dialog memory and default-save-folder state (every
+    // batch shares them), fresh for each case
+    let memory: SharedDialogMemory = Arc::default();
+    hosts.insert(memory);
+    let save_dir: SharedSaveDirState = Arc::default();
+    hosts.insert(save_dir);
 }
