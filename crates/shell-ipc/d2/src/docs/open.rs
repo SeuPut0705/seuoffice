@@ -254,7 +254,7 @@ impl Docs {
                 .replace_all(&basename(source), |_| ".docx".to_owned()),
         ]);
         loop {
-            let result = self.save_dialog(
+            let result = self.save_dialog_in_default_dir(
                 view,
                 js_obj(vec![
                     ("title", js_str(self.tm("dlgSaveAs"))),
@@ -903,7 +903,6 @@ impl Docs {
     /// `exportDocsHeadless(input, outPath, format, timeoutMs)` up to its
     /// window: the shell made the hidden view `view`; its renderer takes the
     /// document and the target from the queues, and `then` gets the report
-    #[cfg_attr(not(test), allow(dead_code))]
     pub(crate) fn begin_headless_export(
         self: &Rc<Self>,
         view: ViewId,

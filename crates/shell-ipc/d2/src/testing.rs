@@ -542,13 +542,6 @@ impl Rt {
         }
     }
 
-    /// `ipcRenderer.sendSync`
-    pub fn send_sync(&mut self, channel: &str, from: Sender, args: Vec<IpcValue>) -> Reply {
-        self.call(ChannelKind::SendSync, channel, from, args)
-            .take()
-            .unwrap_or_else(|| panic!("{channel} did not answer"))
-    }
-
     /// The events emitted since the last call
     pub fn events(&self) -> Vec<Event> {
         std::mem::take(&mut *self.events.0.lock().unwrap())

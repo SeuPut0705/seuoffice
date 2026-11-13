@@ -34,7 +34,7 @@ while IFS= read -r run; do
   case $expect in
     pass) grep -q 'No error has been found' "$log" && ok=1 || ok=0 ;;
     invariant) grep -q "Invariant ${property} is violated" "$log" && ok=1 || ok=0 ;;
-    temporal) grep -q 'Temporal properties were violated' "$log" && ok=1 || ok=0 ;;
+    temporal) grep -q "Temporal property ${property} was violated" "$log" && ok=1 || ok=0 ;;
     *) ok=0 ;;
   esac
   rm -rf "$scratch/states-$name"

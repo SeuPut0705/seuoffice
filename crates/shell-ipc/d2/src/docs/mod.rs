@@ -15,9 +15,9 @@
 
 mod adapters;
 mod close;
-mod editors;
+pub mod editors;
 mod export;
-pub(crate) mod hosts;
+pub mod hosts;
 mod misc;
 mod open;
 mod passwords;
@@ -25,6 +25,14 @@ mod recovery;
 mod save;
 #[cfg(test)]
 mod tests;
+// lib.rs routes `d2/docs:` trigger steps to `probe_trigger`; until that
+// route lands it has no caller outside its tests
+#[cfg(feature = "probe")]
+#[allow(dead_code)]
+mod trigger;
+#[cfg(feature = "probe")]
+#[allow(unused_imports)]
+pub(crate) use trigger::probe_trigger;
 mod texts;
 
 use std::cell::RefCell;
@@ -438,6 +446,23 @@ impl Docs {
         )
     }
 
+    /// `showSaveDialogWithMemory(dialog, parent, options, defaultSaveDir())`:
+    /// the default folder resolved before the dialog (it is made then), as
+    /// the legacy import's target dialog does
+    fn save_dialog_in_default_dir(&self, view: ViewId, options: JsObject<JsonValue>) -> JsonValue {
+        let parent = self.parent(view);
+        let dir = self.default_save_dir().unwrap_or_default();
+        let fallback = FallbackDir::Dir(&dir);
+        let mut memory = self.memory.lock().unwrap_or_else(|e| e.into_inner());
+        show_save_dialog_with_memory(
+            &mut memory,
+            &mut HostDialog(&self.dialogs),
+            parent.as_ref(),
+            &options,
+            Some(&fallback),
+        )
+    }
+
     /// `dialog.showMessageBox(parent?, options)`: the button pressed
     fn message(&self, parent: Option<WindowId>, options: MessageBox) -> usize {
         self.dialogs.message(parent, &options).response
@@ -457,7 +482,7 @@ impl Docs {
     }
 
     fn with_store<R>(&self, f: impl FnOnce(&RecoveryStore) -> R) -> R {
-        recovery::with_store(&self.recovery_shared, &self.user_data(&[]), f)
+        recovery::with_store(&self.recovery_shared, &self.user_data(&[]), &self.shell, f)
     }
 
     fn recent_path(&self) -> String {

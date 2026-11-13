@@ -82,15 +82,6 @@ pub(crate) fn send(
     )
 }
 
-/// `ipcMain.on(channel, listener)` that a renderer calls with `sendSync`: the
-/// answer is what the listener set as `event.returnValue`
-pub(crate) fn send_sync(
-    channel: &'static str,
-    f: impl Fn(&CallContext, Args) -> Reply + 'static,
-) -> Entry {
-    entry(channel, ChannelKind::SendSync, Rc::new(Now(f)))
-}
-
 /// The arguments of one call. A missing argument reads as `undefined`, as in
 /// JavaScript.
 #[derive(Clone, Debug, Default, PartialEq)]
@@ -510,10 +501,6 @@ impl<T> ViewMap<T> {
     /// Reads or changes one view's entry. `f` must not reach this map again.
     pub fn with<R>(&self, view: ViewId, f: impl FnOnce(Option<&mut T>) -> R) -> R {
         f(self.map.borrow_mut().get_mut(&view))
-    }
-
-    pub fn views(&self) -> Vec<ViewId> {
-        self.map.borrow().keys().copied().collect()
     }
 }
 

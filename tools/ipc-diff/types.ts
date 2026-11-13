@@ -3,7 +3,7 @@
  * channels of one batch, with how to load the TypeScript that answers them.
  */
 import type { FileSpec } from '../main-diff/types.ts'
-import type { CaseElectron } from './fakes.ts'
+import type { CaseElectron, FakeContents } from './fakes.ts'
 
 export type { FileSpec }
 
@@ -17,14 +17,26 @@ export interface View {
 }
 
 export interface Call {
+  /** the channel called; a `trigger` has none: write its name here as well (it is left out of the coverage of channels) */
   channel: string
-  kind?: 'invoke' | 'send' | 'sendSync'
-  /** the sender; the case's first view when left out */
+  /** `trigger`: not a message of the renderer but an event of the shell (a menu click, a right-click) that both sides run; see README.md */
+  kind?: 'invoke' | 'send' | 'sendSync' | 'trigger'
+  /** `trigger`: `<batch>/<what>`, the key of `Group.triggers` and what the batch's `probe_trigger` is given */
+  name?: string
+  /** the sender; the case's first view when left out. For a trigger, the view the menu's events go to */
   view?: number
   /** the arguments in the wire form of crates/shell/bridge/wire.ts; `$DIR` in a string is the case's folder */
   args: unknown[]
   /** the buffers the arguments point at, as hex */
   buffers?: string[]
+  /**
+   * an invoke left pending: its answer is `{deferred: true}` and the reply is
+   * taken by a later `{await: <this call's index>}` step, so a renderer round
+   * trip (the handler waits for another call of the renderer) runs its full path
+   */
+  defer?: true
+  /** not a call: the answer of the deferred invoke at this index (`{timeout: true}` after 20 s) */
+  await?: number
 }
 
 export interface Case {
@@ -55,6 +67,11 @@ export interface LoadContext {
   fresh<T = unknown>(path: string): Promise<T>
 }
 
+export interface TriggerContext extends LoadContext {
+  /** the fake `webContents` of a view */
+  contents(view: number): FakeContents
+}
+
 export interface Group {
   /** `U`, `A`, `M`, `W`, `D1`, `D2` */
   batch: string
@@ -64,6 +81,15 @@ export interface Group {
    * (with `cx.fresh` when their state must start over for each case)
    */
   load(cx: LoadContext): Promise<void>
+  /**
+   * The TypeScript side of each `trigger` the group's cases call, by name:
+   * runs after `load`; the value it resolves to is the answer, a throw is
+   * `{error: String(err)}`
+   */
+  triggers?: Record<
+    string,
+    (cx: TriggerContext, view: number, args: unknown[]) => Promise<unknown> | unknown
+  >
   cases: Case[]
   /** channels whose single answer is all there is, with why (the floor of two answers is waived) */
   single?: Record<string, string>
