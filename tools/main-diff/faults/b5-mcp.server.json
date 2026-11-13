@@ -583,8 +583,8 @@
   {
     "name": "sdk tool error message hidden",
     "file": "main-core/src/packages/mcp_sdk/server.rs",
-    "find": "Err((message, ticks)) => (create_tool_error(&message), ticks),",
-    "replace": "Err((_, ticks)) => (create_tool_error(\"tool error\"), ticks),",
+    "find": "Err((message, ticks)) => (create_tool_error(&message), ticks, None),",
+    "replace": "Err((_, ticks)) => (create_tool_error(\"tool error\"), ticks, None),",
     "fn": ["mcp-server.scenario"]
   },
   {
@@ -772,8 +772,8 @@
   {
     "name": "sdk tool response not written",
     "file": "main-core/src/packages/mcp_sdk/server.rs",
-    "find": "CallStep::Done(returned) => self.server.settle(ticket, Ok(returned.result)),",
-    "replace": "CallStep::Done(_) => Vec::new(),",
+    "find": "                self.server.settle(ticket, Ok(returned.result))\n",
+    "replace": "                Vec::new()\n",
     "fn": ["mcp-server.scenario"]
   },
   {
@@ -795,6 +795,34 @@
     "file": "main-core/src/packages/mcp_sdk/server.rs",
     "find": "            registry.inflight.push((ticket, then));\n            registry.host_calls.push((ticket, call));\n            return HandlerOutcome {",
     "replace": "            registry.inflight.push((ticket, then));\n            return HandlerOutcome {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "server empty legacy session id is given",
+    "file": "main-core/src/shell/mcp/mcp_server.rs",
+    "find": "            .filter(|id| !id.is_empty());\n        let Some(session_id) = session_id else {",
+    "replace": "            ;\n        let Some(session_id) = session_id else {",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "streamable tool log not at send",
+    "file": "main-core/src/packages/mcp_sdk/streamable_http_server.rs",
+    "find": "            if let Some(line) = &sent.log {\n                self.io.log(line.clone());\n            }\n",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sse tool log not at send",
+    "file": "main-core/src/packages/mcp_sdk/sse_server.rs",
+    "find": "        if let Some(line) = &sent.log {\n            self.io.log(line.clone());\n        }\n",
+    "replace": "",
+    "fn": ["mcp-server.scenario"]
+  },
+  {
+    "name": "sdk resumed tool log dropped",
+    "file": "main-core/src/packages/mcp_sdk/server.rs",
+    "find": "                    self.registry.borrow_mut().logs.push(line);\n",
+    "replace": "                    let _ = line;\n",
     "fn": ["mcp-server.scenario"]
   }
 ]

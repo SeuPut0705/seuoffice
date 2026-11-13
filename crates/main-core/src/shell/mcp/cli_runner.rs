@@ -84,8 +84,7 @@ pub fn parse_json(stdout: &str) -> Option<JsonValue> {
     }
     let last_line = text
         .split('\n')
-        .filter(|line| !line.is_empty())
-        .next_back()
+        .rfind(|line| !line.is_empty())
         .unwrap_or(text);
     match json_parse(last_line) {
         Ok(parsed @ JsonValue::Object(_)) if parsed.get("status").is_some() => Some(parsed),

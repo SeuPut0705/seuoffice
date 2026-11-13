@@ -1144,11 +1144,16 @@ fn kit_scenario(args: &[Value]) -> (Answer, Vec<Vec<Value>>) {
                 results.push(one(command, offer));
             }
             Some("resolveAll") => {
-                let all = strings_of(prop(step, "commands"))
+                let mut all: Vec<(String, JsonValue)> = strings_of(prop(step, "commands"))
                     .iter()
-                    .map(|command| one(command, true))
+                    .map(|command| {
+                        let answer = one(command, true);
+                        (json_stringify(&answer), answer)
+                    })
                     .collect();
-                results.push(JsonValue::Array(all));
+                // the spec lists the answers of concurrent lookups in sorted order
+                all.sort_by(|a, b| a.0.encode_utf16().cmp(b.0.encode_utf16()));
+                results.push(JsonValue::Array(all.into_iter().map(|(_, v)| v).collect()));
             }
             _ => {}
         }

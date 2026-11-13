@@ -119,8 +119,16 @@ impl SseServerTransport {
     /// the answers of requests that were settled later
     pub fn send_outgoing(&self, outgoing: Vec<Outgoing>) {
         for sent in in_send_order(outgoing) {
-            self.send(&sent.message);
+            self.emit(&sent);
         }
+    }
+
+    /// the line the tool wrapper logged, then the message
+    fn emit(&self, sent: &Outgoing) {
+        if let Some(line) = &sent.log {
+            self.io.log(line.clone());
+        }
+        self.send(&sent.message);
     }
 
     /// `send(message)`
@@ -185,11 +193,11 @@ impl SseServerTransport {
                     .into_iter()
                     .partition(|sent| sent.ticks == 0);
                 for sent in now {
-                    self.send(&sent.message);
+                    self.emit(&sent);
                 }
                 self.reply(res, 202, "Accepted");
                 for sent in later {
-                    self.send(&sent.message);
+                    self.emit(&sent);
                 }
             }
             Err(()) => {

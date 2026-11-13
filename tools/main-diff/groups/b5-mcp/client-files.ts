@@ -1020,6 +1020,7 @@ const storeScenarios: [unknown[], string, Record<string, FileSpec>?][] = [
         { op: 'load' },
         { op: 'update', ops: [['add', { name: 'x', kind: 'remote' }]] },
         { op: 'read' },
+        { op: 'remove' },
       ],
     ],
     'a server with only a name and a kind (random id)',

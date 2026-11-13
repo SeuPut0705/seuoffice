@@ -164,7 +164,10 @@ pub mod schema {
                 out.set(*key, value.clone());
             }
             out.set("path", JsonValue::Array(self.path.clone()));
-            out.set("message", JsonValue::String(self.message.clone()));
+            // an issue made with its own message keeps it where it was
+            if !self.fields.iter().any(|(key, _)| *key == "message") {
+                out.set("message", JsonValue::String(self.message.clone()));
+            }
             JsonValue::Object(out)
         }
     }
@@ -477,7 +480,15 @@ pub mod schema {
                 if let Some(JsonValue::String(value)) = &payload.value
                     && !can_parse_url(value)
                 {
-                    payload.issues.push(custom("URL must be parseable", false));
+                    payload.issues.push(Issue::new(
+                        vec![
+                            ("code", text("custom")),
+                            ("message", text("URL must be parseable")),
+                            ("fatal", JsonValue::Bool(true)),
+                        ],
+                        "URL must be parseable".to_owned(),
+                        false,
+                    ));
                 }
             }
             Check::SafeUrlScheme => {

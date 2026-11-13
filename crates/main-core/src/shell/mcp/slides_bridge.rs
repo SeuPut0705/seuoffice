@@ -30,7 +30,8 @@ use jscompat::node_path::host::{extname, is_absolute};
 use jscompat::{JsObject, JsonValue};
 
 use super::docs_bridge::{Settled, Submitted};
-use super::tools::slides_tools::{ReadDeckOptions, SlidesTxnRequest};
+use super::tools::session_tools::spread;
+use super::tools::slides_tools::ReadDeckOptions;
 use crate::packages::agent_core::redact_core::placeholder_source;
 
 /// `READY_TIMEOUT_MS`
@@ -74,7 +75,7 @@ pub trait SlidesBridgeHost {
     fn attached_ids(&mut self, wc_id: i64) -> Vec<i64>;
     /// `applySessionTxn(session, req)`: the result (`applied`, `failures`,
     /// `slides` ..), or `None` when the session is gone
-    fn apply_session_txn(&mut self, wc_id: i64, req: &SlidesTxnRequest) -> Option<JsonValue>;
+    fn apply_session_txn(&mut self, wc_id: i64, req: &JsonValue) -> Option<JsonValue>;
     /// `await saveSessionDeckTo(session, targetPath)`
     fn save_session_deck_to(&mut self, wc_id: i64, path: &str) -> Result<(), String>;
 
@@ -347,16 +348,9 @@ impl<H: SlidesBridgeHost> SlidesBridge<H> {
     }
 
     /// `readDeckModel(session, options)`
-    fn read_deck_model(&mut self, wc_id: i64, options: ReadOptions) -> JsonValue {
+    fn read_deck_model(&mut self, wc_id: i64, options: ReadOptions) -> Result<JsonValue, String> {
         let deck = self.host.deck(wc_id);
-        let size = field(&deck, "size");
-        let dimension = |key: &str| {
-            let value = size.as_ref().and_then(|size| field(size, key));
-            match value {
-                Some(JsonValue::Number(value)) => value,
-                _ => f64::NAN,
-            }
-        };
+        let size = deck_size(&deck)?;
         let mut slides = Vec::new();
         for (index, slide) in list_field(&deck, "slides").iter().enumerate() {
             let path = string_field(slide, "path").unwrap_or_default();
@@ -419,15 +413,15 @@ impl<H: SlidesBridgeHost> SlidesBridge<H> {
         let mut slide_size = JsObject::new();
         slide_size.set(
             "widthPx",
-            JsonValue::Number(js_round(dimension("cx") / EMU_PER_PX_96)),
+            JsonValue::Number(js_round(dimension(&size, "cx") / EMU_PER_PX_96)),
         );
         slide_size.set(
             "heightPx",
-            JsonValue::Number(js_round(dimension("cy") / EMU_PER_PX_96)),
+            JsonValue::Number(js_round(dimension(&size, "cy") / EMU_PER_PX_96)),
         );
         model.set("slideSize", JsonValue::Object(slide_size));
         model.set("slides", JsonValue::Array(slides));
-        JsonValue::Object(model)
+        Ok(JsonValue::Object(model))
     }
 
     fn new_op(&mut self) -> u64 {
@@ -515,11 +509,7 @@ impl<H: SlidesBridgeHost> SlidesBridge<H> {
 
     /// `runTxn(wcId, req)` of the control: apply one transaction to the tab's
     /// session; the outcome without the render tree
-    pub fn run_txn(
-        &mut self,
-        wc_id: i64,
-        req: &SlidesTxnRequest,
-    ) -> Result<Option<JsonValue>, String> {
+    pub fn run_txn(&mut self, wc_id: i64, req: &JsonValue) -> Result<Option<JsonValue>, String> {
         self.require_session(wc_id)?;
         let Some(result) = self.host.apply_session_txn(wc_id, req) else {
             return Err("the deck session is gone \u{2014} call create_session again".to_owned());
@@ -533,15 +523,13 @@ impl<H: SlidesBridgeHost> SlidesBridge<H> {
             let ids = self.host.attached_ids(wc_id);
             if ids.len() < 2 {
                 let deck = self.host.deck(wc_id);
-                let size = field(&deck, "size");
-                let dimension = |key: &str| {
-                    size.as_ref()
-                        .and_then(|size| field(size, key))
-                        .unwrap_or(JsonValue::Number(f64::NAN))
-                };
+                let size = deck_size(&deck)?;
                 let mut size_out = JsObject::new();
-                size_out.set("cx", dimension("cx"));
-                size_out.set("cy", dimension("cy"));
+                for key in ["cx", "cy"] {
+                    if let Some(value) = field(&size, key) {
+                        size_out.set(key, value);
+                    }
+                }
                 let mut payload = JsObject::new();
                 payload.set(
                     "slides",
@@ -559,17 +547,17 @@ impl<H: SlidesBridgeHost> SlidesBridge<H> {
         // would put the whole deck (and its images) into the agent's context on
         // every op. The agent sees the transaction outcome; read_deck is the model
         // readout.
-        let summary = match result {
-            JsonValue::Object(object) => JsonValue::Object(
-                object
-                    .entries()
-                    .into_iter()
-                    .filter(|(key, _)| *key != "slides")
-                    .map(|(key, value)| (key.to_owned(), value.clone()))
-                    .collect(),
-            ),
-            other => other,
-        };
+        // `{ slides: _renderTree, ...summary } = result`: the rest is spread
+        // as an object (an array's items and a string's code units are keys)
+        let mut rest = JsObject::new();
+        spread(&mut rest, &result);
+        let summary = JsonValue::Object(
+            rest.entries()
+                .into_iter()
+                .filter(|(key, _)| *key != "slides")
+                .map(|(key, value)| (key.to_owned(), value.clone()))
+                .collect(),
+        );
         Ok(Some(summary))
     }
 
@@ -581,7 +569,7 @@ impl<H: SlidesBridgeHost> SlidesBridge<H> {
     ) -> Result<Option<JsonValue>, String> {
         self.require_session(wc_id)?;
         let withhold = options.and_then(|options| options.withhold) == Some(true);
-        Ok(Some(self.read_deck_model(wc_id, ReadOptions { withhold })))
+        Ok(Some(self.read_deck_model(wc_id, ReadOptions { withhold })?))
     }
 
     /// `deckWithholds(wcId)` of the control: the deck carries any withholding mark
@@ -619,6 +607,23 @@ impl<H: SlidesBridgeHost> SlidesBridge<H> {
         self.require_session(wc_id)?;
         self.host.save_session_deck_to(wc_id, &target_path)?;
         Ok(target_path)
+    }
+}
+
+/// `deck.size`: reading `cx` of a missing or null size throws
+fn deck_size(deck: &JsonValue) -> Result<JsonValue, String> {
+    match field(deck, "size") {
+        None => Err("Cannot read properties of undefined (reading 'cx')".to_owned()),
+        Some(JsonValue::Null) => Err("Cannot read properties of null (reading 'cx')".to_owned()),
+        Some(size) => Ok(size),
+    }
+}
+
+/// `size.<key>` as a number; what is no number divides as `NaN`
+fn dimension(size: &JsonValue, key: &str) -> f64 {
+    match field(size, key) {
+        Some(JsonValue::Number(value)) => value,
+        _ => f64::NAN,
     }
 }
 

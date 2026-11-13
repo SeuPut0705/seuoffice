@@ -73,6 +73,7 @@ pub struct SseTransport {
     /// the outcome of `start()`'s promise, queued after the events of the call that settled it
     deferred_started: Option<Result<(), ClientError>>,
     events: VecDeque<TransportEvent>,
+    late_send: bool,
 }
 
 impl SseTransport {
@@ -87,7 +88,16 @@ impl SseTransport {
             start_settled: false,
             deferred_started: None,
             events: VecDeque::new(),
+            late_send: false,
         }
+    }
+
+    /// whether the `fetch` the transport is given reaches the network a few
+    /// ticks after the transport calls it (an async wrapper): a send then
+    /// lands after the synchronous work that follows it. The default is a
+    /// `fetch` that logs at once.
+    pub fn set_late_send(&mut self, late: bool) {
+        self.late_send = late;
     }
 
     fn emit_error(&mut self, error: ClientError) {
@@ -413,6 +423,10 @@ impl Transport for SseTransport {
                 Err(error)
             }
         }
+    }
+
+    fn defers_send(&self) -> bool {
+        self.late_send
     }
 
     fn close(&mut self, host: &mut dyn ClientHost) {

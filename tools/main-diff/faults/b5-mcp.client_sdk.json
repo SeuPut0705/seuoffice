@@ -397,5 +397,55 @@
     "find": "(\"lastModified\", iso_datetime_offset().optional()),",
     "replace": "(\"lastModified\", string().optional()),",
     "fn": ["mcp-sdk/types.safeParse"]
+  },
+  {
+    "name": "client failed connect does not close first",
+    "file": "main-core/src/packages/mcp_sdk/client.rs",
+    "find": "if *kind != Kind::Initialize {",
+    "replace": "if true {",
+    "fn": [
+      "mcp-sdk/client.scenario",
+      "mcp-sdk/streamable-http-client.scenario",
+      "mcp-sdk/sse-client.scenario"
+    ]
+  },
+  {
+    "name": "client stream abort errors come before the rejection",
+    "file": "main-core/src/packages/mcp_sdk/client.rs",
+    "find": "self.hold_late = true;",
+    "replace": "self.hold_late = false;",
+    "fn": ["mcp-sdk/streamable-http-client.scenario"]
+  },
+  {
+    "name": "client cancellation failure text",
+    "file": "main-core/src/packages/mcp_sdk/client.rs",
+    "find": "\"Failed to send cancellation: {}\"",
+    "replace": "\"Failed to send cancel: {}\"",
+    "fn": ["mcp-sdk/streamable-http-client.scenario", "mcp-sdk/sse-client.scenario"]
+  },
+  {
+    "name": "client method-not-found reply failure reads like a handler reply",
+    "file": "main-core/src/packages/mcp_sdk/client.rs",
+    "find": "\"an error response\"",
+    "replace": "\"response\"",
+    "fn": ["mcp-sdk/streamable-http-client.scenario"]
+  },
+  {
+    "name": "client cancel always waits for the rejection",
+    "file": "main-core/src/packages/mcp_sdk/client.rs",
+    "find": "let deferred = send_cancel && self.transport.as_ref().is_some_and(|t| t.defers_send());",
+    "replace": "let deferred = send_cancel;",
+    "fn": [
+      "mcp-sdk/streamable-http-client.scenario",
+      "mcp-sdk/sse-client.scenario",
+      "mcp-sdk/client.scenario"
+    ]
+  },
+  {
+    "name": "schema fatal flag of an unparseable url",
+    "file": "main-core/src/packages/mcp_sdk/types.rs",
+    "find": "(\"fatal\", JsonValue::Bool(true)),",
+    "replace": "(\"fatal\", JsonValue::Bool(false)),",
+    "fn": ["mcp-sdk/types.safeParse"]
   }
 ]

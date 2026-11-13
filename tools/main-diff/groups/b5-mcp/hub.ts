@@ -616,8 +616,10 @@ function track(world: World, label: string, value: unknown): void {
 }
 
 async function settle(world: World): Promise<void> {
+  // a store write is real file I/O: wait by the clock, not by a count of ticks
+  const deadline = performance.now() + 60_000
   let quiet = 0
-  for (let i = 0; i < 2000; i += 1) {
+  while (performance.now() < deadline) {
     await tick()
     if (world.busy === 0) {
       quiet += 1

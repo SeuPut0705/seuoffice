@@ -21,8 +21,11 @@ use serde_json::Value;
 
 use super::{Answer, Context};
 
+/// one slice's table, as `calls::Group`
+type Slice = fn(&str, &[Value], &mut Context) -> Option<Answer>;
+
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
-    const SLICES: &[fn(&str, &[Value], &mut Context) -> Option<Answer>] = &[
+    const SLICES: &[Slice] = &[
         zod::call,
         deps::call,
         client_pure::call,

@@ -182,8 +182,8 @@
   {
     "name": "a local state change does not clear a failure",
     "file": "main-core/src/shell/mcp_client/hub.rs",
-    "find": "if matches!(state, LocalState::Running) {",
-    "replace": "if false {",
+    "find": "if matches!(state, LocalState::Running)\n            && let Some(live) = self.lives.get_mut(&id)\n        {",
+    "replace": "if false\n            && let Some(live) = self.lives.get_mut(&id)\n        {",
     "fn": [
       "hub.scenario"
     ]

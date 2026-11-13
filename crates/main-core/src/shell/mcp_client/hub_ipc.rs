@@ -374,7 +374,7 @@ impl<'h> McpHubIpc<'h> {
         sender_id: f64,
         raw: Option<&JsonValue>,
     ) -> IpcReply {
-        if let Some(refused) = Self::refused(host, sender_id, JsonValue::Null) {
+        if let Some(refused) = Self::refused(host, sender_id, not_settings()) {
             return refused;
         }
         match server_id_of(raw) {

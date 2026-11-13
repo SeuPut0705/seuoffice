@@ -3366,7 +3366,26 @@ let appSerial = 0
 /** what the settings pane reads: each line without its time stamp */
 const untimed = (lines: string[]): string[] => lines.map((line) => line.replace(/^\[[^\]]*\] /, ''))
 
+/** the app scenario under the case's clock, in UTC (the log lines carry a time stamp) */
 async function runApp(spec: { steps: Spec[] }, cx: TsContext): Promise<unknown> {
+  const RealDate = Date
+  const realZone = process.env.TZ
+  process.env.TZ = 'UTC'
+  globalThis.Date = class extends RealDate {
+    constructor(...given: unknown[]) {
+      super(...((given.length === 0 ? [cx.now] : given) as [number]))
+    }
+  } as never
+  try {
+    return await runAppScript(spec, cx)
+  } finally {
+    globalThis.Date = RealDate
+    if (realZone === undefined) delete process.env.TZ
+    else process.env.TZ = realZone
+  }
+}
+
+async function runAppScript(spec: { steps: Spec[] }, cx: TsContext): Promise<unknown> {
   appSerial += 1
   const services: Spec[] = []
   class FakeService {
@@ -3390,11 +3409,13 @@ async function runApp(spec: { steps: Spec[] }, cx: TsContext): Promise<unknown> 
       this.port = port
       this.running = true
       cx.log('listen', port)
+      this.options.logger(`[mcp] listening on ${this.getUrl()} (streamable /mcp, legacy /sse)`)
     }
     async stop(): Promise<void> {
       if (!this.running) return
       this.running = false
       cx.log('close')
+      this.options.logger('[mcp] stopped')
     }
     stopSync(): void {
       void this.stop()

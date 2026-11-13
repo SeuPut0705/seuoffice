@@ -261,10 +261,7 @@ pub fn serialize_stored_oauth(stored: &StoredOAuth) -> String {
         ("metadata", stored.metadata.clone()),
         (
             "resource",
-            stored
-                .resource
-                .as_deref()
-                .map_or(JsonValue::Null, |r| text(r)),
+            stored.resource.as_deref().map_or(JsonValue::Null, text),
         ),
         (
             "registeredClient",

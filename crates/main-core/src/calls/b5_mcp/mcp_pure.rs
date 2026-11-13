@@ -25,7 +25,7 @@ use crate::shell::mcp::cli_runner::{
 };
 use crate::shell::mcp::docs_bridge::{DocsBridge, DocsBridgeHost, Settled, Submitted};
 use crate::shell::mcp::headless_cli::{
-    ConvertOptions, CreateFileOptions, CreateResult, MergeOptions, SheetLinksOptions,
+    CliError, ConvertOptions, CreateFileOptions, CreateResult, MergeOptions, SheetLinksOptions,
     convert_via_cli, create_file_via_cli, create_pptx_via_cli, docs_check_via_cli,
     merge_template_via_cli, read_docx_properties_via_cli, read_docx_text_via_cli,
     sheet_links_via_cli,
@@ -320,7 +320,7 @@ fn created_json(created: &CreateResult) -> Value {
 fn headless(
     args: &[Value],
     cx: &mut Context,
-    call: impl FnOnce(&ScriptedCli, &Value) -> Result<Value, String>,
+    call: impl FnOnce(&ScriptedCli, &Value) -> Result<Value, CliError>,
 ) -> Answer {
     let spec = arg(args, 0).cloned().unwrap_or(Value::Null);
     let log = new_log();
@@ -328,7 +328,10 @@ fn headless(
     let result = call(&cli, &spec);
     cli.log_scratch();
     flush(&log, cx);
-    result.map(Some).map_err(CallError::plain)
+    result.map(Some).map_err(|error| CallError {
+        code: error.code,
+        message: error.message,
+    })
 }
 
 // ---- cli-runner ----

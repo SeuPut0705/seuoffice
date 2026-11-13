@@ -510,6 +510,14 @@ impl FetchHost for World {
                 headers.append(key, value.as_str().unwrap_or(""));
             }
         }
+        // a string body makes `Response` add its own content type
+        let text_body = !null_body
+            && spec.get("stream").and_then(Value::as_bool) != Some(true)
+            && str_field(&spec, "hex").is_none()
+            && str_field(&spec, "body").is_some();
+        if text_body && headers.get("content-type").is_none() {
+            headers.append("content-type", "text/plain;charset=UTF-8");
+        }
         let opaque = spec.get("opaque").and_then(Value::as_bool).unwrap_or(false);
         Ok(FetchResponse {
             status: if opaque { 0 } else { status },

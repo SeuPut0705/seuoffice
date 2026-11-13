@@ -1082,19 +1082,19 @@ impl<'h> McpHub<'h> {
         let local = live.local;
         let remote = live.remote;
         let key_changed = live.remote_key != remote_key_of(&server);
-        if let Some(conn) = local {
-            if let Some(c) = self.locals.get_mut(&conn) {
-                c.set_server(&server);
-            }
+        if let Some(conn) = local
+            && let Some(c) = self.locals.get_mut(&conn)
+        {
+            c.set_server(&server);
         }
-        if let Some(conn) = remote {
-            if key_changed || !server.enabled {
-                self.close_when_unused(conn);
-                if let Some(live) = self.lives.get_mut(id) {
-                    live.remote = None;
-                    live.remote_key = String::new();
-                    live.listed = false;
-                }
+        if let Some(conn) = remote
+            && (key_changed || !server.enabled)
+        {
+            self.close_when_unused(conn);
+            if let Some(live) = self.lives.get_mut(id) {
+                live.remote = None;
+                live.remote_key = String::new();
+                live.listed = false;
             }
         }
     }
@@ -1337,11 +1337,11 @@ impl<'h> McpHub<'h> {
             return;
         };
         // a start that worked clears the failure of the one before
-        if matches!(state, LocalState::Running) {
-            if let Some(live) = self.lives.get_mut(&id) {
-                live.failure = None;
-                live.local_problem = None;
-            }
+        if matches!(state, LocalState::Running)
+            && let Some(live) = self.lives.get_mut(&id)
+        {
+            live.failure = None;
+            live.local_problem = None;
         }
         self.notify();
     }
@@ -1430,10 +1430,10 @@ impl<'h> McpHub<'h> {
                     }
                     self.notify();
                 }
-                if let Some(live) = self.lives.get_mut(&id) {
-                    if live.sign_in.as_ref().is_some_and(|ctl| ctl.op == op) {
-                        live.sign_in = None;
-                    }
+                if let Some(live) = self.lives.get_mut(&id)
+                    && live.sign_in.as_ref().is_some_and(|ctl| ctl.op == op)
+                {
+                    live.sign_in = None;
                 }
                 let answer = match result {
                     SignInResult::Ok => ok_json(),
@@ -1926,10 +1926,10 @@ impl<'h> McpHub<'h> {
         let state = self.local_state(&server.id);
         self.retry(&server.id);
         // a runtime is downloaded only after the person agrees, and that question is Settings'
-        if let Some(LocalState::Failed { reason, .. }) = state {
-            if reason == McpFailReason::RuntimeMissing {
-                self.host.open_settings(&server.id);
-            }
+        if let Some(LocalState::Failed { reason, .. }) = state
+            && reason == McpFailReason::RuntimeMissing
+        {
+            self.host.open_settings(&server.id);
         }
         true
     }
@@ -2340,29 +2340,29 @@ impl<'h> McpHub<'h> {
             return Ok(invalid("not-found", None));
         };
         let mut next = current.clone();
-        if let Some(name) = string_of(prop(patch, "name")) {
-            if name != current.name {
-                if let Some(problem) = self.check_name(name, Some(id)) {
-                    return Ok(problem);
-                }
-                next.name = name.to_owned();
+        if let Some(name) = string_of(prop(patch, "name"))
+            && name != current.name
+        {
+            if let Some(problem) = self.check_name(name, Some(id)) {
+                return Ok(problem);
             }
+            next.name = name.to_owned();
         }
         if current.kind == McpServerKind::Remote {
-            if let Some(url) = string_of(prop(patch, "url")) {
-                if url != current.url {
-                    let allow = match prop(patch, "allowPlainHttp") {
-                        Some(JsonValue::Bool(b)) => Some(*b),
-                        _ => None,
-                    };
-                    if let Some(problem) = self.check_remote(url, allow) {
-                        return Ok(problem);
-                    }
-                    next.url = url.to_owned();
-                    // a sign-in belongs to the address it was made for
-                    if let Some(oauth) = next.oauth.as_mut() {
-                        oauth.tokens = String::new();
-                    }
+            if let Some(url) = string_of(prop(patch, "url"))
+                && url != current.url
+            {
+                let allow = match prop(patch, "allowPlainHttp") {
+                    Some(JsonValue::Bool(b)) => Some(*b),
+                    _ => None,
+                };
+                if let Some(problem) = self.check_remote(url, allow) {
+                    return Ok(problem);
+                }
+                next.url = url.to_owned();
+                // a sign-in belongs to the address it was made for
+                if let Some(oauth) = next.oauth.as_mut() {
+                    oauth.tokens = String::new();
                 }
             }
             if let Some(transport) = string_of(prop(patch, "transport")) {
@@ -2425,12 +2425,12 @@ impl<'h> McpHub<'h> {
             }
         }
         self.replace_server(id, &mut |_| next.clone())?;
-        if next.url != current.url || next.command != current.command {
-            if let Some(live) = self.lives.get_mut(id) {
-                live.listed = false;
-                live.failure = None;
-                live.local_problem = None;
-            }
+        if (next.url != current.url || next.command != current.command)
+            && let Some(live) = self.lives.get_mut(id)
+        {
+            live.listed = false;
+            live.failure = None;
+            live.local_problem = None;
         }
         self.follow(id);
         self.notify();
@@ -2551,13 +2551,13 @@ impl<'h> McpHub<'h> {
             }
             self.lives.delete(id);
         }
-        if let Some(conn) = revoker {
-            if Some(conn) != live_remote {
-                let op = self.new_op();
-                self.pending.insert(op, Pending::Close { conn });
-                if let Some(c) = self.remotes.get_mut(&conn) {
-                    c.close(op);
-                }
+        if let Some(conn) = revoker
+            && Some(conn) != live_remote
+        {
+            let op = self.new_op();
+            self.pending.insert(op, Pending::Close { conn });
+            if let Some(c) = self.remotes.get_mut(&conn) {
+                c.close(op);
             }
         }
         self.notify();
@@ -2700,14 +2700,14 @@ impl<'h> McpHub<'h> {
                     None
                 };
                 // allowed before: the start downloads it without asking (13)
-                if let Some(question) = &question {
-                    if prop(question, "allowed") != Some(&JsonValue::Bool(true)) {
-                        return Reply::Now(Ok(object(vec![
-                            ("ok", JsonValue::Bool(false)),
-                            ("problem", text("runtime-download")),
-                            ("question", question.clone()),
-                        ])));
-                    }
+                if let Some(question) = &question
+                    && prop(question, "allowed") != Some(&JsonValue::Bool(true))
+                {
+                    return Reply::Now(Ok(object(vec![
+                        ("ok", JsonValue::Bool(false)),
+                        ("problem", text("runtime-download")),
+                        ("question", question.clone()),
+                    ])));
                 }
                 if question.is_none() {
                     // the card shows it as the server's failure, with its reason, once
@@ -2935,10 +2935,10 @@ impl<'h> McpHub<'h> {
                     },
                 );
                 let local = self.lives.get(id).and_then(|l| l.local);
-                if let Some(conn) = local {
-                    if let Some(c) = self.locals.get_mut(&conn) {
-                        c.retry();
-                    }
+                if let Some(conn) = local
+                    && let Some(c) = self.locals.get_mut(&conn)
+                {
+                    c.retry();
                 }
                 self.notify();
             }
@@ -2996,10 +2996,10 @@ impl<'h> McpHub<'h> {
             }
             None => None,
         };
-        if let Some(conn) = local {
-            if let Some(c) = self.locals.get_mut(&conn) {
-                c.retry();
-            }
+        if let Some(conn) = local
+            && let Some(c) = self.locals.get_mut(&conn)
+        {
+            c.retry();
         }
         self.notify();
         ok_json()

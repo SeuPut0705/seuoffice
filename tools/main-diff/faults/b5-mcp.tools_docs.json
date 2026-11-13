@@ -37,8 +37,8 @@
   {
     "name": "cli runner reads the first line for json",
     "file": "main-core/src/shell/mcp/cli_runner.rs",
-    "find": ".next_back()",
-    "replace": ".next()",
+    "find": ".rfind(|line| !line.is_empty())",
+    "replace": ".find(|line| !line.is_empty())",
     "fn": ["cli-runner.createCliRunner"]
   },
   {
@@ -156,7 +156,7 @@
   {
     "name": "headless leaves the scratch folder",
     "file": "main-core/src/shell/mcp/headless_cli.rs",
-    "find": "rm_recursive_force(&dir).map_err(|e| e.message)?;",
+    "find": "rm_recursive_force(&dir)?;",
     "replace": "let _ = rm_recursive_force;",
     "fn": [
       "headless-cli.createFileViaCli",

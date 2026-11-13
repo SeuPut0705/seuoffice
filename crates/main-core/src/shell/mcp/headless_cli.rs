@@ -16,24 +16,57 @@ use jscompat::node_path::host::join;
 use jscompat::{JsonValue, json_stringify, to_primitive};
 
 use super::cli_runner::{CliRunOptions, CliRunOutcome, CliRunner, cli_error};
-use crate::node_fs::mkdtemp_random;
+use crate::node_fs::{NodeError, mkdtemp_random};
 use crate::pdf::node_io::{rm_recursive_force, tmpdir, write_file_mode};
+
+/// The `Error` the TypeScript throws: its message and, when it is a Node
+/// system error (a failed write of the staged input), its `code`. A caller
+/// that only needs the message takes it through `?` into a `String`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct CliError {
+    pub message: String,
+    pub code: Option<String>,
+}
+
+impl From<String> for CliError {
+    fn from(message: String) -> Self {
+        CliError {
+            message,
+            code: None,
+        }
+    }
+}
+
+impl From<NodeError> for CliError {
+    fn from(error: NodeError) -> Self {
+        CliError {
+            message: error.message,
+            code: error.code.map(str::to_owned),
+        }
+    }
+}
+
+impl From<CliError> for String {
+    fn from(error: CliError) -> Self {
+        error.message
+    }
+}
 
 /// `withTempDir(fn)`: run `f` with a scratch directory that is always removed
 /// afterwards. A removal that fails replaces the result, as a `finally` that
 /// throws does.
-fn with_temp_dir<T>(f: impl FnOnce(&str) -> Result<T, String>) -> Result<T, String> {
-    let dir = mkdtemp_random(&join(&[&tmpdir(), "seuoffice-mcp-"])).map_err(|e| e.message)?;
+fn with_temp_dir<T>(f: impl FnOnce(&str) -> Result<T, CliError>) -> Result<T, CliError> {
+    let dir = mkdtemp_random(&join(&[&tmpdir(), "seuoffice-mcp-"]))?;
     let result = f(&dir);
-    rm_recursive_force(&dir).map_err(|e| e.message)?;
+    rm_recursive_force(&dir)?;
     result
 }
 
 /// `stage(dir, name, content)`: stage inline content in the scratch dir and
 /// return its path
-fn stage(dir: &str, name: &str, content: &str) -> Result<String, String> {
+fn stage(dir: &str, name: &str, content: &str) -> Result<String, CliError> {
     let path = join(&[dir, name]);
-    write_file_mode(&path, content, 0o666).map_err(|e| e.message)?;
+    write_file_mode(&path, content, 0o666)?;
     Ok(path)
 }
 
@@ -97,7 +130,7 @@ pub struct CreateFileOptions<'a> {
 pub fn create_file_via_cli(
     runner: &dyn CliRunner,
     opts: &CreateFileOptions<'_>,
-) -> Result<CreateResult, String> {
+) -> Result<CreateResult, CliError> {
     with_temp_dir(|dir| {
         let input_path = stage(dir, opts.input_name, opts.input_content)?;
         let args = vec![
@@ -121,7 +154,7 @@ pub fn create_pptx_via_cli(
     ops: &[JsonValue],
     out: &str,
     overwrite: bool,
-) -> Result<CreateResult, String> {
+) -> Result<CreateResult, CliError> {
     with_temp_dir(|dir| {
         let ops_path = stage(
             dir,
@@ -146,7 +179,7 @@ fn run_create(
     mut args: Vec<String>,
     out: &str,
     overwrite: bool,
-) -> Result<CreateResult, String> {
+) -> Result<CreateResult, CliError> {
     args.push("--out".to_owned());
     args.push(out.to_owned());
     if overwrite {
@@ -247,14 +280,15 @@ pub struct MergeOptions<'a> {
 pub fn merge_template_via_cli(
     runner: &dyn CliRunner,
     opts: &MergeOptions<'_>,
-) -> Result<JsonValue, String> {
+) -> Result<JsonValue, CliError> {
     with_temp_dir(|dir| {
         // `writeFile(path, JSON.stringify(undefined))` is refused by Node
         let Some(data) = opts.data else {
-            return Err(
-                "The \"data\" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined"
+            return Err(CliError {
+                message: "The \"data\" argument must be of type string or an instance of Buffer, TypedArray, or DataView. Received undefined"
                     .to_owned(),
-            );
+                code: Some("ERR_INVALID_ARG_TYPE".to_owned()),
+            });
         };
         let data_path = stage(dir, "data.json", &json_stringify(data))?;
         let mut args = vec![

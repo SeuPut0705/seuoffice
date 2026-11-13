@@ -211,6 +211,10 @@ impl SessionServer for AnsweringOldToolNames<'_> {
         self.inner.take_host_calls()
     }
 
+    fn take_logs(&mut self) -> Vec<String> {
+        self.inner.take_logs()
+    }
+
     fn resume_tool(&mut self, ticket: Ticket, settled: Settled) -> Vec<Outgoing> {
         self.inner.resume_tool(ticket, settled)
     }
@@ -302,18 +306,19 @@ fn wrapped<'h>(io: Io, name: String, started: f64, step: ToolStep<'h>) -> CallSt
             let elapsed = number_to_string(io.now_ms() - started);
             CallStep::Done(match outcome {
                 Ok(result) => {
-                    io.log(format!("[mcp] tool {name} ok ({elapsed}ms)"));
+                    let line = format!("[mcp] tool {name} ok ({elapsed}ms)");
                     let mut block = vec![("type", JsonValue::String("text".into()))];
                     if let Some(text) = stringify_result(result.as_ref()) {
                         block.push(("text", JsonValue::String(text)));
                     }
                     ToolReturn {
                         result: object(vec![("content", JsonValue::Array(vec![object(block)]))]),
+                        log: Some(line),
                         rejected: false,
                     }
                 }
                 Err(message) => {
-                    io.log(format!("[mcp] tool {name} error ({elapsed}ms): {message}"));
+                    let line = format!("[mcp] tool {name} error ({elapsed}ms): {message}");
                     ToolReturn {
                         result: object(vec![
                             (
@@ -325,6 +330,7 @@ fn wrapped<'h>(io: Io, name: String, started: f64, step: ToolStep<'h>) -> CallSt
                             ),
                             ("isError", JsonValue::Bool(true)),
                         ]),
+                        log: Some(line),
                         rejected: true,
                     }
                 }
@@ -360,6 +366,9 @@ fn parse_url(text: &str, base: &str) -> Result<Url, ()> {
 /// what a session's server left for the caller: the awaits its tools started
 /// and the signals that fired, as commands
 fn drain_server(io: &Io, session_id: &str, server: &mut dyn SessionServer) {
+    for line in server.take_logs() {
+        io.log(line);
+    }
     for (ticket, call) in server.take_host_calls() {
         io.push(Command::ToolCall {
             session_id: session_id.to_owned(),
@@ -883,7 +892,9 @@ impl<'h> McpServerService<'h> {
         let session_id = url
             .query_pairs()
             .find(|(key, _)| key == "sessionId")
-            .map(|(_, value)| value.into_owned());
+            .map(|(_, value)| value.into_owned())
+            // `if (!sessionId)`: an empty one is missing too
+            .filter(|id| !id.is_empty());
         let Some(session_id) = session_id else {
             self.json(
                 res,

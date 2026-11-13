@@ -179,8 +179,15 @@ async function withWorld<T>(cfg: WorldCfg, body: (world: World) => Promise<T>): 
       }
     }
   }
+  // the PKCE challenge is a real crypto.subtle.digest, which answers from a thread: a step
+  // also waits a moment of real time so what it started has ended before the next step
   world.settle = async () => {
-    for (let i = 0; i < 12; i++) await new Promise((resolve) => setImmediate(resolve))
+    const turns = async (): Promise<void> => {
+      for (let i = 0; i < 12; i++) await new Promise((resolve) => setImmediate(resolve))
+    }
+    await turns()
+    await new Promise((resolve) => realSetTimeout(resolve, 30))
+    await turns()
   }
 
   // AbortSignal.timeout: the 20 s limit of a sign-in request

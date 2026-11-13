@@ -228,15 +228,9 @@ impl EventParser {
         match field {
             "event" => self.event_type = nonempty(value),
             "data" => self.add_data(value),
-            "id" => {
-                if !value.contains('\0') {
-                    self.id = Some(value.to_owned());
-                }
-            }
-            "retry" => {
-                if !value.is_empty() && value.bytes().all(|b| b.is_ascii_digit()) {
-                    self.retries.push(parse_int(value, Radix::Ten));
-                }
+            "id" if !value.contains('\0') => self.id = Some(value.to_owned()),
+            "retry" if !value.is_empty() && value.bytes().all(|b| b.is_ascii_digit()) => {
+                self.retries.push(parse_int(value, Radix::Ten));
             }
             _ => {}
         }
@@ -339,6 +333,7 @@ pub struct StreamableHttpTransport {
     streams: Vec<Stream>,
     synthetic_streams: u64,
     events: VecDeque<TransportEvent>,
+    late_send: bool,
 }
 
 impl StreamableHttpTransport {
@@ -356,12 +351,21 @@ impl StreamableHttpTransport {
             streams: Vec::new(),
             synthetic_streams: 0,
             events: VecDeque::new(),
+            late_send: false,
         }
     }
 
     /// `transport.protocolVersion`
     pub fn protocol_version(&self) -> Option<&str> {
         self.protocol_version.as_deref()
+    }
+
+    /// whether the `fetch` the transport is given reaches the network a few
+    /// ticks after the transport calls it (an async wrapper): a send then
+    /// lands after the synchronous work that follows it. The default is a
+    /// `fetch` that logs at once.
+    pub fn set_late_send(&mut self, late: bool) {
+        self.late_send = late;
     }
 
     fn emit_error(&mut self, error: ClientError) {
@@ -727,6 +731,10 @@ impl Transport for StreamableHttpTransport {
         }
     }
 
+    fn defers_send(&self) -> bool {
+        self.late_send
+    }
+
     fn close(&mut self, host: &mut dyn ClientHost) {
         if let Some(timer) = self.reconnection_timeout.take() {
             host.clear_timeout(timer);
@@ -751,9 +759,10 @@ impl Transport for StreamableHttpTransport {
                 if let Some(stream) = self.streams.iter_mut().find(|s| s.id == id) {
                     stream.over = true;
                 }
-                self.emit_error(ClientError::plain(
-                    "SSE stream disconnected: AbortError: This operation was aborted",
-                ));
+                self.events
+                    .push_back(TransportEvent::LateError(ClientError::plain(
+                        "SSE stream disconnected: AbortError: This operation was aborted",
+                    )));
             }
         }
     }

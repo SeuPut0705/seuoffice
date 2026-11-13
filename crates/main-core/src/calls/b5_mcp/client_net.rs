@@ -953,7 +953,10 @@ fn run_remote(cfg: &Value) -> Answer {
             .to_owned(),
         call_timeout_ms: cfg.get("callTimeoutMs").and_then(Value::as_f64),
     };
-    let mut conn = RemoteConnection::new(options).map_err(CallError::plain)?;
+    let mut conn = RemoteConnection::new(options).map_err(|message| CallError {
+        code: Some("ERR_INVALID_URL".to_owned()),
+        message,
+    })?;
     // operation numbers and signal numbers are the position of their names
     let mut ops: Vec<String> = Vec::new();
     let mut signals: Vec<(String, bool)> = Vec::new();
