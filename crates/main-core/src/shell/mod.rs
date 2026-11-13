@@ -1,8 +1,10 @@
 //! `apps/shell/src/main`: the modules that hold no Electron object (batches 1
 //! and 3 of decision 0030), one file per TypeScript file.
 
+pub mod agent;
 pub mod ai_naming;
 pub mod ai_naming_provider;
+pub mod ai_naming_service;
 pub mod ai_secrets;
 pub mod app_routing;
 pub mod app_settings;
@@ -28,6 +30,7 @@ pub mod file_index;
 pub mod file_targets;
 pub mod folder_roots;
 pub mod folder_tree;
+pub mod generate;
 pub mod headless_export;
 pub mod home_api;
 pub mod launch_paths;
@@ -67,6 +70,7 @@ pub mod update_notes;
 pub mod update_restart;
 pub mod update_resume;
 pub mod updater;
+pub mod user_skills;
 pub mod window_background;
 pub mod window_bounds;
 pub mod window_close_guard;

@@ -1,0 +1,1468 @@
+[
+  {
+    "name": "agent-session/skills: the plugin is named wrong",
+    "file": "main-core/src/packages/ai_provider/agent_session_skills.rs",
+    "find": "pub const AGENT_SKILL_PLUGIN_NAME: &str = \"ieum-skills\";",
+    "replace": "pub const AGENT_SKILL_PLUGIN_NAME: &str = \"ieum-skill\";",
+    "fn": ["ai-provider/agent-session/skills.AGENT_SKILL_PLUGIN_NAME"]
+  },
+  {
+    "name": "program-problem: exited is named exit",
+    "file": "main-core/src/packages/ai_provider/agent_session_program_problem.rs",
+    "find": "AgentProgramProblem::Exited { .. } => \"exited\",",
+    "replace": "AgentProgramProblem::Exited { .. } => \"exit\",",
+    "fn": ["ai-provider/agent-session/program-problem.AgentProgramError"]
+  },
+  {
+    "name": "program-problem: the exit code has another key",
+    "file": "main-core/src/packages/ai_provider/agent_session_program_problem.rs",
+    "find": "object.set(\"exitCode\", JsonValue::Number(*code));",
+    "replace": "object.set(\"exit_code\", JsonValue::Number(*code));",
+    "fn": ["ai-provider/agent-session/program-problem.AgentProgramError"]
+  },
+  {
+    "name": "program-problem: the refusal code has another key",
+    "file": "main-core/src/packages/ai_provider/agent_session_program_problem.rs",
+    "find": "object.set(\"code\", JsonValue::Number(*code));",
+    "replace": "object.set(\"exit\", JsonValue::Number(*code));",
+    "fn": ["ai-provider/agent-session/program-problem.AgentProgramError"]
+  },
+  {
+    "name": "program-problem: the error has another name",
+    "file": "main-core/src/packages/ai_provider/agent_session_program_problem.rs",
+    "find": "pub const NAME: &'static str = \"AgentProgramError\";",
+    "replace": "pub const NAME: &'static str = \"AgentError\";",
+    "fn": [
+      "ai-provider/agent-session/program-problem.AgentProgramError",
+      "agent-sessions.agentStartFailed"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: the sentence loses a clause",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "say in your answer which step you could not do.",
+    "replace": "say which step you could not do.",
+    "fn": [
+      "agent-core/skill-mcp-refs.SKILL_SKIPPED_STEPS_SENTENCE",
+      "agent-core/skill-mcp-refs.skillStepsNote"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: the unusable line says now",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "which cannot be used right now.",
+    "replace": "which cannot be used now.",
+    "fn": [
+      "agent-core/skill-mcp-refs.mcpServerUnusableLine",
+      "agent-core/skill-mcp-refs.skillStepsNote"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: a server is listed twice",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "if !server.is_empty() && !into.iter().any(|known| known == server) {",
+    "replace": "if !server.is_empty() {",
+    "fn": [
+      "agent-core/skill-mcp-refs.mcpServersInText",
+      "agent-core/skill-mcp-refs.mcpServersOfSkill",
+      "agent-core/skill-mcp-refs.mcpServerListOf"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: an empty server is listed",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "if !server.is_empty() && !into.iter().any(|known| known == server) {",
+    "replace": "if !into.iter().any(|known| known == server) {",
+    "fn": ["agent-core/skill-mcp-refs.mcpServerListOf"]
+  },
+  {
+    "name": "skill-mcp-refs: a name inside a longer word is a tool",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "(?<![A-Za-z0-9_])",
+    "replace": "",
+    "fn": [
+      "agent-core/skill-mcp-refs.mcpServersInText",
+      "agent-core/skill-mcp-refs.mcpServersOfSkill"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: the server runs to the last double underscore",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "*?)__[A-Za-z0-9*][\\w.*-]*\",",
+    "replace": "*)__[A-Za-z0-9*][\\w.*-]*\",",
+    "fn": ["agent-core/skill-mcp-refs.mcpServersInText"]
+  },
+  {
+    "name": "skill-mcp-refs: commas do not part allowed tools",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "js_regex!(r\"[\\s,]+\")",
+    "replace": "js_regex!(r\"[\\s]+\")",
+    "fn": [
+      "agent-core/skill-mcp-refs.mcpServersInAllowedTools",
+      "agent-core/skill-mcp-refs.mcpServersOfSkill"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: quotes stay on an allowed tool",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "js_regex!(r#\"^[\"']+|[\"']+$\"#, \"g\")",
+    "replace": "js_regex!(r#\"^[\"']+\"#, \"g\")",
+    "fn": ["agent-core/skill-mcp-refs.mcpServersInAllowedTools"]
+  },
+  {
+    "name": "skill-mcp-refs: a list of allowed tools is joined without a gap",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "value.join(\" \")",
+    "replace": "value.join(\"\")",
+    "fn": [
+      "agent-core/skill-mcp-refs.mcpServersInAllowedTools",
+      "agent-core/skill-mcp-refs.mcpServersOfSkill"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: the front matter servers are dropped",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "let mut out = mcp_servers_in_allowed_tools(allowed_tools);",
+    "replace": "let mut out: Vec<String> = Vec::new();",
+    "fn": ["agent-core/skill-mcp-refs.mcpServersOfSkill"]
+  },
+  {
+    "name": "skill-mcp-refs: with no server list every server is usable",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "None => true,",
+    "replace": "None => false,",
+    "fn": [
+      "agent-core/skill-mcp-refs.unusableMcpServers",
+      "agent-core/skill-mcp-refs.skillStepsNote"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: a check that throws counts as usable",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "Err(UsableThrew) => true,",
+    "replace": "Err(UsableThrew) => false,",
+    "fn": [
+      "agent-core/skill-mcp-refs.unusableMcpServers",
+      "agent-core/skill-mcp-refs.skillStepsNote"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: the usable ones are listed",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "Ok(usable) => !usable,",
+    "replace": "Ok(usable) => usable,",
+    "fn": [
+      "agent-core/skill-mcp-refs.unusableMcpServers",
+      "agent-core/skill-mcp-refs.skillStepsNote"
+    ]
+  },
+  {
+    "name": "skill-mcp-refs: the note is one line",
+    "file": "main-core/src/packages/agent_core/skill_mcp_refs.rs",
+    "find": "lines.join(\"\\n\")",
+    "replace": "lines.join(\" \")",
+    "fn": ["agent-core/skill-mcp-refs.skillStepsNote"]
+  },
+  {
+    "name": "agent-api: a channel is named differently",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "(\"getInit\", \"agent-window:get-init\"),",
+    "replace": "(\"getInit\", \"agent-window:getinit\"),",
+    "fn": ["agent-api.AGENT_CHANNELS"]
+  },
+  {
+    "name": "agent-api: the programs are in another order",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "pub const AGENT_PROVIDERS: [&str; 2] = [\"claude-code\", \"codex\"];",
+    "replace": "pub const AGENT_PROVIDERS: [&str; 2] = [\"codex\", \"claude-code\"];",
+    "fn": ["agent-api.AGENT_PROVIDERS"]
+  },
+  {
+    "name": "agent-api: the modes are in another order",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "pub const AGENT_MODES: [&str; 3] = [\"ask-commands\", \"ask-writes\", \"trust-project\"];",
+    "replace": "pub const AGENT_MODES: [&str; 3] = [\"ask-writes\", \"ask-commands\", \"trust-project\"];",
+    "fn": ["agent-api.AGENT_MODES"]
+  },
+  {
+    "name": "agent-api: the warning is a new version",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "pub const AGENT_WARNING_VERSION: f64 = 1.0;",
+    "replace": "pub const AGENT_WARNING_VERSION: f64 = 2.0;",
+    "fn": ["agent-api.AGENT_WARNING_VERSION"]
+  },
+  {
+    "name": "agent-api: nine recent folders",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "pub const AGENT_RECENT_LIMIT: usize = 8;",
+    "replace": "pub const AGENT_RECENT_LIMIT: usize = 9;",
+    "fn": [
+      "agent-api.AGENT_RECENT_LIMIT",
+      "agent-api.normalizeAgentPrefs",
+      "agent-api.withRecentFolder"
+    ]
+  },
+  {
+    "name": "agent-api: the default mode asks for writes",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "mode: \"ask-commands\".to_owned(),",
+    "replace": "mode: \"ask-writes\".to_owned(),",
+    "fn": ["agent-api.DEFAULT_AGENT_PREFS", "agent-api.normalizeAgentPrefs"]
+  },
+  {
+    "name": "agent-api: a folder starts with network on",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "codex_network: false,",
+    "replace": "codex_network: true,",
+    "fn": ["agent-api.DEFAULT_AGENT_PROJECT_PREFS"]
+  },
+  {
+    "name": "agent-api: any web search value is taken",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "&& AGENT_CODEX_WEB_SEARCH.contains(&search.as_str())",
+    "replace": "&& !search.is_empty()",
+    "fn": ["agent-api.agentProjectPrefsPatch"]
+  },
+  {
+    "name": "agent-api: the network key is read in lower case",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "own(raw, \"codexNetwork\")",
+    "replace": "own(raw, \"codexnetwork\")",
+    "fn": ["agent-api.agentProjectPrefsPatch"]
+  },
+  {
+    "name": "agent-api: a run error is named differently",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "\"sandbox-unavailable\",",
+    "replace": "\"sandbox-unavailable-x\",",
+    "fn": ["agent-api.AGENT_RUN_ERROR_KINDS"]
+  },
+  {
+    "name": "agent-api: the code of a failed step has a dash",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "format!(\"prepare {}\", step.as_str())",
+    "replace": "format!(\"prepare-{}\", step.as_str())",
+    "fn": ["agent-api.agentStartFailureCode"]
+  },
+  {
+    "name": "agent-api: the exit code is joined with a dash",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "format!(\"exited {}\", number_to_string(*code))",
+    "replace": "format!(\"exited-{}\", number_to_string(*code))",
+    "fn": ["agent-api.agentStartFailureCode"]
+  },
+  {
+    "name": "agent-api: a step keeps its slashes",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "step.replace('/', \".\")",
+    "replace": "step.to_owned()",
+    "fn": ["agent-api.agentStartFailureCode"]
+  },
+  {
+    "name": "agent-api: the refusal code is glued on",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "Some(code) => format!(\" {}\", number_to_string(*code)),",
+    "replace": "Some(code) => format!(\"{}\", number_to_string(*code)),",
+    "fn": ["agent-api.agentStartFailureCode"]
+  },
+  {
+    "name": "agent-api: a fraction is an accepted warning",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "if accepted.is_finite() && accepted.fract() == 0.0 =>",
+    "replace": "if accepted.is_finite() =>",
+    "fn": ["agent-api.normalizeAgentPrefs"]
+  },
+  {
+    "name": "agent-api: a folder is kept twice",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "&& !unique.contains(folder)",
+    "replace": "&& true",
+    "fn": ["agent-api.normalizeAgentPrefs"]
+  },
+  {
+    "name": "agent-api: an empty folder is kept",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "&& !folder.is_empty()",
+    "replace": "&& true",
+    "fn": ["agent-api.normalizeAgentPrefs"]
+  },
+  {
+    "name": "agent-api: one more folder than the limit is kept",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "unique.truncate(AGENT_RECENT_LIMIT);",
+    "replace": "unique.truncate(AGENT_RECENT_LIMIT + 1);",
+    "fn": ["agent-api.normalizeAgentPrefs"]
+  },
+  {
+    "name": "agent-api: an unknown program is the second",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "_ => defaults.provider,",
+    "replace": "_ => \"codex\".to_owned(),",
+    "fn": ["agent-api.normalizeAgentPrefs"]
+  },
+  {
+    "name": "agent-api: the older copy of a folder is told by case",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": ".filter(|known| known.to_lowercase() != lower)",
+    "replace": ".filter(|known| known.as_str() != folder)",
+    "fn": ["agent-api.withRecentFolder"]
+  },
+  {
+    "name": "agent-api: the new list is not cut",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "recent_folders.truncate(AGENT_RECENT_LIMIT);",
+    "replace": "recent_folders.truncate(AGENT_RECENT_LIMIT + 5);",
+    "fn": ["agent-api.withRecentFolder"]
+  },
+  {
+    "name": "agent-api: the view says changes",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "object.set(\"changed\", JsonValue::Bool(self.changed));",
+    "replace": "object.set(\"changes\", JsonValue::Bool(self.changed));",
+    "fn": ["project-skills.projectSkillsView", "project-skills.setProjectSkills"]
+  },
+  {
+    "name": "project-skills: the others are the project skills",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": ".filter(|skill| skill.source == \"project\")",
+    "replace": ".filter(|skill| skill.source != \"project\")",
+    "fn": [
+      "project-skills.projectSkillsOf",
+      "project-skills.projectSkillsView",
+      "project-skills.projectSkillsFingerprint"
+    ]
+  },
+  {
+    "name": "project-skills: 401 files fit",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "if *budget < 0 {",
+    "replace": "if *budget < -1 {",
+    "fn": ["project-skills.projectSkillsFingerprint"]
+  },
+  {
+    "name": "project-skills: the file budget is 399",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "const MAX_FILES: i64 = 400;",
+    "replace": "const MAX_FILES: i64 = 399;",
+    "fn": ["project-skills.projectSkillsFingerprint"]
+  },
+  {
+    "name": "project-skills: one byte past 16 MiB is read",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "const MAX_BYTES: u64 = 16 * 1024 * 1024;",
+    "replace": "const MAX_BYTES: u64 = 16 * 1024 * 1024 + 1;",
+    "fn": ["project-skills.projectSkillsFingerprint"]
+  },
+  {
+    "name": "project-skills: exactly 16 MiB is too much",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "if bytes > MAX_BYTES {",
+    "replace": "if bytes >= MAX_BYTES {",
+    "fn": ["project-skills.projectSkillsFingerprint"]
+  },
+  {
+    "name": "project-skills: the skills go by id downwards",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "sorted.sort_by(|a, b| compare(&a.id, &b.id));",
+    "replace": "sorted.sort_by(|a, b| compare(&b.id, &a.id));",
+    "fn": [
+      "project-skills.projectSkillsFingerprint",
+      "project-skills.projectSkillsView",
+      "project-skills.setProjectSkills"
+    ]
+  },
+  {
+    "name": "project-skills: the files go by bytes",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "entries.sort_by(|a, b| compare(&a.0, &b.0));",
+    "replace": "entries.sort_by(|a, b| a.0.cmp(&b.0));",
+    "fn": ["project-skills.projectSkillsFingerprint"]
+  },
+  {
+    "name": "project-skills: the skill id is not in the hash",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "\"skill\\0{}\\0\"",
+    "replace": "\"skill\\0{}\"",
+    "fn": ["project-skills.projectSkillsFingerprint"]
+  },
+  {
+    "name": "project-skills: the folder key keeps its case on Windows",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "if platform == \"win32\" {",
+    "replace": "if platform == \"linux\" {",
+    "fn": [
+      "project-skills.approvedFingerprint",
+      "project-skills.writeProjectSkillsApproval",
+      "project-skills.projectSkillsAllowed"
+    ]
+  },
+  {
+    "name": "project-skills: an upper-case approval is taken",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "&& js_regex!(r\"^[0-9a-f]{64}$\").test(text)",
+    "replace": "&& js_regex!(r\"^[0-9a-fA-F]{64}$\").test(text)",
+    "fn": ["project-skills.approvedFingerprint"]
+  },
+  {
+    "name": "project-skills: a relative folder is taken",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "if is_absolute(key)",
+    "replace": "if true",
+    "fn": ["project-skills.writeProjectSkillsApproval"]
+  },
+  {
+    "name": "project-skills: an empty fingerprint is kept",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "match truthy(fingerprint) {",
+    "replace": "match fingerprint {",
+    "fn": ["project-skills.writeProjectSkillsApproval"]
+  },
+  {
+    "name": "project-skills: turning one off removes the others",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": ".filter(|(known, _)| *known != key)",
+    "replace": ".filter(|(known, _)| *known == key)",
+    "fn": ["project-skills.writeProjectSkillsApproval", "project-skills.setProjectSkills"]
+  },
+  {
+    "name": "project-skills: a changed folder is allowed",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": ".as_deref() == Some(approved.as_str())",
+    "replace": ".as_deref() != Some(approved.as_str())",
+    "fn": ["project-skills.projectSkillsAllowed"]
+  },
+  {
+    "name": "project-skills: nothing to approve is allowed",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "allowed: fingerprint.is_some() && approved == fingerprint,",
+    "replace": "allowed: approved == fingerprint,",
+    "fn": ["project-skills.projectSkillsView"]
+  },
+  {
+    "name": "project-skills: unreadable skills count as changed",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "changed: approved.is_some() && fingerprint.is_some() && approved != fingerprint,",
+    "replace": "changed: approved.is_some() && approved != fingerprint,",
+    "fn": ["project-skills.projectSkillsView"]
+  },
+  {
+    "name": "project-skills: turning on turns off",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "let fingerprint = if on {",
+    "replace": "let fingerprint = if !on {",
+    "fn": ["project-skills.setProjectSkills"]
+  },
+  {
+    "name": "agent-session-folders: a folder is not named for the app",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "const PREFIX: &str = \"ieum-agent-\";",
+    "replace": "const PREFIX: &str = \"ieum-agent_\";",
+    "fn": ["agent-session-folders.makeAgentSessionFolder"]
+  },
+  {
+    "name": "agent-session-folders: the mark names another key",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\\\"createdAt\\\"",
+    "replace": "\\\"created\\\"",
+    "fn": ["agent-session-folders.makeAgentSessionFolder"]
+  },
+  {
+    "name": "agent-session-folders: an unmarked folder goes after 25 hours",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "const UNMARKED_MAX_AGE_MS: f64 = 24.0",
+    "replace": "const UNMARKED_MAX_AGE_MS: f64 = 25.0",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a day old goes",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if now - listing.changed_at > UNMARKED_MAX_AGE_MS {",
+    "replace": "if now - listing.changed_at >= UNMARKED_MAX_AGE_MS {",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the slack is six minutes",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "const START_SLACK_MS: f64 = 5.0 * 60.0 * 1000.0;",
+    "replace": "const START_SLACK_MS: f64 = 6.0 * 60.0 * 1000.0;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the slack itself is too late",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "&& started_at > folder.owner.created_at + START_SLACK_MS",
+    "replace": "&& started_at >= folder.owner.created_at + START_SLACK_MS",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: 101 folders a sweep",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "const MAX_FOLDERS_PER_SWEEP: usize = 100;",
+    "replace": "const MAX_FOLDERS_PER_SWEEP: usize = 101;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: 257 entries are ours",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "const MAX_ENTRIES_PER_FOLDER: usize = 256;",
+    "replace": "const MAX_ENTRIES_PER_FOLDER: usize = 257;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: 256 entries are not ours",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if entries.len() >= MAX_ENTRIES_PER_FOLDER {",
+    "replace": "if entries.len() > MAX_ENTRIES_PER_FOLDER {",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: an underscore is a letter",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "js_regex!(r\"^ieum-agent-[A-Za-z0-9]{6}$\")",
+    "replace": "js_regex!(r\"^ieum-agent-[A-Za-z0-9_]{6}$\")",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: seven letters are a name",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "js_regex!(r\"^ieum-agent-[A-Za-z0-9]{6}$\")",
+    "replace": "js_regex!(r\"^ieum-agent-[A-Za-z0-9]{6,}$\")",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: process zero is an owner",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if pid <= 0.0 {",
+    "replace": "if pid < 0.0 {",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a fraction is a process",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "pid.fract() == 0.0 &&",
+    "replace": "",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a time that is not finite is a time",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if created_at.is_finite() =>",
+    "replace": "if true =>",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a running owner is removed",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if !alive {",
+    "replace": "if alive {",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a process is asked about twice",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if !pids.contains(&folder.owner.pid) {",
+    "replace": "if true {",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: start times are asked for none",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if running.is_empty() {",
+    "replace": "if false {",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: this process has another number",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "if pid == host.pid() {",
+    "replace": "if false {",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: this process started after now",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "host.now_ms() - host.uptime_secs() * 1000.0",
+    "replace": "host.now_ms() + host.uptime_secs() * 1000.0",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a day is 23 hours",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "number(2) * 24.0",
+    "replace": "number(2) * 23.0",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a process starts in the future",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "now - elapsed * 1000.0",
+    "replace": "now + elapsed * 1000.0",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: ps is asked for etimes",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\"etime=\".to_owned(),",
+    "replace": "\"etimes=\".to_owned(),",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: PowerShell asks for a prompt",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\"-NonInteractive\".to_owned(),",
+    "replace": "\"-Interactive\".to_owned(),",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the script exits one",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\"exit 0\".to_owned(),",
+    "replace": "\"exit 1\".to_owned(),",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: PowerShell is not the one of the system",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "&[\"WindowsPowerShell\", \"v1.0\", \"powershell.exe\"]",
+    "replace": "&[\"WindowsPowerShell\", \"v1.0\", \"pwsh.exe\"]",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the query runs where the app was started",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "Some(cwd),",
+    "replace": "None,",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: a line with a carriage return is read",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "exec(trim(line))",
+    "replace": "exec(line)",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the query waits five seconds",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "pub const PROCESS_QUERY_TIMEOUT_MS: u32 = 10_000;",
+    "replace": "pub const PROCESS_QUERY_TIMEOUT_MS: u32 = 5_000;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the query buffer is two megabytes",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "pub const PROCESS_QUERY_MAX_BUFFER: u32 = 1 << 20;",
+    "replace": "pub const PROCESS_QUERY_MAX_BUFFER: u32 = 1 << 21;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-sessions: a failed step is unknown",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "AgentStartFailure::PrepareFailed { step: *step },",
+    "replace": "AgentStartFailure::Unknown,",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program problem is lost",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "problem: error.problem.clone(),",
+    "replace": "problem: crate::packages::ai_provider::agent_session_program_problem::AgentProgramProblem::NoModel,",
+    "fn": ["agent-sessions.agentStartFailed", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: any kind is a run error",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Some(JsonValue::String(kind)) if AGENT_RUN_ERROR_KINDS.contains(&kind.as_str()) => {",
+    "replace": "Some(JsonValue::String(kind)) => {",
+    "fn": ["agent-sessions.agentStartFailed", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program error has another reason",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "name: Some(text(AgentProgramError::NAME)),",
+    "replace": "name: Some(text(\"Error\")),",
+    "fn": ["agent-sessions.agentStartFailed", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: .codex is not protected",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "join(&[home_dir, \".codex\"]),",
+    "replace": "join(&[home_dir, \".codes\"]),",
+    "fn": ["agent-sessions.agentProtectedPaths"]
+  },
+  {
+    "name": "agent-sessions: the upstream home is not protected",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "join(&[home_dir, \".genoffice\"]),",
+    "replace": "join(&[home_dir, \".genoffice2\"]),",
+    "fn": ["agent-sessions.agentProtectedPaths"]
+  },
+  {
+    "name": "agent-sessions: the app home is another folder",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "pub const HOME_DIR_NAME: &str = \".seuoffice\";",
+    "replace": "pub const HOME_DIR_NAME: &str = \".seuoffice2\";",
+    "fn": ["agent-sessions.agentProtectedPaths"]
+  },
+  {
+    "name": "agent-sessions: the old home folders are not protected",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "for name in OLD_HOME_DIR_NAMES {",
+    "replace": "for name in OLD_HOME_DIR_NAMES.into_iter().skip(1) {",
+    "fn": ["agent-sessions.agentProtectedPaths"]
+  },
+  {
+    "name": "agent-sessions: the data folder is not protected",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "paths.push(user_data.to_owned());",
+    "replace": "let _ = user_data;",
+    "fn": ["agent-sessions.agentProtectedPaths", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a relative folder is looked for",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if folder.is_empty() || !is_absolute(folder) {",
+    "replace": "if folder.is_empty() {",
+    "fn": ["agent-sessions.projectFolderProblem", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a missing folder is not a folder",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "return Some(\"missing\");",
+    "replace": "return Some(\"not-a-folder\");",
+    "fn": ["agent-sessions.projectFolderProblem"]
+  },
+  {
+    "name": "agent-sessions: a file is a folder",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if !info.is_dir() {",
+    "replace": "if info.is_dir() {",
+    "fn": ["agent-sessions.projectFolderProblem"]
+  },
+  {
+    "name": "agent-sessions: the root is the home folder",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "return Some(\"drive-root\");",
+    "replace": "return Some(\"home-folder\");",
+    "fn": ["agent-sessions.projectFolderProblem"]
+  },
+  {
+    "name": "agent-sessions: everything below home is home",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if root == comparable_path(home_dir, home_dir, platform) {",
+    "replace": "if root.starts_with(&comparable_path(home_dir, home_dir, platform)) {",
+    "fn": ["agent-sessions.projectFolderProblem", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a folder inside a protected one is fine",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "is_inside_path(&root, &guard, platform) ||",
+    "replace": "",
+    "fn": ["agent-sessions.projectFolderProblem"]
+  },
+  {
+    "name": "agent-sessions: a folder holding a protected one is fine",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "|| is_inside_path(&guard, &root, platform) {",
+    "replace": "{",
+    "fn": ["agent-sessions.projectFolderProblem"]
+  },
+  {
+    "name": "agent-sessions: the preview limit is 2001",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "const RELAY_INPUT_PREVIEW_CHARS: usize = 2_000;",
+    "replace": "const RELAY_INPUT_PREVIEW_CHARS: usize = 2_001;",
+    "fn": ["agent-sessions.relayInputPreview", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: exactly the limit is cut",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if text.encode_utf16().count() > RELAY_INPUT_PREVIEW_CHARS {",
+    "replace": "if text.encode_utf16().count() >= RELAY_INPUT_PREVIEW_CHARS {",
+    "fn": ["agent-sessions.relayInputPreview"]
+  },
+  {
+    "name": "agent-sessions: a cut preview ends with dots",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "\"{}…\",",
+    "replace": "\"{}...\",",
+    "fn": ["agent-sessions.relayInputPreview", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the preview is one line",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let text = json_stringify_pretty(input, 2);",
+    "replace": "let text = json_stringify_pretty(input, 0);",
+    "fn": ["agent-sessions.relayInputPreview", "agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the skills line names one folder up",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "dirname(&dirname(&first.skill_md))",
+    "replace": "dirname(&first.skill_md)",
+    "fn": ["agent-sessions.codexSkillInstructions"]
+  },
+  {
+    "name": "agent-sessions: the plugin root is always named",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if !bundle_dir.is_empty() {",
+    "replace": "if true {",
+    "fn": ["agent-sessions.codexSkillInstructions"]
+  },
+  {
+    "name": "agent-sessions: a title the name already says is shown",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let named = if !title.is_empty() && title != skill.name {",
+    "replace": "let named = if !title.is_empty() {",
+    "fn": ["agent-sessions.codexSkillInstructions"]
+  },
+  {
+    "name": "agent-sessions: a manual skill is not marked",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "skill.invoke == \"manual\"",
+    "replace": "skill.invoke == \"never\"",
+    "fn": ["agent-sessions.codexSkillInstructions"]
+  },
+  {
+    "name": "agent-sessions: a skill with no description has none",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "\"no description\"",
+    "replace": "\"none\"",
+    "fn": ["agent-sessions.codexSkillInstructions"]
+  },
+  {
+    "name": "agent-sessions: lines of a description stay",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "js_regex!(r\"\\s+\", \"g\")",
+    "replace": "js_regex!(r\"[ ]+\", \"g\")",
+    "fn": ["agent-sessions.codexSkillInstructions"]
+  },
+  {
+    "name": "agent-sessions: Codex reads with the Read tool",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let how = if provider == \"claude-code\" {",
+    "replace": "let how = if provider == \"codex\" {",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: the note limit is 31000",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "const MAX_PROJECT_NOTES_CHARS: usize = 32_000;",
+    "replace": "const MAX_PROJECT_NOTES_CHARS: usize = 31_000;",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: a note of exactly the limit is cut",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if content.encode_utf16().count() > MAX_PROJECT_NOTES_CHARS {",
+    "replace": "if content.encode_utf16().count() >= MAX_PROJECT_NOTES_CHARS {",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: a cut note always says where the rest is",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if note_inside_project(&path, project_root, platform) {",
+    "replace": "if true {",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: a link that stays does not stay",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "!(rel == \"..\" || rel.starts_with(&format!(\"..{SEP}\")) || is_absolute(&rel))",
+    "replace": "!(rel == \"..\" || rel.starts_with(\"..\") || is_absolute(&rel))",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: a link out stays in",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "!(rel == \"..\" || rel.starts_with(&format!(\"..{SEP}\")) || is_absolute(&rel))",
+    "replace": "!(rel == \"..\" || is_absolute(&rel))",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: the cut splits a pair",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if (0xd800..=0xdbff).contains(&code) {",
+    "replace": "if false {",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: a blank note is a note",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if trim(&content).is_empty() {",
+    "replace": "if content.is_empty() {",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: Codex reads the project notes of Claude and Agents",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let files: &[&str] = if provider == \"claude-code\" {",
+    "replace": "let files: &[&str] = if provider == \"codex\" {",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: Claude is told about the skills",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if provider == \"codex\" {\n        lines.extend(codex_skill_instructions(skills));",
+    "replace": "if provider == \"claude-code\" {\n        lines.extend(codex_skill_instructions(skills));",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: the app tools are always described",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if with_app_tools {",
+    "replace": "if !with_app_tools {",
+    "fn": [
+      "agent-sessions.agentInstructionsAndCuts",
+      "agent-sessions.agentInstructions",
+      "agent-sessions.createAgentManager"
+    ]
+  },
+  {
+    "name": "agent-sessions: relay servers are named when there are none",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if !relay_servers.is_empty() {",
+    "replace": "if relay_servers.is_empty() {",
+    "fn": [
+      "agent-sessions.agentInstructionsAndCuts",
+      "agent-sessions.agentInstructions",
+      "agent-sessions.createAgentManager"
+    ]
+  },
+  {
+    "name": "agent-sessions: relay servers are joined without a gap",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "relay_servers.join(\", \")",
+    "replace": "relay_servers.join(\",\")",
+    "fn": [
+      "agent-sessions.agentInstructionsAndCuts",
+      "agent-sessions.agentInstructions",
+      "agent-sessions.createAgentManager"
+    ]
+  },
+  {
+    "name": "agent-sessions: the skill sentence is worded differently",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "\"When you follow a skill: {SKILL_SKIPPED_STEPS_SENTENCE}\"",
+    "replace": "\"When following a skill: {SKILL_SKIPPED_STEPS_SENTENCE}\"",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: the reply language is asked for differently",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "unless the person writes in another language.",
+    "replace": "unless asked otherwise.",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: a note has a one-hash heading",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "format!(\"## {name}\\n{}\"",
+    "replace": "format!(\"# {name}\\n{}\"",
+    "fn": ["agent-sessions.agentInstructionsAndCuts", "agent-sessions.agentInstructions"]
+  },
+  {
+    "name": "agent-sessions: a bad folder is not connected",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "return AgentStartResult::failed(AgentStartFailure::BadFolder);",
+    "replace": "return AgentStartResult::failed(AgentStartFailure::NotConnected);",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: no connection is a bad folder",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "return AgentStartResult::failed(AgentStartFailure::NotConnected);",
+    "replace": "return AgentStartResult::failed(AgentStartFailure::BadFolder);",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the status of the program is not read",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "subscription_connection(&settings, prop(&statuses, &request.provider))",
+    "replace": "subscription_connection(&settings, None)",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a metered login is not metered",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "connection == SubscriptionConnection::Metered",
+    "replace": "connection != SubscriptionConnection::Metered",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: Codex searches live by default",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "|| \"cached\".to_owned()",
+    "replace": "|| \"live\".to_owned()",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: Codex gets the network by default",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "is_some_and(|codex| codex.network)",
+    "replace": "is_none_or(|codex| codex.network)",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: Codex is started for Claude",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let ran = if request.provider == \"claude-code\" {",
+    "replace": "let ran = if request.provider == \"codex\" {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program with no model gets one",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "model: string_of(\"model\").unwrap_or_default(),",
+    "replace": "model: string_of(\"model\").unwrap_or(\"default\".to_owned()),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the CLI path is read under another key",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "cli_path: string_of(\"cliPath\"),",
+    "replace": "cli_path: string_of(\"cli_path\"),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the effort is read under another key",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "effort: string_of(\"effort\"),",
+    "replace": "effort: string_of(\"thinking\"),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the app tools are always told of",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "app_mcp_info.is_some(),",
+    "replace": "true,",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: no relays are an empty list",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "user_mcp_relays: if relay_list.is_empty() {",
+    "replace": "user_mcp_relays: if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: no servers keeping results inside are a list",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "mcp_keep_inside: if keep_inside.is_empty() {",
+    "replace": "mcp_keep_inside: if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: no cut notes are a list",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "instructions_truncated: if instructions.truncated.is_empty() {",
+    "replace": "instructions_truncated: if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a stop while the app tools start goes unnoticed",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "entry.borrow_mut().app_mcp = Some(app_mcp.server);\n            }\n            if self.stopped(host, &entry) {",
+    "replace": "entry.borrow_mut().app_mcp = Some(app_mcp.server);\n            }\n            if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a stop while the relays start goes unnoticed",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "entry.borrow_mut().relays = Some(relays.handle);\n            }\n            if self.stopped(host, &entry) {",
+    "replace": "entry.borrow_mut().relays = Some(relays.handle);\n            }\n            if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a stop while the instructions are made goes unnoticed",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "self.meanwhile(host, \"instructions\");\n            if self.stopped(host, &entry) {",
+    "replace": "self.meanwhile(host, \"instructions\");\n            if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a stop while the runner works goes unnoticed",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "entry.borrow_mut().session = Some(ran?);\n            if self.stopped(host, &entry) {",
+    "replace": "entry.borrow_mut().session = Some(ran?);\n            if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the program is started though turned off",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if Self::off_in_app(host, &request.provider) {\n                self.cleanup(host, &entry);",
+    "replace": "if false {\n                self.cleanup(host, &entry);",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program found after it was turned off keeps running",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Self::stop_session(&entry);\n                self.cleanup(host, &entry);\n                return Ok(off_in_app_failure());",
+    "replace": "self.cleanup(host, &entry);\n                return Ok(off_in_app_failure());",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program turned off while it started is let go",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if Self::off_in_app(host, &request.provider) {\n                Self::stop_session(&entry);",
+    "replace": "if false {\n                Self::stop_session(&entry);",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the status says off",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Some(JsonValue::String(state)) if state == \"off\"",
+    "replace": "Some(JsonValue::String(state)) if state == \"offline\"",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the setting is not read for off",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if subscription_off_in(&settings, Some(&text(provider))) {",
+    "replace": "if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a failed start leaves its parts",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "self.cleanup(host, &entry);\n                agent_start_failed(&error)",
+    "replace": "agent_start_failed(&error)",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the app tools are left running",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "app_mcp.stop();",
+    "replace": "let _ = app_mcp;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the relays are left running",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "relays.stop();",
+    "replace": "let _ = relays;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: waiting questions are left waiting",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Self::settle(host, entry, &id, &RelayAnswer::Deny);",
+    "replace": "let _ = &id;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the session folder is left",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "host.remove_folder(&dir, &REMOVE_OPTIONS);",
+    "replace": "let _ = &dir;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the folder is retried eleven times",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "max_retries: 10,",
+    "replace": "max_retries: 11,",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the folder is retried after 101 ms",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "retry_delay_ms: 100,",
+    "replace": "retry_delay_ms: 101,",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: an answered question is answered again",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "live.relay_asks.len() != before",
+    "replace": "true",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: an aborted question is asked",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Some(entry) if !aborted => entry,",
+    "replace": "Some(entry) => entry,",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: Codex questions come from Claude",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let provider = if live.provider == \"claude-code\" {",
+    "replace": "let provider = if live.provider == \"codex\" {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a question is of another kind",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "(\"kind\", text(\"mcp-tool\")),",
+    "replace": "(\"kind\", text(\"tool\")),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a message to a missing session has another text",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "return Err(\"No such agent session\".to_owned()),",
+    "replace": "return Err(\"No such session\".to_owned()),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a document is warned about every time",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if live.protected_documents.contains(&key) {",
+    "replace": "if false {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: documents are told apart by their spelling",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let key = comparable_path(path, path, &self.platform);",
+    "replace": "let key = path.clone();",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the notice has another type",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "(\"type\", text(\"documents-unprotected\")),",
+    "replace": "(\"type\", text(\"documents-open\")),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the off-in-app notice has another text",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "const OFF_IN_APP_MESSAGE: &str = \"The program is turned off in this app\";",
+    "replace": "const OFF_IN_APP_MESSAGE: &str = \"The program is turned off\";",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the off-in-app notice has another kind",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "(\"kind\", text(\"off-in-app\")),",
+    "replace": "(\"kind\", text(\"off\")),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a scope of session is once",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "scope: if answer.scope.as_deref() == Some(\"session\") {",
+    "replace": "scope: if answer.scope.as_deref() == Some(\"once\") {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: another owner answers",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let Some(entry) = self.own(owner_id, session_id) else {\n            return;\n        };\n        // a relay",
+    "replace": "let Some(entry) = self.find(session_id) else {\n            return;\n        };\n        // a relay",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: stopping an owner stops the others",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if entry.borrow().owner_id != owner_id {",
+    "replace": "if entry.borrow().owner_id == owner_id {",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the quit leaves the folders",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let _ = host.remove_folder_sync(&dir, &REMOVE_OPTIONS);",
+    "replace": "let _ = &dir;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a removed folder is forgotten wrongly",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "self.removing.retain(|known| known != dir);",
+    "replace": "self.removing.retain(|known| known == dir);",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the program ends on a different event",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if event_type(event) == Some(\"ended\")",
+    "replace": "if event_type(event) == Some(\"end\")",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: another owner finds the session",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": ".filter(|entry| entry.borrow().owner_id == owner_id)",
+    "replace": ".filter(|entry| entry.borrow().owner_id != owner_id)",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a stopped start leaves the program running",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "        Self::stop_session(entry);\n        self.release(host, entry);\n        true",
+    "replace": "        self.release(host, entry);\n        true",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a path outside the folder opens",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "if !is_inside_path(&comparable_path(&full, &root, platform), &root, platform) {",
+    "replace": "if false {",
+    "fn": ["agent-sessions.openableProjectFile"]
+  },
+  {
+    "name": "agent-sessions: an absolute path is under the folder",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "let full = if is_absolute(path) {",
+    "replace": "let full = if false {",
+    "fn": ["agent-sessions.openableProjectFile"]
+  },
+  {
+    "name": "agent-sessions: a folder opens",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Ok(info) if info.is_file() => {}",
+    "replace": "Ok(_) => {}",
+    "fn": ["agent-sessions.openableProjectFile"]
+  },
+  {
+    "name": "agent-session-folders: the mtime of a file is not read",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "*changed_at = jscompat::math_max(*changed_at, StatInfo::of(&file).mtime_ms);",
+    "replace": "let _ = &file;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the mtime of a folder is not read",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "*changed_at = jscompat::math_max(*changed_at, StatInfo::of(&info).mtime_ms);",
+    "replace": "let _ = &info;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the folder itself stays",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "let _ = fs::remove_dir(namespaced(dir));",
+    "replace": "let _ = dir;",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: the script loop has no gap",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\"foreach ($id in @({})) {{\"",
+    "replace": "\"foreach ($id in @({})){{\"",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: ps is asked for pid names",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\"pid=\".to_owned(),",
+    "replace": "\"pid\".to_owned(),",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: ps is found on the path",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\"/bin/ps\".to_owned(),",
+    "replace": "\"ps\".to_owned(),",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-session-folders: ps is asked for a process group",
+    "file": "main-core/src/shell/agent/agent_session_folders.rs",
+    "find": "\"-p\".to_owned(),",
+    "replace": "\"-g\".to_owned(),",
+    "fn": ["agent-session-folders.sweepAgentSessionFolders"]
+  },
+  {
+    "name": "agent-sessions: the open documents are not passed on",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "session.set_open_documents(&current);",
+    "replace": "let _ = &current;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the off-in-app notice has another type",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "(\"type\", text(\"error\")),",
+    "replace": "(\"type\", text(\"failure\")),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program turned off since is left running",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Self::stop_session(&entry);\n            self.cleanup(host, &entry);\n            return Ok(());",
+    "replace": "self.cleanup(host, &entry);\n            return Ok(());",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: the program never hears an answer",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "session.answer(request_id, answer);",
+    "replace": "let _ = (request_id, answer);",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: stopping a session leaves its program",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Self::stop_session(&entry);\n        self.cleanup(host, &entry);\n    }\n\n    /// the owner window went away",
+    "replace": "self.cleanup(host, &entry);\n    }\n\n    /// the owner window went away",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: stopping an owner leaves its programs",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "Self::stop_session(&entry);\n            self.cleanup(host, &entry);\n        }\n    }\n\n    /// the app is quitting",
+    "replace": "self.cleanup(host, &entry);\n        }\n    }\n\n    /// the app is quitting",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a question is not remembered",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "live.relay_asks.push(id.clone());",
+    "replace": "let _ = &id;",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a question has another type",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "(\"type\", text(\"permission\")),",
+    "replace": "(\"type\", text(\"permission-request\")),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a question shows the server",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "(\"tool\", text(&request.exposed_name)),",
+    "replace": "(\"tool\", text(&request.server)),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a question shows no input",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "(\"target\", text(&relay_input_preview(&request.input))),",
+    "replace": "(\"target\", text(\"\")),",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-sessions: a program event is not told on",
+    "file": "main-core/src/shell/agent/agent_sessions.rs",
+    "find": "host.emit(owner_id, session_id, event);\n        if event_type(event)",
+    "replace": "if event_type(event)",
+    "fn": ["agent-sessions.createAgentManager"]
+  },
+  {
+    "name": "agent-api: a program is blocked",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "pub const AGENT_BLOCKED_PROVIDERS: [&str; 0] = [];",
+    "replace": "pub const AGENT_BLOCKED_PROVIDERS: [&str; 1] = [\"codex\"];",
+    "fn": ["agent-api.AGENT_BLOCKED_PROVIDERS"]
+  },
+  {
+    "name": "agent-api: the web search choices are in another order",
+    "file": "main-core/src/shell/agent/agent_api.rs",
+    "find": "pub const AGENT_CODEX_WEB_SEARCH: [&str; 3] = [\"cached\", \"live\", \"disabled\"];",
+    "replace": "pub const AGENT_CODEX_WEB_SEARCH: [&str; 3] = [\"live\", \"cached\", \"disabled\"];",
+    "fn": ["agent-api.AGENT_CODEX_WEB_SEARCH"]
+  },
+  {
+    "name": "project-skills: the settings key is singular",
+    "file": "main-core/src/shell/agent/project_skills.rs",
+    "find": "pub const PROJECT_SKILLS_KEY: &str = \"agentProjectSkills\";",
+    "replace": "pub const PROJECT_SKILLS_KEY: &str = \"agentProjectSkill\";",
+    "fn": ["project-skills.PROJECT_SKILLS_KEY"]
+  }
+]

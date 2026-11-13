@@ -9,6 +9,7 @@ pub mod copy_image_guard;
 pub mod doc_format;
 pub mod docs_recovery;
 pub mod external_change;
+pub mod free_ai_ipc;
 pub mod free_ai_strings;
 pub mod hwp_export;
 pub mod hwp_export_strings;
