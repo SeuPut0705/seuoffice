@@ -43,6 +43,26 @@ fn chunk(request_id: &Option<JsonValue>, kind: &str, rest: Vec<(&str, JsonValue)
     out
 }
 
+/// The chunk as the renderer receives it: the `null` the `done` chunk of a turn carries for
+/// `stopReason` is the key with the value `undefined`, which structured cloning keeps
+fn wire_chunk(chunk: &JsonValue) -> IpcValue {
+    let wire = from_json(chunk);
+    let IpcValue::Object(mut entries) = wire else {
+        return wire;
+    };
+    let done = entries
+        .iter()
+        .any(|(k, v)| k == "type" && *v == IpcValue::String("done".into()));
+    if done {
+        for (key, value) in entries.iter_mut() {
+            if key == "stopReason" && *value == IpcValue::Null {
+                *value = IpcValue::Undefined;
+            }
+        }
+    }
+    IpcValue::Object(entries)
+}
+
 /// what the coalescer hands each gathered chunk to
 type SendChunk = Box<dyn FnMut(Chunk)>;
 
@@ -251,7 +271,7 @@ pub(super) fn ai_stream(
                 services.events.emit(
                     Target::View(view),
                     "ai:stream-chunk",
-                    vec![from_json(chunk)],
+                    vec![wire_chunk(chunk)],
                 );
             }
         }
@@ -452,13 +472,12 @@ pub(super) fn ai_stream(
             let mut failed = None;
             match result {
                 Ok(()) => {
-                    let rest = run
-                        .stop_reason
-                        .borrow()
-                        .clone()
-                        .map(|reason| vec![("stopReason", reason)])
-                        .unwrap_or_default();
-                    run.push("done", rest);
+                    // `{ requestId, type: 'done', stopReason }`: the key is there when the
+                    // provider gave no reason, with the value `undefined`. A JSON value
+                    // cannot hold that, so `null` stands in until `send` makes the wire
+                    // value (a provider's reason is always a string).
+                    let reason = run.stop_reason.borrow().clone().unwrap_or(JsonValue::Null);
+                    run.push("done", vec![("stopReason", reason)]);
                 }
                 Err(_) if controller.aborted() => run.push("done", Vec::new()),
                 Err(error) => {
