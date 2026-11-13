@@ -130,10 +130,7 @@ const TABLES: Array<[string, string]> = [
   ['an unclosed paired gridCol', slideXml(frame(tbl(UNCLOSED, '<a:tblPr/>', ...PLAIN_ROWS)))],
   ['a gridCol without w', slideXml(frame(tbl(NOW, '<a:tblPr/>', ...PLAIN_ROWS)))],
   ['no gridCol at all', slideXml(frame(tbl('<a:tblGrid/>', '<a:tblPr/>', ...PLAIN_ROWS)))],
-  [
-    'right-to-left',
-    slideXml(frame(tbl(SELF, '<a:tblPr rtl="1" firstRow="1"/>', ...PLAIN_ROWS))),
-  ],
+  ['right-to-left', slideXml(frame(tbl(SELF, '<a:tblPr rtl="1" firstRow="1"/>', ...PLAIN_ROWS)))],
   [
     'cell edge cases',
     slideXml(
@@ -179,11 +176,11 @@ const TABLES: Array<[string, string]> = [
     'text outside a table first',
     slideXml(SHAPE, frame(tbl(SELF, '<a:tblPr/>', ...PLAIN_ROWS))), // the table is element 1
   ],
-  ['unicode text', slideXml(frame(tbl(SELF, '<a:tblPr/>', row(H(50), '\u{1F600}\uD55C', '&amp;', 'x'))))],
   [
-    'an empty tr',
-    slideXml(frame(tbl(SELF, '<a:tblPr/>', ...PLAIN_ROWS, '<a:tr h="9"/>'))),
+    'unicode text',
+    slideXml(frame(tbl(SELF, '<a:tblPr/>', row(H(50), '\u{1F600}\uD55C', '&amp;', 'x')))),
   ],
+  ['an empty tr', slideXml(frame(tbl(SELF, '<a:tblPr/>', ...PLAIN_ROWS, '<a:tr h="9"/>')))],
 ]
 
 const PARAGRAPHS: unknown[][] = [
@@ -257,8 +254,7 @@ const styleInput = (
   part?: { part: string; text: string },
   styleDefXml = STYLE_DEF,
   styleId = STYLE_ID,
-): Input =>
-  deckInput(deck, { slide: 0, element: 0, styleId, styleDefXml }, part)
+): Input => deckInput(deck, { slide: 0, element: 0, styleId, styleDefXml }, part)
 
 const STYLE_DECK = 'pptxgenjs text, shape, table and two slides'
 
@@ -276,26 +272,24 @@ export const DECKTABLES: CallSpec[] = [
         ),
       ),
     built: [
-      ...built(
-        (i) => {
-          const rest: Record<string, unknown>[] = []
-          for (const [row, col] of [
-            [0, 0],
-            [0, 1],
-            [0, 2],
-            [1, 2],
-            [1, 0],
-            [2, 0],
-            [0, 3],
-            [-1, 0],
-            [0, 1.5],
-          ]) {
-            rest.push({ row, col, paragraphs: PARAGRAPHS[i % PARAGRAPHS.length] })
-          }
-          if (i === 0) for (const paragraphs of PARAGRAPHS) rest.push({ row: 1, col: 1, paragraphs })
-          return rest
-        },
-      ),
+      ...built((i) => {
+        const rest: Record<string, unknown>[] = []
+        for (const [row, col] of [
+          [0, 0],
+          [0, 1],
+          [0, 2],
+          [1, 2],
+          [1, 0],
+          [2, 0],
+          [0, 3],
+          [-1, 0],
+          [0, 1.5],
+        ]) {
+          rest.push({ row, col, paragraphs: PARAGRAPHS[i % PARAGRAPHS.length] })
+        }
+        if (i === 0) for (const paragraphs of PARAGRAPHS) rest.push({ row: 1, col: 1, paragraphs })
+        return rest
+      }),
       // text with `$` goes through the paragraph generator, not a replacement string
       ...built((i) => (i === 0 ? [{ row: 0, col: 0, paragraphs: PARAGRAPHS[3] }] : [])),
     ],
@@ -319,7 +313,12 @@ export const DECKTABLES: CallSpec[] = [
             { edit: { shadingColor: '#FF0000' } },
             { edit: { borderPreset: 'all', borderColor: '#00F', borderWidthEmu: 12700 } },
             { edit: { shadingColor: '#00FF00', cells: [{ row: 0, col: 1 }] } },
-            { edit: { tblPrXml: '<a:tblPr firstRow="1" bandRow="1"/>', clearDirectFormatting: true } },
+            {
+              edit: {
+                tblPrXml: '<a:tblPr firstRow="1" bandRow="1"/>',
+                clearDirectFormatting: true,
+              },
+            },
           ]
         : [{ edit: { firstRow: true } }],
     ),
@@ -336,7 +335,12 @@ export const DECKTABLES: CallSpec[] = [
       styleInput(BLANK),
       // the part is there already (and the style is, or is not)
       styleInput(STYLE_DECK),
-      styleInput(STYLE_DECK, undefined, '<a:tblStyle styleId="{BBBBBBBB-0000-0000-0000-000000000002}"/>', '{BBBBBBBB-0000-0000-0000-000000000002}'),
+      styleInput(
+        STYLE_DECK,
+        undefined,
+        '<a:tblStyle styleId="{BBBBBBBB-0000-0000-0000-000000000002}"/>',
+        '{BBBBBBBB-0000-0000-0000-000000000002}',
+      ),
       // an empty part reads as missing
       styleInput(BLANK, { part: 'ppt/tableStyles.xml', text: '' }),
       // a part without a list: the empty list is the base
@@ -384,7 +388,9 @@ export const DECKTABLES: CallSpec[] = [
         ),
       ),
     built: built((i) =>
-      i === 4 || i === 5 || i === 6 ? OPS_STRUCTURE.slice(0, 3).map((op) => ({ op })) : OPS_STRUCTURE.map((op) => ({ op })),
+      i === 4 || i === 5 || i === 6
+        ? OPS_STRUCTURE.slice(0, 3).map((op) => ({ op }))
+        : OPS_STRUCTURE.map((op) => ({ op })),
     ),
   },
   {
@@ -398,7 +404,7 @@ export const DECKTABLES: CallSpec[] = [
           args.op as never,
         ),
       ),
-    built: built((i) => OPS_MERGE.map((op) => ({ op }))),
+    built: built(() => OPS_MERGE.map((op) => ({ op }))),
   },
   {
     fn: 'pptxDecktables.index.setTableColWidth',

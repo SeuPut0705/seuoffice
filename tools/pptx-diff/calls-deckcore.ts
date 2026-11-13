@@ -27,7 +27,6 @@ import {
   appendRawElements,
   commitSaved,
   materializeSlide,
-  openPptx,
   patchedElementXml,
   patchSlideXml,
   reparseDeck,
@@ -777,7 +776,7 @@ export const DECKCORE: CallSpec[] = [
   {
     fn: 'pptxDeckcore.index.patchedElementXml',
     call: (text, args) =>
-      deckOp(text, args, (opened, at: At) =>
+      deckOp(text, args, (opened) =>
         withUuid(UUID, () => {
           applyEdits(opened, edits(args))
           const el = opened.deck.slides[args.slide as number]!.elements[args.element as number]!
