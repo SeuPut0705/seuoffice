@@ -77,7 +77,10 @@ const args = (flag: string): string[] =>
   process.argv.flatMap((a, i) => (a === flag ? [process.argv[i + 1]] : []))
 const show = Number(arg('--show') ?? 10)
 
-/** `<batch>/<file>` for every groups/<batch>/<file>.ts */
+/**
+ * `<batch>/<file>` for every groups/<batch>/<file>.ts that exports a group;
+ * a file without `export const group` is a helper the groups share (a loader)
+ */
 function groupNames(): string[] {
   const root = join(tool, 'groups')
   if (!existsSync(root)) return []
@@ -86,6 +89,7 @@ function groupNames(): string[] {
     .flatMap((d) =>
       readdirSync(join(root, d.name))
         .filter((f) => f.endsWith('.ts') && !f.endsWith('.test.ts'))
+        .filter((f) => /^export const group\b/m.test(readFileSync(join(root, d.name, f), 'utf8')))
         .map((f) => `${d.name}/${f.slice(0, -3)}`),
     )
     .sort()
