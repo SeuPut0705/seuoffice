@@ -4,12 +4,31 @@
 //!
 //! The TypeScript injects the runners, the app's MCP server, the subscription
 //! statuses and settings, the open tabs and the event sink; here the caller
-//! gives them through [`AgentHost`], and the runtimes of the programs
+//! gives the immediate ones through [`AgentHost`], and the runtimes of the programs
 //! (`packages/ai-provider/src/agent-session/{claude,codex}.ts`, which wait for
-//! their engine) stay behind [`AgentSessionHandle`] and the two `run_*` methods.
+//! their engine) stay behind [`AgentSessionHandle`].
 //! The manager is a struct the caller owns ([`AgentManager`]).
 //!
-//! What the TypeScript does with promises and callbacks becomes calls the
+//! Every IPC handler and all of this state run on the shell's one core thread,
+//! so nothing here blocks on host work that needs that thread (the Codex app
+//! server, the MCP relays, the agent CLIs), and a stop, an answer or an event
+//! must be able to land while a start waits, as in the TypeScript. So what the
+//! TypeScript awaits is a step the caller carries out:
+//! - `start` is [`AgentManager::start_begin`] and [`AgentStartJob::resume`]: each
+//!   awaited call of the TypeScript (`makeAgentSessionFolder`, `startAppMcp`,
+//!   `startRelays`, `buildSkills`, the runner) is an [`AgentStartStep::Await`]
+//!   with an [`AgentStartCall`]; the caller does the work, runs whatever else
+//!   happens meanwhile (`stop`, `stop_owner`, `stop_all`, `answer`, `on_event`,
+//!   `relay_ask`) and gives the job what the call came to as an
+//!   [`AgentStartAnswer`]. The checks after each `await` (`stopped`, turned off
+//!   in the app) run when the answer arrives, in the TypeScript's order. The two
+//!   awaits that only read files inside this crate (`agentInstructionsAndCuts`,
+//!   `agentSessionSkillsOf`) stay plain calls: a stop that could land while they
+//!   read is seen by the next check or step;
+//! - `send` is [`AgentManager::send_begin`] and [`AgentSendJob::resume`]: the
+//!   program's acceptance of the message is host work of the same kind.
+//!
+//! What else the TypeScript does with promises and callbacks becomes calls the
 //! caller drives:
 //! - a program's events: [`AgentManager::on_event`] (the `onEvent` the runner
 //!   was given);
@@ -18,11 +37,7 @@
 //!   [`AgentHost::relay_settled`]; an aborted question is
 //!   [`AgentManager::relay_ask_aborted`];
 //! - a session folder's removal: [`AgentHost::remove_folder`] starts it and the
-//!   caller calls [`AgentManager::folder_removed`] once it succeeded;
-//! - what happens while `start` waits (a window closing, an event): after each
-//!   step the manager asks [`AgentHost::meanwhile`] and carries out the
-//!   [`Meanwhile`] operations it hands over, then goes on and checks, as the
-//!   TypeScript does after each `await`.
+//!   caller calls [`AgentManager::folder_removed`] once it succeeded.
 
 use std::cell::RefCell;
 use std::collections::HashSet;
@@ -35,7 +50,7 @@ use jscompat::{
 };
 
 use super::agent_api::{AGENT_RUN_ERROR_KINDS, AgentPrepareStep, AgentStartFailure};
-use super::agent_session_folders::{FolderHost, make_agent_session_folder};
+use super::agent_session_folders::FolderHost;
 use super::agent_skills::{AgentSessionSkill, AgentSkillEntry, agent_session_skills_of};
 use crate::node_fs::{NodeError, namespaced};
 use crate::packages::agent_core::skill_mcp_refs::SKILL_SKIPPED_STEPS_SENTENCE;
@@ -359,8 +374,9 @@ impl CodexRunOptions {
 
 /// `AgentSession`: a running program
 pub trait AgentSessionHandle {
-    /// send the person's next message; `Err` is the message of the rejection
-    fn send(&mut self, text: &str) -> Result<(), String>;
+    /// start sending the person's next message; the program's acceptance comes back through
+    /// [`AgentSendJob::resume`] (`Err` is the message of the rejection)
+    fn send(&mut self, text: &str);
     /// answer a pending permission request
     fn answer(&mut self, id: &str, answer: &AgentPermissionAnswer);
     /// the documents open in tabs changed
@@ -458,23 +474,129 @@ pub const REMOVE_OPTIONS: RemoveOptions = RemoveOptions {
     retry_delay_ms: 100,
 };
 
-/// What happened while a step of `start` waited
+/// The host work a start waits on: one variant per awaited call of `start`. The caller carries it
+/// out and gives [`AgentStartJob::resume`] what it came to as the matching [`AgentStartAnswer`].
 #[derive(Debug, Clone, PartialEq)]
-pub enum Meanwhile {
-    Stop {
-        owner_id: i64,
-        session_id: String,
+pub enum AgentStartCall {
+    /// `makeAgentSessionFolder()`: the caller runs
+    /// [`make_agent_session_folder`](super::agent_session_folders::make_agent_session_folder)
+    /// over its folder host, with no parent folder
+    SessionFolder,
+    /// `deps.startAppMcp(projectRoot, session)`
+    AppMcp {
+        project_root: String,
+        session: AgentMcpSession,
     },
-    StopOwner {
-        owner_id: i64,
+    /// `deps.startRelays(session, ask)`; the questions of the relays go to
+    /// [`AgentManager::relay_ask`]
+    Relays { session: AgentMcpSession },
+    /// `deps.buildSkills(projectRoot)`
+    BuildSkills { project_root: String },
+    /// `deps.runners.claude(options, onEvent)`: `session` is what `onEvent` closes over; the
+    /// program's events go to [`AgentManager::on_event`] with it
+    RunClaude {
+        options: Box<AgentSessionOptions>,
+        session: AgentMcpSession,
     },
-    StopAll,
-    /// an event of the program (the `onEvent` of the runner)
-    Event {
-        owner_id: i64,
-        session_id: String,
-        event: JsonValue,
+    /// `deps.runners.codex({ ...options, meteredAccepted, webSearch, network }, onEvent)`
+    RunCodex {
+        options: Box<AgentSessionOptions>,
+        codex: CodexRunOptions,
+        session: AgentMcpSession,
     },
+}
+
+/// What an [`AgentStartCall`] came to: a `Result` is the promise settling, `Err` its rejection
+pub enum AgentStartAnswer {
+    /// the answer to [`AgentStartCall::SessionFolder`]
+    SessionFolder(Result<String, NodeError>),
+    /// the answer to [`AgentStartCall::AppMcp`]
+    AppMcp(Result<AppMcp, Box<Thrown>>),
+    /// the answer to [`AgentStartCall::Relays`]
+    Relays(Result<McpRelays, Box<Thrown>>),
+    /// the answer to [`AgentStartCall::BuildSkills`]
+    BuildSkills(Result<Option<AgentSkillBundle>, Box<Thrown>>),
+    /// the answer to [`AgentStartCall::RunClaude`] and [`AgentStartCall::RunCodex`]
+    Run(Result<Box<dyn AgentSessionHandle>, RunnerError>),
+}
+
+/// What a start asks of the caller next
+pub enum AgentStartStep {
+    /// carry `call` out, then give `job` its answer through [`AgentStartJob::resume`]
+    Await {
+        call: AgentStartCall,
+        job: AgentStartJob,
+    },
+    /// the start is over (its session is live, or it failed and cleaned up)
+    Done(AgentStartResult),
+}
+
+/// Where a start waits
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum Waiting {
+    SessionFolder,
+    AppMcp,
+    Relays,
+    BuildSkills,
+    Run,
+}
+
+/// What the TypeScript's `start` keeps in its locals across the awaits
+struct StartState {
+    entry: Entry,
+    request: AgentStartRequest,
+    settings: JsonValue,
+    /// whether the login is the metered one (`connection === 'metered'`)
+    metered: bool,
+    project_root: String,
+    open_at_start: Vec<String>,
+    session: AgentMcpSession,
+    waiting: Waiting,
+    /// empty until the folder is made
+    session_dir: String,
+    /// the address and token of the app's MCP server, once started
+    app_mcp: Option<(String, String)>,
+    relay_list: Vec<AgentMcpRelay>,
+    keep_inside: Vec<String>,
+    skills: Option<AgentSkillBundle>,
+    /// the project notes the instructions cut at the limit
+    truncated: Vec<String>,
+}
+
+/// A start that waits on an [`AgentStartCall`]; it lives on the core thread with the manager
+pub struct AgentStartJob {
+    state: Box<StartState>,
+}
+
+/// the call a send waits on: the program takes the message
+#[derive(Debug, Clone, PartialEq)]
+pub struct AgentSendCall {
+    pub owner_id: i64,
+    pub session_id: String,
+    pub text: String,
+}
+
+/// A send that waits on its [`AgentSendCall`]. Nothing of the manager's state is read after the
+/// TypeScript's `await entry.session.send(text)`, so [`AgentSendJob::resume`] only gives the
+/// answer back.
+pub struct AgentSendJob(());
+
+impl AgentSendJob {
+    /// the program's answer to the message: `Err` is the message of the rejection
+    pub fn resume(self, answer: Result<(), String>) -> Result<(), String> {
+        answer
+    }
+}
+
+/// What a send asks of the caller next
+pub enum AgentSendStep {
+    /// the program is sending: give `job` the answer through [`AgentSendJob::resume`]
+    Await {
+        call: AgentSendCall,
+        job: AgentSendJob,
+    },
+    /// settled already: `Err` is what the TypeScript throws, the message of an `Error`
+    Done(Result<(), String>),
 }
 
 /// `AgentManagerDeps` and what the TypeScript takes from Node
@@ -491,38 +613,12 @@ pub trait AgentHost: FolderHost {
     fn random_uuid(&mut self) -> String;
     /// `deps.emit(ownerId, sessionId, event)`
     fn emit(&mut self, owner_id: i64, session_id: &str, event: &JsonValue);
-    /// whether `deps.startAppMcp` is given
+    /// whether `deps.startAppMcp` is given: a start then waits on [`AgentStartCall::AppMcp`]
     fn has_app_mcp(&self) -> bool;
-    /// `deps.startAppMcp(projectRoot, session)`
-    fn start_app_mcp(
-        &mut self,
-        project_root: &str,
-        session: &AgentMcpSession,
-    ) -> Result<AppMcp, Box<Thrown>>;
-    /// whether `deps.startRelays` is given
+    /// whether `deps.startRelays` is given: a start then waits on [`AgentStartCall::Relays`]
     fn has_relays(&self) -> bool;
-    /// `deps.startRelays(session, ask)`; the questions of the relays go to
-    /// [`AgentManager::relay_ask`]
-    fn start_relays(&mut self, session: &AgentMcpSession) -> Result<McpRelays, Box<Thrown>>;
-    /// whether `deps.buildSkills` is given
+    /// whether `deps.buildSkills` is given: a start then waits on [`AgentStartCall::BuildSkills`]
     fn has_build_skills(&self) -> bool;
-    /// `deps.buildSkills(projectRoot)`
-    fn build_skills(&mut self, project_root: &str)
-    -> Result<Option<AgentSkillBundle>, Box<Thrown>>;
-    /// `deps.runners.claude(options, onEvent)`: `session` is what `onEvent` closes over; the
-    /// program's events go to [`AgentManager::on_event`] with it
-    fn run_claude(
-        &mut self,
-        options: &AgentSessionOptions,
-        session: &AgentMcpSession,
-    ) -> Result<Box<dyn AgentSessionHandle>, RunnerError>;
-    /// `deps.runners.codex({ ...options, meteredAccepted, webSearch, network }, onEvent)`
-    fn run_codex(
-        &mut self,
-        options: &AgentSessionOptions,
-        codex: &CodexRunOptions,
-        session: &AgentMcpSession,
-    ) -> Result<Box<dyn AgentSessionHandle>, RunnerError>;
     /// `rm(dir, removeOptions)`, started: the caller calls [`AgentManager::folder_removed`] when
     /// it has succeeded
     fn remove_folder(&mut self, dir: &str, options: &RemoveOptions);
@@ -530,8 +626,6 @@ pub trait AgentHost: FolderHost {
     fn remove_folder_sync(&mut self, dir: &str, options: &RemoveOptions) -> bool;
     /// the relay's question `id` got its answer
     fn relay_settled(&mut self, ask_id: &str, answer: &RelayAnswer);
-    /// what happened since the last step of `start` (the manager carries it out)
-    fn meanwhile(&mut self, step: &str) -> Vec<Meanwhile>;
 }
 
 /// Folders no session may use or reach: sign-in stores, the original app, this app's data
@@ -1051,25 +1145,6 @@ impl AgentManager {
         )
     }
 
-    /// carry out what happened while a step waited
-    fn meanwhile(&mut self, host: &mut dyn AgentHost, step: &str) {
-        for operation in host.meanwhile(step) {
-            match operation {
-                Meanwhile::Stop {
-                    owner_id,
-                    session_id,
-                } => self.stop(host, owner_id, &session_id),
-                Meanwhile::StopOwner { owner_id } => self.stop_owner(host, owner_id),
-                Meanwhile::StopAll => self.stop_all(host),
-                Meanwhile::Event {
-                    owner_id,
-                    session_id,
-                    event,
-                } => self.on_event(host, owner_id, &session_id, &event),
-            }
-        }
-    }
-
     /// stopped meanwhile: what came after the stop, a program the runner gave included, ends
     fn stopped(&mut self, host: &mut dyn AgentHost, entry: &Entry) -> bool {
         let id = entry.borrow().id.clone();
@@ -1081,12 +1156,14 @@ impl AgentManager {
         true
     }
 
-    pub fn start(
+    /// `start(ownerId, request)`: the checks before the session exists, then the first await of
+    /// the TypeScript. See [`AgentStartStep`].
+    pub fn start_begin(
         &mut self,
         host: &mut dyn AgentHost,
         owner_id: i64,
         request: &AgentStartRequest,
-    ) -> AgentStartResult {
+    ) -> AgentStartStep {
         let project_root = resolve(&[&request.project_root]);
         if project_folder_problem(
             &project_root,
@@ -1096,14 +1173,14 @@ impl AgentManager {
         )
         .is_some()
         {
-            return AgentStartResult::failed(AgentStartFailure::BadFolder);
+            return AgentStartStep::Done(AgentStartResult::failed(AgentStartFailure::BadFolder));
         }
         let settings = host.ai_settings();
         let statuses = host.statuses();
         let Some(connection) =
             subscription_connection(&settings, prop(&statuses, &request.provider))
         else {
-            return AgentStartResult::failed(AgentStartFailure::NotConnected);
+            return AgentStartStep::Done(AgentStartResult::failed(AgentStartFailure::NotConnected));
         };
 
         let id = host.random_uuid();
@@ -1128,217 +1205,26 @@ impl AgentManager {
         }));
         // live while it is prepared: its window closing or the app quitting stops it here too
         self.live.push(entry.clone());
-        let result = (|| -> Result<AgentStartResult, StartError> {
-            let made =
-                make_agent_session_folder(host, None).map_err(|error| Box::new(thrown_of(&error)));
-            self.meanwhile(host, "session-folder");
-            let session_dir = prepared(AgentPrepareStep::SessionFolder, made)?;
-            entry.borrow_mut().session_dir = Some(session_dir.clone());
-            if self.stopped(host, &entry) {
-                return Ok(stopped_while_starting());
-            }
-            let session = AgentMcpSession {
+        StartState {
+            entry,
+            request: request.clone(),
+            settings,
+            metered: connection == SubscriptionConnection::Metered,
+            project_root,
+            open_at_start,
+            session: AgentMcpSession {
                 owner_id,
-                session_id: id.clone(),
-            };
-            let mut app_mcp_info: Option<(String, String)> = None;
-            if host.has_app_mcp() {
-                let started = host.start_app_mcp(&project_root, &session);
-                self.meanwhile(host, "app-tools");
-                let app_mcp = prepared(AgentPrepareStep::AppTools, started)?;
-                app_mcp_info = Some((app_mcp.url, app_mcp.token));
-                entry.borrow_mut().app_mcp = Some(app_mcp.server);
-            }
-            if self.stopped(host, &entry) {
-                return Ok(stopped_while_starting());
-            }
-            // the person's MCP servers as they are set now: a change applies to the next session
-            let mut relay_list: Vec<AgentMcpRelay> = Vec::new();
-            let mut keep_inside: Vec<String> = Vec::new();
-            if host.has_relays() {
-                let started = host.start_relays(&session);
-                self.meanwhile(host, "user-mcp");
-                let relays = prepared(AgentPrepareStep::UserMcp, started)?;
-                relay_list = relays.relays;
-                keep_inside = relays.keep_results_inside;
-                entry.borrow_mut().relays = Some(relays.handle);
-            }
-            if self.stopped(host, &entry) {
-                return Ok(stopped_while_starting());
-            }
-            // the skills as they are now: a change made during the session applies to the next one
-            let mut skills: Option<AgentSkillBundle> = None;
-            if host.has_build_skills() {
-                let built = host.build_skills(&project_root);
-                self.meanwhile(host, "skills");
-                skills = prepared(AgentPrepareStep::Skills, built)?;
-            }
-            entry.borrow_mut().skills = skills.as_ref().map(|bundle| bundle.skills.clone());
-            let config = prop(&settings, "providers").and_then(|p| prop(p, &request.provider));
-            let relay_names: Vec<String> =
-                relay_list.iter().map(|relay| relay.name.clone()).collect();
-            let language = host.language();
-            let process_platform = host.platform();
-            let instructions = agent_instructions_and_cuts(
-                &request.provider,
-                &project_root,
-                &language,
-                app_mcp_info.is_some(),
-                skills.as_ref().map_or(&[][..], |bundle| &bundle.skills[..]),
-                &relay_names,
-                &process_platform,
-            );
-            self.meanwhile(host, "instructions");
-            if self.stopped(host, &entry) {
-                return Ok(stopped_while_starting());
-            }
-            let string_of = |key: &str| match config.and_then(|config| prop(config, key)) {
-                Some(JsonValue::String(value)) => Some(value.clone()),
-                _ => None,
-            };
-            let options = AgentSessionOptions {
-                project_root: project_root.clone(),
-                mode: request.mode.clone(),
-                model: string_of("model").unwrap_or_default(),
-                effort: string_of("effort"),
-                cli_path: string_of("cliPath"),
-                instructions: instructions.text.clone(),
-                open_documents: open_at_start.clone(),
-                protected_paths: self.protected_paths.clone(),
-                skill_bundle_dir: skills.as_ref().map(|bundle| bundle.dir.clone()),
-                app_mcp: app_mcp_info.clone(),
-                user_mcp_relays: if relay_list.is_empty() {
-                    None
-                } else {
-                    Some(relay_list.clone())
-                },
-                session_dir,
-            };
-            // the servers, relays and skills above can take seconds: turned off meanwhile, the
-            // program is not started
-            if Self::off_in_app(host, &request.provider) {
-                self.cleanup(host, &entry);
-                return Ok(off_in_app_failure());
-            }
-            let ran = if request.provider == "claude-code" {
-                host.run_claude(&options, &session)
-            } else {
-                host.run_codex(
-                    &options,
-                    &CodexRunOptions {
-                        metered_accepted: connection == SubscriptionConnection::Metered,
-                        web_search: request
-                            .codex
-                            .as_ref()
-                            .map_or_else(|| "cached".to_owned(), |codex| codex.web_search.clone()),
-                        network: request.codex.as_ref().is_some_and(|codex| codex.network),
-                    },
-                    &session,
-                )
-            };
-            self.meanwhile(host, "runner");
-            entry.borrow_mut().session = Some(ran?);
-            if self.stopped(host, &entry) {
-                return Ok(stopped_while_starting());
-            }
-            // turned off while the runner prepared its files and found the program: it ends now
-            if Self::off_in_app(host, &request.provider) {
-                Self::stop_session(&entry);
-                self.cleanup(host, &entry);
-                return Ok(off_in_app_failure());
-            }
-            // the window's `/` list: what the session got, with the paths a chip names
-            let listed = match &skills {
-                Some(bundle) => agent_session_skills_of(&bundle.skills),
-                None => Vec::new(),
-            };
-            self.meanwhile(host, "skills-list");
-            Ok(AgentStartResult::Started {
-                session_id: id.clone(),
-                skills: listed,
-                mcp_keep_inside: if keep_inside.is_empty() {
-                    None
-                } else {
-                    Some(keep_inside.clone())
-                },
-                instructions_truncated: if instructions.truncated.is_empty() {
-                    None
-                } else {
-                    Some(instructions.truncated.clone())
-                },
-            })
-        })();
-        match result {
-            Ok(result) => result,
-            Err(error) => {
-                self.cleanup(host, &entry);
-                agent_start_failed(&error)
-            }
+                session_id: id,
+            },
+            waiting: Waiting::SessionFolder,
+            session_dir: String::new(),
+            app_mcp: None,
+            relay_list: Vec::new(),
+            keep_inside: Vec::new(),
+            skills: None,
+            truncated: Vec::new(),
         }
-    }
-
-    /// `Err` is what the TypeScript throws: the message of an `Error`
-    pub fn send(
-        &mut self,
-        host: &mut dyn AgentHost,
-        owner_id: i64,
-        session_id: &str,
-        message: &str,
-    ) -> Result<(), String> {
-        let entry = match self.own(owner_id, session_id) {
-            Some(entry) if entry.borrow().session.is_some() => entry,
-            _ => return Err("No such agent session".to_owned()),
-        };
-        let provider = entry.borrow().provider.clone();
-        // turned off in this app since the session started: the program is sent nothing more
-        if Self::off_in_app(host, &provider) {
-            host.emit(
-                owner_id,
-                session_id,
-                &object(vec![
-                    ("type", text("error")),
-                    ("kind", text("off-in-app")),
-                    ("message", text(OFF_IN_APP_MESSAGE)),
-                ]),
-            );
-            Self::stop_session(&entry);
-            self.cleanup(host, &entry);
-            return Ok(());
-        }
-        // documents opened since the session started were not in its program-level rules
-        let current = host.open_documents();
-        let mut added: Vec<String> = Vec::new();
-        {
-            let mut live = entry.borrow_mut();
-            for path in &current {
-                let key = comparable_path(path, path, Some(&self.platform));
-                if live.protected_documents.contains(&key) {
-                    continue;
-                }
-                live.protected_documents.insert(key.clone());
-                if !live.warned_documents.contains(&key) {
-                    live.warned_documents.insert(key);
-                    added.push(path.clone());
-                }
-            }
-        }
-        if !added.is_empty() {
-            host.emit(
-                owner_id,
-                session_id,
-                &object(vec![
-                    ("type", text("documents-unprotected")),
-                    ("paths", strings(&added)),
-                ]),
-            );
-        }
-        // tabs opened or closed since the last message count from here on
-        let mut live = entry.borrow_mut();
-        let Some(session) = live.session.as_mut() else {
-            return Err("No such agent session".to_owned());
-        };
-        session.set_open_documents(&current);
-        session.send(message)
+        .wait(AgentStartCall::SessionFolder)
     }
 
     pub fn answer(
@@ -1429,6 +1315,373 @@ fn off_in_app_failure() -> AgentStartResult {
     AgentStartResult::failed(AgentStartFailure::RunError {
         kind: "off-in-app".to_owned(),
     })
+}
+
+fn stopped_step() -> AgentStartStep {
+    AgentStartStep::Done(stopped_while_starting())
+}
+
+impl StartState {
+    /// stop here until the caller has carried `call` out
+    fn wait(self, call: AgentStartCall) -> AgentStartStep {
+        AgentStartStep::Await {
+            call,
+            job: AgentStartJob {
+                state: Box::new(self),
+            },
+        }
+    }
+
+    /// what the `catch` of the TypeScript's `start` does
+    fn fail(
+        self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+        error: &StartError,
+    ) -> AgentStartStep {
+        manager.cleanup(host, &self.entry);
+        AgentStartStep::Done(agent_start_failed(error))
+    }
+
+    /// the folder is made
+    fn after_folder(
+        mut self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+        dir: String,
+    ) -> AgentStartStep {
+        self.entry.borrow_mut().session_dir = Some(dir.clone());
+        self.session_dir = dir;
+        if manager.stopped(host, &self.entry) {
+            return stopped_step();
+        }
+        self.enter_app_mcp(manager, host)
+    }
+
+    fn enter_app_mcp(
+        mut self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+    ) -> AgentStartStep {
+        if !host.has_app_mcp() {
+            return self.after_app_mcp(manager, host);
+        }
+        self.waiting = Waiting::AppMcp;
+        let call = AgentStartCall::AppMcp {
+            project_root: self.project_root.clone(),
+            session: self.session.clone(),
+        };
+        self.wait(call)
+    }
+
+    fn after_app_mcp(self, manager: &mut AgentManager, host: &mut dyn AgentHost) -> AgentStartStep {
+        if manager.stopped(host, &self.entry) {
+            return stopped_step();
+        }
+        self.enter_relays(manager, host)
+    }
+
+    fn enter_relays(
+        mut self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+    ) -> AgentStartStep {
+        // the person's MCP servers as they are set now: a change applies to the next session
+        if !host.has_relays() {
+            return self.after_relays(manager, host);
+        }
+        self.waiting = Waiting::Relays;
+        let call = AgentStartCall::Relays {
+            session: self.session.clone(),
+        };
+        self.wait(call)
+    }
+
+    fn after_relays(self, manager: &mut AgentManager, host: &mut dyn AgentHost) -> AgentStartStep {
+        if manager.stopped(host, &self.entry) {
+            return stopped_step();
+        }
+        self.enter_skills(manager, host)
+    }
+
+    fn enter_skills(
+        mut self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+    ) -> AgentStartStep {
+        // the skills as they are now: a change made during the session applies to the next one
+        if !host.has_build_skills() {
+            return self.after_skills(manager, host);
+        }
+        self.waiting = Waiting::BuildSkills;
+        let call = AgentStartCall::BuildSkills {
+            project_root: self.project_root.clone(),
+        };
+        self.wait(call)
+    }
+
+    /// the skills are built (or there are none): the instructions, then the program
+    fn after_skills(
+        mut self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+    ) -> AgentStartStep {
+        self.entry.borrow_mut().skills = self.skills.as_ref().map(|bundle| bundle.skills.clone());
+        let relay_names: Vec<String> = self
+            .relay_list
+            .iter()
+            .map(|relay| relay.name.clone())
+            .collect();
+        let language = host.language();
+        let process_platform = host.platform();
+        let instructions = agent_instructions_and_cuts(
+            &self.request.provider,
+            &self.project_root,
+            &language,
+            self.app_mcp.is_some(),
+            self.skills
+                .as_ref()
+                .map_or(&[][..], |bundle| &bundle.skills[..]),
+            &relay_names,
+            &process_platform,
+        );
+        if manager.stopped(host, &self.entry) {
+            return stopped_step();
+        }
+        let config =
+            prop(&self.settings, "providers").and_then(|p| prop(p, &self.request.provider));
+        let string_of = |key: &str| match config.and_then(|config| prop(config, key)) {
+            Some(JsonValue::String(value)) => Some(value.clone()),
+            _ => None,
+        };
+        let options = AgentSessionOptions {
+            project_root: self.project_root.clone(),
+            mode: self.request.mode.clone(),
+            model: string_of("model").unwrap_or_default(),
+            effort: string_of("effort"),
+            cli_path: string_of("cliPath"),
+            instructions: instructions.text,
+            open_documents: self.open_at_start.clone(),
+            protected_paths: manager.protected_paths.clone(),
+            skill_bundle_dir: self.skills.as_ref().map(|bundle| bundle.dir.clone()),
+            app_mcp: self.app_mcp.clone(),
+            user_mcp_relays: if self.relay_list.is_empty() {
+                None
+            } else {
+                Some(self.relay_list.clone())
+            },
+            session_dir: self.session_dir.clone(),
+        };
+        self.truncated = instructions.truncated;
+        // the servers, relays and skills above can take seconds: turned off meanwhile, the
+        // program is not started
+        if AgentManager::off_in_app(host, &self.request.provider) {
+            manager.cleanup(host, &self.entry);
+            return AgentStartStep::Done(off_in_app_failure());
+        }
+        self.waiting = Waiting::Run;
+        let session = self.session.clone();
+        let call = if self.request.provider == "claude-code" {
+            AgentStartCall::RunClaude {
+                options: Box::new(options),
+                session,
+            }
+        } else {
+            AgentStartCall::RunCodex {
+                options: Box::new(options),
+                codex: CodexRunOptions {
+                    metered_accepted: self.metered,
+                    web_search: self
+                        .request
+                        .codex
+                        .as_ref()
+                        .map_or_else(|| "cached".to_owned(), |codex| codex.web_search.clone()),
+                    network: self
+                        .request
+                        .codex
+                        .as_ref()
+                        .is_some_and(|codex| codex.network),
+                },
+                session,
+            }
+        };
+        self.wait(call)
+    }
+
+    /// the runner answered
+    fn after_run(
+        self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+        ran: Result<Box<dyn AgentSessionHandle>, RunnerError>,
+    ) -> AgentStartStep {
+        let program = match ran {
+            Ok(program) => program,
+            Err(error) => return self.fail(manager, host, &StartError::from(error)),
+        };
+        self.entry.borrow_mut().session = Some(program);
+        if manager.stopped(host, &self.entry) {
+            return stopped_step();
+        }
+        // turned off while the runner prepared its files and found the program: it ends now
+        if AgentManager::off_in_app(host, &self.request.provider) {
+            AgentManager::stop_session(&self.entry);
+            manager.cleanup(host, &self.entry);
+            return AgentStartStep::Done(off_in_app_failure());
+        }
+        // the window's `/` list: what the session got, with the paths a chip names
+        let listed = match &self.skills {
+            Some(bundle) => agent_session_skills_of(&bundle.skills),
+            None => Vec::new(),
+        };
+        AgentStartStep::Done(AgentStartResult::Started {
+            session_id: self.session.session_id,
+            skills: listed,
+            mcp_keep_inside: if self.keep_inside.is_empty() {
+                None
+            } else {
+                Some(self.keep_inside)
+            },
+            instructions_truncated: if self.truncated.is_empty() {
+                None
+            } else {
+                Some(self.truncated)
+            },
+        })
+    }
+}
+
+impl AgentStartJob {
+    /// Go on with the start once the caller has carried out the call it waited on. Between the
+    /// two, the caller may run any other call of the manager (`stop`, `stop_owner`, `stop_all`,
+    /// `answer`, `on_event`, `relay_ask`). An answer that does not fit the call is the caller's
+    /// mistake and panics.
+    pub fn resume(
+        self,
+        manager: &mut AgentManager,
+        host: &mut dyn AgentHost,
+        answer: AgentStartAnswer,
+    ) -> AgentStartStep {
+        let mut state = *self.state;
+        match (state.waiting, answer) {
+            (Waiting::SessionFolder, AgentStartAnswer::SessionFolder(made)) => {
+                let made = made.map_err(|error| Box::new(thrown_of(&error)));
+                match prepared(AgentPrepareStep::SessionFolder, made) {
+                    Ok(dir) => state.after_folder(manager, host, dir),
+                    Err(error) => state.fail(manager, host, &error),
+                }
+            }
+            (Waiting::AppMcp, AgentStartAnswer::AppMcp(started)) => {
+                match prepared(AgentPrepareStep::AppTools, started) {
+                    Ok(app_mcp) => {
+                        state.app_mcp = Some((app_mcp.url, app_mcp.token));
+                        state.entry.borrow_mut().app_mcp = Some(app_mcp.server);
+                        state.after_app_mcp(manager, host)
+                    }
+                    Err(error) => state.fail(manager, host, &error),
+                }
+            }
+            (Waiting::Relays, AgentStartAnswer::Relays(started)) => {
+                match prepared(AgentPrepareStep::UserMcp, started) {
+                    Ok(relays) => {
+                        state.relay_list = relays.relays;
+                        state.keep_inside = relays.keep_results_inside;
+                        state.entry.borrow_mut().relays = Some(relays.handle);
+                        state.after_relays(manager, host)
+                    }
+                    Err(error) => state.fail(manager, host, &error),
+                }
+            }
+            (Waiting::BuildSkills, AgentStartAnswer::BuildSkills(built)) => {
+                match prepared(AgentPrepareStep::Skills, built) {
+                    Ok(skills) => {
+                        state.skills = skills;
+                        state.after_skills(manager, host)
+                    }
+                    Err(error) => state.fail(manager, host, &error),
+                }
+            }
+            (Waiting::Run, AgentStartAnswer::Run(ran)) => state.after_run(manager, host, ran),
+            _ => panic!("the answer does not fit the call the start waits on"),
+        }
+    }
+}
+
+impl AgentManager {
+    /// `send(ownerId, sessionId, text)`: the checks and the warning about documents opened since
+    /// the session started, then the message goes to the program. See [`AgentSendStep`].
+    pub fn send_begin(
+        &mut self,
+        host: &mut dyn AgentHost,
+        owner_id: i64,
+        session_id: &str,
+        message: &str,
+    ) -> AgentSendStep {
+        let entry = match self.own(owner_id, session_id) {
+            Some(entry) if entry.borrow().session.is_some() => entry,
+            _ => return AgentSendStep::Done(Err("No such agent session".to_owned())),
+        };
+        let provider = entry.borrow().provider.clone();
+        // turned off in this app since the session started: the program is sent nothing more
+        if Self::off_in_app(host, &provider) {
+            host.emit(
+                owner_id,
+                session_id,
+                &object(vec![
+                    ("type", text("error")),
+                    ("kind", text("off-in-app")),
+                    ("message", text(OFF_IN_APP_MESSAGE)),
+                ]),
+            );
+            Self::stop_session(&entry);
+            self.cleanup(host, &entry);
+            return AgentSendStep::Done(Ok(()));
+        }
+        // documents opened since the session started were not in its program-level rules
+        let current = host.open_documents();
+        let mut added: Vec<String> = Vec::new();
+        {
+            let mut live = entry.borrow_mut();
+            for path in &current {
+                let key = comparable_path(path, path, Some(&self.platform));
+                if live.protected_documents.contains(&key) {
+                    continue;
+                }
+                live.protected_documents.insert(key.clone());
+                if !live.warned_documents.contains(&key) {
+                    live.warned_documents.insert(key);
+                    added.push(path.clone());
+                }
+            }
+        }
+        if !added.is_empty() {
+            host.emit(
+                owner_id,
+                session_id,
+                &object(vec![
+                    ("type", text("documents-unprotected")),
+                    ("paths", strings(&added)),
+                ]),
+            );
+        }
+        // tabs opened or closed since the last message count from here on
+        {
+            let mut live = entry.borrow_mut();
+            let Some(session) = live.session.as_mut() else {
+                return AgentSendStep::Done(Err("No such agent session".to_owned()));
+            };
+            session.set_open_documents(&current);
+            session.send(message);
+        }
+        AgentSendStep::Await {
+            call: AgentSendCall {
+                owner_id,
+                session_id: session_id.to_owned(),
+                text: message.to_owned(),
+            },
+            job: AgentSendJob(()),
+        }
+    }
 }
 
 /// A path the session may open in a tab: an existing file inside its project folder

@@ -93,15 +93,15 @@
   {
     "name": "folder-files: a file with a second hard link is plain",
     "file": "main-core/src/shell/projects/folder_files.rs",
-    "find": "link_count(&info) > 1",
-    "replace": "link_count(&info) > 2",
+    "find": "link_count(&path, &info) > 1",
+    "replace": "link_count(&path, &info) > 2",
     "fn": ["folder-files.plainFileIn", "folder-files.readFolderText", "trust.readHashedTexts"]
   },
   {
-    "name": "folder-files: a link on the way is no folder",
+    "name": "folder-files: a link on the way is followed as a folder",
     "file": "main-core/src/shell/projects/folder_files.rs",
-    "find": "if !last && !info.is_dir() {",
-    "replace": "if false {",
+    "find": "        if info.file_type().is_symlink() {\n            return None;\n        }\n        let last = index == segments.len() - 1;\n        if !last && !info.is_dir() {\n            return None;\n        }\n        if last && (!info.is_file() || link_count(&path, &info) > 1) {",
+    "replace": "        let last = index == segments.len() - 1;\n        if last && (!info.is_file() || link_count(&path, &info) > 1) {",
     "fn": [
       "folder-files.plainFileIn",
       "folder-files.readFolderText",
