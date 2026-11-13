@@ -4,10 +4,12 @@
 pub mod agent;
 pub mod ai_naming;
 pub mod ai_naming_provider;
+pub mod ai_naming_service;
 pub mod ai_secrets;
 pub mod app_routing;
 pub mod app_settings;
 pub mod atomic_write;
+pub mod generate;
 pub mod cli_link;
 pub mod control_handlers;
 pub mod control_server;

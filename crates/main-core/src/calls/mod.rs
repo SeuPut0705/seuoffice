@@ -25,6 +25,7 @@ mod b4_pdf;
 mod b4_sheets;
 mod b4_slides;
 mod b5_ai;
+mod b5_agent;
 mod b5_mcp;
 mod b6_apps;
 mod b6_shell;
@@ -101,6 +102,7 @@ const GROUPS: &[Group] = &[
     b4_pdf::call,
     b4_hwp::call,
     b5_ai::call,
+    b5_agent::call,
     b6_utils::call,
     b6_shell::call,
     b6_apps::call,
