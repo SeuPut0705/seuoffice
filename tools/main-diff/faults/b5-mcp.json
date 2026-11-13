@@ -5687,5 +5687,19 @@
     "find": "method: \"deckWithholds\",",
     "replace": "method: \"deckWithhold\",",
     "fn": ["agent-mcp.withholdingSlides"]
+  },
+  {
+    "name": "local a listing settles as an ensure",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "            Work::List { .. } => CallKind::List,",
+    "replace": "            Work::List { .. } => CallKind::Ensure,",
+    "fn": ["local.scenario"]
+  },
+  {
+    "name": "local a tool call settles as an ensure",
+    "file": "main-core/src/shell/mcp_client/local.rs",
+    "find": "            Work::Tool { .. } => CallKind::Tool,",
+    "replace": "            Work::Tool { .. } => CallKind::Ensure,",
+    "fn": ["local.scenario"]
   }
 ]

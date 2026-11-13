@@ -1154,6 +1154,22 @@ const localCases: Case[] = [
     ],
     'tool lists: a result that is no list, an empty list',
   ),
+  lc(
+    OK,
+    options(),
+    [
+      step('ensure', { label: 'e' }),
+      init(),
+      list('l'),
+      reply(1, tools(['echo'])),
+      callStep('c', 'echo', { text: 'hi' }),
+      reply(2, textResult('hello')),
+      step('stop', { label: 's' }),
+      exit(),
+      closeChild(),
+    ],
+    'each call settles as the method it began as: ensure, list, call, stop',
+  ),
 ]
 
 // ---------------------------------------------------------------------------
