@@ -571,6 +571,8 @@ export const ko = {
     'AI에게 숨긴 내용이 있는 문서는 ODT 파일에 담을 수 없습니다. .docx로 저장하거나 표시를 먼저 지우세요.',
   appMarkedOdtAutoSkipped:
     '자동 저장하지 않았습니다. AI에게 숨긴 내용은 ODT 파일에 담을 수 없습니다. .docx로 저장하거나 표시를 지우세요.',
+  appMarkedExportRefused:
+    '내보내지 않았습니다. 이 문서에는 AI에게 숨긴 내용이 있는데, 내보낸 파일에는 이를 담을 수 없습니다. .docx로 저장하거나, 파일 메뉴에서 내보낼 때 표시 없이 내보내기를 선택하세요.',
   appSaveFormatMismatch: '파일 확장자가 문서 형식(.{ext})과 같아야 합니다.',
   appFormatChangeTitleOdt: 'ODT로 저장',
   appFormatChangeTitleDocx: 'Word 문서(.docx)로 저장',

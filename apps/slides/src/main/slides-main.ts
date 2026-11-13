@@ -5280,6 +5280,32 @@ export function registerSlidesIpc(): void {
     },
   )
 
+  // A PDF or image copy records no mark: the person chooses before anything
+  // is written. Nothing here writes; the renderer acts on the answer.
+  ipcMain.handle('slides:ask-withheld-export', async (_e, format: unknown) => {
+    if (format !== 'PDF' && format !== 'PNG' && format !== 'JPG') {
+      throw new Error('Invalid export format.')
+    }
+    const options = {
+      type: 'warning' as const,
+      message: tm('withheldExportMsg', { format }),
+      detail: tm('withheldExportDetail', { format }),
+      buttons: [
+        tm('withheldExportKeepPptxBtn'),
+        tm('withheldExportWithoutMarksBtn', { format }),
+        tm('btnCancel'),
+      ],
+      defaultId: 0,
+      cancelId: 2,
+      noLink: true,
+    }
+    const parent = dialogParent()
+    const { response } = parent
+      ? await dialog.showMessageBox(parent, options)
+      : await dialog.showMessageBox(options)
+    return response === 0 ? 'pptx' : response === 1 ? 'export' : 'cancel'
+  })
+
   ipcMain.handle('slides:export-pdf', async (_e, op: ExportPdfOp): Promise<ExportPdfResult> => {
     return exportSlidesPdf({
       ...op,

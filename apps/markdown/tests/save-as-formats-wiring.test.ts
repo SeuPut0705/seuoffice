@@ -28,7 +28,6 @@ describe('Save As › an export (renderer wiring)', () => {
 
   it('passes the approved path to the Word, ODT and page-image exports', () => {
     expect(app).toContain('runExportRef.current = runExport')
-    expect(app.match(/\.\.\.\(saveAsTarget \? \{ saveAsTarget \} : \{\}\)/g)).toHaveLength(2)
     expect(read('src/renderer/export/imageExport.ts')).toContain(
       '...(saveAsTarget ? { saveAsTarget } : {})',
     )

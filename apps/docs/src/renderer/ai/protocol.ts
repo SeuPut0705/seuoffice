@@ -539,12 +539,16 @@ export function serializeRangeToHtml(
   endIndex: number,
   sel?: { from: number; to: number } | null,
   image?: ImageSrcMapper,
+  /** `document`: the person's own words, for a file the person chose to export without the marks */
+  view: 'model' | 'document' = 'model',
 ): string {
   // The model's view, not the document's: a withheld span's words must
   // not travel in the HTML this produces. `redactNode` is total, so a
   // shape it does not recognise still comes through rather than
   // throwing and falling back to the unredacted text.
-  const json = redactNode(editor.getJSON() as RedactableNode) as PmNode
+  const json = (
+    view === 'document' ? editor.getJSON() : redactNode(editor.getJSON() as RedactableNode)
+  ) as PmNode
   const children = (json.content ?? []).slice(startIndex, endIndex + 1)
   const parts: string[] = []
   let listBuffer: { kind: string; items: string[] } | null = null

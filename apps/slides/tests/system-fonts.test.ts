@@ -121,7 +121,7 @@ describe.runIf(mac)(
     })
 
     it('unresolvable families substitute to Calibri regardless of apparent class (PPT probe truth)', () => {
-      const cal = office ? /^Calibri$/ : /^Carlito(?: GO)?$/
+      const cal = office ? /^Calibri$/ : /^SeuOffice Sans GO$/
       expect(m.displayFamily!(style('Zxqvwt Nonexistent'))).toMatch(cal)
       expect(m.displayFamily!(style('Qqzgaramond'))).toMatch(cal) // serif-looking name
       expect(m.displayFamily!(style('Zxqvwt Mono Courier'))).toMatch(cal) // mono-looking name
@@ -190,8 +190,9 @@ describe.runIf(mac)(
 )
 
 describe('variable-font family names alias to the static family and back', () => {
-  // Static "Zqvstat-*" weights and a lone "ZqvvarVariable" file, all Carlito copies: the
-  // filename index is what resolution keys on, so the face names stay Carlito
+  // Static "Zqvstat-*" weights and a lone "ZqvvarVariable" file, all copies of the bundled
+  // Calibri stand-in: the filename index is what resolution keys on, so the face names stay
+  // the stand-in's own (SeuOffice Sans GO)
   const carlito = resolve(process.cwd(), '../../packages/ui/src/fonts')
   let dir: string
   beforeAll(() => {
@@ -212,8 +213,8 @@ describe('variable-font family names alias to the static family and back', () =>
     const m = createSystemFontMetrics()
     const regular = style('Zqvstat Variable')
     const bold = style('Zqvstat Variable', { bold: true })
-    expect(m.displayFamily!(regular)).toMatch(/^Carlito/)
-    expect(m.displayFamily!(bold)).toMatch(/^Carlito/)
+    expect(m.displayFamily!(regular)).toMatch(/^SeuOffice Sans GO/)
+    expect(m.displayFamily!(bold)).toMatch(/^SeuOffice Sans GO/)
     expect(m.measure('Hello', regular)).toBeCloseTo(m.measure('Hello', style('Carlito')), 5)
     expect(m.measure('Hello', bold)).toBeCloseTo(
       m.measure('Hello', style('Carlito', { bold: true })),
@@ -224,7 +225,7 @@ describe('variable-font family names alias to the static family and back', () =>
 
   it('static X with only "X Variable" installed takes the variable file', () => {
     const m = createSystemFontMetrics()
-    expect(m.displayFamily!(style('Zqvvar'))).toMatch(/^Carlito/)
+    expect(m.displayFamily!(style('Zqvvar'))).toMatch(/^SeuOffice Sans GO/)
     expect(m.measure('Hello', style('Zqvvar'))).toBeCloseTo(m.measure('Hello', style('Carlito')), 5)
   })
 

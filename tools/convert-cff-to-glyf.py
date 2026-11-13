@@ -50,9 +50,9 @@ from fontTools.ttLib.woff2 import WOFF2FlavorData
 DEFAULT_FONTS = [
     "packages/ui/template-fonts/NotoSerifKR-Regular.otf",
     "packages/ui/template-fonts/NotoSerifKR-Bold.otf",
-    "apps/docs/src/renderer/fonts/GenOfficeSansKR-Regular-subset.woff2",
-    "apps/docs/src/renderer/fonts/GenOfficeSerifKR-Regular-subset.woff2",
-    "apps/docs/src/renderer/fonts/GenOfficeCheLatinKR.woff2",
+    "apps/docs/src/renderer/fonts/SeuOfficeSansKR-Regular-subset.woff2",
+    "apps/docs/src/renderer/fonts/SeuOfficeSerifKR-Regular-subset.woff2",
+    "apps/docs/src/renderer/fonts/SeuOfficeCheLatinKR.woff2",
     "apps/docs/src/renderer/fonts/NotoSansCJKsc-Regular-subset.woff2",
     "apps/docs/src/renderer/fonts/NotoSerifCJKsc-Regular-subset.woff2",
 ]

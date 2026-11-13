@@ -146,6 +146,7 @@ const EDIT_MEMBERS = [
 
 /** Members that write or hand the deck to the desktop (files, export, print) */
 const SAVE_MEMBERS = [
+  'askWithheldExport',
   'exportImages',
   'exportPdf',
   'listPrinters',

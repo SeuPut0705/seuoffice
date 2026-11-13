@@ -8,6 +8,7 @@
 import { isMetafileMime, metafileToDataUrl } from '@seuoffice/docx-engine/metafile'
 import type { PrinterInfo, WorkbookExportPdfRequest } from '../shared/desktop-api'
 import type { FWorksheet } from '@univerjs/sheets/facade'
+import type { RedactionIndex } from './ai/redact'
 import type { WorkbookOperation } from '@seuoffice/xlsx-gateway/domain/workbook-dsl'
 import type { ApplyOutcome } from '@seuoffice/xlsx-gateway/domain/workbook.types'
 
@@ -43,6 +44,7 @@ import {
   type HeaderFooterPictureSlot,
 } from './print-settings'
 import { settleVisualNodes, snapshotPrintVisuals } from './print-visuals'
+import { sheetsExposeWithheld, type ExportedSheet } from './withheld-export'
 import { installedVisualFrames, type InstalledVisualFrame } from './WorkbookVisuals'
 import type { LazyWorkbookState, UniverRuntime } from './univer-state'
 
@@ -69,6 +71,10 @@ export interface PageLayoutContext {
   /// Re-queues the floating visuals' install so a print right after load
   /// (headless export) finds their frames; optional for callers without visuals.
   requestVisualInstall?: () => void
+  /// The cells the reader hid from the AI: a PDF cannot carry that mark.
+  redactions: () => RedactionIndex
+  /// Opens Save As, where .xlsx keeps the marks the PDF cannot.
+  requestSaveAs: () => void
   /// Page-setup edits run as set_page_setup ops through the shared executor.
   runOps: (
     ops: readonly WorkbookOperation[],
@@ -423,6 +429,8 @@ export type PrintRange = 'active' | 'workbook' | 'selection'
 
 export interface PrintJob {
   readonly documents: readonly SheetPrintDocument[]
+  /// The sheets those documents were laid out from.
+  readonly sheets: readonly ExportedSheet[]
   readonly fileName: string
   readonly pageCount: number
 }
@@ -491,14 +499,7 @@ export function createPrintPreviewHost(ctx: PageLayoutContext): PrintPreviewHost
       `:${columnLabel(startColumn + range.getWidth() - 1)}${startRow + range.getHeight()}`
     )
   }
-  const printableSheets = () =>
-    workbook
-      .getSheets()
-      .filter(
-        (sheet) =>
-          !sheet.isSheetHidden() &&
-          !(state && isSheetRemoved(state.editJournal, sheet.getSheetId())),
-      )
+  const printableSheets = () => printableSheetsOf(workbook, state)
   const baseName = (state?.file.name ?? 'Book1').replace(/\.[^.]+$/, '')
   const include = (pages: PrintOutputSettings['pages']) =>
     pages === null ? undefined : (page: number) => page >= pages.from && page <= pages.to
@@ -527,7 +528,7 @@ export function createPrintPreviewHost(ctx: PageLayoutContext): PrintPreviewHost
       }
       const pageCount = documents.reduce((sum, document) => sum + document.pages.length, 0)
       if (pageCount === 0) throw new PrintError(t('appPrintNothing'))
-      return { documents, fileName: `${baseName}.pdf`, pageCount }
+      return { documents, sheets: exportedSheets(sheets), fileName: `${baseName}.pdf`, pageCount }
     },
     listPrinters: () => window.desktopApi.listPrinters(),
     async print(job, output) {
@@ -542,6 +543,7 @@ export function createPrintPreviewHost(ctx: PageLayoutContext): PrintPreviewHost
       return result.error === undefined ? t('appPrintCanceled') : t('appPrintFailed')
     },
     async exportPdf(job, pages) {
+      if (!(await confirmPdfWithoutMarks(ctx, job.sheets))) return t('appPdfCanceled')
       const result = await window.desktopApi.exportPdf(
         printRequest(job.documents, job.fileName, include(pages)),
       )
@@ -552,7 +554,41 @@ export function createPrintPreviewHost(ctx: PageLayoutContext): PrintPreviewHost
   }
 }
 
+/// Every visible, non-removed sheet, in tab order.
+function printableSheetsOf(
+  workbook: { getSheets(): FWorksheet[] },
+  state: LazyWorkbookState | null,
+): FWorksheet[] {
+  return workbook
+    .getSheets()
+    .filter(
+      (sheet) =>
+        !sheet.isSheetHidden() && !(state && isSheetRemoved(state.editJournal, sheet.getSheetId())),
+    )
+}
+
+function exportedSheets(sheets: readonly FWorksheet[]): ExportedSheet[] {
+  return sheets.map((sheet) => ({ id: sheet.getSheetId(), name: sheet.getSheetName() }))
+}
+
+/// A PDF records no mark, so a sheet holding a cell hidden from the AI asks the
+/// person before it is written: keep .xlsx (Save As), export without the marks,
+/// or cancel. True only for "export without the marks" or when nothing is hidden.
+async function confirmPdfWithoutMarks(
+  ctx: PageLayoutContext,
+  sheets: readonly ExportedSheet[],
+): Promise<boolean> {
+  if (!sheetsExposeWithheld(ctx.redactions(), sheets)) return true
+  const choice = await window.desktopApi.askWithheldExport('PDF')
+  if (choice === 'export') return true
+  if (choice === 'xlsx') ctx.requestSaveAs()
+  return false
+}
+
 const FULL_LOAD_TIMEOUT_MS = 180_000
+
+/// An export that holds cells hidden from the AI and has no person to ask.
+class HiddenExportRefused extends Error {}
 
 /// Print and PDF export lay out every cell, so a streamed workbook is fully
 /// loaded first (the same load as the Load-all prompt, joined if one already
@@ -617,12 +653,18 @@ export async function openPrintPreviewHost(
   return createPrintPreviewHost(ctx)
 }
 
+/// A laid-out PDF and the sheets it was laid out from.
+interface PdfPayload {
+  readonly request: WorkbookExportPdfRequest
+  readonly sheets: readonly ExportedSheet[]
+}
+
 /// The active sheet laid out as print HTML with its Page Layout settings, or
 /// null (after a status message) when the workbook is not ready for it.
 async function activeSheetPrintPayload(
   ctx: PageLayoutContext,
   messages: { readonly notLoaded: string; readonly preparing: string; readonly failed: string },
-): Promise<WorkbookExportPdfRequest | null> {
+): Promise<PdfPayload | null> {
   const activeSheet = () => ctx.univerRef.current?.univerAPI.getActiveWorkbook()?.getActiveSheet()
   if (!activeSheet()) {
     ctx.setMessage(t('appActiveSheetUnavailable'))
@@ -645,7 +687,10 @@ async function activeSheetPrintPayload(
   const sheetId = worksheet.getSheetId()
   const document = await sheetPrintDocument(ctx, state, worksheet, {}, null, new Date(), true)
   if (ctx.lazyWorkbookRef.current !== state || activeSheet()?.getSheetId() !== sheetId) return null
-  return printRequest([document], `${document.fileName}.pdf`)
+  return {
+    request: printRequest([document], `${document.fileName}.pdf`),
+    sheets: exportedSheets([worksheet]),
+  }
 }
 
 /// Every visible, non-removed sheet laid out in order: the headless export's
@@ -656,7 +701,7 @@ async function activeSheetPrintPayload(
 async function workbookPrintPayload(
   ctx: PageLayoutContext,
   messages: { readonly notLoaded: string; readonly preparing: string; readonly failed: string },
-): Promise<WorkbookExportPdfRequest | null> {
+): Promise<PdfPayload | null> {
   const workbook = ctx.univerRef.current?.univerAPI.getActiveWorkbook()
   if (!workbook?.getActiveSheet()) {
     ctx.setMessage(t('appActiveSheetUnavailable'))
@@ -677,12 +722,7 @@ async function workbookPrintPayload(
   await settleFormulas(ctx.univerRef.current)
 
   const activeId = current.getActiveSheet()?.getSheetId()
-  const sheets = current
-    .getSheets()
-    .filter(
-      (sheet) =>
-        !sheet.isSheetHidden() && !(state && isSheetRemoved(state.editJournal, sheet.getSheetId())),
-    )
+  const sheets = printableSheetsOf(current, state)
   const now = new Date()
   const documents: SheetPrintDocument[] = []
   for (const sheet of sheets) {
@@ -692,7 +732,7 @@ async function workbookPrintPayload(
   }
   if (activeId !== undefined) current.getSheetBySheetId(activeId)?.activate()
   const baseName = (state?.file.name ?? 'Book1').replace(/\.[^.]+$/, '')
-  return printRequest(documents, `${baseName}.pdf`)
+  return { request: printRequest(documents, `${baseName}.pdf`), sheets: exportedSheets(sheets) }
 }
 
 /// Lays the active sheet out as HTML with its Page Layout settings and asks
@@ -701,6 +741,10 @@ async function workbookPrintPayload(
 /// sheet after the formula engine has settled; resolves true when a PDF was
 /// written. `saveAsPath` (Save As › PDF) is the path the Save As dialog just
 /// returned: the active sheet goes there without a second dialog.
+///
+/// A sheet holding a cell hidden from the AI asks first, because the PDF cannot
+/// carry the mark. `outPath` has no person to ask, so that export is refused
+/// with an error rather than a `false`: the headless caller reports the reason.
 export async function handleExportPdf(
   ctx: PageLayoutContext,
   outPath?: string,
@@ -716,8 +760,17 @@ export async function handleExportPdf(
       ? await workbookPrintPayload(ctx, messages)
       : await activeSheetPrintPayload(ctx, messages)
     if (!payload) return false
+    // Judged on the sheets the layout used: the load above awaited, and the
+    // active sheet may have changed since the menu was clicked.
+    if (outPath && sheetsExposeWithheld(ctx.redactions(), payload.sheets)) {
+      throw new HiddenExportRefused(t('appPdfRefusedHidden'))
+    }
+    if (!(await confirmPdfWithoutMarks(ctx, payload.sheets))) {
+      ctx.setMessage(t('appPdfCanceled'))
+      return false
+    }
     const result = await window.desktopApi.exportPdf({
-      ...payload,
+      ...payload.request,
       ...(outPath ? { outPath } : {}),
       ...(saveAsPath ? { saveAsPath } : {}),
     })
@@ -726,6 +779,10 @@ export async function handleExportPdf(
     )
     return !result.canceled
   } catch (error: unknown) {
+    if (error instanceof HiddenExportRefused) {
+      ctx.setMessage(error.message)
+      throw error
+    }
     ctx.setMessage(error instanceof Error ? error.message : t('appPdfExportFailed'))
     return false
   }
