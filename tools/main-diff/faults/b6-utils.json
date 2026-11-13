@@ -1,0 +1,212 @@
+[
+  {
+    "name": "save conflict proceeds on cancel",
+    "file": "main-core/src/packages/electron_utils/save_conflict.rs",
+    "find": "if show_over_open_parent(options.dialog, options.parent, &message_box) == 0.0 {",
+    "replace": "if show_over_open_parent(options.dialog, options.parent, &message_box) != 2.0 {",
+    "fn": ["save-conflict.confirmOverwriteIfConflicted"]
+  },
+  {
+    "name": "save conflict rereads at the same mtime",
+    "file": "main-core/src/packages/electron_utils/save_conflict.rs",
+    "find": "if mtime_ms == recorded.mtime_ms && size == recorded.size {",
+    "replace": "if mtime_ms == recorded.mtime_ms && size == recorded.size && false {",
+    "fn": ["save-conflict.isModifiedSince"]
+  },
+  {
+    "name": "save conflict broken probe counts as open",
+    "file": "main-core/src/packages/electron_utils/save_conflict.rs",
+    "find": "probe.is_some_and(|probe| probe(path).unwrap_or(false))",
+    "replace": "probe.is_some_and(|probe| probe(path).unwrap_or(true))",
+    "fn": ["save-conflict.isPathOpenElsewhere", "save-conflict.confirmOverwriteIfConflicted", "save-conflict.shouldDeferAutoSave"]
+  },
+  {
+    "name": "save conflict box cancels on overwrite",
+    "file": "main-core/src/packages/electron_utils/save_conflict.rs",
+    "find": "cancel_id: Some(1),",
+    "replace": "cancel_id: Some(0),",
+    "fn": ["save-conflict.confirmOverwriteIfConflicted"]
+  },
+  {
+    "name": "save image allows blob URLs",
+    "file": "main-core/src/packages/electron_utils/save_image.rs",
+    "find": "r\"^(file|blob|javascript|about):\"",
+    "replace": "r\"^(file|javascript|about):\"",
+    "fn": ["save-image.isSavableImageUrl"]
+  },
+  {
+    "name": "save image jpeg extension",
+    "file": "main-core/src/packages/electron_utils/save_image.rs",
+    "find": "\"image/jpeg\" => \"jpg\",",
+    "replace": "\"image/jpeg\" => \"jpeg\",",
+    "fn": ["save-image.suggestImageFileName"]
+  },
+  {
+    "name": "save image tif names kept only as tiff",
+    "file": "main-core/src/packages/electron_utils/save_image.rs",
+    "find": "bmp|svg|avif|tiff?)$",
+    "replace": "bmp|svg|avif|tiff)$",
+    "fn": ["save-image.suggestImageFileName"]
+  },
+  {
+    "name": "save image base64 flag case-sensitive",
+    "file": "main-core/src/packages/electron_utils/save_image.rs",
+    "find": ".any(|param| param.to_lowercase() == \"base64\");",
+    "replace": ".any(|param| param == \"base64\");",
+    "fn": ["save-image.decodeDataUrl"]
+  },
+  {
+    "name": "save image HTTP status text",
+    "file": "main-core/src/packages/electron_utils/save_image.rs",
+    "find": "\"Error: fetch failed: HTTP {}\"",
+    "replace": "\"Error: fetch failed: {}\"",
+    "fn": ["save-image.saveImageFromUrl"]
+  },
+  {
+    "name": "save image writes on an empty path",
+    "file": "main-core/src/packages/electron_utils/save_image.rs",
+    "find": "if canceled || file_path.is_empty() {",
+    "replace": "if canceled {",
+    "fn": ["save-image.saveImageFromUrl"]
+  },
+  {
+    "name": "context menu Korean table",
+    "file": "main-core/src/packages/electron_utils/context_menu.rs",
+    "find": "\"ko\" => Some(KO),",
+    "replace": "\"ko\" => Some(EN),",
+    "fn": ["context-menu.contextMenuLabels", "context-menu.buildContextMenuItems"]
+  },
+  {
+    "name": "context menu image needs no source",
+    "file": "main-core/src/packages/electron_utils/context_menu.rs",
+    "find": "if params.media_type.as_deref() != Some(\"image\") || !has_image_src {",
+    "replace": "if params.media_type.as_deref() != Some(\"image\") {",
+    "fn": ["context-menu.buildContextMenuItems"]
+  },
+  {
+    "name": "context menu no separator before edit items",
+    "file": "main-core/src/packages/electron_utils/context_menu.rs",
+    "find": "image.push(ContextMenuItem::Separator);",
+    "replace": "",
+    "fn": ["context-menu.buildContextMenuItems", "context-menu.installContextMenu"]
+  },
+  {
+    "name": "context menu suggestions without a misspelled word",
+    "file": "main-core/src/packages/electron_utils/context_menu.rs",
+    "find": "if !params.misspelled_word.is_empty() && !params.dictionary_suggestions.is_empty() {",
+    "replace": "if !params.dictionary_suggestions.is_empty() {",
+    "fn": ["context-menu.buildContextMenuItems"]
+  },
+  {
+    "name": "context menu selection not trimmed",
+    "file": "main-core/src/packages/electron_utils/context_menu.rs",
+    "find": "if !trim(&params.selection_text).is_empty() {",
+    "replace": "if !params.selection_text.is_empty() {",
+    "fn": ["context-menu.buildContextMenuItems"]
+  },
+  {
+    "name": "context menu save title keeps the ellipsis",
+    "file": "main-core/src/packages/electron_utils/context_menu.rs",
+    "find": "js_regex!(r\"\\u2026$\")",
+    "replace": "js_regex!(r\"x\\u2026$\")",
+    "fn": ["context-menu.installContextMenu"]
+  },
+  {
+    "name": "context menu throwing interceptor claims",
+    "file": "main-core/src/packages/electron_utils/context_menu.rs",
+    "find": "!matches!(answer, Some(Ok(true)))",
+    "replace": "!matches!(answer, Some(Ok(true) | Err(_)))",
+    "fn": ["context-menu.installContextMenu"]
+  },
+  {
+    "name": "app menu Korean order of the last two",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "let order = if o.name_with_ai_first { [1, 0] } else { [0, 1] };",
+    "replace": "let order = [0, 1];",
+    "fn": ["app-menu.appMenuLabels"]
+  },
+  {
+    "name": "app menu window role labeled Edit",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "MenuItem::role_labeled(\"windowMenu\", labels.window())",
+    "replace": "MenuItem::role_labeled(\"windowMenu\", labels.edit())",
+    "fn": ["app-menu.windowMenuTemplate"]
+  },
+  {
+    "name": "app menu edit role on every platform",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "        return MenuItem::role_labeled(\"editMenu\", labels.edit());\n    }",
+    "replace": "    }\n    if platform != \"darwin\" {\n        return MenuItem::role_labeled(\"editMenu\", labels.edit());\n    }",
+    "fn": ["app-menu.editMenuTemplate"]
+  },
+  {
+    "name": "app menu accelerator of the other platform",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "accelerator: Some(if platform == \"darwin\" {",
+    "replace": "accelerator: Some(if platform != \"darwin\" {",
+    "fn": ["app-menu.toggleDevToolsItem", "app-menu.viewMenuTemplate"]
+  },
+  {
+    "name": "app menu devtools ignore their own window",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "if of_previous.as_ref() == Some(focused) {",
+    "replace": "if false && of_previous.as_ref() == Some(focused) {",
+    "fn": ["app-menu.click"]
+  },
+  {
+    "name": "app menu devtools keep a closed target",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "self.last_detached_target = None;",
+    "replace": "",
+    "fn": ["app-menu.click"]
+  },
+  {
+    "name": "app menu about offers the check always",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "    if can_check {\n        buttons.push",
+    "replace": "    if true {\n        buttons.push",
+    "fn": ["app-menu.click"]
+  },
+  {
+    "name": "app menu about copy is the third button",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "if response == 1.0 {",
+    "replace": "if response == 2.0 {",
+    "fn": ["app-menu.click"]
+  },
+  {
+    "name": "app menu view groups without separators",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "if index > 0 {",
+    "replace": "if index > 5 {",
+    "fn": ["app-menu.viewMenuTemplate"]
+  },
+  {
+    "name": "app menu help separator without extras",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "if has_extra {",
+    "replace": "if true {",
+    "fn": ["app-menu.helpMenuTemplate"]
+  },
+  {
+    "name": "app menu application menu everywhere",
+    "file": "main-core/src/packages/electron_utils/app_menu.rs",
+    "find": "if platform != \"darwin\" {\n        return None;",
+    "replace": "if platform == \"plan9\" {\n        return None;",
+    "fn": ["app-menu.appMenuTemplate"]
+  },
+  {
+    "name": "renderer protocol answers every request",
+    "file": "main-core/src/packages/electron_utils/renderer_protocol.rs",
+    "find": "None => RendererProtocolAnswer::NotFound,",
+    "replace": "None => RendererProtocolAnswer::Fetch(String::new()),",
+    "fn": ["renderer-protocol.installRendererProtocol"]
+  },
+  {
+    "name": "renderer protocol forgets the docx media scheme",
+    "file": "main-core/src/packages/electron_utils/renderer_protocol.rs",
+    "find": "        docx_media_scheme_privilege(),\n        slide_media_scheme_privilege(),",
+    "replace": "        slide_media_scheme_privilege(),\n        docx_media_scheme_privilege(),",
+    "fn": ["renderer-protocol.registerRendererScheme"]
+  }
+]
