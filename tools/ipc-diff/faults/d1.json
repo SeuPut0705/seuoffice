@@ -280,10 +280,10 @@
     "groups": ["d1/sheets-save"]
   },
   {
-    "name": "a screen permission that is not determined is read as denied",
+    "name": "a capture source is classed by the window prefix",
     "file": "shell-ipc/d1/src/sheets/misc.rs",
-    "find": "status != \"granted\" && status != \"not-determined\"",
-    "replace": "status != \"granted\"",
+    "find": "let kind = if source.id.starts_with(\"screen\") {",
+    "replace": "let kind = if source.id.starts_with(\"window\") {",
     "groups": ["d1/sheets-files"]
   },
   {
