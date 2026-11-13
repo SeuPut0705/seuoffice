@@ -144,6 +144,7 @@ const cases: Case[] = [
   },
   {
     note: 'diag: a line is appended with the clock; an over-long or non-string line is dropped',
+    files: { userData: { dir: true } },
     calls: [
       call('docs:spell-diag', ['toggle on'], 'send'),
       call('docs:spell-diag', ['kick'], 'send'),
@@ -154,6 +155,7 @@ const cases: Case[] = [
   },
   {
     note: 'diag with another clock reading',
+    files: { userData: { dir: true } },
     hosts: { m: { now: 1234567890123 } },
     calls: [call('docs:spell-diag', ['later'], 'send')],
   },
