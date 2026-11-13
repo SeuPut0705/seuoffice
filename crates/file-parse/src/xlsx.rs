@@ -2,7 +2,8 @@
 //! packages/file-parse/src/xlsx-redaction.ts, and the gateway readers that
 //! file calls: `readRedactionRecord`, `parseRedactionPart` and
 //! `parseRedactionNameMirror` of xlsx-gateway `gateway/xlsx-redaction.ts`,
-//! `parseSheetElements` of `gateway/xlsx-sheets.ts`, `offsetFormulaRefs` of
+//! `parseSheetElements` of `gateway/xlsx-sheets.ts` and the element scanner
+//! it reads with ([`crate::xlsx_xml_scan`]), `offsetFormulaRefs` of
 //! `domain/formula-shift.ts`, `parseAddress` and `columnIndex` of
 //! `domain/cell-address.ts`, `decodeXlsxEscapes` of `gateway/xlsx-escapes.ts`.
 //! The cells that compute from a withheld cell are
@@ -26,6 +27,7 @@ use crate::xlsx_formula_redaction::{
     DerivedInput, DerivedSheet, FORMULA_SCAN_MAX_BYTES, PivotOutput, pivot_output_of,
     read_derived_cells,
 };
+use crate::xlsx_xml_scan::{element_text, root_namespace_elements};
 
 use fxp::JVal;
 
@@ -1190,15 +1192,6 @@ fn parse_redaction_part(text: &str) -> Result<Vec<SheetRedactionState>, Unreadab
         .collect()
 }
 
-/// `unescapeXml` of xlsx-defined-names.ts.
-fn unescape_xml(input: &str) -> String {
-    input
-        .replace("&quot;", "\"")
-        .replace("&lt;", "<")
-        .replace("&gt;", ">")
-        .replace("&amp;", "&")
-}
-
 /// `unmirrorFormula`
 fn unmirror_formula(body: &str) -> String {
     let text = trim(body);
@@ -1259,16 +1252,13 @@ fn parse_redaction_name_mirror(
     sheet_order: &[String],
 ) -> Result<Vec<SheetRedactionState>, Unreadable> {
     let mut by_sheet: Vec<SheetRedactionState> = Vec::new();
-    let elements = js_regex!(
-        r#"<definedName\b[^>]*\bname="_gxRedaction_\d+"[^>]*>(?:[\s\S]*?</definedName>|)"#
-    );
-    for found in elements.find_iter(workbook_xml) {
-        let body = js_regex!(r"<definedName\b[^>]*>([\s\S]*?)<\/definedName>")
-            .exec(found.as_str())
-            .and_then(|body| body.get(1))
-            .unwrap_or_default();
+    for element in root_namespace_elements(workbook_xml, "definedName") {
+        if !js_regex!(r"^_gxRedaction_\d+$").test(element.attribute("name").unwrap_or_default()) {
+            continue;
+        }
         let payload: Value =
-            serde_json::from_str(&unmirror_formula(&unescape_xml(body))).map_err(|_| Unreadable)?;
+            serde_json::from_str(&unmirror_formula(&element_text(workbook_xml, &element)))
+                .map_err(|_| Unreadable)?;
         let (sheet_name, mark) = mirror_mark_of(&payload, sheet_order)?;
         match by_sheet
             .iter_mut()
@@ -1284,54 +1274,12 @@ fn parse_redaction_name_mirror(
     Ok(by_sheet)
 }
 
-/// `decodeEntities` of xlsx-sheets.ts. A reference to half of a surrogate
-/// pair reads as U+FFFD: a Rust string cannot hold the lone half.
-fn decode_entities(input: &str) -> String {
-    js_regex!(r"&(?:#x([0-9A-Fa-f]+)|#([0-9]+)|(quot|apos|lt|gt|amp));").replace_all(
-        input,
-        |found| {
-            if let Some(named) = found.get(3) {
-                return match named {
-                    "quot" => "\"",
-                    "apos" => "'",
-                    "lt" => "<",
-                    "gt" => ">",
-                    _ => "&",
-                }
-                .to_owned();
-            }
-            let code = match found.get(1) {
-                Some(hex) => hex.bytes().fold(0.0, |code, digit| {
-                    code * 16.0 + f64::from(char::from(digit).to_digit(16).unwrap_or(0))
-                }),
-                None => to_number(found.get(2).unwrap_or_default()),
-            };
-            if code <= f64::from(0x10_FFFF_u32) {
-                char::from_u32(code as u32)
-                    .unwrap_or('\u{FFFD}')
-                    .to_string()
-            } else {
-                found.as_str().to_owned()
-            }
-        },
-    )
-}
-
 /// The names `parseSheetElements` reads, in workbook order.
-fn sheet_element_names(workbook_xml: &str) -> Result<Vec<String>, RegexLimit> {
-    let mut names = Vec::new();
-    for found in try_js_regex!(r#"<sheet\b(?:"[^"]*"|'[^']*'|[^>"'])*?(?:/>|>[\s\S]*?</sheet>)"#)
-        .try_find_iter(workbook_xml)
-    {
-        let found = found?;
-        if let Some(name) = js_regex!(r#"(?:^|\s)name="([^"]*)""#)
-            .exec(found.as_str())
-            .and_then(|name| name.get(1))
-        {
-            names.push(decode_entities(name));
-        }
-    }
-    Ok(names)
+fn sheet_element_names(workbook_xml: &str) -> Vec<String> {
+    root_namespace_elements(workbook_xml, "sheet")
+        .iter()
+        .filter_map(|element| element.attribute("name").map(str::to_owned))
+        .collect()
 }
 
 /// `readRedactionRecord` of the gateway: the part when it parses, the copy in
@@ -1348,10 +1296,7 @@ fn read_redaction_record(
             _ => damaged = true,
         }
     }
-    let mirrored = parse_redaction_name_mirror(
-        workbook_xml,
-        &sheet_element_names(workbook_xml).map_err(|_| Unreadable)?,
-    )?;
+    let mirrored = parse_redaction_name_mirror(workbook_xml, &sheet_element_names(workbook_xml))?;
     if damaged && mirrored.is_empty() {
         return Err(Unreadable);
     }

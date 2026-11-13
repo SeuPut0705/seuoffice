@@ -35,4 +35,6 @@ pub mod xlsx_dates;
 pub mod xlsx_formula_reads;
 #[cfg(feature = "xlsx")]
 pub mod xlsx_formula_redaction;
+#[cfg(feature = "xlsx")]
+pub mod xlsx_xml_scan;
 pub mod zip_text_parts;

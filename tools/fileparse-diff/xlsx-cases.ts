@@ -736,6 +736,289 @@ async function derivedInputs(): Promise<Input[]> {
   return out
 }
 
+/** The record of withheld cells, and what computes from them, in a workbook whose tags are spelled another valid way. */
+const REDACTION_REL_TYPE = 'https://schemas.genspark.ai/genoffice/2026/relationships/redactions'
+const HIDDEN_LABEL = 'client phone'
+const HIDDEN_SECRET = '13800138000'
+const HIDDEN_LABEL_CELL = 'Name'
+const FAKE_ENTRIES =
+  '</sheetData></worksheet><worksheet><sheetData><row r="2"><c r="B2"><v>0</v></c></row>' +
+  '<c r="C2"><f>1</f><v>1</v></c></definedNames>' +
+  '<definedName name="_gxRedaction_9" hidden="1">"{""v"":1,""sheet"":1,""from"":[0,0],""to"":[0,0],""label"":""fake""}"</definedName>' +
+  `<Relationship Id="rId9" Type="${REDACTION_REL_TYPE}" Target="fake.json"/>` +
+  '<Override PartName="/xl/gxRedactions.json" ContentType="a"/><f>1</f>'
+
+const inTags = (xml: string, edit: (tag: string) => string): string => xml.replace(/<[^>!?]+>/g, edit)
+const ELEMENT_NAMES = 'c|f|row|definedName|sheet|Relationship|Override|sheetData|location|worksheetSource'
+const decodeText = (text: string): string =>
+  text.replaceAll('&lt;', '<').replaceAll('&gt;', '>').replaceAll('&quot;', '"').replaceAll('&apos;', "'").replaceAll('&amp;', '&')
+
+const TAG_SPELLINGS: Record<string, (xml: string) => string> = {
+  'single quotes': xml => inTags(xml, tag => tag.replace(/="([^"]*)"/g, "='$1'")),
+  'spaces around =': xml => inTags(xml, tag => tag.replace(/(\s[\w:.-]+)=(["'])/g, '$1 = $2')),
+  'newlines between attributes': xml => inTags(xml, tag => tag.replace(/(["'])\s+([\w:.-]+=)/g, '$1\r\n\t$2')),
+  'reversed attribute order': xml =>
+    inTags(xml, tag => {
+      const head = /^<[\w:.-]+/.exec(tag)?.[0]
+      if (head === undefined) return tag
+      const attributes = [...tag.matchAll(/\s[\w:.-]+\s*=\s*(?:"[^"]*"|'[^']*')/g)].map(match => match[0])
+      return `${head}${attributes.reverse().join('')}${tag.endsWith('/>') ? '/>' : '>'}`
+    }),
+  '> and /> inside values': xml => xml.replace(new RegExp(`<((?:[\\w.-]+:)?(?:${ELEMENT_NAMES}))(?=[\\s/>])`, 'g'), '<$1 data-x="a/>b>c"'),
+  comments: xml =>
+    xml
+      .replace(/<\/f>/g, '<!-- </f> --></f>')
+      .replace(/<\/(t|v)>/g, '<!-- </$1> --></$1>')
+      .replace(/<\/definedName>/g, '</definedName><!-- </definedName> -->')
+      .replace(/(<c(?=\s)[^>/]*>)/g, '$1<!-- </c></row></sheetData> <c r="B2"><v>0</v></c> -->')
+      .replace(/<definedNames>/, '<definedNames><!-- <definedName name="_gxRedaction_9" hidden="1">"{""v"":1,""sheet"":1,""from"":[0,0],""to"":[0,0],""label"":""fake""}"</definedName> -->')
+      .replace(/<Relationships[^>]*>/g, tag => `${tag}<!-- <Relationship Type="${REDACTION_REL_TYPE}" Target="x"/> -->`),
+  'fake markup in CDATA': xml =>
+    xml
+      .replaceAll(`<t>${HIDDEN_LABEL_CELL}</t>`, `<t><![CDATA[${FAKE_ENTRIES}]]></t>`)
+      .replace('>"hello"</definedName>', () => `><![CDATA["${FAKE_ENTRIES.replaceAll('"', '""')}"]]></definedName>`),
+  'space before > in end tags': xml => xml.replace(/<\/([\w:.-]+)>/g, '</$1 >'),
+  'space before > in start tags': xml =>
+    inTags(xml, tag => (/^<[\w:.-]/.test(tag) ? tag.replace(/(\/?)>$/, (_all, slash: string) => ` ${slash}>`) : tag)),
+  CDATA: xml =>
+    xml.replace(/<(f|t|v|definedName|formula1)((?:\s[^>]*)?)>([^<]+)<\/\1>/g, (_all, name: string, attributes: string, text: string) =>
+      `<${name}${attributes}><![CDATA[${decodeText(text)}]]></${name}>`),
+  'namespace prefix': xml =>
+    /xmlns="(?:http:\/\/schemas\.openxmlformats\.org\/(?:spreadsheetml\/2006\/main|package\/2006\/(?:relationships|content-types)))"/.test(xml)
+      ? xml.replace(/(<[\w:.-]+[^>]*?)\sxmlns="/, '$1 xmlns:x="').replace(/<(\/?)([A-Za-z_][\w.-]*)(?=[\s/>])/g, '<$1x:$2')
+      : xml,
+}
+TAG_SPELLINGS.all = xml =>
+  ['single quotes', 'spaces around =', 'CDATA', 'comments', '> and /> inside values', 'space before > in end tags'].reduce(
+    (out, name) => TAG_SPELLINGS[name]!(out), xml)
+
+type RecordKind = 'part' | 'mirror' | 'both'
+const HIDDEN_PAYLOAD = (sheetIndex: number, from: [number, number], to: [number, number], label: string) =>
+  `"${JSON.stringify(mirrorMark(sheetIndex, from, to, label)).replaceAll('"', '""')}"`
+const hiddenCell = (ref: string, text: string) => `<c r="${ref}" t="inlineStr"><is><t>${text}</t></is></c>`
+
+/** Data (B2:B3 withheld, a formula, a text formula and a defined name over B2) and Report (a PivotTable over Data), each part as it is written. */
+function hiddenParts(record: RecordKind, strings: 'shared' | 'inline'): Record<string, string> {
+  const phone = strings === 'shared' ? '<c r="B2" t="s"><v>0</v></c>' : hiddenCell('B2', HIDDEN_SECRET)
+  const data = sheet(
+    row(1, hiddenCell('A1', HIDDEN_LABEL_CELL), hiddenCell('B1', 'Phone')) +
+    row(2, hiddenCell('A2', 'Kim'), phone, c('C2', f('B2*2') + v('27600276000')), c('D2', f('B2&amp;"x"') + v(`${HIDDEN_SECRET}x`), ' t="str"'), c('E2', f('phone') + v(HIDDEN_SECRET))) +
+    row(3, hiddenCell('A3', 'Lee'), hiddenCell('B3', 'second')) +
+    row(5, c('C5', f('1+1') + v('2'))),
+    '<dataValidations count="1"><dataValidation type="list" sqref="G2"><formula1>$B$2:$B$3</formula1></dataValidation></dataValidations>',
+  )
+  const report = sheet(
+    row(3, hiddenCell('A3', 'Phone'), hiddenCell('B3', 'Total'), hiddenCell('D3', 'beside')) + row(4, hiddenCell('A4', HIDDEN_SECRET), c('B4', v('27600276000'))),
+  )
+  const names = '<definedName name="phone">Data!$B$2</definedName><definedName name="greeting">"hello"</definedName>' +
+    (record === 'part' ? '' : mirror(0, mirrorMark(0, [1, 1], [2, 1], HIDDEN_LABEL)))
+  return bookParts({
+    sheets: [['Data', data], ['Report', report]],
+    definedNames: names,
+    extraRels: [['rId3', 'sharedStrings', 'sharedStrings.xml']],
+    files: {
+      'xl/sharedStrings.xml': sst(strings === 'shared' ? `<si><t>${HIDDEN_SECRET}</t></si>` : '<si><t>unused</t></si>'),
+      ...(record === 'mirror' ? {} : { 'xl/gxRedactions.json': part([{ name: 'Data', marks: [mark(1, 2, 1, 1, HIDDEN_LABEL)] }]) }),
+      'xl/worksheets/_rels/sheet2.xml.rels': PIVOT_RELS,
+      [PIVOT_PART]: pivotXml(PIVOT_LOCATION('A3:B4')),
+      'xl/pivotTables/_rels/pivotTable1.xml.rels': CACHE_RELS,
+      [CACHE_PART]: cacheXml(WORKSHEET_SOURCE('ref="A1:B3" sheet="Data"')),
+    },
+  })
+}
+
+/** Every XML part of the workbook rewritten by `spelling` (the record's JSON part is left alone). */
+const spelled = (parts: Record<string, string>, spelling: string | null): Record<string, string> =>
+  Object.fromEntries(Object.entries(parts).map(([name, xml]) => [name, spelling === null || !/\.(?:xml|rels)$/.test(name) ? xml : TAG_SPELLINGS[spelling]!(xml)]))
+
+async function spellingInputs(): Promise<Input[]> {
+  const out: Input[] = []
+  const add = async (label: string, bytes: Uint8Array | Book, mutate = false) =>
+    out.push({ label, bytes: bytes instanceof Uint8Array ? bytes : await book(bytes), ...(mutate ? {} : { mutate: false }) })
+
+  // the record is found, and the cells it hides stay hidden, however the tags are written
+  for (const spelling of [null, ...Object.keys(TAG_SPELLINGS)]) {
+    for (const record of ['part', 'mirror', 'both'] as const) {
+      for (const strings of ['shared', 'inline'] as const) {
+        await add(`withheld: spelled ${spelling ?? 'as written'}, record ${record}, ${strings} strings`, await zip(spelled(hiddenParts(record, strings), spelling)),
+          spelling === 'all' && strings === 'shared')
+      }
+    }
+  }
+
+  // the mirrored names of the workbook, read as an XML parser reads them
+  const PAYLOAD = HIDDEN_PAYLOAD(0, [1, 1], [2, 2], 'Salary')
+  const OTHER = HIDDEN_PAYLOAD(1, [0, 0], [0, 0], 'Name')
+  const two: Book['sheets'] = [['Pay', GRID_SHEET], ['Other', GRID_TWO]]
+  const sheetElements = (open = '<sheet', close = '/>') => `${open} name="Pay" sheetId="1" r:id="rId1"${close}${open} name="Other" sheetId="2" r:id="rId2"${close}`
+  const workbook = (inner: string, root = `xmlns="${S}" xmlns:r="${R}"`, tag = 'workbook', prolog = '') => `${DECL}${prolog}<${tag} ${root}>${inner}</${tag}>`
+  const names = (inner: string) => `<sheets>${sheetElements()}</sheets><definedNames>${inner}</definedNames>`
+  const withWorkbook = (xml: string, extra: Partial<Book> = {}): Book => ({ sheets: two, ...extra, files: { 'xl/workbook.xml': xml, ...extra.files } })
+  const entry = (attributes: string, body: string, end = '</definedName>') => `<definedName ${attributes}>${body}${end}`
+  const MIRROR = 'name="_gxRedaction_0" hidden="1"'
+  const mirrored: Array<[string, string]> = [
+    ['single quotes and spaces', entry(`hidden = '1'   name = '_gxRedaction_0'`, PAYLOAD, '</definedName >')],
+    ['attributes over lines, reversed', entry('\r\n\thidden="1"\r\n\tname="_gxRedaction_0"\r\n', PAYLOAD)],
+    ['a name given twice, the last read', entry('name="other" name="_gxRedaction_0"', PAYLOAD)],
+    ['a name given twice, the last not a mirror', entry('name="_gxRedaction_0" name="other"', PAYLOAD)],
+    ['formula in CDATA', entry(MIRROR, `<![CDATA[${PAYLOAD}]]>`)],
+    ['formula in CDATA beside text', entry(MIRROR, `${PAYLOAD.slice(0, 1)}<![CDATA[${PAYLOAD.slice(1, -1)}]]>${PAYLOAD.slice(-1)}`)],
+    ['formula with a comment in it', entry(MIRROR, `${PAYLOAD.slice(0, 1)}<!-- </definedName> -->${PAYLOAD.slice(1)}`)],
+    ['formula with a child element in it', entry(MIRROR, `<b>x</b>${PAYLOAD}`)],
+    ['formula with a processing instruction in it', entry(MIRROR, `<?x?>${PAYLOAD}`)],
+    ['formula with named quotes', entry(MIRROR, PAYLOAD.replaceAll('"', '&quot;'))],
+    ['formula with decimal quotes', entry(MIRROR, PAYLOAD.replaceAll('"', '&#34;'))],
+    ['formula with hexadecimal quotes', entry(MIRROR, PAYLOAD.replaceAll('"', '&#x22;'))],
+    ['formula with a reference that is not a character', entry(MIRROR, PAYLOAD.replace('Salary', 'Sal&#x110000;ary'))],
+    ['formula with a reference that is not whole', entry(MIRROR, PAYLOAD.replace('Salary', 'Sal&#xZZ;ary&amp'))],
+    ['formula with space around it', entry(MIRROR, `\r\n  ${PAYLOAD}\t `)],
+    ['entry in a comment', `<!-- ${entry(MIRROR, PAYLOAD)} -->`],
+    ['entry in CDATA', `<![CDATA[${entry(MIRROR, PAYLOAD)}]]>`],
+    ['entry in a processing instruction', `<?x ${entry(MIRROR, PAYLOAD)}?>`],
+    ['entry a comment follows', `${entry(MIRROR, PAYLOAD)}<!-- ${entry('name="_gxRedaction_1" hidden="1"', 'not json')} -->`],
+    ['entry written empty', `<definedName ${MIRROR}></definedName>`],
+    ['entry written self-closed with space', `<definedName ${MIRROR} />`],
+    ['entry written self-closed in single quotes', `<definedName name='_gxRedaction_0'/>`],
+    ['two entries, the second damaged', entry(MIRROR, PAYLOAD) + entry('name="_gxRedaction_1"', '"{oops}"')],
+    ['two entries, one per sheet', entry(MIRROR, PAYLOAD) + entry('name="_gxRedaction_1"', OTHER)],
+    ['two entries, the second of the first sheet', entry(MIRROR, PAYLOAD) + entry('name="_gxRedaction_1"', HIDDEN_PAYLOAD(0, [0, 0], [0, 0], 'Head'))],
+    ['entry of a sheet no tab has', entry(MIRROR, HIDDEN_PAYLOAD(7, [0, 0], [0, 0], 'Gone'))],
+    ['entry that is not a mirror in a name', entry('name="_gxRedaction_0X"', 'not json') + entry(MIRROR, PAYLOAD)],
+    ['entry beside a comment that holds its end tag', entry(MIRROR, PAYLOAD) + '<!-- </definedName> -->' + entry('name="_gxRedaction_1"', OTHER)],
+    ['entry in a prefix the root does not have', `<y:definedName ${MIRROR}>${PAYLOAD}</y:definedName>`],
+    ['prefixed entry beside a plain one', `<y:definedName name="_gxRedaction_1">not json</y:definedName>${entry(MIRROR, PAYLOAD)}`],
+  ]
+  for (const [label, inner] of mirrored) await add(`withheld: spelled mirror, ${label}`, withWorkbook(workbook(names(inner))))
+  for (const name of ['_gxRedaction_01', '_gxRedaction_', '_gxRedaction_0 ', ' _gxRedaction_0', '_GXREDACTION_0', '_gxRedaction_\uFF10', '_gxRedaction_0\n', 'x_gxRedaction_0', '_gxRedaction_12', '_gxRedaction_0_1', '_gxredaction_0']) {
+    await add(`withheld: spelled mirror, name ${JSON.stringify(name)}`, withWorkbook(workbook(names(entry(`name="${name}"`, PAYLOAD)))))
+  }
+  await add('withheld: spelled mirror, plain elements of a prefixed workbook', withWorkbook(workbook(
+    `<x:sheets>${sheetElements('<x:sheet')}</x:sheets><x:definedNames>${entry(`name="_gxRedaction_0"`, PAYLOAD).replaceAll('definedName', 'x:definedName')}<definedName name="_gxRedaction_1">not json</definedName></x:definedNames>`,
+    `xmlns:x="${S}" xmlns:r="${R}"`, 'x:workbook')))
+  await add('withheld: spelled mirror, prefixed elements of a plain workbook', withWorkbook(workbook(
+    `<sheets>${sheetElements()}</sheets><definedNames>${entry(MIRROR, PAYLOAD)}<y:definedName name="_gxRedaction_1">not json</y:definedName></definedNames>`)))
+  await add('withheld: spelled mirror, the sheets of another prefix are not the tabs', withWorkbook(workbook(
+    `<sheets><y:sheet name="Decoy" sheetId="3"/>${sheetElements()}</sheets><definedNames>${entry(MIRROR, PAYLOAD)}</definedNames>`)))
+  await add('withheld: spelled mirror, a comment before the root holds a start tag of another prefix', withWorkbook(workbook(names(entry(MIRROR, PAYLOAD)), undefined, undefined, '<!-- <x:a> -->')))
+  await add('withheld: spelled mirror, a processing instruction before the root', withWorkbook(workbook(names(entry(MIRROR, PAYLOAD)), undefined, undefined, '<?xml-stylesheet href="a"?>')))
+  await add('withheld: spelled mirror, a doctype before the root', withWorkbook(workbook(names(entry(MIRROR, PAYLOAD)), undefined, undefined, '<!DOCTYPE workbook>')))
+
+  // the tabs the mirror counts in, read as an XML parser reads them
+  const tabs = (inner: string) => withWorkbook(workbook(`<sheets>${inner}</sheets><definedNames>${entry(MIRROR, HIDDEN_PAYLOAD(1, [0, 0], [1, 1], 'Second'))}</definedNames>`))
+  await add('withheld: spelled sheets, single quotes', tabs(`<sheet name='Pay' sheetId='1' r:id='rId1'/><sheet name='Other' sheetId='2' r:id='rId2'/>`))
+  await add('withheld: spelled sheets, spaces around the sign', tabs(`<sheet name = "Pay" sheetId = "1" r:id = "rId1" /><sheet\r\n name\t=\t'Other'\r\n sheetId="2" r:id="rId2"></sheet >`))
+  await add('withheld: spelled sheets, name after other attributes', tabs(`<sheet sheetId="1" r:id="rId1" name="Pay"/><sheet sheetId="2" r:id="rId2" name="Other"/>`))
+  await add('withheld: spelled sheets, a tab with no name', tabs(`<sheet sheetId="1" r:id="rId1"/><sheet name="Pay" sheetId="2" r:id="rId2"/>`))
+  await add('withheld: spelled sheets, a tab named twice', tabs(`<sheet name="x" name="Pay" sheetId="1" r:id="rId1"/><sheet name="Other" name="Other" sheetId="2" r:id="rId2"/>`))
+  await add('withheld: spelled sheets, a tab in a comment', tabs(`<!-- <sheet name="Pay"/> --><sheet name="Pay" sheetId="1" r:id="rId1"/><sheet name="Other" sheetId="2" r:id="rId2"/>`))
+  await add('withheld: spelled sheets, a tab in CDATA', tabs(`<![CDATA[<sheet name="Pay"/>]]><sheet name="Pay" sheetId="1" r:id="rId1"/><sheet name="Other" sheetId="2" r:id="rId2"/>`))
+  await add('withheld: spelled sheets, a tab written with an end tag', tabs(`<sheet name="Pay" sheetId="1" r:id="rId1"></sheet><sheet name="Other" sheetId="2" r:id="rId2"><extLst/></sheet>`))
+  await add('withheld: spelled sheets, a name with a greater-than sign', withWorkbook(workbook(`<sheets><sheet name="a&gt;b" sheetId="1" r:id="rId1"/><sheet name="c>d" sheetId="2" r:id="rId2"/></sheets><definedNames>${entry(MIRROR, HIDDEN_PAYLOAD(1, [0, 0], [1, 1], 'Second'))}</definedNames>`),
+    { sheets: [['a>b', GRID_SHEET], ['c>d', GRID_TWO]] }))
+  await add('withheld: spelled sheets, a name with references', withWorkbook(workbook(`<sheets><sheet name="R&amp;D &#x41;&#66;" sheetId="1" r:id="rId1"/><sheet name="Other" sheetId="2" r:id="rId2"/></sheets><definedNames>${entry(MIRROR, PAYLOAD)}</definedNames>`),
+    { sheets: [['R&D AB', GRID_SHEET], ['Other', GRID_TWO]] }))
+  await add('withheld: spelled sheets, a part record beside names that are spelled another way', withWorkbook(workbook(`<sheets>${sheetElements()}</sheets>`),
+    { files: { 'xl/gxRedactions.json': part([{ name: 'Pay', marks: [mark(1, 2, 1, 2, 'Salary')] }]) } }))
+
+  // the formulas of a sheet, read as an XML parser reads them
+  const scan = (label: string, xml: string, marks: unknown = PAY_B1) => add(`derived: spelled ${label}`, marked([['Pay', xml]], marks))
+  const base = (...cells: string[]) => sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), ...cells))
+  await scan('cells, a greater-than sign in an attribute value', sheet(row(1, c('A1', v('plain')), c('B1', v('1000')), '<c r="C1" data-x="a>b"><f t="normal" data-x="a>b">B1</f><v>1</v></c>', '<c data-x=\'>\' r="D1"><f data-x="/>">A1</f><v>1</v></c>', fc('E1', 'C1', '1'))))
+  await scan('cells, addresses in single quotes and spaced', base('<c r=\'C1\'><f>B1</f><v>1</v></c>', '<c r = "D1" ><f >B1</f ><v>1</v></c >', '<c\r\n\tr="E1"\r\n><f\r\n>A1</f\r\n></c>'))
+  await scan('cells, attributes reversed and quoted another way', base('<c t="n" s="1" r="C1"><f ca="1" t="normal">B1</f></c>', `<c t='n' r='D1'><f t='shared' ref='D1:E1' si='0'>B1</f></c>`, `<c r="E1"><f si="0" t="shared"/></c>`))
+  await scan('cells, end tags with spaces', base('<c r="C1"><f>B1</f ><v>1</v></c >', '<c r="D1"><f>A1</f\n></c\t>'))
+  await scan('cells, comments in the formula', base('<c r="C1"><f>B<!-- </f> -->1</f><v>1</v></c>', '<c r="D1"><f><!-- x -->A1<!-- <c r="B1"> --></f></c>'))
+  await scan('cells, a comment that holds a cell', base('<!-- <c r="C1"><f>B1</f></c> -->', '<c r="D1"><v>3</v></c>', fc('E1', 'D1', '1')))
+  await scan('cells, a comment that holds the end of the data', base('<!-- </sheetData> -->', fc('C1', 'B1', '1')))
+  await scan('cells, a comment that holds the start of the data', `${DECL}<worksheet xmlns="${S}"><!-- <sheetData> -->${row(1, c('A1', v('plain')), fc('C1', 'B1', '1'))}</worksheet>`)
+  await scan('cells, a comment never closed', base(fc('C1', 'B1', '1'), '<!-- <c r="D1"><f>B1</f></c>'))
+  await scan('cells, formula text in CDATA', base('<c r="C1"><f><![CDATA[B1+"</f>"]]></f><v>1</v></c>', '<c r="D1"><f>A1<![CDATA[+&amp;<>]]>+A1</f></c>', '<c r="E1"><f><![CDATA[&#x110000;]]></f></c>'))
+  await scan('cells, a formula that only looks like one in CDATA', base('<c r="C1" t="inlineStr"><is><t><![CDATA[<f>B1</f>]]></t></is></c>', '<c r="D1" t="inlineStr"><is><t><![CDATA[</sheetData><c r="Z1"><f>B1</f></c>]]></t></is></c>', fc('E1', 'A1', '1')))
+  await scan('cells, CDATA outside a formula', base('<![CDATA[<f>B1</f>]]>', fc('C1', 'A1', '1')))
+  await scan('cells, a processing instruction that holds a formula', base('<?x <c r="C1"><f>B1</f></c> ?>', fc('D1', 'A1', '1')))
+  await scan('cells, a processing instruction in a formula', base('<c r="C1"><f>B<?x </f> ?>1</f></c>'))
+  await scan('cells, formula in a prefix, cell in another', `${DECL}<worksheet xmlns="${S}" xmlns:y="${S}" xmlns:z="${S}"><y:sheetData><y:row r="1"><z:c r="A1"><z:v>plain</z:v></z:c><z:c r="B1"><z:v>1000</z:v></z:c><y:c r="C1"><z:f>B1</z:f></y:c><z:c r="D1"><y:f>A1</y:f></z:c></y:row></y:sheetData></worksheet>`)
+  await scan('cells, a prefix with dots and dashes', `${DECL}<worksheet xmlns:a.b-c="${S}"><a.b-c:sheetData><a.b-c:row r="1"><a.b-c:c r="A1"><a.b-c:v>plain</a.b-c:v></a.b-c:c><a.b-c:c r="B1"><a.b-c:v>1000</a.b-c:v></a.b-c:c><a.b-c:c r="C1"><a.b-c:f>B1</a.b-c:f></a.b-c:c></a.b-c:row></a.b-c:sheetData></worksheet>`)
+  await scan('cells, a prefix with a colon in it', `${DECL}<worksheet xmlns="${S}"><sheetData><row r="1"><c r="A1"><v>plain</v></c><c r="B1"><v>1000</v></c><a:b:c r="C1"><f>B1</f></a:b:c></row></sheetData></worksheet>`)
+  await scan('cells, names that only start like the tags', base('<cc r="C1"><ff>B1</ff></cc>', '<c-x r="D1"><f-x>B1</f-x></c-x>', '<sheetDataX><f>B1</f></sheetDataX>', fc('E1', 'A1', '1')))
+  await scan('cells, a cell tag that holds a slash before its end', base('<c r="C1" x=y/><f>B1</f>', '<c r="D1" />', fc('E1', 'A1', '1')))
+  await scan('cells, a formula tag that ends in a slash after a value', base('<c r="C1"><f t="shared" si="0" /></c>', '<c r="D1"><f t="shared" si="0" ref="D1:E1">B1</f></c>', '<c r="E1"><f t="shared" si="0"/></c>'))
+  await scan('cells, a formula tag that holds a slash in a value', base('<c r="C1"><f x="a/">B1</f></c>', '<c r="D1"><f x=\'/\'>A1</f></c>'))
+  await scan('cells, a formula that is never closed', base('<c r="C1"><f>B1'))
+  await scan('cells, a formula whose tag is never closed', base('<c r="C1"><f t="normal"'))
+  await scan('cells, a cell whose tag is never closed', base('<c r="C1"'))
+  await scan('cells, a quote that is never closed in a tag', base('<c r="C1" x="><f>B1</f></c>'))
+  await scan('cells, a formula opened twice', base('<c r="C1"><f>A1<f>B1</f></c><c r="D1"><f>A1</f></c>'))
+  await scan('cells, a formula closed twice', base('<c r="C1"><f>B1</f></f><c r="D1"><f>A1</f></c>'))
+  await scan('cells, a formula whose cell is closed first', base('<c r="C1"><f>B1</c><c r="D1">A1</f></c>'))
+  await scan('cells, a formula whose data is closed first', base('<c r="C1"><f>B1</sheetData></f><c r="D1"><f>B1</f></c>'))
+  await scan('cells, a formula that holds a bad character reference', base('<c r="C1"><f>B1&#x110000;</f></c>'))
+  await scan('cells, a formula that holds a bad character reference in a comment', base('<c r="C1"><f>B1<!-- &#x110000; --></f></c>'))
+  await scan('cells, a bad character reference outside a formula', base('<c r="C1" t="str"><v>&#x110000;</v></c>', fc('D1', 'B1', '1')))
+  await scan('cells, a bad character reference past a formula that is not closed', base('<c r="C1"><f>B1&#x110000;'))
+  await scan('cells, text around a formula', base('<c r="C1">x<f>B1</f>y</c>', 'text<c r="D1">z<f>A1</f></c>text'))
+  await scan('cells, a formula with a reference to the marked cell split across tags', base('<c r="C1"><f>B<!-- -->1</f></c>', '<c r="D1"><f>$B<![CDATA[$]]>1</f></c>'))
+  await scan('cells, two data elements', `${DECL}<worksheet xmlns="${S}"><sheetData>${row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'))}</sheetData><sheetData>${row(2, fc('A2', 'B1', '1'))}</sheetData></worksheet>`)
+  await scan('cells, a data element with spaces in its end tag', `${DECL}<worksheet xmlns="${S}"><sheetData >${row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'))}</sheetData ><x><f>B1</f></x></worksheet>`)
+  await scan('cells, a data element written self-closed with a space', `${DECL}<worksheet xmlns="${S}"><sheetData /><row r="1"><c r="A1"><f>B1</f></c></row></worksheet>`)
+  await scan('cells, a data element with an end tag that holds attributes', `${DECL}<worksheet xmlns="${S}"><sheetData>${row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'))}</sheetData x="1"><c r="D1"><f>B1</f></c></worksheet>`)
+  await scan('cells, a data element that is a prefix of another', `${DECL}<worksheet xmlns="${S}"><sheetDataX>${row(1, fc('A1', 'B1', '1'))}</sheetDataX></worksheet>`)
+  await scan('cells, data in a comment around the real one', `${DECL}<worksheet xmlns="${S}"><!-- <sheetData> --><sheetData>${row(1, c('A1', v('plain')), c('B1', v('1000')), fc('C1', 'B1', '1'))}</sheetData><!-- </sheetData> --></worksheet>`)
+  await scan('cells, entities in the formula and its tag around a quote', base('<c r="C1" x="&quot;>"><f t="normal" x="&apos;">B1&amp;&quot;&gt;&quot;</f></c>'))
+  await scan('cells, a tag name with a quote in it', base('<c"x r="C1"><f>B1</f></c"x>', fc('D1', 'A1', '1')))
+
+  // a PivotTable and its cache, read as an XML parser reads them
+  const pivot = (label: string, spec: PivotSpec) => add(`derived: spelled pivot, ${label}`, pivotBook(spec))
+  const location = (attributes: string, tag = 'location') => `<${tag} ${attributes}/>`
+  await pivot('location in single quotes and spaced', { pivot: pivotXml(`<location\r\n\tref = 'A6:C10'\r\n\trowPageCount = '1' colPageCount = "1" />`, PIVOT_PAGE_FIELDS(1)) })
+  await pivot('location with its end tag', { pivot: pivotXml(`<location ref="A6:C10" rowPageCount="1" colPageCount="1"></location >`, PIVOT_PAGE_FIELDS(1)) })
+  await pivot('location that is not an element', { pivot: pivotXml(`<!-- <location ref="A1:A2"/> --><![CDATA[<location ref="A1:A2"/>]]>${location('ref="A6:C10"')}`) })
+  await pivot('location in a comment only', { pivot: pivotXml('<!-- <location ref="A6:C10"/> -->') })
+  await pivot('location in CDATA only', { pivot: pivotXml('<![CDATA[<location ref="A6:C10"/>]]>') })
+  await pivot('location in a processing instruction only', { pivot: pivotXml('<?x <location ref="A6:C10"/> ?>') })
+  await pivot('location with a greater-than sign in a value', { pivot: pivotXml('<location title="a>b" ref="A6:C10" data-x=\'>\'/>') })
+  await pivot('location with a reference written with entities', { pivot: pivotXml(location('ref="A&#54;:C&#x31;0" rowPageCount="&#49;" colPageCount="&#x31;"'), PIVOT_PAGE_FIELDS(1)) })
+  await pivot('location with a reference given twice, the last read', { pivot: pivotXml(location('ref="A1:A2" ref=\'A6:C10\'')) })
+  await pivot('location with a reference given twice, the last unreadable', { pivot: pivotXml(location('ref="A6:C10" ref="bad"')) })
+  await pivot('location with a count that carries no value', { pivot: pivotXml(location('ref="A6:C10" rowPageCount colPageCount="1"'), PIVOT_PAGE_FIELDS(1)) })
+  await pivot('location in a prefix with the filters in another', { pivot: pivotXml(location('ref="A6:C10" rowPageCount="1" colPageCount="2"', 'x:location'), PIVOT_PAGE_FIELDS(2, 'y:')) })
+  await pivot('location inside another element', { pivot: pivotXml(`<ext>${location('ref="A6:C10"')}</ext>`) })
+  await pivot('location after one that is never closed', { pivot: pivotXml(`<location ref="A6:B8">${location('ref="A6:C10"')}`) })
+  await pivot('location that is never finished', { pivot: pivotXml('<location ref="A6:C10"') })
+  await pivot('location whose value is never closed', { pivot: pivotXml(`<location ref="A6:C10 firstHeaderRow="1"/>`) })
+  await pivot('filters spelled with spaces and end tags', { pivot: pivotXml(location('ref="A6:C10" rowPageCount="1" colPageCount="2"'), '<pageFields count="2"><pageField fld="0" /><pageField fld="1"></pageField ></pageFields>') })
+  await pivot('filters in comments and CDATA', { pivot: pivotXml(location('ref="A6:C10"'), '<!-- <pageField fld="0"/> --><![CDATA[<pageField fld="0"/>]]><?x <pageField/> ?>') })
+  await pivot('filters in a prefix', { pivot: pivotXml(location('ref="A6:C10" rowPageCount="1" colPageCount="1"'), '<x:pageFields><x:pageField fld="0"/></x:pageFields>') })
+  await pivot('filters that only start like one', { pivot: pivotXml(location('ref="A6:C10"'), '<pageFieldX/><pageFields/><pageField-x/>') })
+  await pivot('filters with a greater-than sign in a value', { pivot: pivotXml(location('ref="A6:C10" rowPageCount="1" colPageCount="1"'), '<pageField title="a>b"/>') })
+  await pivot('filters after a tag whose name holds a quote', { pivot: pivotXml(location('ref="A6:C10" rowPageCount="1" colPageCount="1"'), '<a"b c="d"/><pageField fld="0"/>') })
+  const source = (attributes: string, root?: string, before = '') => cacheXml(WORKSHEET_SOURCE(attributes), { ...(root === undefined ? {} : { root }), before })
+  await pivot('source in a comment and CDATA first', { cache: cacheXml('<!-- <cacheSource type="worksheet"><worksheetSource ref="A1:B4" sheet="Data"/></cacheSource> --><![CDATA[<worksheetSource ref="A1:B4" sheet="Data"/>]]>' + WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"')) })
+  await pivot('source in a comment only', { cache: cacheXml('<!-- <cacheSource type="worksheet"><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource> -->') })
+  await pivot('source with end tags spaced', { cache: cacheXml('<cacheSource type="worksheet"><worksheetSource ref="A1:C4" sheet="Data"></worksheetSource ></cacheSource >') })
+  await pivot('source with a type in single quotes and spaced', { cache: cacheXml(`<cacheSource\r\n type = 'worksheet' ><worksheetSource\r\n ref = 'A1:C4'\r\n sheet = 'Data' /></cacheSource>`) })
+  await pivot('source with a type given twice, the last read', { cache: cacheXml('<cacheSource type="external" type="worksheet"><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource>') })
+  await pivot('source with a type given twice, the last not a worksheet', { cache: cacheXml('<cacheSource type="worksheet" type="external"><worksheetSource ref="A1:C4" sheet="Data"/></cacheSource>') })
+  await pivot('source with names given twice, the last read', { cache: cacheXml('<cacheSource type="worksheet"><worksheetSource ref="A1:B4" ref="A1:C4" sheet="Gone" sheet="Data"/></cacheSource>') })
+  await pivot('source with a name and an empty sheet', { cache: source('name="Sales" sheet=""'), definedNames: SALES_NAME })
+  await pivot('source with an empty reference and a sheet', { cache: source('ref="" sheet="Data"') })
+  await pivot('source with an empty name', { cache: source('name=""') })
+  await pivot('source with references in the sheet and range', { cache: source('ref="A1:&#67;4" sheet="Da&#x74;a"') })
+  await pivot('source with a sheet whose reference is not a character', { cache: source('ref="A1:C4" sheet="Da&#xD800;ta"') })
+  await pivot('source with a sheet that has quotes in it', { cache: source('ref="A1:C4" sheet="Pa&apos;y&quot;s &amp;apos; &amp;amp;"') })
+  await pivot('source with a greater-than sign in a value', { cache: source('title="a>b" ref="A1:C4" sheet="Data" other=\'>\'') })
+  await pivot('source with a relationship after a greater-than sign in single quotes', { cache: source(`ref="A1:C4" sheet="Data" title='a>b' r:id='rId1'`) })
+  await pivot('source with a relationship id spaced and over lines', { cache: source('ref="A1:C4" sheet="Data"\r\n\tr:id\r\n\t=\r\n\t"rId1"') })
+  await pivot('source with a relationship id with no value', { cache: source('ref="A1:C4" sheet="Data" r:id') })
+  await pivot('source in prefixed elements with another prefix for the relationships', { cache: cacheXml(`<x:cacheSource type="worksheet"><x:worksheetSource ref="A1:C4" sheet="Data" q:id="rId1" xmlns:q="${R}"/></x:cacheSource>`, { root: `xmlns:x="${S}"` }) })
+  await pivot('source in prefixed elements, the relationships bound in a comment', { cache: cacheXml(`<!-- xmlns:q="${R}" --><x:cacheSource type="worksheet"><x:worksheetSource ref="A1:C4" sheet="Data" q:id="rId1"/></x:cacheSource>`, { root: `xmlns:x="${S}" xmlns:q="urn:other"` }) })
+  await pivot('source after a tag whose name holds a quote', { cache: cacheXml(`<a"b c="d"/>${WORKSHEET_SOURCE('ref="A1:C4" sheet="Data"')}`) })
+  await pivot('source whose cache source is never closed', { cache: cacheXml('<cacheSource type="worksheet"><worksheetSource ref="A1:C4" sheet="Data"/>') })
+  await pivot('source that is never finished', { cache: `${DECL}<pivotCacheDefinition xmlns="${S}"><cacheSource type="worksheet"><worksheetSource ref="A1:C4" sheet="Data"` })
+  await pivot('source of a cache that holds a sheet in single quotes', { cache: source(`ref='A1:C4' sheet='Pay"s Data'`) })
+  return out
+}
+
 async function inputs(): Promise<Input[]> {
   const out: Input[] = []
   const add = (label: string, bytes: Uint8Array, maxChars?: number) =>
@@ -852,6 +1135,7 @@ async function inputs(): Promise<Input[]> {
   add('empty archive', await zip({}))
 
   out.push(...await redactionInputs())
+  out.push(...await spellingInputs())
   out.push(...await derivedInputs())
   out.push(...hostileZipInputs())
   return out
@@ -915,9 +1199,9 @@ async function withheldQueries(bytes: Uint8Array): Promise<Query[]> {
   const cellRefs: string[] = []
   try {
     const zip = await JSZip.loadAsync(bytes)
-    for (const [, name] of (await partText(zip, 'xl/workbook.xml')).matchAll(/<sheet\b[^>]*?\bname="([^"]*)"/g)) names.push(decodeAttribute(name!))
+    for (const [, name, single] of (await partText(zip, 'xl/workbook.xml')).matchAll(/<(?:[\w.-]+:)?sheet\b[^>]*?\bname\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) names.push(decodeAttribute(name ?? single!))
     for (const part of Object.keys(zip.files).filter(name => /^xl\/worksheets\/[^/]+\.xml$/.test(name))) {
-      for (const [, ref] of (await partText(zip, part)).matchAll(/<c\b[^>]*?\br="([^"]*)"/g)) cellRefs.push(decodeAttribute(ref!))
+      for (const [, ref, single] of (await partText(zip, part)).matchAll(/<(?:[\w.-]+:)?c\b[^>]*?\br\s*=\s*(?:"([^"]*)"|'([^']*)')/g)) cellRefs.push(decodeAttribute(ref ?? single!))
     }
   } catch {
     // not a workbook this reads: only the refs and names that need no workbook are asked

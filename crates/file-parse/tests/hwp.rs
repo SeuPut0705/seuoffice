@@ -21,6 +21,9 @@ fn tracked(path: &str) -> Vec<u8> {
 }
 
 fn fixture(name: &str) -> Vec<u8> {
+    // the answers were taken from Node in Korea: memo dates in +09:00, whatever
+    // zone this machine is in (the first offset set holds for the whole run)
+    let _ = rhwp::model::memo_time::set_local_offset(|_| Some(9 * 3600));
     tracked(&format!("apps/hwp/tests/fixtures/{name}"))
 }
 
