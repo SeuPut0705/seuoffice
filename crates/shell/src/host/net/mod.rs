@@ -11,9 +11,11 @@ use shell_contract::Hosts;
 
 use super::HostContext;
 
+pub mod ai;
 pub mod http;
+pub mod tools;
 
-pub fn install(hosts: &mut Hosts, _cx: &HostContext) {
+pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     let spawn: http::Spawn = Arc::new(|future| {
         tauri::async_runtime::spawn(future);
     });
@@ -21,6 +23,8 @@ pub fn install(hosts: &mut Hosts, _cx: &HostContext) {
     hosts.insert(net);
     hosts.insert(shell_ipc_a::template_selection::factory());
     hosts.insert(shell_ipc_a::zotero::factory());
+    ai::install(hosts, cx);
+    tools::install(hosts, cx);
     if std::env::var(crate::PARTIAL_ENV).is_ok_and(|v| v == "1") {
         shell_ipc_a::insert_unbuilt_ports(hosts);
     }

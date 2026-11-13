@@ -50,6 +50,15 @@ hyper-util = { version = "0.1", features = ["tokio"] }
 http-body-util = "0.1"
 bytes = "1"
 tokio = { version = "1", features = ["net", "sync", "macros", "rt", "time"] }
+# A's AI hosts (host/net/ai): the ChatGPT sign-in's ID token signature
+# (RS256, ES256), the OAuth PKCE bytes from the OS, the slides AI's image
+# sizes; ring and image are already pulled by tauri and reqwest
+ring = "0.17"
+getrandom = "0.4"
+image = { version = "0.25", default-features = false, features = ["png", "jpeg", "gif", "webp", "bmp"] }
+# A's MCP hub (host/net/tools): a tool's outputSchema, as the MCP SDK's Ajv
+# checked it; no remote or file $ref resolution
+jsonschema = { version = "0.61", default-features = false }
 # the feed's sha512 of a download (host/update.rs)
 sha2 = "0.10"
 # the blockmaps of a differential update are gzipped (U, host/update/feed.rs)
@@ -95,7 +104,8 @@ block2 = "0.6"
 windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage_Streams", "UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_System_WinRT", "Win32_UI_Controls", "Win32_UI_WindowsAndMessaging"] }
 
 [dev-dependencies]
-# the fakes of M's and U's hosts for the_batches_register_over_the_stubs
+# the fakes of A's, M's and U's hosts for the_batches_register_over_the_stubs
+shell-ipc-a = { path = "../shell-ipc/a", features = ["probe"] }
 shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
 shell-ipc-u = { path = "../shell-ipc/u", features = ["probe"] }
 
