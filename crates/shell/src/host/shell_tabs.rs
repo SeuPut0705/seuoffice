@@ -34,6 +34,18 @@ pub(crate) trait ShellTabs {
     /// `revealShellWindow`: un-minimize, show and focus the shell window,
     /// making it first when it was closed (macOS keeps running without it)
     fn reveal_shell_window(&self);
+    /// `newDocTab`, `newSheetTab`, ... by home kind (`docx`, `xlsx`, `pptx`,
+    /// `md`, `html`, `xmind`, `drawio`, `hwp`, `pdf`), as `home:new-*` does
+    /// without a remembered folder; `false` for any other name
+    fn new_document(&self, home_kind: &str) -> bool;
+    /// `visibleHomeKinds(readHomeKinds())` without `pdfTools`, in home's order
+    fn new_document_kinds(&self) -> Vec<String>;
+    /// "Open in New Window" (Docs' New Window, Slides' Open in New Window): the
+    /// shell's active tab of `kind` moves into a window of its own
+    fn open_in_new_window(&self, kind: TabKind);
+    /// `changeUiScale(APP_SETTINGS_PATH(), direction)`: 1 bigger, -1 smaller,
+    /// 0 reset. Saved, stamped on every page, and the tab strip relaid out.
+    fn change_ui_scale(&self, direction: i32);
 }
 
 struct OverTabs(Rc<TabsState>);
@@ -61,6 +73,26 @@ impl ShellTabs for OverTabs {
 
     fn reveal_shell_window(&self) {
         self.0.reveal_shell_window();
+    }
+
+    fn new_document(&self, home_kind: &str) -> bool {
+        self.0.new_document(home_kind)
+    }
+
+    fn new_document_kinds(&self) -> Vec<String> {
+        self.0.visible_home_kinds()
+    }
+
+    fn open_in_new_window(&self, kind: TabKind) {
+        self.0.open_active_in_new_window(kind);
+    }
+
+    fn change_ui_scale(&self, direction: i32) {
+        let tabs = self.0.clone();
+        crate::ui_scale::change(&self.0.settings_path(), direction, move |_| {
+            // the strip moved, so the views below it move too
+            tabs.relayout();
+        });
     }
 }
 

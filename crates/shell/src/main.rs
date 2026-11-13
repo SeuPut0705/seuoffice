@@ -30,6 +30,7 @@ mod ipc;
 mod measure;
 mod paths;
 mod preload;
+mod ui_scale;
 mod views;
 
 use std::path::PathBuf;
@@ -299,6 +300,12 @@ fn main() {
                 ipc.views.remove_window(id);
             }
         })
+        .on_page_load(|webview, payload| {
+            // `did-finish-load`: the stored interface scale goes into every page
+            if payload.event() == tauri::webview::PageLoadEvent::Finished {
+                ui_scale::on_page_finished(webview);
+            }
+        })
         .on_webview_event(|webview, event| {
             // the paths of a drop, for `webUtils.getPathForFile`
             if let WebviewEvent::DragDrop(DragDropEvent::Drop { paths, .. }) = event
@@ -311,6 +318,7 @@ fn main() {
             let handle = app.handle().clone();
             let views = setup_views;
             let paths = setup_paths;
+            ui_scale::install(&handle, &paths.settings_file().to_string_lossy());
 
             let ui: Arc<dyn Thread> = Arc::new(TauriUi {
                 app: handle.clone(),

@@ -652,8 +652,7 @@ impl TabHooks for Unbuilt {
         unbuilt("TabHooks::pdf_close_cancelled");
     }
     fn ui_scale(&self) -> f64 {
-        unbuilt("TabHooks::ui_scale");
-        0.0
+        crate::ui_scale::current()
     }
     fn no_spare_view_env(&self) -> bool {
         unbuilt("TabHooks::no_spare_view_env");
@@ -695,8 +694,11 @@ impl TabHooks for Unbuilt {
         unbuilt("TabHooks::app_menu_activate");
     }
     fn visible_home_kinds(&self) -> Vec<String> {
-        unbuilt("TabHooks::visible_home_kinds");
-        Vec::new()
+        shell_ipc_w::home_settings::visible_home_kinds(
+            &crate::paths::ShellPaths::new()
+                .settings_file()
+                .to_string_lossy(),
+        )
     }
     fn drive_reopen(&self, _: &str) -> bool {
         unbuilt("TabHooks::drive_reopen");
