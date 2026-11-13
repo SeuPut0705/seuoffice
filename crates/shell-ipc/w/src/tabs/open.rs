@@ -70,7 +70,7 @@ impl TabsState {
     /// `revealShellWindow`: show does not un-minimize, and on macOS closing the
     /// window leaves the app running, so a file opened from the outside would
     /// land out of sight
-    pub(super) fn reveal_shell_window(&self) {
+    pub fn reveal_shell_window(&self) {
         let shell = {
             let mut g = self.inner.borrow_mut();
             g.ensure_manager();

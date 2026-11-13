@@ -21,7 +21,7 @@ target="${CARGO_TARGET_DIR:-$work/target}"
 
 mkdir -p "$work"
 for entry in src build.rs frontend out; do
-  [ -e "$work/$entry" ] || ln -s "$shell_dir/$entry" "$work/$entry"
+  ln -sfn "$shell_dir/$entry" "$work/$entry"
 done
 
 python3 - "$shell_dir" "$work" <<'PY'

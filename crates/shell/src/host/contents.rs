@@ -7,7 +7,7 @@
 //! answers on the UI thread, which a core-thread caller does not hold.
 
 use std::collections::{HashMap, HashSet};
-use std::sync::{Arc, Mutex, mpsc};
+use std::sync::{Arc, LazyLock, Mutex, mpsc};
 use std::time::Duration;
 
 use base64::Engine as _;
@@ -18,6 +18,7 @@ use shell_contract::ids::{ViewId, WindowId};
 use shell_contract::runtime::Views;
 use shell_contract::value::IpcValue;
 use shell_contract::{ContentsHost, Hosts};
+use tauri::Webview;
 use tauri_runtime_cef::{DevToolsProtocol, WebviewCefExt, allocate_devtools_message_id};
 
 use super::HostContext;
@@ -29,7 +30,8 @@ const CDP_TIMEOUT: Duration = Duration::from_secs(90);
 
 type Answer = (bool, Vec<u8>);
 
-/// CDP results waiting for their caller, by request id
+/// CDP results waiting for their caller, by request id. The ids come from one
+/// process-wide allocator, so one table serves every webview.
 #[derive(Default)]
 struct Pending(Mutex<HashMap<i32, mpsc::SyncSender<Answer>>>);
 
@@ -47,20 +49,65 @@ impl Pending {
     }
 }
 
+static PENDING: LazyLock<Arc<Pending>> = LazyLock::new(Arc::default);
+
+/// Labels of the webviews whose browser already hands its results to [`PENDING`]
+static OBSERVED: LazyLock<Mutex<HashSet<String>>> = LazyLock::new(Mutex::default);
+
+/// A webview that had CDP calls is gone: a later webview of the same label
+/// is observed afresh. Labels of the shell's views are never reused; a
+/// window made outside the view table (a print window) calls this when it closes.
+#[allow(dead_code)] // called by batch M's print host
+pub(crate) fn forget_webview(label: &str) {
+    OBSERVED.lock().unwrap().remove(label);
+}
+
+/// One Chrome DevTools protocol call on `webview`'s browser, answered with
+/// the parsed `result`. Blocks until the browser answers, so not from the UI
+/// thread. The webview's label must be unique among the webviews that use it.
+pub(crate) fn cdp(webview: &Webview, method: &str, params: Value) -> Result<Value, String> {
+    if OBSERVED.lock().unwrap().insert(webview.label().to_owned()) {
+        let pending = PENDING.clone();
+        webview
+            .on_dev_tools_protocol(move |protocol| pending.complete(protocol))
+            .map_err(|e| e.to_string())?;
+    }
+    let id = allocate_devtools_message_id().map_err(|e| e.to_string())?;
+    let (tx, rx) = mpsc::sync_channel(1);
+    PENDING.0.lock().unwrap().insert(id, tx);
+    let message = json!({ "id": id, "method": method, "params": params }).to_string();
+    if let Err(error) = webview.send_dev_tools_message(message.as_bytes()) {
+        PENDING.0.lock().unwrap().remove(&id);
+        return Err(error.to_string());
+    }
+    let (success, result) = rx.recv_timeout(CDP_TIMEOUT).map_err(|_| {
+        PENDING.0.lock().unwrap().remove(&id);
+        format!("{method}: no answer in {}s", CDP_TIMEOUT.as_secs())
+    })?;
+    if !success {
+        return Err(String::from_utf8_lossy(&result).into_owned());
+    }
+    serde_json::from_slice(&result).map_err(|e| e.to_string())
+}
+
+/// A CDP result's base64 `data` field (`Page.printToPDF`, `Page.captureScreenshot`)
+pub(crate) fn cdp_bytes(webview: &Webview, method: &str, params: Value) -> Result<Vec<u8>, String> {
+    let result = cdp(webview, method, params)?;
+    let data = result["data"]
+        .as_str()
+        .ok_or_else(|| format!("{method} returned no data"))?;
+    STANDARD.decode(data).map_err(|e| e.to_string())
+}
+
 struct ShellContents {
     table: Arc<ViewTable>,
     windows: Arc<Windows>,
-    pending: Arc<Pending>,
-    /// views whose browser already hands its results to `pending`
-    observed: Mutex<HashSet<ViewId>>,
 }
 
 pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     let contents: ContentsHost = Arc::new(ShellContents {
         table: cx.views.clone(),
         windows: cx.windows.clone(),
-        pending: Arc::default(),
-        observed: Mutex::default(),
     });
     hosts.insert(contents);
 }
@@ -100,7 +147,7 @@ fn paper(name: &str) -> Option<(f64, f64)> {
 /// key Electron has and CDP names alike goes across; the page size and the
 /// margins (inches in both) are spelled out. What `options` leaves out stays
 /// at the browser's default.
-fn pdf_params(options: &IpcValue) -> Value {
+pub(crate) fn pdf_params(options: &IpcValue) -> Value {
     let mut params = Map::new();
     for key in [
         "landscape",
@@ -155,42 +202,10 @@ fn pdf_params(options: &IpcValue) -> Value {
 }
 
 impl ShellContents {
-    fn cdp(&self, view: ViewId, method: &str, params: Value) -> Result<Value, String> {
-        let webview = self
-            .windows
+    fn webview_of(&self, view: ViewId) -> Result<Webview, String> {
+        self.windows
             .webview(view)
-            .ok_or_else(|| format!("no view {}", view.0))?;
-        if self.observed.lock().unwrap().insert(view) {
-            let pending = self.pending.clone();
-            webview
-                .on_dev_tools_protocol(move |protocol| pending.complete(protocol))
-                .map_err(|e| e.to_string())?;
-        }
-        let id = allocate_devtools_message_id().map_err(|e| e.to_string())?;
-        let (tx, rx) = mpsc::sync_channel(1);
-        self.pending.0.lock().unwrap().insert(id, tx);
-        let message = json!({ "id": id, "method": method, "params": params }).to_string();
-        if let Err(error) = webview.send_dev_tools_message(message.as_bytes()) {
-            self.pending.0.lock().unwrap().remove(&id);
-            return Err(error.to_string());
-        }
-        let (success, result) = rx.recv_timeout(CDP_TIMEOUT).map_err(|_| {
-            self.pending.0.lock().unwrap().remove(&id);
-            format!("{method}: no answer in {}s", CDP_TIMEOUT.as_secs())
-        })?;
-        if !success {
-            return Err(String::from_utf8_lossy(&result).into_owned());
-        }
-        serde_json::from_slice(&result).map_err(|e| e.to_string())
-    }
-
-    /// A CDP result's base64 `data` field
-    fn cdp_bytes(&self, view: ViewId, method: &str, params: Value) -> Result<Vec<u8>, String> {
-        let result = self.cdp(view, method, params)?;
-        let data = result["data"]
-            .as_str()
-            .ok_or_else(|| format!("{method} returned no data"))?;
-        STANDARD.decode(data).map_err(|e| e.to_string())
+            .ok_or_else(|| format!("no view {}", view.0))
     }
 }
 
@@ -200,11 +215,19 @@ impl Contents for ShellContents {
     }
 
     fn capture_png(&self, view: ViewId) -> Result<Vec<u8>, String> {
-        self.cdp_bytes(view, "Page.captureScreenshot", json!({ "format": "png" }))
+        cdp_bytes(
+            &self.webview_of(view)?,
+            "Page.captureScreenshot",
+            json!({ "format": "png" }),
+        )
     }
 
     fn print_to_pdf(&self, view: ViewId, options: IpcValue) -> Result<Vec<u8>, String> {
-        self.cdp_bytes(view, "Page.printToPDF", pdf_params(&options))
+        cdp_bytes(
+            &self.webview_of(view)?,
+            "Page.printToPDF",
+            pdf_params(&options),
+        )
     }
 
     /// `webContents.print` opens the system's print dialog. Tauri's `print`

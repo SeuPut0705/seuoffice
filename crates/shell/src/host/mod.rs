@@ -20,6 +20,7 @@ pub mod clipboard;
 pub mod contents;
 pub mod dialog;
 pub mod os_shell;
+pub(crate) mod shell_tabs;
 pub mod unbuilt;
 pub mod w;
 pub mod window;
