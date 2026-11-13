@@ -1,7 +1,8 @@
 /**
- * Test plumbing for the text layer: ODT → bridge docx, the editor's way of
- * saving an edited paragraph (rawPPr reuse, `saveDocx`), and the write-back
- * into the original ODT strings.
+ * Test plumbing over the public API: ODT → bridge docx (`odtToDocx`), the
+ * editor's way of saving an edited paragraph (rawPPr reuse, `saveDocx`), and
+ * the write-back into the original ODT (`saveOdt`, then the parts read out of
+ * the saved package).
  */
 import {
   type Block,
@@ -13,48 +14,36 @@ import {
   parseDocx,
   saveDocx,
 } from '@seuoffice/docx-engine'
-import {
-  type BridgeMap,
-  ConversionRegistry,
-  OdfToOoxmlContext,
-  OoxmlToOdfContext,
-  type OdtDocument,
-  applyTextPatches,
-  buildBridgeDocx,
-  convertOdtBody,
-  openOdt,
-  readDocxPart,
-  rebuildOdtBody,
-} from '../../src/core'
-import { convertOdtPage } from '../../src/page'
-import { convertOdtStyles, registerTextConverters, updateOdtStyles } from '../../src/text'
-import { FULL_REGISTRY, fullWriteBack, registryOr } from './full'
+import { type BridgeMap, type ConversionReport, odtToDocx, saveOdt } from '../../src'
+import { type OdtArchive, readArchive } from './odt-archive'
 
 export interface Bridge {
-  doc: OdtDocument
-  ctx: OdfToOoxmlContext
+  /** the ODT as opened */
+  odt: Uint8Array
+  archive: OdtArchive
   map: BridgeMap
   docx: Uint8Array
-  registry: ConversionRegistry
+  report: ConversionReport
+  /** content.xml of the opened ODT */
+  content: string
+  /** styles.xml of the opened ODT, null when it has none */
+  styles: string | null
 }
 
-export function textRegistry(): ConversionRegistry {
-  return registryOr(() => registerTextConverters(new ConversionRegistry()))
-}
-
-export async function odtToBridge(
-  bytes: Uint8Array,
-  registry: ConversionRegistry = textRegistry(),
-): Promise<Bridge> {
-  const doc = await openOdt(bytes)
-  const ctx = new OdfToOoxmlContext(doc, registry)
-  convertOdtStyles(ctx)
-  convertOdtBody(ctx)
-  if (FULL_REGISTRY) convertOdtPage(ctx)
-  const docx = await buildBridgeDocx(ctx)
+export async function odtToBridge(bytes: Uint8Array): Promise<Bridge> {
+  const archive = await readArchive(bytes)
+  const { docxBytes, bridge, report } = await odtToDocx(bytes)
   // the map must survive a JSON round trip (it crosses IPC)
-  const map = JSON.parse(JSON.stringify(ctx.map)) as BridgeMap
-  return { doc, ctx, map, docx, registry }
+  const map = JSON.parse(JSON.stringify(bridge)) as BridgeMap
+  return {
+    odt: bytes,
+    archive,
+    map,
+    docx: docxBytes,
+    report,
+    content: archive.text('content.xml') as string,
+    styles: archive.text('styles.xml') ?? null,
+  }
 }
 
 /** A generated block carrying everything the editor carries for a parsed paragraph. */
@@ -137,28 +126,106 @@ export function editOnly(
   return (blocks) => blocks.map((_, i) => (edits[i] ? { edit: i, change: edits[i] } : { keep: i }))
 }
 
-export interface WriteBack {
-  content: string
-  styles: string
-  rctx: OoxmlToOdfContext
+export interface PackageChanges {
+  /** entries the save added, in package order */
+  add: Array<{ path: string; data: Uint8Array; mediaType: string }>
+  /** entries the save removed, in original order */
+  remove: string[]
 }
 
-/** Writes the edited docx back into the original ODT strings. */
+export interface WriteBack {
+  /** the saved ODT (the original bytes, same object, when nothing changed) */
+  odt: Uint8Array
+  archive: OdtArchive
+  content: string
+  /** '' when the package has no styles.xml */
+  styles: string
+  manifest: string
+  changes: PackageChanges
+  /** the automatic styles the save added to `part` (elements absent from the original) */
+  newAutomaticStyles(part: 'content.xml' | 'styles.xml'): string[]
+}
+
+/** The top-level elements of the first `office:automatic-styles` of a part. */
+function automaticStyleElements(xml: string | null | undefined): string[] {
+  if (!xml) return []
+  const open = /<office:automatic-styles(\s[^>]*)?(\/?)>/.exec(xml)
+  if (!open || open[2] === '/') return []
+  const from = open.index + open[0].length
+  const to = xml.indexOf('</office:automatic-styles>', from)
+  const inner = xml.slice(from, to)
+  const out: string[] = []
+  const tag = /<(\/?)([A-Za-z][\w:.-]*)[^>]*?(\/?)>/g
+  let depth = 0
+  let start = -1
+  for (let m = tag.exec(inner); m; m = tag.exec(inner)) {
+    if (m[1] === '/') {
+      depth--
+      if (depth === 0) out.push(inner.slice(start, m.index + m[0].length))
+    } else if (m[3] === '/') {
+      if (depth === 0) out.push(m[0])
+    } else {
+      if (depth === 0) start = m.index
+      depth++
+    }
+  }
+  return out
+}
+
+function newElements(before: string | null | undefined, after: string | null | undefined) {
+  const remaining = automaticStyleElements(before)
+  const added: string[] = []
+  for (const element of automaticStyleElements(after)) {
+    const at = remaining.indexOf(element)
+    if (at >= 0) remaining.splice(at, 1)
+    else added.push(element)
+  }
+  return added
+}
+
+/** The `manifest:media-type` the manifest declares for `path`, '' when it has none. */
+function manifestMediaType(manifest: string, path: string): string {
+  for (const entry of manifest.matchAll(/<manifest:file-entry\b[^>]*>/g)) {
+    const fullPath = /manifest:full-path="([^"]*)"/.exec(entry[0])?.[1]
+    if (fullPath === path) return /manifest:media-type="([^"]*)"/.exec(entry[0])?.[1] ?? ''
+  }
+  return ''
+}
+
+/** Saves the edited docx into the original ODT with the public API. */
 export async function writeBack(bridge: Bridge, edited: Uint8Array): Promise<WriteBack> {
-  const parsed = await parseDocx(edited)
-  const editedStylesXml = await readDocxPart(edited, 'word/styles.xml')
-  if (FULL_REGISTRY)
-    return fullWriteBack(bridge.doc, bridge.map, parsed, bridge.registry, editedStylesXml)
-  const rctx = new OoxmlToOdfContext(bridge.doc, bridge.map, parsed, bridge.registry, {
-    editedStylesXml,
+  const { odtBytes: odt } = await saveOdt({
+    originalOdt: bridge.odt,
+    bridge: bridge.map,
+    editedDocx: edited,
   })
-  rebuildOdtBody(rctx)
-  updateOdtStyles(rctx)
-  const patches = rctx.finish()
+  const archive = odt === bridge.odt ? bridge.archive : await readArchive(odt)
+  const content = archive.text('content.xml') as string
+  const styles = archive.text('styles.xml') ?? ''
+  const before = new Map(bridge.archive.entries.map((e) => [e.name, e]))
+  const after = new Map(archive.entries.map((e) => [e.name, e]))
+  const manifest = archive.text('META-INF/manifest.xml') ?? ''
+  const changes: PackageChanges = {
+    add: archive.entries
+      .filter((e) => !before.has(e.name))
+      .map((e) => ({
+        path: e.name,
+        data: e.bytes,
+        mediaType: manifestMediaType(manifest, e.name),
+      })),
+    remove: bridge.archive.entries.map((e) => e.name).filter((name) => !after.has(name)),
+  }
   return {
-    content: applyTextPatches(bridge.doc.contentXml, patches['content.xml']),
-    styles: applyTextPatches(bridge.doc.stylesXml ?? '', patches['styles.xml']),
-    rctx,
+    odt,
+    archive,
+    content,
+    styles,
+    manifest,
+    changes,
+    newAutomaticStyles: (part) =>
+      part === 'content.xml'
+        ? newElements(bridge.content, content)
+        : newElements(bridge.styles, styles),
   }
 }
 

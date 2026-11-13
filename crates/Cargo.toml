@@ -4,6 +4,7 @@ members = [
   "ooxml-xml",
   "ooxml-pkg",
   "docx-engine",
+  "odt-engine",
   "pptx-engine",
   "mtx",
   "omml",
@@ -27,6 +28,7 @@ ooxml-pkg = { path = "ooxml-pkg" }
 # without icu-collation: each member names it, so the wasm build can leave it out
 docx-engine = { path = "docx-engine", default-features = false }
 pptx-engine = { path = "pptx-engine" }
+odt-engine = { path = "odt-engine" }
 mtx = { path = "mtx" }
 omml = { path = "omml" }
 # the decoders of the Encoding Standard, which TextDecoder follows

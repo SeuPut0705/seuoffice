@@ -1,5 +1,5 @@
 /**
- * Test plumbing for the table layer: the registry in T6's order and the two
+ * Test plumbing for the table layer: the two
  * ways the editor saves a changed table (apps/docs `pmDocToSavePlan`):
  * - cell text only → `patchTableCellTexts(original, texts)` (untouched cells
  *   and paragraphs keep their bytes);
@@ -14,16 +14,7 @@ import {
   generateTableModelXml,
   patchTableCellTexts,
 } from '@seuoffice/docx-engine'
-import { ConversionRegistry } from '../../src/core'
-import { registerTableConverters } from '../../src/table'
-import { registerTextConverters } from '../../src/text'
 import type { EditorOp } from './bridge'
-import { registryOr } from './full'
-
-/** Text first, then tables — the order T6 registers them. */
-export function tableRegistry(): ConversionRegistry {
-  return registryOr(() => registerTableConverters(registerTextConverters(new ConversionRegistry())))
-}
 
 /** A deep copy of a parsed table block's model. */
 export const modelOf = (block: Block): TableModel =>

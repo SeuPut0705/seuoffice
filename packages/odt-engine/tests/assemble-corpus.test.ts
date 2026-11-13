@@ -15,12 +15,12 @@ import { join } from 'node:path'
 import { parseDocx, readSections } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { odtToDocx, odtToText, saveOdt } from '../src'
-import { readOdtPackage } from '../src/core'
-import { readPageExt } from '../src/page'
-import type { TableExt } from '../src/table'
+import { type TableExt, pageExtOf } from './helpers/bridge-ext'
 import { diffPackages, expectedOrder, textOf } from './helpers/api'
 import { editorSave, replaceText } from './helpers/bridge'
+import { elementNamed } from './helpers/page-fixtures'
 import { cellRuns, editRuns, patchCells } from './helpers/table-editor'
+import { readArchive } from './helpers/odt-archive'
 
 const root = process.env.ODT_CORPUS
 
@@ -71,14 +71,18 @@ describe.skipIf(!root)('public API over the corpus', () => {
         totals.text++
         const keep = await editorSave(docxBytes, (blocks) => blocks.map((_, i) => ({ keep: i })))
         const t2 = performance.now()
-        const same = await saveOdt({ originalOdt: odt, bridge, editedDocx: keep.bytes })
+        const { odtBytes: same } = await saveOdt({
+          originalOdt: odt,
+          bridge,
+          editedDocx: keep.bytes,
+        })
         const t3 = performance.now()
         if (odt.length > largest.size)
           largest = { name, size: odt.length, open: t1 - t0, save: t3 - t2 }
         if (same.length === odt.length && same.every((b, i) => b === odt[i])) totals.unedited++
         else failures.push(`${name}: unedited save changed the bytes`)
 
-        const pkg = await readOdtPackage(odt)
+        const pkg = await readArchive(odt)
         const contentSize = pkg.get('content.xml')?.bytes.length ?? 0
         if (contentSize > largestContent.size)
           largestContent = { name, size: contentSize, open: t1 - t0, save: t3 - t2 }
@@ -112,9 +116,9 @@ describe.skipIf(!root)('public API over the corpus', () => {
                 : { keep: i },
             ),
           )
-          const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+          const { odtBytes: saved } = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
           const diff = await diffPackages(odt, saved)
-          const after = textOf(await readOdtPackage(saved), 'content.xml')
+          const after = textOf(await readArchive(saved), 'content.xml')
           if (diff.changed.join() !== 'content.xml' || diff.added.length || diff.removed.length)
             failures.push(`${name}: paragraph edit changed ${diff.changed.join(', ')}`)
           else if (
@@ -162,9 +166,13 @@ describe.skipIf(!root)('public API over the corpus', () => {
                     : { keep: i },
                 ),
               )
-              const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+              const { odtBytes: saved } = await saveOdt({
+                originalOdt: odt,
+                bridge,
+                editedDocx: bytes,
+              })
               const diff = await diffPackages(odt, saved)
-              const after = textOf(await readOdtPackage(saved), 'content.xml')
+              const after = textOf(await readArchive(saved), 'content.xml')
               if (diff.changed.join() !== 'content.xml' || diff.added.length)
                 failures.push(`${name}: cell edit changed ${diff.changed.join(', ')}`)
               else if (!onlyRange(content, after, cell.start, cell.end))
@@ -178,22 +186,22 @@ describe.skipIf(!root)('public API over the corpus', () => {
         }
 
         // 3. the final section's left margin
-        const page = readPageExt(bridge)
+        const page = pageExtOf(bridge)
         const sections = readSections(parsed)
         const last = sections[sections.length - 1]
         const run = page ? page.runs[page.sections[page.sections.length - 1].run] : null
         const used = (page?.runs ?? []).filter((x) => x.master === run?.master).length
-        const layout = run?.layout ? pkg && (await odtToLayout(odt, run.layout)) : null
+        const layout = run?.layout ? layoutRange(textOf(pkg, 'styles.xml'), run.layout) : null
         if (last && run && layout && used === 1) {
           const { bytes } = await editorSave(
             docxBytes,
             (blocks) => blocks.map((_, i) => ({ keep: i })),
             { section: { ...last.settings, marginLeft: last.settings.marginLeft + 567 } },
           )
-          const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+          const { odtBytes: saved } = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
           const diff = await diffPackages(odt, saved)
           const styles = textOf(pkg, 'styles.xml')
-          const after = textOf(await readOdtPackage(saved), 'styles.xml')
+          const after = textOf(await readArchive(saved), 'styles.xml')
           if (diff.changed.join() !== 'styles.xml' || diff.added.length)
             failures.push(`${name}: margin edit changed ${diff.changed.join(', ')}`)
           else if (!onlyRange(styles, after, layout.start, layout.end))
@@ -216,13 +224,10 @@ describe.skipIf(!root)('public API over the corpus', () => {
   }, 1_200_000)
 })
 
-/** The source range of a page layout of the ODT's styles.xml. */
-async function odtToLayout(
-  odt: Uint8Array,
-  name: string,
-): Promise<{ start: number; end: number } | null> {
-  const { openOdt } = await import('../src/core')
-  const doc = await openOdt(odt)
-  const layout = doc.styles.pageLayout(name)
-  return layout ? { start: layout.start, end: layout.end } : null
+/** The source range of a page layout of an ODT's styles.xml. */
+function layoutRange(styles: string, name: string): { start: number; end: number } | null {
+  const layout = elementNamed(styles, 'style:page-layout', name)
+  if (layout === null) return null
+  const start = styles.indexOf(layout)
+  return { start, end: start + layout.length }
 }

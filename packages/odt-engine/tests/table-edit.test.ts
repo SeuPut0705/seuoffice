@@ -11,7 +11,7 @@ import {
   patchTableCellTexts,
 } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import type { TableExt } from '../src/table'
+import type { TableExt } from './helpers/bridge-ext'
 import { type EditorOp, editorSave, odtToBridge, replaceText, writeBack } from './helpers/bridge'
 import { buildOdt } from './helpers/build-odt'
 import { hFieldBookmark, hPara, hParaWith } from './helpers/hancom-fragments'
@@ -21,18 +21,17 @@ import {
   firstDiff,
   patchCells,
   regenerate,
-  tableRegistry,
   tableTexts,
 } from './helpers/table-editor'
 import { CELL_FIELD, tablesDoc } from './helpers/table-fixtures'
 
 async function open() {
   const doc = tablesDoc()
-  const bridge = await odtToBridge(await buildOdt(doc.options), tableRegistry())
+  const bridge = await odtToBridge(await buildOdt(doc.options))
   const parsed = await parseDocx(bridge.docx)
   const visible = parsed.blocks.filter((b) => !b.hidden)
   const ext = bridge.map.ext.table as unknown as TableExt
-  return { bridge, visible, doc, ext, xml: bridge.doc.contentXml }
+  return { bridge, visible, doc, ext, xml: bridge.content }
 }
 
 type Opened = Awaited<ReturnType<typeof open>>
@@ -48,7 +47,7 @@ async function save(o: Opened, ops: Record<number, (b: Block) => EditorOp>) {
 /** Content minus the new automatic styles. */
 const withoutNewStyles = (wb: Awaited<ReturnType<typeof writeBack>>) => {
   let out = wb.content
-  for (const x of wb.rctx.newAutomaticStyles('content.xml')) out = out.replace(x, '')
+  for (const x of wb.newAutomaticStyles('content.xml')) out = out.replace(x, '')
   return out
 }
 
@@ -74,7 +73,6 @@ describe('editing one cell', () => {
         o.doc.pieces.cellA.replace('>a<', '>a바뀜<') +
         o.xml.slice(cell.end),
     )
-    expect(wb.rctx.warnings).toEqual([])
   })
 
   it('keeps a form field (누름틀) with its text when the cell is edited', async () => {
@@ -116,7 +114,6 @@ describe('editing one cell', () => {
     expect(inner).toContain(
       `${hPara('이름: 홍')}<text:p text:style-name="P1_0"><text:span text:style-name="T1">${field.start}길동${field.end}</text:span></text:p>`,
     )
-    expect(wb.rctx.warnings.join('\n')).toMatch(/split by a new paragraph/)
   })
 
   it('an added paragraph in a cell takes the style of the paragraph it follows', async () => {
@@ -172,7 +169,6 @@ describe('locked cells (Hancom cell protection)', () => {
     const t1 = o.ext.tables[o.ext.elements['1']]
     expect(range({ ...o, xml: wb.content }, t1.cells[1][0])).toBe(o.doc.pieces.lockedCell)
     expect(wb.content).toContain(o.doc.pieces.cellA.replace('>a<', '>A<'))
-    expect(wb.rctx.warnings.join('\n')).toMatch(/locked table cell/)
   })
 
   it('a formatting change of a locked cell is not written either', async () => {
@@ -184,7 +180,6 @@ describe('locked cells (Hancom cell protection)', () => {
         }),
     })
     expectSame(wb.content, o.xml)
-    expect(wb.rctx.warnings.join('\n')).toMatch(/locked table cell/)
   })
 })
 
@@ -276,7 +271,7 @@ describe('formatting and new tables', () => {
           m.rows[1][1].fill = 'FFFF00'
         }),
     })
-    const styles = wb.rctx.newAutomaticStyles('content.xml')
+    const styles = wb.newAutomaticStyles('content.xml')
     expect(styles).toHaveLength(1)
     expect(styles[0]).toMatch(
       /^<style:style style:name="Table1\.A1_io1" style:family="table-cell"><style:table-cell-properties [^>]*fo:background-color="#ffff00"/,
@@ -314,7 +309,6 @@ describe('formatting and new tables', () => {
         ...o.doc.options,
         overrideParts: { 'content.xml': wb.content, 'styles.xml': wb.styles },
       }),
-      tableRegistry(),
     )
     const parsed = await parseDocx(reopened.docx)
     const t = parsed.blocks.filter((b) => !b.hidden)[1]

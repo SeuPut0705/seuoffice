@@ -50,6 +50,10 @@ export async function exportOdt(
     const path = await steps.pickPath()
     if (!path) return { ok: true, canceled: true }
     const { odtBytes, report } = await convert(await steps.docx())
+    // an ODT shows a hidden-from-AI run as plain words: nothing is written
+    if (report.some((item) => item.feature === 'hidden_from_ai')) {
+      return { ok: false, error: tOdt(getUiLang(), 'markedMessage') }
+    }
     if (report.length > 0 && !(await steps.confirm(report))) return { ok: true, canceled: true }
     if (steps.prepare && !(await steps.prepare(path))) return { ok: true, canceled: true }
     await steps.write(path, odtBytes)
@@ -156,6 +160,7 @@ const FEATURE_KEY: Record<ReportFeature, OdtKey> = {
   protection: 'featProtection',
   form_field: 'featFormField',
   object: 'featObject',
+  hidden_from_ai: 'featHiddenFromAi',
 }
 
 const tOdt = createI18n({
@@ -198,6 +203,7 @@ const tOdt = createI18n({
     featProtection: 'Editing restrictions and read-only recommendation',
     featFormField: 'Form fields',
     featObject: 'Other objects',
+    featHiddenFromAi: 'Hidden-from-AI marks (the text stays, readable by AI)',
   },
   ko: {
     filterOdt: 'ODT 문서',
@@ -238,6 +244,7 @@ const tOdt = createI18n({
     featProtection: '편집 제한·읽기 전용 권장',
     featFormField: '누름틀',
     featObject: '기타 개체',
+    featHiddenFromAi: 'AI에게 가린 표시(글은 남고 AI가 읽을 수 있음)',
   },
 })
 

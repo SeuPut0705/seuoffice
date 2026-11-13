@@ -4,9 +4,9 @@
  * origin); the citation stays a `text:note` inside its paragraph.
  */
 import { describe, expect, it } from 'vitest'
-import { bodyOf, editOnly, editorSave, replaceText } from './helpers/bridge'
+import { bodyOf, editOnly, editorSave, replaceText, writeBack } from './helpers/bridge'
 import { escapeText, hFootnote, hPara, hParaWith } from './helpers/hancom-fragments'
-import { objectsBridge, visibleBlocks, writeBackObjects } from './helpers/objects-fixtures'
+import { objectsBridge, visibleBlocks } from './helpers/objects-fixtures'
 
 const note = hFootnote(' 각주 내용')
 const endnote = `<text:note text:note-class="endnote"><text:note-citation>i</text:note-citation><text:note-body>${hPara('미주 글', { style: 'P425_11', span: 'T270' })}</text:note-body></text:note>`
@@ -51,8 +51,8 @@ describe('notes: OOXML → ODF', () => {
     const { bytes } = await editorSave(fx.bridge.docx, (blocks) =>
       blocks.map((_, i) => ({ keep: i })),
     )
-    const wb = await writeBackObjects(fx, bytes)
-    expect(wb.content).toBe(fx.bridge.doc.contentXml)
+    const wb = await writeBack(fx.bridge, bytes)
+    expect(wb.content).toBe(fx.bridge.content)
   })
 
   it('text edited next to a note keeps the note bytes', async () => {
@@ -61,7 +61,7 @@ describe('notes: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 0: (g) => replaceText(g, 0, 2, '본 문') }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(hParaWith(`본 문${note} 뒤`) + hPara('다음'))
   })
 
@@ -72,7 +72,7 @@ describe('notes: OOXML → ODF', () => {
       (blocks) => blocks.map((_, i) => ({ keep: i })),
       { footnotes: [{ id: '1', text: '고친 각주 내용' }] },
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(
       hParaWith(`본문${note.replace(notePara(' 각주 내용'), notePara('고친 각주 내용'))} 뒤`) +
         hPara('다음'),
@@ -86,7 +86,7 @@ describe('notes: OOXML → ODF', () => {
       editOnly({ 0: (g) => replaceText(g, 0, 0, '새 ') }),
       { footnotes: [{ id: '1', text: '첫 문단\n둘째 문단 고침\n셋째' }] },
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     const rewritten = twoParagraphNote.replace(
       notePara('둘째 문단'),
       notePara('둘째 문단 고침') + notePara('셋째'),
@@ -110,7 +110,7 @@ describe('notes: OOXML → ODF', () => {
         ],
       }))(),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     const added = `<text:note text:note-class="footnote"><text:note-body>${notePara('새 각주')}</text:note-body><text:note-citation>2)</text:note-citation></text:note>`
     expect(bodyOf(wb.content)).toBe(hParaWith(`본문${note} 뒤${added}`) + hPara('다음'))
   })
@@ -121,7 +121,7 @@ describe('notes: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 0: (g) => (g.runs = g.runs.filter((r) => !r.noteRef)) }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(hParaWith('본문 뒤') + hPara('다음'))
   })
 })

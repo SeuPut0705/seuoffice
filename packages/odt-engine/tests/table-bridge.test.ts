@@ -5,15 +5,16 @@
  */
 import { type Block, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import { type TableExt, isProtectedCell, protectedCellsOf } from '../src/table'
+import { isProtectedCell, protectedCellsOf } from '../src'
+import type { TableExt } from './helpers/bridge-ext'
 import { editorSave, odtToBridge, writeBack } from './helpers/bridge'
 import { buildOdt } from './helpers/build-odt'
 import { hancomSample } from './helpers/hancom-sample'
-import { regenerate, tableRegistry, tableTexts } from './helpers/table-editor'
+import { regenerate, tableTexts } from './helpers/table-editor'
 import { tablesDoc } from './helpers/table-fixtures'
 
 async function open(body = tablesDoc()) {
-  const bridge = await odtToBridge(await buildOdt(body.options), tableRegistry())
+  const bridge = await odtToBridge(await buildOdt(body.options))
   const parsed = await parseDocx(bridge.docx)
   const visible = parsed.blocks.filter((b) => !b.hidden)
   return { bridge, parsed, visible, doc: body }
@@ -65,7 +66,7 @@ describe('tables open in the editor', () => {
   it('records cell ranges, the frame wrapper and units in ext.table', async () => {
     const { bridge, doc } = await open()
     const ext = bridge.map.ext.table as unknown as TableExt
-    const xml = bridge.doc.contentXml
+    const xml = bridge.content
     const t1 = ext.tables[ext.elements[String(1)]]
     expect(xml.slice(t1.start, t1.end)).toBe(doc.pieces.table1)
     expect(t1.frame && xml.slice(t1.frame.frame.start, t1.frame.frame.end)).toBe(doc.pieces.frame)
@@ -108,7 +109,7 @@ describe('tables open in the editor', () => {
       ),
     ])
     const outer = hTable('Table2', 1, [hRow([hCell(hPara('host') + inner)], 'Table2.1')])
-    const bridge = await odtToBridge(await buildOdt({ body: outer }), tableRegistry())
+    const bridge = await odtToBridge(await buildOdt({ body: outer }))
     expect(protectedCellsOf(bridge.map)).toEqual([
       { table: 0, path: [{ row: 0, col: 0, index: 0 }], row: 0, col: 0, tc: 0 },
     ])
@@ -119,10 +120,10 @@ describe('unedited round trips', () => {
   it('writes nothing back for an unchanged document', async () => {
     const { bridge } = await open()
     const wb = await writeBack(bridge, bridge.docx)
-    expect(wb.content).toBe(bridge.doc.contentXml)
-    expect(wb.styles).toBe(bridge.doc.stylesXml)
+    expect(wb.content).toBe(bridge.content)
+    expect(wb.styles).toBe(bridge.styles)
     const kept = await editorSave(bridge.docx, (blocks) => blocks.map((_, i) => ({ keep: i })))
-    expect((await writeBack(bridge, kept.bytes)).content).toBe(bridge.doc.contentXml)
+    expect((await writeBack(bridge, kept.bytes)).content).toBe(bridge.content)
   })
 
   it('a table the editor regenerates without changes writes nothing back', async () => {
@@ -131,17 +132,17 @@ describe('unedited round trips', () => {
       blocks.map((b, i) => (b.type === 'table' ? regenerate(visible[i], () => {}) : { keep: i })),
     )
     const wb = await writeBack(bridge, bytes)
-    expect(wb.rctx.newAutomaticStyles('content.xml')).toEqual([])
-    expect(wb.content).toBe(bridge.doc.contentXml)
+    expect(wb.newAutomaticStyles('content.xml')).toEqual([])
+    expect(wb.content).toBe(bridge.content)
   })
 
   it('the Hancom sample round-trips byte for byte with the table layer', async () => {
     const sample = hancomSample()
-    const bridge = await odtToBridge(await buildOdt(sample.options), tableRegistry())
+    const bridge = await odtToBridge(await buildOdt(sample.options))
     const parsed = await parseDocx(bridge.docx)
     expect(parsed.blocks.filter((b) => !b.hidden && b.type === 'table').length).toBe(3)
     const wb = await writeBack(bridge, bridge.docx)
-    expect(wb.content).toBe(bridge.doc.contentXml)
+    expect(wb.content).toBe(bridge.content)
     expect(protectedCellsOf(bridge.map)).toHaveLength(1)
   })
 })

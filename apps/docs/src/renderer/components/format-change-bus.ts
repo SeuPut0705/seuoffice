@@ -25,6 +25,7 @@ export const REPORT_FEATURE_KEYS: Record<ReportFeature, StringKey> = {
   protection: 'appOdtFeatureProtection',
   form_field: 'appOdtFeatureFormField',
   object: 'appOdtFeatureObject',
+  hidden_from_ai: 'appOdtFeatureHiddenFromAi',
 }
 
 export interface FormatChangeRequest {

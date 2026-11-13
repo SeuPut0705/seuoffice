@@ -1,14 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { buildOdt } from './helpers/build-odt'
 import { hancomSample } from './helpers/hancom-sample'
-import { bodyOf, editorSave } from './helpers/bridge'
-import {
-  keepAllBut,
-  odtToPageBridge,
-  pageWriteBack,
-  sectPrRewrite,
-  sectionsOf,
-} from './helpers/page-bridge'
+import { bodyOf, editorSave, odtToBridge, writeBack } from './helpers/bridge'
+import { keepAllBut, sectPrRewrite, sectionsOf } from './helpers/page-bridge'
 import { elementNamed, layoutXml, namesOf, pageDoc, singleRun } from './helpers/page-fixtures'
 
 /** The original string with exactly the given element replaced (everything else must equal). */
@@ -20,7 +14,7 @@ function onlyChanged(before: string, after: string, element: string): void {
 }
 
 async function open(options = pageDoc()) {
-  const bridge = await odtToPageBridge(await buildOdt(options))
+  const bridge = await odtToBridge(await buildOdt(options))
   const view = await sectionsOf(bridge.docx)
   return { bridge, ...view }
 }
@@ -35,9 +29,9 @@ describe('page setup edits', () => {
       bridge.docx,
       keepAllBut({ [rewrite.docxIndex]: rewrite.xml }),
     )
-    const back = await pageWriteBack(bridge, bytes)
-    expect(back.content).toBe(bridge.doc.contentXml)
-    const before = bridge.doc.stylesXml as string
+    const back = await writeBack(bridge, bytes)
+    expect(back.content).toBe(bridge.content)
+    const before = bridge.styles as string
     const layout = elementNamed(before, 'style:page-layout', 'Mpm2') as string
     onlyChanged(before, back.styles, layout)
     const edited = elementNamed(back.styles, 'style:page-layout', 'Mpm2') as string
@@ -58,7 +52,7 @@ describe('page setup edits', () => {
       (blocks) => blocks.map((_, i) => ({ keep: i })),
       { section: settings },
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     const styles = back.styles
     expect(namesOf(styles, 'style:master-page')).toEqual(['Standard', 'Standard_io1', 'MP2'])
     const clone = elementNamed(styles, 'style:master-page', 'Standard_io1') as string
@@ -69,7 +63,7 @@ describe('page setup edits', () => {
     expect(layout).toContain('svg:height="2.500cm"')
     expect(layout).toContain('fo:margin-top="1.000cm"')
     // originals untouched
-    const original = bridge.doc.stylesXml as string
+    const original = bridge.styles as string
     for (const [el, name] of [
       ['style:master-page', 'Standard'],
       ['style:page-layout', 'Mpm1'],
@@ -78,12 +72,12 @@ describe('page setup edits', () => {
     ])
       expect(elementNamed(styles, el, name)).toBe(elementNamed(original, el, name))
     // the third run's start style now names the clone; the body is untouched
-    expect(bodyOf(back.content)).toBe(bodyOf(bridge.doc.contentXml))
+    expect(bodyOf(back.content)).toBe(bodyOf(bridge.content))
     expect(elementNamed(back.content, 'style:style', 'PS3')).toContain(
       'style:master-page-name="Standard_io1"',
     )
     expect(elementNamed(back.content, 'style:style', 'PS1')).toBe(
-      elementNamed(bridge.doc.contentXml, 'style:style', 'PS1'),
+      elementNamed(bridge.content, 'style:style', 'PS1'),
     )
   })
 
@@ -96,9 +90,9 @@ describe('page setup edits', () => {
       keepAllBut({ [rewrite.docxIndex]: rewrite.xml }),
       { section: { ...sections[2].settings, ...edit.settings } },
     )
-    const back = await pageWriteBack(bridge, bytes)
-    expect(back.content).toBe(bridge.doc.contentXml)
-    const before = bridge.doc.stylesXml as string
+    const back = await writeBack(bridge, bytes)
+    expect(back.content).toBe(bridge.content)
+    const before = bridge.styles as string
     onlyChanged(before, back.styles, elementNamed(before, 'style:page-layout', 'Mpm1') as string)
     expect(elementNamed(back.styles, 'style:page-layout', 'Mpm1')).toContain(
       'fo:margin-right="3.000cm"',
@@ -120,7 +114,7 @@ describe('page setup edits', () => {
         },
       },
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     const layout = elementNamed(back.styles, 'style:page-layout', 'Mpm1') as string
     expect(layout).toContain('fo:page-width="29.700cm"')
     expect(layout).toContain('fo:page-height="21.000cm"')
@@ -134,10 +128,10 @@ describe('page setup edits', () => {
       (blocks) => blocks.map((_, i) => ({ keep: i })),
       { pgNumType: { fmt: 'upperRoman', start: 3 } },
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(elementNamed(back.styles, 'style:page-layout', 'Mpm1')).toContain('style:num-format="I"')
     expect(elementNamed(back.content, 'style:style', 'PS1')).toContain('style:page-number="3"')
-    expect(bodyOf(back.content)).toBe(bodyOf(bridge.doc.contentXml))
+    expect(bodyOf(back.content)).toBe(bodyOf(bridge.content))
   })
 
   it('never writes columns', async () => {
@@ -151,9 +145,9 @@ describe('page setup edits', () => {
       (blocks) => blocks.map((_, i) => ({ keep: i })),
       { section: { ...sections[2].settings, columns: 1 } },
     )
-    const back = await pageWriteBack(bridge, bytes)
-    expect(back.styles).toBe(bridge.doc.stylesXml)
-    expect(back.content).toBe(bridge.doc.contentXml)
+    const back = await writeBack(bridge, bytes)
+    expect(back.styles).toBe(bridge.styles)
+    expect(back.content).toBe(bridge.content)
   })
 
   it('the Hancom sample: an edit of the last run clones the master page it shares with the first', async () => {
@@ -164,10 +158,10 @@ describe('page setup edits', () => {
       (blocks) => blocks.map((_, i) => ({ keep: i })),
       { section: { ...last.settings, marginLeft: last.settings.marginLeft + 567 } },
     )
-    const back = await pageWriteBack(bridge, bytes)
-    expect(bodyOf(back.content)).toBe(bodyOf(bridge.doc.contentXml))
+    const back = await writeBack(bridge, bytes)
+    expect(bodyOf(back.content)).toBe(bodyOf(bridge.content))
     expect(namesOf(back.styles, 'style:master-page')).toEqual(['Standard', 'Standard_io1', 'MP2'])
-    const before = bridge.doc.stylesXml as string
+    const before = bridge.styles as string
     for (const name of ['Standard', 'MP2'])
       expect(elementNamed(back.styles, 'style:master-page', name)).toBe(
         elementNamed(before, 'style:master-page', name),
@@ -176,7 +170,7 @@ describe('page setup edits', () => {
       'style:master-page-name="Standard_io1"',
     )
     expect(elementNamed(back.content, 'style:style', 'P73_0_MS1_b3')).toBe(
-      elementNamed(bridge.doc.contentXml, 'style:style', 'P73_0_MS1_b3'),
+      elementNamed(bridge.content, 'style:style', 'P73_0_MS1_b3'),
     )
   })
 })

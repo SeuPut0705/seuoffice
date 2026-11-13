@@ -32,7 +32,7 @@
 - `docs read`·`docs apply`는 `.odt`를 `.docx`와 같은 방식으로 받는다. `apply`는 `.odt`로 다시 쓰고(`--out`도 `.odt`), 고치지 않은 부분은 원래 바이트 그대로 둔다. `info`처럼 형식을 가리지 않는 명령도 `.odt`를 알아본다.
 - ODT에서 꺼 둔 기능의 편집(메모, `--track`, 변경 내용 받아들이기·되돌리기, 목차, 수식, 차트, 글상자, 다단, 워터마크, 콘텐츠 컨트롤 감싸기·풀기, 그림 번호·상호 참조·인용·목차 같은 `insertField` 필드)은 `unsupported`, 한컴에서 잠근 칸과 잠긴 개체를 고치는 편집은 `op_rejected`로 거절한다. 묶음 처리는 docx와 같다. 기본은 하나라도 거절되면 묶음 전체를 쓰지 않고, `--best-effort`·`--stop-on-error`일 때만 나머지를 쓰고 `status: "partial"`로 답한다.
 - `convert`가 받는 경로: `odt → docx | pdf | md | html`, `docx | md | html → odt`. `odt → pdf | html`과 `html → odt`는 임시 docx를 거쳐 앱으로 내보내고, 그 임시 파일은 실패해도 지운다.
-- 바꾸는 중에 모양이 바뀌거나 빠지는 것이 있으면 파일은 쓰고, 항목마다 `warnings[]`로 알린다. 코드는 `odt_converted`(바뀜)와 `odt_dropped`(빠짐)다. 같은 목록이 `detail.odt_report`에 `[{ kind: "converted" | "dropped", feature, count }]`로 온다. `feature`는 바뀌지 않는 식별자다: `toc`, `chart`, `equation`, `shape`, `textbox`, `columns`, `citation`, `cross_reference`, `page_color`, `mirror_margins`, `theme`, `comment`, `revision`, `ink`, `watermark`, `password`, `protection`, `form_field`, `object`.
+- 바꾸는 중에 모양이 바뀌거나 빠지는 것이 있으면 파일은 쓰고, 항목마다 `warnings[]`로 알린다. 코드는 `odt_converted`(바뀜)와 `odt_dropped`(빠짐)다. 같은 목록이 `detail.odt_report`에 `[{ kind: "converted" | "dropped", feature, count }]`로 온다. `feature`는 바뀌지 않는 식별자다: `toc`, `chart`, `equation`, `shape`, `textbox`, `columns`, `citation`, `cross_reference`, `page_color`, `mirror_margins`, `theme`, `comment`, `revision`, `ink`, `watermark`, `password`, `protection`, `form_field`, `object`, `hidden_from_ai`("AI에게 가림" 표시: ODT는 지니지 못해 버리고, 숨긴 글이 그대로 남는다).
 - 암호가 걸린 ODT는 열지 않는다. 종료 코드 2, `error: "unsupported"`, `suggestion`은 "암호를 푼 뒤 다시 시도하라"다.
 
 **옛 워드 문서(`.doc`·`.dot`).**

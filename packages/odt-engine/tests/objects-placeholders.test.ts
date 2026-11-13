@@ -6,29 +6,19 @@
  * and the package entries only it referenced.
  */
 import { patchImageParagraphXml } from '@seuoffice/docx-engine'
-import { FULL_REGISTRY } from './helpers/full'
 import { describe, expect, it } from 'vitest'
-import { NEUTRAL_PLACEHOLDER_PNG, ODT_KEEP_PREFIX, parseKeepName } from '../src/objects'
-import { bodyOf, editOnly, editorSave, replaceText } from './helpers/bridge'
+import { parseKeepName } from '../src'
+import { bodyOf, editOnly, editorSave, replaceText, writeBack } from './helpers/bridge'
 import type { OdtFixtureEntry } from './helpers/build-odt'
-import {
-  FORMULA_CONTENT_XML,
-  hCustomShape,
-  hFramedTable,
-  hPara,
-  hParaWith,
-  hRow,
-  hCell,
-  hTable,
-} from './helpers/hancom-fragments'
+import { FORMULA_CONTENT_XML, hCustomShape, hPara, hParaWith } from './helpers/hancom-fragments'
 import { PNG_1X1 } from './helpers/hancom-sample'
 import {
+  ODT_KEEP_PREFIX,
   keepAllBut,
   objectsBridge,
   resizeDrawing,
   saveBlocks,
   visibleBlocks,
-  writeBackObjects,
 } from './helpers/objects-fixtures'
 
 /** A formula object with its replacement picture, as LibreOffice-style packages store it. */
@@ -84,9 +74,10 @@ describe('placeholders: ODF → OOXML', () => {
     expect(blocks[0].runs?.[1].image?.dataUrl).toBe(
       `data:image/png;base64,${Buffer.from(PNG_1X1).toString('base64')}`,
     )
-    expect(blocks[1].imageDataUrl).toBe(
-      `data:image/png;base64,${Buffer.from(NEUTRAL_PLACEHOLDER_PNG).toString('base64')}`,
-    )
+    const neutral = blocks[1].imageDataUrl
+    expect(neutral).toMatch(/^data:image\/png;base64,/)
+    expect(neutral).not.toBe(blocks[0].runs?.[1].image?.dataUrl)
+    expect(blocks[2].runs?.[1].image?.dataUrl).toBe(neutral)
     // sizes follow the objects
     const eq = fx.ext.placeholders[0]
     expect([eq.widthEmu, eq.heightEmu]).toEqual([720000, 216000])
@@ -100,24 +91,14 @@ describe('placeholders: ODF → OOXML', () => {
     expect(blocks[0].runs?.[0].text).toBe('식 ')
   })
 
-  // without the table layer the frame stays a kept marker
-  it.skipIf(FULL_REGISTRY)('a text box holding a table is left to the table owner', async () => {
-    const framed = hFramedTable(hTable('Table1', 1, [hRow([hCell(hPara('칸'))])]))
-    const fx = await objectsBridge({ body: framed.paragraph })
-    expect(fx.ext.placeholders).toEqual([])
-    expect(fx.bridge.map.paragraphs[0].markers).toEqual([
-      expect.objectContaining({ kind: 'keep', name: 'draw:frame' }),
-    ])
-  })
-
   it('the objects slot survives a JSON round trip unchanged', async () => {
     const fx = await objectsBridge({
       body: hParaWith(`식 ${formula}`) + toc,
       extraEntries: formulaEntries,
     })
-    const ext = fx.bridge.ctx.map.ext.objects
+    const ext = fx.bridge.map.ext.objects
     expect(JSON.parse(JSON.stringify(ext))).toEqual(ext)
-    expect(fx.bridge.map.ext.objects).toEqual(ext)
+    expect(ext).toEqual(fx.ext)
   })
 })
 
@@ -130,8 +111,8 @@ describe('placeholders: OOXML → ODF', () => {
     const { bytes } = await editorSave(fx.bridge.docx, (blocks) =>
       blocks.map((_, i) => ({ keep: i })),
     )
-    const wb = await writeBackObjects(fx, bytes)
-    expect(wb.content).toBe(fx.bridge.doc.contentXml)
+    const wb = await writeBack(fx.bridge, bytes)
+    expect(wb.content).toBe(fx.bridge.content)
     expect(wb.changes).toEqual({ add: [], remove: [] })
   })
 
@@ -141,7 +122,7 @@ describe('placeholders: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 1: (g) => replaceText(g, 0, 1, '수') }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(
       hPara('위') + hParaWith(`수 ${formula}끝`) + hParaWith(shape.shape) + toc + hPara('아래'),
     )
@@ -176,7 +157,7 @@ describe('placeholders: OOXML → ODF', () => {
         },
       }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(
       hPara('위') + hParaWith(`새 식 ${formula}끝`) + hParaWith(shape.shape) + toc + hPara('아래'),
     )
@@ -188,7 +169,7 @@ describe('placeholders: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 1: (g) => (g.runs = g.runs.filter((r) => !r.image)) }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(
       hPara('위') + hParaWith('식 끝') + hParaWith(shape.shape) + toc + hPara('아래'),
     )
@@ -205,7 +186,7 @@ describe('placeholders: OOXML → ODF', () => {
     const edited = await saveBlocks(fx.bridge.docx, (blocks) =>
       keepAllBut(blocks, { 2: null, 3: null }),
     )
-    const wb = await writeBackObjects(fx, edited)
+    const wb = await writeBack(fx.bridge, edited)
     expect(bodyOf(wb.content)).toBe(hPara('위') + hParaWith(`식 ${formula}끝`) + hPara('아래'))
     expect(wb.changes).toEqual({ add: [], remove: [] })
   })
@@ -216,7 +197,7 @@ describe('placeholders: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 0: (g) => replaceText(g, 0, 0, '맨 ') }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(trackedChanges + hPara('맨 앞') + revision)
   })
 })

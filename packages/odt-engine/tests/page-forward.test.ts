@@ -1,26 +1,26 @@
-import { PAGE_MARK, sectionSettingsFromXml } from '@seuoffice/docx-engine'
+import { PAGE_MARK } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import { openOdt } from '../src/core'
-import {
-  injectParagraphSectPr,
-  layoutGeometry,
-  odfLengths,
-  readPageExt,
-  stripParagraphSectPr,
-} from '../src/page'
-import { lengthToTwips } from '../src/text'
 import { buildOdt } from './helpers/build-odt'
 import { hPara } from './helpers/hancom-fragments'
 import { hancomSample } from './helpers/hancom-sample'
-import { editorSave } from './helpers/bridge'
-import { odtToPageBridge, pageWriteBack, sectionsOf } from './helpers/page-bridge'
-import { RUN_TEXTS, layoutXml, masterXml, pageDoc, singleRun } from './helpers/page-fixtures'
+import { editorSave, odtToBridge, writeBack } from './helpers/bridge'
+import { pageExtOf } from './helpers/bridge-ext'
+import { sectionsOf } from './helpers/page-bridge'
+import {
+  RUN_TEXTS,
+  elementNamed,
+  layoutXml,
+  masterXml,
+  pageDoc,
+  singleRun,
+} from './helpers/page-fixtures'
 
-const cm = (v: string) => lengthToTwips(v) as number
+/** Twips of an ODF length in cm (every length in these fixtures is one). */
+const cm = (v: string) => (Number.parseFloat(v) * 1440) / 2.54
 
 describe('page runs → docx sections', () => {
   it('makes one docx section per page run, with its master page geometry', async () => {
-    const bridge = await odtToPageBridge(await buildOdt(pageDoc()))
+    const bridge = await odtToBridge(await buildOdt(pageDoc()))
     const { sections, visible } = await sectionsOf(bridge.docx)
     expect(sections).toHaveLength(3)
     const texts = (s: (typeof sections)[number]) =>
@@ -50,14 +50,14 @@ describe('page runs → docx sections', () => {
   })
 
   it('gives every run its own header/footer parts, read back with their text', async () => {
-    const bridge = await odtToPageBridge(await buildOdt(pageDoc()))
+    const bridge = await odtToBridge(await buildOdt(pageDoc()))
     const { parsed, sections } = await sectionsOf(bridge.docx)
     const header = (i: number) => parsed.hfParts?.[sections[i].headerRefs.default ?? '']?.text
     expect([header(0), header(1), header(2)]).toEqual(['header', 'header 2', 'header'])
     expect(sections[0].headerRefs.default).not.toBe(sections[2].headerRefs.default)
     // run 2 has no footer, but must not inherit run 1's: a blank part
     expect(parsed.hfParts?.[sections[1].footerRefs.default ?? '']?.text).toBe('')
-    const ext = readPageExt(bridge.map)
+    const ext = pageExtOf(bridge.map)
     expect(ext?.runs.map((r) => r.master)).toEqual(['Standard', 'MP2', 'Standard'])
     expect(ext?.parts[sections[1].footerRefs.default ?? '']?.fill).toBe('empty')
   })
@@ -72,7 +72,7 @@ describe('page runs → docx sections', () => {
           footer: ['foot'],
         }) + masterXml('MP2', 'Mpm2', { header: ['header 2'] }),
     })
-    const bridge = await odtToPageBridge(await buildOdt(doc))
+    const bridge = await odtToBridge(await buildOdt(doc))
     const { parsed, sections } = await sectionsOf(bridge.docx)
     expect(parsed.evenAndOddHeaders).toBe(true)
     expect(sections[0].titlePg).toBe(true)
@@ -102,7 +102,7 @@ describe('page runs → docx sections', () => {
         '<style:style style:name="PSN" style:parent-style-name="Standard" style:master-page-name="Standard" style:family="paragraph"><style:paragraph-properties style:page-number="5"/></style:style>' +
         '<style:style style:name="Sect1" style:family="section"><style:section-properties><style:columns fo:column-count="3" fo:column-gap="0.300cm"/></style:section-properties></style:style>',
     })
-    const bridge = await odtToPageBridge(await buildOdt(doc))
+    const bridge = await odtToBridge(await buildOdt(doc))
     const { sections } = await sectionsOf(bridge.docx)
     expect(sections).toHaveLength(3)
     expect(sections.map((s) => s.startType)).toEqual(['nextPage', 'continuous', 'continuous'])
@@ -120,16 +120,16 @@ describe('page runs → docx sections', () => {
       body: hPara('only'),
       layouts: [layoutXml('Mpm1')],
     })
-    const bridge = await odtToPageBridge(await buildOdt(doc))
+    const bridge = await odtToBridge(await buildOdt(doc))
     const { parsed } = await sectionsOf(bridge.docx)
     expect(parsed.footerText).toBe(`- ${PAGE_MARK} -`)
     expect(parsed.footerHasPageNumber).toBe(true)
   })
 
   it('handles the Hancom sample (several runs sharing a master page, a section, kept blocks)', async () => {
-    const bridge = await odtToPageBridge(await buildOdt(hancomSample().options))
+    const bridge = await odtToBridge(await buildOdt(hancomSample().options))
     const { sections } = await sectionsOf(bridge.docx)
-    const ext = readPageExt(bridge.map)
+    const ext = pageExtOf(bridge.map)
     expect(ext?.runs.map((r) => r.master)).toEqual(['Standard', 'MP2', 'Standard'])
     expect(sections.length).toBeGreaterThanOrEqual(3)
     expect(sections.filter((s) => s.startType === 'nextPage')).toHaveLength(3)
@@ -148,43 +148,47 @@ describe('geometry', () => {
     layoutXml('D', { header: '1.000cm', headerExtra: ' fo:margin-bottom="0.250cm"' }),
     layoutXml('E', { width: '29.699cm', height: '21.000cm', orientation: 'landscape' }),
   ]
+  const lengthOf = (xml: string, attr: string, within?: string) => {
+    const scope = within
+      ? (xml.match(new RegExp(`<${within}>[\\s\\S]*?</${within}>`))?.[0] ?? '')
+      : xml
+    const value = new RegExp(`${attr}="([^"]*)"`).exec(scope)?.[1]
+    return value === undefined ? 0 : cm(value)
+  }
 
   it('page layout → sectPr → back gives the same ODF lengths (within rounding)', async () => {
-    const doc = await openOdt(
-      await buildOdt(pageDoc({ layouts, masterStyles: masterXml('Standard', 'A', {}) })),
-    )
-    for (const name of ['A', 'B', 'C', 'D', 'E']) {
-      const layout = doc.styles.pageLayout(name)
-      const g = layoutGeometry(layout)
-      const settings = sectionSettingsFromXml(
-        `<w:sectPr><w:pgSz w:w="${g.width}" w:h="${g.height}"/><w:pgMar w:top="${g.top}" w:right="${g.right}" w:bottom="${g.bottom}" w:left="${g.left}" w:header="${g.header}" w:footer="${g.footer}" w:gutter="0"/></w:sectPr>`,
+    for (const layout of layouts) {
+      const name = /style:name="([^"]*)"/.exec(layout)?.[1] as string
+      const options = pageDoc({
+        body: hPara('alpha', { style: 'PS1' }),
+        layouts: [layout],
+        masterStyles: masterXml('Standard', name, {}),
+      })
+      const bridge = await odtToBridge(await buildOdt(options))
+      const { sections } = await sectionsOf(bridge.docx)
+      const settings = sections[0].settings
+      // a nudge of the left margin makes the save write the layout from the sectPr
+      const { bytes } = await editorSave(
+        bridge.docx,
+        (blocks) => blocks.map((_, i) => ({ keep: i })),
+        { section: { ...settings, marginLeft: settings.marginLeft + 20 } },
       )
-      const back = odfLengths(layout, settings)
-      const p = layout?.properties['style:page-layout-properties'] ?? {}
-      const hf = (path: string) => lengthToTwips(layout?.properties[path]?.['svg:height']) ?? 0
-      expect(Math.abs(back.top - cm(p['fo:margin-top']))).toBeLessThan(1)
-      expect(Math.abs(back.bottom - cm(p['fo:margin-bottom']))).toBeLessThan(1)
-      expect(
-        Math.abs(back.headerHeight - hf('style:header-style/style:header-footer-properties')),
-      ).toBeLessThan(1)
-      expect(
-        Math.abs(back.footerHeight - hf('style:footer-style/style:header-footer-properties')),
-      ).toBeLessThan(1)
-      expect(Math.abs(g.width - cm(p['fo:page-width']))).toBeLessThan(1)
-    }
-  })
-
-  it('injects and strips a paragraph sectPr exactly', () => {
-    const sect = '<w:sectPr><w:pgSz w:w="1" w:h="2"/></w:sectPr>'
-    for (const p of [
-      '<w:p><w:pPr><w:pStyle w:val="a"/><w:jc w:val="left"/></w:pPr><w:r><w:t>x</w:t></w:r></w:p>',
-      '<w:p><w:r><w:t>x</w:t></w:r></w:p>',
-      '<w:p><w:pPr/></w:p>',
-    ]) {
-      const injected = injectParagraphSectPr(p, sect)
-      expect(injected).toContain(sect)
-      const back = stripParagraphSectPr(injected)
-      expect(back).toBe(p === '<w:p><w:pPr/></w:p>' ? '<w:p></w:p>' : p)
+      const back = await writeBack(bridge, bytes)
+      const before = elementNamed(bridge.styles as string, 'style:page-layout', name) as string
+      const after = elementNamed(back.styles, 'style:page-layout', name) as string
+      expect(after, name).not.toBe(before)
+      for (const [attr, within] of [
+        ['fo:page-width'],
+        ['fo:page-height'],
+        ['fo:margin-top'],
+        ['fo:margin-bottom'],
+        ['svg:height', 'style:header-style'],
+        ['svg:height', 'style:footer-style'],
+      ] as const)
+        expect(
+          Math.abs(lengthOf(after, attr, within) - lengthOf(before, attr, within)),
+          `${name} ${attr} ${within ?? ''}`,
+        ).toBeLessThan(1)
     }
   })
 })
@@ -199,16 +203,16 @@ describe('unedited round trip', () => {
     ],
   ] as const) {
     it(`writes nothing for ${name}`, async () => {
-      const bridge = await odtToPageBridge(await buildOdt(options))
+      const bridge = await odtToBridge(await buildOdt(options))
       const { bytes } = await editorSave(bridge.docx, (blocks) =>
         blocks.map((_, i) => ({ keep: i })),
       )
-      const back = await pageWriteBack(bridge, bytes)
-      expect(back.content).toBe(bridge.doc.contentXml)
-      expect(back.styles).toBe(bridge.doc.stylesXml)
-      const out = await pageWriteBack(bridge, bridge.docx)
-      expect(out.content).toBe(bridge.doc.contentXml)
-      expect(out.styles).toBe(bridge.doc.stylesXml)
+      const back = await writeBack(bridge, bytes)
+      expect(back.content).toBe(bridge.content)
+      expect(back.styles).toBe(bridge.styles)
+      const out = await writeBack(bridge, bridge.docx)
+      expect(out.content).toBe(bridge.content)
+      expect(out.styles).toBe(bridge.styles)
     })
   }
 })

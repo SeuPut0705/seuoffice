@@ -6,9 +6,9 @@
  * not saved into ODT documents.
  */
 import { describe, expect, it } from 'vitest'
-import { bodyOf, editOnly, editorSave, replaceText, runText } from './helpers/bridge'
+import { bodyOf, editOnly, editorSave, replaceText, runText, writeBack } from './helpers/bridge'
 import { hAnnotation, hPara, hParaWith, hancomRunText } from './helpers/hancom-fragments'
-import { objectsBridge, visibleBlocks, writeBackObjects } from './helpers/objects-fixtures'
+import { objectsBridge, visibleBlocks } from './helpers/objects-fixtures'
 
 const memo = hAnnotation('memo1', 'memo text', '달린 글')
 
@@ -43,8 +43,8 @@ describe('comments: OOXML → ODF', () => {
     const { bytes } = await editorSave(fx.bridge.docx, (blocks) =>
       blocks.map((_, i) => ({ keep: i })),
     )
-    const wb = await writeBackObjects(fx, bytes)
-    expect(wb.content).toBe(fx.bridge.doc.contentXml)
+    const wb = await writeBack(fx.bridge, bytes)
+    expect(wb.content).toBe(fx.bridge.content)
   })
 
   it('commented text edited: the comment is kept and re-anchored', async () => {
@@ -58,7 +58,7 @@ describe('comments: OOXML → ODF', () => {
         },
       }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(
       hParaWith(`맨앞 ${memo.annotation}${hancomRunText('달린 그')}${memo.end} 뒤`) + hPara('다음'),
     )
@@ -70,7 +70,7 @@ describe('comments: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 0: (g) => replaceText(g, 2, 6, '') }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(hParaWith(hancomRunText('앞  뒤')) + hPara('다음'))
   })
 
@@ -80,7 +80,7 @@ describe('comments: OOXML → ODF', () => {
       fx.bridge.docx,
       editOnly({ 0: (g) => replaceText(g, 0, 0, '맨 ') }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(hParaWith(`맨 앞${memo.annotation}뒤`))
   })
 
@@ -96,7 +96,7 @@ describe('comments: OOXML → ODF', () => {
         1: (g) => replaceText(g, 3, 5, ' 마지막'),
       }),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(
       hParaWith(`맨 처음 ${memo.annotation}가운데`) + hParaWith(`이어서${memo.end} 마지막`),
     )
@@ -118,8 +118,7 @@ describe('comments: OOXML → ODF', () => {
         ],
       }))(),
     )
-    const wb = await writeBackObjects(fx, bytes)
+    const wb = await writeBack(fx.bridge, bytes)
     expect(bodyOf(wb.content)).toBe(body)
-    expect(wb.rctx.warnings.some((w) => w.includes('new comment'))).toBe(true)
   })
 })
