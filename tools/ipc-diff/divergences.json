@@ -1,1 +1,132 @@
-[]
+[
+  {
+    "id": "m-settings-lone-surrogate",
+    "group": "m/settings",
+    "case": 22,
+    "typescript": {
+      "record": {
+        "calls": [
+          {
+            "answer": {
+              "value": {
+                "value": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ud83d",
+                "fallback": "tester"
+              },
+              "buffers": []
+            },
+            "events": [
+              {
+                "view": 1,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ud83d"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 2,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ud83d"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 3,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ud83d"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 4,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ud83d"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 5,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ud83d"
+                ],
+                "buffers": []
+              }
+            ]
+          }
+        ],
+        "log": []
+      },
+      "files": {
+        "userData": "dir 755",
+        "userData/app-settings.json": "file 644 \"{\\n  \\\"language\\\": \\\"en\\\",\\n  \\\"authorName\\\": \\\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\\\\ud83d\\\"\\n}\""
+      }
+    },
+    "rust": {
+      "record": {
+        "calls": [
+          {
+            "answer": {
+              "value": {
+                "value": "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd",
+                "fallback": "tester"
+              },
+              "buffers": []
+            },
+            "events": [
+              {
+                "view": 1,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 2,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 3,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 4,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                ],
+                "buffers": []
+              },
+              {
+                "view": 5,
+                "channel": "app:author-name-changed",
+                "args": [
+                  "yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd"
+                ],
+                "buffers": []
+              }
+            ]
+          }
+        ],
+        "log": []
+      },
+      "files": {
+        "userData": "dir 755",
+        "userData/app-settings.json": "file 644 \"{\\n  \\\"language\\\": \\\"en\\\",\\n  \\\"authorName\\\": \\\"yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy\ufffd\\\"\\n}\""
+      }
+    },
+    "reason": "main-core holds the author name as a Rust String: cutting a surrogate pair at 120 UTF-16 units leaves a lone surrogate that JS keeps (answer, event and the escaped file text) and Rust turns into U+FFFD"
+  }
+]

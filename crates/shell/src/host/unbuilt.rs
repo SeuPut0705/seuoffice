@@ -278,13 +278,14 @@ impl HomeFiles for Unbuilt {
         Vec::new()
     }
     fn document_link_paths(&self) -> Vec<String> {
-        unbuilt("HomeFiles::document_link_paths");
-        Vec::new()
+        crate::host::menu::document_link_paths()
     }
     fn project_file_renamed(&self, _: &str, _: &str) {
         unbuilt("HomeFiles::project_file_renamed");
     }
-    fn file_moved(&self, _: &str, _: &str) {
+    fn file_moved(&self, old_path: &str, new_path: &str) {
+        crate::host::menu::document_link_file_moved(old_path, new_path);
+        // the slides recent list and the open tabs' `*FileRenamed` are still to come
         unbuilt("HomeFiles::file_moved");
     }
     fn recents_changed(&self) {
@@ -368,7 +369,7 @@ impl HomeApp for Unbuilt {
         unbuilt("HomeApp::delimited_import_limit_changed");
     }
     fn home_kinds_changed(&self) {
-        unbuilt("HomeApp::home_kinds_changed");
+        super::menu::home_kinds_changed();
     }
     fn folder_watchers_changed(&self) {
         unbuilt("HomeApp::folder_watchers_changed");
@@ -548,10 +549,8 @@ impl TabHooks for Unbuilt {
     fn set_active_slides_web_contents(&self, _: ViewId) {
         unbuilt("TabHooks::set_active_slides_web_contents");
     }
-    fn apply_menu_for(&self, _: TabKind) {
-        // M: when host/menu.rs exports `apply_menu_for(&AppHandle, TabKind)`, call it here
-        // (the stand-in has no AppHandle yet: keep one in `Unbuilt` when it does)
-        unbuilt("TabHooks::apply_menu_for");
+    fn apply_menu_for(&self, kind: TabKind) {
+        super::menu::apply_menu(kind);
     }
     fn teardown_docs_renderer(&self, _: ViewId) {
         unbuilt("TabHooks::teardown_docs_renderer");
@@ -664,11 +663,10 @@ impl TabHooks for Unbuilt {
         unbuilt("TabHooks::detached_changed");
     }
     fn app_menu_popup(&self) -> Option<Vec<shell_ipc_w::tabs::MenuEntry>> {
-        unbuilt("TabHooks::app_menu_popup");
-        None
+        super::menu::app_menu_popup()
     }
-    fn app_menu_activate(&self, _: u32) {
-        unbuilt("TabHooks::app_menu_activate");
+    fn app_menu_activate(&self, id: u32) {
+        super::menu::app_menu_activate(id);
     }
     fn visible_home_kinds(&self) -> Vec<String> {
         shell_ipc_w::home_settings::visible_home_kinds(
