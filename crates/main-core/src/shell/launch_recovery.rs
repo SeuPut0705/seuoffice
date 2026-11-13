@@ -967,36 +967,72 @@ pub enum EnsureLoaded<C> {
     Missing,
 }
 
-/// `LiveTabContentsDeps<C>`
+/// `LiveTabContentsDeps<C>` without `ensureLoaded`: that one waits for the
+/// tab's editor page, an answer that arrives on the thread asking for it, so
+/// it is the caller's step ([`LiveTabStep::EnsureLoaded`]).
 pub trait LiveTabContentsDeps<C> {
-    /// `ensureLoaded(tabId)`; an `Err` is a rejection
-    fn ensure_loaded(&mut self, tab_id: &str) -> Result<EnsureLoaded<C>, Failure>;
     /// a document in a detached window
     fn detached(&mut self, tab_id: &str) -> Option<C>;
     fn title_of(&mut self, tab_id: &str) -> Option<String>;
 }
 
+/// What the caller does next.
+#[derive(Debug, Clone, PartialEq)]
+pub enum LiveTabStep<C> {
+    /// `await deps.ensureLoaded(tabId)`: load the tab, wait for its editor
+    /// page, and answer with [`LiveTabLookup::resume`] (`Err` is a rejection)
+    EnsureLoaded(String),
+    /// `liveTabContents` returned (`Ok`) or threw (`Err`)
+    Done(Result<Option<C>, Failure>),
+}
+
 /// `liveTabContents`: the live webContents of an open document for a caller
-/// that cannot wait on a person. A document that must first ask the user fails
-/// with a message the agent can relay (spec 5.3). `None` when no such
-/// document is open.
-pub fn live_tab_contents<C>(
-    tab_id: &str,
-    deps: &mut dyn LiveTabContentsDeps<C>,
-) -> Result<Option<C>, Failure> {
-    match deps.ensure_loaded(tab_id)? {
-        EnsureLoaded::Ready(contents) => Ok(Some(contents)),
-        EnsureLoaded::NeedsUser => {
-            let title = deps.title_of(tab_id).filter(|title| !title.is_empty());
-            Err(Failure(match title {
-                Some(title) => format!(
-                    "\"{title}\" has recovered changes to decide on: {LAUNCH_NEEDS_USER_MESSAGE}"
-                ),
-                None => format!(
-                    "this document has recovered changes to decide on: {LAUNCH_NEEDS_USER_MESSAGE}"
-                ),
-            }))
-        }
-        EnsureLoaded::Missing => Ok(deps.detached(tab_id)),
+/// that cannot wait on a person. An unloaded tab is loaded first and its
+/// editor page waited for; a document that must first ask the user fails with
+/// a message the agent can relay (spec 5.3). `Ok(None)` when no such document
+/// is open.
+#[derive(Debug, Clone, PartialEq)]
+pub struct LiveTabLookup {
+    tab_id: String,
+}
+
+impl LiveTabLookup {
+    /// the call: the first step is always the load
+    pub fn begin<C>(tab_id: &str) -> (Self, LiveTabStep<C>) {
+        (
+            LiveTabLookup {
+                tab_id: tab_id.to_owned(),
+            },
+            LiveTabStep::EnsureLoaded(tab_id.to_owned()),
+        )
+    }
+
+    /// the answer of the `ensureLoaded` the last step asked for
+    pub fn resume<C>(
+        &self,
+        deps: &mut dyn LiveTabContentsDeps<C>,
+        answer: Result<EnsureLoaded<C>, Failure>,
+    ) -> LiveTabStep<C> {
+        let tab_id = self.tab_id.as_str();
+        let loaded = match answer {
+            Ok(loaded) => loaded,
+            Err(failure) => return LiveTabStep::Done(Err(failure)),
+        };
+        let result = match loaded {
+            EnsureLoaded::Ready(contents) => Ok(Some(contents)),
+            EnsureLoaded::NeedsUser => {
+                let title = deps.title_of(tab_id).filter(|title| !title.is_empty());
+                Err(Failure(match title {
+                    Some(title) => format!(
+                        "\"{title}\" has recovered changes to decide on: {LAUNCH_NEEDS_USER_MESSAGE}"
+                    ),
+                    None => format!(
+                        "this document has recovered changes to decide on: {LAUNCH_NEEDS_USER_MESSAGE}"
+                    ),
+                }))
+            }
+            EnsureLoaded::Missing => Ok(deps.detached(tab_id)),
+        };
+        LiveTabStep::Done(result)
     }
 }

@@ -1,0 +1,5 @@
+target/
+gen/
+# bridge/preloads.mjs
+out/
+node_modules/

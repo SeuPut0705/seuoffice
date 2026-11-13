@@ -1,0 +1,27 @@
+{
+  "productName": "SeuOffice",
+  "version": "0.13.0",
+  "identifier": "com.seuput.seuoffice",
+  "mainBinaryName": "SeuOffice",
+  "build": {
+    "frontendDist": "./frontend"
+  },
+  "app": {
+    "windows": []
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "publisher": "SeuPut",
+    "shortDescription": "SeuOffice",
+    "icon": [
+      "../../apps/shell/build/icons/32x32.png",
+      "../../apps/shell/build/icons/128x128.png",
+      "../../apps/shell/build/icon.icns",
+      "../../apps/shell/build/icon.ico"
+    ],
+    "macOS": {
+      "signingIdentity": "-"
+    }
+  }
+}

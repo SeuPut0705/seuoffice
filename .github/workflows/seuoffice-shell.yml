@@ -1,0 +1,252 @@
+name: seuoffice shell
+
+# The stage 3 shell (crates/shell, decision 0029): Tauri 3 on the CEF runtime
+# with main-core linked in. Built on the Mac and Windows runners only: the cef
+# crate downloads the CEF distribution (about 1 GB), which no workstation and no
+# Linux job needs. Each job
+#   1. bundles the preloads (crates/shell/bridge/preloads.mjs, 19 of them),
+#   2. builds the shell,
+#   3. runs `--measure-dialog` (the IPC measurement the contract asks of
+#      batch W) where the runner has a display, and uploads its JSON.
+# Start it by hand while the branch is young:
+#   gh workflow run "seuoffice shell" --ref <branch>
+
+on:
+  push:
+    branches: ['feat/rust-shell-*']
+    paths:
+      - 'crates/shell/**'
+      - '.github/workflows/seuoffice-shell.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seuoffice-shell-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # the version of the cef crate Cargo.lock pins, and the CEF distribution it
+  # downloads (the build metadata of cef-dll-sys 154.5.0+154.0.34)
+  CEF_CRATE_VERSION: '154.5.0'
+  CEF_VERSION: '154.0.34'
+  # the preload bundles need the workspace packages' sources, not Electron
+  ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+
+jobs:
+  mac:
+    runs-on: macos-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: crates/shell
+    env:
+      APPLE_SIGNING_IDENTITY: '-'
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+        with:
+          components: rustfmt
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: crates/shell
+          cache-on-failure: true
+
+      # The cef crate downloads the CEF distribution into CEF_PATH on the first
+      # build; one cache entry per CEF version serves later runs.
+      - name: CEF path
+        run: echo "CEF_PATH=$HOME/.cache/tauri-cef" >> "$GITHUB_ENV"
+      - name: restore the CEF cache
+        id: cef-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: shell-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: tools
+        run: |
+          cmake --version
+          ninja --version || brew install ninja
+          rustc --version
+          cargo --version
+
+      - name: format
+        run: cargo fmt --check
+
+      - name: npm ci (esbuild and the workspace packages of the preloads)
+        working-directory: .
+        run: npm ci --ignore-scripts
+      - name: preloads
+        working-directory: .
+        run: |
+          node crates/shell/bridge/preloads.mjs
+          cat crates/shell/out/preloads/manifest.json | head -40
+
+      - name: Tauri CLI
+        run: npm install --no-audit --no-fund
+
+      - name: build the app bundle
+        id: build
+        run: |
+          # the CDN's index.json is past the 10 MB body limit of the cef crate's build script
+          python3 ci/cef-index-mirror.py 8099 "$CEF_VERSION" > "$RUNNER_TEMP/cef-mirror.log" 2>&1 &
+          mirror=$!
+          trap 'kill $mirror 2>/dev/null || true' EXIT
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:8099/index.json -o /dev/null && break; sleep 1; done
+          cat "$RUNNER_TEMP/cef-mirror.log"
+          export CEF_DOWNLOAD_URL=http://127.0.0.1:8099
+          start=$(date +%s)
+          npx tauri build --bundles app --verbose
+          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+
+      - name: save the CEF cache
+        if: always() && steps.cef-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: shell-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: unit tests (not blocking, the test binary must find the CEF framework)
+        continue-on-error: true
+        run: cargo test --release 2>&1 | tail -60
+
+      - name: measure the dialog (--measure-dialog)
+        timeout-minutes: 10
+        run: |
+          out="$RUNNER_TEMP/measure"
+          mkdir -p "$out"
+          app=$(find target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1)
+          ls -la "$app/Contents/MacOS" "$app/Contents/Frameworks" | tee "$out/app-contents.txt"
+          set +e
+          SEUOFFICE_USER_DATA="$out/userdata" "$app/Contents/MacOS/SeuOffice" --measure-dialog "$out/dialog.json" 2>&1 | tee "$out/shell.log"
+          status=${PIPESTATUS[0]}
+          cat "$out/dialog.json" || true
+          exit $status
+
+      - name: upload shell-mac
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: shell-mac
+          path: |
+            ${{ runner.temp }}/measure/dialog.json
+            ${{ runner.temp }}/measure/shell.log
+            ${{ runner.temp }}/measure/*.txt
+            crates/shell/out/preloads/manifest.json
+          if-no-files-found: warn
+
+  win:
+    runs-on: windows-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        shell: bash
+        working-directory: crates/shell
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .nvmrc
+      - uses: dtolnay/rust-toolchain@4cda84d5c5c54efe2404f9d843567869ab1699d4 # stable branch, 2026-07
+      - uses: Swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # v2.9.1
+        with:
+          workspaces: crates/shell
+          cache-on-failure: true
+
+      - name: CEF path
+        run: echo "CEF_PATH=${USERPROFILE}/.cache/tauri-cef" >> "$GITHUB_ENV"
+      - name: restore the CEF cache
+        id: cef-cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: shell-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: tools
+        run: |
+          cmake --version
+          ninja --version || choco install ninja -y
+          rustc --version
+          cargo --version
+
+      - name: npm ci (esbuild and the workspace packages of the preloads)
+        working-directory: .
+        run: npm ci --ignore-scripts
+      - name: preloads
+        working-directory: .
+        run: |
+          node crates/shell/bridge/preloads.mjs
+          head -40 crates/shell/out/preloads/manifest.json
+
+      # No installer yet (batch U): the build copies the CEF runtime files next
+      # to the executable (cef-dll-sys), so target/release runs as it is.
+      - name: build
+        id: build
+        run: |
+          # the CDN's index.json is past the 10 MB body limit of the cef crate's build script
+          python3 ci/cef-index-mirror.py 8099 "$CEF_VERSION" > "$RUNNER_TEMP/cef-mirror.log" 2>&1 &
+          mirror=$!
+          trap 'kill $mirror 2>/dev/null || true' EXIT
+          for i in $(seq 1 90); do curl -sf http://127.0.0.1:8099/index.json -o /dev/null && break; sleep 1; done
+          cat "$RUNNER_TEMP/cef-mirror.log"
+          export CEF_DOWNLOAD_URL=http://127.0.0.1:8099
+          start=$(date +%s)
+          cargo build --release --verbose
+          echo "seconds=$(( $(date +%s) - start ))" >> "$GITHUB_OUTPUT"
+          ls -la target/release
+
+      - name: save the CEF cache
+        if: always() && steps.cef-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.cache/tauri-cef
+          key: shell-cef-${{ runner.os }}-${{ runner.arch }}-${{ env.CEF_CRATE_VERSION }}
+
+      - name: unit tests (not blocking, the test binary must find libcef.dll)
+        continue-on-error: true
+        run: cargo test --release 2>&1 | tail -60
+
+      # cef-dll-sys copies the CEF runtime files next to the executable by
+      # walking up from its build script's OUT_DIR, which cargo's newer build
+      # directory layout puts one level too deep: target/release holds
+      # SeuOffice.exe and no libcef.dll, and bash reports a missing DLL as
+      # exit 127. Copy them from the CEF distribution itself.
+      - name: CEF runtime next to the executable
+        run: |
+          cef_dll=$(find "$CEF_PATH" -name libcef.dll | head -1)
+          echo "libcef.dll in the CEF distribution: $cef_dll"
+          test -n "$cef_dll"
+          cp -rn "$(dirname "$cef_dll")"/. target/release/
+          echo "--- target/release"
+          ls target/release | head -60
+
+      - name: measure the dialog (--measure-dialog)
+        timeout-minutes: 10
+        run: |
+          out="$RUNNER_TEMP/measure"
+          mkdir -p "$out"
+          ls target/release > "$out/target-release.txt"
+          exe=./target/release/SeuOffice.exe
+          ls -la "$exe" target/release/libcef.dll
+          set +e
+          SEUOFFICE_USER_DATA="$out/userdata" "$exe" --measure-dialog "$out/dialog.json" 2>&1 | tee "$out/shell.log"
+          status=${PIPESTATUS[0]}
+          echo "exit status $status"
+          cat "$out/dialog.json" || true
+          exit $status
+
+      - name: upload shell-win
+        if: always()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: shell-win
+          path: |
+            ${{ runner.temp }}/measure/dialog.json
+            ${{ runner.temp }}/measure/shell.log
+            ${{ runner.temp }}/measure/*.txt
+            crates/shell/out/preloads/manifest.json
+          if-no-files-found: warn

@@ -1,0 +1,83 @@
+[package]
+name = "seuoffice-shell"
+description = "The stage 3 shell of SeuOffice: Tauri 3 on the CEF runtime, main-core linked in-process (decisions 0025, 0029, 0030)"
+version = "0.13.0"
+edition = "2024"
+rust-version = "1.95"
+license = "Apache-2.0"
+publish = false
+
+# Its own workspace and lock: crates/Cargo.toml excludes this folder. CEF is a
+# download of about 1 GB, so it is built on the Mac and Windows runners only
+# (.github/workflows/seuoffice-shell.yml), never in the workspace tests.
+[workspace]
+
+# the executable is what the bundle ships, so it carries the product name
+[[bin]]
+name = "SeuOffice"
+path = "src/main.rs"
+
+[features]
+# Chromium DevTools in a release build too (a debug build has them anyway)
+devtools = ["tauri/devtools", "tauri-runtime-cef/devtools"]
+# a release build on Windows without a console window; the runner builds leave
+# it off so the logs and the measurement's output stay on stdout and stderr
+windows-gui = []
+
+[build-dependencies]
+tauri-build = "=3.0.0-alpha.4"
+
+[dependencies]
+# The Tauri 3 alpha and its CEF runtime are pinned together (decision 0029, 3):
+# the pair the prototype built and ran on the runners. `unstable` is Window::add_child,
+# which the tabs of the shell window (several webviews in one window) need.
+tauri = { version = "=3.0.0-alpha.6", features = ["unstable"] }
+# unstable: the CEF builder extensions of child webviews (console and frame observers)
+tauri-runtime-cef = { version = "=3.0.0-alpha.7", features = ["unstable"] }
+# the CEF API itself, the version tauri-runtime-cef pulls (no second copy):
+# CefBrowserHost and the request context's preferences, which Tauri does not expose
+cef = "=154.5.0"
+
+shell-contract = { path = "../shell-contract" }
+shell-core = { path = "../shell-core" }
+shell-ipc-u = { path = "../shell-ipc/u" }
+shell-ipc-a = { path = "../shell-ipc/a" }
+shell-ipc-m = { path = "../shell-ipc/m" }
+shell-ipc-w = { path = "../shell-ipc/w" }
+shell-ipc-d1 = { path = "../shell-ipc/d1" }
+shell-ipc-d2 = { path = "../shell-ipc/d2" }
+main-core = { path = "../main-core" }
+
+serde_json = { version = "1", features = ["preserve_order", "float_roundtrip"] }
+base64 = "0.22"
+percent-encoding = "2"
+dirs = "6"
+# native dialogs, on the UI thread (host/dialog.rs)
+rfd = { version = "0.15", features = ["common-controls-v6"] }
+# the clipboard in the formats the handlers use (host/clipboard.rs)
+clipboard-rs = "0.3"
+# shell.openExternal / openPath and trashItem (host/os_shell.rs)
+open = "5"
+trash = "5"
+
+# regress 0.12.0 with a bounded backtrack stack (see crates/vendor/regress/VENDORED.md):
+# the workspace patch does not reach a crate outside it
+[target.'cfg(windows)'.dependencies]
+# the silent print loop (host/print/windows.rs): Windows.Data.Pdf pages into a GDI printer DC
+windows = { version = "0.62", features = ["Data_Pdf", "Foundation", "Graphics_Imaging", "Storage_Streams", "UI", "Win32_Foundation", "Win32_Graphics_Gdi", "Win32_Graphics_Printing", "Win32_Storage_Xps", "Win32_System_WinRT"] }
+
+[dev-dependencies]
+# the fakes of M's hosts for the_batches_register_over_the_stubs
+shell-ipc-m = { path = "../shell-ipc/m", features = ["probe"] }
+
+[patch.crates-io]
+regress = { path = "../vendor/regress" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 16
+# main-core's handlers are wrapped in catch_unwind (the contract, section 1):
+# a panic becomes an error reply instead of ending the shell with every open
+# document. The workspace's release profile aborts; this one does not.
+panic = "unwind"

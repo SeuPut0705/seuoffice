@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>shell IPC measurement</title>
+  </head>
+  <body>
+    <pre id="log">starting</pre>
+    <script>
+      // --measure-dialog (crates/shell/src/measure.rs). Loaded with the real
+      // bridge: every call below is a frame through ipc_invoke, the core
+      // thread and the view's output stream. A block of its own: Tauri's
+      // initialization scripts declare globals (`ipc`) a top-level const of
+      // this classic script would collide with.
+      {
+        //
+        // The shell forwards this page's console to its log with a timestamp
+        // (src/trace.rs), so every stage is announced with console.log: a run
+        // that stalls shows the last stage it reached.
+        const t0 = performance.now()
+        let stage = 'start'
+        const mark = (text) => {
+          stage = text
+          console.log(`[measure +${(performance.now() - t0).toFixed(0)}ms] ${text}`)
+        }
+        window.addEventListener('error', (e) => mark(`window error: ${e.message}`))
+        window.addEventListener('unhandledrejection', (e) =>
+          mark(`unhandled rejection: ${e.reason}`),
+        )
+        // while a stage is long, say which one is still running
+        setInterval(
+          () =>
+            console.log(`[measure +${(performance.now() - t0).toFixed(0)}ms] heartbeat: ${stage}`),
+          5000,
+        )
+        const internals = window.__TAURI_INTERNALS__
+        mark(
+          `page ${location.href}; measureIpc ${typeof window.measureIpc}; ` +
+            `__TAURI_INTERNALS__ ${typeof internals}` +
+            (internals ? ` [${Object.getOwnPropertyNames(internals).join(',')}]` : '') +
+            `; ipc ${typeof window.ipc}; trace flag ${window.__SEUOFFICE_TRACE__}`,
+        )
+        const measureIpc = window.measureIpc
+        if (!measureIpc)
+          mark(
+            'the bridge did not run: window.measureIpc is missing (the preload was not injected into this page)',
+          )
+        const HOLD_MS = 2000
+        const PERIOD_MS = 20
+        const BEFORE_MS = 1000
+        const AFTER_MS = 1500
+        const PROBE = 'quick-look:get-settings'
+        const log = document.getElementById('log')
+        const say = (text) => {
+          log.textContent += `\n${text}`
+          mark(text)
+        }
+        const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+        function stats(values) {
+          const sorted = [...values].sort((a, b) => a - b)
+          const at = (q) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))]
+          return sorted.length === 0
+            ? { n: 0 }
+            : { n: sorted.length, p50: at(0.5), p95: at(0.95), max: sorted[sorted.length - 1] }
+        }
+
+        // sequential round trips of one call, `n` times
+        async function roundTrips(n, call) {
+          const times = []
+          for (let i = 0; i < n; i++) {
+            const start = performance.now()
+            await call()
+            times.push(performance.now() - start)
+          }
+          return times
+        }
+
+        // A call every PERIOD_MS whether or not the last one came back; each is
+        // classed by when it was sent: before the block, while it held, after
+        async function paced(kind) {
+          const calls = []
+          const fire = () => {
+            const sent = performance.now()
+            const call = { sent, ms: undefined }
+            calls.push(call)
+            measureIpc.invoke(PROBE).then(
+              () => {
+                call.ms = performance.now() - sent
+              },
+              (error) => {
+                call.error = String(error)
+              },
+            )
+          }
+          const timer = setInterval(fire, PERIOD_MS)
+          await sleep(BEFORE_MS)
+          await measureIpc.invoke('measure:block', kind)
+          const blockStart = performance.now()
+          await sleep(HOLD_MS + AFTER_MS)
+          clearInterval(timer)
+          // the calls held behind the block answer once it ends
+          const waited = performance.now()
+          while (calls.some((c) => c.ms === undefined && c.error === undefined)) {
+            if (performance.now() - waited > 15000) break
+            await sleep(50)
+          }
+          const phase = (from, to) =>
+            calls
+              .filter((c) => c.sent >= from && c.sent < to && c.ms !== undefined)
+              .map((c) => c.ms)
+          const lost = calls.filter((c) => c.ms === undefined).length
+          return {
+            before: stats(phase(0, blockStart)),
+            during: stats(phase(blockStart, blockStart + HOLD_MS)),
+            after: stats(phase(blockStart + HOLD_MS, Infinity)),
+            sent: calls.length,
+            unanswered: lost,
+          }
+        }
+
+        async function main() {
+          if (!measureIpc) throw new Error('window.measureIpc is missing')
+          say('warm up: the first invoke')
+          const first = performance.now()
+          await measureIpc.invoke(PROBE)
+          mark(`first reply after ${(performance.now() - first).toFixed(1)} ms`)
+          await roundTrips(49, () => measureIpc.invoke(PROBE))
+          const idle = stats(await roundTrips(200, () => measureIpc.invoke(PROBE)))
+
+          const echo = {}
+          for (const [name, size, runs] of [
+            ['1KB', 1024, 200],
+            ['10MB', 10 * 1024 * 1024, 15],
+          ]) {
+            say(`echo ${name}`)
+            const payload = new Uint8Array(size)
+            for (let i = 0; i < size; i += 4096) payload[i] = i & 0xff
+            let intact = true
+            const times = await roundTrips(runs, async () => {
+              const back = await measureIpc.invoke('measure:echo', payload)
+              if (!(back instanceof Uint8Array) || back.length !== size || back[0] !== payload[0]) {
+                intact = false
+              }
+            })
+            echo[name] = { ...stats(times), bytes: size, intact }
+          }
+
+          say('sendSync')
+          const sync = { n: 0 }
+          try {
+            const times = []
+            for (let i = 0; i < 100; i++) {
+              const start = performance.now()
+              const paths = measureIpc.sendSync('webutils:dropped-paths')
+              times.push(performance.now() - start)
+              if (!Array.isArray(paths)) throw new Error('the sync answer is not a list')
+            }
+            Object.assign(sync, stats(times))
+          } catch (error) {
+            sync.error = String(error)
+          }
+
+          say('core held with the UI thread held (run_on(ui, ...))')
+          const ui = await paced('ui')
+          say('core held, UI thread free')
+          const core = await paced('core')
+
+          const report = {
+            mode: 'measure-dialog',
+            probe: PROBE,
+            holdMs: HOLD_MS,
+            periodMs: PERIOD_MS,
+            userAgent: navigator.userAgent,
+            idle,
+            echo,
+            sync,
+            dialog: { ui, core },
+            note: 'ms per round trip through ipc_invoke, the core thread and the output stream. before/during/after: calls classed by send time against a 2 s hold of the core thread; ui also holds the UI thread, core leaves it running.',
+          }
+          say('report')
+          await measureIpc.invoke('measure:report', JSON.stringify(report))
+        }
+
+        main().catch(async (error) => {
+          say(`failed: ${error}`)
+          if (!measureIpc) return
+          try {
+            await measureIpc.invoke(
+              'measure:report',
+              JSON.stringify({ error: String(error?.stack ?? error) }),
+            )
+          } catch {}
+        })
+      }
+    </script>
+  </body>
+</html>

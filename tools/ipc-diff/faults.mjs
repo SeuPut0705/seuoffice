@@ -13,7 +13,8 @@
 // Each fault is undone before the next, also when the build fails.
 //
 // Verdicts: CAUGHT (an unlisted difference), MISSED (the comparison passed),
-// BUILD (the faulted Rust does not build), BAD (find is not there once).
+// BUILD (the faulted Rust does not build), BAD (find is not there once),
+// BASELINE (a group of the fault differs already unfaulted: nothing is proved).
 import { execFileSync, spawnSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
@@ -41,6 +42,18 @@ function compare(groups) {
   return { status, out }
 }
 
+// the groups the files name, compared once unfaulted: a group that already
+// differs would make every fault in it look caught
+execFileSync('node', ['build.mjs'], { cwd: tool, stdio: 'pipe' })
+const dirty = new Map()
+for (const group of new Set(
+  files.flatMap((file) => JSON.parse(readFileSync(resolve(file), 'utf8')).flatMap((f) => f.groups)),
+)) {
+  const { status, out } = compare([group])
+  if (status !== 0) dirty.set(group, out.split('\n').find((l) => / cases, \d+ equal/.test(l)) ?? '')
+}
+for (const [group, line] of dirty) console.log(`BASELINE group ${group} differs unfaulted: ${line}`)
+
 for (const file of files) {
   const faults = JSON.parse(readFileSync(resolve(file), 'utf8'))
   console.log(`\n${file}`)
@@ -51,7 +64,11 @@ for (const file of files) {
     const count = original.split(fault.find).length - 1
     let verdict
     let detail
-    if (count !== 1) {
+    const unclean = fault.groups.filter((g) => dirty.has(g))
+    if (unclean.length > 0) {
+      verdict = 'BASELINE'
+      detail = `unfaulted ${unclean.join(', ')} already differ`
+    } else if (count !== 1) {
       verdict = 'BAD'
       detail = `find occurs ${count} times`
     } else {
@@ -92,7 +109,7 @@ mkdirSync(out, { recursive: true })
 writeFileSync(join(out, 'faults.json'), `${JSON.stringify(results, null, 2)}\n`)
 const count = (v) => results.filter((r) => r.verdict === v).length
 console.log(
-  `\n${results.length} faults: ${count('CAUGHT')} caught, ${count('MISSED')} missed, ${count('BUILD')} not building, ${count('BAD')} bad`,
+  `\n${results.length} faults: ${count('CAUGHT')} caught, ${count('MISSED')} missed, ${count('BUILD')} not building, ${count('BAD')} bad, ${count('BASELINE')} on a group that differs unfaulted`,
 )
 // the unfaulted probe again, so a later step compares the code as it is
 execFileSync('node', ['build.mjs'], { cwd: tool, stdio: 'inherit' })
