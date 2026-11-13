@@ -10,6 +10,7 @@ import { execFileSync } from 'node:child_process'
 import { existsSync, readFileSync, readdirSync, statSync, writeFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import * as prettier from 'prettier'
 import ts from 'typescript'
 import { ROOT, config } from './config'
 
@@ -497,10 +498,13 @@ function splitTop(text: string): string[] {
 }
 
 function rustFiles(dir: string): string[] {
-  return readdirSync(dir).flatMap((n) => {
-    const p = join(dir, n)
-    return statSync(p).isDirectory() ? rustFiles(p) : n.endsWith('.rs') ? [p] : []
-  })
+  // in name order: the directory order of the file system differs between machines
+  return readdirSync(dir)
+    .sort()
+    .flatMap((n) => {
+      const p = join(dir, n)
+      return statSync(p).isDirectory() ? rustFiles(p) : n.endsWith('.rs') ? [p] : []
+    })
 }
 
 function rustFns(): RustFn[] {
@@ -727,9 +731,21 @@ export function build(): { exports: ExportInfo[] } {
   return { exports }
 }
 
+/**
+ * Writes the manifest the same on every machine: module paths in printed types
+ * relative to the repository, in the repository's JSON style (prettier).
+ */
+export async function writeManifest(manifest: { exports: ExportInfo[] }): Promise<void> {
+  const text = JSON.stringify(manifest, null, 2).replaceAll(`${ROOT.replaceAll('\\', '/')}/`, '')
+  writeFileSync(
+    OUT,
+    await prettier.format(text, { ...(await prettier.resolveConfig(OUT)), filepath: OUT }),
+  )
+}
+
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const manifest = build()
-  writeFileSync(OUT, JSON.stringify(manifest, null, 1) + '\n')
+  await writeManifest(manifest)
   const fnsOnly = manifest.exports.filter((e) => e.kind === 'function')
   const tally = new Map<string, number>()
   for (const e of fnsOnly) tally.set(e.route, (tally.get(e.route) ?? 0) + 1)
