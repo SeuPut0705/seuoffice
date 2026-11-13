@@ -444,10 +444,10 @@ function thirdPartyNoticeProblems() {
 
 function ensureThirdPartyNotices() {
   if (thirdPartyNoticeProblems().length > 0) {
-    // IEUM_RELEASE makes the generator fail on a gap instead of degrading
+    // SEUOFFICE_RELEASE makes the generator fail on a gap instead of degrading
     execFileSync(process.execPath, [join(__dirname, '../../tools/gen-third-party-notices.mjs')], {
       stdio: 'inherit',
-      env: { ...process.env, IEUM_RELEASE: '1' },
+      env: { ...process.env, SEUOFFICE_RELEASE: '1' },
     })
   }
   const problems = thirdPartyNoticeProblems()

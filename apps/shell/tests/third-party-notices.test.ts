@@ -84,7 +84,7 @@ describe('third-party license aggregation', () => {
     execFileSync(process.execPath, [join(root, 'tools/gen-third-party-notices.mjs')], {
       cwd: root,
       stdio: 'pipe',
-      env: { ...process.env, CI: '', IEUM_RELEASE: '' },
+      env: { ...process.env, CI: '', SEUOFFICE_RELEASE: '', IEUM_RELEASE: '' },
     })
     const text = readFileSync(join(root, 'apps/shell/build/THIRD-PARTY-NOTICES.txt'), 'utf8')
     expect(text).toContain('@embedpdf/pdfium')
@@ -242,7 +242,7 @@ function packWithNotice(notice: string | null, regenerated: string | null, offic
               return JSON.stringify({ count: officeWasmCrates })
             }
             if (script.endsWith('tools/gen-third-party-notices.mjs')) {
-              generatorRuns.push({ script: args[0], release: opts.env?.IEUM_RELEASE })
+              generatorRuns.push({ script: args[0], release: opts.env?.SEUOFFICE_RELEASE })
               current = regenerated
             }
             return Buffer.from('')

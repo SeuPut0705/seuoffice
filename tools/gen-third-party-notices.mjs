@@ -16,7 +16,7 @@
  * The three Rust sections need cargo, the rhwp one a sparse checkout of the
  * rhwp tag (manifests only, cached under node_modules/.cache), and the
  * office_wasm.wasm one the path dependencies crates/office-wasm resolves.
- * Without them a local build degrades to a pointer; with CI or IEUM_RELEASE
+ * Without them a local build degrades to a pointer; with CI or SEUOFFICE_RELEASE
  * set the gap is an error, and electron-builder's beforePack rejects a notice
  * that has it. A crate of office_wasm.wasm without a license file is an error
  * in every build.
@@ -32,6 +32,7 @@ import { execFileSync } from 'node:child_process'
 import { builtinModules, createRequire } from 'node:module'
 import { licenseText } from './license-text.mjs'
 import { officeWasmCrates } from './office-wasm-crates.mjs'
+import { OLD_RELEASE_ENV } from './old-names.mjs'
 import { loadDrawio, loadInventory, VENDOR_DIR as DRAWIO_VENDOR } from '../vendor/drawio/bundle.mjs'
 
 const require = createRequire(import.meta.url)
@@ -42,10 +43,11 @@ const BUILTIN = new Set(builtinModules)
 const envFlag = (name) => !['', '0', 'false'].includes((process.env[name] ?? '').toLowerCase())
 /**
  * A notice with a missing section must not reach an installer: on CI and in a
- * release build (IEUM_RELEASE=1, which electron-builder's beforePack sets when
- * it has to regenerate) every gap throws instead of degrading.
+ * release build (SEUOFFICE_RELEASE=1, which electron-builder's beforePack sets
+ * when it has to regenerate; the old name is read too) every gap throws
+ * instead of degrading.
  */
-const STRICT = envFlag('CI') || envFlag('IEUM_RELEASE')
+const STRICT = envFlag('CI') || envFlag('SEUOFFICE_RELEASE') || envFlag(OLD_RELEASE_ENV)
 
 function gap(message) {
   if (STRICT) throw new Error(`third-party notice incomplete: ${message}`)
@@ -834,7 +836,8 @@ function vendoredSources() {
     const dir = join(ROOT, src, 'vendor')
     if (!existsSync(dir)) continue
     for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      if (entry.isDirectory()) found.push(join(src, 'vendor', entry.name))
+      // a repository path with forward slashes on every OS: the notice prints it
+      if (entry.isDirectory()) found.push(`${src}/vendor/${entry.name}`)
     }
   }
   return found.sort()
