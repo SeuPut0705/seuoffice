@@ -242,14 +242,20 @@ impl CrashWatchHost for Watch {
             .map_or_else(|| "other".to_owned(), |d| kind_name(d.kind)))
     }
     fn document_of(&self, wc: &View) -> Result<Option<CrashedDocument>, Failure> {
-        Ok(self.shell.crashed_document(wc.view).map(|d| CrashedDocument {
-            kind: kind_name(d.kind),
-            title: d.title,
-            file_path: d.file_path,
-        }))
+        Ok(self
+            .shell
+            .crashed_document(wc.view)
+            .map(|d| CrashedDocument {
+                kind: kind_name(d.kind),
+                title: d.title,
+                file_path: d.file_path,
+            }))
     }
     fn parent_window(&self, wc: &View) -> Result<Option<Parent>, Failure> {
-        Ok(self.shell.parent_window_for(wc.view).map(|_: WindowId| Parent))
+        Ok(self
+            .shell
+            .parent_window_for(wc.view)
+            .map(|_: WindowId| Parent))
     }
     fn close_document(&self, wc: &View) -> Result<bool, Failure> {
         Ok(self.shell.close_document(wc.view))
