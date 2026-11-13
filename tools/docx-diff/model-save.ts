@@ -15,7 +15,8 @@ import type { Block, GeneratedBlock } from './reference/types'
 import { failed } from './engine'
 import { Comparison, describeTextDifference, engine } from './harness'
 import { modelJson } from './model-wire'
-import { editsOf, STORIES } from './withheld-inputs'
+import { hiddenRunProperties } from './reference/withheld'
+import { editsOf, OWN_REDACT_NS, STORIES } from './withheld-inputs'
 
 const encode = new TextEncoder()
 
@@ -101,6 +102,12 @@ const SECTION = {
   columns: 2,
   colSpace: 500,
 }
+
+const W_NS = 'http://schemas.openxmlformats.org/wordprocessingml/2006/main'
+
+/** A story part of `root` whose one run carries `rPr`. */
+const storyPart = (root: string, rPr: string): string =>
+  `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<${root} xmlns:w="${W_NS}"><w:p><w:r>${rPr}<w:t>words</w:t></w:r></w:p></${root}>`
 
 /** What the editor may ask of a document, one variant per family of options. */
 function variantsOf(doc: ParsedDocFull): Variant[] {
@@ -309,6 +316,45 @@ function variantsOf(doc: ParsedDocFull): Variant[] {
         savedAt: SAVED_AT,
         dropOrphanMoveRanges: true,
         removeParts: { kinds: ['customXml'] },
+      },
+    },
+    {
+      // the run of a rich header carries the mark in its rawRPr: the new part's root must declare it
+      name: 'hidden run in headers and footers',
+      blocks: base,
+      options: {
+        savedAt: SAVED_AT,
+        header: {
+          text: 'Hidden header',
+          paras: [{ runs: [{ text: 'Hidden header', rawRPr: hiddenRunProperties('phone') }] }],
+        },
+        footer: {
+          text: 'Hidden footer',
+          paras: [{ runs: [{ text: 'Hidden footer', rawRPr: hiddenRunProperties('phone') }] }],
+        },
+        titlePg: true,
+        headerFirst: {
+          text: 'Hidden first',
+          paras: [{ runs: [{ text: 'Hidden first', rawRPr: hiddenRunProperties('') }] }],
+        },
+      },
+    },
+    {
+      // parts replaced as given: a story part that holds a mark, under the mark's two spellings
+      name: 'story parts replaced with marked ones',
+      blocks: base,
+      options: {
+        savedAt: SAVED_AT,
+        partXml: {
+          'word/header1.xml': storyPart('w:hdr', hiddenRunProperties('phone')),
+          'word/footer1.xml': storyPart(
+            'w:ftr',
+            `<w:rPr><gx:redact xmlns:gx="${OWN_REDACT_NS}"/></w:rPr>`,
+          ),
+          'word/footnotes.xml': storyPart('w:footnotes', hiddenRunProperties('note')),
+          'word/comments.xml': storyPart('w:comments', hiddenRunProperties('comment')),
+          'word/styles.xml': storyPart('w:styles', hiddenRunProperties('style')),
+        },
       },
     },
   ]
