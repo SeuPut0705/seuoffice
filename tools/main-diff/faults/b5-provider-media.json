@@ -1,0 +1,501 @@
+[
+  {
+    "name": "download cap is 51 MiB",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "const MAX_DOWNLOAD_BYTES: usize = 50 * 1024 * 1024;",
+    "replace": "const MAX_DOWNLOAD_BYTES: usize = 51 * 1024 * 1024;",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "gemini inline limit is 19 MiB",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "const GEMINI_INLINE_LIMIT_BYTES: usize = 18 * 1024 * 1024;",
+    "replace": "const GEMINI_INLINE_LIMIT_BYTES: usize = 19 * 1024 * 1024;",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "declared length at the cap is refused",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if declared > MAX_DOWNLOAD_BYTES as f64 {",
+    "replace": "if declared >= MAX_DOWNLOAD_BYTES as f64 {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "streamed length at the cap is refused",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if out.len() + chunk.len() > MAX_DOWNLOAD_BYTES {",
+    "replace": "if out.len() + chunk.len() >= MAX_DOWNLOAD_BYTES {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "file ready deadline is inclusive",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if rt.now() > deadline {",
+    "replace": "if rt.now() >= deadline {",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "file poll every second",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "const GEMINI_FILE_POLL_MS: f64 = 2_000.0;",
+    "replace": "const GEMINI_FILE_POLL_MS: f64 = 1_000.0;",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "flux poll every second",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "waits.next(1_500.0).await?;",
+    "replace": "waits.next(1_000.0).await?;",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "generate timeout is 5 minutes",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "const GENERATE_TIMEOUT_MS: f64 = 600_000.0;",
+    "replace": "const GENERATE_TIMEOUT_MS: f64 = 300_000.0;",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "analyze timeout is 10 minutes",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "const ANALYZE_TIMEOUT_MS: f64 = 300_000.0;",
+    "replace": "const ANALYZE_TIMEOUT_MS: f64 = 600_000.0;",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "test timeout is 30 seconds",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "const TEST_TIMEOUT_MS: f64 = 20_000.0;",
+    "replace": "const TEST_TIMEOUT_MS: f64 = 30_000.0;",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "png needs 8 bytes",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if bytes.len() > 8 && bytes[0] == 0x89",
+    "replace": "if bytes.len() >= 8 && bytes[0] == 0x89",
+    "fn": ["media-protocols.sniffImageMime"]
+  },
+  {
+    "name": "jpeg needs 3 bytes",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if bytes.len() > 3 && bytes[0] == 0xff",
+    "replace": "if bytes.len() >= 3 && bytes[0] == 0xff",
+    "fn": ["media-protocols.sniffImageMime"]
+  },
+  {
+    "name": "gif needs 6 bytes",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if bytes.len() > 6 && bytes[0] == 0x47",
+    "replace": "if bytes.len() >= 6 && bytes[0] == 0x47",
+    "fn": ["media-protocols.sniffImageMime"]
+  },
+  {
+    "name": "webp needs 12 bytes",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if bytes.len() > 12\n",
+    "replace": "if bytes.len() >= 12\n",
+    "fn": ["media-protocols.sniffImageMime"]
+  },
+  {
+    "name": "data url without base64",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "\"data:{};base64,{}\"",
+    "replace": "\"data:{};b64,{}\"",
+    "fn": ["media-protocols.analyzeMediaWithProvider", "media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "error body cap is 1 MiB",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "const MAX_ERROR_BODY_BYTES: f64 = 64.0 * 1024.0;",
+    "replace": "const MAX_ERROR_BODY_BYTES: f64 = 1024.0 * 1024.0;",
+    "fn": ["media-protocols.generateImageWithProvider", "media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "bfl probe 404 passes",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if provider != \"bfl\" && (resp.status() == 404.0",
+    "replace": "if (resp.status() == 404.0",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "405 is not a pass",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "resp.status() == 405.0) {",
+    "replace": "resp.status() == 406.0) {",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "500 is no server error",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "} else if resp.status() >= 500.0 {",
+    "replace": "} else if resp.status() > 500.0 {",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "429 is no rate limit",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "let error = if resp.status() == 429.0 {",
+    "replace": "let error = if resp.status() == 428.0 {",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "dashscope root keeps api/v1",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "(/compatible-mode/v1|/api/v1)$",
+    "replace": "(/compatible-mode/v1)$",
+    "fn": [
+      "media-protocols.generateImageWithProvider",
+      "media-protocols.analyzeMediaWithProvider",
+      "media-protocols.testMediaProvider"
+    ]
+  },
+  {
+    "name": "gemini root keeps /v1",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "js_regex!(r\"/v1(beta)?$\")",
+    "replace": "js_regex!(r\"/v1beta$\")",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "probe page size 2",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "None => pairs.push((\"pageSize\".to_owned(), \"1\".to_owned())),",
+    "replace": "None => pairs.push((\"pageSize\".to_owned(), \"2\".to_owned())),",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "probe drops every page size",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "let first = !seen;",
+    "replace": "let first = false;",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "upload address checked by host only",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if upload.origin().ascii_serialization()",
+    "replace": "if upload.host_str().unwrap_or_default().to_owned()",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "polling address over http",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if poll.scheme() != \"https\" || !same_site {",
+    "replace": "if !same_site {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "two hosts without a domain match",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "(site.is_some() && site == get_domain(poll_host))",
+    "replace": "(site == get_domain(poll_host))",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "flux box has no 256 floor",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "math_max(256.0, math_round(n / 32.0) * 32.0)",
+    "replace": "math_round(n / 32.0) * 32.0",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "flux long side 1280",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "let long = 1024.0;",
+    "replace": "let long = 1280.0;",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "flux 3 is not flux-3-image",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if model == \"flux-3-image\" {",
+    "replace": "if model == \"flux-3\" {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "flux Failed keeps polling",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "\"Error\" | \"Failed\" | \"No Card Generated\"",
+    "replace": "\"Error\" | \"No Card Generated\"",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "flux status matches without case",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if status == \"Ready\" {",
+    "replace": "if status.to_lowercase() == \"ready\" {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "flux sample_url ignored",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "None => nonempty(prop(&json, \"sample_url\")),",
+    "replace": "None => None,",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "mai takes six references",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if references.len() > 5 {",
+    "replace": "if references.len() > 6 {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "mai native size answered no error",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "Some(_) => return Err(JsError::type_error(\"size.split is not a function\")),",
+    "replace": "Some(_) => None,",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "reference extension keeps jpeg",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": ".map(|s| replace_first_string(s, \"jpeg\", \"jpg\"))",
+    "replace": ".map(|s| replace_first_string(s, \"jpeg\", \"jpeg\"))",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "blob type keeps case",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "mime.to_ascii_lowercase()",
+    "replace": "mime.to_owned()",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "image field for three references",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "let field = if refs.len() > 1 { \"image[]\" } else { \"image\" };",
+    "replace": "let field = if refs.len() > 2 { \"image[]\" } else { \"image\" };",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "inline edits go multipart",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if refs.is_empty() || style.edits == Edits::Inline {",
+    "replace": "if refs.is_empty() {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "gpt-image match is case sensitive",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "js_regex!(r\"gpt-image\", \"i\")",
+    "replace": "js_regex!(r\"gpt-image\", \"\")",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "background without the flag",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "input.transparent == Some(true) &&",
+    "replace": "true &&",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "imagen prefix",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "model.starts_with(\"imagen-\")",
+    "replace": "model.starts_with(\"magen-\")",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "stop is a reason",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "Some(reason) if reason != \"STOP\" =>",
+    "replace": "Some(reason) =>",
+    "fn": ["media-protocols.generateImageWithProvider", "media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "gemini texts joined without a space",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "part_texts(&parts).join(\" \")",
+    "replace": "part_texts(&parts).join(\"\")",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "gemini text head is 100",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "slice_to(joined, 200)",
+    "replace": "slice_to(joined, 100)",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "video allowed for every vendor",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "m.mime.starts_with(\"video/\") && meta.video_analysis",
+    "replace": "m.mime.starts_with(\"video/\")",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "gemini answer joined with a space",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "part_texts(&parts).concat()",
+    "replace": "part_texts(&parts).join(\" \")",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "empty base url counts",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "Some(a) if !a.is_empty() => Some(a),",
+    "replace": "Some(a) => Some(a),",
+    "fn": [
+      "media-protocols.generateImageWithProvider",
+      "media-protocols.analyzeMediaWithProvider",
+      "media-protocols.testMediaProvider"
+    ]
+  },
+  {
+    "name": "empty base url satisfies the requirement",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "config.base_url.as_deref().is_none_or(str::is_empty)",
+    "replace": "config.base_url.as_deref().is_none()",
+    "fn": [
+      "media-protocols.generateImageWithProvider",
+      "media-protocols.analyzeMediaWithProvider",
+      "media-protocols.testMediaProvider"
+    ]
+  },
+  {
+    "name": "native size becomes null",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "Size::Native(_) => None,",
+    "replace": "Size::Native(_) => Some(JsonValue::Null),",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "abort leaves the wait timer",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "rt.clear_timeout(Some(timer));",
+    "replace": "let _ = timer;",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "first of a string is its second unit",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "JsonValue::String(s) => s.encode_utf16().next().map(|unit| {",
+    "replace": "JsonValue::String(s) => s.encode_utf16().nth(1).map(|unit| {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "caller signal ignored",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "Some(signal) => rt.any_signal(&[signal, &timeout]),",
+    "replace": "Some(_) => timeout,",
+    "fn": [
+      "media-protocols.generateImageWithProvider",
+      "media-protocols.analyzeMediaWithProvider",
+      "media-protocols.testMediaProvider"
+    ]
+  },
+  {
+    "name": "dashscope code any type",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "nonempty(get(Some(&json), \"code\"))",
+    "replace": "as_str(get(Some(&json), \"code\"))",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "minimax only 1004 fails",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "&& *code != 0.0",
+    "replace": "&& *code == 1004.0",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "stability takes any ratio",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "&& STABILITY_ASPECT_RATIOS.contains(&ratio)",
+    "replace": "&& true",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "auto is an aspect ratio",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "!r.is_empty() && *r != \"auto\")",
+    "replace": "!r.is_empty())",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "microsoft probe uses bearer",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "get_with(vec![pair(\"api-key\", &config.api_key)])",
+    "replace": "get_with(bearer(config))",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "gemini probe uses bearer",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "get_with(vec![pair(\"x-goog-api-key\", &config.api_key)])",
+    "replace": "get_with(bearer(config))",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "bfl probe path",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "&format!(\"{base}/v1/credits\")",
+    "replace": "&format!(\"{base}/v1/credit\")",
+    "fn": ["media-protocols.testMediaProvider"]
+  },
+  {
+    "name": "declared mime fallback",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "as_str(declared_mime).unwrap_or(\"image/png\")",
+    "replace": "as_str(declared_mime).unwrap_or(\"image/jpeg\")",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "ark takes any ratio",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "&& ARK_RATIOS.contains(&r)",
+    "replace": "",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "minimax takes any ratio",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "&& MINIMAX_RATIOS.contains(r)",
+    "replace": "",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "gemini takes any ratio",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "&& GEMINI_ASPECT_RATIOS.contains(r)",
+    "replace": "",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "blob type keeps non-ascii",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "mime.chars().any(|c| !('\\u{20}'..='\\u{7e}').contains(&c))",
+    "replace": "false",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "imagen empty bytes are no image",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "let Some(b64) = as_str(get(entry, \"bytesBase64Encoded\")) else {",
+    "replace": "let Some(b64) = nonempty(get(entry, \"bytesBase64Encoded\")) else {",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  },
+  {
+    "name": "cannot-be-a-base url gets a path",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "if !url.cannot_be_a_base() {",
+    "replace": "if true {",
+    "fn": ["media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "a non-object body is null",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "Ok(_) => Ok(JsonValue::Object(Obj::new())),",
+    "replace": "Ok(_) => Ok(JsonValue::Null),",
+    "fn": ["media-protocols.generateImageWithProvider", "media-protocols.analyzeMediaWithProvider"]
+  },
+  {
+    "name": "an array body is no record",
+    "file": "main-core/src/packages/ai_provider/media_protocols.rs",
+    "find": "Ok(v @ (JsonValue::Object(_) | JsonValue::Array(_))) => Ok(v),",
+    "replace": "Ok(v @ JsonValue::Object(_)) => Ok(v),",
+    "fn": ["media-protocols.generateImageWithProvider"]
+  }
+]

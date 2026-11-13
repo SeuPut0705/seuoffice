@@ -22,7 +22,8 @@ use super::super::{CallError, Context};
 use crate::node_fs::{NodeError, code_of, node_error, node_error2};
 use crate::packages::ai_provider::task::{
     Answer, ChildEvent, Cmd, DirEntry, Event, Fetcher, FileKind, FileStat, FormValue, FsAnswer,
-    FsOp, HostInfo, Id, JsError, RequestBody, ResponseHead, Rt, Runtime, Signal, Stdio,
+    FsOp, HostInfo, HttpRequest, Id, JsError, RequestBody, ResponseHead, Rt, Runtime, Signal,
+    Stdio,
 };
 
 /// The UUID the n-th `randomUUID()` answers, on both sides.
@@ -33,6 +34,11 @@ pub(crate) fn uuid_of(n: u64) -> String {
 fn chunk_bytes(chunk: &Value) -> Vec<u8> {
     match chunk {
         Value::String(s) => s.as_bytes().to_vec(),
+        Value::Object(o) if o.contains_key("fill") => {
+            let byte = o.get("fill").and_then(Value::as_u64).unwrap_or(0) as u8;
+            let size = o.get("size").and_then(Value::as_u64).unwrap_or(0) as usize;
+            vec![byte; size]
+        }
         Value::Object(o) => o
             .get("hex")
             .and_then(Value::as_str)
@@ -46,10 +52,42 @@ fn chunk_bytes(chunk: &Value) -> Vec<u8> {
     }
 }
 
+/// A request body of more than this many bytes is logged as a digest.
+const BIG_BODY: usize = 1 << 20;
+
+/// `{ big: { bytes, head, tail, fnv } }`: the length, the first and last 32
+/// bytes in hex, and the FNV-1a 32-bit hash of all.
+fn big_line(bytes: &[u8]) -> Value {
+    let fnv = bytes.iter().fold(0x811c_9dc5_u32, |h, b| {
+        (h ^ u32::from(*b)).wrapping_mul(0x0100_0193)
+    });
+    json!({ "big": {
+        "bytes": bytes.len(),
+        "head": hex(&bytes[..bytes.len().min(32)]),
+        "tail": hex(&bytes[bytes.len().saturating_sub(32)..]),
+        "fnv": fnv,
+    } })
+}
+
 fn chunks(value: Option<&Value>) -> VecDeque<Vec<u8>> {
     value
         .and_then(Value::as_array)
         .map(|a| a.iter().map(chunk_bytes).collect())
+        .unwrap_or_default()
+}
+
+/// The chunks of a response body: bytes, or the failure of the stream.
+fn body_chunks(value: Option<&Value>) -> VecDeque<Result<Vec<u8>, String>> {
+    value
+        .and_then(Value::as_array)
+        .map(|a| {
+            a.iter()
+                .map(|chunk| match chunk.get("error").and_then(Value::as_str) {
+                    Some(message) => Err(message.to_owned()),
+                    None => Ok(chunk_bytes(chunk)),
+                })
+                .collect()
+        })
         .unwrap_or_default()
 }
 
@@ -89,13 +127,18 @@ fn error_of_spec(r: &Value) -> JsError {
     if let Some(code) = r.get("code") {
         e = e.with("code", json_value_from_serde(code));
     }
+    if let Some(cause) = r.get("cause") {
+        e = e.with("cause", json_value_from_serde(cause));
+    }
     e
 }
 
 fn body_line(body: &Option<RequestBody>) -> Value {
     match body {
         None => Value::Null,
+        Some(RequestBody::Text(t)) if t.len() > BIG_BODY => big_line(t.as_bytes()),
         Some(RequestBody::Text(t)) => Value::String(t.clone()),
+        Some(RequestBody::Bytes(b)) if b.len() > BIG_BODY => big_line(b),
         Some(RequestBody::Bytes(b)) => json!({ "hex": hex(b) }),
         Some(RequestBody::Form(parts)) => {
             let parts: Vec<Value> = parts
@@ -136,11 +179,13 @@ enum Later {
     Start(Id),
     Reply(Id, usize, bool),
     Close(Id, Option<String>),
+    /// a scripted loopback request (its spec, the `state` of the call it follows)
+    Request(Value, String),
 }
 
 struct Body {
     fetch: usize,
-    chunks: VecDeque<Vec<u8>>,
+    chunks: VecDeque<Result<Vec<u8>, String>>,
 }
 
 /// The log the world and the call's own callbacks write to, in one order.
@@ -168,6 +213,9 @@ struct WorldRun<'a> {
     children: BTreeMap<Id, ChildRun>,
     child_count: usize,
     calls: usize,
+    /// the servers that listened, and whether each is still open
+    servers: Vec<(Id, bool)>,
+    requests: u64,
     immediate: VecDeque<Event>,
     later: VecDeque<Later>,
 }
@@ -233,7 +281,7 @@ impl WorldRun<'_> {
                         id,
                         Body {
                             fetch: i,
-                            chunks: chunks(spec.get("body")),
+                            chunks: body_chunks(spec.get("body")),
                         },
                     );
                 }
@@ -277,15 +325,24 @@ impl WorldRun<'_> {
                 });
             }
             Cmd::Read { id, body } => {
-                let answer = match self
+                let next = self
                     .bodies
                     .get_mut(&body)
-                    .and_then(|b| b.chunks.pop_front())
-                {
-                    Some(chunk) => Answer::Chunk(chunk),
-                    None => Answer::End,
-                };
-                self.immediate.push_back(Event::Done { id, answer });
+                    .and_then(|b| b.chunks.pop_front());
+                self.immediate.push_back(match next {
+                    Some(Ok(chunk)) => Event::Done {
+                        id,
+                        answer: Answer::Chunk(chunk),
+                    },
+                    Some(Err(message)) => Event::Failed {
+                        id,
+                        error: JsError::error(message),
+                    },
+                    None => Event::Done {
+                        id,
+                        answer: Answer::End,
+                    },
+                });
             }
             Cmd::CloneBody { from, to } => {
                 if let Some(b) = self.bodies.get(&from) {
@@ -335,6 +392,7 @@ impl WorldRun<'_> {
                         "stdio": spawn.stdio.iter().map(|s| stdio_name(*s)).collect::<Vec<_>>(),
                         "detached": spawn.detached,
                         "windowsHide": spawn.windows_hide,
+                        "shell": spawn.shell,
                     }
                 ]));
                 let spec = self
@@ -428,10 +486,29 @@ impl WorldRun<'_> {
             }
             Cmd::Listen { id, host, port } => {
                 self.log(json!(["listen", host, number(port)]));
-                self.immediate.push_back(Event::Done {
-                    id,
-                    answer: Answer::Listening { port: 40001.0 },
-                });
+                let failure = self.spec.get("listenError").cloned();
+                let event = match failure {
+                    Some(failure) => {
+                        let mut error = JsError::error(
+                            failure
+                                .get("message")
+                                .and_then(Value::as_str)
+                                .unwrap_or_default(),
+                        );
+                        if let Some(code) = failure.get("code") {
+                            error = error.with("code", json_value_from_serde(code));
+                        }
+                        Event::Failed { id, error }
+                    }
+                    None => {
+                        self.servers.push((id, true));
+                        Event::Done {
+                            id,
+                            answer: Answer::Listening { port: 40001.0 },
+                        }
+                    }
+                };
+                self.immediate.push_back(event);
             }
             Cmd::Respond {
                 request,
@@ -447,7 +524,14 @@ impl WorldRun<'_> {
                     String::from_utf8_lossy(&body)
                 ]));
             }
-            Cmd::CloseServer { .. } => self.log(json!(["close-server"])),
+            Cmd::CloseServer { server } => {
+                if let Some(entry) = self.servers.iter_mut().find(|s| s.0 == server)
+                    && entry.1
+                {
+                    entry.1 = false;
+                    self.log(json!(["close-server"]));
+                }
+            }
             Cmd::Call { id, name, args } => {
                 self.log(json!(["call", name, json_value_to_serde(&args)]));
                 let answer = self
@@ -455,7 +539,30 @@ impl WorldRun<'_> {
                     .get("calls")
                     .and_then(|c| c.get(self.calls))
                     .cloned();
+                let k = self.calls as u64;
                 self.calls += 1;
+                let state = match &args {
+                    JsonValue::Array(items) => match items.first() {
+                        Some(JsonValue::String(first)) => url::Url::parse(first)
+                            .ok()
+                            .and_then(|u| {
+                                u.query_pairs()
+                                    .find(|(name, _)| name == "state")
+                                    .map(|(_, v)| v.into_owned())
+                            })
+                            .unwrap_or_default(),
+                        _ => String::new(),
+                    },
+                    _ => String::new(),
+                };
+                if let Some(list) = self.spec.get("requests").and_then(Value::as_array) {
+                    for spec in list {
+                        if spec.get("afterCall").and_then(Value::as_u64) == Some(k) {
+                            self.later
+                                .push_back(Later::Request(spec.clone(), state.clone()));
+                        }
+                    }
+                }
                 let event = match answer
                     .as_ref()
                     .and_then(|a| a.get("reject"))
@@ -587,6 +694,44 @@ impl WorldRun<'_> {
                 Some(c) => close(c, child, signal),
                 None => Vec::new(),
             },
+            Later::Request(spec, state) => {
+                let Some((server, _)) = self.servers.iter().rev().find(|s| s.1).copied() else {
+                    return Vec::new();
+                };
+                let n = self.requests;
+                self.requests += 1;
+                let headers = spec
+                    .get("headers")
+                    .and_then(Value::as_array)
+                    .map(|a| {
+                        a.iter()
+                            .filter_map(|p| {
+                                Some((
+                                    p.get(0)?.as_str()?.to_lowercase(),
+                                    p.get(1)?.as_str()?.to_owned(),
+                                ))
+                            })
+                            .collect()
+                    })
+                    .unwrap_or_default();
+                vec![Event::Request {
+                    server,
+                    request: HttpRequest {
+                        id: n,
+                        method: spec
+                            .get("method")
+                            .and_then(Value::as_str)
+                            .unwrap_or("GET")
+                            .to_owned(),
+                        url: spec
+                            .get("url")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .replace("$state", &state),
+                        headers,
+                    },
+                }]
+            }
         }
     }
 }
@@ -752,6 +897,29 @@ fn run_fs(op: &FsOp) -> Result<FsAnswer, NodeError> {
                 Ok(FsAnswer::Unit)
             }
         }
+        FsOp::Access { path, mode } => {
+            #[cfg(unix)]
+            {
+                let c_path = std::ffi::CString::new(path.as_str()).map_err(|_| NodeError {
+                    code: Some("ERR_INVALID_ARG_VALUE"),
+                    message: format!("The argument 'path' must be a string without null bytes: {path}"),
+                })?;
+                // SAFETY: `c_path` is a valid NUL-terminated string that outlives the call
+                let result = unsafe { libc::access(c_path.as_ptr(), *mode as libc::c_int) };
+                if result == 0 {
+                    Ok(FsAnswer::Unit)
+                } else {
+                    Err(node_error(&std::io::Error::last_os_error(), "access", path))
+                }
+            }
+            #[cfg(not(unix))]
+            {
+                let _ = mode;
+                fs::metadata(path)
+                    .map(|_| FsAnswer::Unit)
+                    .map_err(|e| node_error(&e, "access", path))
+            }
+        }
     }
 }
 
@@ -846,6 +1014,8 @@ where
         timer_count: 0,
         children: BTreeMap::new(),
         child_count: 0,
+        servers: Vec::new(),
+        requests: 0,
         calls: 0,
         immediate: VecDeque::new(),
         later: VecDeque::new(),
