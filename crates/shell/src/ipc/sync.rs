@@ -21,6 +21,7 @@ use tauri::http::{self, Method, StatusCode};
 use tauri::{AppHandle, Manager, Runtime, UriSchemeContext, UriSchemeResponder};
 
 use super::{Ipc, dispatch};
+use crate::trace::trace;
 
 pub const SCHEME: &str = "seuoffice-ipc";
 
@@ -75,6 +76,7 @@ pub fn handle<R: Runtime>(
     }
     let ipc = ctx.app_handle().state::<Ipc>();
     let Some(sender) = ipc.views.sender_of_label(ctx.webview_label()) else {
+        trace!("sync", "refused: '{}' has no bridge", ctx.webview_label());
         responder.respond(text_error(
             StatusCode::FORBIDDEN,
             "this webview has no bridge to the shell",
@@ -85,6 +87,13 @@ pub fn handle<R: Runtime>(
         percent_encoding::percent_decode_str(request.uri().path().trim_start_matches('/'))
             .decode_utf8_lossy()
             .into_owned();
+    trace!(
+        "sync",
+        "view {}: '{channel}' ({} bytes)",
+        sender.view.0,
+        request.body().len()
+    );
+    ipc.note_call();
     let args = match unframe(request.body()).and_then(|(header, buffers)| {
         decode_list(header.get("args").unwrap_or(&Value::Null), &buffers)
     }) {

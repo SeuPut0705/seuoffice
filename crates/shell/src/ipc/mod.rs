@@ -33,6 +33,7 @@ use tauri::ipc::{Channel, InvokeBody, InvokeResponseBody, Request};
 use tauri::{State, Webview};
 
 use crate::measure::Measure;
+use crate::trace::trace;
 use crate::views::ViewTable;
 use outlet::TauriOutlet;
 
@@ -84,7 +85,23 @@ pub struct Ipc {
     pub measure: Option<Arc<Measure>>,
 }
 
+/// The raw body's size, for the trace
+fn request_len(request: &Request<'_>) -> usize {
+    match request.body() {
+        InvokeBody::Raw(bytes) => bytes.len(),
+        InvokeBody::Json(_) => 0,
+    }
+}
+
 impl Ipc {
+    /// A command or a sync request reached the shell: the measurement's
+    /// watchdog tells "nothing arrived" from "something stopped later"
+    pub(crate) fn note_call(&self) {
+        if let Some(measure) = &self.measure {
+            measure.note_call();
+        }
+    }
+
     pub(crate) fn sender(&self, webview: &Webview) -> Result<Sender, String> {
         self.views.sender_of_label(webview.label()).ok_or_else(|| {
             format!(
@@ -133,10 +150,22 @@ pub async fn ipc_invoke(
     request: Request<'_>,
     ipc: State<'_, Ipc>,
 ) -> Result<(), String> {
-    let sender = ipc.sender(&webview)?;
-    let Call { id, channel, args } = parse(&request, true)?;
+    let sender = ipc
+        .sender(&webview)
+        .inspect_err(|e| trace!("ipc", "invoke refused: {e}"))?;
+    let Call { id, channel, args } = parse(&request, true)
+        .inspect_err(|e| trace!("ipc", "view {}: invoke not parsed: {e}", sender.view.0))?;
     let id = RequestId(id.unwrap_or_default());
     let view = sender.view;
+    trace!(
+        "ipc",
+        "view {}: invoke #{} '{channel}' ({} args, {} bytes)",
+        view.0,
+        id.0,
+        args.len(),
+        request_len(&request)
+    );
+    ipc.note_call();
 
     if let Some(measure) = &ipc.measure
         && measure.handles(&channel)
@@ -168,8 +197,18 @@ pub async fn ipc_send(
     request: Request<'_>,
     ipc: State<'_, Ipc>,
 ) -> Result<(), String> {
-    let sender = ipc.sender(&webview)?;
-    let Call { channel, args, .. } = parse(&request, false)?;
+    let sender = ipc
+        .sender(&webview)
+        .inspect_err(|e| trace!("ipc", "send refused: {e}"))?;
+    let Call { channel, args, .. } = parse(&request, false)
+        .inspect_err(|e| trace!("ipc", "view {}: send not parsed: {e}", sender.view.0))?;
+    trace!(
+        "ipc",
+        "view {}: send '{channel}' ({} args)",
+        sender.view.0,
+        args.len()
+    );
+    ipc.note_call();
     ipc.core.post(Box::new(move || {
         let name = channel.clone();
         dispatch(
@@ -196,7 +235,17 @@ pub async fn ipc_listen(
     on_frame: Channel<InvokeResponseBody>,
     ipc: State<'_, Ipc>,
 ) -> Result<(), String> {
-    let sender = ipc.sender(&webview)?;
+    let sender = ipc
+        .sender(&webview)
+        .inspect_err(|e| trace!("ipc", "listen refused: {e}"))?;
+    trace!(
+        "ipc",
+        "view {}: listen, stream {} from '{}'",
+        sender.view.0,
+        on_frame.id(),
+        webview.label()
+    );
+    ipc.note_call();
     // a second stream for one view is a new document in it: the old page's
     // pending calls end, as they did when its renderer was replaced
     if ipc.outlet.attach(sender.view, on_frame) {

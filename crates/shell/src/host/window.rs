@@ -23,10 +23,40 @@ use tauri::{
     AppHandle, LogicalPosition, LogicalSize, Manager, Webview, WebviewUrl, WebviewWindowBuilder,
 };
 
+use tauri_runtime_cef::{
+    ConsoleMessage, FrameEvent, FrameEventKind, WebviewBuilderCefExt, WebviewWindowBuilderCefExt,
+};
+
 use super::HostContext;
 use crate::app_scheme;
 use crate::preload;
+use crate::trace::{self, trace};
 use crate::views::ViewTable;
+
+/// One console line of a page, as the trace shows it
+fn console_line(label: &str, message: &ConsoleMessage) {
+    trace!(
+        "console",
+        "{label} {:?} {} ({}:{})", message.level, message.message, message.source, message.line
+    );
+}
+
+/// The frame events worth a line: where a page went and whether it loaded
+fn frame_line(label: &str, event: &FrameEvent) {
+    let what = match &event.kind {
+        FrameEventKind::NavigationStarted { url } => format!("navigation started {url}"),
+        FrameEventKind::DocumentCommitted { url } => format!("document committed {url}"),
+        FrameEventKind::NavigationFailed { url } => format!("NAVIGATION FAILED {url}"),
+        FrameEventKind::LoadingStateChanged { is_loading } => format!("loading {is_loading}"),
+        FrameEventKind::RendererTerminated => "RENDERER TERMINATED".to_owned(),
+        _ => return,
+    };
+    trace!(
+        "frame",
+        "{label} {}{what}",
+        if event.is_main { "" } else { "(subframe) " }
+    );
+}
 
 /// How a view talks to the shell
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -50,12 +80,18 @@ impl Bridge {
         }
     }
 
-    fn script(self) -> Option<&'static str> {
-        match self {
-            Bridge::None => None,
-            Bridge::Surface(surface) => Some(preload::source(surface)),
-            Bridge::Measure => Some(preload::MEASURE),
-        }
+    /// The initialization script; with the trace on, the bridge is told to log its stages
+    fn script(self) -> Option<String> {
+        let source = match self {
+            Bridge::None => return None,
+            Bridge::Surface(surface) => preload::source(surface),
+            Bridge::Measure => preload::MEASURE,
+        };
+        Some(if trace::enabled() {
+            format!("window.__SEUOFFICE_TRACE__ = true;\n{source}")
+        } else {
+            source.to_owned()
+        })
     }
 }
 
@@ -116,6 +152,21 @@ impl Windows {
         if let Some((w, h)) = spec.min_size {
             builder = builder.min_inner_size(w, h);
         }
+        if trace::enabled() {
+            let (console, frames) = (label.clone(), label.clone());
+            builder = builder
+                .on_console_message(move |m| console_line(&console, &m))
+                .on_frame_event(move |e| frame_line(&frames, &e));
+        }
+        trace!(
+            "window",
+            "open window {} view {} '{label}' {} (bridge {:?}, script {} bytes)",
+            window.0,
+            view.0,
+            spec.view.url,
+            spec.view.bridge,
+            spec.view.bridge.script().map_or(0, |s| s.len())
+        );
         if let Some(script) = spec.view.bridge.script() {
             builder = builder
                 .initialization_script(script)
@@ -139,7 +190,10 @@ impl Windows {
             }
         }
         match builder.build() {
-            Ok(_) => Ok((window, view)),
+            Ok(_) => {
+                trace!("window", "window {} built", window.0);
+                Ok((window, view))
+            }
             Err(error) => {
                 self.views.remove_window(window);
                 Err(format!("opening a window: {error}"))
@@ -169,6 +223,16 @@ impl Windows {
         let mut builder = WebviewBuilder::new(&view_label, url)
             .position(LogicalPosition::new(bounds.x, bounds.y))
             .size(LogicalSize::new(bounds.width, bounds.height));
+        if trace::enabled() {
+            let (console, frames) = (view_label.clone(), view_label.clone());
+            builder = builder
+                .on_console_message(move |m| console_line(&console, &m))
+                .on_frame_event(move |e| frame_line(&frames, &e));
+        }
+        trace!(
+            "window",
+            "add view {} '{view_label}' to window {} {}", view.0, window.0, spec.url
+        );
         if let Some(script) = spec.bridge.script() {
             builder = builder
                 .initialization_script(script)
