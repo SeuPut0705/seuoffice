@@ -11,8 +11,8 @@
 //! Public for the other tool modules and the later waves:
 //! [`sanitize_file_base`], [`unique_path_in`], [`resolve_output_path`] (the
 //! shared output-path policy of every generating tool), [`resolve_target_path`],
-//! [`create_document_tools`], [`document_driver`] and the [`DocsControl`] the
-//! shell's docs bridge implements.
+//! [`create_document_tools`], [`document_driver`] and the two host calls of
+//! the shell's docs bridge ([`docs_open_blank_call`], [`docs_run_call`]).
 
 use std::rc::Rc;
 
@@ -21,8 +21,8 @@ use jscompat::{JsonValue, js_regex, slice_utf16, trim};
 
 use super::formats::{SessionFamily, capability_report};
 use super::session_tools::{
-    FamilyDriver, ObjectDraft, ResolveOptions, SharedSessionHost, TargetResolver, content_target,
-    is_true, js_object, string_arg, string_or_empty,
+    FamilyDriver, ObjectDraft, ResolveOptions, SharedSessionHost, content_target, is_true,
+    js_object, string_arg, string_or_empty, sync_handler, with_target,
 };
 use crate::packages::i18n::PRODUCT_NAME;
 use crate::packages::zod::{ZodType, z};
@@ -33,7 +33,7 @@ use crate::shell::mcp::headless_cli::{
     docs_check_via_cli, merge_template_via_cli, read_docx_properties_via_cli,
     read_docx_text_via_cli,
 };
-use crate::shell::mcp::mcp_server::McpToolDefinition;
+use crate::shell::mcp::mcp_server::{HostCall, McpToolDefinition, ToolStep};
 
 /// `McpEditorCommandName`: editor commands the docs renderer bridge
 /// understands (see docs shared/ipc.ts)
@@ -64,19 +64,34 @@ impl McpEditorCommandName {
 /// `DocsControl`: visible-editor control. Opens a docs tab and pushes editor
 /// commands into it, so an external agent builds and edits a document the user
 /// can watch instead of writing bytes behind the UI. Implemented in the shell
-/// main process over `shell::mcp::docs_bridge`. `Err` is the message of what
-/// it throws; a command's result is what the renderer answered (`None` is
-/// `undefined`).
-pub trait DocsControl {
-    /// open a fresh blank docs tab; its webContents id
-    fn open_blank_tab(&self) -> Result<i64, String>;
-    /// run one editor command in that tab and answer its result
-    fn run_command(
-        &self,
-        wc_id: i64,
-        command: McpEditorCommandName,
-        payload: &JsonValue,
-    ) -> Result<Option<JsonValue>, String>;
+/// main process over `shell::mcp::docs_bridge`. Both calls wait for the docs
+/// renderer, so on the one core thread they are steps: the tools suspend on
+/// the [`HostCall`]s these two functions name and the host answers them
+/// through the bridge (`Err` is the message of what it throws; a command's
+/// result is what the renderer answered, `None` being `undefined`).
+///
+/// `DocsControl.openBlankTab()`: open a fresh blank docs tab; answered with
+/// its webContents id as a number.
+pub fn docs_open_blank_call() -> HostCall {
+    HostCall {
+        control: "DocsControl",
+        method: "openBlankTab",
+        args: Vec::new(),
+    }
+}
+
+/// `DocsControl.runCommand(wcId, command, payload)`: run one editor command in
+/// that tab and answer its result
+pub fn docs_run_call(wc_id: i64, command: McpEditorCommandName, payload: JsonValue) -> HostCall {
+    HostCall {
+        control: "DocsControl",
+        method: "runCommand",
+        args: vec![
+            JsonValue::Number(wc_id as f64),
+            JsonValue::String(command.as_str().to_owned()),
+            payload,
+        ],
+    }
 }
 
 /// `DocToolDeps.defaultSaveDir`: directory generated files land in when the
@@ -96,17 +111,20 @@ pub struct DocToolDeps<'h> {
     pub background: Option<bool>,
     /// open a file in the SeuOffice UI (optional in tests)
     pub open_in_tab: Option<OpenInTab<'h>>,
-    /// visible-editor control for the MCP-driven document session (optional in tests)
-    pub docs: Option<Rc<dyn DocsControl + 'h>>,
+    /// whether the shell wired the visible-editor control (`DocsControl`) for
+    /// the MCP-driven document session (optional in tests)
+    pub docs: bool,
     /// extra formats other tool families can generate (reported by get_app_info)
     pub extra_formats: Option<Vec<String>>,
     /// the bundled seuoffice CLI, used by the headless tools
     pub cli: Option<Rc<dyn CliRunner + 'h>>,
-    /// resolve a caller-supplied document reference (tab id or path) to the
-    /// webContents of that open tab, so the content tools can edit a document
-    /// the *user* has open rather than only the session's own blank one. Absent
-    /// in headless/unit runs, where a `document` argument is refused.
-    pub resolve_target: Option<Rc<dyn TargetResolver + 'h>>,
+    /// whether the shell wired a `TargetResolver`, which resolves a
+    /// caller-supplied document reference (tab id or path) to the webContents
+    /// of that open tab, so the content tools can edit a document the *user*
+    /// has open rather than only the session's own blank one. Absent in
+    /// headless/unit runs, where a `document` argument is refused. The
+    /// resolution is a host call ([`super::session_tools::resolve_target_call`]).
+    pub resolve_target: bool,
 }
 
 /// `DOCX_EXT`: `.${generateExtension('docx')}`, which the registry says is
@@ -276,7 +294,7 @@ fn create_headless_docx_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinition
                     .describe("allow replacing an existing file at `path`; default false"),
             ),
         ])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let title = string_or_empty(&args, "title")?;
             let title = trim(&title);
             if title.is_empty() {
@@ -355,7 +373,7 @@ fn create_fill_template_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinition
                     .describe("fail instead of writing when a placeholder has no value; default false"),
             ),
         ])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let template_path = string_or_empty(&args, "template")?;
             if !is_absolute(&template_path) {
                 return Err("template must be an absolute path".to_owned());
@@ -445,7 +463,7 @@ fn create_convert_document_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinit
                     .describe("xlsx → csv: the worksheet to export (default: the active one)"),
             ),
         ])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let source_path = string_or_empty(&args, "path")?;
             if !is_absolute(&source_path) {
                 return Err("path must be absolute".to_owned());
@@ -510,7 +528,7 @@ fn create_check_document_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinitio
             "path",
             z::string().describe("absolute path to a .docx or .odt file"),
         )])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let file_path = string_or_empty(&args, "path")?;
             if !is_absolute(&file_path) {
                 return Err("path must be absolute".to_owned());
@@ -545,7 +563,7 @@ fn read_docx_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinition<'h> {
             "path",
             z::string().describe("absolute path to a .docx or .odt file"),
         )])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let file_path = string_or_empty(&args, "path")?;
             if !is_absolute(&file_path) {
                 return Err("path must be absolute".to_owned());
@@ -581,7 +599,7 @@ fn read_docx_properties_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinition
             "path",
             z::string().describe("absolute path to a .docx file"),
         )])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let file_path = string_or_empty(&args, "path")?;
             if !is_absolute(&file_path) {
                 return Err("path must be absolute".to_owned());
@@ -614,7 +632,7 @@ fn open_in_seuoffice_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinition<'h
             "path",
             z::string().describe("absolute path to the file to open"),
         )])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let file_path = string_or_empty(&args, "path")?;
             if !is_absolute(&file_path) {
                 return Err("path must be absolute".to_owned());
@@ -643,7 +661,7 @@ fn get_app_info_tool<'h>(deps: Rc<DocToolDeps<'h>>) -> McpToolDefinition<'h> {
         )
         .to_owned(),
         input_schema: Some(z::shape(vec![])),
-        handler: Box::new(move |_args: JsonValue| {
+        handler: sync_handler(move |_args: JsonValue| {
             // Every format listed here is written by a headless create/read tool, and
             // all of them are opt-in: with background generation off there is no
             // generate tool at all, so advertising docx/pptx/xlsx would describe
@@ -700,24 +718,22 @@ pub fn create_document_tools<'h>(
 /// The docx session driver behind the shared create_session / save_session
 /// tools (`documentDriver(docs)`). The content tools below address the tab
 /// this driver opened.
-struct DocumentDriver<'h> {
-    docs: Rc<dyn DocsControl + 'h>,
-}
+struct DocumentDriver;
 
-impl FamilyDriver for DocumentDriver<'_> {
+impl FamilyDriver for DocumentDriver {
     fn family(&self) -> SessionFamily {
         SessionFamily::Docx
     }
 
-    fn open_blank_tab(&self) -> Result<i64, String> {
-        self.docs.open_blank_tab()
+    fn open_blank_tab(&self) -> HostCall {
+        docs_open_blank_call()
     }
 
-    fn save(&self, wc_id: i64, path: &str, overwrite: bool) -> Result<Option<JsonValue>, String> {
-        self.docs.run_command(
+    fn save(&self, wc_id: i64, path: &str, overwrite: bool) -> HostCall {
+        docs_run_call(
             wc_id,
             McpEditorCommandName::SaveDocument,
-            &js_object(vec![
+            js_object(vec![
                 ("path", JsonValue::String(path.to_owned())),
                 ("overwrite", JsonValue::Bool(overwrite)),
             ]),
@@ -725,9 +741,19 @@ impl FamilyDriver for DocumentDriver<'_> {
     }
 }
 
-/// `documentDriver(docs)`
-pub fn document_driver<'h>(docs: Rc<dyn DocsControl + 'h>) -> Rc<dyn FamilyDriver + 'h> {
-    Rc::new(DocumentDriver { docs })
+/// `documentDriver(docs)`: the driver awaits the docs control through its host
+/// calls, so it holds none
+pub fn document_driver<'h>() -> Rc<dyn FamilyDriver + 'h> {
+    Rc::new(DocumentDriver)
+}
+
+/// `await docs.runCommand(wcId, command, payload)` as the last step of a
+/// handler: the tool answers what the renderer answered
+fn run_command<'h>(wc_id: i64, command: McpEditorCommandName, payload: JsonValue) -> ToolStep<'h> {
+    ToolStep::Await {
+        call: docs_run_call(wc_id, command, payload),
+        then: Box::new(ToolStep::Done),
+    }
 }
 
 /// the `document` field of every content tool
@@ -750,15 +776,15 @@ fn create_docx_content_tools<'h>(
     deps: &Rc<DocToolDeps<'h>>,
     host: SharedSessionHost,
 ) -> Vec<McpToolDefinition<'h>> {
-    let Some(docs) = deps.docs.clone() else {
+    if !deps.docs {
         return Vec::new();
-    };
+    }
 
-    let target = content_target(host, deps.resolve_target.clone(), SessionFamily::Docx);
+    let target = content_target(host, deps.resolve_target, SessionFamily::Docx);
     let focus = || Some(ResolveOptions { focus: Some(true) });
 
     let insert_content = {
-        let (docs, target) = (Rc::clone(&docs), Rc::clone(&target));
+        let target = Rc::clone(&target);
         McpToolDefinition {
             name: "insert_content".to_owned(),
             description: concat!(
@@ -778,14 +804,15 @@ fn create_docx_content_tools<'h>(
                 ("document", document_field()),
             ])),
             handler: Box::new(move |args: JsonValue| {
-                let wc = target(args.get("document").as_deref(), focus())?;
-                docs.run_command(wc, McpEditorCommandName::InsertContent, &args)
+                with_target(&target, args, focus(), |wc, args| {
+                    run_command(wc, McpEditorCommandName::InsertContent, args)
+                })
             }),
         }
     };
 
     let replace_blocks = {
-        let (docs, target) = (Rc::clone(&docs), Rc::clone(&target));
+        let target = Rc::clone(&target);
         McpToolDefinition {
             name: "replace_blocks".to_owned(),
             description: concat!(
@@ -813,14 +840,15 @@ fn create_docx_content_tools<'h>(
                 ("document", document_field()),
             ])),
             handler: Box::new(move |args: JsonValue| {
-                let wc = target(args.get("document").as_deref(), focus())?;
-                docs.run_command(wc, McpEditorCommandName::ReplaceBlocks, &args)
+                with_target(&target, args, focus(), |wc, args| {
+                    run_command(wc, McpEditorCommandName::ReplaceBlocks, args)
+                })
             }),
         }
     };
 
     let apply_ops = {
-        let (docs, target) = (Rc::clone(&docs), Rc::clone(&target));
+        let target = Rc::clone(&target);
         McpToolDefinition {
             name: "apply_ops".to_owned(),
             description: concat!(
@@ -840,17 +868,18 @@ fn create_docx_content_tools<'h>(
                 ("document", document_field()),
             ])),
             handler: Box::new(move |args: JsonValue| {
-                let wc = target(args.get("document").as_deref(), focus())?;
-                let mut payload = ObjectDraft::new();
-                payload.set("ops", args.get("ops").map(|ops| ops.into_owned()));
-                payload.set("dryRun", Some(JsonValue::Bool(is_true(&args, "dryRun"))));
-                docs.run_command(wc, McpEditorCommandName::ApplyOps, &payload.finish())
+                with_target(&target, args, focus(), |wc, args| {
+                    let mut payload = ObjectDraft::new();
+                    payload.set("ops", args.get("ops").map(|ops| ops.into_owned()));
+                    payload.set("dryRun", Some(JsonValue::Bool(is_true(&args, "dryRun"))));
+                    run_command(wc, McpEditorCommandName::ApplyOps, payload.finish())
+                })
             }),
         }
     };
 
     let insert_picture = {
-        let (docs, target) = (Rc::clone(&docs), Rc::clone(&target));
+        let target = Rc::clone(&target);
         let length = || z::union(vec![z::number(), z::string()]);
         McpToolDefinition {
             name: "insert_picture".to_owned(),
@@ -925,14 +954,15 @@ fn create_docx_content_tools<'h>(
                 ("document", document_field()),
             ])),
             handler: Box::new(move |args: JsonValue| {
-                let wc = target(args.get("document").as_deref(), focus())?;
-                docs.run_command(wc, McpEditorCommandName::InsertPicture, &args)
+                with_target(&target, args, focus(), |wc, args| {
+                    run_command(wc, McpEditorCommandName::InsertPicture, args)
+                })
             }),
         }
     };
 
     let read_document = {
-        let (docs, target) = (Rc::clone(&docs), Rc::clone(&target));
+        let target = Rc::clone(&target);
         McpToolDefinition {
             name: "read_document".to_owned(),
             description: concat!(
@@ -943,8 +973,9 @@ fn create_docx_content_tools<'h>(
             .to_owned(),
             input_schema: Some(z::shape(vec![("document", document_field())])),
             handler: Box::new(move |args: JsonValue| {
-                let wc = target(args.get("document").as_deref(), None)?;
-                docs.run_command(wc, McpEditorCommandName::ReadDocument, &js_object(vec![]))
+                with_target(&target, args, None, |wc, _args| {
+                    run_command(wc, McpEditorCommandName::ReadDocument, js_object(vec![]))
+                })
             }),
         }
     };

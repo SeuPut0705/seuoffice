@@ -482,8 +482,8 @@
   {
     "name": "session save keeps the session open",
     "file": "main-core/src/shell/mcp/tools/session_tools.rs",
-    "find": "save_host.borrow_mut().end();",
-    "replace": "let _ = &save_host;",
+    "find": "host.borrow_mut().end();",
+    "replace": "let _ = &host;",
     "fn": ["session-tools.call"]
   },
   {
@@ -531,8 +531,8 @@
   {
     "name": "session unknown family text",
     "file": "main-core/src/shell/mcp/tools/session_tools.rs",
-    "find": "\"unknown family \\\"{}\\\"\"",
-    "replace": "\"unknown family {}\"",
+    "find": "\"unknown family \\\"{name}\\\"\"",
+    "replace": "\"unknown family {name}\"",
     "fn": ["session-tools.call"]
   },
   {
@@ -671,8 +671,8 @@
   {
     "name": "document read_document focuses",
     "file": "main-core/src/shell/mcp/tools/document_tools.rs",
-    "find": "let wc = target(args.get(\"document\").as_deref(), None)?;",
-    "replace": "let wc = target(args.get(\"document\").as_deref(), focus())?;",
+    "find": "with_target(&target, args, None, |wc, _args| {",
+    "replace": "with_target(&target, args, focus(), |wc, _args| {",
     "fn": ["document-tools.call"]
   },
   {
@@ -706,8 +706,8 @@
   {
     "name": "open documents empty saved path is reported",
     "file": "main-core/src/shell/mcp/tools/open_documents_tools.rs",
-    "find": "closed.saved_path.filter(|path| !path.is_empty())",
-    "replace": "closed.saved_path",
+    "find": "saved_path.filter(JsonValue::truthy)",
+    "replace": "saved_path",
     "fn": ["open-documents-tools.call"]
   },
   {
@@ -877,5 +877,33 @@
     "find": "const HWP_EXTS: [&str; 2] = [\".hwp\", \".hwpx\"];",
     "replace": "const HWP_EXTS: [&str; 2] = [\".hwp\", \".hwp\"];",
     "fn": ["hwp-tools.call"]
+  },
+  {
+    "name": "open documents a number answer has a savedPath",
+    "file": "main-core/src/shell/mcp/tools/open_documents_tools.rs",
+    "find": "Some(_) => Ok(None),",
+    "replace": "Some(_) => Err(\"no savedPath\".to_owned()),",
+    "fn": ["open-documents-tools.call"]
+  },
+  {
+    "name": "open documents destructuring undefined says null",
+    "file": "main-core/src/shell/mcp/tools/open_documents_tools.rs",
+    "find": "as it is undefined.\"",
+    "replace": "as it is null.\"",
+    "fn": ["open-documents-tools.call"]
+  },
+  {
+    "name": "open documents destructuring null says undefined",
+    "file": "main-core/src/shell/mcp/tools/open_documents_tools.rs",
+    "find": "as it is null.\"",
+    "replace": "as it is undefined.\"",
+    "fn": ["open-documents-tools.call"]
+  },
+  {
+    "name": "session target resolver gets no options",
+    "file": "main-core/src/shell/mcp/tools/session_tools.rs",
+    "find": "args.push(JsonValue::Object(entries));",
+    "replace": "let _ = entries;",
+    "fn": ["session-tools.contentTarget", "session-tools.call", "document-tools.call"]
   }
 ]

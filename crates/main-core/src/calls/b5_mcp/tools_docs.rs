@@ -22,10 +22,10 @@ use crate::packages::zod::to_json_schema;
 use crate::pdf::pdfium::PdfiumError;
 use crate::pdf::read_text::{PdfPageText, PdfTextDoc, ReadPdfTextOptions};
 use crate::shell::mcp::cli_runner::CliRunner;
-use crate::shell::mcp::mcp_server::McpToolDefinition;
+use crate::shell::mcp::mcp_server::{HostCall, McpToolDefinition, Settled, ToolStep};
 use crate::shell::mcp::tools::document_tools::{
-    DocToolDeps, DocsControl, McpEditorCommandName, OutputPathOptions, create_document_tools,
-    document_driver, resolve_output_path, resolve_target_path, sanitize_file_base, unique_path_in,
+    DocToolDeps, OutputPathOptions, create_document_tools, document_driver, resolve_output_path,
+    resolve_target_path, sanitize_file_base, unique_path_in,
 };
 use crate::shell::mcp::tools::formats::{
     FORMAT_FAMILIES, FormatFamily, SessionFamily, capability_report, family_label,
@@ -35,14 +35,12 @@ use crate::shell::mcp::tools::hwp_tools::{
     HWP_MAX_CHARS, HwpReadError, HwpTextReader, create_hwp_tools, hwp_text_window, read_hwp_file,
 };
 use crate::shell::mcp::tools::open_documents_tools::{
-    CloseOutcome, OpenDocumentsControl, OpenDocumentsDeps, SaveOutcome, Unsaved, close_save_path,
-    create_open_document_tools, document_format, resolve_open_document,
-    resolve_open_document_of_family,
+    OpenDocumentsDeps, close_save_path, create_open_document_tools, document_format,
+    resolve_open_document, resolve_open_document_of_family,
 };
 use crate::shell::mcp::tools::pdf_tools::{PdfTextReader, create_pdf_tools, parse_page_list};
 use crate::shell::mcp::tools::session_tools::{
-    FamilyDriver, ResolveOptions, TargetResolver, content_target, create_session_host,
-    create_session_tools,
+    FamilyDriver, ResolveOptions, content_target, create_session_host, create_session_tools,
 };
 use crate::shell::tab_manager::{OpenDocumentTab, TabKind};
 
@@ -136,10 +134,10 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 default_save_dir: Rc::new(move || format!("{dir}/save")),
                 background: None,
                 open_in_tab: None,
-                docs: None,
+                docs: false,
                 extra_formats: None,
                 cli: None,
-                resolve_target: None,
+                resolve_target: false,
             };
             let requested = arg(args, 2).and_then(Value::as_str);
             let overwrite = arg(args, 3).and_then(Value::as_bool).unwrap_or(false);
@@ -197,7 +195,7 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         })(),
         "open-documents-tools.tools" => {
             let tools = create_open_document_tools(OpenDocumentsDeps {
-                control: None,
+                control: false,
                 default_save_dir: Rc::new(|| "/x".to_owned()),
             });
             Ok(Some(listed(&tools)))
@@ -335,8 +333,14 @@ fn listed(tools: &[McpToolDefinition<'_>]) -> Value {
     )
 }
 
-/// `tools.find(name).handler(args ?? {})`
-fn call_tool(tools: Vec<McpToolDefinition<'_>>, name: &str, args: Option<&Value>) -> Answer {
+/// `tools.find(name).handler(args ?? {})`, resumed through every host call
+/// the handler awaits: the fakes of the case answer them
+fn call_tool(
+    tools: Vec<McpToolDefinition<'_>>,
+    name: &str,
+    args: Option<&Value>,
+    fakes: &Fakes,
+) -> Answer {
     let Some(mut tool) = tools.into_iter().find(|tool| tool.name == name) else {
         return Err(CallError::plain(format!("no such tool: {name}")));
     };
@@ -344,9 +348,173 @@ fn call_tool(tools: Vec<McpToolDefinition<'_>>, name: &str, args: Option<&Value>
         Some(args) if !args.is_null() => jv(args),
         _ => jv(&json!({})),
     };
-    (tool.handler)(args)
+    drive((tool.handler)(args), fakes)
         .map(|value| value.map(|value| sv(&value)))
         .map_err(CallError::plain)
+}
+
+/// run the steps of a handler to its end: each host call it awaits is
+/// answered by the fakes, then the handler goes on
+fn drive(mut step: ToolStep<'_>, fakes: &Fakes) -> Settled {
+    loop {
+        match step {
+            ToolStep::Done(settled) => return settled,
+            ToolStep::Await { call, then } => step = then(fakes.answer(&call)),
+        }
+    }
+}
+
+fn string_at(args: &[JsonValue], at: usize) -> String {
+    match args.get(at) {
+        Some(JsonValue::String(text)) => text.clone(),
+        _ => String::new(),
+    }
+}
+
+fn number_at(args: &[JsonValue], at: usize) -> i64 {
+    match args.get(at) {
+        Some(JsonValue::Number(number)) => *number as i64,
+        _ => 0,
+    }
+}
+
+/// What answers the host calls a case's handler awaits, from the script the
+/// case gives; each call is one log line, as the TypeScript's fake writes it.
+struct Fakes {
+    log: Log,
+    /// the session drivers of a case
+    drivers: Vec<Rc<ScriptDriver>>,
+    /// the docs control: `{ open, run }`
+    docs: Option<Value>,
+    /// the target resolver: `{ answer }` or `{ throws }`
+    resolver: Option<Value>,
+    /// the open-documents control: `{ list, read, close, save }`
+    open: Option<Value>,
+}
+
+impl Fakes {
+    fn new(log: Log) -> Self {
+        Fakes {
+            log,
+            drivers: Vec::new(),
+            docs: None,
+            resolver: None,
+            open: None,
+        }
+    }
+
+    /// the answer to one awaited host call
+    fn answer(&self, call: &HostCall) -> Settled {
+        match (call.control, call.method) {
+            ("FamilyDriver", method) => {
+                let family = string_at(&call.args, 0);
+                // the last driver of a family wins, as the TypeScript's `Map`
+                let Some(driver) = self
+                    .drivers
+                    .iter()
+                    .rev()
+                    .find(|driver| driver.family.as_str() == family)
+                else {
+                    return Err(format!("no driver for {family}"));
+                };
+                if method == "openBlankTab" {
+                    driver.open()
+                } else {
+                    driver.save_to(&call.args)
+                }
+            }
+            ("DocsControl", "openBlankTab") => {
+                push(&self.log, vec![Value::from("docs.open")]);
+                match self.docs.as_ref().and_then(|docs| docs.get("open")) {
+                    Some(open) if open.is_object() => Err(text(open, "throws")),
+                    Some(open) => Ok(Some(JsonValue::Number(open.as_i64().unwrap_or(1) as f64))),
+                    None => Ok(Some(JsonValue::Number(1.0))),
+                }
+            }
+            ("DocsControl", "runCommand") => {
+                push(
+                    &self.log,
+                    vec![
+                        Value::from("docs.run"),
+                        Value::from(number_at(&call.args, 0)),
+                        Value::from(string_at(&call.args, 1)),
+                        call.args.get(2).map(sv).unwrap_or(Value::Null),
+                    ],
+                );
+                let run = self.docs.as_ref().and_then(|docs| docs.get("run"));
+                Ok(scripted(run)?.map(|value| jv(&value)))
+            }
+            ("TargetResolver", "resolve") => {
+                push(
+                    &self.log,
+                    vec![
+                        Value::from("resolveTarget"),
+                        Value::from(string_at(&call.args, 0)),
+                        Value::from(string_at(&call.args, 1)),
+                        call.args.get(2).map(sv).unwrap_or(Value::Null),
+                    ],
+                );
+                let resolver = self.resolver.as_ref();
+                if let Some(message) = resolver
+                    .and_then(|r| r.get("throws"))
+                    .and_then(Value::as_str)
+                {
+                    return Err(message.to_owned());
+                }
+                let answer = resolver
+                    .and_then(|r| r.get("answer"))
+                    .and_then(Value::as_i64)
+                    .unwrap_or(0);
+                Ok(Some(JsonValue::Number(answer as f64)))
+            }
+            ("OpenDocumentsControl", method) => self.open_documents(method, &call.args),
+            (control, method) => Err(format!("no fake answers {control}.{method}")),
+        }
+    }
+
+    /// the open-documents control of a case
+    fn open_documents(&self, method: &str, args: &[JsonValue]) -> Settled {
+        let field = |key: &str| self.open.as_ref().and_then(|spec| spec.get(key));
+        let tab_id = || match args.first().and_then(|tab| tab.get("id")).as_deref() {
+            Some(JsonValue::String(id)) => id.clone(),
+            _ => String::new(),
+        };
+        match method {
+            "list" => {
+                push(&self.log, vec![Value::from("control.list")]);
+                match field("list") {
+                    Some(list @ Value::Array(_)) => Ok(Some(jv(list))),
+                    other => Err(other.map(|list| text(list, "throws")).unwrap_or_default()),
+                }
+            }
+            "read" => {
+                push(
+                    &self.log,
+                    vec![Value::from("control.read"), Value::from(tab_id())],
+                );
+                Ok(scripted(field("read"))?.map(|value| jv(&value)))
+            }
+            "close" => {
+                push(
+                    &self.log,
+                    vec![
+                        Value::from("control.close"),
+                        Value::from(tab_id()),
+                        args.get(1).map(sv).unwrap_or(Value::Null),
+                    ],
+                );
+                Ok(scripted(field("close"))?.map(|value| jv(&value)))
+            }
+            "save" => {
+                push(
+                    &self.log,
+                    vec![Value::from("control.save"), Value::from(tab_id())],
+                );
+                Ok(scripted(field("save"))?.map(|value| jv(&value)))
+            }
+            other => Err(format!("no fake answers OpenDocumentsControl.{other}")),
+        }
+    }
 }
 
 // ---- session-tools ----
@@ -379,12 +547,9 @@ impl ScriptDriver {
     }
 }
 
-impl FamilyDriver for ScriptDriver {
-    fn family(&self) -> SessionFamily {
-        self.family
-    }
-
-    fn open_blank_tab(&self) -> Result<i64, String> {
+impl ScriptDriver {
+    /// the answer to `driver.openBlankTab()`
+    fn open(&self) -> Settled {
         push(
             &self.log,
             vec![
@@ -400,21 +565,52 @@ impl FamilyDriver for ScriptDriver {
         {
             return Err(message.to_owned());
         }
-        Ok(self.open.as_ref().and_then(Value::as_i64).unwrap_or(0))
+        let wc = self.open.as_ref().and_then(Value::as_i64).unwrap_or(0);
+        Ok(Some(JsonValue::Number(wc as f64)))
     }
 
-    fn save(&self, wc_id: i64, path: &str, overwrite: bool) -> Result<Option<JsonValue>, String> {
+    /// the answer to `driver.save(wcId, path, overwrite)`
+    fn save_to(&self, args: &[JsonValue]) -> Settled {
         push(
             &self.log,
             vec![
                 Value::from("driver.save"),
                 Value::from(self.family.as_str()),
-                Value::from(wc_id),
-                Value::from(path),
-                Value::Bool(overwrite),
+                Value::from(number_at(args, 1)),
+                Value::from(string_at(args, 2)),
+                Value::Bool(matches!(args.get(3), Some(JsonValue::Bool(true)))),
             ],
         );
         Ok(scripted(self.save.as_ref())?.map(|value| jv(&value)))
+    }
+}
+
+/// the host calls a driver of a case awaits name the family first, which
+/// [`Fakes::answer`] routes by
+impl FamilyDriver for ScriptDriver {
+    fn family(&self) -> SessionFamily {
+        self.family
+    }
+
+    fn open_blank_tab(&self) -> HostCall {
+        HostCall {
+            control: "FamilyDriver",
+            method: "openBlankTab",
+            args: vec![JsonValue::String(self.family.as_str().to_owned())],
+        }
+    }
+
+    fn save(&self, wc_id: i64, path: &str, overwrite: bool) -> HostCall {
+        HostCall {
+            control: "FamilyDriver",
+            method: "save",
+            args: vec![
+                JsonValue::String(self.family.as_str().to_owned()),
+                JsonValue::Number(wc_id as f64),
+                JsonValue::String(path.to_owned()),
+                JsonValue::Bool(overwrite),
+            ],
+        }
     }
 }
 
@@ -435,18 +631,24 @@ fn session_call(args: &[Value], cx: &mut Context) -> Answer {
         let wc = session.get("wcId").and_then(Value::as_i64).unwrap_or(0);
         host.borrow_mut().begin(family, wc);
     }
-    let drivers: Vec<Rc<dyn FamilyDriver>> = spec
+    let mut fakes = Fakes::new(Rc::clone(&log));
+    fakes.drivers = spec
         .get("drivers")
         .and_then(Value::as_array)
         .map(|list| {
             list.iter()
                 .filter_map(|d| ScriptDriver::of(d, Rc::clone(&log)))
-                .map(|d| Rc::new(d) as Rc<dyn FamilyDriver>)
+                .map(Rc::new)
                 .collect()
         })
         .unwrap_or_default();
+    let drivers: Vec<Rc<dyn FamilyDriver>> = fakes
+        .drivers
+        .iter()
+        .map(|d| Rc::clone(d) as Rc<dyn FamilyDriver>)
+        .collect();
     let tools = create_session_tools(&drivers, Rc::clone(&host));
-    let answer = call_tool(tools, &text(&spec, "tool"), spec.get("args"));
+    let answer = call_tool(tools, &text(&spec, "tool"), spec.get("args"), &fakes);
     push(
         &log,
         vec![
@@ -489,42 +691,6 @@ fn session_host_call(args: &[Value]) -> Answer {
     Ok(Some(Value::Array(answers)))
 }
 
-/// a resolver of a case: `{ answer }` or `{ throws }`
-struct ScriptResolver {
-    spec: Value,
-    log: Log,
-}
-
-impl TargetResolver for ScriptResolver {
-    fn resolve(
-        &self,
-        target: &str,
-        family: SessionFamily,
-        options: Option<&ResolveOptions>,
-    ) -> Result<i64, String> {
-        let options = match options {
-            Some(o) => match o.focus {
-                Some(focus) => json!({ "focus": focus }),
-                None => json!({}),
-            },
-            None => Value::Null,
-        };
-        push(
-            &self.log,
-            vec![
-                Value::from("resolveTarget"),
-                Value::from(target),
-                Value::from(family.as_str()),
-                options,
-            ],
-        );
-        if let Some(message) = self.spec.get("throws").and_then(Value::as_str) {
-            return Err(message.to_owned());
-        }
-        Ok(self.spec.get("answer").and_then(Value::as_i64).unwrap_or(0))
-    }
-}
-
 fn content_target_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).cloned().unwrap_or(Value::Null);
     let log = new_log();
@@ -537,15 +703,11 @@ fn content_target_call(args: &[Value], cx: &mut Context) -> Answer {
             session.get("wcId").and_then(Value::as_i64).unwrap_or(0),
         );
     }
-    let resolver: Option<Rc<dyn TargetResolver>> =
-        spec.get("resolver").filter(|r| r.is_object()).map(|r| {
-            Rc::new(ScriptResolver {
-                spec: r.clone(),
-                log: Rc::clone(&log),
-            }) as Rc<dyn TargetResolver>
-        });
+    // a resolver of a case: `{ answer }` or `{ throws }`
+    let mut fakes = Fakes::new(Rc::clone(&log));
+    fakes.resolver = spec.get("resolver").filter(|r| r.is_object()).cloned();
     let family = SessionFamily::parse(&text(&spec, "family")).unwrap_or(SessionFamily::Docx);
-    let target = content_target(Rc::clone(&host), resolver, family);
+    let target = content_target(Rc::clone(&host), fakes.resolver.is_some(), family);
     let mut answers = Vec::new();
     for call in spec
         .get("calls")
@@ -557,8 +719,16 @@ fn content_target_call(args: &[Value], cx: &mut Context) -> Answer {
         let options = call.get("options").map(|o| ResolveOptions {
             focus: o.get("focus").and_then(Value::as_bool),
         });
-        answers.push(match target(document.as_ref(), options) {
-            Ok(wc) => json!({ "ok": wc }),
+        let step = target(
+            document.as_ref(),
+            options,
+            Box::new(|found: Result<i64, String>| {
+                ToolStep::Done(found.map(|wc| Some(JsonValue::Number(wc as f64))))
+            }),
+        );
+        answers.push(match drive(step, &fakes) {
+            Ok(Some(JsonValue::Number(wc))) => json!({ "ok": wc as i64 }),
+            Ok(_) => Value::Null,
             Err(message) => json!({ "error": message }),
         });
     }
@@ -567,41 +737,6 @@ fn content_target_call(args: &[Value], cx: &mut Context) -> Answer {
 }
 
 // ---- document-tools ----
-
-/// the docs control of a case: `{ open, run }`
-struct ScriptDocs {
-    spec: Value,
-    log: Log,
-}
-
-impl DocsControl for ScriptDocs {
-    fn open_blank_tab(&self) -> Result<i64, String> {
-        push(&self.log, vec![Value::from("docs.open")]);
-        match self.spec.get("open") {
-            Some(open) if open.is_object() => Err(text(open, "throws")),
-            Some(open) => Ok(open.as_i64().unwrap_or(1)),
-            None => Ok(1),
-        }
-    }
-
-    fn run_command(
-        &self,
-        wc_id: i64,
-        command: McpEditorCommandName,
-        payload: &JsonValue,
-    ) -> Result<Option<JsonValue>, String> {
-        push(
-            &self.log,
-            vec![
-                Value::from("docs.run"),
-                Value::from(wc_id),
-                Value::from(command.as_str()),
-                sv(payload),
-            ],
-        );
-        Ok(scripted(self.spec.get("run"))?.map(|value| jv(&value)))
-    }
-}
 
 /// the dependencies of a case (`DepsSpec` of the spec) and its scripted CLI
 fn build_deps<'h>(d: &Value, log: &Log) -> (Rc<DocToolDeps<'h>>, Option<Rc<ScriptedCli>>) {
@@ -628,18 +763,6 @@ fn build_deps<'h>(d: &Value, log: &Log) -> (Rc<DocToolDeps<'h>>, Option<Rc<Scrip
                 }
             }) as Rc<dyn Fn(&str) -> Result<(), String>>
         });
-    let docs = d.get("docs").map(|docs| {
-        Rc::new(ScriptDocs {
-            spec: docs.clone(),
-            log: Rc::clone(log),
-        }) as Rc<dyn DocsControl>
-    });
-    let resolve_target = d.get("resolve").map(|resolve| {
-        Rc::new(ScriptResolver {
-            spec: resolve.clone(),
-            log: Rc::clone(log),
-        }) as Rc<dyn TargetResolver>
-    });
     let deps = DocToolDeps {
         version: d
             .get("version")
@@ -649,7 +772,7 @@ fn build_deps<'h>(d: &Value, log: &Log) -> (Rc<DocToolDeps<'h>>, Option<Rc<Scrip
         default_save_dir: Rc::new(move || save_dir.clone()),
         background: d.get("background").and_then(Value::as_bool),
         open_in_tab,
-        docs,
+        docs: d.get("docs").is_some(),
         extra_formats: d.get("extraFormats").and_then(Value::as_array).map(|list| {
             list.iter()
                 .filter_map(Value::as_str)
@@ -657,7 +780,7 @@ fn build_deps<'h>(d: &Value, log: &Log) -> (Rc<DocToolDeps<'h>>, Option<Rc<Scrip
                 .collect()
         }),
         cli: cli.clone().map(|cli| cli as Rc<dyn CliRunner>),
-        resolve_target,
+        resolve_target: d.get("resolve").is_some(),
     };
     (Rc::new(deps), cli)
 }
@@ -674,9 +797,13 @@ fn document_call(args: &[Value], cx: &mut Context) -> Answer {
             session.get("wcId").and_then(Value::as_i64).unwrap_or(0),
         );
     }
-    let (deps, cli) = build_deps(spec.get("deps").unwrap_or(&Value::Null), &log);
+    let deps_spec = spec.get("deps").cloned().unwrap_or(Value::Null);
+    let (deps, cli) = build_deps(&deps_spec, &log);
+    let mut fakes = Fakes::new(Rc::clone(&log));
+    fakes.docs = deps_spec.get("docs").cloned();
+    fakes.resolver = deps_spec.get("resolve").cloned();
     let tools = create_document_tools(deps, host);
-    let answer = call_tool(tools, &text(&spec, "tool"), spec.get("args"));
+    let answer = call_tool(tools, &text(&spec, "tool"), spec.get("args"), &fakes);
     if let Some(dir) = cli.and_then(|cli| cli.scratch.borrow().clone()) {
         push(
             &log,
@@ -693,22 +820,25 @@ fn document_call(args: &[Value], cx: &mut Context) -> Answer {
 fn driver_call(args: &[Value], cx: &mut Context) -> Answer {
     let world = arg(args, 0).cloned().unwrap_or(Value::Null);
     let log = new_log();
-    let docs: Rc<dyn DocsControl> = Rc::new(ScriptDocs {
-        spec: world,
-        log: Rc::clone(&log),
-    });
-    let driver = document_driver(docs);
+    let mut fakes = Fakes::new(Rc::clone(&log));
+    fakes.docs = Some(world);
+    let driver = document_driver();
     let answer = (|| {
         let mut out = Map::new();
         out.insert("family".into(), Value::from(driver.family().as_str()));
         if str_arg(args, 1).is_ok_and(|op| op == "open") {
-            let wc = driver.open_blank_tab().map_err(CallError::plain)?;
-            out.insert("wcId".into(), Value::from(wc));
+            match fakes.answer(&driver.open_blank_tab()) {
+                Ok(Some(JsonValue::Number(wc))) => {
+                    out.insert("wcId".into(), Value::from(wc as i64));
+                }
+                Ok(_) => {}
+                Err(message) => return Err(CallError::plain(message)),
+            }
         } else {
             let wc = arg(args, 2).and_then(Value::as_i64).unwrap_or(0);
             let overwrite = arg(args, 4).and_then(Value::as_bool).unwrap_or(false);
-            let saved = driver
-                .save(wc, str_arg(args, 3)?, overwrite)
+            let saved = fakes
+                .answer(&driver.save(wc, str_arg(args, 3)?, overwrite))
                 .map_err(CallError::plain)?;
             if let Some(saved) = saved {
                 out.insert("saved".into(), sv(&saved));
@@ -743,82 +873,18 @@ fn tabs_of(value: Option<&Value>) -> Vec<OpenDocumentTab> {
         .unwrap_or_default()
 }
 
-/// the open-documents control of a case: `{ list, read, close, save }`
-struct ScriptOpenControl {
-    spec: Value,
-    log: Log,
-}
-
-impl OpenDocumentsControl for ScriptOpenControl {
-    fn list(&self) -> Result<Vec<OpenDocumentTab>, String> {
-        push(&self.log, vec![Value::from("control.list")]);
-        match self.spec.get("list") {
-            Some(Value::Array(_)) => Ok(tabs_of(self.spec.get("list"))),
-            other => Err(other.map(|list| text(list, "throws")).unwrap_or_default()),
-        }
-    }
-
-    fn read(&self, tab: &OpenDocumentTab) -> Result<Option<JsonValue>, String> {
-        push(
-            &self.log,
-            vec![Value::from("control.read"), Value::from(tab.id.as_str())],
-        );
-        Ok(scripted(self.spec.get("read"))?.map(|value| jv(&value)))
-    }
-
-    fn close(&self, tab: &OpenDocumentTab, unsaved: Unsaved) -> Result<CloseOutcome, String> {
-        push(
-            &self.log,
-            vec![
-                Value::from("control.close"),
-                Value::from(tab.id.as_str()),
-                json!({ "unsaved": unsaved.as_str() }),
-            ],
-        );
-        let outcome = scripted(self.spec.get("close"))?;
-        Ok(CloseOutcome {
-            saved_path: outcome
-                .as_ref()
-                .and_then(|o| o.get("savedPath"))
-                .and_then(Value::as_str)
-                .map(str::to_owned),
-        })
-    }
-
-    fn save(&self, tab: &OpenDocumentTab) -> Result<SaveOutcome, String> {
-        push(
-            &self.log,
-            vec![Value::from("control.save"), Value::from(tab.id.as_str())],
-        );
-        let outcome = scripted(self.spec.get("save"))?;
-        Ok(SaveOutcome {
-            saved_path: outcome
-                .as_ref()
-                .and_then(|o| o.get("savedPath"))
-                .and_then(Value::as_str)
-                .unwrap_or_default()
-                .to_owned(),
-        })
-    }
-}
-
 fn open_call(args: &[Value], cx: &mut Context) -> Answer {
     let spec = arg(args, 0).cloned().unwrap_or(Value::Null);
     let log = new_log();
-    let control = spec
-        .get("control")
-        .filter(|c| c.is_object())
-        .map(|control| {
-            Rc::new(ScriptOpenControl {
-                spec: control.clone(),
-                log: Rc::clone(&log),
-            }) as Rc<dyn OpenDocumentsControl>
-        });
+    // the open-documents control of a case: `{ list, read, close, save }`
+    let control = spec.get("control").filter(|c| c.is_object()).cloned();
+    let mut fakes = Fakes::new(Rc::clone(&log));
+    fakes.open = control.clone();
     let tools = create_open_document_tools(OpenDocumentsDeps {
-        control,
+        control: control.is_some(),
         default_save_dir: Rc::new(|| "/unused".to_owned()),
     });
-    let answer = call_tool(tools, "open_documents", spec.get("args"));
+    let answer = call_tool(tools, "open_documents", spec.get("args"), &fakes);
     flush(&log, cx);
     answer
 }
@@ -937,7 +1003,12 @@ fn pdf_call(args: &[Value], cx: &mut Context) -> Answer {
         spec.get("reader").unwrap_or(&Value::Null),
         Rc::clone(&log),
     ));
-    let answer = call_tool(create_pdf_tools(reader), "read_pdf", spec.get("args"));
+    let answer = call_tool(
+        create_pdf_tools(reader),
+        "read_pdf",
+        spec.get("args"),
+        &Fakes::new(Rc::clone(&log)),
+    );
     flush(&log, cx);
     answer
 }
@@ -982,7 +1053,12 @@ fn hwp_call(args: &[Value], cx: &mut Context) -> Answer {
         spec.get("world").unwrap_or(&Value::Null),
         Rc::clone(&log),
     ));
-    let answer = call_tool(create_hwp_tools(reader), "read_hwp", spec.get("args"));
+    let answer = call_tool(
+        create_hwp_tools(reader),
+        "read_hwp",
+        spec.get("args"),
+        &Fakes::new(Rc::clone(&log)),
+    );
     flush(&log, cx);
     answer
 }

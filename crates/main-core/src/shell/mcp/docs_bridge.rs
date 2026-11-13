@@ -26,12 +26,16 @@
 //! - the two calls of `createDocsControl(deps)` are [`DocsBridge::open_blank_tab`]
 //!   and [`DocsBridge::run_command`]. Each answers [`Submitted`]: settled at
 //!   once, or pending, its promise settling later through
-//!   [`DocsBridgeHost::settle`]. The host implements the tool layer's
-//!   `DocsControl` over them by waiting for that settle.
+//!   [`DocsBridgeHost::settle`]. The tool layer's `DocsControl` host calls
+//!   (`document_tools::docs_open_blank_call` / `docs_run_call`) are answered
+//!   through them: the host remembers which suspended tool (ticket) waits on
+//!   a `Pending(op)` and resumes it with the outcome `settle(op, ..)` gives.
 //!
 //! What `deps` gave (`openBlankTab`, `authorizeSave`, `abandonBlankTab`) and
-//! `existsSync` are host calls too. `deps.openBlankTab()` is taken not to
-//! throw; the optional `abandonBlankTab` is a host that does nothing.
+//! `existsSync` are synchronous host calls too: the TypeScript's `deps`
+//! return a number and `void`, nothing there awaits a renderer.
+//! `deps.openBlankTab()` is taken not to throw; the optional `abandonBlankTab`
+//! is a host that does nothing.
 //!
 //! One thing of the TypeScript's scheduling is kept: a promise's reaction runs
 //! after the code that settled it. So when a tab announces itself, the waiters'

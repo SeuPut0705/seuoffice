@@ -16,7 +16,7 @@ use std::rc::Rc;
 use jscompat::node_path::host::{basename, extname, is_absolute};
 use jscompat::{JsObject, JsonValue, number_to_string};
 
-use super::session_tools::string_or_empty;
+use super::session_tools::{string_or_empty, sync_handler};
 use crate::node_fs::NodeError;
 use crate::packages::zod::z;
 use crate::pdf::generated_output::exists_sync;
@@ -138,7 +138,7 @@ pub fn create_hwp_tools<'h>(reader: Rc<dyn HwpTextReader + 'h>) -> Vec<McpToolDe
                     .describe("character to start from; default 0"),
             ),
         ])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let file_path = string_or_empty(&args, "path")?;
             if !is_absolute(&file_path) {
                 return Err("path must be absolute".to_owned());

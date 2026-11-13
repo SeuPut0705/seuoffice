@@ -1559,6 +1559,24 @@ const openCases: Case[] = [
     OPEN_FILES,
   ),
   openCase(CONTROL(), { action: 'close', target: 'ghost' }, 'closing what is not open'),
+  openCase(
+    CONTROL({ save: { undef: true } }),
+    { action: 'save', target: 't1' },
+    'save answered with nothing: destructuring undefined throws',
+    OPEN_FILES,
+  ),
+  openCase(
+    CONTROL({ close: { value: null } }),
+    { action: 'close', target: 't1' },
+    'close answered with null: destructuring null throws',
+    OPEN_FILES,
+  ),
+  openCase(
+    CONTROL({ save: { value: 5 } }),
+    { action: 'save', target: 't1' },
+    'save answered with a number: no savedPath, so savedTo is left out',
+    OPEN_FILES,
+  ),
 ]
 
 const toolsOnlyCases: Case[] = [

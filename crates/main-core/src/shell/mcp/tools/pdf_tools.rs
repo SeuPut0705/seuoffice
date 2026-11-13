@@ -18,7 +18,7 @@ use std::rc::Rc;
 use jscompat::node_path::host::{basename, extname, is_absolute};
 use jscompat::{JsonValue, js_regex, number_to_string, to_number, trim};
 
-use super::session_tools::{js_object, string_or_empty};
+use super::session_tools::{js_object, string_or_empty, sync_handler};
 use crate::packages::zod::z;
 use crate::pdf::generated_output::exists_sync;
 use crate::pdf::node_io::read_file_bytes;
@@ -109,7 +109,7 @@ pub fn create_pdf_tools<'h>(reader: Rc<dyn PdfTextReader + 'h>) -> Vec<McpToolDe
                 ),
             ),
         ])),
-        handler: Box::new(move |args: JsonValue| {
+        handler: sync_handler(move |args: JsonValue| {
             let file_path = string_or_empty(&args, "path")?;
             if !is_absolute(&file_path) {
                 return Err("path must be absolute".to_owned());

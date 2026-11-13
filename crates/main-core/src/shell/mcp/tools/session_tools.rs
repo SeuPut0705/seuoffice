@@ -9,11 +9,13 @@
 //! behind a [`FamilyDriver`]. One session is active at a time: creating a new
 //! session replaces the previous one.
 //!
-//! Every `await` of the TypeScript is a plain call here: the drivers, the
-//! target resolver and the controls are host traits whose methods take `&self`
-//! and are held as `Rc<dyn ..>`, so several handlers share them. The session
-//! host is the one piece of state the tool set shares: [`SharedSessionHost`],
-//! an `Rc<RefCell<..>>` made by [`create_session_host`].
+//! Every `await` of the TypeScript that a renderer answers is a step here, not
+//! a call: a handler returns [`ToolStep::Await`] with the [`HostCall`] it
+//! waits for and the continuation that goes on with the answer ([`await_host`]).
+//! The drivers name the host call each of their methods awaits; the target
+//! resolver is the call [`resolve_target_call`]. The session host is the one
+//! piece of state the tool set shares: [`SharedSessionHost`], an
+//! `Rc<RefCell<..>>` made by [`create_session_host`].
 //!
 //! The bottom of the file holds the argument helpers the tool modules share
 //! (`String(args.x ?? '')`, `args.x === true`, an object spread); the other
@@ -28,9 +30,9 @@ use jscompat::{JsObject, JsonValue, to_primitive};
 use super::formats::{SessionFamily, family_label, with_save_extension};
 use crate::packages::i18n::PRODUCT_NAME;
 use crate::packages::zod::z;
-use crate::shell::mcp::mcp_server::McpToolDefinition;
+use crate::shell::mcp::mcp_server::{HostCall, McpToolDefinition, Settled, ToolHandler, ToolStep};
 
-/// `options` of a [`TargetResolver`] call: `{ focus?: boolean }`
+/// `options` of a [`resolve_target_call`]: `{ focus?: boolean }`
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct ResolveOptions {
     pub focus: Option<bool>,
@@ -45,25 +47,48 @@ pub struct ResolveOptions {
 /// With `focus`, the tab is also brought into view (activated, and the window
 /// revealed) so the user watches the change land. Mutating tools ask for it;
 /// reads do not, because an agent sweeping several tabs for context should
-/// not make the UI jump along. `Err` is the message of what it throws.
-pub trait TargetResolver {
-    fn resolve(
-        &self,
-        target: &str,
-        family: SessionFamily,
-        options: Option<&ResolveOptions>,
-    ) -> Result<i64, String>;
+/// not make the UI jump along.
+///
+/// The resolution waits for the tab manager and the window, so on the one core
+/// thread it is a step, not a method: this is the call the handler suspends on
+/// (`TargetResolver.resolve(target, family, options?)`). The host answers the
+/// webContents id as a number, or the message the resolver threw.
+pub fn resolve_target_call(
+    target: &str,
+    family: SessionFamily,
+    options: Option<ResolveOptions>,
+) -> HostCall {
+    let mut args = vec![
+        JsonValue::String(target.to_owned()),
+        JsonValue::String(family.as_str().to_owned()),
+    ];
+    if let Some(options) = options {
+        let mut entries = JsObject::new();
+        if let Some(focus) = options.focus {
+            entries.set("focus", JsonValue::Bool(focus));
+        }
+        args.push(JsonValue::Object(entries));
+    }
+    HostCall {
+        control: "TargetResolver",
+        method: "resolve",
+        args,
+    }
 }
 
 /// `FamilyDriver`: one family's visible-session lifecycle, implemented by the
 /// family's tool module. `open_blank_tab` opens the tab; `save` writes that
-/// tab to disk through the family's own bridge. `save` answers what the
-/// bridge answered (`None` is `undefined`); a driver that reports failure as
-/// data answers `{ ok: false, .. }` instead of failing.
+/// tab to disk through the family's own bridge. Both wait for a renderer, so a
+/// driver does not run them: it names the host call each one awaits (the
+/// family's control: `DocsControl.openBlankTab`, `DocsControl.runCommand`,
+/// ...), and the session tools suspend on it. `open_blank_tab` is answered
+/// with the new tab's webContents id; `save` with what the bridge answered
+/// (`None` is `undefined`), where a driver that reports failure as data
+/// answers `{ ok: false, .. }` instead of failing.
 pub trait FamilyDriver {
     fn family(&self) -> SessionFamily;
-    fn open_blank_tab(&self) -> Result<i64, String>;
-    fn save(&self, wc_id: i64, path: &str, overwrite: bool) -> Result<Option<JsonValue>, String>;
+    fn open_blank_tab(&self) -> HostCall;
+    fn save(&self, wc_id: i64, path: &str, overwrite: bool) -> HostCall;
 }
 
 /// `ActiveSession`
@@ -144,11 +169,17 @@ fn save_failure(result: Option<&JsonValue>) -> Option<String> {
     })
 }
 
+/// The continuation a [`ContentTarget`] runs with the tab it found, or the
+/// message of what the lookup threw.
+pub type TargetThen<'h> = Box<dyn FnOnce(Result<i64, String>) -> ToolStep<'h> + 'h>;
+
 /// The function [`content_target`] returns: where a content tool should send
 /// its command. Called with `args.document` (`None` is `undefined`) and, for
-/// a mutating tool, `{ focus: true }`.
+/// a mutating tool, `{ focus: true }`, then the continuation of the handler
+/// (`const wc = await target(..)` is `target(.., then)`). [`with_target`]
+/// is the usual way to call it.
 pub type ContentTarget<'h> =
-    Rc<dyn Fn(Option<&JsonValue>, Option<ResolveOptions>) -> Result<i64, String> + 'h>;
+    Rc<dyn Fn(Option<&JsonValue>, Option<ResolveOptions>, TargetThen<'h>) -> ToolStep<'h> + 'h>;
 
 /// `contentTarget(host, resolveTarget, family)`: where a content tool should
 /// send its command: the open document the caller named, or the session's own
@@ -160,26 +191,93 @@ pub type ContentTarget<'h> =
 /// tab keeps its own dirty/save lifecycle: MCP edits land in the live document
 /// and the user decides when to save (or the caller uses `open_documents
 /// {action:"save"}`).
+///
+/// `resolve_target` is whether the shell wired a `TargetResolver` (absent in
+/// headless/unit runs, where a `document` argument is refused). The resolver
+/// itself awaits the tab manager and the window, so naming a document is a
+/// host call ([`resolve_target_call`]) the continuation resumes from.
 pub fn content_target<'h>(
     host: SharedSessionHost,
-    resolve_target: Option<Rc<dyn TargetResolver + 'h>>,
+    resolve_target: bool,
     family: SessionFamily,
 ) -> ContentTarget<'h> {
     Rc::new(
-        move |document: Option<&JsonValue>, options: Option<ResolveOptions>| {
+        move |document: Option<&JsonValue>,
+              options: Option<ResolveOptions>,
+              then: TargetThen<'h>| {
             let named = match document {
                 Some(JsonValue::String(text)) if !text.is_empty() => text,
-                _ => return host.borrow().require(family),
+                _ => {
+                    let wc = host.borrow().require(family);
+                    return then(wc);
+                }
             };
-            let Some(resolver) = &resolve_target else {
-                return Err(
+            if !resolve_target {
+                return then(Err(
                     "this build cannot target an open document; use create_session and its own tab instead"
                         .to_owned(),
-                );
-            };
-            resolver.resolve(named, family, options.as_ref())
+                ));
+            }
+            await_host(
+                resolve_target_call(named, family, options),
+                move |settled| then(tab_id_of(settled)),
+            )
         },
     )
+}
+
+/// `await target(args.document, options)` then `next(wc, args)`: the handler
+/// of a content tool. A lookup that threw ends the tool with its message.
+pub fn with_target<'h, F>(
+    target: &ContentTarget<'h>,
+    args: JsonValue,
+    options: Option<ResolveOptions>,
+    next: F,
+) -> ToolStep<'h>
+where
+    F: FnOnce(i64, JsonValue) -> ToolStep<'h> + 'h,
+{
+    let document = args.get("document").map(|document| document.into_owned());
+    target(
+        document.as_ref(),
+        options,
+        Box::new(move |found| match found {
+            Ok(wc) => next(wc, args),
+            Err(message) => ToolStep::Done(Err(message)),
+        }),
+    )
+}
+
+/// `await` of a host call: the handler goes on in `then` once the host has
+/// answered it ([`Settled`]: the value, `None` being `undefined`, or the
+/// message it threw).
+pub fn await_host<'h, F>(call: HostCall, then: F) -> ToolStep<'h>
+where
+    F: FnOnce(Settled) -> ToolStep<'h> + 'h,
+{
+    ToolStep::Await {
+        call,
+        then: Box::new(then),
+    }
+}
+
+/// the webContents id a host answered to a call whose TypeScript gives a
+/// `number` (`openBlankTab`, the target resolver)
+pub fn tab_id_of(settled: Settled) -> Result<i64, String> {
+    match settled {
+        Ok(Some(JsonValue::Number(id))) => Ok(id as i64),
+        Ok(_) => Err("the host answered no tab id".to_owned()),
+        Err(message) => Err(message),
+    }
+}
+
+/// A tool whose handler awaits no host call: what it computes is the tool's
+/// answer at once (`ToolStep::Done`).
+pub fn sync_handler<'h, F>(mut handler: F) -> ToolHandler<'h>
+where
+    F: FnMut(JsonValue) -> Result<Option<JsonValue>, String> + 'h,
+{
+    Box::new(move |args| ToolStep::Done(handler(args)))
 }
 
 /// `createSessionTools(drivers, host)`: `create_session` and `save_session`
@@ -226,26 +324,33 @@ pub fn create_session_tools<'h>(
                 _ => None,
             };
             let Some(driver) = driver else {
-                return Err(format!(
-                    "unknown family \"{}\"",
-                    string_of(family_arg.as_deref())?
-                ));
+                return ToolStep::Done(
+                    string_of(family_arg.as_deref())
+                        .and_then(|name| Err(format!("unknown family \"{name}\""))),
+                );
             };
             let family = driver.family();
-            let wc_id = driver.open_blank_tab()?;
-            create_host.borrow_mut().begin(family, wc_id);
-            Ok(Some(js_object(vec![
-                ("ok", JsonValue::Bool(true)),
-                ("family", JsonValue::String(family.as_str().to_owned())),
-                ("sessionId", JsonValue::Number(wc_id as f64)),
-                (
-                    "message",
-                    JsonValue::String(format!(
-                        "A new empty {} is open in {PRODUCT_NAME}. Add content, then call save_session.",
-                        family_label(family.editor())
-                    )),
-                ),
-            ])))
+            let host = Rc::clone(&create_host);
+            // `const wcId = await driver.openBlankTab()`
+            await_host(driver.open_blank_tab(), move |settled| {
+                let wc_id = match tab_id_of(settled) {
+                    Ok(wc_id) => wc_id,
+                    Err(message) => return ToolStep::Done(Err(message)),
+                };
+                host.borrow_mut().begin(family, wc_id);
+                ToolStep::Done(Ok(Some(js_object(vec![
+                    ("ok", JsonValue::Bool(true)),
+                    ("family", JsonValue::String(family.as_str().to_owned())),
+                    ("sessionId", JsonValue::Number(wc_id as f64)),
+                    (
+                        "message",
+                        JsonValue::String(format!(
+                            "A new empty {} is open in {PRODUCT_NAME}. Add content, then call save_session.",
+                            family_label(family.editor())
+                        )),
+                    ),
+                ]))))
+            })
         }),
     };
 
@@ -270,46 +375,60 @@ pub fn create_session_tools<'h>(
             ),
         ])),
         handler: Box::new(move |args: JsonValue| {
-            let Some(session) = save_host.borrow().current() else {
-                return Err("no session is open — call create_session first".to_owned());
-            };
-            let Some(driver) = driver_of(&save_drivers, session.family.as_str()) else {
-                return Err(format!(
-                    "no driver for the active \"{}\" session",
-                    session.family.as_str()
-                ));
-            };
-            let requested = string_or_empty(&args, "path")?;
-            if !is_absolute(&requested) {
-                return Err("path must be absolute".to_owned());
-            }
-            let file_path = with_save_extension(session.family, &requested)?;
-            let result = driver.save(session.wc_id, &file_path, is_true(&args, "overwrite"))?;
-            // Some drivers report a failed write as data rather than by throwing
-            // (sheets returns the renderer's SaveOutcome `{ok:false}`), so returning
-            // it verbatim would tell the agent the file was written when it was not.
-            // Raise a tool error and keep the session open: the edits are still in
-            // the tab, so the caller can correct the path and retry instead of
-            // rebuilding the document from scratch.
-            if let Some(failure) = save_failure(result.as_ref()) {
-                return Err(failure);
-            }
-            save_host.borrow_mut().end();
-            // Normalize the success shape: drivers differ (docs returns `{ok,path}`,
-            // slides just `{path}`), and an agent that checks `ok` on every family
-            // would read the slides save as a failure. A driver that returned a
-            // non-object is reported as-is under `result` rather than being spread
-            // into the response as indexed characters.
-            let mut out = JsObject::new();
-            out.set("ok", JsonValue::Bool(true));
-            match &result {
-                Some(detail @ (JsonValue::Object(_) | JsonValue::Array(_))) => {
-                    spread(&mut out, detail);
+            // everything before `await driver.save(..)` runs without the host
+            let prepared = (|| {
+                let Some(session) = save_host.borrow().current() else {
+                    return Err("no session is open — call create_session first".to_owned());
+                };
+                let Some(driver) = driver_of(&save_drivers, session.family.as_str()) else {
+                    return Err(format!(
+                        "no driver for the active \"{}\" session",
+                        session.family.as_str()
+                    ));
+                };
+                let requested = string_or_empty(&args, "path")?;
+                if !is_absolute(&requested) {
+                    return Err("path must be absolute".to_owned());
                 }
-                Some(other) => out.set("result", other.clone()),
-                None => {}
-            }
-            Ok(Some(JsonValue::Object(out)))
+                let file_path = with_save_extension(session.family, &requested)?;
+                Ok(driver.save(session.wc_id, &file_path, is_true(&args, "overwrite")))
+            })();
+            let call = match prepared {
+                Ok(call) => call,
+                Err(message) => return ToolStep::Done(Err(message)),
+            };
+            let host = Rc::clone(&save_host);
+            await_host(call, move |settled| {
+                let result = match settled {
+                    Ok(result) => result,
+                    Err(message) => return ToolStep::Done(Err(message)),
+                };
+                // Some drivers report a failed write as data rather than by throwing
+                // (sheets returns the renderer's SaveOutcome `{ok:false}`), so returning
+                // it verbatim would tell the agent the file was written when it was not.
+                // Raise a tool error and keep the session open: the edits are still in
+                // the tab, so the caller can correct the path and retry instead of
+                // rebuilding the document from scratch.
+                if let Some(failure) = save_failure(result.as_ref()) {
+                    return ToolStep::Done(Err(failure));
+                }
+                host.borrow_mut().end();
+                // Normalize the success shape: drivers differ (docs returns `{ok,path}`,
+                // slides just `{path}`), and an agent that checks `ok` on every family
+                // would read the slides save as a failure. A driver that returned a
+                // non-object is reported as-is under `result` rather than being spread
+                // into the response as indexed characters.
+                let mut out = JsObject::new();
+                out.set("ok", JsonValue::Bool(true));
+                match &result {
+                    Some(detail @ (JsonValue::Object(_) | JsonValue::Array(_))) => {
+                        spread(&mut out, detail);
+                    }
+                    Some(other) => out.set("result", other.clone()),
+                    None => {}
+                }
+                ToolStep::Done(Ok(Some(JsonValue::Object(out))))
+            })
         }),
     };
 
