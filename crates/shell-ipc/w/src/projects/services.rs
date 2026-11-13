@@ -784,7 +784,7 @@ pub(super) struct ChatsOfShell {
 }
 
 fn chat_error(error: main_core::shell::projects::chat_store::ChatStoreError) -> Thrown {
-    Thrown(error.0)
+    Thrown(error.message)
 }
 
 impl ProjectIpcChats for ChatsOfShell {
