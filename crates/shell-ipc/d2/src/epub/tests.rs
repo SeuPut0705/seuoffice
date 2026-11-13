@@ -1024,12 +1024,19 @@ fn probe_triggers_call_the_editor() {
         vec![(Target::View(view), "epub:menu-command", vec![s("find")])]
     );
     edit(&mut rt, sender, "x");
-    let (_, answer) = trigger("request-save", json!(["save"]));
+    let (_, answer) = trigger("d2/epub:request-save", json!(["save"]));
+    assert_eq!(*answer.borrow(), Some(Ok(IpcValue::Undefined)));
     assert_eq!(
         events(&rt),
         vec![(Target::View(view), "epub:save-request", vec![s("save")])]
     );
+    let (_, pending) = trigger("outcome", json!([]));
+    assert_eq!(*pending.borrow(), Some(Ok(IpcValue::Null)));
     rt.send("epub:save-request-ack", sender, vec![true.into_ipc()]);
-    assert_eq!(*answer.borrow(), Some(Ok(true.into_ipc())));
+    let (_, settled) = trigger("outcome", json!([]));
+    assert_eq!(
+        *settled.borrow(),
+        Some(Ok(obj([("value", true.into_ipc())])))
+    );
     assert!(!trigger("export-request", json!([])).0);
 }

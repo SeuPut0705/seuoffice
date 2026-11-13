@@ -154,6 +154,7 @@ struct ViewState {
 /// `createReadingState({ dir: userDataDir, write: atomicWriteFile })`
 struct ReadingDeps {
     dir: String,
+    shell: EpubShellHost,
 }
 
 impl ReadingStateDeps for ReadingDeps {
@@ -164,14 +165,8 @@ impl ReadingStateDeps for ReadingDeps {
         atomic_write_file(path, text.as_bytes())
     }
     fn now(&mut self) -> f64 {
-        now_ms()
+        self.shell.now()
     }
-}
-
-fn now_ms() -> f64 {
-    std::time::SystemTime::now()
-        .duration_since(std::time::UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_millis() as f64)
 }
 
 #[derive(Default)]
@@ -886,10 +881,11 @@ impl Epub {
     /// `reading()`: the reading state, made on first use
     fn reading<R>(&self, f: impl FnOnce(&mut ReadingState<ReadingDeps>) -> R) -> R {
         let dir = self.user_data_dir();
+        let shell = self.shell.clone();
         let mut state = self.state.borrow_mut();
         f(state
             .reading
-            .get_or_insert_with(|| ReadingState::new(ReadingDeps { dir })))
+            .get_or_insert_with(|| ReadingState::new(ReadingDeps { dir, shell })))
     }
 
     /// `parentOf(contents)`
@@ -2075,10 +2071,19 @@ pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value)
     hosts.insert::<EpubShellHost>(Arc::new(hosts::FakeShell::new(&member("shell"), log)));
 }
 
+#[cfg(any(test, feature = "probe"))]
+thread_local! {
+    /// The outcome of the last waiting trigger: `None` while it waits
+    static OUTCOME: RefCell<Option<Reply>> = const { RefCell::new(None) };
+}
+
 /// A `trigger` step of tools/ipc-diff (`d2/epub:<what>`): what the shell
 /// calls on the editor, by the TypeScript function's name in kebab case.
-/// `args` are that function's arguments after `contents`. False for a name
-/// it does not know.
+/// `args` are that function's arguments after `contents`. A call that waits
+/// for the renderer (`request-save`, `request-close`, `read-text`,
+/// `save-to-path`) answers `undefined` at once; the `outcome` trigger then
+/// answers `null` while it waits, `{value}` or `{error}` once it settled.
+/// False for a name it does not know.
 #[cfg(any(test, feature = "probe"))]
 pub(crate) fn probe_trigger(
     what: &str,
@@ -2089,18 +2094,22 @@ pub(crate) fn probe_trigger(
     then: shell_contract::editors::Then<IpcValue>,
 ) -> bool {
     use shell_contract::editors::SaveMode;
+    let what = what.strip_prefix("d2/epub:").unwrap_or(what);
     let Some(editors) = provided.all::<EpubEditors>().into_iter().next() else {
         return false;
     };
     let arg = |i: usize| args.get(i).unwrap_or(&Value::Null);
     let text = |i: usize| arg(i).as_str().unwrap_or("").to_owned();
-    let done = || IpcValue::Undefined;
+    /// starts a waiting call: its outcome lands in `OUTCOME`
+    fn wait<T: 'static>(
+        into: impl Fn(T) -> IpcValue + 'static,
+    ) -> shell_contract::editors::Then<T> {
+        OUTCOME.with(|o| *o.borrow_mut() = None);
+        Box::new(move |r| OUTCOME.with(|o| *o.borrow_mut() = Some(r.map(into))))
+    }
     match what {
         // createEpubView(openPath)
-        "open-view" => {
-            editors.open_view(view, arg(0).as_str().map(Path::new));
-            then(Ok(done()))
-        }
+        "open-view" => editors.open_view(view, arg(0).as_str().map(Path::new)),
         // requestEpubSave(contents, mode)
         "request-save" => {
             let mode = if arg(0).as_str() == Some("saveAs") {
@@ -2108,40 +2117,52 @@ pub(crate) fn probe_trigger(
             } else {
                 SaveMode::Save
             };
-            editors.request_save(view, mode, Box::new(|r| then(r.map(IpcValue::Bool))))
+            editors.request_save(view, mode, wait(IpcValue::Bool))
         }
         // requestEpubClose(contents, parent)
         "request-close" => {
             let parent = arg(0).as_u64().map(|w| WindowId(w as u32));
-            editors.request_close(view, parent, Box::new(|r| then(r.map(IpcValue::Bool))))
+            editors.request_close(view, parent, wait(IpcValue::Bool))
         }
         // epubReadText(contents)
-        "read-text" => editors.read_text(view, Box::new(|r| then(r.map(IpcValue::String)))),
+        "read-text" => editors.read_text(view, wait(IpcValue::String)),
         // epubSaveToPath(contents, filePath)
-        "save-to-path" => editors.save_to_path(
-            view,
-            PathBuf::from(text(0)),
-            Box::new(move |r| then(r.map(|()| done()))),
-        ),
+        "save-to-path" => {
+            editors.save_to_path(view, PathBuf::from(text(0)), wait(|()| IpcValue::Undefined))
+        }
+        "outcome" => {
+            let value = match OUTCOME.with(|o| o.borrow().clone()) {
+                None => IpcValue::Null,
+                Some(Ok(value)) => kit::obj([("value", value)]),
+                Some(Err(e)) => kit::obj([("error", e.to_string().into_ipc())]),
+            };
+            return answer(then, value);
+        }
         // epubFileRenamed(contents, oldPath, newPath)
-        "file-renamed" => {
-            editors.file_renamed(view, Path::new(&text(0)), Path::new(&text(1)));
-            then(Ok(done()))
-        }
+        "file-renamed" => editors.file_renamed(view, Path::new(&text(0)), Path::new(&text(1))),
         // sendEpubMenuCommand(contents, command)
-        "menu-command" => {
-            editors.menu_command(view, &text(0));
-            then(Ok(done()))
-        }
+        "menu-command" => editors.menu_command(view, &text(0)),
         // epubIsDirty(wcId)
-        "is-dirty" => then(Ok(IpcValue::Bool(editors.is_dirty(view)))),
+        "is-dirty" => return answer(then, IpcValue::Bool(editors.is_dirty(view))),
         // epubIsTranslationLocked(wcId)
-        "is-translation-locked" => then(Ok(IpcValue::Bool(editors.is_translation_locked(view)))),
+        "is-translation-locked" => {
+            return answer(then, IpcValue::Bool(editors.is_translation_locked(view)));
+        }
         // epubFilePath(wcId)
-        "file-path" => then(Ok(editors
-            .document_path(view)
-            .map_or(IpcValue::Undefined, |p| p.as_path().into_ipc()))),
+        "file-path" => {
+            let path = editors.document_path(view);
+            return answer(
+                then,
+                path.map_or(IpcValue::Undefined, |p| p.as_path().into_ipc()),
+            );
+        }
         _ => return false,
     }
+    answer(then, IpcValue::Undefined)
+}
+
+#[cfg(any(test, feature = "probe"))]
+fn answer(then: shell_contract::editors::Then<IpcValue>, value: IpcValue) -> bool {
+    then(Ok(value));
     true
 }

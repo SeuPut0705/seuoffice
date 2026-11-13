@@ -293,6 +293,9 @@ pub trait EpubShell: Send + Sync {
     /// `randomBytes(16).toString('hex')`: a view's asset token, a flush
     /// request id
     fn random_token(&self) -> String;
+    /// `Date.now()`: the time a reading position is stamped with, a pasted
+    /// picture is named by, and old pasted pictures are judged against
+    fn now(&self) -> f64;
 }
 
 pub type EpubShellHost = Arc<dyn EpubShell>;
@@ -756,9 +759,11 @@ mod fake {
         fn parse_file_to_text(&self, path: &str) -> Result<String, Option<String>> {
             match self.0.next("parseFileToText") {
                 Some(Value::String(text)) => Ok(text),
+                // `!parsed.damaged && parsed.error`: a damaged file's error is not shown
                 Some(answer) => Err(answer
                     .get("error")
                     .and_then(Value::as_str)
+                    .filter(|_| answer.get("damaged") != Some(&Value::Bool(true)))
                     .map(str::to_owned)),
                 None => std::fs::read(path)
                     .map(|bytes| String::from_utf8_lossy(&bytes).into_owned())
@@ -999,6 +1004,14 @@ mod fake {
                     .collect())),
                 _ => Some(Err(())),
             }
+        }
+
+        /// `now` of the case, 2024-01-01T00:00:00Z by default
+        fn now(&self) -> f64 {
+            self.case
+                .get("now")
+                .and_then(Value::as_f64)
+                .unwrap_or(1_704_067_200_000.0)
         }
 
         fn random_token(&self) -> String {
