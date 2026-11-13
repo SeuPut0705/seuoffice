@@ -16,10 +16,12 @@ use main_core::packages::electron_utils::context_menu::{
     ContextMenuParams, EditAction, EditFlags, MenuCommand, MenuEntry, context_menu_labels,
     context_menu_template,
 };
-use main_core::packages::electron_utils::dialog_memory::Dialog;
+use main_core::packages::electron_utils::dialog_memory::{
+    Dialog, DialogMemory, show_save_dialog_with_memory,
+};
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
 use main_core::packages::electron_utils::save_image::{
-    SaveImageOptions, fetch_image_for_save, save_fetched_image,
+    DecodedImage, SaveImageOptions, SaveImageResult, fetch_image_for_save, save_fetched_image,
 };
 use serde_json::{Value, json};
 use shell_contract::hosts::{ClipboardHost, DialogsHost, FileDialog, FileFilter};
@@ -247,26 +249,7 @@ fn run(
                     Ok(image) => image,
                     Err(error) => return eprintln!("shell: save image: {error}"),
                 };
-                // the shared memory is copied and written back under short
-                // locks, never held while the user picks (W's helper)
-                let mut dialog = SaveDialog {
-                    host: dialogs,
-                    confirmed: false,
-                };
-                let result = with_shared_memory(&memory, |memory| {
-                    let result = save_fetched_image(
-                        memory,
-                        &mut dialog,
-                        parent.as_ref(),
-                        &url,
-                        image,
-                        &SaveImageOptions {
-                            title: &title,
-                            fallback_dir: None,
-                        },
-                    );
-                    (result, dialog.confirmed)
-                });
+                let result = save_image_as(&memory, dialogs, parent, &url, image, &title);
                 if let Some(error) = result.error {
                     eprintln!("shell: save image: {error}");
                 }
@@ -391,13 +374,64 @@ impl Response for Fetched {
 }
 
 /// `dialog.showSaveDialog` as `showSaveDialogWithMemory` calls it
-/// The save dialog of Save Image As; `confirmed` once the user picked a file
-struct SaveDialog {
-    host: DialogsHost,
-    confirmed: bool,
+/// `saveImageFromUrl`'s dialog and write, on a worker. The shared memory is
+/// copied under a short lock for the dialog's suggestion and is never held
+/// while the user picks. A confirmed pick is written back the moment the
+/// dialog returns, before the file is written: a slow write must not let this
+/// pick overwrite one confirmed after it.
+fn save_image_as(
+    memory: &Mutex<DialogMemory>,
+    dialogs: DialogsHost,
+    parent: Option<WindowId>,
+    url: &str,
+    image: DecodedImage,
+    title: &str,
+) -> SaveImageResult {
+    let mut dialog = SaveDialog {
+        host: dialogs,
+        shared: memory,
+    };
+    // the copy only: the dialog itself writes a confirmed pick back
+    with_shared_memory(memory, |copy| {
+        let result = save_fetched_image(
+            copy,
+            &mut dialog,
+            parent.as_ref(),
+            url,
+            image,
+            &SaveImageOptions {
+                title,
+                fallback_dir: None,
+            },
+        );
+        (result, false)
+    })
 }
 
-impl Dialog for SaveDialog {
+/// The save dialog of Save Image As
+struct SaveDialog<'a> {
+    host: DialogsHost,
+    /// where a confirmed pick is remembered as soon as it is made
+    shared: &'a Mutex<DialogMemory>,
+}
+
+/// A dialog that answers what the real one answered, for main-core's own
+/// rule of what a pick remembers
+struct Answered(JsonValue);
+
+impl Dialog for Answered {
+    type Window = WindowId;
+
+    fn show_open_dialog(&mut self, _: Option<&WindowId>, _: &JsObject<JsonValue>) -> JsonValue {
+        self.0.clone()
+    }
+
+    fn show_save_dialog(&mut self, _: Option<&WindowId>, _: &JsObject<JsonValue>) -> JsonValue {
+        self.0.clone()
+    }
+}
+
+impl Dialog for SaveDialog<'_> {
     type Window = WindowId;
 
     fn show_open_dialog(
@@ -462,7 +496,208 @@ impl Dialog for SaveDialog {
             ),
         );
         let answer = JsonValue::Object(answer);
-        self.confirmed = save_confirmed(&answer);
+        if save_confirmed(&answer) {
+            with_shared_memory(self.shared, |memory| {
+                let remembered = Answered(answer.clone());
+                show_save_dialog_with_memory(memory, &mut { remembered }, parent, options, None);
+                ((), true)
+            });
+        }
         answer
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::path::{Path, PathBuf};
+    use std::sync::Arc;
+    use std::time::Duration;
+
+    use shell_contract::hosts::{Dialogs, MessageBox, MessageBoxAnswer};
+
+    use super::*;
+
+    /// A save dialog that picks `path`
+    struct Picks(Option<PathBuf>);
+
+    impl Dialogs for Picks {
+        fn open(&self, _: Option<WindowId>, _: &FileDialog) -> Option<Vec<PathBuf>> {
+            None
+        }
+        fn save(&self, _: Option<WindowId>, _: &FileDialog) -> Option<PathBuf> {
+            self.0.clone()
+        }
+        fn message(&self, _: Option<WindowId>, _: &MessageBox) -> MessageBoxAnswer {
+            MessageBoxAnswer {
+                response: 0,
+                checkbox_checked: false,
+            }
+        }
+        fn error(&self, _: &str, _: &str) {}
+    }
+
+    fn picks(path: Option<&Path>) -> DialogsHost {
+        Arc::new(Picks(path.map(Path::to_path_buf)))
+    }
+
+    fn png() -> DecodedImage {
+        DecodedImage {
+            bytes: vec![1, 2, 3],
+            mime: Some("image/png".into()),
+        }
+    }
+
+    /// The folder the next save dialog is anchored in
+    fn remembered(memory: &Mutex<DialogMemory>) -> Option<String> {
+        struct Seen(Option<String>);
+        impl Dialog for Seen {
+            type Window = WindowId;
+            fn show_open_dialog(
+                &mut self,
+                _: Option<&WindowId>,
+                _: &JsObject<JsonValue>,
+            ) -> JsonValue {
+                JsonValue::Null
+            }
+            fn show_save_dialog(
+                &mut self,
+                _: Option<&WindowId>,
+                o: &JsObject<JsonValue>,
+            ) -> JsonValue {
+                if let Some(JsonValue::String(path)) = o.get("defaultPath") {
+                    self.0 = Some(path.clone());
+                }
+                JsonValue::Null
+            }
+        }
+        let mut options = JsObject::new();
+        options.set("defaultPath", JsonValue::String("x.png".into()));
+        let mut seen = Seen(None);
+        let mut copy = memory.lock().unwrap().clone();
+        show_save_dialog_with_memory(&mut copy, &mut seen, None, &options, None);
+        seen.0.filter(|path| path != "x.png").map(|path| {
+            Path::new(&path)
+                .parent()
+                .unwrap()
+                .to_string_lossy()
+                .into_owned()
+        })
+    }
+
+    fn temp_dir(name: &str) -> PathBuf {
+        let dir = std::env::temp_dir().join(format!("m-save-image-{name}-{}", std::process::id()));
+        let _ = std::fs::remove_dir_all(&dir);
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// A confirms, its write stalls, B confirms and finishes, then A's write
+    /// finishes: B confirmed last, so B's folder is the one remembered
+    #[cfg(unix)]
+    #[test]
+    fn a_slow_write_does_not_overwrite_a_later_confirmation() {
+        let (a, b) = (temp_dir("a"), temp_dir("b"));
+        // a FIFO: A's write blocks until the test reads it
+        let fifo = a.join("slow.png");
+        assert!(
+            std::process::Command::new("mkfifo")
+                .arg(&fifo)
+                .status()
+                .unwrap()
+                .success()
+        );
+        let memory: Arc<Mutex<DialogMemory>> = Arc::default();
+
+        let shared = memory.clone();
+        let target = fifo.clone();
+        let slow = std::thread::spawn(move || {
+            save_image_as(
+                &shared,
+                picks(Some(&target)),
+                None,
+                "https://x/a.png",
+                png(),
+                "Save",
+            )
+        });
+        let a_dir = a.to_string_lossy().into_owned();
+        let mut waited = 0;
+        while remembered(&memory).as_deref() != Some(a_dir.as_str()) {
+            assert!(
+                waited < 500,
+                "A's confirmation was not remembered before its write"
+            );
+            std::thread::sleep(Duration::from_millis(10));
+            waited += 1;
+        }
+
+        let saved = save_image_as(
+            &memory,
+            picks(Some(&b.join("b.png"))),
+            None,
+            "https://x/b.png",
+            png(),
+            "Save",
+        );
+        assert!(saved.ok, "{saved:?}");
+        // A's write ends now
+        assert_eq!(std::fs::read(&fifo).unwrap(), vec![1, 2, 3]);
+        assert!(slow.join().unwrap().ok);
+        assert_eq!(remembered(&memory), Some(b.to_string_lossy().into_owned()));
+        let _ = std::fs::remove_dir_all(&a);
+        let _ = std::fs::remove_dir_all(&b);
+    }
+
+    /// A cancel remembers nothing and writes nothing
+    #[test]
+    fn a_canceled_save_remembers_nothing() {
+        let dir = temp_dir("cancel");
+        let memory = Mutex::new(DialogMemory::new());
+        let first = save_image_as(
+            &memory,
+            picks(Some(&dir.join("one.png"))),
+            None,
+            "https://x/one.png",
+            png(),
+            "Save",
+        );
+        assert!(first.ok);
+        let canceled = save_image_as(
+            &memory,
+            picks(None),
+            None,
+            "https://x/two.png",
+            png(),
+            "Save",
+        );
+        assert!(!canceled.ok && canceled.error.is_none());
+        assert_eq!(
+            remembered(&memory),
+            Some(dir.to_string_lossy().into_owned())
+        );
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A pick whose write fails is still remembered, as the TypeScript's
+    /// memory notes the pick before the write
+    #[test]
+    fn a_confirmed_pick_is_remembered_even_when_its_write_fails() {
+        let dir = temp_dir("fails");
+        let memory = Mutex::new(DialogMemory::new());
+        let missing = dir.join("no-such-folder").join("x.png");
+        let saved = save_image_as(
+            &memory,
+            picks(Some(&missing)),
+            None,
+            "https://x/x.png",
+            png(),
+            "Save",
+        );
+        assert!(!saved.ok && saved.error.is_some());
+        assert_eq!(
+            remembered(&memory),
+            Some(dir.join("no-such-folder").to_string_lossy().into_owned())
+        );
+        let _ = std::fs::remove_dir_all(&dir);
     }
 }
