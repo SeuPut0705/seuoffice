@@ -31,10 +31,10 @@ use serde_json::Value;
 use shell_contract::{IpcError, IpcValue, ViewId, WindowId};
 
 use super::conv::ipc_to_serde;
-use super::core::{Core, Env, now_ms};
+use super::core::{Core, Env};
 use super::dialogs::{
     HostMessages, Win, ask, default_save_dir, dialog_options, dialog_parent, json_filter,
-    message_box, save_dialog,
+    message_box, save_dialog, save_dialog_plain,
 };
 use super::engine::OdsConversion;
 use super::open::{
@@ -278,10 +278,7 @@ fn guard_split_save(
 
 /// `placeStagedSave`: beside the target first, then promoted over it
 fn place_staged_save(env: &Env, staged: &str, target: &str) -> Result<(), IpcError> {
-    let beside = join(&[
-        &dirname(target),
-        &format!(".{}.tmp.xlsx", jscompat::random_uuid()),
-    ]);
+    let beside = join(&[&dirname(target), &format!(".{}.tmp.xlsx", env.uuid())]);
     let placed = fs::copy(staged, &beside)
         .map_err(|e| io_err(e, "copyfile", staged))
         .and_then(|_| env.engine.promote_file_atomically(&beside, target));
@@ -580,7 +577,7 @@ pub fn save_workbook(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValu
     }
     // An encrypted workbook's save lands as plaintext only inside its own temp dir
     let plain_save_dir = match (&session.password, &session.import_temp_dir) {
-        (Some(_), Some(dir)) => Some(join(&[dir, &jscompat::random_uuid()])),
+        (Some(_), Some(dir)) => Some(join(&[dir, &env.uuid()])),
         _ => None,
     };
     let plain_save_path = plain_save_dir
@@ -619,7 +616,7 @@ pub fn save_workbook(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValu
                     staged_bytes,
                     app_version: env.shell.app_version(),
                 },
-                now_ms(),
+                env.shell.now_ms(),
                 SAVE_FAILURE_LOG_MAX_BYTES,
             );
             if !quiet && !env.shell.is_headless() {
@@ -1026,10 +1023,7 @@ fn export_workbook_as_ods(
             Ok(reopened) if reopened.sheets > 0.0 => {}
             _ => return OdsOutcome::Unreadable,
         }
-        let beside = join(&[
-            &dirname(target),
-            &format!(".{}.tmp.ods", jscompat::random_uuid()),
-        ]);
+        let beside = join(&[&dirname(target), &format!(".{}.tmp.ods", env.uuid())]);
         let placed = fs::copy(&temp_ods, &beside)
             .map_err(|e| io_err(e, "copyfile", &temp_ods))
             .and_then(|_| env.engine.promote_file_atomically(&beside, target));
@@ -1398,7 +1392,7 @@ pub fn export_pdf(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, 
             IpcValue::String(name) => name.clone(),
             _ => String::new(),
         };
-        let selection = save_dialog(
+        let selection = save_dialog_plain(
             env,
             env.window_of(view),
             &dialog_options(&[
@@ -1778,7 +1772,7 @@ pub fn save_edits_begin(core: &Core, view: ViewId, input: &IpcValue) -> Result<I
                 transfer_id: get("transferId"),
                 total,
             },
-            now_ms(),
+            core.env.shell.now_ms(),
         )
         .map_err(|e| thrown(e.0))?;
     Ok(IpcValue::Undefined)
@@ -1814,7 +1808,7 @@ pub fn save_edits_chunk(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcV
         let mut state = core.state.borrow_mut();
         let tab = state.tab_mut(view).expect("ensured");
         tab.save_transfers
-            .add_chunk(chunk, now_ms())
+            .add_chunk(chunk, core.env.shell.now_ms())
             .map_err(|e| thrown(e.0))
     })?;
     Ok(IpcValue::Undefined)

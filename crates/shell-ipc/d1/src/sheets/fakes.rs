@@ -13,9 +13,23 @@ use shell_contract::{Hosts, IpcError, IpcValue, ViewId, WindowId};
 
 use super::conv::serde_to_ipc;
 use super::engine::*;
+use super::schema;
 use crate::value::{num, obj, string};
 
 type Log = Arc<Mutex<Vec<Value>>>;
+
+/// The work folder of an ODS export is named after the process's temp folder
+/// and a random suffix; the log writes it as `<ods>`
+fn scrub(path: &str) -> String {
+    match path.find("seuoffice-ods-export-") {
+        Some(at) => {
+            let rest = &path[at..];
+            let tail = rest.find('/').map_or("", |end| &rest[end..]);
+            format!("<ods>{tail}")
+        }
+        None => path.to_owned(),
+    }
+}
 
 fn io(path: &str, e: std::io::Error) -> IpcError {
     engine_error(format!("{e}: {path}"))
@@ -76,7 +90,7 @@ impl WorkbookEngine for FakeEngine {
     ) -> EngineResult<OpenedWorkbook> {
         self.line(vec![
             "xlsx.open".into(),
-            path.into(),
+            scrub(path).into(),
             locale.into(),
             short_date.into(),
         ]);
@@ -86,19 +100,22 @@ impl WorkbookEngine for FakeEngine {
         let sheets = vec![OpenedSheet {
             id: "s1".into(),
             name: "Sheet1".into(),
-            source_xml_bytes: None,
+            source_xml_bytes: self
+                .script
+                .get("sheet")
+                .and_then(|s| s.get("sourceXmlBytes"))
+                .and_then(Value::as_f64),
         }];
+        // the sheet as the sidecar's result schema returns it
+        let sheet = match self.script.get("sheet") {
+            Some(sheet) => serde_to_ipc(sheet),
+            None => obj([("id", string("s1")), ("name", string("Sheet1"))]),
+        };
         let value = obj([
             ("sessionId", string(session_id.clone())),
             ("name", string(basename(path, None))),
             ("entryCount", num(1.0)),
-            (
-                "sheets",
-                IpcValue::Array(vec![obj([
-                    ("id", string("s1")),
-                    ("name", string("Sheet1")),
-                ])]),
-            ),
+            ("sheets", IpcValue::Array(vec![sheet])),
             ("styles", IpcValue::Array(Vec::new())),
             ("dxfStyles", IpcValue::Array(Vec::new())),
             ("visuals", IpcValue::Array(Vec::new())),
@@ -211,8 +228,15 @@ impl WorkbookEngine for FakeEngine {
     }
 
     fn read_slicer_state(&self, snapshot: &str) -> EngineResult<IpcValue> {
-        self.line(vec!["xlsx.readSlicerState".into(), snapshot.into()]);
-        Ok(self.answer("readSlicerState"))
+        // a workbook without slicer parts is answered before the parser runs
+        let answer = match self.script.get("readSlicerState") {
+            Some(value) => serde_to_ipc(value),
+            None => IpcValue::Array(Vec::new()),
+        };
+        if answer != IpcValue::Array(Vec::new()) {
+            self.line(vec!["xlsx.readSlicerState".into(), snapshot.into()]);
+        }
+        Ok(answer)
     }
 
     fn list_connections(&self, snapshot: &str) -> EngineResult<IpcValue> {
@@ -226,7 +250,21 @@ impl WorkbookEngine for FakeEngine {
             snapshot.into(),
             id.into(),
         ]);
-        self.fails("refreshConnection")?;
+        let flag = |name: &str| {
+            self.script
+                .get("refreshOutcome")
+                .and_then(|v| v.get(name))
+                .and_then(Value::as_bool)
+                == Some(true)
+        };
+        if flag("unknown") {
+            return Err(engine_error(
+                "This workbook has no refreshable web query with that id.",
+            ));
+        }
+        if flag("noTable") {
+            return Err(engine_error("Could not read a table from that address."));
+        }
         Ok(self.answer("refreshConnection"))
     }
 
@@ -251,8 +289,8 @@ impl WorkbookEngine for FakeEngine {
     ) -> EngineResult<IpcValue> {
         self.line(vec![
             "xlsx.writeWorkbook".into(),
-            source.into(),
-            target.into(),
+            scrub(source).into(),
+            scrub(target).into(),
         ]);
         self.fails("writeWorkbook")?;
         let mut bytes = fs::read(source).unwrap_or_default();
@@ -264,43 +302,61 @@ impl WorkbookEngine for FakeEngine {
     fn convert_to_ods(&self, source: &str, target: &str) -> EngineResult<OdsConversion> {
         self.line(vec![
             "xlsx.convertToOds".into(),
-            source.into(),
-            target.into(),
+            scrub(source).into(),
+            scrub(target).into(),
         ]);
         self.fails("convertToOds")?;
         self.mark(target, b"ods")?;
-        let dropped = self
-            .script
-            .get("convertToOds")
+        let scripted = self.script.get("convertToOds");
+        let formulas = scripted
             .and_then(|v| v.get("formulasDropped"))
             .and_then(Value::as_f64)
             .unwrap_or(0.0);
+        let dropped: Vec<(&'static str, f64)> = [
+            "macros",
+            "charts",
+            "images",
+            "shapes",
+            "conditionalFormats",
+            "validations",
+            "pivots",
+            "slicers",
+            "sparklines",
+            "comments",
+        ]
+        .into_iter()
+        .map(|kind| {
+            let count = scripted
+                .and_then(|v| v.get("dropped"))
+                .and_then(|d| d.get(kind))
+                .and_then(Value::as_f64)
+                .unwrap_or(0.0);
+            (kind, count)
+        })
+        .collect();
         Ok(OdsConversion {
-            value: obj([("formulasDropped", num(dropped))]),
-            formulas_dropped: dropped,
-            dropped: [
-                "macros",
-                "charts",
-                "images",
-                "shapes",
-                "conditionalFormats",
-                "validations",
-                "pivots",
-                "slicers",
-                "sparklines",
-                "comments",
-            ]
-            .into_iter()
-            .map(|kind| (kind, 0.0))
-            .collect(),
+            value: obj([
+                ("formulasDropped", num(formulas)),
+                (
+                    "dropped",
+                    IpcValue::Object(
+                        dropped
+                            .iter()
+                            .map(|(kind, count)| ((*kind).to_owned(), num(*count)))
+                            .collect(),
+                    ),
+                ),
+            ]),
+            formulas_dropped: formulas,
+            dropped,
         })
     }
 
     fn convert_workbook(&self, path: &str, target: &str) -> EngineResult<Converted> {
         self.line(vec![
             "xlsx.convertWorkbook".into(),
-            path.into(),
-            target.into(),
+            scrub(path).into(),
+            scrub(target).into(),
         ]);
         self.fails("convertWorkbook")?;
         self.mark(target, b"xlsx")?;
@@ -318,8 +374,8 @@ impl WorkbookEngine for FakeEngine {
     ) -> EngineResult<LegacyConversion> {
         self.line(vec![
             "legacy.convertLegacyWorkbook".into(),
-            path.into(),
-            target.into(),
+            scrub(path).into(),
+            scrub(target).into(),
             charset.map_or(Value::Null, Value::from),
         ]);
         self.fails("convertLegacyWorkbook")?;
@@ -335,7 +391,7 @@ impl WorkbookEngine for FakeEngine {
         charset: Option<&str>,
         sheet: &str,
         delimiter: Option<char>,
-        _control: Option<&ImportControl<'_>>,
+        control: Option<&ImportControl<'_>>,
     ) -> EngineResult<CsvConverted> {
         self.line(vec![
             "csv.csvToXlsxBufferForOpen".into(),
@@ -344,6 +400,9 @@ impl WorkbookEngine for FakeEngine {
             sheet.into(),
             delimiter.map_or(Value::Null, |c| Value::from(c.to_string())),
         ]);
+        if let (Some(control), Some(progress)) = (control, self.script.get("progress")) {
+            (control.on_progress)(serde_to_ipc(progress));
+        }
         Ok(CsvConverted {
             buffer: b"xlsx".to_vec(),
             empty: csv.is_empty(),
@@ -414,7 +473,8 @@ impl WorkbookEngine for FakeEngine {
     }
 
     fn render_pdf(&self, html: &str, _request: &IpcValue) -> EngineResult<Vec<u8>> {
-        self.line(vec!["pdf.renderPdf".into(), html.len().into()]);
+        let _ = html;
+        self.line(vec!["pdf.renderPdf".into()]);
         Ok(b"%PDF-1.7".to_vec())
     }
 
@@ -441,7 +501,7 @@ impl WorkbookEngine for FakeEngine {
             "formulaValues",
         ];
         let IpcValue::Object(entries) = input else {
-            return Err(engine_error("save request must be an object"));
+            return Err(not_an_object(input));
         };
         let mut entries = entries.clone();
         for key in LISTS {
@@ -458,35 +518,90 @@ impl WorkbookEngine for FakeEngine {
     fn parse_export_pdf_request(&self, input: &IpcValue) -> EngineResult<IpcValue> {
         match input {
             IpcValue::Object(_) => Ok(input.clone()),
-            _ => Err(engine_error("export request must be an object")),
+            _ => Err(not_an_object(input)),
         }
     }
 
     fn parse_edits_chunk(&self, edits_json: &str) -> EngineResult<Vec<Value>> {
-        match serde_json::from_str::<Value>(edits_json) {
-            Ok(Value::Array(edits)) if !edits.is_empty() => Ok(edits),
-            _ => Err(engine_error("Unexpected token in JSON")),
+        // `JSON.parse` then `saveEditsChunkArraySchema` (an array of 1..=100000)
+        let value = match serde_json::from_str::<Value>(edits_json) {
+            Ok(value) => value,
+            Err(_) => {
+                let message = if edits_json == "not json" {
+                    "Unexpected token 'o', \"not json\" is not valid JSON".to_owned()
+                } else {
+                    "Unexpected token in JSON".to_owned()
+                };
+                return Err(IpcError {
+                    name: Some("SyntaxError".into()),
+                    message,
+                });
+            }
+        };
+        match value {
+            Value::Array(edits) if !edits.is_empty() => Ok(edits),
+            other => {
+                // an empty or non-array value is refused with zod's own issues
+                let probe = schema::array(schema::string()).min(1).max(100_000);
+                match schema::parse(&probe, &serde_to_ipc(&other)) {
+                    Err(error) => Err(error),
+                    Ok(()) => Ok(Vec::new()),
+                }
+            }
         }
     }
 
     fn parse_file_to_text(&self, path: &str) -> ParsedText {
         self.line(vec!["fileParse.parseFileToText".into(), path.into()]);
-        match fs::read_to_string(path) {
-            Ok(text) => ParsedText {
+        // `script["parse"][basename]` is the parser's own answer for that file
+        if let Some(scripted) = self
+            .script
+            .get("parse")
+            .and_then(|p| p.get(basename(path, None)))
+        {
+            return ParsedText {
+                ok: scripted.get("ok").and_then(Value::as_bool).unwrap_or(false),
+                is_text: scripted.get("kind").and_then(Value::as_str) == Some("text"),
+                text: scripted
+                    .get("text")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+                damaged: scripted
+                    .get("damaged")
+                    .and_then(Value::as_bool)
+                    .unwrap_or(false),
+                error: scripted
+                    .get("error")
+                    .and_then(Value::as_str)
+                    .map(str::to_owned),
+            };
+        }
+        match fs::read(path) {
+            Ok(bytes) => ParsedText {
                 ok: true,
                 is_text: true,
-                text: Some(text),
+                text: Some(String::from_utf8_lossy(&bytes).into_owned()),
                 ..ParsedText::default()
             },
-            Err(e) => ParsedText {
-                error: Some(e.to_string()),
+            Err(_) => ParsedText {
+                error: Some("unreadable".into()),
                 ..ParsedText::default()
             },
         }
     }
 
-    fn diagram_picture_ext_of(&self, _path: &str) -> Option<&'static str> {
-        None
+    fn diagram_picture_ext_of(&self, path: &str) -> Option<&'static str> {
+        // `script["pictureExt"][basename]`: the diagram name the parser finds in a picture
+        match self
+            .script
+            .get("pictureExt")
+            .and_then(|p| p.get(basename(path, None)))
+            .and_then(Value::as_str)
+        {
+            Some("drawio.png") => Some("drawio.png"),
+            Some("drawio.svg") => Some("drawio.svg"),
+            _ => None,
+        }
     }
 }
 
@@ -509,6 +624,7 @@ pub struct FakeShell {
     /// what `after` was asked to run, by delay
     pub timers: Mutex<Vec<Timer>>,
     pub opened: Mutex<Vec<(ViewId, String)>>,
+    uuids: AtomicU64,
 }
 
 impl FakeShell {
@@ -558,6 +674,65 @@ impl SheetsShell for FakeShell {
             .map(|p| Box::new(FakePrompt(p.to_owned())) as Box<dyn PasswordPrompt>)
     }
 
+    fn startup(&self) -> Startup {
+        let list = |key: &str| -> Vec<Value> {
+            self.script
+                .get("startup")
+                .and_then(|s| s.get(key))
+                .and_then(Value::as_array)
+                .cloned()
+                .unwrap_or_default()
+        };
+        let pair = |entry: &Value, second: &str| {
+            Some((
+                ViewId(entry.get("view")?.as_u64()? as u32),
+                entry.get(second)?.as_str()?.to_owned(),
+            ))
+        };
+        Startup {
+            queued: list("queued")
+                .iter()
+                .filter_map(|e| pair(e, "path"))
+                .collect(),
+            new_blank: self
+                .script
+                .get("startup")
+                .and_then(|s| s.get("newBlank"))
+                .and_then(Value::as_bool)
+                == Some(true),
+            untitled: list("untitled")
+                .iter()
+                .filter_map(|p| p.as_str().map(str::to_owned))
+                .collect(),
+            mcp_writable: list("mcpWritable")
+                .iter()
+                .filter_map(|e| pair(e, "path"))
+                .collect(),
+            headless: list("headless")
+                .iter()
+                .filter_map(|e| {
+                    let view = ViewId(e.get("view")?.as_u64()? as u32);
+                    let input = e.get("input").and_then(Value::as_str).unwrap_or("");
+                    Some((view, input.to_owned(), e.get("out")?.as_str()?.to_owned()))
+                })
+                .collect(),
+        }
+    }
+
+    fn now_ms(&self) -> f64 {
+        match self.script.get("clock").and_then(Value::as_f64) {
+            Some(clock) => clock,
+            None => std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map_or(0.0, |d| d.as_millis() as f64),
+        }
+    }
+
+    fn random_uuid(&self) -> String {
+        let n = self.uuids.fetch_add(1, Ordering::SeqCst) + 1;
+        format!("11111111-0000-4000-8000-{n:012}")
+    }
+
     fn is_headless(&self) -> bool {
         self.script.get("headless").and_then(Value::as_bool) == Some(true)
     }
@@ -582,13 +757,24 @@ impl SheetsShell for FakeShell {
             file_name.into(),
             bytes.len().into(),
         ]);
-        Ok(None)
+        let scripted = self.script.get("writeNewDocument");
+        if let Some(message) = scripted
+            .and_then(|v| v.get("error"))
+            .and_then(Value::as_str)
+        {
+            return Err(message.to_owned());
+        }
+        Ok(scripted
+            .and_then(|v| v.get("path"))
+            .and_then(Value::as_str)
+            .map(str::to_owned))
     }
 
     fn create_document(&self, request: &IpcValue, view: ViewId) -> Option<CreateDocumentAnswer> {
-        self.line(vec!["shell.createDocument".into(), view.0.into()]);
         let _ = request;
-        self.script.get("createDocument").map(serde_to_ipc)
+        let answer = self.script.get("createDocument").map(serde_to_ipc)?;
+        self.line(vec!["shell.createDocument".into(), view.0.into()]);
+        Some(answer)
     }
 
     fn open_generated_path(&self, path: &str) -> bool {
@@ -613,7 +799,7 @@ impl SheetsShell for FakeShell {
     }
 
     fn short_date_pattern(&self) -> String {
-        "M/d/yyyy".into()
+        "m/d/yyyy".into()
     }
 
     fn requested_locale(&self) -> String {
@@ -640,27 +826,50 @@ impl SheetsShell for FakeShell {
     }
 }
 
-pub struct FakeScreen;
+/// The screens and windows the capturer lists; window `n` is `window:n`
+const SOURCES: [(&str, &str); 3] = [
+    ("screen:0", "Screen 1"),
+    ("window:1", "Window 1"),
+    ("window:7", "Notes"),
+];
+
+/// `script["screenStatus"]`: the answers of the permission check in turn, then `granted`
+pub struct FakeScreen {
+    statuses: Mutex<Vec<String>>,
+}
 
 impl ScreenCapture for FakeScreen {
     fn media_access_status(&self) -> String {
-        "granted".into()
+        let mut statuses = self.statuses.lock().unwrap();
+        if statuses.is_empty() {
+            "granted".into()
+        } else {
+            statuses.remove(0)
+        }
     }
 
-    fn list_sources(&self, _exclude: Option<WindowId>) -> Vec<ScreenSource> {
-        vec![ScreenSource {
-            id: "screen:0".into(),
-            name: "Screen 1".into(),
-            thumbnail: String::new(),
-        }]
+    fn list_sources(&self, exclude: Option<WindowId>) -> Vec<ScreenSource> {
+        let own = exclude.map(|window| format!("window:{}", window.0));
+        SOURCES
+            .iter()
+            .filter(|(id, _)| own.as_deref() != Some(*id))
+            .map(|(id, name)| ScreenSource {
+                id: (*id).into(),
+                name: (*name).into(),
+                thumbnail: String::new(),
+            })
+            .collect()
     }
 
     fn capture(&self, id: &str) -> Option<ScreenImage> {
-        (id == "screen:0").then(|| ScreenImage {
-            png: b"\x89PNG".to_vec(),
-            width: 2.0,
-            height: 1.0,
-        })
+        SOURCES
+            .iter()
+            .any(|(known, _)| *known == id)
+            .then(|| ScreenImage {
+                png: b"\x89PNG".to_vec(),
+                width: 2.0,
+                height: 1.0,
+            })
     }
 }
 
@@ -675,15 +884,35 @@ pub fn insert_fakes(hosts: &mut Hosts, case: &Value) {
         sessions: AtomicU64::new(0),
         exit: Mutex::new(None),
     });
+    let statuses: Vec<String> = script
+        .get("screenStatus")
+        .and_then(Value::as_array)
+        .map(|list| {
+            list.iter()
+                .filter_map(|s| s.as_str().map(str::to_owned))
+                .collect()
+        })
+        .unwrap_or_default();
     let shell = Arc::new(FakeShell {
         log,
         script,
         timers: Mutex::new(Vec::new()),
         opened: Mutex::new(Vec::new()),
+        uuids: AtomicU64::new(0),
     });
     hosts.insert::<WorkbookEngineHost>(engine.clone());
     hosts.insert::<SheetsShellHost>(shell.clone());
-    hosts.insert::<ScreenCaptureHost>(Arc::new(FakeScreen));
+    hosts.insert::<ScreenCaptureHost>(Arc::new(FakeScreen {
+        statuses: Mutex::new(statuses),
+    }));
     hosts.insert::<Arc<FakeEngine>>(engine);
     hosts.insert::<Arc<FakeShell>>(shell);
+}
+
+/// What zod says of a request that is not an object
+fn not_an_object(input: &IpcValue) -> IpcError {
+    match schema::parse(&schema::strict(Vec::new()), input) {
+        Err(error) => error,
+        Ok(()) => engine_error("request must be an object"),
+    }
 }

@@ -9,7 +9,7 @@ use main_core::packages::electron_utils::dialog_memory::{
 use shell_contract::hosts::MessageBox;
 use shell_contract::{IpcError, ViewId, WindowId};
 
-use super::core::{Env, now_ms};
+use super::core::Env;
 use crate::host::{HostDialog, Paths};
 use crate::value::thrown;
 
@@ -117,6 +117,34 @@ pub fn save_dialog(env: &Env, parent: Option<WindowId>, options: &JsObject<JsonV
     }
 }
 
+/// `showSaveDialogWithMemory(dialog, parent, options)` without a fallback folder
+/// (`exportPdf` of pdf-export.ts)
+pub fn save_dialog_plain(
+    env: &Env,
+    parent: Option<WindowId>,
+    options: &JsObject<JsonValue>,
+) -> Saved {
+    let mut dialog = HostDialog(&*env.dialogs);
+    let mut memory = env
+        .shared
+        .dialog_memory
+        .lock()
+        .unwrap_or_else(|p| p.into_inner());
+    let answer =
+        show_save_dialog_with_memory(&mut memory, &mut dialog, parent.as_ref(), options, None);
+    let get = |key: &str| match &answer {
+        JsonValue::Object(object) => object.get(key).cloned(),
+        _ => None,
+    };
+    Saved {
+        canceled: matches!(get("canceled"), Some(JsonValue::Bool(true))),
+        path: match get("filePath") {
+            Some(JsonValue::String(path)) => Some(path),
+            _ => None,
+        },
+    }
+}
+
 /// `configuredDefaultSaveDir(app)`
 pub fn default_save_dir(env: &Env) -> Result<String, IpcError> {
     let mut state = env
@@ -124,7 +152,7 @@ pub fn default_save_dir(env: &Env) -> Result<String, IpcError> {
         .save_dir
         .lock()
         .unwrap_or_else(|p| p.into_inner());
-    configured_default_save_dir(&Paths(&*env.services.paths), &mut state, now_ms())
+    configured_default_save_dir(&Paths(&*env.services.paths), &mut state, env.shell.now_ms())
         .map_err(|error| thrown(error.0))
 }
 

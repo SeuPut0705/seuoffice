@@ -94,6 +94,33 @@ pub fn routes(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Route>
         }));
     }
     install_views(&core);
+    // the tabs and flags the shell made before the handlers run
+    {
+        let startup = env.shell.startup();
+        for sender in services.views.all() {
+            if sender.surface == shell_contract::Surface::Sheets {
+                core.register_tab(sender.view);
+            }
+        }
+        for (view, path) in &startup.queued {
+            core.queue_workbook(*view, path);
+        }
+        if startup.new_blank {
+            core.set_new_blank();
+        }
+        for path in &startup.untitled {
+            core.mark_untitled_path(path);
+        }
+        for (view, path) in &startup.mcp_writable {
+            core.authorize_mcp_write(*view, path);
+        }
+        for (view, input, out) in startup.headless {
+            core.queue_workbook(view, &input);
+            let mut state = core.state.borrow_mut();
+            state.headless_targets.insert(view, out);
+            state.headless_waiters.insert(view, Box::new(|_| {}));
+        }
+    }
     provided.add::<dyn DocumentEditors>(Rc::new(SheetsEditors { core: core.clone() }));
 
     let mut routes = Vec::new();

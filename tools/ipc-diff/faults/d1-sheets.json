@@ -1,0 +1,110 @@
+[
+  {
+    "name": "a page of attachment text is cut at another size (positive control)",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "clamp(1.0, 48_000.0)",
+    "replace": "clamp(1.0, 50.0)",
+    "groups": [
+      "d1/sheets-files"
+    ]
+  },
+  {
+    "name": "find asks for a limit above zero, not at least one",
+    "file": "shell-ipc/d1/src/sheets/read.rs",
+    "find": "schema::int().at_least(1).max(100_000)",
+    "replace": "schema::int().positive().max(100_000)",
+    "groups": [
+      "d1/sheets-read"
+    ]
+  },
+  {
+    "name": "a reversed range is no longer refused when only the rows are reversed",
+    "file": "shell-ipc/d1/src/sheets/read.rs",
+    "find": "\n            if start_row > end_row || start_col > end_col {",
+    "replace": "\n            if start_row > end_row && start_col > end_col {",
+    "groups": [
+      "d1/sheets-read"
+    ]
+  },
+  {
+    "name": "a merge source of another type has another message",
+    "file": "shell-ipc/d1/src/sheets/mod.rs",
+    "find": "Unsupported merge source: {ext}",
+    "replace": "Unsupported merge source {ext}",
+    "groups": [
+      "d1/sheets-open"
+    ]
+  },
+  {
+    "name": "the text cache of attachments keeps nothing",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "state.attachment_text_cache.len() > 8",
+    "replace": "state.attachment_text_cache.len() > 0",
+    "groups": [
+      "d1/sheets-files"
+    ]
+  },
+  {
+    "name": "a chosen pick no longer cancels the other tabs",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "    core.broadcast_pick_cancelled(&pending_id, source);\n    core.env.shell.activate_tab(source);",
+    "replace": "    core.env.shell.activate_tab(source);",
+    "groups": [
+      "d1/sheets-read"
+    ]
+  },
+  {
+    "name": "the PDF export dialog gets the default folder like the other saves",
+    "file": "shell-ipc/d1/src/sheets/save.rs",
+    "find": "let selection = save_dialog_plain(",
+    "replace": "let selection = save_dialog(",
+    "groups": [
+      "d1/sheets-save"
+    ]
+  },
+  {
+    "name": "a screen permission that is not determined is read as denied",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": "status != \"granted\" && status != \"not-determined\"",
+    "replace": "status != \"granted\"",
+    "groups": [
+      "d1/sheets-files"
+    ]
+  },
+  {
+    "name": "the file picker for a workbook offers another set of types",
+    "file": "shell-ipc/d1/src/sheets/open.rs",
+    "find": "&[\"xlsx\", \"xlsm\", \"xls\", \"csv\", \"tsv\", \"ods\"],",
+    "replace": "&[\"xlsx\", \"xlsm\", \"xls\", \"csv\", \"tsv\"],",
+    "groups": [
+      "d1/sheets-open"
+    ]
+  },
+  {
+    "name": "a pasted picture is stamped with another separator",
+    "file": "shell-ipc/d1/src/sheets/misc.rs",
+    "find": ".map(|c| if c == 'T' { '-' } else { c })",
+    "replace": ".map(|c| if c == 'T' { '_' } else { c })",
+    "groups": [
+      "d1/sheets-files"
+    ]
+  },
+  {
+    "name": "an explicit save path has another refusal",
+    "file": "shell-ipc/d1/src/sheets/save.rs",
+    "find": "\"An explicit save path needs Save As.\"",
+    "replace": "\"An explicit save path needs Save As\"",
+    "groups": [
+      "d1/sheets-save"
+    ]
+  },
+  {
+    "name": "a request that mixes inline and transferred edits has another message",
+    "file": "shell-ipc/d1/src/sheets/save.rs",
+    "find": "\"Save request mixes inline and transferred edits.\"",
+    "replace": "\"Save request mixes inline and transferred edits\"",
+    "groups": [
+      "d1/sheets-save"
+    ]
+  }
+]

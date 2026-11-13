@@ -304,6 +304,10 @@ pub trait SheetsShell: Send + Sync {
     ) -> Option<Box<dyn PasswordPrompt>>;
     /// `isHeadlessMode()`
     fn is_headless(&self) -> bool;
+    /// what the shell set up before the handlers run
+    fn startup(&self) -> Startup {
+        Startup::default()
+    }
     /// `runtime.newDocumentDir(wcId)`: the project folder of the view's panel
     fn new_document_dir(&self, view: ViewId) -> Option<String>;
     /// `runtime.writeNewDocument(wcId, fileName, bytes)`: the path written, or
@@ -328,6 +332,10 @@ pub trait SheetsShell: Send + Sync {
     fn requested_locale(&self) -> String;
     /// `delimitedImportLimit()`: the ceiling of a .csv/.tsv import, in bytes (the shell owns the setting)
     fn delimited_import_limit(&self) -> f64;
+    /// `Date.now()`
+    fn now_ms(&self) -> f64;
+    /// `crypto.randomUUID()` of the paths and ids this module makes
+    fn random_uuid(&self) -> String;
     /// `app.getVersion()`
     fn app_version(&self) -> String;
     /// `setTimeout(job, ms)` on the core thread
@@ -337,6 +345,22 @@ pub trait SheetsShell: Send + Sync {
 }
 
 pub type SheetsShellHost = Arc<dyn SheetsShell>;
+
+/// What the shell did to the sheets tabs before the first renderer call:
+/// `queueWorkbookForView`, `setSheetsNewBlank`, `markSheetsUntitledPath`,
+/// `authorizeMcpSheetWrite` and a headless export's hidden view. Read once, when
+/// the batch registers. A shell that sets these through
+/// [`super::SheetsViews`] later answers nothing here.
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct Startup {
+    pub queued: Vec<(ViewId, String)>,
+    pub new_blank: bool,
+    pub untitled: Vec<String>,
+    pub mcp_writable: Vec<(ViewId, String)>,
+    /// `(view, input, outPath)` of a running `exportSheetsPdfHeadless`: the
+    /// input is queued for the view
+    pub headless: Vec<(ViewId, String, String)>,
+}
 
 /// A screen source the capturer lists (`desktopCapturer.getSources`)
 #[derive(Clone, Debug, PartialEq)]

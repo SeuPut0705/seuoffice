@@ -66,7 +66,7 @@ pub fn arm_pick(core: &Core, view: ViewId, input: &IpcValue) -> Result<IpcValue,
         IpcValue::Number(n) => ViewId(*n as u32),
         _ => view,
     };
-    let pick_id = format!("pick-{}", jscompat::random_uuid());
+    let pick_id = format!("pick-{}", core.env.uuid());
     let previous = core
         .state
         .borrow()
@@ -421,7 +421,7 @@ fn save_pasted_image(env: &Env, data: &IpcValue, ext: &IpcValue) -> Option<Strin
     let bytes = as_bytes(data).filter(|bytes| !bytes.is_empty())?;
     let dir = join(&[&env.temp_dir(), "seuoffice-pasted"]);
     fs::create_dir_all(&dir).ok()?;
-    let iso = jscompat::to_iso_string(super::core::now_ms())?;
+    let iso = jscompat::to_iso_string(env.shell.now_ms())?;
     let stamp: String = iso[..19]
         .chars()
         .filter(|c| *c != '-' && *c != ':')

@@ -365,7 +365,7 @@ pub fn write_session_copy(
     };
     let title = recovery_title_for(session);
     let temp = env.temp_dir();
-    let directory = join(&[&temp, "seuoffice-imports", &jscompat::random_uuid()]);
+    let directory = join(&[&temp, "seuoffice-imports", &env.uuid()]);
     let produced = (|| {
         fs::create_dir_all(&directory).map_err(|e| io_err(e, "mkdir", &directory))?;
         let target = join(&[

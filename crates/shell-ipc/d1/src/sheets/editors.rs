@@ -13,7 +13,7 @@ use main_core::sheets::temp_files::cleanup_expired_pasted_files;
 use shell_contract::editors::{DocumentEditors, SaveMode, Then};
 use shell_contract::{IpcError, IpcValue, Surface, ViewId, WindowId};
 
-use super::core::{CloseWaiter, Core, now_ms};
+use super::core::{CloseWaiter, Core};
 use super::dialogs::message_box;
 use super::open::cleanup_session;
 use super::session::SessionInfo;
@@ -349,7 +349,7 @@ impl Core {
         if std::mem::replace(&mut self.state.borrow_mut().pasted_cleanup_started, true) {
             return;
         }
-        cleanup_expired_pasted_files(&self.env.temp_dir(), now_ms());
+        cleanup_expired_pasted_files(&self.env.temp_dir(), self.env.shell.now_ms());
     }
 }
 

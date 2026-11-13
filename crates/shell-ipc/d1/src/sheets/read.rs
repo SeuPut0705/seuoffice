@@ -151,7 +151,7 @@ pub fn find_cells(env: &Env, view: ViewId, input: IpcValue) -> Result<IpcValue, 
                 ])
                 .optional(),
             ),
-            ("limit", schema::int().positive().max(100_000)),
+            ("limit", schema::int().at_least(1).max(100_000)),
         ]),
     )?;
     env.engine.find_cells(&input)

@@ -16,7 +16,6 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
 
 use main_core::packages::electron_utils::recovery_contract::RecoveryOpenDecision;
 use main_core::packages::electron_utils::recovery_store::{
@@ -300,6 +299,11 @@ impl Env {
     }
 
     /// `app.getPath('temp')`
+    /// `randomUUID()`
+    pub fn uuid(&self) -> String {
+        self.shell.random_uuid()
+    }
+
     pub fn temp_dir(&self) -> String {
         crate::host::path_string(self.services.paths.path(PathName::Temp))
     }
@@ -317,7 +321,8 @@ impl Env {
         let shared: std::sync::MutexGuard<'_, SharedRecoveryState> = lock(&self.recovery);
         let user_data = self.user_data_dir();
         let user_data_dir = move || user_data.clone();
-        let now = now_ms;
+        let shell = self.shell.clone();
+        let now = move || shell.now_ms();
         let uuid = jscompat::random_uuid;
         let store = create_recovery_store(
             RecoveryStoreOptions {
@@ -335,13 +340,6 @@ fn lock<T>(mutex: &Mutex<T>) -> std::sync::MutexGuard<'_, T> {
     mutex
         .lock()
         .unwrap_or_else(|poisoned| poisoned.into_inner())
-}
-
-/// `Date.now()`
-pub fn now_ms() -> f64 {
-    SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_millis() as f64)
 }
 
 impl Core {

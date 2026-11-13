@@ -67,11 +67,7 @@ fn to_fixed1(x: f64) -> String {
 }
 
 pub fn import_dir(env: &Env) -> String {
-    join(&[
-        &env.temp_dir(),
-        "seuoffice-imports",
-        &jscompat::random_uuid(),
-    ])
+    join(&[&env.temp_dir(), "seuoffice-imports", &env.uuid()])
 }
 
 fn make_dir(path: &str) -> Result<(), IpcError> {
@@ -96,7 +92,7 @@ fn file_size(path: &str) -> Result<f64, IpcError> {
 pub fn reserve_snapshot_path(env: &Env) -> Result<String, IpcError> {
     let dir = join(&[&env.temp_dir(), "seuoffice-sheets-sessions"]);
     make_dir(&dir)?;
-    Ok(join(&[&dir, &format!("{}.xlsx", jscompat::random_uuid())]))
+    Ok(join(&[&dir, &format!("{}.xlsx", env.uuid())]))
 }
 
 fn snapshot_workbook(env: &Env, path: &str) -> Result<String, IpcError> {
@@ -750,7 +746,7 @@ pub fn prepare_workbook_for_open(
             let stem = replace_extension(&basename(path, None), "");
             let open_path = join(&[
                 &unsaved.temp_dir,
-                &format!("{stem}-{}.xlsx", &jscompat::random_uuid()[..8]),
+                &format!("{stem}-{}.xlsx", &env.uuid()[..8]),
             ]);
             if copy_extension == "xls" {
                 convert_legacy_import(env, path, &open_path)?;

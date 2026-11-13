@@ -141,6 +141,14 @@ impl Ty {
         self
     }
 
+    /// `.min(n)` of a number: at least `n`
+    pub fn at_least(mut self, n: usize) -> Ty {
+        if let Kind::Num { min, .. } = &mut self.kind {
+            *min = Some((n as f64, true));
+        }
+        self
+    }
+
     /// `.positive()`
     pub fn positive(mut self) -> Ty {
         if let Kind::Num { min, .. } = &mut self.kind {
@@ -495,13 +503,12 @@ pub fn zod_error(issues: Vec<Value>) -> IpcError {
 
 /// A custom issue, as a `superRefine` adds one
 pub fn custom_issue(message: &str) -> IpcError {
-    let mut issues = Issues { list: Vec::new() };
-    issues.push(
-        vec![("code", Value::from("custom"))],
-        &[],
-        message.to_owned(),
-    );
-    zod_error(issues.list)
+    // a custom issue keeps `message` ahead of `path`
+    let mut issue = Map::new();
+    issue.insert("code".into(), Value::from("custom"));
+    issue.insert("message".into(), Value::from(message));
+    issue.insert("path".into(), Value::Array(Vec::new()));
+    zod_error(vec![Value::Object(issue)])
 }
 
 /// `schema.parse(value)`: Ok when the value matches
