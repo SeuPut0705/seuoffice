@@ -173,11 +173,66 @@ struct ChildRun {
     spec: Value,
     closed: bool,
     writes: usize,
+    /// the writes no `answers` entry took (`replies` goes by them)
+    plain: usize,
+    /// per method, the `answers` entries taken
+    answered: BTreeMap<String, usize>,
+}
+
+impl ChildRun {
+    /// The reply of a write: by its request's method when `answers` has one
+    /// left (`$ID` in its string chunks is the request's id), else by order.
+    fn reply_to(&mut self, data: &[u8]) -> Option<Value> {
+        let request: Option<Value> = std::str::from_utf8(data)
+            .ok()
+            .and_then(|text| serde_json::from_str(text).ok());
+        if let Some(Value::Object(r)) = &request
+            && let Some(Value::String(method)) = r.get("method")
+            && let Some(id) = r.get("id")
+        {
+            let n = self.answered.get(method).copied().unwrap_or(0);
+            if let Some(entry) = self
+                .spec
+                .get("answers")
+                .and_then(|a| a.get(method))
+                .and_then(|list| list.get(n))
+            {
+                self.answered.insert(method.clone(), n + 1);
+                let id = id.to_string();
+                let fill = |chunks: Option<&Value>| -> Option<Value> {
+                    chunks.and_then(Value::as_array).map(|list| {
+                        Value::Array(
+                            list.iter()
+                                .map(|c| match c {
+                                    Value::String(s) => Value::String(s.replace("$ID", &id)),
+                                    other => other.clone(),
+                                })
+                                .collect(),
+                        )
+                    })
+                };
+                let mut reply = serde_json::Map::new();
+                if let Some(stdout) = fill(entry.get("stdout")) {
+                    reply.insert("stdout".into(), stdout);
+                }
+                if let Some(stderr) = fill(entry.get("stderr")) {
+                    reply.insert("stderr".into(), stderr);
+                }
+                return Some(Value::Object(reply));
+            }
+        }
+        self.plain += 1;
+        self.spec
+            .get("replies")
+            .and_then(|r| r.get(self.plain - 1))
+            .cloned()
+    }
 }
 
 enum Later {
     Start(Id),
-    Reply(Id, usize, bool),
+    /// the reply a write gets (taken at the write), and whether the child closes after it
+    Reply(Id, Option<Value>, bool),
     Close(Id, Option<String>),
     /// a scripted loopback request (its spec, the `state` of the call it follows)
     Request(Value, String),
@@ -438,6 +493,8 @@ impl WorldRun {
                         spec,
                         closed: false,
                         writes: 0,
+                        plain: 0,
+                        answered: BTreeMap::new(),
                     },
                 );
                 self.immediate.push_back(Event::Done {
@@ -453,8 +510,9 @@ impl WorldRun {
                 c.writes += 1;
                 let (i, k) = (c.i, c.writes);
                 let close_now = c.spec.get("closeOn").and_then(Value::as_u64) == Some(k as u64);
+                let reply = c.reply_to(&data);
                 self.log(json!(["stdin", i, String::from_utf8_lossy(&data)]));
-                self.later.push_back(Later::Reply(child, k, close_now));
+                self.later.push_back(Later::Reply(child, reply, close_now));
             }
             Cmd::EndStdin { child } => {
                 let Some(c) = self.children.get(&child) else {
@@ -689,14 +747,13 @@ impl WorldRun {
                 }
                 events
             }
-            Later::Reply(child, k, close_now) => {
+            Later::Reply(child, reply, close_now) => {
                 let Some(c) = self.children.get_mut(&child) else {
                     return Vec::new();
                 };
                 if c.closed {
                     return Vec::new();
                 }
-                let reply = c.spec.get("replies").and_then(|r| r.get(k - 1)).cloned();
                 let mut events = Vec::new();
                 if let Some(reply) = reply {
                     events.extend(out(chunks(reply.get("stdout")), false, child));
