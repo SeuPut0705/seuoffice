@@ -233,8 +233,9 @@ fn path_type_error(v: &IpcValue) -> shell_contract::IpcError {
         IpcValue::Array(_) => "an instance of Array".to_owned(),
         _ => "an instance of Object".to_owned(),
     };
+    // `String(err)` of a Node error carries its code in the name
     kit::named_error(
-        "TypeError",
+        "TypeError [ERR_INVALID_ARG_TYPE]",
         format!("The \"path\" argument must be of type string. Received {received}"),
     )
 }

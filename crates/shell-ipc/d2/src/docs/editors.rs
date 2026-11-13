@@ -29,25 +29,20 @@ impl DocumentEditors for DocsEditors {
             .is_some_and(|s| s.surface == Surface::Docs)
     }
 
-    /// `'save'` runs the renderer's full save flow (the close guard's
-    /// `docs:close-save-request`, which asks for a file when there is none)
-    /// and answers its outcome. `'saveAs'` is the tab menu's
-    /// `menu:command 'save-as'`: the renderer reports nothing back, so the
-    /// answer is that the request went out.
+    /// The shell's tab menu saved a Word tab with `menu:command 'save'` or
+    /// `'save-as'` (tab-document-actions.ts): the renderer runs its own save
+    /// flow and reports nothing back, so the answer is that the request went out.
     fn request_save(&self, view: ViewId, mode: SaveMode, then: Then<bool>) {
-        match mode {
-            SaveMode::Save => self
-                .0
-                .request_renderer_save(view, Box::new(move |ok| then(Ok(ok)))),
-            SaveMode::SaveAs => {
-                self.0.services.events.emit(
-                    Target::View(view),
-                    "menu:command",
-                    vec![IpcValue::String("save-as".into())],
-                );
-                then(Ok(true))
-            }
-        }
+        let command = match mode {
+            SaveMode::Save => "save",
+            SaveMode::SaveAs => "save-as",
+        };
+        self.0.services.events.emit(
+            Target::View(view),
+            "menu:command",
+            vec![IpcValue::String(command.into())],
+        );
+        then(Ok(true))
     }
 
     fn request_close(&self, view: ViewId, parent: Option<WindowId>, then: Then<bool>) {

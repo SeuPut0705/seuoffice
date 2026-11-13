@@ -25,13 +25,10 @@ mod recovery;
 mod save;
 #[cfg(test)]
 mod tests;
-// lib.rs routes `d2/docs:` trigger steps to `probe_trigger`; until that
-// route lands it has no caller outside its tests
+// lib.rs routes `d2/docs:` trigger steps here
 #[cfg(feature = "probe")]
-#[allow(dead_code)]
 mod trigger;
 #[cfg(feature = "probe")]
-#[allow(unused_imports)]
 pub(crate) use trigger::probe_trigger;
 mod texts;
 

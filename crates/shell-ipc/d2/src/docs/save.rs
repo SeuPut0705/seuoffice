@@ -40,6 +40,9 @@ use crate::kit::{self, Entry, IntoIpc};
 
 const NOT_OPENED: &str = "save target is not an opened document";
 
+/// `MARKED_EXPORT_FORMATS`: the formats that ask before marked content is written
+const MARKED_EXPORT_FORMATS: [&str; 6] = ["odt", "pdf", "hwp", "html", "md", "png"];
+
 /// What a write left: what landed, the plain document, the absorbed picture
 /// hashes, and the disk state to remember
 pub(crate) struct Written {
@@ -844,39 +847,61 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
     ));
 
     let d = docs.clone();
-    all.push(kit::invoke("docs:confirm-marked-odt", move |cx, _args| {
-        let view = cx.sender.view;
-        if d.is_torn_down(view) {
-            return Ok("cancel".into_ipc());
-        }
-        let b = marked_odt_box(&MarkedOdtText {
-            title: d.tm("markedOdtTitle"),
-            message: d.tm("markedOdtMessage"),
-            detail: d.tm("markedOdtDetail"),
-            save_docx: Some(d.tm("markedOdtDocx")),
-            clear_marks: d.tm("markedOdtClear"),
-            cancel: d.tm("btnCancel"),
-        });
-        let response = d.message(
-            d.parent(view),
-            MessageBox {
-                kind: Some(b.kind.into()),
-                title: Some(b.title),
-                message: b.message,
-                detail: Some(b.detail),
-                buttons: b.buttons,
-                default_id: Some(b.default_id as usize),
-                cancel_id: Some(b.cancel_id),
-                checkbox_label: None,
-            },
-        );
-        let choice = match marked_odt_choice(response as f64, true) {
-            main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Docx => "docx",
-            main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Clear => "clear",
-            main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Cancel => "cancel",
-        };
-        Ok(choice.into_ipc())
-    }));
+    all.push(kit::invoke(
+        "docs:confirm-marked-export",
+        move |cx, args| {
+            let view = cx.sender.view;
+            if d.is_torn_down(view) {
+                return Ok("cancel".into_ipc());
+            }
+            // an unknown format answers as a cancel
+            let Some(format) = args.str(0).filter(|f| MARKED_EXPORT_FORMATS.contains(f)) else {
+                return Ok("cancel".into_ipc());
+            };
+            let odt = format == "odt";
+            let b = marked_odt_box(&MarkedOdtText {
+                title: d.tm("markedTitle"),
+                message: d.tm(if odt {
+                    "markedOdtMessage"
+                } else {
+                    "markedExportMessage"
+                }),
+                detail: d.tm(if odt {
+                    "markedOdtDetail"
+                } else {
+                    "markedExportDetail"
+                }),
+                save_docx: Some(d.tm("markedDocx")),
+                clear_marks: d.tm(if odt {
+                    "markedOdtClear"
+                } else {
+                    "markedExportClear"
+                }),
+                cancel: d.tm("btnCancel"),
+            });
+            let response = d.message(
+                d.parent(view),
+                MessageBox {
+                    kind: Some(b.kind.into()),
+                    title: Some(b.title),
+                    message: b.message,
+                    detail: Some(b.detail),
+                    buttons: b.buttons,
+                    default_id: Some(b.default_id as usize),
+                    cancel_id: Some(b.cancel_id),
+                    checkbox_label: None,
+                },
+            );
+            let choice = match marked_odt_choice(response as f64, true) {
+                main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Docx => "docx",
+                main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Clear => "clear",
+                main_core::packages::electron_utils::marked_odt::MarkedOdtChoice::Cancel => {
+                    "cancel"
+                }
+            };
+            Ok(choice.into_ipc())
+        },
+    ));
 
     let d = docs.clone();
     all.push(kit::invoke_later(
