@@ -26,6 +26,7 @@ use crate::props::{
     checkbox_state_of, convertible_hyperlink, merge_runs, mergefield_instr, ruby_part_text,
     simple_inline_field, split_image_run, zotero_inline_field,
 };
+use crate::withheld::withheld_label_of;
 use crate::xml_text::{decode_numeric_char_refs, math_tokens};
 
 /// Run keys that are content or field machinery, not formatting a field result inherits
@@ -63,6 +64,22 @@ fn result_format_of(run: &Run) -> Map<String, Value> {
     let mut map = super::convert::into_map(json(run));
     map.retain(|key, _| !RESULT_FORMAT_SKIP.contains(&key.as_str()));
     map
+}
+
+/// `hiddenResultMark`: a field's result is shown as one run, whatever runs
+/// cached it; when a person hid any of them from AI, the result carries that
+/// mark (the whole result is hidden: its words cannot be told apart once
+/// merged). Sets `rawRPr` of `format` as the spread of the TypeScript does.
+fn mark_hidden_result(format: &mut Map<String, Value>, cached: &[Run]) {
+    let hidden = cached
+        .iter()
+        .find(|run| withheld_label_of(run.raw_r_pr.as_deref()).is_some());
+    if let Some(raw) = hidden
+        .and_then(|run| run.raw_r_pr.as_deref())
+        .filter(|raw| !raw.is_empty())
+    {
+        format.insert("rawRPr".to_owned(), Value::from(raw));
+    }
 }
 
 /// `Array.prototype.sort()` order of strings: by UTF-16 code unit.
@@ -239,17 +256,20 @@ impl<'a, 'c> Walker<'a, 'c> {
 
     /// `resultFormat`: formatting of the field result: the first cached run, else the field code's rPr.
     fn result_format(&mut self) -> Result<Map<String, Value>, Thrown> {
-        if let Some(first) = self.field_cached_runs.first() {
-            return Ok(result_format_of(first));
-        }
-        let Some(begin) = self.field_begin_run else {
+        let source = if let Some(first) = self.field_cached_runs.first() {
+            Some(result_format_of(first))
+        } else if let Some(begin) = self.field_begin_run {
+            let r_pr = begin.find_child("w:rPr");
+            self.build_text_run(r_pr, "x", None)?
+                .map(|run| result_format_of(&run))
+        } else {
+            None
+        };
+        let Some(mut format) = source else {
             return Ok(Map::new());
         };
-        let r_pr = begin.find_child("w:rPr");
-        Ok(self
-            .build_text_run(r_pr, "x", None)?
-            .map(|run| result_format_of(&run))
-            .unwrap_or_default())
+        mark_hidden_result(&mut format, &self.field_cached_runs);
+        Ok(format)
     }
 
     fn push_zotero_cached_runs(&mut self, part: &str, rev: Option<&RevCtx>) -> Result<(), Thrown> {
@@ -494,6 +514,7 @@ impl<'a, 'c> Walker<'a, 'c> {
             );
             map.insert("refField".to_owned(), Value::from(name));
             map.insert("refInstr".to_owned(), Value::from(instr.as_str()));
+            mark_hidden_result(&mut map, &self.field_cached_runs);
             if dirty {
                 map.insert("fldDirty".to_owned(), Value::Bool(true));
             }
@@ -655,7 +676,8 @@ impl<'a, 'c> Walker<'a, 'c> {
             .iter()
             .map(|r| r.text.as_deref().unwrap_or(""))
             .collect();
-        let format = cached.first().map(result_format_of).unwrap_or_default();
+        let mut format = cached.first().map(result_format_of).unwrap_or_default();
+        mark_hidden_result(&mut format, &cached);
         let dirty = matches!(node.attr("w:dirty"), Some("true" | "1"));
         let mut map: Map<String, Value>;
         if let Some(xe) = xe {

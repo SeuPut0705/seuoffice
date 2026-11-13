@@ -9,6 +9,7 @@ pub mod hf_part;
 pub mod hf_root;
 
 use jscompat::{JsNum, Radix, Slot, js_regex, math_max, parse_int, to_int32, to_number};
+use ooxml_pkg::canonical_xml_syntax;
 use ooxml_xml::XNode;
 use serde::{Deserialize, Serialize};
 
@@ -60,7 +61,8 @@ pub struct TableSummary {
 
 /// `tableSummary`: rows counted over the whole table, columns over its first
 /// row, nested tables included; the text cut at 120 UTF-16 units.
-pub fn table_summary(xml: &str) -> TableSummary {
+pub fn table_summary(source: &str) -> TableSummary {
+    let xml = &*canonical_xml_syntax(source);
     let rows = js_regex!(r"<w:tr[\s>]").find_iter(xml).count();
     let first_row = js_regex!(r"<w:tr[\s>][\s\S]*?<\/w:tr>")
         .exec(xml)

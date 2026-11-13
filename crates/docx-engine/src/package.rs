@@ -2,8 +2,10 @@
 //! relationships, the main part, content types
 //! (packages/docx-engine/src/parse-package.ts and `contentTypesOf` of parse.ts).
 
+use std::borrow::Cow;
+
 use jscompat::{JsMap, decode_uri_component, js_regex, truthy, try_js_regex};
-use ooxml_pkg::Package;
+use ooxml_pkg::{Package, canonical_xml_syntax};
 use ooxml_xml::{XNode, parse_ordered};
 use serde::{Deserialize, Serialize};
 
@@ -21,6 +23,16 @@ pub fn parse_part(xml: &str) -> Result<Vec<XNode>, Thrown> {
 /// `await zip.file(path)?.async('string')`
 pub fn part_text<'a>(package: &'a Package, path: &str) -> Result<Option<&'a str>, Thrown> {
     package.text(path).map_err(|error| error.to_string())
+}
+
+/// `partText` of parse.ts: the text of a part that is only read, written the
+/// usual way (see `canonicalXmlSyntax`). The document part and the parts the
+/// save path splices keep their bytes.
+pub fn canonical_part_text<'a>(
+    package: &'a Package,
+    path: &str,
+) -> Result<Option<Cow<'a, str>>, Thrown> {
+    Ok(part_text(package, path)?.map(canonical_xml_syntax))
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

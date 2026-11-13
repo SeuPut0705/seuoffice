@@ -18,7 +18,7 @@ use crate::inline_opaque::ContentControlPart;
 use crate::model::{HeaderFooter, HfParagraph, HfTableCell, ParaFormat, Run};
 use crate::parse::tables::hf_fields::{PAGE_MARK, SECTION_PAGES_MARK, TOTAL_PAGES_MARK};
 use crate::parse::tables::hf_root::{
-    HfRootName, hf_kept_root, hf_root_attrs, hf_wrap_namespaces, is_text_para,
+    HfRootName, hf_kept_root, hf_root_open, hf_wrap_namespaces, is_text_para,
 };
 use crate::revision_xml::apply_revision_resolutions;
 use crate::watermark::is_watermark_child;
@@ -581,9 +581,9 @@ fn header_footer_part_xml_within(
     }
     controls
         .finish(&format!(
-            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n<{root}{}>{body}</{root}>",
-            hf_root_attrs(),
-            root = root.as_str(),
+            "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n{}{body}</{}>",
+            hf_root_open(root, original_xml).map_err(thrown)?,
+            root.as_str(),
         ))
         .map_err(thrown)
 }

@@ -189,6 +189,9 @@ export const NOTE_PARTS: string[] = [
   `<w:footnotes><!-- <w:footnote w:id="9"><w:p/></w:footnote> --><w:footnote w:id="1"><w:p>${hiddenRun('<![CDATA[</w:footnote><w:footnote w:id="9"><w:p><w:r><w:t>x</w:t></w:r></w:p></w:footnote>]]>', '<go:redact w:label="phone"/>')}</w:p></w:footnote></w:footnotes>`,
   // the first paragraph opens with the reference and a spacer; a hidden run first
   `<w:footnotes><w:footnote w:id="1"><w:p><w:r><w:footnoteRef/></w:r>${hiddenRun(' secret', '<go:redact w:label="phone"/>')}${plainRun(' tail')}</w:p><w:p>${hiddenRun('second', '<go:redact w:label="phone"/>')}</w:p></w:footnote></w:footnotes>`,
+  // pictures in a note, one of them in a hidden run, and `$` patterns in a picture's XML
+  `<w:footnotes><w:footnote w:id="1"><w:p><w:r><w:footnoteRef/></w:r>${plainRun(' See ')}${hiddenRun('138', '<go:redact w:label="phone"/>')}<w:r><w:rPr><go:redact w:label="logo"/></w:rPr><w:drawing><wp:inline a="$&amp;$1"/></w:drawing></w:r></w:p><w:p><w:r><w:pict><v:shape/></w:pict></w:r><w:r><w:object>$$</w:object></w:r></w:p></w:footnote></w:footnotes>`,
+  `<w:footnotes><w:footnote w:id="1"><w:p><w:r><w:footnoteRef/></w:r>${plainRun(' Plain ')}<w:r><w:drawing/></w:r></w:p></w:footnote></w:footnotes>`,
   // a mark no run accounts for
   `<w:footnotes><w:footnote w:id="1"><w:p><go:redact w:label="phone"/>${plainRun(' secret')}</w:p></w:footnote></w:footnotes>`,
   '<w:footnotes><w:footnote w:id="1"><w:p>',

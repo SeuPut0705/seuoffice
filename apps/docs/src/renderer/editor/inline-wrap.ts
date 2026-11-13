@@ -39,6 +39,7 @@ import {
   type InlineWrap,
 } from '@seuoffice/docx-engine'
 import { notifyOdt, recordOdtRefusal } from '../odt-gate'
+import { REDACT_MARK } from '../ai/redact'
 import {
   INLINE_WRAP_MARK,
   contentControlKey,
@@ -502,7 +503,8 @@ export const InlineWrapGuardExtension = Extension.create({
   addCommands() {
     return {
       // "Clear formatting" takes every mark off the selection. The wrapper
-      // mark is the control around the text, not formatting: it stays.
+      // mark is the control around the text, not formatting, and so is the
+      // mark that hides the words from AI: both stay.
       unsetAllMarks:
         () =>
         ({ tr, dispatch }) => {
@@ -511,7 +513,7 @@ export const InlineWrapGuardExtension = Extension.create({
           if (dispatch) {
             for (const range of ranges) {
               for (const type of Object.values(tr.doc.type.schema.marks)) {
-                if (type.name === INLINE_WRAP_MARK) continue
+                if (type.name === INLINE_WRAP_MARK || type.name === REDACT_MARK) continue
                 tr.removeMark(range.$from.pos, range.$to.pos, type)
               }
             }

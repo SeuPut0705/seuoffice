@@ -29,6 +29,7 @@ import { SAVE } from './calls-save'
 import { createCallsRunner } from './calls-runner'
 import { SECTION } from './calls-section'
 import { VML } from './calls-vml'
+import { HIDDEN_CONTENT } from './calls-hidden-content'
 import { WITHHELD } from './calls-withheld'
 
 export const {
@@ -62,6 +63,7 @@ export const {
   section: SECTION,
   vml: VML,
   withheld: WITHHELD,
+  hiddenContent: HIDDEN_CONTENT,
   xmltag: XMLTAG,
   genRpr: GEN_RPR,
   genProps: GEN_PROPS,

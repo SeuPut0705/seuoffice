@@ -3,9 +3,11 @@
 use std::borrow::Cow;
 
 use jscompat::{JsNum, JsRegex, Radix, js_regex, math_round, parse_int, trim, trim_start};
-use ooxml_xml::{XNode, parse_ordered};
+use ooxml_pkg::canonical_xml_syntax;
+use ooxml_xml::{XNode, mask_opaque, parse_ordered};
 use serde::Serialize;
 
+use crate::xml_tag::{TagName, find_start_tag, remove_segments};
 use crate::xml_text::{EMU_PER_PX, decode_entities, on_off_of, plain_text};
 
 /// `maxNestedTags` of the TypeScript engine's `xmlParser`.
@@ -125,9 +127,10 @@ pub struct BookmarkNames {
 pub fn bookmark_names_of(xml: &str) -> BookmarkNames {
     let mut names: Vec<String> = Vec::new();
     let mut hidden: Vec<String> = Vec::new();
-    for found in js_regex!(r#"<w:bookmarkStart [^>]*w:name=(?:"([^"]+)"|'([^']+)')"#).find_iter(xml)
+    for found in
+        js_regex!(r#"<w:bookmarkStart [^>]*w:name="([^"]+)""#).find_iter(&canonical_xml_syntax(xml))
     {
-        let name = decode_entities(found.get(1).or(found.get(2)).unwrap_or(""));
+        let name = decode_entities(found.get(1).unwrap_or(""));
         let list = if name.starts_with('_') {
             &mut hidden
         } else {
@@ -146,26 +149,35 @@ pub fn bookmark_names_of(xml: &str) -> BookmarkNames {
 /// Exact `<w:pPr>...</w:pPr>` slice of a paragraph (depth-aware: pPrChange
 /// nests another w:pPr inside). `None` when the paragraph has no properties.
 pub fn raw_ppr_of(xml: &str) -> Option<&str> {
+    // tags are found in the XML with its comments and CDATA blanked, so their
+    // text is never a tag; the slice is of the XML itself
+    let masked = mask_opaque(xml);
     // the paragraph's own pPr must be the first child of w:p
-    let open_end = xml.find('>')? + 1;
-    let start = xml.len() - trim_start(&xml[open_end..]).len();
-    if !xml[start..].starts_with("<w:pPr") {
+    let open_end = find_start_tag(&masked, TagName::Any, 0)?.end;
+    let start = masked.len() - trim_start(&masked[open_end..]).len();
+    if !masked[start..].starts_with("<w:pPr") {
         return None;
     }
     let mut depth = 0i64;
-    for found in js_regex!(r"<w:pPr(?=[\s/>])|<\/w:pPr>").find_from(xml, start) {
-        if found.as_str() == "</w:pPr>" {
+    let mut at = start;
+    while let Some(found) = js_regex!(r"<w:pPr(?=[\s/>])|<\/w:pPr\s*>")
+        .find_from(&masked, at)
+        .next()
+    {
+        at = found.end();
+        if found.as_str().starts_with("</") {
             depth -= 1;
             if depth == 0 {
                 return Some(&xml[start..found.end()]);
             }
         } else {
             // self-closing <w:pPr/> never opens
-            let gt = xml[found.start()..].find('>').map(|at| found.start() + at);
-            if gt.is_some_and(|gt| xml.as_bytes()[gt - 1] == b'/') {
+            let tag = find_start_tag(&masked, TagName::Exact("w:pPr"), found.start());
+            if let Some(tag) = tag.filter(|tag| tag.self_closing) {
                 if depth == 0 {
-                    return gt.map(|gt| &xml[start..gt + 1]);
+                    return Some(&xml[start..tag.end]);
                 }
+                at = tag.end;
                 continue;
             }
             depth += 1;
@@ -177,7 +189,8 @@ pub fn raw_ppr_of(xml: &str) -> Option<&str> {
 /// A text-less anchored shape no taller than about 10px is almost always a
 /// decorative horizontal rule.
 pub fn is_thin_rule(xml: &str) -> bool {
-    let Some(extent) = js_regex!(r#"<wp:extent cx="(\d+)" cy="(\d+)""#).exec(xml) else {
+    let xml = canonical_xml_syntax(xml);
+    let Some(extent) = js_regex!(r#"<wp:extent cx="(\d+)" cy="(\d+)""#).exec(&xml) else {
         return false;
     };
     let cx = parse_int(extent.get(1).unwrap_or(""), Radix::Ten);
@@ -198,7 +211,8 @@ pub struct RuleDisplay {
 }
 
 /// Stroke color and thickness (a:ln) plus extent width of a decorative rule drawing.
-pub fn rule_display_of(xml: &str) -> RuleDisplay {
+pub fn rule_display_of(source: &str) -> RuleDisplay {
+    let xml = &*canonical_xml_syntax(source);
     let mut out = RuleDisplay::default();
     let first_group_as_int = |regex: &JsRegex, text: &str| {
         let digits = regex.exec(text).and_then(|found| found.get(1));
@@ -259,7 +273,8 @@ pub fn is_invisible_empty_shape(xml: &str) -> bool {
 
 /// Legacy VML pict that draws nothing: only shapetype definitions, hidden
 /// shapes, or white strokeless placeholder rectangles.
-pub fn is_invisible_vml_pict(xml: &str) -> bool {
+pub fn is_invisible_vml_pict(source: &str) -> bool {
+    let xml = &*canonical_xml_syntax(source);
     if !js_regex!(r"<v:(?:shapetype|shape|rect|roundrect|oval|line|polyline)\b").test(xml) {
         return false;
     }
@@ -291,9 +306,7 @@ pub fn strip_textboxes(xml: &str) -> Cow<'_, str> {
     if !xml.contains("<w:txbxContent") {
         return Cow::Borrowed(xml);
     }
-    Cow::Owned(
-        js_regex!(r"<w:txbxContent>[\s\S]*?<\/w:txbxContent>").replace_all(xml, |_| String::new()),
-    )
+    remove_segments(xml, "w:txbxContent")
 }
 
 /// Page-type w:br carried by the anchor paragraph itself (not inside box content).

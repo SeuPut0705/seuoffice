@@ -134,9 +134,10 @@ describe('pictures are visible to the model and survive a block rewrite when ech
       para([picture([{ type: 'redaction', attrs: { label: 'private' } }]), text(' after')]),
     ])
     expect(serializeRangeToHtml(editor, 0, 0)).not.toContain('doc:')
+    // the rewrite would remove the hidden picture, so it is refused whole
     const r = await replace(editor, 0, 0, '<p>x <img src="doc:0.0"></p>')
-    expect(r.isError).toBeFalsy()
-    expect(pictureCount(editor)).toBe(0)
+    expect(r.isError).toBe(true)
+    expect(pictureCount(editor)).toBe(1)
   })
 
   it('a picture pending deletion is neither numbered nor counted as lost', async () => {

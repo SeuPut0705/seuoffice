@@ -5250,9 +5250,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::parse::tables::hf_root::hf_root_open",
+        "file": "crates/docx-engine/src/parse/tables/hf_root.rs",
+        "name": "hf_root_open",
+        "vis": "pub",
+        "params": ["root: HfRootName", "original_xml: Option<&str>"],
+        "ret": "Result<String, RegexError>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "hf-root",
@@ -5390,9 +5397,16 @@
         "bytes": false
       },
       "required": ["index", "package", "test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::hidden_content::docx_holds_hidden_content",
+        "file": "crates/docx-engine/src/hidden_content.rs",
+        "name": "docx_holds_hidden_content",
+        "vis": "pub",
+        "params": ["bytes: &[u8]"],
+        "ret": "Result<bool, String>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "hidden-content",
@@ -5416,9 +5430,16 @@
         "bytes": true
       },
       "required": ["index", "package"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::hidden_content::clear_hidden_marks",
+        "file": "crates/docx-engine/src/hidden_content.rs",
+        "name": "clear_hidden_marks",
+        "vis": "pub",
+        "params": ["bytes: &[u8]", "now: f64"],
+        "ret": "Result<Vec<u8>, String>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "ink",
@@ -8415,9 +8436,16 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "ooxml_pkg::canonical_xml_syntax",
+        "file": "crates/ooxml-pkg/src/normalize.rs",
+        "name": "canonical_xml_syntax",
+        "vis": "pub",
+        "params": ["xml: &str"],
+        "ret": "Cow<'_, str>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "ooxml-normalize",
@@ -9063,7 +9091,7 @@
         "file": "crates/docx-engine/src/drawing_geometry/anchor.rs",
         "name": "drawing_anchor_meta",
         "vis": "pub",
-        "params": ["frag: &str"],
+        "params": ["source: &str"],
         "ret": "DrawingAnchorMeta",
         "reachable": true
       },
@@ -10560,7 +10588,7 @@
         "file": "crates/docx-engine/src/props/paragraph.rs",
         "name": "rule_display_of",
         "vis": "pub",
-        "params": ["xml: &str"],
+        "params": ["source: &str"],
         "ret": "RuleDisplay",
         "reachable": true
       },
@@ -10626,7 +10654,7 @@
         "file": "crates/docx-engine/src/props/paragraph.rs",
         "name": "is_invisible_vml_pict",
         "vis": "pub",
-        "params": ["xml: &str"],
+        "params": ["source: &str"],
         "ret": "bool",
         "reachable": true
       },
@@ -13683,7 +13711,7 @@
         "file": "crates/docx-engine/src/xml_text.rs",
         "name": "plain_text",
         "vis": "pub",
-        "params": ["xml: &str"],
+        "params": ["source: &str"],
         "ret": "String",
         "reachable": true
       },
@@ -14252,7 +14280,7 @@
         "file": "crates/docx-engine/src/parse/drawings/image.rs",
         "name": "run_picture_anchor_of",
         "vis": "pub",
-        "params": ["drawing_xml: &str"],
+        "params": ["source: &str"],
         "ret": "Result<RunPictureAnchor, Thrown>",
         "reachable": true
       },
@@ -20731,7 +20759,7 @@
         "shape": null,
         "bytes": false
       },
-      "required": [],
+      "required": ["index", "package"],
       "rust": {
         "path": "docx_engine::withheld::has_withheld_trace",
         "file": "crates/docx-engine/src/withheld.rs",
@@ -20765,9 +20793,16 @@
         "bytes": false
       },
       "required": [],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::withheld_part_label",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "withheld_part_label",
+        "vis": "pub",
+        "params": ["part_xml: &str"],
+        "ret": "Option<String>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -20857,9 +20892,16 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::withheld_block_label",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "withheld_block_label",
+        "vis": "pub",
+        "params": ["block_xml: &str"],
+        "ret": "Option<String>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -21062,9 +21104,16 @@
         "bytes": false
       },
       "required": ["index", "package"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::withheld::hidden_run_properties",
+        "file": "crates/docx-engine/src/withheld.rs",
+        "name": "hidden_run_properties",
+        "vis": "pub",
+        "params": ["label: &str"],
+        "ret": "String",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "withheld",
@@ -21108,19 +21157,12 @@
     },
     {
       "module": "withheld",
-      "name": "withRedactNamespace",
+      "name": "withRedactRoot",
       "kind": "function",
       "async": false,
       "params": [
         {
           "name": "partXml",
-          "type": "string",
-          "optional": false,
-          "rest": false,
-          "codec": "json"
-        },
-        {
-          "name": "rootTag",
           "type": "string",
           "optional": false,
           "rest": false,
@@ -21135,16 +21177,9 @@
         "bytes": false
       },
       "required": [],
-      "rust": {
-        "path": "docx_engine::withheld::with_redact_namespace",
-        "file": "crates/docx-engine/src/withheld.rs",
-        "name": "with_redact_namespace",
-        "vis": "pub",
-        "params": ["part_xml: &str", "root_tag: &str"],
-        "ret": "Result<String, RegexError>",
-        "reachable": true
-      },
-      "route": "table"
+      "rust": null,
+      "route": "ts",
+      "reason": "no Rust port names it"
     },
     {
       "module": "withheld",
@@ -21634,9 +21669,16 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::xml_tag::element_inner",
+        "file": "crates/docx-engine/src/xml_tag.rs",
+        "name": "element_inner",
+        "vis": "pub",
+        "params": ["xml: &str"],
+        "ret": "&str",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "xml-tag",
@@ -21682,8 +21724,8 @@
       },
       "required": ["test"],
       "rust": {
-        "path": "docx_engine::generate::text_patch::xml_segments",
-        "file": "crates/docx-engine/src/generate/text_patch.rs",
+        "path": "docx_engine::xml_tag::xml_segments",
+        "file": "crates/docx-engine/src/xml_tag.rs",
         "name": "xml_segments",
         "vis": "pub",
         "params": ["xml: &str", "tag: &str", "from: usize", "to: usize"],
@@ -21729,9 +21771,17 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
+      "rust": {
+        "path": "docx_engine::xml_tag::replace_segments",
+        "file": "crates/docx-engine/src/xml_tag.rs",
+        "name": "replace_segments",
+        "vis": "pub",
+        "params": ["xml: &'x str", "tag: &str", "mut replace: impl FnMut(&str) -> String"],
+        "ret": "Cow<'x, str>",
+        "reachable": true
+      },
       "route": "ts",
-      "reason": "no Rust port names it"
+      "reason": "its Rust signature is not one a row can read: (xml: &'x str, tag: &str, mut replace: impl FnMut(&str) -> String) -> Cow<'x, str>"
     },
     {
       "module": "xml-tag",
@@ -21762,9 +21812,16 @@
         "bytes": false
       },
       "required": ["test"],
-      "rust": null,
-      "route": "ts",
-      "reason": "no Rust port names it"
+      "rust": {
+        "path": "docx_engine::xml_tag::remove_segments",
+        "file": "crates/docx-engine/src/xml_tag.rs",
+        "name": "remove_segments",
+        "vis": "pub",
+        "params": ["xml: &'x str", "tag: &str"],
+        "ret": "Cow<'x, str>",
+        "reachable": true
+      },
+      "route": "table"
     },
     {
       "module": "xml-tag",

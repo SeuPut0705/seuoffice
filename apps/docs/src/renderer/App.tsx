@@ -533,6 +533,7 @@ import {
   templateDocBytes,
   writeRecoveryCopy as writeRecoveryCopyImpl,
   forgetRecoveryCopy,
+  type ExportHow,
   type FileActionContext,
   type PendingPdfExport,
 } from './file-actions'
@@ -3173,19 +3174,19 @@ export function App() {
   }, [pgNumModal, sections, activeSection])
 
   const exportPdf = useCallback(
-    (outPath?: string) => exportPdfImpl(fileCtxRef.current, outPath),
+    (outPath?: string, how?: ExportHow) => exportPdfImpl(fileCtxRef.current, outPath, how),
     [],
   )
   const exportHtml = useCallback(
-    (outPath?: string) => exportHtmlImpl(fileCtxRef.current, outPath),
+    (outPath?: string, how?: ExportHow) => exportHtmlImpl(fileCtxRef.current, outPath, how),
     [],
   )
   const exportHwp = useCallback(
-    (outPath?: string) => exportHwpImpl(fileCtxRef.current, outPath),
+    (outPath?: string, how?: ExportHow) => exportHwpImpl(fileCtxRef.current, outPath, how),
     [],
   )
   const exportMarkdown = useCallback(
-    (outPath?: string) => exportMarkdownImpl(fileCtxRef.current, outPath),
+    (outPath?: string, how?: ExportHow) => exportMarkdownImpl(fileCtxRef.current, outPath, how),
     [],
   )
   const exportImages = useCallback(() => exportImagesImpl(fileCtxRef.current), [])
@@ -3212,6 +3213,8 @@ export function App() {
     void (async () => {
       const target = await window.desktop.consumeHeadlessExport()
       if (!target) return
+      const exportFile =
+        target.format === 'html' ? exportHtml : target.format === 'md' ? exportMarkdown : exportPdf
       const report = await runHeadlessDocumentExport(
         target.outPath,
         // A failed open falls back to an untitled blank document (filePath
@@ -3221,7 +3224,19 @@ export function App() {
           const doc = fileCtxRef.current.doc
           return { opened: typeof doc?.filePath === 'string', failed: doc?.filePath === null }
         },
-        target.format === 'html' ? exportHtml : target.format === 'md' ? exportMarkdown : exportPdf,
+        // nobody can be asked here: content hidden from AI is refused, and the
+        // CLI gets the reason instead of "did not produce a file"
+        async (outPath) => {
+          let refused = ''
+          const ok = await exportFile(outPath, {
+            by: 'silent',
+            onRefused: (message) => {
+              refused = message
+            },
+          })
+          if (!ok && refused) throw new Error(refused)
+          return ok
+        },
       )
       window.desktop.headlessExportDone(report)
     })()
@@ -3267,7 +3282,7 @@ export function App() {
         return
       }
       setExportLocksPreview(true)
-      const ok = await exportPdf(pending.outPath).catch(() => false)
+      const ok = await exportPdf(pending.outPath, pending.how).catch(() => false)
       setExportLocksPreview(false)
       // a Print the user started meanwhile owns the preview now
       if (pending.closePreview && !showPrintDialogRef.current) setShowPagePreview(false)

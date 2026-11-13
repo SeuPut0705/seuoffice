@@ -5,6 +5,7 @@
 use docx_engine::generate::text_patch::{
     self, CellTextsPatch, FieldTextPatch, TextboxParasPatchSet,
 };
+use docx_engine::xml_tag;
 use ooxml_xml::Utf16Map;
 use serde::Serialize;
 use serde_json::Value;
@@ -41,7 +42,7 @@ fn xml_segments16(text: &str, tag: &str, from: f64, to: f64) -> Vec<Segment16> {
     let from16 = from.trunc().clamp(0.0, len16) as usize;
     let to16 = to.ceil().clamp(0.0, len16) as usize;
     let map = Utf16Map::new(text);
-    text_patch::xml_segments(
+    xml_tag::xml_segments(
         text,
         tag,
         byte_at_unit(text, from16),

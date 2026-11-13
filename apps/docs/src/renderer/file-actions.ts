@@ -50,7 +50,12 @@ import { docxToOdt, isOdtOpenError, saveOdt, type ConversionReport } from '@seuo
 import type { Dispatch, SetStateAction } from 'react'
 import { projectPanelText } from '@seuoffice/ui'
 import type { AiDocContent, OpenDocxResult } from '../shared/ipc'
-import { docFormatOfPath, type DocFormat, type SaveAsKind } from '../shared/open-file'
+import {
+  docFormatOfPath,
+  type DocFormat,
+  type MarkedExportFormat,
+  type SaveAsKind,
+} from '../shared/open-file'
 import { numberedExportPaths } from '@seuoffice/electron-utils/numbered-export-paths'
 import {
   hfVariantsFromParsed,
@@ -74,7 +79,7 @@ import {
 } from './odt-gate'
 import { labelPlaceholdersInDocx } from './odt-label-docx'
 import { confirmFormatChange } from './components/format-change-bus'
-import { assertNoMarks, MarkedOdtError, planOdtWrite, type OdtWritePlan } from './marked-odt'
+import { assertNoMarks, MarkedOdtError, planMarkedWrite, type MarkedWritePlan } from './marked-odt'
 import { PHASED_APPEND } from './editor/streaming-tail-guard'
 import { docTextLength, docWeight, openTierFor } from './large-document'
 import { documentToMarkdown } from './export-markdown'
@@ -130,12 +135,30 @@ import { showToast } from './components/toast-bus'
 import { buildStandaloneHtml } from './html-export'
 import { aiPanelInitiallyOpen } from '@seuoffice/ui'
 
+/**
+ * How an export is run. A person at the File menu or Save As can be asked what
+ * to do with content hidden from AI; the CLI, an automation hook and a headless
+ * export cannot be, so for them marked content is refused and nothing is written.
+ */
+export interface ExportHow {
+  /** who runs the export; absent: a person when no path is given, else a silent caller */
+  by?: 'person' | 'silent'
+  /** receives the reason when a silent export of marked content is refused */
+  onRefused?: (message: string) => void
+  /** what "save as Word" does when the person picks it in the marked-content box (default: Save As, Word listed first) */
+  saveAsWord?: () => Promise<boolean>
+  /** the marked-content question was already settled for this export (a PDF parked until the preview mounts) */
+  answered?: true
+}
+
 /** An export waiting for the pagination preview to mount; resolve settles the caller's exportPdf promise. */
 export type PendingPdfExport = {
   outPath?: string
   resolve: (ok: boolean) => void
   /** the export opened the preview itself and closes it once the PDF is written */
   closePreview: boolean
+  /** the settled terms of the parked export, handed back when it resumes */
+  how: ExportHow
 }
 
 /** The App state the file actions need; built fresh per call. */
@@ -1211,6 +1234,8 @@ export function save(
   auto = false,
   newDocName?: string,
   explicitTarget?: ExplicitSaveTarget,
+  /** the format the Save As dialog lists first (default: the document's own) */
+  pickFormat?: DocFormat,
 ): Promise<boolean> {
   // A save arriving mid-flight waits for the current one instead of failing.
   // Reuse the finished pass only when it left nothing behind — judged by the
@@ -1223,7 +1248,7 @@ export function save(
     async () => {
       const settled = ctx.settleFontSettings ? await ctx.settleFontSettings() : ctx
       if (docGeneration !== generation) return false
-      return saveOnce(settled, saveAs, auto, newDocName, explicitTarget)
+      return saveOnce(settled, saveAs, auto, newDocName, explicitTarget, false, pickFormat)
     },
     // an explicit MCP target must always write, never reuse an earlier pass
     () => !saveAs && !explicitTarget && !ctx.saveIncompleteRef.current && !isDocDirty(ctx),
@@ -1328,7 +1353,7 @@ export async function odtBytesFor(
   editedDocx: Uint8Array,
 ): Promise<Uint8Array> {
   // an ODT cannot hold the mark that hides content from AI: callers that can
-  // ask plan the write first (planOdtWrite) and hand over the cleared docx
+  // ask plan the write first (planMarkedWrite) and hand over the cleared docx
   return saveOdt({
     originalOdt: baseline.original,
     bridge: baseline.bridge,
@@ -1338,7 +1363,7 @@ export async function odtBytesFor(
 
 /** a save that stops before writing because its docx holds content hidden from AI */
 class OdtWriteStopped extends Error {
-  constructor(readonly plan: Exclude<OdtWritePlan, { kind: 'write' }>) {
+  constructor(readonly plan: Exclude<MarkedWritePlan, { kind: 'write' }>) {
     super('no ODT written')
   }
 }
@@ -1350,7 +1375,10 @@ class OdtWriteStopped extends Error {
  * MCP-driven save), so marked content is declined.
  */
 async function docxForOdt(docx: Uint8Array, silent: boolean): Promise<Uint8Array> {
-  const plan = await planOdtWrite(docx, silent ? null : () => window.desktop.confirmMarkedOdt())
+  const plan = await planMarkedWrite(
+    docx,
+    silent ? null : () => window.desktop.confirmMarkedExport('odt'),
+  )
   if (plan.kind !== 'write') throw new OdtWriteStopped(plan)
   return plan.docx
 }
@@ -1550,9 +1578,15 @@ async function saveOnce(
         )
         if (!pick) return false
         if (pick.kind && pick.kind !== 'docx' && pick.kind !== 'odt') {
-          // a copy in another format: nothing about this document was saved
-          await exportSaveAsCopy(ctx, pick)
-          return false
+          // a copy in another format: nothing about this document was saved, unless
+          // the person answered the marked-content box with Word: that is this same
+          // Save As again, Word first, and the document is saved by it
+          let savedAsWord = false
+          await exportSaveAsCopy(ctx, pick, async () => {
+            savedAsWord = await saveOnce(ctx, true, false, newDocName, undefined, false, 'docx')
+            return savedAsWord
+          })
+          return savedAsWord
         }
         const target = docFormatOfPath(pick.path) ?? format
         if (target !== format) {
@@ -1764,7 +1798,7 @@ async function saveOnce(
  */
 async function odtWriteStopped(
   ctx: FileActionContext,
-  plan: Exclude<OdtWritePlan, { kind: 'write' }>,
+  plan: Exclude<MarkedWritePlan, { kind: 'write' }>,
   how: {
     auto: boolean
     explicitTarget: ExplicitSaveTarget | undefined
@@ -1798,24 +1832,75 @@ async function odtWriteStopped(
 export function exportSaveAsCopy(
   ctx: FileActionContext,
   pick: { path: string; kind?: SaveAsKind; dir?: string; pdfPath?: string },
+  saveAsWord?: () => Promise<boolean>,
 ): Promise<boolean> {
+  // the person picked this path in the dialog: marked content is asked about, not refused
+  const how: ExportHow = { by: 'person', saveAsWord }
   switch (pick.kind) {
     case 'pdf':
-      return exportPdf(ctx, pick.path)
+      return exportPdf(ctx, pick.path, how)
     case 'hwp':
     case 'hwpx':
-      return exportHwp(ctx, pick.path)
+      return exportHwp(ctx, pick.path, how)
     case 'html':
-      return exportHtml(ctx, pick.path)
+      return exportHtml(ctx, pick.path, how)
     case 'md':
-      return exportMarkdown(ctx, pick.path)
+      return exportMarkdown(ctx, pick.path, how)
     case 'png':
       return pick.dir && pick.pdfPath
-        ? exportImages(ctx, { path: pick.path, dir: pick.dir, pdfPath: pick.pdfPath })
+        ? exportImages(ctx, { path: pick.path, dir: pick.dir, pdfPath: pick.pdfPath }, how)
         : Promise.resolve(false)
     default:
       return Promise.resolve(false)
   }
+}
+
+/**
+ * What a write of `docx` into a format that cannot hold the mark (PDF, page
+ * images, HTML, Markdown, Hangul) may use: the docx itself when nothing in it
+ * is hidden, else the answer of the box shown to a person (the marks-cleared
+ * copy, Word instead, or nothing). null = write nothing. A silent caller is
+ * never asked: its marked content is refused with the reason.
+ */
+async function docxForMarkedExport(
+  ctx: FileActionContext,
+  format: Exclude<MarkedExportFormat, 'odt'>,
+  by: 'person' | 'silent',
+  how: ExportHow,
+  docx: Uint8Array,
+): Promise<Uint8Array | null> {
+  const plan = await planMarkedWrite(
+    docx,
+    by === 'silent' ? null : () => window.desktop.confirmMarkedExport(format),
+  )
+  if (plan.kind === 'write') return plan.docx
+  if (plan.kind === 'save-as-docx') {
+    await (how.saveAsWord ?? (() => save(ctx, true, false, undefined, undefined, 'docx')))()
+    return null
+  }
+  if (by === 'silent') {
+    const message = t('appMarkedExportRefused')
+    ctx.setStatus(message)
+    how.onRefused?.(message)
+  } else {
+    ctx.setStatus('')
+  }
+  return null
+}
+
+/** the gate of every export that builds its file from the editor's view: false = write nothing */
+async function markedExportAllowed(
+  ctx: FileActionContext,
+  format: Exclude<MarkedExportFormat, 'odt'>,
+  by: 'person' | 'silent',
+  how: ExportHow,
+): Promise<boolean> {
+  if (how.answered) return true
+  // the docx a save would write holds every story (body, headers, footers, comments, notes)
+  window.dispatchEvent(new Event('ai-docs-commit-tables'))
+  const docx = await buildDocBytes(ctx)
+  if (!docx) return false
+  return (await docxForMarkedExport(ctx, format, by, how, docx)) !== null
 }
 
 /**
@@ -1910,10 +1995,14 @@ async function printGroupsMerged(
 }
 
 /** Park the export until the preview mounts; the App effect re-runs it and settles the promise. */
-function deferExportToPreview(ctx: FileActionContext, outPath?: string): Promise<boolean> {
+function deferExportToPreview(
+  ctx: FileActionContext,
+  outPath: string | undefined,
+  how: ExportHow,
+): Promise<boolean> {
   return new Promise<boolean>((resolve) => {
     const closePreview = !document.querySelector('.pagination-preview')
-    ctx.pendingMixedExportRef.current = { outPath, resolve, closePreview }
+    ctx.pendingMixedExportRef.current = { outPath, resolve, closePreview, how }
     ctx.setShowPagePreview(true)
     ctx.bumpPendingExportTick()
   })
@@ -1928,11 +2017,17 @@ function deferExportToPreview(ctx: FileActionContext, outPath?: string): Promise
 let printJobActive = false
 
 /** Resolves true only when a PDF was written to disk. */
-export async function exportPdf(ctx: FileActionContext, outPath?: string): Promise<boolean> {
+export async function exportPdf(
+  ctx: FileActionContext,
+  outPath?: string,
+  how: ExportHow = {},
+): Promise<boolean> {
   const { doc } = ctx
   if (!doc) return false
   noticeLabelsBeforeOutput()
   await waitForFullContent()
+  const by = how.by ?? (outPath === undefined ? 'person' : 'silent')
+  if (!(await markedExportAllowed(ctx, 'pdf', by, how))) return false
   if (printJobActive || ctx.pendingMixedExportRef.current) {
     ctx.setStatus(t('appExportingPdf'))
     return false
@@ -2010,7 +2105,7 @@ export async function exportPdf(ctx: FileActionContext, outPath?: string): Promi
       ).map((st) => `${st.pageWidth}x${st.pageHeight}`),
     )
     if (sizes.size > 1) ctx.setStatus(t('appMixedExportOpening'))
-    return deferExportToPreview(ctx, outPath)
+    return deferExportToPreview(ctx, outPath, { ...how, by, answered: true })
   } finally {
     clearPrintZoom()
     printJobActive = false
@@ -2028,9 +2123,14 @@ const IMAGE_EXPORT_DPI = 192
 export async function exportImages(
   ctx: FileActionContext,
   saveAsTarget?: { path: string; dir: string; pdfPath: string },
+  how: ExportHow = {},
 ): Promise<boolean> {
   const { doc } = ctx
   if (!doc) return false
+  // the question comes before the folder dialog and before any page is printed
+  await waitForFullContent()
+  const by = how.by ?? (saveAsTarget ? 'silent' : 'person')
+  if (!(await markedExportAllowed(ctx, 'png', by, how))) return false
   const target = saveAsTarget ?? (await window.desktop.pickExportImagesTarget())
   if (!target) return false
   ctx.setStatus(t('appExportingImages'))
@@ -2054,7 +2154,7 @@ export async function exportImages(
       if (!pdfDone.some((re) => re.test(s))) ctx.setStatus(s)
     },
   }
-  if (!(await exportPdf(staged, target.pdfPath))) {
+  if (!(await exportPdf(staged, target.pdfPath, { answered: true }))) {
     void window.desktop.takeExportPdf(target.pdfPath)
     return false
   }
@@ -2111,10 +2211,16 @@ export async function exportImages(
 }
 
 /** Resolves true only when an HTML file was written to disk. */
-export async function exportHtml(ctx: FileActionContext, outPath?: string): Promise<boolean> {
+export async function exportHtml(
+  ctx: FileActionContext,
+  outPath?: string,
+  how: ExportHow = {},
+): Promise<boolean> {
   const { doc, editor } = ctx
   if (!doc || !editor) return false
   await waitForFullContent()
+  const by = how.by ?? (outPath === undefined ? 'person' : 'silent')
+  if (!(await markedExportAllowed(ctx, 'html', by, how))) return false
   ctx.setStatus(t('appExportingHtml'))
   const root = editor.view.dom as HTMLElement
   const textWidthPx = Number.parseFloat(
@@ -2142,7 +2248,11 @@ export async function exportHtml(ctx: FileActionContext, outPath?: string): Prom
  * converts the docx a save would write, asks before writing a copy that loses
  * something, and opens the copy.
  */
-export async function exportHwp(ctx: FileActionContext, outPath?: string): Promise<boolean> {
+export async function exportHwp(
+  ctx: FileActionContext,
+  outPath?: string,
+  how: ExportHow = {},
+): Promise<boolean> {
   const { doc } = ctx
   if (!doc || !ctx.editor) return false
   const generation = docGeneration
@@ -2150,7 +2260,11 @@ export async function exportHwp(ctx: FileActionContext, outPath?: string): Promi
   if (docGeneration !== generation) return false
   window.dispatchEvent(new Event('ai-docs-commit-tables'))
   ctx.setStatus(t('appExportingHwp'))
-  const docx = await buildDocBytes(ctx)
+  const built = await buildDocBytes(ctx)
+  if (!built) return false
+  // the Hangul copy is converted from the docx: marks cleared when the person chose that
+  const by = how.by ?? (outPath === undefined ? 'person' : 'silent')
+  const docx = await docxForMarkedExport(ctx, 'hwp', by, how, built)
   if (!docx) return false
   const result = await window.desktop.exportHwp(
     doc.fileName,
@@ -2176,10 +2290,16 @@ export async function exportHwp(ctx: FileActionContext, outPath?: string): Promi
 }
 
 /** Resolves true only when a Markdown file was written to disk. */
-export async function exportMarkdown(ctx: FileActionContext, outPath?: string): Promise<boolean> {
+export async function exportMarkdown(
+  ctx: FileActionContext,
+  outPath?: string,
+  how: ExportHow = {},
+): Promise<boolean> {
   const { doc, editor } = ctx
   if (!doc || !editor) return false
   await waitForFullContent()
+  const by = how.by ?? (outPath === undefined ? 'person' : 'silent')
+  if (!(await markedExportAllowed(ctx, 'md', by, how))) return false
   ctx.setStatus(t('appExportingMarkdown'))
   const { markdown, images } = documentToMarkdown(editor)
   const result = await window.desktop.exportMarkdown(doc.fileName, markdown, images, outPath)

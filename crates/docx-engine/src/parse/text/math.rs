@@ -1,11 +1,12 @@
 //! Display maths of a paragraph: alignment, size and the source its
 //! fragments are read from.
 
-use jscompat::{JsNum, Radix, RegexError, js_regex, math_max, parse_int};
+use jscompat::{JsNum, Radix, RegexError, math_max, parse_int};
 
 use crate::fields::tag_attr;
 use crate::model::EffectivePPr;
 use crate::props::strip_textboxes;
+use crate::xml_tag::remove_segments;
 
 /// `mathParaAlign`: an oMathPara follows its m:jc (Word's default
 /// centerGroup, written out so the paragraph style's alignment cannot win);
@@ -42,9 +43,7 @@ pub fn math_size_half_points(omml: &str, eff: &EffectivePPr) -> Result<JsNum, Re
 /// aligned with the nodes visited.
 pub fn math_source_xml_of(xml: &str) -> String {
     if xml.contains("<mc:Fallback") {
-        let kept = js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>", "g")
-            .replace_all(xml, |_| String::new());
-        strip_textboxes(&kept).into_owned()
+        strip_textboxes(&remove_segments(xml, "mc:Fallback")).into_owned()
     } else {
         strip_textboxes(xml).into_owned()
     }

@@ -557,7 +557,11 @@ import {
   type ProjectWindow,
 } from './projects/project-ipc'
 import { PROJECT_UNAVAILABLE, ProjectFolderTools, type DownloadAsk } from './projects/project-tools'
-import { runHeadlessExport, type HeadlessExporters } from './headless-export'
+import {
+  runHeadlessExport,
+  type HeadlessExporters,
+  type HeadlessPlaceholderExport,
+} from './headless-export'
 import { TabManager, canonicalPath, type DetachedTab } from './tab-manager'
 import { tabMenuTemplate, type TabMenuActions, isProgramFile } from './tab-menu'
 import { runTabDocumentAction, type TabDocumentAction } from './tab-document-actions'
@@ -6698,6 +6702,18 @@ const headlessExporters: HeadlessExporters = {
   diagram: exportDiagramHeadless,
 }
 
+/** a marked Word document's HTML or Markdown: the bundled CLI's conversion, a placeholder for each hidden span */
+const headlessPlaceholderExport: HeadlessPlaceholderExport = async (input, outPath, format) => {
+  const result = await bundledCliRunner().run(
+    ['convert', input, '--to', format, '--out', outPath, '--force'],
+    { timeoutMs: 300_000 },
+  )
+  if (result.ok) return
+  const message =
+    result.json && 'message' in result.json ? result.json.message : result.stderr.trim()
+  throw new Error(message || `the conversion to ${format} failed`)
+}
+
 /**
  * The whole `--headless-export` run: no shell window, no menus, no updater,
  * no single-instance lock (a GUI instance may well be running). Prints
@@ -6709,7 +6725,12 @@ async function runHeadlessExportEntry(
   const outcome =
     parsed.kind === 'error'
       ? ({ ok: false, code: HEADLESS_EXIT.badArgs, message: parsed.message } as const)
-      : await runHeadlessExport(parsed.request, headlessExporters)
+      : await runHeadlessExport(
+          parsed.request,
+          headlessExporters,
+          undefined,
+          headlessPlaceholderExport,
+        )
   const json = parsed.kind === 'error' ? parsed.json : parsed.request.json
   stopSheetsSidecar()
   for (const win of BrowserWindow.getAllWindows()) if (!win.isDestroyed()) win.destroy()

@@ -21,6 +21,7 @@ use crate::parse::text::FloatTableAhead;
 use crate::props::collect_nodes;
 use crate::vml::shape::encode_uri_component;
 use crate::vml::{anchor_rel_h, anchor_rel_v};
+use crate::xml_tag::remove_segments;
 
 /// `alignedPictureXEmu`: the column-relative X (EMU) of a `wp:align`
 /// positioned anchor (no posOffset): left/center/right (inside/outside read as
@@ -568,8 +569,7 @@ pub fn hf_shape_drawing_svg(frag: &str) -> Result<Option<String>, RegexLimit> {
         return Ok(None);
     }
     // Word pairs DrawingML shapes with a VML twin in mc:Fallback
-    let body = js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>")
-        .replace_all(frag, |_| String::new());
+    let body = remove_segments(frag, "mc:Fallback");
     let whole = |pattern: &JsRegex, text: &str| {
         pattern
             .exec(text)
