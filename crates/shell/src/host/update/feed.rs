@@ -951,7 +951,10 @@ releaseDate: '2026-11-14T00:00:00.000Z'
         )
         .unwrap();
         if cfg!(all(target_os = "macos", target_arch = "aarch64")) {
-            assert_eq!(stable.pick().unwrap().url, "SeuOffice-0.13.0-arm64-mac-stable.zip");
+            assert_eq!(
+                stable.pick().unwrap().url,
+                "SeuOffice-0.13.0-arm64-mac-stable.zip"
+            );
         }
     }
 
