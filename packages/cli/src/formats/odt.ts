@@ -72,20 +72,44 @@ export async function openOdtBytes(
   }
 }
 
-/** The edited bridge docx written back into the received ODT (original bytes when nothing changed). */
-export function saveOdtBytes(origin: OdtOrigin, editedDocx: Uint8Array): Promise<Uint8Array> {
-  return mapped(
-    async () =>
-      (await saveOdt({ originalOdt: origin.originalOdt, bridge: origin.bridge, editedDocx }))
-        .odtBytes,
+/**
+ * An ODT has no place for the mark that hides content from AI: the engine
+ * writes the hidden words as plain text and reports each mark it dropped
+ * (`hidden_from_ai`). Such an ODT is never handed back, so nothing is written.
+ */
+function refuseDroppedMarks(report: ConversionReport): void {
+  if (!report.some((item) => item.feature === 'hidden_from_ai')) return
+  throw new CliError(
+    EXIT.usage,
+    'cannot write an ODT file: the document holds content hidden from AI, and an ODT file cannot keep that',
+    undefined,
+    {
+      reason: 'unsupported',
+      suggestion: 'save it as .docx, which keeps the hiding, or clear the marks first',
+    },
   )
 }
 
+/** The edited bridge docx written back into the received ODT (original bytes when nothing changed). */
+export function saveOdtBytes(origin: OdtOrigin, editedDocx: Uint8Array): Promise<Uint8Array> {
+  return mapped(async () => {
+    const { odtBytes, report } = await saveOdt({
+      originalOdt: origin.originalOdt,
+      bridge: origin.bridge,
+      editedDocx,
+    })
+    refuseDroppedMarks(report)
+    return odtBytes
+  })
+}
+
 /** A whole docx → a new ODT. */
-export function docxBytesToOdt(
+export async function docxBytesToOdt(
   docx: Uint8Array,
 ): Promise<{ odtBytes: Uint8Array; report: ConversionReport }> {
-  return docxToOdt(docx)
+  const converted = await docxToOdt(docx)
+  refuseDroppedMarks(converted.report)
+  return converted
 }
 
 // ---- conversion report → warnings ----
