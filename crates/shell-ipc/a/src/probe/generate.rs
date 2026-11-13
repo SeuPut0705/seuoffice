@@ -137,6 +137,20 @@ impl FakeGenerateShell {
         push(&self.log, line);
     }
 
+    /// One `parseFileToText` line, keeping the run of read lines at the log's end sorted by
+    /// path: the TypeScript side starts the reads of a batch in no fixed order.
+    fn read_line(&self, path: &str) {
+        let Some(log) = &self.log else { return };
+        let mut log = log.lock().expect("the log");
+        let is_read = |line: &Value| line[0].as_str() == Some("parseFileToText");
+        let start = log
+            .iter()
+            .rposition(|line| !is_read(line))
+            .map_or(0, |i| i + 1);
+        log.push(json!(["parseFileToText", path]));
+        log[start..].sort_by(|a, b| a[1].as_str().cmp(&b[1].as_str()));
+    }
+
     fn win(&self, window: WindowId, what: &str) {
         self.line(json!(["win", window.0, what]));
     }
@@ -444,7 +458,7 @@ impl GenerateShell for FakeGenerateShell {
     }
 
     fn parse_file_to_text(&self, path: &str) -> Result<ParsedFile, String> {
-        self.line(json!(["parseFileToText", path]));
+        self.read_line(path);
         let name = path.rsplit(['/', '\\']).next().unwrap_or(path);
         match self.spec["parse"].get(name) {
             Some(Value::String(_)) => Err("parse failed".to_owned()),

@@ -565,7 +565,8 @@ fn a_stream_sends_its_chunks_in_order_then_replies() {
         vec![
             json!({ "requestId": "r1", "type": "ping" }),
             json!({ "requestId": "r1", "type": "delta", "text": "Hello" }),
-            json!({ "requestId": "r1", "type": "done" }),
+            // the key is there with the value `undefined` when the provider gave no reason
+            json!({ "requestId": "r1", "type": "done", "stopReason": "<undefined>" }),
         ]
     );
     // one request, to the provider of the renderer's settings, with its key

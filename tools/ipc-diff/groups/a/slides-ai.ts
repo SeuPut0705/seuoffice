@@ -59,7 +59,7 @@ const code = (entry: string, starts: readonly string[]): string =>
 const ipcCode = code('apps/slides/src/main/ai-ipc.ts', [
   'const AI_SETTINGS_PATH =',
   'function slidesMediaRoots(',
-  'function readJson(',
+  'function readJson<',
   'function readAiSettings(',
   'function screenToolContext(',
   'const AI_RUN_FAILURES_PATH =',
