@@ -665,13 +665,17 @@ pub fn capture_screen_sources(env: &Env, view: ViewId) -> IpcValue {
             ("sources", IpcValue::Array(Vec::new())),
         ])
     };
-    // macOS gates desktopCapturer behind the Screen Recording permission and returns black frames
-    let status = env.screen.media_access_status();
-    if status != "granted" && status != "not-determined" {
-        return denied();
+    // macOS gates desktopCapturer behind the Screen Recording permission and
+    // returns black frames instead of failing; elsewhere there is no gate
+    let gated = cfg!(target_os = "macos");
+    if gated {
+        let status = env.screen.media_access_status();
+        if status != "granted" && status != "not-determined" {
+            return denied();
+        }
     }
     let sources = env.screen.list_sources(dialog_parent(env, view));
-    if env.screen.media_access_status() != "granted" {
+    if gated && env.screen.media_access_status() != "granted" {
         return denied();
     }
     obj([
