@@ -1,0 +1,278 @@
+[
+  {
+    "files": "packages/ui/template-fonts/**",
+    "licence": "OFL-1.1",
+    "record": "packages/ui/template-fonts/README.md",
+    "source": "design-template fonts, unmodified except the two Noto Serif KR faces (CFF outlines to TrueType); each family's OFL text beside it"
+  },
+  {
+    "files": "packages/ui/src/fonts/Carlito-*.ttf",
+    "licence": "OFL-1.1",
+    "record": "packages/ui/src/fonts/README.md",
+    "source": "Carlito 1.103, patched by tools/patch-carlito-vi.py and renamed Carlito GO"
+  },
+  {
+    "files": "apps/docs/src/renderer/fonts/GenOfficePUABlank.woff2",
+    "licence": "Apache-2.0",
+    "record": "apps/docs/src/renderer/fonts/README.md",
+    "source": "blank glyphs drawn by tools/build-pua-blank-font.py; no outline from another font"
+  },
+  {
+    "files": "apps/docs/src/renderer/fonts/GenOfficeBalancedSpace.woff2",
+    "licence": "Apache-2.0",
+    "record": "tools/build-balanced-space-font.py",
+    "source": "blank glyphs drawn by tools/build-balanced-space-font.py; no outline from another font"
+  },
+  {
+    "files": "apps/docs/src/renderer/fonts/Caladea-*.ttf",
+    "licence": "Apache-2.0",
+    "record": "apps/docs/src/renderer/fonts/README.md",
+    "source": "Caladea, unmodified"
+  },
+  {
+    "files": "apps/docs/src/renderer/fonts/BookmanOldStyleGO-*.ttf",
+    "licence": "Apache-2.0",
+    "record": "apps/docs/src/renderer/fonts/README.md",
+    "source": "Caladea with matched advances (tools/build-metric-fonts.py)"
+  },
+  {
+    "files": "apps/docs/src/renderer/fonts/DavidGO-*.ttf",
+    "licence": "OFL-1.1",
+    "record": "packages/font-metrics/measurements/families/david-go.json",
+    "source": "Liberation Serif with matched advances (tools/build-metric-fonts.py)"
+  },
+  {
+    "files": "apps/docs/src/renderer/fonts/*.ttf",
+    "licence": "OFL-1.1",
+    "record": "apps/docs/src/renderer/fonts/README.md",
+    "source": "Liberation 2.1.5, and the Aptos GO, Aptos Narrow GO and Century Gothic GO faces built from Carlito and Liberation (tools/build-metric-fonts.py)"
+  },
+  {
+    "files": "apps/docs/src/renderer/fonts/*.woff2",
+    "licence": "OFL-1.1",
+    "record": "apps/docs/src/renderer/fonts/README.md",
+    "source": "subsets and stand-ins built from Noto, Nanum, Poppins and DM Sans faces by the tools/build-*-font.py scripts"
+  },
+  {
+    "files": "apps/shell/build/brand/ai-mark.svg",
+    "licence": "Apache-2.0 AND ISC AND MIT",
+    "record": "NOTICE",
+    "source": "original composition whose geometry is adapted from Lucide (ISC) and Feather (MIT)"
+  },
+  {
+    "files": "apps/shell/build/brand/**",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "SeuOffice app icon and logo sources, original; the wordmark is Roboto Bold (Apache-2.0) outlines"
+  },
+  {
+    "files": "apps/shell/src/renderer/src/assets/seuoffice-logo.svg",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "copy of apps/shell/build/brand/logo-lockup.svg made by tools/gen-brand-assets.mjs"
+  },
+  {
+    "files": "apps/shell/build/hwp.*",
+    "licence": "Apache-2.0 AND OFL-1.1",
+    "record": "tools/gen-file-association-icons.mjs",
+    "source": "drawn by the script, with Hangul outlines from Pretendard Bold (OFL-1.1)"
+  },
+  {
+    "files": "apps/shell/src/renderer/src/assets/file-hwp.svg",
+    "licence": "Apache-2.0 AND OFL-1.1",
+    "record": "tools/gen-file-association-icons.mjs",
+    "source": "drawn by the script, with Hangul outlines from Pretendard Bold (OFL-1.1)"
+  },
+  {
+    "files": "apps/shell/build/icon*",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-brand-assets.mjs",
+    "source": "app icon rasterised from apps/shell/build/brand"
+  },
+  {
+    "files": "apps/shell/build/icons/**",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-brand-assets.mjs",
+    "source": "app icon rasterised from apps/shell/build/brand"
+  },
+  {
+    "files": "apps/docs/build/icon*",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-brand-assets.mjs",
+    "source": "app icon rasterised from apps/shell/build/brand"
+  },
+  {
+    "files": "apps/*/src/renderer/**/app-icon.png",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-brand-assets.mjs",
+    "source": "app icon rasterised from apps/shell/build/brand"
+  },
+  {
+    "files": "apps/shell/build/*.ico",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-file-association-icons.mjs",
+    "source": "file-type icons drawn by the script"
+  },
+  {
+    "files": "apps/shell/build/*.icns",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-file-association-icons.mjs",
+    "source": "file-type icons drawn by the script"
+  },
+  {
+    "files": "apps/shell/src/renderer/src/assets/file-*.svg",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-file-association-icons.mjs",
+    "source": "file-type tiles drawn by the script"
+  },
+  {
+    "files": "apps/*/src/renderer/**/file-*.png",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-file-association-icons.mjs",
+    "source": "attachment-card icons drawn by the script"
+  },
+  {
+    "files": "packages/ui/src/assets/file-*.png",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-file-association-icons.mjs",
+    "source": "attachment-card icons drawn by the script"
+  },
+  {
+    "files": "apps/shell/build/shell-new/**",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-shell-new-templates.ts",
+    "source": "blank documents written by this repository's engines"
+  },
+  {
+    "files": "apps/hwp/src/renderer/assets/blank.hwp",
+    "licence": "Apache-2.0",
+    "record": "apps/hwp/scripts/make-blank.mjs",
+    "source": "blank document written by the rhwp engine; no third-party content"
+  },
+  {
+    "files": "apps/shell/src/main/assets/menu-*.png",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "menu icons that came with GenOffice's repository (Apache-2.0); where the drawings came from is not recorded"
+  },
+  {
+    "files": "apps/*/src/renderer/**/send-*.png",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "AI-panel buttons that came with GenOffice's repository (Apache-2.0); where the drawings came from is not recorded"
+  },
+  {
+    "files": "apps/*/src/renderer/**/attach-icon.png",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "AI-panel button that came with GenOffice's repository (Apache-2.0); where the drawing came from is not recorded"
+  },
+  {
+    "files": "apps/*/src/renderer/**/icon-*.png",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "toolbar icons that came with GenOffice's repository (Apache-2.0); where the drawings came from is not recorded"
+  },
+  {
+    "files": "apps/slides/src/renderer/assets/textures/*.png",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "fill textures that came with GenOffice's repository (Apache-2.0); where the images came from is not recorded"
+  },
+  {
+    "files": "apps/shell/src/renderer/src/i18n/help/topics/img/*.png",
+    "licence": "Apache-2.0",
+    "record": "tools/gen-help-screenshots.ts",
+    "source": "screenshots of this app; file-ops and tabs are regenerated by the script, word-shortcuts by tools/gen-help-shortcut-figure.ts, the rest came with GenOffice's repository"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/builtin-skills.json",
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "the manifest of the built-in skills: source, path, commit and licence of each"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/*/scripts/office/schemas/**",
+    "licence": "LicenseRef-ECMA-376-schemas",
+    "record": "NOTICE",
+    "source": "ISO/IEC 29500-4:2016 (ECMA-376), OPC and Microsoft Office extension schemas exactly as anthropics/skills ships them"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/docx/**",
+    "licence": "Apache-2.0",
+    "record": "apps/shell/resources/builtin-skills/docx/LICENSE.txt",
+    "source": "anthropics/skills skills/docx at 2c5958ecac7cee2b583967a2c4981d0f4a75c579, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/pptx/**",
+    "licence": "Apache-2.0",
+    "record": "apps/shell/resources/builtin-skills/pptx/LICENSE.txt",
+    "source": "anthropics/skills skills/pptx at 2c5958ecac7cee2b583967a2c4981d0f4a75c579, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/xlsx/**",
+    "licence": "Apache-2.0",
+    "record": "apps/shell/resources/builtin-skills/xlsx/LICENSE.txt",
+    "source": "anthropics/skills skills/xlsx at 2c5958ecac7cee2b583967a2c4981d0f4a75c579, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/pdf/**",
+    "licence": "Apache-2.0",
+    "record": "apps/shell/resources/builtin-skills/pdf/LICENSE.txt",
+    "source": "anthropics/skills skills/pdf at 2c5958ecac7cee2b583967a2c4981d0f4a75c579, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/internal-comms/**",
+    "licence": "Apache-2.0",
+    "record": "apps/shell/resources/builtin-skills/internal-comms/LICENSE.txt",
+    "source": "anthropics/skills skills/internal-comms at dbd4588f9e1033efb41dad4bef2f7947c8993d44, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/meeting-minutes/**",
+    "licence": "MIT",
+    "record": "apps/shell/resources/builtin-skills/meeting-minutes/LICENSE",
+    "source": "github/awesome-copilot skills/meeting-minutes at 613efc8c21d9b3ce642dff361d17006cd9967e28, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/humanizer/**",
+    "licence": "MIT",
+    "record": "apps/shell/resources/builtin-skills/humanizer/LICENSE",
+    "source": "blader/humanizer at 8c307f367c91bd974002f10f2be2965d642c13df, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/copy-editing/**",
+    "licence": "MIT",
+    "record": "apps/shell/resources/builtin-skills/copy-editing/LICENSE",
+    "source": "coreyhaines31/marketingskills skills/copy-editing at e85f3cbc2e4a79bf33b2a12e9bdd9087d414735b, unmodified"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/find-skills/**",
+    "licence": "MIT",
+    "record": "apps/shell/resources/builtin-skills/find-skills/LICENSE",
+    "source": "vercel-labs/skills skills/find-skills at a80e4c9d12d607631249d4d7d059f835d4b2f13a, with a section for this app appended"
+  },
+  {
+    "files": "apps/shell/resources/builtin-skills/*/SKILL.md",
+    "licence": "Apache-2.0",
+    "record": "apps/shell/resources/builtin-skills/builtin-skills.json",
+    "source": "skills written for IeumOffice (source \"ieumoffice\" in the manifest)"
+  },
+  {
+    "files": "skills/seuoffice/**",
+    "licence": "Apache-2.0",
+    "record": "LICENSE",
+    "source": "the seuoffice CLI skill, written for this project"
+  },
+  {
+    "files": "vendor/rhwp-core/**",
+    "licence": "MIT",
+    "record": "vendor/rhwp-core/THIRD_PARTY_LICENSES.md",
+    "source": "rhwp built with the patches in vendor/rhwp-core/patches; the crates linked into rhwp_bg.wasm are checked by deny.toml in CI"
+  },
+  {
+    "files": "vendor/drawio/**",
+    "licence": "Apache-2.0",
+    "record": "vendor/drawio/README.md",
+    "source": "the scripts and inventory that build the draw.io bundle; the bundle's own licences are checked by tools/check-drawio-bundle.mjs"
+  }
+]

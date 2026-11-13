@@ -2,8 +2,8 @@
  * Dependency license gate: every production npm dependency must
  * carry a license from the permissive allowlist, so a copyleft dependency
  * cannot slip into a release. Reads license fields from package-lock.json
- * (no install needed); the Rust sidecar equivalent is cargo-deny
- * (apps/sheets/native/xlsx-engine/deny.toml).
+ * (no install needed); the Rust equivalent is cargo-deny with deny.toml,
+ * run by CI's rust-licenses job.
  */
 import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
