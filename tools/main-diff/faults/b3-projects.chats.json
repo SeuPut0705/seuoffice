@@ -324,15 +324,15 @@
   {
     "name": "chat-store: an info of another project is overwritten",
     "file": "main-core/src/shell/projects/chat_store.rs",
-    "find": "                if let Some(parsed) = &parsed\n                    && parsed.project_id() != project_id\n                {\n                    return Ok(None);\n                }\n",
+    "find": "            if let Some(parsed) = &parsed\n                && parsed.project_id() != project_id\n            {\n                return Ok(None);\n            }\n",
     "replace": "",
     "fn": ["chat-store.scenario"]
   },
   {
     "name": "chat-store: a new info is made at the clock, not the first message",
     "file": "main-core/src/shell/projects/chat_store.rs",
-    "find": "Some(entry) => record_str(&entry.message, \"ts\"),\n                    None => host.now_iso(),",
-    "replace": "Some(_) => host.now_iso(),\n                    None => host.now_iso(),",
+    "find": "Some(entry) => record_str(&entry.message, \"ts\"),\n                None => host.now_iso(),",
+    "replace": "Some(_) => host.now_iso(),\n                None => host.now_iso(),",
     "fn": ["chat-store.scenario"]
   },
   {

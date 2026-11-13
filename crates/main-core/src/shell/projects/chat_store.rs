@@ -1241,74 +1241,74 @@ impl<G: ChatStoreGuide, H: ChatStoreHost> ProjectChatStore<G, H> {
         let mut change = |current: Option<&str>,
                           install_id: &mut InstallIdSupplier<'_>|
          -> Result<Option<String>, ChatStoreError> {
-                let parsed = parse_info(current, chat_id);
-                if let Some(parsed) = &parsed
-                    && parsed.project_id() != project_id
-                {
-                    return Ok(None);
-                }
-                let at = match entries.first() {
-                    Some(entry) => record_str(&entry.message, "ts"),
-                    None => host.now_iso(),
-                };
-                let mut info = match parsed {
-                    Some(parsed) => parsed,
-                    None => {
-                        let mut fresh = JsObject::new();
-                        fresh.set(
-                            "version",
-                            JsonValue::Number(f64::from(PROJECT_FORMAT_VERSION)),
-                        );
-                        fresh.set("id", string_value(chat_id.to_owned()));
-                        fresh.set("projectId", string_value(project_id.to_owned()));
-                        fresh.set("title", string_value(String::new()));
-                        fresh.set("createdAt", string_value(at.clone()));
-                        fresh.set("updatedAt", string_value(at));
-                        fresh.set("origin", string_value(install_id()?));
-                        fresh.set(
-                            "lastEditor",
-                            string_value(match entries.first() {
-                                Some(entry) => record_str(&entry.message, "editor"),
-                                None => "home".to_owned(),
-                            }),
-                        );
-                        fresh.set("documents", JsonValue::Array(Vec::new()));
-                        ChatInfo(fresh)
-                    }
-                };
-                for entry in entries {
-                    info.0
-                        .set("updatedAt", string_value(record_str(&entry.message, "ts")));
-                    info.0.set(
-                        "lastEditor",
-                        string_value(record_str(&entry.message, "editor")),
+            let parsed = parse_info(current, chat_id);
+            if let Some(parsed) = &parsed
+                && parsed.project_id() != project_id
+            {
+                return Ok(None);
+            }
+            let at = match entries.first() {
+                Some(entry) => record_str(&entry.message, "ts"),
+                None => host.now_iso(),
+            };
+            let mut info = match parsed {
+                Some(parsed) => parsed,
+                None => {
+                    let mut fresh = JsObject::new();
+                    fresh.set(
+                        "version",
+                        JsonValue::Number(f64::from(PROJECT_FORMAT_VERSION)),
                     );
-                    if let Some(doc_rel) = &entry.doc_rel {
-                        let documents = move_to_end(platform, &info.documents(), doc_rel);
-                        info.0.set("documents", string_array(&documents));
-                    }
+                    fresh.set("id", string_value(chat_id.to_owned()));
+                    fresh.set("projectId", string_value(project_id.to_owned()));
+                    fresh.set("title", string_value(String::new()));
+                    fresh.set("createdAt", string_value(at.clone()));
+                    fresh.set("updatedAt", string_value(at));
+                    fresh.set("origin", string_value(install_id()?));
+                    fresh.set(
+                        "lastEditor",
+                        string_value(match entries.first() {
+                            Some(entry) => record_str(&entry.message, "editor"),
+                            None => "home".to_owned(),
+                        }),
+                    );
+                    fresh.set("documents", JsonValue::Array(Vec::new()));
+                    ChatInfo(fresh)
                 }
-                for rel in attached {
-                    let documents = move_to_end(platform, &info.documents(), rel);
+            };
+            for entry in entries {
+                info.0
+                    .set("updatedAt", string_value(record_str(&entry.message, "ts")));
+                info.0.set(
+                    "lastEditor",
+                    string_value(record_str(&entry.message, "editor")),
+                );
+                if let Some(doc_rel) = &entry.doc_rel {
+                    let documents = move_to_end(platform, &info.documents(), doc_rel);
                     info.0.set("documents", string_array(&documents));
                 }
-                if let Some(rename) = &rename {
-                    info.0.set("title", string_value(rename.clone()));
-                } else if info.title().is_empty()
-                    && let Some(first) = entries
-                        .iter()
-                        .find(|entry| record_str(&entry.message, "role") == "user")
-                {
-                    info.0.set(
-                        "title",
-                        string_value(one_line(
-                            &record_str(&first.message, "text"),
-                            CHAT_TITLE_CHARS,
-                        )),
-                    );
-                }
-                Ok(Some(info_text(&info)))
-            };
+            }
+            for rel in attached {
+                let documents = move_to_end(platform, &info.documents(), rel);
+                info.0.set("documents", string_array(&documents));
+            }
+            if let Some(rename) = &rename {
+                info.0.set("title", string_value(rename.clone()));
+            } else if info.title().is_empty()
+                && let Some(first) = entries
+                    .iter()
+                    .find(|entry| record_str(&entry.message, "role") == "user")
+            {
+                info.0.set(
+                    "title",
+                    string_value(one_line(
+                        &record_str(&first.message, "text"),
+                        CHAT_TITLE_CHARS,
+                    )),
+                );
+            }
+            Ok(Some(info_text(&info)))
+        };
         let outcome = self.guide.update_data(
             project_id,
             &info_rel(chat_id),
