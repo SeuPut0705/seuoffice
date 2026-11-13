@@ -43,16 +43,17 @@ const BASE: Fake = { ipcMain: { handle() {}, removeHandler() {}, on() {} } }
 
 interface Box {
   fake: Fake
-  /** the stub module's setter, once it has been loaded */
-  set?: (fake: Fake) => void
+  /** the setter of each instance of the stub: `require` and `import` load it
+   *  as two modules, and both must follow `useElectron` */
+  setters: ((fake: Fake) => void)[]
 }
-const box: Box = { fake: BASE }
+const box: Box = { fake: BASE, setters: [] }
 ;(globalThis as Record<symbol, unknown>)[Symbol.for('main-diff.electron')] = box
 
 const source = [
   `const box = globalThis[Symbol.for('main-diff.electron')]`,
   ...NAMES.map((name) => `export let ${name} = box.fake.${name}`),
-  `box.set = (fake) => { ${NAMES.map((name) => `${name} = fake.${name}`).join('; ')} }`,
+  `box.setters.push((fake) => { ${NAMES.map((name) => `${name} = fake.${name}`).join('; ')} })`,
   `export default new Proxy({}, { get: (_, key) => box.fake[key] })`,
 ].join('\n')
 const URL = 'main-diff:electron'
@@ -73,5 +74,5 @@ registerHooks({
 /** the Electron the next calls see: these names, over the do-nothing `ipcMain` */
 export function useElectron(fake: Fake): void {
   box.fake = { ...BASE, ...fake }
-  box.set?.(box.fake)
+  for (const set of box.setters) set(box.fake)
 }
