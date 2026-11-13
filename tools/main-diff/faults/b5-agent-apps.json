@@ -2368,8 +2368,8 @@
   {
     "name": "hwp-image: the aspect ratio is not stringified",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "        .map(js_string);\n    let op = GenerateImageOp",
-    "replace": "        .map(|_| String::new());\n    let op = GenerateImageOp",
+    "find": "        .map(js_string_checked)\n        .transpose()?;\n    let op = GenerateImageOp {\n        prompt,\n        aspect_ratio,\n    };\n    let file = host.file_path_of(sender_id);\n    let temp",
+    "replace": "        .map(|_| Ok::<_, JsTypeError>(String::new()))\n        .transpose()?;\n    let op = GenerateImageOp {\n        prompt,\n        aspect_ratio,\n    };\n    let file = host.file_path_of(sender_id);\n    let temp",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
@@ -2417,14 +2417,14 @@
   {
     "name": "hwp-image: only the first picture is taken",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "        Some(JsonValue::Array(items)) => items.iter().map(js_string).collect(),",
-    "replace": "        Some(JsonValue::Array(items)) => items.iter().take(1).map(js_string).collect(),",
+    "find": "        Some(JsonValue::Array(items)) => items\n            .iter()\n            .map(js_string_checked)",
+    "replace": "        Some(JsonValue::Array(items)) => items\n            .iter()\n            .take(1)\n            .map(js_string_checked)",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
     "name": "hwp-image: the requirements are dropped",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "        Some(value) => value_key(Some(value)),",
+    "find": "        Some(requirements) => js_string_checked(requirements)?,",
     "replace": "        Some(_) => String::new(),",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
@@ -2445,8 +2445,8 @@
   {
     "name": "hwp-image: the generate call begins after the roots",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "    let call = calls.begin(sender_id, sender_destroyed);\n    let prompt",
-    "replace": "    let call = calls.begin(sender_id, false);\n    let prompt",
+    "find": "    let call = calls.begin(sender_id, sender_destroyed);\n    let request = generate_request(host, sender_id, op);",
+    "replace": "    let call = calls.begin(sender_id, false);\n    let request = generate_request(host, sender_id, op);",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
@@ -2459,8 +2459,8 @@
   {
     "name": "hwp-image: the statuses are not asked for a generation",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "    let statuses = host.subscription_statuses();\n    GenerateImageStart {",
-    "replace": "    let statuses = JsonValue::Null;\n    GenerateImageStart {",
+    "find": "    let statuses = host.subscription_statuses();\n    Ok(GenerateImageRequest {",
+    "replace": "    let statuses = JsonValue::Null;\n    Ok(GenerateImageRequest {",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
@@ -2515,8 +2515,8 @@
   {
     "name": "mindmap-image: the aspect ratio is not stringified",
     "file": "main-core/src/mindmap/ai_image.rs",
-    "find": "        .map(js_string);",
-    "replace": "        .map(|_| String::new());",
+    "find": "        .map(js_string_checked)\n        .transpose()?;",
+    "replace": "        .map(|_| Ok::<_, JsTypeError>(String::new()))\n        .transpose()?;",
     "fn": ["mindmap/ai-image.registerMindmapImageIpc"]
   },
   {
@@ -4925,5 +4925,68 @@
       "mindmap/ai-attachments.readAttachmentPage",
       "mindmap/ai-attachments.registerMindmapAiIpc"
     ]
+  },
+  {
+    "name": "hwp-image: a prompt that cannot be a string is empty",
+    "file": "main-core/src/hwp/ai_image.rs",
+    "find": "        Some(value) => js_string_checked(value)?,\n    };\n    let aspect_ratio",
+    "replace": "        Some(value) => js_string_checked(value).unwrap_or_default(),\n    };\n    let aspect_ratio",
+    "fn": ["hwp/ai-image.registerHwpImageIpc"]
+  },
+  {
+    "name": "hwp-image: an aspect ratio that cannot be a string is left out",
+    "file": "main-core/src/hwp/ai_image.rs",
+    "find": "        .transpose()?;\n    let op = GenerateImageOp {\n        prompt,\n        aspect_ratio,\n    };\n    let file = host.file_path_of(sender_id);\n    let temp",
+    "replace": "        .and_then(Result::ok);\n    let op = GenerateImageOp {\n        prompt,\n        aspect_ratio,\n    };\n    let file = host.file_path_of(sender_id);\n    let temp",
+    "fn": ["hwp/ai-image.registerHwpImageIpc"]
+  },
+  {
+    "name": "hwp-image: a picture url that cannot be a string is dropped",
+    "file": "main-core/src/hwp/ai_image.rs",
+    "find": "            .map(js_string_checked)\n            .collect::<Result<_, _>>()?,",
+    "replace": "            .filter_map(|url| js_string_checked(url).ok())\n            .collect(),",
+    "fn": ["hwp/ai-image.registerHwpImageIpc"]
+  },
+  {
+    "name": "hwp-image: requirements that cannot be a string are empty",
+    "file": "main-core/src/hwp/ai_image.rs",
+    "find": "        Some(requirements) => js_string_checked(requirements)?,",
+    "replace": "        Some(requirements) => js_string_checked(requirements).unwrap_or_default(),",
+    "fn": ["hwp/ai-image.registerHwpImageIpc"]
+  },
+  {
+    "name": "hwp-image: the settings path is read after the op",
+    "file": "main-core/src/hwp/ai_image.rs",
+    "find": "    let path = settings_path(host);\n    let prompt = match op.and_then(|o| prop(o, \"prompt\")) {\n        None | Some(JsonValue::Null) => String::new(),\n        Some(value) => js_string_checked(value)?,\n    };",
+    "replace": "    let prompt = match op.and_then(|o| prop(o, \"prompt\")) {\n        None | Some(JsonValue::Null) => String::new(),\n        Some(value) => js_string_checked(value)?,\n    };\n    let path = settings_path(host);",
+    "fn": ["hwp/ai-image.registerHwpImageIpc"]
+  },
+  {
+    "name": "hwp-image: the analyze settings path is read after the requirements",
+    "file": "main-core/src/hwp/ai_image.rs",
+    "find": "    let settings_path = settings_path(host);\n    let requirements = match op.and_then(|o| prop(o, \"requirements\")) {\n        None | Some(JsonValue::Null) => String::new(),\n        Some(requirements) => js_string_checked(requirements)?,\n    };",
+    "replace": "    let requirements = match op.and_then(|o| prop(o, \"requirements\")) {\n        None | Some(JsonValue::Null) => String::new(),\n        Some(requirements) => js_string_checked(requirements)?,\n    };\n    let settings_path = settings_path(host);",
+    "fn": ["hwp/ai-image.registerHwpImageIpc"]
+  },
+  {
+    "name": "mindmap-image: a prompt that cannot be a string is empty",
+    "file": "main-core/src/mindmap/ai_image.rs",
+    "find": "        Some(value) => js_string_checked(value)?,",
+    "replace": "        Some(value) => js_string_checked(value).unwrap_or_default(),",
+    "fn": ["mindmap/ai-image.registerMindmapImageIpc"]
+  },
+  {
+    "name": "mindmap-image: an aspect ratio that cannot be a string is left out",
+    "file": "main-core/src/mindmap/ai_image.rs",
+    "find": "        .transpose()?;",
+    "replace": "        .and_then(Result::ok);",
+    "fn": ["mindmap/ai-image.registerMindmapImageIpc"]
+  },
+  {
+    "name": "mindmap-image: the settings path is read after the op",
+    "file": "main-core/src/mindmap/ai_image.rs",
+    "find": "    let path = join(&[&host.user_data_dir(), \"ai-settings.json\"]);\n    let prompt = match op.and_then(|o| prop(o, \"prompt\")) {\n        None | Some(JsonValue::Null) => String::new(),\n        Some(value) => js_string_checked(value)?,\n    };",
+    "replace": "    let prompt = match op.and_then(|o| prop(o, \"prompt\")) {\n        None | Some(JsonValue::Null) => String::new(),\n        Some(value) => js_string_checked(value)?,\n    };\n    let path = join(&[&host.user_data_dir(), \"ai-settings.json\"]);",
+    "fn": ["mindmap/ai-image.registerMindmapImageIpc"]
   }
 ]

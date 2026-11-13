@@ -3,20 +3,21 @@
 //! calls to bring a picture into the document or to ask what one in the
 //! document shows.
 //!
-//! `ipcMain.handle` stays in TypeScript. The handler bodies are
-//! [`generate_image`] and [`analyze_media`]; the `fetchImage` handler is
-//! `fetchImageBytes(url)` and nothing else, called through the ported
-//! `electron_utils::fetch_image_bytes`. `withMediaCallSignal` is
+//! `ipcMain.handle` stays in TypeScript. The bodies of the generate and
+//! analyze handlers are [`begin_generate_image`] / [`finish_generate_image`]
+//! and [`begin_analyze_media`] / [`finish_analyze_media`]; the `fetchImage`
+//! handler is `fetchImageBytes(url)` and nothing else, called through the
+//! ported `electron_utils::fetch_image_bytes`. `withMediaCallSignal` is
 //! [`MediaCalls`] of the caller.
 //!
 //! Engine-waiting: `generateImageTool` and `analyzeMediaTool` (the vendors and
-//! the Codex generator), behind [`HwpImageHost`].
+//! the Codex generator), which the caller runs between a begin and its finish.
 
-use crate::packages::ai_provider::jsval::{js_string, object, prop, text, value_key};
+use crate::packages::ai_provider::jsval::{js_string_checked, object, prop, text};
 use crate::packages::ai_search::media_call_abort::{MediaCallRun, MediaCalls};
 use crate::packages::ai_search::media_tools::document_media_roots;
-use jscompat::JsonValue;
 use jscompat::node_path::host::join;
+use jscompat::{JsTypeError, JsonValue};
 
 /// the options of `generateImageTool(settingsPath, op, options)`
 #[derive(Debug, Clone, PartialEq)]
@@ -96,43 +97,60 @@ fn settings_path(host: &mut dyn HwpImageHost) -> String {
 /// `e.sender`. The generation is a long call that `abortMediaCalls` from
 /// another handler cancels, so the caller runs `generateImageTool` itself
 /// between this and [`finish_generate_image`], with the signal of
-/// [`MediaCalls::aborted`] (`run.call`).
+/// [`MediaCalls::aborted`] (`run.call`). `Err` is the `TypeError` of a
+/// `String()` the handler rejects with; the call is forgotten by then.
 pub fn begin_generate_image(
     host: &mut dyn HwpImageHost,
     calls: &mut MediaCalls,
     sender_id: f64,
     sender_destroyed: bool,
     op: Option<&JsonValue>,
-) -> GenerateImageStart {
+) -> Result<GenerateImageStart, JsTypeError> {
     let call = calls.begin(sender_id, sender_destroyed);
+    let request = generate_request(host, sender_id, op);
+    // the `finally` of `withMediaCallSignal` when its callback throws
+    if request.is_err() {
+        calls.end(sender_id, call);
+    }
+    Ok(GenerateImageStart {
+        run: MediaCallRun { sender_id, call },
+        request: request?,
+    })
+}
+
+/// the arguments of `generateImageTool` in the order JavaScript evaluates
+/// them: the settings path, the op (whose `String()` may throw), the options
+fn generate_request(
+    host: &mut dyn HwpImageHost,
+    sender_id: f64,
+    op: Option<&JsonValue>,
+) -> Result<GenerateImageRequest, JsTypeError> {
+    let path = settings_path(host);
     let prompt = match op.and_then(|o| prop(o, "prompt")) {
         None | Some(JsonValue::Null) => String::new(),
-        Some(value) => js_string(value),
+        Some(value) => js_string_checked(value)?,
     };
     let aspect_ratio = op
         .and_then(|o| prop(o, "aspectRatio"))
         .filter(|a| a.truthy())
-        .map(js_string);
+        .map(js_string_checked)
+        .transpose()?;
     let op = GenerateImageOp {
         prompt,
         aspect_ratio,
     };
-    let path = settings_path(host);
     let file = host.file_path_of(sender_id);
     let temp = host.temp_dir();
     let roots = document_media_roots(file.as_deref(), Some(&join(&[&temp, "seuoffice-pasted"])));
     // screen path: the statuses of the process-wide subscription service
     // decide the route
     let statuses = host.subscription_statuses();
-    GenerateImageStart {
-        run: MediaCallRun { sender_id, call },
-        request: GenerateImageRequest {
-            settings_path: path,
-            op,
-            media_roots: roots,
-            statuses,
-        },
-    }
+    Ok(GenerateImageRequest {
+        settings_path: path,
+        op,
+        media_roots: roots,
+        statuses,
+    })
 }
 
 /// the `finally` of the generate handler: the engine answered (or was
@@ -155,17 +173,45 @@ fn is_image_data_url(url: &str) -> bool {
 /// the handler of `HWP_CHANNELS.analyzeMedia` up to the engine call: the
 /// panel takes a picture out of the document and sends it as an image data
 /// URL. Only data URLs are taken (this editor has no path to hand over).
+/// `Err` is the `TypeError` of a `String()` the handler rejects with; the
+/// call is forgotten by then.
 pub fn begin_analyze_media(
     host: &mut dyn HwpImageHost,
     calls: &mut MediaCalls,
     sender_id: f64,
     sender_destroyed: bool,
     op: Option<&JsonValue>,
-) -> AnalyzeMediaStep {
+) -> Result<AnalyzeMediaStep, JsTypeError> {
     let call = calls.begin(sender_id, sender_destroyed);
     let run = MediaCallRun { sender_id, call };
+    match analyze_request(host, op) {
+        Ok(Some(request)) => Ok(AnalyzeMediaStep::Tool { run, request }),
+        Ok(None) => {
+            calls.end(sender_id, call);
+            Ok(AnalyzeMediaStep::Done(object(vec![(
+                "error",
+                text("no picture was given to look at"),
+            )])))
+        }
+        // the `finally` of `withMediaCallSignal` when its callback throws
+        Err(e) => {
+            calls.end(sender_id, call);
+            Err(e)
+        }
+    }
+}
+
+/// the callback of the analyze handler up to `analyzeMediaTool`: `None` when
+/// no picture is left to look at
+fn analyze_request(
+    host: &mut dyn HwpImageHost,
+    op: Option<&JsonValue>,
+) -> Result<Option<AnalyzeMediaRequest>, JsTypeError> {
     let urls: Vec<String> = match op.and_then(|o| prop(o, "mediaUrls")) {
-        Some(JsonValue::Array(items)) => items.iter().map(js_string).collect(),
+        Some(JsonValue::Array(items)) => items
+            .iter()
+            .map(js_string_checked)
+            .collect::<Result<_, _>>()?,
         _ => Vec::new(),
     };
     let media_urls: Vec<String> = urls
@@ -173,29 +219,22 @@ pub fn begin_analyze_media(
         .filter(|url| is_image_data_url(url))
         .collect();
     if media_urls.is_empty() {
-        calls.end(sender_id, call);
-        return AnalyzeMediaStep::Done(object(vec![(
-            "error",
-            text("no picture was given to look at"),
-        )]));
+        return Ok(None);
     }
+    let settings_path = settings_path(host);
     let requirements = match op.and_then(|o| prop(o, "requirements")) {
         None | Some(JsonValue::Null) => String::new(),
-        Some(value) => value_key(Some(value)),
+        Some(requirements) => js_string_checked(requirements)?,
     };
-    let settings_path = settings_path(host);
     let statuses = host.subscription_statuses();
-    AnalyzeMediaStep::Tool {
-        run,
-        request: AnalyzeMediaRequest {
-            settings_path,
-            op: AnalyzeMediaOp {
-                media_urls,
-                requirements,
-            },
-            statuses,
+    Ok(Some(AnalyzeMediaRequest {
+        settings_path,
+        op: AnalyzeMediaOp {
+            media_urls,
+            requirements,
         },
-    }
+        statuses,
+    }))
 }
 
 /// the `finally` of the analyze handler: the engine answered (or was
