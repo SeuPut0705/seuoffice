@@ -30,10 +30,33 @@ const [shard, shards] = (process.env.FAULT_SHARD ?? '0/1').split('/').map(Number
 process.env.MAIN_DIFF_PROFILE ??= 'node-faults'
 const results = []
 
+// the group of each function: a comparison runs only the groups a fault names
+const groupOf = new Map(
+  spawnSync('npx', ['tsx', 'main.ts', '--list'], { cwd: tool, encoding: 'utf8' })
+    .stdout.split('\n')
+    .filter(Boolean)
+    .map((line) => line.split('\t').reverse()),
+)
+
 function compare(fns) {
-  const args = ['tsx', 'main.ts', '--show', '3', ...fns.flatMap((f) => ['--fn', f])]
-  const run = spawnSync('npx', args, { cwd: tool, encoding: 'utf8' })
-  return { status: run.status, out: `${run.stdout}${run.stderr}` }
+  let status = 0
+  let out = ''
+  for (const group of new Set(fns.map((f) => groupOf.get(f) ?? 'unknown'))) {
+    const mine = fns.filter((f) => (groupOf.get(f) ?? 'unknown') === group)
+    const args = [
+      'tsx',
+      'main.ts',
+      '--group',
+      group,
+      '--show',
+      '3',
+      ...mine.flatMap((f) => ['--fn', f]),
+    ]
+    const run = spawnSync('npx', args, { cwd: tool, encoding: 'utf8' })
+    status ||= run.status
+    out += `${run.stdout}${run.stderr}`
+  }
+  return { status, out }
 }
 
 for (const file of files) {

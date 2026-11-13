@@ -1,53 +1,35 @@
 import type { Group } from '../types.ts'
-import { group as b2Misc } from './b2-misc.ts'
-import { group as b2Print } from './b2-print.ts'
-import { group as b2Recovery } from './b2-recovery.ts'
-import { group as b2Remote } from './b2-remote.ts'
-import { group as b3Session } from './b3-session.ts'
-import { group as b3Shell } from './b3-shell.ts'
-import { group as b3Update } from './b3-update.ts'
-import { group as b4Docs } from './b4-docs.ts'
-import { group as b4Sheets } from './b4-sheets.ts'
-import { group as b4Slides } from './b4-slides.ts'
-import { group as b4Markdown } from './b4-markdown.ts'
-import { group as b4Html } from './b4-html.ts'
-import { group as b4Pdf } from './b4-pdf.ts'
-import { group as b4Hwp } from './b4-hwp.ts'
-import { group as b5Ai } from './b5-ai.ts'
-import { group as b6Apps } from './b6-apps.ts'
-import { group as b6Shell } from './b6-shell.ts'
-import { group as b6Tabs } from './b6-tabs.ts'
-import { group as b6Utils } from './b6-utils.ts'
-import { group as files } from './files.ts'
-import { group as nodeFs } from './node-fs.ts'
-import { group as nodePath } from './node-path.ts'
-import { group as settings } from './settings.ts'
-import { group as update } from './update.ts'
 
-/** The groups of each batch (decision 0030), by the name `--group` takes. */
-export const groups: Record<string, Group> = {
-  'node-path': nodePath,
-  update,
-  settings,
-  files,
-  'node-fs': nodeFs,
-  'b2-misc': b2Misc,
-  'b2-recovery': b2Recovery,
-  'b2-remote': b2Remote,
-  'b2-print': b2Print,
-  'b3-session': b3Session,
-  'b3-update': b3Update,
-  'b3-shell': b3Shell,
-  'b4-docs': b4Docs,
-  'b4-sheets': b4Sheets,
-  'b4-slides': b4Slides,
-  'b4-markdown': b4Markdown,
-  'b4-html': b4Html,
-  'b4-pdf': b4Pdf,
-  'b4-hwp': b4Hwp,
-  'b5-ai': b5Ai,
-  'b6-utils': b6Utils,
-  'b6-shell': b6Shell,
-  'b6-apps': b6Apps,
-  'b6-tabs': b6Tabs,
+/**
+ * The groups of each batch (decision 0030), by the name `--group` takes, in
+ * the order they run. A group is loaded only when it runs, and main.ts runs
+ * each group in a process of its own: a group fakes modules (electron, the
+ * editors' mains) through loader hooks and module caches that outlive it, so
+ * one group's fakes must never reach another group's modules.
+ */
+export const groups: Record<string, () => Promise<{ group: Group }>> = {
+  'node-path': () => import('./node-path.ts'),
+  update: () => import('./update.ts'),
+  settings: () => import('./settings.ts'),
+  files: () => import('./files.ts'),
+  'node-fs': () => import('./node-fs.ts'),
+  'b2-misc': () => import('./b2-misc.ts'),
+  'b2-recovery': () => import('./b2-recovery.ts'),
+  'b2-remote': () => import('./b2-remote.ts'),
+  'b2-print': () => import('./b2-print.ts'),
+  'b3-session': () => import('./b3-session.ts'),
+  'b3-update': () => import('./b3-update.ts'),
+  'b3-shell': () => import('./b3-shell.ts'),
+  'b4-docs': () => import('./b4-docs.ts'),
+  'b4-sheets': () => import('./b4-sheets.ts'),
+  'b4-slides': () => import('./b4-slides.ts'),
+  'b4-markdown': () => import('./b4-markdown.ts'),
+  'b4-html': () => import('./b4-html.ts'),
+  'b4-pdf': () => import('./b4-pdf.ts'),
+  'b4-hwp': () => import('./b4-hwp.ts'),
+  'b5-ai': () => import('./b5-ai.ts'),
+  'b6-utils': () => import('./b6-utils.ts'),
+  'b6-shell': () => import('./b6-shell.ts'),
+  'b6-apps': () => import('./b6-apps.ts'),
+  'b6-tabs': () => import('./b6-tabs.ts'),
 }

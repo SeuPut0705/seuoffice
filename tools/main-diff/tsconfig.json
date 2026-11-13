@@ -12,6 +12,7 @@
   // the shell's ambient declarations, in the shell's order (apps/shell/tsconfig.json)
   "include": [
     "../../apps/slides/src/main/env.d.ts",
+    "../../apps/docs/src/main/env.d.ts",
     "../../packages/html2docx/src/raw.d.ts",
     "../../packages/pdf2docx/src/bidi-js.d.ts",
     "*.ts",
