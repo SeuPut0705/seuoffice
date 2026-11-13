@@ -14,7 +14,7 @@ use std::net::Ipv6Addr;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use jscompat::{JsRegex, js_regex};
+use jscompat::{JsRegex, RegexLimit, TryJsRegex, js_regex, try_js_regex};
 use url::Url;
 
 // The IPv4 pattern of node:net (lib/internal/net.js)
@@ -26,19 +26,21 @@ fn ipv4_regex() -> &'static JsRegex {
     js_regex!(IPV4_PATTERN)
 }
 
-fn ipv6_regex() -> &'static JsRegex {
-    js_regex!(IPV6_PATTERN)
+fn ipv6_regex() -> &'static TryJsRegex {
+    try_js_regex!(IPV6_PATTERN)
 }
 
-/// `net.isIP(text)`: 4, 6 or 0.
-pub fn is_ip(text: &str) -> u8 {
-    if ipv4_regex().test(text) {
+/// `net.isIP(text)`: 4, 6 or 0. `Err` is a search of the IPv6 pattern that
+/// stopped at the bound, which V8 never does; every caller here treats it as
+/// unsafe.
+pub fn is_ip(text: &str) -> Result<u8, RegexLimit> {
+    Ok(if ipv4_regex().test(text) {
         4
-    } else if ipv6_regex().test(text) {
+    } else if ipv6_regex().try_test(text)? {
         6
     } else {
         0
-    }
+    })
 }
 
 /// An address list of `net.BlockList`: subnets as (network, prefix bits).
@@ -125,15 +127,15 @@ fn in_blocked_v6(address: &[u8; 16]) -> bool {
 
 /// True when `ip` is a fake-ip placeholder a VPN resolver handed out for a real hostname.
 pub fn is_fake_ip_dns_artifact(ip: &str) -> bool {
-    is_ip(ip) == 4
+    is_ip(ip) == Ok(4)
         && parse_v4(ip).is_some_and(|address| prefix_matches(&address, &FAKE_IP_V4.0, FAKE_IP_V4.1))
 }
 
 /// True when `ip` is a literal address outside the public ranges (non-addresses count as unsafe).
 pub fn is_blocked_address(ip: &str) -> bool {
     match is_ip(ip) {
-        0 => true,
-        4 => parse_v4(ip).is_some_and(|address| in_blocked_v4(&address)),
+        Ok(0) | Err(_) => true,
+        Ok(4) => parse_v4(ip).is_some_and(|address| in_blocked_v4(&address)),
         _ => parse_v6(ip).is_some_and(|address| in_blocked_v6(&address)),
     }
 }
@@ -230,7 +232,7 @@ pub fn resolve_safe_remote_target(
     if host.is_empty() {
         return None;
     }
-    let literal_family = is_ip(&host);
+    let literal_family = is_ip(&host).ok()?;
     if literal_family != 0 {
         if is_blocked_address(&host) {
             return None;
