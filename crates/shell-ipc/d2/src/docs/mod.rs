@@ -15,9 +15,9 @@
 
 mod adapters;
 mod close;
-pub(crate) mod editors;
+pub mod editors;
 mod export;
-pub(crate) mod hosts;
+pub mod hosts;
 mod misc;
 mod open;
 mod passwords;

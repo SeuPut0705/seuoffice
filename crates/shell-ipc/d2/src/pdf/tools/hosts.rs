@@ -246,6 +246,8 @@ pub enum TabKind {
 /// What the shell does for the PDF tools beyond the shared hosts. Runs on
 /// the core thread unless a method says otherwise.
 pub trait PdfToolsShell: Send + Sync {
+    /// `crypto.randomUUID()`: the ids the tools window hands out
+    fn random_uuid(&self) -> String;
     /// `currentLang()`
     fn lang(&self) -> String;
     /// `currentTheme()` as the tools window takes it: `light`, `dark`, `system`
@@ -297,11 +299,14 @@ pub type PdfToolsShellHost = Arc<dyn PdfToolsShell>;
 #[cfg(any(test, feature = "probe"))]
 pub(crate) mod fake {
     //! The fakes of [`PdfToolsEngine`] and [`PdfToolsShell`]. Each answers
-    //! from the case (`hosts.d2.pdf`): `case[<method>]` is the answer to
+    //! from the case (`hosts.d2.pdf.tools`): `case[<method>]` is the answer to
     //! every call, or, when it is an array, the answers in order (so an
     //! array answer is written inside one), then the neutral default. Store
     //! calls read `case["store.<method>"]`. In answers, `{"$u8": [..]}` is a
-    //! `Uint8Array`. Every call is recorded with its arguments.
+    //! `Uint8Array`. A call with an effect writes one line to the probe's
+    //! log, named after the TypeScript function the method stands for
+    //! (tools/ipc-diff/groups/d2/pdf-tools-fakes.ts writes the same lines).
+    //! `random_uuid` counts: `00000000-0000-4000-8000-000000000001`, ...
     //!
     //! Shapes: `run_job` `{"value": v, "progress": [[done, total]]}` or
     //! `{"error": code, "message": m}` (default `not-available`);
@@ -309,11 +314,13 @@ pub(crate) mod fake {
     //! (default: the first input); `inspect_pdf` `{"pages": n}` or
     //! `{"problem": p}` (default 1 page); `convert_to_office` `{"bytes": b,
     //! "scannedDocument": bool, "pageResults": [[page, status]]}` or
-    //! `{"load": code}` / `{"error": m}`; store errors `{"$error": "write"|"type"|"other", "message": m}`.
+    //! `{"load": code}` / `{"error": m}`; store errors `{"$error": "write"|"type"|"other", "message": m}`;
+    //! `unsavedFiles`: the paths open with unsaved changes.
 
     use std::collections::HashMap;
     use std::path::PathBuf;
     use std::sync::Mutex;
+    use std::sync::atomic::{AtomicU64, Ordering};
 
     use serde_json::{Value, json};
     use shell_contract::runtime::CancelToken;
@@ -321,29 +328,41 @@ pub(crate) mod fake {
 
     use super::*;
 
+    /// ipc-probe's case log (its `ProbeLog`)
+    pub type ProbeLog = Arc<Mutex<Vec<Value>>>;
+
     /// Answers queued per method, and the calls made
     pub struct Fake {
         answers: Mutex<HashMap<String, Value>>,
+        #[cfg(test)]
         pub calls: Mutex<Vec<(String, Value)>>,
-        /// what `flush_pdf_save` and `close_tab` answer; tests may change it
+        /// what `flush_pdf_save` answers; tests may change it
         pub flush_ok: Mutex<bool>,
+        log: Option<ProbeLog>,
+        uuids: AtomicU64,
     }
 
     impl Fake {
-        pub fn new(case: &Value) -> Self {
+        pub fn new(case: &Value, log: Option<ProbeLog>) -> Self {
             let answers = match case {
                 Value::Object(map) => map.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
                 _ => HashMap::new(),
             };
             Fake {
                 answers: Mutex::new(answers),
+                #[cfg(test)]
                 calls: Mutex::default(),
                 flush_ok: Mutex::new(true),
+                log,
+                uuids: AtomicU64::new(0),
             }
         }
 
         fn answer(&self, method: &str, args: Value) -> Option<Value> {
+            #[cfg(test)]
             self.calls.lock().unwrap().push((method.to_owned(), args));
+            #[cfg(not(test))]
+            let _ = args;
             let mut answers = self.answers.lock().unwrap();
             match answers.get_mut(method)? {
                 Value::Array(queue) if queue.is_empty() => None,
@@ -352,7 +371,15 @@ pub(crate) mod fake {
             }
         }
 
+        /// one line of the probe's log
+        fn log(&self, line: Value) {
+            if let Some(log) = &self.log {
+                log.lock().unwrap().push(line)
+            }
+        }
+
         /// answers `method` from now on as the case's `value` would
+        #[cfg(test)]
         pub fn set(&self, method: &str, value: Value) {
             self.answers
                 .lock()
@@ -361,6 +388,7 @@ pub(crate) mod fake {
         }
 
         /// the calls of one method, their arguments
+        #[cfg(test)]
         pub fn called(&self, method: &str) -> Vec<Value> {
             self.calls
                 .lock()
@@ -409,7 +437,9 @@ pub(crate) mod fake {
             progress: &(dyn Fn(f64, f64) + Sync),
             _cancel: &CancelToken,
         ) -> JobOutcome {
-            let Some(answer) = self.answer("run_job", json_of(&job)) else {
+            let args = json_of(&job);
+            self.log(json!(["runStructureJob", args]));
+            let Some(answer) = self.answer("run_job", args) else {
                 return Err(JobFailure::new("not-available", Some("no job process")));
             };
             for step in answer["progress"].as_array().into_iter().flatten() {
@@ -435,10 +465,11 @@ pub(crate) mod fake {
             args: Vec<IpcValue>,
         ) -> Result<IpcValue, StoreError> {
             let key = format!("store.{}", method.name());
-            let record = json!({
-                "dir": user_data.to_string_lossy(),
-                "args": args.iter().map(json_of).collect::<Vec<_>>(),
-            });
+            let args: Vec<Value> = args.iter().map(json_of).collect();
+            let mut line = vec![json!(format!("ResultStore.{}", method.name()))];
+            line.extend(args.iter().cloned());
+            self.log(Value::Array(line));
+            let record = json!({ "dir": user_data.to_string_lossy(), "args": args });
             let Some(answer) = self.answer(&key, record) else {
                 use StoreMethod::*;
                 return Ok(match method {
@@ -497,9 +528,11 @@ pub(crate) mod fake {
             progress: &(dyn Fn(f64, f64) + Sync),
             cancel: &CancelToken,
         ) -> Result<Vec<Vec<u8>>, ToolError> {
+            let options = json_of(&options);
+            self.log(json!(["runPdfTool", tool, inputs.len(), options]));
             let answer = self.answer(
                 "run_tool",
-                json!({ "tool": tool, "inputs": inputs.len(), "options": json_of(&options) }),
+                json!({ "tool": tool, "inputs": inputs.len(), "options": options }),
             );
             let Some(answer) = answer else {
                 return Ok(inputs.into_iter().take(1).collect());
@@ -528,10 +561,7 @@ pub(crate) mod fake {
         }
 
         fn png_data_url(&self, width: f64, height: f64, bgra: &[u8]) -> String {
-            self.calls
-                .lock()
-                .unwrap()
-                .push(("png_data_url".into(), json!([width, height, bgra.len()])));
+            self.answer("png_data_url", json!([width, height, bgra.len()]));
             format!("data:image/png;base64,{width}x{height}")
         }
 
@@ -542,6 +572,8 @@ pub(crate) mod fake {
             password: Option<&str>,
             progress: &(dyn Fn(f64, f64) + Sync),
         ) -> Result<OfficeConversion, ConvertError> {
+            let args = json!([format.extension(), pdf_path, password]);
+            self.log(json!(["convertPdfFileToOfficeLocal", args]));
             let answer = self.answer(
                 "convert_to_office",
                 json!({ "format": format.extension(), "path": pdf_path, "password": password }),
@@ -568,6 +600,10 @@ pub(crate) mod fake {
     }
 
     impl PdfToolsShell for Fake {
+        fn random_uuid(&self) -> String {
+            let n = self.uuids.fetch_add(1, Ordering::Relaxed) + 1;
+            format!("00000000-0000-4000-8000-{n:012}")
+        }
         fn lang(&self) -> String {
             self.answer("lang", Value::Null)
                 .map(|a| text(&a))
@@ -587,33 +623,46 @@ pub(crate) mod fake {
         }
         /// view 900 unless the case says
         fn open_tools_window(&self, parent: Option<WindowId>, title: &str) -> Option<ViewId> {
-            let a = self.answer("open_tools_window", json!([parent.map(|w| w.0), title]));
+            let args = json!([parent.map(|w| w.0), title]);
+            self.log(json!(["openPdfToolsWindow", args[0], title]));
+            let a = self.answer("open_tools_window", args);
             Some(ViewId(a.and_then(|a| a.as_u64()).unwrap_or(900) as u32))
         }
         fn show_window(&self, view: ViewId) {
+            self.log(json!(["pdfToolsWindow.show", view.0]));
             self.answer("show_window", json!(view.0));
         }
         /// view 901 unless the case says
         fn open_password_window(&self, parent: Option<WindowId>, title: &str) -> Option<ViewId> {
-            let a = self.answer("open_password_window", json!([parent.map(|w| w.0), title]));
+            let args = json!([parent.map(|w| w.0), title]);
+            self.log(json!(["promptPdfPassword.window", args[0], title]));
+            let a = self.answer("open_password_window", args);
             Some(ViewId(a.and_then(|a| a.as_u64()).unwrap_or(901) as u32))
         }
         fn open_result(&self, path: &str) -> bool {
+            self.log(json!(["openResult", path]));
             self.answer("open_result", json!(path))
                 .and_then(|a| a.as_bool())
                 .unwrap_or(true)
         }
         fn open_for_editing(&self, path: &str) -> bool {
+            self.log(json!(["openForEditing", path]));
             self.answer("open_for_editing", json!(path))
                 .and_then(|a| a.as_bool())
                 .unwrap_or(true)
         }
         fn file_has_unsaved_changes(&self, path: &str) -> bool {
+            let unsaved = self.answers.lock().unwrap().get("unsavedFiles").cloned();
             self.answer("file_has_unsaved_changes", json!(path))
                 .and_then(|a| a.as_bool())
-                .unwrap_or(false)
+                .unwrap_or_else(|| {
+                    unsaved
+                        .and_then(|u| u.as_array().cloned())
+                        .is_some_and(|u| u.iter().any(|p| p.as_str() == Some(path)))
+                })
         }
         fn open_document_path(&self, path: &str) -> bool {
+            self.log(json!(["openDocumentPath", path]));
             self.answer("open_document_path", json!(path))
                 .and_then(|a| a.as_bool())
                 .unwrap_or(true)
@@ -629,6 +678,7 @@ pub(crate) mod fake {
             })
         }
         fn flush_pdf_save(&self, view: ViewId, then: Box<dyn FnOnce(bool)>) {
+            self.log(json!(["flushPdfSave", view.0]));
             let ok = self
                 .answer("flush_pdf_save", json!(view.0))
                 .and_then(|a| a.as_bool())
@@ -636,25 +686,32 @@ pub(crate) mod fake {
             then(ok)
         }
         fn find_tab(&self, kind: TabKind, path: &str) -> Option<String> {
+            self.log(json!([format!("tabManager.find{kind:?}TabByPath"), path]));
             self.answer("find_tab", json!([format!("{kind:?}"), path]))
                 .and_then(|a| a.as_str().map(str::to_owned))
         }
+        /// an answer that is a string is the rejection's message
         fn close_tab(&self, tab: &str, then: Box<dyn FnOnce(Result<(), String>)>) {
+            self.log(json!(["tabManager.closeTab", tab]));
             match self.answer("close_tab", json!(tab)) {
                 Some(Value::String(e)) => then(Err(e)),
                 _ => then(Ok(())),
             }
         }
         fn activate_tab(&self, tab: &str) {
+            self.log(json!(["tabManager.activateTab", tab]));
             self.answer("activate_tab", json!(tab));
         }
         fn activate_view(&self, view: ViewId) {
+            self.log(json!(["activateView", view.0]));
             self.answer("activate_view", json!(view.0));
         }
         fn set_progress_bar(&self, window: WindowId, progress: f64) {
+            self.log(json!(["setProgressBar", window.0, progress]));
             self.answer("set_progress_bar", json!([window.0, progress]));
         }
         fn open_hwp_copy(&self, copy: &str, title: &str) -> Result<Option<ViewId>, String> {
+            self.log(json!(["tabManager.openHwpTab", copy, title]));
             match self.answer("open_hwp_copy", json!([copy, title])) {
                 Some(Value::String(e)) => Err(e),
                 Some(a) => Ok(a.as_u64().map(|v| ViewId(v as u32))),

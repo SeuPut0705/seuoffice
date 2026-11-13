@@ -12,7 +12,7 @@ use std::fs;
 use std::io::Read;
 use std::rc::Rc;
 use std::sync::Arc;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::UNIX_EPOCH;
 
 use jscompat::node_path::host::{basename, extname};
 use jscompat::{JsObject, JsonValue};
@@ -261,11 +261,9 @@ fn collect_attachments<'a>(
 
 // ---- pasted images ----
 
-/// `new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')`
-fn pasted_stamp() -> String {
-    let ms = SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .map_or(0.0, |d| d.as_millis() as f64);
+/// `new Date().toISOString().slice(0, 19).replace(/[-:]/g, '').replace('T', '-')`,
+/// `Date.now()` being the shell's clock
+fn pasted_stamp(ms: f64) -> String {
     jscompat::to_iso_string(ms)
         .unwrap_or_default()
         .chars()
@@ -284,6 +282,7 @@ enum PasteRefused {
 fn save_pasted_image(
     temp: &std::path::Path,
     seq: &Cell<u64>,
+    now_ms: f64,
     data: &IpcValue,
     ext: &IpcValue,
 ) -> Result<Result<String, PasteRefused>, IpcError> {
@@ -306,7 +305,7 @@ fn save_pasted_image(
     seq.set(seq.get() + 1);
     let file = dir.join(format!(
         "pasted-{}-{}.{clean_ext}",
-        pasted_stamp(),
+        pasted_stamp(now_ms),
         seq.get()
     ));
     fs::write(&file, bytes)
@@ -500,7 +499,7 @@ fn not_a_string_path(v: &IpcValue) -> IpcError {
         IpcValue::Object(_) => "an instance of Object".to_owned(),
     };
     kit::named_error(
-        "TypeError",
+        "TypeError [ERR_INVALID_ARG_TYPE]",
         format!("The \"path\" argument must be of type string. Received {received}"),
     )
 }
@@ -638,6 +637,7 @@ pub(super) fn entries_with(
             let saved = save_pasted_image(
                 &temp.path(PathName::Temp),
                 &pasted_seq,
+                shell.now_ms(),
                 args.get(0),
                 args.get(1),
             )?;
@@ -1250,7 +1250,11 @@ mod tests {
             let err = rt
                 .invoke_now(channel, from, vec![IpcValue::Number(5.0)])
                 .unwrap_err();
-            assert_eq!(err.name.as_deref(), Some("TypeError"), "{channel}");
+            assert_eq!(
+                err.name.as_deref(),
+                Some("TypeError [ERR_INVALID_ARG_TYPE]"),
+                "{channel}"
+            );
             assert_eq!(
                 err.message,
                 "The \"path\" argument must be of type string. Received type number (5)"

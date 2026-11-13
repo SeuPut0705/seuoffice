@@ -20,7 +20,7 @@ use shell_contract::runtime::PathName;
 use shell_contract::{IpcError, IpcValue, ViewId};
 
 use super::session::{object, slice16};
-use super::{DialogAdapter, Epub, js_object, now_ms};
+use super::{DialogAdapter, Epub, js_object};
 use crate::kit::{self, Args, IntoIpc};
 use jscompat::JsonValue;
 
@@ -341,7 +341,7 @@ impl Epub {
             }
             state.attach.pasted_pruned = true;
         }
-        let cutoff = now_ms() - WEEK_MS;
+        let cutoff = self.shell.now() - WEEK_MS;
         // the folder may not exist yet; another tab may have removed a file already
         let Ok(entries) = fs::read_dir(namespaced(dir)) else {
             return;
@@ -376,7 +376,7 @@ impl Epub {
         fs::create_dir_all(namespaced(&dir))
             .map_err(|e| kit::error(node_error(&e, "mkdir", &dir).message))?;
         self.prune_pasted_images(&dir);
-        let iso = jscompat::to_iso_string(now_ms()).unwrap_or_default();
+        let iso = jscompat::to_iso_string(self.shell.now()).unwrap_or_default();
         let stamp = iso
             .chars()
             .take(19)

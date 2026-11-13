@@ -9,8 +9,8 @@ use std::collections::{HashMap, HashSet};
 use std::rc::Rc;
 use std::sync::Arc;
 
+use jscompat::JsonValue;
 use jscompat::node_path::host::{basename, dirname, resolve};
-use jscompat::{JsonValue, random_uuid};
 use main_core::packages::electron_utils::dialog_memory::save_as_suggestion;
 use main_core::pdf::atomic_write::write_pdf_atomically;
 use main_core::pdf::generated_output::{exists_sync, unique_generated_pdf_path};
@@ -223,7 +223,7 @@ impl Window {
                     match r {
                         Ok((name, pages, size, path)) => {
                             let p = Picked {
-                                id: random_uuid(),
+                                id: me.ctx.shell.random_uuid(),
                                 kind,
                                 name,
                                 pages,
@@ -377,7 +377,7 @@ impl Window {
         if self.s.borrow().finding.is_some() || self.s.borrow().running {
             return r.reply(Ok(failed("busy")));
         }
-        let job_id = random_uuid();
+        let job_id = self.ctx.shell.random_uuid();
         self.s.borrow_mut().finding = Some(job_id.clone());
         let job = obj([
             ("op", "blankPages".into_ipc()),
@@ -716,7 +716,7 @@ impl Run {
     /// `runToolJob(owner, tool, path, options)`: add a password, remove one
     /// or repair in the job process, and check the answer is what the tool promises
     fn run_job(self, options: IpcValue) {
-        let job_id = random_uuid();
+        let job_id = self.w.ctx.shell.random_uuid();
         self.w.s.borrow_mut().running_job = Some(job_id.clone());
         let job = tools::job_for(self.tool, &self.sources[0].path, &options);
         let ctx = self.w.ctx.clone();
@@ -841,7 +841,7 @@ impl Run {
                 };
                 let mut outputs = Vec::new();
                 for (target, size) in targets.into_iter().zip(sizes) {
-                    let id = random_uuid();
+                    let id = self.w.ctx.shell.random_uuid();
                     outputs.push(obj([
                         ("id", id.clone().into_ipc()),
                         ("name", basename(&target, None).into_ipc()),

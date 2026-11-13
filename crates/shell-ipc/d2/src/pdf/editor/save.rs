@@ -208,9 +208,21 @@ impl Editor {
         reply: Responder,
     ) {
         if target == path && !redacting {
-            let deps = super::open::NoteDeps::new(self);
-            self.notes
-                .after_save(&deps, &path, &mut |what, err| eprintln!("{what} {}", err.0));
+            // `void noteLinks.afterSave(path)`: the hash reads the whole file
+            let deps = super::open::AfterSaveDeps::new(self);
+            let platform = self.shell.platform();
+            let saved = path.clone();
+            kit::on_worker(
+                &self.services,
+                move || {
+                    main_core::pdf::note_link::NoteLinkService::new(platform).after_save(
+                        &deps,
+                        &saved,
+                        &mut |what, err| eprintln!("{what} {}", err.0),
+                    )
+                },
+                |()| {},
+            );
         }
         if target == path {
             self.st.borrow_mut().unsaved_blank.remove(&path);

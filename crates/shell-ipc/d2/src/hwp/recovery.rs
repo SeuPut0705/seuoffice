@@ -69,9 +69,7 @@ impl HwpRecoveryElectron for Electron<'_> {
     }
 
     fn now_ms(&self) -> f64 {
-        std::time::SystemTime::now()
-            .duration_since(std::time::UNIX_EPOCH)
-            .map_or(0.0, |d| d.as_secs_f64() * 1000.0)
+        self.0.shell.now_ms()
     }
 
     fn random_uuid(&self) -> String {

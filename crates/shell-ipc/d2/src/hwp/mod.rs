@@ -17,6 +17,8 @@ mod ai_image;
 mod attachments;
 mod editor;
 mod memos;
+#[cfg(feature = "probe")]
+mod probe;
 mod recovery;
 
 use std::path::PathBuf;
@@ -34,7 +36,11 @@ use attachments::ParsedFile;
 
 use crate::kit::Entry;
 
-pub(crate) use editor::HwpEditors;
+pub use editor::{HEADLESS_TIMEOUT_MS, HwpEditors, UntitledOption};
+// lib.rs routes the probe's `d2/hwp:` triggers here
+#[cfg(feature = "probe")]
+#[allow(unused_imports)]
+pub(crate) use probe::probe_trigger;
 
 /// What an HWP file says of tracked changes (`TrackedChanges` of
 /// tracked-changes.ts)
@@ -135,6 +141,8 @@ pub trait HwpShell: Send + Sync {
     fn focused_window(&self) -> Option<WindowId>;
     /// `crypto.randomUUID()`
     fn random_uuid(&self) -> String;
+    /// `Date.now()`
+    fn now_ms(&self) -> f64;
     /// the shell's probe behind `isPathOpenElsewhere(path)`: another pane
     /// holds this file (false without a probe, or when it throws)
     fn is_path_open_elsewhere(&self, path: &str) -> bool;
@@ -378,8 +386,9 @@ impl main_core::packages::electron_utils::default_save_dir::PathProvider for App
 /// This app's host fakes, answering from `case` (`hosts.d2.hwp`)
 #[cfg(any(test, feature = "probe"))]
 pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
-    hosts.insert::<HwpEngineHost>(Arc::new(fake::FakeEngine::new(case)));
-    hosts.insert::<HwpShellHost>(Arc::new(fake::FakeShell::new(case)));
+    let log = fake::Log::of(hosts);
+    hosts.insert::<HwpEngineHost>(Arc::new(fake::FakeEngine::new(case, log.clone())));
+    hosts.insert::<HwpShellHost>(Arc::new(fake::FakeShell::new(case, log)));
 }
 
 #[cfg(any(test, feature = "probe"))]
@@ -393,14 +402,13 @@ pub(crate) mod fake {
     //! elsewhere, no project folder, the editor takes no key, the hidden view
     //! is view 900.
 
-    use std::sync::Mutex;
-
     use std::path::PathBuf;
+    use std::sync::{Arc, Mutex};
 
     use main_core::packages::electron_utils::unsaved_files::{
         OpenFileState, OpenFilesSourceFailed,
     };
-    use serde_json::Value;
+    use serde_json::{Value, json};
     use shell_contract::runtime::CancelToken;
     use shell_contract::{ViewId, WindowId};
 
@@ -429,17 +437,39 @@ pub(crate) mod fake {
         v.and_then(|v| v.as_str().map(str::to_owned))
     }
 
-    pub(crate) struct FakeEngine(Answers);
+    /// `Date.now()` of a case that does not set `now_ms`: 2026-01-01 UTC.
+    /// tools/ipc-diff's hwp groups pin the TypeScript's clock to the same.
+    pub(crate) const NOW_MS: f64 = 1_767_225_600_000.0;
+
+    /// The case's host log in ipc-probe (`ProbeLog` there); none in unit tests
+    #[derive(Clone, Default)]
+    pub(crate) struct Log(pub Option<Arc<Mutex<Vec<Value>>>>);
+
+    impl Log {
+        pub fn of(hosts: &shell_contract::Hosts) -> Self {
+            Log(hosts.get::<Arc<Mutex<Vec<Value>>>>().cloned())
+        }
+
+        /// one line, named after the TypeScript function the host method stands for
+        pub fn push(&self, line: Value) {
+            if let Some(log) = &self.0 {
+                log.lock().unwrap().push(line)
+            }
+        }
+    }
+
+    pub(crate) struct FakeEngine(Answers, pub(crate) Log);
 
     impl FakeEngine {
-        pub fn new(case: &Value) -> Self {
-            FakeEngine(Answers::new(case))
+        pub fn new(case: &Value, log: Log) -> Self {
+            FakeEngine(Answers::new(case), log)
         }
     }
 
     impl HwpEngine for FakeEngine {
         /// `"none" | "tracked" | "unreadable"`
         fn tracked_changes_of(&self, _file: &[u8]) -> TrackedChanges {
+            self.1.push(json!(["trackedChangesOf"]));
             match text(self.0.next("tracked_changes_of")).as_deref() {
                 Some("tracked") => TrackedChanges::Tracked,
                 Some("unreadable") => TrackedChanges::Unreadable,
@@ -448,10 +478,12 @@ pub(crate) mod fake {
         }
         /// the bytes as a string, or null
         fn without_tracked_changes(&self, _file: &[u8]) -> Option<Vec<u8>> {
+            self.1.push(json!(["withoutTrackedChanges"]));
             text(self.0.next("without_tracked_changes")).map(String::into_bytes)
         }
         /// `[{author, date, text, place}]`, or `{"error": message}`
         fn hwp_memos_of(&self, _file: &[u8]) -> Result<Vec<HwpMemo>, String> {
+            self.1.push(json!(["hwpMemosOf"]));
             match self.0.next("hwp_memos_of") {
                 Some(Value::Object(o)) if o.contains_key("error") => {
                     Err(o["error"].as_str().unwrap_or_default().to_owned())
@@ -473,6 +505,7 @@ pub(crate) mod fake {
         }
         /// the text, or `{"error": message}`
         fn hwp_to_text(&self, _file: &[u8]) -> Result<String, String> {
+            self.1.push(json!(["hwpToText"]));
             match self.0.next("hwp_to_text") {
                 Some(Value::String(s)) => Ok(s),
                 Some(Value::Object(o)) => Err(o
@@ -488,6 +521,8 @@ pub(crate) mod fake {
         /// "dirty"}]}`, or absent/null for no source registered
         fn open_files(&self) -> Option<Result<Vec<OpenFileState>, OpenFilesSourceFailed>> {
             let source = self.0.next("open_files").filter(|v| !v.is_null())?;
+            // the line of `openFilesSource`, called only when a source is registered
+            self.1.push(json!(["openFilesSource"]));
             if source.get("failed").and_then(Value::as_bool) == Some(true) {
                 return Some(Err(OpenFilesSourceFailed));
             }
@@ -502,7 +537,8 @@ pub(crate) mod fake {
                 .collect()))
         }
         /// a bool (default `false`)
-        fn diagram_picture_has_no_original(&self, _file_name: String, _bytes: Vec<u8>) -> bool {
+        fn diagram_picture_has_no_original(&self, file_name: String, _bytes: Vec<u8>) -> bool {
+            self.1.push(json!(["extractDiagramXml", file_name]));
             self.0
                 .next("diagram_picture_has_no_original")
                 .and_then(|v| v.as_bool())
@@ -511,6 +547,7 @@ pub(crate) mod fake {
         /// `{ok, kind: "text"|"image"|"unsupported", text, error, damaged}`;
         /// default: the file read as UTF-8 text
         fn parse_file_to_text(&self, path: String) -> ParsedFile {
+            self.1.push(json!(["parseFileToText", path]));
             let Some(answer) = self.0.next("parse_file_to_text") else {
                 return match std::fs::read(&path) {
                     Ok(bytes) => ParsedFile {
@@ -543,14 +580,16 @@ pub(crate) mod fake {
             }
         }
         /// a string is the error it throws; default: the bytes
-        fn checked_hwp_bytes(&self, bytes: Vec<u8>, _ext: String) -> Result<Vec<u8>, String> {
+        fn checked_hwp_bytes(&self, bytes: Vec<u8>, ext: String) -> Result<Vec<u8>, String> {
+            self.1.push(json!(["checkedHwpBytes", ext]));
             match self.0.next("checked_hwp_bytes") {
                 Some(Value::String(error)) => Err(error),
                 _ => Ok(bytes),
             }
         }
         /// `{base64, mime}`, or null (default) for a refused address
-        fn fetch_image_bytes(&self, _url: String) -> Option<FetchedImage> {
+        fn fetch_image_bytes(&self, url: String) -> Option<FetchedImage> {
+            self.1.push(json!(["fetchImageBytes", url]));
             let answer = self.0.next("fetch_image_bytes")?;
             let member = |key: &str| answer.get(key)?.as_str().map(str::to_owned);
             Some(FetchedImage {
@@ -569,6 +608,8 @@ pub(crate) mod fake {
             requirements: String,
             cancel: CancelToken,
         ) -> Result<Value, String> {
+            self.1
+                .push(json!(["analyzeMediaTool", media_urls, requirements]));
             match self.0.next("analyze_media") {
                 Some(answer) => match answer.get("throws").and_then(Value::as_str) {
                     Some(message) => Err(message.to_owned()),
@@ -585,24 +626,28 @@ pub(crate) mod fake {
         }
     }
 
-    /// The shell's side; what it was asked is in [`FakeShell::calls`]
+    /// The shell's side; what it was asked is in [`FakeShell::calls`] and,
+    /// in the probe, the case's log
     pub(crate) struct FakeShell {
         answers: Answers,
-        pub calls: Mutex<Vec<String>>,
+        log: Log,
+        pub calls: Mutex<Vec<Value>>,
         uuid: Mutex<u64>,
     }
 
     impl FakeShell {
-        pub fn new(case: &Value) -> Self {
+        pub fn new(case: &Value, log: Log) -> Self {
             FakeShell {
                 answers: Answers::new(case),
+                log,
                 calls: Mutex::default(),
                 uuid: Mutex::new(0),
             }
         }
 
-        fn log(&self, call: String) {
-            self.calls.lock().unwrap().push(call)
+        fn log(&self, line: Value) {
+            self.log.push(line.clone());
+            self.calls.lock().unwrap().push(line)
         }
 
         fn flag(&self, method: &str, default: bool) -> bool {
@@ -612,9 +657,23 @@ pub(crate) mod fake {
                 .unwrap_or(default)
         }
 
+        /// the lines logged since the last call, each as its words
         #[cfg(test)]
         pub fn take_calls(&self) -> Vec<String> {
             std::mem::take(&mut *self.calls.lock().unwrap())
+                .into_iter()
+                .map(|line| {
+                    line.as_array()
+                        .into_iter()
+                        .flatten()
+                        .map(|word| match word {
+                            Value::String(s) => s.clone(),
+                            other => other.to_string(),
+                        })
+                        .collect::<Vec<_>>()
+                        .join(" ")
+                })
+                .collect()
         }
     }
 
@@ -632,58 +691,69 @@ pub(crate) mod fake {
                 .and_then(|v| v.as_u64())
                 .map(|n| WindowId(n as u32))
         }
+        /// `00000000-0000-4000-8000-000000000001`, `...0002`, ...
         fn random_uuid(&self) -> String {
             let mut n = self.uuid.lock().unwrap();
             *n += 1;
             format!("00000000-0000-4000-8000-{:012}", *n)
         }
-        fn is_path_open_elsewhere(&self, _path: &str) -> bool {
+        /// a number; [`NOW_MS`] by default
+        fn now_ms(&self) -> f64 {
+            self.answers
+                .next("now_ms")
+                .and_then(|v| v.as_f64())
+                .unwrap_or(NOW_MS)
+        }
+        fn is_path_open_elsewhere(&self, path: &str) -> bool {
+            self.log(json!(["openPathProbe", path]));
             self.flag("is_path_open_elsewhere", false)
         }
         fn import_pdf(&self) {
-            self.log("import_pdf".into())
+            self.log(json!(["runtime.importPdf"]))
         }
-        fn new_document_dir(&self, _view: ViewId) -> Option<String> {
+        fn new_document_dir(&self, view: ViewId) -> Option<String> {
+            self.log(json!(["runtime.newDocumentDir", view.0]));
             text(self.answers.next("new_document_dir"))
         }
         fn file_saved(&self, view: ViewId, path: &str) {
-            self.log(format!("file_saved {} {path}", view.0))
+            self.log(json!(["fileSavedHook", view.0, path]))
         }
         fn open_file_dialog(&self) -> bool {
-            self.log("open_file_dialog".into());
+            self.log(json!(["runtime.openFileDialog"]));
             self.flag("open_file_dialog", true)
         }
         fn go_home(&self) -> bool {
-            self.log("go_home".into());
+            self.log(json!(["runtime.goHome"]));
             self.flag("go_home", true)
         }
         fn new_document(&self) -> bool {
-            self.log("new_document".into());
+            self.log(json!(["runtime.newDocument"]));
             self.flag("new_document", true)
         }
         fn reload(&self, view: ViewId) {
-            self.log(format!("reload {}", view.0))
+            self.log(json!(["webContents.reload", view.0]))
         }
-        fn editor_takes(&self, _view: ViewId, key: &str) -> bool {
-            self.log(format!("editor_takes {key}"));
+        fn editor_takes(&self, view: ViewId, key: &str) -> bool {
+            self.log(json!(["editorTakes", view.0, key]));
             self.flag("editor_takes", false)
         }
         fn copy(&self, view: ViewId) {
-            self.log(format!("copy {}", view.0))
+            self.log(json!(["webContents.copy", view.0]))
         }
         fn cut(&self, view: ViewId) {
-            self.log(format!("cut {}", view.0))
+            self.log(json!(["webContents.cut", view.0]))
         }
         fn send_key(&self, view: ViewId, key_code: &str, modifiers: &[&str]) {
-            self.log(format!(
-                "send_key {} {key_code} {}",
+            self.log(json!([
+                "webContents.sendInputEvent",
                 view.0,
-                modifiers.join("+")
-            ))
+                key_code,
+                modifiers
+            ]))
         }
         /// a view number, or `{"error": message}`
         fn create_headless_view(&self) -> Result<ViewId, String> {
-            match self.answers.next("create_headless_view") {
+            let made = match self.answers.next("create_headless_view") {
                 Some(Value::Object(o)) => Err(o
                     .get("error")
                     .and_then(Value::as_str)
@@ -691,13 +761,15 @@ pub(crate) mod fake {
                     .to_owned()),
                 Some(v) => Ok(ViewId(v.as_u64().unwrap_or(900) as u32)),
                 None => Ok(ViewId(900)),
-            }
+            };
+            self.log(json!(["new BrowserWindow"]));
+            made
         }
         fn load_headless_view(&self, view: ViewId) {
-            self.log(format!("load_headless_view {}", view.0))
+            self.log(json!(["webContents.loadURL", view.0]))
         }
         fn destroy_headless_view(&self, view: ViewId) {
-            self.log(format!("destroy_headless_view {}", view.0))
+            self.log(json!(["BrowserWindow.destroy", view.0]))
         }
     }
 }

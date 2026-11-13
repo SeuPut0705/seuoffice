@@ -308,6 +308,8 @@ pub trait PdfShell: Send + Sync {
     ) -> Option<u64>;
     /// `watcher.close()`
     fn close_watch(&self, handle: u64);
+    /// `crypto.randomUUID()` (the opaque certificate ids a view gets)
+    fn random_uuid(&self) -> String;
     /// what `ocr.ts` reads from the process and its own location
     fn ocr_env(&self) -> OcrEnv;
 }

@@ -8,8 +8,8 @@ use std::cell::{Cell, RefCell};
 use std::collections::HashMap;
 use std::rc::Rc;
 
+use jscompat::js_regex;
 use jscompat::node_path::host::{basename, join};
-use jscompat::{js_regex, random_uuid};
 use main_core::packages::electron_utils::atomic_write::atomic_write_file;
 use main_core::pdf::generated_output::exists_sync;
 use shell_contract::hosts::MessageBox;
@@ -234,7 +234,7 @@ impl Convert {
         let dir = join(&[
             &temp.to_string_lossy(),
             "seuoffice-pdf-imports",
-            &random_uuid(),
+            &self.ctx.shell.random_uuid(),
         ]);
         let base =
             js_regex!(r"\.pdf$", "i").replace_all(&basename(pdf_path, None), |_| String::new());
