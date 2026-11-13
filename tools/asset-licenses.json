@@ -55,9 +55,9 @@
   },
   {
     "files": "apps/shell/build/brand/ai-mark.svg",
-    "licence": "FSL-1.1-ALv2 AND ISC AND MIT",
+    "licence": "Apache-2.0 AND ISC AND MIT",
     "record": "NOTICE",
-    "source": "original composition whose geometry is adapted from Lucide (ISC) and Feather (MIT)"
+    "source": "composition drawn in IeumOffice (Apache-2.0) whose geometry is adapted from Lucide (ISC) and Feather (MIT)"
   },
   {
     "files": "apps/shell/build/brand/**",
@@ -157,9 +157,9 @@
   },
   {
     "files": "apps/shell/src/main/assets/menu-*.png",
-    "licence": "FSL-1.1-ALv2",
-    "record": "tools/gen-file-association-icons.mjs",
-    "source": "file-type menu icons rasterised by tools/gen-file-association-icons.mjs from its own drawings"
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "file-type menu icons rasterised by tools/gen-file-association-icons.mjs, which came with GenOffice and IeumOffice (Apache-2.0) and draws the IeumOffice icon set"
   },
   {
     "files": "apps/*/src/renderer/**/send-*.png",
@@ -187,9 +187,9 @@
   },
   {
     "files": "apps/shell/src/renderer/src/i18n/help/topics/img/*.png",
-    "licence": "FSL-1.1-ALv2",
-    "record": "tools/gen-help-screenshots.ts",
-    "source": "screenshots of this app: file-ops and tabs taken by tools/gen-help-screenshots.ts, word-shortcuts drawn by tools/gen-help-shortcut-figure.ts"
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "screenshots of this app: file-ops and tabs taken by tools/gen-help-screenshots.ts, word-shortcuts drawn by tools/gen-help-shortcut-figure.ts; both scripts came with GenOffice and IeumOffice (Apache-2.0)"
   },
   {
     "files": "apps/shell/resources/builtin-skills/builtin-skills.json",
@@ -265,9 +265,9 @@
   },
   {
     "files": "skills/seuoffice/**",
-    "licence": "FSL-1.1-ALv2",
-    "record": "LICENSE",
-    "source": "the seuoffice CLI skill, written for this project"
+    "licence": "Apache-2.0",
+    "record": "NOTICE",
+    "source": "the CLI skill that came with GenOffice and IeumOffice (Apache-2.0), renamed and extended here"
   },
   {
     "files": "vendor/rhwp-core/**",
