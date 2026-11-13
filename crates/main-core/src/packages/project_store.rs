@@ -916,7 +916,7 @@ pub struct OpenProjectChatArgs {
 #[serde(tag = "status", rename_all = "kebab-case")]
 pub enum OpenProjectChatResult {
     Ok {
-        info: ProjectChatInfo,
+        info: Box<ProjectChatInfo>,
         messages: Vec<ProjectChatMessage>,
         foreign: bool,
     },

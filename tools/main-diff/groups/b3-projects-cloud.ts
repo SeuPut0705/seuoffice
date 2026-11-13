@@ -756,9 +756,9 @@ const UNDER_CASES: Case[] = [
   },
   {
     args: [
-      '/Users/me/Library/CloudStorage/OneDrive-X/a.docx',
+      `${HOME}/Library/CloudStorage/OneDrive-X/a.docx`,
       { HOME: '' },
-      { platform: 'darwin', osHome: '/Users/me' },
+      { platform: 'darwin', osHome: HOME },
     ],
     note: 'the OS home folder',
   },
