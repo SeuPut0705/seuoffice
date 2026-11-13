@@ -213,9 +213,12 @@ mod tests {
 
     #[test]
     fn a_listed_memo_missing_from_the_saved_file_counts_once() {
-        let saved = super::super::fake::FakeEngine::new(&serde_json::json!({
-            "hwp_memos_of": [[{ "author": "a", "text": "x", "place": "body" }]],
-        }));
+        let saved = super::super::fake::FakeEngine::new(
+            &serde_json::json!({
+                "hwp_memos_of": [[{ "author": "a", "text": "x", "place": "body" }]],
+            }),
+            Default::default(),
+        );
         let wanted = |text: &str| MemoSnapshot {
             author: "a".into(),
             date: None,
