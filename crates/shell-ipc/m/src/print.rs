@@ -22,25 +22,26 @@ use main_core::html::preview_document::{asset_base_href, build_preview_document}
 use main_core::hwp::dialog_strings::tm;
 use main_core::hwp::ipc::PrintPage as HwpPage;
 use main_core::hwp::print_document::{
-    PrintJob, PrintWindow as HwpWindow, bad_job, print_job_to_pdf, print_job_to_printer,
+    PrintJob, bad_job, begin_print_job_to_pdf, begin_print_job_to_printer,
 };
 use main_core::markdown::print_document::{
-    MarkdownPageRange, MarkdownPrintOptions, MarkdownPrintWindow, print_markdown_document,
+    MarkdownPageRange, MarkdownPrintOptions, MarkdownPrintWindow, begin_print_markdown_document,
 };
-use main_core::markdown::print_pdf::print_markdown_pdf;
+use main_core::markdown::print_pdf::begin_print_markdown_pdf;
 use main_core::node_fs::{mkdtemp_random, node_error};
 use main_core::packages::electron_utils::atomic_write::atomic_write_file;
 use main_core::packages::electron_utils::print_cups::{
     CupsPrintJob, DriverOption, DuplexMode, PrintToPdfRequest, print_pdf_via_cups,
     print_to_pdf_options_for,
 };
-use main_core::packages::electron_utils::print_html_pdf::PrintWindow as HtmlPdfWindow;
+use main_core::packages::electron_utils::print_html_pdf::{PdfStep, PrintWindow as HtmlPdfWindow};
 use main_core::packages::electron_utils::print_job::{
     PrintDuplex, PrintJobOptions, print_job_options, print_outcome,
 };
 use main_core::packages::electron_utils::print_window::{
-    ExecOutcome, JsError, PRINT_READY_SCRIPT, PrintDialogOutcome, PrintDialogWindow,
-    PrintDocumentOptions, PrintReport, load_print_html, print_html_document, rm_recursive_force,
+    ExecOutcome, JsError, PRINT_READY_SCRIPT, PRINT_READY_TIMEOUT_MS, PrintDialogOutcome,
+    PrintDialogWindow, PrintDocumentOptions, PrintReport, RendererAnswer, RendererCall, WindowStep,
+    begin_load_print_html, begin_print, rm_recursive_force,
 };
 use main_core::packages::electron_utils::printer_options::{
     CommandOutcome, DRIVER_OPTION_NAMES, query_printer_options,
@@ -176,8 +177,13 @@ impl PrintSurface for WholeNumbers {
         self.0.load_url(url)
     }
 
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> ExecOutcome {
-        self.0.execute_javascript(script, user_gesture)
+    fn execute_javascript(
+        &mut self,
+        script: &str,
+        user_gesture: bool,
+        race_ms: Option<f64>,
+    ) -> ExecOutcome {
+        self.0.execute_javascript(script, user_gesture, race_ms)
     }
 
     fn print(&mut self, options: &Value) -> PrintReport {
@@ -213,33 +219,129 @@ struct Win {
 }
 
 impl Win {
-    fn print_options(&self, silent: bool, print_background: bool) -> Value {
-        let mut options = Map::new();
-        options.insert("silent".into(), Value::Bool(silent));
-        options.insert("printBackground".into(), Value::Bool(print_background));
-        if let Some(Value::Object(extra)) = &self.print_extra {
-            for (key, value) in extra {
-                options.insert(key.clone(), value.clone());
+    /// `webContents.print(options)` with the keys this window adds to every print
+    fn print_options(&self, options: Value) -> Value {
+        match (options, &self.print_extra) {
+            (Value::Object(mut options), Some(Value::Object(extra))) => {
+                for (key, value) in extra {
+                    options.insert(key.clone(), value.clone());
+                }
+                Value::Object(options)
+            }
+            (options, _) => options,
+        }
+    }
+
+    /// One awaited renderer call of a main-core job, carried out on this
+    /// window. Runs on a worker: the surface hops to the UI thread itself.
+    fn carry(&mut self, call: RendererCall) -> RendererAnswer {
+        match call {
+            RendererCall::LoadFile { path } => {
+                RendererAnswer::Loaded(self.surface.load_file(&path).map_err(JsError::plain))
+            }
+            RendererCall::ExecuteJavaScript {
+                script,
+                user_gesture,
+                race_ms,
+            } => RendererAnswer::Executed(self.surface.execute_javascript(
+                script,
+                user_gesture,
+                race_ms,
+            )),
+            RendererCall::PrintToPdf { options } => {
+                RendererAnswer::Pdf(self.surface.print_to_pdf(&options).map_err(JsError::plain))
+            }
+            RendererCall::Print { options } => {
+                let options = self.print_options(options);
+                RendererAnswer::Printed(Ok(self.surface.print(&options)))
             }
         }
-        Value::Object(options)
     }
 }
 
+/// Runs a main-core job's steps to its end: `next` carries out the awaited
+/// call and hands the job its answer
+fn drive<J, T>(
+    mut step: WindowStep<J, T>,
+    mut next: impl FnMut(J, RendererCall) -> WindowStep<J, T>,
+) -> T {
+    loop {
+        match step {
+            WindowStep::Done(out) => return out,
+            WindowStep::Await { call, job } => step = next(job, call),
+        }
+    }
+}
+
+/// `printHtmlDocument(options)` on `win`: load, readiness probe, system dialog
+fn print_html_document(
+    win: &mut Win,
+    options: &PrintDocumentOptions<'_>,
+    log_probe_error: &mut dyn FnMut(&str),
+) -> Result<PrintDialogOutcome, JsError> {
+    let step = begin_print(win, options);
+    drive(step, |job, call| {
+        let answer = win.carry(call);
+        job.resume(win, answer, log_probe_error)
+    })
+}
+
+/// `loadPrintHtml(win, html, fileName, dirPrefix)`: the temp dir to remove afterwards
+fn load_print_html(
+    win: &mut Win,
+    html: &str,
+    file_name: Option<&str>,
+    dir_prefix: Option<&str>,
+    tmp_dir: &str,
+    log_probe_error: &mut dyn FnMut(&str),
+) -> Result<String, JsError> {
+    let step = begin_load_print_html(html, file_name, dir_prefix, tmp_dir);
+    drive(step, |job, call| {
+        job.resume(win.carry(call), log_probe_error)
+    })
+}
+
+/// A PDF job on a window it made itself (html, markdown, Hangul)
+fn print_pdf(step: PdfStep<Win>) -> Result<Vec<u8>, JsError> {
+    drive(step, |mut job, call| {
+        let answer = job.window().carry(call);
+        job.resume(answer)
+    })
+}
+
+/// Hangul's print to the system dialog: `true` when it printed, `false` on a cancel
+fn print_job_to_printer(
+    job: &PrintJob,
+    tmp_dir: &str,
+    create_window: &mut dyn FnMut() -> Result<Win, JsError>,
+) -> Result<bool, JsError> {
+    drive(
+        begin_print_job_to_printer(job, tmp_dir, create_window),
+        |mut job, call| {
+            let answer = job.window().carry(call);
+            job.resume(answer)
+        },
+    )
+}
+
+/// `printMarkdownDocument(html, pages, options)`
+fn print_markdown_document(
+    create_window: impl FnOnce() -> Result<Win, JsError>,
+    html: &str,
+    pages: Option<&MarkdownPageRange>,
+    options: &MarkdownPrintOptions,
+    platform: &str,
+    tmp_dir: &str,
+) -> Result<PrintDialogOutcome, JsError> {
+    let step =
+        begin_print_markdown_document(create_window, html, pages, options, platform, tmp_dir);
+    drive(step, |mut job, call| {
+        let answer = job.window().carry(call);
+        job.resume(answer)
+    })
+}
+
 impl PrintDialogWindow for Win {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.surface.load_file(path).map_err(JsError::plain)
-    }
-
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> ExecOutcome {
-        self.surface.execute_javascript(script, user_gesture)
-    }
-
-    fn print(&mut self, silent: bool, print_background: bool) -> Result<PrintReport, JsError> {
-        let options = self.print_options(silent, print_background);
-        Ok(self.surface.print(&options))
-    }
-
     fn show(&mut self) -> Result<(), JsError> {
         self.surface.show();
         Ok(())
@@ -260,34 +362,8 @@ impl PrintDialogWindow for Win {
     }
 }
 
+/// The window of the PDF jobs (html, markdown and Hangul) and Hangul's printer job
 impl HtmlPdfWindow for Win {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.surface.load_file(path).map_err(JsError::plain)
-    }
-
-    fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, JsError> {
-        self.surface.print_to_pdf(options).map_err(JsError::plain)
-    }
-
-    fn destroy(&mut self) -> Result<(), JsError> {
-        self.surface.destroy();
-        Ok(())
-    }
-}
-
-impl HwpWindow for Win {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.surface.load_file(path).map_err(JsError::plain)
-    }
-
-    fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, JsError> {
-        self.surface.print_to_pdf(options).map_err(JsError::plain)
-    }
-
-    fn print(&mut self, options: &Value) -> Result<PrintReport, JsError> {
-        Ok(self.surface.print(options))
-    }
-
     fn destroy(&mut self) -> Result<(), JsError> {
         self.surface.destroy();
         Ok(())
@@ -295,10 +371,6 @@ impl HwpWindow for Win {
 }
 
 impl MarkdownPrintWindow for Win {
-    fn load_file(&mut self, path: &str) -> Result<(), JsError> {
-        self.surface.load_file(path).map_err(JsError::plain)
-    }
-
     fn show(&mut self) -> Result<(), JsError> {
         self.surface.show();
         Ok(())
@@ -306,15 +378,6 @@ impl MarkdownPrintWindow for Win {
 
     fn focus(&mut self) -> Result<(), JsError> {
         self.surface.focus();
-        Ok(())
-    }
-
-    fn print(&mut self, options: &Value) -> Result<PrintReport, JsError> {
-        Ok(self.surface.print(options))
-    }
-
-    fn destroy(&mut self) -> Result<(), JsError> {
-        self.surface.destroy();
         Ok(())
     }
 }
@@ -609,16 +672,19 @@ fn render_print_pdf(
     std::fs::write(&html_path, build_preview_document(html, base.as_deref()))
         .map_err(|e| node_error(&e, "open", &html_path))?;
     let mut win = env.window(plain_spec(PrintProfile::Static));
-    let printed = HtmlPdfWindow::load_file(&mut win, &html_path).and_then(|()| {
-        HtmlPdfWindow::print_to_pdf(
-            &mut win,
-            &json!({
-                "pageSize": "A4",
-                "printBackground": true,
-                "margins": { "top": 0.6, "bottom": 0.6, "left": 0.6, "right": 0.6 },
-            }),
-        )
-    });
+    let printed = win
+        .carry(RendererCall::LoadFile { path: html_path })
+        .into_loaded()
+        .and_then(|()| {
+            win.carry(RendererCall::PrintToPdf {
+                options: json!({
+                    "pageSize": "A4",
+                    "printBackground": true,
+                    "margins": { "top": 0.6, "bottom": 0.6, "left": 0.6, "right": 0.6 },
+                }),
+            })
+            .into_pdf()
+        });
     HtmlPdfWindow::destroy(&mut win)?;
     printed
 }
@@ -787,7 +853,7 @@ fn hwp_print(
         if target.is_empty() {
             return Ok(json!({ "ok": true, "canceled": true }));
         }
-        let bytes = print_job_to_pdf(job, &tmp, &mut create)?;
+        let bytes = print_pdf(begin_print_job_to_pdf(job, &tmp, &mut create))?;
         atomic_write_file(&target, &bytes).map_err(JsError::from)?;
         // a headless export stays silent: no tab, no file manager window
         if !env.host.headless() && !env.host.open_generated_path(&target) {
@@ -888,12 +954,12 @@ fn markdown(registry: &mut dyn Registry, env: &Env) -> Result<(), RegisterError>
             };
             let options = markdown_options(field(request, "options"));
             e.later(reply, move |env| {
-                let printed = print_markdown_pdf(
+                let printed = print_pdf(begin_print_markdown_pdf(
                     || Ok(env.window(plain_spec(PrintProfile::Static))),
                     &html,
                     &options,
                     &env.tmp(),
-                );
+                ));
                 match printed {
                     Ok(pdf) => Ok(crate::value::object([
                         ("ok", IpcValue::Bool(true)),
@@ -1015,13 +1081,13 @@ fn diagram_print(env: &Env, pages: &[DiagramPage], title: &str) -> Result<Value,
         .lock()
         .unwrap()
         .drop_print_document(&token);
-    let printed = loaded.and_then(
-        |()| match win.execute_javascript(PRINT_READY_SCRIPT, true) {
+    let printed = loaded.and_then(|()| {
+        match win.execute_javascript(PRINT_READY_SCRIPT, true, Some(PRINT_READY_TIMEOUT_MS)) {
             ExecOutcome::Throws(message) => Err(message),
             // a probe that rejects or outlasts the timer does not stop the print
             _ => Ok(()),
-        },
-    );
+        }
+    });
     let printed = printed.map(|()| {
         // Windows attaches the native dialog to the printed window, which must be visible
         if env.platform == "win32" {

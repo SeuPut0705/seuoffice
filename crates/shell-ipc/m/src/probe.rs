@@ -285,7 +285,12 @@ impl PrintSurface for FakeSurface {
         self.loaded()
     }
 
-    fn execute_javascript(&mut self, _script: &str, _user_gesture: bool) -> ExecOutcome {
+    fn execute_javascript(
+        &mut self,
+        _script: &str,
+        _user_gesture: bool,
+        _race_ms: Option<f64>,
+    ) -> ExecOutcome {
         self.log(json!(["win.webContents.executeJavaScript"]));
         match self.config.get("exec").and_then(Value::as_str) {
             Some("pending") => ExecOutcome::Pending,

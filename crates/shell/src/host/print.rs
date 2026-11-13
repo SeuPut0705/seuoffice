@@ -37,8 +37,6 @@ use crate::views::ViewTable;
 /// Electron's `loadFile` resolved when the page loaded; a page that never
 /// does is a failure, not a hang
 const LOAD_TIMEOUT: Duration = Duration::from_secs(60);
-/// `PRINT_READY_SCRIPT` raced a 5 s timer (print-window.ts)
-const PROBE_TIMEOUT: Duration = Duration::from_secs(5);
 /// The longest a print preview may stay open before the window is let go
 const PREVIEW_TIMEOUT: Duration = Duration::from_secs(30 * 60);
 const PREVIEW_POLL: Duration = Duration::from_millis(300);
@@ -346,7 +344,12 @@ impl PrintSurface for PrintWindow {
         self.load(url)
     }
 
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> ExecOutcome {
+    fn execute_javascript(
+        &mut self,
+        script: &str,
+        user_gesture: bool,
+        race_ms: Option<f64>,
+    ) -> ExecOutcome {
         let webview = match self.webview() {
             Ok(webview) => webview,
             Err(error) => return ExecOutcome::Throws(error),
@@ -361,8 +364,16 @@ impl PrintSurface for PrintWindow {
         std::thread::spawn(move || {
             let _ = tx.send(cdp(&webview, "Runtime.evaluate", params));
         });
-        match rx.recv_timeout(PROBE_TIMEOUT) {
-            Err(_) => ExecOutcome::Pending,
+        // without a race the call waits as long as CDP does
+        let settled = match race_ms {
+            Some(ms) => rx.recv_timeout(Duration::from_millis(ms.max(0.0) as u64)),
+            None => rx.recv().map_err(|_| mpsc::RecvTimeoutError::Disconnected),
+        };
+        match settled {
+            Err(mpsc::RecvTimeoutError::Timeout) => ExecOutcome::Pending,
+            Err(mpsc::RecvTimeoutError::Disconnected) => {
+                ExecOutcome::Throws("the page went away".to_owned())
+            }
             Ok(Err(error)) => ExecOutcome::Throws(error),
             Ok(Ok(answer)) => match answer.get("exceptionDetails") {
                 Some(details) => ExecOutcome::Rejected(

@@ -60,8 +60,14 @@ pub struct PrintWindowSpec {
 pub trait PrintSurface: Send {
     fn load_file(&mut self, path: &str) -> Result<(), String>;
     fn load_url(&mut self, url: &str) -> Result<(), String>;
-    /// `executeJavaScript(script, userGesture)` raced against a 5 s timer
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> ExecOutcome;
+    /// `executeJavaScript(script, userGesture)`; with `race_ms`, raced against
+    /// a timer of that many milliseconds ([`ExecOutcome::Pending`] when it wins)
+    fn execute_javascript(
+        &mut self,
+        script: &str,
+        user_gesture: bool,
+        race_ms: Option<f64>,
+    ) -> ExecOutcome;
     /// `webContents.print(options, (success, failureReason) => ...)`
     fn print(&mut self, options: &Value) -> PrintReport;
     fn print_to_pdf(&mut self, options: &Value) -> Result<Vec<u8>, String>;
