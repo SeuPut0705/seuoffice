@@ -714,7 +714,7 @@ export const BUNDLED_FONTS = new Set([
   'SeuOffice Fullwidth TC',
   'SeuOffice Songti SC',
   'SeuOffice Songti TC',
-  'Carlito GO',
+  'SeuOffice Sans GO',
   'Aptos GO',
   'Aptos Display GO',
   'Aptos Narrow GO',
@@ -1080,9 +1080,9 @@ type Generic = 'serif' | 'sans-serif' | 'monospace'
  * spellings of a Word face are separate store entries, hence separate keys.
  */
 const STAND_IN_CHAINS: Record<string, [string[], Generic]> = {
-  calibri: [['Carlito GO', 'Calibri Arabic GO', CJK_SANS], 'sans-serif'],
+  calibri: [['SeuOffice Sans GO', 'Calibri Arabic GO', CJK_SANS], 'sans-serif'],
   'calibri light': [
-    ['Calibri Light GO', 'Carlito GO', 'Calibri Arabic GO', CJK_SANS],
+    ['Calibri Light GO', 'SeuOffice Sans GO', 'Calibri Arabic GO', CJK_SANS],
     'sans-serif',
   ],
   cambria: [['Caladea', BOX, CJK_SERIF], 'serif'],
@@ -1209,7 +1209,7 @@ const HAN_REGIONAL_NAME_RE =
  */
 function latinSlotHead(sub: string): string[] {
   const k = sub.normalize('NFKC').toLowerCase()
-  if (k === 'calibri') return ['Carlito GO']
+  if (k === 'calibri') return ['SeuOffice Sans GO']
   if (k === 'cambria') return ['KR Theme Latin GO']
   if (k === 'simsun' || k === '\u5b8b\u4f53') return ['SeuOffice SimSun Latin']
   return latinChainHead(sub)

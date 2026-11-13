@@ -86,7 +86,7 @@ export const FACE_CHAIN_RULES: ChainRule[] = [
   {
     id: 'calibri',
     when: (f) => f.includes('calibri'),
-    chain: () => [['Carlito GO', 'Calibri Arabic GO', CJK_SANS], 'sans-serif'],
+    chain: () => [['SeuOffice Sans GO', 'Calibri Arabic GO', CJK_SANS], 'sans-serif'],
   },
   // Aptos (M365 cloud face, never installed locally): line metrics equal Calibri's
   // (Word probe 2026-08-22) but its advances do not, so the size-adjusted Carlito
@@ -98,7 +98,7 @@ export const FACE_CHAIN_RULES: ChainRule[] = [
     when: (f) => f.includes('aptos'),
     chain: (f) => {
       const alias = /mono|serif/.test(f)
-        ? 'Carlito GO'
+        ? 'SeuOffice Sans GO'
         : f.includes('display')
           ? 'Aptos Display GO'
           : f.includes('narrow')

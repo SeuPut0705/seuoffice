@@ -9,7 +9,7 @@
     "files": "packages/ui/src/fonts/Carlito-*.ttf",
     "licence": "OFL-1.1",
     "record": "packages/ui/src/fonts/README.md",
-    "source": "Carlito 1.103, patched by tools/patch-carlito-vi.py and renamed Carlito GO"
+    "source": "Carlito 1.103, patched by tools/patch-carlito-vi.py and renamed SeuOffice Sans GO"
   },
   {
     "files": "apps/docs/src/renderer/fonts/SeuOfficePUABlank.woff2",

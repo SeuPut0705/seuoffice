@@ -4,7 +4,7 @@ blank 1em glyph.
 
 Chromium never system-falls-back for PUA characters: an unmapped PUA
 codepoint renders the chain's primary font's .notdef. Chains headed by a
-real installed face (Calibri, Carlito GO...) therefore draw tofu boxes for
+real installed face (Calibri, SeuOffice Sans GO...) therefore draw tofu boxes for
 AI-residue PUA tokens, while Word and chains headed by the bundled CJK
 subsets (whose subsetted .notdef is blank) show nothing. This font gives
 those chains an explicit blank glyph so PUA stays invisible everywhere,

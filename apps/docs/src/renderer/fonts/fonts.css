@@ -13,31 +13,31 @@
    packages/font-metrics/measurements by tools/build-font-aliases.mjs. */
 @import './fonts.generated.css';
 
-/* "Carlito GO": Carlito with Vietnamese stacked diacritics fixed at build time
+/* "SeuOffice Sans GO": Carlito with Vietnamese stacked diacritics fixed at build time
    (tools/patch-carlito-vi.py); renamed per OFL Reserved Font Name clause */
 @font-face {
-  font-family: 'Carlito GO';
+  font-family: 'SeuOffice Sans GO';
   src: url('@seuoffice/ui/fonts/Carlito-Regular.ttf');
   font-weight: normal;
   font-style: normal;
   font-display: block;
 }
 @font-face {
-  font-family: 'Carlito GO';
+  font-family: 'SeuOffice Sans GO';
   src: url('@seuoffice/ui/fonts/Carlito-Bold.ttf');
   font-weight: bold;
   font-style: normal;
   font-display: block;
 }
 @font-face {
-  font-family: 'Carlito GO';
+  font-family: 'SeuOffice Sans GO';
   src: url('@seuoffice/ui/fonts/Carlito-Italic.ttf');
   font-weight: normal;
   font-style: italic;
   font-display: block;
 }
 @font-face {
-  font-family: 'Carlito GO';
+  font-family: 'SeuOffice Sans GO';
   src: url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf');
   font-weight: bold;
   font-style: italic;
@@ -197,7 +197,7 @@
 
 /* Chromium never system-falls-back for Private Use codepoints: unmapped PUA
  * renders the chain's primary font's .notdef. Chains headed by a real face
- * (Calibri, Carlito GO) draw tofu boxes for AI-residue PUA tokens, while Word
+ * (Calibri, SeuOffice Sans GO) draw tofu boxes for AI-residue PUA tokens, while Word
  * and subset-headed chains (blank subsetted .notdef) show nothing. This tiny
  * generated font (tools/build-pua-blank-font.py) maps all of U+E000-F8FF to a
  * blank 1em glyph so PUA stays invisible in the chains that carry it. */

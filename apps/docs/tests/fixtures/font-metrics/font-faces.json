@@ -2636,31 +2636,31 @@
       "src": "url('./Caladea-Regular.ttf')"
     }
   ],
-  "Carlito GO": [
+  "SeuOffice Sans GO": [
     {
       "font-display": "block",
-      "font-family": "'Carlito GO'",
+      "font-family": "'SeuOffice Sans GO'",
       "font-style": "normal",
       "font-weight": "normal",
       "src": "url('@seuoffice/ui/fonts/Carlito-Regular.ttf')"
     },
     {
       "font-display": "block",
-      "font-family": "'Carlito GO'",
+      "font-family": "'SeuOffice Sans GO'",
       "font-style": "normal",
       "font-weight": "bold",
       "src": "url('@seuoffice/ui/fonts/Carlito-Bold.ttf')"
     },
     {
       "font-display": "block",
-      "font-family": "'Carlito GO'",
+      "font-family": "'SeuOffice Sans GO'",
       "font-style": "italic",
       "font-weight": "normal",
       "src": "url('@seuoffice/ui/fonts/Carlito-Italic.ttf')"
     },
     {
       "font-display": "block",
-      "font-family": "'Carlito GO'",
+      "font-family": "'SeuOffice Sans GO'",
       "font-style": "italic",
       "font-weight": "bold",
       "src": "url('@seuoffice/ui/fonts/Carlito-BoldItalic.ttf')"

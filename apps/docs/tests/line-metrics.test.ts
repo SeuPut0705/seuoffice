@@ -687,7 +687,7 @@ describe('cssLeadTop', () => {
 describe('fontBoxCss', () => {
   it('reports the hhea box and skew of the chain head', () => {
     expect(
-      fontBoxCss("'Calibri','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif"),
+      fontBoxCss("'Calibri','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif"),
     ).toEqual(['--doc-font-box:1.0000', '--doc-font-skew:0.5000'])
     expect(fontBoxCss("'Times New Roman','SimSun',serif")).toEqual([
       '--doc-font-box:1.1074',
@@ -807,17 +807,17 @@ describe('cssFontFamily', () => {
     setDocFontTable([{ name: 'Bahnschrift Light Condensed', panose: '020B0502040204020203' }])
     try {
       expect(cssFontFamily('Bahnschrift Light Condensed')).toMatch(
-        /^'Bahnschrift Light Condensed','Calibri','Carlito GO',/,
+        /^'Bahnschrift Light Condensed','Calibri','SeuOffice Sans GO',/,
       )
       expect(lineHeightFactor('Bahnschrift Light Condensed')).toBe(1.22)
     } finally {
       setDocFontTable(null)
     }
     expect(cssFontFamily('Calibri')).toBe(
-      "'Calibri','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif",
+      "'Calibri','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif",
     )
     expect(cssFontFamily('Calibri Light')).toBe(
-      "'Calibri Light','Calibri Light GO','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif",
+      "'Calibri Light','Calibri Light GO','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif",
     )
     expect(cssFontFamily('Times New Roman')).toBe(
       "'Times New Roman','Liberation Serif','SeuOffice Box Drawing','Noto Serif CJK SC',serif",
@@ -1288,7 +1288,7 @@ describe('document fontTable substitution hints', () => {
   it('missing hangul-named face with a sans PANOSE stays Batang, its Latin Calibri (probe 2026-10-22)', () => {
     setDocFontTable([{ name: '원신한 Light', panose: '020B0303000000000000' }])
     expect(cssFontFamily('원신한 Light')).toBe(
-      `'원신한 Light','Carlito GO','Batang',${KO_SERIF},serif`,
+      `'원신한 Light','SeuOffice Sans GO','Batang',${KO_SERIF},serif`,
     )
     expect(krLineFactor('\uc6d0\uc2e0\ud55c Light')).toBe(1.3)
     expect(cjkDeclaredLineFactor('\uc6d0\uc2e0\ud55c Light')).toBe(1.3)
@@ -1344,7 +1344,7 @@ describe('document fontTable substitution hints', () => {
     ])
     for (const f of ['Mont', 'Quokka Probe B', 'Quokka Probe D']) {
       expect(cssFontFamily(f)).toBe(
-        `'${f}','Calibri','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif`,
+        `'${f}','Calibri','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif`,
       )
       expect(lineHeightFactor(f)).toBe(1.22)
     }
@@ -1361,7 +1361,7 @@ describe('document fontTable substitution hints', () => {
     setDocFontTable([
       { name: 'Open Sans', panose: '020B0606030504020204', charset: '00', family: 'swiss' },
     ])
-    expect(cssFontFamily('Open Sans')).not.toContain("'Carlito GO'")
+    expect(cssFontFamily('Open Sans')).not.toContain("'SeuOffice Sans GO'")
     expect(lineHeightFactor('Open Sans')).toBe(1.365)
     setDocFontTable(null)
     expect(lineHeightFactor('Mont')).toBe(1.172)
@@ -1480,7 +1480,7 @@ describe('Aptos (M365 cloud face)', () => {
   it('other Aptos cuts keep unscaled Carlito (Mono/Serif unprobed)', () => {
     for (const name of ['Aptos Mono', 'Aptos Serif']) {
       expect(cssFontFamily(name)).toBe(
-        `'${name}','Carlito GO','SeuOffice PUA Blank','Noto Sans CJK SC',sans-serif`,
+        `'${name}','SeuOffice Sans GO','SeuOffice PUA Blank','Noto Sans CJK SC',sans-serif`,
       )
     }
   })
@@ -1959,7 +1959,7 @@ describe('cssFontFamily Arabic', () => {
     )
     expect(lineHeightFactor('Dubai')).toBe(1.688)
     expect(cssCsFontFamily('Dubai', 'Calibri')).toMatch(
-      /^'Dubai','Dubai GO','Calibri','Carlito GO'/,
+      /^'Dubai','Dubai GO','Calibri','SeuOffice Sans GO'/,
     )
   })
 
@@ -2085,13 +2085,15 @@ describe('textHasComplexScript', () => {
 describe('cssCsFontFamily', () => {
   it('cs="Calibri" keeps Arabic in the Calibri alias instead of the Geeza Pro system fallback', () => {
     const chain = cssCsFontFamily('Calibri', 'Calibri', 'Calibri')
-    expect(chain).toBe("'Calibri','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif")
+    expect(chain).toBe(
+      "'Calibri','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif",
+    )
     expect(chain).not.toMatch(/geeza/i)
   })
 
   it('cs chain leads; punct alias then subset, ascii chain wins Latin letters, Times backstops', () => {
     expect(cssCsFontFamily('Arabic Typesetting', 'Calibri', 'Calibri')).toBe(
-      "'Arabic Typesetting','Naskh Digits GO','Times Punct GO','Noto Naskh Arabic TNR','Calibri','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC','Times New Roman','Liberation Serif','Geeza Pro','Al Bayan',sans-serif",
+      "'Arabic Typesetting','Naskh Digits GO','Times Punct GO','Noto Naskh Arabic TNR','Calibri','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC','Times New Roman','Liberation Serif','Geeza Pro','Al Bayan',sans-serif",
     )
   })
 

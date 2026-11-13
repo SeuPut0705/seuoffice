@@ -7,7 +7,7 @@ freely redistributable with the app. Licenses: Carlito and Liberation are
 
 | Font                 | License    | Metric-compatible Word counterpart        |
 | -------------------- | ---------- | ----------------------------------------- |
-| Carlito GO           | OFL 1.1    | Calibri (Word's default body font)        |
+| SeuOffice Sans GO    | OFL 1.1    | Calibri (Word's default body font)        |
 | Caladea              | Apache-2.0 | Cambria                                   |
 | Cambria Math GO      | Apache-2.0 | Cambria Math (Caladea, adjusted)          |
 | Liberation Serif     | OFL 1.1    | Times New Roman                           |
@@ -19,7 +19,7 @@ freely redistributable with the app. Licenses: Carlito and Liberation are
 | Bookman Old Style GO | Apache-2.0 | Bookman Old Style (Caladea, adv.-matched) |
 | Century Gothic GO    | OFL 1.1    | Century Gothic (Liberation Sans, adv.-m.) |
 
-"Carlito GO" (`Carlito-*.ttf`) is a derivative of Carlito 1.103: a build-time patch
+"SeuOffice Sans GO" (`Carlito-*.ttf`) is a derivative of Carlito 1.103: a build-time patch
 (`tools/patch-carlito-vi.py`) rebuilds Vietnamese precomposed glyphs whose above mark
 (circumflex/breve) was dropped (Ậ/Ệ/Ộ in Regular/Bold); advance widths are unchanged.
 Renamed per OFL 1.1 §2 — "Carlito" is a Reserved Font Name. The files live in
@@ -277,7 +277,7 @@ serif, so unknown Arabic families default to the Naskh chain.
 Generated from scratch by `tools/build-pua-blank-font.py` (no upstream font;
 two glyphs, both empty). Chromium never system-falls-back for Private Use
 codepoints: an unmapped PUA character renders the chain's primary font's
-`.notdef`. Chains headed by a real face (Calibri, Carlito GO) therefore draw
+`.notdef`. Chains headed by a real face (Calibri, SeuOffice Sans GO) therefore draw
 tofu boxes for AI-residue PUA tokens, while Word — and chains headed by the
 bundled CJK subsets, whose subsetted `.notdef` is blank — show nothing. This
 face sits in the Aptos chain and behind the range-limited `Noto Sans/Serif
