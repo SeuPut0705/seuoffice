@@ -2327,7 +2327,7 @@ pub const CHANNELS: &[ChannelSpec] = &[
         &[Sheets],
     ),
     spec("workbook:select-for-merge", &[Invoke], D1, &[Sheets]),
-    spec("workbook:sidecar-crashed", &[Event], U, &[Sheets]),
+    spec("workbook:sidecar-crashed", &[Event], D1, &[Sheets]),
     spec("workbook:template-bytes", &[Invoke], D1, &[Sheets]),
     spec("workbook:update-external-links", &[Invoke], D1, &[Sheets]),
     spec("workbook:update-password", &[Invoke], D1, &[Sheets]),

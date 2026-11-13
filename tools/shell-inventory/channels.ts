@@ -395,6 +395,7 @@ const BATCHES = [
 /** channels whose name matches an earlier batch's rule but whose state lives elsewhere */
 const PINNED: Record<string, string> = {
   'slides:font-install-local': 'D1',
+  'workbook:sidecar-crashed': 'D1',
 }
 const APP_BATCH: Record<string, string> = {
   shell: 'W',
