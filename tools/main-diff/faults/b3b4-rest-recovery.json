@@ -1,0 +1,1298 @@
+[
+  {
+    "name": "html-recovery: the flush wait is 2.5 s, not 3 s (control)",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "pub const RECOVERY_FLUSH_TIMEOUT_MS: f64 = 3_000.0;",
+    "replace": "pub const RECOVERY_FLUSH_TIMEOUT_MS: f64 = 2_500.0;",
+    "fn": [
+      "html/recovery.RECOVERY_FLUSH_TIMEOUT_MS",
+      "markdown/recovery.RECOVERY_FLUSH_TIMEOUT_MS",
+      "html/recovery.createTextRecovery",
+      "markdown/recovery.createTextRecovery"
+    ]
+  },
+  {
+    "name": "html-recovery: two untitled copies of one kind are the same copy",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "a.kind == b.kind && a.untitled_id == b.untitled_id",
+    "replace": "a.kind == b.kind",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a file copy is told by its kind, not its path",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "a.kind == b.kind && a.file_path == b.file_path",
+    "replace": "a.kind == b.kind",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a crashed renderer is not marked crashed",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "listener.state.borrow_mut().crashed = true;",
+    "replace": "listener.state.borrow_mut().crashed = false;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a crashed renderer settles no wait",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "        listener.state.borrow_mut().crashed = true;\n        self.settle_flush(&listener.state);",
+    "replace": "        listener.state.borrow_mut().crashed = true;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a closing view that crashed deletes its copy",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if crashed || self.host.is_dirty(wc_id) || !owns {",
+    "replace": "if self.host.is_dirty(wc_id) || !owns {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a closing view that never wrote the copy deletes it",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if crashed || self.host.is_dirty(wc_id) || !owns {",
+    "replace": "if crashed || self.host.is_dirty(wc_id) {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a closing view is dropped without settling its waits",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "        self.settle_flush(&state);\n        let (crashed, owns) = {",
+    "replace": "        let (crashed, owns) = {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a clean close is deleted as a save",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "self.delete_for(&state, &identity, RecoveryDeleteReason::ClosedClean);",
+    "replace": "self.delete_for(&state, &identity, RecoveryDeleteReason::Saved);",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a crashed view still writes",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if state.resolving || state.crashed {",
+    "replace": "if state.resolving {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a clean view writes",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if !self.host.is_dirty(wc_id) {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the same text writes again",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if state.borrow().last_text.as_deref() == Some(text) {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a superseded write answers skipped",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "return Ok(TextRecoveryWriteResult::Superseded);",
+    "replace": "return Ok(TextRecoveryWriteResult::Skipped);",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the text of the last copy is not kept",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.last_text = Some(text.to_owned());",
+    "replace": "state.last_text = None;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the identity of the last copy is not kept",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.written_as = Some(identity);",
+    "replace": "state.written_as = None;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the copy under the pre-rename path is not replaced",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.renamed_from.take()",
+    "replace": "None",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a write does not settle the flush wait",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "        let result = self.write_copy_of(contents.id(), &state, text);\n        self.settle_flush(&state);",
+    "replace": "        let result = self.write_copy_of(contents.id(), &state, text);",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a delete failure is logged with another prefix",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "&format!(\"[{}] recovery {} failed:\", self.host.kind(), what),",
+    "replace": "&format!(\"[{}] recovery {} fail:\", self.host.kind(), what),",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a save keeps the path suggestion",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.save_as_default_path = None;",
+    "replace": "state.save_as_default_path = state.save_as_default_path.clone();",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a save keeps the untitled identity",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "            state.untitled = None;\n            state.save_as_default_path = None;",
+    "replace": "            state.save_as_default_path = None;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a delete leaves the other panes their last copy",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "other.last_text = None;",
+    "replace": "other.last_text = other.last_text.clone();",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: after Dont Save the other panes stay blocked",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if reason == RecoveryDeleteReason::DontSave && shared {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a view is its own other pane",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if Rc::ptr_eq(&other, state) {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a save is deleted as Dont Save",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "self.delete_for(&state, before, RecoveryDeleteReason::Saved);",
+    "replace": "self.delete_for(&state, before, RecoveryDeleteReason::DontSave);",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: Dont Save is a clean close",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "self.delete_for(&state, &identity, RecoveryDeleteReason::DontSave);",
+    "replace": "self.delete_for(&state, &identity, RecoveryDeleteReason::ClosedClean);",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a failed save to the own path deletes the own copy",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if same_identity(&self.identity_for(wc_id, &state), &target) {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a failed save deletes a copy another path wrote",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "Some(written) if same_identity(&written, &target) => {}",
+    "replace": "Some(_) => {}",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a failed save does not lift the block",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "self.quietly(\"resume\", || self.store.clear_discarded(&target));",
+    "replace": "self.quietly(\"resume\", || Ok(()));",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a rename of a view that owns no copy asks for one",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if !state.borrow().owns {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a rename asks a destroyed renderer",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if !contents.is_destroyed() {",
+    "replace": "if true {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a hidden export window restores",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if self.headless.is_headless_mode() {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a restored seed with a missing original names no path",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "RecoveryIdentity::File(file) => Some(file.file_path.clone()),",
+    "replace": "RecoveryIdentity::File(_) => None,",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: an empty original path is named",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "original_path: truthy(original_path.as_deref()).map(str::to_owned),",
+    "replace": "original_path,",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the decision original opens the prompt",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "Some(RecoveryOpenDecision::Original) => return None,",
+    "replace": "Some(RecoveryOpenDecision::Original) => {}",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a restore decision leaves the copy as chosen",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "self.store.mark_copy_loaded(&identity).map(|_| ())",
+    "replace": "Ok(())",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a seed leaves the copy as it was",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "self.store.mark_copy_loaded(&seed).map(|_| ())",
+    "replace": "Ok(())",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a pane asks although a sibling shows the file",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if self.sibling_owns_path(contents.id(), &file_path) {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a destroyed pane counts as a sibling",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if id == wc_id || destroyed || resolving {",
+    "replace": "if id == wc_id || resolving {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the open failure is logged with another prefix",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "&format!(\"[{}] recovery open failed:\", self.host.kind()),",
+    "replace": "&format!(\"[{}] recovery open fail:\", self.host.kind()),",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: an empty suggestion is a suggestion",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if let Some(path) = truthy(state.save_as_default_path.as_deref()) {",
+    "replace": "if let Some(path) = state.save_as_default_path.as_deref() {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: an empty save path is a path",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if let Some(file_path) = truthy(save_path.as_deref()) {",
+    "replace": "if let Some(file_path) = save_path.as_deref() {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: an empty shell title wins",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if let Some(title) = truthy(from_shell.as_deref()) {",
+    "replace": "if let Some(title) = from_shell.as_deref() {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: an empty own title wins",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if let Some(title) = truthy(own.as_deref()) {",
+    "replace": "if let Some(title) = own.as_deref() {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a title source that throws names the copy",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "Some(source) => source(&contents).unwrap_or(None),",
+    "replace": "Some(source) => source(&contents).unwrap_or(Some(\"(error)\".to_owned())),",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a destroyed view is reloaded",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if !state.asked || state.contents.is_destroyed() {",
+    "replace": "if !state.asked {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a reload is asked again",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "        state.borrow_mut().asked = false;\n        contents.reload();",
+    "replace": "        state.borrow_mut().asked = true;\n        contents.reload();",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the shell decision is not kept",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.borrow_mut().decision = Some(request.decision);",
+    "replace": "state.borrow_mut().decision = None;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the untitled seed is not kept",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.untitled_seed = Some(request.copy.clone());",
+    "replace": "state.untitled_seed = None;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the title of an untitled copy is not kept",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.title = Some(request.title.clone());",
+    "replace": "state.title = None;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: the suggestion of an untitled copy is not kept",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.save_as_default_path = request.save_as_default_path.clone();",
+    "replace": "state.save_as_default_path = None;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a clean view is asked for its copy",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if crashed || contents.is_destroyed() || !self.host.is_dirty(id) {",
+    "replace": "if crashed || contents.is_destroyed() {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a destroyed view is asked for its copy",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if crashed || contents.is_destroyed() || !self.host.is_dirty(id) {",
+    "replace": "if crashed || !self.host.is_dirty(id) {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a renderer that cannot be told is waited for",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "if contents.send(&self.host.flush_channel()).is_err() {",
+    "replace": "if false {",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a timer that fires settles nothing",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "    pub fn flush_timeout(&self, token: u64) {\n        self.settled.borrow_mut().insert(token);",
+    "replace": "    pub fn flush_timeout(&self, token: u64) {\n        let _ = token;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: one answered wait resolves the round",
+    "file": "main-core/src/html/recovery.rs",
+    "find": ".all(|waiter| self.waiter_settled(waiter.token))",
+    "replace": ".any(|waiter| self.waiter_settled(waiter.token))",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: a view is not waited for",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "state.borrow_mut().flush_waiters.push(token);",
+    "replace": "let _ = token;",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "html-recovery: password documents exist",
+    "file": "main-core/src/html/recovery.rs",
+    "find": "    pub fn is_unprotectable(&self, _contents: &H::Contents) -> bool {\n        false",
+    "replace": "    pub fn is_unprotectable(&self, _contents: &H::Contents) -> bool {\n        true",
+    "fn": ["html/recovery.createTextRecovery", "markdown/recovery.createTextRecovery"]
+  },
+  {
+    "name": "docs-recovery: a file copy is kept under another editor (control)",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "            kind: \"docs\".to_owned(),\n            file_path: file_path.to_owned(),",
+    "replace": "            kind: \"html\".to_owned(),\n            file_path: file_path.to_owned(),",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a format change keeps the untitled slot",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "&& current.ext == ext.as_str()",
+    "replace": "&& true",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: the replaced untitled slot stays",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "            self.store.delete_copy(\n                &RecoveryIdentity::Untitled(current),\n                RecoveryDeleteReason::ClosedClean,\n            )?;",
+    "replace": "            let _ = current;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a Dont Save forgets the untitled slot",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "if result == RecoveryDeleteResult::Deleted && reason != RecoveryDeleteReason::DontSave {",
+    "replace": "if result == RecoveryDeleteResult::Deleted {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a deleted untitled slot is never forgotten",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "if result == RecoveryDeleteResult::Deleted && reason != RecoveryDeleteReason::DontSave {",
+    "replace": "if false {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a headless export keeps a copy",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "        // a headless export's hidden window converts the file and goes; it keeps no copy\n        if self.headless.is_headless_mode() {",
+    "replace": "        // a headless export's hidden window converts the file and goes; it keeps no copy\n        if false {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: the write ticket is not given to the store",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "ticket: Some(ticket),",
+    "replace": "ticket: None,",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a superseded write answers written",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "if result != RecoveryWriteResult::Written {",
+    "replace": "if false {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: an empty origin names a copy",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "if let Some(original) = truthy(original_path) {",
+    "replace": "if let Some(original) = original_path {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: the file copy of a marked tab stays",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "                    let deleted = self\n                        .store\n                        .delete_copy(&self.file_copy(original), RecoveryDeleteReason::Saved)?;",
+    "replace": "                    let deleted = RecoveryDeleteResult::Refused;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a stale marked untitled copy stays",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "                        == Some(file.file_path.as_str())",
+    "replace": "                        != Some(file.file_path.as_str())",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a copy does not undo a clean answer",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "self.outcomes.borrow().get(&key(tab_id)).copied() == Some(DocsCloseOutcome::Clean);",
+    "replace": "self.outcomes.borrow().get(&key(tab_id)).copied() == Some(DocsCloseOutcome::Saved);",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a save leaves the untitled copy",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "        }\n        self.drop_untitled(tab_id, RecoveryDeleteReason::Saved)\n    }\n\n    /// the close check answered",
+    "replace": "        }\n        Ok(())\n    }\n\n    /// the close check answered",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a dirty answer is a clean one",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "        if dirty {",
+    "replace": "        if !dirty {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a discard is a clean close",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": ".set(key(tab_id), DocsCloseOutcome::DontSave);",
+    "replace": ".set(key(tab_id), DocsCloseOutcome::Clean);",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a close that saved is a clean close",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": ".set(key(tab_id), DocsCloseOutcome::Saved);",
+    "replace": ".set(key(tab_id), DocsCloseOutcome::Clean);",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: an abandoned tab keeps its outcome",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "        // no outcome: the teardown keeps every copy, like a crashed tab's\n        self.outcomes.borrow_mut().delete(&key(tab_id));",
+    "replace": "        // no outcome: the teardown keeps every copy, like a crashed tab's",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: an abandoned file copy stays undecided",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": ".set_copy_state(&self.file_copy(path), RecoveryCopyState::Later)?;",
+    "replace": ".set_copy_state(&self.file_copy(path), RecoveryCopyState::Undecided)?;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: the file a hung tab loaded is not set aside",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "paths.push(file_path.to_owned());",
+    "replace": "let _ = file_path;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: an abandoned untitled copy stays undecided",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "                RecoveryCopyState::Later,\n            )?;",
+    "replace": "                RecoveryCopyState::Undecided,\n            )?;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a cancelled quit keeps the Save answer instead",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "self.outcomes.borrow().get(&key(tab_id)).copied() == Some(DocsCloseOutcome::DontSave);",
+    "replace": "self.outcomes.borrow().get(&key(tab_id)).copied() == Some(DocsCloseOutcome::Saved);",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a restore that failed stays undecided",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": ".set_copy_state(&self.file_copy(file_path), RecoveryCopyState::Later)?;",
+    "replace": ".set_copy_state(&self.file_copy(file_path), RecoveryCopyState::Undecided)?;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a crashed tab settles its copies",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "if !crashed && let Some(outcome) = outcome {",
+    "replace": "if let Some(outcome) = outcome {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a clean close is deleted as a save",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "DocsCloseOutcome::Clean => RecoveryDeleteReason::ClosedClean,",
+    "replace": "DocsCloseOutcome::Clean => RecoveryDeleteReason::Saved,",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a discarding close is a clean close",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "DocsCloseOutcome::DontSave => RecoveryDeleteReason::DontSave,",
+    "replace": "DocsCloseOutcome::DontSave => RecoveryDeleteReason::ClosedClean,",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a settled tab keeps its untitled slot",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "        self.untitled_by_tab.borrow_mut().delete(&key(tab_id));\n        self.outcomes.borrow_mut().delete(&key(tab_id));\n        Ok(())",
+    "replace": "        self.outcomes.borrow_mut().delete(&key(tab_id));\n        Ok(())",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a headless export is asked",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "        // prompt (whose Esc restores), and a copy it neither uses nor settles stays as it was\n        if self.headless.is_headless_mode() {",
+    "replace": "        // prompt (whose Esc restores), and a copy it neither uses nor settles stays as it was\n        if false {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: opening a file keeps the Dont Save block",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "self.store.clear_discarded(&identity)?;",
+    "replace": "let _ = &identity;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: the decision original asks the prompt",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "Some(RecoveryOpenDecision::Original) => return Ok(DocsOpenRecovery::Original),",
+    "replace": "Some(RecoveryOpenDecision::Original) => {}",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a restore decision leaves the copy as chosen",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "                self.store.mark_copy_loaded(&identity)?;",
+    "replace": "                let _ = &identity;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a copy the editor refuses is taken",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "if !(options.accept)(&bytes) {",
+    "replace": "if false {",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: an adopted copy is later",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "state: Some(RecoveryCopyState::Undecided),",
+    "replace": "state: Some(RecoveryCopyState::Later),",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: an adopted copy has no title",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "title: options.title.to_owned(),",
+    "replace": "title: String::new(),",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: an adopted copy keeps the docx format",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "ext: options.ext.as_str().to_owned(),",
+    "replace": "ext: \".docx\".to_owned(),",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: the slot the tab took again is deleted",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "&& previous.untitled_id != identity.untitled_id",
+    "replace": "&& true",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: the slot the tab had stays",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "            self.store.delete_copy(\n                &RecoveryIdentity::Untitled(previous),\n                RecoveryDeleteReason::ClosedClean,\n            )?;",
+    "replace": "            let _ = previous;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "docs-recovery: a taken copy stays as it was",
+    "file": "main-core/src/docs/docs_recovery.rs",
+    "find": "            .mark_copy_loaded(&RecoveryIdentity::Untitled(identity.clone()))?;",
+    "replace": "            .is_discarded(&RecoveryIdentity::Untitled(identity.clone()))?;",
+    "fn": ["docs-recovery.createDocsRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a working file lives half a day (control)",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "pub const PDF_RECOVERY_WORK_FILE_MAX_AGE_MS: f64 = 24.0 * 60.0 * 60.0 * 1000.0;",
+    "replace": "pub const PDF_RECOVERY_WORK_FILE_MAX_AGE_MS: f64 = 12.0 * 60.0 * 60.0 * 1000.0;",
+    "fn": ["pdf-recovery.PDF_RECOVERY_WORK_FILE_MAX_AGE_MS", "pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the key is another name",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "const ENCRYPT_KEY: &[u8] = b\"/Encrypt\";",
+    "replace": "const ENCRYPT_KEY: &[u8] = b\"/Encrypted\";",
+    "fn": ["pdf-recovery.pdfLooksEncrypted"]
+  },
+  {
+    "name": "pdf-recovery: a line feed does not end a name",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "0x00, 0x09, 0x0a, 0x0c,",
+    "replace": "0x00, 0x09, 0x0b, 0x0c,",
+    "fn": ["pdf-recovery.pdfLooksEncrypted"]
+  },
+  {
+    "name": "pdf-recovery: a key at the end of the file is no entry",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "if after >= buf.len() || NAME_END.contains(&buf[after]) {",
+    "replace": "if after > buf.len() || NAME_END.contains(&buf.get(after).copied().unwrap_or(b'a')) {",
+    "fn": ["pdf-recovery.pdfLooksEncrypted"]
+  },
+  {
+    "name": "pdf-recovery: only the first key is looked at",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "found = index_of_key(buf, at + 1);",
+    "replace": "found = None;",
+    "fn": ["pdf-recovery.pdfLooksEncrypted"]
+  },
+  {
+    "name": "pdf-recovery: a skill template is asked about a copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "if untitled_here || self.deps.is_untitled_copy_path(path) {",
+    "replace": "if untitled_here {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a decision is for any path",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "Some((decided_path, decision)) if decided_path == path => Some(*decision),",
+    "replace": "Some((_, decision)) => Some(*decision),",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a restore decision leaves the copy as chosen",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "store.mark_copy_loaded(identity)?;",
+    "replace": "let _ = identity;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a restored answer opens the file",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "bytes = Some(restored);",
+    "replace": "let _ = restored;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a restored view owns no copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            state.owned_copy = Some(identity);",
+    "replace": "            state.owned_copy = None;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a restored view starts clean",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            state.unsaved_from_copy = true;\n            state.owned_copy = Some(identity);",
+    "replace": "            state.unsaved_from_copy = false;\n            state.owned_copy = Some(identity);",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a path with a copy needs no question",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "                    Ok(plan) => matches!(plan, RecoveryOpenPlan::None),",
+    "replace": "                    Ok(plan) => !matches!(plan, RecoveryOpenPlan::None),",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a waiting decision needs no question",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "                && decided_path == path",
+    "replace": "                && decided_path != path",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a path that needs no question is not recorded",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        if none {",
+    "replace": "        if !none {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a question is asked again for an answered path",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        if state.borrow().resolved_path.as_deref() == Some(path) {",
+    "replace": "        if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the renderer asking is not noted",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        self.view(id).borrow_mut().consumed = true;",
+    "replace": "        let _ = id;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a decision is not kept",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "state.decision = Some((path.to_owned(), decision));",
+    "replace": "state.decision = None;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the bytes of another path are given",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "Some(restored) if restored.path == path => Some(Rc::clone(&restored.bytes)),",
+    "replace": "Some(restored) => Some(Rc::clone(&restored.bytes)),",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a write after Dont Save is not superseded",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            if state.dropped {",
+    "replace": "            if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a protected view is written for",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            if state.unprotectable || state.source_encrypted {",
+    "replace": "            if state.unprotectable {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a path that was not answered is written for",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "if state.resolved_path.as_deref() != Some(path) || state.resolving {",
+    "replace": "if state.resolving {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an encrypted source is not remembered",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "state.borrow_mut().source_encrypted = true;",
+    "replace": "let _ = &state;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: Dont Save while the bytes are made does not win",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        if state.borrow().dropped {",
+    "replace": "        if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an untitled copy is titled by its working file",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "Some(untitled) if untitled.path == path => untitled.title.clone(),",
+    "replace": "Some(untitled) if untitled.path == path => basename(path, None),",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a landed write answers superseded",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "return Ok(PdfRecoveryWriteResult::Written);",
+    "replace": "return Ok(PdfRecoveryWriteResult::Superseded);",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a failed write answers skipped",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "                PdfRecoveryWriteResult::Failed",
+    "replace": "                PdfRecoveryWriteResult::Skipped",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a protected untitled document is refreshed",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            if state.borrow().unprotectable {",
+    "replace": "            if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an encrypted save is refreshed as a copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "if pdf_looks_encrypted(&bytes) {",
+    "replace": "if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a save in place leaves the copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        self.delete_copy(&identity, RecoveryDeleteReason::Saved);\n        let mut state = state.borrow_mut();",
+    "replace": "        let _ = &identity;\n        let mut state = state.borrow_mut();",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an adopted document keeps its untitled copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            self.delete_copy(&identity, RecoveryDeleteReason::Saved);\n            let mut state = state.borrow_mut();",
+    "replace": "            let _ = &identity;\n            let mut state = state.borrow_mut();",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an adopted document stays untitled",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            state.untitled = None;",
+    "replace": "            let _ = &state.untitled;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a moved untitled document keeps its copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "self.delete_copy(&owned, RecoveryDeleteReason::Saved);",
+    "replace": "let _ = &owned;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a moved file document keeps its copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "                && file.file_path == old_path\n            {\n                self.delete_copy(&owned, RecoveryDeleteReason::ClosedClean);",
+    "replace": "                && file.file_path == old_path\n            {\n                let _ = &owned;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a reload from disk keeps the copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            && file.file_path == path\n        {\n            self.delete_copy(&owned, RecoveryDeleteReason::ClosedClean);",
+    "replace": "            && file.file_path == path\n        {\n            let _ = &owned;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: Dont Save is not noted",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            state.dropped = true;",
+    "replace": "            state.dropped = false;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: Dont Save forgets the copy the view owns",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "let dropped_copy = identity.or_else(|| state.borrow().owned_copy.clone());",
+    "replace": "let dropped_copy = identity;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: Dont Save leaves the copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "self.delete_copy(copy, RecoveryDeleteReason::DontSave);",
+    "replace": "let _ = copy;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a close that was not dropped is cancelled",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        if !state.borrow().dropped {",
+    "replace": "        if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a cancelled close keeps the block",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "let _ = store.clear_discarded(&dropped);",
+    "replace": "let _ = &dropped;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a rename leaves the answered path",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            if state.resolved_path.as_deref() == Some(old_path) {",
+    "replace": "            if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a rename leaves the restored path",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "                && restored.path == old_path",
+    "replace": "                && false",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a rename moves the copy of another path",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        if owned_file.file_path != old_path {",
+    "replace": "        if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a rename leaves the old copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "store.delete_copy(&owned, RecoveryDeleteReason::Discarded)?;",
+    "replace": "let _ = &owned;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a rename does not hand the copy on",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "state.borrow_mut().owned_copy = Some(next.clone());",
+    "replace": "let _ = &next;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a copy of another editor is opened",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        if request.copy.kind() != \"pdf\" {",
+    "replace": "        if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an opened copy stays as it was",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "store.mark_copy_loaded(&request.copy)?;",
+    "replace": "let _ = &request;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the earlier working file stays",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        // a working file this view made earlier is replaced by this one\n        self.drop_work_file(&state, None);",
+    "replace": "        // a working file this view made earlier is replaced by this one",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an empty suggestion is a suggestion",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "truthy(request.save_as_default_path.as_deref())",
+    "replace": "request.save_as_default_path.as_deref()",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the notice comes again",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "if !(unprotectable || state.source_encrypted) || state.notice_shown {",
+    "replace": "if !(unprotectable || state.source_encrypted) {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the report is not kept",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "state.unprotectable = unprotectable;",
+    "replace": "let _ = unprotectable;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the notice is in English",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "Some(unprotectable_notice_text(&self.deps.lang()))",
+    "replace": "Some(unprotectable_notice_text(\"en\"))",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an encrypted source is not unprotectable",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "                state.unprotectable || state.source_encrypted\n            }\n            None => false,",
+    "replace": "                state.unprotectable\n            }\n            None => false,",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a crashed view deletes its copy",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "if dirty || crashed {",
+    "replace": "if dirty {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a destroyed view keeps its working file",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        self.drop_work_file(&state, None);\n        let (dropped, dropped_copy, owned_copy, crashed) = {",
+    "replace": "        let (dropped, dropped_copy, owned_copy, crashed) = {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a working file of another path is dropped",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "            && file != path",
+    "replace": "            && false",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a working file at the limit stays",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "StatInfo::of(&info).mtime_ms > cutoff",
+    "replace": "StatInfo::of(&info).mtime_ms >= cutoff",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a working file in use is swept",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "if in_use.contains(&file) {",
+    "replace": "if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the limit is added to the clock",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "let cutoff = self.deps.now_ms() - max_age_ms;",
+    "replace": "let cutoff = self.deps.now_ms() + max_age_ms;",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: the default limit is none",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "let max_age_ms = max_age_ms.unwrap_or(PDF_RECOVERY_WORK_FILE_MAX_AGE_MS);",
+    "replace": "let max_age_ms = max_age_ms.unwrap_or(0.0);",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: a skill template is no untitled document",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "        if self.deps.is_untitled_copy_path(path) {",
+    "replace": "        if false {",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "pdf-recovery: an untitled document has no title",
+    "file": "main-core/src/pdf/pdf_recovery.rs",
+    "find": "                title: basename(path, None),",
+    "replace": "                title: String::new(),",
+    "fn": ["pdf-recovery.createPdfRecovery"]
+  },
+  {
+    "name": "recovery-policy: the limit is 32 MB (control)",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "pub const MAX_AUTOMATIC_RECOVERY_WORKSHEET_XML_BYTES: f64 = 64.0 * 1024.0 * 1024.0;",
+    "replace": "pub const MAX_AUTOMATIC_RECOVERY_WORKSHEET_XML_BYTES: f64 = 32.0 * 1024.0 * 1024.0;",
+    "fn": [
+      "recovery-policy.MAX_AUTOMATIC_RECOVERY_WORKSHEET_XML_BYTES",
+      "recovery-policy.allowsAutomaticWorkbookRecovery"
+    ]
+  },
+  {
+    "name": "recovery-policy: a sheet at the limit is refused",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "Some(bytes) => *bytes <= MAX_AUTOMATIC_RECOVERY_WORKSHEET_XML_BYTES,",
+    "replace": "Some(bytes) => *bytes < MAX_AUTOMATIC_RECOVERY_WORKSHEET_XML_BYTES,",
+    "fn": ["recovery-policy.allowsAutomaticWorkbookRecovery"]
+  },
+  {
+    "name": "recovery-policy: a sheet of unknown size is refused",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "        None => true,",
+    "replace": "        None => false,",
+    "fn": ["recovery-policy.allowsAutomaticWorkbookRecovery"]
+  },
+  {
+    "name": "recovery-policy: a password workbook gets a copy",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if session.password.is_some() {",
+    "replace": "if false {",
+    "fn": ["recovery-policy.sessionRecoveryIdentity"]
+  },
+  {
+    "name": "recovery-policy: a given identity is ignored",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if let Some(identity) = &session.recovery_identity {",
+    "replace": "if false && let Some(identity) = &session.recovery_identity {",
+    "fn": ["recovery-policy.sessionRecoveryIdentity"]
+  },
+  {
+    "name": "recovery-policy: a new workbook has a path copy",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if session.unsaved_new == Some(true) {",
+    "replace": "if false {",
+    "fn": ["recovery-policy.sessionRecoveryIdentity"]
+  },
+  {
+    "name": "recovery-policy: a converted session without a source gets a path copy",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if session.csv_source_path.is_some() || session.suggest_save_as.is_some() {",
+    "replace": "if session.csv_source_path.is_some() {",
+    "fn": ["recovery-policy.sessionRecoveryIdentity"]
+  },
+  {
+    "name": "recovery-policy: the restore target is not used",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": ".unwrap_or_else(|| session.path.clone()),",
+    "replace": ".unwrap_or_else(|| String::from(\"?\")),",
+    "fn": ["recovery-policy.sessionRecoveryIdentity"]
+  },
+  {
+    "name": "recovery-policy: a new workbook gets a converted copy",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if prepared.password.is_some() || prepared.unsaved_new == Some(true) {",
+    "replace": "if prepared.password.is_some() {",
+    "fn": ["recovery-policy.convertedSessionRecovery"]
+  },
+  {
+    "name": "recovery-policy: a session with an identity gets another",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if prepared.recovery_identity.is_some() {",
+    "replace": "if false {",
+    "fn": ["recovery-policy.convertedSessionRecovery"]
+  },
+  {
+    "name": "recovery-policy: a plain open gets a converted copy",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if prepared.csv_source_path.is_none() && prepared.suggest_save_as.is_none() {",
+    "replace": "if prepared.csv_source_path.is_none() || prepared.suggest_save_as.is_none() {",
+    "fn": ["recovery-policy.convertedSessionRecovery"]
+  },
+  {
+    "name": "recovery-policy: a converted copy is a macro workbook",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "ext: \".xlsx\".to_owned(),",
+    "replace": "ext: \".xlsm\".to_owned(),",
+    "fn": ["recovery-policy.convertedSessionRecovery"]
+  },
+  {
+    "name": "recovery-policy: a converted copy names no original",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": ".unwrap_or_else(|| opened_path.to_owned()),",
+    "replace": ".unwrap_or_else(|| String::new()),",
+    "fn": ["recovery-policy.convertedSessionRecovery"]
+  },
+  {
+    "name": "recovery-policy: the workbook pattern is case sensitive",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "js_regex!(r\".xls[xm]$\", \"i\")",
+    "replace": "js_regex!(r\".xls[xm]$\", \"\")",
+    "fn": ["recovery-policy.saveAsDefaultFor"]
+  },
+  {
+    "name": "recovery-policy: the workbook pattern wants a dot",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "r\".xls[xm]$\"",
+    "replace": "r\"\\.xls[xm]$\"",
+    "fn": ["recovery-policy.saveAsDefaultFor"]
+  },
+  {
+    "name": "recovery-policy: the extension is cut by its bytes",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "Some(-(ext.encode_utf16().count() as f64)),",
+    "replace": "Some(-(ext.len() as f64)),",
+    "fn": ["recovery-policy.saveAsDefaultFor"]
+  },
+  {
+    "name": "recovery-policy: a file without an extension loses its end",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "    let stem = if ext.is_empty() {",
+    "replace": "    let stem = if false {",
+    "fn": ["recovery-policy.saveAsDefaultFor"]
+  },
+  {
+    "name": "recovery-policy: the sibling is a macro workbook",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "format!(\"{stem}.xlsx\")",
+    "replace": "format!(\"{stem}.xlsm\")",
+    "fn": ["recovery-policy.saveAsDefaultFor"]
+  },
+  {
+    "name": "recovery-policy: the macro extension is case sensitive",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if extname(suggest_save_as).to_lowercase() == \".xlsm\" {",
+    "replace": "if extname(suggest_save_as) == \".xlsm\" {",
+    "fn": ["recovery-policy.untitledWorkbookExt"]
+  },
+  {
+    "name": "recovery-policy: the index is named another way",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "pub const LEGACY_UNSAVED_NEW_INDEX: &str = \"unsaved-new.json\";",
+    "replace": "pub const LEGACY_UNSAVED_NEW_INDEX: &str = \"unsaved.json\";",
+    "fn": ["recovery-policy.LEGACY_UNSAVED_NEW_INDEX", "recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: the hash is one digit short",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "&sha1_hex(file_path.as_bytes())[..16]",
+    "replace": "&sha1_hex(file_path.as_bytes())[..15]",
+    "fn": ["recovery-policy.legacyCopyName", "recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: a legacy copy is an xls",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "format!(\"{}.xlsx\", &sha1_hex(file_path.as_bytes())[..16])",
+    "replace": "format!(\"{}.xls\", &sha1_hex(file_path.as_bytes())[..16])",
+    "fn": ["recovery-policy.legacyCopyName", "recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: a gone copy is tried",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "if !Path::new(&copy).exists() {",
+    "replace": "if false {",
+    "fn": ["recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: an adopted copy is titled by its path",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "title: basename(&path, None),",
+    "replace": "title: path.clone(),",
+    "fn": ["recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: an adopted macro workbook is an xlsx",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "ext: untitled_workbook_ext(&path).to_owned(),",
+    "replace": "ext: \".xlsx\".to_owned(),",
+    "fn": ["recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: an adopted copy is undecided",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "state: Some(RecoveryCopyState::Later),",
+    "replace": "state: Some(RecoveryCopyState::Undecided),",
+    "fn": ["recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: a move that failed is dropped from the index",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "None => remaining.push(path),",
+    "replace": "None => {}",
+    "fn": ["recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: an empty index is rewritten",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "let updated = if remaining.is_empty() {",
+    "replace": "let updated = if false {",
+    "fn": ["recovery-policy.migrateLegacyUnsavedNew"]
+  },
+  {
+    "name": "recovery-policy: the index failure is logged with another prefix",
+    "file": "main-core/src/sheets/recovery_policy.rs",
+    "find": "\"[sheets] legacy unsaved-new index update failed:\",",
+    "replace": "\"[sheets] legacy index update failed:\",",
+    "fn": ["recovery-policy.migrateLegacyUnsavedNew"]
+  }
+]

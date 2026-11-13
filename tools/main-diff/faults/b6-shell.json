@@ -1045,5 +1045,40 @@
     "find": "        !self.flow().install_dir_ok.unwrap_or(false)",
     "replace": "        self.flow().install_dir_ok.unwrap_or(false)",
     "fn": ["updater.initAutoUpdater"]
+  },
+  {
+    "name": "updater: a manual check that has ended still counts as running",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "self.finish_manual_check(host, lang, outcome);\n                self.manual_check_in_flight = false;",
+    "replace": "self.finish_manual_check(host, lang, outcome);",
+    "fn": ["updater.checkForUpdatesNow"]
+  },
+  {
+    "name": "updater: a manual check that needed no call stays running",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "        if step == UpdaterStep::Idle {\n            self.manual_check_in_flight = false;",
+    "replace": "        if false {\n            self.manual_check_in_flight = false;",
+    "fn": ["updater.checkForUpdatesNow"]
+  },
+  {
+    "name": "updater: a scheduled check ends as a manual one",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "self.start_check(PendingCheck::Scheduled)",
+    "replace": "self.start_check(PendingCheck::Manual(Lang::En))",
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
+  },
+  {
+    "name": "updater: the Mac staging's rejection does not end the download",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "let rejection = flow.staging_error.take().or(rejection);",
+    "replace": "let rejection = rejection;",
+    "fn": ["updater.initAutoUpdater"]
+  },
+  {
+    "name": "updater: a rejection of an event is dropped while a download runs",
+    "file": "main-core/src/shell/updater.rs",
+    "find": "flow.running_download = Some(generation);",
+    "replace": "flow.running_download = None;",
+    "fn": ["updater.initAutoUpdater"]
   }
 ]
