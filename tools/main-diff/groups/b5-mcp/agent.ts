@@ -1866,8 +1866,8 @@ const textCases = cases(
   ['needsReview', 'notes', 'write'],
   ['needsReview', 'notes', 'w'.repeat(100)],
   ['needsReview', 'notes', 'a"b\\c\n'],
-  ['needsReview', 'notes', 'a'.repeat(78) + '\u{1F600}'],
-  ['needsReview', 'notes', 'a'.repeat(78) + '\u{1F600}b'],
+  // the 80-unit cut halves the pair: divergences.json, relay-text-cuts-a-surrogate-pair-3
+  ['needsReview', 'notes', 'a'.repeat(79) + '\u{1F600}'],
   ['needsReview', 'notes', 'a'.repeat(80) + 'b'],
   ['unknownTool', 'notes', 'nope'],
   ['unknownTool', 'notes', ''],
@@ -1875,6 +1875,8 @@ const textCases = cases(
   ['declined'],
   ['stopped', 'notes'],
   ['stopped', ''],
+  ['needsReview', 'notes', 'a'.repeat(78) + '\u{1F600}'],
+  ['needsReview', 'notes', 'a'.repeat(78) + '\u{1F600}b'],
 )
 
 export const group: Group = {

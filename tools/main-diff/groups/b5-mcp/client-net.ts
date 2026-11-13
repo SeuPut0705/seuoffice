@@ -117,7 +117,7 @@ interface World {
   openExternal: (url: string) => Promise<unknown>
   openFails: boolean
   table: Record<string, string[]>
-  request: (method: string, target: string, index?: number) => void
+  request: (method: string, target: string, index?: number, force?: boolean) => void
   stream: (
     n: number,
   ) => { controller: ReadableStreamDefaultController<Uint8Array>; closed: boolean } | undefined
@@ -276,9 +276,9 @@ async function withWorld<T>(cfg: WorldCfg, body: (world: World) => Promise<T>): 
     return server
   }
   syncBuiltinESMExports()
-  world.request = (method, target, index) => {
+  world.request = (method, target, index, force) => {
     const server = index === undefined ? servers[servers.length - 1] : servers[index]
-    if (!server || server.closed) return
+    if (!server || (server.closed && !force)) return
     let status = 0
     let headers: Record<string, string> = {}
     const res: FakeRes = {
@@ -450,6 +450,7 @@ function commonStep(world: World, step: Step): boolean {
         (step.method as string | undefined) ?? 'GET',
         step.target as string,
         step.server as number | undefined,
+        step.force === true,
       )
       return true
     default:
@@ -507,6 +508,17 @@ async function runLoopback(cfg: LoopbackCase): Promise<unknown> {
 const callback = (state: string, extra = ''): string => `/callback?state=${state}${extra}`
 
 const loopbackCases: unknown[] = [
+  {
+    // a request that is still on a connection of the closed server (`force`) meets the settled receiver
+    state: 'abc',
+    timeoutMs: 600000,
+    steps: [
+      { op: 'start' },
+      { op: 'loopback', target: callback('abc', '&code=ok') },
+      { op: 'loopback', force: true, target: callback('abc', '&code=again') },
+      { op: 'loopback', force: true, target: callback('abc') },
+    ],
+  },
   {
     state: 'abc',
     timeoutMs: 600000,

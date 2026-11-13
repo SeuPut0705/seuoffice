@@ -44,7 +44,7 @@ from this repository's GitHub release; bump `DEFAULT_VERSION` in it with the
 release that carries the archive.
 
 ```sh
-curl -fsSL https://raw.githubusercontent.com/SeuPut0705/seuoffice/main/packaging/cli/install.sh | sh
+curl -fsSL https://raw.githubusercontent.com/seuput-inc/seuoffice/main/packaging/cli/install.sh | sh
 ```
 
 - writes only `~/.local/share/seuoffice-cli` (or `$XDG_DATA_HOME`) and

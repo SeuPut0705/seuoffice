@@ -2131,6 +2131,75 @@ hubCases.push(
     ],
     'the same call id of the same window again stops the call before it',
   ),
+  c(
+    [
+      base({
+        servers: [SEED_DOCS],
+        runtimes: { uv: { allowed: true } },
+        plan: {
+          ok: false,
+          problem: 'runtime-missing',
+          runtime: {
+            ok: false,
+            reason: 'runtime-missing',
+            detail: 'download-needed',
+            runtime: null,
+            downloads: [
+              { runtime: 'uv', version: '0.5', bytes: 100 },
+              { runtime: 'python', version: '3.12', bytes: 200 },
+            ],
+            message: 'uv is missing',
+          },
+          message: 'missing',
+        },
+      }),
+      [settings('test', '$id:docs'), settings('planned-launch', '$id:docs')],
+    ],
+    'only one of two needed runtimes was allowed before: the question still asks',
+  ),
+  c(
+    [
+      base({
+        servers: [SEED_DOCS],
+        local: { listError: { reason: 'start-failed', problem: 'did-not-start' } },
+      }),
+      [
+        settings('test', '$id:docs'),
+        { op: 'view', which: 'settings' },
+        { op: 'localState', conn: 1, state: { state: 'running' } },
+        { op: 'view', which: 'settings' },
+        ipc(`${T}list`, [], 'editor'),
+        { op: 'localState', conn: 1, state: { state: 'starting' } },
+        ipc(`${T}list`, [], 'editor'),
+      ],
+    ],
+    'a start that worked clears the failure of the one before, as the state changes',
+  ),
+  c(
+    [
+      base({ servers: [{ ...SEED_LAW, headers: { authorization: 'Bearer lower', 'X-B': 'b' } }] }),
+      [
+        settings('edit', '$id:law', { key: 'KEY-NEW-12345678' }),
+        { op: 'store' },
+        settings('add', {
+          name: 'upper',
+          kind: 'remote',
+          url: 'https://x.example',
+          headers: { AUTHORIZATION: 'old', 'X-B': 'b' },
+          key: 'bearer   Token-2',
+        }),
+        settings('add', {
+          name: 'cleared',
+          kind: 'remote',
+          url: 'https://x.example',
+          headers: { aUtHoRiZaTiOn: 'old' },
+          key: '   ',
+        }),
+        { op: 'store' },
+      ],
+    ],
+    'a key replaces an Authorization header whatever its case, and a blank key only removes it',
+  ),
 )
 
 // the channels of hub-ipc, over the real hub with nothing registered
