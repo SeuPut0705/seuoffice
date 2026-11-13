@@ -1,36 +1,67 @@
 //! Run-level content controls and Zotero fields across paragraphs.
 
-use jscompat::{RegexLimit, js_regex, trim};
+use jscompat::{js_regex, trim};
+use ooxml_xml::XNode;
 use serde::Serialize;
 
 use crate::model::{InlineContentControl, RunZoteroFieldPart};
 use crate::props::zotero_inline_field;
 use crate::scan::BodyElement;
-use crate::sdt::{sdt_meta, sdt_ranges};
-use crate::xml_text::{decode_entities, plain_text};
+use crate::withheld::{parse_entry, runs_text, withheld_text};
+use crate::xml_text::{decode_entities, decode_numeric_char_refs};
 
 /// `inlineContentControlsOf`: the run-level content controls of a
-/// paragraph, read only; a w:sdt holding a paragraph or a table is a block
-/// container and not one of them.
-pub fn inline_content_controls_of(xml: &str) -> Result<Vec<InlineContentControl>, RegexLimit> {
+/// paragraph, read only, as the parser finds them (outermost first; markup
+/// inside CDATA is text, not a control); a w:sdt holding a paragraph or a table
+/// is a block container and not one of them.
+pub fn inline_content_controls_of(xml: &str) -> Vec<InlineContentControl> {
+    let Some(paragraph) = parse_entry(xml) else {
+        return Vec::new();
+    };
     let mut out = Vec::new();
-    for range in sdt_ranges(xml)? {
-        // `xml.slice`: empty where the range is reversed
-        let content = xml.get(range.open_end..range.close_start).unwrap_or("");
-        if js_regex!(r"<w:p[\s/>]|<w:tbl[\s>]").test(content) {
-            continue;
+    visit_controls(&paragraph, &mut out);
+    out
+}
+
+fn visit_controls(node: &XNode, out: &mut Vec<InlineContentControl>) {
+    let val_of = |sdt_pr: Option<&XNode>, name: &str| -> String {
+        sdt_pr
+            .and_then(|sdt_pr| sdt_pr.find_child(name))
+            .and_then(|child| child.attr("w:val"))
+            .unwrap_or("")
+            .to_owned()
+    };
+    for child in node.children() {
+        if child.name() == Some("w:sdt")
+            && let Some(content) = child.find_child("w:sdtContent")
+            // a w:sdt holding a paragraph or a table is a block container, not a
+            // run-level control; the body/split paths already report those
+            && !holds_block(content)
+        {
+            let sdt_pr = child.find_child("w:sdtPr");
+            out.push(InlineContentControl {
+                tag: val_of(sdt_pr, "w:tag"),
+                title: val_of(sdt_pr, "w:alias"),
+                lock: val_of(sdt_pr, "w:lock"),
+                id: val_of(sdt_pr, "w:id"),
+                text: control_text(content),
+                model_text: withheld_text(content, &control_text),
+            });
         }
-        let meta = sdt_meta(xml.get(range.open_start..range.close_end).unwrap_or(""));
-        out.push(InlineContentControl {
-            tag: meta.tag,
-            title: meta.alias,
-            lock: meta.lock,
-            id: meta.id,
-            text: plain_text(content),
-            model_text: None,
-        });
+        visit_controls(child, out);
     }
-    Ok(out)
+}
+
+/// `controlText`: an inline control's text, character references decoded as the body's are.
+fn control_text(content: &XNode) -> String {
+    decode_numeric_char_refs(&runs_text(content)).into_owned()
+}
+
+/// `holdsBlock`: whether a subtree holds a paragraph or a table.
+fn holds_block(node: &XNode) -> bool {
+    node.children()
+        .iter()
+        .any(|child| matches!(child.name(), Some("w:p" | "w:tbl")) || holds_block(child))
 }
 
 /// `ZoteroFieldParagraph`: a paragraph's place in a Zotero field that spans
@@ -141,16 +172,12 @@ pub fn cross_paragraph_zotero_fields(
 }
 
 /// `attachInlineContentControls`: attach the inline controls of a paragraph block, when it has any.
-pub fn attach_inline_content_controls(
-    block: &mut crate::model::Block,
-    xml: &str,
-) -> Result<(), RegexLimit> {
+pub fn attach_inline_content_controls(block: &mut crate::model::Block, xml: &str) {
     if block.inline_content_controls.is_some() || !js_regex!(r"^<w:p[\s/>]").test(xml) {
-        return Ok(());
+        return;
     }
-    let inline = inline_content_controls_of(xml)?;
+    let inline = inline_content_controls_of(xml);
     if !inline.is_empty() {
         block.inline_content_controls.set(inline);
     }
-    Ok(())
 }

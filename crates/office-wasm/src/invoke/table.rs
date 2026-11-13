@@ -130,6 +130,31 @@ fn xnode(args: Args<'_>, index: usize) -> Result<ooxml_xml::XNode, String> {
     oxnode(args, index)?.ok_or_else(|| format!("TypeError: argument {index} is missing"))
 }
 
+/// An XNode as the TypeScript holds it: `{ name: [children], ':@': { attr: value } }`, a text node as `{ '#text': text }`.
+fn node_value(node: &ooxml_xml::XNode) -> Value {
+    let mut object = serde_json::Map::new();
+    match node {
+        ooxml_xml::XNode::Text(text) => {
+            object.insert("#text".to_owned(), Value::String(text.clone()));
+        }
+        ooxml_xml::XNode::Element(element) => {
+            object.insert(
+                element.name.clone(),
+                Value::Array(element.children.iter().map(node_value).collect()),
+            );
+            if !element.attrs.is_empty() {
+                let attrs = element
+                    .attrs
+                    .iter()
+                    .map(|(key, value)| (key.clone(), Value::String(value.clone())))
+                    .collect();
+                object.insert(":@".to_owned(), Value::Object(attrs));
+            }
+        }
+    }
+    Value::Object(object)
+}
+
 fn oxnode(args: Args<'_>, index: usize) -> Result<Option<ooxml_xml::XNode>, String> {
     let Some(xml) = opt::<String>(args, index)? else {
         return Ok(None);
@@ -234,6 +259,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "decodeSymbolText" => r_decode_symbol_text(env, args),
         "dedupeStyleRefs" => r_dedupe_style_refs(env, args),
         "deobfuscateOdttf" => routes::deobfuscate_odttf(env, &args.resolved()?),
+        "editedCommentModelText" => r_edited_comment_model_text(env, args),
         "eqFieldToOmml" => r_eq_field_to_omml(env, args),
         "fieldDisplayOf" => r_field_display_of(env, args),
         "findChartWorkbookPath" => routes::find_chart_workbook_path(env, &args.resolved()?),
@@ -302,6 +328,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "nextContentControlId" => r_next_content_control_id(env, args),
         "nextNoteId" => r_next_note_id(env, args),
         "normalizeOoxmlXml" => r_normalize_ooxml_xml(env, args),
+        "noteModelText" => r_note_model_text(env, args),
         "notePropsFromXml" => r_note_props_from_xml(env, args),
         "numberingLevelFromCustom" => r_numbering_level_from_custom(env, args),
         "ommlEndsWithBreak" => r_omml_ends_with_break(env, args),
@@ -320,6 +347,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "parseCorePropertiesXml" => r_parse_core_properties_xml(env, args),
         "parseCustomPropertiesXml" => r_parse_custom_properties_xml(env, args),
         "parseCustomPropertyTypesXml" => r_parse_custom_property_types_xml(env, args),
+        "parseEntry" => r_parse_entry(env, args),
         "parseFontTable" => routes::parse_font_table(env, &args.resolved()?),
         "parseLazyMediaUrl" => r_parse_lazy_media_url(env, args),
         "parseNotesXml" => r_parse_notes_xml(env, args),
@@ -384,6 +412,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "rootAttributes" => r_root_attributes(env, args),
         "runCopiedElsewhere" => r_run_copied_elsewhere(env, args),
         "runPictureAnchorOf" => r_run_picture_anchor_of(env, args),
+        "runsText" => r_runs_text(env, args),
         "sameInlineWrap" => r_same_inline_wrap(env, args),
         "sameInlineWrapChain" => r_same_inline_wrap_chain(env, args),
         "sdtCheckboxGlyphs" => r_sdt_checkbox_glyphs(env, args),
@@ -425,6 +454,9 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "vmlShapeTypeTable" => r_vml_shape_type_table(env, args),
         "vmlStyleProp" => r_vml_style_prop(env, args),
         "w3cdtfStamp" => routes::w3cdtf_stamp(env, &args.resolved()?),
+        "withheldLabelOf" => r_withheld_label_of(env, args),
+        "withheldNode" => r_withheld_node(env, args),
+        "withheldText" => r_withheld_text(env, args),
         "xmlFlagOn" => r_xml_flag_on(env, args),
         _ => Err(format!("no function {name}")),
     }
@@ -829,6 +861,14 @@ fn r_decode_symbol_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_dedupe_style_refs(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = ooxml_pkg::dedupe_style_refs(p0).map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_edited_comment_model_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let p1 = rstr(args, 1)?;
+    let r = docx_engine::settings::edited_comment_model_text(p0, p1)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1300,6 +1340,12 @@ fn r_normalize_ooxml_xml(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(to_json(&r)?))
 }
 
+fn r_note_model_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0: Vec<Vec<docx_engine::model::NoteRun>> = req(args, 0)?;
+    let r = docx_engine::notes::note_model_text(&p0);
+    Ok(Some(to_json(&r)?))
+}
+
 fn r_note_props_from_xml(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let p1: docx_engine::section::read::NotePrTag = req(args, 1)?;
@@ -1427,6 +1473,13 @@ fn r_parse_custom_property_types_xml(env: &mut InvokeEnv<'_>, args: Args<'_>) ->
     let p0 = rstr(args, 0)?;
     let r = docx_engine::doc_properties::parse_custom_property_types_xml(p0);
     Ok(Some(to_json(&r)?))
+}
+
+fn r_parse_entry(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let xml = rstr(args, 0)?;
+    Ok(docx_engine::withheld::parse_entry(xml)
+        .as_ref()
+        .map(node_value))
 }
 
 fn r_parse_lazy_media_url(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
@@ -1584,7 +1637,8 @@ fn r_patch_paragraph_texts(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let p1 = rstr(args, 1)?;
     let p2: bool = req(args, 2)?;
-    let r = docx_engine::save::parts::text_patch::patch_paragraph_texts(p0, p1, p2);
+    let r = docx_engine::save::parts::text_patch::patch_paragraph_texts(p0, p1, p2)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 
@@ -1890,6 +1944,12 @@ fn r_run_picture_anchor_of(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(to_json(&r)?))
 }
 
+fn r_runs_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = xnode(args, 0)?;
+    let r = docx_engine::withheld::runs_text(&p0);
+    Ok(Some(to_json(&r)?))
+}
+
 fn r_same_inline_wrap(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0: Option<docx_engine::model::InlineWrap> = opt(args, 0)?;
     let p1: Option<docx_engine::model::InlineWrap> = opt(args, 1)?;
@@ -2151,6 +2211,44 @@ fn r_vml_style_prop(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p1 = rstr(args, 1)?;
     let r = docx_engine::vml::vml_style_prop(p0, p1).map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
+}
+
+fn r_withheld_label_of(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = ostr(args, 0)?;
+    let r = docx_engine::withheld::withheld_label_of(p0);
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_withheld_node(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let node = xnode(args, 0)?;
+    Ok(Some(
+        docx_engine::withheld::withheld_node(&node)
+            .as_ref()
+            .map_or(Value::Null, node_value),
+    ))
+}
+
+fn r_withheld_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let node = xnode(args, 0)?;
+    let host = &*env;
+    let failed: std::cell::RefCell<Option<String>> = std::cell::RefCell::new(None);
+    let ask = |name: &str, arguments: Value| -> Value {
+        host.callback(name, &arguments).unwrap_or_else(|error| {
+            failed.borrow_mut().get_or_insert(error);
+            Value::Null
+        })
+    };
+    let text_of = |view: &ooxml_xml::XNode| -> String {
+        match ask("textOf", json!([node_value(view)])) {
+            Value::String(text) => text,
+            other => other.to_string(),
+        }
+    };
+    let read = docx_engine::withheld::withheld_text(&node, &text_of);
+    if let Some(error) = failed.into_inner() {
+        return Err(error);
+    }
+    put(read)
 }
 
 fn r_xml_flag_on(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {

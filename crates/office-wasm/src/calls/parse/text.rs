@@ -196,7 +196,7 @@ fn default_para_style(_text: &str, args: &Value) -> Returned {
 }
 
 fn inline_content_controls_of(text: &str, _args: &Value) -> Returned {
-    value(text::inline_content_controls_of(text).map_err(|limit| limit.to_string())?)
+    value(text::inline_content_controls_of(text))
 }
 
 /// A `BodyElement` as it crosses JSON: its range in UTF-16 units.

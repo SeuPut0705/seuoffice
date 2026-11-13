@@ -363,8 +363,7 @@ fn parse_docx_with(
                 block.sdt_shell.set(model_of(Value::Object(shell))?);
                 block.sdt_shells.set(model_of(Value::Array(chain))?);
                 if part.name == "w:p" {
-                    super::text::attach_inline_content_controls(&mut block, child_xml)
-                        .map_err(|limit| limit.to_string())?;
+                    super::text::attach_inline_content_controls(&mut block, child_xml);
                 }
                 if !block.label.as_deref().is_some_and(|l| !l.is_empty()) {
                     let label = if !meta.alias.is_empty() {
@@ -418,8 +417,7 @@ fn parse_docx_with(
             .map(|(_, field)| field);
         let mut block = build_block(el, i, xml, &ctx, zotero)?;
         if el.name == "w:p" {
-            super::text::attach_inline_content_controls(&mut block, xml)
-                .map_err(|limit| limit.to_string())?;
+            super::text::attach_inline_content_controls(&mut block, xml);
         }
         let span = ctx
             .section_at

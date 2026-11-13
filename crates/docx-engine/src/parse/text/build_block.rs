@@ -271,8 +271,7 @@ pub fn build_block(
                 })
                 .collect();
             inner.sdt_shells.set(model_of(Value::Array(chain))?);
-            super::controls::attach_inline_content_controls(&mut inner, &sdt.p_xml)
-                .map_err(|limit| limit.to_string())?;
+            super::controls::attach_inline_content_controls(&mut inner, &sdt.p_xml);
             // label the block with the alias for UI affordance
             if !inner.label.as_deref().is_some_and(|l| !l.is_empty()) {
                 let meta = &sdt.shell.meta;
