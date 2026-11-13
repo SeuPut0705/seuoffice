@@ -1545,6 +1545,66 @@ mod tests {
         assert!(r.rec.recovery_new_tabs(1, None, Some("hwpx")).is_empty());
     }
 
+    /// `has_turn` and the check/land split a caller runs `applySaveFixes`
+    /// between (off the core thread): what lands in that gap wins
+    #[test]
+    fn a_split_write_lands_unless_a_save_or_dont_save_came_between() {
+        let mut r = rig();
+        let path = r.file_view(1, "doc.hwpx");
+        let bytes = zip_bytes(4);
+        let check = |r: &mut Rig| {
+            r.rec.recovery_begin(&r.e, &r.shared, 1);
+            assert!(r.rec.has_turn(1));
+            let job = r
+                .rec
+                .recovery_write_check(&r.e, &r.shared, 1, Some(&bytes), Some("hwpx"))
+                .unwrap_or_else(|outcome| panic!("check refused: {outcome:?}"));
+            // the check takes the turn, as the TypeScript's handler does first
+            assert!(!r.rec.has_turn(1));
+            job
+        };
+        assert!(!r.rec.has_turn(1));
+
+        // nothing between: the copy lands with the bytes the caller fixed
+        let job = check(&mut r);
+        assert_eq!(job.format, HwpFormat::Hwpx);
+        let fixed = zip_bytes(5);
+        assert_eq!(
+            r.rec.recovery_write_land(&r.e, &r.shared, 1, job, &fixed),
+            RecoveryWriteOutcome::Written
+        );
+        let copy = with_store(&r.e, &r.shared, |s| s.read_copy(&file_identity(&path)));
+        assert_eq!(copy, Some(fixed));
+
+        // a save landed between: the older bytes do not come back
+        let job = check(&mut r);
+        let before = r.rec.hwp_recovery_before_save(&r.e, 1);
+        r.rec.hwp_recovery_saved(&r.e, &r.shared, 1, before);
+        assert_eq!(
+            r.rec
+                .recovery_write_land(&r.e, &r.shared, 1, job, &zip_bytes(6)),
+            RecoveryWriteOutcome::Superseded
+        );
+        assert!(!r.copy_exists(&path));
+
+        // "Don't Save" between: neither
+        let job = check(&mut r);
+        r.rec.hwp_recovery_dont_save(&r.e, &r.shared, 1);
+        assert_eq!(
+            r.rec
+                .recovery_write_land(&r.e, &r.shared, 1, job, &zip_bytes(7)),
+            RecoveryWriteOutcome::Superseded
+        );
+        assert!(!r.copy_exists(&path));
+
+        // a check without a turn answers what the handler answers
+        assert!(matches!(
+            r.rec
+                .recovery_write_check(&r.e, &r.shared, 1, Some(&bytes), Some("hwpx")),
+            Err(RecoveryWriteOutcome::Superseded)
+        ));
+    }
+
     fn leave_copy(r: &Rig, path: &str, bytes: &[u8]) {
         with_store(&r.e, &r.shared, |store| {
             store
