@@ -815,7 +815,7 @@ fn a_renamed_file_keeps_its_grant_under_the_new_name() {
 
 #[test]
 fn the_editor_saves_and_exports_by_menu_command() {
-    let mut t = T::new(json!({}));
+    let t = T::new(json!({}));
     let editor = editor_for(&t.rt.provided(), ViewId(1)).unwrap();
     assert!(editor.owns(ViewId(1)));
     let other = t.rt.view(3, Surface::Pdf);
