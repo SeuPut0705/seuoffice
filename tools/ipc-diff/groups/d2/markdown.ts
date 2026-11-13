@@ -19,7 +19,7 @@ import {
   type Outbound,
   type TextEditorElectron,
   answers,
-  awaitStep,
+  outcomeStep,
   groupTriggers,
   setUpTextCase,
   triggerStep,
@@ -541,17 +541,18 @@ const cases: Case[] = [
 ]
 
 /** a `d2/markdown:<what>` step: the shell's or another area's call into the editor */
-const trigger = (what: string, args: unknown[] = [], more: { view?: number; defer?: true } = {}) =>
+const trigger = (what: string, args: unknown[] = [], more: { view?: number; begin?: true } = {}) =>
   triggerStep('markdown', what, args, more)
+/** what the begun `<what>` of `view` settled on */
+const outcome = (what: string, view = 1) => outcomeStep('markdown', what, view)
 
 /**
  * The cases of the shell's and the other areas' calls into the editor
  * (`d2/markdown:<what>`, crates/shell-ipc/d2/src/markdown `probe_trigger`).
- * A call that waits for the renderer is deferred, answered, then awaited.
- * They run once ipc-probe routes `d2/` triggers.
+ * A call that waits for the renderer is begun, answered, then its outcome taken.
  */
-export const triggerCases: Case[] = [
-  // needs trigger: open-view (createMarkdownView on a file), the per-view grant
+const triggerCases: Case[] = [
+  // open-view (createMarkdownView on a file), the per-view grant
   {
     note: 'a view the shell opened on a note reads it and saves to it',
     views: M,
@@ -563,7 +564,7 @@ export const triggerCases: Case[] = [
       save({ text: '# o2' }),
     ],
   },
-  // needs trigger: request-save, the save-request event and its two answers
+  // request-save, the save-request event and its two answers
   {
     note: 'a menu save waits for the renderer: the ack declines, the save resolves',
     views: M,
@@ -571,57 +572,57 @@ export const triggerCases: Case[] = [
     calls: [
       trigger('open-view', [docs('m.md')]),
       dirty,
-      trigger('request-save', ['saveAs'], { defer: true }),
+      trigger('request-save', ['saveAs'], { begin: true }),
       send('markdown:save-request-ack', false),
-      awaitStep(2),
-      trigger('request-save', ['save'], { defer: true }),
+      outcome('request-save'),
+      trigger('request-save', ['save'], { begin: true }),
       save({ text: 'saved' }),
-      awaitStep(5),
+      outcome('request-save'),
       trigger('request-save', ['save']),
     ],
   },
-  // needs trigger: request-close, the close-save-request event
+  // request-close, the close-save-request event
   {
     note: 'closing a dirty note asks; Save waits for the renderer, Cancel keeps it',
     views: M,
     hosts: { shared: { dialogs: { message: [{ response: 0 }, { response: 2 }] } } },
     calls: [
       dirty,
-      trigger('request-close', [], { defer: true }),
+      trigger('request-close', [], { begin: true }),
       send('markdown:close-save-result', true),
-      awaitStep(1),
+      outcome('request-close'),
       trigger('request-close'),
     ],
   },
-  // needs trigger: read-text, the read-text-request event
+  // read-text, the read-text-request event
   {
     note: 'MCP reads the live text: an odd answer is text, none is an error',
     views: M,
     calls: [
-      trigger('read-text', [], { defer: true }),
+      trigger('read-text', [], { begin: true }),
       send('markdown:read-text-result', { text: 42 }),
-      awaitStep(0),
-      trigger('read-text', [], { defer: true }),
+      outcome('read-text'),
+      trigger('read-text', [], { begin: true }),
       send('markdown:read-text-result', null),
-      awaitStep(3),
+      outcome('read-text'),
     ],
   },
-  // needs trigger: save-to-path, file-renamed, export-request, the file-renamed and export-request events
+  // save-to-path, file-renamed, export-request, the file-renamed and export-request events
   {
     note: 'MCP saves to a path; the file is renamed; the menu exports',
     views: M,
     files: { 'documents/r.md': 'r' },
     calls: [
       trigger('open-view', [docs('r.md')]),
-      trigger('save-to-path', [docs('mcp.md')], { defer: true }),
+      trigger('save-to-path', [docs('mcp.md')], { begin: true }),
       save({ text: 'via mcp' }),
-      awaitStep(1),
+      outcome('save-to-path'),
       trigger('file-renamed', [docs('mcp.md'), docs('moved.md')]),
       trigger('export-request', ['pdf']),
       trigger('is-dirty'),
     ],
   },
-  // needs trigger: write-copies-now, the recovery-flush-request event
+  // write-copies-now, the recovery-flush-request event
   {
     note: 'the OS ends the session: each dirty view is asked for its copy',
     views: M,
@@ -629,13 +630,13 @@ export const triggerCases: Case[] = [
     calls: [
       call('markdown:recovery-open'),
       dirty,
-      trigger('write-copies-now', [], { defer: true }),
+      trigger('write-copies-now', [], { begin: true }),
       call('markdown:recovery-write', 'flushed'),
-      awaitStep(2),
+      outcome('write-copies-now'),
       trigger('discard-pending-assets'),
     ],
   },
-  // needs trigger: queue-seed, queue-note-append (the note-append-ready event)
+  // queue-seed, queue-note-append (the note-append-ready event)
   {
     note: 'a seeded tab, and text queued for an open note, taken once',
     views: TWO,
@@ -654,7 +655,7 @@ export const triggerCases: Case[] = [
       call('markdown:note-append-take'),
     ],
   },
-  // needs trigger: export-pdf-headless
+  // export-pdf-headless
   {
     note: 'a headless PDF export hands its target once and settles on the report',
     views: TWO,
@@ -662,12 +663,12 @@ export const triggerCases: Case[] = [
     calls: [
       trigger('export-pdf-headless', [docs('h.md'), '$DIR/out/h.pdf', 5000], {
         view: 2,
-        defer: true,
+        begin: true,
       }),
       { ...call('markdown:consume-headless-export'), view: 2 },
       { ...call('markdown:consume-headless-export'), view: 2 },
       { ...send('markdown:headless-export-done', { ok: false, error: 'boom' }), view: 2 },
-      awaitStep(0),
+      outcome('export-pdf-headless', 2),
     ],
   },
 ]
@@ -754,6 +755,6 @@ export const group: Group = {
     if (!loaded) throw new Error('no d2/markdown case is loaded')
     return loaded
   }),
-  cases,
+  cases: [...cases, ...triggerCases],
   single: {},
 }

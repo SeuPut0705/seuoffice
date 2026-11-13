@@ -17,7 +17,7 @@ import {
   type Outbound,
   type TextEditorElectron,
   answers,
-  awaitStep,
+  outcomeStep,
   groupTriggers,
   setUpTextCase,
   triggerStep,
@@ -574,17 +574,18 @@ const cases: Case[] = [
 ]
 
 /** a `d2/html:<what>` step: the shell's or another area's call into the editor */
-const trigger = (what: string, args: unknown[] = [], more: { view?: number; defer?: true } = {}) =>
+const trigger = (what: string, args: unknown[] = [], more: { view?: number; begin?: true } = {}) =>
   triggerStep('html', what, args, more)
+/** what the begun `<what>` of `view` settled on */
+const outcome = (what: string, view = 1) => outcomeStep('html', what, view)
 
 /**
  * The cases of the shell's and the other areas' calls into the editor
  * (`d2/html:<what>`, crates/shell-ipc/d2/src/html `probe_trigger`). A call
- * that waits for the renderer is deferred, answered, then awaited. They run
- * once ipc-probe routes `d2/` triggers.
+ * that waits for the renderer is begun, answered, then its outcome taken.
  */
-export const triggerCases: Case[] = [
-  // needs trigger: open-view (createHtmlView on a file), the per-view grant
+const triggerCases: Case[] = [
+  // open-view (createHtmlView on a file), the per-view grant
   {
     note: 'a view the shell opened on a file reads it and saves to it',
     views: H,
@@ -596,7 +597,7 @@ export const triggerCases: Case[] = [
       save({ text: '<p>saved</p>' }),
     ],
   },
-  // needs trigger: request-save, the save-request event and its two answers
+  // request-save, the save-request event and its two answers
   {
     note: 'a menu save waits for the renderer: the ack declines, the save resolves',
     views: H,
@@ -604,57 +605,57 @@ export const triggerCases: Case[] = [
     calls: [
       trigger('open-view', [docs('m.html')]),
       dirty,
-      trigger('request-save', ['saveAs'], { defer: true }),
+      trigger('request-save', ['saveAs'], { begin: true }),
       send('html:save-request-ack', false),
-      awaitStep(2),
-      trigger('request-save', ['save'], { defer: true }),
+      outcome('request-save'),
+      trigger('request-save', ['save'], { begin: true }),
       save({ text: 'saved' }),
-      awaitStep(5),
+      outcome('request-save'),
       trigger('request-save', ['save']),
     ],
   },
-  // needs trigger: request-close, the close-save-request event
+  // request-close, the close-save-request event
   {
     note: 'closing a dirty page asks; Save waits for the renderer, Cancel keeps it',
     views: H,
     hosts: { shared: { dialogs: { message: [{ response: 0 }, { response: 2 }] } } },
     calls: [
       dirty,
-      trigger('request-close', [], { defer: true }),
+      trigger('request-close', [], { begin: true }),
       send('html:close-save-result', true),
-      awaitStep(1),
+      outcome('request-close'),
       trigger('request-close'),
     ],
   },
-  // needs trigger: read-text, the read-text-request event
+  // read-text, the read-text-request event
   {
     note: 'MCP reads the live text: an odd answer is text, none is an error',
     views: H,
     calls: [
-      trigger('read-text', [], { defer: true }),
+      trigger('read-text', [], { begin: true }),
       send('html:read-text-result', { text: 42 }),
-      awaitStep(0),
-      trigger('read-text', [], { defer: true }),
+      outcome('read-text'),
+      trigger('read-text', [], { begin: true }),
       send('html:read-text-result', null),
-      awaitStep(3),
+      outcome('read-text'),
     ],
   },
-  // needs trigger: save-to-path, file-renamed, export-request, the file-renamed and export-request events
+  // save-to-path, file-renamed, export-request, the file-renamed and export-request events
   {
     note: 'MCP saves to a path; the file is renamed; the menu exports',
     views: H,
     files: { 'documents/r.html': 'r' },
     calls: [
       trigger('open-view', [docs('r.html')]),
-      trigger('save-to-path', [docs('mcp.html')], { defer: true }),
+      trigger('save-to-path', [docs('mcp.html')], { begin: true }),
       save({ text: 'via mcp' }),
-      awaitStep(1),
+      outcome('save-to-path'),
       trigger('file-renamed', [docs('mcp.html'), docs('moved.html')]),
       trigger('export-request', ['pdf']),
       trigger('is-dirty'),
     ],
   },
-  // needs trigger: write-copies-now, the recovery-flush-request event
+  // write-copies-now, the recovery-flush-request event
   {
     note: 'the OS ends the session: each dirty view is asked for its copy',
     views: H,
@@ -662,13 +663,13 @@ export const triggerCases: Case[] = [
     calls: [
       call('html:recovery-open'),
       dirty,
-      trigger('write-copies-now', [], { defer: true }),
+      trigger('write-copies-now', [], { begin: true }),
       call('html:recovery-write', 'flushed'),
-      awaitStep(2),
+      outcome('write-copies-now'),
       trigger('discard-pending-assets'),
     ],
   },
-  // needs trigger: queue-seed, export-headless
+  // queue-seed, export-headless
   {
     note: 'a seeded tab and a headless export',
     views: TWO,
@@ -679,11 +680,11 @@ export const triggerCases: Case[] = [
       call('html:seed-take'),
       trigger('export-headless', [docs('h.html'), '$DIR/out/h.pdf', 'pdf', 5000], {
         view: 2,
-        defer: true,
+        begin: true,
       }),
       { ...call('html:consume-headless-export'), view: 2 },
       { ...send('html:headless-export-done', { ok: false, error: 'boom' }), view: 2 },
-      awaitStep(3),
+      outcome('export-headless', 2),
     ],
   },
 ]
@@ -783,7 +784,7 @@ export const group: Group = {
     if (!loaded) throw new Error('no d2/html case is loaded')
     return loaded
   }),
-  cases,
+  cases: [...cases, ...triggerCases],
   single: {
     'html:fetch-image':
       'no case reaches a picture: the network is off on both sides and the generated-image store lives in the real temp folder',
