@@ -255,3 +255,64 @@ one source replacement (`[name, compared function, file, original, faulty]`)
 applied to a scratch copy of `crates/`, one wasm build and one comparison per
 fault, a positive control first. The integrator chooses faults without
 reading the porters' lists.
+
+## Handoff (2026-11-13, from the Mac mini session to the MacBook)
+
+State at the push of this section, branch `feat/rust-odt-c3`:
+
+- Port and switch are done: `@seuoffice/odt-engine` calls the wasm binding; the
+  TypeScript engine is frozen in `tools/odt-diff/reference/`. Local gate run 14:
+  exit 0, 0 differences, 0 panics, both ledger classes reproduce. App odt tests on
+  the binding: docs 48/48, html 14/14, markdown 20/20, cli odt 59/59, odt-engine
+  266 passed / 9 skipped.
+- B4 merged at `308f88e16`. CI `test (1, 2, 4)` fails on the same 33 tests as
+  B4's own CI (the docx engine's Rust port of the hidden-from-AI batch, B4's
+  work), none of them odt.
+- `dropped`/`hidden_from_ai` (dispatch d5) is in the reference and in Rust,
+  identical; `saveOdt` returns `{ odtBytes, report }`; gate (b) compares the
+  save report; built case `hidden-from-ai` and the edit "a paragraph hidden from
+  AI before the first" exercise it.
+- Faults: round 3 (runner 43318251285) ran 21 of 26 and caught 20. The miss
+  `rows-floor-cmp` now has (f) inputs (`withRowFloors` with every row at its
+  floor, no rule). Five were never run (150-minute shard limit):
+  `table-row-height-twips`, `text-cell-join`, `report-count-sum`,
+  `table-colspan-gt`, `objects-note-key`. The job now runs 13 shards; round 4
+  is runner 43342464157 on `91f1794bf` (in progress at the handoff). Read
+  `odt-faults-out-*/report.json` of its artifacts; target 26/26.
+
+Open work (dispatch d6, main's request): every caller that writes an ODT refuses
+a report holding `hidden_from_ai` and writes nothing, with tests.
+
+- CLI: done in `packages/cli/src/formats/odt.ts` (`refuseDroppedMarks` in
+  `saveOdtBytes` and `docxBytesToOdt`), test `packages/cli/tests/odt-hidden.test.ts`
+  committed WIP and not yet run.
+- docs: `apps/docs/src/renderer/file-actions.ts` `odtBytesFor` (save, recovery
+  copy, template) and `saveWithFormatChange` (`docxToOdt` for Save As .odt).
+  Throw with a localized message; main uses the key `appMarkedOdtRefused`
+  (en: "This document has content hidden from AI, which an ODT file cannot
+  keep. Save it as .docx, or clear the marks first."; ko on main), reuse that
+  key and text so the merge with main lines up. Test in
+  `apps/docs/tests/odt-open-save.test.ts`: mark editor text with
+  `schema.marks.redaction.create({ label })`, save as .odt and Save As .odt,
+  expect nothing in `written`.
+- html and markdown: `apps/*/src/main/odt-export.ts` `exportOdt`: after
+  `convert`, a report with `hidden_from_ai` returns `{ ok: false, error }`
+  without `write`; main names the message key `markedRefused` in `tOdt`. Test
+  in `apps/*/tests/odt-export.test.ts` with a docx holding a `go:redact` run.
+- Main's own upstream refusal (`fix/redact-followups`: `marked-odt.ts`,
+  `planOdtWrite`, CLI `guardHiddenContent`) is not on this branch; when it
+  lands both apply, the engine report is the second check.
+
+How to run (Node 22, rustup with `wasm32-wasip1`):
+
+- Gate: `node tools/odt-diff/run.mjs --by-function` (builds the wasm first,
+  about 6 minutes); the report is `tools/odt-diff/out/<time>.stdout.log`; the
+  populations for `floors.json` are in `out/populations.json` (corpus lines
+  exact, seeded `*Mutated` lines rounded down to hundreds).
+- Faults: `node tools/odt-diff/faults.mjs --inventory` checks every anchor;
+  `node tools/odt-diff/faults.mjs --no-control --only a,b` runs single faults
+  (about 30 minutes each); the runner runs them with
+  `gh workflow run "seuoffice rust" --ref feat/rust-odt-c3`.
+- Never `cargo fmt --all` (it reformats B4's generated files); use
+  `cargo fmt -p odt-engine`.
+- Trail: `crates/odt-engine/C3-TRAIL.md` rows 1 to 26.
