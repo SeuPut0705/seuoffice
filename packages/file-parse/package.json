@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/file-parse",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "shared attachment parsing: PDF, Office, HWP and plain-text formats to text, read by the Rust readers (crates/file-parse) through the wasm engine; images flagged for multimodal input",

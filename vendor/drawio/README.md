@@ -13,7 +13,7 @@
 
 ## 빌드에서 하는 일
 
-`npm run build -w @genoffice/diagram`(그리고 `dev`, `dev:renderer`)가 `node ../../vendor/drawio/prepare.mjs`를 부른다.
+`npm run build -w @seuoffice/diagram`(그리고 `dev`, `dev:renderer`)가 `node ../../vendor/drawio/prepare.mjs`를 부른다.
 
 1. `.cache/<판>/draw.war`가 있으면 그 해시를 확인한다. 없으면 `drawio.json`의 주소에서 받아 해시를 확인한 뒤 캐시에 둔다. 해시가 다르면 빌드가 실패하고 캐시에 아무것도 남기지 않는다. 캐시가 있으면 다시 받지 않는다(캐시 파일의 해시가 틀리면 실패하고, 그 파일을 지우라고 알린다).
 2. 뺄 목록에 걸리는 파일을 빼고 나머지를 `apps/diagram/out/drawio/`에 그대로(바이트 그대로) 푼다.

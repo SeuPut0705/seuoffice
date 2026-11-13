@@ -13,9 +13,6 @@ Tabs: **Home / Insert / Draw / Layout / Design / References / Review / View**, p
 - **Layout**: margins, orientation and paper size, columns, paragraph indents and spacing.
 - **Design**: themes, color sets, watermark, page borders.
 - **References**: table of contents (updatable), footnotes/endnotes, captions, cross-references.
-
-  ![The References tab](img/docs-references.png)
-
 - **Review**: **Editor** proofreads the whole document for spelling, grammar and punctuation; **Translate**; spell check; comments (**AI Resolve Comments** works through the open ones); track changes with All/Simple markup views, accept/reject, and **AI Revision Summary**; word count; **Compare** against another file; **Protect Document**.
 - **View**: five ways to look at the file — **Print Layout**, **Web Layout**, **Outline**, **Read Mode** and **Page Preview**; zoom out/in/100%/page width/one page; **AI Panel**; **Dark Mode**; ruler, gridlines and the navigation pane; **New Tab**, **Split** and **Switch Tabs**; the searchable **keyboard-shortcuts dialog**.
   - **Dark Mode** darkens the page and the canvas around it, never the ribbon — Word's split between a dark editing surface and a dark window. The choice is remembered, and it wins over the app theme either way.

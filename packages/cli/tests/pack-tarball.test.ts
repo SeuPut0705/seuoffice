@@ -31,7 +31,7 @@ function resources(): string {
 
 function notices(): string {
   const dir = mkdtempSync(join(tmpdir(), 'seuoffice-notices-'))
-  for (const name of ['LICENSE', 'NOTICE', 'THIRD-PARTY-NOTICES.txt']) {
+  for (const name of ['LICENSE', 'LICENSE-APACHE', 'NOTICE', 'THIRD-PARTY-NOTICES.txt']) {
     writeFileSync(join(dir, name), `${name}\n`)
   }
   return dir
@@ -79,6 +79,7 @@ describe('pack-tarball', () => {
       'seuoffice-cli/wasm/office_wasm.wasm',
       'seuoffice-cli/native/xlsx-sidecar',
       'seuoffice-cli/LICENSE',
+      'seuoffice-cli/LICENSE-APACHE',
       'seuoffice-cli/NOTICE',
       'seuoffice-cli/THIRD-PARTY-NOTICES.txt',
     ]) {

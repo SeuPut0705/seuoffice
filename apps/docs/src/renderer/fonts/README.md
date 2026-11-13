@@ -7,7 +7,7 @@ freely redistributable with the app. Licenses: Carlito and Liberation are
 
 | Font                 | License    | Metric-compatible Word counterpart        |
 | -------------------- | ---------- | ----------------------------------------- |
-| Carlito GO           | OFL 1.1    | Calibri (Word's default body font)        |
+| SeuOffice Sans GO    | OFL 1.1    | Calibri (Word's default body font)        |
 | Caladea              | Apache-2.0 | Cambria                                   |
 | Cambria Math GO      | Apache-2.0 | Cambria Math (Caladea, adjusted)          |
 | Liberation Serif     | OFL 1.1    | Times New Roman                           |
@@ -19,7 +19,7 @@ freely redistributable with the app. Licenses: Carlito and Liberation are
 | Bookman Old Style GO | Apache-2.0 | Bookman Old Style (Caladea, adv.-matched) |
 | Century Gothic GO    | OFL 1.1    | Century Gothic (Liberation Sans, adv.-m.) |
 
-"Carlito GO" (`Carlito-*.ttf`) is a derivative of Carlito 1.103: a build-time patch
+"SeuOffice Sans GO" (`Carlito-*.ttf`) is a derivative of Carlito 1.103: a build-time patch
 (`tools/patch-carlito-vi.py`) rebuilds Vietnamese precomposed glyphs whose above mark
 (circumflex/breve) was dropped (Ậ/Ệ/Ộ in Regular/Bold); advance widths are unchanged.
 Renamed per OFL 1.1 §2 — "Carlito" is a Reserved Font Name. The files live in
@@ -70,7 +70,7 @@ forms + basic Latin
 Rare characters outside the subset still fall through to system fonts (shown as
 missing glyphs in minimal environments); bold is synthesized by the browser.
 
-The serif subset also backs the `GenOffice Fullwidth TC` face (`fonts.css`), a
+The serif subset also backs the `SeuOffice Fullwidth TC` face (`fonts.css`), a
 unicode-range shim (U+FF0D/FF0F/FF3C/FF3F/FF5E) slotted before Songti TC in the
 Traditional Chinese serif chain: Songti TC draws those fullwidth glyphs at
 ~0.2-0.5em of ink inside the 1em advance, so a PMingLiU document's U+FF0F
@@ -81,9 +81,9 @@ chain order; advances are 1.0em everywhere, so line breaking is unchanged.
 
 | Font                                 | Role                                                        |
 | ------------------------------------ | ----------------------------------------------------------- |
-| GenOffice Serif KR (subset woff2)    | Batang-metric stand-in for Korean serif families            |
-| GenOffice Sans KR (subset woff2)     | fallback for Korean sans families (Malgun etc.)             |
-| GenOffice Che Latin KR (ASCII woff2) | half-width Latin for BatangChe/GulimChe/DotumChe/GungsuhChe |
+| SeuOffice Serif KR (subset woff2)    | Batang-metric stand-in for Korean serif families            |
+| SeuOffice Sans KR (subset woff2)     | fallback for Korean sans families (Malgun etc.)             |
+| SeuOffice Che Latin KR (ASCII woff2) | half-width Latin for BatangChe/GulimChe/DotumChe/GungsuhChe |
 
 Source: Noto Serif/Sans CJK KR Regular from [notofonts/noto-cjk](https://github.com/notofonts/noto-cjk)
 (SIL OFL 1.1), subset with fonttools to the 2,350 KS X 1001 syllables + jamo
@@ -106,7 +106,7 @@ ink widths and side bearings of Batang/Malgun
 (`tools/normalize-kr-latin-metrics.py`,
 `tools/scale-kr-sans-latin-ink.py`).
 
-`GenOfficeCheLatinKR.woff2` is an ASCII-only derivative of GenOffice Sans KR.
+`SeuOfficeCheLatinKR.woff2` is an ASCII-only derivative of SeuOffice Sans KR.
 `tools/build-kr-che-latin-font.py` gives its Noto-derived outlines fixed 0.5em
 advances and transforms them to measured DotumChe ink boxes. Microsoft Office
 fonts are build-time measurement references only; no Microsoft outlines are
@@ -117,11 +117,11 @@ counterpart line factors live in `lineHeightFactor()` of `line-metrics.ts`.
 The Sans/Che source copyright (Adobe 2014–2021 and Google LLC), Serif source
 copyright (Adobe 2017–2024), and full OFL 1.1 text are in `LICENSE-OFL.txt`.
 
-### GenOffice Gothic KR
+### SeuOffice Gothic KR
 
 | Font                               | Role                                            |
 | ---------------------------------- | ----------------------------------------------- |
-| GenOffice Gothic KR (subset woff2) | real-metric face for NanumGothic-declaring docs |
+| SeuOffice Gothic KR (subset woff2) | real-metric face for NanumGothic-declaring docs |
 
 Source: NanumGothic Regular from [google/fonts](https://github.com/google/fonts/tree/main/ofl/nanumgothic)
 (SIL OFL 1.1). Word for Mac renders NanumGothic documents with the OS
@@ -131,16 +131,16 @@ Batang-normalized subset above ships 1.0/0.333/0.596 — +6.4% per hangul line.
 Subset to the same ranges as the KR fallbacks (KS X 1001 syllables + jamo +
 Basic Latin/punctuation/fullwidth forms), advances **unmodified**
 (`tools/build-gothic-kr-font.py`) and checked in as
-`GenOfficeGothicKR-Regular-subset.woff2`. Renamed per OFL (the upstream
+`SeuOfficeGothicKR-Regular-subset.woff2`. Renamed per OFL (the upstream
 Reserved Font Names include "Nanum" and "NanumGothic"; subsetting is a
 modification). The exact NHN copyright/Reserved Font Name notice and the full
 OFL 1.1 text are in `LICENSE-OFL.txt`.
 
-### GenOffice UI Kana JP
+### SeuOffice UI Kana JP
 
 | Font                                      | Role                                                |
 | ----------------------------------------- | --------------------------------------------------- |
-| GenOffice UI Kana JP (Regular/Bold woff2) | Meiryo UI-advance kana/JP punctuation for the alias |
+| SeuOffice UI Kana JP (Regular/Bold woff2) | Meiryo UI-advance kana/JP punctuation for the alias |
 
 Source: Noto Sans JP variable font from [notofonts/noto-cjk](https://github.com/notofonts/noto-cjk)
 (SIL OFL 1.1), instanced at wght 400/700. Word for Mac renders Meiryo UI with
@@ -159,7 +159,7 @@ outlines are modified).
 
 | Font                             | Role                                 |
 | -------------------------------- | ------------------------------------ |
-| GenOffice Poppins (subset woff2) | real face for Poppins-declaring docs |
+| SeuOffice Poppins (subset woff2) | real face for Poppins-declaring docs |
 
 Source: Poppins Regular/Bold from [google/fonts](https://github.com/google/fonts/tree/main/ofl/poppins)
 (SIL OFL 1.1). Poppins is an M365 cloud font: Word downloads the real face and
@@ -169,7 +169,7 @@ with the PDF embedding Poppins-Regular/Bold), while the Helvetica-class
 fallback runs ~12.6% narrower per line and 1.172-spaced — a 13-page document
 paginated as 11. Subset to Latin + Latin Extended + punctuation/currency,
 advances and vertical metrics **unmodified** (`tools/build-poppins-font.py`),
-checked in as `GenOfficePoppins-{Regular,Bold}-subset.woff2`. Renamed (no
+checked in as `SeuOfficePoppins-{Regular,Bold}-subset.woff2`. Renamed (no
 Reserved Font Name upstream) so a locally installed Poppins wins by chain
 order. Italic synthesizes oblique from these faces.
 
@@ -177,7 +177,7 @@ order. Italic synthesizes oblique from these faces.
 
 | Font                             | Role                                 |
 | -------------------------------- | ------------------------------------ |
-| GenOffice DM Sans (subset woff2) | real face for DM Sans-declaring docs |
+| SeuOffice DM Sans (subset woff2) | real face for DM Sans-declaring docs |
 
 Source: DM Sans 1.200 Regular/Bold statics from [google/fonts](https://github.com/google/fonts/tree/af0704e25dfad3e8999a2955cbbdfa2b28099617/ofl/dmsans)
 (SIL OFL 1.1; the current upstream is a variable font whose instances no
@@ -188,7 +188,7 @@ whose hmtx equals the 1.200 statics glyph for glyph (hhea = typo = win =
 fallback runs ~7% narrower per line and 1.15-spaced. Subset to Latin + Latin
 Extended + punctuation/currency, advances and vertical metrics **unmodified**
 (`tools/build-dm-sans-font.py`), checked in as
-`GenOfficeDMSans-{Regular,Bold}-subset.woff2`. Renamed (no Reserved Font Name
+`SeuOfficeDMSans-{Regular,Bold}-subset.woff2`. Renamed (no Reserved Font Name
 of its own upstream) so a locally installed DM Sans wins by chain order.
 Italic synthesizes oblique from these faces.
 
@@ -196,7 +196,7 @@ Italic synthesizes oblique from these faces.
 
 | Font                    | Role                                     |
 | ----------------------- | ---------------------------------------- |
-| GenOffice Tamil (woff2) | Latha-metric stand-in for Tamil families |
+| SeuOffice Tamil (woff2) | Latha-metric stand-in for Tamil families |
 
 Source: Noto Sans Tamil Regular from [notofonts](https://github.com/notofonts/notofonts.github.io)
 (SIL OFL 1.1). Word substitutes missing Tamil families with Latha; Chromium's
@@ -213,8 +213,8 @@ per OFL ("Noto" is a Reserved Font Name; advances are modified).
 
 | Font                                   | Role                                                    |
 | -------------------------------------- | ------------------------------------------------------- |
-| GenOffice Cordia (Regular/Bold woff2)  | Cordia New-metric stand-in for Thai families Word lacks |
-| GenOffice Sarabun (Regular/Bold woff2) | TH SarabunPSK-metric stand-in (Word ships that face)    |
+| SeuOffice Cordia (Regular/Bold woff2)  | Cordia New-metric stand-in for Thai families Word lacks |
+| SeuOffice Sarabun (Regular/Bold woff2) | TH SarabunPSK-metric stand-in (Word ships that face)    |
 
 Word for Mac ships Cordia New and TH SarabunPSK in its DFonts and substitutes
 Cordia New for every other Thai family (TH SarabunIT9, Angsana New, the UPC
@@ -229,7 +229,7 @@ in their glyph names, marks the median letter factor), one vertical factor
 mark/mkmk anchors moved with their glyph, `kern` and hinting dropped, advances
 and vertical metrics from the Word face. The Latin repertoire is Liberation Sans
 size-adjusted to the Word face's Latin advances (family manifests
-`genoffice-cordia.json` / `genoffice-sarabun.json`). Renamed per OFL 1.1 ("Noto"
+`seuoffice-cordia.json` / `seuoffice-sarabun.json`). Renamed per OFL 1.1 ("Noto"
 is a Reserved Font Name). `tests/thai-font-metrics.test.ts` holds the advance
 and ink contract; the line factors (1.147 / 1.31) live in `line-factors.json`.
 
@@ -237,7 +237,7 @@ and ink contract; the line factors (1.147 / 1.31) live in `line-factors.json`.
 
 | Font                      | Role                                         |
 | ------------------------- | -------------------------------------------- |
-| GenOffice Bengali (woff2) | Nirmala UI-metric stand-in, Regular and Bold |
+| SeuOffice Bengali (woff2) | Nirmala UI-metric stand-in, Regular and Bold |
 
 Source: Noto Sans Bengali Regular/Bold from [notofonts](https://github.com/notofonts/notofonts.github.io)
 (SIL OFL 1.1). Word for Mac renders Nirmala UI for real (M365 cloud font);
@@ -272,12 +272,12 @@ serif, so unknown Arabic families default to the Naskh chain.
 
 | Font                              | Role                                             |
 | --------------------------------- | ------------------------------------------------ |
-| GenOffice PUA Blank (woff2, 312B) | blank 1em glyph for all of U+E000-F8FF (BMP PUA) |
+| SeuOffice PUA Blank (woff2, 312B) | blank 1em glyph for all of U+E000-F8FF (BMP PUA) |
 
 Generated from scratch by `tools/build-pua-blank-font.py` (no upstream font;
 two glyphs, both empty). Chromium never system-falls-back for Private Use
 codepoints: an unmapped PUA character renders the chain's primary font's
-`.notdef`. Chains headed by a real face (Calibri, Carlito GO) therefore draw
+`.notdef`. Chains headed by a real face (Calibri, SeuOffice Sans GO) therefore draw
 tofu boxes for AI-residue PUA tokens, while Word — and chains headed by the
 bundled CJK subsets, whose subsetted `.notdef` is blank — show nothing. This
 face sits in the Aptos chain and behind the range-limited `Noto Sans/Serif
@@ -289,8 +289,8 @@ Every bundled face carries TrueType (glyf) outlines. Chromium's PDF backend
 (Skia, `printToPDF`) cannot embed CFF-flavoured faces: each glyph drawn with
 one lands in the exported PDF as a Type3 path procedure instead of an embedded
 font (no font name in the viewer, unreliable text selection and search).
-Noto Sans/Serif CJK SC and the three Noto-derived KR faces (GenOffice Sans KR,
-GenOffice Serif KR, GenOffice Che Latin KR) come from CFF sources, so the last
+Noto Sans/Serif CJK SC and the three Noto-derived KR faces (SeuOffice Sans KR,
+SeuOffice Serif KR, SeuOffice Che Latin KR) come from CFF sources, so the last
 build step for them is `tools/convert-cff-to-glyf.py`: cu2qu at 1 font unit,
 glyph order, cmap, advances, OS/2, hhea/vhea, name and layout tables carried
 over byte for byte (the script asserts it), VORG dropped with each vertical
@@ -300,6 +300,6 @@ origin kept in vmtx. Only outlines change, so the OFL Reserved Font Name
 `tools/scale-kr-sans-latin-ink.py` and `tools/build-kr-che-latin-font.py`
 edit CFF charstrings: run them on a CFF build, then convert. Those charstrings
 also carried their own widths, which no longer matched the normalized hmtx
-(hangul 0.92em, `A` 1.275em in GenOffice Sans KR). Chromium on Windows
+(hangul 0.92em, `A` 1.275em in SeuOffice Sans KR). Chromium on Windows
 measured the CFF faces with those widths (probe 2026-10-31) while macOS used
 hmtx; glyf has no widths of its own, so hmtx now holds on every platform.

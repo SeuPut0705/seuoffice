@@ -10,8 +10,9 @@
  *
  * The Chromium part is too large (18MB); electron-builder extraResources ships
  * LICENSES.chromium.html separately, referenced from the body text. The repo's
- * own LICENSE (Apache-2.0) ships beside it as LICENSE.txt; the NOTICE that
- * license requires to travel with the work opens the generated file.
+ * own LICENSE (FSL-1.1-ALv2) ships beside it as LICENSE.txt and the Apache
+ * License 2.0 as LICENSE-APACHE.txt; the NOTICE the Apache License requires to
+ * travel with the work opens the generated file.
  *
  * The three Rust sections need cargo, the rhwp one a sparse checkout of the
  * rhwp tag (manifests only, cached under node_modules/.cache), and the
@@ -129,6 +130,7 @@ const NOTE = {
 const SPDX_NOTE = {
   dompurify: 'Apache-2.0 (dual MPL-2.0/Apache-2.0, used under Apache-2.0)',
   jszip: 'MIT (dual MIT/GPL-3.0-or-later, used under MIT)',
+  'node-forge': 'BSD-3-Clause (dual BSD-3-Clause/GPL-2.0, used under BSD-3-Clause)',
   'r-efi': 'MIT (tri-licensed MIT/Apache-2.0/LGPL-2.1-or-later, used under MIT)',
 }
 
@@ -617,13 +619,15 @@ const seed = importedNames()
 const { resolved, missing } = closure(seed)
 resolved.sort(([a], [b]) => a.localeCompare(b))
 
-// Apache-2.0 §4(d): the NOTICE of the work travels with every copy; LICENSE.txt is §4(a)
+// Apache-2.0 §4(d): the NOTICE of the work travels with every copy; LICENSE-APACHE.txt is §4(a)
 const NOTICE = readFileSync(join(ROOT, 'NOTICE'), 'utf8').trim()
 
 let out = `${NOTICE}
 
-The Apache License, Version 2.0, under which the work above is distributed,
-is reproduced in LICENSE.txt next to this file.
+The Functional Source License, Version 1.1, Apache 2.0 Future License, under
+which seuoffice is distributed, is reproduced in LICENSE.txt next to this file,
+and the Apache License, Version 2.0, under which the works above are
+distributed, in LICENSE-APACHE.txt.
 `
 
 out += hr(HEADER)
@@ -697,9 +701,24 @@ const FONTS = [
     'Digitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.',
   ],
   [
-    'Carlito',
+    'SeuOffice Sans GO (Carlito 1.103 derivative)',
     'SIL OFL 1.1',
-    '© 2010-2013 tyPoland Lukasz Dziedzic with Reserved Font Name "Carlito".',
+    '© 2010-2013 tyPoland Lukasz Dziedzic with Reserved Font Name "Carlito".\nVietnamese precomposed glyphs rebuilt (tools/patch-carlito-vi.py); renamed per OFL 1.1, the\nReserved Font Name is not used.',
+  ],
+  [
+    'Aptos GO / Aptos Display GO / Aptos Narrow GO (Carlito derivatives)',
+    'SIL OFL 1.1',
+    '© 2010-2013 tyPoland Lukasz Dziedzic with Reserved Font Name "Carlito".\nLatin subset with outlines scaled to other advance widths (tools/build-metric-fonts.py); renamed\nper OFL 1.1. No Microsoft font outlines are included.',
+  ],
+  [
+    'Century Gothic GO (Liberation Sans derivative)',
+    'SIL OFL 1.1',
+    'Digitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.\nLatin subset with outlines scaled to other advance widths (tools/build-metric-fonts.py); renamed\nper OFL 1.1. No Monotype font outlines are included.',
+  ],
+  [
+    'David GO (Liberation Serif derivative)',
+    'SIL OFL 1.1',
+    'Digitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.\nSubset with outlines scaled to other advance widths; renamed per OFL 1.1. No Monotype or Microsoft\nfont outlines are included.',
   ],
   [
     'Caladea',
@@ -707,27 +726,32 @@ const FONTS = [
     '© Huerta Tipográfica. Licensed under the Apache License, Version 2.0.',
   ],
   [
+    'Bookman Old Style GO (Caladea derivative)',
+    'Apache-2.0',
+    '© Huerta Tipográfica. Licensed under the Apache License, Version 2.0.\nModified: Latin subset with outlines scaled to other advance widths (tools/build-metric-fonts.py)\nand renamed. No Monotype or Microsoft font outlines are included.',
+  ],
+  [
     'Noto Sans CJK SC / Noto Serif CJK SC (subset)',
     'SIL OFL 1.1',
     '© Adobe / Google. This bundle ships a subset of the original fonts (reduced glyph coverage for size);\nno other modifications were made.',
   ],
   [
-    'GenOffice UI Kana JP (Noto Sans JP derivative)',
+    'SeuOffice UI Kana JP (Noto Sans JP derivative)',
     'SIL OFL 1.1',
-    'Source: Noto Sans JP from https://github.com/notofonts/noto-cjk. Copyright 2014-2021 Adobe\n(http://www.adobe.com/), with Reserved Font Name "Source". This bundle ships Regular and Bold\ninstances subset to U+3000-30FF, with modified advances and horizontally condensed outlines to\nmatch Meiryo UI metrics and vertical metrics set to the Hiragino class. Renamed to GenOffice UI\nKana JP per OFL 1.1; the upstream Reserved Font Name is not used.',
+    'Source: Noto Sans JP from https://github.com/notofonts/noto-cjk. Copyright 2014-2021 Adobe\n(http://www.adobe.com/), with Reserved Font Name "Source". This bundle ships Regular and Bold\ninstances subset to U+3000-30FF, with modified advances and horizontally condensed outlines to\nmatch Meiryo UI metrics and vertical metrics set to the Hiragino class. Renamed to SeuOffice UI\nKana JP per OFL 1.1; the upstream Reserved Font Name is not used.',
   ],
   [
-    'GenOffice Sans KR (Noto Sans CJK KR derivative)',
+    'SeuOffice Sans KR (Noto Sans CJK KR derivative)',
     'SIL OFL 1.1',
     'Copyright 2014-2021 Adobe (http://www.adobe.com/), Google LLC, Reserved Font Name "Source".\nSubset with modified advance widths and horizontally transformed Noto CJK outlines to match measured\nKorean Office-family metrics; renamed per OFL 1.1. No Microsoft font outlines are included.',
   ],
   [
-    'GenOffice Serif KR (Noto Serif CJK KR derivative)',
+    'SeuOffice Serif KR (Noto Serif CJK KR derivative)',
     'SIL OFL 1.1',
     'Copyright 2017-2024 Adobe (http://www.adobe.com/), Reserved Font Name "Source".\nSubset with modified advance widths and horizontally transformed Noto CJK outlines to match measured\nKorean Office-family metrics; renamed per OFL 1.1. No Microsoft font outlines are included.',
   ],
   [
-    'GenOffice Che Latin KR (Noto Sans CJK KR derivative)',
+    'SeuOffice Che Latin KR (Noto Sans CJK KR derivative)',
     'SIL OFL 1.1',
     'Copyright 2014-2021 Adobe (http://www.adobe.com/), Google LLC, Reserved Font Name "Source".\nASCII subset with fixed 0.5em advances and horizontally transformed Noto CJK outlines; Microsoft\nDotumChe is used only as a metric reference. Renamed per OFL 1.1. No Microsoft outlines are included.',
   ],
@@ -737,29 +761,34 @@ const FONTS = [
     '© The Noto Project Authors. This bundle ships a subset of the original fonts;\nglyphs and metrics are unmodified.',
   ],
   [
-    'GenOffice Gothic KR (NanumGothic derivative)',
+    'SeuOffice Gothic KR (NanumGothic derivative)',
     'SIL OFL 1.1',
     `${GOTHIC_KR_COPYRIGHT}\nSubset with unmodified metrics; renamed per OFL 1.1.`,
   ],
   [
-    'GenOffice Poppins (Poppins derivative)',
+    'SeuOffice Poppins (Poppins derivative)',
     'SIL OFL 1.1',
     'Copyright 2020 The Poppins Project Authors (https://github.com/itfoundry/Poppins).\nLatin subset with unmodified metrics and advances; renamed.',
   ],
   [
-    'GenOffice DM Sans (DM Sans derivative)',
+    'SeuOffice DM Sans (DM Sans derivative)',
     'SIL OFL 1.1',
     'Copyright 2014-2017 Indian Type Foundry (info@indiantypefoundry.com). Copyright 2019 Google LLC.\nLatin subset with unmodified metrics and advances; renamed.',
   ],
   [
-    'GenOffice Tamil (Noto Sans Tamil derivative)',
+    'SeuOffice Tamil (Noto Sans Tamil derivative)',
     'SIL OFL 1.1',
     '© The Noto Project Authors, original Reserved Font Name "Noto". Modified advance widths;\nrenamed per OFL 1.1.',
   ],
   [
-    'GenOffice Bengali (Noto Sans Bengali derivative)',
+    'SeuOffice Bengali (Noto Sans Bengali derivative)',
     'SIL OFL 1.1',
     '© The Noto Project Authors, original Reserved Font Name "Noto". Modified advance widths;\nrenamed per OFL 1.1.',
+  ],
+  [
+    'SeuOffice Cordia / SeuOffice Sarabun (Noto Sans Thai and Liberation Sans derivatives)',
+    'SIL OFL 1.1',
+    '© The Noto Project Authors, original Reserved Font Name "Noto".\nDigitized data © 2010 Google Corporation with Reserved Font Names Arimo, Tinos and Cousine.\n© 2012 Red Hat, Inc. with Reserved Font Name Liberation.\nThai outlines from Noto Sans Thai and Latin outlines from Liberation Sans, scaled to other advance\nwidths (tools/build-thai-font.py); renamed per OFL 1.1. No Microsoft font outlines are included.',
   ],
   [
     'KaTeX webfonts',
@@ -1070,6 +1099,32 @@ if (officeCrates === null) {
     }
   }
 }
+// the AI mark (apps/shell/build/brand/ai-mark.svg, packages/ui/src/AiMark.tsx) adapts the
+// geometry of two Lucide icons; ISC asks for its notice with every copy, and `circle` comes
+// from Feather under MIT
+out += hr('10. Icon geometry adapted from Lucide')
+out += `
+The AI button mark adapts the geometry of the Lucide icons \`circle\` and
+\`message-square\` (https://lucide.dev, https://github.com/lucide-icons/lucide).
+Lucide marks \`circle\` as derived from the Feather project.
+`
+out += sub('Lucide — ISC License')
+out += `Copyright (c) 2026 Lucide Icons and Contributors
+
+Permission to use, copy, modify, and/or distribute this software for any
+purpose with or without fee is hereby granted, provided that the above
+copyright notice and this permission notice appear in all copies.
+
+THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+`
+out += sub('Feather (the Lucide icons derived from it, among them circle) — MIT License')
+out += `Copyright (c) 2013-present Cole Bemis\n\n${MIT_PERMISSION}\n`
 
 for (const term of ['@embedpdf/pdfium', 'Copyright 2014 PDFium Authors', 'Apache License']) {
   if (!out.includes(term)) {
