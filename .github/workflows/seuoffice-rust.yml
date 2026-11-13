@@ -32,6 +32,13 @@ on:
         description: A faults file for tools/docx-diff/faults.py, run instead of the gate (on a rust-faults/* branch)
         required: false
         default: ''
+      # 1 while the organisation has few runners; more shards end a long faults
+      # file sooner but hold that many runners at once
+      fault_shards:
+        description: Runners the faults file is split over (FAULT_SHARD of faults.py)
+        type: choice
+        options: ['1', '2', '4', '8']
+        default: '1'
 
 concurrency:
   group: seuoffice-rust-${{ github.ref }}
@@ -174,6 +181,11 @@ jobs:
     if: ${{ inputs.faults }}
     runs-on: ubuntu-latest
     timeout-minutes: 240
+    strategy:
+      fail-fast: false
+      matrix:
+        # the shard indices of the fault_shards choice; a matrix cannot count to n itself
+        shard: ${{ fromJSON('{"1":[0],"2":[0,1],"4":[0,1,2,3],"8":[0,1,2,3,4,5,6,7]}')[inputs.fault_shards || '1'] }}
     steps:
       # the model group reads the declarations at MODEL_SOURCE's commit
       - uses: actions/checkout@v4
@@ -206,12 +218,14 @@ jobs:
       - name: Faults
         env:
           FAULTS: ${{ inputs.faults }}
+          FAULT_SHARD: ${{ matrix.shard }}/${{ inputs.fault_shards || '1' }}
         run: python3 tools/docx-diff/faults.py "$FAULTS"
 
       - name: Keep the result
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: docx-diff-faults
+          # one shard keeps the name the trail and crates/README.md cite
+          name: docx-diff-faults${{ inputs.fault_shards != '1' && inputs.fault_shards && format('-{0}', matrix.shard) || '' }}
           path: tools/docx-diff/out
           if-no-files-found: ignore
