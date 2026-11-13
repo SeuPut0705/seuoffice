@@ -74,7 +74,7 @@ import {
 } from './table-style'
 import { ownValue, setOwn } from './own-value'
 import { asXmlNode, canonicalXml, decodeXml, percentFraction } from './xml-utils'
-import { readRedactLabel } from './redaction-xml'
+import { diagramDataRedactLabel, readRedactLabel } from './redaction-xml'
 
 const parser = xmlParser({
   ignoreAttributes: false,
@@ -1568,6 +1568,8 @@ function graphicFramePassthrough(node: any, anchor: ByteAnchor, ctx: ParseContex
         if (shapes.length) el.previewShapes = shapes
       }
     }
+    const hidden = diagramDataRedactLabel(dm ? ctx.diagramDatas?.get(String(dm)) : undefined)
+    if (hidden !== undefined && el.previewShapes) withholdShapeText(el.previewShapes, hidden)
   }
   // OLE read-only preview: p:pic embedded in graphicData (often inside mc:AlternateContent/mc:Fallback),
   // or — in legacy converted decks — a VML shape keyed by the oleObj spid (v:imagedata, usually WMF/EMF)
@@ -1892,6 +1894,18 @@ function dgmSp(
           },
         }
       : {}),
+  }
+}
+
+/** Every run and picture of the shapes drawn for a diagram, withheld under `label`. */
+function withholdShapeText(shapes: SlideElement[], label: string): void {
+  for (const shape of shapes) {
+    if (shape.type === 'group') withholdShapeText(shape.children, label)
+    else if (shape.type === 'picture') shape.redact = label
+    const text = (shape as { text?: { paragraphs?: Array<{ runs: Array<{ redact?: string }> }> } })
+      .text
+    for (const paragraph of text?.paragraphs ?? [])
+      for (const run of paragraph.runs) run.redact = label
   }
 }
 
