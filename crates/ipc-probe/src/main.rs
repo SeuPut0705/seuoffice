@@ -30,13 +30,17 @@ use shell_contract::{Hosts, PRELOADS, Surface};
 use shell_core::core_thread::{CoreThread, ThreadWorkers};
 use shell_core::dispatch::{CatchingWorkers, Dispatcher};
 use shell_core::outlet::resolve;
-use shell_core::table::{Completeness, build};
+use shell_core::table::{StartError, Table};
 use shell_core::{BATCHES, wire};
 
 /// The call log a batch's fakes write to: take it from the hosts with
 /// `hosts.get::<ProbeLog>()`; one JSON line per call, named after the
 /// Electron call it fakes (tools/ipc-diff/README.md)
 pub type ProbeLog = Arc<Mutex<Vec<Value>>>;
+
+/// The batch of each entry of [`BATCHES`], as a group names it
+const BATCH_NAMES: [&str; 6] = ["U", "A", "M", "W", "D1", "D2"];
+const _: () = assert!(BATCHES.len() == BATCH_NAMES.len());
 
 /// How long one call may take before the case fails
 const CALL_TIMEOUT: Duration = Duration::from_secs(20);
@@ -258,15 +262,26 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
     };
 
     let trigger_services = services.clone();
+    // the TypeScript side loads only the module of the group's batch (`batch`
+    // of the case) and keeps what it sends while loading; what another batch
+    // sends while it registers (A's hub load tells every window) belongs to
+    // no call and is dropped
+    let own = case["batch"].as_str().map(str::to_owned);
+    let registering = recorder.clone();
     let registered = run_on(core.as_ref(), move || {
-        match build(&services, BATCHES, Completeness::AsRegistered) {
-            Ok(table) => {
-                PROVIDED.with(|p| *p.borrow_mut() = Some(table.provided()));
-                DISPATCHER.with(|d| *d.borrow_mut() = Some(Dispatcher::new(table)));
-                None
+        let mut table = Table::default();
+        for (name, register) in BATCH_NAMES.iter().zip(BATCHES) {
+            let before = registering.events.lock().unwrap().len();
+            if let Err(e) = register(&mut table, &services) {
+                return Some(format!("{:?}", StartError::Register(e)));
             }
-            Err(e) => Some(format!("{e:?}")),
+            if own.as_deref().is_some_and(|own| own != *name) {
+                registering.events.lock().unwrap().truncate(before);
+            }
         }
+        PROVIDED.with(|p| *p.borrow_mut() = Some(table.provided()));
+        DISPATCHER.with(|d| *d.borrow_mut() = Some(Dispatcher::new(table)));
+        None
     });
     if let Some(error) = registered {
         core.stop();
