@@ -1,0 +1,22 @@
+(node:3115) ExperimentalWarning: WASI is an experimental feature and might change at any time
+(Use `node --trace-warnings ...` to show where the warning was created)
+
+thread '<unnamed>' (1) panicked at odt-engine/src/text/style_xml.rs:149:35:
+end byte index 4294967295 is out of bounds for string of length 0
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+wasm://wasm/036da4ba:1
+
+
+RuntimeError: unreachable
+    at wasm://wasm/036da4ba:wasm-function[13579]:0xc8a511
+    at wasm://wasm/036da4ba:wasm-function[13477]:0xc838f7
+    at wasm://wasm/036da4ba:wasm-function[13476]:0xc838ed
+    at wasm://wasm/036da4ba:wasm-function[11896]:0xb94201
+    at wasm://wasm/036da4ba:wasm-function[11895]:0xb941f7
+    at wasm://wasm/036da4ba:wasm-function[13474]:0xc838ca
+    at wasm://wasm/036da4ba:wasm-function[13467]:0xc83357
+    at wasm://wasm/036da4ba:wasm-function[13508]:0xc846f9
+    at wasm://wasm/036da4ba:wasm-function[13507]:0xc84661
+    at wasm://wasm/036da4ba:wasm-function[5767]:0x789538
+
+Node.js v22.22.0

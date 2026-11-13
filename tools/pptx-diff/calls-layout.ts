@@ -8,17 +8,9 @@ import {
   layoutHierTree,
   parseHierConstraints,
 } from './reference/dgm-hier'
-import {
-  applyFormat,
-  type CopiedFormat,
-  extractFormat,
-} from './reference/format-brush'
+import { applyFormat, type CopiedFormat, extractFormat } from './reference/format-brush'
 import { parseSlide } from './reference/parse'
-import {
-  layoutShapes,
-  SMARTART_PALETTE,
-  type SmartArtLayout,
-} from './reference/smartart-layout'
+import { layoutShapes, SMARTART_PALETTE, type SmartArtLayout } from './reference/smartart-layout'
 import type { SlideElement, TextElement } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { mulberry32 } from '../docx-diff/synthetic'

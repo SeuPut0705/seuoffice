@@ -5,7 +5,7 @@ import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { Editor, type JSONContent } from '@tiptap/core'
-import { parseDocx } from '@seuoffice/docx-engine'
+import { clearHiddenMarks, parseDocx } from '@seuoffice/docx-engine'
 import { ODT_MIMETYPE, odtToText, type ConversionReport } from '@seuoffice/odt-engine'
 import type { Lang } from '@seuoffice/i18n'
 import { buildExtensions } from '../src/renderer/editor/extensions'
@@ -174,8 +174,20 @@ describe('markdown ODT export and AI redaction', () => {
     }
   }
 
-  it('the ODT carries exactly the text the docx export carries, no more', async () => {
+  it('a docx holding content hidden from AI is refused and nothing is written', async () => {
+    // the Word export writes the mark on the hidden run
     const docx = await docxOf(redactedDoc())
+    const path = tempPath('marked.odt')
+    const { s } = steps(docx, path)
+    const outcome = await exportOdt(s)
+    expect(outcome).toEqual({ ok: false, error: expect.stringContaining('hidden from AI') })
+    expect(s.confirm).not.toHaveBeenCalled()
+    expect(s.write).not.toHaveBeenCalled()
+    expect(existsSync(path)).toBe(false)
+  })
+
+  it('the marks-cleared copy carries exactly the text the docx export carries, no more', async () => {
+    const docx = await clearHiddenMarks(await docxOf(redactedDoc()))
     const path = tempPath('redacted.odt')
     const { s } = steps(docx, path)
     expect(await exportOdt(s)).toEqual({ ok: true, path })

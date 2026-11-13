@@ -302,7 +302,9 @@ describe('the parser and the attribute reader give one value for one spelling', 
         .replace(/\bId="[^"]*"/, () => 'Id="r&e;1"'),
     )
     // the Rust engine refuses DOCTYPE outright (crates/pptx-engine/README.md, unit 1: final policy)
-    expect(() => opened.archive.readRels(path)).toThrow('document type declarations are not supported')
+    expect(() => opened.archive.readRels(path)).toThrow(
+      'document type declarations are not supported',
+    )
   })
 })
 

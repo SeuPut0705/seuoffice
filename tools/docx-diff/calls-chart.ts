@@ -1,12 +1,7 @@
 // Group `chart` of comparison (f): the read side of chart.ts. parseChartPartXml
 // takes the part text, `args.partPath` and `args.theme`; the colour helpers
 // take `args.hex` and their factors, a null factor standing for NaN.
-import {
-  lumHex,
-  parseChartPartXml,
-  shadeHex,
-  tintHex,
-} from './reference/chart'
+import { lumHex, parseChartPartXml, shadeHex, tintHex } from './reference/chart'
 import { readThemeColors } from './reference/theme'
 import type { ThemeColors } from './reference/types'
 import type { CallSpec, Input } from './calls-spec'
@@ -62,7 +57,12 @@ const THEME_ACCENTS: ThemeColors = {
   accent6: '70AD47',
 }
 
-const THEMES: Array<ThemeColors | undefined> = [undefined, THEME_CUSTOM, THEME_BROKEN, THEME_ACCENTS]
+const THEMES: Array<ThemeColors | undefined> = [
+  undefined,
+  THEME_CUSTOM,
+  THEME_BROKEN,
+  THEME_ACCENTS,
+]
 
 // ---------------------------------------------------------------- chart parts
 
@@ -238,7 +238,9 @@ function builtParts(): string[] {
   // markers: line, scatter styles, radar styles, every series switching symbols off
   const symbolNone = '<c:marker><c:symbol val="none"/></c:marker>'
   for (const marker of ['1', '0', 'true', '']) {
-    out.push(part('c:lineChart', `<c:grouping val="standard"/>${ser(BASIC)}<c:marker val="${marker}"/>`))
+    out.push(
+      part('c:lineChart', `<c:grouping val="standard"/>${ser(BASIC)}<c:marker val="${marker}"/>`),
+    )
     out.push(
       part(
         'c:lineChart',
@@ -253,7 +255,11 @@ function builtParts(): string[] {
     )
   }
   const xy: Ser = {
-    cat: numRef(['0.70000000000000062', '1e21', '-0.00005', ' ', 'abc', '', '2.00005'], 7, 'General'),
+    cat: numRef(
+      ['0.70000000000000062', '1e21', '-0.00005', ' ', 'abc', '', '2.00005'],
+      7,
+      'General',
+    ),
     catTag: 'xVal',
     val: numRef(['1', '2', '3', '4', '5', '6', '7']),
     tag: 'yVal',
@@ -308,7 +314,10 @@ function builtParts(): string[] {
     ),
     part(
       'c:bubbleChart',
-      ser({ ...xy }).replace('</c:ser>', `<c:bubbleSize>${numRef(['', 'x'])}</c:bubbleSize></c:ser>`),
+      ser({ ...xy }).replace(
+        '</c:ser>',
+        `<c:bubbleSize>${numRef(['', 'x'])}</c:bubbleSize></c:ser>`,
+      ),
     ),
   )
   for (const radar of [undefined, 'filled', 'marker', 'standard', 'Marker', '']) {
@@ -396,7 +405,9 @@ function builtParts(): string[] {
   // frame line on c:chartSpace
   const frames = [
     spPr('<a:noFill/><a:ln><a:noFill/></a:ln>'),
-    spPr(`<a:ln w="9525">${solid('<a:schemeClr val="tx1"><a:lumMod val="15000"/><a:lumOff val="85000"/></a:schemeClr>')}</a:ln>`),
+    spPr(
+      `<a:ln w="9525">${solid('<a:schemeClr val="tx1"><a:lumMod val="15000"/><a:lumOff val="85000"/></a:schemeClr>')}</a:ln>`,
+    ),
     spPr(`<a:ln>${solid('<a:srgbClr val="00ff00"/>')}</a:ln>`),
     spPr('<a:ln w="9525"/>'),
     spPr(solid('<a:srgbClr val="FFFFFF"/>')),
@@ -414,17 +425,34 @@ function builtParts(): string[] {
     `<c:${tag}><c:axId val="9"/>${pos === undefined ? '' : `<c:axPos val="${pos}"/>`}${inner}</c:${tag}>`
   const title = (inner: string): string => `<c:title>${inner}</c:title>`
   const richTitle = (text: string): string =>
-    title(`<c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>${text}</a:t></a:r><a:r><a:t>!</a:t></a:r></a:p></c:rich></c:tx>`)
+    title(
+      `<c:tx><c:rich><a:bodyPr/><a:p><a:r><a:t>${text}</a:t></a:r><a:r><a:t>!</a:t></a:r></a:p></c:rich></c:tx>`,
+    )
   const axisSets = [
     ax('catAx', 'l', richTitle('Region \u00e9\u{1F600}')) + ax('valAx', 'b', '<c:delete val="1"/>'),
     ax('valAx', 'b', title(`<c:tx>${strRef(['From cell'])}</c:tx>`)) +
       ax('valAx', 'l', title('<c:overlay val="0"/>')),
-    ax('dateAx', 't', lnOf('<a:noFill/>') + txPr('<a:defRPr sz="900">' + solid('<a:schemeClr val="tx1"/>') + '</a:defRPr>')) +
-      ax('serAx', 'r', lnOf(solid('<a:srgbClr val="ABCDEF"/>')) + '<c:delete/>'),
-    ax('catAx', undefined) + ax('valAx', 'z') + ax('catAx', 'b') + ax('valAx', 'b', '<c:delete val="1"/>'),
-    ax('valAx', 'l', '<c:majorGridlines/>') + ax('catAx', 'b', '<c:majorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:majorGridlines>'),
-    ax('valAx', 'l', `<c:majorGridlines>${lnOf(solid('<a:srgbClr val="D9D9D9"/>'))}</c:majorGridlines>`) +
-      ax('catAx', 'b', `<c:majorGridlines>${spPr('')}</c:majorGridlines>${lnOf('')}`),
+    ax(
+      'dateAx',
+      't',
+      lnOf('<a:noFill/>') +
+        txPr('<a:defRPr sz="900">' + solid('<a:schemeClr val="tx1"/>') + '</a:defRPr>'),
+    ) + ax('serAx', 'r', lnOf(solid('<a:srgbClr val="ABCDEF"/>')) + '<c:delete/>'),
+    ax('catAx', undefined) +
+      ax('valAx', 'z') +
+      ax('catAx', 'b') +
+      ax('valAx', 'b', '<c:delete val="1"/>'),
+    ax('valAx', 'l', '<c:majorGridlines/>') +
+      ax(
+        'catAx',
+        'b',
+        '<c:majorGridlines><c:spPr><a:ln><a:noFill/></a:ln></c:spPr></c:majorGridlines>',
+      ),
+    ax(
+      'valAx',
+      'l',
+      `<c:majorGridlines>${lnOf(solid('<a:srgbClr val="D9D9D9"/>'))}</c:majorGridlines>`,
+    ) + ax('catAx', 'b', `<c:majorGridlines>${spPr('')}</c:majorGridlines>${lnOf('')}`),
     ax('surfaceAx', 'b') + ax('valAx', 'l', '<c:delete val="true"/>' + txPr('<a:defRPr/>')),
     '',
   ]
@@ -442,11 +470,41 @@ function builtParts(): string[] {
     bar(ser({ cat: strRef(['a', 'b'], 5), val: numRef(['1', '2'], 5) })),
     bar(ser({ cat: strRef(['a', 'b', 'c'], 1), val: numRef(['1', '2', '3'], 1) })),
     bar(ser({ cat: strRef(['a'], -3), val: numRef(['1'], 'x') })),
-    bar(ser({ cat: strRef([['2', 'c'], ['0', 'a']], 0), val: numRef([['3', '9']], '') })),
     bar(
       ser({
-        cat: strRef([['x', 'bad'], ['-1', 'neg'], ['1.9', 'one'], [' 2', 'two'], ['-0', 'zero']]),
-        val: numRef([['0', '1'], ['1', ''], ['2', ' '], ['3', 'abc'], ['4', '1e3'], ['5', '0x10'], ['6', '-0'], ['7', 'Infinity'], ['8', '\u00a05\u00a0']], 10),
+        cat: strRef(
+          [
+            ['2', 'c'],
+            ['0', 'a'],
+          ],
+          0,
+        ),
+        val: numRef([['3', '9']], ''),
+      }),
+    ),
+    bar(
+      ser({
+        cat: strRef([
+          ['x', 'bad'],
+          ['-1', 'neg'],
+          ['1.9', 'one'],
+          [' 2', 'two'],
+          ['-0', 'zero'],
+        ]),
+        val: numRef(
+          [
+            ['0', '1'],
+            ['1', ''],
+            ['2', ' '],
+            ['3', 'abc'],
+            ['4', '1e3'],
+            ['5', '0x10'],
+            ['6', '-0'],
+            ['7', 'Infinity'],
+            ['8', '\u00a05\u00a0'],
+          ],
+          10,
+        ),
       }),
     ),
     bar(
@@ -470,11 +528,39 @@ function builtParts(): string[] {
       }),
     ),
     // the first series without categories: the next one gives them
-    bar(ser({ val: VALS }) + ser({ cat: strRef([]), val: VALS }, 1) + ser({ cat: strRef(['late']), val: VALS }, 2)),
+    bar(
+      ser({ val: VALS }) +
+        ser({ cat: strRef([]), val: VALS }, 1) +
+        ser({ cat: strRef(['late']), val: VALS }, 2),
+    ),
   )
   // date categories
-  const serials = ['45000', '60', '61', '59.5', '60.5', '0', '-1', '80000', '80001', '1.5', '', 'abc', '0.4', '1e4']
-  for (const format of ['m/d/yyyy', 'General', 'yyyy', 'D', 'mmm-yy', 'hh:mm', '[$-409]d\\-mmm', '']) {
+  const serials = [
+    '45000',
+    '60',
+    '61',
+    '59.5',
+    '60.5',
+    '0',
+    '-1',
+    '80000',
+    '80001',
+    '1.5',
+    '',
+    'abc',
+    '0.4',
+    '1e4',
+  ]
+  for (const format of [
+    'm/d/yyyy',
+    'General',
+    'yyyy',
+    'D',
+    'mmm-yy',
+    'hh:mm',
+    '[$-409]d\\-mmm',
+    '',
+  ]) {
     out.push(bar(ser({ cat: numRef(serials, serials.length, format), val: numRef(['1']) })))
   }
   out.push(
@@ -533,8 +619,12 @@ function builtParts(): string[] {
     { chart: '<c:title/><c:autoTitleDeleted val="false"/>' },
     { chart: '' },
     { chart: richTitle('Sales \u00e9\u{1F680}') },
-    { chart: `<c:title><c:tx>${strRef(['Cached title'])}</c:tx>${txPr('<a:defRPr sz="1400"/>')}</c:title>` },
-    { chart: `<c:title><c:tx><c:rich><a:p><a:r><a:t>Chart Title</a:t></a:r></a:p></c:rich></c:tx></c:title>` },
+    {
+      chart: `<c:title><c:tx>${strRef(['Cached title'])}</c:tx>${txPr('<a:defRPr sz="1400"/>')}</c:title>`,
+    },
+    {
+      chart: `<c:title><c:tx><c:rich><a:p><a:r><a:t>Chart Title</a:t></a:r></a:p></c:rich></c:tx></c:title>`,
+    },
     { chart: `<c:title>${txPr('<a:defRPr sz="1862"/>')}</c:title>` },
   ]
   for (const opts of titles) {
@@ -547,7 +637,28 @@ function builtParts(): string[] {
   const alt = (choice: string, fallback: string): string =>
     `<mc:AlternateContent xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"><mc:Choice Requires="c14" xmlns:c14="http://schemas.microsoft.com/office/drawing/2007/8/2/chart">${choice}</mc:Choice><mc:Fallback>${fallback}</mc:Fallback></mc:AlternateContent>`
   const styles = [
-    ...['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '17', '42', '48', '49', '0', '-1', 'x', '101', '148', '149'].map(styleOf),
+    ...[
+      '1',
+      '2',
+      '3',
+      '4',
+      '5',
+      '6',
+      '7',
+      '8',
+      '9',
+      '10',
+      '17',
+      '42',
+      '48',
+      '49',
+      '0',
+      '-1',
+      'x',
+      '101',
+      '148',
+      '149',
+    ].map(styleOf),
     alt('<c14:style val="102"/>', styleOf('2')),
     alt('<c14:style val="105"/>', styleOf('5')),
     alt('<c14:style val="150"/>', styleOf('3')),
@@ -563,7 +674,16 @@ function builtParts(): string[] {
     many.push(
       ser(
         i === 0
-          ? { cat: strRef(['a'], 100000), val: numRef([['0', '1'], ['5000', '2']], 1000000) }
+          ? {
+              cat: strRef(['a'], 100000),
+              val: numRef(
+                [
+                  ['0', '1'],
+                  ['5000', '2'],
+                ],
+                1000000,
+              ),
+            }
           : { val: numRef([String(i)]) },
         i,
       ),
@@ -594,15 +714,25 @@ const CX_NS =
 const cxPts = (values: Array<[string, string]>): string =>
   values.map(([idx, v]) => `<cx:pt idx="${idx}">${v}</cx:pt>`).join('')
 
-const cxData = (id: string, cats: Array<[string, string]> | null, vals: Array<[string, string]> | null): string =>
+const cxData = (
+  id: string,
+  cats: Array<[string, string]> | null,
+  vals: Array<[string, string]> | null,
+): string =>
   `<cx:data id="${id}">` +
-  (cats ? `<cx:strDim type="cat"><cx:f>S!A2</cx:f><cx:lvl ptCount="${cats.length}">${cxPts(cats)}</cx:lvl></cx:strDim>` : '') +
-  (vals ? `<cx:numDim type="val"><cx:f>S!B2</cx:f><cx:lvl ptCount="${vals.length}" formatCode="General">${cxPts(vals)}</cx:lvl></cx:numDim>` : '') +
+  (cats
+    ? `<cx:strDim type="cat"><cx:f>S!A2</cx:f><cx:lvl ptCount="${cats.length}">${cxPts(cats)}</cx:lvl></cx:strDim>`
+    : '') +
+  (vals
+    ? `<cx:numDim type="val"><cx:f>S!B2</cx:f><cx:lvl ptCount="${vals.length}" formatCode="General">${cxPts(vals)}</cx:lvl></cx:numDim>`
+    : '') +
   '</cx:data>'
 
 const cxSeries = (layout: string, dataId: string | null, name?: string): string =>
   `<cx:series layoutId="${layout}" uniqueId="{1}">` +
-  (name === undefined ? '' : `<cx:tx><cx:txData><cx:f>S!B1</cx:f><cx:v>${name}</cx:v></cx:txData></cx:tx>`) +
+  (name === undefined
+    ? ''
+    : `<cx:tx><cx:txData><cx:f>S!B1</cx:f><cx:v>${name}</cx:v></cx:txData></cx:tx>`) +
   (dataId === null ? '' : `<cx:dataId val="${dataId}"/>`) +
   '</cx:series>'
 
@@ -610,8 +740,17 @@ const cxSpace = (data: string, series: string, title = '', dataTag = 'cx:chartDa
   `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<cx:chartSpace ${CX_NS}><${dataTag}>${data}</${dataTag}>` +
   `<cx:chart>${title}<cx:plotArea><cx:plotAreaRegion>${series}</cx:plotAreaRegion></cx:plotArea></cx:chart></cx:chartSpace>`
 
-const CX_CATS: Array<[string, string]> = [['0', 'Q1'], ['1', 'Q2'], ['2', '\u00e9t\u00e9 \u{1F31E}']]
-const CX_VALS: Array<[string, string]> = [['0', '10'], ['1', ' '], ['2', 'abc'], ['3', '1e2']]
+const CX_CATS: Array<[string, string]> = [
+  ['0', 'Q1'],
+  ['1', 'Q2'],
+  ['2', '\u00e9t\u00e9 \u{1F31E}'],
+]
+const CX_VALS: Array<[string, string]> = [
+  ['0', '10'],
+  ['1', ' '],
+  ['2', 'abc'],
+  ['3', '1e2'],
+]
 const cxTitle = (text: string): string =>
   `<cx:title pos="t"><cx:tx><cx:rich><a:bodyPr/><a:p><a:r><a:t>${text}</a:t></a:r></a:p></cx:rich></cx:tx></cx:title>`
 
@@ -629,7 +768,13 @@ function builtChartex(): string[] {
     'constructor',
     '',
   ]) {
-    out.push(cxSpace(cxData('0', CX_CATS, CX_VALS), cxSeries(layout, '0', 'Series \u00fc'), cxTitle('Title \u{1F4CA}')))
+    out.push(
+      cxSpace(
+        cxData('0', CX_CATS, CX_VALS),
+        cxSeries(layout, '0', 'Series \u00fc'),
+        cxTitle('Title \u{1F4CA}'),
+      ),
+    )
   }
   out.push(
     // the data under another element name
@@ -646,10 +791,26 @@ function builtChartex(): string[] {
       cxTitle(''),
     ),
     // a later cx:data of the same id replaces the earlier
-    cxSpace(cxData('0', CX_CATS, CX_VALS) + cxData('0', [['0', 'later']], [['0', '7']]), cxSeries('funnel', '0')),
+    cxSpace(
+      cxData('0', CX_CATS, CX_VALS) + cxData('0', [['0', 'later']], [['0', '7']]),
+      cxSeries('funnel', '0'),
+    ),
     // holes and odd idx in the values
     cxSpace(
-      cxData('0', [['0', 'a'], ['1', 'b']], [['3', '4'], ['x', '1'], ['-1', '2'], ['1048576', '3'], ['0', '-0']]),
+      cxData(
+        '0',
+        [
+          ['0', 'a'],
+          ['1', 'b'],
+        ],
+        [
+          ['3', '4'],
+          ['x', '1'],
+          ['-1', '2'],
+          ['1048576', '3'],
+          ['0', '-0'],
+        ],
+      ),
       cxSeries('boxWhisker', '0'),
     ),
     // title without text, title absent
@@ -664,7 +825,18 @@ function builtChartex(): string[] {
 
 /** A category hole of a chartex strDim: listed as chartex-category-hole-written-as-null. */
 const CHARTEX_CATEGORY_HOLE = cxSpace(
-  cxData('0', [['0', 'a'], ['2', 'c']], [['0', '1'], ['1', '2'], ['2', '3']]),
+  cxData(
+    '0',
+    [
+      ['0', 'a'],
+      ['2', 'c'],
+    ],
+    [
+      ['0', '1'],
+      ['1', '2'],
+      ['2', '3'],
+    ],
+  ),
   cxSeries('treemap', '0'),
 )
 

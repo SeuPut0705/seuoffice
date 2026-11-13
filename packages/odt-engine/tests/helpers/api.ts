@@ -3,15 +3,18 @@
  * the editor's way (`editorSave`) and `saveOdt`, and comparing packages entry
  * by entry.
  */
-import { type OdtPackage, readOdtPackage } from '../../src/core'
+import type { Block } from '@seuoffice/docx-engine'
+import JSZip from 'jszip'
 import { type BridgeMap, odtToDocx, saveOdt } from '../../src'
 import { type EditorOp, editorSave } from './bridge'
-import type { Block } from '@seuoffice/docx-engine'
+import { type OdtArchive, readArchive } from './odt-archive'
 
-const decoder = new TextDecoder()
+/** One part of a docx, read with JSZip (undefined when the package has none). */
+export async function docxPart(docx: Uint8Array, path: string): Promise<string | undefined> {
+  return (await JSZip.loadAsync(docx)).file(path)?.async('string')
+}
 
-export const textOf = (pkg: OdtPackage, name: string): string =>
-  decoder.decode(pkg.get(name)?.bytes ?? new Uint8Array())
+export const textOf = (pkg: OdtArchive, name: string): string => pkg.text(name) ?? ''
 
 /** Opens with the public API and saves after the editor's operations. */
 export async function roundTrip(
@@ -21,7 +24,7 @@ export async function roundTrip(
 ): Promise<{ saved: Uint8Array; bridge: BridgeMap; docx: Uint8Array; edited: Uint8Array }> {
   const { docxBytes, bridge } = await odtToDocx(odt)
   const { bytes } = await editorSave(docxBytes, ops, options)
-  const saved = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
+  const { odtBytes: saved } = await saveOdt({ originalOdt: odt, bridge, editedDocx: bytes })
   return { saved, bridge, docx: docxBytes, edited: bytes }
 }
 
@@ -43,8 +46,8 @@ const same = (a: Uint8Array, b: Uint8Array) => {
 }
 
 export async function diffPackages(before: Uint8Array, after: Uint8Array): Promise<PackageDiff> {
-  const a = await readOdtPackage(before)
-  const b = await readOdtPackage(after)
+  const a = await readArchive(before)
+  const b = await readArchive(after)
   const names = new Set(a.entries.map((e) => e.name))
   const changed: string[] = []
   const added: string[] = []
@@ -66,7 +69,7 @@ export async function diffPackages(before: Uint8Array, after: Uint8Array): Promi
 
 /** The original order of entries with mimetype moved first (what a re-pack writes). */
 export async function expectedOrder(original: Uint8Array): Promise<string[]> {
-  const pkg = await readOdtPackage(original)
+  const pkg = await readArchive(original)
   const names = pkg.entries.map((e) => e.name)
   return ['mimetype', ...names.filter((n) => n !== 'mimetype')]
 }

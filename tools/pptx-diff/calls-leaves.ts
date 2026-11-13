@@ -4,11 +4,7 @@
 // `pptxLeaves.<module>.<TypeScript name>`.
 import { XMLParser } from 'fast-xml-parser'
 import { crc32 } from './reference/crc32'
-import {
-  namedActionAttr,
-  namedActionOf,
-  NAMED_ACTIONS,
-} from './reference/named-action'
+import { namedActionAttr, namedActionOf, NAMED_ACTIONS } from './reference/named-action'
 import { scanSlide } from './reference/scan'
 import {
   canListSlide,

@@ -34,6 +34,10 @@ node faults.mjs faults/b1.json,faults/b2.json      # FAULT_SHARD=i/n 으로 나�
 
 # 러너(비교 + Windows + 결함 6조각)
 # 실행 파일의 작업은 모두 `needs: quick`이다(main 0d78db19c의 규칙): 서식·clippy·단위 시험은 quick에서 돈다.
+# 실행 파일은 main 것에 이 가지의 것을 더해 만든다: main을 합친 뒤
+#   git show origin/main:.github/workflows/seuoffice-rust.yml > /tmp/main.yml
+#   python3 tools/main-diff/compose-workflow.py /tmp/main.yml tools/main-diff/workflow-additions.txt > .github/workflows/seuoffice-rust.yml
+# 이 가지의 실행은 -f skip_pptx_faults=true로 슬라이드 결함 조각을 건너뛴다(병합 후보 실행은 false).
 # 결함 1,707개가 6조각에 85-100분 걸렸다(작업 제한 120분). 6,109개 전부는 한 실행에 들지 않으므로
 # 묶음별로 나눠 돌린다. 이 가지 몫(b1-b6, d8, d9, b2-cli, b4-fonts, b4-pdf-store, b5-kb):
 gh workflow run "seuoffice rust" --ref feat/rust-stage2-plan \

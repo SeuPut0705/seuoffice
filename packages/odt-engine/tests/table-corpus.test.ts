@@ -13,9 +13,9 @@ import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { type Block, parseDocx } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
-import type { TableExt } from '../src/table'
+import type { TableExt } from './helpers/bridge-ext'
 import { editorSave, odtToBridge, writeBack } from './helpers/bridge'
-import { cellRuns, editRuns, patchCells, regenerate, tableRegistry } from './helpers/table-editor'
+import { cellRuns, editRuns, patchCells, regenerate } from './helpers/table-editor'
 
 const root = process.env.ODT_CORPUS
 
@@ -58,7 +58,7 @@ describe.skipIf(!root)('table layer over the real corpus (ODT_CORPUS)', () => {
     for (const file of files) {
       try {
         const bytes = new Uint8Array(readFileSync(file))
-        const bridge = await odtToBridge(bytes, tableRegistry())
+        const bridge = await odtToBridge(bytes)
         const ext = (bridge.map.ext.table ?? null) as unknown as TableExt | null
         if (!ext) continue
         counts.tables += ext.tables.length
@@ -75,7 +75,7 @@ describe.skipIf(!root)('table layer over the real corpus (ODT_CORPUS)', () => {
             }
 
         const same = await writeBack(bridge, bridge.docx)
-        if (same.content !== bridge.doc.contentXml || same.styles !== (bridge.doc.stylesXml ?? ''))
+        if (same.content !== bridge.content || same.styles !== (bridge.styles ?? ''))
           failures.push(`${file}: an unedited write-back changed the ODT`)
         else counts.unchanged++
 
@@ -91,7 +91,7 @@ describe.skipIf(!root)('table layer over the real corpus (ODT_CORPUS)', () => {
           failures.push(`${file}: the first table is not a table block in the bridge`)
           continue
         }
-        const original = bridge.doc.contentXml
+        const original = bridge.content
 
         // regenerated without changes: nothing is written
         counts.regenerateAttempted++
@@ -99,7 +99,7 @@ describe.skipIf(!root)('table layer over the real corpus (ODT_CORPUS)', () => {
           blocks.map((b, i) => (i === index ? regenerate(b, () => {}) : { keep: i })),
         )
         const rw = await writeBack(bridge, regen.bytes)
-        if (rw.content === original && rw.rctx.newAutomaticStyles('content.xml').length === 0)
+        if (rw.content === original && rw.newAutomaticStyles('content.xml').length === 0)
           counts.regenerated++
         else failures.push(`${file}: the first table regenerated unchanged wrote something back`)
 
@@ -132,8 +132,7 @@ describe.skipIf(!root)('table layer over the real corpus (ODT_CORPUS)', () => {
         )
         const wb = await writeBack(bridge, edited)
         let stripped = wb.content
-        for (const x of wb.rctx.newAutomaticStyles('content.xml'))
-          stripped = stripped.replace(x, '')
+        for (const x of wb.newAutomaticStyles('content.xml')) stripped = stripped.replace(x, '')
         const cell = first.cells[t.row][t.col]
         if (cell.kind !== 'cell') continue
         const head = original.slice(0, cell.start)

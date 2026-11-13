@@ -1,5 +1,11 @@
 import { createHash } from 'node:crypto'
-import { extractModelSchema, walkWire, WireError, type ModelSchema, type ObjectVisit } from './model-schema'
+import {
+  extractModelSchema,
+  walkWire,
+  WireError,
+  type ModelSchema,
+  type ObjectVisit,
+} from './model-schema'
 import type { ModelInput } from './model-wire'
 
 export interface FieldCount {
@@ -43,9 +49,16 @@ export class ModelCoverage {
 
   report(): object {
     return {
-      fields: Object.fromEntries([...this.fields].map(([name, tally]) => [name, {
-        values: tally.values, nulls: tally.nulls, distinct: tally.distinct.size,
-      }])),
+      fields: Object.fromEntries(
+        [...this.fields].map(([name, tally]) => [
+          name,
+          {
+            values: tally.values,
+            nulls: tally.nulls,
+            distinct: tally.distinct.size,
+          },
+        ]),
+      ),
       unobserved: [...this.fields].filter(([, tally]) => tally.values === 0).map(([name]) => name),
       refused: this.refused,
     }

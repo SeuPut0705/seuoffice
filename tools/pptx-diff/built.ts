@@ -27,7 +27,9 @@ export async function builtDecks(): Promise<Array<[string, Uint8Array]>> {
   deck.addSlide().addText('Second slide', { x: 1, y: 1, w: 4, h: 1 })
   // pptxgenjs stamps docProps/core.xml with the clock: one fixed time, so the
   // deck is the same bytes on every run (see stable-zip.ts)
-  const written = await JSZip.loadAsync((await deck.write({ outputType: 'uint8array' })) as Uint8Array)
+  const written = await JSZip.loadAsync(
+    (await deck.write({ outputType: 'uint8array' })) as Uint8Array,
+  )
   const core = await written.file('docProps/core.xml')?.async('string')
   if (core !== undefined) {
     written.file(

@@ -1,18 +1,11 @@
 import { describe, expect, it } from 'vitest'
-import { stripParagraphSectPr } from '../src/page'
 import { buildOdt } from './helpers/build-odt'
-import { bodyOf, editorSave, replaceText } from './helpers/bridge'
-import {
-  keepAllBut,
-  odtToPageBridge,
-  pageWriteBack,
-  sectPrRewrite,
-  sectionsOf,
-} from './helpers/page-bridge'
+import { bodyOf, editorSave, replaceText, odtToBridge, writeBack } from './helpers/bridge'
+import { keepAllBut, sectPrRewrite, sectionsOf, stripParagraphSectPr } from './helpers/page-bridge'
 import { elementNamed, namesOf, pageDoc } from './helpers/page-fixtures'
 
 async function open(options = pageDoc()) {
-  const bridge = await odtToPageBridge(await buildOdt(options))
+  const bridge = await odtToBridge(await buildOdt(options))
   const view = await sectionsOf(bridge.docx)
   return { bridge, ...view }
 }
@@ -38,11 +31,11 @@ describe('section breaks', () => {
     expect(visible.length).toBe(6)
     const { sections: after } = await sectionsOf(bytes)
     expect(after).toHaveLength(4)
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(namesOf(back.styles, 'style:master-page')).toEqual(['Standard', 'Standard_io1', 'MP2'])
     // the clone is a copy of Standard under the new name
     const clone = elementNamed(back.styles, 'style:master-page', 'Standard_io1') as string
-    const original = elementNamed(bridge.doc.stylesXml as string, 'style:master-page', 'Standard')
+    const original = elementNamed(bridge.styles as string, 'style:master-page', 'Standard')
     expect(clone.replace('Standard_io1', 'Standard')).toBe(original)
     // "one b" now starts a page run under the clone; nothing else in the body changed
     const style = styleOfParagraph(back.content, 'one b') as string
@@ -50,15 +43,13 @@ describe('section breaks', () => {
     const def = elementNamed(back.content, 'style:style', style) as string
     expect(def).toContain('style:master-page-name="Standard_io1"')
     expect(def.replace(/ style:master-page-name="[^"]*"/, '').replace(style, 'P1_0')).toBe(
-      elementNamed(bridge.doc.contentXml, 'style:style', 'P1_0'),
+      elementNamed(bridge.content, 'style:style', 'P1_0'),
     )
     expect(
       bodyOf(back.content).replace(`text:style-name="${style}"`, 'text:style-name="P1_0"'),
-    ).toBe(bodyOf(bridge.doc.contentXml))
+    ).toBe(bodyOf(bridge.content))
     // no empty paragraph for the break itself
-    expect(back.content.match(/<text:p /g)?.length).toBe(
-      bridge.doc.contentXml.match(/<text:p /g)?.length,
-    )
+    expect(back.content.match(/<text:p /g)?.length).toBe(bridge.content.match(/<text:p /g)?.length)
   })
 
   it('a removed break merges the run into the previous one', async () => {
@@ -71,18 +62,18 @@ describe('section breaks', () => {
         b.docxIndex === sections[0].lastBlockIndex ? { xml, docxIndex: b.docxIndex } : { keep: i },
       ),
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     // run 2 ("two a", PS2 → MP2) now follows run 1's master page: PS2 loses its switch
-    expect(bodyOf(back.content)).toBe(bodyOf(bridge.doc.contentXml))
+    expect(bodyOf(back.content)).toBe(bodyOf(bridge.content))
     const ps2 = elementNamed(back.content, 'style:style', 'PS2') as string
     expect(ps2).toBe(
-      elementNamed(bridge.doc.contentXml, 'style:style', 'PS2')?.replace(
+      elementNamed(bridge.content, 'style:style', 'PS2')?.replace(
         ' style:master-page-name="MP2"',
         '',
       ),
     )
     // run 1's master page and everything in styles.xml is untouched
-    expect(back.styles).toBe(bridge.doc.stylesXml)
+    expect(back.styles).toBe(bridge.styles)
   })
 
   it('a text edit in a paragraph carrying a section break is a plain text edit', async () => {
@@ -96,9 +87,9 @@ describe('section breaks', () => {
       ),
     )
     expect(parsed.blocks.some((b) => b.docxIndex === index)).toBe(true)
-    const back = await pageWriteBack(bridge, bytes)
-    expect(back.styles).toBe(bridge.doc.stylesXml)
-    expect(bodyOf(back.content)).toBe(bodyOf(bridge.doc.contentXml).replace('>one b<', '>ONE b<'))
+    const back = await writeBack(bridge, bytes)
+    expect(back.styles).toBe(bridge.styles)
+    expect(bodyOf(back.content)).toBe(bodyOf(bridge.content).replace('>one b<', '>ONE b<'))
   })
 
   it('a page setup edit together with a text edit in the same section', async () => {
@@ -119,7 +110,7 @@ describe('section breaks', () => {
       first.bytes,
       keepAllBut({ [rewrite.docxIndex]: rewrite.xml }),
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(elementNamed(back.styles, 'style:page-layout', 'Mpm2')).toContain(
       'fo:margin-left="3.000cm"',
     )
@@ -137,7 +128,7 @@ describe('section breaks', () => {
       { edit: 1, change: (g) => replaceText(g, 0, 0, 'new ') },
       ...blocks.slice(2).map((_, i) => ({ keep: i + 2 })),
     ])
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     const style = styleOfParagraph(back.content, 'new one b') as string
     expect(elementNamed(back.content, 'style:style', style)).toContain(
       'style:master-page-name="Standard_io1"',
@@ -161,9 +152,9 @@ describe('section breaks', () => {
         b.docxIndex === sections[0].lastBlockIndex ? { xml, docxIndex: b.docxIndex } : { keep: i },
       ),
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(elementNamed(back.content, 'style:style', 'PS2')).toBe(
-      elementNamed(bridge.doc.contentXml, 'style:style', 'PS2'),
+      elementNamed(bridge.content, 'style:style', 'PS2'),
     )
     const style = styleOfParagraph(back.content, 'two a') as string
     expect(style).not.toBe('PS2')
@@ -177,13 +168,13 @@ describe('section breaks', () => {
     const { bytes } = await editorSave(bridge.docx, (blocks) =>
       blocks.map((_, i) => ({ keep: i })).filter((_, i) => i !== 2),
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(back.content).not.toContain('two a')
     const style = styleOfParagraph(back.content, 'two b') as string
     expect(elementNamed(back.content, 'style:style', style)).toContain(
       'style:master-page-name="MP2"',
     )
-    expect(back.styles).toBe(bridge.doc.stylesXml)
+    expect(back.styles).toBe(bridge.styles)
   })
 
   it('a page number start on a run without an explicit start paragraph', async () => {
@@ -196,7 +187,7 @@ describe('section breaks', () => {
       (blocks) => blocks.map((_, i) => ({ keep: i })),
       { pgNumType: { start: 4 } },
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     const style = styleOfParagraph(back.content, 'plain') as string
     const def = elementNamed(back.content, 'style:style', style) as string
     expect(def).toContain('style:master-page-name="Standard"')
@@ -211,7 +202,7 @@ describe('section breaks', () => {
       keepAllBut({ [rewrite.docxIndex]: rewrite.xml }),
       { section: { ...sections[2].settings, marginRight: 1701 } },
     )
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(namesOf(back.styles, 'style:master-page')).toEqual(['Standard', 'Standard_io1', 'MP2'])
     expect(namesOf(back.styles, 'style:page-layout')).toEqual(['Mpm1', 'Mpm2', 'Mpm1_io1'])
     const layoutOf = (master: string) =>

@@ -22,6 +22,8 @@ concurrency:
 
 permissions:
   contents: read
+  # the changed-file checks on main read which commit last passed CI
+  actions: read
 
 jobs:
   test:
@@ -84,60 +86,42 @@ jobs:
       - name: Check dependency licenses
         run: npm run licenses
 
-      - name: Check formatting
+      # The changed-file checks below compare against one base, chosen by
+      # tools/changed-files-base.mjs (which says why per event); it fails rather
+      # than hand them an empty base, which would check no file and pass. On main
+      # the base is the last commit whose CI passed, so a run started by hand and a
+      # push whose run was cancelled still look at everything since then.
+      - name: Choose the base of the changed-file checks
         env:
-          FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        # For PRs the checkout is the PR merge commit, so its first parent is the
-        # exact main revision the merge was built against. The event's base.sha can
-        # lag behind a fast-moving main, which pulls unrelated main-side files into
-        # the changed-file set and fails the check on files the PR never touched.
+          GH_TOKEN: ${{ github.token }}
         run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FORMAT_BASE_REF=$(git rev-parse HEAD^1)
+          if [ "${{ github.ref }}" = "refs/heads/main" ] && [ "${{ github.event_name }}" != "pull_request" ]; then
+            LAST_GREEN_MAIN=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?branch=main&status=success&per_page=1" --jq '.workflow_runs[0].head_sha // empty')
+            export LAST_GREEN_MAIN
           fi
-          npm run format:check
+          base=$(node tools/changed-files-base.mjs)
+          echo "FORMAT_BASE_REF=$base" >> "$GITHUB_ENV"
+
+      - name: Check formatting
+        run: npm run format:check
 
       - name: Check theme colors
-        env:
-          FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FORMAT_BASE_REF=$(git rev-parse HEAD^1)
-          fi
-          npm run check:theme-colors
+        run: npm run check:theme-colors
 
       # Inline text-layout decisions (script tests, face predicates, CJK ranges,
       # compat reads) stay in apps/docs/src/renderer/text-layout/, not in the emitters.
       - name: Check inline text-layout rules
-        env:
-          FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FORMAT_BASE_REF=$(git rev-parse HEAD^1)
-          fi
-          npm run check:inline-rules
+        run: npm run check:inline-rules
 
       # Line-metric numbers (fonts.css size-adjust/overrides, knownLineFactor)
       # must cite the Word measurement they came from.
       - name: Check font-metric provenance
-        env:
-          FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FORMAT_BASE_REF=$(git rev-parse HEAD^1)
-          fi
-          npm run check:font-metrics-provenance
+        run: npm run check:font-metrics-provenance
 
       # skills/*/SKILL.md ship to users' agent directories; a body change
       # without a metadata.version bump would never be offered as an update.
       - name: Check skill versions
-        env:
-          FORMAT_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
-        run: |
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            FORMAT_BASE_REF=$(git rev-parse HEAD^1)
-          fi
-          npm run check:skill-version
+        run: npm run check:skill-version
 
       # Whole-tree, not changed-files: every language of the manual
       # has to match the English article's structure. A language that quietly

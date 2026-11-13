@@ -30,6 +30,12 @@ mod images;
 mod ink;
 mod markers;
 mod math;
+mod odt_assemble;
+mod odt_core;
+mod odt_objects;
+mod odt_page;
+mod odt_table;
+mod odt_text;
 mod parse;
 mod pptx_anim;
 mod pptx_bytes;
@@ -123,6 +129,12 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "parse" => Some(parse::dispatch(function, text, args)),
         "markers" => Some(markers::dispatch(function, text, args)),
         "math" => Some(math::dispatch(function, text, args)),
+        "odtAssemble" => Some(odt_assemble::dispatch(function, text, args)),
+        "odtCore" => Some(odt_core::dispatch(function, text, args)),
+        "odtObjects" => Some(odt_objects::dispatch(function, text, args)),
+        "odtPage" => Some(odt_page::dispatch(function, text, args)),
+        "odtTable" => Some(odt_table::dispatch(function, text, args)),
+        "odtText" => Some(odt_text::dispatch(function, text, args)),
         "resolve" => Some(resolve::dispatch(function, text, args)),
         "revision" => Some(revision::dispatch(function, text, args)),
         "save" => Some(save::dispatch(function, text, args)),
@@ -169,4 +181,31 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "xmltag" => Some(xml_tag::dispatch(function, text, args)),
         _ => None,
     }
+}
+
+/// The byte offset of a UTF-16 offset argument of the odt groups. An offset
+/// past the end of the text counts on past it, as a JavaScript index does,
+/// so that two offsets past the end keep their order and distance.
+pub fn byte_past_end(idx: &odt_engine::offset::IndexedText, units: f64) -> usize {
+    let units = if units.is_nan() || units < 0.0 {
+        0.0
+    } else {
+        units.trunc()
+    };
+    let len = f64::from(idx.len_u16().0);
+    if units <= len {
+        idx.to_byte(odt_engine::offset::U16(units as u32))
+    } else {
+        idx.text.len() + (units - len) as usize
+    }
+}
+
+/// The UTF-16 offset of a byte offset of a result, past the end counting on
+/// as in `byte_past_end`.
+pub fn u16_past_end(idx: &odt_engine::offset::IndexedText, byte: usize) -> u32 {
+    let len = idx.text.len();
+    if byte > len {
+        return idx.len_u16().0 + (byte - len) as u32;
+    }
+    idx.to_u16(byte).0
 }

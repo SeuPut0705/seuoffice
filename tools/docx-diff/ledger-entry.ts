@@ -23,7 +23,16 @@ interface Wanted {
 const wanted = JSON.parse(readFileSync(resolve(process.argv[2]!), 'utf8')) as Wanted
 const { typescript, rust } = await callOutcomes(wanted.fn, wanted.text, wanted.args ?? {})
 if (isDeepStrictEqual(typescript, rust)) throw new Error(`${wanted.id}: both sides agree`)
-const entry = { id: wanted.id, comparison: 'call', fn: wanted.fn, text: wanted.text, args: wanted.args ?? {}, typescript, rust, reason: wanted.reason }
+const entry = {
+  id: wanted.id,
+  comparison: 'call',
+  fn: wanted.fn,
+  text: wanted.text,
+  args: wanted.args ?? {},
+  typescript,
+  rust,
+  reason: wanted.reason,
+}
 const path = resolve(toolDir, 'divergences.json')
 const ledger = JSON.parse(readFileSync(path, 'utf8')) as Array<{ id: string }>
 const at = ledger.findIndex((listed) => listed.id === wanted.id)

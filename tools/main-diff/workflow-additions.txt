@@ -1,0 +1,142 @@
+# What the stage 2 branch adds to main's seuoffice-rust.yml; see
+# compose-workflow.py. Each section is copied as written.
+# --- inputs
+      main_faults:
+        description: A faults file for tools/main-diff/faults.mjs (the central process), run beside the gates
+        required: false
+        default: ''
+      # branch-local: stage 2 does not touch the slides engine; a merge
+      # candidate leaves it false
+      skip_pptx_faults:
+        description: Skip the slides fault shards (stage 2 branch runs only)
+        type: boolean
+        default: false
+# --- crates-steps
+      # the central process (decision 0030): crates/main-core through its
+      # Node-API addon against the TypeScript main process
+      - name: Central process comparison
+        if: ${{ !cancelled() }}
+        # a full run takes minutes; a case that never returns fails the step
+        # (its log and trace are kept) instead of holding the job for hours
+        timeout-minutes: 30
+        shell: bash
+        env:
+          MAIN_DIFF_TRACE: ${{ github.workspace }}/tools/main-diff/out/trace.txt
+        run: |
+          npm --prefix tools/main-diff run typecheck
+          mkdir -p tools/main-diff/out
+          npm --prefix tools/main-diff run gate -- --show 40 2>&1 | tee tools/main-diff/out/gate.txt
+
+      - name: Keep the central process comparison
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-diff-out
+          path: tools/main-diff/out
+          if-no-files-found: ignore
+# --- jobs
+  # The central process on Windows (decision 0030): the functions whose Rust
+  # reads the platform (the file identity of fs.statSync, the file error
+  # table of node-fs) against the TypeScript on the same machine. The Linux job compares everything else.
+  main-windows:
+    needs: quick
+    if: ${{ !inputs.faults }}
+    runs-on: windows-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is the central process in this tree
+        id: has
+        shell: bash
+        run: |
+          if [ -f crates/main-core/Cargo.toml ]; then echo "main=true" >> "$GITHUB_OUTPUT"; else echo "main=false" >> "$GITHUB_OUTPUT"; fi
+
+      - name: Rust toolchain
+        if: steps.has.outputs.main == 'true'
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      # node_fs's Windows error table against libuv's own switch, every case
+      - name: Error table against libuv
+        if: steps.has.outputs.main == 'true'
+        working-directory: crates
+        run: cargo test -p main-core --lib libuv_table
+
+      - uses: actions/setup-node@v4
+        if: steps.has.outputs.main == 'true'
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        if: steps.has.outputs.main == 'true'
+        run: npm ci
+
+      - name: Central process comparison on Windows
+        if: steps.has.outputs.main == 'true'
+        shell: bash
+        run: |
+          mkdir -p tools/main-diff/out
+          # two runs, each its own filter; the second must not hide the first's failure
+          set +e
+          status=0
+          npm --prefix tools/main-diff run gate -- --fn rename-validation.isSameFile --fn rename-validation.pdfSaveAsTarget --fn folder-files.plainFileIn.hardLinks --fn write-guard.appendData.hardLinks --show 40 2>&1 | tee tools/main-diff/out/gate.txt
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+          npm --prefix tools/main-diff run gate -- --group node-fs --show 40 2>&1 | tee tools/main-diff/out/gate-node-fs.txt
+          [ "${PIPESTATUS[0]}" -eq 0 ] || status=1
+          exit $status
+
+      - name: Keep the Windows comparison
+        if: ${{ always() && steps.has.outputs.main == 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-diff-windows-out
+          path: tools/main-diff/out
+          if-no-files-found: ignore
+
+  # Fault injection for the central process (decision 0030): each fault of
+  # the file rebuilds the Node-API addon and runs the comparison of its
+  # functions, which must then differ.
+  main-faults:
+    needs: quick
+    if: ${{ inputs.main_faults }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4, 5]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Rust toolchain
+        run: |
+          rustup toolchain install stable --profile minimal
+          rustup default stable
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Faults
+        shell: bash
+        env:
+          FAULTS: ${{ inputs.main_faults }}
+          FAULT_SHARD: ${{ matrix.shard }}/6
+        run: |
+          mkdir -p tools/main-diff/out
+          node tools/main-diff/faults.mjs "$FAULTS" 2>&1 | tee tools/main-diff/out/faults.txt
+
+      - name: Keep the result
+        if: ${{ always() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: main-diff-faults-${{ matrix.shard }}
+          path: tools/main-diff/out
+          if-no-files-found: ignore

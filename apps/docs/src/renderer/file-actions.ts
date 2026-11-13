@@ -1347,6 +1347,14 @@ function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
 }
 
+/**
+ * The engine writes a hidden-from-AI run into an ODT as plain words and
+ * reports each mark it dropped: such an ODT is never handed to a write.
+ */
+function refuseDroppedMarks(report: ConversionReport): void {
+  if (report.some((item) => item.feature === 'hidden_from_ai')) throw new MarkedOdtError()
+}
+
 /** The edited bridge docx written back into the document's ODT (no edit → the ODT's own bytes). */
 export async function odtBytesFor(
   baseline: OdtBaseline,
@@ -1354,11 +1362,13 @@ export async function odtBytesFor(
 ): Promise<Uint8Array> {
   // an ODT cannot hold the mark that hides content from AI: callers that can
   // ask plan the write first (planMarkedWrite) and hand over the cleared docx
-  return saveOdt({
+  const { odtBytes, report } = await saveOdt({
     originalOdt: baseline.original,
     bridge: baseline.bridge,
     editedDocx: await assertNoMarks(editedDocx),
   })
+  refuseDroppedMarks(report)
+  return odtBytes
 }
 
 /** a save that stops before writing because its docx holds content hidden from AI */
@@ -1419,6 +1429,7 @@ async function saveWithFormatChange(
     }
     const renderedObjects = await captureRenderedObjects(editor, await parseDocx(whole))
     const converted = await docxToOdt(whole, { renderedObjects })
+    refuseDroppedMarks(converted.report)
     data = converted.odtBytes
     report = withOpenPassword(converted.report, doc.encrypted === true)
   } else {

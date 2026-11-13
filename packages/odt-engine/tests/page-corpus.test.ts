@@ -11,9 +11,10 @@
 import { readFileSync, readdirSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { readPageExt } from '../src/page'
-import { editorSave } from './helpers/bridge'
-import { odtToPageBridge, pageWriteBack, sectionsOf } from './helpers/page-bridge'
+import { editorSave, odtToBridge, writeBack } from './helpers/bridge'
+import { pageExtOf } from './helpers/bridge-ext'
+import { sectionsOf } from './helpers/page-bridge'
+import { elementNamed } from './helpers/page-fixtures'
 
 const root = process.env.ODT_CORPUS
 
@@ -48,8 +49,8 @@ describe.skipIf(!root)('page layer over the corpus', () => {
     for (const file of files) {
       const name = file.slice((root as string).length + 1)
       try {
-        const bridge = await odtToPageBridge(new Uint8Array(readFileSync(file)))
-        const ext = readPageExt(bridge.map)
+        const bridge = await odtToBridge(new Uint8Array(readFileSync(file)))
+        const ext = pageExtOf(bridge.map)
         if (!ext) throw new Error('no page data')
         const { sections, parsed } = await sectionsOf(bridge.docx)
         expect(sections.length, name).toBe(ext.sections.length)
@@ -63,8 +64,8 @@ describe.skipIf(!root)('page layer over the corpus', () => {
         totals.sharedMasters += [...used.values()].filter((n) => n > 1).length
 
         // unedited
-        const same = await pageWriteBack(bridge, bridge.docx)
-        if (same.content !== bridge.doc.contentXml || same.styles !== bridge.doc.stylesXml)
+        const same = await writeBack(bridge, bridge.docx)
+        if (same.content !== bridge.content || same.styles !== bridge.styles)
           throw new Error('unedited save changed the ODT')
 
         // a margin edit of the final section
@@ -74,19 +75,21 @@ describe.skipIf(!root)('page layer over the corpus', () => {
           (blocks) => blocks.map((_, i) => ({ keep: i })),
           { section: { ...last.settings, marginLeft: last.settings.marginLeft + 567 } },
         )
-        const back = await pageWriteBack(bridge, bytes)
+        const back = await writeBack(bridge, bytes)
         const run = ext.runs[ext.sections[ext.sections.length - 1].run]
-        const layout = run.layout ? bridge.doc.styles.pageLayout(run.layout) : undefined
-        const master = run.master ? bridge.doc.styles.masterPage(run.master) : undefined
+        const styles = bridge.styles as string
+        const layout = run.layout ? elementNamed(styles, 'style:page-layout', run.layout) : null
+        const master = run.master ? elementNamed(styles, 'style:master-page', run.master) : null
         if (!layout || !master) continue
-        const styles = bridge.doc.stylesXml as string
+        const layoutAt = styles.indexOf(layout)
+        const masterAt = styles.indexOf(master)
         const shared = (used.get(run.master as string) ?? 0) > 1
-        if (!shared && back.content !== bridge.doc.contentXml)
+        if (!shared && back.content !== bridge.content)
           throw new Error('a margin edit changed content.xml')
         if (!shared) {
-          const before = styles.slice(layout.start, layout.end)
-          const head = styles.slice(0, layout.start)
-          const tail = styles.slice(layout.end)
+          const before = layout
+          const head = styles.slice(0, layoutAt)
+          const tail = styles.slice(layoutAt + layout.length)
           if (!back.styles.startsWith(head) || !back.styles.endsWith(tail))
             throw new Error('a margin edit changed more than the page layout')
           const edited = back.styles.slice(head.length, back.styles.length - tail.length)
@@ -106,13 +109,12 @@ describe.skipIf(!root)('page layer over the corpus', () => {
               (blocks) => blocks.map((_, i) => ({ keep: i })),
               { header: { text: '', paras: edited } },
             )
-            const out = await pageWriteBack(bridge, save.bytes)
-            if (out.content !== bridge.doc.contentXml)
-              throw new Error('a header edit changed content.xml')
+            const out = await writeBack(bridge, save.bytes)
+            if (out.content !== bridge.content) throw new Error('a header edit changed content.xml')
             // new automatic styles (edited text) may be added; the rest is the master page
-            const autos = bridge.doc.styles.containers.styles.automaticStyles
-            const at = autos && !autos.selfClosing ? autos.closeStart : master.start
-            const middle = styles.slice(at, master.start)
+            const autosEnd = styles.indexOf('</office:automatic-styles>')
+            const at = autosEnd >= 0 && autosEnd < masterAt ? autosEnd : masterAt
+            const middle = styles.slice(at, masterAt)
             const rest = out.styles.slice(at)
             const added = rest.indexOf(middle)
             if (
@@ -121,7 +123,7 @@ describe.skipIf(!root)('page layer over the corpus', () => {
               !/^(?:<style:style style:name="[^"]*_io\d+"[\s\S]*?<\/style:style>)*$/.test(
                 rest.slice(0, added),
               ) ||
-              !out.styles.endsWith(styles.slice(master.end))
+              !out.styles.endsWith(styles.slice(masterAt + master.length))
             )
               throw new Error('a header edit changed more than its master page')
             if (!out.styles.includes('edited')) throw new Error('the header edit was not written')

@@ -2,8 +2,8 @@ import { PAGE_MARK } from '@seuoffice/docx-engine'
 import { describe, expect, it } from 'vitest'
 import { buildOdt } from './helpers/build-odt'
 import { hCell, hFramedTable, hPara, hRow, hTable } from './helpers/hancom-fragments'
-import { bodyOf, editorSave, replaceText } from './helpers/bridge'
-import { editedHf, odtToPageBridge, pageWriteBack, sectionsOf } from './helpers/page-bridge'
+import { bodyOf, editorSave, replaceText, odtToBridge, writeBack } from './helpers/bridge'
+import { editedHf, sectionsOf } from './helpers/page-bridge'
 import {
   elementNamed,
   hp,
@@ -17,7 +17,7 @@ import {
 const keepAll = (blocks: unknown[]) => blocks.map((_, i) => ({ keep: i }))
 
 async function open(options = pageDoc()) {
-  const bridge = await odtToPageBridge(await buildOdt(options))
+  const bridge = await odtToBridge(await buildOdt(options))
   const view = await sectionsOf(bridge.docx)
   return { bridge, ...view }
 }
@@ -51,7 +51,7 @@ describe('header objects the editor does not show', () => {
     const { bytes } = await editorSave(bridge.docx, keepAll, {
       sectionHf: [{ lastBlockIndex: sections[1].lastBlockIndex, kind: 'header', hf }],
     })
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     return region(back.styles, 'MP2', 'header') as string
   }
 
@@ -83,9 +83,9 @@ describe('header and footer edits', () => {
     const { bytes } = await editorSave(bridge.docx, keepAll, {
       sectionHf: [{ lastBlockIndex: sections[1].lastBlockIndex, kind: 'header', hf }],
     })
-    const back = await pageWriteBack(bridge, bytes)
-    expect(back.content).toBe(bridge.doc.contentXml)
-    const before = bridge.doc.stylesXml as string
+    const back = await writeBack(bridge, bytes)
+    expect(back.content).toBe(bridge.content)
+    const before = bridge.styles as string
     const inner = region(before, 'MP2', 'header') as string
     const after = region(back.styles, 'MP2', 'header') as string
     expect(after).toBe(inner.replace('header 2', 'HEADER 2'))
@@ -99,7 +99,7 @@ describe('header and footer edits', () => {
     const { bytes } = await editorSave(bridge.docx, keepAll, {
       sectionHf: [{ lastBlockIndex: sections[0].lastBlockIndex, kind: 'header', hf }],
     })
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(namesOf(back.styles, 'style:master-page')).toEqual(['Standard', 'Standard_io1', 'MP2'])
     expect(region(back.styles, 'Standard_io1', 'header')).toBe(hp('my header'))
     expect(region(back.styles, 'Standard_io1', 'footer')).toBe(hp('footer'))
@@ -107,7 +107,7 @@ describe('header and footer edits', () => {
     expect(elementNamed(back.styles, 'style:master-page', 'Standard_io1')).toContain(
       'style:page-layout-name="Mpm1"',
     )
-    const before = bridge.doc.stylesXml as string
+    const before = bridge.styles as string
     expect(elementNamed(back.styles, 'style:master-page', 'Standard')).toBe(
       elementNamed(before, 'style:master-page', 'Standard'),
     )
@@ -116,9 +116,9 @@ describe('header and footer edits', () => {
       'style:master-page-name="Standard_io1"',
     )
     expect(elementNamed(back.content, 'style:style', 'PS3')).toBe(
-      elementNamed(bridge.doc.contentXml, 'style:style', 'PS3'),
+      elementNamed(bridge.content, 'style:style', 'PS3'),
     )
-    expect(bodyOf(back.content)).toBe(bodyOf(bridge.doc.contentXml))
+    expect(bodyOf(back.content)).toBe(bodyOf(bridge.content))
   })
 
   it('edits the final run header through the trailing options', async () => {
@@ -126,10 +126,10 @@ describe('header and footer edits', () => {
     const rId = sections[0].headerRefs.default as string
     const hf = editedHf(parsed, rId, (paras) => replaceText(paras[1] as never, 6, 6, '!'))
     const { bytes } = await editorSave(bridge.docx, keepAll, { header: hf })
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     // the untouched first paragraph keeps its bytes
     expect(region(back.styles, 'Standard', 'header')).toBe(hp('top') + hp('second!'))
-    expect(back.content).toBe(bridge.doc.contentXml)
+    expect(back.content).toBe(bridge.content)
   })
 
   it('adds a paragraph to a header', async () => {
@@ -141,7 +141,7 @@ describe('header and footer edits', () => {
       )
     })
     const { bytes } = await editorSave(bridge.docx, keepAll, { header: hf })
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     const inner = region(back.styles, 'Standard', 'header') as string
     expect(inner.startsWith(hp('top'))).toBe(true)
     expect(inner).toContain('>more</text:span></text:p>')
@@ -156,7 +156,7 @@ describe('header and footer edits', () => {
         titlePg: true,
         headerFirst: { text: 'first', paras: [{ runs: [{ text: 'first' }] }] },
       })
-      const back = await pageWriteBack(bridge, bytes)
+      const back = await writeBack(bridge, bytes)
       const inner = region(back.styles, 'Standard', 'header-first')
       expect(inner).toContain('>first<')
       // no first-page footer typed: the first page shows none
@@ -172,7 +172,7 @@ describe('header and footer edits', () => {
         singleRun({ header: ['plain'], 'header-first': ['first'], footer: ['foot'] }),
       )
       const { bytes } = await editorSave(bridge.docx, keepAll, { titlePg: false })
-      const back = await pageWriteBack(bridge, bytes)
+      const back = await writeBack(bridge, bytes)
       expect(region(back.styles, 'Standard', 'header-first')).toBeNull()
       expect(region(back.styles, 'Standard', 'header')).toBe(hp('plain'))
     }
@@ -182,7 +182,7 @@ describe('header and footer edits', () => {
       const { sections } = await sectionsOf(bridge.docx)
       expect(sections[0].titlePg).toBe(false)
       const { bytes } = await editorSave(bridge.docx, keepAll, { titlePg: true })
-      const back = await pageWriteBack(bridge, bytes)
+      const back = await writeBack(bridge, bytes)
       // Word shows an empty first-page header: so does the ODT
       expect(region(back.styles, 'Standard', 'header-first')).toBe('')
     }
@@ -195,7 +195,7 @@ describe('header and footer edits', () => {
         evenAndOddHeaders: true,
         headerEven: { text: 'even', paras: [{ runs: [{ text: 'even' }] }] },
       })
-      const back = await pageWriteBack(bridge, bytes)
+      const back = await writeBack(bridge, bytes)
       expect(region(back.styles, 'Standard', 'header-left')).toContain('>even<')
       expect(region(back.styles, 'Standard', 'header')).toBe(hp('plain'))
     }
@@ -204,7 +204,7 @@ describe('header and footer edits', () => {
       const { parsed } = await sectionsOf(bridge.docx)
       expect(parsed.evenAndOddHeaders).toBe(true)
       const { bytes } = await editorSave(bridge.docx, keepAll, { evenAndOddHeaders: false })
-      const back = await pageWriteBack(bridge, bytes)
+      const back = await writeBack(bridge, bytes)
       expect(region(back.styles, 'Standard', 'header-left')).toBeNull()
       expect(region(back.styles, 'Standard', 'header')).toBe(hp('plain'))
     }
@@ -223,7 +223,7 @@ describe('header and footer edits', () => {
     expect(parsed.hfParts?.[rId]?.text).toBe(`page ${PAGE_MARK}`)
     const hf = editedHf(parsed, rId, (paras) => replaceText(paras[0] as never, 0, 4, 'Page'))
     const { bytes } = await editorSave(bridge.docx, keepAll, { footer: hf })
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(region(back.styles, 'Standard', 'footer')).toBe(field.replace('>page ', '>Page '))
   })
 })
@@ -234,7 +234,7 @@ describe('master pages without headers', () => {
     const { bytes } = await editorSave(bridge.docx, keepAll, {
       header: { text: 'new', paras: [{ runs: [{ text: 'new' }] }] },
     })
-    const back = await pageWriteBack(bridge, bytes)
+    const back = await writeBack(bridge, bytes)
     expect(region(back.styles, 'Standard', 'header')).toContain('>new<')
     expect(masterXml('Standard', 'Mpm1', {})).toContain('/>')
   })

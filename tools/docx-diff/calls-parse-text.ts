@@ -1877,14 +1877,15 @@ export const PARSE_TEXT: CallSpec[] = [
           `<w:p>${hidden}<mc:AlternateContent><mc:Choice Requires="wps"><m:oMath/></mc:Choice><mc:Fallback><m:oMath/></mc:Fallback></mc:AlternateContent><m:oMath/></w:p>`,
       ),
       ...hiddenIn('</mc:Fallback>').map(
-        (hidden) =>
-          `<w:p><mc:Fallback>${hidden}<m:oMath/></mc:Fallback><m:oMath/></w:p>`,
+        (hidden) => `<w:p><mc:Fallback>${hidden}<m:oMath/></mc:Fallback><m:oMath/></w:p>`,
       ),
       ...hiddenIn('<w:txbxContent>').map(
-        (hidden) => `<w:p>${hidden}<w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
+        (hidden) =>
+          `<w:p>${hidden}<w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
       ),
       ...hiddenIn('</w:txbxContent>').map(
-        (hidden) => `<w:p><w:txbxContent><w:p>${hidden}<m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
+        (hidden) =>
+          `<w:p><w:txbxContent><w:p>${hidden}<m:oMath/></w:p></w:txbxContent><m:oMath/></w:p>`,
       ),
       '<w:p><mc:Fallback><m:oMath/></mc:Fallback ><w:txbxContent><w:p><m:oMath/></w:p></w:txbxContent ><m:oMath/></w:p>',
       '<w:p><mc:Fallback a=">"><m:oMath/></mc:Fallback><w:txbxContent a=">"><m:oMath/></w:txbxContent><m:oMath/></w:p>',

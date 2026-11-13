@@ -266,7 +266,9 @@ describe('mergeRecords — control fields', () => {
   it('keeps a run that carries no text — a logo, an index entry', () => {
     // image and index runs hold their payload beside an empty text; the merge
     // must copy them through rather than drop "empty" runs
-    const logo = blk([{ text: '', image: { dataUrl: 'data:image/png;base64,', xml: '<w:drawing/>' } }])
+    const logo = blk([
+      { text: '', image: { dataUrl: 'data:image/png;base64,', xml: '<w:drawing/>' } },
+    ])
     const { blocks } = mergeRecords([p('x'), logo, mergeName()], data)
     expect(blocks[1]!.runs?.[0]!.image).toBeDefined()
   })

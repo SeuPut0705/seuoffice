@@ -9,10 +9,7 @@ import {
   validCustGeomPath,
   type CustGeomPath,
 } from './reference/custgeom'
-import {
-  isPresetShapeType,
-  PRESET_SHAPE_TYPES,
-} from './reference/preset-shape-types'
+import { isPresetShapeType, PRESET_SHAPE_TYPES } from './reference/preset-shape-types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 type Gd = { name: string; fmla: string }

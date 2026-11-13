@@ -569,6 +569,7 @@ export const en = {
   appOdtFeatureProtection: 'Editing restrictions and protection',
   appOdtFeatureFormField: 'Form fields',
   appOdtFeatureObject: 'Other objects',
+  appOdtFeatureHiddenFromAi: 'Hidden-from-AI marks (the text stays, readable by AI)',
   appOdtOff: 'Not available in ODT documents. Save as .docx to use it.',
   appOdtProtectedCell: 'Protected cell. It was locked in Hancom Office and cannot be changed.',
   appOdtProtectedCellTip: 'Protected cell',

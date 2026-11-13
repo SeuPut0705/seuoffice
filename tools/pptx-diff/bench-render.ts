@@ -57,7 +57,10 @@ async function measure(config: string, rounds: number): Promise<Timing> {
   const { openPptx } = (await import('@seuoffice/pptx-engine')) as typeof Engine
   const { buildRenderSlide } = await import('../../packages/pptx-render/src/index')
   const { DECKS } = await import('./deck-ops')
-  const decks = DECKS.map(([name, base64]): [string, Uint8Array] => [name, Buffer.from(base64, 'base64')])
+  const decks = DECKS.map(([name, base64]): [string, Uint8Array] => [
+    name,
+    Buffer.from(base64, 'base64'),
+  ])
     .sort((a, b) => b[1].length - a[1].length)
     .slice(0, DECK_COUNT)
   const opens: number[] = []
@@ -103,7 +106,17 @@ function shimsFor(names: string[]): string {
 function runChild(config: string, env: Record<string, string>, rounds: number): Timing {
   const out = execFileSync(
     process.execPath,
-    ['--import', 'tsx', '--import', pathToFileURL(resolve(repoRoot, 'tools/pptx-diff/bench-register.mjs')).href, process.argv[1]!, '--child', config, '--rounds', String(rounds)],
+    [
+      '--import',
+      'tsx',
+      '--import',
+      pathToFileURL(resolve(repoRoot, 'tools/pptx-diff/bench-register.mjs')).href,
+      process.argv[1]!,
+      '--child',
+      config,
+      '--rounds',
+      String(rounds),
+    ],
     { cwd: repoRoot, env: { ...process.env, ...env }, encoding: 'utf8', maxBuffer: 1 << 26 },
   )
   return JSON.parse(out.trim().split('\n').at(-1)!) as Timing
@@ -119,14 +132,20 @@ if (child) {
   const wasm = runChild('wasm', {}, rounds)
   results.push(wasm)
   for (const name of Object.values(RENDER_PATH).flat()) {
-    results.push(runChild(`wasm, ${name} in TypeScript`, { BENCH_SHIM_DIR: shimsFor([name]) }, rounds))
+    results.push(
+      runChild(`wasm, ${name} in TypeScript`, { BENCH_SHIM_DIR: shimsFor([name]) }, rounds),
+    )
   }
   const base = results[0]!.totalMs
   console.log('| Configuration | Open ms | Render ms | Total ms | vs TypeScript | Export costs |')
   console.log('| --- | --- | --- | --- | --- | --- |')
   for (const r of results) {
-    const cost = r.config.startsWith('wasm, ') ? `${(((wasm.totalMs - r.totalMs) / base) * 100).toFixed(1)}%` : ''
-    console.log(`| ${r.config} | ${r.openMs.toFixed(1)} | ${r.renderMs.toFixed(1)} | ${r.totalMs.toFixed(1)} | ${(((r.totalMs - base) / base) * 100).toFixed(1)}% | ${cost} |`)
+    const cost = r.config.startsWith('wasm, ')
+      ? `${(((wasm.totalMs - r.totalMs) / base) * 100).toFixed(1)}%`
+      : ''
+    console.log(
+      `| ${r.config} | ${r.openMs.toFixed(1)} | ${r.renderMs.toFixed(1)} | ${r.totalMs.toFixed(1)} | ${(((r.totalMs - base) / base) * 100).toFixed(1)}% | ${cost} |`,
+    )
   }
   const file = argAfter('--json')
   if (file) {

@@ -15,13 +15,7 @@ import type {
   ThemeColors,
   ThemeFonts,
 } from './reference/types'
-import {
-  findChild,
-  nameOf,
-  serializeXNode,
-  type XNode,
-  xmlParser,
-} from './reference/xml-utils'
+import { findChild, nameOf, serializeXNode, type XNode, xmlParser } from './reference/xml-utils'
 
 /** Arguments beside the text or node, the same object on both sides of the wire. */
 export interface Args {
