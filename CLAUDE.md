@@ -1,6 +1,6 @@
 # seuoffice 작업 규칙
 
-seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)에서 갈라져 나왔고, 2026-11-12부터 상위를 따라가지 않는 독립 프로젝트다(결정 0024). 엔진을 Rust로 옮기는 중이다(결정 0025, 0026). 스풋(GitHub SeuPut0705)의 개인 자산이고, 저장소 전체를 공개한다(결정 0007). <FSL_FIRST_VERSION>부터 라이선스는 FSL-1.1-ALv2(`LICENSE`)이고, 그 전 판과 GenOffice·이음오피스에서 온 부분은 Apache-2.0(`LICENSE-APACHE`)이다(결정 0031, 초안).
+seuoffice는 웹과 PC(Windows, Mac)에서 문서를 보고 고치고 AI로 편집하는 오피스다. 이음오피스(IeumOffice, Apache-2.0, GenOffice의 한국어 포크)에서 갈라져 나왔고, 2026-11-12부터 상위를 따라가지 않는 독립 프로젝트다(결정 0024). 엔진을 Rust로 옮기는 중이다(결정 0025, 0026). 스풋(GitHub SeuPut0705)의 개인 자산이고, 저장소 전체를 공개한다(결정 0007). v0.12.41의 소스부터 라이선스는 FSL-1.1-ALv2(`LICENSE`)이고, 그 전에 Apache-2.0으로 받은 사본과 GenOffice·이음오피스에서 온 부분은 Apache-2.0(`LICENSE-APACHE`)이다(결정 0031).
 
 ## 먼저 읽을 것
 

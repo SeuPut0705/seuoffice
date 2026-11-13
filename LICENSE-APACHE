@@ -1,11 +1,14 @@
 LICENSE-APACHE: the Apache License, Version 2.0, reproduced unchanged
 below the line.
 
-Draft (FSL switch, not yet in effect). Before <FSL_FIRST_VERSION> (commit
-<FSL_FIRST_COMMIT>) the whole of seuoffice was distributed under this
-licence, and those versions stay under it. From that version on, LICENSE
-(Functional Source License 1.1, Apache 2.0 Future License) applies to
-seuoffice's own work, and this text is shipped:
+Up to the switch to the Functional Source License, the whole of seuoffice
+was distributed under this licence. Copies received under it before the
+switch (any version up to and including the published v0.12.41 release
+files) keep the rights it granted; they cannot be revoked. The seuoffice
+source as of v0.12.41 (tag v0.12.41, commit 7b2ac300d) and every later
+change are distributed under LICENSE (Functional Source License 1.1, Apache
+2.0 Future License) from commit <FSL_SWITCH_COMMIT> on, and this text is
+shipped:
 
 - for the code and other material seuoffice took from GenOffice
   (Copyright 2026 Mainfunc, Inc.) and IeumOffice, which their authors
