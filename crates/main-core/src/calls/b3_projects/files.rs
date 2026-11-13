@@ -32,10 +32,11 @@ use crate::packages::electron_utils::unsaved_files::{
 };
 use crate::packages::file_parse::attachable::attachable_max_bytes;
 use crate::packages::i18n::Lang;
-use crate::packages::project_store::{
-    ProjectFileEntry, ProjectId, ProjectListItem, ProjectTrustPrompt,
+use crate::packages::project_store::{ProjectFileEntry, ProjectListItem, ProjectTrustPrompt};
+use crate::shell::knowledge_base::{
+    KB_READ_CHUNK_CHARS, KB_READ_MAX_BYTES, KB_SCOPES_MAX, KbReadPage, KbRunScopes,
+    kb_read_max_bytes,
 };
-use crate::shell::knowledge_base::{KB_READ_MAX_BYTES, kb_read_max_bytes};
 use crate::shell::projects::cloud_cache::CacheClock;
 use crate::shell::projects::ignore::{IgnoreOptions, compile_ignore};
 use crate::shell::projects::paths::canonical_path;
@@ -56,10 +57,10 @@ use crate::shell::projects::project_index::{
     ProjectIndexGuide, ProjectNameOnly, RerankIgnoreFilter, merge_index_roots, project_folder_roots,
 };
 use crate::shell::projects::project_tools::{
-    DownloadAsk, IndexHit, IndexSearchOptions, IndexSearchResult, IndexStore, KbReadPage,
-    KnowledgePages, PROJECT_LIST_DEFAULT_LIMIT, PROJECT_SCOPE_UNKNOWN,
-    PROJECT_SEARCH_DEFAULT_LIMIT, PROJECT_UNAVAILABLE, ProjectFolderTools, ProjectToolsDeps,
-    ProjectToolsGuide, ProjectToolsScopes, ProjectToolsStore,
+    DownloadAsk, IndexHit, IndexSearchOptions, IndexSearchResult, IndexStore, KnowledgePages,
+    PROJECT_LIST_DEFAULT_LIMIT, PROJECT_SCOPE_UNKNOWN, PROJECT_SEARCH_DEFAULT_LIMIT,
+    PROJECT_UNAVAILABLE, ProjectFolderTools, ProjectToolsDeps, ProjectToolsGuide,
+    ProjectToolsStore,
 };
 
 type Logs = Rc<RefCell<Vec<Vec<Value>>>>;
@@ -691,58 +692,17 @@ impl ProjectToolsGuide for FakeToolsGuide {
     }
 }
 
-/// `KB_SCOPE_UNKNOWN` of knowledge-base.ts
-const KB_SCOPE_UNKNOWN: &str = "knowledge-base scope is not open";
-
-/// `KB_SCOPES_MAX` of knowledge-base.ts
-const KB_SCOPES_MAX: usize = 16;
-
-/// the `KbRunScopes` methods the tools call, over a counter: scopes `scope-1`, ...
-#[derive(Default)]
-struct FakeScopes {
-    held: JsMap<(i64, ProjectId)>,
-    counter: u32,
-}
-
-impl ProjectToolsScopes for FakeScopes {
-    fn open_project(&mut self, owner: i64, project_id: &str) -> String {
-        self.counter += 1;
-        let scope = format!("scope-{}", self.counter);
-        self.held.set(scope.clone(), (owner, project_id.to_owned()));
-        while self.held.len() > KB_SCOPES_MAX {
-            let Some(oldest) = self.held.keys().next().map(str::to_owned) else {
-                break;
-            };
-            self.held.delete(&oldest);
-        }
-        scope
-    }
-
-    fn close(&mut self, owner: i64, scope: Option<&JsonValue>) {
-        if let Some(JsonValue::String(scope)) = scope
-            && self.held.get(scope).is_some_and(|held| held.0 == owner)
-        {
-            self.held.delete(scope);
-        }
-    }
-
-    fn project_of(&mut self, owner: i64, raw: &JsonValue) -> Result<Option<ProjectId>, Thrown> {
-        let scope = match raw {
-            JsonValue::Object(object) => object.get("scope"),
-            _ => None,
-        };
-        let Some(scope) = scope else {
-            return Ok(None);
-        };
-        let held = match scope {
-            JsonValue::String(scope) => self.held.get(scope),
-            _ => None,
-        };
-        match held {
-            Some((held_owner, project)) if *held_owner == owner => Ok(Some(project.clone())),
-            _ => Err(Thrown(KB_SCOPE_UNKNOWN.to_owned())),
-        }
-    }
+/// the real `KbRunScopes` the tools scenario hands the tools, its scopes
+/// named `scope-1`, ...
+fn kb_scopes() -> KbRunScopes {
+    let mut counter = 0_u32;
+    KbRunScopes::new(
+        Box::new(move || {
+            counter += 1;
+            format!("scope-{counter}")
+        }),
+        KB_SCOPES_MAX,
+    )
 }
 
 /// a row the scripted index holds
@@ -826,9 +786,6 @@ impl ProjectToolsStore for FakeStoreProvider {
         self.0.as_mut().map(|index| index as &mut dyn IndexStore)
     }
 }
-
-/// `KB_READ_CHUNK_CHARS` of knowledge-base.ts
-const KB_READ_CHUNK_CHARS: f64 = 24_000.0;
 
 /// `readKnowledgeFilePage` over `.txt`, `.md` and `.py` files: the
 /// unsaved-changes check, the size cap, the text as UTF-8, then the page.
@@ -981,7 +938,7 @@ fn tools_call(args: &[Value], cx: &mut Context) -> Answer {
             dir: dir.clone(),
             logs: Rc::clone(&logs),
         }),
-        scopes: Box::new(FakeScopes::default()),
+        scopes: Box::new(kb_scopes()),
         store: Box::new(store),
         resolve_cloud_only: Box::new(FakeResolver::new(
             Some(&expanded_cloud).filter(|spec| !spec.is_null()),

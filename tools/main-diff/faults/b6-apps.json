@@ -325,22 +325,22 @@
   {
     "name": "print shows the window on darwin",
     "file": "main-core/src/markdown/print_document.rs",
-    "find": "if platform == \"win32\" {",
-    "replace": "if platform == \"darwin\" {",
+    "find": "win32: platform == \"win32\",",
+    "replace": "win32: platform == \"darwin\",",
     "fn": ["markdown/print-document.printMarkdownDocument"]
   },
   {
     "name": "print swallows a window that cannot be destroyed",
     "file": "main-core/src/markdown/print_document.rs",
-    "find": "window.destroy()?;",
-    "replace": "let _ = window.destroy();",
+    "find": "let released = release_job(win, work_dir, |win| win.destroy());",
+    "replace": "let released = release_job(win, work_dir, |win| {\n        let _ = win.destroy();\n        Ok(())\n    });",
     "fn": ["markdown/print-document.printMarkdownDocument"]
   },
   {
     "name": "print error text",
     "file": "main-core/src/markdown/print_document.rs",
-    "find": "Err(error) => PrintDialogOutcome::Failed(error.message),",
-    "replace": "Err(error) => PrintDialogOutcome::Failed(format!(\"{}!\", error.message)),",
+    "find": "let outcome = printed.unwrap_or_else(|error| PrintDialogOutcome::Failed(error.message));",
+    "replace": "let outcome = printed.unwrap_or_else(|error| PrintDialogOutcome::Failed(format!(\"{}!\", error.message)));",
     "fn": ["markdown/print-document.printMarkdownDocument"]
   },
   {
@@ -366,10 +366,14 @@
   },
   {
     "name": "pdf window that cannot be destroyed",
-    "file": "main-core/src/markdown/print_pdf.rs",
-    "find": "window.destroy()?;",
-    "replace": "let _ = window.destroy();",
-    "fn": ["markdown/print-pdf.printMarkdownPdf"]
+    "file": "main-core/src/packages/electron_utils/print_html_pdf.rs",
+    "find": "let released = release_job(Some(&mut self.win), &self.work_dir, |win| win.destroy());",
+    "replace": "let released = release_job(Some(&mut self.win), &self.work_dir, |win| {\n            let _ = win.destroy();\n            Ok(())\n        });",
+    "fn": [
+      "markdown/print-pdf.printMarkdownPdf",
+      "print-html-pdf.printHtmlToPdf",
+      "hwp/print-document.printJobToPdf"
+    ]
   },
   {
     "name": "pdf page size",

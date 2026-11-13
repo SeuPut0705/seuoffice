@@ -4,7 +4,7 @@
 
 ## 지금 상태
 
-- `crates/main-core`는 B1–B6의 옮길 모듈을 모두 가졌다. 남은 B3·B4·B5는 다섯 가지(`feat/rust-stage2-{b3b4,projects,ai,mcp,provider}`)에서 옮겨 408290026에 합쳤다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
+- `crates/main-core`는 B1–B6의 옮길 모듈을 모두 가졌다(엔진을 기다리는 모듈 제외; `shell/knowledge-base`는 검토 뒤 마저 옮김). 남은 B3·B4·B5는 다섯 가지(`feat/rust-stage2-{b3b4,projects,ai,mcp,provider}`)에서 옮겨 408290026에 합쳤다. 호스트를 모르는 크레이트이고, `tests/hosts.rs`가 napi·tauri·wry·cef·neon 의존을 막는다. Electron은 `crates/main-node`(Node-API 애드온, `#[napi(catch_unwind)]`)로 부른다.
 - main 8b9fd99ea를 합쳤다(305eba4a8). 이 가지의 `apps/`, `packages/`는 그 main과 같다.
 - 엔진을 기다리는 모듈, E·S3 묶음, preload 브리지는 옮기지 않았다. 목록과 까닭은 결정 0030의 결과 절에 있다.
 - 합친 뒤 이 기계에서 본 것: `cargo check -p main-core --tests` 경고 없음, `cargo fmt --all --check`, `tools/main-diff`의 tsc·prettier, 결함 5,973개의 `find`가 모두 한 번.
