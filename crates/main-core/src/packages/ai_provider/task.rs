@@ -644,6 +644,10 @@ struct Inner {
     st: RefCell<State>,
     /// something settled since the last pass: the tasks may go further
     dirty: Cell<bool>,
+    /// bodies whose handle went, released at the next [`Runtime::poll`] (or
+    /// [`Rt::take_cmds`]): a handle may go while the state is borrowed (a
+    /// cleared timer's callback, a dropped task), so the drop only notes it
+    dropped: RefCell<Vec<Id>>,
 }
 
 /// The handle a ported function awaits through. Cloning it is cheap.
@@ -728,10 +732,11 @@ impl Rt {
     /// does for them with what the tasks' callbacks did (a log, a trace)
     /// takes them as the callbacks run; [`Runtime::poll`] answers the rest.
     pub fn take_cmds(&self) -> Vec<Cmd> {
-        match self.0.st.try_borrow_mut() {
-            Ok(mut st) => std::mem::take(&mut st.cmds),
-            Err(_) => Vec::new(),
+        if self.0.st.try_borrow_mut().is_err() {
+            return Vec::new();
         }
+        self.release_dropped();
+        std::mem::take(&mut self.0.st.borrow_mut().cmds)
     }
 
     /// `console.<level>(...args)`
@@ -1097,16 +1102,20 @@ impl Rt {
         }
     }
 
+    /// Release the bodies whose handle went since the last call.
+    fn release_dropped(&self) {
+        let dropped = std::mem::take(&mut *self.0.dropped.borrow_mut());
+        for body in dropped {
+            self.release_body(body);
+        }
+    }
+
     /// The handle to `body` went (JavaScript's garbage collector frees it
     /// unseen). A branch the host still keeps is released, and the stream
     /// stops once no branch can read it. The program's view (`live`, an
     /// abort's `Cancel`) does not change, as JavaScript's does not at a drop.
-    /// A drop while the state is borrowed (only `Runtime`'s own drop) sends
-    /// nothing: the runtime is going.
     fn release_body(&self, body: Id) {
-        let Ok(mut st) = self.0.st.try_borrow_mut() else {
-            return;
-        };
+        let mut st = self.0.st.borrow_mut();
         let Some(b) = st.bodies.get_mut(&body) else {
             return;
         };
@@ -1423,7 +1432,7 @@ pub struct Response {
 impl Drop for Response {
     fn drop(&mut self) {
         if let Some(body) = self.body {
-            self.rt.release_body(body);
+            self.rt.0.dropped.borrow_mut().push(body);
         }
     }
 }
@@ -1831,6 +1840,7 @@ impl Runtime {
                 host: RefCell::new(host),
                 st: RefCell::new(State::default()),
                 dirty: Cell::new(false),
+                dropped: RefCell::new(Vec::new()),
             })),
             tasks: Vec::new(),
         }
@@ -1882,6 +1892,7 @@ impl Runtime {
                 break;
             }
         }
+        self.rt.release_dropped();
         std::mem::take(&mut self.rt.0.st.borrow_mut().cmds)
     }
 
