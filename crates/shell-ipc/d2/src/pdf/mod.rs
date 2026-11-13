@@ -22,7 +22,8 @@ pub(crate) struct Grants(pub ViewMap<HashSet<String>>);
 impl Grants {
     /// `pdfPathGranted(webContentsId, path)`
     pub fn granted(&self, view: ViewId, path: &str) -> bool {
-        self.0.with(view, |set| set.is_some_and(|set| set.contains(path)))
+        self.0
+            .with(view, |set| set.is_some_and(|set| set.contains(path)))
     }
 }
 

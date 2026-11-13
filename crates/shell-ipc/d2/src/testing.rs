@@ -20,7 +20,9 @@ use shell_contract::ipc::{
     Sender, Target,
 };
 use shell_contract::runtime::{AppPaths, CancelToken, PathName, Services, Thread, Views, Workers};
-use shell_contract::{Batch, CHANNELS, Hosts, IpcValue, RequestId, Surface, ViewId, WindowId};
+use shell_contract::{
+    Batch, CHANNELS, Hosts, IpcValue, Provided, RequestId, Surface, ViewId, WindowId,
+};
 
 use crate::kit::{self, Entry};
 
@@ -305,7 +307,10 @@ pub(crate) fn schedule(delay: Duration, id: u64) {
 
 /// The registry the shell keeps, with the contract's start-up checks
 #[derive(Default)]
-struct Table(HashMap<&'static str, (ChannelKind, Rc<dyn Handler>)>);
+struct Table {
+    handlers: HashMap<&'static str, (ChannelKind, Rc<dyn Handler>)>,
+    provided: Rc<Provided>,
+}
 
 impl Registry for Table {
     fn register(
@@ -329,10 +334,14 @@ impl Registry for Table {
         if !spec.kinds.contains(&kind) {
             return Err(RegisterError::WrongKind { channel, kind });
         }
-        if self.0.insert(channel, (kind, handler)).is_some() {
+        if self.handlers.insert(channel, (kind, handler)).is_some() {
             return Err(RegisterError::Twice(channel));
         }
         Ok(())
+    }
+
+    fn provided(&self) -> Rc<Provided> {
+        Rc::clone(&self.provided)
     }
 }
 
@@ -406,7 +415,16 @@ impl Rt {
     }
 
     pub fn registered(&self) -> Vec<(&'static str, ChannelKind)> {
-        self.table.0.iter().map(|(c, (k, _))| (*c, *k)).collect()
+        self.table
+            .handlers
+            .iter()
+            .map(|(c, (k, _))| (*c, *k))
+            .collect()
+    }
+
+    /// What the batches provided while registering
+    pub fn provided(&self) -> Rc<Provided> {
+        self.table.provided()
     }
 
     /// Adds a view (its window has the same number)
@@ -468,10 +486,16 @@ impl Rt {
         CLOCK.with(|c| c.borrow_mut().0 = end);
     }
 
-    fn call(&mut self, kind: ChannelKind, channel: &str, from: Sender, args: Vec<IpcValue>) -> Pending {
+    fn call(
+        &mut self,
+        kind: ChannelKind,
+        channel: &str,
+        from: Sender,
+        args: Vec<IpcValue>,
+    ) -> Pending {
         let (registered, handler) = self
             .table
-            .0
+            .handlers
             .get(channel)
             .map(|(k, h)| (*k, Rc::clone(h)))
             .unwrap_or_else(|| panic!("no handler for {channel}"));
@@ -575,9 +599,15 @@ mod tests {
         let mut rt = Rt::new(|_| {});
         let log = std::rc::Rc::new(std::cell::RefCell::new(Vec::new()));
         let (l1, l2, l3) = (log.clone(), log.clone(), log.clone());
-        after(&rt.services, Duration::from_millis(30), move || l1.borrow_mut().push(30));
-        after(&rt.services, Duration::from_millis(10), move || l2.borrow_mut().push(10));
-        let t = after(&rt.services, Duration::from_millis(20), move || l3.borrow_mut().push(20));
+        after(&rt.services, Duration::from_millis(30), move || {
+            l1.borrow_mut().push(30)
+        });
+        after(&rt.services, Duration::from_millis(10), move || {
+            l2.borrow_mut().push(10)
+        });
+        let t = after(&rt.services, Duration::from_millis(20), move || {
+            l3.borrow_mut().push(20)
+        });
         clear(t);
         rt.advance(Duration::from_millis(15));
         assert_eq!(*log.borrow(), vec![10]);

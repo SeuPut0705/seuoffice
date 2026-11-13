@@ -394,7 +394,11 @@ pub(crate) fn on_worker<R: Send + 'static>(
         waiting.borrow_mut().insert(
             id,
             Box::new(move |result: Box<dyn Any + Send>| {
-                then(*result.downcast::<R>().expect("a worker result of its own type"))
+                then(
+                    *result
+                        .downcast::<R>()
+                        .expect("a worker result of its own type"),
+                )
             }),
         )
     });
