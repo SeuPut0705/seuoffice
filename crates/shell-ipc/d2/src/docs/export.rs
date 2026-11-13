@@ -589,7 +589,7 @@ pub(super) fn entries(docs: &Rc<Docs>) -> Vec<Entry> {
             };
             let pdf_path = join(&[
                 &d.temp_dir(),
-                &format!("seuoffice-docs-images-{}.pdf", jscompat::random_uuid()),
+                &format!("seuoffice-docs-images-{}.pdf", d.shell.random_uuid()),
             ]);
             d.add_image_export(view, &pdf_path, &dir);
             Ok(Obj::new().set("dir", dir).set("pdfPath", pdf_path).done())

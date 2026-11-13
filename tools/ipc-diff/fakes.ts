@@ -28,12 +28,35 @@ export interface CaseElectron extends Record<string, unknown> {
   readonly log: unknown[]
   /** the fake `webContents` of a view */
   contents(view: number): FakeContents
+  /** the menu `popup()` was last called on since the last call of this, if any */
+  takePopped(): FakeMenu | null
+  /** hands every view's contents to the `app.on('web-contents-created')` listeners, as Electron does when it creates them */
+  replayWebContentsCreated(): void
+}
+
+/** what `Menu.buildFromTemplate` answers: the template, popped up or installed as the application menu */
+export interface FakeMenu {
+  template: MenuTemplateItem[]
+  popup(): void
+}
+
+export interface MenuTemplateItem {
+  label?: string
+  type?: string
+  submenu?: MenuTemplateItem[] | FakeMenu
+  click?: (item: MenuTemplateItem, window: unknown, event: unknown) => unknown
+  [key: string]: unknown
 }
 
 export interface FakeContents {
   id: number
   send(channel: string, ...args: unknown[]): void
   isDestroyed(): boolean
+  /** `on`/`once` of Electron's emitter (`once` listens for good: no case destroys a view) */
+  on(event: string, listener: Fn): FakeContents
+  once(event: string, listener: Fn): FakeContents
+  /** calls the listeners of `event` and answers when every one is done */
+  emit(event: string, ...args: unknown[]): Promise<unknown[]>
   [key: string]: unknown
 }
 
@@ -86,8 +109,17 @@ export function caseElectron(dir: string, c: Case): CaseElectron {
   const contentsCase = shared.contents ?? {}
   const contents = new Map<number, FakeContents>()
   for (const v of views) {
-    contents.set(v.view, {
+    const listeners = new Map<string, Fn[]>()
+    const listen = (event: string, listener: Fn): FakeContents => {
+      listeners.set(event, [...(listeners.get(event) ?? []), listener])
+      return fake
+    }
+    const fake: FakeContents = {
       id: v.view,
+      on: listen,
+      once: listen,
+      emit: (event, ...args) =>
+        Promise.all((listeners.get(event) ?? []).map((listener) => listener(...args))),
       send(channel: string, ...args: unknown[]) {
         const e = new Encoder()
         const header = e.values(args)
@@ -118,7 +150,8 @@ export function caseElectron(dir: string, c: Case): CaseElectron {
         log.push(['webContents.print', v.view, new Encoder().value(options)])
         done?.((contentsCase.print as boolean | undefined) ?? true, '')
       },
-    })
+    }
+    contents.set(v.view, fake)
   }
   const windowIds = [...new Set(views.map((v) => v.window))]
   const windows = new Map(
@@ -159,9 +192,21 @@ export function caseElectron(dir: string, c: Case): CaseElectron {
   }
   const image = (png: Buffer) => ({ toPNG: () => png, isEmpty: () => png.length === 0 })
 
+  const created: Fn[] = []
+  let applicationMenu: FakeMenu | null = null
+  let popped: FakeMenu | null = null
+
   const electron: CaseElectron = {
     handlers: { invoke, on },
     log,
+    takePopped() {
+      const out = popped
+      popped = null
+      return out
+    },
+    replayWebContentsCreated() {
+      for (const listener of created) for (const v of views) listener({}, contents.get(v.view))
+    },
     takeEvents() {
       const out = events
       events = []
@@ -199,7 +244,9 @@ export function caseElectron(dir: string, c: Case): CaseElectron {
       getPath: (name: string) => join(dir, name),
       getName: () => 'seuoffice',
       isPackaged: false,
-      on: () => {},
+      on: (event: string, listener: Fn) => {
+        if (event === 'web-contents-created') created.push(listener)
+      },
       once: () => {},
       whenReady: () => Promise.resolve(),
     },
@@ -263,6 +310,14 @@ export function caseElectron(dir: string, c: Case): CaseElectron {
         log.push(['clipboard.writeImage', hex(board.png)])
       },
       availableFormats: () => (log.push(['clipboard.availableFormats']), board.formats),
+    },
+    Menu: {
+      buildFromTemplate: (template: MenuTemplateItem[]): FakeMenu => {
+        const menu: FakeMenu = { template, popup: () => void (popped = menu) }
+        return menu
+      },
+      setApplicationMenu: (menu: FakeMenu | null) => void (applicationMenu = menu),
+      getApplicationMenu: () => applicationMenu,
     },
     nativeImage: {
       createFromBuffer: (png: Buffer) => image(Buffer.from(png)),

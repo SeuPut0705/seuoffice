@@ -9,11 +9,13 @@
 //! [`PdfEditors`](editors::PdfEditors).
 
 mod dialogs;
-mod editors;
-mod hosts;
+pub mod editors;
+pub mod hosts;
 mod media;
 mod open;
 mod pages;
+#[cfg(feature = "probe")]
+pub(crate) mod probe;
 mod recovery;
 mod save;
 mod sign;
@@ -44,7 +46,7 @@ use super::Grants;
 use crate::kit::{self, Entry, Timer};
 
 pub(crate) use editors::PdfEditors;
-pub use hosts::{PdfEngine, PdfEngineHost, PdfShell, PdfShellHost};
+use hosts::{PdfEngineHost, PdfShellHost};
 use recovery::{Recovery, Store};
 
 /// A renderer reply the main side waits for, shared between the waiter

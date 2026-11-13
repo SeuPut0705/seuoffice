@@ -11,23 +11,23 @@ use shell_contract::editors::{SaveMode, Then};
 use shell_contract::ipc::{Sender, Target};
 use shell_contract::{DocumentEditors, IpcError, IpcValue, Surface, editor_for};
 
-use super::hosts::{FakeEngine, FakeShell};
+use super::hosts::{FakeEngine, FakeShell, Log};
 use super::{EpubEditors, EpubEngineHost, EpubShellHost};
 use crate::kit::{IntoIpc, field, obj};
 use crate::testing::{HostCall, Rt};
 
 const CHAPTER: &str = "<p>OEBPS/c1.xhtml</p>";
 
-fn rt(case: Value) -> (Rt, Arc<FakeShell>) {
-    let shell = Arc::new(FakeShell::new(&case["shell"]));
-    let engine = case["engine"].clone();
-    let host = shell.clone();
+/// A shell with the EPUB editor's fakes; the log is what they were asked
+fn rt(case: Value) -> (Rt, Log) {
+    let log = Log::default();
+    let (engine, shell, into) = (case["engine"].clone(), case["shell"].clone(), log.clone());
     let mut rt = Rt::new(move |h| {
-        h.insert::<EpubEngineHost>(Arc::new(FakeEngine::new(&engine)));
-        h.insert::<EpubShellHost>(host);
+        h.insert::<EpubEngineHost>(Arc::new(FakeEngine::new(&engine, into.clone())));
+        h.insert::<EpubShellHost>(Arc::new(FakeShell::new(&shell, into)));
     });
     rt.register(super::entries).unwrap();
-    (rt, shell)
+    (rt, log)
 }
 
 fn editors(rt: &Rt) -> Rc<EpubEditors> {
@@ -51,7 +51,7 @@ fn granted(rt: &mut Rt, id: u32) -> (Sender, String) {
     let path = rt.dir.join(format!("book{id}.epub"));
     std::fs::write(&path, b"BOOK").unwrap();
     let sender = rt.view(id, Surface::Epub);
-    editors(rt).create_view(sender.view, Some(&path));
+    editors(rt).open_view(sender.view, Some(&path));
     (sender, path_str(&path))
 }
 
@@ -65,15 +65,27 @@ fn opened(rt: &mut Rt, id: u32) -> (Sender, String) {
     (sender, path)
 }
 
+fn edits(rt: &mut Rt, sender: Sender, edits: Vec<IpcValue>) -> IpcValue {
+    let request = obj([("spineIndex", n(0.0)), ("edits", edits.into_ipc())]);
+    rt.invoke_now("epub:apply-edits", sender, vec![request])
+        .unwrap()
+}
+
+/// replaces the text of the chapter's first block
 fn edit(rt: &mut Rt, sender: Sender, text: &str) -> IpcValue {
     let edit = obj([
         ("op", s("replace")),
-        ("blockId", s("b0")),
+        ("blockId", s("b1")),
         ("text", s(text)),
     ]);
-    let request = obj([("spineIndex", n(0.0)), ("edits", vec![edit].into_ipc())]);
-    rt.invoke_now("epub:apply-edits", sender, vec![request])
-        .unwrap()
+    edits(rt, sender, vec![edit])
+}
+
+fn ids(answer: &IpcValue) -> Vec<IpcValue> {
+    match field(answer, "blocks") {
+        IpcValue::Array(blocks) => blocks.iter().map(|b| field(b, "id").clone()).collect(),
+        other => panic!("{other:?}"),
+    }
 }
 
 type Slot<T> = Rc<RefCell<Option<Result<T, IpcError>>>>;
@@ -187,10 +199,14 @@ fn an_edit_makes_the_book_dirty_and_a_save_writes_only_then() {
     );
 
     let edited = edit(&mut rt, sender, "hello");
-    assert_eq!(field(&edited, "source"), &s("hello"));
+    assert_eq!(field(&edited, "source"), &s("<p>hello</p>"));
     assert_eq!(field(&edited, "version"), &n(1.0));
     assert_eq!(field(&edited, "dirty"), &true.into_ipc());
-    let inverse = obj([("start", n(0.0)), ("end", n(5.0)), ("text", s(CHAPTER))]);
+    let inverse = obj([
+        ("start", n(3.0)),
+        ("end", n(8.0)),
+        ("text", s("OEBPS/c1.xhtml")),
+    ]);
     assert_eq!(field(&edited, "inverse"), &vec![inverse].into_ipc());
     let eds = editors(&rt);
     assert!(eds.is_dirty(sender.view));
@@ -247,7 +263,11 @@ fn range_replacements_need_the_current_version() {
     let (sender, _) = opened(&mut rt, 1);
     edit(&mut rt, sender, "hello");
     let replace = |version: IpcValue| {
-        let r = obj([("start", n(0.0)), ("end", n(5.0)), ("text", s(CHAPTER))]);
+        let r = obj([
+            ("start", n(3.0)),
+            ("end", n(8.0)),
+            ("text", s("OEBPS/c1.xhtml")),
+        ]);
         obj([
             ("spineIndex", n(0.0)),
             ("version", version),
@@ -275,6 +295,54 @@ fn range_replacements_need_the_current_version() {
     assert_eq!(field(&back, "source"), &s(CHAPTER));
     assert_eq!(field(&back, "version"), &n(2.0));
     assert_eq!(field(&back, "dirty"), &false.into_ipc());
+}
+
+/// `OpenChapter.nextId` goes back to the engine with the map: after the
+/// highest block is deleted, a new block must not take its id again
+#[test]
+fn fresh_block_ids_continue_after_the_last_block_is_deleted() {
+    let (mut rt, _) =
+        rt(json!({ "engine": { "readText": { "OEBPS/c1.xhtml": "<p>a</p><p>b</p>" } } }));
+    let (sender, _) = opened(&mut rt, 1);
+    let chapter = rt
+        .invoke_now("epub:read-chapter", sender, vec![n(0.0)])
+        .unwrap();
+    assert_eq!(ids(&chapter), vec![s("b1"), s("b2")]);
+    let deleted = edits(
+        &mut rt,
+        sender,
+        vec![obj([("op", s("delete")), ("blockId", s("b2"))])],
+    );
+    assert_eq!(ids(&deleted), vec![s("b1")]);
+    let inserted = edits(
+        &mut rt,
+        sender,
+        vec![obj([
+            ("op", s("insert_after")),
+            ("blockId", s("b1")),
+            ("text", s("c")),
+        ])],
+    );
+    assert_eq!(field(&inserted, "created"), &vec![s("b3")].into_ipc());
+    assert_eq!(ids(&inserted), vec![s("b1"), s("b3")]);
+
+    // a range replacement that splits the last block numbers on from there too
+    let split = obj([
+        ("start", n(12.0)),
+        ("end", n(12.0)),
+        ("text", s("</p><p>d")),
+    ]);
+    let request = obj([
+        ("spineIndex", n(0.0)),
+        ("version", field(&inserted, "version").clone()),
+        ("replacements", vec![split].into_ipc()),
+    ]);
+    let remapped = rt
+        .invoke_now("epub:replace-ranges", sender, vec![request])
+        .unwrap();
+    assert_eq!(field(&remapped, "source"), &s("<p>a</p><p>c</p><p>d</p>"));
+    assert_eq!(field(&remapped, "created"), &vec![s("b4")].into_ipc());
+    assert_eq!(ids(&remapped), vec![s("b1"), s("b3"), s("b4")]);
 }
 
 #[test]
@@ -373,7 +441,7 @@ fn reading_the_text_waits_for_the_flush() {
     let (sender, _) = opened(&mut rt, 1);
     let view = sender.view;
     let editor = editor_for(&rt.provided(), view).unwrap();
-    edit(&mut rt, sender, "<p>hello</p>");
+    edit(&mut rt, sender, "hello");
 
     let flush = |rt: &mut Rt, result: IpcValue| {
         let mut events = events(rt);
@@ -446,8 +514,8 @@ fn save_as_asks_for_a_file_and_tells_the_shell() {
     assert_eq!(field(&saved, "written"), &true.into_ipc());
     assert_eq!(std::fs::read(&target).unwrap(), b"BOOK");
     assert_eq!(
-        *shell.saved.lock().unwrap(),
-        vec![(sender.view, target.clone())]
+        *shell.lock().unwrap(),
+        vec![json!(["fileSavedHook", sender.view.0, target])]
     );
     let HostCall::Save(_, dialog) = &rt.script().calls[0] else {
         panic!()
@@ -932,4 +1000,43 @@ fn an_unsaved_open_file_is_not_read() {
         )
         .unwrap();
     assert_eq!(field(&ok, "text"), &s("secret"));
+}
+
+/// The probe's trigger steps reach the editor as the shell would
+#[test]
+fn probe_triggers_call_the_editor() {
+    let (mut rt, _) = rt(Value::Null);
+    let (sender, path) = opened(&mut rt, 1);
+    let view = sender.view;
+    let (provided, services) = (rt.provided(), rt.services.clone());
+    let trigger = |what: &str, args: Value| {
+        let (answer, then) = slot();
+        let known = super::probe_trigger(what, view, &args, &services, &provided, then);
+        (known, answer)
+    };
+    let (known, answer) = trigger("file-path", json!([]));
+    assert!(known);
+    assert_eq!(*answer.borrow(), Some(Ok(s(&path))));
+    let (_, answer) = trigger("menu-command", json!(["find"]));
+    assert_eq!(*answer.borrow(), Some(Ok(IpcValue::Undefined)));
+    assert_eq!(
+        events(&rt),
+        vec![(Target::View(view), "epub:menu-command", vec![s("find")])]
+    );
+    edit(&mut rt, sender, "x");
+    let (_, answer) = trigger("d2/epub:request-save", json!(["save"]));
+    assert_eq!(*answer.borrow(), Some(Ok(IpcValue::Undefined)));
+    assert_eq!(
+        events(&rt),
+        vec![(Target::View(view), "epub:save-request", vec![s("save")])]
+    );
+    let (_, pending) = trigger("outcome", json!([]));
+    assert_eq!(*pending.borrow(), Some(Ok(IpcValue::Null)));
+    rt.send("epub:save-request-ack", sender, vec![true.into_ipc()]);
+    let (_, settled) = trigger("outcome", json!([]));
+    assert_eq!(
+        *settled.borrow(),
+        Some(Ok(obj([("value", true.into_ipc())])))
+    );
+    assert!(!trigger("export-request", json!([])).0);
 }
