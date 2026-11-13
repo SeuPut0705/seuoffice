@@ -56,10 +56,10 @@
     "groups": ["a/outbound"]
   },
   {
-    "name": "any stored value turns the tools off",
+    "name": "a stored false no longer turns the tools off",
     "file": "shell-ipc/a/src/outbound.rs",
     "find": "            Some(JsonValue::Bool(false))\n",
-    "replace": "            Some(_)\n",
+    "replace": "            Some(JsonValue::Bool(true))\n",
     "groups": ["a/outbound"]
   },
   {
