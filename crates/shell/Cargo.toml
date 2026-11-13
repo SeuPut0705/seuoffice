@@ -32,7 +32,8 @@ tauri-build = "=3.0.0-alpha.4"
 # the pair the prototype built and ran on the runners. `unstable` is Window::add_child,
 # which the tabs of the shell window (several webviews in one window) need.
 tauri = { version = "=3.0.0-alpha.6", features = ["unstable"] }
-tauri-runtime-cef = "=3.0.0-alpha.7"
+# unstable: the CEF builder extensions of child webviews (console and frame observers)
+tauri-runtime-cef = { version = "=3.0.0-alpha.7", features = ["unstable"] }
 # the CEF API itself, the version tauri-runtime-cef pulls (no second copy):
 # CefBrowserHost and the request context's preferences, which Tauri does not expose
 cef = "=154.5.0"
