@@ -83,8 +83,18 @@ pub trait Net: Send + Sync {
     /// has not handed out yet; each is read on its own
     fn clone_body(&self, from: Id, to: Id);
     /// Stop the operation `id`, or the whole stream of the fetch `id` (its
-    /// body and its clones); an id that is none of these is ignored
+    /// body and its clones); an id that is none of these, or one already
+    /// stopped (by [`Net::release`]), is ignored
     fn cancel(&self, id: Id);
+    /// The program dropped the handle of `body` (a fetch's body or a clone)
+    /// before it was handed its end: free what is kept for that branch; with
+    /// `stop`, no branch can read the fetch `stop`'s stream any more, so stop
+    /// it as [`Net::cancel`] would. Nothing answers it, and nothing the
+    /// program sees changes (in JavaScript the body is only garbage). The
+    /// default keeps nothing to free.
+    fn release(&self, body: Id, stop: Option<Id>) {
+        let _ = (body, stop);
+    }
     /// `server.listen(port, host)`: answer [`Answer::Listening`] with the
     /// port bound (0 asks for a free one), then pass each request to
     /// [`Sink::request`] with an id of the host's own, which
@@ -97,6 +107,12 @@ pub trait Net: Send + Sync {
 }
 
 pub type NetHost = Arc<dyn Net>;
+
+/// `Date.now()` of the runtime, when the shell hands one in: the probe pins it
+/// so answers that carry the clock (`ai:local-test`) compare; without it the
+/// system clock
+#[derive(Clone)]
+pub struct RuntimeClock(pub Arc<dyn Fn() -> f64 + Send + Sync>);
 
 /// Where a [`Net`] host hands its outcomes: posts to the core thread, from
 /// any thread, in the order of the calls of one thread
@@ -352,6 +368,9 @@ impl Shared {
                     self.net.cancel(self.scoped(id));
                 }
             }
+            Cmd::Release { body, stop } => self
+                .net
+                .release(self.scoped(body), stop.map(|source| self.scoped(source))),
             Cmd::SetTimer { id, ms } => self
                 .timers
                 .borrow_mut()
@@ -548,15 +567,18 @@ impl Driver {
     /// Built once in a port factory, on the core thread, from the shell's
     /// services and the batch's [`NetHost`]
     pub fn new(services: &Services, net: NetHost) -> Driver {
-        Driver::from_parts(
+        let clock = services.hosts.get::<RuntimeClock>().cloned();
+        Driver::with_clock(
             services.core.clone(),
             services.workers.clone(),
             &services.paths.path(PathName::Temp),
             &services.paths.path(PathName::Home),
             net,
+            clock,
         )
     }
 
+    #[cfg(test)]
     fn from_parts(
         core: Arc<dyn Thread>,
         workers: Arc<dyn Workers>,
@@ -564,9 +586,24 @@ impl Driver {
         homedir: &Path,
         net: NetHost,
     ) -> Driver {
+        Driver::with_clock(core, workers, tmpdir, homedir, net, None)
+    }
+
+    fn with_clock(
+        core: Arc<dyn Thread>,
+        workers: Arc<dyn Workers>,
+        tmpdir: &Path,
+        homedir: &Path,
+        net: NetHost,
+        clock: Option<RuntimeClock>,
+    ) -> Driver {
         let scope = NEXT_SCOPE.fetch_add(1, Ordering::Relaxed);
         assert!(scope < 1 << (64 - SCOPE_SHIFT), "more drivers than ids");
-        let started_at = now_ms();
+        let clock: Box<dyn Fn() -> f64> = match clock {
+            Some(RuntimeClock(clock)) => Box::new(move || clock()),
+            None => Box::new(now_ms),
+        };
+        let started_at = clock();
         let runtime = Runtime::new(HostInfo {
             platform: crate::secrets::PLATFORM.to_owned(),
             pid: f64::from(std::process::id()),
@@ -580,7 +617,7 @@ impl Driver {
                     )
                 })
                 .collect(),
-            clock: Box::new(now_ms),
+            clock,
             uuid: Box::new(random_uuid),
             random: Box::new(random_bytes),
             kill: Box::new(signal::kill),

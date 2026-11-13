@@ -16,14 +16,22 @@
  * `currentTheme`. `mcpHub` is null: sessions get no relays.
  *
  * `os.homedir()` and `os.tmpdir()` are the case's `home` and `temp` folders
- * (HOME and TMPDIR); a case makes them with a file each, a session folder is
+ * (patched while the case's folder is there); a case makes them with a file each, a session folder is
  * made in `temp`. The ids `randomUUID()` makes in the manager are counted
  * (`00000000-0000-4000-8000-000000000001`, ...), as the Rust probe counts
  * them, so the session of a case has a known id.
  *
- * Not covered here: `agent-window:skill-proposal` and `agent-window:install-proposal`
- * (a session's MCP tool call shows them, no call of a renderer does; the
- * unit tests of the Rust port do), opening the window (`home:open-agent-window`
+ * `agent-window:skill-proposal` and `agent-window:install-proposal` are shown by a
+ * session's MCP tools, which no call of a renderer makes: the triggers
+ * `a/agent-propose-skill` `[sessionId, projectRoot, input]` and
+ * `a/agent-propose-install` `[sessionId, projectRoot, address]` call
+ * `agentSkillToolsFor(session, projectRoot, deps)` of the real module over the
+ * session the case started (window: its page, `listSkills`: `hosts.a.agent.skills`,
+ * keys: the counted ids). No session skills are given (`bundle` stays null in those
+ * cases: the manager's own list is not reachable from here), and a closed window
+ * is not reachable on either side (no case destroys a view).
+ *
+ * Not covered here: opening the window (`home:open-agent-window`
  * is W's channel; the window is open from the start when `hosts.a.agent.window`
  * names its view), the cards the template buttons need (they come with the
  * proposals), a failed start that writes the crash log (its line is dated),
@@ -39,8 +47,13 @@ import {
   setProjectSkills,
 } from '../../../../apps/shell/src/main/agent/project-skills.ts'
 import { normalizeAgentPrefs } from '../../../../apps/shell/src/shared/agent-api.ts'
-import type { Call, Case, Group, LoadContext, View } from '../../types.ts'
+import type { Call, Case, Group, LoadContext, TriggerContext, View } from '../../types.ts'
 import { entryStatements } from './lib/entry-source.ts'
+import os from 'node:os'
+import { existsSync } from 'node:fs'
+
+const REAL_HOMEDIR = os.homedir
+const REAL_TMPDIR = os.tmpdir
 
 const MODULE = 'apps/shell/src/main/agent/agent-window.ts'
 type AgentWindowModule = typeof import('../../../../apps/shell/src/main/agent/agent-window.ts')
@@ -140,10 +153,18 @@ function browserWindowOf(cx: LoadContext, world: World): unknown {
 
 // ---- load ------------------------------------------------------------------------------
 
+/** what the triggers reach: the real module and the case's world */
+let loaded: { mod: AgentWindowModule; world: World; log: (line: unknown[]) => number } | undefined
+
 async function load(cx: LoadContext): Promise<void> {
-  // the folders `app.getPath` names: HOME and TMPDIR are what os.homedir() and os.tmpdir() read
-  process.env.HOME = join(cx.dir, 'home')
-  process.env.TMPDIR = join(cx.dir, 'temp')
+  // the folders `app.getPath` names, while the case's folder is there:
+  // outside a case (the harness makes its folders between cases, after the
+  // case's own is gone) the real ones answer (as groups/m/print/host.ts does)
+  const home = join(cx.dir, 'home')
+  const temp = join(cx.dir, 'temp')
+  os.homedir = () => (existsSync(home) ? home : REAL_HOMEDIR())
+  os.tmpdir = () => (existsSync(temp) ? temp : REAL_TMPDIR())
+  syncBuiltinESMExports()
   counted = 0
   const hostsA = (cx.case.hosts?.a ?? {}) as { agent?: World; lang?: string }
   const world = hostsA.agent ?? {}
@@ -152,6 +173,7 @@ async function load(cx: LoadContext): Promise<void> {
   ;(globalThis as Record<string, unknown>).__dirname = '/probe'
   if (world.window !== undefined) cx.install({ BrowserWindow: browserWindowOf(cx, world) })
   const mod = await cx.fresh<AgentWindowModule>(MODULE)
+  loaded = { mod, world, log }
 
   const names = {
     configureAgentWindow: mod.configureAgentWindow,
@@ -254,6 +276,46 @@ async function load(cx: LoadContext): Promise<void> {
   if (world.window !== undefined) mod.openAgentWindow()
 }
 
+// ---- triggers ----------------------------------------------------------------------------
+
+/** the two skill tools of the session `sessionId` of the window `view`, over the case's skills */
+function skillTools(cx: TriggerContext, view: number, sessionId: string, projectRoot: string) {
+  const { mod, world, log } = loaded!
+  return mod.agentSkillToolsFor({ ownerId: view, sessionId }, projectRoot, {
+    window: () => ({ send: (channel, payload) => cx.contents(view).send(channel, payload) }),
+    listSkills: async () => {
+      log(['userSkills.list'])
+      return (world.skills ?? []) as never
+    },
+    sessionSkills: () => [],
+    keep: () => {},
+    newKey: countedUuid,
+  })
+}
+
+const triggers: NonNullable<Group['triggers']> = {
+  'a/agent-propose-skill': async (cx, view, args) => {
+    const [sessionId, projectRoot, input] = args as [string, string, Record<string, unknown>]
+    // what the MCP tool's schema hands over: every field there, the strings empty when not given
+    await skillTools(cx, view, sessionId, projectRoot).proposeSkill(
+      {
+        title: String(input.title ?? ''),
+        name: String(input.name ?? ''),
+        description: String(input.description ?? ''),
+        body: String(input.body ?? ''),
+        wantsTemplate: input.wantsTemplate === true,
+        targetId: String(input.targetId ?? ''),
+        suggestedTemplatePath: String(input.suggestedTemplatePath ?? ''),
+      },
+      { openTabs: async () => [] },
+    )
+  },
+  'a/agent-propose-install': async (cx, view, args) => {
+    const [sessionId, projectRoot, address] = args as [string, string, string]
+    await skillTools(cx, view, sessionId, projectRoot).proposeInstall(address)
+  },
+}
+
 // ---- cases ---------------------------------------------------------------------------------
 
 const views: View[] = [
@@ -294,7 +356,73 @@ const projectSkill = {
   source: 'project',
 }
 
+const propose = (input: Record<string, unknown>): Call => ({
+  channel: 'a/agent-propose-skill',
+  kind: 'trigger',
+  name: 'a/agent-propose-skill',
+  view: 2,
+  args: [SESSION, '$DIR/project', input],
+})
+const proposeInstall = (address: string): Call => ({
+  channel: 'a/agent-propose-install',
+  kind: 'trigger',
+  name: 'a/agent-propose-install',
+  view: 2,
+  args: [SESSION, '$DIR/project', address],
+})
+const listed = [
+  { id: 'user:summarize', source: 'user', name: 'summarize', title: 'Summarize', owned: true },
+  { id: 'project:review', source: 'project', name: 'review', title: 'Review', owned: false },
+]
+
 const cases: Case[] = [
+  {
+    note: 'the skill tools of a session: a new skill card, a change to a listed skill, an install proposal',
+    views,
+    files: withAccepted,
+    hosts: agent({ statuses: ready, skills: listed }),
+    calls: [
+      start(),
+      propose({
+        title: 'Weekly report',
+        name: 'weekly-report',
+        description: 'Writes the weekly report',
+        body: 'Collect the week and write it up.',
+        wantsTemplate: true,
+      }),
+      propose({
+        title: 'Summaries',
+        name: 'summarize',
+        description: 'Summarizes better',
+        body: 'Keep it short.',
+        targetId: 'summarize',
+      }),
+      proposeInstall('https://github.com/example/skills/tree/main/review'),
+    ],
+  },
+  {
+    note: 'a card for a skill that is not listed, and one of the project folder are refused with words for the model',
+    views,
+    files: withAccepted,
+    hosts: agent({ statuses: ready, skills: listed }),
+    calls: [
+      start(),
+      propose({
+        title: 'Nope',
+        name: 'nope',
+        description: 'd',
+        body: 'b',
+        targetId: 'no-such-skill',
+      }),
+      propose({
+        title: 'Review',
+        name: 'review',
+        description: 'd',
+        body: 'b',
+        targetId: 'project:review',
+      }),
+    ],
+  },
   {
     note: 'the window page is told its init, another agent page is not',
     views,
@@ -520,6 +648,7 @@ const cases: Case[] = [
 export const group: Group = {
   batch: 'A',
   load,
+  triggers,
   cases,
   single: {
     'agent-window:answer':
