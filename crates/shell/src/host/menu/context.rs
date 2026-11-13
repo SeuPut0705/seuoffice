@@ -18,7 +18,9 @@ use main_core::packages::electron_utils::context_menu::{
 };
 use main_core::packages::electron_utils::dialog_memory::Dialog;
 use main_core::packages::electron_utils::safe_remote_url::{FetchError, Response};
-use main_core::packages::electron_utils::save_image::{SaveImageOptions, save_image_from_url};
+use main_core::packages::electron_utils::save_image::{
+    SaveImageOptions, fetch_image_for_save, save_fetched_image,
+};
 use serde_json::{Value, json};
 use shell_contract::hosts::{ClipboardHost, DialogsHost, FileDialog, FileFilter};
 use shell_contract::ids::{ViewId, WindowId};
@@ -28,6 +30,7 @@ use shell_ipc_m::hosts::MHostRef;
 use shell_ipc_m::intercept_context_menu;
 use shell_ipc_m::state::MStateRef;
 use shell_ipc_w::SharedDialogMemory;
+use shell_ipc_w::shared_dialog::{save_confirmed, with_shared_memory};
 use tauri::menu::{Menu, MenuItem, PredefinedMenuItem};
 use tauri::{AppHandle, LogicalPosition, Manager};
 use tauri_runtime_cef::WebviewCefExt;
@@ -238,22 +241,32 @@ fn run(
                 .or_else(|| params.src_url.clone())
                 .unwrap_or_default();
             services.workers.spawn(Box::new(move || {
-                let mut dialog = SaveDialog(dialogs);
+                // the fetch takes no lock: other dialogs stay free while it runs
                 let mut fetch = |url: &str| page_fetch(&webview, url);
-                let mut memory = memory
-                    .lock()
-                    .unwrap_or_else(|poisoned| poisoned.into_inner());
-                let result = save_image_from_url(
-                    &mut memory,
-                    &mut dialog,
-                    &mut fetch,
-                    parent.as_ref(),
-                    &url,
-                    &SaveImageOptions {
-                        title: &title,
-                        fallback_dir: None,
-                    },
-                );
+                let image = match fetch_image_for_save(&url, &mut fetch) {
+                    Ok(image) => image,
+                    Err(error) => return eprintln!("shell: save image: {error}"),
+                };
+                // the shared memory is copied and written back under short
+                // locks, never held while the user picks (W's helper)
+                let mut dialog = SaveDialog {
+                    host: dialogs,
+                    confirmed: false,
+                };
+                let result = with_shared_memory(&memory, |memory| {
+                    let result = save_fetched_image(
+                        memory,
+                        &mut dialog,
+                        parent.as_ref(),
+                        &url,
+                        image,
+                        &SaveImageOptions {
+                            title: &title,
+                            fallback_dir: None,
+                        },
+                    );
+                    (result, dialog.confirmed)
+                });
                 if let Some(error) = result.error {
                     eprintln!("shell: save image: {error}");
                 }
@@ -378,7 +391,11 @@ impl Response for Fetched {
 }
 
 /// `dialog.showSaveDialog` as `showSaveDialogWithMemory` calls it
-struct SaveDialog(DialogsHost);
+/// The save dialog of Save Image As; `confirmed` once the user picked a file
+struct SaveDialog {
+    host: DialogsHost,
+    confirmed: bool,
+}
 
 impl Dialog for SaveDialog {
     type Window = WindowId;
@@ -425,7 +442,7 @@ impl Dialog for SaveDialog {
                 .collect(),
             _ => Vec::new(),
         };
-        let picked = self.0.save(
+        let picked = self.host.save(
             parent.copied(),
             &FileDialog {
                 title: text("title"),
@@ -444,6 +461,8 @@ impl Dialog for SaveDialog {
                     .unwrap_or_default(),
             ),
         );
-        JsonValue::Object(answer)
+        let answer = JsonValue::Object(answer);
+        self.confirmed = save_confirmed(&answer);
+        answer
     }
 }
