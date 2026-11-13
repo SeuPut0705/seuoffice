@@ -20,8 +20,7 @@ use jscompat::{JsObject, JsonValue, slice_utf16, trim};
 use main_core::node_fs::node_error as io_node_error;
 use main_core::packages::ai_provider::settings_secrets::AiSecretCodec;
 use main_core::packages::electron_utils::default_save_dir::{
-    DEFAULT_SAVE_DIR_KEY, PathProvider, SaveDirState, Thrown, configured_default_save_dir,
-    is_usable_save_dir,
+    DEFAULT_SAVE_DIR_KEY, PathProvider, Thrown, configured_default_save_dir, is_usable_save_dir,
 };
 use main_core::packages::electron_utils::github_menu::GITHUB_REPO_URL;
 use main_core::packages::electron_utils::hwp_default_format::{
@@ -438,6 +437,18 @@ fn normalize_home_kinds(raw: Option<&JsonValue>) -> HomeKinds {
     HomeKinds { order, hidden }
 }
 
+/// `visibleHomeKinds(readHomeKinds())` without `pdfTools`: the new-document
+/// kinds the shell's menus list, in home's order, read from the settings file
+pub fn visible_home_kinds(settings_path: &str) -> Vec<String> {
+    let kinds = normalize_home_kinds(read_app_settings(settings_path).get("homeKinds"));
+    kinds
+        .order
+        .iter()
+        .filter(|k| **k != "pdfTools" && !kinds.hidden.contains(k))
+        .map(|k| (*k).to_owned())
+        .collect()
+}
+
 impl HomeKinds {
     /// `storedHomeKinds`: only what differs from the first state
     fn stored(&self) -> JsonValue {
@@ -613,7 +624,7 @@ struct Ctx {
     dialogs: DialogsHost,
     main_window: MainWindowHost,
     settings_path: String,
-    save_dir_state: RefCell<SaveDirState>,
+    save_dir_state: crate::SharedSaveDirState,
     /// `cachedAutoSaveDefault`
     auto_save: RefCell<Option<(bool, f64)>>,
 }
@@ -647,7 +658,7 @@ impl Ctx {
     fn save_dir(&self) -> Result<String, IpcError> {
         configured_default_save_dir(
             &self.paths(),
-            &mut self.save_dir_state.borrow_mut(),
+            &mut self.save_dir_state.lock().unwrap(),
             self.app.now_ms(),
         )
         .map_err(|Thrown(message)| error(message))
@@ -808,7 +819,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
             .join("app-settings.json")
             .to_string_lossy()
             .into_owned(),
-        save_dir_state: RefCell::new(SaveDirState::new()),
+        save_dir_state: services.hosts.need(Batch::W)?,
         auto_save: RefCell::new(None),
     });
     flags(registry, &cx)?;

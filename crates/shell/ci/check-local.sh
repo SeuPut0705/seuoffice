@@ -16,12 +16,15 @@
 set -euo pipefail
 
 shell_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-work="${SHELL_CHECK_DIR:-${TMPDIR:-/tmp}/seuoffice-shell-check}"
+# one folder per checkout: worktrees of this repository run it side by side,
+# and a shared folder's symlinks would point at whichever ran last
+key="$(printf '%s' "$shell_dir" | shasum | cut -c1-12)"
+work="${SHELL_CHECK_DIR:-${TMPDIR:-/tmp}/seuoffice-shell-check-$key}"
 target="${CARGO_TARGET_DIR:-$work/target}"
 
 mkdir -p "$work"
 for entry in src build.rs frontend out; do
-  [ -e "$work/$entry" ] || ln -s "$shell_dir/$entry" "$work/$entry"
+  ln -sfn "$shell_dir/$entry" "$work/$entry"
 done
 
 python3 - "$shell_dir" "$work" <<'PY'
@@ -30,7 +33,7 @@ shell, work = sys.argv[1:3]
 manifest = open(os.path.join(shell, "Cargo.toml")).read()
 # path dependencies and the regress patch point out of the folder
 manifest = manifest.replace('path = "../', 'path = "' + os.path.normpath(os.path.join(shell, "..")) + "/")
-manifest = manifest.replace("[dependencies]\n", '[dependencies]\ncef = { version = "=154.5.0", features = ["dox"] }\n', 1)
+manifest = manifest.replace('cef = "=154.5.0"', 'cef = { version = "=154.5.0", features = ["dox"] }', 1)
 open(os.path.join(work, "Cargo.toml"), "w").write(manifest)
 conf = json.load(open(os.path.join(shell, "tauri.conf.json")))
 conf["bundle"]["icon"] = [os.path.normpath(os.path.join(shell, i)) for i in conf["bundle"]["icon"]]

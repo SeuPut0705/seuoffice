@@ -49,6 +49,18 @@ fn handle(
     registry.register(Batch::W, channel, kind, Rc::new(Sync(f)))
 }
 
+/// The process's one dialog memory (`lastUsedDirectoryByDialog`): the last
+/// confirmed folder is shared by every editor and the shell. The shell and
+/// ipc-probe insert one; every batch takes it with `Hosts::need`.
+pub type SharedDialogMemory = std::sync::Arc<
+    std::sync::Mutex<main_core::packages::electron_utils::dialog_memory::DialogMemory>,
+>;
+
+/// The process's one default-save-folder state (`Symbol.for('seuoffice.defaultSaveDir.state')`)
+pub type SharedSaveDirState = std::sync::Arc<
+    std::sync::Mutex<main_core::packages::electron_utils::default_save_dir::SaveDirState>,
+>;
+
 pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), RegisterError> {
     doc_picker::register(registry, services)?;
     editor_files::register(registry, services)?;

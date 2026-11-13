@@ -9,24 +9,27 @@
 //! | `quick_look::QuickLookRuntime`, `QuickLookWindow`, `main_core`'s `QuickLookEngines` | stub (the preview window, the Explorer hook and the tray, the zip and text engines) |
 //! | `doc_picker::DocPickerWindow`, `DocPickerSources` | stub |
 //! | `editor_files::DocsTabs`, `SheetsTabs`, `OpenFiles`, `FileParse`, `UiLanguage` | stub |
-//! | `home_files::HomeFiles`, `FileSearch`, `FolderTree`, `FolderWatch` | stub |
+//! | `home_files::HomeFiles`, `FileSearch`, `FolderWatch` | stub |
 //! | `home_settings::HomeApp` | stub |
 //! | `tabs::WindowsHost` | stub: the window system of the tab strip ([`super::window::Windows`] has the Tauri half) |
 //! | `tabs::TabHooks` (provided, on the core thread) | stub, [`register_hooks`] |
 
+use std::cell::RefCell;
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, OnceLock};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use shell_contract::Hosts;
 use shell_contract::ipc::{RegisterError, Registry};
-use shell_contract::runtime::Services;
+use shell_contract::provided::Provided;
+use shell_contract::runtime::{Services, run_on};
 use shell_ipc_w::doc_picker::{DocPickerSourcesHost, DocPickerWindowHost};
 use shell_ipc_w::editor_files::{
     Clock, ClockHost, DocsTabsHost, FileParseHost, OpenFilesHost, SheetsTabsHost, UiLanguageHost,
 };
-use shell_ipc_w::home_files::{FileSearchHost, FolderTreeHost, FolderWatchHost, HomeFilesHost};
+use shell_ipc_w::home_files::{FileSearchHost, FolderWatchHost, HomeFilesHost};
 use shell_ipc_w::home_settings::HomeAppHost;
+use shell_ipc_w::projects::host::{LegacyProjectStoreHost, ProjectFilesHost, ProjectsHostRef};
 use shell_ipc_w::quick_look::{QuickLookEnginesHost, QuickLookHost, QuickLookWindowHost};
 use shell_ipc_w::tabs::{TabHooks, WindowsHostRef};
 
@@ -74,21 +77,66 @@ fn install_hosts(hosts: &mut Hosts) {
         UiLanguageHost,
         HomeFilesHost,
         FileSearchHost,
-        FolderTreeHost,
         FolderWatchHost,
         HomeAppHost,
         WindowsHostRef,
+        ProjectsHostRef,
+        ProjectFilesHost,
+        LegacyProjectStoreHost,
     );
+}
+
+thread_local! {
+    /// What the batches provide each other, kept on the core thread for the
+    /// shell's own hosts whose calls start elsewhere (a menu click, a worker)
+    static CORE_PROVIDED: RefCell<Option<Rc<Provided>>> = const { RefCell::new(None) };
+}
+
+/// The shell's services, once the batches registered with them
+static SERVICES: OnceLock<Services> = OnceLock::new();
+
+/// Runs `job` with the core thread's [`Provided`]: at once on the core
+/// thread, else through `run_on(core, ..)`. `None` before the batches registered.
+#[allow(dead_code)]
+pub(crate) fn on_core<R: Send + 'static>(
+    job: impl FnOnce(&Provided) -> R + Send + 'static,
+) -> Option<R> {
+    let core = SERVICES.get()?.core.clone();
+    let run = move || CORE_PROVIDED.with(|p| p.borrow().as_deref().map(job));
+    if core.is_current() {
+        run()
+    } else {
+        run_on(core.as_ref(), run)
+    }
 }
 
 /// The batch that comes before the six: it adds what the shell provides on
 /// the core thread. `tabs::register` takes the first `TabHooks` it finds.
+/// Posts `job` to the core thread with its Provided and the shell's
+/// Services; never waits. Dropped before the batches registered.
+#[allow(dead_code)]
+pub(crate) fn post_core(job: impl FnOnce(&Provided, &Services) + Send + 'static) {
+    let Some(services) = SERVICES.get() else {
+        return;
+    };
+    services.core.post(Box::new(move || {
+        CORE_PROVIDED.with(|p| {
+            if let (Some(provided), Some(services)) = (p.borrow().as_deref(), SERVICES.get()) {
+                job(provided, services);
+            }
+        })
+    }));
+}
+
 pub fn register_hooks(
     registry: &mut dyn Registry,
-    _services: &Services,
+    services: &Services,
 ) -> Result<(), RegisterError> {
+    let _ = SERVICES.set(services.clone());
+    let provided = registry.provided();
     let hooks: Rc<dyn TabHooks> = Rc::new(Unbuilt);
-    registry.provided().add::<dyn TabHooks>(hooks);
+    provided.add::<dyn TabHooks>(hooks);
+    CORE_PROVIDED.with(|p| *p.borrow_mut() = Some(provided));
     Ok(())
 }
 
@@ -209,6 +257,10 @@ mod tests {
         hosts.insert(contents);
         crate::host::window::install_main_window(&mut hosts, &views);
         install_hosts(&mut hosts);
+        crate::host::install_process_state(&mut hosts);
+        // M's and U's own hosts come from their host files with an AppHandle; their fakes stand in here
+        shell_ipc_m::probe_hosts(&mut hosts, &serde_json::Value::Null);
+        shell_ipc_u::probe_hosts(&mut hosts, &serde_json::Value::Null);
         let ui: Arc<dyn Thread> = CoreThread::spawn("w-test-ui");
         let services = Services {
             ui,

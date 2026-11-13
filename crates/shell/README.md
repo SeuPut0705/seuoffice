@@ -27,7 +27,7 @@ crates/shell/ci/check-local.sh clippy --no-deps --all-targets -- -D warnings
 crates/shell/ci/check-local.sh test          # 순수한 시험만 돈다. CEF는 부르지 않는다
 ```
 
-러너에서는 워크플로가 같은 순서로 지은 뒤 측정까지 돌린다. Mac은 `npx tauri build --bundles app`(CEF 프레임워크가 `.app` 안에 있어야 한다), Windows는 `cargo build --release`(CEF 실행 파일들은 `cef-dll-sys`가 `target/release`에 복사한다)다. CEF 목록(`index.json`)이 `cef` 크레이트의 10 MB 상한을 넘어 `ci/cef-index-mirror.py`로 줄인 목록을 내준다(`CEF_DOWNLOAD_URL`).
+러너에서는 워크플로가 같은 순서로 지은 뒤 측정까지 돌린다. Mac은 `npx tauri build --bundles app`(CEF 프레임워크가 `.app` 안에 있어야 한다), Windows는 `cargo build --release`다. `cef-dll-sys`는 CEF 실행 파일들을 빌드 스크립트 OUT_DIR에서 세 단계 위로 복사하는데, 새 cargo의 빌드 폴더 배치에서는 `target/release/build`에 떨어져 `target/release`의 exe 옆에 `libcef.dll`이 없다(실행하면 bash가 127). 그래서 워크플로가 CEF 배포판에서 `target/release`로 따로 복사한다. CEF 목록(`index.json`)이 `cef` 크레이트의 10 MB 상한을 넘어 `ci/cef-index-mirror.py`로 줄인 목록을 내준다(`CEF_DOWNLOAD_URL`).
 
 ## 환경 변수와 인자
 
@@ -37,6 +37,7 @@ crates/shell/ci/check-local.sh test          # 순수한 시험만 돈다. CEF�
 | `SEUOFFICE_USER_DATA`         | userData 폴더를 바꾼다(Electron 판의 시험 몰이꾼과 같다). Chromium 프로필은 그 옆 `<값>-cef`에 둔다                                                                          |
 | `SEUOFFICE_APPS_DIR`          | `apps` 폴더. 기본은 빌드한 체크아웃이다. 렌더러는 `<apps>/<앱>/out/renderer`에서 읽는다                                                                                      |
 | `--measure-dialog <out.json>` | 아래 측정                                                                                                                                                                    |
+| `SEUOFFICE_SHELL_TRACE=1`     | 시각이 붙은 IPC 길 기록(`src/trace.rs`)을 stderr에 남긴다. `--measure-dialog`은 늘 켠다                                                                                      |
 | `CI`                          | 시작 실패 때 대화 상자를 띄우지 않는다                                                                                                                                       |
 
 userData는 Electron 판과 같은 자리다(결정 0013, 0019): 기본이 `appData/seuoffice`, 디버그 판은 Electron의 포장하지 않은 실행처럼 `appData/seuoffice-Dev`.
@@ -82,17 +83,17 @@ Electron 판은 `genoffice-app://<host>/<파일>`로 내줬고 처리기들(`mai
 
 ## 호스트
 
-| 호스트                            | 구현                                                                                                                                                                    |
-| --------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Dialogs`                         | `rfd`, UI 스레드에서. 버튼 1~3개까지만 되고 체크 상자와 4개 이상은 취소 버튼으로 답하며 로그를 찍는다(`rfd`의 한계)                                                     |
-| `OsShell`                         | `open`, `trash`, 탐색기·Finder 열기                                                                                                                                     |
-| `Clipboard`                       | `clipboard-rs`, UI 스레드에서                                                                                                                                           |
-| `Contents`                        | 캡처와 PDF는 CDP(`Page.captureScreenshot`, `Page.printToPDF`). Electron 옵션을 CDP 인자로 바꾼다. `print`는 Tauri의 `print()`로 대화 상자를 열고 결과는 모른다          |
-| `MainWindow`                      | 셸 창으로 표시한 뷰(없으면 첫 `Shell` 뷰)                                                                                                                               |
-| `Arc<Mutex<SharedRecoveryState>>` | 프로세스에 하나, 임의 run id                                                                                                                                            |
-| 묶음 W 전용                       | `src/host/w.rs`: 시계는 진짜, 나머지는 `unbuilt.rs`의 대역(처음 부를 때 한 번 로그). 반환값을 지어낼 수 없는 호출(창, 뷰)은 panic하고 `Dispatcher`가 오류 답으로 바꾼다 |
+| 호스트                            | 구현                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Dialogs`                         | `rfd`, UI 스레드에서. 버튼 1~3개까지만 되고 체크 상자와 4개 이상은 취소 버튼으로 답하며 로그를 찍는다(`rfd`의 한계)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `OsShell`                         | `open`, `trash`, 탐색기·Finder 열기                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| `Clipboard`                       | `clipboard-rs`, UI 스레드에서                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
+| `Contents`                        | 캡처와 PDF는 CDP(`Page.captureScreenshot`, `Page.printToPDF`). Electron 옵션을 CDP 인자로 바꾼다. `print`는 Tauri의 `print()`로 대화 상자를 열고 결과는 모른다                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| `MainWindow`                      | 셸 창으로 표시한 뷰(없으면 첫 `Shell` 뷰)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
+| `Arc<Mutex<SharedRecoveryState>>` | 프로세스에 하나, 임의 run id                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| 묶음 W 전용                       | `src/host/w.rs`가 `shell-ipc-w`가 `need`하는 호스트를 모두 넣는다. 진짜: `ClockHost`, 그리고 `ProjectsHostRef` 가운데 난수(id용이고 비밀값용이 아님), 홈 폴더, 숫자 서식(영어·한국어), `console.warn`. 나머지는 `unbuilt.rs`의 대역이다(처음 부를 때 한 번 로그): `QuickLookHost`, `QuickLookWindowHost`, `QuickLookEnginesHost`, `DocPickerWindowHost`, `DocPickerSourcesHost`, `DocsTabsHost`, `SheetsTabsHost`, `OpenFilesHost`, `FileParseHost`, `UiLanguageHost`, `HomeFilesHost`, `FileSearchHost`, `FolderWatchHost`, `HomeAppHost`, `WindowsHostRef`, `ProjectsHostRef`(창 이벤트, 타이머, 날짜·시간 서식, Windows 목록 실행. 날짜는 지역 시간대가 아니라 UTC), `ProjectFilesHost`, `LegacyProjectStoreHost`. `FolderTree`는 main-core가 맡아 대역이 없다. 반환값을 지어낼 수 없는 호출(창, 뷰, 열린 문서 목록)은 panic하고 `Dispatcher`가 오류 답으로 바꾼다 |
 
-`TabHooks`는 코어 스레드의 `Provided`에 들어가야 해서 `host::w::register_hooks`가 묶음 W보다 먼저 도는 묶음으로 추가한다. 진짜 구현이 생기면 그 자리에서 바꾼다.
+`dyn TabHooks`는 코어 스레드의 `Provided`에 들어가야 해서(`tabs::register`가 거기서 첫 것을 꺼낸다) `host::w::register_hooks`가 묶음 W보다 먼저 도는 묶음으로 추가한다. 진짜 구현이 생기면 그 자리에서 바꾼다.
 
 ## 측정 (`--measure-dialog <out.json>`)
 
@@ -104,7 +105,7 @@ Electron 판은 `genoffice-app://<host>/<파일>`로 내줬고 처리기들(`mai
 - `dialog.ui`와 `dialog.core`: 20 ms마다 한 번씩 쉬지 않고 호출을 보내다가, 1초 뒤 코어 스레드를 2초 세운다. 호출을 **보낸 때**로 `before`(세우기 전), `during`(2초 동안), `after`(그 뒤 1.5초)로 나누어 `p50`, `p95`, `max`를 적는다. `ui`는 코어 스레드가 `run_on(ui, …)`로 기다리고 UI 스레드 일도 2초 잡고 있다(모달 대화 상자가 코어 스레드에 하는 일의 최악 경우. 진짜 대화 상자는 UI 스레드의 이벤트를 계속 돌리지만 이 일은 돌리지 않는다). `core`는 코어 스레드만 세우고 UI 스레드는 돈다. 두 값의 차이가 "코어가 서는 탓"과 "UI도 서는 탓"을 가른다.
 - `environment`: OS, 아키텍처, 판, 프로필. 페이지의 `userAgent`도 들어 있다.
 
-2초 뒤에도 답이 안 온 호출이 있으면 `unanswered`로 센다. 3분 안에 보고가 없으면 셸이 스스로 `{error}`를 적고 끝낸다(러너가 걸리지 않게).
+2초 뒤에도 답이 안 온 호출이 있으면 `unanswered`로 센다. 멈추면 셸이 스스로 `{error}`와 기록을 적고 끝낸다(아래 "기록", 러너가 걸리지 않게).
 
 ## 첫 러너 실행에서 확인할 것
 
@@ -116,3 +117,30 @@ Electron 판은 `genoffice-app://<host>/<파일>`로 내줬고 처리기들(`mai
 6. 팝업 거부와 `on_navigation`이 페이지를 막지 않는지(측정 페이지는 앱 스킴 밖으로 나가지 않는다).
 
 러너에서 처음 보는 것이라 로컬에서 확인하지 못한 API는 다음이다: `Window::add_child`(탭 뷰, 아직 부르지 않음), `WebviewCefExt::on_dev_tools_protocol`로 받은 CDP 결과의 `data` 모양(`Page.printToPDF`는 시제품이 같은 방식으로 썼다), 끌어 놓기 이벤트와 DOM `drop`의 순서, 앱 스킴 HTML에 주입되는 초기화 스크립트가 `<head>` 맨 앞인지.
+
+## 기록(trace)
+
+`SEUOFFICE_SHELL_TRACE=1`이거나 `--measure-dialog`이면 `src/trace.rs`가 `[+  123.4ms] 꼬리표: 글` 줄을 stderr와 600줄 고리에 남긴다. 꼬리표는 다음과 같다.
+
+- `window`: 창을 연 주소, 브리지 종류, 초기화 스크립트 크기.
+- `scheme`: 앱 스킴 요청과 답.
+- `page`, `frame`: 페이지 시작과 끝, 이동 실패, 렌더러 종료.
+- `console`: 그 웹뷰의 console을 CEF `on_console_message`로 받은 것.
+- `ipc`, `sync`: 명령이 닿은 것(뷰, 채널, 인자 수, 바이트).
+- `outlet`: 출력 흐름이 열린 것과 보낸 프레임.
+- `measure`: 측정 처리기.
+
+브리지(`bridge/tauri.ts`)와 측정 페이지는 단계마다 console.log로 알린다(`[bridge +ms] …`, `[measure +ms] …`). preload가 돈 주소와 `__TAURI_INTERNALS__` 속성, `ipc_listen`을 보낸 때와 받았다는 표시가 온 때, 흐름의 첫 프레임, 첫 invoke와 첫 답, 5초마다 지금 단계가 나온다. 처리 길의 줄(`ipc`, `outlet`, `measure`, `sync`)은 처음 40줄만 모두 적고 이후는 100번에 한 번만 적어 측정을 늦추지 않는다. 센 값은 `traceCounts`에 남는다.
+
+측정이 멈추면 셸이 `dialog.json`에 `{error, environment, traceCounts, trace: [...]}`를 적고 끝낸다. 40초 안에 아무 명령도 닿지 않았거나(preload가 안 돌았거나, 페이지가 안 떴거나, Tauri의 invoke가 페이지를 못 떠남), 150초 안에 보고가 없을 때다. `trace`의 마지막 줄들이 멈춘 곳이다. 읽는 법:
+
+- `window … script N bytes`가 0이거나 없다: 브리지를 싣지 않았다.
+- `scheme … measure.html -> 200`이 없다: 페이지를 받지 못했다. `404`면 폴더가 틀렸고, `frame … NAVIGATION FAILED`면 스킴 처리기가 이름을 받지 못한 것이다.
+- `console … page …; measureIpc undefined`: 페이지는 떴으나 preload가 주입되지 않았다. `[bridge …] loaded …`가 없어도 같은 뜻이다.
+- `[bridge …] ipc_listen #1 sent`만 있고 `ipc: … listen`이 없다: 명령이 페이지를 떠나지 못한다(CORS, ACL, invoke key). console에 `[shell bridge] ipc_listen failed`가 뒤따른다.
+- `ipc: listen`은 있고 `outlet: stream attached`가 없다: `ipc_listen` 처리에서 막혔다.
+- `outlet: … bytes sent`는 있고 `[bridge] stream frame #1`이 없다: `Channel`의 `eval`·fetch 길이 페이지에 닿지 못한다.
+
+## 묶음 W 트레이트가 바뀌었을 때
+
+`host/unbuilt.rs`는 `shell-ipc-w`의 호스트 트레이트마다 대역을 하나씩 구현한다. 트레이트가 바뀌면 `ci/check-local.sh check`가 어긋난 메서드를 rustc 오류로 알려 준다. 새 호스트가 생기면 `host/w.rs`의 `install_hosts`에 넣고, `the_batches_register_over_the_stubs`(묶음 여섯이 `AsRegistered`로 `MissingHost` 없이 등록되는지)가 빠진 것을 잡는다.

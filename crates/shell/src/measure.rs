@@ -20,7 +20,7 @@
 
 use std::path::PathBuf;
 use std::sync::Arc;
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 use std::time::Duration;
 
 use serde_json::{Value, json};
@@ -31,18 +31,25 @@ use shell_core::outlet::{Outlet, reply_frame};
 use tauri::AppHandle;
 
 use crate::ipc::Ipc;
+use crate::trace::{self, trace};
 
 /// How long the core thread is held, as a modal dialog would hold it
 pub const HOLD: Duration = Duration::from_secs(2);
 
 /// The run is over when the page reports, or after this long
-const DEADLINE: Duration = Duration::from_secs(180);
+const DEADLINE: Duration = Duration::from_secs(150);
+
+/// A page that has sent nothing by now never will: the run ends with the
+/// trace instead of waiting for the whole deadline
+const FIRST_CALL_WITHIN: Duration = Duration::from_secs(40);
 
 pub struct Measure {
     out: PathBuf,
     ui: Arc<dyn Thread>,
     app: AppHandle,
     reported: AtomicBool,
+    /// a command or a sync request of the page reached the shell
+    calls: AtomicUsize,
 }
 
 impl Measure {
@@ -52,19 +59,43 @@ impl Measure {
             ui,
             app,
             reported: AtomicBool::new(false),
+            calls: AtomicUsize::new(0),
         });
         // a page that never loads must not hang the runner
         let watchdog = measure.clone();
         std::thread::spawn(move || {
-            std::thread::sleep(DEADLINE);
-            if !watchdog.reported.load(Ordering::Acquire) {
-                watchdog.finish(
-                    json!({ "error": format!("no report within {} s", DEADLINE.as_secs()) }),
-                    3,
-                );
+            std::thread::sleep(FIRST_CALL_WITHIN);
+            if watchdog.calls.load(Ordering::Acquire) == 0 {
+                watchdog.stalled(format!(
+                    "the page sent nothing to the shell within {} s: no command, no sync request. \
+                     The preload did not run, Tauri's invoke did not leave the page, or the page did not load \
+                     (see trace)",
+                    FIRST_CALL_WITHIN.as_secs()
+                ));
+                return;
             }
+            std::thread::sleep(DEADLINE - FIRST_CALL_WITHIN);
+            watchdog.stalled(format!(
+                "no report within {} s; {} calls reached the shell (see trace for the last one)",
+                DEADLINE.as_secs(),
+                watchdog.calls.load(Ordering::Acquire)
+            ));
         });
         measure
+    }
+
+    /// A command or a sync request of the page reached the shell
+    pub fn note_call(&self) {
+        self.calls.fetch_add(1, Ordering::AcqRel);
+    }
+
+    /// The run cannot finish: write what is known and end
+    fn stalled(&self, why: String) {
+        if self.reported.load(Ordering::Acquire) {
+            return;
+        }
+        trace!("measure", "STALLED: {why}");
+        self.finish(json!({ "error": why }), 3);
     }
 
     pub fn handles(&self, channel: &str) -> bool {
@@ -85,6 +116,8 @@ impl Measure {
         self.reported.store(true, Ordering::Release);
         if let Value::Object(map) = &mut report {
             map.insert("environment".into(), Self::environment());
+            map.insert("traceCounts".into(), json!(trace::counts()));
+            map.insert("trace".into(), json!(trace::recent()));
         }
         let text = serde_json::to_string_pretty(&report).unwrap_or_default();
         if let Err(error) = std::fs::write(&self.out, format!("{text}\n")) {
@@ -105,6 +138,7 @@ impl Measure {
         args: Vec<IpcValue>,
     ) {
         let first = args.into_iter().next().unwrap_or(IpcValue::Undefined);
+        trace!("measure", "view {}: '{channel}' #{}", view.0, id.0);
         match channel {
             // through the core thread, as every handler's answer
             "measure:echo" => {

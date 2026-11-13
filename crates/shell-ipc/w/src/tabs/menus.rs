@@ -59,7 +59,7 @@ fn tab_icon(kind: TabKind) -> &'static str {
 }
 
 /// `NEW_KIND_MENU`: label key, icon and what it opens, by the home kind
-fn new_kind_entry(kind: &str) -> Option<(&'static str, &'static str, NewKind)> {
+pub(super) fn new_kind_entry(kind: &str) -> Option<(&'static str, &'static str, NewKind)> {
     Some(match kind {
         "docx" => ("menuNewDoc", "docx", NewKind::Doc),
         "xlsx" => ("menuNewSheet", "xlsx", NewKind::Sheet),

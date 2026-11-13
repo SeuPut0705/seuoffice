@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use main_core::packages::electron_utils::recovery_store::SharedRecoveryState;
 use shell_contract::Hosts;
 use shell_contract::runtime::Thread;
-use tauri::AppHandle;
+use tauri::{AppHandle, RunEvent};
 
 use crate::views::ViewTable;
 
@@ -20,6 +20,7 @@ pub mod clipboard;
 pub mod contents;
 pub mod dialog;
 pub mod os_shell;
+pub(crate) mod shell_tabs;
 pub mod unbuilt;
 pub mod w;
 pub mod window;
@@ -44,6 +45,19 @@ pub struct HostContext {
     pub windows: Arc<window::Windows>,
 }
 
+/// The state TypeScript kept once per process, one instance each, shared by
+/// every batch (ipc-probe's fakes insert the same): the recovery state (U, D1,
+/// D2), the dialog memory and the default-save-folder state
+pub fn install_process_state(hosts: &mut Hosts) {
+    hosts.insert(Arc::new(Mutex::new(
+        SharedRecoveryState::with_random_run_id(),
+    )));
+    let memory: shell_ipc_w::SharedDialogMemory = Arc::default();
+    hosts.insert(memory);
+    let save_dir: shell_ipc_w::SharedSaveDirState = Arc::default();
+    hosts.insert(save_dir);
+}
+
 /// Every host the shell has; the batches' `register` read them with `Hosts::need`
 pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     dialog::install(hosts, cx);
@@ -51,10 +65,7 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     clipboard::install(hosts, cx);
     contents::install(hosts, cx);
     window::install(hosts, cx);
-    // the process's one recovery state: U, D1 and D2 share it (ipc-probe's fakes insert the same)
-    hosts.insert(Arc::new(Mutex::new(
-        SharedRecoveryState::with_random_run_id(),
-    )));
+    install_process_state(hosts);
     w::install(hosts, cx);
 
     crash::install(hosts, cx);
@@ -66,6 +77,13 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     print::install(hosts, cx);
     secrets::install(hosts, cx);
     update::install(hosts, cx);
+}
+
+/// Every event of the event loop, for the batches that answer one (U: files
+/// opened from the OS, the updater's quit)
+pub fn on_run_event(app: &AppHandle, event: &RunEvent) {
+    os::on_run_event(app, event);
+    update::on_run_event(app, event);
 }
 
 /// Runs `job` on the UI thread and waits for it. A host is called from the

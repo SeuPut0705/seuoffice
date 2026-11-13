@@ -120,7 +120,7 @@ jobs:
           out="$RUNNER_TEMP/measure"
           mkdir -p "$out"
           app=$(find target/release/bundle/macos -maxdepth 1 -name '*.app' | head -1)
-          ls -la "$app/Contents/MacOS" "$app/Contents/Frameworks"
+          ls -la "$app/Contents/MacOS" "$app/Contents/Frameworks" | tee "$out/app-contents.txt"
           set +e
           SEUOFFICE_USER_DATA="$out/userdata" "$app/Contents/MacOS/SeuOffice" --measure-dialog "$out/dialog.json" 2>&1 | tee "$out/shell.log"
           status=${PIPESTATUS[0]}
@@ -135,6 +135,7 @@ jobs:
           path: |
             ${{ runner.temp }}/measure/dialog.json
             ${{ runner.temp }}/measure/shell.log
+            ${{ runner.temp }}/measure/*.txt
             crates/shell/out/preloads/manifest.json
           if-no-files-found: warn
 
@@ -209,14 +210,32 @@ jobs:
         continue-on-error: true
         run: cargo test --release 2>&1 | tail -60
 
+      # cef-dll-sys copies the CEF runtime files next to the executable by
+      # walking up from its build script's OUT_DIR, which cargo's newer build
+      # directory layout puts one level too deep: target/release holds
+      # SeuOffice.exe and no libcef.dll, and bash reports a missing DLL as
+      # exit 127. Copy them from the CEF distribution itself.
+      - name: CEF runtime next to the executable
+        run: |
+          cef_dll=$(find "$CEF_PATH" -name libcef.dll | head -1)
+          echo "libcef.dll in the CEF distribution: $cef_dll"
+          test -n "$cef_dll"
+          cp -rn "$(dirname "$cef_dll")"/. target/release/
+          echo "--- target/release"
+          ls target/release | head -60
+
       - name: measure the dialog (--measure-dialog)
         timeout-minutes: 10
         run: |
           out="$RUNNER_TEMP/measure"
           mkdir -p "$out"
+          ls target/release > "$out/target-release.txt"
+          exe=./target/release/SeuOffice.exe
+          ls -la "$exe" target/release/libcef.dll
           set +e
-          SEUOFFICE_USER_DATA="$out/userdata" ./target/release/SeuOffice.exe --measure-dialog "$out/dialog.json" 2>&1 | tee "$out/shell.log"
+          SEUOFFICE_USER_DATA="$out/userdata" "$exe" --measure-dialog "$out/dialog.json" 2>&1 | tee "$out/shell.log"
           status=${PIPESTATUS[0]}
+          echo "exit status $status"
           cat "$out/dialog.json" || true
           exit $status
 
@@ -228,5 +247,6 @@ jobs:
           path: |
             ${{ runner.temp }}/measure/dialog.json
             ${{ runner.temp }}/measure/shell.log
+            ${{ runner.temp }}/measure/*.txt
             crates/shell/out/preloads/manifest.json
           if-no-files-found: warn
