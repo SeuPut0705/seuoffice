@@ -338,6 +338,8 @@ const RELS: Array<[string, RelInfo]> = [
   ['rId9', { target: '%E0%A4%A.xml', type: 'http://x/x' }],
   ['rId10', { target: 'charts/chart3.xml', type: 'http://x/chart' }],
   ['rId11', { target: 'txbx%202.xml', type: 'http://x/txbx' }],
+  ['rId12', { target: 'charts/chart4.xml', type: 'http://x/chart' }],
+  ['rId13', { target: 'charts/chart5.xml', type: 'http://x/chart' }],
   ['', { target: 'empty.xml', type: 'http://x/x' }],
 ]
 
@@ -363,7 +365,8 @@ const SETTINGS_XMLS = [
   ),
   `<w:settings><w:footnotePr><w:pos w:val = 'beneathText'/><w:numRestart w:val='eachSect' /></w:footnotePr ><w:endnotePr><w:numFmt w:val="lowerRoman"/></w:endnotePr ></w:settings >`,
   ...hiddenIn('<w:footnotePr><w:numFmt w:val="upperRoman"/></w:footnotePr>').map(
-    (hidden) => `<w:settings>${hidden}<w:footnotePr><w:numFmt w:val="lowerLetter"/></w:footnotePr></w:settings>`,
+    (hidden) =>
+      `<w:settings>${hidden}<w:footnotePr><w:numFmt w:val="lowerLetter"/></w:footnotePr></w:settings>`,
   ),
   '',
 ]
@@ -409,10 +412,18 @@ const SOURCES_PACKAGES: Array<Array<[string, string]>> = [
     ],
   ],
   ...hiddenIn('<b:Source><b:Tag>Fake</b:Tag><b:Title>Hidden</b:Title></b:Source>').map((hidden) => [
-    ['customXml/item1.xml', SOURCES_XML.replace('<b:Source>', `${hidden}<b:Source>`)] as [string, string],
+    ['customXml/item1.xml', SOURCES_XML.replace('<b:Source>', `${hidden}<b:Source>`)] as [
+      string,
+      string,
+    ],
   ]),
   [['customXml/item1.xml', SOURCES_XML.replace('T &amp; U', '<![CDATA[T & U]]>')]],
-  [['customXml/item1.xml', SOURCES_XML.replace('<b:Tag>Smi20</b:Tag>', '<b:Tag a=">">Smi20</b:Tag>')]],
+  [
+    [
+      'customXml/item1.xml',
+      SOURCES_XML.replace('<b:Tag>Smi20</b:Tag>', '<b:Tag a=">">Smi20</b:Tag>'),
+    ],
+  ],
   [],
 ]
 
@@ -444,10 +455,22 @@ const CHART_PARTS: Array<[string, string]> = [
   // the chart of chart1 in other valid spellings
   [
     'word/charts/chart3.xml',
-    CHART_XML.replace('<c:barDir val="col"/>', "<c:barDir val = 'col' /><!-- <c:barDir val=\"bar\"/> -->")
+    CHART_XML.replace(
+      '<c:barDir val="col"/>',
+      '<c:barDir val = \'col\' /><!-- <c:barDir val="bar"/> -->',
+    )
       .replace('<c:v>S</c:v>', '<c:v><![CDATA[S & T]]></c:v >')
       .replace('<c:v>A</c:v>', '<c:v xml:space = "preserve">A</c:v >'),
   ],
+  // a chart holding a withheld mark: its display carries the label
+  [
+    'word/charts/chart4.xml',
+    CHART_XML.replace(
+      '<c:chart>',
+      '<c:chart><c:title><c:tx><c:rich><a:p><a:r><a:rPr><go:redact xmlns:go="https://github.com/SeuPut0705/seuoffice/redaction/2026" label="sales"/></a:rPr><a:t>T</a:t></a:r></a:p></c:rich></c:tx></c:title>',
+    ),
+  ],
+  ['word/charts/chart5.xml', CHART_XML.replace('<c:chart>', '<c:chart><!-- <go:redact/> -->')],
 ]
 const chartDrawing = (rId: string, extent: string, tag = 'c:chart'): string =>
   `<w:drawing><wp:inline>${extent}<a:graphic><a:graphicData><${tag} xmlns:c="c" r:id="${rId}"/></a:graphicData></a:graphic></wp:inline></w:drawing>`
@@ -460,6 +483,8 @@ const CHART_DRAWINGS = [
   chartDrawing('rId10', "<wp:extent cx = '5486400' cy = '3200400' />"),
   chartDrawing('rId2', '<wp:extent cx="1" cy="1"/>'),
   chartDrawing('rId99', ''),
+  chartDrawing('rId12', '<wp:extent cx="5486400" cy="3200400"/>'),
+  chartDrawing('rId13', '<wp:extent cx="5486400" cy="3200400"/>'),
   '<c:chart r:id="rId4"/>',
   '',
 ]
@@ -472,7 +497,10 @@ const TXBX_DOCUMENTS = [
 ]
 const TXBX_PARTS: Array<[string, string]> = [
   ['word/txbx 1.xml', '<w:txbxContent><w:p/></w:txbxContent>'],
-  ['word/txbx 2.xml', `<?xml version='1.0'?><w:txbxContent a = '>'><!-- <w:p>no</w:p> --><w:p><w:r><w:t xml:space = 'preserve'><![CDATA[a<b]]></w:t ></w:r></w:p></w:txbxContent >`],
+  [
+    'word/txbx 2.xml',
+    `<?xml version='1.0'?><w:txbxContent a = '>'><!-- <w:p>no</w:p> --><w:p><w:r><w:t xml:space = 'preserve'><![CDATA[a<b]]></w:t ></w:r></w:p></w:txbxContent >`,
+  ],
   ['word/media/image1.png', 'not a picture'],
 ]
 
@@ -527,7 +555,10 @@ const SVG_FRAGS = [
   ...hiddenIn('</mc:Fallback>').map((hidden) => svgTwin(SVG_BASE, '', `<mc:Fallback>${hidden}`)),
   svgTwin(SVG_BASE, '', '<mc:Fallback a=">">'),
   svgTwin(SVG_BASE, '', '<mc:Fallback xmlns:x="urn:x">', '</mc:Fallback >'),
-  SVG_BASE.replace('<wp:extent cx="952500" cy="476250"/>', "<wp:extent cx = '952500' cy = '476250' />"),
+  SVG_BASE.replace(
+    '<wp:extent cx="952500" cy="476250"/>',
+    "<wp:extent cx = '952500' cy = '476250' />",
+  ),
   SVG_BASE.replace('<a:srgbClr val="1f497d"/>', "<a:srgbClr val = '1f497d' />"),
   shapeDrawing(
     wsp(0, 0, 952500, 476250, CURVES) + wsp(9525, 19050, 95250, 95250, ARCS),
@@ -2508,16 +2539,28 @@ const MARKUP_DRAWINGS: string[] = [
   markupAnchor('', " descr='a>b' layoutInCell = 'false'"),
   markupAnchor('').replace('relativeFrom="page"', "relativeFrom = 'page'"),
   markupAnchor('').replace('</wp:positionH>', '</wp:positionH >'),
-  markupAnchor('').replace('<wp:positionV relativeFrom="margin">', '<wp:positionV relativeFrom="margin" descr="a>b">'),
-  markupAnchor('').replace('<wp:extent cx="952500" cy="476250"/>', "<wp:extent cx = '952500' cy = '476250' />"),
-  markupAnchor('').replace('<wp:wrapSquare wrapText="left"/>', "<wp:wrapSquare wrapText = 'left' />"),
+  markupAnchor('').replace(
+    '<wp:positionV relativeFrom="margin">',
+    '<wp:positionV relativeFrom="margin" descr="a>b">',
+  ),
+  markupAnchor('').replace(
+    '<wp:extent cx="952500" cy="476250"/>',
+    "<wp:extent cx = '952500' cy = '476250' />",
+  ),
+  markupAnchor('').replace(
+    '<wp:wrapSquare wrapText="left"/>',
+    "<wp:wrapSquare wrapText = 'left' />",
+  ),
   markupAnchor('<wp:effectExtent l="9525" t="19050" r="0" b="0"/>'),
 ]
 const MARKUP_HOST_PARAS: Array<(drawing: string) => string> = [
-  (d) => `<w:p w:rsidR=">"><w:pPr><w:jc w:val="center"/><w:ind w:left="720"/></w:pPr><w:r>${d}</w:r></w:p>`,
+  (d) =>
+    `<w:p w:rsidR=">"><w:pPr><w:jc w:val="center"/><w:ind w:left="720"/></w:pPr><w:r>${d}</w:r></w:p>`,
   (d) => `<w:p><w:pPr><w:jc w:val="right"/></w:pPr ><w:r>${d}</w:r></w:p>`,
-  (d) => `<w:p><!-- <w:pPr><w:jc w:val="left"/></w:pPr> --><w:pPr><w:jc w:val="center"/></w:pPr><w:r>${d}</w:r></w:p>`,
-  (d) => `<w:p><w:pPr><w:jc w:val="center"/><!-- </w:pPr> --><w:ind w:left="360"/></w:pPr><w:r>${d}</w:r></w:p>`,
+  (d) =>
+    `<w:p><!-- <w:pPr><w:jc w:val="left"/></w:pPr> --><w:pPr><w:jc w:val="center"/></w:pPr><w:r>${d}</w:r></w:p>`,
+  (d) =>
+    `<w:p><w:pPr><w:jc w:val="center"/><!-- </w:pPr> --><w:ind w:left="360"/></w:pPr><w:r>${d}</w:r></w:p>`,
   (d) => `<w:p><w:pPr a=">"><w:ind w:left="360"/></w:pPr><w:r>${d}</w:r></w:p>`,
   (d) => `<w:p><w:r><w:t xml:space = 'preserve'>lead </w:t ></w:r><w:r>${d}</w:r></w:p>`,
   (d) => `<w:p><w:r><w:t><![CDATA[a<b]]></w:t></w:r><w:r>${d}</w:r></w:p>`,
@@ -2790,7 +2833,9 @@ const BATCH2: CallSpec[] = [
       fn: 'runPictureAnchorOf',
       input: ([xml]) => (typeof xml === 'string' ? { text: xml } : undefined),
     },
-    built: [...ANCHOR_DRAWINGS, ...PIC_EFFECT_DRAWINGS, ...MARKUP_DRAWINGS].map((text) => ({ text })),
+    built: [...ANCHOR_DRAWINGS, ...PIC_EFFECT_DRAWINGS, ...MARKUP_DRAWINGS].map((text) => ({
+      text,
+    })),
   },
   {
     fn: 'parse.imageMeta',

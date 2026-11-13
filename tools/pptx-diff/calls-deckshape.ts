@@ -102,7 +102,7 @@ const sid = (o: Parameters<Parameters<typeof deckOp>[2]>[1], args: Record<string
 const bytes = (v: unknown) => (v ? Uint8Array.from(v as number[]) : undefined)
 
 const ELEMENTS = [0, 1, 2, 3, 4, 5, 6, 7, 99]
-const built = (make: (e: number, text: string) => Input, texts = SPTEXTS): Input[] =>
+const _built = (make: (e: number, text: string) => Input, texts = SPTEXTS): Input[] =>
   texts.flatMap((t) => ELEMENTS.map((e) => make(e, t)))
 
 interface Ctx {

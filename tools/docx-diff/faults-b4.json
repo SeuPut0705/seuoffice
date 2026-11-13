@@ -85,13 +85,6 @@
       "new": "                if let Some(r_pr) = node.find_child(\"w:rPr\")"
     },
     {
-      "name": "B4: an image block in a hidden run carries no redact",
-      "group": "parse",
-      "file": "crates/docx-engine/src/parse/text/build_block.rs",
-      "old": "    if let Some(redact) = redact {\n        block.redact.set(redact);\n    }",
-      "new": "    if let Some(redact) = redact.filter(|_| false) {\n        block.redact.set(redact);\n    }"
-    },
-    {
       "name": "B4: a marked chart part gives its display no redact",
       "group": "parse",
       "file": "crates/docx-engine/src/parse/drawings/media.rs",

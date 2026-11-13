@@ -398,7 +398,7 @@ export const DECKTABLES: CallSpec[] = [
           args.op as never,
         ),
       ),
-    built: built((i) => OPS_MERGE.map((op) => ({ op }))),
+    built: built((_i) => OPS_MERGE.map((op) => ({ op }))),
   },
   {
     fn: 'pptxDecktables.index.setTableColWidth',

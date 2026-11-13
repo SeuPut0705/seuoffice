@@ -511,7 +511,7 @@ const RUNS: Array<Args> = wire([
   { text: 'e', redact: 'why', colorNodeXml: '<a:schemeClr val="bg1"/>', fontFamily: 'A&B' },
   { text: '', paraMark: true },
   { text: 'x', paraMark: true, color: '#010101' },
-  { text: 'x', fontSize: 1e999, baseline: 1e999, letterSpacing: 1e12, letterSpacingEdited: true },
+  { text: 'x', fontSize: Infinity, baseline: Infinity, letterSpacing: 1e12, letterSpacingEdited: true },
   {
     text: '\u{1F600}',
     kern: 1.234,

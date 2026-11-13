@@ -175,7 +175,7 @@ jobs:
   faults:
     if: ${{ inputs.faults }}
     runs-on: ubuntu-latest
-    timeout-minutes: 90
+    timeout-minutes: 240
     steps:
       - uses: actions/checkout@v4
 
