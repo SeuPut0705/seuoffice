@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use main_core::packages::electron_utils::recovery_store::SharedRecoveryState;
 use shell_contract::Hosts;
 use shell_contract::runtime::Thread;
-use tauri::AppHandle;
+use tauri::{AppHandle, RunEvent};
 
 use crate::views::ViewTable;
 
@@ -67,6 +67,13 @@ pub fn install(hosts: &mut Hosts, cx: &HostContext) {
     print::install(hosts, cx);
     secrets::install(hosts, cx);
     update::install(hosts, cx);
+}
+
+/// Every event of the event loop, for the batches that answer one (U: files
+/// opened from the OS, the updater's quit)
+pub fn on_run_event(app: &AppHandle, event: &RunEvent) {
+    os::on_run_event(app, event);
+    update::on_run_event(app, event);
 }
 
 /// Runs `job` on the UI thread and waits for it. A host is called from the
