@@ -80,8 +80,9 @@ pub fn try_replace_first_with(
 
 /// A pattern built at run time, written the way `new RegExp(pattern)` without
 /// the `u` flag reads it: a character outside the BMP is two code units, and
-/// `\uD83D\uDE00` written for each says so where the pattern text itself
-/// cannot (`JsRegex::new` refuses such a character). Equal to the pattern
+/// `\uD83D(?:)\uDE00` written for each says so where the pattern text itself
+/// cannot (`JsRegex::new` refuses such a character, and a pair of adjacent
+/// escapes). Equal to the pattern
 /// when it holds none.
 pub fn units_pattern(pattern: &str) -> std::borrow::Cow<'_, str> {
     if pattern.chars().all(|c| c.len_utf8() < 4) {
@@ -93,9 +94,11 @@ pub fn units_pattern(pattern: &str) -> std::borrow::Cow<'_, str> {
             out.push(c);
         } else {
             let mut units = [0u16; 2];
-            for unit in c.encode_utf16(&mut units) {
-                out.push_str(&format!("\\u{unit:04X}"));
-            }
+            let [high, low] = *c.encode_utf16(&mut units).iter().as_slice() else {
+                unreachable!("a character outside the BMP is two units")
+            };
+            // the empty group keeps the two halves from reading as one character
+            out.push_str(&format!("\\u{high:04X}(?:)\\u{low:04X}"));
         }
     }
     std::borrow::Cow::Owned(out)
@@ -137,7 +140,7 @@ mod tests {
         assert_eq!(super::units_pattern("a(b"), "a(b");
         assert_eq!(
             super::units_pattern("Id=\"\u{1F600}\""),
-            "Id=\"\\uD83D\\uDE00\""
+            "Id=\"\\uD83D(?:)\\uDE00\""
         );
         let re = crate::JsRegex::new(&super::units_pattern("Id=\"\u{1F600}\""), "").unwrap();
         assert!(re.test("x Id=\"\u{1F600}\" y"));
