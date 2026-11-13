@@ -2541,4 +2541,72 @@ mod tests {
             "AbortError"
         );
     }
+
+    /// Two reads in flight: task A, started first, reads after a timer, so
+    /// task B sends the first `Cmd::Read`. Answers: the runtime, the
+    /// response, A's and B's calls, A's and B's read ids.
+    #[allow(clippy::type_complexity)]
+    fn reads_out_of_task_order() -> (
+        Runtime,
+        Rc<Response>,
+        Call<Result<Option<Vec<u8>>, JsError>>,
+        Call<Result<Option<Vec<u8>>, JsError>>,
+        Id,
+        Id,
+    ) {
+        let mut runtime = Runtime::new(host());
+        let (response, _) = fetched(&mut runtime);
+        let response = Rc::new(response);
+        let rt = runtime.rt().clone();
+        let reader = response.clone();
+        let a = runtime.start(async move {
+            rt.sleep(1.0).await;
+            reader.read().await
+        });
+        let reader = response.clone();
+        let b = runtime.start(async move { reader.read().await });
+        let cmds = runtime.poll();
+        let timer = cmds
+            .iter()
+            .find_map(|c| match c {
+                Cmd::SetTimer { id, .. } => Some(*id),
+                _ => None,
+            })
+            .expect("A's timer");
+        let read_b = read_of(&cmds);
+        runtime.feed(Event::Timer { id: timer });
+        let read_a = read_of(&runtime.poll());
+        (runtime, response, a, b, read_a, read_b)
+    }
+
+    #[test]
+    fn the_end_met_by_one_read_keeps_a_chunk_another_read_already_got() {
+        let (mut runtime, _response, a, b, read_a, read_b) = reads_out_of_task_order();
+        // the host answers in order before the tasks run: B's chunk, then A's end;
+        // A, polled first, meets the end
+        runtime.feed(Event::Done {
+            id: read_b,
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        runtime.feed(Event::Done {
+            id: read_a,
+            answer: Answer::End,
+        });
+        assert!(runtime.poll().is_empty());
+        assert_eq!(a.take().expect("A ended").unwrap(), None);
+        assert_eq!(b.take().expect("B ended").unwrap(), Some(b"one".to_vec()));
+    }
+
+    #[test]
+    fn a_cancel_keeps_a_chunk_a_read_already_got() {
+        let (mut runtime, response, a, b, _read_a, read_b) = reads_out_of_task_order();
+        runtime.feed(Event::Done {
+            id: read_b,
+            answer: Answer::Chunk(b"one".to_vec()),
+        });
+        response.cancel();
+        runtime.poll();
+        assert_eq!(a.take().expect("A ended").unwrap(), None);
+        assert_eq!(b.take().expect("B ended").unwrap(), Some(b"one".to_vec()));
+    }
 }
