@@ -4,14 +4,14 @@
  * `src/main`, and `packages/electron-utils/src`), its lines, the Electron
  * APIs it names, the IPC channels it registers, the Node built-ins it uses
  * for files and the OS, the npm packages it imports (native ones marked), and
- * the modules of the same app it imports. A module is Electron-free when
+ * the modules it imports, in any app. A module is Electron-free when
  * neither it nor any module it imports, directly or not, imports `electron`.
  *
  *   npx tsx tools/main-inventory/inventory.ts            # writes out/inventory.json
  *   npx tsx tools/main-inventory/inventory.ts --markdown # and prints the table
  */
 import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
-import { dirname, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import ts from 'typescript'
 
@@ -155,28 +155,53 @@ function scanFile(file: string, mod: Module, moduleOf: (abs: string) => string |
   visit(sf)
 }
 
-function modulesOfApp(app: string, mainDir: string): Module[] {
+interface ModuleDir {
+  app: string
+  mainDir: string
+  /** the top-level files and folders of `mainDir` that hold sources: one module each */
+  entries: string[]
+}
+
+function moduleDir(app: string, mainDir: string): ModuleDir {
   const entries = readdirSync(mainDir).filter((name) => {
     const path = join(mainDir, name)
     return statSync(path).isDirectory() ? sourcesUnder(path).length > 0 : isSource(name)
   })
-  const idOf = (name: string): string =>
-    statSync(join(mainDir, name)).isDirectory()
-      ? `${app}/${name}/`
-      : `${app}/${name.replace(/\.(ts|tsx|mts)$/, '')}`
-  const moduleOf = (abs: string): string | undefined => {
-    const rel = relative(mainDir, abs)
-    if (rel.startsWith('..')) return undefined
+  return { app, mainDir, entries }
+}
+
+const idOf = (dir: ModuleDir, name: string): string =>
+  statSync(join(dir.mainDir, name)).isDirectory()
+    ? `${dir.app}/${name}/`
+    : `${dir.app}/${name.replace(/\.(ts|tsx|mts)$/, '')}`
+
+const apps = readdirSync(join(root, 'apps')).filter((app) =>
+  existsSync(join(root, 'apps', app, 'src', 'main')),
+)
+const dirs: ModuleDir[] = [
+  ...apps.map((app) => moduleDir(app, join(root, 'apps', app, 'src', 'main'))),
+  moduleDir('electron-utils', join(root, 'packages', 'electron-utils', 'src')),
+]
+
+/** The module a file belongs to, in any app: a relative import may cross into
+ * another app's main folder (shell/pdf-note-tabs imports markdown/note-append) */
+function moduleOf(abs: string): string | undefined {
+  for (const dir of dirs) {
+    const rel = relative(dir.mainDir, abs)
+    if (rel.startsWith('..') || isAbsolute(rel)) continue
     const head = rel.split(sep)[0]
-    for (const name of entries) {
-      if (name === head || name.replace(/\.(ts|tsx|mts)$/, '') === head) return idOf(name)
+    for (const name of dir.entries) {
+      if (name === head || name.replace(/\.(ts|tsx|mts)$/, '') === head) return idOf(dir, name)
     }
-    return undefined
   }
-  return entries.map((name) => {
+  return undefined
+}
+
+function modulesOf(dir: ModuleDir): Module[] {
+  return dir.entries.map((name) => {
     const mod: Module = {
-      id: idOf(name),
-      app,
+      id: idOf(dir, name),
+      app: dir.app,
       files: 0,
       lines: 0,
       electron: [],
@@ -187,7 +212,7 @@ function modulesOfApp(app: string, mainDir: string): Module[] {
       seuoffice: [],
       imports: [],
     }
-    for (const file of sourcesUnder(join(mainDir, name))) {
+    for (const file of sourcesUnder(join(dir.mainDir, name))) {
       mod.files++
       scanFile(file, mod, moduleOf)
     }
@@ -197,13 +222,7 @@ function modulesOfApp(app: string, mainDir: string): Module[] {
   })
 }
 
-const apps = readdirSync(join(root, 'apps')).filter((app) =>
-  existsSync(join(root, 'apps', app, 'src', 'main')),
-)
-const modules: Module[] = [
-  ...apps.flatMap((app) => modulesOfApp(app, join(root, 'apps', app, 'src', 'main'))),
-  ...modulesOfApp('electron-utils', join(root, 'packages', 'electron-utils', 'src')),
-]
+const modules: Module[] = dirs.flatMap(modulesOf)
 
 const byId = new Map(modules.map((m) => [m.id, m]))
 function electronFree(m: Module, seen = new Set<string>()): boolean {
