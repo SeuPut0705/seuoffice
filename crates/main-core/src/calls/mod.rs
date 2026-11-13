@@ -25,6 +25,8 @@ mod b4_pdf;
 mod b4_sheets;
 mod b4_slides;
 mod b5_ai;
+mod b6_apps;
+mod b6_shell;
 mod b6_utils;
 mod fakes;
 mod files;
@@ -98,6 +100,8 @@ const GROUPS: &[Group] = &[
     b4_hwp::call,
     b5_ai::call,
     b6_utils::call,
+    b6_shell::call,
+    b6_apps::call,
 ];
 
 /// Runs `name` with `args`; `None` when no group has it.

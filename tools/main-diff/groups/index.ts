@@ -14,6 +14,8 @@ import { group as b4Html } from './b4-html.ts'
 import { group as b4Pdf } from './b4-pdf.ts'
 import { group as b4Hwp } from './b4-hwp.ts'
 import { group as b5Ai } from './b5-ai.ts'
+import { group as b6Apps } from './b6-apps.ts'
+import { group as b6Shell } from './b6-shell.ts'
 import { group as b6Utils } from './b6-utils.ts'
 import { group as files } from './files.ts'
 import { group as nodeFs } from './node-fs.ts'
@@ -44,4 +46,6 @@ export const groups: Record<string, Group> = {
   'b4-hwp': b4Hwp,
   'b5-ai': b5Ai,
   'b6-utils': b6Utils,
+  'b6-shell': b6Shell,
+  'b6-apps': b6Apps,
 }
