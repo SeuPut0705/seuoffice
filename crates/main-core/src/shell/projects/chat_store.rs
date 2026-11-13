@@ -47,6 +47,7 @@ use serde::Serialize;
 
 use super::folder_files::{data_dir_name, plain_file_in, plain_folder_entries, read_folder_text};
 use super::project_guide::{DataUpdateOutcome, SelectionTarget};
+use super::stand_ins::process_platform;
 use super::trust::has_foreign_message;
 use crate::node_fs::{NodeError, namespaced, node_error, node_error_fd};
 use crate::packages::project_store::{
@@ -276,15 +277,6 @@ pub struct ChatStoreOptions {
     pub state_cache_limit: Option<f64>,
     /// default [`FOREIGN_SCAN_CACHE_LIMIT`]
     pub foreign_cache_limit: Option<f64>,
-}
-
-/// `process.platform`
-pub fn process_platform() -> &'static str {
-    match std::env::consts::OS {
-        "macos" => "darwin",
-        "windows" => "win32",
-        other => other,
-    }
 }
 
 /// Chat info as read: the object of the file with the fields the app uses

@@ -54,7 +54,7 @@ use jscompat::{
 };
 use serde::{Deserialize, Serialize};
 
-use super::chat_store::{ChatStoreGuide, process_platform};
+use super::chat_store::ChatStoreGuide;
 use super::cloud_files::{SyncFolderOptions, is_under_known_sync_folder};
 use super::context::assemble_trusted_context;
 use super::folder_files::{
@@ -81,6 +81,7 @@ use super::selection::{
     ResolvedSelectionTarget, delete_key, drop_from_list, find_unregistered_project,
     record_outside_chat, record_selection, selection_for,
 };
+use super::stand_ins::process_platform;
 use super::trust::{TrustScanInput, read_hashed_texts, scan_for_trust};
 use super::visibility::is_ai_visible_path;
 use super::write_guard::{
@@ -131,7 +132,7 @@ struct Adoption {
     id: ProjectId,
     name: String,
     identity: FolderIdentity,
-    previous: Option<ListEntry>,
+    previous: Option<crate::packages::project_store::ProjectListEntry>,
     copied_from: Option<ProjectId>,
     stale_at_path: Option<ProjectId>,
 }

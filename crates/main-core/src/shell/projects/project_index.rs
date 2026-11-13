@@ -49,7 +49,7 @@ pub fn merge_index_roots(
     project_roots: &[String],
     platform: Option<&str>,
 ) -> Vec<String> {
-    let platform = platform.unwrap_or_else(process_platform);
+    let platform = platform.unwrap_or(process_platform());
     let mut out: Vec<String> = home_roots.to_vec();
     for root in project_roots {
         if out
@@ -84,7 +84,7 @@ impl<R: CloudOnlyResolver> ProjectNameOnly<R> {
         ProjectNameOnly {
             project_roots,
             resolve,
-            platform: platform.unwrap_or_else(process_platform).to_owned(),
+            platform: platform.unwrap_or(process_platform()).to_owned(),
         }
     }
 
@@ -146,7 +146,7 @@ impl<G: ProjectIndexGuide> RerankIgnoreFilter<G> {
     pub fn new(guide: G, platform: Option<&str>) -> Self {
         RerankIgnoreFilter {
             guide,
-            platform: platform.unwrap_or_else(process_platform).to_owned(),
+            platform: platform.unwrap_or(process_platform()).to_owned(),
         }
     }
 

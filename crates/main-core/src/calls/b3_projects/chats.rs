@@ -26,11 +26,12 @@ use crate::shell::projects::chat_store::{
     CHAT_STATE_CACHE_LIMIT, CHAT_TITLE_CHARS, CHAT_TITLE_MAX_CHARS, ChatAppendedEvent,
     ChatAppendedListener, ChatSender, ChatStoreError, ChatStoreGuide, ChatStoreHost,
     ChatStoreOptions, FOREIGN_SCAN_CACHE_LIMIT, ListenerId, MAX_PENDING_OPENING_MESSAGES,
-    ProjectChatStore, default_new_id, process_platform,
+    ProjectChatStore, default_new_id,
 };
 use crate::shell::projects::folder_files::data_dir_name;
 use crate::shell::projects::paths::{canonical_path, relative_inside};
 use crate::shell::projects::project_guide::{DataUpdateOutcome, SelectionTarget};
+use crate::shell::projects::stand_ins::process_platform;
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
     Some(match name {

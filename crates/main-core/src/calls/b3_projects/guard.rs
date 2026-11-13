@@ -589,7 +589,7 @@ fn open_disk(args: &[Value]) -> Result<(Disk, Vec<Value>), CallError> {
     let platform = ctx
         .get("platform")
         .and_then(Value::as_str)
-        .unwrap_or_else(host_platform)
+        .unwrap_or(host_platform())
         .to_owned();
     let mask = Mask { dir, real };
     let rest = args

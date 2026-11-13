@@ -777,8 +777,8 @@
     "fn": ["chat-store.scenario"]
   },
   {
-    "name": "chat-store: macos is not darwin",
-    "file": "main-core/src/shell/projects/chat_store.rs",
+    "name": "stand-ins: macos is not darwin",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
     "find": "\"macos\" => \"darwin\",",
     "replace": "\"macos\" => \"macos\",",
     "fn": ["chat-store.scenario"]
