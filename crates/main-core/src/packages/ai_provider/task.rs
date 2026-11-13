@@ -2344,4 +2344,68 @@ mod tests {
         drop(copy);
         assert!(runtime.poll().is_empty());
     }
+
+    /// Two `read()` calls in flight on one fetched response: the response,
+    /// the two calls, the ids of their `Cmd::Read`s.
+    fn two_reads(
+        runtime: &mut Runtime,
+    ) -> (
+        Rc<Response>,
+        Vec<Call<Result<Option<Vec<u8>>, JsError>>>,
+        Vec<Id>,
+    ) {
+        let (response, _) = fetched(runtime);
+        let response = Rc::new(response);
+        let reads: Vec<_> = (0..2)
+            .map(|_| {
+                let response = response.clone();
+                runtime.start(async move { response.read().await })
+            })
+            .collect();
+        let ids: Vec<Id> = runtime
+            .poll()
+            .iter()
+            .filter_map(|c| match c {
+                Cmd::Read { id, .. } => Some(*id),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(ids.len(), 2);
+        (response, reads, ids)
+    }
+
+    #[test]
+    fn the_end_of_a_stream_ends_every_read_waiting_on_it() {
+        let mut runtime = Runtime::new(host());
+        let (_response, reads, ids) = two_reads(&mut runtime);
+        // the host answers the first read only: the stream closed
+        runtime.feed(Event::Done {
+            id: ids[0],
+            answer: Answer::End,
+        });
+        assert!(runtime.poll().is_empty());
+        for read in &reads {
+            assert_eq!(read.take().expect("the read ended").unwrap(), None);
+        }
+    }
+
+    #[test]
+    fn a_failed_stream_fails_every_read_waiting_on_it_and_every_later_one() {
+        let mut runtime = Runtime::new(host());
+        let (response, reads, ids) = two_reads(&mut runtime);
+        runtime.feed(Event::Failed {
+            id: ids[0],
+            error: JsError::type_error("terminated"),
+        });
+        assert!(runtime.poll().is_empty());
+        for read in &reads {
+            let error = read.take().expect("the read ended").unwrap_err();
+            assert_eq!(error.message, "terminated");
+        }
+        // a read after the failure asks the host nothing and fails the same way
+        let later = runtime.start(async move { response.read().await });
+        assert!(runtime.poll().is_empty());
+        let error = later.take().expect("the read ended").unwrap_err();
+        assert_eq!(error.message, "terminated");
+    }
 }
