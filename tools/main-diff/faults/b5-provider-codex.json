@@ -121,8 +121,8 @@
   {
     "name": "codex a changed metered login is accepted",
     "file": "main-core/src/packages/ai_provider/codex_app_server.rs",
-    "find": "login.login_kind.as_deref() != Some(status_kind.as_str())",
-    "replace": "login.login_kind.as_deref() == Some(status_kind.as_str())",
+    "find": "        && login_kind != status_kind",
+    "replace": "        && login_kind == status_kind",
     "fn": ["codex.streamCodexAppServer"]
   },
   {
