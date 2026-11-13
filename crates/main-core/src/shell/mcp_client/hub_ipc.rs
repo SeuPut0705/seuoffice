@@ -11,8 +11,8 @@
 //! `ipcMain.handle` stays in the TypeScript. Each method of [`McpHubIpc`] is
 //! the body of one handler: `sender_id` is the id of the webContents that
 //! asked, the other arguments are what the renderer sent (`None` is
-//! `undefined`), and the answer is the value the handler returns (`undefined`
-//! answers `null`). A handler that awaits the hub answers [`IpcReply::Later`]
+//! `undefined`), and the answer is the value the handler returns (`None`
+//! answers `undefined`, which Electron delivers to the renderer as such). A handler that awaits the hub answers [`IpcReply::Later`]
 //! with the hub's [`Ticket`]; the hub keeps the state across the await (see
 //! `hub`'s module doc), so there is no `begin`/`finish` pair: the caller drives
 //! the hub's events and takes the answers with [`McpHubIpc::take_settled`].
@@ -53,8 +53,10 @@ pub trait McpHubIpcHost {
     fn send_settings_changed(&mut self, view: &JsonValue);
 }
 
-/// the value a handler returns once the hub answered (`undefined` is `null`)
-pub type IpcValue = HubResult<JsonValue>;
+/// the value a handler returns once the hub answered: `None` is `undefined`
+/// (the handler returns nothing, which Electron delivers to the renderer as
+/// `undefined`), `Some(Null)` is a real `null`; `Err` is a rejection
+pub type IpcValue = HubResult<Option<JsonValue>>;
 
 /// What a handler does after its hub call
 #[derive(Debug, Clone, PartialEq)]
@@ -68,14 +70,24 @@ pub enum IpcReply {
 /// `answer` of a ticket the hub settled, as the handler returns it
 pub fn answer_value(answer: HubAnswer) -> IpcValue {
     match answer {
-        HubAnswer::Call(value) | HubAnswer::SignIn(value) => Ok(value),
-        HubAnswer::Test(result) | HubAnswer::Remove(result) => result,
-        HubAnswer::StopAll => Ok(JsonValue::Null),
+        HubAnswer::Call(value) | HubAnswer::SignIn(value) => Ok(Some(value)),
+        HubAnswer::Test(result) | HubAnswer::Remove(result) => result.map(Some),
+        HubAnswer::StopAll => Ok(None),
     }
 }
 
 fn now(value: JsonValue) -> IpcReply {
-    IpcReply::Now(Ok(value))
+    IpcReply::Now(Ok(Some(value)))
+}
+
+/// a handler that returns `undefined`
+fn now_undefined() -> IpcReply {
+    IpcReply::Now(Ok(None))
+}
+
+/// a handler that returns what a hub method that writes the store answered
+fn now_result(result: HubResult<JsonValue>) -> IpcReply {
+    IpcReply::Now(result.map(Some))
 }
 
 fn lift<T>(reply: Reply<T>, f: impl FnOnce(T) -> IpcValue) -> IpcReply {
@@ -209,16 +221,15 @@ impl<'h> McpHubIpc<'h> {
                 &JsonValue::Object(request.input),
                 &request.call_id,
             ),
-            Ok,
+            |v| Ok(Some(v)),
         )
     }
 
     /// `MCP_TOOLS_CHANNELS.cancel`
-    pub fn tools_cancel(&mut self, sender_id: f64, raw: Option<&JsonValue>) -> JsonValue {
+    pub fn tools_cancel(&mut self, sender_id: f64, raw: Option<&JsonValue>) {
         if let Some(call_id) = mcp_call_id_of(raw) {
             self.hub.cancel(&Self::caller(sender_id), &call_id);
         }
-        JsonValue::Null
     }
 
     /// `MCP_TOOLS_CHANNELS.retry`
@@ -291,7 +302,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match mcp_server_input_of(raw) {
-            Some(input) => IpcReply::Now(self.hub.add(&input)),
+            Some(input) => now_result(self.hub.add(&input)),
             None => now(malformed()),
         }
     }
@@ -310,7 +321,7 @@ impl<'h> McpHubIpc<'h> {
         let id = server_id_of(raw_id);
         let patch = mcp_server_patch_of(raw_patch);
         match (id, patch) {
-            (Some(id), Some(patch)) => IpcReply::Now(self.hub.edit(&id, &patch)),
+            (Some(id), Some(patch)) => now_result(self.hub.edit(&id, &patch)),
             _ => now(malformed()),
         }
     }
@@ -326,7 +337,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match server_id_of(raw) {
-            Some(id) => lift(self.hub.remove(&id), |v| v),
+            Some(id) => lift(self.hub.remove(&id), |v| v.map(Some)),
             None => now(malformed()),
         }
     }
@@ -342,7 +353,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match server_id_of(raw) {
-            Some(id) => lift(self.hub.test(&id), |v| v),
+            Some(id) => lift(self.hub.test(&id), |v| v.map(Some)),
             None => now(malformed()),
         }
     }
@@ -362,7 +373,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match server_id_of(raw) {
-            Some(id) => lift(self.hub.sign_in(&id), Ok),
+            Some(id) => lift(self.hub.sign_in(&id), |v| Ok(Some(v))),
             None => now(malformed()),
         }
     }
@@ -380,7 +391,7 @@ impl<'h> McpHubIpc<'h> {
         match server_id_of(raw) {
             Some(id) => {
                 self.hub.cancel_sign_in(&id);
-                now(JsonValue::Null)
+                now_undefined()
             }
             None => now(malformed()),
         }
@@ -398,7 +409,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match (server_id_of(raw_id), tool_name_of(raw_tool)) {
-            (Some(id), Some(tool)) => IpcReply::Now(self.hub.approve_tool(&id, &tool)),
+            (Some(id), Some(tool)) => now_result(self.hub.approve_tool(&id, &tool)),
             _ => now(malformed()),
         }
     }
@@ -414,7 +425,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match server_id_of(raw) {
-            Some(id) => IpcReply::Now(self.hub.approve_instructions(&id)),
+            Some(id) => now_result(self.hub.approve_instructions(&id)),
             None => now(malformed()),
         }
     }
@@ -431,9 +442,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match (server_id_of(raw_id), plan_fingerprint_of(raw_fingerprint)) {
-            (Some(id), Some(fingerprint)) => {
-                IpcReply::Now(self.hub.approve_launch(&id, &fingerprint))
-            }
+            (Some(id), Some(fingerprint)) => now_result(self.hub.approve_launch(&id, &fingerprint)),
             _ => now(malformed()),
         }
     }
@@ -456,7 +465,7 @@ impl<'h> McpHubIpc<'h> {
             permission_of_input(raw_permission),
         ) {
             (Some(id), Some(tool), Some(permission)) => {
-                IpcReply::Now(self.hub.set_tool_permission(&id, &tool, permission))
+                now_result(self.hub.set_tool_permission(&id, &tool, permission))
             }
             _ => now(malformed()),
         }
@@ -474,7 +483,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match (server_id_of(raw_id), boolean_of(raw_on)) {
-            (Some(id), Some(on)) => IpcReply::Now(self.hub.set_keep_results_inside(&id, on)),
+            (Some(id), Some(on)) => now_result(self.hub.set_keep_results_inside(&id, on)),
             _ => now(malformed()),
         }
     }
@@ -491,7 +500,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match (server_id_of(raw_id), boolean_of(raw_on)) {
-            (Some(id), Some(on)) => IpcReply::Now(self.hub.set_enabled(&id, on)),
+            (Some(id), Some(on)) => now_result(self.hub.set_enabled(&id, on)),
             _ => now(malformed()),
         }
     }
@@ -507,7 +516,7 @@ impl<'h> McpHubIpc<'h> {
             return refused;
         }
         match server_id_of(raw) {
-            Some(id) => IpcReply::Now(self.hub.mark_tools_seen(&id)),
+            Some(id) => now_result(self.hub.mark_tools_seen(&id)),
             None => now(malformed()),
         }
     }
@@ -541,7 +550,7 @@ impl<'h> McpHubIpc<'h> {
         }
         match (server_id_of(raw_id), boolean_of(raw_download)) {
             (Some(id), Some(download)) => {
-                IpcReply::Now(self.hub.answer_runtime_download(&id, download))
+                now_result(self.hub.answer_runtime_download(&id, download))
             }
             _ => now(not_found_problem()),
         }
