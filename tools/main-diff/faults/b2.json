@@ -699,8 +699,8 @@
   {
     "name": "win-platform",
     "file": "main-core/src/packages/electron_utils/print_window.rs",
-    "find": "if options.platform == \"win32\" {",
-    "replace": "if options.platform != \"win32\" {",
+    "find": "let win32 = options.platform == \"win32\";",
+    "replace": "let win32 = options.platform != \"win32\";",
     "fn": ["print-window.printHtmlDocument"]
   },
   {
@@ -1185,5 +1185,26 @@
     "find": "headless: AtomicBool::new(false),",
     "replace": "headless: AtomicBool::new(true),",
     "fn": ["headless-mode.isHeadlessMode"]
+  },
+  {
+    "name": "print: the readiness probe runs without a user gesture",
+    "file": "main-core/src/packages/electron_utils/print_window.rs",
+    "find": "user_gesture: true,",
+    "replace": "user_gesture: false,",
+    "fn": ["print-window.loadPrintHtml", "print-window.printHtmlDocument"]
+  },
+  {
+    "name": "print: the system dialog is asked to print silently",
+    "file": "main-core/src/packages/electron_utils/print_window.rs",
+    "find": "silent: false,",
+    "replace": "silent: true,",
+    "fn": ["print-window.printHtmlDocument"]
+  },
+  {
+    "name": "print: Windows shows the window without focusing it",
+    "file": "main-core/src/packages/electron_utils/print_window.rs",
+    "find": "win.show().and_then(|()| win.focus())",
+    "replace": "win.show()",
+    "fn": ["print-window.printHtmlDocument"]
   }
 ]

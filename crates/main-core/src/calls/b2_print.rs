@@ -12,6 +12,7 @@
 //! comparison's own: `emitDestroyed`, `setPlatform`), then the function itself
 //! with the remaining arguments, and answers `{ result?, state }`.
 
+use super::fakes::{FakePrintRenderer, drive_load, drive_print};
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::packages::electron_utils::generate_handoff::{
     self, GenerateConvertKind, GenerateConvertTarget, GenerateHandoff, GenerateHandoffTarget,
@@ -42,7 +43,7 @@ use crate::packages::electron_utils::print_html_pdf::{
 use crate::packages::electron_utils::print_job::{print_job_options, print_outcome};
 use crate::packages::electron_utils::print_window::{
     ExecOutcome, JsError, PRINT_READY_SCRIPT, PrintDialogWindow, PrintDocumentOptions, PrintReport,
-    load_print_html, print_html_document, rm_recursive_force,
+    begin_load_print_html, begin_print, rm_recursive_force,
 };
 use crate::packages::electron_utils::printer_options::{
     CommandOutcome, DRIVER_OPTION_NAMES, is_valid_option_name, is_valid_option_value,
@@ -479,7 +480,7 @@ impl<'a> FakeWindow<'a> {
     }
 }
 
-impl PrintDialogWindow for FakeWindow<'_> {
+impl FakePrintRenderer for FakeWindow<'_> {
     fn load_file(&mut self, path: &str) -> Result<(), JsError> {
         self.load(path)
     }
@@ -519,7 +520,9 @@ impl PrintDialogWindow for FakeWindow<'_> {
                 .to_owned(),
         })
     }
+}
 
+impl PrintDialogWindow for FakeWindow<'_> {
     fn show(&mut self) -> Result<(), JsError> {
         self.log(vec![Value::from("show")]);
         if self.throws("showThrows") {
@@ -618,12 +621,9 @@ fn load_print_html_call(args: &[Value], cx: &mut Context) -> Answer {
     let logs: Logs = RefCell::new(Vec::new());
     let mut window = FakeWindow::new(script, &logs, None);
     let tmp = os_tmpdir();
-    let loaded = load_print_html(
+    let loaded = drive_load(
+        begin_load_print_html(html, file_name, dir_prefix, &tmp),
         &mut window,
-        html,
-        file_name,
-        dir_prefix,
-        &tmp,
         &mut |message| {
             logs.borrow_mut().push(vec![
                 Value::from("console.error"),
@@ -679,7 +679,8 @@ fn print_html_document_call(args: &[Value], cx: &mut Context) -> Answer {
         platform,
         tmp_dir: &tmp,
     };
-    let outcome = print_html_document(&mut window, &options, &mut |message| {
+    let step = begin_print(&mut window, &options);
+    let outcome = drive_print(step, &mut window, &mut |message| {
         logs.borrow_mut().push(vec![
             Value::from("console.error"),
             Value::from("[print] readiness probe failed:"),

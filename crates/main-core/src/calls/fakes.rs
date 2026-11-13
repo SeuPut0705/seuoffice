@@ -8,6 +8,77 @@ use std::collections::VecDeque;
 use serde_json::Value;
 
 use crate::packages::electron_utils::message_box::{MessageBox, MessageBoxOptions, ParentWindow};
+use crate::packages::electron_utils::print_window::{
+    ExecOutcome, JsError, LoadStep, PrintDialogOutcome, PrintDialogWindow, PrintReport, PrintStep,
+};
+
+/// What a print window does when the renderer is awaited: a scenario's fake
+/// answers at once, so [`drive_print`] plays the Electron adapter and carries
+/// out each step of a print on it.
+pub(super) trait FakePrintRenderer {
+    /// `win.loadFile(path)`
+    fn load_file(&mut self, path: &str) -> Result<(), JsError>;
+    /// `webContents.executeJavaScript(script, userGesture)` as the race with
+    /// the timer came out
+    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> ExecOutcome;
+    /// `webContents.print(options, callback)`: what the callback got
+    fn print(&mut self, silent: bool, print_background: bool) -> Result<PrintReport, JsError>;
+}
+
+/// Every step of `loadPrintHtml` carried out on the fake, up to its end.
+pub(super) fn drive_load<W: FakePrintRenderer>(
+    mut step: LoadStep,
+    win: &mut W,
+    log_probe_error: &mut dyn FnMut(&str),
+) -> Result<String, JsError> {
+    loop {
+        step = match step {
+            LoadStep::Load { path, load } => load.on_loaded(win.load_file(&path)),
+            LoadStep::Probe {
+                script,
+                user_gesture,
+                load,
+            } => load.on_probe(
+                win.execute_javascript(script, user_gesture),
+                log_probe_error,
+            ),
+            LoadStep::Done(loaded) => return loaded,
+        }
+    }
+}
+
+/// Every step of `printHtmlDocument` carried out on the fake, up to its end.
+pub(super) fn drive_print<W: PrintDialogWindow + FakePrintRenderer>(
+    mut step: PrintStep,
+    win: &mut W,
+    log_probe_error: &mut dyn FnMut(&str),
+) -> Result<PrintDialogOutcome, JsError> {
+    loop {
+        step = match step {
+            PrintStep::Load { path, job } => {
+                let loaded = win.load_file(&path);
+                job.on_loaded(win, loaded)
+            }
+            PrintStep::Probe {
+                script,
+                user_gesture,
+                job,
+            } => {
+                let outcome = win.execute_javascript(script, user_gesture);
+                job.on_probe(win, outcome, log_probe_error)
+            }
+            PrintStep::Dialog {
+                silent,
+                print_background,
+                job,
+            } => {
+                let printed = win.print(silent, print_background);
+                job.on_printed(win, printed)
+            }
+            PrintStep::Done(outcome) => return outcome,
+        }
+    }
+}
 
 /// a `BrowserWindow` that answers `isDestroyed`
 pub(super) struct FakeWindow {

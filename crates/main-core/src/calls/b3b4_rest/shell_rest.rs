@@ -14,6 +14,7 @@ use jscompat::node_path::host::join;
 use jscompat::{js_regex, number_to_string, value_truthy};
 use serde_json::{Map, Number, Value};
 
+use super::super::fakes::{FakePrintRenderer, drive_print};
 use super::super::{Answer, CallError, Context, arg, print_js, str_arg};
 use crate::packages::electron_utils::drop_open::{DropPartition, partition_drop_payload};
 use crate::packages::electron_utils::generate_handoff::{
@@ -47,7 +48,7 @@ use crate::slides::autofit_writeback::{
     AutofitElement, AutofitHost, AutofitRendered, AutofitText, RenderTextLayout, TextInsets,
     TextLine, TextNode, TextRefit, TextRun, apply_autofit_resize, sync_autofit_scale,
 };
-use crate::slides::print_window::print_slides_html;
+use crate::slides::print_window::{begin_print_slides_html, finish_print_slides_html};
 use crate::slides::seed_deck::{
     DeckChanged, SeedContents, SeedDeckHost, SeedSession, open_slides_seed,
 };
@@ -646,7 +647,7 @@ impl PrintWin<'_> {
     }
 }
 
-impl PrintDialogWindow for PrintWin<'_> {
+impl FakePrintRenderer for PrintWin<'_> {
     fn load_file(&mut self, path: &str) -> Result<(), JsError> {
         // the folder's random part is cut off, so both sides log the same
         let (dir, base) = path.rsplit_once('/').unwrap_or(("", path));
@@ -700,7 +701,9 @@ impl PrintDialogWindow for PrintWin<'_> {
                 .to_owned(),
         })
     }
+}
 
+impl PrintDialogWindow for PrintWin<'_> {
     fn show(&mut self) -> Result<(), JsError> {
         self.log.push(vec![text("show")]);
         if self.throws("showThrows") {
@@ -752,13 +755,15 @@ fn print_slides_call(args: &[Value], cx: &mut Context) -> Answer {
     };
     let tmp = os_tmpdir();
     let probe_log = log.clone();
-    let result = print_slides_html(html, &mut window, platform, &tmp, &mut |message| {
+    let step = begin_print_slides_html(html, &mut window, platform, &tmp);
+    let printed = drive_print(step, &mut window, &mut |message| {
         probe_log.push(vec![
             text("console.error"),
             text("[print] readiness probe failed:"),
             text(message),
         ]);
     });
+    let result = finish_print_slides_html(printed);
     log.flush_into(cx);
     match result {
         Ok(result) => {
