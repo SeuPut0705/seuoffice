@@ -642,11 +642,12 @@ impl Md {
                     .to_string_lossy(),
                 "markdown-conversions",
             ]);
+            let shell = Arc::clone(&self.shell);
             create_markdown_conversion_session(
                 &root,
                 &SessionOptions::default(),
                 self.e.docs.now_ms(),
-                &jscompat::random_uuid,
+                &move || shell.random_uuid(),
             )
             .map_err(|e| e.message)
         })
@@ -1020,16 +1021,13 @@ pub(super) fn entries(
                     Err(error) => return responder.reply(Ok(failure(error))),
                 };
                 let me = Rc::clone(&m);
+                let shell = Arc::clone(&m.shell);
                 return kit::on_worker(
                     &m.services,
                     move || {
-                        write_markdown_conversion(
-                            &session,
-                            &safe_name,
-                            &bytes,
-                            None,
-                            &jscompat::random_uuid,
-                        )
+                        write_markdown_conversion(&session, &safe_name, &bytes, None, &move || {
+                            shell.random_uuid()
+                        })
                         .map_err(|e| e.message)
                     },
                     move |written| {
