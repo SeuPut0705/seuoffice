@@ -10,7 +10,7 @@ use std::rc::Rc;
 
 use jscompat::{
     JsObject, JsonValue, decode_uri_component, encode_uri_component, js_regex,
-    json_value_from_serde, json_value_to_serde,
+    json_value_from_serde, json_value_to_serde, slice_utf16,
 };
 use serde_json::Value;
 
@@ -150,7 +150,7 @@ impl McpSecretCodec for FakeCodec {
         if self.open == OpenMode::Null || sealed.contains("other-pc") {
             return Ok(None);
         }
-        decode_uri_component(&sealed[SEALED_PREFIX.len()..])
+        decode_uri_component(&slice_utf16(sealed, SEALED_PREFIX.len() as f64, None))
             .map(Some)
             .map_err(|e| CodecThrow(e.to_string()))
     }

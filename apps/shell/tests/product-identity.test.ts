@@ -336,7 +336,7 @@ describe('repository coordinates', () => {
   })
 
   it('names the same repository in the package metadata', () => {
-    expect(GITHUB_REPO_URL).toBe('https://github.com/SeuPut0705/seuoffice')
+    expect(GITHUB_REPO_URL).toBe('https://github.com/seuput-inc/seuoffice')
     expect(shellPackage.homepage).toBe(GITHUB_REPO_URL)
     expect((rootPackage.repository as { url: string }).url).toBe(`git+${GITHUB_REPO_URL}.git`)
   })

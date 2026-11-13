@@ -407,15 +407,11 @@ impl Fakes {
     fn answer(&self, call: &HostCall) -> Settled {
         match (call.control, call.method) {
             ("FamilyDriver", method) => {
-                let family = string_at(&call.args, 0);
-                // the last driver of a family wins, as the TypeScript's `Map`
                 let Some(driver) = self
                     .drivers
-                    .iter()
-                    .rev()
-                    .find(|driver| driver.family.as_str() == family)
+                    .get(number_at(&call.args, call.args.len().saturating_sub(1)) as usize)
                 else {
-                    return Err(format!("no driver for {family}"));
+                    return Err("no such driver".to_owned());
                 };
                 if method == "openBlankTab" {
                     driver.open()
@@ -521,6 +517,10 @@ impl Fakes {
 
 /// a driver of a case: `{ family, open, save }`
 struct ScriptDriver {
+    /// its place among the drivers of the case: the host call names the driver
+    /// that made it, so a handler that picks the wrong one of two drivers of a
+    /// family is seen
+    index: usize,
     family: SessionFamily,
     open: Option<Value>,
     save: Option<Value>,
@@ -530,6 +530,7 @@ struct ScriptDriver {
 impl ScriptDriver {
     fn of(spec: &Value, log: Log) -> Option<Self> {
         Some(ScriptDriver {
+            index: 0,
             family: SessionFamily::parse(spec.get("family").and_then(Value::as_str)?)?,
             open: spec.get("open").cloned(),
             save: spec.get("save").cloned(),
@@ -539,6 +540,7 @@ impl ScriptDriver {
 
     fn bare(family: SessionFamily, log: Log) -> Self {
         ScriptDriver {
+            index: 0,
             family,
             open: Some(Value::from(1)),
             save: None,
@@ -596,7 +598,10 @@ impl FamilyDriver for ScriptDriver {
         HostCall {
             control: "FamilyDriver",
             method: "openBlankTab",
-            args: vec![JsonValue::String(self.family.as_str().to_owned())],
+            args: vec![
+                JsonValue::String(self.family.as_str().to_owned()),
+                JsonValue::Number(self.index as f64),
+            ],
         }
     }
 
@@ -609,6 +614,7 @@ impl FamilyDriver for ScriptDriver {
                 JsonValue::Number(wc_id as f64),
                 JsonValue::String(path.to_owned()),
                 JsonValue::Bool(overwrite),
+                JsonValue::Number(self.index as f64),
             ],
         }
     }
@@ -638,7 +644,11 @@ fn session_call(args: &[Value], cx: &mut Context) -> Answer {
         .map(|list| {
             list.iter()
                 .filter_map(|d| ScriptDriver::of(d, Rc::clone(&log)))
-                .map(Rc::new)
+                .enumerate()
+                .map(|(index, mut driver)| {
+                    driver.index = index;
+                    Rc::new(driver)
+                })
                 .collect()
         })
         .unwrap_or_default();

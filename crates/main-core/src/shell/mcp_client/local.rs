@@ -609,6 +609,8 @@ enum Work {
 
 struct Call {
     id: CallId,
+    /// the method the call is, fixed when it begins: its settle names it
+    kind: CallKind,
     work: Work,
     /// the call has an `AbortSignal`
     has_signal: bool,
@@ -1254,8 +1256,14 @@ impl LocalMcpConnection {
         work: Work,
         signal: CallSignal,
     ) {
+        let kind = match &work {
+            Work::Ensure => CallKind::Ensure,
+            Work::List { .. } => CallKind::List,
+            Work::Tool { .. } => CallKind::Tool,
+        };
         self.calls.push(Call {
             id,
+            kind,
             work,
             has_signal: signal != CallSignal::None,
             aborted: signal == CallSignal::Aborted,
@@ -1471,10 +1479,10 @@ impl LocalMcpConnection {
             .iter()
             .find(|s| s.io.id == child)
             .and_then(|s| s.client.get_instructions().map(str::to_owned));
-        let Work::List { tools, .. } = std::mem::replace(&mut self.calls[index].work, Work::Ensure)
-        else {
+        let Work::List { tools, .. } = &mut self.calls[index].work else {
             return;
         };
+        let tools = std::mem::take(tools);
         self.finish_call(
             host,
             id,
@@ -1538,12 +1546,7 @@ impl LocalMcpConnection {
                 None,
             ))),
         };
-        let kind = match &call.work {
-            Work::Ensure => CallKind::Ensure,
-            Work::List { .. } => CallKind::List,
-            Work::Tool { .. } => CallKind::Tool,
-        };
-        host.settle(id, kind, outcome);
+        host.settle(id, call.kind, outcome);
     }
 
     // ---- starting ----
