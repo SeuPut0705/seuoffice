@@ -13,6 +13,7 @@ pub mod field_balance;
 pub mod fields;
 pub mod font_table;
 pub mod generate;
+pub mod hidden_content;
 pub mod image_kinds;
 pub mod ink;
 pub mod inline_opaque;

@@ -240,6 +240,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "canonicalXmlSyntax" => r_canonical_xml_syntax(env, args),
         "citationText" => r_citation_text(env, args),
         "cleanMoveRangeMarkers" => r_clean_move_range_markers(env, args),
+        "clearHiddenMarks" => r_clear_hidden_marks(env, args),
         "colorNodeHex" => r_color_node_hex(env, args),
         "compareBlocks" => r_compare_blocks(env, args),
         "compareOperands" => r_compare_operands(env, args),
@@ -260,6 +261,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "decodeSymbolText" => r_decode_symbol_text(env, args),
         "dedupeStyleRefs" => r_dedupe_style_refs(env, args),
         "deobfuscateOdttf" => routes::deobfuscate_odttf(env, &args.resolved()?),
+        "docxHoldsHiddenContent" => r_docx_holds_hidden_content(env, args),
         "editedCommentModelText" => r_edited_comment_model_text(env, args),
         "elementInner" => r_element_inner(env, args),
         "eqFieldToOmml" => r_eq_field_to_omml(env, args),
@@ -748,6 +750,14 @@ fn r_clean_move_range_markers(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(to_json(&r)?))
 }
 
+fn r_clear_hidden_marks(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = env.blob(args.get(0).unwrap_or(&Value::Null))?;
+    let p1 = num(args, 1)?;
+    let r = docx_engine::hidden_content::clear_hidden_marks(p0, p1)
+        .map_err(|error| error.to_string())?;
+    Ok(Some(env.put_blob(r)))
+}
+
 fn r_color_node_hex(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = oxnode(args, 0)?;
     let p1: Option<docx_engine::theme::ThemeColors> = opt(args, 1)?;
@@ -873,6 +883,13 @@ fn r_decode_symbol_text(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_dedupe_style_refs(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = ooxml_pkg::dedupe_style_refs(p0).map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_docx_holds_hidden_content(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = env.blob(args.get(0).unwrap_or(&Value::Null))?;
+    let r = docx_engine::hidden_content::docx_holds_hidden_content(p0)
+        .map_err(|error| error.to_string())?;
     Ok(Some(to_json(&r)?))
 }
 

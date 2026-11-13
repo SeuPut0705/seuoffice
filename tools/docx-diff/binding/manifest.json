@@ -6136,9 +6136,18 @@
     "package",
     "test"
    ],
-   "rust": null,
-   "route": "ts",
-   "reason": "no Rust port names it"
+   "rust": {
+    "path": "docx_engine::hidden_content::docx_holds_hidden_content",
+    "file": "crates/docx-engine/src/hidden_content.rs",
+    "name": "docx_holds_hidden_content",
+    "vis": "pub",
+    "params": [
+     "bytes: &[u8]"
+    ],
+    "ret": "Result<bool, String>",
+    "reachable": true
+   },
+   "route": "table"
   },
   {
    "module": "hidden-content",
@@ -6165,9 +6174,19 @@
     "index",
     "package"
    ],
-   "rust": null,
-   "route": "ts",
-   "reason": "no Rust port names it"
+   "rust": {
+    "path": "docx_engine::hidden_content::clear_hidden_marks",
+    "file": "crates/docx-engine/src/hidden_content.rs",
+    "name": "clear_hidden_marks",
+    "vis": "pub",
+    "params": [
+     "bytes: &[u8]",
+     "now: f64"
+    ],
+    "ret": "Result<Vec<u8>, String>",
+    "reachable": true
+   },
+   "route": "table"
   },
   {
    "module": "ink",
