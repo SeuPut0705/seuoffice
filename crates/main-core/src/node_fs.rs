@@ -659,8 +659,9 @@ mod libuv_table {
 
     #[test]
     fn what_the_switch_leaves_out_is_unknown() {
-        for raw in [0, -4058, 2_000_000, ERROR_SUCCESS as i32] {
-            assert_eq!(errno_name(raw), None, "{raw}");
-        }
+        // libuv's `default:` is UV_UNKNOWN; zero and below are not system errors
+        assert_eq!(errno_name(2_000_000), Some("UNKNOWN"));
+        assert_eq!(errno_name(ERROR_SUCCESS as i32), None);
+        assert_eq!(errno_name(-4058), None);
     }
 }
