@@ -106,8 +106,11 @@ Var SeuOfficePrevious
   ${If} $UpdateMode = 1
     nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" "--updated"
   ${EndIf}
+  ; Quit, not Abort: Abort in the install section leaves the window open on
+  ; its "aborted" page, which an update started from the app would leave
+  ; waiting for a click after the message above
   SetErrorLevel 5
-  Abort "${REASON}"
+  Quit
 !macroend
 
 !macro NSIS_HOOK_PREINSTALL

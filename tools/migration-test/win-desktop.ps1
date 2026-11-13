@@ -107,6 +107,48 @@ function IsAdmin {
   ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole(
     [Security.Principal.WindowsBuiltInRole]::Administrator)
 }
+# The message box the installer shows when it keeps the installed version
+# (crates/shell/bundle/hooks.nsh, SeuOfficeKeepInstalled): an update from the
+# app installs visibly, so the box waits for a click. Only a box of the
+# installer's process with the expected text is answered (OK), never the
+# installer's own window, which is a dialog too.
+Add-Type -TypeDefinition @'
+using System;
+using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
+public static class MigrationDialogs {
+  delegate bool EnumProc(IntPtr hwnd, IntPtr lParam);
+  [DllImport("user32.dll")] static extern bool EnumWindows(EnumProc f, IntPtr l);
+  [DllImport("user32.dll")] static extern bool EnumChildWindows(IntPtr parent, EnumProc f, IntPtr l);
+  [DllImport("user32.dll")] static extern uint GetWindowThreadProcessId(IntPtr h, out uint pid);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetClassName(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll", CharSet = CharSet.Unicode)] static extern int GetWindowText(IntPtr h, StringBuilder s, int n);
+  [DllImport("user32.dll")] static extern bool IsWindowVisible(IntPtr h);
+  [DllImport("user32.dll")] static extern bool PostMessage(IntPtr h, uint m, IntPtr w, IntPtr l);
+  static string Class(IntPtr h) { var s = new StringBuilder(256); GetClassName(h, s, 256); return s.ToString(); }
+  static string Text(IntPtr h) { var s = new StringBuilder(2048); GetWindowText(h, s, 2048); return s.ToString(); }
+  public static string[] Answer(int pid, string mustContain) {
+    var answered = new List<string>();
+    EnumWindows((h, l) => {
+      uint owner;
+      GetWindowThreadProcessId(h, out owner);
+      if (owner != (uint)pid || !IsWindowVisible(h) || Class(h) != "#32770") return true;
+      var text = new StringBuilder();
+      EnumChildWindows(h, (c, l2) => {
+        if (Class(c) == "Static") text.Append(Text(c)).Append(' ');
+        return true;
+      }, IntPtr.Zero);
+      if (text.ToString().Contains(mustContain)) {
+        answered.Add(Text(h) + ": " + text.ToString().Trim());
+        PostMessage(h, 0x0111, (IntPtr)1, IntPtr.Zero); // WM_COMMAND, IDOK
+      }
+      return true;
+    }, IntPtr.Zero);
+    return answered.ToArray();
+  }
+}
+'@
 $ifeo = 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\SeuOffice.exe'
 
 try {
@@ -171,12 +213,24 @@ try {
     if (-not $installer) { Start-Sleep -Milliseconds 500 }
   }
   Step 'installer-started' @{ path = $installer.Path; seconds = $t.Elapsed.TotalSeconds }
+  # read the exit code later: the handle must be taken while the process runs
+  if ($installer) { $null = $installer.Handle }
+  $answered = @()
   if ($Fault -eq 'kill-installer' -and $installer) {
     Start-Sleep 5
     Stop-Process -Id $installer.Id -Force
     Step 'installer-killed' @{ }
   } elseif ($installer) {
-    $installer.WaitForExit()
+    # an update waits up to 90 s for the new app's start mark; 10 min is a hang
+    for ($i = 0; $i -lt 1200 -and -not $installer.HasExited; $i++) {
+      if ($Fault -eq 'lock-file') { $answered += [MigrationDialogs]::Answer($installer.Id, 'stays as it is') }
+      Start-Sleep -Milliseconds 500
+    }
+    if (-not $installer.HasExited) {
+      Stop-Process -Id $installer.Id -Force
+      Fail 'the installer did not end within 10 minutes'
+    }
+    Step 'installer-ended' @{ exit = $installer.ExitCode; answered = $answered; seconds = $t.Elapsed.TotalSeconds }
   }
   for ($i = 0; $i -lt 90 -and -not (AppProcesses); $i++) { Start-Sleep 1 }
   Start-Sleep 5
@@ -189,6 +243,14 @@ try {
   Step 'after-install' @{
     version = $version; appStartedByInstaller = $started; seconds = $t.Elapsed.TotalSeconds
     installDir = (InstallDir); installDirFiles = $files
+  }
+
+  if ($Fault -eq 'lock-file') {
+    # hooks.nsh: nothing written, exit code 5, the installed version started again
+    if (-not $installer) { Fail 'no installer started' }
+    if ($installer.ExitCode -ne 5) { Fail "the installer ended with $($installer.ExitCode), expected 5 (kept the installed version)" }
+    if ($answered.Count -eq 0) { Fail 'the installer did not say it kept the installed version' }
+    if (-not $started) { Fail 'the installed version was not started again' }
   }
 
   # 4. the data, read by the app now installed
