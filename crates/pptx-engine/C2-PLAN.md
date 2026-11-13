@@ -42,14 +42,14 @@ the same objects.
 
 The data shape, one table both sides read:
 
-| Argument kind | Request                                                         | Written back                                                       |
-| ------------- | --------------------------------------------------------------- | ------------------------------------------------------------------ |
-| `json`        | JSON                                                            | nothing                                                            |
-| `slide`       | the `Slide` as JSON (Rust `&mut Slide`)                         | `out[i]`: the slide's JSON; `adopt` into the caller's object       |
-| `deck`        | the `SlideDeck` as JSON (Rust `&mut SlideDeck`)                 | the same                                                           |
-| `archive`     | `{ entries: [[path, {$blob:n}]...], originalHash }`             | `out[i]: { changed: [[path, {$blob}\|null]...], paths }`           |
-| `opened`      | `{ deck, archive }` as the two rows above                       | `{ deck, archive }` as above                                       |
-| `slideOf`     | a `Slide` of the opened deck, sent as its index (Rust `usize`)  | through the `opened` argument                                      |
+| Argument kind | Request                                                        | Written back                                                 |
+| ------------- | -------------------------------------------------------------- | ------------------------------------------------------------ |
+| `json`        | JSON                                                           | nothing                                                      |
+| `slide`       | the `Slide` as JSON (Rust `&mut Slide`)                        | `out[i]`: the slide's JSON; `adopt` into the caller's object |
+| `deck`        | the `SlideDeck` as JSON (Rust `&mut SlideDeck`)                | the same                                                     |
+| `archive`     | `{ entries: [[path, {$blob:n}]...], originalHash }`            | `out[i]: { changed: [[path, {$blob}\|null]...], paths }`     |
+| `opened`      | `{ deck, archive }` as the two rows above                      | `{ deck, archive }` as above                                 |
+| `slideOf`     | a `Slide` of the opened deck, sent as its index (Rust `usize`) | through the `opened` argument                                |
 
 - The kind comes from the Rust signature: a `&mut` parameter is written back;
   `OpenedPptx`/`PackageArchive` are the structured kinds. The generator emits
@@ -107,3 +107,89 @@ dispatch), C's push (`Deserialize` for the model and the deck-op option types,
 The pptx-diff comparison and faults, clippy, `npm run test -w
 @seuoffice/pptx-engine` and the packages that import it, the render benchmark,
 then `CI`, `seuoffice` and `seuoffice rust` on runners.
+
+## Handoff (2026-11-13, MacBook to Mac mini)
+
+The batch moves to the Mac mini (main's load move, dispatch d3). State at the
+pushed head of `feat/rust-pptx-c2`.
+
+### What is done
+
+- The TypeScript engine is frozen in `tools/pptx-diff/reference/` (main's
+  redaction changes b55ef3684 and 288118079 applied to it by hand: index,
+  parse, xml-utils, redaction-xml). The gate imports only the reference.
+- The generator is B4's (`tools/docx-diff/binding/gen.ts`) with an engine
+  config: `--engine pptx` reads `tools/pptx-diff/binding/{config,kinds,wrapper,rows,overrides}.ts`
+  and writes `packages/pptx-engine/src/*` (47 modules, 3 copied, `crc32`
+  dropped), `crates/office-wasm/src/invoke/pptx_table.rs` (289 rows) and
+  `tools/pptx-diff/binding/manifest.json`. Without a flag it writes the docx
+  binding unchanged. TS-only: `savePptxToFile`, `ownValue`, `setOwn`,
+  `xmlParser`, `xmlArray`, `sfntCmapLookup`, plain-data consts, and the
+  `PackageArchive` accessors.
+- Hand-written: `packages/pptx-engine/src/{engine,engine-adopt,engine-init,engine-url}.ts`,
+  `src/node/*`, `crates/office-wasm/src/invoke/{pptx,pptx_routes}.rs`,
+  `crates/office-wasm/src/calls/pptx_roundtrip.rs` (gate group
+  `pptxRoundtrip`, `tools/pptx-diff/calls-roundtrip.ts`).
+- Init: `node` export condition, slides main/renderer/web `engine-init.ts`,
+  vitest `setupFiles` (pptx-engine, pptx-render, pipelines, shell; slides and
+  pptx-ops had B4's).
+- Render benchmark: crates/pptx-engine/README.md ("C2 is on"); no export stays
+  TypeScript.
+- Redaction (main's d2): `read_redact_label` ported (60ce84173) with 12 gate
+  inputs and 2 fault probes; C took both into u1 (e70ddfb01, ee9a20614).
+- The independent review's two findings are fixed: a slide part listed twice
+  keeps two slide objects (`tests/slide-listed-twice.test.ts`, failed before
+  the fix), and archive parts are copied out of the reply frame.
+
+### Taken from the other streams
+
+- Stream C (`feat/rust-pptx-u1`), up to 64221b7ec: model `Deserialize`
+  (strict), `Uids::next`, `open_pptx_with`/`open_archive_with`, option-struct
+  bytes as `{"$bytes"}`, `GroupChildSlice`/`HierLayout` `Serialize`,
+  stored media in `save_pptx`, `canonical_xml` in `parse_slide` (747604879),
+  `skip_withheld`, `image_rel_for` returning `Option` (64221b7ec).
+- B4 (`feat/rust-docx-b4`), up to 197759de0: `engineInvoke`/`revive` in
+  `@seuoffice/engine-wasm`, `Args` rows and `{"$text"}` blobs, request depth
+  1024, `toWellFormed`, `{"$num"}` for non-finite numbers, the node.ts path,
+  `formatted()` rustfmt of the tables, the eslint ignore of
+  `tools/*-diff/reference/**`.
+- origin/main up to 8a63a954a.
+
+### What waits
+
+- B4 d332386da (pushed after 197759de0) is not merged yet; merge it, then
+  regenerate both engines and check the docx no-diff. B4 owes main's docx
+  redaction batch (cli `docs` hidden-* tests: 123 failures here; CI tests of
+  `@seuoffice/docs` and `@seuoffice/docx-engine`; seuoffice web ai-relay docs
+  specs). Those are B4's.
+- CI lint, 8 errors, all in stream C's gate files (tools/pptx-diff
+  calls-deckcore, calls-deckshape, calls-decktables, calls-generate,
+  calls-media): ask C or fix them in a commit C can take.
+- Runners at 6b61b29bd: CI 43347118154 (lint above; docs and docx-engine
+  tests: B4), seuoffice 43347121284 (web: 8 ai-relay docs specs: B4; the two
+  collab-slides specs of the earlier run passed), seuoffice rust 43347124639
+  (running at hand-over). No runner has seen 859e51275/93c33c17c yet.
+- Local results at e044a3c7e (BindingFixes): pptx-engine 1795 passed;
+  pptx-render 427; pptx-ops 120; pipelines 225; slides 2551 passed with 1
+  machine-font failure (`system-fonts`); shell: 3 macOS-only failures
+  (`tab-shortcuts` Cmd+W, two `mcp-client/local`); cli: only the B4 docs
+  failures.
+- Not run yet: the full pptx-diff gate and the 316 fault probes on this head
+  (run them on the runner: `gh workflow run "seuoffice rust" --ref feat/rust-pptx-c2`).
+- Open choice for main: the slide-index Rust signatures make the binding lend a
+  master or layout slide to the deck for one call (`slideIndex` in
+  engine.ts); a Rust API taking a slide beside the opened deck would remove it.
+
+### How to run
+
+```sh
+export PATH=/opt/homebrew/opt/node@22/bin:$PATH
+npm ci
+node crates/office-wasm/build.mjs                      # release wasm, needed by every test
+npx tsx tools/docx-diff/binding/gen.ts                 # docx: must leave no diff
+npx tsx tools/docx-diff/binding/gen.ts --engine pptx   # pptx binding
+npm run test -w @seuoffice/pptx-engine                 # and pptx-render, pptx-ops, pipelines, slides, shell, cli
+node tools/pptx-diff/faults.mjs --inventory            # 0 STALE
+npx tsx tools/pptx-diff/bench-render.ts --rounds 100   # render benchmark
+gh workflow run CI --ref feat/rust-pptx-c2             # and seuoffice, "seuoffice rust" (gate and faults)
+```
