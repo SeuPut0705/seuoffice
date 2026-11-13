@@ -36,6 +36,8 @@
  *   40001 and answers `listen` at once, or fails it with `listenError: {
  *   message, code }`. A body chunk `{ error: message }` makes the stream fail
  *   when it is read.
+ * - `killFails`: pids whose `process.kill` throws ESRCH (a negative pid is
+ *   a process group), so a group kill falls back to the process alone.
  * - `env` (`process.env`), `platform` (default `linux`), `pid` (1000),
  *   `abortAt`: the virtual time at which the caller's signal aborts.
  * - the case's folder: calls of `node:fs/promises` (`FS_CALLS`) run for real
@@ -116,6 +118,8 @@ export interface World {
   platform?: string
   pid?: number
   abortAt?: number
+  /** the pids (a negative one is a process group) whose `process.kill` throws ESRCH */
+  killFails?: number[]
   requests?: RequestSpec[]
   listenError?: { message: string; code?: string }
 }
@@ -554,6 +558,11 @@ export class WorldRun {
 
   kill = (pid: number, signal?: string | number): true => {
     this.log('killpid', pid, signal ?? null)
+    if (this.world.killFails?.includes(pid)) {
+      const e: Any = new Error('kill ESRCH')
+      e.code = 'ESRCH'
+      throw e
+    }
     return true
   }
 

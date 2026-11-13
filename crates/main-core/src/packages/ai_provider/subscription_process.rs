@@ -788,9 +788,9 @@ impl KillHost for RtKillHost {
     }
 
     fn kill(&mut self, pid: f64, signal: Option<Signal>) -> Result<(), String> {
-        // the runtime reports no failure of a signal
-        self.rt.kill_pid(pid, signal.map(Signal::as_str));
-        Ok(())
+        self.rt
+            .kill_pid(pid, signal.map(Signal::as_str))
+            .map_err(|e| e.message_or_string())
     }
 
     fn spawn_killer(

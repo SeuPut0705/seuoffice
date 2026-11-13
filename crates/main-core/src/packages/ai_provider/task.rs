@@ -423,9 +423,6 @@ pub enum Cmd {
     EndStdin { child: Id },
     /// `child.kill(signal)`; `None`: `SIGTERM`
     KillChild { child: Id, signal: Option<String> },
-    /// `process.kill(pid, signal)`; a negative pid is a process group. A
-    /// failure is not reported: every caller ignores it.
-    KillPid { pid: f64, signal: Option<String> },
     /// a file system call: answer [`Answer::Fs`]
     Fs { id: Id, op: FsOp },
     /// `server.listen(port, host)`: answer [`Answer::Listening`], then the
@@ -545,6 +542,11 @@ pub struct HostInfo {
     pub uuid: Box<dyn FnMut() -> String>,
     /// `crypto.randomBytes(n)`
     pub random: Box<dyn FnMut(usize) -> Vec<u8>>,
+    /// `process.kill(pid, signal)`, a system call the shell makes at once on
+    /// the core thread: a negative pid is a process group, `None` is
+    /// `SIGTERM`; the `Err` is what Node throws (`ESRCH`, `EPERM`), which
+    /// callers act on (a child that leads no group is signalled alone)
+    pub kill: Box<dyn FnMut(f64, Option<&str>) -> Result<(), JsError>>,
 }
 
 // ---------------------------------------------------------------------------
@@ -1089,12 +1091,9 @@ impl Rt {
         })
     }
 
-    /// `process.kill(pid, signal)`
-    pub fn kill_pid(&self, pid: f64, signal: Option<&str>) {
-        self.push(Cmd::KillPid {
-            pid,
-            signal: signal.map(str::to_owned),
-        });
+    /// `process.kill(pid, signal)`: `Err` is what it threw
+    pub fn kill_pid(&self, pid: f64, signal: Option<&str>) -> Result<(), JsError> {
+        (self.0.host.borrow_mut().kill)(pid, signal)
     }
 
     fn deliver(&self, child: Id, event: ChildEvent) {
@@ -1836,6 +1835,7 @@ mod tests {
             clock: Box::new(|| 0.0),
             uuid: Box::new(String::new),
             random: Box::new(|n| vec![0; n]),
+            kill: Box::new(|_, _| Ok(())),
         }
     }
 

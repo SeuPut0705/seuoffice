@@ -1730,6 +1730,11 @@ L.push(
   run(wc({ closeOn: 'kill' }), { timeoutMs: 200 }, 'the CLI does not answer in time'),
   run(wc({ closeOn: 'kill' }), {}, 'the default timeout'),
   run({ abortAt: 50, children: [{ closeOn: 'kill' }] } as World, {}, 'the caller gives up'),
+  run(
+    { abortAt: 50, killFails: [-4242], children: [{ closeOn: 'kill' }] } as World,
+    {},
+    'the caller gives up; the CLI leads no group, so it is signalled alone',
+  ),
   run(wc({ closeOn: 'kill' }), { preAborted: true }, 'aborted before it started'),
   run(wc(ok({ models: [] })), { resolveError: 'no cli here' }, 'the program finder fails'),
   run(

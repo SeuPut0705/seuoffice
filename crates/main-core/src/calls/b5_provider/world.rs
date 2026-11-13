@@ -468,9 +468,6 @@ impl WorldRun<'_> {
                     ));
                 }
             }
-            Cmd::KillPid { pid, signal } => {
-                self.log(json!(["killpid", number(pid), signal]));
-            }
             Cmd::Fs { id, op } => {
                 let event = match run_fs(&op) {
                     Ok(answer) => Event::Done {
@@ -1002,11 +999,31 @@ where
                 })
                 .collect()
         }),
+        kill: Box::new(|_, _| Ok(())),
+    };
+    let sink: Sink = Rc::new(RefCell::new(Vec::new()));
+    // `killFails`: the pids whose `process.kill` throws ESRCH
+    let kill_fails: Vec<f64> = spec
+        .get("killFails")
+        .and_then(Value::as_array)
+        .map(|a| a.iter().filter_map(Value::as_f64).collect())
+        .unwrap_or_default();
+    let kill_sink = sink.clone();
+    let host = HostInfo {
+        kill: Box::new(move |pid, signal| {
+            note(&kill_sink, json!(["killpid", number(pid), signal]));
+            if kill_fails.contains(&pid) {
+                return Err(
+                    JsError::error("kill ESRCH").with("code", JsonValue::String("ESRCH".into()))
+                );
+            }
+            Ok(())
+        }),
+        ..host
     };
     let mut runtime = Runtime::new(host);
     let rt = runtime.rt().clone();
     let signal = rt.controller();
-    let sink: Sink = Rc::new(RefCell::new(Vec::new()));
     let call = runtime.start(start(rt.clone(), signal.clone(), sink.clone()));
     let mut run = WorldRun {
         spec,
