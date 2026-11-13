@@ -228,6 +228,9 @@ struct LocalWorld {
     kill_group_throws: bool,
     taskkill_throws: bool,
     labels: Vec<String>,
+    /// the method each call began as, by call id: a settle that names another
+    /// kind is answered as a mismatch the TypeScript never shows
+    kinds: Vec<CallKind>,
     outcomes: Vec<(String, JsonValue)>,
 }
 
@@ -491,7 +494,14 @@ impl LocalMcpHost for LocalWorld {
     }
 
     fn settle(&mut self, call: CallId, kind: CallKind, outcome: Result<CallOutcome, CallFailure>) {
-        let _ = kind;
+        if let Some(expected) = self.kinds.get(call as usize).copied()
+            && expected != kind
+        {
+            let label = self.labels.get(call as usize).cloned().unwrap_or_default();
+            let mismatch = format!("settled as {kind:?}, began as {expected:?}");
+            self.set_outcome(&label, object(vec![("wrongKind", text(mismatch.as_str()))]));
+            return;
+        }
         let value = match outcome {
             Ok(CallOutcome::Ensured | CallOutcome::Stopped) => {
                 object(vec![("ok", JsonValue::Bool(true))])
@@ -612,6 +622,7 @@ fn local_scenario(args: &[Value]) -> (Answer, Vec<Vec<Value>>) {
         kill_group_throws: is_true(prop(&o, "killGroupThrows")),
         taskkill_throws: is_true(prop(&o, "taskkillThrows")),
         labels: Vec::new(),
+        kinds: Vec::new(),
         outcomes: Vec::new(),
     };
     let app_signal = as_str(prop(&o, "appSignal"));
@@ -649,6 +660,12 @@ fn local_scenario(args: &[Value]) -> (Answer, Vec<Vec<Value>>) {
             "ensure" | "list" | "call" | "stop" => {
                 let id = world.labels.len() as CallId;
                 world.labels.push(label.clone());
+                world.kinds.push(match op {
+                    "ensure" => CallKind::Ensure,
+                    "list" => CallKind::List,
+                    "call" => CallKind::Tool,
+                    _ => CallKind::Stop,
+                });
                 world.set_outcome(&label, text("pending"));
                 let signal = signal_of(step);
                 if signal == CallSignal::Live {

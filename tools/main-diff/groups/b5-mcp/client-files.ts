@@ -68,6 +68,7 @@ const TOML_TEXTS: [string, string?][] = [
   ['a = 1\nb = 2\nc = 3\n'],
   ['  a   =   1  # trailing comment'],
   ['a=1\r\nb=2\r\n', 'CRLF'],
+  ['a=1\r\n\r\nb=2\r\n', 'CRLF with a blank line'],
   ['\uFEFFa = 1', 'a byte order mark'],
   ['a-b_c9 = 1'],
   ['"quoted key" = 1'],
@@ -1416,6 +1417,8 @@ interface TarEntry {
   sizeField?: string
   /** a checksum that is wrong */
   badSum?: boolean
+  /** the checksum field ends in two NUL bytes instead of NUL and a space */
+  nulSum?: boolean
   /** no ustar magic */
   v7?: boolean
   prefix?: string
@@ -1441,7 +1444,10 @@ function tarBlock(entry: TarEntry, typeChar: string, data: Buffer): Buffer {
   if (entry.prefix) header.write(entry.prefix, 345, 'utf8')
   let sum = 0
   for (const byte of header) sum += byte
-  header.write(entry.badSum ? '0000000\0' : `${sum.toString(8).padStart(6, '0')}\0 `, 148, 'latin1')
+  const written = entry.nulSum
+    ? `${sum.toString(8).padStart(6, '0')}\0\0`
+    : `${sum.toString(8).padStart(6, '0')}\0 `
+  header.write(entry.badSum ? '0000000\0' : written, 148, 'latin1')
   return header
 }
 
@@ -1579,6 +1585,13 @@ const tarArchives: [string, TarEntry[], { endMark?: boolean }?][] = [
     [
       { name: 'GlobalHeader', type: 'g', data: paxBody({ path: 'ignored/x' }) },
       { name: `${R}/g.txt`, data: 'g' },
+    ],
+  ],
+  [
+    'a global pax header inside the top folder is ignored, not unpacked',
+    [
+      { name: `${R}/GlobalHeader`, type: 'g', data: paxBody({ comment: 'x' }) },
+      { name: `${R}/g2.txt`, data: 'g2' },
     ],
   ],
   [
@@ -1753,6 +1766,13 @@ const tarArchives: [string, TarEntry[], { endMark?: boolean }?][] = [
       { name: `${R}/bad.txt`, data: 'bad', badSum: true },
     ],
   ],
+  [
+    'a checksum field ending in two NUL bytes',
+    [
+      { name: `${R}/nul.txt`, data: 'nul', nulSum: true },
+      { name: `${R}/after.txt`, data: 'after' },
+    ],
+  ],
   ['no end mark', [{ name: `${R}/a.txt`, data: 'a' }], { endMark: false }],
   ['only the end mark', []],
   [
@@ -1849,6 +1869,24 @@ for (const [note, entries, opts] of tarArchives) {
     ),
   )
 }
+extractCases.push(
+  c(
+    ['$DIR/archive.bin', 'tar.gz', R, '$DIR/out'],
+    'a symbolic link into a sibling folder whose name starts like the destination',
+    {
+      ...archiveFile(
+        gz(
+          tarBytes([
+            { name: `${R}/a/sibling`, type: '2', link: '../../out-sibling/f' },
+            { name: `${R}/a/inside`, type: '2', link: '../b' },
+            { name: `${R}/b`, data: 'b' },
+          ]),
+        ),
+      ),
+      'out-sibling/f': 'sibling file',
+    },
+  ),
+)
 extractCases.push(
   c(
     ['$DIR/archive.bin', 'tar.gz', '', '$DIR/out'],
