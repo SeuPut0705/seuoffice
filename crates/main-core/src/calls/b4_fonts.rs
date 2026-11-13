@@ -262,7 +262,7 @@ pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answ
                     .collect(),
             )))
         }
-        "family-info.resolveFamilyInfo" => (|| {
+        "family-info.resolveFamilyInfo" => {
             let families = strings(arg(args, 0));
             let faces: Vec<FaceFamily> = arg(args, 1)
                 .and_then(Value::as_array)
@@ -273,7 +273,7 @@ pub(super) fn call(name: &str, args: &[Value], _cx: &mut Context) -> Option<Answ
             resolve_family_info(&families, &faces)
                 .map(|list| Some(infos_value(list)))
                 .map_err(limit)
-        })(),
+        }
         "family-info.familyInfoFor" | "metrics.familyVerticalMetrics" | "sfnt.familyAliases" => {
             scenario_call(args)
         }

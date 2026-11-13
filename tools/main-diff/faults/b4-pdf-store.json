@@ -402,22 +402,22 @@
   {
     "name": "migration replaces an equal AI-read page",
     "file": "main-core/src/packages/pdf_structure/store.rs",
-    "find": "if current.saved_at >= entry.saved_at {",
-    "replace": "if current.saved_at > entry.saved_at {",
+    "find": "&& current.saved_at >= entry.saved_at",
+    "replace": "&& current.saved_at > entry.saved_at",
     "fn": ["pdf-structure/store.migrateDocument"]
   },
   {
     "name": "migration replaces an equal passage",
     "file": "main-core/src/packages/pdf_structure/store.rs",
-    "find": "if current.saved_at >= card.saved_at {",
-    "replace": "if current.saved_at > card.saved_at {",
+    "find": "&& current.saved_at >= card.saved_at",
+    "replace": "&& current.saved_at > card.saved_at",
     "fn": ["pdf-structure/store.migrateDocument"]
   },
   {
     "name": "migration replaces an equal insights entry",
     "file": "main-core/src/packages/pdf_structure/store.rs",
-    "find": "if current_saved_at >= saved_at {",
-    "replace": "if current_saved_at > saved_at {",
+    "find": "&& current_saved_at >= saved_at",
+    "replace": "&& current_saved_at > saved_at",
     "fn": ["pdf-structure/store.migrateDocument"]
   },
   {
@@ -430,15 +430,15 @@
   {
     "name": "migration replaces a newer translation block",
     "file": "main-core/src/packages/pdf_structure/store.rs",
-    "find": "if let Some(current) = as_block(raw.as_ref(), &block.key) {",
-    "replace": "if let Some(current) = as_block(raw.as_ref(), &block.key).filter(|_| false) {",
+    "find": "if let Some(current) = as_block(raw.as_ref(), &block.key)\n",
+    "replace": "if let Some(current) = as_block(raw.as_ref(), &block.key).filter(|_| false)\n",
     "fn": ["pdf-structure/store.migrateDocument"]
   },
   {
     "name": "migration replaces a newer highlight block",
     "file": "main-core/src/packages/pdf_structure/store.rs",
-    "find": "if let Some(current) = as_highlight_block(raw.as_ref(), &block.key) {",
-    "replace": "if let Some(current) = as_highlight_block(raw.as_ref(), &block.key).filter(|_| false) {",
+    "find": "if let Some(current) = as_highlight_block(raw.as_ref(), &block.key)\n",
+    "replace": "if let Some(current) = as_highlight_block(raw.as_ref(), &block.key).filter(|_| false)\n",
     "fn": ["pdf-structure/store.migrateDocument"]
   },
   {

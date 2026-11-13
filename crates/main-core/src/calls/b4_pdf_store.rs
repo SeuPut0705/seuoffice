@@ -122,13 +122,13 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
         "pdf-structure/keys.blockKeyString" => {
             (|| Ok(Some(Value::from(block_key_string(&key_of(arg(args, 0))?)))))()
         }
-        "pdf-structure/sentence-ends.validSentenceEnds" => (|| {
+        "pdf-structure/sentence-ends.validSentenceEnds" => {
             let ends = arg(args, 0).map(json_value_from_serde);
             let length = present(args, 1).and_then(Value::as_f64);
             Ok(Some(Value::Bool(
                 valid_sentence_ends(ends.as_ref(), length).is_some(),
             )))
-        })(),
+        }
         "pdf-structure/sentence-ends.sentenceEndsPair" => (|| {
             let source = arg(args, 0).map(json_value_from_serde);
             let ends = arg(args, 1).map(json_value_from_serde);
@@ -155,24 +155,24 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                 ),
             ))
         })(),
-        "pdf-structure/reading.isSegment" => (|| {
+        "pdf-structure/reading.isSegment" => {
             let value = arg(args, 0).map(json_value_from_serde);
             Ok(Some(Value::Bool(is_segment(value.as_ref()))))
-        })(),
-        "pdf-structure/reading.asPassageCard" => (|| {
+        }
+        "pdf-structure/reading.asPassageCard" => {
             let raw = arg(args, 0).map(json_value_from_serde);
             Ok(Some(
                 as_passage_card(raw.as_ref())
                     .map_or(Value::Null, |card| json_value_to_serde(&card.to_value())),
             ))
-        })(),
-        "pdf-structure/reading.asHighlightRun" => (|| {
+        }
+        "pdf-structure/reading.asHighlightRun" => {
             let raw = arg(args, 0).map(json_value_from_serde);
             Ok(Some(
                 as_highlight_run(raw.as_ref())
                     .map_or(Value::Null, |run| json_value_to_serde(&run.to_value())),
             ))
-        })(),
+        }
         "pdf-structure/reading.asHighlightBlock" => (|| {
             let raw = arg(args, 0).map(json_value_from_serde);
             let key = key_of(arg(args, 1))?;
@@ -181,19 +181,19 @@ pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answe
                     .map_or(Value::Null, |entry| json_value_to_serde(&entry.to_value())),
             ))
         })(),
-        "pdf-structure/reading.asInsights" => (|| {
+        "pdf-structure/reading.asInsights" => {
             let raw = arg(args, 0).map(json_value_from_serde);
             Ok(Some(
                 as_insights(raw.as_ref())
                     .map_or(Value::Null, |entry| json_value_to_serde(&entry.to_value())),
             ))
-        })(),
-        "pdf-structure/note-links.asNoteLinks" => (|| {
+        }
+        "pdf-structure/note-links.asNoteLinks" => {
             let raw = arg(args, 0).map(json_value_from_serde);
             Ok(Some(json_value_to_serde(
                 &as_note_links(raw.as_ref()).to_value(),
             )))
-        })(),
+        }
         "tree/hash.sha256Hex" => (|| Ok(Some(Value::from(sha256_hex(str_arg(args, 0)?)))))(),
         "tree/inline.runsText" => (|| Ok(Some(Value::from(runs_text(&runs_of(arg(args, 0))?)))))(),
         "highlight/run-id.normalizeLabelName" => {
@@ -563,32 +563,30 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
     let answer: Answer = (|| {
         let doc = || text_of(arg(args, 0));
         match method {
-            "ResultStore" => {
-                return val(JsonValue::Object(
-                    [("dir".to_owned(), JsonValue::String(store.dir.clone()))]
-                        .into_iter()
-                        .collect(),
-                ));
-            }
+            "ResultStore" => val(JsonValue::Object(
+                [("dir".to_owned(), JsonValue::String(store.dir.clone()))]
+                    .into_iter()
+                    .collect(),
+            )),
             // paths
-            "documentDir" => return text(store.document_dir(doc()?).map_err(fail)?),
+            "documentDir" => text(store.document_dir(doc()?).map_err(fail)?),
             "aiReadPagePath" => {
                 let path = store
                     .ai_read_page_path(doc()?, text_of(arg(args, 1))?)
                     .map_err(fail)?;
-                return text(path);
+                text(path)
             }
             "translationDir" => {
                 let path = store
                     .translation_dir(doc()?, text_of(arg(args, 1))?, mode_of(args, 2)?)
                     .map_err(fail)?;
-                return text(path);
+                text(path)
             }
             "translationMetaPath" => {
                 let path = store
                     .translation_meta_path(doc()?, text_of(arg(args, 1))?, mode_of(args, 2)?)
                     .map_err(fail)?;
-                return text(path);
+                text(path)
             }
             "translationBlockPath" => {
                 let path = store
@@ -599,7 +597,7 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                         mode_of(args, 3)?,
                     )
                     .map_err(fail)?;
-                return text(path);
+                text(path)
             }
             "jobPath" => {
                 let path = store
@@ -610,36 +608,30 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                         mode_of(args, 3)?,
                     )
                     .map_err(fail)?;
-                return text(path);
+                text(path)
             }
-            "passagePath" => {
-                return text(
-                    store
-                        .passage_path(doc()?, text_of(arg(args, 1))?)
-                        .map_err(fail)?,
-                );
-            }
-            "highlightRunDir" => {
-                return text(
-                    store
-                        .highlight_run_dir(doc()?, text_of(arg(args, 1))?)
-                        .map_err(fail)?,
-                );
-            }
+            "passagePath" => text(
+                store
+                    .passage_path(doc()?, text_of(arg(args, 1))?)
+                    .map_err(fail)?,
+            ),
+            "highlightRunDir" => text(
+                store
+                    .highlight_run_dir(doc()?, text_of(arg(args, 1))?)
+                    .map_err(fail)?,
+            ),
             "highlightBlockPath" => {
                 let path = store
                     .highlight_block_path(doc()?, text_of(arg(args, 1))?, &key_of(arg(args, 2))?)
                     .map_err(fail)?;
-                return text(path);
+                text(path)
             }
-            "insightsPath" => {
-                return text(
-                    store
-                        .insights_path(doc()?, text_of(arg(args, 1))?)
-                        .map_err(fail)?,
-                );
-            }
-            "noteLinksPath" => return text(store.note_links_path()),
+            "insightsPath" => text(
+                store
+                    .insights_path(doc()?, text_of(arg(args, 1))?)
+                    .map_err(fail)?,
+            ),
+            "noteLinksPath" => text(store.note_links_path()),
             // AI-read pages
             "writeAiReadPage" => {
                 let meta = arg(args, 3);
@@ -648,20 +640,13 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                     model: meta.and_then(|m| opt_text(m.get("model"))),
                 };
                 let payload = json_value_from_serde(arg(args, 2).unwrap_or(&Value::Null));
-                return done(store.write_ai_read_page(
-                    doc()?,
-                    text_of(arg(args, 1))?,
-                    &payload,
-                    &meta,
-                ));
+                done(store.write_ai_read_page(doc()?, text_of(arg(args, 1))?, &payload, &meta))
             }
             "readAiReadPage" => {
                 let entry = store.read_ai_read_page(doc()?, text_of(arg(args, 1))?);
-                return or_null(entry.map(|e| e.to_value()));
+                or_null(entry.map(|e| e.to_value()))
             }
-            "readAiReadPages" => {
-                return val(pairs(&store.read_ai_read_pages(doc()?), |e| e.to_value()));
-            }
+            "readAiReadPages" => val(pairs(&store.read_ai_read_pages(doc()?), |e| e.to_value())),
             // translations
             "writeTranslationMeta" => {
                 let meta = arg(args, 2).ok_or_else(|| bad("the meta"))?;
@@ -669,31 +654,29 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                     provider: text_of(meta.get("provider"))?.to_owned(),
                     model: text_of(meta.get("model"))?.to_owned(),
                 };
-                return done(store.write_translation_meta(
+                done(store.write_translation_meta(
                     doc()?,
                     text_of(arg(args, 1))?,
                     &meta,
                     mode_of(args, 3)?,
-                ));
+                ))
             }
             "writeTranslationBlock" => {
                 let block = block_input(arg(args, 2).ok_or_else(|| bad("a block"))?)?;
-                return done(store.write_translation_block(
+                done(store.write_translation_block(
                     doc()?,
                     text_of(arg(args, 1))?,
                     &block,
                     mode_of(args, 3)?,
-                ));
+                ))
             }
-            "writeEditedTranslationBlock" => {
-                return done(store.write_edited_translation_block(
-                    doc()?,
-                    text_of(arg(args, 1))?,
-                    &key_of(arg(args, 2))?,
-                    text_of(arg(args, 3))?,
-                    mode_of(args, 4)?,
-                ));
-            }
+            "writeEditedTranslationBlock" => done(store.write_edited_translation_block(
+                doc()?,
+                text_of(arg(args, 1))?,
+                &key_of(arg(args, 2))?,
+                text_of(arg(args, 3))?,
+                mode_of(args, 4)?,
+            )),
             "writeTranslationBlocks" => {
                 let blocks = arg(args, 2)
                     .and_then(Value::as_array)
@@ -701,18 +684,18 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                     .iter()
                     .map(block_input)
                     .collect::<R<Vec<_>>>()?;
-                return done(store.write_translation_blocks(
+                done(store.write_translation_blocks(
                     doc()?,
                     text_of(arg(args, 1))?,
                     &blocks,
                     mode_of(args, 3)?,
-                ));
+                ))
             }
             "readTranslation" => {
                 let found = store
                     .read_translation(doc()?, text_of(arg(args, 1))?, mode_of(args, 2)?)
                     .map_err(fail)?;
-                return or_null(found.map(|t| {
+                or_null(found.map(|t| {
                     JsonValue::Object(
                         [
                             ("lang".to_owned(), JsonValue::String(t.lang.clone())),
@@ -731,19 +714,13 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                         .into_iter()
                         .collect(),
                     )
-                }));
+                }))
             }
-            "listTranslations" => {
-                return Ok(Some(strings(
-                    &store.list_translations(doc()?, mode_of(args, 1)?),
-                )));
-            }
+            "listTranslations" => Ok(Some(strings(
+                &store.list_translations(doc()?, mode_of(args, 1)?),
+            ))),
             "deleteTranslation" => {
-                return done(store.delete_translation(
-                    doc()?,
-                    text_of(arg(args, 1))?,
-                    mode_of(args, 2)?,
-                ));
+                done(store.delete_translation(doc()?, text_of(arg(args, 1))?, mode_of(args, 2)?))
             }
             "deleteTranslationExceptEdited" => {
                 let removed = store
@@ -753,7 +730,7 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                         mode_of(args, 2)?,
                     )
                     .map_err(fail)?;
-                return count(removed);
+                count(removed)
             }
             "countEditedTranslationBlocks" => {
                 let n = store
@@ -763,12 +740,12 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                         mode_of(args, 2)?,
                     )
                     .map_err(fail)?;
-                return count(n);
+                count(n)
             }
             // job records
             "writeJob" => {
                 let job = job_input(arg(args, 1).ok_or_else(|| bad("a job"))?)?;
-                return done(store.write_job(doc()?, &job));
+                done(store.write_job(doc()?, &job))
             }
             "heartbeatJob" => {
                 let beat = store
@@ -779,7 +756,7 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                         mode_of(args, 3)?,
                     )
                     .map_err(fail)?;
-                return Ok(Some(Value::Bool(beat)));
+                Ok(Some(Value::Bool(beat)))
             }
             "readJob" => {
                 let status = store.read_job(
@@ -788,69 +765,59 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                     present(args, 2).and_then(Value::as_str),
                     mode_of(args, 3)?,
                 );
-                return val(status.to_value());
+                val(status.to_value())
             }
-            "listJobs" => {
-                return list(
-                    store
-                        .list_jobs(doc()?)
-                        .iter()
-                        .map(|j| j.to_value())
-                        .collect(),
-                );
-            }
-            "unfinishedJobs" => {
-                return list(
-                    store
-                        .unfinished_jobs(doc()?)
-                        .iter()
-                        .map(|j| j.to_value())
-                        .collect(),
-                );
-            }
+            "listJobs" => list(
+                store
+                    .list_jobs(doc()?)
+                    .iter()
+                    .map(|j| j.to_value())
+                    .collect(),
+            ),
+            "unfinishedJobs" => list(
+                store
+                    .unfinished_jobs(doc()?)
+                    .iter()
+                    .map(|j| j.to_value())
+                    .collect(),
+            ),
             // passage cards
             "writePassage" => {
                 let card = passage_input(arg(args, 1).ok_or_else(|| bad("a card"))?)?;
-                return done(store.write_passage(doc()?, &card));
+                done(store.write_passage(doc()?, &card))
             }
             "readPassage" => {
                 let card = store.read_passage(doc()?, text_of(arg(args, 1))?);
-                return or_null(card.map(|c| c.to_value()));
+                or_null(card.map(|c| c.to_value()))
             }
-            "readPassages" => {
-                return list(
-                    store
-                        .read_passages(doc()?)
-                        .iter()
-                        .map(|c| c.to_value())
-                        .collect(),
-                );
-            }
-            "deletePassage" => {
-                return done(store.delete_passage(doc()?, text_of(arg(args, 1))?));
-            }
-            "countPassages" => return count(store.count_passages(doc()?)),
+            "readPassages" => list(
+                store
+                    .read_passages(doc()?)
+                    .iter()
+                    .map(|c| c.to_value())
+                    .collect(),
+            ),
+            "deletePassage" => done(store.delete_passage(doc()?, text_of(arg(args, 1))?)),
+            "countPassages" => count(store.count_passages(doc()?)),
             // AI highlights
             "writeHighlightRun" => {
                 let run = run_input(arg(args, 1).ok_or_else(|| bad("a run"))?)?;
-                return done(store.write_highlight_run(doc()?, &run));
+                done(store.write_highlight_run(doc()?, &run))
             }
             "readHighlightRun" => {
                 let run = store.read_highlight_run(doc()?, text_of(arg(args, 1))?);
-                return or_null(run.map(|r| r.to_value()));
+                or_null(run.map(|r| r.to_value()))
             }
-            "listHighlightRuns" => {
-                return list(
-                    store
-                        .list_highlight_runs(doc()?)
-                        .iter()
-                        .map(|r| r.to_value())
-                        .collect(),
-                );
-            }
+            "listHighlightRuns" => list(
+                store
+                    .list_highlight_runs(doc()?)
+                    .iter()
+                    .map(|r| r.to_value())
+                    .collect(),
+            ),
             "writeHighlightBlock" => {
                 let block = highlight_block_input(arg(args, 2).ok_or_else(|| bad("a block"))?)?;
-                return done(store.write_highlight_block(doc()?, text_of(arg(args, 1))?, &block));
+                done(store.write_highlight_block(doc()?, text_of(arg(args, 1))?, &block))
             }
             "writeHighlightBlocks" => {
                 let blocks = arg(args, 2)
@@ -859,7 +826,7 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                     .iter()
                     .map(highlight_block_input)
                     .collect::<R<Vec<_>>>()?;
-                return done(store.write_highlight_blocks(doc()?, text_of(arg(args, 1))?, &blocks));
+                done(store.write_highlight_blocks(doc()?, text_of(arg(args, 1))?, &blocks))
             }
             "readHighlightBlock" => {
                 let entry = store.read_highlight_block(
@@ -867,11 +834,11 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                     text_of(arg(args, 1))?,
                     &key_of(arg(args, 2))?,
                 );
-                return or_null(entry.map(|e| e.to_value()));
+                or_null(entry.map(|e| e.to_value()))
             }
             "readHighlightBlocks" => {
                 let blocks = store.read_highlight_blocks(doc()?, text_of(arg(args, 1))?);
-                return val(pairs(&blocks, |b| b.to_value()));
+                val(pairs(&blocks, |b| b.to_value()))
             }
             "setHighlightSuggestionStates" => {
                 let mut states = JsObject::new();
@@ -888,43 +855,41 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                         &states,
                     )
                     .map_err(fail)?;
-                return Ok(Some(Value::Bool(changed)));
+                Ok(Some(Value::Bool(changed)))
             }
             "deleteHighlightRun" => {
-                return done(store.delete_highlight_run(doc()?, text_of(arg(args, 1))?));
+                done(store.delete_highlight_run(doc()?, text_of(arg(args, 1))?))
             }
             // insights
             "writeInsights" => {
                 let entry = insights_input(arg(args, 1).ok_or_else(|| bad("an entry"))?)?;
-                return done(store.write_insights(doc()?, &entry));
+                done(store.write_insights(doc()?, &entry))
             }
             "readInsights" => {
                 let entry = store.read_insights(doc()?, text_of(arg(args, 1))?);
-                return or_null(entry.map(|e| e.to_value()));
+                or_null(entry.map(|e| e.to_value()))
             }
-            "listInsights" => return Ok(Some(strings(&store.list_insights(doc()?)))),
-            "deleteInsights" => {
-                return done(store.delete_insights(doc()?, text_of(arg(args, 1))?));
-            }
+            "listInsights" => Ok(Some(strings(&store.list_insights(doc()?)))),
+            "deleteInsights" => done(store.delete_insights(doc()?, text_of(arg(args, 1))?)),
             // note links
-            "readNoteLinks" => return val(store.read_note_links().to_value()),
+            "readNoteLinks" => val(store.read_note_links().to_value()),
             "findNoteLink" => {
                 let found = store.find_note_link(text_of(arg(args, 0))?, text_of(arg(args, 1))?);
-                return or_null(found.map(|f| f.to_value()));
+                or_null(found.map(|f| f.to_value()))
             }
             "setNoteLink" => {
                 let link = arg(args, 1).ok_or_else(|| bad("a link"))?;
-                return done(store.set_note_link(
+                done(store.set_note_link(
                     text_of(arg(args, 0))?,
                     text_of(link.get("notePath"))?,
                     text_of(link.get("docHash"))?,
-                ));
+                ))
             }
             "updateNoteLinkDocHash" => {
                 let changed = store
                     .update_note_link_doc_hash(text_of(arg(args, 0))?, text_of(arg(args, 1))?)
                     .map_err(fail)?;
-                return Ok(Some(Value::Bool(changed)));
+                Ok(Some(Value::Bool(changed)))
             }
             // migration, delete and size
             "migrateDocument" => {
@@ -946,11 +911,11 @@ fn run(store: &mut ResultStore, method: &str, args: &[Value]) -> Option<Answer> 
                     keep_block_keys: keep,
                 };
                 let moved = store.migrate_document(&input).map_err(fail)?;
-                return val(moved.to_value());
+                val(moved.to_value())
             }
-            "deleteDocument" => return done(store.delete_document(doc()?)),
-            "deleteAll" => return done(store.delete_all()),
-            "size" => return count(store.size(present(args, 0).and_then(Value::as_str))),
+            "deleteDocument" => done(store.delete_document(doc()?)),
+            "deleteAll" => done(store.delete_all()),
+            "size" => count(store.size(present(args, 0).and_then(Value::as_str))),
             _ => Err(CallError::plain(format!("no such method: {method}"))),
         }
     })();

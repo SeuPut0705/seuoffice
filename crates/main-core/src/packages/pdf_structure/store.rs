@@ -1959,14 +1959,14 @@ impl ResultStore {
         let links = self.read_note_links().links;
         let platform = self.env.platform();
         let pdf_key = note_link_key(pdf_path, platform);
-        if let Some(by_path) = links.get(&pdf_key) {
-            if file_exists(&by_path.note_path) {
-                return Some(FoundNoteLink {
-                    link: by_path.clone(),
-                    pdf_key,
-                    matched_by: MatchedBy::Path,
-                });
-            }
+        if let Some(by_path) = links.get(&pdf_key)
+            && file_exists(&by_path.note_path)
+        {
+            return Some(FoundNoteLink {
+                link: by_path.clone(),
+                pdf_key,
+                matched_by: MatchedBy::Path,
+            });
         }
         if !is_valid_seg(doc_hash) {
             return None;
@@ -2099,10 +2099,10 @@ impl ResultStore {
             if !pages.contains(fp) {
                 continue;
             }
-            if let Some(current) = self.read_ai_read_page(new_doc_hash, fp) {
-                if current.saved_at >= entry.saved_at {
-                    continue;
-                }
+            if let Some(current) = self.read_ai_read_page(new_doc_hash, fp)
+                && current.saved_at >= entry.saved_at
+            {
+                continue;
             }
             self.put_ai_read(new_doc_hash, &entry.page_fingerprint, &entry.to_value())?;
             result.ai_read_pages += 1.0;
@@ -2185,10 +2185,10 @@ impl ResultStore {
                 }
                 let path = self.translation_block_path(new_doc_hash, &lang, &block.key, mode)?;
                 let raw = self.read(&path);
-                if let Some(current) = as_block(raw.as_ref(), &block.key) {
-                    if current.saved_at >= block.saved_at {
-                        continue;
-                    }
+                if let Some(current) = as_block(raw.as_ref(), &block.key)
+                    && current.saved_at >= block.saved_at
+                {
+                    continue;
                 }
                 let write = BlockWrite {
                     key: &block.key,
@@ -2236,10 +2236,10 @@ impl ResultStore {
             if !pages.contains(&card.page_fingerprint) {
                 continue;
             }
-            if let Some(current) = self.read_passage(new_doc_hash, &card.id) {
-                if current.saved_at >= card.saved_at {
-                    continue;
-                }
+            if let Some(current) = self.read_passage(new_doc_hash, &card.id)
+                && current.saved_at >= card.saved_at
+            {
+                continue;
             }
             self.put_passage(new_doc_hash, &card)?;
             passages += 1.0;
@@ -2255,10 +2255,10 @@ impl ResultStore {
             for block in self.read_highlight_block_list(old_doc_hash, &run_id, Some(pages)) {
                 let path = self.highlight_block_path(new_doc_hash, &run_id, &block.key)?;
                 let raw = self.read(&path);
-                if let Some(current) = as_highlight_block(raw.as_ref(), &block.key) {
-                    if current.saved_at >= block.saved_at {
-                        continue;
-                    }
+                if let Some(current) = as_highlight_block(raw.as_ref(), &block.key)
+                    && current.saved_at >= block.saved_at
+                {
+                    continue;
                 }
                 self.put_highlight_block(new_doc_hash, &run_id, &block)?;
                 highlight_blocks += 1.0;
@@ -2272,10 +2272,10 @@ impl ResultStore {
             if !entry.page_fingerprints.iter().all(|fp| pages.contains(fp)) {
                 continue;
             }
-            if let Some((_, current_saved_at)) = self.read_stored_insights(new_doc_hash, &lang) {
-                if current_saved_at >= saved_at {
-                    continue;
-                }
+            if let Some((_, current_saved_at)) = self.read_stored_insights(new_doc_hash, &lang)
+                && current_saved_at >= saved_at
+            {
+                continue;
             }
             self.put_insights(new_doc_hash, &entry, saved_at)?;
             insights += 1.0;
