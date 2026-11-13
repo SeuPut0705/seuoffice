@@ -290,7 +290,7 @@ The seuoffice source as of v0.12.41 (tag v0.12.41, commit
 7b2ac300de5284a1e81b694552afca38733d2a1e) and every later change are
 Copyright 2026 SeuPut (최진서) and licensed by SeuPut under the Functional
 Source License, Version 1.1, Apache 2.0 Future License (FSL-1.1-ALv2), in
-LICENSE (shipped as LICENSE.txt). From commit <FSL_SWITCH_COMMIT> on, every
+LICENSE (shipped as LICENSE.txt). From commit 2c35438f2f569510cc9a327ecba4dba4720de928 on, every
 distribution of that code, source or binary, is under FSL-1.1-ALv2. The first
 release under FSL-1.1-ALv2 is 0.12.42. The v0.12.41 release files already
 published are not rebuilt or replaced.
