@@ -111,6 +111,10 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     hosts.insert::<outbound::OutboundShellHost>(std::sync::Arc::new(
         probe::FakeOutboundShell::new(case),
     ));
+    probe::drive::insert(hosts, case, log.clone());
+    probe::integrations::insert(hosts, case, log.clone());
+    probe::knowledge_base::insert(hosts, case, log.clone());
+    probe::zotero::insert(hosts, case, log.clone());
     hosts.insert::<shell_ai_prefs::ShellUiHost>(std::sync::Arc::new(probe::FakeShellUi::new(
         case, log,
     )));

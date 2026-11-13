@@ -5,6 +5,11 @@
 //! rejects with `Error: message`; a channel the case does not name answers
 //! `undefined`.
 
+pub mod drive;
+pub mod integrations;
+pub mod knowledge_base;
+pub mod zotero;
+
 use shell_contract::ipc::Responder;
 use shell_contract::{IpcError, IpcValue};
 
