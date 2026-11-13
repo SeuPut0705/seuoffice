@@ -22,7 +22,7 @@ use std::time::{Duration, Instant};
 use serde_json::{Value, json};
 use shell_contract::editors::Then;
 use shell_contract::ids::{RequestId, ViewId, WindowId};
-use shell_contract::ipc::{ChannelKind, EventSink, Registry, Reply, Sender, Target};
+use shell_contract::ipc::{ChannelKind, EventSink, RegisterError, Registry, Reply, Sender, Target};
 use shell_contract::provided::Provided;
 use shell_contract::runtime::{AppPaths, PathName, Services, Thread, Views, Workers, run_on};
 use shell_contract::value::IpcValue;
@@ -227,6 +227,31 @@ fn trigger_answer(reply: Option<Reply>) -> Value {
     }
 }
 
+/// Registers `batches` in order and keeps, of what they send while they
+/// register, only what the batch `own` sends. The TypeScript side loads only
+/// the module of the group's batch and keeps what it sends while loading;
+/// what another batch sends while it registers (A's hub load tells every
+/// window) belongs to no call. Without `own`, everything is kept. Sends after
+/// registration are not this function's business and stay.
+fn register_keeping_own<F>(
+    table: &mut Table,
+    batches: impl IntoIterator<Item = (&'static str, F)>,
+    own: Option<&str>,
+    events: &Mutex<Vec<Value>>,
+) -> Result<(), RegisterError>
+where
+    F: FnOnce(&mut Table) -> Result<(), RegisterError>,
+{
+    for (name, register) in batches {
+        let before = events.lock().unwrap().len();
+        register(table)?;
+        if own.is_some_and(|own| own != name) {
+            events.lock().unwrap().truncate(before);
+        }
+    }
+    Ok(())
+}
+
 fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
     let views = match case["views"].as_array() {
         Some(views) => views.iter().map(sender_of).collect::<Result<Vec<_>, _>>()?,
@@ -262,22 +287,19 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
     };
 
     let trigger_services = services.clone();
-    // the TypeScript side loads only the module of the group's batch (`batch`
-    // of the case) and keeps what it sends while loading; what another batch
-    // sends while it registers (A's hub load tells every window) belongs to
-    // no call and is dropped
     let own = case["batch"].as_str().map(str::to_owned);
     let registering = recorder.clone();
     let registered = run_on(core.as_ref(), move || {
         let mut table = Table::default();
-        for (name, register) in BATCH_NAMES.iter().zip(BATCHES) {
-            let before = registering.events.lock().unwrap().len();
-            if let Err(e) = register(&mut table, &services) {
-                return Some(format!("{:?}", StartError::Register(e)));
-            }
-            if own.as_deref().is_some_and(|own| own != *name) {
-                registering.events.lock().unwrap().truncate(before);
-            }
+        let services = &services;
+        let batches = BATCH_NAMES
+            .iter()
+            .zip(BATCHES)
+            .map(|(name, register)| (*name, move |table: &mut Table| register(table, services)));
+        if let Err(e) =
+            register_keeping_own(&mut table, batches, own.as_deref(), &registering.events)
+        {
+            return Some(format!("{:?}", StartError::Register(e)));
         }
         PROVIDED.with(|p| *p.borrow_mut() = Some(table.provided()));
         DISPATCHER.with(|d| *d.borrow_mut() = Some(Dispatcher::new(table)));
@@ -472,5 +494,75 @@ fn main() {
         };
         writeln!(stdout, "{out}").expect("writing stdout");
         stdout.flush().expect("writing stdout");
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn sent(channel: &str) -> Value {
+        json!({ "view": 1, "channel": channel })
+    }
+
+    fn channels(events: &Mutex<Vec<Value>>) -> Vec<String> {
+        events
+            .lock()
+            .unwrap()
+            .iter()
+            .map(|e| e["channel"].as_str().unwrap().to_owned())
+            .collect()
+    }
+
+    /// A batch whose registration sends `channels`
+    fn sending<'a>(
+        events: &'a Mutex<Vec<Value>>,
+        channels: &'a [&'a str],
+    ) -> impl FnOnce(&mut Table) -> Result<(), RegisterError> + 'a {
+        move |_| {
+            for channel in channels {
+                events.lock().unwrap().push(sent(channel));
+            }
+            Ok(())
+        }
+    }
+
+    #[test]
+    fn only_the_groups_own_batch_keeps_what_it_sends_while_registering() {
+        let events = Mutex::new(Vec::new());
+        let batches = [
+            ("A", sending(&events, &["mcp-tools:changed"])),
+            // W's quick-look sends M's channel: the sender's batch counts, not the channel's
+            (
+                "W",
+                sending(
+                    &events,
+                    &["quick-look:will-show", "quick-look:theme-changed"],
+                ),
+            ),
+            ("M", sending(&events, &["home:open-settings"])),
+        ];
+        register_keeping_own(&mut Table::default(), batches, Some("W"), &events).unwrap();
+        assert_eq!(
+            channels(&events),
+            ["quick-look:will-show", "quick-look:theme-changed"]
+        );
+        // what another batch sends once every batch registered is a call's
+        events.lock().unwrap().push(sent("mcp-tools:changed"));
+        assert_eq!(channels(&events).last().unwrap(), "mcp-tools:changed");
+    }
+
+    #[test]
+    fn without_a_batch_everything_is_kept() {
+        let events = Mutex::new(Vec::new());
+        let batches = [
+            ("A", sending(&events, &["mcp-tools:changed"])),
+            ("W", sending(&events, &["quick-look:will-show"])),
+        ];
+        register_keeping_own(&mut Table::default(), batches, None, &events).unwrap();
+        assert_eq!(
+            channels(&events),
+            ["mcp-tools:changed", "quick-look:will-show"]
+        );
     }
 }
