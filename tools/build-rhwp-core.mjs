@@ -9,8 +9,9 @@
  * with `wasm-pack build --target web --release` and copies the package files
  * into vendor/rhwp-core, recording the WASM hash in its package.json.
  *
- * `--source-only` stops after the patches are applied and leaves the tree in place:
- * the Rust crates (crates/file-parse, feature `hwp`) depend on it by path.
+ * `--source-only` stops after the patches are applied and leaves the tree in
+ * crates/.rhwp-source/<tag>: CI checks the licences of the crates it compiles
+ * (deny.toml), and the Rust crates in crates/ depend on it by path.
  *
  * Needs git, rustup (the tag's rust-toolchain.toml selects the toolchain and
  * the wasm32 target) and wasm-pack. The app build itself never runs this.
@@ -35,8 +36,8 @@ const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'))
 // `features`, when set, replaces the crate's default features (decision 0107: the PDF
 // import upstream builds in by default stays out until upstream releases it).
 const { tag, branch, commit, patches, features } = manifest.rhwp
-// --source-only prepares the tree crates/file-parse compiles, outside
-// node_modules so that `npm ci` leaves it in place
+// --source-only keeps the tree outside node_modules, so that `npm ci` leaves it
+// in place
 const work = process.argv.includes('--source-only')
   ? join(ROOT, 'crates', '.rhwp-source', tag)
   : join(ROOT, 'node_modules', '.cache', 'rhwp-core', tag)

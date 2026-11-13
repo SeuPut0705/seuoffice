@@ -80,7 +80,7 @@ export const ORDERS_PATH = join(HERE, 'model-orders.json')
  */
 export const MODEL_SOURCE = {
   ref: 'origin/main',
-  commit: '07a251652ef00015e5bdb115f0c040ac05b78f5f',
+  commit: 'a9e4aaa68c5f6d94a52a7fb6c08953143957528b',
 }
 
 /** A file of the repository as the pinned commit holds it: the frozen

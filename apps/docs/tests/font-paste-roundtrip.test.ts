@@ -83,7 +83,7 @@ describe('fontAttrsFromFamilyChain', () => {
 
   it('skips internal SeuOffice aliases even at the chain head', () => {
     expect(
-      fontAttrsFromFamilyChain("'GenOffice Songti SC','STSong','SimSun','Noto Serif CJK SC',serif"),
+      fontAttrsFromFamilyChain("'SeuOffice Songti SC','STSong','SimSun','Noto Serif CJK SC',serif"),
     ).toEqual({ font: 'STSong' })
   })
 
@@ -93,7 +93,7 @@ describe('fontAttrsFromFamilyChain', () => {
       fontAscii: 'SomeCustomFont',
     })
     expect(
-      fontAttrsFromFamilyChain("'PT Serif Custom','Noto Serif CJK GO','GenOffice PUA Blank',serif"),
+      fontAttrsFromFamilyChain("'PT Serif Custom','Noto Serif CJK GO','SeuOffice PUA Blank',serif"),
     ).toEqual({ font: 'PT Serif Custom', fontAscii: 'PT Serif Custom' })
   })
 
@@ -175,7 +175,7 @@ describe('complex-script (w:cs) render chain', () => {
       csFont: 'Arabic Typesetting',
     })
     expect(html).toContain(
-      'font-family: &quot;Arabic Typesetting&quot;, &quot;Naskh Digits GO&quot;, &quot;Times Punct GO&quot;, &quot;Noto Naskh Arabic TNR&quot;, &quot;Calibri&quot;, &quot;Carlito GO&quot;, &quot;Calibri Arabic GO&quot;, &quot;Noto Sans CJK SC&quot;, &quot;Times New Roman&quot;, &quot;Liberation Serif&quot;, &quot;Geeza Pro&quot;, &quot;Al Bayan&quot;, sans-serif',
+      'font-family: &quot;Arabic Typesetting&quot;, &quot;Naskh Digits GO&quot;, &quot;Times Punct GO&quot;, &quot;Noto Naskh Arabic TNR&quot;, &quot;Calibri&quot;, &quot;SeuOffice Sans GO&quot;, &quot;Calibri Arabic GO&quot;, &quot;Noto Sans CJK SC&quot;, &quot;Times New Roman&quot;, &quot;Liberation Serif&quot;, &quot;Geeza Pro&quot;, &quot;Al Bayan&quot;, sans-serif',
     )
   })
 

@@ -11,6 +11,7 @@ import {
   readEmbeddedFonts,
 } from './reference/font-table'
 import {
+  canonicalXmlSyntax,
   needsOoxmlNormalization,
   normalizeOoxmlXml,
 } from './reference/ooxml-normalize'
@@ -143,13 +144,18 @@ async function contentTypesOf(zip: JSZip) {
   return { defaults, overrides }
 }
 
+/** `partText` of parse.ts: a part that is only read, written the usual way. */
+async function partText(file: JSZip.JSZipObject): Promise<string> {
+  return canonicalXmlSyntax(await file.async('string'))
+}
+
 /** `parseTheme` and `readThemeFontLang` of parse.ts. */
 export async function parseTheme(
   zip: JSZip,
 ): Promise<{ fonts: ThemeFonts | null; colors: ThemeColors | null }> {
   const file = zip.file(THEME_PART_PATH)
   if (!file) return { fonts: null, colors: { ...DEFAULT_THEME_COLORS } }
-  const xml = await file.async('string')
+  const xml = await partText(file)
   const fonts = readThemeFonts(xml)
   if (fonts) {
     const { eaLang, bidiLang } = await readThemeFontLang(zip)
@@ -162,7 +168,7 @@ export async function parseTheme(
 async function readThemeFontLang(zip: JSZip): Promise<{ eaLang?: string; bidiLang?: string }> {
   const file = zip.file('word/settings.xml')
   if (!file) return {}
-  const tag = /<w:themeFontLang\b[^>]*>/.exec(await file.async('string'))?.[0]
+  const tag = /<w:themeFontLang\b[^>]*>/.exec(await partText(file))?.[0]
   if (!tag) return {}
   return {
     eaLang: /\bw:eastAsia="([^"]+)"/.exec(tag)?.[1],
@@ -205,7 +211,7 @@ const PARSE_TS_SNIPPETS = [
       return { defaults, overrides }`,
   `  const file = zip.file(THEME_PART_PATH)
   if (!file) return { fonts: null, colors: { ...DEFAULT_THEME_COLORS } }
-  const xml = await file.async('string')
+  const xml = await partText(file)
   const fonts = readThemeFonts(xml)
   if (fonts) {
     const { eaLang, bidiLang } = await readThemeFontLang(zip)
@@ -215,7 +221,7 @@ const PARSE_TS_SNIPPETS = [
   return { fonts, colors: readThemeColors(xml) }`,
   `  const file = zip.file('word/settings.xml')
   if (!file) return {}
-  const tag = /<w:themeFontLang\\b[^>]*>/.exec(await file.async('string'))?.[0]
+  const tag = /<w:themeFontLang\\b[^>]*>/.exec(await partText(file))?.[0]
   if (!tag) return {}
   return {
     eaLang: /\\bw:eastAsia="([^"]+)"/.exec(tag)?.[1],
@@ -278,7 +284,7 @@ async function typescriptModel(zip: JSZip): Promise<Model> {
 
   const fontTable = await attempt(async () => {
     const file = zip.file(FONT_TABLE_PART_PATH)
-    return file ? parseFontTable(await file.async('string')) : []
+    return file ? parseFontTable(await partText(file)) : []
   })
   const embeddedFonts = fontTable.value
     ? await outcomeOf(async () =>

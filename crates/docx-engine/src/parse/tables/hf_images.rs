@@ -24,6 +24,7 @@ use crate::vml::{
     Dim, FloatAnchor, vml_float_anchor, vml_fraction, vml_rotation_deg, vml_style_dim_px,
 };
 use crate::watermark::{is_picture_watermark_shape, read_watermark_shape};
+use crate::xml_tag::remove_segments;
 use crate::xml_text::EMU_PER_PX;
 
 /// `HF_DRAWING_RE`: the `<w:drawing>` elements of a header/footer part, in the
@@ -223,8 +224,7 @@ pub fn hf_group_pictures(
     source_path: &str,
     media: &MediaEnv<'_>,
 ) -> Result<Option<Vec<HfImage>>, Thrown> {
-    let body = js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>", "g")
-        .replace_all(frag, |_| String::new());
+    let body = remove_segments(frag, "mc:Fallback");
     let mut anchor = AnchorPos::default();
     read_anchor_pos(&body, &mut anchor);
     let (Some(anchor_x), Some(anchor_y)) = (*anchor.pos_x_px, *anchor.pos_y_px) else {

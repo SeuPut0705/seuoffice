@@ -34,6 +34,8 @@ function imageExt(src: string): string | null {
  * restricted-HTML serializer (same source the CLI's docx→md uses); protected
  * blocks become a display formula, a field's visible text, a picture, or
  * nothing. Pictures are collected for the writer and referenced by name.
+ * The person's export: the words a person hid from AI are written as they are
+ * (the export asked first, see file-actions.ts `markedExportAllowed`).
  */
 export function documentToMarkdown(editor: Editor): MarkdownExport {
   const top = editor.state.doc
@@ -54,7 +56,8 @@ export function documentToMarkdown(editor: Editor): MarkdownExport {
   }
   let runStart = -1
   const flush = (end: number) => {
-    if (runStart >= 0) parts.push(serializeRangeToHtml(editor, runStart, end, null, image))
+    if (runStart >= 0)
+      parts.push(serializeRangeToHtml(editor, runStart, end, null, image, 'document'))
     runStart = -1
   }
   top.forEach((node, _offset, index) => {

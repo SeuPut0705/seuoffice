@@ -116,10 +116,10 @@ describe('docDefaults East Asian w:lang w:val lays Latin out with the eastAsia s
     expect(runStyle({ font: 'Courier New', fontAscii: 'Courier New' })).toContain('Batang')
     expect(
       runStyle({ font: 'Courier New', fontAscii: 'Courier New', eastAsiaFont: 'Courier New' }),
-    ).toContain('GenOffice SimSun Latin')
+    ).toContain('SeuOffice SimSun Latin')
     setLatinViaEastAsiaSlot(true, 'Arial')
     expect(runStyle({ font: 'Courier New', fontAscii: 'Courier New' })).toContain(
-      'GenOffice SimSun Latin',
+      'SeuOffice SimSun Latin',
     )
   })
 
@@ -145,7 +145,7 @@ describe('docDefaults East Asian w:lang w:val lays Latin out with the eastAsia s
     const strong = /\[data-style="Strong"\] \{([^}]*)\}/.exec(css)![1]
     expect(strong).not.toContain('font-family')
     const code = /\[data-style="Code"\] \{([^}]*)\}/.exec(css)![1]
-    expect(code).toContain('GenOffice SimSun Latin')
+    expect(code).toContain('SeuOffice SimSun Latin')
     expect(code).not.toContain('Courier New')
   })
 
@@ -169,7 +169,7 @@ describe('docDefaults East Asian w:lang w:val lays Latin out with the eastAsia s
     expect(runStyle({ font: 'Courier New', fontAscii: 'Courier New' })).toContain('Courier New')
     setLatinViaEastAsiaSlot(true)
     const ff = runStyle({ font: 'Courier New', fontAscii: 'Courier New' })
-    expect(ff).toContain('GenOffice SimSun Latin')
+    expect(ff).toContain('SeuOffice SimSun Latin')
     expect(ff).not.toContain('Courier New')
     expect(runStyle({ font: 'Arial Unicode MS', fontAscii: 'Arial Unicode MS' })).toContain(
       'Arial Unicode MS',
@@ -179,11 +179,11 @@ describe('docDefaults East Asian w:lang w:val lays Latin out with the eastAsia s
   it('the document base family follows SimSun under lang=ko, the empty-line factor stays Arial', () => {
     const ko = docStyleCss(parsedWith({ asciiFont: 'Arial', eastAsiaFont: 'Arial', lang: 'ko' }))
     const base = BASE.exec(ko)![1]
-    expect(base).toContain('GenOffice SimSun Latin')
+    expect(base).toContain('SeuOffice SimSun Latin')
     expect(base).not.toContain('Arial')
     // empty paragraphs keep the ascii face's height (Word probe 2026-11-02)
     expect(base).toContain('--doc-line-factor-latin:1.15')
-    expect(ko).toMatch(/--doc-latin-chain:[^;}]*GenOffice SimSun Latin/)
+    expect(ko).toMatch(/--doc-latin-chain:[^;}]*SeuOffice SimSun Latin/)
     // without the rule Arial leads; a Latin eastAsia slot still sends CJK glyphs to
     // SimSun (Word probe 2026-11-04 e4: docDefaults Calibri in every slot draws Han in SimSun)
     const en = docStyleCss(parsedWith({ asciiFont: 'Arial', eastAsiaFont: 'Arial', lang: 'en-US' }))

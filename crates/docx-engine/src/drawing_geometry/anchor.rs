@@ -3,11 +3,13 @@
 //! anchor metadata of one fragment, its page/margin-relative position and the
 //! child-to-anchor transform of a wpg group.
 
-use jscompat::{JsNum, JsRegex, Radix, index_of, js_regex, math_round, parse_int, to_number};
+use jscompat::{JsNum, JsRegex, Radix, js_regex, math_round, parse_int, to_number};
+use ooxml_pkg::canonical_xml_syntax;
 use ooxml_xml::XNode;
 use serde::{Deserialize, Serialize};
 
 use crate::section::SectionSettings;
+use crate::xml_tag::xml_segments;
 
 /// `LINE_PRSTS_RE.source` (the regex has no flags).
 pub const LINE_PRSTS_RE_SOURCE: &str =
@@ -94,51 +96,14 @@ pub struct DrawingAnchorMeta {
     pub page_y_emu: Option<JsNum>,
 }
 
-/// `drawingOpenAt`: next `<w:drawing>` open tag at or after `from`, attributes
-/// tolerated.
-fn drawing_open_at(xml: &str, from: usize) -> Option<usize> {
-    js_regex!(r"<w:drawing[\s>]")
-        .find_from(xml, from)
-        .next()
-        .map(|found| found.start())
-}
-
 /// `topLevelDrawings`: the top-level `<w:drawing>` fragments of a paragraph,
 /// balanced (a textbox's txbxContent may nest further drawings, which stay
-/// inside their parent fragment).
+/// inside their parent fragment), found as `xmlSegments` finds them.
 pub fn top_level_drawings(xml: &str) -> Vec<&str> {
-    const CLOSE: &str = "</w:drawing>";
-    let mut out = Vec::new();
-    let mut i = 0;
-    while let Some(start) = drawing_open_at(xml, i) {
-        let mut depth: usize = 0;
-        let mut j = start;
-        loop {
-            // j is the offset of a `<`, so j + 1 is a character boundary
-            let open = drawing_open_at(xml, j + 1);
-            let Some(close) = index_of(xml, CLOSE, j + 1) else {
-                // malformed; bail with what we have
-                return out;
-            };
-            match open {
-                Some(open) if open < close => {
-                    depth += 1;
-                    j = open;
-                }
-                _ if depth > 0 => {
-                    depth -= 1;
-                    j = close;
-                }
-                _ => {
-                    let end = close + CLOSE.len();
-                    out.push(xml.get(start..end).unwrap_or(""));
-                    i = end;
-                    break;
-                }
-            }
-        }
-    }
-    out
+    xml_segments(xml, "w:drawing", 0, xml.len())
+        .into_iter()
+        .map(|seg| &xml[seg.start..seg.end])
+        .collect()
 }
 
 /// `parseInt(m?.[1] ?? '', 10)` of the first match of `pattern` in `text`.
@@ -158,7 +123,8 @@ fn finite(v: f64) -> Option<JsNum> {
 }
 
 /// `drawingAnchorMeta`
-pub fn drawing_anchor_meta(frag: &str) -> DrawingAnchorMeta {
+pub fn drawing_anchor_meta(source: &str) -> DrawingAnchorMeta {
+    let frag = &*canonical_xml_syntax(source);
     let Some(anchor_tag) = js_regex!(r"<wp:anchor[^>]*>")
         .exec(frag)
         .map(|found| found.as_str())

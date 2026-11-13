@@ -14,7 +14,7 @@ use super::picture::rect_frac;
 use crate::drawing_geometry::fill::{color_node_hex, grad_fill_approx_hex};
 use crate::image_kinds::is_metafile_mime;
 use crate::model::{DiagramDisplay, DiagramShape, DiagramShapeFillRect, SharedStr};
-use crate::package::{Thrown, parse_rels, part_text, resolve_relationship_target_path};
+use crate::package::{Thrown, canonical_part_text, parse_rels, resolve_relationship_target_path};
 use crate::parse::text::{BuildContext, emu_to_px};
 use crate::props::{XML_PARSER_MAX_NESTED_TAGS, collect_nodes};
 use crate::theme::ThemeColors;
@@ -109,12 +109,13 @@ pub fn extract_diagram_text(xml: &str, ctx: &BuildContext<'_>) -> Result<Option<
     );
     let Some(data_xml) = path
         .as_deref()
-        .map(|path| part_text(ctx.zip, path))
+        .map(|path| canonical_part_text(ctx.zip, path))
         .transpose()?
         .flatten()
     else {
         return Ok(None);
     };
+    let data_xml = &*data_xml;
     // node texts by modelId (pres/transition points carry no content text)
     let mut pt_texts: JsMap<String> = JsMap::new();
     for found in

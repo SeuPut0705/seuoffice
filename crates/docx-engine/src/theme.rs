@@ -9,7 +9,7 @@ use jscompat::{
 use ooxml_pkg::Package;
 use serde::{Deserialize, Serialize};
 
-use crate::package::{Thrown, part_text};
+use crate::package::{Thrown, canonical_part_text};
 
 pub const THEME_PART_PATH: &str = "word/theme/theme1.xml";
 
@@ -219,21 +219,24 @@ pub struct Theme {
 /// `parseTheme` of parse.ts. A package without a theme part still resolves
 /// colour references, against the built-in Office palette.
 pub fn parse_theme(package: &Package) -> Result<Theme, Thrown> {
-    let Some(xml) = part_text(package, THEME_PART_PATH)? else {
+    let Some(xml) = canonical_part_text(package, THEME_PART_PATH)? else {
         return Ok(Theme {
             fonts: None,
             colors: Some(ThemeColors::office()),
         });
     };
-    let mut fonts = read_theme_fonts(xml);
+    let mut fonts = read_theme_fonts(&xml);
     if let Some(fonts) = &mut fonts {
         // settings.xml w:themeFontLang picks Word's face for an empty slot
-        let tag = part_text(package, "word/settings.xml")?
-            .and_then(|settings| js_regex!(r"<w:themeFontLang\b[^>]*>").exec(settings));
+        let settings = canonical_part_text(package, "word/settings.xml")?;
+        let tag = settings
+            .as_deref()
+            .and_then(|settings| js_regex!(r"<w:themeFontLang\b[^>]*>").exec(settings))
+            .map(|tag| tag.as_str());
         if let Some(tag) = tag {
             let attr = |pattern: &JsRegex| {
                 pattern
-                    .exec(tag.as_str())
+                    .exec(tag)
                     .and_then(|found| found.get(1))
                     .map(str::to_owned)
             };
@@ -247,7 +250,7 @@ pub fn parse_theme(package: &Package) -> Result<Theme, Thrown> {
     }
     Ok(Theme {
         fonts,
-        colors: read_theme_colors(xml).map_err(|limit| limit.to_string())?,
+        colors: read_theme_colors(&xml).map_err(|limit| limit.to_string())?,
     })
 }
 

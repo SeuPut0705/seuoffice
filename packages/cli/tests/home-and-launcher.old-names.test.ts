@@ -173,7 +173,7 @@ describe.skipIf(process.platform === 'win32')('the standalone CLI archive', () =
     copyFileSync(join(cli, 'seuoffice'), join(from, 'cli', 'seuoffice'))
     copyFileSync(join(cli, 'seuoffice.cjs'), join(from, 'cli', 'seuoffice.cjs'))
     const notices = tempDir()
-    for (const name of ['LICENSE', 'NOTICE', 'THIRD-PARTY-NOTICES.txt']) {
+    for (const name of ['LICENSE', 'LICENSE-APACHE', 'NOTICE', 'THIRD-PARTY-NOTICES.txt']) {
       writeFileSync(join(notices, name), name)
     }
     const out = tempDir()

@@ -45,7 +45,7 @@ pub fn placeholder_source(label: &str) -> String {
 }
 
 /// `sanitizeLabel` without its options: the label of a placeholder.
-fn sanitize_label(raw: &str) -> String {
+pub(crate) fn sanitize_label(raw: &str) -> String {
     let stripped = js_regex!(r#"[{}<>="']"#, "g").replace_all(raw, |_| String::new());
     let spaced = js_regex!(r"\s+", "g").replace_all(&stripped, |_| " ".to_owned());
     trim(&cut_label(trim(&spaced))).to_owned()
@@ -85,6 +85,28 @@ pub fn withheld_label_of(r_pr_xml: Option<&str>) -> Option<String> {
         .and_then(|found| found.get(1))
         .unwrap_or("private");
     Some(decode_entities(label))
+}
+
+/// `withheldPartLabel`: the label of the mark in a part that holds a drawing's
+/// rich text (a chart part), or `None` when the part holds none. The drawing is
+/// shown whole, so a mark anywhere in the part hides all of it; the label is
+/// read off the first mark element (`label`, or `w:label`), else `private`.
+pub fn withheld_part_label(part_xml: &str) -> Option<String> {
+    if !has_withheld_trace(part_xml) {
+        return None;
+    }
+    let found =
+        js_regex!(r#"<(?:[\w.-]+:)?redact\b[^>]*?\s(?:w:)?label\s*=\s*(?:"([^"]*)"|'([^']*)')"#)
+            .exec(part_xml);
+    let label = found
+        .and_then(|found| found.get(1).or(found.get(2)))
+        .unwrap_or("private");
+    let label = decode_entities(label);
+    Some(if label.is_empty() {
+        "private".to_owned()
+    } else {
+        label
+    })
 }
 
 /// `hasWithheldTrace`: whether the raw XML holds anything that looks like the
@@ -214,6 +236,53 @@ pub fn withheld_node(node: &XNode) -> Option<XNode> {
     Some(with_children(node, withheld_children(node.children())?))
 }
 
+fn first_marked_run_label(node: &XNode) -> Option<String> {
+    for child in node.children() {
+        if name_of(child).is_none() {
+            continue;
+        }
+        let label = if name_of(child) == Some("w:r") {
+            run_label(child)
+        } else {
+            None
+        };
+        if label.is_some() {
+            return label;
+        }
+        if let Some(inner) = first_marked_run_label(child) {
+            return Some(inner);
+        }
+    }
+    None
+}
+
+/// `withheldBlockLabel`: the label of the first run marked hidden from AI
+/// anywhere in a block's XML (a text box's paragraphs and a field's cached
+/// result included); `None` when no run is. A block that does not parse and
+/// shows a trace of the mark is withheld as `private`.
+pub fn withheld_block_label(block_xml: &str) -> Option<String> {
+    match parse_entry(block_xml) {
+        None => has_withheld_trace(block_xml).then(|| "private".to_owned()),
+        Some(node) => first_marked_run_label(&node),
+    }
+}
+
+/// `hiddenRunProperties`: the run properties of a run a person hid from AI, as
+/// the Docs editor writes them: the character border and the mark carrying the
+/// label.
+pub fn hidden_run_properties(label: &str) -> String {
+    let cleaned = sanitize_label(label);
+    let label = if cleaned.is_empty() {
+        "private"
+    } else {
+        &cleaned
+    };
+    format!(
+        "<w:rPr><w:bdr w:val=\"single\" w:sz=\"6\" w:color=\"6B4FC0\"/><{REDACT_EL} w:label=\"{}\"/></w:rPr>",
+        escape_xml_attr(label)
+    )
+}
+
 /// `runsText`: the run text of a subtree as Word shows it: w:t, outside field
 /// codes and deletions.
 pub fn runs_text(node: &XNode) -> String {
@@ -241,18 +310,18 @@ pub fn parse_entry(xml: &str) -> Option<XNode> {
 }
 
 /// `withheldText`: what a model reads of a parsed entry, given how its reader
-/// reads text (`text_of`): `None` when the entry hides nothing, else its text
+/// reads text (`text_of`): `None` when the entry carries no mark, else its text
 /// with each hidden run as its placeholder, or the whole entry withheld when
-/// a mark sits where no run accounts for it.
+/// a mark sits where no run accounts for it. It is `Some` whenever a mark is
+/// there, also when it reads as the entry's own words.
 pub fn withheld_text(node: &XNode, text_of: &dyn Fn(&XNode) -> String) -> Option<String> {
     if !has_mark_element(node) {
         return None;
     }
-    let model_text = match withheld_node(node) {
+    Some(match withheld_node(node) {
         None => WITHHELD_ENTRY_TEXT.to_owned(),
         Some(view) => text_of(&view),
-    };
-    (model_text != text_of(node)).then_some(model_text)
+    })
 }
 
 /// `firstMarkLabel`: the label of the first mark in an entry's XML, `private`
@@ -297,8 +366,12 @@ pub fn over_withheld(entry_xml: &str, label: &str) -> String {
     js_regex!(r"<w:r(\s[^>]*)?>([\s\S]*?)<\/w:r>", "g").replace_all(entry_xml, |found| {
         let run = found.as_str();
         let inner = found.get(2).unwrap_or("");
-        // a run with no words (a reference mark, a spacer) stays as it is
-        if !js_regex!(r"<w:t(?:\s[^>]*)?>[^<]*\S[^<]*<\/w:t>").test(inner) {
+        // a run with no content (a reference mark, a spacer) stays as it is
+        if !js_regex!(
+            r"<w:t(?:\s[^>]*)?>[^<]*\S[^<]*<\/w:t>|<w:(?:drawing|pict|object|sym)[\s>/]|<mc:AlternateContent[\s>]"
+        )
+        .test(inner)
+        {
             return run.to_owned();
         }
         let marked = if inner.contains("</w:rPr>") {

@@ -194,6 +194,7 @@ export const OVERRIDES: Record<string, Override> = {
         }`,
   },
   // ---- a node the engine answers: `node_value` writes it as the TypeScript holds it ({ name: [children], ':@': { attr: value } })
+  clearHiddenMarks: { args: ['bytes', '$now'] },
   parseEntry: {
     rust: `let xml = rstr(args, 0)?;
         Ok(docx_engine::withheld::parse_entry(xml).as_ref().map(node_value))`,

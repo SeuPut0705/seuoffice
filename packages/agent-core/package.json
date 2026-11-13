@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/agent-core",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "Generic ReAct agent loop: pluggable skills (tools + prompt + context), pluggable LLM transport; shared by AI Docs and future apps (Excel / PPT)",

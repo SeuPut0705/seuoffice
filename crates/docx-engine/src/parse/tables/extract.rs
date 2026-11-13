@@ -5,7 +5,7 @@ use std::collections::HashSet;
 use std::rc::Rc;
 
 use jscompat::{JsNum, js_regex, math_max, math_round, parse_float, to_number, try_js_regex};
-use ooxml_xml::{XNode, parse_ordered, serialize};
+use ooxml_xml::{XNode, mask_opaque, parse_ordered, serialize};
 
 use super::{
     DEEP_XML_PARSER_MAX_NESTED_TAGS, children_through_sdt, flattened_table_model, is_uniform_grid,
@@ -39,6 +39,7 @@ use crate::props::{
 };
 use crate::resolve::{ResolveParaOptions, TableCond, resolve_paragraph_props};
 use crate::styles::TableCondFormat;
+use crate::xml_tag::{TagName, element_inner, find_start_tag, remove_segments};
 use crate::xml_text::{bool_prop, color_from};
 
 /// `MAX_TABLE_NEST_DEPTH`: real documents rarely nest past 3-4 levels; below
@@ -421,21 +422,13 @@ pub fn attach_raw_table_pr(
     model: &mut TableModel,
     raw_tr_prs: &mut Vec<Option<String>>,
 ) -> Result<(), Thrown> {
-    let Some(open) = js_regex!(r"<w:tbl[\s>]").exec(xml) else {
-        return Ok(());
-    };
-    // `xml.indexOf('>', open.index) + 1`
-    let Some(inner_start) = xml[open.start()..]
-        .find('>')
-        .map(|at| open.start() + at + 1)
+    let Some(open) =
+        find_start_tag(&mask_opaque(xml), TagName::Exact("w:tbl"), 0).map(|tag| tag.start)
     else {
         return Ok(());
     };
-    let Some(inner_end) = xml.rfind("</w:tbl>") else {
-        return Ok(());
-    };
-    let inner = xml.get(inner_start..inner_end).unwrap_or("");
-    let tbl_kids = split_xml_children(inner).map_err(|limit| limit.to_string())?;
+    let tbl_kids =
+        split_xml_children(element_inner(&xml[open..])).map_err(|limit| limit.to_string())?;
     let find = |kids: &[(String, String)], name: &str| -> Option<String> {
         kids.iter()
             .find(|(kid, _)| kid == name)
@@ -464,9 +457,7 @@ pub fn attach_raw_table_pr(
     let mut raw_tbl_pr_exs: Vec<Option<String>> = vec![None; row_count];
     let mut row_tbl_pr_ex_changes: Vec<Option<PropChangeInfo>> = vec![None; row_count];
     for (ri, tr) in trs.iter().enumerate() {
-        let tr_open_end = tr.find('>').map_or(0, |at| at + 1);
-        let tr_inner = js_slice_from(tr, tr_open_end, tr.rfind("</w:tr>"));
-        let kids = split_xml_children(tr_inner).map_err(|limit| limit.to_string())?;
+        let kids = split_xml_children(element_inner(tr)).map_err(|limit| limit.to_string())?;
         if let Some(tr_pr) = find(&kids, "w:trPr") {
             row_pr_changes[ri] = prop_change_info(&tr_pr, "w:trPrChange");
             // a JavaScript array grows on assignment past its end
@@ -494,9 +485,8 @@ pub fn attach_raw_table_pr(
             continue;
         }
         for (ci, tc) in tcs.iter().enumerate() {
-            let tc_open_end = tc.find('>').map_or(0, |at| at + 1);
-            let tc_inner = js_slice_from(tc, tc_open_end, tc.rfind("</w:tc>"));
-            let tc_kids = split_xml_children(tc_inner).map_err(|limit| limit.to_string())?;
+            let tc_kids =
+                split_xml_children(element_inner(tc)).map_err(|limit| limit.to_string())?;
             let Some(tc_pr) = find(&tc_kids, "w:tcPr") else {
                 continue;
             };
@@ -520,16 +510,6 @@ pub fn attach_raw_table_pr(
         model.row_tbl_pr_ex_changes = Some(row_tbl_pr_ex_changes);
     }
     Ok(())
-}
-
-/// `text.slice(from, to)` where `to` may be `lastIndexOf`'s -1 (no match):
-/// `slice(from, -1)` stops one unit short of the end.
-fn js_slice_from(text: &str, from: usize, to: Option<usize>) -> &str {
-    let end = match to {
-        Some(to) => to,
-        None => text.char_indices().next_back().map_or(0, |(at, _)| at),
-    };
-    text.get(from..end).unwrap_or("")
 }
 
 /// The depth of content `extract_table` follows. The deep parser admits
@@ -1288,8 +1268,7 @@ pub fn extract_cell(
             // fallback like buildBlock's detect, or each shape extracts twice
             let raw_p_xml = serialize(block);
             let p_xml = if raw_p_xml.contains("<mc:Fallback") {
-                js_regex!(r"<mc:Fallback[^>]*>[\s\S]*?<\/mc:Fallback>", "g")
-                    .replace_all(&raw_p_xml, |_| String::new())
+                remove_segments(&raw_p_xml, "mc:Fallback").into_owned()
             } else {
                 raw_p_xml
             };

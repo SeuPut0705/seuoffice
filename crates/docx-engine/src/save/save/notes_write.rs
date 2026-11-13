@@ -256,6 +256,37 @@ fn note_entry_xml(kind: NoteKind, note: &NoteInfo, attrs: &mut NoteRevAttrs) -> 
     )
 }
 
+/// `pictureRunsOf`: the runs of a note's own XML that hold a picture, a drawing
+/// or an object, each as a run of its own without the run's properties.
+fn picture_runs_of(entry_xml: &str) -> Result<Vec<String>, String> {
+    let mut runs = Vec::new();
+    for found in try_js_regex!(
+        r"<w:(drawing|pict|object)(?:\s[^>]*)?>[\s\S]*?<\/w:\1>",
+        "g"
+    )
+    .try_find_iter(entry_xml)
+    {
+        runs.push(format!("<w:r>{}</w:r>", found.map_err(limit)?.as_str()));
+    }
+    Ok(runs)
+}
+
+/// `withPictureRuns`: `entry_xml` with the pictures of the entry it replaces at
+/// the end of its last paragraph, as comments keep theirs.
+fn with_picture_runs(entry_xml: &str, original_entry_xml: &str) -> Result<String, String> {
+    let runs = picture_runs_of(original_entry_xml)?.concat();
+    if runs.is_empty() {
+        return Ok(entry_xml.to_owned());
+    }
+    let last = try_js_regex!(r"<\/w:p>(?![\s\S]*<\/w:p>)");
+    // a string replacement: `$&` and friends in a picture's XML are patterns
+    let replacement = format!("{runs}</w:p>");
+    jscompat::try_replace_first_with(last, entry_xml, |found| {
+        jscompat::get_substitution(found.as_str(), entry_xml, found.start(), &[], &replacement)
+    })
+    .map_err(limit)
+}
+
 /// `buildNotesXml`: the notes part regenerated from the full desired list.
 /// Structural entries of the original are kept byte-identical; a note whose
 /// text is unchanged keeps its original bytes; a changed one is patched at the
@@ -316,7 +347,9 @@ pub fn build_notes_xml(
         }
         // an edit that cannot be patched around hidden runs: written anew, every
         // word of the note is hidden under the first label it carried
-        let entry = note_entry_xml(kind, n, &mut rev_attrs);
+        // The note's pictures ride into the new entry: a picture is no text, and
+        // one that sat in a hidden run is hidden with the rest of the note.
+        let entry = with_picture_runs(&note_entry_xml(kind, n, &mut rev_attrs), &orig_xml)?;
         body.push_str(&if has_withheld_trace(&orig_xml) {
             over_withheld(&entry, &first_mark_label(&orig_xml))
         } else {
