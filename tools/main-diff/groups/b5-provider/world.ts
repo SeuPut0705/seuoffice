@@ -476,7 +476,8 @@ export class WorldRun {
     const close = (signal?: string | null): void => {
       if (closed) return
       closed = true
-      const code = signal ? null : (exit.code ?? 0)
+      // `code: null` is a child that ended without a code (by a signal), as world.rs reads it
+      const code = signal ? null : exit.code === undefined ? 0 : exit.code
       const sig = signal ?? exit.signal ?? null
       if (child.stdin) child.stdin.writable = false
       child.emit('exit', code, sig)
