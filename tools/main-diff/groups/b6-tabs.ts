@@ -169,6 +169,8 @@ interface WcState {
   pending?: number
   memo?: boolean
   destroyed?: boolean
+  /** `docsQueryDirty` rejects */
+  queryFails?: boolean
   identity?: { imported?: boolean; title: string; sourcePath?: string }
 }
 
@@ -318,6 +320,11 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
   }
   const failures = new Set<string>()
   const closeAnswers: unknown[] = []
+  // while the world holds, a `docsQueryDirty` or a close prompt waits for a
+  // `release` instead of answering: the renderer's reply has not come yet
+  let holding = false
+  const heldCalls: { resolve: (answer: boolean) => void; reject: (error: Error) => void }[] = []
+  const bgs: Promise<unknown>[] = []
   const held: (DetachedTab | null)[] = []
   const openerReady = new Map<number, { resolve: () => void; reject: (e: Error) => void }>()
   const windowOpen = new Map<number, (details: { url: string }) => unknown>()
@@ -443,11 +450,16 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
     if (failures.has(name)) throw new Error('create failed')
     return makeView()
   }
-  const answer = (): Promise<boolean> => {
-    const next = closeAnswers.length > 0 ? closeAnswers.shift() : true
-    if (next === 'throws') return Promise.reject(new Error('prompt failed'))
-    return Promise.resolve(next as boolean)
-  }
+  const gate = (answered: () => Promise<boolean>): Promise<boolean> =>
+    holding
+      ? new Promise<boolean>((resolve, reject) => heldCalls.push({ resolve, reject }))
+      : answered()
+  const answer = (): Promise<boolean> =>
+    gate(() => {
+      const next = closeAnswers.length > 0 ? closeAnswers.shift() : true
+      if (next === 'throws') return Promise.reject(new Error('prompt failed'))
+      return Promise.resolve(next as boolean)
+    })
   const app: Record<string, (...a: never[]) => unknown> = {
     createDocsView: (path) => creator('createDocsView', path ?? null),
     createSheetsView: (opts) => creator('createSheetsView', opts),
@@ -486,7 +498,11 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
     },
     docsQueryDirty: (wc: { id: number }) => {
       log('docsQueryDirty', wc.id)
-      return Promise.resolve(!!stateOf(wc.id).dirty)
+      return gate(() =>
+        stateOf(wc.id).queryFails
+          ? Promise.reject(new Error('query failed'))
+          : Promise.resolve(!!stateOf(wc.id).dirty),
+      )
     },
     sheetsPendingEditCount: (id: number) => {
       log('sheetsPendingEditCount', id)
@@ -678,7 +694,7 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
           }
         : null
 
-    const run = async (o: Op): Promise<unknown> => {
+    const run = async (o: Op, background = false): Promise<unknown> => {
       switch (o.op) {
         // ---- the world ----
         case 'window':
@@ -688,7 +704,14 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
           return null
         case 'state': {
           const s = stateOf(o.wc as number)
-          for (const key of ['dirty', 'pending', 'memo', 'destroyed', 'identity'] as const) {
+          for (const key of [
+            'dirty',
+            'pending',
+            'memo',
+            'destroyed',
+            'queryFails',
+            'identity',
+          ] as const) {
             if (o[key] !== undefined) (s as Record<string, unknown>)[key] = o[key]
           }
           return null
@@ -696,6 +719,27 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
         case 'closeAnswers':
           closeAnswers.push(...(o.answers as unknown[]))
           return null
+        case 'hold':
+          holding = o.on as boolean
+          return null
+        case 'release': {
+          const call = heldCalls.shift()
+          if (!call) return false
+          if (o.answer === 'throws') call.reject(new Error('released failure'))
+          else call.resolve(o.answer as boolean)
+          return true
+        }
+        case 'bg':
+          // the operation runs on; its result is read by `join`
+          bgs.push(
+            run(o.do as Op, true).then(
+              (value) => (value === undefined ? null : value),
+              (err) => ({ error: message(err) }),
+            ),
+          )
+          return null
+        case 'join':
+          return await Promise.all(bgs)
         case 'fail':
           if (o.on === false) failures.delete(o.create as string)
           else failures.add(o.create as string)
@@ -812,13 +856,13 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
           } as never)
         }
         case 'ensure': {
-          const out = await settled(tm.ensureTabLoaded(o.id as string))
-          if ('ok' in out) {
-            const value = out.ok as { status: string; webContents?: { id: number } }
-            return value.status === 'ready'
+          const shown = (value: { status: string; webContents?: { id: number } }) =>
+            value.status === 'ready'
               ? { status: 'ready', wc: value.webContents?.id }
               : { status: value.status }
-          }
+          if (background) return shown(await tm.ensureTabLoaded(o.id as string))
+          const out = await settled(tm.ensureTabLoaded(o.id as string))
+          if ('ok' in out) return shown(out.ok as { status: string })
           return out
         }
         case 'unloaded':
@@ -985,8 +1029,10 @@ async function runScenario(spec: Scenario, cx: TsContext): Promise<unknown> {
         }
         case 'winState': {
           const win = winOf(o.window)
-          // a window destroyed from outside closes, as Electron's does
-          if (o.destroyed === true && !win.state.destroyed) closedQueue.push(win)
+          // a window destroyed from outside closes, as Electron's does (`silent`: its
+          // `closed` has not come yet)
+          if (o.destroyed === true && !win.state.destroyed && o.silent !== true)
+            closedQueue.push(win)
           for (const key of ['destroyed', 'minimized', 'focused', 'title'] as const) {
             if (o[key] !== undefined) (win.state as Record<string, unknown>)[key] = o[key]
           }
@@ -1641,6 +1687,18 @@ const layoutCases: Case[] = [
     ],
     {},
     'a degenerate window gives the spare view no bounds',
+  ),
+  scenario(
+    [
+      open('docs'),
+      open('sheets'),
+      { op: 'beginSplit', a: 't1', b: 't2', orientation: 'side', ratio: 0.5, focus: 'a' },
+      act('t2'),
+      S,
+      L,
+    ],
+    {},
+    'activating a pane of a live split drops the pending spare-view timer',
   ),
 ]
 
@@ -2402,6 +2460,48 @@ const unloadedCases: Case[] = [
     {},
     'a failing opener answers none to a lookup and a detach; closing it just drops it',
   ),
+  scenario(
+    [
+      {
+        op: 'hydrate',
+        session: {
+          tabs: [
+            { kind: 'docs', filePath: '/w/a.docx', opener: plain },
+            { kind: 'sheets', filePath: '/w/b.xlsx', opener: plain },
+          ],
+          active: 0,
+          split: { a: 0, b: 1, orientation: 'side', ratio: 0.5, focus: 'b' },
+        },
+      },
+      S,
+      L,
+    ],
+    {},
+    'the front tab of a restored split wins over the remembered focus when it is the first pane',
+  ),
+  scenario(
+    [
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/a.docx', opener: { kind: 'custom', ready: 'pending' } },
+      },
+      {
+        op: 'addUnloaded',
+        spec: { kind: 'docs', filePath: '/w/b.docx', opener: { kind: 'custom', ready: 'pending' } },
+      },
+      { op: 'bg', do: { op: 'ensure', id: 't1', bg: true } },
+      { op: 'bg', do: { op: 'ensure', id: 't2', bg: true } },
+      { op: 'closeNoPrompt', id: 't1' },
+      { op: 'closeNoPrompt', id: 't2' },
+      { op: 'state', wc: 101, destroyed: true },
+      { op: 'ready', opener: 1, settle: 'resolve' },
+      { op: 'ready', opener: 2, settle: 'resolve' },
+      { op: 'join' },
+      L,
+    ],
+    {},
+    'an ensure that waited for its document answers with the view the tab had then, even if the tab left meanwhile',
+  ),
 ]
 
 // ---- closing ----
@@ -2587,6 +2687,106 @@ const closeCases: Case[] = [
     ],
     {},
     'the shell-close guard lists tabs by family and dirty state',
+  ),
+  scenario(
+    [
+      open('hwp', { path: '/w/a.hwp' }),
+      { op: 'state', wc: 100, memo: true },
+      open('hwp', { path: '/w/b.hwp' }),
+      { op: 'state', wc: 101, dirty: true },
+      open('hwp', { path: '/w/c.hwp' }),
+      { op: 'dirtyMemo' },
+      { op: 'dirty', kind: 'hwp' },
+    ],
+    {},
+    'the shell-close guard asks for a hwp tab with an open memo even when it is clean, or with edits and no memo',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      { op: 'state', wc: 100, dirty: true },
+      open('sheets', { path: '/w/b.xlsx' }),
+      act('t1'),
+      { op: 'hold', on: true },
+      { op: 'bg', do: { op: 'closeTab', id: 't1' } },
+      { op: 'closeTab', id: 't1' },
+      { op: 'closeNoPrompt', id: 't1' },
+      { op: 'canDetach', id: 't1' },
+      { op: 'detach', id: 't1' },
+      L,
+      { op: 'release', answer: true },
+      { op: 'closeTab', id: 't1' },
+      { op: 'canDetach', id: 't1' },
+      { op: 'release', answer: false },
+      { op: 'canDetach', id: 't1' },
+      { op: 'hold', on: false },
+      { op: 'closeAnswers', answers: [true] },
+      { op: 'closeTab', id: 't1' },
+      { op: 'join' },
+      L,
+    ],
+    {},
+    'a second close, a promptless close and a detach of a tab whose close waits on the renderer are refused, in the query and in the prompt',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      { op: 'state', wc: 100, dirty: true },
+      { op: 'state', wc: 100, queryFails: true },
+      { op: 'closeTab', id: 't1' },
+      { op: 'canDetach', id: 't1' },
+      { op: 'state', wc: 100, queryFails: false },
+      { op: 'closeAnswers', answers: ['throws'] },
+      { op: 'closeTab', id: 't1' },
+      { op: 'canDetach', id: 't1' },
+      L,
+      { op: 'hold', on: true },
+      { op: 'bg', do: { op: 'closeTab', id: 't1' } },
+      { op: 'release', answer: 'throws' },
+      { op: 'join' },
+      { op: 'canDetach', id: 't1' },
+    ],
+    {},
+    'a query or a prompt that fails rejects the close and frees the tab',
+  ),
+  scenario(
+    [
+      open('sheets', { path: '/w/a.xlsx' }),
+      { op: 'state', wc: 100, pending: 1 },
+      open('docs', { path: '/w/b.docx' }),
+      open('slides', { path: '/w/c.pptx' }),
+      { op: 'beginSplit', a: 't2', b: 't3', orientation: 'side', ratio: 0.5, focus: 'a' },
+      { op: 'hold', on: true },
+      { op: 'bg', do: { op: 'closeTab', id: 't1' } },
+      S,
+      L,
+      { op: 'closeTab', id: 't1' },
+      { op: 'release', answer: false },
+      S,
+      L,
+      { op: 'hold', on: false },
+      { op: 'closeAnswers', answers: [true] },
+      { op: 'closeTab', id: 't1' },
+      S,
+      L,
+    ],
+    {},
+    'the split is put back after a prompt that waited, and the tab is closed once it is confirmed',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      { op: 'state', wc: 100, dirty: true },
+      { op: 'hold', on: true },
+      { op: 'closeActive' },
+      { op: 'canDetach', id: 't1' },
+      { op: 'release', answer: true },
+      { op: 'release', answer: true },
+      { op: 'release', answer: true },
+      L,
+    ],
+    {},
+    'Cmd+W on a dirty docs tab waits for the query and the prompt; with nothing held, release answers false',
   ),
 ]
 
@@ -2827,6 +3027,30 @@ const lookupCases: Case[] = [
     ],
     {},
     'the session strip leaves out Home, the manual and Present tabs; the front tab is by id',
+  ),
+  scenario(
+    [
+      open('sheets', { path: '/w/a.xlsx' }),
+      { op: 'state', wc: 100, pending: 2 },
+      open('pdf', { path: '/w/b.pdf' }),
+      { op: 'state', wc: 101, dirty: true },
+      open('docs', { path: '/w/c.docx' }),
+      { op: 'state', wc: 102, dirty: true },
+      { op: 'hold', on: true },
+      { op: 'bg', do: { op: 'openDocuments' } },
+      act('home'),
+      { op: 'closeNoPrompt', id: 't1' },
+      { op: 'release', answer: true },
+      { op: 'join' },
+      { op: 'hold', on: false },
+      { op: 'state', wc: 102, queryFails: true },
+      { op: 'openDocuments' },
+      { op: 'state', wc: 102, queryFails: false },
+      { op: 'openDocuments' },
+      L,
+    ],
+    {},
+    'the list of open documents is the strip as it was when it was asked for, and fails when a query fails',
   ),
 ]
 
@@ -3254,6 +3478,36 @@ const dockCases: Case[] = [
     {},
     'closing a window that is hovering the strip clears the indicator',
   ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      open('markdown', { path: '/w/b.md' }),
+      { op: 'newWindow', tab: 't2' },
+      { op: 'dockHost', on: true },
+      { op: 'band', rect: { x: 100, y: 42, width: 1200, height: 56 } },
+      { op: 'screen', cursor: { x: 400, y: 70 } },
+      { op: 'win', window: 1, event: 'move' },
+      { op: 'screen', cursor: { x: 400, y: 600 } },
+      { op: 'fireTimer', n: 1 },
+      L,
+      { op: 'detachedFilePaths' },
+    ],
+    {},
+    'the dwell timer of the cursor that left the strip clears the hover instead of docking',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      open('markdown', { path: '/w/b.md' }),
+      { op: 'newWindow', tab: 't2', tearOffAt: { x: 500, y: 300 } },
+      { op: 'winState', window: 1, destroyed: true, silent: true },
+      { op: 'takeTear' },
+      { op: 'isTearing' },
+      L,
+    ],
+    {},
+    'a torn-off window destroyed before its closed event gives no tab back',
+  ),
 ]
 
 const detachedCloseCases: Case[] = [
@@ -3386,6 +3640,81 @@ const detachedCloseCases: Case[] = [
     ],
     {},
     "a docked window's close handler lets the close through (its view left)",
+  ),
+  scenario(
+    [
+      open('hwp', { path: '/w/a.hwp' }),
+      open('markdown', { path: '/w/b.md' }),
+      { op: 'newWindow', tab: 't1' },
+      { op: 'newWindow', tab: 't2' },
+      { op: 'state', wc: 100, memo: true },
+      { op: 'closeDetached', id: 'detached:100' },
+      { op: 'closeDetached', id: 'detached:101' },
+      { op: 'state', wc: 100, memo: false },
+      { op: 'closeDetached', id: 'detached:100' },
+      { op: 'detachedSessionTabs' },
+    ],
+    {},
+    'a promptless close over an open memo editor is refused, then allowed once the memo is closed',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      { op: 'state', wc: 100, dirty: true },
+      open('markdown', { path: '/w/b.md' }),
+      { op: 'newWindow', tab: 't1' },
+      { op: 'newWindow', tab: 't2' },
+      { op: 'hold', on: true },
+      { op: 'win', window: 1, event: 'close' },
+      { op: 'win', window: 1, event: 'close' },
+      { op: 'closeDetached', id: 'detached:100' },
+      { op: 'release', answer: true },
+      { op: 'release', answer: true },
+      { op: 'detachedSessionTabs' },
+      { op: 'detachedOpenDocuments' },
+    ],
+    {},
+    'a second close event while the prompt waits is refused; the run goes on with its window after a promptless close tore it down',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      { op: 'state', wc: 100, dirty: true },
+      { op: 'newWindow', tab: 't1' },
+      { op: 'hold', on: true },
+      { op: 'win', window: 1, event: 'close' },
+      { op: 'release', answer: 'throws' },
+      { op: 'hold', on: false },
+      { op: 'detachedOpenDocuments' },
+      { op: 'closeAnswers', answers: [false, true] },
+      { op: 'win', window: 1, event: 'close' },
+      { op: 'win', window: 1, event: 'close' },
+      { op: 'detachedSessionTabs' },
+    ],
+    {},
+    'a query that fails keeps the window and its next close prompts again',
+  ),
+  scenario(
+    [
+      open('docs', { path: '/w/a.docx' }),
+      open('docs', { path: '/w/b.docx' }),
+      open('markdown', { path: '/w/c.md' }),
+      { op: 'newWindow', tab: 't1' },
+      { op: 'newWindow', tab: 't2' },
+      { op: 'newWindow', tab: 't3' },
+      { op: 'state', wc: 100, dirty: true },
+      { op: 'state', wc: 101, dirty: true },
+      { op: 'hold', on: true },
+      { op: 'bg', do: { op: 'detachedOpenDocuments' } },
+      { op: 'winState', window: 2, destroyed: true },
+      { op: 'release', answer: true },
+      { op: 'bg', do: { op: 'detachedOpenDocuments' } },
+      { op: 'winState', window: 1, destroyed: true },
+      { op: 'release', answer: true },
+      { op: 'join' },
+    ],
+    {},
+    'the list of detached documents skips a window that closed while an earlier one was asked or while its own query waited',
   ),
 ]
 

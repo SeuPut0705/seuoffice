@@ -1,0 +1,191 @@
+[
+  {
+    "name": "files:read caps a slice at another length",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": ".clamp(1.0, 48_000.0);",
+    "replace": ".clamp(1.0, 49_000.0);",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "the picture cap of an attachment is 6 MB",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
+    "replace": "const ATTACHABLE_IMAGE_MAX_BYTES: f64 = 6.0 * 1024.0 * 1024.0;",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "webp is not an attachable picture",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "const IMAGE_EXTS: [&str; 5] = [\"png\", \"jpg\", \"jpeg\", \"gif\", \"webp\"];",
+    "replace": "const IMAGE_EXTS: [&str; 5] = [\"png\", \"jpg\", \"jpeg\", \"gif\", \"bmp\"];",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "the picker's filter lists pictures before diagrams",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        .chain(DIAGRAM_EXTS)\n        .chain(IMAGE_EXTS)\n}",
+    "replace": "        .chain(IMAGE_EXTS)\n        .chain(DIAGRAM_EXTS)\n}",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "the picker forgets the folder of the last pick",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "            &mut memory.borrow_mut(),",
+    "replace": "            &mut DialogMemory::new(),",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "the picker is not parented to the sender's window",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "            parent.as_ref(),",
+    "replace": "            None,",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a text's length counts characters, not UTF-16 units",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        let total = units.len();",
+    "replace": "        let total = body.chars().count();",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a negative offset is reported as it came",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "floor_or(js_number(args.get(1)), 0.0).max(0.0);",
+    "replace": "floor_or(js_number(args.get(1)), 0.0);",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a file open with unsaved changes is read",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        assert_file_saved(&holder, path).map_err(str::to_owned)?;",
+    "replace": "        let _ = assert_file_saved(&holder, path);",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a jpg is answered as image/jpg",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        \"jpg\" | \"jpeg\" => Some(\"image/jpeg\"),",
+    "replace": "        \"jpg\" | \"jpeg\" => Some(\"image/jpg\"),",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "files:read-image lets a picture of twice the cap through",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "Ok(size) if size > ATTACHABLE_IMAGE_MAX_BYTES =>",
+    "replace": "Ok(size) if size > ATTACHABLE_IMAGE_MAX_BYTES * 2.0 =>",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "an attachment that is not a file is accepted",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        if !meta.is_file() {",
+    "replace": "        if false {",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "pasted pictures are stamped with less of the time",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "            .take(19)",
+    "replace": "            .take(15)",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "pasted pictures are not numbered",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        self.seq.set(self.seq.get() + 1);",
+    "replace": "        self.seq.set(self.seq.get());",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "pasted pictures are pruned after half a day",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "7.0 * 24.0 * 60.0 * 60.0 * 1000.0",
+    "replace": "0.5 * 24.0 * 60.0 * 60.0 * 1000.0",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "the folder of pasted pictures is pruned on every save",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        if self.pruned.replace(true) {",
+    "replace": "        if false {",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a pasted picture's extension keeps its case",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "            Some(IpcValue::String(ext)) => ext.to_lowercase(),",
+    "replace": "            Some(IpcValue::String(ext)) => ext.clone(),",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a blank tab is not asked for with an empty path",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        let blank = path.is_none_or(str::is_empty);",
+    "replace": "        let blank = path.is_none();",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "win:list answers every tab as unfocused",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "(\"focused\", IpcValue::Bool(tab.focused)),",
+    "replace": "(\"focused\", IpcValue::Bool(false)),",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "an untrusted sender is told another thing",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "Err(error(\"Untrusted IPC sender.\"))",
+    "replace": "Err(error(\"Untrusted sender.\"))",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "shell:open-external opens any address",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "Some(IpcValue::String(url)) => safe_external_url(Some(url), None),",
+    "replace": "Some(IpcValue::String(url)) => Some(url.clone()),",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "the texts are always Korean",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "        self.strings.t(self.lang.lang(), key, None)",
+    "replace": "        self.strings.t(Lang::Ko, key, None)",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a path of 1025 characters is accepted",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "            } else if units > 1024 {",
+    "replace": "            } else if units > 1025 {",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a path of too many characters is told another thing",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "\"Too big: expected string to have <=1024 characters\"",
+    "replace": "\"Too big: expected string to have <1024 characters\"",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a picture is accepted past 20 MB",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "            if meta.len() > 20 * 1024 * 1024 {",
+    "replace": "            if meta.len() > 21 * 1024 * 1024 {",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "a PNG signature of four bytes is enough",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "    if bytes.len() >= 8 && bytes[..4] == [0x89, 0x50, 0x4e, 0x47] {",
+    "replace": "    if bytes.len() >= 4 && bytes[..4] == [0x89, 0x50, 0x4e, 0x47] {",
+    "groups": ["w/editor-files"]
+  },
+  {
+    "name": "~/ is the temp folder",
+    "file": "shell-ipc/w/src/editor_files.rs",
+    "find": "                Some(rest) => join(&[&home.to_string_lossy(), rest]),",
+    "replace": "                Some(rest) => join(&[&temp.to_string_lossy(), rest]),",
+    "groups": ["w/editor-files"]
+  }
+]

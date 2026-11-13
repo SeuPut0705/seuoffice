@@ -60,8 +60,8 @@ use crate::shell::renderer_disposal::{
     Failure, ReleasableContents, RendererDisposal, destroy_closed_view,
 };
 use crate::shell::renderer_watchdog::{
-    BodyParams, ProcessMetric, RendererWatchdog, WatchdogContents, WatchdogDocumentInfo,
-    WatchdogHost, WatchdogOptions, WatchdogStringKey,
+    BodyParams, ProcessMetric, RendererWatchdog, ReportAnswer, ReportRun, ReportStep,
+    WatchdogContents, WatchdogDocumentInfo, WatchdogHost, WatchdogOptions, WatchdogStringKey,
 };
 use crate::shell::session_record::{
     SessionRecord, SessionRecordProcess, SessionRecorderEnv, write_record_atomic,
@@ -496,11 +496,18 @@ impl CliLinkHost for FakeCliHost {
     fn app_home_dir(&self, home_dir: &str) -> String {
         app_home_dir(home_dir)
     }
-    fn install_cli_link(&self, _launcher: &str) -> Result<InstallOutcome, String> {
+    fn install_cli_link(&self, launcher: &str) -> Result<InstallOutcome, String> {
         // installCliLink answers `unsupported` where it has no way to link;
         // the specs stop there so nothing reaches the machine
         match self.platform().as_str() {
-            "darwin" | "linux" | "win32" => Err("the case would reach the machine".to_owned()),
+            // no `powershell.exe` on the machines the cases run on: the registry
+            // edit cannot start, and the outcome names the launcher's folder
+            "win32" => Ok(InstallOutcome {
+                status: "unwritable".to_owned(),
+                location: Some(jscompat::node_path::win32::dirname(launcher)),
+                ..InstallOutcome::default()
+            }),
+            "darwin" | "linux" => Err("the case would reach the machine".to_owned()),
             _ => Ok(InstallOutcome {
                 status: "unsupported".to_owned(),
                 ..InstallOutcome::default()
@@ -536,7 +543,6 @@ fn cli_link_call(args: &[Value], cx: &mut Context) -> Answer {
 struct FakeStyle {
     name: String,
     destroyed: bool,
-    rejects: bool,
     /// the case's `isDestroyed` is a log line (ui-scale), or not (pointer-size)
     log_destroyed: bool,
     log: Log,
@@ -547,7 +553,6 @@ impl FakeStyle {
         FakeStyle {
             name: name.to_owned(),
             destroyed: field_bool(spec, "destroyed"),
-            rejects: field_bool(spec, "rejects"),
             log_destroyed,
             log: Rc::clone(log),
         }
@@ -562,16 +567,12 @@ impl StyleTarget for FakeStyle {
         self.destroyed
     }
 
-    fn execute_javascript(&self, script: &str) -> Result<(), String> {
+    fn execute_javascript(&self, script: &str) {
+        // the spec's `rejects` only changes the promise the TypeScript drops
         log_line(
             &self.log,
             vec![text(&self.name), text("execute"), text(script)],
         );
-        if self.rejects {
-            Err("gone".to_owned())
-        } else {
-            Ok(())
-        }
     }
 }
 
@@ -1076,6 +1077,8 @@ struct CrashWc {
     name: String,
     id: i64,
     spec: Value,
+    /// `spec.destroyed`, which a `destroy` event sets while a box is up
+    destroyed: Rc<Cell<bool>>,
     log: Log,
 }
 
@@ -1084,7 +1087,7 @@ impl CrashContents for CrashWc {
         self.id
     }
     fn is_destroyed(&self) -> bool {
-        field_bool(&self.spec, "destroyed")
+        self.destroyed.get()
     }
     fn reload(&self) -> Result<(), Failure> {
         log_line(&self.log, vec![text("reload"), text(&self.name)]);
@@ -1308,6 +1311,7 @@ fn crash_watch_call(args: &[Value], cx: &mut Context) -> Answer {
             name: name.clone(),
             id: field_f64(wc, "id").unwrap_or(0.0) as i64,
             spec: wc.clone(),
+            destroyed: Rc::new(Cell::new(field_bool(wc, "destroyed"))),
             log: Rc::clone(&log),
         })
         .collect();
@@ -1366,6 +1370,10 @@ fn crash_watch_call(args: &[Value], cx: &mut Context) -> Answer {
                 Ok(None) => {}
                 Err(CrashWatchError::InvalidTime(_) | CrashWatchError::Rejected(_)) => {}
             }
+        } else if let Some(name) = event.get("destroy").and_then(Value::as_str) {
+            if let Some(wc) = find(name) {
+                wc.destroyed.set(true);
+            }
         } else if let Some(answer) = event.get("answer") {
             if pending.is_empty() {
                 continue;
@@ -1390,6 +1398,8 @@ fn crash_watch_call(args: &[Value], cx: &mut Context) -> Answer {
 struct DogWc {
     name: String,
     spec: Value,
+    /// how many times `isDestroyed` was asked: `destroyedAfter` counts them
+    destroyed_calls: Rc<Cell<f64>>,
     log: Log,
 }
 
@@ -1398,7 +1408,10 @@ impl WatchdogContents for DogWc {
         field_f64(&self.spec, "id").unwrap_or(0.0) as i64
     }
     fn is_destroyed(&self) -> bool {
+        let calls = self.destroyed_calls.get() + 1.0;
+        self.destroyed_calls.set(calls);
         field_bool(&self.spec, "destroyed")
+            || field_f64(&self.spec, "destroyedAfter").is_some_and(|after| calls > after)
     }
     fn get_os_process_id(&self) -> i64 {
         field_f64(&self.spec, "pid").unwrap_or(0.0) as i64
@@ -1415,31 +1428,6 @@ impl WatchdogContents for DogWc {
             vec![text(&self.name), text("attach"), text(protocol)],
         );
         Ok(())
-    }
-    fn debugger_send_command(&self, method: &str, params: Option<Value>) -> Result<Value, Failure> {
-        log_line(
-            &self.log,
-            vec![
-                text(&self.name),
-                text("send"),
-                text(method),
-                params.unwrap_or(Value::Null),
-            ],
-        );
-        if field_str(&self.spec, "failOn") == Some(method) {
-            return Err(Failure(format!("{method} failed")));
-        }
-        if method == "Profiler.stop" {
-            let mut node = Map::new();
-            node.insert("id".to_owned(), Value::from(1));
-            let mut profile = Map::new();
-            profile.insert("nodes".to_owned(), Value::Array(vec![Value::Object(node)]));
-            profile.insert("name".to_owned(), text(&self.name));
-            let mut out = Map::new();
-            out.insert("profile".to_owned(), Value::Object(profile));
-            return Ok(Value::Object(out));
-        }
-        Ok(Value::Object(Map::new()))
     }
     fn debugger_detach(&self) -> Result<(), Failure> {
         log_line(&self.log, vec![text(&self.name), text("detach")]);
@@ -1540,14 +1528,6 @@ impl WatchdogHost for DogHost {
         Ok(fake_parent(&wc.spec))
     }
 
-    fn close_document(&self, wc: &DogWc) -> Result<(), Failure> {
-        log_line(&self.log, vec![text("closeDocument"), text(&wc.name)]);
-        if field_str(&wc.spec, "close") == Some("throws") {
-            return Err(Failure("closeDocument failed".to_owned()));
-        }
-        Ok(())
-    }
-
     fn t(&self, key: WatchdogStringKey, params: Option<&BodyParams>) -> String {
         let shown = params.map_or(Value::Null, |p| {
             let mut o = Map::new();
@@ -1559,8 +1539,80 @@ impl WatchdogHost for DogHost {
         log_line(&self.log, vec![text("t"), text(key.as_str()), shown]);
         format!("<{}>", key.as_str())
     }
+}
 
-    fn sleep(&self, _ms: f64) {}
+/// `await wc.debugger.sendCommand(method, params)` as the spec's fake answers it
+fn dog_command(
+    wc: &DogWc,
+    log: &Log,
+    method: &str,
+    params: Option<Value>,
+) -> Result<Value, Failure> {
+    log_line(
+        log,
+        vec![
+            text(&wc.name),
+            text("send"),
+            text(method),
+            params.unwrap_or(Value::Null),
+        ],
+    );
+    if field_str(&wc.spec, "failOn") == Some(method) {
+        return Err(Failure(format!("{method} failed")));
+    }
+    if method == "Profiler.stop" {
+        let mut node = Map::new();
+        node.insert("id".to_owned(), Value::from(1));
+        let mut profile = Map::new();
+        profile.insert("nodes".to_owned(), Value::Array(vec![Value::Object(node)]));
+        profile.insert("name".to_owned(), text(&wc.name));
+        let mut out = Map::new();
+        out.insert("profile".to_owned(), Value::Object(profile));
+        return Ok(Value::Object(out));
+    }
+    Ok(Value::Object(Map::new()))
+}
+
+/// Carries out the steps of a report until it ends or its box is up: `true`
+/// when the box is up (the report waits for its answer).
+fn drive_report(
+    dog: &RendererWatchdog,
+    host: &DogHost,
+    log: &Log,
+    run: &mut ReportRun<DogWc>,
+    mut step: ReportStep<DogWc>,
+) -> bool {
+    loop {
+        let answer = match step {
+            ReportStep::Command { wc, method, params } => {
+                ReportAnswer::Command(dog_command(&wc, log, method, params))
+            }
+            ReportStep::Sleep(_) => ReportAnswer::Slept,
+            ReportStep::Prompt {
+                options,
+                over_parent,
+            } => {
+                log_line(
+                    log,
+                    vec![
+                        text(if over_parent { "over" } else { "box" }),
+                        to_value(&options),
+                    ],
+                );
+                return true;
+            }
+            ReportStep::CloseDocument(wc) => {
+                log_line(log, vec![text("closeDocument"), text(&wc.name)]);
+                ReportAnswer::Closed(if field_str(&wc.spec, "close") == Some("throws") {
+                    Err(Failure("closeDocument failed".to_owned()))
+                } else {
+                    Ok(())
+                })
+            }
+            ReportStep::Done => return false,
+        };
+        step = run.resume(dog, host, answer);
+    }
 }
 
 fn watchdog_call(args: &[Value], cx: &mut Context) -> Answer {
@@ -1571,6 +1623,7 @@ fn watchdog_call(args: &[Value], cx: &mut Context) -> Answer {
         .map(|(name, wc)| DogWc {
             name: name.clone(),
             spec: wc.clone(),
+            destroyed_calls: Rc::new(Cell::new(0.0)),
             log: Rc::clone(&log),
         })
         .collect();
@@ -1597,7 +1650,7 @@ fn watchdog_call(args: &[Value], cx: &mut Context) -> Answer {
     );
     log_line(&log, vec![text("setInterval"), num(dog.sample_ms())]);
     log_line(&log, vec![text("unref")]);
-    let mut pending = Vec::new();
+    let mut pending: Vec<ReportRun<DogWc>> = Vec::new();
     for step in list(spec.get("steps")) {
         if let Some(clock) = field_f64(step, "clock") {
             host.clock.set(clock);
@@ -1606,30 +1659,26 @@ fn watchdog_call(args: &[Value], cx: &mut Context) -> Answer {
             *host.metrics.borrow_mut() = metrics.clone();
             for report in dog.sample(&host) {
                 // a report that cannot name its document is rejected: not reached by the cases
-                let Ok(info) = dog.diagnose(&host, &report) else {
+                let Ok((mut run, first)) = dog.start_report(&host, report) else {
                     continue;
                 };
-                if let Some(prompt) = dog.ask(&host, &report, info.as_ref()) {
-                    log_line(
-                        &log,
-                        vec![
-                            text(if prompt.over_parent { "over" } else { "box" }),
-                            to_value(&prompt.options),
-                        ],
-                    );
-                    pending.push((report, prompt));
+                if drive_report(&dog, &host, &log, &mut run, first) {
+                    pending.push(run);
                 }
             }
         }
         if let Some(answer) = step.get("answer")
             && !pending.is_empty()
         {
-            let (report, prompt) = pending.remove(0);
+            let mut run = pending.remove(0);
             let response = match answer.as_f64() {
                 Some(response) => Ok(response),
                 None => Err(Failure("dialog failed".to_owned())),
             };
-            dog.answered(&host, &report, prompt, response);
+            let next = run.resume(&dog, &host, ReportAnswer::Dialog(response));
+            if drive_report(&dog, &host, &log, &mut run, next) {
+                pending.push(run);
+            }
         }
     }
     cx.logs.extend(take_logs(&log));

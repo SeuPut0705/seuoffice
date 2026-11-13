@@ -1,8 +1,9 @@
 //! `apps/shell/src/main/tab-lifecycle.ts`.
 //!
-//! `closeTab` is a promise in the TypeScript; here it is a call that returns
-//! when the tab is closed or the close was cancelled, which is what the
-//! `await` waits for.
+//! `closeTab` is a promise in the TypeScript that may wait for a renderer's
+//! answer (an unsaved-changes prompt); here closing in order is a run the
+//! caller drives: [`CloseInOrder::start`] and [`CloseInOrder::resume`] say
+//! which tab to close next, and the caller resumes once that close settled.
 
 /// `MAX_RECENTLY_CLOSED`
 pub const MAX_RECENTLY_CLOSED: f64 = 20.0;
@@ -16,31 +17,72 @@ pub struct TabCloseTarget {
     pub closable: Option<bool>,
 }
 
-/// `TabCloseManager`
+/// The tab list of `TabCloseManager`; its `closeTab` is the caller's, asked
+/// for by [`CloseInOrderStep::CloseTab`].
 pub trait TabCloseManager {
     fn list(&mut self) -> Vec<TabCloseTarget>;
-    fn close_tab(&mut self, id: &str);
 }
 
-/// `closeTabsInOrder`: closes tabs one after another. Skips tabs that no
-/// longer exist, are marked unclosable, or are `home`. When a tab is still in
-/// the list after `closeTab` (a cancelled close confirmation) the sequence
-/// stops and leaves all remaining tabs open.
-pub fn close_tabs_in_order(tabs: &mut dyn TabCloseManager, ids: &[String]) {
-    for id in ids {
-        let list = tabs.list();
-        let Some(target) = list.iter().find(|tab| &tab.id == id) else {
-            continue;
+/// What the run of `closeTabsInOrder` asks the caller to do next.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CloseInOrderStep {
+    /// `await tabs.closeTab(id)`: then call [`CloseInOrder::resume`]
+    CloseTab(String),
+    /// the run ended
+    Done,
+}
+
+/// `closeTabsInOrder(tabs, ids)`: closes tabs one after another. Skips tabs
+/// that no longer exist, are marked unclosable, or are `home`. When a tab is
+/// still in the list after its close settled (a cancelled close
+/// confirmation) the run stops and leaves all remaining tabs open.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct CloseInOrder {
+    ids: Vec<String>,
+    /// the index of the next id to look at
+    next: usize,
+    /// the id whose close the caller carries out
+    closing: Option<String>,
+}
+
+impl CloseInOrder {
+    pub fn start(tabs: &mut dyn TabCloseManager, ids: &[String]) -> (Self, CloseInOrderStep) {
+        let mut run = CloseInOrder {
+            ids: ids.to_vec(),
+            next: 0,
+            closing: None,
         };
-        if target.id == "home" || target.closable == Some(false) {
-            continue;
-        }
+        let step = run.advance(tabs);
+        (run, step)
+    }
 
-        tabs.close_tab(id);
-
-        if tabs.list().iter().any(|tab| &tab.id == id) {
-            return;
+    /// The close asked for settled (closed, or cancelled): continue.
+    pub fn resume(&mut self, tabs: &mut dyn TabCloseManager) -> CloseInOrderStep {
+        let Some(id) = self.closing.take() else {
+            return CloseInOrderStep::Done;
+        };
+        if tabs.list().iter().any(|tab| tab.id == id) {
+            self.next = self.ids.len();
+            return CloseInOrderStep::Done;
         }
+        self.advance(tabs)
+    }
+
+    fn advance(&mut self, tabs: &mut dyn TabCloseManager) -> CloseInOrderStep {
+        while self.next < self.ids.len() {
+            let id = self.ids[self.next].clone();
+            self.next += 1;
+            let list = tabs.list();
+            let Some(target) = list.iter().find(|tab| tab.id == id) else {
+                continue;
+            };
+            if target.id == "home" || target.closable == Some(false) {
+                continue;
+            }
+            self.closing = Some(id.clone());
+            return CloseInOrderStep::CloseTab(id);
+        }
+        CloseInOrderStep::Done
     }
 }
 
