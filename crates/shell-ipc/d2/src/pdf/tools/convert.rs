@@ -216,6 +216,9 @@ impl Convert {
         let Some((view, path)) = tab.and_then(|t| Some((t.view, t.file_path?))) else {
             return then(Ok(()));
         };
+        if !self.ctx.shell.has_tab_manager() {
+            return then(Ok(()));
+        }
         let me = self.clone();
         self.ctx.shell.flush_pdf_save(
             view,

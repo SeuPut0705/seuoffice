@@ -290,6 +290,9 @@ pub trait PdfToolsShell: Send + Sync {
     fn activate_view(&self, view: ViewId);
     /// `win.setProgressBar(progress)`; any thread
     fn set_progress_bar(&self, window: WindowId, progress: f64);
+    /// `tabManager` is set: the shell window and its tabs exist (false
+    /// before the app is ready)
+    fn has_tab_manager(&self) -> bool;
     /// `tabManager.openHwpTab(copy, { untitledCopy: { title, importedPdf: true } })`
     /// and `webContentsForTab` of it: the new tab's view, if it has one
     fn open_hwp_copy(&self, copy: &str, title: &str) -> Result<Option<ViewId>, String>;
@@ -316,7 +319,9 @@ pub(crate) mod fake {
     //! `{"problem": p}` (default 1 page); `convert_to_office` `{"bytes": b,
     //! "scannedDocument": bool, "pageResults": [[page, status]]}` or
     //! `{"load": code}` / `{"error": m}`; store errors `{"$error": "write"|"type"|"other", "message": m}`;
-    //! `unsavedFiles`: the paths open with unsaved changes.
+    //! `unsavedFiles`: the paths open with unsaved changes; `strings`: the
+    //! shell's text by key; `tabManager: false`: the shell has no tab manager
+    //! yet (the shell entry before the app is ready).
 
     use std::collections::HashMap;
     use std::path::PathBuf;
@@ -615,9 +620,16 @@ pub(crate) mod fake {
                 .map(|a| text(&a))
                 .unwrap_or_else(|| "system".into())
         }
-        /// the key, then `name=value` of each parameter
+        /// `strings[key]` of the case, else the key; then `name=value` of each parameter
         fn text(&self, key: &str, params: &[(&str, String)]) -> String {
-            std::iter::once(key.to_owned())
+            let strings = self.answers.lock().unwrap().get("strings").cloned();
+            let text = strings
+                .as_ref()
+                .and_then(|s| s.get(key))
+                .and_then(Value::as_str)
+                .unwrap_or(key)
+                .to_owned();
+            std::iter::once(text)
                 .chain(params.iter().map(|(k, v)| format!("{k}={v}")))
                 .collect::<Vec<_>>()
                 .join(" ")
@@ -668,7 +680,12 @@ pub(crate) mod fake {
             });
             then(answer)
         }
+        /// with `tabManager: false` (the shell entry before it is ready) a
+        /// file opens nowhere: false, without a line
         fn open_document_path(&self, path: &str) -> bool {
+            if !self.has_tab_manager() {
+                return false;
+            }
             self.log(json!(["openDocumentPath", path]));
             self.answer("open_document_path", json!(path))
                 .and_then(|a| a.as_bool())
@@ -684,15 +701,19 @@ pub(crate) mod fake {
                 window: a["window"].as_u64().map(|w| WindowId(w as u32)),
             })
         }
+        /// a view without unsaved edits answers at once (`pdfIsDirty` false)
         fn flush_pdf_save(&self, view: ViewId, then: Box<dyn FnOnce(bool)>) {
-            self.log(json!(["flushPdfSave", view.0]));
             let ok = self
                 .answer("flush_pdf_save", json!(view.0))
                 .and_then(|a| a.as_bool())
                 .unwrap_or(*self.flush_ok.lock().unwrap());
             then(ok)
         }
+        /// with `tabManager: false` no tab shows anything, without a line
         fn find_tab(&self, kind: TabKind, path: &str) -> Option<String> {
+            if !self.has_tab_manager() {
+                return None;
+            }
             self.log(json!([format!("tabManager.find{kind:?}TabByPath"), path]));
             self.answer("find_tab", json!([format!("{kind:?}"), path]))
                 .and_then(|a| a.as_str().map(str::to_owned))
@@ -712,6 +733,10 @@ pub(crate) mod fake {
         fn activate_view(&self, view: ViewId) {
             self.log(json!(["activateView", view.0]));
             self.answer("activate_view", json!(view.0));
+        }
+        /// unless the case says `tabManager: false`
+        fn has_tab_manager(&self) -> bool {
+            self.answers.lock().unwrap().get("tabManager") != Some(&Value::Bool(false))
         }
         fn set_progress_bar(&self, window: WindowId, progress: f64) {
             self.log(json!(["setProgressBar", window.0, progress]));
