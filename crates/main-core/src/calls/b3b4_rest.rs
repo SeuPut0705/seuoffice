@@ -5,6 +5,7 @@
 //! One part per spec part of `groups/b3b4-rest/`.
 
 mod index_core;
+mod index_store;
 mod shell_rest;
 
 use serde_json::Value;
@@ -12,5 +13,7 @@ use serde_json::Value;
 use super::{Answer, Context};
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
-    index_core::call(name, args, cx).or_else(|| shell_rest::call(name, args, cx))
+    index_core::call(name, args, cx)
+        .or_else(|| index_store::call(name, args, cx))
+        .or_else(|| shell_rest::call(name, args, cx))
 }

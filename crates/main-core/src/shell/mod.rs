@@ -29,6 +29,7 @@ pub mod file_targets;
 pub mod folder_roots;
 pub mod folder_tree;
 pub mod headless_export;
+pub mod home_api;
 pub mod launch_paths;
 pub mod launch_recovery;
 pub mod mac_update;

@@ -11,6 +11,7 @@ import type { Group } from '../types.ts'
 // loaded after electron-fake.ts has registered its hooks
 const parts = await Promise.all([
   import('./b3b4-rest/index-core.ts'),
+  import('./b3b4-rest/index-store.ts'),
   import('./b3b4-rest/shell-rest.ts'),
 ])
 
