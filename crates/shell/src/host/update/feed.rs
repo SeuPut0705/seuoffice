@@ -383,7 +383,9 @@ impl Feed {
             return false;
         }
         let mut command = std::process::Command::new(&installer);
-        command.arg("--updated");
+        // `--updated` as electron-updater passed it (hooks.nsh reads it),
+        // `/UPDATE` for Tauri's own pages: an update never offers to uninstall
+        command.arg("--updated").arg("/UPDATE");
         if silent {
             command.arg("/S");
         }

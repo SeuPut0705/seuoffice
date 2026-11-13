@@ -19,6 +19,9 @@
 ;    previous folder comes back and is started. An installer that is killed
 ;    leaves a RunOnce entry (a script in %LOCALAPPDATA%) that puts the
 ;    previous folder back at the next sign-in unless the install finished.
+;    When the previous folder cannot be set aside whole (a file in it is
+;    held open), the install stops before writing anything and the installed
+;    version stays.
 ;
 ; 3. What the Electron build's build/installer.nsh registered besides the
 ;    associations Tauri writes: the per-type icons, Explorer's New menu for
@@ -81,6 +84,21 @@ Var SeuOfficePrevious
   seuoffice_scan_done:
 !macroend
 
+; Nothing new was written: the installed version stays, and is started again
+; when an update had closed it, so the person is back where they were. Its
+; updater then finds the version unchanged and reports the failed install.
+!macro SeuOfficeKeepInstalled REASON
+  DetailPrint "${REASON} The installed version stays."
+  ${IfNot} ${Silent}
+    MessageBox MB_ICONSTOP|MB_OK "${REASON}$\r$\n$\r$\nThe installed version of ${PRODUCTNAME} stays as it is. Close the program that uses it and try again."
+  ${EndIf}
+  ${If} $UpdateMode = 1
+    nsis_tauri_utils::RunAsUser "$INSTDIR\${MAINBINARYNAME}.exe" "--updated"
+  ${EndIf}
+  SetErrorLevel 5
+  Abort "${REASON}"
+!macroend
+
 !macro NSIS_HOOK_PREINSTALL
   ; electron-updater's flag; Tauri's own is /UPDATE
   ClearErrors
@@ -98,29 +116,40 @@ Var SeuOfficePrevious
     !insertmacro CheckIfAppIsRunning "$INSTDIR\${MAINBINARYNAME}.exe" "${PRODUCTNAME}"
   ${EndIf}
 
-  ; the version in the folder now stays beside it until the new one has started
+  ; The version in the folder stays beside it until the new one has started.
+  ; Fail closed: when it cannot be set aside whole, nothing new is written and
+  ; the installed version stays as it is (a locked file, an antivirus scan).
   StrCpy $SeuOfficePrevious ""
   ${If} ${FileExists} "$INSTDIR\${MAINBINARYNAME}.exe"
+    ; the installer's own working folder is inside $INSTDIR (SetOutPath): leave it
+    SetOutPath $TEMP
+    ; a .previous an earlier run left must go first, or the rename below fails
     RMDir /r "$INSTDIR.previous"
+    ${If} ${FileExists} "$INSTDIR.previous\*.*"
+      !insertmacro SeuOfficeKeepInstalled "$INSTDIR.previous is in use and could not be removed."
+    ${EndIf}
+    ; a killed install puts the previous folder back at the next sign-in;
+    ; written first, so no moment exists without it
+    FileOpen $6 "${SEUOFFICE_RESTORE_SCRIPT}" w
+    FileWrite $6 '@echo off$\r$\n'
+    FileWrite $6 'if exist "$INSTDIR\${SEUOFFICE_COMPLETE_MARK}" goto done$\r$\n'
+    FileWrite $6 'if not exist "$INSTDIR.previous\${MAINBINARYNAME}.exe" goto done$\r$\n'
+    FileWrite $6 'rmdir /s /q "$INSTDIR"$\r$\n'
+    FileWrite $6 'move "$INSTDIR.previous" "$INSTDIR"$\r$\n'
+    FileWrite $6 ':done$\r$\n'
+    FileWrite $6 'del "%~f0"$\r$\n'
+    FileClose $6
+    WriteRegStr HKCU "${SEUOFFICE_RUNONCE}" "${SEUOFFICE_RESTORE_VALUE}" \
+      '"$SYSDIR\cmd.exe" /c "${SEUOFFICE_RESTORE_SCRIPT}"'
     ClearErrors
     Rename "$INSTDIR" "$INSTDIR.previous"
     ${If} ${Errors}
-      DetailPrint "Could not keep the previous version beside the new one"
-    ${Else}
-      StrCpy $SeuOfficePrevious "$INSTDIR.previous"
-      ; a killed install puts it back at the next sign-in
-      FileOpen $6 "${SEUOFFICE_RESTORE_SCRIPT}" w
-      FileWrite $6 '@echo off$\r$\n'
-      FileWrite $6 'if exist "$INSTDIR\${SEUOFFICE_COMPLETE_MARK}" goto done$\r$\n'
-      FileWrite $6 'if not exist "$SeuOfficePrevious\${MAINBINARYNAME}.exe" goto done$\r$\n'
-      FileWrite $6 'rmdir /s /q "$INSTDIR"$\r$\n'
-      FileWrite $6 'move "$SeuOfficePrevious" "$INSTDIR"$\r$\n'
-      FileWrite $6 ':done$\r$\n'
-      FileWrite $6 'del "%~f0"$\r$\n'
-      FileClose $6
-      WriteRegStr HKCU "${SEUOFFICE_RUNONCE}" "${SEUOFFICE_RESTORE_VALUE}" \
-        '"$SYSDIR\cmd.exe" /c "${SEUOFFICE_RESTORE_SCRIPT}"'
+    ${OrIfNot} ${FileExists} "$INSTDIR.previous\${MAINBINARYNAME}.exe"
+      DeleteRegValue HKCU "${SEUOFFICE_RUNONCE}" "${SEUOFFICE_RESTORE_VALUE}"
+      Delete "${SEUOFFICE_RESTORE_SCRIPT}"
+      !insertmacro SeuOfficeKeepInstalled "A file of the installed version is in use."
     ${EndIf}
+    StrCpy $SeuOfficePrevious "$INSTDIR.previous"
   ${EndIf}
   CreateDirectory "$INSTDIR"
   SetOutPath $INSTDIR

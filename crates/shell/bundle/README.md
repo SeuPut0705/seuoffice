@@ -28,7 +28,7 @@ Electron 판은 명령줄을 앱 실행 파일로 돌렸다(`ELECTRON_RUN_AS_NOD
 
 ## 되돌리기(Windows)
 
-업데이트로 설치할 때 설치 폴더를 `<폴더>.previous`로 옮긴 뒤 새 판을 깐다. 새 판을 `--updated`로 띄우고 90초 안에 `%APPDATA%\seuoffice\shell-started.txt`에 그 판 번호가 적히기를 기다린다(`src/host/os.rs`가 시작할 때 적는다). 적히지 않으면 새 파일을 지우고 이전 폴더를 되돌려 띄운다. 설치 프로그램이 도중에 끝나면, 다음 로그인 때 RunOnce가 `%LOCALAPPDATA%\seuoffice-restore-previous.cmd`로 이전 폴더를 되돌린다. 설치가 끝난 표시(`.seuoffice-install-complete`)가 있으면 아무것도 하지 않는다.
+업데이트로 설치할 때 설치 폴더를 `<폴더>.previous`로 옮긴 뒤 새 판을 깐다. 새 판을 `--updated`로 띄우고 90초 안에 `%APPDATA%\seuoffice\shell-started.txt`에 그 판 번호가 적히기를 기다린다(`src/host/os.rs`가 시작할 때 적는다). 적히지 않으면 새 파일을 지우고 이전 폴더를 되돌려 띄운다. 설치 프로그램이 도중에 끝나면, 다음 로그인 때 RunOnce가 `%LOCALAPPDATA%\seuoffice-restore-previous.cmd`로 이전 폴더를 되돌린다. 설치가 끝난 표시(`.seuoffice-install-complete`)가 있으면 아무것도 하지 않는다. 옛 폴더를 통째로 옮기지 못하면(안의 파일을 다른 프로그램이 열고 있을 때) 설치 프로그램은 새 파일을 하나도 쓰지 않고 멈추고, 업데이트였다면 옛 판을 다시 띄운다. 이 길은 넘어가기 시험의 `lock-file`이 본다.
 
 ## 아직 안 된 것
 
