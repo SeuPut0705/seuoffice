@@ -1,0 +1,100 @@
+[
+  {
+    "name": "a bad save request is refused with another text",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "failure(\"html: bad save request\")",
+    "replace": "failure(\"html: bad save\")",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "image references of another type are accepted",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "_ => return done(failure(\"html: bad image references\")),",
+    "replace": "_ => Vec::new(),",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "the AI's silent save numbers a taken name with a space",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "format!(\"{base}-{n}.html\")",
+    "replace": "format!(\"{base} {n}.html\")",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "the save dialog has another title",
+    "file": "shell-ipc/d2/src/html/save.rs",
+    "find": "Some(tr(&lang, \"Save HTML Document\", \"HTML 문서 저장\")),",
+    "replace": "Some(tr(&lang, \"Save HTML\", \"HTML 문서 저장\")),",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "an attachment read is cut at a few characters",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "const READ_MAX_CHARS: f64 = 48_000.0;",
+    "replace": "const READ_MAX_CHARS: f64 = 4.0;",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "attachment pictures are capped at five bytes",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "const IMAGE_MAX_BYTES: f64 = 5.0 * 1024.0 * 1024.0;",
+    "replace": "const IMAGE_MAX_BYTES: f64 = 5.0;",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "a pasted picture of another type is refused with another text",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "\"not a supported image type\",",
+    "replace": "\"unsupported\",",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "an attachment path of another type throws a plain TypeError",
+    "file": "shell-ipc/d2/src/html/attach.rs",
+    "find": "\"TypeError [ERR_INVALID_ARG_TYPE]\",",
+    "replace": "\"TypeError\",",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "a provisional title keeps 60 characters",
+    "file": "shell-ipc/d2/src/html/mod.rs",
+    "find": "jscompat::slice_utf16(&collapsed, 0.0, Some(80.0))",
+    "replace": "jscompat::slice_utf16(&collapsed, 0.0, Some(60.0))",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "the ODT report box has another message",
+    "file": "shell-ipc/d2/src/html/odt_export.rs",
+    "find": "\"Some content will change or be left out in the ODT file.\",",
+    "replace": "\"Some content will change.\",",
+    "groups": ["d2/html", "d2/markdown"]
+  },
+  {
+    "name": "a headless export of a marked page is refused with another text",
+    "file": "shell-ipc/d2/src/html/odt_export.rs",
+    "find": "\"this page has content hidden from AI, and this export cannot keep that; clear the marks first\",",
+    "replace": "\"marked\",",
+    "groups": ["d2/html"]
+  },
+  {
+    "name": "a file name keeps its colons",
+    "file": "shell-ipc/d2/src/html/text_doc.rs",
+    "find": "if matches!(c, '/' | '\\\\' | ':' | '*' | '?' | '\"' | '<' | '>' | '|') {",
+    "replace": "if matches!(c, '/' | '\\\\' | '*' | '?' | '\"' | '<' | '>' | '|') {",
+    "groups": ["d2/html", "d2/markdown"]
+  },
+  {
+    "name": "an ungranted read names no editor",
+    "file": "shell-ipc/d2/src/html/text_doc.rs",
+    "find": "\"{}: path not granted to this view\",",
+    "replace": "\"{}: path not granted\",",
+    "groups": ["d2/html", "d2/markdown"]
+  },
+  {
+    "name": "a recovery copy an untracked view asks for is reported written",
+    "file": "shell-ipc/d2/src/text_recovery.rs",
+    "find": "WriteResult::Skipped => \"skipped\",",
+    "replace": "WriteResult::Skipped => \"written\",",
+    "groups": ["d2/html", "d2/markdown"]
+  }
+]
