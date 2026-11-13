@@ -310,6 +310,33 @@ const SHARED_START_ID = doc(
 /** an author type error is reached only when a revision is consulted */
 const UNCONSULTED = ['', 'plain', `<w:moveFromRangeEnd w:id="1"/>`, `<!-- <w:ins/> -->`]
 
+/** the mark that hides a run from AI, and the border the editor draws beside it */
+const MARK = '<seu:redact seu:by="person"/>'
+const EDITOR_BORDER = '<w:bdr w:val="single" w:sz="6" w:color="6B4FC0"/>'
+const OLD_RPR = (inner: string): string =>
+  `<w:rPrChange${at('40')}><w:rPr>${inner}</w:rPr></w:rPrChange>`
+const HIDDEN_RPR_CHANGES = [
+  `<w:p><w:r><w:rPr><w:b/>${EDITOR_BORDER}${MARK}${OLD_RPR('<w:i/>')}</w:rPr><w:t>x</w:t></w:r></w:p>`,
+  // the old properties hold a border of their own: the editor's goes
+  `<w:p><w:r><w:rPr><w:b/>${EDITOR_BORDER}${MARK}${OLD_RPR('<w:bdr w:val="double"/>')}</w:rPr><w:t>x</w:t></w:r></w:p>`,
+  // a mark without the editor's border, under another prefix, before a tracked marker
+  `<w:p><w:r><w:rPr><w:del${at('41')}/><x:redact/><w:sz w:val="20"/>${OLD_RPR('')}</w:rPr><w:t>x</w:t></w:r></w:p>`,
+  // a border that is not the editor's stays only as formatting
+  `<w:p><w:r><w:rPr><w:bdr w:val="single" w:sz="8"/>${MARK}${OLD_RPR('<w:u/>')}</w:rPr><w:t>x</w:t></w:r></w:p>`,
+  // no mark: the old properties replace the current ones as before
+  `<w:p><w:r><w:rPr><w:b/>${OLD_RPR('<w:i/>')}</w:rPr><w:t>x</w:t></w:r></w:p>`,
+]
+const hiddenRun = (text: string): string =>
+  `<w:r><w:rPr>${EDITOR_BORDER}${MARK}</w:rPr><w:t>${text}</w:t></w:r>`
+const HIDDEN_CHANGES =
+  para(`<w:del${at('50')}><w:r><w:rPr>${MARK}</w:rPr><w:delText>secret</w:delText></w:r></w:del>`) +
+  para(`<w:del${at('51')}>${run('plain gone')}</w:del>`) +
+  para(`<w:ins${at('52')}>${hiddenRun('secret added')}</w:ins>`) +
+  para(`<w:ins${at('53')}>${run('plain added')}</w:ins>`) +
+  para(run('a'), markPPr(`<w:ins${at('54')}/>`)) +
+  `<w:tbl><w:tr><w:trPr><w:ins${at('55')}/></w:trPr><w:tc>${para(hiddenRun('row secret'))}</w:tc></w:tr>` +
+  `<w:tr><w:trPr><w:del${at('56')}/></w:trPr>${tc('', 'row plain')}</w:tr></w:tbl>`
+
 const APPLY_INPUTS: Input[] = [
   ...XMLS.flatMap((text) => MODES.map((mode) => ({ text, args: { mode } }))),
   ...FILTERS.flatMap((filter) =>
@@ -341,6 +368,17 @@ const APPLY_INPUTS: Input[] = [
     text: para(`<w:ins${at('1', 'kim', 'Jan 1 2024 08:00')}>${run('a')}</w:ins>`),
     args: { mode: 'accept', filter: { before: '2024-01-01T00:00:00Z' } },
   },
+  // a formatting change rejected on a run a person hid from AI: the mark (any
+  // prefix) and the editor's border beside it stay, the old properties come back
+  ...HIDDEN_RPR_CHANGES.flatMap((text) =>
+    ['accept', 'reject'].map((mode) => ({ text: doc(text), args: { mode } })),
+  ),
+  // keepHidden: a deletion accepted, an insertion or a row rejected stays
+  // pending when it holds hidden words; falsy flags are no flag
+  ...[{ keepHidden: true }, { keepHidden: 1 }, { keepHidden: 0 }, { keepHidden: '' }, {}].flatMap(
+    (filter) =>
+      ['accept', 'reject'].map((mode) => ({ text: doc(HIDDEN_CHANGES), args: { mode, filter } })),
+  ),
 ]
 
 const RESOLUTIONS: unknown[] = [
