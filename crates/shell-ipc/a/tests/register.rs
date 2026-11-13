@@ -272,12 +272,14 @@ fn a_shell_with_some_ports_built_starts_and_the_others_say_not_built() {
     );
 }
 
+// the probe build has no OS key store: it does not compile otherwise
+const _: () = assert!(!shell_ipc_a::secrets::OS_KEY_STORE);
+
 /// The batch as the probe builds it (`feature = "probe"`, not a unit test
 /// build): its safeStorage has no OS key store, so a comparison run never
 /// reads the person's keychain item
 #[test]
 fn the_probe_build_never_reaches_the_os_key_store() {
-    assert!(!shell_ipc_a::secrets::OS_KEY_STORE);
     let storage = shell_ipc_a::secrets::OsSafeStorage::new(shell_ipc_a::secrets::KeyPlace {
         app_name: "seuoffice".into(),
         user_data: std::env::temp_dir().join("shell-a-probe-no-keychain"),
