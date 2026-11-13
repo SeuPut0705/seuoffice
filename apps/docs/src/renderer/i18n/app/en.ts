@@ -535,6 +535,8 @@ export const en = {
   appOdtEncrypted:
     '"{name}" is password-protected and cannot be opened. Remove the password in the program that set it (for example Hancom Office), then open the file again.',
   appSavingAsFormat: 'Saving as {format}…',
+  appMarkedOdtRefused:
+    'This document has content hidden from AI, which an ODT file cannot keep. Save it as .docx, or clear the marks first.',
   appSaveFormatMismatch: "The file extension must match the document's format (.{ext}).",
   appFormatChangeTitleOdt: 'Save as ODT',
   appFormatChangeTitleDocx: 'Save as Word document (.docx)',

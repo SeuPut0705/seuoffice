@@ -433,6 +433,61 @@ describe('saving an ODT document', () => {
   })
 })
 
+describe('content hidden from AI never lands in an ODT', () => {
+  /** the whole text of the editor marked as hidden from AI */
+  function hideFromAi(editor: Editor): void {
+    const mark = editor.state.schema.marks.redaction.create({ label: 'client' })
+    editor.view.dispatch(editor.state.tr.addMark(0, editor.state.doc.content.size, mark))
+  }
+
+  it('saving a marked ODT document writes nothing and says why', async () => {
+    const ctx = makeCtx()
+    await loadFile(ctx, openResult('/docs/form.odt', await blankOdt()))
+    const editor = ctx.editor as Editor
+    setParagraphs(editor, ['Account SECRET-4711'])
+    hideFromAi(editor)
+    ctx.dirtyRef.current = true
+    expect(await save(ctx, false)).toBe(false)
+    expect(written).toHaveLength(0)
+    expect(toast).toHaveBeenCalledWith(expect.stringContaining('hidden from AI'), 'error')
+    // the same text unmarked saves
+    setParagraphs(editor, ['Account SECRET-4711'])
+    ctx.dirtyRef.current = true
+    expect(await save(ctx, false)).toBe(true)
+    expect(written).toHaveLength(1)
+  })
+
+  it('an MCP save of a marked ODT document writes nothing', async () => {
+    const ctx = makeCtx()
+    await loadFile(ctx, openResult('/docs/form.odt', await blankOdt()))
+    setParagraphs(ctx.editor as Editor, ['Account SECRET-4711'])
+    hideFromAi(ctx.editor as Editor)
+    ctx.dirtyRef.current = true
+    expect(await save(ctx, false, false, undefined, { path: '/out/x.odt', overwrite: true })).toBe(
+      false,
+    )
+    expect(written).toHaveLength(0)
+  })
+
+  it('Save As .odt of a marked docx writes nothing and asks nothing', async () => {
+    const ctx = makeCtx()
+    await loadFile(ctx, openResult('/docs/a.docx', await buildBlankDocx({})))
+    setParagraphs(ctx.editor as Editor, ['Account SECRET-4711'])
+    hideFromAi(ctx.editor as Editor)
+    ctx.dirtyRef.current = true
+    const asked: unknown[] = []
+    setFormatChangeHost((request, answer) => {
+      asked.push(request)
+      answer(true)
+    })
+    pickedPath = '/docs/a.odt'
+    expect(await save(ctx, true)).toBe(false)
+    expect(asked).toHaveLength(0)
+    expect(written).toHaveLength(0)
+    expect(docOf(ctx).format).toBe('docx')
+  })
+})
+
 describe('Save As with a format change', () => {
   it('docx → ODT asks with the report; cancel writes nothing', async () => {
     const ctx = makeCtx()
