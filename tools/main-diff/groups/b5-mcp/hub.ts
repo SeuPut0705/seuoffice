@@ -10,8 +10,10 @@
  *   machine and plays the fakes' events; every step is followed by a quiet
  *   point (the TypeScript waits for its microtasks and file writes, the Rust
  *   delivers the fakes' answers until none is left), and its record lists what
- *   the step returned, what settled that was pending, the fakes' calls, whether
- *   the hub said `changed` and the notices the windows got.
+ *   the step returned, what settled that was pending, the fakes' calls, every
+ *   notice `hub.onChanged` fired (with the settings view the listener reads at
+ *   that moment, which is when the microtask of `notify()` runs) and the
+ *   notices the windows got.
  *   - config: `{ dir, lang?, listings: { NAME: listing }, servers: [seed],
  *     plan, runtimes?, remote?, local? }`. A seed is `{ name, kind, url?,
  *     headers?, oauth?, command?, args?, env?, listing?: NAME, approvePlan?,
@@ -149,6 +151,7 @@ interface World {
   held: Held[]
   busy: number
   changes: number
+  notices: unknown[]
   sent: { to: number; channel: string }[]
   other: unknown[]
   pending: Map<string, PendingValue>
@@ -482,6 +485,7 @@ async function makeWorld(config: Rec, logs: string[]): Promise<World> {
     held: [],
     busy: 0,
     changes: 0,
+    notices: [],
     sent: [],
     other: [],
     pending: new Map(),
@@ -557,6 +561,8 @@ async function makeWorld(config: Rec, logs: string[]): Promise<World> {
   world.hub = hub
   hub.onChanged(() => {
     world.changes += 1
+    // what the listener reads when the notice fires: the settings view of that moment
+    world.notices.push(sortKeys(hub.settingsView()))
   })
   wireEvents(world)
   const { shell } = settingsSenders(world)
@@ -773,7 +779,7 @@ async function play(world: World, steps: Rec[]): Promise<unknown> {
   const records: unknown[] = []
   for (const [index, step] of steps.entries()) {
     const startLogs = world.logs.length
-    const startChanges = world.changes
+    const startNotices = world.notices.length
     const startSent = world.sent.length
     const out = (await runStep(world, step, index)) as Rec
     await settle(world)
@@ -807,9 +813,9 @@ async function play(world: World, steps: Rec[]): Promise<unknown> {
     if (Object.keys(settled).length > 0) record.settled = settled
     const calls = world.logs.slice(startLogs)
     if (calls.length > 0) record.calls = calls
-    if (world.changes > startChanges) record.changed = true
+    if (world.notices.length > startNotices) record.notices = world.notices.slice(startNotices)
     const sent = world.sent.slice(startSent)
-    if (sent.length > 0) record.sent = sent.slice(-3).map((s) => [s.to, s.channel])
+    if (sent.length > 0) record.sent = sent.map((s) => [s.to, s.channel])
     records.push(normalize(record))
   }
   return records
@@ -901,18 +907,13 @@ async function appScenario(config: Rec, steps: Rec[]): Promise<unknown> {
       for (let i = 0; i < 20; i += 1) await tick()
       const calls = logs.slice(startLogs)
       if (calls.length > 0) record.calls = calls
-      if (changes > startChanges) record.changed = true
+      if (changes > startChanges) record.notices = changes - startChanges
       const fresh = sent.slice(startSent)
       const batch = fresh.filter(
         (s) => s.channel === 'mcp-tools:changed' || s.channel === 'mcp-servers:changed',
       )
       const others = fresh.filter((s) => !batch.includes(s))
-      if (batch.length > 0) {
-        const last = batch.slice(
-          -(batch.some((s) => s.to === 1 && s.channel === 'mcp-servers:changed') ? 3 : 2),
-        )
-        record.sent = last.map((s) => [s.to, s.channel])
-      }
+      if (batch.length > 0) record.sent = batch.map((s) => [s.to, s.channel])
       if (others.length > 0) record.other = others.map((s) => [s.to, s.channel, s.payload])
       records.push(normalizeText(record))
     }
@@ -2314,6 +2315,128 @@ hubCases.push(
       ],
     ],
     'the calls of a window stop when it is destroyed; each window is watched once; a window with no `once` is not',
+  ),
+)
+
+// every notice of `hub.onChanged`, with the view the listener reads when it fires:
+// the microtask of `notify()` runs at the next await, not at the end of the step
+const FRESH = { name: 'fresh', kind: 'remote', url: 'https://f.example/mcp' }
+hubCases.push(
+  c(
+    [
+      base({ servers: [FRESH, SEED_LAW] }),
+      [
+        settings('test', '$id:fresh'),
+        call('law', 'search', 'c1'),
+        { op: 'toolsChanged', conn: 'remote#2' },
+      ],
+    ],
+    'a remote list that works: connecting, then unchecked (or ready), then connected, as three notices; a call; a list the server announced',
+  ),
+  c(
+    [
+      base({ servers: [FRESH, SEED_LAW], remote: { listError: 'unreachable' } }),
+      [
+        settings('test', '$id:fresh'),
+        call('law', 'search', 'c1'),
+        { op: 'remote', conn: 1, set: { listError: 'login-required' } },
+        settings('test', '$id:fresh'),
+      ],
+    ],
+    'a remote list that fails: connecting, then unchecked, then failed (or login-required)',
+  ),
+  c(
+    [
+      base({ servers: [SEED_DOCS] }),
+      [
+        settings('test', '$id:docs'),
+        call('docs', 'search', 'c1'),
+        {
+          op: 'local',
+          conn: 1,
+          set: { listError: { reason: 'start-failed', problem: 'did-not-start' } },
+        },
+        settings('test', '$id:docs'),
+        { op: 'toolsChanged', conn: 'local#1' },
+      ],
+    ],
+    'a local list has no connecting notice: one notice when it is read, one when it fails',
+  ),
+  c(
+    [
+      base({ servers: [SEED_LAW] }),
+      [
+        settings('set-enabled', '$id:law', false),
+        settings('set-enabled', '$id:law', true),
+        settings('set-enabled', '$id:law', true),
+        settings('set-enabled', '$id:nobody', true),
+        settings('retry', '$id:law'),
+        settings('set-keep-results-inside', '$id:law', false),
+        settings('approve-tool', '$id:law', 'search'),
+      ],
+    ],
+    'turning a server on again: the change, then the retry, as two notices; the changes that are one notice',
+  ),
+  c(
+    [
+      base({ servers: [SEED_LAW], remote: { callErrors: ['unreachable'] } }),
+      [call('law', 'search', 'warm'), call('law', 'search', 'c1'), call('law', 'search', 'c2')],
+    ],
+    'a call that fails notes the failure, and the next one that works clears it, each in its own notice',
+  ),
+  c(
+    [
+      base({ servers: [] }),
+      [
+        { op: 'hub', method: 'load' },
+        settings('add', { name: 'law', kind: 'remote', url: 'https://law.example.com/mcp' }),
+        settings('edit', '$id:law', { url: 'https://law.example.com/v2' }),
+        settings('sign-in', '$id:law'),
+        settings('test', '$id:law'),
+        settings('remove', '$id:law'),
+      ],
+    ],
+    'load, add, edit, sign-in, check and remove each tell the windows once, after what they did',
+  ),
+  c(
+    [
+      base({
+        servers: [UNAPPROVED_DOCS],
+        plan: {
+          ok: false,
+          problem: 'runtime-missing',
+          runtime: {
+            ok: false,
+            reason: 'runtime-missing',
+            detail: 'download-needed',
+            runtime: 'node',
+            downloads: [{ runtime: 'node', version: '22.1.0', bytes: 31000000 }],
+            message: 'node is missing',
+          },
+          message: 'missing',
+        },
+      }),
+      [
+        settings('answer-runtime-download', '$id:docs', true),
+        { op: 'plan', plan: READY_PLAN },
+        settings('approve-launch', '$id:docs', '$fp'),
+        settings('test', '$id:docs'),
+      ],
+    ],
+    'a download answer tells the windows before the plan is read again; approving, then checking, a command',
+  ),
+  c(
+    [
+      base({ servers: [SEED_LAW], remote: { hold: ['listTools'] } }),
+      [
+        call('law', 'search', 'a'),
+        { op: 'release', conn: 'remote#1', method: 'listTools' },
+        { op: 'remote', conn: 1, set: { hold: ['callTool'] } },
+        call('law', 'search', 'b'),
+        settings('set-enabled', '$id:law', false),
+      ],
+    ],
+    'the connecting count is seen while a list is held, and again when it is read; a call cut by turning the server off',
   ),
 )
 
