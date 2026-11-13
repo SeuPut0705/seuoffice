@@ -26,7 +26,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
     let apps = [
         diagram::routes(services, &registry.provided())?,
         mindmap::routes(services, &registry.provided())?,
-        sheets::routes(services)?,
+        sheets::routes(services, &registry.provided())?,
         slides::routes(services)?,
     ];
     for route in apps.into_iter().flatten() {
@@ -42,7 +42,7 @@ const _: RegisterBatch = register;
 pub fn insert_fakes(hosts: &mut shell_contract::Hosts) {
     diagram::insert_fakes(hosts, &serde_json::Value::Null);
     mindmap::insert_fakes(hosts, &serde_json::Value::Null);
-    sheets::insert_fakes(hosts);
+    sheets::insert_fakes(hosts, &serde_json::Value::Null);
     slides::insert_fakes(hosts);
 }
 
