@@ -258,10 +258,7 @@ pub fn get_provider_adapter(provider: &str) -> Result<Adapter<'_>, JsError> {
     if INHERITED_KEYS.contains(&provider) {
         return Ok(Adapter::Inherited);
     }
-    if super::providers::provider_ids()
-        .iter()
-        .any(|id| *id == provider)
-    {
+    if super::providers::provider_ids().contains(&provider) {
         return Ok(Adapter::Own(provider));
     }
     Err(JsError::error(format!("Unknown provider: {provider}")))

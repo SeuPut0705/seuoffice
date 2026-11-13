@@ -177,11 +177,9 @@ fn list_answer_of(answer: Option<&Value>) -> Option<ListAnswer> {
 }
 
 /// The scripted listing of a case: the n-th call answers its n-th spec.
-fn scripted_list(
-    rt: &Rt,
-    sink: &Sink,
-    lists: Vec<Value>,
-) -> Rc<dyn Fn(&str, &KeyListConfig) -> ListFuture> {
+type ScriptedList = Rc<dyn Fn(&str, &KeyListConfig) -> ListFuture>;
+
+fn scripted_list(rt: &Rt, sink: &Sink, lists: Vec<Value>) -> ScriptedList {
     let rt = rt.clone();
     let sink = sink.clone();
     let calls = Rc::new(Cell::new(0usize));

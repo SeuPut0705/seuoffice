@@ -69,7 +69,8 @@ pub struct JsError {
     /// `error.message`
     pub message: String,
     /// the other own properties (`code`, `cause`, `kind`...), in the order set
-    pub props: Obj,
+    /// boxed: a thrown value travels in every `Result`, so it stays small
+    pub props: Box<Obj>,
 }
 
 impl JsError {
@@ -79,7 +80,7 @@ impl JsError {
             class: class.to_owned(),
             name: class.to_owned(),
             message: message.into(),
-            props: Obj::new(),
+            props: Box::default(),
         }
     }
 
@@ -113,7 +114,7 @@ impl JsError {
 
     /// `throw value` of a value that is no `Error`
     pub fn value(value: JsonValue) -> JsError {
-        let mut props = Obj::new();
+        let mut props: Box<Obj> = Box::default();
         props.set("value", value);
         JsError {
             class: String::new(),
@@ -548,14 +549,17 @@ pub struct HostInfo {
     /// is `SIGTERM`; the `Err` is what Node throws (`ESRCH`, `EPERM`), which
     /// callers act on at once, as the TypeScript does (a child that leads no
     /// group is then signalled alone)
-    pub kill: Box<dyn FnMut(f64, Option<&str>) -> Result<(), JsError>>,
+    pub kill: KillFn,
 }
 
 // ---------------------------------------------------------------------------
 // the runtime
 // ---------------------------------------------------------------------------
 
+/// `process.kill(pid, signal)` on the host, see [`HostInfo::kill`]
+pub type KillFn = Box<dyn FnMut(f64, Option<&str>) -> Result<(), JsError>>;
 type Listener = Rc<RefCell<dyn FnMut(&ChildEvent)>>;
+type AbortListener = (Id, Box<dyn FnOnce(&JsError)>);
 type Handler = Rc<RefCell<dyn FnMut(HttpRequest)>>;
 type LocalFuture = Pin<Box<dyn Future<Output = ()>>>;
 
@@ -567,7 +571,7 @@ enum Timer {
 #[derive(Default)]
 struct SignalState {
     reason: Option<JsError>,
-    listeners: Vec<(Id, Box<dyn FnOnce(&JsError)>)>,
+    listeners: Vec<AbortListener>,
     /// operations and bodies that end with the signal
     bound: Vec<Id>,
 }
@@ -697,6 +701,17 @@ impl Rt {
     /// `crypto.randomBytes(n)`
     pub fn random_bytes(&self, n: usize) -> Vec<u8> {
         (self.0.host.borrow_mut().random)(n)
+    }
+
+    /// The commands queued since the last [`Runtime::poll`], in the order
+    /// queued, taken out of the queue. A host that must interleave what it
+    /// does for them with what the tasks' callbacks did (a log, a trace)
+    /// takes them as the callbacks run; [`Runtime::poll`] answers the rest.
+    pub fn take_cmds(&self) -> Vec<Cmd> {
+        match self.0.st.try_borrow_mut() {
+            Ok(mut st) => std::mem::take(&mut st.cmds),
+            Err(_) => Vec::new(),
+        }
     }
 
     /// `console.<level>(...args)`

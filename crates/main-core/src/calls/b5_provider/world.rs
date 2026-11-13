@@ -191,16 +191,32 @@ struct Body {
 /// The log the world and the call's own callbacks write to, in one order.
 pub(crate) type Sink = Rc<RefCell<Vec<Vec<Value>>>>;
 
-/// Writes one log line to `sink`.
+thread_local! {
+    /// While a call runs in the world: hands the commands the runtime queued
+    /// so far to the world, so that what the world logs for them comes
+    /// before a line a callback writes after them, as in JavaScript, where
+    /// `setTimeout` or `fetch` runs (and is logged) at the call.
+    static FLUSH: RefCell<Option<Box<dyn Fn()>>> = const { RefCell::new(None) };
+}
+
+/// Writes one log line to `sink`, after what the world logs for the
+/// commands queued before it.
 pub(crate) fn note(sink: &Sink, line: Value) {
+    FLUSH.with(|flush| {
+        if let Ok(flush) = flush.try_borrow()
+            && let Some(flush) = flush.as_ref()
+        {
+            flush();
+        }
+    });
     if let Value::Array(items) = line {
         sink.borrow_mut().push(items);
     }
 }
 
 /// The world's state while one call runs.
-struct WorldRun<'a> {
-    spec: &'a Value,
+struct WorldRun {
+    spec: Value,
     sink: Sink,
     now: Rc<Cell<f64>>,
     fetches: usize,
@@ -220,7 +236,7 @@ struct WorldRun<'a> {
     later: VecDeque<Later>,
 }
 
-impl WorldRun<'_> {
+impl WorldRun {
     fn log(&mut self, line: Value) {
         note(&self.sink, line);
     }
@@ -1040,8 +1056,8 @@ where
     let rt = runtime.rt().clone();
     let signal = rt.controller();
     let call = runtime.start(start(rt.clone(), signal.clone(), sink.clone()));
-    let mut run = WorldRun {
-        spec,
+    let run = Rc::new(RefCell::new(WorldRun {
+        spec: spec.clone(),
         sink: sink.clone(),
         now: now.clone(),
         fetches: 0,
@@ -1057,24 +1073,46 @@ where
         calls: 0,
         immediate: VecDeque::new(),
         later: VecDeque::new(),
-    };
+    }));
+    {
+        let rt = rt.clone();
+        let run = run.clone();
+        FLUSH.with(|flush| {
+            *flush.borrow_mut() = Some(Box::new(move || {
+                if let Ok(mut run) = run.try_borrow_mut() {
+                    for cmd in rt.take_cmds() {
+                        run.handle(cmd);
+                    }
+                }
+            }));
+        });
+    }
     // the caller's abort: timer 0
     const ABORT: Id = Id::MAX;
     if let Some(at) = spec.get("abortAt").and_then(Value::as_f64) {
-        run.timers.push((0, at, ABORT));
+        run.borrow_mut().timers.push((0, at, ABORT));
     }
+    // `run` is borrowed only between the runtime's calls: the callbacks
+    // those calls run hand their commands to it (FLUSH)
     for _ in 0..100_000 {
-        for cmd in runtime.poll() {
-            run.handle(cmd);
+        let cmds = runtime.poll();
+        {
+            let mut run = run.borrow_mut();
+            for cmd in cmds {
+                run.handle(cmd);
+            }
         }
-        if !run.immediate.is_empty() {
-            while let Some(event) = run.immediate.pop_front() {
+        let immediate: Vec<Event> = run.borrow_mut().immediate.drain(..).collect();
+        if !immediate.is_empty() {
+            for event in immediate {
                 runtime.feed(event);
             }
             continue;
         }
-        if let Some(later) = run.later.pop_front() {
-            for event in run.emit(later) {
+        let later = run.borrow_mut().later.pop_front();
+        if let Some(later) = later {
+            let events = run.borrow_mut().emit(later);
+            for event in events {
                 runtime.feed(event);
             }
             continue;
@@ -1082,16 +1120,19 @@ where
         if call.is_done() {
             break;
         }
-        let Some(next) = run
-            .timers
-            .iter()
-            .enumerate()
-            .min_by(|a, b| a.1.1.total_cmp(&b.1.1).then(a.0.cmp(&b.0)))
-            .map(|(k, _)| k)
-        else {
+        let next = {
+            let mut run = run.borrow_mut();
+            let next = run
+                .timers
+                .iter()
+                .enumerate()
+                .min_by(|a, b| a.1.1.total_cmp(&b.1.1).then(a.0.cmp(&b.0)))
+                .map(|(k, _)| k);
+            next.map(|k| run.timers.remove(k))
+        };
+        let Some((_, at, id)) = next else {
             break;
         };
-        let (_, at, id) = run.timers.remove(next);
         if at > now.get() {
             now.set(at);
         }
@@ -1101,6 +1142,7 @@ where
             runtime.feed(Event::Timer { id });
         }
     }
+    FLUSH.with(|flush| *flush.borrow_mut() = None);
     cx.logs.extend(sink.borrow_mut().drain(..));
     call.take()
         .ok_or_else(|| CallError::plain("the call never ended"))

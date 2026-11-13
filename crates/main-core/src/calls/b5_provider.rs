@@ -23,7 +23,8 @@ use serde_json::Value;
 use super::{Answer, Context};
 
 pub(super) fn call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
-    const PARTS: &[fn(&str, &[Value], &mut Context) -> Option<Answer>] = &[
+    type Part = fn(&str, &[Value], &mut Context) -> Option<Answer>;
+    const PARTS: &[Part] = &[
         fetch::call,
         openai::call,
         anthropic::call,

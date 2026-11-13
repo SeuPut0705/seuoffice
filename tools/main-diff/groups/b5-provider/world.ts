@@ -58,6 +58,7 @@
  * the first and last 32 bytes in hex, and the FNV-1a 32-bit hash of all).
  */
 import childProcess from 'node:child_process'
+import os from 'node:os'
 import crypto from 'node:crypto'
 import { EventEmitter } from 'node:events'
 import fsPromises from 'node:fs/promises'
@@ -345,17 +346,20 @@ export class WorldRun {
         )
       }
       const status = spec.status ?? 200
+      // a status the Response constructor takes with a body; the rest (1xx, a
+      // null-body status like 304 with a body, past 599) is set after it
+      const constructible = status >= 200 && status <= 599 && ![204, 205, 304].includes(status)
       const response = new Response(stream, {
-        status: status >= 200 && status <= 599 ? status : 200,
+        status: constructible ? status : 200,
         statusText: spec.statusText ?? '',
         headers: spec.headers ?? [],
       })
       const own = (key: string, value: unknown): void => {
         Object.defineProperty(response, key, { value, configurable: true })
       }
-      if (status < 200 || status > 599) {
+      if (!constructible) {
         own('status', status)
-        own('ok', false)
+        own('ok', status >= 200 && status <= 299)
       }
       own('type', spec.type ?? 'basic')
       own('url', spec.url ?? '')
@@ -597,6 +601,7 @@ export class WorldRun {
       createServer: http.createServer,
       kill: process.kill,
       env: process.env,
+      tmpdir: os.tmpdir,
       platform: process.platform,
       pid: process.pid,
       console: { log: console.log, warn: console.warn, error: console.error, info: console.info },
@@ -624,6 +629,13 @@ export class WorldRun {
       ;(childProcess as Any).spawn = this.spawn
       ;(http as Any).createServer = this.createServer
       ;(process as Any).kill = this.kill
+      // `os.tmpdir()` reads the real environment; here it reads the world's, as
+      // the Rust world does (TMPDIR, TMP, TEMP, else /tmp; a trailing slash off)
+      ;(os as Any).tmpdir = (): string => {
+        const read = (name: string): string => env[name] || ''
+        const path = read('TMPDIR') || read('TMP') || read('TEMP') || '/tmp'
+        return path.length > 1 && path.endsWith('/') ? path.slice(0, -1) : path
+      }
       // Node's own process.env reads names without case on Windows, as Rt::env does
       process.env =
         this.world.platform === 'win32'
@@ -653,6 +665,27 @@ export class WorldRun {
         ;(fsPromises as Any)[name] = (...args: unknown[]) => {
           this.pendingIo += 1
           return fn(...args).finally(() => (this.pendingIo -= 1))
+        }
+      }
+      // `mkdtemp(prefix)` names the folder by the first free counter, as the Rust world does
+      if (realFs.mkdtemp && realFs.mkdir) {
+        const mkdir = realFs.mkdir
+        ;(fsPromises as Any).mkdtemp = async (prefix: string) => {
+          this.pendingIo += 1
+          try {
+            for (let n = 1; n < 1000; n++) {
+              const path = `${prefix}${String(n).padStart(6, '0')}`
+              try {
+                await mkdir(path)
+                return path
+              } catch (e) {
+                if ((e as { code?: string }).code !== 'EEXIST') throw e
+              }
+            }
+            throw Object.assign(new Error('no free temp name'), { code: 'EEXIST' })
+          } finally {
+            this.pendingIo -= 1
+          }
         }
       }
       syncBuiltinESMExports()
@@ -697,6 +730,7 @@ export class WorldRun {
       ;(process as Any).kill = real.kill
       process.env = real.env
       Object.defineProperty(process, 'platform', { value: real.platform, configurable: true })
+      ;(os as Any).tmpdir = real.tmpdir
       Object.defineProperty(process, 'pid', { value: real.pid, configurable: true, writable: true })
       Object.assign(console, real.console)
       for (const [name, fn] of Object.entries(realFs)) (fsPromises as Any)[name] = fn
