@@ -125,4 +125,4 @@ try {
 
 ## 라이선스
 
-Apache-2.0. 저장소: https://github.com/SeuPut0705/seuoffice
+FSL-1.1-ALv2(소스 공개, 판마다 2년 뒤 Apache-2.0), GenOffice·이음오피스에서 온 부분은 Apache-2.0. 저장소: https://github.com/SeuPut0705/seuoffice

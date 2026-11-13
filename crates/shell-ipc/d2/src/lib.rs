@@ -72,7 +72,9 @@ fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
+    use std::sync::{Arc, Mutex};
 
+    use main_core::packages::electron_utils::recovery_store::SharedRecoveryState;
     use shell_contract::ipc::ChannelKind;
     use shell_contract::{Batch, CHANNELS};
 
@@ -84,7 +86,13 @@ mod tests {
     /// wrong-kind channels)
     #[test]
     fn registers_every_d2_channel_and_nothing_else() {
-        let mut rt = Rt::new(|hosts| super::fakes(hosts, &serde_json::Value::Null));
+        let mut rt = Rt::new(|hosts| {
+            // the shell inserts the process's one recovery state
+            hosts.insert::<Arc<Mutex<SharedRecoveryState>>>(Arc::new(Mutex::new(
+                SharedRecoveryState::new("0000000000000000"),
+            )));
+            super::fakes(hosts, &serde_json::Value::Null)
+        });
         for app in super::APPS {
             rt.register(*app).unwrap();
         }

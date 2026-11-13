@@ -373,23 +373,18 @@ describe('the echo a replacement sends back', () => {
     return String(out.output ?? '')
   }
 
-  it('quotes the marker when the selection covers the whole span', () => {
+  // replacing hidden words would remove them: the call is refused, and its
+  // answer names neither the words nor which of them the selection reached
+  it.each([
+    ['covers the whole span', SECRET.length],
+    ['only clips into it', 3],
+  ])('is refused without quoting the words when the selection %s', (_name, length) => {
     const editor = marked()
-    selectSpan(editor, SECRET.length)
+    selectSpan(editor, length)
     const out = run(editor)
-    expect(out).toContain('{{client phone}}')
-    expect(out).not.toContain(SECRET)
-  })
-
-  it('quotes the marker when the selection only clips into it', () => {
-    // the reachable case that matters: `replace_selection` runs on a partial
-    // overlap where the write guard's range check does not stop it, and its
-    // echo is what goes back to the model
-    const editor = marked()
-    selectSpan(editor, 3)
-    const out = run(editor)
-    expect(out).toContain('{{client phone}}')
-    expect(out).not.toContain(SECRET)
+    expect(out).toContain('hid from AI')
+    expect(out).not.toContain(SECRET.slice(0, 3))
+    expect(editor.state.doc.textContent).toBe(`Call ${SECRET} now`)
   })
 
   it('still echoes the real text when nothing is withheld there', () => {

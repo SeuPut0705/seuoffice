@@ -1,6 +1,9 @@
 import { Mark, type Editor } from '@tiptap/core'
+import type { Node as PmNode } from '@tiptap/pm/model'
+import { Plugin, PluginKey } from '@tiptap/pm/state'
 import { REDACT_EL } from '@seuoffice/docx-engine'
 import { REDACT_MARK } from '../ai/redact'
+import { recordOdtRefusal } from '../odt-gate'
 
 declare module '@tiptap/core' {
   interface Commands<ReturnType> {
@@ -112,7 +115,59 @@ export const DocRedaction = Mark.create({
         },
     }
   },
+
+  addProseMirrorPlugins() {
+    return [
+      new Plugin({
+        key: new PluginKey('redactionModelEditGuard'),
+        filterTransaction: (tr) => {
+          if (modelEditDepth === 0 || !tr.docChanged) return true
+          if (!removesHidden(tr.before, tr.doc)) return true
+          recordOdtRefusal('hiddenContent')
+          return false
+        },
+      }),
+    ]
+  },
 })
+
+let modelEditDepth = 0
+
+/**
+ * Runs a model's edit: while it runs, a transaction that would take away
+ * anything a person hid from AI (the words, a hidden picture or block, or the
+ * mark itself) is refused, and the refusal becomes the tool call's error. The
+ * person's own edits are never held back.
+ */
+export function asModelEdit<T>(run: () => T): T {
+  modelEditDepth++
+  try {
+    return run()
+  } finally {
+    modelEditDepth--
+  }
+}
+
+/** how many of each hidden character, picture or block a document holds, per label */
+function hiddenInventory(doc: PmNode): Map<string, number> {
+  const counts = new Map<string, number>()
+  const add = (key: string) => counts.set(key, (counts.get(key) ?? 0) + 1)
+  doc.descendants((node) => {
+    const mark = node.marks.find((m) => m.type.name === REDACT_MARK)
+    const label = mark ? String(mark.attrs.label) : node.attrs.redact
+    if (typeof label !== 'string') return true
+    if (node.isText) for (const ch of node.text!) add(`${label}\u0000${ch}`)
+    else add(`${label}\u0000<${node.type.name}>`)
+    return !node.isAtom
+  })
+  return counts
+}
+
+function removesHidden(before: PmNode, after: PmNode): boolean {
+  const kept = hiddenInventory(after)
+  for (const [key, count] of hiddenInventory(before)) if ((kept.get(key) ?? 0) < count) return true
+  return false
+}
 
 /**
  * Whether any part of a range carries the redaction mark.

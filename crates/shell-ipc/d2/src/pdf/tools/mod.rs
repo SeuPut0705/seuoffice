@@ -1,22 +1,505 @@
-//! The shell's PDF tools: structure jobs and the result store, the tools window, the password dialog, the conversion screen, `pdf:convert-office`.
+//! The shell's PDF tools: structure jobs and the result store
+//! (`pdf-structure-ipc.ts`, `pdf-structure/handlers.ts`, [`structure`]), the
+//! tools window (`pdf-tools/`, [`window`]), the password dialog
+//! (`pdf-password-dialog.ts`, [`password`]), the conversion screen
+//! (`pdf-convert-ui.ts`) and `pdf:convert-office` of `shell/index.ts`
+//! ([`convert`]).
+//!
+//! What other areas call (`requestPdfConvertDialog`, `promptPdfPassword`,
+//! `grantPdfStructureTarget`, `openPdfToolsWithFile`, ...) are methods of
+//! [`PdfTools`], which `entries` adds to the provided table.
 
+mod convert;
+mod hosts;
+mod options;
+mod password;
+mod runner;
+mod structure;
+mod window;
+
+use std::cell::RefCell;
 use std::rc::Rc;
 
-use shell_contract::Provided;
+use jscompat::{JsObject, JsonValue};
+use main_core::packages::electron_utils::dialog_memory::{
+    Dialog, DialogMemory, FallbackDir, show_open_dialog_with_memory, show_save_dialog_with_memory,
+};
+use shell_contract::hosts::{
+    ContentsHost, Dialogs, DialogsHost, FileDialog, FileFilter, MainWindowHost, OsShellHost,
+};
 use shell_contract::ipc::RegisterError;
 use shell_contract::runtime::Services;
+use shell_contract::{Batch, IpcValue, Provided, ViewId, WindowId};
+
+pub(crate) use hosts::*;
 
 use super::Grants;
-use crate::kit::Entry;
+use crate::kit::{Entry, IntoIpc};
 
-pub(crate) fn entries(
-    _services: &Services,
-    _provided: &Rc<Provided>,
-    _grants: &Grants,
-) -> Result<Vec<Entry>, RegisterError> {
-    Ok(Vec::new())
+/// What every part of the tools reaches: the services, the hosts, the
+/// grants of the editor, one dialog memory and the job runner
+pub(crate) struct Ctx {
+    pub services: Services,
+    pub engine: PdfToolsEngineHost,
+    pub shell: PdfToolsShellHost,
+    pub dialogs: DialogsHost,
+    pub contents: ContentsHost,
+    pub os: OsShellHost,
+    pub main_window: MainWindowHost,
+    pub grants: Grants,
+    /// `showOpenDialogWithMemory` keys its memory by Electron's one `dialog`
+    memory: RefCell<DialogMemory>,
+    pub runner: runner::Runner,
 }
 
-/// The fakes of this part's hosts, answering from `case` (`hosts.d2.pdf`)
+impl Ctx {
+    /// `showOpenDialogWithMemory(dialog, parent, options, fallbackDir)`:
+    /// the picked paths, `None` when cancelled
+    pub fn show_open(
+        &self,
+        parent: Option<WindowId>,
+        options: JsObject<JsonValue>,
+        fallback: Option<&str>,
+    ) -> Option<Vec<String>> {
+        let result = show_open_dialog_with_memory(
+            &mut self.memory.borrow_mut(),
+            &mut HostDialog(&*self.dialogs),
+            parent.as_ref(),
+            &options,
+            fallback,
+        );
+        if result.get("canceled").is_some_and(|c| c.truthy()) {
+            return None;
+        }
+        Some(match result.get("filePaths").as_deref() {
+            Some(JsonValue::Array(paths)) => paths
+                .iter()
+                .filter_map(|p| match p {
+                    JsonValue::String(s) => Some(s.clone()),
+                    _ => None,
+                })
+                .collect(),
+            _ => Vec::new(),
+        })
+    }
+
+    /// `showSaveDialogWithMemory(dialog, parent, options)`: the picked path,
+    /// `None` when cancelled or empty
+    pub fn show_save(
+        &self,
+        parent: Option<WindowId>,
+        options: JsObject<JsonValue>,
+    ) -> Option<String> {
+        let result = show_save_dialog_with_memory(
+            &mut self.memory.borrow_mut(),
+            &mut HostDialog(&*self.dialogs),
+            parent.as_ref(),
+            &options,
+            None::<&FallbackDir<'_>>,
+        );
+        if result.get("canceled").is_some_and(|c| c.truthy()) {
+            return None;
+        }
+        match result.get("filePath").as_deref() {
+            Some(JsonValue::String(path)) if !path.is_empty() => Some(path.clone()),
+            _ => None,
+        }
+    }
+
+    /// `!contents.isDestroyed()`
+    pub fn alive(&self, view: ViewId) -> bool {
+        self.services.views.sender_of(view).is_some()
+    }
+
+    /// `BrowserWindow.fromWebContents(contents)`
+    pub fn window_of(&self, view: ViewId) -> Option<WindowId> {
+        self.contents.window_of(view)
+    }
+}
+
+/// The shared dialog host as `dialog-memory`'s `Dialog`
+struct HostDialog<'a>(&'a dyn Dialogs);
+
+fn file_dialog(options: &JsObject<JsonValue>) -> FileDialog {
+    let text = |key: &str| match options.get(key) {
+        Some(JsonValue::String(s)) => Some(s.clone()),
+        _ => None,
+    };
+    let strings = |v: Option<&JsonValue>| match v {
+        Some(JsonValue::Array(items)) => items
+            .iter()
+            .filter_map(|i| match i {
+                JsonValue::String(s) => Some(s.clone()),
+                _ => None,
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    let filters = match options.get("filters") {
+        Some(JsonValue::Array(items)) => items
+            .iter()
+            .map(|f| FileFilter {
+                name: match f.get("name").as_deref() {
+                    Some(JsonValue::String(s)) => s.clone(),
+                    _ => String::new(),
+                },
+                extensions: strings(f.get("extensions").as_deref()),
+            })
+            .collect(),
+        _ => Vec::new(),
+    };
+    FileDialog {
+        title: text("title"),
+        default_path: text("defaultPath").map(Into::into),
+        button_label: text("buttonLabel"),
+        filters,
+        properties: strings(options.get("properties")),
+    }
+}
+
+impl Dialog for HostDialog<'_> {
+    type Window = WindowId;
+
+    fn show_open_dialog(
+        &mut self,
+        parent: Option<&WindowId>,
+        options: &JsObject<JsonValue>,
+    ) -> JsonValue {
+        let picked = self.0.open(parent.copied(), &file_dialog(options));
+        let mut out = JsObject::new();
+        out.set("canceled", JsonValue::Bool(picked.is_none()));
+        out.set(
+            "filePaths",
+            JsonValue::Array(
+                picked
+                    .unwrap_or_default()
+                    .iter()
+                    .map(|p| JsonValue::String(p.to_string_lossy().into_owned()))
+                    .collect(),
+            ),
+        );
+        JsonValue::Object(out)
+    }
+
+    fn show_save_dialog(
+        &mut self,
+        parent: Option<&WindowId>,
+        options: &JsObject<JsonValue>,
+    ) -> JsonValue {
+        let picked = self.0.save(parent.copied(), &file_dialog(options));
+        let mut out = JsObject::new();
+        out.set("canceled", JsonValue::Bool(picked.is_none()));
+        if let Some(path) = picked {
+            out.set(
+                "filePath",
+                JsonValue::String(path.to_string_lossy().into_owned()),
+            );
+        }
+        JsonValue::Object(out)
+    }
+}
+
+/// Dialog options as an object literal
+pub(crate) fn options<const N: usize>(
+    entries: [(&str, Option<JsonValue>); N],
+) -> JsObject<JsonValue> {
+    let mut out = JsObject::new();
+    for (k, v) in entries {
+        if let Some(v) = v {
+            out.set(k, v);
+        }
+    }
+    out
+}
+
+pub(crate) fn js_str(s: &str) -> JsonValue {
+    JsonValue::String(s.to_owned())
+}
+
+pub(crate) fn js_strs(items: &[&str]) -> JsonValue {
+    JsonValue::Array(items.iter().map(|s| js_str(s)).collect())
+}
+
+/// `[{ name, extensions }]`
+pub(crate) fn js_filter(name: &str, extensions: &[&str]) -> JsonValue {
+    let mut f = JsObject::new();
+    f.set("name", js_str(name));
+    f.set("extensions", js_strs(extensions));
+    JsonValue::Array(vec![JsonValue::Object(f)])
+}
+
+// ── values as the TypeScript reads and builds them ──
+
+/// `typeof v === 'object' && v !== null && !Array.isArray(v)`
+pub(crate) fn is_record(v: &IpcValue) -> bool {
+    matches!(
+        v,
+        IpcValue::Object(_) | IpcValue::Bytes(..) | IpcValue::Date(_)
+    )
+}
+
+/// `Number.isSafeInteger(v)`
+pub(crate) fn safe_int(v: &IpcValue) -> Option<f64> {
+    match v {
+        IpcValue::Number(n) if n.fract() == 0.0 && n.abs() <= 9_007_199_254_740_991.0 => Some(*n),
+        _ => None,
+    }
+}
+
+/// `text.length` (UTF-16 code units)
+pub(crate) fn js_len(text: &str) -> usize {
+    text.encode_utf16().count()
+}
+
+/// `{ ...value, key: v }`: the key keeps its place when `value` has it
+pub(crate) fn with(mut value: IpcValue, key: &str, v: IpcValue) -> IpcValue {
+    if let IpcValue::Object(entries) = &mut value {
+        match entries.iter_mut().find(|(k, _)| k == key) {
+            Some(entry) => entry.1 = v,
+            None => entries.push((key.to_owned(), v)),
+        }
+        value
+    } else {
+        IpcValue::Object(vec![(key.to_owned(), v)])
+    }
+}
+
+/// `{ ok: true, ...value }`
+pub(crate) fn ok_with(value: IpcValue) -> IpcValue {
+    let mut out = vec![("ok".to_owned(), true.into_ipc())];
+    if let IpcValue::Object(entries) = value {
+        for (k, v) in entries {
+            match out.iter_mut().find(|(o, _)| *o == k) {
+                Some(slot) => slot.1 = v,
+                None => out.push((k, v)),
+            }
+        }
+    }
+    IpcValue::Object(out)
+}
+
+/// An integer as JavaScript prints it
+pub(crate) fn int_text(n: f64) -> String {
+    if n.fract() == 0.0 && n.abs() < 1e21 {
+        format!("{}", n as i64)
+    } else {
+        format!("{n}")
+    }
+}
+
+/// The calls other areas make into the PDF tools
+pub(crate) struct PdfTools {
+    ctx: Rc<Ctx>,
+    structure: structure::Structure,
+    window: window::Window,
+    password: password::Password,
+    convert: convert::Convert,
+}
+
+// called by other areas (menus, Save As, the editor's ribbon) through the provided table
+#[allow(dead_code)]
+impl PdfTools {
+    /// `requestPdfConvertDialog(contents, format, outPath)`
+    pub fn request_convert_dialog(
+        &self,
+        view: Option<ViewId>,
+        format: &str,
+        out_path: Option<&str>,
+    ) {
+        convert::request_convert_dialog(&self.ctx, view, format, out_path)
+    }
+
+    /// `promptPdfPassword(parent, state)`: `then` gets the entered password,
+    /// `None` when the user cancelled or closed the window
+    pub fn prompt_password(
+        &self,
+        parent: Option<WindowId>,
+        state: IpcValue,
+        then: Box<dyn FnOnce(Option<String>)>,
+    ) {
+        self.password.prompt(parent, state, then)
+    }
+
+    /// `closePdfPasswordDialog()`
+    pub fn close_password_dialog(&self) {
+        self.password.close()
+    }
+
+    /// `grantPdfStructureTarget(contents, sourcePath, outPath, kind)`
+    pub fn grant_structure_target(
+        &self,
+        view: ViewId,
+        source: &str,
+        out_path: &str,
+        kind: &str,
+    ) -> bool {
+        self.ctx.alive(view) && self.structure.grant_target(view, source, out_path, kind)
+    }
+
+    /// `openPdfToolsWithFile(path, tool)`
+    pub fn open_with_file(&self, path: &str, tool: &str) -> bool {
+        self.window.open_with_file(path, tool)
+    }
+
+    /// `openPdfToolsWindow()`
+    pub fn open_window(&self) {
+        self.window.open_window()
+    }
+
+    /// `exportPdfAs{Docx,Pptx,Xlsx}Local(preset)`: Save As › Word,
+    /// PowerPoint, Excel with the tab and target its dialog picked
+    pub fn export_office(
+        &self,
+        format: OfficeFormat,
+        preset: Option<(PdfTab, String)>,
+        then: Box<dyn FnOnce()>,
+    ) {
+        self.convert.export_office(format, preset, then)
+    }
+
+    /// `app.on('will-quit', () => runner.cancelAll())`
+    pub fn cancel_all(&self) -> usize {
+        self.ctx.runner.cancel_all()
+    }
+}
+
+pub(crate) fn entries(
+    services: &Services,
+    provided: &Rc<Provided>,
+    grants: &Grants,
+) -> Result<Vec<Entry>, RegisterError> {
+    let hosts = &services.hosts;
+    let ctx = Rc::new(Ctx {
+        services: services.clone(),
+        engine: hosts.need::<PdfToolsEngineHost>(Batch::D2)?,
+        shell: hosts.need::<PdfToolsShellHost>(Batch::D2)?,
+        dialogs: hosts.need::<DialogsHost>(Batch::D2)?,
+        contents: hosts.need::<ContentsHost>(Batch::D2)?,
+        os: hosts.need::<OsShellHost>(Batch::D2)?,
+        main_window: hosts.need::<MainWindowHost>(Batch::D2)?,
+        grants: grants.clone(),
+        memory: RefCell::default(),
+        runner: runner::Runner::new(services),
+    });
+    let password = password::Password::new(&ctx);
+    let structure = structure::Structure::new(&ctx);
+    let window = window::Window::new(&ctx);
+    let convert = convert::Convert::new(&ctx, &password);
+    let mut all = Vec::new();
+    all.extend(password.entries());
+    all.extend(structure.entries());
+    all.extend(window.entries());
+    all.extend(convert.entries());
+    provided.add::<PdfTools>(Rc::new(PdfTools {
+        ctx,
+        structure,
+        window,
+        password,
+        convert,
+    }));
+    Ok(all)
+}
+
+/// The fakes of this part's hosts: one [`hosts::fake::Fake`] for both
+/// traits, answering from `case.tools` (`hosts.d2.pdf.tools`)
 #[cfg(any(test, feature = "probe"))]
-pub(crate) fn fakes(_hosts: &mut shell_contract::Hosts, _case: &serde_json::Value) {}
+pub(crate) fn fakes(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) {
+    let fake = std::sync::Arc::new(hosts::fake::Fake::new(
+        case.get("tools").unwrap_or(&serde_json::Value::Null),
+    ));
+    hosts.insert::<PdfToolsEngineHost>(fake.clone());
+    hosts.insert::<PdfToolsShellHost>(fake);
+}
+
+#[cfg(test)]
+pub(crate) mod test_support {
+    //! A shell with the tools registered and a handle on their fake
+    use std::sync::Arc;
+
+    use serde_json::Value;
+    use shell_contract::{IpcValue, Surface, ViewId};
+
+    use super::hosts::fake::Fake;
+    use super::*;
+    use crate::testing::Rt;
+
+    pub struct T {
+        pub rt: Rt,
+        pub fake: Arc<Fake>,
+    }
+
+    fn register(services: &Services, provided: &Rc<Provided>) -> Result<Vec<Entry>, RegisterError> {
+        // the editor's grants: tests grant through the map this creates
+        let grants = GRANTS
+            .with(|g| g.borrow().clone())
+            .unwrap_or_else(|| Grants(crate::kit::ViewMap::new(services)));
+        GRANTS.with(|g| *g.borrow_mut() = Some(grants.clone()));
+        entries(services, provided, &grants)
+    }
+
+    thread_local! {
+        static GRANTS: RefCell<Option<Grants>> = const { RefCell::new(None) };
+    }
+
+    pub fn tools(case: Value) -> T {
+        GRANTS.with(|g| *g.borrow_mut() = None);
+        let fake = Arc::new(Fake::new(&case));
+        let f = fake.clone();
+        let mut rt = Rt::new(move |h| {
+            h.insert::<PdfToolsEngineHost>(f.clone());
+            h.insert::<PdfToolsShellHost>(f);
+        });
+        rt.register(register).unwrap();
+        T { rt, fake }
+    }
+
+    impl T {
+        /// `allowedByWc`: give `view` the file
+        pub fn grant(&self, view: u32, path: &str) {
+            GRANTS.with(|g| {
+                let g = g.borrow();
+                let grants = g.as_ref().unwrap();
+                if !grants.0.contains(ViewId(view)) {
+                    grants.0.insert(ViewId(view), Default::default());
+                }
+                grants.0.with(ViewId(view), |set| {
+                    set.unwrap().insert(path.to_owned());
+                });
+            })
+        }
+
+        pub fn tools(&self) -> Rc<PdfTools> {
+            self.rt.provided().all::<PdfTools>().pop().unwrap()
+        }
+
+        pub fn pdf_view(&self, id: u32) -> shell_contract::ipc::Sender {
+            self.rt.view(id, Surface::Pdf)
+        }
+
+        pub fn call(
+            &mut self,
+            channel: &str,
+            from: shell_contract::ipc::Sender,
+            args: Vec<IpcValue>,
+        ) -> IpcValue {
+            self.rt.invoke_now(channel, from, args).unwrap()
+        }
+
+        /// a temp file with these bytes; its path
+        pub fn file(&self, name: &str, bytes: &[u8]) -> String {
+            let path = self.rt.dir.join(name);
+            std::fs::write(&path, bytes).unwrap();
+            path.to_string_lossy().into_owned()
+        }
+    }
+
+    /// an IpcValue from JSON, `{"$u8": [..]}` as bytes
+    pub fn v(json: Value) -> IpcValue {
+        super::hosts::fake::ipc(&json)
+    }
+
+    /// what a test compares a reply with
+    pub fn j(v: &IpcValue) -> Value {
+        crate::kit::to_json(v).unwrap_or(Value::Null)
+    }
+}

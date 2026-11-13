@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/xlsx-gateway",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "xlsx write gateway and workbook domain logic (OOXML patching, CSV import, workbook DSL, pivots, charts) shared by the sheets app and the seuoffice CLI; no Electron, no Univer",

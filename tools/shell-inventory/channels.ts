@@ -405,6 +405,11 @@ const PINNED: Record<string, string> = {
   'app:get-split-role': 'W',
   'app:view-focused': 'W',
   'app:open-dropped-files': 'W',
+  // events go with the batch whose handler emits them (2026-11-13, M's proposal)
+  'app:auto-save-default-changed': 'W',
+  'app:chrome-pressed': 'W',
+  'app:split-role-changed': 'W',
+  'slides:fonts-changed': 'D1',
 }
 const APP_BATCH: Record<string, string> = {
   shell: 'W',

@@ -151,7 +151,7 @@ function stubMetricsCanvas(ascent: number, descent: number) {
 function mountBlankFace() {
   const style = document.createElement('style')
   style.textContent =
-    "@font-face { font-family: 'GenOffice PUA Blank'; src: url('./GenOfficePUABlank.woff2') format('woff2'); }"
+    "@font-face { font-family: 'SeuOffice PUA Blank'; src: url('./SeuOfficePUABlank.woff2') format('woff2'); }"
   document.head.appendChild(style)
 }
 
@@ -160,15 +160,15 @@ describe('docStyleCss grid strut face', () => {
     stubMetricsCanvas(1143, 286)
     mountBlankFace()
     const css = docStyleCss(parsedWith(GRID_SECT, 'ＭＳ 明朝'))
-    expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
+    expect(css).toContain("@font-face { font-family:'SeuOffice Grid Strut'")
     expect(css).toContain('ascent-override:114.3%')
     expect(css).toContain('descent-override:28.6%')
-    expect(css).toContain('GenOfficePUABlank.woff2')
+    expect(css).toContain('SeuOfficePUABlank.woff2')
     // the Office-private MS Mincho renders through a stand-in, so the
     // inheriting .doc-ea-strut paragraphs share the strut too
     expect(css).toContain(
       // !important: all-declared CJK paragraphs carry their chain inline and get the class too
-      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) { font-family:'GenOffice Grid Strut',var(--doc-grid-strut-tail,serif) !important }",
+      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) { font-family:'SeuOffice Grid Strut',var(--doc-grid-strut-tail,serif) !important }",
     )
     expect(css).toContain('--doc-grid-strut-tail:')
   })
@@ -183,11 +183,11 @@ describe('docStyleCss grid strut face', () => {
     expect(css).toContain('--doc-line-factor-cjk:1.3')
     expect(css).toContain('--doc-line-mult:1.15')
     expect(css).toContain("--doc-east-asian-font:'SimSun'")
-    expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
+    expect(css).toContain("@font-face { font-family:'SeuOffice Grid Strut'")
     expect(css).toContain('ascent-override:116%')
     expect(css).toContain('descent-override:28.8%')
     expect(css).toContain(
-      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) .doc-east-asian-font { font-family:'GenOffice Grid Strut',",
+      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) .doc-east-asian-font { font-family:'SeuOffice Grid Strut',",
     )
   })
 
@@ -204,13 +204,13 @@ describe('docStyleCss grid strut face', () => {
     stubMetricsCanvas(880, 120)
     mountBlankFace()
     const css = docStyleCss(parsedWith(null, '\u6e38\u660e\u671d'))
-    expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
+    expect(css).toContain("@font-face { font-family:'SeuOffice Grid Strut'")
     expect(css).toContain('ascent-override:88%')
     expect(css).toContain('.doc-page :is(.doc-grid-strut,.doc-ea-strut) {')
     // the CJK spans lead with the strut face too: their loaded range alias is
     // not the face the strut measured, and offset boxes union past the grid
     expect(css).toContain(
-      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) .doc-east-asian-font { font-family:'GenOffice Grid Strut',",
+      ".doc-page :is(.doc-grid-strut,.doc-ea-strut) .doc-east-asian-font { font-family:'SeuOffice Grid Strut',",
     )
     expect(docStyleCss(parsedWith(null, '\uff2d\uff33 \u660e\u671d'))).toContain('.doc-ea-strut')
   })
@@ -228,7 +228,7 @@ describe('docStyleCss grid strut face', () => {
     stubMetricsCanvas(969, 391)
     mountBlankFace()
     const css = docStyleCss(parsedWith(null, 'DengXian'))
-    expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
+    expect(css).toContain("@font-face { font-family:'SeuOffice Grid Strut'")
     expect(css).toContain('ascent-override:96.9%')
     expect(css).toContain('descent-override:39.1%')
     expect(css).toContain('.doc-page :is(.doc-grid-strut,.doc-ea-strut) {')
@@ -250,7 +250,7 @@ describe('docStyleCss grid strut face', () => {
         },
       ),
     )
-    expect(css).toContain("@font-face { font-family:'GenOffice Grid Strut'")
+    expect(css).toContain("@font-face { font-family:'SeuOffice Grid Strut'")
     expect(css).toContain('.doc-ea-strut')
   })
 
