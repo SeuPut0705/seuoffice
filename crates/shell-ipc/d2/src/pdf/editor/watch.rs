@@ -198,6 +198,15 @@ impl Watch {
 /// schedules the next one
 type Step = Box<dyn FnOnce(&mut DiskWatch, &mut Deps<'_>) -> Option<Pending>>;
 
+/// `deps.stat(path)`: a file's time and size, `None` when it is no file
+fn stat_of(path: &str) -> Option<FileStat> {
+    let meta = std::fs::metadata(main_core::node_fs::namespaced(path)).ok()?;
+    meta.is_file().then(|| FileStat {
+        mtime_ms: StatInfo::of(&meta).mtime_ms,
+        size: meta.len() as f64,
+    })
+}
+
 impl Editor {
     /// Runs `step` on the view's watcher when it is still the one of
     /// `generation`, then the `stat` or `read` it waits for
@@ -222,13 +231,7 @@ impl Editor {
             None => {}
             Some(Pending::Stat) => kit::on_worker(
                 &self.services,
-                move || {
-                    let meta = std::fs::metadata(main_core::node_fs::namespaced(&path)).ok();
-                    meta.filter(|m| m.is_file()).map(|m| FileStat {
-                        mtime_ms: StatInfo::of(&m).mtime_ms,
-                        size: m.len() as f64,
-                    })
-                },
+                move || stat_of(&path),
                 move |stat| {
                     ed.run_watch(
                         view,
@@ -303,5 +306,51 @@ impl Editor {
                 w.machine.rebase(base);
             }
         });
+    }
+
+    /// The probe's stand-in for the folder watch and its settle timer
+    /// (tools/ipc-diff `d2/pdf:disk-change`): the folder reports `name`, then
+    /// every timer the watcher sets fires at once and its `stat` and `read`
+    /// run inline, until it waits for nothing. Reaches the notice the
+    /// TypeScript's real timers reach, without their time.
+    #[cfg(any(test, feature = "probe"))]
+    pub(super) fn disk_change_now(&self, view: ViewId, name: Option<&str>) {
+        let Some(mut watch) = self.with_view(view, |v| v.watch.take()) else {
+            return;
+        };
+        let path = watch.machine.path().to_owned();
+        {
+            let mut deps = Deps {
+                ed: self,
+                view,
+                generation: watch.generation,
+                path: path.clone(),
+                aux: &mut watch.aux,
+            };
+            watch.machine.on_event(&mut deps, name);
+            // bounded: a file that keeps changing is reported after DISK_WATCH_MAX_WAITS
+            for _ in 0..100 {
+                let timers: Vec<u64> = deps.aux.timers.keys().copied().collect();
+                if timers.is_empty() {
+                    break;
+                }
+                for id in timers {
+                    if let Some(timer) = deps.aux.timers.remove(&id) {
+                        kit::clear(timer)
+                    }
+                }
+                let mut pending = watch.machine.fire_timer(&mut deps);
+                while let Some(p) = pending {
+                    pending = match p {
+                        Pending::Stat => watch.machine.answer_stat(&mut deps, stat_of(&path)),
+                        Pending::Read => {
+                            let bytes = std::fs::read(&path).ok();
+                            watch.machine.answer_read(&mut deps, bytes.as_deref())
+                        }
+                    };
+                }
+            }
+        }
+        self.with_view(view, |v| v.watch = Some(watch));
     }
 }
