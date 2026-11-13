@@ -22,6 +22,7 @@ pub mod runtime;
 pub mod secrets;
 pub mod shell_ai_prefs;
 pub mod slides_ai;
+pub mod subscription;
 pub mod template_selection;
 mod unbuilt;
 pub mod user_skills;
@@ -159,6 +160,7 @@ pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &serde_json::Value) 
     probe::mcp::insert(hosts, case, log.clone());
     probe::slides_ai::insert(hosts, case, log.clone());
     probe::user_skills::insert(hosts, case, log.clone());
+    probe::subscription::insert(hosts, case, log.clone());
     hosts.insert::<shell_ai_prefs::ShellUiHost>(std::sync::Arc::new(probe::FakeShellUi::new(
         case, log,
     )));

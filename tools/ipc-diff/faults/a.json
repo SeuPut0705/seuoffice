@@ -929,5 +929,40 @@
     "find": "self.timed_out = result.timed_out;\n                result.outcome",
     "replace": "self.timed_out = result.timed_out;\n                ChatOutcome::Reply { content: Some(\"Fixed\".into()) }",
     "groups": ["a/ai-naming"]
+  },
+  {
+    "name": "the settings file is not migrated to a notice version on read",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "let raw = match with_migrated_subscription_notice_version(&raw) {",
+    "replace": "let raw = match with_migrated_subscription_notice_version(&raw).and(None::<JsonValue>) {",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "ai:settings-changed is not sent after a settings write",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "events.emit(Target::All, SETTINGS_CHANGED, Vec::new());",
+    "replace": "let _ = (&events, SETTINGS_CHANGED);",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "status changes go to the shell surface only",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "broadcast_events.emit(Target::All, CHANGED, vec![from_json(statuses)]);",
+    "replace": "broadcast_events.emit(Target::Surface(shell_contract::Surface::Shell), CHANGED, vec![from_json(statuses)]);",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "the ChatGPT install help opens a vendor CLI page instead of the usage page",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": "if id == \"chatgpt\" {",
+    "replace": "if id == \"chatgpt-never\" {",
+    "groups": ["a/subscription"]
+  },
+  {
+    "name": "the settings file is read and written under another name",
+    "file": "shell-ipc/a/src/subscription.rs",
+    "find": ".join(\"ai-settings.json\")",
+    "replace": ".join(\"ai-settings.jsn\")",
+    "groups": ["a/subscription"]
   }
 ]
