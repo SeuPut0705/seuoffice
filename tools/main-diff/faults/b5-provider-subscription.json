@@ -589,8 +589,8 @@
   {
     "name": "a run that gives up ends the program softly",
     "file": "main-core/src/packages/ai_provider/subscription_process.rs",
-    "find": "kill_process_tree_rt(&rt, pid, true);",
-    "replace": "kill_process_tree_rt(&rt, pid, false);",
+    "find": "kill_process_tree_rt(&rt, pid_cell.get(), true);",
+    "replace": "kill_process_tree_rt(&rt, pid_cell.get(), false);",
     "fn": ["subscription/process.runSubscriptionProgram"]
   },
   {
