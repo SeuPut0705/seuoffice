@@ -1,9 +1,9 @@
 [
   {
-    "name": "a Latin hit at the very start is dropped",
+    "name": "no hit is ever kept",
     "file": "main-core/src/shell/text_marks.rs",
-    "find": "|| pos == 0",
-    "replace": "|| pos == usize::MAX",
+    "find": "ranges.push((pos, pos + needle.len()));",
+    "replace": "ranges.push((pos, pos));",
     "fn": [
       "text-marks.findRanges",
       "text-marks.findTextRanges",

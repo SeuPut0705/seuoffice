@@ -679,10 +679,10 @@
     "fn": ["rerank.SearchReranker"]
   },
   {
-    "name": "probe key check does not trim",
+    "name": "probe local servers need a key",
     "file": "main-core/src/shell/file_index/rerank.rs",
     "find": "if !is_local_endpoint(settings.endpoint) && trim(&opts.key).is_empty() {",
-    "replace": "if !is_local_endpoint(settings.endpoint) && opts.key.is_empty() {",
+    "replace": "if trim(&opts.key).is_empty() {",
     "fn": ["rerank.probeDecision"]
   },
   {

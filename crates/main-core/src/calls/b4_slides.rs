@@ -10,9 +10,12 @@ use std::rc::Rc;
 use jscompat::{JsonValue, json_value_from_serde};
 use serde_json::{Map, Number, Value};
 
+use super::fakes::FakeRenderer;
 use super::{Answer, CallError, Context, arg, str_arg};
 use crate::packages::electron_utils::generate_handoff::HandoffWebContents;
-use crate::packages::electron_utils::print_window::{JsError, rm_recursive_force};
+use crate::packages::electron_utils::print_window::{
+    ExecOutcome, JsError, RendererAnswer, RendererCall, WindowStep, rm_recursive_force,
+};
 use crate::packages::electron_utils::recovery_store::{
     RecoveryEditorKind, RecoveryFileIdentity, RecoveryIdentity, RecoveryUntitledIdentity,
 };
@@ -33,8 +36,8 @@ use crate::slides::paste_cascade::{
 };
 use crate::slides::pdf_export::{
     ExportPdfLink, ExportPdfPage, ExportSlidesPdfOptions, PDF_EXPORT_HEIGHT_IN,
-    PDF_EXPORT_TIMEOUT_MS, PRINT_READY_SCRIPT, PdfExportWindow, Step, build_pdf_export_html,
-    build_pdf_link_overlays, export_page_width_in, export_slides_pdf,
+    PDF_EXPORT_TIMEOUT_MS, PRINT_READY_SCRIPT, PdfExportWindow, begin_export_slides_pdf,
+    build_pdf_export_html, build_pdf_link_overlays, export_page_width_in,
 };
 use crate::slides::picture_frame::{
     DEFAULT_PICTURE_DPI, ImageDpi, PictureFrameOptions, picture_frame,
@@ -572,47 +575,79 @@ impl FakePdfWindow<'_> {
     fn mode(&self, key: &str) -> Option<&str> {
         self.script.get(key).and_then(Value::as_str)
     }
-    fn step<T>(&self, key: &str, ok: impl FnOnce() -> T, failure: &str) -> Step<T> {
+    /// `Ok` once the call settles; `Err(None)` for a call that hangs until the
+    /// watchdog fires
+    fn step<T>(
+        &self,
+        key: &str,
+        ok: impl FnOnce() -> T,
+        failure: &str,
+    ) -> Result<T, Option<JsError>> {
         match self.mode(key) {
-            Some("throws") => Step::Done(Err(JsError::plain(failure))),
-            Some("hangs") => Step::Hangs,
-            _ => Step::Done(Ok(ok())),
+            Some("throws") => Err(Some(JsError::plain(failure))),
+            Some("hangs") => Err(None),
+            _ => Ok(ok()),
+        }
+    }
+}
+
+impl FakeRenderer for FakePdfWindow<'_> {
+    fn answer(&mut self, call: &RendererCall) -> RendererAnswer {
+        match call {
+            RendererCall::LoadFile { path } => {
+                *self.work_dir.borrow_mut() = path.rsplit_once('/').map(|(dir, _)| dir.to_owned());
+                let html = std::fs::read_to_string(path).unwrap_or_default();
+                self.log(vec![
+                    Value::from("loadFile"),
+                    Value::from(mask_rand(path)),
+                    Value::from(html),
+                ]);
+                match self.step("loadFile", || (), "load failed") {
+                    Ok(()) => RendererAnswer::Loaded(Ok(())),
+                    Err(Some(error)) => RendererAnswer::Loaded(Err(error)),
+                    Err(None) => RendererAnswer::TimedOut,
+                }
+            }
+            RendererCall::ExecuteJavaScript {
+                script,
+                user_gesture,
+                ..
+            } => {
+                self.log(vec![
+                    Value::from("executeJavaScript"),
+                    Value::from(*script),
+                    Value::Bool(*user_gesture),
+                ]);
+                match self.step("executeJavaScript", || (), "execute failed") {
+                    Ok(()) => RendererAnswer::Executed(ExecOutcome::Settled),
+                    Err(Some(error)) => {
+                        RendererAnswer::Executed(ExecOutcome::Rejected(error.message))
+                    }
+                    Err(None) => RendererAnswer::TimedOut,
+                }
+            }
+            RendererCall::PrintToPdf { options } => {
+                self.log(vec![Value::from("printToPDF"), options.clone()]);
+                let pdf = self
+                    .script
+                    .get("pdfHex")
+                    .and_then(Value::as_str)
+                    .and_then(|text| unhex(text).ok())
+                    .unwrap_or_default();
+                match self.step("printToPDF", || pdf, "printToPDF threw") {
+                    Ok(pdf) => RendererAnswer::Pdf(Ok(pdf)),
+                    Err(Some(error)) => RendererAnswer::Pdf(Err(error)),
+                    Err(None) => RendererAnswer::TimedOut,
+                }
+            }
+            RendererCall::Print { .. } => RendererAnswer::Printed(Err(JsError::plain(
+                "the slides PDF window has no print dialog",
+            ))),
         }
     }
 }
 
 impl PdfExportWindow for FakePdfWindow<'_> {
-    fn load_file(&mut self, path: &str) -> Step<()> {
-        *self.work_dir.borrow_mut() = path.rsplit_once('/').map(|(dir, _)| dir.to_owned());
-        let html = std::fs::read_to_string(path).unwrap_or_default();
-        self.log(vec![
-            Value::from("loadFile"),
-            Value::from(mask_rand(path)),
-            Value::from(html),
-        ]);
-        self.step("loadFile", || (), "load failed")
-    }
-
-    fn execute_javascript(&mut self, script: &str, user_gesture: bool) -> Step<()> {
-        self.log(vec![
-            Value::from("executeJavaScript"),
-            Value::from(script),
-            Value::Bool(user_gesture),
-        ]);
-        self.step("executeJavaScript", || (), "execute failed")
-    }
-
-    fn print_to_pdf(&mut self, options: &Value) -> Step<Vec<u8>> {
-        self.log(vec![Value::from("printToPDF"), options.clone()]);
-        let pdf = self
-            .script
-            .get("pdfHex")
-            .and_then(Value::as_str)
-            .and_then(|text| unhex(text).ok())
-            .unwrap_or_default();
-        self.step("printToPDF", || pdf, "printToPDF threw")
-    }
-
     fn destroy(&mut self) -> Result<(), JsError> {
         self.log(vec![Value::from("destroy")]);
         if matches!(self.script.get("destroyThrows"), Some(Value::Bool(true))) {
@@ -665,7 +700,16 @@ fn export_pdf(args: &[Value], cx: &mut Context) -> Answer {
         }
         Ok(())
     };
-    let result = export_slides_pdf(&options, create, &mut open);
+    let mut step = begin_export_slides_pdf(&options, create);
+    let result = loop {
+        step = match step {
+            WindowStep::Await { call, mut job } => {
+                let answer = job.window().answer(&call);
+                job.resume(answer, &mut open)
+            }
+            WindowStep::Done(result) => break result,
+        }
+    };
     if let Some(dir) = work_dir.borrow().as_deref() {
         let _ = rm_recursive_force(dir);
     }
