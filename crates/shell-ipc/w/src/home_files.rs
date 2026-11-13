@@ -6,9 +6,8 @@
 //!
 //! What lives outside `main-core` today is behind four hosts of this batch:
 //! [`HomeFiles`] (the tabs, projects and other areas that key on a path),
-//! [`FileSearch`] (the file index), [`FolderTree`] (folder-tree.ts, ported on
-//! `feat/rust-stage2-b3b4` and not yet merged) and [`FolderWatch`] (the
-//! recursive watcher of the tree's roots).
+//! [`FileSearch`] (the file index) and [`FolderWatch`] (the recursive watcher
+//! of the tree's roots).
 
 use std::cell::{Cell, RefCell};
 use std::collections::HashSet;
@@ -16,7 +15,7 @@ use std::path::{Path, PathBuf};
 use std::rc::Rc;
 use std::sync::Arc;
 
-use jscompat::node_path::host::{SEP, basename, dirname, join, resolve};
+use jscompat::node_path::host::{basename, dirname, join, resolve};
 use jscompat::{JsObject, JsTypeError, JsonValue, json_parse, number_to_string, slice_utf16, trim};
 use main_core::docs::starred_files::{
     StarredItem, assign_starred_group, drop_starred_items, read_starred_items, rename_starred_item,
@@ -26,7 +25,7 @@ use main_core::node_fs::NodeError;
 use main_core::packages::electron_utils::atomic_write::write_json_atomic;
 use main_core::packages::electron_utils::default_save_dir::{
     PathProvider, SaveDirState, Thrown as SaveDirThrown, configured_default_save_dir,
-    default_save_dir_fallback, is_usable_save_dir,
+    default_save_dir_fallback,
 };
 use main_core::packages::electron_utils::dialog_memory::{
     Dialog, DialogMemory, show_open_dialog_with_memory,
@@ -42,6 +41,11 @@ use main_core::shell::file_targets::{
 use main_core::shell::folder_roots::{
     FOLDER_ROOTS_KEY, FolderRoot, describe_extra_root, read_extra_roots, with_extra_root,
     without_extra_root,
+};
+use main_core::shell::folder_tree::{
+    FolderErrors, FolderListing, MoveConflictPolicy, MoveFailure, MoveOptions, MoveResult, Moved,
+    RenameResult, ReplacedItem, Thrown, create_folder, describe_root, is_inside_root, list_folder,
+    move_paths_into, paths_under, rebase_path, rename_folder,
 };
 use main_core::shell::recent_files::{
     RecentEntry, cap_stat_paths, matches_ext_family, normalize_recent_query, page_recent_paths,
@@ -136,112 +140,6 @@ pub trait FileSearch: Send + Sync {
 }
 
 pub type FileSearchHost = Arc<dyn FileSearch>;
-
-/// `FolderErrors`
-#[derive(Debug, Clone, PartialEq)]
-pub struct FolderErrors {
-    pub bad_args: String,
-    pub bad_name: String,
-    pub missing: String,
-    pub exists: String,
-    pub failed: String,
-}
-
-/// `RenameResult`: `ok`, then the path of a success or the error of a failure
-#[derive(Debug, Clone, PartialEq)]
-pub struct RenameResult {
-    pub ok: bool,
-    pub path: Option<String>,
-    pub error: Option<String>,
-}
-
-/// `FolderEntry`
-#[derive(Debug, Clone, PartialEq)]
-pub struct FolderEntry {
-    pub path: String,
-    pub name: String,
-    pub mtime_ms: f64,
-    pub has_subfolders: bool,
-}
-
-/// `FolderListing`; `missing` is set only when the directory could not be read
-#[derive(Debug, Clone, PartialEq)]
-pub struct FolderListing {
-    pub dir: String,
-    pub folders: Vec<FolderEntry>,
-    pub files: Vec<RecentEntry>,
-    pub missing: Option<bool>,
-}
-
-/// `MoveConflictPolicy`
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum MoveConflictPolicy {
-    Ask,
-    Replace,
-    KeepBoth,
-    Skip,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct Moved {
-    pub from: String,
-    pub to: String,
-}
-
-#[derive(Debug, Clone, PartialEq)]
-pub struct MoveFailure {
-    pub path: String,
-    pub error: String,
-}
-
-/// `MoveResult`
-#[derive(Debug, Clone, PartialEq, Default)]
-pub struct MoveResult {
-    pub moved: Vec<Moved>,
-    pub conflicts: Vec<String>,
-    pub failed: Vec<MoveFailure>,
-}
-
-/// A throw: `Some(message)` for an `Error`, `None` for any other value
-pub type Thrown = Option<String>;
-
-/// The displaced target of a 'replace' move: finalized once the move
-/// succeeded, put back if it failed
-pub trait ReplacedItem {
-    fn commit(&mut self) -> Result<(), Thrown>;
-    fn rollback(&mut self) -> Result<(), Thrown>;
-}
-
-/// `MoveOptions`
-pub trait MoveOptions {
-    /// park an existing target out of the way before the move (policy 'replace')
-    fn replace_existing(&mut self, path: &str) -> Result<Box<dyn ReplacedItem>, Thrown>;
-}
-
-/// folder-tree.ts: the folder panel's listing, create, rename and move.
-/// Signatures are those of `main_core::shell::folder_tree` on
-/// `feat/rust-stage2-b3b4`; when it lands the host goes and the handlers call
-/// the module.
-pub trait FolderTree: Send + Sync {
-    /// `listFolder(dir, starredPaths)`
-    fn list_folder(&self, dir: &str, starred_paths: &HashSet<String>) -> FolderListing;
-    /// `createFolder(parent, name, errors)`
-    fn create_folder(&self, parent: &str, name: &str, errors: &FolderErrors) -> RenameResult;
-    /// `renameFolder(dir, newName, errors)`
-    fn rename_folder(&self, dir: &str, new_name: &str, errors: &FolderErrors) -> RenameResult;
-    /// `movePathsInto(paths, targetDir, policy, errors, options)`; an `Err` is
-    /// the throw of a failed rollback
-    fn move_paths_into(
-        &self,
-        paths: &[String],
-        target_dir: &str,
-        policy: MoveConflictPolicy,
-        errors: &FolderErrors,
-        options: &mut dyn MoveOptions,
-    ) -> Result<MoveResult, Thrown>;
-}
-
-pub type FolderTreeHost = Arc<dyn FolderTree>;
 
 /// The recursive watcher of the tree's roots (`ensureFolderWatchers`)
 pub trait FolderWatch: Send + Sync {
@@ -633,83 +531,6 @@ fn exists_sync(path: &str) -> bool {
     Path::new(path).exists()
 }
 
-fn real_or_resolved(path: &str) -> String {
-    std::fs::canonicalize(path)
-        .ok()
-        .and_then(|p| p.to_str().map(str::to_owned))
-        .unwrap_or_else(|| resolve(&[path]))
-}
-
-fn with_trailing_sep(dir: &str) -> String {
-    if dir.ends_with(SEP) {
-        dir.to_owned()
-    } else {
-        format!("{dir}{SEP}")
-    }
-}
-
-/// `isInsideRoot(root, path)`: the root or below it; an existing path
-/// compares by real path, a missing one by its nearest existing ancestor
-fn is_inside_root(root: &str, path: &str) -> bool {
-    let real_root = real_or_resolved(root);
-    let mut probe = resolve(&[path]);
-    let mut missing: Vec<String> = Vec::new();
-    while !exists_sync(&probe) {
-        let parent = dirname(&probe);
-        if parent == probe {
-            return false;
-        }
-        missing.insert(0, basename(&probe, None));
-        probe = parent;
-    }
-    let real_probe = real_or_resolved(&probe);
-    let mut parts: Vec<&str> = vec![real_probe.as_str()];
-    parts.extend(missing.iter().map(String::as_str));
-    let real = join(&parts);
-    real == real_root || real.starts_with(&with_trailing_sep(&real_root))
-}
-
-/// `describeRoot(root)`: creates a missing root level by level
-fn describe_root(root: &str) -> FolderRoot {
-    let usable = is_usable_save_dir(root) && std::fs::metadata(root).is_ok_and(|m| m.is_dir());
-    let name = basename(root, None);
-    FolderRoot {
-        path: root.to_owned(),
-        name: if name.is_empty() {
-            root.to_owned()
-        } else {
-            name
-        },
-        usable,
-        readable: usable,
-        removable: false,
-    }
-}
-
-/// `pathsUnder(dir, candidates)`: the candidates below `dir` at any depth
-fn paths_under(dir: &str, candidates: &[String]) -> Vec<String> {
-    let base = resolve(&[dir]);
-    let prefix = with_trailing_sep(&base);
-    let mut out: Vec<String> = Vec::new();
-    for path in candidates {
-        let resolved = resolve(&[path]);
-        if resolved != base && resolved.starts_with(&prefix) && !out.contains(path) {
-            out.push(path.clone());
-        }
-    }
-    out
-}
-
-/// `rebasePath(path, oldDir, newDir)`
-fn rebase_path(path: &str, old_dir: &str, new_dir: &str) -> String {
-    let abs = resolve(&[path]);
-    let base = resolve(&[old_dir]);
-    if abs != base && !abs.starts_with(&with_trailing_sep(&base)) {
-        return path.to_owned();
-    }
-    join(&[new_dir, &abs[base.len()..]])
-}
-
 // ---- recents and starred (docs-main) ----------------------------------------
 
 /// `RECENT_LIMIT`
@@ -755,7 +576,6 @@ struct Home {
     workers: Arc<dyn shell_contract::runtime::Workers>,
     host: HomeFilesHost,
     search: FileSearchHost,
-    tree: FolderTreeHost,
     watch: FolderWatchHost,
     dialogs: DialogsHost,
     os: OsShellHost,
@@ -1331,7 +1151,6 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
         workers: services.workers.clone(),
         host: services.hosts.need(Batch::W)?,
         search: services.hosts.need(Batch::W)?,
-        tree: services.hosts.need(Batch::W)?,
         watch: services.hosts.need(Batch::W)?,
         dialogs: services.hosts.need(Batch::W)?,
         os: services.hosts.need(Batch::W)?,
@@ -1815,7 +1634,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
             ]));
         };
         let starred: HashSet<String> = h.starred_files().into_iter().collect();
-        Ok(listing_to_ipc(&h.tree.list_folder(path, &starred)))
+        Ok(listing_to_ipc(&list_folder(path, &starred)))
     })?;
 
     let h = home.clone();
@@ -1826,7 +1645,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
         if !h.inside_any_root(parent)? {
             return Ok(failed(h.tm(Msg::BadArgs)));
         }
-        Ok(rename_result_to_ipc(&h.tree.create_folder(
+        Ok(rename_result_to_ipc(&create_folder(
             parent,
             name,
             &h.folder_errors(),
@@ -1842,7 +1661,7 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
             return Ok(failed(h.tm(Msg::BadArgs)));
         }
         let files_before = h.tracked_files_under(dir);
-        let result = h.tree.rename_folder(dir, new_name, &h.folder_errors());
+        let result = rename_folder(dir, new_name, &h.folder_errors());
         if let (true, Some(path)) = (result.ok, &result.path)
             && path != dir
         {
@@ -1910,16 +1729,14 @@ pub fn register(registry: &mut dyn Registry, services: &Services) -> Result<(), 
             home: h.clone(),
             displaced: displaced.clone(),
         };
-        let result = h
-            .tree
-            .move_paths_into(
-                &sources,
-                target_dir,
-                policy,
-                &h.folder_errors(),
-                &mut options,
-            )
-            .map_err(|thrown| error(thrown.unwrap_or_default()))?;
+        let result = move_paths_into(
+            &sources,
+            target_dir,
+            policy,
+            &h.folder_errors(),
+            &mut options,
+        )
+        .map_err(|thrown| error(thrown.unwrap_or_default()))?;
         for parked in displaced.borrow().iter() {
             if h.os.trash_item(Path::new(parked)).is_err() {
                 let _ = std::fs::remove_dir_all(parked).or_else(|_| std::fs::remove_file(parked));
@@ -2226,34 +2043,6 @@ mod fakes {
         }
     }
 
-    /// folder-tree.ts is not in `main-core` yet: until it lands (and the
-    /// host goes) the channels that need it cannot be compared
-    struct BlockedFolderTree;
-
-    const BLOCKED: &str = "blocked on feat/rust-stage2-b3b4: main_core::shell::folder_tree";
-
-    impl FolderTree for BlockedFolderTree {
-        fn list_folder(&self, _: &str, _: &HashSet<String>) -> FolderListing {
-            unimplemented!("{BLOCKED}")
-        }
-        fn create_folder(&self, _: &str, _: &str, _: &FolderErrors) -> RenameResult {
-            unimplemented!("{BLOCKED}")
-        }
-        fn rename_folder(&self, _: &str, _: &str, _: &FolderErrors) -> RenameResult {
-            unimplemented!("{BLOCKED}")
-        }
-        fn move_paths_into(
-            &self,
-            _: &[String],
-            _: &str,
-            _: MoveConflictPolicy,
-            _: &FolderErrors,
-            _: &mut dyn MoveOptions,
-        ) -> Result<MoveResult, Thrown> {
-            unimplemented!("{BLOCKED}")
-        }
-    }
-
     pub fn probe_hosts(hosts: &mut shell_contract::Hosts, case: &Value) {
         let log: Log = hosts
             .get::<Log>()
@@ -2270,8 +2059,6 @@ mod fakes {
             created: AtomicBool::new(false),
         });
         hosts.insert(search);
-        let tree: FolderTreeHost = Arc::new(BlockedFolderTree);
-        hosts.insert(tree);
         let watch: FolderWatchHost = Arc::new(FakeWatch {
             log,
             case: case["watch"].clone(),

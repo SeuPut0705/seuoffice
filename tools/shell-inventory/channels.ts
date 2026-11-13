@@ -402,6 +402,7 @@ const PINNED: Record<string, string> = {
   'slides:private-font-faces': 'D1',
   'slides:private-font-data': 'D1',
   'pdf:store-page-fingerprints': 'D2',
+  'pdf:store-ai-read-pages': 'D2',
   'app:get-split-role': 'W',
   'app:view-focused': 'W',
   'app:open-dropped-files': 'W',

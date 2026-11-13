@@ -20,6 +20,7 @@ mod open;
 mod ops;
 #[cfg(feature = "probe")]
 mod probe;
+mod project_seam;
 mod state;
 mod wire;
 
@@ -38,6 +39,7 @@ pub use host::{
 };
 #[cfg(feature = "probe")]
 pub use probe::probe_hosts;
+pub use project_seam::ViewDocument;
 pub use state::TabsState;
 
 use self::menus::popup_at;
