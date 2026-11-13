@@ -2186,6 +2186,32 @@ export const guard: Group = {
     ),
     cases: appendCases,
   },
+  // the hard-link cases of `appendData` alone, for the Windows comparison
+  'write-guard.appendData.hardLinks': {
+    ts: guardCall((guard, [root, rel, text, dataDir]) =>
+      guard.appendData(root, rel, text, dataDirOf(dataDir)),
+    ),
+    cases: [
+      {
+        args: [fsCtx(), P, 'c.jsonl', 'x'],
+        files: proj({ [`${DATA}/c.jsonl`]: 'a' }),
+        note: 'a file with one name',
+      },
+      {
+        args: [fsCtx(), P, 'chats/c.jsonl', 'x'],
+        files: proj({
+          [`${DATA}/chats/c.jsonl`]: 'a',
+          'proj/other.jsonl': { link: `${DATA}/chats/c.jsonl` },
+        }),
+        note: 'a file with a second name is refused',
+      },
+      {
+        args: [fsCtx(), P, 'c.jsonl', 'x'],
+        files: proj({ [`${DATA}/c.jsonl`]: 'a', 'outside.jsonl': { link: `${DATA}/c.jsonl` } }),
+        note: 'the second name is outside the project',
+      },
+    ],
+  },
   'write-guard.updateData': {
     ts: guardCall(async (guard, [root, rel, change, dataDir], run) =>
       guard.updateData(root, rel, changeOf(change as Change, run.log), dataDirOf(dataDir)),

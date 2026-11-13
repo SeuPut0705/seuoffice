@@ -9,6 +9,12 @@
  * is called with the page that sends, the program of a session is a fake
  * runner, and what the window does (the calls the fakes saw, in order) is the
  * log. The Rust side runs the same steps against a scripted host.
+ * The manager is the product's own as well (`createAgentManager`) and the Rust
+ * side runs the real `AgentManager` over its start steps. A world with `hold`
+ * keeps the fake program from answering until a `release` step, and an
+ * `invoke` step with `detach` does not wait for its handler: the steps after
+ * it (stop, send, a closed window) run while a start waits, and the `release`
+ * step has the start's answer.
  * `crypto.randomUUID` answers `uuid-1`, `uuid-2` ... so session ids and card
  * keys are the same on both sides. A page is named by its id: the window's
  * pages count from 5, Home is 1, any other page is 77.
@@ -633,14 +639,29 @@ interface Step {
   input?: unknown
   address?: string
   tabs?: 'throws' | unknown[]
+  /** do not wait for the handler: it is held by a program that does not answer yet */
+  detach?: true
+  /** let the held program answer; the result is the held handler's */
+  release?: true
 }
 
 interface World {
   deps: DepsSpec
   dialog: unknown
+  /** the fake program does not answer a start until a `release` step */
+  hold?: boolean
   /** the deck behind a pptx candidate (Rust only: the TypeScript reads the file) */
   deck?: { entries: DeckEntry[] }
   steps: Step[]
+}
+
+/** a promise and the call that settles it */
+const gate = (): { promise: Promise<void>; open: () => void } => {
+  let open: () => void = () => undefined
+  const promise = new Promise<void>((resolve) => {
+    open = resolve
+  })
+  return { promise, open }
 }
 
 /** `crypto.randomUUID` answers `uuid-1`, `uuid-2` ... while `run` runs */
@@ -824,6 +845,9 @@ async function runWindow(world: World, cx: TsContext): Promise<unknown[]> {
     app: { getVersion: () => '0.0.0' },
   })
 
+  const reached = gate()
+  const opened = gate()
+  let pending: unknown
   const hooks: Any[] = []
   const onEvents: Array<(event: unknown) => void> = []
   const runner = (kind: string) => async (options: Any, onEvent: (event: unknown) => void) => {
@@ -840,6 +864,10 @@ async function runWindow(world: World, cx: TsContext): Promise<unknown[]> {
         : { projectRoot: options.projectRoot, mode: options.mode },
     )
     onEvents.push(onEvent)
+    if (world.hold) {
+      reached.open()
+      await opened.promise
+    }
     return {
       send: async (text: string) => log('session.send', text),
       answer: (id: string, a: unknown) => log('session.answer', id, a),
@@ -893,9 +921,25 @@ async function runWindow(world: World, cx: TsContext): Promise<unknown[]> {
         step.invoke === 'homeOpen'
           ? homeChannel.AGENT_HOME_OPEN_CHANNEL
           : api.AGENT_CHANNELS[step.invoke as keyof typeof api.AGENT_CHANNELS]
-      result = plain(
-        await handlers[channel]!({ sender: sender(step.sender ?? 'win') }, ...(step.args ?? [])),
+      const call = handlers[channel]!(
+        { sender: sender(step.sender ?? 'win') },
+        ...(step.args ?? []),
       )
+      if (step.detach) {
+        const settled = await Promise.race([
+          reached.promise.then(() => false),
+          Promise.resolve(call).then(
+            () => true,
+            () => true,
+          ),
+        ])
+        if (settled) result = plain(await call)
+        else pending = call
+      } else result = plain(await call)
+    } else if (step.release) {
+      opened.open()
+      result = plain(await pending)
+      pending = undefined
     } else if (step.isWindowContents) {
       result = mod.isAgentWindowContents(sender(step.isWindowContents))
     } else if (step.sessionEvent !== undefined) {
@@ -1454,6 +1498,43 @@ const windowCases: Case[] = [
     'the list of skills cannot be read',
     {},
     { listSkills: 'throws' },
+  ),
+  caseOf(
+    [
+      OPEN,
+      { ...START, detach: true },
+      invoke('send', 'win', 'uuid-1', 'early'),
+      invoke('openFile', 'win', 'uuid-1', 'a.md'),
+      invoke('stop', 'win', 'uuid-1'),
+      invoke('openFile', 'win', 'uuid-1', 'a.md'),
+      { release: true },
+      invoke('send', 'win', 'uuid-1', 'late'),
+    ],
+    'stop while start awaits: the stop runs at once, the start then answers stopped and writes no preferences',
+    { hold: true },
+  ),
+  caseOf(
+    [
+      OPEN,
+      { ...START, detach: true },
+      { fire: 'closed' },
+      { sessionEvent: 0, event: { type: 'text', text: 'nobody is listening' } },
+      { release: true },
+    ],
+    'the window closes while a start awaits',
+    { hold: true },
+  ),
+  caseOf(
+    [
+      OPEN,
+      { ...START, detach: true },
+      invoke('answer', 'win', 'uuid-1', 'r1', true, 'once'),
+      { release: true },
+      invoke('send', 'win', 'uuid-1', 'hello'),
+      invoke('stop', 'win', 'uuid-1'),
+    ],
+    'an answer while a start awaits finds no program; the start goes on after it',
+    { hold: true },
   ),
 ]
 
