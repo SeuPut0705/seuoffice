@@ -1,13 +1,14 @@
 //! `apps/slides/src/main/template-selection-ipc.ts`: the two channels with
 //! which a slides renderer reads and sets the design template remembered for
 //! its deck. The renderer never names a file: which document is meant is the
-//! calling view's slides session, which batch D1 owns, so it is asked of a
-//! host. The store itself is `main-core`'s [`TemplateSelectionMemory`].
+//! calling view's slides session, which batch D1 provides
+//! ([`SlidesDocuments`], looked up when a call comes). The store itself is
+//! `main-core`'s [`TemplateSelectionMemory`].
 //!
 //! The hooks the TypeScript module also exports (`followTemplateSelection`,
 //! `inheritTemplateSelection`, `moveSlidesTemplateSelection`) are called by
-//! the save and rename paths, not by a channel. They need this port's memory:
-//! it is shared through [`SlidesTemplateSelectionPort::memory`].
+//! D1's save paths and W's rename path: the port provides them
+//! ([`SlidesTemplateSelectionHooks`]) over the same memory.
 
 use std::cell::{OnceCell, RefCell};
 use std::rc::Rc;
@@ -21,21 +22,20 @@ use main_core::slides::template_selection_store::{
 use shell_contract::IpcValue;
 use shell_contract::ViewId;
 use shell_contract::ipc::{CallContext, Responder};
+use shell_contract::provided::Provided;
 use shell_contract::runtime::{AppPaths, PathName};
+use shell_contract::slides::{SlidesDocument, SlidesDocuments, SlidesTemplateSelectionHooks};
 
 use crate::ports::SlidesTemplateSelection;
 use crate::value::{arg, from_json};
 
-/// The slides session state of batch D1, as far as this module reads it
-pub trait SlidesDocuments: Send + Sync {
-    /// `sessions.get(event.sender.id)`: the document the view has open, `None`
-    /// for a window with no document. `id` stays the same for the life of the
-    /// session object (what the `WeakMap` of the store keys by) and `path` is
-    /// '' until the document has been saved. D1 provides this.
-    fn document(&self, view: ViewId) -> Option<TemplateSelectionDocument>;
+/// The store's document from the contract's
+fn store_doc(doc: &SlidesDocument) -> TemplateSelectionDocument {
+    TemplateSelectionDocument {
+        id: doc.id,
+        path: doc.path.clone(),
+    }
 }
-
-pub type SlidesDocumentsHost = Arc<dyn SlidesDocuments>;
 
 /// `TemplateSelection` as the renderer receives it
 fn selection_json(selection: &TemplateSelection) -> JsonValue {
@@ -69,24 +69,32 @@ fn answer(selection: Option<TemplateSelection>) -> IpcValue {
 
 pub struct SlidesTemplateSelectionPort {
     paths: Arc<dyn AppPaths>,
-    documents: SlidesDocumentsHost,
+    provided: Rc<Provided>,
     /// `memory`: created on first use, once the shell has settled the
     /// user-data folder
     memory: OnceCell<Rc<RefCell<TemplateSelectionMemory>>>,
 }
 
 impl SlidesTemplateSelectionPort {
-    pub fn new(paths: Arc<dyn AppPaths>, documents: SlidesDocumentsHost) -> Self {
+    pub fn new(paths: Arc<dyn AppPaths>, provided: Rc<Provided>) -> Self {
         SlidesTemplateSelectionPort {
             paths,
-            documents,
+            provided,
             memory: OnceCell::new(),
         }
     }
 
-    /// `templateSelectionMemory()`: what the save and rename hooks
-    /// (`follow`, `inherit`, `moved`) must use too
-    pub fn memory(&self) -> Rc<RefCell<TemplateSelectionMemory>> {
+    /// `sessions.get(event.sender.id)`: from whichever batch provides it
+    fn document(&self, view: ViewId) -> Option<TemplateSelectionDocument> {
+        self.provided
+            .all::<dyn SlidesDocuments>()
+            .iter()
+            .find_map(|documents| documents.document(view))
+            .map(|doc| store_doc(&doc))
+    }
+
+    /// `templateSelectionMemory()`
+    fn memory(&self) -> Rc<RefCell<TemplateSelectionMemory>> {
         self.memory
             .get_or_init(|| {
                 let user_data = self.paths.path(PathName::UserData);
@@ -107,7 +115,6 @@ impl SlidesTemplateSelection for SlidesTemplateSelectionPort {
         reply: Responder,
     ) {
         let selection = self
-            .documents
             .document(cx.sender.view)
             .and_then(|document| self.memory().borrow().get(&document));
         reply.reply(Ok(answer(selection)))
@@ -119,27 +126,44 @@ impl SlidesTemplateSelection for SlidesTemplateSelectionPort {
         args: Vec<IpcValue>,
         reply: Responder,
     ) {
-        let selection = self
-            .documents
-            .document(cx.sender.view)
-            .and_then(|document| {
-                self.memory()
-                    .borrow_mut()
-                    .set(&document, arg(&args, 0).as_ref())
-            });
+        let selection = self.document(cx.sender.view).and_then(|document| {
+            self.memory()
+                .borrow_mut()
+                .set(&document, arg(&args, 0).as_ref())
+        });
         reply.reply(Ok(answer(selection)))
     }
 }
 
-/// The host the shell inserts for this port
+/// The hooks never fail the save or rename they are called from: the
+/// memory swallows its own errors (`guarded` in the TypeScript)
+impl SlidesTemplateSelectionHooks for SlidesTemplateSelectionPort {
+    fn follow(&self, doc: &SlidesDocument, from_path: &str, to_path: &str) {
+        self.memory()
+            .borrow_mut()
+            .follow(&store_doc(doc), from_path, to_path)
+    }
+
+    fn inherit(&self, previous: Option<&SlidesDocument>, replacement: &SlidesDocument) {
+        self.memory()
+            .borrow_mut()
+            .inherit(previous.map(store_doc).as_ref(), &store_doc(replacement))
+    }
+
+    fn moved(&self, old_path: &str, new_path: &str) {
+        self.memory().borrow_mut().moved(old_path, new_path)
+    }
+}
+
+/// The host the shell inserts for this port; it also provides the hooks
 pub fn factory() -> crate::Factory<dyn SlidesTemplateSelection> {
-    crate::Factory::new(|services, _| {
-        let port: Rc<dyn SlidesTemplateSelection> = Rc::new(SlidesTemplateSelectionPort::new(
+    crate::Factory::new(|services, provided| {
+        let port = Rc::new(SlidesTemplateSelectionPort::new(
             services.paths.clone(),
-            services
-                .hosts
-                .need::<SlidesDocumentsHost>(shell_contract::Batch::A)?,
+            provided.clone(),
         ));
+        provided.add::<dyn SlidesTemplateSelectionHooks>(port.clone());
+        let port: Rc<dyn SlidesTemplateSelection> = port;
         Ok(port)
     })
 }
@@ -164,9 +188,9 @@ mod tests {
     }
 
     #[derive(Default)]
-    struct Sessions(Mutex<HashMap<u32, TemplateSelectionDocument>>);
+    struct Sessions(Mutex<HashMap<u32, SlidesDocument>>);
     impl SlidesDocuments for Sessions {
-        fn document(&self, view: ViewId) -> Option<TemplateSelectionDocument> {
+        fn document(&self, view: ViewId) -> Option<SlidesDocument> {
             self.0.lock().unwrap().get(&view.0).cloned()
         }
     }
@@ -181,8 +205,10 @@ mod tests {
         dir
     }
 
-    fn port(dir: &Path, sessions: &Arc<Sessions>) -> SlidesTemplateSelectionPort {
-        SlidesTemplateSelectionPort::new(Arc::new(Dir(dir.to_path_buf())), sessions.clone())
+    fn port(dir: &Path, sessions: &Rc<Sessions>) -> SlidesTemplateSelectionPort {
+        let provided = Rc::new(Provided::default());
+        provided.add::<dyn SlidesDocuments>(sessions.clone());
+        SlidesTemplateSelectionPort::new(Arc::new(Dir(dir.to_path_buf())), provided)
     }
 
     fn call(view: u32, f: impl FnOnce(&CallContext, Responder)) -> Result<IpcValue, IpcError> {
@@ -241,10 +267,10 @@ mod tests {
         }
     }
 
-    fn open(sessions: &Arc<Sessions>, view: u32, id: u64, path: &str) {
+    fn open(sessions: &Rc<Sessions>, view: u32, id: u64, path: &str) {
         sessions.0.lock().unwrap().insert(
             view,
-            TemplateSelectionDocument {
+            SlidesDocument {
                 id,
                 path: path.into(),
             },
@@ -254,7 +280,7 @@ mod tests {
     #[test]
     fn a_window_with_no_document_answers_null_both_ways() {
         let dir = user_data("nodoc");
-        let sessions = Arc::new(Sessions::default());
+        let sessions = Rc::new(Sessions::default());
         let p = port(&dir, &sessions);
         assert_eq!(get(&p, 7), IpcValue::Null);
         assert_eq!(
@@ -266,7 +292,7 @@ mod tests {
     #[test]
     fn an_unsaved_deck_remembers_its_selection_in_memory_only() {
         let dir = user_data("unsaved");
-        let sessions = Arc::new(Sessions::default());
+        let sessions = Rc::new(Sessions::default());
         open(&sessions, 1, 11, "");
         let p = port(&dir, &sessions);
         assert_eq!(get(&p, 1), IpcValue::Null);
@@ -294,7 +320,7 @@ mod tests {
         let dir = user_data("saved");
         let file = dir.join("deck.pptx");
         std::fs::write(&file, b"x").unwrap();
-        let sessions = Arc::new(Sessions::default());
+        let sessions = Rc::new(Sessions::default());
         open(&sessions, 1, 11, &file.to_string_lossy());
         let first = port(&dir, &sessions);
         let stored = set(&first, 1, selection("saved", "My style", &[]));
@@ -305,7 +331,7 @@ mod tests {
     #[test]
     fn something_that_is_not_a_selection_changes_nothing_and_null_forgets() {
         let dir = user_data("invalid");
-        let sessions = Arc::new(Sessions::default());
+        let sessions = Rc::new(Sessions::default());
         open(&sessions, 1, 11, "");
         let p = port(&dir, &sessions);
         let kept = set(&p, 1, selection("builtin", "aurora", &[]));
@@ -314,5 +340,46 @@ mod tests {
         assert_eq!(set(&p, 1, IpcValue::String("nope".into())), kept);
         assert_eq!(set(&p, 1, IpcValue::Null), IpcValue::Null);
         assert_eq!(get(&p, 1), IpcValue::Null);
+    }
+
+    #[test]
+    fn the_hooks_carry_the_selection_to_a_saved_file_a_new_session_and_a_rename() {
+        let dir = user_data("hooks");
+        let sessions = Rc::new(Sessions::default());
+        open(&sessions, 1, 11, "");
+        let p = port(&dir, &sessions);
+        let stored = set(&p, 1, selection("builtin", "aurora", &[]));
+        // a replacement session in the same window starts with what the old one had
+        let old = SlidesDocument {
+            id: 11,
+            path: String::new(),
+        };
+        let new = SlidesDocument {
+            id: 12,
+            path: String::new(),
+        };
+        p.inherit(Some(&old), &new);
+        open(&sessions, 1, 12, "");
+        assert_eq!(get(&p, 1), stored);
+        // the first save writes it under the file; a fresh port reads it from disk
+        let first = dir.join("a.pptx").to_string_lossy().into_owned();
+        p.follow(&new, "", &first);
+        open(&sessions, 1, 12, &first);
+        assert_eq!(get(&port(&dir, &sessions), 1), stored);
+        // a rename moves the record: nothing stays under the old path
+        let second = dir.join("b.pptx").to_string_lossy().into_owned();
+        p.moved(&first, &second);
+        assert_eq!(get(&port(&dir, &sessions), 1), IpcValue::Null);
+        open(&sessions, 1, 12, &second);
+        assert_eq!(get(&port(&dir, &sessions), 1), stored);
+    }
+
+    #[test]
+    fn the_factory_provides_the_hooks() {
+        let provided = Rc::new(Provided::default());
+        let paths: Arc<dyn AppPaths> = Arc::new(Dir(user_data("factory")));
+        let port = Rc::new(SlidesTemplateSelectionPort::new(paths, provided.clone()));
+        provided.add::<dyn SlidesTemplateSelectionHooks>(port);
+        assert_eq!(provided.all::<dyn SlidesTemplateSelectionHooks>().len(), 1);
     }
 }
