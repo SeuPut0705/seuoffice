@@ -275,8 +275,8 @@ pub trait EpubShell: Send + Sync {
     /// another pane; no probe, or one that threw, is `false`
     fn open_elsewhere(&self, path: &str) -> bool;
     /// `runtime.isPathOpenInTab(path)`: a tab of any editor has the file
-    /// open; `Ok(false)` when the shell gave none, `Err` when it threw
-    fn is_path_open_in_tab(&self, path: &str) -> Result<bool, ()>;
+    /// open; `Ok(false)` when the shell gave none, `Err` with what it threw
+    fn is_path_open_in_tab(&self, path: &str) -> Result<bool, String>;
     /// `runtime.migrateJobRecords(new ResultStore(dir), old, new)`: the job
     /// records moved; `Ok(0)` when the shell gave none
     fn migrate_job_records(
@@ -989,9 +989,9 @@ mod fake {
                 .unwrap_or(false)
         }
 
-        fn is_path_open_in_tab(&self, path: &str) -> Result<bool, ()> {
+        fn is_path_open_in_tab(&self, path: &str) -> Result<bool, String> {
             match self.case.get("openInTab") {
-                Some(Value::String(s)) if s == "throws" => Err(()),
+                Some(Value::String(s)) if s == "throws" => Err("the probe threw".into()),
                 Some(Value::Array(paths)) => Ok(paths.iter().any(|p| p.as_str() == Some(path))),
                 _ => Ok(false),
             }

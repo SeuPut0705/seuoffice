@@ -14,13 +14,15 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::io::{BufRead, Write};
 use std::path::PathBuf;
+use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Condvar, LazyLock, Mutex, mpsc};
 use std::time::{Duration, Instant};
 
 use serde_json::{Value, json};
 use shell_contract::ids::{RequestId, ViewId, WindowId};
-use shell_contract::ipc::{ChannelKind, EventSink, Reply, Sender, Target};
+use shell_contract::ipc::{ChannelKind, EventSink, Registry, Reply, Sender, Target};
+use shell_contract::provided::Provided;
 use shell_contract::runtime::{AppPaths, PathName, Services, Thread, Views, Workers, run_on};
 use shell_contract::value::IpcValue;
 use shell_contract::{Hosts, PRELOADS, Surface};
@@ -160,6 +162,8 @@ impl Tracked {
 thread_local! {
     /// The case's dispatch, on its core thread
     static DISPATCHER: RefCell<Option<Dispatcher>> = const { RefCell::new(None) };
+    /// What the batches provide each other, for the `trigger` calls
+    static PROVIDED: RefCell<Option<Rc<Provided>>> = const { RefCell::new(None) };
 }
 
 fn sender_of(view: &Value) -> Result<Sender, String> {
@@ -233,9 +237,11 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
         hosts: Arc::new(hosts),
     };
 
+    let trigger_services = services.clone();
     let registered = run_on(core.as_ref(), move || {
         match build(&services, BATCHES, Completeness::AsRegistered) {
             Ok(table) => {
+                PROVIDED.with(|p| *p.borrow_mut() = Some(table.provided()));
                 DISPATCHER.with(|d| *d.borrow_mut() = Some(Dispatcher::new(table)));
                 None
             }
@@ -249,14 +255,84 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
     }
 
     let mut calls = Vec::new();
+    // deferred invokes by the index of their call, until an `await` step takes them
+    let mut deferred: HashMap<u64, (ChannelKind, String, mpsc::Receiver<Reply>)> = HashMap::new();
     for (i, call) in case["calls"].as_array().into_iter().flatten().enumerate() {
+        if let Some(at) = call["await"].as_u64() {
+            let answer = match deferred.remove(&at) {
+                Some((kind, channel, rx)) => {
+                    answer(kind, &channel, rx.recv_timeout(CALL_TIMEOUT).ok())
+                }
+                None => json!({ "thrown": format!("no deferred call {at}") }),
+            };
+            let drained = drain(&core, &ui, &tracked);
+            let mut out = json!({
+                "answer": answer,
+                "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
+            });
+            if !drained {
+                out["undrained"] = json!(true);
+            }
+            calls.push(out);
+            continue;
+        }
         let channel = call["channel"].as_str().ok_or("a call without a channel")?;
-        let kind = kind_of(call["kind"].as_str().unwrap_or("invoke"))?;
         let view = call["view"].as_u64().unwrap_or(views[0].view.0 as u64) as u32;
         let sender = *views
             .iter()
             .find(|s| s.view.0 == view)
             .ok_or_else(|| format!("call {i}: no view {view}"))?;
+        if call["kind"].as_str() == Some("trigger") {
+            let services = trigger_services.clone();
+            let name = call["name"].as_str().unwrap_or("").to_string();
+            let unknown = format!("unknown trigger {name}");
+            let args = call["args"].clone();
+            let (answer, drained) = {
+                let reply = run_on(core.as_ref(), move || {
+                    let slot: Rc<RefCell<Option<Reply>>> = Rc::default();
+                    let then = {
+                        let slot = slot.clone();
+                        Box::new(move |r| *slot.borrow_mut() = Some(r))
+                    };
+                    let known = PROVIDED.with(|p| {
+                        let p = p.borrow();
+                        let provided = p.as_ref().expect("the case's provided");
+                        // one arm per batch crate that exports `probe_trigger`,
+                        // matched on the name's prefix; the batch adds its own:
+                        //   match name.split_once('/').map(|(batch, _)| batch) {
+                        //       Some("m") => shell_ipc_m::probe_trigger(
+                        //           &name, ViewId(view), &args, &services, provided, then),
+                        //       _ => false,
+                        //   }
+                        let _ = (&name, view, &args, &services, provided, then);
+                        false
+                    });
+                    known.then(|| slot.borrow_mut().take())
+                });
+                let drained = drain(&core, &ui, &tracked);
+                let answer = match reply {
+                    None => json!({ "thrown": unknown }),
+                    Some(None) => json!({ "timeout": true }),
+                    Some(Some(Ok(value))) => {
+                        let (header, buffers) = wire::encode(&value);
+                        let buffers: Vec<String> = buffers.iter().map(|b| hex(b)).collect();
+                        json!({ "value": header, "buffers": buffers })
+                    }
+                    Some(Some(Err(e))) => json!({ "error": e.to_string() }),
+                };
+                (answer, drained)
+            };
+            let mut out = json!({
+                "answer": answer,
+                "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
+            });
+            if !drained {
+                out["undrained"] = json!(true);
+            }
+            calls.push(out);
+            continue;
+        }
+        let kind = kind_of(call["kind"].as_str().unwrap_or("invoke"))?;
         let buffers: Vec<Vec<u8>> = call["buffers"]
             .as_array()
             .into_iter()
@@ -284,10 +360,15 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
                 );
             })
         }));
-        let reply = rx.recv_timeout(CALL_TIMEOUT).ok();
+        let answer = if call["defer"].as_bool() == Some(true) {
+            deferred.insert(i as u64, (kind, channel.to_string(), rx));
+            json!({ "deferred": true })
+        } else {
+            answer(kind, channel, rx.recv_timeout(CALL_TIMEOUT).ok())
+        };
         let drained = drain(&core, &ui, &tracked);
         let mut out = json!({
-            "answer": answer(kind, channel, reply),
+            "answer": answer,
             "events": std::mem::take(&mut *recorder.events.lock().unwrap()),
         });
         if !drained {
@@ -297,6 +378,7 @@ fn run_case(dir: &str, case: &Value) -> Result<Value, String> {
     }
     run_on(core.as_ref(), || {
         DISPATCHER.with(|d| drop(d.borrow_mut().take()));
+        PROVIDED.with(|p| drop(p.borrow_mut().take()));
     });
     core.stop();
     ui.stop();

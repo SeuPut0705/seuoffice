@@ -471,38 +471,62 @@ impl Docs {
                 )));
             }
         };
-        let fallback = self.default_save_dir();
         let shell = self.shell.clone();
         let docs = Rc::clone(self);
+        let file_name = format!("{title}.{ext}");
+        let name = file_name.clone();
+        // placeAiDocument first; the default folder only when nothing placed it
         kit::on_worker(
             &self.services,
-            move || -> Result<String, String> {
-                let file_name = format!("{title}.{ext}");
+            move || -> Result<(Vec<u8>, Option<String>), String> {
                 let bytes = if ext == "pdf" {
                     shell.print_html_to_pdf(build_printable_html(&title, &content))?
                 } else {
                     content.into_bytes()
                 };
-                match shell.write_new_document(owner, &file_name, bytes.clone()) {
-                    Some(Ok(Some(placed))) => Ok(placed),
+                match shell.write_new_document(owner, &name, bytes.clone()) {
+                    Some(Ok(Some(placed))) => Ok((bytes, Some(placed))),
                     Some(Err(e)) => Err(e),
-                    None | Some(Ok(None)) => {
-                        let path = unique_path_in(&fallback?, &file_name);
-                        std::fs::write(&path, bytes)
-                            .map_err(|e| super::fs_error(&e, "open", &path).message)?;
-                        Ok(path)
-                    }
+                    None | Some(Ok(None)) => Ok((bytes, None)),
                 }
             },
-            move |result| {
-                then(match result {
-                    Ok(path) => {
-                        docs.open_generated_file(&path);
-                        Obj::new().set("ok", true).set("path", path).done()
-                    }
-                    Err(e) => super::failed(e),
-                })
+            move |made| {
+                let bytes = match made {
+                    Err(e) => return then(super::failed(e)),
+                    Ok((_, Some(placed))) => return docs.ai_document_written(Ok(placed), then),
+                    Ok((bytes, None)) => bytes,
+                };
+                let dir = match docs.default_save_dir() {
+                    Ok(dir) => dir,
+                    Err(e) => return then(super::failed(e)),
+                };
+                let d = docs.clone();
+                kit::on_worker(
+                    &docs.services,
+                    move || {
+                        let path = unique_path_in(&dir, &file_name);
+                        std::fs::write(&path, bytes)
+                            .map(|()| path.clone())
+                            .map_err(|e| super::fs_error(&e, "open", &path).message)
+                    },
+                    move |written| d.ai_document_written(written, then),
+                );
             },
         );
+    }
+
+    /// `openGeneratedFile(filePath)` and the answer of `createAiDocument`
+    fn ai_document_written(
+        &self,
+        written: Result<String, String>,
+        then: Box<dyn FnOnce(IpcValue)>,
+    ) {
+        then(match written {
+            Ok(path) => {
+                self.open_generated_file(&path);
+                Obj::new().set("ok", true).set("path", path).done()
+            }
+            Err(e) => super::failed(e),
+        })
     }
 }

@@ -35,7 +35,7 @@ struct T {
 }
 
 fn t(case: serde_json::Value) -> T {
-    let shell = Arc::new(FakeShell::new(&case));
+    let shell = Arc::new(FakeShell::new(&case, Default::default()));
     let host = Arc::clone(&shell);
     let mut rt = Rt::new(move |h| {
         crate::hwp::fakes(h, &case);
@@ -432,7 +432,14 @@ fn save_as_to_a_new_path_tells_the_shell() {
             .unwrap();
     assert_eq!(field(&done, "ok"), &true.into_ipc());
     let target = target.to_string_lossy().into_owned();
-    assert_eq!(t.shell.take_calls(), vec![format!("file_saved 1 {target}")]);
+    assert_eq!(
+        t.shell.take_calls(),
+        vec![
+            "runtime.newDocumentDir 1".to_owned(),
+            format!("openPathProbe {target}"),
+            format!("fileSavedHook 1 {target}"),
+        ]
+    );
     assert_eq!(
         t.rt.invoke_now("hwp:consume-pending", from, vec![]),
         Ok(s(&target))
@@ -549,7 +556,7 @@ fn the_file_menu_sends_the_same_requests_as_the_keys() {
     t.rt.send("hwp:file-command", from, vec![s("importPdf")]);
     let stranger = t.rt.view(2, Surface::Hwp);
     t.rt.send("hwp:file-command", stranger, vec![s("importPdf")]);
-    assert_eq!(t.shell.take_calls(), vec!["import_pdf".to_owned()]);
+    assert_eq!(t.shell.take_calls(), vec!["runtime.importPdf".to_owned()]);
 }
 
 #[test]
@@ -680,7 +687,11 @@ fn a_headless_export_hands_its_path_once_and_ends_with_the_report() {
     assert_eq!(*ok.borrow(), Some(Ok(())));
     assert_eq!(
         t.shell.take_calls(),
-        vec!["load_headless_view 900", "destroy_headless_view 900"]
+        vec![
+            "new BrowserWindow",
+            "webContents.loadURL 900",
+            "BrowserWindow.destroy 900"
+        ]
     );
 
     let (failed, then) = slot();
@@ -769,7 +780,7 @@ fn ctrl_s_and_hangul_alt_keys_ask_for_a_save() {
     assert!(
         t.shell
             .take_calls()
-            .contains(&"editor_takes ctrl-shift-s".to_owned())
+            .contains(&"editorTakes 1 ctrl-shift-s".to_owned())
     );
     assert!(t.editors.before_input(from.view, &key("KeyP", false)));
     assert_eq!(

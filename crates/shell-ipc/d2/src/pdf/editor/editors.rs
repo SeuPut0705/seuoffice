@@ -30,7 +30,7 @@ const COPY_FLUSH_TIMEOUT: Duration = Duration::from_secs(8);
 
 /// `PdfSaveAsOutcome`
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub(crate) enum SaveAsOutcome {
+pub enum SaveAsOutcome {
     Saved,
     Cancelled,
     Failed,
@@ -160,12 +160,12 @@ impl Editor {
 }
 
 /// The PDF editor as the shell, the menus and MCP call it
-pub(crate) struct PdfEditors(pub(super) Rc<Editor>);
+pub struct PdfEditors(pub(super) Rc<Editor>);
 
 impl PdfEditors {
     /// `createPdfView(openPath)`'s `grantAndTrack`: the view starts with its
     /// file (when it exists) as its only grant
-    pub(crate) fn open_view(&self, view: ViewId, open_path: Option<&str>) {
+    pub fn open_view(&self, view: ViewId, open_path: Option<&str>) {
         let ed = &self.0;
         let mut allowed = HashSet::new();
         if let Some(path) = open_path.filter(|p| !p.is_empty() && Path::new(p).exists()) {
@@ -177,7 +177,7 @@ impl PdfEditors {
 
     /// `setWindowOpenHandler` of the view: external links go to the system
     /// browser, nothing opens in the app; answers `deny` always
-    pub(crate) fn window_open(&self, url: &str) {
+    pub fn window_open(&self, url: &str) {
         let options = SafeExternalUrlOptions {
             allowed_protocols: Some(vec!["http:".into(), "https:".into(), "mailto:".into()]),
         };
@@ -187,51 +187,51 @@ impl PdfEditors {
     }
 
     /// `render-process-gone`: a crashed renderer keeps its recovery copy
-    pub(crate) fn render_gone(&self, view: ViewId) {
+    pub fn render_gone(&self, view: ViewId) {
         self.0.rec.borrow_mut().mark_crashed(view);
     }
 
     /// `did-start-loading` (reload): the remount drops the edits and the watch
-    pub(crate) fn start_loading(&self, view: ViewId) {
+    pub fn start_loading(&self, view: ViewId) {
         self.0.with_view(view, |v| v.dirty = false);
         self.0.stop_view_watch(view);
     }
 
     /// `pdfIsDirty(wcId)`
-    pub(crate) fn is_dirty(&self, view: ViewId) -> bool {
+    pub fn is_dirty(&self, view: ViewId) -> bool {
         self.0.is_dirty(view)
     }
 
     /// `clearPdfDirty(wcId)`
-    pub(crate) fn clear_dirty(&self, view: ViewId) {
+    pub fn clear_dirty(&self, view: ViewId) {
         self.0.with_view(view, |v| v.dirty = false);
     }
 
     /// `pdfPathGranted(wcId, path)`
-    pub(crate) fn path_granted(&self, view: ViewId, path: &str) -> bool {
+    pub fn path_granted(&self, view: ViewId, path: &str) -> bool {
         self.0.grants.granted(view, path)
     }
 
     /// `markPdfUntitledPath(path)`: "New PDF" wrote a blank
-    pub(crate) fn mark_untitled_path(&self, path: &str) {
+    pub fn mark_untitled_path(&self, path: &str) {
         let mut st = self.0.st.borrow_mut();
         st.untitled.insert(path.to_owned());
         st.unsaved_blank.insert(path.to_owned());
     }
 
     /// `markPdfUntitledCopy(path)`
-    pub(crate) fn mark_untitled_copy(&self, path: &str) {
+    pub fn mark_untitled_copy(&self, path: &str) {
         self.0.st.borrow_mut().untitled_copy.insert(path.to_owned());
     }
 
     /// `pdfRecoveryIdentity(wcId)`
-    pub(crate) fn recovery_identity(&self, view: ViewId) -> Option<RecoveryIdentity> {
+    pub fn recovery_identity(&self, view: ViewId) -> Option<RecoveryIdentity> {
         self.0.rec.borrow().untitled_identity(view)
     }
 
     /// `writePdfCopiesNow()`: every dirty view writes its copy now; `then`
     /// runs once each answered or timed out
-    pub(crate) fn write_copies_now(&self, then: Box<dyn FnOnce()>) {
+    pub fn write_copies_now(&self, then: Box<dyn FnOnce()>) {
         let ed = &self.0;
         let views: Vec<ViewId> = {
             let st = ed.st.borrow();
@@ -291,7 +291,7 @@ impl PdfEditors {
     }
 
     /// `pdfRecoveryEditor.openFileWithDecision(contents, request)`
-    pub(crate) fn open_file_with_decision(&self, view: ViewId, path: &str, restore: bool) {
+    pub fn open_file_with_decision(&self, view: ViewId, path: &str, restore: bool) {
         let ed = &self.0;
         if ed.services.views.sender_of(view).is_none()
             || !ed.registered(view)
@@ -309,7 +309,7 @@ impl PdfEditors {
     }
 
     /// `pdfRecoveryEditor.openUntitledCopy(contents, request)`
-    pub(crate) fn open_untitled_copy(
+    pub fn open_untitled_copy(
         &self,
         view: ViewId,
         copy: &RecoveryIdentity,
@@ -341,22 +341,22 @@ impl PdfEditors {
     }
 
     /// `pdfRecoveryEditor.isUnprotectable(contents)`
-    pub(crate) fn is_unprotectable(&self, view: ViewId) -> bool {
+    pub fn is_unprotectable(&self, view: ViewId) -> bool {
         self.0.rec.borrow().is_unprotectable(view)
     }
 
     /// `registerPdfRecoveryEditor()`'s sweep of a crash's working files
-    pub(crate) fn sweep_work_files(&self) {
+    pub fn sweep_work_files(&self) {
         self.0.rec.borrow().sweep_work_files(WORK_FILE_MAX_AGE);
     }
 
     /// `discardPdfRecovery(contents)`
-    pub(crate) fn discard_recovery(&self, view: ViewId) {
+    pub fn discard_recovery(&self, view: ViewId) {
         self.0.discard_recovery(view)
     }
 
     /// `pdfCloseCancelled(contents)`
-    pub(crate) fn close_cancelled(&self, view: ViewId) {
+    pub fn close_cancelled(&self, view: ViewId) {
         if self.0.rec.borrow_mut().close_cancelled(view) {
             self.0
                 .emit(view, "pdf:recovery-dropped", vec![false.into_ipc()]);
@@ -364,7 +364,7 @@ impl PdfEditors {
     }
 
     /// `flushPdfSave(contents, flushAll)`: clean views answer true at once
-    pub(crate) fn flush_save(&self, view: ViewId, flush_all: bool, then: Box<dyn FnOnce(bool)>) {
+    pub fn flush_save(&self, view: ViewId, flush_all: bool, then: Box<dyn FnOnce(bool)>) {
         if self.0.services.views.sender_of(view).is_none() || !self.0.is_dirty(view) {
             return then(true);
         }
@@ -372,12 +372,12 @@ impl PdfEditors {
     }
 
     /// `setPdfSaveAsInFlight(contents, inFlight)`
-    pub(crate) fn set_save_as_in_flight(&self, view: ViewId, in_flight: bool) {
+    pub fn set_save_as_in_flight(&self, view: ViewId, in_flight: bool) {
         self.0.set_save_as_in_flight(view, in_flight)
     }
 
     /// `requestPdfSaveAsOutcome(contents, targetPath)`
-    pub(crate) fn request_save_as_outcome(
+    pub fn request_save_as_outcome(
         &self,
         view: ViewId,
         target: &str,
@@ -387,7 +387,7 @@ impl PdfEditors {
     }
 
     /// `requestPdfSaveAs(contents, targetPath)`
-    pub(crate) fn request_save_as(&self, view: ViewId, target: &str, then: Box<dyn FnOnce(bool)>) {
+    pub fn request_save_as(&self, view: ViewId, target: &str, then: Box<dyn FnOnce(bool)>) {
         self.0.request_save_as_outcome(
             view,
             target,
@@ -396,7 +396,7 @@ impl PdfEditors {
     }
 
     /// `requestPdfPageImages(contents, targetPath)`: false = not sent
-    pub(crate) fn request_page_images(&self, view: ViewId, target: &str) -> bool {
+    pub fn request_page_images(&self, view: ViewId, target: &str) -> bool {
         let ed = &self.0;
         if ed.services.views.sender_of(view).is_none()
             || !target.to_ascii_lowercase().ends_with(".png")
