@@ -479,30 +479,14 @@ impl ChatStoreHost for ChatHost {
 
 type ChatStore = ProjectChatStore<Rc<ProjectGuide>, ChatHost>;
 
-/// the errno name (`EACCES`) a Node error's message starts with
-fn errno_of(message: &str) -> Value {
-    match message.split_once(": ") {
-        Some((name, _))
-            if name.len() > 1
-                && name.starts_with('E')
-                && name
-                    .chars()
-                    .all(|c| c.is_ascii_uppercase() || c.is_ascii_digit()) =>
-        {
-            Value::from(name)
-        }
-        _ => Value::Null,
-    }
-}
-
 /// a chat store call as the spec reports it: its answer, or `{ error, code,
 /// refused }` where it threw
 fn chat_answer<T: serde::Serialize>(result: Result<T, ChatStoreError>) -> Value {
     match result {
         Ok(answer) => to_json(&answer),
-        Err(ChatStoreError(message)) => json!({
-            "error": mask_tmp(&message),
-            "code": errno_of(&message),
+        Err(error) => json!({
+            "error": mask_tmp(&error.message),
+            "code": error.code,
             "refused": null,
         }),
     }
