@@ -1,0 +1,63 @@
+name: seuoffice formal
+
+# TLC model checks of formal/manifest.json's models run here, not on a developer machine.
+# The quick tier runs when a model or the code it covers changes; the deep tier on request.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'formal/**'
+      - 'tools/formal/**'
+      - 'packages/collab/src/**'
+      - 'packages/web-platform/src/collab-link.ts'
+      - 'packages/embed/src/collab.ts'
+      - '.github/workflows/seuoffice-formal.yml'
+  workflow_dispatch:
+    inputs:
+      deep:
+        description: Also run the deep tier (hours)
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: formal-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tlc:
+    strategy:
+      fail-fast: false
+      matrix:
+        tier: [quick, deep]
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    steps:
+      - name: Skip the deep tier unless asked
+        id: gate
+        run: echo "run=${{ matrix.tier == 'quick' || inputs.deep == true }}" >> "$GITHUB_OUTPUT"
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.run == 'true'
+      - uses: actions/setup-java@v4
+        if: steps.gate.outputs.run == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Fetch tla2tools 1.8.0 (pre-release asset rebuilt 2026-11-06; a rebuild fails the checksum)
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          curl -fsSL --retry 5 --retry-all-errors -o "$RUNNER_TEMP/tla2tools.jar" https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar
+          echo "e1f11b75c4b5bc4478ba0ac5cb6ae28e40a01b0016bc33e0aa97da22dfdbcd7f  $RUNNER_TEMP/tla2tools.jar" | sha256sum -c -
+      - name: Run the ${{ matrix.tier }} matrix
+        if: steps.gate.outputs.run == 'true'
+        run: |
+          jq -c --arg tier '${{ matrix.tier }}' \
+            '.models[] | select(.kind == "tla" and ((.tier // "quick") == $tier))' formal/manifest.json |
+          while IFS= read -r model; do
+            dir="formal/$(jq -r .dir <<<"$model")"
+            echo "== $(jq -r .id <<<"$model")"
+            bash tools/formal/run-matrix.sh "$dir" "$(jq -r .spec <<<"$model")" \
+              "$PWD/$dir/$(jq -r .matrix <<<"$model")" "$RUNNER_TEMP/tla2tools.jar" || exit 1
+          done

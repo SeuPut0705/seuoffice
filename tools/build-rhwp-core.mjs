@@ -2,12 +2,16 @@
  * Rebuilds vendor/rhwp-core: the rhwp engine (`@rhwp/core`) at the pinned tag
  * with the layout patches in vendor/rhwp-core/patches (decision 0050).
  *
- *   node tools/build-rhwp-core.mjs [--keep]
+ *   node tools/build-rhwp-core.mjs [--keep | --source-only]
  *
  * Fetches the tag into node_modules/.cache/rhwp-core (without the multi-GB
  * sample documents), checks the commit, applies the patches in order, builds
  * with `wasm-pack build --target web --release` and copies the package files
  * into vendor/rhwp-core, recording the WASM hash in its package.json.
+ *
+ * `--source-only` stops after the patches are applied and leaves the tree in
+ * crates/.rhwp-source/<tag>: CI checks the licences of the crates it compiles
+ * (deny.toml), and the Rust crates in crates/ depend on it by path.
  *
  * Needs git, rustup (the tag's rust-toolchain.toml selects the toolchain and
  * the wasm32 target) and wasm-pack. The app build itself never runs this.
@@ -32,7 +36,11 @@ const manifest = JSON.parse(readFileSync(MANIFEST, 'utf8'))
 // `features`, when set, replaces the crate's default features (decision 0107: the PDF
 // import upstream builds in by default stays out until upstream releases it).
 const { tag, branch, commit, patches, features } = manifest.rhwp
-const work = join(ROOT, 'node_modules', '.cache', 'rhwp-core', tag)
+// --source-only keeps the tree outside node_modules, so that `npm ci` leaves it
+// in place
+const work = process.argv.includes('--source-only')
+  ? join(ROOT, 'crates', '.rhwp-source', tag)
+  : join(ROOT, 'node_modules', '.cache', 'rhwp-core', tag)
 
 function run(command, args, cwd, env = process.env) {
   console.log(`> ${command} ${args.join(' ')}`)
@@ -74,6 +82,11 @@ if (head !== commit) {
 }
 for (const patch of patches) {
   run('git', ['apply', '--whitespace=nowarn', join(VENDOR, 'patches', patch)], work)
+}
+
+if (process.argv.includes('--source-only')) {
+  console.log(`vendor/rhwp-core: ${tag} + ${patches.length} patches applied in ${work}`)
+  process.exit(0)
 }
 
 // Local paths would otherwise end up in the WASM (panic locations of the

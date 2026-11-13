@@ -1,0 +1,4 @@
+# Pins the memory project so it survives the repository move to seuput-inc (2026-11-14):
+# the derived name would otherwise follow the new origin and start an empty project.
+workspace = "default"
+project = "seuput0705-seuoffice"

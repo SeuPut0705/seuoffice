@@ -29,7 +29,7 @@
     },
     {
       "kind": "fontBox",
-      "chain": "'Calibri','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif",
+      "chain": "'Calibri','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif",
       "expect": ["--doc-font-box:1.0000", "--doc-font-skew:0.5000"]
     }
   ],
