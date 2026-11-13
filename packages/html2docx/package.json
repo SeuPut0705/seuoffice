@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/html2docx",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "HTML \u2192 DOCX conversion: in-browser intent-tree extraction, screenshots for unmappable visuals, native OOXML generation",

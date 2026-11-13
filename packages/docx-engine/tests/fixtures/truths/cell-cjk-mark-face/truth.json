@@ -14,7 +14,7 @@
         "styles": [
           "font-size:12pt",
           "--doc-line-factor:1.3",
-          "font-family:'SimSun','GenOffice SimSun Latin','GenOffice Songti SC','STSong','Noto Serif CJK SC',serif",
+          "font-family:'SimSun','SeuOffice SimSun Latin','SeuOffice Songti SC','STSong','Noto Serif CJK SC',serif",
           "--doc-lead-gap:0px"
         ]
       },
@@ -28,7 +28,7 @@
         "styles": [
           "font-size:12pt",
           "--doc-line-factor:1.22",
-          "font-family:'Calibri','Carlito GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif"
+          "font-family:'Calibri','SeuOffice Sans GO','Calibri Arabic GO','Noto Sans CJK SC',sans-serif"
         ]
       }
     },

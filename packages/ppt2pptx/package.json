@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/ppt2pptx",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "Legacy PowerPoint 97-2003 import: parse .ppt (OLE2/CFB + MS-PPT records) and rebuild it as .pptx; staged as editable-text foundation, then geometry, then styles",
