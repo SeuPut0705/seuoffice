@@ -2,7 +2,7 @@
   "name": "@seuoffice/html",
   "productName": "SeuOffice HTML",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "HTML editor module: source-of-truth HTML editing with live preview, hosted by shell tabs",
   "main": "out/main/index.js",

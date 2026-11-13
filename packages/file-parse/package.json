@@ -1,14 +1,15 @@
 {
   "name": "@seuoffice/file-parse",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "shared attachment parsing: PDF, Office, HWP and plain-text formats to text; images flagged for multimodal input",
   "exports": {
     ".": "./src/index.ts",
     "./hwp": "./src/hwp.ts",
-    "./redaction": "./src/redaction.ts"
+    "./redaction": "./src/redaction.ts",
+    "./hidden-content": "./src/hidden-content.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit",

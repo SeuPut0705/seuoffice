@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/cli",
   "version": "0.10.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "seuoffice: the SeuOffice command line (create, convert, read, edit and render documents) built on the same engines as the app; runs headless on the app's bundled Node runtime",

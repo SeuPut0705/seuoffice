@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/hwp2docx",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "HWP/HWPX (Hancom) import filter: .hwpx → .docx parsed locally, .hwp read through rhwp (MIT) into HWPX first, rebuilt through docx-engine; the same output as Tiptap JSON",

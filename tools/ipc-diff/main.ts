@@ -32,12 +32,13 @@ import { tmpdir } from 'node:os'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath, pathToFileURL } from 'node:url'
 import { useElectron } from '../main-diff/electron-fake.ts'
+import './vite-imports.ts'
 import { Encoder, WireError, decode } from '../../crates/shell/bridge/wire.ts'
 import { CHANNELS, SPECS } from './channels.ts'
 import { caseElectron } from './fakes.ts'
 import { cleanUp, setUp, snapshot, substitute, unsubstitute } from './folder.ts'
 import { Probe } from './probe.ts'
-import type { Call, Case, Group } from './types.ts'
+import type { Call, Case, Group, LoadContext } from './types.ts'
 
 const tool = dirname(fileURLToPath(import.meta.url))
 const root = resolve(tool, '../..')
@@ -120,13 +121,19 @@ let freshCount = 0
 async function typescriptSide(group: Group, c: Case, dir: string): Promise<unknown> {
   const electron = caseElectron(dir, c)
   useElectron(electron)
-  await group.load({
+  const cx: LoadContext = {
     dir,
     case: c,
     electron,
+    install(names) {
+      Object.assign(electron, names)
+      useElectron(electron)
+    },
     // a query makes a module instance of its own: the module is chosen per case
     fresh: (path) => import(`${pathToFileURL(resolve(root, path)).href}?case=${freshCount++}`),
-  })
+  }
+  await group.load(cx)
+  electron.replayWebContentsCreated()
   const views = c.views ?? [{ view: 1, window: 1, surface: 'Shell' }]
   const calls = []
   for (const call of c.calls) {
@@ -145,9 +152,23 @@ async function typescriptSide(group: Group, c: Case, dir: string): Promise<unkno
       frameId: 1,
       reply: (ch: string, ...a: unknown[]) => sender.send(ch, ...a),
     }
-    const refused = refusal(call, view.surface ?? 'Shell')
+    const refused = kind === 'trigger' ? undefined : refusal(call, view.surface ?? 'Shell')
     let answer: Record<string, unknown>
-    if (kind === 'send') {
+    if (kind === 'trigger') {
+      const run = group.triggers?.[call.name ?? '']
+      if (!run) answer = { thrown: `unknown trigger ${call.name}` }
+      else {
+        try {
+          const e = new Encoder()
+          const value = e.value(
+            await run({ ...cx, contents: electron.contents }, view.view, call.args),
+          )
+          answer = { value, buffers: e.buffers.map(hex) }
+        } catch (err) {
+          answer = { error: String(err) }
+        }
+      }
+    } else if (kind === 'send') {
       const listeners = electron.handlers.on.get(call.channel) ?? []
       answer = {}
       if (refused !== undefined) answer = { thrown: refused }
@@ -195,7 +216,7 @@ async function typescriptSide(group: Group, c: Case, dir: string): Promise<unkno
 async function side(c: Case, run: (c: Case, dir: string) => Promise<unknown>): Promise<string> {
   const dir = mkdtempSync(join(tmpdir(), 'ipc-diff-'))
   try {
-    setUp(dir, c.files)
+    setUp(dir, substitute(c.files, dir))
     const record = await run(substitute(c, dir), dir)
     const text = unsubstitute(JSON.stringify({ record, files: snapshot(dir) }), dir)
     // the temporary file of an atomic write is named after the process and a
@@ -249,6 +270,11 @@ async function runGroup(name: string): Promise<void> {
       continue
     }
     for (const [k, call] of c.calls.entries()) {
+      // a trigger calls no channel: only the events it emitted count
+      if (call.kind === 'trigger') {
+        for (const e of tsRecord.calls[k]?.events ?? []) events.add(e.channel)
+        continue
+      }
       const r = (report.channels[call.channel] ??= { calls: 0, answers: [], withArgs: false })
       r.calls++
       r.withArgs ||= call.args.length > 0
@@ -366,6 +392,14 @@ else if (!groupNames().includes(only)) {
   process.exitCode = 1
 } else if (process.argv.includes('--list')) {
   const group = await loadGroup(only)
-  const seen = new Set(group.cases.flatMap((c) => c.calls.map((call) => call.channel)))
+  const seen = new Set(
+    group.cases.flatMap((c) =>
+      c.calls.filter((call) => call.kind !== 'trigger').map((call) => call.channel),
+    ),
+  )
   for (const channel of [...seen].sort()) console.log(`${only}\t${channel}`)
-} else await runGroup(only)
+} else {
+  await runGroup(only)
+  // a loaded app module may keep timers and watchers that hold the process open
+  process.exit()
+}

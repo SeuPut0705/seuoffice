@@ -2,7 +2,7 @@
   "name": "@seuoffice/pdf",
   "productName": "SeuOffice PDF",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "PDF viewer module: PDF.js render + text layer + thumbnails, hosted by shell tabs",
   "main": "out/main/index.js",

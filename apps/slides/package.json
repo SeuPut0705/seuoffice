@@ -2,7 +2,7 @@
   "name": "@seuoffice/slides",
   "productName": "SeuOffice Slides",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "AI-native pptx editor: byte-fidelity open + high-fidelity Konva render + element-patch save",
   "main": "out/main/index.js",
@@ -52,7 +52,7 @@
   },
   "author": "SeuOffice",
   "build": {
-    "appId": "com.genoffice.slides",
+    "appId": "com.seuput.seuoffice.slides",
     "productName": "SeuOffice Slides",
     "electronVersion": "43.3.0",
     "directories": {

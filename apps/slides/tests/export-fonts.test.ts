@@ -30,15 +30,15 @@ describe('export fonts', () => {
     const names = familyNames([
       "'Noto Sans SC', 'PingFang SC', sans-serif",
       'Calibri, Carlito, Arial, sans-serif',
-      "'Carlito GO'",
+      "'SeuOffice Sans GO'",
     ])
     expect([...names].sort()).toEqual([
       'arial',
       'calibri',
       'carlito',
-      'carlito go',
       'noto sans sc',
       'pingfang sc',
+      'seuoffice sans go',
     ])
   })
 

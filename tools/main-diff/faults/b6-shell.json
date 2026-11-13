@@ -42,10 +42,10 @@
     "fn": ["permission-guard.installShellPermissionGuard"]
   },
   {
-    "name": "permission-guard: the shell's own folder is named docs",
+    "name": "permission-guard: the shell's own folder is the slides page",
     "file": "main-core/src/shell/permission_guard.rs",
     "find": "file_roots: vec![(\"shell\".to_owned(), renderer_dir.to_owned())],",
-    "replace": "file_roots: vec![(\"docs\".to_owned(), renderer_dir.to_owned())],",
+    "replace": "file_roots: vec![(\"slides\".to_owned(), renderer_dir.to_owned())],",
     "fn": ["permission-guard.installShellPermissionGuard"]
   },
   {
@@ -501,10 +501,10 @@
     "fn": ["renderer-watchdog.startRendererWatchdog"]
   },
   {
-    "name": "renderer-watchdog: the first prompt needs growth",
+    "name": "renderer-watchdog: the memory at a prompt is forgotten",
     "file": "main-core/src/shell/renderer_watchdog.rs",
-    "find": "let escalated = state.prompted_memory_mb.is_none()",
-    "replace": "let escalated = false",
+    "find": "state.prompted_memory_mb = Some(memory_mb);",
+    "replace": "state.prompted_memory_mb = None;",
     "fn": ["renderer-watchdog.startRendererWatchdog"]
   },
   {
@@ -564,10 +564,10 @@
     "fn": ["renderer-watchdog.startRendererWatchdog"]
   },
   {
-    "name": "renderer-watchdog: a renderer being asked is asked again",
+    "name": "renderer-watchdog: a renderer torn down before its box is still asked",
     "file": "main-core/src/shell/renderer_watchdog.rs",
-    "find": "        if state.borrow().prompting {\n            return None;",
-    "replace": "        if false {\n            return None;",
+    "find": "        if wc.is_destroyed() {\n            return None;\n        }\n        let state = Rc::clone",
+    "replace": "        let state = Rc::clone",
     "fn": ["renderer-watchdog.startRendererWatchdog"]
   },
   {
@@ -820,7 +820,7 @@
     "file": "main-core/src/shell/updater.rs",
     "find": "        if platform != \"win32\" && platform != \"darwin\" && !is_linux_app_image {",
     "replace": "        if platform != \"win32\" && platform != \"darwin\" && platform != \"linux\" {",
-    "fn": ["updater.initAutoUpdater"]
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
   },
   {
     "name": "updater: the latest channel allows no prerelease",
@@ -953,7 +953,7 @@
     "file": "main-core/src/shell/updater.rs",
     "find": "        if !self.restart.update_restart_requested() {",
     "replace": "        if false {",
-    "fn": ["updater.initAutoUpdater"]
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
   },
   {
     "name": "updater: the installer is silent on Windows",
@@ -995,7 +995,7 @@
     "file": "main-core/src/shell/updater.rs",
     "find": "        if !host.auto_check_enabled() {",
     "replace": "        if false {",
-    "fn": ["updater.initAutoUpdater"]
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
   },
   {
     "name": "updater: the cache is pruned during a download",
@@ -1009,28 +1009,28 @@
     "file": "main-core/src/shell/updater.rs",
     "find": "host.set_timeout(Timer::FakeShow, 1500.0);",
     "replace": "host.set_timeout(Timer::FakeShow, 1000.0);",
-    "fn": ["updater.initAutoUpdater"]
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
   },
   {
     "name": "updater: the preview moves in steps of five",
     "file": "main-core/src/shell/updater.rs",
     "find": "        *pct += 4.0;",
     "replace": "        *pct += 5.0;",
-    "fn": ["updater.initAutoUpdater"]
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
   },
   {
     "name": "updater: the preview finishes one step late",
     "file": "main-core/src/shell/updater.rs",
     "find": "        if now >= 100.0 {",
     "replace": "        if now > 100.0 {",
-    "fn": ["updater.initAutoUpdater"]
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
   },
   {
     "name": "updater: the preview runs in a packaged app",
     "file": "main-core/src/shell/updater.rs",
     "find": "            .filter(|_| !packaged)",
     "replace": "            .filter(|_| packaged)",
-    "fn": ["updater.initAutoUpdater"]
+    "fn": ["updater.initAutoUpdater", "updater.checkForUpdatesNow"]
   },
   {
     "name": "updater: the admin prompt is expected everywhere",

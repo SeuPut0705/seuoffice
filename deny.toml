@@ -1,0 +1,43 @@
+# What may be compiled into a Rust binary or WebAssembly module seuoffice
+# ships. CI's rust-licenses job checks every such graph against this file:
+# the xlsx sidecar (apps/sheets/native/xlsx-engine), its WASI build
+# (apps/sheets/native/xlsx-wasm) and the rhwp engine built into
+# vendor/rhwp-core. Run one locally with
+#   cargo deny --config deny.toml --manifest-path <Cargo.toml> check licenses bans
+#
+# A dependency must offer at least one licence from the list (cargo-deny takes
+# the most favourable branch of an OR expression). Each one only asks for its
+# copyright and licence text to ship, which tools/gen-third-party-notices.mjs
+# collects.
+[licenses]
+version = 2
+allow = [
+  "MIT",
+  "Apache-2.0",
+  "Apache-2.0 WITH LLVM-exception",
+  "BSD-2-Clause",
+  "BSD-3-Clause",
+  "0BSD",
+  "ISC",
+  "Zlib",
+  "Unicode-3.0",
+  "Unlicense",
+  "CC0-1.0",
+  "BSL-1.0",
+  # the JPEG code of rhwp (rhwp-zune-jpeg, rhwp-jpeg-encoder): keep "This
+  # software is based in part on the work of the Independent JPEG Group."
+  "IJG",
+]
+
+# our own crates (publish = false) carry the project's licence, FSL-1.1-ALv2;
+# the list above is for what they depend on
+[licenses.private]
+ignore = true
+
+[bans]
+# a crate pulled in at two versions is reported, not failed
+multiple-versions = "warn"
+# a registry dependency without a version could change under a published
+# Cargo.lock; path dependencies between our own unpublished crates are fine
+wildcards = "deny"
+allow-wildcard-paths = true

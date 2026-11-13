@@ -52,6 +52,41 @@ node tools/ipc-diff/faults.mjs tools/ipc-diff/faults/w.json
 - `$DIR` in any string is the case's folder. `app.getPath(name)` is
   `$DIR/<name>` on both sides (`userData`, `temp`, `documents`, ...).
 
+### A trigger
+
+Some events no handler emits: a native menu item's click, a right-click. A
+`trigger` call runs such a thing on both sides and compares what it emitted:
+
+```ts
+{ channel: 'm/menu:docs:File > Save', kind: 'trigger', name: 'm/menu:docs:File > Save', view: 1, args: [] }
+```
+
+- `name` is `<batch>/<what>` (batch in lower case); `args` is plain JSON.
+  `channel` repeats the name; a trigger is left out of the coverage of
+  channels, and the events it emits count for the coverage of events.
+- TypeScript: `Group.triggers[name](cx, view, args)` runs after `load`
+  (`cx` is the load context plus `contents(view)`). What it resolves to is
+  the answer, `{value, buffers}`; a throw is `{error: String(err)}`, without
+  Electron's remote-method sentence. A name the group lacks answers
+  `{thrown: "unknown trigger <name>"}`.
+- Rust: a batch crate exports, behind its `probe` feature next to
+  `probe_hosts`,
+
+  ```rust
+  pub fn probe_trigger(name: &str, view: ViewId, args: &serde_json::Value,
+      services: &Services, provided: &Rc<Provided>, then: Then<IpcValue>) -> bool
+  ```
+
+  (false: not its name), and calls `then` with the outcome. ipc-probe runs it
+  on the core thread through one `match` arm on the name's prefix in
+  `run_case`; the batch that adds its export adds its arm. Today only `m`.
+  The answer is `{value, buffers}` or `{error: String(err)}`, as above.
+
+- The fakes a trigger needs: `Menu` (`buildFromTemplate`, `popup` recorded as
+  the last popped menu, `setApplicationMenu`, `getApplicationMenu`),
+  `app.on('web-contents-created')` replayed for each view's contents after
+  `load`, and `webContents.on/once/emit`.
+
 ### What is compared
 
 For every call: the answer (`{value, buffers}`, `{error}` with Electron's

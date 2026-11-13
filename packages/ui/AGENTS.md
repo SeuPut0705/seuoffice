@@ -69,7 +69,7 @@
 - "도움 요청용 정보 복사"(`aiConnectInfoText`)에는 상태의 종류·오류 종류·버전 모양의 값·로그인 중인지·종량 허용 여부·ChatGPT 로그인이 실패한 까닭(`loginFailure`의 정해진 이름, HTTP 상태 번호, 식별자 모양의 OAuth 오류 코드. `subscriptionLoginFailureOf`로 한 번 더 거른다)과 `navigator`의 플랫폼·사용자 에이전트만 들어간다. 계정, 경로, 오류 원문은 넣지 않는다. 새 값을 넣을 때도 이 원칙을 지킨다.
 - `free-limit`(무료 연결의 오늘 사용량 소진)은 막힌 실행 종류(`AI_BLOCKED_RUN_KINDS`)다. 문장은 `errFreeLimit`·`errFreeLimitReset`이다.
 - 오류 문장: `aiRunErrorText(lang, cause)`는 구독 계약의 종류에만 문장을 주고 `timeout`·`credits`·`network`·`overloaded`에는 `undefined`를 돌려준다. 그래서 전송의 `errorText` 옵션에 그대로 꽂으면 에디터의 기존 문장이 살아 있다. `unsafe-tools`에 제공자가 없으면 Claude로 읽는다.
-- 문자열은 `createI18n`을 거치므로 사전 안의 `GenOffice`는 출력에서 제품명으로 바뀐다. 사전은 원본의 표기를 유지한다.
+- 제품 이름은 사전에 `SeuOffice`라고 직접 적는다. 원본의 이름을 찍는 문자열은 `{upstream}` 자리 표시를 쓰고, 이름은 부르는 쪽이 `UPSTREAM_PRODUCT_NAME`으로 넘긴다.
 - CSS는 컴포넌트가 스스로 import한다(`ai-subscription.css`, `ai-usage.css`). 새 클래스는 `ai-sub-` 접두사를 쓴다. 에디터가 따로 import해야 하는 CSS는 `package.json`의 `exports`에 올린 것뿐이다.
 - 브랜드 로고는 두 테마에서 공식 색을 유지한다(크롬이 아니라 브랜드 자산). 단색 로고는 `currentColor`를 써서 어두운 테마에서 읽히게 한다.
 
