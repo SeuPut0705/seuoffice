@@ -1,0 +1,255 @@
+[
+  {
+    "name": "paths: a sibling folder sharing a name prefix is inside",
+    "file": "main-core/src/shell/projects/paths.rs",
+    "find": "c.starts_with(&format!(\"{r}{sep}\"))",
+    "replace": "c.starts_with(&r)",
+    "fn": ["paths.isInsideFolder", "paths.relativeInside", "paths.folderRefusal"]
+  },
+  {
+    "name": "paths: case is never folded",
+    "file": "main-core/src/shell/projects/paths.rs",
+    "find": "if folds_case(platform) {",
+    "replace": "if false {",
+    "fn": ["paths.comparablePath", "paths.samePath", "paths.isInsideFolder", "paths.relativeInside"]
+  },
+  {
+    "name": "paths: the user folder is a project folder",
+    "file": "main-core/src/shell/projects/paths.rs",
+    "find": "if same_path(folder, &home, platform) {",
+    "replace": "if false {",
+    "fn": ["paths.folderRefusal", "paths.locationRefusal"]
+  },
+  {
+    "name": "ignore: a folder-only pattern hides files too",
+    "file": "main-core/src/shell/projects/ignore.rs",
+    "find": "(!pattern.dir_only || is_dir) &&",
+    "replace": "true &&",
+    "fn": ["ignore.compileIgnore", "visibility.isAiVisiblePath"]
+  },
+  {
+    "name": "ignore: a trailing double star takes whole folders only",
+    "file": "main-core/src/shell/projects/ignore.rs",
+    "find": "body.push_str(if last { \".*\" } else { \"(?:[^/]+/)*\" });",
+    "replace": "body.push_str(if last { \"(?:[^/]+/)*\" } else { \".*\" });",
+    "fn": ["ignore.compileIgnore"]
+  },
+  {
+    "name": "ignore: an anchored pattern matches at any depth",
+    "file": "main-core/src/shell/projects/ignore.rs",
+    "find": "if anchored { \"\" } else { \"(?:.*/)?\" }",
+    "replace": "if anchored { \"(?:.*/)?\" } else { \"\" }",
+    "fn": ["ignore.compileIgnore"]
+  },
+  {
+    "name": "ignore: a re-include line is a pattern",
+    "file": "main-core/src/shell/projects/ignore.rs",
+    "find": "pattern.starts_with('#') || pattern.starts_with('!')",
+    "replace": "pattern.starts_with('#')",
+    "fn": ["ignore.compileIgnore"]
+  },
+  {
+    "name": "ignore: a line already there is added again",
+    "file": "main-core/src/shell/projects/ignore.rs",
+    "find": "if lines.iter().any(|line| same_line_for(line, rel_path)) {",
+    "replace": "if false {",
+    "fn": ["ignore.addIgnoreLine"]
+  },
+  {
+    "name": "memory: an entry that carries a date gets another",
+    "file": "main-core/src/shell/projects/memory.rs",
+    "find": "if dated().test(text) {",
+    "replace": "if false {",
+    "fn": ["memory.applyMemoryOp", "memory.buildMemoryText"]
+  },
+  {
+    "name": "memory: the Korean header is the English one",
+    "file": "main-core/src/shell/projects/memory.rs",
+    "find": "if base == \"ko\" {",
+    "replace": "if base == \"en\" {",
+    "fn": ["memory.memoryHeader"]
+  },
+  {
+    "name": "memory: adding an entry that is there rewrites the text",
+    "file": "main-core/src/shell/projects/memory.rs",
+    "find": "text: current.map_or_else(|| join_lines(&lines), str::to_owned),",
+    "replace": "text: join_lines(&lines),",
+    "fn": ["memory.applyMemoryOp"]
+  },
+  {
+    "name": "memory: the date's year is cut to two digits",
+    "file": "main-core/src/shell/projects/memory.rs",
+    "find": "\"{}-{}-{}\",\n        pad(date.full_year, 4),",
+    "replace": "\"{}-{}-{}\",\n        pad(date.full_year, 2),",
+    "fn": ["memory.localDate"]
+  },
+  {
+    "name": "memory: the backup name's month is zero based",
+    "file": "main-core/src/shell/projects/memory.rs",
+    "find": "\"{}{}{}\",\n        pad(date.full_year, 4),\n        pad(date.month + 1, 2),",
+    "replace": "\"{}{}{}\",\n        pad(date.full_year, 4),\n        pad(date.month, 2),",
+    "fn": ["memory.memoryBackupName"]
+  },
+  {
+    "name": "folder-files: a file with a second hard link is plain",
+    "file": "main-core/src/shell/projects/folder_files.rs",
+    "find": "link_count(&info) > 1",
+    "replace": "link_count(&info) > 2",
+    "fn": ["folder-files.plainFileIn", "folder-files.readFolderText", "trust.readHashedTexts"]
+  },
+  {
+    "name": "folder-files: a link on the way is no folder",
+    "file": "main-core/src/shell/projects/folder_files.rs",
+    "find": "if !last && !info.is_dir() {",
+    "replace": "if false {",
+    "fn": [
+      "folder-files.plainFileIn",
+      "folder-files.readFolderText",
+      "folder-files.realPlainFileIn"
+    ]
+  },
+  {
+    "name": "folder-files: a BOM stays in the text",
+    "file": "main-core/src/shell/projects/folder_files.rs",
+    "find": "Some(text.strip_prefix('\\u{feff}').unwrap_or(&text).to_owned())",
+    "replace": "Some(text.into_owned())",
+    "fn": [
+      "folder-files.readFolderText",
+      "folder-files.readDataText",
+      "folder-files.readProjectFile"
+    ]
+  },
+  {
+    "name": "folder-files: an empty current data folder counts as in use",
+    "file": "main-core/src/shell/projects/folder_files.rs",
+    "find": "let mut in_use = |name: &str| real_folder(name) && folder_holds_data(&join(&[root, name]), 3);",
+    "replace": "let mut in_use = |name: &str| real_folder(name);",
+    "fn": ["folder-files.dataDirName", "trust.scanForTrust"]
+  },
+  {
+    "name": "folder-files: a data folder name is matched with its case",
+    "file": "main-core/src/shell/projects/folder_files.rs",
+    "find": "let lower = segment.to_lowercase();",
+    "replace": "let lower = segment.to_owned();",
+    "fn": ["folder-files.isDataDirName"]
+  },
+  {
+    "name": "folder-files: a project name is not cut",
+    "file": "main-core/src/shell/projects/folder_files.rs",
+    "find": ".take(PROJECT_NAME_MAX_CHARS)",
+    "replace": ".take(PROJECT_NAME_MAX_CHARS * 2)",
+    "fn": ["folder-files.cleanProjectName", "folder-files.readProjectFile"]
+  },
+  {
+    "name": "folder-files: a missing creation time is not the epoch",
+    "file": "main-core/src/shell/projects/folder_files.rs",
+    "find": "_ => \"1970-01-01T00:00:00.000Z\".to_owned(),",
+    "replace": "_ => \"1970-01-01T00:00:00.001Z\".to_owned(),",
+    "fn": ["folder-files.readProjectFile"]
+  },
+  {
+    "name": "visibility: a drive letter path is judged like any other",
+    "file": "main-core/src/shell/projects/visibility.rs",
+    "find": "|| (first.is_some_and(|c| c.is_ascii_alphabetic()) && chars.next() == Some(':'))",
+    "replace": "|| false",
+    "fn": ["visibility.isAiVisiblePath"]
+  },
+  {
+    "name": "visibility: a save's temp name is hidden as a folder only",
+    "file": "main-core/src/shell/projects/visibility.rs",
+    "find": "if !segment_is_dir && is_save_temp_name(name) {",
+    "replace": "if segment_is_dir && is_save_temp_name(name) {",
+    "fn": ["visibility.isAiVisiblePath"]
+  },
+  {
+    "name": "visibility: the last segment is never a folder",
+    "file": "main-core/src/shell/projects/visibility.rs",
+    "find": "let segment_is_dir = index < segments.len() - 1 || is_dir;",
+    "replace": "let segment_is_dir = index < segments.len() - 1;",
+    "fn": ["visibility.isAiVisiblePath"]
+  },
+  {
+    "name": "trust: an array line is no foreign record",
+    "file": "main-core/src/shell/projects/trust.rs",
+    "find": "Ok(JsonValue::Array(_)) => return true,",
+    "replace": "Ok(JsonValue::Array(_)) => continue,",
+    "fn": ["trust.hasForeignMessage"]
+  },
+  {
+    "name": "trust: a lone carriage return does not end a line",
+    "file": "main-core/src/shell/projects/trust.rs",
+    "find": "b'\\r' => {",
+    "replace": "b'\\x00' => {",
+    "fn": ["trust.hasForeignMessage"]
+  },
+  {
+    "name": "trust: a chat of another project is listed",
+    "file": "main-core/src/shell/projects/trust.rs",
+    "find": "if info.project_id != project_id {",
+    "replace": "if false {",
+    "fn": ["trust.listForeignChats", "trust.scanForTrust"]
+  },
+  {
+    "name": "trust: a blank file is shown",
+    "file": "main-core/src/shell/projects/trust.rs",
+    "find": "text.filter(|text| !trim(text).is_empty())",
+    "replace": "text.filter(|text| !text.is_empty())",
+    "fn": ["trust.scanForTrust"]
+  },
+  {
+    "name": "agent-sessions: the upstream app's home folder is not protected",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "join(&[home_dir, \".genoffice\"]),",
+    "replace": "join(&[home_dir, \".genoffice2\"]),",
+    "fn": ["agent-sessions.agentProtectedPaths", "paths.folderRefusal"]
+  },
+  {
+    "name": "folder-tree: Office lock files are shown",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "if name.starts_with('.') || name.starts_with(\"~$\") {",
+    "replace": "if name.starts_with('.') {",
+    "fn": ["folder-tree.isHiddenEntry", "visibility.isAiVisiblePath"]
+  },
+  {
+    "name": "folder-tree: draw.io pictures as PNG are not tree files",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "    \"drawio.png\",\n",
+    "replace": "    \"drawio.jpg\",\n",
+    "fn": ["folder-tree.isSupportedTreeFile", "folder-tree.TREE_FILE_EXTENSIONS"]
+  },
+  {
+    "name": "user-skills: a .DS_Store is data",
+    "file": "main-core/src/packages/ai_provider/user_skills_sources.rs",
+    "find": "name != \".DS_Store\"",
+    "replace": "true",
+    "fn": ["sources.folderHoldsData", "folder-files.dataDirName"]
+  },
+  {
+    "name": "user-skills: one level too deep",
+    "file": "main-core/src/packages/ai_provider/user_skills_sources.rs",
+    "find": "depth > 1 &&",
+    "replace": "depth > 0 &&",
+    "fn": ["sources.folderHoldsData"]
+  },
+  {
+    "name": "project-store: the backup pattern counts five time digits",
+    "file": "main-core/src/packages/project_store.rs",
+    "find": "-\\d{6}\\.bak",
+    "replace": "-\\d{5}\\.bak",
+    "fn": ["folder-api.MEMORY_BACKUP_PATTERN"]
+  },
+  {
+    "name": "project-store: the longest project name",
+    "file": "main-core/src/packages/project_store.rs",
+    "find": "pub const PROJECT_NAME_MAX_CHARS: usize = 128;",
+    "replace": "pub const PROJECT_NAME_MAX_CHARS: usize = 127;",
+    "fn": ["folder-api.PROJECT_NAME_MAX_CHARS", "folder-files.cleanProjectName"]
+  },
+  {
+    "name": "file-index: the scan depth",
+    "file": "main-core/src/shell/projects/stand_ins.rs",
+    "find": "pub const SCAN_MAX_DEPTH: u32 = 32;",
+    "replace": "pub const SCAN_MAX_DEPTH: u32 = 31;",
+    "fn": ["scan.SCAN_MAX_DEPTH"]
+  }
+]

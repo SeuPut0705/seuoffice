@@ -23,5 +23,6 @@ pub mod registry;
 pub mod run_error;
 pub mod search_settings;
 pub mod settings_secrets;
+pub mod user_skills_sources;
 pub mod user_skills_states;
 pub mod watchdog;
