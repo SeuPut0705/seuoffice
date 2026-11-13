@@ -24,6 +24,7 @@ pub(crate) mod shell_tabs;
 pub mod unbuilt;
 pub mod w;
 pub mod window;
+pub(crate) mod window_open;
 
 // one file per other batch's hosts; each is `install` and nothing else until its batch fills it
 pub mod crash; // U
