@@ -7,7 +7,7 @@ use docx_engine::save::parts::text_patch::patch_paragraph_texts;
 use docx_engine::settings::edited_comment_model_text;
 use docx_engine::withheld::{
     comment_entries, first_mark_label, has_mark_element, has_withheld_trace, over_withheld,
-    over_withheld_model_text, parse_entry, runs_text, with_redact_namespace, withheld_label_of,
+    over_withheld_model_text, parse_entry, withheld_block_label, withheld_part_label, hidden_run_properties, runs_text, with_redact_namespace, withheld_label_of,
     withheld_node, withheld_text,
 };
 use ooxml_xml::XNode;
@@ -43,6 +43,9 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
             let absent: Option<bool> = super::arg(args, "absent")?;
             value(withheld_label_of((absent != Some(true)).then_some(text)))
         }
+        "withheldPartLabel" => optional(withheld_part_label(text)),
+        "withheldBlockLabel" => optional(withheld_block_label(text)),
+        "hiddenRunProperties" => value(hidden_run_properties(text)),
         "hasWithheldTrace" => value(has_withheld_trace(text)),
         "hasMarkElement" => over_node(text, |node| value(has_mark_element(node))),
         "withheldNode" => over_node(text, |node| {

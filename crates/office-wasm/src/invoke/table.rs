@@ -274,11 +274,11 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "hasDuplicateStyleRefs" => r_has_duplicate_style_refs(env, args),
         "hashProtectionPassword" => r_hash_protection_password(env, args),
         "hasUniversalMeasures" => r_has_universal_measures(env, args),
-        "hasWithheldTrace" => r_has_withheld_trace(env, args),
         "hfMovablePictureFrag" => r_hf_movable_picture_frag(env, args),
         "hfReferenceRId" => r_hf_reference_r_id(env, args),
         "hfReferenceTags" => r_hf_reference_tags(env, args),
         "hfReferenceType" => r_hf_reference_type(env, args),
+        "hiddenRunProperties" => r_hidden_run_properties(env, args),
         "ifBranch" => r_if_branch(env, args),
         "injectInkRunsIntoParagraph" => r_inject_ink_runs_into_paragraph(env, args),
         "injectIntoSectPr" => r_inject_into_sect_pr(env, args),
@@ -456,6 +456,7 @@ pub fn invoke(env: &mut InvokeEnv<'_>, name: &str, args: Args<'_>) -> Out {
         "vmlShapeTypeTable" => r_vml_shape_type_table(env, args),
         "vmlStyleProp" => r_vml_style_prop(env, args),
         "w3cdtfStamp" => routes::w3cdtf_stamp(env, &args.resolved()?),
+        "withheldBlockLabel" => r_withheld_block_label(env, args),
         "withheldLabelOf" => r_withheld_label_of(env, args),
         "withheldNode" => r_withheld_node(env, args),
         "withheldText" => r_withheld_text(env, args),
@@ -1021,12 +1022,6 @@ fn r_has_universal_measures(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     Ok(Some(to_json(&r)?))
 }
 
-fn r_has_withheld_trace(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
-    let p0 = rstr(args, 0)?;
-    let r = docx_engine::withheld::has_withheld_trace(p0);
-    Ok(Some(to_json(&r)?))
-}
-
 fn r_hf_movable_picture_frag(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::parse::tables::hf::hf_movable_picture_frag(p0);
@@ -1049,6 +1044,12 @@ fn r_hf_reference_tags(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
 fn r_hf_reference_type(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let r = docx_engine::section::read::hf_reference_type(p0);
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_hidden_run_properties(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::withheld::hidden_run_properties(p0);
     Ok(Some(to_json(&r)?))
 }
 
@@ -2224,6 +2225,12 @@ fn r_vml_style_prop(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
     let p0 = rstr(args, 0)?;
     let p1 = rstr(args, 1)?;
     let r = docx_engine::vml::vml_style_prop(p0, p1).map_err(|error| error.to_string())?;
+    Ok(Some(to_json(&r)?))
+}
+
+fn r_withheld_block_label(env: &mut InvokeEnv<'_>, args: Args<'_>) -> Out {
+    let p0 = rstr(args, 0)?;
+    let r = docx_engine::withheld::withheld_block_label(p0);
     Ok(Some(to_json(&r)?))
 }
 
