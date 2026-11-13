@@ -11,8 +11,8 @@ use pptx_engine::slide_ids::{
 };
 use pptx_engine::table_grid::{GridCell, table_row_grid_cols};
 use pptx_engine::xml_utils::{
-    as_xml_node, attribute_of, c_sld_name_of, creation_id_ext_xml, creation_id_xml, decode_xml,
-    default_content_type_for, element_range, escape_xml_attr, escape_xml_text,
+    as_xml_node, attribute_of, c_sld_name_of, canonical_xml, creation_id_ext_xml, creation_id_xml,
+    decode_xml, default_content_type_for, element_range, escape_xml_attr, escape_xml_text,
     has_content_type_override, has_default_for, max_relationship_id_number, root_prefix_of,
     with_relationship_ids, xml_array,
 };
@@ -83,6 +83,7 @@ pub fn dispatch(function: &str, text: &str, args: &Value) -> Returned {
         "xml-utils.asXmlNode" => value(as_xml_node(args.get("value"))),
         "xml-utils.xmlArray" => value(xml_array(args.get("value")).collect::<Vec<_>>()),
         "xml-utils.decodeXml" => value(decode_xml(text)),
+        "xml-utils.canonicalXml" => value(canonical_xml(text)?),
         "xml-utils.escapeXmlText" => value(escape_xml_text(text)),
         "xml-utils.escapeXmlAttr" => value(escape_xml_attr(text)),
         "xml-utils.percentFraction" => {

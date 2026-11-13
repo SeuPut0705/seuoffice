@@ -12,12 +12,9 @@
  *    into solid colors over the white/table background. Unknown GUIDs return undefined
  *    (keeping the unstyled rendering).
  */
-import { xmlParser } from './xml-parser'
-import { applyColorMods } from './color'
-import { resolveSchemeColor, type Theme } from './theme'
-import { ownValue } from './own-value'
+import { type Theme } from './theme'
 import type { Fill, Stroke } from './types'
-import { asXmlNode, xmlArray, type XmlNode } from './xml-utils'
+import { call } from './engine'
 
 /** Style for one table region (whole table / banding / first row, etc.). */
 export interface TablePartStyle {
@@ -30,7 +27,6 @@ export interface TablePartStyle {
   /** <a:tcTxStyle><a:font>: explicit per-bucket typefaces */
   font?: { latin?: string; ea?: string; cs?: string }
 }
-
 export interface TableStyleDef {
   wholeTbl?: TablePartStyle
   band1H?: TablePartStyle
@@ -54,7 +50,6 @@ export interface TableStyleDef {
   /** <a:tblBg><a:fillRef>: theme fillStyleLst template ref (parse.ts instantiates it with phClr) */
   tblBgRef?: { idx: number; phClr?: string }
 }
-
 /** Region toggles from a:tblPr. */
 export interface TableStyleFlags {
   firstRow: boolean
@@ -64,7 +59,6 @@ export interface TableStyleFlags {
   bandRow: boolean
   bandCol: boolean
 }
-
 type BuiltinFamily =
   | 'themed1'
   | 'themed2'
@@ -77,7 +71,6 @@ type BuiltinFamily =
   | 'medium4'
   | 'dark1'
   | 'dark2'
-
 // 74 built-in style GUIDs -> family + accent (GUID table from official Microsoft docs hh273476).
 // themed1 without accent = No Style, No Grid; themed2 without accent = No Style, Table Grid.
 const BUILTIN: Record<string, { family: BuiltinFamily; accent?: string }> = {
@@ -156,7 +149,6 @@ const BUILTIN: Record<string, { family: BuiltinFamily; accent?: string }> = {
   '{91EBBBCC-DAD2-459C-BE2E-F6DE35CF9A28}': { family: 'dark2', accent: 'accent3' },
   '{46F890A9-2807-4EBB-B81D-B2AA78EC7F39}': { family: 'dark2', accent: 'accent5' },
 }
-
 const FAMILY_LABEL: Record<BuiltinFamily, string> = {
   themed1: 'Themed Style 1',
   themed2: 'Themed Style 2',
@@ -170,7 +162,6 @@ const FAMILY_LABEL: Record<BuiltinFamily, string> = {
   dark1: 'Dark Style 1',
   dark2: 'Dark Style 2',
 }
-
 export interface BuiltinTableStyle {
   id: string
   /** Gallery name as PowerPoint shows it ("Medium Style 2 - Accent 1") */
@@ -178,7 +169,6 @@ export interface BuiltinTableStyle {
   family: BuiltinFamily
   accent?: string
 }
-
 function builtinName(family: BuiltinFamily, accent?: string): string {
   if (!accent) {
     if (family === 'themed1') return 'No Style, No Grid'
@@ -190,7 +180,6 @@ function builtinName(family: BuiltinFamily, accent?: string): string {
   if (family === 'dark2') return `${FAMILY_LABEL[family]} - Accent ${n}/Accent ${Number(n) + 1}`
   return `${FAMILY_LABEL[family]} - Accent ${n}`
 }
-
 /** The 74 PowerPoint built-in table styles, gallery order. */
 export const BUILTIN_TABLE_STYLES: readonly BuiltinTableStyle[] = Object.entries(BUILTIN).map(
   ([id, def]) => ({
@@ -200,263 +189,17 @@ export const BUILTIN_TABLE_STYLES: readonly BuiltinTableStyle[] = Object.entries
     ...(def.accent ? { accent: def.accent } : {}),
   }),
 )
-
 /** Gallery name of a built-in style id, or undefined for custom/unknown ids. */
 export function builtinTableStyleName(styleId: string | undefined): string | undefined {
-  if (!styleId) return undefined
-  const def = BUILTIN[styleId]
-  return def ? builtinName(def.family, def.accent) : undefined
+  return call('builtinTableStyleName', [styleId], { undef: true }) as never
 }
-
 /**
  * GUID for a built-in style given its GUID or gallery name (case-insensitive,
  * "Dark Style 2 - Accent 2" resolves to the Accent 1/Accent 2 definition).
  */
 export function resolveBuiltinTableStyleId(nameOrId: string): string | undefined {
-  const key = nameOrId.trim()
-  if (/^\{[0-9A-Fa-f-]{36}\}$/.test(key)) {
-    const upper = key.toUpperCase()
-    return BUILTIN[upper] ? upper : undefined
-  }
-  const norm = key.toLowerCase().replace(/\s+/g, ' ')
-  for (const s of BUILTIN_TABLE_STYLES) {
-    if (s.name.toLowerCase() === norm) return s.id
-    if (s.family === 'dark2' && s.accent) {
-      const n = Number(s.accent.slice('accent'.length))
-      for (const alt of [n, n + 1]) {
-        if (norm === `dark style 2 - accent ${alt}`) return s.id
-      }
-    }
-  }
-  return undefined
+  return call('resolveBuiltinTableStyleId', [nameOrId], { undef: true }) as never
 }
-
-/** Compatibility: the made-up "no style" GUID this app used to write (not in the official table). */
-export const LEGACY_NO_STYLE = '{2D5ABB26-0587-4C30-8999-92F81FD0307D}'
-
-/** tint: keep pct of the color and blend the rest toward white (OOXML <a:tint val="20000"> = 20%). */
-function tint(hex: string, pct: number): string {
-  return mixToward(hex, pct, 255)
-}
-
-/** shade: keep pct of the color and blend the rest toward black (OOXML <a:shade>). */
-function shade(hex: string, pct: number): string {
-  return mixToward(hex, pct, 0)
-}
-
-function mixToward(hex: string, pct: number, target: number): string {
-  const h = hex.replace('#', '')
-  const ch = (i: number) => parseInt(h.slice(i, i + 2), 16)
-  const mix = (c: number) => Math.round(target * (1 - pct) + c * pct)
-  const to = (c: number) => c.toString(16).toUpperCase().padStart(2, '0')
-  return `#${to(mix(ch(0)))}${to(mix(ch(2)))}${to(mix(ch(4)))}`
-}
-
-/** Pre-blended solid color of fg composited over bg at alpha opacity (banded alpha fill -> solid color). */
-function over(fg: string, alpha: number, bg: string): string {
-  const f = fg.replace('#', '')
-  const b = bg.replace('#', '')
-  const ch = (s: string, i: number) => parseInt(s.slice(i, i + 2), 16)
-  const mix = (i: number) => Math.round(ch(f, i) * alpha + ch(b, i) * (1 - alpha))
-  const to = (c: number) => c.toString(16).toUpperCase().padStart(2, '0')
-  return `#${to(mix(0))}${to(mix(2))}${to(mix(4))}`
-}
-
-const solid = (color: string): Fill => ({ type: 'solid', color })
-const line = (color: string, width = 12700): Stroke => ({ fill: solid(color), width })
-
-/**
- * Built-in style family -> region styles (color rules follow the LibreOffice
- * predefined-table-styles implementation; colors are resolved to final values via the
- * theme; banded alpha is pre-blended against the underlying background).
- */
-function builtinStyle(
-  family: BuiltinFamily,
-  accentName: string | undefined,
-  theme: Theme | undefined,
-): TableStyleDef {
-  const lt1 = resolveSchemeColor('lt1', theme) ?? '#FFFFFF'
-  const dk1 = resolveSchemeColor('dk1', theme) ?? '#000000'
-  const accent = accentName ? (resolveSchemeColor(accentName, theme) ?? '#4472C4') : undefined
-
-  switch (family) {
-    case 'themed1': {
-      if (!accent) return { wholeTbl: { textColor: dk1 } } // No Style, No Grid
-      const band = solid(over(accent, 0.4, lt1))
-      return {
-        wholeTbl: { textColor: dk1 },
-        firstRow: { fill: solid(accent), textColor: lt1 },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        insideH: line(accent),
-        insideV: line(accent),
-        outer: { l: line(accent), r: line(accent), t: line(accent), b: line(accent) },
-        firstRowBottom: line(lt1),
-      }
-    }
-    case 'themed2': {
-      if (!accent) {
-        // No Style, Table Grid: all-dk1 grid
-        return {
-          wholeTbl: { textColor: dk1 },
-          insideH: line(dk1),
-          insideV: line(dk1),
-          outer: { l: line(dk1), r: line(dk1), t: line(dk1), b: line(dk1) },
-        }
-      }
-      const outer = line(tint(accent, 0.5))
-      const band = solid(over(lt1, 0.2, accent))
-      return {
-        wholeTbl: { fill: solid(accent), textColor: lt1 },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        outer: { l: outer, r: outer, t: outer, b: outer },
-        firstRowBottom: line(lt1),
-        lastRowTop: line(lt1),
-      }
-    }
-    case 'light1': {
-      const a = accent ?? dk1
-      const band = solid(over(a, 0.2, lt1))
-      return {
-        wholeTbl: { textColor: dk1 },
-        firstRow: { bold: true, textColor: dk1 },
-        firstCol: { bold: true },
-        lastCol: { bold: true, textColor: dk1 },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        outer: { t: line(a), b: line(a) },
-        firstRowBottom: line(a),
-        lastRowTop: line(a),
-      }
-    }
-    case 'light2': {
-      const a = accent ?? dk1
-      return {
-        wholeTbl: { textColor: dk1 },
-        firstRow: { fill: solid(a), textColor: lt1, bold: true },
-        outer: { l: line(a), r: line(a), t: line(a), b: line(a) },
-        lastRowTop: line(a),
-      }
-    }
-    case 'light3': {
-      const a = accent ?? dk1
-      const band = solid(over(a, 0.2, lt1))
-      return {
-        wholeTbl: { textColor: dk1 },
-        firstRow: { textColor: a, bold: true },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        insideH: line(a),
-        insideV: line(a),
-        outer: { l: line(a), r: line(a), t: line(a), b: line(a) },
-        firstRowBottom: line(a),
-        lastRowTop: line(a),
-      }
-    }
-    case 'medium1': {
-      const a = accent ?? dk1
-      const band = solid(tint(a, 0.2))
-      return {
-        wholeTbl: { fill: solid(lt1), textColor: dk1 },
-        firstRow: { fill: solid(a), textColor: lt1, bold: true },
-        lastRow: { fill: solid(lt1), bold: true },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        insideH: line(a),
-        outer: { l: line(a), r: line(a), t: line(a), b: line(a) },
-        lastRowTop: line(a),
-      }
-    }
-    case 'medium2': {
-      const a = accent ?? dk1
-      return {
-        wholeTbl: { fill: solid(tint(a, 0.2)), textColor: dk1 },
-        band1H: { fill: solid(tint(a, 0.4)) },
-        band1V: { fill: solid(tint(a, 0.4)) },
-        firstRow: { fill: solid(a), textColor: lt1, bold: true },
-        lastRow: { fill: solid(a), textColor: lt1, bold: true },
-        firstCol: { fill: solid(a), textColor: lt1, bold: true },
-        lastCol: { fill: solid(a), textColor: lt1, bold: true },
-        insideH: line(lt1),
-        insideV: line(lt1),
-        outer: { l: line(lt1), r: line(lt1), t: line(lt1), b: line(lt1) },
-        firstRowBottom: line(lt1),
-        lastRowTop: line(lt1),
-      }
-    }
-    case 'medium3': {
-      const a = accent ?? dk1
-      const band = solid(tint(dk1, 0.2))
-      return {
-        wholeTbl: { fill: solid(lt1), textColor: dk1 },
-        firstRow: { fill: solid(a), textColor: lt1, bold: true },
-        lastRow: { fill: solid(lt1), bold: true },
-        firstCol: { fill: solid(a), textColor: lt1 },
-        lastCol: { fill: solid(a), textColor: lt1 },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        outer: { t: line(dk1), b: line(dk1) },
-        firstRowBottom: line(dk1),
-        lastRowTop: line(dk1),
-      }
-    }
-    case 'medium4': {
-      const a = accent ?? dk1
-      const band = solid(tint(a, 0.4))
-      return {
-        wholeTbl: { fill: solid(tint(a, 0.2)), textColor: dk1 },
-        firstRow: { fill: solid(tint(a, 0.2)), textColor: a, bold: true },
-        lastRow: { fill: solid(tint(dk1, 0.2)) },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        insideH: line(a),
-        insideV: line(a),
-        outer: { l: line(a), r: line(a), t: line(a), b: line(a) },
-        lastRowTop: line(dk1),
-      }
-    }
-    case 'dark1': {
-      // accent variants use shade (dark background, light text); the no-accent variant uses dk1 tint (light gray background, dark text)
-      const a = accent ?? dk1
-      const tf = accent ? shade : tint
-      const body = accent ? lt1 : dk1
-      return {
-        wholeTbl: { fill: solid(tf(a, 0.2)), textColor: body },
-        firstRow: { fill: solid(dk1), textColor: lt1, bold: true },
-        lastRow: { fill: solid(tf(a, 0.2)), textColor: body, bold: true },
-        firstCol: { fill: solid(tf(a, 0.6)) },
-        lastCol: { fill: solid(tf(a, 0.6)) },
-        band1H: { fill: solid(tf(a, 0.4)) },
-        band1V: { fill: solid(tf(a, 0.4)) },
-        firstRowBottom: line(lt1),
-        lastRowTop: line(lt1),
-      }
-    }
-    case 'dark2': {
-      const a = accent ?? dk1
-      // Header paired colors: base=dk1, Accent1->accent2 / Accent3->accent4 / Accent5->accent6
-      const headerPair: Record<string, string> = {
-        accent1: 'accent2',
-        accent3: 'accent4',
-        accent5: 'accent6',
-      }
-      const header = accentName
-        ? (resolveSchemeColor(headerPair[accentName] ?? accentName, theme) ?? dk1)
-        : dk1
-      const band = solid(tint(a, 0.4))
-      return {
-        wholeTbl: { fill: solid(tint(a, 0.2)), textColor: dk1 },
-        firstRow: { fill: solid(header), textColor: lt1, bold: true },
-        lastRow: { fill: solid(tint(a, 0.2)), bold: true },
-        band1H: { fill: band },
-        band1V: { fill: band },
-        lastRowTop: line(dk1),
-      }
-    }
-  }
-}
-
 /**
  * styleId → style definition. Prefers explicit definitions in tableStyles.xml, falling
  * back to the built-in table.
@@ -466,223 +209,5 @@ export function resolveTableStyle(
   tableStylesXml: string | undefined,
   theme: Theme | undefined,
 ): TableStyleDef | undefined {
-  if (!styleId) return undefined
-  if (tableStylesXml && tableStylesXml.includes(styleId)) {
-    const def = parseTableStylesXml(tableStylesXml, styleId, theme)
-    if (def) return def
-  }
-  // The built-in gallery backs an undefined id even when the part defines other styles
-  // (prod deck: Light Style 1 - Accent 3 banding drawn next to a one-entry part). The
-  // earlier "transparent with a populated part" reading came from decks whose cells
-  // carried an explicit <a:noFill/>, which hides any style fill anyway.
-  // the id is the document's: the gallery answers its own ids only
-  const builtin = ownValue(BUILTIN, styleId)
-  if (builtin) {
-    const def = builtinStyle(builtin.family, builtin.accent, theme)
-    def.wholeTbl = { fontRef: 'minor', ...def.wholeTbl }
-    return def
-  }
-  if (styleId === LEGACY_NO_STYLE) return {}
-  return undefined
-}
-
-/**
- * Style borders for cell (r,c) (composed from region borders; explicit tcPr borders
- * take precedence): inner separator lines + whole-table outer border + header
- * separator lines (when the firstRow/lastRow flags are on).
- */
-export function cellStyleBorders(
-  def: TableStyleDef,
-  flags: TableStyleFlags,
-  r: number,
-  c: number,
-  nRows: number,
-  nCols: number,
-): { l?: Stroke; r?: Stroke; t?: Stroke; b?: Stroke } {
-  const out: { l?: Stroke; r?: Stroke; t?: Stroke; b?: Stroke } = {}
-  if (r < nRows - 1 && def.insideH) out.b = def.insideH
-  if (c < nCols - 1 && def.insideV) out.r = def.insideV
-  if (def.outer) {
-    if (r === 0 && def.outer.t) out.t = def.outer.t
-    if (r === nRows - 1 && def.outer.b) out.b = def.outer.b
-    if (c === 0 && def.outer.l) out.l = def.outer.l
-    if (c === nCols - 1 && def.outer.r) out.r = def.outer.r
-  }
-  if (flags.firstRow && r === 0 && nRows > 1 && def.firstRowBottom) out.b = def.firstRowBottom
-  if (flags.lastRow && r === nRows - 1 && nRows > 1 && def.lastRowTop) out.t = def.lastRowTop
-  return out
-}
-
-// ── tableStyles.xml parsing ─────────────────────────────────────────
-
-const tsParser = xmlParser({
-  ignoreAttributes: false,
-  attributeNamePrefix: '@_',
-  isArray: (name) => name === 'a:tblStyle',
-})
-
-function readColor(node: unknown, theme: Theme | undefined): string | undefined {
-  if (!node || typeof node !== 'object') return undefined
-  const n = asXmlNode(node)
-  // tint/shade/alpha via the canonical linear-gamma modifier path (PPT computes
-  // table-style tints in linear space: accent tint 20% renders ≈(244,231,231),
-  // not the straight-sRGB (242,204,204) — prod_043 pixel-verified); alpha lands
-  // as an #RRGGBBAA suffix so banded fills composite over <a:tblBg>
-  if (n['a:srgbClr']) {
-    const srgb = asXmlNode(n['a:srgbClr'])
-    return applyColorMods('#' + String(srgb['@_val']).toUpperCase(), srgb)
-  }
-  if (n['a:schemeClr']) {
-    const scheme = asXmlNode(n['a:schemeClr'])
-    const base = resolveSchemeColor(String(scheme['@_val']), theme)
-    if (!base) return undefined
-    return applyColorMods(base, scheme)
-  }
-  const prst = asXmlNode(n['a:prstClr'])['@_val']
-  if (prst === 'black') return '#000000'
-  if (prst === 'white') return '#FFFFFF'
-  return undefined
-}
-
-function readPart(part: unknown, theme: Theme | undefined): TablePartStyle | undefined {
-  if (!part || typeof part !== 'object') return undefined
-  const p = asXmlNode(part)
-  const out: TablePartStyle = {}
-  const fillColor = readColor(asXmlNode(asXmlNode(p['a:tcStyle'])['a:fill'])['a:solidFill'], theme)
-  if (fillColor) out.fill = solid(fillColor)
-  if (p['a:tcTxStyle']) {
-    const tx = asXmlNode(p['a:tcTxStyle'])
-    if (tx['@_b'] === 'on') out.bold = true
-    const refIdx = asXmlNode(tx['a:fontRef'])['@_idx']
-    if (refIdx === 'minor' || refIdx === 'major') out.fontRef = refIdx
-    if (tx['a:font']) {
-      const f = asXmlNode(tx['a:font'])
-      const face = (tag: string) => asXmlNode(f[tag])['@_typeface'] as string | undefined
-      out.font = { latin: face('a:latin'), ea: face('a:ea'), cs: face('a:cs') }
-    }
-    const c = readColor(tx, theme)
-    if (c) out.textColor = c
-  }
-  return Object.keys(out).length ? out : undefined
-}
-
-function readInside(
-  part: unknown,
-  tag: 'a:insideH' | 'a:insideV' | 'a:left' | 'a:right' | 'a:top' | 'a:bottom',
-  theme: Theme | undefined,
-): Stroke | undefined {
-  const bdr = asXmlNode(asXmlNode(asXmlNode(part)['a:tcStyle'])['a:tcBdr'])
-  const edge = asXmlNode(bdr[tag])
-  const lnRaw = edge['a:ln']
-  if (lnRaw) {
-    const ln = asXmlNode(lnRaw)
-    if ('a:noFill' in ln) return undefined
-    const c = readColor(ln['a:solidFill'], theme)
-    if (!c) return undefined
-    return line(c, parseInt(String(ln['@_w']), 10) || 12700)
-  }
-  // <a:lnRef idx>: theme lnStyleLst template; the ref's child color substitutes phClr
-  const refRaw = edge['a:lnRef']
-  if (refRaw) {
-    const ref = asXmlNode(refRaw)
-    const c = readColor(ref, theme)
-    if (!c) return undefined
-    const idx = parseInt(String(ref['@_idx'] ?? '0'), 10) || 0
-    const tplLn = asXmlNode(asXmlNode(theme?.lnStyles?.[idx - 1])['a:ln'])
-    return line(c, parseInt(String(tplLn['@_w']), 10) || 12700)
-  }
-  return undefined
-}
-
-function parseTableStylesXml(
-  xml: string,
-  styleId: string,
-  theme: Theme | undefined,
-): TableStyleDef | undefined {
-  let doc: XmlNode
-  try {
-    doc = asXmlNode(tsParser.parse(xml))
-  } catch {
-    return undefined
-  }
-  const list = asXmlNode(doc['a:tblStyleLst'])['a:tblStyle'] ?? []
-  const style = xmlArray(list).find((s) => s['@_styleId'] === styleId)
-  if (!style) return undefined
-  const def: TableStyleDef = {}
-  const tblBgRaw = style['a:tblBg']
-  if (tblBgRaw) {
-    const bg = asXmlNode(tblBgRaw)
-    const direct = readColor(asXmlNode(bg['a:fill'])['a:solidFill'], theme)
-    if (direct) def.tblBg = solid(direct)
-    const refRaw = bg['a:fillRef']
-    if (refRaw) {
-      const ref = asXmlNode(refRaw)
-      const idx = parseInt(String(ref['@_idx'] ?? '0'), 10) || 0
-      if (idx > 0) def.tblBgRef = { idx, phClr: readColor(ref, theme) }
-    }
-  }
-  for (const key of [
-    'wholeTbl',
-    'band1H',
-    'band2H',
-    'band1V',
-    'band2V',
-    'firstRow',
-    'lastRow',
-    'firstCol',
-    'lastCol',
-  ] as const) {
-    const p = readPart(style['a:' + key], theme)
-    if (p) def[key] = p
-  }
-  def.insideH = readInside(style['a:wholeTbl'], 'a:insideH', theme)
-  def.insideV = readInside(style['a:wholeTbl'], 'a:insideV', theme)
-  if (!def.insideH) delete def.insideH
-  if (!def.insideV) delete def.insideV
-  const outer = {
-    l: readInside(style['a:wholeTbl'], 'a:left', theme),
-    r: readInside(style['a:wholeTbl'], 'a:right', theme),
-    t: readInside(style['a:wholeTbl'], 'a:top', theme),
-    b: readInside(style['a:wholeTbl'], 'a:bottom', theme),
-  }
-  if (outer.l || outer.r || outer.t || outer.b) def.outer = outer
-  return Object.keys(def).length ? def : undefined
-}
-
-/**
- * Compute the final region style for cell (r,c) (OOXML precedence:
- * wholeTbl < banding < lastRow/firstCol/lastCol < firstRow).
- */
-export function cellPartStyle(
-  def: TableStyleDef,
-  flags: TableStyleFlags,
-  r: number,
-  c: number,
-  nRows: number,
-  nCols: number,
-): TablePartStyle {
-  const merge = (base: TablePartStyle, over?: TablePartStyle): TablePartStyle =>
-    over
-      ? { ...base, ...Object.fromEntries(Object.entries(over).filter(([, v]) => v !== undefined)) }
-      : base
-
-  let out: TablePartStyle = { ...(def.wholeTbl ?? {}) }
-  const isFirstRow = flags.firstRow && r === 0
-  const isLastRow = flags.lastRow && r === nRows - 1
-  const isFirstCol = flags.firstCol && c === 0
-  const isLastCol = flags.lastCol && c === nCols - 1
-
-  if (flags.bandRow && !isFirstRow && !isLastRow) {
-    const dataR = r - (flags.firstRow ? 1 : 0)
-    out = merge(out, dataR % 2 === 0 ? def.band1H : def.band2H)
-  }
-  if (flags.bandCol && !isFirstCol && !isLastCol) {
-    const dataC = c - (flags.firstCol ? 1 : 0)
-    out = merge(out, dataC % 2 === 0 ? def.band1V : def.band2V)
-  }
-  if (isLastCol) out = merge(out, def.lastCol)
-  if (isFirstCol) out = merge(out, def.firstCol)
-  if (isLastRow) out = merge(out, def.lastRow)
-  if (isFirstRow) out = merge(out, def.firstRow)
-  return out
+  return call('resolveTableStyle', [styleId, tableStylesXml, theme], { undef: true }) as never
 }

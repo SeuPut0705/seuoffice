@@ -17,7 +17,7 @@ import {
   savePptx,
 } from '../src/index'
 import { parseSlide } from '../src/parse'
-import type { GroupElement, SlideElement } from '../src/types'
+import type { GroupElement, Slide, SlideElement } from '../src/types'
 import JSZip from 'jszip'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -61,16 +61,20 @@ const MAKE_SP = (x: number, y: number, cx: number, cy: number) =>
   `<a:prstGeom prst="rect"><a:avLst/></a:prstGeom></p:spPr>` +
   `<p:txBody><a:bodyPr/><a:lstStyle/><a:p/></p:txBody></p:sp>`
 
-const MOCK_SLIDE: any = {
+const MOCK_SP = MAKE_SP(100, 100, 200, 200)
+const MOCK_SLIDE: Slide = {
+  path: 'ppt/slides/slide1.xml',
   elements: [
     {
       id: 'el1',
       type: 'shape',
-      anchor: { originalXml: MAKE_SP(100, 100, 200, 200) },
-      transform: { offset: { x: 100, y: 100, cx: 200, cy: 200 } },
+      anchor: { spIndex: 0, originalXml: MOCK_SP, range: [0, MOCK_SP.length] },
+      transform: { offset: { x: 100, y: 100, cx: 200, cy: 200 }, rot: 0, flipH: false, flipV: false },
     },
   ],
   originalXml: '<p:sld><p:cSld><p:spTree><p:grpSpPr/></p:spTree></p:cSld></p:sld>',
+  bodyPrefix: '',
+  bodySuffix: '',
 }
 
 describe('buildGrpSpXml', () => {

@@ -14,9 +14,18 @@ const many = (...fills: string[]): string => fills.map((f) => sp(f)).join('')
 
 const THEME = {
   colors: {
-    dk1: '#000000', lt1: '#FFFFFF', dk2: '#44546A', lt2: '#E7E6E6',
-    accent1: '#4472C4', accent2: '#ED7D31', accent3: '#A5A5A5', accent4: '#FFC000',
-    accent5: '#5B9BD5', accent6: '#70AD47', hlink: '#0563C1', folHlink: '#954F72',
+    dk1: '#000000',
+    lt1: '#FFFFFF',
+    dk2: '#44546A',
+    lt2: '#E7E6E6',
+    accent1: '#4472C4',
+    accent2: '#ED7D31',
+    accent3: '#A5A5A5',
+    accent4: '#FFC000',
+    accent5: '#5B9BD5',
+    accent6: '#70AD47',
+    hlink: '#0563C1',
+    folHlink: '#954F72',
   },
   clrMap: { bg1: 'lt1', tx1: 'dk1', bg2: 'lt2', tx2: 'dk2' },
   majorFont: 'Calibri Light',
@@ -30,18 +39,38 @@ const MEDIA = [
 ]
 const CTX = { theme: THEME, mediaRels: MEDIA }
 
-const blip = (blipInner: string, rest = '<a:stretch><a:fillRect/></a:stretch>', attrs = ' r:embed="rId1"'): string =>
-  `<a:blipFill><a:blip${attrs}>${blipInner}</a:blip>${rest}</a:blipFill>`
+const blip = (
+  blipInner: string,
+  rest = '<a:stretch><a:fillRect/></a:stretch>',
+  attrs = ' r:embed="rId1"',
+): string => `<a:blipFill><a:blip${attrs}>${blipInner}</a:blip>${rest}</a:blipFill>`
 const gs = (pos: string, clr: string): string => `<a:gs pos="${pos}">${clr}</a:gs>`
-const SRGB = (v: string, kids = ''): string => (kids ? `<a:srgbClr val="${v}">${kids}</a:srgbClr>` : `<a:srgbClr val="${v}"/>`)
+const SRGB = (v: string, kids = ''): string =>
+  kids ? `<a:srgbClr val="${v}">${kids}</a:srgbClr>` : `<a:srgbClr val="${v}"/>`
 const grad = (inner: string, attrs = ''): string =>
   `<a:gradFill${attrs}><a:gsLst>${gs('0', SRGB('FF0000'))}${gs('100000', SRGB('0000FF'))}</a:gsLst>${inner}</a:gradFill>`
 
-export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, unknown>; seed?: false }> = [
+export const SLIDES: Array<{
+  name: string
+  spTree: string
+  ctx?: Record<string, unknown>
+  seed?: false
+}> = [
   // ── parseFill: early kinds ──
-  { name: 'fill none and absent', spTree: many('<a:noFill/>', '', '<a:noFill/><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>') },
+  {
+    name: 'fill none and absent',
+    spTree: many(
+      '<a:noFill/>',
+      '',
+      '<a:noFill/><a:solidFill><a:srgbClr val="FF0000"/></a:solidFill>',
+    ),
+  },
   { name: 'fill grpFill without group', spTree: many('<a:grpFill/>') },
-  { name: 'fill grpFill with group fill', spTree: many('<a:grpFill/>'), ctx: { groupFill: { type: 'solid', color: '#123456' } } },
+  {
+    name: 'fill grpFill with group fill',
+    spTree: many('<a:grpFill/>'),
+    ctx: { groupFill: { type: 'solid', color: '#123456' } },
+  },
   {
     name: 'fill grpFill in a group',
     spTree: `<p:grpSp><p:nvGrpSpPr><p:cNvPr id="2" name="G"/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr><a:xfrm><a:off x="0" y="0"/><a:ext cx="100" cy="100"/><a:chOff x="0" y="0"/><a:chExt cx="100" cy="100"/></a:xfrm><a:solidFill><a:srgbClr val="00AA00"/></a:solidFill></p:grpSpPr>${sp('<a:grpFill/>')}</p:grpSp>`,
@@ -65,8 +94,17 @@ export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, 
     ),
     ctx: CTX,
   },
-  { name: 'fill solid phClr with phClr ctx', spTree: many('<a:solidFill><a:schemeClr val="phClr"><a:shade val="50000"/></a:schemeClr></a:solidFill>'), ctx: { ...CTX, phClr: '#336699' } },
-  { name: 'fill solid scheme without theme', spTree: many('<a:solidFill><a:schemeClr val="accent1"/></a:solidFill>') },
+  {
+    name: 'fill solid phClr with phClr ctx',
+    spTree: many(
+      '<a:solidFill><a:schemeClr val="phClr"><a:shade val="50000"/></a:schemeClr></a:solidFill>',
+    ),
+    ctx: { ...CTX, phClr: '#336699' },
+  },
+  {
+    name: 'fill solid scheme without theme',
+    spTree: many('<a:solidFill><a:schemeClr val="accent1"/></a:solidFill>'),
+  },
   // ── gradient ──
   {
     name: 'grad lin and path forms',
@@ -78,7 +116,9 @@ export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, 
       grad('<a:lin ang="abc"/>'),
       grad('<a:lin ang="-5400000"/>'),
       grad(''),
-      grad('<a:path path="circle"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path>'),
+      grad(
+        '<a:path path="circle"><a:fillToRect l="50000" t="50000" r="50000" b="50000"/></a:path>',
+      ),
       grad('<a:path path="rect"><a:fillToRect l="50%" t="25.5%" r=" 10% " b="x"/></a:path>'),
       grad('<a:path path="shape"><a:fillToRect/></a:path>'),
       grad('<a:path path="other"><a:fillToRect r="100000"/></a:path>'),
@@ -128,19 +168,49 @@ export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, 
       blip('', undefined, ' r:embed=""'),
       blip('', undefined, ' r:embed="rIdMissing"'),
       blip('', undefined, ' r:embed="rIdEmpty"'),
-      blip('<a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="rId2"/></a:ext></a:extLst>'),
-      blip('<a:extLst><a:ext uri="x"><asvg:svgBlip r:embed="rId2"/></a:ext></a:extLst>', undefined, ''),
-      blip('<a:extLst><a:ext uri="a"><a14:useLocalDpi val="0"/></a:ext><a:ext uri="b"><svgBlip r:embed="rId2"/></a:ext></a:extLst>', undefined, ''),
+      blip(
+        '<a:extLst><a:ext uri="{96DAC541-7B7A-43D3-8B79-37D633B846F1}"><asvg:svgBlip xmlns:asvg="http://schemas.microsoft.com/office/drawing/2016/SVG/main" r:embed="rId2"/></a:ext></a:extLst>',
+      ),
+      blip(
+        '<a:extLst><a:ext uri="x"><asvg:svgBlip r:embed="rId2"/></a:ext></a:extLst>',
+        undefined,
+        '',
+      ),
+      blip(
+        '<a:extLst><a:ext uri="a"><a14:useLocalDpi val="0"/></a:ext><a:ext uri="b"><svgBlip r:embed="rId2"/></a:ext></a:extLst>',
+        undefined,
+        '',
+      ),
       blip('<a:extLst><a:ext uri="b"><x:svgBlip r:embed="rIdMissing"/></a:ext></a:extLst>'),
-      blip('<a:extLst><a:ext uri="b"><x:svgBlip/><y:svgBlip r:embed="rId2"/></a:ext></a:extLst>', undefined, ''),
-      blip('<a:extLst><a:ext uri="b"><x:svgBlipX r:embed="rId2"/></a:ext></a:extLst>', undefined, ''),
+      blip(
+        '<a:extLst><a:ext uri="b"><x:svgBlip/><y:svgBlip r:embed="rId2"/></a:ext></a:extLst>',
+        undefined,
+        '',
+      ),
+      blip(
+        '<a:extLst><a:ext uri="b"><x:svgBlipX r:embed="rId2"/></a:ext></a:extLst>',
+        undefined,
+        '',
+      ),
+      blip(
+        '<a:extLst><a:ext uri="x"><asvg:svgBlip r:embed="rId2"/></a:ext></a:extLst>',
+        undefined,
+        ' r:embed=""',
+      ),
       '<a:blipFill><a:stretch/></a:blipFill>',
       '<a:blipFill/>',
     ),
     ctx: CTX,
   },
   // mediaRels is a Map: an rId named after an inherited key is an ordinary key (no defect)
-  { name: 'blip embed named constructor', spTree: many(blip('', undefined, ' r:embed="constructor"'), blip('', undefined, ' r:embed="toString"')), ctx: CTX },
+  {
+    name: 'blip embed named constructor',
+    spTree: many(
+      blip('', undefined, ' r:embed="constructor"'),
+      blip('', undefined, ' r:embed="toString"'),
+    ),
+    ctx: CTX,
+  },
   {
     name: 'blip alphaModFix',
     spTree: many(
@@ -181,24 +251,36 @@ export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, 
   {
     name: 'blip duotone',
     spTree: many(
-      blip('<a:duotone><a:prstClr val="black"/><a:schemeClr val="accent1"><a:tint val="45000"/></a:schemeClr></a:duotone>'),
+      blip(
+        '<a:duotone><a:prstClr val="black"/><a:schemeClr val="accent1"><a:tint val="45000"/></a:schemeClr></a:duotone>',
+      ),
       blip('<a:duotone><a:schemeClr val="bg1"/><a:prstClr val="black"/></a:duotone>'),
       blip('<a:duotone><a:srgbClr val="FFFFFF"/><a:srgbClr val="000000"/></a:duotone>'),
-      blip('<a:duotone><a:schemeClr val="accent2"/><a:schemeClr val="accent1"/><a:schemeClr val="accent3"/></a:duotone>'),
-      blip('<a:duotone><a:srgbClr val="FFFFFF"/><a:sysClr val="windowText" lastClr="000000"/></a:duotone>'),
+      blip(
+        '<a:duotone><a:schemeClr val="accent2"/><a:schemeClr val="accent1"/><a:schemeClr val="accent3"/></a:duotone>',
+      ),
+      blip(
+        '<a:duotone><a:srgbClr val="FFFFFF"/><a:sysClr val="windowText" lastClr="000000"/></a:duotone>',
+      ),
       blip('<a:duotone><a:srgbClr val="FFFFFF"/></a:duotone>'),
       blip('<a:duotone><a:srgbClr/><a:srgbClr val="000000"/></a:duotone>'),
       blip('<a:duotone/>'),
       blip('<a:duotone/><a:grayscl/>'),
-      blip('<a:duotone><a:srgbClr val="000000"><a:alpha val="50000"/></a:srgbClr><a:prstClr val="white"/></a:duotone>'),
-      blip('<a:duotone><a:hslClr hue="0" sat="0" lum="0"/><a:scrgbClr r="0" g="0" b="0"/></a:duotone>'),
+      blip(
+        '<a:duotone><a:srgbClr val="000000"><a:alpha val="50000"/></a:srgbClr><a:prstClr val="white"/></a:duotone>',
+      ),
+      blip(
+        '<a:duotone><a:hslClr hue="0" sat="0" lum="0"/><a:scrgbClr r="0" g="0" b="0"/></a:duotone>',
+      ),
     ),
     ctx: CTX,
   },
   {
     name: 'blip clrChange',
     spTree: many(
-      blip('<a:clrChange><a:clrFrom><a:srgbClr val="FFFFFF"/></a:clrFrom><a:clrTo><a:srgbClr val="FFFFFF"><a:alpha val="0"/></a:srgbClr></a:clrTo></a:clrChange>'),
+      blip(
+        '<a:clrChange><a:clrFrom><a:srgbClr val="FFFFFF"/></a:clrFrom><a:clrTo><a:srgbClr val="FFFFFF"><a:alpha val="0"/></a:srgbClr></a:clrTo></a:clrChange>',
+      ),
       blip('<a:clrChange><a:clrFrom><a:schemeClr val="accent1"/></a:clrFrom></a:clrChange>'),
       blip('<a:clrChange><a:clrTo><a:srgbClr val="000000"/></a:clrTo></a:clrChange>'),
       blip('<a:clrChange/>'),
@@ -217,7 +299,11 @@ export const SLIDES: Array<{ name: string; spTree: string; ctx?: Record<string, 
     ctx: CTX,
   },
   { name: 'blip without media rels', spTree: many(blip('')) },
-  { name: 'blip picture element', spTree: pic(blip('<a:duotone><a:prstClr val="black"/><a:srgbClr val="00FF00"/></a:duotone>')), ctx: CTX },
+  {
+    name: 'blip picture element',
+    spTree: pic(blip('<a:duotone><a:prstClr val="black"/><a:srgbClr val="00FF00"/></a:duotone>')),
+    ctx: CTX,
+  },
   // ── pattern ──
   {
     name: 'pattern forms',

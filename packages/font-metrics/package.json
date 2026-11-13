@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/font-metrics",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "System font location and vertical-metrics extraction for the Electron main processes (targeted sfnt table reads, no whole-file parsing)",

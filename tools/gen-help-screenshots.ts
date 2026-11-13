@@ -6,9 +6,8 @@
  * Only the ones a topic body references: `file-ops` (Home's file list with a
  * file's menu open) and `tabs` (the tab strip). The registry bundles every PNG
  * in the img folder, so a figure no topic shows still ships; this script does
- * not write any. The other referenced figures are ribbon strips and editor
- * popups captured elsewhere, and `word-shortcuts` comes from
- * gen-help-shortcut-figure.ts.
+ * not write any. The one other figure, `word-shortcuts`, comes from
+ * gen-help-shortcut-figure.ts. A figure no script draws does not go in.
  *
  * ## Why a script and not a hand capture
  *

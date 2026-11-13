@@ -4,6 +4,7 @@
  * unchanged, and a deck that withholds anything says so.
  */
 import { describe, expect, it, vi } from 'vitest'
+import { PackageArchive } from '@seuoffice/pptx-engine'
 
 const sessions = new Map<number, unknown>()
 
@@ -19,7 +20,9 @@ vi.mock('../../../slides/src/main/session-state', () => ({
 
 const { createSlidesControl, elementWithholds } = await import('../../src/main/mcp/slides-bridge')
 
-const box = { offset: { x: 0, y: 0, cx: 100, cy: 100 } }
+// whole model objects: the engine reads what it is handed as the model types it
+const box = { offset: { x: 0, y: 0, cx: 100, cy: 100 }, rot: 0, flipH: false, flipV: false }
+const anchor = { spIndex: 0, originalXml: '', range: [0, 0] }
 const para = (...runs: Array<{ text: string; redact?: string }>) => ({ runs })
 
 const COMMENTS_REL = 'http://schemas.openxmlformats.org/officeDocument/2006/relationships/comments'
@@ -42,36 +45,39 @@ interface DeckOptions {
   comments?: { authorsXml: string; commentsXml: string }
 }
 
-/** Minimal archive surface used by getSlideComments: slide rels + the comment parts. */
-function fakeArchive(comments: DeckOptions['comments']) {
-  return {
-    readRels: (partPath: string) => {
-      const rels = new Map<string, { id: string; type: string; target: string }>()
-      if (comments && partPath === 'ppt/slides/slide1.xml') {
-        rels.set('rId2', { id: 'rId2', type: COMMENTS_REL, target: '../comments/comment1.xml' })
-      }
-      return rels
-    },
-    readText: (path: string) => {
-      if (!comments) return null
-      if (path === 'ppt/comments/comment1.xml') return comments.commentsXml
-      if (path === 'ppt/commentAuthors.xml') return comments.authorsXml
-      return null
-    },
+/** A package holding the slide's rels and the comment parts getSlideComments reads. */
+function archiveOf(comments: DeckOptions['comments']): PackageArchive {
+  const utf8 = (text: string): Uint8Array => new TextEncoder().encode(text)
+  const entries: Array<[string, Uint8Array]> = []
+  if (comments) {
+    entries.push(
+      [
+        'ppt/slides/_rels/slide1.xml.rels',
+        utf8(
+          '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
+            `<Relationship Id="rId2" Type="${COMMENTS_REL}" Target="../comments/comment1.xml"/>` +
+            '</Relationships>',
+        ),
+      ],
+      ['ppt/comments/comment1.xml', utf8(comments.commentsXml)],
+      ['ppt/commentAuthors.xml', utf8(comments.authorsXml)],
+    )
   }
+  return PackageArchive.fromWire({ entries, originalHash: '' })
 }
 
 function deck(elements: unknown[], options: DeckOptions = {}) {
   return {
     opened: {
-      archive: fakeArchive(options.comments),
+      archive: archiveOf(options.comments),
       deck: {
         size: { cx: 12192000, cy: 6858000 },
         slides: [
           {
-            id: 's1',
             path: 'ppt/slides/slide1.xml',
+            originalXml: '',
             bodyPrefix: options.hidden ? '<p:sld show="0">' : '<p:sld>',
+            bodySuffix: '',
             elements,
           },
         ],
@@ -99,6 +105,7 @@ function slide0(readout: unknown): SlideReadout {
 const withheldRun = {
   id: 'e1',
   type: 'text',
+  anchor,
   transform: box,
   text: { paragraphs: [para({ text: 'Salary: ' }, { text: '5,000', redact: 'pay' })] },
 }
@@ -106,13 +113,17 @@ const withheldShape = {
   id: 'e2',
   type: 'shape',
   redact: 'secret box',
+  anchor,
   transform: box,
   text: { paragraphs: [para({ text: 'hidden words' })] },
 }
 const table = {
   id: 'e3',
   type: 'table',
+  anchor,
   transform: box,
+  colWidths: [50, 50],
+  rowHeights: [100],
   rows: [
     [
       { text: { paragraphs: [para({ text: 'Name' })] } },
@@ -123,6 +134,7 @@ const table = {
 const plain = {
   id: 'e4',
   type: 'text',
+  anchor,
   transform: box,
   text: { paragraphs: [para({ text: 'Hello' })] },
 }
@@ -162,6 +174,7 @@ describe('the withholding readout', () => {
       elementWithholds({
         id: 'g',
         type: 'group',
+        anchor,
         transform: box,
         children: [withheldShape],
       } as never),

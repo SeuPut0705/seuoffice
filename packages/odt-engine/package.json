@@ -1,7 +1,7 @@
 {
   "name": "@seuoffice/odt-engine",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "type": "module",
   "description": "OpenDocument Text (.odt) bridge over the Rust engine: ODT to docx for the Word editor, narrow-patch save back into the original ODT, docx to ODT export",

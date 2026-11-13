@@ -36,8 +36,8 @@ import {
   setSlideBackgroundImage,
   setSlideBgGraphicsHidden,
   type OpenedPptx,
-} from '../../packages/pptx-engine/src/index'
-import type { Slide } from '../../packages/pptx-engine/src/types'
+} from './reference/index'
+import type { Slide } from './reference/types'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 import { type At, DECKS, deckInput, deckOp } from './deck-ops'
 
@@ -47,7 +47,11 @@ type Args = Record<string, unknown>
 async function withUuid<T>(uuid: string, run: () => Promise<T> | T): Promise<T> {
   const host = globalThis.crypto
   const own = Object.getOwnPropertyDescriptor(host, 'randomUUID')
-  Object.defineProperty(host, 'randomUUID', { value: () => uuid, configurable: true, writable: true })
+  Object.defineProperty(host, 'randomUUID', {
+    value: () => uuid,
+    configurable: true,
+    writable: true,
+  })
   try {
     return await run()
   } finally {
@@ -87,7 +91,12 @@ function applyEdits(opened: OpenedPptx, edits: Edit[] | undefined): void {
       case 'fill':
       case 'stroke':
       case 'srcRect':
-        if (!(e.set.field === 'srcRect' ? ['picture'] : ['text', 'shape', 'picture']).includes(el.type)) break
+        if (
+          !(e.set.field === 'srcRect' ? ['picture'] : ['text', 'shape', 'picture']).includes(
+            el.type,
+          )
+        )
+          break
         // a null value is no key: a Rust slot cannot hold null
         if (e.set.value === null) delete el[e.set.field]
         else el[e.set.field] = e.set.value
@@ -96,7 +105,10 @@ function applyEdits(opened: OpenedPptx, edits: Edit[] | undefined): void {
         if (el.transform) el.transform.offset.x = e.set.value
         break
       case 'runText': {
-        const run = el.type === 'text' || el.type === 'shape' ? el.text?.paragraphs?.[0]?.runs?.[0] : undefined
+        const run =
+          el.type === 'text' || el.type === 'shape'
+            ? el.text?.paragraphs?.[0]?.runs?.[0]
+            : undefined
         if (run) run.text = e.set.value
         break
       }
@@ -233,10 +245,8 @@ const HF_SOME = '<p:hf sldNum="true"/>'
 
 const BG_GRADIENT =
   '<p:bg><p:bgPr><a:gradFill><a:gsLst><a:gs pos="0"><a:srgbClr val="FF0000"/></a:gs><a:gs pos="100000"><a:srgbClr val="0000FF"/></a:gs></a:gsLst><a:lin ang="5400000"/></a:gradFill><a:effectLst/></p:bgPr></p:bg>'
-const BG_REF =
-  '<p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'
-const BG_REF_STYLE =
-  '<p:bg><p:bgRef idx="2"><a:srgbClr val="445566"/></p:bgRef></p:bg>'
+const BG_REF = '<p:bg><p:bgRef idx="1001"><a:schemeClr val="bg1"/></p:bgRef></p:bg>'
+const BG_REF_STYLE = '<p:bg><p:bgRef idx="2"><a:srgbClr val="445566"/></p:bgRef></p:bg>'
 const BG_BLIP =
   '<p:bg><p:bgPr><a:blipFill><a:blip r:embed="rId1"/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:effectLst/></p:bgPr></p:bg>'
 
@@ -258,7 +268,11 @@ const ALL_RELS = slideRels(
     rel('rId6', `${REL}/video`, 'https://example.com/v.mp4', ' TargetMode="External"') +
     rel('rId7', `${REL}/audio`, '../theme/theme1.xml') +
     rel('rId8', `${REL}/media`, '../theme/theme1.xml') +
-    rel('rId9', 'http://schemas.microsoft.com/office/2017/06/relationships/model3d', '../theme/theme1.xml') +
+    rel(
+      'rId9',
+      'http://schemas.microsoft.com/office/2017/06/relationships/model3d',
+      '../theme/theme1.xml',
+    ) +
     rel('rId10', `${REL}/chart`, '../theme/theme1.xml') +
     rel('rId11', `${REL}/chartEx`, '../slideMasters/slideMaster1.xml') +
     rel('rId12', `${REL}/diagramData`, '../theme/theme1.xml') +
@@ -270,14 +284,17 @@ const ALL_RELS = slideRels(
 )
 
 /** A diagram data part naming its drawing relationship, so the data part's own rels are read. */
-const DIAGRAM_DATA = '<dgm:dataModel xmlns:dgm="d"><dgm:extLst><a:ext xmlns:a="a"><dsp:dataModelExt xmlns:dsp="x" relId="rId15"/></a:ext></dgm:extLst></dgm:dataModel>'
+const DIAGRAM_DATA =
+  '<dgm:dataModel xmlns:dgm="d"><dgm:extLst><a:ext xmlns:a="a"><dsp:dataModelExt xmlns:dsp="x" relId="rId15"/></a:ext></dgm:extLst></dgm:dataModel>'
 
 /**
  * A deck whose OLE preview (VML) and SmartArt data name their relationships the way XML allows:
  * spaced `=`, single quotes, references, ids that are not `rId<number>`, other attributes first.
  */
 const SPELLED_PARTS = await (async () => {
-  const zip = await JSZip.loadAsync(Buffer.from(DECKS.find(([name]) => name === 'blank deck')![1], 'base64'))
+  const zip = await JSZip.loadAsync(
+    Buffer.from(DECKS.find(([name]) => name === 'blank deck')![1], 'base64'),
+  )
   zip.file(
     'ppt/slides/_rels/slide1.xml.rels',
     slideRels(
@@ -290,7 +307,7 @@ const SPELLED_PARTS = await (async () => {
   )
   zip.file(
     'ppt/drawings/vmlDrawing1.xml',
-    "<xml xmlns:v=\"v\" xmlns:o=\"o\"><v:shape note=\"a>b\" id = 'spid&#49;' o:spid = \"_x0001\"><v:imagedata note=\"x>y\" o:relid = 'img&amp;1'/></v:shape></xml>",
+    '<xml xmlns:v="v" xmlns:o="o"><v:shape note="a>b" id = \'spid&#49;\' o:spid = "_x0001"><v:imagedata note="x>y" o:relid = \'img&amp;1\'/></v:shape></xml>',
   )
   zip.file(
     'ppt/drawings/_rels/vmlDrawing1.xml.rels',
@@ -337,14 +354,22 @@ const OPEN_INPUTS: Input[] = [
   asRels(slideRels('<Relationship Id="rId2" Type="x/hyperlink"/>')),
   asRels(''),
   asLayout(layout(BG_SOLID, LOGO(20) + FOOTER(21, 'ftr', 'layout footer'), '', HF_ALL)),
-  asLayout(layout(BG_GRADIENT, LOGO(20) + FOOTER(21, 'sldNum', '') + FOOTER(22, 'dt', '2026'), '', HF_ALL)),
+  asLayout(
+    layout(BG_GRADIENT, LOGO(20) + FOOTER(21, 'sldNum', '') + FOOTER(22, 'dt', '2026'), '', HF_ALL),
+  ),
   asLayout(layout(BG_REF, LOGO(20), '', HF_OFF)),
   asLayout(layout(BG_REF_STYLE, LOGO(20) + FOOTER(21, 'ftr', 'x'), '', HF_SOME)),
   asLayout(layout(BG_BLIP, LOGO(20), ' showMasterSp="0"', HF_ALL)),
   asLayout(layout('', LOGO(20), " showMasterSp='false'")),
   asLayout('<p:sldLayout'),
   asLayout(''),
-  asMaster(master(BG_REF, LOGO(30) + FOOTER(31, 'ftr', 'master footer') + FOOTER(32, 'sldNum', ''), HF_ALL)),
+  asMaster(
+    master(
+      BG_REF,
+      LOGO(30) + FOOTER(31, 'ftr', 'master footer') + FOOTER(32, 'sldNum', ''),
+      HF_ALL,
+    ),
+  ),
   asMaster(master(BG_SOLID, LOGO(30) + FOOTER(31, 'dt', '1 Jan'), HF_SOME)),
   asMaster(master('', LOGO(30), HF_OFF)),
   asMaster(master(BG_BLIP, LOGO(30))),
@@ -372,13 +397,34 @@ const OPEN_INPUTS: Input[] = [
 /** Edits that make every kind of element dirty, one flag at a time, on `EVERYTHING`. */
 const EDIT_SETS: Array<Edit[]> = [
   [{ slide: 0, element: 0, flags: ['dirty'] }],
-  [{ slide: 0, element: 0, flags: ['dirty'], set: { field: 'runText', value: 'Changed <&> text' } }],
+  [
+    {
+      slide: 0,
+      element: 0,
+      flags: ['dirty'],
+      set: { field: 'runText', value: 'Changed <&> text' },
+    },
+  ],
   [{ slide: 0, element: 0, flags: ['dirtyPPr'], ppr: { align: true, level: true } }],
   [{ slide: 0, element: 0, flags: [], ppr: { indents: true, paraIndices: [1] } }],
   [{ slide: 0, element: 1, flags: ['dirtyTransform'], set: { field: 'offsetX', value: 1234 } }],
-  [{ slide: 0, element: 1, flags: ['dirtyFill'], set: { field: 'fill', value: { type: 'solid', color: '#00FF00' } } }],
+  [
+    {
+      slide: 0,
+      element: 1,
+      flags: ['dirtyFill'],
+      set: { field: 'fill', value: { type: 'solid', color: '#00FF00' } },
+    },
+  ],
   [{ slide: 0, element: 1, flags: ['dirtyFill'], set: { field: 'fill', value: { type: 'none' } } }],
-  [{ slide: 0, element: 1, flags: ['dirtyFill'], set: { field: 'fill', value: { type: 'solid', color: 'none' } } }],
+  [
+    {
+      slide: 0,
+      element: 1,
+      flags: ['dirtyFill'],
+      set: { field: 'fill', value: { type: 'solid', color: 'none' } },
+    },
+  ],
   [
     {
       slide: 0,
@@ -407,15 +453,14 @@ const EDIT_SETS: Array<Edit[]> = [
       set: { field: 'fill', value: { type: 'gradient', stops: [{ pos: 0, color: '#FF0000' }] } },
     },
   ],
-  [{ slide: 0, element: 1, flags: ['dirtyFill'], set: { field: 'fill', value: { type: 'pattern', fg: '#000000', bg: '#FFFFFF', preset: 'pct5' } } }],
   [
     {
       slide: 0,
       element: 1,
-      flags: ['dirtyStroke'],
+      flags: ['dirtyFill'],
       set: {
-        field: 'stroke',
-        value: { fill: { type: 'solid', color: '#0000FF' }, width: 25400, dash: 'dash', cap: 'round', join: 'bevel', compound: 'thickThin' },
+        field: 'fill',
+        value: { type: 'pattern', fg: '#000000', bg: '#FFFFFF', preset: 'pct5' },
       },
     },
   ],
@@ -426,7 +471,14 @@ const EDIT_SETS: Array<Edit[]> = [
       flags: ['dirtyStroke'],
       set: {
         field: 'stroke',
-        value: { fill: { type: 'gradient', stops: [{ pos: 0, color: '#112233' }, { pos: 1, color: '#445566' }], angle: 45 }, width: 12700, cap: 'flat', join: 'miter', compound: 'sng' },
+        value: {
+          fill: { type: 'solid', color: '#0000FF' },
+          width: 25400,
+          dash: 'dash',
+          cap: 'round',
+          join: 'bevel',
+          compound: 'thickThin',
+        },
       },
     },
   ],
@@ -435,27 +487,116 @@ const EDIT_SETS: Array<Edit[]> = [
       slide: 0,
       element: 1,
       flags: ['dirtyStroke'],
-      set: { field: 'stroke', value: { fill: { type: 'gradient', stops: [] }, width: 1, cap: 'square', compound: 'dbl' } },
+      set: {
+        field: 'stroke',
+        value: {
+          fill: {
+            type: 'gradient',
+            stops: [
+              { pos: 0, color: '#112233' },
+              { pos: 1, color: '#445566' },
+            ],
+            angle: 45,
+          },
+          width: 12700,
+          cap: 'flat',
+          join: 'miter',
+          compound: 'sng',
+        },
+      },
     },
   ],
-  [{ slide: 0, element: 1, flags: ['dirtyStroke'], set: { field: 'stroke', value: { fill: { type: 'none' }, width: 1 } } }],
-  [{ slide: 0, element: 1, flags: ['dirtyStroke'], set: { field: 'stroke', value: { fill: { type: 'solid', color: '#000000' }, width: 1, compound: 'tri' } } }],
-  [{ slide: 0, element: 3, flags: ['dirtySrcRect'], set: { field: 'srcRect', value: { l: 0.1, t: 0.2, r: 0.3, b: 0.4 } } }],
+  [
+    {
+      slide: 0,
+      element: 1,
+      flags: ['dirtyStroke'],
+      set: {
+        field: 'stroke',
+        value: { fill: { type: 'gradient', stops: [] }, width: 1, cap: 'square', compound: 'dbl' },
+      },
+    },
+  ],
+  [
+    {
+      slide: 0,
+      element: 1,
+      flags: ['dirtyStroke'],
+      set: { field: 'stroke', value: { fill: { type: 'none' }, width: 1 } },
+    },
+  ],
+  [
+    {
+      slide: 0,
+      element: 1,
+      flags: ['dirtyStroke'],
+      set: {
+        field: 'stroke',
+        value: { fill: { type: 'solid', color: '#000000' }, width: 1, compound: 'tri' },
+      },
+    },
+  ],
+  [
+    {
+      slide: 0,
+      element: 3,
+      flags: ['dirtySrcRect'],
+      set: { field: 'srcRect', value: { l: 0.1, t: 0.2, r: 0.3, b: 0.4 } },
+    },
+  ],
   [{ slide: 0, element: 3, flags: ['dirtySrcRect'], set: { field: 'srcRect', value: null } }],
-  [{ slide: 0, element: 3, flags: ['dirtyTransform', 'dirtyStroke'], set: { field: 'offsetX', value: 77 } }],
+  [
+    {
+      slide: 0,
+      element: 3,
+      flags: ['dirtyTransform', 'dirtyStroke'],
+      set: { field: 'offsetX', value: 77 },
+    },
+  ],
   [{ slide: 0, element: 4, flags: ['dirtyTransform'], set: { field: 'offsetX', value: 555 } }],
   [{ slide: 0, element: 4, flags: ['dirty', 'dirtyFill', 'dirtyStroke', 'dirtySrcRect'] }],
   [{ slide: 0, element: 5, flags: ['dirtyTransform'], set: { field: 'offsetX', value: 4321 } }],
-  [{ slide: 0, element: 2, flags: ['dirtyFill', 'dirtyStroke'], set: { field: 'fill', value: { type: 'solid', color: '#ABCDEF' } } }],
-  [{ slide: 0, element: 6, flags: ['dirty', 'dirtyFill', 'dirtyTransform', 'dirtyStroke'], set: { field: 'offsetX', value: 99 } }],
-  [{ slide: 0, element: 6, flags: ['dirtyFill'], set: { field: 'fill', value: { type: 'solid', color: '#010203' } } }],
+  [
+    {
+      slide: 0,
+      element: 2,
+      flags: ['dirtyFill', 'dirtyStroke'],
+      set: { field: 'fill', value: { type: 'solid', color: '#ABCDEF' } },
+    },
+  ],
+  [
+    {
+      slide: 0,
+      element: 6,
+      flags: ['dirty', 'dirtyFill', 'dirtyTransform', 'dirtyStroke'],
+      set: { field: 'offsetX', value: 99 },
+    },
+  ],
+  [
+    {
+      slide: 0,
+      element: 6,
+      flags: ['dirtyFill'],
+      set: { field: 'fill', value: { type: 'solid', color: '#010203' } },
+    },
+  ],
   [{ slide: 0, element: 7, flags: ['dirtyTransform'], set: { field: 'offsetX', value: 31 } }],
   [{ slide: 0, element: 6, flags: ['dirtyPPr'], ppr: { spcBef: true } }],
   [{ slide: 0, structure: true }],
   [
     { slide: 0, element: 0, flags: ['dirty'] },
-    { slide: 0, element: 1, flags: ['dirtyFill', 'dirtyTransform'], set: { field: 'offsetX', value: 8 } },
-    { slide: 0, element: 3, flags: ['dirtySrcRect'], set: { field: 'srcRect', value: { l: 0.5, t: 0, r: 0, b: 0 } } },
+    {
+      slide: 0,
+      element: 1,
+      flags: ['dirtyFill', 'dirtyTransform'],
+      set: { field: 'offsetX', value: 8 },
+    },
+    {
+      slide: 0,
+      element: 3,
+      flags: ['dirtySrcRect'],
+      set: { field: 'srcRect', value: { l: 0.5, t: 0, r: 0, b: 0 } },
+    },
   ],
 ]
 
@@ -464,20 +605,30 @@ const editedInputs = (rest: Args = {}): Input[] => [
   ...EDIT_SETS.map((set) => asSlide(EVERYTHING, { ...rest, edits: set })),
   ...[0, 1, 2, 3].flatMap((element) =>
     DECKS.map(([name]) =>
-      deckInput(name, { ...rest, edits: [{ slide: 0, element, flags: ['dirty', 'dirtyTransform', 'dirtyFill'] }] }),
+      deckInput(name, {
+        ...rest,
+        edits: [{ slide: 0, element, flags: ['dirty', 'dirtyTransform', 'dirtyFill'] }],
+      }),
     ),
   ),
   ...DECKS.map(([name]) =>
-    deckInput(name, { ...rest, edits: [{ slide: 0, structure: true }, { slide: 1, structure: true }] }),
+    deckInput(name, {
+      ...rest,
+      edits: [
+        { slide: 0, structure: true },
+        { slide: 1, structure: true },
+      ],
+    }),
   ),
 ]
 
 // A 1x1 PNG, as the list of its bytes.
 const PNG = [
-  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52, 0x00, 0x00, 0x00,
-  0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4, 0x89, 0x00, 0x00, 0x00, 0x0d, 0x49,
-  0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0xf8, 0xff, 0xff, 0x3f, 0x00, 0x05, 0xfe, 0x02, 0xfe, 0xa7, 0x35, 0x81, 0x84,
-  0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e, 0x44, 0xae, 0x42, 0x60, 0x82,
+  0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x48, 0x44, 0x52,
+  0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01, 0x08, 0x06, 0x00, 0x00, 0x00, 0x1f, 0x15, 0xc4,
+  0x89, 0x00, 0x00, 0x00, 0x0d, 0x49, 0x44, 0x41, 0x54, 0x78, 0x9c, 0x63, 0xf8, 0xff, 0xff, 0x3f,
+  0x00, 0x05, 0xfe, 0x02, 0xfe, 0xa7, 0x35, 0x81, 0x84, 0x00, 0x00, 0x00, 0x00, 0x49, 0x45, 0x4e,
+  0x44, 0xae, 0x42, 0x60, 0x82,
 ]
 
 const bg = (value: unknown): Args => ({ fill: value })
@@ -487,8 +638,22 @@ const FILLS: unknown[] = [
   '#12345678',
   'none',
   '',
-  { stops: [{ pos: 0, color: '#FF0000' }, { pos: 1, color: '#0000FF' }], angle: 45.6 },
-  { stops: [{ pos: 0, color: '#FF0000' }, { pos: 0.5, color: '#00FF00' }, { pos: 1, color: '#0000FF' }], radial: true, angle: 90 },
+  {
+    stops: [
+      { pos: 0, color: '#FF0000' },
+      { pos: 1, color: '#0000FF' },
+    ],
+    angle: 45.6,
+  },
+  {
+    stops: [
+      { pos: 0, color: '#FF0000' },
+      { pos: 0.5, color: '#00FF00' },
+      { pos: 1, color: '#0000FF' },
+    ],
+    radial: true,
+    angle: 90,
+  },
   { stops: [{ pos: 0, color: '#FF0000' }] },
   { stops: [], path: 'rect', fillTo: { l: 0.1, t: 0.2, r: 0.3, b: 0.4 } },
 ]
@@ -534,10 +699,7 @@ export const DECKCORE: CallSpec[] = [
         opened.deck = reparseDeck(opened).deck
         return null
       }),
-    built: [
-      ...OPEN_INPUTS,
-      ...EDIT_SETS.map((set) => asSlide(EVERYTHING, { edits: set })),
-    ],
+    built: [...OPEN_INPUTS, ...EDIT_SETS.map((set) => asSlide(EVERYTHING, { edits: set }))],
   },
   {
     fn: 'pptxDeckcore.index.savePptx',
@@ -570,11 +732,20 @@ export const DECKCORE: CallSpec[] = [
       ...EDIT_SETS.slice(0, 6).map((set) => asSlide(EVERYTHING, { edits: set, save: false })),
       asSlide(EVERYTHING, {
         edits: [{ slide: 0, element: 0, flags: ['dirty'] }],
-        afterSave: [{ slide: 0, element: 1, flags: ['dirtyFill'], set: { field: 'fill', value: { type: 'solid', color: '#778899' } } }],
+        afterSave: [
+          {
+            slide: 0,
+            element: 1,
+            flags: ['dirtyFill'],
+            set: { field: 'fill', value: { type: 'solid', color: '#778899' } },
+          },
+        ],
       }),
       asSlide(EVERYTHING, {
         edits: [{ slide: 0, element: 0, flags: ['dirty'] }],
-        afterSave: [{ slide: 0, element: 0, flags: ['dirty'], set: { field: 'runText', value: 'after' } }],
+        afterSave: [
+          { slide: 0, element: 0, flags: ['dirty'], set: { field: 'runText', value: 'after' } },
+        ],
         again: true,
       }),
     ],
@@ -592,14 +763,20 @@ export const DECKCORE: CallSpec[] = [
       ...EDIT_SETS.map((set) => asSlide(EVERYTHING, { slide: 0, edits: set })),
       ...DECKS.map(([name]) => deckInput(name, { slide: 0 })),
       ...DECKS.map(([name]) =>
-        deckInput(name, { slide: 0, edits: [{ slide: 0, element: 0, flags: ['dirty'] }, { slide: 0, element: 1, flags: ['dirtyTransform'] }] }),
+        deckInput(name, {
+          slide: 0,
+          edits: [
+            { slide: 0, element: 0, flags: ['dirty'] },
+            { slide: 0, element: 1, flags: ['dirtyTransform'] },
+          ],
+        }),
       ),
     ],
   },
   {
     fn: 'pptxDeckcore.index.patchedElementXml',
     call: (text, args) =>
-      deckOp(text, args, (opened, _at: At) =>
+      deckOp(text, args, (opened) =>
         withUuid(UUID, () => {
           applyEdits(opened, edits(args))
           const el = opened.deck.slides[args.slide as number]!.elements[args.element as number]!
@@ -614,7 +791,13 @@ export const DECKCORE: CallSpec[] = [
       ),
       ...DECKS.flatMap(([name]) =>
         [0, 1, 2].map((element) =>
-          deckInput(name, { slide: 0, element, edits: [{ slide: 0, element, flags: ['dirty', 'dirtyTransform', 'dirtyFill', 'dirtyStroke'] }] }),
+          deckInput(name, {
+            slide: 0,
+            element,
+            edits: [
+              { slide: 0, element, flags: ['dirty', 'dirtyTransform', 'dirtyFill', 'dirtyStroke'] },
+            ],
+          }),
         ),
       ),
     ],
@@ -637,7 +820,11 @@ export const DECKCORE: CallSpec[] = [
       ]),
       ...DECKS.map(([name]) => deckInput(name, { slide: 0, ...bg('#102030') })),
       ...DECKS.map(([name]) => deckInput(name, { slide: 1, ...bg(FILLS[4]) })),
-      asSlide(EVERYTHING, { slide: 0, ...bg('#102030'), edits: [{ slide: 0, element: 0, flags: ['dirty'] }] }),
+      asSlide(EVERYTHING, {
+        slide: 0,
+        ...bg('#102030'),
+        edits: [{ slide: 0, element: 0, flags: ['dirty'] }],
+      }),
       asSlide(slide(TEXT, { bg: '<p:bg bwMode="auto"/>' }), { slide: 0, ...bg('#102030') }),
       asSlide('<p:sld>', { slide: 0, ...bg('#102030') }),
     ],
@@ -675,8 +862,18 @@ export const DECKCORE: CallSpec[] = [
           source: { mediaPath: 'ppt/theme/theme1.xml' },
           tile,
         }),
+        // an image rel with an empty id: no rel to point at, so nothing changes
+        asRels(slideRels(rel('', `${REL}/image`, '../theme/theme1.xml')), {
+          slide: 0,
+          source: { mediaPath: 'ppt/theme/theme1.xml' },
+          tile,
+        }),
         asRels('', { slide: 0, source: { mediaPath: 'ppt/theme/theme1.xml' }, tile }),
-        asRels('<Relationships></Relationships>', { slide: 0, source: { mediaPath: 'ppt/theme/theme1.xml' }, tile }),
+        asRels('<Relationships></Relationships>', {
+          slide: 0,
+          source: { mediaPath: 'ppt/theme/theme1.xml' },
+          tile,
+        }),
         asRels(slideRels(rel('rId99999999999999999999', `${REL}/image`, 'x.png')), {
           slide: 0,
           source: { mediaPath: 'ppt/theme/theme1.xml' },
@@ -716,7 +913,10 @@ export const DECKCORE: CallSpec[] = [
     built: [
       ...[true, false].flatMap((hidden) => [
         ...INHERITED.map((input) => ({ ...input, args: { ...input.args, hidden } })),
-        asLayout(layout(BG_SOLID, LOGO(20) + FOOTER(21, 'ftr', 'f'), '', HF_ALL), { slide: 0, hidden }),
+        asLayout(layout(BG_SOLID, LOGO(20) + FOOTER(21, 'ftr', 'f'), '', HF_ALL), {
+          slide: 0,
+          hidden,
+        }),
         asMaster(master(BG_SOLID, LOGO(30) + FOOTER(31, 'dt', 'd'), HF_ALL), { slide: 0, hidden }),
         asSlide(slide(TEXT, { attrs: ' showMasterSp="0"' }), { slide: 0, hidden }),
         asSlide(slide(TEXT, { attrs: ' showMasterSp="1" foo="bar"' }), { slide: 0, hidden }),
@@ -768,7 +968,11 @@ export const DECKCORE: CallSpec[] = [
       ].flatMap((xmls) => [
         deckInput('blank deck', { slide: 0, xmls }),
         asSlide(EVERYTHING, { slide: 0, xmls }),
-        asSlide(EVERYTHING, { slide: 0, xmls, edits: [{ slide: 0, element: 0, flags: ['dirty'] }] }),
+        asSlide(EVERYTHING, {
+          slide: 0,
+          xmls,
+          edits: [{ slide: 0, element: 0, flags: ['dirty'] }],
+        }),
       ]),
       ...DECKS.map(([name]) => deckInput(name, { slide: 0, xmls: [SHAPE, TEXT] })),
       deckInput('blank deck', { slide: 4, xmls: [TEXT] }),
@@ -787,7 +991,13 @@ export const DECKCORE: CallSpec[] = [
       ...[
         { rows: 2, cols: 3, offset: { x: 100, y: 200, cx: 3000, cy: 1000 } },
         { rows: 1, cols: 1, offset: { x: 0, y: 0, cx: 1, cy: 1 } },
-        { rows: 3, cols: 2, offset: { x: 0, y: 0, cx: 6000, cy: 3000 }, colWidthsEmu: [1000, 5000], rowHeightsEmu: [1, 2, 3] },
+        {
+          rows: 3,
+          cols: 2,
+          offset: { x: 0, y: 0, cx: 6000, cy: 3000 },
+          colWidthsEmu: [1000, 5000],
+          rowHeightsEmu: [1, 2, 3],
+        },
         { rows: 0, cols: -5, offset: { x: 0, y: 0, cx: 0, cy: 0 } },
         { rows: 1e9, cols: 2, offset: { x: 0, y: 0, cx: 1e30, cy: 1 } },
       ].flatMap((opts) => [
@@ -795,9 +1005,15 @@ export const DECKCORE: CallSpec[] = [
         asSlide(EVERYTHING, { slide: 0, opts }),
       ]),
       ...DECKS.map(([name]) =>
-        deckInput(name, { slide: 0, opts: { rows: 2, cols: 2, offset: { x: 0, y: 0, cx: 2000, cy: 1000 } } }),
+        deckInput(name, {
+          slide: 0,
+          opts: { rows: 2, cols: 2, offset: { x: 0, y: 0, cx: 2000, cy: 1000 } },
+        }),
       ),
-      deckInput('blank deck', { slide: 3, opts: { rows: 1, cols: 1, offset: { x: 0, y: 0, cx: 1, cy: 1 } } }),
+      deckInput('blank deck', {
+        slide: 3,
+        opts: { rows: 1, cols: 1, offset: { x: 0, y: 0, cx: 1, cy: 1 } },
+      }),
     ],
   },
 ]

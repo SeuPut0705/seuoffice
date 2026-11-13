@@ -8,7 +8,7 @@ import {
   patchTableStyleXml,
   TABLE_STYLE_PRESETS,
   type TableStyleEdit,
-} from '../../packages/pptx-engine/src/table-edit'
+} from './reference/table-edit'
 import {
   applyThemeToArchive,
   buildColorMap,
@@ -17,8 +17,8 @@ import {
   recolorXml,
   remapDeckColors,
   type ThemeSpec,
-} from '../../packages/pptx-engine/src/theme-apply'
-import { PackageArchive } from '../../packages/pptx-engine/src/zip'
+} from './reference/theme-apply'
+import { PackageArchive } from './reference/zip'
 import type { CallSpec, Input } from '../docx-diff/calls-spec'
 
 type Parts = Array<[string, string]>

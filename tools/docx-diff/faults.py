@@ -25,8 +25,13 @@ throwaway branch that holds the faults file:
 
 The result is written to tools/docx-diff/out/faults.txt, which the job keeps.
 Exits 1 when a fault does not apply or does not build: such a fault says nothing.
+
+FAULT_SHARD=i/n runs only the faults whose index is i modulo n, so that n
+runners can share one file (the workflow's `fault_shards` input). Every
+shard still checks that each fault of the file applies.
 """
 import json
+import os
 import pathlib
 import re
 import subprocess
@@ -70,6 +75,11 @@ def main() -> int:
         if found != 1:
             print(f"{fault['name']}: the text occurs {found} times in {fault['file']}")
             return 1
+    shard, shards = (int(part) for part in os.environ.get("FAULT_SHARD", "0/1").split("/"))
+    if not 0 <= shard < shards:
+        print(f"FAULT_SHARD {shard}/{shards} names no shard")
+        return 1
+    faults = faults[shard::shards]
     OUT.parent.mkdir(parents=True, exist_ok=True)
     broken = 0
     counts = {"caught": 0, "MISSED": 0, "SET ASIDE": 0}

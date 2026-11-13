@@ -18,3 +18,16 @@ scope.process ??= {
     queueMicrotask(() => callback(...args)),
 }
 scope.global ??= globalThis
+
+// The slides session defers its history notice with setImmediate (session-state.ts). The page
+// had it only as a side effect of JSZip's `setimmediate` dependency, which the Rust engine no
+// longer loads: each callback runs as a task of its own, in the order it was queued.
+if (typeof scope.setImmediate !== 'function') {
+  const queue: Array<() => void> = []
+  const channel = new MessageChannel()
+  channel.port1.onmessage = () => queue.shift()?.()
+  scope.setImmediate = (callback: (...args: unknown[]) => void, ...args: unknown[]) => {
+    queue.push(() => callback(...args))
+    channel.port2.postMessage(null)
+  }
+}

@@ -21,6 +21,7 @@ import { LEAVES } from './calls-leaves'
 import { MTX } from './calls-mtx'
 import { PACKAGE } from './calls-package'
 import { PLACEHOLDER } from './calls-placeholder'
+import { ROUNDTRIP } from './calls-roundtrip'
 import { TABLES } from './calls-tables'
 import { TABLESTYLE } from './calls-tablestyle'
 import { THEME } from './calls-theme'
@@ -54,4 +55,5 @@ export const { callOutcomes, callsOnDocument, callsAfterCorpus, reportCalls, lis
     layouts: LAYOUTS,
     media: MEDIA,
     packageparts: PACKAGEPARTS,
+    roundtrip: ROUNDTRIP,
   })

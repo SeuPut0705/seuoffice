@@ -1,6 +1,6 @@
 # SeuOffice 설치
 
-모든 버전은 GitHub에 있는 프로젝트의 [Releases 페이지](https://github.com/SeuPut0705/seuoffice/releases/latest)에 올라옵니다.
+모든 버전은 GitHub에 있는 프로젝트의 [Releases 페이지](https://github.com/seuput-inc/seuoffice/releases/latest)에 올라옵니다.
 
 ## 내 컴퓨터에 맞는 파일 고르기
 

@@ -600,10 +600,15 @@ fn invoke_command(
         invoke::host::RecordingHost::new(resolved_of(resolved, blobs)?, alt_chunk_converter);
     let mut env = invoke::InvokeEnv::new(blobs, callbacks, now_ms, media);
     // the product's calls: a model value read as the TypeScript reads it (wire.rs)
-    // `odt.<name>`: the exports of @seuoffice/odt-engine besides its commands
-    let result = jscompat::reading_leniently(|| match function.strip_prefix("odt.") {
-        Some(name) => odt::invoke(name, &args.resolved()?),
-        None => invoke::table::invoke(&mut env, function, args),
+    // `pptx.<name>` and `odt.<name>`: the other engines' exports besides their commands
+    let result = jscompat::reading_leniently(|| {
+        if let Some(name) = function.strip_prefix("pptx.") {
+            invoke::pptx_table::invoke(&mut env, name, args)
+        } else if let Some(name) = function.strip_prefix("odt.") {
+            odt::invoke(name, &args.resolved()?)
+        } else {
+            invoke::table::invoke(&mut env, function, args)
+        }
     });
     let warnings = docx_engine::warnings::take();
     let value = result?;

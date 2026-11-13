@@ -15,13 +15,20 @@ const NS =
 const OTHER = '<a:ext uri="{C183D7F6-B498-43B3-948B-1728B52AA6E4}"><keep me="1"/></a:ext>'
 const LINK_LIST = '<a:extLst><a:ext uri="{A12FA001-AC4F-418D-AE19-62706E023703}"/></a:extLst>'
 
+/** A whole element around `originalXml`: the engine reads a model, not a partial one. */
+const elementOf = (originalXml: string): SlideElement => ({
+  id: 'el',
+  type: 'passthrough',
+  kind: 'unknown',
+  anchor: { spIndex: 0, originalXml, range: [0, originalXml.length] },
+  transform: { offset: { x: 0, y: 0, cx: 0, cy: 0 }, rot: 0, flipH: false, flipV: false },
+})
+
 /** The shape after it was given a creation id, with <p:cNvPr> holding `inner`. */
 function minted(inner: string): string {
-  const element = {
-    anchor: {
-      originalXml: `<p:sp ${NS}><p:nvSpPr><p:cNvPr id="2" name="Box">${inner}</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/></p:sp>`,
-    },
-  } as unknown as SlideElement
+  const element = elementOf(
+    `<p:sp ${NS}><p:nvSpPr><p:cNvPr id="2" name="Box">${inner}</p:cNvPr><p:cNvSpPr/><p:nvPr/></p:nvSpPr><p:spPr/></p:sp>`,
+  )
   ensureCreationId(element)
   const xml = element.anchor!.originalXml
   expect(XMLValidator.validate(xml)).toBe(true)

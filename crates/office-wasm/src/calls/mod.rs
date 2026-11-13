@@ -60,6 +60,7 @@ mod pptx_package;
 mod pptx_packageparts;
 mod pptx_parse;
 mod pptx_placeholder;
+mod pptx_roundtrip;
 mod pptx_tables;
 mod pptx_tablestyle;
 mod pptx_theme;
@@ -164,6 +165,7 @@ pub fn dispatch(name: &str, text: &str, args: &Value) -> Option<Returned> {
         "pptxMedia" => Some(pptx_media::dispatch(function, text, args)),
         "pptxPackageparts" => Some(pptx_packageparts::dispatch(function, text, args)),
         "pptxGeom" => Some(pptx_geom::dispatch(function, text, args)),
+        "pptxRoundtrip" => Some(pptx_roundtrip::dispatch(function, text, args)),
         "pptxIdent" => Some(pptx_ident::dispatch(function, text, args)),
         "pptxLayout" => Some(pptx_layout::dispatch(function, text, args)),
         "pptxLeaves" => Some(pptx_leaves::dispatch(function, text, args)),

@@ -8,8 +8,8 @@ seuoffice 웹 묶음(`@seuoffice/web`)을 호스트가 직접 정적 파일로 �
 # 안정 판 하나를 골라 같은 판의 두 묶음을 릴리스 주소로 설치한다(npm 레지스트리에는 없다)
 V=0.12.15
 npm install \
-  https://github.com/SeuPut0705/seuoffice/releases/download/v$V/seuoffice-embed-$V.tgz \
-  https://github.com/SeuPut0705/seuoffice/releases/download/v$V/seuoffice-web-$V.tgz
+  https://github.com/seuput-inc/seuoffice/releases/download/v$V/seuoffice-embed-$V.tgz \
+  https://github.com/seuput-inc/seuoffice/releases/download/v$V/seuoffice-web-$V.tgz
 ```
 
 ## 보기
@@ -125,4 +125,4 @@ try {
 
 ## 라이선스
 
-Apache-2.0. 저장소: https://github.com/SeuPut0705/seuoffice
+FSL-1.1-ALv2(소스 공개, 판마다 2년 뒤 Apache-2.0), GenOffice·이음오피스에서 온 부분은 Apache-2.0. 저장소: https://github.com/seuput-inc/seuoffice

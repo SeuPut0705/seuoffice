@@ -34,7 +34,7 @@ const faults = [
   ],
   [
     'numeric-hex-radix',
-    'pptxLeaves.xml-utils.decodeNumericCharRefs',
+    'pptxLeaves.xml-utils.decodeXml',
     leaf + 'xml_utils.rs',
     'Some(hex) => parse_int(hex, Radix::Sixteen)',
     'Some(hex) => parse_int(hex, Radix::Ten)',
@@ -559,11 +559,11 @@ const faults = [
     'guid.get(..8).unwrap_or(guid).to_owned()',
   ],
   [
-    'ident-slide-flat',
+    'ident-slide-number-end-anchor',
     'pptxIdent.identity.slideDurableId',
     'crates/pptx-engine/src/identity.rs',
-    '"_".repeat(other.as_str().encode_utf16().count())',
-    '"_".to_owned()',
+    'js_regex!(r"slide(\\d+)\\.xml$")',
+    'js_regex!(r"slide(\\d+)\\.xml")',
   ],
   [
     'ident-cnvpr-number-empty',
@@ -627,6 +627,20 @@ const faults = [
     'crates/pptx-engine/src/redaction_xml.rs',
     'Some(Value::String(label)) if !label.is_empty() => Some(label.as_str()),',
     'Some(Value::String(label)) => Some(label.as_str()),',
+  ],
+  [
+    'ident-read-unreadable-label-withholds',
+    'pptxIdent.redaction-xml.readRedactLabel',
+    'crates/pptx-engine/src/redaction_xml.rs',
+    '_ => Some("private"),',
+    '_ => None,',
+  ],
+  [
+    'ident-read-mark-any-prefix',
+    'pptxIdent.redaction-xml.readRedactLabel',
+    'crates/pptx-engine/src/redaction_xml.rs',
+    'js_regex!(r"^(?:[\\w.-]+:)?redact$", "")',
+    'js_regex!(r"^(?:go:)?redact$", "")',
   ],
   [
     'ident-strip-trim',
@@ -1555,11 +1569,11 @@ const faults = [
     'start_a: JsNum(scaled_attr(r, "@_stA", 100000.0, 100000.0).unwrap_or(0.0)),',
   ],
   [
-    'parse-shape-shadow-inner-empty-outer',
+    'parse-shape-shadow-ky-zero-kept',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/shape.rs',
-    'inner: (!value_truthy(outer)).then_some(true),',
-    'inner: outer.is_none().then_some(true),',
+    'ky_deg: ky.filter(|k| number_truthy(*k)).map(JsNum),',
+    'ky_deg: ky.map(JsNum),',
   ],
   // shape.ts: <a:bevelT/>
   [
@@ -1591,13 +1605,13 @@ const faults = [
     '            if !is_self {\n                group_depth += 1;',
     '            if true {\n                group_depth += 1;',
   ],
-  // shape.ts: 10001 descendants
+  // shape.ts: group children in document order
   [
-    'parse-shape-group-budget-not-spent',
+    'parse-shape-group-child-doc-order',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/shape.rs',
-    'budget.remaining -= 1;',
-    'budget.remaining -= 0;',
+    'sort_by_number(&mut ordered, |a, b| a.1 - b.1);',
+    'sort_by_number(&mut ordered, |_, _| 0.0);',
   ],
   [
     'parse-shape-group-child-nvid',
@@ -1722,11 +1736,11 @@ const faults = [
     'out.extend(dgm_bullet_lines(c, lvl));',
   ],
   [
-    'parse-dgm-label-fill-alpha-kept',
+    'parse-dgm-label-fill-tag-order-reversed',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/diagram.rs',
-    'fills.push(slice_utf16(hex, 0.0, Some(7.0)));',
-    'fills.push(hex.to_owned());',
+    'for tag in super::fill::COLOR_NODE_TAGS {',
+    'for tag in super::fill::COLOR_NODE_TAGS.iter().rev().copied() {',
   ],
   [
     'parse-dgm-sp-bullet-on-title',
@@ -1839,7 +1853,7 @@ const faults = [
     'pptxParse.parse.parseSlide',
     leaf + 'parse/diagram/org.rs',
     'math_max(frame_cx * 0.0012, 9525.0)',
-    'math_min(frame_cx * 0.0012, 9525.0)',
+    'jscompat::math_min(frame_cx * 0.0012, 9525.0)',
   ],
   [
     'parse-dgm-cards-foot',
@@ -1909,8 +1923,8 @@ const faults = [
     'parse-text-color-source-slot',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/text.rs',
-    '(para_style.color.is_some(), &mut src.color),',
-    '(para_style.color.is_some(), &mut src.font_size),',
+    '(para_style.color.is_some(), &mut src.color),\n        (para_style.latin_font.is_some(), &mut src.latin_font),',
+    '(para_style.color.is_some(), &mut src.latin_font),\n        (para_style.latin_font.is_some(), &mut src.color),',
   ],
   [
     'parse-text-theme-font-major-prefix',
@@ -1956,11 +1970,11 @@ const faults = [
     '        if true {\n            cell.fill.set(fill);',
   ],
   [
-    'parse-table-cell-zero-width-nofill',
+    'parse-table-cell-zero-width-numeric',
     'pptxParse.parse.parseSlide',
     leaf + 'parse/table.rs',
-    '== Some("0")\n            && get(Some(ln), "a:noFill").is_none()',
-    '== Some("0")',
+    'get(Some(ln), "@_w").and_then(Value::as_str) == Some("0")',
+    'get(Some(ln), "@_w")\n            .and_then(Value::as_str)\n            .is_some_and(|w| w.trim_matches(\'0\').is_empty())',
   ],
   [
     'parse-table-cell-inset-default',
@@ -2197,6 +2211,49 @@ const faults = [
     '(Some(o), Some(c)) if c < o => (c, true),',
     '(Some(o), Some(c)) if c > o => (c, true),',
   ],
+  // main 288118079: one spelling of a slide, and runs hidden from AI out of a search
+  [
+    'canonical-comment-kept',
+    'pptxLeaves.xml-utils.canonicalXml',
+    leaf + 'xml_utils.rs',
+    'if text.starts_with("<!--") {\n                return String::new();',
+    'if text.starts_with("<!--") {\n                return text.to_owned();',
+  ],
+  [
+    'canonical-cdata-unescaped',
+    'pptxLeaves.xml-utils.canonicalXml',
+    leaf + 'xml_utils.rs',
+    'return escape_xml_text(cdata);',
+    'return cdata.to_owned();',
+  ],
+  [
+    'canonical-end-tag-space-kept',
+    'pptxLeaves.xml-utils.canonicalXml',
+    leaf + 'xml_utils.rs',
+    'Some(space) => format!("{}>", &text[..space.start()]),',
+    'Some(_) => text.to_owned(),',
+  ],
+  [
+    'parse-slide-raw-spelling',
+    'pptxParse.parse.parseSlide',
+    leaf + 'parse/slide.rs',
+    'let canonical = crate::xml_utils::canonical_xml(slide_xml)?;',
+    'let canonical = std::borrow::Cow::<str>::Borrowed(slide_xml);',
+  ],
+  [
+    'replace-withheld-not-barrier',
+    'pptxDecktext.index.replaceAllInDeck',
+    leaf + 'deck/text.rs',
+    '|| (skip_withheld && r.redact',
+    '|| (!skip_withheld && r.redact',
+  ],
+  [
+    'deckcore-image-rel-empty-id-used',
+    'pptxDeckcore.index.setSlideBackgroundImage',
+    leaf + 'deck/background.rs',
+    'return Ok((!rel.id.is_empty()).then(|| rel.id.clone()));',
+    'return Ok(Some(rel.id.clone()));',
+  ],
 ]
 
 const out = resolve(here, 'out/faults')
@@ -2266,6 +2323,22 @@ const compareArgs = [
 ]
 /** The calls group of a fault's function: `pptxParse.text.x` is `parse`. */
 const groupOf = (fn) => fn.split('.')[0].slice('pptx'.length).toLowerCase()
+// A probe run before this one left its last fault built in the shared target
+// directory, and the new scratch copy can look older than it to cargo
+const cleaned = run('cargo', [
+  'clean',
+  '--manifest-path',
+  resolve(workspace, 'crates/Cargo.toml'),
+  '--target',
+  'wasm32-wasip1',
+  '--profile',
+  'probe',
+  '-p',
+  'pptx-engine',
+  '-p',
+  'office-wasm',
+])
+if (cleaned.status !== 0) throw new Error(cleaned.stderr || String(cleaned.error))
 const baselineBuild = run('cargo', args)
 if (baselineBuild.status !== 0) throw new Error(baselineBuild.stderr || String(baselineBuild.error))
 // The groups the selected faults are in, unfaulted: each must pass on its own

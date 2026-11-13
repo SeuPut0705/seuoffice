@@ -138,10 +138,10 @@ pub fn set_slide_background_image(
                 .slides
                 .get(slide_index)
                 .ok_or_else(|| no_slide(slide_index))?;
-            (
-                image_rel_for(archive, slide, media_path)?,
-                media_path.clone(),
-            )
+            let Some(rid) = image_rel_for(archive, slide, media_path)? else {
+                return Ok(None);
+            };
+            (rid, media_path.clone())
         }
     };
     let tiled = tile == Some(true);
@@ -183,16 +183,18 @@ pub fn set_slide_background_image(
     Ok(Some(media_path))
 }
 
-/// `imageRelFor`: the slide's image rel for a media path, adding one when missing.
+/// `imageRelFor`: the slide's image rel for a media path, adding one when
+/// missing. `None` where the rel found has an empty id: every caller's
+/// `if (!rid) return null`.
 pub(crate) fn image_rel_for(
     archive: &mut PackageArchive,
     slide: &Slide,
     media_path: &str,
-) -> Result<String, String> {
+) -> Result<Option<String>, String> {
     let path = slide_path(slide);
     for rel in archive.read_rels(path)?.values() {
         if rel.r#type.ends_with("/image") && resolve_target(path, &rel.target) == media_path {
-            return Ok(rel.id.clone());
+            return Ok((!rel.id.is_empty()).then(|| rel.id.clone()));
         }
     }
     let rels_path = rels_path_for(path);
@@ -220,7 +222,7 @@ pub(crate) fn image_rel_for(
         None => rels,
     };
     archive.entries_mut().set(rels_path, updated.into_bytes());
-    Ok(rid)
+    Ok(Some(rid))
 }
 
 /// `resetSlideBackground`: removes the slide's own `<p:bg>` override; the

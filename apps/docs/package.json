@@ -2,7 +2,7 @@
   "name": "@seuoffice/docs",
   "productName": "SeuOffice Docs",
   "version": "0.1.0",
-  "license": "Apache-2.0",
+  "license": "FSL-1.1-ALv2",
   "private": true,
   "description": "AI-native streaming docx editor with paragraph-patch save",
   "main": "out/main/index.js",
@@ -51,7 +51,7 @@
   },
   "author": "SeuOffice",
   "build": {
-    "appId": "com.genoffice.docs",
+    "appId": "com.seuput.seuoffice.docs",
     "productName": "SeuOffice Docs",
     "electronVersion": "43.3.0",
     "artifactName": "AIDocx-${version}-${arch}.${ext}",

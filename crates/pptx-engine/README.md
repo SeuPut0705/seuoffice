@@ -123,6 +123,89 @@ ported in batches, not unit by unit:
 Units 1 to 4 below were ported and proven one unit at a time before this
 change; their faults are run with C2.
 
+C2 is on `feat/rust-pptx-c2` (crates/pptx-engine/C2-PLAN.md has its shape).
+The TypeScript engine is frozen in `tools/pptx-diff/reference/`, which the
+gate compares against; `packages/pptx-engine/src` is the binding the
+generator writes (`npx tsx tools/docx-diff/binding/gen.ts --engine pptx`).
+
+Render benchmark (`tools/pptx-diff/bench-render.ts`, 100 rounds after 3
+warm-up rounds, the five largest decks the gate has, open plus
+`buildRenderSlide` of every slide, Node 22 on an M-series MacBook, medians):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 56.7    | 2.5       | 59.3     | 0.0%          |             |
+| wasm                                          | 30.6    | 8.6       | 39.2     | -33.9%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 30.6    | 7.4       | 37.9     | -36.0%        | 2.1%        |
+| wasm, `elementDurableId` in TypeScript        | 30.6    | 6.1       | 36.7     | -38.1%        | 4.2%        |
+| wasm, `groupChildDurableId` in TypeScript     | 32.5    | 8.3       | 40.8     | -31.2%        | -2.7%       |
+| wasm, `isBackgroundLikeElement` in TypeScript | 29.5    | 7.9       | 37.4     | -36.9%        | 3.0%        |
+
+The rule (main, 2026-11-12): an export whose wasm route makes the benchmark
+more than 5% slower stays TypeScript. None does: the largest cost is
+`elementDurableId`, 4.2% of the TypeScript total, so all four cross to Rust.
+The wasm path renders slower (8.6 ms against 2.5 ms: every render-path call
+serializes an element) and opens faster; the opening dominates. Two runs of
+20 rounds gave costs from -11% to +4% for the same exports: the per-export
+column is noise near its size, and the 100-round run is the one recorded.
+
+The same benchmark on a GitHub runner (workflow `seuoffice bench pptx`, run
+43374829413 at 8fc9462a2, ubuntu-latest, 100 rounds, medians):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 129.0   | 6.7       | 135.7    | 0.0%          |             |
+| wasm                                          | 65.6    | 24.4      | 90.0     | -33.6%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 65.6    | 20.4      | 85.9     | -36.7%        | 3.0%        |
+| wasm, `elementDurableId` in TypeScript        | 66.9    | 16.7      | 83.6     | -38.4%        | 4.7%        |
+| wasm, `groupChildDurableId` in TypeScript     | 66.2    | 22.5      | 88.7     | -34.6%        | 1.0%        |
+| wasm, `isBackgroundLikeElement` in TypeScript | 66.0    | 22.6      | 88.6     | -34.7%        | 1.0%        |
+
+At 8fc9462a2 the verdict held: the largest cost, `elementDurableId`, was 4.7%,
+under 5%.
+
+Run 43471015686 at 2fc9611be (the org's runner pool, the codec's `ref` shapes
+in; same benchmark):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 115.3   | 5.7       | 121.1    | 0.0%          |             |
+| wasm                                          | 66.1    | 23.1      | 89.3     | -26.3%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 65.5    | 18.6      | 84.1     | -30.6%        | 4.3%        |
+| wasm, `elementDurableId` in TypeScript        | 65.8    | 15.0      | 80.8     | -33.3%        | 7.0%        |
+| wasm, `groupChildDurableId` in TypeScript     | 66.3    | 19.9      | 86.3     | -28.7%        | 2.5%        |
+| wasm, `isBackgroundLikeElement` in TypeScript | 66.6    | 21.1      | 87.7     | -27.6%        | 1.3%        |
+
+An export's cost is the time the benchmark saves when that export is taken
+from the TypeScript, over the TypeScript total: for `elementDurableId` here
+(89.3 - 80.8) / 121.1 = 7.0%, against (90.0 - 83.6) / 135.7 = 4.7% before.
+The wasm total barely moved (90.0 to 89.3 ms); the TypeScript total fell
+14.6 ms on these runners, most of the change in the percentage. The codec
+change cannot explain it: the export answers a string, so its reply is never
+revived through a shape.
+
+Main asked for one more 100-round run before deciding (run 43498253158 at
+5c14802ee):
+
+| Configuration                                 | Open ms | Render ms | Total ms | vs TypeScript | Export cost |
+| --------------------------------------------- | ------- | --------- | -------- | ------------- | ----------- |
+| TypeScript                                    | 94.3    | 5.0       | 99.3     | 0.0%          |             |
+| wasm                                          | 51.3    | 18.1      | 69.4     | -30.1%        |             |
+| wasm, `tableRowGridCols` in TypeScript        | 51.3    | 14.5      | 65.7     | -33.8%        | 3.7%        |
+| wasm, `elementDurableId` in TypeScript        | 51.5    | 12.0      | 63.5     | -36.0%        | 5.9%        |
+| wasm, `groupChildDurableId` in TypeScript     | 51.5    | 15.8      | 67.3     | -32.2%        | 2.1%        |
+| wasm, `isBackgroundLikeElement` in TypeScript | 51.1    | 16.8      | 68.0     | -31.6%        | 1.4%        |
+
+`elementDurableId` is over 5% again ((69.4 - 63.5) / 99.3), so it stays
+TypeScript (`PPTX_TS_ONLY` in tools/pptx-diff/binding/overrides.ts), and so do
+the three `xml-utils` functions it reads an element's bytes with
+(`attributeOf`, `elementRange`, `decodeXml`): through the binding each would be
+a wasm call of its own, more than the one call it replaces, and the benchmark
+measured it with them in TypeScript. Their Rust copies stay, as B4's
+per-character predicates did: the engine calls them itself
+(`matches_element_ref`, `group_child_durable_id`, the parsers), and the gate
+still compares them with the reference.
+
 ## Unit order
 
 Leaves first, the read side before the save side, as in the Word port.
@@ -636,11 +719,11 @@ names. Element ids are rebased to a counter from 0, a fixed uuid stands in for
 `crypto.randomUUID()`, and every zip the gate writes carries one fixed date
 (`stable-zip.ts`), so an input is the same bytes on every run.
 
-| Comparison            | Checks  | Different | Note                                                   |
-| --------------------- | ------- | --------- | ------------------------------------------------------ |
-| First (all groups)    | 137,770 | 11,622    | `evidence/c1-first.*`, kept unedited                   |
-| First, new groups     | 59,128  | 9,949     | 11 groups, 210 functions                               |
-| Last (all groups)     | 144,314 | 0         | but the 2 ledger classes and `generate`'s null numbers |
+| Comparison         | Checks  | Different | Note                                                   |
+| ------------------ | ------- | --------- | ------------------------------------------------------ |
+| First (all groups) | 137,770 | 11,622    | `evidence/c1-first.*`, kept unedited                   |
+| First, new groups  | 59,128  | 9,949     | 11 groups, 210 functions                               |
+| Last (all groups)  | 144,314 | 0         | but the 2 ledger classes and `generate`'s null numbers |
 
 Most of the first differences were the harness, not the port: three groups
 named wrong (never compared), `null` against an absent key in dispatches, a
@@ -662,4 +745,9 @@ option structs read a number list or `{ "$bytes": base64 }`
 (`src/json_bytes.rs`). `deck::open_pptx_with` and `open_archive_with` take the
 id counter a host keeps across calls (`Uids::next`).
 
-Fault probes run with C2, before the merge to main.
+The fault probes (`tools/pptx-diff/faults.mjs`, 311) all fail the gate on
+runner 43310891406 (ee9a20614). Main's fixes had made 15 of them dead or
+equivalent code and 2 no longer compiled: those were replaced by other defects
+of the same function or given gate inputs that reach them. They build in the
+`probe` profile (release semantics, no LTO), so eight shards finish in under an
+hour.
