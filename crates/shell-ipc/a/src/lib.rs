@@ -13,6 +13,7 @@ pub mod ports;
 mod probe;
 pub mod secrets;
 pub mod shell_ai_prefs;
+pub mod template_selection;
 mod value;
 pub mod zotero;
 
