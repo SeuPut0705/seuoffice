@@ -185,7 +185,7 @@ const SHELL_MENUS = {
 
 const sheetsModules = new WeakMap<CaseElectron, Promise<Record<string, Fn>>>()
 
-const group: Group = {
+export const group: Group = {
   batch: 'M',
 
   async load(cx: LoadContext) {
@@ -507,5 +507,3 @@ group.cases = [
     calls: [context(image, ['\uC774\uBBF8\uC9C0 \uBCF4\uAE30']), context(image, ['View Image'])],
   },
 ]
-
-export { group }
