@@ -2397,8 +2397,8 @@
   {
     "name": "hwp-image: no picture is asked anyway",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "    let answer = if media_urls.is_empty() {",
-    "replace": "    let answer = if false {",
+    "find": "    if media_urls.is_empty() {",
+    "replace": "    if false {",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
@@ -2418,15 +2418,15 @@
   {
     "name": "hwp-image: the requirements are dropped",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "            Some(value) => value_key(Some(value)),",
-    "replace": "            Some(_) => String::new(),",
+    "find": "        Some(value) => value_key(Some(value)),",
+    "replace": "        Some(_) => String::new(),",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
     "name": "hwp-image: an empty requirement is the text of a null",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "        let requirements = match op.and_then(|o| prop(o, \"requirements\")) {\n            None | Some(JsonValue::Null) => String::new(),",
-    "replace": "        let requirements = match op.and_then(|o| prop(o, \"requirements\")) {\n            None | Some(JsonValue::Null) => \"undefined\".to_owned(),",
+    "find": "    let requirements = match op.and_then(|o| prop(o, \"requirements\")) {\n        None | Some(JsonValue::Null) => String::new(),",
+    "replace": "    let requirements = match op.and_then(|o| prop(o, \"requirements\")) {\n        None | Some(JsonValue::Null) => \"undefined\".to_owned(),",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
@@ -2446,15 +2446,15 @@
   {
     "name": "hwp-image: the analyze call begins on another window",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "    let call = calls.begin(sender_id, sender_destroyed);\n    let urls",
-    "replace": "    let call = calls.begin(sender_id, false);\n    let urls",
+    "find": "    let call = calls.begin(sender_id, sender_destroyed);\n    let run",
+    "replace": "    let call = calls.begin(sender_id, false);\n    let run",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
     "name": "hwp-image: the statuses are not asked for a generation",
     "file": "main-core/src/hwp/ai_image.rs",
-    "find": "    let statuses = host.subscription_statuses();\n    let answer = host.generate_image_tool",
-    "replace": "    let statuses = JsonValue::Null;\n    let answer = host.generate_image_tool",
+    "find": "    let statuses = host.subscription_statuses();\n    GenerateImageStart {",
+    "replace": "    let statuses = JsonValue::Null;\n    GenerateImageStart {",
     "fn": ["hwp/ai-image.registerHwpImageIpc"]
   },
   {
@@ -2773,7 +2773,7 @@
   {
     "name": "diagram attachments: a file with unsaved changes is read",
     "file": "main-core/src/diagram/ai_attachments.rs",
-    "find": "        host.assert_file_saved(file_path)?;\n",
+    "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
     "replace": "",
     "fn": [
       "diagram/ai-attachments.readAttachmentPage",
@@ -3563,7 +3563,7 @@
   {
     "name": "epub attachments: a file with unsaved changes is read",
     "file": "main-core/src/epub/ai_attachments.rs",
-    "find": "        host.assert_file_saved(file_path)?;\n",
+    "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
     "replace": "",
     "fn": ["epub/ai-attachments.readAttachmentPage", "epub/ai-attachments.registerEpubAiIpc"]
   },
@@ -4178,7 +4178,7 @@
   {
     "name": "mindmap attachments: a file with unsaved changes is read",
     "file": "main-core/src/mindmap/ai_attachments.rs",
-    "find": "        host.assert_file_saved(file_path)?;\n",
+    "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
     "replace": "",
     "fn": [
       "mindmap/ai-attachments.readAttachmentPage",
@@ -4892,5 +4892,32 @@
     "find": "resolve_ai_settings(None, Some(&stored), &mut default_ai_settings(None))",
     "replace": "resolve_ai_settings(None, None, &mut default_ai_settings(None))",
     "fn": ["ai-search/media-tools.readAiSettingsFile"]
+  },
+  {
+    "name": "src attachments: the refusal of an unsaved file has another message",
+    "file": "main-core/src/diagram/ai_attachments.rs",
+    "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
+    "replace": "        assert_file_saved(open_files, file_path).map_err(|_| \"unsaved\".to_owned())?;\n",
+    "fn": [
+      "diagram/ai-attachments.readAttachmentPage",
+      "diagram/ai-attachments.registerDiagramAiIpc"
+    ]
+  },
+  {
+    "name": "src attachments: the refusal of an unsaved file has another message",
+    "file": "main-core/src/epub/ai_attachments.rs",
+    "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
+    "replace": "        assert_file_saved(open_files, file_path).map_err(|_| \"unsaved\".to_owned())?;\n",
+    "fn": ["epub/ai-attachments.readAttachmentPage", "epub/ai-attachments.registerEpubAiIpc"]
+  },
+  {
+    "name": "src attachments: the refusal of an unsaved file has another message",
+    "file": "main-core/src/mindmap/ai_attachments.rs",
+    "find": "        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;\n",
+    "replace": "        assert_file_saved(open_files, file_path).map_err(|_| \"unsaved\".to_owned())?;\n",
+    "fn": [
+      "mindmap/ai-attachments.readAttachmentPage",
+      "mindmap/ai-attachments.registerMindmapAiIpc"
+    ]
   }
 ]

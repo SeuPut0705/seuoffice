@@ -879,13 +879,6 @@
     "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
   },
   {
-    "name": "agent-window: tabs that cannot be read stop the card",
-    "file": "main-core/src/shell/agent/agent_window.rs",
-    "find": "let tabs = d.open_tabs().unwrap_or_default();",
-    "replace": "let Ok(tabs) = d.open_tabs() else {\n            return Err(\"tabs\".to_owned());\n        };",
-    "fn": ["agent-window.agentSkillToolsFor.proposeSkill"]
-  },
-  {
     "name": "agent-window: the session skills are read before the key",
     "file": "main-core/src/shell/agent/agent_window.rs",
     "find": "let key = d.new_key();\n        let session_skills = d.session_skills();",
@@ -926,5 +919,12 @@
     "find": "let key = d.new_key();\n        d.send_to_window(",
     "replace": "let key = String::from(\"fixed\");\n        d.send_to_window(",
     "fn": ["agent-window.agentSkillToolsFor.proposeInstall"]
+  },
+  {
+    "name": "agent-window: the model's suggested template is read from another folder",
+    "file": "main-core/src/shell/agent/agent_window.rs",
+    "find": "suggested: &input.suggested_template_path,",
+    "replace": "suggested: \"\",",
+    "fn": ["agent-window.window"]
   }
 ]

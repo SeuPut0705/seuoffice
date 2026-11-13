@@ -464,8 +464,8 @@
   {
     "name": "ai-ipc: the stream's listeners stay",
     "file": "main-core/src/slides/ai_ipc.rs",
-    "find": "    unwatch.dispose(sender);",
-    "replace": "    let _ = &unwatch;",
+    "find": "    run.unwatch.dispose(sender);",
+    "replace": "    let _ = &run.unwatch;",
     "fn": ["slides/ai-ipc.registerAiIpc"]
   },
   {
@@ -478,15 +478,15 @@
   {
     "name": "ai-ipc: a web search asks for seven results",
     "file": "main-core/src/slides/ai_ipc.rs",
-    "find": "number_or(max_results, 6.0)",
-    "replace": "number_or(max_results, 7.0)",
+    "find": "\"results\", 6.0,",
+    "replace": "\"results\", 7.0,",
     "fn": ["slides/ai-ipc.registerAiIpc"]
   },
   {
     "name": "ai-ipc: an image search asks for nine results",
     "file": "main-core/src/slides/ai_ipc.rs",
-    "find": "number_or(max_results, 8.0)",
-    "replace": "number_or(max_results, 9.0)",
+    "find": "\"images\", 8.0,",
+    "replace": "\"images\", 9.0,",
     "fn": ["slides/ai-ipc.registerAiIpc"]
   },
   {
@@ -838,5 +838,75 @@
     "find": "    if unusable(image_w) || unusable(image_h) ||",
     "replace": "    if unusable(image_h) ||",
     "fn": ["pipelines/slides/cover-crop.coverCropFractions"]
+  },
+  {
+    "name": "ai-ipc: a finished stream stays registered",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    streams.delete(&run.key);",
+    "replace": "    let _ = &run.key;",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a run that threw does not fail the handler",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    outcome.map_err(|thrown| thrown_error(&thrown))",
+    "replace": "    let _ = outcome;\n    Ok(())",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a read does not end its media call",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    media_call_end(media_calls, sender, start.call);\n    match outcome {",
+    "replace": "    match outcome {",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media tool does not end its media call",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    media_call_end(media_calls, sender, start.call);\n    match (outcome, start.prep_error) {",
+    "replace": "    match (outcome, start.prep_error) {",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a read that answered is reported as failed",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        Some(Ok(answer)) => answer,",
+    "replace": "        Some(Ok(_)) if false => JsonValue::Null,",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media tool's thrown error loses its message",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        (Some(Err(thrown)), _) => Err(thrown_error(&thrown)),",
+    "replace": "        (Some(Err(_)), _) => Err(IpcError::type_error(\"tool failed\")),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a request that could not be prepared loses its error",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        (None, Some(error)) => Err(error),",
+    "replace": "        (None, Some(_)) => Err(IpcError::type_error(\"not prepared\")),",
+    "fn": ["slides/ai-ipc.registerSlidesOnlyAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a search tool that threw answers the tool's own error",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "        Err(thrown) => Ok(search_failure(list, thrown_text(&thrown)?)),",
+    "replace": "        Err(_) => Ok(search_failure(list, String::new())),",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a query that is no text answers without the error class",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "format!(\"TypeError: {}\", error.0)",
+    "replace": "error.0",
+    "fn": ["slides/ai-ipc.registerAiIpc"]
+  },
+  {
+    "name": "ai-ipc: a media call is registered after its request is prepared",
+    "file": "main-core/src/slides/ai_ipc.rs",
+    "find": "    let call = media_call_begin(media_calls, sender);\n    match prepare() {",
+    "replace": "    let prepared = prepare();\n    let call = media_call_begin(media_calls, sender);\n    match prepared {",
+    "fn": ["slides/ai-ipc.registerAiIpc", "slides/ai-ipc.registerSlidesOnlyAiIpc"]
   }
 ]

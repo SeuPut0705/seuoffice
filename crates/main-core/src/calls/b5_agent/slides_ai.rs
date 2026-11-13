@@ -23,23 +23,25 @@ use crate::packages::ai_provider::stored_settings::{
     with_stored_key_models, with_stored_main_fields, with_stored_subscription_off,
     with_stored_unknown_fields,
 };
+use crate::packages::ai_search::media_call_abort::MediaCallId;
 use crate::packages::ai_search::media_call_abort::MediaCalls;
 use crate::packages::electron_utils::abort_on_destroyed::DestroyableSender;
 use crate::packages::electron_utils::ai_run_guard::{AiRunGuardInput, AiRunGuardSlot};
 use crate::packages::electron_utils::remote_image::MAX_REMOTE_IMAGE_BYTES;
-use crate::packages::electron_utils::safe_remote_url::AbortSignal;
 use crate::packages::pipelines::slides_cover_crop::{CoverCrop, cover_crop_fractions};
 use crate::slides::ai_ipc::{
-    ActiveStreams, AiIpcHost, AiSender, AiStreamRun, ImageDecoder, IpcError, MediaToolOptions,
-    NativeImage, PictureDeck, PictureOffset, PictureSource, ai_analyze_media, ai_generate_image,
-    ai_get_settings, ai_image_search, ai_ipc_setup, ai_list_style_templates,
-    ai_load_style_template, ai_log_run_failure, ai_read_url, ai_save_sidecar,
-    ai_save_style_template, ai_set_settings, ai_stream, ai_stream_cancel, ai_web_search,
-    broadcast_to_windows, chat_gpt_open_browser, chat_gpt_sign_in_pages, insert_image_begin,
-    insert_image_finish, read_ai_settings, replace_picture_begin, replace_picture_finish,
-    slides_ai_default_fonts, slides_ai_tool_capabilities, stored_ai_settings,
-    style_skill_sidecar_path, subscription_login_window_text, subscription_set_metered_accepted,
-    with_metered_accepted,
+    ActiveStreams, AiIpcHost, AiSender, ImageDecoder, IpcError, MediaRequest, MediaToolOptions,
+    NativeImage, PictureDeck, PictureOffset, PictureSource, SearchRequest, SearchStart, StreamRun,
+    StreamStart, ai_analyze_media_begin, ai_analyze_media_finish, ai_generate_image_begin,
+    ai_generate_image_finish, ai_get_settings, ai_image_search_begin, ai_image_search_finish,
+    ai_ipc_setup, ai_list_style_templates, ai_load_style_template, ai_log_run_failure,
+    ai_read_url_begin, ai_read_url_finish, ai_save_sidecar, ai_save_style_template,
+    ai_set_settings, ai_stream_begin, ai_stream_cancel, ai_stream_finish, ai_stream_send,
+    ai_web_search_begin, ai_web_search_finish, broadcast_to_windows, chat_gpt_open_browser,
+    chat_gpt_sign_in_pages, insert_image_begin, insert_image_finish, read_ai_settings,
+    replace_picture_begin, replace_picture_finish, slides_ai_default_fonts,
+    slides_ai_tool_capabilities, stored_ai_settings, style_skill_sidecar_path,
+    subscription_login_window_text, subscription_set_metered_accepted, with_metered_accepted,
 };
 use crate::slides::ai_proposal::{
     AI_REVIEW_SAVE_REASON, AiReview, HistoryMarker, RunBeginWake, SettleStep, WindowLives,
@@ -669,129 +671,6 @@ impl AiIpcHost for Host {
         self.conf("openExternal").and_then(Value::as_str) != Some("reject")
     }
 
-    fn run_ai_stream(
-        &mut self,
-        run: &AiStreamRun<'_>,
-        send: &mut dyn FnMut(&JsonValue),
-    ) -> Result<(), JsonValue> {
-        let request = sv(run.request);
-        let settings = sv(run.settings);
-        let statuses = sv(&run.statuses);
-        logl!(self.log; "runAiStream", request, settings, statuses);
-        let script: Vec<Value> = self
-            .conf("stream")
-            .and_then(|stream| stream.get("script"))
-            .and_then(Value::as_array)
-            .cloned()
-            .unwrap_or_default();
-        for op in &script {
-            if let Some(chunk) = op.get("send") {
-                send(&jv(chunk));
-            } else if let Some(request_id) = op.get("cancel") {
-                let sender = op.get("sender").and_then(Value::as_f64).unwrap_or(1.0);
-                ai_stream_cancel(
-                    &self.streams,
-                    &mut self.calls.borrow_mut(),
-                    sender,
-                    Some(&jv(request_id)),
-                );
-            } else if let Some(id) = op.get("destroy").and_then(Value::as_f64) {
-                // the window's `destroyed` event: the listener of this stream's
-                // controller is the one `abort_on_destroyed` registered
-                let found = self
-                    .senders
-                    .borrow()
-                    .iter()
-                    .find(|(key, _)| *key as f64 == id)
-                    .map(|(_, state)| Rc::clone(state));
-                if let Some(state) = found {
-                    let mut state = state.borrow_mut();
-                    state.destroyed = true;
-                    let listeners = std::mem::take(&mut state.listeners);
-                    if listeners.contains(&1) {
-                        run.signal.abort();
-                    }
-                }
-            } else if op.get("observe").is_some() {
-                let aborted = run.signal.aborted();
-                logl!(self.log; "aborted", aborted);
-            } else if let Some(message) = op.get("throw").and_then(Value::as_str) {
-                return Err(error_value(message));
-            }
-        }
-        Ok(())
-    }
-
-    fn web_search_tool(
-        &mut self,
-        settings_path: &str,
-        query: &str,
-        max_results: f64,
-    ) -> Result<JsonValue, JsonValue> {
-        self.tool(
-            "webSearchTool",
-            vec![json!(settings_path), json!(query), json!(max_results)],
-            None,
-        )
-    }
-
-    fn image_search_tool(
-        &mut self,
-        settings_path: &str,
-        query: &str,
-        max_results: f64,
-    ) -> Result<JsonValue, JsonValue> {
-        self.tool(
-            "imageSearchTool",
-            vec![json!(settings_path), json!(query), json!(max_results)],
-            None,
-        )
-    }
-
-    fn read_url_tool(
-        &mut self,
-        settings_path: &str,
-        url: &str,
-        offset: f64,
-        signal: &dyn AbortSignal,
-    ) -> Result<JsonValue, JsonValue> {
-        self.tool(
-            "readUrlTool",
-            vec![json!(settings_path), json!(url), json!(offset)],
-            Some(signal.aborted()),
-        )
-    }
-
-    fn generate_image_tool(
-        &mut self,
-        settings_path: &str,
-        request: &JsonValue,
-        options: &MediaToolOptions,
-        signal: &dyn AbortSignal,
-    ) -> Result<JsonValue, JsonValue> {
-        let options = json!({ "mediaRoots": options.media_roots, "context": sv(&options.context) });
-        self.tool(
-            "generateImageTool",
-            vec![json!(settings_path), sv(request), options],
-            Some(signal.aborted()),
-        )
-    }
-
-    fn analyze_media_tool(
-        &mut self,
-        settings_path: &str,
-        request: &JsonValue,
-        options: &MediaToolOptions,
-        signal: &dyn AbortSignal,
-    ) -> Result<JsonValue, JsonValue> {
-        let options = json!({ "mediaRoots": options.media_roots, "context": sv(&options.context) });
-        self.tool(
-            "analyzeMediaTool",
-            vec![json!(settings_path), sv(request), options],
-            Some(signal.aborted()),
-        )
-    }
-
     fn ai_tool_capabilities(&mut self, settings: &JsonValue, context: &JsonValue) -> JsonValue {
         let (settings, context) = (sv(settings), sv(context));
         logl!(self.log; "aiToolCapabilities", settings, context);
@@ -1408,13 +1287,17 @@ impl World {
                 Ok(Value::Null)
             }
             "ai:stream" => {
-                ai_stream(
+                let begun = ai_stream_begin(
                     &mut self.host,
                     &self.streams,
                     &self.guard,
                     &mut sender,
                     first.as_ref(),
                 )?;
+                if let StreamStart::Run(run) = begun {
+                    let outcome = self.run_stream(&run, &mut sender);
+                    ai_stream_finish(&self.streams, &mut sender, *run, outcome)?;
+                }
                 Ok(Value::Null)
             }
             "ai:stream-cancel" => {
@@ -1426,44 +1309,70 @@ impl World {
                 );
                 Ok(Value::Null)
             }
-            "ai:web-search" => Ok(sv(&ai_web_search(
-                &mut self.host,
-                first.as_ref(),
-                second.as_ref(),
-            )?)),
-            "ai:image-search" => Ok(sv(&ai_image_search(
-                &mut self.host,
-                first.as_ref(),
-                second.as_ref(),
-            )?)),
-            "ai:read-url" => Ok(sv(&ai_read_url(
-                &mut self.host,
-                &mut self.calls.borrow_mut(),
-                &mut sender,
-                first.as_ref(),
-                second.as_ref(),
-            ))),
+            "ai:web-search" => {
+                match ai_web_search_begin(&self.host, first.as_ref(), second.as_ref()) {
+                    SearchStart::Answer(answer) => Ok(sv(&answer)),
+                    SearchStart::Run(request) => {
+                        let outcome = self.run_search("webSearchTool", &request);
+                        Ok(sv(&ai_web_search_finish(outcome)?))
+                    }
+                }
+            }
+            "ai:image-search" => {
+                match ai_image_search_begin(&self.host, first.as_ref(), second.as_ref()) {
+                    SearchStart::Answer(answer) => Ok(sv(&answer)),
+                    SearchStart::Run(request) => {
+                        let outcome = self.run_search("imageSearchTool", &request);
+                        Ok(sv(&ai_image_search_finish(outcome)?))
+                    }
+                }
+            }
+            "ai:read-url" => {
+                let (start, request) = ai_read_url_begin(
+                    &mut self.host,
+                    &mut self.calls.borrow_mut(),
+                    &mut sender,
+                    first.as_ref(),
+                    second.as_ref(),
+                );
+                let outcome = request.map(|request| self.run_media(start.call(), request));
+                Ok(sv(&ai_read_url_finish(
+                    &mut self.calls.borrow_mut(),
+                    &mut sender,
+                    start,
+                    outcome,
+                )))
+            }
             "slides:ai-default-fonts" => Ok(sv(&slides_ai_default_fonts(&mut self.host))),
             "slides:ai-tool-capabilities" => Ok(sv(&slides_ai_tool_capabilities(&mut self.host))),
-            "ai:generate-image" => {
+            "ai:generate-image" | "ai:analyze-media" => {
+                let analyze = channel == "ai:analyze-media";
                 let path = self.session_path(sender_id);
-                Ok(sv(&ai_generate_image(
-                    &mut self.host,
-                    &mut self.calls.borrow_mut(),
-                    &mut sender,
-                    path.as_deref(),
-                    first.as_ref(),
-                )?))
-            }
-            "ai:analyze-media" => {
-                let path = self.session_path(sender_id);
-                Ok(sv(&ai_analyze_media(
-                    &mut self.host,
-                    &mut self.calls.borrow_mut(),
-                    &mut sender,
-                    path.as_deref(),
-                    first.as_ref(),
-                )?))
+                let (start, request) = if analyze {
+                    ai_analyze_media_begin(
+                        &mut self.host,
+                        &mut self.calls.borrow_mut(),
+                        &mut sender,
+                        path.as_deref(),
+                        first.as_ref(),
+                    )
+                } else {
+                    ai_generate_image_begin(
+                        &mut self.host,
+                        &mut self.calls.borrow_mut(),
+                        &mut sender,
+                        path.as_deref(),
+                        first.as_ref(),
+                    )
+                };
+                let outcome = request.map(|request| self.run_media(start.call(), request));
+                let calls = &mut self.calls.borrow_mut();
+                let answer = if analyze {
+                    ai_analyze_media_finish(calls, &mut sender, start, outcome)?
+                } else {
+                    ai_generate_image_finish(calls, &mut sender, start, outcome)?
+                };
+                Ok(sv(&answer))
             }
             "ai:insert-image-url" | "ai:replace-picture-url" => {
                 self.picture(channel == "ai:insert-image-url", sender_id, first, &during)
@@ -1649,6 +1558,114 @@ impl World {
             "fit": session.deck.fit,
             "deck": { "slides": session.deck.slides, "size": session.deck.size },
         })
+    }
+}
+
+impl World {
+    /// `runAiStream` of the case: it logs its call, then plays its script
+    /// (`send`, a cancel of another call, the window going away, an
+    /// observation of the signal, a rejection) on the caller's time, while
+    /// other IPC (the cancel) can land.
+    fn run_stream(&mut self, run: &StreamRun, sender: &mut FakeSender) -> Result<(), JsonValue> {
+        let request = sv(&run.request);
+        let settings = sv(&run.settings);
+        let statuses = sv(&run.statuses);
+        logl!(self.log; "runAiStream", request, settings, statuses);
+        let script: Vec<Value> = self
+            .host
+            .conf("stream")
+            .and_then(|stream| stream.get("script"))
+            .and_then(Value::as_array)
+            .cloned()
+            .unwrap_or_default();
+        for op in &script {
+            if let Some(chunk) = op.get("send") {
+                ai_stream_send(sender, &jv(chunk));
+            } else if let Some(request_id) = op.get("cancel") {
+                let from = op.get("sender").and_then(Value::as_f64).unwrap_or(1.0);
+                ai_stream_cancel(
+                    &self.streams,
+                    &mut self.calls.borrow_mut(),
+                    from,
+                    Some(&jv(request_id)),
+                );
+            } else if let Some(id) = op.get("destroy").and_then(Value::as_f64) {
+                // the window's `destroyed` event: the listener of this stream's
+                // controller is the one `abort_on_destroyed` registered
+                let found = self
+                    .senders
+                    .borrow()
+                    .iter()
+                    .find(|(key, _)| *key as f64 == id)
+                    .map(|(_, state)| Rc::clone(state));
+                if let Some(state) = found {
+                    let mut state = state.borrow_mut();
+                    state.destroyed = true;
+                    let listeners = std::mem::take(&mut state.listeners);
+                    if listeners.contains(&1) {
+                        run.signal.abort();
+                    }
+                }
+            } else if op.get("observe").is_some() {
+                let aborted = run.signal.aborted();
+                logl!(self.log; "aborted", aborted);
+            } else if let Some(message) = op.get("throw").and_then(Value::as_str) {
+                return Err(error_value(message));
+            }
+        }
+        Ok(())
+    }
+
+    /// a search tool of the case
+    fn run_search(&mut self, name: &str, request: &SearchRequest) -> Result<JsonValue, JsonValue> {
+        self.host.tool(
+            name,
+            vec![
+                json!(request.settings_path),
+                json!(request.query),
+                json!(request.max_results),
+            ],
+            None,
+        )
+    }
+
+    /// a media tool of the case, with the signal of its call as it is now
+    fn run_media(
+        &mut self,
+        call: MediaCallId,
+        request: MediaRequest,
+    ) -> Result<JsonValue, JsonValue> {
+        let aborted = Some(self.calls.borrow().aborted(call));
+        let options_json = |options: &MediaToolOptions| json!({ "mediaRoots": options.media_roots, "context": sv(&options.context) });
+        match request {
+            MediaRequest::ReadUrl {
+                settings_path,
+                url,
+                offset,
+            } => self.host.tool(
+                "readUrlTool",
+                vec![json!(settings_path), json!(url), json!(offset)],
+                aborted,
+            ),
+            MediaRequest::GenerateImage {
+                settings_path,
+                request,
+                options,
+            } => self.host.tool(
+                "generateImageTool",
+                vec![json!(settings_path), sv(&request), options_json(&options)],
+                aborted,
+            ),
+            MediaRequest::AnalyzeMedia {
+                settings_path,
+                request,
+                options,
+            } => self.host.tool(
+                "analyzeMediaTool",
+                vec![json!(settings_path), sv(&request), options_json(&options)],
+                aborted,
+            ),
+        }
     }
 }
 

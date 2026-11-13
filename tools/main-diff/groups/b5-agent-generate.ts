@@ -509,8 +509,8 @@ interface InspectScenario {
   /** by path, what the injected `stat` answers; absent: the real one */
   stat?: Record<string, { isFile?: boolean; size: number; mtimeMs?: number } | { throws: true }>
   injectParse?: boolean
-  /** by path: the answer of `hasUnsavedChanges`, or 'throws' */
-  unsaved?: Record<string, boolean | 'throws'>
+  /** the shell's open files (`setOpenFilesSource`), or 'throws' for a source that fails; absent: none */
+  openFiles?: Array<{ filePath?: string; dirty: boolean }> | 'throws'
   steps: Array<{ inspect: string } | { write: { path: string; text: string; mtimeMs?: number } }>
 }
 
@@ -528,14 +528,7 @@ async function runInspect(o: InspectScenario, cx: TsContext): Promise<unknown[]>
         writeFile(step.write.path, step.write.text, step.write.mtimeMs)
         continue
       }
-      const deps: Record<string, unknown> = {
-        hasUnsavedChanges: async (path: string) => {
-          cx.log('unsaved', path)
-          const answer = byPath(o.unsaved, path)
-          if (answer === 'throws') throw new Error('unsaved failed')
-          return answer ?? false
-        },
-      }
+      const deps: Record<string, unknown> = {}
       const stat = o.stat
       if (stat) {
         deps.stat = async (path: string) => {
@@ -546,7 +539,20 @@ async function runInspect(o: InspectScenario, cx: TsContext): Promise<unknown[]>
         }
       }
       if (o.injectParse) deps.parse = (path: string) => box.parse(path)
-      results.push(await guarded(() => materials.inspectMaterial(step.inspect, deps as never)))
+      const files = o.openFiles
+      unsaved.setOpenFilesSource(
+        files === undefined
+          ? null
+          : () => {
+              if (files === 'throws') throw new Error('open files failed')
+              return files
+            },
+      )
+      try {
+        results.push(await guarded(() => materials.inspectMaterial(step.inspect, deps as never)))
+      } finally {
+        unsaved.setOpenFilesSource(null)
+      }
     }
     return results
   })
@@ -608,14 +614,34 @@ const inspectCases: Case[] = [
     ],
   },
   {
-    // open with unsaved changes: not read; the hasUnsavedChanges that throws is the answer
+    // open with unsaved changes: not read; another file, and a clean one, are
     args: [
       {
-        stat: { '/m/a.md': { size: 5, mtimeMs: 1 }, '/m/b.md': { size: 5, mtimeMs: 1 } },
-        unsaved: { '/m/a.md': true, '/m/b.md': 'throws' },
+        stat: {
+          '/m/a.md': { size: 5, mtimeMs: 1 },
+          '/m/b.md': { size: 5, mtimeMs: 1 },
+          '/m/c.md': { size: 5, mtimeMs: 1 },
+        },
+        openFiles: [
+          { filePath: '/m/a.md', dirty: true },
+          { filePath: '/m/c.md', dirty: false },
+          { dirty: true },
+        ],
+        engine: { parse: { '/m/a.md': text(5), '/m/b.md': text(5), '/m/c.md': text(7) } },
+        injectParse: true,
+        steps: [{ inspect: '/m/a.md' }, { inspect: '/m/b.md' }, { inspect: '/m/c.md' }],
+      },
+    ],
+  },
+  {
+    // the open files cannot be told: counts as unsaved, nothing is read
+    args: [
+      {
+        stat: { '/m/a.md': { size: 5, mtimeMs: 1 } },
+        openFiles: 'throws',
         engine: { parse: { '/m/a.md': text(5) } },
         injectParse: true,
-        steps: [{ inspect: '/m/a.md' }, { inspect: '/m/b.md' }],
+        steps: [{ inspect: '/m/a.md' }],
       },
     ],
   },
@@ -733,7 +759,6 @@ interface OpenScenario {
   save?: string[]
   /** by kind: what the save does: false (the editor says no) or 'throws' */
   saveResult?: Record<string, boolean | 'throws'>
-  listThrows?: boolean
   steps: Array<
     | { saveActionFor: string }
     | { saveMaterial: string }
@@ -755,8 +780,6 @@ function makeOpenDeps(o: OpenScenario, cx: TsContext) {
   for (const kind of o.save ?? []) save[kind] = saveFor(kind)
   return {
     list: async () => {
-      cx.log('list')
-      if (o.listThrows) throw new Error('list failed')
       return o.tabs.map((t) => ({ active: false, dirty: false, ...t }))
     },
     webContentsFor: (tabId: string) => {
@@ -884,21 +907,6 @@ const openCases: Case[] = [
           { saveMaterial: '$DIR/a.pdf' },
           { saveMaterial: '$DIR/a.odt' },
           { saveMaterial: '$DIR/not-open.docx' },
-        ],
-      },
-    ],
-  },
-  {
-    // a list that throws reaches the caller
-    args: [
-      {
-        tabs: [tab('d1', 'docs', '$DIR/a.docx')],
-        listThrows: true,
-        steps: [
-          { saveActionFor: '$DIR/a.docx' },
-          { saveMaterial: '$DIR/a.docx' },
-          { pathOfUntitled: 11 },
-          { showUntitled: 11 },
         ],
       },
     ],

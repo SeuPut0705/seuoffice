@@ -19,7 +19,10 @@
 //! to a session it also owns. Promises are plain calls, a rejection is a
 //! [`Failure`], and `Promise.all` over the rows runs them one after another
 //! (the first rejection, in row order, is the answer; every row still runs).
-//! The recheck `setTimeout` is [`GenerateSessionHost::sleep`].
+//! The open files and open tabs the TypeScript asks the shell for are the
+//! [`OpenSnapshot`] every action is handed. Two awaits wait on a renderer and
+//! are steps: an editor's save command and the recheck `setTimeout` of
+//! [`GenerateSession::save_begin`] ([`SaveStep`], [`SaveRun`]).
 
 use jscompat::math_round;
 use serde_json::{Value, json};
@@ -34,7 +37,9 @@ use super::limits::{MAX_IMAGE_MATERIAL_BYTES, MAX_MATERIAL_BYTES, MAX_MATERIALS}
 use super::materials::{
     MaterialStatus, material_key, material_max_bytes, summarize_materials, untitled_material,
 };
-use super::open_materials::SaveOutcome;
+use super::open_materials::{
+    OpenSnapshot, SaveAnswer, SaveMaterialRun, SaveMaterialStep, SaveNeed, SaveOutcome,
+};
 use super::request::{
     Prepared, available_conversions, is_ai_target_kind, prepare_generate_request,
 };
@@ -54,15 +59,25 @@ pub enum MaterialRef {
 /// `GenerateSessionDeps`. A call that rejects is a [`Failure`].
 pub trait GenerateSessionHost {
     fn lang(&self) -> Lang;
-    fn inspect(&mut self, path: &str) -> Result<MaterialStatus, Failure>;
+    /// `deps.inspect(path)`, with the open files the shell gathered
+    fn inspect(&mut self, snap: &OpenSnapshot<'_>, path: &str) -> Result<MaterialStatus, Failure>;
     /// For a never-saved document: its path now, `None` while it is still untitled.
-    fn path_of_untitled(&mut self, web_contents_id: f64) -> Result<Option<String>, Failure>;
+    /// (`deps.pathOfUntitled(..).catch(() => null)`: the open tabs are the snapshot's.)
+    fn path_of_untitled(&mut self, snap: &OpenSnapshot<'_>, web_contents_id: f64)
+    -> Option<String>;
     /// whether this path's open document can be saved in place, or only shown
-    fn save_action_for(&mut self, path: &str) -> Result<SaveAction, Failure>;
-    /// save the open document behind `path`; `Shown` = its tab was brought forward instead
-    fn save_material(&mut self, path: &str) -> Result<SaveOutcome, Failure>;
+    fn save_action_for(&mut self, snap: &OpenSnapshot<'_>, path: &str) -> SaveAction;
+    /// save the open document behind `path`, up to the editor's save command
+    /// (a rejection is [`SaveOutcome::Failed`])
+    fn save_material_begin(&mut self, snap: &OpenSnapshot<'_>, path: &str) -> SaveMaterialStep;
+    /// the editor answered a [`SaveNeed`]
+    fn save_material_resume(&mut self, run: SaveMaterialRun, answer: SaveAnswer) -> SaveOutcome;
     /// bring a never-saved document's tab forward so the user can save it
-    fn show_untitled(&mut self, web_contents_id: f64) -> Result<(), Failure>;
+    fn show_untitled(
+        &mut self,
+        snap: &OpenSnapshot<'_>,
+        web_contents_id: f64,
+    ) -> Result<(), Failure>;
     /// open the new untitled tab with the request queued for it (fails when it cannot)
     fn open_target_tab(&mut self, handoff: &GenerateHandoff) -> Result<(), Failure>;
     /// `deps.convert` and `deps.openConvertedTab` were both given: conversions are offered
@@ -81,8 +96,6 @@ pub trait GenerateSessionHost {
     fn now(&mut self) -> f64;
     /// a dirty flag can lag a save by a beat: when to look again (`None`: 600 ms)
     fn recheck_delay_ms(&self) -> Option<f64>;
-    /// `await new Promise((r) => setTimeout(r, ms))`
-    fn sleep(&mut self, ms: f64);
     /// `MAX_OUTLINE_SLIDES` of `apps/shell/src/main/mcp/pptx-outline.ts`
     fn max_convert_slides(&self) -> usize;
 }
@@ -106,6 +119,46 @@ fn key_of(mref: &MaterialRef) -> String {
             web_contents_id, ..
         } => format!("untitled:{}", jscompat::number_to_string(*web_contents_id)),
     }
+}
+
+/// What the caller carries out for a save in flight, and answers with a
+/// [`SessionAnswer`] through [`GenerateSession::save_resume`].
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionNeed {
+    /// the editor's save command
+    Save(SaveNeed),
+    /// `await new Promise((r) => setTimeout(r, ms))`: call back after `ms`
+    /// milliseconds, other messages landing meanwhile
+    Sleep(f64),
+}
+
+/// The answer to a [`SessionNeed`].
+#[derive(Debug, Clone, PartialEq)]
+pub enum SessionAnswer {
+    Save(SaveAnswer),
+    Slept,
+}
+
+#[derive(Debug)]
+enum SaveStage {
+    Saving(SaveMaterialRun),
+    Waiting,
+}
+
+/// The continuation of `save` between two calls; the caller keeps it. The
+/// row is named by its id, so a row removed meanwhile is left alone.
+#[derive(Debug)]
+pub struct SaveRun {
+    id: u64,
+    row_key: String,
+    stage: SaveStage,
+}
+
+/// One step of `save`.
+#[derive(Debug)]
+pub enum SaveStep {
+    Done(Result<(), Failure>),
+    Need(SessionNeed, SaveRun),
 }
 
 pub struct GenerateSession {
@@ -149,6 +202,7 @@ impl GenerateSession {
     pub fn reset<H: GenerateSessionHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         refs: &[MaterialRef],
         kind: Option<AiTargetKind>,
     ) -> Result<(), Failure> {
@@ -161,7 +215,7 @@ impl GenerateSession {
         self.mode = GenerateMode::Ai;
         self.convert_kind = None;
         self.append_refs(refs);
-        self.refresh(host)
+        self.refresh(host, snap)
     }
 
     pub fn state<H: GenerateSessionHost>(&self, host: &H) -> GenerateWindowState {
@@ -350,6 +404,7 @@ impl GenerateSession {
     fn inspect_row<H: GenerateSessionHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         id: u64,
     ) -> Result<(), Failure> {
         let untitled = self
@@ -365,8 +420,7 @@ impl GenerateSession {
             });
         if let Some((web_contents_id, title)) = untitled {
             let saved_path = host
-                .path_of_untitled(web_contents_id)
-                .unwrap_or(None)
+                .path_of_untitled(snap, web_contents_id)
                 .filter(|path| !path.is_empty());
             match saved_path {
                 Some(saved) => {
@@ -392,9 +446,9 @@ impl GenerateSession {
             Some(MaterialRef::Path(path)) => path.clone(),
             _ => return Ok(()),
         };
-        let status = host.inspect(&path)?;
+        let status = host.inspect(snap, &path)?;
         let save_action = if status.unsaved {
-            Some(host.save_action_for(&path).unwrap_or(SaveAction::Show))
+            Some(host.save_action_for(snap, &path))
         } else {
             None
         };
@@ -422,13 +476,14 @@ impl GenerateSession {
     fn inspect_rows<H: GenerateSessionHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         rows: &[u64],
     ) -> Result<(), Failure> {
         self.in_flight += 1;
         self.push(host);
         let mut failure: Option<Failure> = None;
         for id in rows {
-            if let Err(error) = self.inspect_row(host, *id)
+            if let Err(error) = self.inspect_row(host, snap, *id)
                 && failure.is_none()
             {
                 failure = Some(error);
@@ -440,9 +495,13 @@ impl GenerateSession {
     }
 
     /// read every row again (window focus, after a save, before "make")
-    pub fn refresh<H: GenerateSessionHost>(&mut self, host: &mut H) -> Result<(), Failure> {
+    pub fn refresh<H: GenerateSessionHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+    ) -> Result<(), Failure> {
         let all: Vec<u64> = self.rows.iter().map(|r| r.id).collect();
-        self.inspect_rows(host, &all)
+        self.inspect_rows(host, snap, &all)
     }
 
     pub fn set_kind<H: GenerateSessionHost>(&mut self, host: &mut H, kind: Option<&Value>) {
@@ -481,6 +540,7 @@ impl GenerateSession {
     pub fn add_paths<H: GenerateSessionHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         paths: &[Value],
     ) -> Result<(), Failure> {
         if self.making {
@@ -495,7 +555,7 @@ impl GenerateSession {
             .collect();
         let added = self.append_refs(&refs);
         if !added.is_empty() {
-            self.inspect_rows(host, &added)
+            self.inspect_rows(host, snap, &added)
         } else {
             self.push(host);
             Ok(())
@@ -514,19 +574,21 @@ impl GenerateSession {
         self.push(host);
     }
 
-    pub fn save<H: GenerateSessionHost>(
+    /// `save(key)`, up to the first await that waits on a renderer
+    pub fn save_begin<H: GenerateSessionHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         key: Option<&Value>,
-    ) -> Result<(), Failure> {
+    ) -> SaveStep {
         let found = key
             .and_then(Value::as_str)
             .and_then(|key| self.rows.iter().find(|r| r.key == key));
         let Some(row) = found else {
-            return Ok(());
+            return SaveStep::Done(Ok(()));
         };
         if self.making || self.saving.contains(&row.key) {
-            return Ok(());
+            return SaveStep::Done(Ok(()));
         }
         let (id, row_key, mref) = (row.id, row.key.clone(), row.mref.clone());
         self.failure = None;
@@ -534,20 +596,71 @@ impl GenerateSession {
             MaterialRef::Untitled {
                 web_contents_id, ..
             } => {
-                host.show_untitled(web_contents_id)?;
+                if let Err(error) = host.show_untitled(snap, web_contents_id) {
+                    return SaveStep::Done(Err(error));
+                }
                 self.push(host);
-                return Ok(());
+                return SaveStep::Done(Ok(()));
             }
             MaterialRef::Path(path) => path,
         };
         self.saving.push(row_key.clone());
         self.push(host);
-        let result = host.save_material(&path).unwrap_or(SaveOutcome::Failed);
-        self.saving.retain(|k| *k != row_key);
+        match host.save_material_begin(snap, &path) {
+            SaveMaterialStep::Done(result) => self.after_save(host, snap, id, &row_key, result),
+            SaveMaterialStep::Need(need, run) => SaveStep::Need(
+                SessionNeed::Save(need),
+                SaveRun {
+                    id,
+                    row_key,
+                    stage: SaveStage::Saving(run),
+                },
+            ),
+        }
+    }
+
+    /// the caller carried out a [`SessionNeed`]
+    pub fn save_resume<H: GenerateSessionHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+        run: SaveRun,
+        answer: SessionAnswer,
+    ) -> SaveStep {
+        let SaveRun { id, row_key, stage } = run;
+        match (stage, answer) {
+            (SaveStage::Saving(save), SessionAnswer::Save(answer)) => {
+                let result = host.save_material_resume(save, answer);
+                self.after_save(host, snap, id, &row_key, result)
+            }
+            (SaveStage::Waiting, SessionAnswer::Slept) => {
+                if self.has_row(id) {
+                    SaveStep::Done(self.inspect_rows(host, snap, &[id]))
+                } else {
+                    SaveStep::Done(Ok(()))
+                }
+            }
+            // an answer the step did not ask for ends the save
+            _ => SaveStep::Done(Ok(())),
+        }
+    }
+
+    /// what follows `result = await this.deps.saveMaterial(path)`
+    fn after_save<H: GenerateSessionHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+        id: u64,
+        row_key: &str,
+        result: SaveOutcome,
+    ) -> SaveStep {
+        self.saving.retain(|k| k != row_key);
         if result == SaveOutcome::Failed {
             self.failure = Some(Failed::Save);
         }
-        self.inspect_rows(host, &[id])?;
+        if let Err(error) = self.inspect_rows(host, snap, &[id]) {
+            return SaveStep::Done(Err(error));
+        }
         // a tab can report its clean state a moment after the write lands
         let still_unsaved = self
             .rows
@@ -557,18 +670,27 @@ impl GenerateSession {
             .is_some_and(|s| s.unsaved);
         if result == SaveOutcome::Saved && still_unsaved {
             let delay = host.recheck_delay_ms().unwrap_or(600.0);
-            host.sleep(delay);
-            if self.has_row(id) {
-                self.inspect_rows(host, &[id])?;
-            }
+            return SaveStep::Need(
+                SessionNeed::Sleep(delay),
+                SaveRun {
+                    id,
+                    row_key: row_key.to_owned(),
+                    stage: SaveStage::Waiting,
+                },
+            );
         }
-        Ok(())
+        SaveStep::Done(Ok(()))
     }
 
     /// "make": read everything again, then open the new tab with the request
     /// queued for it and close the window. False (and nothing opened) when the
     /// materials do not allow it any more.
-    pub fn make<H: GenerateSessionHost>(&mut self, host: &mut H, text: Option<&Value>) -> bool {
+    pub fn make<H: GenerateSessionHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+        text: Option<&Value>,
+    ) -> bool {
         let Some(text) = text.and_then(Value::as_str) else {
             return false;
         };
@@ -578,7 +700,7 @@ impl GenerateSession {
         self.making = true;
         self.failure = None;
         self.push(host);
-        match self.make_run(host, text) {
+        match self.make_run(host, snap, text) {
             Ok(done) => done,
             Err(_) => {
                 self.failure = Some(Failed::Make);
@@ -590,13 +712,14 @@ impl GenerateSession {
     fn make_run<H: GenerateSessionHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         text: &str,
     ) -> Result<bool, Failure> {
-        self.refresh(host)?;
+        self.refresh(host, snap)?;
         if self.mode == GenerateMode::Convert {
             let chosen = self.chosen_conversion(&self.conversions(&*host));
             return match chosen {
-                Some(kind) => self.convert_and_open(host, kind),
+                Some(kind) => self.convert_and_open(host, snap, kind),
                 None => Ok(self.stop_making(host, false)),
             };
         }
@@ -615,7 +738,7 @@ impl GenerateSession {
             "materials": materials,
             "text": text,
         });
-        let prepared = prepare_generate_request(&raw, &mut |path| host.inspect(path))?;
+        let prepared = prepare_generate_request(&raw, &mut |path| host.inspect(snap, path))?;
         let Prepared::Ready { ready, .. } = prepared else {
             return Ok(self.stop_making(host, false));
         };
@@ -654,6 +777,7 @@ impl GenerateSession {
     fn convert_and_open<H: GenerateSessionHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         kind: ConvertKind,
     ) -> Result<bool, Failure> {
         let path = match self.listed_rows().first().map(|row| &row.mref) {
@@ -669,7 +793,7 @@ impl GenerateSession {
             "materials": [path],
             "text": "",
         });
-        let prepared = prepare_generate_request(&raw, &mut |path| host.inspect(path))?;
+        let prepared = prepare_generate_request(&raw, &mut |path| host.inspect(snap, path))?;
         let Prepared::Ready { request, .. } = prepared else {
             return Ok(self.stop_making(host, false));
         };

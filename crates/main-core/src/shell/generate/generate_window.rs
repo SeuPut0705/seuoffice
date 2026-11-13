@@ -25,15 +25,32 @@
 //! (`void session.reset(...)`, `void current.refresh()`) runs to its end
 //! before the next line, so the window calls and the session's calls are not
 //! interleaved as they are there.
+//!
+//! The shell gathers the open files and open tabs the TypeScript reads from
+//! `tabManager.openDocuments()` and hands them to every call that reads them
+//! as an [`OpenSnapshot`]. Two awaits wait on a renderer and are steps: an
+//! editor's save command and the recheck timer of "save". A save handler
+//! answers a [`WindowStep`]; the caller carries out its [`SessionNeed`] and
+//! calls [`GenerateWindow::resume_save`] with the answer. The window keeps
+//! every session in a table until its last pending save has ended, because
+//! the TypeScript session an in-flight call belongs to goes on after the
+//! window moved to another one.
 
 use serde::Serialize;
 use serde_json::{Value, json};
 
 use super::convert::{ConvertResult, ConvertedDocument};
 use super::generate_api::{AiTargetKind, ConvertKind, GenerateWindowState, SaveAction, channels};
+use super::materials::{InspectHost, MaterialLengthCache, inspect_material};
 use super::materials::{MaterialStatus, supported_material_exts};
-use super::open_materials::{OpenMaterialsDeps, SaveOutcome, create_open_materials};
-use super::session::{GenerateSession, GenerateSessionHost, MaterialRef};
+use super::open_materials::{
+    OpenMaterialsDeps, OpenSnapshot, SaveAnswer, SaveMaterialRun, SaveMaterialStep, SaveOutcome,
+    path_of_untitled, save_action_for, save_material_begin, show_untitled,
+};
+use super::session::{
+    GenerateSession, GenerateSessionHost, MaterialRef, SaveRun, SaveStep, SessionAnswer,
+    SessionNeed,
+};
 use super::title_bar::generate_title_bar_overlay;
 use crate::packages::electron_utils::generate_handoff::GenerateHandoff;
 use crate::packages::electron_utils::safe_external_url::safe_external_url;
@@ -70,7 +87,7 @@ pub struct OpenDialogResult {
 
 /// `GenerateWindowDeps` and the Electron objects the module calls. Every
 /// window is a [`WindowId`] the host made.
-pub trait GenerateWindowHost: OpenMaterialsDeps {
+pub trait GenerateWindowHost: OpenMaterialsDeps + InspectHost {
     // ---- deps ----
     /// the window the generate window sits above when the caller names none
     fn parent_window(&mut self) -> Option<WindowId>;
@@ -93,15 +110,12 @@ pub trait GenerateWindowHost: OpenMaterialsDeps {
     /// every starred file in a Starred-view group
     fn starred_group_paths(&mut self, group: &str) -> Vec<String>;
     // ---- what the session's deps are made of ----
-    /// `inspectMaterial(path)` with its default reads
-    fn inspect_material(&mut self, path: &str) -> Result<MaterialStatus, Failure>;
     /// `convertSource(kind, path, { untitled })`; it never rejects
     fn convert_source(&mut self, kind: ConvertKind, path: &str, untitled: &str) -> ConvertResult;
     /// `markdownRedactionNotice(path)`
     fn markdown_redaction_notice(&mut self, path: &str) -> bool;
     fn new_id(&mut self) -> String;
     fn now(&mut self) -> f64;
-    fn sleep(&mut self, ms: f64);
     /// `MAX_OUTLINE_SLIDES`
     fn max_convert_slides(&self) -> usize;
     // ---- electron ----
@@ -255,6 +269,22 @@ pub const IPC_HANDLE_CHANNELS: [&str; 12] = [
     channels::HOME_OPEN_WITH_GROUP,
 ];
 
+/// The continuation of a save handler while the caller carries out a
+/// [`SessionNeed`]; the caller keeps it and hands it to
+/// [`GenerateWindow::resume_save`].
+#[derive(Debug)]
+pub struct WindowRun {
+    session_id: u64,
+    run: SaveRun,
+}
+
+/// One step of `generate:save-material`.
+#[derive(Debug)]
+pub enum WindowStep {
+    Done(Result<(), Failure>),
+    Need(SessionNeed, WindowRun),
+}
+
 /// the `init` of `openGenerateWindow`
 #[derive(Debug, Clone, PartialEq)]
 pub struct OpenInit {
@@ -269,14 +299,25 @@ pub struct OpenInit {
 pub struct GenerateWindow {
     configured: bool,
     win: Option<WindowId>,
-    session: Option<GenerateSession>,
+    /// every session a call may still be running on, by id
+    sessions: Vec<SessionEntry>,
     /// the session of each window made, by the window's id
     window_sessions: Vec<(WindowId, u64)>,
+    /// `session`: the current one
     session_id: Option<u64>,
+    /// `lengthCache` of materials.ts
+    length_cache: MaterialLengthCache,
     next_session_id: u64,
     /// where the open window was opened from (home or an editor window)
     opener: Option<NewDocumentOpener>,
     ipc_registered: bool,
+}
+
+struct SessionEntry {
+    id: u64,
+    session: GenerateSession,
+    /// saves in flight on this session
+    pending: usize,
 }
 
 /// the deps of a session, over the host and the window state
@@ -284,8 +325,9 @@ struct SessionBridge<'a, H: GenerateWindowHost> {
     host: &'a mut H,
     win: &'a mut Option<WindowId>,
     opener: &'a mut Option<NewDocumentOpener>,
-    /// `closeGenerateWindow` ran: the session is gone
-    session_closed: bool,
+    length_cache: &'a mut MaterialLengthCache,
+    /// `closeGenerateWindow` ran: no session is current any more
+    window_closed: bool,
 }
 
 /// `closeGenerateWindow`'s window part
@@ -308,24 +350,37 @@ impl<H: GenerateWindowHost> GenerateSessionHost for SessionBridge<'_, H> {
         self.host.lang()
     }
 
-    fn inspect(&mut self, path: &str) -> Result<MaterialStatus, Failure> {
-        self.host.inspect_material(path)
+    fn inspect(&mut self, snap: &OpenSnapshot<'_>, path: &str) -> Result<MaterialStatus, Failure> {
+        inspect_material(&mut *self.host, self.length_cache, snap.files, path)
     }
 
-    fn path_of_untitled(&mut self, web_contents_id: f64) -> Result<Option<String>, Failure> {
-        create_open_materials(&mut *self.host).path_of_untitled(web_contents_id)
+    fn path_of_untitled(
+        &mut self,
+        snap: &OpenSnapshot<'_>,
+        web_contents_id: f64,
+    ) -> Option<String> {
+        path_of_untitled(&mut *self.host, snap.tabs, web_contents_id)
     }
 
-    fn save_action_for(&mut self, path: &str) -> Result<SaveAction, Failure> {
-        create_open_materials(&mut *self.host).save_action_for(path)
+    fn save_action_for(&mut self, snap: &OpenSnapshot<'_>, path: &str) -> SaveAction {
+        save_action_for(&*self.host, snap.tabs, path)
     }
 
-    fn save_material(&mut self, path: &str) -> Result<SaveOutcome, Failure> {
-        create_open_materials(&mut *self.host).save_material(path)
+    fn save_material_begin(&mut self, snap: &OpenSnapshot<'_>, path: &str) -> SaveMaterialStep {
+        save_material_begin(&mut *self.host, snap.tabs, path)
     }
 
-    fn show_untitled(&mut self, web_contents_id: f64) -> Result<(), Failure> {
-        create_open_materials(&mut *self.host).show_untitled(web_contents_id)
+    fn save_material_resume(&mut self, run: SaveMaterialRun, answer: SaveAnswer) -> SaveOutcome {
+        run.resume(&mut *self.host, answer)
+    }
+
+    fn show_untitled(
+        &mut self,
+        snap: &OpenSnapshot<'_>,
+        web_contents_id: f64,
+    ) -> Result<(), Failure> {
+        show_untitled(&mut *self.host, snap.tabs, web_contents_id);
+        Ok(())
     }
 
     fn open_target_tab(&mut self, handoff: &GenerateHandoff) -> Result<(), Failure> {
@@ -363,7 +418,7 @@ impl<H: GenerateWindowHost> GenerateSessionHost for SessionBridge<'_, H> {
     }
 
     fn close(&mut self) {
-        self.session_closed = true;
+        self.window_closed = true;
         close_window_state(&mut *self.host, &mut *self.win, &mut *self.opener);
     }
 
@@ -379,10 +434,6 @@ impl<H: GenerateWindowHost> GenerateSessionHost for SessionBridge<'_, H> {
         None
     }
 
-    fn sleep(&mut self, ms: f64) {
-        self.host.sleep(ms);
-    }
-
     fn max_convert_slides(&self) -> usize {
         self.host.max_convert_slides()
     }
@@ -393,27 +444,62 @@ impl GenerateWindow {
         Self::default()
     }
 
-    /// Runs `run` on the open session with its deps. `None` when there is no
-    /// session. A session that closed the window is dropped afterwards.
+    /// Runs `run` on session `id` with its deps. `None` when there is no
+    /// such session. When the session closed the window, no session is
+    /// current afterwards; a session nothing runs on any more is dropped.
+    fn with_session_id<H: GenerateWindowHost, R>(
+        &mut self,
+        host: &mut H,
+        id: u64,
+        run: impl FnOnce(&mut GenerateSession, &mut SessionBridge<'_, H>) -> R,
+    ) -> Option<R> {
+        let at = self.sessions.iter().position(|e| e.id == id)?;
+        let mut entry = self.sessions.remove(at);
+        let mut bridge = SessionBridge {
+            host,
+            win: &mut self.win,
+            opener: &mut self.opener,
+            length_cache: &mut self.length_cache,
+            window_closed: false,
+        };
+        let result = run(&mut entry.session, &mut bridge);
+        if bridge.window_closed {
+            self.session_id = None;
+        }
+        self.sessions.insert(at, entry);
+        Some(result)
+    }
+
+    /// Runs `run` on the current session (`session?.x`).
     fn with_session<H: GenerateWindowHost, R>(
         &mut self,
         host: &mut H,
         run: impl FnOnce(&mut GenerateSession, &mut SessionBridge<'_, H>) -> R,
     ) -> Option<R> {
-        let mut session = self.session.take()?;
-        let mut bridge = SessionBridge {
-            host,
-            win: &mut self.win,
-            opener: &mut self.opener,
-            session_closed: false,
-        };
-        let result = run(&mut session, &mut bridge);
-        if bridge.session_closed {
-            self.session_id = None;
-        } else {
-            self.session = Some(session);
-        }
-        Some(result)
+        let id = self.session_id?;
+        let result = self.with_session_id(host, id, run);
+        self.prune_sessions();
+        result
+    }
+
+    /// a session that is not current and has no save in flight is gone
+    fn prune_sessions(&mut self) {
+        let current = self.session_id;
+        self.sessions
+            .retain(|e| Some(e.id) == current || e.pending > 0);
+    }
+
+    fn current_session(&self) -> Option<&GenerateSession> {
+        let id = self.session_id?;
+        self.sessions
+            .iter()
+            .find(|e| e.id == id)
+            .map(|e| &e.session)
+    }
+
+    fn has_session(&self) -> bool {
+        self.session_id
+            .is_some_and(|id| self.sessions.iter().any(|e| e.id == id))
     }
 
     /// `configureGenerateWindow(next)`: `deps = next`, and the tab id
@@ -501,9 +587,10 @@ impl GenerateWindow {
     pub fn handle_add_materials<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         sender_id: f64,
     ) -> Result<(), Failure> {
-        if !self.from_window(&*host, sender_id) || self.session.is_none() || !self.configured {
+        if !self.from_window(&*host, sender_id) || !self.has_session() || !self.configured {
             return Ok(());
         }
         let Some(win) = self.win else {
@@ -524,7 +611,7 @@ impl GenerateWindow {
         if !result.canceled {
             // `session?.addPaths(...)`: the session may be gone by now
             self.with_session(host, |session, bridge| {
-                session.add_paths(bridge, &result.file_paths)
+                session.add_paths(bridge, snap, &result.file_paths)
             })
             .unwrap_or(Ok(()))?;
         }
@@ -547,24 +634,72 @@ impl GenerateWindow {
     pub fn handle_save_material<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         sender_id: f64,
         key: Option<&Value>,
-    ) -> Result<(), Failure> {
-        if self.from_window(&*host, sender_id) {
-            self.with_session(host, |session, bridge| session.save(bridge, key))
-                .unwrap_or(Ok(()))?;
+    ) -> WindowStep {
+        if !self.from_window(&*host, sender_id) {
+            return WindowStep::Done(Ok(()));
         }
-        Ok(())
+        let Some(id) = self.session_id else {
+            return WindowStep::Done(Ok(()));
+        };
+        let step = self.with_session_id(host, id, |session, bridge| {
+            session.save_begin(bridge, snap, key)
+        });
+        self.save_step(id, step)
+    }
+
+    /// the caller carried out the [`SessionNeed`] of a [`WindowStep`]
+    pub fn resume_save<H: GenerateWindowHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+        run: WindowRun,
+        answer: SessionAnswer,
+    ) -> WindowStep {
+        let id = run.session_id;
+        let step = self.with_session_id(host, id, |session, bridge| {
+            session.save_resume(bridge, snap, run.run, answer)
+        });
+        if let Some(entry) = self.sessions.iter_mut().find(|e| e.id == id) {
+            entry.pending -= 1;
+        }
+        self.save_step(id, step)
+    }
+
+    /// what a step of `save` means for the window: a pending save keeps its
+    /// session in the table
+    fn save_step(&mut self, id: u64, step: Option<SaveStep>) -> WindowStep {
+        let out = match step {
+            None | Some(SaveStep::Done(Ok(()))) => WindowStep::Done(Ok(())),
+            Some(SaveStep::Done(Err(error))) => WindowStep::Done(Err(error)),
+            Some(SaveStep::Need(need, run)) => {
+                if let Some(entry) = self.sessions.iter_mut().find(|e| e.id == id) {
+                    entry.pending += 1;
+                }
+                WindowStep::Need(
+                    need,
+                    WindowRun {
+                        session_id: id,
+                        run,
+                    },
+                )
+            }
+        };
+        self.prune_sessions();
+        out
     }
 
     /// `generate:refresh`
     pub fn handle_refresh<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         sender_id: f64,
     ) -> Result<(), Failure> {
         if self.from_window(&*host, sender_id) {
-            self.with_session(host, |session, bridge| session.refresh(bridge))
+            self.with_session(host, |session, bridge| session.refresh(bridge, snap))
                 .unwrap_or(Ok(()))?;
         }
         Ok(())
@@ -574,13 +709,14 @@ impl GenerateWindow {
     pub fn handle_make<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         sender_id: f64,
         text: Option<&Value>,
     ) -> bool {
         if !self.from_window(&*host, sender_id) {
             return false;
         }
-        self.with_session(host, |session, bridge| session.make(bridge, text))
+        self.with_session(host, |session, bridge| session.make(bridge, snap, text))
             .unwrap_or(false)
     }
 
@@ -595,19 +731,21 @@ impl GenerateWindow {
     pub fn handle_open_with_paths<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         sender_id: f64,
         paths: Option<&Value>,
     ) -> Result<(), Failure> {
         if !self.from_home(host, sender_id) {
             return Ok(());
         }
-        self.open_generate_window_with_paths(host, string_list(paths), None)
+        self.open_generate_window_with_paths(host, snap, string_list(paths), None)
     }
 
     /// `generate:open-with-group`
     pub fn handle_open_with_group<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         sender_id: f64,
         group: Option<&Value>,
     ) -> Result<(), Failure> {
@@ -618,7 +756,7 @@ impl GenerateWindow {
             return Ok(());
         };
         let paths = host.starred_group_paths(group);
-        self.open_generate_window_with_paths(host, paths, None)
+        self.open_generate_window_with_paths(host, snap, paths, None)
     }
 
     /// `openGenerateWindow(init)`: open the window (or start the open one
@@ -626,6 +764,7 @@ impl GenerateWindow {
     pub fn open_generate_window<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         init: OpenInit,
     ) -> Result<(), Failure> {
         if !self.configured {
@@ -634,12 +773,14 @@ impl GenerateWindow {
         self.opener = init.opener.clone();
         if let Some(win) = self.win
             && !host.window_is_destroyed(win)
-            && self.session.as_ref().is_some_and(|s| !s.is_closed())
+            && self.current_session().is_some_and(|s| !s.is_closed())
         {
             // `void session.reset(...)`
             let refs = init.refs.clone();
             let kind = init.kind;
-            let _ = self.with_session(host, |session, bridge| session.reset(bridge, &refs, kind));
+            let _ = self.with_session(host, |session, bridge| {
+                session.reset(bridge, snap, &refs, kind)
+            });
             if host.window_is_minimized(win) {
                 host.window_restore(win);
             }
@@ -650,8 +791,13 @@ impl GenerateWindow {
 
         let id = self.next_session_id;
         self.next_session_id += 1;
-        self.session = Some(GenerateSession::new(&init.refs, init.kind));
+        self.sessions.push(SessionEntry {
+            id,
+            session: GenerateSession::new(&init.refs, init.kind),
+            pending: 0,
+        });
         self.session_id = Some(id);
+        self.prune_sessions();
         let lang = host.lang();
         let parent = match init.parent {
             Some(parent) => Some(parent),
@@ -681,7 +827,7 @@ impl GenerateWindow {
             _ => host.window_load_generate_page(next),
         }
         // `void current.refresh()`
-        let _ = self.with_session(host, |session, bridge| session.refresh(bridge));
+        let _ = self.with_session(host, |session, bridge| session.refresh(bridge, snap));
         Ok(())
     }
 
@@ -692,9 +838,14 @@ impl GenerateWindow {
 
     /// `next.on('focus', ...)`: coming back from another window is when a
     /// material may have been saved there
-    pub fn on_focus<H: GenerateWindowHost>(&mut self, host: &mut H, window: WindowId) {
+    pub fn on_focus<H: GenerateWindowHost>(
+        &mut self,
+        host: &mut H,
+        snap: &OpenSnapshot<'_>,
+        window: WindowId,
+    ) {
         if self.session_of(window).is_some() && self.session_of(window) == self.session_id {
-            let _ = self.with_session(host, |session, bridge| session.refresh(bridge));
+            let _ = self.with_session(host, |session, bridge| session.refresh(bridge, snap));
         }
     }
 
@@ -708,8 +859,8 @@ impl GenerateWindow {
             self.opener = None;
         }
         if owned.is_some() && owned == self.session_id {
-            self.session = None;
             self.session_id = None;
+            self.prune_sessions();
         }
     }
 
@@ -741,11 +892,13 @@ impl GenerateWindow {
     pub fn open_generate_window_with_paths<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         paths: Vec<String>,
         parent: Option<WindowId>,
     ) -> Result<(), Failure> {
         self.open_generate_window(
             host,
+            snap,
             OpenInit {
                 refs: paths.into_iter().map(MaterialRef::Path).collect(),
                 kind: None,
@@ -761,6 +914,7 @@ impl GenerateWindow {
     pub fn open_generate_window_for_document<H: GenerateWindowHost>(
         &mut self,
         host: &mut H,
+        snap: &OpenSnapshot<'_>,
         web_contents_id: f64,
         file_path: Option<&str>,
         title: &str,
@@ -775,6 +929,7 @@ impl GenerateWindow {
         };
         self.open_generate_window(
             host,
+            snap,
             OpenInit {
                 refs: vec![mref],
                 kind: None,
@@ -786,8 +941,8 @@ impl GenerateWindow {
 
     /// `closeGenerateWindow()`
     pub fn close_generate_window<H: GenerateWindowHost>(&mut self, host: &mut H) {
-        self.session = None;
         self.session_id = None;
+        self.prune_sessions();
         close_window_state(host, &mut self.win, &mut self.opener);
     }
 

@@ -12,7 +12,7 @@
 //! generator), behind [`MindmapImageHost`].
 
 use crate::packages::ai_provider::jsval::{js_string, prop};
-use crate::packages::ai_search::media_call_abort::{MediaCallId, MediaCalls};
+use crate::packages::ai_search::media_call_abort::{MediaCallRun, MediaCalls};
 use crate::packages::ai_search::media_tools::document_media_roots;
 use jscompat::JsonValue;
 use jscompat::node_path::host::join;
@@ -34,32 +34,45 @@ pub trait MindmapImageHost {
     fn file_path_of(&mut self, web_contents_id: f64) -> Option<String>;
     /// `sharedSubscriptionStatuses()`
     fn subscription_statuses(&mut self) -> JsonValue;
-    /// `generateImageTool(settingsPath, op, { mediaRoots, context, signal })`;
-    /// `context` is `{ path: 'screen', statuses }`, `signal` is
-    /// `calls.aborted(call)`
-    fn generate_image_tool(
-        &mut self,
-        calls: &MediaCalls,
-        call: MediaCallId,
-        settings_path: &str,
-        op: &GenerateImageOp,
-        media_roots: &[String],
-        statuses: &JsonValue,
-    ) -> JsonValue;
+    // `generateImageTool` is not a host call: it is long and another handler
+    // can cancel it, so the handler hands its arguments out as a request
+    // (see `begin_generate_image`)
 }
 
-/// the handler of `MINDMAP_CHANNELS.aiGenerateImage`: `op` is the renderer's
-/// payload; `sender_id` and `sender_destroyed` are `e.sender`;
-/// `pasted_image_dir` is `options.pastedImageDir` (where a pasted picture
-/// waits, the same folder the attachment reader uses)
-pub fn generate_image(
+/// `generateImageTool(settingsPath, op, { mediaRoots, context, signal })`:
+/// `context` is `{ path: 'screen', statuses }`
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenerateImageRequest {
+    pub settings_path: String,
+    pub op: GenerateImageOp,
+    pub media_roots: Vec<String>,
+    pub statuses: JsonValue,
+}
+
+/// a generation that has begun: the call to finish and what the engine is
+/// asked
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenerateImageStart {
+    pub run: MediaCallRun,
+    pub request: GenerateImageRequest,
+}
+
+/// the handler of `MINDMAP_CHANNELS.aiGenerateImage` up to the engine call:
+/// `op` is the renderer's payload; `sender_id` and `sender_destroyed` are
+/// `e.sender`; `pasted_image_dir` is `options.pastedImageDir` (where a pasted
+/// picture waits, the same folder the attachment reader uses). The
+/// generation is a long call that `abortMediaCalls` from another handler
+/// cancels, so the caller runs `generateImageTool` itself between this and
+/// [`finish_generate_image`], with the signal of [`MediaCalls::aborted`]
+/// (`run.call`).
+pub fn begin_generate_image(
     host: &mut dyn MindmapImageHost,
     calls: &mut MediaCalls,
     pasted_image_dir: &str,
     sender_id: f64,
     sender_destroyed: bool,
     op: Option<&JsonValue>,
-) -> JsonValue {
+) -> GenerateImageStart {
     let call = calls.begin(sender_id, sender_destroyed);
     let prompt = match op.and_then(|o| prop(o, "prompt")) {
         None | Some(JsonValue::Null) => String::new(),
@@ -79,7 +92,24 @@ pub fn generate_image(
     // screen path: the statuses of the process-wide subscription service
     // decide the route
     let statuses = host.subscription_statuses();
-    let answer = host.generate_image_tool(calls, call, &path, &op, &roots, &statuses);
-    calls.end(sender_id, call);
+    GenerateImageStart {
+        run: MediaCallRun { sender_id, call },
+        request: GenerateImageRequest {
+            settings_path: path,
+            op,
+            media_roots: roots,
+            statuses,
+        },
+    }
+}
+
+/// the `finally` of the handler: the engine answered (or was aborted); the
+/// call is forgotten and the answer is the handler's
+pub fn finish_generate_image(
+    calls: &mut MediaCalls,
+    run: MediaCallRun,
+    answer: JsonValue,
+) -> JsonValue {
+    calls.end(run.sender_id, run.call);
     answer
 }

@@ -16,9 +16,13 @@ use crate::docs::free_ai_ipc::{
 };
 use crate::html::ai_search_ipc::{HtmlAiSearchHost, HtmlAiSearchIpc, image_search, web_search};
 use crate::hwp::ai_image::{
-    AnalyzeMediaOp, HwpImageHost, analyze_media, generate_image as hwp_generate_image,
+    AnalyzeMediaRequest, AnalyzeMediaStep, HwpImageHost, begin_analyze_media, begin_generate_image,
+    finish_analyze_media, finish_generate_image,
 };
-use crate::mindmap::ai_image::{MindmapImageHost, generate_image as mindmap_generate_image};
+use crate::mindmap::ai_image::{
+    MindmapImageHost, begin_generate_image as mindmap_begin_generate_image,
+    finish_generate_image as mindmap_finish_generate_image,
+};
 use crate::packages::ai_provider::free_connect::{
     FreeConnectFailure, FreeConnectPage, FreeConnectResult,
 };
@@ -592,6 +596,38 @@ impl MediaFake {
         ]);
         self.answer_of("generate")
     }
+
+    /// `analyzeMediaTool(settingsPath, op, { context, signal })`, run by
+    /// the caller between `begin_analyze_media` and its finish
+    fn log_analyze(
+        &mut self,
+        calls: &MediaCalls,
+        call: MediaCallId,
+        request: &AnalyzeMediaRequest,
+    ) -> JsonValue {
+        let op = &request.op;
+        let mut payload = Map::new();
+        payload.insert(
+            "mediaUrls".into(),
+            Value::Array(
+                op.media_urls
+                    .iter()
+                    .map(|u| Value::from(u.as_str()))
+                    .collect(),
+            ),
+        );
+        payload.insert("requirements".into(), Value::from(op.requirements.as_str()));
+        let mut options = Map::new();
+        options.insert("context".into(), Self::context(&request.statuses));
+        options.insert("aborted".into(), Value::Bool(calls.aborted(call)));
+        self.log.push(vec![
+            Value::from("analyzeMediaTool"),
+            Value::from(request.settings_path.as_str()),
+            Value::Object(payload),
+            Value::Object(options),
+        ]);
+        self.answer_of("analyze")
+    }
 }
 
 impl HwpImageHost for MediaFake {
@@ -612,57 +648,6 @@ impl HwpImageHost for MediaFake {
     fn subscription_statuses(&mut self) -> JsonValue {
         MediaFake::subscription_statuses(self)
     }
-
-    fn generate_image_tool(
-        &mut self,
-        calls: &MediaCalls,
-        call: MediaCallId,
-        settings_path: &str,
-        op: &crate::hwp::ai_image::GenerateImageOp,
-        media_roots: &[String],
-        statuses: &JsonValue,
-    ) -> JsonValue {
-        self.log_generate(
-            calls,
-            call,
-            settings_path,
-            &op.prompt,
-            op.aspect_ratio.as_deref(),
-            media_roots,
-            statuses,
-        )
-    }
-
-    fn analyze_media_tool(
-        &mut self,
-        calls: &MediaCalls,
-        call: MediaCallId,
-        settings_path: &str,
-        op: &AnalyzeMediaOp,
-        statuses: &JsonValue,
-    ) -> JsonValue {
-        let mut request = Map::new();
-        request.insert(
-            "mediaUrls".into(),
-            Value::Array(
-                op.media_urls
-                    .iter()
-                    .map(|u| Value::from(u.as_str()))
-                    .collect(),
-            ),
-        );
-        request.insert("requirements".into(), Value::from(op.requirements.as_str()));
-        let mut options = Map::new();
-        options.insert("context".into(), Self::context(statuses));
-        options.insert("aborted".into(), Value::Bool(calls.aborted(call)));
-        self.log.push(vec![
-            Value::from("analyzeMediaTool"),
-            Value::from(settings_path),
-            Value::Object(request),
-            Value::Object(options),
-        ]);
-        self.answer_of("analyze")
-    }
 }
 
 /// a mind map host: the same fake without the temp folder (the folder is
@@ -680,26 +665,6 @@ impl MindmapImageHost for MindmapFake {
 
     fn subscription_statuses(&mut self) -> JsonValue {
         self.0.subscription_statuses()
-    }
-
-    fn generate_image_tool(
-        &mut self,
-        calls: &MediaCalls,
-        call: MediaCallId,
-        settings_path: &str,
-        op: &crate::mindmap::ai_image::GenerateImageOp,
-        media_roots: &[String],
-        statuses: &JsonValue,
-    ) -> JsonValue {
-        self.0.log_generate(
-            calls,
-            call,
-            settings_path,
-            &op.prompt,
-            op.aspect_ratio.as_deref(),
-            media_roots,
-            statuses,
-        )
     }
 }
 
@@ -757,20 +722,48 @@ fn media_call(is_hwp: bool, args: &[Value], cx: &mut Context) -> Answer {
         let answer = if is_hwp {
             host.step = step.clone();
             if generating {
-                hwp_generate_image(&mut host, &mut calls, id, destroyed, op.as_ref())
+                let start = begin_generate_image(&mut host, &mut calls, id, destroyed, op.as_ref());
+                let request = &start.request;
+                let answer = host.log_generate(
+                    &calls,
+                    start.run.call,
+                    &request.settings_path,
+                    &request.op.prompt,
+                    request.op.aspect_ratio.as_deref(),
+                    &request.media_roots,
+                    &request.statuses,
+                );
+                finish_generate_image(&mut calls, start.run, answer)
             } else {
-                analyze_media(&mut host, &mut calls, id, destroyed, op.as_ref())
+                match begin_analyze_media(&mut host, &mut calls, id, destroyed, op.as_ref()) {
+                    AnalyzeMediaStep::Done(answer) => answer,
+                    AnalyzeMediaStep::Tool { run, request } => {
+                        let answer = host.log_analyze(&calls, run.call, &request);
+                        finish_analyze_media(&mut calls, run, answer)
+                    }
+                }
             }
         } else {
             mindmap.0.step = step.clone();
-            mindmap_generate_image(
+            let start = mindmap_begin_generate_image(
                 &mut mindmap,
                 &mut calls,
                 &pasted,
                 id,
                 destroyed,
                 op.as_ref(),
-            )
+            );
+            let request = &start.request;
+            let answer = mindmap.0.log_generate(
+                &calls,
+                start.run.call,
+                &request.settings_path,
+                &request.op.prompt,
+                request.op.aspect_ratio.as_deref(),
+                &request.media_roots,
+                &request.statuses,
+            );
+            mindmap_finish_generate_image(&mut calls, start.run, answer)
         };
         // `undefined` of a tool that answered nothing reads as `null`
         answers.push(js(&answer));

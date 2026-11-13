@@ -24,6 +24,7 @@ use crate::packages::electron_utils::generate_handoff::{
     HandoffEditor, HandoffEditorName, HandoffSkillChip, HandoffStore, HandoffWebContents,
     SkillHandoff, handoff_editor_for_file, handoff_editor_takes_attachments,
 };
+use crate::packages::electron_utils::unsaved_files::{OpenFilesHolder, file_has_unsaved_changes};
 
 /// `USER_SKILLS_CHANNELS.previewEnded`
 pub const PREVIEW_ENDED_CHANNEL: &str = "skills:preview-ended";
@@ -51,16 +52,8 @@ pub struct OpenedCopyTab {
     pub owns_copy: bool,
 }
 
-/// `currentDocumentOf(openerId)`
-#[derive(Debug, Clone, PartialEq)]
-pub enum CurrentDocument {
-    /// the path of a saved document with no unsaved changes
-    Path(String),
-    /// never saved, or has unsaved changes
-    Unsaved,
-}
-
-/// `TemplateTabsDeps`; a `Err(String)` is a rejection
+/// `TemplateTabsDeps`; a `Err(String)` is a rejection. Every method answers
+/// at once: nothing here waits on a renderer.
 pub trait TemplateTabsHost {
     /// a new empty folder for one copy
     fn make_copy_dir(&mut self) -> Result<String, String>;
@@ -72,9 +65,11 @@ pub trait TemplateTabsHost {
     /// Open a new untitled tab of the copy's editor on the copy; `None` when
     /// it could not
     fn open_copy(&mut self, copy: &TemplateCopy) -> Result<Option<OpenedCopyTab>, String>;
-    /// The saved document of the tab whose AI panel asked: `None` when the
-    /// host has no such operation (nothing is attached)
-    fn current_document_of(&mut self, opener_id: f64) -> Option<Result<CurrentDocument, String>>;
+    /// The file path of the tab whose AI panel asked (the tab manager's
+    /// table, or a detached document window): `None` for a document never
+    /// saved or a window that is not a document. A table read, so it answers
+    /// at once.
+    fn opener_file_path(&mut self, opener_id: f64) -> Option<String>;
     /// bring a tab to the front; false when it is gone
     fn focus_tab(&mut self, tab_id: &str) -> bool;
     /// A skill template's copy opened for the panel of `opener_id` (spec 6):
@@ -342,11 +337,14 @@ impl TemplateTabs {
     /// and every chip handed over. With `withCurrent`, the asking tab's saved
     /// document goes along for the new tab to attach; a document never saved
     /// or with unsaved changes is refused (`unsaved`) and nothing opens.
-    /// Returns `(tabId, attached)`.
+    /// `open_files` is the shell's filled snapshot of the open documents, which
+    /// the unsaved check reads (index.ts's `currentDocumentOf`). Returns
+    /// `(tabId, attached)`.
     pub fn open_template(
         &mut self,
         host: &mut dyn TemplateTabsHost,
         store: &mut HandoffStore,
+        open_files: &OpenFilesHolder,
         input: &TemplateOpenInput,
         opener_id: Option<f64>,
     ) -> Svc<(String, bool)> {
@@ -354,16 +352,15 @@ impl TemplateTabs {
         let editor = handoff_editor_for_file(&template.file_name);
         let mut attach: Option<Vec<String>> = None;
         if input.with_current && editor.is_some_and(handoff_editor_takes_attachments) {
-            let current = match opener_id {
-                Some(opener_id) => match host.current_document_of(opener_id) {
-                    Some(Ok(current)) => current,
-                    Some(Err(_)) | None => CurrentDocument::Unsaved,
-                },
-                None => CurrentDocument::Unsaved,
+            let path = match opener_id {
+                Some(opener_id) => host.opener_file_path(opener_id),
+                None => None,
             };
-            match current {
-                CurrentDocument::Unsaved => return Err(fail("unsaved").into()),
-                CurrentDocument::Path(path) => attach = Some(vec![path]),
+            match path {
+                Some(path) if !file_has_unsaved_changes(open_files, &path) => {
+                    attach = Some(vec![path]);
+                }
+                _ => return Err(fail("unsaved").into()),
             }
         }
         let Ok(bytes) = host.read_file(&template.path) else {

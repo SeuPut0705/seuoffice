@@ -17,6 +17,7 @@ use super::limits::{
     LONG_MATERIAL_NOTICE_CHARS, MAX_IMAGE_MATERIAL_BYTES, MAX_MATERIAL_BYTES, MAX_MATERIALS,
     USAGE_NOTICE_CHARS,
 };
+use crate::packages::electron_utils::unsaved_files::{OpenFilesHolder, file_has_unsaved_changes};
 use crate::packages::file_parse::attachable::{attachable_exts, attachable_max_bytes};
 use crate::shell::renderer_disposal::Failure;
 
@@ -138,13 +139,14 @@ pub struct FileStat {
     pub mtime_ms: Option<f64>,
 }
 
-/// `InspectDeps`: the reads of one inspection. A call that rejects is a [`Failure`].
+/// `InspectDeps`: the reads of one inspection. A call that rejects is a
+/// [`Failure`]. The open-files question (`hasUnsavedChanges`) is not a host
+/// call: `inspect_material` is handed the filled [`OpenFilesHolder`].
 pub trait InspectHost {
     fn stat(&mut self, path: &str) -> Result<FileStat, Failure>;
     fn parse(&mut self, path: &str) -> Result<ParsedFile, Failure>;
     /// `deps.parse` was given: an injected parser bypasses the length cache
     fn injected_parse(&self) -> bool;
-    fn has_unsaved_changes(&mut self, path: &str) -> Result<bool, Failure>;
 }
 
 /// Text lengths by path + size + mtime, so reopening the status does not
@@ -215,6 +217,7 @@ fn with_problem(mut status: MaterialStatus, problem: MaterialProblem) -> Materia
 pub fn inspect_material(
     host: &mut dyn InspectHost,
     cache: &mut MaterialLengthCache,
+    open_files: &OpenFilesHolder,
     path: &str,
 ) -> Result<MaterialStatus, Failure> {
     let ext = ext_of(path);
@@ -257,7 +260,7 @@ pub fn inspect_material(
     }
 
     // before any read: a file with unsaved changes is not read until saved
-    if host.has_unsaved_changes(path)? {
+    if file_has_unsaved_changes(open_files, path) {
         sized.unsaved = true;
         return Ok(sized);
     }

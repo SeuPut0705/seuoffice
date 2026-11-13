@@ -17,9 +17,12 @@ use crate::packages::ai_provider::user_skills_import::{Thrown, remove_quietly};
 use crate::packages::electron_utils::generate_handoff::{
     HandoffEditor, HandoffSkillChip, HandoffStore, HandoffWebContents,
 };
+use crate::packages::electron_utils::unsaved_files::{
+    OpenFileState, OpenFilesHolder, OpenFilesSourceFailed,
+};
 use crate::shell::user_skills::template_tabs::{
-    CurrentDocument, OpenedCopyTab, PreviewEnded, PreviewInput, TemplateCopy, TemplateOpenInput,
-    TemplateTabs, TemplateTabsHost,
+    OpenedCopyTab, PreviewEnded, PreviewInput, TemplateCopy, TemplateOpenInput, TemplateTabs,
+    TemplateTabsHost,
 };
 use crate::shell::user_skills::template_tabs_ipc::{
     PreviewOriginalAnswer, handle_finish_preview, handle_focus_tab, handle_open_preview,
@@ -163,17 +166,15 @@ impl TemplateTabsHost for TabsHost {
         }))
     }
 
-    fn current_document_of(&mut self, opener_id: f64) -> Option<Result<CurrentDocument, String>> {
+    fn opener_file_path(&mut self, opener_id: f64) -> Option<String> {
         let current = self.opts.get("current")?;
         log_line(
             &self.log,
             vec![Value::from("currentDocumentOf"), Value::from(opener_id)],
         );
         Some(match current.as_str() {
-            Some("throw") => Err("no document".to_owned()),
-            Some("unsaved") => Ok(CurrentDocument::Unsaved),
-            Some(path) => Ok(CurrentDocument::Path(path.to_owned())),
-            None => Ok(CurrentDocument::Unsaved),
+            Some("throw") | Some("unsaved") | None => SCENARIO_DOCUMENT.to_owned(),
+            Some(path) => path.to_owned(),
         })
     }
 
@@ -264,6 +265,29 @@ impl Env {
     }
 }
 
+/// the path the scenario's opener document has when its `current` is not a path
+const SCENARIO_DOCUMENT: &str = "/scenario/opener-document.docx";
+
+/// The shell's snapshot of the open documents as the scenario's `current`
+/// leaves it: `"unsaved"` lists the opener's document with unsaved changes,
+/// `"throw"` a source that cannot answer, a path or no `current` no source.
+fn open_files_of(opts: &Value) -> OpenFilesHolder {
+    let mut holder = OpenFilesHolder::new();
+    match opts.get("current").and_then(Value::as_str) {
+        Some("unsaved") => holder.set_open_files_source(Some(Box::new(|| {
+            Ok(vec![OpenFileState {
+                file_path: Some(SCENARIO_DOCUMENT.to_owned()),
+                dirty: true,
+            }])
+        }))),
+        Some("throw") => {
+            holder.set_open_files_source(Some(Box::new(|| Err(OpenFilesSourceFailed))))
+        }
+        _ => {}
+    }
+    holder
+}
+
 fn chips_of(value: Option<&Value>) -> Vec<HandoffSkillChip> {
     list_of(value)
         .iter()
@@ -341,9 +365,10 @@ fn step(env: &mut Env, step: &Value) -> Value {
                 with_current: bool_of(a.first().and_then(|i| i.get("withCurrent"))),
             };
             let opener = a.get(1).and_then(Value::as_f64);
+            let open_files = open_files_of(&env.host.opts);
             answer_of(
                 env.tabs
-                    .open_template(&mut env.host, &mut env.store, &input, opener),
+                    .open_template(&mut env.host, &mut env.store, &open_files, &input, opener),
                 |(tab_id, attached)| {
                     ok_with(vec![
                         ("tabId", Value::from(tab_id)),
@@ -437,13 +462,17 @@ fn handler(env: &mut Env, ch: &str, sender: f64, a: &[Value]) -> Value {
     let js: Vec<JsonValue> = a.iter().map(js_of).collect();
     let at = |i: usize| js.get(i);
     match ch {
-        "open-template" => json_value_to_serde(&handle_open_template(
-            &mut env.tabs,
-            &mut env.host,
-            &mut env.store,
-            at(0),
-            sender,
-        )),
+        "open-template" => {
+            let open_files = open_files_of(&env.host.opts);
+            json_value_to_serde(&handle_open_template(
+                &mut env.tabs,
+                &mut env.host,
+                &mut env.store,
+                &open_files,
+                at(0),
+                sender,
+            ))
+        }
         "open-preview" => {
             let (raw, bytes) = marked(a.first().unwrap_or(&Value::Null), "bytes");
             let raw = js_of(&raw);

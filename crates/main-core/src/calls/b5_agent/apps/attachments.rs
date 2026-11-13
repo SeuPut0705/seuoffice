@@ -19,6 +19,7 @@ use crate::calls::fakes::FakeWindow;
 use crate::node_fs::node_error;
 use crate::packages::ai_provider::jsval::number;
 use crate::packages::electron_utils::dialog_memory::{Dialog, DialogMemory};
+use crate::packages::electron_utils::unsaved_files::{OpenFileState, OpenFilesHolder};
 use crate::packages::i18n::Lang;
 
 type Log = Rc<RefCell<Vec<Vec<Value>>>>;
@@ -103,12 +104,32 @@ impl AttachFake {
         self.temp.clone()
     }
 
-    fn assert_saved(&self, path: &str) -> Result<(), String> {
-        self.record(vec![Value::from("assertFileSaved"), Value::from(path)]);
-        match self.saved.get(base_of(path)) {
-            Some(message) => Err(message.clone()),
-            None => Ok(()),
-        }
+    /// The open documents of the shell as the case scripts them: the file
+    /// being read is open with unsaved changes when its name is in `saved`.
+    /// Each ask of the source is one `assertFileSaved` line of the log.
+    fn open_files(&self, file_path: Option<&JsonValue>) -> OpenFilesHolder {
+        let path = match file_path {
+            Some(JsonValue::String(path)) => path.clone(),
+            _ => String::new(),
+        };
+        let dirty = self.saved.contains_key(base_of(&path));
+        let log = Rc::clone(&self.log);
+        let mut holder = OpenFilesHolder::new();
+        holder.set_open_files_source(Some(Box::new(move || {
+            log.borrow_mut().push(vec![
+                Value::from("assertFileSaved"),
+                Value::from(path.as_str()),
+            ]);
+            Ok(if dirty {
+                vec![OpenFileState {
+                    file_path: Some(path.clone()),
+                    dirty: true,
+                }]
+            } else {
+                Vec::new()
+            })
+        })));
+        holder
     }
 
     /// `parseFileToText(path)`: `(ok, kind, text, damaged, error)`
@@ -191,10 +212,6 @@ macro_rules! impl_host {
 
             fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String> {
                 fs::read(path).map_err(|e| node_error(&e, "open", path).message)
-            }
-
-            fn assert_file_saved(&mut self, path: &str) -> Result<(), String> {
-                self.assert_saved(path)
             }
 
             fn parse_file_to_text(
@@ -313,7 +330,8 @@ macro_rules! common_methods {
             offset: Option<&JsonValue>,
             max_chars: Option<&JsonValue>,
         ) -> JsonValue {
-            state.read_attachment_page(host, file_path, offset, max_chars)
+            let open_files = host.open_files(file_path);
+            state.read_attachment_page(host, &open_files, file_path, offset, max_chars)
         }
 
         fn image(host: &mut AttachFake, file_path: Option<&JsonValue>) -> JsonValue {

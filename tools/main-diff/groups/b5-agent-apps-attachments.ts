@@ -6,7 +6,8 @@
  * the case's `ctx` drives, the files are the case's own folder, and the
  * clock is the comparison's.
  *
- * ctx: `{ lang?, temp?, diagram?: { path: ext }, saved?: { path: message },
+ * ctx: `{ lang?, temp?, diagram?: { path: ext }, saved?: { path: message } (the message is
+ * the shell's own: the Rust side reads the file as open and dirty),
  * parse?: { path: { ok, kind?, text?, damaged?, error? } | { throw } },
  * hasFile?: { id: bool } }`. Each call of a stub is one log line.
  *
@@ -319,7 +320,10 @@ const pageCases = (): Case[] => {
     {
       args: [
         [{ read: [`${D}long.txt`, 0, 5] }],
-        { saved: { 'long.txt': 'unsaved changes' }, parse: parse('long.txt', TEXT(text)) },
+        {
+          saved: { 'long.txt': 'This file is open with unsaved changes. Save it, then try again.' },
+          parse: parse('long.txt', TEXT(text)),
+        },
       ],
       files,
       note: 'a file with unsaved changes is not read',

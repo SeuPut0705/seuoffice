@@ -25,6 +25,7 @@ use crate::packages::ai_provider::jsval::{length16, number, object, prop, text};
 use crate::packages::electron_utils::dialog_memory::{
     Dialog, DialogMemory, show_open_dialog_with_memory,
 };
+use crate::packages::electron_utils::unsaved_files::{OpenFilesHolder, assert_file_saved};
 use crate::packages::file_parse::attachable::{
     ATTACHABLE_IMAGE_EXTS, ATTACHABLE_IMAGE_MAX_BYTES, ATTACHABLE_MAX_BYTES, attachable_exts,
     attachable_max_bytes, is_attachable_ext_exact,
@@ -168,8 +169,6 @@ pub trait AttachmentsHost {
     fn write_file(&mut self, path: &str, bytes: &[u8]) -> Result<(), String>;
     /// `readFileSync(path)`
     fn read_file(&mut self, path: &str) -> Result<Vec<u8>, String>;
-    /// `assertFileSaved(path)`: `Err` carries the refusal's message
-    fn assert_file_saved(&mut self, path: &str) -> Result<(), String>;
     /// `parseFileToText(path)`
     fn parse_file_to_text(&mut self, path: &str) -> Result<ParsedText, String>;
 }
@@ -401,11 +400,12 @@ impl AiAttachments {
     fn attachment_text(
         &mut self,
         host: &mut dyn AttachmentsHost,
+        open_files: &OpenFilesHolder,
         file_path: &str,
     ) -> Result<String, String> {
         // a file open with unsaved changes is not read (before the cache): a
         // withholding mark only reaches the file on save
-        host.assert_file_saved(file_path)?;
+        assert_file_saved(open_files, file_path).map_err(str::to_owned)?;
         let stat = host.stat(file_path)?;
         let stamp = format!(
             "{}:{}",
@@ -460,10 +460,12 @@ impl AiAttachments {
 
     /// `readAttachmentPage(filePath, offset, maxChars)`: one page of an
     /// attachment's text: from `offset`, at most `maxChars` (and never more
-    /// than 48,000).
+    /// than 48,000). `open_files` is the shell's list of open documents,
+    /// filled by the caller before the call (`assertFileSaved` reads it).
     pub fn read_attachment_page(
         &mut self,
         host: &mut dyn AttachmentsHost,
+        open_files: &OpenFilesHolder,
         file_path: Option<&JsonValue>,
         offset: Option<&JsonValue>,
         max_chars: Option<&JsonValue>,
@@ -489,7 +491,7 @@ impl AiAttachments {
             let error = tm(host, "errImageNoText", None);
             return failure(error);
         }
-        match self.attachment_text(host, file_path) {
+        match self.attachment_text(host, open_files, file_path) {
             Ok(page_text) => {
                 let start = number_or_zero(offset).max(0.0);
                 let size = number_or_one(max_chars).clamp(1.0, ATTACHMENT_READ_MAX_CHARS);

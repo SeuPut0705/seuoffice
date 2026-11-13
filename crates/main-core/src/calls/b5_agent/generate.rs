@@ -24,7 +24,7 @@ use crate::packages::electron_utils::generate_handoff::{
     GenerateHandoffTarget, HandoffStore, HandoffWebContents,
 };
 use crate::packages::electron_utils::unsaved_files::{
-    OpenFileState, OpenFilesHolder, OpenFilesSourceFailed, file_has_unsaved_changes,
+    OpenFileState, OpenFilesHolder, OpenFilesSourceFailed,
 };
 use crate::packages::file_parse::attachable::{
     ATTACHABLE_IMAGE_EXTS, ATTACHABLE_IMAGE_MAX_BYTES, ATTACHABLE_MAX_BYTES, attachable_exts,
@@ -45,7 +45,7 @@ use crate::shell::generate::generate_api::{
 };
 use crate::shell::generate::generate_window::{
     GenerateText, GenerateWindow, GenerateWindowHost, GenerateWindowOptions, IPC_HANDLE_CHANNELS,
-    NewDocumentOpener, OpenDialogResult, OpenInit, WindowId,
+    NewDocumentOpener, OpenDialogResult, OpenInit, WindowId, WindowStep,
 };
 use crate::shell::generate::limits::{
     LONG_MATERIAL_NOTICE_CHARS, MAX_IMAGE_MATERIAL_BYTES, MAX_MATERIAL_BYTES, MAX_MATERIALS,
@@ -57,13 +57,17 @@ use crate::shell::generate::materials::{
     summarize_materials, supported_material_exts, untitled_material,
 };
 use crate::shell::generate::open_materials::{
-    MaterialContents, OpenDocumentTab, OpenMaterialsDeps, SaveOutcome, create_open_materials,
+    MaterialContents, OpenDocumentTab, OpenMaterialsDeps, OpenSnapshot, SaveAnswer,
+    SaveMaterialRun, SaveMaterialStep, SaveNeed, SaveOutcome, path_of_untitled, save_action_for,
+    save_material_begin, show_untitled,
 };
 use crate::shell::generate::request::{
     available_conversions, is_ai_target_kind, is_convert_kind, prepare_generate_request,
     validate_generate_request,
 };
-use crate::shell::generate::session::{GenerateSession, GenerateSessionHost, MaterialRef};
+use crate::shell::generate::session::{
+    GenerateSession, GenerateSessionHost, MaterialRef, SaveStep, SessionAnswer, SessionNeed,
+};
 use crate::shell::generate::title_bar::{GENERATE_TITLE_BAR_HEIGHT, generate_title_bar_overlay};
 use crate::shell::renderer_disposal::Failure;
 use crate::shell::title_bar_overlay::TitleBarOverlay;
@@ -483,15 +487,35 @@ impl InspectHost for InspectFake<'_> {
     fn injected_parse(&self) -> bool {
         field_bool(self.scenario, "injectParse")
     }
+}
 
-    fn has_unsaved_changes(&mut self, path: &str) -> Result<bool, Failure> {
-        log_line(self.log, vec![text("unsaved"), text(path)]);
-        match by_path(self.scenario.get("unsaved"), path) {
-            Some(Value::String(_)) => Err(Failure("unsaved failed".to_owned())),
-            Some(Value::Bool(answer)) => Ok(*answer),
-            _ => Ok(false),
+/// the open files of a scenario (`openFiles`): a list, or `"throws"` for a
+/// source that fails; absent is no source
+fn open_files_holder(scenario: &Value) -> OpenFilesHolder {
+    let mut holder = OpenFilesHolder::new();
+    match scenario.get("openFiles") {
+        Some(Value::Array(files)) => {
+            let files: Vec<OpenFileState> = files
+                .iter()
+                .map(|f| OpenFileState {
+                    file_path: field_str(f, "filePath").map(str::to_owned),
+                    dirty: field_bool(f, "dirty"),
+                })
+                .collect();
+            holder.set_open_files_source(Some(Box::new(
+                move || -> Result<Vec<OpenFileState>, OpenFilesSourceFailed> { Ok(files.clone()) },
+            )));
         }
+        Some(Value::String(_)) => {
+            holder.set_open_files_source(Some(Box::new(
+                || -> Result<Vec<OpenFileState>, OpenFilesSourceFailed> {
+                    Err(OpenFilesSourceFailed)
+                },
+            )));
+        }
+        _ => {}
     }
+    holder
 }
 
 fn inspect_call(args: &[Value], cx: &mut Context) -> Answer {
@@ -499,6 +523,7 @@ fn inspect_call(args: &[Value], cx: &mut Context) -> Answer {
     let log = new_log();
     let mut engine = Scripted::new(scenario.get("engine"), &log);
     let mut cache = MaterialLengthCache::new();
+    let holder = open_files_holder(&scenario);
     let mut results: Vec<Value> = Vec::new();
     for step in list(scenario.get("steps")) {
         if let Some(write) = step.get("write") {
@@ -515,10 +540,12 @@ fn inspect_call(args: &[Value], cx: &mut Context) -> Answer {
             engine: &mut engine,
             log: &log,
         };
-        results.push(match inspect_material(&mut host, &mut cache, path) {
-            Ok(status) => status.to_value(),
-            Err(Failure(message)) => error_value(&message),
-        });
+        results.push(
+            match inspect_material(&mut host, &mut cache, &holder, path) {
+                Ok(status) => status.to_value(),
+                Err(Failure(message)) => error_value(&message),
+            },
+        );
     }
     cx.logs.extend(log.take());
     Ok(Some(Value::Array(results)))
@@ -826,24 +853,6 @@ struct OpenFake {
 impl OpenMaterialsDeps for OpenFake {
     type Contents = FakeContents;
 
-    fn list(&mut self) -> Result<Vec<OpenDocumentTab>, Failure> {
-        log_line(&self.log, vec![text("list")]);
-        if field_bool(&self.scenario, "listThrows") {
-            return Err(Failure("list failed".to_owned()));
-        }
-        Ok(list(self.scenario.get("tabs"))
-            .iter()
-            .map(|t| OpenDocumentTab {
-                id: field_str(t, "id").unwrap_or_default().to_owned(),
-                kind: tab_kind_of(field_str(t, "kind").unwrap_or_default()),
-                title: field_str(t, "title").unwrap_or_default().to_owned(),
-                file_path: field_str(t, "filePath").map(str::to_owned),
-                active: field_bool(t, "active"),
-                dirty: field_bool(t, "dirty"),
-            })
-            .collect())
-    }
-
     fn web_contents_for(&mut self, tab_id: &str) -> Option<FakeContents> {
         log_line(&self.log, vec![text("webContentsFor"), text(tab_id)]);
         let spec = self.scenario.get("contents")?.get(tab_id)?;
@@ -863,36 +872,6 @@ impl OpenMaterialsDeps for OpenFake {
             .any(|k| k.as_str() == Some(kind.as_str()))
     }
 
-    fn save_to_path(
-        &mut self,
-        kind: DocumentTabKind,
-        web_contents_id: f64,
-        path: &str,
-    ) -> Result<(), Failure> {
-        log_line(
-            &self.log,
-            vec![
-                text("save"),
-                text(kind.as_str()),
-                num(web_contents_id),
-                text(path),
-            ],
-        );
-        self.save_result(kind).map(|_| ())
-    }
-
-    fn save_editor(
-        &mut self,
-        kind: DocumentTabKind,
-        _contents: &FakeContents,
-    ) -> Result<bool, Failure> {
-        log_line(
-            &self.log,
-            vec![text("save"), text(kind.as_str()), text("contents")],
-        );
-        self.save_result(kind)
-    }
-
     fn warn_save_failed(&mut self, error: &Failure) {
         log_line(
             &self.log,
@@ -906,6 +885,21 @@ impl OpenMaterialsDeps for OpenFake {
 }
 
 impl OpenFake {
+    /// the open tabs of the scenario: the snapshot the shell would hand over
+    fn tabs(&self) -> Vec<OpenDocumentTab> {
+        list(self.scenario.get("tabs"))
+            .iter()
+            .map(|t| OpenDocumentTab {
+                id: field_str(t, "id").unwrap_or_default().to_owned(),
+                kind: tab_kind_of(field_str(t, "kind").unwrap_or_default()),
+                title: field_str(t, "title").unwrap_or_default().to_owned(),
+                file_path: field_str(t, "filePath").map(str::to_owned),
+                active: field_bool(t, "active"),
+                dirty: field_bool(t, "dirty"),
+            })
+            .collect()
+    }
+
     /// `saveResult[kind]`: false, 'throws', or true by default
     fn save_result(&self, kind: DocumentTabKind) -> Result<bool, Failure> {
         match self
@@ -918,6 +912,35 @@ impl OpenFake {
             _ => Ok(true),
         }
     }
+
+    /// the editor carries out its save command
+    fn carry_out(&mut self, need: &SaveNeed) -> SaveAnswer {
+        match need {
+            SaveNeed::ToPath {
+                kind,
+                web_contents_id,
+                path,
+            } => {
+                log_line(
+                    &self.log,
+                    vec![
+                        text("save"),
+                        text(kind.as_str()),
+                        num(*web_contents_id),
+                        text(path),
+                    ],
+                );
+                SaveAnswer::ToPath(self.save_result(*kind).map(|_| ()))
+            }
+            SaveNeed::Editor { kind, .. } => {
+                log_line(
+                    &self.log,
+                    vec![text("save"), text(kind.as_str()), text("contents")],
+                );
+                SaveAnswer::Editor(self.save_result(*kind))
+            }
+        }
+    }
 }
 
 fn open_call(args: &[Value], cx: &mut Context) -> Answer {
@@ -927,31 +950,32 @@ fn open_call(args: &[Value], cx: &mut Context) -> Answer {
         scenario: scenario.clone(),
         log: Rc::clone(&log),
     };
+    let tabs = deps.tabs();
     let mut results: Vec<Value> = Vec::new();
     for step in list(scenario.get("steps")) {
-        let mut open = create_open_materials(&mut deps);
         results.push(if let Some(path) = field_str(step, "saveActionFor") {
-            match open.save_action_for(path) {
-                Ok(SaveAction::Save) => text("save"),
-                Ok(SaveAction::Show) => text("show"),
-                Err(Failure(message)) => error_value(&message),
+            match save_action_for(&deps, &tabs, path) {
+                SaveAction::Save => text("save"),
+                SaveAction::Show => text("show"),
             }
         } else if let Some(path) = field_str(step, "saveMaterial") {
-            match open.save_material(path) {
-                Ok(outcome) => text(outcome.as_str()),
-                Err(Failure(message)) => error_value(&message),
-            }
+            let mut step = save_material_begin(&mut deps, &tabs, path);
+            let outcome = loop {
+                match step {
+                    SaveMaterialStep::Done(outcome) => break outcome,
+                    SaveMaterialStep::Need(need, run) => {
+                        let answer = deps.carry_out(&need);
+                        step = SaveMaterialStep::Done(run.resume(&mut deps, answer));
+                    }
+                }
+            };
+            text(outcome.as_str())
         } else if let Some(id) = field_f64(step, "pathOfUntitled") {
-            match open.path_of_untitled(id) {
-                Ok(path) => path.map_or(Value::Null, Value::from),
-                Err(Failure(message)) => error_value(&message),
-            }
+            path_of_untitled(&mut deps, &tabs, id).map_or(Value::Null, Value::from)
         } else {
             let id = field_f64(step, "showUntitled").unwrap_or(f64::NAN);
-            match open.show_untitled(id) {
-                Ok(()) => Value::Null,
-                Err(Failure(message)) => error_value(&message),
-            }
+            show_untitled(&mut deps, &tabs, id);
+            Value::Null
         });
     }
     cx.logs.extend(log.take());
@@ -996,7 +1020,7 @@ impl GenerateSessionHost for SessionFake {
         lang_of(&self.scenario)
     }
 
-    fn inspect(&mut self, path: &str) -> Result<MaterialStatus, Failure> {
+    fn inspect(&mut self, _snap: &OpenSnapshot<'_>, path: &str) -> Result<MaterialStatus, Failure> {
         log_line(&self.log, vec![text("inspect"), text(path)]);
         match self.nth("inspect", "inspect", path) {
             Some(status) if status.get("throws").is_none() => Ok(status_of(&status)),
@@ -1004,20 +1028,24 @@ impl GenerateSessionHost for SessionFake {
         }
     }
 
-    fn path_of_untitled(&mut self, web_contents_id: f64) -> Result<Option<String>, Failure> {
+    fn path_of_untitled(
+        &mut self,
+        _snap: &OpenSnapshot<'_>,
+        web_contents_id: f64,
+    ) -> Option<String> {
         log_line(
             &self.log,
             vec![text("pathOfUntitled"), num(web_contents_id)],
         );
         let key = number_to_string(web_contents_id);
+        // a source that rejects is `catch(() => null)` in the TypeScript
         match self.nth("pathOfUntitled", "untitled", &key) {
-            None | Some(Value::Null) => Ok(None),
-            Some(Value::String(path)) => Ok(Some(path)),
-            Some(_) => Err(Failure("pathOfUntitled failed".to_owned())),
+            Some(Value::String(path)) => Some(path),
+            _ => None,
         }
     }
 
-    fn save_action_for(&mut self, path: &str) -> Result<SaveAction, Failure> {
+    fn save_action_for(&mut self, _snap: &OpenSnapshot<'_>, path: &str) -> SaveAction {
         log_line(&self.log, vec![text("saveActionFor"), text(path)]);
         match self
             .scenario
@@ -1025,28 +1053,36 @@ impl GenerateSessionHost for SessionFake {
             .and_then(|t| t.get(path))
             .and_then(Value::as_str)
         {
-            Some("throws") => Err(Failure("saveActionFor failed".to_owned())),
-            Some("save") => Ok(SaveAction::Save),
-            _ => Ok(SaveAction::Show),
+            Some("save") => SaveAction::Save,
+            _ => SaveAction::Show,
         }
     }
 
-    fn save_material(&mut self, path: &str) -> Result<SaveOutcome, Failure> {
+    fn save_material_begin(&mut self, _snap: &OpenSnapshot<'_>, path: &str) -> SaveMaterialStep {
         log_line(&self.log, vec![text("saveMaterial"), text(path)]);
-        match self
-            .scenario
-            .get("saveMaterial")
-            .and_then(|t| t.get(path))
-            .and_then(Value::as_str)
-        {
-            Some("throws") => Err(Failure("saveMaterial failed".to_owned())),
-            Some("shown") => Ok(SaveOutcome::Shown),
-            Some("failed") => Ok(SaveOutcome::Failed),
-            _ => Ok(SaveOutcome::Saved),
-        }
+        SaveMaterialStep::Done(
+            match self
+                .scenario
+                .get("saveMaterial")
+                .and_then(|t| t.get(path))
+                .and_then(Value::as_str)
+            {
+                Some("shown") => SaveOutcome::Shown,
+                Some("failed" | "throws") => SaveOutcome::Failed,
+                _ => SaveOutcome::Saved,
+            },
+        )
     }
 
-    fn show_untitled(&mut self, web_contents_id: f64) -> Result<(), Failure> {
+    fn save_material_resume(&mut self, _run: SaveMaterialRun, _answer: SaveAnswer) -> SaveOutcome {
+        SaveOutcome::Failed
+    }
+
+    fn show_untitled(
+        &mut self,
+        _snap: &OpenSnapshot<'_>,
+        web_contents_id: f64,
+    ) -> Result<(), Failure> {
         log_line(&self.log, vec![text("showUntitled"), num(web_contents_id)]);
         if field_bool(&self.scenario, "showUntitledThrows") {
             Err(Failure("showUntitled failed".to_owned()))
@@ -1142,10 +1178,6 @@ impl GenerateSessionHost for SessionFake {
         field_f64(&self.scenario, "recheckDelayMs")
     }
 
-    fn sleep(&mut self, ms: f64) {
-        log_line(&self.log, vec![text("sleep"), num(ms)]);
-    }
-
     fn max_convert_slides(&self) -> usize {
         3
     }
@@ -1175,6 +1207,12 @@ fn session_call(args: &[Value], cx: &mut Context) -> Answer {
         &refs_of(scenario.get("refs")),
         ai_kind_of(scenario.get("kind")),
     );
+    // the session scenarios script `inspect` and the tabs themselves
+    let holder = OpenFilesHolder::new();
+    let snap = OpenSnapshot {
+        files: &holder,
+        tabs: &[],
+    };
     let mut results: Vec<Value> = Vec::new();
     for step in list(scenario.get("steps")) {
         results.push(if step.get("state").is_some() {
@@ -1182,11 +1220,12 @@ fn session_call(args: &[Value], cx: &mut Context) -> Answer {
         } else if let Some(reset) = step.get("reset") {
             unit(session.reset(
                 &mut host,
+                &snap,
                 &refs_of(reset.get("refs")),
                 ai_kind_of(reset.get("kind")),
             ))
         } else if step.get("refresh").is_some() {
-            unit(session.refresh(&mut host))
+            unit(session.refresh(&mut host, &snap))
         } else if let Some(kind) = step.get("setKind") {
             session.set_kind(&mut host, step_arg(kind));
             Value::Null
@@ -1194,14 +1233,30 @@ fn session_call(args: &[Value], cx: &mut Context) -> Answer {
             session.set_convert(&mut host, step_arg(kind));
             Value::Null
         } else if let Some(paths) = step.get("addPaths") {
-            unit(session.add_paths(&mut host, paths.as_array().map_or(&[][..], Vec::as_slice)))
+            unit(session.add_paths(
+                &mut host,
+                &snap,
+                paths.as_array().map_or(&[][..], Vec::as_slice),
+            ))
         } else if let Some(key) = step.get("remove") {
             session.remove(&mut host, step_arg(key));
             Value::Null
         } else if let Some(key) = step.get("save") {
-            unit(session.save(&mut host, step_arg(key)))
+            let mut step = session.save_begin(&mut host, &snap, step_arg(key));
+            loop {
+                match step {
+                    SaveStep::Done(result) => break unit(result),
+                    SaveStep::Need(need, run) => {
+                        // the fake host never starts an editor save: only the recheck timer waits
+                        if let SessionNeed::Sleep(ms) = need {
+                            log_line(&log, vec![text("sleep"), num(ms)]);
+                        }
+                        step = session.save_resume(&mut host, &snap, run, SessionAnswer::Slept);
+                    }
+                }
+            }
         } else if let Some(body) = step.get("make") {
-            Value::Bool(session.make(&mut host, step_arg(body)))
+            Value::Bool(session.make(&mut host, &snap, step_arg(body)))
         } else {
             Value::Bool(session.is_closed())
         });
@@ -1232,8 +1287,6 @@ struct WindowFake {
     now_ms: f64,
     open: OpenFake,
     engine: Scripted,
-    holder: OpenFilesHolder,
-    length_cache: MaterialLengthCache,
     notice_cache: NoticeCache,
     windows: Vec<WinState>,
     /// `nativeTheme.on` listeners, one slot per registration
@@ -1276,10 +1329,6 @@ fn with_fixed_id(mut value: Value) -> Value {
 impl OpenMaterialsDeps for WindowFake {
     type Contents = FakeContents;
 
-    fn list(&mut self) -> Result<Vec<OpenDocumentTab>, Failure> {
-        self.open.list()
-    }
-
     fn web_contents_for(&mut self, tab_id: &str) -> Option<FakeContents> {
         self.open.web_contents_for(tab_id)
     }
@@ -1292,49 +1341,8 @@ impl OpenMaterialsDeps for WindowFake {
         self.open.has_save(kind)
     }
 
-    fn save_to_path(
-        &mut self,
-        kind: DocumentTabKind,
-        web_contents_id: f64,
-        path: &str,
-    ) -> Result<(), Failure> {
-        self.open.save_to_path(kind, web_contents_id, path)
-    }
-
-    fn save_editor(
-        &mut self,
-        kind: DocumentTabKind,
-        contents: &FakeContents,
-    ) -> Result<bool, Failure> {
-        self.open.save_editor(kind, contents)
-    }
-
     fn warn_save_failed(&mut self, error: &Failure) {
         self.open.warn_save_failed(error);
-    }
-}
-
-/// the reads of the default `inspectMaterial(path)`: the disk, the reader, the open documents
-struct RealInspect<'a> {
-    engine: &'a mut Scripted,
-    holder: &'a OpenFilesHolder,
-}
-
-impl InspectHost for RealInspect<'_> {
-    fn stat(&mut self, path: &str) -> Result<FileStat, Failure> {
-        real_stat(path)
-    }
-
-    fn parse(&mut self, path: &str) -> Result<ParsedFile, Failure> {
-        self.engine.parse_file_to_text(path)
-    }
-
-    fn injected_parse(&self) -> bool {
-        false
-    }
-
-    fn has_unsaved_changes(&mut self, path: &str) -> Result<bool, Failure> {
-        Ok(file_has_unsaved_changes(self.holder, path))
     }
 }
 
@@ -1359,6 +1367,20 @@ impl NoticeHost for RealNotice<'_> {
     }
 
     fn injected_reader(&self) -> bool {
+        false
+    }
+}
+
+impl InspectHost for WindowFake {
+    fn stat(&mut self, path: &str) -> Result<FileStat, Failure> {
+        real_stat(path)
+    }
+
+    fn parse(&mut self, path: &str) -> Result<ParsedFile, Failure> {
+        self.engine.parse_file_to_text(path)
+    }
+
+    fn injected_parse(&self) -> bool {
         false
     }
 }
@@ -1430,14 +1452,6 @@ impl GenerateWindowHost for WindowFake {
             .collect()
     }
 
-    fn inspect_material(&mut self, path: &str) -> Result<MaterialStatus, Failure> {
-        let mut host = RealInspect {
-            engine: &mut self.engine,
-            holder: &self.holder,
-        };
-        inspect_material(&mut host, &mut self.length_cache, path)
-    }
-
     fn convert_source(
         &mut self,
         kind: ConvertKind,
@@ -1461,8 +1475,6 @@ impl GenerateWindowHost for WindowFake {
     fn now(&mut self) -> f64 {
         self.now_ms
     }
-
-    fn sleep(&mut self, _ms: f64) {}
 
     fn max_convert_slides(&self) -> usize {
         3
@@ -1648,27 +1660,13 @@ fn explicit_parent(value: Option<&Value>) -> Option<WindowId> {
 fn window_call(args: &[Value], cx: &mut Context) -> Answer {
     let scenario = arg(args, 0).cloned().unwrap_or(Value::Null);
     let log = new_log();
-    let mut holder = OpenFilesHolder::new();
-    if let Some(files) = scenario.get("openFiles").and_then(Value::as_array) {
-        let files: Vec<OpenFileState> = files
-            .iter()
-            .map(|f| OpenFileState {
-                file_path: field_str(f, "filePath").map(str::to_owned),
-                dirty: field_bool(f, "dirty"),
-            })
-            .collect();
-        holder.set_open_files_source(Some(Box::new(
-            move || -> Result<Vec<OpenFileState>, OpenFilesSourceFailed> { Ok(files.clone()) },
-        )));
-    }
+    let holder = open_files_holder(&scenario);
     let mut host = WindowFake {
         open: OpenFake {
             scenario: scenario.clone(),
             log: Rc::clone(&log),
         },
         engine: Scripted::new(scenario.get("engine"), &log),
-        holder,
-        length_cache: MaterialLengthCache::new(),
         notice_cache: NoticeCache::new(),
         windows: vec![
             WinState {
@@ -1693,11 +1691,16 @@ fn window_call(args: &[Value], cx: &mut Context) -> Answer {
         log: Rc::clone(&log),
         now_ms: cx.now_ms,
     };
+    let tabs = host.open.tabs();
     let mut window = GenerateWindow::new();
     let mut registered = false;
     let mut results: Vec<Value> = Vec::new();
     for step in list(scenario.get("steps")) {
         host.sends.clear();
+        let snap = OpenSnapshot {
+            files: &holder,
+            tabs: &tabs,
+        };
         let result = if step.get("configure").is_some() {
             let first = window.configure();
             if first {
@@ -1714,6 +1717,7 @@ fn window_call(args: &[Value], cx: &mut Context) -> Answer {
         } else if let Some(open) = step.get("open") {
             unit(window.open_generate_window(
                 &mut host,
+                &snap,
                 OpenInit {
                     refs: refs_of(open.get("refs")),
                     kind: ai_kind_of(open.get("kind")),
@@ -1728,12 +1732,14 @@ fn window_call(args: &[Value], cx: &mut Context) -> Answer {
                 .collect();
             unit(window.open_generate_window_with_paths(
                 &mut host,
+                &snap,
                 paths,
                 explicit_parent(open.get("parent")),
             ))
         } else if let Some(open) = step.get("openDocument") {
             unit(window.open_generate_window_for_document(
                 &mut host,
+                &snap,
                 field_f64(open, "webContentsId").unwrap_or(f64::NAN),
                 field_str(open, "filePath"),
                 field_str(open, "title").unwrap_or_default(),
@@ -1747,9 +1753,9 @@ fn window_call(args: &[Value], cx: &mut Context) -> Answer {
                 .generate_window_contents(&host)
                 .map_or(Value::Null, num)
         } else if let Some(ipc) = step.get("ipc") {
-            ipc_step(&mut window, &mut host, registered, ipc)
+            ipc_step(&mut window, &mut host, &snap, registered, ipc)
         } else if let Some(event) = step.get("event") {
-            event_step(&mut window, &mut host, event)
+            event_step(&mut window, &mut host, &snap, event)
         } else if let Some(n) = field_f64(step, "destroy") {
             if let Some(w) = host.win_mut(n as WindowId) {
                 w.destroyed = true;
@@ -1772,6 +1778,7 @@ fn window_call(args: &[Value], cx: &mut Context) -> Answer {
 fn ipc_step(
     window: &mut GenerateWindow,
     host: &mut WindowFake,
+    snap: &OpenSnapshot<'_>,
     registered: bool,
     ipc: &Value,
 ) -> Value {
@@ -1807,24 +1814,48 @@ fn ipc_step(
             window.handle_set_convert(host, sender, first);
             Value::Null
         }
-        channels::ADD_MATERIALS => unit(window.handle_add_materials(host, sender)),
+        channels::ADD_MATERIALS => unit(window.handle_add_materials(host, snap, sender)),
         channels::REMOVE_MATERIAL => {
             window.handle_remove_material(host, sender, first);
             Value::Null
         }
-        channels::SAVE_MATERIAL => unit(window.handle_save_material(host, sender, first)),
-        channels::REFRESH => unit(window.handle_refresh(host, sender)),
-        channels::MAKE => Value::Bool(window.handle_make(host, sender, first)),
+        channels::SAVE_MATERIAL => {
+            let mut step = window.handle_save_material(host, snap, sender, first);
+            loop {
+                match step {
+                    WindowStep::Done(result) => break unit(result),
+                    WindowStep::Need(need, run) => {
+                        let answer = match need {
+                            SessionNeed::Save(need) => {
+                                SessionAnswer::Save(host.open.carry_out(&need))
+                            }
+                            // the recheck timer: nothing else lands in a case
+                            SessionNeed::Sleep(_) => SessionAnswer::Slept,
+                        };
+                        step = window.resume_save(host, snap, run, answer);
+                    }
+                }
+            }
+        }
+        channels::REFRESH => unit(window.handle_refresh(host, snap, sender)),
+        channels::MAKE => Value::Bool(window.handle_make(host, snap, sender, first)),
         channels::CANCEL => {
             window.handle_cancel(host, sender);
             Value::Null
         }
-        channels::HOME_OPEN_WITH_PATHS => unit(window.handle_open_with_paths(host, sender, first)),
-        _ => unit(window.handle_open_with_group(host, sender, first)),
+        channels::HOME_OPEN_WITH_PATHS => {
+            unit(window.handle_open_with_paths(host, snap, sender, first))
+        }
+        _ => unit(window.handle_open_with_group(host, snap, sender, first)),
     }
 }
 
-fn event_step(window: &mut GenerateWindow, host: &mut WindowFake, event: &Value) -> Value {
+fn event_step(
+    window: &mut GenerateWindow,
+    host: &mut WindowFake,
+    snap: &OpenSnapshot<'_>,
+    event: &Value,
+) -> Value {
     let name = field_str(event, "name").unwrap_or_default();
     if name == "theme" {
         let watching: Vec<WindowId> = host.watchers.iter().flatten().copied().collect();
@@ -1839,7 +1870,7 @@ fn event_step(window: &mut GenerateWindow, host: &mut WindowFake, event: &Value)
     }
     match name {
         "ready-to-show" => window.on_ready_to_show(host, n),
-        "focus" => window.on_focus(host, n),
+        "focus" => window.on_focus(host, snap, n),
         "closed" => window.on_closed(host, n),
         "open" => {
             window.window_open(host, field_str(event, "url").unwrap_or_default());

@@ -335,7 +335,11 @@ pub struct AgentStartRequest {
 
 /// The window's services and its manager, as the handlers call them (the
 /// `deps` and the `manager` of the TypeScript, and the Electron objects they
-/// reach). A method that may throw gives a [`Failure`].
+/// reach). A method that may throw gives a [`Failure`]. Rule d6/d7 audit: the
+/// only call that waits on a renderer is `context.openTabs()`, which is an
+/// argument of `AgentSkillTools::propose_skill` and not a method here; the
+/// dialog, the file system, the manager (app MCP server, relays and the
+/// agent CLI) and the services stay synchronous.
 pub trait AgentWindowHost {
     /// `win`, `None` when null
     fn window(&self) -> Option<WindowState>;
@@ -384,16 +388,20 @@ pub trait AgentWindowHost {
     ) -> Result<AgentProjectSkillsView, Failure>;
     /// `deps.openTemplatePreview` is set
     fn has_open_template_preview(&self) -> bool;
-    /// `deps.openTemplatePreview(owner, input)`, `owner` the page with this id
+    /// `deps.openTemplatePreview(owner, input)`, `owner` the page with this id.
+    /// Synchronous by rule d6: it is `templateTabs.openPreview`, whose
+    /// `open_copy` seam (copy folder, file write, tab creation) is that
+    /// module's `TemplateTabsHost`; it awaits no renderer reply here
     fn open_template_preview(
         &mut self,
         owner_id: i64,
         input: &TemplatePreviewInput,
     ) -> Result<TemplatePreviewOutcome, Failure>;
 
-    /// `dialog.showOpenDialog(win, options)`: the result object
+    /// `dialog.showOpenDialog(win, options)`: the result object (a dialog,
+    /// so synchronous by rule d6)
     fn show_open_dialog(&mut self, options: &JsObject<JsonValue>) -> JsonValue;
-    /// the JSZip behind the deck check (engine-waiting)
+    /// the JSZip behind the deck check (engine-waiting; pure bytes in, entries out)
     fn deck(&mut self) -> &mut dyn DeckArchive;
 
     // the manager
@@ -516,7 +524,9 @@ pub struct AgentMcpSession<'a> {
     pub session_id: &'a str,
 }
 
-/// `AgentSkillToolsDeps`, and the `context.openTabs` of `proposeSkill`
+/// `AgentSkillToolsDeps`: what the skill tools read of the window and the
+/// skills service. `context.openTabs()` is not here: it waits on the
+/// editors' renderers, so `propose_skill` takes its answer as an argument
 pub trait AgentSkillToolsDeps {
     /// `d.window()` is not null (each call is one call of the TypeScript's)
     fn window_open(&mut self) -> bool;
@@ -530,8 +540,6 @@ pub trait AgentSkillToolsDeps {
     fn keep(&mut self, shown: ShownProposal);
     /// `d.newKey()`
     fn new_key(&mut self) -> String;
-    /// `context.openTabs()`; `Err` is a rejection
-    fn open_tabs(&mut self) -> Result<Vec<AgentOpenTab>, Failure>;
 }
 
 /// `agentSkillToolsFor(session, projectRoot, d)`: the two skill tools of one
@@ -545,10 +553,15 @@ pub struct AgentSkillTools<'a> {
 }
 
 impl AgentSkillTools<'_> {
-    /// `proposeSkill(input, context)`; `Err` is the message of the thrown `Error`
+    /// `proposeSkill(input, context)`; `Err` is the message of the thrown
+    /// `Error`. `tabs` is what `await context.openTabs()` answered, the open
+    /// documents of the tab manager (a renderer round trip), gathered by the
+    /// caller before this call; a rejection of it is an empty list, the
+    /// project folder's files are still offered
     pub fn propose_skill(
         &self,
         input: &AgentSkillProposalInput,
+        tabs: &[AgentOpenTab],
         d: &mut dyn AgentSkillToolsDeps,
     ) -> Result<(), String> {
         if !d.window_open() {
@@ -566,11 +579,9 @@ impl AgentSkillTools<'_> {
             AgentSkillProposalResult::Ok(proposal) => proposal,
             AgentSkillProposalResult::Refused(message) => return Err(message),
         };
-        // the project folder's files are still offered when the tabs cannot be read
-        let tabs = d.open_tabs().unwrap_or_default();
         let (candidates, selected) = agent_template_candidates(&TemplateCandidateOptions {
             project_root: self.project_root,
-            tabs: &tabs,
+            tabs,
             suggested: &input.suggested_template_path,
             platform: self.platform,
             project_files: None,

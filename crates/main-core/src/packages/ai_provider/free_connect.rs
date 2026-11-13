@@ -331,7 +331,12 @@ impl CodeWait {
 }
 
 /// The loopback servers, the browser and the random source of the OpenRouter
-/// sign-in.
+/// sign-in. `connect_open_router` waits for the browser's redirect inside
+/// [`OpenRouterHost::await_outcome`], so it is the middle step of a connect
+/// (`FreeAiIpc::plan_connect`, this, `FreeAiIpc::finish_open_router`) that
+/// the caller runs off the core thread: a `cancel` or a newer `connect` must
+/// land on the core thread meanwhile, and reaches this host as its own
+/// `signal_aborted` flag.
 pub trait OpenRouterHost: FreeConnectNet {
     /// `randomBytes(32)`
     fn random_bytes(&mut self) -> [u8; 32];

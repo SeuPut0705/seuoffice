@@ -19,6 +19,7 @@ use super::user_skills_service::{Failure, UserSkillsFail};
 use crate::packages::electron_utils::generate_handoff::{
     HandoffEditor, HandoffStore, SkillHandoff,
 };
+use crate::packages::electron_utils::unsaved_files::OpenFilesHolder;
 use crate::packages::electron_utils::user_skills_channels::{
     handoff_target_of, preview_ended_of, preview_input_of, template_open_input_of,
 };
@@ -65,11 +66,13 @@ fn short_text(value: Option<&JsonValue>, max: usize) -> Option<&str> {
 }
 
 /// the handler of `C.openTemplate`: the asking panel's window is `sender_id`,
-/// the copy's tab follows its project (spec 6)
+/// the copy's tab follows its project (spec 6); `open_files` is the shell's
+/// filled snapshot of the open documents
 pub fn handle_open_template(
     tabs: &mut TemplateTabs,
     host: &mut dyn TemplateTabsHost,
     store: &mut HandoffStore,
+    open_files: &OpenFilesHolder,
     raw: Option<&JsonValue>,
     sender_id: f64,
 ) -> JsonValue {
@@ -78,7 +81,7 @@ pub fn handle_open_template(
     else {
         return invalid();
     };
-    match tabs.open_template(host, store, &input, Some(sender_id)) {
+    match tabs.open_template(host, store, open_files, &input, Some(sender_id)) {
         Ok((tab_id, attached)) => ok_with(&[
             ("tabId", JsonValue::String(tab_id)),
             ("attached", JsonValue::Bool(attached)),

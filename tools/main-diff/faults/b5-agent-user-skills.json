@@ -899,10 +899,24 @@
     "fn": ["template-tabs.createTemplateTabs"]
   },
   {
-    "name": "tabs: a failed document check attaches",
+    "name": "tabs: a document with unsaved changes is attached",
     "file": "main-core/src/shell/user_skills/template_tabs.rs",
-    "find": "Some(Err(_)) | None => CurrentDocument::Unsaved,",
-    "replace": "Some(Err(_)) | None => CurrentDocument::Path(String::new()),",
+    "find": "Some(path) if !file_has_unsaved_changes(open_files, &path) => {",
+    "replace": "Some(path) => {",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: a tab with no file attaches nothing but opens",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "                _ => return Err(fail(\"unsaved\").into()),",
+    "replace": "                _ => {}",
+    "fn": ["template-tabs.createTemplateTabs"]
+  },
+  {
+    "name": "tabs: the asking tab is not looked up",
+    "file": "main-core/src/shell/user_skills/template_tabs.rs",
+    "find": "Some(opener_id) => host.opener_file_path(opener_id),",
+    "replace": "Some(_) => None,",
     "fn": ["template-tabs.createTemplateTabs"]
   },
   {

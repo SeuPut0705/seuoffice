@@ -1063,11 +1063,18 @@ struct WorldTools<'r, 'a> {
     world: &'r mut World<'a>,
     shown: &'r mut AgentWindowShown,
     owner: i64,
-    tabs: Option<&'r Value>,
+    /// the calls of `window()` so far
+    window_calls: usize,
 }
 
 impl AgentSkillToolsDeps for WorldTools<'_, '_> {
     fn window_open(&mut self) -> bool {
+        self.window_calls += 1;
+        // the TypeScript's `context.openTabs()` sits between the first and the
+        // second call of `window()`: the snapshot's call, logged where it was made
+        if self.window_calls == 2 {
+            self.world.put(vec![json!("openTabs")]);
+        }
         agent_live_owner(&*self.world, self.owner)
     }
 
@@ -1105,15 +1112,6 @@ impl AgentSkillToolsDeps for WorldTools<'_, '_> {
 
     fn new_key(&mut self) -> String {
         self.world.uuid()
-    }
-
-    fn open_tabs(&mut self) -> Result<Vec<AgentOpenTab>, Failure> {
-        self.world.put(vec![json!("openTabs")]);
-        match self.tabs {
-            Some(Value::String(_)) => Err(Failure("tabs".to_owned())),
-            Some(Value::Array(tabs)) => Ok(tabs.iter().map(tab_of).collect()),
-            _ => Ok(Vec::new()),
-        }
     }
 }
 
@@ -1186,16 +1184,20 @@ fn step(world: &mut World<'_>, shown: &mut AgentWindowShown, step: &Value, now_m
             platform: node_platform(),
         };
         let mut deps = WorldTools {
-            tabs: step.get("tabs"),
             world,
             shown,
             owner,
+            window_calls: 0,
         };
         let done = if tool == "proposeSkill" {
-            tools.propose_skill(
-                &proposal_input_of(step.get("input").unwrap_or(&Value::Null)),
-                &mut deps,
-            )
+            // the snapshot the shell gathers first (`context.openTabs()`); a
+            // rejection of it is an empty list
+            let tabs: Vec<AgentOpenTab> = match step.get("tabs") {
+                Some(Value::Array(tabs)) => tabs.iter().map(tab_of).collect(),
+                _ => Vec::new(),
+            };
+            let input = proposal_input_of(step.get("input").unwrap_or(&Value::Null));
+            tools.propose_skill(&input, &tabs, &mut deps)
         } else {
             tools.propose_install(&text(step, "address"), &mut deps)
         };
@@ -1313,119 +1315,4 @@ fn window_call(name: &str, args: &[Value], cx: &mut Context) -> Option<Answer> {
         })(),
         _ => return None,
     })
-}
-
-// ---- agent-window: the skill tools ---------------------------------------------
-
-/// the `d` of `agentSkillToolsFor` the scenario scripts
-struct ToolsDeps<'a> {
-    v: &'a Value,
-    calls: usize,
-    keys: usize,
-    open: bool,
-    log: Vec<Vec<Value>>,
-}
-
-impl AgentSkillToolsDeps for ToolsDeps<'_> {
-    fn window_open(&mut self) -> bool {
-        let script = list(self.v, "window");
-        let at = self.calls.min(script.len().saturating_sub(1));
-        self.calls += 1;
-        self.open = script.get(at) == Some(&Value::Bool(true));
-        self.log.push(vec![json!("window"), json!(self.open)]);
-        self.open
-    }
-
-    fn send_to_window(&mut self, channel: &str, payload: &Value) {
-        self.log
-            .push(vec![json!("send"), json!(channel), payload.clone()]);
-    }
-
-    fn list_skills(&mut self) -> Option<Result<Vec<AgentSkillListEntry>, Failure>> {
-        let skills = self.v.get("list")?;
-        self.log.push(vec![json!("listSkills")]);
-        Some(match skills {
-            Value::String(_) => Err(Failure("list".to_owned())),
-            other => Ok(other
-                .as_array()
-                .map_or(&[][..], Vec::as_slice)
-                .iter()
-                .map(list_entry_of)
-                .collect()),
-        })
-    }
-
-    fn session_skills(&mut self) -> Vec<AgentSessionSkillName> {
-        let Some(skills) = self.v.get("sessionSkills") else {
-            return Vec::new();
-        };
-        self.log.push(vec![json!("sessionSkills")]);
-        skills
-            .as_array()
-            .map_or(&[][..], Vec::as_slice)
-            .iter()
-            .map(|skill| AgentSessionSkillName {
-                id: text(skill, "id"),
-                name: text(skill, "name"),
-            })
-            .collect()
-    }
-
-    fn keep(&mut self, shown: ShownProposal) {
-        self.log.push(vec![
-            json!("keep"),
-            json!({
-                "ownerId": shown.owner_id,
-                "sessionId": shown.session_id,
-                "proposal": to_value(&shown.proposal),
-                "candidates": to_value(&shown.candidates),
-            }),
-        ]);
-    }
-
-    fn new_key(&mut self) -> String {
-        self.log.push(vec![json!("newKey")]);
-        let key = texts(self.v, "keys").get(self.keys).cloned();
-        self.keys += 1;
-        key.unwrap_or_default()
-    }
-
-    fn open_tabs(&mut self) -> Result<Vec<AgentOpenTab>, Failure> {
-        self.log.push(vec![json!("openTabs")]);
-        match self.v.get("tabs") {
-            Some(Value::String(_)) => Err(Failure("tabs".to_owned())),
-            Some(Value::Array(tabs)) => Ok(tabs.iter().map(tab_of).collect()),
-            _ => Ok(Vec::new()),
-        }
-    }
-}
-
-fn tools_call(args: &[Value], cx: &mut Context, skill: bool) -> Answer {
-    let scenario = need(args, 0)?;
-    let mut deps = ToolsDeps {
-        v: scenario,
-        calls: 0,
-        keys: 0,
-        open: false,
-        log: Vec::new(),
-    };
-    let project_root = text(scenario, "projectRoot");
-    let tools = AgentSkillTools {
-        session: AgentMcpSession {
-            owner_id: 5,
-            session_id: "s1",
-        },
-        project_root: &project_root,
-        platform: node_platform(),
-    };
-    let done = if skill {
-        tools.propose_skill(&proposal_input_of(need(args, 1)?), &mut deps)
-    } else {
-        tools.propose_install(str_arg(args, 1)?, &mut deps)
-    };
-    cx.logs.extend(deps.log);
-    Ok(Some(match done {
-        Ok(()) => json!("shown"),
-        Err(message) => json!({ "threw": message }),
-    }))
 }

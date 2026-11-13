@@ -277,8 +277,8 @@
   {
     "name": "materials: a file with unsaved changes is read",
     "file": "main-core/src/shell/generate/materials.rs",
-    "find": "    if host.has_unsaved_changes(path)? {\n        sized.unsaved = true;",
-    "replace": "    if false && host.has_unsaved_changes(path)? {\n        sized.unsaved = true;",
+    "find": "    if file_has_unsaved_changes(open_files, path) {",
+    "replace": "    if false && file_has_unsaved_changes(open_files, path) {",
     "fn": ["materials.inspectMaterial"]
   },
   {
@@ -571,78 +571,78 @@
   {
     "name": "open-materials: a bridge nobody gave is saved to",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "                self.deps.has_save(tab.kind) && in_place_exts(tab.kind).contains(&ext.as_str())",
-    "replace": "                in_place_exts(tab.kind).contains(&ext.as_str())",
+    "find": "            deps.has_save(tab.kind) && in_place_exts(tab.kind).contains(&ext.as_str())",
+    "replace": "            in_place_exts(tab.kind).contains(&ext.as_str())",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: an editor nobody gave is saved with",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "            DocumentTabKind::Markdown | DocumentTabKind::Html | DocumentTabKind::Mindmap => {\n                self.deps.has_save(tab.kind)\n            }",
-    "replace": "            DocumentTabKind::Markdown | DocumentTabKind::Html | DocumentTabKind::Mindmap => {\n                true\n            }",
+    "find": "        DocumentTabKind::Markdown | DocumentTabKind::Html | DocumentTabKind::Mindmap => {\n            deps.has_save(tab.kind)\n        }",
+    "replace": "        DocumentTabKind::Markdown | DocumentTabKind::Html | DocumentTabKind::Mindmap => true,",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a clean tab is saved",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "        let Some(tab) = tab.filter(|tab| tab.dirty) else {",
-    "replace": "        let Some(tab) = tab.filter(|_| true) else {",
+    "find": "tab_of_path(tabs, path).filter(|tab| tab.dirty) else",
+    "replace": "tab_of_path(tabs, path).filter(|_| true) else",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a torn-down tab is saved",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "            Some(contents) if !contents.is_destroyed() => contents,",
-    "replace": "            Some(contents) => contents,",
+    "find": "        Some(contents) if !contents.is_destroyed() => contents,",
+    "replace": "        Some(contents) => contents,",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a tab that cannot be saved is not brought forward",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "        if !self.can_save_in_place(&tab) {\n            self.deps.reveal(&tab.id);\n            return Ok(SaveOutcome::Shown);",
-    "replace": "        if false {\n            self.deps.reveal(&tab.id);\n            return Ok(SaveOutcome::Shown);",
+    "find": "    if !can_save_in_place(deps, &tab) {\n        deps.reveal(&tab.id);\n        return SaveMaterialStep::Done(SaveOutcome::Shown);",
+    "replace": "    if false {\n        deps.reveal(&tab.id);\n        return SaveMaterialStep::Done(SaveOutcome::Shown);",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a save that worked failed",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "            Ok(true) => Ok(SaveOutcome::Saved),",
-    "replace": "            Ok(true) => Ok(SaveOutcome::Failed),",
+    "find": "            SaveAnswer::ToPath(Ok(())) | SaveAnswer::Editor(Ok(true)) => SaveOutcome::Saved,",
+    "replace": "            SaveAnswer::ToPath(Ok(())) | SaveAnswer::Editor(Ok(true)) => SaveOutcome::Failed,",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a save the editor refused worked",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "            Ok(false) => Ok(SaveOutcome::Failed),",
-    "replace": "            Ok(false) => Ok(SaveOutcome::Saved),",
+    "find": "            SaveAnswer::Editor(Ok(false)) => SaveOutcome::Failed,",
+    "replace": "            SaveAnswer::Editor(Ok(false)) => SaveOutcome::Saved,",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a failed save is not reported",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "                self.deps.warn_save_failed(&error);",
+    "find": "                deps.warn_save_failed(&error);",
     "replace": "                let _ = &error;",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a bridge save is not counted",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "                self.deps.save_to_path(tab.kind, contents.id(), path)?;\n                Ok(true)",
-    "replace": "                self.deps.save_to_path(tab.kind, contents.id(), path)?;\n                Ok(false)",
+    "find": "            SaveAnswer::ToPath(Ok(())) | SaveAnswer::Editor(Ok(true)) => SaveOutcome::Saved,",
+    "replace": "            SaveAnswer::Editor(Ok(true)) => SaveOutcome::Saved,\n            SaveAnswer::ToPath(Ok(())) => SaveOutcome::Failed,",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: a saved document has no path",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "                return Ok(tab.file_path);",
-    "replace": "                return Ok(None);",
+    "find": "            return tab.file_path.clone();",
+    "replace": "            return None;",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
     "name": "open-materials: showing a document does not reveal it",
     "file": "main-core/src/shell/generate/open_materials.rs",
-    "find": "                self.deps.reveal(&tab.id);\n                return Ok(());",
-    "replace": "                return Ok(());",
+    "find": "            deps.reveal(&tab.id);\n            return;",
+    "replace": "            return;",
     "fn": ["open-materials.createOpenMaterials"]
   },
   {
@@ -1061,8 +1061,8 @@
   {
     "name": "session: an empty saved path is a path",
     "file": "main-core/src/shell/generate/session.rs",
-    "find": "                .unwrap_or(None)\n                .filter(|path| !path.is_empty());",
-    "replace": "                .unwrap_or(None);",
+    "find": "                .path_of_untitled(snap, web_contents_id)\n                .filter(|path| !path.is_empty());",
+    "replace": "                .path_of_untitled(snap, web_contents_id);",
     "fn": ["session.GenerateSession"]
   },
   {
@@ -1073,10 +1073,10 @@
     "fn": ["session.GenerateSession"]
   },
   {
-    "name": "session: a failed save-action look is a save",
+    "name": "session: an unsaved row can always be saved",
     "file": "main-core/src/shell/generate/session.rs",
-    "find": "Some(host.save_action_for(&path).unwrap_or(SaveAction::Show))",
-    "replace": "Some(host.save_action_for(&path).unwrap_or(SaveAction::Save))",
+    "find": "Some(host.save_action_for(snap, &path))",
+    "replace": "Some(SaveAction::Save)",
     "fn": ["session.GenerateSession"]
   },
   {
@@ -1145,8 +1145,8 @@
   {
     "name": "session: a never-saved document is not shown",
     "file": "main-core/src/shell/generate/session.rs",
-    "find": "                host.show_untitled(web_contents_id)?;\n                self.push(host);",
-    "replace": "                self.push(host);",
+    "find": "                if let Err(error) = host.show_untitled(snap, web_contents_id) {\n                    return SaveStep::Done(Err(error));\n                }\n",
+    "replace": "",
     "fn": ["session.GenerateSession"]
   },
   {
@@ -1478,8 +1478,8 @@
   {
     "name": "generate-window: any page adds materials",
     "file": "main-core/src/shell/generate/generate_window.rs",
-    "find": "        if !self.from_window(&*host, sender_id) || self.session.is_none() || !self.configured {",
-    "replace": "        if self.session.is_none() || !self.configured {",
+    "find": "        if !self.from_window(&*host, sender_id) || !self.has_session() || !self.configured {",
+    "replace": "        if !self.has_session() || !self.configured {",
     "fn": ["generate-window.openGenerateWindow"]
   },
   {
@@ -1520,15 +1520,15 @@
   {
     "name": "generate-window: any page saves a material",
     "file": "main-core/src/shell/generate/generate_window.rs",
-    "find": "        if self.from_window(&*host, sender_id) {\n            self.with_session(host, |session, bridge| session.save(bridge, key))",
-    "replace": "        if true {\n            self.with_session(host, |session, bridge| session.save(bridge, key))",
+    "find": "        if !self.from_window(&*host, sender_id) {\n            return WindowStep::Done(Ok(()));\n        }\n        let Some(id)",
+    "replace": "        let Some(id)",
     "fn": ["generate-window.openGenerateWindow"]
   },
   {
     "name": "generate-window: any page refreshes",
     "file": "main-core/src/shell/generate/generate_window.rs",
-    "find": "        if self.from_window(&*host, sender_id) {\n            self.with_session(host, |session, bridge| session.refresh(bridge))",
-    "replace": "        if true {\n            self.with_session(host, |session, bridge| session.refresh(bridge))",
+    "find": "        if self.from_window(&*host, sender_id) {\n            self.with_session(host, |session, bridge| session.refresh(bridge, snap))",
+    "replace": "        if true {\n            self.with_session(host, |session, bridge| session.refresh(bridge, snap))",
     "fn": ["generate-window.openGenerateWindow"]
   },
   {
@@ -1625,7 +1625,7 @@
   {
     "name": "generate-window: the new window is not read",
     "file": "main-core/src/shell/generate/generate_window.rs",
-    "find": "        // `void current.refresh()`\n        let _ = self.with_session(host, |session, bridge| session.refresh(bridge));\n        Ok(())",
+    "find": "        // `void current.refresh()`\n        let _ = self.with_session(host, |session, bridge| session.refresh(bridge, snap));\n        Ok(())",
     "replace": "        Ok(())",
     "fn": ["generate-window.openGenerateWindow"]
   },
@@ -1737,7 +1737,7 @@
   {
     "name": "generate-window: close keeps the session",
     "file": "main-core/src/shell/generate/generate_window.rs",
-    "find": "        self.session = None;\n        self.session_id = None;\n        close_window_state(host, &mut self.win, &mut self.opener);",
+    "find": "        self.session_id = None;\n        self.prune_sessions();\n        close_window_state(host, &mut self.win, &mut self.opener);",
     "replace": "        close_window_state(host, &mut self.win, &mut self.opener);",
     "fn": ["generate-window.closeGenerateWindow", "generate-window.openGenerateWindow"]
   },
@@ -1844,5 +1844,54 @@
       "generate-home-channels.GENERATE_HOME_CHANNELS",
       "generate-window.configureGenerateWindow"
     ]
+  },
+  {
+    "name": "open-materials: a bridge save names another webContents",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "                    web_contents_id: contents.id(),\n                    path: path.to_owned(),",
+    "replace": "                    web_contents_id: 0.0,\n                    path: path.to_owned(),",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "open-materials: a bridge save has no path",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "                    path: path.to_owned(),",
+    "replace": "                    path: String::new(),",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "open-materials: an editor save names another webContents",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "                    kind: tab.kind,\n                    web_contents_id: contents.id(),\n                },",
+    "replace": "                    kind: tab.kind,\n                    web_contents_id: 0.0,\n                },",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "open-materials: a document that cannot be written is saved as failed",
+    "file": "main-core/src/shell/generate/open_materials.rs",
+    "find": "        _ => SaveMaterialStep::Done(SaveOutcome::Failed),",
+    "replace": "        _ => SaveMaterialStep::Done(SaveOutcome::Saved),",
+    "fn": ["open-materials.createOpenMaterials", "generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "session: the second look after the wait is skipped",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                if self.has_row(id) {\n                    SaveStep::Done(self.inspect_rows",
+    "replace": "                if false {\n                    SaveStep::Done(self.inspect_rows",
+    "fn": ["session.GenerateSession"]
+  },
+  {
+    "name": "session: a save without a wait for the editor",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                let result = host.save_material_resume(save, answer);",
+    "replace": "                let result = SaveOutcome::Saved;\n                let _ = (save, answer);",
+    "fn": ["generate-window.openGenerateWindow"]
+  },
+  {
+    "name": "session: the recheck is asked for 0 ms",
+    "file": "main-core/src/shell/generate/session.rs",
+    "find": "                SessionNeed::Sleep(delay),",
+    "replace": "                SessionNeed::Sleep(0.0),",
+    "fn": ["session.GenerateSession"]
   }
 ]

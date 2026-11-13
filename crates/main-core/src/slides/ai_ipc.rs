@@ -5,8 +5,8 @@
 //!
 //! `ipcMain.handle` registration stays in TypeScript; each handler's body is a
 //! function here. What a handler asks of Electron and of the libraries is
-//! [`AiIpcHost`] (the app paths, the window list, the search and media tools,
-//! the subscription connections, `runAiStream`), the sender of the request is
+//! [`AiIpcHost`] (the app paths, the window list, the settings guard, the
+//! subscription connections), the sender of the request is
 //! an [`AiSender`], and the pptx engine behind the picture handlers is
 //! [`PictureDeck`] (a `Deck` of the session) with [`ImageDecoder`] for
 //! `nativeImage`.
@@ -21,10 +21,20 @@
 //! is `None`, as the TypeScript's `catch` makes every one of them `null`) and
 //! may run anything else, such as an `ai-run-hold`, there.
 //!
+//! A call that runs long while other IPC must land (`runAiStream`, and the
+//! search and media tools, which `ai:stream-cancel` cancels through
+//! `abortMediaCalls`) is a begin/finish pair: `*_begin` does all the judgment
+//! before the await (registers the controller or the media call, and answers
+//! what the caller must run: a [`StreamRun`], a [`SearchRequest`], a
+//! [`MediaRequest`]), the caller runs it on its own time, and `*_finish` takes
+//! the outcome (the result, or what the call threw) and runs the `finally`
+//! cleanup in the TypeScript's order. Those libraries are the caller's, not
+//! [`AiIpcHost`] methods.
+//!
 //! The pure functions of `ai-stream.ts` the handlers use (`storedAiSettings`,
 //! `withMeteredAccepted`) are here ([`stored_ai_settings`],
 //! [`with_metered_accepted`]); `runAiStream` itself is the engine-waiting part
-//! of that module and sits behind [`AiIpcHost::run_ai_stream`].
+//! of that module and is run by the caller.
 
 use std::cell::{Cell, RefCell};
 use std::fs::{self, OpenOptions};
@@ -52,6 +62,7 @@ use crate::packages::ai_provider::stored_settings::{
 };
 use crate::packages::ai_search::media_call_abort::{MediaCallId, MediaCalls};
 use crate::packages::ai_search::media_tools::document_media_roots;
+use crate::packages::electron_utils::abort_on_destroyed::Disposer;
 use crate::packages::electron_utils::abort_on_destroyed::{DestroyableSender, abort_on_destroyed};
 use crate::packages::electron_utils::ai_run_guard::{AiRunGuardInput, AiRunGuardSlot};
 use crate::packages::electron_utils::atomic_write::write_json_atomic;
@@ -182,14 +193,6 @@ pub trait AiSender: DestroyableSender {
     fn send(&mut self, channel: &str, payload: &JsonValue);
 }
 
-/// What `runAiStream` is given besides its `send`.
-pub struct AiStreamRun<'a> {
-    pub request: &'a JsonValue,
-    pub settings: &'a JsonValue,
-    pub statuses: JsonValue,
-    pub signal: &'a StreamController,
-}
-
 /// The `options` of `generateImageTool` and `analyzeMediaTool` (without the
 /// signal).
 pub struct MediaToolOptions {
@@ -197,8 +200,9 @@ pub struct MediaToolOptions {
     pub context: JsonValue,
 }
 
-/// What the handlers call. A tool that throws answers `Err` with the thrown
-/// value (`{ "$class": "Error", "message": ... }` for an `Error`).
+/// What the handlers call that is quick and local (paths, the window list,
+/// the connection statuses, `console.warn`, `shell.openExternal`). The long
+/// calls are not here: the caller runs them between a handler's begin and finish.
 pub trait AiIpcHost {
     /// `app.getPath('userData')`
     fn user_data_path(&self) -> String;
@@ -246,50 +250,6 @@ pub trait AiIpcHost {
     /// `shell.openExternal(url)`: `true` when it resolved, `false` when it rejected
     fn open_external(&mut self, url: &str) -> bool;
 
-    /// `runAiStream({ request, settings, statuses, signal, send })`
-    fn run_ai_stream(
-        &mut self,
-        run: &AiStreamRun<'_>,
-        send: &mut dyn FnMut(&JsonValue),
-    ) -> Result<(), JsonValue>;
-    /// `webSearchTool(settingsPath, query, maxResults)`
-    fn web_search_tool(
-        &mut self,
-        settings_path: &str,
-        query: &str,
-        max_results: f64,
-    ) -> Result<JsonValue, JsonValue>;
-    /// `imageSearchTool(settingsPath, query, maxResults)`
-    fn image_search_tool(
-        &mut self,
-        settings_path: &str,
-        query: &str,
-        max_results: f64,
-    ) -> Result<JsonValue, JsonValue>;
-    /// `readUrlTool(settingsPath, url, offset, { signal })`
-    fn read_url_tool(
-        &mut self,
-        settings_path: &str,
-        url: &str,
-        offset: f64,
-        signal: &dyn AbortSignal,
-    ) -> Result<JsonValue, JsonValue>;
-    /// `generateImageTool(settingsPath, request, { mediaRoots, context, signal })`
-    fn generate_image_tool(
-        &mut self,
-        settings_path: &str,
-        request: &JsonValue,
-        options: &MediaToolOptions,
-        signal: &dyn AbortSignal,
-    ) -> Result<JsonValue, JsonValue>;
-    /// `analyzeMediaTool(settingsPath, request, { mediaRoots, context, signal })`
-    fn analyze_media_tool(
-        &mut self,
-        settings_path: &str,
-        request: &JsonValue,
-        options: &MediaToolOptions,
-        signal: &dyn AbortSignal,
-    ) -> Result<JsonValue, JsonValue>;
     /// `aiToolCapabilities(settings, context)`
     fn ai_tool_capabilities(&mut self, settings: &JsonValue, context: &JsonValue) -> JsonValue;
 }
@@ -619,14 +579,36 @@ fn send_chunk<S: AiSender>(sender: &mut S, chunk: &JsonValue) {
     }
 }
 
-/// `ai:stream`: the answer is in the chunks sent to `sender`.
-pub fn ai_stream<S: AiSender>(
+/// What `ai:stream` holds across the await of `runAiStream`: the run the
+/// caller performs, and what the `finally` cleans up afterwards.
+pub struct StreamRun {
+    pub request: JsonValue,
+    /// the request's settings after the schema check
+    pub settings: JsonValue,
+    pub statuses: JsonValue,
+    /// `controller.signal`: aborted by `ai:stream-cancel` or when the window goes away
+    pub signal: StreamController,
+    key: String,
+    unwatch: Disposer,
+}
+
+/// What the first half of `ai:stream` comes to.
+pub enum StreamStart {
+    /// an error chunk was sent (or nothing to run): the handler is over
+    Done,
+    /// the caller runs `runAiStream` with [`ai_stream_send`] as its `send`
+    /// (taking `ai:stream-cancel` meanwhile), then calls [`ai_stream_finish`]
+    Run(Box<StreamRun>),
+}
+
+/// `ai:stream`, up to the call of `runAiStream`.
+pub fn ai_stream_begin<S: AiSender>(
     host: &mut dyn AiIpcHost,
     streams: &ActiveStreams,
     guard: &AiRunGuardSlot,
     sender: &mut S,
     request: Option<&JsonValue>,
-) -> Result<(), IpcError> {
+) -> Result<StreamStart, IpcError> {
     // per-request settings get the same schema check as the persisted ones: a
     // compromised renderer could otherwise hand cliPath/baseUrl straight to
     // the provider layer without ever touching the settings file
@@ -639,7 +621,7 @@ pub fn ai_stream<S: AiSender>(
             "ai:stream-chunk",
             &error_chunk(request_id, "invalid AI settings payload"),
         );
-        return Ok(());
+        return Ok(StreamStart::Done);
     };
     // a free provider is only ever the explicit selection, never what `auto` lands on
     let provider = as_str(prop(&settings, "provider"))
@@ -659,7 +641,7 @@ pub fn ai_stream<S: AiSender>(
     });
     if let Some(refusal) = refusal {
         send_chunk(sender, &error_chunk(request_id, &refusal));
-        return Ok(());
+        return Ok(StreamStart::Done);
     }
     let key = stream_key(request_id);
     let controller = StreamController::new();
@@ -667,20 +649,33 @@ pub fn ai_stream<S: AiSender>(
     let to_abort = controller.clone();
     let unwatch = abort_on_destroyed(sender, &mut || to_abort.abort());
     let statuses = host.shared_subscription_statuses();
-    let outcome = {
-        let mut send = |chunk: &JsonValue| send_chunk(sender, chunk);
-        host.run_ai_stream(
-            &AiStreamRun {
-                request,
-                settings: &settings,
-                statuses,
-                signal: &controller,
-            },
-            &mut send,
-        )
-    };
-    unwatch.dispose(sender);
-    streams.delete(&key);
+    Ok(StreamStart::Run(Box::new(StreamRun {
+        request: request.clone(),
+        settings,
+        statuses,
+        signal: controller,
+        key,
+        unwatch,
+    })))
+}
+
+/// `send(chunk)` of `ai:stream`, for the caller to hand to `runAiStream`:
+/// a window that went away gets nothing.
+pub fn ai_stream_send<S: AiSender>(sender: &mut S, chunk: &JsonValue) {
+    send_chunk(sender, chunk);
+}
+
+/// `ai:stream`, after `runAiStream` settled (`outcome` is its rejection, if
+/// any): the `finally` runs in the TypeScript's order (the sender's
+/// listeners, then the request's entry), then the handler fails with the error.
+pub fn ai_stream_finish<S: AiSender>(
+    streams: &ActiveStreams,
+    sender: &mut S,
+    run: StreamRun,
+    outcome: Result<(), JsonValue>,
+) -> Result<(), IpcError> {
+    run.unwatch.dispose(sender);
+    streams.delete(&run.key);
     outcome.map_err(|thrown| thrown_error(&thrown))
 }
 
@@ -712,38 +707,77 @@ fn search_failure(list: &str, error: String) -> JsonValue {
     ])
 }
 
-/// `ai:web-search`: Serper with DuckDuckGo fallback
-pub fn ai_web_search(
-    host: &mut dyn AiIpcHost,
+/// What a search handler runs: `webSearchTool` or `imageSearchTool`
+/// `(settingsPath, query, maxResults)`.
+#[derive(Debug, Clone, PartialEq)]
+pub struct SearchRequest {
+    pub settings_path: String,
+    pub query: String,
+    pub max_results: f64,
+}
+
+/// What a search handler's first half comes to.
+#[derive(Debug, Clone, PartialEq)]
+pub enum SearchStart {
+    /// the caller runs the tool, then calls the handler's `finish`
+    Run(SearchRequest),
+    /// the query could not become text: the answer of the `catch`
+    Answer(JsonValue),
+}
+
+fn search_begin(
+    host: &dyn AiIpcHost,
+    list: &str,
+    default_max: f64,
     query: Option<&JsonValue>,
     max_results: Option<&JsonValue>,
-) -> Result<JsonValue, IpcError> {
-    let path = ai_settings_path(host);
-    let query = match string_of(query) {
-        Ok(query) => query,
-        Err(error) => return Ok(search_failure("results", format!("TypeError: {}", error.0))),
-    };
-    match host.web_search_tool(&path, &query, number_or(max_results, 6.0)) {
-        Ok(answer) => Ok(answer),
-        Err(thrown) => Ok(search_failure("results", thrown_text(&thrown)?)),
+) -> SearchStart {
+    let settings_path = ai_settings_path(host);
+    match string_of(query) {
+        Ok(query) => SearchStart::Run(SearchRequest {
+            settings_path,
+            query,
+            max_results: number_or(max_results, default_max),
+        }),
+        Err(error) => SearchStart::Answer(search_failure(list, format!("TypeError: {}", error.0))),
     }
 }
 
-/// `ai:image-search`
-pub fn ai_image_search(
-    host: &mut dyn AiIpcHost,
+fn search_finish(list: &str, outcome: Result<JsonValue, JsonValue>) -> Result<JsonValue, IpcError> {
+    match outcome {
+        Ok(answer) => Ok(answer),
+        Err(thrown) => Ok(search_failure(list, thrown_text(&thrown)?)),
+    }
+}
+
+/// `ai:web-search`, up to the tool: Serper with DuckDuckGo fallback
+pub fn ai_web_search_begin(
+    host: &dyn AiIpcHost,
     query: Option<&JsonValue>,
     max_results: Option<&JsonValue>,
+) -> SearchStart {
+    search_begin(host, "results", 6.0, query, max_results)
+}
+
+/// `ai:web-search`, after the tool (`Err` is what it threw)
+pub fn ai_web_search_finish(outcome: Result<JsonValue, JsonValue>) -> Result<JsonValue, IpcError> {
+    search_finish("results", outcome)
+}
+
+/// `ai:image-search`, up to the tool
+pub fn ai_image_search_begin(
+    host: &dyn AiIpcHost,
+    query: Option<&JsonValue>,
+    max_results: Option<&JsonValue>,
+) -> SearchStart {
+    search_begin(host, "images", 8.0, query, max_results)
+}
+
+/// `ai:image-search`, after the tool
+pub fn ai_image_search_finish(
+    outcome: Result<JsonValue, JsonValue>,
 ) -> Result<JsonValue, IpcError> {
-    let path = ai_settings_path(host);
-    let query = match string_of(query) {
-        Ok(query) => query,
-        Err(error) => return Ok(search_failure("images", format!("TypeError: {}", error.0))),
-    };
-    match host.image_search_tool(&path, &query, number_or(max_results, 8.0)) {
-        Ok(answer) => Ok(answer),
-        Err(thrown) => Ok(search_failure("images", thrown_text(&thrown)?)),
-    }
+    search_finish("images", outcome)
 }
 
 /// The media call of `withMediaCallSignal(sender, run)` up to the call of `run`.
@@ -762,46 +796,45 @@ fn media_call_end(media_calls: &mut MediaCalls, sender: &mut dyn AiSender, call:
     media_calls.end(sender.id(), call);
 }
 
-/// The `signal` of a media call
-struct MediaSignal<'a> {
-    calls: &'a MediaCalls,
-    call: MediaCallId,
-}
-
-impl AbortSignal for MediaSignal<'_> {
-    fn aborted(&self) -> bool {
-        self.calls.aborted(self.call)
-    }
-}
-
-/// `ai:read-url`: a long download ends with the window or when the window's AI
-/// run is stopped.
-pub fn ai_read_url(
+/// `ai:read-url`, up to the tool: a long download ends with the window or
+/// when the window's AI run is stopped. The caller runs the returned request,
+/// and may take an `ai:stream-cancel` meanwhile, then calls
+/// [`ai_read_url_finish`].
+pub fn ai_read_url_begin(
     host: &mut dyn AiIpcHost,
     media_calls: &mut MediaCalls,
     sender: &mut dyn AiSender,
     url: Option<&JsonValue>,
     offset: Option<&JsonValue>,
+) -> (MediaStart, Option<MediaRequest>) {
+    media_begin(media_calls, sender, || {
+        let settings_path = ai_settings_path(host);
+        let url = string_of(url)?;
+        Ok(MediaRequest::ReadUrl {
+            settings_path,
+            url,
+            offset: number_or(offset, 0.0),
+        })
+    })
+}
+
+/// `ai:read-url`, after the tool: the `finally` of the call, then the answer;
+/// a read that failed (or never started) answers a network failure.
+pub fn ai_read_url_finish(
+    media_calls: &mut MediaCalls,
+    sender: &mut dyn AiSender,
+    start: MediaStart,
+    outcome: Option<Result<JsonValue, JsonValue>>,
 ) -> JsonValue {
-    let call = media_call_begin(media_calls, sender);
-    let outcome: Result<JsonValue, ()> = (|| {
-        let path = ai_settings_path(host);
-        let url = string_of(url).map_err(|_| ())?;
-        let signal = MediaSignal {
-            calls: &*media_calls,
-            call,
-        };
-        host.read_url_tool(&path, &url, number_or(offset, 0.0), &signal)
-            .map_err(|_| ())
-    })();
-    media_call_end(media_calls, sender, call);
-    outcome.unwrap_or_else(|()| {
-        object(vec![
+    media_call_end(media_calls, sender, start.call);
+    match outcome {
+        Some(Ok(answer)) => answer,
+        _ => object(vec![
             ("ok", JsonValue::Bool(false)),
             ("error", text("The read failed.")),
             ("errorCode", text("network")),
-        ])
-    })
+        ]),
+    }
 }
 
 /// `String(value)` over each item of an array
@@ -863,66 +896,169 @@ fn analyze_media_request(op: Option<&JsonValue>) -> Result<JsonValue, IpcError> 
     ]))
 }
 
-/// One media tool call of a slides window: `ai:generate-image` or
-/// `ai:analyze-media`. Either call ends with its window, or when the window's
-/// AI run is stopped.
-fn media_tool(
-    host: &mut dyn AiIpcHost,
+/// What a media tool call runs: the tool of the handler and what it is given
+/// (without the signal, which is [`MediaCalls::aborted`] of the call).
+pub enum MediaRequest {
+    /// `readUrlTool(settingsPath, url, offset, { signal })`
+    ReadUrl {
+        settings_path: String,
+        url: String,
+        offset: f64,
+    },
+    /// `generateImageTool(settingsPath, request, { mediaRoots, context, signal })`
+    GenerateImage {
+        settings_path: String,
+        request: JsonValue,
+        options: MediaToolOptions,
+    },
+    /// `analyzeMediaTool(settingsPath, request, { mediaRoots, context, signal })`
+    AnalyzeMedia {
+        settings_path: String,
+        request: JsonValue,
+        options: MediaToolOptions,
+    },
+}
+
+/// What `withMediaCallSignal(sender, run)` holds across the await of `run`:
+/// the call in flight, and the error the request's preparation threw (the
+/// callback failed before it reached the tool).
+#[derive(Debug)]
+pub struct MediaStart {
+    call: MediaCallId,
+    prep_error: Option<IpcError>,
+}
+
+impl MediaStart {
+    /// the call to ask [`MediaCalls::aborted`] about, for the tool's signal
+    pub fn call(&self) -> MediaCallId {
+        self.call
+    }
+}
+
+/// The part of `withMediaCallSignal` before `run` and the preparation of
+/// `run` itself: the caller runs the request (when there is one) on its own
+/// time, so a cancel can land meanwhile, then calls the `finish` of the handler.
+fn media_begin(
     media_calls: &mut MediaCalls,
     sender: &mut dyn AiSender,
+    prepare: impl FnOnce() -> Result<MediaRequest, IpcError>,
+) -> (MediaStart, Option<MediaRequest>) {
+    let call = media_call_begin(media_calls, sender);
+    match prepare() {
+        Ok(request) => (
+            MediaStart {
+                call,
+                prep_error: None,
+            },
+            Some(request),
+        ),
+        Err(error) => (
+            MediaStart {
+                call,
+                prep_error: Some(error),
+            },
+            None,
+        ),
+    }
+}
+
+/// The `request` of `ai:generate-image` or `ai:analyze-media`.
+fn media_tool_request(
+    host: &mut dyn AiIpcHost,
     session_path: Option<&str>,
     op: Option<&JsonValue>,
     analyze: bool,
-) -> Result<JsonValue, IpcError> {
-    let call = media_call_begin(media_calls, sender);
-    let outcome = (|| -> Result<JsonValue, IpcError> {
-        let path = ai_settings_path(host);
-        let request = if analyze {
-            analyze_media_request(op)?
-        } else {
-            generate_image_request(op)?
-        };
-        let media_roots = slides_media_roots(host, session_path);
-        let context = screen_tool_context(host);
-        let options = MediaToolOptions {
-            media_roots,
-            context,
-        };
-        let signal = MediaSignal {
-            calls: &*media_calls,
-            call,
-        };
-        let answer = if analyze {
-            host.analyze_media_tool(&path, &request, &options, &signal)
-        } else {
-            host.generate_image_tool(&path, &request, &options, &signal)
-        };
-        answer.map_err(|thrown| thrown_error(&thrown))
-    })();
-    media_call_end(media_calls, sender, call);
-    outcome
+) -> Result<MediaRequest, IpcError> {
+    let settings_path = ai_settings_path(host);
+    let request = if analyze {
+        analyze_media_request(op)?
+    } else {
+        generate_image_request(op)?
+    };
+    let media_roots = slides_media_roots(host, session_path);
+    let context = screen_tool_context(host);
+    let options = MediaToolOptions {
+        media_roots,
+        context,
+    };
+    Ok(if analyze {
+        MediaRequest::AnalyzeMedia {
+            settings_path,
+            request,
+            options,
+        }
+    } else {
+        MediaRequest::GenerateImage {
+            settings_path,
+            request,
+            options,
+        }
+    })
 }
 
-/// `ai:generate-image`: answers with an error text when no route is available.
-pub fn ai_generate_image(
+/// The `finally` of `withMediaCallSignal`, then the outcome of a media tool
+/// handler: `outcome` is what the tool did (`None` when it was never run).
+fn media_tool_finish(
+    media_calls: &mut MediaCalls,
+    sender: &mut dyn AiSender,
+    start: MediaStart,
+    outcome: Option<Result<JsonValue, JsonValue>>,
+) -> Result<JsonValue, IpcError> {
+    media_call_end(media_calls, sender, start.call);
+    match (outcome, start.prep_error) {
+        (Some(Ok(answer)), _) => Ok(answer),
+        (Some(Err(thrown)), _) => Err(thrown_error(&thrown)),
+        (None, Some(error)) => Err(error),
+        (None, None) => Err(IpcError::type_error("the media tool was not run")),
+    }
+}
+
+/// `ai:generate-image`, up to the tool: answers with an error text when no
+/// route is available. The call ends with its window, or when the window's AI
+/// run is stopped.
+pub fn ai_generate_image_begin(
     host: &mut dyn AiIpcHost,
     media_calls: &mut MediaCalls,
     sender: &mut dyn AiSender,
     session_path: Option<&str>,
     op: Option<&JsonValue>,
-) -> Result<JsonValue, IpcError> {
-    media_tool(host, media_calls, sender, session_path, op, false)
+) -> (MediaStart, Option<MediaRequest>) {
+    media_begin(media_calls, sender, || {
+        media_tool_request(host, session_path, op, false)
+    })
 }
 
-/// `ai:analyze-media`
-pub fn ai_analyze_media(
+/// `ai:generate-image`, after the tool (`outcome` as for [`media_tool_finish`]).
+pub fn ai_generate_image_finish(
+    media_calls: &mut MediaCalls,
+    sender: &mut dyn AiSender,
+    start: MediaStart,
+    outcome: Option<Result<JsonValue, JsonValue>>,
+) -> Result<JsonValue, IpcError> {
+    media_tool_finish(media_calls, sender, start, outcome)
+}
+
+/// `ai:analyze-media`, up to the tool
+pub fn ai_analyze_media_begin(
     host: &mut dyn AiIpcHost,
     media_calls: &mut MediaCalls,
     sender: &mut dyn AiSender,
     session_path: Option<&str>,
     op: Option<&JsonValue>,
+) -> (MediaStart, Option<MediaRequest>) {
+    media_begin(media_calls, sender, || {
+        media_tool_request(host, session_path, op, true)
+    })
+}
+
+/// `ai:analyze-media`, after the tool
+pub fn ai_analyze_media_finish(
+    media_calls: &mut MediaCalls,
+    sender: &mut dyn AiSender,
+    start: MediaStart,
+    outcome: Option<Result<JsonValue, JsonValue>>,
 ) -> Result<JsonValue, IpcError> {
-    media_tool(host, media_calls, sender, session_path, op, true)
+    media_tool_finish(media_calls, sender, start, outcome)
 }
 
 // ---- the slides-only handlers ----

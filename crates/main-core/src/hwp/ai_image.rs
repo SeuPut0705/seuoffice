@@ -13,7 +13,7 @@
 //! the Codex generator), behind [`HwpImageHost`].
 
 use crate::packages::ai_provider::jsval::{js_string, object, prop, text, value_key};
-use crate::packages::ai_search::media_call_abort::{MediaCallId, MediaCalls};
+use crate::packages::ai_search::media_call_abort::{MediaCallRun, MediaCalls};
 use crate::packages::ai_search::media_tools::document_media_roots;
 use jscompat::JsonValue;
 use jscompat::node_path::host::join;
@@ -33,6 +33,44 @@ pub struct AnalyzeMediaOp {
     pub requirements: String,
 }
 
+/// `generateImageTool(settingsPath, op, { mediaRoots, context, signal })`:
+/// `context` is `{ path: 'screen', statuses }`
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenerateImageRequest {
+    pub settings_path: String,
+    pub op: GenerateImageOp,
+    pub media_roots: Vec<String>,
+    pub statuses: JsonValue,
+}
+
+/// a generation that has begun: the call to finish and what the engine is
+/// asked
+#[derive(Debug, Clone, PartialEq)]
+pub struct GenerateImageStart {
+    pub run: MediaCallRun,
+    pub request: GenerateImageRequest,
+}
+
+/// `analyzeMediaTool(settingsPath, op, { context, signal })`
+#[derive(Debug, Clone, PartialEq)]
+pub struct AnalyzeMediaRequest {
+    pub settings_path: String,
+    pub op: AnalyzeMediaOp,
+    pub statuses: JsonValue,
+}
+
+/// Where [`begin_analyze_media`] stands.
+#[derive(Debug, Clone, PartialEq)]
+pub enum AnalyzeMediaStep {
+    /// the answer, with no engine call (and the call already forgotten)
+    Done(JsonValue),
+    /// the engine call to make, then [`finish_analyze_media`]
+    Tool {
+        run: MediaCallRun,
+        request: AnalyzeMediaRequest,
+    },
+}
+
 /// What the handlers reach outside this module.
 pub trait HwpImageHost {
     /// `app.getPath('userData')`
@@ -43,27 +81,9 @@ pub trait HwpImageHost {
     fn file_path_of(&mut self, web_contents_id: f64) -> Option<String>;
     /// `sharedSubscriptionStatuses()`
     fn subscription_statuses(&mut self) -> JsonValue;
-    /// `generateImageTool(settingsPath, op, { mediaRoots, context, signal })`;
-    /// `context` is `{ path: 'screen', statuses }`, `signal` is
-    /// `calls.aborted(call)`
-    fn generate_image_tool(
-        &mut self,
-        calls: &MediaCalls,
-        call: MediaCallId,
-        settings_path: &str,
-        op: &GenerateImageOp,
-        media_roots: &[String],
-        statuses: &JsonValue,
-    ) -> JsonValue;
-    /// `analyzeMediaTool(settingsPath, op, { context, signal })`
-    fn analyze_media_tool(
-        &mut self,
-        calls: &MediaCalls,
-        call: MediaCallId,
-        settings_path: &str,
-        op: &AnalyzeMediaOp,
-        statuses: &JsonValue,
-    ) -> JsonValue;
+    // `generateImageTool` and `analyzeMediaTool` are not host calls: they are
+    // long and another handler can cancel them, so the handlers hand their
+    // arguments out as requests (see `begin_generate_image`)
 }
 
 /// `SETTINGS_PATH()`
@@ -71,15 +91,19 @@ fn settings_path(host: &mut dyn HwpImageHost) -> String {
     join(&[&host.user_data_dir(), "ai-settings.json"])
 }
 
-/// the handler of `HWP_CHANNELS.aiGenerateImage`: `op` is the renderer's
-/// payload; `sender_id` and `sender_destroyed` are `e.sender`
-pub fn generate_image(
+/// the handler of `HWP_CHANNELS.aiGenerateImage` up to the engine call: `op`
+/// is the renderer's payload; `sender_id` and `sender_destroyed` are
+/// `e.sender`. The generation is a long call that `abortMediaCalls` from
+/// another handler cancels, so the caller runs `generateImageTool` itself
+/// between this and [`finish_generate_image`], with the signal of
+/// [`MediaCalls::aborted`] (`run.call`).
+pub fn begin_generate_image(
     host: &mut dyn HwpImageHost,
     calls: &mut MediaCalls,
     sender_id: f64,
     sender_destroyed: bool,
     op: Option<&JsonValue>,
-) -> JsonValue {
+) -> GenerateImageStart {
     let call = calls.begin(sender_id, sender_destroyed);
     let prompt = match op.and_then(|o| prop(o, "prompt")) {
         None | Some(JsonValue::Null) => String::new(),
@@ -100,8 +124,25 @@ pub fn generate_image(
     // screen path: the statuses of the process-wide subscription service
     // decide the route
     let statuses = host.subscription_statuses();
-    let answer = host.generate_image_tool(calls, call, &path, &op, &roots, &statuses);
-    calls.end(sender_id, call);
+    GenerateImageStart {
+        run: MediaCallRun { sender_id, call },
+        request: GenerateImageRequest {
+            settings_path: path,
+            op,
+            media_roots: roots,
+            statuses,
+        },
+    }
+}
+
+/// the `finally` of the generate handler: the engine answered (or was
+/// aborted); the call is forgotten and the answer is the handler's
+pub fn finish_generate_image(
+    calls: &mut MediaCalls,
+    run: MediaCallRun,
+    answer: JsonValue,
+) -> JsonValue {
+    calls.end(run.sender_id, run.call);
     answer
 }
 
@@ -111,17 +152,18 @@ fn is_image_data_url(url: &str) -> bool {
         .is_some_and(|head| head.eq_ignore_ascii_case("data:image/"))
 }
 
-/// the handler of `HWP_CHANNELS.analyzeMedia`: the panel takes a picture out
-/// of the document and sends it as an image data URL. Only data URLs are
-/// taken (this editor has no path to hand over).
-pub fn analyze_media(
+/// the handler of `HWP_CHANNELS.analyzeMedia` up to the engine call: the
+/// panel takes a picture out of the document and sends it as an image data
+/// URL. Only data URLs are taken (this editor has no path to hand over).
+pub fn begin_analyze_media(
     host: &mut dyn HwpImageHost,
     calls: &mut MediaCalls,
     sender_id: f64,
     sender_destroyed: bool,
     op: Option<&JsonValue>,
-) -> JsonValue {
+) -> AnalyzeMediaStep {
     let call = calls.begin(sender_id, sender_destroyed);
+    let run = MediaCallRun { sender_id, call };
     let urls: Vec<String> = match op.and_then(|o| prop(o, "mediaUrls")) {
         Some(JsonValue::Array(items)) => items.iter().map(js_string).collect(),
         _ => Vec::new(),
@@ -130,21 +172,39 @@ pub fn analyze_media(
         .into_iter()
         .filter(|url| is_image_data_url(url))
         .collect();
-    let answer = if media_urls.is_empty() {
-        object(vec![("error", text("no picture was given to look at"))])
-    } else {
-        let requirements = match op.and_then(|o| prop(o, "requirements")) {
-            None | Some(JsonValue::Null) => String::new(),
-            Some(value) => value_key(Some(value)),
-        };
-        let path = settings_path(host);
-        let statuses = host.subscription_statuses();
-        let request = AnalyzeMediaOp {
-            media_urls,
-            requirements,
-        };
-        host.analyze_media_tool(calls, call, &path, &request, &statuses)
+    if media_urls.is_empty() {
+        calls.end(sender_id, call);
+        return AnalyzeMediaStep::Done(object(vec![(
+            "error",
+            text("no picture was given to look at"),
+        )]));
+    }
+    let requirements = match op.and_then(|o| prop(o, "requirements")) {
+        None | Some(JsonValue::Null) => String::new(),
+        Some(value) => value_key(Some(value)),
     };
-    calls.end(sender_id, call);
+    let settings_path = settings_path(host);
+    let statuses = host.subscription_statuses();
+    AnalyzeMediaStep::Tool {
+        run,
+        request: AnalyzeMediaRequest {
+            settings_path,
+            op: AnalyzeMediaOp {
+                media_urls,
+                requirements,
+            },
+            statuses,
+        },
+    }
+}
+
+/// the `finally` of the analyze handler: the engine answered (or was
+/// aborted); the call is forgotten and the answer is the handler's
+pub fn finish_analyze_media(
+    calls: &mut MediaCalls,
+    run: MediaCallRun,
+    answer: JsonValue,
+) -> JsonValue {
+    calls.end(run.sender_id, run.call);
     answer
 }

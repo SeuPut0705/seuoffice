@@ -12,6 +12,15 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct MediaCallId(u64);
 
+/// A call between [`MediaCalls::begin`] and [`MediaCalls::end`], as the
+/// continuation of a handler whose long call another handler may cancel: the
+/// window it belongs to and its handle.
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub struct MediaCallRun {
+    pub sender_id: f64,
+    pub call: MediaCallId,
+}
+
 #[derive(Debug)]
 struct Call {
     id: MediaCallId,
