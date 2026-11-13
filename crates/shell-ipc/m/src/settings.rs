@@ -13,7 +13,9 @@ use main_core::packages::electron_utils::author_name::{
     system_author_name,
 };
 use main_core::packages::i18n::{self, LANGS, Lang};
-use main_core::shell::app_settings::{read_app_settings, write_app_setting, write_app_setting_then};
+use main_core::shell::app_settings::{
+    read_app_settings, write_app_setting, write_app_setting_then,
+};
 use main_core::shell::atomic_write::atomic_write_file;
 use main_core::shell::csv_import_limit::csv_import_limit_mb;
 use shell_contract::channels::Surface;
@@ -88,7 +90,11 @@ fn set_language(cx: &Ctx, raw: &IpcValue) -> Reply {
     .map_err(node_error)?;
     cx.host.rebuild_menus_for_language();
     notify_quick_look(cx);
-    cx.emit(Target::All, "app:language-changed", vec![string(lang.as_str())]);
+    cx.emit(
+        Target::All,
+        "app:language-changed",
+        vec![string(lang.as_str())],
+    );
     Ok(IpcValue::Undefined)
 }
 
@@ -126,7 +132,11 @@ fn set_document_theme(cx: &Ctx, raw: &IpcValue) -> Reply {
         Some(JsonValue::String(theme.to_owned())),
     )
     .map_err(node_error)?;
-    cx.emit(Target::All, "app:document-theme-changed", vec![string(theme)]);
+    cx.emit(
+        Target::All,
+        "app:document-theme-changed",
+        vec![string(theme)],
+    );
     Ok(IpcValue::Undefined)
 }
 
@@ -145,10 +155,17 @@ fn set_author_name(cx: &Ctx, raw: &IpcValue) -> Reply {
         } else {
             value
         };
-        cx.emit(Target::All, "app:author-name-changed", vec![string(effective)]);
+        cx.emit(
+            Target::All,
+            "app:author-name-changed",
+            vec![string(effective)],
+        );
     }
     let (value, fallback) = author_name_setting(cx);
-    Ok(object([("value", string(value)), ("fallback", string(fallback))]))
+    Ok(object([
+        ("value", string(value)),
+        ("fallback", string(fallback)),
+    ]))
 }
 
 /// `normalizeMarkdownTheme(value)`: `String(value)` when it names a theme
@@ -249,7 +266,10 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
     let c = cx.clone();
     invoke(registry, "home:get-author-name", move |_, _| {
         let (value, fallback) = author_name_setting(&c);
-        Ok(object([("value", string(value)), ("fallback", string(fallback))]))
+        Ok(object([
+            ("value", string(value)),
+            ("fallback", string(fallback)),
+        ]))
     })?;
     let c = cx.clone();
     invoke(registry, "app:get-author-name", move |_, _| {
@@ -340,7 +360,9 @@ pub(crate) fn register(registry: &mut dyn Registry, cx: &Rc<Ctx>) -> Result<(), 
         move |_, _, reply| {
             let host = c.host.clone();
             c.services.workers.spawn(Box::new(move || {
-                reply.reply(Ok(IpcValue::Bool(host.open_template_fonts_folder().is_empty())))
+                reply.reply(Ok(IpcValue::Bool(
+                    host.open_template_fonts_folder().is_empty(),
+                )))
             }))
         },
     )?;
@@ -429,7 +451,12 @@ mod tests {
     #[test]
     fn an_unknown_or_unchanged_language_does_nothing() {
         let p = probe(json!({ "appLocale": "en-US" }));
-        for lang in [string("en"), string("KO"), IpcValue::Number(1.0), IpcValue::Undefined] {
+        for lang in [
+            string("en"),
+            string("KO"),
+            IpcValue::Number(1.0),
+            IpcValue::Undefined,
+        ] {
             assert_eq!(
                 p.call(sender(1, Shell), "home:set-language", vec![lang]),
                 Ok(IpcValue::Undefined)
@@ -529,15 +556,27 @@ mod tests {
         );
         assert_eq!(
             p.take_events(),
-            vec![(Target::All, "app:author-name-changed", vec![string("Lee Ji")])]
+            vec![(
+                Target::All,
+                "app:author-name-changed",
+                vec![string("Lee Ji")]
+            )]
         );
         // unchanged: no write, no event, the same answer
-        p.call(sender(1, Shell), "home:set-author-name", vec![string("Lee Ji")])
-            .unwrap();
+        p.call(
+            sender(1, Shell),
+            "home:set-author-name",
+            vec![string("Lee Ji")],
+        )
+        .unwrap();
         assert!(p.take_events().is_empty());
         // a non-string clears it; the event carries the fallback
-        p.call(sender(1, Shell), "home:set-author-name", vec![IpcValue::Null])
-            .unwrap();
+        p.call(
+            sender(1, Shell),
+            "home:set-author-name",
+            vec![IpcValue::Null],
+        )
+        .unwrap();
         assert_eq!(
             p.take_events(),
             vec![(Target::All, "app:author-name-changed", vec![string("kim")])]
@@ -545,7 +584,10 @@ mod tests {
         let p = probe(json!({ "username": null }));
         assert_eq!(
             p.call(sender(1, Shell), "home:get-author-name", vec![]),
-            Ok(object([("value", string("")), ("fallback", string("User"))]))
+            Ok(object([
+                ("value", string("")),
+                ("fallback", string("User"))
+            ]))
         );
     }
 

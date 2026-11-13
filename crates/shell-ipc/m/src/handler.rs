@@ -33,9 +33,12 @@ pub fn invoke(
     channel: &'static str,
     handler: impl Fn(&CallContext, Vec<IpcValue>) -> Reply + 'static,
 ) -> Result<(), RegisterError> {
-    register(registry, channel, ChannelKind::Invoke, move |cx, args, reply| {
-        reply.reply(handler(cx, args))
-    })
+    register(
+        registry,
+        channel,
+        ChannelKind::Invoke,
+        move |cx, args, reply| reply.reply(handler(cx, args)),
+    )
 }
 
 /// `ipcMain.handle` whose body awaits: it keeps the responder and answers
@@ -54,10 +57,15 @@ pub fn send(
     channel: &'static str,
     handler: impl Fn(&CallContext, Vec<IpcValue>) + 'static,
 ) -> Result<(), RegisterError> {
-    register(registry, channel, ChannelKind::Send, move |cx, args, reply| {
-        handler(cx, args);
-        reply.reply(Ok(IpcValue::Undefined))
-    })
+    register(
+        registry,
+        channel,
+        ChannelKind::Send,
+        move |cx, args, reply| {
+            handler(cx, args);
+            reply.reply(Ok(IpcValue::Undefined))
+        },
+    )
 }
 
 /// `ipcMain.on` for `ipcRenderer.sendSync`: the answer is `event.returnValue`
@@ -66,9 +74,12 @@ pub fn send_sync(
     channel: &'static str,
     handler: impl Fn(&CallContext, Vec<IpcValue>) -> IpcValue + 'static,
 ) -> Result<(), RegisterError> {
-    register(registry, channel, ChannelKind::SendSync, move |cx, args, reply| {
-        reply.reply(Ok(handler(cx, args)))
-    })
+    register(
+        registry,
+        channel,
+        ChannelKind::SendSync,
+        move |cx, args, reply| reply.reply(Ok(handler(cx, args))),
+    )
 }
 
 /// `throw new Error(message)`

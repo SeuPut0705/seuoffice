@@ -8,21 +8,19 @@ use std::rc::Rc;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::{Arc, Mutex};
 
+use serde_json::Value;
 use shell_contract::channels::{Batch, CHANNELS, Surface};
+use shell_contract::hosts::{
+    Contents, ContentsHost, Dialogs, DialogsHost, FileDialog, MainWindow, MainWindowHost,
+    MessageBox, MessageBoxAnswer, OsShell, OsShellHost,
+};
 use shell_contract::ipc::{
     CallContext, ChannelKind, EventSink, Handler, RegisterError, Registry, Reply, Responder,
     Sender, Target,
 };
-use shell_contract::runtime::{
-    AppPaths, CancelToken, PathName, Services, Thread, Views, Workers,
-};
-use shell_contract::hosts::{
-    Contents, ContentsHost, Dialogs, DialogsHost, FileDialog, MainWindow,
-    MainWindowHost, MessageBox, MessageBoxAnswer, OsShell, OsShellHost,
-};
 use shell_contract::provided::Provided;
+use shell_contract::runtime::{AppPaths, CancelToken, PathName, Services, Thread, Views, Workers};
 use shell_contract::{Hosts, IpcValue, RequestId, ViewId, WindowId};
-use serde_json::Value;
 
 use crate::probe::{self, Fake};
 

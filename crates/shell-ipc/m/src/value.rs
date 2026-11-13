@@ -168,10 +168,7 @@ mod tests {
         let json = to_json(&value).unwrap();
         assert_eq!(
             from_json(&json),
-            object([(
-                "b",
-                IpcValue::Array(vec![IpcValue::Null, IpcValue::Null])
-            )])
+            object([("b", IpcValue::Array(vec![IpcValue::Null, IpcValue::Null]))])
         );
         assert_eq!(
             to_serde(&value).unwrap(),

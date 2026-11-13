@@ -100,7 +100,9 @@ impl MHost for Fake {
     }
 
     fn env_lang(&self) -> Option<String> {
-        self.get("envLang").and_then(Value::as_str).map(str::to_owned)
+        self.get("envLang")
+            .and_then(Value::as_str)
+            .map(str::to_owned)
     }
 
     fn username(&self) -> Option<String> {
@@ -129,7 +131,9 @@ impl MHost for Fake {
 
     fn reveal_home(&self) -> bool {
         self.log("revealHome".into());
-        self.get("revealHome").and_then(Value::as_bool).unwrap_or(true)
+        self.get("revealHome")
+            .and_then(Value::as_bool)
+            .unwrap_or(true)
     }
 
     fn open_template_fonts_folder(&self) -> String {
@@ -325,7 +329,11 @@ impl Peers for Fake {
     }
 
     fn hwp_take_pdf_grant(&self, view: ViewId) -> Option<String> {
-        let taken = self.calls.lock().unwrap().contains(&format!("takeGrant {}", view.0));
+        let taken = self
+            .calls
+            .lock()
+            .unwrap()
+            .contains(&format!("takeGrant {}", view.0));
         self.log(format!("takeGrant {}", view.0));
         if taken {
             return None;
@@ -340,7 +348,9 @@ impl Peers for Fake {
     }
 
     fn headless(&self) -> bool {
-        self.get("headless").and_then(Value::as_bool).unwrap_or(false)
+        self.get("headless")
+            .and_then(Value::as_bool)
+            .unwrap_or(false)
     }
 
     fn open_generated_path(&self, path: &str) -> bool {

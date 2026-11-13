@@ -150,7 +150,10 @@ impl MState {
         if let Some(theme) = self.inner.lock().unwrap().doc_theme.clone() {
             return theme;
         }
-        let theme = match read_app_settings(settings_path).get("documentTheme").cloned() {
+        let theme = match read_app_settings(settings_path)
+            .get("documentTheme")
+            .cloned()
+        {
             Some(JsonValue::String(s)) if s == "light" || s == "dark" => s,
             _ => "follow".to_owned(),
         };
