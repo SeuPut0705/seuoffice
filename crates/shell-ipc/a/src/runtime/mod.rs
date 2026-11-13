@@ -83,8 +83,18 @@ pub trait Net: Send + Sync {
     /// has not handed out yet; each is read on its own
     fn clone_body(&self, from: Id, to: Id);
     /// Stop the operation `id`, or the whole stream of the fetch `id` (its
-    /// body and its clones); an id that is none of these is ignored
+    /// body and its clones); an id that is none of these, or one already
+    /// stopped (by [`Net::release`]), is ignored
     fn cancel(&self, id: Id);
+    /// The program dropped the handle of `body` (a fetch's body or a clone)
+    /// before it was handed its end: free what is kept for that branch; with
+    /// `stop`, no branch can read the fetch `stop`'s stream any more, so stop
+    /// it as [`Net::cancel`] would. Nothing answers it, and nothing the
+    /// program sees changes (in JavaScript the body is only garbage). The
+    /// default keeps nothing to free.
+    fn release(&self, body: Id, stop: Option<Id>) {
+        let _ = (body, stop);
+    }
     /// `server.listen(port, host)`: answer [`Answer::Listening`] with the
     /// port bound (0 asks for a free one), then pass each request to
     /// [`Sink::request`] with an id of the host's own, which

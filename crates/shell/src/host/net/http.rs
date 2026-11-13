@@ -541,11 +541,17 @@ impl Net for HttpNet {
             let _ = stop.send(());
         }
         let source = st.bodies.get(&id).map(|b| b.source).unwrap_or(id);
-        if let Some(mut gone) = st.sources.remove(&source) {
-            if let Some(stop) = gone.stop.take() {
-                let _ = stop.send(());
-            }
-            st.bodies.retain(|_, branch| branch.source != source);
+        stop_source(&mut st, source);
+    }
+
+    fn release(&self, body: Id, stop: Option<Id>) {
+        let mut st = Inner::lock(&self.0.state);
+        let source = st.bodies.remove(&body).map(|b| b.source);
+        if let Some(source) = stop {
+            stop_source(&mut st, source);
+        } else if let Some(source) = source {
+            // the chunks only this branch had still to read go with it
+            trim(&mut st, source);
         }
     }
 
@@ -647,6 +653,17 @@ impl Net for HttpNet {
         if let Some(stop) = Inner::lock(&self.0.state).servers.remove(&server) {
             let _ = stop.send(());
         }
+    }
+}
+
+/// The stream of the fetch `source` stops: its response (and connection) is
+/// dropped, a pull in flight ends, and every branch goes with it
+fn stop_source(st: &mut State, source: Id) {
+    if let Some(mut gone) = st.sources.remove(&source) {
+        if let Some(stop) = gone.stop.take() {
+            let _ = stop.send(());
+        }
+        st.bodies.retain(|_, branch| branch.source != source);
     }
 }
 
